@@ -12,37 +12,41 @@ algorithm main(
     output   uint1 uart_out_ready
 ) {
     // Storage for value to return
-    uint8 character = 63;
+    uint8 character = uninitialized;
 
     // Turn off the lights
     rgbR = 0; rgbG = 0; rgbB = 0;
     
     while (1) {
-        // Set output to ? and then change when a recognised value is available
-        character = 63;
         // when uart data available
         if(uart_out_valid) {
-            // RED from R
-            if(uart_out_data == 82) {
-                rgbR = 1;
-                character = 82;
+            switch(uart_out_data)
+            {
+                // RED from R
+                case 82: {
+                    rgbR = 1;
+                    character = 82;
+                }
+                // // GREEN from G
+                case 71: {
+                    rgbG = 1;
+                    character = 71;
+                }
+                // BLUE from B
+                case 66: {
+                    rgbR = 1;
+                    character = 66;
+                }
+                // OFF from X
+                case 88: {
+                    rgbR = 0; rgbG = 0; rgbB = 0;
+                    character = 88;
+                }
+                // default return ?
+                default: {
+                    character = 63;
+                }
             }
-            // GREEN from G
-            if(uart_out_data == 71) {
-                rgbG = 1;
-                character = 71;
-            }
-            // BLUE from B
-            if(uart_out_data == 66) {
-                rgbB = 1;
-                character = 66;
-            }
-            // OFF from X
-            if(uart_out_data == 88) {
-                rgbR = 0; rgbG = 0; rgbB = 0;
-                character = 88;
-           }
-
            // Output the return character
            uart_in_data = character;
            uart_in_valid = 1;
