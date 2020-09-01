@@ -8,8 +8,8 @@
 `define GREENPWM RGB2PWM
 `elsif HACKER
 `define BLUEPWM  RGB0PWM
-`define GREENPWM RGB1PWM
-`define REDPWM   RGB2PWM
+`define GREENPWM RGB2PWM
+`define REDPWM   RGB1PWM
 `elsif PVT
 `define GREENPWM RGB0PWM
 `define REDPWM   RGB1PWM
@@ -52,7 +52,7 @@ module top(
     assign clk_48mhz = clk;
 
     // RGB LED Driver
-    wire [2:0] __main_led;
+    wire rgbB, rgbG, rgbR;
     SB_RGBA_DRV #(
         .CURRENT_MODE("0b1"),       // half current
         .RGB0_CURRENT("0b000011"),  // 4 mA
@@ -61,9 +61,9 @@ module top(
     ) RGBA_DRIVER (
         .CURREN(1'b1),
         .RGBLEDEN(1'b1),
-        .`BLUEPWM(__main_led[0]),     // Blue
-        .`REDPWM(__main_led[1]),      // Red
-        .`GREENPWM(__main_led[2]),    // Green
+        .`BLUEPWM(rgbB),     // Blue
+        .`REDPWM(rgbG),      // Red
+        .`GREENPWM(rgbR),    // Green
         .RGB0(rgb0),
         .RGB1(rgb1),
         .RGB2(rgb2)
@@ -135,7 +135,9 @@ module top(
     M_main __main(
     .clock        (clk),
     .reset        (RST_q[0]),
-    .out_led      (__main_led),
+    .out_rgbB      (rgbB),
+    .out_rgbG      (rgbG),
+    .out_rgbR      (rgbR),
     .in_run       (run_main),
 
     
