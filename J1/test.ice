@@ -1,3 +1,44 @@
+bitfield literal {
+    uint1  is_literal,
+    uint15 literal
+}
+
+bitfield callbranch {
+    uint1  is_literal,
+    uint2  is_callbranchalu,
+    uint13 address
+}
+
+bitfield aluop {
+    uint1   is_literal,
+    uint2   is_callbranchalu,
+    uint1   is_r2pc,
+    uint4   operation,
+    uint1   is_t2n,
+    uint1   is_t2r,
+    uint1   is_n2memt,
+    uint1   pad,
+    uint2   rdelta,
+    uint2   ddelta
+}
+
+bitfield bytes {
+    uint8   byte1,
+    uint8   byte0
+}
+
+bitfield nibbles {
+    uint4   nibble3,
+    uint4   nibble2,
+    uint4   nibble1,
+    uint4   nibble0
+}
+
+bitfield twobits {
+    uint1   bit1,
+    uint1   bit0
+}
+
 algorithm main(
     // RGB LED
     output uint1 rgbB,
@@ -11,66 +52,70 @@ algorithm main(
     input    uint1 uart_out_valid,
     output   uint1 uart_out_ready
 ) {
+    // Program counter, next program counter, present instruction, extracted immediate
+    uint13 pc = 0;
+    uint13 pcNextClock = uninitialized;
+
+    uint16 instruction = uninitialized;
+    int2 ddelta := aluop(instruction).ddelta;
+    int2 rdelta := aluop(instruction).rdelta;
+
+    uint1 is_literal := literal(instruction).is_literal;
+    uint1 is_aluop := aluop(instruction).is_callbranchalu == 2b11;
+    
     // dstack 33x16bit and pointer, next pointer, write line, delta
     int16 dstack[33] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    int16 dstackTop = 0;
-    int16 dstackSec = 0;
+    int16 dstackTop = uninitialized;
+    int16 dstackSec = uninitialized;
     uint5 dsp = 0;
-    uint5 dspNext = 1;
-    int2 ddelta = 0;
-    int16 dstackOutput = 0;
+    uint5 dspNextClock = uninitialized;
+    uint5 dspPlus1 := dsp + 1;
+    uint5 dspMinus1 := dsp - 1;
+    int16 dstackOutput = uninitialized;
+    uint1 dstackWrite := is_literal | (is_aluop & aluop(instruction).is_t2n);
     
     // rstack 33x16bit and pointer, next pointer, write line, delta
     int16 rstack[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    int16 rstackTop = 0;
+    int16 rstackTop = uninitialized;
     uint5 rsp = 0;
-    uint5 rspNext = 1;
-    int2 rdelta = 0;
+    uint5 rspNextClock = uninitialized;
+    uint5 rspPlus1 := rsp + 1;
+    int16 rstackOutput = uninitialized;
+    uint1 rstackWrite = 0;
     
-    // ROM will be addressed from 0 - 8191, RAM will be addressed from 8192-16383
+    // RAM
     // 16bit ROM with included compiled j1eForth from https://github.com/samawati/j1eforth
-    brom uint16 rom[] = {
-        $include('j1.inc')
+    // followed by RAM
+    bram uint16 ram[] = {
+        $include('j1eforth.inc')
     };
 
-    // RAM as 8192 x 16bit
-    bram uint16 ram[2048] = uninitialized;
-
-    // Program counter, next program counter, present instruction, extracted immediate
-    uint13 pc = 0;
-    uint13 pcNext = 1;
-
-    uint16 instruction = uninitialized;
-    uint16 immediate = uninitialized;
+    ++:    
     
     // Start of main loop
     while(1) {
         // Show we are alive
-        rgbB = 1;
-        
+        rgbB = 0;
+
         dstackTop = dstack[dsp];
-        dstackSec = dstack[dsp - 1];
-        dspNext = dsp + 1;
+        dstackSec = dstack[dspMinus1];
         rstackTop = rstack[rsp];
-        rspNext = rsp + 1;
-        pcNext = pc + 1;
         
-        // Retrieve the next instruction 0-8191 ROM, 8192-16383 RAM
-        if(pc < 8192) {
-            // READ from ROM
-            rom.addr = pc;
-        } else {
+        // Retrieve the next instruction 0-16383 RAM
+        if(pc < 16384) {
+            rgbR = 1;
             // READ from RAM
             ram.wenable = 0;
-            ram.addr = pc - 8192;
+            ram.addr = pc;
+            ++:
             instruction = ram.rdata;
-        }
-        ++:
-        if(pc<8192) {
-            instruction = rom.rdata;
+            rgbR = 0;
         } else {
-            instruction = ram.rdata;
+            // Basically an error! (Go back to 0)
+            instruction = 0;
         }
+
+        ++:
         
         // Start decode of instruction
         // +---------------------------------------------------------------+
@@ -106,30 +151,34 @@ algorithm main(
         // the stack delta (the amount to increment or decrement the stack
         // by for their respective stacks: return and data)
         
-        if(instruction[15,1]) {
+        if(is_literal) {
             // Push value onto stack
-            dstack[dspNext] = {1b0, instruction[14,15]};
-            dsp = dsp + 1;
+            dstackOutput = {1b0, literal(instruction).literal};
+            dspNextClock = dsp + 1;
         } else {
-            switch (instruction[14,2] ) {
-                case 2b00: {    // BRANCH
-                    pc = instruction[12,13];
+            switch (callbranch(instruction).is_callbranchalu) {
+                case 2b00: {
+                    // BRANCH
+                    pcNextClock = callbranch(instruction).address;
                 }
-                case 2b01: {    // CONDITIONAL BRANCH
+                case 2b01: {
+                    // CONDITIONAL BRANCH (check pcNextClock)
                     if(dstackTop == 0) {
-                        pc = pcNext;
+                        pcNextClock = pc + 1;
                     } else {
-                        pc = instruction[12,13];
+                        pcNextClock = callbranch(instruction).address;
                     }
-                    dsp = dsp - 1;
+                    dspNextClock = dspMinus1;
                 }
-                case 2b10: {    // CALL
-                    rstack[rspNext] = pcNext;
-                    rsp = rsp + 1;
-                    pc = instruction[12,13];
+                case 2b10: {
+                    // CALL
+                    rstackOutput = pc + 1;
+                    rstackWrite = 1;
+                    rspNextClock = rspPlus1;
+                    pcNextClock = callbranch(instruction).address;
                 }
                 case 2b11: {    // ALU
-                    switch(instruction[11,4]) {
+                    switch(aluop(instruction).operation) {
                         case 4b0000: {dstackOutput = dstackTop;}
                         case 4b0001: {dstackOutput = dstackSec;}
                         case 4b0010: {dstackOutput = dstackTop + dstackSec;}
@@ -139,24 +188,17 @@ algorithm main(
                         case 4b0110: {dstackOutput = ~dstackTop;}
                         case 4b0111: {dstackOutput = (dstackTop == dstackSec);}
                         case 4b1000: {dstackOutput = (__signed(dstackSec) < __signed(dstackTop));}
-                        case 4b1001: {dstackOutput = dstackSec >> dstackTop[3,4];}
+                        case 4b1001: {dstackOutput = dstackSec >> nibbles(dstackTop).nibble0;}
                         case 4b1010: {dstackOutput = dstackTop -1;}
                         case 4b1011: {dstackOutput = rstackTop;}
                         case 4b1100: {  // Read value from memory/uart
-                            if(dstackTop<8192) {
-                                // read ROM
-                                 rom.addr = dstackTop;
-                                ++:
-                                dstackOutput = rom.rdata;
-                            }
-                            if( (dstackTop>8191) & (dstackTop<16384) ) {
+                            rgbG = 1;
+                            if(dstackTop<16384) {
                                 ram.wenable = 0;
-                                ram.addr = dstackTop - 8192;
+                                ram.addr = dstackTop;
                                 ++:
                                 dstackOutput = ram.rdata;
-                            }
-                            if(dstackTop>16384) {
-                                rgbG = 1;
+                            } else {
                                 if(uart_out_valid) {
                                     dstackOutput = {8b0, uart_out_data};
                                     uart_out_ready = 1;
@@ -165,54 +207,61 @@ algorithm main(
                                     uart_out_ready = 1;
                                 }
                                 ++:
-                                rgbG = 0;
                             }
+                            rgbG = 0;
                         }
-                        case 4b1101: {dstackOutput = dstackSec << dstackTop[3,4];}
+                        case 4b1101: {dstackOutput = dstackSec << nibbles(dstackTop).nibble0;}
                         case 4b1110: {dstackOutput = {rsp,3b000,dsp};}
                         case 4b1111: {dstackOutput = dstackSec < dstackTop;}
                     }
-                    // Calculate new dsp and rsp
-                    ddelta = instruction[1,2];
-                    rdelta = instruction[3,2];
-                    dsp = dsp + {ddelta[1,1], ddelta[1,1], ddelta[1,1], ddelta};
-                    rsp = rsp + {rdelta[1,1], rdelta[1,1], rdelta[1,1], rdelta};
-                    ++:
-                    dstack[dsp] = dstackOutput;
-                    if(instruction[6,1]) {
-                        // copy top of stack to return stack
-                        rstack[rsp] = dstackTop;
+                    if(aluop(instruction).is_r2pc) {
+                        // return stack to PC
+                        pcNextClock = rstackTop;
+                    } else {
+                        // next instruction
+                        pcNextClock = pc + 1;
                     }
-                    if(instruction[5,1]) {
-                        rgbR = 1;
-                        // write dstackSec to rom/ram[dstackTop]
-                        if(dstackTop<8192) {
-                            // write ROM
-                        }
-                        if( (dstackTop>8191) & (pc<16384) ) {
+                    if(aluop(instruction).is_n2memt) {
+                        // write dstackSec to ram[dstackTop]
+                        rgbG = 1;
+                        if(dstackTop<16384) {
                             // write RAM
                             ram.wenable = 1;
-                            ram.addr = dstackTop - 8192;
+                            ram.addr = dstackTop;
                             ++:
                             ram.wdata = dstackSec;
-                        }
-                        if(dstackTop>16384) {
+                        } else {
                             // write UART
-                            uart_in_data = dstackSec[7,8];
+                            uart_in_data = bytes(dstackSec).byte0;
                             uart_in_valid = 1;
-                            ++:
+                            // Reset UART
+                            //if(uart_in_ready & uart_in_valid) {
+                            //    uart_in_valid = 0;
+                            //}
                         }
-                        rgbR = 0;
-                   }
+                        rgbG = 0;
+                    }
+                    // Calculate new dsp and rsp
+                    dspNextClock = dsp + {twobits(ddelta).bit1, twobits(ddelta).bit1, twobits(ddelta).bit1, ddelta};
+                    rspNextClock = rsp + {twobits(rdelta).bit1, twobits(rdelta).bit1, twobits(rdelta).bit1, rdelta};
+                    rstackWrite = aluop(instruction).is_t2r;
+                    rstackOutput = dstackTop;
                }
             }
         }
         
         ++:
-        // Reset UART
-        //if(uart_in_ready & uart_in_valid) {
-        //    uart_in_valid = 0;
-        //}
+        
+        if(dstackWrite) {
+            dstack[dspNextClock] = dstackOutput;
+        }
+        if(rstackWrite) {
+            rstack[rspNextClock] = rstackOutput;
+        }
+        dsp = dspNextClock;
+        rsp = rspNextClock;
+        pc = pcNextClock;
+        
         rgbB = 0;
     }
 }

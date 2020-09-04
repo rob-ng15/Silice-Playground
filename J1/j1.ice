@@ -51,7 +51,9 @@ algorithm main(
     
     uint16 instruction = uninitialized;
     uint16 immediate = uninitialized;
-    
+
+++:
+
     // Start of main loop
     while(1) {
         rgbB = 1;
@@ -63,7 +65,9 @@ algorithm main(
         rsp = rspN;
         pcplus1 = pc + 1;
 
-        // Write to dstack (work out why this causes an error
+        ++:
+        
+        // Write to dstack
         if(dstackW) {
             dstack[dspN] = st0;
         }
@@ -71,9 +75,13 @@ algorithm main(
         if(rstackW) {
             rstack[rspN] = rstkD;
         }
-    
+        
+        ++:
+        
         st1 = dstack[dsp];
         rst0 = rstack[rsp];
+        
+        ++:
         
         // Retrieve the next instruction 0-8191 ROM, 8192-16383 RAM
         if(pc < 8192) {
@@ -100,18 +108,20 @@ algorithm main(
             ram.addr = st0[15,15] - 8192;
             ram.wdata = st1;
         } else {
-            //while (uart_in_ready == 0) {}
+            //while (uart_in_ready == 0) {++:}
             uart_in_data = st1[7,8];
             uart_in_valid = 1;
         }
-
-        if(uart_in_ready & uart_in_valid) {
-            uart_in_valid = 0;
-        }
+        
+        ++:
+        
+        //if(uart_in_ready & uart_in_valid) {
+        //    uart_in_valid = 0;
+        //}
 
         // Start decode of instruction
         // +---------------------------------------------------------------+
-        // | F | E | D | C | B | A | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+        // | F | E | D | C | B | A | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 |uart_in_valid = 0; 1 | 0 |
         // +---------------------------------------------------------------+
         // | 1 |                    LITERAL VALUE                          |
         // +---------------------------------------------------------------+
@@ -195,6 +205,7 @@ algorithm main(
                         case 4b1011: {st0N = rst0;}
                         case 4b1100: { // LOAD from address
                                         if(st0>16383) {
+                                            rgbG = 1;
                                             // input from UART
                                             if(uart_out_valid) {
                                                 st0N = {8b0, uart_out_data};
@@ -203,6 +214,7 @@ algorithm main(
                                                 st0N = 0;
                                                 uart_out_ready = 1;
                                             }
+                                            rgbG = 0;
                                         } else {
                                             if(st0<8192) {
                                                 // LOAD from ROM
@@ -212,14 +224,13 @@ algorithm main(
                                                 ram.wenable = 0;
                                                 ram.addr = st0 - 8192;
                                             }
-                                            rgbG = 1;
+                                            
                                             ++:
                                             if(st0<8192) {
                                                 st0 = rom.rdata;
                                             } else {
                                                 st0 = ram.rdata;
                                             }
-                                            rgbG = 0;
                                         }
                                      }
                         case 4b1101: {st0N = st1 << st0[3,4];}
