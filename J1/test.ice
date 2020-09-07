@@ -132,7 +132,7 @@ algorithm main(
     
     // cycle to control each stage, init to determine if copying rom to ram or executing
     uint5 cycle = 0;
-    // INIT 0 SPRAM, INIT 1 ROM to SPRAM, INIT 2 J1 CPU
+    // INIT 0 SPRAM, INIT 1 ROM to SPRAM, INIT 2 UART TEST, INIT 3 J1 CPU
     uint2 init = 0;
     // BLUE heartbeat
     uint1 BLUE = 0;
@@ -143,17 +143,19 @@ algorithm main(
     // Address for 0 to SPRAM, copying ROM, plus storage
     uint16 copyaddress = 0;
     uint16 memory_read = 0;
+
     
     // Start of main loop
     while(1) {
-        rgbB = BLUE;
-        rgbG = GREEN;
-        rgbR = RED;
+    
+    rgbB = BLUE;
+    rgbG = GREEN;
+    rgbR = RED;
         
     switch(init) {
         // ZERO SPRAM
         case 0: {
-            GREEN = 1;
+            GREEN = 1 - GREEN;
             switch(cycle) {
                 case 0: {
                     // Setup WRITE to SPRAM
@@ -162,6 +164,7 @@ algorithm main(
                     sram_wren = 1;
                 }
                 case 30: {
+                    sram_wren = 0;
                     copyaddress = copyaddress + 1;
                 }
                 case 31: {
@@ -176,7 +179,7 @@ algorithm main(
         
         // COPY ROM TO SPRAM
         case 1: {
-            RED = 1;
+            RED = 1 - RED;
             switch(cycle) {
                 case 0: {
                     // Setup READ from ROM
@@ -195,10 +198,38 @@ algorithm main(
                 }
                 case 30: {
                     copyaddress = copyaddress + 1;
+                    sram_wren = 0;
                 }
                 case 31: {
                     if(copyaddress == 3336) {
-                        init = 2;
+                        init = 3;
+                        copyaddress = 0;
+                        RED = 0;
+                    }
+                }
+                default: {
+                }
+            }
+        }
+
+        // UART TEST
+        case 2: {
+            BLUE = 1 - BLUE;
+            switch(cycle) {
+                case 0: {
+                    // READ from SPRAM
+                    sram_addr = copyaddress;
+                    sram_wren = 0;
+                }
+                case 8: {
+                    uart_in_data = bytes(sram_data_out).byte0;
+                    uart_in_valid = 1;
+                }
+                case 30: {
+                    copyaddress = copyaddress + 1;
+                }
+                case 31: {
+                    if(copyaddress == 3336) {
                         copyaddress = 0;
                     }
                 }
@@ -206,11 +237,9 @@ algorithm main(
                 }
             }
         }
-    
-        // EXECUTE J1 CPU
-        case 2: {
-            RED = 0;
 
+        // EXECUTE J1 CPU
+        case 3: {
             switch(cycle) {
                 // Write to dstack and rstack
                 case 0: {
@@ -233,20 +262,21 @@ algorithm main(
                 // WRITE [ust0] = st1 or to UART
                 case 3: {
                     if(uramWE) {
-                        if({bits(ust0).bit15, bits(ust0).bit14} == 0) {
-                            sram_addr = msb15bits(ust0).msb15;
-                            sram_data_in = st1;
-                            sram_wren = 1;
-                        } else {
+                        if(bits(ust0).bit14) {
+                            RED = 1 - RED;
                             uart_in_data = bytes(st1).byte0;
                             uart_in_valid = 1;
+                        } else {
+                            sram_addr = {1b0,msb15bits(ust0).msb15};
+                            sram_data_in = st1;
+                            sram_wren = 1;
                         }
                     }
                 }
 
                 // READ mem_din = [ust0]
                 case 11: {
-                    sram_addr = msb15bits(ust0).msb15;
+                    sram_addr = {1b0,msb15bits(ust0).msb15};
                     sram_wren = 0;
                 }
                 case 19: {
@@ -255,6 +285,7 @@ algorithm main(
                 
                 // READ insn = [upc]
                 case 20: {
+                    BLUE = bits(upc).bit0;
                     sram_addr = upc;
                     sram_wren = 0;
                 }
@@ -330,8 +361,9 @@ algorithm main(
                             case 4b1011: {ust0 = rst0;}
                             case 4b1100: {
                                 // UART or mem_din
-                                if(|{bits(st0).bit15, bits(st0).bit14}) {
+                                if(bits(st0).bit14) {
                                     if(uart_out_valid) {
+                                        GREEN = 1 - GREEN;
                                         ust0 = {8b0, uart_out_data};
                                         uart_out_ready = 1;
                                     } else {
@@ -381,18 +413,14 @@ algorithm main(
                         upc = {3b000,callbranch(insn).address};
                     } else {
                         if(is_alu & bits(insn).bit12) {
-                            upc = msb15bits(rst0).msb15;
+                            upc = {1b0,msb15bits(rst0).msb15};
                         } else {
                             upc = pc_plus_1;
                         }
                     }
                 } // J1 CPU Instruction Execute
                 
-                // Reset UART
                 case 31: {
-                    if(uart_in_ready & uart_in_valid) {
-                        uart_in_valid = 0;
-                    }
                 }
 
                 default: {}
@@ -401,7 +429,12 @@ algorithm main(
         } // case(init=2)
         
     } // switch(init)   
-    
+
+    // Reset UART
+    if(uart_in_ready & uart_in_valid) {
+        uart_in_valid = 0;
+    }
+   
     cycle = cycle + 1;
     } // while(1)
 }
