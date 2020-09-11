@@ -63,15 +63,6 @@ bitfield twobits {
     uint1   bit0
 }
 
-bitfield msb15bits {
-    uint15  msb15,
-    uint1   lsb
-}
-bitfield lsb15bits {
-    uint1   lsb,
-    uint15  lsb15
-}
-
 algorithm main(
     // RGB LED
     output uint1    rgbB,
@@ -93,33 +84,29 @@ algorithm main(
     output   uint1  uart_out_ready
 ) {
     uint16  insn = 0;
-    uint16  immediate := {1b0, literal(insn).value};
-    uint1   is_alu := (instruction(insn).is_litcallbranchalu == 3b011);
-    uint1   is_lit := (literal(insn).is_literal);
-    uint2   dd := aluop(insn).ddelta;
-    uint2   rd := aluop(insn).rdelta;
+    uint4   st0sel = 0;
+    uint16  immediate = 0;
+    uint1   is_alu = 0;
+    uint1   is_lit = 0;
     
     uint5   dsp = 0;
     uint5   udsp = 0;
-    uint16  st0 = 0;
+    uint16  st0 = 0;        // top of stack unsigned
     uint16  ust0 = 0;
-    uint1   udstkW := is_lit | (is_alu & bits(insn).bit7);
+    uint1   udstkW = 0;
     
     uint16  pc = 0;
+    uint16  pc_plus_1 = 0;
     uint16  upc = 0;
     uint5   rsp = 0;
     uint5   ursp = 0;
     uint1   urstkW = 0;
     uint16  urstkD = 0;
-    uint1   uramWE := is_alu & bits(insn).bit5;
 
-    uint16  st1 = 0;
+    uint16  st1 = 0;        // second in stack unsigned
     uint16  rst0 = 0;
-    uint16  pc_plus_1 := pc + 1;
     uint16  mem_din = 0;
-    
-    uint4 st0sel = 0;
-    
+
     // dstack 32x16bit and pointer, next pointer, write line, delta
     // rstack 32x16bit and pointer, next pointer, write line, delta
     uint16 dstack[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -127,11 +114,11 @@ algorithm main(
     
     // 16bit ROM with included compiled j1eForth from https://github.com/samawati/j1eforth
     bram uint16 rom[] = {
-        $include('j1eforth16msb.inc')
+        $include('j1eforth16lsb.inc')
     };
     
     // cycle to control each stage, init to determine if copying rom to ram or executing
-    uint5 cycle = 0;
+    uint15 cycle = 0;
     // INIT 0 SPRAM, INIT 1 ROM to SPRAM, INIT 2 UART TEST, INIT 3 J1 CPU
     uint2 init = 0;
     // BLUE heartbeat
@@ -144,6 +131,8 @@ algorithm main(
     uint16 copyaddress = 0;
     uint16 memory_read = 0;
 
+    // DEBUG charout
+    uint8 charout = 0;
     
     // Start of main loop
     while(1) {
@@ -155,7 +144,7 @@ algorithm main(
     switch(init) {
         // ZERO SPRAM
         case 0: {
-            GREEN = 1 - GREEN;
+            GREEN = ~GREEN;
             switch(cycle) {
                 case 0: {
                     // Setup WRITE to SPRAM
@@ -179,7 +168,7 @@ algorithm main(
         
         // COPY ROM TO SPRAM
         case 1: {
-            RED = 1 - RED;
+            RED = ~RED;
             switch(cycle) {
                 case 0: {
                     // Setup READ from ROM
@@ -214,22 +203,34 @@ algorithm main(
 
         // UART TEST
         case 2: {
-            BLUE = 1 - BLUE;
+            BLUE = ~BLUE;
             switch(cycle) {
                 case 0: {
                     // READ from SPRAM
-                    sram_addr = copyaddress;
+                    sram_addr = copyaddress>>1;
                     sram_wren = 0;
                 }
                 case 8: {
-                    uart_in_data = bytes(sram_data_out).byte0;
+                    if(bits(copyaddress).bit0) {
+                        if((bytes(sram_data_out).byte0>31) & (bytes(sram_data_out).byte0<127)) {
+                            uart_in_data = bytes(sram_data_out).byte0;
+                        } else {
+                            uart_in_data = 32;
+                        }
+                    } else {
+                        if((bytes(sram_data_out).byte1>31) & (bytes(sram_data_out).byte1<127)) {
+                            uart_in_data = bytes(sram_data_out).byte1;
+                        } else {
+                            uart_in_data = 32;
+                        }
+                    }
                     uart_in_valid = 1;
                 }
                 case 30: {
                     copyaddress = copyaddress + 1;
                 }
                 case 31: {
-                    if(copyaddress == 3336) {
+                    if(copyaddress == 6672) {
                         copyaddress = 0;
                     }
                 }
@@ -241,73 +242,44 @@ algorithm main(
         // EXECUTE J1 CPU
         case 3: {
             switch(cycle) {
-                // Write to dstack and rstack
+                // Read st0, st1, rst0
                 case 0: {
-                    if(udstkW) {
-                        dstack[udsp] = st0;
-                    }
-                    if(urstkW) {
-                        rstack[ursp] = urstkD;
-                    }
+                    st1 = dstack[dsp];
+                    rst0 = rstack[rsp];
                 }
                 
-                // Update dsp, rsp, pc, st0
-                case 1: {
-                    dsp = udsp;
-                    pc = upc;
-                    st0 = ust0;
-                    rsp = ursp;
-                }
-                
-                // WRITE [ust0] = st1 or to UART
-                case 3: {
-                    if(uramWE) {
-                        if(bits(ust0).bit14) {
-                            RED = 1 - RED;
-                            uart_in_data = bytes(st1).byte0;
-                            uart_in_valid = 1;
-                        } else {
-                            sram_addr = {1b0,msb15bits(ust0).msb15};
-                            sram_data_in = st1;
-                            sram_wren = 1;
-                        }
-                    }
-                }
-
                 // READ mem_din = [ust0]
-                case 11: {
-                    sram_addr = {1b0,msb15bits(ust0).msb15};
+                case 3: {
+                    sram_addr = ust0 >> 1;
                     sram_wren = 0;
                 }
-                case 19: {
+                case 10: {
                     mem_din = sram_data_out;
                 }
                 
-                // READ insn = [upc]
-                case 20: {
-                    BLUE = bits(upc).bit0;
-                    sram_addr = upc;
+                
+                // READ insn = [pc]
+                case 11: {
+                    sram_addr = pc;
                     sram_wren = 0;
                 }
-                case 28: {
+                case 19: {
                     insn = sram_data_out;
                 }
 
                 // DECODE insn
-                case 29: {
-                     switch(callbranch(insn).is_callbranchalu) {
-                        case 2b00:  {st0sel = 0;}                         // ubranch
-                        case 2b10:  {st0sel = 0;}                         // call
-                        case 2b01:  {st0sel = 1;}                         // 0branch
-                        case 2b11:  {st0sel = aluop(insn).operation;}     // ALU 
-                        default:    {st0sel = 4bxxxx;}
-                    }
-                    st1 = dstack[dsp];
-                    rst0 = rstack[rsp];
-
+                case 20: {
+                    is_lit = literal(insn).is_literal;
+                    is_alu = ( instruction(insn).is_litcallbranchalu == 3b011 );
+                    immediate = ( literal(insn).value );
+                    pc_plus_1 = pc + 1;
                 }
+                case 21: {
+                    udstkW = ( is_lit | (is_alu & aluop(insn).is_t2n) );
+                }
+                
                 // J1 CPU Instruction Execute
-                case 30: {
+                case 22: {
                     // +---------------------------------------------------------------+
                     // | F | E | D | C | B | A | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
                     // +---------------------------------------------------------------+
@@ -340,89 +312,215 @@ algorithm main(
                     // RSTACK and DSTACK are signed values (twos compliment) that are
                     // the stack delta (the amount to increment or decrement the stack
                     // by for their respective stacks: return and data)
-                    
-                    if(literal(insn).is_literal) {
+
+                    if(is_lit) { // LITERAL
                         // Push value onto stack
                         ust0 = immediate;
-                    }
-                    if(is_alu) {
-                        switch (aluop(insn).operation) {
-                            case 4b0000: {ust0 = st0;}
-                            case 4b0001: {ust0 = st1;}
-                            case 4b0010: {ust0 = st0 + st1;}
-                            case 4b0011: {ust0 = st0 & st1;}
-                            case 4b0100: {ust0 = st0 | st1;}
-                            case 4b0101: {ust0 = st0 ^ st1;}
-                            case 4b0110: {ust0 = ~st0;}
-                            case 4b0111: {ust0 = {16{(st1 == st0)}};}
-                            case 4b1000: {ust0 = {16{(__signed(st1) < __signed(st0))}};}
-                            case 4b1001: {ust0 = st1 >> nibbles(st0).nibble0;}
-                            case 4b1010: {ust0 = st0 - 1;}
-                            case 4b1011: {ust0 = rst0;}
-                            case 4b1100: {
-                                // UART or mem_din
-                                if(bits(st0).bit14) {
-                                    if(uart_out_valid) {
-                                        GREEN = 1 - GREEN;
-                                        ust0 = {8b0, uart_out_data};
-                                        uart_out_ready = 1;
-                                    } else {
-                                        ust0 = 0;
-                                    }
-                                } else {
-                                    ust0 = mem_din;
-                                }
-                            }
-                            case 4b1101: {ust0 = st1 << nibbles(st0).nibble0;}
-                            case 4b1110: {ust0 = {rsp, 3b000, dsp};}
-                            case 4b1111: {ust0 = {16{(st1 < st0)}};}
-                            default: {ust0 = 16hxxxx;}
-                        }
-                    }
-                    // Calculate new values for dsp, rsp and calculate if writes required
-                    // Calculate new pc
-                    if(is_lit) {
+                        upc = pc_plus_1;
                         udsp = dsp + 1;
                         ursp = rsp;
                         urstkW = 0;
-                        urstkD = upc;
-                    } else { 
-                        if(is_alu) {
-                            udsp = dsp + {twobits(dd).bit1, twobits(dd).bit1, twobits(dd).bit1, dd};
-                            ursp = rsp + {twobits(rd).bit1, twobits(rd).bit1, twobits(rd).bit1, rd};
-                            urstkW = bits(insn).bit6;
-                            urstkD = st0;
-                        } else {
-                            if(instruction(insn).is_litcallbranchalu == 3b001) {
-                                udsp = dsp - 1;
-                            } else {
-                                udsp = dsp;
-                            }
-                        }
-                        if(instruction(insn).is_litcallbranchalu == 3b010) {
-                            ursp = rsp + 1;
-                            urstkW = 1;
-                            urstkD = {lsb15bits(pc_plus_1).lsb15, 1b0};
-                        } else {
-                            ursp = rsp;
-                            urstkW = 0;
-                            urstkD = upc;
-                        }
-                    }
-                    if( ((instruction(insn).is_litcallbranchalu == 3b000) | ((instruction(insn).is_litcallbranchalu == 3b001) & (|st0 == 0)) | (instruction(insn).is_litcallbranchalu == 3b010)) ) {
-                        upc = {3b000,callbranch(insn).address};
+                        urstkD = rst0;
+                        charout = 76; // DEBUG L
                     } else {
-                        if(is_alu & bits(insn).bit12) {
-                            upc = {1b0,msb15bits(rst0).msb15};
-                        } else {
-                            upc = pc_plus_1;
+                        switch( callbranch(insn).is_callbranchalu ) { // BRANCH 0BRANCH CALL ALU
+                            case 2b00: { // BRANCH
+                                ust0 = st0;
+                                upc = callbranch(insn).address;
+                                udsp = dsp;
+                                ursp = rsp;
+                                urstkW = 0;
+                                urstkD = rst0;
+                                charout = 66; // DEBUG B
+                            }
+                            case 2b01: { // 0BRANCH
+                                ust0 = st1;
+                                if( st0 == 0 ) {
+                                    upc = callbranch(insn).address;
+                                    charout = 48; // DEBUG 0
+                                } else {
+                                    upc = pc_plus_1;
+                                    charout = 49; // DEBUG 1
+                                }
+                                udsp = dsp - 1;
+                                ursp = rsp;
+                                urstkW = 0;
+                                urstkD = rst0;
+                            }
+                            case 2b10: { // CALL
+                                ust0 = st0;
+                                upc = callbranch(insn).address;
+                                udsp = dsp;
+                                ursp = rsp;
+                                urstkW = 1;
+                                urstkD = pc_plus_1 << 1;
+                                charout = 67; // DEBUG L
+                            }
+                            case 2b11: { // ALU
+                                switch( aluop(insn).operation ) { // ALU Operation
+                                    case 4b0000: {ust0 = st0;
+                                        charout = 84; // DEBUG T
+                                    }
+                                    
+                                    case 4b0001: {ust0 = st1;
+                                        charout = 78; // DEBUG N
+                                    }
+                                    
+                                    case 4b0010: {ust0 = st0 + st1;
+                                        charout = 43; // DEBUG +
+                                    }
+                                    
+                                    case 4b0011: {ust0 = st0 & st1;
+                                        charout = 38; // DEBUG &
+                                    }
+                                    
+                                    case 4b0100: {ust0 = st0 | st1;
+                                        charout = 124; // DEBUG |
+                                    }
+
+                                    case 4b0101: {ust0 = st0 ^ st1;
+                                        charout = 94; // DEBUG ^
+                                    }
+
+                                    case 4b0110: {ust0 = ~st0;
+                                        charout = 126; // DEBUG ~
+                                    }
+
+                                    case 4b0111: {ust0 = {16{(st1 == st0)}};
+                                        charout = 61; // DEBUG =
+                                    }
+
+                                    case 4b1000: {ust0 = {16{(__signed(st1) < __signed(st0))}};
+                                        charout = 60; // DEBUG <
+                                    }
+                                    
+                                    case 4b1001: {ust0 = st1 >> nibbles(st0).nibble0;
+                                        charout = 125; // DEBUG right brace
+                                    }
+
+                                    case 4b1010: {ust0 = st0 - 1;
+                                        charout = 45; // DEBUG -
+                                    }
+
+                                    case 4b1011: {ust0 = rst0;
+                                        charout = 82; // DEBUG R
+                                    }
+
+                                    case 4b1100: {
+                                        // UART or mem_din
+                                        if(st0 > 16383) { // UART
+                                            if( st0 == 16hf000 ) {
+                                                charout = 117; // DEBUG u                                                
+                                                if( uart_out_valid ) {
+                                                    ust0 = uart_out_data;
+                                                } else {
+                                                    ust0 = 0;
+                                                }
+                                                uart_out_ready = 1;
+                                            } else {
+                                                charout = 115; // DEBUG s
+                                                ust0 = {14b0, 1b0, uart_out_valid};
+                                            }
+                                        } else { // MEM
+                                            charout = 109; // DEBUG m
+                                            ust0 = mem_din;
+                                        }
+                                    }
+                                    
+                                    case 4b1101: {ust0 = st1 << nibbles(st0).nibble0;
+                                        charout = 123; // DEBUG left brace
+                                    }
+
+                                    case 4b1110: {ust0 = {rsp, 3b000, dsp};
+                                        charout = 68; // DEBUG D
+                                    }
+
+                                    case 4b1111: {ust0 = {16{(__unsigned(st1) < __unsigned(st0))}};
+                                        charout = 91; // DEBUG left square
+                                    }
+                                } // ALU Operation
+                                
+                                // UPDATE udsp ursp
+                                switch( aluop(insn).ddelta ) {
+                                    case 2b00: { udsp = dsp; }
+                                    case 2b01: { udsp = dsp + 1; }
+                                    case 2b10: { udsp = dsp - 2; }
+                                    case 2b11: { udsp = dsp - 1; }
+                                }
+                                switch( aluop(insn).rdelta ) {
+                                    case 2b00: { ursp = rsp; }
+                                    case 2b01: { ursp = rsp + 1; }
+                                    case 2b10: { ursp = rsp - 2; }
+                                    case 2b11: { ursp = rsp - 1; }
+                                }
+                                urstkW = aluop(insn).is_t2r;
+                                urstkD = st0;
+
+                            } // ALU
                         }
                     }
                 } // J1 CPU Instruction Execute
+
+                     
+                // update pc and perform mem[t] = n
+                case 23: {
+                    if( is_alu ) {
+                        // r2pc
+                        if( aluop(insn).is_r2pc ) {
+                            upc = rst0 >> 1;
+                        } else {
+                            upc = pc_plus_1;
+                        }
+                        
+                        // n2memt mem[t] = n
+                        if( aluop(insn).is_n2memt ) {
+                            if( st0 < 16384 ) {
+                                charout = 119; // DEBUG w
+                                sram_addr = st0 >> 1;
+                                sram_data_in = st1;
+                                sram_wren = 1;
+                            } else {
+                                charout = 111; // DEBUG o
+                                //uart_in_data = bytes(st1).byte0;
+                                //uart_in_valid = 1;
+                                BLUE = ~BLUE;
+                            }
+                        }
+                    }
+                }
                 
-                case 31: {
+                // DEBUG after execute
+                case 24: {
+                    // DEBUG
+                    uart_in_data = charout;
+                    uart_in_valid = 1;
                 }
 
+                // Write to dstack and rstack
+                case 29: {
+                    if( udstkW ) {
+                        dstack[udsp] = st0;
+                        RED = ~RED;
+                    }
+                    if( urstkW ) {
+                        rstack[ursp] = urstkD;
+                        GREEN = ~GREEN;
+                    }
+                }
+               
+                // Update dsp, rsp, pc, st0
+                case 30: {
+                    dsp = udsp;
+                    pc = upc;
+                    st0 = ust0;
+                    rsp = ursp;
+                }
+                
+                // reset sram_wren
+                case 31: {
+                    sram_wren = 0;
+                }
+                
                 default: {}
                 
             } // switch(cycle)
