@@ -481,8 +481,8 @@ algorithm main(
                                 sram_wren = 1;
                             } else {
                                 charout = 111; // DEBUG o
-                                uart_in_data = bytes(st1).byte0;
-                                uart_in_valid = 1;
+                                //uart_in_data = bytes(st1).byte0;
+                                //uart_in_valid = 1;
                                 BLUE = ~BLUE;
                             }
                         }
@@ -492,8 +492,8 @@ algorithm main(
                 // DEBUG after execute
                 case 24: {
                     // DEBUG
-                    //uart_in_data = charout;
-                    //uart_in_valid = 1;
+                    uart_in_data = charout;
+                    uart_in_valid = 1;
                 }
 
                 // Write to dstack and rstack
