@@ -114,13 +114,13 @@ algorithm main(
     
     // 16bit ROM with included compiled j1eForth from https://github.com/samawati/j1eforth
     bram uint16 rom[] = {
-        $include('j1eforthROM.inc')
+        $include('j1test.inc')
     };
     
     // cycle to control each stage, init to determine if copying rom to ram or executing
     uint15 cycle = 0;
     // INIT 0 SPRAM, INIT 1 ROM to SPRAM, INIT 2 UART TEST, INIT 3 J1 CPU
-    uint4 init = 0;
+    uint2 init = 0;
     // BLUE heartbeat
     uint1 BLUE = 0;
     // GREEN whilst 0 to SPRAM and alu heartbeat
@@ -191,7 +191,7 @@ algorithm main(
                 }
                 case 31: {
                     if(copyaddress == 3336) {
-                        init = 2;
+                        init = 3;
                         copyaddress = 0;
                         RED = 0;
                     }
@@ -201,7 +201,7 @@ algorithm main(
             }
         }
 
-        // DUMP ROM to UART followed by CR LF
+        // UART TEST
         case 2: {
             BLUE = ~BLUE;
             switch(cycle) {
@@ -232,27 +232,15 @@ algorithm main(
                 case 31: {
                     if(copyaddress == 6672) {
                         copyaddress = 0;
-                        init = 3;
-                        BLUE = 0;
                     }
                 }
                 default: {
                 }
             }
         }
-        case 3: {
-            uart_in_data = 13;
-            uart_in_valid = 1;
-            init = 4;
-        }
-         case 4: {
-            uart_in_data = 10;
-            uart_in_valid = 1;
-            init = 5;
-        }
-       
+
         // EXECUTE J1 CPU
-        case 5: {
+        case 3: {
             switch(cycle) {
                 // Read st0, st1, rst0
                 case 0: {
@@ -493,8 +481,8 @@ algorithm main(
                                 sram_wren = 1;
                             } else {
                                 charout = 111; // DEBUG o
-                                //uart_in_data = bytes(st1).byte0;
-                                //uart_in_valid = 1;
+                                uart_in_data = bytes(st1).byte0;
+                                uart_in_valid = 1;
                                 BLUE = ~BLUE;
                             }
                         }
@@ -504,8 +492,8 @@ algorithm main(
                 // DEBUG after execute
                 case 24: {
                     // DEBUG
-                    uart_in_data = charout;
-                    uart_in_valid = 1;
+                    //uart_in_data = charout;
+                    //uart_in_valid = 1;
                 }
 
                 // Write to dstack and rstack
