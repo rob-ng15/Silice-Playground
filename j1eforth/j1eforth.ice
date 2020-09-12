@@ -114,7 +114,7 @@ algorithm main(
     
     // 16bit ROM with included compiled j1eForth from https://github.com/samawati/j1eforth
     bram uint16 rom[] = {
-        $include('j1test.inc')
+        $include('j1eforthROM.inc')
     };
     
     // cycle to control each stage, init to determine if copying rom to ram or executing
