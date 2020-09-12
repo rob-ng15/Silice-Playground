@@ -20,7 +20,8 @@ yosys -D HACKER=1 -p 'synth_ice40 -top top -json build.json' \
                         tinyfpga_bx_usbserial/usb/usb_uart_core.v \
                         tinyfpga_bx_usbserial/usb/usb_uart_i40.v \
                         build.v
-nextpnr-ice40 --up5k --package uwg30 --opt-timing --pcf pcf/fomu-hacker.pcf --json build.json --asc build.asc
+                        
+nextpnr-ice40 --up5k --freq 12 --opt-timing --package uwg30 --pcf pcf/fomu-hacker.pcf --json build.json --asc build.asc
 icepack build.asc build.bit
 icetime -d up5k -mtr build.rpt build.asc
 cp build.bit build.dfu
