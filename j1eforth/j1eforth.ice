@@ -5,7 +5,7 @@ bitfield instruction {
 
 bitfield literal {
     uint1  is_literal,
-    uint15 value
+    uint15 literalvalue
 }
 
 bitfield callbranch {
@@ -114,13 +114,13 @@ algorithm main(
     
     // 16bit ROM with included compiled j1eForth from https://github.com/samawati/j1eforth
     bram uint16 rom[] = {
-        $include('j1test.inc')
+        $include('j1eforthROM.inc')
     };
     
     // cycle to control each stage, init to determine if copying rom to ram or executing
     uint15 cycle = 0;
     // INIT 0 SPRAM, INIT 1 ROM to SPRAM, INIT 2 UART TEST, INIT 3 J1 CPU
-    uint2 init = 0;
+    uint4 init = 0;
     // BLUE heartbeat
     uint1 BLUE = 0;
     // GREEN whilst 0 to SPRAM and alu heartbeat
@@ -140,7 +140,9 @@ algorithm main(
     rgbB = BLUE;
     rgbG = GREEN;
     rgbR = RED;
-        
+
+    uart_out_ready = 1;
+    
     switch(init) {
         // ZERO SPRAM
         case 0: {
@@ -191,7 +193,7 @@ algorithm main(
                 }
                 case 31: {
                     if(copyaddress == 3336) {
-                        init = 3;
+                        init = 2;
                         copyaddress = 0;
                         RED = 0;
                     }
@@ -201,7 +203,7 @@ algorithm main(
             }
         }
 
-        // UART TEST
+        // DUMP ROM to UART followed by CR LF
         case 2: {
             BLUE = ~BLUE;
             switch(cycle) {
@@ -232,25 +234,37 @@ algorithm main(
                 case 31: {
                     if(copyaddress == 6672) {
                         copyaddress = 0;
+                        init = 3;
+                        BLUE = 0;
                     }
                 }
                 default: {
                 }
             }
         }
-
-        // EXECUTE J1 CPU
         case 3: {
+            uart_in_data = 13;
+            uart_in_valid = 1;
+            init = 4;
+        }
+         case 4: {
+            uart_in_data = 10;
+            uart_in_valid = 1;
+            init = 5;
+        }
+       
+        // EXECUTE J1 CPU
+        case 5: {
             switch(cycle) {
-                // Read st0, st1, rst0
+                // Read st1, rst0
                 case 0: {
                     st1 = dstack[dsp];
                     rst0 = rstack[rsp];
                 }
                 
-                // READ mem_din = [ust0]
+                // READ mem_din = [ust0] or is it mem_din = [st0] which should be equal at this point
                 case 3: {
-                    sram_addr = ust0 >> 1;
+                    sram_addr = st0 >> 1;
                     sram_wren = 0;
                 }
                 case 10: {
@@ -258,7 +272,7 @@ algorithm main(
                 }
                 
                 
-                // READ insn = [pc]
+                // READ insn = [pc] or is it insn = [upc] which should be equal at this point
                 case 11: {
                     sram_addr = pc;
                     sram_wren = 0;
@@ -271,7 +285,7 @@ algorithm main(
                 case 20: {
                     is_lit = literal(insn).is_literal;
                     is_alu = ( instruction(insn).is_litcallbranchalu == 3b011 );
-                    immediate = ( literal(insn).value );
+                    immediate = ( literal(insn).literalvalue );
                     pc_plus_1 = pc + 1;
                 }
                 case 21: {
@@ -351,7 +365,7 @@ algorithm main(
                                 ust0 = st0;
                                 upc = callbranch(insn).address;
                                 udsp = dsp;
-                                ursp = rsp;
+                                ursp = rsp + 1;
                                 urstkW = 1;
                                 urstkD = pc_plus_1 << 1;
                                 charout = 67; // DEBUG L
@@ -410,16 +424,17 @@ algorithm main(
                                         // UART or mem_din
                                         if(st0 > 16383) { // UART
                                             if( st0 == 16hf000 ) {
-                                                charout = 117; // DEBUG u                                                
-                                                if( uart_out_valid ) {
-                                                    ust0 = uart_out_data;
-                                                } else {
-                                                    ust0 = 0;
-                                                }
+                                                // INPUT from UART
+                                                charout = 117; // DEBUG u
+                                                RED = ~RED;
+                                                ust0 = uart_out_data;
                                                 uart_out_ready = 1;
                                             } else {
+                                                // STATUS from UART
+                                                // as 14b0 then txBusy rxAvailable
                                                 charout = 115; // DEBUG s
-                                                ust0 = {14b0, 1b0, uart_out_valid};
+                                                ust0 = {14b0, uart_in_valid, uart_out_valid};
+                                                BLUE = ~BLUE;
                                             }
                                         } else { // MEM
                                             charout = 109; // DEBUG m
@@ -474,16 +489,18 @@ algorithm main(
                         
                         // n2memt mem[t] = n
                         if( aluop(insn).is_n2memt ) {
-                            if( ust0 < 16384 ) {
+                            if( st0 < 16384 ) {
+                                // WRITE to SPRAM
                                 charout = 119; // DEBUG w
-                                sram_addr = ust0 >> 1;
+                                sram_addr = st0 >> 1;
                                 sram_data_in = st1;
                                 sram_wren = 1;
                             } else {
+                                // OUTPUT to UART
                                 charout = 111; // DEBUG o
                                 uart_in_data = bytes(st1).byte0;
                                 uart_in_valid = 1;
-                                BLUE = ~BLUE;
+                                GREEN = ~GREEN;
                             }
                         }
                     }
@@ -500,11 +517,9 @@ algorithm main(
                 case 29: {
                     if( udstkW ) {
                         dstack[udsp] = st0;
-                        RED = ~RED;
                     }
                     if( urstkW ) {
                         rstack[ursp] = urstkD;
-                        GREEN = ~GREEN;
                     }
                 }
                
