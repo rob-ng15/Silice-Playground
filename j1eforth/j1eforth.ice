@@ -118,7 +118,7 @@ algorithm main(
     };
     
     // cycle to control each stage, init to determine if copying rom to ram or executing
-    uint15 cycle = 0;
+    uint5 cycle = 0;
     // INIT 0 SPRAM, INIT 1 ROM to SPRAM, INIT 2 UART TEST, INIT 3 J1 CPU
     uint4 init = 0;
     // BLUE heartbeat
@@ -133,6 +133,7 @@ algorithm main(
 
     // DEBUG charout
     uint8 charout = 0;
+    uint8 uart_character = 0;
     
     // Start of main loop
     while(1) {
@@ -141,8 +142,6 @@ algorithm main(
     rgbG = GREEN;
     rgbR = RED;
 
-    uart_out_ready = 1;
-    
     switch(init) {
         // ZERO SPRAM
         case 0: {
@@ -193,7 +192,7 @@ algorithm main(
                 }
                 case 31: {
                     if(copyaddress == 3336) {
-                        init = 2;
+                        init = 3;
                         copyaddress = 0;
                         RED = 0;
                     }
@@ -203,7 +202,7 @@ algorithm main(
             }
         }
 
-        // DUMP ROM to UART followed by CR LF
+        // DUMP ROM to UART
         case 2: {
             BLUE = ~BLUE;
             switch(cycle) {
@@ -242,19 +241,40 @@ algorithm main(
                 }
             }
         }
+
+        // Wait for keypress
         case 3: {
-            uart_in_data = 13;
+            if(uart_out_valid) {
+                switch(uart_out_data)
+                {
+                    // SPACE initialise the J1 CPU
+                    case 32: {
+                        charout = 35;
+                        init = 5;
+                    }
+                    // default return ?
+                    default: {
+                        charout = 63;
+                    }
+                }
+            // Output the return character
+            uart_in_data = charout;
             uart_in_valid = 1;
-            init = 4;
+            uart_out_ready = 1;
+            }
         }
-         case 4: {
-            uart_in_data = 10;
-            uart_in_valid = 1;
-            init = 5;
-        }
-       
+        
         // EXECUTE J1 CPU
         case 5: {
+            // READ from UART if character available and store
+            if(uart_out_valid) {
+                RED = ~RED;
+                uart_character = uart_out_data;
+                uart_out_ready = 1;
+            } else {
+                uart_character = 0;
+            }
+            
             switch(cycle) {
                 // Read st1, rst0
                 case 0: {
@@ -426,14 +446,16 @@ algorithm main(
                                             if( st0 == 16hf000 ) {
                                                 // INPUT from UART
                                                 charout = 117; // DEBUG u
-                                                RED = ~RED;
-                                                ust0 = uart_out_data;
-                                                uart_out_ready = 1;
+                                                ust0 = {8b0, uart_character};
                                             } else {
                                                 // STATUS from UART
                                                 // as 14b0 then txBusy rxAvailable
                                                 charout = 115; // DEBUG s
-                                                ust0 = {14b0, uart_in_valid, uart_out_valid};
+                                                if( uart_character == 0 ) {
+                                                    ust0 = {14b0, uart_in_valid, 1b0};
+                                                } else {
+                                                    ust0 = {14b0, uart_in_valid, 1b1};
+                                                }
                                                 BLUE = ~BLUE;
                                             }
                                         } else { // MEM
@@ -539,7 +561,7 @@ algorithm main(
                 default: {}
                 
             } // switch(cycle)
-        } // case(init=2)
+        } // case(init=5)
         
     } // switch(init)   
 
