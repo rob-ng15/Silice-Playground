@@ -18,4 +18,4 @@ Upload to the FOMU using dfu-util -D build.dfu
 
 Connect to the FOMU via /dev/ttyACMx (as per your machine) using screen / putty / minicom as preferred.
 
-You'll receive back a string of characters representing the instruction being executed presently. Starts working, but fails after approximately 100 instructions where it gets stcuk in some kind of loop. Not yet managed to find out why!
+You'll receive back a dump of the ROM which has been copied to RAM followed by a string of characters representing the instruction being executed presently. Starts working, but fails after approximately 100 instructions where it gets stcuk in some kind of loop. Not yet managed to find out why!
