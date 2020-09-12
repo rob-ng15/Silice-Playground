@@ -1,6 +1,13 @@
 #!/bin/bash
 rm build*
 
+PIN_DEF = fomu-hacker.pcf
+
+DEVICE = up5k
+PACKAGE = uwg30
+
+CLK_MHZ = 12
+
 silice -f frameworks/fomu_USB_ACM.v $1 -o build.v
 
 yosys -D HACKER=1 -p 'synth_ice40 -top top -json build.json' \
@@ -20,7 +27,7 @@ yosys -D HACKER=1 -p 'synth_ice40 -top top -json build.json' \
                         tinyfpga_bx_usbserial/usb/usb_uart_core.v \
                         tinyfpga_bx_usbserial/usb/usb_uart_i40.v \
                         build.v
-nextpnr-ice40 --up5k --package uwg30 --opt-timing --pcf pcf/fomu-hacker.pcf --json build.json --asc build.asc
+nextpnr-ice40 --up5k --package uwg30 --freq 12 --opt-timing --pcf pcf/fomu-hacker.pcf --json build.json --asc build.asc
 icepack build.asc build.bit
 icetime -d up5k -mtr build.rpt build.asc
 cp build.bit build.dfu
