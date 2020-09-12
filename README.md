@@ -20,7 +20,9 @@ GREEN will flash to indicate clearing of SPRAM, RED will flash to indicate copyi
 
 Connect to the FOMU via /dev/ttyACMx (as per your machine) using screen / putty / minicom as preferred.
 
-Waits for SPACE to be sent to initialise the J1 CPU, ? returned if not SPACE, # returned if SPACE.
-
 RED will flash to indicate character received (need to , GREEN will flash to indicate character being sent, BLUE will flash to indicate UART status being checked.
+
+cold (performs a reset)
+
+words (displays the list of known words)
 
