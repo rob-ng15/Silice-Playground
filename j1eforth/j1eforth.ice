@@ -121,10 +121,10 @@ algorithm main(
     uint16 copyaddress = 0;
     uint16 bramREAD = 0;
 
-    // UART buffer FIFO
-    uint8 uartBuffer[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    uint4 uartBufferNext = 0;
-    uint4 uartBufferTop = 0;
+    // UART buffer FIFO (32 character)
+    uint8 uartBuffer[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    uint5 uartBufferNext = 0;
+    uint5 uartBufferTop = 0;
     
     // Start of main loop
     while(1) {
