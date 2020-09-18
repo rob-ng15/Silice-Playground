@@ -1,8 +1,22 @@
 `define FOMU 1
 `default_nettype none
+// Correctly map pins for the iCE40UP5K SB_RGBA_DRV hard macro.
+// The variables EVT, PVT and HACKER are set from the yosys commandline e.g. yosys -D HACKER=1
+`ifdef EVT
+`define BLUEPWM  RGB0PWM
+`define REDPWM   RGB1PWM
+`define GREENPWM RGB2PWM
+`elsif HACKER
 `define BLUEPWM  RGB0PWM
 `define GREENPWM RGB2PWM
 `define REDPWM   RGB1PWM
+`elsif PVT
+`define GREENPWM RGB0PWM
+`define REDPWM   RGB1PWM
+`define BLUEPWM  RGB2PWM
+`else
+`error_board_not_supported
+`endif
 $$FOMU=1
 $$HARDWARE=1
 
@@ -57,24 +71,75 @@ module top(
 
     // SPRAM driver
     // https://github.com/damdoy/ice40_ultraplus_examples/blob/master/spram/top.v
-    // 65536 x 16bit
-    reg [15:0] sram_addr;
-    wire [15:0] sram_data_in;
-    wire [15:0] sram_data_out;
+    // 4 x 16384 x 16bit
+    reg [15:0] sram_addr;               // 16bit 0-65535 address
+    reg [15:0] sram_data_read;          // data read from SPRAM after bank switching
+    wire [15:0] sram_data_in;           // to SB_SPRAM256KA
+    wire [15:0] sram_data_out00;        // from SB_SPRAM256KA bank 00
+    wire [15:0] sram_data_out01;        // from SB_SPRAM256KA bank 01
+    wire [15:0] sram_data_out10;        // from SB_SPRAM256KA bank 10
+    wire [15:0] sram_data_out11;        // from SB_SPRAM256KA bank 11
     wire sram_wren;
-    SB_SPRAM256KA spram (
+
+    always @(posedge clk) begin
+        // SPRAM automatic bank switching for reading data from SB_SPRAM256KA banks
+        case( sram_addr[15:14])
+            2'b00: sram_data_read = sram_data_out00;
+            2'b01: sram_data_read = sram_data_out01;
+            2'b10: sram_data_read = sram_data_out10;
+            2'b11: sram_data_read = sram_data_out11;
+        endcase
+    end
+
+    SB_SPRAM256KA spram00 (
         .ADDRESS(sram_addr),
         .DATAIN(sram_data_in),
         .MASKWREN(4'b1111),
         .WREN(sram_wren),
-        .CHIPSELECT(1'b1),
+        .CHIPSELECT(sram_addr[15:14]==2'b00),
         .CLOCK(clk_48mhz),
         .STANDBY(1'b0),
         .SLEEP(1'b0),
         .POWEROFF(1'b1),
-        .DATAOUT(sram_data_out)
+        .DATAOUT(sram_data_out00)
     );
-    
+    SB_SPRAM256KA spram01 (
+        .ADDRESS(sram_addr),
+        .DATAIN(sram_data_in),
+        .MASKWREN(4'b1111),
+        .WREN(sram_wren),
+        .CHIPSELECT(sram_addr[15:14]==2'b01),
+        .CLOCK(clk_48mhz),
+        .STANDBY(1'b0),
+        .SLEEP(1'b0),
+        .POWEROFF(1'b1),
+        .DATAOUT(sram_data_out01)
+    );
+    SB_SPRAM256KA spram10 (
+        .ADDRESS(sram_addr),
+        .DATAIN(sram_data_in),
+        .MASKWREN(4'b1111),
+        .WREN(sram_wren),
+        .CHIPSELECT(sram_addr[15:14]==2'b10),
+        .CLOCK(clk_48mhz),
+        .STANDBY(1'b0),
+        .SLEEP(1'b0),
+        .POWEROFF(1'b1),
+        .DATAOUT(sram_data_out10)
+    );
+    SB_SPRAM256KA spram11 (
+        .ADDRESS(sram_addr),
+        .DATAIN(sram_data_in),
+        .MASKWREN(4'b1111),
+        .WREN(sram_wren),
+        .CHIPSELECT(sram_addr[15:14]==2'b11),
+        .CLOCK(clk_48mhz),
+        .STANDBY(1'b0),
+        .SLEEP(1'b0),
+        .POWEROFF(1'b1),
+        .DATAOUT(sram_data_out11)
+    );
+
     // Generate RESET
     reg [31:0] RST_d;
     reg [31:0] RST_q;
@@ -85,7 +150,7 @@ module top(
     RST_d = RST_q >> 1;
     end
 
-    always @(posedge clk_48mhz) begin
+    always @(posedge clk) begin
     if (ready) begin
         RST_q <= RST_d;
     end else begin
@@ -115,8 +180,7 @@ module top(
     wire uart_out_valid;
     wire uart_out_ready;
 
-    // usb uart - this instanciates the entire USB device.    
-
+    // usb uart - this instanciates the entire USB device.
     usb_uart uart (
         .clk_48mhz  (clk_48mhz),
         .reset      (reset),
@@ -138,21 +202,21 @@ module top(
     // USB Host Detect Pull Up
     assign usb_dp_pu = 1'b1;
     
+    
     M_main __main(
-    .clock          (clk_48mhz),
-    .reset          (RST_q[0]),
-    .out_rgbB       (rgbB),
-    .out_rgbG       (rgbG),
-    .out_rgbR       (rgbR),
-    .in_run         (run_main),
+    .clock        (clk_48mhz),
+    .reset        (RST_q[0]),
+    .out_rgbLED   ({rgbR, rgbG, rgbB}),
+    .in_buttons   ({user_4, user_3, user_2, user_1}),
+    .in_run       (run_main),
 
     // SPRAM
-    .out_sram_addr      (sram_addr),
-    .out_sram_data_in   (sram_data_in),
-    .in_sram_data_out   (sram_data_out),
-    .out_sram_wren      (sram_wren),
-    
-    // UART
+    .out_sram_address    (sram_addr),
+    .out_sram_data_write (sram_data_in),
+    .in_sram_data_read   (sram_data_read),
+    .out_sram_readwrite  (sram_wren),
+   
+    // uart pipeline in
     .out_uart_in_data( uart_in_data ),
     .out_uart_in_valid( uart_in_valid ),
     .in_uart_in_ready( uart_in_ready ),
@@ -160,6 +224,6 @@ module top(
     .in_uart_out_data( uart_out_data ),
     .in_uart_out_valid( uart_out_valid ),
     .out_uart_out_ready( uart_out_ready  )
-    );
+);
 
 endmodule
