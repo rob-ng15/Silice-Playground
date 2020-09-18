@@ -48,17 +48,24 @@ bitfield nibbles {
     uint4   nibble0
 }
 
+// Simplify SPRAM bank switching (for reading, writing is automatic)
+bitfield bankswitch {
+    uint2   bank,
+    uint14  address
+}
+
 algorithm main(
     // RGB LED
-    output uint1    rgbB,
-    output uint1    rgbG,
-    output uint1    rgbR,
+    output  uint3   rgbLED,
+    
+    // USER buttons
+   input   uint4   buttons,
 
     // SPRAM Interface
-    output uint16   sram_addr,
-    output uint16   sram_data_in,
-    input  uint16   sram_data_out,
-    output uint1    sram_wren,
+    output uint16   sram_address,
+    output uint16   sram_data_write,
+    input  uint16   sram_data_read,
+    output uint1    sram_readwrite,
 
     // UART Interface
     output   uint8  uart_in_data,
@@ -114,9 +121,6 @@ algorithm main(
     uint4 CYCLE = 0;
     uint2 INIT = 0;
     
-    // FOMU LEDS
-    uint1 BLUE = 0; uint1 GREEN = 0; uint1 RED = 0;
-    
     // Address for 0 to SPRAM, copying ROM, plus storage
     uint16 copyaddress = 0;
     uint16 bramREAD = 0;
@@ -126,321 +130,283 @@ algorithm main(
     uint5 uartBufferNext = 0;
     uint5 uartBufferTop = 0;
     
-    // Start of main loop
-    while(1) {
-    
-    rgbB = BLUE;
-    rgbG = GREEN;
-    rgbR = RED;
-
-    switch(INIT) {
-        // INIT is 0 ZERO SPRAM
-        case 0: {
-            GREEN = ~GREEN;
-            switch(CYCLE) {
-                case 0: {
-                    // Setup WRITE to SPRAM
-                    sram_addr = copyaddress;
-                    sram_data_in = 0;
-                    sram_wren = 1;
-                }
-                case 3: {
-                    sram_wren = 0;
-                    copyaddress = copyaddress + 1;
-                }
-                case 15: {
-                    if(copyaddress == 16384) {
-                        INIT = 1;
-                        GREEN = 0;
-                        copyaddress = 0;
-                    }
+    // INIT is 0 ZERO SPRAM
+    while( INIT==0 ) {
+        switch(CYCLE) {
+            case 0: {
+                // Setup WRITE to SPRAM
+                sram_address = copyaddress;
+                sram_data_write = 0;
+                sram_readwrite = 1;
+            }
+            case 3: {
+                sram_readwrite = 0;
+                copyaddress = copyaddress + 1;
+            }
+            case 15: {
+                if(copyaddress == 16384) {
+                    INIT = 1;
+                    copyaddress = 0;
                 }
             }
+        }
+        CYCLE = CYCLE + 1;
+    }
+    
+    // INIT is 1 COPY ROM TO SPRAM
+    while( INIT==1) {
+        switch(CYCLE) {
+            case 0: {
+                // Setup READ from ROM
+                rom.addr = copyaddress;
+                rom.wenable = 0;
+            }
+            case 1: {
+                // READ from ROM
+                bramREAD = rom.rdata;
+            }
+            case 2: {
+                // WRITE to SPRAM
+                sram_address = copyaddress;
+                sram_data_write = bramREAD;
+                sram_readwrite = 1;
+            }
+            case 14: {
+                copyaddress = copyaddress + 1;
+                sram_readwrite = 0;
+            }
+            case 15: {
+                if(copyaddress == 3336) {
+                    INIT = 3;
+                    copyaddress = 0;
+                }
+            }
+            default: {
+            }
+        }
+        CYCLE = CYCLE + 1;
+    }
+
+    // INIT is 3 EXECUTE J1 CPU
+    while( INIT==3 ) {
+        // READ from UART if character available and store
+        if(uart_out_valid) {
+            uartBuffer[uartBufferNext] = uart_out_data;
+            uartBufferTop = uartBufferTop + 1;
+            uart_out_ready = 1;
         }
         
-        // INIT is 1 COPY ROM TO SPRAM
-        case 1: {
-            RED = ~RED;
-            switch(CYCLE) {
-                case 0: {
-                    // Setup READ from ROM
-                    rom.addr = copyaddress;
-                    rom.wenable = 0;
-                }
-                case 1: {
-                    // READ from ROM
-                    bramREAD = rom.rdata;
-                }
-                case 2: {
-                    // WRITE to SPRAM
-                    sram_addr = copyaddress;
-                    sram_data_in = bramREAD;
-                    sram_wren = 1;
-                }
-                case 14: {
-                    copyaddress = copyaddress + 1;
-                    sram_wren = 0;
-                }
-                case 15: {
-                    if(copyaddress == 3336) {
-                        INIT = 2;
-                        copyaddress = 0;
-                        RED = 0;
-                    }
-                }
-                default: {
-                }
+        switch(CYCLE) {
+            // Read stackNext, rStackTop
+            case 0: {
+                stackNext = dstack[dsp];
+                rStackTop = rstack[rsp];
+            
+                // start READ memoryInput = [stackTop] result ready in 2 cycles
+                sram_address = stackTop >> 1;
+                sram_readwrite = 0;
             }
-        }
-
-        // INIT is 2 EXECUTE J1 CPU
-        case 2: {
-            // READ from UART if character available and store
-            if(uart_out_valid) {
-                uartBuffer[uartBufferNext] = uart_out_data;
-                uartBufferTop = uartBufferTop + 1;
-                uart_out_ready = 1;
+            case 4: {
+                // wait then read the data from SPRAM
+                memoryInput = sram_data_read;
             }
             
-            switch(CYCLE) {
-                // Read stackNext, rStackTop
-                case 0: {
-                    stackNext = dstack[dsp];
-                    rStackTop = rstack[rsp];
-                
-                    // start READ memoryInput = [stackTop] result ready in 2 cycles
-                    sram_addr = stackTop >> 1;
-                    sram_wren = 0;
-                }
-                case 3: {
-                    // wait 2 CYCLES then read the data from SPRAM
-                    memoryInput = sram_data_out;
-                }
-                
-                 // start READ instruction = [pc] result ready in 2 cycles
-                case 4: {
-                    sram_addr = pc;
-                    sram_wren = 0;
-                }
-                case 8: {
-                    // wait 2 CYCLES then read the instruction from SPRAM
-                    instruction = sram_data_out;
-                }
+            case 5: {
+                // start READ instruction = [pc] result ready in 2 cycles
+                sram_address = pc;
+                sram_readwrite = 0;
+            }
 
-                // J1 CPU Instruction Execute
-                case 9: {
-                    // +---------------------------------------------------------------+
-                    // | F | E | D | C | B | A | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
-                    // +---------------------------------------------------------------+
-                    // | 1 |                    LITERAL VALUE                          |
-                    // +---------------------------------------------------------------+
-                    // | 0 | 0 | 0 |            BRANCH TARGET ADDRESS                  |
-                    // +---------------------------------------------------------------+
-                    // | 0 | 0 | 1 |            CONDITIONAL BRANCH TARGET ADDRESS      |
-                    // +---------------------------------------------------------------+
-                    // | 0 | 1 | 0 |            CALL TARGET ADDRESS                    |
-                    // +---------------------------------------------------------------+
-                    // | 0 | 1 | 1 |R2P| ALU OPERATION |T2N|T2R|N2A|   | RSTACK| DSTACK|
-                    // +---------------------------------------------------------------+
-                    // | F | E | D | C | B | A | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
-                    // +---------------------------------------------------------------+
-                    // 
-                    // T   : Top of data stack
-                    // N   : Next on data stack
-                    // PC  : Program Counter
-                    // 
-                    // LITERAL VALUES : push a value onto the data stack
-                    // CONDITIONAL    : BRANCHS pop and test the T
-                    // CALLS          : PC+1 onto the return stack
-                    // 
-                    // T2N : Move T to N
-                    // T2R : Move T to top of return stack
-                    // N2A : STORE T to memory location addressed by N
-                    // R2P : Move top of return stack to PC
-                    // 
-                    // RSTACK and DSTACK are signed values (twos compliment) that are
-                    // the stack delta (the amount to increment or decrement the stack
-                    // by for their respective stacks: return and data)
+            case 9: {
+                // wait then read the instruction from SPRAM
+                instruction = sram_data_read;
+            }
 
-                    if(is_lit) {
-                        // LITERAL Push value onto stack
-                        newStackTop = immediate;
-                        newPC = pcPlusOne;
-                        newDSP = dsp + 1;
-                        newRSP = rsp;
-                    } else {
-                        switch( callbranch(instruction).is_callbranchalu ) { // BRANCH 0BRANCH CALL ALU
-                            case 2b00: {
-                                // BRANCH
-                                newStackTop = stackTop;
-                                newPC = callbranch(instruction).address;
-                                newDSP = dsp;
-                                newRSP = rsp;
-                            }
-                            case 2b01: {
-                                // 0BRANCH
-                                newStackTop = stackNext;
-                                if( stackTop == 0 ) {
-                                    newPC = callbranch(instruction).address;
-                                } else {
-                                    newPC = pcPlusOne;
-                                }
-                                newDSP = dsp - 1;
-                                newRSP = rsp;
-                            }
-                            case 2b10: {
-                                // CALL
-                                newStackTop = stackTop;
-                                newPC = callbranch(instruction).address;
-                                newDSP = dsp;
-                                newRSP = rsp + 1;
-                                rstackWData = pcPlusOne << 1;
-                            }
-                            case 2b11: {
-                                // ALU
-                                switch( aluop(instruction).operation ) { // ALU Operation
-                                    case 4b0000: {newStackTop = stackTop;
-                                    }
-                                    
-                                    case 4b0001: {newStackTop = stackNext;
-                                    }
-                                    
-                                    case 4b0010: {newStackTop = stackTop + stackNext;
-                                    }
-                                    
-                                    case 4b0011: {newStackTop = stackTop & stackNext;
-                                    }
-                                    
-                                    case 4b0100: {newStackTop = stackTop | stackNext;
-                                    }
+            // J1 CPU Instruction Execute
+            case 10: {
+                // +---------------------------------------------------------------+
+                // | F | E | D | C | B | A | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+                // +---------------------------------------------------------------+
+                // | 1 |                    LITERAL VALUE                          |
+                // +---------------------------------------------------------------+
+                // | 0 | 0 | 0 |            BRANCH TARGET ADDRESS                  |
+                // +---------------------------------------------------------------+
+                // | 0 | 0 | 1 |            CONDITIONAL BRANCH TARGET ADDRESS      |
+                // +---------------------------------------------------------------+
+                // | 0 | 1 | 0 |            CALL TARGET ADDRESS                    |
+                // +---------------------------------------------------------------+
+                // | 0 | 1 | 1 |R2P| ALU OPERATION |T2N|T2R|N2A|   | RSTACK| DSTACK|
+                // +---------------------------------------------------------------+
+                // | F | E | D | C | B | A | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+                // +---------------------------------------------------------------+
+                // 
+                // T   : Top of data stack
+                // N   : Next on data stack
+                // PC  : Program Counter
+                // 
+                // LITERAL VALUES : push a value onto the data stack
+                // CONDITIONAL    : BRANCHS pop and test the T
+                // CALLS          : PC+1 onto the return stack
+                // 
+                // T2N : Move T to N
+                // T2R : Move T to top of return stack
+                // N2A : STORE T to memory location addressed by N
+                // R2P : Move top of return stack to PC
+                // 
+                // RSTACK and DSTACK are signed values (twos compliment) that are
+                // the stack delta (the amount to increment or decrement the stack
+                // by for their respective stacks: return and data)
 
-                                    case 4b0101: {newStackTop = stackTop ^ stackNext;
-                                    }
-
-                                    case 4b0110: {newStackTop = ~stackTop;
-                                    }
-
-                                    case 4b0111: {newStackTop = {16{(stackNext == stackTop)}};
-                                    }
-
-                                    case 4b1000: {newStackTop = {16{(__signed(stackNext) < __signed(stackTop))}};
-                                    }
-                                    
-                                    case 4b1001: {newStackTop = stackNext >> nibbles(stackTop).nibble0;
-                                    }
-
-                                    case 4b1010: {newStackTop = stackTop - 1;
-                                    }
-
-                                    case 4b1011: {newStackTop = rStackTop;
-                                    }
-
-                                    case 4b1100: {
-                                        // UART or memoryInput
-                                        if(stackTop > 16383) {
-                                            // UART
-                                            if( stackTop == 16hf000 ) {
-                                                // INPUT from UART
-                                                newStackTop = { 8b0, uartBuffer[uartBufferNext] };
-                                                uartBufferNext = uartBufferNext + 1;
-                                                RED = ~RED;
-                                            } else {
-                                                // STATUS from UART
-                                                // as 14b0 then txBusy rxAvailable
-                                                if( uartBufferNext == uartBufferTop ) {
-                                                    newStackTop = {14b0, uart_in_valid, 1b0};
-                                                } else {
-                                                    newStackTop = {14b0, uart_in_valid, 1b1};
-                                                }
-                                                BLUE = ~BLUE;
-                                            }
-                                        } else {
-                                            // memoryInput
-                                            newStackTop = memoryInput;
-                                        }
-                                    }
-                                    
-                                    case 4b1101: {newStackTop = stackNext << nibbles(stackTop).nibble0;
-                                    }
-
-                                    case 4b1110: {newStackTop = {rsp, 3b000, dsp};
-                                    }
-
-                                    case 4b1111: {newStackTop = {16{(__unsigned(stackNext) < __unsigned(stackTop))}};
-                                    }
-                                } // ALU Operation
-                                
-                                // UPDATE newDSP newRSP
-                                newDSP = dsp + ddelta;
-                                newRSP = rsp + rdelta;
-                                rstackWData = stackTop;
-                            } // ALU
+                if(is_lit) {
+                    // LITERAL Push value onto stack
+                    newStackTop = immediate;
+                    newPC = pcPlusOne;
+                    newDSP = dsp + 1;
+                    newRSP = rsp;
+                } else {
+                    switch( callbranch(instruction).is_callbranchalu ) { // BRANCH 0BRANCH CALL ALU
+                        case 2b00: {
+                            // BRANCH
+                            newStackTop = stackTop;
+                            newPC = callbranch(instruction).address;
+                            newDSP = dsp;
+                            newRSP = rsp;
                         }
-                    }
-                } // J1 CPU Instruction Execute
-
-                // update pc and perform mem[t] = n
-                case 10: {
-                    if( is_alu ) {
-                        // r2pc
-                        if( aluop(instruction).is_r2pc ) {
-                            newPC = rStackTop >> 1;
-                        } else {
-                            newPC = pcPlusOne;
-                        }
-                        
-                        // n2memt mem[t] = n
-                        if( aluop(instruction).is_n2memt ) {
-                            if( stackTop < 16384 ) {
-                                // WRITE to SPRAM
-                                sram_addr = stackTop >> 1;
-                                sram_data_in = stackNext;
-                                sram_wren = 1;
+                        case 2b01: {
+                            // 0BRANCH
+                            newStackTop = stackNext;
+                            if( stackTop == 0 ) {
+                                newPC = callbranch(instruction).address;
                             } else {
+                                newPC = pcPlusOne;
+                            }
+                            newDSP = dsp - 1;
+                            newRSP = rsp;
+                        }
+                        case 2b10: {
+                            // CALL
+                            newStackTop = stackTop;
+                            newPC = callbranch(instruction).address;
+                            newDSP = dsp;
+                            newRSP = rsp + 1;
+                            rstackWData = pcPlusOne << 1;
+                        }
+                        case 2b11: {
+                            // ALU
+                            switch( aluop(instruction).operation ) {
+                                case 4b0000: {newStackTop = stackTop;}
+                                case 4b0001: {newStackTop = stackNext;}
+                                case 4b0010: {newStackTop = stackTop + stackNext;}
+                                case 4b0011: {newStackTop = stackTop & stackNext;}
+                                case 4b0100: {newStackTop = stackTop | stackNext;}
+                                case 4b0101: {newStackTop = stackTop ^ stackNext;}
+                                case 4b0110: {newStackTop = ~stackTop;}
+                                case 4b0111: {newStackTop = {16{(stackNext == stackTop)}};}
+                                case 4b1000: {newStackTop = {16{(__signed(stackNext) < __signed(stackTop))}};}
+                                case 4b1001: {newStackTop = stackNext >> nibbles(stackTop).nibble0;}
+                                case 4b1010: {newStackTop = stackTop - 1;}
+                                case 4b1011: {newStackTop = rStackTop;}
+                                case 4b1100: {
+                                // UART or memoryInput
+                                    switch( stackTop ) {
+                                        case 16hf000: {
+                                            // INPUT from UART
+                                            newStackTop = { 8b0, uartBuffer[uartBufferNext] };
+                                            uartBufferNext = uartBufferNext + 1;
+                                        } 
+                                        case 16hf001: {
+                                            // STATUS from UART
+                                            // as 14b0 then txBusy rxAvailable
+                                            if( uartBufferNext == uartBufferTop ) {
+                                                newStackTop = {14b0, uart_in_valid, 1b0};
+                                            } else {
+                                                newStackTop = {14b0, uart_in_valid, 1b1};
+                                            }
+
+                                        }
+                                        case 16hf003: {
+                                            // user buttons
+                                            newStackTop = {12b0, buttons};
+                                        }
+                                        default: {newStackTop = memoryInput;}
+                                    }
+                                }
+                                case 4b1101: {newStackTop = stackNext << nibbles(stackTop).nibble0;}
+                                case 4b1110: {newStackTop = {rsp, 3b000, dsp};}
+                                case 4b1111: {newStackTop = {16{(__unsigned(stackNext) < __unsigned(stackTop))}};}
+                            } // ALU Operation
+                            
+                            // UPDATE newDSP newRSP
+                            newDSP = dsp + ddelta;
+                            newRSP = rsp + rdelta;
+                            rstackWData = stackTop;
+                        } // ALU
+                    }
+                }
+            } // J1 CPU Instruction Execute
+
+            // update pc and perform mem[t] = n
+            case 11: {
+                if( is_alu ) {
+                    // r2pc
+                    if( aluop(instruction).is_r2pc ) {
+                        newPC = rStackTop >> 1;
+                    } else {
+                        newPC = pcPlusOne;
+                    }
+                    
+                    // n2memt mem[t] = n
+                    if( aluop(instruction).is_n2memt ) {
+                        switch( stackTop ) {
+                            default: {
+                                // WRITE to SPRAM
+                                sram_address = stackTop >> 1;
+                                sram_data_write = stackNext;
+                                sram_readwrite = 1;
+                            }
+                            case 16hf000: {
                                 // OUTPUT to UART
                                 uart_in_data = bytes(stackNext).byte0;
                                 uart_in_valid = 1;
-                                GREEN = ~GREEN;
+                            }
+                            case 16hf002: {
+                                // OUTPUT to rgbLED
+                                rgbLED = stackNext;
                             }
                         }
                     }
                 }
-                
                 // Write to dstack and rstack
-                case 11: {
-                    if( dstackWrite ) {
-                        dstack[newDSP] = stackTop;
-                    }
-                    if( rstackWrite ) {
-                        rstack[newRSP] = rstackWData;
-                    }
+                if( dstackWrite ) {
+                    dstack[newDSP] = stackTop;
                 }
-               
-                // Update dsp, rsp, pc, stackTop
-                case 12: {
-                    dsp = newDSP;
-                    pc = newPC;
-                    stackTop = newStackTop;
-                    rsp = newRSP;
+                if( rstackWrite ) {
+                    rstack[newRSP] = rstackWData;
                 }
-                
-                // reset sram_wren
-                case 15: {
-                    sram_wren = 0;
-                }
-                
-                default: {}
-                
-            } // switch(CYCLE)
-        } // case(INIT=2 execute J1 CPU)
+            }
+            
+            // Update dsp, rsp, pc, stackTop
+            case 13: {
+                dsp = newDSP;
+                pc = newPC;
+                stackTop = newStackTop;
+                rsp = newRSP;
+            }
+            
+            // reset sram_readwrite
+            case 15: {
+                sram_readwrite = 0;
+            }
+            
+            default: {}
+        } // switch(CYCLE)
         
-    } // switch(INIT)   
+        // Reset UART
+        if(uart_in_ready & uart_in_valid) {
+            uart_in_valid = 0;
+        }
+    
+        CYCLE = CYCLE + 1;
+    } // (INIT==3 execute J1 CPU)
 
-    // Reset UART
-    if(uart_in_ready & uart_in_valid) {
-        uart_in_valid = 0;
-    }
-   
-    CYCLE = CYCLE + 1;
-    } // while(1)
 }
