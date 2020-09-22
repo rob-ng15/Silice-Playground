@@ -129,7 +129,8 @@ algorithm main(
     dualport_bram uint8 uartOutBuffer[32] = uninitialized;
     uint5 uartOutBufferNext = 0;
     uint5 uartOutBufferTop = 0;
-
+    uint5 newuartOutBufferTop = 0;
+    
     // bram for dstack and rstack write enable, maintained low, pulsed high (code from @sylefeb)
     dstack.wenable         := 0;  
     rstack.wenable         := 0;
@@ -219,6 +220,7 @@ algorithm main(
             uart_in_valid     = 1;
             uartOutBufferNext = uartOutBufferNext + 1;
         }
+        uartOutBufferTop = newuartOutBufferTop;
         
         switch(CYCLE) {
             // Read stackNext, rStackTop
@@ -398,10 +400,10 @@ algorithm main(
                             }
                             case 16hf000: {
                                 // OUTPUT to UART
-                                //uartOutBuffer.wdata1 = bytes(stackNext).byte0;
-                                //uartOutBufferTop = uartOutBufferTop + 1;
-                                uart_in_data = bytes(stackNext).byte0;
-                                uart_in_valid = 1;
+                                uartOutBuffer.wdata1 = bytes(stackNext).byte0;
+                                newuartOutBufferTop = uartOutBufferTop + 1;
+                                //uart_in_data = bytes(stackNext).byte0;
+                                //uart_in_valid = 1;
                             }
                             case 16hf002: {
                                 // OUTPUT to rgbLED
