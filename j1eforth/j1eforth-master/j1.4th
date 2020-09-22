@@ -67,6 +67,11 @@ a: n<<t 0d00 ;
 a: dsp  0e00 ;
 a: nu<t 0f00 ;
 
+a: t==0 0010 ;
+a: t<>0 0110 ;
+a: n<>t 0210 ;
+a: t+1  0310 ;
+
 a: t->n 0080 or ;
 a: t->r 0040 or ;
 a: n->[t] 0020 or ;
@@ -95,7 +100,7 @@ variable tlast
 variable tuser
 
 0001 constant =ver
-0004 constant =ext
+0001 constant =ext
 0040 constant =comp
 0080 constant =imed
 7f1f constant =mask
@@ -227,6 +232,11 @@ variable tuser
     ]asm t r-1 alu
     t r-1 alu asm[ ;
 
+: 0= ]asm t==0 alu asm[ ;
+: 0<> ]asm t<>0 alu asm[ ;
+: <> ]asm n<>t d-1 alu asm[ ;
+: 1+ ]asm t+1 alu asm[ ;
+
 : dup@ ]asm [t] t->n d+1 alu asm[ ;
 : dup>r ]asm t t->r r+1 alu asm[ ;
 : 2dupxor ]asm t^n t->n d+1 alu asm[ ;
@@ -337,9 +347,10 @@ t: r@ r> r> dup >r swap >r t; compile-only
 t: @ ( a -- w ) @ t;
 t: ! ( w a -- ) ! t;
 
-t: <> = invert t;
+t: <> <> t;
 t: 0< 0 literal < t;
-t: 0= 0 literal = t;
+t: 0= 0= t;
+t: 0<> 0<> t;
 t: > swap < t;
 t: 0> 0 literal swap < t;
 t: >= < invert t;
@@ -347,7 +358,7 @@ t: tuck swap over t;
 t: -rot swap >r swap r> t;
 t: 2/ 1 literal rshift t;
 t: 2* 1 literal lshift t;
-t: 1+ 1 literal + t;
+t: 1+ 1+ t;
 t: sp@ dsp ff literal and t;
 t: execute ( ca -- ) >r t;
 t: bye ( -- ) f002 literal ! t;
@@ -493,7 +504,7 @@ t: number? ( a -- n t | a f )
      else r> r> 2drop 2drop 0 literal
       then dup
    then r> 2drop r> base ! t;
-t: ?rx ( -- c t | f ) f001 literal @ 1 literal and 0= invert t;
+t: ?rx ( -- c t | f ) f001 literal @ 1 literal and 0<> t;
 t: tx! ( c -- )
    begin
     f001 literal @ 2 literal and 0=
@@ -873,7 +884,7 @@ t: words
    repeat t;
 t: ver ( -- n ) =ver literal 100 literal * =ext literal + t;
 t: hi ( -- )
-   cr ."| $literal eforth j1 v"
+   cr ."| $literal eforth j1+ v"
 	base @ hex
 	ver <# # # 2e literal hold # #>
 	type base ! cr t;
