@@ -27,7 +27,7 @@ bitfield aluop {
     uint1   is_t2n,                 // top to next in stack
     uint1   is_t2r,                 // top to return stack
     uint1   is_n2memt,              // write to memory       
-    uint1   pad,                    // spare
+    uint1   is_j1j1plus,            // Original J1 or extra J1+ alu operations
     uint1   rdelta1,                // two's complement adjustment for rsp
     uint1   rdelta0,
     uint1   ddelta1,                // two's complement adjustment for dsp
@@ -46,12 +46,6 @@ bitfield nibbles {
     uint4   nibble2,
     uint4   nibble1,
     uint4   nibble0
-}
-
-// Simplify SPRAM bank switching (for reading, writing is automatic)
-bitfield bankswitch {
-    uint2   bank,
-    uint14  address
 }
 
 algorithm main(
@@ -92,14 +86,16 @@ algorithm main(
     uint13  newPC = uninitialized;
 
     // dstack 33x16bit (as 32 array + stackTop) and pointer, next pointer, write line, delta
-    uint16 dstack[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    //uint16 dstack[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    bram uint16 dstack[32] = uninitialized; // bram (code from @sylefeb)
     uint16  stackTop = 0;
     uint5   dsp = 0;
     uint5   newDSP = uninitialized;
     uint16  newStackTop = uninitialized;
 
     // rstack 32x16bit and pointer, next pointer, write line
-    uint16 rstack[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    //uint16 rstack[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    bram uint16 rstack[32] = uninitialized; // bram (code from @sylefeb)
     uint5   rsp = 0;
     uint5   newRSP = uninitialized;
     uint16  rstackWData = uninitialized;
@@ -108,7 +104,6 @@ algorithm main(
     uint16  rStackTop = uninitialized;
     uint16  memoryInput = uninitialized;
 
-    
     // 16bit ROM with included compiled j1eForth from https://github.com/samawati/j1eforth
     bram uint16 rom[] = {
         $include('j1eforthROM.inc')
@@ -125,10 +120,30 @@ algorithm main(
     uint16 copyaddress = 0;
     uint16 bramREAD = 0;
 
-    // UART buffer FIFO (32 character)
-    uint8 uartBuffer[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    uint5 uartBufferNext = 0;
-    uint5 uartBufferTop = 0;
+    // UART input FIFO (32 character) as dualport bram (code from @sylefeb)
+    dualport_bram uint8 uartInBuffer[32] = uninitialized;
+    uint5 uartInBufferNext = 0;
+    uint5 uartInBufferTop = 0;
+
+    // UART output FIFO (32 character) as dualport bram (code from @sylefeb)
+    dualport_bram uint8 uartOutBuffer[32] = uninitialized;
+    uint5 uartOutBufferNext = 0;
+    uint5 uartOutBufferTop = 0;
+
+    // bram for dstack and rstack write enable, maintained low, pulsed high (code from @sylefeb)
+    dstack.wenable         := 0;  
+    rstack.wenable         := 0;
+
+    // dual port bram for dtsack and strack
+    uartInBuffer.wenable0  := 0;  // always read  on port 0
+    uartInBuffer.wenable1  := 1;  // always write on port 1
+    uartInBuffer.addr0     := uartInBufferNext; // FIFO reads on next
+    uartInBuffer.addr1     := uartInBufferTop;  // FIFO writes on top
+    
+    uartOutBuffer.wenable0 := 0; // always read  on port 0
+    uartOutBuffer.wenable1 := 1; // always write on port 1    
+    uartOutBuffer.addr0    := uartOutBufferNext; // FIFO reads on next
+    uartOutBuffer.addr1    := uartOutBufferTop;  // FIFO writes on top
     
     // INIT is 0 ZERO SPRAM
     while( INIT==0 ) {
@@ -191,16 +206,26 @@ algorithm main(
     while( INIT==3 ) {
         // READ from UART if character available and store
         if(uart_out_valid) {
-            uartBuffer[uartBufferNext] = uart_out_data;
-            uartBufferTop = uartBufferTop + 1;
-            uart_out_ready = 1;
+            // writes at uartInBufferTop (code from @sylefeb)
+            uartInBuffer.wdata1  = uart_out_data;            
+            uart_out_ready       = 1;
+            uartInBufferTop      = uartInBufferTop + 1; 
+        }
+
+        // WRITE to UART if characters in buffer and UART is ready
+        if( ~(uartOutBufferNext == uartOutBufferTop) & ~( uart_in_valid ) ) {
+            // reads at uartOutBufferNext (code from @sylefeb)
+            uart_in_data      = uartOutBuffer.rdata0; 
+            uart_in_valid     = 1;
+            uartOutBufferNext = uartOutBufferNext + 1;
         }
         
         switch(CYCLE) {
             // Read stackNext, rStackTop
             case 0: {
-                stackNext = dstack[dsp];
-                rStackTop = rstack[rsp];
+               // read dtsack and rstack brams (code from @sylefeb)
+                stackNext = dstack.rdata;
+                rStackTop = rstack.rdata;
             
                 // start READ memoryInput = [stackTop] result ready in 2 cycles
                 sram_address = stackTop >> 1;
@@ -235,7 +260,7 @@ algorithm main(
                 // +---------------------------------------------------------------+
                 // | 0 | 1 | 0 |            CALL TARGET ADDRESS                    |
                 // +---------------------------------------------------------------+
-                // | 0 | 1 | 1 |R2P| ALU OPERATION |T2N|T2R|N2A|   | RSTACK| DSTACK|
+                // | 0 | 1 | 1 |R2P| ALU OPERATION |T2N|T2R|N2A|J1P| RSTACK| DSTACK|
                 // +---------------------------------------------------------------+
                 // | F | E | D | C | B | A | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
                 // +---------------------------------------------------------------+
@@ -293,47 +318,54 @@ algorithm main(
                         }
                         case 2b11: {
                             // ALU
-                            switch( aluop(instruction).operation ) {
-                                case 4b0000: {newStackTop = stackTop;}
-                                case 4b0001: {newStackTop = stackNext;}
-                                case 4b0010: {newStackTop = stackTop + stackNext;}
-                                case 4b0011: {newStackTop = stackTop & stackNext;}
-                                case 4b0100: {newStackTop = stackTop | stackNext;}
-                                case 4b0101: {newStackTop = stackTop ^ stackNext;}
-                                case 4b0110: {newStackTop = ~stackTop;}
-                                case 4b0111: {newStackTop = {16{(stackNext == stackTop)}};}
-                                case 4b1000: {newStackTop = {16{(__signed(stackNext) < __signed(stackTop))}};}
-                                case 4b1001: {newStackTop = stackNext >> nibbles(stackTop).nibble0;}
-                                case 4b1010: {newStackTop = stackTop - 1;}
-                                case 4b1011: {newStackTop = rStackTop;}
-                                case 4b1100: {
-                                // UART or memoryInput
-                                    switch( stackTop ) {
-                                        case 16hf000: {
-                                            // INPUT from UART
-                                            newStackTop = { 8b0, uartBuffer[uartBufferNext] };
-                                            uartBufferNext = uartBufferNext + 1;
-                                        } 
-                                        case 16hf001: {
-                                            // STATUS from UART
-                                            // as 14b0 then txBusy rxAvailable
-                                            if( uartBufferNext == uartBufferTop ) {
-                                                newStackTop = {14b0, uart_in_valid, 1b0};
-                                            } else {
-                                                newStackTop = {14b0, uart_in_valid, 1b1};
+                            switch( aluop(instruction).is_j1j1plus ) {
+                                case 1b0: {
+                                    switch( aluop(instruction).operation ) {
+                                        case 4b0000: {newStackTop = stackTop;}
+                                        case 4b0001: {newStackTop = stackNext;}
+                                        case 4b0010: {newStackTop = stackTop + stackNext;}
+                                        case 4b0011: {newStackTop = stackTop & stackNext;}
+                                        case 4b0100: {newStackTop = stackTop | stackNext;}
+                                        case 4b0101: {newStackTop = stackTop ^ stackNext;}
+                                        case 4b0110: {newStackTop = ~stackTop;}
+                                        case 4b0111: {newStackTop = {16{(stackNext == stackTop)}};}
+                                        case 4b1000: {newStackTop = {16{(__signed(stackNext) < __signed(stackTop))}};}
+                                        case 4b1001: {newStackTop = stackNext >> nibbles(stackTop).nibble0;}
+                                        case 4b1010: {newStackTop = stackTop - 1;}
+                                        case 4b1011: {newStackTop = rStackTop;}
+                                        case 4b1100: {
+                                        // UART or memoryInput
+                                            switch( stackTop ) {
+                                                case 16hf000: {
+                                                    // INPUT from UART reads at uartInBufferNext (code from @sylefeb)
+                                                    newStackTop = { 8b0, uartInBuffer.rdata0 };
+                                                    uartInBufferNext = uartInBufferNext + 1;
+                                                } 
+                                                case 16hf001: {
+                                                    //newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ~(uartInBufferNext == uartInBufferTop)};
+                                                    newStackTop = {14b0, uart_in_valid, ~(uartInBufferNext == uartInBufferTop)};
+                                                }
+                                                case 16hf003: {
+                                                    // user buttons
+                                                    newStackTop = {12b0, buttons};
+                                                }
+                                                default: {newStackTop = memoryInput;}
                                             }
-
                                         }
-                                        case 16hf003: {
-                                            // user buttons
-                                            newStackTop = {12b0, buttons};
-                                        }
-                                        default: {newStackTop = memoryInput;}
+                                        case 4b1101: {newStackTop = stackNext << nibbles(stackTop).nibble0;}
+                                        case 4b1110: {newStackTop = {rsp, 3b000, dsp};}
+                                        case 4b1111: {newStackTop = {16{(__unsigned(stackNext) < __unsigned(stackTop))}};}
                                     }
                                 }
-                                case 4b1101: {newStackTop = stackNext << nibbles(stackTop).nibble0;}
-                                case 4b1110: {newStackTop = {rsp, 3b000, dsp};}
-                                case 4b1111: {newStackTop = {16{(__unsigned(stackNext) < __unsigned(stackTop))}};}
+                                
+                                case 1b1: {
+                                    switch( aluop(instruction).operation ) {
+                                        case 4b0000: {newStackTop = {16{(stackTop == 0)}};}
+                                        case 4b0001: {newStackTop = ~{16{(stackTop == 0)}};}
+                                        case 4b0010: {newStackTop = ~{16{(stackNext == stackTop)}};}
+                                        case 4b0011: {newStackTop = stackTop + 1;}
+                                    }
+                                }
                             } // ALU Operation
                             
                             // UPDATE newDSP newRSP
@@ -366,6 +398,8 @@ algorithm main(
                             }
                             case 16hf000: {
                                 // OUTPUT to UART
+                                //uartOutBuffer.wdata1 = bytes(stackNext).byte0;
+                                //uartOutBufferTop = uartOutBufferTop + 1;
                                 uart_in_data = bytes(stackNext).byte0;
                                 uart_in_valid = 1;
                             }
@@ -378,10 +412,16 @@ algorithm main(
                 }
                 // Write to dstack and rstack
                 if( dstackWrite ) {
-                    dstack[newDSP] = stackTop;
+                    // bram code for dstack (code from @sylefeb)
+                    dstack.wenable = 1;
+                    dstack.addr    = newDSP;
+                    dstack.wdata   = stackTop;
                 }
                 if( rstackWrite ) {
-                    rstack[newRSP] = rstackWData;
+                    // bram code for rstack (code from @sylefeb)
+                    rstack.wenable = 1;
+                    rstack.addr    = newRSP;
+                    rstack.wdata   = rstackWData;
                 }
             }
             
@@ -391,6 +431,10 @@ algorithm main(
                 pc = newPC;
                 stackTop = newStackTop;
                 rsp = newRSP;
+                
+                // Setup addresses for dstack and rstack brams (code from @sylefeb)
+                dstack.addr = newDSP;
+                rstack.addr = newRSP;
             }
             
             // reset sram_readwrite
