@@ -33,8 +33,7 @@ Upload the compiled bitstream to your FOMU with `dfu-util -D build.dfu`, or the 
 Resource usage has been considerably reduced from my initial attempt at Silice coding, with considerable assistance from @sylefeb who has assisted in using blockrams for the dstack and rstack, and dual ported blockrams for the uart input and output FIFO buffers:
 
 ```
-Info: Device utilisation:                                                                                                           
-Info:            ICESTORM_LC:  2274/ 5280    43%                                                                                    
+Info:            ICESTORM_LC:  2304/ 5280    43%                                                                                    
 Info:           ICESTORM_RAM:    20/   30    66%                                                                                    
 Info:                  SB_IO:    12/   96    12%                                                                                    
 Info:                  SB_GB:     8/    8   100%                                                                                    
@@ -48,7 +47,9 @@ Info:                 SB_SPI:     0/    2     0%
 Info:                 IO_I3C:     0/    2     0%                                                                                    
 Info:            SB_LEDDA_IP:     0/    1     0%                                                                                    
 Info:            SB_RGBA_DRV:     1/    1   100%                                                                                    
-Info:         ICESTORM_SPRAM:     4/    4   100%                                                                                    ```
+Info:         ICESTORM_SPRAM:     4/    4   100%                                                                                    
+
+// Timing estimate: 34.66 ns (28.86 MHz)
 ```
 
 The original J1 CPU has this instruction encoding:
