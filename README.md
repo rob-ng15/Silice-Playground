@@ -122,6 +122,17 @@ f001 | UART Status (bit 1 = TX buffer full, bit 0 = RX character available, best
 f002 | RGB LED input/output bitfield { 13b0, red, green, blue }
 f003 | BUTTONS input bitfield { 12b0, button 4, button 3, button 2, button 1 }
 
+### INIT stages
+
+Due to the size of the block ram on the FOMU (120kbit or 7680 x 16bit) and the J1+ CPU requiring 256kbit (16384 x 16bit) of RAM, the J1+ CPU on the FOMU copies the j1eforth code from an initialised block ram to SPRAM, and uses the SPRAM for the J1+ CPU.
+
+INIT | Action
+:-----: | :-----:
+0 | 0 the SPRAM. <br> <br> Due to the latency, this is controlled by CYCLE (pipeline).
+1 | COPY the j1eforth ROM to SPRAM. <br> <br> Due to latency, this is controoled by CYCLE (pipeline).
+2 | SPARE (not used in the J1+ CPU).
+3 | Start the J1+ CPU at pc==0 from SPRAM.
+
 ### Pipeline / CYCLE logic
 
 Due to blockram and SPRAM latency, there needs to be a pipeline for the J1+ CPU on the FOMU, which is set to 16 stages. These are used as follows:
@@ -129,11 +140,11 @@ Due to blockram and SPRAM latency, there needs to be a pipeline for the J1+ CPU 
 CYCLE | Action
 :-----: | :-----:
 ALL <br> (at entry to INIT==3 loop) | Check for input from the UART, put into buffer. <br> Check if output in the UART buffer and send to UART. <br> __NOTE:__ To stop a race condition, uartOutBufferTop = newuartOutBufferTop is updated after output.
-0 | blockram: Read data stackNext and rstackTop, started in CYCLE==13. <br> <br> SPRAM: Start the read of memory position [stackTop] by setting the SPRAM sram_address and sram_readwrite flag. This is done speculatively in case the ALU needs this memory later in the pipeline.
+0 | blockram: Read data stackNext and rstackTop, started in CYCLE==13. <br> <br> SPRAM: Start the read of memory position [stackTop] by setting the SPRAM sram_address and sram_readwrite flag. <br> This is done speculatively in case the ALU needs this memory later in the pipeline.
 4 | Complete read of memory position [stackTop] from SPRAM by reading sram_data_read.
 5 | Start read of the instruction at memory position [pc] by setting sram_address and sram_readwrite flag.
-9 | Complete read of the instruction at memory position [pc] by reading sram_data_read. <br> <br> The instruction is decoded automatically by the continuos assigns := block at the top of the code.
-10 | Instruction Execution <br> <br> Determine if LITERAL, BRANCH, BRANCH, CALL or ALU. <br> <br> In the ALU (J1 CPU block) the UART input buffer, UART status register or memory is selected as appropriate. The UART buffers and the speculative memory read of [stackTop] are used to allow __ALL__ ALU operations to execute in one cycle.<br> <br> At the end of the ALU if a write to memory is required, this is initiated by setting the sram_address, sram_data_write and sram_readwrite flag. This will be completed by CYCLE==15. <br> <br> Output to UART output buffer or the RGB LED is performed here if a write to an I/O address, not memory, is requested.
+9 | Complete read of the instruction at memory position [pc] by reading sram_data_read. <br> <br> *The instruction is decoded automatically by the continuos assigns := block at the top of the code.*
+10 | Instruction Execution <br> <br> Determine if LITERAL, BRANCH, BRANCH, CALL or ALU. <br> <br> In the ALU (J1 CPU block) the UART input buffer, UART status register, RGB LED status, input buttons or memory is selected as appropriate. The UART buffers and the speculative memory read of [stackTop] are used to allow __ALL__ ALU operations to execute in one cycle.<br> <br> At the end of the ALU if a write to memory is required, this is initiated by setting the sram_address, sram_data_write and sram_readwrite flag. This will be completed by CYCLE==15. <br> <br> Output to UART output buffer or the RGB LED is performed here if a write to an I/O address, not memory, is requested.
 11 | Start the writing to the block ram for the data and return stacks. This will be completed by CYCLE==12.
 13 | Update all of the J1+ CPU pointers for the data and return stacks, the program counter, and stackTop. <br> <br> Start the reading of the data and return stacks. This will be completed by CYCLE==14, but not actually read until the return to CYCLE==0.
 15 | Reset the sram_readwrite flag, to complete any memory write started in CYCLE==11.
