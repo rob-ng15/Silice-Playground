@@ -366,6 +366,36 @@ algorithm main(
                                         case 4b0001: {newStackTop = ~{16{(stackTop == 0)}};}
                                         case 4b0010: {newStackTop = ~{16{(stackNext == stackTop)}};}
                                         case 4b0011: {newStackTop = stackTop + 1;}
+                                        case 4b0100: {newStackTop = stackTop << 1;}
+                                        case 4b0101: {newStackTop = stackTop >> 1;}
+                                        case 4b0110: {newStackTop = {16{(__signed(stackNext) > __signed(stackTop))}};}
+                                        case 4b0111: {newStackTop = {16{(__unsigned(stackNext) > __unsigned(stackTop))}};}
+                                        case 4b1000: {newStackTop = {16{(__signed(stackTop) < 0)}};}
+                                        case 4b1001: {newStackTop = {16{(__signed(stackTop) > 0)}};}
+                                        case 4b1010: {
+                                            if( __signed(stackTop) < 0 ) {
+                                                newStackTop = - stackTop;
+                                            } else {
+                                                newStackTop = stackTop;
+                                            }
+                                        }
+                                        case 4b1011: {
+                                            if( __signed(stackNext) > __signed(stackTop) ) {
+                                                newStackTop = stackNext;
+                                            } else {
+                                                newStackTop = stackTop;
+                                            }
+                                        }
+                                        case 4b1100: {
+                                            if( __signed(stackNext) < __signed(stackTop) ) {
+                                                newStackTop = stackNext;
+                                            } else {
+                                                newStackTop = stackTop;
+                                            }
+                                        }
+                                        case 4b1101: {newStackTop = -stackTop;}
+                                        case 4b1110: {newStackTop = stackNext - stackTop;}
+                                        case 4b1111: {newStackTop = {16{(__signed(stackNext) >= __signed(stackTop))}};}
                                     }
                                 }
                             } // ALU Operation
