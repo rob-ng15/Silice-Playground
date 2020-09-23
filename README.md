@@ -14,7 +14,7 @@ Translation of the j1eforth interactive Forth environment for FOMU (https://www.
 
 The original J1 CPU (https://www.excamera.com/sphinx/fpga-j1.html with a very clear explanatory paper at https://www.excamera.com/files/j1.pdf) along with the j1eforth interactive Forth environment (https://github.com/samawati/j1eforth) was written for an FPGA with access to 16384 x 16bit (256kbit) dual port single cycle block ram, whereas the FOMU has 120kbit of block ram. It does however have 1024kbit of single port ram (65536 x 16bit), which is more than sufficient for j1eforth, but it has 2 cycle latency.
 
-j1eforth for FOMU is coded in Silice (https://github.com/sylefeb/Silice) due to my limited (i.e. NO) FPGA programming experience. Silice provides a nice introduction to FPGA programming for those coming from more tradition software coding. The main challenge for the FOMU is that there is latency to the single port ram, requiring a main loop with cycles to guide memory accesses.
+j1eforth with the enhanced J1+ CPU for FOMU is coded in Silice (https://github.com/sylefeb/Silice) due to my limited (i.e. NO) FPGA programming experience. Silice provides a nice introduction to FPGA programming for those coming from more tradition software coding. The main challenge for the FOMU is that there is latency to the single port ram, requiring a main loop with cycles to guide memory accesses.
 
 I've, in my opinion, tidied up the code, to make the variables more explanatory, and to aid my coding.
 
@@ -92,8 +92,8 @@ The J1+ CPU adds up to 16 new alu operations, by assigning new alu operations by
 
 Binary ALU Operation Code | J1 CPU | J1+ CPU | J1 CPU Forth Word (notes) | J1+ CPU Forth Word | J1+ Implemented in j1eforth
 :----: | :----: | :----: | :----: | :----: | :----:
-0000 | T | T==0 | | 0= | X
-0001 | N | T<>0 | | 0<> | X
+0000 | T | T==0 | (top of stack) | 0= | X
+0001 | N | T<>0 | (next on stack) | 0<> | X
 0010 | T+N | N<>T | + | <> | X
 0011 | T&N | T+1 | and | 1+ | X
 0100 | T&#124;N | | or | | 
@@ -119,8 +119,25 @@ Hexadecimal Address | Usage
 4000 - 7fff | RAM (written to with `value addr !`, read by `addr @`
 f000 | UART input/output (best to leave to j1eforth to operate via IN/OUT buffers)
 f001 | UART Status (bit 1 = TX buffer full, bit 0 = RX character available, best to leave to j1eforth to operate via IN/OUT buffers)
-f002 | RGB LED input/output
-f003 | BUTTONS input
+f002 | RGB LED input/output bitfield { 13b0, red, green, blue }
+f003 | BUTTONS input bitfield { 12b0, button 4, button 3, button 2, button 1 }
+
+### Pipeline / CYCLE logic
+
+Due to blockram and SPRAM latency, there needs to be a pipeline for the J1+ CPU on the FOMU, which is set to 16 stages. These are used as follows:
+
+CYCLE | Action
+:-----: | :-----:
+ALL <br> (at entry to INIT==3 loop) | Check for input from the UART, put into buffer. <br> Check if output in the UART buffer and send to UART. <br> __NOTE:__ To stop a race condition, uartOutBufferTop = newuartOutBufferTop is updated after output.
+0 | blockram: Read data stackNext and rstackTop, started in CYCLE==13. <br> <br> SPRAM: Start the read of memory position [stackTop] by setting the SPRAM sram_address and sram_readwrite flag. This is done speculatively in case the ALU needs this memory later in the pipeline.
+4 | Complete read of memory position [stackTop] from SPRAM by reading sram_data_read.
+5 | Start read of the instruction at memory position [pc] by setting sram_address and sram_readwrite flag.
+9 | Complete read of the instruction at memory position [pc] by reading sram_data_read. <br> <br> The instruction is decoded automatically by the continuos assigns := block at the top of the code.
+10 | Instruction Execution <br> <br> Determine if LITERAL, BRANCH, BRANCH, CALL or ALU. <br> <br> In the ALU (J1 CPU block) the UART input buffer, UART status register or memory is selected as appropriate. The UART buffers and the speculative memory read of [stackTop] are used to allow __ALL__ ALU operations to execute in one cycle.<br> <br> At the end of the ALU if a write to memory is required, this is initiated by setting the sram_address, sram_data_write and sram_readwrite flag. This will be completed by CYCLE==15. <br> <br> Output to UART output buffer or the RGB LED is performed here if a write to an I/O address, not memory, is requested.
+11 | Start the writing to the block ram for the data and return stacks. This will be completed by CYCLE==12.
+13 | Update all of the J1+ CPU pointers for the data and return stacks, the program counter, and stackTop. <br> <br> Start the reading of the data and return stacks. This will be completed by CYCLE==14, but not actually read until the return to CYCLE==0.
+15 | Reset the sram_readwrite flag, to complete any memory write started in CYCLE==11.
+ALL <br> (at end of INIT==3 loop) | Reset the UART output if any character was transmitted. <br> <br> Move to the next CYCLE.
 
 ### Forth Words to try
 * `cold` reset
