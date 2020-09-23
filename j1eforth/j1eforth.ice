@@ -374,6 +374,33 @@ algorithm main(
                             newDSP = dsp + ddelta;
                             newRSP = rsp + rdelta;
                             rstackWData = stackTop;
+
+                            if( aluop(instruction).is_r2pc ) {
+                                newPC = rStackTop >> 1;
+                            } else {
+                                newPC = pcPlusOne;
+                            }
+
+                            // n2memt mem[t] = n        
+                            if( aluop(instruction).is_n2memt ) {
+                                switch( stackTop ) {
+                                    default: {
+                                        // WRITE to SPRAM
+                                        sram_address = stackTop >> 1;
+                                        sram_data_write = stackNext;
+                                        sram_readwrite = 1;
+                                    }
+                                    case 16hf000: {
+                                        // OUTPUT to UART (dualport blockram code from @sylefeb)
+                                        uartOutBuffer.wdata1 = bytes(stackNext).byte0;
+                                        newuartOutBufferTop = uartOutBufferTop + 1;
+                                    }
+                                    case 16hf002: {
+                                        // OUTPUT to rgbLED
+                                        rgbLED = stackNext;
+                                    }
+                                }
+                            }
                         } // ALU
                     }
                 }
@@ -381,37 +408,6 @@ algorithm main(
 
             // update pc and perform mem[t] = n
             case 11: {
-                if( is_alu ) {
-                    // r2pc
-                    if( aluop(instruction).is_r2pc ) {
-                        newPC = rStackTop >> 1;
-                    } else {
-                        newPC = pcPlusOne;
-                    }
-                    
-                    // n2memt mem[t] = n
-                    if( aluop(instruction).is_n2memt ) {
-                        switch( stackTop ) {
-                            default: {
-                                // WRITE to SPRAM
-                                sram_address = stackTop >> 1;
-                                sram_data_write = stackNext;
-                                sram_readwrite = 1;
-                            }
-                            case 16hf000: {
-                                // OUTPUT to UART
-                                uartOutBuffer.wdata1 = bytes(stackNext).byte0;
-                                newuartOutBufferTop = uartOutBufferTop + 1;
-                                //uart_in_data = bytes(stackNext).byte0;
-                                //uart_in_valid = 1;
-                            }
-                            case 16hf002: {
-                                // OUTPUT to rgbLED
-                                rgbLED = stackNext;
-                            }
-                        }
-                    }
-                }
                 // Write to dstack and rstack
                 if( dstackWrite ) {
                     // bram code for dstack (code from @sylefeb)
