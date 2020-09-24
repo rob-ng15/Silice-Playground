@@ -106,20 +106,20 @@ Binary ALU Operation Code | J1 CPU | J1+ CPU | J1 CPU Forth Word (notes) | J1+ C
 0001 | N | T<>0 | (next on stack) | 0<> | X
 0010 | T+N | N<>T | + | <> | X
 0011 | T&N | T+1 | and | 1+ | X
-0100 | T&#124;N | T&#42;2 | or | 2&#42; | 
-0101 | T^N | T/2 | xor | 2/ | 
-0110 | ~T | N>T | invert | > <br> (signed) | 
-0111 | N==T | NU>T | = | > <br> (unsigned) | 
-1000 | N<T | T<0 | < <br> (signed) | 0< | 
-1001 | N>>T | T>0 | rshift | 0> | 
-1010 | T-1 | ABST | 1- | abs | 
-1011 |  rt | MXNT | (push top of return stack to data stack) | max | 
-1100 | [T] | MNNT | @ <br> (read from memory) | min | 
-1101 | N<<T | -T | lshift | negate | 
-1110 | dsp | N-T | (depth of stacks) | - | 
-1111 | NU<T | N>=T | < <br> (unsigned) | >= <br> (signed) | 
+0100 | T&#124;N | T<<1 | or | 2&#42; | X
+0101 | T^N | T>>1 | xor | 2/ | (stops ROM working)
+0110 | ~T | N>T | invert | > <br> (signed) | X
+0111 | N==T | NU>T | = | > <br> (unsigned) | X
+1000 | N<T | T<0 | < <br> (signed) | 0< | X
+1001 | N>>T | T>0 | rshift | 0> | X
+1010 | T-1 | ABST | 1- | abs | X
+1011 |  rt | MXNT | (push top of return stack to data stack) | max | X
+1100 | [T] | MNNT | @ <br> (read from memory) | min | X
+1101 | N<<T | -T | lshift | negate | X
+1110 | dsp | N-T | (depth of stacks) | - | (stops ROM working)
+1111 | NU<T | N>=T | < <br> (unsigned) | >= <br> (signed) | X
 
-*I am presently unable to add any further J1+ CPU alu operations to the j1eforth code, as the compiled ROM is no longer functional. Some assistance to add further instructions would be appreciated.*
+*I am presently unable to add the 2/ or - to the j1eforth ROM, as the compiled ROM is no longer functional. Some assistance to add these instructions would be appreciated.*
 
 ### Memory Map
 
