@@ -71,6 +71,18 @@ a: t==0 0010 ;
 a: t<>0 0110 ;
 a: n<>t 0210 ;
 a: t+1  0310 ;
+a: t<<1 0410 ;
+a: t>>1 0510 ;
+a: n>t  0610 ;
+a: nu>t 0710 ;
+a: t<0  0810 ;
+a: t>0  0910 ;
+a: abst 0a10 ;
+a: mxnt 0b10 ;
+a: mnnt 0c10 ;
+a: negt 0d10 ;
+a: n-t  0e10 ;
+a: n>=t 0f10 ;
 
 a: t->n 0080 or ;
 a: t->r 0040 or ;
@@ -100,7 +112,7 @@ variable tlast
 variable tuser
 
 0001 constant =ver
-0001 constant =ext
+0002 constant =ext
 0040 constant =comp
 0080 constant =imed
 7f1f constant =mask
@@ -232,10 +244,23 @@ variable tuser
     ]asm t r-1 alu
     t r-1 alu asm[ ;
 
+( new J1+ ALU operations )
 : 0= ]asm t==0 alu asm[ ;
 : 0<> ]asm t<>0 alu asm[ ;
 : <> ]asm n<>t d-1 alu asm[ ;
 : 1+ ]asm t+1 alu asm[ ;
+: 2* ]asm t<<1 alu asm[ ;
+( : 2/ ]asm t>>1 alu asm[ ; ) ( uncommenting causes error )
+: > ]asm n>t d-1 alu asm[ ;
+: u> ]asm nu>t d-1 alu asm[ ;
+: 0< ]asm t<0 alu asm[ ;
+: 0> ]asm t>0 alu asm[ ;
+: abs ]asm abst alu asm[ ;
+: max ]asm mxnt d-1 alu asm[ ;
+: min ]asm mnnt d-1 alu asm[ ;
+: negate ]asm negt alu asm[ ;
+( : - ]asm n-t d-1 alu asm[ ; ) ( uncommenting causes error )
+: >= ]asm n>=t d-1 alu asm[ ;
 
 : dup@ ]asm [t] t->n d+1 alu asm[ ;
 : dup>r ]asm t t->r r+1 alu asm[ ;
@@ -333,7 +358,7 @@ t: = = t;
 t: < < t;
 t: u< u< t;
 t: swap swap t;
-t: u> swap u< t;
+t: u> u> t;
 t: dup dup t;
 t: drop drop t;
 t: over over t;
@@ -348,16 +373,16 @@ t: @ ( a -- w ) @ t;
 t: ! ( w a -- ) ! t;
 
 t: <> <> t;
-t: 0< 0 literal < t;
+t: 0< 0< t;
 t: 0= 0= t;
 t: 0<> 0<> t;
-t: > swap < t;
-t: 0> 0 literal swap < t;
-t: >= < invert t;
+t: > > t;
+t: 0> 0> t;
+t: >= >= t;
 t: tuck swap over t;
 t: -rot swap >r swap r> t;
 t: 2/ 1 literal rshift t;
-t: 2* 1 literal lshift t;
+t: 2* 2* t;
 t: 1+ 1+ t;
 t: sp@ dsp ff literal and t;
 t: execute ( ca -- ) >r t;
@@ -411,13 +436,13 @@ t: ?dup ( w -- w w | 0 ) dup if dup then exit t;
 t: rot ( w1 w2 w3 -- w2 w3 w1 ) >r swap r> swap t;
 t: 2drop ( w w -- ) drop drop t;
 t: 2dup ( w1 w2 -- w1 w2 w1 w2 ) over over t;
-t: negate ( n -- -n ) invert 1+ t;
+t: negate ( n -- -n ) negate t;
 t: dnegate ( d -- -d )
    invert >r invert 1 literal um+ r> + t;
 t: - ( n1 n2 -- n1-n2 ) negate + t;
-t: abs ( n -- n ) dup 0< if negate then exit t;
-t: max ( n n -- n ) 2dup > if drop exit then nip t;
-t: min ( n n -- n ) 2dup < if drop exit then nip t;
+t: abs ( n -- n ) abs t;
+t: max ( n n -- n ) max t;
+t: min ( n n -- n ) min t;
 t: within ( u ul uh -- t ) over - >r - r> u< t;
 t: um/mod ( udl udh u -- ur uq )
    2dup u< if
