@@ -34,8 +34,8 @@ Resource usage has been considerably reduced from my initial attempt at Silice c
 
 ```
 Info: Device utilisation:                                                                                                           
-Info:            ICESTORM_LC:  2471/ 5280    46%                                                                                    
-Info:           ICESTORM_RAM:    20/   30    66%                                                                                    
+Info:            ICESTORM_LC:  2618/ 5280    49%                                                                                    
+Info:           ICESTORM_RAM:    19/   30    63%                                                                                    
 Info:                  SB_IO:    12/   96    12%                                                                                    
 Info:                  SB_GB:     8/    8   100%                                                                                    
 Info:           ICESTORM_PLL:     0/    1     0%                                                                                    
@@ -50,7 +50,7 @@ Info:            SB_LEDDA_IP:     0/    1     0%
 Info:            SB_RGBA_DRV:     1/    1   100%                                                                                    
 Info:         ICESTORM_SPRAM:     4/    4   100%                                                                                    
 
-// Timing estimate: 37.67 ns (26.54 MHz)
+// Timing estimate: 38.76 ns (25.80 MHz)
 ```
 
 The original J1 CPU has this instruction encoding:
