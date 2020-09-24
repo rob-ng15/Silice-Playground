@@ -147,7 +147,7 @@ algorithm main(
     uartOutBuffer.addr1    := uartOutBufferTop;  // FIFO writes on top
     
     // INIT is 0 ZERO SPRAM
-    while( INIT==0 ) {
+    while( INIT == 0 ) {
         switch(CYCLE) {
             case 0: {
                 // Setup WRITE to SPRAM
@@ -160,7 +160,7 @@ algorithm main(
                 copyaddress = copyaddress + 1;
             }
             case 15: {
-                if(copyaddress == 16384) {
+                if( copyaddress == 32768 ) {
                     INIT = 1;
                     copyaddress = 0;
                 }
@@ -170,7 +170,7 @@ algorithm main(
     }
     
     // INIT is 1 COPY ROM TO SPRAM
-    while( INIT==1) {
+    while( INIT == 1) {
         switch(CYCLE) {
             case 0: {
                 // Setup READ from ROM
@@ -192,7 +192,7 @@ algorithm main(
                 sram_readwrite = 0;
             }
             case 15: {
-                if(copyaddress == 3336) {
+                if( copyaddress == 4096 ) {
                     INIT = 3;
                     copyaddress = 0;
                 }
@@ -204,9 +204,9 @@ algorithm main(
     }
 
     // INIT is 3 EXECUTE J1 CPU
-    while( INIT==3 ) {
+    while( INIT == 3 ) {
         // READ from UART if character available and store
-        if(uart_out_valid) {
+        if( uart_out_valid ) {
             // writes at uartInBufferTop (code from @sylefeb)
             uartInBuffer.wdata1  = uart_out_data;            
             uart_out_ready       = 1;
@@ -222,7 +222,7 @@ algorithm main(
         }
         uartOutBufferTop = newuartOutBufferTop;
         
-        switch(CYCLE) {
+        switch( CYCLE ) {
             // Read stackNext, rStackTop
             case 0: {
                // read dtsack and rstack brams (code from @sylefeb)
@@ -233,24 +233,24 @@ algorithm main(
                 sram_address = stackTop >> 1;
                 sram_readwrite = 0;
             }
-            case 4: {
+            case 3: {
                 // wait then read the data from SPRAM
                 memoryInput = sram_data_read;
             }
             
-            case 5: {
+            case 4: {
                 // start READ instruction = [pc] result ready in 2 cycles
                 sram_address = pc;
                 sram_readwrite = 0;
             }
 
-            case 9: {
+            case 7: {
                 // wait then read the instruction from SPRAM
                 instruction = sram_data_read;
             }
 
             // J1 CPU Instruction Execute
-            case 10: {
+            case 8: {
                 // +---------------------------------------------------------------+
                 // | F | E | D | C | B | A | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
                 // +---------------------------------------------------------------+
@@ -302,11 +302,7 @@ algorithm main(
                         case 2b01: {
                             // 0BRANCH
                             newStackTop = stackNext;
-                            if( stackTop == 0 ) {
-                                newPC = callbranch(instruction).address;
-                            } else {
-                                newPC = pcPlusOne;
-                            }
+                            newPC = ( stackTop == 0 ) ? callbranch(instruction).address : pcPlusOne;
                             newDSP = dsp - 1;
                             newRSP = rsp;
                         }
@@ -344,8 +340,12 @@ algorithm main(
                                                     uartInBufferNext = uartInBufferNext + 1;
                                                 } 
                                                 case 16hf001: {
-                                                    //newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ~(uartInBufferNext == uartInBufferTop)};
+                                                    // UART status register { 14b0, tx full, rx available }
                                                     newStackTop = {14b0, uart_in_valid, ~(uartInBufferNext == uartInBufferTop)};
+                                                }
+                                                case 16hf002: {
+                                                    // RGB LED status
+                                                    newStackTop = rgbLED;
                                                 }
                                                 case 16hf003: {
                                                     // user buttons
@@ -372,27 +372,9 @@ algorithm main(
                                         case 4b0111: {newStackTop = {16{(__unsigned(stackNext) > __unsigned(stackTop))}};}
                                         case 4b1000: {newStackTop = {16{(__signed(stackTop) < 0)}};}
                                         case 4b1001: {newStackTop = {16{(__signed(stackTop) > 0)}};}
-                                        case 4b1010: {
-                                            if( __signed(stackTop) < 0 ) {
-                                                newStackTop = - stackTop;
-                                            } else {
-                                                newStackTop = stackTop;
-                                            }
-                                        }
-                                        case 4b1011: {
-                                            if( __signed(stackNext) > __signed(stackTop) ) {
-                                                newStackTop = stackNext;
-                                            } else {
-                                                newStackTop = stackTop;
-                                            }
-                                        }
-                                        case 4b1100: {
-                                            if( __signed(stackNext) < __signed(stackTop) ) {
-                                                newStackTop = stackNext;
-                                            } else {
-                                                newStackTop = stackTop;
-                                            }
-                                        }
+                                        case 4b1010: {newStackTop = ( __signed(stackTop) < 0 ) ?  - stackTop : stackTop;}
+                                        case 4b1011: {newStackTop = ( __signed(stackNext) > __signed(stackTop) ) ? stackNext : stackTop;}
+                                        case 4b1100: {newStackTop = ( __signed(stackNext) < __signed(stackTop) ) ? stackNext : stackTop;}
                                         case 4b1101: {newStackTop = -stackTop;}
                                         case 4b1110: {newStackTop = stackNext - stackTop;}
                                         case 4b1111: {newStackTop = {16{(__signed(stackNext) >= __signed(stackTop))}};}
@@ -405,11 +387,8 @@ algorithm main(
                             newRSP = rsp + rdelta;
                             rstackWData = stackTop;
 
-                            if( aluop(instruction).is_r2pc ) {
-                                newPC = rStackTop >> 1;
-                            } else {
-                                newPC = pcPlusOne;
-                            }
+                            // Update PC for next instruction, return from call or next instruction
+                            newPC = ( aluop(instruction).is_r2pc ) ? rStackTop >> 1 : pcPlusOne;
 
                             // n2memt mem[t] = n        
                             if( aluop(instruction).is_n2memt ) {
@@ -437,7 +416,7 @@ algorithm main(
             } // J1 CPU Instruction Execute
 
             // update pc and perform mem[t] = n
-            case 11: {
+            case 9: {
                 // Write to dstack and rstack
                 if( dstackWrite ) {
                     // bram code for dstack (code from @sylefeb)
@@ -454,7 +433,7 @@ algorithm main(
             }
             
             // Update dsp, rsp, pc, stackTop
-            case 13: {
+            case 10: {
                 dsp = newDSP;
                 pc = newPC;
                 stackTop = newStackTop;
@@ -466,7 +445,7 @@ algorithm main(
             }
             
             // reset sram_readwrite
-            case 15: {
+            case 12: {
                 sram_readwrite = 0;
             }
             
@@ -478,7 +457,8 @@ algorithm main(
             uart_in_valid = 0;
         }
     
-        CYCLE = CYCLE + 1;
+        // Move to next CYCLE ( 0 to 12 , then back to 0 )
+        CYCLE = ( CYCLE == 12 ) ? 0 : CYCLE + 1;
     } // (INIT==3 execute J1 CPU)
 
 }
