@@ -33,24 +33,24 @@ Upload the compiled bitstream to your FOMU with `dfu-util -D build.dfu`, or the 
 Resource usage has been considerably reduced from my initial attempt at Silice coding, with considerable assistance from @sylefeb who has assisted in using blockrams for the dstack and rstack, and dual ported blockrams for the uart input and output FIFO buffers:
 
 ```
-Info: Device utilisation:
-Info:            ICESTORM_LC:  2476/ 5280    46%
-Info:           ICESTORM_RAM:    20/   30    66%
-Info:                  SB_IO:    12/   96    12%
-Info:                  SB_GB:     8/    8   100%
-Info:           ICESTORM_PLL:     0/    1     0%
-Info:            SB_WARMBOOT:     0/    1     0%
-Info:           ICESTORM_DSP:     0/    8     0%
-Info:         ICESTORM_HFOSC:     0/    1     0%
-Info:         ICESTORM_LFOSC:     0/    1     0%
-Info:                 SB_I2C:     0/    2     0%
-Info:                 SB_SPI:     0/    2     0%
-Info:                 IO_I3C:     0/    2     0%
-Info:            SB_LEDDA_IP:     0/    1     0%
-Info:            SB_RGBA_DRV:     1/    1   100%
-Info:         ICESTORM_SPRAM:     4/    4   100%
+Info: Device utilisation:                                                                                                           
+Info:            ICESTORM_LC:  2471/ 5280    46%                                                                                    
+Info:           ICESTORM_RAM:    20/   30    66%                                                                                    
+Info:                  SB_IO:    12/   96    12%                                                                                    
+Info:                  SB_GB:     8/    8   100%                                                                                    
+Info:           ICESTORM_PLL:     0/    1     0%                                                                                    
+Info:            SB_WARMBOOT:     0/    1     0%                                                                                    
+Info:           ICESTORM_DSP:     0/    8     0%                                                                                    
+Info:         ICESTORM_HFOSC:     0/    1     0%                                                                                    
+Info:         ICESTORM_LFOSC:     0/    1     0%                                                                                    
+Info:                 SB_I2C:     0/    2     0%                                                                                    
+Info:                 SB_SPI:     0/    2     0%                                                                                    
+Info:                 IO_I3C:     0/    2     0%                                                                                    
+Info:            SB_LEDDA_IP:     0/    1     0%                                                                                    
+Info:            SB_RGBA_DRV:     1/    1   100%                                                                                    
+Info:         ICESTORM_SPRAM:     4/    4   100%                                                                                    
 
-// Timing estimate: 37.54 ns (26.64 MHz)
+// Timing estimate: 37.67 ns (26.54 MHz)
 ```
 
 The original J1 CPU has this instruction encoding:
@@ -145,19 +145,19 @@ INIT | Action
 
 ### Pipeline / CYCLE logic
 
-Due to blockram and SPRAM latency, there needs to be a pipeline for the J1+ CPU on the FOMU, which is set to 16 stages. These are used as follows:
+Due to blockram and SPRAM latency, there needs to be a pipeline for the J1+ CPU on the FOMU, which is set to 0 to 12 stages. These are used as follows:
 
 CYCLE | Action
 :-----: | :-----:
 ALL <br> (at entry to INIT==3 loop) | Check for input from the UART, put into buffer. <br> Check if output in the UART buffer and send to UART. <br> __NOTE:__ To stop a race condition, uartOutBufferTop = newuartOutBufferTop is updated after output.
 0 | blockram: Read data stackNext and rstackTop, started in CYCLE==13. <br> <br> SPRAM: Start the read of memory position [stackTop] by setting the SPRAM sram_address and sram_readwrite flag. <br> This is done speculatively in case the ALU needs this memory later in the pipeline.
-4 | Complete read of memory position [stackTop] from SPRAM by reading sram_data_read.
-5 | Start read of the instruction at memory position [pc] by setting sram_address and sram_readwrite flag.
-9 | Complete read of the instruction at memory position [pc] by reading sram_data_read. <br> <br> *The instruction is decoded automatically by the continuos assigns := block at the top of the code.*
-10 | Instruction Execution <br> <br> Determine if LITERAL, BRANCH, BRANCH, CALL or ALU. <br> <br> In the ALU (J1 CPU block) the UART input buffer, UART status register, RGB LED status, input buttons or memory is selected as appropriate. The UART buffers and the speculative memory read of [stackTop] are used to allow __ALL__ ALU operations to execute in one cycle.<br> <br> At the end of the ALU if a write to memory is required, this is initiated by setting the sram_address, sram_data_write and sram_readwrite flag. This will be completed by CYCLE==15. <br> <br> Output to UART output buffer or the RGB LED is performed here if a write to an I/O address, not memory, is requested.
-11 | Start the writing to the block ram for the data and return stacks. This will be completed by CYCLE==12.
-13 | Update all of the J1+ CPU pointers for the data and return stacks, the program counter, and stackTop. <br> <br> Start the reading of the data and return stacks. This will be completed by CYCLE==14, but not actually read until the return to CYCLE==0.
-15 | Reset the sram_readwrite flag, to complete any memory write started in CYCLE==11.
+3 | Complete read of memory position [stackTop] from SPRAM by reading sram_data_read.
+4 | Start read of the instruction at memory position [pc] by setting sram_address and sram_readwrite flag.
+7 | Complete read of the instruction at memory position [pc] by reading sram_data_read. <br> <br> *The instruction is decoded automatically by the continuos assigns := block at the top of the code.*
+8 | Instruction Execution <br> <br> Determine if LITERAL, BRANCH, BRANCH, CALL or ALU. <br> <br> In the ALU (J1 CPU block) the UART input buffer, UART status register, RGB LED status, input buttons or memory is selected as appropriate. The UART buffers and the speculative memory read of [stackTop] are used to allow __ALL__ ALU operations to execute in one cycle.<br> <br> At the end of the ALU if a write to memory is required, this is initiated by setting the sram_address, sram_data_write and sram_readwrite flag. This will be completed by CYCLE==15. <br> <br> Output to UART output buffer or the RGB LED is performed here if a write to an I/O address, not memory, is requested.
+9 | Start the writing to the block ram for the data and return stacks. This will be completed by CYCLE==12.
+10 | Update all of the J1+ CPU pointers for the data and return stacks, the program counter, and stackTop. <br> <br> Start the reading of the data and return stacks. This will be completed by CYCLE==14, but not actually read until the return to CYCLE==0.
+12 | Reset the sram_readwrite flag, to complete any memory write started in CYCLE==11.
 ALL <br> (at end of INIT==3 loop) | Reset the UART output if any character was transmitted. <br> <br> Move to the next CYCLE.
 
 ### Forth Words to try
