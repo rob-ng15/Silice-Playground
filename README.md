@@ -107,7 +107,7 @@ Binary ALU Operation Code | J1 CPU | J1+ CPU | J1 CPU Forth Word (notes) | J1+ C
 0010 | T+N | N<>T | + | <> | X
 0011 | T&N | T+1 | and | 1+ | X
 0100 | T&#124;N | T<<1 | or | 2&#42; | X
-0101 | T^N | T>>1 | xor | 2/ | (stops ROM working)
+0101 | T^N | T>>1 | xor | 2/ | X
 0110 | ~T | N>T | invert | > <br> (signed) | X
 0111 | N==T | NU>T | = | > <br> (unsigned) | X
 1000 | N<T | T<0 | < <br> (signed) | 0< | X
@@ -116,17 +116,14 @@ Binary ALU Operation Code | J1 CPU | J1+ CPU | J1 CPU Forth Word (notes) | J1+ C
 1011 |  rt | MXNT | (push top of return stack to data stack) | max | X
 1100 | [T] | MNNT | @ <br> (read from memory) | min | X
 1101 | N<<T | -T | lshift | negate | X
-1110 | dsp | N-T | (depth of stacks) | - | (stops ROM working)
+1110 | dsp | N-T | (depth of stacks) | - | X
 1111 | NU<T | N>=T | < <br> (unsigned) | >= <br> (signed) | X
-
-*I am presently unable to add the 2/ or - to the j1eforth ROM, as the compiled ROM is no longer functional. Some assistance to add these instructions would be appreciated.*
 
 ### Memory Map
 
 Hexadecimal Address | Usage
 :----: | :----:
-0000 - 3fff | Program code and data
-4000 - 7fff | RAM (written to with `value addr !`, read by `addr @`
+0000 - 7fff | Program code, data and variable storage. <br> <br> RAM (written to with `value addr !`, read by `addr @`
 f000 | UART input/output (best to leave to j1eforth to operate via IN/OUT buffers)
 f001 | UART Status (bit 1 = TX buffer full, bit 0 = RX character available, best to leave to j1eforth to operate via IN/OUT buffers)
 f002 | RGB LED input/output bitfield { 13b0, red, green, blue }
