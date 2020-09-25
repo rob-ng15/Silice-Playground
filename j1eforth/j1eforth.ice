@@ -67,7 +67,10 @@ algorithm main(
     input    uint1  uart_in_ready,
     input    uint8  uart_out_data,
     input    uint1  uart_out_valid,
-    output   uint1  uart_out_ready
+    output   uint1  uart_out_ready,
+    
+    // 1hz timer
+    input   uint16 timer1hz
 ) {
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
     uint16  instruction = uninitialized;
@@ -350,6 +353,10 @@ algorithm main(
                                                 case 16hf003: {
                                                     // user buttons
                                                     newStackTop = {12b0, buttons};
+                                                }
+                                                case 16hf004: {
+                                                    // 1hz timer
+                                                    newStackTop = timer1hz;
                                                 }
                                                 default: {newStackTop = memoryInput;}
                                             }

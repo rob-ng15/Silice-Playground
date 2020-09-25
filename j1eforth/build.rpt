@@ -1,0 +1,113 @@
+
+icetime topological timing analysis report
+==========================================
+
+Info: max_span_hack is enabled: estimate is conservative.
+
+Report for critical path:
+-------------------------
+
+        lc40_1_3_6 (LogicCell40) [clk] -> lcout: 1.491 ns
+     1.491 ns net_457 (user_3_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_O_I1_SB_LUT4_O_1_I1_SB_LUT4_O_1_I0_SB_LUT4_O_I3[1])
+        t2509 (LocalMux) I -> O: 1.099 ns
+        inmux_2_3_11563_11604 (InMux) I -> O: 0.662 ns
+        t159 (CascadeMux) I -> O: 0.000 ns
+        lc40_2_3_2 (LogicCell40) in2 -> lcout: 1.205 ns
+     4.457 ns net_7010 (user_3_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_O_I1_SB_LUT4_O_1_I1_SB_LUT4_O_1_I0[0])
+        odrv_2_3_7010_6888 (Odrv4) I -> O: 0.649 ns
+        t3490 (Span4Mux_v4) I -> O: 0.649 ns
+        t3489 (LocalMux) I -> O: 1.099 ns
+        inmux_2_7_12057_12083 (InMux) I -> O: 0.662 ns
+        lc40_2_7_0 (LogicCell40) in1 -> carryout: 0.675 ns
+     8.192 ns t69
+        lc40_2_7_1 (LogicCell40) carryin -> carryout: 0.278 ns
+     8.471 ns t70
+        lc40_2_7_2 (LogicCell40) carryin -> carryout: 0.278 ns
+     8.749 ns t71
+        lc40_2_7_3 (LogicCell40) carryin -> carryout: 0.278 ns
+     9.027 ns t72
+        lc40_2_7_4 (LogicCell40) carryin -> carryout: 0.278 ns
+     9.305 ns t73
+        lc40_2_7_5 (LogicCell40) carryin -> carryout: 0.278 ns
+     9.583 ns t74
+        lc40_2_7_6 (LogicCell40) carryin -> carryout: 0.278 ns
+     9.861 ns t75
+        lc40_2_7_7 (LogicCell40) carryin -> carryout: 0.278 ns
+    10.139 ns net_12123 (user_3_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_O_I1_SB_LUT4_O_I3_SB_LUT4_O_I0[7])
+        t76 (ICE_CARRY_IN_MUX) carryinitin -> carryinitout: 0.556 ns
+        lc40_2_8_0 (LogicCell40) carryin -> carryout: 0.278 ns
+    10.974 ns t77
+        lc40_2_8_1 (LogicCell40) carryin -> carryout: 0.278 ns
+    11.252 ns t78
+        lc40_2_8_2 (LogicCell40) carryin -> carryout: 0.278 ns
+    11.530 ns t79
+        lc40_2_8_3 (LogicCell40) carryin -> carryout: 0.278 ns
+    11.808 ns t80
+        lc40_2_8_4 (LogicCell40) carryin -> carryout: 0.278 ns
+    12.086 ns t81
+        lc40_2_8_5 (LogicCell40) carryin -> carryout: 0.278 ns
+    12.364 ns t82
+        lc40_2_8_6 (LogicCell40) carryin -> carryout: 0.278 ns
+    12.643 ns net_12240 (user_3_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_O_I1_SB_LUT4_O_I3_SB_LUT4_O_I0[14])
+        lc40_2_8_7 (LogicCell40) carryin -> carryout: 0.278 ns
+    12.921 ns net_12246 ($nextpnr_ICESTORM_LC_46$I3)
+        t86 (ICE_CARRY_IN_MUX) carryinitin -> carryinitout: 0.556 ns
+        inmux_2_9_12290_12331 (InMux) I -> O: 0.662 ns
+        lc40_2_9_0 (LogicCell40) in3 -> lcout: 0.874 ns
+    15.013 ns net_7890 (user_3_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_O_I1_SB_LUT4_O_I3_SB_LUT4_O_I0[15])
+        t3608 (LocalMux) I -> O: 1.099 ns
+        inmux_2_8_12180_12247 (InMux) I -> O: 0.662 ns
+        lc40_2_8_7 (LogicCell40) in0 -> lcout: 1.285 ns
+    18.060 ns net_7750 (rgbB_SB_LUT4_I0_O_SB_LUT4_I0_I3[0])
+        odrv_2_8_7750_12161 (Odrv4) I -> O: 0.649 ns
+        t3594 (Span4Mux_h4) I -> O: 0.543 ns
+        t3593 (LocalMux) I -> O: 1.099 ns
+        inmux_3_6_15764_15820 (InMux) I -> O: 0.662 ns
+        lc40_3_6_5 (LogicCell40) in0 -> lcout: 1.285 ns
+    22.298 ns net_11890 (__main._q_newStackTop_SB_DFFE_Q_13_D_SB_LUT4_O_I0_SB_LUT4_O_I0_SB_LUT4_O_I0_SB_LUT4_O_I1_SB_LUT4_O_1_I3[3])
+        t4354 (LocalMux) I -> O: 1.099 ns
+        inmux_3_5_15647_15705 (InMux) I -> O: 0.662 ns
+        t300 (CascadeMux) I -> O: 0.000 ns
+        lc40_3_5_6 (LogicCell40) in2 -> lcout: 1.205 ns
+    25.265 ns net_11768 (__main._q_newStackTop_SB_DFFE_Q_13_D_SB_LUT4_O_I0_SB_LUT4_O_I0_SB_LUT4_O_I0_SB_LUT4_O_I1[3])
+        t4245 (LocalMux) I -> O: 1.099 ns
+        inmux_4_4_19364_19389 (InMux) I -> O: 0.662 ns
+        t432 (CascadeMux) I -> O: 0.000 ns
+        lc40_4_4_2 (LogicCell40) in2 -> lcout: 1.205 ns
+    28.231 ns net_15472 (__main._q_newStackTop_SB_DFFE_Q_13_D_SB_LUT4_O_I0_SB_LUT4_O_I0_SB_LUT4_O_I0[0])
+        t5369 (LocalMux) I -> O: 1.099 ns
+        inmux_5_5_23314_23360 (InMux) I -> O: 0.662 ns
+        lc40_5_5_5 (LogicCell40) in1 -> lcout: 1.232 ns
+    31.225 ns net_19429 (__main._q_newStackTop_SB_DFFE_Q_13_D_SB_LUT4_O_I0_SB_LUT4_O_I0[3])
+        odrv_5_5_19429_15732 (Odrv4) I -> O: 0.649 ns
+        t6465 (Span4Mux_h4) I -> O: 0.543 ns
+        t6464 (Span4Mux_v4) I -> O: 0.649 ns
+        t6463 (LocalMux) I -> O: 1.099 ns
+        inmux_7_4_30210_30263 (InMux) I -> O: 0.662 ns
+        t989 (CascadeMux) I -> O: 0.000 ns
+        lc40_7_4_4 (LogicCell40) in2 -> lcout: 1.205 ns
+    36.032 ns net_26873 (__main._q_newStackTop_SB_DFFE_Q_13_D_SB_LUT4_O_I0[0])
+        t8083 (LocalMux) I -> O: 1.099 ns
+        inmux_7_3_30085_30123 (InMux) I -> O: 0.662 ns
+    37.794 ns net_30123 (__main._q_newStackTop_SB_DFFE_Q_13_D_SB_LUT4_O_I0[0])
+        lc40_7_3_1 (LogicCell40) in3 [setup]: 0.583 ns
+    38.377 ns net_26768 (__main._q_newStackTop[1])
+
+Resolvable net names on path:
+     1.491 ns ..  3.252 ns user_3_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_O_I1_SB_LUT4_O_1_I1_SB_LUT4_O_1_I0_SB_LUT4_O_I3[1]
+     4.457 ns ..  7.517 ns user_3_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_O_I1_SB_LUT4_O_1_I1_SB_LUT4_O_1_I0[0]
+    10.139 ns .. 10.696 ns user_3_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_O_I1_SB_LUT4_O_I3_SB_LUT4_O_I0[7]
+    12.643 ns .. 12.643 ns user_3_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_O_I1_SB_LUT4_O_I3_SB_LUT4_O_I0[14]
+    12.921 ns .. 14.139 ns $nextpnr_ICESTORM_LC_46$I3
+    15.013 ns .. 16.775 ns user_3_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_I1_O_SB_LUT4_O_I1_SB_LUT4_O_I3_SB_LUT4_O_I0[15]
+    18.060 ns .. 21.013 ns rgbB_SB_LUT4_I0_O_SB_LUT4_I0_I3[0]
+    22.298 ns .. 24.059 ns __main._q_newStackTop_SB_DFFE_Q_13_D_SB_LUT4_O_I0_SB_LUT4_O_I0_SB_LUT4_O_I0_SB_LUT4_O_I1_SB_LUT4_O_1_I3[3]
+    25.265 ns .. 27.026 ns __main._q_newStackTop_SB_DFFE_Q_13_D_SB_LUT4_O_I0_SB_LUT4_O_I0_SB_LUT4_O_I0_SB_LUT4_O_I1[3]
+    28.231 ns .. 29.993 ns __main._q_newStackTop_SB_DFFE_Q_13_D_SB_LUT4_O_I0_SB_LUT4_O_I0_SB_LUT4_O_I0[0]
+    31.225 ns .. 34.827 ns __main._q_newStackTop_SB_DFFE_Q_13_D_SB_LUT4_O_I0_SB_LUT4_O_I0[3]
+    36.032 ns .. 37.794 ns __main._q_newStackTop_SB_DFFE_Q_13_D_SB_LUT4_O_I0[0]
+                  lcout -> __main._q_newStackTop[1]
+
+Total number of logic levels: 25
+Total path delay: 38.38 ns (26.06 MHz)
+

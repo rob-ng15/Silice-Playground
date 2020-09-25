@@ -51,6 +51,18 @@ module top(
     );
     assign clk_48mhz = clk;
 
+    // Create 1hz (1 second counter)
+    reg [31:0] counter48mhz;
+    reg [15:0] counter1hz;
+    always @(posedge clk_48mhz) begin
+        if( counter48mhz == 48000000 ) begin
+            counter1hz <= counter1hz + 1;
+            counter48mhz <= 0;
+        end else begin
+            counter48mhz <= counter48mhz + 1;
+        end
+    end 
+
     // RGB LED Driver
     wire rgbB, rgbG, rgbR;
     SB_RGBA_DRV #(
@@ -223,7 +235,9 @@ module top(
 
     .in_uart_out_data( uart_out_data ),
     .in_uart_out_valid( uart_out_valid ),
-    .out_uart_out_ready( uart_out_ready  )
+    .out_uart_out_ready( uart_out_ready  ),
+    
+    .in_timer1hz ( counter1hz )
 );
 
 endmodule

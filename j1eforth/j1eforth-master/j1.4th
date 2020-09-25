@@ -112,7 +112,7 @@ variable tlast
 variable tuser
 
 0001 constant =ver
-0002 constant =ext
+0005 constant =ext
 0040 constant =comp
 0080 constant =imed
 7f1f constant =mask
@@ -541,6 +541,7 @@ t: key ( -- c )
      ?key
 	until f000 literal @ t;
 t: nuf? ( -- t ) ?key dup if drop key =cr literal = then exit t;
+t: timer ( -- t ) f004 literal @ t;
 t: space ( -- ) bl emit t;
 t: spaces ( +n -- ) 0 literal max  for aft space then next t;
 t: type ( b u -- ) for aft count emit then next drop t;
