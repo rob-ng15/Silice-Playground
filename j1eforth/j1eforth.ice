@@ -124,15 +124,15 @@ algorithm main(
     uint16 bramREAD = 0;
 
     // UART input FIFO (32 character) as dualport bram (code from @sylefeb)
-    dualport_bram uint8 uartInBuffer[32] = uninitialized;
-    uint5 uartInBufferNext = 0;
-    uint5 uartInBufferTop = 0;
+    dualport_bram uint8 uartInBuffer[256] = uninitialized;
+    uint8 uartInBufferNext = 0;
+    uint8 uartInBufferTop = 0;
 
     // UART output FIFO (32 character) as dualport bram (code from @sylefeb)
-    dualport_bram uint8 uartOutBuffer[32] = uninitialized;
-    uint5 uartOutBufferNext = 0;
-    uint5 uartOutBufferTop = 0;
-    uint5 newuartOutBufferTop = 0;
+    dualport_bram uint8 uartOutBuffer[256] = uninitialized;
+    uint8 uartOutBufferNext = 0;
+    uint8 uartOutBufferTop = 0;
+    uint8 newuartOutBufferTop = 0;
     
     // bram for dstack and rstack write enable, maintained low, pulsed high (code from @sylefeb)
     dstack.wenable         := 0;  

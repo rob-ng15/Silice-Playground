@@ -122,7 +122,7 @@ variable tuser
 000a constant =lf
 000d constant =cr
 
-4000 constant =em
+8000 constant =em
 0000 constant =cold
 
  8 constant =vocs
@@ -541,7 +541,10 @@ t: key ( -- c )
      ?key
 	until f000 literal @ t;
 t: nuf? ( -- t ) ?key dup if drop key =cr literal = then exit t;
-t: timer ( -- t ) f004 literal @ t;
+t: timer@ ( -- t ) f004 literal @ t;
+t: rgb@ ( -- t ) f002 literal @ t;
+t: rgb! ( c -- ) f002 literal ! t;
+t: buttons@ ( -- t ) f003 literal @ t;
 t: space ( -- ) bl emit t;
 t: spaces ( +n -- ) 0 literal max  for aft space then next t;
 t: type ( b u -- ) for aft count emit then next drop t;
