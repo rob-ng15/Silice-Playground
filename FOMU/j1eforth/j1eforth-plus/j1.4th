@@ -560,6 +560,31 @@ t: . ( w -- ) base @ a literal xor if u. exit then str space type t;
 t: cmove ( b1 b2 u -- ) for aft >r dup c@ r@ c! 1+ r> 1+ then next 2drop t;
 t: pack$ ( b u a -- a ) dup >r 2dup ! 1+ swap cmove r> t;
 t: ? ( a -- ) @ . t;
+
+( double maths )
+t: 2over >r >r 2dup r> r> rot >r rot r> t;
+t: 2swap rot >r rot r> t;
+t: 2nip rot drop rot drop t;
+t: 2rot 2>r 2swap 2r> 2swap t;
+t: d= >r rot xor swap r> xor or 0= t;
+t: d<> d= invert t;
+t: d+ rot + >r over + dup rot u< if r> 1+ else r> then t;
+t: d- dnegate d+ t;
+t: s>d dup 0< t;
+t: d1+ 1 literal s>d d+ t;
+t: dxor rot xor -rot xor swap t;
+t: dand rot and -rot and swap t;
+t: dor rot or -rot or swap t;
+t: dinvert invert swap invert swap t;
+t: d< rot 2dup = if 2drop u< else 2nip > then t;
+t: d> 2swap d< t;
+t: d0= or 0= t;
+t: d0< 0 literal s>d d< t;
+t: d0<> d0= invert t;
+t: d2* 2dup d+ t;
+t: d2/ dup f literal lshift >r 2/ swap 2/ r> or swap t;
+t: d1- 1 literal s>d dnegate d+ t;
+
 t: (parse) ( b u c -- b u delta ; <string> )
   temp ! over >r dup if
     1- temp @ bl = if
@@ -787,6 +812,7 @@ t: user ( u -- ; <string> ) token $,n overt compile douser , t;
 t: <create> ( -- ; <string> ) token $,n overt [t] dovar ]asm literal asm[ call, t;
 t: create ( -- ; <string> ) 'create @execute t;
 t: variable ( -- ; <string> ) create 0 literal , t;
+t: 2variable ( -- ; <string> ) create 0 literal , 1 literal cells allot t;
 t: (does>) ( -- )
    r> 1 literal rshift here 1 literal rshift
    last @ name> dup cell+ ]asm 8000 literal asm[ or , ! , t; compile-only

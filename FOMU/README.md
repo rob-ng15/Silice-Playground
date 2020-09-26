@@ -169,6 +169,22 @@ ALL <br> (at end of INIT==3 loop) | Reset the UART output if any character was t
 * `decimal` use decimal notation
 * `hex` use hexadecimal notation
 
+The j1eforth wordlist has been extended to include some double (32 bit) integer words, including `2variable` to create a double variable, double integer arithmetic, along with some words for manipulating double integers on the stack.
+
+* `2variable` creates a named double integer variable
+* `2!` writes the double integer on the stack to a double integer variable (this was already part of j1eforth)
+* `2@` reads a double integer variable to the stack (this was already part of j1eforth)
+* `s>d` converts a single integer on the stack to a double integer on the stack
+* `d1+` and `d1-` increment and decrement the double integer on the stack
+* `d2*` and `d2/` double and halve the double integer on the stack
+* `d+` and `d-` do double integer addition and subtraction
+* `d=`, `d<>`, `d<`, `d>` do double integer comparisons
+* `d0=`, `d0<>` and `d0<` do double integer 0 comparisons
+* `dand`, `dor`, `dxor` and `dinvert` do double integer binary arithmetic
+* `2swap` `2over`, `2rot` and `2nip` along with the j1eforth `2dup` and `2drop` work with double integers on the stack
+* `m*` and `um*` perform single integer signed and unsigned multiplication giving a double integer result (these were already part of j1eforth)
+* `m/mod` and `um/mod` divide a double integer by a single integer, signed and unsigned, to give a single integer remainder and quotient (these were already part of j1eforth)
+
 ### Sample Code
 
 This can be copied and pasted into the terminal. Try to keep line lengths relatively short when cutting and pasting.
