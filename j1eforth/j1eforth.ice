@@ -377,9 +377,9 @@ algorithm main(
                                         case 4b0101: {newStackTop = stackTop >> 1;}
                                         case 4b0110: {newStackTop = {16{(__signed(stackNext) > __signed(stackTop))}};}
                                         case 4b0111: {newStackTop = {16{(__unsigned(stackNext) > __unsigned(stackTop))}};}
-                                        case 4b1000: {newStackTop = {16{(__signed(stackTop) < 0)}};}
-                                        case 4b1001: {newStackTop = {16{(__signed(stackTop) > 0)}};}
-                                        case 4b1010: {newStackTop = ( __signed(stackTop) < 0 ) ?  - stackTop : stackTop;}
+                                        case 4b1000: {newStackTop = {16{(__signed(stackTop) < __signed(0))}};}
+                                        case 4b1001: {newStackTop = {16{(__signed(stackTop) > __signed(0))}};}
+                                        case 4b1010: {newStackTop = ( __signed(stackTop) < __signed(0) ) ?  - stackTop : stackTop;}
                                         case 4b1011: {newStackTop = ( __signed(stackNext) > __signed(stackTop) ) ? stackNext : stackTop;}
                                         case 4b1100: {newStackTop = ( __signed(stackNext) < __signed(stackTop) ) ? stackNext : stackTop;}
                                         case 4b1101: {newStackTop = -stackTop;}
