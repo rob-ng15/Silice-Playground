@@ -18,7 +18,7 @@ j1eforth with the enhanced J1+ CPU for FOMU is coded in Silice (https://github.c
 
 I've, in my opinion, tidied up the code, to make the variables more explanatory, and to aid my coding.
 
-For communicating via a terminal the tinyfpga_bx_usbserial (https://github.com/stef/nb-fomu-hw) was implemented to provide a 115200 baud UART. A 256 character input and output buffer was added.
+For communicating via a terminal the tinyfpga_bx_usbserial (https://github.com/stef/nb-fomu-hw) was implemented to provide a 115200 baud UART. A 512 character input and output buffer was added, allowing copy and paste of code into the terminal.
 
 ## Using j1eforth on the FOMU
 
@@ -34,7 +34,7 @@ Resource usage has been considerably reduced from my initial attempt at Silice c
 
 ```
 Info: Device utilisation:                                                                                                           
-Info:            ICESTORM_LC:  2612/ 5280    49%                                                                                    
+Info:            ICESTORM_LC:  2583/ 5280    48%                                                                                    
 Info:           ICESTORM_RAM:    20/   30    66%                                                                                    
 Info:                  SB_IO:    12/   96    12%                                                                                    
 Info:                  SB_GB:     8/    8   100%                                                                                    
@@ -50,7 +50,7 @@ Info:            SB_LEDDA_IP:     0/    1     0%
 Info:            SB_RGBA_DRV:     1/    1   100%                                                                                    
 Info:         ICESTORM_SPRAM:     4/    4   100%                                                                                    
 
-// Timing estimate: 39.70 ns (25.19 MHz)
+// Timing estimate: 38.88 ns (25.72 MHz)
 ```
 
 The original J1 CPU has this instruction encoding:
@@ -165,7 +165,7 @@ ALL <br> (at end of INIT==3 loop) | Reset the UART output if any character was t
 * `cold` reset
 * `words` list known Forth words
 * `cr` output a carriage return
-* `2a emit` output a * (character 2a (hex) 42 (decimal)
+* `2a emit` output a * ( character 2a (hex) 42 (decimal) )
 * `decimal` use decimal notation
 * `hex` use hexadecimal notation
 
@@ -174,11 +174,14 @@ ALL <br> (at end of INIT==3 loop) | Reset the UART output if any character was t
 This can be copied and pasted into the terminal. Try to keep line lengths relatively short when cutting and pasting.
 
 ```
-: vtcs decimal 27 emit 91 emit 50 emit 74 emit ;
-: vtxy decimal 27 emit 91 emit 0 u.r 59 emit 0 u.r 72 emit ;
-: rgbtest vtcs decimal
-    256 0 do 
-        8 1 vtxy timer@ dup 5 u.r rgb! 
+: vtcs 1b emit 5b emit 32 emit 4a emit ;
+: vtxy 1b emit 5b emit 0 decimal u.r hex 3b emit 0 decimal u.r hex 48 emit ;
+: rgbtest  
+    100 0 do 
+        vtcs
+        8 1 vtxy timer@ dup 5 decimal u.r hex space ." seconds "
+        rgb! rgb@ 3 
+        2 base ! u.r space ." RGB LED" hex 
         8000 0 do loop 
   loop cr 0 rgb! ;
 ```
@@ -187,7 +190,7 @@ This code defines 3 new Forth words:
 
 * `vtcs` which clears the terminal ( sends ESC [ 2 J )
 * `vtxy` moves the cursor to the position defined by the top two locations on the stack, `8 1 vtxy` moves the cursor to line 1 column 8 ( sends ESC [ 1 ; 8 H )
-* `rgbtest` clears the screen, then loops display this number of seconds elapsed, and changing the RGB LED to the lower 3 bits of the timers.
+* `rgbtest` Loops, clears the screen then displays the number of seconds elapsed whilst changing the RGB LED to the lower 3 bits of the timers, and then displaying the binary status of the RGB LED. Finally turning off the RGB LED.
 
 Start the test with `rgbtest`.
 
