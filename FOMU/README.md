@@ -34,8 +34,8 @@ Resource usage has been considerably reduced from my initial attempt at Silice c
 
 ```
 Info: Device utilisation:                                                                                                           
-Info:            ICESTORM_LC:  2583/ 5280    48%                                                                                    
-Info:           ICESTORM_RAM:    20/   30    66%                                                                                    
+Info:            ICESTORM_LC:  2831/ 5280    53%                                                                                    
+Info:           ICESTORM_RAM:    21/   30    70%                                                                                    
 Info:                  SB_IO:    12/   96    12%                                                                                    
 Info:                  SB_GB:     8/    8   100%                                                                                    
 Info:           ICESTORM_PLL:     0/    1     0%                                                                                    
@@ -48,10 +48,14 @@ Info:                 SB_SPI:     0/    2     0%
 Info:                 IO_I3C:     0/    2     0%                                                                                    
 Info:            SB_LEDDA_IP:     0/    1     0%                                                                                    
 Info:            SB_RGBA_DRV:     1/    1   100%                                                                                    
-Info:         ICESTORM_SPRAM:     4/    4   100%                                                                                    
+Info:         ICESTORM_SPRAM:     4/    4   100% 
 
-// Timing estimate: 38.88 ns (25.72 MHz)
+// Timing estimate: 38.93 ns (25.69 MHz)
 ```
+
+## J1 and J1+ CPU Differences
+
+The original J1 CPU had a 33 entry data stack and a 32 entry return stack. The J1+ CPU has a 257 entry data stack and a 256 entry return stack.
 
 The original J1 CPU has this instruction encoding:
 
@@ -162,6 +166,13 @@ ALL <br> (at end of INIT==3 loop) | Reset the UART output if any character was t
 
 ### Forth Words to try
 
+__j1eforth__ defaults to __hex__ for numbers. 
+
+* `.` prints the top of the stack in the current base, `.#` does the same in decimal.
+* `u.` prints the _unsigned_ top of the stack in the current base, `u.#` does the same in decimal.
+* `.r` prints the second in the stack, aligned to top of stack digits, in the current base, `.r#` does the same in decimal.
+* `u.r` prints the _unsigned_ second in the stack, aligned to top of stack digits, in the current base, `u.r#` does the same in decimal.
+
 * `cold` reset
 * `words` list known Forth words
 * `cr` output a carriage return
@@ -191,22 +202,28 @@ This can be copied and pasted into the terminal. Try to keep line lengths relati
 
 ```
 : vtcs 1b emit 5b emit 32 emit 4a emit ;
-: vtxy 1b emit 5b emit 0 decimal u.r hex 3b emit 0 decimal u.r hex 48 emit ;
-: rgbtest  
+: vtxy 1b emit 5b emit 0 u.r# 3b emit 0 u.r# 48 emit ;
+: rgbtest
+    ( store the base, set to binary )
+    base @ 2 base !
     100 0 do 
+        ( clear the screen )
         vtcs
-        8 1 vtxy timer@ dup 5 decimal u.r hex space ." seconds "
-        rgb! rgb@ 3 
-        2 base ! u.r space ." RGB LED" hex 
+        ( move to 8 1, output 5 digit timer )
+        8 1 vtxy timer@ dup 5 u.r# space ." seconds "
+        rgb! rgb@ 
+        ( output 3 digit binary )
+        3 u.r space ." RGB LED" 
         8000 0 do loop 
-  loop cr 0 rgb! ;
+    loop
+    cr 0 rgb! base ! ;
 ```
 
 This code defines 3 new Forth words:
 
 * `vtcs` which clears the terminal ( sends ESC [ 2 J )
 * `vtxy` moves the cursor to the position defined by the top two locations on the stack, `8 1 vtxy` moves the cursor to line 1 column 8 ( sends ESC [ 1 ; 8 H )
-* `rgbtest` Loops, clears the screen then displays the number of seconds elapsed whilst changing the RGB LED to the lower 3 bits of the timers, and then displaying the binary status of the RGB LED. Finally turning off the RGB LED.
+* `rgbtest` Loops, clears the screen then displays the number of seconds elapsed whilst changing the RGB LED to the lower 3 bits of the timers, and then displaying the binary (`2 base !` changes to binary) status of the RGB LED. Finally turning off the RGB LED.
 
 Start the test with `rgbtest`.
 

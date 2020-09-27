@@ -80,27 +80,25 @@ algorithm main(
     uint1   is_lit := literal(instruction).is_literal;
     uint1   dstackWrite := ( is_lit | (is_alu & aluop(instruction).is_t2n) );
     uint1   rstackWrite := ( is_call | (is_alu & aluop(instruction).is_t2r) );
-    uint5   ddelta := { aluop(instruction).ddelta1, aluop(instruction).ddelta1, aluop(instruction).ddelta1, aluop(instruction).ddelta1, aluop(instruction).ddelta0 };
-    uint5   rdelta := { aluop(instruction).rdelta1, aluop(instruction).rdelta1, aluop(instruction).rdelta1, aluop(instruction).rdelta1, aluop(instruction).rdelta0 };
+    uint8   ddelta := { {7{aluop(instruction).ddelta1}}, aluop(instruction).ddelta0 };
+    uint8   rdelta := { {7{aluop(instruction).rdelta1}}, aluop(instruction).rdelta0 };
     
     // program counter
     uint13  pc = 0;
     uint13  pcPlusOne := pc + 1;
     uint13  newPC = uninitialized;
 
-    // dstack 33x16bit (as 32 array + stackTop) and pointer, next pointer, write line, delta
-    //uint16 dstack[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    bram uint16 dstack[32] = uninitialized; // bram (code from @sylefeb)
+    // dstack 257x16bit (as 3256 array + stackTop) and pointer, next pointer, write line, delta
+    bram uint16 dstack[256] = uninitialized; // bram (code from @sylefeb)
     uint16  stackTop = 0;
-    uint5   dsp = 0;
-    uint5   newDSP = uninitialized;
+    uint8   dsp = 0;
+    uint8   newDSP = uninitialized;
     uint16  newStackTop = uninitialized;
 
-    // rstack 32x16bit and pointer, next pointer, write line
-    //uint16 rstack[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    bram uint16 rstack[32] = uninitialized; // bram (code from @sylefeb)
-    uint5   rsp = 0;
-    uint5   newRSP = uninitialized;
+    // rstack 256x16bit and pointer, next pointer, write line
+    bram uint16 rstack[256] = uninitialized; // bram (code from @sylefeb)
+    uint8   rsp = 0;
+    uint8   newRSP = uninitialized;
     uint16  rstackWData = uninitialized;
 
     uint16  stackNext = uninitialized;
@@ -362,7 +360,7 @@ algorithm main(
                                             }
                                         }
                                         case 4b1101: {newStackTop = stackNext << nibbles(stackTop).nibble0;}
-                                        case 4b1110: {newStackTop = {rsp, 3b000, dsp};}
+                                        case 4b1110: {newStackTop = {rsp, dsp};}
                                         case 4b1111: {newStackTop = {16{(__unsigned(stackNext) < __unsigned(stackTop))}};}
                                     }
                                 }
