@@ -67,41 +67,41 @@ wire uart_rx_valid;
 wire uart_rx_ready;
 wire uart_serial_tx;
 
-//uart uart0(
-//.clk(clk), // The master clock for this module
-//.rst(reset_main), // Synchronous reset
-//.rx(rx), // Incoming serial line
-//.tx(tx), // Outgoing serial line
-//.transmit(uart_tx_valid), // Signal to transmit
-//.tx_byte(uart_tx_data), // Byte to transmit
-//.received(uart_rx_valid), // Indicated that a byte has been received
-//.rx_byte(uart_rx_data), // Byte received
-//.is_receiving(), // Low when receive line is idle
-//.is_transmitting(uart_tx_busy),// Low when transmit line is idle
-//.recv_error() // Indicates error in receiving packet.
-//);
+uart uart0(
+    .clk(clk), // The master clock for this module
+    .rst(reset_main), // Synchronous reset
+    .rx(rx), // Incoming serial line
+    .tx(tx), // Outgoing serial line
+    .transmit(uart_tx_valid), // Signal to transmit
+    .tx_byte(uart_tx_data), // Byte to transmit
+    .received(uart_rx_valid), // Indicated that a byte has been received
+    .rx_byte(uart_rx_data), // Byte received
+    .is_receiving(), // Low when receive line is idle
+    .is_transmitting(uart_tx_busy),// Low when transmit line is idle
+    .recv_error() // Indicates error in receiving packet.
+);
 
 // Want to interface to 115200 baud UART
 // 50000000 / 115200 = 434 Clocks Per Bit.
-parameter c_CLOCK_PERIOD_NS = 2;
-parameter c_CLKS_PER_BIT    = 434;
-parameter c_BIT_PERIOD      = 8600;
-
-uart_rx #(.CLKS_PER_BIT(c_CLKS_PER_BIT)) UART_RX_INST
-(.i_Clock(clk),
-    .i_Rx_Serial(rx),
-    .o_Rx_DV(uart_rx_valid),
-    .o_Rx_Byte(uart_rx_data)
-    );
-
-uart_tx #(.CLKS_PER_BIT(c_CLKS_PER_BIT)) UART_TX_INST
-(.i_Clock(clk),
-    .i_Tx_DV(uart_tx_valid),
-    .i_Tx_Byte(uart_tx_data),
-    .o_Tx_Active(uart_tx_busy),
-    .o_Tx_Serial(tx),
-    .o_Tx_Done(uart_tx_done)
-    );
+//parameter c_CLOCK_PERIOD_NS = 2;
+//parameter c_CLKS_PER_BIT    = 434;
+//parameter c_BIT_PERIOD      = 8600;
+//
+//uart_rx #(.CLKS_PER_BIT(c_CLKS_PER_BIT)) UART_RX_INST
+//(.i_Clock(clk),
+//    .i_Rx_Serial(rx),
+//    .o_Rx_DV(uart_rx_valid),
+//    .o_Rx_Byte(uart_rx_data)
+//    );
+//
+//uart_tx #(.CLKS_PER_BIT(c_CLKS_PER_BIT)) UART_TX_INST
+//(.i_Clock(clk),
+//    .i_Tx_DV(uart_tx_valid),
+//    .i_Tx_Byte(uart_tx_data),
+//    .o_Tx_Active(uart_tx_busy),
+//    .o_Tx_Serial(tx),
+//    .o_Tx_Done(uart_tx_done)
+//    );
 
 M_main __main(
   .clock(clk),
@@ -4410,7 +4410,6 @@ end
 if (_q_INIT==3) begin
 // __block_54
 // __block_56
-_d_led = _q_instruction;
 if (in_uart_rx_valid) begin
 // __block_57
 // __block_59
@@ -4452,7 +4451,7 @@ _d_memoryInput = _w_mem_ram_rdata0;
 _d_instruction = _w_mem_ram_rdata1;
 // __block_73
   end
-  8: begin
+  2: begin
 // __block_74_case
 // __block_75
 if (_w_is_lit) begin
@@ -4595,7 +4594,7 @@ _d_newStackTop = {14'b0,_d_uart_tx_valid,~(_q_uartInBufferNext==_d_uartInBufferT
   16'hf002: begin
 // __block_142_case
 // __block_143
-_d_newStackTop = _d_led;
+_d_newStackTop = _q_led;
 // __block_144
   end
   16'hf003: begin
@@ -4793,7 +4792,7 @@ end
 // __block_234
 // __block_235
   end
-  9: begin
+  3: begin
 // __block_236_case
 // __block_237
 if (_w_dstackWrite) begin
@@ -4820,7 +4819,7 @@ end
 // __block_247
 // __block_248
   end
-  10: begin
+  4: begin
 // __block_249_case
 // __block_250
 _d_dsp = _q_newDSP;
@@ -4831,7 +4830,7 @@ _d_dstack_addr = _q_newDSP;
 _d_rstack_addr = _q_newRSP;
 // __block_251
   end
-  12: begin
+  5: begin
 // __block_252_case
 // __block_253
 _d_ram_wenable0 = 0;
@@ -4844,7 +4843,7 @@ _d_ram_wenable0 = 0;
   end
 endcase
 // __block_67
-if (~in_uart_tx_busy&_d_uart_tx_valid) begin
+if (in_uart_tx_busy&_d_uart_tx_valid) begin
 // __block_258
 // __block_260
 _d_uart_tx_valid = 0;
@@ -4853,7 +4852,7 @@ end else begin
 // __block_259
 end
 // __block_262
-_d_CYCLE = _q_CYCLE+1;
+_d_CYCLE = (_q_CYCLE==5)?0:_q_CYCLE+1;
 // __block_263
 _d_index = 5;
 end else begin

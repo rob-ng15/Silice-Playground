@@ -1,5 +1,5 @@
 Analysis & Synthesis report for Basic
-Mon Sep 28 07:56:31 2020
+Mon Sep 28 17:44:37 2020
 Quartus Prime Version 20.1.0 Build 711 06/05/2020 SJ Lite Edition
 
 
@@ -16,37 +16,36 @@ Quartus Prime Version 20.1.0 Build 711 06/05/2020 SJ Lite Edition
   8. Analysis & Synthesis RAM Summary
   9. State Machine - |Basic|M_main:__main|_q_index
  10. State Machine - |Basic|M_main:__main|_q_INIT
- 11. State Machine - |Basic|uart_tx:UART_TX_INST|r_SM_Main
- 12. State Machine - |Basic|uart_rx:UART_RX_INST|r_SM_Main
+ 11. State Machine - |Basic|uart:uart0|tx_state
+ 12. State Machine - |Basic|uart:uart0|recv_state
  13. Registers Removed During Synthesis
  14. Removed Registers Triggering Further Register Optimizations
  15. General Register Statistics
- 16. Registers Packed Into Inferred Megafunctions
- 17. Multiplexer Restructuring Statistics (Restructuring Performed)
- 18. Source assignments for M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|altsyncram:buffer_rtl_0|altsyncram_0pm1:auto_generated
- 19. Source assignments for M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer|altsyncram:buffer_rtl_0|altsyncram_i3n1:auto_generated
- 20. Source assignments for M_main:__main|M_main_mem_ram:__mem__ram|altsyncram:buffer_rtl_0|altsyncram_99e2:auto_generated
- 21. Source assignments for M_main:__main|M_main_mem_rom:__mem__rom|altsyncram:buffer_rtl_0|altsyncram_npd1:auto_generated
- 22. Source assignments for M_main:__main|M_main_mem_rstack:__mem__rstack|altsyncram:buffer_rtl_0|altsyncram_o6n1:auto_generated
- 23. Source assignments for M_main:__main|M_main_mem_dstack:__mem__dstack|altsyncram:buffer_rtl_0|altsyncram_o6n1:auto_generated
- 24. Parameter Settings for User Entity Instance: Top-level Entity: |Basic
- 25. Parameter Settings for User Entity Instance: uart_rx:UART_RX_INST
- 26. Parameter Settings for User Entity Instance: uart_tx:UART_TX_INST
- 27. Parameter Settings for Inferred Entity Instance: M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|altsyncram:buffer_rtl_0
- 28. Parameter Settings for Inferred Entity Instance: M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer|altsyncram:buffer_rtl_0
- 29. Parameter Settings for Inferred Entity Instance: M_main:__main|M_main_mem_ram:__mem__ram|altsyncram:buffer_rtl_0
- 30. Parameter Settings for Inferred Entity Instance: M_main:__main|M_main_mem_rom:__mem__rom|altsyncram:buffer_rtl_0
- 31. Parameter Settings for Inferred Entity Instance: M_main:__main|M_main_mem_rstack:__mem__rstack|altsyncram:buffer_rtl_0
- 32. Parameter Settings for Inferred Entity Instance: M_main:__main|M_main_mem_dstack:__mem__dstack|altsyncram:buffer_rtl_0
- 33. altsyncram Parameter Settings by Entity Instance
- 34. Port Connectivity Checks: "M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer"
- 35. Port Connectivity Checks: "M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer"
- 36. Port Connectivity Checks: "M_main:__main|M_main_mem_ram:__mem__ram"
- 37. Port Connectivity Checks: "M_main:__main"
- 38. Port Connectivity Checks: "uart_tx:UART_TX_INST"
- 39. Post-Synthesis Netlist Statistics for Top Partition
- 40. Elapsed Time Per Partition
- 41. Analysis & Synthesis Messages
+ 16. Inverted Register Statistics
+ 17. Registers Packed Into Inferred Megafunctions
+ 18. Multiplexer Restructuring Statistics (Restructuring Performed)
+ 19. Source assignments for M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|altsyncram:buffer_rtl_0|altsyncram_i3n1:auto_generated
+ 20. Source assignments for M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer|altsyncram:buffer_rtl_0|altsyncram_i3n1:auto_generated
+ 21. Source assignments for M_main:__main|M_main_mem_ram:__mem__ram|altsyncram:buffer_rtl_0|altsyncram_99e2:auto_generated
+ 22. Source assignments for M_main:__main|M_main_mem_rom:__mem__rom|altsyncram:buffer_rtl_0|altsyncram_npd1:auto_generated
+ 23. Source assignments for M_main:__main|M_main_mem_rstack:__mem__rstack|altsyncram:buffer_rtl_0|altsyncram_o6n1:auto_generated
+ 24. Source assignments for M_main:__main|M_main_mem_dstack:__mem__dstack|altsyncram:buffer_rtl_0|altsyncram_o6n1:auto_generated
+ 25. Parameter Settings for User Entity Instance: uart:uart0
+ 26. Parameter Settings for Inferred Entity Instance: M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|altsyncram:buffer_rtl_0
+ 27. Parameter Settings for Inferred Entity Instance: M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer|altsyncram:buffer_rtl_0
+ 28. Parameter Settings for Inferred Entity Instance: M_main:__main|M_main_mem_ram:__mem__ram|altsyncram:buffer_rtl_0
+ 29. Parameter Settings for Inferred Entity Instance: M_main:__main|M_main_mem_rom:__mem__rom|altsyncram:buffer_rtl_0
+ 30. Parameter Settings for Inferred Entity Instance: M_main:__main|M_main_mem_rstack:__mem__rstack|altsyncram:buffer_rtl_0
+ 31. Parameter Settings for Inferred Entity Instance: M_main:__main|M_main_mem_dstack:__mem__dstack|altsyncram:buffer_rtl_0
+ 32. altsyncram Parameter Settings by Entity Instance
+ 33. Port Connectivity Checks: "M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer"
+ 34. Port Connectivity Checks: "M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer"
+ 35. Port Connectivity Checks: "M_main:__main|M_main_mem_ram:__mem__ram"
+ 36. Port Connectivity Checks: "M_main:__main"
+ 37. Port Connectivity Checks: "uart:uart0"
+ 38. Post-Synthesis Netlist Statistics for Top Partition
+ 39. Elapsed Time Per Partition
+ 40. Analysis & Synthesis Messages
 
 
 
@@ -73,16 +72,16 @@ https://fpgasoftware.intel.com/eula.
 +-------------------------------------------------------------------------------+
 ; Analysis & Synthesis Summary                                                  ;
 +---------------------------------+---------------------------------------------+
-; Analysis & Synthesis Status     ; Successful - Mon Sep 28 07:56:31 2020       ;
+; Analysis & Synthesis Status     ; Successful - Mon Sep 28 17:44:37 2020       ;
 ; Quartus Prime Version           ; 20.1.0 Build 711 06/05/2020 SJ Lite Edition ;
 ; Revision Name                   ; Basic                                       ;
 ; Top-level Entity Name           ; Basic                                       ;
 ; Family                          ; Cyclone V                                   ;
 ; Logic utilization (in ALMs)     ; N/A                                         ;
-; Total registers                 ; 461                                         ;
+; Total registers                 ; 564                                         ;
 ; Total pins                      ; 11                                          ;
 ; Total virtual pins              ; 0                                           ;
-; Total block memory bits         ; 594,336                                     ;
+; Total block memory bits         ; 598,432                                     ;
 ; Total DSP Blocks                ; 0                                           ;
 ; Total HSSI RX PCSs              ; 0                                           ;
 ; Total HSSI PMA RX Deserializers ; 0                                           ;
@@ -193,7 +192,7 @@ https://fpgasoftware.intel.com/eula.
 ;                            ;             ;
 ; Usage by Processor         ; % Time Used ;
 ;     Processor 1            ; 100.0%      ;
-;     Processor 2            ;   0.0%      ;
+;     Processor 2            ;   0.1%      ;
 ;     Processor 3            ;   0.0%      ;
 ;     Processor 4            ;   0.0%      ;
 ;     Processor 5            ;   0.0%      ;
@@ -208,8 +207,7 @@ https://fpgasoftware.intel.com/eula.
 +-----------------------------------------------+-----------------+-------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------+---------+
 ; File Name with User-Entered Path              ; Used in Netlist ; File Type                                             ; File Name with Absolute Path                                                                                         ; Library ;
 +-----------------------------------------------+-----------------+-------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------+---------+
-; ../uart/uart_tx.v                             ; yes             ; User Verilog HDL File                                 ; /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart_tx.v                                      ;         ;
-; ../uart/uart_rx.v                             ; yes             ; User Verilog HDL File                                 ; /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart_rx.v                                      ;         ;
+; ../uart/uart.v                                ; yes             ; User Verilog HDL File                                 ; /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart.v                                         ;         ;
 ; basic.v                                       ; yes             ; User Verilog HDL File                                 ; /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v                                       ;         ;
 ; altsyncram.tdf                                ; yes             ; Megafunction                                          ; /opt/intelFPGA/20.1/quartus/libraries/megafunctions/altsyncram.tdf                                                   ;         ;
 ; stratix_ram_block.inc                         ; yes             ; Megafunction                                          ; /opt/intelFPGA/20.1/quartus/libraries/megafunctions/stratix_ram_block.inc                                            ;         ;
@@ -220,7 +218,6 @@ https://fpgasoftware.intel.com/eula.
 ; altrom.inc                                    ; yes             ; Megafunction                                          ; /opt/intelFPGA/20.1/quartus/libraries/megafunctions/altrom.inc                                                       ;         ;
 ; altram.inc                                    ; yes             ; Megafunction                                          ; /opt/intelFPGA/20.1/quartus/libraries/megafunctions/altram.inc                                                       ;         ;
 ; altdpram.inc                                  ; yes             ; Megafunction                                          ; /opt/intelFPGA/20.1/quartus/libraries/megafunctions/altdpram.inc                                                     ;         ;
-; db/altsyncram_0pm1.tdf                        ; yes             ; Auto-Generated Megafunction                           ; /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/db/altsyncram_0pm1.tdf                        ;         ;
 ; db/altsyncram_i3n1.tdf                        ; yes             ; Auto-Generated Megafunction                           ; /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/db/altsyncram_i3n1.tdf                        ;         ;
 ; db/altsyncram_99e2.tdf                        ; yes             ; Auto-Generated Megafunction                           ; /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/db/altsyncram_99e2.tdf                        ;         ;
 ; db/decode_8la.tdf                             ; yes             ; Auto-Generated Megafunction                           ; /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/db/decode_8la.tdf                             ;         ;
@@ -236,69 +233,74 @@ https://fpgasoftware.intel.com/eula.
 +---------------------------------------------+-----------+
 ; Resource                                    ; Usage     ;
 +---------------------------------------------+-----------+
-; Estimate of Logic utilization (ALMs needed) ; 622       ;
+; Estimate of Logic utilization (ALMs needed) ; 788       ;
 ;                                             ;           ;
-; Combinational ALUT usage for logic          ; 923       ;
-;     -- 7 input functions                    ; 28        ;
-;     -- 6 input functions                    ; 275       ;
-;     -- 5 input functions                    ; 202       ;
-;     -- 4 input functions                    ; 121       ;
-;     -- <=3 input functions                  ; 297       ;
+; Combinational ALUT usage for logic          ; 1199      ;
+;     -- 7 input functions                    ; 21        ;
+;     -- 6 input functions                    ; 336       ;
+;     -- 5 input functions                    ; 219       ;
+;     -- 4 input functions                    ; 217       ;
+;     -- <=3 input functions                  ; 406       ;
 ;                                             ;           ;
-; Dedicated logic registers                   ; 461       ;
+; Dedicated logic registers                   ; 564       ;
 ;                                             ;           ;
 ; I/O pins                                    ; 11        ;
 ; Total MLAB memory bits                      ; 0         ;
-; Total block memory bits                     ; 594336    ;
+; Total block memory bits                     ; 598432    ;
 ;                                             ;           ;
 ; Total DSP Blocks                            ; 0         ;
 ;                                             ;           ;
 ; Maximum fan-out node                        ; clk~input ;
-; Maximum fan-out                             ; 581       ;
-; Total fan-out                               ; 8128      ;
-; Average fan-out                             ; 5.33      ;
+; Maximum fan-out                             ; 692       ;
+; Total fan-out                               ; 9651      ;
+; Average fan-out                             ; 5.04      ;
 +---------------------------------------------+-----------+
 
 
-+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-; Analysis & Synthesis Resource Utilization by Entity                                                                                                                                                                                                                                                                              ;
-+-----------------------------------------------------+---------------------+---------------------------+-------------------+------------+------+--------------+--------------------------------------------------------------------------------------------------------------------------+-------------------------+--------------+
-; Compilation Hierarchy Node                          ; Combinational ALUTs ; Dedicated Logic Registers ; Block Memory Bits ; DSP Blocks ; Pins ; Virtual Pins ; Full Hierarchy Name                                                                                                      ; Entity Name             ; Library Name ;
-+-----------------------------------------------------+---------------------+---------------------------+-------------------+------------+------+--------------+--------------------------------------------------------------------------------------------------------------------------+-------------------------+--------------+
-; |Basic                                              ; 923 (86)            ; 461 (79)                  ; 594336            ; 0          ; 11   ; 0            ; |Basic                                                                                                                   ; Basic                   ; work         ;
-;    |M_main:__main|                                  ; 837 (817)           ; 382 (380)                 ; 594336            ; 0          ; 0    ; 0            ; |Basic|M_main:__main                                                                                                     ; M_main                  ; work         ;
-;       |M_main_mem_dstack:__mem__dstack|             ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_dstack:__mem__dstack                                                                     ; M_main_mem_dstack       ; work         ;
-;          |altsyncram:buffer_rtl_0|                  ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_dstack:__mem__dstack|altsyncram:buffer_rtl_0                                             ; altsyncram              ; work         ;
-;             |altsyncram_o6n1:auto_generated|        ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_dstack:__mem__dstack|altsyncram:buffer_rtl_0|altsyncram_o6n1:auto_generated              ; altsyncram_o6n1         ; work         ;
-;       |M_main_mem_ram:__mem__ram|                   ; 20 (0)              ; 2 (0)                     ; 524288            ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_ram:__mem__ram                                                                           ; M_main_mem_ram          ; work         ;
-;          |altsyncram:buffer_rtl_0|                  ; 20 (0)              ; 2 (0)                     ; 524288            ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_ram:__mem__ram|altsyncram:buffer_rtl_0                                                   ; altsyncram              ; work         ;
-;             |altsyncram_99e2:auto_generated|        ; 20 (0)              ; 2 (2)                     ; 524288            ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_ram:__mem__ram|altsyncram:buffer_rtl_0|altsyncram_99e2:auto_generated                    ; altsyncram_99e2         ; work         ;
-;                |decode_8la:decode2|                 ; 4 (4)               ; 0 (0)                     ; 0                 ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_ram:__mem__ram|altsyncram:buffer_rtl_0|altsyncram_99e2:auto_generated|decode_8la:decode2 ; decode_8la              ; work         ;
-;                |mux_7hb:mux4|                       ; 16 (16)             ; 0 (0)                     ; 0                 ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_ram:__mem__ram|altsyncram:buffer_rtl_0|altsyncram_99e2:auto_generated|mux_7hb:mux4       ; mux_7hb                 ; work         ;
-;       |M_main_mem_rom:__mem__rom|                   ; 0 (0)               ; 0 (0)                     ; 57760             ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_rom:__mem__rom                                                                           ; M_main_mem_rom          ; work         ;
-;          |altsyncram:buffer_rtl_0|                  ; 0 (0)               ; 0 (0)                     ; 57760             ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_rom:__mem__rom|altsyncram:buffer_rtl_0                                                   ; altsyncram              ; work         ;
-;             |altsyncram_npd1:auto_generated|        ; 0 (0)               ; 0 (0)                     ; 57760             ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_rom:__mem__rom|altsyncram:buffer_rtl_0|altsyncram_npd1:auto_generated                    ; altsyncram_npd1         ; work         ;
-;       |M_main_mem_rstack:__mem__rstack|             ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_rstack:__mem__rstack                                                                     ; M_main_mem_rstack       ; work         ;
-;          |altsyncram:buffer_rtl_0|                  ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_rstack:__mem__rstack|altsyncram:buffer_rtl_0                                             ; altsyncram              ; work         ;
-;             |altsyncram_o6n1:auto_generated|        ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_rstack:__mem__rstack|altsyncram:buffer_rtl_0|altsyncram_o6n1:auto_generated              ; altsyncram_o6n1         ; work         ;
-;       |M_main_mem_uartInBuffer:__mem__uartInBuffer| ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer                                                         ; M_main_mem_uartInBuffer ; work         ;
-;          |altsyncram:buffer_rtl_0|                  ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer|altsyncram:buffer_rtl_0                                 ; altsyncram              ; work         ;
-;             |altsyncram_i3n1:auto_generated|        ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer|altsyncram:buffer_rtl_0|altsyncram_i3n1:auto_generated  ; altsyncram_i3n1         ; work         ;
-+-----------------------------------------------------+---------------------+---------------------------+-------------------+------------+------+--------------+--------------------------------------------------------------------------------------------------------------------------+-------------------------+--------------+
++--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Analysis & Synthesis Resource Utilization by Entity                                                                                                                                                                                                                                                                                  ;
++-------------------------------------------------------+---------------------+---------------------------+-------------------+------------+------+--------------+---------------------------------------------------------------------------------------------------------------------------+--------------------------+--------------+
+; Compilation Hierarchy Node                            ; Combinational ALUTs ; Dedicated Logic Registers ; Block Memory Bits ; DSP Blocks ; Pins ; Virtual Pins ; Full Hierarchy Name                                                                                                       ; Entity Name              ; Library Name ;
++-------------------------------------------------------+---------------------+---------------------------+-------------------+------------+------+--------------+---------------------------------------------------------------------------------------------------------------------------+--------------------------+--------------+
+; |Basic                                                ; 1199 (86)           ; 564 (79)                  ; 598432            ; 0          ; 11   ; 0            ; |Basic                                                                                                                    ; Basic                    ; work         ;
+;    |M_main:__main|                                    ; 970 (950)           ; 416 (414)                 ; 598432            ; 0          ; 0    ; 0            ; |Basic|M_main:__main                                                                                                      ; M_main                   ; work         ;
+;       |M_main_mem_dstack:__mem__dstack|               ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_dstack:__mem__dstack                                                                      ; M_main_mem_dstack        ; work         ;
+;          |altsyncram:buffer_rtl_0|                    ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_dstack:__mem__dstack|altsyncram:buffer_rtl_0                                              ; altsyncram               ; work         ;
+;             |altsyncram_o6n1:auto_generated|          ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_dstack:__mem__dstack|altsyncram:buffer_rtl_0|altsyncram_o6n1:auto_generated               ; altsyncram_o6n1          ; work         ;
+;       |M_main_mem_ram:__mem__ram|                     ; 20 (0)              ; 2 (0)                     ; 524288            ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_ram:__mem__ram                                                                            ; M_main_mem_ram           ; work         ;
+;          |altsyncram:buffer_rtl_0|                    ; 20 (0)              ; 2 (0)                     ; 524288            ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_ram:__mem__ram|altsyncram:buffer_rtl_0                                                    ; altsyncram               ; work         ;
+;             |altsyncram_99e2:auto_generated|          ; 20 (0)              ; 2 (2)                     ; 524288            ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_ram:__mem__ram|altsyncram:buffer_rtl_0|altsyncram_99e2:auto_generated                     ; altsyncram_99e2          ; work         ;
+;                |decode_8la:decode2|                   ; 4 (4)               ; 0 (0)                     ; 0                 ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_ram:__mem__ram|altsyncram:buffer_rtl_0|altsyncram_99e2:auto_generated|decode_8la:decode2  ; decode_8la               ; work         ;
+;                |mux_7hb:mux4|                         ; 16 (16)             ; 0 (0)                     ; 0                 ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_ram:__mem__ram|altsyncram:buffer_rtl_0|altsyncram_99e2:auto_generated|mux_7hb:mux4        ; mux_7hb                  ; work         ;
+;       |M_main_mem_rom:__mem__rom|                     ; 0 (0)               ; 0 (0)                     ; 57760             ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_rom:__mem__rom                                                                            ; M_main_mem_rom           ; work         ;
+;          |altsyncram:buffer_rtl_0|                    ; 0 (0)               ; 0 (0)                     ; 57760             ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_rom:__mem__rom|altsyncram:buffer_rtl_0                                                    ; altsyncram               ; work         ;
+;             |altsyncram_npd1:auto_generated|          ; 0 (0)               ; 0 (0)                     ; 57760             ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_rom:__mem__rom|altsyncram:buffer_rtl_0|altsyncram_npd1:auto_generated                     ; altsyncram_npd1          ; work         ;
+;       |M_main_mem_rstack:__mem__rstack|               ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_rstack:__mem__rstack                                                                      ; M_main_mem_rstack        ; work         ;
+;          |altsyncram:buffer_rtl_0|                    ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_rstack:__mem__rstack|altsyncram:buffer_rtl_0                                              ; altsyncram               ; work         ;
+;             |altsyncram_o6n1:auto_generated|          ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_rstack:__mem__rstack|altsyncram:buffer_rtl_0|altsyncram_o6n1:auto_generated               ; altsyncram_o6n1          ; work         ;
+;       |M_main_mem_uartInBuffer:__mem__uartInBuffer|   ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer                                                          ; M_main_mem_uartInBuffer  ; work         ;
+;          |altsyncram:buffer_rtl_0|                    ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer|altsyncram:buffer_rtl_0                                  ; altsyncram               ; work         ;
+;             |altsyncram_i3n1:auto_generated|          ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer|altsyncram:buffer_rtl_0|altsyncram_i3n1:auto_generated   ; altsyncram_i3n1          ; work         ;
+;       |M_main_mem_uartOutBuffer:__mem__uartOutBuffer| ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer                                                        ; M_main_mem_uartOutBuffer ; work         ;
+;          |altsyncram:buffer_rtl_0|                    ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|altsyncram:buffer_rtl_0                                ; altsyncram               ; work         ;
+;             |altsyncram_i3n1:auto_generated|          ; 0 (0)               ; 0 (0)                     ; 4096              ; 0          ; 0    ; 0            ; |Basic|M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|altsyncram:buffer_rtl_0|altsyncram_i3n1:auto_generated ; altsyncram_i3n1          ; work         ;
+;    |uart:uart0|                                       ; 143 (143)           ; 69 (69)                   ; 0                 ; 0          ; 0    ; 0            ; |Basic|uart:uart0                                                                                                         ; uart                     ; work         ;
++-------------------------------------------------------+---------------------+---------------------------+-------------------+------------+------+--------------+---------------------------------------------------------------------------------------------------------------------------+--------------------------+--------------+
 Note: For table entries with two numbers listed, the numbers in parentheses indicate the number of resources of the given type used by the specific entity alone. The numbers listed outside of parentheses indicate the total resources of the given type used by the specific entity and all of its sub-entities in the hierarchy.
 
 
-+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-; Analysis & Synthesis RAM Summary                                                                                                                                                                                                                                           ;
-+-----------------------------------------------------------------------------------------------------------------------------+------+------------------+--------------+--------------+--------------+--------------+--------+-----------------------------------------------+
-; Name                                                                                                                        ; Type ; Mode             ; Port A Depth ; Port A Width ; Port B Depth ; Port B Width ; Size   ; MIF                                           ;
-+-----------------------------------------------------------------------------------------------------------------------------+------+------------------+--------------+--------------+--------------+--------------+--------+-----------------------------------------------+
-; M_main:__main|M_main_mem_dstack:__mem__dstack|altsyncram:buffer_rtl_0|altsyncram_o6n1:auto_generated|ALTSYNCRAM             ; AUTO ; Simple Dual Port ; 256          ; 16           ; 256          ; 16           ; 4096   ; None                                          ;
-; M_main:__main|M_main_mem_ram:__mem__ram|altsyncram:buffer_rtl_0|altsyncram_99e2:auto_generated|ALTSYNCRAM                   ; AUTO ; True Dual Port   ; 32768        ; 16           ; 32768        ; 16           ; 524288 ; None                                          ;
-; M_main:__main|M_main_mem_rom:__mem__rom|altsyncram:buffer_rtl_0|altsyncram_npd1:auto_generated|ALTSYNCRAM                   ; AUTO ; ROM              ; 3610         ; 16           ; --           ; --           ; 57760  ; db/Basic.ram0_M_main_mem_rom_c51cba94.hdl.mif ;
-; M_main:__main|M_main_mem_rstack:__mem__rstack|altsyncram:buffer_rtl_0|altsyncram_o6n1:auto_generated|ALTSYNCRAM             ; AUTO ; Simple Dual Port ; 256          ; 16           ; 256          ; 16           ; 4096   ; None                                          ;
-; M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer|altsyncram:buffer_rtl_0|altsyncram_i3n1:auto_generated|ALTSYNCRAM ; AUTO ; Simple Dual Port ; 512          ; 8            ; 512          ; 8            ; 4096   ; None                                          ;
-+-----------------------------------------------------------------------------------------------------------------------------+------+------------------+--------------+--------------+--------------+--------------+--------+-----------------------------------------------+
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Analysis & Synthesis RAM Summary                                                                                                                                                                                                                                             ;
++-------------------------------------------------------------------------------------------------------------------------------+------+------------------+--------------+--------------+--------------+--------------+--------+-----------------------------------------------+
+; Name                                                                                                                          ; Type ; Mode             ; Port A Depth ; Port A Width ; Port B Depth ; Port B Width ; Size   ; MIF                                           ;
++-------------------------------------------------------------------------------------------------------------------------------+------+------------------+--------------+--------------+--------------+--------------+--------+-----------------------------------------------+
+; M_main:__main|M_main_mem_dstack:__mem__dstack|altsyncram:buffer_rtl_0|altsyncram_o6n1:auto_generated|ALTSYNCRAM               ; AUTO ; Simple Dual Port ; 256          ; 16           ; 256          ; 16           ; 4096   ; None                                          ;
+; M_main:__main|M_main_mem_ram:__mem__ram|altsyncram:buffer_rtl_0|altsyncram_99e2:auto_generated|ALTSYNCRAM                     ; AUTO ; True Dual Port   ; 32768        ; 16           ; 32768        ; 16           ; 524288 ; None                                          ;
+; M_main:__main|M_main_mem_rom:__mem__rom|altsyncram:buffer_rtl_0|altsyncram_npd1:auto_generated|ALTSYNCRAM                     ; AUTO ; ROM              ; 3610         ; 16           ; --           ; --           ; 57760  ; db/Basic.ram0_M_main_mem_rom_c51cba94.hdl.mif ;
+; M_main:__main|M_main_mem_rstack:__mem__rstack|altsyncram:buffer_rtl_0|altsyncram_o6n1:auto_generated|ALTSYNCRAM               ; AUTO ; Simple Dual Port ; 256          ; 16           ; 256          ; 16           ; 4096   ; None                                          ;
+; M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer|altsyncram:buffer_rtl_0|altsyncram_i3n1:auto_generated|ALTSYNCRAM   ; AUTO ; Simple Dual Port ; 512          ; 8            ; 512          ; 8            ; 4096   ; None                                          ;
+; M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|altsyncram:buffer_rtl_0|altsyncram_i3n1:auto_generated|ALTSYNCRAM ; AUTO ; Simple Dual Port ; 512          ; 8            ; 512          ; 8            ; 4096   ; None                                          ;
++-------------------------------------------------------------------------------------------------------------------------------+------+------------------+--------------+--------------+--------------+--------------+--------+-----------------------------------------------+
 
 
 Encoding Type:  One-Hot
@@ -329,110 +331,61 @@ Encoding Type:  One-Hot
 
 
 Encoding Type:  One-Hot
-+------------------------------------------------------------------------------------------------------------------------------------------------+
-; State Machine - |Basic|uart_tx:UART_TX_INST|r_SM_Main                                                                                          ;
-+--------------------------+-------------------------+--------------------------+--------------------------+---------------+---------------------+
-; Name                     ; r_SM_Main.s_TX_STOP_BIT ; r_SM_Main.s_TX_DATA_BITS ; r_SM_Main.s_TX_START_BIT ; r_SM_Main.000 ; r_SM_Main.s_CLEANUP ;
-+--------------------------+-------------------------+--------------------------+--------------------------+---------------+---------------------+
-; r_SM_Main.000            ; 0                       ; 0                        ; 0                        ; 0             ; 0                   ;
-; r_SM_Main.s_TX_START_BIT ; 0                       ; 0                        ; 1                        ; 1             ; 0                   ;
-; r_SM_Main.s_TX_DATA_BITS ; 0                       ; 1                        ; 0                        ; 1             ; 0                   ;
-; r_SM_Main.s_TX_STOP_BIT  ; 1                       ; 0                        ; 0                        ; 1             ; 0                   ;
-; r_SM_Main.s_CLEANUP      ; 0                       ; 0                        ; 0                        ; 1             ; 1                   ;
-+--------------------------+-------------------------+--------------------------+--------------------------+---------------+---------------------+
++------------------------------------------------------------------------------------------------+
+; State Machine - |Basic|uart:uart0|tx_state                                                     ;
++---------------------------+------------------+---------------------------+---------------------+
+; Name                      ; tx_state.TX_IDLE ; tx_state.TX_DELAY_RESTART ; tx_state.TX_SENDING ;
++---------------------------+------------------+---------------------------+---------------------+
+; tx_state.TX_IDLE          ; 0                ; 0                         ; 0                   ;
+; tx_state.TX_SENDING       ; 1                ; 0                         ; 1                   ;
+; tx_state.TX_DELAY_RESTART ; 1                ; 1                         ; 0                   ;
++---------------------------+------------------+---------------------------+---------------------+
 
 
 Encoding Type:  One-Hot
-+------------------------------------------------------------------------------------------------------------------------------------------------+
-; State Machine - |Basic|uart_rx:UART_RX_INST|r_SM_Main                                                                                          ;
-+--------------------------+-------------------------+--------------------------+--------------------------+---------------+---------------------+
-; Name                     ; r_SM_Main.s_RX_STOP_BIT ; r_SM_Main.s_RX_DATA_BITS ; r_SM_Main.s_RX_START_BIT ; r_SM_Main.000 ; r_SM_Main.s_CLEANUP ;
-+--------------------------+-------------------------+--------------------------+--------------------------+---------------+---------------------+
-; r_SM_Main.000            ; 0                       ; 0                        ; 0                        ; 0             ; 0                   ;
-; r_SM_Main.s_RX_START_BIT ; 0                       ; 0                        ; 1                        ; 1             ; 0                   ;
-; r_SM_Main.s_RX_DATA_BITS ; 0                       ; 1                        ; 0                        ; 1             ; 0                   ;
-; r_SM_Main.s_RX_STOP_BIT  ; 1                       ; 0                        ; 0                        ; 1             ; 0                   ;
-; r_SM_Main.s_CLEANUP      ; 0                       ; 0                        ; 0                        ; 1             ; 1                   ;
-+--------------------------+-------------------------+--------------------------+--------------------------+---------------+---------------------+
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; State Machine - |Basic|uart:uart0|recv_state                                                                                                                                                                   ;
++-----------------------------+------------------------+---------------------+-----------------------------+--------------------------+-------------------------+---------------------------+--------------------+
+; Name                        ; recv_state.RX_RECEIVED ; recv_state.RX_ERROR ; recv_state.RX_DELAY_RESTART ; recv_state.RX_CHECK_STOP ; recv_state.RX_READ_BITS ; recv_state.RX_CHECK_START ; recv_state.RX_IDLE ;
++-----------------------------+------------------------+---------------------+-----------------------------+--------------------------+-------------------------+---------------------------+--------------------+
+; recv_state.RX_IDLE          ; 0                      ; 0                   ; 0                           ; 0                        ; 0                       ; 0                         ; 0                  ;
+; recv_state.RX_CHECK_START   ; 0                      ; 0                   ; 0                           ; 0                        ; 0                       ; 1                         ; 1                  ;
+; recv_state.RX_READ_BITS     ; 0                      ; 0                   ; 0                           ; 0                        ; 1                       ; 0                         ; 1                  ;
+; recv_state.RX_CHECK_STOP    ; 0                      ; 0                   ; 0                           ; 1                        ; 0                       ; 0                         ; 1                  ;
+; recv_state.RX_DELAY_RESTART ; 0                      ; 0                   ; 1                           ; 0                        ; 0                       ; 0                         ; 1                  ;
+; recv_state.RX_ERROR         ; 0                      ; 1                   ; 0                           ; 0                        ; 0                       ; 0                         ; 1                  ;
+; recv_state.RX_RECEIVED      ; 1                      ; 0                   ; 0                           ; 0                        ; 0                       ; 0                         ; 1                  ;
++-----------------------------+------------------------+---------------------+-----------------------------+--------------------------+-------------------------+---------------------------+--------------------+
 
 
-+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-; Registers Removed During Synthesis                                                                                                                                  ;
-+-------------------------------------------------------------------------------------------------------------------+-------------------------------------------------+
-; Register name                                                                                                     ; Reason for Removal                              ;
-+-------------------------------------------------------------------------------------------------------------------+-------------------------------------------------+
-; RST_q[31]                                                                                                         ; Stuck at GND due to stuck port data_in          ;
-; uart_tx:UART_TX_INST|r_Bit_Index[0..2]                                                                            ; Stuck at GND due to stuck port data_in          ;
-; uart_rx:UART_RX_INST|r_Rx_DV                                                                                      ; Stuck at GND due to stuck port data_in          ;
-; RST_q[30]                                                                                                         ; Stuck at GND due to stuck port data_in          ;
-; M_main:__main|_q_uart_tx_data[1..7]                                                                               ; Lost fanout                                     ;
-; M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|out_uartOutBuffer_rdata0[1..7]                        ; Lost fanout                                     ;
-; uart_tx:UART_TX_INST|r_Tx_Data[1..7]                                                                              ; Lost fanout                                     ;
-; M_main:__main|_q_ram_addr1[14]                                                                                    ; Merged with M_main:__main|_q_ram_addr1[13]      ;
-; M_main:__main|_q_ram_wenable1[0]                                                                                  ; Merged with M_main:__main|_q_ram_addr1[13]      ;
-; M_main:__main|_q_uartInBufferTop[1..8]                                                                            ; Merged with M_main:__main|_q_uartInBufferTop[0] ;
-; M_main:__main|_q_uartInBuffer_wdata1[0..7]                                                                        ; Merged with M_main:__main|_q_uartInBufferTop[0] ;
-; M_main:__main|_q_uartInBufferTop[0]                                                                               ; Stuck at GND due to stuck port data_in          ;
-; M_main:__main|_q_uart_tx_valid[0]                                                                                 ; Stuck at GND due to stuck port data_in          ;
-; uart_tx:UART_TX_INST|r_Tx_Data[0]                                                                                 ; Stuck at GND due to stuck port clock_enable     ;
-; M_main:__main|_q_uart_tx_data[0]                                                                                  ; Lost fanout                                     ;
-; uart_tx:UART_TX_INST|r_Tx_Active                                                                                  ; Stuck at GND due to stuck port clock_enable     ;
-; M_main:__main|_q_ram_addr1[13]                                                                                    ; Stuck at GND due to stuck port data_in          ;
-; M_main:__main|_q_index~2                                                                                          ; Lost fanout                                     ;
-; M_main:__main|_q_index~3                                                                                          ; Lost fanout                                     ;
-; M_main:__main|_q_index~4                                                                                          ; Lost fanout                                     ;
-; uart_tx:UART_TX_INST|r_SM_Main~2                                                                                  ; Lost fanout                                     ;
-; uart_tx:UART_TX_INST|r_SM_Main~3                                                                                  ; Lost fanout                                     ;
-; uart_rx:UART_RX_INST|r_SM_Main~2                                                                                  ; Lost fanout                                     ;
-; uart_rx:UART_RX_INST|r_SM_Main~3                                                                                  ; Lost fanout                                     ;
-; uart_tx:UART_TX_INST|r_SM_Main.s_CLEANUP                                                                          ; Stuck at GND due to stuck port data_in          ;
-; uart_rx:UART_RX_INST|r_SM_Main.s_CLEANUP                                                                          ; Stuck at GND due to stuck port data_in          ;
-; uart_rx:UART_RX_INST|r_Rx_Data                                                                                    ; Lost fanout                                     ;
-; uart_rx:UART_RX_INST|r_Clock_Count[0..7]                                                                          ; Lost fanout                                     ;
-; uart_rx:UART_RX_INST|r_Rx_Data_R                                                                                  ; Lost fanout                                     ;
-; uart_tx:UART_TX_INST|r_SM_Main.s_TX_START_BIT                                                                     ; Lost fanout                                     ;
-; uart_tx:UART_TX_INST|r_SM_Main.s_TX_DATA_BITS                                                                     ; Lost fanout                                     ;
-; uart_rx:UART_RX_INST|r_SM_Main.000                                                                                ; Lost fanout                                     ;
-; uart_rx:UART_RX_INST|r_SM_Main.s_RX_START_BIT                                                                     ; Lost fanout                                     ;
-; uart_rx:UART_RX_INST|r_SM_Main.s_RX_DATA_BITS                                                                     ; Lost fanout                                     ;
-; uart_rx:UART_RX_INST|r_SM_Main.s_RX_STOP_BIT                                                                      ; Lost fanout                                     ;
-; uart_tx:UART_TX_INST|r_SM_Main.s_TX_STOP_BIT                                                                      ; Merged with uart_tx:UART_TX_INST|r_SM_Main.000  ;
-; uart_tx:UART_TX_INST|o_Tx_Serial                                                                                  ; Stuck at VCC due to stuck port data_in          ;
-; uart_tx:UART_TX_INST|r_SM_Main.000                                                                                ; Lost fanout                                     ;
-; M_main:__main|M_main_mem_ram:__mem__ram|altsyncram:buffer_rtl_0|altsyncram_99e2:auto_generated|address_reg_b[0,1] ; Stuck at GND due to stuck port data_in          ;
-; M_main:__main|_q_uartOutBuffer_wdata1[0..7]                                                                       ; Lost fanout                                     ;
-; Total Number of Removed Registers = 89                                                                            ;                                                 ;
-+-------------------------------------------------------------------------------------------------------------------+-------------------------------------------------+
++----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Registers Removed During Synthesis                                                                                                                             ;
++-------------------------------------------------------------------------------------------------------------------+--------------------------------------------+
+; Register name                                                                                                     ; Reason for Removal                         ;
++-------------------------------------------------------------------------------------------------------------------+--------------------------------------------+
+; RST_q[30,31]                                                                                                      ; Stuck at GND due to stuck port data_in     ;
+; M_main:__main|_q_ram_addr1[14]                                                                                    ; Merged with M_main:__main|_q_ram_addr1[13] ;
+; M_main:__main|_q_ram_wenable1[0]                                                                                  ; Merged with M_main:__main|_q_ram_addr1[13] ;
+; M_main:__main|_q_ram_addr1[13]                                                                                    ; Stuck at GND due to stuck port data_in     ;
+; M_main:__main|_q_index~2                                                                                          ; Lost fanout                                ;
+; M_main:__main|_q_index~3                                                                                          ; Lost fanout                                ;
+; M_main:__main|_q_index~4                                                                                          ; Lost fanout                                ;
+; uart:uart0|recv_state~6                                                                                           ; Lost fanout                                ;
+; uart:uart0|recv_state~7                                                                                           ; Lost fanout                                ;
+; uart:uart0|recv_state~8                                                                                           ; Lost fanout                                ;
+; M_main:__main|M_main_mem_ram:__mem__ram|altsyncram:buffer_rtl_0|altsyncram_99e2:auto_generated|address_reg_b[0,1] ; Stuck at GND due to stuck port data_in     ;
+; Total Number of Removed Registers = 13                                                                            ;                                            ;
++-------------------------------------------------------------------------------------------------------------------+--------------------------------------------+
 
 
-+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
-; Removed Registers Triggering Further Register Optimizations                                                                                                     ;
-+------------------------------------------+--------------------------------+-------------------------------------------------------------------------------------+
-; Register name                            ; Reason for Removal             ; Registers Removed due to This Register                                              ;
-+------------------------------------------+--------------------------------+-------------------------------------------------------------------------------------+
-; uart_rx:UART_RX_INST|r_SM_Main~2         ; Lost Fanouts                   ; uart_rx:UART_RX_INST|r_Clock_Count[3], uart_rx:UART_RX_INST|r_Clock_Count[4],       ;
-;                                          ;                                ; uart_rx:UART_RX_INST|r_Clock_Count[2], uart_rx:UART_RX_INST|r_Clock_Count[6],       ;
-;                                          ;                                ; uart_rx:UART_RX_INST|r_Clock_Count[1], uart_rx:UART_RX_INST|r_Clock_Count[0],       ;
-;                                          ;                                ; uart_rx:UART_RX_INST|r_Clock_Count[5], uart_rx:UART_RX_INST|r_Clock_Count[7],       ;
-;                                          ;                                ; uart_rx:UART_RX_INST|r_SM_Main.000, uart_rx:UART_RX_INST|r_SM_Main.s_RX_START_BIT,  ;
-;                                          ;                                ; uart_rx:UART_RX_INST|r_SM_Main.s_RX_STOP_BIT                                        ;
-; uart_tx:UART_TX_INST|r_Bit_Index[0]      ; Stuck at GND                   ; uart_tx:UART_TX_INST|r_Tx_Data[6], uart_tx:UART_TX_INST|r_Tx_Data[5],               ;
-;                                          ; due to stuck port data_in      ; uart_tx:UART_TX_INST|r_Tx_Data[4], uart_tx:UART_TX_INST|r_Tx_Data[3],               ;
-;                                          ;                                ; uart_tx:UART_TX_INST|r_Tx_Data[2], uart_tx:UART_TX_INST|r_Tx_Data[7],               ;
-;                                          ;                                ; uart_tx:UART_TX_INST|o_Tx_Serial                                                    ;
-; uart_tx:UART_TX_INST|r_Tx_Data[0]        ; Stuck at GND                   ; M_main:__main|_q_uart_tx_data[0], M_main:__main|_q_uartOutBuffer_wdata1[0],         ;
-;                                          ; due to stuck port clock_enable ; M_main:__main|_q_uartOutBuffer_wdata1[1], M_main:__main|_q_uartOutBuffer_wdata1[2], ;
-;                                          ;                                ; M_main:__main|_q_uartOutBuffer_wdata1[3], M_main:__main|_q_uartOutBuffer_wdata1[4]  ;
-; uart_rx:UART_RX_INST|r_Rx_DV             ; Stuck at GND                   ; M_main:__main|_q_uartInBufferTop[0], uart_rx:UART_RX_INST|r_Rx_Data,                ;
-;                                          ; due to stuck port data_in      ; uart_rx:UART_RX_INST|r_Rx_Data_R                                                    ;
-; RST_q[31]                                ; Stuck at GND                   ; RST_q[30]                                                                           ;
-;                                          ; due to stuck port data_in      ;                                                                                     ;
-; uart_tx:UART_TX_INST|r_SM_Main~2         ; Lost Fanouts                   ; uart_tx:UART_TX_INST|r_SM_Main.s_TX_START_BIT                                       ;
-; uart_tx:UART_TX_INST|r_SM_Main~3         ; Lost Fanouts                   ; uart_tx:UART_TX_INST|r_SM_Main.s_TX_DATA_BITS                                       ;
-; uart_rx:UART_RX_INST|r_SM_Main~3         ; Lost Fanouts                   ; uart_rx:UART_RX_INST|r_SM_Main.s_RX_DATA_BITS                                       ;
-; uart_tx:UART_TX_INST|r_SM_Main.s_CLEANUP ; Stuck at GND                   ; uart_tx:UART_TX_INST|r_SM_Main.000                                                  ;
-;                                          ; due to stuck port data_in      ;                                                                                     ;
-+------------------------------------------+--------------------------------+-------------------------------------------------------------------------------------+
++------------------------------------------------------------------------------------+
+; Removed Registers Triggering Further Register Optimizations                        ;
++---------------+---------------------------+----------------------------------------+
+; Register name ; Reason for Removal        ; Registers Removed due to This Register ;
++---------------+---------------------------+----------------------------------------+
+; RST_q[31]     ; Stuck at GND              ; RST_q[30]                              ;
+;               ; due to stuck port data_in ;                                        ;
++---------------+---------------------------+----------------------------------------+
 
 
 +------------------------------------------------------+
@@ -440,65 +393,94 @@ Encoding Type:  One-Hot
 +----------------------------------------------+-------+
 ; Statistic                                    ; Value ;
 +----------------------------------------------+-------+
-; Total registers                              ; 461   ;
-; Number of registers using Synchronous Clear  ; 275   ;
+; Total registers                              ; 564   ;
+; Number of registers using Synchronous Clear  ; 300   ;
 ; Number of registers using Synchronous Load   ; 29    ;
 ; Number of registers using Asynchronous Clear ; 0     ;
 ; Number of registers using Asynchronous Load  ; 0     ;
-; Number of registers using Clock Enable       ; 187   ;
+; Number of registers using Clock Enable       ; 214   ;
 ; Number of registers using Preset             ; 0     ;
 +----------------------------------------------+-------+
 
 
-+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-; Registers Packed Into Inferred Megafunctions                                                                                                                              ;
-+-----------------------------------------------------------------------------------------+--------------------------------------------------------------------------+------+
-; Register Name                                                                           ; Megafunction                                                             ; Type ;
-+-----------------------------------------------------------------------------------------+--------------------------------------------------------------------------+------+
-; M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|out_uartOutBuffer_rdata0[0] ; M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|buffer_rtl_0 ; RAM  ;
-; M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer|out_uartInBuffer_rdata0[0..7] ; M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer|buffer_rtl_0   ; RAM  ;
-; M_main:__main|M_main_mem_ram:__mem__ram|out_ram_rdata0[0..15]                           ; M_main:__main|M_main_mem_ram:__mem__ram|buffer_rtl_0                     ; RAM  ;
-; M_main:__main|M_main_mem_ram:__mem__ram|out_ram_rdata1[0..15]                           ; M_main:__main|M_main_mem_ram:__mem__ram|buffer_rtl_0                     ; RAM  ;
-; M_main:__main|M_main_mem_rom:__mem__rom|out_rom_rdata[0..15]                            ; M_main:__main|M_main_mem_rom:__mem__rom|buffer_rtl_0                     ; RAM  ;
-; M_main:__main|M_main_mem_rstack:__mem__rstack|out_rstack_rdata[0..15]                   ; M_main:__main|M_main_mem_rstack:__mem__rstack|buffer_rtl_0               ; RAM  ;
-; M_main:__main|M_main_mem_dstack:__mem__dstack|out_dstack_rdata[0..15]                   ; M_main:__main|M_main_mem_dstack:__mem__dstack|buffer_rtl_0               ; RAM  ;
-+-----------------------------------------------------------------------------------------+--------------------------------------------------------------------------+------+
++--------------------------------------------------+
+; Inverted Register Statistics                     ;
++----------------------------------------+---------+
+; Inverted Register                      ; Fan out ;
++----------------------------------------+---------+
+; uart:uart0|tx_out                      ; 2       ;
+; uart:uart0|tx_clk_divider[2]           ; 1       ;
+; uart:uart0|tx_clk_divider[3]           ; 1       ;
+; uart:uart0|tx_clk_divider[5]           ; 1       ;
+; uart:uart0|tx_clk_divider[6]           ; 1       ;
+; uart:uart0|rx_clk_divider[2]           ; 1       ;
+; uart:uart0|rx_clk_divider[3]           ; 1       ;
+; uart:uart0|rx_clk_divider[5]           ; 1       ;
+; uart:uart0|rx_clk_divider[6]           ; 1       ;
+; Total number of inverted registers = 9 ;         ;
++----------------------------------------+---------+
 
 
-+------------------------------------------------------------------------------------------------------------------------------------------------------------+
-; Multiplexer Restructuring Statistics (Restructuring Performed)                                                                                             ;
-+--------------------+-----------+---------------+----------------------+------------------------+------------+----------------------------------------------+
-; Multiplexer Inputs ; Bus Width ; Baseline Area ; Area if Restructured ; Saving if Restructured ; Registered ; Example Multiplexer Output                   ;
-+--------------------+-----------+---------------+----------------------+------------------------+------------+----------------------------------------------+
-; 3:1                ; 8 bits    ; 16 LEs        ; 0 LEs                ; 16 LEs                 ; Yes        ; |Basic|M_main:__main|_q_newRSP[0]            ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 0 LEs                ; 16 LEs                 ; Yes        ; |Basic|M_main:__main|_q_newDSP[3]            ;
-; 4:1                ; 3 bits    ; 6 LEs         ; 3 LEs                ; 3 LEs                  ; Yes        ; |Basic|M_main:__main|_q_rstackWData[15]      ;
-; 4:1                ; 13 bits   ; 26 LEs        ; 0 LEs                ; 26 LEs                 ; Yes        ; |Basic|M_main:__main|_q_rstackWData[11]      ;
-; 7:1                ; 13 bits   ; 52 LEs        ; 26 LEs               ; 26 LEs                 ; Yes        ; |Basic|M_main:__main|_q_newPC[10]            ;
-; 7:1                ; 8 bits    ; 32 LEs        ; 0 LEs                ; 32 LEs                 ; Yes        ; |Basic|uart_rx:UART_RX_INST|r_Clock_Count[3] ;
-; 9:1                ; 20 bits   ; 120 LEs       ; 0 LEs                ; 120 LEs                ; Yes        ; |Basic|M_main:__main|_q_CYCLE[16]            ;
-; 13:1               ; 16 bits   ; 128 LEs       ; 0 LEs                ; 128 LEs                ; Yes        ; |Basic|M_main:__main|_q_copyaddress[6]       ;
-; 40:1               ; 4 bits    ; 104 LEs       ; 72 LEs               ; 32 LEs                 ; Yes        ; |Basic|M_main:__main|_q_newStackTop[11]      ;
-; 41:1               ; 3 bits    ; 81 LEs        ; 57 LEs               ; 24 LEs                 ; Yes        ; |Basic|M_main:__main|_q_newStackTop[14]      ;
-; 44:1               ; 4 bits    ; 116 LEs       ; 84 LEs               ; 32 LEs                 ; Yes        ; |Basic|M_main:__main|_q_newStackTop[7]       ;
-; 46:1               ; 2 bits    ; 60 LEs        ; 44 LEs               ; 16 LEs                 ; Yes        ; |Basic|M_main:__main|_q_newStackTop[3]       ;
-; 4:1                ; 2 bits    ; 4 LEs         ; 4 LEs                ; 0 LEs                  ; No         ; |Basic|M_main:__main|ShiftRight0             ;
-; 4:1                ; 2 bits    ; 4 LEs         ; 4 LEs                ; 0 LEs                  ; No         ; |Basic|M_main:__main|ShiftLeft0              ;
-; 4:1                ; 18 bits   ; 36 LEs        ; 36 LEs               ; 0 LEs                  ; No         ; |Basic|M_main:__main|ShiftRight0             ;
-; 3:1                ; 7 bits    ; 14 LEs        ; 14 LEs               ; 0 LEs                  ; No         ; |Basic|M_main:__main|Add5                    ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 0 LEs                ; 16 LEs                 ; No         ; |Basic|M_main:__main|Add5                    ;
-; 4:1                ; 2 bits    ; 4 LEs         ; 4 LEs                ; 0 LEs                  ; No         ; |Basic|M_main:__main|_d_rstack_wenable[0]    ;
-; 5:1                ; 8 bits    ; 24 LEs        ; 8 LEs                ; 16 LEs                 ; No         ; |Basic|M_main:__main|_d_rstack_addr          ;
-; 5:1                ; 8 bits    ; 24 LEs        ; 8 LEs                ; 16 LEs                 ; No         ; |Basic|M_main:__main|_d_dstack_addr          ;
-; 8:1                ; 16 bits   ; 80 LEs        ; 48 LEs               ; 32 LEs                 ; No         ; |Basic|M_main:__main|Selector189             ;
-; 11:1               ; 15 bits   ; 105 LEs       ; 30 LEs               ; 75 LEs                 ; No         ; |Basic|M_main:__main|Selector210             ;
-; 3:1                ; 16 bits   ; 32 LEs        ; 16 LEs               ; 16 LEs                 ; No         ; |Basic|M_main:__main|Add8                    ;
-; 4:1                ; 16 bits   ; 32 LEs        ; 32 LEs               ; 0 LEs                  ; No         ; |Basic|M_main:__main|Add8                    ;
-+--------------------+-----------+---------------+----------------------+------------------------+------------+----------------------------------------------+
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Registers Packed Into Inferred Megafunctions                                                                                                                                 ;
++--------------------------------------------------------------------------------------------+--------------------------------------------------------------------------+------+
+; Register Name                                                                              ; Megafunction                                                             ; Type ;
++--------------------------------------------------------------------------------------------+--------------------------------------------------------------------------+------+
+; M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|out_uartOutBuffer_rdata0[0..7] ; M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|buffer_rtl_0 ; RAM  ;
+; M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer|out_uartInBuffer_rdata0[0..7]    ; M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer|buffer_rtl_0   ; RAM  ;
+; M_main:__main|M_main_mem_ram:__mem__ram|out_ram_rdata0[0..15]                              ; M_main:__main|M_main_mem_ram:__mem__ram|buffer_rtl_0                     ; RAM  ;
+; M_main:__main|M_main_mem_ram:__mem__ram|out_ram_rdata1[0..15]                              ; M_main:__main|M_main_mem_ram:__mem__ram|buffer_rtl_0                     ; RAM  ;
+; M_main:__main|M_main_mem_rom:__mem__rom|out_rom_rdata[0..15]                               ; M_main:__main|M_main_mem_rom:__mem__rom|buffer_rtl_0                     ; RAM  ;
+; M_main:__main|M_main_mem_rstack:__mem__rstack|out_rstack_rdata[0..15]                      ; M_main:__main|M_main_mem_rstack:__mem__rstack|buffer_rtl_0               ; RAM  ;
+; M_main:__main|M_main_mem_dstack:__mem__dstack|out_dstack_rdata[0..15]                      ; M_main:__main|M_main_mem_dstack:__mem__dstack|buffer_rtl_0               ; RAM  ;
++--------------------------------------------------------------------------------------------+--------------------------------------------------------------------------+------+
+
+
++---------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Multiplexer Restructuring Statistics (Restructuring Performed)                                                                                          ;
++--------------------+-----------+---------------+----------------------+------------------------+------------+-------------------------------------------+
+; Multiplexer Inputs ; Bus Width ; Baseline Area ; Area if Restructured ; Saving if Restructured ; Registered ; Example Multiplexer Output                ;
++--------------------+-----------+---------------+----------------------+------------------------+------------+-------------------------------------------+
+; 3:1                ; 8 bits    ; 16 LEs        ; 0 LEs                ; 16 LEs                 ; Yes        ; |Basic|M_main:__main|_q_newRSP[2]         ;
+; 3:1                ; 8 bits    ; 16 LEs        ; 0 LEs                ; 16 LEs                 ; Yes        ; |Basic|M_main:__main|_q_newDSP[0]         ;
+; 4:1                ; 3 bits    ; 6 LEs         ; 3 LEs                ; 3 LEs                  ; Yes        ; |Basic|M_main:__main|_q_rstackWData[14]   ;
+; 4:1                ; 13 bits   ; 26 LEs        ; 0 LEs                ; 26 LEs                 ; Yes        ; |Basic|M_main:__main|_q_rstackWData[1]    ;
+; 3:1                ; 7 bits    ; 14 LEs        ; 14 LEs               ; 0 LEs                  ; Yes        ; |Basic|uart:uart0|tx_clk_divider[0]       ;
+; 3:1                ; 7 bits    ; 14 LEs        ; 14 LEs               ; 0 LEs                  ; Yes        ; |Basic|uart:uart0|rx_clk_divider[10]      ;
+; 5:1                ; 4 bits    ; 12 LEs        ; 4 LEs                ; 8 LEs                  ; Yes        ; |Basic|uart:uart0|tx_bits_remaining[2]    ;
+; 5:1                ; 7 bits    ; 21 LEs        ; 7 LEs                ; 14 LEs                 ; Yes        ; |Basic|uart:uart0|tx_data[0]              ;
+; 7:1                ; 13 bits   ; 52 LEs        ; 26 LEs               ; 26 LEs                 ; Yes        ; |Basic|M_main:__main|_q_newPC[6]          ;
+; 5:1                ; 4 bits    ; 12 LEs        ; 4 LEs                ; 8 LEs                  ; Yes        ; |Basic|uart:uart0|tx_countdown[5]         ;
+; 5:1                ; 2 bits    ; 6 LEs         ; 4 LEs                ; 2 LEs                  ; Yes        ; |Basic|uart:uart0|tx_countdown[3]         ;
+; 5:1                ; 4 bits    ; 12 LEs        ; 4 LEs                ; 8 LEs                  ; Yes        ; |Basic|uart:uart0|rx_bits_remaining[2]    ;
+; 8:1                ; 2 bits    ; 10 LEs        ; 6 LEs                ; 4 LEs                  ; Yes        ; |Basic|uart:uart0|rx_countdown[1]         ;
+; 7:1                ; 4 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |Basic|uart:uart0|rx_countdown[5]         ;
+; 10:1               ; 20 bits   ; 120 LEs       ; 0 LEs                ; 120 LEs                ; Yes        ; |Basic|M_main:__main|_q_CYCLE[15]         ;
+; 13:1               ; 16 bits   ; 128 LEs       ; 0 LEs                ; 128 LEs                ; Yes        ; |Basic|M_main:__main|_q_copyaddress[7]    ;
+; 40:1               ; 4 bits    ; 104 LEs       ; 72 LEs               ; 32 LEs                 ; Yes        ; |Basic|M_main:__main|_q_newStackTop[9]    ;
+; 41:1               ; 3 bits    ; 81 LEs        ; 57 LEs               ; 24 LEs                 ; Yes        ; |Basic|M_main:__main|_q_newStackTop[12]   ;
+; 44:1               ; 4 bits    ; 116 LEs       ; 84 LEs               ; 32 LEs                 ; Yes        ; |Basic|M_main:__main|_q_newStackTop[5]    ;
+; 46:1               ; 2 bits    ; 60 LEs        ; 44 LEs               ; 16 LEs                 ; Yes        ; |Basic|M_main:__main|_q_newStackTop[2]    ;
+; 3:1                ; 4 bits    ; 8 LEs         ; 8 LEs                ; 0 LEs                  ; Yes        ; |Basic|uart:uart0|tx_clk_divider[2]       ;
+; 3:1                ; 4 bits    ; 8 LEs         ; 8 LEs                ; 0 LEs                  ; Yes        ; |Basic|uart:uart0|rx_clk_divider[2]       ;
+; 4:1                ; 2 bits    ; 4 LEs         ; 4 LEs                ; 0 LEs                  ; No         ; |Basic|M_main:__main|ShiftLeft0           ;
+; 4:1                ; 2 bits    ; 4 LEs         ; 4 LEs                ; 0 LEs                  ; No         ; |Basic|M_main:__main|ShiftRight0          ;
+; 4:1                ; 18 bits   ; 36 LEs        ; 36 LEs               ; 0 LEs                  ; No         ; |Basic|M_main:__main|ShiftLeft0           ;
+; 3:1                ; 7 bits    ; 14 LEs        ; 14 LEs               ; 0 LEs                  ; No         ; |Basic|M_main:__main|Add5                 ;
+; 3:1                ; 8 bits    ; 16 LEs        ; 0 LEs                ; 16 LEs                 ; No         ; |Basic|M_main:__main|Add5                 ;
+; 4:1                ; 2 bits    ; 4 LEs         ; 4 LEs                ; 0 LEs                  ; No         ; |Basic|M_main:__main|_d_dstack_wenable[0] ;
+; 5:1                ; 8 bits    ; 24 LEs        ; 8 LEs                ; 16 LEs                 ; No         ; |Basic|M_main:__main|_d_rstack_addr       ;
+; 5:1                ; 8 bits    ; 24 LEs        ; 8 LEs                ; 16 LEs                 ; No         ; |Basic|M_main:__main|_d_dstack_addr       ;
+; 8:1                ; 16 bits   ; 80 LEs        ; 48 LEs               ; 32 LEs                 ; No         ; |Basic|M_main:__main|Selector201          ;
+; 7:1                ; 2 bits    ; 8 LEs         ; 6 LEs                ; 2 LEs                  ; No         ; |Basic|uart:uart0|Selector10              ;
+; 11:1               ; 15 bits   ; 105 LEs       ; 30 LEs               ; 75 LEs                 ; No         ; |Basic|M_main:__main|Selector212          ;
+; 3:1                ; 16 bits   ; 32 LEs        ; 16 LEs               ; 16 LEs                 ; No         ; |Basic|M_main:__main|Add8                 ;
+; 4:1                ; 16 bits   ; 32 LEs        ; 32 LEs               ; 0 LEs                  ; No         ; |Basic|M_main:__main|Add8                 ;
++--------------------+-----------+---------------+----------------------+------------------------+------------+-------------------------------------------+
 
 
 +-------------------------------------------------------------------------------------------------------------------------------------------+
-; Source assignments for M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|altsyncram:buffer_rtl_0|altsyncram_0pm1:auto_generated ;
+; Source assignments for M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|altsyncram:buffer_rtl_0|altsyncram_i3n1:auto_generated ;
 +---------------------------------+--------------------+------+-----------------------------------------------------------------------------+
 ; Assignment                      ; Value              ; From ; To                                                                          ;
 +---------------------------------+--------------------+------+-----------------------------------------------------------------------------+
@@ -551,35 +533,23 @@ Encoding Type:  One-Hot
 +---------------------------------+--------------------+------+---------------------------------------------------------------+
 
 
-+-----------------------------------------------------------------------+
-; Parameter Settings for User Entity Instance: Top-level Entity: |Basic ;
-+-------------------+-------+-------------------------------------------+
-; Parameter Name    ; Value ; Type                                      ;
-+-------------------+-------+-------------------------------------------+
-; c_CLOCK_PERIOD_NS ; 2     ; Signed Integer                            ;
-; c_CLKS_PER_BIT    ; 434   ; Signed Integer                            ;
-; c_BIT_PERIOD      ; 8600  ; Signed Integer                            ;
-+-------------------+-------+-------------------------------------------+
-Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
-
-
-+-------------------------------------------------------------------+
-; Parameter Settings for User Entity Instance: uart_rx:UART_RX_INST ;
-+----------------+-------+------------------------------------------+
-; Parameter Name ; Value ; Type                                     ;
-+----------------+-------+------------------------------------------+
-; CLKS_PER_BIT   ; 434   ; Signed Integer                           ;
-+----------------+-------+------------------------------------------+
-Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
-
-
-+-------------------------------------------------------------------+
-; Parameter Settings for User Entity Instance: uart_tx:UART_TX_INST ;
-+----------------+-------+------------------------------------------+
-; Parameter Name ; Value ; Type                                     ;
-+----------------+-------+------------------------------------------+
-; CLKS_PER_BIT   ; 434   ; Signed Integer                           ;
-+----------------+-------+------------------------------------------+
++---------------------------------------------------------+
+; Parameter Settings for User Entity Instance: uart:uart0 ;
++------------------+-------+------------------------------+
+; Parameter Name   ; Value ; Type                         ;
++------------------+-------+------------------------------+
+; CLOCK_DIVIDE     ; 108   ; Signed Integer               ;
+; RX_IDLE          ; 0     ; Signed Integer               ;
+; RX_CHECK_START   ; 1     ; Signed Integer               ;
+; RX_READ_BITS     ; 2     ; Signed Integer               ;
+; RX_CHECK_STOP    ; 3     ; Signed Integer               ;
+; RX_DELAY_RESTART ; 4     ; Signed Integer               ;
+; RX_ERROR         ; 5     ; Signed Integer               ;
+; RX_RECEIVED      ; 6     ; Signed Integer               ;
+; TX_IDLE          ; 0     ; Signed Integer               ;
+; TX_SENDING       ; 1     ; Signed Integer               ;
+; TX_DELAY_RESTART ; 2     ; Signed Integer               ;
++------------------+-------+------------------------------+
 Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
 
 
@@ -639,7 +609,7 @@ Note: In order to hide this table in the UI and the text report file, please set
 ; ECC_PIPELINE_STAGE_ENABLED         ; FALSE                ; Untyped                                                                  ;
 ; WIDTH_ECCSTATUS                    ; 3                    ; Untyped                                                                  ;
 ; DEVICE_FAMILY                      ; Cyclone V            ; Untyped                                                                  ;
-; CBXI_PARAMETER                     ; altsyncram_0pm1      ; Untyped                                                                  ;
+; CBXI_PARAMETER                     ; altsyncram_i3n1      ; Untyped                                                                  ;
 +------------------------------------+----------------------+--------------------------------------------------------------------------+
 Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
 
@@ -1066,13 +1036,14 @@ Note: In order to hide this table in the UI and the text report file, please set
 +------------+--------+----------+----------------------------------------------------------------------------------------------------------------------------------------------+
 
 
-+---------------------------------------------------------------------------------------------------------------------+
-; Port Connectivity Checks: "uart_tx:UART_TX_INST"                                                                    ;
-+-----------+--------+----------+-------------------------------------------------------------------------------------+
-; Port      ; Type   ; Severity ; Details                                                                             ;
-+-----------+--------+----------+-------------------------------------------------------------------------------------+
-; o_Tx_Done ; Output ; Info     ; Connected to dangling logic. Logic that only feeds a dangling port will be removed. ;
-+-----------+--------+----------+-------------------------------------------------------------------------------------+
++-----------------------------------------------------------+
+; Port Connectivity Checks: "uart:uart0"                    ;
++--------------+--------+----------+------------------------+
+; Port         ; Type   ; Severity ; Details                ;
++--------------+--------+----------+------------------------+
+; is_receiving ; Output ; Info     ; Explicitly unconnected ;
+; recv_error   ; Output ; Info     ; Explicitly unconnected ;
++--------------+--------+----------+------------------------+
 
 
 +-----------------------------------------------------+
@@ -1080,33 +1051,33 @@ Note: In order to hide this table in the UI and the text report file, please set
 +-----------------------+-----------------------------+
 ; Type                  ; Count                       ;
 +-----------------------+-----------------------------+
-; arriav_ff             ; 461                         ;
-;     ENA               ; 122                         ;
+; arriav_ff             ; 564                         ;
+;     ENA               ; 149                         ;
 ;     ENA SCLR          ; 36                          ;
 ;     ENA SLD           ; 29                          ;
-;     SCLR              ; 239                         ;
-;     plain             ; 35                          ;
-; arriav_lcell_comb     ; 924                         ;
-;     arith             ; 172                         ;
-;         1 data inputs ; 125                         ;
-;         2 data inputs ; 2                           ;
+;     SCLR              ; 264                         ;
+;     plain             ; 86                          ;
+; arriav_lcell_comb     ; 1200                        ;
+;     arith             ; 203                         ;
+;         1 data inputs ; 155                         ;
+;         2 data inputs ; 3                           ;
 ;         4 data inputs ; 21                          ;
 ;         5 data inputs ; 24                          ;
-;     extend            ; 28                          ;
-;         7 data inputs ; 28                          ;
-;     normal            ; 724                         ;
-;         0 data inputs ; 2                           ;
-;         1 data inputs ; 3                           ;
-;         2 data inputs ; 102                         ;
-;         3 data inputs ; 64                          ;
-;         4 data inputs ; 100                         ;
-;         5 data inputs ; 178                         ;
-;         6 data inputs ; 275                         ;
+;     extend            ; 21                          ;
+;         7 data inputs ; 21                          ;
+;     normal            ; 976                         ;
+;         0 data inputs ; 1                           ;
+;         1 data inputs ; 5                           ;
+;         2 data inputs ; 156                         ;
+;         3 data inputs ; 87                          ;
+;         4 data inputs ; 196                         ;
+;         5 data inputs ; 195                         ;
+;         6 data inputs ; 336                         ;
 ; boundary_port         ; 11                          ;
-; stratixv_ram_block    ; 120                         ;
+; stratixv_ram_block    ; 128                         ;
 ;                       ;                             ;
-; Max LUT depth         ; 10.00                       ;
-; Average LUT depth     ; 4.06                        ;
+; Max LUT depth         ; 9.00                        ;
+; Average LUT depth     ; 4.31                        ;
 +-----------------------+-----------------------------+
 
 
@@ -1115,7 +1086,7 @@ Note: In order to hide this table in the UI and the text report file, please set
 +----------------+--------------+
 ; Partition Name ; Elapsed Time ;
 +----------------+--------------+
-; Top            ; 00:00:04     ;
+; Top            ; 00:00:06     ;
 +----------------+--------------+
 
 
@@ -1125,7 +1096,7 @@ Note: In order to hide this table in the UI and the text report file, please set
 Info: *******************************************************************
 Info: Running Quartus Prime Analysis & Synthesis
     Info: Version 20.1.0 Build 711 06/05/2020 SJ Lite Edition
-    Info: Processing started: Mon Sep 28 07:56:15 2020
+    Info: Processing started: Mon Sep 28 17:44:19 2020
 Info: Command: quartus_map --read_settings_files=on --write_settings_files=off Basic -c Basic
 Warning (18236): Number of processors has not been specified which may cause overloading on shared machines.  Set the global assignment NUM_PARALLEL_PROCESSORS in your QSF to an appropriate value for best performance.
 Info (20030): Parallel compilation is enabled and will use 8 of the 8 processors detected
@@ -1156,14 +1127,19 @@ Warning (10222): Verilog HDL Parameter Declaration warning at uart_rx.v(26): Par
 Warning (10222): Verilog HDL Parameter Declaration warning at uart_rx.v(27): Parameter Declaration in module "uart_rx" behaves as a Local Parameter Declaration because the module has a Module Parameter Port List File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart_rx.v Line: 27
 Info (12127): Elaborating entity "Basic" for the top level hierarchy
 Warning (10230): Verilog HDL assignment warning at basic.v(53): truncated value with size 32 to match size of target (16) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 53
-Info (12128): Elaborating entity "uart_rx" for hierarchy "uart_rx:UART_RX_INST" File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 95
-Warning (10230): Verilog HDL assignment warning at uart_rx.v(80): truncated value with size 32 to match size of target (8) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart_rx.v Line: 80
-Warning (10230): Verilog HDL assignment warning at uart_rx.v(91): truncated value with size 32 to match size of target (8) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart_rx.v Line: 91
-Warning (10230): Verilog HDL assignment warning at uart_rx.v(120): truncated value with size 32 to match size of target (8) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart_rx.v Line: 120
-Info (12128): Elaborating entity "uart_tx" for hierarchy "uart_tx:UART_TX_INST" File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 104
-Warning (10230): Verilog HDL assignment warning at uart_tx.v(68): truncated value with size 32 to match size of target (8) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart_tx.v Line: 68
-Warning (10230): Verilog HDL assignment warning at uart_tx.v(86): truncated value with size 32 to match size of target (8) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart_tx.v Line: 86
-Warning (10230): Verilog HDL assignment warning at uart_tx.v(116): truncated value with size 32 to match size of target (8) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart_tx.v Line: 116
+Info (12128): Elaborating entity "uart" for hierarchy "uart:uart0" File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 82
+Warning (10230): Verilog HDL assignment warning at uart.v(56): truncated value with size 32 to match size of target (11) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart.v Line: 56
+Warning (10230): Verilog HDL assignment warning at uart.v(57): truncated value with size 32 to match size of target (11) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart.v Line: 57
+Warning (10230): Verilog HDL assignment warning at uart.v(89): truncated value with size 32 to match size of target (11) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart.v Line: 89
+Warning (10230): Verilog HDL assignment warning at uart.v(91): truncated value with size 32 to match size of target (11) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart.v Line: 91
+Warning (10230): Verilog HDL assignment warning at uart.v(92): truncated value with size 32 to match size of target (6) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart.v Line: 92
+Warning (10230): Verilog HDL assignment warning at uart.v(94): truncated value with size 32 to match size of target (11) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart.v Line: 94
+Warning (10230): Verilog HDL assignment warning at uart.v(96): truncated value with size 32 to match size of target (11) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart.v Line: 96
+Warning (10230): Verilog HDL assignment warning at uart.v(97): truncated value with size 32 to match size of target (6) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart.v Line: 97
+Warning (10230): Verilog HDL assignment warning at uart.v(108): truncated value with size 32 to match size of target (11) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart.v Line: 108
+Warning (10230): Verilog HDL assignment warning at uart.v(137): truncated value with size 32 to match size of target (4) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart.v Line: 137
+Warning (10230): Verilog HDL assignment warning at uart.v(181): truncated value with size 32 to match size of target (11) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart.v Line: 181
+Warning (10230): Verilog HDL assignment warning at uart.v(191): truncated value with size 32 to match size of target (4) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/uart/uart.v Line: 191
 Info (12128): Elaborating entity "M_main" for hierarchy "M_main:__main" File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 121
 Warning (10230): Verilog HDL assignment warning at basic.v(4183): truncated value with size 32 to match size of target (13) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4183
 Warning (10230): Verilog HDL assignment warning at basic.v(4305): truncated value with size 16 to match size of target (15) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4305
@@ -1173,21 +1149,20 @@ Warning (10230): Verilog HDL assignment warning at basic.v(4355): truncated valu
 Warning (10230): Verilog HDL assignment warning at basic.v(4367): truncated value with size 16 to match size of target (15) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4367
 Warning (10230): Verilog HDL assignment warning at basic.v(4375): truncated value with size 32 to match size of target (16) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4375
 Warning (10230): Verilog HDL assignment warning at basic.v(4401): truncated value with size 32 to match size of target (20) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4401
-Warning (10230): Verilog HDL assignment warning at basic.v(4413): truncated value with size 16 to match size of target (8) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4413
-Warning (10230): Verilog HDL assignment warning at basic.v(4418): truncated value with size 32 to match size of target (9) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4418
-Warning (10230): Verilog HDL assignment warning at basic.v(4429): truncated value with size 32 to match size of target (9) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4429
-Warning (10230): Verilog HDL assignment warning at basic.v(4442): truncated value with size 16 to match size of target (15) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4442
-Warning (10230): Verilog HDL assignment warning at basic.v(4463): truncated value with size 32 to match size of target (8) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4463
-Warning (10230): Verilog HDL assignment warning at basic.v(4484): truncated value with size 32 to match size of target (8) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4484
-Warning (10230): Verilog HDL assignment warning at basic.v(4494): truncated value with size 32 to match size of target (8) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4494
-Warning (10230): Verilog HDL assignment warning at basic.v(4569): truncated value with size 32 to match size of target (16) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4569
-Warning (10230): Verilog HDL assignment warning at basic.v(4586): truncated value with size 32 to match size of target (9) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4586
-Warning (10230): Verilog HDL assignment warning at basic.v(4670): truncated value with size 32 to match size of target (16) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4670
-Warning (10230): Verilog HDL assignment warning at basic.v(4754): truncated value with size 16 to match size of target (13) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4754
-Warning (10230): Verilog HDL assignment warning at basic.v(4762): truncated value with size 16 to match size of target (15) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4762
-Warning (10230): Verilog HDL assignment warning at basic.v(4771): truncated value with size 32 to match size of target (9) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4771
-Warning (10230): Verilog HDL assignment warning at basic.v(4777): truncated value with size 16 to match size of target (8) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4777
-Warning (10230): Verilog HDL assignment warning at basic.v(4856): truncated value with size 32 to match size of target (20) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4856
+Warning (10230): Verilog HDL assignment warning at basic.v(4417): truncated value with size 32 to match size of target (9) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4417
+Warning (10230): Verilog HDL assignment warning at basic.v(4428): truncated value with size 32 to match size of target (9) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4428
+Warning (10230): Verilog HDL assignment warning at basic.v(4441): truncated value with size 16 to match size of target (15) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4441
+Warning (10230): Verilog HDL assignment warning at basic.v(4462): truncated value with size 32 to match size of target (8) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4462
+Warning (10230): Verilog HDL assignment warning at basic.v(4483): truncated value with size 32 to match size of target (8) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4483
+Warning (10230): Verilog HDL assignment warning at basic.v(4493): truncated value with size 32 to match size of target (8) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4493
+Warning (10230): Verilog HDL assignment warning at basic.v(4568): truncated value with size 32 to match size of target (16) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4568
+Warning (10230): Verilog HDL assignment warning at basic.v(4585): truncated value with size 32 to match size of target (9) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4585
+Warning (10230): Verilog HDL assignment warning at basic.v(4669): truncated value with size 32 to match size of target (16) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4669
+Warning (10230): Verilog HDL assignment warning at basic.v(4753): truncated value with size 16 to match size of target (13) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4753
+Warning (10230): Verilog HDL assignment warning at basic.v(4761): truncated value with size 16 to match size of target (15) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4761
+Warning (10230): Verilog HDL assignment warning at basic.v(4770): truncated value with size 32 to match size of target (9) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4770
+Warning (10230): Verilog HDL assignment warning at basic.v(4776): truncated value with size 16 to match size of target (8) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4776
+Warning (10230): Verilog HDL assignment warning at basic.v(4855): truncated value with size 32 to match size of target (20) File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4855
 Info (12128): Elaborating entity "M_main_mem_dstack" for hierarchy "M_main:__main|M_main_mem_dstack:__mem__dstack" File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4133
 Info (12128): Elaborating entity "M_main_mem_rstack" for hierarchy "M_main:__main|M_main_mem_rstack:__mem__rstack" File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4140
 Info (12128): Elaborating entity "M_main_mem_rom" for hierarchy "M_main:__main|M_main_mem_rom:__mem__rom" File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 4145
@@ -1312,25 +1287,6 @@ Info (12133): Instantiated megafunction "M_main:__main|M_main_mem_uartOutBuffer:
     Info (12134): Parameter "INDATA_ACLR_A" = "NONE"
     Info (12134): Parameter "WRCONTROL_ACLR_A" = "NONE"
     Info (12134): Parameter "READ_DURING_WRITE_MODE_MIXED_PORTS" = "OLD_DATA"
-Info (12021): Found 1 design units, including 1 entities, in source file db/altsyncram_0pm1.tdf
-    Info (12023): Found entity 1: altsyncram_0pm1 File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/db/altsyncram_0pm1.tdf Line: 28
-Info (12130): Elaborated megafunction instantiation "M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer|altsyncram:buffer_rtl_0"
-Info (12133): Instantiated megafunction "M_main:__main|M_main_mem_uartInBuffer:__mem__uartInBuffer|altsyncram:buffer_rtl_0" with the following parameter:
-    Info (12134): Parameter "OPERATION_MODE" = "DUAL_PORT"
-    Info (12134): Parameter "WIDTH_A" = "8"
-    Info (12134): Parameter "WIDTHAD_A" = "9"
-    Info (12134): Parameter "NUMWORDS_A" = "512"
-    Info (12134): Parameter "WIDTH_B" = "8"
-    Info (12134): Parameter "WIDTHAD_B" = "9"
-    Info (12134): Parameter "NUMWORDS_B" = "512"
-    Info (12134): Parameter "ADDRESS_ACLR_A" = "NONE"
-    Info (12134): Parameter "OUTDATA_REG_B" = "UNREGISTERED"
-    Info (12134): Parameter "ADDRESS_ACLR_B" = "NONE"
-    Info (12134): Parameter "OUTDATA_ACLR_B" = "NONE"
-    Info (12134): Parameter "ADDRESS_REG_B" = "CLOCK0"
-    Info (12134): Parameter "INDATA_ACLR_A" = "NONE"
-    Info (12134): Parameter "WRCONTROL_ACLR_A" = "NONE"
-    Info (12134): Parameter "READ_DURING_WRITE_MODE_MIXED_PORTS" = "OLD_DATA"
 Info (12021): Found 1 design units, including 1 entities, in source file db/altsyncram_i3n1.tdf
     Info (12023): Found entity 1: altsyncram_i3n1 File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/db/altsyncram_i3n1.tdf Line: 28
 Info (12130): Elaborated megafunction instantiation "M_main:__main|M_main_mem_ram:__mem__ram|altsyncram:buffer_rtl_0"
@@ -1395,34 +1351,20 @@ Info (12133): Instantiated megafunction "M_main:__main|M_main_mem_rstack:__mem__
     Info (12134): Parameter "READ_DURING_WRITE_MODE_MIXED_PORTS" = "OLD_DATA"
 Info (12021): Found 1 design units, including 1 entities, in source file db/altsyncram_o6n1.tdf
     Info (12023): Found entity 1: altsyncram_o6n1 File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/db/altsyncram_o6n1.tdf Line: 28
-Warning (14284): Synthesized away the following node(s):
-    Warning (14285): Synthesized away the following RAM node(s):
-        Warning (14320): Synthesized away node "M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|altsyncram:buffer_rtl_0|altsyncram_0pm1:auto_generated|ram_block1a0" File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/db/altsyncram_0pm1.tdf Line: 38
-        Warning (14320): Synthesized away node "M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|altsyncram:buffer_rtl_0|altsyncram_0pm1:auto_generated|ram_block1a1" File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/db/altsyncram_0pm1.tdf Line: 66
-        Warning (14320): Synthesized away node "M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|altsyncram:buffer_rtl_0|altsyncram_0pm1:auto_generated|ram_block1a2" File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/db/altsyncram_0pm1.tdf Line: 94
-        Warning (14320): Synthesized away node "M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|altsyncram:buffer_rtl_0|altsyncram_0pm1:auto_generated|ram_block1a3" File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/db/altsyncram_0pm1.tdf Line: 122
-        Warning (14320): Synthesized away node "M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|altsyncram:buffer_rtl_0|altsyncram_0pm1:auto_generated|ram_block1a4" File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/db/altsyncram_0pm1.tdf Line: 150
-        Warning (14320): Synthesized away node "M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|altsyncram:buffer_rtl_0|altsyncram_0pm1:auto_generated|ram_block1a5" File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/db/altsyncram_0pm1.tdf Line: 178
-        Warning (14320): Synthesized away node "M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|altsyncram:buffer_rtl_0|altsyncram_0pm1:auto_generated|ram_block1a6" File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/db/altsyncram_0pm1.tdf Line: 206
-        Warning (14320): Synthesized away node "M_main:__main|M_main_mem_uartOutBuffer:__mem__uartOutBuffer|altsyncram:buffer_rtl_0|altsyncram_0pm1:auto_generated|ram_block1a7" File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/db/altsyncram_0pm1.tdf Line: 234
 Warning (12241): 1 hierarchies have connectivity warnings - see the Connectivity Checks report folder
-Warning (13024): Output pins are stuck at VCC or GND
-    Warning (13410): Pin "tx" is stuck at VCC File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 8
 Info (286030): Timing-Driven Synthesis is running
-Info (17049): 54 registers lost all their fanouts during netlist optimizations.
+Info (17049): 6 registers lost all their fanouts during netlist optimizations.
 Info (16010): Generating hard_block partition "hard_block:auto_generated_inst"
     Info (16011): Adding 0 node(s), including 0 DDIO, 0 PLL, 0 transceiver and 0 LCELL
-Warning (21074): Design contains 1 input pin(s) that do not drive logic
-    Warning (15610): No output dependent on input pin "rx" File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 9
-Info (21057): Implemented 1223 device resources after synthesis - the final resource count might be different
+Info (21057): Implemented 1547 device resources after synthesis - the final resource count might be different
     Info (21058): Implemented 2 input pins
     Info (21059): Implemented 9 output pins
-    Info (21061): Implemented 1092 logic cells
-    Info (21064): Implemented 120 RAM segments
-Info: Quartus Prime Analysis & Synthesis was successful. 0 errors, 59 warnings
-    Info: Peak virtual memory: 542 megabytes
-    Info: Processing ended: Mon Sep 28 07:56:31 2020
-    Info: Elapsed time: 00:00:16
-    Info: Total CPU time (on all processors): 00:00:31
+    Info (21061): Implemented 1408 logic cells
+    Info (21064): Implemented 128 RAM segments
+Info: Quartus Prime Analysis & Synthesis was successful. 0 errors, 50 warnings
+    Info: Peak virtual memory: 536 megabytes
+    Info: Processing ended: Mon Sep 28 17:44:37 2020
+    Info: Elapsed time: 00:00:18
+    Info: Total CPU time (on all processors): 00:00:33
 
 

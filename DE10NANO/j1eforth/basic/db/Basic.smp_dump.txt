@@ -14,18 +14,18 @@ _q_INIT.00 0 0 0
 _q_INIT.01 1 0 1 
 _q_INIT.11 0 1 1 
 
-State Machine - |Basic|uart_tx:UART_TX_INST|r_SM_Main
-Name r_SM_Main.s_TX_STOP_BIT r_SM_Main.s_TX_DATA_BITS r_SM_Main.s_TX_START_BIT r_SM_Main.000 r_SM_Main.s_CLEANUP 
-r_SM_Main.000 0 0 0 0 0 
-r_SM_Main.s_TX_START_BIT 0 0 1 1 0 
-r_SM_Main.s_TX_DATA_BITS 0 1 0 1 0 
-r_SM_Main.s_TX_STOP_BIT 1 0 0 1 0 
-r_SM_Main.s_CLEANUP 0 0 0 1 1 
+State Machine - |Basic|uart:uart0|tx_state
+Name tx_state.TX_IDLE tx_state.TX_DELAY_RESTART tx_state.TX_SENDING 
+tx_state.TX_IDLE 0 0 0 
+tx_state.TX_SENDING 1 0 1 
+tx_state.TX_DELAY_RESTART 1 1 0 
 
-State Machine - |Basic|uart_rx:UART_RX_INST|r_SM_Main
-Name r_SM_Main.s_RX_STOP_BIT r_SM_Main.s_RX_DATA_BITS r_SM_Main.s_RX_START_BIT r_SM_Main.000 r_SM_Main.s_CLEANUP 
-r_SM_Main.000 0 0 0 0 0 
-r_SM_Main.s_RX_START_BIT 0 0 1 1 0 
-r_SM_Main.s_RX_DATA_BITS 0 1 0 1 0 
-r_SM_Main.s_RX_STOP_BIT 1 0 0 1 0 
-r_SM_Main.s_CLEANUP 0 0 0 1 1 
+State Machine - |Basic|uart:uart0|recv_state
+Name recv_state.RX_RECEIVED recv_state.RX_ERROR recv_state.RX_DELAY_RESTART recv_state.RX_CHECK_STOP recv_state.RX_READ_BITS recv_state.RX_CHECK_START recv_state.RX_IDLE 
+recv_state.RX_IDLE 0 0 0 0 0 0 0 
+recv_state.RX_CHECK_START 0 0 0 0 0 1 1 
+recv_state.RX_READ_BITS 0 0 0 0 1 0 1 
+recv_state.RX_CHECK_STOP 0 0 0 1 0 0 1 
+recv_state.RX_DELAY_RESTART 0 0 1 0 0 0 1 
+recv_state.RX_ERROR 0 1 0 0 0 0 1 
+recv_state.RX_RECEIVED 1 0 0 0 0 0 1 

@@ -4,6 +4,10 @@
 			"name" : "Top",
 			"pins" : [
 				{
+					"name" : "tx",
+					"strict" : false
+				},
+				{
 					"name" : "LED0",
 					"strict" : false
 				},
@@ -37,6 +41,10 @@
 				},
 				{
 					"name" : "clk",
+					"strict" : false
+				},
+				{
+					"name" : "rx",
 					"strict" : false
 				}
 			]

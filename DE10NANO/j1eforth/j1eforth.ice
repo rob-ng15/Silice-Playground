@@ -199,9 +199,6 @@ algorithm main(
 
     // INIT is 3 EXECUTE J1 CPU
     while( INIT == 3 ) {
-        // DEBUG
-        led = instruction;
-        
         // READ from UART if character available and store
         if( uart_rx_valid ) {
             // writes at uartInBufferTop (code from @sylefeb)
@@ -238,7 +235,7 @@ algorithm main(
             }
             
             // J1 CPU Instruction Execute
-            case 8: {
+            case 2: {
                 // +---------------------------------------------------------------+
                 // | F | E | D | C | B | A | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
                 // +---------------------------------------------------------------+
@@ -408,7 +405,7 @@ algorithm main(
             } // J1 CPU Instruction Execute
 
             // update pc and perform mem[t] = n
-            case 9: {
+            case 3: {
                 // Write to dstack and rstack
                 if( dstackWrite ) {
                     // bram code for dstack (code from @sylefeb)
@@ -425,7 +422,7 @@ algorithm main(
             }
             
             // Update dsp, rsp, pc, stackTop
-            case 10: {
+            case 4: {
                 dsp = newDSP;
                 pc = newPC;
                 stackTop = newStackTop;
@@ -437,7 +434,7 @@ algorithm main(
             }
             
             // reset sram_readwrite
-            case 12: {
+            case 5: {
                 ram.wenable0 = 0;
             }
             
@@ -445,13 +442,12 @@ algorithm main(
         } // switch(CYCLE)
         
         // Reset UART
-        if(~uart_tx_busy & uart_tx_valid) {
+        if(uart_tx_busy & uart_tx_valid) {
             uart_tx_valid = 0;
         }
     
         // Move to next CYCLE ( 0 to 12 , then back to 0 )
-        //CYCLE = ( CYCLE == 12 ) ? 0 : CYCLE + 1;
-        CYCLE = CYCLE + 1;
+        CYCLE = ( CYCLE == 5 ) ? 0 : CYCLE + 1;
     } // (INIT==3 execute J1 CPU)
 
 }
