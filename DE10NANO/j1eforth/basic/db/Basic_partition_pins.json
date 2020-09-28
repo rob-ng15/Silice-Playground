@@ -38,10 +38,6 @@
 				{
 					"name" : "clk",
 					"strict" : false
-				},
-				{
-					"name" : "rx",
-					"strict" : false
 				}
 			]
 		}

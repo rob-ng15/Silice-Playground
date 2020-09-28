@@ -5,7 +5,7 @@ module Basic(
     input clk,
     
     // uart via GPIO pins
-    output reg tx,
+    output tx,
     input rx,
     
     // Outputs to the 8 onboard LEDs
@@ -67,19 +67,41 @@ wire uart_rx_valid;
 wire uart_rx_ready;
 wire uart_serial_tx;
 
-uart uart0(
-.clk(clk), // The master clock for this module
-.rst(reset_main), // Synchronous reset
-.rx(rx), // Incoming serial line
-.tx(uart_serial_tx), // Outgoing serial line
-.transmit(uart_tx_valid), // Signal to transmit
-.tx_byte(uart_tx_data), // Byte to transmit
-.received(uart_rx_valid), // Indicated that a byte has been received
-.rx_byte(uart_rx_data), // Byte received
-.is_receiving(), // Low when receive line is idle
-.is_transmitting(uart_tx_busy),// Low when transmit line is idle
-.recv_error() // Indicates error in receiving packet.
-);
+//uart uart0(
+//.clk(clk), // The master clock for this module
+//.rst(reset_main), // Synchronous reset
+//.rx(rx), // Incoming serial line
+//.tx(tx), // Outgoing serial line
+//.transmit(uart_tx_valid), // Signal to transmit
+//.tx_byte(uart_tx_data), // Byte to transmit
+//.received(uart_rx_valid), // Indicated that a byte has been received
+//.rx_byte(uart_rx_data), // Byte received
+//.is_receiving(), // Low when receive line is idle
+//.is_transmitting(uart_tx_busy),// Low when transmit line is idle
+//.recv_error() // Indicates error in receiving packet.
+//);
+
+// Want to interface to 115200 baud UART
+// 50000000 / 115200 = 434 Clocks Per Bit.
+parameter c_CLOCK_PERIOD_NS = 2;
+parameter c_CLKS_PER_BIT    = 434;
+parameter c_BIT_PERIOD      = 8600;
+
+uart_rx #(.CLKS_PER_BIT(c_CLKS_PER_BIT)) UART_RX_INST
+(.i_Clock(clk),
+    .i_Rx_Serial(rx),
+    .o_Rx_DV(uart_rx_valid),
+    .o_Rx_Byte(uart_rx_data)
+    );
+
+uart_tx #(.CLKS_PER_BIT(c_CLKS_PER_BIT)) UART_TX_INST
+(.i_Clock(clk),
+    .i_Tx_DV(uart_tx_valid),
+    .i_Tx_Byte(uart_tx_data),
+    .o_Tx_Active(uart_tx_busy),
+    .o_Tx_Serial(tx),
+    .o_Tx_Done(uart_tx_done)
+    );
 
 M_main __main(
   .clock(clk),
@@ -107,8 +129,6 @@ always @* begin
   LED5 = __main_out_led[5+:1];
   LED6 = __main_out_led[6+:1];
   LED7 = __main_out_led[7+:1];
-  
-  tx = uart_serial_tx;
 end
 
 endmodule
