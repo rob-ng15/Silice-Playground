@@ -1,3 +1,96 @@
+// VGA Driver Includes
+$include('common/vga.ice')
+import('common/de10nano_clk_100_25.v')
+import('common/reset_conditioner.v')
+
+algorithm text_display(
+  input   uint10 pix_x,
+  input   uint10 pix_y,
+  input   uint1  pix_active,
+  input   uint1  pix_vblank,
+  output! uint$color_depth$ pix_red,
+  output! uint$color_depth$ pix_green,
+  output! uint$color_depth$ pix_blue
+) <autorun> {
+
+    // Character ROM 
+    uint8 characterGenerator[] = {
+        $include('characterROM.inc')
+    };
+
+    // 80 x 30 character buffer and attribute ( back 4 bit, fore 4 bit )
+    uint8 character[2400] = {
+        $$for i=0,2399 do
+            $math.floor(i)$,
+        $$end
+    };
+    uint8 attribute[2400] = {
+        $$for i=0,2399 do
+            $math.floor(i)$,
+        $$end
+    };
+    
+    uint6 Rcolourmap[16] = {  0, 32,  0, 32,  0, 32,  0, 48, 32, 63,  0, 63,  0, 63,  0, 63 };
+    uint6 Gcolourmap[16] = {  0,  0, 32, 32,  0,  0, 32, 48, 32,  0, 63, 63,  0,  0, 63, 63 };
+    uint6 Bcolourmap[16] = {  0,  0,  0,  0, 32, 32, 32, 48, 32,  0,  0,  0, 63, 63, 63, 63 };
+    
+    uint16 xpixel = 0;
+    uint16 ypixel = 0;
+    
+    // Character position on the screen x 0-79, y 0-29 * 80
+    uint8 xcharacterpos := xpixel >> 3;
+    uint8 ycharacterpos := (ypixel >> 3 ) << 4 + (ypixel >> 3) << 6;
+    
+    // Derive the x and y coordinate within the current character block
+    uint8 xincharacter := xpixel & 7;
+    uint8 yincharacter := ypixel & 7;
+
+    // Find present character and attribute
+    uint8 presentcharacter := character[ xcharacterpos + ycharacterpos ];
+    uint8 presentattribute := attribute[ xcharacterpos + ycharacterpos ];
+    
+    uint8 presentcharacterbitmap := characterGenerator[ 504 + yincharacter ]; //presentcharacter << 3 + yincharacter ];
+    uint1 presentcharacterpixel := ( presentcharacterbitmap >> ( 7 - xincharacter ) ) & 1;
+    
+    // by default r,g,b are set to zero
+    pix_red   := 0;
+    pix_green := 0;
+    pix_blue  := 0;
+    
+    while (1) {
+        // wait until vblank is over
+        while (pix_vblank == 1) { 
+            xpixel = 0;
+            ypixel = 0;
+        }
+        
+        while (pix_vblank == 0) {
+            // Determine if background or foreground
+            switch( presentcharacterpixel ) {
+               case 0: {
+                    // background
+                    pix_red = Rcolourmap[ presentattribute >> 4 ];
+                    pix_green = Gcolourmap[ presentattribute >> 4 ];
+                    pix_blue = Bcolourmap[ presentattribute >> 4 ];
+                }
+                case 1: {
+                    // foreground
+                    pix_red = Rcolourmap[ presentattribute & 15 ];
+                    pix_green = Gcolourmap[ presentattribute & 15 ];
+                    pix_blue = Bcolourmap[ presentattribute & 15 ];
+                }
+            }
+            // Move to the next pixel
+            if( xpixel == 639 ) {
+                ypixel = ypixel + 1;
+                xpixel = 0;
+            } else {
+                xpixel = xpixel + 1;
+            }
+        }
+    }
+}
+
 // BITFIELDS to help with bit/field access
 
 // Instruction is 3 bits 1xx = literal value, 000 = branch, 001 = 0branch, 010 = call, 011 = alu, followed by 13 bits of instruction specific data
@@ -59,12 +152,81 @@ algorithm main(
     output   uint8  uart_tx_data,
     output   uint1  uart_tx_valid,
     input    uint1  uart_tx_busy,
+    input   uint1   uart_tx_done,
     input    uint8  uart_rx_data,
     input    uint1  uart_rx_valid,
-    
+
+    // SDRAM
+    output! uint1  sdram_cle,
+    output! uint1  sdram_dqm,
+    output! uint1  sdram_cs,
+    output! uint1  sdram_we,
+    output! uint1  sdram_cas,
+    output! uint1  sdram_ras,
+    output! uint2  sdram_ba,
+    output! uint13 sdram_a,
+    output! uint1  sdram_clk,
+    inout   uint8  sdram_dq,
+
+    // VGA
+    output! uint$color_depth$ video_r,
+    output! uint$color_depth$ video_g,
+    output! uint$color_depth$ video_b,
+    output! uint1 video_hs,
+    output! uint1 video_vs,
+
     // 1hz timer
     input   uint16 timer1hz
 ) {
+    // VGA Text Display
+  uint1 video_reset = 0;
+  uint1 video_clock = 0;
+  uint1 sdram_clock = 0;
+  uint1 pll_lock = 0;
+  de10nano_clk_100_25 clk_gen(
+    refclk    <: clock,
+    outclk_0  :> sdram_clock,
+    outclk_1  :> video_clock,
+    locked    :> pll_lock,
+    rst       <: reset
+  ); 
+
+  // --- video reset
+  reset_conditioner vga_rstcond (
+    rcclk <: video_clock,
+    in  <: reset,
+    out :> video_reset
+  );
+
+  uint1  active = 0;
+  uint1  vblank = 0;
+  uint10 pix_x  = 0;
+  uint10 pix_y  = 0;
+
+  vga vga_driver <@video_clock,!video_reset>
+  (
+    vga_hs :> video_hs,
+	  vga_vs :> video_vs,
+	  active :> active,
+	  vblank :> vblank,
+	  vga_x  :> pix_x,
+	  vga_y  :> pix_y
+  );
+
+  text_display display <@video_clock,!video_reset>
+  (
+	  pix_x      <: pix_x,
+	  pix_y      <: pix_y,
+	  pix_active <: active,
+	  pix_vblank <: vblank,
+	  pix_red    :> video_r,
+	  pix_green  :> video_g,
+	  pix_blue   :> video_b
+  );
+
+  uint8 frame  = 0;
+
+    // J1+ CPU
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
     uint16  instruction = uninitialized;
     uint16  immediate := ( literal(instruction).literalvalue );
@@ -120,6 +282,7 @@ algorithm main(
     dualport_bram uint8 uartInBuffer[512] = uninitialized;
     uint9 uartInBufferNext = 0;
     uint9 uartInBufferTop = 0;
+    uint1 uartInHold = 1;
 
     // UART output FIFO (512 character) as dualport bram (code from @sylefeb)
     dualport_bram uint8 uartOutBuffer[512] = uninitialized;
@@ -142,6 +305,17 @@ algorithm main(
     uartOutBuffer.wenable1 := 1; // always write on port 1    
     uartOutBuffer.addr0    := uartOutBufferNext; // FIFO reads on next
     uartOutBuffer.addr1    := uartOutBufferTop;  // FIFO writes on top
+
+    // Lock out SDRAM for the J1+ CPU
+    sdram_cle := 1bz;
+    sdram_dqm := 1bz;
+    sdram_cs  := 1bz;
+    sdram_we  := 1bz;
+    sdram_cas := 1bz;
+    sdram_ras := 1bz;
+    sdram_ba  := 2bz;
+    sdram_a   := 13bz;
+    sdram_clk := 1bz;
     
     // INIT is 0 ZERO dualport working blockram
     while( INIT == 0 ) {
@@ -200,26 +374,47 @@ algorithm main(
 
     // INIT is 3 EXECUTE J1 CPU
     while( INIT == 3 ) {
+        // Deal with VBLANK, VGA and SDRAM
+
         // READ from UART if character available and store
-        if( uart_rx_valid ) {
-            // writes at uartInBufferTop (code from @sylefeb)
-            uartInBuffer.wdata1  = uart_rx_data;            
-            uartInBufferTop      = uartInBufferTop + 1; 
+        switch( uartInHold ) {
+            case 0: {
+                if( uart_rx_valid ) {
+                    // writes at uartInBufferTop (code from @sylefeb)
+                    uartInBuffer.wdata1  = uart_rx_data;            
+                    uartInBufferTop      = uartInBufferTop + 1;
+                    uartInHold = 1;
+                }
+            }
+            case 1: {
+                // Wait for UART valid flag to flip before allowing another read
+                uartInHold = ( uart_rx_valid == 0 ) ? 0 : 1;
+            }
         }
+
+        // WRITE to UART if characters in buffer and UART is ready
+        switch( uartOutHold ) {
+            case 0: {
+                if( ~(uartOutBufferNext == uartOutBufferTop) & ~( uart_tx_busy ) ) {
+                    // reads at uartOutBufferNext (code from @sylefeb)
+                    uart_tx_data      = uartOutBuffer.rdata0; 
+                    uart_tx_valid     = 1;
+                    uartOutHold = 1;
+                    uartOutBufferNext = uartOutBufferNext + 1;
+                }
+            }
+            case 1: {
+                if( ~uart_tx_busy ) {
+                    uart_tx_valid = 0;
+                    uartOutHold = 0;
+                }
+            }
+        }
+        uartOutBufferTop = newuartOutBufferTop;        
         
         switch( CYCLE ) {
             // Read stackNext, rStackTop
             case 0: {
-                // WRITE to UART if characters in buffer and UART is ready
-                if( ~(uartOutBufferNext == uartOutBufferTop) & ~( uart_tx_busy ) & ( uartOutHold == 0 ) ) {
-                    // reads at uartOutBufferNext (code from @sylefeb)
-                    uart_tx_data      = uartOutBuffer.rdata0; 
-                    uart_tx_valid     = 1;
-                    uartOutHold = 3;
-                    uartOutBufferNext = uartOutBufferNext + 1;
-                }
-                uartOutBufferTop = newuartOutBufferTop;
-                
                 // read dtsack and rstack brams (code from @sylefeb)
                 stackNext = dstack.rdata;
                 rStackTop = rstack.rdata;
@@ -436,14 +631,6 @@ algorithm main(
             
                 // reset sram_readwrite
                 ram.wenable0 = 0;
-
-                // Reset UART, allow time for tx busy to flag
-                if( uartOutHold > 0 ) {
-                    if( uartOutHold == 2 ) {
-                        uart_tx_valid = 0;
-                    }
-                    uartOutHold = uartOutHold - 1;
-                }
             }
             
             default: {}
