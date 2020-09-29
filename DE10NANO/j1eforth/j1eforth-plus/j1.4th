@@ -112,7 +112,7 @@ variable tlast
 variable tuser
 
 0001 constant =ver
-0005 constant =ext
+0006 constant =ext
 0040 constant =comp
 0080 constant =imed
 7f1f constant =mask
@@ -542,8 +542,8 @@ t: key ( -- c )
 	until f000 literal @ t;
 t: nuf? ( -- t ) ?key dup if drop key =cr literal = then exit t;
 t: timer@ ( -- t ) f004 literal @ t;
-t: rgb@ ( -- t ) f002 literal @ t;
-t: rgb! ( c -- ) f002 literal ! t;
+t: led@ ( -- t ) f002 literal @ t;
+t: led! ( c -- ) f002 literal ! t;
 t: buttons@ ( -- t ) f003 literal @ t;
 t: space ( -- ) bl emit t;
 t: spaces ( +n -- ) 0 literal max  for aft space then next t;

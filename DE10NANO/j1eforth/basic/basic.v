@@ -8,6 +8,14 @@ module Basic(
     output tx,
     input rx,
     
+    // user button and switches
+    input   BUTTON0,
+    input   BUTTON1,
+    input   SWITCH0,
+    input   SWITCH1,
+    input   SWITCH2,
+    input   SWITCH3,
+    
     // Outputs to the 8 onboard LEDs
     output reg LED0,
     output reg LED1,
@@ -67,6 +75,7 @@ wire uart_rx_valid;
 wire uart_rx_ready;
 wire uart_serial_tx;
 
+// UART from https://github.com/cyrozap/osdvu
 uart uart0(
     .clk(clk), // The master clock for this module
     .rst(reset_main), // Synchronous reset
@@ -81,34 +90,17 @@ uart uart0(
     .recv_error() // Indicates error in receiving packet.
 );
 
-// Want to interface to 115200 baud UART
-// 50000000 / 115200 = 434 Clocks Per Bit.
-//parameter c_CLOCK_PERIOD_NS = 2;
-//parameter c_CLKS_PER_BIT    = 434;
-//parameter c_BIT_PERIOD      = 8600;
-//
-//uart_rx #(.CLKS_PER_BIT(c_CLKS_PER_BIT)) UART_RX_INST
-//(.i_Clock(clk),
-//    .i_Rx_Serial(rx),
-//    .o_Rx_DV(uart_rx_valid),
-//    .o_Rx_Byte(uart_rx_data)
-//    );
-//
-//uart_tx #(.CLKS_PER_BIT(c_CLKS_PER_BIT)) UART_TX_INST
-//(.i_Clock(clk),
-//    .i_Tx_DV(uart_tx_valid),
-//    .i_Tx_Byte(uart_tx_data),
-//    .o_Tx_Active(uart_tx_busy),
-//    .o_Tx_Serial(tx),
-//    .o_Tx_Done(uart_tx_done)
-//    );
-
 M_main __main(
   .clock(clk),
   .reset(reset_main),
   .in_run(run_main),
+  
+  // LEDS
   .out_led(__main_out_led),
 
+  // BUTTONS and SWITCHES (combined)
+  .in_buttons( {2'b0, SWITCH3, SWITCH2, SWITCH1, SWITCH0, BUTTON1, BUTTON0} ),
+  
   // UART
   .out_uart_tx_data( uart_tx_data ),
   .out_uart_tx_valid( uart_tx_valid ),
@@ -1431,15 +1423,15 @@ initial begin
  buffer[1251] = 16'h6600;
  buffer[1252] = 16'h7C0C;
  buffer[1253] = 16'h09BC;
- buffer[1254] = 16'h7204;
- buffer[1255] = 16'h6267;
+ buffer[1254] = 16'h6C04;
+ buffer[1255] = 16'h6465;
  buffer[1256] = 16'h0040;
  buffer[1257] = 16'h8FFD;
  buffer[1258] = 16'h6600;
  buffer[1259] = 16'h7C0C;
  buffer[1260] = 16'h09CC;
- buffer[1261] = 16'h7204;
- buffer[1262] = 16'h6267;
+ buffer[1261] = 16'h6C04;
+ buffer[1262] = 16'h6465;
  buffer[1263] = 16'h0021;
  buffer[1264] = 16'h8FFD;
  buffer[1265] = 16'h6600;
@@ -3729,7 +3721,7 @@ initial begin
  buffer[3549] = 16'h8001;
  buffer[3550] = 16'h8100;
  buffer[3551] = 16'h4329;
- buffer[3552] = 16'h8005;
+ buffer[3552] = 16'h8006;
  buffer[3553] = 16'h720F;
  buffer[3554] = 16'h1BB6;
  buffer[3555] = 16'h6802;
@@ -3895,7 +3887,7 @@ out_done,
 reset,
 clock
 );
-input  [3:0] in_buttons;
+input  [7:0] in_buttons;
 input  [0:0] in_uart_tx_busy;
 input  [7:0] in_uart_rx_data;
 input  [0:0] in_uart_rx_valid;
@@ -3982,8 +3974,8 @@ reg  [0:0] _d_ram_wenable1;
 reg  [0:0] _q_ram_wenable1;
 reg  [14:0] _d_ram_addr1;
 reg  [14:0] _q_ram_addr1;
-reg  [19:0] _d_CYCLE;
-reg  [19:0] _q_CYCLE;
+reg  [2:0] _d_CYCLE;
+reg  [2:0] _q_CYCLE;
 reg  [1:0] _d_INIT;
 reg  [1:0] _q_INIT;
 reg  [15:0] _d_copyaddress;
@@ -4020,6 +4012,8 @@ reg  [8:0] _d_uartOutBufferTop;
 reg  [8:0] _q_uartOutBufferTop;
 reg  [8:0] _d_newuartOutBufferTop;
 reg  [8:0] _q_newuartOutBufferTop;
+reg  [7:0] _d_uartOutHold;
+reg  [7:0] _q_uartOutHold;
 reg  [7:0] _d_led,_q_led;
 reg  [7:0] _d_uart_tx_data,_q_uart_tx_data;
 reg  [0:0] _d_uart_tx_valid,_q_uart_tx_valid;
@@ -4066,6 +4060,7 @@ _q_uartOutBuffer_addr1 <= 0;
 _q_uartOutBufferNext <= 0;
 _q_uartOutBufferTop <= 0;
 _q_newuartOutBufferTop <= 0;
+_q_uartOutHold <= 0;
   if (reset) begin
 _q_index <= 0;
 end else begin
@@ -4116,6 +4111,7 @@ _q_uartOutBuffer_addr1 <= _d_uartOutBuffer_addr1;
 _q_uartOutBufferNext <= _d_uartOutBufferNext;
 _q_uartOutBufferTop <= _d_uartOutBufferTop;
 _q_newuartOutBufferTop <= _d_newuartOutBufferTop;
+_q_uartOutHold <= _d_uartOutHold;
 _q_index <= _d_index;
   end
 _q_led <= _d_led;
@@ -4235,6 +4231,7 @@ _d_uartOutBuffer_addr1 = _q_uartOutBuffer_addr1;
 _d_uartOutBufferNext = _q_uartOutBufferNext;
 _d_uartOutBufferTop = _q_uartOutBufferTop;
 _d_newuartOutBufferTop = _q_newuartOutBufferTop;
+_d_uartOutHold = _q_uartOutHold;
 _d_led = _q_led;
 _d_uart_tx_data = _q_uart_tx_data;
 _d_uart_tx_valid = _q_uart_tx_valid;
@@ -4290,6 +4287,7 @@ _d_uartOutBuffer_addr1 = 0;
 _d_uartOutBufferNext = 0;
 _d_uartOutBufferTop = 0;
 _d_newuartOutBufferTop = 0;
+_d_uartOutHold = 0;
 // --
 _d_index = 1;
 end
@@ -4307,14 +4305,14 @@ _d_ram_wdata0 = 0;
 _d_ram_wenable0 = 1;
 // __block_8
   end
-  3: begin
+  1: begin
 // __block_9_case
 // __block_10
 _d_copyaddress = _q_copyaddress+1;
 _d_ram_wenable0 = 0;
 // __block_11
   end
-  15: begin
+  4: begin
 // __block_12_case
 // __block_13
 if (_q_copyaddress==32768) begin
@@ -4336,7 +4334,7 @@ end
   end
 endcase
 // __block_5
-_d_CYCLE = (_q_CYCLE==15)?0:_q_CYCLE+1;
+_d_CYCLE = (_q_CYCLE==4)?0:_q_CYCLE+1;
 // __block_23
 _d_index = 1;
 end else begin
@@ -4369,14 +4367,14 @@ _d_ram_wdata0 = _q_bramREAD;
 _d_ram_wenable0 = 1;
 // __block_37
   end
-  14: begin
+  3: begin
 // __block_38_case
 // __block_39
 _d_copyaddress = _q_copyaddress+1;
 _d_ram_wenable0 = 0;
 // __block_40
   end
-  15: begin
+  4: begin
 // __block_41_case
 // __block_42
 if (_q_copyaddress==4096) begin
@@ -4398,7 +4396,7 @@ end
   end
 endcase
 // __block_28
-_d_CYCLE = (_q_CYCLE==15)?0:_q_CYCLE+1;
+_d_CYCLE = (_q_CYCLE==4)?0:_q_CYCLE+1;
 // __block_52
 _d_index = 3;
 end else begin
@@ -4420,22 +4418,23 @@ end else begin
 // __block_58
 end
 // __block_61
-if (~(_q_uartOutBufferNext==_q_uartOutBufferTop)&~(in_uart_tx_busy)) begin
-// __block_62
-// __block_64
-_d_uart_tx_data = _w_mem_uartOutBuffer_rdata0;
-_d_uart_tx_valid = 1;
-_d_uartOutBufferNext = _q_uartOutBufferNext+1;
-// __block_65
-end else begin
-// __block_63
-end
-// __block_66
-_d_uartOutBufferTop = _q_newuartOutBufferTop;
   case (_q_CYCLE)
   0: begin
-// __block_68_case
+// __block_63_case
+// __block_64
+if (~(_q_uartOutBufferNext==_q_uartOutBufferTop)&~(in_uart_tx_busy)&(_q_uartOutHold==0)) begin
+// __block_65
+// __block_67
+_d_uart_tx_data = _w_mem_uartOutBuffer_rdata0;
+_d_uart_tx_valid = 1;
+_d_uartOutHold = 3;
+_d_uartOutBufferNext = _q_uartOutBufferNext+1;
+// __block_68
+end else begin
+// __block_66
+end
 // __block_69
+_d_uartOutBufferTop = _q_newuartOutBufferTop;
 _d_stackNext = _w_mem_dstack_rdata;
 _d_rStackTop = _w_mem_rstack_rdata;
 _d_ram_addr0 = _q_stackTop>>1;
@@ -4588,7 +4587,7 @@ _d_uartInBufferNext = _q_uartInBufferNext+1;
   16'hf001: begin
 // __block_139_case
 // __block_140
-_d_newStackTop = {14'b0,_d_uart_tx_valid,~(_q_uartInBufferNext==_d_uartInBufferTop)};
+_d_newStackTop = {14'b0,(_q_uartOutBufferTop+1==_q_uartOutBufferNext),~(_q_uartInBufferNext==_d_uartInBufferTop)};
 // __block_141
   end
   16'hf002: begin
@@ -4767,7 +4766,7 @@ _d_ram_wenable0 = 1;
 // __block_224_case
 // __block_225
 _d_uartOutBuffer_wdata1 = _q_stackNext[0+:8];
-_d_newuartOutBufferTop = _d_uartOutBufferTop+1;
+_d_newuartOutBufferTop = _q_uartOutBufferTop+1;
 // __block_226
   end
   16'hf002: begin
@@ -4828,32 +4827,36 @@ _d_stackTop = _q_newStackTop;
 _d_rsp = _q_newRSP;
 _d_dstack_addr = _q_newDSP;
 _d_rstack_addr = _q_newRSP;
-// __block_251
-  end
-  5: begin
-// __block_252_case
-// __block_253
 _d_ram_wenable0 = 0;
+if (_q_uartOutHold>0) begin
+// __block_251
+// __block_253
+if (_q_uartOutHold==2) begin
 // __block_254
+// __block_256
+_d_uart_tx_valid = 0;
+// __block_257
+end else begin
+// __block_255
+end
+// __block_258
+_d_uartOutHold = _q_uartOutHold-1;
+// __block_259
+end else begin
+// __block_252
+end
+// __block_260
+// __block_261
   end
   default: begin
-// __block_255_case
-// __block_256
-// __block_257
+// __block_262_case
+// __block_263
+// __block_264
   end
 endcase
-// __block_67
-if (in_uart_tx_busy&_d_uart_tx_valid) begin
-// __block_258
-// __block_260
-_d_uart_tx_valid = 0;
-// __block_261
-end else begin
-// __block_259
-end
-// __block_262
-_d_CYCLE = (_q_CYCLE==5)?0:_q_CYCLE+1;
-// __block_263
+// __block_62
+_d_CYCLE = (_q_CYCLE==4)?0:_q_CYCLE+1;
+// __block_265
 _d_index = 5;
 end else begin
 _d_index = 6;

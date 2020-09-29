@@ -1,12 +1,10 @@
 # Silice-Playground
 My Silice (https://github.com/sylefeb/Silice) Coding Experimental Area
 
-Examples to play with FOMU via Silice
+Examples to play with FOMU via Silice. _I only have a **HACKER** FOMU, so in my examples, the pcf file used is always `fomu-hacker.pcf`. This will need to be changed in `fomu_hacker_USB_SPRAM.sh` for your model of FOMU. 
 
 BLINKY pulses the LED, 
 USB_ACM echoes UART input and sets LED according to the input
-
-
 
 ## j1eforth for FOMU
 
@@ -24,9 +22,9 @@ For communicating via a terminal the tinyfpga_bx_usbserial (https://github.com/s
 
 Download the source code from this repository. Ensure that you have the required toolchain installed. Compile (on Linux) with `./fomu_hacker_USB_SPRAM.sh j1eforth.ice` within the source directory.
 
-Or download the precompiled `j1eforth-FOMU.dfu` file from this repository.
+Or download the precompiled `j1eforth-FOMU-HACKER.dfu` file from this repository.
 
-Upload the compiled bitstream to your FOMU with `dfu-util -D build.dfu`, or the downloaded bitstream with `dfu-util -D j1eforth-FOMU.dfu` and connect via your chosen terminal, for minicom `minicom -D /dev/ttyACM0` (ACM0 may need replacing with an appropriate number on your machine).
+Upload the compiled bitstream to your FOMU with `dfu-util -D build.dfu`, or the downloaded bitstream with `dfu-util -D j1eforth-FOMU-HACKER.dfu` and connect via your chosen terminal, for minicom `minicom -D /dev/ttyACM0` (ACM0 may need replacing with an appropriate number on your machine).
 
 ## Resources on the FOMU
 
@@ -132,7 +130,7 @@ Hexadecimal Address | Usage
 0000 - 7fff | Program code and data
 f000 | UART input/output (best to leave to j1eforth to operate via IN/OUT buffers).
 f001 | UART Status (bit 1 = TX buffer full, bit 0 = RX character available, best to leave to j1eforth to operate via IN/OUT buffers).
-f002 | RGB LED input/output bitfield { 13b0, red, green, blue } `rgbled rgb!` sets the RGB LED, `rgb@` places the RGB LED status onto the stack.
+f002 | RGB LED input/output bitfield { 13b0, red, green, blue } `rgbled led!` sets the RGB LED, `led@` places the RGB LED status onto the stack.
 f003 | BUTTONS input bitfield { 12b0, button 4, button 3, button 2, button 1 }, `buttons@` places the buttons status onto the stack.
 f004 | TIMER 1hz (1 second) counter since boot, `timer@` places the timer onto the stack
 
@@ -203,7 +201,7 @@ This can be copied and pasted into the terminal. Try to keep line lengths relati
 ```
 : vtcs 1b emit 5b emit 32 emit 4a emit ;
 : vtxy 1b emit 5b emit 0 u.r# 3b emit 0 u.r# 48 emit ;
-: rgbtest
+: ledtest
     ( store the base, set to binary )
     base @ 2 base !
     100 0 do 
@@ -211,20 +209,20 @@ This can be copied and pasted into the terminal. Try to keep line lengths relati
         vtcs
         ( move to 8 1, output 5 digit timer )
         8 1 vtxy timer@ dup 5 u.r# space ." seconds "
-        rgb! rgb@ 
+        led! led@ 
         ( output 3 digit binary )
-        3 u.r space ." RGB LED" 
+        8 u.r space ." LEDs" 
         8000 0 do loop 
     loop
-    cr 0 rgb! base ! ;
+    cr 0 led! base ! ;
 ```
 
 This code defines 3 new Forth words:
 
 * `vtcs` which clears the terminal ( sends ESC [ 2 J )
 * `vtxy` moves the cursor to the position defined by the top two locations on the stack, `8 1 vtxy` moves the cursor to line 1 column 8 ( sends ESC [ 1 ; 8 H )
-* `rgbtest` Loops, clears the screen then displays the number of seconds elapsed whilst changing the RGB LED to the lower 3 bits of the timers, and then displaying the binary (`2 base !` changes to binary) status of the RGB LED. Finally turning off the RGB LED.
+* `ledtest` Loops, clears the screen then displays the number of seconds elapsed whilst changing the RGB LED to the lower 3 bits of the timers, and then displaying the binary (`2 base !` changes to binary) status of the RGB LED. Finally turning off the RGB LED.
 
-Start the test with `rgbtest`.
+Start the test with `ledtest`.
 
 ![j1eforth in Silice on FOMU](j1eforth.png)

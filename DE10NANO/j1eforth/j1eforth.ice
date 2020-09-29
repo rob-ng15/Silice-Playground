@@ -53,7 +53,7 @@ algorithm main(
     output  uint8   led,
     
     // USER buttons
-   input   uint4   buttons,
+    input   uint8    buttons,
 
     // UART Interface
     output   uint8  uart_tx_data,
@@ -109,23 +109,24 @@ algorithm main(
     // CYCLE allows 1 clock cycle for BRAM access and 3 clock cycles for SPRAM access
     // INIT to determine if copying rom to ram or executing
     // INIT 0 SPRAM, INIT 1 ROM to SPRAM, INIT 2 J1 CPU
-    uint20 CYCLE = 0;
+    uint3 CYCLE = 0;
     uint2 INIT = 0;
     
     // Address for 0 to SPRAM, copying ROM, plus storage
     uint16 copyaddress = 0;
     uint16 bramREAD = 0;
 
-    // UART input FIFO (32 character) as dualport bram (code from @sylefeb)
+    // UART input FIFO (512 character) as dualport bram (code from @sylefeb)
     dualport_bram uint8 uartInBuffer[512] = uninitialized;
     uint9 uartInBufferNext = 0;
     uint9 uartInBufferTop = 0;
 
-    // UART output FIFO (32 character) as dualport bram (code from @sylefeb)
+    // UART output FIFO (512 character) as dualport bram (code from @sylefeb)
     dualport_bram uint8 uartOutBuffer[512] = uninitialized;
     uint9 uartOutBufferNext = 0;
     uint9 uartOutBufferTop = 0;
     uint9 newuartOutBufferTop = 0;
+    uint8 uartOutHold = 0;
     
     // bram for dstack and rstack write enable, maintained low, pulsed high (code from @sylefeb)
     dstack.wenable         := 0;  
@@ -150,11 +151,11 @@ algorithm main(
                 ram.wdata0 = 0;
                 ram.wenable0 = 1;
             }
-            case 3: {
+            case 1: {
                 copyaddress = copyaddress + 1;
                 ram.wenable0 = 0;
             }
-            case 15: {
+            case 4: {
                 if( copyaddress == 32768 ) {
                     INIT = 1;
                     copyaddress = 0;
@@ -162,7 +163,7 @@ algorithm main(
             }
             default: {}
         }
-        CYCLE = ( CYCLE == 15 ) ? 0 : CYCLE + 1;
+        CYCLE = ( CYCLE == 4 ) ? 0 : CYCLE + 1;
     }
     
     // INIT is 1 COPY ROM TO RAM
@@ -181,11 +182,11 @@ algorithm main(
                 ram.wdata0 = bramREAD;
                 ram.wenable0 = 1;
             }
-            case 14: {
+            case 3: {
                 copyaddress = copyaddress + 1;
                 ram.wenable0 = 0;
             }
-            case 15: {
+            case 4: {
                 if( copyaddress == 4096 ) {
                     INIT = 3;
                     copyaddress = 0;
@@ -194,7 +195,7 @@ algorithm main(
             default: {
             }
         }
-        CYCLE = ( CYCLE == 15 ) ? 0 : CYCLE + 1;
+        CYCLE = ( CYCLE == 4 ) ? 0 : CYCLE + 1;
     }
 
     // INIT is 3 EXECUTE J1 CPU
@@ -205,20 +206,21 @@ algorithm main(
             uartInBuffer.wdata1  = uart_rx_data;            
             uartInBufferTop      = uartInBufferTop + 1; 
         }
-
-        // WRITE to UART if characters in buffer and UART is ready
-        if( ~(uartOutBufferNext == uartOutBufferTop) & ~( uart_tx_busy ) ) {
-            // reads at uartOutBufferNext (code from @sylefeb)
-            uart_tx_data      = uartOutBuffer.rdata0; 
-            uart_tx_valid     = 1;
-            uartOutBufferNext = uartOutBufferNext + 1;
-        }
-        uartOutBufferTop = newuartOutBufferTop;
         
         switch( CYCLE ) {
             // Read stackNext, rStackTop
             case 0: {
-               // read dtsack and rstack brams (code from @sylefeb)
+                // WRITE to UART if characters in buffer and UART is ready
+                if( ~(uartOutBufferNext == uartOutBufferTop) & ~( uart_tx_busy ) & ( uartOutHold == 0 ) ) {
+                    // reads at uartOutBufferNext (code from @sylefeb)
+                    uart_tx_data      = uartOutBuffer.rdata0; 
+                    uart_tx_valid     = 1;
+                    uartOutHold = 3;
+                    uartOutBufferNext = uartOutBufferNext + 1;
+                }
+                uartOutBufferTop = newuartOutBufferTop;
+                
+                // read dtsack and rstack brams (code from @sylefeb)
                 stackNext = dstack.rdata;
                 rStackTop = rstack.rdata;
             
@@ -326,7 +328,7 @@ algorithm main(
                                                 } 
                                                 case 16hf001: {
                                                     // UART status register { 14b0, tx full, rx available }
-                                                    newStackTop = {14b0, uart_tx_valid, ~(uartInBufferNext == uartInBufferTop)};
+                                                    newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ~( uartInBufferNext == uartInBufferTop )};
                                                 }
                                                 case 16hf002: {
                                                     // RGB LED status
@@ -431,23 +433,25 @@ algorithm main(
                 // Setup addresses for dstack and rstack brams (code from @sylefeb)
                 dstack.addr = newDSP;
                 rstack.addr = newRSP;
-            }
             
-            // reset sram_readwrite
-            case 5: {
+                // reset sram_readwrite
                 ram.wenable0 = 0;
+
+                // Reset UART, allow time for tx busy to flag
+                if( uartOutHold > 0 ) {
+                    if( uartOutHold == 2 ) {
+                        uart_tx_valid = 0;
+                    }
+                    uartOutHold = uartOutHold - 1;
+                }
             }
             
             default: {}
         } // switch(CYCLE)
         
-        // Reset UART
-        if(uart_tx_busy & uart_tx_valid) {
-            uart_tx_valid = 0;
-        }
     
         // Move to next CYCLE ( 0 to 12 , then back to 0 )
-        CYCLE = ( CYCLE == 5 ) ? 0 : CYCLE + 1;
+        CYCLE = ( CYCLE == 4 ) ? 0 : CYCLE + 1;
     } // (INIT==3 execute J1 CPU)
 
 }

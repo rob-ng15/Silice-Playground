@@ -1,1 +1,0 @@
-Warning (10268): Verilog HDL information at basic.v(120): always construct contains both blocking and non-blocking assignments File: /home/rob/Development/github/Silice-Playground/DE10NANO/j1eforth/basic/basic.v Line: 120
