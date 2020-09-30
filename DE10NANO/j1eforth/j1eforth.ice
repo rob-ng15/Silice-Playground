@@ -4,13 +4,25 @@ import('common/de10nano_clk_100_25.v')
 import('common/reset_conditioner.v')
 
 algorithm multiplex_display(
-  input   uint10 pix_x,
-  input   uint10 pix_y,
-  input   uint1  pix_active,
-  input   uint1  pix_vblank,
-  output! uint$color_depth$ pix_red,
-  output! uint$color_depth$ pix_green,
-  output! uint$color_depth$ pix_blue
+    input   uint10 pix_x,
+    input   uint10 pix_y,
+    input   uint1  pix_active,
+    input   uint1  pix_vblank,
+    output! uint$color_depth$ pix_red,
+    output! uint$color_depth$ pix_green,
+    output! uint$color_depth$ pix_blue,
+
+    // GPU to SET pixels
+    input uint10 gpu_x,
+    input uint9 gpu_y,
+    input uint8 gpu_dotset,
+    input uint1 gpu_write,
+    
+    // TPU to SET characters, background, foreground
+    input uint7 tpu_x,
+    input uint5 tpu_y,
+    input uint8 tpu_set,
+    input uint2 tpu_write // 0 = nothing, 1 = char, 2 = background, 3 = foreground
 ) <autorun> {
 
     // Character ROM 
@@ -21,11 +33,23 @@ algorithm multiplex_display(
 
     // 80 x 30 character buffer and foreground and background colours in { rrrgggbb }
     // Setting character to 0 allows the bitmap to show through
-    dualport_bram uint8 character[2400] = uninitialized;
+    dualport_bram uint8 character[2400] = {
+        $$for i=0,2399 do
+            $math.floor(i)$,
+        $$end
+    };
     
-    dualport_bram uint8 foreground[2400] = uninitialized;
+    dualport_bram uint8 foreground[2400] = {
+        $$for i=0,2399 do
+            $math.floor(i)$,
+        $$end
+    };
     
-    dualport_bram uint8 background[2400] = uninitialized;
+    dualport_bram uint8 background[2400] = {
+        $$for i=0,2399 do
+            $math.floor(2399-i)$,
+        $$end
+    };
    
     // 640 x 480 { rrrgggbb } colour bitmap
     dualport_bram uint8 bitmap[ 307200 ] = uninitialized;
@@ -35,12 +59,13 @@ algorithm multiplex_display(
     uint6 colourexpand2to6[4] = {  0, 21, 42, 63 };
     
     // Character position on the screen x 0-79, y 0-29 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
-    uint8 xcharacterpos := (pix_x + 2 ) >> 3;
-    uint8 ycharacterpos := ((pix_y + 2)  >> 4) * 80;
+    uint8 xcharacterpos := (pix_x + 1) >> 3;
+    uint12 ycharacterpos := ((pix_y) >> 4) * 80;
     
     // Derive the x and y coordinate within the current 8x16 character block x 0-7, y 0-15
     uint8 xincharacter := pix_x & 7;
     uint8 yincharacter := pix_y & 15;
+
     // Derive the actual pixel in the current character
     uint1 characterpixel := ((characterGenerator[ character.rdata0 * 16 + yincharacter ] << xincharacter) >> 7) & 1;
 
@@ -61,19 +86,51 @@ algorithm multiplex_display(
     // Setup the address in the bitmap for the pixel being rendered
     bitmap.addr0 := pix_x  + pix_y * 640;
     bitmap.wenable0 := 0;
+    
+    // Bitmap write access for the GPU
+    bitmap.addr1 := gpu_x + gpu_y * 640;
+    bitmap.wenable1 := 0;
 
+    // BRAM write access for the TPU 
+    character.addr1 := tpu_x + tpu_y * 80;
+    character.wenable1 := 0;
+    background.addr1 := tpu_x + tpu_y * 80;
+    background.wenable1 := 0;
+    foreground.addr1 := tpu_x + tpu_y * 80;
+    foreground.wenable1 := 0;
+    
     while (1) {
+        // GPU set pixel according to gpu inputs
+        if( gpu_write ) {
+            bitmap.wdata1 = gpu_dotset;
+            bitmap.wenable1 = 1;
+        }
+ 
+        // TPU to set characters according to TPU inputs
+        switch( tpu_write ) {
+            case 1: {
+                character.wdata1 = tpu_set;
+                character.wenable1 = 1;
+            }
+            case 2: {
+                background.wdata1 = tpu_set;
+                background.wenable1 = 1;
+            }
+            case 3: {
+                foreground.wdata1 = tpu_set;
+                foreground.wenable1 = 1;
+            }
+            default: {}
+        }
         // wait until vblank is over
-        while (pix_vblank == 1) {}
-        
-        while (pix_vblank == 0) {
+        if (pix_vblank == 0) {
             if( pix_active ) { //& ((pix_x > 0)&(pix_x<639) & ((pix_y>0)&(pix_y<479))) ) {
                 switch( character.rdata0 ) {
                     case 0: {
                         // BITMAP
                         pix_red = colourexpand3to6[ (bitmap.rdata0 & 8he0) >> 5 ];
                         pix_green = colourexpand3to6[ (bitmap.rdata0 & 8h1c) >> 2 ];
-                        pix_blue = colourexpand3to6[ (bitmap.rdata0 & 8h3) ];
+                        pix_blue = colourexpand2to6[ (bitmap.rdata0 & 8h3) ];
                     }
                     default: {
                         // CHARACTER from characterGenerator
@@ -83,13 +140,13 @@ algorithm multiplex_display(
                                 // background
                                 pix_red = colourexpand3to6[ (background.rdata0 & 8he0) >> 5 ];
                                 pix_green = colourexpand3to6[ (background.rdata0 & 8h1c) >> 2 ];
-                                pix_blue = colourexpand3to6[ (background.rdata0 & 8h3) ];
+                                pix_blue = colourexpand2to6[ (background.rdata0 & 8h3) ];
                             }
                             case 1: {
                                 // foreground
                                 pix_red = colourexpand3to6[ (foreground.rdata0 & 8he0) >> 5 ];
                                 pix_green = colourexpand3to6[ (foreground.rdata0 & 8h1c) >> 2 ];
-                                pix_blue = colourexpand3to6[ (foreground.rdata0 & 8h3) ];
+                                pix_blue = colourexpand2to6[ (foreground.rdata0 & 8h3) ];
                             }
                         }
                     }
@@ -187,52 +244,57 @@ algorithm main(
     input   uint16 timer1hz
 ) {
     // VGA Text Display
-  uint1 video_reset = 0;
-  uint1 video_clock = 0;
-  uint1 sdram_clock = 0;
-  uint1 pll_lock = 0;
-  de10nano_clk_100_25 clk_gen(
-    refclk    <: clock,
-    outclk_0  :> sdram_clock,
-    outclk_1  :> video_clock,
-    locked    :> pll_lock,
-    rst       <: reset
-  ); 
+    uint1 video_reset = 0;
+    uint1 video_clock = 0;
+    uint1 sdram_clock = 0;
+    uint1 pll_lock = 0;
+    de10nano_clk_100_25 clk_gen(
+        refclk    <: clock,
+        outclk_0  :> sdram_clock,
+        outclk_1  :> video_clock,
+        locked    :> pll_lock,
+        rst       <: reset
+    ); 
 
-  // --- video reset
-  reset_conditioner vga_rstcond (
-    rcclk <: video_clock,
-    in  <: reset,
-    out :> video_reset
-  );
+    // --- video reset
+    reset_conditioner vga_rstcond (
+        rcclk <: video_clock,
+        in  <: reset,
+        out :> video_reset
+    );
 
-  uint1  active = 0;
-  uint1  vblank = 0;
-  uint10 pix_x  = 0;
-  uint10 pix_y  = 0;
+    // Status of the screen, if in range, if in vblank, actual pixel x and y
+    uint1  active = 0;
+    uint1  vblank = 0;
+    uint10 pix_x  = 0;
+    uint10 pix_y  = 0;
 
-  vga vga_driver <@video_clock,!video_reset>
-  (
-    vga_hs :> video_hs,
-	  vga_vs :> video_vs,
-	  active :> active,
-	  vblank :> vblank,
-	  vga_x  :> pix_x,
-	  vga_y  :> pix_y
-  );
+    // GPU for reading and writing pixels
+    //uint10 gpu_x = 0;
+    //uint9 gpu_y = 0;
+    //uint8 gpu_dotset = 0;
+    //uint1 gpu_write := 0;
+    
+    vga vga_driver <@video_clock,!video_reset>
+    (
+        vga_hs :> video_hs,
+        vga_vs :> video_vs,
+        active :> active,
+        vblank :> vblank,
+        vga_x  :> pix_x,
+        vga_y  :> pix_y
+    );
 
-  multiplex_display display <@video_clock,!video_reset>
-  (
-	  pix_x      <: pix_x,
-	  pix_y      <: pix_y,
-	  pix_active <: active,
-	  pix_vblank <: vblank,
-	  pix_red    :> video_r,
-	  pix_green  :> video_g,
-	  pix_blue   :> video_b
-  );
-
-  uint8 frame  = 0;
+    multiplex_display display <@video_clock,!video_reset>
+    (
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: active,
+        pix_vblank <: vblank,
+        pix_red    :> video_r,
+        pix_green  :> video_g,
+        pix_blue   :> video_b
+    );
 
     // J1+ CPU
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
@@ -602,7 +664,43 @@ algorithm main(
                                         // OUTPUT to led
                                         led = stackNext;
                                     }
-                                }
+                                    case 16hff00: {
+                                        // GPU set x
+                                        display.gpu_x = stackNext;
+                                    }
+                                    case 16hff01: {
+                                        // GPU set y
+                                        display.gpu_y = stackNext;
+                                    }
+                                    case 16hff02: {
+                                        // GPU set dot
+                                        display.gpu_dotset = stackNext;
+                                        display.gpu_write = 1;
+                                    }
+                                    case 16hff10: {
+                                        // TPU set x
+                                        display.tpu_x = stackNext;
+                                    }
+                                    case 16hff11: {
+                                        // TPU set y
+                                        display.tpu_y = stackNext;
+                                    }
+                                     case 16hff12: {
+                                        // TPU set char
+                                        display.tpu_set = stackNext;
+                                        display.tpu_write = 1;
+                                    }
+                                     case 16hff13: {
+                                        // TPU set background
+                                        display.tpu_set = stackNext;
+                                        display.tpu_write = 2;
+                                    }
+                                     case 16hff14: {
+                                        // TPU set foreground
+                                        display.tpu_set = stackNext;
+                                        display.tpu_write = 3;
+                                    }
+                               }
                             }
                         } // ALU
                     }
@@ -639,6 +737,10 @@ algorithm main(
             
                 // reset sram_readwrite
                 ram.wenable0 = 0;
+                
+                // reset gpu
+                display.gpu_write = 0;
+                display.tpu_write = 0;
             }
             
             default: {}

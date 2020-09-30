@@ -589,6 +589,12 @@ t: d2* 2dup d+ t;
 t: d2/ dup f literal lshift >r 2/ swap 2/ r> or swap t;
 t: d1- 1 literal s>d dnegate d+ t;
 
+( GPU )
+t: setpixel ( colour x y ) ff01 literal ! ff00 literal ! ff02 literal ! t;
+
+( TPU )
+t: setchar ( char fore back x y ) ff11 literal ! ff10 literal ! ff13 literal ! ff14 literal ! ff12 literal ! t;
+
 t: (parse) ( b u c -- b u delta ; <string> )
   temp ! over >r dup if
     1- temp @ bl = if
