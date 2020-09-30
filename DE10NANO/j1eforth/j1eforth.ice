@@ -3,7 +3,7 @@ $include('common/vga.ice')
 import('common/de10nano_clk_100_25.v')
 import('common/reset_conditioner.v')
 
-algorithm text_display(
+algorithm multiplex_display(
   input   uint10 pix_x,
   input   uint10 pix_y,
   input   uint1  pix_active,
@@ -14,80 +14,88 @@ algorithm text_display(
 ) <autorun> {
 
     // Character ROM 
+    //brom uint8 characterGenerator[] = {
     uint8 characterGenerator[] = {
-        $include('characterROM.inc')
+        $include('characterROM8x16.inc')
     };
 
-    // 80 x 30 character buffer and attribute ( back 4 bit, fore 4 bit )
-    uint8 character[2400] = {
-        $$for i=0,2399 do
-            $math.floor(i)$,
-        $$end
-    };
-    uint8 attribute[2400] = {
-        $$for i=0,2399 do
-            $math.floor(i)$,
-        $$end
-    };
+    // 80 x 30 character buffer and foreground and background colours in { rrrgggbb }
+    // Setting character to 0 allows the bitmap to show through
+    dualport_bram uint8 character[2400] = uninitialized;
     
-    uint6 Rcolourmap[16] = {  0, 32,  0, 32,  0, 32,  0, 48, 32, 63,  0, 63,  0, 63,  0, 63 };
-    uint6 Gcolourmap[16] = {  0,  0, 32, 32,  0,  0, 32, 48, 32,  0, 63, 63,  0,  0, 63, 63 };
-    uint6 Bcolourmap[16] = {  0,  0,  0,  0, 32, 32, 32, 48, 32,  0,  0,  0, 63, 63, 63, 63 };
+    dualport_bram uint8 foreground[2400] = uninitialized;
     
-    uint16 xpixel = 0;
-    uint16 ypixel = 0;
-    
-    // Character position on the screen x 0-79, y 0-29 * 80
-    uint8 xcharacterpos := xpixel >> 3;
-    uint8 ycharacterpos := (ypixel >> 3 ) << 4 + (ypixel >> 3) << 6;
-    
-    // Derive the x and y coordinate within the current character block
-    uint8 xincharacter := xpixel & 7;
-    uint8 yincharacter := ypixel & 7;
+    dualport_bram uint8 background[2400] = uninitialized;
+   
+    // 640 x 480 { rrrgggbb } colour bitmap
+    dualport_bram uint8 bitmap[ 307200 ] = uninitialized;
 
-    // Find present character and attribute
-    uint8 presentcharacter := character[ xcharacterpos + ycharacterpos ];
-    uint8 presentattribute := attribute[ xcharacterpos + ycharacterpos ];
+    // Expansion map for { rrr } to { rrrrrr }, { ggg } to { gggggg }, { bb } to { bbbbbb }
+    uint6 colourexpand3to6[8] = {  0, 9, 18, 27, 36, 45, 54, 63 };
+    uint6 colourexpand2to6[4] = {  0, 21, 42, 63 };
     
-    uint8 presentcharacterbitmap := characterGenerator[ 504 + yincharacter ]; //presentcharacter << 3 + yincharacter ];
-    uint1 presentcharacterpixel := ( presentcharacterbitmap >> ( 7 - xincharacter ) ) & 1;
+    // Character position on the screen x 0-79, y 0-29 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
+    uint8 xcharacterpos := (pix_x + 2 ) >> 3;
+    uint8 ycharacterpos := ((pix_y + 2)  >> 4) * 80;
     
-    // by default r,g,b are set to zero
+    // Derive the x and y coordinate within the current 8x16 character block x 0-7, y 0-15
+    uint8 xincharacter := pix_x & 7;
+    uint8 yincharacter := pix_y & 15;
+    // Derive the actual pixel in the current character
+    uint1 characterpixel := ((characterGenerator[ character.rdata0 * 16 + yincharacter ] << xincharacter) >> 7) & 1;
+
+    // RGB is { 0,  0, 0 } by default
     pix_red   := 0;
     pix_green := 0;
     pix_blue  := 0;
     
+    // Set up reading of character and attribute memory
+    // character.rdata0 is the character, foreground.rdata0 and background.rdata0 are the attribute being rendered
+    character.addr0 := xcharacterpos + ycharacterpos;
+    character.wenable0 := 0;
+    foreground.addr0 := xcharacterpos + ycharacterpos;
+    foreground.wenable0 := 0;
+    background.addr0 := xcharacterpos + ycharacterpos;
+    background.wenable0 := 0;
+    
+    // Setup the address in the bitmap for the pixel being rendered
+    bitmap.addr0 := pix_x  + pix_y * 640;
+    bitmap.wenable0 := 0;
+
     while (1) {
         // wait until vblank is over
-        while (pix_vblank == 1) { 
-            xpixel = 0;
-            ypixel = 0;
-        }
+        while (pix_vblank == 1) {}
         
         while (pix_vblank == 0) {
-            // Determine if background or foreground
-            switch( presentcharacterpixel ) {
-               case 0: {
-                    // background
-                    pix_red = Rcolourmap[ presentattribute >> 4 ];
-                    pix_green = Gcolourmap[ presentattribute >> 4 ];
-                    pix_blue = Bcolourmap[ presentattribute >> 4 ];
-                }
-                case 1: {
-                    // foreground
-                    pix_red = Rcolourmap[ presentattribute & 15 ];
-                    pix_green = Gcolourmap[ presentattribute & 15 ];
-                    pix_blue = Bcolourmap[ presentattribute & 15 ];
-                }
-            }
-            // Move to the next pixel
-            if( xpixel == 639 ) {
-                ypixel = ypixel + 1;
-                xpixel = 0;
-            } else {
-                xpixel = xpixel + 1;
-            }
-        }
+            if( pix_active ) { //& ((pix_x > 0)&(pix_x<639) & ((pix_y>0)&(pix_y<479))) ) {
+                switch( character.rdata0 ) {
+                    case 0: {
+                        // BITMAP
+                        pix_red = colourexpand3to6[ (bitmap.rdata0 & 8he0) >> 5 ];
+                        pix_green = colourexpand3to6[ (bitmap.rdata0 & 8h1c) >> 2 ];
+                        pix_blue = colourexpand3to6[ (bitmap.rdata0 & 8h3) ];
+                    }
+                    default: {
+                        // CHARACTER from characterGenerator
+                        // Determine if background or foreground
+                        switch( characterpixel ) {
+                        case 0: {
+                                // background
+                                pix_red = colourexpand3to6[ (background.rdata0 & 8he0) >> 5 ];
+                                pix_green = colourexpand3to6[ (background.rdata0 & 8h1c) >> 2 ];
+                                pix_blue = colourexpand3to6[ (background.rdata0 & 8h3) ];
+                            }
+                            case 1: {
+                                // foreground
+                                pix_red = colourexpand3to6[ (foreground.rdata0 & 8he0) >> 5 ];
+                                pix_green = colourexpand3to6[ (foreground.rdata0 & 8h1c) >> 2 ];
+                                pix_blue = colourexpand3to6[ (foreground.rdata0 & 8h3) ];
+                            }
+                        }
+                    }
+                } // character or bitmap
+            } // pix_active
+        } // pix_vblank == 0
     }
 }
 
@@ -213,7 +221,7 @@ algorithm main(
 	  vga_y  :> pix_y
   );
 
-  text_display display <@video_clock,!video_reset>
+  multiplex_display display <@video_clock,!video_reset>
   (
 	  pix_x      <: pix_x,
 	  pix_y      <: pix_y,
@@ -279,16 +287,16 @@ algorithm main(
     uint16 bramREAD = 0;
 
     // UART input FIFO (512 character) as dualport bram (code from @sylefeb)
-    dualport_bram uint8 uartInBuffer[512] = uninitialized;
-    uint9 uartInBufferNext = 0;
-    uint9 uartInBufferTop = 0;
+    dualport_bram uint8 uartInBuffer[256] = uninitialized;
+    uint8 uartInBufferNext = 0;
+    uint8 uartInBufferTop = 0;
     uint1 uartInHold = 1;
 
     // UART output FIFO (512 character) as dualport bram (code from @sylefeb)
-    dualport_bram uint8 uartOutBuffer[512] = uninitialized;
-    uint9 uartOutBufferNext = 0;
-    uint9 uartOutBufferTop = 0;
-    uint9 newuartOutBufferTop = 0;
+    dualport_bram uint8 uartOutBuffer[256] = uninitialized;
+    uint8 uartOutBufferNext = 0;
+    uint8 uartOutBufferTop = 0;
+    uint8 newuartOutBufferTop = 0;
     uint8 uartOutHold = 0;
     
     // bram for dstack and rstack write enable, maintained low, pulsed high (code from @sylefeb)
