@@ -1,7 +1,13 @@
 // VGA Driver Includes
 $include('common/vga.ice')
+
 import('common/de10nano_clk_100_25.v')
 import('common/reset_conditioner.v')
+
+append('jamieilesUART/baud_rate_gen.v')
+append('jamieilesUART/receiver.v')
+append('jamieilesUART/transmitter.v')
+import('jamieilesUART/uart.v')
 
 algorithm multiplex_display(
     input   uint10 pix_x,
@@ -471,33 +477,30 @@ bitfield nibbles {
     uint4   nibble0
 }
 
+// Create 1hz (1 second counter)
+algorithm pulse1hz(
+    output uint16 counter1hz
+) <autorun>
+{
+  uint32 counter50mhz = 0;
+  counter1hz = 0;
+  while (1) {
+        if ( counter50mhz == 50000000 ) {
+            counter1hz   = counter1hz + 1;
+            counter50mhz = 0;
+        } else {
+            counter50mhz = counter50mhz + 1;
+        }
+    }
+}
+
 algorithm main(
+
     // LEDS (8 of)
-    output  uint8   led,
+    output  uint8   leds,
     
     // USER buttons
-    input   uint8    buttons,
-
-    // UART Interface
-    output   uint8  uart_tx_data,
-    output   uint1  uart_tx_valid,
-    input    uint1  uart_tx_busy,
-    input   uint1   uart_tx_done,
-    input    uint8  uart_rx_data,
-    input    uint1  uart_rx_valid,
-    output  uint1   uart_rx_ready,
-
-    // SDRAM
-    output! uint1  sdram_cle,
-    output! uint1  sdram_dqm,
-    output! uint1  sdram_cs,
-    output! uint1  sdram_we,
-    output! uint1  sdram_cas,
-    output! uint1  sdram_ras,
-    output! uint2  sdram_ba,
-    output! uint13 sdram_a,
-    output! uint1  sdram_clk,
-    inout   uint8  sdram_dq,
+    // input   uint8    buttons,
 
     // VGA
     output! uint$color_depth$ video_r,
@@ -506,9 +509,39 @@ algorithm main(
     output! uint1 video_hs,
     output! uint1 video_vs,
 
-    // 1hz timer
-    input   uint16 timer1hz
+    // UART
+    output! uint1 uart_tx,
+    input   uint1 uart_rx
+
 ) {
+
+    uint8 buttons = 0; // TODO
+
+    uint16 timer1hz = 0;
+    pulse1hz p1hz( counter1hz :> timer1hz );
+
+    // UART tx and rx
+    uint8 uart_tx_data  = 0;
+    uint1 uart_tx_valid = 0;
+    uint1 uart_tx_busy  = 0;
+    uint1 uart_tx_done  = 0;
+    uint8 uart_rx_data  = 0;
+    uint1 uart_rx_valid = 0;
+    uint1 uart_rx_ready = 0;
+
+    // UART from https://github.com/jamieiles/uart
+    uart uart0(
+        clk_50m <: clock,
+        din     <: uart_tx_data,
+        wr_en   <: uart_tx_valid,
+        tx      :> uart_tx,
+        tx_busy :> uart_tx_busy,
+        rx      <: uart_rx,
+        rdy     :> uart_rx_valid,
+        rdy_clr <: uart_rx_ready,
+        dout    :> uart_rx_data
+    );
+
     // VGA Text Display
     uint1 video_reset = 0;
     uint1 video_clock = 0;
@@ -642,17 +675,6 @@ algorithm main(
     uartOutBuffer.wenable1 := 1; // always write on port 1    
     uartOutBuffer.addr0    := uartOutBufferNext; // FIFO reads on next
     uartOutBuffer.addr1    := uartOutBufferTop;  // FIFO writes on top
-
-    // Lock out SDRAM for the J1+ CPU
-    sdram_cle := 1bz;
-    sdram_dqm := 1bz;
-    sdram_cs  := 1bz;
-    sdram_we  := 1bz;
-    sdram_cas := 1bz;
-    sdram_ras := 1bz;
-    sdram_ba  := 2bz;
-    sdram_a   := 13bz;
-    sdram_clk := 1bz;
 
     // Setup the terminal
     display.showterminal = 1;
@@ -869,7 +891,7 @@ algorithm main(
                                                 }
                                                 case 16hf002: {
                                                     // RGB LED status
-                                                    newStackTop = led;
+                                                    newStackTop = leds;
                                                 }
                                                 case 16hf003: {
                                                     // user buttons
@@ -938,7 +960,7 @@ algorithm main(
                                     }
                                     case 16hf002: {
                                         // OUTPUT to led
-                                        led = stackNext;
+                                        leds = stackNext;
                                     }
                                     case 16hff00: {
                                         // GPU set x
