@@ -146,7 +146,10 @@ set_global_assignment -name ALLOW_ANY_ROM_SIZE_FOR_RECOGNITION OFF
 set_global_assignment -name TIMING_ANALYZER_DO_REPORT_TIMING OFF
 
 
-set_global_assignment -name VERILOG_FILE ../uart/uart.v
+set_global_assignment -name VERILOG_FILE ../jamieilesUART/uart.v
+set_global_assignment -name VERILOG_FILE ../jamieilesUART/transmitter.v
+set_global_assignment -name VERILOG_FILE ../jamieilesUART/receiver.v
+set_global_assignment -name VERILOG_FILE ../jamieilesUART/baud_rate_gen.v
 set_global_assignment -name VERILOG_FILE SdramVga.v
 set_global_assignment -name SOURCE_TCL_SCRIPT_FILE pins.tcl
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id SdramVga

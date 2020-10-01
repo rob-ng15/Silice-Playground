@@ -111,22 +111,34 @@ wire uart_tx_done;
 wire [7:0] uart_rx_data;
 wire uart_rx_valid;
 wire uart_rx_ready;
-wire uart_serial_tx;
+
+// UART from https://github.com/jamieiles/uart
+uart uart0(
+    .din( uart_tx_data ),
+    .wr_en( uart_tx_valid ),
+    .clk_50m( clk ),
+    .tx( tx ),
+    .tx_busy( uart_tx_busy ),
+    .rx( rx ),
+    .rdy( uart_rx_valid ),
+    .rdy_clr( uart_rx_ready ),
+    .dout( uart_rx_data )
+);
 
 // UART from https://github.com/cyrozap/osdvu
-uart uart0(
-    .clk(clk), // The master clock for this module
-    .rst(reset_main), // Synchronous reset
-    .rx(rx), // Incoming serial line
-    .tx(tx), // Outgoing serial line
-    .transmit(uart_tx_valid), // Signal to transmit
-    .tx_byte(uart_tx_data), // Byte to transmit
-    .received(uart_rx_valid), // Indicated that a byte has been received
-    .rx_byte(uart_rx_data), // Byte received
-    .is_receiving(), // Low when receive line is idle
-    .is_transmitting(uart_tx_busy),// Low when transmit line is idle
-    .recv_error() // Indicates error in receiving packet.
-);
+//uart uart0(
+//    .clk(clk), // The master clock for this module
+//    .rst(reset_main), // Synchronous reset
+//    .rx(rx), // Incoming serial line
+//    .tx(tx), // Outgoing serial line
+//    .transmit(uart_tx_valid), // Signal to transmit
+//    .tx_byte(uart_tx_data), // Byte to transmit
+//    .received(uart_rx_valid), // Indicated that a byte has been received
+//    .rx_byte(uart_rx_data), // Byte received
+//    .is_receiving(), // Low when receive line is idle
+//    .is_transmitting(uart_tx_busy),// Low when transmit line is idle
+//    .recv_error() // Indicates error in receiving packet.
+//);
 
 M_main __main(
   // CLK and RESET
@@ -164,7 +176,7 @@ M_main __main(
 
   .in_uart_rx_data( uart_rx_data ),
   .in_uart_rx_valid( uart_rx_valid ),
-    
+  .out_uart_rx_ready( uart_rx_ready ),  
   .in_timer1hz ( counter1hz )
 );
 

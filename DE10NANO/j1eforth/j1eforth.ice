@@ -15,8 +15,12 @@ algorithm multiplex_display(
     // GPU to SET pixels
     input uint10 gpu_x,
     input uint9 gpu_y,
-    input uint8 gpu_dotset,
-    input uint1 gpu_write,
+    input uint16 gpu_param0,
+    input uint16 gpu_param1,
+    input uint16 gpu_param2,
+    input uint16 gpu_param3,
+    input uint8 gpu_colour,
+    input uint2 gpu_write,
     
     // TPU to SET characters, background, foreground
     input uint7 tpu_x,
@@ -69,6 +73,20 @@ algorithm multiplex_display(
     // Derive the actual pixel in the current character
     uint1 characterpixel := ((characterGenerator[ character.rdata0 * 16 + yincharacter ] << xincharacter) >> 7) & 1;
 
+    // GPU work variable storage
+    uint8 gpu_active = 0;
+    uint16 gpu_active_x = 0;
+    uint16 gpu_active_y = 0;
+    uint8 gpu_active_colour = 0;
+    uint16 gpu_temp0 = 0;
+    uint16 gpu_temp1 = 0;
+    uint16 gpu_temp2 = 0;
+    uint16 gpu_temp3 = 0;
+    uint16 gpu_temp4 = 0;
+    uint16 gpu_temp5 = 0;
+    uint16 gpu_temp6 = 0;
+    uint16 gpu_temp7 = 0;
+    
     // RGB is { 0,  0, 0 } by default
     pix_red   := 0;
     pix_green := 0;
@@ -88,7 +106,6 @@ algorithm multiplex_display(
     bitmap.wenable0 := 0;
     
     // Bitmap write access for the GPU
-    bitmap.addr1 := gpu_x + gpu_y * 640;
     bitmap.wenable1 := 0;
 
     // BRAM write access for the TPU 
@@ -100,11 +117,6 @@ algorithm multiplex_display(
     foreground.wenable1 := 0;
     
     while (1) {
-        // GPU set pixel according to gpu inputs
-        if( gpu_write ) {
-            bitmap.wdata1 = gpu_dotset;
-            bitmap.wenable1 = 1;
-        }
  
         // TPU to set characters according to TPU inputs
         switch( tpu_write ) {
@@ -122,6 +134,96 @@ algorithm multiplex_display(
             }
             default: {}
         }
+        
+        // Perform GPU Operation
+        // GPU functions 1 pixel per cycle, even during hblank and vblank
+        switch( gpu_active ) {
+            case 0: {
+                // Setup GPU operation
+                switch( gpu_write ) {
+                    case 1: {
+                        // Setup writing a pixel colour to x,y
+                        gpu_active_colour = gpu_colour;
+                        gpu_active_x = gpu_x;
+                        gpu_active_y = gpu_y;
+                        gpu_active = 1;
+                    }
+                    case 2: {
+                        // Setup drawing a rectangle from x,y to param0, param1 in colour
+                        // Ensures that works left to right, top to bottom
+                        gpu_active_colour = gpu_colour;
+                        gpu_active_x = ( gpu_x < gpu_param0 ) ? gpu_x : gpu_param0;                 // left
+                        gpu_active_y = ( gpu_y < gpu_param1 ) ? gpu_y : gpu_param1;                 // top
+                        gpu_temp0 = ( gpu_x < gpu_param0 ) ? gpu_x : gpu_param0;                    // left - for next line
+                        gpu_temp2 = ( gpu_x < gpu_param0 ) ? gpu_param0 : gpu_x;                    // right - at end of line
+                        gpu_temp3 = ( gpu_y < gpu_param1 ) ? gpu_param1 : gpu_y;                    // bottom - at end of rectangle
+                        gpu_active = 2; 
+                    }
+                    case 3: {
+                        // Setup drawing a line from x,y to param0, param1 in colour
+                        // Ensure that works from left to right
+                        gpu_active_colour = gpu_colour;
+                        gpu_active_x = gpu_x;                                                   // left
+                        gpu_active_y = gpu_y;                                                   // top
+                        gpu_temp0 = gpu_param0;                                                 // right
+                        gpu_temp2 = gpu_param0 - gpu_x;                                         // Bresenham delta x
+                        gpu_temp3 = gpu_param1 - gpu_y;                                         // Bresenham delta y
+                        gpu_temp4 = 2 * ( ( gpu_param1 - gpu_y ) - ( gpu_param0 - gpu_x ) ) ;   // Bresenham error
+                        gpu_active = 3;
+                    }
+                    default: {}
+                }
+            }
+            
+            // Write colour to x,y
+            case 1: {
+                bitmap.addr1 = gpu_active_x + gpu_active_y * 640;
+                bitmap.wdata1 = gpu_active_colour;
+                bitmap.wenable1 = 1;
+                gpu_active = 0;
+            }
+            case 2: {
+                // Rectangle of colour at x,y top left to param0, param1 bottom right
+                bitmap.addr1 = gpu_active_x + gpu_active_y * 640;
+                bitmap.wdata1 = gpu_active_colour;
+                bitmap.wenable1 = 1;
+                
+                if( gpu_active_x == gpu_temp2 ) {
+                    // End of line
+                    if( gpu_active_y == gpu_temp3 ) {
+                        // Reached bottom right
+                        gpu_active = 0;
+                    } else {
+                        // Next line
+                        gpu_active_x = gpu_temp0;
+                        gpu_active_y = gpu_active_y + 1;
+                    }
+                } else {
+                    gpu_active_x = gpu_active_x + 1;
+                }
+            }
+            case 3: {
+                // Bresenham line drawing algorithm of colour from x,y to param0,param1
+                if( gpu_active_x < gpu_temp0 ) {
+                    // Draw the pixel and calculate the next pixel
+                    bitmap.addr1 = gpu_active_x + gpu_active_y * 640;
+                    bitmap.wdata1 = gpu_active_colour;
+                    bitmap.wenable1 = 1;
+                    if( gpu_temp4 >= 0 ) {
+                        gpu_active_y = gpu_active_y + 1;                                // Move Down
+                        gpu_temp4 = gpu_temp4 + 2*gpu_temp3 - 2*gpu_temp2;              // New Bresenham error
+                    } else {
+                        gpu_temp4 = gpu_temp4 + 2*gpu_temp3;                            // New Bresenham error
+                    }
+                    gpu_active_x = gpu_active_x + 1;                                    // Move Right
+                } else {
+                    // Reached the end of the line
+                    gpu_active = 0;
+                }
+            }
+            default: {gpu_active = 0;}
+        }
+        
         // wait until vblank is over
         if (pix_vblank == 0) {
             if( pix_active ) { //& ((pix_x > 0)&(pix_x<639) & ((pix_y>0)&(pix_y<479))) ) {
@@ -220,6 +322,7 @@ algorithm main(
     input   uint1   uart_tx_done,
     input    uint8  uart_rx_data,
     input    uint1  uart_rx_valid,
+    output  uint1   uart_rx_ready,
 
     // SDRAM
     output! uint1  sdram_cle,
@@ -272,7 +375,7 @@ algorithm main(
     // GPU for reading and writing pixels
     //uint10 gpu_x = 0;
     //uint9 gpu_y = 0;
-    //uint8 gpu_dotset = 0;
+    //uint8 gpu_colour = 0;
     //uint1 gpu_write := 0;
     
     vga vga_driver <@video_clock,!video_reset>
@@ -455,6 +558,7 @@ algorithm main(
                     uartInBufferTop      = uartInBufferTop + 1;
                     uartInHold = 1;
                 }
+                uart_rx_ready = 1;
             }
             case 1: {
                 // Wait for UART valid flag to flip before allowing another read
@@ -674,8 +778,27 @@ algorithm main(
                                     }
                                     case 16hff02: {
                                         // GPU set dot
-                                        display.gpu_dotset = stackNext;
-                                        display.gpu_write = 1;
+                                        display.gpu_colour = stackNext;
+                                    }
+                                   case 16hff03: {
+                                        // GPU set parameter 0
+                                        display.gpu_param0 = stackNext;
+                                    }
+                                   case 16hff04: {
+                                        // GPU set parameter 1
+                                        display.gpu_param1 = stackNext;
+                                    }
+                                   case 16hff05: {
+                                        // GPU set parameter 2
+                                        display.gpu_param2 = stackNext;
+                                    }
+                                   case 16hff06: {
+                                        // GPU set parameter 3
+                                        display.gpu_param3 = stackNext;
+                                    }
+                                   case 16hff07: {
+                                        // Start GPU
+                                        display.gpu_write = stackNext;
                                     }
                                     case 16hff10: {
                                         // TPU set x
@@ -747,7 +870,7 @@ algorithm main(
         } // switch(CYCLE)
         
     
-        // Move to next CYCLE ( 0 to 12 , then back to 0 )
+        // Move to next CYCLE ( 0 to 4 , then back to 0 )
         CYCLE = ( CYCLE == 4 ) ? 0 : CYCLE + 1;
     } // (INIT==3 execute J1 CPU)
 
