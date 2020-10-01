@@ -21,6 +21,7 @@ algorithm multiplex_display(
     input uint16 gpu_param3,
     input uint8 gpu_colour,
     input uint2 gpu_write,
+    output uint8 gpu_active,
     
     // TPU to SET characters, background, foreground
     input uint7 tpu_x,
@@ -74,18 +75,17 @@ algorithm multiplex_display(
     uint1 characterpixel := ((characterGenerator[ character.rdata0 * 16 + yincharacter ] << xincharacter) >> 7) & 1;
 
     // GPU work variable storage
-    uint8 gpu_active = 0;
     uint16 gpu_active_x = 0;
     uint16 gpu_active_y = 0;
     uint8 gpu_active_colour = 0;
-    uint16 gpu_temp0 = 0;
-    uint16 gpu_temp1 = 0;
-    uint16 gpu_temp2 = 0;
-    uint16 gpu_temp3 = 0;
-    uint16 gpu_temp4 = 0;
-    uint16 gpu_temp5 = 0;
-    uint16 gpu_temp6 = 0;
-    uint16 gpu_temp7 = 0;
+    int16 gpu_temp0 = 0;
+    int16 gpu_temp1 = 0;
+    int16 gpu_temp2 = 0;
+    int16 gpu_temp3 = 0;
+    int16 gpu_temp4 = 0;
+    int16 gpu_temp5 = 0;
+    int16 gpu_temp6 = 0;
+    int16 gpu_temp7 = 0;
     
     // RGB is { 0,  0, 0 } by default
     pix_red   := 0;
@@ -115,6 +115,9 @@ algorithm multiplex_display(
     background.wenable1 := 0;
     foreground.addr1 := tpu_x + tpu_y * 80;
     foreground.wenable1 := 0;
+    
+    // GPU active flag
+    gpu_active = 0;
     
     while (1) {
  
@@ -452,17 +455,17 @@ algorithm main(
     uint16 bramREAD = 0;
 
     // UART input FIFO (512 character) as dualport bram (code from @sylefeb)
-    dualport_bram uint8 uartInBuffer[256] = uninitialized;
-    uint8 uartInBufferNext = 0;
-    uint8 uartInBufferTop = 0;
+    dualport_bram uint8 uartInBuffer[512] = uninitialized;
+    uint9 uartInBufferNext = 0;
+    uint9 uartInBufferTop = 0;
     uint1 uartInHold = 1;
 
     // UART output FIFO (512 character) as dualport bram (code from @sylefeb)
-    dualport_bram uint8 uartOutBuffer[256] = uninitialized;
-    uint8 uartOutBufferNext = 0;
-    uint8 uartOutBufferTop = 0;
-    uint8 newuartOutBufferTop = 0;
-    uint8 uartOutHold = 0;
+    dualport_bram uint8 uartOutBuffer[512] = uninitialized;
+    uint9 uartOutBufferNext = 0;
+    uint9 uartOutBufferTop = 0;
+    uint9 newuartOutBufferTop = 0;
+    uint1 uartOutHold = 0;
     
     // bram for dstack and rstack write enable, maintained low, pulsed high (code from @sylefeb)
     dstack.wenable         := 0;  
@@ -710,6 +713,10 @@ algorithm main(
                                                 case 16hf004: {
                                                     // 1hz timer
                                                     newStackTop = timer1hz;
+                                                }
+                                                case 16hff07: {
+                                                    // GPU Status
+                                                    newStackTop = display.gpu_active;
                                                 }
                                                 default: {newStackTop = memoryInput;}
                                             }

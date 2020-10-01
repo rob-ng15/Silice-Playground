@@ -31,7 +31,7 @@ ff03 | GPU parameter 0 from stack
 ff03 | GPU parameter 1 from stack
 ff03 | GPU parameter 2 from stack
 ff03 | GPU parameter 3 from stack
-ff07 | Start GPU Operation from stack
+ff07 | Start GPU Operation from stack (WRITE)<br>Read GPU Status to stack
 
 GPU Operation | Action
 :-----: | :-----:
@@ -54,23 +54,57 @@ ff14 | Write foreground colour from stack to x,y
 Helpful GPU and TPU words:
 
 ```
-( GPU )
-: gpu_setpixel ( colour x y ) ff01 ! ff00 ! ff02 ! 1 ff07 ! ;
+: gpu_setpixel ff01 ! ff00 ! ff02 ! 1 ff07 ! 
+  begin ff07 @ 0= until ;
+: gpu_rectangle ff04 ! ff03 ! ff01 ! ff00 ! ff02 ! 2 ff07 !
+  begin ff07 @ 0= until ;
+: gpu_line ff04 ! ff03 ! ff01 ! ff00 ! ff02 ! 3 ff07 !
+  begin ff07 @ 0= until ;
+: gpu_cs 0 0 0 2f7 1df gpu_rectangle
+  begin ff07 @ 0= until ;
 
-: gpu_rectangle ( colour x y x1 y1 ) ff04 ! ff03 ! ff01 ! ff00 ! ff02 ! 2 ff07 ! ;
-: gpu_line ( colour x y x1 y1 ) ff04 ! ff03 ! ff01 ! ff00 ! ff02 ! 3 ff07 ! ;
-
-( Use GPU to draw a rectangle from 0,0 to 639,479 in colour 0 )
-: gpu_cs 0 0 0 2f7 1df gpu_rectangle ;
-
-( TPU )
-: tpu_setchar ( char fore back x y ) ff11 ! ff10 ! ff13 ! ff14 ! ff12 ! ;
+: tpu_setchar ff11 ! ff10 ! ff13 ! ff14 ! ff12 ! ;
 : tpu_cs 50 0 do i
     1e 0 do
         dup 0 swap 0 swap 0 swap i tpu_setchar
     loop
 loop ;
 ```
+GPU/TPU Word | Usage
+:-----: | :-----:
+gpu_setpixel | colour x y gpu_setpixel<br>_Sets pixel x,y to colour_
+gpu_rectangle | colour x1 y1 x2 y2 gpu_rectangle<br>_Draws a solid rectanlge of colour from x1,y1 to x2,y2_
+gpu_line | colour x1 y1 x2 y2 gpu_line<br>_Draws a line of colour from x1,y1 to x2,y2_
+gpu_cs | gpu_cs<br>_Clears the graphic display_
+tpu_setchar | character x y foreground background tpu_setchar<br>_Puts character at x,y in foreground and background colours
+tpu_cs | tpu_cs<br>_Clears the text display (allows graphics to show)_
+
+Fun GPU and TPU words:
+
+```
+: drawrectangles
+  gpu_cs
+  100 0 do
+    i 0 i 20 i 20 + gpu_rectangle
+    i i 0 i 20 + 20 gpu_rectangle
+    i i 100 i 20 + 120 gpu_rectangle
+    i 100 i 120 i 20 + gpu_rectangle
+    i i i i 20 + i 20 + gpu_rectangle
+  loop ;
+
+: drawblock
+  gpu_cs
+  100 0 do
+    i i i 100 100  gpu_rectangle
+    i 101 101 200 i - 200 i - gpu_rectangle
+    i i 200 i - 101 101 gpu_rectangle
+    i 200 i - i 101 101 gpu_rectangle
+  loop ;
+```
+t: tx! ( c -- )
+   begin
+    f001 literal @ 2 literal and 0=
+   until f000 literal ! t;
 
 ## Issues
 

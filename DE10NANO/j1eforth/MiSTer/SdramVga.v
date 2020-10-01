@@ -7852,6 +7852,7 @@ in_tpu_write,
 out_pix_red,
 out_pix_green,
 out_pix_blue,
+out_gpu_active,
 in_run,
 out_done,
 reset,
@@ -7876,6 +7877,7 @@ input  [1:0] in_tpu_write;
 output  [5:0] out_pix_red;
 output  [5:0] out_pix_green;
 output  [5:0] out_pix_blue;
+output  [7:0] out_gpu_active;
 input in_run;
 output out_done;
 input reset;
@@ -12053,29 +12055,29 @@ reg  [7:0] _d_bitmap_wdata1;
 reg  [7:0] _q_bitmap_wdata1;
 reg  [18:0] _d_bitmap_addr1;
 reg  [18:0] _q_bitmap_addr1;
-reg  [7:0] _d_gpu_active;
-reg  [7:0] _q_gpu_active;
 reg  [15:0] _d_gpu_active_x;
 reg  [15:0] _q_gpu_active_x;
 reg  [15:0] _d_gpu_active_y;
 reg  [15:0] _q_gpu_active_y;
 reg  [7:0] _d_gpu_active_colour;
 reg  [7:0] _q_gpu_active_colour;
-reg  [15:0] _d_gpu_temp0;
-reg  [15:0] _q_gpu_temp0;
-reg  [15:0] _d_gpu_temp2;
-reg  [15:0] _q_gpu_temp2;
-reg  [15:0] _d_gpu_temp3;
-reg  [15:0] _q_gpu_temp3;
-reg  [15:0] _d_gpu_temp4;
-reg  [15:0] _q_gpu_temp4;
+reg signed [15:0] _d_gpu_temp0;
+reg signed [15:0] _q_gpu_temp0;
+reg signed [15:0] _d_gpu_temp2;
+reg signed [15:0] _q_gpu_temp2;
+reg signed [15:0] _d_gpu_temp3;
+reg signed [15:0] _q_gpu_temp3;
+reg signed [15:0] _d_gpu_temp4;
+reg signed [15:0] _q_gpu_temp4;
 reg  [5:0] _d_pix_red,_q_pix_red;
 reg  [5:0] _d_pix_green,_q_pix_green;
 reg  [5:0] _d_pix_blue,_q_pix_blue;
+reg  [7:0] _d_gpu_active,_q_gpu_active;
 reg  [1:0] _d_index,_q_index;
 assign out_pix_red = _d_pix_red;
 assign out_pix_green = _d_pix_green;
 assign out_pix_blue = _d_pix_blue;
+assign out_gpu_active = _q_gpu_active;
 assign out_done = (_q_index == 3);
 
 always @(posedge clock) begin
@@ -12100,7 +12102,6 @@ _q_bitmap_addr0 <= 0;
 _q_bitmap_wenable1 <= 0;
 _q_bitmap_wdata1 <= 0;
 _q_bitmap_addr1 <= 0;
-_q_gpu_active <= 0;
 _q_gpu_active_x <= 0;
 _q_gpu_active_y <= 0;
 _q_gpu_active_colour <= 0;
@@ -12134,7 +12135,6 @@ _q_bitmap_addr0 <= _d_bitmap_addr0;
 _q_bitmap_wenable1 <= _d_bitmap_wenable1;
 _q_bitmap_wdata1 <= _d_bitmap_wdata1;
 _q_bitmap_addr1 <= _d_bitmap_addr1;
-_q_gpu_active <= _d_gpu_active;
 _q_gpu_active_x <= _d_gpu_active_x;
 _q_gpu_active_y <= _d_gpu_active_y;
 _q_gpu_active_colour <= _d_gpu_active_colour;
@@ -12147,6 +12147,7 @@ _q_index <= _d_index;
 _q_pix_red <= _d_pix_red;
 _q_pix_green <= _d_pix_green;
 _q_pix_blue <= _d_pix_blue;
+_q_gpu_active <= _d_gpu_active;
 end
 
 
@@ -12226,7 +12227,6 @@ _d_bitmap_addr0 = _q_bitmap_addr0;
 _d_bitmap_wenable1 = _q_bitmap_wenable1;
 _d_bitmap_wdata1 = _q_bitmap_wdata1;
 _d_bitmap_addr1 = _q_bitmap_addr1;
-_d_gpu_active = _q_gpu_active;
 _d_gpu_active_x = _q_gpu_active_x;
 _d_gpu_active_y = _q_gpu_active_y;
 _d_gpu_active_colour = _q_gpu_active_colour;
@@ -12237,6 +12237,7 @@ _d_gpu_temp4 = _q_gpu_temp4;
 _d_pix_red = _q_pix_red;
 _d_pix_green = _q_pix_green;
 _d_pix_blue = _q_pix_blue;
+_d_gpu_active = _q_gpu_active;
 _d_index = _q_index;
 // _always_pre
 _d_pix_red = 0;
@@ -12282,7 +12283,6 @@ _d_bitmap_addr0 = 0;
 _d_bitmap_wenable1 = 0;
 _d_bitmap_wdata1 = 0;
 _d_bitmap_addr1 = 0;
-_d_gpu_active = 0;
 _d_gpu_active_x = 0;
 _d_gpu_active_y = 0;
 _d_gpu_active_colour = 0;
@@ -12291,6 +12291,7 @@ _d_gpu_temp2 = 0;
 _d_gpu_temp3 = 0;
 _d_gpu_temp4 = 0;
 // --
+_d_gpu_active = 0;
 _d_index = 1;
 end
 1: begin
@@ -12452,6 +12453,7 @@ end
   default: begin
 // __block_72_case
 // __block_73
+_d_gpu_active = 0;
 // __block_74
   end
 endcase
@@ -16218,16 +16220,16 @@ endmodule
 module M_main_mem_uartInBuffer(
 input      [0:0]             in_uartInBuffer_wenable0,
 input       [7:0]     in_uartInBuffer_wdata0,
-input      [7:0]                in_uartInBuffer_addr0,
+input      [8:0]                in_uartInBuffer_addr0,
 input      [0:0]             in_uartInBuffer_wenable1,
 input      [7:0]                 in_uartInBuffer_wdata1,
-input      [7:0]                in_uartInBuffer_addr1,
+input      [8:0]                in_uartInBuffer_addr1,
 output reg  [7:0]     out_uartInBuffer_rdata0,
 output reg  [7:0]     out_uartInBuffer_rdata1,
 input      clock0,
 input      clock1
 );
-reg  [7:0] buffer[255:0];
+reg  [7:0] buffer[511:0];
 always @(posedge clock0) begin
   if (in_uartInBuffer_wenable0) begin
     buffer[in_uartInBuffer_addr0] <= in_uartInBuffer_wdata0;
@@ -16248,16 +16250,16 @@ endmodule
 module M_main_mem_uartOutBuffer(
 input      [0:0]             in_uartOutBuffer_wenable0,
 input       [7:0]     in_uartOutBuffer_wdata0,
-input      [7:0]                in_uartOutBuffer_addr0,
+input      [8:0]                in_uartOutBuffer_addr0,
 input      [0:0]             in_uartOutBuffer_wenable1,
 input      [7:0]                 in_uartOutBuffer_wdata1,
-input      [7:0]                in_uartOutBuffer_addr1,
+input      [8:0]                in_uartOutBuffer_addr1,
 output reg  [7:0]     out_uartOutBuffer_rdata0,
 output reg  [7:0]     out_uartOutBuffer_rdata1,
 input      clock0,
 input      clock1
 );
-reg  [7:0] buffer[255:0];
+reg  [7:0] buffer[511:0];
 always @(posedge clock0) begin
   if (in_uartOutBuffer_wenable0) begin
     buffer[in_uartOutBuffer_addr0] <= in_uartOutBuffer_wdata0;
@@ -16349,6 +16351,7 @@ wire _w_vga_driver_done;
 wire  [5:0] _w_display_pix_red;
 wire  [5:0] _w_display_pix_green;
 wire  [5:0] _w_display_pix_blue;
+wire  [7:0] _w_display_gpu_active;
 wire _w_display_done;
 wire  [15:0] _w_mem_dstack_rdata;
 wire  [15:0] _w_mem_rstack_rdata;
@@ -16435,38 +16438,38 @@ reg  [15:0] _d_bramREAD;
 reg  [15:0] _q_bramREAD;
 reg  [0:0] _d_uartInBuffer_wenable0;
 reg  [0:0] _q_uartInBuffer_wenable0;
-reg  [7:0] _d_uartInBuffer_addr0;
-reg  [7:0] _q_uartInBuffer_addr0;
+reg  [8:0] _d_uartInBuffer_addr0;
+reg  [8:0] _q_uartInBuffer_addr0;
 reg  [0:0] _d_uartInBuffer_wenable1;
 reg  [0:0] _q_uartInBuffer_wenable1;
 reg  [7:0] _d_uartInBuffer_wdata1;
 reg  [7:0] _q_uartInBuffer_wdata1;
-reg  [7:0] _d_uartInBuffer_addr1;
-reg  [7:0] _q_uartInBuffer_addr1;
-reg  [7:0] _d_uartInBufferNext;
-reg  [7:0] _q_uartInBufferNext;
-reg  [7:0] _d_uartInBufferTop;
-reg  [7:0] _q_uartInBufferTop;
+reg  [8:0] _d_uartInBuffer_addr1;
+reg  [8:0] _q_uartInBuffer_addr1;
+reg  [8:0] _d_uartInBufferNext;
+reg  [8:0] _q_uartInBufferNext;
+reg  [8:0] _d_uartInBufferTop;
+reg  [8:0] _q_uartInBufferTop;
 reg  [0:0] _d_uartInHold;
 reg  [0:0] _q_uartInHold;
 reg  [0:0] _d_uartOutBuffer_wenable0;
 reg  [0:0] _q_uartOutBuffer_wenable0;
-reg  [7:0] _d_uartOutBuffer_addr0;
-reg  [7:0] _q_uartOutBuffer_addr0;
+reg  [8:0] _d_uartOutBuffer_addr0;
+reg  [8:0] _q_uartOutBuffer_addr0;
 reg  [0:0] _d_uartOutBuffer_wenable1;
 reg  [0:0] _q_uartOutBuffer_wenable1;
 reg  [7:0] _d_uartOutBuffer_wdata1;
 reg  [7:0] _q_uartOutBuffer_wdata1;
-reg  [7:0] _d_uartOutBuffer_addr1;
-reg  [7:0] _q_uartOutBuffer_addr1;
-reg  [7:0] _d_uartOutBufferNext;
-reg  [7:0] _q_uartOutBufferNext;
-reg  [7:0] _d_uartOutBufferTop;
-reg  [7:0] _q_uartOutBufferTop;
-reg  [7:0] _d_newuartOutBufferTop;
-reg  [7:0] _q_newuartOutBufferTop;
-reg  [7:0] _d_uartOutHold;
-reg  [7:0] _q_uartOutHold;
+reg  [8:0] _d_uartOutBuffer_addr1;
+reg  [8:0] _q_uartOutBuffer_addr1;
+reg  [8:0] _d_uartOutBufferNext;
+reg  [8:0] _q_uartOutBufferNext;
+reg  [8:0] _d_uartOutBufferTop;
+reg  [8:0] _q_uartOutBufferTop;
+reg  [8:0] _d_newuartOutBufferTop;
+reg  [8:0] _q_newuartOutBufferTop;
+reg  [0:0] _d_uartOutHold;
+reg  [0:0] _q_uartOutHold;
 reg  [7:0] _d_led,_q_led;
 reg  [7:0] _d_uart_tx_data,_q_uart_tx_data;
 reg  [0:0] _d_uart_tx_valid,_q_uart_tx_valid;
@@ -16681,6 +16684,7 @@ M_multiplex_display display (
 .out_pix_red(_w_display_pix_red),
 .out_pix_green(_w_display_pix_green),
 .out_pix_blue(_w_display_pix_blue),
+.out_gpu_active(_w_display_gpu_active),
 .out_done(_w_display_done),
 .in_run(_display_run),
 .reset(_w_vga_rstcond_out),
@@ -17249,141 +17253,147 @@ _d_newStackTop = {12'b0,in_buttons};
 _d_newStackTop = in_timer1hz;
 // __block_169
   end
-  default: begin
+  16'hff07: begin
 // __block_170_case
 // __block_171
-_d_newStackTop = _q_memoryInput;
+_d_newStackTop = _w_display_gpu_active;
 // __block_172
+  end
+  default: begin
+// __block_173_case
+// __block_174
+_d_newStackTop = _q_memoryInput;
+// __block_175
   end
 endcase
 // __block_154
-// __block_173
-  end
-  4'b1101: begin
-// __block_174_case
-// __block_175
-_d_newStackTop = _q_stackNext<<_q_stackTop[0+:4];
 // __block_176
   end
-  4'b1110: begin
+  4'b1101: begin
 // __block_177_case
 // __block_178
-_d_newStackTop = {_q_rsp,_q_dsp};
+_d_newStackTop = _q_stackNext<<_q_stackTop[0+:4];
 // __block_179
   end
-  4'b1111: begin
+  4'b1110: begin
 // __block_180_case
 // __block_181
-_d_newStackTop = {16{($unsigned(_q_stackNext)<$unsigned(_q_stackTop))}};
+_d_newStackTop = {_q_rsp,_q_dsp};
 // __block_182
+  end
+  4'b1111: begin
+// __block_183_case
+// __block_184
+_d_newStackTop = {16{($unsigned(_q_stackNext)<$unsigned(_q_stackTop))}};
+// __block_185
   end
 endcase
 // __block_115
-// __block_183
+// __block_186
   end
   1'b1: begin
-// __block_184_case
-// __block_185
-  case (_q_instruction[8+:4])
-  4'b0000: begin
 // __block_187_case
 // __block_188
-_d_newStackTop = {16{(_q_stackTop==0)}};
-// __block_189
-  end
-  4'b0001: begin
+  case (_q_instruction[8+:4])
+  4'b0000: begin
 // __block_190_case
 // __block_191
-_d_newStackTop = ~{16{(_q_stackTop==0)}};
+_d_newStackTop = {16{(_q_stackTop==0)}};
 // __block_192
   end
-  4'b0010: begin
+  4'b0001: begin
 // __block_193_case
 // __block_194
-_d_newStackTop = ~{16{(_q_stackNext==_q_stackTop)}};
+_d_newStackTop = ~{16{(_q_stackTop==0)}};
 // __block_195
   end
-  4'b0011: begin
+  4'b0010: begin
 // __block_196_case
 // __block_197
-_d_newStackTop = _q_stackTop+1;
+_d_newStackTop = ~{16{(_q_stackNext==_q_stackTop)}};
 // __block_198
   end
-  4'b0100: begin
+  4'b0011: begin
 // __block_199_case
 // __block_200
-_d_newStackTop = _q_stackTop<<1;
+_d_newStackTop = _q_stackTop+1;
 // __block_201
   end
-  4'b0101: begin
+  4'b0100: begin
 // __block_202_case
 // __block_203
-_d_newStackTop = _q_stackTop>>1;
+_d_newStackTop = _q_stackTop<<1;
 // __block_204
   end
-  4'b0110: begin
+  4'b0101: begin
 // __block_205_case
 // __block_206
-_d_newStackTop = {16{($signed(_q_stackNext)>$signed(_q_stackTop))}};
+_d_newStackTop = _q_stackTop>>1;
 // __block_207
   end
-  4'b0111: begin
+  4'b0110: begin
 // __block_208_case
 // __block_209
-_d_newStackTop = {16{($unsigned(_q_stackNext)>$unsigned(_q_stackTop))}};
+_d_newStackTop = {16{($signed(_q_stackNext)>$signed(_q_stackTop))}};
 // __block_210
   end
-  4'b1000: begin
+  4'b0111: begin
 // __block_211_case
 // __block_212
-_d_newStackTop = {16{($signed(_q_stackTop)<$signed(0))}};
+_d_newStackTop = {16{($unsigned(_q_stackNext)>$unsigned(_q_stackTop))}};
 // __block_213
   end
-  4'b1001: begin
+  4'b1000: begin
 // __block_214_case
 // __block_215
-_d_newStackTop = {16{($signed(_q_stackTop)>$signed(0))}};
+_d_newStackTop = {16{($signed(_q_stackTop)<$signed(0))}};
 // __block_216
   end
-  4'b1010: begin
+  4'b1001: begin
 // __block_217_case
 // __block_218
-_d_newStackTop = ($signed(_q_stackTop)<$signed(0))?-_q_stackTop:_q_stackTop;
+_d_newStackTop = {16{($signed(_q_stackTop)>$signed(0))}};
 // __block_219
   end
-  4'b1011: begin
+  4'b1010: begin
 // __block_220_case
 // __block_221
-_d_newStackTop = ($signed(_q_stackNext)>$signed(_q_stackTop))?_q_stackNext:_q_stackTop;
+_d_newStackTop = ($signed(_q_stackTop)<$signed(0))?-_q_stackTop:_q_stackTop;
 // __block_222
   end
-  4'b1100: begin
+  4'b1011: begin
 // __block_223_case
 // __block_224
-_d_newStackTop = ($signed(_q_stackNext)<$signed(_q_stackTop))?_q_stackNext:_q_stackTop;
+_d_newStackTop = ($signed(_q_stackNext)>$signed(_q_stackTop))?_q_stackNext:_q_stackTop;
 // __block_225
   end
-  4'b1101: begin
+  4'b1100: begin
 // __block_226_case
 // __block_227
-_d_newStackTop = -_q_stackTop;
+_d_newStackTop = ($signed(_q_stackNext)<$signed(_q_stackTop))?_q_stackNext:_q_stackTop;
 // __block_228
   end
-  4'b1110: begin
+  4'b1101: begin
 // __block_229_case
 // __block_230
-_d_newStackTop = _q_stackNext-_q_stackTop;
+_d_newStackTop = -_q_stackTop;
 // __block_231
   end
-  4'b1111: begin
+  4'b1110: begin
 // __block_232_case
 // __block_233
-_d_newStackTop = {16{($signed(_q_stackNext)>=$signed(_q_stackTop))}};
+_d_newStackTop = _q_stackNext-_q_stackTop;
 // __block_234
   end
+  4'b1111: begin
+// __block_235_case
+// __block_236
+_d_newStackTop = {16{($signed(_q_stackNext)>=$signed(_q_stackTop))}};
+// __block_237
+  end
 endcase
-// __block_186
-// __block_235
+// __block_189
+// __block_238
   end
 endcase
 // __block_112
@@ -17392,157 +17402,157 @@ _d_newRSP = _q_rsp+_w_rdelta;
 _d_rstackWData = _q_stackTop;
 _d_newPC = (_q_instruction[12+:1])?_q_rStackTop>>1:_w_pcPlusOne;
 if (_q_instruction[5+:1]) begin
-// __block_236
-// __block_238
+// __block_239
+// __block_241
   case (_q_stackTop)
   default: begin
-// __block_240_case
-// __block_241
+// __block_243_case
+// __block_244
 _d_ram_addr0 = _q_stackTop>>1;
 _d_ram_wdata0 = _q_stackNext;
 _d_ram_wenable0 = 1;
-// __block_242
-  end
-  16'hf000: begin
-// __block_243_case
-// __block_244
-_d_uartOutBuffer_wdata1 = _q_stackNext[0+:8];
-_d_newuartOutBufferTop = _d_uartOutBufferTop+1;
 // __block_245
   end
-  16'hf002: begin
+  16'hf000: begin
 // __block_246_case
 // __block_247
-_d_led = _q_stackNext;
+_d_uartOutBuffer_wdata1 = _q_stackNext[0+:8];
+_d_newuartOutBufferTop = _d_uartOutBufferTop+1;
 // __block_248
   end
-  16'hff00: begin
+  16'hf002: begin
 // __block_249_case
 // __block_250
-_d_display_gpu_x = _q_stackNext;
+_d_led = _q_stackNext;
 // __block_251
   end
-  16'hff01: begin
+  16'hff00: begin
 // __block_252_case
 // __block_253
-_d_display_gpu_y = _q_stackNext;
+_d_display_gpu_x = _q_stackNext;
 // __block_254
   end
-  16'hff02: begin
+  16'hff01: begin
 // __block_255_case
 // __block_256
-_d_display_gpu_colour = _q_stackNext;
+_d_display_gpu_y = _q_stackNext;
 // __block_257
   end
-  16'hff03: begin
+  16'hff02: begin
 // __block_258_case
 // __block_259
-_d_display_gpu_param0 = _q_stackNext;
+_d_display_gpu_colour = _q_stackNext;
 // __block_260
   end
-  16'hff04: begin
+  16'hff03: begin
 // __block_261_case
 // __block_262
-_d_display_gpu_param1 = _q_stackNext;
+_d_display_gpu_param0 = _q_stackNext;
 // __block_263
   end
-  16'hff05: begin
+  16'hff04: begin
 // __block_264_case
 // __block_265
-_d_display_gpu_param2 = _q_stackNext;
+_d_display_gpu_param1 = _q_stackNext;
 // __block_266
   end
-  16'hff06: begin
+  16'hff05: begin
 // __block_267_case
 // __block_268
-_d_display_gpu_param3 = _q_stackNext;
+_d_display_gpu_param2 = _q_stackNext;
 // __block_269
   end
-  16'hff07: begin
+  16'hff06: begin
 // __block_270_case
 // __block_271
-_d_display_gpu_write = _q_stackNext;
+_d_display_gpu_param3 = _q_stackNext;
 // __block_272
   end
-  16'hff10: begin
+  16'hff07: begin
 // __block_273_case
 // __block_274
-_d_display_tpu_x = _q_stackNext;
+_d_display_gpu_write = _q_stackNext;
 // __block_275
   end
-  16'hff11: begin
+  16'hff10: begin
 // __block_276_case
 // __block_277
-_d_display_tpu_y = _q_stackNext;
+_d_display_tpu_x = _q_stackNext;
 // __block_278
   end
-  16'hff12: begin
+  16'hff11: begin
 // __block_279_case
 // __block_280
-_d_display_tpu_set = _q_stackNext;
-_d_display_tpu_write = 1;
+_d_display_tpu_y = _q_stackNext;
 // __block_281
   end
-  16'hff13: begin
+  16'hff12: begin
 // __block_282_case
 // __block_283
 _d_display_tpu_set = _q_stackNext;
-_d_display_tpu_write = 2;
+_d_display_tpu_write = 1;
 // __block_284
   end
-  16'hff14: begin
+  16'hff13: begin
 // __block_285_case
 // __block_286
 _d_display_tpu_set = _q_stackNext;
-_d_display_tpu_write = 3;
+_d_display_tpu_write = 2;
 // __block_287
   end
-endcase
-// __block_239
-// __block_288
-end else begin
-// __block_237
-end
+  16'hff14: begin
+// __block_288_case
 // __block_289
+_d_display_tpu_set = _q_stackNext;
+_d_display_tpu_write = 3;
 // __block_290
   end
 endcase
-// __block_100
+// __block_242
 // __block_291
+end else begin
+// __block_240
 end
 // __block_292
 // __block_293
   end
-  3: begin
-// __block_294_case
+endcase
+// __block_100
+// __block_294
+end
 // __block_295
-if (_w_dstackWrite) begin
 // __block_296
+  end
+  3: begin
+// __block_297_case
 // __block_298
+if (_w_dstackWrite) begin
+// __block_299
+// __block_301
 _d_dstack_wenable = 1;
 _d_dstack_addr = _q_newDSP;
 _d_dstack_wdata = _q_stackTop;
-// __block_299
+// __block_302
 end else begin
-// __block_297
-end
 // __block_300
-if (_w_rstackWrite) begin
-// __block_301
+end
 // __block_303
+if (_w_rstackWrite) begin
+// __block_304
+// __block_306
 _d_rstack_wenable = 1;
 _d_rstack_addr = _q_newRSP;
 _d_rstack_wdata = _q_rstackWData;
-// __block_304
+// __block_307
 end else begin
-// __block_302
-end
 // __block_305
-// __block_306
+end
+// __block_308
+// __block_309
   end
   4: begin
-// __block_307_case
-// __block_308
+// __block_310_case
+// __block_311
 _d_dsp = _q_newDSP;
 _d_pc = _q_newPC;
 _d_stackTop = _q_newStackTop;
@@ -17552,17 +17562,17 @@ _d_rstack_addr = _q_newRSP;
 _d_ram_wenable0 = 0;
 _d_display_gpu_write = 0;
 _d_display_tpu_write = 0;
-// __block_309
+// __block_312
   end
   default: begin
-// __block_310_case
-// __block_311
-// __block_312
+// __block_313_case
+// __block_314
+// __block_315
   end
 endcase
 // __block_86
 _d_CYCLE = (_q_CYCLE==4)?0:_q_CYCLE+1;
-// __block_313
+// __block_316
 _d_index = 5;
 end else begin
 _d_index = 6;
