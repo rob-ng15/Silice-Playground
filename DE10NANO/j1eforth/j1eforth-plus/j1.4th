@@ -533,7 +533,7 @@ t: ?rx ( -- c t | f ) f001 literal @ 1 literal and 0<> t;
 t: tx! ( c -- )
    begin
     f001 literal @ 2 literal and 0=
-   until f000 literal ! t;
+   until dup f000 literal ! ff20 literal ! t;
 t: ?key ( -- c ) '?key @execute t;
 t: emit ( c -- ) 'emit @execute t;
 t: key ( -- c )

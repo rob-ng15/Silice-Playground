@@ -14,7 +14,8 @@ __Works__ _sort of_!
 The VGA output is a multiplexed bitmap and character display, with the bitmap __under__ the characters. To allow the bitmap to be displayed, set the corresponding character map to 0.
 
 * 640 x 480 256 colour { rrrgggbb } bitmap display
-* 80 x 30 256 colour { rrrgggbb } text display, using IBM 256 character ROM
+* 80 x 30 256 colour { rrrgggbb } text display, using IBM 8x16 256 character ROM
+* 80 x 4 2 colour blue/white text display, using IBM 8x8 256 character ROM as input/output terminal
 
 Each character has 3 attributes, character, foreground and background.
 
@@ -33,23 +34,30 @@ ff03 | GPU parameter 2 from stack
 ff03 | GPU parameter 3 from stack
 ff07 | Start GPU Operation from stack (WRITE)<br>Read GPU Status to stack
 
-GPU Operation | Action
+GPU Operation | GPU Action
 :-----: | :-----:
 0 | Idle
 1 | Set pixel x,y to colour
 2 | Fill rectangle x,y to param0,param1 in colour
 3 | Bresenham's line drawing algorithm from x,y to param0,param1 in colour<br>Work in Progress
-4 | Bresenham's circle drawing algorithm centred at x,y of radius r in colour<br>Work in Progress
+5 | Bresenham's circle drawing algorithm centred at x,y of radius r in colour<br>Work in Progress
 
 The TPU is controlled by writing to the following addresses:
 
-Hexadecimal Address | TPU Usage
+Hexadecimal Address | TPU Action
 :----: | :----:
 ff10 | TPU x coordinate from stack
 ff11 | TPU y coordinate from stack
 ff12 | Write character from stack to x,y
 ff13 | Write background colour from stack to x,y
 ff14 | Write foreground colour from stack to x,y
+
+The terminal is controlled by writing to the following addresses:
+
+Hexadecimal Address | Terminal Action
+:----: | :----:
+ff20 | Terminal write character from stack ( part of emit )
+ff21 | ```1 ff21 !``` show the terminal<br>```0 ff21 !``` hide the terminal
 
 Helpful GPU and TPU words:
 

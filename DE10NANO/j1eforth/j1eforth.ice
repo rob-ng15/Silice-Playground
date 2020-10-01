@@ -27,35 +27,68 @@ algorithm multiplex_display(
     input uint7 tpu_x,
     input uint5 tpu_y,
     input uint8 tpu_set,
-    input uint2 tpu_write // 0 = nothing, 1 = char, 2 = background, 3 = foreground
+    input uint2 tpu_write,   // 0 = nothing, 1 = char, 2 = background, 3 = foreground
+    
+    // Terminal show/hide and cursor show/hide
+    input uint8 terminal_character,
+    input uint1 terminal_write, // 0 = noting, 1 = character
+    input uint1 showterminal,
+    input uint1 showcursor,
+    input uint1 timer1hz
 ) <autorun> {
 
-    // Character ROM 
-    //brom uint8 characterGenerator[] = {
-    uint8 characterGenerator[] = {
+    // Character ROM 8x16
+    uint8 characterGenerator8x16[] = {
         $include('characterROM8x16.inc')
+    };
+    
+    // Character ROM 8x8
+    uint8 characterGenerator8x8[] = {
+        $include('characterROM8x8.inc')
     };
 
     // 80 x 30 character buffer and foreground and background colours in { rrrgggbb }
     // Setting character to 0 allows the bitmap to show through
-    dualport_bram uint8 character[2400] = {
-        $$for i=0,2399 do
-            $math.floor(i)$,
-        $$end
-    };
-    
-    dualport_bram uint8 foreground[2400] = {
-        $$for i=0,2399 do
-            $math.floor(i)$,
-        $$end
-    };
-    
-    dualport_bram uint8 background[2400] = {
-        $$for i=0,2399 do
-            $math.floor(2399-i)$,
-        $$end
-    };
+    dualport_bram uint8 character[2400] = uninitialized;
+    dualport_bram uint8 foreground[2400] = uninitialized;
+    dualport_bram uint8 background[2400] = uninitialized;
    
+
+    // Character position on the screen x 0-79, y 0-29 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
+    uint8 xcharacterpos := (pix_x + 1) >> 3;
+    uint12 ycharacterpos := ((pix_y) >> 4) * 80; // 16 pixel high characters
+    
+    // Derive the x and y coordinate within the current 8x16 character block x 0-7, y 0-15
+    uint8 xincharacter := pix_x & 7;
+    uint8 yincharacter := pix_y & 15;
+
+    // Derive the actual pixel in the current character
+    uint1 characterpixel := ((characterGenerator8x16[ character.rdata0 * 16 + yincharacter ] << xincharacter) >> 7) & 1;
+    
+    // 80 x 4 character buffer for the input/output terminal
+    dualport_bram uint8 terminal[320] = uninitialized;
+
+    uint8 terminal_x = 0;
+    uint8 terminal_y = 3;
+
+    // Character position on the terminal x 0-79, y 0-3 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
+    uint8 xterminalpos := (pix_x + 1) >> 3;
+    uint12 yterminalpos := ((pix_y - 448) >> 3) * 80; // 8 pixel high characters
+
+    uint1 is_cursor := ( xterminalpos == terminal_x ) & ( ( ( pix_y - 448) >> 3 ) == terminal_y );
+    
+    // Derive the x and y coordinate within the current 8x8 terminal character block x 0-7, y 0-7
+    uint8 xinterminal := pix_x & 7;
+    uint8 yinterminal := pix_y & 7;
+
+    // Derive the actual pixel in the current terminal
+    uint1 terminalpixel := ((characterGenerator8x8[ terminal.rdata0 * 8 + yinterminal ] << xinterminal) >> 7) & 1;
+
+    // Terminal active (scroll) flag
+    uint2 terminal_active = 0;
+    uint9 terminal_scroll = 0;
+    uint8 terminal_scroll_next = 0;
+    
     // 640 x 480 { rrrgggbb } colour bitmap
     dualport_bram uint8 bitmap[ 307200 ] = uninitialized;
 
@@ -63,17 +96,6 @@ algorithm multiplex_display(
     uint6 colourexpand3to6[8] = {  0, 9, 18, 27, 36, 45, 54, 63 };
     uint6 colourexpand2to6[4] = {  0, 21, 42, 63 };
     
-    // Character position on the screen x 0-79, y 0-29 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
-    uint8 xcharacterpos := (pix_x + 1) >> 3;
-    uint12 ycharacterpos := ((pix_y) >> 4) * 80;
-    
-    // Derive the x and y coordinate within the current 8x16 character block x 0-7, y 0-15
-    uint8 xincharacter := pix_x & 7;
-    uint8 yincharacter := pix_y & 15;
-
-    // Derive the actual pixel in the current character
-    uint1 characterpixel := ((characterGenerator[ character.rdata0 * 16 + yincharacter ] << xincharacter) >> 7) & 1;
-
     // GPU work variable storage
     uint16 gpu_active_x = 0;
     uint16 gpu_active_y = 0;
@@ -92,6 +114,10 @@ algorithm multiplex_display(
     pix_green := 0;
     pix_blue  := 0;
     
+    // Setup the reading of the terminal memory
+    terminal.addr0 := xterminalpos + yterminalpos;
+    terminal.wenable0 := 0;
+    
     // Set up reading of character and attribute memory
     // character.rdata0 is the character, foreground.rdata0 and background.rdata0 are the attribute being rendered
     character.addr0 := xcharacterpos + ycharacterpos;
@@ -100,7 +126,7 @@ algorithm multiplex_display(
     foreground.wenable0 := 0;
     background.addr0 := xcharacterpos + ycharacterpos;
     background.wenable0 := 0;
-    
+
     // Setup the address in the bitmap for the pixel being rendered
     bitmap.addr0 := pix_x  + pix_y * 640;
     bitmap.wenable0 := 0;
@@ -115,10 +141,13 @@ algorithm multiplex_display(
     background.wenable1 := 0;
     foreground.addr1 := tpu_x + tpu_y * 80;
     foreground.wenable1 := 0;
+
+    // Terminal write access
+    terminal.wenable1 := 0;
     
     // GPU active flag
     gpu_active = 0;
-    
+      
     while (1) {
  
         // TPU to set characters according to TPU inputs
@@ -136,6 +165,85 @@ algorithm multiplex_display(
                 foreground.wenable1 = 1;
             }
             default: {}
+        }
+
+        // Terminal
+        if( terminal_active == 0 ) {
+            switch( terminal_write ) {
+                case 1: {
+                    // Display character
+                    switch( terminal_character ) {
+                        case 10: {
+                            // LINE FEED, scroll
+
+
+
+                            terminal_scroll = 0;
+                            terminal_active = 1;
+                        }
+                        case 13: {
+                            // CARRIAGE RETURN
+                            terminal_x = 0;
+                            terminal_active = 1;
+                        }
+                        default: {
+                            // Display character
+                            terminal.addr1 = terminal_x + terminal_y * 80;
+                            terminal.wdata1 = terminal_character;
+                            terminal.wenable1 = 1;
+                            if( terminal_x == 79 ) {
+                                terminal_x = 0;
+                                terminal_scroll = 0;
+                                terminal_active = 1;
+                            } else {
+                                terminal_x = terminal_x + 1;
+                            }
+                        }
+                    }
+                }
+                default: {}
+            }
+        } else {
+            // Terminal actions
+            switch( terminal_active ) {
+                case 1: {
+                    // SCROLL
+                    if( terminal_scroll == 240 ) {
+                        // Finished Scroll, Move to blank
+                        terminal_active = 4;
+                    } else {
+                        // Read the next character down
+                        terminal.addr1 = terminal_scroll + 80;
+                        terminal_active = 2;
+                    }
+                }
+                case 2: {
+                    // Retrieve the character to move up
+                    terminal_scroll_next = terminal.rdata1;
+                    terminal_active = 3;
+                }
+                case 3: {
+                    // Write the character one line up and move onto the next character
+                    terminal.addr1 = terminal_scroll;
+                    terminal.wdata1 = terminal_scroll_next;
+                    terminal.wenable1 = 1;
+                    terminal_scroll = terminal_scroll + 1;
+                    terminal_active = 1;
+                }
+                case 4: {
+                    // Blank out the last line
+                    terminal.addr1 = terminal_scroll;
+                    terminal.wdata1 = 0;
+                    terminal.wenable1 = 1;
+                    if( terminal_scroll == 320 ) {
+                        // Finish Blank
+                        terminal_active = 0;
+                    } else {
+                        terminal_scroll = terminal_scroll + 1;
+                    }
+                }
+                default: {}
+            }
         }
         
         // Perform GPU Operation
@@ -171,9 +279,14 @@ algorithm multiplex_display(
                         gpu_temp0 = gpu_param0;                                                 // right
                         gpu_temp2 = gpu_param0 - gpu_x;                                         // Bresenham delta x
                         gpu_temp3 = gpu_param1 - gpu_y;                                         // Bresenham delta y
-                        gpu_temp4 = 2 * ( ( gpu_param1 - gpu_y ) - ( gpu_param0 - gpu_x ) ) ;   // Bresenham error
-                        gpu_active = 3;
-                    }
+                        if( (gpu_param0 - gpu_x) >= (gpu_param1 - gpu_y) ) {
+                            gpu_temp4 = 2 * ( ( gpu_param1 - gpu_y ) - ( gpu_param0 - gpu_x ) );   // Bresenham error
+                            gpu_active = 3;
+                        } else {
+                            gpu_temp4 = 2 * ( ( gpu_param1 - gpu_y ) - ( gpu_param0 - gpu_x ) );   // Bresenham error
+                            gpu_active = 4;
+                        }
+                     }
                     default: {}
                 }
             }
@@ -206,7 +319,7 @@ algorithm multiplex_display(
                 }
             }
             case 3: {
-                // Bresenham line drawing algorithm of colour from x,y to param0,param1
+                // Bresenham line drawing algorithm of colour from x,y to param0,param1 (shallow line)
                 if( gpu_active_x < gpu_temp0 ) {
                     // Draw the pixel and calculate the next pixel
                     bitmap.addr1 = gpu_active_x + gpu_active_y * 640;
@@ -224,38 +337,85 @@ algorithm multiplex_display(
                     gpu_active = 0;
                 }
             }
+            case 4: {
+                // Bresenham line drawing algorithm of colour from x,y to param0,param1 (steep line)
+                if( gpu_active_y < gpu_temp1 ) {
+                    // Draw the pixel and calculate the next pixel
+                    bitmap.addr1 = gpu_active_x + gpu_active_y * 640;
+                    bitmap.wdata1 = gpu_active_colour;
+                    bitmap.wenable1 = 1;
+                    if( gpu_temp4 >= 0 ) {
+                        gpu_active_x = gpu_active_x + 1;                                // Move Down
+                        gpu_temp4 = gpu_temp4 + 2*gpu_temp3 - 2*gpu_temp2;              // New Bresenham error
+                    } else {
+                        gpu_temp4 = gpu_temp4 + 2*gpu_temp3;                            // New Bresenham error
+                    }
+                    gpu_active_y = gpu_active_y + 1;                                    // Move Right
+                } else {
+                    // Reached the end of the line
+                    gpu_active = 0;
+                }
+            }
             default: {gpu_active = 0;}
         }
         
         // wait until vblank is over
         if (pix_vblank == 0) {
-            if( pix_active ) { //& ((pix_x > 0)&(pix_x<639) & ((pix_y>0)&(pix_y<479))) ) {
-                switch( character.rdata0 ) {
-                    case 0: {
-                        // BITMAP
-                        pix_red = colourexpand3to6[ (bitmap.rdata0 & 8he0) >> 5 ];
-                        pix_green = colourexpand3to6[ (bitmap.rdata0 & 8h1c) >> 2 ];
-                        pix_blue = colourexpand2to6[ (bitmap.rdata0 & 8h3) ];
-                    }
-                    default: {
-                        // CHARACTER from characterGenerator
-                        // Determine if background or foreground
-                        switch( characterpixel ) {
+            if( pix_active ) {
+                if( pix_y > 447 & showterminal ) {
+                    // Display terminal 
+                    switch( terminalpixel ) {
                         case 0: {
-                                // background
-                                pix_red = colourexpand3to6[ (background.rdata0 & 8he0) >> 5 ];
-                                pix_green = colourexpand3to6[ (background.rdata0 & 8h1c) >> 2 ];
-                                pix_blue = colourexpand2to6[ (background.rdata0 & 8h3) ];
+                            if( is_cursor & timer1hz ) {
+                                pix_red = 63;
+                                pix_green = 63;
+                                pix_blue = 63;
+                            } else {
+                                pix_red = 0;
+                                pix_green = 0;
+                                pix_blue = 63;
                             }
-                            case 1: {
-                                // foreground
-                                pix_red = colourexpand3to6[ (foreground.rdata0 & 8he0) >> 5 ];
-                                pix_green = colourexpand3to6[ (foreground.rdata0 & 8h1c) >> 2 ];
-                                pix_blue = colourexpand2to6[ (foreground.rdata0 & 8h3) ];
+                        }
+                        case 1: {
+                            if( is_cursor & timer1hz ) {
+                                pix_red = 0;
+                                pix_green = 0;
+                                pix_blue = 63;
+                            } else {
+                                pix_red = 63;
+                                pix_green = 63;
+                                pix_blue = 63;
                             }
                         }
                     }
-                } // character or bitmap
+                } else {
+                    switch( character.rdata0 ) {
+                        case 0: {
+                            // BITMAP
+                            pix_red = colourexpand3to6[ (bitmap.rdata0 & 8he0) >> 5 ];
+                            pix_green = colourexpand3to6[ (bitmap.rdata0 & 8h1c) >> 2 ];
+                            pix_blue = colourexpand2to6[ (bitmap.rdata0 & 8h3) ];
+                        }
+                        default: {
+                            // CHARACTER from characterGenerator
+                            // Determine if background or foreground
+                            switch( characterpixel ) {
+                            case 0: {
+                                    // background
+                                    pix_red = colourexpand3to6[ (background.rdata0 & 8he0) >> 5 ];
+                                    pix_green = colourexpand3to6[ (background.rdata0 & 8h1c) >> 2 ];
+                                    pix_blue = colourexpand2to6[ (background.rdata0 & 8h3) ];
+                                }
+                                case 1: {
+                                    // foreground
+                                    pix_red = colourexpand3to6[ (foreground.rdata0 & 8he0) >> 5 ];
+                                    pix_green = colourexpand3to6[ (foreground.rdata0 & 8h1c) >> 2 ];
+                                    pix_blue = colourexpand2to6[ (foreground.rdata0 & 8h3) ];
+                                }
+                            }
+                        }
+                    } // character or bitmap
+                }
             } // pix_active
         } // pix_vblank == 0
     }
@@ -399,7 +559,8 @@ algorithm main(
         pix_vblank <: vblank,
         pix_red    :> video_r,
         pix_green  :> video_g,
-        pix_blue   :> video_b
+        pix_blue   :> video_b,
+        timer1hz   <: timer1hz
     );
 
     // J1+ CPU
@@ -492,6 +653,10 @@ algorithm main(
     sdram_ba  := 2bz;
     sdram_a   := 13bz;
     sdram_clk := 1bz;
+
+    // Setup the terminal
+    display.showterminal = 1;
+    display.showcursor = 1;
     
     // INIT is 0 ZERO dualport working blockram
     while( INIT == 0 ) {
@@ -815,21 +980,30 @@ algorithm main(
                                         // TPU set y
                                         display.tpu_y = stackNext;
                                     }
-                                     case 16hff12: {
+                                    case 16hff12: {
                                         // TPU set char
                                         display.tpu_set = stackNext;
                                         display.tpu_write = 1;
                                     }
-                                     case 16hff13: {
+                                    case 16hff13: {
                                         // TPU set background
                                         display.tpu_set = stackNext;
                                         display.tpu_write = 2;
                                     }
-                                     case 16hff14: {
+                                    case 16hff14: {
                                         // TPU set foreground
                                         display.tpu_set = stackNext;
                                         display.tpu_write = 3;
                                     }
+                                    case 16hff20: {
+                                        // Terminal set character
+                                        display.terminal_character = stackNext;
+                                        display.terminal_write = 1;
+                                     }
+                                    case 16hff21: {
+                                        // Terminal set showterminal
+                                        display.showterminal = stackNext;
+                                     }
                                }
                             }
                         } // ALU
@@ -868,9 +1042,10 @@ algorithm main(
                 // reset sram_readwrite
                 ram.wenable0 = 0;
                 
-                // reset gpu
+                // reset gpu, tpu and terminal
                 display.gpu_write = 0;
                 display.tpu_write = 0;
+                display.terminal_write = 0;
             }
             
             default: {}
