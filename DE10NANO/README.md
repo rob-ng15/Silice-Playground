@@ -7,6 +7,10 @@ Port of the j1eforth with J1+ CPU from the FOMU.
 
 __Works__ _sort of_!
 
+## Building
+
+This uses the _**DRAFT**_ branch of Silice (https://github.com/sylefeb/Silice). Open a terminal in the DE10NANO/j1eforth directory and type ```make de10nano```. Wait. Upload your design your DE10NNANO with ```quartus_pgm -m jtag -o "p;BUILD_de10nano/build.sof@2"```.
+
 ## Features
 
 * VGA Output
@@ -15,11 +19,11 @@ The VGA output is a multiplexed bitmap and character display, with the bitmap __
 
 * 640 x 480 256 colour { rrrgggbb } bitmap display
 * 80 x 30 256 colour { rrrgggbb } text display, using IBM 8x16 256 character ROM
-* 80 x 4 2 colour blue/white text display, using IBM 8x8 256 character ROM as input/output terminal
+* 80 x 8 2 colour blue/white text display, using IBM 8x8 256 character ROM as input/output terminal
 
-Each character has 3 attributes, character, foreground and background.
+Each character in the main character display has 3 attributes, character, foreground and background.
 
-Due to the address space limitations of the J1+ CPU the bitmap and character map cannot be memory mapped so these memory areas are controlled by the multiplex_display algorithm, providing a small GPU (graphics processing unit) and a small TPU (text processing unit). 
+Due to the address space limitations of the J1+ CPU the bitmap, character map and terminal map cannot be memory mapped so these memory areas are controlled by the multiplex_display algorithm, providing a small GPU (graphics processing unit), a small TPU (text processing unit) and a small terminal interface. 
 
 The GPU is controlled by writing to the following addresses:
 
@@ -32,7 +36,7 @@ ff03 | GPU parameter 0 from stack
 ff03 | GPU parameter 1 from stack
 ff03 | GPU parameter 2 from stack
 ff03 | GPU parameter 3 from stack
-ff07 | Start GPU Operation from stack (WRITE)<br>Read GPU Status to stack
+ff07 | Start GPU Operation from stack (WRITE)<br>Read GPU Active Status to stack
 
 GPU Operation | GPU Action
 :-----: | :-----:
@@ -56,7 +60,7 @@ The terminal is controlled by writing to the following addresses:
 
 Hexadecimal Address | Terminal Action
 :----: | :----:
-ff20 | Terminal write character from stack ( part of emit )
+ff20 | Terminal write character from stack ( part of emit )<br>Red Terminal Active Status to stack
 ff21 | ```1 ff21 !``` show the terminal<br>```0 ff21 !``` hide the terminal
 
 Helpful GPU and TPU words:
@@ -109,10 +113,6 @@ Fun GPU and TPU words:
     i 200 i - i 101 101 gpu_rectangle
   loop ;
 ```
-t: tx! ( c -- )
-   begin
-    f001 literal @ 2 literal and 0=
-   until f000 literal ! t;
 
 ## Issues
 

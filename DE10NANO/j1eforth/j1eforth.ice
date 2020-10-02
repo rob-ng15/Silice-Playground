@@ -40,7 +40,8 @@ algorithm multiplex_display(
     input uint1 terminal_write, // 0 = noting, 1 = character
     input uint1 showterminal,
     input uint1 showcursor,
-    input uint1 timer1hz
+    input uint1 timer1hz,
+    output uint3 terminal_active
 ) <autorun> {
 
     // Character ROM 8x16
@@ -72,16 +73,16 @@ algorithm multiplex_display(
     uint1 characterpixel := ((characterGenerator8x16[ character.rdata0 * 16 + yincharacter ] << xincharacter) >> 7) & 1;
     
     // 80 x 4 character buffer for the input/output terminal
-    dualport_bram uint8 terminal[320] = uninitialized;
+    dualport_bram uint8 terminal[640] = uninitialized;
 
     uint8 terminal_x = 0;
-    uint8 terminal_y = 3;
+    uint8 terminal_y = 7;
 
     // Character position on the terminal x 0-79, y 0-3 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
     uint8 xterminalpos := (pix_x + 1) >> 3;
-    uint12 yterminalpos := ((pix_y - 448) >> 3) * 80; // 8 pixel high characters
+    uint12 yterminalpos := ((pix_y - 416) >> 3) * 80; // 8 pixel high characters
 
-    uint1 is_cursor := ( xterminalpos == terminal_x ) & ( ( ( pix_y - 448) >> 3 ) == terminal_y );
+    uint1 is_cursor := ( xterminalpos == terminal_x ) & ( ( ( pix_y - 416) >> 3 ) == terminal_y );
     
     // Derive the x and y coordinate within the current 8x8 terminal character block x 0-7, y 0-7
     uint8 xinterminal := pix_x & 7;
@@ -91,9 +92,8 @@ algorithm multiplex_display(
     uint1 terminalpixel := ((characterGenerator8x8[ terminal.rdata0 * 8 + yinterminal ] << xinterminal) >> 7) & 1;
 
     // Terminal active (scroll) flag
-    uint2 terminal_active = 0;
-    uint9 terminal_scroll = 0;
-    uint8 terminal_scroll_next = 0;
+    uint10 terminal_scroll = 0;
+    uint10 terminal_scroll_next = 0;
     
     // 640 x 480 { rrrgggbb } colour bitmap
     dualport_bram uint8 bitmap[ 307200 ] = uninitialized;
@@ -148,8 +148,9 @@ algorithm multiplex_display(
     foreground.addr1 := tpu_x + tpu_y * 80;
     foreground.wenable1 := 0;
 
-    // Terminal write access
+    // Terminal flags
     terminal.wenable1 := 0;
+    terminal_active = 0;
     
     // GPU active flag
     gpu_active = 0;
@@ -179,18 +180,23 @@ algorithm multiplex_display(
                 case 1: {
                     // Display character
                     switch( terminal_character ) {
+                        case 8: {
+                            // BACKSPACE, move back one character
+                            if( terminal_x > 0 ) {
+                                terminal_x = terminal_x - 1;
+                                terminal.addr1 = terminal_x - 1 + terminal_y * 80;
+                                terminal.wdata1 = 0;
+                                terminal.wenable1 = 1;
+                            }
+                        }
                         case 10: {
                             // LINE FEED, scroll
-
-
-
                             terminal_scroll = 0;
                             terminal_active = 1;
                         }
                         case 13: {
                             // CARRIAGE RETURN
                             terminal_x = 0;
-                            terminal_active = 1;
                         }
                         default: {
                             // Display character
@@ -214,7 +220,7 @@ algorithm multiplex_display(
             switch( terminal_active ) {
                 case 1: {
                     // SCROLL
-                    if( terminal_scroll == 240 ) {
+                    if( terminal_scroll == 560 ) {
                         // Finished Scroll, Move to blank
                         terminal_active = 4;
                     } else {
@@ -241,7 +247,7 @@ algorithm multiplex_display(
                     terminal.addr1 = terminal_scroll;
                     terminal.wdata1 = 0;
                     terminal.wenable1 = 1;
-                    if( terminal_scroll == 320 ) {
+                    if( terminal_scroll == 640 ) {
                         // Finish Blank
                         terminal_active = 0;
                     } else {
@@ -283,13 +289,14 @@ algorithm multiplex_display(
                         gpu_active_x = gpu_x;                                                   // left
                         gpu_active_y = gpu_y;                                                   // top
                         gpu_temp0 = gpu_param0;                                                 // right
+                        gpu_temp1 = gpu_param1;
                         gpu_temp2 = gpu_param0 - gpu_x;                                         // Bresenham delta x
                         gpu_temp3 = gpu_param1 - gpu_y;                                         // Bresenham delta y
                         if( (gpu_param0 - gpu_x) >= (gpu_param1 - gpu_y) ) {
                             gpu_temp4 = 2 * ( ( gpu_param1 - gpu_y ) - ( gpu_param0 - gpu_x ) );   // Bresenham error
                             gpu_active = 3;
                         } else {
-                            gpu_temp4 = 2 * ( ( gpu_param1 - gpu_y ) - ( gpu_param0 - gpu_x ) );   // Bresenham error
+                            gpu_temp4 = 2 * ( ( gpu_param0 - gpu_x ) - ( gpu_param1 - gpu_y ) );   // Bresenham error
                             gpu_active = 4;
                         }
                      }
@@ -352,9 +359,9 @@ algorithm multiplex_display(
                     bitmap.wenable1 = 1;
                     if( gpu_temp4 >= 0 ) {
                         gpu_active_x = gpu_active_x + 1;                                // Move Down
-                        gpu_temp4 = gpu_temp4 + 2*gpu_temp3 - 2*gpu_temp2;              // New Bresenham error
+                        gpu_temp4 = gpu_temp4 + 2*gpu_temp2 - 2*gpu_temp3;              // New Bresenham error
                     } else {
-                        gpu_temp4 = gpu_temp4 + 2*gpu_temp3;                            // New Bresenham error
+                        gpu_temp4 = gpu_temp4 + 2*gpu_temp2;                            // New Bresenham error
                     }
                     gpu_active_y = gpu_active_y + 1;                                    // Move Right
                 } else {
@@ -368,7 +375,7 @@ algorithm multiplex_display(
         // wait until vblank is over
         if (pix_vblank == 0) {
             if( pix_active ) {
-                if( pix_y > 447 & showterminal ) {
+                if( pix_y > 415 & showterminal ) {
                     // Display terminal 
                     switch( terminalpixel ) {
                         case 0: {
@@ -495,7 +502,6 @@ algorithm pulse1hz(
 }
 
 algorithm main(
-
     // LEDS (8 of)
     output  uint8   leds,
     
@@ -542,7 +548,7 @@ algorithm main(
         dout    :> uart_rx_data
     );
 
-    // VGA Text Display
+    // VGA MultiPlexed Bitmap, Text and Terminal Display
     uint1 video_reset = 0;
     uint1 video_clock = 0;
     uint1 sdram_clock = 0;
@@ -902,8 +908,12 @@ algorithm main(
                                                     newStackTop = timer1hz;
                                                 }
                                                 case 16hff07: {
-                                                    // GPU Status
+                                                    // GPU Active Status
                                                     newStackTop = display.gpu_active;
+                                                }
+                                                case 16hff20: {
+                                                    // Terminal Active Status
+                                                    newStackTop = display.terminal_active;
                                                 }
                                                 default: {newStackTop = memoryInput;}
                                             }
