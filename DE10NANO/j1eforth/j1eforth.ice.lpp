@@ -1,0 +1,5356 @@
+// ----------------------- memory_ports.ice -----------
+// @sylefeb - Silice standard library
+// Memory port interfaces
+// 2020-09-03
+
+// single port BRAM
+
+interface bram_port {
+  output! addr,
+  output! wenable,
+  input   rdata,
+  output! wdata,
+}
+
+// single port BROM
+
+interface brom_port {
+  output! addr,
+  input   rdata,
+}
+
+// dual port BRAM
+
+interface bram_port0 {
+  output! addr0,
+  output! wenable0,
+  input   rdata0,
+  output! wdata0,
+}
+
+interface bram_port1 {
+  output! addr1,
+  output! wenable1,
+  input   rdata1,
+  output! wdata1,
+}
+
+interface bram_ports {
+  output! addr0,
+  output! wenable0,
+  input   rdata0,
+  output! wdata0,
+  output! addr1,
+  output! wenable1,
+  input   rdata1,
+  output! wdata1,
+}
+
+// ----------------------- end of memory_ports.ice ----
+
+// VGA Driver Includes
+// SL 2019-10
+// -------------------------
+
+algorithm vga(
+  output! uint1  vga_hs,
+  output! uint1  vga_vs,
+  output! uint1  active,
+  output! uint1  vblank,
+  output! uint10 vga_x,
+  output! uint10 vga_y
+) <autorun> {
+
+  uint10 H_FRT_PORCH = 16;
+  uint10 H_SYNCH     = 96;
+  uint10 H_BCK_PORCH = 48;
+  uint10 H_RES       = 640;
+
+  uint10 V_FRT_PORCH = 10;
+  uint10 V_SYNCH     = 2;
+  uint10 V_BCK_PORCH = 33;
+  uint10 V_RES       = 480;
+
+  uint10 HS_START = 0;
+  uint10 HS_END   = 0;
+  uint10 HA_START = 0;
+  uint10 H_END    = 0;
+
+  uint10 VS_START = 0;
+  uint10 VS_END   = 0;
+  uint10 VA_START = 0;
+  uint10 V_END    = 0;
+
+  uint10 xcount = 0;
+  uint10 ycount = 0;
+
+  HS_START := H_FRT_PORCH;
+  HS_END   := H_FRT_PORCH + H_SYNCH;
+  HA_START := H_FRT_PORCH + H_SYNCH + H_BCK_PORCH;
+  H_END    := H_FRT_PORCH + H_SYNCH + H_BCK_PORCH + H_RES;
+
+  VS_START := V_FRT_PORCH;
+  VS_END   := V_FRT_PORCH + V_SYNCH;
+  VA_START := V_FRT_PORCH + V_SYNCH + V_BCK_PORCH;
+  V_END    := V_FRT_PORCH + V_SYNCH + V_BCK_PORCH + V_RES;
+
+  vga_hs := ~((xcount >= HS_START && xcount < HS_END));
+  vga_vs := ~((ycount >= VS_START && ycount < VS_END));
+
+  active := (xcount >= HA_START && xcount < H_END)
+         && (ycount >= VA_START && ycount < V_END);
+  vblank := (ycount < VA_START);
+
+  xcount = 0;
+  ycount = 0;
+
+  while (1) {
+
+      vga_x = (active) ? xcount - HA_START : 10hffffffff;
+      vga_y = (vblank) ? 10hffffffff : ycount - VA_START;
+
+    if (xcount == H_END-1) {
+      xcount = 0;
+      if (ycount == V_END-1) {
+        ycount = 0;
+      } else {
+        ycount = ycount + 1;
+	  }
+    } else {
+      xcount = xcount + 1;
+	}
+  }
+
+}
+
+// -------------------------
+
+
+import('common/de10nano_clk_100_25.v')
+import('common/reset_conditioner.v')
+
+append('jamieilesUART/baud_rate_gen.v')
+append('jamieilesUART/receiver.v')
+append('jamieilesUART/transmitter.v')
+import('jamieilesUART/uart.v')
+
+algorithm multiplex_display(
+    input   uint10 pix_x,
+    input   uint10 pix_y,
+    input   uint1  pix_active,
+    input   uint1  pix_vblank,
+    output! uint6 pix_red,
+    output! uint6 pix_green,
+    output! uint6 pix_blue,
+
+    // GPU to SET pixels
+    input uint10 gpu_x,
+    input uint9 gpu_y,
+    input uint16 gpu_param0,
+    input uint16 gpu_param1,
+    input uint16 gpu_param2,
+    input uint16 gpu_param3,
+    input uint8 gpu_colour,
+    input uint2 gpu_write,
+    output uint8 gpu_active,
+    
+    // TPU to SET characters, background, foreground
+    input uint7 tpu_x,
+    input uint5 tpu_y,
+    input uint8 tpu_set,
+    input uint2 tpu_write,   // 0 = nothing, 1 = char, 2 = background, 3 = foreground
+    
+    // Terminal show/hide and cursor show/hide
+    input uint8 terminal_character,
+    input uint1 terminal_write, // 0 = noting, 1 = character
+    input uint1 showterminal,
+    input uint1 showcursor,
+    input uint1 timer1hz,
+    output uint3 terminal_active
+) <autorun> {
+
+    // Character ROM 8x16
+    uint8 characterGenerator8x16[] = {
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h7e, 8h81, 8ha5, 8h81, 8h81, 8hbd, 8h99, 8h81, 8h81, 8h7e, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h7e, 8hff, 8hdb, 8hff, 8hff, 8hc3, 8he7, 8hff, 8hff, 8h7e, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h6c, 8hfe, 8hfe, 8hfe, 8hfe, 8h7c, 8h38, 8h10, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h10, 8h38, 8h7c, 8hfe, 8h7c, 8h38, 8h10, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h18, 8h3c, 8h3c, 8he7, 8he7, 8he7, 8h18, 8h18, 8h3c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h18, 8h3c, 8h7e, 8hff, 8hff, 8h7e, 8h18, 8h18, 8h3c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h18, 8h3c, 8h3c, 8h18, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8he7, 8hc3, 8hc3, 8he7, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h3c, 8h66, 8h42, 8h42, 8h66, 8h3c, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8hff, 8hff, 8hff, 8hff, 8hff, 8hc3, 8h99, 8hbd, 8hbd, 8h99, 8hc3, 8hff, 8hff, 8hff, 8hff, 8hff,
+    8h00, 8h00, 8h1e, 8h0e, 8h1a, 8h32, 8h78, 8hcc, 8hcc, 8hcc, 8hcc, 8h78, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h3c, 8h66, 8h66, 8h66, 8h66, 8h3c, 8h18, 8h7e, 8h18, 8h18, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h3f, 8h33, 8h3f, 8h30, 8h30, 8h30, 8h30, 8h70, 8hf0, 8he0, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h7f, 8h63, 8h7f, 8h63, 8h63, 8h63, 8h63, 8h67, 8he7, 8he6, 8hc0, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h18, 8h18, 8hdb, 8h3c, 8he7, 8h3c, 8hdb, 8h18, 8h18, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h80, 8hc0, 8he0, 8hf0, 8hf8, 8hfe, 8hf8, 8hf0, 8he0, 8hc0, 8h80, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h02, 8h06, 8h0e, 8h1e, 8h3e, 8hfe, 8h3e, 8h1e, 8h0e, 8h06, 8h02, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h18, 8h3c, 8h7e, 8h18, 8h18, 8h18, 8h7e, 8h3c, 8h18, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h66, 8h66, 8h66, 8h66, 8h66, 8h66, 8h66, 8h00, 8h66, 8h66, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h7f, 8hdb, 8hdb, 8hdb, 8h7b, 8h1b, 8h1b, 8h1b, 8h1b, 8h1b, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h7c, 8hc6, 8h60, 8h38, 8h6c, 8hc6, 8hc6, 8h6c, 8h38, 8h0c, 8hc6, 8h7c, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8hfe, 8hfe, 8hfe, 8hfe, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h18, 8h3c, 8h7e, 8h18, 8h18, 8h18, 8h7e, 8h3c, 8h18, 8h7e, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h18, 8h3c, 8h7e, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h7e, 8h3c, 8h18, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h18, 8h0c, 8hfe, 8h0c, 8h18, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h30, 8h60, 8hfe, 8h60, 8h30, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8hc0, 8hc0, 8hc0, 8hfe, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h28, 8h6c, 8hfe, 8h6c, 8h28, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h10, 8h38, 8h38, 8h7c, 8h7c, 8hfe, 8hfe, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8hfe, 8hfe, 8h7c, 8h7c, 8h38, 8h38, 8h10, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h18, 8h3c, 8h3c, 8h3c, 8h18, 8h18, 8h18, 8h00, 8h18, 8h18, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h66, 8h66, 8h66, 8h24, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h6c, 8h6c, 8hfe, 8h6c, 8h6c, 8h6c, 8hfe, 8h6c, 8h6c, 8h00, 8h00, 8h00, 8h00,
+    8h18, 8h18, 8h7c, 8hc6, 8hc2, 8hc0, 8h7c, 8h06, 8h06, 8h86, 8hc6, 8h7c, 8h18, 8h18, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8hc2, 8hc6, 8h0c, 8h18, 8h30, 8h60, 8hc6, 8h86, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h38, 8h6c, 8h6c, 8h38, 8h76, 8hdc, 8hcc, 8hcc, 8hcc, 8h76, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h30, 8h30, 8h30, 8h60, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h0c, 8h18, 8h30, 8h30, 8h30, 8h30, 8h30, 8h30, 8h18, 8h0c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h30, 8h18, 8h0c, 8h0c, 8h0c, 8h0c, 8h0c, 8h0c, 8h18, 8h30, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h66, 8h3c, 8hff, 8h3c, 8h66, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h18, 8h18, 8h7e, 8h18, 8h18, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h18, 8h18, 8h18, 8h30, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8hfe, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h18, 8h18, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h02, 8h06, 8h0c, 8h18, 8h30, 8h60, 8hc0, 8h80, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h38, 8h6c, 8hc6, 8hc6, 8hd6, 8hd6, 8hc6, 8hc6, 8h6c, 8h38, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h18, 8h38, 8h78, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h7e, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h7c, 8hc6, 8h06, 8h0c, 8h18, 8h30, 8h60, 8hc0, 8hc6, 8hfe, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h7c, 8hc6, 8h06, 8h06, 8h3c, 8h06, 8h06, 8h06, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h0c, 8h1c, 8h3c, 8h6c, 8hcc, 8hfe, 8h0c, 8h0c, 8h0c, 8h1e, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hfe, 8hc0, 8hc0, 8hc0, 8hfc, 8h06, 8h06, 8h06, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h38, 8h60, 8hc0, 8hc0, 8hfc, 8hc6, 8hc6, 8hc6, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hfe, 8hc6, 8h06, 8h06, 8h0c, 8h18, 8h30, 8h30, 8h30, 8h30, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h7c, 8hc6, 8hc6, 8hc6, 8h7c, 8hc6, 8hc6, 8hc6, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h7c, 8hc6, 8hc6, 8hc6, 8h7e, 8h06, 8h06, 8h06, 8h0c, 8h78, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h18, 8h18, 8h00, 8h00, 8h00, 8h18, 8h18, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h18, 8h18, 8h00, 8h00, 8h00, 8h18, 8h18, 8h30, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h06, 8h0c, 8h18, 8h30, 8h60, 8h30, 8h18, 8h0c, 8h06, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h7e, 8h00, 8h00, 8h7e, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h60, 8h30, 8h18, 8h0c, 8h06, 8h0c, 8h18, 8h30, 8h60, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h7c, 8hc6, 8hc6, 8h0c, 8h18, 8h18, 8h18, 8h00, 8h18, 8h18, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h7c, 8hc6, 8hc6, 8hde, 8hde, 8hde, 8hdc, 8hc0, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h10, 8h38, 8h6c, 8hc6, 8hc6, 8hfe, 8hc6, 8hc6, 8hc6, 8hc6, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hfc, 8h66, 8h66, 8h66, 8h7c, 8h66, 8h66, 8h66, 8h66, 8hfc, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h3c, 8h66, 8hc2, 8hc0, 8hc0, 8hc0, 8hc0, 8hc2, 8h66, 8h3c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hf8, 8h6c, 8h66, 8h66, 8h66, 8h66, 8h66, 8h66, 8h6c, 8hf8, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hfe, 8h66, 8h62, 8h68, 8h78, 8h68, 8h60, 8h62, 8h66, 8hfe, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hfe, 8h66, 8h62, 8h68, 8h78, 8h68, 8h60, 8h60, 8h60, 8hf0, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h3c, 8h66, 8hc2, 8hc0, 8hc0, 8hde, 8hc6, 8hc6, 8h66, 8h3a, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hc6, 8hc6, 8hc6, 8hc6, 8hfe, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h3c, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h3c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h1e, 8h0c, 8h0c, 8h0c, 8h0c, 8h0c, 8hcc, 8hcc, 8hcc, 8h78, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8he6, 8h66, 8h66, 8h6c, 8h78, 8h78, 8h6c, 8h66, 8h66, 8he6, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hf0, 8h60, 8h60, 8h60, 8h60, 8h60, 8h60, 8h62, 8h66, 8hfe, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hc6, 8hee, 8hfe, 8hfe, 8hd6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hc6, 8he6, 8hf6, 8hfe, 8hde, 8hce, 8hc6, 8hc6, 8hc6, 8hc6, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h7c, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hfc, 8h66, 8h66, 8h66, 8h7c, 8h60, 8h60, 8h60, 8h60, 8hf0, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h7c, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hd6, 8hde, 8h7c, 8h0c, 8h0e, 8h00, 8h00,
+    8h00, 8h00, 8hfc, 8h66, 8h66, 8h66, 8h7c, 8h6c, 8h66, 8h66, 8h66, 8he6, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h7c, 8hc6, 8hc6, 8h60, 8h38, 8h0c, 8h06, 8hc6, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h7e, 8h7e, 8h5a, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h3c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8h6c, 8h38, 8h10, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hc6, 8hc6, 8hc6, 8hc6, 8hd6, 8hd6, 8hd6, 8hfe, 8hee, 8h6c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hc6, 8hc6, 8h6c, 8h7c, 8h38, 8h38, 8h7c, 8h6c, 8hc6, 8hc6, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h66, 8h66, 8h66, 8h66, 8h3c, 8h18, 8h18, 8h18, 8h18, 8h3c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hfe, 8hc6, 8h86, 8h0c, 8h18, 8h30, 8h60, 8hc2, 8hc6, 8hfe, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h3c, 8h30, 8h30, 8h30, 8h30, 8h30, 8h30, 8h30, 8h30, 8h3c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h80, 8hc0, 8he0, 8h70, 8h38, 8h1c, 8h0e, 8h06, 8h02, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h3c, 8h0c, 8h0c, 8h0c, 8h0c, 8h0c, 8h0c, 8h0c, 8h0c, 8h3c, 8h00, 8h00, 8h00, 8h00,
+    8h10, 8h38, 8h6c, 8hc6, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8hff, 8h00, 8h00,
+    8h30, 8h30, 8h18, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h78, 8h0c, 8h7c, 8hcc, 8hcc, 8hcc, 8h76, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8he0, 8h60, 8h60, 8h78, 8h6c, 8h66, 8h66, 8h66, 8h66, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h7c, 8hc6, 8hc0, 8hc0, 8hc0, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h1c, 8h0c, 8h0c, 8h3c, 8h6c, 8hcc, 8hcc, 8hcc, 8hcc, 8h76, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h7c, 8hc6, 8hfe, 8hc0, 8hc0, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h38, 8h6c, 8h64, 8h60, 8hf0, 8h60, 8h60, 8h60, 8h60, 8hf0, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h76, 8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8h7c, 8h0c, 8hcc, 8h78, 8h00,
+    8h00, 8h00, 8he0, 8h60, 8h60, 8h6c, 8h76, 8h66, 8h66, 8h66, 8h66, 8he6, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h18, 8h18, 8h00, 8h38, 8h18, 8h18, 8h18, 8h18, 8h18, 8h3c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h06, 8h06, 8h00, 8h0e, 8h06, 8h06, 8h06, 8h06, 8h06, 8h06, 8h66, 8h66, 8h3c, 8h00,
+    8h00, 8h00, 8he0, 8h60, 8h60, 8h66, 8h6c, 8h78, 8h78, 8h6c, 8h66, 8he6, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h38, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h3c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8hec, 8hfe, 8hd6, 8hd6, 8hd6, 8hd6, 8hc6, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8hdc, 8h66, 8h66, 8h66, 8h66, 8h66, 8h66, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h7c, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8hdc, 8h66, 8h66, 8h66, 8h66, 8h66, 8h7c, 8h60, 8h60, 8hf0, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h76, 8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8h7c, 8h0c, 8h0c, 8h1e, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8hdc, 8h76, 8h66, 8h60, 8h60, 8h60, 8hf0, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h7c, 8hc6, 8h60, 8h38, 8h0c, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h10, 8h30, 8h30, 8hfc, 8h30, 8h30, 8h30, 8h30, 8h36, 8h1c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8h76, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h66, 8h66, 8h66, 8h66, 8h66, 8h3c, 8h18, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8hc6, 8hc6, 8hd6, 8hd6, 8hd6, 8hfe, 8h6c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8hc6, 8h6c, 8h38, 8h38, 8h38, 8h6c, 8hc6, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8h7e, 8h06, 8h0c, 8hf8, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8hfe, 8hcc, 8h18, 8h30, 8h60, 8hc6, 8hfe, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h0e, 8h18, 8h18, 8h18, 8h70, 8h18, 8h18, 8h18, 8h18, 8h0e, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h18, 8h18, 8h18, 8h18, 8h00, 8h18, 8h18, 8h18, 8h18, 8h18, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h70, 8h18, 8h18, 8h18, 8h0e, 8h18, 8h18, 8h18, 8h18, 8h70, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h76, 8hdc, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h10, 8h38, 8h6c, 8hc6, 8hc6, 8hc6, 8hfe, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h3c, 8h66, 8hc2, 8hc0, 8hc0, 8hc0, 8hc2, 8h66, 8h3c, 8h0c, 8h06, 8h7c, 8h00, 8h00,
+    8h00, 8h00, 8hcc, 8h00, 8h00, 8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8h76, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h0c, 8h18, 8h30, 8h00, 8h7c, 8hc6, 8hfe, 8hc0, 8hc0, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h10, 8h38, 8h6c, 8h00, 8h78, 8h0c, 8h7c, 8hcc, 8hcc, 8hcc, 8h76, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hcc, 8h00, 8h00, 8h78, 8h0c, 8h7c, 8hcc, 8hcc, 8hcc, 8h76, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h60, 8h30, 8h18, 8h00, 8h78, 8h0c, 8h7c, 8hcc, 8hcc, 8hcc, 8h76, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h38, 8h6c, 8h38, 8h00, 8h78, 8h0c, 8h7c, 8hcc, 8hcc, 8hcc, 8h76, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h3c, 8h66, 8h60, 8h60, 8h66, 8h3c, 8h0c, 8h06, 8h3c, 8h00, 8h00, 8h00,
+    8h00, 8h10, 8h38, 8h6c, 8h00, 8h7c, 8hc6, 8hfe, 8hc0, 8hc0, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hc6, 8h00, 8h00, 8h7c, 8hc6, 8hfe, 8hc0, 8hc0, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h60, 8h30, 8h18, 8h00, 8h7c, 8hc6, 8hfe, 8hc0, 8hc0, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h66, 8h00, 8h00, 8h38, 8h18, 8h18, 8h18, 8h18, 8h18, 8h3c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h18, 8h3c, 8h66, 8h00, 8h38, 8h18, 8h18, 8h18, 8h18, 8h18, 8h3c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h60, 8h30, 8h18, 8h00, 8h38, 8h18, 8h18, 8h18, 8h18, 8h18, 8h3c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8hc6, 8h00, 8h10, 8h38, 8h6c, 8hc6, 8hc6, 8hfe, 8hc6, 8hc6, 8hc6, 8h00, 8h00, 8h00, 8h00,
+    8h38, 8h6c, 8h38, 8h00, 8h38, 8h6c, 8hc6, 8hc6, 8hfe, 8hc6, 8hc6, 8hc6, 8h00, 8h00, 8h00, 8h00,
+    8h18, 8h30, 8h60, 8h00, 8hfe, 8h66, 8h60, 8h7c, 8h60, 8h60, 8h66, 8hfe, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8hcc, 8h76, 8h36, 8h7e, 8hd8, 8hd8, 8h6e, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h3e, 8h6c, 8hcc, 8hcc, 8hfe, 8hcc, 8hcc, 8hcc, 8hcc, 8hce, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h10, 8h38, 8h6c, 8h00, 8h7c, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hc6, 8h00, 8h00, 8h7c, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h60, 8h30, 8h18, 8h00, 8h7c, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h30, 8h78, 8hcc, 8h00, 8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8h76, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h60, 8h30, 8h18, 8h00, 8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8h76, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hc6, 8h00, 8h00, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8h7e, 8h06, 8h0c, 8h78, 8h00,
+    8h00, 8hc6, 8h00, 8h7c, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8hc6, 8h00, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h18, 8h18, 8h3c, 8h66, 8h60, 8h60, 8h60, 8h66, 8h3c, 8h18, 8h18, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h38, 8h6c, 8h64, 8h60, 8hf0, 8h60, 8h60, 8h60, 8h60, 8he6, 8hfc, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h66, 8h66, 8h3c, 8h18, 8h7e, 8h18, 8h7e, 8h18, 8h18, 8h18, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8hf8, 8hcc, 8hcc, 8hf8, 8hc4, 8hcc, 8hde, 8hcc, 8hcc, 8hcc, 8hc6, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h0e, 8h1b, 8h18, 8h18, 8h18, 8h7e, 8h18, 8h18, 8h18, 8h18, 8h18, 8hd8, 8h70, 8h00, 8h00,
+    8h00, 8h18, 8h30, 8h60, 8h00, 8h78, 8h0c, 8h7c, 8hcc, 8hcc, 8hcc, 8h76, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h0c, 8h18, 8h30, 8h00, 8h38, 8h18, 8h18, 8h18, 8h18, 8h18, 8h3c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h18, 8h30, 8h60, 8h00, 8h7c, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h18, 8h30, 8h60, 8h00, 8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8h76, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h76, 8hdc, 8h00, 8hdc, 8h66, 8h66, 8h66, 8h66, 8h66, 8h66, 8h00, 8h00, 8h00, 8h00,
+    8h76, 8hdc, 8h00, 8hc6, 8he6, 8hf6, 8hfe, 8hde, 8hce, 8hc6, 8hc6, 8hc6, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h3c, 8h6c, 8h6c, 8h3e, 8h00, 8h7e, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h38, 8h6c, 8h6c, 8h38, 8h00, 8h7c, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h30, 8h30, 8h00, 8h30, 8h30, 8h60, 8hc0, 8hc6, 8hc6, 8h7c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8hfe, 8hc0, 8hc0, 8hc0, 8hc0, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8hfe, 8h06, 8h06, 8h06, 8h06, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8hc0, 8hc0, 8hc2, 8hc6, 8hcc, 8h18, 8h30, 8h60, 8hdc, 8h86, 8h0c, 8h18, 8h3e, 8h00, 8h00,
+    8h00, 8hc0, 8hc0, 8hc2, 8hc6, 8hcc, 8h18, 8h30, 8h66, 8hce, 8h9e, 8h3e, 8h06, 8h06, 8h00, 8h00,
+    8h00, 8h00, 8h18, 8h18, 8h00, 8h18, 8h18, 8h18, 8h3c, 8h3c, 8h3c, 8h18, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h36, 8h6c, 8hd8, 8h6c, 8h36, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8hd8, 8h6c, 8h36, 8h6c, 8hd8, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h11, 8h44, 8h11, 8h44, 8h11, 8h44, 8h11, 8h44, 8h11, 8h44, 8h11, 8h44, 8h11, 8h44, 8h11, 8h44,
+    8h55, 8haa, 8h55, 8haa, 8h55, 8haa, 8h55, 8haa, 8h55, 8haa, 8h55, 8haa, 8h55, 8haa, 8h55, 8haa,
+    8hdd, 8h77, 8hdd, 8h77, 8hdd, 8h77, 8hdd, 8h77, 8hdd, 8h77, 8hdd, 8h77, 8hdd, 8h77, 8hdd, 8h77,
+    8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8hf8, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8h18, 8h18, 8h18, 8hf8, 8h18, 8hf8, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18,
+    8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8hf6, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8hfe, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8hf8, 8h18, 8hf8, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18,
+    8h36, 8h36, 8h36, 8h36, 8h36, 8hf6, 8h06, 8hf6, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8hfe, 8h06, 8hf6, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8h36, 8h36, 8h36, 8hf6, 8h06, 8hfe, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8hfe, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h18, 8h18, 8h18, 8h18, 8h18, 8hf8, 8h18, 8hf8, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8hf8, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h1f, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8hff, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8hff, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h1f, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8hff, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8hff, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8h18, 8h18, 8h18, 8h1f, 8h18, 8h1f, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18,
+    8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h37, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8h36, 8h36, 8h36, 8h37, 8h30, 8h3f, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h3f, 8h30, 8h37, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8h36, 8h36, 8h36, 8hf7, 8h00, 8hff, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8hff, 8h00, 8hf7, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8h36, 8h36, 8h36, 8h37, 8h30, 8h37, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8hff, 8h00, 8hff, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h36, 8h36, 8h36, 8h36, 8h36, 8hf7, 8h00, 8hf7, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36,
+    8h18, 8h18, 8h18, 8h18, 8h18, 8hff, 8h00, 8hff, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8hff, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8hff, 8h00, 8hff, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8hff, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h3f, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h18, 8h18, 8h18, 8h18, 8h18, 8h1f, 8h18, 8h1f, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h1f, 8h18, 8h1f, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h3f, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8hff, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36,
+    8h18, 8h18, 8h18, 8h18, 8h18, 8hff, 8h18, 8hff, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8hf8, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h1f, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18,
+    8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff,
+    8hf0, 8hf0, 8hf0, 8hf0, 8hf0, 8hf0, 8hf0, 8hf0, 8hf0, 8hf0, 8hf0, 8hf0, 8hf0, 8hf0, 8hf0, 8hf0,
+    8h0f, 8h0f, 8h0f, 8h0f, 8h0f, 8h0f, 8h0f, 8h0f, 8h0f, 8h0f, 8h0f, 8h0f, 8h0f, 8h0f, 8h0f, 8h0f,
+    8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h76, 8hdc, 8hd8, 8hd8, 8hd8, 8hdc, 8h76, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h78, 8hcc, 8hcc, 8hcc, 8hd8, 8hcc, 8hc6, 8hc6, 8hc6, 8hcc, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hfe, 8hc6, 8hc6, 8hc0, 8hc0, 8hc0, 8hc0, 8hc0, 8hc0, 8hc0, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8hfe, 8h6c, 8h6c, 8h6c, 8h6c, 8h6c, 8h6c, 8h6c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8hfe, 8hc6, 8h60, 8h30, 8h18, 8h30, 8h60, 8hc6, 8hfe, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h7e, 8hd8, 8hd8, 8hd8, 8hd8, 8hd8, 8h70, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h66, 8h66, 8h66, 8h66, 8h66, 8h7c, 8h60, 8h60, 8hc0, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h76, 8hdc, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h7e, 8h18, 8h3c, 8h66, 8h66, 8h66, 8h3c, 8h18, 8h7e, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h38, 8h6c, 8hc6, 8hc6, 8hfe, 8hc6, 8hc6, 8h6c, 8h38, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h38, 8h6c, 8hc6, 8hc6, 8hc6, 8h6c, 8h6c, 8h6c, 8h6c, 8hee, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h1e, 8h30, 8h18, 8h0c, 8h3e, 8h66, 8h66, 8h66, 8h66, 8h3c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h7e, 8hdb, 8hdb, 8hdb, 8h7e, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h03, 8h06, 8h7e, 8hdb, 8hdb, 8hf3, 8h7e, 8h60, 8hc0, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h1c, 8h30, 8h60, 8h60, 8h7c, 8h60, 8h60, 8h60, 8h30, 8h1c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h7c, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8hc6, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8hfe, 8h00, 8h00, 8hfe, 8h00, 8h00, 8hfe, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h18, 8h18, 8h7e, 8h18, 8h18, 8h00, 8h00, 8hff, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h30, 8h18, 8h0c, 8h06, 8h0c, 8h18, 8h30, 8h00, 8h7e, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h0c, 8h18, 8h30, 8h60, 8h30, 8h18, 8h0c, 8h00, 8h7e, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h0e, 8h1b, 8h1b, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8hd8, 8hd8, 8hd8, 8h70, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h18, 8h18, 8h00, 8h7e, 8h00, 8h18, 8h18, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h76, 8hdc, 8h00, 8h76, 8hdc, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h38, 8h6c, 8h6c, 8h38, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h18, 8h18, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h18, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h0f, 8h0c, 8h0c, 8h0c, 8h0c, 8h0c, 8hec, 8h6c, 8h6c, 8h3c, 8h1c, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8hd8, 8h6c, 8h6c, 8h6c, 8h6c, 8h6c, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h70, 8hd8, 8h30, 8h60, 8hc8, 8hf8, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h7c, 8h7c, 8h7c, 8h7c, 8h7c, 8h7c, 8h7c, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00
+
+
+    };
+    
+    // Character ROM 8x8
+    uint8 characterGenerator8x8[] = {
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h7e, 8h81, 8ha5, 8h81, 8hbd, 8h99, 8h81, 8h7e,
+    8h7e, 8hff, 8hdb, 8hff, 8hc3, 8he7, 8hff, 8h7e,
+    8h6c, 8hfe, 8hfe, 8hfe, 8h7c, 8h38, 8h10, 8h00,
+    8h10, 8h38, 8h7c, 8hfe, 8h7c, 8h38, 8h10, 8h00,
+    8h38, 8h7c, 8h38, 8hfe, 8hfe, 8h7c, 8h38, 8h7c,
+    8h10, 8h10, 8h38, 8h7c, 8hfe, 8h7c, 8h38, 8h7c,
+    8h00, 8h00, 8h18, 8h3c, 8h3c, 8h18, 8h00, 8h00,
+    8hff, 8hff, 8he7, 8hc3, 8hc3, 8he7, 8hff, 8hff,
+    8h00, 8h3c, 8h66, 8h42, 8h42, 8h66, 8h3c, 8h00,
+    8hff, 8hc3, 8h99, 8hbd, 8hbd, 8h99, 8hc3, 8hff,
+    8h0f, 8h07, 8h0f, 8h7d, 8hcc, 8hcc, 8hcc, 8h78,
+    8h3c, 8h66, 8h66, 8h66, 8h3c, 8h18, 8h7e, 8h18,
+    8h3f, 8h33, 8h3f, 8h30, 8h30, 8h70, 8hf0, 8he0,
+    8h7f, 8h63, 8h7f, 8h63, 8h63, 8h67, 8he6, 8hc0,
+    8h99, 8h5a, 8h3c, 8he7, 8he7, 8h3c, 8h5a, 8h99,
+    8h80, 8he0, 8hf8, 8hfe, 8hf8, 8he0, 8h80, 8h00,
+    8h02, 8h0e, 8h3e, 8hfe, 8h3e, 8h0e, 8h02, 8h00,
+    8h18, 8h3c, 8h7e, 8h18, 8h18, 8h7e, 8h3c, 8h18,
+    8h66, 8h66, 8h66, 8h66, 8h66, 8h00, 8h66, 8h00,
+    8h7f, 8hdb, 8hdb, 8h7b, 8h1b, 8h1b, 8h1b, 8h00,
+    8h3e, 8h63, 8h38, 8h6c, 8h6c, 8h38, 8hcc, 8h78,
+    8h00, 8h00, 8h00, 8h00, 8h7e, 8h7e, 8h7e, 8h00,
+    8h18, 8h3c, 8h7e, 8h18, 8h7e, 8h3c, 8h18, 8hff,
+    8h18, 8h3c, 8h7e, 8h18, 8h18, 8h18, 8h18, 8h00,
+    8h18, 8h18, 8h18, 8h18, 8h7e, 8h3c, 8h18, 8h00,
+    8h00, 8h18, 8h0c, 8hfe, 8h0c, 8h18, 8h00, 8h00,
+    8h00, 8h30, 8h60, 8hfe, 8h60, 8h30, 8h00, 8h00,
+    8h00, 8h00, 8hc0, 8hc0, 8hc0, 8hfe, 8h00, 8h00,
+    8h00, 8h24, 8h66, 8hff, 8h66, 8h24, 8h00, 8h00,
+    8h00, 8h18, 8h3c, 8h7e, 8hff, 8hff, 8h00, 8h00,
+    8h00, 8hff, 8hff, 8h7e, 8h3c, 8h18, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h30, 8h78, 8h78, 8h30, 8h30, 8h00, 8h30, 8h00,
+    8h6c, 8h6c, 8h6c, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h6c, 8h6c, 8hfe, 8h6c, 8hfe, 8h6c, 8h6c, 8h00,
+    8h30, 8h7c, 8hc0, 8h78, 8h0c, 8hf8, 8h30, 8h00,
+    8h00, 8hc6, 8hcc, 8h18, 8h30, 8h66, 8hc6, 8h00,
+    8h38, 8h6c, 8h38, 8h76, 8hdc, 8hcc, 8h76, 8h00,
+    8h60, 8h60, 8hc0, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h18, 8h30, 8h60, 8h60, 8h60, 8h30, 8h18, 8h00,
+    8h60, 8h30, 8h18, 8h18, 8h18, 8h30, 8h60, 8h00,
+    8h00, 8h66, 8h3c, 8hff, 8h3c, 8h66, 8h00, 8h00,
+    8h00, 8h30, 8h30, 8hfc, 8h30, 8h30, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h30, 8h30, 8h60,
+    8h00, 8h00, 8h00, 8hfc, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h30, 8h30, 8h00,
+    8h06, 8h0c, 8h18, 8h30, 8h60, 8hc0, 8h80, 8h00,
+    8h7c, 8hc6, 8hce, 8hde, 8hf6, 8he6, 8h7c, 8h00,
+    8h30, 8h70, 8h30, 8h30, 8h30, 8h30, 8hfc, 8h00,
+    8h78, 8hcc, 8h0c, 8h38, 8h60, 8hcc, 8hfc, 8h00,
+    8h78, 8hcc, 8h0c, 8h38, 8h0c, 8hcc, 8h78, 8h00,
+    8h1c, 8h3c, 8h6c, 8hcc, 8hfe, 8h0c, 8h1e, 8h00,
+    8hfc, 8hc0, 8hf8, 8h0c, 8h0c, 8hcc, 8h78, 8h00,
+    8h38, 8h60, 8hc0, 8hf8, 8hcc, 8hcc, 8h78, 8h00,
+    8hfc, 8hcc, 8h0c, 8h18, 8h30, 8h30, 8h30, 8h00,
+    8h78, 8hcc, 8hcc, 8h78, 8hcc, 8hcc, 8h78, 8h00,
+    8h78, 8hcc, 8hcc, 8h7c, 8h0c, 8h18, 8h70, 8h00,
+    8h00, 8h30, 8h30, 8h00, 8h00, 8h30, 8h30, 8h00,
+    8h00, 8h30, 8h30, 8h00, 8h00, 8h30, 8h30, 8h60,
+    8h18, 8h30, 8h60, 8hc0, 8h60, 8h30, 8h18, 8h00,
+    8h00, 8h00, 8hfc, 8h00, 8h00, 8hfc, 8h00, 8h00,
+    8h60, 8h30, 8h18, 8h0c, 8h18, 8h30, 8h60, 8h00,
+    8h78, 8hcc, 8h0c, 8h18, 8h30, 8h00, 8h30, 8h00,
+    8h7c, 8hc6, 8hde, 8hde, 8hde, 8hc0, 8h78, 8h00,
+    8h30, 8h78, 8hcc, 8hcc, 8hfc, 8hcc, 8hcc, 8h00,
+    8hfc, 8h66, 8h66, 8h7c, 8h66, 8h66, 8hfc, 8h00,
+    8h3c, 8h66, 8hc0, 8hc0, 8hc0, 8h66, 8h3c, 8h00,
+    8hf8, 8h6c, 8h66, 8h66, 8h66, 8h6c, 8hf8, 8h00,
+    8hfe, 8h62, 8h68, 8h78, 8h68, 8h62, 8hfe, 8h00,
+    8hfe, 8h62, 8h68, 8h78, 8h68, 8h60, 8hf0, 8h00,
+    8h3c, 8h66, 8hc0, 8hc0, 8hce, 8h66, 8h3e, 8h00,
+    8hcc, 8hcc, 8hcc, 8hfc, 8hcc, 8hcc, 8hcc, 8h00,
+    8h78, 8h30, 8h30, 8h30, 8h30, 8h30, 8h78, 8h00,
+    8h1e, 8h0c, 8h0c, 8h0c, 8hcc, 8hcc, 8h78, 8h00,
+    8he6, 8h66, 8h6c, 8h78, 8h6c, 8h66, 8he6, 8h00,
+    8hf0, 8h60, 8h60, 8h60, 8h62, 8h66, 8hfe, 8h00,
+    8hc6, 8hee, 8hfe, 8hfe, 8hd6, 8hc6, 8hc6, 8h00,
+    8hc6, 8he6, 8hf6, 8hde, 8hce, 8hc6, 8hc6, 8h00,
+    8h38, 8h6c, 8hc6, 8hc6, 8hc6, 8h6c, 8h38, 8h00,
+    8hfc, 8h66, 8h66, 8h7c, 8h60, 8h60, 8hf0, 8h00,
+    8h78, 8hcc, 8hcc, 8hcc, 8hdc, 8h78, 8h1c, 8h00,
+    8hfc, 8h66, 8h66, 8h7c, 8h6c, 8h66, 8he6, 8h00,
+    8h78, 8hcc, 8he0, 8h70, 8h1c, 8hcc, 8h78, 8h00,
+    8hfc, 8hb4, 8h30, 8h30, 8h30, 8h30, 8h78, 8h00,
+    8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8hfc, 8h00,
+    8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8h78, 8h30, 8h00,
+    8hc6, 8hc6, 8hc6, 8hd6, 8hfe, 8hee, 8hc6, 8h00,
+    8hc6, 8hc6, 8h6c, 8h38, 8h38, 8h6c, 8hc6, 8h00,
+    8hcc, 8hcc, 8hcc, 8h78, 8h30, 8h30, 8h78, 8h00,
+    8hfe, 8hc6, 8h8c, 8h18, 8h32, 8h66, 8hfe, 8h00,
+    8h78, 8h60, 8h60, 8h60, 8h60, 8h60, 8h78, 8h00,
+    8hc0, 8h60, 8h30, 8h18, 8h0c, 8h06, 8h02, 8h00,
+    8h78, 8h18, 8h18, 8h18, 8h18, 8h18, 8h78, 8h00,
+    8h10, 8h38, 8h6c, 8hc6, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8hff,
+    8h30, 8h30, 8h18, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h78, 8h0c, 8h7c, 8hcc, 8h76, 8h00,
+    8he0, 8h60, 8h60, 8h7c, 8h66, 8h66, 8hdc, 8h00,
+    8h00, 8h00, 8h78, 8hcc, 8hc0, 8hcc, 8h78, 8h00,
+    8h1c, 8h0c, 8h0c, 8h7c, 8hcc, 8hcc, 8h76, 8h00,
+    8h00, 8h00, 8h78, 8hcc, 8hfc, 8hc0, 8h78, 8h00,
+    8h38, 8h6c, 8h60, 8hf0, 8h60, 8h60, 8hf0, 8h00,
+    8h00, 8h00, 8h76, 8hcc, 8hcc, 8h7c, 8h0c, 8hf8,
+    8he0, 8h60, 8h6c, 8h76, 8h66, 8h66, 8he6, 8h00,
+    8h30, 8h00, 8h70, 8h30, 8h30, 8h30, 8h78, 8h00,
+    8h0c, 8h00, 8h0c, 8h0c, 8h0c, 8hcc, 8hcc, 8h78,
+    8he0, 8h60, 8h66, 8h6c, 8h78, 8h6c, 8he6, 8h00,
+    8h70, 8h30, 8h30, 8h30, 8h30, 8h30, 8h78, 8h00,
+    8h00, 8h00, 8hcc, 8hfe, 8hfe, 8hd6, 8hc6, 8h00,
+    8h00, 8h00, 8hf8, 8hcc, 8hcc, 8hcc, 8hcc, 8h00,
+    8h00, 8h00, 8h78, 8hcc, 8hcc, 8hcc, 8h78, 8h00,
+    8h00, 8h00, 8hdc, 8h66, 8h66, 8h7c, 8h60, 8hf0,
+    8h00, 8h00, 8h76, 8hcc, 8hcc, 8h7c, 8h0c, 8h1e,
+    8h00, 8h00, 8hdc, 8h76, 8h66, 8h60, 8hf0, 8h00,
+    8h00, 8h00, 8h7c, 8hc0, 8h78, 8h0c, 8hf8, 8h00,
+    8h10, 8h30, 8h7c, 8h30, 8h30, 8h34, 8h18, 8h00,
+    8h00, 8h00, 8hcc, 8hcc, 8hcc, 8hcc, 8h76, 8h00,
+    8h00, 8h00, 8hcc, 8hcc, 8hcc, 8h78, 8h30, 8h00,
+    8h00, 8h00, 8hc6, 8hd6, 8hfe, 8hfe, 8h6c, 8h00,
+    8h00, 8h00, 8hc6, 8h6c, 8h38, 8h6c, 8hc6, 8h00,
+    8h00, 8h00, 8hcc, 8hcc, 8hcc, 8h7c, 8h0c, 8hf8,
+    8h00, 8h00, 8hfc, 8h98, 8h30, 8h64, 8hfc, 8h00,
+    8h1c, 8h30, 8h30, 8he0, 8h30, 8h30, 8h1c, 8h00,
+    8h18, 8h18, 8h18, 8h00, 8h18, 8h18, 8h18, 8h00,
+    8he0, 8h30, 8h30, 8h1c, 8h30, 8h30, 8he0, 8h00,
+    8h76, 8hdc, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h10, 8h38, 8h6c, 8hc6, 8hc6, 8hfe, 8h00,
+    8h78, 8hcc, 8hc0, 8hcc, 8h78, 8h18, 8h0c, 8h78,
+    8h00, 8hcc, 8h00, 8hcc, 8hcc, 8hcc, 8h7e, 8h00,
+    8h1c, 8h00, 8h78, 8hcc, 8hfc, 8hc0, 8h78, 8h00,
+    8h7e, 8hc3, 8h3c, 8h06, 8h3e, 8h66, 8h3f, 8h00,
+    8hcc, 8h00, 8h78, 8h0c, 8h7c, 8hcc, 8h7e, 8h00,
+    8he0, 8h00, 8h78, 8h0c, 8h7c, 8hcc, 8h7e, 8h00,
+    8h30, 8h30, 8h78, 8h0c, 8h7c, 8hcc, 8h7e, 8h00,
+    8h00, 8h00, 8h78, 8hc0, 8hc0, 8h78, 8h0c, 8h38,
+    8h7e, 8hc3, 8h3c, 8h66, 8h7e, 8h60, 8h3c, 8h00,
+    8hcc, 8h00, 8h78, 8hcc, 8hfc, 8hc0, 8h78, 8h00,
+    8he0, 8h00, 8h78, 8hcc, 8hfc, 8hc0, 8h78, 8h00,
+    8hcc, 8h00, 8h70, 8h30, 8h30, 8h30, 8h78, 8h00,
+    8h7c, 8hc6, 8h38, 8h18, 8h18, 8h18, 8h3c, 8h00,
+    8he0, 8h00, 8h70, 8h30, 8h30, 8h30, 8h78, 8h00,
+    8hc6, 8h38, 8h6c, 8hc6, 8hfe, 8hc6, 8hc6, 8h00,
+    8h30, 8h30, 8h00, 8h78, 8hcc, 8hfc, 8hcc, 8h00,
+    8h1c, 8h00, 8hfc, 8h60, 8h78, 8h60, 8hfc, 8h00,
+    8h00, 8h00, 8h7f, 8h0c, 8h7f, 8hcc, 8h7f, 8h00,
+    8h3e, 8h6c, 8hcc, 8hfe, 8hcc, 8hcc, 8hce, 8h00,
+    8h78, 8hcc, 8h00, 8h78, 8hcc, 8hcc, 8h78, 8h00,
+    8h00, 8hcc, 8h00, 8h78, 8hcc, 8hcc, 8h78, 8h00,
+    8h00, 8he0, 8h00, 8h78, 8hcc, 8hcc, 8h78, 8h00,
+    8h78, 8hcc, 8h00, 8hcc, 8hcc, 8hcc, 8h7e, 8h00,
+    8h00, 8he0, 8h00, 8hcc, 8hcc, 8hcc, 8h7e, 8h00,
+    8h00, 8hcc, 8h00, 8hcc, 8hcc, 8h7c, 8h0c, 8hf8,
+    8hc3, 8h18, 8h3c, 8h66, 8h66, 8h3c, 8h18, 8h00,
+    8hcc, 8h00, 8hcc, 8hcc, 8hcc, 8hcc, 8h78, 8h00,
+    8h18, 8h18, 8h7e, 8hc0, 8hc0, 8h7e, 8h18, 8h18,
+    8h38, 8h6c, 8h64, 8hf0, 8h60, 8he6, 8hfc, 8h00,
+    8hcc, 8hcc, 8h78, 8hfc, 8h30, 8hfc, 8h30, 8h30,
+    8hf8, 8hcc, 8hcc, 8hfa, 8hc6, 8hcf, 8hc6, 8hc7,
+    8h0e, 8h1b, 8h18, 8h3c, 8h18, 8h18, 8hd8, 8h70,
+    8h1c, 8h00, 8h78, 8h0c, 8h7c, 8hcc, 8h7e, 8h00,
+    8h38, 8h00, 8h70, 8h30, 8h30, 8h30, 8h78, 8h00,
+    8h00, 8h1c, 8h00, 8h78, 8hcc, 8hcc, 8h78, 8h00,
+    8h00, 8h1c, 8h00, 8hcc, 8hcc, 8hcc, 8h7e, 8h00,
+    8h00, 8hf8, 8h00, 8hf8, 8hcc, 8hcc, 8hcc, 8h00,
+    8hfc, 8h00, 8hcc, 8hec, 8hfc, 8hdc, 8hcc, 8h00,
+    8h3c, 8h6c, 8h6c, 8h3e, 8h00, 8h7e, 8h00, 8h00,
+    8h38, 8h6c, 8h6c, 8h38, 8h00, 8h7c, 8h00, 8h00,
+    8h30, 8h00, 8h30, 8h60, 8hc0, 8hcc, 8h78, 8h00,
+    8h00, 8h00, 8h00, 8hfc, 8hc0, 8hc0, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8hfc, 8h0c, 8h0c, 8h00, 8h00,
+    8hc3, 8hc6, 8hcc, 8hde, 8h33, 8h66, 8hcc, 8h0f,
+    8hc3, 8hc6, 8hcc, 8hdb, 8h37, 8h6f, 8hcf, 8h03,
+    8h18, 8h18, 8h00, 8h18, 8h18, 8h18, 8h18, 8h00,
+    8h00, 8h33, 8h66, 8hcc, 8h66, 8h33, 8h00, 8h00,
+    8h00, 8hcc, 8h66, 8h33, 8h66, 8hcc, 8h00, 8h00,
+    8h22, 8h88, 8h22, 8h88, 8h22, 8h88, 8h22, 8h88,
+    8h55, 8haa, 8h55, 8haa, 8h55, 8haa, 8h55, 8haa,
+    8hdb, 8h77, 8hdb, 8hee, 8hdb, 8h77, 8hdb, 8hee,
+    8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8h18, 8h18, 8hf8, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8hf8, 8h18, 8hf8, 8h18, 8h18, 8h18,
+    8h36, 8h36, 8h36, 8h36, 8hf6, 8h36, 8h36, 8h36,
+    8h00, 8h00, 8h00, 8h00, 8hfe, 8h36, 8h36, 8h36,
+    8h00, 8h00, 8hf8, 8h18, 8hf8, 8h18, 8h18, 8h18,
+    8h36, 8h36, 8hf6, 8h06, 8hf6, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36,
+    8h00, 8h00, 8hfe, 8h06, 8hf6, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8hf6, 8h06, 8hfe, 8h00, 8h00, 8h00,
+    8h36, 8h36, 8h36, 8h36, 8hfe, 8h00, 8h00, 8h00,
+    8h18, 8h18, 8hf8, 8h18, 8hf8, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8hf8, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8h18, 8h18, 8h1f, 8h00, 8h00, 8h00,
+    8h18, 8h18, 8h18, 8h18, 8hff, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8hff, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8h18, 8h18, 8h1f, 8h18, 8h18, 8h18,
+    8h00, 8h00, 8h00, 8h00, 8hff, 8h00, 8h00, 8h00,
+    8h18, 8h18, 8h18, 8h18, 8hff, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8h1f, 8h18, 8h1f, 8h18, 8h18, 8h18,
+    8h36, 8h36, 8h36, 8h36, 8h37, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8h37, 8h30, 8h3f, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h3f, 8h30, 8h37, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8hf7, 8h00, 8hff, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hff, 8h00, 8hf7, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8h37, 8h30, 8h37, 8h36, 8h36, 8h36,
+    8h00, 8h00, 8hff, 8h00, 8hff, 8h00, 8h00, 8h00,
+    8h36, 8h36, 8hf7, 8h00, 8hf7, 8h36, 8h36, 8h36,
+    8h18, 8h18, 8hff, 8h00, 8hff, 8h00, 8h00, 8h00,
+    8h36, 8h36, 8h36, 8h36, 8hff, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hff, 8h00, 8hff, 8h18, 8h18, 8h18,
+    8h00, 8h00, 8h00, 8h00, 8hff, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8h36, 8h36, 8h3f, 8h00, 8h00, 8h00,
+    8h18, 8h18, 8h1f, 8h18, 8h1f, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h1f, 8h18, 8h1f, 8h18, 8h18, 8h18,
+    8h00, 8h00, 8h00, 8h00, 8h3f, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8h36, 8h36, 8hff, 8h36, 8h36, 8h36,
+    8h18, 8h18, 8hff, 8h18, 8hff, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8h18, 8h18, 8hf8, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h1f, 8h18, 8h18, 8h18,
+    8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff,
+    8h00, 8h00, 8h00, 8h00, 8hff, 8hff, 8hff, 8hff,
+    8hf0, 8hf0, 8hf0, 8hf0, 8hf0, 8hf0, 8hf0, 8hf0,
+    8h0f, 8h0f, 8h0f, 8h0f, 8h0f, 8h0f, 8h0f, 8h0f,
+    8hff, 8hff, 8hff, 8hff, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h76, 8hdc, 8hc8, 8hdc, 8h76, 8h00,
+    8h00, 8h78, 8hcc, 8hf8, 8hcc, 8hf8, 8hc0, 8hc0,
+    8h00, 8hfc, 8hcc, 8hc0, 8hc0, 8hc0, 8hc0, 8h00,
+    8h00, 8hfe, 8h6c, 8h6c, 8h6c, 8h6c, 8h6c, 8h00,
+    8hfc, 8hcc, 8h60, 8h30, 8h60, 8hcc, 8hfc, 8h00,
+    8h00, 8h00, 8h7e, 8hd8, 8hd8, 8hd8, 8h70, 8h00,
+    8h00, 8h66, 8h66, 8h66, 8h66, 8h7c, 8h60, 8hc0,
+    8h00, 8h76, 8hdc, 8h18, 8h18, 8h18, 8h18, 8h00,
+    8hfc, 8h30, 8h78, 8hcc, 8hcc, 8h78, 8h30, 8hfc,
+    8h38, 8h6c, 8hc6, 8hfe, 8hc6, 8h6c, 8h38, 8h00,
+    8h38, 8h6c, 8hc6, 8hc6, 8h6c, 8h6c, 8hee, 8h00,
+    8h1c, 8h30, 8h18, 8h7c, 8hcc, 8hcc, 8h78, 8h00,
+    8h00, 8h00, 8h7e, 8hdb, 8hdb, 8h7e, 8h00, 8h00,
+    8h06, 8h0c, 8h7e, 8hdb, 8hdb, 8h7e, 8h60, 8hc0,
+    8h38, 8h60, 8hc0, 8hf8, 8hc0, 8h60, 8h38, 8h00,
+    8h78, 8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8h00,
+    8h00, 8hfc, 8h00, 8hfc, 8h00, 8hfc, 8h00, 8h00,
+    8h30, 8h30, 8hfc, 8h30, 8h30, 8h00, 8hfc, 8h00,
+    8h60, 8h30, 8h18, 8h30, 8h60, 8h00, 8hfc, 8h00,
+    8h18, 8h30, 8h60, 8h30, 8h18, 8h00, 8hfc, 8h00,
+    8h0e, 8h1b, 8h1b, 8h18, 8h18, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8h18, 8h18, 8h18, 8hd8, 8hd8, 8h70,
+    8h30, 8h30, 8h00, 8hfc, 8h00, 8h30, 8h30, 8h00,
+    8h00, 8h76, 8hdc, 8h00, 8h76, 8hdc, 8h00, 8h00,
+    8h38, 8h6c, 8h6c, 8h38, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h18, 8h18, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h18, 8h00, 8h00, 8h00,
+    8h0f, 8h0c, 8h0c, 8h0c, 8hec, 8h6c, 8h3c, 8h1c,
+    8h78, 8h6c, 8h6c, 8h6c, 8h6c, 8h00, 8h00, 8h00,
+    8h70, 8h18, 8h30, 8h60, 8h78, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h3c, 8h3c, 8h3c, 8h3c, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00
+
+    };
+
+    // 80 x 30 character buffer and foreground and background colours in { rrrgggbb }
+    // Setting character to 0 allows the bitmap to show through
+    dualport_bram uint8 character[2400] = uninitialized;
+    dualport_bram uint8 foreground[2400] = uninitialized;
+    dualport_bram uint8 background[2400] = uninitialized;
+   
+
+    // Character position on the screen x 0-79, y 0-29 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
+    uint8 xcharacterpos := (pix_x) >> 3;
+    uint12 ycharacterpos := ((pix_y) >> 4) * 80; // 16 pixel high characters
+    
+    // Derive the x and y coordinate within the current 8x16 character block x 0-7, y 0-15
+    uint8 xincharacter := (pix_x) & 7;
+    uint8 yincharacter := (pix_y) & 15;
+
+    // Derive the actual pixel in the current character
+    uint1 characterpixel := ((characterGenerator8x16[ character.rdata0 * 16 + yincharacter ] << xincharacter) >> 7) & 1;
+    
+    // 80 x 4 character buffer for the input/output terminal
+    dualport_bram uint8 terminal[640] = uninitialized;
+
+    uint8 terminal_x = 0;
+    uint8 terminal_y = 7;
+
+    // Character position on the terminal x 0-79, y 0-3 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
+    uint8 xterminalpos := (pix_x) >> 3;
+    uint12 yterminalpos := ((pix_y - 416) >> 3) * 80; // 8 pixel high characters
+
+    uint1 is_cursor := ( xterminalpos == terminal_x ) & ( ( ( pix_y - 416) >> 3 ) == terminal_y );
+    
+    // Derive the x and y coordinate within the current 8x8 terminal character block x 0-7, y 0-7
+    uint8 xinterminal := (pix_x) & 7;
+    uint8 yinterminal := (pix_y) & 7;
+
+    // Derive the actual pixel in the current terminal
+    uint1 terminalpixel := ((characterGenerator8x8[ terminal.rdata0 * 8 + yinterminal ] << xinterminal) >> 7) & 1;
+
+    // Terminal active (scroll) flag
+    uint10 terminal_scroll = 0;
+    uint10 terminal_scroll_next = 0;
+    
+    // 640 x 480 { rrrgggbb } colour bitmap
+    dualport_bram uint8 bitmap[ 307200 ] = uninitialized;
+
+    // Expansion map for { rrr } to { rrrrrr }, { ggg } to { gggggg }, { bb } to { bbbbbb }
+    uint6 colourexpand3to6[8] = {  0, 9, 18, 27, 36, 45, 54, 63 };
+    uint6 colourexpand2to6[4] = {  0, 21, 42, 63 };
+    
+    // GPU work variable storage
+    uint16 gpu_active_x = 0;
+    uint16 gpu_active_y = 0;
+    uint8 gpu_active_colour = 0;
+    int16 gpu_temp0 = 0;
+    int16 gpu_temp1 = 0;
+    int16 gpu_temp2 = 0;
+    int16 gpu_temp3 = 0;
+    int16 gpu_temp4 = 0;
+    int16 gpu_temp5 = 0;
+    int16 gpu_temp6 = 0;
+    int16 gpu_temp7 = 0;
+    
+    // RGB is { 0,  0, 0 } by default
+    pix_red   := 0;
+    pix_green := 0;
+    pix_blue  := 0;
+    
+    // Setup the reading of the terminal memory
+    terminal.addr0 := xterminalpos + yterminalpos;
+    terminal.wenable0 := 0;
+    
+    // Set up reading of character and attribute memory
+    // character.rdata0 is the character, foreground.rdata0 and background.rdata0 are the attribute being rendered
+    character.addr0 := xcharacterpos + ycharacterpos;
+    character.wenable0 := 0;
+    foreground.addr0 := xcharacterpos + ycharacterpos;
+    foreground.wenable0 := 0;
+    background.addr0 := xcharacterpos + ycharacterpos;
+    background.wenable0 := 0;
+
+    // Setup the address in the bitmap for the pixel being rendered
+    bitmap.addr0 := pix_x  + pix_y * 640;
+    bitmap.wenable0 := 0;
+    
+    // Bitmap write access for the GPU
+    bitmap.wenable1 := 0;
+
+    // BRAM write access for the TPU 
+    character.addr1 := tpu_x + tpu_y * 80;
+    character.wenable1 := 0;
+    background.addr1 := tpu_x + tpu_y * 80;
+    background.wenable1 := 0;
+    foreground.addr1 := tpu_x + tpu_y * 80;
+    foreground.wenable1 := 0;
+
+    // Terminal flags
+    terminal.wenable1 := 0;
+    terminal_active = 0;
+    
+    // GPU active flag
+    gpu_active = 0;
+      
+    while (1) {
+
+        // TPU to set characters according to TPU inputs
+        switch( tpu_write ) {
+            case 1: {
+                character.wdata1 = tpu_set;
+                character.wenable1 = 1;
+            }
+            case 2: {
+                background.wdata1 = tpu_set;
+                background.wenable1 = 1;
+            }
+            case 3: {
+                foreground.wdata1 = tpu_set;
+                foreground.wenable1 = 1;
+            }
+            default: {}
+        }
+
+        // Terminal
+        if( terminal_active == 0 ) {
+            switch( terminal_write ) {
+                case 1: {
+                    // Display character
+                    switch( terminal_character ) {
+                        case 8: {
+                            // BACKSPACE, move back one character
+                            if( terminal_x > 0 ) {
+                                terminal_x = terminal_x - 1;
+                                terminal.addr1 = terminal_x - 1 + terminal_y * 80;
+                                terminal.wdata1 = 0;
+                                terminal.wenable1 = 1;
+                            }
+                        }
+                        case 10: {
+                            // LINE FEED, scroll
+                            terminal_scroll = 0;
+                            terminal_active = 1;
+                        }
+                        case 13: {
+                            // CARRIAGE RETURN
+                            terminal_x = 0;
+                        }
+                        default: {
+                            // Display character
+                            terminal.addr1 = terminal_x + terminal_y * 80;
+                            terminal.wdata1 = terminal_character;
+                            terminal.wenable1 = 1;
+                            if( terminal_x == 79 ) {
+                                terminal_x = 0;
+                                terminal_scroll = 0;
+                                terminal_active = 1;
+                            } else {
+                                terminal_x = terminal_x + 1;
+                            }
+                        }
+                    }
+                }
+                default: {}
+            }
+        } else {
+            // Terminal actions
+            switch( terminal_active ) {
+                case 1: {
+                    // SCROLL
+                    if( terminal_scroll == 560 ) {
+                        // Finished Scroll, Move to blank
+                        terminal_active = 4;
+                    } else {
+                        // Read the next character down
+                        terminal.addr1 = terminal_scroll + 80;
+                        terminal_active = 2;
+                    }
+                }
+                case 2: {
+                    // Retrieve the character to move up
+                    terminal_scroll_next = terminal.rdata1;
+                    terminal_active = 3;
+                }
+                case 3: {
+                    // Write the character one line up and move onto the next character
+                    terminal.addr1 = terminal_scroll;
+                    terminal.wdata1 = terminal_scroll_next;
+                    terminal.wenable1 = 1;
+                    terminal_scroll = terminal_scroll + 1;
+                    terminal_active = 1;
+                }
+                case 4: {
+                    // Blank out the last line
+                    terminal.addr1 = terminal_scroll;
+                    terminal.wdata1 = 0;
+                    terminal.wenable1 = 1;
+                    if( terminal_scroll == 640 ) {
+                        // Finish Blank
+                        terminal_active = 0;
+                    } else {
+                        terminal_scroll = terminal_scroll + 1;
+                    }
+                }
+                default: {}
+            }
+        }
+        
+        // Perform GPU Operation
+        // GPU functions 1 pixel per cycle, even during hblank and vblank
+        switch( gpu_active ) {
+            case 0: {
+                // Setup GPU operation
+                switch( gpu_write ) {
+                    case 1: {
+                        // Setup writing a pixel colour to x,y
+                        gpu_active_colour = gpu_colour;
+                        gpu_active_x = gpu_x;
+                        gpu_active_y = gpu_y;
+                        gpu_active = 1;
+                    }
+                    case 2: {
+                        // Setup drawing a rectangle from x,y to param0, param1 in colour
+                        // Ensures that works left to right, top to bottom
+                        gpu_active_colour = gpu_colour;
+                        gpu_active_x = ( gpu_x < gpu_param0 ) ? gpu_x : gpu_param0;                 // left
+                        gpu_active_y = ( gpu_y < gpu_param1 ) ? gpu_y : gpu_param1;                 // top
+                        gpu_temp0 = ( gpu_x < gpu_param0 ) ? gpu_x : gpu_param0;                    // left - for next line
+                        gpu_temp2 = ( gpu_x < gpu_param0 ) ? gpu_param0 : gpu_x;                    // right - at end of line
+                        gpu_temp3 = ( gpu_y < gpu_param1 ) ? gpu_param1 : gpu_y;                    // bottom - at end of rectangle
+                        gpu_active = 2; 
+                    }
+                    case 3: {
+                        // Setup drawing a line from x,y to param0, param1 in colour
+                        // Ensure that works from left to right
+                        gpu_active_colour = gpu_colour;
+                        gpu_active_x = gpu_x;                                                   // left
+                        gpu_active_y = gpu_y;                                                   // top
+                        gpu_temp0 = gpu_param0;                                                 // right
+                        gpu_temp1 = gpu_param1;
+                        gpu_temp2 = gpu_param0 - gpu_x;                                         // Bresenham delta x
+                        gpu_temp3 = gpu_param1 - gpu_y;                                         // Bresenham delta y
+                        if( (gpu_param0 - gpu_x) >= (gpu_param1 - gpu_y) ) {
+                            gpu_temp4 = 2 * ( ( gpu_param1 - gpu_y ) - ( gpu_param0 - gpu_x ) );   // Bresenham error
+                            gpu_active = 3;
+                        } else {
+                            gpu_temp4 = 2 * ( ( gpu_param0 - gpu_x ) - ( gpu_param1 - gpu_y ) );   // Bresenham error
+                            gpu_active = 4;
+                        }
+                     }
+                    default: {}
+                }
+            }
+            
+            // Write colour to x,y
+            case 1: {
+                bitmap.addr1 = gpu_active_x + gpu_active_y * 640;
+                bitmap.wdata1 = gpu_active_colour;
+                bitmap.wenable1 = 1;
+                gpu_active = 0;
+            }
+            case 2: {
+                // Rectangle of colour at x,y top left to param0, param1 bottom right
+                bitmap.addr1 = gpu_active_x + gpu_active_y * 640;
+                bitmap.wdata1 = gpu_active_colour;
+                bitmap.wenable1 = 1;
+                
+                if( gpu_active_x == gpu_temp2 ) {
+                    // End of line
+                    if( gpu_active_y == gpu_temp3 ) {
+                        // Reached bottom right
+                        gpu_active = 0;
+                    } else {
+                        // Next line
+                        gpu_active_x = gpu_temp0;
+                        gpu_active_y = gpu_active_y + 1;
+                    }
+                } else {
+                    gpu_active_x = gpu_active_x + 1;
+                }
+            }
+            case 3: {
+                // Bresenham line drawing algorithm of colour from x,y to param0,param1 (shallow line)
+                if( gpu_active_x < gpu_temp0 ) {
+                    // Draw the pixel and calculate the next pixel
+                    bitmap.addr1 = gpu_active_x + gpu_active_y * 640;
+                    bitmap.wdata1 = gpu_active_colour;
+                    bitmap.wenable1 = 1;
+                    if( gpu_temp4 >= 0 ) {
+                        gpu_active_y = gpu_active_y + 1;                                // Move Down
+                        gpu_temp4 = gpu_temp4 + 2*gpu_temp3 - 2*gpu_temp2;              // New Bresenham error
+                    } else {
+                        gpu_temp4 = gpu_temp4 + 2*gpu_temp3;                            // New Bresenham error
+                    }
+                    gpu_active_x = gpu_active_x + 1;                                    // Move Right
+                } else {
+                    // Reached the end of the line
+                    gpu_active = 0;
+                }
+            }
+            case 4: {
+                // Bresenham line drawing algorithm of colour from x,y to param0,param1 (steep line)
+                if( gpu_active_y < gpu_temp1 ) {
+                    // Draw the pixel and calculate the next pixel
+                    bitmap.addr1 = gpu_active_x + gpu_active_y * 640;
+                    bitmap.wdata1 = gpu_active_colour;
+                    bitmap.wenable1 = 1;
+                    if( gpu_temp4 >= 0 ) {
+                        gpu_active_x = gpu_active_x + 1;                                // Move Down
+                        gpu_temp4 = gpu_temp4 + 2*gpu_temp2 - 2*gpu_temp3;              // New Bresenham error
+                    } else {
+                        gpu_temp4 = gpu_temp4 + 2*gpu_temp2;                            // New Bresenham error
+                    }
+                    gpu_active_y = gpu_active_y + 1;                                    // Move Right
+                } else {
+                    // Reached the end of the line
+                    gpu_active = 0;
+                }
+            }
+            default: {gpu_active = 0;}
+        }
+        
+        // wait until vblank is over
+        if (pix_vblank == 0) {
+            if( pix_active ) {
+                if( pix_y > 415 & showterminal ) {
+                    // Display terminal 
+                    switch( terminalpixel ) {
+                        case 0: {
+                            if( is_cursor & timer1hz ) {
+                                pix_red = 63;
+                                pix_green = 63;
+                                pix_blue = 63;
+                            } else {
+                                pix_red = 0;
+                                pix_green = 0;
+                                pix_blue = 63;
+                            }
+                        }
+                        case 1: {
+                            if( is_cursor & timer1hz ) {
+                                pix_red = 0;
+                                pix_green = 0;
+                                pix_blue = 63;
+                            } else {
+                                pix_red = 63;
+                                pix_green = 63;
+                                pix_blue = 63;
+                            }
+                        }
+                    }
+                } else {
+                    switch( character.rdata0 ) {
+                        case 0: {
+                            // BITMAP
+                            pix_red = colourexpand3to6[ (bitmap.rdata0 & 8he0) >> 5 ];
+                            pix_green = colourexpand3to6[ (bitmap.rdata0 & 8h1c) >> 2 ];
+                            pix_blue = colourexpand2to6[ (bitmap.rdata0 & 8h3) ];
+                        }
+                        default: {
+                            // CHARACTER from characterGenerator
+                            // Determine if background or foreground
+                            switch( characterpixel ) {
+                            case 0: {
+                                    // background
+                                    pix_red = colourexpand3to6[ (background.rdata0 & 8he0) >> 5 ];
+                                    pix_green = colourexpand3to6[ (background.rdata0 & 8h1c) >> 2 ];
+                                    pix_blue = colourexpand2to6[ (background.rdata0 & 8h3) ];
+                                }
+                                case 1: {
+                                    // foreground
+                                    pix_red = colourexpand3to6[ (foreground.rdata0 & 8he0) >> 5 ];
+                                    pix_green = colourexpand3to6[ (foreground.rdata0 & 8h1c) >> 2 ];
+                                    pix_blue = colourexpand2to6[ (foreground.rdata0 & 8h3) ];
+                                }
+                            }
+                        }
+                    } // character or bitmap
+                }
+            } // pix_active
+        } // pix_vblank == 0
+    }
+}
+
+// BITFIELDS to help with bit/field access
+
+// Instruction is 3 bits 1xx = literal value, 000 = branch, 001 = 0branch, 010 = call, 011 = alu, followed by 13 bits of instruction specific data
+bitfield instruction {
+    uint3 is_litcallbranchalu,
+    uint13 pad
+}
+
+// A literal instruction is 1 followed by a 15 bit UNSIGNED literal value
+bitfield literal {
+    uint1  is_literal,
+    uint15 literalvalue
+}
+
+// A branch, 0branch or call instruction is 0 followed by 00 = branch, 01 = 0branch, 10 = call followed by 13bit target address 
+bitfield callbranch {
+    uint1  is_literal,
+    uint2  is_callbranchalu,
+    uint13 address
+}
+// An alu instruction is 0 (not literal) followed by 11 = alu
+bitfield aluop {
+    uint1   is_literal,
+    uint2   is_callbranchalu,
+    uint1   is_r2pc,                // return from subroutine
+    uint4   operation,              // arithmetic / memory read/write operation to perform
+    uint1   is_t2n,                 // top to next in stack
+    uint1   is_t2r,                 // top to return stack
+    uint1   is_n2memt,              // write to memory       
+    uint1   is_j1j1plus,            // Original J1 or extra J1+ alu operations
+    uint1   rdelta1,                // two's complement adjustment for rsp
+    uint1   rdelta0,
+    uint1   ddelta1,                // two's complement adjustment for dsp
+    uint1   ddelta0
+}
+
+// Simplify access to high/low byte
+bitfield bytes {
+    uint8   byte1,
+    uint8   byte0
+}
+
+// Simplify access to 4bit nibbles (used to extract shift left/right amount)
+bitfield nibbles {
+    uint4   nibble3,
+    uint4   nibble2,
+    uint4   nibble1,
+    uint4   nibble0
+}
+
+// Create 1hz (1 second counter)
+algorithm pulse1hz(
+    output uint16 counter1hz
+) <autorun>
+{
+  uint32 counter50mhz = 0;
+  counter1hz = 0;
+  while (1) {
+        if ( counter50mhz == 50000000 ) {
+            counter1hz   = counter1hz + 1;
+            counter50mhz = 0;
+        } else {
+            counter50mhz = counter50mhz + 1;
+        }
+    }
+}
+
+algorithm main(
+    // LEDS (8 of)
+    output  uint8   leds,
+    
+    // USER buttons
+    // input   uint8    buttons,
+
+    // VGA
+    output! uint6 video_r,
+    output! uint6 video_g,
+    output! uint6 video_b,
+    output! uint1 video_hs,
+    output! uint1 video_vs,
+
+    // UART
+    output! uint1 uart_tx,
+    input   uint1 uart_rx
+
+) {
+
+    uint8 buttons = 0; // TODO
+
+    uint16 timer1hz = 0;
+    pulse1hz p1hz( counter1hz :> timer1hz );
+
+    // UART tx and rx
+    uint8 uart_tx_data  = 0;
+    uint1 uart_tx_valid = 0;
+    uint1 uart_tx_busy  = 0;
+    uint1 uart_tx_done  = 0;
+    uint8 uart_rx_data  = 0;
+    uint1 uart_rx_valid = 0;
+    uint1 uart_rx_ready = 0;
+
+    // UART from https://github.com/jamieiles/uart
+    uart uart0(
+        clk_50m <: clock,
+        din     <: uart_tx_data,
+        wr_en   <: uart_tx_valid,
+        tx      :> uart_tx,
+        tx_busy :> uart_tx_busy,
+        rx      <: uart_rx,
+        rdy     :> uart_rx_valid,
+        rdy_clr <: uart_rx_ready,
+        dout    :> uart_rx_data
+    );
+
+    // VGA MultiPlexed Bitmap, Text and Terminal Display
+    uint1 video_reset = 0;
+    uint1 video_clock = 0;
+    uint1 sdram_clock = 0;
+    uint1 pll_lock = 0;
+    de10nano_clk_100_25 clk_gen(
+        refclk    <: clock,
+        outclk_0  :> sdram_clock,
+        outclk_1  :> video_clock,
+        locked    :> pll_lock,
+        rst       <: reset
+    ); 
+
+    // --- video reset
+    reset_conditioner vga_rstcond (
+        rcclk <: video_clock,
+        in  <: reset,
+        out :> video_reset
+    );
+
+    // Status of the screen, if in range, if in vblank, actual pixel x and y
+    uint1  active = 0;
+    uint1  vblank = 0;
+    uint10 pix_x  = 0;
+    uint10 pix_y  = 0;
+
+    // GPU for reading and writing pixels
+    //uint10 gpu_x = 0;
+    //uint9 gpu_y = 0;
+    //uint8 gpu_colour = 0;
+    //uint1 gpu_write := 0;
+    
+    vga vga_driver <@video_clock,!video_reset>
+    (
+        vga_hs :> video_hs,
+        vga_vs :> video_vs,
+        active :> active,
+        vblank :> vblank,
+        vga_x  :> pix_x,
+        vga_y  :> pix_y
+    );
+
+    multiplex_display display <@video_clock,!video_reset>
+    (
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: active,
+        pix_vblank <: vblank,
+        pix_red    :> video_r,
+        pix_green  :> video_g,
+        pix_blue   :> video_b,
+        timer1hz   <: timer1hz
+    );
+
+    // J1+ CPU
+    // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
+    uint16  instruction = uninitialized;
+    uint16  immediate := ( literal(instruction).literalvalue );
+    uint1   is_alu := ( instruction(instruction).is_litcallbranchalu == 3b011 );
+    uint1   is_call := ( instruction(instruction).is_litcallbranchalu == 3b010 );
+    uint1   is_lit := literal(instruction).is_literal;
+    uint1   dstackWrite := ( is_lit | (is_alu & aluop(instruction).is_t2n) );
+    uint1   rstackWrite := ( is_call | (is_alu & aluop(instruction).is_t2r) );
+    uint8   ddelta := { {7{aluop(instruction).ddelta1}}, aluop(instruction).ddelta0 };
+    uint8   rdelta := { {7{aluop(instruction).rdelta1}}, aluop(instruction).rdelta0 };
+    
+    // program counter
+    uint13  pc = 0;
+    uint13  pcPlusOne := pc + 1;
+    uint13  newPC = uninitialized;
+
+    // dstack 257x16bit (as 3256 array + stackTop) and pointer, next pointer, write line, delta
+    bram uint16 dstack[256] = uninitialized; // bram (code from @sylefeb)
+    uint16  stackTop = 0;
+    uint8   dsp = 0;
+    uint8   newDSP = uninitialized;
+    uint16  newStackTop = uninitialized;
+
+    // rstack 256x16bit and pointer, next pointer, write line
+    bram uint16 rstack[256] = uninitialized; // bram (code from @sylefeb)
+    uint8   rsp = 0;
+    uint8   newRSP = uninitialized;
+    uint16  rstackWData = uninitialized;
+
+    uint16  stackNext = uninitialized;
+    uint16  rStackTop = uninitialized;
+    uint16  memoryInput = uninitialized;
+
+    // 16bit ROM with included compiled j1eForth from https://github.com/samawati/j1eforth
+    brom uint16 rom[] = {
+16h0E12,
+16h0010,
+16h0000,
+16h0000,
+16h0000,
+16h7F00,
+16h1078,
+16h1156,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h1C54,
+16h1C1E,
+16h0952,
+16h0964,
+16h1BEA,
+16h0E34,
+16h0F20,
+16h162C,
+16h16AE,
+16h16D6,
+16h1742,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h6003,
+16h6003,
+16h6003,
+16h6003,
+16h6003,
+16h6003,
+16h6003,
+16h6003,
+16h6003,
+16h6003,
+16h6003,
+16h6003,
+16h6003,
+16h6003,
+16h6003,
+16h710C,
+16h6001,
+16h6001,
+16h6001,
+16h6001,
+16h6001,
+16h6001,
+16h6001,
+16h6001,
+16h6001,
+16h6001,
+16h6001,
+16h6001,
+16h6001,
+16h6001,
+16h6001,
+16h700C,
+16h6100,
+16h700C,
+16h404E,
+16h005E,
+16h404D,
+16h005D,
+16h404C,
+16h005C,
+16h404B,
+16h005B,
+16h404A,
+16h005A,
+16h4049,
+16h0059,
+16h4048,
+16h0058,
+16h4047,
+16h0057,
+16h4046,
+16h0056,
+16h4045,
+16h0055,
+16h4044,
+16h0054,
+16h4043,
+16h0053,
+16h4042,
+16h0052,
+16h4041,
+16h0051,
+16h4040,
+16h0050,
+16h700C,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h0000,
+16h6E04,
+16h6F6F,
+16h0070,
+16h700C,
+16h0182,
+16h2B01,
+16h720F,
+16h018C,
+16h7803,
+16h726F,
+16h750F,
+16h0192,
+16h6103,
+16h646E,
+16h730F,
+16h019A,
+16h6F02,
+16h0072,
+16h740F,
+16h01A2,
+16h6906,
+16h766E,
+16h7265,
+16h0074,
+16h760C,
+16h01AA,
+16h3D01,
+16h770F,
+16h01B6,
+16h3C01,
+16h780F,
+16h01BC,
+16h7502,
+16h003C,
+16h7F0F,
+16h01C2,
+16h7304,
+16h6177,
+16h0070,
+16h718C,
+16h01CA,
+16h7502,
+16h003E,
+16h771F,
+16h01D4,
+16h6403,
+16h7075,
+16h708D,
+16h01DC,
+16h6404,
+16h6F72,
+16h0070,
+16h710F,
+16h01E4,
+16h6F04,
+16h6576,
+16h0072,
+16h718D,
+16h01EE,
+16h6E03,
+16h7069,
+16h700F,
+16h01F8,
+16h6C06,
+16h6873,
+16h6669,
+16h0074,
+16h7D0F,
+16h0200,
+16h7206,
+16h6873,
+16h6669,
+16h0074,
+16h790F,
+16h020C,
+16h3102,
+16h002D,
+16h7A0C,
+16h0218,
+16h3E42,
+16h0072,
+16h6B8D,
+16h6180,
+16h6147,
+16h6147,
+16h700C,
+16h0220,
+16h7242,
+16h003E,
+16h6B8D,
+16h6B8D,
+16h6180,
+16h6147,
+16h700C,
+16h0230,
+16h7242,
+16h0040,
+16h6B8D,
+16h6B8D,
+16h6081,
+16h6147,
+16h6180,
+16h6147,
+16h700C,
+16h0240,
+16h4001,
+16h7C0C,
+16h0254,
+16h2101,
+16h6023,
+16h710F,
+16h025A,
+16h3C02,
+16h003E,
+16h721F,
+16h0262,
+16h3002,
+16h003C,
+16h781C,
+16h026A,
+16h3002,
+16h003D,
+16h701C,
+16h0272,
+16h3003,
+16h3E3C,
+16h711C,
+16h027A,
+16h3E01,
+16h761F,
+16h0282,
+16h3002,
+16h003E,
+16h791C,
+16h0288,
+16h3E02,
+16h003D,
+16h7F1F,
+16h0290,
+16h7404,
+16h6375,
+16h006B,
+16h6180,
+16h718D,
+16h0298,
+16h2D04,
+16h6F72,
+16h0074,
+16h6180,
+16h6147,
+16h6180,
+16h6B8D,
+16h700C,
+16h02A4,
+16h3202,
+16h002F,
+16h8001,
+16h790F,
+16h02B6,
+16h3202,
+16h002A,
+16h741C,
+16h02C0,
+16h3102,
+16h002B,
+16h731C,
+16h02C8,
+16h7303,
+16h4070,
+16h6E81,
+16h80FF,
+16h730F,
+16h02D0,
+16h6507,
+16h6578,
+16h7563,
+16h6574,
+16h6147,
+16h700C,
+16h02DC,
+16h6203,
+16h6579,
+16h8FFD,
+16h6600,
+16h6023,
+16h710F,
+16h02EA,
+16h6302,
+16h0040,
+16h6081,
+16h6C00,
+16h6180,
+16h8001,
+16h6303,
+16h2187,
+16h8008,
+16h6903,
+16h0189,
+16h80FF,
+16h730F,
+16h700C,
+16h02F8,
+16h6302,
+16h0021,
+16h6180,
+16h80FF,
+16h6303,
+16h6081,
+16h8008,
+16h6D03,
+16h6403,
+16h6180,
+16h414F,
+16h6081,
+16h6C00,
+16h6180,
+16h8001,
+16h6303,
+16h8000,
+16h6703,
+16h80FF,
+16h6503,
+16h6147,
+16h6181,
+16h6503,
+16h6B8D,
+16h6303,
+16h6503,
+16h6180,
+16h6023,
+16h710F,
+16h0316,
+16h7503,
+16h2B6D,
+16h6181,
+16h6181,
+16h6203,
+16h6147,
+16h6B81,
+16h8000,
+16h6F13,
+16h6147,
+16h6181,
+16h6181,
+16h6303,
+16h6810,
+16h6B8D,
+16h6403,
+16h6147,
+16h6403,
+16h6810,
+16h6B8D,
+16h6303,
+16h6600,
+16h6310,
+16h6B8D,
+16h718C,
+16h0352,
+16h6445,
+16h766F,
+16h7261,
+16h6B8D,
+16h700C,
+16h0386,
+16h7502,
+16h0070,
+16h41C6,
+16h7E8C,
+16h0392,
+16h6446,
+16h756F,
+16h6573,
+16h0072,
+16h41CB,
+16h6C00,
+16h6B8D,
+16h6C00,
+16h720F,
+16h039C,
+16h6204,
+16h7361,
+16h0065,
+16hFE80,
+16h700C,
+16h03B0,
+16h7404,
+16h6D65,
+16h0070,
+16hFE82,
+16h700C,
+16h03BC,
+16h3E03,
+16h6E69,
+16hFE84,
+16h700C,
+16h03C8,
+16h2304,
+16h6974,
+16h0062,
+16hFE86,
+16h700C,
+16h03D2,
+16h7403,
+16h6269,
+16hFE88,
+16h700C,
+16h03DE,
+16h2705,
+16h7665,
+16h6C61,
+16hFE8A,
+16h700C,
+16h03E8,
+16h2706,
+16h6261,
+16h726F,
+16h0074,
+16hFE8C,
+16h700C,
+16h03F4,
+16h6803,
+16h646C,
+16hFE8E,
+16h700C,
+16h0402,
+16h6307,
+16h6E6F,
+16h6574,
+16h7478,
+16hFE90,
+16h700C,
+16h040C,
+16h660E,
+16h726F,
+16h6874,
+16h772D,
+16h726F,
+16h6C64,
+16h7369,
+16h0074,
+16hFEA2,
+16h700C,
+16h041A,
+16h6307,
+16h7275,
+16h6572,
+16h746E,
+16hFEA8,
+16h700C,
+16h0430,
+16h6402,
+16h0070,
+16hFEAC,
+16h700C,
+16h043E,
+16h6C04,
+16h7361,
+16h0074,
+16hFEAE,
+16h700C,
+16h0448,
+16h2705,
+16h6B3F,
+16h7965,
+16hFEB0,
+16h700C,
+16h0454,
+16h2705,
+16h6D65,
+16h7469,
+16hFEB2,
+16h700C,
+16h0460,
+16h2705,
+16h6F62,
+16h746F,
+16hFEB4,
+16h700C,
+16h046C,
+16h2702,
+16h005C,
+16hFEB6,
+16h700C,
+16h0478,
+16h2706,
+16h616E,
+16h656D,
+16h003F,
+16hFEB8,
+16h700C,
+16h0482,
+16h2704,
+16h2C24,
+16h006E,
+16hFEBA,
+16h700C,
+16h0490,
+16h2706,
+16h766F,
+16h7265,
+16h0074,
+16hFEBC,
+16h700C,
+16h049C,
+16h2702,
+16h003B,
+16hFEBE,
+16h700C,
+16h04AA,
+16h2707,
+16h7263,
+16h6165,
+16h6574,
+16hFEC0,
+16h700C,
+16h04B4,
+16h3F04,
+16h7564,
+16h0070,
+16h6081,
+16h2267,
+16h708D,
+16h700C,
+16h04C2,
+16h7203,
+16h746F,
+16h6147,
+16h6180,
+16h6B8D,
+16h718C,
+16h04D2,
+16h3205,
+16h7264,
+16h706F,
+16h6103,
+16h710F,
+16h04E0,
+16h3204,
+16h7564,
+16h0070,
+16h6181,
+16h718D,
+16h04EC,
+16h6E06,
+16h6765,
+16h7461,
+16h0065,
+16h7D1C,
+16h04F8,
+16h6407,
+16h656E,
+16h6167,
+16h6574,
+16h6600,
+16h6147,
+16h6600,
+16h8001,
+16h41AB,
+16h6B8D,
+16h720F,
+16h0504,
+16h2D01,
+16h6D10,
+16h720F,
+16h051C,
+16h6103,
+16h7362,
+16h7A1C,
+16h0524,
+16h6D03,
+16h7861,
+16h7B1F,
+16h052C,
+16h6D03,
+16h6E69,
+16h7C1F,
+16h0534,
+16h7706,
+16h7469,
+16h6968,
+16h006E,
+16h6181,
+16h428F,
+16h6147,
+16h428F,
+16h6B8D,
+16h7F0F,
+16h053C,
+16h7506,
+16h2F6D,
+16h6F6D,
+16h0064,
+16h4279,
+16h6F03,
+16h22D6,
+16h6D10,
+16h800F,
+16h6147,
+16h6147,
+16h6081,
+16h41AB,
+16h6147,
+16h6147,
+16h6081,
+16h41AB,
+16h6B8D,
+16h6203,
+16h6081,
+16h6B8D,
+16h6B81,
+16h6180,
+16h6147,
+16h41AB,
+16h6B8D,
+16h6403,
+16h22CA,
+16h6147,
+16h6103,
+16h6310,
+16h6B8D,
+16h02CB,
+16h6103,
+16h6B8D,
+16h6B81,
+16h22D2,
+16h6B8D,
+16h6A00,
+16h6147,
+16h02B3,
+16h6B8D,
+16h6103,
+16h6103,
+16h718C,
+16h6103,
+16h4273,
+16h8000,
+16h6600,
+16h708D,
+16h0552,
+16h6D05,
+16h6D2F,
+16h646F,
+16h6081,
+16h6810,
+16h6081,
+16h6147,
+16h22E8,
+16h6D10,
+16h6147,
+16h4286,
+16h6B8D,
+16h6147,
+16h6081,
+16h6810,
+16h22EE,
+16h6B81,
+16h6203,
+16h6B8D,
+16h42AD,
+16h6B8D,
+16h22F5,
+16h6180,
+16h6D10,
+16h718C,
+16h700C,
+16h05B8,
+16h2F04,
+16h6F6D,
+16h0064,
+16h6181,
+16h6810,
+16h6180,
+16h02DF,
+16h05EE,
+16h6D03,
+16h646F,
+16h42FA,
+16h710F,
+16h05FE,
+16h2F01,
+16h42FA,
+16h700F,
+16h0608,
+16h7503,
+16h2A6D,
+16h8000,
+16h6180,
+16h800F,
+16h6147,
+16h6081,
+16h41AB,
+16h6147,
+16h6147,
+16h6081,
+16h41AB,
+16h6B8D,
+16h6203,
+16h6B8D,
+16h231D,
+16h6147,
+16h6181,
+16h41AB,
+16h6B8D,
+16h6203,
+16h6B81,
+16h2323,
+16h6B8D,
+16h6A00,
+16h6147,
+16h030E,
+16h6B8D,
+16h6103,
+16h426B,
+16h710F,
+16h0610,
+16h2A01,
+16h430A,
+16h710F,
+16h0650,
+16h6D02,
+16h002A,
+16h4279,
+16h6503,
+16h6810,
+16h6147,
+16h6A10,
+16h6180,
+16h6A10,
+16h430A,
+16h6B8D,
+16h2339,
+16h0286,
+16h700C,
+16h0658,
+16h2A05,
+16h6D2F,
+16h646F,
+16h6147,
+16h432E,
+16h6B8D,
+16h02DF,
+16h0676,
+16h2A02,
+16h002F,
+16h433E,
+16h700F,
+16h0686,
+16h6305,
+16h6C65,
+16h2B6C,
+16h8002,
+16h720F,
+16h0690,
+16h6305,
+16h6C65,
+16h2D6C,
+16h8002,
+16h028F,
+16h069C,
+16h6305,
+16h6C65,
+16h736C,
+16h8001,
+16h7D0F,
+16h06A8,
+16h6202,
+16h006C,
+16h8020,
+16h700C,
+16h06B4,
+16h3E05,
+16h6863,
+16h7261,
+16h807F,
+16h6303,
+16h6081,
+16h807F,
+16h435C,
+16h42A2,
+16h236B,
+16h6103,
+16h805F,
+16h700C,
+16h700C,
+16h06BE,
+16h2B02,
+16h0021,
+16h414F,
+16h6C00,
+16h6203,
+16h6180,
+16h6023,
+16h710F,
+16h06DC,
+16h3202,
+16h0021,
+16h6180,
+16h6181,
+16h6023,
+16h6103,
+16h434B,
+16h6023,
+16h710F,
+16h06EE,
+16h3202,
+16h0040,
+16h6081,
+16h434B,
+16h6C00,
+16h6180,
+16h7C0C,
+16h0702,
+16h6305,
+16h756F,
+16h746E,
+16h6081,
+16h6310,
+16h6180,
+16h017E,
+16h0712,
+16h6804,
+16h7265,
+16h0065,
+16hFEAC,
+16h7C0C,
+16h0722,
+16h6107,
+16h696C,
+16h6E67,
+16h6465,
+16h6081,
+16h8000,
+16h8002,
+16h42AD,
+16h6103,
+16h6081,
+16h23A5,
+16h8002,
+16h6180,
+16h428F,
+16h720F,
+16h072E,
+16h6105,
+16h696C,
+16h6E67,
+16h4394,
+16h439B,
+16hFEAC,
+16h6023,
+16h710F,
+16h074E,
+16h7003,
+16h6461,
+16h4394,
+16h8050,
+16h6203,
+16h039B,
+16h0760,
+16h4008,
+16h7865,
+16h6365,
+16h7475,
+16h0065,
+16h6C00,
+16h4264,
+16h23C0,
+16h0172,
+16h700C,
+16h076E,
+16h6604,
+16h6C69,
+16h006C,
+16h6180,
+16h6147,
+16h6180,
+16h03CC,
+16h4279,
+16h418D,
+16h6310,
+16h6B81,
+16h23D2,
+16h6B8D,
+16h6A00,
+16h6147,
+16h03C9,
+16h6B8D,
+16h6103,
+16h0273,
+16h0784,
+16h6505,
+16h6172,
+16h6573,
+16h8000,
+16h03C5,
+16h07AC,
+16h6405,
+16h6769,
+16h7469,
+16h8009,
+16h6181,
+16h6803,
+16h8007,
+16h6303,
+16h6203,
+16h8030,
+16h720F,
+16h07B8,
+16h6507,
+16h7478,
+16h6172,
+16h7463,
+16h8000,
+16h6180,
+16h42AD,
+16h6180,
+16h03DF,
+16h07D0,
+16h3C02,
+16h0023,
+16h43B2,
+16hFE8E,
+16h6023,
+16h710F,
+16h07E4,
+16h6804,
+16h6C6F,
+16h0064,
+16hFE8E,
+16h6C00,
+16h6A00,
+16h6081,
+16hFE8E,
+16h6023,
+16h6103,
+16h018D,
+16h07F2,
+16h2301,
+16hFE80,
+16h6C00,
+16h43EC,
+16h03FC,
+16h080A,
+16h2302,
+16h0073,
+16h4406,
+16h6081,
+16h2411,
+16h040D,
+16h700C,
+16h0816,
+16h7304,
+16h6769,
+16h006E,
+16h6810,
+16h241A,
+16h802D,
+16h03FC,
+16h700C,
+16h0826,
+16h2302,
+16h003E,
+16h6103,
+16hFE8E,
+16h6C00,
+16h43B2,
+16h6181,
+16h028F,
+16h0838,
+16h7303,
+16h7274,
+16h6081,
+16h6147,
+16h6A10,
+16h43F4,
+16h440D,
+16h6B8D,
+16h4416,
+16h041E,
+16h084A,
+16h6803,
+16h7865,
+16h8010,
+16hFE80,
+16h6023,
+16h710F,
+16h0860,
+16h6407,
+16h6365,
+16h6D69,
+16h6C61,
+16h800A,
+16hFE80,
+16h6023,
+16h710F,
+16h086E,
+16h6406,
+16h6769,
+16h7469,
+16h003F,
+16h6147,
+16h8030,
+16h428F,
+16h8009,
+16h6181,
+16h6803,
+16h2457,
+16h6081,
+16h8020,
+16h6613,
+16h2451,
+16h8020,
+16h428F,
+16h8007,
+16h428F,
+16h6081,
+16h800A,
+16h6803,
+16h6403,
+16h6081,
+16h6B8D,
+16h7F0F,
+16h0880,
+16h6E07,
+16h6D75,
+16h6562,
+16h3F72,
+16hFE80,
+16h6C00,
+16h6147,
+16h8000,
+16h6181,
+16h438C,
+16h6181,
+16h417E,
+16h8024,
+16h6703,
+16h246F,
+16h4432,
+16h6180,
+16h6310,
+16h6180,
+16h6A00,
+16h6181,
+16h417E,
+16h802D,
+16h6703,
+16h6147,
+16h6180,
+16h6B81,
+16h428F,
+16h6180,
+16h6B81,
+16h6203,
+16h4264,
+16h24A0,
+16h6A00,
+16h6147,
+16h6081,
+16h6147,
+16h417E,
+16hFE80,
+16h6C00,
+16h4444,
+16h249A,
+16h6180,
+16hFE80,
+16h6C00,
+16h4329,
+16h6203,
+16h6B8D,
+16h6310,
+16h6B81,
+16h2492,
+16h6B8D,
+16h6A00,
+16h6147,
+16h047E,
+16h6B8D,
+16h6103,
+16h6B81,
+16h6003,
+16h2498,
+16h6D10,
+16h6180,
+16h049F,
+16h6B8D,
+16h6B8D,
+16h4273,
+16h4273,
+16h8000,
+16h6081,
+16h6B8D,
+16h4273,
+16h6B8D,
+16hFE80,
+16h6023,
+16h710F,
+16h08B6,
+16h3F03,
+16h7872,
+16h8FFE,
+16h6600,
+16h6C00,
+16h8001,
+16h6303,
+16h711C,
+16h094E,
+16h7403,
+16h2178,
+16h8FFE,
+16h6600,
+16h6C00,
+16h8002,
+16h6303,
+16h6010,
+16h24B2,
+16h6081,
+16h8FFF,
+16h6600,
+16h6023,
+16h6103,
+16h80DF,
+16h6600,
+16h6C00,
+16h6010,
+16h24BE,
+16h80DF,
+16h6600,
+16h6023,
+16h6103,
+16h80DF,
+16h6600,
+16h6C00,
+16h6010,
+16h24C7,
+16h700C,
+16h0960,
+16h3F04,
+16h656B,
+16h0079,
+16hFEB0,
+16h03BC,
+16h099C,
+16h6504,
+16h696D,
+16h0074,
+16hFEB2,
+16h03BC,
+16h09A8,
+16h6B03,
+16h7965,
+16h44D1,
+16h24DC,
+16h8FFF,
+16h6600,
+16h7C0C,
+16h09B4,
+16h6E04,
+16h6675,
+16h003F,
+16h44D1,
+16h6081,
+16h24EC,
+16h6103,
+16h44DC,
+16h800D,
+16h770F,
+16h700C,
+16h09C4,
+16h7406,
+16h6D69,
+16h7265,
+16h0040,
+16h8FFB,
+16h6600,
+16h7C0C,
+16h09DC,
+16h6C04,
+16h6465,
+16h0040,
+16h8FFD,
+16h6600,
+16h7C0C,
+16h09EC,
+16h6C04,
+16h6465,
+16h0021,
+16h8FFD,
+16h6600,
+16h6023,
+16h710F,
+16h09FA,
+16h6208,
+16h7475,
+16h6F74,
+16h736E,
+16h0040,
+16h8FFC,
+16h6600,
+16h7C0C,
+16h0A0A,
+16h7305,
+16h6170,
+16h6563,
+16h435C,
+16h04D7,
+16h0A1C,
+16h7306,
+16h6170,
+16h6563,
+16h0073,
+16h8000,
+16h6B13,
+16h6147,
+16h051D,
+16h4511,
+16h6B81,
+16h2523,
+16h6B8D,
+16h6A00,
+16h6147,
+16h051C,
+16h6B8D,
+16h710F,
+16h0A28,
+16h7404,
+16h7079,
+16h0065,
+16h6147,
+16h052D,
+16h438C,
+16h44D7,
+16h6B81,
+16h2533,
+16h6B8D,
+16h6A00,
+16h6147,
+16h052B,
+16h6B8D,
+16h6103,
+16h710F,
+16h0A4C,
+16h6302,
+16h0072,
+16h800D,
+16h44D7,
+16h800A,
+16h04D7,
+16h0A6E,
+16h6443,
+16h246F,
+16h6B8D,
+16h6B81,
+16h6B8D,
+16h438C,
+16h6203,
+16h439B,
+16h6147,
+16h6180,
+16h6147,
+16h700C,
+16h0A7C,
+16h2443,
+16h7C22,
+16h4540,
+16h700C,
+16h0A96,
+16h2E02,
+16h0024,
+16h438C,
+16h0529,
+16h0AA0,
+16h2E43,
+16h7C22,
+16h4540,
+16h0552,
+16h0AAA,
+16h2E02,
+16h0072,
+16h6147,
+16h4427,
+16h6B8D,
+16h6181,
+16h428F,
+16h4518,
+16h0529,
+16h0AB4,
+16h7503,
+16h722E,
+16h6147,
+16h43F4,
+16h440D,
+16h441E,
+16h6B8D,
+16h6181,
+16h428F,
+16h4518,
+16h0529,
+16h0AC8,
+16h7502,
+16h002E,
+16h43F4,
+16h440D,
+16h441E,
+16h4511,
+16h0529,
+16h0AE0,
+16h2E01,
+16hFE80,
+16h6C00,
+16h800A,
+16h6503,
+16h257F,
+16h0572,
+16h4427,
+16h4511,
+16h0529,
+16h0AF0,
+16h2E02,
+16h0023,
+16hFE80,
+16h6C00,
+16h6180,
+16h443B,
+16h4579,
+16hFE80,
+16h6023,
+16h710F,
+16h0B06,
+16h7503,
+16h232E,
+16hFE80,
+16h6C00,
+16h6180,
+16h443B,
+16h43F4,
+16h440D,
+16h441E,
+16h4511,
+16h4529,
+16hFE80,
+16h6023,
+16h710F,
+16h0B1C,
+16h7504,
+16h722E,
+16h0023,
+16hFE80,
+16h6C00,
+16h426B,
+16h426B,
+16h443B,
+16h6147,
+16h43F4,
+16h440D,
+16h441E,
+16h6B8D,
+16h6181,
+16h428F,
+16h4518,
+16h4529,
+16hFE80,
+16h6023,
+16h710F,
+16h0B3A,
+16h2E03,
+16h2372,
+16hFE80,
+16h6C00,
+16h426B,
+16h426B,
+16h443B,
+16h6147,
+16h4427,
+16h6B8D,
+16h6181,
+16h428F,
+16h4518,
+16h4529,
+16hFE80,
+16h6023,
+16h710F,
+16h0B64,
+16h6305,
+16h6F6D,
+16h6576,
+16h6147,
+16h05D1,
+16h6147,
+16h6081,
+16h417E,
+16h6B81,
+16h418D,
+16h6310,
+16h6B8D,
+16h6310,
+16h6B81,
+16h25D7,
+16h6B8D,
+16h6A00,
+16h6147,
+16h05C9,
+16h6B8D,
+16h6103,
+16h0273,
+16h0B88,
+16h7005,
+16h6361,
+16h246B,
+16h6081,
+16h6147,
+16h4279,
+16h6023,
+16h6103,
+16h6310,
+16h6180,
+16h45C7,
+16h6B8D,
+16h700C,
+16h0BB6,
+16h3F01,
+16h6C00,
+16h0579,
+16h0BD2,
+16h3205,
+16h766F,
+16h7265,
+16h6147,
+16h6147,
+16h4279,
+16h6B8D,
+16h6B8D,
+16h426B,
+16h6147,
+16h426B,
+16h6B8D,
+16h700C,
+16h0BDA,
+16h3205,
+16h7773,
+16h7061,
+16h426B,
+16h6147,
+16h426B,
+16h6B8D,
+16h700C,
+16h0BF6,
+16h3204,
+16h696E,
+16h0070,
+16h426B,
+16h6103,
+16h426B,
+16h710F,
+16h0C08,
+16h3204,
+16h6F72,
+16h0074,
+16h6180,
+16h6147,
+16h6147,
+16h45FE,
+16h6B8D,
+16h6B8D,
+16h6180,
+16h05FE,
+16h0C18,
+16h6402,
+16h003D,
+16h6147,
+16h426B,
+16h6503,
+16h6180,
+16h6B8D,
+16h6503,
+16h6403,
+16h701C,
+16h0C30,
+16h6403,
+16h3E3C,
+16h461A,
+16h760C,
+16h0C46,
+16h6402,
+16h002B,
+16h426B,
+16h6203,
+16h6147,
+16h6181,
+16h6203,
+16h6081,
+16h426B,
+16h6F03,
+16h2636,
+16h6B8D,
+16h6310,
+16h0637,
+16h6B8D,
+16h700C,
+16h0C50,
+16h6402,
+16h002D,
+16h4286,
+16h062A,
+16h0C72,
+16h7303,
+16h643E,
+16h6081,
+16h781C,
+16h0C7C,
+16h6403,
+16h2B31,
+16h8001,
+16h4640,
+16h062A,
+16h0C86,
+16h6404,
+16h6F78,
+16h0072,
+16h426B,
+16h6503,
+16h4155,
+16h6503,
+16h718C,
+16h0C92,
+16h6404,
+16h6E61,
+16h0064,
+16h426B,
+16h6303,
+16h4155,
+16h6303,
+16h718C,
+16h0CA4,
+16h6403,
+16h726F,
+16h426B,
+16h6403,
+16h4155,
+16h6403,
+16h718C,
+16h0CB6,
+16h6407,
+16h6E69,
+16h6576,
+16h7472,
+16h6600,
+16h6180,
+16h6600,
+16h718C,
+16h0CC6,
+16h6402,
+16h003C,
+16h426B,
+16h4279,
+16h6703,
+16h2675,
+16h4273,
+16h6F03,
+16h0677,
+16h4607,
+16h761F,
+16h0CD8,
+16h6402,
+16h003E,
+16h45FE,
+16h066E,
+16h0CF0,
+16h6403,
+16h3D30,
+16h6403,
+16h701C,
+16h0CFA,
+16h6403,
+16h3C30,
+16h8000,
+16h4640,
+16h066E,
+16h0D04,
+16h6404,
+16h3C30,
+16h003E,
+16h467F,
+16h760C,
+16h0D10,
+16h6403,
+16h2A32,
+16h4279,
+16h062A,
+16h0D1C,
+16h6403,
+16h2F32,
+16h6081,
+16h800F,
+16h6D03,
+16h6147,
+16h415D,
+16h6180,
+16h415D,
+16h6B8D,
+16h6403,
+16h718C,
+16h0D26,
+16h6403,
+16h2D31,
+16h8001,
+16h4640,
+16h4286,
+16h062A,
+16h0D40,
+16h2807,
+16h6170,
+16h7372,
+16h2965,
+16hFE82,
+16h6023,
+16h6103,
+16h6181,
+16h6147,
+16h6081,
+16h26F6,
+16h6A00,
+16hFE82,
+16h6C00,
+16h435C,
+16h6703,
+16h26D2,
+16h6147,
+16h438C,
+16hFE82,
+16h6C00,
+16h6180,
+16h428F,
+16h6810,
+16h6600,
+16h6B81,
+16h6910,
+16h6303,
+16h26D0,
+16h6B81,
+16h26CA,
+16h6B8D,
+16h6A00,
+16h6147,
+16h06B9,
+16h6B8D,
+16h6103,
+16h6B8D,
+16h6103,
+16h8000,
+16h708D,
+16h6A00,
+16h6B8D,
+16h6181,
+16h6180,
+16h6147,
+16h438C,
+16hFE82,
+16h6C00,
+16h6180,
+16h428F,
+16hFE82,
+16h6C00,
+16h435C,
+16h6703,
+16h26E0,
+16h6810,
+16h26EC,
+16h6B81,
+16h26E7,
+16h6B8D,
+16h6A00,
+16h6147,
+16h06D5,
+16h6B8D,
+16h6103,
+16h6081,
+16h6147,
+16h06F1,
+16h6B8D,
+16h6103,
+16h6081,
+16h6147,
+16h6A00,
+16h6181,
+16h428F,
+16h6B8D,
+16h6B8D,
+16h028F,
+16h6181,
+16h6B8D,
+16h028F,
+16h0D4E,
+16h7005,
+16h7261,
+16h6573,
+16h6147,
+16hFE88,
+16h6C00,
+16hFE84,
+16h6C00,
+16h6203,
+16hFE86,
+16h6C00,
+16hFE84,
+16h6C00,
+16h428F,
+16h6B8D,
+16h46AB,
+16hFE84,
+16h0370,
+16h0DF4,
+16h2E82,
+16h0028,
+16h8029,
+16h46FD,
+16h0529,
+16h0E1A,
+16h2881,
+16h8029,
+16h46FD,
+16h0273,
+16h0E26,
+16h3C83,
+16h3E5C,
+16hFE86,
+16h6C00,
+16hFE84,
+16h6023,
+16h710F,
+16h0E30,
+16h5C81,
+16hFEB6,
+16h03BC,
+16h0E40,
+16h7704,
+16h726F,
+16h0064,
+16h46FD,
+16h4394,
+16h434B,
+16h05DE,
+16h0E48,
+16h7405,
+16h6B6F,
+16h6E65,
+16h435C,
+16h0727,
+16h0E58,
+16h6E05,
+16h6D61,
+16h3E65,
+16h438C,
+16h801F,
+16h6303,
+16h6203,
+16h039B,
+16h0E64,
+16h7305,
+16h6D61,
+16h3F65,
+16h6A00,
+16h6147,
+16h074E,
+16h6181,
+16h6B81,
+16h6203,
+16h417E,
+16h6181,
+16h6B81,
+16h6203,
+16h417E,
+16h428F,
+16h4264,
+16h274E,
+16h6B8D,
+16h710F,
+16h6B81,
+16h2754,
+16h6B8D,
+16h6A00,
+16h6147,
+16h0741,
+16h6B8D,
+16h6103,
+16h8000,
+16h700C,
+16h0E76,
+16h6604,
+16h6E69,
+16h0064,
+16h6180,
+16h6081,
+16h417E,
+16hFE82,
+16h6023,
+16h6103,
+16h6081,
+16h6C00,
+16h6147,
+16h434B,
+16h6180,
+16h6C00,
+16h6081,
+16h277A,
+16h6081,
+16h6C00,
+16hFF1F,
+16h6303,
+16h6B81,
+16h6503,
+16h2775,
+16h434B,
+16h8000,
+16h6600,
+16h0779,
+16h434B,
+16hFE82,
+16h6C00,
+16h473E,
+16h077F,
+16h6B8D,
+16h6103,
+16h6180,
+16h4351,
+16h718C,
+16h2784,
+16h8002,
+16h4357,
+16h428F,
+16h0767,
+16h6B8D,
+16h6103,
+16h6003,
+16h4351,
+16h6081,
+16h4735,
+16h718C,
+16h0EB2,
+16h3C07,
+16h616E,
+16h656D,
+16h3E3F,
+16hFE90,
+16h6081,
+16h4383,
+16h6503,
+16h2796,
+16h4351,
+16h6147,
+16h6B8D,
+16h434B,
+16h6081,
+16h6147,
+16h6C00,
+16h4264,
+16h27A3,
+16h475C,
+16h4264,
+16h2797,
+16h6B8D,
+16h710F,
+16h6B8D,
+16h6103,
+16h8000,
+16h700C,
+16h0F18,
+16h6E05,
+16h6D61,
+16h3F65,
+16hFEB8,
+16h03BC,
+16h0F50,
+16h5E02,
+16h0068,
+16h6147,
+16h6181,
+16h6B81,
+16h6803,
+16h6081,
+16h27BB,
+16h8008,
+16h6081,
+16h44D7,
+16h4511,
+16h44D7,
+16h6B8D,
+16h720F,
+16h0F5C,
+16h7403,
+16h7061,
+16h6081,
+16h44D7,
+16h6181,
+16h418D,
+16h731C,
+16h0F7C,
+16h6B04,
+16h6174,
+16h0070,
+16h6081,
+16h800D,
+16h6503,
+16h27D3,
+16h8008,
+16h6503,
+16h27D2,
+16h435C,
+16h07C0,
+16h07B0,
+16h6103,
+16h6003,
+16h708D,
+16h0F8C,
+16h6106,
+16h6363,
+16h7065,
+16h0074,
+16h6181,
+16h6203,
+16h6181,
+16h4279,
+16h6503,
+16h27EC,
+16h44DC,
+16h6081,
+16h435C,
+16h428F,
+16h807F,
+16h6F03,
+16h27EA,
+16h47C0,
+16h07EB,
+16h47C9,
+16h07DE,
+16h6103,
+16h6181,
+16h028F,
+16h0FAE,
+16h7105,
+16h6575,
+16h7972,
+16hFE88,
+16h6C00,
+16h8050,
+16h47DB,
+16hFE86,
+16h6023,
+16h6103,
+16h6103,
+16h8000,
+16hFE84,
+16h6023,
+16h710F,
+16h0FE0,
+16h6106,
+16h6F62,
+16h7472,
+16h0032,
+16h4540,
+16h710F,
+16h1000,
+16h6106,
+16h6F62,
+16h7472,
+16h0031,
+16h4511,
+16h4552,
+16h803F,
+16h44D7,
+16h4539,
+16hFE8C,
+16h43BC,
+16h0804,
+16h100E,
+16h3C49,
+16h613F,
+16h6F62,
+16h7472,
+16h3E22,
+16h281C,
+16h4540,
+16h080B,
+16h0804,
+16h1028,
+16h6606,
+16h726F,
+16h6567,
+16h0074,
+16h472F,
+16h47AB,
+16h4264,
+16h2834,
+16h4351,
+16h6081,
+16hFEAC,
+16h6023,
+16h6103,
+16h6C00,
+16h6081,
+16hFE90,
+16h6023,
+16h6103,
+16hFEAE,
+16h6023,
+16h6103,
+16h710F,
+16h080B,
+16h103C,
+16h240A,
+16h6E69,
+16h6574,
+16h7072,
+16h6572,
+16h0074,
+16h47AB,
+16h4264,
+16h284C,
+16h6C00,
+16h8040,
+16h6303,
+16h4819,
+16h630C,
+16h6D6F,
+16h6970,
+16h656C,
+16h6F2D,
+16h6C6E,
+16h0079,
+16h0172,
+16h0850,
+16h445F,
+16h284F,
+16h700C,
+16h080B,
+16h106C,
+16h5B81,
+16h9078,
+16hFE8A,
+16h6023,
+16h710F,
+16h10A2,
+16h2E03,
+16h6B6F,
+16h9078,
+16hFE8A,
+16h6C00,
+16h6703,
+16h2861,
+16h4557,
+16h2003,
+16h6B6F,
+16h0539,
+16h10AE,
+16h6504,
+16h6176,
+16h006C,
+16h472F,
+16h6081,
+16h417E,
+16h286D,
+16hFE8A,
+16h43BC,
+16h0866,
+16h6103,
+16h0859,
+16h10C6,
+16h2445,
+16h7665,
+16h6C61,
+16hFE84,
+16h6C00,
+16h6147,
+16hFE86,
+16h6C00,
+16h6147,
+16hFE88,
+16h6C00,
+16h6147,
+16hFE84,
+16h8000,
+16h6180,
+16h6023,
+16h6103,
+16hFE86,
+16h6023,
+16h6103,
+16hFE88,
+16h6023,
+16h6103,
+16h4866,
+16h6B8D,
+16hFE88,
+16h6023,
+16h6103,
+16h6B8D,
+16hFE86,
+16h6023,
+16h6103,
+16h6B8D,
+16hFE84,
+16h6023,
+16h710F,
+16h10E0,
+16h7006,
+16h6572,
+16h6573,
+16h0074,
+16hFF00,
+16hFE86,
+16h434B,
+16h6023,
+16h710F,
+16h112A,
+16h7104,
+16h6975,
+16h0074,
+16h4852,
+16h47F3,
+16h4866,
+16h08A3,
+16h700C,
+16h113E,
+16h6105,
+16h6F62,
+16h7472,
+16h6103,
+16h4899,
+16h4859,
+16h08A2,
+16h1150,
+16h2701,
+16h472F,
+16h47AB,
+16h28B5,
+16h700C,
+16h080B,
+16h1160,
+16h6105,
+16h6C6C,
+16h746F,
+16h439B,
+16hFEAC,
+16h0370,
+16h116E,
+16h2C01,
+16h4394,
+16h6081,
+16h434B,
+16hFEAC,
+16h6023,
+16h6103,
+16h6023,
+16h710F,
+16h117C,
+16h6345,
+16h6C61,
+16h2C6C,
+16h8001,
+16h6903,
+16hC000,
+16h6403,
+16h08BF,
+16h1190,
+16h3F47,
+16h7262,
+16h6E61,
+16h6863,
+16h8001,
+16h6903,
+16hA000,
+16h6403,
+16h08BF,
+16h11A2,
+16h6246,
+16h6172,
+16h636E,
+16h0068,
+16h8001,
+16h6903,
+16h8000,
+16h6403,
+16h08BF,
+16h11B6,
+16h5B89,
+16h6F63,
+16h706D,
+16h6C69,
+16h5D65,
+16h48B1,
+16h08CB,
+16h11CA,
+16h6347,
+16h6D6F,
+16h6970,
+16h656C,
+16h6B8D,
+16h6081,
+16h6C00,
+16h48BF,
+16h434B,
+16h6147,
+16h700C,
+16h11DA,
+16h7287,
+16h6365,
+16h7275,
+16h6573,
+16hFEAE,
+16h6C00,
+16h4735,
+16h08CB,
+16h11F2,
+16h7004,
+16h6369,
+16h006B,
+16h6081,
+16h6410,
+16h6410,
+16h80C0,
+16h6203,
+16h6147,
+16h700C,
+16h1204,
+16h6C87,
+16h7469,
+16h7265,
+16h6C61,
+16h6081,
+16hFFFF,
+16h6600,
+16h6303,
+16h291D,
+16h8000,
+16h6600,
+16h6503,
+16h4911,
+16h48F1,
+16h6600,
+16h0921,
+16hFFFF,
+16h6600,
+16h6403,
+16h08BF,
+16h700C,
+16h121A,
+16h5B83,
+16h5D27,
+16h48B1,
+16h0911,
+16h1246,
+16h2403,
+16h222C,
+16h8022,
+16h46FD,
+16h4394,
+16h45DE,
+16h438C,
+16h6203,
+16h439B,
+16hFEAC,
+16h6023,
+16h710F,
+16h1250,
+16h66C3,
+16h726F,
+16h48F1,
+16h4112,
+16h0394,
+16h126A,
+16h62C5,
+16h6765,
+16h6E69,
+16h0394,
+16h1276,
+16h2846,
+16h656E,
+16h7478,
+16h0029,
+16h6B8D,
+16h6B8D,
+16h4264,
+16h294D,
+16h6A00,
+16h6147,
+16h6C00,
+16h6147,
+16h700C,
+16h434B,
+16h6147,
+16h700C,
+16h1280,
+16h6EC4,
+16h7865,
+16h0074,
+16h48F1,
+16h4944,
+16h08BF,
+16h12A2,
+16h2844,
+16h6F64,
+16h0029,
+16h6B8D,
+16h6081,
+16h6147,
+16h6180,
+16h426B,
+16h6147,
+16h6147,
+16h434B,
+16h6147,
+16h700C,
+16h12B0,
+16h64C2,
+16h006F,
+16h48F1,
+16h495B,
+16h8000,
+16h48BF,
+16h0394,
+16h12CC,
+16h2847,
+16h656C,
+16h7661,
+16h2965,
+16h6B8D,
+16h6103,
+16h6B8D,
+16h6103,
+16h6B8D,
+16h710F,
+16h12DC,
+16h6CC5,
+16h6165,
+16h6576,
+16h48F1,
+16h4972,
+16h700C,
+16h12F2,
+16h2846,
+16h6F6C,
+16h706F,
+16h0029,
+16h6B8D,
+16h6B8D,
+16h6310,
+16h6B8D,
+16h4279,
+16h6213,
+16h2990,
+16h6147,
+16h6147,
+16h6C00,
+16h6147,
+16h700C,
+16h6147,
+16h6A00,
+16h6147,
+16h434B,
+16h6147,
+16h700C,
+16h1300,
+16h2848,
+16h6E75,
+16h6F6C,
+16h706F,
+16h0029,
+16h6B8D,
+16h6B8D,
+16h6103,
+16h6B8D,
+16h6103,
+16h6B8D,
+16h6103,
+16h6147,
+16h700C,
+16h132E,
+16h75C6,
+16h6C6E,
+16h6F6F,
+16h0070,
+16h48F1,
+16h499C,
+16h700C,
+16h134C,
+16h2845,
+16h643F,
+16h296F,
+16h4279,
+16h6213,
+16h29BE,
+16h6B8D,
+16h6081,
+16h6147,
+16h6180,
+16h426B,
+16h6147,
+16h6147,
+16h434B,
+16h6147,
+16h700C,
+16h0273,
+16h700C,
+16h135C,
+16h3FC3,
+16h6F64,
+16h48F1,
+16h49B1,
+16h8000,
+16h48BF,
+16h0394,
+16h1382,
+16h6CC4,
+16h6F6F,
+16h0070,
+16h48F1,
+16h4984,
+16h6081,
+16h48BF,
+16h48F1,
+16h499C,
+16h4351,
+16h4394,
+16h8001,
+16h6903,
+16h6180,
+16h6023,
+16h710F,
+16h1392,
+16h2847,
+16h6C2B,
+16h6F6F,
+16h2970,
+16h6B8D,
+16h6180,
+16h6B8D,
+16h6B8D,
+16h4279,
+16h428F,
+16h6147,
+16h8002,
+16h4905,
+16h6B81,
+16h6203,
+16h6B81,
+16h6503,
+16h6810,
+16h6010,
+16h8003,
+16h4905,
+16h6B8D,
+16h6503,
+16h6810,
+16h6010,
+16h6403,
+16h29FB,
+16h6147,
+16h6203,
+16h6147,
+16h6C00,
+16h6147,
+16h700C,
+16h6147,
+16h6147,
+16h6103,
+16h434B,
+16h6147,
+16h700C,
+16h13B4,
+16h2BC5,
+16h6F6C,
+16h706F,
+16h48F1,
+16h49DE,
+16h6081,
+16h48BF,
+16h48F1,
+16h499C,
+16h4351,
+16h4394,
+16h8001,
+16h6903,
+16h6180,
+16h6023,
+16h710F,
+16h1404,
+16h2843,
+16h2969,
+16h6B8D,
+16h6B8D,
+16h414F,
+16h6147,
+16h6147,
+16h700C,
+16h1426,
+16h69C1,
+16h48F1,
+16h4A15,
+16h700C,
+16h1438,
+16h75C5,
+16h746E,
+16h6C69,
+16h08D5,
+16h1442,
+16h61C5,
+16h6167,
+16h6E69,
+16h08DF,
+16h144C,
+16h69C2,
+16h0066,
+16h4394,
+16h8000,
+16h08D5,
+16h1456,
+16h74C4,
+16h6568,
+16h006E,
+16h4394,
+16h8001,
+16h6903,
+16h6181,
+16h6C00,
+16h6403,
+16h6180,
+16h6023,
+16h710F,
+16h1462,
+16h72C6,
+16h7065,
+16h6165,
+16h0074,
+16h48DF,
+16h0A34,
+16h147C,
+16h73C4,
+16h696B,
+16h0070,
+16h4394,
+16h8000,
+16h08DF,
+16h148A,
+16h61C3,
+16h7466,
+16h6103,
+16h4A48,
+16h493E,
+16h718C,
+16h1498,
+16h65C4,
+16h736C,
+16h0065,
+16h4A48,
+16h6180,
+16h0A34,
+16h14A6,
+16h77C5,
+16h6968,
+16h656C,
+16h4A2D,
+16h718C,
+16h14B4,
+16h2846,
+16h6163,
+16h6573,
+16h0029,
+16h6B8D,
+16h6180,
+16h6147,
+16h6147,
+16h700C,
+16h14C0,
+16h63C4,
+16h7361,
+16h0065,
+16h48F1,
+16h4A64,
+16h8030,
+16h700C,
+16h14D4,
+16h2844,
+16h666F,
+16h0029,
+16h6B8D,
+16h6B81,
+16h6180,
+16h6147,
+16h770F,
+16h14E4,
+16h6FC2,
+16h0066,
+16h48F1,
+16h4A75,
+16h0A2D,
+16h14F6,
+16h65C5,
+16h646E,
+16h666F,
+16h4A56,
+16h8031,
+16h700C,
+16h1502,
+16h2809,
+16h6E65,
+16h6364,
+16h7361,
+16h2965,
+16h6B8D,
+16h6B8D,
+16h6103,
+16h6147,
+16h700C,
+16h1510,
+16h65C7,
+16h646E,
+16h6163,
+16h6573,
+16h6081,
+16h8031,
+16h6703,
+16h2A9E,
+16h6103,
+16h4A34,
+16h0A97,
+16h8030,
+16h6213,
+16h4819,
+16h6213,
+16h6461,
+16h6320,
+16h7361,
+16h2065,
+16h6F63,
+16h736E,
+16h7274,
+16h6375,
+16h2E74,
+16h48F1,
+16h4A8D,
+16h700C,
+16h1526,
+16h24C2,
+16h0022,
+16h48F1,
+16h454D,
+16h092A,
+16h155E,
+16h2EC2,
+16h0022,
+16h48F1,
+16h4557,
+16h092A,
+16h156A,
+16h3E05,
+16h6F62,
+16h7964,
+16h034B,
+16h1576,
+16h2844,
+16h6F74,
+16h0029,
+16h6B8D,
+16h6081,
+16h434B,
+16h6147,
+16h6C00,
+16h6023,
+16h710F,
+16h1580,
+16h74C2,
+16h006F,
+16h48F1,
+16h4AC3,
+16h48B1,
+16h4ABE,
+16h08BF,
+16h1596,
+16h2845,
+16h742B,
+16h296F,
+16h6B8D,
+16h6081,
+16h434B,
+16h6147,
+16h6C00,
+16h0370,
+16h15A6,
+16h2BC3,
+16h6F74,
+16h48F1,
+16h4AD6,
+16h48B1,
+16h4ABE,
+16h08BF,
+16h15BA,
+16h670B,
+16h7465,
+16h632D,
+16h7275,
+16h6572,
+16h746E,
+16hFEA8,
+16h7C0C,
+16h15CA,
+16h730B,
+16h7465,
+16h632D,
+16h7275,
+16h6572,
+16h746E,
+16hFEA8,
+16h6023,
+16h710F,
+16h15DC,
+16h640B,
+16h6665,
+16h6E69,
+16h7469,
+16h6F69,
+16h736E,
+16hFE90,
+16h6C00,
+16h0AF4,
+16h15F0,
+16h3F07,
+16h6E75,
+16h7169,
+16h6575,
+16h6081,
+16h4AEB,
+16h475C,
+16h2B11,
+16h4557,
+16h2007,
+16h6572,
+16h6564,
+16h2066,
+16h6181,
+16h4552,
+16h710F,
+16h1604,
+16h3C05,
+16h2C24,
+16h3E6E,
+16h6081,
+16h417E,
+16h2B2B,
+16h4B06,
+16h6081,
+16h438C,
+16h6203,
+16h439B,
+16hFEAC,
+16h6023,
+16h6103,
+16h6081,
+16hFEAE,
+16h6023,
+16h6103,
+16h4351,
+16h4AEB,
+16h6C00,
+16h6180,
+16h6023,
+16h710F,
+16h6103,
+16h454D,
+16h6E04,
+16h6D61,
+16h0065,
+16h080B,
+16h1626,
+16h2403,
+16h6E2C,
+16hFEBA,
+16h03BC,
+16h1664,
+16h2408,
+16h6F63,
+16h706D,
+16h6C69,
+16h0065,
+16h47AB,
+16h4264,
+16h2B46,
+16h6C00,
+16h8080,
+16h6303,
+16h2B45,
+16h0172,
+16h0B46,
+16h08CB,
+16h445F,
+16h2B49,
+16h0911,
+16h080B,
+16h166E,
+16h6186,
+16h6F62,
+16h7472,
+16h0022,
+16h48F1,
+16h4819,
+16h092A,
+16h1696,
+16h3C07,
+16h766F,
+16h7265,
+16h3E74,
+16hFEAE,
+16h6C00,
+16h4AEB,
+16h6023,
+16h710F,
+16h16A6,
+16h6F05,
+16h6576,
+16h7472,
+16hFEBC,
+16h03BC,
+16h16BA,
+16h6504,
+16h6978,
+16h0074,
+16h6B8D,
+16h710F,
+16h16C6,
+16h3CC3,
+16h3E3B,
+16h48F1,
+16h4B66,
+16h4852,
+16h4B60,
+16h8000,
+16h4394,
+16h6023,
+16h710F,
+16h16D2,
+16h3BC1,
+16hFEBE,
+16h03BC,
+16h16E8,
+16h5D01,
+16h9678,
+16hFE8A,
+16h6023,
+16h710F,
+16h16F0,
+16h3A01,
+16h472F,
+16h4B34,
+16h0B79,
+16h16FC,
+16h6909,
+16h6D6D,
+16h6465,
+16h6169,
+16h6574,
+16h8080,
+16hFEAE,
+16h6C00,
+16h6C00,
+16h6403,
+16hFEAE,
+16h6C00,
+16h6023,
+16h710F,
+16h1706,
+16h7504,
+16h6573,
+16h0072,
+16h472F,
+16h4B34,
+16h4B60,
+16h48F1,
+16h41D2,
+16h08BF,
+16h1724,
+16h3C08,
+16h7263,
+16h6165,
+16h6574,
+16h003E,
+16h472F,
+16h4B34,
+16h4B60,
+16h838C,
+16h08CB,
+16h1738,
+16h6306,
+16h6572,
+16h7461,
+16h0065,
+16hFEC0,
+16h03BC,
+16h174E,
+16h7608,
+16h7261,
+16h6169,
+16h6C62,
+16h0065,
+16h4BAB,
+16h8000,
+16h08BF,
+16h175C,
+16h3209,
+16h6176,
+16h6972,
+16h6261,
+16h656C,
+16h4BAB,
+16h8000,
+16h48BF,
+16h8001,
+16h4357,
+16h08BA,
+16h176E,
+16h2847,
+16h6F64,
+16h7365,
+16h293E,
+16h6B8D,
+16h8001,
+16h6903,
+16h4394,
+16h8001,
+16h6903,
+16hFEAE,
+16h6C00,
+16h4735,
+16h6081,
+16h434B,
+16hFFFF,
+16h6600,
+16h6403,
+16h48BF,
+16h6023,
+16h6103,
+16h08BF,
+16h1786,
+16h630C,
+16h6D6F,
+16h6970,
+16h656C,
+16h6F2D,
+16h6C6E,
+16h0079,
+16h8040,
+16hFEAE,
+16h6C00,
+16h6C00,
+16h6403,
+16hFEAE,
+16h6C00,
+16h6023,
+16h710F,
+16h17B4,
+16h6485,
+16h656F,
+16h3E73,
+16h48F1,
+16h4BC7,
+16h700C,
+16h17D6,
+16h6304,
+16h6168,
+16h0072,
+16h435C,
+16h4727,
+16h6310,
+16h017E,
+16h17E4,
+16h5B86,
+16h6863,
+16h7261,
+16h005D,
+16h4BF5,
+16h0911,
+16h17F4,
+16h6308,
+16h6E6F,
+16h7473,
+16h6E61,
+16h0074,
+16h4BAB,
+16h48BF,
+16h4BC7,
+16h7C0C,
+16h1802,
+16h6405,
+16h6665,
+16h7265,
+16h4BAB,
+16h8000,
+16h48BF,
+16h4BC7,
+16h6C00,
+16h4264,
+16h8000,
+16h6703,
+16h4819,
+16h750D,
+16h696E,
+16h696E,
+16h6974,
+16h6C61,
+16h7A69,
+16h6465,
+16h0172,
+16h1816,
+16h6982,
+16h0073,
+16h48B1,
+16h4ABE,
+16h6023,
+16h710F,
+16h1840,
+16h2E03,
+16h6469,
+16h4264,
+16h2C2F,
+16h438C,
+16h801F,
+16h6303,
+16h0529,
+16h4539,
+16h4557,
+16h7B08,
+16h6F6E,
+16h616E,
+16h656D,
+16h007D,
+16h700C,
+16h184E,
+16h7708,
+16h726F,
+16h6C64,
+16h7369,
+16h0074,
+16h43AA,
+16h4394,
+16h8000,
+16h48BF,
+16h6081,
+16hFEA8,
+16h434B,
+16h6081,
+16h6C00,
+16h48BF,
+16h6023,
+16h6103,
+16h8000,
+16h08BF,
+16h1870,
+16h6F06,
+16h6472,
+16h7265,
+16h0040,
+16h6081,
+16h6C00,
+16h6081,
+16h2C5A,
+16h6147,
+16h434B,
+16h4C50,
+16h6B8D,
+16h6180,
+16h731C,
+16h700F,
+16h1898,
+16h6709,
+16h7465,
+16h6F2D,
+16h6472,
+16h7265,
+16hFE90,
+16h0C50,
+16h18B8,
+16h3E04,
+16h6977,
+16h0064,
+16h034B,
+16h18C8,
+16h2E04,
+16h6977,
+16h0064,
+16h4511,
+16h6081,
+16h4C67,
+16h434B,
+16h6C00,
+16h4264,
+16h2C75,
+16h4C29,
+16h710F,
+16h8000,
+16h0566,
+16h18D2,
+16h2104,
+16h6977,
+16h0064,
+16h4C67,
+16h434B,
+16hFEAE,
+16h6C00,
+16h6180,
+16h6023,
+16h710F,
+16h18F0,
+16h7604,
+16h636F,
+16h0073,
+16h4539,
+16h4557,
+16h7605,
+16h636F,
+16h3A73,
+16hFEA8,
+16h434B,
+16h6C00,
+16h4264,
+16h2C94,
+16h6081,
+16h4C6C,
+16h4C67,
+16h0C8D,
+16h700C,
+16h1906,
+16h6F05,
+16h6472,
+16h7265,
+16h4539,
+16h4557,
+16h7307,
+16h6165,
+16h6372,
+16h3A68,
+16h4C61,
+16h4264,
+16h2CA6,
+16h6180,
+16h4C6C,
+16h6A00,
+16h0CA0,
+16h4539,
+16h4557,
+16h6407,
+16h6665,
+16h6E69,
+16h3A65,
+16h4AEB,
+16h0C6C,
+16h192C,
+16h7309,
+16h7465,
+16h6F2D,
+16h6472,
+16h7265,
+16h6081,
+16h8000,
+16h6600,
+16h6703,
+16h2CBC,
+16h6103,
+16hFEA2,
+16h8001,
+16h8008,
+16h6181,
+16h6F03,
+16h4819,
+16h6F12,
+16h6576,
+16h2072,
+16h6973,
+16h657A,
+16h6F20,
+16h2066,
+16h7623,
+16h636F,
+16h0073,
+16hFE90,
+16h6180,
+16h6081,
+16h2CD7,
+16h6147,
+16h6180,
+16h6181,
+16h6023,
+16h6103,
+16h434B,
+16h6B8D,
+16h6A00,
+16h0CCC,
+16h6180,
+16h6023,
+16h710F,
+16h195E,
+16h6F04,
+16h6C6E,
+16h0079,
+16h8000,
+16h6600,
+16h0CB4,
+16h19B6,
+16h6104,
+16h736C,
+16h006F,
+16h4C61,
+16h6181,
+16h6180,
+16h6310,
+16h0CB4,
+16h19C4,
+16h7008,
+16h6572,
+16h6976,
+16h756F,
+16h0073,
+16h4C61,
+16h6180,
+16h6103,
+16h6A00,
+16h0CB4,
+16h19D6,
+16h3E04,
+16h6F76,
+16h0063,
+16h4BAB,
+16h6081,
+16h48BF,
+16h4C7B,
+16h4BC7,
+16h6C00,
+16h6147,
+16h4C61,
+16h6180,
+16h6103,
+16h6B8D,
+16h6180,
+16h0CB4,
+16h19EC,
+16h7705,
+16h6469,
+16h666F,
+16h48B1,
+16h4ABE,
+16h7C0C,
+16h1A0E,
+16h760A,
+16h636F,
+16h6261,
+16h6C75,
+16h7261,
+16h0079,
+16h4C3D,
+16h0CF9,
+16h1A1C,
+16h5F05,
+16h7974,
+16h6570,
+16h6147,
+16h0D1F,
+16h438C,
+16h4362,
+16h44D7,
+16h6B81,
+16h2D25,
+16h6B8D,
+16h6A00,
+16h6147,
+16h0D1C,
+16h6B8D,
+16h6103,
+16h710F,
+16h1A2E,
+16h6403,
+16h2B6D,
+16h6181,
+16h8004,
+16h4566,
+16h4511,
+16h6147,
+16h0D34,
+16h438C,
+16h8003,
+16h4566,
+16h6B81,
+16h2D3A,
+16h6B8D,
+16h6A00,
+16h6147,
+16h0D31,
+16h6B8D,
+16h710F,
+16h1A52,
+16h6404,
+16h6D75,
+16h0070,
+16hFE80,
+16h6C00,
+16h6147,
+16h4432,
+16h8010,
+16h4305,
+16h6147,
+16h4539,
+16h8010,
+16h4279,
+16h4D2B,
+16h4155,
+16h8002,
+16h4518,
+16h4D1A,
+16h6B81,
+16h2D55,
+16h6B8D,
+16h6A00,
+16h6147,
+16h0D47,
+16h6B8D,
+16h6103,
+16h6103,
+16h6B8D,
+16hFE80,
+16h6023,
+16h710F,
+16h1A7A,
+16h2E02,
+16h0073,
+16h4539,
+16h416A,
+16h6A00,
+16h800F,
+16h6303,
+16h6147,
+16h6B81,
+16h4905,
+16h4579,
+16h6B81,
+16h2D6E,
+16h6B8D,
+16h6A00,
+16h6147,
+16h0D65,
+16h6B8D,
+16h6103,
+16h4557,
+16h3C04,
+16h6F74,
+16h0073,
+16h700C,
+16h1ABA,
+16h2807,
+16h6E3E,
+16h6D61,
+16h2965,
+16h6C00,
+16h4264,
+16h2D84,
+16h4279,
+16h4735,
+16h6503,
+16h2D83,
+16h4351,
+16h0D7A,
+16h700F,
+16h6103,
+16h8000,
+16h700C,
+16h1AEC,
+16h3E05,
+16h616E,
+16h656D,
+16h6147,
+16h4C61,
+16h4264,
+16h2DA7,
+16h6180,
+16h6B81,
+16h6180,
+16h4D7A,
+16h4264,
+16h2DA5,
+16h6147,
+16h6A00,
+16h6147,
+16h0D9A,
+16h6103,
+16h6B81,
+16h2DA0,
+16h6B8D,
+16h6A00,
+16h6147,
+16h0D99,
+16h6B8D,
+16h6103,
+16h6B8D,
+16h6B8D,
+16h710F,
+16h6A00,
+16h0D8D,
+16h6B8D,
+16h6103,
+16h8000,
+16h700C,
+16h1B10,
+16h7303,
+16h6565,
+16h48B1,
+16h4539,
+16h6081,
+16h6C00,
+16h4264,
+16hF00C,
+16h6503,
+16h2DC7,
+16hBFFF,
+16h6303,
+16h8001,
+16h6D03,
+16h4D8B,
+16h4264,
+16h2DC0,
+16h4511,
+16h4C29,
+16h0DC5,
+16h6081,
+16h6C00,
+16hFFFF,
+16h6303,
+16h4572,
+16h434B,
+16h0DB0,
+16h0273,
+16h1B58,
+16h2807,
+16h6F77,
+16h6472,
+16h2973,
+16h4539,
+16h6C00,
+16h4264,
+16h2DD6,
+16h6081,
+16h4C29,
+16h4511,
+16h4351,
+16h0DCE,
+16h700C,
+16h1B92,
+16h7705,
+16h726F,
+16h7364,
+16h4C61,
+16h4264,
+16h2DE9,
+16h6180,
+16h4539,
+16h4539,
+16h4557,
+16h3A01,
+16h6081,
+16h4C6C,
+16h4539,
+16h4DCD,
+16h6A00,
+16h0DDC,
+16h700C,
+16h1BB0,
+16h7603,
+16h7265,
+16h8001,
+16h8100,
+16h4329,
+16h8006,
+16h720F,
+16h1BD6,
+16h6802,
+16h0069,
+16h4539,
+16h4557,
+16h650C,
+16h6F66,
+16h7472,
+16h2068,
+16h316A,
+16h202B,
+16h0076,
+16hFE80,
+16h6C00,
+16h4432,
+16h4DED,
+16h43F4,
+16h4406,
+16h4406,
+16h802E,
+16h43FC,
+16h4406,
+16h441E,
+16h4529,
+16hFE80,
+16h6023,
+16h6103,
+16h0539,
+16h1BE6,
+16h6304,
+16h6C6F,
+16h0064,
+16h8002,
+16hFE80,
+16h8042,
+16h45C7,
+16h4899,
+16hFEA2,
+16h6081,
+16hFE90,
+16h6023,
+16h6103,
+16h6081,
+16hFEA8,
+16h4379,
+16h4B60,
+16hC000,
+16h434B,
+16h6081,
+16h4351,
+16h6C00,
+16h4873,
+16hFEB4,
+16h43BC,
+16h48A2,
+16h0E12
+
+    };
+    
+    dualport_bram uint16 ram[32768] = uninitialized;
+    
+    // CYCLE to control each stage
+    // CYCLE allows 1 clock cycle for BRAM access and 3 clock cycles for SPRAM access
+    // INIT to determine if copying rom to ram or executing
+    // INIT 0 SPRAM, INIT 1 ROM to SPRAM, INIT 2 J1 CPU
+    uint3 CYCLE = 0;
+    uint2 INIT = 0;
+    
+    // Address for 0 to SPRAM, copying ROM, plus storage
+    uint16 copyaddress = 0;
+    uint16 bramREAD = 0;
+
+    // UART input FIFO (512 character) as dualport bram (code from @sylefeb)
+    dualport_bram uint8 uartInBuffer[512] = uninitialized;
+    uint9 uartInBufferNext = 0;
+    uint9 uartInBufferTop = 0;
+    uint1 uartInHold = 1;
+
+    // UART output FIFO (512 character) as dualport bram (code from @sylefeb)
+    dualport_bram uint8 uartOutBuffer[512] = uninitialized;
+    uint9 uartOutBufferNext = 0;
+    uint9 uartOutBufferTop = 0;
+    uint9 newuartOutBufferTop = 0;
+    uint1 uartOutHold = 0;
+    
+    // bram for dstack and rstack write enable, maintained low, pulsed high (code from @sylefeb)
+    dstack.wenable         := 0;  
+    rstack.wenable         := 0;
+
+    // dual port bram for dtsack and strack
+    uartInBuffer.wenable0  := 0;  // always read  on port 0
+    uartInBuffer.wenable1  := 1;  // always write on port 1
+    uartInBuffer.addr0     := uartInBufferNext; // FIFO reads on next
+    uartInBuffer.addr1     := uartInBufferTop;  // FIFO writes on top
+    
+    uartOutBuffer.wenable0 := 0; // always read  on port 0
+    uartOutBuffer.wenable1 := 1; // always write on port 1    
+    uartOutBuffer.addr0    := uartOutBufferNext; // FIFO reads on next
+    uartOutBuffer.addr1    := uartOutBufferTop;  // FIFO writes on top
+
+    // Setup the terminal
+    display.showterminal = 1;
+    display.showcursor = 1;
+    
+    // INIT is 0 ZERO dualport working blockram
+    while( INIT == 0 ) {
+        switch(CYCLE) {
+            case 0: {
+                ram.addr0 = copyaddress;
+                ram.wdata0 = 0;
+                ram.wenable0 = 1;
+            }
+            case 1: {
+                copyaddress = copyaddress + 1;
+                ram.wenable0 = 0;
+            }
+            case 4: {
+                if( copyaddress == 32768 ) {
+                    INIT = 1;
+                    copyaddress = 0;
+                }
+            }
+            default: {}
+        }
+        CYCLE = ( CYCLE == 4 ) ? 0 : CYCLE + 1;
+    }
+    
+    // INIT is 1 COPY ROM TO RAM
+    while( INIT == 1) {
+        switch(CYCLE) {
+            case 0: {
+                // Setup READ from ROM
+                rom.addr = copyaddress;
+            }
+            case 1: {
+                bramREAD = rom.rdata;
+            }
+            case 2: {
+                // WRITE to RAM
+                ram.addr0 = copyaddress;
+                ram.wdata0 = bramREAD;
+                ram.wenable0 = 1;
+            }
+            case 3: {
+                copyaddress = copyaddress + 1;
+                ram.wenable0 = 0;
+            }
+            case 4: {
+                if( copyaddress == 4096 ) {
+                    INIT = 3;
+                    copyaddress = 0;
+                }
+            }
+            default: {
+            }
+        }
+        CYCLE = ( CYCLE == 4 ) ? 0 : CYCLE + 1;
+    }
+
+    // INIT is 3 EXECUTE J1 CPU
+    while( INIT == 3 ) {
+        // Deal with VBLANK, VGA and SDRAM
+
+        // READ from UART if character available and store
+        switch( uartInHold ) {
+            case 0: {
+                if( uart_rx_valid ) {
+                    // writes at uartInBufferTop (code from @sylefeb)
+                    uartInBuffer.wdata1  = uart_rx_data;            
+                    uartInBufferTop      = uartInBufferTop + 1;
+                    uartInHold = 1;
+                }
+                uart_rx_ready = 1;
+            }
+            case 1: {
+                // Wait for UART valid flag to flip before allowing another read
+                uartInHold = ( uart_rx_valid == 0 ) ? 0 : 1;
+            }
+        }
+
+        // WRITE to UART if characters in buffer and UART is ready
+        switch( uartOutHold ) {
+            case 0: {
+                if( ~(uartOutBufferNext == uartOutBufferTop) & ~( uart_tx_busy ) ) {
+                    // reads at uartOutBufferNext (code from @sylefeb)
+                    uart_tx_data      = uartOutBuffer.rdata0; 
+                    uart_tx_valid     = 1;
+                    uartOutHold = 1;
+                    uartOutBufferNext = uartOutBufferNext + 1;
+                }
+            }
+            case 1: {
+                if( ~uart_tx_busy ) {
+                    uart_tx_valid = 0;
+                    uartOutHold = 0;
+                }
+            }
+        }
+        uartOutBufferTop = newuartOutBufferTop;        
+        
+        switch( CYCLE ) {
+            // Read stackNext, rStackTop
+            case 0: {
+                // read dtsack and rstack brams (code from @sylefeb)
+                stackNext = dstack.rdata;
+                rStackTop = rstack.rdata;
+            
+                // start READ memoryInput = [stackTop] and instruction = [pc] result ready in 1 cycles
+                ram.addr0 = stackTop >> 1;
+                ram.wenable0 = 0;
+                ram.addr1 = pc;
+                ram.wenable1 = 0;
+            }
+            case 1: {
+                // wait then read the data from RAM
+                memoryInput = ram.rdata0;
+                instruction = ram.rdata1;
+            }
+            
+            // J1 CPU Instruction Execute
+            case 2: {
+                // +---------------------------------------------------------------+
+                // | F | E | D | C | B | A | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+                // +---------------------------------------------------------------+
+                // | 1 |                    LITERAL VALUE                          |
+                // +---------------------------------------------------------------+
+                // | 0 | 0 | 0 |            BRANCH TARGET ADDRESS                  |
+                // +---------------------------------------------------------------+
+                // | 0 | 0 | 1 |            CONDITIONAL BRANCH TARGET ADDRESS      |
+                // +---------------------------------------------------------------+
+                // | 0 | 1 | 0 |            CALL TARGET ADDRESS                    |
+                // +---------------------------------------------------------------+
+                // | 0 | 1 | 1 |R2P| ALU OPERATION |T2N|T2R|N2A|J1P| RSTACK| DSTACK|
+                // +---------------------------------------------------------------+
+                // | F | E | D | C | B | A | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+                // +---------------------------------------------------------------+
+                // 
+                // T   : Top of data stack
+                // N   : Next on data stack
+                // PC  : Program Counter
+                // 
+                // LITERAL VALUES : push a value onto the data stack
+                // CONDITIONAL    : BRANCHS pop and test the T
+                // CALLS          : PC+1 onto the return stack
+                // 
+                // T2N : Move T to N
+                // T2R : Move T to top of return stack
+                // N2A : STORE T to memory location addressed by N
+                // R2P : Move top of return stack to PC
+                // 
+                // RSTACK and DSTACK are signed values (twos compliment) that are
+                // the stack delta (the amount to increment or decrement the stack
+                // by for their respective stacks: return and data)
+
+                if(is_lit) {
+                    // LITERAL Push value onto stack
+                    newStackTop = immediate;
+                    newPC = pcPlusOne;
+                    newDSP = dsp + 1;
+                    newRSP = rsp;
+                } else {
+                    switch( callbranch(instruction).is_callbranchalu ) { // BRANCH 0BRANCH CALL ALU
+                        case 2b00: {
+                            // BRANCH
+                            newStackTop = stackTop;
+                            newPC = callbranch(instruction).address;
+                            newDSP = dsp;
+                            newRSP = rsp;
+                        }
+                        case 2b01: {
+                            // 0BRANCH
+                            newStackTop = stackNext;
+                            newPC = ( stackTop == 0 ) ? callbranch(instruction).address : pcPlusOne;
+                            newDSP = dsp - 1;
+                            newRSP = rsp;
+                        }
+                        case 2b10: {
+                            // CALL
+                            newStackTop = stackTop;
+                            newPC = callbranch(instruction).address;
+                            newDSP = dsp;
+                            newRSP = rsp + 1;
+                            rstackWData = pcPlusOne << 1;
+                        }
+                        case 2b11: {
+                            // ALU
+                            switch( aluop(instruction).is_j1j1plus ) {
+                                case 1b0: {
+                                    switch( aluop(instruction).operation ) {
+                                        case 4b0000: {newStackTop = stackTop;}
+                                        case 4b0001: {newStackTop = stackNext;}
+                                        case 4b0010: {newStackTop = stackTop + stackNext;}
+                                        case 4b0011: {newStackTop = stackTop & stackNext;}
+                                        case 4b0100: {newStackTop = stackTop | stackNext;}
+                                        case 4b0101: {newStackTop = stackTop ^ stackNext;}
+                                        case 4b0110: {newStackTop = ~stackTop;}
+                                        case 4b0111: {newStackTop = {16{(stackNext == stackTop)}};}
+                                        case 4b1000: {newStackTop = {16{(__signed(stackNext) < __signed(stackTop))}};}
+                                        case 4b1001: {newStackTop = stackNext >> nibbles(stackTop).nibble0;}
+                                        case 4b1010: {newStackTop = stackTop - 1;}
+                                        case 4b1011: {newStackTop = rStackTop;}
+                                        case 4b1100: {
+                                        // UART or memoryInput
+                                            switch( stackTop ) {
+                                                case 16hf000: {
+                                                    // INPUT from UART reads at uartInBufferNext (code from @sylefeb)
+                                                    newStackTop = { 8b0, uartInBuffer.rdata0 };
+                                                    uartInBufferNext = uartInBufferNext + 1;
+                                                } 
+                                                case 16hf001: {
+                                                    // UART status register { 14b0, tx full, rx available }
+                                                    newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ~( uartInBufferNext == uartInBufferTop )};
+                                                }
+                                                case 16hf002: {
+                                                    // RGB LED status
+                                                    newStackTop = leds;
+                                                }
+                                                case 16hf003: {
+                                                    // user buttons
+                                                    newStackTop = {12b0, buttons};
+                                                }
+                                                case 16hf004: {
+                                                    // 1hz timer
+                                                    newStackTop = timer1hz;
+                                                }
+                                                case 16hff07: {
+                                                    // GPU Active Status
+                                                    newStackTop = display.gpu_active;
+                                                }
+                                                case 16hff20: {
+                                                    // Terminal Active Status
+                                                    newStackTop = display.terminal_active;
+                                                }
+                                                default: {newStackTop = memoryInput;}
+                                            }
+                                        }
+                                        case 4b1101: {newStackTop = stackNext << nibbles(stackTop).nibble0;}
+                                        case 4b1110: {newStackTop = {rsp, dsp};}
+                                        case 4b1111: {newStackTop = {16{(__unsigned(stackNext) < __unsigned(stackTop))}};}
+                                    }
+                                }
+                                
+                                case 1b1: {
+                                    switch( aluop(instruction).operation ) {
+                                        case 4b0000: {newStackTop = {16{(stackTop == 0)}};}
+                                        case 4b0001: {newStackTop = ~{16{(stackTop == 0)}};}
+                                        case 4b0010: {newStackTop = ~{16{(stackNext == stackTop)}};}
+                                        case 4b0011: {newStackTop = stackTop + 1;}
+                                        case 4b0100: {newStackTop = stackTop << 1;}
+                                        case 4b0101: {newStackTop = stackTop >> 1;}
+                                        case 4b0110: {newStackTop = {16{(__signed(stackNext) > __signed(stackTop))}};}
+                                        case 4b0111: {newStackTop = {16{(__unsigned(stackNext) > __unsigned(stackTop))}};}
+                                        case 4b1000: {newStackTop = {16{(__signed(stackTop) < __signed(0))}};}
+                                        case 4b1001: {newStackTop = {16{(__signed(stackTop) > __signed(0))}};}
+                                        case 4b1010: {newStackTop = ( __signed(stackTop) < __signed(0) ) ?  - stackTop : stackTop;}
+                                        case 4b1011: {newStackTop = ( __signed(stackNext) > __signed(stackTop) ) ? stackNext : stackTop;}
+                                        case 4b1100: {newStackTop = ( __signed(stackNext) < __signed(stackTop) ) ? stackNext : stackTop;}
+                                        case 4b1101: {newStackTop = -stackTop;}
+                                        case 4b1110: {newStackTop = stackNext - stackTop;}
+                                        case 4b1111: {newStackTop = {16{(__signed(stackNext) >= __signed(stackTop))}};}
+                                    }
+                                }
+                            } // ALU Operation
+                            
+                            // UPDATE newDSP newRSP
+                            newDSP = dsp + ddelta;
+                            newRSP = rsp + rdelta;
+                            rstackWData = stackTop;
+
+                            // Update PC for next instruction, return from call or next instruction
+                            newPC = ( aluop(instruction).is_r2pc ) ? rStackTop >> 1 : pcPlusOne;
+
+                            // n2memt mem[t] = n        
+                            if( aluop(instruction).is_n2memt ) {
+                                switch( stackTop ) {
+                                    default: {
+                                        // WRITE to SPRAM
+                                        ram.addr0 = stackTop >> 1;
+                                        ram.wdata0 = stackNext;
+                                        ram.wenable0 = 1;
+                                    }
+                                    case 16hf000: {
+                                        // OUTPUT to UART (dualport blockram code from @sylefeb)
+                                        uartOutBuffer.wdata1 = bytes(stackNext).byte0;
+                                        newuartOutBufferTop = uartOutBufferTop + 1;
+                                    }
+                                    case 16hf002: {
+                                        // OUTPUT to led
+                                        leds = stackNext;
+                                    }
+                                    case 16hff00: {
+                                        // GPU set x
+                                        display.gpu_x = stackNext;
+                                    }
+                                    case 16hff01: {
+                                        // GPU set y
+                                        display.gpu_y = stackNext;
+                                    }
+                                    case 16hff02: {
+                                        // GPU set dot
+                                        display.gpu_colour = stackNext;
+                                    }
+                                   case 16hff03: {
+                                        // GPU set parameter 0
+                                        display.gpu_param0 = stackNext;
+                                    }
+                                   case 16hff04: {
+                                        // GPU set parameter 1
+                                        display.gpu_param1 = stackNext;
+                                    }
+                                   case 16hff05: {
+                                        // GPU set parameter 2
+                                        display.gpu_param2 = stackNext;
+                                    }
+                                   case 16hff06: {
+                                        // GPU set parameter 3
+                                        display.gpu_param3 = stackNext;
+                                    }
+                                   case 16hff07: {
+                                        // Start GPU
+                                        display.gpu_write = stackNext;
+                                    }
+                                    case 16hff10: {
+                                        // TPU set x
+                                        display.tpu_x = stackNext;
+                                    }
+                                    case 16hff11: {
+                                        // TPU set y
+                                        display.tpu_y = stackNext;
+                                    }
+                                    case 16hff12: {
+                                        // TPU set char
+                                        display.tpu_set = stackNext;
+                                        display.tpu_write = 1;
+                                    }
+                                    case 16hff13: {
+                                        // TPU set background
+                                        display.tpu_set = stackNext;
+                                        display.tpu_write = 2;
+                                    }
+                                    case 16hff14: {
+                                        // TPU set foreground
+                                        display.tpu_set = stackNext;
+                                        display.tpu_write = 3;
+                                    }
+                                    case 16hff20: {
+                                        // Terminal set character
+                                        display.terminal_character = stackNext;
+                                        display.terminal_write = 1;
+                                     }
+                                    case 16hff21: {
+                                        // Terminal set showterminal
+                                        display.showterminal = stackNext;
+                                     }
+                               }
+                            }
+                        } // ALU
+                    }
+                }
+            } // J1 CPU Instruction Execute
+
+            // update pc and perform mem[t] = n
+            case 3: {
+                // Write to dstack and rstack
+                if( dstackWrite ) {
+                    // bram code for dstack (code from @sylefeb)
+                    dstack.wenable = 1;
+                    dstack.addr    = newDSP;
+                    dstack.wdata   = stackTop;
+                }
+                if( rstackWrite ) {
+                    // bram code for rstack (code from @sylefeb)
+                    rstack.wenable = 1;
+                    rstack.addr    = newRSP;
+                    rstack.wdata   = rstackWData;
+                }
+            }
+            
+            // Update dsp, rsp, pc, stackTop
+            case 4: {
+                dsp = newDSP;
+                pc = newPC;
+                stackTop = newStackTop;
+                rsp = newRSP;
+                
+                // Setup addresses for dstack and rstack brams (code from @sylefeb)
+                dstack.addr = newDSP;
+                rstack.addr = newRSP;
+            
+                // reset sram_readwrite
+                ram.wenable0 = 0;
+                
+                // reset gpu, tpu and terminal
+                display.gpu_write = 0;
+                display.tpu_write = 0;
+                display.terminal_write = 0;
+            }
+            
+            default: {}
+        } // switch(CYCLE)
+        
+    
+        // Move to next CYCLE ( 0 to 4 , then back to 0 )
+        CYCLE = ( CYCLE == 4 ) ? 0 : CYCLE + 1;
+    } // (INIT==3 execute J1 CPU)
+
+}
+

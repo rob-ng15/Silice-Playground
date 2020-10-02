@@ -62,12 +62,12 @@ algorithm multiplex_display(
    
 
     // Character position on the screen x 0-79, y 0-29 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
-    uint8 xcharacterpos := (pix_x + 1) >> 3;
+    uint8 xcharacterpos := (pix_x) >> 3;
     uint12 ycharacterpos := ((pix_y) >> 4) * 80; // 16 pixel high characters
     
     // Derive the x and y coordinate within the current 8x16 character block x 0-7, y 0-15
-    uint8 xincharacter := pix_x & 7;
-    uint8 yincharacter := pix_y & 15;
+    uint8 xincharacter := (pix_x) & 7;
+    uint8 yincharacter := (pix_y) & 15;
 
     // Derive the actual pixel in the current character
     uint1 characterpixel := ((characterGenerator8x16[ character.rdata0 * 16 + yincharacter ] << xincharacter) >> 7) & 1;
@@ -79,14 +79,14 @@ algorithm multiplex_display(
     uint8 terminal_y = 7;
 
     // Character position on the terminal x 0-79, y 0-3 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
-    uint8 xterminalpos := (pix_x + 1) >> 3;
+    uint8 xterminalpos := (pix_x) >> 3;
     uint12 yterminalpos := ((pix_y - 416) >> 3) * 80; // 8 pixel high characters
 
     uint1 is_cursor := ( xterminalpos == terminal_x ) & ( ( ( pix_y - 416) >> 3 ) == terminal_y );
     
     // Derive the x and y coordinate within the current 8x8 terminal character block x 0-7, y 0-7
-    uint8 xinterminal := pix_x & 7;
-    uint8 yinterminal := pix_y & 7;
+    uint8 xinterminal := (pix_x) & 7;
+    uint8 yinterminal := (pix_y) & 7;
 
     // Derive the actual pixel in the current terminal
     uint1 terminalpixel := ((characterGenerator8x8[ terminal.rdata0 * 8 + yinterminal ] << xinterminal) >> 7) & 1;
