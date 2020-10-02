@@ -1,12 +1,13 @@
-module uart(input wire [7:0] din,
-	    input wire wr_en,
-	    input wire clk_50m,
-	    output wire tx,
-	    output wire tx_busy,
-	    input wire rx,
-	    output wire rdy,
-	    input wire rdy_clr,
-	    output wire [7:0] dout);
+module uart(
+		input  [7:0] din,
+	    input  wr_en,
+	    input  clk_50m,
+	    output tx,
+	    output tx_busy,
+	    input  rx,
+	    output rdy,
+	    input  rdy_clr,
+	    output [7:0] dout);
 
 wire rxclk_en, txclk_en;
 
