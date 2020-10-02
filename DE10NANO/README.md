@@ -18,10 +18,15 @@ This uses the _**DRAFT**_ branch of Silice (https://github.com/sylefeb/Silice). 
 The VGA output is a multiplexed bitmap and character display, with the bitmap __under__ the characters. To allow the bitmap to be displayed, set the corresponding character map to 0.
 
 * 640 x 480 256 colour { rrrgggbb } bitmap display
+* - Includes a simple GPU to draw pixels, lines (via Bresenham's Line Drawing Algorithm) and filled rectangles.
 * 80 x 30 256 colour { rrrgggbb } text display, using IBM 8x16 256 character ROM
+* - Includes a simple TPU to draw characters on the display (will be expanded)
+* - Each character has 3 attributes, character code, foreground colour and background colour
+* - Character 0 allows the underlying bitmap to display
 * 80 x 8 2 colour blue/white text display, using IBM 8x8 256 character ROM as input/output terminal
-
-Each character in the main character display has 3 attributes, character, foreground and background.
+* - Includes a simple terminal output protocol to display characters
+* - Includes a flashing cursor
+* - Can be shown/hidden to allow the larger character and bitmap to be fully displayed
 
 Due to the address space limitations of the J1+ CPU the bitmap, character map and terminal map cannot be memory mapped so these memory areas are controlled by the multiplex_display algorithm, providing a small GPU (graphics processing unit), a small TPU (text processing unit) and a small terminal interface. 
 
@@ -43,7 +48,7 @@ GPU Operation | GPU Action
 0 | Idle
 1 | Set pixel x,y to colour
 2 | Fill rectangle x,y to param0,param1 in colour
-3 | Bresenham's line drawing algorithm from x,y to param0,param1 in colour<br>Work in Progress
+3 | Bresenham's line drawing algorithm from x,y to param0,param1 in colour
 5 | Bresenham's circle drawing algorithm centred at x,y of radius r in colour<br>Work in Progress
 
 The TPU is controlled by writing to the following addresses:
