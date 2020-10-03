@@ -19,13 +19,13 @@ algorithm multiplex_display(
     output! uint$color_depth$ pix_blue,
 
     // GPU to SET pixels
-    input uint10 gpu_x,
-    input uint9 gpu_y,
-    input uint16 gpu_param0,
-    input uint16 gpu_param1,
-    input uint16 gpu_param2,
-    input uint16 gpu_param3,
-    input uint8 gpu_colour,
+    input int10 gpu_x,
+    input int9 gpu_y,
+    input int16 gpu_param0,
+    input int16 gpu_param1,
+    input int16 gpu_param2,
+    input int16 gpu_param3,
+    input int8 gpu_colour,
     input uint2 gpu_write,
     output uint8 gpu_active,
     
@@ -103,8 +103,8 @@ algorithm multiplex_display(
     uint6 colourexpand2to6[4] = {  0, 21, 42, 63 };
     
     // GPU work variable storage
-    uint16 gpu_active_x = 0;
-    uint16 gpu_active_y = 0;
+    int16 gpu_active_x = 0;
+    int16 gpu_active_y = 0;
     uint8 gpu_active_colour = 0;
     int16 gpu_temp0 = 0;
     int16 gpu_temp1 = 0;
@@ -134,7 +134,7 @@ algorithm multiplex_display(
     background.wenable0 := 0;
 
     // Setup the address in the bitmap for the pixel being rendered
-    bitmap.addr0 := pix_x  + pix_y * 640;
+    bitmap.addr0 := pix_x + pix_y * 640;
     bitmap.wenable0 := 0;
     
     // Bitmap write access for the GPU
@@ -272,7 +272,7 @@ algorithm multiplex_display(
                         gpu_active = 1;
                     }
                     case 2: {
-                        // Setup drawing a rectangle from x,y to param0, param1 in colour
+                        // Setup drawing a rectangle from x,y to param0,param1 in colour
                         // Ensures that works left to right, top to bottom
                         gpu_active_colour = gpu_colour;
                         gpu_active_x = ( gpu_x < gpu_param0 ) ? gpu_x : gpu_param0;                 // left
@@ -282,24 +282,6 @@ algorithm multiplex_display(
                         gpu_temp3 = ( gpu_y < gpu_param1 ) ? gpu_param1 : gpu_y;                    // bottom - at end of rectangle
                         gpu_active = 2; 
                     }
-                    case 3: {
-                        // Setup drawing a line from x,y to param0, param1 in colour
-                        // Ensure that works from left to right
-                        gpu_active_colour = gpu_colour;
-                        gpu_active_x = gpu_x;                                                   // left
-                        gpu_active_y = gpu_y;                                                   // top
-                        gpu_temp0 = gpu_param0;                                                 // right
-                        gpu_temp1 = gpu_param1;
-                        gpu_temp2 = gpu_param0 - gpu_x;                                         // Bresenham delta x
-                        gpu_temp3 = gpu_param1 - gpu_y;                                         // Bresenham delta y
-                        if( (gpu_param0 - gpu_x) >= (gpu_param1 - gpu_y) ) {
-                            gpu_temp4 = 2 * ( ( gpu_param1 - gpu_y ) - ( gpu_param0 - gpu_x ) );   // Bresenham error
-                            gpu_active = 3;
-                        } else {
-                            gpu_temp4 = 2 * ( ( gpu_param0 - gpu_x ) - ( gpu_param1 - gpu_y ) );   // Bresenham error
-                            gpu_active = 4;
-                        }
-                     }
                     default: {}
                 }
             }
@@ -324,49 +306,11 @@ algorithm multiplex_display(
                         gpu_active = 0;
                     } else {
                         // Next line
-                        gpu_active_x = gpu_temp0;
                         gpu_active_y = gpu_active_y + 1;
                     }
+                    gpu_active_x = 0;
                 } else {
                     gpu_active_x = gpu_active_x + 1;
-                }
-            }
-            case 3: {
-                // Bresenham line drawing algorithm of colour from x,y to param0,param1 (shallow line)
-                if( gpu_active_x < gpu_temp0 ) {
-                    // Draw the pixel and calculate the next pixel
-                    bitmap.addr1 = gpu_active_x + gpu_active_y * 640;
-                    bitmap.wdata1 = gpu_active_colour;
-                    bitmap.wenable1 = 1;
-                    if( gpu_temp4 >= 0 ) {
-                        gpu_active_y = gpu_active_y + 1;                                // Move Down
-                        gpu_temp4 = gpu_temp4 + 2*gpu_temp3 - 2*gpu_temp2;              // New Bresenham error
-                    } else {
-                        gpu_temp4 = gpu_temp4 + 2*gpu_temp3;                            // New Bresenham error
-                    }
-                    gpu_active_x = gpu_active_x + 1;                                    // Move Right
-                } else {
-                    // Reached the end of the line
-                    gpu_active = 0;
-                }
-            }
-            case 4: {
-                // Bresenham line drawing algorithm of colour from x,y to param0,param1 (steep line)
-                if( gpu_active_y < gpu_temp1 ) {
-                    // Draw the pixel and calculate the next pixel
-                    bitmap.addr1 = gpu_active_x + gpu_active_y * 640;
-                    bitmap.wdata1 = gpu_active_colour;
-                    bitmap.wenable1 = 1;
-                    if( gpu_temp4 >= 0 ) {
-                        gpu_active_x = gpu_active_x + 1;                                // Move Down
-                        gpu_temp4 = gpu_temp4 + 2*gpu_temp2 - 2*gpu_temp3;              // New Bresenham error
-                    } else {
-                        gpu_temp4 = gpu_temp4 + 2*gpu_temp2;                            // New Bresenham error
-                    }
-                    gpu_active_y = gpu_active_y + 1;                                    // Move Right
-                } else {
-                    // Reached the end of the line
-                    gpu_active = 0;
                 }
             }
             default: {gpu_active = 0;}

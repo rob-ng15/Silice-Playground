@@ -48,8 +48,8 @@ GPU Operation | GPU Action
 0 | Idle
 1 | Set pixel x,y to colour
 2 | Fill rectangle x,y to param0,param1 in colour
-3 | Bresenham's line drawing algorithm from x,y to param0,param1 in colour
-5 | Bresenham's circle drawing algorithm centred at x,y of radius r in colour<br>Work in Progress
+3 | Bresenham's line drawing algorithm from x,y to param0,param1 in colour<br>Work in Progress
+4 | Bresenham's circle drawing algorithm centred at x,y of radius r in colour<br>Work in Progress
 
 The TPU is controlled by writing to the following addresses:
 
@@ -117,6 +117,14 @@ Fun GPU and TPU words:
     i i 200 i - 101 101 gpu_rectangle
     i 200 i - i 101 101 gpu_rectangle
   loop ;
+  
+: de10
+  tpu_cs
+  44 2 ff 0 16 tpu_setchar
+  45 2 ff 1 16 tpu_setchar
+  31 2 ff 2 16 tpu_setchar
+  30 2 ff 3 16 tpu_setchar ;
+
 ```
 
 ## Issues
