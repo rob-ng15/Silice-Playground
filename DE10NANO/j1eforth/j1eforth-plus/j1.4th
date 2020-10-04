@@ -963,6 +963,38 @@ t: cold ( -- )
    quit
    cold t;
 
+( GPU, TPU and TERMINAL helpers)
+t: gpu!pixel ( colour x y ) ff01 literal ! ff00 literal ! ff02 literal ! 1 literal ff07 literal ! 
+    begin ff07 literal @ 0= until t;
+t: gpu!rectangle ( colour x1 y1 x2 y2 ) ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 2 literal ff07 literal !
+  begin ff07 literal @ 0= until t;
+t: gpu!line ( colour x1 y1 x2 y2 ) ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 3 literal ff07 literal !
+  begin ff07 literal @ 0= until t;
+t: gpu!cs 0 literal 0 literal 0 literal 2f7 literal 1df literal gpu!rectangle t;
+
+t: tpu!xy ( x y )ff11 literal ! ff10 literal ! 1 literal ff15 literal ! t;
+t: tpu!foreground ( foreground ) ff14 literal ! t;
+t: tpu!background ( background ) ff13 literal ! t;
+t: tpu!emit ( character ) ff12 literal ! 2 literal ff15 literal ! t;
+t: tpu!cs
+    0 literal 0 literal tpu!xy 
+    960 literal for aft 0 literal tpu!emit then next 
+    0 literal 0 literal tpu!xy t;
+t: tpu!space bl tpu!emit t;
+t: tpu!spaces 0 literal max for aft tpu!space then next t;
+t: tpu!type for aft count tpu!emit then next drop t;
+t: tpu!.r >r str r> over - tpu!spaces tpu!type t;
+t: tpu!u.r >r <# #s #> r> over - tpu!spaces tpu!type t;
+t: tpu!u. <# #s #> tpu!space tpu!type t;
+t: tpu!. base @ a literal xor if tpu!u. exit then str tpu!space tpu!type t;
+t: tpu!.# base @ swap decimal tpu!. base ! t;
+t: tpu!u.# base @ swap decimal <# #s #> tpu!space tpu!type base ! t;
+t: tpu!u.r# base @ rot rot decimal >r <# #s #> r> over - tpu!spaces tpu!type base ! t;
+t: tpu!.r# base @ rot rot decimal >r str r> over - tpu!spaces tpu!type base ! t;
+
+t: terminal!show 1 literal ff21 literal ! t;
+t: terminal!hide 0 literal ff21 literal ! t;
+
 target.1 -order set-current
 
 there 			[u] dp t!

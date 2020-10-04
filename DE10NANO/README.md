@@ -30,101 +30,55 @@ The VGA output is a multiplexed bitmap and character display, with the bitmap __
 
 Due to the address space limitations of the J1+ CPU the bitmap, character map and terminal map cannot be memory mapped so these memory areas are controlled by the multiplex_display algorithm, providing a small GPU (graphics processing unit), a small TPU (text processing unit) and a small terminal interface. 
 
-The GPU is controlled by writing to the following addresses:
+Words to control the GPU, TPU and TERMINAL are built into the j1eforth environment
 
-Hexadecimal Address | GPU Usage
-:----: | :----:
-ff00 | GPU X coordinate from stack
-ff01 | GPU Y coordinate from stack
-ff02 | GPU colour from stack
-ff03 | GPU parameter 0 from stack
-ff03 | GPU parameter 1 from stack
-ff03 | GPU parameter 2 from stack
-ff03 | GPU parameter 3 from stack
-ff07 | Start GPU Operation from stack (WRITE)<br>Read GPU Active Status to stack
-
-GPU Operation | GPU Action
+GPU/TPU/TERMINAL Word | Usage
 :-----: | :-----:
-0 | Idle
-1 | Set pixel x,y to colour
-2 | Fill rectangle x,y to param0,param1 in colour
-3 | Bresenham's line drawing algorithm from x,y to param0,param1 in colour<br>Work in Progress
-4 | Bresenham's circle drawing algorithm centred at x,y of radius r in colour<br>Work in Progress
-
-The TPU is controlled by writing to the following addresses:
-
-Hexadecimal Address | TPU Action
-:----: | :----:
-ff10 | TPU x coordinate from stack
-ff11 | TPU y coordinate from stack
-ff12 | Write character from stack to x,y
-ff13 | Write background colour from stack to x,y
-ff14 | Write foreground colour from stack to x,y
-
-The terminal is controlled by writing to the following addresses:
-
-Hexadecimal Address | Terminal Action
-:----: | :----:
-ff20 | Terminal write character from stack ( part of emit )<br>Red Terminal Active Status to stack
-ff21 | ```1 ff21 !``` show the terminal<br>```0 ff21 !``` hide the terminal
-
-Helpful GPU and TPU words:
-
-```
-: gpu_setpixel ff01 ! ff00 ! ff02 ! 1 ff07 ! 
-  begin ff07 @ 0= until ;
-: gpu_rectangle ff04 ! ff03 ! ff01 ! ff00 ! ff02 ! 2 ff07 !
-  begin ff07 @ 0= until ;
-: gpu_line ff04 ! ff03 ! ff01 ! ff00 ! ff02 ! 3 ff07 !
-  begin ff07 @ 0= until ;
-: gpu_cs 0 0 0 2f7 1df gpu_rectangle
-  begin ff07 @ 0= until ;
-
-: tpu_setchar ff11 ! ff10 ! ff13 ! ff14 ! ff12 ! ;
-: tpu_cs 50 0 do i
-    1e 0 do
-        dup 0 swap 0 swap 0 swap i tpu_setchar
-    loop
-loop ;
-```
-GPU/TPU Word | Usage
-:-----: | :-----:
-gpu_setpixel | colour x y gpu_setpixel<br>_Sets pixel x,y to colour_
-gpu_rectangle | colour x1 y1 x2 y2 gpu_rectangle<br>_Draws a solid rectanlge of colour from x1,y1 to x2,y2_
-gpu_line | colour x1 y1 x2 y2 gpu_line<br>_Draws a line of colour from x1,y1 to x2,y2_
-gpu_cs | gpu_cs<br>_Clears the graphic display_
-tpu_setchar | character x y foreground background tpu_setchar<br>_Puts character at x,y in foreground and background colours
-tpu_cs | tpu_cs<br>_Clears the text display (allows graphics to show)_
+gpu!pixel | ```colour x y gpu!pixel``` draws a pixel at x,y in colour
+gpu!rectangle | ```colour x1 y1 x2 y2 gpu!rectangle``` draws a rectangle from x1,y1 to x2,y2 in colour
+gpu!line | ```colour x1 y1 x2 y2 gpu!line``` draws a line from x1,y1 to x2,y2 in colour
+gpu!cs | ```gpu!cs``` clears the bitmap
+ | 
+tpu!cs | ```tpu!cs``` clears the character map (allows bitmap to show through)
+tpu!xy | ```x y tpu!xy``` moves the TPU cursor to x,y
+tpu!foreground |```foreground tpu!foreground``` sets the foreground colour
+tpu!background | ```background tpu!background``` sets the background colour
+tpu!emit | emit for the TPU character map
+tpu!type | type for the TPU character map
+tpu!space<br>tpu!spaces | space and spaces for the TPU character map
+tpu!.r<br>tpu!u.r<br>tpu!u.<br>tpu!.<br>tpu!.#<br>tpu!u.#<br>tpu!u.r#<br>tpu!.r# | Equivalents for .r u.r u. . .# u.# u.r# .r# for the TPU character map
+ | 
+terminal!show | show the blue terminal window
+terminal!hide | hide the blue terminal window
 
 Fun GPU and TPU words:
 
 ```
 : drawrectangles
-  gpu_cs
+  gpu!cs
   100 0 do
-    i 0 i 20 i 20 + gpu_rectangle
-    i i 0 i 20 + 20 gpu_rectangle
-    i i 100 i 20 + 120 gpu_rectangle
-    i 100 i 120 i 20 + gpu_rectangle
-    i i i i 20 + i 20 + gpu_rectangle
+    i 0 i 20 i 20 + gpu!rectangle
+    i i 0 i 20 + 20 gpu!rectangle
+    i i 100 i 20 + 120 gpu!rectangle
+    i 100 i 120 i 20 + gpu!rectangle
+    i i i i 20 + i 20 + gpu!rectangle
   loop ;
 
 : drawblock
-  gpu_cs
+  gpu!cs
   100 0 do
-    i i i 100 100  gpu_rectangle
-    i 101 101 200 i - 200 i - gpu_rectangle
-    i i 200 i - 101 101 gpu_rectangle
-    i 200 i - i 101 101 gpu_rectangle
+    i i i 100 100  gpu!rectangle
+    i 101 101 200 i - 200 i - gpu!rectangle
+    i i 200 i - 101 101 gpu!rectangle
+    i 200 i - i 101 101 gpu!rectangle
   loop ;
   
-: de10
-  tpu_cs
-  44 2 ff 0 16 tpu_setchar
-  45 2 ff 1 16 tpu_setchar
-  31 2 ff 2 16 tpu_setchar
-  30 2 ff 3 16 tpu_setchar ;
-
+: tputest
+  ff 0 do
+    255 i - tpu!background
+    i tpu!foreground
+    i tpu!emit
+  loop ;
 ```
 
 ## Issues
