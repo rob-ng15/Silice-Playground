@@ -15,31 +15,33 @@ This uses the _**DRAFT**_ branch of Silice (https://github.com/sylefeb/Silice). 
 
 * VGA Output
 
-The VGA output is a multiplexed bitmap and character display, with the bitmap __under__ the characters. To allow the bitmap to be displayed, set the corresponding character map to 0.
+The VGA output is a multiplexed bitmap and character display, with the bitmap __under__ the characters.
 
-* 640 x 480 256 colour { rrrgggbb } bitmap display
+* Background colour - single { rrrgggbbb } colour.
+* 640 x 480 512 colour { Arrrgggbbb } bitmap display.
+* - If A (ALPHA) is 1, then the background colour is displayed.
 * - Includes a simple GPU to draw pixels, lines (via Bresenham's Line Drawing Algorithm) and filled rectangles.
-* 80 x 30 256 colour { rrrgggbb } text display, using IBM 8x16 256 character ROM
+* 80 x 30 512 colour text display, using IBM 8x16 256 character ROM
 * - Includes a simple TPU to draw characters on the display (will be expanded)
-* - Each character has 3 attributes, character code, foreground colour and background colour
-* - Character 0 allows the underlying bitmap to display
+* - Each character has 3 attributes
+* - - Character code
+* - - Foreground colour { rrrgggbbb }
+* - - Background colour { Arrrgggbbb ) if A (ALPHA) is 1, then the bitmap or background colour is displayed.
 * 80 x 8 2 colour blue/white text display, using IBM 8x8 256 character ROM as input/output terminal
 * - Includes a simple terminal output protocol to display characters
 * - Includes a flashing cursor
-* - Can be shown/hidden to allow the larger character and bitmap to be fully displayed
+* - Can be shown/hidden to allow the larger character 8x16 map or the bitmap to be fully displayed
 
-Due to the address space limitations of the J1+ CPU the bitmap, character map and terminal map cannot be memory mapped so these memory areas are controlled by the multiplex_display algorithm, providing a small GPU (graphics processing unit), a small TPU (text processing unit) and a small terminal interface. 
-
-Words to control the GPU, TPU and TERMINAL are built into the j1eforth environment
+Due to the address space limitations of the J1+ CPU the bitmap, character map and terminal map cannot be memory mapped so these memory areas are controlled by the multiplex_display algorithm, providing a small GPU (graphics processing unit), a small TPU (text processing unit) and a small terminal interface. Words to control the GPU, TPU and TERMINAL are built into the j1eforth environment.
 
 GPU/TPU/TERMINAL Word | Usage
 :-----: | :-----:
+background! | ```colour background!````sets the background colour<br>Not working at present, not sure why!
 gpu!pixel | ```colour x y gpu!pixel``` draws a pixel at x,y in colour
 gpu!rectangle | ```colour x1 y1 x2 y2 gpu!rectangle``` draws a rectangle from x1,y1 to x2,y2 in colour
 gpu!line | ```colour x1 y1 x2 y2 gpu!line``` draws a line from x1,y1 to x2,y2 in colour
-gpu!cs | ```gpu!cs``` clears the bitmap
- | 
-tpu!cs | ```tpu!cs``` clears the character map (allows bitmap to show through)
+gpu!cs | ```gpu!cs``` clears the bitmap (sets to transparent)
+tpu!cs | ```tpu!cs``` clears the character map (sets to transparent so the bitmap can show through
 tpu!xy | ```x y tpu!xy``` moves the TPU cursor to x,y
 tpu!foreground |```foreground tpu!foreground``` sets the foreground colour
 tpu!background | ```background tpu!background``` sets the background colour
@@ -47,35 +49,34 @@ tpu!emit | emit for the TPU character map
 tpu!type | type for the TPU character map
 tpu!space<br>tpu!spaces | space and spaces for the TPU character map
 tpu!.r<br>tpu!u.r<br>tpu!u.<br>tpu!.<br>tpu!.#<br>tpu!u.#<br>tpu!u.r#<br>tpu!.r# | Equivalents for .r u.r u. . .# u.# u.r# .r# for the TPU character map
- | 
 terminal!show | show the blue terminal window
 terminal!hide | hide the blue terminal window
+
+Colour Guide<br>HEX | Colour
+:-----: | :-----:
+200 | Transparent
+000 | Black
+007 | Blue
+038 | Green
+1c0 | Red
+1ff | White
 
 Fun GPU and TPU words:
 
 ```
 : drawrectangles
   gpu!cs
-  100 0 do
+  1ff 0 do
     i 0 i 20 i 20 + gpu!rectangle
     i i 0 i 20 + 20 gpu!rectangle
-    i i 100 i 20 + 120 gpu!rectangle
-    i 100 i 120 i 20 + gpu!rectangle
+    i i 1ff i 20 + 21f gpu!rectangle
+    i 1ff i 21f i 20 + gpu!rectangle
     i i i i 20 + i 20 + gpu!rectangle
   loop ;
 
-: drawblock
-  gpu!cs
-  100 0 do
-    i i i 100 100  gpu!rectangle
-    i 101 101 200 i - 200 i - gpu!rectangle
-    i i 200 i - 101 101 gpu!rectangle
-    i 200 i - i 101 101 gpu!rectangle
-  loop ;
-  
 : tputest
-  ff 0 do
-    255 i - tpu!background
+  1ff 0 do
+    200 i - tpu!background
     i tpu!foreground
     i tpu!emit
   loop ;
@@ -83,9 +84,40 @@ Fun GPU and TPU words:
 
 ## Issues
 
+* ```tpu!cs gpu!cs``` must be issued to display graphics as memory is initialised for text display
 * UART input works, with copy'n'paste.
 * UART output misses some characters.
-* Text and Bitmap output is misaligned on the display.
+* Bitmap output is misaligned on the display (1 pixel to the right).
+
+## TODO (Wishlist)
+
+* TILEMAPS
+* - Put a 42 x 32 tilemap between background and bitmap along with a configurable 256 16 x 16 backtilemap
+* - - Tiles would be 1 bit with foreground and background colour per tile (with ALPHA bit)
+* - - Tilemap offset of -16 to 16 in x and y to allow scrolling
+* - - Tilemap scroller to move tilemap up, down, left, right
+* - Put a 42 x 32 tilemap between bitmap and the character map along with a configurable 256 16 x 16 fronttilemap
+* - - Tiles would be 1 bit with foreground and background colour per tile (with ALPHA bit)
+* - - Tilemap offset of -16 to 16 in x and y to allow scrolling
+* - - Tilemap scroller to move tilemap up, down, left, right
+
+* GPU
+* - Complete line drawing
+* - DEBUG rectangle drawing
+* - Complete circle drawing
+* - BLITTER
+* - - 1 bit 16x16 blitter from a configurable 256 16 x 16 tilemap
+* - - 10 bit { Arrrgggbbb } 16 x 16 blitter from a configurable 64 16 x 16 tilemap (16384 * 10 bit, might be too big for the blockram)
+
+* VECTOR LIST
+* - Provide a list of (up to 16) vertices for each vector
+* - - centre x, centre y, colour
+* - - - 16 lots of active, offsetx1, offsety1, offsetx2, offsety2
+* - Can be drawn with one command to the bitmap
+* - Potentially multiple vectors blocks in the list
+
+* DISPLAY LIST
+* - List of GPU commands to be executed in sequence on activation to be drawn to the bitmap
 
 ## Notes
 

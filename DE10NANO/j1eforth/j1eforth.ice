@@ -9,6 +9,20 @@ append('jamieilesUART/receiver.v')
 append('jamieilesUART/transmitter.v')
 import('jamieilesUART/uart.v')
 
+// 10 bit colour either ALPHA (background or lower layer) or red, green, blue
+bitfield colour10 {
+    uint1   alpha,
+    uint3   red,
+    uint3   green, 
+    uint3   blue
+}
+
+bitfield colour9 {
+    uint3   red,
+    uint3   green, 
+    uint3   blue
+}
+
 algorithm multiplex_display(
     input   uint10 pix_x,
     input   uint10 pix_y,
@@ -18,6 +32,9 @@ algorithm multiplex_display(
     output! uint$color_depth$ pix_green,
     output! uint$color_depth$ pix_blue,
 
+    // Bottom layer BACKGROUND colour
+    input uint9 backgroundcolour,
+    
     // GPU to SET pixels
     input int16 gpu_x,
     input int16 gpu_y,
@@ -25,7 +42,7 @@ algorithm multiplex_display(
     input int16 gpu_param1,
     input int16 gpu_param2,
     input int16 gpu_param3,
-    input int8 gpu_colour,
+    input int10 gpu_colour,
     input uint8 gpu_write,
     output uint8 gpu_active,
     
@@ -33,8 +50,8 @@ algorithm multiplex_display(
     input uint7 tpu_x,
     input uint5 tpu_y,
     input uint8 tpu_character,
-    input uint8 tpu_foreground,
-    input uint8 tpu_background,
+    input uint9 tpu_foreground,
+    input uint10 tpu_background,
     input uint2 tpu_write,   // 0 = nothing, 1 = set x,y , 2 = put character,foreground,background at x,y and move to next x,y
     
     // Terminal show/hide and cursor show/hide
@@ -56,12 +73,20 @@ algorithm multiplex_display(
         $include('characterROM8x8.inc')
     };
 
-    // 80 x 30 character buffer and foreground and background colours in { rrrgggbb }
-    // Setting character to 0 allows the bitmap to show through
+    // 80 x 30 character buffer
+    // Setting background to 200 (ALPHA) allows the bitmap/background to show through
     dualport_bram uint8 character[2400] = uninitialized;
-    dualport_bram uint8 foreground[2400] = uninitialized;
-    dualport_bram uint8 background[2400] = uninitialized;
-   
+    dualport_bram uint9 foreground[2400] = uninitialized;   // { rrrgggbbb }
+    dualport_bram uint10 background[2400] = uninitialized;  // { Arrrgggbbb }
+
+    // 80 x 4 character buffer for the input/output terminal
+    dualport_bram uint8 terminal[640] = uninitialized;
+
+    // 640 x 480 x 10 bit { Arrrgggbbb } colour bitmap
+    dualport_bram uint10 bitmap[ 307200 ] = uninitialized;  // { Arrrgggbbb }
+
+    // Expansion map for { rrr } to { rrrrrr }, { ggg } to { gggggg }, { bbb } to { bbbbbb }
+    uint6 colourexpand3to6[8] = {  0, 9, 18, 27, 36, 45, 54, 63 };
 
     // Character position on the screen x 0-79, y 0-29 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
     uint8 xcharacterpos := (pix_x+1) >> 3;
@@ -74,16 +99,13 @@ algorithm multiplex_display(
     // Derive the actual pixel in the current character
     uint1 characterpixel := ((characterGenerator8x16[ character.rdata0 * 16 + yincharacter ] << xincharacter) >> 7) & 1;
     
-    // 80 x 4 character buffer for the input/output terminal
-    dualport_bram uint8 terminal[640] = uninitialized;
-
+    // Character position on the terminal x 0-79, y 0-7 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
     uint8 terminal_x = 0;
     uint8 terminal_y = 7;
-
-    // Character position on the terminal x 0-79, y 0-3 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
     uint8 xterminalpos := (pix_x+1) >> 3;
     uint12 yterminalpos := ((pix_y - 416) >> 3) * 80; // 8 pixel high characters
 
+    // Determine if cursor, and if cursor is flashing
     uint1 is_cursor := ( xterminalpos == terminal_x ) & ( ( ( pix_y - 416) >> 3 ) == terminal_y );
     
     // Derive the x and y coordinate within the current 8x8 terminal character block x 0-7, y 0-7
@@ -93,21 +115,14 @@ algorithm multiplex_display(
     // Derive the actual pixel in the current terminal
     uint1 terminalpixel := ((characterGenerator8x8[ terminal.rdata0 * 8 + yinterminal ] << xinterminal) >> 7) & 1;
 
-    // Terminal active (scroll) flag
+    // Terminal active (scroll) flag and temporary storage for scrolling
     uint10 terminal_scroll = 0;
     uint10 terminal_scroll_next = 0;
-    
-    // 640 x 480 { rrrgggbb } colour bitmap
-    dualport_bram uint8 bitmap[ 307200 ] = uninitialized;
-
-    // Expansion map for { rrr } to { rrrrrr }, { ggg } to { gggggg }, { bb } to { bbbbbb }
-    uint6 colourexpand3to6[8] = {  0, 9, 18, 27, 36, 45, 54, 63 };
-    uint6 colourexpand2to6[4] = {  0, 21, 42, 63 };
     
     // GPU work variable storage
     int16 gpu_active_x = 0;
     int16 gpu_active_y = 0;
-    uint8 gpu_active_colour = 0;
+    uint10 gpu_active_colour = 0;
     int16 gpu_temp0 = 0;
     int16 gpu_temp1 = 0;
     int16 gpu_temp2 = 0;
@@ -120,11 +135,16 @@ algorithm multiplex_display(
     // TPU work variable storage
     uint7 tpu_active_x = 0;
     uint5 tpu_active_y = 0;
-    
-    // RGB is { 0,  0, 0 } by default
-    pix_red   := 0;
-    pix_green := 0;
-    pix_blue  := 0;
+
+    // RGB is { BACKGROUND } by default
+    //pix_red   := 0;
+    //pix_green := 0;
+    //pix_blue  := 0;
+    // BACKGROUND
+    pix_red := colourexpand3to6[ colour9(backgroundcolour).red ];
+    pix_green := colourexpand3to6[ colour9(backgroundcolour).green ];
+    pix_blue := colourexpand3to6[ colour9(backgroundcolour).blue ];
+
     
     // Setup the reading of the terminal memory
     terminal.addr0 := xterminalpos + yterminalpos;
@@ -157,10 +177,10 @@ algorithm multiplex_display(
     // Terminal flags
     terminal.wenable1 := 0;
     terminal_active = 0;
-    
+
     // GPU active flag
     gpu_active = 0;
-      
+    
     while (1) {
  
         // TPU
@@ -439,67 +459,69 @@ algorithm multiplex_display(
             }
             default: {gpu_active = 0;}
         }
-        
+
         // wait until pix_active
-            if( pix_active ) {
-                if( pix_y > 415 & showterminal ) {
-                    // Display terminal 
-                    switch( terminalpixel ) {
-                        case 0: {
-                            if( is_cursor & timer1hz ) {
-                                pix_red = 63;
-                                pix_green = 63;
-                                pix_blue = 63;
-                            } else {
-                                pix_red = 0;
-                                pix_green = 0;
-                                pix_blue = 63;
-                            }
-                        }
-                        case 1: {
-                            if( is_cursor & timer1hz ) {
-                                pix_red = 0;
-                                pix_green = 0;
-                                pix_blue = 63;
-                            } else {
-                                pix_red = 63;
-                                pix_green = 63;
-                                pix_blue = 63;
-                            }
+        if( pix_active ) {
+            
+            // BITMAP
+            if( ~colour10(bitmap.rdata0).alpha ) {
+                pix_red = colourexpand3to6[ colour10(bitmap.rdata0).red ];
+                pix_green = colourexpand3to6[ colour10(bitmap.rdata0).green ];
+                pix_blue = colourexpand3to6[ colour10(bitmap.rdata0).blue ];
+            }
+
+            // CHARACTER from characterGenerator
+            // Determine if background or foreground
+            switch( characterpixel ) {
+            case 0: {
+                    // BACKGROUND
+                    if( ~colour10(background.rdata0).alpha ) {
+                        pix_red = colourexpand3to6[ colour10(background.rdata0).red ];
+                        pix_green = colourexpand3to6[ colour10(background.rdata0).green ];
+                        pix_blue = colourexpand3to6[ colour10(background.rdata0).blue ];
+                    }
+                }
+                case 1: {
+                    // foreground
+                    pix_red = colourexpand3to6[ colour9(foreground.rdata0).red ];
+                    pix_green = colourexpand3to6[ colour9(foreground.rdata0).green ];
+                    pix_blue = colourexpand3to6[ colour9(foreground.rdata0).blue ];
+                }
+            }
+
+            // TERMINAL is in range and showterminal flag
+            // Invert colours for cursor if flashing
+            if( pix_y > 415 & showterminal ) {
+                switch( terminalpixel ) {
+                    case 0: {
+                        if( is_cursor & timer1hz ) {
+                            pix_red = 63;
+                            pix_green = 63;
+                            pix_blue = 63;
+                        } else {
+                            pix_red = 0;
+                            pix_green = 0;
+                            pix_blue = 63;
                         }
                     }
-                } else {
-                    switch( character.rdata0 ) {
-                        case 0: {
-                            // BITMAP
-                            pix_red = colourexpand3to6[ (bitmap.rdata0 & 8he0) >> 5 ];
-                            pix_green = colourexpand3to6[ (bitmap.rdata0 & 8h1c) >> 2 ];
-                            pix_blue = colourexpand2to6[ (bitmap.rdata0 & 8h3) ];
+                    case 1: {
+                        if( is_cursor & timer1hz ) {
+                            pix_red = 0;
+                            pix_green = 0;
+                            pix_blue = 63;
+                        } else {
+                            pix_red = 63;
+                            pix_green = 63;
+                            pix_blue = 63;
                         }
-                        default: {
-                            // CHARACTER from characterGenerator
-                            // Determine if background or foreground
-                            switch( characterpixel ) {
-                            case 0: {
-                                    // background
-                                    pix_red = colourexpand3to6[ (background.rdata0 & 8he0) >> 5 ];
-                                    pix_green = colourexpand3to6[ (background.rdata0 & 8h1c) >> 2 ];
-                                    pix_blue = colourexpand2to6[ (background.rdata0 & 8h3) ];
-                                }
-                                case 1: {
-                                    // foreground
-                                    pix_red = colourexpand3to6[ (foreground.rdata0 & 8he0) >> 5 ];
-                                    pix_green = colourexpand3to6[ (foreground.rdata0 & 8h1c) >> 2 ];
-                                    pix_blue = colourexpand2to6[ (foreground.rdata0 & 8h3) ];
-                                }
-                            }
-                        }
-                    } // character or bitmap
+                    }
                 }
-            } // pix_active
+            }
+        } // pix_active
     }
 }
 
+// J1+ CPU Starts here
 // BITFIELDS to help with bit/field access
 
 // Instruction is 3 bits 1xx = literal value, 000 = branch, 001 = 0branch, 010 = call, 011 = alu, followed by 13 bits of instruction specific data
@@ -586,7 +608,7 @@ algorithm main(
     input   uint1 uart_rx
 
 ) {
-
+    // SETUP Peripherals
     uint8 buttons = 0; // TODO
 
     uint16 timer1hz = 0;
@@ -1103,6 +1125,10 @@ algorithm main(
                                         // Terminal set showterminal
                                         display.showterminal = stackNext;
                                      }
+                                    case 16hffff: {
+                                        // Set BACKGROUND colour
+                                        display.backgroundcolour = stackNext;
+                                    }
                                }
                             }
                         } // ALU

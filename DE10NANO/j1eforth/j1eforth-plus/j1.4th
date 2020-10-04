@@ -964,20 +964,23 @@ t: cold ( -- )
    cold t;
 
 ( GPU, TPU and TERMINAL helpers)
-t: gpu!pixel ( colour x y ) ff01 literal ! ff00 literal ! ff02 literal ! 1 literal ff07 literal ! 
-    begin ff07 literal @ 0= until t;
-t: gpu!rectangle ( colour x1 y1 x2 y2 ) ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 2 literal ff07 literal !
-  begin ff07 literal @ 0= until t;
-t: gpu!line ( colour x1 y1 x2 y2 ) ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 3 literal ff07 literal !
-  begin ff07 literal @ 0= until t;
-t: gpu!cs 0 literal 0 literal 0 literal 2f7 literal 1df literal gpu!rectangle t;
+t: background! ( colour) ffff literal ! t;
+t: gpu!pixel ( colour x y ) begin ff07 literal @ 0= until 
+    ff01 literal ! ff00 literal ! ff02 literal ! 1 literal ff07 literal ! t;
+t: gpu!rectangle ( colour x1 y1 x2 y2 ) begin ff07 literal @ 0= until 
+    ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 2 literal ff07 literal ! t;
+t: gpu!line ( colour x1 y1 x2 y2 ) begin ff07 literal @ 0= until 
+    ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 3 literal ff07 literal ! t;
+t: gpu!cs 200 literal 0 literal 0 literal 2f7 literal 1df literal gpu!rectangle t;
 
 t: tpu!xy ( x y )ff11 literal ! ff10 literal ! 1 literal ff15 literal ! t;
 t: tpu!foreground ( foreground ) ff14 literal ! t;
 t: tpu!background ( background ) ff13 literal ! t;
 t: tpu!emit ( character ) ff12 literal ! 2 literal ff15 literal ! t;
 t: tpu!cs
-    0 literal 0 literal tpu!xy 
+    0 literal 0 literal tpu!xy
+    0 literal tpu!foreground
+    200 literal tpu!background
     960 literal for aft 0 literal tpu!emit then next 
     0 literal 0 literal tpu!xy t;
 t: tpu!space bl tpu!emit t;
