@@ -178,6 +178,10 @@ algorithm multiplex_display(
     bitmap.wenable1 := 0;
 
     // blit1tilemap read access for the blit1tilemap
+    blit1tilemap.addr0 := gpu_tile * 16 + gpu_active_y;
+    blit1tilemap.wenable0 := 0;
+    
+    // blit1tilemap write access for the GPU to load tilemaps
     blit1tilemap.wenable1 := 0;
 
     // BRAM write access for the TPU 
@@ -576,15 +580,14 @@ algorithm multiplex_display(
                 }
             }
             case 14: {
-                // 1 bit BLITTER
-                // Read blit 1 bit tile map
-                blit1tilemap.addr1 = gpu_tile * 16 + gpu_active_y;
+                // 1 bit blitter
+                // delay to read 1 line from blit1tilemap memory
                 gpu_active = 15;
             }
             case 15: {
                 // 1 bit BLITTER
                 // Draw pixel, move to next pixel
-                if( ((blit1tilemap.rdata1 << gpu_active_x) >> 15) & 1 ) {
+                if( ((blit1tilemap.rdata0 << gpu_active_x) >> 15) & 1 ) {
                     if( (gpu_x1 + gpu_active_x >= 0) & (gpu_x1 + gpu_active_x<640) & (gpu_y1 + gpu_active_y>=0) & (gpu_y1 + gpu_active_y<480) ) {
                         bitmap.addr1 = gpu_active_x + gpu_x1 + (gpu_active_y + gpu_y1) * 640;
                         bitmap.wdata1 = gpu_active_colour;

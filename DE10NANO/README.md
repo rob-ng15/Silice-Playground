@@ -166,7 +166,7 @@ tputest
 * - Complete line drawing - STEEP lines do not work
 * - DEBUG rectangle drawing
 * - BLITTER
-* - - 1 bit 16x16 blitter from a configurable 256 16 x 16 tilemap
+* - - 1 bit 16x16 blitter from a configurable 256 16 x 16 tilemap - partially implemented
 * - - 10 bit { Arrrgggbbb } 16 x 16 blitter from a configurable 64 16 x 16 tilemap (16384 * 10 bit, might be too big for the blockram)
 
 * VECTOR LIST
