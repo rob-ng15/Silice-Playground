@@ -32,9 +32,6 @@ algorithm multiplex_display(
     output! uint$color_depth$ pix_green,
     output! uint$color_depth$ pix_blue,
 
-    // Bottom layer BACKGROUND colour
-    input uint9 backgroundcolour,
-    
     // GPU to SET pixels
     input int16 gpu_x,
     input int16 gpu_y,
@@ -85,9 +82,15 @@ algorithm multiplex_display(
     // 640 x 480 x 10 bit { Arrrgggbbb } colour bitmap
     dualport_bram uint10 bitmap[ 307200 ] = uninitialized;  // { Arrrgggbbb }
 
+    // 256 x 16 x 16 1 bit tilemap for blit1tilemap
+    dualport_bram uint16 blit1tilemap[ ] = { 16h2080, 16h1100, 16h3f80, 16h6ec0, 16hffe0, 16hbfa0, 16ha0a0, 16h1b00, 16h0, 16h0, 16h0, 16h0, 16h0, 16h0, 16h0, 16h0 };//4096 ] = uninitialized;
+    
     // Expansion map for { rrr } to { rrrrrr }, { ggg } to { gggggg }, { bbb } to { bbbbbb }
     uint6 colourexpand3to6[8] = {  0, 9, 18, 27, 36, 45, 54, 63 };
 
+    // BACKGROUND colour, shows through if all the above layers are transparent
+    uint9 backgroundcolour = 0;
+    
     // Character position on the screen x 0-79, y 0-29 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
     uint8 xcharacterpos := (pix_x+1) >> 3;
     uint12 ycharacterpos := ((pix_y) >> 4) * 80; // 16 pixel high characters
@@ -120,31 +123,39 @@ algorithm multiplex_display(
     uint10 terminal_scroll_next = 0;
     
     // GPU work variable storage
+    // Present GPU pixel and colour
     int16 gpu_active_x = 0;
     int16 gpu_active_y = 0;
     uint10 gpu_active_colour = 0;
-    int16 gpu_temp0 = 0;
-    int16 gpu_temp1 = 0;
-    int16 gpu_temp2 = 0;
-    int16 gpu_temp3 = 0;
-    int16 gpu_temp4 = 0;
-    int16 gpu_temp5 = 0;
-    int16 gpu_temp6 = 0;
-    int16 gpu_temp7 = 0;
+    
+    // Temporary storage for GPU operations with meaningful names centre coordinates, end coordinates, width, height, deltas, radius, etc
+    int16 gpu_xc = 0;
+    int16 gpu_yc = 0;
+    int16 gpu_x1 = 0;
+    int16 gpu_y1 = 0;
+    int16 gpu_x2 = 0;
+    int16 gpu_y2 = 0;
+    int16 gpu_w = 0;
+    int16 gpu_h = 0;
+    int16 gpu_dx1 = 0;
+    int16 gpu_dx2 = 0;
+    int16 gpu_dy1 = 0;
+    int16 gpu_dy2 = 0;
+    int16 gpu_longest = 0;
+    int16 gpu_shortest = 0;
+    int16 gpu_numerator = 0;
+    int16 gpu_radius = 0;
+    int16 gpu_count = 0;
+    uint16 gpu_tile = 0;
 
     // TPU work variable storage
     uint7 tpu_active_x = 0;
     uint5 tpu_active_y = 0;
 
     // RGB is { BACKGROUND } by default
-    //pix_red   := 0;
-    //pix_green := 0;
-    //pix_blue  := 0;
-    // BACKGROUND
-    pix_red := colourexpand3to6[ colour9(backgroundcolour).red ];
-    pix_green := colourexpand3to6[ colour9(backgroundcolour).green ];
-    pix_blue := colourexpand3to6[ colour9(backgroundcolour).blue ];
-
+    pix_red   := 0;
+    pix_green := 0;
+    pix_blue  := 0;
     
     // Setup the reading of the terminal memory
     terminal.addr0 := xterminalpos + yterminalpos;
@@ -166,6 +177,9 @@ algorithm multiplex_display(
     // Bitmap write access for the GPU
     bitmap.wenable1 := 0;
 
+    // blit1tilemap read access for the blit1tilemap
+    blit1tilemap.wenable1 := 0;
+
     // BRAM write access for the TPU 
     character.addr1 := tpu_active_x + tpu_active_y * 80;
     character.wenable1 := 0;
@@ -176,14 +190,13 @@ algorithm multiplex_display(
 
     // Terminal flags
     terminal.wenable1 := 0;
-    terminal_active = 0;
 
-    // GPU active flag
-    gpu_active = 0;
-    
-    while (1) {
- 
+    // TPU, GPU and TERMINAL Operations
+    always {
         // TPU
+        // tpu_write controls actions
+        // 1 = set cursor position
+        // 2 = draw character in foreground,background at x,y and mvoe to next position
         switch( tpu_write ) {
             case 1: {
                 // Set cursor position
@@ -211,97 +224,104 @@ algorithm multiplex_display(
                 }
             }
             default: {}
-        }
+        } // TPU
 
         // Terminal
-        if( terminal_active == 0 ) {
-            switch( terminal_write ) {
-                case 1: {
-                    // Display character
-                    switch( terminal_character ) {
-                        case 8: {
-                            // BACKSPACE, move back one character
-                            if( terminal_x > 0 ) {
-                                terminal_x = terminal_x - 1;
-                                terminal.addr1 = terminal_x - 1 + terminal_y * 80;
-                                terminal.wdata1 = 0;
-                                terminal.wenable1 = 1;
+        // terminal_write controls actions
+        // 1 = output character or backspace, move to the next character position, and scroll if needed
+         switch( terminal_active ) {
+             case 0: {
+                switch( terminal_write ) {
+                    case 1: {
+                        // Display character
+                        switch( terminal_character ) {
+                            case 8: {
+                                // BACKSPACE, move back one character
+                                if( terminal_x > 0 ) {
+                                    terminal_x = terminal_x - 1;
+                                    terminal.addr1 = terminal_x - 1 + terminal_y * 80;
+                                    terminal.wdata1 = 0;
+                                    terminal.wenable1 = 1;
+                                }
                             }
-                        }
-                        case 10: {
-                            // LINE FEED, scroll
-                            terminal_scroll = 0;
-                            terminal_active = 1;
-                        }
-                        case 13: {
-                            // CARRIAGE RETURN
-                            terminal_x = 0;
-                        }
-                        default: {
-                            // Display character
-                            terminal.addr1 = terminal_x + terminal_y * 80;
-                            terminal.wdata1 = terminal_character;
-                            terminal.wenable1 = 1;
-                            if( terminal_x == 79 ) {
-                                terminal_x = 0;
+                            case 10: {
+                                // LINE FEED, scroll
                                 terminal_scroll = 0;
                                 terminal_active = 1;
-                            } else {
-                                terminal_x = terminal_x + 1;
+                            }
+                            case 13: {
+                                // CARRIAGE RETURN
+                                terminal_x = 0;
+                            }
+                            default: {
+                                // Display character
+                                terminal.addr1 = terminal_x + terminal_y * 80;
+                                terminal.wdata1 = terminal_character;
+                                terminal.wenable1 = 1;
+                                if( terminal_x == 79 ) {
+                                    terminal_x = 0;
+                                    terminal_scroll = 0;
+                                    terminal_active = 1;
+                                } else {
+                                    terminal_x = terminal_x + 1;
+                                }
                             }
                         }
                     }
+                    default: {}
                 }
-                default: {}
             }
-        } else {
-            // Terminal actions
-            switch( terminal_active ) {
-                case 1: {
-                    // SCROLL
-                    if( terminal_scroll == 560 ) {
-                        // Finished Scroll, Move to blank
-                        terminal_active = 4;
-                    } else {
-                        // Read the next character down
-                        terminal.addr1 = terminal_scroll + 80;
-                        terminal_active = 2;
-                    }
+            // TERMINAL SCROLL
+            case 1: {
+                // SCROLL
+                if( terminal_scroll == 560 ) {
+                    // Finished Scroll, Move to blank
+                    terminal_active = 4;
+                } else {
+                    // Read the next character down
+                    terminal.addr1 = terminal_scroll + 80;
+                    terminal_active = 2;
                 }
-                case 2: {
-                    // Retrieve the character to move up
-                    terminal_scroll_next = terminal.rdata1;
-                    terminal_active = 3;
-                }
-                case 3: {
-                    // Write the character one line up and move onto the next character
-                    terminal.addr1 = terminal_scroll;
-                    terminal.wdata1 = terminal_scroll_next;
-                    terminal.wenable1 = 1;
+            }
+            case 2: {
+                // Retrieve the character to move up
+                terminal_scroll_next = terminal.rdata1;
+                terminal_active = 3;
+            }
+            case 3: {
+                // Write the character one line up and move onto the next character
+                terminal.addr1 = terminal_scroll;
+                terminal.wdata1 = terminal_scroll_next;
+                terminal.wenable1 = 1;
+                terminal_scroll = terminal_scroll + 1;
+                terminal_active = 1;
+            }
+            case 4: {
+                // Blank out the last line
+                terminal.addr1 = terminal_scroll;
+                terminal.wdata1 = 0;
+                terminal.wenable1 = 1;
+                if( terminal_scroll == 640 ) {
+                    // Finish Blank
+                    terminal_active = 0;
+                } else {
                     terminal_scroll = terminal_scroll + 1;
-                    terminal_active = 1;
                 }
-                case 4: {
-                    // Blank out the last line
-                    terminal.addr1 = terminal_scroll;
-                    terminal.wdata1 = 0;
-                    terminal.wenable1 = 1;
-                    if( terminal_scroll == 640 ) {
-                        // Finish Blank
-                        terminal_active = 0;
-                    } else {
-                        terminal_scroll = terminal_scroll + 1;
-                    }
-                }
-                default: {}
             }
-        }
-        
-        // Perform GPU Operation
-        // GPU functions 1 pixel per cycle, even during hblank and vblank
+            default: {terminal_active = 0;}
+         } // TERMINAL
+
         switch( gpu_active ) {
             case 0: {
-                // Setup GPU operation
+                // SETUP GPU 
+                // gpu_write controls actions
+                // 1 = plot pixel
+                // 2 = draw rectangle
+                // 3 = draw line
+                // 4 = draw_circle
+                // 5 = 1 bit 16x16 blit in gpu_colour from 1 bit 16x16 tilemap
+                // 6 = 10 bit 16x16 blit from 10 bit 16x16 tilemap
+                // 255 = set background colour
                 switch( gpu_write ) {
                     case 1: {
                         // Setup writing a pixel colour to x,y
@@ -315,39 +335,69 @@ algorithm multiplex_display(
                         // Ensures that works left to right, top to bottom
                         gpu_active_colour = gpu_colour;
                         gpu_active_x = ( gpu_x < gpu_param0 ) ? gpu_x : gpu_param0;                 // left
-                        gpu_active_y = ( gpu_x < gpu_param0 ) ? gpu_y : gpu_param1;                 // top
-                        gpu_temp0 = ( gpu_x < gpu_param0 ) ? gpu_x : gpu_param0;                    // left - for next line
-                        gpu_temp2 = ( gpu_x < gpu_param0 ) ? gpu_param0 : gpu_x;                    // right - at end of line
-                        gpu_temp3 = ( gpu_x < gpu_param0 ) ? gpu_param1 : gpu_y;                    // bottom - at end of rectangle
+                        gpu_active_y = ( gpu_y < gpu_param1 ) ? gpu_y : gpu_param1;                 // top
+                        gpu_x2 = ( gpu_x < gpu_param0 ) ? gpu_x : gpu_param0;                       // left - for next line
+                        gpu_w = ( gpu_x < gpu_param0 ) ? gpu_param0 : gpu_x;                        // right - at end of line
+                        gpu_h = ( gpu_y < gpu_param1 ) ? gpu_param1 : gpu_y;                        // bottom - at end of rectangle
                         gpu_active = 2; 
                     }
                     case 3: {
                         // Setup drawing a line from x,y to param0,param1 in colour
                         // Ensures that works left to right
                         gpu_active_colour = gpu_colour;
-                        gpu_active_x = ( gpu_x < gpu_param0 ) ? gpu_x : gpu_param0;
-                        gpu_active_y = ( gpu_x < gpu_param0 ) ? gpu_y : gpu_param1;
-                        gpu_temp0 = ( gpu_x < gpu_param0 ) ? gpu_param0 : gpu_x;
-                        gpu_temp1 = ( gpu_x < gpu_param0 ) ? gpu_param1 : gpu_y;
+                        gpu_active_x = gpu_x;
+                        gpu_active_y = gpu_y;
+                        gpu_x2 = gpu_param0;
+                        gpu_y2 = gpu_param1;
+                        gpu_w = gpu_param0 - gpu_x;
+                        gpu_h = gpu_param1 - gpu_y;
+                        gpu_dx1 = 0;
+                        gpu_dx2 = 0;
+                        gpu_dy1 = 0;
+                        gpu_dy2 = 0;
+                        gpu_count = 0;
                         gpu_active = 3; 
                     }
                     case 4: {
                         // Setup drawing a circle centre x,y or radius param0 in colour
                         gpu_active_colour = gpu_colour;
-                        gpu_active_x = 0;                                                           // start position on the arc
-                        gpu_active_y = gpu_param0;                                                  // start position on the arc          
-                        gpu_temp0 = gpu_param0;                                                     // radius
-                        gpu_temp1 = gpu_x;                                                          // centre x
-                        gpu_temp2 = gpu_y;                                                          // centre y
-                        gpu_temp3 = 3 - (2 * gpu_param0);                                           // initial error
+                        gpu_active_x = 0;
+                        gpu_active_y = gpu_param0;
+                        gpu_xc = gpu_x;
+                        gpu_yc = gpu_y;
+                        gpu_numerator = 3 - ( 2 * gpu_param0 );
                         gpu_active = 6;
+                    }
+                    case 5: {
+                        // Setup 1 bit 16x16 blitter starting at x,y in colour of tile param0
+                        gpu_active_colour = gpu_colour;
+                        gpu_active_x = 0;
+                        gpu_active_y = 0;
+                        gpu_x1 = gpu_x;
+                        gpu_y1 = gpu_y;
+                        gpu_w = 15;
+                        gpu_h = 15;
+                        gpu_tile = gpu_param0;                       
+                        gpu_active = 14;
+                    }
+                    case 6: {
+                        // Write to tilemap param0 line param1 value gpu_param2
+                        blit1tilemap.addr1 = gpu_param0 * 16 + gpu_param1;
+                        blit1tilemap.wdata1 = gpu_param2;
+                        blit1tilemap.wenable1 = 1;
+                    }
+                    case 255: {
+                        // Set background colour
+                        backgroundcolour = gpu_colour;
                     }
                     default: {}
                 }
             }
+            // Perform GPU Operation
+            // GPU functions 1 pixel per cycle, even during hblank and vblank
             case 1: {
                 // Write colour to x,y
-                if( (gpu_active_x >= 0) & (gpu_active_x<=640) & (gpu_active_y>=0) & (gpu_active_y<480) ) {
+                if( (gpu_active_x >= 0) & (gpu_active_x<640) & (gpu_active_y>=0) & (gpu_active_y<480) ) {
                     bitmap.addr1 = gpu_active_x + gpu_active_y * 640;
                     bitmap.wdata1 = gpu_active_colour;
                     bitmap.wenable1 = 1;
@@ -356,118 +406,228 @@ algorithm multiplex_display(
             }
             case 2: {
                 // Rectangle of colour at x,y top left to param0, param1 bottom right
-                if( (gpu_active_x >= 0) & (gpu_active_x<=640) & (gpu_active_y>=0) & (gpu_active_y<480) ) {
+                if( (gpu_active_x >= 0) & (gpu_active_x<640) & (gpu_active_y>=0) & (gpu_active_y<480) ) {
                     bitmap.addr1 = gpu_active_x + gpu_active_y * 640;
                     bitmap.wdata1 = gpu_active_colour;
                     bitmap.wenable1 = 1;
                 }
-                
-                if( gpu_active_x == gpu_temp2 ) {
+                // Move to next pixel
+                if( gpu_active_x == gpu_w ) {
                     // End of line
-                    if( gpu_active_y == gpu_temp3 ) {
+                    if( gpu_active_y == gpu_h ) {
                         // Reached bottom right
                         gpu_active = 0;
                     } else {
                         // Next line
                         gpu_active_y = gpu_active_y + 1;
                     }
-                    gpu_active_x = gpu_temp0;
+                    gpu_active_x = gpu_x2;
                 } else {
                     gpu_active_x = gpu_active_x + 1;
                 }
             }
             case 3: {
                 // Bresenham's Line Drawing Algorithm
-                // 4 Cases always left to right, shallow down, steep down, shallow up, steep up
-                // Calculate deltas and initial error
-                gpu_temp2 = gpu_temp0 - gpu_active_x;
-                gpu_temp3 = gpu_temp1 - gpu_active_y;
-                gpu_temp4 = 2 * (gpu_temp1 - gpu_active_y) - (gpu_temp0 - gpu_active_x);
-                if( (gpu_temp0 - gpu_active_x) > 1 ) {
-                    // SHALLOW
-                    gpu_active = 4;
+                // Calculate deltas and longest, shortest
+                gpu_longest = ( gpu_w < 0 ) ? -gpu_w : gpu_w ;
+                gpu_shortest = ( gpu_h < 0 ) ? -gpu_h : gpu_h;
+                if( gpu_w < 0 ) {
+                    gpu_dx1 = -1;
+                    gpu_dx2 = -1;
                 } else {
-                    // STEEP
-                    gpu_active = 5;
+                    if( gpu_w > 0 ) {
+                        gpu_dx1 = 1;
+                        gpu_dx2 = 1;
+                    }
                 }
+                if( gpu_h < 0 ) {
+                    gpu_dy1 = -1;
+                } else {
+                    if( gpu_h > 0 ) {
+                        gpu_dy1 = 1;
+                    }
+                }
+                gpu_active = 4;
             }
             case 4: {
-                // Bresenham's Line Drawing Algorithm - Shallow Lines
-                if( (gpu_active_x >= 0) & (gpu_active_x<=640) & (gpu_active_y>=0) & (gpu_active_y<480) ) {
-                    bitmap.addr1 = gpu_active_x + gpu_active_y * 640;
-                    bitmap.wdata1 = gpu_active_colour;
-                    bitmap.wenable1 = 1;
-                }
-                if( gpu_active_x == gpu_temp0 ) {
-                    // Finished
-                    gpu_active = 0;
-                } else {
-                    if( gpu_temp4 >= 0 ) {
-                        if( gpu_temp3 < 0 ) {
-                            gpu_active_y = gpu_active_y - 1;
-                        } else {
-                            gpu_active_y = gpu_active_y + 1;
-                        }
-                        gpu_temp4 = gpu_temp4 + (2 * gpu_temp3) - (2 * gpu_temp2);
+                // Bresenham's Line Drawing Algorithm
+                // Determine if steep or shallow
+                if( (gpu_longest <= gpu_shortest) ) {
+                    gpu_numerator = gpu_shortest >> 1;
+                    gpu_longest = gpu_shortest;
+                    gpu_shortest = gpu_longest;
+                    if( gpu_h < 0 ) {
+                        gpu_dy2 = -1;
                     } else {
-                        gpu_temp4 = gpu_temp4 + (2 * gpu_temp3); 
+                        if( gpu_h > 0 ) {
+                            gpu_dy2 = 1;
+                        }
                     }
-                    gpu_active_x = gpu_active_x + 1;
+                } else {
+                    gpu_numerator = gpu_longest >> 1;
                 }
+                gpu_active = 5;
             }
             case 5: {
-                // Bresenham's Line Drawing Algorithm - Steep Lines
-                if( (gpu_active_x >= 0) & (gpu_active_x<=640) & (gpu_active_y>=0) & (gpu_active_y<480) ) {
-                    bitmap.addr1 = gpu_active_x + gpu_active_y * 640;
+                // Bresenham's Line Drawing Algorithm
+                // Draw the line
+                if( (gpu_active_x >= 0) & (gpu_active_x <640) & (gpu_active_y >=0) & (gpu_active_y <480) ) {
+                    bitmap.addr1 = gpu_active_x + (gpu_active_y) * 640;
                     bitmap.wdata1 = gpu_active_colour;
                     bitmap.wenable1 = 1;
                 }
-                if( gpu_active_y == gpu_temp1 ) {
-                    // Finished
+                if( gpu_count == gpu_longest ) {
+                    // FINISHED
                     gpu_active = 0;
                 } else {
-                    if( gpu_temp4 >= 0 ) {
-                        gpu_active_x = gpu_active_x + 1;
-                        gpu_temp4 = gpu_temp4 + (2 * gpu_temp3) - (2 * gpu_temp2);
+                    if( ~(gpu_numerator < gpu_longest) ) {
+                        gpu_numerator = gpu_numerator + gpu_shortest - gpu_longest;
+                        gpu_active_x = gpu_active_x + gpu_dx1;
+                        gpu_active_y = gpu_active_y + gpu_dy1;
                     } else {
-                        gpu_temp4 = gpu_temp4 + (2 * gpu_temp3); 
+                        gpu_numerator = gpu_numerator + gpu_shortest;
+                        gpu_active_x = gpu_active_x + gpu_dx2;
+                        gpu_active_y = gpu_active_y + gpu_dy2;
                     }
-                    if( gpu_temp3 < 0 ) {
-                        gpu_active_y = gpu_active_y - 1;
-                    } else {
-                        gpu_active_y = gpu_active_y + 1;
-                    }
+                    gpu_count = gpu_count + 1;
                 }
             }
             case 6: {
                 // Bresenham's Circle Drawing Algorithm - Arc 0
-                if( (gpu_active_x + gpu_temp1 >= 0) & (gpu_active_x + gpu_temp1 <=640) & (gpu_active_y + gpu_temp2 >=0) & (gpu_active_y + gpu_temp2 <480) ) {
-                    bitmap.addr1 = gpu_active_x + gpu_temp1 + (gpu_active_y + gpu_temp2) * 640;
+                if( (gpu_xc + gpu_active_x >= 0) & (gpu_xc + gpu_active_x <640) & (gpu_yc + gpu_active_y >=0) & (gpu_yc + gpu_active_y <480) ) {
+                    bitmap.addr1 = gpu_xc + gpu_active_x + (gpu_yc + gpu_active_y) * 640;
                     bitmap.wdata1 = gpu_active_colour;
                     bitmap.wenable1 = 1;
                 }
-                if( gpu_active_x == gpu_active_y ) {
+                gpu_active = 7;
+            }
+            case 7: {
+                // Bresenham's Circle Drawing Algorithm - Arc 1
+                if( (gpu_xc - gpu_active_x >= 0) & (gpu_xc - gpu_active_x <640) & (gpu_yc + gpu_active_y >=0) & (gpu_yc + gpu_active_y <480) ) {
+                    bitmap.addr1 = gpu_xc - gpu_active_x + (gpu_yc + gpu_active_y) * 640;
+                    bitmap.wdata1 = gpu_active_colour;
+                    bitmap.wenable1 = 1;
+                }
+                gpu_active = 8;
+            }
+            case 8: {
+                // Bresenham's Circle Drawing Algorithm - Arc 2
+                if( (gpu_xc + gpu_active_x >= 0) & (gpu_xc + gpu_active_x <640) & (gpu_yc - gpu_active_y >=0) & (gpu_yc - gpu_active_y <480) ) {
+                    bitmap.addr1 = gpu_xc + gpu_active_x + (gpu_yc - gpu_active_y) * 640;
+                    bitmap.wdata1 = gpu_active_colour;
+                    bitmap.wenable1 = 1;
+                }
+                gpu_active = 9;
+            }
+            case 9: {
+                // Bresenham's Circle Drawing Algorithm - Arc 3
+                if( (gpu_xc - gpu_active_x >= 0) & (gpu_xc - gpu_active_x <640) & (gpu_yc - gpu_active_y >=0) & (gpu_yc - gpu_active_y <480) ) {
+                    bitmap.addr1 = gpu_xc - gpu_active_x + (gpu_yc - gpu_active_y) * 640;
+                    bitmap.wdata1 = gpu_active_colour;
+                    bitmap.wenable1 = 1;
+                }
+                gpu_active = 10;
+            }
+            case 10: {
+                // Bresenham's Circle Drawing Algorithm - Arc 4
+                if( (gpu_xc + gpu_active_y >= 0) & (gpu_xc + gpu_active_y <640) & (gpu_yc + gpu_active_x >=0) & (gpu_yc + gpu_active_x <480) ) {
+                    bitmap.addr1 = gpu_xc + gpu_active_y + (gpu_yc + gpu_active_x) * 640;
+                    bitmap.wdata1 = gpu_active_colour;
+                    bitmap.wenable1 = 1;
+                }
+                gpu_active = 11;
+            }
+            case 11: {
+                // Bresenham's Circle Drawing Algorithm - Arc 5
+                if( (gpu_xc - gpu_active_y >= 0) & (gpu_xc - gpu_active_y <640) & (gpu_yc + gpu_active_x >=0) & (gpu_yc + gpu_active_x <480) ) {
+                    bitmap.addr1 = gpu_xc - gpu_active_y + (gpu_yc + gpu_active_x) * 640;
+                    bitmap.wdata1 = gpu_active_colour;
+                    bitmap.wenable1 = 1;
+                }
+                gpu_active = 12;
+            }
+            case 12: {
+                // Bresenham's Circle Drawing Algorithm - Arc 6
+                if( (gpu_xc + gpu_active_y >= 0) & (gpu_xc + gpu_active_y <640) & (gpu_yc - gpu_active_x >=0) & (gpu_yc - gpu_active_x <480) ) {
+                    bitmap.addr1 = gpu_xc + gpu_active_y + (gpu_yc - gpu_active_x) * 640;
+                    bitmap.wdata1 = gpu_active_colour;
+                    bitmap.wenable1 = 1;
+                }
+                gpu_active = 13;
+            }
+            case 13: {
+                // Bresenham's Circle Drawing Algorithm - Arc 7
+                if( (gpu_xc - gpu_active_y >= 0) & (gpu_xc - gpu_active_y <640) & (gpu_yc - gpu_active_x >=0) & (gpu_yc - gpu_active_x <480) ) {
+                    bitmap.addr1 = gpu_xc - gpu_active_y + (gpu_yc - gpu_active_x) * 640;
+                    bitmap.wdata1 = gpu_active_colour;
+                    bitmap.wenable1 = 1;
+                }
+                 if( gpu_active_y >= gpu_active_x ) {
+                    gpu_active_x = gpu_active_x + 1;
+                    if( gpu_numerator > 0 ) {
+                        gpu_numerator = gpu_numerator + 4 * (gpu_active_x - gpu_active_y) + 10;
+                        gpu_active_y = gpu_active_y - 1;
+                    } else {
+                        gpu_numerator = gpu_numerator + 4 * gpu_active_x + 6;
+                    }
+                    gpu_active = 6;
+                } else {
                     gpu_active = 0;
                 }
-                if( gpu_temp3 <= 0 ) {
-                    gpu_temp3 = gpu_temp3 + (4 * gpu_active_x) + 6;
-                } else {
-                    gpu_temp3 = gpu_temp3 + (4 * gpu_active_x) - (4* gpu_active_y) + 10;
-                    gpu_active_y = gpu_active_y - 1;
+            }
+            case 14: {
+                // 1 bit BLITTER
+                // Read blit 1 bit tile map
+                blit1tilemap.addr1 = gpu_tile * 16 + gpu_active_y;
+                gpu_active = 15;
+            }
+            case 15: {
+                // 1 bit BLITTER
+                // Draw pixel, move to next pixel
+                if( ((blit1tilemap.rdata1 << gpu_active_x) >> 15) & 1 ) {
+                    if( (gpu_x1 + gpu_active_x >= 0) & (gpu_x1 + gpu_active_x<640) & (gpu_y1 + gpu_active_y>=0) & (gpu_y1 + gpu_active_y<480) ) {
+                        bitmap.addr1 = gpu_active_x + gpu_x1 + (gpu_active_y + gpu_y1) * 640;
+                        bitmap.wdata1 = gpu_active_colour;
+                        bitmap.wenable1 = 1;
+                    }
                 }
-                gpu_active_x = gpu_active_x + 1;
+                if( gpu_active_x < gpu_w ) {
+                    gpu_active_x = gpu_active_x + 1;
+                } else {
+                    gpu_active_x = 0;
+                    // Move to next line and fetch line from blit 1 bit tile map
+                    if( gpu_active_y < gpu_h ) {
+                        gpu_active_y = gpu_active_y + 1;
+                        gpu_active = 14;
+                    } else {
+                        // FINISHED
+                        gpu_active = 0;
+                    }
+                }
             }
             default: {gpu_active = 0;}
         }
+    }
 
+    // GPU, TPU and TERMINAL flags
+    terminal_active = 0;
+    gpu_active = 0;
+    
+    // Draw the screen
+    while (1) {
         // wait until pix_active
+        // THEN BACKGROUND -> BITMAP -> CHARACTER MAP -> TERMINAL
         if( pix_active ) {
-            
             // BITMAP
             if( ~colour10(bitmap.rdata0).alpha ) {
                 pix_red = colourexpand3to6[ colour10(bitmap.rdata0).red ];
                 pix_green = colourexpand3to6[ colour10(bitmap.rdata0).green ];
                 pix_blue = colourexpand3to6[ colour10(bitmap.rdata0).blue ];
+            } else {
+                // BACKGROUND
+                pix_red = colourexpand3to6[ colour9(backgroundcolour).red ];
+                pix_green = colourexpand3to6[ colour9(backgroundcolour).green ];
+                pix_blue = colourexpand3to6[ colour9(backgroundcolour).blue ];
             }
 
             // CHARACTER from characterGenerator
@@ -641,6 +801,8 @@ algorithm main(
     uint1 video_clock = 0;
     uint1 sdram_clock = 0;
     uint1 pll_lock = 0;
+    
+    // Generate the 100MHz SDRAM and 25MHz VIDEO clocks
     de10nano_clk_100_25 clk_gen(
         refclk    <: clock,
         outclk_0  :> sdram_clock,
@@ -662,12 +824,7 @@ algorithm main(
     uint10 pix_x  = 0;
     uint10 pix_y  = 0;
 
-    // GPU for reading and writing pixels
-    //uint10 gpu_x = 0;
-    //uint9 gpu_y = 0;
-    //uint8 gpu_colour = 0;
-    //uint1 gpu_write := 0;
-    
+    // 25MHz pixel clock
     vga vga_driver <@video_clock,!video_reset>
     (
         vga_hs :> video_hs,
@@ -678,6 +835,7 @@ algorithm main(
         vga_y  :> pix_y
     );
 
+    // 50Mhz EXACTLY double the pixel clock
     multiplex_display display <@video_clock,!video_reset>
     (
         pix_x      <: pix_x,
@@ -831,8 +989,6 @@ algorithm main(
 
     // INIT is 3 EXECUTE J1 CPU
     while( INIT == 3 ) {
-        // Deal with VBLANK, VGA and SDRAM
-
         // READ from UART if character available and store
         switch( uartInHold ) {
             case 0: {
@@ -1127,7 +1283,8 @@ algorithm main(
                                      }
                                     case 16hffff: {
                                         // Set BACKGROUND colour
-                                        display.backgroundcolour = stackNext;
+                                        display.gpu_colour = stackNext;
+                                        display.gpu_write = 255;
                                     }
                                }
                             }

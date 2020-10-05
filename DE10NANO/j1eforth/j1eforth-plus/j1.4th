@@ -573,30 +573,6 @@ t: cmove ( b1 b2 u -- ) for aft >r dup c@ r@ c! 1+ r> 1+ then next 2drop t;
 t: pack$ ( b u a -- a ) dup >r 2dup ! 1+ swap cmove r> t;
 t: ? ( a -- ) @ . t;
 
-( double maths )
-t: 2over >r >r 2dup r> r> rot >r rot r> t;
-t: 2swap rot >r rot r> t;
-t: 2nip rot drop rot drop t;
-t: 2rot 2>r 2swap 2r> 2swap t;
-t: d= >r rot xor swap r> xor or 0= t;
-t: d<> d= invert t;
-t: d+ rot + >r over + dup rot u< if r> 1+ else r> then t;
-t: d- dnegate d+ t;
-t: s>d dup 0< t;
-t: d1+ 1 literal s>d d+ t;
-t: dxor rot xor -rot xor swap t;
-t: dand rot and -rot and swap t;
-t: dor rot or -rot or swap t;
-t: dinvert invert swap invert swap t;
-t: d< rot 2dup = if 2drop u< else 2nip > then t;
-t: d> 2swap d< t;
-t: d0= or 0= t;
-t: d0< 0 literal s>d d< t;
-t: d0<> d0= invert t;
-t: d2* 2dup d+ t;
-t: d2/ dup f literal lshift >r 2/ swap 2/ r> or swap t;
-t: d1- 1 literal s>d dnegate d+ t;
-
 t: (parse) ( b u c -- b u delta ; <string> )
   temp ! over >r dup if
     1- temp @ bl = if
@@ -963,17 +939,45 @@ t: cold ( -- )
    quit
    cold t;
 
+( double maths )
+t: 2over >r >r 2dup r> r> rot >r rot r> t;
+t: 2swap rot >r rot r> t;
+t: 2nip rot drop rot drop t;
+t: 2rot 2>r 2swap 2r> 2swap t;
+t: d= >r rot xor swap r> xor or 0= t;
+t: d<> d= invert t;
+t: d+ rot + >r over + dup rot u< if r> 1+ else r> then t;
+t: d- dnegate d+ t;
+t: s>d dup 0< t;
+t: d1+ 1 literal s>d d+ t;
+t: dxor rot xor -rot xor swap t;
+t: dand rot and -rot and swap t;
+t: dor rot or -rot or swap t;
+t: dinvert invert swap invert swap t;
+t: d< rot 2dup = if 2drop u< else 2nip > then t;
+t: d> 2swap d< t;
+t: d0= or 0= t;
+t: d0< 0 literal s>d d< t;
+t: d0<> d0= invert t;
+t: d2* 2dup d+ t;
+t: d2/ dup f literal lshift >r 2/ swap 2/ r> or swap t;
+t: d1- 1 literal s>d dnegate d+ t;
+
 ( GPU, TPU and TERMINAL helpers)
 t: background! ( colour) ffff literal ! t;
-t: gpu!pixel ( colour x y ) begin ff07 literal @ 0= until 
+t: pixel! ( colour x y ) begin ff07 literal @ 0= until 
     ff01 literal ! ff00 literal ! ff02 literal ! 1 literal ff07 literal ! t;
-t: gpu!rectangle ( colour x1 y1 x2 y2 ) begin ff07 literal @ 0= until 
+t: rectangle! ( colour x1 y1 x2 y2 ) begin ff07 literal @ 0= until 
     ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 2 literal ff07 literal ! t;
-t: gpu!line ( colour x1 y1 x2 y2 ) begin ff07 literal @ 0= until 
+t: line! ( colour x1 y1 x2 y2 ) begin ff07 literal @ 0= until 
     ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 3 literal ff07 literal ! t;
-t: gpu!cs 200 literal 0 literal 0 literal 2f7 literal 1df literal gpu!rectangle t;
+t: circle! ( colour xc yc r ) begin ff07 literal @ 0= until 
+    ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 4 literal ff07 literal ! t;
+t: blit1! ( colour blit1tile x y ) begin ff07 literal @ 0= until 
+    ff01 literal ! ff00 literal ! ff03 literal ! ff02 literal ! 5 literal ff07 literal ! t;
+t: cs! 200 literal 0 literal 0 literal 2f7 literal 1df literal rectangle! t;
 
-t: tpu!xy ( x y )ff11 literal ! ff10 literal ! 1 literal ff15 literal ! t;
+t: tpu!xy ( x y ) ff11 literal ! ff10 literal ! 1 literal ff15 literal ! t;
 t: tpu!foreground ( foreground ) ff14 literal ! t;
 t: tpu!background ( background ) ff13 literal ! t;
 t: tpu!emit ( character ) ff12 literal ! 2 literal ff15 literal ! t;
@@ -986,6 +990,7 @@ t: tpu!cs
 t: tpu!space bl tpu!emit t;
 t: tpu!spaces 0 literal max for aft tpu!space then next t;
 t: tpu!type for aft count tpu!emit then next drop t;
+t: tpu!.$ count tpu!type t;
 t: tpu!.r >r str r> over - tpu!spaces tpu!type t;
 t: tpu!u.r >r <# #s #> r> over - tpu!spaces tpu!type t;
 t: tpu!u. <# #s #> tpu!space tpu!type t;
