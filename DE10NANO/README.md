@@ -112,17 +112,19 @@ drawcircles
 0001000100000000
 0010000010000000 
 hex
-: setblit1tile
+: blit1tile!
   ff03 !
   10 0 do
     i ff04 !
     ff05 !
     6 ff07 !
   loop ;
-0 setblit1tile
+0 blit1tile!
 : invaders
   10 0 do
-    i 0 i 10 * i 10 * blit1!
+    i 10 0 do
+      dup 1ff i - swap 0 swap 18 * i 18 * blit1!
+    loop  
   loop ;
 invaders
 
@@ -159,7 +161,7 @@ tputest
 * - Complete line drawing - STEEP lines do not work
 * - DEBUG rectangle drawing
 * - BLITTER
-* - - 1 bit 16x16 blitter from a configurable 256 16 x 16 tilemap - partially implemented
+* - - 1 bit 16x16 blitter from a configurable 256 16 x 16 tilemap - partially implemented (slight misalignment on the output)
 * - - 10 bit { Arrrgggbbb } 16 x 16 blitter from a configurable 64 16 x 16 tilemap (16384 * 10 bit, might be too big for the blockram)
 
 * VECTOR LIST

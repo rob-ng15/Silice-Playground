@@ -112,7 +112,7 @@ variable tlast
 variable tuser
 
 0001 constant =ver
-0006 constant =ext
+0008 constant =ext
 0040 constant =comp
 0080 constant =imed
 7f1f constant =mask

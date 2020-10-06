@@ -346,6 +346,10 @@ algorithm main(
         pix_red    :> video_r,
         pix_green  :> video_g,
         pix_blue   :> video_b,
+
+        background_r <: background_r,
+        background_g <: background_g,
+        background_b <: background_b,
      
         bitmap_r <: bitmap_r,
         bitmap_g <: bitmap_g,
@@ -799,6 +803,7 @@ algorithm main(
                                     case 16hffff: {
                                         // Set BACKGROUND colour
                                         background_generator.backgroundcolour = stackNext;
+                                        background_generator.backgroundcolour_write = 1;
                                     }
                                }
                             }
@@ -838,10 +843,11 @@ algorithm main(
                 // reset sram_readwrite
                 ram.wenable0 = 0;
                 
-                // reset gpu, tpu and terminal
+                // reset gpu, tpu, terminal and background
                 gpu_processor.gpu_write = 0;
                 character_map_window.tpu_write = 0;
                 terminal_window.terminal_write = 0;
+                background_generator.backgroundcolour_write = 0;
             }
             
             default: {}

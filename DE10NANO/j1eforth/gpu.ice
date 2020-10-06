@@ -48,7 +48,6 @@ algorithm gpu(
     // blit1tilemap read access for the blit1tilemap
     blit1tilemap.addr0 := gpu_tile * 16 + gpu_active_y;
     blit1tilemap.wenable0 := 0;
-    uint1 blit1pixel := (( blit1tilemap.rdata0 << gpu_active_x ) >> 15) & 1;
         
     // blit1tilemap write access for the GPU to load tilemaps
     blit1tilemap.wenable1 := 0;
@@ -312,7 +311,7 @@ algorithm gpu(
             case 15: {
                 // 1 bit BLITTER
                 // Draw pixel, move to next pixel
-                if( blit1pixel) {
+                if( (( blit1tilemap.rdata0 << gpu_active_x ) >> 15) & 1 ) {
                     bitmap_x_write = gpu_x1 + gpu_active_x;
                     bitmap_y_write = gpu_y1 + gpu_active_y;
                     bitmap_colour_write = gpu_active_colour;
