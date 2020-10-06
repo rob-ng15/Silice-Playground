@@ -43,16 +43,16 @@ line! | ```colour x1 y1 x2 y2 line!``` draws a line from x1,y1 to x2,y2 in colou
 circle! | ```colour xc yc r circle!``` draws a circle centred at xc,yc of radius r in colour
 blit1! | ```colour tile x y blit1!``` blits tilemap tile to x,y in colour
 cs! | ```cs!``` clears the bitmap (sets to transparent)
-tpu!cs | ```tpu!cs``` clears the character map (sets to transparent so the bitmap can show through)
-tpu!xy | ```x y tpu!xy``` moves the TPU cursor to x,y
-tpu!foreground |```foreground tpu!foreground``` sets the foreground colour
-tpu!background | ```background tpu!background``` sets the background colour
-tpu!emit | emit for the TPU character map
-tpu!type | type for the TPU character map
-tpu!space<br>tpu!spaces | space and spaces for the TPU character map
-tpu!.r<br>tpu!u.r<br>tpu!u.<br>tpu!.<br>tpu!.#<br>tpu!u.#<br>tpu!u.r#<br>tpu!.r#<br>tpu!.$ | Equivalents for .r u.r u. . .# u.# u.r# .r# .$ for the TPU character map
-terminal!show | show the blue terminal window
-terminal!hide | hide the blue terminal window
+tpucs! | ```tpucs!``` clears the character map (sets to transparent so the bitmap can show through)
+tpuxy! | ```x y tpuxy!``` moves the TPU cursor to x,y
+tpuforeground! |```foreground tpuforeground!``` sets the foreground colour
+tpubackground! | ```background tpubackground!``` sets the background colour
+tpuemit | emit for the TPU character map
+tputype | type for the TPU character map
+tpuspace<br>tpuspaces | space and spaces for the TPU character map
+tpu.r<br>tpu!u.r<br>tpuu.<br>tpu.<br>tpu.#<br>tpuu.#<br>tpuu.r#<br>tpu.r#<br>tpu.$ | Equivalents for .r u.r u. . .# u.# u.r# .r# .$ for the TPU character map
+terminalshow! | show the blue terminal window
+terminalhide! | hide the blue terminal window
 
 Colour Guide<br>HEX | Colour
 :-----: | :-----:
@@ -128,23 +128,16 @@ invaders
 
 : tputest
   1ff 0 do
-    200 i - tpu!background
-    i tpu!foreground
-    i tpu!emit
+    200 i - tpubackground!
+    i tpuforeground!
+    i tpuemit
   loop ;
 tputest
 ```
-: setblit1tile
-  ff03 . .
-  10 0 do
-    i ff04 . .
-    ff05 . .
-    6 ff07 . .
-  loop ;
 
 ## Issues
 
-* ```tpu!cs cs!``` must be issued to display graphics as memory is initialised for text display
+* ```tpucs! cs!``` must be issued to display graphics as memory is initialised for text display
 * UART input works, with copy'n'paste
 * - Glitches occasionally when copy'n'paste
 * UART output misses some characters.

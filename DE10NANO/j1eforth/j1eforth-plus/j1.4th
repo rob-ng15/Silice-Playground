@@ -977,31 +977,31 @@ t: blit1! ( colour blit1tile x y ) begin ff07 literal @ 0= until
     ff01 literal ! ff00 literal ! ff03 literal ! ff02 literal ! 5 literal ff07 literal ! t;
 t: cs! 200 literal 0 literal 0 literal 2f7 literal 1df literal rectangle! t;
 
-t: tpu!xy ( x y ) ff11 literal ! ff10 literal ! 1 literal ff15 literal ! t;
-t: tpu!foreground ( foreground ) ff14 literal ! t;
-t: tpu!background ( background ) ff13 literal ! t;
-t: tpu!emit ( character ) ff12 literal ! 2 literal ff15 literal ! t;
-t: tpu!cs
-    0 literal 0 literal tpu!xy
-    0 literal tpu!foreground
-    200 literal tpu!background
-    960 literal for aft 0 literal tpu!emit then next 
-    0 literal 0 literal tpu!xy t;
-t: tpu!space bl tpu!emit t;
-t: tpu!spaces 0 literal max for aft tpu!space then next t;
-t: tpu!type for aft count tpu!emit then next drop t;
-t: tpu!.$ count tpu!type t;
-t: tpu!.r >r str r> over - tpu!spaces tpu!type t;
-t: tpu!u.r >r <# #s #> r> over - tpu!spaces tpu!type t;
-t: tpu!u. <# #s #> tpu!space tpu!type t;
-t: tpu!. base @ a literal xor if tpu!u. exit then str tpu!space tpu!type t;
-t: tpu!.# base @ swap decimal tpu!. base ! t;
-t: tpu!u.# base @ swap decimal <# #s #> tpu!space tpu!type base ! t;
-t: tpu!u.r# base @ rot rot decimal >r <# #s #> r> over - tpu!spaces tpu!type base ! t;
-t: tpu!.r# base @ rot rot decimal >r str r> over - tpu!spaces tpu!type base ! t;
+t: tpuxy! ( x y ) ff11 literal ! ff10 literal ! 1 literal ff15 literal ! t;
+t: tpuforeground! ( foreground ) ff14 literal ! t;
+t: tpubackground! ( background ) ff13 literal ! t;
+t: tpuemit ( character ) ff12 literal ! 2 literal ff15 literal ! t;
+t: tpucs!
+    0 literal 0 literal tpuxy!
+    0 literal tpuforeground!
+    200 literal tpubackground!
+    960 literal for aft 0 literal tpuemit then next 
+    0 literal 0 literal tpuxy! t;
+t: tpuspace bl tpuemit t;
+t: tpuspaces 0 literal max for aft tpuspace then next t;
+t: tputype for aft count tpuemit then next drop t;
+t: tpu.$ count tputype t;
+t: tpu.r >r str r> over - tpuspaces tputype t;
+t: tpuu.r >r <# #s #> r> over - tpuspaces tputype t;
+t: tpuu. <# #s #> tpuspace tputype t;
+t: tpu. base @ a literal xor if tpuu. exit then str tpuspace tputype t;
+t: tpu.# base @ swap decimal tpu. base ! t;
+t: tpuu.# base @ swap decimal <# #s #> tpuspace tputype base ! t;
+t: tpuu.r# base @ rot rot decimal >r <# #s #> r> over - tpuspaces tputype base ! t;
+t: tpu.r# base @ rot rot decimal >r str r> over - tpuspaces tputype base ! t;
 
-t: terminal!show 1 literal ff21 literal ! t;
-t: terminal!hide 0 literal ff21 literal ! t;
+t: terminalshow! 1 literal ff21 literal ! t;
+t: terminalhide! 0 literal ff21 literal ! t;
 
 target.1 -order set-current
 
