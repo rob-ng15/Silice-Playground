@@ -13,15 +13,16 @@ bitfield colour9 {
     uint3   blue
 }
 
-// VGA Driver Includes
-$include('common/vga.ice')
+// VGA/HDMI Driver Includes
+$include('DE10NANO/common/vga.ice')
+
 $include('terminal.ice')
 $include('character_map.ice')
 $include('bitmap.ice')
 $include('gpu.ice')
 $include('background.ice')
 
-import('common/de10nano_clk_100_25.v')
+import('DE10NANOcommon/de10nano_clk_100_25.v')
 import('common/reset_conditioner.v')
 
 append('jamieilesUART/baud_rate_gen.v')
@@ -176,13 +177,12 @@ algorithm main(
     output! uint$color_depth$ video_r,
     output! uint$color_depth$ video_g,
     output! uint$color_depth$ video_b,
-    output! uint1 video_hs,
-    output! uint1 video_vs,
+    output! uint1   video_hs,
+    output! uint1   video_vs,
 
     // UART
     output! uint1 uart_tx,
     input   uint1 uart_rx
-
 ) {
     // SETUP Peripherals
     uint8 buttons = 0; // TODO

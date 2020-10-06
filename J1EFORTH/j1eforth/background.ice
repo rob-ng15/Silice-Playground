@@ -11,7 +11,9 @@ algorithm background(
     input uint1 backgroundcolour_write
 ) <autorun> {
     // Expansion map for { rrr } to { rrrrrr }, { ggg } to { gggggg }, { bbb } to { bbbbbb }
-    uint6 colourexpand3to6[8] = {  0, 9, 18, 27, 36, 45, 54, 63 };
+    // or { rrr } tp { rrrrrrrr }, { ggg } to { gggggggg }, { bbb } to { bbbbbbbb }
+    uint6 colourexpand3to6[8] = {  0, 9, 18, 27, 36, 45, 54, 255 };
+    uint6 colourexpand3to8[8] = {  0, 36, 73, 109, 145, 182, 218, 255 };
 
     uint9 background = 0;
     
@@ -22,8 +24,8 @@ algorithm background(
     }
     
     while(1) {
-        pix_red = colourexpand3to6[ colour9(background).red ];
-        pix_green = colourexpand3to6[ colour9(background).green ];
-        pix_blue = colourexpand3to6[ colour9(background).blue ];
+        pix_red = colourexpand3to$color_depth$[ colour9(background).red ];
+        pix_green = colourexpand3to$color_depth$[ colour9(background).green ];
+        pix_blue = colourexpand3to$color_depth$[ colour9(background).blue ];
     }
 }

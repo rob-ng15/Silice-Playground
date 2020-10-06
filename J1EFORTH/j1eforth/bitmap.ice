@@ -21,7 +21,9 @@ algorithm bitmap(
     dualport_bram uint10 bitmap[ 307200 ] = uninitialized;  // { Arrrgggbbb }
 
     // Expansion map for { rrr } to { rrrrrr }, { ggg } to { gggggg }, { bbb } to { bbbbbb }
-    uint6 colourexpand3to6[8] = {  0, 9, 18, 27, 36, 45, 54, 63 };
+    // or { rrr } tp { rrrrrrrr }, { ggg } to { gggggggg }, { bbb } to { bbbbbbbb }
+    uint6 colourexpand3to6[8] = {  0, 9, 18, 27, 36, 45, 54, 255 };
+    uint6 colourexpand3to8[8] = {  0, 36, 73, 109, 145, 182, 218, 255 };
 
     // Setup the address in the bitmap for the pixel being rendered
     bitmap.addr0 := pix_x + pix_y * 640;
@@ -44,9 +46,9 @@ algorithm bitmap(
     // Render the bitmap
     while(1) {
         if( ~colour10(bitmap.rdata0).alpha ) {
-            pix_red = colourexpand3to6[ colour10(bitmap.rdata0).red ];
-            pix_green = colourexpand3to6[ colour10(bitmap.rdata0).green ];
-            pix_blue = colourexpand3to6[ colour10(bitmap.rdata0).blue ];
+            pix_red = colourexpand3to$color_depth$[ colour10(bitmap.rdata0).red ];
+            pix_green = colourexpand3to$color_depth$[ colour10(bitmap.rdata0).green ];
+            pix_blue = colourexpand3to$color_depth$[ colour10(bitmap.rdata0).blue ];
             bitmap_display = 1;
         } else {
             bitmap_display = 0;

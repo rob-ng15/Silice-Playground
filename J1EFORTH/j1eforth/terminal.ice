@@ -144,24 +144,24 @@ algorithm terminal(
             switch( terminalpixel ) {
                 case 0: {
                     if( is_cursor & timer1hz ) {
-                        pix_red = 63;
-                        pix_green = 63;
-                        pix_blue = 63;
+                        pix_red = $color_depth$==6 ? 63 : 255;
+                        pix_green = $color_depth$==6 ? 63 : 255;
+                        pix_blue = $color_depth$==6 ? 63 : 255;
                     } else {
                         pix_red = 0;
                         pix_green = 0;
-                        pix_blue = 63;
+                        pix_blue = $color_depth$==6 ? 63 : 255;
                     }
                 }
                 case 1: {
                     if( is_cursor & timer1hz ) {
                         pix_red = 0;
                         pix_green = 0;
-                        pix_blue = 63;
+                        pix_blue = $color_depth$==6 ? 63 : 255;
                     } else {
-                        pix_red = 63;
-                        pix_green = 63;
-                        pix_blue = 63;
+                        pix_red = $color_depth$==6 ? 63 : 255;
+                        pix_green = $color_depth$==6 ? 63 : 255;
+                        pix_blue = $color_depth$==6 ? 63 : 255;
                     }
                 }
             }

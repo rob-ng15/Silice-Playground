@@ -28,7 +28,9 @@ algorithm character_map(
     dualport_bram uint10 background[2400] = uninitialized;  // { Arrrgggbbb }
 
     // Expansion map for { rrr } to { rrrrrr }, { ggg } to { gggggg }, { bbb } to { bbbbbb }
-    uint6 colourexpand3to6[8] = {  0, 9, 18, 27, 36, 45, 54, 63 };
+    // or { rrr } tp { rrrrrrrr }, { ggg } to { gggggggg }, { bbb } to { bbbbbbbb }
+    uint6 colourexpand3to6[8] = {  0, 9, 18, 27, 36, 45, 54, 255 };
+    uint6 colourexpand3to8[8] = {  0, 36, 73, 109, 145, 182, 218, 255 };
 
     // Character position on the screen x 0-79, y 0-29 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
     uint8 xcharacterpos := (pix_x+1) >> 3;
@@ -107,17 +109,17 @@ algorithm character_map(
             case 0: {
                     // BACKGROUND
                     if( ~colour10(background.rdata0).alpha ) {
-                        pix_red = colourexpand3to6[ colour10(background.rdata0).red ];
-                        pix_green = colourexpand3to6[ colour10(background.rdata0).green ];
-                        pix_blue = colourexpand3to6[ colour10(background.rdata0).blue ];
+                        pix_red = colourexpand3to$color_depth$[ colour10(background.rdata0).red ];
+                        pix_green = colourexpand3to$color_depth$[ colour10(background.rdata0).green ];
+                        pix_blue = colourexpand3to$color_depth$[ colour10(background.rdata0).blue ];
                         character_map_display = 1;
                     }
                 }
                 case 1: {
                     // foreground
-                    pix_red = colourexpand3to6[ colour9(foreground.rdata0).red ];
-                    pix_green = colourexpand3to6[ colour9(foreground.rdata0).green ];
-                    pix_blue = colourexpand3to6[ colour9(foreground.rdata0).blue ];
+                    pix_red = colourexpand3to$color_depth$[ colour9(foreground.rdata0).red ];
+                    pix_green = colourexpand3to$color_depth$[ colour9(foreground.rdata0).green ];
+                    pix_blue = colourexpand3to$color_depth$[ colour9(foreground.rdata0).blue ];
                     character_map_display = 1;
                 }
             }
