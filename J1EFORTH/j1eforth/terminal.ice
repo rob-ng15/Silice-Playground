@@ -24,17 +24,17 @@ algorithm terminal(
     dualport_bram uint8 terminal[640] = uninitialized;
 
     // Character position on the terminal x 0-79, y 0-7 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
-    uint8 terminal_x = 0;
-    uint8 terminal_y = 7;
-    uint8 xterminalpos := (pix_x+1) >> 3;
-    uint12 yterminalpos := ((pix_y - 416) >> 3) * 80; // 8 pixel high characters
+    uint7 terminal_x = 0;
+    uint3 terminal_y = 7;
+    uint7 xterminalpos := (pix_x+1) >> 3;
+    uint10 yterminalpos := ((pix_y - 416) >> 3) * 80; // 8 pixel high characters
 
     // Determine if cursor, and if cursor is flashing
     uint1 is_cursor := ( xterminalpos == terminal_x ) & ( ( ( pix_y - 416) >> 3 ) == terminal_y );
     
     // Derive the x and y coordinate within the current 8x8 terminal character block x 0-7, y 0-7
-    uint8 xinterminal := (pix_x) & 7;
-    uint8 yinterminal := (pix_y) & 7;
+    uint3 xinterminal := (pix_x) & 7;
+    uint3 yinterminal := (pix_y) & 7;
 
     // Derive the actual pixel in the current terminal
     uint1 terminalpixel := ((characterGenerator8x8[ terminal.rdata0 * 8 + yinterminal ] << xinterminal) >> 7) & 1;

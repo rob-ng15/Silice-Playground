@@ -13,23 +13,6 @@ bitfield colour9 {
     uint3   blue
 }
 
-// VGA/HDMI Driver Includes
-$include('DE10NANO/common/vga.ice')
-
-$include('terminal.ice')
-$include('character_map.ice')
-$include('bitmap.ice')
-$include('gpu.ice')
-$include('background.ice')
-
-import('DE10NANOcommon/de10nano_clk_100_25.v')
-import('common/reset_conditioner.v')
-
-append('jamieilesUART/baud_rate_gen.v')
-append('jamieilesUART/receiver.v')
-append('jamieilesUART/transmitter.v')
-import('jamieilesUART/uart.v')
-
 algorithm multiplex_display(
     input   uint10 pix_x,
     input   uint10 pix_y,
@@ -170,19 +153,26 @@ algorithm main(
     // LEDS (8 of)
     output  uint8   leds,
     
+$$if ULX3S then
+    output  uint3   gpdi_dp,
+    output  uint3   gpdi_dn,
+$$end
+
+$$if DE10NANO then
+    // UART
+    output! uint1   uart_tx,
+    input   uint1   uart_rx,
+
     // USER buttons
     // input   uint8    buttons,
+$$end
 
-    // VGA
+    // VGA/HDMI
     output! uint$color_depth$ video_r,
     output! uint$color_depth$ video_g,
     output! uint$color_depth$ video_b,
     output! uint1   video_hs,
-    output! uint1   video_vs,
-
-    // UART
-    output! uint1 uart_tx,
-    input   uint1 uart_rx
+    output! uint1   video_vs
 ) {
     // SETUP Peripherals
     uint8 buttons = 0; // TODO
@@ -199,6 +189,7 @@ algorithm main(
     uint1 uart_rx_valid = 0;
     uint1 uart_rx_ready = 0;
 
+$$if DE10NANO then
     // UART from https://github.com/jamieiles/uart
     uart uart0(
         clk_50m <: clock,
@@ -211,14 +202,16 @@ algorithm main(
         rdy_clr <: uart_rx_ready,
         dout    :> uart_rx_data
     );
+$$end
 
-    // VGA Display
+    // VGA/HDMI Display
     uint1 video_reset = 0;
     uint1 video_clock = 0;
     uint1 sdram_clock = 0;
     uint1 pll_lock = 0;
     
     // Generate the 100MHz SDRAM and 25MHz VIDEO clocks
+$$if DE10NANO then
     de10nano_clk_100_25 clk_gen(
         refclk    <: clock,
         outclk_0  :> sdram_clock,
@@ -226,10 +219,19 @@ algorithm main(
         locked    :> pll_lock,
         rst       <: reset
     ); 
+$$end
+$$if ULX3S then
+    ulx3s_clk_100_25 clk_gen(
+        clkin    <: clock,
+        clkout0  :> sdram_clock,
+        clkout1  :> video_clock,
+        locked   :> pll_lock
+    ); 
+$$end
 
     // Video Reset
     reset_conditioner vga_rstcond (
-        rcclk <: video_clock,
+        rcclk <: video_clock ,
         in  <: reset,
         out :> video_reset
     );
@@ -240,7 +242,8 @@ algorithm main(
     uint10 pix_x  = 0;
     uint10 pix_y  = 0;
 
-    // 25MHz pixel clock
+    // VGA or HDMI driver
+$$if DE10NANO then
     vga vga_driver <@video_clock,!video_reset>
     (
         vga_hs :> video_hs,
@@ -250,6 +253,20 @@ algorithm main(
         vga_x  :> pix_x,
         vga_y  :> pix_y
     );
+$$end
+$$if ULX3S then
+hdmi video(
+    x       :> pix_x,
+    y       :> pix_y,
+    active  :> active,
+    vblank  :> vblank,
+    gpdi_dp :> gpdi_dp,
+    gpdi_dn :> gpdi_dn,
+    red     <: video_r,
+    green   <: video_g,
+    blue    <: video_b
+  );
+$$end
 
     // Background
     uint$color_depth$   background_r = 0;
@@ -271,8 +288,8 @@ algorithm main(
     uint$color_depth$   bitmap_g = 0;
     uint$color_depth$   bitmap_b = 0;
     uint1               bitmap_display = 0;
-    int16               bitmap_x_write = 0;
-    int16               bitmap_y_write = 0;
+    int11               bitmap_x_write = 0;
+    int11               bitmap_y_write = 0;
     uint10              bitmap_colour_write = 0;
     uint1               bitmap_write = 0;
 
@@ -800,10 +817,25 @@ algorithm main(
                                         // Terminal set showterminal
                                         terminal_window.showterminal = stackNext;
                                     }
-                                    case 16hffff: {
+                                    case 16hfff0: {
                                         // Set BACKGROUND colour
                                         background_generator.backgroundcolour = stackNext;
                                         background_generator.backgroundcolour_write = 1;
+                                    }
+                                    case 16hfff1: {
+                                        // Set alternative BACKGROUND colour
+                                        background_generator.backgroundcolour_alt = stackNext;
+                                        background_generator.backgroundcolour_write = 2;
+                                    }
+                                    case 16hfff2: {
+                                        // Set BACKGROUND colour mode
+                                        background_generator.backgroundcolour_mode = stackNext;
+                                        background_generator.backgroundcolour_write = 3;
+                                    }
+                                    case 16hfff3: {
+                                        // Set BACKGROUND colour fade level
+                                        background_generator.backgroundcolour_fade = stackNext;
+                                        background_generator.backgroundcolour_write = 4;
                                     }
                                }
                             }

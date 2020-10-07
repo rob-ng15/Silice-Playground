@@ -1,49 +1,49 @@
 algorithm gpu(
     // GPU to SET and GET pixels
-    output! int16 bitmap_x_write,
-    output! int16 bitmap_y_write,
+    output! int11 bitmap_x_write,
+    output! int11 bitmap_y_write,
     output! uint10 bitmap_colour_write,
     output! uint1 bitmap_write,
     
-    input int16 gpu_x,
-    input int16 gpu_y,
-    input int16 gpu_colour,
-    input int16 gpu_param0,
-    input int16 gpu_param1,
-    input int16 gpu_param2,
-    input int16 gpu_param3,
-    input uint8 gpu_write,
+    input int11 gpu_x,
+    input int11 gpu_y,
+    input uint10 gpu_colour,
+    input int11 gpu_param0,
+    input int11 gpu_param1,
+    input int11 gpu_param2,
+    input int11 gpu_param3,
+    input uint3 gpu_write,
     
-    output  uint8 gpu_active
+    output  uint4 gpu_active
 ) <autorun> {
     // 256 x 16 x 16 1 bit tilemap for blit1tilemap
     dualport_bram uint16 blit1tilemap[ 4096 ] = uninitialized;
     
     // GPU work variable storage
     // Present GPU pixel and colour
-    int16 gpu_active_x = 0;
-    int16 gpu_active_y = 0;
+    int11 gpu_active_x = 0;
+    int11 gpu_active_y = 0;
     uint10 gpu_active_colour = 0;
     
     // Temporary storage for GPU operations with meaningful names centre coordinates, end coordinates, width, height, deltas, radius, etc
-    int16 gpu_xc = 0;
-    int16 gpu_yc = 0;
-    int16 gpu_x1 = 0;
-    int16 gpu_y1 = 0;
-    int16 gpu_x2 = 0;
-    int16 gpu_y2 = 0;
-    int16 gpu_w = 0;
-    int16 gpu_h = 0;
-    int16 gpu_dx1 = 0;
-    int16 gpu_dx2 = 0;
-    int16 gpu_dy1 = 0;
-    int16 gpu_dy2 = 0;
-    int16 gpu_longest = 0;
-    int16 gpu_shortest = 0;
-    int16 gpu_numerator = 0;
-    int16 gpu_radius = 0;
-    int16 gpu_count = 0;
-    uint16 gpu_tile = 0;
+    int11 gpu_xc = 0;
+    int11 gpu_yc = 0;
+    int11 gpu_x1 = 0;
+    int11 gpu_y1 = 0;
+    int11 gpu_x2 = 0;
+    int11 gpu_y2 = 0;
+    int11 gpu_w = 0;
+    int11 gpu_h = 0;
+    int11 gpu_dx1 = 0;
+    int11 gpu_dx2 = 0;
+    int11 gpu_dy1 = 0;
+    int11 gpu_dy2 = 0;
+    int11 gpu_longest = 0;
+    int11 gpu_shortest = 0;
+    int11 gpu_numerator = 0;
+    int11 gpu_radius = 0;
+    int11 gpu_count = 0;
+    uint8 gpu_tile = 0;
 
     // blit1tilemap read access for the blit1tilemap
     blit1tilemap.addr0 := gpu_tile * 16 + gpu_active_y;
@@ -67,11 +67,12 @@ algorithm gpu(
                 // 6 = 10 bit 16x16 blit from 10 bit 16x16 tilemap
                 switch( gpu_write ) {
                     case 1: {
-                        // Setup writing a pixel colour to x,y
-                        gpu_active_colour = gpu_colour;
-                        gpu_active_x = gpu_x;
-                        gpu_active_y = gpu_y;
-                        gpu_active = 1;
+                        // Setup writing a pixel colour to x,y 
+                        // Done directly, does not activate the GPU
+                        bitmap_x_write = gpu_x;
+                        bitmap_y_write = gpu_y;
+                        bitmap_colour_write = gpu_colour;
+                        bitmap_write = 1;
                     }
                     case 2: {
                         // Setup drawing a rectangle from x,y to param0,param1 in colour
@@ -82,7 +83,7 @@ algorithm gpu(
                         gpu_x2 = ( gpu_x < gpu_param0 ) ? gpu_x : gpu_param0;                       // left - for next line
                         gpu_w = ( gpu_x < gpu_param0 ) ? gpu_param0 : gpu_x;                        // right - at end of line
                         gpu_h = ( gpu_y < gpu_param1 ) ? gpu_param1 : gpu_y;                        // bottom - at end of rectangle
-                        gpu_active = 2; 
+                        gpu_active = 1; 
                     }
                     case 3: {
                         // Setup drawing a line from x,y to param0,param1 in colour
@@ -99,7 +100,7 @@ algorithm gpu(
                         gpu_dy1 = 0;
                         gpu_dy2 = 0;
                         gpu_count = 0;
-                        gpu_active = 3; 
+                        gpu_active = 2; 
                     }
                     case 4: {
                         // Setup drawing a circle centre x,y or radius param0 in colour
@@ -135,14 +136,6 @@ algorithm gpu(
             // Perform GPU Operation
             // GPU functions 1 pixel per cycle, even during hblank and vblank
             case 1: {
-                // Write colour to x,y
-                bitmap_x_write = gpu_active_x;
-                bitmap_y_write = gpu_active_y;
-                bitmap_colour_write = gpu_active_colour;
-                bitmap_write = 1;
-                gpu_active = 0;
-            }
-            case 2: {
                 // Rectangle of colour at x,y top left to param0, param1 bottom right
                 bitmap_x_write = gpu_active_x;
                 bitmap_y_write = gpu_active_y;
@@ -163,7 +156,7 @@ algorithm gpu(
                     gpu_active_x = gpu_active_x + 1;
                 }
             }
-            case 3: {
+            case 2: {
                 // Bresenham's Line Drawing Algorithm
                 // Calculate deltas and longest, shortest
                 gpu_longest = ( gpu_w < 0 ) ? -gpu_w : gpu_w ;
@@ -184,25 +177,26 @@ algorithm gpu(
                         gpu_dy1 = 1;
                     }
                 }
-                gpu_active = 4;
+                gpu_active = 3;
             }
-            case 4: {
+            case 3: {
                 // Bresenham's Line Drawing Algorithm
                 // Determine if steep or shallow
                 if( (gpu_longest <= gpu_shortest) ) {
-                    gpu_numerator = gpu_shortest >> 1;
                     gpu_longest = gpu_shortest;
                     gpu_shortest = gpu_longest;
-                    if( gpu_h < 0 ) {
-                        gpu_dy2 = -1;
-                    } else {
-                        if( gpu_h > 0 ) {
-                            gpu_dy2 = 1;
-                        }
-                    }
+                } 
+                gpu_active = 4;
+            }
+            case 4: {
+                if( gpu_h < 0 ) {
+                    gpu_dy2 = -1;
                 } else {
-                    gpu_numerator = gpu_longest >> 1;
+                    if( gpu_h > 0 ) {
+                        gpu_dy2 = 1;
+                    }
                 }
+                gpu_numerator = gpu_longest >> 1;
                 gpu_active = 5;
             }
             case 5: {

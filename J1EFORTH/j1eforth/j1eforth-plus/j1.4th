@@ -945,7 +945,6 @@ t: 2swap rot >r rot r> t;
 t: 2nip rot drop rot drop t;
 t: 2rot 2>r 2swap 2r> 2swap t;
 t: d= >r rot xor swap r> xor or 0= t;
-t: d<> d= invert t;
 t: d+ rot + >r over + dup rot u< if r> 1+ else r> then t;
 t: d- dnegate d+ t;
 t: s>d dup 0< t;
@@ -955,16 +954,11 @@ t: dand rot and -rot and swap t;
 t: dor rot or -rot or swap t;
 t: dinvert invert swap invert swap t;
 t: d< rot 2dup = if 2drop u< else 2nip > then t;
-t: d> 2swap d< t;
 t: d0= or 0= t;
-t: d0< 0 literal s>d d< t;
-t: d0<> d0= invert t;
-t: d2* 2dup d+ t;
-t: d2/ dup f literal lshift >r 2/ swap 2/ r> or swap t;
 t: d1- 1 literal s>d dnegate d+ t;
 
 ( GPU, TPU and TERMINAL helpers)
-t: background! ( colour) ffff literal ! t;
+t: background! ( colour) fff0 literal ! t;
 t: pixel! ( colour x y ) begin ff07 literal @ 0= until 
     ff01 literal ! ff00 literal ! ff02 literal ! 1 literal ff07 literal ! t;
 t: rectangle! ( colour x1 y1 x2 y2 ) begin ff07 literal @ 0= until 

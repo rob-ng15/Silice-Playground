@@ -37,8 +37,8 @@ algorithm character_map(
     uint12 ycharacterpos := ((pix_y) >> 4) * 80; // 16 pixel high characters
     
     // Derive the x and y coordinate within the current 8x16 character block x 0-7, y 0-15
-    uint8 xincharacter := (pix_x) & 7;
-    uint8 yincharacter := (pix_y) & 15;
+    uint3 xincharacter := (pix_x) & 7;
+    uint4 yincharacter := (pix_y) & 15;
 
     // Derive the actual pixel in the current character
     uint1 characterpixel := ((characterGenerator8x16[ character.rdata0 * 16 + yincharacter ] << xincharacter) >> 7) & 1;
@@ -113,6 +113,8 @@ algorithm character_map(
                         pix_green = colourexpand3to$color_depth$[ colour10(background.rdata0).green ];
                         pix_blue = colourexpand3to$color_depth$[ colour10(background.rdata0).blue ];
                         character_map_display = 1;
+                    } else {
+                        character_map_display = 0;
                     }
                 }
                 case 1: {
@@ -123,8 +125,6 @@ algorithm character_map(
                     character_map_display = 1;
                 }
             }
-        } else {
-            character_map_display = 0;
-        }
+        } 
     }
 }
