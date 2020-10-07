@@ -15,11 +15,13 @@ algorithm terminal(
     input   uint1   timer1hz,
     output uint3    terminal_active
 ) <autorun> {
-    // Character ROM 8x8
-    uint8 characterGenerator8x8[] = {
+    // Character ROM 8x8 x 256
+    //uint8 characterGenerator8x8[] = {
+    //};
+    brom uint8 characterGenerator8x8[] = {
         $include('characterROM8x8.inc')
     };
-
+    
     // 80 x 4 character buffer for the input/output terminal
     dualport_bram uint8 terminal[640] = uninitialized;
 
@@ -37,12 +39,15 @@ algorithm terminal(
     uint3 yinterminal := (pix_y) & 7;
 
     // Derive the actual pixel in the current terminal
-    uint1 terminalpixel := ((characterGenerator8x8[ terminal.rdata0 * 8 + yinterminal ] << xinterminal) >> 7) & 1;
+    uint1 terminalpixel := (characterGenerator8x8.rdata << xinterminal >> 7) & 1; //((characterGenerator8x8[ terminal.rdata0 * 8 + yinterminal ] << xinterminal) >> 7) & 1;
 
     // Terminal active (scroll) flag and temporary storage for scrolling
     uint10 terminal_scroll = 0;
     uint10 terminal_scroll_next = 0;
 
+    // Setup the reading of the character generator character
+    characterGenerator8x8.addr := terminal.rdata0 * 8 + yinterminal;
+    
     // Setup the reading of the terminal memory
     terminal.addr0 := xterminalpos + yterminalpos;
     terminal.wenable0 := 0;

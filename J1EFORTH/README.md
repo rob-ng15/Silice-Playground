@@ -25,19 +25,19 @@ __ULX3S not yet tested__ Open a terminal in the DE10NANO directory and type ```m
 ### Resource Usage (de10nano)
 
 ```
-Fitter Status : Successful - Wed Oct  7 07:48:04 2020
+Fitter Status : Successful - Wed Oct  7 15:31:11 2020
 Quartus Prime Version : 20.1.0 Build 711 06/05/2020 SJ Lite Edition
 Revision Name : build
 Top-level Entity Name : top
 Family : Cyclone V
 Device : 5CSEBA6U23I7
 Timing Models : Final
-Logic utilization (in ALMs) : 34,905 / 41,910 ( 83 % )
-Total registers : 63477
+Logic utilization (in ALMs) : 22,549 / 41,910 ( 54 % )
+Total registers : 39317
 Total pins : 31 / 314 ( 10 % )
 Total virtual pins : 0
-Total block memory bits : 3,686,144 / 5,662,720 ( 65 % )
-Total RAM Blocks : 452 / 553 ( 82 % )
+Total block memory bits : 3,742,912 / 5,662,720 ( 66 % )
+Total RAM Blocks : 461 / 553 ( 83 % )
 Total DSP Blocks : 0 / 112 ( 0 % )
 Total HSSI RX PCSs : 0
 Total HSSI PMA RX Deserializers : 0

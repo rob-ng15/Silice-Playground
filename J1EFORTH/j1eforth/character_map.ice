@@ -17,7 +17,9 @@ algorithm character_map(
     input uint2 tpu_write
 ) <autorun> {
     // Character ROM 8x16
-    uint8 characterGenerator8x16[] = {
+    //uint8 characterGenerator8x16[] = {
+    //};
+    brom uint8 characterGenerator8x16[] = {
         $include('characterROM8x16.inc')
     };
     
@@ -41,12 +43,14 @@ algorithm character_map(
     uint4 yincharacter := (pix_y) & 15;
 
     // Derive the actual pixel in the current character
-    uint1 characterpixel := ((characterGenerator8x16[ character.rdata0 * 16 + yincharacter ] << xincharacter) >> 7) & 1;
+    uint1 characterpixel := (characterGenerator8x16.rdata << xincharacter >> 7) & 1; //((characterGenerator8x16[ character.rdata0 * 16 + yincharacter ] << xincharacter) >> 7) & 1;
 
     // TPU work variable storage
     uint7 tpu_active_x = 0;
     uint5 tpu_active_y = 0;
 
+    // Setup the reading of the character generator memory
+    characterGenerator8x16.addr := character.rdata0 * 16 + yincharacter;
 
     // Set up reading of character and attribute memory
     // character.rdata0 is the character, foreground.rdata0 and background.rdata0 are the attribute being rendered

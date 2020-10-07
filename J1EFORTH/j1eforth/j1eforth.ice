@@ -158,14 +158,9 @@ $$if ULX3S then
     output  uint3   gpdi_dn,
 $$end
 
-$$if DE10NANO then
     // UART
     output! uint1   uart_tx,
     input   uint1   uart_rx,
-
-    // USER buttons
-    // input   uint8    buttons,
-$$end
 
     // VGA/HDMI
     output! uint$color_depth$ video_r,
@@ -188,7 +183,8 @@ $$end
     uint8 uart_rx_data  = 0;
     uint1 uart_rx_valid = 0;
     uint1 uart_rx_ready = 0;
-
+    uint1 uart_rx_error = 0;
+    
 $$if DE10NANO then
     // UART from https://github.com/jamieiles/uart
     uart uart0(
@@ -202,6 +198,22 @@ $$if DE10NANO then
         rdy_clr <: uart_rx_ready,
         dout    :> uart_rx_data
     );
+$$end
+$$if ULX3S then
+    // UART from https://github.com/lawrie/ulx3s_examples/blob/master/computer/simpleuart.v
+    // Need to check if these are the correct way around
+    //simpleuart uart0(
+    //    clk     <: clock,
+    //    ser_tx  :> uart_rx,
+    //    ser_rx  <: uart_tx,
+    //    reg_dat_we <: uart_tx_valid,
+    //    reg_dat_re <: uart_rx_ready,
+    //    reg_dat_di <: uart_tx_data,
+    //    reg_dat_do :> uart_rx_data,
+    //    reg_dat_wait :> uart_tx_busy,
+    //    recv_buf_valid :> uart_rx_valid,
+    //    tdre :> uart_rx_error
+    //);
 $$end
 
     // VGA/HDMI Display

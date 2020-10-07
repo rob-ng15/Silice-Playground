@@ -9,5 +9,5 @@ $include('../background.ice')
 
 import('../common/ulx3s_clk_100_25.v')
 import('../common/reset_conditioner.v')
-
+import('lawrieUART/simpleuart.v')
 $include('../j1eforth.ice')
