@@ -26,8 +26,8 @@ algorithm character_map(
     // 80 x 30 character buffer
     // Setting background to 200 (ALPHA) allows the bitmap/background to show through
     dualport_bram uint8 character[2400] = uninitialized;
-    dualport_bram uint9 foreground[2400] = uninitialized;   // { rrrgggbbb }
-    dualport_bram uint10 background[2400] = uninitialized;  // { Arrrgggbbb }
+    dualport_bram uint9 foreground[2400] = uninitialized;               // { rrrgggbbb }
+    dualport_bram uint10 background[2400] = { 10h200, pad(10h200) };    // { Arrrgggbbb }
 
     // Expansion map for { rrr } to { rrrrrr }, { ggg } to { gggggg }, { bbb } to { bbbbbb }
     // or { rrr } tp { rrrrrrrr }, { ggg } to { gggggggg }, { bbb } to { bbbbbbbb }

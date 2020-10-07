@@ -25,15 +25,16 @@ __ULX3S not yet tested__ Open a terminal in the DE10NANO directory and type ```m
 ### Resource Usage (de10nano)
 
 ```
-Fitter Status : Successful - Wed Oct  7 15:31:11 2020
+
+Fitter Status : Successful - Wed Oct  7 18:33:12 2020
 Quartus Prime Version : 20.1.0 Build 711 06/05/2020 SJ Lite Edition
 Revision Name : build
 Top-level Entity Name : top
 Family : Cyclone V
 Device : 5CSEBA6U23I7
 Timing Models : Final
-Logic utilization (in ALMs) : 22,549 / 41,910 ( 54 % )
-Total registers : 39317
+Logic utilization (in ALMs) : 22,522 / 41,910 ( 54 % )
+Total registers : 39338
 Total pins : 31 / 314 ( 10 % )
 Total virtual pins : 0
 Total block memory bits : 3,742,912 / 5,662,720 ( 66 % )
@@ -262,14 +263,14 @@ fff3 | BACKGROUND set the fade level
   loop ;
 tpucs! cs! drawrectangles
 
-tpucs! cs!
+
 : drawblocks
   1ff 0 do
     i i i 200 200 rectangle!
   loop ;
 tpucs! cs! drawblocks
   
-tpucs! cs!
+
 : drawcircles
   1ff 0 do
     i 180 180 1ff i - circle!

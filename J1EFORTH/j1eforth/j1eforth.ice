@@ -87,7 +87,7 @@ algorithm multiplex_display(
 // Instruction is 3 bits 1xx = literal value, 000 = branch, 001 = 0branch, 010 = call, 011 = alu, followed by 13 bits of instruction specific data
 bitfield instruction {
     uint3 is_litcallbranchalu,
-    uint13 pad
+    uint13 padding
 }
 
 // A literal instruction is 1 followed by a 15 bit UNSIGNED literal value
