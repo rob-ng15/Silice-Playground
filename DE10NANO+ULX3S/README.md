@@ -20,7 +20,7 @@ For communication with j1eforth there is a UART (working de10nano, not implement
 
 __DE10NANO__ Open a terminal in the DE10NANO directory and type ```make de10nano```. Wait. Upload your design your DE10NNANO with ```quartus_pgm -m jtag -o "p;BUILD_de10nano/build.sof@2"```.
 
-__ULX3S not yet tested__ Open a terminal in the DE10NANO directory and type ```make ulx3s```. Wait. Upload your design your ULX3S with ```?```.
+__ULX3S__ Open a terminal in the DE10NANO directory and type ```make ulx3s```. Wait. Upload your design your ULX3S with ```fujproj BUILD_ulx3s build.bit```.
 
 ### Resource Usage (de10nano)
 
@@ -45,6 +45,24 @@ Total HSSI TX PCSs : 0
 Total HSSI PMA TX Serializers : 0
 Total PLLs : 1 / 6 ( 17 % )
 Total DLLs : 0 / 4 ( 0 % )
+```
+### Resource Usage (ulx3s)
+```
+   Number of wires:              10662
+   Number of wire bits:          64636
+   Number of public wires:       10662
+   Number of public wire bits:   64636
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:               7249
+     CCU2C                         511
+     DP16KD                         75
+     EHXPLLL                         2
+     LUT4                         5515
+     MULT18X18D                      5
+     TRELLIS_FF                   1137
+     TRELLIS_IO                      4
 ```
 
 ## J1/J1+ CPU Architecture and Comparisons
@@ -318,11 +336,11 @@ ledtest
 
 ## Issues
 
-* ```tpucs! cs!``` must be issued to display graphics as memory is initialised for text display
 * UART input works, with copy'n'paste
 * - Glitches occasionally when copy'n'paste
-* UART output misses some characters.
-* Bitmap output is misaligned on the display (1 pixel to the right).
+* UART output misses some characters (de10nano)
+* Bitmap output is misaligned on the display (1 pixel to the right) (de10nano)
+* TPU and TERMINAL both double type (ulx3s)
 
 ## TODO (Wishlist)
 
