@@ -25,20 +25,19 @@ __ULX3S not yet tested__ Open a terminal in the DE10NANO directory and type ```m
 ### Resource Usage (de10nano)
 
 ```
-
-Fitter Status : Successful - Wed Oct  7 18:33:12 2020
+Fitter Status : Successful - Thu Oct  8 07:15:45 2020
 Quartus Prime Version : 20.1.0 Build 711 06/05/2020 SJ Lite Edition
 Revision Name : build
 Top-level Entity Name : top
 Family : Cyclone V
 Device : 5CSEBA6U23I7
 Timing Models : Final
-Logic utilization (in ALMs) : 22,522 / 41,910 ( 54 % )
-Total registers : 39338
+Logic utilization (in ALMs) : 2,637 / 41,910 ( 6 % )
+Total registers : 1131
 Total pins : 31 / 314 ( 10 % )
 Total virtual pins : 0
-Total block memory bits : 3,742,912 / 5,662,720 ( 66 % )
-Total RAM Blocks : 461 / 553 ( 83 % )
+Total block memory bits : 2,812,128 / 5,662,720 ( 50 % )
+Total RAM Blocks : 351 / 553 ( 63 % )
 Total DSP Blocks : 0 / 112 ( 0 % )
 Total HSSI RX PCSs : 0
 Total HSSI PMA RX Deserializers : 0
@@ -170,16 +169,22 @@ The j1eforth wordlist has been extended to include some double (32 bit) integer 
 
 The VGA/HDMI output is a multiplexed bitmap and character display, with the following layers in order:
 
-* Background colour - single { rrrgggbbb } colour.
-* 640 x 480 (de10nano) or 320 x 240 (ulx3s with double sized pixels) 512 colour { Arrrgggbbb } bitmap display.
+* Background with configurable, but not yet implemented designs
+* - single { rrggbb } colour.
+* 640 x 480 (de10nano) or 320 x 240 (ulx3s with double sized pixels) 64 colour { Arrggbb } bitmap display.
 * - If A (ALPHA) is 1, then the background colour is displayed.
-* - Includes a simple GPU to draw pixels, lines (via Bresenham's Line Drawing Algorithm) and filled rectangles.
-* 80 x 30 512 colour text display, using IBM 8x16 256 character ROM
+* - Includes a simple GPU to:
+* - - Draw pixels
+* - - Lines (via Bresenham's Line Drawing Algorithm)
+* - - Circles (via Bresenham's Circle Drawing Algorithm) 
+* - - Filled rectangles
+* - - Blitter for 16 x 16 1 bit tiles
+* 80 x 30 64 colour text display, using IBM 8x16 256 character ROM
 * - Includes a simple TPU to draw characters on the display (will be expanded)
 * - Each character has 3 attributes
 * - - Character code
-* - - Foreground colour { rrrgggbbb }
-* - - Background colour { Arrrgggbbb ) if A (ALPHA) is 1, then the bitmap or background colour is displayed.
+* - - Foreground colour { rrggbb }
+* - - Background colour { Arrggbb ) if A (ALPHA) is 1, then the bitmap or background colour is displayed.
 * 80 x 8 2 colour blue/white text display, using IBM 8x8 256 character ROM as input/output terminal
 * - Includes a simple terminal output protocol to display characters
 * - Includes a flashing cursor
@@ -213,15 +218,15 @@ terminalhide! | hide the blue terminal window
 
 Colour Guide<br>HEX | Colour
 :-----: | :-----:
-200 | Transparent
-000 | Black
-007 | Blue
-038 | Green
-03F | Cyan
-1c0 | Red
-1c7 | Magenta
-1f8 | Yellow
-1ff | White
+40 | Transparent
+00 | Black
+03 | Blue
+0c | Green
+0f | Cyan
+30 | Red
+33 | Magenta
+3c | Yellow
+3f | White
 
 ### GPU, TPU and TERMINAL Memory Map
 
@@ -254,7 +259,7 @@ fff3 | BACKGROUND set the fade level
 
 ```
 : drawrectangles
-  1ff 0 do
+  3f 0 do
     i 0 i 20 i 20 + rectangle!
     i i 0 i 20 + 20 rectangle!
     i i 1ff i 20 + 21f rectangle!
@@ -265,15 +270,15 @@ tpucs! cs! drawrectangles
 
 
 : drawblocks
-  1ff 0 do
+  3f 0 do
     i i i 200 200 rectangle!
   loop ;
 tpucs! cs! drawblocks
   
 
 : drawcircles
-  1ff 0 do
-    i 180 180 1ff i - circle!
+  3f 0 do
+    i 180 180 3f i - circle!
   loop ;
 tpucs! cs! drawcircles
   
@@ -306,14 +311,14 @@ hex
 : invaders
   10 0 do
     i 10 0 do
-      dup 1ff i - swap 0 swap 18 * i 18 * blit1!
+      dup 3f i - swap 0 swap 18 * i 18 * blit1!
     loop  
   loop ;
 tpucs! cs! invaders
 
 : tputest
-  1ff 0 do
-    200 i - tpubackground!
+  3f 0 do
+    40 i - tpubackground!
     i tpuforeground!
     i tpuemit
   loop ;
@@ -322,8 +327,8 @@ tpucs! tputest
 : ledtest
     base @ 2 base !
     tpucs!
-    100 0 do
-        i tpuforeground! 1ff i - tpubackground!
+    40 0 do
+        i tpuforeground! 3f i - tpubackground!
         8 1 tpuxy! timer@ dup 5 tpuu.r# tpuspace $" seconds " tpu.$
         led! led@ 
         8 tpuu.r tpuspace $" LEDs" tpu.$ 

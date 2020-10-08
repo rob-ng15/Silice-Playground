@@ -969,7 +969,7 @@ t: circle! ( colour xc yc r ) begin ff07 literal @ 0= until
     ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 4 literal ff07 literal ! t;
 t: blit1! ( colour blit1tile x y ) begin ff07 literal @ 0= until 
     ff01 literal ! ff00 literal ! ff03 literal ! ff02 literal ! 5 literal ff07 literal ! t;
-t: cs! 200 literal 0 literal 0 literal 2f7 literal 1df literal rectangle! t;
+t: cs! 40 literal 0 literal 0 literal 2f7 literal 1df literal rectangle! t;
 
 t: tpuxy! ( x y ) ff11 literal ! ff10 literal ! 1 literal ff15 literal ! t;
 t: tpuforeground! ( foreground ) ff14 literal ! t;
@@ -978,7 +978,7 @@ t: tpuemit ( character ) ff12 literal ! 2 literal ff15 literal ! t;
 t: tpucs!
     0 literal 0 literal tpuxy!
     0 literal tpuforeground!
-    200 literal tpubackground!
+    40 literal tpubackground!
     960 literal for aft 0 literal tpuemit then next 
     0 literal 0 literal tpuxy! t;
 t: tpuspace bl tpuemit t;

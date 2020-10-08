@@ -7,20 +7,20 @@ algorithm background(
     output! uint$color_depth$ pix_green,
     output! uint$color_depth$ pix_blue,
 
-    input uint9 backgroundcolour,
-    input uint9 backgroundcolour_alt,
+    input uint6 backgroundcolour,
+    input uint6 backgroundcolour_alt,
     input uint3 backgroundcolour_mode,
     input uint3 backgroundcolour_fade,
     input uint3 backgroundcolour_write
 ) <autorun> {
-    // Expansion map for { rrr } to { rrrrrr }, { ggg } to { gggggg }, { bbb } to { bbbbbb }
-    // or { rrr } tp { rrrrrrrr }, { ggg } to { gggggggg }, { bbb } to { bbbbbbbb }
-    uint6 colourexpand3to6[8] = {  0, 9, 18, 27, 36, 45, 54, 255 };
-    uint6 colourexpand3to8[8] = {  0, 36, 73, 109, 145, 182, 218, 255 };
+    // Expansion map for { rr } to { rrrrrr }, { gg } to { gggggg }, { bb } to { bbbbbb }
+    // or { rr } tp { rrrrrrrr }, { gg } to { gggggggg }, { bb } to { bbbbbbbb }
+    uint6 colourexpand2to6[4] = {  0, 21, 42, 63 };
+    uint8 colourexpand2to8[4] = {  0, 85, 170, 255 };
 
-    uint9 background = 0;
-    uint9 background_alt = 0;
-    uint9 background_mode = 0;
+    uint6 background = 0;
+    uint6 background_alt = 0;
+    uint3 background_mode = 0;
     uint3 background_fade = 0;
     
     always {
@@ -44,9 +44,10 @@ algorithm background(
     while(1) {
         switch( backgroundcolour_mode ) {
             case 0: {
-                pix_red = colourexpand3to$color_depth$[ colour9(background).red ] >> background_fade;
-                pix_green = colourexpand3to$color_depth$[ colour9(background).green ] >> background_fade;
-                pix_blue = colourexpand3to$color_depth$[ colour9(background).blue ] >> background_fade;
+                // SOLID
+                pix_red = colourexpand2to$color_depth$[ colour6(background).red ] >> background_fade;
+                pix_green = colourexpand2to$color_depth$[ colour6(background).green ] >> background_fade;
+                pix_blue = colourexpand2to$color_depth$[ colour6(background).blue ] >> background_fade;
             }
             default: {
                 pix_red = 0;

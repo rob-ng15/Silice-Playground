@@ -2,12 +2,12 @@ algorithm gpu(
     // GPU to SET and GET pixels
     output! int11 bitmap_x_write,
     output! int11 bitmap_y_write,
-    output! uint10 bitmap_colour_write,
+    output! uint8 bitmap_colour_write,
     output! uint1 bitmap_write,
     
     input int11 gpu_x,
     input int11 gpu_y,
-    input uint10 gpu_colour,
+    input uint8 gpu_colour,
     input int11 gpu_param0,
     input int11 gpu_param1,
     input int11 gpu_param2,
@@ -23,7 +23,7 @@ algorithm gpu(
     // Present GPU pixel and colour
     int11 gpu_active_x = 0;
     int11 gpu_active_y = 0;
-    uint10 gpu_active_colour = 0;
+    uint7 gpu_active_colour = 0;
     
     // Temporary storage for GPU operations with meaningful names centre coordinates, end coordinates, width, height, deltas, radius, etc
     int11 gpu_xc = 0;

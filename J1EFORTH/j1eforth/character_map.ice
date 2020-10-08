@@ -12,27 +12,25 @@ algorithm character_map(
     input uint7 tpu_x,
     input uint5 tpu_y,
     input uint8 tpu_character,
-    input uint9 tpu_foreground,
-    input uint10 tpu_background,
+    input uint6 tpu_foreground,
+    input uint7 tpu_background,
     input uint2 tpu_write
 ) <autorun> {
     // Character ROM 8x16
-    //uint8 characterGenerator8x16[] = {
-    //};
-    brom uint8 characterGenerator8x16[] = {
+    uint8 characterGenerator8x16[] = {
         $include('characterROM8x16.inc')
     };
     
     // 80 x 30 character buffer
     // Setting background to 200 (ALPHA) allows the bitmap/background to show through
     dualport_bram uint8 character[2400] = uninitialized;
-    dualport_bram uint9 foreground[2400] = uninitialized;               // { rrrgggbbb }
-    dualport_bram uint10 background[2400] = { 10h200, pad(10h200) };    // { Arrrgggbbb }
+    dualport_bram uint6 foreground[2400] = uninitialized;               // { rrggbb }
+    dualport_bram uint7 background[2400] = { 7h40, pad(7h40) };    // { Arrggbb }
 
-    // Expansion map for { rrr } to { rrrrrr }, { ggg } to { gggggg }, { bbb } to { bbbbbb }
-    // or { rrr } tp { rrrrrrrr }, { ggg } to { gggggggg }, { bbb } to { bbbbbbbb }
-    uint6 colourexpand3to6[8] = {  0, 9, 18, 27, 36, 45, 54, 255 };
-    uint6 colourexpand3to8[8] = {  0, 36, 73, 109, 145, 182, 218, 255 };
+    // Expansion map for { rr } to { rrrrrr }, { gg } to { gggggg }, { bb } to { bbbbbb }
+    // or { rr } tp { rrrrrrrr }, { gg } to { gggggggg }, { bb } to { bbbbbbbb }
+    uint6 colourexpand2to6[4] = {  0, 21, 42, 63 };
+    uint8 colourexpand2to8[4] = {  0, 85, 170, 255 };
 
     // Character position on the screen x 0-79, y 0-29 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
     uint8 xcharacterpos := (pix_x+1) >> 3;
@@ -43,14 +41,11 @@ algorithm character_map(
     uint4 yincharacter := (pix_y) & 15;
 
     // Derive the actual pixel in the current character
-    uint1 characterpixel := (characterGenerator8x16.rdata << xincharacter >> 7) & 1; //((characterGenerator8x16[ character.rdata0 * 16 + yincharacter ] << xincharacter) >> 7) & 1;
+    uint1 characterpixel := ((characterGenerator8x16[ character.rdata0 * 16 + yincharacter ] << xincharacter) >> 7) & 1;
 
     // TPU work variable storage
     uint7 tpu_active_x = 0;
     uint5 tpu_active_y = 0;
-
-    // Setup the reading of the character generator memory
-    characterGenerator8x16.addr := character.rdata0 * 16 + yincharacter;
 
     // Set up reading of character and attribute memory
     // character.rdata0 is the character, foreground.rdata0 and background.rdata0 are the attribute being rendered
@@ -112,10 +107,10 @@ algorithm character_map(
             switch( characterpixel ) {
             case 0: {
                     // BACKGROUND
-                    if( ~colour10(background.rdata0).alpha ) {
-                        pix_red = colourexpand3to$color_depth$[ colour10(background.rdata0).red ];
-                        pix_green = colourexpand3to$color_depth$[ colour10(background.rdata0).green ];
-                        pix_blue = colourexpand3to$color_depth$[ colour10(background.rdata0).blue ];
+                    if( ~colour7(background.rdata0).alpha ) {
+                        pix_red = colourexpand2to$color_depth$[ colour7(background.rdata0).red ];
+                        pix_green = colourexpand2to$color_depth$[ colour7(background.rdata0).green ];
+                        pix_blue = colourexpand2to$color_depth$[ colour7(background.rdata0).blue ];
                         character_map_display = 1;
                     } else {
                         character_map_display = 0;
@@ -123,9 +118,9 @@ algorithm character_map(
                 }
                 case 1: {
                     // foreground
-                    pix_red = colourexpand3to$color_depth$[ colour9(foreground.rdata0).red ];
-                    pix_green = colourexpand3to$color_depth$[ colour9(foreground.rdata0).green ];
-                    pix_blue = colourexpand3to$color_depth$[ colour9(foreground.rdata0).blue ];
+                    pix_red = colourexpand2to$color_depth$[ colour6(foreground.rdata0).red ];
+                    pix_green = colourexpand2to$color_depth$[ colour6(foreground.rdata0).green ];
+                    pix_blue = colourexpand2to$color_depth$[ colour6(foreground.rdata0).blue ];
                     character_map_display = 1;
                 }
             }

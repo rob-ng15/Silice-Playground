@@ -1,16 +1,16 @@
 // 10 bit colour either ALPHA (background or lower layer) or red, green, blue
-bitfield colour10 {
+bitfield colour7 {
     uint1   alpha,
-    uint3   red,
-    uint3   green, 
-    uint3   blue
+    uint2   red,
+    uint2   green, 
+    uint2   blue
 }
 
 // 9bit colour red, green, blue
-bitfield colour9 {
-    uint3   red,
-    uint3   green, 
-    uint3   blue
+bitfield colour6 {
+    uint2   red,
+    uint2   green, 
+    uint2   blue
 }
 
 algorithm multiplex_display(
@@ -176,45 +176,18 @@ $$end
     pulse1hz p1hz( counter1hz :> timer1hz );
 
     // UART tx and rx
-    uint8 uart_tx_data  = 0;
-    uint1 uart_tx_valid = 0;
-    uint1 uart_tx_busy  = 0;
-    uint1 uart_tx_done  = 0;
-    uint8 uart_rx_data  = 0;
-    uint1 uart_rx_valid = 0;
-    uint1 uart_rx_ready = 0;
-    uint1 uart_rx_error = 0;
-    
-$$if DE10NANO then
-    // UART from https://github.com/jamieiles/uart
-    uart uart0(
-        clk_50m <: clock,
-        din     <: uart_tx_data,
-        wr_en   <: uart_tx_valid,
-        tx      :> uart_tx,
-        tx_busy :> uart_tx_busy,
-        rx      <: uart_rx,
-        rdy     :> uart_rx_valid,
-        rdy_clr <: uart_rx_ready,
-        dout    :> uart_rx_data
+    // UART written in Silice by https://github.com/sylefeb/Silice
+    uart_out uo;
+    uart_sender usend(
+        io      <:> uo,
+        uart_tx :>  uart_tx
     );
-$$end
-$$if ULX3S then
-    // UART from https://github.com/lawrie/ulx3s_examples/blob/master/computer/simpleuart.v
-    // Need to check if these are the correct way around
-    //simpleuart uart0(
-    //    clk     <: clock,
-    //    ser_tx  :> uart_rx,
-    //    ser_rx  <: uart_tx,
-    //    reg_dat_we <: uart_tx_valid,
-    //    reg_dat_re <: uart_rx_ready,
-    //    reg_dat_di <: uart_tx_data,
-    //    reg_dat_do :> uart_rx_data,
-    //    reg_dat_wait :> uart_tx_busy,
-    //    recv_buf_valid :> uart_rx_valid,
-    //    tdre :> uart_rx_error
-    //);
-$$end
+
+    uart_in ui;
+    uart_receiver urecv(
+        io      <:> ui,
+        uart_rx <:  uart_rx
+    );
 
     // VGA/HDMI Display
     uint1 video_reset = 0;
@@ -430,24 +403,16 @@ $$end
     uint16  rStackTop = uninitialized;
     uint16  memoryInput = uninitialized;
 
-    // 16bit ROM with included compiled j1eForth from https://github.com/samawati/j1eforth
-    brom uint16 rom[] = {
+    // 16bit ROM with included with compiled j1eForth developed from https://github.com/samawati/j1eforth
+    dualport_bram uint16 ram[32768] = {
         $include('j1eforthROM.inc')
+        , pad(uninitialized)
     };
-    
-    dualport_bram uint16 ram[32768] = uninitialized;
     
     // CYCLE to control each stage
     // CYCLE allows 1 clock cycle for BRAM access and 3 clock cycles for SPRAM access
-    // INIT to determine if copying rom to ram or executing
-    // INIT 0 SPRAM, INIT 1 ROM to SPRAM, INIT 2 J1 CPU
     uint3 CYCLE = 0;
-    uint2 INIT = 0;
     
-    // Address for 0 to SPRAM, copying ROM, plus storage
-    uint16 copyaddress = 0;
-    uint16 bramREAD = 0;
-
     // UART input FIFO (512 character) as dualport bram (code from @sylefeb)
     dualport_bram uint8 uartInBuffer[512] = uninitialized;
     uint9 uartInBufferNext = 0;
@@ -476,101 +441,30 @@ $$end
     uartOutBuffer.addr0    := uartOutBufferNext; // FIFO reads on next
     uartOutBuffer.addr1    := uartOutBufferTop;  // FIFO writes on top
 
+    // Setup the UART
+    uo.data_in_ready := 0; // maintain low
+
     // Setup the terminal
     terminal_window.showterminal = 1;
     terminal_window.showcursor = 1;
-    
-    // INIT is 0 ZERO dualport working blockram
-    while( INIT == 0 ) {
-        switch(CYCLE) {
-            case 0: {
-                ram.addr0 = copyaddress;
-                ram.wdata0 = 0;
-                ram.wenable0 = 1;
-            }
-            case 1: {
-                copyaddress = copyaddress + 1;
-                ram.wenable0 = 0;
-            }
-            case 4: {
-                if( copyaddress == 32768 ) {
-                    INIT = 1;
-                    copyaddress = 0;
-                }
-            }
-            default: {}
-        }
-        CYCLE = ( CYCLE == 4 ) ? 0 : CYCLE + 1;
-    }
-    
-    // INIT is 1 COPY ROM TO RAM
-    while( INIT == 1) {
-        switch(CYCLE) {
-            case 0: {
-                // Setup READ from ROM
-                rom.addr = copyaddress;
-            }
-            case 1: {
-                bramREAD = rom.rdata;
-            }
-            case 2: {
-                // WRITE to RAM
-                ram.addr0 = copyaddress;
-                ram.wdata0 = bramREAD;
-                ram.wenable0 = 1;
-            }
-            case 3: {
-                copyaddress = copyaddress + 1;
-                ram.wenable0 = 0;
-            }
-            case 4: {
-                if( copyaddress == 4096 ) {
-                    INIT = 3;
-                    copyaddress = 0;
-                }
-            }
-            default: {
-            }
-        }
-        CYCLE = ( CYCLE == 4 ) ? 0 : CYCLE + 1;
-    }
 
-    // INIT is 3 EXECUTE J1 CPU
-    while( INIT == 3 ) {
+
+    // EXECUTE J1 CPU
+    while( 1 ) {
         // READ from UART if character available and store
-        switch( uartInHold ) {
-            case 0: {
-                if( uart_rx_valid ) {
-                    // writes at uartInBufferTop (code from @sylefeb)
-                    uartInBuffer.wdata1  = uart_rx_data;            
-                    uartInBufferTop      = uartInBufferTop + 1;
-                    uartInHold = 1;
-                }
-                uart_rx_ready = 1;
-            }
-            case 1: {
-                // Wait for UART valid flag to flip before allowing another read
-                uartInHold = ( uart_rx_valid == 0 ) ? 0 : 1;
-            }
+        if( ui.data_out_ready ) {
+            // writes at uartInBufferTop (code from @sylefeb)
+            uartInBuffer.wdata1  = ui.data_out;            
+            uartInBufferTop      = uartInBufferTop + 1;
+            uartInHold = 1;
         }
 
         // WRITE to UART if characters in buffer and UART is ready
-        switch( uartOutHold ) {
-            case 0: {
-                if( ~(uartOutBufferNext == uartOutBufferTop) & ~( uart_tx_busy ) ) {
-                    // reads at uartOutBufferNext (code from @sylefeb)
-                    uart_tx_data      = uartOutBuffer.rdata0; 
-                    uart_tx_valid     = 1;
-                    uartOutHold = 1;
-                    uartOutBufferNext = uartOutBufferNext + 1;
-                }
-            }
-            case 1: {
-                if( ~uart_tx_busy ) {
-                    uart_tx_valid = 0;
-                    uartOutHold = 0;
-                }
-            }
+        if( ~(uartOutBufferNext == uartOutBufferTop) & ~( uo.busy ) ) {
+            // reads at uartOutBufferNext (code from @sylefeb)
+            uo.data_in      = uartOutBuffer.rdata0; 
+            uo.data_in_ready     = 1;
+            uartOutBufferNext = uartOutBufferNext + 1;
         }
         uartOutBufferTop = newuartOutBufferTop;        
         
