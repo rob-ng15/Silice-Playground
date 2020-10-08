@@ -1,6 +1,6 @@
 
 .DEFAULT: j1eforth-ULX3S.ice
-	silice-make.py -s j1eforth-ULX3S.ice -b $@ -p basic,hdmi,uart -o BUILD_$(subst :,_,$@) -t shell
+	silice-make.py -s j1eforth-ULX3S.ice -b $@ -p basic,hdmi,uart -o BUILD_$(subst :,_,$@)
 
 clean:
 	rm -rf BUILD_*
