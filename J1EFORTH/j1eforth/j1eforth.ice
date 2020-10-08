@@ -275,8 +275,8 @@ $$end
     uint1               bitmap_display = 0;
     int11               bitmap_x_write = 0;
     int11               bitmap_y_write = 0;
-    uint10              bitmap_colour_write = 0;
-    uint1               bitmap_write = 0;
+    uint7               bitmap_colour_write = 0;
+    uint2               bitmap_write = 0;
 
     gpu gpu_processor <@video_clock,!video_reset>
     (
@@ -404,11 +404,12 @@ $$end
     uint16  memoryInput = uninitialized;
 
     // 16bit ROM with included with compiled j1eForth developed from https://github.com/samawati/j1eforth
-    dualport_bram uint16 ram[32768] = {
+    dualport_bram uint16 ram_0[8192] = {
         $include('j1eforthROM.inc')
         , pad(uninitialized)
     };
-    
+    dualport_bram uint16 ram_1[8192] = uninitialized;
+
     // CYCLE to control each stage
     // CYCLE allows 1 clock cycle for BRAM access and 3 clock cycles for SPRAM access
     uint3 CYCLE = 0;
@@ -426,6 +427,12 @@ $$end
     uint9 newuartOutBufferTop = 0;
     uint1 uartOutHold = 0;
     
+    // BRAM for CPU ram write enable mainained low, pulsed high
+    ram_0.wenable0 := 0;
+    ram_0.wenable1 := 0;
+    ram_1.wenable0 := 0;
+    ram_1.wenable1 := 0;
+
     // bram for dstack and rstack write enable, maintained low, pulsed high (code from @sylefeb)
     dstack.wenable         := 0;  
     rstack.wenable         := 0;
@@ -444,13 +451,8 @@ $$end
     // Setup the UART
     uo.data_in_ready := 0; // maintain low
 
-    // Setup the terminal
-    terminal_window.showterminal = 1;
-    terminal_window.showcursor = 1;
-
-
-    // EXECUTE J1 CPU
-    while( 1 ) {
+    // UART input and output buffering
+    always {
         // READ from UART if character available and store
         if( ui.data_out_ready ) {
             // writes at uartInBufferTop (code from @sylefeb)
@@ -458,7 +460,15 @@ $$end
             uartInBufferTop      = uartInBufferTop + 1;
             uartInHold = 1;
         }
+    }
+    
+    // Setup the terminal
+    terminal_window.showterminal = 1;
+    terminal_window.showcursor = 1;
 
+
+    // EXECUTE J1 CPU
+    while( 1 ) {
         // WRITE to UART if characters in buffer and UART is ready
         if( ~(uartOutBufferNext == uartOutBufferTop) & ~( uo.busy ) ) {
             // reads at uartOutBufferNext (code from @sylefeb)
@@ -466,6 +476,7 @@ $$end
             uo.data_in_ready     = 1;
             uartOutBufferNext = uartOutBufferNext + 1;
         }
+        // Update UART output buffer top if character has been put into buffer
         uartOutBufferTop = newuartOutBufferTop;        
         
         switch( CYCLE ) {
@@ -476,15 +487,20 @@ $$end
                 rStackTop = rstack.rdata;
             
                 // start READ memoryInput = [stackTop] and instruction = [pc] result ready in 1 cycles
-                ram.addr0 = stackTop >> 1;
-                ram.wenable0 = 0;
-                ram.addr1 = pc;
-                ram.wenable1 = 0;
+                // PC can only ever be 0 - 8191
+                ram_0.addr1 = pc;
+                // stackTop could be 0 - 32767 with WORD level access
+                ram_0.addr0 = stackTop >> 1;
+                ram_1.addr0 = stackTop >> 1;
             }
             case 1: {
                 // wait then read the data from RAM
-                memoryInput = ram.rdata0;
-                instruction = ram.rdata1;
+                instruction = ram_0.rdata1;
+                if( stackTop > 16383 ) {
+                    memoryInput = ram_1.rdata0;
+                } else {
+                    memoryInput = ram_0.rdata0;
+                }
             }
             
             // J1 CPU Instruction Execute
@@ -645,9 +661,15 @@ $$end
                                 switch( stackTop ) {
                                     default: {
                                         // WRITE to SPRAM
-                                        ram.addr0 = stackTop >> 1;
-                                        ram.wdata0 = stackNext;
-                                        ram.wenable0 = 1;
+                                        if( stackTop > 16383 ) {
+                                            ram_1.addr0 = stackTop >> 1;
+                                            ram_1.wdata0 = stackNext;
+                                            ram_1.wenable0 = 1;
+                                        } else {
+                                            ram_0.addr0 = stackTop >> 1;
+                                            ram_0.wdata0 = stackNext;
+                                            ram_0.wenable0 = 1;
+                                       }
                                     }
                                     case 16hf000: {
                                         // OUTPUT to UART (dualport blockram code from @sylefeb)
@@ -778,9 +800,6 @@ $$end
                 dstack.addr = newDSP;
                 rstack.addr = newRSP;
             
-                // reset sram_readwrite
-                ram.wenable0 = 0;
-                
                 // reset gpu, tpu, terminal and background
                 gpu_processor.gpu_write = 0;
                 character_map_window.tpu_write = 0;

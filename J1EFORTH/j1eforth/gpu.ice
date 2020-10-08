@@ -2,16 +2,16 @@ algorithm gpu(
     // GPU to SET and GET pixels
     output! int11 bitmap_x_write,
     output! int11 bitmap_y_write,
-    output! uint8 bitmap_colour_write,
-    output! uint1 bitmap_write,
+    output! uint7 bitmap_colour_write,
+    output! uint2 bitmap_write,
     
     input int11 gpu_x,
     input int11 gpu_y,
     input uint8 gpu_colour,
-    input int11 gpu_param0,
-    input int11 gpu_param1,
-    input int11 gpu_param2,
-    input int11 gpu_param3,
+    input int16 gpu_param0,
+    input int16 gpu_param1,
+    input int16 gpu_param2,
+    input int16 gpu_param3,
     input uint3 gpu_write,
     
     output  uint4 gpu_active
@@ -50,6 +50,8 @@ algorithm gpu(
     blit1tilemap.wenable0 := 0;
         
     // blit1tilemap write access for the GPU to load tilemaps
+    blit1tilemap.addr1 := gpu_param0 * 16 + gpu_param1;
+    blit1tilemap.wdata1 := gpu_param2;
     blit1tilemap.wenable1 := 0;
 
     bitmap_write := 0;
@@ -126,8 +128,7 @@ algorithm gpu(
                     }
                     case 6: {
                         // Write to tilemap param0 line param1 value gpu_param2
-                        blit1tilemap.addr1 = gpu_param0 * 16 + gpu_param1;
-                        blit1tilemap.wdata1 = gpu_param2;
+                        // Done directly, does not activate the GPU
                         blit1tilemap.wenable1 = 1;
                     }
                     default: {}

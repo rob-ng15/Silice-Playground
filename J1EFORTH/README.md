@@ -155,9 +155,10 @@ The j1eforth wordlist has been extended to include some double (32 bit) integer 
 * `2@` reads a double integer variable to the stack (this was already part of j1eforth)
 * `s>d` converts a single integer on the stack to a double integer on the stack
 * `d1+` and `d1-` increment and decrement the double integer on the stack
+* `d2*` and `d2/` double and halve the double integer on the stack
 * `d+` and `d-` do double integer addition and subtraction
-* `d=`, `d<` do double integer comparisons
-* `d0=` do double integer 0 comparisons
+* `d=`, `d<>`, `d<`, `d>` do double integer comparisons
+* `d0=`, `d0<>` and `d0<` do double integer 0 comparisons
 * `dand`, `dor`, `dxor` and `dinvert` do double integer binary arithmetic
 * `2swap` `2over`, `2rot` and `2nip` along with the j1eforth `2dup` and `2drop` work with double integers on the stack
 * `m*` and `um*` perform single integer signed and unsigned multiplication giving a double integer result (these were already part of j1eforth)
@@ -266,55 +267,33 @@ fff3 | BACKGROUND set the fade level
     i 1ff i 21f i 20 + rectangle!
     i i i i 20 + i 20 + rectangle!
   loop ;
-tpucs! cs! drawrectangles
-
+cs! drawrectangles
 
 : drawblocks
   3f 0 do
     i i i 200 200 rectangle!
   loop ;
-tpucs! cs! drawblocks
-  
+cs! drawblocks
 
 : drawcircles
   3f 0 do
-    i 180 180 3f i - circle!
+    i 100 100 3f i - 2* circle!
   loop ;
-tpucs! cs! drawcircles
+cs! drawcircles
   
-2 base !
-0000000000000000
-0000111011100000
-0000110001100000
-0000110001100000
-1101100000110110
-1001110001110010
-1101111111110110
-1101111111110110
-1111111111111110
-0011100100111000
-0011100100111000
-0001111111110000
-0000100000100000
-0000100000100000
-0001100000110000
-0111000000011100
-hex
-: blit1tile!
-  ff03 !
-  10 0 do
-    i ff04 !
-    ff05 !
-    6 ff07 !
-  loop ;
+701c 1830 820 820
+ff8 3938 3938 fffe
+dff6 dff6 9c72 d836
+c60 c60 ee0 0
+: blit1tile! ff03 ! 10 for aft i ff04 ! ff05 ! 6 ff07 ! then next ;
 0 blit1tile!
 : invaders
   10 0 do
     i 10 0 do
       dup 3f i - swap 0 swap 18 * i 18 * blit1!
-    loop  
+    loop  drop
   loop ;
-tpucs! cs! invaders
+cs! invaders
 
 : tputest
   3f 0 do

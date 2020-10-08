@@ -945,6 +945,7 @@ t: 2swap rot >r rot r> t;
 t: 2nip rot drop rot drop t;
 t: 2rot 2>r 2swap 2r> 2swap t;
 t: d= >r rot xor swap r> xor or 0= t;
+t: d<> d= invert t;
 t: d+ rot + >r over + dup rot u< if r> 1+ else r> then t;
 t: d- dnegate d+ t;
 t: s>d dup 0< t;
@@ -954,21 +955,22 @@ t: dand rot and -rot and swap t;
 t: dor rot or -rot or swap t;
 t: dinvert invert swap invert swap t;
 t: d< rot 2dup = if 2drop u< else 2nip > then t;
+t: d> 2swap d< t;
 t: d0= or 0= t;
+t: d0< 0 literal s>d d< t;
+t: d0<> d0= invert t;
+t: d2* 2dup d+ t;
+t: d2/ dup f literal lshift >r 2/ swap 2/ r> or swap t;
 t: d1- 1 literal s>d dnegate d+ t;
 
 ( GPU, TPU and TERMINAL helpers)
-t: background! ( colour) fff0 literal ! t;
-t: pixel! ( colour x y ) begin ff07 literal @ 0= until 
-    ff01 literal ! ff00 literal ! ff02 literal ! 1 literal ff07 literal ! t;
-t: rectangle! ( colour x1 y1 x2 y2 ) begin ff07 literal @ 0= until 
-    ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 2 literal ff07 literal ! t;
-t: line! ( colour x1 y1 x2 y2 ) begin ff07 literal @ 0= until 
-    ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 3 literal ff07 literal ! t;
-t: circle! ( colour xc yc r ) begin ff07 literal @ 0= until 
-    ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 4 literal ff07 literal ! t;
-t: blit1! ( colour blit1tile x y ) begin ff07 literal @ 0= until 
-    ff01 literal ! ff00 literal ! ff03 literal ! ff02 literal ! 5 literal ff07 literal ! t;
+t: gpu? begin ff07 literal @ 0= until t;
+t: background! fff0 literal ! t;
+t: pixel! gpu? ff01 literal ! ff00 literal ! ff02 literal ! 1 literal ff07 literal ! t;
+t: rectangle! gpu? ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 2 literal ff07 literal ! t;
+t: line! gpu? ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 3 literal ff07 literal ! t;
+t: circle! gpu? ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 4 literal ff07 literal ! t;
+t: blit1! gpu? ff01 literal ! ff00 literal ! ff03 literal ! ff02 literal ! 5 literal ff07 literal ! t;
 t: cs! 40 literal 0 literal 0 literal 2f7 literal 1df literal rectangle! t;
 
 t: tpuxy! ( x y ) ff11 literal ! ff10 literal ! 1 literal ff15 literal ! t;
