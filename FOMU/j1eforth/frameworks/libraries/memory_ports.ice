@@ -46,4 +46,4 @@ interface bram_ports {
   output! wdata1,
 }
 
-// ----------------------- end of memory_ports.ice ---- 
+// ----------------------- end of memory_ports.ice ----

@@ -31,24 +31,26 @@ Upload the compiled bitstream to your FOMU with `dfu-util -D build.dfu`, or the 
 Resource usage has been considerably reduced from my initial attempt at Silice coding, with considerable assistance from @sylefeb who has assisted in using blockrams for the dstack and rstack, and dual ported blockrams for the uart input and output FIFO buffers:
 
 ```
-Info: Device utilisation:                                                                                                           
-Info:            ICESTORM_LC:  2831/ 5280    53%                                                                                    
-Info:           ICESTORM_RAM:    21/   30    70%                                                                                    
-Info:                  SB_IO:    12/   96    12%                                                                                    
-Info:                  SB_GB:     8/    8   100%                                                                                    
-Info:           ICESTORM_PLL:     0/    1     0%                                                                                    
-Info:            SB_WARMBOOT:     0/    1     0%                                                                                    
-Info:           ICESTORM_DSP:     0/    8     0%                                                                                    
-Info:         ICESTORM_HFOSC:     0/    1     0%                                                                                    
-Info:         ICESTORM_LFOSC:     0/    1     0%                                                                                    
-Info:                 SB_I2C:     0/    2     0%                                                                                    
-Info:                 SB_SPI:     0/    2     0%                                                                                    
-Info:                 IO_I3C:     0/    2     0%                                                                                    
-Info:            SB_LEDDA_IP:     0/    1     0%                                                                                    
-Info:            SB_RGBA_DRV:     1/    1   100%                                                                                    
+Info: Device utilisation:
+Info:            ICESTORM_LC:  2849/ 5280    53%
+Info:           ICESTORM_RAM:    21/   30    70%
+Info:                  SB_IO:    12/   96    12%
+Info:                  SB_GB:     8/    8   100%
+Info:           ICESTORM_PLL:     0/    1     0%
+Info:            SB_WARMBOOT:     0/    1     0%
+Info:           ICESTORM_DSP:     0/    8     0%
+Info:         ICESTORM_HFOSC:     0/    1     0%
+Info:         ICESTORM_LFOSC:     0/    1     0%
+Info:                 SB_I2C:     0/    2     0%
+Info:                 SB_SPI:     0/    2     0%
+Info:                 IO_I3C:     0/    2     0%
+Info:            SB_LEDDA_IP:     0/    1     0%
+Info:            SB_RGBA_DRV:     1/    1   100%
+Info:         ICESTORM_SPRAM:     4/    4   100%
 Info:         ICESTORM_SPRAM:     4/    4   100% 
 
-// Timing estimate: 38.93 ns (25.69 MHz)
+// Timing estimate: 38.77 ns (25.79 MHz) (HACKER)
+// Timing estimate: 38.80 ns (25.77 MHz) (PVT)
 ```
 
 ## J1 and J1+ CPU Differences

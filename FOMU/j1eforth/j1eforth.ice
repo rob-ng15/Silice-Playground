@@ -3,7 +3,7 @@
 // Instruction is 3 bits 1xx = literal value, 000 = branch, 001 = 0branch, 010 = call, 011 = alu, followed by 13 bits of instruction specific data
 bitfield instruction {
     uint3 is_litcallbranchalu,
-    uint13 pad
+    uint13 padding
 }
 
 // A literal instruction is 1 followed by a 15 bit UNSIGNED literal value
@@ -146,6 +146,16 @@ algorithm main(
     uartOutBuffer.wenable1 := 1; // always write on port 1    
     uartOutBuffer.addr0    := uartOutBufferNext; // FIFO reads on next
     uartOutBuffer.addr1    := uartOutBufferTop;  // FIFO writes on top
+
+    always {
+        // READ from UART if character available and store
+        if( uart_out_valid ) {
+            // writes at uartInBufferTop (code from @sylefeb)
+            uartInBuffer.wdata1  = uart_out_data;            
+            uart_out_ready       = 1;
+            uartInBufferTop      = uartInBufferTop + 1; 
+        }
+    }
     
     // INIT is 0 ZERO SPRAM
     while( INIT == 0 ) {
@@ -206,14 +216,6 @@ algorithm main(
 
     // INIT is 3 EXECUTE J1 CPU
     while( INIT == 3 ) {
-        // READ from UART if character available and store
-        if( uart_out_valid ) {
-            // writes at uartInBufferTop (code from @sylefeb)
-            uartInBuffer.wdata1  = uart_out_data;            
-            uart_out_ready       = 1;
-            uartInBufferTop      = uartInBufferTop + 1; 
-        }
-
         // WRITE to UART if characters in buffer and UART is ready
         if( ~(uartOutBufferNext == uartOutBufferTop) & ~( uart_in_valid ) ) {
             // reads at uartOutBufferNext (code from @sylefeb)
