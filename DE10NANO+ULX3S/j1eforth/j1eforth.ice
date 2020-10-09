@@ -168,7 +168,11 @@ $$end
     output! uint$color_depth$ video_b,
     output! uint1   video_hs,
     output! uint1   video_vs
-) {
+) 
+$$if ULX3S then
+<@clock_50mhz> // ULX3S has a 25 MHz clock, so we use a PLL to bring it up to 50 MHz
+$$end
+{
     // SETUP Peripherals
     uint8 buttons = 0; // TODO
 
@@ -192,11 +196,11 @@ $$end
     // VGA/HDMI Display
     uint1 video_reset = 0;
     uint1 video_clock = 0;
-    uint1 sdram_clock = 0;
     uint1 pll_lock = 0;
     
     // Generate the 100MHz SDRAM and 25MHz VIDEO clocks
 $$if DE10NANO then
+    uint1 sdram_clock = 0;
     de10nano_clk_100_25 clk_gen(
         refclk    <: clock,
         outclk_0  :> sdram_clock,
@@ -206,9 +210,10 @@ $$if DE10NANO then
     ); 
 $$end
 $$if ULX3S then
-    ulx3s_clk_100_25 clk_gen(
+    uint1 clock_50mhz = 0;
+    ulx3s_clk_50_25 clk_gen(
         clkin    <: clock,
-        clkout0  :> sdram_clock,
+        clkout0  :> clock_50mhz,
         clkout1  :> video_clock,
         locked   :> pll_lock
     ); 
@@ -240,16 +245,21 @@ $$if DE10NANO then
     );
 $$end
 $$if ULX3S then
-hdmi video(
+
+uint8 video_r8 := video_r << 2;
+uint8 video_g8 := video_g << 2;
+uint8 video_b8 := video_b << 2;
+
+hdmi video<@clock,!reset>(
     x       :> pix_x,
     y       :> pix_y,
     active  :> active,
     vblank  :> vblank,
     gpdi_dp :> gpdi_dp,
     gpdi_dn :> gpdi_dn,
-    red     <: video_r,
-    green   <: video_g,
-    blue    <: video_b
+    red     <: video_r8,
+    green   <: video_g8,
+    blue    <: video_b8
   );
 $$end
 
