@@ -98,19 +98,20 @@ algorithm hdmi_ddr_shifter(
   input   uint10 data_r,
   input   uint10 data_g,
   input   uint10 data_b,
-  output  uint8  outbits,
+  output! uint8  outbits,
 ) <autorun> {
-  uint4  mod5    = 0;
+  uint3  mod5    = 0;
   uint10 shift_r = 0;
   uint10 shift_g = 0;
   uint10 shift_b = 0;
-  uint2  clkbits = 0;
   always {
     shift_r = (mod5 == 0) ?  data_r : shift_r[2,8];
     shift_g = (mod5 == 0) ?  data_g : shift_g[2,8];
     shift_b = (mod5 == 0) ?  data_b : shift_b[2,8];
-    clkbits = (mod5 < 2) ? 2b11 : ( (mod5 > 2) ? 2b00 : 2b01 );
-    outbits = { clkbits , shift_b[0,2] , shift_g[0,2] , shift_r[0,2] };
+    outbits = {
+        ~(mod5[2,1] || mod5[1,1]),
+        ~(mod5[2,1] || (mod5[1,1] & mod5[0,1])),
+        shift_b[0,2] , shift_g[0,2] , shift_r[0,2] };
     mod5    = (mod5 == 4) ? 0 : (mod5 + 1);
   }
 }
