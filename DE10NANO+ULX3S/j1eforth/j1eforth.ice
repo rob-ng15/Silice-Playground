@@ -154,8 +154,8 @@ algorithm main(
     output  uint8   leds,
     
 $$if ULX3S then
-    output  uint3   gpdi_dp,
-    output  uint3   gpdi_dn,
+    output  uint4   gpdi_dp,
+    output  uint4   gpdi_dn,
 $$end
 
     // UART
