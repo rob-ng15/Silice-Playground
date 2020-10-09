@@ -154,8 +154,8 @@ algorithm main(
     output  uint8   leds,
     
 $$if ULX3S then
-    output  uint3   gpdi_dp,
-    output  uint3   gpdi_dn,
+    output  uint4   gpdi_dp,
+    output  uint4   gpdi_dn,
 $$end
 
     // UART
@@ -470,6 +470,13 @@ $$end
             uartInBufferTop      = uartInBufferTop + 1;
             uartInHold = 1;
         }
+        // WRITE to UART if characters in buffer and UART is ready
+        if( ~(uartOutBufferNext == uartOutBufferTop) & ~( uo.busy ) ) {
+            // reads at uartOutBufferNext (code from @sylefeb)
+            uo.data_in      = uartOutBuffer.rdata0; 
+            uo.data_in_ready     = 1;
+            uartOutBufferNext = uartOutBufferNext + 1;
+        }
     }
     
     // Setup the terminal
@@ -479,13 +486,6 @@ $$end
 
     // EXECUTE J1 CPU
     while( 1 ) {
-        // WRITE to UART if characters in buffer and UART is ready
-        if( ~(uartOutBufferNext == uartOutBufferTop) & ~( uo.busy ) ) {
-            // reads at uartOutBufferNext (code from @sylefeb)
-            uo.data_in      = uartOutBuffer.rdata0; 
-            uo.data_in_ready     = 1;
-            uartOutBufferNext = uartOutBufferNext + 1;
-        }
         // Update UART output buffer top if character has been put into buffer
         uartOutBufferTop = newuartOutBufferTop;        
         

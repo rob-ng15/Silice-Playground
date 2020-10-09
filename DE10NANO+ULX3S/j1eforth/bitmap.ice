@@ -1,13 +1,6 @@
-$$if DE10NANO then
 $$WIDTH = 640
 $$HEIGHT = 480
 $$SIZE = 307200
-$$end
-$$if ULX3S then
-$$WIDTH = 320
-$$HEIGHT = 240
-$$SIZE = 76800
-$$end
 
 algorithm bitmap(
     input   uint10  pix_x,
@@ -47,34 +40,14 @@ algorithm bitmap(
 
     // Setup the address in the bitmap for the pixel being rendered
     // ULX3S half the pix_x and pix_y to double the pixels
-$$if DE10NANO then
     bitmap_A.addr0 := pix_x + pix_y * $WIDTH$;
-$$end
-$$if ULX3S then
-    bitmap_A.addr0 := (pix_x>>1) + (pix_y>>1) * $WIDTH$;
-$$end
     bitmap_A.wenable0 := 0;
-$$if DE10NANO then
     bitmap_R.addr0 := pix_x + pix_y * $WIDTH$;
-$$end
-$$if ULX3S then
-    bitmap_R.addr0 := (pix_x>>1) + (pix_y>>1) * $WIDTH$;
-$$end
     bitmap_R.wenable0 := 0;
-$$if DE10NANO then
     bitmap_G.addr0 := pix_x + pix_y * $WIDTH$;
-$$end
-$$if ULX3S then
-    bitmap_G.addr0 := (pix_x>>1) + (pix_y>>1) * $WIDTH$;
-$$end
     bitmap_G.wenable0 := 0;
-$$if DE10NANO then
     bitmap_B.addr0 := pix_x + pix_y * $WIDTH$;
-$$end
-$$if ULX3S then
-    bitmap_B.addr0 := (pix_x>>1) + (pix_y>>1) * $WIDTH$;
-$$end
-    bitmap_B.wenable0 := 0;
+   bitmap_B.wenable0 := 0;
     
     // Bitmap write access for the GPU - Only enable when x and y are in range
     bitmap_A.addr1 := bitmap_x_write + bitmap_y_write * $WIDTH$;

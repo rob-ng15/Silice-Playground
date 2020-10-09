@@ -48,21 +48,32 @@ Total DLLs : 0 / 4 ( 0 % )
 ```
 ### Resource Usage (ulx3s)
 ```
-   Number of wires:              10662
-   Number of wire bits:          64636
-   Number of public wires:       10662
-   Number of public wire bits:   64636
-   Number of memories:               0
-   Number of memory bits:            0
-   Number of processes:              0
-   Number of cells:               7249
-     CCU2C                         511
-     DP16KD                         75
-     EHXPLLL                         2
-     LUT4                         5515
-     MULT18X18D                      5
-     TRELLIS_FF                   1137
-     TRELLIS_IO                      4
+Info: Device utilisation:
+Info: 	       TRELLIS_SLICE:  4069/41820     9%
+Info: 	          TRELLIS_IO:    26/  365     7%
+Info: 	                DCCA:     4/   56     7%
+Info: 	              DP16KD:    75/  208    36%
+Info: 	          MULT18X18D:     5/  156     3%
+Info: 	              ALU54B:     0/   78     0%
+Info: 	             EHXPLLL:     2/    4    50%
+Info: 	             EXTREFB:     0/    2     0%
+Info: 	                DCUA:     0/    2     0%
+Info: 	           PCSCLKDIV:     0/    2     0%
+Info: 	             IOLOGIC:     0/  224     0%
+Info: 	            SIOLOGIC:     0/  141     0%
+Info: 	                 GSR:     0/    1     0%
+Info: 	               JTAGG:     0/    1     0%
+Info: 	                OSCG:     0/    1     0%
+Info: 	               SEDGA:     0/    1     0%
+Info: 	                 DTR:     0/    1     0%
+Info: 	             USRMCLK:     0/    1     0%
+Info: 	             CLKDIVF:     0/    4     0%
+Info: 	           ECLKSYNCB:     0/   10     0%
+Info: 	             DLLDELD:     0/    8     0%
+Info: 	              DDRDLL:     0/    4     0%
+Info: 	             DQSBUFM:     0/   14     0%
+Info: 	     TRELLIS_ECLKBUF:     0/    8     0%
+Info: 	        ECLKBRIDGECS:     0/    2     0%
 ```
 
 ## J1/J1+ CPU Architecture and Comparisons
@@ -336,11 +347,7 @@ ledtest
 
 ## Issues
 
-* UART input works, with copy'n'paste
-* - Glitches occasionally when copy'n'paste
-* UART output misses some characters (de10nano)
 * Bitmap output is misaligned on the display (1 pixel to the right) (de10nano)
-* TPU and TERMINAL both double type (ulx3s)
 
 ## TODO (Wishlist)
 
