@@ -201,7 +201,7 @@ The VGA/HDMI output is a multiplexed bitmap and character display, with the foll
 
 * Background with configurable, but not yet implemented designs
 * - single { rrggbb } colour.
-* 640 x 480 (de10nano) or 320 x 240 (ulx3s with double sized pixels) 64 colour { Arrggbb } bitmap display.
+* 640 x 480 64 colour { Arrggbb } bitmap display.
 * - If A (ALPHA) is 1, then the background colour is displayed.
 * - Includes a simple GPU to:
 * - - Draw pixels
