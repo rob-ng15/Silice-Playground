@@ -22,24 +22,30 @@ algorithm multiplex_display(
     output! uint$color_depth$ pix_green,
     output! uint$color_depth$ pix_blue,
 
-    // Background
+    // BACKGROUND
     input uint$color_depth$ background_r,
     input uint$color_depth$ background_g,
     input uint$color_depth$ background_b,
 
-    // Character Map and TPU
+    // LOWER SPRITES
+    input uint$color_depth$ lower_sprites_r,
+    input uint$color_depth$ lower_sprites_g,
+    input uint$color_depth$ lower_sprites_b,
+    input uint1   lower_sprites_display,
+
+    // BITMAP
     input uint$color_depth$ bitmap_r,
     input uint$color_depth$ bitmap_g,
     input uint$color_depth$ bitmap_b,
     input uint1   bitmap_display,
 
-    // Character Map and TPU
+    // CHARACTER MAP
     input uint$color_depth$ character_map_r,
     input uint$color_depth$ character_map_g,
     input uint$color_depth$ character_map_b,
     input uint1   character_map_display,
     
-    // Terminal
+    // TERMINAL
     input uint$color_depth$ terminal_r,
     input uint$color_depth$ terminal_g,
     input uint$color_depth$ terminal_b,
@@ -54,24 +60,33 @@ algorithm multiplex_display(
     while (1) {
         // wait until pix_active THEN BACKGROUND -> BITMAP -> CHARACTER MAP -> TERMINAL
         if( pix_active ) {
-            // BITMAP
-            if( bitmap_display ) {
-                pix_red = bitmap_r;
-                pix_green = bitmap_g;
-                pix_blue = bitmap_b;
+            // LOWER SPRITES OR BACKGROUND
+            if( lower_sprites_display ) {
+                pix_red = lower_sprites_r;
+                pix_green = lower_sprites_g;
+                pix_blue = lower_sprites_b;
             } else {
                 // BACKGROUND
                 pix_red = background_r;
                 pix_green = background_g;
                 pix_blue = background_b;
             }
-
+            
+            // BITMAP
+            if( bitmap_display ) {
+                pix_red = bitmap_r;
+                pix_green = bitmap_g;
+                pix_blue = bitmap_b;
+            }
+            
+            // CHARACTER MAP
             if( character_map_display ) {
                 pix_red = character_map_r;
                 pix_green = character_map_g;
                 pix_blue = character_map_b;
             }
-            
+
+            // TERMINAL
             if( terminal_display ) {
                 pix_red = terminal_r;
                 pix_green = terminal_g;
@@ -263,7 +278,7 @@ hdmi video<@clock,!reset>(
   );
 $$end
 
-    // Background
+    // BACKGROUND
     uint$color_depth$   background_r = 0;
     uint$color_depth$   background_g = 0;
     uint$color_depth$   background_b = 0;
@@ -277,8 +292,26 @@ $$end
         pix_green  :> background_g,
         pix_blue   :> background_b,
     );
+
+    // Lower Sprite LAyer - Between BACKGROUND and BITMAP
+    uint$color_depth$   lower_sprites_r = 0;
+    uint$color_depth$   lower_sprites_g = 0;
+    uint$color_depth$   lower_sprites_b = 0;
+    uint1               lower_sprites_display = 0;
     
-    // Bitmap Window
+   sprite_layer lower_sprites <@video_clock,!video_reset>
+    (
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: active,
+        pix_vblank <: vblank,
+        pix_red    :> lower_sprites_r,
+        pix_green  :> lower_sprites_g,
+        pix_blue   :> lower_sprites_b,
+        sprite_layer_display :> lower_sprites_display,
+    );
+        
+    // Bitmap Window and GPU
     uint$color_depth$   bitmap_r = 0;
     uint$color_depth$   bitmap_g = 0;
     uint$color_depth$   bitmap_b = 0;
@@ -295,7 +328,7 @@ $$end
         bitmap_colour_write :> bitmap_colour_write,
         bitmap_write :> bitmap_write
     );
-    
+
     bitmap bitmap_window <@video_clock,!video_reset>
     (
         pix_x      <: pix_x,
@@ -362,6 +395,11 @@ $$end
         background_r <: background_r,
         background_g <: background_g,
         background_b <: background_b,
+
+        lower_sprites_r <: lower_sprites_r,
+        lower_sprites_g <: lower_sprites_g,
+        lower_sprites_b <: lower_sprites_b,
+        lower_sprites_display <: lower_sprites_display,
      
         bitmap_r <: bitmap_r,
         bitmap_g <: bitmap_g,
@@ -681,97 +719,163 @@ $$end
                                             ram_0.wenable0 = 1;
                                        }
                                     }
+                                    // UART output
                                     case 16hf000: {
-                                        // OUTPUT to UART (dualport blockram code from @sylefeb)
                                         uartOutBuffer.wdata1 = bytes(stackNext).byte0;
                                         newuartOutBufferTop = uartOutBufferTop + 1;
                                     }
+                                    // LED set
                                     case 16hf002: {
-                                        // OUTPUT to led
                                         leds = stackNext;
                                     }
+                                    
+                                    // GPU Controls
                                     case 16hff00: {
-                                        // GPU set x
                                         gpu_processor.gpu_x = stackNext;
                                     }
                                     case 16hff01: {
-                                        // GPU set y
                                         gpu_processor.gpu_y = stackNext;
                                     }
                                     case 16hff02: {
-                                        // GPU set colour
                                         gpu_processor.gpu_colour = stackNext;
                                     }
                                    case 16hff03: {
-                                        // GPU set parameter 0
                                         gpu_processor.gpu_param0 = stackNext;
                                     }
                                    case 16hff04: {
-                                        // GPU set parameter 1
                                         gpu_processor.gpu_param1 = stackNext;
                                     }
                                    case 16hff05: {
-                                        // GPU set parameter 2
                                         gpu_processor.gpu_param2 = stackNext;
                                     }
                                    case 16hff06: {
-                                        // GPU set parameter 3
                                         gpu_processor.gpu_param3 = stackNext;
                                     }
                                    case 16hff07: {
-                                        // Start GPU
                                         gpu_processor.gpu_write = stackNext;
                                     }
+                                    
+                                    // TPU Controls
                                     case 16hff10: {
-                                        // TPU set x
                                         character_map_window.tpu_x = stackNext;
                                     }
                                     case 16hff11: {
-                                        // TPU set y
                                         character_map_window.tpu_y = stackNext;
                                     }
                                     case 16hff12: {
-                                        // TPU set char
                                         character_map_window.tpu_character = stackNext;
                                     }
                                     case 16hff13: {
-                                        // TPU set background
                                         character_map_window.tpu_background = stackNext;
                                     }
                                     case 16hff14: {
-                                        // TPU set foreground
                                         character_map_window.tpu_foreground = stackNext;
                                     }
                                     case 16hff15: {
-                                        // Start TPU
                                         character_map_window.tpu_write = stackNext;
                                     }
+                                    
+                                    // TERMINAL Output + SHOW/HIDE
                                     case 16hff20: {
-                                        // Terminal set character
                                         terminal_window.terminal_character = stackNext;
                                         terminal_window.terminal_write = 1;
                                     }
                                     case 16hff21: {
-                                        // Terminal set showterminal
-                                        terminal_window.showterminal = stackNext;
+                                         terminal_window.showterminal = stackNext;
                                     }
+                                    
+                                    // LOWER SPRITE LAYER CONTROLS
+                                    case 16hff30: {
+                                        lower_sprites.sprite_set_number = stackNext;
+                                    }
+                                    case 16hff31: {
+                                        lower_sprites.sprite_set_active = stackNext;
+                                        lower_sprites.sprite_layer_write = 1;
+                                    }
+                                    case 16hff32: {
+                                        lower_sprites.sprite_set_tile = stackNext;
+                                        lower_sprites.sprite_layer_write = 2;
+                                    }
+                                    case 16hff33: {
+                                        lower_sprites.sprite_set_colour = stackNext;
+                                        lower_sprites.sprite_layer_write = 3;
+                                    }
+                                    case 16hff34: {
+                                        lower_sprites.sprite_set_x = stackNext;
+                                        lower_sprites.sprite_layer_write = 4;
+                                    }
+                                    case 16hff35: {
+                                        lower_sprites.sprite_set_y = stackNext;
+                                        lower_sprites.sprite_layer_write = 5;
+                                    }
+                                    case 16hff36: {
+                                        lower_sprites.sprite_writer_tile = stackNext;
+                                    }
+                                    case 16hff37: {
+                                        lower_sprites.sprite_writer_line = stackNext;
+                                    }
+                                    case 16hff38: {
+                                        lower_sprites.sprite_writer_bitmap = stackNext;
+                                        lower_sprites.sprite_layer_write = 8;
+                                    }
+                                    case 16hff3f: {
+                                        lower_sprites.sprite_layer_fade = stackNext;
+                                        lower_sprites.sprite_layer_write = 9;
+                                    }
+                                    
+                                    // UPPER SPRITE LAYER CONTROLS
+                                    case 16hff40: {
+                                        lower_sprites.sprite_set_number = stackNext;
+                                    }
+                                    case 16hff41: {
+                                        lower_sprites.sprite_set_active = stackNext;
+                                        lower_sprites.sprite_layer_write = 1;
+                                    }
+                                    case 16hff42: {
+                                        lower_sprites.sprite_set_tile = stackNext;
+                                        lower_sprites.sprite_layer_write = 2;
+                                    }
+                                    case 16hff43: {
+                                        lower_sprites.sprite_set_colour = stackNext;
+                                        lower_sprites.sprite_layer_write = 3;
+                                    }
+                                    case 16hff44: {
+                                        lower_sprites.sprite_set_x = stackNext;
+                                        lower_sprites.sprite_layer_write = 4;
+                                    }
+                                    case 16hff45: {
+                                        lower_sprites.sprite_set_y = stackNext;
+                                        lower_sprites.sprite_layer_write = 5;
+                                    }
+                                    case 16hff46: {
+                                        lower_sprites.sprite_writer_tile = stackNext;
+                                    }
+                                    case 16hff47: {
+                                        lower_sprites.sprite_writer_line = stackNext;
+                                    }
+                                    case 16hff48: {
+                                        lower_sprites.sprite_writer_bitmap = stackNext;
+                                        lower_sprites.sprite_layer_write = 8;
+                                    }
+                                    case 16hff4f: {
+                                        lower_sprites.sprite_layer_fade = stackNext;
+                                        lower_sprites.sprite_layer_write = 9;
+                                    }
+                                    
+                                    // BACKGROUND Controls
                                     case 16hfff0: {
-                                        // Set BACKGROUND colour
                                         background_generator.backgroundcolour = stackNext;
                                         background_generator.backgroundcolour_write = 1;
                                     }
                                     case 16hfff1: {
-                                        // Set alternative BACKGROUND colour
                                         background_generator.backgroundcolour_alt = stackNext;
                                         background_generator.backgroundcolour_write = 2;
                                     }
                                     case 16hfff2: {
-                                        // Set BACKGROUND colour mode
                                         background_generator.backgroundcolour_mode = stackNext;
                                         background_generator.backgroundcolour_write = 3;
                                     }
-                                    case 16hfff3: {
-                                        // Set BACKGROUND colour fade level
+                                    case 16hffff: {
                                         background_generator.backgroundcolour_fade = stackNext;
                                         background_generator.backgroundcolour_write = 4;
                                     }
@@ -815,6 +919,7 @@ $$end
                 character_map_window.tpu_write = 0;
                 terminal_window.terminal_write = 0;
                 background_generator.backgroundcolour_write = 0;
+                lower_sprites.sprite_layer_write = 0;
             }
             
             default: {}

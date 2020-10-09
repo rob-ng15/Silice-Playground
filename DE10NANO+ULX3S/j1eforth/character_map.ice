@@ -64,6 +64,9 @@ algorithm character_map(
     foreground.addr1 := tpu_active_x + tpu_active_y * 80;
     foreground.wenable1 := 0;
 
+    // Default to transparent
+    character_map_display := 0;
+    
     // TPU
     // tpu_write controls actions
     // 1 = set cursor position
@@ -112,8 +115,6 @@ algorithm character_map(
                         pix_green = colourexpand2to$color_depth$[ colour7(background.rdata0).green ];
                         pix_blue = colourexpand2to$color_depth$[ colour7(background.rdata0).blue ];
                         character_map_display = 1;
-                    } else {
-                        character_map_display = 0;
                     }
                 }
                 case 1: {

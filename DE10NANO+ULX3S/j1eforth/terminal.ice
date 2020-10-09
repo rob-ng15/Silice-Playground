@@ -50,6 +50,9 @@ algorithm terminal(
     // Setup the writing to the terminal memory
     terminal.wenable1 := 0;
 
+    // Default to transparent
+    terminal_display := 0;
+    
     // TERMINAL Actions
     // Write to terminal, move to next character and scroll
     always {

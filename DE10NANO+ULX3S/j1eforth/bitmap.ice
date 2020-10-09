@@ -63,6 +63,9 @@ algorithm bitmap(
     bitmap_B.wdata1 := colour7(bitmap_colour_write).blue;
     bitmap_B.wenable1 := 0;
 
+    // Default to transparent
+    bitmap_display := 0;
+    
     // Write to the bitmap
     always {
         switch( bitmap_write ) {
@@ -87,8 +90,6 @@ algorithm bitmap(
             pix_green = colourexpand2to$color_depth$[ bitmap_G.rdata0 ] >> bitmap_fade;
             pix_blue = colourexpand2to$color_depth$[ bitmap_B.rdata0 ] >> bitmap_fade;
             bitmap_display = 1;
-        } else {
-            bitmap_display = 0;
         }
     }
 }

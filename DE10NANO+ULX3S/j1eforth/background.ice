@@ -49,6 +49,31 @@ algorithm background(
                 pix_green = colourexpand2to$color_depth$[ colour6(background).green ] >> background_fade;
                 pix_blue = colourexpand2to$color_depth$[ colour6(background).blue ] >> background_fade;
             }
+            case 1: {
+                // SMALL checkerboard
+                switch( { pix_x[0,1], pix_y[0,1] } ) {
+                    case 2b00: {
+                        pix_red = colourexpand2to$color_depth$[ colour6(background).red ] >> background_fade;
+                        pix_green = colourexpand2to$color_depth$[ colour6(background).green ] >> background_fade;
+                        pix_blue = colourexpand2to$color_depth$[ colour6(background).blue ] >> background_fade;
+                    }
+                    case 2b01: {
+                        pix_red = colourexpand2to$color_depth$[ colour6(background_alt).red ] >> background_fade;
+                        pix_green = colourexpand2to$color_depth$[ colour6(background_alt).green ] >> background_fade;
+                        pix_blue = colourexpand2to$color_depth$[ colour6(background_alt).blue ] >> background_fade;
+                    }
+                    case 2b10: {
+                        pix_red = colourexpand2to$color_depth$[ colour6(background_alt).red ] >> background_fade;
+                        pix_green = colourexpand2to$color_depth$[ colour6(background_alt).green ] >> background_fade;
+                        pix_blue = colourexpand2to$color_depth$[ colour6(background_alt).blue ] >> background_fade;
+                    }
+                    case 2b11: {
+                        pix_red = colourexpand2to$color_depth$[ colour6(background).red ] >> background_fade;
+                        pix_green = colourexpand2to$color_depth$[ colour6(background).green ] >> background_fade;
+                        pix_blue = colourexpand2to$color_depth$[ colour6(background).blue ] >> background_fade;
+                    }
+                }
+            }
             default: {
                 pix_red = 0;
                 pix_green = 0;

@@ -199,8 +199,16 @@ The j1eforth wordlist has been extended to include some double (32 bit) integer 
 
 The VGA/HDMI output is a multiplexed bitmap and character display, with the following layers in order:
 
-* Background with configurable, but not yet implemented designs
-* - single { rrggbb } colour.
+* Background with configurable, but not yet fully implemented designs
+* - single { rrggbb } colour
+* - alternative { rrggbb } colour, used in some designs
+* - selectable solid or checkerboard display
+* - fader level
+* Lower Sprite Layer ( Partially implemented )
+* - 8 x 16 x 16 1 bit sprites each in one of { rrggbb } colours
+* - Each sprite can show one of 3 user settable tiles
+* - Each sprite can be visible/invisible
+* - Each sprite can be individually positioned
 * 640 x 480 64 colour { Arrggbb } bitmap display.
 * - If A (ALPHA) is 1, then the background colour is displayed.
 * - Includes a simple GPU to:
@@ -208,7 +216,7 @@ The VGA/HDMI output is a multiplexed bitmap and character display, with the foll
 * - - Lines (via Bresenham's Line Drawing Algorithm)
 * - - Circles (via Bresenham's Circle Drawing Algorithm) 
 * - - Filled rectangles
-* - - Blitter for 16 x 16 1 bit tiles
+* - - Blitter for 16 x 16 1 bit user settable tiles
 * 80 x 30 64 colour text display, using IBM 8x16 256 character ROM
 * - Includes a simple TPU to draw characters on the display (will be expanded)
 * - Each character has 3 attributes
@@ -232,6 +240,8 @@ rectangle! | ```colour x1 y1 x2 y2 rectangle!``` draws a rectangle from x1,y1 to
 line! | ```colour x1 y1 x2 y2 line!``` draws a line from x1,y1 to x2,y2 in colour
 circle! | ```colour xc yc r circle!``` draws a circle centred at xc,yc of radius r in colour
 blit1! | ```colour tile x y blit1!``` blits tilemap tile to x,y in colour
+blit1tile! | ```16bitmaplines tilenumber bit1tile!``` sets a blit1 tilemap tile to the 16 bitmap lines (see example below)
+lsltile! | ```16bitmaplines tilenumber lsltile!``` sets a lower sprite layer tilemap tile to the 16 bitmap lines
 cs! | ```cs!``` clears the bitmap (sets to transparent)
 tpucs! | ```tpucs!``` clears the character map (sets to transparent so the bitmap can show through)
 tpuxy! | ```x y tpuxy!``` moves the TPU cursor to x,y
@@ -280,12 +290,26 @@ ff14 | TPU set the foreground colour
 ff15 | TPU start<br>1 - Move to x,y<br>2 - Write character code in foreground colour, background colour to x,y and move to the next position<br>__Note__ No scrolling, wraps back to the top
 ff20 | TERMINAL outputs a character
 ff21 | TERMINAL show/hide<br>1 - Show the termnal<br>0 - Hide the terminal
+ff30 | LOWER SPRITE LAYER set sprite number to update the following:
+ff31 | LSL set sprite active flag
+ff32 | LSL set sprite tile number 0-63
+ff33 | LSL set sprite colour
+ff34 | LSL set sprite x coordinate
+ff35 | LSL set sprite y coordinate
+ff36 | LOWER SPRITE LAYER TILE BITMAP WRITER set tile number
+ff37 | LSLTBW set tile line
+ff38 | LSLTBW set tile bitmap
 fff0 | BACKGROUND set the background colour
 fff1 | BACKGROUND set the alternative background colour
-fff2 | BACKGROUND set the background mode<br>0 - Solid
-fff3 | BACKGROUND set the fade level
+fff2 | BACKGROUND set the background mode<br>0 - Solid, 1 - Small checkerboard
+ffff | BACKGROUND set the fade level
 
 ### GPU and TPU demonstration
+
+: spritetest
+ 0 ff30 ! 3c ff33 ! 10 ff34 ! 10 ff35 ! 1 ff31 !
+ 100 0 do i ff34 ! i ff35 ! loop ;
+ 
 
 ```
 : drawrectangles
@@ -377,6 +401,9 @@ ledtest
 
 * DISPLAY LIST
 * - List of GPU commands to be executed in sequence on activation to be drawn to the bitmap
+
+* BACKGROUND
+* - Implement more patterns
 
 ## Notes
 
