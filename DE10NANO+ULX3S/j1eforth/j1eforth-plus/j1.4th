@@ -973,7 +973,8 @@ t: line! ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 litera
 t: circle! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 4 literal gpu! t;
 t: blit1! ff01 literal ! ff00 literal ! ff03 literal ! ff02 literal ! 5 literal gpu! t;
 t: blit1tile! ff03 literal ! 10 literal begin 1- dup ff04 literal ! swap ff05 literal ! 6 literal gpu! dup 0= until drop t;
-t: lsltile! ff36 literal ! 10 literal begin 1- dup ff37 literal ! swap ff38 literal ! dup 0= until drop t;
+t: lsltile! ff36 literal ! 40 literal begin 1- dup ff37 literal ! swap ff38 literal ! dup 0= until drop t;
+t: usltile! ff46 literal ! 40 literal begin 1- dup ff47 literal ! swap ff48 literal ! dup 0= until drop t;
 t: cs! 40 literal 0 literal 0 literal 2f7 literal 1df literal rectangle! t;
 
 t: tpu! ff15 literal ! t;

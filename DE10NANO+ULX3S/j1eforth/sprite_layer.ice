@@ -1,3 +1,9 @@
+// Set maximum number of sprites per layer
+$$if not MAXSPRITES then
+$$MAXSPRITES = 8
+$$end
+
+
 algorithm sprite_layer(
     input   uint10  pix_x,
     input   uint10  pix_y,
@@ -14,11 +20,11 @@ algorithm sprite_layer(
     input   uint6   sprite_set_colour,
     input   int11   sprite_set_x,
     input   int11   sprite_set_y,
-    input   uint6   sprite_set_tile,
+    input   uint2   sprite_set_tile,
     
     // For setting sprite tile bitmaps
-    input   uint6   sprite_writer_tile,
-    input   uint4   sprite_writer_line,
+    input   uint3   sprite_writer_sprite,
+    input   uint6   sprite_writer_line,
     input   uint16  sprite_writer_bitmap,
     
     // Flag to start the above
@@ -34,22 +40,35 @@ algorithm sprite_layer(
 
     // Storage for the sprites
     // Stored as registers as needed instantly
-    uint1 sprite_active[8] = uninitialised;
-    int11 sprite_x[8] = uninitialised;
-    int11 sprite_y[8] = uninitialised;
-    uint6 sprite_colour[8] = { 6h0, 6h3, 6hc, 6hf, 6h30, 6h33, 6h3c, 6h3f };
-    uint6 sprite_tile_number[8] = uninitialised;
-    uint16 sprite_tiles[] = { 16h5555, 16ha0a0, 16h5555, 16ha0a0, 16h5555, 16ha0a0, 16h5555, 16ha0a0, 16h5555, 16ha0a0, 16h5555, 16ha0a0, 16h5555, 16ha0a0, 16h5555, 16ha0a0, 
-                                    16h701c, 16h1830, 16h820, 16h820, 16hff8, 16h3938, 16h3938, 16hfffe, 16hdff6, 16hdff6, 16h9c72, 16hd836, 16hc60, 16hc60, 16hee0, 16h0,
-                                    16hffff, 16hffff, 16hffff, 16hffff, 16hffff, 16hffff, 16hffff, 16hffff, 16hffff, 16hffff, 16hffff, 16hffff, 16hffff, 16hffff, 16hffff, 16hffff };
-    
+    uint1 sprite_active[$MAXSPRITES$] = uninitialised;
+    int11 sprite_x[$MAXSPRITES$] = uninitialised;
+    int11 sprite_y[$MAXSPRITES$] = uninitialised;
+    uint6 sprite_colour[$MAXSPRITES$] = uninitialised;
+    uint2 sprite_tile_number[$MAXSPRITES$] = uninitialised;
+
+    // One bram for each sprite
+$$for i=0,7 do
+    dualport_bram uint16 sprite_$i$_tiles[64] = uninitialised;
+$$end
+
     uint3 sprite_fade = 0;
 
+        // Calculate if each sprite is visible
 $$for i=0,7 do
-    // Calculate if each sprite is visible
-    uint1 sprite_$i$_visible := sprite_active[$i$] & ( pix_x >= sprite_x[$i$] ) & ( pix_x < sprite_x[$i$] + 16 ) & ( pix_y >= sprite_y[$i$] ) & ( pix_y < sprite_y[$i$] + 16 ) & ( sprite_tiles[ sprite_tile_number[$i$] * 16 + (pix_y - sprite_y[$i$] ) ] >> ( 15 - ( pix_x - sprite_x[$i$] ) ) & 1 );
+    uint1 sprite_$i$_visible := sprite_active[$i$] & ( pix_x >= sprite_x[$i$] ) & ( pix_x < sprite_x[$i$] + 16 ) & ( pix_y >= sprite_y[$i$] ) & ( pix_y < sprite_y[$i$] + 16 ) & ( sprite_$i$_tiles.rdata0 >> ( 15 - ( pix_x - sprite_x[$i$] ) ) & 1 );
 $$end
-    
+
+
+        // Set read and write address for the sprite tiles
+$$for i=0,7 do
+    sprite_$i$_tiles.addr0 := sprite_tile_number[$i$] * 16 + ( pix_y - sprite_y[$i$] );
+    sprite_$i$_tiles.wenable0 := 0;
+    sprite_$i$_tiles.addr1 := sprite_writer_line;
+    sprite_$i$_tiles.wdata1 := sprite_writer_bitmap;
+    sprite_$i$_tiles.wenable1 := 0;
+$$end
+
+
     // Default to transparent
     sprite_layer_display := 0;
     
@@ -72,8 +91,15 @@ $$end
             case 5: {
                 sprite_y[ sprite_set_number ] = sprite_set_y;
             }
-            case 8: {
-                sprite_tiles[ sprite_writer_tile * 16 + sprite_writer_line ] = sprite_writer_bitmap;
+            case 8: { 
+                switch( sprite_writer_sprite ) {
+$$for i=0,7 do
+                    case $i$: {
+                        sprite_$i$_tiles.wenable1 = 1;
+                    }
+$$end
+                    default: {}
+                }
             }
             case 9: {
                 sprite_fade = sprite_layer_fade;
@@ -85,61 +111,14 @@ $$end
     // Render the sprite layer
     while(1) {
         if( pix_active ) {
-            if( sprite_7_visible ) {
-                pix_red = colourexpand2to$color_depth$[ sprite_colour[7] >> 4 ] >> sprite_fade;
-                pix_green = colourexpand2to$color_depth$[ sprite_colour[7] >> 2 ] >> sprite_fade;
-                pix_blue = colourexpand2to$color_depth$[ sprite_colour[7] ] >> sprite_fade;
+$$for i=0,7 do
+            if( sprite_$i$_visible ) {
+                pix_red = colourexpand2to$color_depth$[ sprite_colour[$i$] >> 4 ] >> sprite_fade;
+                pix_green = colourexpand2to$color_depth$[ sprite_colour[$i$] >> 2 ] >> sprite_fade;
+                pix_blue = colourexpand2to$color_depth$[ sprite_colour[$i$] ] >> sprite_fade;
                 sprite_layer_display = 1;
-            } else {
-                if( sprite_6_visible ) {
-                    pix_red = colourexpand2to$color_depth$[ sprite_colour[6] >> 4 ] >> sprite_fade;
-                    pix_green = colourexpand2to$color_depth$[ sprite_colour[6] >> 2 ] >> sprite_fade;
-                    pix_blue = colourexpand2to$color_depth$[ sprite_colour[6] ]  >> sprite_fade;
-                    sprite_layer_display = 1;
-                } else {
-                    if( sprite_5_visible ) {
-                        pix_red = colourexpand2to$color_depth$[ sprite_colour[5] >> 4 ] >> sprite_fade;
-                        pix_green = colourexpand2to$color_depth$[ sprite_colour[5] >> 2 ] >> sprite_fade;
-                        pix_blue = colourexpand2to$color_depth$[ sprite_colour[5] ] >> sprite_fade;
-                        sprite_layer_display = 1;
-                    } else {
-                        if( sprite_4_visible ) {
-                            pix_red = colourexpand2to$color_depth$[ sprite_colour[4] >> 4 ] >> sprite_fade;
-                            pix_green = colourexpand2to$color_depth$[ sprite_colour[4] >> 2 ] >> sprite_fade;
-                            pix_blue = colourexpand2to$color_depth$[ sprite_colour[4] ] >> sprite_fade;
-                            sprite_layer_display = 1;
-                        } else {
-                            if( sprite_3_visible ) {
-                                pix_red = colourexpand2to$color_depth$[ sprite_colour[3] >> 4 ] >> sprite_fade;
-                                pix_green = colourexpand2to$color_depth$[ sprite_colour[3] >> 2 ] >> sprite_fade;
-                                pix_blue = colourexpand2to$color_depth$[ sprite_colour[3] ] >> sprite_fade;
-                                sprite_layer_display = 1;
-                            } else {
-                                if( sprite_2_visible ) {
-                                    pix_red = colourexpand2to$color_depth$[ sprite_colour[2] >> 4 ] >> sprite_fade;
-                                    pix_green = colourexpand2to$color_depth$[ sprite_colour[2] >> 2 ] >> sprite_fade;
-                                    pix_blue = colourexpand2to$color_depth$[ sprite_colour[2] ] >> sprite_fade;
-                                    sprite_layer_display = 1;
-                                } else {
-                                    if( sprite_1_visible ) {
-                                        pix_red = colourexpand2to$color_depth$[ sprite_colour[1] >> 4 ] >> sprite_fade;
-                                        pix_green = colourexpand2to$color_depth$[ sprite_colour[1] >> 2 ] >> sprite_fade;
-                                        pix_blue = colourexpand2to$color_depth$[ sprite_colour[1] ] >> sprite_fade;
-                                        sprite_layer_display = 1;
-                                    } else {
-                                        if( sprite_0_visible ) {
-                                            pix_red = colourexpand2to$color_depth$[ sprite_colour[0] >> 4 ] >> sprite_fade;
-                                            pix_green = colourexpand2to$color_depth$[ sprite_colour[0] >> 2 ] >> sprite_fade;
-                                            pix_blue = colourexpand2to$color_depth$[ sprite_colour[0] ] >> sprite_fade;
-                                            sprite_layer_display = 1;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
             }
+$$end
         }
     }
 }

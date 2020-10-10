@@ -25,7 +25,7 @@ algorithm bitmap(
     input uint3 bitmapcolour_fade
 
 ) <autorun> {
-    // 640 x 480 (de10nano) or 320 x 240 (ulx3s) x 10 bit { Arrrgggbbb } colour bitmap
+    // 640 x 480 x 7 bit { Arrggbb } colour bitmap
     dualport_bram uint1 bitmap_A[ $SIZE$ ] = uninitialized;
     dualport_bram uint2 bitmap_R[ $SIZE$ ] = uninitialized;
     dualport_bram uint2 bitmap_G[ $SIZE$ ] = uninitialized;
@@ -39,7 +39,6 @@ algorithm bitmap(
     uint3 bitmap_fade = 0;
 
     // Setup the address in the bitmap for the pixel being rendered
-    // ULX3S half the pix_x and pix_y to double the pixels
     bitmap_A.addr0 := pix_x + pix_y * $WIDTH$;
     bitmap_A.wenable0 := 0;
     bitmap_R.addr0 := pix_x + pix_y * $WIDTH$;
@@ -47,7 +46,7 @@ algorithm bitmap(
     bitmap_G.addr0 := pix_x + pix_y * $WIDTH$;
     bitmap_G.wenable0 := 0;
     bitmap_B.addr0 := pix_x + pix_y * $WIDTH$;
-   bitmap_B.wenable0 := 0;
+    bitmap_B.wenable0 := 0;
     
     // Bitmap write access for the GPU - Only enable when x and y are in range
     bitmap_A.addr1 := bitmap_x_write + bitmap_y_write * $WIDTH$;

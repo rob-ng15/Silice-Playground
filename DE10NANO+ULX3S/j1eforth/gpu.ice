@@ -81,9 +81,9 @@ algorithm gpu(
                         // Ensures that works left to right, top to bottom
                         // Cut out pixels out of 0 <= x <= 639 , 0 <= y <= 479
                         gpu_active_colour = gpu_colour;
-                        gpu_active_x = ( gpu_x < gpu_param0 ) ? ( gpu_x > 0 ? 0 : gpu_x ) : ( gpu_param0 > 0 ? 0 : gpu_param0 );                // left
-                        gpu_active_y = ( gpu_y < gpu_param1 ) ? ( gpu_y > 0 ? 0 : gpu_y ) : ( gpu_param1 > 0 ? 0 : gpu_param1 );                 // top
-                        gpu_x2 = ( gpu_x < gpu_param0 ) ? ( gpu_x > 0 ? 0 : gpu_x )  : ( gpu_param0 > 0 ? 0 : gpu_param0 );                       // left - for next line
+                        gpu_active_x = ( gpu_x < gpu_param0 ) ? ( gpu_x < 0 ? 0 : gpu_x ) : ( gpu_param0 < 0 ? 0 : gpu_param0 );                // left
+                        gpu_active_y = ( gpu_y < gpu_param1 ) ? ( gpu_y < 0 ? 0 : gpu_y ) : ( gpu_param1 < 0 ? 0 : gpu_param1 );                 // top
+                        gpu_x2 = ( gpu_x < gpu_param0 ) ? ( gpu_x < 0 ? 0 : gpu_x )  : ( gpu_param0 < 0 ? 0 : gpu_param0 );                       // left - for next line
                         gpu_w = ( gpu_x < gpu_param0 ) ? ( gpu_param0 > 639 ? 639 : gpu_param0 ) : ( gpu_x > 639 ? 639 : gpu_x );                        // right - at end of line
                         gpu_h = ( gpu_y < gpu_param1 ) ? ( gpu_param1 > 479 ? 479 : gpu_param1 ) : ( gpu_y > 479 ? 479 : gpu_y );                        // bottom - at end of rectangle
                         gpu_active = 1; 

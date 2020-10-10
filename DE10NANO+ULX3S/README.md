@@ -241,7 +241,8 @@ line! | ```colour x1 y1 x2 y2 line!``` draws a line from x1,y1 to x2,y2 in colou
 circle! | ```colour xc yc r circle!``` draws a circle centred at xc,yc of radius r in colour
 blit1! | ```colour tile x y blit1!``` blits tilemap tile to x,y in colour
 blit1tile! | ```16bitmaplines tilenumber bit1tile!``` sets a blit1 tilemap tile to the 16 bitmap lines (see example below)
-lsltile! | ```16bitmaplines tilenumber lsltile!``` sets a lower sprite layer tilemap tile to the 16 bitmap lines
+lsltile! | ```64bitmaplines spritenumber lsltile!``` sets a lower sprite layer tilemap for a sprite to the 64 bitmap lines
+usltile! | ```64bitmaplines spritenumber usltile!``` sets an upper sprite layer tilemap for a sprite to the 64 bitmap lines
 cs! | ```cs!``` clears the bitmap (sets to transparent)
 tpucs! | ```tpucs!``` clears the character map (sets to transparent so the bitmap can show through)
 tpuxy! | ```x y tpuxy!``` moves the TPU cursor to x,y
@@ -292,13 +293,24 @@ ff20 | TERMINAL outputs a character
 ff21 | TERMINAL show/hide<br>1 - Show the termnal<br>0 - Hide the terminal
 ff30 | LOWER SPRITE LAYER set sprite number to update the following:
 ff31 | LSL set sprite active flag
-ff32 | LSL set sprite tile number 0-63
+ff32 | LSL set sprite tile number 0-3
 ff33 | LSL set sprite colour
 ff34 | LSL set sprite x coordinate
 ff35 | LSL set sprite y coordinate
-ff36 | LOWER SPRITE LAYER TILE BITMAP WRITER set tile number
-ff37 | LSLTBW set tile line
+ff36 | LOWER SPRITE LAYER TILE BITMAP WRITER set sprite number
+ff37 | LSLTBW set tile line ( 0 - 63 )
 ff38 | LSLTBW set tile bitmap
+ff3f | LSL set the fade level
+ff40 | UPPER SPRITE LAYER set sprite number to update the following:
+ff41 | USL set sprite active flag
+ff42 | USL set sprite tile number 0-3
+ff43 | USL set sprite colour
+ff44 | USL set sprite x coordinate
+ff45 | USL set sprite y coordinate
+ff46 | UPPER SPRITE LAYER TILE BITMAP WRITER set sprite number
+ff47 | USLTBW set tile line ( 0 - 63 )
+ff48 | USLTBW set tile bitmap
+ff4f | USL set the fade level
 fff0 | BACKGROUND set the background colour
 fff1 | BACKGROUND set the alternative background colour
 fff2 | BACKGROUND set the background mode<br>0 - Solid, 1 - Small checkerboard
@@ -306,34 +318,35 @@ ffff | BACKGROUND set the fade level
 
 ### GPU and TPU demonstration
 
-: spritetest
- 0 ff30 ! 3c ff33 ! 10 ff34 ! 10 ff35 ! 1 ff31 !
- 100 0 do i ff34 ! i ff35 ! loop ;
- 
-
 ```
 : drawrectangles
   3f 0 do
-    i 0 i 20 i 20 + rectangle!
-    i i 0 i 20 + 20 rectangle!
-    i i 1ff i 20 + 21f rectangle!
-    i 1ff i 21f i 20 + rectangle!
-    i i i i 20 + i 20 + rectangle!
+    i 0 i 4 * 20 i 4 * 20 + rectangle!
+    i i 10 * 0 i 10 * 20 + 20 rectangle!
+    i i 10 * 1ff i 10 * 20 + 21f rectangle!
+    i 1ff i 10 * 21f i 10 * 20 + rectangle!
+    i i 10 * i 10 * i 10 * 20 + i 10 * 20 + rectangle!
   loop ;
 cs! drawrectangles
 
+```
+```
 : drawblocks
   3f 0 do
     i i i 200 200 rectangle!
   loop ;
 cs! drawblocks
 
+```
+```
 : drawcircles
   3f 0 do
     i 100 100 3f i - 2* circle!
   loop ;
 cs! drawcircles
-  
+
+```
+```
 701c 1830 820 820
 ff8 3938 3938 fffe
 dff6 dff6 9c72 d836
@@ -347,6 +360,8 @@ c60 c60 ee0 0
   loop ;
 cs! invaders
 
+```
+```
 : tputest
   3f 0 do
     40 i - tpubackground!
@@ -355,6 +370,8 @@ cs! invaders
   loop ;
 tpucs! tputest
 
+```
+```
 : ledtest
     base @ 2 base !
     tpucs!
@@ -365,8 +382,65 @@ tpucs! tputest
         8 tpuu.r tpuspace $" LEDs" tpu.$ 
         8000 0 do loop 
     loop
-    cr 0 led! base ! ;
+   cr 0 led! base ! ;
 ledtest
+
+```
+```
+: setsprites
+  7 0 do
+    5555 a0a0 5555 a0a0 5555 a0a0 5555 a0a0
+    5555 a0a0 5555 a0a0 5555 a0a0 5555 a0a0
+    a0a0 5555 a0a0 5555 a0a0 5555 a0a0 5555
+    a0a0 5555 a0a0 5555 a0a0 5555 a0a0 5555
+    701c 1830 820 820 ff8 3938 3938 fffe
+    dff6 dff6 9c72 d836 c60 c60 ee0 0
+    ffff ffff ffff ffff ffff ffff ffff ffff
+    ffff ffff ffff ffff ffff ffff ffff ffff 
+    i lsltile!
+    5555 a0a0 5555 a0a0 5555 a0a0 5555 a0a0
+    5555 a0a0 5555 a0a0 5555 a0a0 5555 a0a0
+    a0a0 5555 a0a0 5555 a0a0 5555 a0a0 5555
+    a0a0 5555 a0a0 5555 a0a0 5555 a0a0 5555
+    701c 1830 820 820 ff8 3938 3938 fffe
+    dff6 dff6 9c72 d836 c60 c60 ee0 0
+    ffff ffff ffff ffff ffff ffff ffff ffff
+    ffff ffff ffff ffff ffff ffff ffff ffff 
+    i usltile!
+  loop ;
+setsprites
+
+: screentest
+  100 0 do 
+    0 ff30 ! i ff34 ! i ff35 !
+    1 ff30 ! i ff34 ! 100 i - ff35 !
+    2 ff30 ! 100 i - ff34 ! i ff35 !
+    3 ff30 ! 100 i - ff34 ! 100 i - ff35 !
+    0 ff40 ! i ff44 ! 80 ff45 !
+    1 ff40 ! 80 ff44 ! i ff45 !
+    2 ff40 ! 100 i - ff44 ! 80 ff45 !
+    3 ff40 ! 80 ff44 ! 100 i - ff45 !
+    1000 0 do loop
+  loop ;
+cs! tpucs!
+1 background!
+4 fff1 !
+1 fff2 !
+
+15 70 0 90 100 rectangle!
+2a 0 70 100 90 rectangle!
+3f 80 80 40 circle!
+
+0 ff30 ! 3 ff33 ! 1 ff31 ! 0 ff32 !
+1 ff30 ! c ff33 ! 1 ff31 ! 1 ff32 !
+2 ff30 ! 30 ff33 ! 1 ff31 ! 2 ff32 !
+3 ff30 ! 3f ff33 ! 1 ff31 ! 3 ff32 !
+0 ff40 ! 0 ff43 ! 1 ff41 ! 0 ff42 !
+1 ff40 ! f ff43 ! 1 ff41 ! 1 ff42 !
+2 ff40 ! 33 ff43 ! 1 ff41 ! 2 ff42 !
+3 ff40 ! 3c ff43 ! 1 ff41 ! 3 ff42 !
+screentest
+
 ```
 
 ## Issues

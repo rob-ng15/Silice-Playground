@@ -39,6 +39,12 @@ algorithm multiplex_display(
     input uint$color_depth$ bitmap_b,
     input uint1   bitmap_display,
 
+    // UPPER SPRITES
+    input uint$color_depth$ upper_sprites_r,
+    input uint$color_depth$ upper_sprites_g,
+    input uint$color_depth$ upper_sprites_b,
+    input uint1   upper_sprites_display,
+
     // CHARACTER MAP
     input uint$color_depth$ character_map_r,
     input uint$color_depth$ character_map_g,
@@ -58,39 +64,46 @@ algorithm multiplex_display(
         
     // Draw the screen
     while (1) {
-        // wait until pix_active THEN BACKGROUND -> BITMAP -> CHARACTER MAP -> TERMINAL
+        // wait until pix_active THEN BACKGROUND -> LOWER SPRITES -> BITMAP -> UPPER SPRITES -> CHARACTER MAP -> TERMINAL
         if( pix_active ) {
-            // LOWER SPRITES OR BACKGROUND
-            if( lower_sprites_display ) {
-                pix_red = lower_sprites_r;
-                pix_green = lower_sprites_g;
-                pix_blue = lower_sprites_b;
-            } else {
-                // BACKGROUND
-                pix_red = background_r;
-                pix_green = background_g;
-                pix_blue = background_b;
-            }
-            
-            // BITMAP
-            if( bitmap_display ) {
-                pix_red = bitmap_r;
-                pix_green = bitmap_g;
-                pix_blue = bitmap_b;
-            }
-            
-            // CHARACTER MAP
-            if( character_map_display ) {
-                pix_red = character_map_r;
-                pix_green = character_map_g;
-                pix_blue = character_map_b;
-            }
-
             // TERMINAL
             if( terminal_display ) {
                 pix_red = terminal_r;
                 pix_green = terminal_g;
                 pix_blue = terminal_b;
+            } else {
+                // CHARACTER MAP
+                if( character_map_display ) {
+                    pix_red = character_map_r;
+                    pix_green = character_map_g;
+                    pix_blue = character_map_b;
+                } else {
+                    // UPPER SPRITES
+                    if( upper_sprites_display ) {
+                        pix_red = upper_sprites_r;
+                        pix_green = upper_sprites_g;
+                        pix_blue = upper_sprites_b;
+                    } else {
+                        // BITMAP
+                        if( bitmap_display ) {
+                            pix_red = bitmap_r;
+                            pix_green = bitmap_g;
+                            pix_blue = bitmap_b;
+                        } else {
+                            // LOWER SPRITES
+                            if( lower_sprites_display ) {
+                                pix_red = lower_sprites_r;
+                                pix_green = lower_sprites_g;
+                                pix_blue = lower_sprites_b;
+                            } else {
+                                // BACKGROUND
+                                pix_red = background_r;
+                                pix_green = background_g;
+                                pix_blue = background_b;
+                            }
+                        }
+                    }
+                }
             }
         } // pix_active
     }
@@ -345,6 +358,24 @@ $$end
         bitmap_write <: bitmap_write
     );
 
+    // Upper Sprite Layer - Between BITMAP and CHARACTER MAP
+    uint$color_depth$   upper_sprites_r = 0;
+    uint$color_depth$   upper_sprites_g = 0;
+    uint$color_depth$   upper_sprites_b = 0;
+    uint1               upper_sprites_display = 0;
+    
+    sprite_layer upper_sprites <@video_clock,!video_reset>
+    (
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: active,
+        pix_vblank <: vblank,
+        pix_red    :> upper_sprites_r,
+        pix_green  :> upper_sprites_g,
+        pix_blue   :> upper_sprites_b,
+        sprite_layer_display :> upper_sprites_display,
+    );
+        
     // Character Map Window
     uint$color_depth$   character_map_r = 0;
     uint$color_depth$   character_map_g = 0;
@@ -405,6 +436,11 @@ $$end
         bitmap_g <: bitmap_g,
         bitmap_b <: bitmap_b,
         bitmap_display <: bitmap_display,
+
+        upper_sprites_r <: upper_sprites_r,
+        upper_sprites_g <: upper_sprites_g,
+        upper_sprites_b <: upper_sprites_b,
+        upper_sprites_display <: upper_sprites_display,
      
         character_map_r <: character_map_r,
         character_map_g <: character_map_g,
@@ -462,18 +498,16 @@ $$end
     // CYCLE allows 1 clock cycle for BRAM access and 3 clock cycles for SPRAM access
     uint3 CYCLE = 0;
     
-    // UART input FIFO (512 character) as dualport bram (code from @sylefeb)
-    dualport_bram uint8 uartInBuffer[512] = uninitialized;
-    uint9 uartInBufferNext = 0;
-    uint9 uartInBufferTop = 0;
-    uint1 uartInHold = 1;
+    // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
+    dualport_bram uint8 uartInBuffer[4096] = uninitialized;
+    uint13 uartInBufferNext = 0;
+    uint13 uartInBufferTop = 0;
 
     // UART output FIFO (512 character) as dualport bram (code from @sylefeb)
     dualport_bram uint8 uartOutBuffer[512] = uninitialized;
     uint9 uartOutBufferNext = 0;
     uint9 uartOutBufferTop = 0;
     uint9 newuartOutBufferTop = 0;
-    uint1 uartOutHold = 0;
     
     // BRAM for CPU ram write enable mainained low, pulsed high
     ram_0.wenable0 := 0;
@@ -506,7 +540,6 @@ $$end
             // writes at uartInBufferTop (code from @sylefeb)
             uartInBuffer.wdata1  = ui.data_out;            
             uartInBufferTop      = uartInBufferTop + 1;
-            uartInHold = 1;
         }
         // WRITE to UART if characters in buffer and UART is ready
         if( ~(uartOutBufferNext == uartOutBufferTop) & ~( uo.busy ) ) {
@@ -809,7 +842,7 @@ $$end
                                         lower_sprites.sprite_layer_write = 5;
                                     }
                                     case 16hff36: {
-                                        lower_sprites.sprite_writer_tile = stackNext;
+                                        lower_sprites.sprite_writer_sprite = stackNext;
                                     }
                                     case 16hff37: {
                                         lower_sprites.sprite_writer_line = stackNext;
@@ -825,41 +858,41 @@ $$end
                                     
                                     // UPPER SPRITE LAYER CONTROLS
                                     case 16hff40: {
-                                        lower_sprites.sprite_set_number = stackNext;
+                                        upper_sprites.sprite_set_number = stackNext;
                                     }
                                     case 16hff41: {
-                                        lower_sprites.sprite_set_active = stackNext;
-                                        lower_sprites.sprite_layer_write = 1;
+                                        upper_sprites.sprite_set_active = stackNext;
+                                        upper_sprites.sprite_layer_write = 1;
                                     }
                                     case 16hff42: {
-                                        lower_sprites.sprite_set_tile = stackNext;
-                                        lower_sprites.sprite_layer_write = 2;
+                                        upper_sprites.sprite_set_tile = stackNext;
+                                        upper_sprites.sprite_layer_write = 2;
                                     }
                                     case 16hff43: {
-                                        lower_sprites.sprite_set_colour = stackNext;
-                                        lower_sprites.sprite_layer_write = 3;
+                                        upper_sprites.sprite_set_colour = stackNext;
+                                        upper_sprites.sprite_layer_write = 3;
                                     }
                                     case 16hff44: {
-                                        lower_sprites.sprite_set_x = stackNext;
-                                        lower_sprites.sprite_layer_write = 4;
+                                        upper_sprites.sprite_set_x = stackNext;
+                                        upper_sprites.sprite_layer_write = 4;
                                     }
                                     case 16hff45: {
-                                        lower_sprites.sprite_set_y = stackNext;
-                                        lower_sprites.sprite_layer_write = 5;
+                                        upper_sprites.sprite_set_y = stackNext;
+                                        upper_sprites.sprite_layer_write = 5;
                                     }
                                     case 16hff46: {
-                                        lower_sprites.sprite_writer_tile = stackNext;
+                                        upper_sprites.sprite_writer_sprite = stackNext;
                                     }
                                     case 16hff47: {
-                                        lower_sprites.sprite_writer_line = stackNext;
+                                        upper_sprites.sprite_writer_line = stackNext;
                                     }
                                     case 16hff48: {
-                                        lower_sprites.sprite_writer_bitmap = stackNext;
-                                        lower_sprites.sprite_layer_write = 8;
+                                        upper_sprites.sprite_writer_bitmap = stackNext;
+                                        upper_sprites.sprite_layer_write = 8;
                                     }
                                     case 16hff4f: {
-                                        lower_sprites.sprite_layer_fade = stackNext;
-                                        lower_sprites.sprite_layer_write = 9;
+                                        upper_sprites.sprite_layer_fade = stackNext;
+                                        upper_sprites.sprite_layer_write = 9;
                                     }
                                     
                                     // BACKGROUND Controls
@@ -914,12 +947,13 @@ $$end
                 dstack.addr = newDSP;
                 rstack.addr = newRSP;
             
-                // reset gpu, tpu, terminal and background
-                gpu_processor.gpu_write = 0;
-                character_map_window.tpu_write = 0;
-                terminal_window.terminal_write = 0;
+                // RESET BACKGROUND, LOWER SPRITE LAYER, BITMAP, UPPER SPRITE LAYER, CHARACTER MAP and TERMINAL controls
                 background_generator.backgroundcolour_write = 0;
                 lower_sprites.sprite_layer_write = 0;
+                gpu_processor.gpu_write = 0;
+                character_map_window.tpu_write = 0;
+                upper_sprites.sprite_layer_write = 0;
+                terminal_window.terminal_write = 0;
             }
             
             default: {}
