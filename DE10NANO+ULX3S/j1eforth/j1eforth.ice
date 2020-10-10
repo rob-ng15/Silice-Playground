@@ -312,7 +312,7 @@ $$end
     uint$color_depth$   lower_sprites_b = 0;
     uint1               lower_sprites_display = 0;
     
-   sprite_layer lower_sprites <@video_clock,!video_reset>
+    sprite_layer lower_sprites <@video_clock,!video_reset>
     (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -321,7 +321,7 @@ $$end
         pix_red    :> lower_sprites_r,
         pix_green  :> lower_sprites_g,
         pix_blue   :> lower_sprites_b,
-        sprite_layer_display :> lower_sprites_display,
+        sprite_layer_display :> lower_sprites_display
     );
         
     // Bitmap Window and GPU
@@ -373,7 +373,7 @@ $$end
         pix_red    :> upper_sprites_r,
         pix_green  :> upper_sprites_g,
         pix_blue   :> upper_sprites_b,
-        sprite_layer_display :> upper_sprites_display,
+        sprite_layer_display :> upper_sprites_display
     );
         
     // Character Map Window

@@ -16,28 +16,28 @@ j1eforth with the enhanced J1+ CPU for FOMU is coded in Silice (https://github.c
 
 I've, in my opinion, tidied up the code, to make the variables more explanatory, and to aid my coding.
 
-For communication with j1eforth there is a UART (working de10nano, not implemented ulx3s) which provides input and output, output is duplicated on the terminal display.
+For communication with j1eforth there is a UART which provides input and output, output is duplicated on the terminal display.
 
-__DE10NANO__ Open a terminal in the DE10NANO directory and type ```make de10nano```. Wait. Upload your design your DE10NNANO with ```quartus_pgm -m jtag -o "p;BUILD_de10nano/build.sof@2"```.
+__DE10NANO__ Open a terminal in the DE10NANO directory and type ```make de10nano```. Wait. Upload your design your DE10NNANO with ```quartus_pgm -m jtag -o "p;BUILD_de10nano/build.sof@2"```. Or download from this repository.
 
-__ULX3S__ Open a terminal in the DE10NANO directory and type ```make ulx3s```. Wait. Upload your design your ULX3S with ```fujproj BUILD_ulx3s build.bit```.
+__ULX3S__ Open a terminal in the DE10NANO directory and type ```make ulx3s```. Wait. Upload your design your ULX3S with ```fujproj BUILD_ulx3s/build.bit```. Or download from this repository.
 
 ### Resource Usage (de10nano)
 
 ```
-Fitter Status : Successful - Thu Oct  8 07:15:45 2020
+Fitter Status : Successful - Sat Oct 10 13:08:36 2020
 Quartus Prime Version : 20.1.0 Build 711 06/05/2020 SJ Lite Edition
 Revision Name : build
 Top-level Entity Name : top
 Family : Cyclone V
 Device : 5CSEBA6U23I7
 Timing Models : Final
-Logic utilization (in ALMs) : 2,637 / 41,910 ( 6 % )
-Total registers : 1131
+Logic utilization (in ALMs) : 4,333 / 41,910 ( 10 % )
+Total registers : 1898
 Total pins : 31 / 314 ( 10 % )
 Total virtual pins : 0
-Total block memory bits : 2,812,128 / 5,662,720 ( 50 % )
-Total RAM Blocks : 351 / 553 ( 63 % )
+Total block memory bits : 2,595,040 / 5,662,720 ( 46 % )
+Total RAM Blocks : 338 / 553 ( 61 % )
 Total DSP Blocks : 0 / 112 ( 0 % )
 Total HSSI RX PCSs : 0
 Total HSSI PMA RX Deserializers : 0
@@ -46,34 +46,10 @@ Total HSSI PMA TX Serializers : 0
 Total PLLs : 1 / 6 ( 17 % )
 Total DLLs : 0 / 4 ( 0 % )
 ```
+
 ### Resource Usage (ulx3s)
 ```
-Info: Device utilisation:
-Info: 	       TRELLIS_SLICE:  4069/41820     9%
-Info: 	          TRELLIS_IO:    26/  365     7%
-Info: 	                DCCA:     4/   56     7%
-Info: 	              DP16KD:    75/  208    36%
-Info: 	          MULT18X18D:     5/  156     3%
-Info: 	              ALU54B:     0/   78     0%
-Info: 	             EHXPLLL:     2/    4    50%
-Info: 	             EXTREFB:     0/    2     0%
-Info: 	                DCUA:     0/    2     0%
-Info: 	           PCSCLKDIV:     0/    2     0%
-Info: 	             IOLOGIC:     0/  224     0%
-Info: 	            SIOLOGIC:     0/  141     0%
-Info: 	                 GSR:     0/    1     0%
-Info: 	               JTAGG:     0/    1     0%
-Info: 	                OSCG:     0/    1     0%
-Info: 	               SEDGA:     0/    1     0%
-Info: 	                 DTR:     0/    1     0%
-Info: 	             USRMCLK:     0/    1     0%
-Info: 	             CLKDIVF:     0/    4     0%
-Info: 	           ECLKSYNCB:     0/   10     0%
-Info: 	             DLLDELD:     0/    8     0%
-Info: 	              DDRDLL:     0/    4     0%
-Info: 	             DQSBUFM:     0/   14     0%
-Info: 	     TRELLIS_ECLKBUF:     0/    8     0%
-Info: 	        ECLKBRIDGECS:     0/    2     0%
+Need recent compilation statistics.
 ```
 
 ## J1/J1+ CPU Architecture and Comparisons
@@ -204,19 +180,22 @@ The VGA/HDMI output is a multiplexed bitmap and character display, with the foll
 * - alternative { rrggbb } colour, used in some designs
 * - selectable solid or checkerboard display
 * - fader level
-* Lower Sprite Layer ( Partially implemented )
+* Lower Sprite Layer - between the background and the bitmap
 * - 8 x 16 x 16 1 bit sprites each in one of { rrggbb } colours
-* - Each sprite can show one of 3 user settable tiles
+* - Each sprite can show one of 3 user settable tiles. These tiles are specific to each sprite
 * - Each sprite can be visible/invisible
 * - Each sprite can be individually positioned
-* 640 x 480 64 colour { Arrggbb } bitmap display.
-* - If A (ALPHA) is 1, then the background colour is displayed.
+* - Fader level for the sprite layer
+* 640 x 480 64 colour { Arrggbb } bitmap display
+* - If A (ALPHA) is 1, then the layers below are displayed
 * - Includes a simple GPU to:
 * - - Draw pixels
 * - - Lines (via Bresenham's Line Drawing Algorithm)
 * - - Circles (via Bresenham's Circle Drawing Algorithm) 
 * - - Filled rectangles
 * - - Blitter for 16 x 16 1 bit user settable tiles
+* Upper Sprite Layer - between the bitmap and the character display
+* - Specifics as per the Lower Sprite Layer above
 * 80 x 30 64 colour text display, using IBM 8x16 256 character ROM
 * - Includes a simple TPU to draw characters on the display (will be expanded)
 * - Each character has 3 attributes
@@ -228,7 +207,7 @@ The VGA/HDMI output is a multiplexed bitmap and character display, with the foll
 * - Includes a flashing cursor
 * - Can be shown/hidden to allow the larger character 8x16 map or the bitmap to be fully displayed
 
-Due to the address space limitations of the J1+ CPU the bitmap, character map and terminal map cannot be memory mapped so these memory areas are controlled by the multiplex_display algorithm, providing a small GPU (graphics processing unit), a small TPU (text processing unit) and a small terminal interface. Words to control the GPU, TPU and TERMINAL are built into the j1eforth environment.
+Due to the address space limitations of the J1+ CPU the bitmap, character map, terminal map and sprite layers cannot be memory mapped so these memory areas are controlled by the multiplex_display algorithm, providing a small GPU (graphics processing unit), a small TPU (text processing unit), a small terminal interface and sprite layer controls . Some words to control the GPU, TPU, SPRITES TERMINAL are built into the j1eforth environment. Additional controls are provided by writing to the memory registers listed below.
 
 ### GPU and TPU added j1eforth words
 
@@ -411,7 +390,26 @@ ledtest
 setsprites
 
 : screentest
+  cs! tpucs!
+  1 background! 4 fff1 ! 1 fff2 !
+
+  15 70 0 a0 110 rectangle!
+  2a 0 70 110 a0 rectangle!
+  3f 90 90 40 circle!
+
+  0 ff30 ! 3 ff33 ! 1 ff31 ! 0 ff32 !
+  1 ff30 ! c ff33 ! 1 ff31 ! 1 ff32 !
+  2 ff30 ! 30 ff33 ! 1 ff31 ! 2 ff32 !
+  3 ff30 ! 3f ff33 ! 1 ff31 ! 3 ff32 !
+  0 ff40 ! 0 ff43 ! 1 ff41 ! 0 ff42 !
+  1 ff40 ! f ff43 ! 1 ff41 ! 1 ff42 !
+  2 ff40 ! 33 ff43 ! 1 ff41 ! 2 ff42 !
+  3 ff40 ! 3c ff43 ! 1 ff41 ! 3 ff42 !
+
+  3f tpubackground! 3 tpuforeground!
+
   100 0 do 
+    10 2 tpuxy! $" Counting " tpu.$ timer@ dup led! tpu.#    
     0 ff30 ! i ff34 ! i ff35 !
     1 ff30 ! i ff34 ! 100 i - ff35 !
     2 ff30 ! 100 i - ff34 ! i ff35 !
@@ -420,25 +418,9 @@ setsprites
     1 ff40 ! 80 ff44 ! i ff45 !
     2 ff40 ! 100 i - ff44 ! 80 ff45 !
     3 ff40 ! 80 ff44 ! 100 i - ff45 !
-    1000 0 do loop
+    
+    2000 0 do loop
   loop ;
-cs! tpucs!
-1 background!
-4 fff1 !
-1 fff2 !
-
-15 70 0 90 100 rectangle!
-2a 0 70 100 90 rectangle!
-3f 80 80 40 circle!
-
-0 ff30 ! 3 ff33 ! 1 ff31 ! 0 ff32 !
-1 ff30 ! c ff33 ! 1 ff31 ! 1 ff32 !
-2 ff30 ! 30 ff33 ! 1 ff31 ! 2 ff32 !
-3 ff30 ! 3f ff33 ! 1 ff31 ! 3 ff32 !
-0 ff40 ! 0 ff43 ! 1 ff41 ! 0 ff42 !
-1 ff40 ! f ff43 ! 1 ff41 ! 1 ff42 !
-2 ff40 ! 33 ff43 ! 1 ff41 ! 2 ff42 !
-3 ff40 ! 3c ff43 ! 1 ff41 ! 3 ff42 !
 screentest
 
 ```
@@ -461,10 +443,8 @@ screentest
 
 * GPU
 * - Complete line drawing - STEEP lines do not work
-* - DEBUG rectangle drawing
 * - BLITTER
-* - - 1 bit 16x16 blitter from a configurable 256 16 x 16 tilemap
-* - - 10 bit { Arrrgggbbb } 16 x 16 blitter from a configurable 64 16 x 16 tilemap (16384 * 10 bit, might be too big for the blockram)
+* - - 10 bit { Arrggbb } 16 x 16 blitter from a configurable 64 16 x 16 tilemap (16384 * 7 bit, might be too big for the blockram)
 
 * VECTOR LIST
 * - Provide a list of (up to 16) vertices for each vector
