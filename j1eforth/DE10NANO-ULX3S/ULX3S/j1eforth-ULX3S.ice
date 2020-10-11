@@ -15,4 +15,6 @@ $include('../sprite_layer.ice')
 
 import('../common/ulx3s_clk_50_25.v')
 import('../common/reset_conditioner.v')
+import('../common/ps2.v')
+
 $include('../j1eforth.ice')

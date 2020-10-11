@@ -190,6 +190,12 @@ $$end
     output! uint1   uart_tx,
     input   uint1   uart_rx,
 
+$$if ULX3S then
+    // PS2 Keyboard
+    input   uint1   ps2clk,
+    input   uint1   ps2data,
+$$end
+    
     // VGA/HDMI
     output! uint$color_depth$ video_r,
     output! uint$color_depth$ video_g,
@@ -220,6 +226,19 @@ $$end
         io      <:> ui,
         uart_rx <:  uart_rx
     );
+
+    // PS/2 Keyboard for the ULX3S
+$$if ULX3S then
+    uint8 ps2_key = 0;
+    uint1 ps2_strobe = 0;
+    ps2kbd keyboard(
+        clk <: clock,
+        ps2_clk  <: ps2clk,
+        ps2_data <: ps2data,
+        ps2_code :> ps2_key,
+        strobe   :> ps2_strobe
+    );
+$$end
 
     // VGA/HDMI Display
     uint1 video_reset = 0;
@@ -272,23 +291,23 @@ $$if DE10NANO then
         vga_y  :> pix_y
     );
 $$end
+
 $$if ULX3S then
+    uint8 video_r8 := video_r << 2;
+    uint8 video_g8 := video_g << 2;
+    uint8 video_b8 := video_b << 2;
 
-uint8 video_r8 := video_r << 2;
-uint8 video_g8 := video_g << 2;
-uint8 video_b8 := video_b << 2;
-
-hdmi video<@clock,!reset>(
-    x       :> pix_x,
-    y       :> pix_y,
-    active  :> active,
-    vblank  :> vblank,
-    gpdi_dp :> gpdi_dp,
-    gpdi_dn :> gpdi_dn,
-    red     <: video_r8,
-    green   <: video_g8,
-    blue    <: video_b8
-  );
+    hdmi video<@clock,!reset>(
+        x       :> pix_x,
+        y       :> pix_y,
+        active  :> active,
+        vblank  :> vblank,
+        gpdi_dp :> gpdi_dp,
+        gpdi_dn :> gpdi_dn,
+        red     <: video_r8,
+        green   <: video_g8,
+        blue    <: video_b8
+    );
 $$end
 
     // BACKGROUND
@@ -455,7 +474,7 @@ $$end
         terminal_b <: terminal_b,
         terminal_display <: terminal_display
     );
-
+    
     // J1+ CPU
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
     uint16  instruction = uninitialized;
@@ -498,13 +517,20 @@ $$end
     dualport_bram uint16 ram_1[8192] = uninitialized;
 
     // CYCLE to control each stage
-    // CYCLE allows 1 clock cycle for BRAM access and 3 clock cycles for SPRAM access
+    // CYCLE allows 1 clock cycle for BRAM access
     uint3 CYCLE = 0;
     
     // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
     dualport_bram uint8 uartInBuffer[4096] = uninitialized;
     uint13 uartInBufferNext = 0;
     uint13 uartInBufferTop = 0;
+
+$$if ULX3S then
+    // PS/2 input FIFO (16 character) as dualport bram (code from @sylefeb)
+    dualport_bram uint8 ps2InBuffer[16] = uninitialized;
+    uint4 ps2InBufferNext = 0;
+    uint4 ps2InBufferTop = 0;
+$$end
 
     // UART output FIFO (512 character) as dualport bram (code from @sylefeb)
     dualport_bram uint8 uartOutBuffer[512] = uninitialized;
@@ -522,7 +548,14 @@ $$end
     dstack.wenable         := 0;  
     rstack.wenable         := 0;
 
-    // dual port bram for dtsack and strack
+    // UART and PS/2 Buffers
+    $$if ULX3S then
+        ps2InBuffer.wenable0  := 0;  // always read  on port 0
+        ps2InBuffer.wenable1  := 1;  // always write on port 1
+        ps2InBuffer.addr0     := ps2InBufferNext; // FIFO reads on next
+        ps2InBuffer.addr1     := ps2InBufferTop;  // FIFO writes on top
+    $$end
+
     uartInBuffer.wenable0  := 0;  // always read  on port 0
     uartInBuffer.wenable1  := 1;  // always write on port 1
     uartInBuffer.addr0     := uartInBufferNext; // FIFO reads on next
@@ -538,6 +571,14 @@ $$end
 
     // UART input and output buffering
     always {
+    $$if ULX3S then
+            // READ from PS/2 if character available and store
+            if( ps2_strobe ) {
+                // writes at ps2InBufferTop (code from @sylefeb)
+                ps2InBuffer.wdata1  = ps2_key;            
+                ps2InBufferTop      = ps2InBufferTop + 1;
+            }
+    $$end
         // READ from UART if character available and store
         if( ui.data_out_ready ) {
             // writes at uartInBufferTop (code from @sylefeb)
@@ -674,12 +715,31 @@ $$end
                                             switch( stackTop ) {
                                                 case 16hf000: {
                                                     // INPUT from UART reads at uartInBufferNext (code from @sylefeb)
+                                                    // for ULX3S prioritises PS/2 keyboard over UART
+                                                    $$if DE10NANO then
                                                     newStackTop = { 8b0, uartInBuffer.rdata0 };
                                                     uartInBufferNext = uartInBufferNext + 1;
+                                                    $$end
+                                                    $$if ULX3S then
+                                                        if( ~( ps2InBufferNext == ps2InBufferTop ) ) {
+                                                            //PS/2
+                                                            newStackTop = { 8b0, ps2InBuffer.rdata0 };
+                                                            ps2InBufferNext = ps2InBufferNext + 1;
+                                                        } else {
+                                                            //UART
+                                                            newStackTop = { 8b0, uartInBuffer.rdata0 };
+                                                            uartInBufferNext = uartInBufferNext + 1;
+                                                        }
+                                                    $$end
                                                 } 
                                                 case 16hf001: {
                                                     // UART status register { 14b0, tx full, rx available }
+                                                    $$if DE10NANO then
                                                     newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ~( uartInBufferNext == uartInBufferTop )};
+                                                    $$end
+                                                    $$if ULX3S then
+                                                    newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ~( uartInBufferNext == uartInBufferTop ) | ~( ps2InBufferNext == ps2InBufferTop ) };
+                                                    $$end
                                                 }
                                                 case 16hf002: {
                                                     // RGB LED status
@@ -742,6 +802,9 @@ $$end
                                                 }
                                                 case 16hff49: {
                                                     newStackTop = upper_sprites.sprites_at_xy;
+                                                }
+                                                case 16hffff: {
+                                                    newStackTop = vblank;
                                                 }
                                                 default: {newStackTop = memoryInput;}
                                             }
@@ -911,6 +974,10 @@ $$end
                                     case 16hff3b: {
                                         lower_sprites.sprites_at_y = stackNext;
                                     }
+                                    case 16hff3c: {
+                                        lower_sprites.sprite_update = stackNext;
+                                        lower_sprites.sprite_layer_write = 10;
+                                    }
                                     case 16hff3f: {
                                         lower_sprites.sprite_layer_fade = stackNext;
                                         lower_sprites.sprite_layer_write = 9;
@@ -946,15 +1013,19 @@ $$end
                                     case 16hff47: {
                                         upper_sprites.sprite_writer_line = stackNext;
                                     }
+                                    case 16hff48: {
+                                        upper_sprites.sprite_writer_bitmap = stackNext;
+                                        upper_sprites.sprite_layer_write = 8;
+                                    }
                                     case 16hff4a: {
                                         upper_sprites.sprites_at_x = stackNext;
                                     }
                                     case 16hff4b: {
                                         upper_sprites.sprites_at_y = stackNext;
                                     }
-                                    case 16hff48: {
-                                        upper_sprites.sprite_writer_bitmap = stackNext;
-                                        upper_sprites.sprite_layer_write = 8;
+                                    case 16hff4c: {
+                                        upper_sprites.sprite_update = stackNext;
+                                        upper_sprites.sprite_layer_write = 10;
                                     }
                                     case 16hff4f: {
                                         upper_sprites.sprite_layer_fade = stackNext;

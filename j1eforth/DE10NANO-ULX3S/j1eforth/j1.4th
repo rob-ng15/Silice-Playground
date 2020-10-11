@@ -963,19 +963,27 @@ t: d2* 2dup d+ t;
 t: d2/ dup f literal lshift >r 2/ swap 2/ r> or swap t;
 t: d1- 1 literal s>d dnegate d+ t;
 
-( GPU, TPU and TERMINAL helpers)
+( DISPLAY helper words )
+t: vblank begin ffff literal @ 0= until t;
+
+t: background! fff2 literal ! fff1 literal ! fff0 literal ! t;
+
 t: gpu? begin ff07 literal @ 0= until t;
 t: gpu! gpu? ff07 literal ! t;
-t: background! fff0 literal ! t;
 t: pixel! ff01 literal ! ff00 literal ! ff02 literal ! 1 literal gpu! t;
 t: rectangle! ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 2 literal gpu! t;
 t: line! ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 3 literal gpu! t;
 t: circle! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 4 literal gpu! t;
 t: blit1! ff01 literal ! ff00 literal ! ff03 literal ! ff02 literal ! 5 literal gpu! t;
 t: blit1tile! ff03 literal ! 10 literal begin 1- dup ff04 literal ! swap ff05 literal ! 6 literal gpu! dup 0= until drop t;
-t: lsltile! ff36 literal ! 40 literal begin 1- dup ff37 literal ! swap ff38 literal ! dup 0= until drop t;
-t: usltile! ff46 literal ! 40 literal begin 1- dup ff47 literal ! swap ff48 literal ! dup 0= until drop t;
 t: cs! 40 literal 0 literal 0 literal 2f7 literal 1df literal rectangle! t;
+
+t: lsltile! ff36 literal ! 40 literal begin 1- dup ff37 literal ! swap ff38 literal ! dup 0= until drop t;
+t: lslsprite! ff30 literal ! ff31 literal ! ff32 literal ! ff33 literal ! ff35 literal ! ff34 literal ! t;
+t: lslupdate! ff30 literal ! ff3c literal ! t;
+t: usltile! ff46 literal ! 40 literal begin 1- dup ff47 literal ! swap ff48 literal ! dup 0= until drop t;
+t: uslsprite! ff40 literal ! ff41 literal ! ff42 literal ! ff43 literal ! ff45 literal ! ff44 literal ! t;
+t: uslupdate! ff40 literal ! ff4c literal ! t;
 
 t: tpu! ff15 literal ! t;
 t: tpuxy! ( x y ) ff11 literal ! ff10 literal ! 1 literal tpu! t;

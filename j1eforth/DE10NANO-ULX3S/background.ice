@@ -23,6 +23,12 @@ algorithm background(
     uint3 background_mode = 0;
     uint3 background_fade = 0;
     
+    // Static large number generator
+    uint38 static_0 = 38b10101111110010010001000010100001110001;
+    uint38 static_0a = 38b10101111110010010001000010100001110001;
+    uint27 static_1 = 27b111010101000011010011100001;
+    uint27 static_1a = 27b111010101000011010011100001;
+
     always {
         switch( backgroundcolour_write ) {
             case 1: {
@@ -38,6 +44,18 @@ algorithm background(
                 background_fade = backgroundcolour_fade;
             }
             default: {}
+        }
+
+        // Generate static grey scale values
+        if( static_0a == 0 ) {
+            static_0a = static_0;
+        } else {
+            static_0a = static_0a >> 1;
+        }
+        if( static_1a == 0 ) {
+            static_1a = static_1;
+        } else {
+            static_1a = static_1a >> 1;
         }
     }
     
@@ -148,6 +166,57 @@ algorithm background(
                         pix_blue = colourexpand2to$color_depth$[ colour6(background).blue ] >> background_fade;
                     }
                 }
+            }
+            case 5: {
+                // 8 colour rainbow
+                switch( pix_y[6,3] ) {
+                    case 3b000: {
+                        pix_red = colourexpand2to$color_depth$[ 2 ] >> background_fade;
+                        pix_green = 0;
+                        pix_blue = 0;
+                    }
+                    case 3b001: {
+                        pix_red = colourexpand2to$color_depth$[ 3 ] >> background_fade;
+                        pix_green = 0;
+                        pix_blue = 0;
+                    }
+                    case 3b010: {
+                        pix_red = colourexpand2to$color_depth$[ 3 ] >> background_fade;
+                        pix_green = colourexpand2to$color_depth$[ 2 ] >> background_fade;
+                        pix_blue = 0;
+                    }
+                    case 3b011: {
+                        pix_red = colourexpand2to$color_depth$[ 3 ] >> background_fade;
+                        pix_green = colourexpand2to$color_depth$[ 3 ] >> background_fade;
+                        pix_blue = 0;
+                    }
+                    case 3b100: {
+                        pix_red = 0;
+                        pix_green = colourexpand2to$color_depth$[ 3 ] >> background_fade;
+                        pix_blue = 0;
+                    }
+                    case 3b101: {
+                        pix_red = 0;
+                        pix_green = 0;
+                        pix_blue = colourexpand2to$color_depth$[ 3 ] >> background_fade;
+                    }
+                    case 3b110: {
+                        pix_red = colourexpand2to$color_depth$[ 1 ] >> background_fade;
+                        pix_green = 0;
+                        pix_blue = colourexpand2to$color_depth$[ 2 ] >> background_fade;
+                    }
+                    case 3b111: {
+                        pix_red = colourexpand2to$color_depth$[ 1 ] >> background_fade;
+                        pix_green = colourexpand2to$color_depth$[ 2 ] >> background_fade;
+                        pix_blue = colourexpand2to$color_depth$[ 3 ] >> background_fade;
+                    }
+                }
+            }
+            case 6: {
+                // Static
+                pix_red = colourexpand2to$color_depth$[ { static_0a[0,1], static_1a[0,1] } ] >> background_fade;
+                pix_green = colourexpand2to$color_depth$[ { static_0a[0,1], static_1a[0,1] } ] >> background_fade;
+                pix_blue = colourexpand2to$color_depth$[ { static_0a[0,1], static_1a[0,1] } ] >> background_fade;
             }
             default: {
                 pix_red = 0;
