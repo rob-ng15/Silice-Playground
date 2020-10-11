@@ -333,12 +333,14 @@ $$end
     int11               bitmap_y_write = 0;
     uint7               bitmap_colour_write = 0;
     uint2               bitmap_write = 0;
+    uint3               bitmapcolour_fade = 0;
 
     gpu gpu_processor <@video_clock,!video_reset>
     (
         bitmap_x_write :> bitmap_x_write,
         bitmap_y_write :> bitmap_y_write,
         bitmap_colour_write :> bitmap_colour_write,
+        bitmapcolour_fade :> bitmapcolour_fade,
         bitmap_write :> bitmap_write
     );
 
@@ -355,6 +357,7 @@ $$end
         bitmap_x_write <: bitmap_x_write,
         bitmap_y_write <: bitmap_y_write,
         bitmap_colour_write <: bitmap_colour_write,
+        bitmapcolour_fade <: bitmapcolour_fade,
         bitmap_write <: bitmap_write
     );
 
@@ -698,6 +701,48 @@ $$end
                                                     // Terminal Active Status
                                                     newStackTop = terminal_window.terminal_active;
                                                 }
+                                                case 16hff08: {
+                                                    // Read BITMAP pixel
+                                                    newStackTop = bitmap_window.bitmap_colour_read;
+                                                }
+                                                // LOWER SPRITES READ
+                                                case 16hff31: {
+                                                    newStackTop = lower_sprites.sprite_read_active;
+                                                }
+                                                case 16hff32: {
+                                                    newStackTop = lower_sprites.sprite_read_tile;
+                                                }
+                                                case 16hff33: {
+                                                    newStackTop = lower_sprites.sprite_read_colour;
+                                                }
+                                                case 16hff34: {
+                                                    newStackTop = lower_sprites.sprite_read_x;
+                                                }
+                                                case 16hff35: {
+                                                    newStackTop = lower_sprites.sprite_read_y;
+                                                }
+                                                case 16hff39: {
+                                                    newStackTop = lower_sprites.sprites_at_xy;
+                                                }
+                                                // UPPER SPRITES READ
+                                                case 16hff41: {
+                                                    newStackTop = upper_sprites.sprite_read_active;
+                                                }
+                                                case 16hff42: {
+                                                    newStackTop = upper_sprites.sprite_read_tile;
+                                                }
+                                                case 16hff43: {
+                                                    newStackTop = upper_sprites.sprite_read_colour;
+                                                }
+                                                case 16hff44: {
+                                                    newStackTop = upper_sprites.sprite_read_x;
+                                                }
+                                                case 16hff45: {
+                                                    newStackTop = upper_sprites.sprite_read_y;
+                                                }
+                                                case 16hff49: {
+                                                    newStackTop = upper_sprites.sprites_at_xy;
+                                                }
                                                 default: {newStackTop = memoryInput;}
                                             }
                                         }
@@ -784,10 +829,19 @@ $$end
                                    case 16hff06: {
                                         gpu_processor.gpu_param3 = stackNext;
                                     }
-                                   case 16hff07: {
+                                    case 16hff07: {
                                         gpu_processor.gpu_write = stackNext;
                                     }
-                                    
+                                    case 16hff09: {
+                                        bitmap_window.bitmap_x_read = stackNext;
+                                    }
+                                    case 16hff0a: {
+                                        bitmap_window.bitmap_y_read = stackNext;
+                                    }
+                                    case 16hff0f: {
+                                        gpu_processor.gpu_param0 = stackNext;
+                                        gpu_processor.gpu_write = 7;
+                                    }
                                     // TPU Controls
                                     case 16hff10: {
                                         character_map_window.tpu_x = stackNext;
@@ -851,6 +905,12 @@ $$end
                                         lower_sprites.sprite_writer_bitmap = stackNext;
                                         lower_sprites.sprite_layer_write = 8;
                                     }
+                                    case 16hff3a: {
+                                        lower_sprites.sprites_at_x = stackNext;
+                                    }
+                                    case 16hff3b: {
+                                        lower_sprites.sprites_at_y = stackNext;
+                                    }
                                     case 16hff3f: {
                                         lower_sprites.sprite_layer_fade = stackNext;
                                         lower_sprites.sprite_layer_write = 9;
@@ -885,6 +945,12 @@ $$end
                                     }
                                     case 16hff47: {
                                         upper_sprites.sprite_writer_line = stackNext;
+                                    }
+                                    case 16hff4a: {
+                                        upper_sprites.sprites_at_x = stackNext;
+                                    }
+                                    case 16hff4b: {
+                                        upper_sprites.sprites_at_y = stackNext;
                                     }
                                     case 16hff48: {
                                         upper_sprites.sprite_writer_bitmap = stackNext;

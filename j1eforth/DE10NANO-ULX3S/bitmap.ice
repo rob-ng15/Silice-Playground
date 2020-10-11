@@ -39,13 +39,14 @@ algorithm bitmap(
     uint3 bitmap_fade = 0;
 
     // Setup the address in the bitmap for the pixel being rendered
-    bitmap_A.addr0 := pix_x + pix_y * $WIDTH$;
+    // Use pre-fetching of the next pixel ready for the next cycle
+    bitmap_A.addr0 := ( pix_active ? pix_x + 1 : 0 ) + ( pix_vblank ? 0 : pix_y * $WIDTH$ );
     bitmap_A.wenable0 := 0;
-    bitmap_R.addr0 := pix_x + pix_y * $WIDTH$;
+    bitmap_R.addr0 := ( pix_active ? pix_x + 1 : 0 ) + ( pix_vblank ? 0 : pix_y * $WIDTH$ );
     bitmap_R.wenable0 := 0;
-    bitmap_G.addr0 := pix_x + pix_y * $WIDTH$;
+    bitmap_G.addr0 := ( pix_active ? pix_x + 1 : 0 ) + ( pix_vblank ? 0 : pix_y * $WIDTH$ );
     bitmap_G.wenable0 := 0;
-    bitmap_B.addr0 := pix_x + pix_y * $WIDTH$;
+    bitmap_B.addr0 := ( pix_active ? pix_x + 1 : 0 ) + ( pix_vblank ? 0 : pix_y * $WIDTH$ );
     bitmap_B.wenable0 := 0;
     
     // Bitmap write access for the GPU - Only enable when x and y are in range
@@ -84,11 +85,16 @@ algorithm bitmap(
     
     // Render the bitmap
     while(1) {
-        if( ~bitmap_A.rdata0 ) {
-            pix_red = colourexpand2to$color_depth$[ bitmap_R.rdata0 ] >> bitmap_fade;
-            pix_green = colourexpand2to$color_depth$[ bitmap_G.rdata0 ] >> bitmap_fade;
-            pix_blue = colourexpand2to$color_depth$[ bitmap_B.rdata0 ] >> bitmap_fade;
-            bitmap_display = 1;
+        if( pix_active ) {
+            if( ~bitmap_A.rdata0 ) {
+                pix_red = colourexpand2to$color_depth$[ bitmap_R.rdata0 ] >> bitmap_fade;
+                pix_green = colourexpand2to$color_depth$[ bitmap_G.rdata0 ] >> bitmap_fade;
+                pix_blue = colourexpand2to$color_depth$[ bitmap_B.rdata0 ] >> bitmap_fade;
+                bitmap_display = 1;
+            }
+            if( ( pix_x == bitmap_x_read ) & ( pix_y == bitmap_y_read ) ) {
+                bitmap_colour_read = { bitmap_A.rdata0, bitmap_R.rdata0, bitmap_G.rdata0, bitmap_B.rdata0 };
+            }
         }
     }
 }

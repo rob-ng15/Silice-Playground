@@ -4,6 +4,7 @@ algorithm gpu(
     output! int11 bitmap_y_write,
     output! uint7 bitmap_colour_write,
     output! uint2 bitmap_write,
+    output! uint3 bitmapcolour_fade,
     
     input int11 gpu_x,
     input int11 gpu_y,
@@ -131,6 +132,11 @@ algorithm gpu(
                         // Write to tilemap param0 line param1 value gpu_param2
                         // Done directly, does not activate the GPU
                         blit1tilemap.wenable1 = 1;
+                    }
+                    case 7: {
+                        // Set the bitmap fade level
+                        bitmapcolour_fade = gpu_param0;
+                        bitmap_write = 2;
                     }
                     default: {}
                 }

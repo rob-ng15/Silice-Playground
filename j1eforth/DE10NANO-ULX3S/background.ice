@@ -74,6 +74,81 @@ algorithm background(
                     }
                 }
             }
+            case 2: {
+                // MEDIUM checkerboard
+                switch( { pix_x[1,1], pix_y[1,1] } ) {
+                    case 2b00: {
+                        pix_red = colourexpand2to$color_depth$[ colour6(background).red ] >> background_fade;
+                        pix_green = colourexpand2to$color_depth$[ colour6(background).green ] >> background_fade;
+                        pix_blue = colourexpand2to$color_depth$[ colour6(background).blue ] >> background_fade;
+                    }
+                    case 2b01: {
+                        pix_red = colourexpand2to$color_depth$[ colour6(background_alt).red ] >> background_fade;
+                        pix_green = colourexpand2to$color_depth$[ colour6(background_alt).green ] >> background_fade;
+                        pix_blue = colourexpand2to$color_depth$[ colour6(background_alt).blue ] >> background_fade;
+                    }
+                    case 2b10: {
+                        pix_red = colourexpand2to$color_depth$[ colour6(background_alt).red ] >> background_fade;
+                        pix_green = colourexpand2to$color_depth$[ colour6(background_alt).green ] >> background_fade;
+                        pix_blue = colourexpand2to$color_depth$[ colour6(background_alt).blue ] >> background_fade;
+                    }
+                    case 2b11: {
+                        pix_red = colourexpand2to$color_depth$[ colour6(background).red ] >> background_fade;
+                        pix_green = colourexpand2to$color_depth$[ colour6(background).green ] >> background_fade;
+                        pix_blue = colourexpand2to$color_depth$[ colour6(background).blue ] >> background_fade;
+                    }
+                }
+            }
+            case 3: {
+                // LARGE checkerboard
+                switch( { pix_x[2,1], pix_y[2,1] } ) {
+                    case 2b00: {
+                        pix_red = colourexpand2to$color_depth$[ colour6(background).red ] >> background_fade;
+                        pix_green = colourexpand2to$color_depth$[ colour6(background).green ] >> background_fade;
+                        pix_blue = colourexpand2to$color_depth$[ colour6(background).blue ] >> background_fade;
+                    }
+                    case 2b01: {
+                        pix_red = colourexpand2to$color_depth$[ colour6(background_alt).red ] >> background_fade;
+                        pix_green = colourexpand2to$color_depth$[ colour6(background_alt).green ] >> background_fade;
+                        pix_blue = colourexpand2to$color_depth$[ colour6(background_alt).blue ] >> background_fade;
+                    }
+                    case 2b10: {
+                        pix_red = colourexpand2to$color_depth$[ colour6(background_alt).red ] >> background_fade;
+                        pix_green = colourexpand2to$color_depth$[ colour6(background_alt).green ] >> background_fade;
+                        pix_blue = colourexpand2to$color_depth$[ colour6(background_alt).blue ] >> background_fade;
+                    }
+                    case 2b11: {
+                        pix_red = colourexpand2to$color_depth$[ colour6(background).red ] >> background_fade;
+                        pix_green = colourexpand2to$color_depth$[ colour6(background).green ] >> background_fade;
+                        pix_blue = colourexpand2to$color_depth$[ colour6(background).blue ] >> background_fade;
+                    }
+                }
+            }
+            case 4: {
+                // HUGE checkerboard
+                switch( { pix_x[3,1], pix_y[3,1] } ) {
+                    case 2b00: {
+                        pix_red = colourexpand2to$color_depth$[ colour6(background).red ] >> background_fade;
+                        pix_green = colourexpand2to$color_depth$[ colour6(background).green ] >> background_fade;
+                        pix_blue = colourexpand2to$color_depth$[ colour6(background).blue ] >> background_fade;
+                    }
+                    case 2b01: {
+                        pix_red = colourexpand2to$color_depth$[ colour6(background_alt).red ] >> background_fade;
+                        pix_green = colourexpand2to$color_depth$[ colour6(background_alt).green ] >> background_fade;
+                        pix_blue = colourexpand2to$color_depth$[ colour6(background_alt).blue ] >> background_fade;
+                    }
+                    case 2b10: {
+                        pix_red = colourexpand2to$color_depth$[ colour6(background_alt).red ] >> background_fade;
+                        pix_green = colourexpand2to$color_depth$[ colour6(background_alt).green ] >> background_fade;
+                        pix_blue = colourexpand2to$color_depth$[ colour6(background_alt).blue ] >> background_fade;
+                    }
+                    case 2b11: {
+                        pix_red = colourexpand2to$color_depth$[ colour6(background).red ] >> background_fade;
+                        pix_green = colourexpand2to$color_depth$[ colour6(background).green ] >> background_fade;
+                        pix_blue = colourexpand2to$color_depth$[ colour6(background).blue ] >> background_fade;
+                    }
+                }
+            }
             default: {
                 pix_red = 0;
                 pix_green = 0;
