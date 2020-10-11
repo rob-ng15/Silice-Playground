@@ -79,7 +79,7 @@ ledtest
 
 ```
 : setsprites
-  3 0 do
+  7 0 do
     5555 a0a0 5555 a0a0 5555 a0a0 5555 a0a0
     5555 a0a0 5555 a0a0 5555 a0a0 5555 a0a0
     a0a0 5555 a0a0 5555 a0a0 5555 a0a0 5555
@@ -105,23 +105,28 @@ setsprites
   cs! tpucs!
   1 4 1 background!
 
-  15 70 0 a0 110 rectangle!
-  2a 0 70 110 a0 rectangle!
-  3f 90 90 40 circle!
-
-  0 0 3 1 1 0 lslsprite!
-  0 100 c 1 1 1 lslsprite!
-  100 0 30 2 1 2 lslsprite!
-  100 100 3f 2 1 3 lslsprite!
-  0 80 0 0 1 0 uslsprite!
-  80 0 f 1 1 1 uslsprite!
-  100 80 33 2 1 2 uslsprite!
-  80 100 3c 2 1 3 uslsprite!
+  15 130 0 150 1e0 rectangle!
+  2a 0 e0 280 100 rectangle!
+  3f 140 f0 40 circle!
+  3c 140 f0 80 circle!
+  3 0 f0 140 0 line!
+  3 140 0 280 f0 line!
+  3 280 f0 150 1e0 line!
+  3 150 1e0 0 f0 line!
+  
+  0 0 3 0 1 0 lslsprite!
+  0 1d0 c 1 1 1 lslsprite!
+  270 0 30 2 1 2 lslsprite!
+  270 1d0 3f 3 1 3 lslsprite!
+  0 e8 0 0 1 0 uslsprite!
+  138 0 f 1 1 1 uslsprite!
+  270 e8 33 2 1 2 uslsprite!
+  138 1d0 3c 3 1 3 uslsprite!
 
   3f tpubackground! 3 tpuforeground!
 
-  200 0 do 
-    a 2 tpuxy! $" Counting " tpu.$ timer@ dup led! tpu.#
+  400 0 do 
+    20 2 tpuxy! $" Counting " tpu.$ timer@ dup led! tpu.#
     9 0 lslupdate!
     39 1 lslupdate!
     f 2 lslupdate!
@@ -130,7 +135,7 @@ setsprites
     8 1 uslupdate!
     7 2 uslupdate!
     38 3 uslupdate!
-    2000 0 do loop vblank
+    1800 0 do loop vblank
   loop ;
 screentest
 

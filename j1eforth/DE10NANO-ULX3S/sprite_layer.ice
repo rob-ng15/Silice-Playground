@@ -1,12 +1,12 @@
 bitfield spriteupdate {
-    uint1   colour_act,
-    uint6   colour,
-    uint1   y_act,
-    uint1   x_act,
-    uint1   tile_act,
-    uint1   dysign,
+    uint1   colour_act,         // 1 change the colour
+    uint6   colour,             // { rrggbb }
+    uint1   y_act,              // 1 - kill when off screen, 0 - wrap
+    uint1   x_act,              // 1 - kill when off screen, 0 - wrap
+    uint1   tile_act,           // 1 - increase the tile number
+    uint1   dysign,             // dy - 2's complement update for the y coordinate
     uint2   dy,
-    uint1   dxsign,
+    uint1   dxsign,             // dx - 2's complement update for the x coordinate
     uint2   dx
 }
 
