@@ -4,14 +4,15 @@
 
 ```
 : drawrectangles
-  3f 0 do
+  40 0 do
     i 0 i 4 * 20 i 4 * 20 + rectangle!
-    i i 10 * 0 i 10 * 20 + 20 rectangle!
-    i i 10 * 1ff i 10 * 20 + 21f rectangle!
-    i 1ff i 10 * 21f i 10 * 20 + rectangle!
-    i i 10 * i 10 * i 10 * 20 + i 10 * 20 + rectangle!
+    i i 4 * 0 i 4 * 20 + 20 rectangle!
+    i i 4 * fc i 4 * 20 + 11c rectangle!
+    i fc i 4 * 11c i 4 * 20 + rectangle!
+    i i 4 * i 4 * i 4 * 20 + i 4 * 20 + rectangle!
   loop ;
 cs! drawrectangles
+
 
 ```
 
@@ -20,7 +21,7 @@ cs! drawrectangles
 ```
 : drawcircles
   3f 0 do
-    i 100 100 3f i - 2* circle!
+    i 140 f0 3f i - 2* circle!
   loop ;
 cs! drawcircles
 

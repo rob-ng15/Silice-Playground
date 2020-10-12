@@ -239,7 +239,6 @@ tputype | Equivalent ```type``` for the TPU and character map
 tpuspace<br>tpuspaces | Equivalent to ```space``` and ```spaces``` for the TPU and character map
 tpu.r<br>tpu!u.r<br>tpuu.<br>tpu.<br>tpu.#<br>tpuu.#<br>tpuu.r#<br>tpu.r#<br>tpu.$ | Equivalent to ```.r``` ```u.r``` ```u.``` ```.``` ```.#``` ```u.#``` ```u.r#``` ```.r#``` ```.$``` for the TPU and character map
 
-
 ### Terminal Window
 
 * 80 x 8 2 colour blue/white text display, using IBM 8x8 256 character ROM as input/output terminal
