@@ -49,13 +49,13 @@ algorithm background(
         // Generate static grey scale values
         if( static_0a == 0 ) {
             static_0a = static_0;
+            if( static_1a == 0 ) {
+                static_1a = static_1;
+            } else {
+                static_1a = static_1a >> 1;
+            }
         } else {
             static_0a = static_0a >> 1;
-        }
-        if( static_1a == 0 ) {
-            static_1a = static_1;
-        } else {
-            static_1a = static_1a >> 1;
         }
     }
     
