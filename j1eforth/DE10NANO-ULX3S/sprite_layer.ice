@@ -127,7 +127,7 @@ algorithm sprite_layer(
                 if( spriteupdate( sprite_update ).colour_act ) {
                     sprite_colour[ sprite_set_number ] = spriteupdate( sprite_update ).colour;
                 }
-                if(  (sprite_x[ sprite_set_number ] < (-16)) | (sprite_x[ sprite_set_number ] > 655) ) {
+                if(  (sprite_x[ sprite_set_number ] < (-16)) | (sprite_x[ sprite_set_number ] > 640) ) {
                     if( spriteupdate( sprite_update ).x_act ) {
                         sprite_active[ sprite_set_number ] = 0;
                     } else {
@@ -136,7 +136,7 @@ algorithm sprite_layer(
                 } else {
                     sprite_x[ sprite_set_number ] = sprite_x[ sprite_set_number ] + { {9{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
                 }
-                if(  (sprite_y[ sprite_set_number ] < (-16)) | (sprite_y[ sprite_set_number ] > 479) ) {
+                if(  (sprite_y[ sprite_set_number ] < (-16)) | (sprite_y[ sprite_set_number ] > 480) ) {
                     if( spriteupdate( sprite_update ).y_act ) {
                         sprite_active[ sprite_set_number ] = 0;
                     } else {

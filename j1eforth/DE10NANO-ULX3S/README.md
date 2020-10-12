@@ -74,18 +74,92 @@ Info:           ECLKBRIDGECS:     0/    2     0%
 
 The VGA DE10NANO/HDMI ULX3S output has the following layers in order:
 
+* Background
+* Lower Sprite Layer
+* Bitmap with GPU
+* Upper Sprite Layer
+* Character Map with TPU
+* Terminal
+
+Due to the address space limitations of the J1+ CPU the display layer memories cannot be memory mapped. Control of the display layers is done via memory mapped control registers. _Some_ j1eforth words are provided as helpers.
+
+### Background Layer
+
+The background layer displays at a pixel if __ALL__ of the layers above are transpoarent.
+
 * Background with configurable designs
 * - single { rrggbb } colour
-* - alternative { rrggbb } colour, used in some designs
+* - alternative { rrggbb } colour for some designs
 * - selectable solid, checkerboard, rainbow or static 
 * - fader level
 
-* Lower Sprite Layer - between the background and the bitmap
-* - 8 x 16 x 16 1 bit sprites each in one of { rrggbb } colours
-* - Each sprite can show one of 3 user settable tiles. These tiles are specific to each sprite
-* - Each sprite can be visible/invisible
-* - Each sprite can be individually positioned
-* - Fader level for the sprite layer
+#### Memory Map for the BACKGROUND Layer
+
+Hexadecimal Address | Write | Read
+:----: | :----: | :-----:
+fff0 | Set the background colour |
+fff1 | Set the alternative background colour |
+fff2 | Set the background design<br>0 - Solid<br>1 - Small checkerboard<br>2 - Medium checkerboard<br>3 - Large checkerboard<br>4 - Huge checkerboard<br>5 - Rainbow<br>6 - Static<br>7 - Starfield (not implemented) |
+ffff | Set the fade level for the background layer | VBLANK flag
+
+#### j1eforth BACKGROUND words
+
+DISPLAY Word | Usage
+:-----: | :-----:
+vblank | ```vblank``` await vblank
+
+BACKGROUND Word | Usage
+:-----: | :-----:
+background! | Example: ```3 2 4 background!``` Sets the background to a HUGE blue/dark blue checkerboard
+
+### Lower (and Upper) Sprite Layer
+
+* Sprite Layer
+* - 8 x 16 x 16 1 bit sprites
+* - 4 user settable tiles per sprite
+* - fader level
+
+The lower sprite layer displays between the background and the bitmap; the upper sprite layers displays between the bitmap and the character map.
+
+Each Sprite has the following attributes:
+
+Sprite Tile Map | Active | Tile Number | X | Y | Colour 
+:-----: | :-----: | :-----: | :-----: | :-----: | :-----:
+64 lines of 16 pixels<br>4 x 16 x 16 tiles per Sprite | Display(1) or Hide(0) the Sprite | 0 - 3 Select tile from the sprite tile map | X coordinate | Y coordinate | { rrggbb } colour
+
+#### Memory Map for the LOWER and UPPER SPRITE Layers
+
+Hexadecimal Address <br> ff30 - ff3f for lower sprites <br> ff40 - ff4f for upper sprites | Write | Read
+:----: | :----: | :-----:
+ff30 | Set __Active Sprite Number__ referred to as _ASN_ in the following |
+ff31 | Set _ASN_ active | Read _ASN_ active
+ff32 | Set _ASN_ tile number | Read _ASN_ tile number
+ff33 | Set _ASN_ colour | Read _ASN_ colour
+ff34 | Set _ASN_ x coordinate | Read _ASN_ x coordinate
+ff35 | Set _ASN_ y coordinate | Read _ASN_ coordinate
+ff36 | Set __Tile Map Writer Sprite Number__ referred to as _TMWSN_ in the following<br> |
+ff37 | Set _TMWSN_ tile map line ( 0 - 63 ) |
+ff38 | Set _TMWSN_ tile map line bitmap |
+ff39 | | Sprites at flag<br>8 bit { sprite7, sprite6 ... sprite0 } flag of which sprites are visible at the x,y coordinate set below
+ff3a | Sprites at x coordinate |
+ff3b | Sprites at y coordinate |
+ff3c | Update a sprite<br>16 bit { change colour, rrggbb, x_act(1=kill,0=wrap), y_act(1=kill,0=wrap), tile_act(0=same,1=increment), deltay(3 bit 2's complement), deltax(3 bit 2's complement) } |
+ff3f | Set the fade level for the sprite layer
+
+_For the Upper Sprite Layer add ff10 to the address_.
+
+#### j1eforth SPRITE LAYER words
+
+SPRITE LAYER Word | Usage
+:-----: | :-----:
+lslsprite! | Example ```10 20 3f 2 1 0 lslsprite!``` set lower sprite layer sprite 0 to 10,20 in colour 3f with tile map number 2 and active
+uslsprite! | Example ```10 20 3f 2 1 0 uslsprite!``` set upper sprite layer sprite 0 to 10,20 in colour 3f with tile map number 2 and active
+lsltile! | Example (put 64 16bit bitmap lines to the stack) ```0 lsltile!``` set lower sprite layer sprite 0 tile map to the 64 bitmap lines
+usltile! | Example (put 64 16bit bitmap lines to the stack) ```0 usltile!``` set upper sprite layer sprite 0 tile map to the 64 bitmap lines
+lslupdate! | Example ```57 lslupdate!``` Update lower sprite layer sprite 0 according to (binary) { 0 000000 0 0 1 010 111 }<br>No change to colour, x wrap, y wrap, Iicrement tile number, y=y+2, x=x-1
+uslupdate! | Example ```86b1 uslupdate!``` Update lower sprite layer sprite 0 according to (binary) { 1 000011 0 1 0 110 001 }<br>Change colour to 3(blue), x wrap, y kill, keep tile number, y=y-2, x=x+1
+
+### Bitmap Layer with GPU
 
 * 640 x 480 64 colour { Arrggbb } bitmap display
 * - If A (ALPHA) is 1, then the lower layers are displayed
@@ -97,8 +171,42 @@ The VGA DE10NANO/HDMI ULX3S output has the following layers in order:
 * - - Blitter for 16 x 16 1 bit user settable tiles
 * - Fader level for the bitmap layer
 
-* Upper Sprite Layer - between the bitmap and the character display
-* - Specifics as per the Lower Sprite Layer above
+#### Memory Map for the BITMAP Layer and GPU
+
+Hexadecimal Address | Write | Read
+:----: | :----: | :-----:
+ff00 | Set the GPU x coordinate |
+ff01 | Set the GPU y coordinate |
+ff02 | Set the GPU colour |
+ff03 | Set GPU parameter 0 |
+ff04 | Set GPU parameter 1 |
+ff05 | Set GPU parameter 2 |
+ff06 | Set GPU parameter 3 |
+ff07 | Start GPU<br>1 - Plot a pixel x,y in colour<br>2 - Fill a rectangle from x,y to param0,param1 in colour<br>3 - Draw a line from x,y to param0,param1 in colour<br>4 - Draw a circle centred at x,y of radius param0 in colour<br>5 - 1 bit blitter of a 16x16 tile to x,y using tile number param0 in colour<br>6 - Set line param1 of tile param0 to param2 in the 1 bit blitter tile map | GPU busy
+ff08 | | Colourof the pixel at x,y (set below)<br>Updates every frame whilst the selected pixel is being rendered
+ff09 | Set the x coordinate for reading |
+ff0a | Set the y coordinate for reading |
+ff0f | Set the fade level for the bitmap layer |
+
+#### j1eforth BITMAP and GPU words
+
+BITMAP and GPU Word | Usage
+:-----: | :-----:
+pixel! | Example ```30 10 10 pixel!``` plots pixel 10,10 in colour 30 (red)
+rectangle! | Example ```c 10 10 20 20 rectangle!``` draws a rectangle from 10,10 to 20,20 in colour c (green)
+line! | Example ```3c 0 0 100 100 line!``` draws a line from 0,0 to 100,100 in colour 3c (yellow)
+circle! | Example ```33 100 100 50 circle!``` draws a circle centred at 100,100 of radius 50 in colour 33 (magenta)
+blit1! | Example ```f 0 10 10 blit1!``` blits tilemap tile 0 to 10,10 in colour f (cyan)
+blit1tile! | Example (put 16 16bit bitmap lines to the stack) ```0 bit1tile!``` sets a blit1 tilemap tile 0 to the 16 bitmap lines
+cs! | Example ```cs!``` clears the bitmap (sets to transparent)
+
+_```gpu?``` writes the GPU busy flag to the stack, and ```gpu!``` will start the GPU according to the action from the stack. ALl of the above BITMAP and GPU words query the GPU busy flag before commiting their action to the GPU_.
+
+### Upper Sprite Layer
+
+_Details in Lower Sprite Layer section_
+
+### Character Map with TPU
 
 * 80 x 30 64 colour character map display, using IBM 8x16 256 character ROM
 * - Includes a simple TPU to draw characters on the display (will be expanded)
@@ -107,111 +215,46 @@ The VGA DE10NANO/HDMI ULX3S output has the following layers in order:
 * - - Foreground colour { rrggbb }
 * - - Background colour { Arrggbb ) if A (ALPHA) is 1, then the lower layers are displayed.
 
+#### Memory Map for the CHARACTER MAP Layer and TPU
+
+Hexadecimal Address | Write | Read
+:----: | :----: | :-----:
+ff10 | Set the TPU x coordinate |
+ff11 | Set the TPU y coordinate |
+ff12 | Set the TPU character code |
+ff13 | Set the TPU background colour |
+ff14 | Set the TPU foreground colour |
+ff15 | Start TPU<br>1 - Move to x,y<br>2 - Write character code in foreground colour, background colour to x,y and move to the next position<br>__Note__ No scrolling, wraps back to the top |
+
+#### j1eforth CHARACTER MAP and TPU words
+
+CHARACTER MAP and TPU Word | Usage
+:-----: | :-----:
+tpucs! | Example ```tpucs!``` clears the character map (sets to transparent)
+tpuxy! | Example ```0 0 tpuxy!``` moves the TPU cursor to 0,0 (top left)
+tpuforeground! | Example ```3f tpuforeground!``` sets the TPU foreground to colour 3f (white)
+tpubackground! | Example ```3 tpubackground!``` sets the TPU background to colour 3 (blue)
+tpuemit | Equivalent to ```emit``` for the TPU and character map
+tputype | Equivalent ```type``` for the TPU and character map
+tpuspace<br>tpuspaces | Equivalent to ```space``` and ```spaces``` for the TPU and character map
+tpu.r<br>tpu!u.r<br>tpuu.<br>tpu.<br>tpu.#<br>tpuu.#<br>tpuu.r#<br>tpu.r#<br>tpu.$ | Equivalent to ```.r``` ```u.r``` ```u.``` ```.``` ```.#``` ```u.#``` ```u.r#``` ```.r#``` ```.$``` for the TPU and character map
+
+
+### Terminal Window
+
 * 80 x 8 2 colour blue/white text display, using IBM 8x8 256 character ROM as input/output terminal
 * - Includes a simple terminal output protocol to display characters
 * - Includes a flashing cursor
 * - Can be shown/hidden to allow the larger character 8x16 map or the bitmap to be fully displayed
 
-Due to the address space limitations of the J1+ CPU the display layer memories cannot be memory mapped. Control of the display layers is done via memory mapped control registers. _Some_ j1eforth words are provided as helpers.
+#### Memory Map for the TERMINAL Window
 
-### Display Control Registers
-
-Hexadecimal Address | Usage
-:----: | :----:
-ff00 | GPU set the x coordinate
-ff01 | GPU set the y coordinate
-ff02 | GPU set the colour
-ff03 | GPU set parameter 0
-ff04 | GPU set parameter 1
-ff05 | GPU set parameter 2
-ff06 | GPU set parameter 3
-ff07 | GPU start<br>1 - Plot a pixel x,y in colour<br>2 - Fill a rectangle from x,y to param0,param1 in colour<br>3 - Draw a line from x,y to param0,param1 in colour<br>4 - Draw a circle centred at x,y of radius param0 in colour<br>5 - 1 bit blitter of a 16x16 tile to x,y using tile number param0 in colour<br>6 - Set line param1 of tile param0 to param2 in the 1 bit blitter tile map
-ff08 | BITMAP READ colour at x,y
-ff09 | BITMAP READ x - set the x pixel for reading
-ff0a | BITMAP READ y - set the y pixel for reading
-ff0f | BITMAP set the fade level
-ff10 | TPU set the x coordinate
-ff11 | TPU set the y coordinate
-ff12 | TPU set the character code
-ff13 | TPU set the background colour
-ff14 | TPU set the foreground colour
-ff15 | TPU start<br>1 - Move to x,y<br>2 - Write character code in foreground colour, background colour to x,y and move to the next position<br>__Note__ No scrolling, wraps back to the top
+Hexadecimal Address | Write | Read
+:----: | :----: | :-----:
 ff20 | TERMINAL outputs a character
 ff21 | TERMINAL show/hide<br>1 - Show the termnal<br>0 - Hide the terminal
-ff30 | LOWER SPRITE LAYER set sprite number to update/read the following:
-ff31 | LSL set or read sprite active flag
-ff32 | LSL set or read sprite tile number 0-3
-ff33 | LSL set or read sprite colour
-ff34 | LSL set or read sprite x coordinate
-ff35 | LSL set or read sprite y coordinate
-ff36 | LOWER SPRITE LAYER TILE BITMAP WRITER set sprite number
-ff37 | LSLTBW set tile line ( 0 - 63 )
-ff38 | LSLTBW set tile bitmap
-ff39 | LOWER SPRITE LAYER SPRITES AT x,y FLAG<br>Returns the sprites with visible pixels at x,y. BASIC collision detection.
-ff3a | LSLSAT set the x coordinate
-ff3b | LSLSAT set the y coordinate
-ff3c | LOWER SPRITE LAYER SPRITES update a sprite<br>{ change colour, rrggbb, x_act(1=kill,0=wrap), y_act(1=kill,0=wrap), tile_act(0=same,1+1), deltay(3 bit 2's complement), deltax(3 bit 2's complement) }
-ff3f | LSL set the fade level
-ff40 | UPPER SPRITE LAYER set sprite number to update/read the following:
-ff41 | USL set or read sprite active flag
-ff42 | USL set or read sprite tile number 0-3
-ff43 | USL set or read sprite colour
-ff44 | USL set or read sprite x coordinate
-ff45 | USL set or read sprite y coordinate
-ff46 | UPPER SPRITE LAYER TILE BITMAP WRITER set sprite number
-ff47 | USLTBW set tile line ( 0 - 63 )
-ff48 | USLTBW set tile bitmap
-ff49 | UPPER SPRITE LAYER SPRITES AT x,y FLAG<br>Returns the sprites with visible pixels at x,y. BASIC collision detection.
-ff4a | USLSAT set the x coordinate
-ff4b | USLSAT set the y coordinate
-ff4c | UPPER SPRITE LAYER SPRITES update a sprite<br>{ change colour, rrggbb, x_act(1=kill,0=wrap), y_act(1=kill,0=wrap), tile_act(0=same,1+1), deltay(3 bit 2's complement), deltax(3 bit 2's complement) }
-ff4f | USL set the fade level
-fff0 | BACKGROUND set the background colour
-fff1 | BACKGROUND set the alternative background colour
-fff2 | BACKGROUND set the background mode<br>0 - Solid<br>1 - Small checkerboard<br>2 - Medium checkerboard<br>3 - Large checkerboard<br>4 - Huge checkerboard<br>5 - Rainbow<br>6 - Static<br>7 - Starfield (not implemented)
-ffff | BACKGROUND set the fade level (write)<br>VBLANK flag (read)
 
-### Display added j1eforth words
-
-Helper words for controlling the display are built into the j1eforth environment.
-
-DISPLAY Word | Usage
-:-----: | :-----:
-vblank | ```vblank``` await vblank
-
-BACKGROUND Word | Usage
-:-----: | :-----:
-background! | ```colour alt mode background!```sets the background colour, alt colour and mode<br>The background will only display if the layers above are transparent. ```cs! tpucs!``` clears the bitmap and character map to transparent
-
-GPU Word | Usage
-:-----: | :-----:
-pixel! | ```colour x y pixel!``` draws a pixel at x,y in colour
-rectangle! | ```colour x1 y1 x2 y2 rectangle!``` draws a rectangle from x1,y1 to x2,y2 in colour
-line! | ```colour x1 y1 x2 y2 line!``` draws a line from x1,y1 to x2,y2 in colour
-circle! | ```colour xc yc r circle!``` draws a circle centred at xc,yc of radius r in colour
-blit1! | ```colour tile x y blit1!``` blits tilemap tile to x,y in colour
-blit1tile! | ```16bitmaplines tilenumber bit1tile!``` sets a blit1 tilemap tile to the 16 bitmap lines
-cs! | ```cs!``` clears the bitmap (sets to transparent)
-
-SPRITE Word | Usage
-:-----: | :-----:
-lslsprite! | ```x y colour tile active spritenumber lslsprite!``` set lower sprite layer sprite spritenumber x y colour tilenumber and active flag
-uslsprite! | ```x y colour tile active spritenumber lslsprite!``` set upper sprite layer sprite spritenumber x y colour tilenumber and active flag
-lsltile! | ```64bitmaplines spritenumber lsltile!``` sets a lower sprite layer tilemap for a sprite to the 64 bitmap lines
-usltile! | ```64bitmaplines spritenumber usltile!``` sets an upper sprite layer tilemap for a sprite to the 64 bitmap lines
-lslupdate! | ```updateflag spritenumber lslupdate!``` updates a lower sprite layer sprite according to the update flag
-uslupdate! | ```updateflag spritenumber uslupdate!``` updates an upper sprite layer sprite according to the update flag
-
-TPU Word | Usage
-:-----: | :-----:
-tpucs! | ```tpucs!``` clears the character map (sets to transparent so the bitmap can show through)
-tpuxy! | ```x y tpuxy!``` moves the TPU cursor to x,y
-tpuforeground! |```foreground tpuforeground!``` sets the foreground colour
-tpubackground! | ```background tpubackground!``` sets the background colour
-tpuemit | emit for the TPU and character map
-tputype | type for the TPU and character map
-tpuspace<br>tpuspaces | space and spaces for the TPU and character map
-tpu.r<br>tpu!u.r<br>tpuu.<br>tpu.<br>tpu.#<br>tpuu.#<br>tpuu.r#<br>tpu.r#<br>tpu.$ | Equivalents for .r u.r u. . .# u.# u.r# .r# .$ for the TPU and character map
+#### j1eforth TERMINAL words
 
 TERMINAL Word | Usage
 :-----: | :-----:
