@@ -22,7 +22,7 @@ PIN_DEF = fomu-hacker.pcf
 DEVICE = up5k
 PACKAGE = uwg30
 
-CLK_MHZ = 12
+CLK_MHZ = 48
 
 all: nb_fomu_hw.dfu nb_fomu_hw.rpt fomu_led_ctrl.dfu fomu_led_ctrl.rpt
 
@@ -33,10 +33,10 @@ $(1).json: $(1).v $(SOURCES)
 	yosys -q -p 'synth_ice40 -top $(1) -json $$@' $$^
 
 %.asc: $(PIN_DEF) %.json
-	nextpnr-ice40 --$(DEVICE) --freq $(CLK_MHZ) --opt-timing --package $(PACKAGE) --pcf $(PIN_DEF) --json $$*.json --asc $$@
+	nextpnr-ice40 --placer heap --$(DEVICE) --freq $(CLK_MHZ) --opt-timing --package $(PACKAGE) --pcf $(PIN_DEF) --json $$*.json --asc $$@
 
 gui-$(1): $(PIN_DEF) $(1).json
-	nextpnr-ice40 --$(DEVICE) --package $(PACKAGE) --pcf $(PIN_DEF) --json $(1).json --asc $(1).asc --gui
+	nextpnr-ice40 --placer heap --$(DEVICE) --package $(PACKAGE) --pcf $(PIN_DEF) --json $(1).json --asc $(1).asc --gui
 
 %.bin: %.asc
 	icepack $$< $$@
