@@ -575,14 +575,14 @@ $$end
 
     // UART input and output buffering
     always {
-    $$if ULX3S then
-            // READ from PS/2 if character available and store
-            if( ps2_strobe ) {
-                // writes at ps2InBufferTop (code from @sylefeb)
-                ps2InBuffer.wdata1  = ps2_key;            
-                ps2InBufferTop      = ps2InBufferTop + 1;
-            }
-    $$end
+        $$if ULX3S then
+                // READ from PS/2 if character available and store
+                if( ps2_strobe ) {
+                    // writes at ps2InBufferTop (code from @sylefeb)
+                    ps2InBuffer.wdata1  = ps2_key;            
+                    ps2InBufferTop      = ps2InBufferTop + 1;
+                }
+        $$end
         // READ from UART if character available and store
         if( ui.data_out_ready ) {
             // writes at uartInBufferTop (code from @sylefeb)
@@ -721,8 +721,8 @@ $$end
                                                     // INPUT from UART reads at uartInBufferNext (code from @sylefeb)
                                                     // for ULX3S prioritises PS/2 keyboard over UART
                                                     $$if DE10NANO then
-                                                    newStackTop = { 8b0, uartInBuffer.rdata0 };
-                                                    uartInBufferNext = uartInBufferNext + 1;
+                                                        newStackTop = { 8b0, uartInBuffer.rdata0 };
+                                                        uartInBufferNext = uartInBufferNext + 1;
                                                     $$end
                                                     $$if ULX3S then
                                                         if( ~( ps2InBufferNext == ps2InBufferTop ) ) {
@@ -739,10 +739,10 @@ $$end
                                                 case 16hf001: {
                                                     // UART status register { 14b0, tx full, rx available }
                                                     $$if DE10NANO then
-                                                    newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ~( uartInBufferNext == uartInBufferTop )};
+                                                        newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ~( uartInBufferNext == uartInBufferTop )};
                                                     $$end
                                                     $$if ULX3S then
-                                                    newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ~( uartInBufferNext == uartInBufferTop ) | ~( ps2InBufferNext == ps2InBufferTop ) };
+                                                        newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ~( uartInBufferNext == uartInBufferTop ) | ~( ps2InBufferNext == ps2InBufferTop ) };
                                                     $$end
                                                 }
                                                 case 16hf002: {
@@ -761,13 +761,13 @@ $$end
                                                     // GPU Active Status
                                                     newStackTop = gpu_processor.gpu_active;
                                                 }
-                                                case 16hff21: {
-                                                    // Terminal Active Status
-                                                    newStackTop = terminal_window.terminal_active;
-                                                }
                                                 case 16hff08: {
                                                     // Read BITMAP pixel
                                                     newStackTop = bitmap_window.bitmap_colour_read;
+                                                }
+                                                case 16hff20: {
+                                                    // Terminal Active Status
+                                                    newStackTop = terminal_window.terminal_active;
                                                 }
                                                 // LOWER SPRITES READ
                                                 case 16hff31: {

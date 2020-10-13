@@ -143,7 +143,7 @@ ff38 | Set _TMWSN_ tile map line bitmap |
 ff39 | | Sprites at flag<br>8 bit { sprite7, sprite6 ... sprite0 } flag of which sprites are visible at the x,y coordinate set below
 ff3a | Sprites at x coordinate |
 ff3b | Sprites at y coordinate |
-ff3c | Update a sprite<br>16 bit { change colour, rrggbb, x_act(1=kill,0=wrap), y_act(1=kill,0=wrap), tile_act(0=same,1=increment), deltay(3 bit 2's complement), deltax(3 bit 2's complement) } |
+ff3c | Update a sprite<br>See notes below |
 ff3f | Set the fade level for the sprite layer
 
 _For the Upper Sprite Layer add ff10 to the address_.
@@ -157,7 +157,19 @@ uslsprite! | Example ```10 20 3f 2 1 0 uslsprite!``` set upper sprite layer spri
 lsltile! | Example (put 64 16bit bitmap lines to the stack) ```0 lsltile!``` set lower sprite layer sprite 0 tile map to the 64 bitmap lines
 usltile! | Example (put 64 16bit bitmap lines to the stack) ```0 usltile!``` set upper sprite layer sprite 0 tile map to the 64 bitmap lines
 lslupdate! | Example ```57 lslupdate!``` Update lower sprite layer sprite 0 according to (binary) { 0 000000 0 0 1 010 111 }<br>No change to colour, x wrap, y wrap, Iicrement tile number, y=y+2, x=x-1
-uslupdate! | Example ```86b1 uslupdate!``` Update lower sprite layer sprite 0 according to (binary) { 1 000011 0 1 0 110 001 }<br>Change colour to 3(blue), x wrap, y kill, keep tile number, y=y-2, x=x+1
+uslupdate! | Example ```86b1 uslupdate!``` Update upper sprite layer sprite 0 according to (binary) { 1 000011 0 1 0 110 001 }<br>Change colour to 3(blue), x wrap, y kill, keep tile number, y=y-2, x=x+1
+
+#### Notes about the SPRITE UPDATE binary code
+
+Bit(s) | Purpose
+:-----: | -----
+15 | Colour action - 0 = leave as is, 1 = change to { rrggbb } as given in bits 14 - 9
+14 - 9 | { rrggbb } colour
+8 | Y action - 0 = wrap y-axis, 1 = set sprite to inactive if it moves off screen
+7 | X action - 0 = wrap x-axis, 1 = set sprite to inactive if it moves off screen
+6 | Tile number action - 0 = leave as is, 1 = increment the tile number (simple animation)
+5 - 3 | Y delta - amount to move along the y-axis, 2's complement number
+2 - 0 | X delta - amount to move along the x-axis, 2's complement number
 
 ### Bitmap Layer with GPU
 
@@ -250,7 +262,7 @@ tpu.r<br>tpu!u.r<br>tpuu.<br>tpu.<br>tpu.#<br>tpuu.#<br>tpuu.r#<br>tpu.r#<br>tpu
 
 Hexadecimal<br>Address | Write | Read
 :-----: | ----- | -----
-ff20 | TERMINAL outputs a character | TERMINAL visibility status
+ff20 | TERMINAL outputs a character | TERMINAL busy
 ff21 | TERMINAL show/hide<br>1 - Show the termnal<br>0 - Hide the terminal
 
 #### j1eforth TERMINAL words
