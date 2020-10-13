@@ -167,24 +167,24 @@ algorithm gpu(
             case 2: {
                 // Bresenham's Line Drawing Algorithm
                 // Calculate deltas and longest = abs( gpu_w ), shortest = abs( gpu_h )
-                gpu_longest = ( gpu_w < 0 ) ? -gpu_w : gpu_w ;
-                gpu_shortest = ( gpu_h < 0 ) ? -gpu_h : gpu_h;
-                
                 if( gpu_w < 0 ) {
                     gpu_dx1 = -1;
-                    gpu_dx2 = -1;
+                    gpu_dx1 = -1;
+                } else {
+                    if( gpu_w > 0 ) {
+                        gpu_dx1 = 1;
+                        gpu_dx2 = 1;
+                     }
                 }
-                if( gpu_w > 0 ) {
-                    gpu_dx1 = 1;
-                    gpu_dx2 = 1;
-                }
-                
                 if( gpu_h < 0 ) {
                     gpu_dy1 = -1;
+                } else {
+                    if( gpu_h > 0 ) {
+                        gpu_dy1 = 1;
+                    }
                 }
-                if( gpu_h > 0 ) {
-                    gpu_dy1 = 1;
-                }
+                gpu_longest = ( gpu_w < 0 ) ? -gpu_w : gpu_w;
+                gpu_shortest = ( gpu_h < 0 ) ? -gpu_h : gpu_h;
                 
                 gpu_active = 3;
             }
@@ -193,13 +193,14 @@ algorithm gpu(
                 // Determine if steep or shallow
                 if( ~(gpu_longest > gpu_shortest) ) {
                     // Switch as steep line
-                    gpu_longest = gpu_shortest;
-                    gpu_shortest = gpu_longest;
+                    gpu_longest = ( gpu_h < 0 ) ? -gpu_h : gpu_h;
+                    gpu_shortest = ( gpu_w < 0 ) ? -gpu_w : gpu_w;
                     if( gpu_h < 0 ) {
                         gpu_dy2 = -1;
-                    }
-                    if( gpu_h > 0 ) {
-                        gpu_dy2 = 1;
+                    } else {
+                        if( gpu_h > 0 ) {
+                            gpu_dy2 = 1;
+                        }
                     }
                     gpu_dx2 = 0;
                 } 

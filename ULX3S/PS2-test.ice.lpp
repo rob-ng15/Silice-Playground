@@ -1,0 +1,945 @@
+// ----------------------- memory_ports.ice -----------
+// @sylefeb - Silice standard library
+// Memory port interfaces
+// 2020-09-03
+
+// single port BRAM
+
+interface bram_port {
+  output! addr,
+  output! wenable,
+  input   rdata,
+  output! wdata,
+}
+
+// single port BROM
+
+interface brom_port {
+  output! addr,
+  input   rdata,
+}
+
+// dual port BRAM
+
+interface bram_port0 {
+  output! addr0,
+  output! wenable0,
+  input   rdata0,
+  output! wdata0,
+}
+
+interface bram_port1 {
+  output! addr1,
+  output! wenable1,
+  input   rdata1,
+  output! wdata1,
+}
+
+interface bram_ports {
+  output! addr0,
+  output! wenable0,
+  input   rdata0,
+  output! wdata0,
+  output! addr1,
+  output! wenable1,
+  input   rdata1,
+  output! wdata1,
+}
+
+// ----------------------- end of memory_ports.ice ----
+
+// SL 2020-09-05
+// Silice HDMI driver
+//
+// 640x480, 250MHz TMDS from 25MHz pixel clock
+//
+// Currently limited to the ULX3S, but should be relatively easy to port,
+// pending pll and differential serial output primitives
+//
+// See also
+// - https://www.digikey.com/eewiki/pages/viewpage.action?pageId=36569119
+// - https://www.fpga4fun.com/HDMI.html
+// - https://github.com/lawrie/ulx3s_examples/blob/master/hdmi/tmds_encoder.v
+
+import('hdmi_clock.v')
+import('differential_pair.v')
+import('hdmi_differential_pairs.v')
+
+// ----------------------------------------------------
+
+algorithm tmds_encoder(
+  input   uint8  data,
+  input   uint2  ctrl,
+  input   uint1  data_or_ctrl,
+  output  uint10 tmds
+) <autorun> {
+
+  uint9 q_m             = 0;
+  int5  dc_bias         = 0;
+
+  // tracks 'number on ones' in input
+  uint4 num_ones        := data[0,1] + data[1,1] + data[2,1] + data[3,1]
+                         + data[4,1] + data[5,1] + data[6,1] + data[7,1];
+  // tracks 'numbers of ones minus number of zeros' in internal byte
+  int5  diff_ones_zeros := q_m[0,1] + q_m[1,1] + q_m[2,1] + q_m[3,1] 
+                         + q_m[4,1] + q_m[5,1] + q_m[6,1] + q_m[7,1] - 6d4;
+
+  // XOR chain on input
+  int1  xored1          := data[1,1] ^ data[0,1];
+  int1  xored2          := data[2,1] ^ xored1;
+  int1  xored3          := data[3,1] ^ xored2;
+  int1  xored4          := data[4,1] ^ xored3;
+  int1  xored5          := data[5,1] ^ xored4;
+  int1  xored6          := data[6,1] ^ xored5;
+  int1  xored7          := data[7,1] ^ xored6;
+
+  // XNOR chain on input
+  int1  xnored1         := ~(data[1,1] ^ data[0,1]);
+  int1  xnored2         := ~(data[2,1] ^ xnored1);
+  int1  xnored3         := ~(data[3,1] ^ xnored2);
+  int1  xnored4         := ~(data[4,1] ^ xnored3);
+  int1  xnored5         := ~(data[5,1] ^ xnored4);
+  int1  xnored6         := ~(data[6,1] ^ xnored5);
+  int1  xnored7         := ~(data[7,1] ^ xnored6);
+  
+  always {
+    // choice of encoding scheme (xor / xnor)
+    if ((num_ones > 4) || (num_ones == 4 && data[0,1] == 0)) {
+      q_m = { 1b0 , {xnored7,xnored6,xnored5,xnored4,xnored3,xnored2,xnored1} , data[0,1] };  
+    } else {
+      q_m = { 1b1 , {xored7,xored6,xored5,xored4,xored3,xored2,xored1} , data[0,1] };    
+    }
+    if (data_or_ctrl) {
+      // output data
+      if (dc_bias == 0 || diff_ones_zeros == 0) {
+        tmds      = {~q_m[8,1] , q_m[8,1], (q_m[8,1] ? q_m[0,8] : ~q_m[0,8])};
+        if (q_m[8,1] == 0) {
+          dc_bias = dc_bias - diff_ones_zeros;
+        } else {
+          dc_bias = dc_bias + diff_ones_zeros;
+        }
+      } else {
+        if (  (dc_bias > 0 && diff_ones_zeros > 0)
+           || (dc_bias < 0 && diff_ones_zeros < 0) ) {
+          tmds    = {1b1, q_m[8,1], ~q_m[0,8] };
+          dc_bias = dc_bias + q_m[8,1] - diff_ones_zeros;
+        } else {
+          tmds    = {1b0,q_m};
+          dc_bias = dc_bias - (~q_m[8,1]) + diff_ones_zeros;
+        }
+      }
+    } else {
+      // output control
+      switch (ctrl) {
+        case 2b00: { tmds = 10b1101010100; }
+        case 2b01: { tmds = 10b0010101011; }
+        case 2b10: { tmds = 10b0101010100; }
+        case 2b11: { tmds = 10b1010101011; }
+      }
+      dc_bias = 0;
+    }
+  }
+
+}
+
+// ----------------------------------------------------
+
+algorithm hdmi_ddr_shifter(
+  input   uint10 data_r,
+  input   uint10 data_g,
+  input   uint10 data_b,
+  output  uint8  outbits,
+) <autorun> {
+  uint3  mod5    = 0;
+  uint10 shift_r = 0;
+  uint10 shift_g = 0;
+  uint10 shift_b = 0;
+  uint2  clkbits = 0;
+  always {
+    shift_r = (mod5 == 0) ?  data_r : shift_r[2,8];
+    shift_g = (mod5 == 0) ?  data_g : shift_g[2,8];
+    shift_b = (mod5 == 0) ?  data_b : shift_b[2,8];
+    clkbits = (mod5[0,2] < 2) ? 2b11 : ( (mod5 > 2) ? 2b00 : 2b01 );
+    outbits = { clkbits , shift_b[0,2] , shift_g[0,2] , shift_r[0,2] };
+    mod5    = (mod5 == 4) ? 0 : (mod5 + 1);
+  }
+}
+
+// ----------------------------------------------------
+
+// Expects to run at 25 MHz (hdmi pixel clock)
+algorithm hdmi(
+  output  uint10 x,
+  output  uint10 y,
+  output  uint1  active,
+  output  uint1  vblank,
+  output! uint4  gpdi_dp,
+  output! uint4  gpdi_dn,
+  input   uint8  red,
+  input   uint8  green,
+  input   uint8  blue,
+) <autorun> {
+    
+  uint10 cntx  = 0;
+  uint10 cnty  = 0;
+  
+  uint1  hsync = 0;
+  uint1  vsync = 0;
+  
+  // pll for tmds
+  uint1  half_hdmi_clk = uninitialized;
+  hdmi_clock pll(
+    clk      <: clock,              //  25 MHz
+    half_hdmi_clk :> half_hdmi_clk, // 125 MHz (half 250MHz HDMI, double data rate output)
+  );
+  
+  uint2  null_ctrl  = 0;
+  uint2  sync_ctrl  = 0;
+  uint10 tmds_red   = 0;
+  uint10 tmds_green = 0;
+  uint10 tmds_blue  = 0;
+
+  uint8  latch_red   = 0;
+  uint8  latch_green = 0;
+  uint8  latch_blue  = 0;
+  uint2  prev_sync_ctrl = 0;
+  uint1  prev_active    = 0;
+
+  // encoders
+  // => we use <:: to bind values from cycle start (ignoring changes during current cycle)
+  tmds_encoder tmdsR(
+    data        <:: latch_red,
+    ctrl        <:: null_ctrl,
+    data_or_ctrl<:: prev_active,
+    tmds         :> tmds_red
+  );
+  tmds_encoder tmdsG(
+    data        <:: latch_green,
+    ctrl        <:: null_ctrl,
+    data_or_ctrl<:: prev_active,
+    tmds         :> tmds_green
+  );
+  tmds_encoder tmdsB(
+    data        <:: latch_blue,
+    ctrl        <:: prev_sync_ctrl,
+    data_or_ctrl<:: prev_active,
+    tmds         :> tmds_blue
+  );
+
+  // shifter
+  uint8 crgb_pos = 0;
+  hdmi_ddr_shifter shift<@half_hdmi_clk>(
+    data_r  <: tmds_red,
+    data_g  <: tmds_green,
+    data_b  <: tmds_blue,
+    outbits :> crgb_pos,
+  );
+
+  uint8 crgb_neg := ~ crgb_pos;
+  
+  hdmi_differential_pairs hdmi_out( 
+    clock   <: half_hdmi_clk,
+    pos     <: crgb_pos, 
+    neg     <: crgb_neg, 
+    out_pos :> gpdi_dp, 
+    out_neg :> gpdi_dn );
+
+  always {
+
+    // record previous state of sync_ctrl and active,
+    // we receive the r,b,g value for the x,y set below with a one cycle latency
+    // these are then latched for the following cycle
+    // thus we have to delay corresponding sync and active two cycles
+    prev_sync_ctrl = sync_ctrl;
+    prev_active    = active;
+
+    // synchronization bits
+    hsync          = (cntx > 655) && (cntx < 752);
+    vsync          = (cnty > 489) && (cnty < 492);
+    sync_ctrl      = {vsync,hsync};    
+    // output active area
+    active         = (cntx < 640) && (cnty < 480);    
+    // output vblank
+    vblank         = (cnty >= 480);
+    // output x,y
+    x              = cntx;
+    y              = cnty; 
+    // => we will get color result on next cycle   
+
+    // update coordinates
+    cnty        = (cntx == 799) ? (cnty == 524 ? 0 : (cnty + 1)) : cnty;
+    cntx        = (cntx == 799) ? 0 : (cntx + 1);
+    
+    // latch r,b,g received at this cycle, for previous coord
+    // will be fed into HDMI encoders next cycle
+    latch_red   = red;
+    latch_green = green;
+    latch_blue  = blue;
+
+  }
+}
+
+// ----------------------------------------------------
+
+algorithm terminal(
+    input   uint10  pix_x,
+    input   uint10  pix_y,
+    input   uint1   pix_active,
+    input   uint1   pix_vblank,
+    output! uint6 pix_red,
+    output! uint6 pix_green,
+    output! uint6 pix_blue,
+    output! uint1   terminal_display,
+    
+    input   uint8   terminal_character,
+    input   uint1   terminal_write,
+    input   uint1   showterminal,
+    input   uint1   showcursor,
+    input   uint1   timer1hz,
+    output uint3    terminal_active
+) <autorun> {
+    // Character ROM 8x8 x 256
+    uint8 characterGenerator8x8[] = {
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h7e, 8h81, 8ha5, 8h81, 8hbd, 8h99, 8h81, 8h7e,
+    8h7e, 8hff, 8hdb, 8hff, 8hc3, 8he7, 8hff, 8h7e,
+    8h6c, 8hfe, 8hfe, 8hfe, 8h7c, 8h38, 8h10, 8h00,
+    8h10, 8h38, 8h7c, 8hfe, 8h7c, 8h38, 8h10, 8h00,
+    8h38, 8h7c, 8h38, 8hfe, 8hfe, 8h7c, 8h38, 8h7c,
+    8h10, 8h10, 8h38, 8h7c, 8hfe, 8h7c, 8h38, 8h7c,
+    8h00, 8h00, 8h18, 8h3c, 8h3c, 8h18, 8h00, 8h00,
+    8hff, 8hff, 8he7, 8hc3, 8hc3, 8he7, 8hff, 8hff,
+    8h00, 8h3c, 8h66, 8h42, 8h42, 8h66, 8h3c, 8h00,
+    8hff, 8hc3, 8h99, 8hbd, 8hbd, 8h99, 8hc3, 8hff,
+    8h0f, 8h07, 8h0f, 8h7d, 8hcc, 8hcc, 8hcc, 8h78,
+    8h3c, 8h66, 8h66, 8h66, 8h3c, 8h18, 8h7e, 8h18,
+    8h3f, 8h33, 8h3f, 8h30, 8h30, 8h70, 8hf0, 8he0,
+    8h7f, 8h63, 8h7f, 8h63, 8h63, 8h67, 8he6, 8hc0,
+    8h99, 8h5a, 8h3c, 8he7, 8he7, 8h3c, 8h5a, 8h99,
+    8h80, 8he0, 8hf8, 8hfe, 8hf8, 8he0, 8h80, 8h00,
+    8h02, 8h0e, 8h3e, 8hfe, 8h3e, 8h0e, 8h02, 8h00,
+    8h18, 8h3c, 8h7e, 8h18, 8h18, 8h7e, 8h3c, 8h18,
+    8h66, 8h66, 8h66, 8h66, 8h66, 8h00, 8h66, 8h00,
+    8h7f, 8hdb, 8hdb, 8h7b, 8h1b, 8h1b, 8h1b, 8h00,
+    8h3e, 8h63, 8h38, 8h6c, 8h6c, 8h38, 8hcc, 8h78,
+    8h00, 8h00, 8h00, 8h00, 8h7e, 8h7e, 8h7e, 8h00,
+    8h18, 8h3c, 8h7e, 8h18, 8h7e, 8h3c, 8h18, 8hff,
+    8h18, 8h3c, 8h7e, 8h18, 8h18, 8h18, 8h18, 8h00,
+    8h18, 8h18, 8h18, 8h18, 8h7e, 8h3c, 8h18, 8h00,
+    8h00, 8h18, 8h0c, 8hfe, 8h0c, 8h18, 8h00, 8h00,
+    8h00, 8h30, 8h60, 8hfe, 8h60, 8h30, 8h00, 8h00,
+    8h00, 8h00, 8hc0, 8hc0, 8hc0, 8hfe, 8h00, 8h00,
+    8h00, 8h24, 8h66, 8hff, 8h66, 8h24, 8h00, 8h00,
+    8h00, 8h18, 8h3c, 8h7e, 8hff, 8hff, 8h00, 8h00,
+    8h00, 8hff, 8hff, 8h7e, 8h3c, 8h18, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h30, 8h78, 8h78, 8h30, 8h30, 8h00, 8h30, 8h00,
+    8h6c, 8h6c, 8h6c, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h6c, 8h6c, 8hfe, 8h6c, 8hfe, 8h6c, 8h6c, 8h00,
+    8h30, 8h7c, 8hc0, 8h78, 8h0c, 8hf8, 8h30, 8h00,
+    8h00, 8hc6, 8hcc, 8h18, 8h30, 8h66, 8hc6, 8h00,
+    8h38, 8h6c, 8h38, 8h76, 8hdc, 8hcc, 8h76, 8h00,
+    8h60, 8h60, 8hc0, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h18, 8h30, 8h60, 8h60, 8h60, 8h30, 8h18, 8h00,
+    8h60, 8h30, 8h18, 8h18, 8h18, 8h30, 8h60, 8h00,
+    8h00, 8h66, 8h3c, 8hff, 8h3c, 8h66, 8h00, 8h00,
+    8h00, 8h30, 8h30, 8hfc, 8h30, 8h30, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h30, 8h30, 8h60,
+    8h00, 8h00, 8h00, 8hfc, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h30, 8h30, 8h00,
+    8h06, 8h0c, 8h18, 8h30, 8h60, 8hc0, 8h80, 8h00,
+    8h7c, 8hc6, 8hce, 8hde, 8hf6, 8he6, 8h7c, 8h00,
+    8h30, 8h70, 8h30, 8h30, 8h30, 8h30, 8hfc, 8h00,
+    8h78, 8hcc, 8h0c, 8h38, 8h60, 8hcc, 8hfc, 8h00,
+    8h78, 8hcc, 8h0c, 8h38, 8h0c, 8hcc, 8h78, 8h00,
+    8h1c, 8h3c, 8h6c, 8hcc, 8hfe, 8h0c, 8h1e, 8h00,
+    8hfc, 8hc0, 8hf8, 8h0c, 8h0c, 8hcc, 8h78, 8h00,
+    8h38, 8h60, 8hc0, 8hf8, 8hcc, 8hcc, 8h78, 8h00,
+    8hfc, 8hcc, 8h0c, 8h18, 8h30, 8h30, 8h30, 8h00,
+    8h78, 8hcc, 8hcc, 8h78, 8hcc, 8hcc, 8h78, 8h00,
+    8h78, 8hcc, 8hcc, 8h7c, 8h0c, 8h18, 8h70, 8h00,
+    8h00, 8h30, 8h30, 8h00, 8h00, 8h30, 8h30, 8h00,
+    8h00, 8h30, 8h30, 8h00, 8h00, 8h30, 8h30, 8h60,
+    8h18, 8h30, 8h60, 8hc0, 8h60, 8h30, 8h18, 8h00,
+    8h00, 8h00, 8hfc, 8h00, 8h00, 8hfc, 8h00, 8h00,
+    8h60, 8h30, 8h18, 8h0c, 8h18, 8h30, 8h60, 8h00,
+    8h78, 8hcc, 8h0c, 8h18, 8h30, 8h00, 8h30, 8h00,
+    8h7c, 8hc6, 8hde, 8hde, 8hde, 8hc0, 8h78, 8h00,
+    8h30, 8h78, 8hcc, 8hcc, 8hfc, 8hcc, 8hcc, 8h00,
+    8hfc, 8h66, 8h66, 8h7c, 8h66, 8h66, 8hfc, 8h00,
+    8h3c, 8h66, 8hc0, 8hc0, 8hc0, 8h66, 8h3c, 8h00,
+    8hf8, 8h6c, 8h66, 8h66, 8h66, 8h6c, 8hf8, 8h00,
+    8hfe, 8h62, 8h68, 8h78, 8h68, 8h62, 8hfe, 8h00,
+    8hfe, 8h62, 8h68, 8h78, 8h68, 8h60, 8hf0, 8h00,
+    8h3c, 8h66, 8hc0, 8hc0, 8hce, 8h66, 8h3e, 8h00,
+    8hcc, 8hcc, 8hcc, 8hfc, 8hcc, 8hcc, 8hcc, 8h00,
+    8h78, 8h30, 8h30, 8h30, 8h30, 8h30, 8h78, 8h00,
+    8h1e, 8h0c, 8h0c, 8h0c, 8hcc, 8hcc, 8h78, 8h00,
+    8he6, 8h66, 8h6c, 8h78, 8h6c, 8h66, 8he6, 8h00,
+    8hf0, 8h60, 8h60, 8h60, 8h62, 8h66, 8hfe, 8h00,
+    8hc6, 8hee, 8hfe, 8hfe, 8hd6, 8hc6, 8hc6, 8h00,
+    8hc6, 8he6, 8hf6, 8hde, 8hce, 8hc6, 8hc6, 8h00,
+    8h38, 8h6c, 8hc6, 8hc6, 8hc6, 8h6c, 8h38, 8h00,
+    8hfc, 8h66, 8h66, 8h7c, 8h60, 8h60, 8hf0, 8h00,
+    8h78, 8hcc, 8hcc, 8hcc, 8hdc, 8h78, 8h1c, 8h00,
+    8hfc, 8h66, 8h66, 8h7c, 8h6c, 8h66, 8he6, 8h00,
+    8h78, 8hcc, 8he0, 8h70, 8h1c, 8hcc, 8h78, 8h00,
+    8hfc, 8hb4, 8h30, 8h30, 8h30, 8h30, 8h78, 8h00,
+    8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8hfc, 8h00,
+    8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8h78, 8h30, 8h00,
+    8hc6, 8hc6, 8hc6, 8hd6, 8hfe, 8hee, 8hc6, 8h00,
+    8hc6, 8hc6, 8h6c, 8h38, 8h38, 8h6c, 8hc6, 8h00,
+    8hcc, 8hcc, 8hcc, 8h78, 8h30, 8h30, 8h78, 8h00,
+    8hfe, 8hc6, 8h8c, 8h18, 8h32, 8h66, 8hfe, 8h00,
+    8h78, 8h60, 8h60, 8h60, 8h60, 8h60, 8h78, 8h00,
+    8hc0, 8h60, 8h30, 8h18, 8h0c, 8h06, 8h02, 8h00,
+    8h78, 8h18, 8h18, 8h18, 8h18, 8h18, 8h78, 8h00,
+    8h10, 8h38, 8h6c, 8hc6, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8hff,
+    8h30, 8h30, 8h18, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h78, 8h0c, 8h7c, 8hcc, 8h76, 8h00,
+    8he0, 8h60, 8h60, 8h7c, 8h66, 8h66, 8hdc, 8h00,
+    8h00, 8h00, 8h78, 8hcc, 8hc0, 8hcc, 8h78, 8h00,
+    8h1c, 8h0c, 8h0c, 8h7c, 8hcc, 8hcc, 8h76, 8h00,
+    8h00, 8h00, 8h78, 8hcc, 8hfc, 8hc0, 8h78, 8h00,
+    8h38, 8h6c, 8h60, 8hf0, 8h60, 8h60, 8hf0, 8h00,
+    8h00, 8h00, 8h76, 8hcc, 8hcc, 8h7c, 8h0c, 8hf8,
+    8he0, 8h60, 8h6c, 8h76, 8h66, 8h66, 8he6, 8h00,
+    8h30, 8h00, 8h70, 8h30, 8h30, 8h30, 8h78, 8h00,
+    8h0c, 8h00, 8h0c, 8h0c, 8h0c, 8hcc, 8hcc, 8h78,
+    8he0, 8h60, 8h66, 8h6c, 8h78, 8h6c, 8he6, 8h00,
+    8h70, 8h30, 8h30, 8h30, 8h30, 8h30, 8h78, 8h00,
+    8h00, 8h00, 8hcc, 8hfe, 8hfe, 8hd6, 8hc6, 8h00,
+    8h00, 8h00, 8hf8, 8hcc, 8hcc, 8hcc, 8hcc, 8h00,
+    8h00, 8h00, 8h78, 8hcc, 8hcc, 8hcc, 8h78, 8h00,
+    8h00, 8h00, 8hdc, 8h66, 8h66, 8h7c, 8h60, 8hf0,
+    8h00, 8h00, 8h76, 8hcc, 8hcc, 8h7c, 8h0c, 8h1e,
+    8h00, 8h00, 8hdc, 8h76, 8h66, 8h60, 8hf0, 8h00,
+    8h00, 8h00, 8h7c, 8hc0, 8h78, 8h0c, 8hf8, 8h00,
+    8h10, 8h30, 8h7c, 8h30, 8h30, 8h34, 8h18, 8h00,
+    8h00, 8h00, 8hcc, 8hcc, 8hcc, 8hcc, 8h76, 8h00,
+    8h00, 8h00, 8hcc, 8hcc, 8hcc, 8h78, 8h30, 8h00,
+    8h00, 8h00, 8hc6, 8hd6, 8hfe, 8hfe, 8h6c, 8h00,
+    8h00, 8h00, 8hc6, 8h6c, 8h38, 8h6c, 8hc6, 8h00,
+    8h00, 8h00, 8hcc, 8hcc, 8hcc, 8h7c, 8h0c, 8hf8,
+    8h00, 8h00, 8hfc, 8h98, 8h30, 8h64, 8hfc, 8h00,
+    8h1c, 8h30, 8h30, 8he0, 8h30, 8h30, 8h1c, 8h00,
+    8h18, 8h18, 8h18, 8h00, 8h18, 8h18, 8h18, 8h00,
+    8he0, 8h30, 8h30, 8h1c, 8h30, 8h30, 8he0, 8h00,
+    8h76, 8hdc, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h10, 8h38, 8h6c, 8hc6, 8hc6, 8hfe, 8h00,
+    8h78, 8hcc, 8hc0, 8hcc, 8h78, 8h18, 8h0c, 8h78,
+    8h00, 8hcc, 8h00, 8hcc, 8hcc, 8hcc, 8h7e, 8h00,
+    8h1c, 8h00, 8h78, 8hcc, 8hfc, 8hc0, 8h78, 8h00,
+    8h7e, 8hc3, 8h3c, 8h06, 8h3e, 8h66, 8h3f, 8h00,
+    8hcc, 8h00, 8h78, 8h0c, 8h7c, 8hcc, 8h7e, 8h00,
+    8he0, 8h00, 8h78, 8h0c, 8h7c, 8hcc, 8h7e, 8h00,
+    8h30, 8h30, 8h78, 8h0c, 8h7c, 8hcc, 8h7e, 8h00,
+    8h00, 8h00, 8h78, 8hc0, 8hc0, 8h78, 8h0c, 8h38,
+    8h7e, 8hc3, 8h3c, 8h66, 8h7e, 8h60, 8h3c, 8h00,
+    8hcc, 8h00, 8h78, 8hcc, 8hfc, 8hc0, 8h78, 8h00,
+    8he0, 8h00, 8h78, 8hcc, 8hfc, 8hc0, 8h78, 8h00,
+    8hcc, 8h00, 8h70, 8h30, 8h30, 8h30, 8h78, 8h00,
+    8h7c, 8hc6, 8h38, 8h18, 8h18, 8h18, 8h3c, 8h00,
+    8he0, 8h00, 8h70, 8h30, 8h30, 8h30, 8h78, 8h00,
+    8hc6, 8h38, 8h6c, 8hc6, 8hfe, 8hc6, 8hc6, 8h00,
+    8h30, 8h30, 8h00, 8h78, 8hcc, 8hfc, 8hcc, 8h00,
+    8h1c, 8h00, 8hfc, 8h60, 8h78, 8h60, 8hfc, 8h00,
+    8h00, 8h00, 8h7f, 8h0c, 8h7f, 8hcc, 8h7f, 8h00,
+    8h3e, 8h6c, 8hcc, 8hfe, 8hcc, 8hcc, 8hce, 8h00,
+    8h78, 8hcc, 8h00, 8h78, 8hcc, 8hcc, 8h78, 8h00,
+    8h00, 8hcc, 8h00, 8h78, 8hcc, 8hcc, 8h78, 8h00,
+    8h00, 8he0, 8h00, 8h78, 8hcc, 8hcc, 8h78, 8h00,
+    8h78, 8hcc, 8h00, 8hcc, 8hcc, 8hcc, 8h7e, 8h00,
+    8h00, 8he0, 8h00, 8hcc, 8hcc, 8hcc, 8h7e, 8h00,
+    8h00, 8hcc, 8h00, 8hcc, 8hcc, 8h7c, 8h0c, 8hf8,
+    8hc3, 8h18, 8h3c, 8h66, 8h66, 8h3c, 8h18, 8h00,
+    8hcc, 8h00, 8hcc, 8hcc, 8hcc, 8hcc, 8h78, 8h00,
+    8h18, 8h18, 8h7e, 8hc0, 8hc0, 8h7e, 8h18, 8h18,
+    8h38, 8h6c, 8h64, 8hf0, 8h60, 8he6, 8hfc, 8h00,
+    8hcc, 8hcc, 8h78, 8hfc, 8h30, 8hfc, 8h30, 8h30,
+    8hf8, 8hcc, 8hcc, 8hfa, 8hc6, 8hcf, 8hc6, 8hc7,
+    8h0e, 8h1b, 8h18, 8h3c, 8h18, 8h18, 8hd8, 8h70,
+    8h1c, 8h00, 8h78, 8h0c, 8h7c, 8hcc, 8h7e, 8h00,
+    8h38, 8h00, 8h70, 8h30, 8h30, 8h30, 8h78, 8h00,
+    8h00, 8h1c, 8h00, 8h78, 8hcc, 8hcc, 8h78, 8h00,
+    8h00, 8h1c, 8h00, 8hcc, 8hcc, 8hcc, 8h7e, 8h00,
+    8h00, 8hf8, 8h00, 8hf8, 8hcc, 8hcc, 8hcc, 8h00,
+    8hfc, 8h00, 8hcc, 8hec, 8hfc, 8hdc, 8hcc, 8h00,
+    8h3c, 8h6c, 8h6c, 8h3e, 8h00, 8h7e, 8h00, 8h00,
+    8h38, 8h6c, 8h6c, 8h38, 8h00, 8h7c, 8h00, 8h00,
+    8h30, 8h00, 8h30, 8h60, 8hc0, 8hcc, 8h78, 8h00,
+    8h00, 8h00, 8h00, 8hfc, 8hc0, 8hc0, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8hfc, 8h0c, 8h0c, 8h00, 8h00,
+    8hc3, 8hc6, 8hcc, 8hde, 8h33, 8h66, 8hcc, 8h0f,
+    8hc3, 8hc6, 8hcc, 8hdb, 8h37, 8h6f, 8hcf, 8h03,
+    8h18, 8h18, 8h00, 8h18, 8h18, 8h18, 8h18, 8h00,
+    8h00, 8h33, 8h66, 8hcc, 8h66, 8h33, 8h00, 8h00,
+    8h00, 8hcc, 8h66, 8h33, 8h66, 8hcc, 8h00, 8h00,
+    8h22, 8h88, 8h22, 8h88, 8h22, 8h88, 8h22, 8h88,
+    8h55, 8haa, 8h55, 8haa, 8h55, 8haa, 8h55, 8haa,
+    8hdb, 8h77, 8hdb, 8hee, 8hdb, 8h77, 8hdb, 8hee,
+    8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8h18, 8h18, 8hf8, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8hf8, 8h18, 8hf8, 8h18, 8h18, 8h18,
+    8h36, 8h36, 8h36, 8h36, 8hf6, 8h36, 8h36, 8h36,
+    8h00, 8h00, 8h00, 8h00, 8hfe, 8h36, 8h36, 8h36,
+    8h00, 8h00, 8hf8, 8h18, 8hf8, 8h18, 8h18, 8h18,
+    8h36, 8h36, 8hf6, 8h06, 8hf6, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36, 8h36,
+    8h00, 8h00, 8hfe, 8h06, 8hf6, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8hf6, 8h06, 8hfe, 8h00, 8h00, 8h00,
+    8h36, 8h36, 8h36, 8h36, 8hfe, 8h00, 8h00, 8h00,
+    8h18, 8h18, 8hf8, 8h18, 8hf8, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8hf8, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8h18, 8h18, 8h1f, 8h00, 8h00, 8h00,
+    8h18, 8h18, 8h18, 8h18, 8hff, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8hff, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8h18, 8h18, 8h1f, 8h18, 8h18, 8h18,
+    8h00, 8h00, 8h00, 8h00, 8hff, 8h00, 8h00, 8h00,
+    8h18, 8h18, 8h18, 8h18, 8hff, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8h1f, 8h18, 8h1f, 8h18, 8h18, 8h18,
+    8h36, 8h36, 8h36, 8h36, 8h37, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8h37, 8h30, 8h3f, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h3f, 8h30, 8h37, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8hf7, 8h00, 8hff, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hff, 8h00, 8hf7, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8h37, 8h30, 8h37, 8h36, 8h36, 8h36,
+    8h00, 8h00, 8hff, 8h00, 8hff, 8h00, 8h00, 8h00,
+    8h36, 8h36, 8hf7, 8h00, 8hf7, 8h36, 8h36, 8h36,
+    8h18, 8h18, 8hff, 8h00, 8hff, 8h00, 8h00, 8h00,
+    8h36, 8h36, 8h36, 8h36, 8hff, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8hff, 8h00, 8hff, 8h18, 8h18, 8h18,
+    8h00, 8h00, 8h00, 8h00, 8hff, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8h36, 8h36, 8h3f, 8h00, 8h00, 8h00,
+    8h18, 8h18, 8h1f, 8h18, 8h1f, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h1f, 8h18, 8h1f, 8h18, 8h18, 8h18,
+    8h00, 8h00, 8h00, 8h00, 8h3f, 8h36, 8h36, 8h36,
+    8h36, 8h36, 8h36, 8h36, 8hff, 8h36, 8h36, 8h36,
+    8h18, 8h18, 8hff, 8h18, 8hff, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8h18, 8h18, 8hf8, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h1f, 8h18, 8h18, 8h18,
+    8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff, 8hff,
+    8h00, 8h00, 8h00, 8h00, 8hff, 8hff, 8hff, 8hff,
+    8hf0, 8hf0, 8hf0, 8hf0, 8hf0, 8hf0, 8hf0, 8hf0,
+    8h0f, 8h0f, 8h0f, 8h0f, 8h0f, 8h0f, 8h0f, 8h0f,
+    8hff, 8hff, 8hff, 8hff, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h76, 8hdc, 8hc8, 8hdc, 8h76, 8h00,
+    8h00, 8h78, 8hcc, 8hf8, 8hcc, 8hf8, 8hc0, 8hc0,
+    8h00, 8hfc, 8hcc, 8hc0, 8hc0, 8hc0, 8hc0, 8h00,
+    8h00, 8hfe, 8h6c, 8h6c, 8h6c, 8h6c, 8h6c, 8h00,
+    8hfc, 8hcc, 8h60, 8h30, 8h60, 8hcc, 8hfc, 8h00,
+    8h00, 8h00, 8h7e, 8hd8, 8hd8, 8hd8, 8h70, 8h00,
+    8h00, 8h66, 8h66, 8h66, 8h66, 8h7c, 8h60, 8hc0,
+    8h00, 8h76, 8hdc, 8h18, 8h18, 8h18, 8h18, 8h00,
+    8hfc, 8h30, 8h78, 8hcc, 8hcc, 8h78, 8h30, 8hfc,
+    8h38, 8h6c, 8hc6, 8hfe, 8hc6, 8h6c, 8h38, 8h00,
+    8h38, 8h6c, 8hc6, 8hc6, 8h6c, 8h6c, 8hee, 8h00,
+    8h1c, 8h30, 8h18, 8h7c, 8hcc, 8hcc, 8h78, 8h00,
+    8h00, 8h00, 8h7e, 8hdb, 8hdb, 8h7e, 8h00, 8h00,
+    8h06, 8h0c, 8h7e, 8hdb, 8hdb, 8h7e, 8h60, 8hc0,
+    8h38, 8h60, 8hc0, 8hf8, 8hc0, 8h60, 8h38, 8h00,
+    8h78, 8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8hcc, 8h00,
+    8h00, 8hfc, 8h00, 8hfc, 8h00, 8hfc, 8h00, 8h00,
+    8h30, 8h30, 8hfc, 8h30, 8h30, 8h00, 8hfc, 8h00,
+    8h60, 8h30, 8h18, 8h30, 8h60, 8h00, 8hfc, 8h00,
+    8h18, 8h30, 8h60, 8h30, 8h18, 8h00, 8hfc, 8h00,
+    8h0e, 8h1b, 8h1b, 8h18, 8h18, 8h18, 8h18, 8h18,
+    8h18, 8h18, 8h18, 8h18, 8h18, 8hd8, 8hd8, 8h70,
+    8h30, 8h30, 8h00, 8hfc, 8h00, 8h30, 8h30, 8h00,
+    8h00, 8h76, 8hdc, 8h00, 8h76, 8hdc, 8h00, 8h00,
+    8h38, 8h6c, 8h6c, 8h38, 8h00, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h18, 8h18, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h18, 8h00, 8h00, 8h00,
+    8h0f, 8h0c, 8h0c, 8h0c, 8hec, 8h6c, 8h3c, 8h1c,
+    8h78, 8h6c, 8h6c, 8h6c, 8h6c, 8h00, 8h00, 8h00,
+    8h70, 8h18, 8h30, 8h60, 8h78, 8h00, 8h00, 8h00,
+    8h00, 8h00, 8h3c, 8h3c, 8h3c, 8h3c, 8h00, 8h00,
+    8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00, 8h00
+
+    };
+    
+    // 80 x 4 character buffer for the input/output terminal
+    dualport_bram uint8 terminal[640] = uninitialized;
+
+    // Initial cursor position in the terminal, bottom left
+    uint7 terminal_x = 0;
+    uint3 terminal_y = 7;
+
+    
+    // Character position on the terminal x 0-79, y 0-7 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
+    uint7 xterminalpos := ( pix_active ? pix_x + 1 : 0 ) >> 3;
+    uint10 yterminalpos := (( pix_vblank ? 0 : pix_y - 416 ) >> 3) * 80; // 8 pixel high characters
+
+    // Determine if cursor, and if cursor is flashing
+    uint1 is_cursor := ( xterminalpos == terminal_x ) & ( ( ( pix_y - 416) >> 3 ) == terminal_y );
+    
+    // Derive the x and y coordinate within the current 8x8 terminal character block x 0-7, y 0-7
+    uint3 xinterminal := (pix_x) & 7;
+    uint3 yinterminal := (pix_y) & 7;
+
+    // Derive the actual pixel in the current terminal
+    uint1 terminalpixel := ((characterGenerator8x8[ terminal.rdata0 * 8 + yinterminal ] << xinterminal) >> 7) & 1;
+
+    // Terminal active (scroll) flag and temporary storage for scrolling
+    uint10 terminal_scroll = 0;
+    uint10 terminal_scroll_next = 0;
+
+    // Setup the reading of the terminal memory
+    terminal.addr0 := xterminalpos + yterminalpos;
+    terminal.wenable0 := 0;
+
+    // Setup the writing to the terminal memory
+    terminal.wenable1 := 0;
+
+    // Default to transparent
+    terminal_display := 0;
+    
+    // TERMINAL Actions
+    // Write to terminal, move to next character and scroll
+    always {
+         switch( terminal_active ) {
+             case 0: {
+                switch( terminal_write ) {
+                    case 1: {
+                        // Display character
+                        switch( terminal_character ) {
+                            case 8: {
+                                // BACKSPACE, move back one character
+                                if( terminal_x > 0 ) {
+                                    terminal_x = terminal_x - 1;
+                                    terminal.addr1 = terminal_x - 1 + terminal_y * 80;
+                                    terminal.wdata1 = 0;
+                                    terminal.wenable1 = 1;
+                                }
+                            }
+                            case 10: {
+                                // LINE FEED, scroll
+                                terminal_scroll = 0;
+                                terminal_active = 1;
+                            }
+                            case 13: {
+                                // CARRIAGE RETURN
+                                terminal_x = 0;
+                            }
+                            default: {
+                                // Display character
+                                terminal.addr1 = terminal_x + terminal_y * 80;
+                                terminal.wdata1 = terminal_character;
+                                terminal.wenable1 = 1;
+                                if( terminal_x == 79 ) {
+                                    terminal_x = 0;
+                                    terminal_scroll = 0;
+                                    terminal_active = 1;
+                                } else {
+                                    terminal_x = terminal_x + 1;
+                                }
+                            }
+                        }
+                    }
+                    default: {}
+                }
+            }
+            // TERMINAL SCROLL
+            case 1: {
+                // SCROLL
+                if( terminal_scroll == 560 ) {
+                    // Finished Scroll, Move to blank
+                    terminal_active = 4;
+                } else {
+                    // Read the next character down
+                    terminal.addr1 = terminal_scroll + 80;
+                    terminal_active = 2;
+                }
+            }
+            case 2: {
+                // Retrieve the character to move up
+                terminal_scroll_next = terminal.rdata1;
+                terminal_active = 3;
+            }
+            case 3: {
+                // Write the character one line up and move onto the next character
+                terminal.addr1 = terminal_scroll;
+                terminal.wdata1 = terminal_scroll_next;
+                terminal.wenable1 = 1;
+                terminal_scroll = terminal_scroll + 1;
+                terminal_active = 1;
+            }
+            case 4: {
+                // Blank out the last line
+                terminal.addr1 = terminal_scroll;
+                terminal.wdata1 = 0;
+                terminal.wenable1 = 1;
+                if( terminal_scroll == 640 ) {
+                    // Finish Blank
+                    terminal_active = 0;
+                } else {
+                    terminal_scroll = terminal_scroll + 1;
+                }
+            }
+            default: {terminal_active = 0;}
+         } // TERMINAL
+    }
+
+    // Render the terminal
+    while(1) {
+        if( pix_active & showterminal & (pix_y > 415) ) {
+            // TERMINAL is in range and showterminal flag
+            // Invert colours for cursor if flashing
+            switch( terminalpixel ) {
+                case 0: {
+                    if( is_cursor & timer1hz ) {
+                        pix_red = 6==6 ? 63 : 255;
+                        pix_green = 6==6 ? 63 : 255;
+                        pix_blue = 6==6 ? 63 : 255;
+                    } else {
+                        pix_red = 0;
+                        pix_green = 0;
+                        pix_blue = 6==6 ? 63 : 255;
+                    }
+                }
+                case 1: {
+                    if( is_cursor & timer1hz ) {
+                        pix_red = 0;
+                        pix_green = 0;
+                        pix_blue = 6==6 ? 63 : 255;
+                    } else {
+                        pix_red = 6==6 ? 63 : 255;
+                        pix_green = 6==6 ? 63 : 255;
+                        pix_blue = 6==6 ? 63 : 255;
+                    }
+                }
+            }
+            terminal_display = 1;
+        } else {
+            terminal_display = 0;
+        }
+    }
+
+}
+
+import('common/ulx3s_clk_50_25.v')
+import('common/reset_conditioner.v')
+import('common/ps2.v')
+
+
+algorithm multiplex_display(
+    input   uint10 pix_x,
+    input   uint10 pix_y,
+    input   uint1  pix_active,
+    input   uint1  pix_vblank,
+    output! uint6 pix_red,
+    output! uint6 pix_green,
+    output! uint6 pix_blue,
+
+    // TERMINAL
+    input uint6 terminal_r,
+    input uint6 terminal_g,
+    input uint6 terminal_b,
+    input uint1   terminal_display
+) <autorun> {
+    // RGB is { 0, 0, 0 } by default
+    pix_red   := 0;
+    pix_green := 0;
+    pix_blue  := 0;
+        
+    // Draw the screen
+    while (1) {
+        // wait until pix_active THEN BACKGROUND -> LOWER SPRITES -> BITMAP -> UPPER SPRITES -> CHARACTER MAP -> TERMINAL
+        if( pix_active ) {
+            // TERMINAL
+            if( terminal_display ) {
+                pix_red = terminal_r;
+                pix_green = terminal_g;
+                pix_blue = terminal_b;
+            }        
+        } // pix_active
+    }
+}
+
+// Create 1hz (1 second counter)
+algorithm pulse1hz(
+    output uint16 counter1hz
+) <autorun>
+{
+  uint32 counter50mhz = 0;
+  counter1hz = 0;
+  while (1) {
+        if ( counter50mhz == 50000000 ) {
+            counter1hz   = counter1hz + 1;
+            counter50mhz = 0;
+        } else {
+            counter50mhz = counter50mhz + 1;
+        }
+    }
+}
+
+algorithm main(
+    // LEDS (8 of)
+    output  uint8   leds,
+    
+    // BUTTONS
+    input   uint8   btns,
+    
+    output  uint4   gpdi_dp,
+    output  uint4   gpdi_dn,
+
+    // UART
+    output! uint1   uart_tx,
+    input   uint1   uart_rx,
+
+    // US2 USB Port
+    input   uint1   usb_bd_dp,
+    input   uint1   usb_bd_dn,
+    output  uint1   usb_pu_dp,
+    output  uint1   usb_pu_dn,
+    
+    // VGA/HDMI
+    output! uint6 video_r,
+    output! uint6 video_g,
+    output! uint6 video_b,
+    output! uint1   video_hs,
+    output! uint1   video_vs
+) <@clock_50mhz> {
+    // CYCLE counter
+    uint3 CYCLE = 0;
+
+    // Setup the 1hz timer
+    uint16 timer1hz = 0;
+    pulse1hz p1hz( counter1hz :> timer1hz );
+
+    // PS/2 Keyboard for the ULX3S
+    uint8 ps2_key = 0;
+    uint1 ps2_strobe = 0;
+    ps2kbd keyboard(
+        clk <: clock,
+        ps2_clk  <: usb_bd_dp,
+        ps2_data <: usb_bd_dn,
+        ps2_code :> ps2_key,
+        strobe   :> ps2_strobe
+    );
+
+    // VGA/HDMI Display
+    uint1 video_reset = 0;
+    uint1 video_clock = 0;
+    uint1 pll_lock = 0;
+    
+    uint1 clock_50mhz = 0;
+    ulx3s_clk_50_25 clk_gen(
+        clkin    <: clock,
+        clkout0  :> clock_50mhz,
+        clkout1  :> video_clock,
+        locked   :> pll_lock
+    ); 
+
+    // Video Reset
+    reset_conditioner vga_rstcond (
+        rcclk <: video_clock ,
+        in  <: reset,
+        out :> video_reset
+    );
+
+    // Status of the screen, if in range, if in vblank, actual pixel x and y
+    uint1  active = 0;
+    uint1  vblank = 0;
+    uint10 pix_x  = 0;
+    uint10 pix_y  = 0;
+
+    // VGA or HDMI driver
+    uint8 video_r8 := video_r << 2;
+    uint8 video_g8 := video_g << 2;
+    uint8 video_b8 := video_b << 2;
+
+    hdmi video<@clock,!reset>(
+        x       :> pix_x,
+        y       :> pix_y,
+        active  :> active,
+        vblank  :> vblank,
+        gpdi_dp :> gpdi_dp,
+        gpdi_dn :> gpdi_dn,
+        red     <: video_r8,
+        green   <: video_g8,
+        blue    <: video_b8
+    );
+    
+    // Terminal window at the bottom of the screen
+    uint6   terminal_r = 0;
+    uint6   terminal_g = 0;
+    uint6   terminal_b = 0;
+    uint1               terminal_display = 0;
+    
+    terminal terminal_window <@video_clock,!video_reset>
+    (
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: active,
+        pix_vblank <: vblank,
+        pix_red    :> terminal_r,
+        pix_green  :> terminal_g,
+        pix_blue   :> terminal_b,
+        terminal_display :> terminal_display,
+        timer1hz   <: timer1hz
+    );
+    
+    multiplex_display display <@video_clock,!video_reset>
+    (
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: active,
+        pix_vblank <: vblank,
+        pix_red    :> video_r,
+        pix_green  :> video_g,
+        pix_blue   :> video_b,
+
+        terminal_r <: terminal_r,
+        terminal_g <: terminal_g,
+        terminal_b <: terminal_b,
+        terminal_display <: terminal_display
+    );
+    
+    // PS/2 input FIFO (16 character) as dualport bram (code from @sylefeb)
+    dualport_bram uint8 ps2InBuffer[16] = uninitialized;
+    uint4 ps2InBufferNext = 0;
+    uint4 ps2InBufferTop = 0;
+        ps2InBuffer.wenable0  := 0;  // always read  on port 0
+        ps2InBuffer.wenable1  := 1;  // always write on port 1
+        ps2InBuffer.addr0     := ps2InBufferNext; // FIFO reads on next
+        ps2InBuffer.addr1     := ps2InBufferTop;  // FIFO writes on top
+
+    // UART input and output buffering
+    always {
+        // READ from PS/2 if character available and store
+        if( ps2_strobe ) {
+            // writes at ps2InBufferTop (code from @sylefeb)
+            ps2InBuffer.wdata1  = ps2_key;            
+            ps2InBufferTop      = ps2InBufferTop + 1;
+        }
+    }
+    
+    // Setup the terminal
+    terminal_window.showterminal = 1;
+    terminal_window.showcursor = 1;
+
+    // Echo PS/2 Input to terminal
+    while( 1 ) {
+        
+        switch( CYCLE ) {
+            case 0: {
+                if( ~( ps2InBufferNext == ps2InBufferTop ) ) {
+                    terminal_window.terminal_character = ps2InBuffer.rdata0;
+                    terminal_window.terminal_write = 1;
+                }
+            }
+            
+            case 2: {
+                terminal_window.terminal_write = 0;
+            }
+            
+            default: {}
+        } // switch(CYCLE)
+        
+    
+        CYCLE = ( CYCLE == 2 ) ? 0 : CYCLE + 1;
+    }
+}
+

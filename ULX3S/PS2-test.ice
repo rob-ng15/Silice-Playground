@@ -201,6 +201,7 @@ algorithm main(
     // Setup the terminal
     terminal_window.showterminal = 1;
     terminal_window.showcursor = 1;
+
     // Echo PS/2 Input to terminal
     while( 1 ) {
         
