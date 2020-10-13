@@ -22,7 +22,7 @@ PIN_DEF = fomu-hacker.pcf
 DEVICE = up5k
 PACKAGE = uwg30
 
-CLK_MHZ = 12
+CLK_MHZ = 48
 
 all: nb_fomu_hw.dfu nb_fomu_hw.rpt fomu_led_ctrl.dfu fomu_led_ctrl.rpt
 
