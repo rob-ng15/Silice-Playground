@@ -181,6 +181,9 @@ algorithm main(
     // LEDS (8 of)
     output  uint8   leds,
     
+    // BUTTONS
+    input   uint8   btns,
+    
 $$if ULX3S then
     output  uint4   gpdi_dp,
     output  uint4   gpdi_dn,
@@ -191,9 +194,11 @@ $$end
     input   uint1   uart_rx,
 
 $$if ULX3S then
-    // PS2 Keyboard
-    input   uint1   ps2clk,
-    input   uint1   ps2data,
+    // US2 USB Port
+    input   uint1   usb_bd_dp,
+    input   uint1   usb_bd_dn,
+    output  uint1   usb_pu_dp,
+    output  uint1   usb_pu_dn,
 $$end
     
     // VGA/HDMI
@@ -207,9 +212,6 @@ $$if ULX3S then
 <@clock_50mhz> // ULX3S has a 25 MHz clock, so we use a PLL to bring it up to 50 MHz
 $$end
 {
-    // SETUP Peripherals
-    uint8 buttons = 0; // TODO
-
     uint16 timer1hz = 0;
     pulse1hz p1hz( counter1hz :> timer1hz );
 
@@ -233,8 +235,8 @@ $$if ULX3S then
     uint1 ps2_strobe = 0;
     ps2kbd keyboard(
         clk <: clock,
-        ps2_clk  <: ps2clk,
-        ps2_data <: ps2data,
+        ps2_clk  <: usb_bd_dp,
+        ps2_data <: usb_bd_dn,
         ps2_code :> ps2_key,
         strobe   :> ps2_strobe
     );
@@ -550,10 +552,12 @@ $$end
 
     // UART and PS/2 Buffers
     $$if ULX3S then
-        ps2InBuffer.wenable0  := 0;  // always read  on port 0
-        ps2InBuffer.wenable1  := 1;  // always write on port 1
-        ps2InBuffer.addr0     := ps2InBufferNext; // FIFO reads on next
-        ps2InBuffer.addr1     := ps2InBufferTop;  // FIFO writes on top
+        ps2InBuffer.wenable0    := 0;               // always read  on port 0
+        ps2InBuffer.wenable1    := 1;               // always write on port 1
+        ps2InBuffer.addr0       := ps2InBufferNext; // FIFO reads on next
+        ps2InBuffer.addr1       := ps2InBufferTop;  // FIFO writes on top
+        usb_pu_dp               := 1;               // PULLUP for PS/2 keyboard via USB
+        usb_pu_dn               := 1;               // PULLUP for PS/2 keyboard via USB
     $$end
 
     uartInBuffer.wenable0  := 0;  // always read  on port 0
@@ -747,7 +751,7 @@ $$end
                                                 }
                                                 case 16hf003: {
                                                     // user buttons
-                                                    newStackTop = {12b0, buttons};
+                                                    newStackTop = btns;
                                                 }
                                                 case 16hf004: {
                                                     // 1hz timer
@@ -757,7 +761,7 @@ $$end
                                                     // GPU Active Status
                                                     newStackTop = gpu_processor.gpu_active;
                                                 }
-                                                case 16hff20: {
+                                                case 16hff21: {
                                                     // Terminal Active Status
                                                     newStackTop = terminal_window.terminal_active;
                                                 }

@@ -549,10 +549,6 @@ t: key ( -- c )
      ?key
 	until f000 literal @ t;
 t: nuf? ( -- t ) ?key dup if drop key =cr literal = then exit t;
-t: timer@ ( -- t ) f004 literal @ t;
-t: led@ ( -- t ) f002 literal @ t;
-t: led! ( c -- ) f002 literal ! t;
-t: buttons@ ( -- t ) f003 literal @ t;
 t: space ( -- ) bl emit t;
 t: spaces ( +n -- ) 0 literal max  for aft space then next t;
 t: type ( b u -- ) for aft count emit then next drop t;
@@ -962,6 +958,13 @@ t: d0<> d0= invert t;
 t: d2* 2dup d+ t;
 t: d2/ dup f literal lshift >r 2/ swap 2/ r> or swap t;
 t: d1- 1 literal s>d dnegate d+ t;
+t: dabs dup 0< if dnegate then t;
+
+( Buttons and LEDs )
+t: timer@ ( -- t ) f004 literal @ t;
+t: led@ ( -- t ) f002 literal @ t;
+t: led! ( c -- ) f002 literal ! t;
+t: buttons@ ( -- t ) f003 literal @ t;
 
 ( DISPLAY helper words )
 t: vblank begin ffff literal @ 0= until t;
