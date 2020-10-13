@@ -77,6 +77,10 @@ algorithm sprite_layer(
         uint1 sprite_$i$_visible := sprite_active[$i$] & ( pix_x >= sprite_x[$i$] ) & ( pix_x < sprite_x[$i$] + 16 ) & ( pix_y >= sprite_y[$i$] ) & ( pix_y < sprite_y[$i$] + 16 ) & ( sprite_$i$_tiles.rdata0 >> ( 15 - ( pix_x - sprite_x[$i$] ) ) & 1 );
     $$end
 
+    // Expand Sprite Update Deltas
+    int11 deltax := { {9{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
+    int11 deltay := { {9{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
+   
     // Set read and write address for the sprite tiles
     $$for i=0,7 do
         sprite_$i$_tiles.addr0 := sprite_tile_number[$i$] * 16 + ( pix_y - sprite_y[$i$] );
@@ -134,7 +138,7 @@ algorithm sprite_layer(
                         sprite_x[ sprite_set_number ] = (sprite_x[ sprite_set_number ] < (-16)) ? 640 : -16;
                     }
                 } else {
-                    sprite_x[ sprite_set_number ] = sprite_x[ sprite_set_number ] + { {9{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
+                    sprite_x[ sprite_set_number ] = sprite_x[ sprite_set_number ] + deltax;
                 }
                 if(  (sprite_y[ sprite_set_number ] < (-16)) | (sprite_y[ sprite_set_number ] > 480) ) {
                     if( spriteupdate( sprite_update ).y_act ) {
@@ -143,7 +147,7 @@ algorithm sprite_layer(
                         sprite_y[ sprite_set_number ] = (sprite_y[ sprite_set_number ] < (-16)) ? 480 : -16;
                     }
                 } else {
-                    sprite_y[ sprite_set_number ] = sprite_y[ sprite_set_number ] + { {9{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
+                    sprite_y[ sprite_set_number ] = sprite_y[ sprite_set_number ] + deltay;
                 }
             }
             default: {}

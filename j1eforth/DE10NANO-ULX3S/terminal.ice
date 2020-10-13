@@ -23,11 +23,14 @@ algorithm terminal(
     // 80 x 4 character buffer for the input/output terminal
     dualport_bram uint8 terminal[640] = uninitialized;
 
-    // Character position on the terminal x 0-79, y 0-7 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
+    // Initial cursor position in the terminal, bottom left
     uint7 terminal_x = 0;
     uint3 terminal_y = 7;
-    uint7 xterminalpos := (pix_x+1) >> 3;
-    uint10 yterminalpos := ((pix_y - 416) >> 3) * 80; // 8 pixel high characters
+
+    
+    // Character position on the terminal x 0-79, y 0-7 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
+    uint7 xterminalpos := ( pix_active ? pix_x + 1 : 0 ) >> 3;
+    uint10 yterminalpos := (( pix_vblank ? 0 : pix_y - 416 ) >> 3) * 80; // 8 pixel high characters
 
     // Determine if cursor, and if cursor is flashing
     uint1 is_cursor := ( xterminalpos == terminal_x ) & ( ( ( pix_y - 416) >> 3 ) == terminal_y );

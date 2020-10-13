@@ -1,0 +1,16 @@
+# make doc
+# python encode.py j1.png
+# python mkblob.py ; exit
+make j1.bin || exit
+
+# for ADDR in 0 80000 100000 180000
+# do
+#   (. /opt/Xilinx/11.1/ISE/settings32.sh ; promgen -u $ADDR j1_program.bit -p mcs -w -o j1_program_$ADDR.mcs )
+# done
+# ./boot
+# ping -c 4 192.168.0.99 && python twist.py
+
+python twist.py
+
+(. /opt/Xilinx/11.1/ISE/settings32.sh ; data2mem -bm ../synth/j1_bd.bmm -bd j1.mem tag jram -bt ../synth/j1.bit -o b j1_program.bit )
+scp j1_program.bit leonard:.

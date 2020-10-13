@@ -33,8 +33,8 @@ algorithm character_map(
     uint8 colourexpand2to8[4] = {  0, 85, 170, 255 };
 
     // Character position on the screen x 0-79, y 0-29 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
-    uint8 xcharacterpos := (pix_x+1) >> 3;
-    uint12 ycharacterpos := ((pix_y) >> 4) * 80; // 16 pixel high characters
+    uint8 xcharacterpos := ( pix_active ? pix_x + 1 : 0 ) >> 3;
+    uint12 ycharacterpos := (( pix_vblank ? 0 : pix_y ) >> 4) * 80; // 16 pixel high characters
     
     // Derive the x and y coordinate within the current 8x16 character block x 0-7, y 0-15
     uint3 xincharacter := (pix_x) & 7;

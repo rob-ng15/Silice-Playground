@@ -136,6 +136,7 @@ The j1eforth wordlist has been extended to include some double (32 bit) integer 
 * `d=`, `d<>`, `d<`, `d>` do double integer comparisons
 * `d0=`, `d0<>` and `d0<` do double integer 0 comparisons
 * `dand`, `dor`, `dxor` and `dinvert` do double integer binary arithmetic
+* `dnegate` change sign of the double integer on the stack (this was already part of j1eforth)
 * `2swap` `2over`, `2rot` and `2nip` along with the j1eforth `2dup` and `2drop` work with double integers on the stack
 * `m*` and `um*` perform single integer signed and unsigned multiplication giving a double integer result (these were already part of j1eforth)
 * `m/mod` and `um/mod` divide a double integer by a single integer, signed and unsigned, to give a single integer remainder and quotient (these were already part of j1eforth)
