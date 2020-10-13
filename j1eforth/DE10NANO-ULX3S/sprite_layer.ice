@@ -80,9 +80,7 @@ algorithm sprite_layer(
     // Expand Sprite Update Deltas
     int11 deltax := { {9{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
     int11 deltay := { {9{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
-    
-
-    
+   
     // Set read and write address for the sprite tiles
     $$for i=0,7 do
         sprite_$i$_tiles.addr0 := sprite_tile_number[$i$] * 16 + ( pix_y - sprite_y[$i$] );

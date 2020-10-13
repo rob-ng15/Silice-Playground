@@ -193,14 +193,6 @@ $$end
     output! uint1   uart_tx,
     input   uint1   uart_rx,
 
-$$if ULX3S then
-    // US2 USB Port
-    input   uint1   usb_bd_dp,
-    input   uint1   usb_bd_dn,
-    output  uint1   usb_pu_dp,
-    output  uint1   usb_pu_dn,
-$$end
-    
     // VGA/HDMI
     output! uint$color_depth$ video_r,
     output! uint$color_depth$ video_g,
@@ -229,18 +221,6 @@ $$end
         uart_rx <:  uart_rx
     );
 
-    // PS/2 Keyboard for the ULX3S
-$$if ULX3S then
-    uint8 ps2_key = 0;
-    uint1 ps2_strobe = 0;
-    ps2kbd keyboard(
-        clk <: clock,
-        ps2_clk  <: usb_bd_dp,
-        ps2_data <: usb_bd_dn,
-        ps2_code :> ps2_key,
-        strobe   :> ps2_strobe
-    );
-$$end
 
     // VGA/HDMI Display
     uint1 video_reset = 0;
@@ -527,13 +507,6 @@ $$end
     uint13 uartInBufferNext = 0;
     uint13 uartInBufferTop = 0;
 
-$$if ULX3S then
-    // PS/2 input FIFO (16 character) as dualport bram (code from @sylefeb)
-    dualport_bram uint8 ps2InBuffer[16] = uninitialized;
-    uint4 ps2InBufferNext = 0;
-    uint4 ps2InBufferTop = 0;
-$$end
-
     // UART output FIFO (512 character) as dualport bram (code from @sylefeb)
     dualport_bram uint8 uartOutBuffer[512] = uninitialized;
     uint9 uartOutBufferNext = 0;
@@ -550,16 +523,7 @@ $$end
     dstack.wenable         := 0;  
     rstack.wenable         := 0;
 
-    // UART and PS/2 Buffers
-    $$if ULX3S then
-        ps2InBuffer.wenable0    := 0;               // always read  on port 0
-        ps2InBuffer.wenable1    := 1;               // always write on port 1
-        ps2InBuffer.addr0       := ps2InBufferNext; // FIFO reads on next
-        ps2InBuffer.addr1       := ps2InBufferTop;  // FIFO writes on top
-        usb_pu_dp               := 1;               // PULLUP for PS/2 keyboard via USB
-        usb_pu_dn               := 1;               // PULLUP for PS/2 keyboard via USB
-    $$end
-
+    // UART Buffers
     uartInBuffer.wenable0  := 0;  // always read  on port 0
     uartInBuffer.wenable1  := 1;  // always write on port 1
     uartInBuffer.addr0     := uartInBufferNext; // FIFO reads on next
@@ -575,14 +539,6 @@ $$end
 
     // UART input and output buffering
     always {
-        $$if ULX3S then
-                // READ from PS/2 if character available and store
-                if( ps2_strobe ) {
-                    // writes at ps2InBufferTop (code from @sylefeb)
-                    ps2InBuffer.wdata1  = ps2_key;            
-                    ps2InBufferTop      = ps2InBufferTop + 1;
-                }
-        $$end
         // READ from UART if character available and store
         if( ui.data_out_ready ) {
             // writes at uartInBufferTop (code from @sylefeb)
@@ -719,31 +675,12 @@ $$end
                                             switch( stackTop ) {
                                                 case 16hf000: {
                                                     // INPUT from UART reads at uartInBufferNext (code from @sylefeb)
-                                                    // for ULX3S prioritises PS/2 keyboard over UART
-                                                    $$if DE10NANO then
-                                                        newStackTop = { 8b0, uartInBuffer.rdata0 };
-                                                        uartInBufferNext = uartInBufferNext + 1;
-                                                    $$end
-                                                    $$if ULX3S then
-                                                        if( ~( ps2InBufferNext == ps2InBufferTop ) ) {
-                                                            //PS/2
-                                                            newStackTop = { 8b0, ps2InBuffer.rdata0 };
-                                                            ps2InBufferNext = ps2InBufferNext + 1;
-                                                        } else {
-                                                            //UART
-                                                            newStackTop = { 8b0, uartInBuffer.rdata0 };
-                                                            uartInBufferNext = uartInBufferNext + 1;
-                                                        }
-                                                    $$end
+                                                    newStackTop = { 8b0, uartInBuffer.rdata0 };
+                                                    uartInBufferNext = uartInBufferNext + 1;
                                                 } 
                                                 case 16hf001: {
                                                     // UART status register { 14b0, tx full, rx available }
-                                                    $$if DE10NANO then
-                                                        newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ~( uartInBufferNext == uartInBufferTop )};
-                                                    $$end
-                                                    $$if ULX3S then
-                                                        newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ~( uartInBufferNext == uartInBufferTop ) | ~( ps2InBufferNext == ps2InBufferTop ) };
-                                                    $$end
+                                                    newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ~( uartInBufferNext == uartInBufferTop )};
                                                 }
                                                 case 16hf002: {
                                                     // RGB LED status

@@ -35,15 +35,15 @@ algorithm gpu(
     int11 gpu_y2 = 0;
     int11 gpu_w = 0;
     int11 gpu_h = 0;
-    int11 gpu_dx1 = 0;
-    int11 gpu_dx2 = 0;
-    int11 gpu_dy1 = 0;
-    int11 gpu_dy2 = 0;
-    int11 gpu_longest = 0;
-    int11 gpu_shortest = 0;
+    int11 gpu_dx = 0;
+    int11 gpu_sx = 0;
+    int11 gpu_dy = 0;
+    int11 gpu_sy = 0;
     int11 gpu_numerator = 0;
+    int11 gpu_numerator2 = 0;
     int11 gpu_radius = 0;
-    int11 gpu_count = 0;
+    uint11 gpu_count = 0;
+    uint11 gpu_max_count = 0;
     uint8 gpu_tile = 0;
 
     // blit1tilemap read access for the blit1tilemap
@@ -95,14 +95,12 @@ algorithm gpu(
                         gpu_active_colour = gpu_colour;
                         gpu_active_x = gpu_x;
                         gpu_active_y = gpu_y;
-                        gpu_x2 = gpu_param0;
-                        gpu_y2 = gpu_param1;
-                        gpu_w = gpu_param0 - gpu_x;
-                        gpu_h = gpu_param1 - gpu_y;
-                        gpu_dx1 = 0;
-                        gpu_dx2 = 0;
-                        gpu_dy1 = 0;
-                        gpu_dy2 = 0;
+                        gpu_x1 = gpu_param0;
+                        gpu_y1 = gpu_param1;
+                        gpu_dx = ( gpu_param0 < gpu_x ) ? gpu_x - gpu_param0 : gpu_param0 - gpu_x;
+                        gpu_dy = ( gpu_param1 < gpu_y )? gpu_y - gpu_param1 : gpu_param1 - gpu_x;
+                        gpu_sx = ( gpu_x < gpu_param0 ) ? 1 : -1;
+                        gpu_sy = ( gpu_y < gpu_param1 ) ? 1 : -1;
                         gpu_count = 0;
                         gpu_active = 2; 
                     }
@@ -166,72 +164,42 @@ algorithm gpu(
             }
             case 2: {
                 // Bresenham's Line Drawing Algorithm
-                // Calculate deltas and longest = abs( gpu_w ), shortest = abs( gpu_h )
-                if( gpu_w < 0 ) {
-                    gpu_dx1 = -1;
-                    gpu_dx1 = -1;
-                } else {
-                    if( gpu_w > 0 ) {
-                        gpu_dx1 = 1;
-                        gpu_dx2 = 1;
-                     }
-                }
-                if( gpu_h < 0 ) {
-                    gpu_dy1 = -1;
-                } else {
-                    if( gpu_h > 0 ) {
-                        gpu_dy1 = 1;
-                    }
-                }
-                gpu_longest = ( gpu_w < 0 ) ? -gpu_w : gpu_w;
-                gpu_shortest = ( gpu_h < 0 ) ? -gpu_h : gpu_h;
-                
+                gpu_numerator = ( gpu_dx > gpu_dy ) ? ( gpu_dx >> 1) : -( gpu_dy >> 1);
+                gpu_max_count = ( gpu_dx > gpu_dy ) ? gpu_dx : gpu_dy;
                 gpu_active = 3;
             }
             case 3: {
-                // Bresenham's Line Drawing Algorithm
-                // Determine if steep or shallow
-                if( ~(gpu_longest > gpu_shortest) ) {
-                    // Switch as steep line
-                    gpu_longest = ( gpu_h < 0 ) ? -gpu_h : gpu_h;
-                    gpu_shortest = ( gpu_w < 0 ) ? -gpu_w : gpu_w;
-                    if( gpu_h < 0 ) {
-                        gpu_dy2 = -1;
-                    } else {
-                        if( gpu_h > 0 ) {
-                            gpu_dy2 = 1;
-                        }
-                    }
-                    gpu_dx2 = 0;
-                } 
-                gpu_active = 4;
-            }
-            case 4: {          
-                gpu_numerator = gpu_longest >> 1;
-                gpu_active = 5;
-            }
-            case 5: {
-                // Bresenham's Line Drawing Algorithm
+                // Bresenham's Line Drawing Algorithm.
                 // Draw the line
                 bitmap_x_write = gpu_active_x;
                 bitmap_y_write = gpu_active_y;
                 bitmap_colour_write = gpu_active_colour;
                 bitmap_write = 1;
-                if( gpu_count == gpu_longest ) {
-                    // FINISHED
-                    gpu_active = 0;
+                
+                // Check if done
+                if( gpu_count < gpu_max_count ) {
+                    gpu_numerator2 = gpu_numerator;
+                    gpu_active = 4;
                 } else {
-                    if( ~(gpu_numerator < gpu_longest) ) {
-                        gpu_numerator = gpu_numerator + gpu_shortest - gpu_longest;
-                        gpu_active_x = gpu_active_x + gpu_dx1;
-                        gpu_active_y = gpu_active_y + gpu_dy1;
-                    } else {
-                        gpu_numerator = gpu_numerator + gpu_shortest;
-                        gpu_active_x = gpu_active_x + gpu_dx2;
-                        gpu_active_y = gpu_active_y + gpu_dy2;
-                    }
-                    gpu_count = gpu_count + 1;
+                    gpu_active = 0;
                 }
+            }
+            case 4: {          
+                // Bresenham's Line Drawing Algorithm.
+                if ( gpu_numerator2 > (-gpu_dx) ) {
+                    gpu_numerator = gpu_numerator - gpu_dy;
+                    gpu_active_x = gpu_active_x + gpu_sx;
+                }
+                gpu_active = 5;                
+            }
+            case 5: {
+                // Bresenham's Line Drawing Algorithm
+                if( gpu_numerator2 < gpu_dy ) {
+                    gpu_numerator = gpu_numerator + gpu_dx;
+                    gpu_active_y = gpu_active_y + gpu_sy;
+                }
+                gpu_count = gpu_count + 1;
+                gpu_active = 3;
             }
             case 6: {
                 // Bresenham's Circle Drawing Algorithm - Arc 0

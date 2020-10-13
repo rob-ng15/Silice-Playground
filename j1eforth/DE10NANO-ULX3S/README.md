@@ -140,7 +140,7 @@ ff35 | Set _ASN_ y coordinate | Read _ASN_ coordinate
 ff36 | Set __Tile Map Writer Sprite Number__ referred to as _TMWSN_ in the following<br> |
 ff37 | Set _TMWSN_ tile map line ( 0 - 63 ) |
 ff38 | Set _TMWSN_ tile map line bitmap |
-ff39 | | Sprites at flag<br>8 bit { sprite7, sprite6 ... sprite0 } flag of which sprites are visible at the x,y coordinate set below
+ff39 | | Sprites at flag<br>8 bit { sprite7, sprite6 ... sprite0 } flag of which sprites are visible at the x,y coordinate set below<br>Updates every frame whilst the pixel is being rendered
 ff3a | Sprites at x coordinate |
 ff3b | Sprites at y coordinate |
 ff3c | Update a sprite<br>See notes below |
@@ -195,7 +195,7 @@ ff04 | Set GPU parameter 1 |
 ff05 | Set GPU parameter 2 |
 ff06 | Set GPU parameter 3 |
 ff07 | Start GPU<br>1 - Plot a pixel x,y in colour<br>2 - Fill a rectangle from x,y to param0,param1 in colour<br>3 - Draw a line from x,y to param0,param1 in colour<br>4 - Draw a circle centred at x,y of radius param0 in colour<br>5 - 1 bit blitter of a 16x16 tile to x,y using tile number param0 in colour<br>6 - Set line param1 of tile param0 to param2 in the 1 bit blitter tile map | GPU busy
-ff08 | | Colourof the pixel at x,y (set below)<br>Updates every frame whilst the selected pixel is being rendered
+ff08 | | Colour of the pixel at x,y (set below)<br>Updates every frame whilst the selected pixel is being rendered
 ff09 | Set the x coordinate for reading |
 ff0a | Set the y coordinate for reading |
 ff0f | Set the fade level for the bitmap layer |
