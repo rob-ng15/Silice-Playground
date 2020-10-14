@@ -191,6 +191,10 @@ $$end
     output! uint1   uart_tx,
     input   uint1   uart_rx,
 
+    // AUDIO
+    output! uint4   audio_l,
+    output! uint4   audio_r,
+    
     // VGA/HDMI
     output! uint$color_depth$ video_r,
     output! uint$color_depth$ video_g,
@@ -453,6 +457,12 @@ $$end
         terminal_g <: terminal_g,
         terminal_b <: terminal_b,
         terminal_display <: terminal_display
+    );
+
+    apu apu_processor <@video_clock,!video_reset>
+    (
+        audio_left :> audio_l,
+        audio_right :> audio_r
     );
     
     // J1+ CPU
@@ -976,6 +986,20 @@ $$end
                                         upper_sprites.sprite_layer_write = 9;
                                     }
                                     
+                                    // APU
+                                    case 16hffe0: {
+                                        apu_processor.waveform = stackNext;
+                                    }
+                                    case 16hffe1: {
+                                        apu_processor.note = stackNext;
+                                    }
+                                    case 16hffe2: {
+                                        apu_processor.duration = stackNext;
+                                    }
+                                    case 16hffe3: {
+                                        apu_processor.apu_write = 1;
+                                    }
+                                    
                                     // BACKGROUND Controls
                                     case 16hfff0: {
                                         background_generator.backgroundcolour = stackNext;
@@ -1035,6 +1059,7 @@ $$end
                 character_map_window.tpu_write = 0;
                 upper_sprites.sprite_layer_write = 0;
                 terminal_window.terminal_write = 0;
+                apu_processor.apu_write = 0;
             }
             
             default: {}

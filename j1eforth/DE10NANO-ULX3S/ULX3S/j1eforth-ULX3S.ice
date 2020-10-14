@@ -13,6 +13,7 @@ $include('../gpu.ice')
 $include('../background.ice')
 $include('../sprite_layer.ice')
 $include('../vectors.ice')
+$include('../audio.ice')
 
 import('../common/ulx3s_clk_50_25.v')
 import('../common/reset_conditioner.v')

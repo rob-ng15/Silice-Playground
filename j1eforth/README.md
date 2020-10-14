@@ -133,8 +133,7 @@ The j1eforth wordlist has been extended to include some double (32 bit) integer 
 * `d1+` and `d1-` increment and decrement the double integer on the stack
 * `d2*` and `d2/` double and halve the double integer on the stack
 * `d+` and `d-` do double integer addition and subtraction
-* `d=`, `d<>`, `d<`, `d>` do double integer comparisons
-* `d0=`, `d0<>` and `d0<` do double integer 0 comparisons
+* `d=` do double integer comparison
 * `dand`, `dor`, `dxor` and `dinvert` do double integer binary arithmetic
 * `dnegate` change sign of the double integer on the stack (this was already part of j1eforth)
 * `2swap` `2over`, `2rot` and `2nip` along with the j1eforth `2dup` and `2drop` work with double integers on the stack

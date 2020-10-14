@@ -20,54 +20,12 @@ __ULX3S__ Open a terminal in the ULX3S directory and type ```make ulx3s```. Wait
 
 ### Resource Usage (de10nano)
 ```
-Quartus Prime Version : 20.1.0 Build 711 06/05/2020 SJ Lite Edition
-Revision Name : build
-Top-level Entity Name : top
-Family : Cyclone V
-Device : 5CSEBA6U23I7
-Timing Models : Final
-Logic utilization (in ALMs) : 4,778 / 41,910 ( 11 % )
-Total registers : 2196
-Total pins : 31 / 314 ( 10 % )
-Total virtual pins : 0
-Total block memory bits : 2,595,040 / 5,662,720 ( 46 % )
-Total RAM Blocks : 338 / 553 ( 61 % )
-Total DSP Blocks : 0 / 112 ( 0 % )
-Total HSSI RX PCSs : 0
-Total HSSI PMA RX Deserializers : 0
-Total HSSI TX PCSs : 0
-Total HSSI PMA TX Serializers : 0
-Total PLLs : 1 / 6 ( 17 % )
-Total DLLs : 0 / 4 ( 0 % )
+Need recent statistics
 ```
 
 ### Resource Usage (ulx3s)
 ```
-Info:          TRELLIS_SLICE:  9905/41820    23%                                                                                    
-Info:             TRELLIS_IO:    30/  365     8%                                                                                    
-Info:                   DCCA:     4/   56     7%                                                                                    
-Info:                 DP16KD:   174/  208    83%                                                                                    
-Info:             MULT18X18D:     5/  156     3%                                                                                    
-Info:                 ALU54B:     0/   78     0%                                                                                    
-Info:                EHXPLLL:     2/    4    50%                                                                                    
-Info:                EXTREFB:     0/    2     0%                                                                                    
-Info:                   DCUA:     0/    2     0%                                                                                    
-Info:              PCSCLKDIV:     0/    2     0%
-Info:                IOLOGIC:     0/  224     0%
-Info:               SIOLOGIC:     8/  141     5%
-Info:                    GSR:     0/    1     0%
-Info:                  JTAGG:     0/    1     0%
-Info:                   OSCG:     0/    1     0%
-Info:                  SEDGA:     0/    1     0%
-Info:                    DTR:     0/    1     0%
-Info:                USRMCLK:     0/    1     0%
-Info:                CLKDIVF:     0/    4     0%
-Info:              ECLKSYNCB:     0/   10     0%
-Info:                DLLDELD:     0/    8     0%
-Info:                 DDRDLL:     0/    4     0%
-Info:                DQSBUFM:     0/   14     0%
-Info:        TRELLIS_ECLKBUF:     0/    8     0%
-Info:           ECLKBRIDGECS:     0/    2     0%
+Need recent statistics
 ```
 
 ## VGA/HDMI Multiplexed Display
@@ -272,6 +230,35 @@ TERMINAL<br>Word | Usage
 terminalshow! | Example ```terminalshow!``` show the blue terminal window
 terminalhide! | Example ```terminalhide!``` hide the blue terminal window
 
+### Audio Output
+
+Audio output is implemented for the ULX3S only at present. Audio output is via the 3.5mm jack.
+
+* Mono audio
+* Specified notes in the range Deep C to Double High C
+* Selectable waveforms
+    * Square
+    * Sawtooth
+    * Triangle
+    * Sine
+    * Noise
+* Selectable duration in milliseconds, 1000 being 1 second
+
+#### Memory Map for the Audio Output
+
+Hexadecimal<br>Address | Write | Read
+:-----: | ----- | -----
+ffe0 | Set the APU waveform<br>0 = square, 1 = sawtooth, 2 = triangle, 3 = sine, 4 = noise<br>_square wave_ is working |
+ffe1 | Set the APU note<br>_HEX_ 1 = C 2, D = C 3, 19 = C 4 (middle), 25 = C 5, 31 = C 6, 3D = C 7 | 
+ffe2 | Set the APU duration in milliseconds<br>_HEX_ 3e8 = 1 second
+ffe3 | Start the APU to output the specified note
+
+#### j1eforth AUDIO words
+
+AUDIO<br>Word | Usage
+----- | -----
+beep! | Example ```0 19 3e8 beep!``` outputs a middle c square wave for 1 second
+
 ### Colour hex numbers
 
 Colour<br>Guide<br>__HEX__ | Colour
@@ -288,32 +275,38 @@ Colour<br>Guide<br>__HEX__ | Colour
 
 ## TODO (Wishlist)
 
-* TILEMAPS
-    * Put a 42 x 32 tilemap between background and bitmap along with a configurable 256 16 x 16 backtilemap
-        * Tiles would be 1 bit with foreground and background colour per tile (with ALPHA bit)
-        * Tilemap offset of -16 to 16 in x and y to allow scrolling
-        * Tilemap scroller to move tilemap up, down, left, right
-    * Put a 42 x 32 tilemap between bitmap and the character map along with a configurable 256 16 x 16 fronttilemap
-        * Tiles would be 1 bit with foreground and background colour per tile (with ALPHA bit)
-        * Tilemap offset of -16 to 16 in x and y to allow scrolling
-        * Tilemap scroller to move tilemap up, down, left, right
+### AUDIO
+* Ensure waveforms other than square work
+* Allow polyphonic sound
+* Allow stereo sound
+* Volume control
 
-* GPU
-    * Complete line drawing - STEEP lines do not work
-    * BLITTER
-        * 10 bit { Arrggbb } 16 x 16 blitter from a configurable 64 16 x 16 tilemap (16384 * 7 bit, might be too big for the blockram)
+### TILEMAPS
+* Put a 42 x 32 tilemap between background and bitmap along with a configurable 256 16 x 16 backtilemap
+    * Tiles would be 1 bit with foreground and background colour per tile (with ALPHA bit)
+    * Tilemap offset of -16 to 16 in x and y to allow scrolling
+    * Tilemap scroller to move tilemap up, down, left, right
+* Put a 42 x 32 tilemap between bitmap and the character map along with a configurable 256 16 x 16 fronttilemap
+    * Tiles would be 1 bit with foreground and background colour per tile (with ALPHA bit)
+    * Tilemap offset of -16 to 16 in x and y to allow scrolling
+    * Tilemap scroller to move tilemap up, down, left, right
 
-* VECTOR LIST
-    * Provide a list of (up to 16) vertices for each vector
-        * centre x, centre y, colour
-        * 16 lots of active, offsetx1, offsety1, offsetx2, offsety2
-    * Can be drawn with one command to the bitmap
+### GPU
+* COLOUR BLITTER
+    * 10 bit { Arrggbb } 16 x 16 blitter from a configurable 64 16 x 16 tilemap (16384 * 7 bit, might be too big for the blockram)
+        * A will determine if pixel is placed or missed (mask)
 
-* DISPLAY LIST
-    * List of GPU, SPRITE or VECTOR commands to be executed in sequence
+### VECTOR LIST
+* Provide a list of (up to 16) vertices for each vector
+    * centre x, centre y, colour
+    * 16 lots of active, offsetx1, offsety1, offsetx2, offsety2
+* Can be drawn with one command to the bitmap
 
-* BACKGROUND
-    * Implement more patterns
+### DISPLAY LIST
+* List of GPU, SPRITE or VECTOR commands to be executed in sequence
+
+### BACKGROUND
+* Implement more patterns
 
 ## Notes
 

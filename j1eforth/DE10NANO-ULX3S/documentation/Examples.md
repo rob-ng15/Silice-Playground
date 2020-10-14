@@ -141,3 +141,49 @@ setsprites
 screentest
 
 ```
+
+## Button test to move a sprite (ULX3S only at present)
+
+```
+: setsprites
+  7 0 do
+    5555 a0a0 5555 a0a0 5555 a0a0 5555 a0a0
+    5555 a0a0 5555 a0a0 5555 a0a0 5555 a0a0
+    a0a0 5555 a0a0 5555 a0a0 5555 a0a0 5555
+    a0a0 5555 a0a0 5555 a0a0 5555 a0a0 5555
+    701c 1830 820 820 ff8 3938 3938 fffe
+    dff6 dff6 9c72 d836 c60 c60 ee0 0
+    ffff ffff ffff ffff ffff ffff ffff ffff
+    ffff ffff ffff ffff ffff ffff ffff ffff 
+    i lsltile!
+  loop ;
+setsprites
+
+: buttontest
+  cs! tpucs!
+  1 4 1 background!
+
+  15 130 0 150 1e0 rectangle!
+  2a 0 e0 280 100 rectangle!
+  3f 140 f0 40 circle!
+  3c 140 f0 80 circle!
+  
+  0 0 3 0 1 0 lslsprite!
+
+  3f tpubackground! 3 tpuforeground!
+
+  begin
+    1800 0 do loop vblank
+    20 2 tpuxy! $" Sprite at " tpu.$ ff34 @ 5 tpu.r# ff35 @ 5 tpu.r#
+    buttons@ 
+    dup 2 and 0<> if 40 0 lslupdate! then
+    dup 20 and 0<> if 7 0 lslupdate! then
+    dup 40 and 0<> if 1 0 lslupdate! then
+    dup 8 and 0<> if 38 0 lslupdate! then
+    dup 10 and 0<> if 8 0 lslupdate! then
+    4 and 0<>
+  until ;
+buttontest
+```
+
+

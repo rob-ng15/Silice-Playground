@@ -959,6 +959,9 @@ t: led@ ( -- t ) f002 literal @ t;
 t: led! ( c -- ) f002 literal ! t;
 t: buttons@ ( -- t ) f003 literal @ t;
 
+( Audio )
+t: beep! ffe2 literal ! ffe1 literal ! ffe0 literal ! 1 literal ffe3 literal ! t;
+
 ( DISPLAY helper words )
 t: vblank begin ffff literal @ 0= until t;
 

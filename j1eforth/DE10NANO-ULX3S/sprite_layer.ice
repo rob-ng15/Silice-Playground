@@ -131,6 +131,11 @@ algorithm sprite_layer(
                 if( spriteupdate( sprite_update ).colour_act ) {
                     sprite_colour[ sprite_set_number ] = spriteupdate( sprite_update ).colour;
                 }
+                // Change the tile
+                if( spriteupdate( sprite_update ).tile_act ) {
+                    sprite_tile_number[ sprite_set_number ] = sprite_tile_number[ sprite_set_number ] + 1;
+                }
+                // Move along x-axis
                 if(  (sprite_x[ sprite_set_number ] < (-16)) | (sprite_x[ sprite_set_number ] > 640) ) {
                     if( spriteupdate( sprite_update ).x_act ) {
                         sprite_active[ sprite_set_number ] = 0;
@@ -140,6 +145,7 @@ algorithm sprite_layer(
                 } else {
                     sprite_x[ sprite_set_number ] = sprite_x[ sprite_set_number ] + deltax;
                 }
+                // Move along y-axis
                 if(  (sprite_y[ sprite_set_number ] < (-16)) | (sprite_y[ sprite_set_number ] > 480) ) {
                     if( spriteupdate( sprite_update ).y_act ) {
                         sprite_active[ sprite_set_number ] = 0;
@@ -157,7 +163,7 @@ algorithm sprite_layer(
         sprite_read_active = sprite_active[ sprite_set_number ];
         sprite_read_colour = sprite_colour[ sprite_set_number ];
         sprite_read_x = sprite_x[ sprite_set_number ];
-        sprite_read_y = sprite_x[ sprite_set_number ];
+        sprite_read_y = sprite_y[ sprite_set_number ];
         sprite_read_tile = sprite_tile_number[ sprite_set_number ];
     }
     
