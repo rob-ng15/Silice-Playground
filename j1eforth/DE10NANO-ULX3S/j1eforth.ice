@@ -163,17 +163,26 @@ bitfield nibbles {
 // Create 1hz (1 second counter)
 algorithm pulse1hz(
     output uint16 counter1hz
-) <autorun>
-{
-  uint32 counter50mhz = 0;
-  counter1hz = 0;
-  while (1) {
-        if ( counter50mhz == 50000000 ) {
-            counter1hz   = counter1hz + 1;
-            counter50mhz = 0;
-        } else {
-            counter50mhz = counter50mhz + 1;
-        }
+) <autorun> {
+    uint32 counter50mhz = 0;
+    counter1hz = 0;
+    while (1) {
+        counter1hz = ( counter50mhz == 50000000 ) ? counter1hz + 1 : counter1hz;
+        counter50mhz = ( counter50mhz == 50000000 ) ? 0 : counter50mhz + 1;
+    }
+}
+
+// Create 1khz (1 milli-second counter)
+algorithm pulse1khz(
+    output uint16 counter1khz,
+    input  uint16 countdownfrom,
+    input  uint1  resetcountdown
+) <autorun> {
+    uint32 counter50mhz = 0;
+    
+    while (1) {
+        counter1khz = ( resetcountdown ) ? countdownfrom : ( counter1khz == 0 ) ? 0 : ( counter50mhz == 50000 ) ? counter1khz - 1 : counter1khz;
+        counter50mhz = ( resetcountdown ) ? 0 : ( counter50mhz == 50000 ) ? 0 : counter50mhz + 1;
     }
 }
 
@@ -206,9 +215,13 @@ $$if ULX3S then
 <@clock_50mhz> // ULX3S has a 25 MHz clock, so we use a PLL to bring it up to 50 MHz
 $$end
 {
+    // 1hz timer (mainly for cursor on the terminal)
     uint16 timer1hz = 0;
     pulse1hz p1hz( counter1hz :> timer1hz );
 
+    // 1khz timer (mainly for defining sleep/pause periods)
+    pulse1khz p1khz( );
+    
     // UART tx and rx
     // UART written in Silice by https://github.com/sylefeb/Silice
     uart_out uo;
@@ -757,6 +770,9 @@ $$end
                                                 case 16hff49: {
                                                     newStackTop = upper_sprites.sprites_at_xy;
                                                 }
+                                                case 16hffef: {
+                                                    newStackTop = p1khz.counter1khz;
+                                                }
                                                 case 16hffff: {
                                                     newStackTop = vblank;
                                                 }
@@ -1000,6 +1016,12 @@ $$end
                                         apu_processor.apu_write = 1;
                                     }
                                     
+                                    // 1khz timer
+                                    case 16hffef: {
+                                        p1khz.countdownfrom = stackNext;
+                                        p1khz.resetcountdown = 1;
+                                    }
+                                    
                                     // BACKGROUND Controls
                                     case 16hfff0: {
                                         background_generator.backgroundcolour = stackNext;
@@ -1039,6 +1061,9 @@ $$end
                     rstack.addr    = newRSP;
                     rstack.wdata   = rstackWData;
                 }
+                
+                // RESET TIMER1khz
+                p1khz.resetcountdown = 0;
             }
             
             // Update dsp, rsp, pc, stackTop

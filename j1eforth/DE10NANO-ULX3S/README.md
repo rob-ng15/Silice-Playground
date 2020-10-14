@@ -252,12 +252,14 @@ ffe0 | Set the APU waveform<br>0 = square, 1 = sawtooth, 2 = triangle, 3 = sine,
 ffe1 | Set the APU note<br>_HEX_ 1 = C 2, D = C 3, 19 = C 4 (middle), 25 = C 5, 31 = C 6, 3D = C 7 | 
 ffe2 | Set the APU duration in milliseconds<br>_HEX_ 3e8 = 1 second
 ffe3 | Start the APU to output the specified note
+ffef | Start the 1khz (millisecond) countdown timer | Read the 1khz (millisecond) countdown timer
 
 #### j1eforth AUDIO words
 
 AUDIO<br>Word | Usage
 ----- | -----
-beep! | Example ```0 19 3e8 beep!``` outputs a middle c square wave for 1 second
+beep! | Example ```0 19 3e8 beep!``` outputs a middle c square wave for 1 second ( 3e8 hex = 1000 milliseconds )
+sleep | Example ```3e8 sleep``` waits for 1 second ( 3e8 hex = 1000 milliseconds )
 
 ### Colour hex numbers
 

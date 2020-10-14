@@ -111,8 +111,8 @@ setsprites
   3f 140 f0 40 circle!
   3c 140 f0 80 circle!
   3 0 f0 140 0 line!
-  3 140 0 280 f0 line!
-  3 280 f0 150 1e0 line!
+  3 280 f0 140 0 line!
+  3 150 1e0 280 f0  line!
   3 150 1e0 0 f0 line!
   
   0 0 3 0 1 0 lslsprite!
@@ -136,7 +136,7 @@ setsprites
     8 1 uslupdate!
     7 2 uslupdate!
     38 3 uslupdate!
-    1800 0 do loop vblank
+    14 sleep vblank
   loop ;
 screentest
 
@@ -173,7 +173,7 @@ setsprites
   3f tpubackground! 3 tpuforeground!
 
   begin
-    1800 0 do loop vblank
+    14 ffef !
     20 2 tpuxy! $" Sprite at " tpu.$ ff34 @ 5 tpu.r# ff35 @ 5 tpu.r#
     buttons@ 
     dup 2 and 0<> if 40 0 lslupdate! then
@@ -181,9 +181,11 @@ setsprites
     dup 40 and 0<> if 1 0 lslupdate! then
     dup 8 and 0<> if 38 0 lslupdate! then
     dup 10 and 0<> if 8 0 lslupdate! then
+    begin ffef @ 0= until vblank
     4 and 0<>
   until ;
 buttontest
 ```
 
+__NOTE__ ```14 ffef !``` and ```begin ffef @ 0= until``` provide a consistent 20 millisec delay at the bottom of the loop
 

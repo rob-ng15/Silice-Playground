@@ -959,8 +959,9 @@ t: led@ ( -- t ) f002 literal @ t;
 t: led! ( c -- ) f002 literal ! t;
 t: buttons@ ( -- t ) f003 literal @ t;
 
-( Audio )
+( Audio and countdown timer )
 t: beep! ffe2 literal ! ffe1 literal ! ffe0 literal ! 1 literal ffe3 literal ! t;
+t: sleep ffef literal ! begin ffef literal @ 0= until t;
 
 ( DISPLAY helper words )
 t: vblank begin ffff literal @ 0= until t;
