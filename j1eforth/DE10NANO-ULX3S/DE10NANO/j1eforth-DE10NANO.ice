@@ -9,6 +9,7 @@ $include('../bitmap.ice')
 $include('../gpu.ice')
 $include('../background.ice')
 $include('../sprite_layer.ice')
+$include('../vectors.ice')
 
 import('../common/de10nano_clk_100_25.v')
 import('../common/reset_conditioner.v')
