@@ -179,11 +179,9 @@ algorithm pulse1hz(
 
 algorithm main(
     // LEDS (8 of)
-    output  uint8   leds,
-    
-    // BUTTONS
-    input   uint8   btns,
-    
+    output  uint8          leds,
+    input   uint$NUM_BTNS$ btns,
+        
 $$if ULX3S then
     output  uint4   gpdi_dp,
     output  uint4   gpdi_dn,
@@ -513,6 +511,11 @@ $$end
     uint9 uartOutBufferTop = 0;
     uint9 newuartOutBufferTop = 0;
     
+    // register buttons
+    uint$NUM_BTNS$ reg_btns = 0;
+
+    reg_btns ::= btns;
+
     // BRAM for CPU ram write enable mainained low, pulsed high
     ram_0.wenable0 := 0;
     ram_0.wenable1 := 0;
@@ -688,7 +691,7 @@ $$end
                                                 }
                                                 case 16hf003: {
                                                     // user buttons
-                                                    newStackTop = btns;
+                                                    newStackTop = {$16-NUM_BTNS$b0, reg_btns[0,$NUM_BTNS$]};
                                                 }
                                                 case 16hf004: {
                                                     // 1hz timer
