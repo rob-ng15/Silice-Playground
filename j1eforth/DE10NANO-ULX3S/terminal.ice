@@ -27,7 +27,6 @@ algorithm terminal(
     uint7 terminal_x = 0;
     uint3 terminal_y = 7;
 
-    
     // Character position on the terminal x 0-79, y 0-7 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
     uint7 xterminalpos := ( pix_active ? pix_x + 1 : 0 ) >> 3;
     uint10 yterminalpos := (( pix_vblank ? 0 : pix_y - 416 ) >> 3) * 80; // 8 pixel high characters
@@ -53,8 +52,9 @@ algorithm terminal(
     // Setup the writing to the terminal memory
     terminal.wenable1 := 0;
 
-    // Default to transparent
-    terminal_display := 0;
+    // Default to transparent and active pixels always blue
+    terminal_display := pix_active & showterminal & (pix_y > 415);
+    pix_blue := $color_depth$==6 ? 63 : 255;
     
     // TERMINAL Actions
     // Write to terminal, move to next character and scroll
@@ -67,9 +67,9 @@ algorithm terminal(
                         switch( terminal_character ) {
                             case 8: {
                                 // BACKSPACE, move back one character
+                                terminal_x = ( terminal_x > 0 ) ? terminal_x - 1 : terminal_x;
                                 if( terminal_x > 0 ) {
-                                    terminal_x = terminal_x - 1;
-                                    terminal.addr1 = terminal_x - 1 + terminal_y * 80;
+                                    terminal.addr1 = terminal_x + terminal_y * 80;
                                     terminal.wdata1 = 0;
                                     terminal.wenable1 = 1;
                                 }
@@ -89,19 +89,17 @@ algorithm terminal(
                                 terminal.wdata1 = terminal_character;
                                 terminal.wenable1 = 1;
                                 if( terminal_x == 79 ) {
-                                    terminal_x = 0;
                                     terminal_scroll = 0;
                                     terminal_active = 1;
-                                } else {
-                                    terminal_x = terminal_x + 1;
-                                }
+                                } 
+                                terminal_x = ( terminal_x == 79 ) ? 0 : terminal_x + 1;
                             }
                         }
                     }
                     default: {}
                 }
             }
-            // TERMINAL SCROLL
+            // Start of TERMINAL SCROLL
             case 1: {
                 // SCROLL
                 if( terminal_scroll == 560 ) {
@@ -149,32 +147,14 @@ algorithm terminal(
             // Invert colours for cursor if flashing
             switch( terminalpixel ) {
                 case 0: {
-                    if( is_cursor & timer1hz ) {
-                        pix_red = $color_depth$==6 ? 63 : 255;
-                        pix_green = $color_depth$==6 ? 63 : 255;
-                        pix_blue = $color_depth$==6 ? 63 : 255;
-                    } else {
-                        pix_red = 0;
-                        pix_green = 0;
-                        pix_blue = $color_depth$==6 ? 63 : 255;
-                    }
+                    pix_red = ( is_cursor & timer1hz ) ? $color_depth$==6 ? 63 : 255 : 0;
+                    pix_green = ( is_cursor & timer1hz ) ? $color_depth$==6 ? 63 : 255 : 0;
                 }
                 case 1: {
-                    if( is_cursor & timer1hz ) {
-                        pix_red = 0;
-                        pix_green = 0;
-                        pix_blue = $color_depth$==6 ? 63 : 255;
-                    } else {
-                        pix_red = $color_depth$==6 ? 63 : 255;
-                        pix_green = $color_depth$==6 ? 63 : 255;
-                        pix_blue = $color_depth$==6 ? 63 : 255;
-                    }
+                    pix_red = ( is_cursor & timer1hz ) ? 0 : $color_depth$==6 ? 63 : 255;
+                    pix_green = ( is_cursor & timer1hz ) ? 0 : $color_depth$==6 ? 63 : 255;
                 }
             }
-            terminal_display = 1;
-        } else {
-            terminal_display = 0;
         }
     }
-
 }

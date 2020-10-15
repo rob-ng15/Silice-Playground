@@ -263,7 +263,7 @@ algorithm gpu(
                 bitmap_y_write = gpu_yc - gpu_active_x;
                 bitmap_colour_write = gpu_active_colour;
                 bitmap_write = 1;
-                 if( gpu_active_y >= gpu_active_x ) {
+                if( gpu_active_y >= gpu_active_x ) {
                     gpu_active_x = gpu_active_x + 1;
                     if( gpu_numerator > 0 ) {
                         gpu_numerator = gpu_numerator + 4 * (gpu_active_x - gpu_active_y) + 10;

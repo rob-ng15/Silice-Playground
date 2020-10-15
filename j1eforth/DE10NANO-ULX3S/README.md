@@ -20,15 +20,29 @@ __ULX3S__ Open a terminal in the ULX3S directory and type ```make ulx3s```. Wait
 
 ### Resource Usage (de10nano)
 ```
-Need recent statistics
+Family : Cyclone V
+Device : 5CSEBA6U23I7
+Timing Models : Final
+Logic utilization (in ALMs) : 4,970 / 41,910 ( 12 % )
+Total registers : 2352
+Total pins : 36 / 314 ( 11 % )
+Total virtual pins : 0
+Total block memory bits : 2,595,040 / 5,662,720 ( 46 % )
+Total RAM Blocks : 338 / 553 ( 61 % )
+Total DSP Blocks : 0 / 112 ( 0 % )
+Total HSSI RX PCSs : 0
+Total HSSI PMA RX Deserializers : 0
+Total HSSI TX PCSs : 0
+Total HSSI PMA TX Serializers : 0
+Total PLLs : 1 / 6 ( 17 % )
+Total DLLs : 0 / 4 ( 0 % )
 ```
 
 ### Resource Usage (ulx3s)
 
-From 0755 on 15/10/2020 following refactoring of the multiplex_display pixel selection to ternary operators.
-
 ```
-Info:          TRELLIS_SLICE: 11384/41820    27%
+Info: Device utilisation:
+Info:          TRELLIS_SLICE: 10990/41820    26%
 Info:             TRELLIS_IO:    34/  365     9%
 Info:                   DCCA:     4/   56     7%
 Info:                 DP16KD:   174/  208    83%
@@ -55,9 +69,9 @@ Info:        TRELLIS_ECLKBUF:     0/    8     0%
 Info:           ECLKBRIDGECS:     0/    2     0%
 
 Info: Max frequency for clock 27.49 MHz (PASS at 25.00 MHz)
-Info: Max frequency for clock 51.18 MHz (PASS at 50.00 MHz)
-Info: Max frequency for clock 38.49 MHz (PASS at 25.00 MHz)
-Info: Max frequency for clock 236.91 MHz (PASS at 125.00 MHz)
+Info: Max frequency for clock 53.69 MHz (PASS at 50.00 MHz)
+Info: Max frequency for clock 34.89 MHz (PASS at 25.00 MHz)
+Info: Max frequency for clock 232.23 MHz (PASS at 125.00 MHz)
 ```
 
 ## VGA/HDMI Multiplexed Display

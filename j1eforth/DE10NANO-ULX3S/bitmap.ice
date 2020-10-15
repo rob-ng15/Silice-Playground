@@ -64,7 +64,7 @@ algorithm bitmap(
     bitmap_B.wenable1 := 0;
 
     // Default to transparent
-    bitmap_display := 0;
+    bitmap_display := pix_active & ~bitmap_A.rdata0;
     
     // Write to the bitmap
     always {
@@ -90,7 +90,6 @@ algorithm bitmap(
                 pix_red = colourexpand2to$color_depth$[ bitmap_R.rdata0 ] >> bitmap_fade;
                 pix_green = colourexpand2to$color_depth$[ bitmap_G.rdata0 ] >> bitmap_fade;
                 pix_blue = colourexpand2to$color_depth$[ bitmap_B.rdata0 ] >> bitmap_fade;
-                bitmap_display = 1;
             }
             if( ( pix_x == bitmap_x_read ) & ( pix_y == bitmap_y_read ) ) {
                 bitmap_colour_read = { bitmap_A.rdata0, bitmap_R.rdata0, bitmap_G.rdata0, bitmap_B.rdata0 };

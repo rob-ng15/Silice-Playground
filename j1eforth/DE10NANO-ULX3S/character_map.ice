@@ -65,12 +65,12 @@ algorithm character_map(
     foreground.wenable1 := 0;
 
     // Default to transparent
-    character_map_display := 0;
+    character_map_display := pix_active & (( characterpixel ) | ( ~colour7(background.rdata0).alpha ));
     
     // TPU
     // tpu_write controls actions
     // 1 = set cursor position
-    // 2 = draw character in foreground,background at x,y and mvoe to next position
+    // 2 = draw character in foreground,background at x,y and move to next position
     always {
         switch( tpu_write ) {
             case 1: {
@@ -88,15 +88,9 @@ algorithm character_map(
                 foreground.wenable1 = 1;
                 
                 if( tpu_active_x == 79 ) {
-                    tpu_active_x = 0;
-                    if( tpu_active_y == 29 ) {
-                        tpu_active_y = 0;
-                    } else {
-                        tpu_active_y = tpu_active_y + 1;
-                    }
-                } else {
-                    tpu_active_x = tpu_active_x + 1;
+                    tpu_active_y = ( tpu_active_y == 29 ) ? 0 : tpu_active_y + 1;
                 }
+                tpu_active_x = ( tpu_active_x == 79 ) ? 0 : tpu_active_x + 1;
             }
             default: {}
         } // TPU
@@ -108,13 +102,12 @@ algorithm character_map(
             // CHARACTER from characterGenerator8x16
             // Determine if background or foreground
             switch( characterpixel ) {
-            case 0: {
+                case 0: {
                     // BACKGROUND
                     if( ~colour7(background.rdata0).alpha ) {
                         pix_red = colourexpand2to$color_depth$[ colour7(background.rdata0).red ];
                         pix_green = colourexpand2to$color_depth$[ colour7(background.rdata0).green ];
                         pix_blue = colourexpand2to$color_depth$[ colour7(background.rdata0).blue ];
-                        character_map_display = 1;
                     }
                 }
                 case 1: {
@@ -122,7 +115,6 @@ algorithm character_map(
                     pix_red = colourexpand2to$color_depth$[ colour6(foreground.rdata0).red ];
                     pix_green = colourexpand2to$color_depth$[ colour6(foreground.rdata0).green ];
                     pix_blue = colourexpand2to$color_depth$[ colour6(foreground.rdata0).blue ];
-                    character_map_display = 1;
                 }
             }
         } 

@@ -50,7 +50,7 @@ cs! invaders
 ```
 : tputest
   3f 0 do
-    40 i - tpubackground!
+    3f i - tpubackground!
     i tpuforeground!
     i tpuemit
   loop ;
@@ -64,12 +64,12 @@ tpucs! tputest
 : ledtest
     base @ 2 base !
     tpucs!
-    40 0 do
+    10 0 do
         i tpuforeground! 3f i - tpubackground!
         8 1 tpuxy! timer@ dup 5 tpuu.r# tpuspace $" seconds " tpu.$
         led! led@ 
         8 tpuu.r tpuspace $" LEDs" tpu.$ 
-        8000 0 do loop 
+        3e8 sleep
     loop
    cr 0 led! base ! ;
 ledtest
@@ -189,3 +189,14 @@ buttontest
 
 __NOTE__ ```14 ffef !``` and ```begin ffef @ 0= until``` provide a consistent 20 millisec delay at the bottom of the loop
 
+## Audio Test (not presently working, only odd number notes play)
+```
+: closeencounters
+    0 1a 3e8 beep! 3e8 sleep
+    0 1c 3e8 beep! 3e8 sleep
+    0 19 3e8 beep! 3e8 sleep
+    0 d 3e8 beep! 3e8 sleep
+    0 14 3e8 beep! 3e8 sleep
+;
+closeencounters
+```

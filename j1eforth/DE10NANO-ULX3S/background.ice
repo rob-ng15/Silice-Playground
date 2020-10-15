@@ -31,32 +31,16 @@ algorithm background(
 
     always {
         switch( backgroundcolour_write ) {
-            case 1: {
-                background = backgroundcolour;
-            }
-            case 2: {
-                background_alt = backgroundcolour_alt;
-            }
-            case 3: {
-                background_mode = backgroundcolour_mode;
-            }
-            case 4: {
-                background_fade = backgroundcolour_fade;
-            }
+            case 1: { background = backgroundcolour; }
+            case 2: { background_alt = backgroundcolour_alt; }
+            case 3: { background_mode = backgroundcolour_mode; }
+            case 4: { background_fade = backgroundcolour_fade; }
             default: {}
         }
 
         // Generate static grey scale values
-        if( static_0a == 0 ) {
-            static_0a = static_0;
-            if( static_1a == 0 ) {
-                static_1a = static_1;
-            } else {
-                static_1a = static_1a >> 1;
-            }
-        } else {
-            static_0a = static_0a >> 1;
-        }
+        static_0a = ( static_0a == 0 ) ? static_0 : static_0a >> 1;
+        static_1a = ( static_0a == 0 ) ? ( static_1a == 0 ) ? static_1 : static_1a >> 1 : static_1a;
     }
     
     while(1) {

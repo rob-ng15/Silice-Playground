@@ -97,21 +97,11 @@ algorithm sprite_layer(
     // Set tile bitmaps, x coordinate, y coordinate, colour, tile number and visibility
     always {
         switch( sprite_layer_write ) {
-            case 1: {
-                sprite_active[ sprite_set_number ] = sprite_set_active;
-            }
-            case 2: {
-                sprite_tile_number[ sprite_set_number ] = sprite_set_tile;
-            }
-            case 3: {
-                sprite_colour[ sprite_set_number ] = sprite_set_colour;
-            }
-            case 4: {
-                sprite_x[ sprite_set_number ] = sprite_set_x;
-            }
-            case 5: {
-                sprite_y[ sprite_set_number ] = sprite_set_y;
-            }
+            case 1: { sprite_active[ sprite_set_number ] = sprite_set_active; }
+            case 2: { sprite_tile_number[ sprite_set_number ] = sprite_set_tile; }
+            case 3: { sprite_colour[ sprite_set_number ] = sprite_set_colour; }
+            case 4: { sprite_x[ sprite_set_number ] = sprite_set_x; }
+            case 5: { sprite_y[ sprite_set_number ] = sprite_set_y; }
             case 8: { 
                 switch( sprite_writer_sprite ) {
                     $$for i=0,7 do
@@ -122,9 +112,7 @@ algorithm sprite_layer(
                     default: {}
                 }
             }
-            case 9: {
-                sprite_fade = sprite_layer_fade;
-            }
+            case 9: { sprite_fade = sprite_layer_fade; }
             case 10: {
                 // Perform sprite update
                 // Change the colour
