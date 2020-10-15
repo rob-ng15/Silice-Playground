@@ -18,7 +18,7 @@ algorithm character_map(
 ) <autorun> {
     // Character ROM 8x16
     uint8 characterGenerator8x16[] = {
-        $include('characterROM8x16.inc')
+        $include('ROM/characterROM8x16.inc')
     };
     
     // 80 x 30 character buffer

@@ -63,12 +63,11 @@ algorithm apu(
     frequencytable.addr := selected_note;
     
     always {
-        if( selected_note ) {
-            if( counter == 0 ) {
-                audio_left = selected_audio_output;
-                audio_right = selected_audio_output;
-            }   
+        if( selected_note & ( counter == 0 ) ) {
+            audio_left = selected_audio_output;
+            audio_right = selected_audio_output;
         }
+        
         if( countto25000 == 25000 ) {
             milliseconds = milliseconds + 1;
             countto25000 = 0;
@@ -81,10 +80,14 @@ algorithm apu(
                 }
             }
         }
+        
+        //milliseconds = ( countto25000 == 25000 ) ? milliseconds + 1 : milliseconds;
+        //countto25000 = ( countto25000 == 25000 ) ? 0 : countto25000 + 1;
+        //selected_duration = ( milliseconds == selected_duration ) ? 0 : selected_duration;
+        //selected_note = ( milliseconds == selected_duration ) ? 0 : selected_note;
     }
     
-    while(1) {
-        
+    while(1) {        
         if( apu_write ) {
             // Latch the selected note, waveform and duration
             selected_waveform = waveform;
@@ -102,6 +105,8 @@ algorithm apu(
             } else {
                 counter = counter - 1;
             }
+            //step_point = ( counter == 0 ) ? step_point + 1 : step_point;
+            //counter = ( counter == 0 ) ? selected_note_frequency : counter - 1;
         }
     }
 }

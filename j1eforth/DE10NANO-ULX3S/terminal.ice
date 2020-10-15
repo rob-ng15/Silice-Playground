@@ -17,7 +17,7 @@ algorithm terminal(
 ) <autorun> {
     // Character ROM 8x8 x 256
     uint8 characterGenerator8x8[] = {
-        $include('characterROM8x8.inc')
+        $include('ROM/characterROM8x8.inc')
     };
     
     // 80 x 4 character buffer for the input/output terminal

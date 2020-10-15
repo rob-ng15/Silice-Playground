@@ -1,4 +1,4 @@
-// 10 bit colour either ALPHA (background or lower layer) or red, green, blue
+// 10 bit colour either ALPHA (background or lower layer) or red, green, blue { Arrggbb }
 bitfield colour7 {
     uint1   alpha,
     uint2   red,
@@ -6,7 +6,7 @@ bitfield colour7 {
     uint2   blue
 }
 
-// 9bit colour red, green, blue
+// 9bit colour red, green, blue { rrggbb }
 bitfield colour6 {
     uint2   red,
     uint2   green, 
@@ -63,48 +63,12 @@ algorithm multiplex_display(
     pix_blue  := 0;
         
     // Draw the screen
-    while (1) {
-        // wait until pix_active THEN BACKGROUND -> LOWER SPRITES -> BITMAP -> UPPER SPRITES -> CHARACTER MAP -> TERMINAL
+    while (1) {        
         if( pix_active ) {
-            // TERMINAL
-            if( terminal_display ) {
-                pix_red = terminal_r;
-                pix_green = terminal_g;
-                pix_blue = terminal_b;
-            } else {
-                // CHARACTER MAP
-                if( character_map_display ) {
-                    pix_red = character_map_r;
-                    pix_green = character_map_g;
-                    pix_blue = character_map_b;
-                } else {
-                    // UPPER SPRITES
-                    if( upper_sprites_display ) {
-                        pix_red = upper_sprites_r;
-                        pix_green = upper_sprites_g;
-                        pix_blue = upper_sprites_b;
-                    } else {
-                        // BITMAP
-                        if( bitmap_display ) {
-                            pix_red = bitmap_r;
-                            pix_green = bitmap_g;
-                            pix_blue = bitmap_b;
-                        } else {
-                            // LOWER SPRITES
-                            if( lower_sprites_display ) {
-                                pix_red = lower_sprites_r;
-                                pix_green = lower_sprites_g;
-                                pix_blue = lower_sprites_b;
-                            } else {
-                                // BACKGROUND
-                                pix_red = background_r;
-                                pix_green = background_g;
-                                pix_blue = background_b;
-                            }
-                        }
-                    }
-                }
-            }
+            // wait until pix_active THEN BACKGROUND -> LOWER SPRITES -> BITMAP -> UPPER SPRITES -> CHARACTER MAP -> TERMINAL
+            pix_red = ( terminal_display ) ? terminal_r : ( character_map_display ) ? character_map_r : ( upper_sprites_display ) ? upper_sprites_r : ( bitmap_display ) ? bitmap_r : ( lower_sprites_display ) ? lower_sprites_r : background_r;
+            pix_green = ( terminal_display ) ? terminal_g : ( character_map_display ) ? character_map_g : ( upper_sprites_display ) ? upper_sprites_g : ( bitmap_display ) ? bitmap_g : ( lower_sprites_display ) ? lower_sprites_g : background_g;
+            pix_blue = ( terminal_display ) ? terminal_b : ( character_map_display ) ? character_map_b : ( upper_sprites_display ) ? upper_sprites_b : ( bitmap_display ) ? bitmap_b : ( lower_sprites_display ) ? lower_sprites_b : background_b;
         } // pix_active
     }
 }
@@ -166,6 +130,7 @@ algorithm pulse1hz(
 ) <autorun> {
     uint32 counter50mhz = 0;
     counter1hz = 0;
+    
     while (1) {
         counter1hz = ( counter50mhz == 50000000 ) ? counter1hz + 1 : counter1hz;
         counter50mhz = ( counter50mhz == 50000000 ) ? 0 : counter50mhz + 1;
@@ -236,7 +201,6 @@ $$end
         uart_rx <:  uart_rx
     );
 
-
     // VGA/HDMI Display
     uint1 video_reset = 0;
     uint1 video_clock = 0;
@@ -290,6 +254,7 @@ $$if DE10NANO then
 $$end
 
 $$if ULX3S then
+    // Adjust 6 biut rgb to 8 bit rgb for HDMI output
     uint8 video_r8 := video_r << 2;
     uint8 video_g8 := video_g << 2;
     uint8 video_b8 := video_b << 2;
@@ -514,7 +479,7 @@ $$end
 
     // 16bit ROM with included with compiled j1eForth developed from https://github.com/samawati/j1eforth
     dualport_bram uint16 ram_0[8192] = {
-        $include('j1eforthROM.inc')
+        $include('ROM/j1eforthROM.inc')
         , pad(uninitialized)
     };
     dualport_bram uint16 ram_1[8192] = uninitialized;
@@ -584,7 +549,6 @@ $$end
     terminal_window.showterminal = 1;
     terminal_window.showcursor = 1;
 
-
     // EXECUTE J1 CPU
     while( 1 ) {
         // Update UART output buffer top if character has been put into buffer
@@ -607,11 +571,7 @@ $$end
             case 1: {
                 // wait then read the data from RAM
                 instruction = ram_0.rdata1;
-                if( stackTop > 16383 ) {
-                    memoryInput = ram_1.rdata0;
-                } else {
-                    memoryInput = ram_0.rdata0;
-                }
+                memoryInput = ( stackTop > 16383 ) ? ram_1.rdata0 : ram_0.rdata0;
             }
             
             // J1 CPU Instruction Execute
@@ -697,85 +657,54 @@ $$end
                                         case 4b1010: {newStackTop = stackTop - 1;}
                                         case 4b1011: {newStackTop = rStackTop;}
                                         case 4b1100: {
-                                        // UART or memoryInput
+                                            // UART or memoryInput
                                             switch( stackTop ) {
-                                                case 16hf000: {
-                                                    // INPUT from UART reads at uartInBufferNext (code from @sylefeb)
-                                                    newStackTop = { 8b0, uartInBuffer.rdata0 };
-                                                    uartInBufferNext = uartInBufferNext + 1;
-                                                } 
-                                                case 16hf001: {
-                                                    // UART status register { 14b0, tx full, rx available }
-                                                    newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ~( uartInBufferNext == uartInBufferTop )};
-                                                }
-                                                case 16hf002: {
-                                                    // RGB LED status
-                                                    newStackTop = leds;
-                                                }
-                                                case 16hf003: {
-                                                    // user buttons
-                                                    newStackTop = {$16-NUM_BTNS$b0, reg_btns[0,$NUM_BTNS$]};
-                                                }
-                                                case 16hf004: {
-                                                    // 1hz timer
-                                                    newStackTop = timer1hz;
-                                                }
-                                                case 16hff07: {
-                                                    // GPU Active Status
-                                                    newStackTop = gpu_processor.gpu_active;
-                                                }
-                                                case 16hff08: {
-                                                    // Read BITMAP pixel
-                                                    newStackTop = bitmap_window.bitmap_colour_read;
-                                                }
-                                                case 16hff20: {
-                                                    // Terminal Active Status
-                                                    newStackTop = terminal_window.terminal_active;
-                                                }
+                                                // INPUT from UART reads at uartInBufferNext (code from @sylefeb)
+                                                // UART status register { 14b0, tx full, rx available }
+                                                case 16hf000: { newStackTop = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1; } 
+                                                case 16hf001: { newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ~( uartInBufferNext == uartInBufferTop )}; }
+                                                
+                                                // LED status
+                                                case 16hf002: { newStackTop = leds; }
+                                                
+                                                // BUTTONS
+                                                case 16hf003: { newStackTop = {$16-NUM_BTNS$b0, reg_btns[0,$NUM_BTNS$]}; }
+                                                
+                                                // 1hz timer
+                                                case 16hf004: { newStackTop = timer1hz; }
+                                                
+                                                // GPU Active Status
+                                                case 16hff07: { newStackTop = gpu_processor.gpu_active; }
+                                                
+                                                // Read BITMAP pixel
+                                                case 16hff08: { newStackTop = bitmap_window.bitmap_colour_read; }
+                                                
+                                                // Terminal Active Status
+                                                case 16hff20: { newStackTop = terminal_window.terminal_active; }
+                                                
                                                 // LOWER SPRITES READ
-                                                case 16hff31: {
-                                                    newStackTop = lower_sprites.sprite_read_active;
-                                                }
-                                                case 16hff32: {
-                                                    newStackTop = lower_sprites.sprite_read_tile;
-                                                }
-                                                case 16hff33: {
-                                                    newStackTop = lower_sprites.sprite_read_colour;
-                                                }
-                                                case 16hff34: {
-                                                    newStackTop = lower_sprites.sprite_read_x;
-                                                }
-                                                case 16hff35: {
-                                                    newStackTop = lower_sprites.sprite_read_y;
-                                                }
-                                                case 16hff39: {
-                                                    newStackTop = lower_sprites.sprites_at_xy;
-                                                }
+                                                case 16hff31: { newStackTop = lower_sprites.sprite_read_active; }
+                                                case 16hff32: { newStackTop = lower_sprites.sprite_read_tile; }
+                                                case 16hff33: { newStackTop = lower_sprites.sprite_read_colour; }
+                                                case 16hff34: { newStackTop = lower_sprites.sprite_read_x; }
+                                                case 16hff35: { newStackTop = lower_sprites.sprite_read_y; }
+                                                case 16hff39: { newStackTop = lower_sprites.sprites_at_xy; }
+                                                
                                                 // UPPER SPRITES READ
-                                                case 16hff41: {
-                                                    newStackTop = upper_sprites.sprite_read_active;
-                                                }
-                                                case 16hff42: {
-                                                    newStackTop = upper_sprites.sprite_read_tile;
-                                                }
-                                                case 16hff43: {
-                                                    newStackTop = upper_sprites.sprite_read_colour;
-                                                }
-                                                case 16hff44: {
-                                                    newStackTop = upper_sprites.sprite_read_x;
-                                                }
-                                                case 16hff45: {
-                                                    newStackTop = upper_sprites.sprite_read_y;
-                                                }
-                                                case 16hff49: {
-                                                    newStackTop = upper_sprites.sprites_at_xy;
-                                                }
-                                                case 16hffef: {
-                                                    newStackTop = p1khz.counter1khz;
-                                                }
-                                                case 16hffff: {
-                                                    newStackTop = vblank;
-                                                }
+                                                case 16hff41: { newStackTop = upper_sprites.sprite_read_active; }
+                                                case 16hff42: { newStackTop = upper_sprites.sprite_read_tile; }
+                                                case 16hff43: { newStackTop = upper_sprites.sprite_read_colour; }
+                                                case 16hff44: { newStackTop = upper_sprites.sprite_read_x; }
+                                                case 16hff45: { newStackTop = upper_sprites.sprite_read_y; }
+                                                case 16hff49: { newStackTop = upper_sprites.sprites_at_xy; }
+                                                
+                                                // Timer 1khz countdown
+                                                case 16hffef: { newStackTop = p1khz.counter1khz; }
+                                                
+                                                // VBLANK status
+                                                case 16hffff: { newStackTop = vblank; }
+                                                
+                                                // MEMORY
                                                 default: {newStackTop = memoryInput;}
                                             }
                                         }
@@ -831,214 +760,80 @@ $$end
                                        }
                                     }
                                     // UART output
-                                    case 16hf000: {
-                                        uartOutBuffer.wdata1 = bytes(stackNext).byte0;
-                                        newuartOutBufferTop = uartOutBufferTop + 1;
-                                    }
-                                    // LED set
-                                    case 16hf002: {
-                                        leds = stackNext;
-                                    }
+                                    case 16hf000: { uartOutBuffer.wdata1 = bytes(stackNext).byte0; newuartOutBufferTop = uartOutBufferTop + 1; }
                                     
-                                    // GPU Controls
-                                    case 16hff00: {
-                                        gpu_processor.gpu_x = stackNext;
-                                    }
-                                    case 16hff01: {
-                                        gpu_processor.gpu_y = stackNext;
-                                    }
-                                    case 16hff02: {
-                                        gpu_processor.gpu_colour = stackNext;
-                                    }
-                                   case 16hff03: {
-                                        gpu_processor.gpu_param0 = stackNext;
-                                    }
-                                   case 16hff04: {
-                                        gpu_processor.gpu_param1 = stackNext;
-                                    }
-                                   case 16hff05: {
-                                        gpu_processor.gpu_param2 = stackNext;
-                                    }
-                                   case 16hff06: {
-                                        gpu_processor.gpu_param3 = stackNext;
-                                    }
-                                    case 16hff07: {
-                                        gpu_processor.gpu_write = stackNext;
-                                    }
-                                    case 16hff09: {
-                                        bitmap_window.bitmap_x_read = stackNext;
-                                    }
-                                    case 16hff0a: {
-                                        bitmap_window.bitmap_y_read = stackNext;
-                                    }
-                                    case 16hff0f: {
-                                        gpu_processor.gpu_param0 = stackNext;
-                                        gpu_processor.gpu_write = 7;
-                                    }
+                                    // LED set
+                                    case 16hf002: { leds = stackNext; }
+                                    
+                                    // GPU Controls and BITMAP reader
+                                    case 16hff00: { gpu_processor.gpu_x = stackNext; }
+                                    case 16hff01: { gpu_processor.gpu_y = stackNext; }
+                                    case 16hff02: { gpu_processor.gpu_colour = stackNext; }
+                                    case 16hff03: { gpu_processor.gpu_param0 = stackNext; }
+                                    case 16hff04: { gpu_processor.gpu_param1 = stackNext; }
+                                    case 16hff05: { gpu_processor.gpu_param2 = stackNext; }
+                                    case 16hff06: { gpu_processor.gpu_param3 = stackNext; }
+                                    case 16hff07: { gpu_processor.gpu_write = stackNext; }
+                                    case 16hff09: { bitmap_window.bitmap_x_read = stackNext; }
+                                    case 16hff0a: { bitmap_window.bitmap_y_read = stackNext; }
+                                    case 16hff0f: { gpu_processor.gpu_param0 = stackNext; gpu_processor.gpu_write = 7; }
+                                    
                                     // TPU Controls
-                                    case 16hff10: {
-                                        character_map_window.tpu_x = stackNext;
-                                    }
-                                    case 16hff11: {
-                                        character_map_window.tpu_y = stackNext;
-                                    }
-                                    case 16hff12: {
-                                        character_map_window.tpu_character = stackNext;
-                                    }
-                                    case 16hff13: {
-                                        character_map_window.tpu_background = stackNext;
-                                    }
-                                    case 16hff14: {
-                                        character_map_window.tpu_foreground = stackNext;
-                                    }
-                                    case 16hff15: {
-                                        character_map_window.tpu_write = stackNext;
-                                    }
+                                    case 16hff10: { character_map_window.tpu_x = stackNext; }
+                                    case 16hff11: { character_map_window.tpu_y = stackNext; }
+                                    case 16hff12: { character_map_window.tpu_character = stackNext; }
+                                    case 16hff13: { character_map_window.tpu_background = stackNext; }
+                                    case 16hff14: { character_map_window.tpu_foreground = stackNext; }
+                                    case 16hff15: { character_map_window.tpu_write = stackNext; }
                                     
                                     // TERMINAL Output + SHOW/HIDE
-                                    case 16hff20: {
-                                        terminal_window.terminal_character = stackNext;
-                                        terminal_window.terminal_write = 1;
-                                    }
-                                    case 16hff21: {
-                                         terminal_window.showterminal = stackNext;
-                                    }
+                                    case 16hff20: { terminal_window.terminal_character = stackNext; terminal_window.terminal_write = 1; }
+                                    case 16hff21: { terminal_window.showterminal = stackNext; }
                                     
                                     // LOWER SPRITE LAYER CONTROLS
-                                    case 16hff30: {
-                                        lower_sprites.sprite_set_number = stackNext;
-                                    }
-                                    case 16hff31: {
-                                        lower_sprites.sprite_set_active = stackNext;
-                                        lower_sprites.sprite_layer_write = 1;
-                                    }
-                                    case 16hff32: {
-                                        lower_sprites.sprite_set_tile = stackNext;
-                                        lower_sprites.sprite_layer_write = 2;
-                                    }
-                                    case 16hff33: {
-                                        lower_sprites.sprite_set_colour = stackNext;
-                                        lower_sprites.sprite_layer_write = 3;
-                                    }
-                                    case 16hff34: {
-                                        lower_sprites.sprite_set_x = stackNext;
-                                        lower_sprites.sprite_layer_write = 4;
-                                    }
-                                    case 16hff35: {
-                                        lower_sprites.sprite_set_y = stackNext;
-                                        lower_sprites.sprite_layer_write = 5;
-                                    }
-                                    case 16hff36: {
-                                        lower_sprites.sprite_writer_sprite = stackNext;
-                                    }
-                                    case 16hff37: {
-                                        lower_sprites.sprite_writer_line = stackNext;
-                                    }
-                                    case 16hff38: {
-                                        lower_sprites.sprite_writer_bitmap = stackNext;
-                                        lower_sprites.sprite_layer_write = 8;
-                                    }
-                                    case 16hff3a: {
-                                        lower_sprites.sprites_at_x = stackNext;
-                                    }
-                                    case 16hff3b: {
-                                        lower_sprites.sprites_at_y = stackNext;
-                                    }
-                                    case 16hff3c: {
-                                        lower_sprites.sprite_update = stackNext;
-                                        lower_sprites.sprite_layer_write = 10;
-                                    }
-                                    case 16hff3f: {
-                                        lower_sprites.sprite_layer_fade = stackNext;
-                                        lower_sprites.sprite_layer_write = 9;
-                                    }
+                                    case 16hff30: { lower_sprites.sprite_set_number = stackNext; }
+                                    case 16hff31: { lower_sprites.sprite_set_active = stackNext; lower_sprites.sprite_layer_write = 1; }
+                                    case 16hff32: { lower_sprites.sprite_set_tile = stackNext; lower_sprites.sprite_layer_write = 2; }
+                                    case 16hff33: { lower_sprites.sprite_set_colour = stackNext; lower_sprites.sprite_layer_write = 3; }
+                                    case 16hff34: { lower_sprites.sprite_set_x = stackNext; lower_sprites.sprite_layer_write = 4; }
+                                    case 16hff35: { lower_sprites.sprite_set_y = stackNext; lower_sprites.sprite_layer_write = 5; }
+                                    case 16hff36: { lower_sprites.sprite_writer_sprite = stackNext; }
+                                    case 16hff37: { lower_sprites.sprite_writer_line = stackNext; }
+                                    case 16hff38: { lower_sprites.sprite_writer_bitmap = stackNext; lower_sprites.sprite_layer_write = 8; }
+                                    case 16hff3a: { lower_sprites.sprites_at_x = stackNext; }
+                                    case 16hff3b: { lower_sprites.sprites_at_y = stackNext; }
+                                    case 16hff3c: { lower_sprites.sprite_update = stackNext; lower_sprites.sprite_layer_write = 10; }
+                                    case 16hff3f: { lower_sprites.sprite_layer_fade = stackNext; lower_sprites.sprite_layer_write = 9; }
                                     
                                     // UPPER SPRITE LAYER CONTROLS
-                                    case 16hff40: {
-                                        upper_sprites.sprite_set_number = stackNext;
-                                    }
-                                    case 16hff41: {
-                                        upper_sprites.sprite_set_active = stackNext;
-                                        upper_sprites.sprite_layer_write = 1;
-                                    }
-                                    case 16hff42: {
-                                        upper_sprites.sprite_set_tile = stackNext;
-                                        upper_sprites.sprite_layer_write = 2;
-                                    }
-                                    case 16hff43: {
-                                        upper_sprites.sprite_set_colour = stackNext;
-                                        upper_sprites.sprite_layer_write = 3;
-                                    }
-                                    case 16hff44: {
-                                        upper_sprites.sprite_set_x = stackNext;
-                                        upper_sprites.sprite_layer_write = 4;
-                                    }
-                                    case 16hff45: {
-                                        upper_sprites.sprite_set_y = stackNext;
-                                        upper_sprites.sprite_layer_write = 5;
-                                    }
-                                    case 16hff46: {
-                                        upper_sprites.sprite_writer_sprite = stackNext;
-                                    }
-                                    case 16hff47: {
-                                        upper_sprites.sprite_writer_line = stackNext;
-                                    }
-                                    case 16hff48: {
-                                        upper_sprites.sprite_writer_bitmap = stackNext;
-                                        upper_sprites.sprite_layer_write = 8;
-                                    }
-                                    case 16hff4a: {
-                                        upper_sprites.sprites_at_x = stackNext;
-                                    }
-                                    case 16hff4b: {
-                                        upper_sprites.sprites_at_y = stackNext;
-                                    }
-                                    case 16hff4c: {
-                                        upper_sprites.sprite_update = stackNext;
-                                        upper_sprites.sprite_layer_write = 10;
-                                    }
-                                    case 16hff4f: {
-                                        upper_sprites.sprite_layer_fade = stackNext;
-                                        upper_sprites.sprite_layer_write = 9;
-                                    }
+                                    case 16hff40: { upper_sprites.sprite_set_number = stackNext; }
+                                    case 16hff41: { upper_sprites.sprite_set_active = stackNext; upper_sprites.sprite_layer_write = 1; }
+                                    case 16hff42: { upper_sprites.sprite_set_tile = stackNext; upper_sprites.sprite_layer_write = 2; }
+                                    case 16hff43: { upper_sprites.sprite_set_colour = stackNext; upper_sprites.sprite_layer_write = 3; }
+                                    case 16hff44: { upper_sprites.sprite_set_x = stackNext; upper_sprites.sprite_layer_write = 4; }
+                                    case 16hff45: { upper_sprites.sprite_set_y = stackNext; upper_sprites.sprite_layer_write = 5; }
+                                    case 16hff46: { upper_sprites.sprite_writer_sprite = stackNext; }
+                                    case 16hff47: { upper_sprites.sprite_writer_line = stackNext; }
+                                    case 16hff48: { upper_sprites.sprite_writer_bitmap = stackNext; upper_sprites.sprite_layer_write = 8; }
+                                    case 16hff4a: { upper_sprites.sprites_at_x = stackNext; }
+                                    case 16hff4b: { upper_sprites.sprites_at_y = stackNext; }
+                                    case 16hff4c: { upper_sprites.sprite_update = stackNext; upper_sprites.sprite_layer_write = 10; }
+                                    case 16hff4f: { upper_sprites.sprite_layer_fade = stackNext; upper_sprites.sprite_layer_write = 9; }
                                     
                                     // APU
-                                    case 16hffe0: {
-                                        apu_processor.waveform = stackNext;
-                                    }
-                                    case 16hffe1: {
-                                        apu_processor.note = stackNext;
-                                    }
-                                    case 16hffe2: {
-                                        apu_processor.duration = stackNext;
-                                    }
-                                    case 16hffe3: {
-                                        apu_processor.apu_write = 1;
-                                    }
+                                    case 16hffe0: { apu_processor.waveform = stackNext; }
+                                    case 16hffe1: { apu_processor.note = stackNext; }
+                                    case 16hffe2: { apu_processor.duration = stackNext; }
+                                    case 16hffe3: { apu_processor.apu_write = 1; }
                                     
-                                    // 1khz timer
-                                    case 16hffef: {
-                                        p1khz.countdownfrom = stackNext;
-                                        p1khz.resetcountdown = 1;
-                                    }
+                                    // 1khz countdown timer
+                                    case 16hffef: { p1khz.countdownfrom = stackNext; p1khz.resetcountdown = 1; }
                                     
                                     // BACKGROUND Controls
-                                    case 16hfff0: {
-                                        background_generator.backgroundcolour = stackNext;
-                                        background_generator.backgroundcolour_write = 1;
-                                    }
-                                    case 16hfff1: {
-                                        background_generator.backgroundcolour_alt = stackNext;
-                                        background_generator.backgroundcolour_write = 2;
-                                    }
-                                    case 16hfff2: {
-                                        background_generator.backgroundcolour_mode = stackNext;
-                                        background_generator.backgroundcolour_write = 3;
-                                    }
-                                    case 16hffff: {
-                                        background_generator.backgroundcolour_fade = stackNext;
-                                        background_generator.backgroundcolour_write = 4;
-                                    }
+                                    case 16hfff0: { background_generator.backgroundcolour = stackNext; background_generator.backgroundcolour_write = 1; }
+                                    case 16hfff1: { background_generator.backgroundcolour_alt = stackNext; background_generator.backgroundcolour_write = 2; }
+                                    case 16hfff2: { background_generator.backgroundcolour_mode = stackNext; background_generator.backgroundcolour_write = 3; }
+                                    case 16hffff: { background_generator.backgroundcolour_fade = stackNext; background_generator.backgroundcolour_write = 4; }
                                }
                             }
                         } // ALU
@@ -1062,7 +857,7 @@ $$end
                     rstack.wdata   = rstackWData;
                 }
                 
-                // RESET TIMER1khz
+                // RESET TIMER1khz control
                 p1khz.resetcountdown = 0;
             }
             
@@ -1093,5 +888,5 @@ $$end
     
         // Move to next CYCLE ( 0 to 4 , then back to 0 )
         CYCLE = ( CYCLE == 4 ) ? 0 : CYCLE + 1;
-    } // (INIT==3 execute J1 CPU)
+    } // execute J1 CPU
 }

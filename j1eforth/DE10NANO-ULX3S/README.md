@@ -24,8 +24,40 @@ Need recent statistics
 ```
 
 ### Resource Usage (ulx3s)
+
+From 0755 on 15/10/2020 following refactoring of the multiplex_display pixel selection to ternary operators.
+
 ```
-Need recent statistics
+Info:          TRELLIS_SLICE: 11384/41820    27%
+Info:             TRELLIS_IO:    34/  365     9%
+Info:                   DCCA:     4/   56     7%
+Info:                 DP16KD:   174/  208    83%
+Info:             MULT18X18D:     5/  156     3%
+Info:                 ALU54B:     0/   78     0%
+Info:                EHXPLLL:     2/    4    50%
+Info:                EXTREFB:     0/    2     0%
+Info:                   DCUA:     0/    2     0%
+Info:              PCSCLKDIV:     0/    2     0%
+Info:                IOLOGIC:     0/  224     0%
+Info:               SIOLOGIC:     8/  141     5%
+Info:                    GSR:     0/    1     0%
+Info:                  JTAGG:     0/    1     0%
+Info:                   OSCG:     0/    1     0%
+Info:                  SEDGA:     0/    1     0%
+Info:                    DTR:     0/    1     0%
+Info:                USRMCLK:     0/    1     0%
+Info:                CLKDIVF:     0/    4     0%
+Info:              ECLKSYNCB:     0/   10     0%
+Info:                DLLDELD:     0/    8     0%
+Info:                 DDRDLL:     0/    4     0%
+Info:                DQSBUFM:     0/   14     0%
+Info:        TRELLIS_ECLKBUF:     0/    8     0%
+Info:           ECLKBRIDGECS:     0/    2     0%
+
+Info: Max frequency for clock 27.49 MHz (PASS at 25.00 MHz)
+Info: Max frequency for clock 51.18 MHz (PASS at 50.00 MHz)
+Info: Max frequency for clock 38.49 MHz (PASS at 25.00 MHz)
+Info: Max frequency for clock 236.91 MHz (PASS at 125.00 MHz)
 ```
 
 ## VGA/HDMI Multiplexed Display
@@ -260,6 +292,17 @@ AUDIO<br>Word | Usage
 ----- | -----
 beep! | Example ```0 19 3e8 beep!``` outputs a middle c square wave for 1 second ( 3e8 hex = 1000 milliseconds )
 sleep | Example ```3e8 sleep``` waits for 1 second ( 3e8 hex = 1000 milliseconds )
+
+#### Note table
+
+Octave | C | C#/Db | D | D#/Eb | E | F | F#/Gb | G | G#/Ab | A | A#/Bb | B
+:-----: | :--: | :--: |  :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--:
+C2 (Deep C) | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | a | b | c
+C3 | d | e | f | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18
+C4 (Middle C) | 19 | 1a | 1b | 1c | 1d | 1e | 1f | 20 | 21 | 22 | 23 | 24
+C5 (Tenor C) | 25 | 26 | 27 | 28 | 29 | 2a | 2b | 2c | 2d | 2e | 2f | 30
+C6 (Soprano C) | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 3a | 3b | 3c
+C7 (Double High C) | 3d
 
 ### Colour hex numbers
 
