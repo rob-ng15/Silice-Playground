@@ -48,6 +48,7 @@ algorithm sprite_layer(
     input   uint3   sprite_writer_sprite,
     input   uint6   sprite_writer_line,
     input   uint16  sprite_writer_bitmap,  
+    input   uint1   sprite_writer_active,
     
     // SPRITE LAYER fade level
     input uint3 sprite_layer_fade
@@ -87,7 +88,7 @@ algorithm sprite_layer(
         sprite_$i$_tiles.wenable0 := 0;
         sprite_$i$_tiles.addr1 := sprite_writer_line;
         sprite_$i$_tiles.wdata1 := sprite_writer_bitmap;
-        sprite_$i$_tiles.wenable1 := 0;
+        sprite_$i$_tiles.wenable1 := ( sprite_writer_sprite == $i$ ) & sprite_writer_active;
     $$end
 
     // Default to transparent
@@ -102,16 +103,6 @@ algorithm sprite_layer(
             case 3: { sprite_colour[ sprite_set_number ] = sprite_set_colour; }
             case 4: { sprite_x[ sprite_set_number ] = sprite_set_x; }
             case 5: { sprite_y[ sprite_set_number ] = sprite_set_y; }
-            case 8: { 
-                switch( sprite_writer_sprite ) {
-                    $$for i=0,7 do
-                        case $i$: {
-                            sprite_$i$_tiles.wenable1 = 1;
-                        }
-                    $$end
-                    default: {}
-                }
-            }
             case 9: { sprite_fade = sprite_layer_fade; }
             case 10: {
                 // Perform sprite update

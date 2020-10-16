@@ -6,14 +6,14 @@ algorithm gpu(
     output! uint2 bitmap_write,
     output! uint3 bitmapcolour_fade,
     
-    input int11 gpu_x,
-    input int11 gpu_y,
-    input uint8 gpu_colour,
-    input int16 gpu_param0,
-    input int16 gpu_param1,
-    input int16 gpu_param2,
-    input int16 gpu_param3,
-    input uint3 gpu_write,
+    input   int11 gpu_x,
+    input   int11 gpu_y,
+    input   uint8 gpu_colour,
+    input   int16 gpu_param0,
+    input   int16 gpu_param1,
+    input   int16 gpu_param2,
+    input   int16 gpu_param3,
+    input   uint4 gpu_write,
     
     output  uint4 gpu_active
 ) <autorun> {
@@ -42,8 +42,8 @@ algorithm gpu(
     int11 gpu_numerator = 0;
     int11 gpu_numerator2 = 0;
     int11 gpu_radius = 0;
-    uint11 gpu_count = 0;
-    uint11 gpu_max_count = 0;
+    int11 gpu_count = 0;
+    int11 gpu_max_count = 0;
     uint8 gpu_tile = 0;
 
     // blit1tilemap read access for the blit1tilemap
@@ -85,23 +85,24 @@ algorithm gpu(
                         gpu_active_x = ( gpu_x < gpu_param0 ) ? ( gpu_x < 0 ? 0 : gpu_x ) : ( gpu_param0 < 0 ? 0 : gpu_param0 );                // left
                         gpu_active_y = ( gpu_y < gpu_param1 ) ? ( gpu_y < 0 ? 0 : gpu_y ) : ( gpu_param1 < 0 ? 0 : gpu_param1 );                 // top
                         gpu_x2 = ( gpu_x < gpu_param0 ) ? ( gpu_x < 0 ? 0 : gpu_x )  : ( gpu_param0 < 0 ? 0 : gpu_param0 );                       // left - for next line
-                        gpu_w = ( gpu_x < gpu_param0 ) ? ( gpu_param0 > 639 ? 639 : gpu_param0 ) : ( gpu_x > 639 ? 639 : gpu_x );                        // right - at end of line
-                        gpu_h = ( gpu_y < gpu_param1 ) ? ( gpu_param1 > 479 ? 479 : gpu_param1 ) : ( gpu_y > 479 ? 479 : gpu_y );                        // bottom - at end of rectangle
+                        gpu_x1 = ( gpu_x < gpu_param0 ) ? ( gpu_param0 > 639 ? 639 : gpu_param0 ) : ( gpu_x > 639 ? 639 : gpu_x );                        // right - at end of line
+                        gpu_y1 = ( gpu_y < gpu_param1 ) ? ( gpu_param1 > 479 ? 479 : gpu_param1 ) : ( gpu_y > 479 ? 479 : gpu_y );                        // bottom - at end of rectangle
                         gpu_active = 1; 
                     }
                     case 3: {
                         // Setup drawing a line from x,y to param0,param1 in colour
-                        // Ensures that works left to right
-                        gpu_active_colour = gpu_colour;
-                        gpu_active_x = gpu_x;
-                        gpu_active_y = gpu_y;
-                        gpu_x1 = gpu_param0;
-                        gpu_y1 = gpu_param1;
+                        // Ensure LEFT to RIGHT
+                        gpu_active_x = ( gpu_x < gpu_param0 ) ? gpu_x : gpu_param0;
+                        gpu_active_y = ( gpu_x < gpu_param0 ) ? gpu_y : gpu_param1;
+                        // Absolute DELTAs
                         gpu_dx = ( gpu_param0 < gpu_x ) ? gpu_x - gpu_param0 : gpu_param0 - gpu_x;
-                        gpu_dy = ( gpu_param1 < gpu_y )? gpu_y - gpu_param1 : gpu_param1 - gpu_x;
-                        gpu_sx = ( gpu_x < gpu_param0 ) ? 1 : -1;
-                        gpu_sy = ( gpu_y < gpu_param1 ) ? 1 : -1;
+                        gpu_dy = ( gpu_param1 < gpu_y )? gpu_y - gpu_param1 : gpu_param1 - gpu_y;
+                        // Shift X is always POSITIVE
+                        gpu_sx = 1;
+                        // Shift Y is NEGATIVE or POSITIVE
+                        gpu_sy = ( gpu_x < gpu_param0 ) ? ( gpu_y < gpu_param1 ) ? 1 : -1 : ( gpu_y < gpu_param1 ) ? -1 : 1;
                         gpu_count = 0;
+                        gpu_active_colour = gpu_colour;
                         gpu_active = 2; 
                     }
                     case 4: {
@@ -148,23 +149,13 @@ algorithm gpu(
                 bitmap_colour_write = gpu_active_colour;
                 bitmap_write = 1;
                 // Move to next pixel
-                if( gpu_active_x == gpu_w ) {
-                    // End of line
-                    if( gpu_active_y == gpu_h ) {
-                        // Reached bottom right
-                        gpu_active = 0;
-                    } else {
-                        // Next line
-                        gpu_active_y = gpu_active_y + 1;
-                    }
-                    gpu_active_x = gpu_x2;
-                } else {
-                    gpu_active_x = gpu_active_x + 1;
-                }
+                gpu_active = ( ( gpu_active_x == gpu_x1) & ( gpu_active_y == gpu_y1 ) ) ? 0 : 1;
+                gpu_active_x = ( gpu_active_x == gpu_x1 ) ? gpu_x2 : gpu_active_x + 1;
+                gpu_active_y = ( gpu_active_x == gpu_x1 ) ? gpu_active_y + 1 : gpu_active_y;
             }
             case 2: {
                 // Bresenham's Line Drawing Algorithm
-                gpu_numerator = ( gpu_dx > gpu_dy ) ? ( gpu_dx >> 1) : -( gpu_dy >> 1);
+                gpu_numerator = ( gpu_dx > gpu_dy ) ? ( gpu_dx >> 1 ) : -( gpu_dy >> 1 );
                 gpu_max_count = ( gpu_dx > gpu_dy ) ? gpu_dx : gpu_dy;
                 gpu_active = 3;
             }
@@ -177,12 +168,8 @@ algorithm gpu(
                 bitmap_write = 1;
                 
                 // Check if done
-                if( gpu_count < gpu_max_count ) {
-                    gpu_numerator2 = gpu_numerator;
-                    gpu_active = 4;
-                } else {
-                    gpu_active = 0;
-                }
+                gpu_active = ( gpu_count < gpu_max_count ) ? 4 : 0;
+                gpu_numerator2 = gpu_numerator;
             }
             case 4: {          
                 // Bresenham's Line Drawing Algorithm.
@@ -290,19 +277,9 @@ algorithm gpu(
                     bitmap_colour_write = gpu_active_colour;
                     bitmap_write = 1;
                 }
-                if( gpu_active_x < gpu_w ) {
-                    gpu_active_x = gpu_active_x + 1;
-                } else {
-                    gpu_active_x = 0;
-                    // Move to next line and fetch line from blit 1 bit tile map
-                    if( gpu_active_y < gpu_h ) {
-                        gpu_active_y = gpu_active_y + 1;
-                        gpu_active = 14;
-                    } else {
-                        // FINISHED
-                        gpu_active = 0;
-                    }
-                }
+                gpu_active = ( gpu_active_y < gpu_h ) ? 14 : ( gpu_active_x < gpu_w ) ? 14 : 0;
+                gpu_active_x = ( gpu_active_x < gpu_w ) ? gpu_active_x + 1 : 0;
+                gpu_active_y = ( gpu_active_x < gpu_w ) ? gpu_active_y : gpu_active_y + 1;
             }
             default: {gpu_active = 0;}
         }

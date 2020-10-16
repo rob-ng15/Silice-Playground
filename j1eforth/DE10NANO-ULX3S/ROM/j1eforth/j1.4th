@@ -961,10 +961,13 @@ t: buttons@ ( -- t ) f003 literal @ t;
 
 ( Audio and countdown timer )
 t: beep! ffe2 literal ! ffe1 literal ! ffe0 literal ! 1 literal ffe3 literal ! t;
-t: sleep ffef literal ! begin ffef literal @ 0= until t;
+t: beep? begin ffe3 literal @ 0= until t;
+t: timer! ffef literal ! t;
+t: sleep? begin ffef literal @ 0= until t;
+t: sleep timer! sleep? t;
 
 ( DISPLAY helper words )
-t: vblank begin ffff literal @ 0= until t;
+t: vblank? begin ffff literal @ 1 literal = until t;
 
 t: background! fff2 literal ! fff1 literal ! fff0 literal ! t;
 
@@ -984,6 +987,10 @@ t: lslupdate! ff30 literal ! ff3c literal ! t;
 t: usltile! ff46 literal ! 40 literal begin 1- dup ff47 literal ! swap ff48 literal ! dup 0= until drop t;
 t: uslsprite! ff40 literal ! ff41 literal ! ff42 literal ! ff43 literal ! ff45 literal ! ff44 literal ! t;
 t: uslupdate! ff40 literal ! ff4c literal ! t;
+
+t: vectorvertex! ff76 literal ! ff75 literal ! ff78 literal ! ff77 literal ! ff79 literal ! 1 literal ff7a literal ! t;
+t: vector? begin ff74 literal @ 0= until t;
+t: vector! vector? ff70 literal ! ff73 literal ! ff72 literal ! ff71 literal ! 1 literal ff74 literal ! t;
 
 t: tpu! ff15 literal ! t;
 t: tpuxy! ( x y ) ff11 literal ! ff10 literal ! 1 literal tpu! t;
@@ -1011,6 +1018,7 @@ t: tpu.r# base @ rot rot decimal >r str r> over - tpuspaces tputype base ! t;
 
 t: terminalshow! 1 literal ff21 literal ! t;
 t: terminalhide! 0 literal ff21 literal ! t;
+
 
 target.1 -order set-current
 

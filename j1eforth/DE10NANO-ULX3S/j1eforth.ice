@@ -442,6 +442,8 @@ $$end
         audio_left :> audio_l,
         audio_right :> audio_r
     );
+
+    vectors vector_drawer ();
     
     // J1+ CPU
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
@@ -543,6 +545,17 @@ $$end
             uo.data_in_ready     = 1;
             uartOutBufferNext = uartOutBufferNext + 1;
         }
+
+        // Communicate with VECTORS and DISPLAY LISTS
+        if( vector_drawer.gpu_write == 3 ) {
+            gpu_processor.gpu_x = vector_drawer.gpu_x;
+            gpu_processor.gpu_y = vector_drawer.gpu_y;
+            gpu_processor.gpu_colour = vector_drawer.gpu_colour;
+            gpu_processor.gpu_param0 = vector_drawer.gpu_param0;
+            gpu_processor.gpu_param1 = vector_drawer.gpu_param1;
+            gpu_processor.gpu_write = vector_drawer.gpu_write;
+        }
+        vector_drawer.gpu_active = gpu_processor.gpu_active;
     }
     
     // Setup the terminal
@@ -698,7 +711,11 @@ $$end
                                                 case 16hff45: { newStackTop = upper_sprites.sprite_read_y; }
                                                 case 16hff49: { newStackTop = upper_sprites.sprites_at_xy; }
                                                 
-                                                // Timer 1khz countdown
+                                                // VECTORS
+                                                case 16hff74: { newStackTop = vector_drawer.vector_block_active; }
+                                                
+                                                // Audio and Timer 1khz countdown
+                                                case 16hffe3: { newStackTop = apu_processor.selected_duration; }
                                                 case 16hffef: { newStackTop = p1khz.counter1khz; }
                                                 
                                                 // VBLANK status
@@ -799,7 +816,7 @@ $$end
                                     case 16hff35: { lower_sprites.sprite_set_y = stackNext; lower_sprites.sprite_layer_write = 5; }
                                     case 16hff36: { lower_sprites.sprite_writer_sprite = stackNext; }
                                     case 16hff37: { lower_sprites.sprite_writer_line = stackNext; }
-                                    case 16hff38: { lower_sprites.sprite_writer_bitmap = stackNext; lower_sprites.sprite_layer_write = 8; }
+                                    case 16hff38: { lower_sprites.sprite_writer_bitmap = stackNext; lower_sprites.sprite_writer_active = 1; }
                                     case 16hff3a: { lower_sprites.sprites_at_x = stackNext; }
                                     case 16hff3b: { lower_sprites.sprites_at_y = stackNext; }
                                     case 16hff3c: { lower_sprites.sprite_update = stackNext; lower_sprites.sprite_layer_write = 10; }
@@ -814,18 +831,31 @@ $$end
                                     case 16hff45: { upper_sprites.sprite_set_y = stackNext; upper_sprites.sprite_layer_write = 5; }
                                     case 16hff46: { upper_sprites.sprite_writer_sprite = stackNext; }
                                     case 16hff47: { upper_sprites.sprite_writer_line = stackNext; }
-                                    case 16hff48: { upper_sprites.sprite_writer_bitmap = stackNext; upper_sprites.sprite_layer_write = 8; }
+                                    case 16hff48: { upper_sprites.sprite_writer_bitmap = stackNext; upper_sprites.sprite_writer_active = 1; }
                                     case 16hff4a: { upper_sprites.sprites_at_x = stackNext; }
                                     case 16hff4b: { upper_sprites.sprites_at_y = stackNext; }
                                     case 16hff4c: { upper_sprites.sprite_update = stackNext; upper_sprites.sprite_layer_write = 10; }
                                     case 16hff4f: { upper_sprites.sprite_layer_fade = stackNext; upper_sprites.sprite_layer_write = 9; }
                                     
+                                    // VECTOR DRAWER
+                                    case 16hff70: { vector_drawer.vector_block_number = stackNext; }
+                                    case 16hff71: { vector_drawer.vector_block_colour = stackNext; }
+                                    case 16hff72: { vector_drawer.vector_block_xc = stackNext; }
+                                    case 16hff73: { vector_drawer.vector_block_yc = stackNext; }
+                                    case 16hff74: { vector_drawer.draw_vector = 1; }
+                                    case 16hff75: { vector_drawer.vertices_writer_block = stackNext; }
+                                    case 16hff76: { vector_drawer.vertices_writer_vertex = stackNext; }
+                                    case 16hff77: { vector_drawer.vertices_writer_xdelta = stackNext; }
+                                    case 16hff78: { vector_drawer.vertices_writer_ydelta = stackNext; }
+                                    case 16hff79: { vector_drawer.vertices_writer_active = stackNext; }
+                                    case 16hff7a: { vector_drawer.vertices_writer_write = 1; }
+                                   
                                     // APU
                                     case 16hffe0: { apu_processor.waveform = stackNext; }
                                     case 16hffe1: { apu_processor.note = stackNext; }
                                     case 16hffe2: { apu_processor.duration = stackNext; }
                                     case 16hffe3: { apu_processor.apu_write = 1; }
-                                    
+
                                     // 1khz countdown timer
                                     case 16hffef: { p1khz.countdownfrom = stackNext; p1khz.resetcountdown = 1; }
                                     
@@ -875,11 +905,15 @@ $$end
                 // RESET BACKGROUND, LOWER SPRITE LAYER, BITMAP, UPPER SPRITE LAYER, CHARACTER MAP and TERMINAL controls
                 background_generator.backgroundcolour_write = 0;
                 lower_sprites.sprite_layer_write = 0;
+                lower_sprites.sprite_writer_active = 0;
                 gpu_processor.gpu_write = 0;
                 character_map_window.tpu_write = 0;
                 upper_sprites.sprite_layer_write = 0;
+                upper_sprites.sprite_writer_active = 0;
                 terminal_window.terminal_write = 0;
                 apu_processor.apu_write = 0;
+                vector_drawer.draw_vector = 0;
+                vector_drawer.vertices_writer_write = 0;
             }
             
             default: {}

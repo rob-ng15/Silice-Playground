@@ -1,4 +1,3 @@
-// NOT YET OPERATIONAL
 bitfield vectorentry {
     uint1   active,
     uint1   dysign,
@@ -14,33 +13,34 @@ bitfield vectorentry {
 // Each vertices has an active flag, processing of a vector block stops when the active flag is 0
 // Each vector block has a centre x and y coordinate and a colour { rrggbb }
 
-algorithm vector_block(
+algorithm vectors(
     input   uint5   vector_block_number,
+    input   uint7   vector_block_colour,
+    input   int11   vector_block_xc,
+    input   int11   vector_block_yc,
+    
     input   uint1   draw_vector,
 
     // For setting vertices
     input   uint3   vertices_writer_block,
     input   uint6   vertices_writer_vertex,
-    input   uint13  vertices_writer_activedeltas,  
-
-    // Communication with the GPU
-    output int11 gpu_x,
-    output int11 gpu_y,
-    output uint8 gpu_colour,
-    output int16 gpu_param0,
-    output int16 gpu_param1,
-    output int16 gpu_param2,
-    output int16 gpu_param3,
-    output uint3 gpu_write,
+    input   int6    vertices_writer_xdelta,  
+    input   int6    vertices_writer_ydelta,
+    input   uint1   vertices_writer_active,
+    input   uint1   vertices_writer_write,
+    
+    output  uint3   vector_block_active,
+    
+    // Communication with the GPU via j1eforth always{} block
+    output!  int11 gpu_x,
+    output!  int11 gpu_y,
+    output!  uint8 gpu_colour,
+    output!  int16 gpu_param0,
+    output!  int16 gpu_param1,
+    output!  uint3 gpu_write,
     
     input  uint4 gpu_active
 ) <autorun> {
-    // Storage for the vector block x and y coordinates and the colour
-    // Stored as registers as needed instantly
-    int11 vector_x[32] = uninitialised;
-    int11 vector_y[32] = uninitialised;
-    uint6 vector_colour[8] = uninitialised;
-
     // 32 vector blocks each of 16 vertices
     dualport_bram uint13 vertices[512] = uninitialised;    
 
@@ -53,63 +53,59 @@ algorithm vector_block(
     int11 start_x = 0;
     int11 start_y = 0;
     
-    uint4 vector_block_active = 0;
-    
     // Set read and write address for the vertices
     vertices.addr0 := vector_block_number * 16 + vertices_number;
     vertices.wenable0 := 0;
     vertices.addr1 := vertices_writer_block * 16 + vertices_writer_vertex;
-    vertices.wdata1 := vertices_writer_activedeltas;
-    vertices.wenable1 := 0;
-    
-    // Write vertices to the buffer
+    vertices.wdata1 := { vertices_writer_active, vertices_writer_ydelta, vertices_writer_xdelta };
+    vertices.wenable1 := vertices_writer_active;
+
+    gpu_write := 0;
+
     always {
+        if( draw_vector ) {
+            vector_block_active = 1;
+        }
     }
     
+    vector_block_active = 0;
+    vertices_number = 0;
+    
     while(1) {
-        if( draw_vector ) {
-        }
         switch( vector_block_active ) {
             case 1: {
-                // Read the first vertices
-                start_x = vector_x[ vector_block_number ] + deltax;
-                start_y = vector_y[ vector_block_number ] + deltay;
-                vertices_number = 1;
+                // Delay to allow reading of the first vertex
                 vector_block_active = 2;
             }
             case 2: {
-                // See if the next vertices is active
-                if( vectorentry(vertices.rdata0).active ) {
-                    // Wait for GPU
-                    if( gpu_active ) {
-                        vector_block_active = 2;
-                    } else {
-                        vector_block_active = 3;
-                    }
-                } else {
-                    // Finished
-                    vertices_number = 0;
-                    vector_block_active = 0;
-                }
+                // Read the first of the vertices
+                start_x = vector_block_xc + deltax;
+                start_y = vector_block_yc + deltay;
+                vertices_number = 1;
+                vector_block_active = 3;
             }
             case 3: {
+                // Delay to allow reading of the next vertices
+                vector_block_active = 4;
+            }
+            case 4: {
+                // See if the next of the vertices is active and await the GPU
+                vector_block_active = ( vectorentry(vertices.rdata0).active ) ? ( gpu_active ) ? 4 : 5 : 0;
+                vertices_number = ( vectorentry(vertices.rdata0).active ) ? vertices_number : 0;
+            }
+            case 5: {
                 // Send the line to the GPU
                 gpu_x = start_x;
                 gpu_y = start_y;
-                gpu_colour = vector_colour[ vector_block_number ];
-                gpu_param0 = vector_x[ vector_block_number ] + deltax;
-                gpu_param1 = vector_y[ vector_block_number ] + deltay;
-                gpu_write = 2;
-                // Move onto the next vertices
-                start_x = vector_x[ vector_block_number ] + deltax;
-                start_y = vector_y[ vector_block_number ] + deltay;
-                if( vertices_number < 15 ) {
-                    vertices_number = vertices_number + 1;
-                    vector_block_active = 2;
-                } else {
-                    vertices_number = 0;
-                    vector_block_active = 0;
-                }
+                gpu_colour = vector_block_colour;
+                gpu_param0 = vector_block_xc + deltax;
+                gpu_param1 = vector_block_yc + deltay;
+                gpu_write = 3;
+                // Move onto the next of the vertices
+                start_x = vector_block_xc + deltax;
+                start_y = vector_block_yc + deltay;
+                vertices_number = ( vertices_number < 15 ) ? vertices_number + 1 : 0;
+                vector_block_active = ( vertices_number < 15 ) ? 3 : 0;
             }
             default: {
                 vertices_number = 0;

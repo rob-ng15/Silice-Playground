@@ -7,6 +7,7 @@ algorithm apu(
     
     // Duration in ms, 1000 = 1 second,
     input   uint16  duration,
+    output!  uint16  selected_duration,
     
     // Activate the APU
     input   uint1   apu_write,
@@ -54,7 +55,7 @@ algorithm apu(
     uint16  counter25mhz = 0;
     uint16  counter1khz = 0;
     uint16  milliseconds = 0;
-    uint16  selected_duration = 0;
+    
     
     uint4   selected_audio_output := waveformtable.rdata;
     uint16  selected_note_frequency := frequencytable.rdata;
@@ -63,7 +64,7 @@ algorithm apu(
     frequencytable.addr := selected_note;
     
     always {
-        if( selected_note & ( counter25mhz == 0 ) ) {
+        if( ( selected_note > 0 ) & ( counter25mhz == 0 ) ) {
             audio_left = selected_audio_output;
             audio_right = selected_audio_output;
         }

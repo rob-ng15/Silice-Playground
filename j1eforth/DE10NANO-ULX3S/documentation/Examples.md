@@ -13,7 +13,6 @@
   loop ;
 cs! drawrectangles
 
-
 ```
 
 ## Draw multi-coloured circles
@@ -80,7 +79,7 @@ ledtest
 
 ```
 : setsprites
-  7 0 do
+  4 0 do
     5555 a0a0 5555 a0a0 5555 a0a0 5555 a0a0
     5555 a0a0 5555 a0a0 5555 a0a0 5555 a0a0
     a0a0 5555 a0a0 5555 a0a0 5555 a0a0 5555
@@ -102,6 +101,12 @@ ledtest
   loop ;
 setsprites
 
+1 -1f 0 0 0 vectorvertex!
+1 0 -1f 0 1 vectorvertex!
+1 1f 0 0 2 vectorvertex!
+1 0 1f 0 3 vectorvertex!
+1 -1f 0 0 4 vectorvertex!
+
 : screentest
   cs! tpucs!
   1 4 1 background!
@@ -111,9 +116,15 @@ setsprites
   3f 140 f0 40 circle!
   3c 140 f0 80 circle!
   3 0 f0 140 0 line!
-  3 280 f0 140 0 line!
-  3 150 1e0 280 f0  line!
-  3 150 1e0 0 f0 line!
+  3 140 0 280 f0 line!
+  3 280 f0 140 1e0 line!
+  3 140 1e0 0 f0 line!
+   
+  3 140 f0 0 vector!
+  c 150 f0 0 vector!
+  33 130 f0 0 vector!
+  3c 140 e0 0 vector!
+  30 140 100 0 vector!
   
   0 0 3 0 1 0 lslsprite!
   0 1d0 c 1 1 1 lslsprite!
@@ -127,6 +138,7 @@ setsprites
   3f tpubackground! 3 tpuforeground!
 
   400 0 do 
+    14 timer! vblank?
     20 2 tpuxy! $" Counting " tpu.$ timer@ dup led! tpu.#
     9 0 lslupdate!
     39 1 lslupdate!
@@ -136,7 +148,7 @@ setsprites
     8 1 uslupdate!
     7 2 uslupdate!
     38 3 uslupdate!
-    14 sleep vblank
+    sleep?
   loop ;
 screentest
 
@@ -173,7 +185,7 @@ setsprites
   3f tpubackground! 3 tpuforeground!
 
   begin
-    14 ffef !
+    14 timer! vblank?
     20 2 tpuxy! $" Sprite at " tpu.$ ff34 @ 5 tpu.r# ff35 @ 5 tpu.r#
     buttons@ 
     dup 2 and 0<> if 40 0 lslupdate! then
@@ -181,22 +193,21 @@ setsprites
     dup 40 and 0<> if 1 0 lslupdate! then
     dup 8 and 0<> if 38 0 lslupdate! then
     dup 10 and 0<> if 8 0 lslupdate! then
-    begin ffef @ 0= until vblank
+    sleep? 
     4 and 0<>
   until ;
 buttontest
 ```
 
-__NOTE__ ```14 ffef !``` and ```begin ffef @ 0= until``` provide a consistent 20 millisec delay at the bottom of the loop
+## Audio Test
 
-## Audio Test (not presently working, only odd number notes play)
 ```
 : closeencounters
-    0 1a 3e8 beep! 3e8 sleep
-    0 1c 3e8 beep! 3e8 sleep
-    0 19 3e8 beep! 3e8 sleep
-    0 d 3e8 beep! 3e8 sleep
-    0 14 3e8 beep! 3e8 sleep
+    0 1a 3e8 beep! beep?
+    0 1c 3e8 beep! beep?
+    0 19 3e8 beep! beep?
+    0 d 3e8 beep! beep?
+    0 14 3e8 beep! beep?
 ;
 closeencounters
 ```

@@ -20,58 +20,11 @@ __ULX3S__ Open a terminal in the ULX3S directory and type ```make ulx3s```. Wait
 
 ### Resource Usage (de10nano)
 ```
-Family : Cyclone V
-Device : 5CSEBA6U23I7
-Timing Models : Final
-Logic utilization (in ALMs) : 4,970 / 41,910 ( 12 % )
-Total registers : 2352
-Total pins : 36 / 314 ( 11 % )
-Total virtual pins : 0
-Total block memory bits : 2,595,040 / 5,662,720 ( 46 % )
-Total RAM Blocks : 338 / 553 ( 61 % )
-Total DSP Blocks : 0 / 112 ( 0 % )
-Total HSSI RX PCSs : 0
-Total HSSI PMA RX Deserializers : 0
-Total HSSI TX PCSs : 0
-Total HSSI PMA TX Serializers : 0
-Total PLLs : 1 / 6 ( 17 % )
-Total DLLs : 0 / 4 ( 0 % )
 ```
 
 ### Resource Usage (ulx3s)
 
 ```
-Info: Device utilisation:
-Info:          TRELLIS_SLICE: 10990/41820    26%
-Info:             TRELLIS_IO:    34/  365     9%
-Info:                   DCCA:     4/   56     7%
-Info:                 DP16KD:   174/  208    83%
-Info:             MULT18X18D:     5/  156     3%
-Info:                 ALU54B:     0/   78     0%
-Info:                EHXPLLL:     2/    4    50%
-Info:                EXTREFB:     0/    2     0%
-Info:                   DCUA:     0/    2     0%
-Info:              PCSCLKDIV:     0/    2     0%
-Info:                IOLOGIC:     0/  224     0%
-Info:               SIOLOGIC:     8/  141     5%
-Info:                    GSR:     0/    1     0%
-Info:                  JTAGG:     0/    1     0%
-Info:                   OSCG:     0/    1     0%
-Info:                  SEDGA:     0/    1     0%
-Info:                    DTR:     0/    1     0%
-Info:                USRMCLK:     0/    1     0%
-Info:                CLKDIVF:     0/    4     0%
-Info:              ECLKSYNCB:     0/   10     0%
-Info:                DLLDELD:     0/    8     0%
-Info:                 DDRDLL:     0/    4     0%
-Info:                DQSBUFM:     0/   14     0%
-Info:        TRELLIS_ECLKBUF:     0/    8     0%
-Info:           ECLKBRIDGECS:     0/    2     0%
-
-Info: Max frequency for clock 27.49 MHz (PASS at 25.00 MHz)
-Info: Max frequency for clock 53.69 MHz (PASS at 50.00 MHz)
-Info: Max frequency for clock 34.89 MHz (PASS at 25.00 MHz)
-Info: Max frequency for clock 232.23 MHz (PASS at 125.00 MHz)
 ```
 
 ## VGA/HDMI Multiplexed Display
@@ -110,7 +63,7 @@ ffff | Set the fade level for the background layer | VBLANK flag
 
 DISPLAY<br>Word | Usage
 ----- | -----
-vblank | Example ```vblank``` await vblank
+vblank? | Example ```vblank``` wait for vblank
 
 BACKGROUND<br>Word | Usage
 ----- | -----
@@ -297,7 +250,7 @@ Hexadecimal<br>Address | Write | Read
 ffe0 | Set the APU waveform<br>0 = square, 1 = sawtooth, 2 = triangle, 3 = sine, 4 = noise<br>_square wave_ is working |
 ffe1 | Set the APU note<br>_HEX_ 1 = C 2, D = C 3, 19 = C 4 (middle), 25 = C 5, 31 = C 6, 3D = C 7 | 
 ffe2 | Set the APU duration in milliseconds<br>_HEX_ 3e8 = 1 second
-ffe3 | Start the APU to output the specified note
+ffe3 | Start the APU to output the specified note | Milliseconds left on the present note
 ffef | Start the 1khz (millisecond) countdown timer | Read the 1khz (millisecond) countdown timer
 
 #### j1eforth AUDIO words
@@ -305,6 +258,9 @@ ffef | Start the 1khz (millisecond) countdown timer | Read the 1khz (millisecond
 AUDIO<br>Word | Usage
 ----- | -----
 beep! | Example ```0 19 3e8 beep!``` outputs a middle c square wave for 1 second ( 3e8 hex = 1000 milliseconds )
+beep? | Example ```beep?``` waits for the APU to finish (present note)
+timer! | Example ```3e8 timer!``` starts the 1khz timer at 1 second ( 3e8 hex = 1000 milliseconds )
+sleep? | Example ```sleep?``` waits for th 1khz timer to finish
 sleep | Example ```3e8 sleep``` waits for 1 second ( 3e8 hex = 1000 milliseconds )
 
 #### Note table
@@ -332,7 +288,7 @@ Colour<br>Guide<br>__HEX__ | Colour
 3c | Yellow
 3f | White
 
-## TODO (Wishlist)
+## TODO
 
 ### AUDIO
 * Ensure waveforms other than square work
@@ -355,14 +311,32 @@ Colour<br>Guide<br>__HEX__ | Colour
     * 10 bit { Arrggbb } 16 x 16 blitter from a configurable 64 16 x 16 tilemap (16384 * 7 bit, might be too big for the blockram)
         * A will determine if pixel is placed or missed (mask)
 
-### VECTOR LIST
-* Provide a list of (up to 16) vertices for each vector
-    * centre x, centre y, colour
-    * 16 lots of active, offsetx1, offsety1, offsetx2, offsety2
-* Can be drawn with one command to the bitmap
+### VECTOR DRAWER ( Work In Progress )
 
+_Coded, still misses the odd line. Wired in to memory map and extra j1eforth words added._
+
+* Provides 32 vector blocks, each of 16 vertices
+* Each vertex is a displacement from 0, 0 in the range -31 to 0 to 31
+    * Each vertex has an active flag
+        * When drawing the vector block, the vector drawer will stop when it reaches and inactive vertex
+        
+When drawing a vector block, a colour, x-centre, y-centre and vector block number is provided. This should be quicker than specifiying each line to draw in Forth code, as the vector drawer will send the next vector to the GPU as soon as the previous one is rendered, and will continue in the background with no further intervention from the Forth code.
+        
 ### DISPLAY LIST
-* List of GPU, SPRITE or VECTOR commands to be executed in sequence
+
+_Partially coded. Not yet wired into memory map. No extra j1eforth words added._
+
+* Provides 256 display list entries
+    * Each entry comprises of a 78 bits coding a complete command to send to the GPU or VECTOR BLOCK
+        * active
+        * command ( GPU command or VECTOR DRAWER )
+        * colour { Arrggbb }
+        * x
+        * y
+        * param0 - circle radius, rectangle x1, blitter tile number, vector block number
+        * param1 - rectangle y1
+        * param2 - for future expansion
+        * param3 - for future expansion
 
 ### BACKGROUND
 * Implement more patterns

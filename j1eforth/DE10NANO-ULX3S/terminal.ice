@@ -13,7 +13,7 @@ algorithm terminal(
     input   uint1   showterminal,
     input   uint1   showcursor,
     input   uint1   timer1hz,
-    output uint3    terminal_active
+    output  uint3    terminal_active
 ) <autorun> {
     // Character ROM 8x8 x 256
     uint8 characterGenerator8x8[] = {
