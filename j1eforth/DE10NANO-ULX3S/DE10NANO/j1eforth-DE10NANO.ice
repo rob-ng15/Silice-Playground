@@ -10,6 +10,7 @@ $include('../gpu.ice')
 $include('../background.ice')
 $include('../sprite_layer.ice')
 $include('../vectors.ice')
+$include('../display_list.ice')
 $include('../audio.ice')
 
 import('../common/de10nano_clk_100_25.v')

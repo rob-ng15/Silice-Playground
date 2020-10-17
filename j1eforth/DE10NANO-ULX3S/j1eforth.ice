@@ -126,28 +126,29 @@ bitfield nibbles {
 
 // Create 1hz (1 second counter)
 algorithm pulse1hz(
-    output uint16 counter1hz
+    output uint16 counter1hz,
+    input  uint1  resetCounter
 ) <autorun> {
     uint32 counter50mhz = 0;
     counter1hz = 0;
     
     while (1) {
-        counter1hz = ( counter50mhz == 50000000 ) ? counter1hz + 1 : counter1hz;
-        counter50mhz = ( counter50mhz == 50000000 ) ? 0 : counter50mhz + 1;
+        counter1hz = ( resetCounter ) ? 0 : ( counter50mhz == 50000000 ) ? counter1hz + 1 : counter1hz;
+        counter50mhz = ( resetCounter ) ? 0 : ( counter50mhz == 50000000 ) ? 0 : counter50mhz + 1;
     }
 }
 
 // Create 1khz (1 milli-second counter)
 algorithm pulse1khz(
     output uint16 counter1khz,
-    input  uint16 countdownfrom,
-    input  uint1  resetcountdown
+    input  uint16 resetCount,
+    input  uint1  resetCounter
 ) <autorun> {
     uint32 counter50mhz = 0;
     
     while (1) {
-        counter1khz = ( resetcountdown ) ? countdownfrom : ( counter1khz == 0 ) ? 0 : ( counter50mhz == 50000 ) ? counter1khz - 1 : counter1khz;
-        counter50mhz = ( resetcountdown ) ? 0 : ( counter50mhz == 50000 ) ? 0 : counter50mhz + 1;
+        counter1khz = ( resetCounter ) ? resetCount : ( counter1khz == 0 ) ? 0 : ( counter50mhz == 50000 ) ? counter1khz - 1 : counter1khz;
+        counter50mhz = ( resetCounter ) ? 0 : ( counter50mhz == 50000 ) ? 0 : counter50mhz + 1;
     }
 }
 
@@ -180,12 +181,14 @@ $$if ULX3S then
 <@clock_50mhz> // ULX3S has a 25 MHz clock, so we use a PLL to bring it up to 50 MHz
 $$end
 {
-    // 1hz timer (mainly for cursor on the terminal)
-    uint16 timer1hz = 0;
-    pulse1hz p1hz( counter1hz :> timer1hz );
+    // 1hz timers (p1hz used for systemClock, timer1hz for user purposes)
+    uint16 systemClock = 0;
+    pulse1hz p1hz( counter1hz :> systemClock );
+    pulse1hz timer1hz( );
 
-    // 1khz timer (mainly for defining sleep/pause periods)
-    pulse1khz p1khz( );
+    // 1khz timers (sleepTimer used for sleep command, timer1khz for user purposes)
+    pulse1khz sleepTimer( );
+    pulse1khz timer1khz( );
     
     // UART tx and rx
     // UART written in Silice by https://github.com/sylefeb/Silice
@@ -272,6 +275,8 @@ $$if ULX3S then
     );
 $$end
 
+    // Build up the display layers
+    
     // BACKGROUND
     uint$color_depth$   background_r = 0;
     uint$color_depth$   background_g = 0;
@@ -287,7 +292,7 @@ $$end
         pix_blue   :> background_b,
     );
 
-    // Lower Sprite LAyer - Between BACKGROUND and BITMAP
+    // Lower Sprite Layer - Between BACKGROUND and BITMAP
     uint$color_depth$   lower_sprites_r = 0;
     uint$color_depth$   lower_sprites_g = 0;
     uint$color_depth$   lower_sprites_b = 0;
@@ -394,9 +399,10 @@ $$end
         pix_green  :> terminal_g,
         pix_blue   :> terminal_b,
         terminal_display :> terminal_display,
-        timer1hz   <: timer1hz
+        timer1hz   <: systemClock
     );
-    
+
+    // Combine the display layers for display
     multiplex_display display <@video_clock,!video_reset>
     (
         pix_x      <: pix_x,
@@ -437,13 +443,24 @@ $$end
         terminal_display <: terminal_display
     );
 
-    apu apu_processor <@video_clock,!video_reset>
+    // Left and Right audio channels
+    // Sync'd with video_clock
+    apu apu_processor_L <@video_clock,!video_reset>
     (
-        audio_left :> audio_l,
-        audio_right :> audio_r
+        audio_output :> audio_l,
+    );
+    apu apu_processor_R <@video_clock,!video_reset>
+    (
+        audio_output :> audio_r,
     );
 
+    // Vector drawer
+    // Sync'd with system clock 50MHz
     vectors vector_drawer ();
+
+    // Display list
+    // Sync'd with system clock 50MHz
+    displaylist displaylist_drawer ();
     
     // J1+ CPU
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
@@ -529,7 +546,7 @@ $$end
 
     // Setup the UART
     uo.data_in_ready := 0; // maintain low
-
+    
     // UART input and output buffering
     always {
         // READ from UART if character available and store
@@ -556,6 +573,24 @@ $$end
             gpu_processor.gpu_write = vector_drawer.gpu_write;
         }
         vector_drawer.gpu_active = gpu_processor.gpu_active;
+
+        if( displaylist_drawer.gpu_write > 0 ) {
+            gpu_processor.gpu_x = displaylist_drawer.gpu_x;
+            gpu_processor.gpu_y = displaylist_drawer.gpu_y;
+            gpu_processor.gpu_colour = displaylist_drawer.gpu_colour;
+            gpu_processor.gpu_param0 = displaylist_drawer.gpu_param0;
+            gpu_processor.gpu_param1 = displaylist_drawer.gpu_param1;
+            gpu_processor.gpu_write = displaylist_drawer.gpu_write;
+        }
+        if( displaylist_drawer.draw_vector ) {
+            vector_drawer.vector_block_number = displaylist_drawer.vector_block_number;
+            vector_drawer.vector_block_colour = displaylist_drawer.vector_block_colour;
+            vector_drawer.vector_block_xc = displaylist_drawer.vector_block_xc;
+            vector_drawer.vector_block_yc = displaylist_drawer.vector_block_yc;
+            vector_drawer.draw_vector = displaylist_drawer.draw_vector;
+        }
+        displaylist_drawer.gpu_active = gpu_processor.gpu_active;
+        displaylist_drawer.vector_block_active = vector_drawer.vector_block_active;
     }
     
     // Setup the terminal
@@ -683,9 +718,6 @@ $$end
                                                 // BUTTONS
                                                 case 16hf003: { newStackTop = {$16-NUM_BTNS$b0, reg_btns[0,$NUM_BTNS$]}; }
                                                 
-                                                // 1hz timer
-                                                case 16hf004: { newStackTop = timer1hz; }
-                                                
                                                 // GPU Active Status
                                                 case 16hff07: { newStackTop = gpu_processor.gpu_active; }
                                                 
@@ -713,10 +745,19 @@ $$end
                                                 
                                                 // VECTORS
                                                 case 16hff74: { newStackTop = vector_drawer.vector_block_active; }
+
+                                                // DISPLATY LIST
+                                                case 16hff82: { newStackTop = displaylist_drawer.display_list_active; }
                                                 
-                                                // Audio and Timer 1khz countdown
-                                                case 16hffe3: { newStackTop = apu_processor.selected_duration; }
-                                                case 16hffef: { newStackTop = p1khz.counter1khz; }
+                                                // AUDIO
+                                                case 16hffe3: { newStackTop = apu_processor_L.selected_duration; }
+                                                case 16hffe7: { newStackTop = apu_processor_R.selected_duration; }
+                                                
+                                                // TIMERS
+                                                case 16hf004: { newStackTop = systemClock; }
+                                                case 16hffed: { newStackTop = timer1hz.counter1hz; }
+                                                case 16hffee: { newStackTop = timer1khz.counter1khz; }
+                                                case 16hffef: { newStackTop = sleepTimer.counter1khz; }
                                                 
                                                 // VBLANK status
                                                 case 16hffff: { newStackTop = vblank; }
@@ -849,15 +890,35 @@ $$end
                                     case 16hff78: { vector_drawer.vertices_writer_ydelta = stackNext; }
                                     case 16hff79: { vector_drawer.vertices_writer_active = stackNext; }
                                     case 16hff7a: { vector_drawer.vertices_writer_write = 1; }
-                                   
-                                    // APU
-                                    case 16hffe0: { apu_processor.waveform = stackNext; }
-                                    case 16hffe1: { apu_processor.note = stackNext; }
-                                    case 16hffe2: { apu_processor.duration = stackNext; }
-                                    case 16hffe3: { apu_processor.apu_write = 1; }
 
-                                    // 1khz countdown timer
-                                    case 16hffef: { p1khz.countdownfrom = stackNext; p1khz.resetcountdown = 1; }
+                                    // DISPLAY LIST
+                                    case 16hff80: { displaylist_drawer.start_entry = stackNext; }
+                                    case 16hff81: { displaylist_drawer.finish_entry = stackNext; }
+                                    case 16hff82: { displaylist_drawer.start_displaylist = 1; }
+                                    case 16hff83: { displaylist_drawer.writer_entry_number = stackNext; }
+                                    case 16hff84: { displaylist_drawer.writer_active = stackNext; }
+                                    case 16hff85: { displaylist_drawer.writer_command = stackNext; }
+                                    case 16hff86: { displaylist_drawer.writer_colour = stackNext; }
+                                    case 16hff87: { displaylist_drawer.writer_x = stackNext; }
+                                    case 16hff88: { displaylist_drawer.writer_y = stackNext; }
+                                    case 16hff89: { displaylist_drawer.writer_p0 = stackNext; }
+                                    case 16hff8a: { displaylist_drawer.writer_p1 = stackNext; }
+                                    case 16hff8b: { displaylist_drawer.writer_write = stackNext; }
+
+                                    // APU
+                                    case 16hffe0: { apu_processor_L.waveform = stackNext; }
+                                    case 16hffe1: { apu_processor_L.note = stackNext; }
+                                    case 16hffe2: { apu_processor_L.duration = stackNext; }
+                                    case 16hffe3: { apu_processor_L.apu_write = 1; }
+                                    case 16hffe4: { apu_processor_R.waveform = stackNext; }
+                                    case 16hffe5: { apu_processor_R.note = stackNext; }
+                                    case 16hffe6: { apu_processor_R.duration = stackNext; }
+                                    case 16hffe7: { apu_processor_R.apu_write = 1; }
+
+                                    // TIMERS
+                                    case 16hffed: { timer1hz.resetCounter = 1; }
+                                    case 16hffee: { timer1khz.resetCount = stackNext; timer1khz.resetCounter = 1; }
+                                    case 16hffef: { sleepTimer.resetCount = stackNext; sleepTimer.resetCounter = 1; }
                                     
                                     // BACKGROUND Controls
                                     case 16hfff0: { background_generator.backgroundcolour = stackNext; background_generator.backgroundcolour_write = 1; }
@@ -886,9 +947,6 @@ $$end
                     rstack.addr    = newRSP;
                     rstack.wdata   = rstackWData;
                 }
-                
-                // RESET TIMER1khz control
-                p1khz.resetcountdown = 0;
             }
             
             // Update dsp, rsp, pc, stackTop
@@ -911,9 +969,24 @@ $$end
                 upper_sprites.sprite_layer_write = 0;
                 upper_sprites.sprite_writer_active = 0;
                 terminal_window.terminal_write = 0;
-                apu_processor.apu_write = 0;
+                
+                // RESET VECTOR controls
                 vector_drawer.draw_vector = 0;
                 vector_drawer.vertices_writer_write = 0;
+
+                // RESET DISPLAY LIST controls
+                displaylist_drawer.start_displaylist = 0;
+                displaylist_drawer.writer_write = 0;
+                
+                // RESET AUDIO controls
+                apu_processor_L.apu_write = 0;
+                apu_processor_R.apu_write = 0;
+                
+                // RESET TIMER controls
+                p1hz.resetCounter = 0;
+                sleepTimer.resetCounter = 0;
+                timer1hz.resetCounter = 0;
+                timer1khz.resetCounter = 0;
             }
             
             default: {}

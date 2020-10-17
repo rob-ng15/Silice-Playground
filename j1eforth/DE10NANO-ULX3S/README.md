@@ -40,6 +40,21 @@ The VGA DE10NANO/HDMI ULX3S output has the following layers in order:
 
 Due to the address space limitations of the J1+ CPU the display layer memories cannot be memory mapped. Control of the display layers is done via memory mapped control registers. _Some_ j1eforth words are provided as helpers.
 
+### Colour hex numbers
+
+Colour<br>Guide<br>__HEX__ | Colour
+:-----: | :-----:
+40 | Transparent<br>(where used, bitmap layer, character map layer)
+00 | Black
+03 | Blue
+0c | Green
+0f | Cyan
+30 | Red
+33 | Magenta
+3c | Yellow
+3f | White
+
+
 ### Background Layer
 
 The background layer displays at a pixel if __ALL__ of the layers above are transpoarent.
@@ -47,7 +62,7 @@ The background layer displays at a pixel if __ALL__ of the layers above are tran
 * Background with configurable designs
     * single { rrggbb } colour
     * alternative { rrggbb } colour for some designs
-    * selectable solid, checkerboard, rainbow or static 
+    * selectable solid, checkerboard, rainbow or rolling static 
     * fader level
 
 #### Memory Map for the BACKGROUND Layer
@@ -56,7 +71,7 @@ Hexadecimal<br>Address | Write | Read
 :----: | ---- | -----
 fff0 | Set the background colour |
 fff1 | Set the alternative background colour |
-fff2 | Set the background design<br>0 - Solid<br>1 - Small checkerboard<br>2 - Medium checkerboard<br>3 - Large checkerboard<br>4 - Huge checkerboard<br>5 - Rainbow<br>6 - Static<br>7 - Starfield (not implemented) |
+fff2 | Set the background design<br>0 - Solid<br>1 - Small checkerboard<br>2 - Medium checkerboard<br>3 - Large checkerboard<br>4 - Huge checkerboard<br>5 - Rainbow<br>6 - Rolling static<br>7 - Starfield (not implemented) |
 ffff | Set the fade level for the background layer | VBLANK flag
 
 #### j1eforth BACKGROUND words
@@ -233,7 +248,7 @@ terminalhide! | Example ```terminalhide!``` hide the blue terminal window
 
 Audio output is implemented for the ULX3S only at present. Audio output is via the 3.5mm jack.
 
-* Mono audio
+* Stereo audio ( two audio processors, left and right )
 * Specified notes in the range Deep C to Double High C
 * Selectable waveforms
     * Square
@@ -247,21 +262,23 @@ Audio output is implemented for the ULX3S only at present. Audio output is via t
 
 Hexadecimal<br>Address | Write | Read
 :-----: | ----- | -----
-ffe0 | Set the APU waveform<br>0 = square, 1 = sawtooth, 2 = triangle, 3 = sine, 4 = noise<br>_square wave_ is working |
-ffe1 | Set the APU note<br>_HEX_ 1 = C 2, D = C 3, 19 = C 4 (middle), 25 = C 5, 31 = C 6, 3D = C 7 | 
-ffe2 | Set the APU duration in milliseconds<br>_HEX_ 3e8 = 1 second
-ffe3 | Start the APU to output the specified note | Milliseconds left on the present note
-ffef | Start the 1khz (millisecond) countdown timer | Read the 1khz (millisecond) countdown timer
+ffe0 | Set the Left APU waveform<br>0 = square, 1 = sawtooth, 2 = triangle, 3 = sine, 4 = noise<br>_square wave_ is working |
+ffe1 | Set the Left APU note<br>_HEX_ 1 = C 2, D = C 3, 19 = C 4 (middle), 25 = C 5, 31 = C 6, 3D = C 7 | 
+ffe2 | Set the Left APU duration in milliseconds<br>_HEX_ 3e8 = 1 second
+ffe3 | Start the Left APU to output the specified note | Milliseconds left on the present note
+ffe4 | Set the Right APU waveform<br>0 = square, 1 = sawtooth, 2 = triangle, 3 = sine, 4 = noise<br>_square wave_ is working |
+ffe5 | Set the Right APU note<br>_HEX_ 1 = C 2, D = C 3, 19 = C 4 (middle), 25 = C 5, 31 = C 6, 3D = C 7 | 
+ffe6 | Set the Right APU duration in milliseconds<br>_HEX_ 3e8 = 1 second
+ffe7 | Start the Right APU to output the specified note | Milliseconds left on the present note
 
 #### j1eforth AUDIO words
 
 AUDIO<br>Word | Usage
 ----- | -----
-beep! | Example ```0 19 3e8 beep!``` outputs a middle c square wave for 1 second ( 3e8 hex = 1000 milliseconds )
-beep? | Example ```beep?``` waits for the APU to finish (present note)
-timer! | Example ```3e8 timer!``` starts the 1khz timer at 1 second ( 3e8 hex = 1000 milliseconds )
-sleep? | Example ```sleep?``` waits for th 1khz timer to finish
-sleep | Example ```3e8 sleep``` waits for 1 second ( 3e8 hex = 1000 milliseconds )
+beep! | Example ```0 19 3e8 beep!``` outputs a middle c square wave for 1 second ( 3e8 hex = 1000 milliseconds ) to left and right channels
+beep? | Example ```beep?``` waits for the APU to finish (present note) on left and right channels
+
+_```beepL!```, ```beepR!``` , ```beepL?``` and ```beepR?``` are for the respective single channels only_
 
 #### Note table
 
@@ -274,29 +291,46 @@ C5 (Tenor C) | 25 | 26 | 27 | 28 | 29 | 2a | 2b | 2c | 2d | 2e | 2f | 30
 C6 (Soprano C) | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 3a | 3b | 3c
 C7 (Double High C) | 3d
 
-### Colour hex numbers
+### Timers
 
-Colour<br>Guide<br>__HEX__ | Colour
-:-----: | :-----:
-40 | Transparent
-00 | Black
-03 | Blue
-0c | Green
-0f | Cyan
-30 | Red
-33 | Magenta
-3c | Yellow
-3f | White
+* Two 1hz (1 second) counters
+    * A systemclock, number of seconds since startup
+    * A user resetable timer
+    
+* Two 1khz (1 millisecond) countdown timers
+    * A sleep timer
+    * A user resetable timer
+
+#### Memory Map for the Timers
+
+Hexadecimal<br>Address | Write | Read
+:-----: | ----- | -----
+f004 | | Read the 1hz systemClock
+ffed | Reset the 1hz user timer | Read the 1hz user timer
+ffee | Start the 1khz user timer | Read the 1khz user timer
+ffef | Start the 1khz sleep timer | Read the 1khz sleep timer
+
+#### j1eforth TIMER words
+
+TIMER<br>Word | Usage
+----- | -----
+clock@ | Example ```clock@``` puts the systemClock, number of seconds since startup onto the stack
+timer1hz! | Example ```timer1hz!``` resets the 1hz user timer
+timer1hz@ | Example ```timer1hz@``` puts the 1hz user timer onto the stack
+timer1khz! | Example ```3e8 timer1khz!``` starts the 1khz timer at 1 second ( 3e8 hex = 1000 milliseconds )
+timer1khz? | Example ```timer1khz?``` waits for the 1khz timer to finish
+sleep | Example ```3e8 sleep``` waits for 1 second ( 3e8 hex = 1000 milliseconds )
 
 ## TODO
 
 ### AUDIO
+
 * Ensure waveforms other than square work
 * Allow polyphonic sound
-* Allow stereo sound
 * Volume control
 
 ### TILEMAPS
+
 * Put a 42 x 32 tilemap between background and bitmap along with a configurable 256 16 x 16 backtilemap
     * Tiles would be 1 bit with foreground and background colour per tile (with ALPHA bit)
     * Tilemap offset of -16 to 16 in x and y to allow scrolling
@@ -307,6 +341,7 @@ Colour<br>Guide<br>__HEX__ | Colour
     * Tilemap scroller to move tilemap up, down, left, right
 
 ### GPU
+
 * COLOUR BLITTER
     * 10 bit { Arrggbb } 16 x 16 blitter from a configurable 64 16 x 16 tilemap (16384 * 7 bit, might be too big for the blockram)
         * A will determine if pixel is placed or missed (mask)
@@ -321,13 +356,27 @@ _Coded, still misses the odd line. Wired in to memory map and extra j1eforth wor
         * When drawing the vector block, the vector drawer will stop when it reaches and inactive vertex
         
 When drawing a vector block, a colour, x-centre, y-centre and vector block number is provided. This should be quicker than specifiying each line to draw in Forth code, as the vector drawer will send the next vector to the GPU as soon as the previous one is rendered, and will continue in the background with no further intervention from the Forth code.
+
+Hexadecimal<br>Address | Write | Read
+:-----: | ----- | -----
+ff70 | Set the vector block number for drawing
+ff71 | Set the colour for drawing
+ff72 | Set the x centre coordinate for drawing
+ff73 | Set the y centre coordinate for drawing
+ff74 | Start the vector drawing | Vector block busy
+ff75 | Set the vector block number for writing
+ff76 | Set the vertex in the vector block number for writing
+ff77 | Set the x delta of the vertex for writing
+ff78 | Set the y delta of the vertex for writing
+ff79 | Set the active status of the vertex for writing
+ff7a | Write the vertex to the vector block
         
 ### DISPLAY LIST
 
-_Partially coded. Not yet wired into memory map. No extra j1eforth words added._
+_Partially coded. No extra j1eforth words added._
 
 * Provides 256 display list entries
-    * Each entry comprises of a 78 bits coding a complete command to send to the GPU or VECTOR BLOCK
+    * Each entry comprises of a 56 bits coding a complete command to send to the GPU or VECTOR BLOCK
         * active
         * command ( GPU command or VECTOR DRAWER )
         * colour { Arrggbb }
@@ -335,8 +384,21 @@ _Partially coded. Not yet wired into memory map. No extra j1eforth words added._
         * y
         * param0 - circle radius, rectangle x1, blitter tile number, vector block number
         * param1 - rectangle y1
-        * param2 - for future expansion
-        * param3 - for future expansion
+
+Hexadecimal<br>Address | Write | Read
+:-----: | ----- | -----
+ff80 | Set the display list start entry number for drawing
+ff81 | Set the display list finish entry number for drawing
+ff82 | Start the display list drawing from start entry to finish entry | Display list busy
+ff83 | Set the display entry number for writing
+ff84 | Set the display list entry active status for writing
+ff85 | Set the display list entry command for writing
+ff86 | Set the display list entry colour for writing
+ff87 | Set the display list entry x for writing
+ff88 | Set the display list entry y for writing
+ff89 | Set the display list entry p0 for writing
+ff8a | Set the display list entry p1 for writing
+ff8b | Write the display list entry to the display list
 
 ### BACKGROUND
 * Implement more patterns

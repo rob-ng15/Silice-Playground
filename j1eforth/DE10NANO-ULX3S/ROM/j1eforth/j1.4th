@@ -954,17 +954,26 @@ t: d2* 2dup d+ t;
 t: d2/ dup f literal lshift >r 2/ swap 2/ r> or swap t;
 
 ( Buttons and LEDs )
-t: timer@ ( -- t ) f004 literal @ t;
-t: led@ ( -- t ) f002 literal @ t;
-t: led! ( c -- ) f002 literal ! t;
-t: buttons@ ( -- t ) f003 literal @ t;
+t: led@ f002 literal @ t;
+t: led! f002 literal ! t;
+t: buttons@ f003 literal @ t;
 
-( Audio and countdown timer )
-t: beep! ffe2 literal ! ffe1 literal ! ffe0 literal ! 1 literal ffe3 literal ! t;
-t: beep? begin ffe3 literal @ 0= until t;
-t: timer! ffef literal ! t;
-t: sleep? begin ffef literal @ 0= until t;
-t: sleep timer! sleep? t;
+( Audio )
+t: beep! dup ffe2 literal ! ffe6 literal ! dup ffe1 literal ! ffe5 literal ! dup ffe0 literal ! ffe4 literal ! 
+  1 literal ffe3 literal ! 1 literal ffe7 literal ! t;
+t: beep? begin ffe3 literal @ 0= until begin ffe7 literal @ 0= until t;
+t: beepL! ffe2 literal ! ffe1 literal ! ffe0 literal ! 1 literal ffe3 literal ! t;
+t: beepR! ffe6 literal ! ffe5 literal ! ffe4 literal ! 1 literal ffe7 literal ! t;
+t: beepL? begin ffe3 literal @ 0= until t;
+t: beepR? begin ffe7 literal @ 0= until t;
+
+( Timers )
+t: clock@ f004 literal @ t;
+t: timer1hz! 1 literal ffed literal ! t;
+t: timer1hz@ ffed literal @ t;
+t: timer1khz! ffee literal ! t;
+t: timer1khz? begin ffee literal @ 0= until t;
+t: sleep ffef literal ! begin ffef literal @ 0= until t;
 
 ( DISPLAY helper words )
 t: vblank? begin ffff literal @ 1 literal = until t;

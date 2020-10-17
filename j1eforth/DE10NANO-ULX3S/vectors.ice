@@ -22,7 +22,7 @@ algorithm vectors(
     input   uint1   draw_vector,
 
     // For setting vertices
-    input   uint3   vertices_writer_block,
+    input   uint5   vertices_writer_block,
     input   uint6   vertices_writer_vertex,
     input   int6    vertices_writer_xdelta,  
     input   int6    vertices_writer_ydelta,

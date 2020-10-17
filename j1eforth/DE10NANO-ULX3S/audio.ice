@@ -12,8 +12,7 @@ algorithm apu(
     // Activate the APU
     input   uint1   apu_write,
     
-    output! uint4   audio_left,
-    output! uint4   audio_right
+    output! uint4   audio_output,
 ) <autorun> {
     // 32 step points per waveform
     brom uint4 waveformtable[] = {
@@ -65,8 +64,7 @@ algorithm apu(
     
     always {
         if( ( selected_note > 0 ) & ( counter25mhz == 0 ) ) {
-            audio_left = selected_audio_output;
-            audio_right = selected_audio_output;
+            audio_output = selected_audio_output;
         }
     }
     

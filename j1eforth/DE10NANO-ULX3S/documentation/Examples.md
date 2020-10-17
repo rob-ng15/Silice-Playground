@@ -62,10 +62,10 @@ tpucs! tputest
 ```
 : ledtest
     base @ 2 base !
-    tpucs!
+    tpucs! timer1hz!
     10 0 do
         i tpuforeground! 3f i - tpubackground!
-        8 1 tpuxy! timer@ dup 5 tpuu.r# tpuspace $" seconds " tpu.$
+        8 1 tpuxy! timer1hz@ dup 5 tpuu.r# tpuspace $" seconds " tpu.$
         led! led@ 
         8 tpuu.r tpuspace $" LEDs" tpu.$ 
         3e8 sleep
@@ -108,7 +108,7 @@ setsprites
 1 -1f 0 0 4 vectorvertex!
 
 : screentest
-  cs! tpucs!
+  cs! tpucs! timer1hz!
   1 4 1 background!
 
   15 130 0 150 1e0 rectangle!
@@ -137,9 +137,9 @@ setsprites
 
   3f tpubackground! 3 tpuforeground!
 
-  400 0 do 
-    14 timer! vblank?
-    20 2 tpuxy! $" Counting " tpu.$ timer@ dup led! tpu.#
+  440 0 do 
+    14 timer1khz! vblank?
+    20 2 tpuxy! $" Counting " tpu.$ timer1hz@ dup led! tpu.#
     9 0 lslupdate!
     39 1 lslupdate!
     f 2 lslupdate!
@@ -148,7 +148,7 @@ setsprites
     8 1 uslupdate!
     7 2 uslupdate!
     38 3 uslupdate!
-    sleep?
+    timer1khz?
   loop ;
 screentest
 
@@ -185,7 +185,7 @@ setsprites
   3f tpubackground! 3 tpuforeground!
 
   begin
-    14 timer! vblank?
+    14 timer1khz! vblank?
     20 2 tpuxy! $" Sprite at " tpu.$ ff34 @ 5 tpu.r# ff35 @ 5 tpu.r#
     buttons@ 
     dup 2 and 0<> if 40 0 lslupdate! then
@@ -193,10 +193,11 @@ setsprites
     dup 40 and 0<> if 1 0 lslupdate! then
     dup 8 and 0<> if 38 0 lslupdate! then
     dup 10 and 0<> if 8 0 lslupdate! then
-    sleep? 
+    timer1khz? 
     4 and 0<>
   until ;
 buttontest
+
 ```
 
 ## Audio Test
@@ -210,4 +211,20 @@ buttontest
     0 14 3e8 beep! beep?
 ;
 closeencounters
+
+```
+
+## Display List (test area)
+
+active command colour x y p0 p1 entry displaylist!
+
+```
+: displaylist!
+  ff83 !
+  ff8a ! ff89 !  ff88 ! ff87 ! ff86 ! ff85 ! ff84 !
+  1 ff8b ! ;
+  
+1 2 3f 10 10 20 20 0 displaylist!
+1 4 3 50 50 20 0 1 displaylist!
+
 ```
