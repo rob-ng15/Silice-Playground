@@ -19,12 +19,43 @@ __DE10NANO__ Open a terminal in the DE10NANO directory and type ```make de10nano
 __ULX3S__ Open a terminal in the ULX3S directory and type ```make ulx3s```. Wait. Upload your design your ULX3S with ```fujproj BUILD_ulx3s/build.bit```. Or download from this repository.
 
 ### Resource Usage (de10nano)
+
+__*Not necessarily the most recent build, used for indicative purporses and monitoring during coding*__
+
 ```
 ```
 
 ### Resource Usage (ulx3s)
 
+__*Not necessarily the most recent build, used for indicative purporses and monitoring during coding*__
+
 ```
+Info: Device utilisation:
+Info:          TRELLIS_SLICE: 11703/41820    27%
+Info:             TRELLIS_IO:    34/  365     9%
+Info:                   DCCA:     4/   56     7%
+Info:                 DP16KD:   180/  208    86%
+Info:             MULT18X18D:     5/  156     3%
+Info:                 ALU54B:     0/   78     0%
+Info:                EHXPLLL:     2/    4    50%
+Info:                EXTREFB:     0/    2     0%
+Info:                   DCUA:     0/    2     0%
+Info:              PCSCLKDIV:     0/    2     0%
+Info:                IOLOGIC:     0/  224     0%
+Info:               SIOLOGIC:     8/  141     5%
+Info:                    GSR:     0/    1     0%
+Info:                  JTAGG:     0/    1     0%
+Info:                   OSCG:     0/    1     0%
+Info:                  SEDGA:     0/    1     0%
+Info:                    DTR:     0/    1     0%
+Info:                USRMCLK:     0/    1     0%
+Info:                CLKDIVF:     0/    4     0%
+Info:              ECLKSYNCB:     0/   10     0%
+Info:                DLLDELD:     0/    8     0%
+Info:                 DDRDLL:     0/    4     0%
+Info:                DQSBUFM:     0/   14     0%
+Info:        TRELLIS_ECLKBUF:     0/    8     0%
+Info:           ECLKBRIDGECS:     0/    2     0%
 ```
 
 ## VGA/HDMI Multiplexed Display

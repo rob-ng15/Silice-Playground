@@ -133,8 +133,8 @@ algorithm pulse1hz(
     counter1hz = 0;
     
     while (1) {
-        counter1hz = ( resetCounter ) ? 0 : ( counter50mhz == 50000000 ) ? counter1hz + 1 : counter1hz;
-        counter50mhz = ( resetCounter ) ? 0 : ( counter50mhz == 50000000 ) ? 0 : counter50mhz + 1;
+        counter1hz = ( resetCounter == 1 ) ? 0 : ( counter50mhz == 50000000 ) ? counter1hz + 1 : counter1hz;
+        counter50mhz = ( resetCounter == 1 ) ? 0 : ( counter50mhz == 50000000 ) ? 0 : counter50mhz + 1;
     }
 }
 
@@ -147,8 +147,8 @@ algorithm pulse1khz(
     uint32 counter50mhz = 0;
     
     while (1) {
-        counter1khz = ( resetCounter ) ? resetCount : ( counter1khz == 0 ) ? 0 : ( counter50mhz == 50000 ) ? counter1khz - 1 : counter1khz;
-        counter50mhz = ( resetCounter ) ? 0 : ( counter50mhz == 50000 ) ? 0 : counter50mhz + 1;
+        counter1khz = ( resetCounter == 1 ) ? resetCount : ( counter1khz == 0 ) ? 0 : ( counter50mhz == 50000 ) ? counter1khz - 1 : counter1khz;
+        counter50mhz = ( resetCounter == 1 ) ? 0 : ( counter50mhz == 50000 ) ? 0 : counter50mhz + 1;
     }
 }
 
@@ -193,13 +193,13 @@ $$end
     // UART tx and rx
     // UART written in Silice by https://github.com/sylefeb/Silice
     uart_out uo;
-    uart_sender usend(
+    uart_sender usend (
         io      <:> uo,
         uart_tx :>  uart_tx
     );
 
     uart_in ui;
-    uart_receiver urecv(
+    uart_receiver urecv (
         io      <:> ui,
         uart_rx <:  uart_rx
     );
@@ -212,7 +212,7 @@ $$end
     // Generate the 100MHz SDRAM and 25MHz VIDEO clocks
 $$if DE10NANO then
     uint1 sdram_clock = 0;
-    de10nano_clk_100_25 clk_gen(
+    de10nano_clk_100_25 clk_gen (
         refclk    <: clock,
         outclk_0  :> sdram_clock,
         outclk_1  :> video_clock,
@@ -222,7 +222,7 @@ $$if DE10NANO then
 $$end
 $$if ULX3S then
     uint1 clock_50mhz = 0;
-    ulx3s_clk_50_25 clk_gen(
+    ulx3s_clk_50_25 clk_gen (
         clkin    <: clock,
         clkout0  :> clock_50mhz,
         clkout1  :> video_clock,
@@ -245,8 +245,7 @@ $$end
 
     // VGA or HDMI driver
 $$if DE10NANO then
-    vga vga_driver <@video_clock,!video_reset>
-    (
+    vga vga_driver <@video_clock,!video_reset> (
         vga_hs :> video_hs,
         vga_vs :> video_vs,
         active :> active,
@@ -262,7 +261,7 @@ $$if ULX3S then
     uint8 video_g8 := video_g << 2;
     uint8 video_b8 := video_b << 2;
 
-    hdmi video<@clock,!reset>(
+    hdmi video<@clock,!reset> (
         x       :> pix_x,
         y       :> pix_y,
         active  :> active,
@@ -281,8 +280,7 @@ $$end
     uint$color_depth$   background_r = 0;
     uint$color_depth$   background_g = 0;
     uint$color_depth$   background_b = 0;
-    background background_generator <@video_clock,!video_reset>
-    (
+    background background_generator <@video_clock,!video_reset>  (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: active,
@@ -298,8 +296,7 @@ $$end
     uint$color_depth$   lower_sprites_b = 0;
     uint1               lower_sprites_display = 0;
     
-    sprite_layer lower_sprites <@video_clock,!video_reset>
-    (
+    sprite_layer lower_sprites <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: active,
@@ -321,8 +318,7 @@ $$end
     uint2               bitmap_write = 0;
     uint3               bitmapcolour_fade = 0;
 
-    gpu gpu_processor <@video_clock,!video_reset>
-    (
+    gpu gpu_processor <@video_clock,!video_reset> (
         bitmap_x_write :> bitmap_x_write,
         bitmap_y_write :> bitmap_y_write,
         bitmap_colour_write :> bitmap_colour_write,
@@ -330,8 +326,7 @@ $$end
         bitmap_write :> bitmap_write
     );
 
-    bitmap bitmap_window <@video_clock,!video_reset>
-    (
+    bitmap bitmap_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: active,
@@ -353,8 +348,7 @@ $$end
     uint$color_depth$   upper_sprites_b = 0;
     uint1               upper_sprites_display = 0;
     
-    sprite_layer upper_sprites <@video_clock,!video_reset>
-    (
+    sprite_layer upper_sprites <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: active,
@@ -371,8 +365,7 @@ $$end
     uint$color_depth$   character_map_b = 0;
     uint1               character_map_display = 0;
     
-    character_map character_map_window <@video_clock,!video_reset>
-    (
+    character_map character_map_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: active,
@@ -389,8 +382,7 @@ $$end
     uint$color_depth$   terminal_b = 0;
     uint1               terminal_display = 0;
     
-    terminal terminal_window <@video_clock,!video_reset>
-    (
+    terminal terminal_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: active,
@@ -403,8 +395,7 @@ $$end
     );
 
     // Combine the display layers for display
-    multiplex_display display <@video_clock,!video_reset>
-    (
+    multiplex_display display <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: active,
@@ -445,22 +436,58 @@ $$end
 
     // Left and Right audio channels
     // Sync'd with video_clock
-    apu apu_processor_L <@video_clock,!video_reset>
-    (
+    apu apu_processor_L <@video_clock,!video_reset> (
         audio_output :> audio_l,
     );
-    apu apu_processor_R <@video_clock,!video_reset>
-    (
+    apu apu_processor_R <@video_clock,!video_reset> (
         audio_output :> audio_r,
     );
 
     // Vector drawer
     // Sync'd with system clock 50MHz
-    vectors vector_drawer ();
+    int11   v_gpu_x = 0;
+    int11   v_gpu_y = 0;
+    uint7   v_gpu_colour = 0;
+    int11   v_gpu_param0 = 0;
+    int11   v_gpu_param1 = 0;
+    uint4   v_gpu_write = 0;
+    
+    vectors vector_drawer (
+        gpu_x :> v_gpu_x,
+        gpu_y :> v_gpu_y,
+        gpu_colour :> v_gpu_colour,
+        gpu_param0 :> v_gpu_param0,
+        gpu_param1 :> v_gpu_param1,
+        gpu_write :> v_gpu_write
+    );
 
     // Display list
     // Sync'd with system clock 50MHz
-    displaylist displaylist_drawer ();
+    int11   dl_gpu_x = 0;
+    int11   dl_gpu_y = 0;
+    uint7   dl_gpu_colour = 0;
+    int11   dl_gpu_param0 = 0;
+    int11   dl_gpu_param1 = 0;
+    uint4   dl_gpu_write = 0;
+    uint5   dl_vector_block_number = 0;
+    uint7   dl_vector_block_colour = 0;
+    int11   dl_vector_block_xc = 0;
+    int11   dl_vector_block_yc =0;
+    uint1   dl_draw_vector = 0;
+    
+    displaylist displaylist_drawer (
+        gpu_x :> dl_gpu_x,
+        gpu_y :> dl_gpu_y,
+        gpu_colour :> dl_gpu_colour,
+        gpu_param0 :> dl_gpu_param0,
+        gpu_param1 :> dl_gpu_param1,
+        gpu_write :> dl_gpu_write,
+        vector_block_number :> dl_vector_block_number,
+        vector_block_colour :> dl_vector_block_colour,
+        vector_block_xc :> dl_vector_block_xc,
+        vector_block_yc :> dl_vector_block_yc,
+        draw_vector :> dl_draw_vector
+    );
     
     // J1+ CPU
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
@@ -564,30 +591,30 @@ $$end
         }
 
         // Communicate with VECTORS and DISPLAY LISTS
-        if( vector_drawer.gpu_write == 3 ) {
-            gpu_processor.gpu_x = vector_drawer.gpu_x;
-            gpu_processor.gpu_y = vector_drawer.gpu_y;
-            gpu_processor.gpu_colour = vector_drawer.gpu_colour;
-            gpu_processor.gpu_param0 = vector_drawer.gpu_param0;
-            gpu_processor.gpu_param1 = vector_drawer.gpu_param1;
-            gpu_processor.gpu_write = vector_drawer.gpu_write;
+        if( v_gpu_write == 3 ) {
+            gpu_processor.gpu_x = v_gpu_x;
+            gpu_processor.gpu_y = v_gpu_y;
+            gpu_processor.gpu_colour = v_gpu_colour;
+            gpu_processor.gpu_param0 = v_gpu_param0;
+            gpu_processor.gpu_param1 = v_gpu_param1;
+            gpu_processor.gpu_write = v_gpu_write;
         }
         vector_drawer.gpu_active = gpu_processor.gpu_active;
 
-        if( displaylist_drawer.gpu_write > 0 ) {
-            gpu_processor.gpu_x = displaylist_drawer.gpu_x;
-            gpu_processor.gpu_y = displaylist_drawer.gpu_y;
-            gpu_processor.gpu_colour = displaylist_drawer.gpu_colour;
-            gpu_processor.gpu_param0 = displaylist_drawer.gpu_param0;
-            gpu_processor.gpu_param1 = displaylist_drawer.gpu_param1;
-            gpu_processor.gpu_write = displaylist_drawer.gpu_write;
+        if( dl_gpu_write > 0 ) {
+            gpu_processor.gpu_x = dl_gpu_x;
+            gpu_processor.gpu_y = dl_gpu_y;
+            gpu_processor.gpu_colour = dl_gpu_colour;
+            gpu_processor.gpu_param0 = dl_gpu_param0;
+            gpu_processor.gpu_param1 = dl_gpu_param1;
+            gpu_processor.gpu_write = dl_gpu_write;
         }
-        if( displaylist_drawer.draw_vector ) {
-            vector_drawer.vector_block_number = displaylist_drawer.vector_block_number;
-            vector_drawer.vector_block_colour = displaylist_drawer.vector_block_colour;
-            vector_drawer.vector_block_xc = displaylist_drawer.vector_block_xc;
-            vector_drawer.vector_block_yc = displaylist_drawer.vector_block_yc;
-            vector_drawer.draw_vector = displaylist_drawer.draw_vector;
+        if( displaylist_drawer.draw_vector > 0 ) {
+            vector_drawer.vector_block_number = dl_vector_block_number;
+            vector_drawer.vector_block_colour = dl_vector_block_colour;
+            vector_drawer.vector_block_xc = dl_vector_block_xc;
+            vector_drawer.vector_block_yc = dl_vector_block_yc;
+            vector_drawer.draw_vector = dl_draw_vector;
         }
         displaylist_drawer.gpu_active = gpu_processor.gpu_active;
         displaylist_drawer.vector_block_active = vector_drawer.vector_block_active;

@@ -137,9 +137,9 @@ setsprites
 
   3f tpubackground! 3 tpuforeground!
 
-  440 0 do 
+  terminalhide! 440 0 do 
     14 timer1khz! vblank?
-    20 2 tpuxy! $" Counting " tpu.$ timer1hz@ dup led! tpu.#
+    22 2 tpuxy! $" Counting " tpu.$ timer1hz@ dup led! tpu.#
     9 0 lslupdate!
     39 1 lslupdate!
     f 2 lslupdate!
@@ -149,7 +149,7 @@ setsprites
     7 2 uslupdate!
     38 3 uslupdate!
     timer1khz?
-  loop ;
+  loop terminalshow! ;
 screentest
 
 ```
@@ -214,7 +214,7 @@ closeencounters
 
 ```
 
-## Display List (test area)
+## Display List (test area, does not presently output)
 
 active command colour x y p0 p1 entry displaylist!
 
