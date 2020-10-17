@@ -23,6 +23,23 @@ __ULX3S__ Open a terminal in the ULX3S directory and type ```make ulx3s```. Wait
 __*Not necessarily the most recent build, used for indicative purporses and monitoring during coding*__
 
 ```
+Top-level Entity Name : top
+Family : Cyclone V
+Device : 5CSEBA6U23I7
+Timing Models : Final
+Logic utilization (in ALMs) : 5,447 / 41,910 ( 13 % )
+Total registers : 2724
+Total pins : 36 / 314 ( 11 % )
+Total virtual pins : 0
+Total block memory bits : 2,601,696 / 5,662,720 ( 46 % )
+Total RAM Blocks : 339 / 553 ( 61 % )
+Total DSP Blocks : 1 / 112 ( < 1 % )
+Total HSSI RX PCSs : 0
+Total HSSI PMA RX Deserializers : 0
+Total HSSI TX PCSs : 0
+Total HSSI PMA TX Serializers : 0
+Total PLLs : 1 / 6 ( 17 % )
+Total DLLs : 0 / 4 ( 0 % )
 ```
 
 ### Resource Usage (ulx3s)
@@ -31,11 +48,11 @@ __*Not necessarily the most recent build, used for indicative purporses and moni
 
 ```
 Info: Device utilisation:
-Info:          TRELLIS_SLICE: 11703/41820    27%
+Info:          TRELLIS_SLICE: 11411/41820    27%
 Info:             TRELLIS_IO:    34/  365     9%
 Info:                   DCCA:     4/   56     7%
-Info:                 DP16KD:   180/  208    86%
-Info:             MULT18X18D:     5/  156     3%
+Info:                 DP16KD:   176/  208    84%
+Info:             MULT18X18D:     6/  156     3%
 Info:                 ALU54B:     0/   78     0%
 Info:                EHXPLLL:     2/    4    50%
 Info:                EXTREFB:     0/    2     0%
@@ -84,7 +101,6 @@ Colour<br>Guide<br>__HEX__ | Colour
 33 | Magenta
 3c | Yellow
 3f | White
-
 
 ### Background Layer
 

@@ -43,9 +43,9 @@ algorithm vectors(
     int11 deltay := { {6{dy.rdata0[5,1]}}, dy.rdata0[0,5]  };
     
     // Vertices being processed, plus starting coordinates
-    uint4 vertices_number = 0;
-    int11 start_x = 0;
-    int11 start_y = 0;
+    uint4 vertices_number = uninitialised;
+    int11 start_x = uninitialised;
+    int11 start_y = uninitialised;
     
     // Set read and write address for the vertices
     A.addr0 := vector_block_number * 16 + vertices_number;
@@ -69,9 +69,7 @@ algorithm vectors(
     gpu_write := 0;
 
     always {
-        if( draw_vector ) {
-            vector_block_active = 1;
-        }
+        vector_block_active = ( draw_vector ) ? 1 : vector_block_active;
     }
     
     vector_block_active = 0;
@@ -96,7 +94,7 @@ algorithm vectors(
             }
             case 4: {
                 // See if the next of the vertices is active and await the GPU
-                vector_block_active = ( A.rdata0 ) ? ( gpu_active ) ? 4 : 5 : 0;
+                vector_block_active = ( A.rdata0 ) ? ( gpu_active > 0 ) ? 4 : 5 : 0;
                 vertices_number = ( A.rdata0 ) ? vertices_number : 0;
             }
             case 5: {

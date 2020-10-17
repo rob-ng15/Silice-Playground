@@ -48,8 +48,8 @@ algorithm displaylist(
     dualport_bram int11 p0[256] = { 20, 50, pad(uninitialised) };    
     dualport_bram int11 p1[256] = { 20, pad(uninitialised) };    
 
-    uint8   entry_number = 0;
-    uint8   finish_number = 0;
+    uint8   entry_number = uninitialised;
+    uint8   finish_number = uninitialised;
     
     // Set read address for the display list entry being processed
     A.addr0 := entry_number;
@@ -127,7 +127,7 @@ algorithm displaylist(
             case 2: {
                 if( A.rdata0  ) {
                     // Await GPU and VECTOR DRAWER
-                    display_list_active = ( gpu_active | vector_block_active ) ? 2 : 3;
+                    display_list_active = ( ( gpu_active > 0)  | ( vector_block_active > 0 ) ) ? 2 : 3;
                 } else {
                     // Move to the next entry
                     entry_number = ( entry_number < finish_number ) ? entry_number + 1 : start_entry;

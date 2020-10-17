@@ -182,7 +182,7 @@ $$if ULX3S then
 $$end
 {
     // 1hz timers (p1hz used for systemClock, timer1hz for user purposes)
-    uint16 systemClock = 0;
+    uint16 systemClock = uninitialized;
     pulse1hz p1hz( counter1hz :> systemClock );
     pulse1hz timer1hz( );
 
@@ -205,13 +205,13 @@ $$end
     );
 
     // VGA/HDMI Display
-    uint1 video_reset = 0;
-    uint1 video_clock = 0;
-    uint1 pll_lock = 0;
+    uint1 video_reset = uninitialized;
+    uint1 video_clock = uninitialized;
+    uint1 pll_lock = uninitialized;
     
     // Generate the 100MHz SDRAM and 25MHz VIDEO clocks
 $$if DE10NANO then
-    uint1 sdram_clock = 0;
+    uint1 sdram_clock = uninitialized;
     de10nano_clk_100_25 clk_gen (
         refclk    <: clock,
         outclk_0  :> sdram_clock,
@@ -221,7 +221,7 @@ $$if DE10NANO then
     ); 
 $$end
 $$if ULX3S then
-    uint1 clock_50mhz = 0;
+    uint1 clock_50mhz = uninitialized;
     ulx3s_clk_50_25 clk_gen (
         clkin    <: clock,
         clkout0  :> clock_50mhz,
@@ -238,10 +238,10 @@ $$end
     );
 
     // Status of the screen, if in range, if in vblank, actual pixel x and y
-    uint1  active = 0;
-    uint1  vblank = 0;
-    uint10 pix_x  = 0;
-    uint10 pix_y  = 0;
+    uint1  active = uninitialized;
+    uint1  vblank = uninitialized;
+    uint10 pix_x  = uninitialized;
+    uint10 pix_y  = uninitialized;
 
     // VGA or HDMI driver
 $$if DE10NANO then
@@ -277,9 +277,9 @@ $$end
     // Build up the display layers
     
     // BACKGROUND
-    uint$color_depth$   background_r = 0;
-    uint$color_depth$   background_g = 0;
-    uint$color_depth$   background_b = 0;
+    uint$color_depth$   background_r = uninitialized;
+    uint$color_depth$   background_g = uninitialized;
+    uint$color_depth$   background_b = uninitialized;
     background background_generator <@video_clock,!video_reset>  (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -291,10 +291,10 @@ $$end
     );
 
     // Lower Sprite Layer - Between BACKGROUND and BITMAP
-    uint$color_depth$   lower_sprites_r = 0;
-    uint$color_depth$   lower_sprites_g = 0;
-    uint$color_depth$   lower_sprites_b = 0;
-    uint1               lower_sprites_display = 0;
+    uint$color_depth$   lower_sprites_r = uninitialized;
+    uint$color_depth$   lower_sprites_g = uninitialized;
+    uint$color_depth$   lower_sprites_b = uninitialized;
+    uint1               lower_sprites_display = uninitialized;
     
     sprite_layer lower_sprites <@video_clock,!video_reset> (
         pix_x      <: pix_x,
@@ -308,22 +308,24 @@ $$end
     );
         
     // Bitmap Window and GPU
-    uint$color_depth$   bitmap_r = 0;
-    uint$color_depth$   bitmap_g = 0;
-    uint$color_depth$   bitmap_b = 0;
-    uint1               bitmap_display = 0;
-    int11               bitmap_x_write = 0;
-    int11               bitmap_y_write = 0;
-    uint7               bitmap_colour_write = 0;
-    uint2               bitmap_write = 0;
-    uint3               bitmapcolour_fade = 0;
-
+    uint$color_depth$   bitmap_r = uninitialized;
+    uint$color_depth$   bitmap_g = uninitialized;
+    uint$color_depth$   bitmap_b = uninitialized;
+    uint1               bitmap_display = uninitialized;
+    int11               bitmap_x_write = uninitialized;
+    int11               bitmap_y_write = uninitialized;
+    uint7               bitmap_colour_write = uninitialized;
+    uint2               bitmap_write = uninitialized;
+    uint3               bitmapcolour_fade = uninitialized;
+    uint4               gpu_active = uninitialized;
+    
     gpu gpu_processor <@video_clock,!video_reset> (
         bitmap_x_write :> bitmap_x_write,
         bitmap_y_write :> bitmap_y_write,
         bitmap_colour_write :> bitmap_colour_write,
         bitmapcolour_fade :> bitmapcolour_fade,
-        bitmap_write :> bitmap_write
+        bitmap_write :> bitmap_write,
+        gpu_active :> gpu_active
     );
 
     bitmap bitmap_window <@video_clock,!video_reset> (
@@ -343,10 +345,10 @@ $$end
     );
 
     // Upper Sprite Layer - Between BITMAP and CHARACTER MAP
-    uint$color_depth$   upper_sprites_r = 0;
-    uint$color_depth$   upper_sprites_g = 0;
-    uint$color_depth$   upper_sprites_b = 0;
-    uint1               upper_sprites_display = 0;
+    uint$color_depth$   upper_sprites_r = uninitialized;
+    uint$color_depth$   upper_sprites_g = uninitialized;
+    uint$color_depth$   upper_sprites_b = uninitialized;
+    uint1               upper_sprites_display = uninitialized;
     
     sprite_layer upper_sprites <@video_clock,!video_reset> (
         pix_x      <: pix_x,
@@ -360,10 +362,10 @@ $$end
     );
         
     // Character Map Window
-    uint$color_depth$   character_map_r = 0;
-    uint$color_depth$   character_map_g = 0;
-    uint$color_depth$   character_map_b = 0;
-    uint1               character_map_display = 0;
+    uint$color_depth$   character_map_r = uninitialized;
+    uint$color_depth$   character_map_g = uninitialized;
+    uint$color_depth$   character_map_b = uninitialized;
+    uint1               character_map_display = uninitialized;
     
     character_map character_map_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
@@ -377,10 +379,10 @@ $$end
     );
     
     // Terminal window at the bottom of the screen
-    uint$color_depth$   terminal_r = 0;
-    uint$color_depth$   terminal_g = 0;
-    uint$color_depth$   terminal_b = 0;
-    uint1               terminal_display = 0;
+    uint$color_depth$   terminal_r = uninitialized;
+    uint$color_depth$   terminal_g = uninitialized;
+    uint$color_depth$   terminal_b = uninitialized;
+    uint1               terminal_display = uninitialized;
     
     terminal terminal_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
@@ -445,12 +447,13 @@ $$end
 
     // Vector drawer
     // Sync'd with system clock 50MHz
-    int11   v_gpu_x = 0;
-    int11   v_gpu_y = 0;
-    uint7   v_gpu_colour = 0;
-    int11   v_gpu_param0 = 0;
-    int11   v_gpu_param1 = 0;
-    uint4   v_gpu_write = 0;
+    int11   v_gpu_x = uninitialized;
+    int11   v_gpu_y = uninitialized;
+    uint7   v_gpu_colour = uninitialized;
+    int11   v_gpu_param0 = uninitialized;
+    int11   v_gpu_param1 = uninitialized;
+    uint4   v_gpu_write = uninitialized;
+    uint3   vector_block_active = uninitialized;
     
     vectors vector_drawer (
         gpu_x :> v_gpu_x,
@@ -458,22 +461,24 @@ $$end
         gpu_colour :> v_gpu_colour,
         gpu_param0 :> v_gpu_param0,
         gpu_param1 :> v_gpu_param1,
-        gpu_write :> v_gpu_write
+        gpu_write :> v_gpu_write,
+        vector_block_active :> vector_block_active,
+        gpu_active <: gpu_active
     );
 
     // Display list
     // Sync'd with system clock 50MHz
-    int11   dl_gpu_x = 0;
-    int11   dl_gpu_y = 0;
-    uint7   dl_gpu_colour = 0;
-    int11   dl_gpu_param0 = 0;
-    int11   dl_gpu_param1 = 0;
-    uint4   dl_gpu_write = 0;
-    uint5   dl_vector_block_number = 0;
-    uint7   dl_vector_block_colour = 0;
-    int11   dl_vector_block_xc = 0;
-    int11   dl_vector_block_yc =0;
-    uint1   dl_draw_vector = 0;
+    int11   dl_gpu_x = uninitialized;
+    int11   dl_gpu_y = uninitialized;
+    uint7   dl_gpu_colour = uninitialized;
+    int11   dl_gpu_param0 = uninitialized;
+    int11   dl_gpu_param1 = uninitialized;
+    uint4   dl_gpu_write = uninitialized;
+    uint5   dl_vector_block_number = uninitialized;
+    uint7   dl_vector_block_colour = uninitialized;
+    int11   dl_vector_block_xc = uninitialized;
+    int11   dl_vector_block_yc =uninitialized;
+    uint1   dl_draw_vector = uninitialized;
     
     displaylist displaylist_drawer (
         gpu_x :> dl_gpu_x,
@@ -486,7 +491,10 @@ $$end
         vector_block_colour :> dl_vector_block_colour,
         vector_block_xc :> dl_vector_block_xc,
         vector_block_yc :> dl_vector_block_yc,
-        draw_vector :> dl_draw_vector
+        draw_vector :> dl_draw_vector,
+        vector_block_active <: vector_block_active,
+        gpu_active <: gpu_active
+
     );
     
     // J1+ CPU
@@ -591,6 +599,7 @@ $$end
         }
 
         // Communicate with VECTORS and DISPLAY LISTS
+        // Send VECTOR line to GPU
         if( v_gpu_write == 3 ) {
             gpu_processor.gpu_x = v_gpu_x;
             gpu_processor.gpu_y = v_gpu_y;
@@ -599,8 +608,8 @@ $$end
             gpu_processor.gpu_param1 = v_gpu_param1;
             gpu_processor.gpu_write = v_gpu_write;
         }
-        vector_drawer.gpu_active = gpu_processor.gpu_active;
 
+        // Send DISPLAY LIST to GPU
         if( dl_gpu_write > 0 ) {
             gpu_processor.gpu_x = dl_gpu_x;
             gpu_processor.gpu_y = dl_gpu_y;
@@ -609,6 +618,7 @@ $$end
             gpu_processor.gpu_param1 = dl_gpu_param1;
             gpu_processor.gpu_write = dl_gpu_write;
         }
+        // Send DISPLAY LIST to VECTOR
         if( displaylist_drawer.draw_vector > 0 ) {
             vector_drawer.vector_block_number = dl_vector_block_number;
             vector_drawer.vector_block_colour = dl_vector_block_colour;
@@ -616,8 +626,6 @@ $$end
             vector_drawer.vector_block_yc = dl_vector_block_yc;
             vector_drawer.draw_vector = dl_draw_vector;
         }
-        displaylist_drawer.gpu_active = gpu_processor.gpu_active;
-        displaylist_drawer.vector_block_active = vector_drawer.vector_block_active;
     }
     
     // Setup the terminal

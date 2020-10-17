@@ -77,9 +77,10 @@ variable lasttimer
 
 : demo
   timer1hz! 0 lasttimer !
+  15 0 7 background! cs!
   begin
     beepboop
-    14 timer1khz! vblank? cs! gpu?
+    14 timer1khz! vblank? cs!
     138 0 uslupdate!
     3f 140 f0 0 vector!
     3 100 100 8 vector!

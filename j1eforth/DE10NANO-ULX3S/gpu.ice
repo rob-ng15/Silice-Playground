@@ -22,29 +22,29 @@ algorithm gpu(
     
     // GPU work variable storage
     // Present GPU pixel and colour
-    int11 gpu_active_x = 0;
-    int11 gpu_active_y = 0;
-    uint7 gpu_active_colour = 0;
+    int11 gpu_active_x = uninitialized;
+    int11 gpu_active_y = uninitialized;
+    uint7 gpu_active_colour = uninitialized;
     
     // Temporary storage for GPU operations with meaningful names centre coordinates, end coordinates, width, height, deltas, radius, etc
-    int11 gpu_xc = 0;
-    int11 gpu_yc = 0;
-    int11 gpu_x1 = 0;
-    int11 gpu_y1 = 0;
-    int11 gpu_x2 = 0;
-    int11 gpu_y2 = 0;
-    int11 gpu_w = 0;
-    int11 gpu_h = 0;
-    int11 gpu_dx = 0;
-    int11 gpu_sx = 0;
-    int11 gpu_dy = 0;
-    int11 gpu_sy = 0;
-    int11 gpu_numerator = 0;
-    int11 gpu_numerator2 = 0;
-    int11 gpu_radius = 0;
-    int11 gpu_count = 0;
-    int11 gpu_max_count = 0;
-    uint8 gpu_tile = 0;
+    int11 gpu_xc = uninitialized;
+    int11 gpu_yc = uninitialized;
+    int11 gpu_x1 = uninitialized;
+    int11 gpu_y1 = uninitialized;
+    int11 gpu_x2 = uninitialized;
+    int11 gpu_y2 = uninitialized;
+    int11 gpu_w = uninitialized;
+    int11 gpu_h = uninitialized;
+    int11 gpu_dx = uninitialized;
+    int11 gpu_sx = uninitialized;
+    int11 gpu_dy = uninitialized;
+    int11 gpu_sy = uninitialized;
+    int11 gpu_numerator = uninitialized;
+    int11 gpu_numerator2 = uninitialized;
+    int11 gpu_radius = uninitialized;
+    int11 gpu_count = uninitialized;
+    int11 gpu_max_count = uninitialized;
+    uint8 gpu_tile = uninitialized;
 
     // blit1tilemap read access for the blit1tilemap
     blit1tilemap.addr0 := gpu_tile * 16 + gpu_active_y;

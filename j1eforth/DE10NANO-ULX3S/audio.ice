@@ -48,13 +48,12 @@ algorithm apu(
         747, 705, 665,                                                                          // 61 = C 7 or Double High C
     };
     
-    uint3   selected_waveform = 0;
-    uint6   selected_note = 0;
-    uint5   step_point = 0;   
-    uint16  counter25mhz = 0;
-    uint16  counter1khz = 0;
-    uint16  milliseconds = 0;
-    
+    uint3   selected_waveform = uninitialized;
+    uint6   selected_note = uninitialized;
+    uint5   step_point = uninitialized;   
+    uint16  counter25mhz = uninitialized;
+    uint16  counter1khz = uninitialized;
+    uint16  milliseconds = uninitialized;
     
     uint4   selected_audio_output := waveformtable.rdata;
     uint16  selected_note_frequency := frequencytable.rdata;

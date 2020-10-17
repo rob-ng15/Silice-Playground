@@ -29,6 +29,18 @@ algorithm background(
     uint27 static_1 = 27b111010101000011010011100001;
     uint27 static_1a = 27b111010101000011010011100001;
 
+    // Variables for SNOW (from @sylefeb)
+    int10   dotpos = 0;
+    int2    speed = 0;
+    int2    inv_speed = 0;
+    int12   rand_x = 0;
+    int32   frame = 0;
+    
+    // Default to black
+    pix_red := 0;
+    pix_green := 0;
+    pix_blue := 0;
+
     always {
         switch( backgroundcolour_write ) {
             case 1: { background = backgroundcolour; }
@@ -41,6 +53,9 @@ algorithm background(
         // Generate static grey scale values
         static_0a = ( static_0a == 0 ) ? static_0 : static_0a >> 1;
         static_1a = ( static_0a == 0 ) ? ( static_1a == 0 ) ? static_1 : static_1a >> 1 : static_1a;
+        
+        // Increment frame number
+        frame = ( ( pix_x == 639 ) & ( pix_y == 470 ) ) ? frame + 1 : frame;
     }
     
     while(1) {
@@ -202,11 +217,18 @@ algorithm background(
                 pix_green = colourexpand2to$color_depth$[ { static_0a[0,1], static_1a[0,1] } ] >> background_fade;
                 pix_blue = colourexpand2to$color_depth$[ { static_0a[0,1], static_1a[0,1] } ] >> background_fade;
             }
-            default: {
-                pix_red = 0;
-                pix_green = 0;
-                pix_blue = 0;
-            }
+            case 7: {
+                // Snow
+                rand_x = (pix_x == 0) ? 1 : rand_x * 31421 + 6927;
+                speed  = rand_x[10,2];
+                dotpos = (frame >> speed) + rand_x;
+                if (pix_y == dotpos) {
+                    pix_red   = colourexpand2to$color_depth$[ colour6(background).red ] >> background_fade;
+                    pix_green = colourexpand2to$color_depth$[ colour6(background).green ] >> background_fade;
+                    pix_blue  = colourexpand2to$color_depth$[ colour6(background).blue ] >> background_fade;
+                }
+            }                
+            default: {}
         }
     }
 }

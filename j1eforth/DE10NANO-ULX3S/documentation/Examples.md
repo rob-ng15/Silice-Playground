@@ -35,6 +35,7 @@ dff6 dff6 9c72 d836
 c60 c60 ee0 0
 0 blit1tile!
 : invaders
+  3c 0 7 background!
   10 0 do
     i 10 0 do
       dup 3f i - swap 0 swap 18 * i 18 * blit1!
