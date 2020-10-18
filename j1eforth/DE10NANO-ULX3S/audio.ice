@@ -62,7 +62,7 @@ algorithm apu(
     frequencytable.addr := selected_note;
     
     always {
-        if( ( selected_note > 0 ) & ( counter25mhz == 0 ) ) {
+        if( ( selected_note > 0 ) && ( counter25mhz == 0 ) ) {
             audio_output = selected_audio_output;
         }
     }

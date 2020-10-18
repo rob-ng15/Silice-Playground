@@ -1033,7 +1033,6 @@ t: tpu.r# base @ rot rot decimal >r str r> over - tpuspaces tputype base ! t;
 t: terminalshow! 1 literal ff21 literal ! t;
 t: terminalhide! 0 literal ff21 literal ! t;
 
-
 target.1 -order set-current
 
 there 			[u] dp t!

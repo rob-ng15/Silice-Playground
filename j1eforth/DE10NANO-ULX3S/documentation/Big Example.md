@@ -1,5 +1,17 @@
+( store timer1hz@ to generate a beep/boop every other second )
 variable lasttimer
 
+( helper word to create an array )
+
+: array 
+  create cells allot
+  does> cells + ;
+
+( storage for 32 (20 hex) asteroids )
+20 array asteroidtype
+20 array asteroidx
+20 array asteroidy
+  
 ( set bullet sprite )
 8000 0000 0000 0000 0000 0000 0000 0000
 0000 0000 0000 0000 0000 0000 0000 0000
@@ -75,6 +87,7 @@ variable lasttimer
   then ;
 
 : demoULX3S
+  terminalhide!
   timer1hz! 0 lasttimer !
   2a 0 7 background! cs!
   begin
@@ -88,16 +101,17 @@ variable lasttimer
     buttons@ 2 and 0<> if 
       140 f0 3f 0 1 0 uslsprite!
       4 3d 80 beep! then
-      timer1khz? vblank?
+    timer1khz? vblank?
     buttons@ 4 and 0<>
-  until ;
+  until terminalshow! ;
 
 : demoDE10NANO
+  terminalhide!
   timer1hz! 0 lasttimer !
   2a 0 7 background! cs!
   begin
     beepboop
-    14 timer1khz! vblank? cs!
+    14 timer1khz! cs!
     138 0 uslupdate!
     3f 140 f0 0 vector!
     3 100 100 8 vector!
@@ -106,7 +120,7 @@ variable lasttimer
     buttons@ 2 and 0= if 
       140 f0 3f 0 1 0 uslsprite!
       4 3d 80 beep! then
-    timer1khz?
+    timer1khz? vblank?
     buttons@ 1 and 0=
-  until ;
+  until terminalshow! ;
   

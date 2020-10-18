@@ -75,7 +75,7 @@ algorithm sprite_layer(
 
     // Calculate if each sprite is visible
     $$for i=0,7 do
-        uint1 sprite_$i$_visible := sprite_active[$i$] & ( pix_x >= sprite_x[$i$] ) & ( pix_x < sprite_x[$i$] + 16 ) & ( pix_y >= sprite_y[$i$] ) & ( pix_y < sprite_y[$i$] + 16 ) & ( sprite_$i$_tiles.rdata0 >> ( 15 - ( pix_x - sprite_x[$i$] ) ) & 1 );
+        uint1 sprite_$i$_visible := sprite_active[$i$] && ( pix_x >= sprite_x[$i$] ) && ( pix_x < sprite_x[$i$] + 16 ) && ( pix_y >= sprite_y[$i$] ) && ( pix_y < sprite_y[$i$] + 16 ) && ( sprite_$i$_tiles.rdata0 >> ( 15 - ( pix_x - sprite_x[$i$] ) ) & 1 );
     $$end
 
     // Expand Sprite Update Deltas
@@ -88,7 +88,7 @@ algorithm sprite_layer(
         sprite_$i$_tiles.wenable0 := 0;
         sprite_$i$_tiles.addr1 := sprite_writer_line;
         sprite_$i$_tiles.wdata1 := sprite_writer_bitmap;
-        sprite_$i$_tiles.wenable1 := ( sprite_writer_sprite == $i$ ) & sprite_writer_active;
+        sprite_$i$_tiles.wenable1 := ( sprite_writer_sprite == $i$ ) && sprite_writer_active;
     $$end
 
     // Default to transparent
@@ -115,7 +115,7 @@ algorithm sprite_layer(
                     sprite_tile_number[ sprite_set_number ] = sprite_tile_number[ sprite_set_number ] + 1;
                 }
                 // Move along x-axis
-                if(  (sprite_x[ sprite_set_number ] < (-16)) | (sprite_x[ sprite_set_number ] > 640) ) {
+                if(  (sprite_x[ sprite_set_number ] < (-16)) || (sprite_x[ sprite_set_number ] > 640) ) {
                     if( spriteupdate( sprite_update ).x_act ) {
                         sprite_active[ sprite_set_number ] = 0;
                     } else {
@@ -125,7 +125,7 @@ algorithm sprite_layer(
                     sprite_x[ sprite_set_number ] = sprite_x[ sprite_set_number ] + deltax;
                 }
                 // Move along y-axis
-                if(  (sprite_y[ sprite_set_number ] < (-16)) | (sprite_y[ sprite_set_number ] > 480) ) {
+                if(  (sprite_y[ sprite_set_number ] < (-16)) || (sprite_y[ sprite_set_number ] > 480) ) {
                     if( spriteupdate( sprite_update ).y_act ) {
                         sprite_active[ sprite_set_number ] = 0;
                     } else {
@@ -158,7 +158,7 @@ algorithm sprite_layer(
                 }
             $$end
             // Perform BASIC collision detection
-            if( ( pix_x == sprites_at_x ) & ( pix_y == sprites_at_y ) ) {
+            if( ( pix_x == sprites_at_x ) && ( pix_y == sprites_at_y ) ) {
                 sprites_at_xy = {
                     8b00000000, sprite_7_visible, sprite_6_visible, sprite_5_visible, sprite_4_visible, sprite_3_visible, sprite_2_visible, sprite_1_visible, sprite_0_visible
                 };

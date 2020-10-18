@@ -35,7 +35,7 @@ algorithm displaylist(
     output  int11   vector_block_yc,
     output  uint1   draw_vector,
     
-    output  uint3   display_list_active,
+    output  uint4   display_list_active,
     input   uint4   gpu_active,
     input   uint3   vector_block_active
 ) {
@@ -122,9 +122,7 @@ algorithm displaylist(
             case 0: {
                 entry_number = start_entry;
                 finish_number = finish_entry;
-                if( start_displaylist == 1 ) {
-                    display_list_active = 1;
-                }
+                display_list_active = ( start_displaylist == 1 ) ? 1 : 0;
             }
             case 1: {
                 // Start the start and finish position
@@ -143,11 +141,11 @@ algorithm displaylist(
             case 4: {
                 if( A.rdata0  ) {
                     // Await GPU and VECTOR DRAWER
-                    display_list_active = ( ( gpu_active > 0)  | ( vector_block_active > 0 ) ) ? 4 : 5;
+                    display_list_active = ( ( gpu_active > 0) || ( vector_block_active > 0 ) ) ? 4 : 5;
                 } else {
                     // Move to the next entry
                     entry_number = ( entry_number == finish_number ) ?  start_entry : entry_number + 1;
-                    display_list_active = ( entry_number == finish_number ) ? 2 : 0;
+                    display_list_active = ( entry_number == finish_number ) ? 0 : 2;
                 }
             }
             case 5: {

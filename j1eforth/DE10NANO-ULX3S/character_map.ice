@@ -17,7 +17,7 @@ algorithm character_map(
     input uint2 tpu_write
 ) <autorun> {
     // Character ROM 8x16
-    uint8 characterGenerator8x16[] = {
+    brom uint8 characterGenerator8x16[] = {
         $include('ROM/characterROM8x16.inc')
     };
     
@@ -33,7 +33,7 @@ algorithm character_map(
     uint8 colourexpand2to8[4] = {  0, 85, 170, 255 };
 
     // Character position on the screen x 0-79, y 0-29 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
-    uint8 xcharacterpos := ( pix_active ? pix_x + 1 : 0 ) >> 3;
+    uint8 xcharacterpos := ( pix_active ? (pix_x < 640 ) ? pix_x + 2 : 0 : 0 ) >> 3;
     uint12 ycharacterpos := (( pix_vblank ? 0 : pix_y ) >> 4) * 80; // 16 pixel high characters
     
     // Derive the x and y coordinate within the current 8x16 character block x 0-7, y 0-15
@@ -41,7 +41,7 @@ algorithm character_map(
     uint4 yincharacter := (pix_y) & 15;
 
     // Derive the actual pixel in the current character
-    uint1 characterpixel := characterGenerator8x16[ character.rdata0 * 16 + yincharacter ][7 - xincharacter,1];
+    uint1 characterpixel := characterGenerator8x16.rdata[7 - xincharacter,1];
 
     // TPU character position
     uint7 tpu_active_x = 0;
@@ -64,8 +64,11 @@ algorithm character_map(
     foreground.addr1 := tpu_active_x + tpu_active_y * 80;
     foreground.wenable1 := 0;
 
+    // Setup the reading of the characterGenerator8x16 ROM
+    characterGenerator8x16.addr :=  character.rdata0 * 16 + yincharacter;
+
     // Default to transparent
-    character_map_display := pix_active & (( characterpixel ) | ( ~colour7(background.rdata0).alpha ));
+    character_map_display := pix_active && (( characterpixel ) || ( ~colour7(background.rdata0).alpha ));
     
     // TPU
     // tpu_write controls actions

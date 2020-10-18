@@ -124,12 +124,13 @@ bitfield nibbles {
     uint4   nibble0
 }
 
-// Create 1hz (1 second counter)
+// Create 1hz (1 second counter, also can output the baseline 50MHz counter)
 algorithm pulse1hz(
+    output uint32 counter50mhz,
     output uint16 counter1hz,
     input  uint1  resetCounter
 ) <autorun> {
-    uint32 counter50mhz = 0;
+    counter50mhz = 0;
     counter1hz = 0;
     
     while (1) {
@@ -181,9 +182,13 @@ $$if ULX3S then
 <@clock_50mhz> // ULX3S has a 25 MHz clock, so we use a PLL to bring it up to 50 MHz
 $$end
 {
-    // 1hz timers (p1hz used for systemClock, timer1hz for user purposes)
+    // 1hz timers (p1hz used for systemClock and systemClockMHz, timer1hz for user purposes)
     uint16 systemClock = uninitialized;
-    pulse1hz p1hz( counter1hz :> systemClock );
+    uint32 systemClockMHz = uninitialized;
+    pulse1hz p1hz ( 
+        counter1hz :> systemClock,
+        counter50mhz :> systemClockMHz
+    );
     pulse1hz timer1hz( );
 
     // 1khz timers (sleepTimer used for sleep command, timer1khz for user purposes)
@@ -616,7 +621,7 @@ $$end
             uartInBufferTop      = uartInBufferTop + 1;
         }
         // WRITE to UART if characters in buffer and UART is ready
-        if( ~(uartOutBufferNext == uartOutBufferTop) & ~( uo.busy ) ) {
+        if( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) ) {
             // reads at uartOutBufferNext (code from @sylefeb)
             uo.data_in      = uartOutBuffer.rdata0; 
             uo.data_in_ready     = 1;
@@ -741,7 +746,7 @@ $$end
                                                 // INPUT from UART reads at uartInBufferNext (code from @sylefeb)
                                                 // UART status register { 14b0, tx full, rx available }
                                                 case 16hf000: { newStackTop = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1; } 
-                                                case 16hf001: { newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ~( uartInBufferNext == uartInBufferTop )}; }
+                                                case 16hf001: { newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ( uartInBufferNext != uartInBufferTop )}; }
                                                 
                                                 // LED status
                                                 case 16hf002: { newStackTop = leds; }

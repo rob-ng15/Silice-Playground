@@ -55,7 +55,7 @@ algorithm background(
         static_1a = ( static_0a == 0 ) ? ( static_1a == 0 ) ? static_1 : static_1a >> 1 : static_1a;
         
         // Increment frame number
-        frame = ( ( pix_x == 639 ) & ( pix_y == 470 ) ) ? frame + 1 : frame;
+        frame = ( ( pix_x == 639 ) && ( pix_y == 470 ) ) ? frame + 1 : frame;
     }
     
     while(1) {

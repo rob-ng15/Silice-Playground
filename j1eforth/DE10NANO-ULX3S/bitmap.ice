@@ -70,7 +70,7 @@ algorithm bitmap(
     always {
         switch( bitmap_write ) {
             case 1: {
-                if( (bitmap_x_write >= 0 ) & (bitmap_x_write < $WIDTH$) & (bitmap_y_write >= 0) & (bitmap_y_write < $HEIGHT$) ) {
+                if( (bitmap_x_write >= 0 ) && (bitmap_x_write < $WIDTH$) && (bitmap_y_write >= 0) && (bitmap_y_write < $HEIGHT$) ) {
                     bitmap_A.wenable1 = 1;
                     bitmap_R.wenable1 = 1;
                     bitmap_G.wenable1 = 1;

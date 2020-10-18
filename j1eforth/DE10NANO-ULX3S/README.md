@@ -12,7 +12,7 @@
 * - 50MHz operation
 * - 5 clock cycles per operation agains 13 clock cycles per operation on the FOMU, giving an effective CPU running at 10MHz
 
-For communication with j1eforth there is a UART which provides input and output, output is duplicated on the terminal display. The ULX3S has a PS/2 keyboard input via the us2 connector and a USB OTG and PS/2 to USB converter.
+For communication with j1eforth there is a UART which provides input and output, output is duplicated on the terminal display. The ULX3S will also have PS/2 keyboard input via the us2 connector and a USB OTG and PS/2 to USB converter.
 
 __DE10NANO__ Open a terminal in the DE10NANO directory and type ```make de10nano```. Wait. Upload your design your DE10NNANO with ```quartus_pgm -m jtag -o "p;BUILD_de10nano/build.sof@2"```. Or download from this repository.
 
@@ -27,12 +27,12 @@ Top-level Entity Name : top
 Family : Cyclone V
 Device : 5CSEBA6U23I7
 Timing Models : Final
-Logic utilization (in ALMs) : 5,447 / 41,910 ( 13 % )
-Total registers : 2724
+Logic utilization (in ALMs) : 4,877 / 41,910 ( 12 % )
+Total registers : 2840
 Total pins : 36 / 314 ( 11 % )
 Total virtual pins : 0
-Total block memory bits : 2,601,696 / 5,662,720 ( 46 % )
-Total RAM Blocks : 339 / 553 ( 61 % )
+Total block memory bits : 2,665,184 / 5,662,720 ( 47 % )
+Total RAM Blocks : 352 / 553 ( 64 % )
 Total DSP Blocks : 1 / 112 ( < 1 % )
 Total HSSI RX PCSs : 0
 Total HSSI PMA RX Deserializers : 0
@@ -48,10 +48,10 @@ __*Not necessarily the most recent build, used for indicative purporses and moni
 
 ```
 Info: Device utilisation:
-Info:          TRELLIS_SLICE: 11411/41820    27%
+Info:          TRELLIS_SLICE: 10780/41820    25%
 Info:             TRELLIS_IO:    34/  365     9%
 Info:                   DCCA:     4/   56     7%
-Info:                 DP16KD:   176/  208    84%
+Info:                 DP16KD:   183/  208    87%
 Info:             MULT18X18D:     6/  156     3%
 Info:                 ALU54B:     0/   78     0%
 Info:                EHXPLLL:     2/    4    50%

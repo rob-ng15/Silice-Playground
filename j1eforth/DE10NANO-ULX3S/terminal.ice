@@ -16,7 +16,7 @@ algorithm terminal(
     output  uint3    terminal_active
 ) <autorun> {
     // Character ROM 8x8 x 256
-    uint8 characterGenerator8x8[] = {
+    brom uint8 characterGenerator8x8[] = {
         $include('ROM/characterROM8x8.inc')
     };
     
@@ -28,7 +28,7 @@ algorithm terminal(
     uint3 terminal_y = 7;
 
     // Character position on the terminal x 0-79, y 0-7 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
-    uint7 xterminalpos := ( pix_active ? pix_x + 1 : 0 ) >> 3;
+    uint7 xterminalpos := ( pix_active ? (pix_x < 640 ) ? pix_x + 2 : 0 : 0 ) >> 3;
     uint10 yterminalpos := (( pix_vblank ? 0 : pix_y - 416 ) >> 3) * 80; // 8 pixel high characters
 
     // Determine if cursor, and if cursor is flashing
@@ -39,7 +39,7 @@ algorithm terminal(
     uint3 yinterminal := (pix_y) & 7;
 
     // Derive the actual pixel in the current terminal
-    uint1 terminalpixel := characterGenerator8x8[ terminal.rdata0 * 8 + yinterminal ][7 - xinterminal,1];
+    uint1 terminalpixel := characterGenerator8x8.rdata[7 - xinterminal,1];
     
     // Terminal active (scroll) flag and temporary storage for scrolling
     uint10 terminal_scroll = 0;
@@ -52,6 +52,9 @@ algorithm terminal(
     // Setup the writing to the terminal memory
     terminal.wenable1 := 0;
 
+    // Setup the reading of the characterGenerator8x8 ROM
+    characterGenerator8x8.addr :=  terminal.rdata0 * 8 + yinterminal;
+    
     // Default to transparent and active pixels always blue
     terminal_display := pix_active & showterminal & (pix_y > 415);
     pix_blue := $color_depth$==6 ? 63 : 255;
@@ -142,17 +145,17 @@ algorithm terminal(
 
     // Render the terminal
     while(1) {
-        if( pix_active & showterminal & (pix_y > 415) ) {
+        if( pix_active & showterminal && (pix_y > 415) ) {
             // TERMINAL is in range and showterminal flag
             // Invert colours for cursor if flashing
             switch( terminalpixel ) {
                 case 0: {
-                    pix_red = ( is_cursor & timer1hz ) ? $color_depth$==6 ? 63 : 255 : 0;
-                    pix_green = ( is_cursor & timer1hz ) ? $color_depth$==6 ? 63 : 255 : 0;
+                    pix_red = ( is_cursor && timer1hz ) ? $color_depth$==6 ? 63 : 255 : 0;
+                    pix_green = ( is_cursor && timer1hz ) ? $color_depth$==6 ? 63 : 255 : 0;
                 }
                 case 1: {
-                    pix_red = ( is_cursor & timer1hz ) ? 0 : $color_depth$==6 ? 63 : 255;
-                    pix_green = ( is_cursor & timer1hz ) ? 0 : $color_depth$==6 ? 63 : 255;
+                    pix_red = ( is_cursor && timer1hz ) ? 0 : $color_depth$==6 ? 63 : 255;
+                    pix_green = ( is_cursor && timer1hz ) ? 0 : $color_depth$==6 ? 63 : 255;
                 }
             }
         }
