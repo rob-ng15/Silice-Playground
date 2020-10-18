@@ -401,6 +401,7 @@ _Coded, still misses the odd line. Wired in to memory map and extra j1eforth wor
 * Each vertex is a displacement from 0, 0 in the range -31 to 0 to 31
     * Each vertex has an active flag
         * When drawing the vector block, the vector drawer will stop when it reaches and inactive vertex
+* Tightly coupled to the GPU. The vectors are directly sent to the GPU, when the GPU is ready, when not active
         
 When drawing a vector block, a colour, x-centre, y-centre and vector block number is provided. This should be quicker than specifiying each line to draw in Forth code, as the vector drawer will send the next vector to the GPU as soon as the previous one is rendered, and will continue in the background with no further intervention from the Forth code.
 
@@ -445,9 +446,10 @@ ff87 | Set the display list entry x for writing
 ff88 | Set the display list entry y for writing
 ff89 | Set the display list entry p0 for writing
 ff8a | Set the display list entry p1 for writing
-ff8b | Write the display list entry to the display list
+ff8b | Write the display list entry to the display list<br>1 - Replace entry, 2 - Update via update flag, 3 - Update active status, 4 - Update colour, 5 - Update x, 6 - Update y, 7 - Update p0, 8 - Update p1
 
 ### BACKGROUND
+
 * Implement more patterns
 
 ## Notes

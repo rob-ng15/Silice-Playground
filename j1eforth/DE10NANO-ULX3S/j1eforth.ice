@@ -307,27 +307,18 @@ $$end
         sprite_layer_display :> lower_sprites_display
     );
         
-    // Bitmap Window and GPU
+    // Bitmap Window
     uint$color_depth$   bitmap_r = uninitialized;
     uint$color_depth$   bitmap_g = uninitialized;
     uint$color_depth$   bitmap_b = uninitialized;
+    // From GPU to set a pixel
     uint1               bitmap_display = uninitialized;
     int11               bitmap_x_write = uninitialized;
     int11               bitmap_y_write = uninitialized;
     uint7               bitmap_colour_write = uninitialized;
     uint2               bitmap_write = uninitialized;
     uint3               bitmapcolour_fade = uninitialized;
-    uint4               gpu_active = uninitialized;
     
-    gpu gpu_processor <@video_clock,!video_reset> (
-        bitmap_x_write :> bitmap_x_write,
-        bitmap_y_write :> bitmap_y_write,
-        bitmap_colour_write :> bitmap_colour_write,
-        bitmapcolour_fade :> bitmapcolour_fade,
-        bitmap_write :> bitmap_write,
-        gpu_active :> gpu_active
-    );
-
     bitmap bitmap_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -445,29 +436,19 @@ $$end
         audio_output :> audio_r,
     );
 
-    // Vector drawer
-    // Sync'd with system clock 50MHz
+    // GPU, VECTOR DRAWER and DISPLAY LIST DRAWER
+    // The GPU sends rendered pixels to the BITMAP LAYER
+    // The VECTOR DRAWER sends lines to be rendered
+    // The DISPLAY LIST DRAWER can send pixels, rectangles, lines, circles, blit1s to the GPU 
+    // and vector blocks to draw to the VECTOR DRAWER
+    // VECTOR DRAWER to GPU
     int11   v_gpu_x = uninitialized;
     int11   v_gpu_y = uninitialized;
     uint7   v_gpu_colour = uninitialized;
     int11   v_gpu_param0 = uninitialized;
     int11   v_gpu_param1 = uninitialized;
     uint4   v_gpu_write = uninitialized;
-    uint3   vector_block_active = uninitialized;
-    
-    vectors vector_drawer (
-        gpu_x :> v_gpu_x,
-        gpu_y :> v_gpu_y,
-        gpu_colour :> v_gpu_colour,
-        gpu_param0 :> v_gpu_param0,
-        gpu_param1 :> v_gpu_param1,
-        gpu_write :> v_gpu_write,
-        vector_block_active :> vector_block_active,
-        gpu_active <: gpu_active
-    );
-
-    // Display list
-    // Sync'd with system clock 50MHz
+    // Display list to GPU or VECTOR DRAWER
     int11   dl_gpu_x = uninitialized;
     int11   dl_gpu_y = uninitialized;
     uint7   dl_gpu_colour = uninitialized;
@@ -478,9 +459,54 @@ $$end
     uint7   dl_vector_block_colour = uninitialized;
     int11   dl_vector_block_xc = uninitialized;
     int11   dl_vector_block_yc =uninitialized;
-    uint1   dl_draw_vector = uninitialized;
-    
-    displaylist displaylist_drawer (
+    uint1   dl_draw_vector = uninitialized;   
+    // Status flags
+    uint3   vector_block_active = uninitialized;
+    uint4   gpu_active = uninitialized;
+
+    gpu gpu_processor <@video_clock,!video_reset> (
+        bitmap_x_write :> bitmap_x_write,
+        bitmap_y_write :> bitmap_y_write,
+        bitmap_colour_write :> bitmap_colour_write,
+        bitmapcolour_fade :> bitmapcolour_fade,
+        bitmap_write :> bitmap_write,
+        gpu_active :> gpu_active,
+
+        v_gpu_x <: v_gpu_x,
+        v_gpu_y <: v_gpu_y,
+        v_gpu_colour <: v_gpu_colour,
+        v_gpu_param0 <: v_gpu_param0,
+        v_gpu_param1 <: v_gpu_param1,
+        v_gpu_write <: v_gpu_write,
+
+        dl_gpu_x <: dl_gpu_x,
+        dl_gpu_y <: dl_gpu_y,
+        dl_gpu_colour <: dl_gpu_colour,
+        dl_gpu_param0 <: dl_gpu_param0,
+        dl_gpu_param1 <: dl_gpu_param1,
+        dl_gpu_write <: dl_gpu_write
+    );
+
+    // Vector drawer
+    vectors vector_drawer <@video_clock,!video_reset> (
+        gpu_x :> v_gpu_x,
+        gpu_y :> v_gpu_y,
+        gpu_colour :> v_gpu_colour,
+        gpu_param0 :> v_gpu_param0,
+        gpu_param1 :> v_gpu_param1,
+        gpu_write :> v_gpu_write,
+        vector_block_active :> vector_block_active,
+        gpu_active <: gpu_active,
+
+        dl_vector_block_number <: dl_vector_block_number,
+        dl_vector_block_colour <: dl_vector_block_colour,
+        dl_vector_block_xc <: dl_vector_block_xc,
+        dl_vector_block_yc <: dl_vector_block_yc,
+        dl_draw_vector <: dl_draw_vector,
+    );
+
+    // Display list
+    displaylist displaylist_drawer <@video_clock,!video_reset> (
         gpu_x :> dl_gpu_x,
         gpu_y :> dl_gpu_y,
         gpu_colour :> dl_gpu_colour,
@@ -494,7 +520,6 @@ $$end
         draw_vector :> dl_draw_vector,
         vector_block_active <: vector_block_active,
         gpu_active <: gpu_active
-
     );
     
     // J1+ CPU
@@ -596,35 +621,6 @@ $$end
             uo.data_in      = uartOutBuffer.rdata0; 
             uo.data_in_ready     = 1;
             uartOutBufferNext = uartOutBufferNext + 1;
-        }
-
-        // Communicate with VECTORS and DISPLAY LISTS
-        // Send VECTOR line to GPU
-        if( v_gpu_write == 3 ) {
-            gpu_processor.gpu_x = v_gpu_x;
-            gpu_processor.gpu_y = v_gpu_y;
-            gpu_processor.gpu_colour = v_gpu_colour;
-            gpu_processor.gpu_param0 = v_gpu_param0;
-            gpu_processor.gpu_param1 = v_gpu_param1;
-            gpu_processor.gpu_write = v_gpu_write;
-        }
-
-        // Send DISPLAY LIST to GPU
-        if( dl_gpu_write > 0 ) {
-            gpu_processor.gpu_x = dl_gpu_x;
-            gpu_processor.gpu_y = dl_gpu_y;
-            gpu_processor.gpu_colour = dl_gpu_colour;
-            gpu_processor.gpu_param0 = dl_gpu_param0;
-            gpu_processor.gpu_param1 = dl_gpu_param1;
-            gpu_processor.gpu_write = dl_gpu_write;
-        }
-        // Send DISPLAY LIST to VECTOR
-        if( displaylist_drawer.draw_vector > 0 ) {
-            vector_drawer.vector_block_number = dl_vector_block_number;
-            vector_drawer.vector_block_colour = dl_vector_block_colour;
-            vector_drawer.vector_block_xc = dl_vector_block_xc;
-            vector_drawer.vector_block_yc = dl_vector_block_yc;
-            vector_drawer.draw_vector = dl_draw_vector;
         }
     }
     

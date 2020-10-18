@@ -20,15 +20,15 @@ algorithm displaylist(
     input   uint11  writer_p1,
     input   uint4   writer_write,
 
-    // Communication with the GPU via j1eforth always{} block
-    output!  int11 gpu_x,
-    output!  int11 gpu_y,
-    output!  uint7 gpu_colour,
-    output!  int11 gpu_param0,
-    output!  int11 gpu_param1,
-    output!  uint4 gpu_write,
+    // Communication with the GPU
+    output  int11 gpu_x,
+    output  int11 gpu_y,
+    output  uint7 gpu_colour,
+    output  int11 gpu_param0,
+    output  int11 gpu_param1,
+    output  uint4 gpu_write,
 
-    // Communication with the VECTOR DRAWER via j1eforth always{} block
+    // Communication with the VECTOR DRAWER
     output  uint5   vector_block_number,
     output  uint7   vector_block_colour,
     output  int11   vector_block_xc,
@@ -103,7 +103,7 @@ algorithm displaylist(
                 p1.wenable1 = 1;
             }
             case 2: {
-                // Update entry according to update flag { wrap, Arrggbb, 4-bit y-delta, 4-bit x-delta }
+                // Update entry according to update flag { 6-bit y-delta, 6-bit x-delta range -31 to 0 to 31 }
                 // NB: deltas for rectangles move x, y, p0, p1
             }
             // Update individual components

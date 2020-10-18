@@ -23,14 +23,21 @@ algorithm vectors(
     
     output  uint3   vector_block_active,
     
-    // Communication with the GPU via j1eforth always{} block
+    // Communication with the GPU
     output  int11 gpu_x,
     output  int11 gpu_y,
     output  uint7 gpu_colour,
     output  int11 gpu_param0,
     output  int11 gpu_param1,
     output  uint4 gpu_write,
-    
+
+    // Communication from the DISPLAY LIST DRAWER
+    input  uint5   dl_vector_block_number,
+    input  uint7   dl_vector_block_colour,
+    input  int11   dl_vector_block_xc,
+    input  int11   dl_vector_block_yc,
+    input  uint1   dl_draw_vector,
+
     input  uint4 gpu_active
 ) <autorun> {
     // 32 vector blocks each of 16 vertices
@@ -42,25 +49,26 @@ algorithm vectors(
     int11 deltax := { {6{dx.rdata0[5,1]}}, dx.rdata0[0,5] };
     int11 deltay := { {6{dy.rdata0[5,1]}}, dy.rdata0[0,5]  };
     
-    // Vertices being processed, plus starting coordinates
+    // Vertices being processed, plus first coordinate of each line
+    uint5 block_number = uninitialised;
     uint4 vertices_number = uninitialised;
     int11 start_x = uninitialised;
     int11 start_y = uninitialised;
     
     // Set read and write address for the vertices
-    A.addr0 := vector_block_number * 16 + vertices_number;
+    A.addr0 := block_number * 16 + vertices_number;
     A.wenable0 := 0;
     A.addr1 := vertices_writer_block * 16 + vertices_writer_vertex;
     A.wdata1 := vertices_writer_active;
     A.wenable1 := vertices_writer_write;
     
-    dx.addr0 := vector_block_number * 16 + vertices_number;
+    dx.addr0 := block_number * 16 + vertices_number;
     dx.wenable0 := 0;
     dx.addr1 := vertices_writer_block * 16 + vertices_writer_vertex;
     dx.wdata1 := vertices_writer_xdelta;
     dx.wenable1 := vertices_writer_write;
     
-    dy.addr0 := vector_block_number * 16 + vertices_number;
+    dy.addr0 := block_number * 16 + vertices_number;
     dy.wenable0 := 0;
     dy.addr1 := vertices_writer_block * 16 + vertices_writer_vertex;
     dy.wdata1 := vertices_writer_ydelta;
@@ -69,7 +77,9 @@ algorithm vectors(
     gpu_write := 0;
 
     always {
-        vector_block_active = ( draw_vector ) ? 1 : vector_block_active;
+        vector_block_active = ( draw_vector ) ? 1 : ( dl_draw_vector) ? 1 : vector_block_active;
+        block_number = ( draw_vector ) ? vector_block_number : ( dl_draw_vector) ? dl_vector_block_number : block_number ;
+        gpu_colour = ( draw_vector ) ? vector_block_colour : ( dl_draw_vector) ? dl_vector_block_colour : gpu_colour;
     }
     
     vector_block_active = 0;
@@ -101,7 +111,6 @@ algorithm vectors(
                 // Send the line to the GPU
                 gpu_x = start_x;
                 gpu_y = start_y;
-                gpu_colour = vector_block_colour;
                 gpu_param0 = vector_block_xc + deltax;
                 gpu_param1 = vector_block_yc + deltay;
                 gpu_write = 3;
@@ -113,8 +122,8 @@ algorithm vectors(
                 vector_block_active = ( vertices_number < 15 ) ? 3 : 0;
             }
             default: {
-                vertices_number = 0;
                 vector_block_active = 0;
+                vertices_number = 0;
             }
         }
     }
