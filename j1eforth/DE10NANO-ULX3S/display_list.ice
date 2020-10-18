@@ -35,9 +35,9 @@ algorithm displaylist(
     output  int11   vector_block_yc,
     output  uint1   draw_vector,
     
-    output   uint3   display_list_active,
-    input    uint4   gpu_active,
-    input    uint3   vector_block_active
+    output  uint3   display_list_active,
+    input   uint4   gpu_active,
+    input   uint3   vector_block_active
 ) {
     // 256 display list entries
     dualport_bram uint1 A[256] = { 1, 1, pad(uninitialised) };    
@@ -105,6 +105,7 @@ algorithm displaylist(
             case 2: {
                 // Update entry according to update flag { 6-bit y-delta, 6-bit x-delta range -31 to 0 to 31 }
                 // NB: deltas for rectangles move x, y, p0, p1
+                // Vector blocks will wrap when offscreen ( 32 pixels )
             }
             // Update individual components
             case 3: { A.wenable1 = 1; }
@@ -114,27 +115,42 @@ algorithm displaylist(
             case 7: { p0.wenable1 = 1; }
             case 8: { p1.wenable1 = 1; }
         }
-        
-        display_list_active = ( start_displaylist > 0 ) ? 1 : 0;
     }
     
     while(1) {
         switch( display_list_active ) {
+            case 0: {
+                entry_number = start_entry;
+                finish_number = finish_entry;
+                if( start_displaylist == 1 ) {
+                    display_list_active = 1;
+                }
+            }
             case 1: {
-                // Delay to allow reading of the next entry
+                // Start the start and finish position
+                entry_number = start_entry;
+                finish_number = finish_entry;
                 display_list_active = 2;
             }
             case 2: {
-                if( A.rdata0  ) {
-                    // Await GPU and VECTOR DRAWER
-                    display_list_active = ( ( gpu_active > 0)  | ( vector_block_active > 0 ) ) ? 2 : 3;
-                } else {
-                    // Move to the next entry
-                    entry_number = ( entry_number < finish_number ) ? entry_number + 1 : start_entry;
-                    display_list_active = ( entry_number < finish_number ) ? 1 : 0;
-                }
+                // Delay to allow reading of the next entry
+                display_list_active = 3;
             }
             case 3: {
+                // Delay to allow reading of the next entry
+                display_list_active = 4;
+            }
+            case 4: {
+                if( A.rdata0  ) {
+                    // Await GPU and VECTOR DRAWER
+                    display_list_active = ( ( gpu_active > 0)  | ( vector_block_active > 0 ) ) ? 4 : 5;
+                } else {
+                    // Move to the next entry
+                    entry_number = ( entry_number == finish_number ) ?  start_entry : entry_number + 1;
+                    display_list_active = ( entry_number == finish_number ) ? 2 : 0;
+                }
+            }
+            case 5: {
                 // Dispatch entry to GPU or vector block
                 switch( command.rdata0 ) {
                     case 14: {
@@ -156,13 +172,11 @@ algorithm displaylist(
                     }
                 }
                 // Move to the next entry
-                entry_number = ( entry_number < finish_number ) ? entry_number + 1 : start_entry;
-                display_list_active = ( entry_number < finish_number ) ? 1 : 0;
+                entry_number = ( entry_number == finish_number ) ? start_entry : entry_number + 1;
+                display_list_active = ( entry_number == finish_number ) ? 0 : 2;
             }
             default: {
                 display_list_active = 0;
-                entry_number = start_entry;
-                finish_number = finish_entry;
             }
         }
     }

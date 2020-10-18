@@ -231,7 +231,7 @@ blit1! | Example ```f 0 10 10 blit1!``` blits tilemap tile 0 to 10,10 in colour 
 blit1tile! | Example (put 16 16bit bitmap lines to the stack) ```0 bit1tile!``` sets a blit1 tilemap tile 0 to the 16 bitmap lines
 cs! | Example ```cs!``` clears the bitmap (sets to transparent)
 
-_```gpu?``` writes the GPU busy flag to the stack, and ```gpu!``` will start the GPU according to the action from the stack. ALl of the above BITMAP and GPU words query the GPU busy flag before commiting their action to the GPU_.
+_```gpu?``` waits whilst the GPU is busy, and ```gpu!``` will start the GPU according to the action from the stack. ALl of the above BITMAP and GPU words query the GPU busy flag before commiting their action to the GPU_.
 
 ### Upper Sprite Layer
 
@@ -418,7 +418,15 @@ ff77 | Set the x delta of the vertex for writing
 ff78 | Set the y delta of the vertex for writing
 ff79 | Set the active status of the vertex for writing
 ff7a | Write the vertex to the vector block
-        
+
+#### j1eforth VECTOR DRAWER words
+
+VECTOR<br>DRAWER<br>Word | Usage
+----- | -----
+vectorvertex! | Example ```1 -6 -18 a 0 vectorvertex!``` sets vertex 0 in vector block a to -6, -18 and active
+vector? | Example ```vector?``` waits whilst the VECTOR DRAWER is busy
+vector! | Example ```c 50 50 9 vector!``` draws vector block 9 centred at 50, 50 in colour c 
+
 ### DISPLAY LIST
 
 _Partially coded. No extra j1eforth words added._
@@ -447,6 +455,13 @@ ff88 | Set the display list entry y for writing
 ff89 | Set the display list entry p0 for writing
 ff8a | Set the display list entry p1 for writing
 ff8b | Write the display list entry to the display list<br>1 - Replace entry, 2 - Update via update flag, 3 - Update active status, 4 - Update colour, 5 - Update x, 6 - Update y, 7 - Update p0, 8 - Update p1
+
+#### j1eforth DISPLAY LIST words
+
+DISPLAY<br>LIST<br>Word | Usage
+----- | -----
+dlentry! | Example ```1 2 3f 10 10 20 20 0 dlentry!!``` sets display list entry 0 to active, command 2 (GPU rectanlge) in colour 3f from 10, 10 to 20, 20
+dlstart! | Example ```8 10 dlstart!``` starts the display list to draw entries 8 to 10
 
 ### BACKGROUND
 

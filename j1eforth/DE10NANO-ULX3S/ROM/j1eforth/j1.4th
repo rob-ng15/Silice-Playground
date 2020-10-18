@@ -940,6 +940,7 @@ t: 2over >r >r 2dup r> r> rot >r rot r> t;
 t: 2swap rot >r rot r> t;
 t: 2nip rot drop rot drop t;
 t: 2rot 2>r 2swap 2r> 2swap t;
+t: d0= or 0= t;
 t: d= >r rot xor swap r> xor or 0= t;
 t: d+ rot + >r over + dup rot u< if r> 1+ else r> then t;
 t: d- dnegate d+ t;
@@ -976,7 +977,7 @@ t: timer1khz? begin ffee literal @ 0= until t;
 t: sleep ffef literal ! begin ffef literal @ 0= until t;
 
 ( DISPLAY helper words )
-t: vblank? begin ffff literal @ 1 literal = until t;
+t: vblank? begin ffff literal @ 0<> until t;
 
 t: background! fff2 literal ! fff1 literal ! fff0 literal ! t;
 
@@ -1000,6 +1001,10 @@ t: uslupdate! ff40 literal ! ff4c literal ! t;
 t: vectorvertex! ff76 literal ! ff75 literal ! ff78 literal ! ff77 literal ! ff79 literal ! 1 literal ff7a literal ! t;
 t: vector? begin ff74 literal @ 0= until t;
 t: vector! vector? ff70 literal ! ff73 literal ! ff72 literal ! ff71 literal ! 1 literal ff74 literal ! t;
+
+t: dlentry! ff83 literal ! ff8a literal ! ff89 literal ! ff88 literal ! ff87 literal ! ff86 literal ! ff85 literal ! ff84 literal ! 1 literal ff8b literal ! t;
+t: dlstart! ff81 literal ! ff80 literal ! 1 literal ff82 literal ! t;
+t: dl? begin ff82 literal @ 0= until t;
 
 t: tpu! ff15 literal ! t;
 t: tpuxy! ( x y ) ff11 literal ! ff10 literal ! 1 literal tpu! t;

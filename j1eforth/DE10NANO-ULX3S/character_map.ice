@@ -41,9 +41,9 @@ algorithm character_map(
     uint4 yincharacter := (pix_y) & 15;
 
     // Derive the actual pixel in the current character
-    uint1 characterpixel := ((characterGenerator8x16[ character.rdata0 * 16 + yincharacter ] << xincharacter) >> 7) & 1;
+    uint1 characterpixel := characterGenerator8x16[ character.rdata0 * 16 + yincharacter ][7 - xincharacter,1];
 
-    // TPU work variable storage
+    // TPU character position
     uint7 tpu_active_x = 0;
     uint5 tpu_active_y = 0;
 

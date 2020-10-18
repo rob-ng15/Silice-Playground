@@ -1,4 +1,3 @@
-```
 variable lasttimer
 
 ( set bullet sprite )
@@ -51,7 +50,7 @@ variable lasttimer
 1 0 -10 9 d vectorvertex!
 
 ( set big asteroid 3 block )
-1 -6 -18 a 0 vectorvertex!
+1 -6 -14 a 0 vectorvertex!
 1 8 -f a 1 vectorvertex!
 1 8 -1 a 2 vectorvertex!
 1 f -6 a 3 vectorvertex!
@@ -63,7 +62,7 @@ variable lasttimer
 1 -11 11 a 9 vectorvertex!
 1 -11 0 a a vectorvertex!
 1 -10 -7 a b vectorvertex!
-1 - -18 a c vectorvertex!
+1 -6 -14 a c vectorvertex!
 
 : beepboop
   timer1hz@ lasttimer @ <>
@@ -75,12 +74,12 @@ variable lasttimer
       0 2 1f4 beepR! then
   then ;
 
-: demo
+: demoULX3S
   timer1hz! 0 lasttimer !
-  15 0 7 background! cs!
+  2a 0 7 background! cs!
   begin
     beepboop
-    14 timer1khz! vblank? cs!
+    14 timer1khz! cs!
     138 0 uslupdate!
     3f 140 f0 0 vector!
     3 100 100 8 vector!
@@ -89,9 +88,25 @@ variable lasttimer
     buttons@ 2 and 0<> if 
       140 f0 3f 0 1 0 uslsprite!
       4 3d 80 beep! then
-    timer1khz?
+      timer1khz? vblank?
     buttons@ 4 and 0<>
   until ;
 
-
-```
+: demoDE10NANO
+  timer1hz! 0 lasttimer !
+  2a 0 7 background! cs!
+  begin
+    beepboop
+    14 timer1khz! vblank? cs!
+    138 0 uslupdate!
+    3f 140 f0 0 vector!
+    3 100 100 8 vector!
+    c 50 50 9 vector!
+    33 200 f0 a vector!
+    buttons@ 2 and 0= if 
+      140 f0 3f 0 1 0 uslsprite!
+      4 3d 80 beep! then
+    timer1khz?
+    buttons@ 1 and 0=
+  until ;
+  

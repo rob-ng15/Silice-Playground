@@ -220,12 +220,8 @@ closeencounters
 active command colour x y p0 p1 entry displaylist!
 
 ```
-: displaylist!
-  ff83 !
-  ff8a ! ff89 !  ff88 ! ff87 ! ff86 ! ff85 ! ff84 !
-  1 ff8b ! ;
-  
-1 2 3f 10 10 20 20 0 displaylist!
-1 4 3 50 50 20 0 1 displaylist!
+1 2 3f 10 10 20 20 0 dlentry!!
+1 4 3 50 50 20 0 1 dlentry!
+0 1 dlstart!
 
 ```

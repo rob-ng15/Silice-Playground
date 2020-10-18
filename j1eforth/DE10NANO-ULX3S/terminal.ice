@@ -39,8 +39,8 @@ algorithm terminal(
     uint3 yinterminal := (pix_y) & 7;
 
     // Derive the actual pixel in the current terminal
-    uint1 terminalpixel := ((characterGenerator8x8[ terminal.rdata0 * 8 + yinterminal ] << xinterminal) >> 7) & 1;
-
+    uint1 terminalpixel := characterGenerator8x8[ terminal.rdata0 * 8 + yinterminal ][7 - xinterminal,1];
+    
     // Terminal active (scroll) flag and temporary storage for scrolling
     uint10 terminal_scroll = 0;
     uint10 terminal_scroll_next = 0;

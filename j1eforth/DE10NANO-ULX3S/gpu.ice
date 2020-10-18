@@ -362,7 +362,7 @@ algorithm gpu(
             case 15: {
                 // 1 bit BLITTER
                 // Draw pixel, move to next pixel
-                if( (( blit1tilemap.rdata0 << gpu_active_x ) >> 15) & 1 ) {
+                if( blit1tilemap.rdata0[15 -gpu_active_x,1] ) {
                     bitmap_x_write = gpu_x1 + gpu_active_x;
                     bitmap_y_write = gpu_y1 + gpu_active_y;
                     bitmap_colour_write = gpu_active_colour;
