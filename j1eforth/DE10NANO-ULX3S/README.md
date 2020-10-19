@@ -137,6 +137,8 @@ background! | Example: ```3 2 4 background!``` Sets the background to a HUGE blu
     * 8 x 16 x 16 1 bit sprites
     * 4 user settable tiles per sprite
     * fader level
+    * In layer sprite collision detection, updates at the end of every frame
+    * Sprite to bitmap collision detection, updates at the end of every frame
 
 The lower sprite layer displays between the background and the bitmap; the upper sprite layers displays between the bitmap and the character map.
 
@@ -155,17 +157,19 @@ ff31 | Set _ASN_ active | Read _ASN_ active
 ff32 | Set _ASN_ tile number | Read _ASN_ tile number
 ff33 | Set _ASN_ colour | Read _ASN_ colour
 ff34 | Set _ASN_ x coordinate | Read _ASN_ x coordinate
-ff35 | Set _ASN_ y coordinate | Read _ASN_ coordinate
-ff36 | Set __Tile Map Writer Sprite Number__ referred to as _TMWSN_ in the following<br> |
-ff37 | Set _TMWSN_ tile map line ( 0 - 63 ) |
-ff38 | Set _TMWSN_ tile map line bitmap |
-ff39 | | Sprites at flag<br>8 bit { sprite7, sprite6 ... sprite0 } flag of which sprites are visible at the x,y coordinate set below<br>Updates every frame whilst the pixel is being rendered
-ff3a | Sprites at x coordinate |
-ff3b | Sprites at y coordinate |
-ff3c | Update a sprite<br>See notes below |
+ff35 | Set _ASN_ y coordinate | Read _ASN_ y coordinate
+ff36 | Set __Tile Map Writer Sprite Number__ referred to as _TMWSN_ in the following<br> | Sprites at flag<br>8 bit { sprite7, sprite6 ... sprite0 } flag of which sprites are visible at the x,y coordinate set below<br>Updates every frame whilst the pixel is being rendered
+ff37 | Set _TMWSN_ tile map line ( 0 - 63 ) | Collision detection flag for sprite 0 { bitmap, 0000000, sprite 7, ... sprite 0 }, updates at the end of every frame
+ff38 | Set _TMWSN_ tile map line bitmap | Collision detection flag for sprite 1 { bitmap, 0000000, sprite 7, ... sprite 0 }, updates at the end of every frame
+ff39 | | Collision detection flag for sprite 2 { bitmap, 0000000, sprite 7, ... sprite 0 }, updates at the end of every frame 
+ff3a | Sprites at x coordinate | Collision detection flag for sprite 3 { bitmap, 0000000, sprite 7, ... sprite 0 }, updates at the end of every frame
+ff3b | Sprites at y coordinate | Collision detection flag for sprite 4 { bitmap, 0000000, sprite 7, ... sprite 0 }, updates at the end of every frame
+ff3c | Update a sprite<br>See notes below | Collision detection flag for sprite 5 { bitmap, 0000000, sprite 7, ... sprite 0 }, updates at the end of every frame
+ff3d | |  Collision detection flag for sprite 6 { bitmap, 0000000, sprite 7, ... sprite 0 }, updates at the end of every frame
+ff3e | |  Collision detection flag for sprite 7 { bitmap, 0000000, sprite 7, ... sprite 0 }, updates at the end of every frame
 ff3f | Set the fade level for the sprite layer
 
-_For the Upper Sprite Layer add ff10 to the address_.
+_For the Upper Sprite Layer add 10 to the address, range ff40 - ff4f_.
 
 #### j1eforth SPRITE LAYER words
 

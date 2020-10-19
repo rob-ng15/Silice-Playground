@@ -226,6 +226,10 @@ algorithm background(
                     pix_red   = colourexpand2to$color_depth$[ colour6(background).red ] >> background_fade;
                     pix_green = colourexpand2to$color_depth$[ colour6(background).green ] >> background_fade;
                     pix_blue  = colourexpand2to$color_depth$[ colour6(background).blue ] >> background_fade;
+                } else {
+                    pix_red   = colourexpand2to$color_depth$[ colour6(background_alt).red ] >> background_fade;
+                    pix_green = colourexpand2to$color_depth$[ colour6(background_alt).green ] >> background_fade;
+                    pix_blue  = colourexpand2to$color_depth$[ colour6(background_alt).blue ] >> background_fade;
                 }
             }                
             default: {}

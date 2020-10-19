@@ -81,19 +81,19 @@ ledtest
 ```
 : setsprites
   4 0 do
-    5555 a0a0 5555 a0a0 5555 a0a0 5555 a0a0
-    5555 a0a0 5555 a0a0 5555 a0a0 5555 a0a0
-    a0a0 5555 a0a0 5555 a0a0 5555 a0a0 5555
-    a0a0 5555 a0a0 5555 a0a0 5555 a0a0 5555
+    5555 aaaa 5555 aaaa 5555 aaaa 5555 aaaa
+    5555 aaaa 5555 aaaa 5555 aaaa 5555 aaaa
+    aaaa 5555 aaaa 5555 aaaa 5555 aaaa 5555
+    aaaa 5555 aaaa 5555 aaaa 5555 aaaa 5555
     701c 1830 820 820 ff8 3938 3938 fffe
     dff6 dff6 9c72 d836 c60 c60 ee0 0
     ffff ffff ffff ffff ffff ffff ffff ffff
     ffff ffff ffff ffff ffff ffff ffff ffff 
     i lsltile!
-    5555 a0a0 5555 a0a0 5555 a0a0 5555 a0a0
-    5555 a0a0 5555 a0a0 5555 a0a0 5555 a0a0
-    a0a0 5555 a0a0 5555 a0a0 5555 a0a0 5555
-    a0a0 5555 a0a0 5555 a0a0 5555 a0a0 5555
+    5555 aaaa 5555 aaaa 5555 aaaa 5555 aaaa
+    5555 aaaa 5555 aaaa 5555 aaaa 5555 aaaa
+    aaaa 5555 aaaa 5555 aaaa 5555 aaaa 5555
+    aaaa 5555 aaaa 5555 aaaa 5555 aaaa 5555
     701c 1830 820 820 ff8 3938 3938 fffe
     dff6 dff6 9c72 d836 c60 c60 ee0 0
     ffff ffff ffff ffff ffff ffff ffff ffff
@@ -159,11 +159,11 @@ screentest
 
 ```
 : setsprites
-  7 0 do
-    5555 a0a0 5555 a0a0 5555 a0a0 5555 a0a0
-    5555 a0a0 5555 a0a0 5555 a0a0 5555 a0a0
-    a0a0 5555 a0a0 5555 a0a0 5555 a0a0 5555
-    a0a0 5555 a0a0 5555 a0a0 5555 a0a0 5555
+  4 0 do
+    5555 aaaa 5555 aaaa 5555 aaaa 5555 aaaa
+    5555 aaaa 5555 aaaa 5555 aaaa 5555 aaaa
+    aaaa 5555 aaaa 5555 aaaa 5555 aaaa 5555
+    aaaa 5555 aaaa 5555 aaaa 5555 aaaa 5555
     701c 1830 820 820 ff8 3938 3938 fffe
     dff6 dff6 9c72 d836 c60 c60 ee0 0
     ffff ffff ffff ffff ffff ffff ffff ffff

@@ -8,6 +8,7 @@ variable lasttimer
   does> cells + ;
 
 ( storage for 32 (20 hex) asteroids )
+
 20 array asteroidtype
 20 array asteroidx
 20 array asteroidy
@@ -76,6 +77,20 @@ variable lasttimer
 1 -10 -7 a b vectorvertex!
 1 -6 -14 a c vectorvertex!
 
+: setup
+  ( hide the terminal )
+  terminalhide!
+  ( reset the second timer )
+  timer1hz! 0 lasttimer !
+  ( set the background )
+  2a 1 7 background! cs!
+  ( hide usl sprite 0 and set monitoring )
+  0 0 0 0 0 0 uslsprite!
+  0 ff40 ! ;
+
+: finish
+ terminalshow! ;
+
 : beepboop
   timer1hz@ lasttimer @ <>
   if
@@ -86,41 +101,52 @@ variable lasttimer
       0 2 1f4 beepR! then
   then ;
 
-: demoULX3S
-  terminalhide!
-  timer1hz! 0 lasttimer !
-  2a 0 7 background! cs!
-  begin
+: fire?
+  ( fire if bullet not active )
+  ff41 @ 0= if
+    140 ef 3f 0 1 0 uslsprite!
+    4 3d 80 beep!
+  then ;
+
+: hit?
+  ( see if the bullet has hit the background )
+  ff47 @ 8000 and if
+    ( explode )
+    1 19 80 beep!
+    ( deactivate the bullet )
+    0 0 0 0 0 0 uslsprite!
+  then ;
+    
+: mainloop
     beepboop
     14 timer1khz! cs!
     138 0 uslupdate!
+    ( copy the bullet coordinates )
+    ff44 @ ff09 !
+    ff45 @ ff0a ! 
     3f 140 f0 0 vector!
-    3 100 100 8 vector!
+    3 140 80 8 vector!
     c 50 50 9 vector!
     33 200 f0 a vector!
+    hit? ;
+
+: demoULX3S
+  setup
+  begin
+    mainloop
     buttons@ 2 and 0<> if 
-      140 f0 3f 0 1 0 uslsprite!
-      4 3d 80 beep! then
+      fire? then
     timer1khz? vblank?
     buttons@ 4 and 0<>
-  until terminalshow! ;
+  until finish ;
 
 : demoDE10NANO
-  terminalhide!
-  timer1hz! 0 lasttimer !
-  2a 0 7 background! cs!
+  setup
   begin
-    beepboop
-    14 timer1khz! cs!
-    138 0 uslupdate!
-    3f 140 f0 0 vector!
-    3 100 100 8 vector!
-    c 50 50 9 vector!
-    33 200 f0 a vector!
+    mainloop
     buttons@ 2 and 0= if 
-      140 f0 3f 0 1 0 uslsprite!
-      4 3d 80 beep! then
+      fire? then
     timer1khz? vblank?
     buttons@ 1 and 0=
-  until terminalshow! ;
+  until finish ;
   

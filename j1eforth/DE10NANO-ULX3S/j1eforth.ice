@@ -294,23 +294,6 @@ $$end
         pix_green  :> background_g,
         pix_blue   :> background_b,
     );
-
-    // Lower Sprite Layer - Between BACKGROUND and BITMAP
-    uint$color_depth$   lower_sprites_r = uninitialized;
-    uint$color_depth$   lower_sprites_g = uninitialized;
-    uint$color_depth$   lower_sprites_b = uninitialized;
-    uint1               lower_sprites_display = uninitialized;
-    
-    sprite_layer lower_sprites <@video_clock,!video_reset> (
-        pix_x      <: pix_x,
-        pix_y      <: pix_y,
-        pix_active <: active,
-        pix_vblank <: vblank,
-        pix_red    :> lower_sprites_r,
-        pix_green  :> lower_sprites_g,
-        pix_blue   :> lower_sprites_b,
-        sprite_layer_display :> lower_sprites_display
-    );
         
     // Bitmap Window
     uint$color_depth$   bitmap_r = uninitialized;
@@ -340,6 +323,24 @@ $$end
         bitmap_write <: bitmap_write
     );
 
+    // Lower Sprite Layer - Between BACKGROUND and BITMAP
+    uint$color_depth$   lower_sprites_r = uninitialized;
+    uint$color_depth$   lower_sprites_g = uninitialized;
+    uint$color_depth$   lower_sprites_b = uninitialized;
+    uint1               lower_sprites_display = uninitialized;
+    
+    sprite_layer lower_sprites <@video_clock,!video_reset> (
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: active,
+        pix_vblank <: vblank,
+        pix_red    :> lower_sprites_r,
+        pix_green  :> lower_sprites_g,
+        pix_blue   :> lower_sprites_b,
+        sprite_layer_display :> lower_sprites_display,
+        bitmap_display <: bitmap_display
+    );
+    
     // Upper Sprite Layer - Between BITMAP and CHARACTER MAP
     uint$color_depth$   upper_sprites_r = uninitialized;
     uint$color_depth$   upper_sprites_g = uninitialized;
@@ -354,7 +355,8 @@ $$end
         pix_red    :> upper_sprites_r,
         pix_green  :> upper_sprites_g,
         pix_blue   :> upper_sprites_b,
-        sprite_layer_display :> upper_sprites_display
+        sprite_layer_display :> upper_sprites_display,
+        bitmap_display <: bitmap_display
     );
         
     // Character Map Window
@@ -769,7 +771,15 @@ $$end
                                                 case 16hff33: { newStackTop = lower_sprites.sprite_read_colour; }
                                                 case 16hff34: { newStackTop = lower_sprites.sprite_read_x; }
                                                 case 16hff35: { newStackTop = lower_sprites.sprite_read_y; }
-                                                case 16hff39: { newStackTop = lower_sprites.sprites_at_xy; }
+                                                case 16hff36: { newStackTop = lower_sprites.sprites_at_xy; }
+                                                case 16hff37: { newStackTop = lower_sprites.collision_0; }
+                                                case 16hff38: { newStackTop = lower_sprites.collision_1; }
+                                                case 16hff39: { newStackTop = lower_sprites.collision_2; }
+                                                case 16hff3a: { newStackTop = lower_sprites.collision_3; }
+                                                case 16hff3b: { newStackTop = lower_sprites.collision_4; }
+                                                case 16hff3c: { newStackTop = lower_sprites.collision_5; }
+                                                case 16hff3d: { newStackTop = lower_sprites.collision_6; }
+                                                case 16hff3e: { newStackTop = lower_sprites.collision_7; }
                                                 
                                                 // UPPER SPRITES READ
                                                 case 16hff41: { newStackTop = upper_sprites.sprite_read_active; }
@@ -777,7 +787,15 @@ $$end
                                                 case 16hff43: { newStackTop = upper_sprites.sprite_read_colour; }
                                                 case 16hff44: { newStackTop = upper_sprites.sprite_read_x; }
                                                 case 16hff45: { newStackTop = upper_sprites.sprite_read_y; }
-                                                case 16hff49: { newStackTop = upper_sprites.sprites_at_xy; }
+                                                case 16hff46: { newStackTop = upper_sprites.sprites_at_xy; }
+                                                case 16hff47: { newStackTop = upper_sprites.collision_0; }
+                                                case 16hff48: { newStackTop = upper_sprites.collision_1; }
+                                                case 16hff49: { newStackTop = upper_sprites.collision_2; }
+                                                case 16hff4a: { newStackTop = upper_sprites.collision_3; }
+                                                case 16hff4b: { newStackTop = upper_sprites.collision_4; }
+                                                case 16hff4c: { newStackTop = upper_sprites.collision_5; }
+                                                case 16hff4d: { newStackTop = upper_sprites.collision_6; }
+                                                case 16hff4e: { newStackTop = upper_sprites.collision_7; }
                                                 
                                                 // VECTORS
                                                 case 16hff74: { newStackTop = vector_drawer.vector_block_active; }

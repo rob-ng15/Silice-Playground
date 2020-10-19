@@ -38,11 +38,18 @@ algorithm sprite_layer(
     // Flag to set the above
     input   uint4   sprite_layer_write,
 
-    // For determing which sprites are showing ata a given pixel
+    // For determing which sprites are showing at a given pixel
     // Basic collision detection
     input   uint11  sprites_at_x,
     input   uint11  sprites_at_y,
     output  uint16  sprites_at_xy,
+
+    // FULL collision detection
+    // Bitmap is set flag
+    input   uint1   bitmap_display,
+    $$for i=0,7 do
+        output uint16 collision_$i$,
+    $$end
     
     // For setting sprite tile bitmaps
     input   uint3   sprite_writer_sprite,
@@ -51,7 +58,8 @@ algorithm sprite_layer(
     input   uint1   sprite_writer_active,
     
     // SPRITE LAYER fade level
-    input uint3 sprite_layer_fade
+    input uint3 sprite_layer_fade,
+
 ) <autorun> {
     // Expansion map for { rr } to { rrrrrr }, { gg } to { gggggg }, { bb } to { bbbbbb }
     // or { rr } tp { rrrrrrrr }, { gg } to { gggggggg }, { bb } to { bbbbbbbb }
@@ -66,6 +74,11 @@ algorithm sprite_layer(
     uint6 sprite_colour[8] = uninitialised;
     uint2 sprite_tile_number[8] = uninitialised;
 
+    // Collision detection storage
+    $$for i=0,7 do
+        uint16      detect_collision_$i$ = uninitialised;
+    $$end
+    
     // One bram for each sprite
     $$for i=0,7 do
         dualport_bram uint16 sprite_$i$_tiles[64] = uninitialised;
@@ -75,7 +88,8 @@ algorithm sprite_layer(
 
     // Calculate if each sprite is visible
     $$for i=0,7 do
-        uint1 sprite_$i$_visible := sprite_active[$i$] && ( pix_x >= sprite_x[$i$] ) && ( pix_x < sprite_x[$i$] + 16 ) && ( pix_y >= sprite_y[$i$] ) && ( pix_y < sprite_y[$i$] + 16 ) && ( sprite_$i$_tiles.rdata0 >> ( 15 - ( pix_x - sprite_x[$i$] ) ) & 1 );
+        uint4 sprite_$i$_xinsprite := 15 - ( pix_x - sprite_x[$i$] );
+        uint1 sprite_$i$_visible := sprite_active[$i$] && ( pix_x >= sprite_x[$i$] ) && ( pix_x < sprite_x[$i$] + 16 ) && ( pix_y >= sprite_y[$i$] ) && ( pix_y < sprite_y[$i$] + 16 ) && ( sprite_$i$_tiles.rdata0[ sprite_$i$_xinsprite, 1 ] );
     $$end
 
     // Expand Sprite Update Deltas
@@ -148,20 +162,44 @@ algorithm sprite_layer(
     
     // Render the sprite layer
     while(1) {
-        if( pix_active ) {
+        if( pix_vblank ) {
+            // RESET collision detection
             $$for i=0,7 do
-                if( sprite_$i$_visible ) {
-                    pix_red = colourexpand2to$color_depth$[ sprite_colour[$i$] >> 4 ] >> sprite_fade;
-                    pix_green = colourexpand2to$color_depth$[ sprite_colour[$i$] >> 2 ] >> sprite_fade;
-                    pix_blue = colourexpand2to$color_depth$[ sprite_colour[$i$] ] >> sprite_fade;
-                    sprite_layer_display = 1;
-                }
+                detect_collision_$i$ = 0;
             $$end
-            // Perform BASIC collision detection
-            if( ( pix_x == sprites_at_x ) && ( pix_y == sprites_at_y ) ) {
-                sprites_at_xy = {
-                    8b00000000, sprite_7_visible, sprite_6_visible, sprite_5_visible, sprite_4_visible, sprite_3_visible, sprite_2_visible, sprite_1_visible, sprite_0_visible
-                };
+        } else {
+            if( pix_active ) {
+                $$for i=0,7 do
+                    if( sprite_$i$_visible ) {
+                        pix_red = colourexpand2to$color_depth$[ sprite_colour[$i$] >> 4 ] >> sprite_fade;
+                        pix_green = colourexpand2to$color_depth$[ sprite_colour[$i$] >> 2 ] >> sprite_fade;
+                        pix_blue = colourexpand2to$color_depth$[ sprite_colour[$i$] ] >> sprite_fade;
+                        sprite_layer_display = 1;
+                    }
+                $$end
+                
+                // Perform BASIC collision detection ( ALL of the sprites at x,y )
+                if( ( pix_x == sprites_at_x ) && ( pix_y == sprites_at_y ) ) {
+                    sprites_at_xy = {
+                        8b00000000, sprite_7_visible, sprite_6_visible, sprite_5_visible, sprite_4_visible, sprite_3_visible, sprite_2_visible, sprite_1_visible, sprite_0_visible
+                    };
+                }
+                
+                // Perform collision detection
+                $$for i=0,7 do
+                    if( sprite_$i$_visible ) {
+                        detect_collision_$i$ = detect_collision_$i$ | {
+                            bitmap_display, 7b00000000, sprite_7_visible, sprite_6_visible, sprite_5_visible, sprite_4_visible, sprite_3_visible, sprite_2_visible, sprite_1_visible, sprite_0_visible
+                        };
+                    }
+                $$end
+                
+                // Output collision detection
+                if( ( pix_x == 639 ) && ( pix_y == 479 ) ) {
+                    $$for i=0,7 do
+                        collision_$i$ = detect_collision_$i$;
+                    $$end
+                }
             }
         }
     }
