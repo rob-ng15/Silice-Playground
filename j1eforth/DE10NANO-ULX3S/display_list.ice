@@ -40,13 +40,13 @@ algorithm displaylist(
     input   uint3   vector_block_active
 ) {
     // 256 display list entries
-    dualport_bram uint1 A[256] = { 1, 1, pad(uninitialised) };    
-    dualport_bram uint4 command[256] = { 2, 4, pad(uninitialised) };    
-    dualport_bram uint7 colour[256] = { 63, 3, pad(uninitialised) };    
-    dualport_bram int11 x[256] = { 10, 100, pad(uninitialised) };    
-    dualport_bram int11 y[256] = { 10, 100, pad(uninitialised) };    
-    dualport_bram int11 p0[256] = { 20, 50, pad(uninitialised) };    
-    dualport_bram int11 p1[256] = { 20, pad(uninitialised) };    
+    dualport_bram uint1 A[256] = uninitialised;    
+    dualport_bram uint4 command[256] = uninitialised;    
+    dualport_bram uint7 colour[256] = uninitialised;    
+    dualport_bram int11 x[256] = uninitialised;    
+    dualport_bram int11 y[256] = uninitialised;    
+    dualport_bram int11 p0[256] = uninitialised;    
+    dualport_bram int11 p1[256] = uninitialised;    
 
     uint8   entry_number = uninitialised;
     uint8   finish_number = uninitialised;
@@ -115,16 +115,16 @@ algorithm displaylist(
             case 7: { p0.wenable1 = 1; }
             case 8: { p1.wenable1 = 1; }
         }
+        
+        if( start_displaylist == 1 ) {
+            display_list_active = 1;
+        }
     }
     
     while(1) {
         switch( display_list_active ) {
-            case 0: {
-                entry_number = start_entry;
-                finish_number = finish_entry;
-                display_list_active = ( start_displaylist == 1 ) ? 1 : 0;
-            }
             case 1: {
+                //gpu_write = 2; gpu_x = 10; gpu_y = 10; gpu_param0 = 20; gpu_param1 = 20; gpu_colour = 63;
                 // Start the start and finish position
                 entry_number = start_entry;
                 finish_number = finish_entry;
@@ -174,6 +174,8 @@ algorithm displaylist(
                 display_list_active = ( entry_number == finish_number ) ? 0 : 2;
             }
             default: {
+                entry_number = start_entry;
+                finish_number = finish_entry;
                 display_list_active = 0;
             }
         }
