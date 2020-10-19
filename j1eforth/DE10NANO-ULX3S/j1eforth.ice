@@ -73,7 +73,53 @@ algorithm multiplex_display(
     }
 }
 
-// J1+ CPU Starts here
+// Create 1hz (1 second counter, also can output the baseline 50MHz counter)
+algorithm pulse1hz(
+    output uint32 counter50mhz,
+    output uint16 counter1hz,
+    input  uint1  resetCounter
+) <autorun> {
+    counter50mhz = 0;
+    counter1hz = 0;
+    
+    while (1) {
+        counter1hz = ( resetCounter == 1 ) ? 0 : ( counter50mhz == 50000000 ) ? counter1hz + 1 : counter1hz;
+        counter50mhz = ( resetCounter == 1 ) ? 0 : ( counter50mhz == 50000000 ) ? 0 : counter50mhz + 1;
+    }
+}
+
+// Create 1khz (1 milli-second counter)
+algorithm pulse1khz(
+    output uint16 counter1khz,
+    input  uint16 resetCount,
+    input  uint1  resetCounter
+) <autorun> {
+    uint32 counter50mhz = 0;
+    
+    while (1) {
+        counter1khz = ( resetCounter == 1 ) ? resetCount : ( counter1khz == 0 ) ? 0 : ( counter50mhz == 50000 ) ? counter1khz - 1 : counter1khz;
+        counter50mhz = ( resetCounter == 1 ) ? 0 : ( counter50mhz == 50000 ) ? 0 : counter50mhz + 1;
+    }
+}
+
+// 16 bit random number generator 
+algorithm random(
+    output  uint16  randomnumber,
+    input   uint32  counter50mhz,
+    input   uint1   resetRandom
+) <autorun> {
+    uint5  q = 5b01010;
+
+    while(1) {
+        if( ( q == 0 ) || resetRandom ) {
+            q = counter50mhz[0,5];
+        } else {
+            q = { q[0,4], q[4,1] ^ q[2,1] };
+            randomnumber = ( randomnumber << 5 ) | q;
+        }
+    }
+}
+
 // BITFIELDS to help with bit/field access
 
 // Instruction is 3 bits 1xx = literal value, 000 = branch, 001 = 0branch, 010 = call, 011 = alu, followed by 13 bits of instruction specific data
@@ -124,35 +170,6 @@ bitfield nibbles {
     uint4   nibble0
 }
 
-// Create 1hz (1 second counter, also can output the baseline 50MHz counter)
-algorithm pulse1hz(
-    output uint32 counter50mhz,
-    output uint16 counter1hz,
-    input  uint1  resetCounter
-) <autorun> {
-    counter50mhz = 0;
-    counter1hz = 0;
-    
-    while (1) {
-        counter1hz = ( resetCounter == 1 ) ? 0 : ( counter50mhz == 50000000 ) ? counter1hz + 1 : counter1hz;
-        counter50mhz = ( resetCounter == 1 ) ? 0 : ( counter50mhz == 50000000 ) ? 0 : counter50mhz + 1;
-    }
-}
-
-// Create 1khz (1 milli-second counter)
-algorithm pulse1khz(
-    output uint16 counter1khz,
-    input  uint16 resetCount,
-    input  uint1  resetCounter
-) <autorun> {
-    uint32 counter50mhz = 0;
-    
-    while (1) {
-        counter1khz = ( resetCounter == 1 ) ? resetCount : ( counter1khz == 0 ) ? 0 : ( counter50mhz == 50000 ) ? counter1khz - 1 : counter1khz;
-        counter50mhz = ( resetCounter == 1 ) ? 0 : ( counter50mhz == 50000 ) ? 0 : counter50mhz + 1;
-    }
-}
-
 algorithm main(
     // LEDS (8 of)
     output  uint8          leds,
@@ -194,6 +211,12 @@ $$end
     // 1khz timers (sleepTimer used for sleep command, timer1khz for user purposes)
     pulse1khz sleepTimer( );
     pulse1khz timer1khz( );
+
+    // RNG random number generator
+    // Uses systemClockMHz to reseed if locked
+    random rng(
+        counter50mhz <: systemClockMHz
+    );
     
     // UART tx and rx
     // UART written in Silice by https://github.com/sylefeb/Silice
@@ -813,6 +836,9 @@ $$end
                                                 case 16hffee: { newStackTop = timer1khz.counter1khz; }
                                                 case 16hffef: { newStackTop = sleepTimer.counter1khz; }
                                                 
+                                                // RNG random number generator
+                                                case 16hffe0: { newStackTop = rng.randomnumber; }
+                                                
                                                 // VBLANK status
                                                 case 16hffff: { newStackTop = vblank; }
                                                 
@@ -969,6 +995,9 @@ $$end
                                     case 16hffe6: { apu_processor_R.duration = stackNext; }
                                     case 16hffe7: { apu_processor_R.apu_write = 1; }
 
+                                    // RNG
+                                    case 16hffe0: { rng.resetRandom = 1; }
+                                    
                                     // TIMERS
                                     case 16hffed: { timer1hz.resetCounter = 1; }
                                     case 16hffee: { timer1khz.resetCount = stackNext; timer1khz.resetCounter = 1; }
@@ -1041,6 +1070,9 @@ $$end
                 sleepTimer.resetCounter = 0;
                 timer1hz.resetCounter = 0;
                 timer1khz.resetCounter = 0;
+                
+                // RESET RNG control
+                rng.resetRandom = 0;
             }
             
             default: {}

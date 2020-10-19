@@ -7,12 +7,38 @@ variable lasttimer
   create cells allot
   does> cells + ;
 
+( helper word to create pseudo random numbers )
+( creates random numbers from 0 to stack-1 )
+
+: rng
+  ffe0 @ swap /mod drop ;
+  
 ( storage for 32 (20 hex) asteroids )
 
+20 array asteroidactive
 20 array asteroidtype
+20 array asteroidcolour
 20 array asteroidx
 20 array asteroidy
-  
+20 array asteroiddirection
+
+( store number of active asteroids )
+variable activeasteroids
+
+( set directions )
+( compass points initially )
+8 array directionx
+8 array directiony
+0 0 directionx ! 1 1 directionx !
+1 2 directionx ! 1 3 directionx !
+0 4 directionx ! -1 5 directionx !
+-1 6 directionx ! -1 7 directionx !
+
+-1 0 directiony ! -1 1 directiony !
+0 2 directiony ! 1 3 directiony !
+1 4 directiony ! 1 5 directiony !
+0 6 directiony ! -1 7 directiony !
+
 ( set bullet sprite )
 8000 0000 0000 0000 0000 0000 0000 0000
 0000 0000 0000 0000 0000 0000 0000 0000
@@ -77,6 +103,60 @@ variable lasttimer
 1 -10 -7 a b vectorvertex!
 1 -6 -14 a c vectorvertex!
 
+: placeasteroids
+  0 activeasteroids !
+  
+  ( set initial colour and deactivate all asteroids )
+  ( colour is used to detect which asteroid )
+  ( the bullet has hit)
+  
+  20 0 do
+    i 10 + i asteroidcolour !
+    0 i asteroidactive !
+    8 rng i asteroiddirection !
+  loop
+  
+  ( place upto 2 asteroid in the top section )
+  3 rng 1+ 0 do
+    activeasteroids @
+    dup 280 rng swap asteroidx !
+    dup a0 rng swap asteroidy !
+    dup 3 rng 8 + swap asteroidtype !
+    1 swap asteroidactive !
+    activeasteroids @ 1+ activeasteroids !
+  loop
+
+  ( place upto 2 asteroid in the bottom section )
+  3 rng 1+ 0 do
+    activeasteroids @
+    dup 280 rng swap asteroidx !
+    dup a0 rng 140 + swap asteroidy !
+    dup 3 rng 8 + swap asteroidtype !
+    1 swap asteroidactive !
+    activeasteroids @ 1+ activeasteroids !
+  loop
+
+  ( place upto 2 asteroid in the left section )
+  3 rng 1+ 0 do
+    activeasteroids @
+    dup d6 rng 1ac + swap asteroidx !
+    dup 1e0 rng swap asteroidy !
+    dup 3 rng 8 + swap asteroidtype !
+    1 swap asteroidactive !
+    activeasteroids @ 1+ activeasteroids !
+  loop
+  
+  ( place upto 2 asteroid in the right section )
+  3 rng 1+ 0 do
+    activeasteroids @
+    dup d6 rng swap asteroidx !
+    dup 1e0 rng swap asteroidy !
+    dup 3 rng 8 + swap asteroidtype !
+    1 swap asteroidactive !
+    activeasteroids @ 1+ activeasteroids !
+  loop
+;
+
 : setup
   ( hide the terminal )
   terminalhide!
@@ -86,7 +166,9 @@ variable lasttimer
   2a 1 7 background! cs!
   ( hide usl sprite 0 and set monitoring )
   0 0 0 0 0 0 uslsprite!
-  0 ff40 ! ;
+  0 ff40 ! 
+  ( randomly place asteroids )
+  placeasteroids ;
 
 : finish
  terminalshow! ;
@@ -116,18 +198,50 @@ variable lasttimer
     ( deactivate the bullet )
     0 0 0 0 0 0 uslsprite!
   then ;
-    
+
+: drawship 
+    3f 140 f0 0 vector!
+;
+
+: wrapasteroid
+  dup dup asteroidx @ 280 /mod drop
+  swap asteroidx !
+  dup asteroidy @ 1e0 /mod drop
+  swap asteroidy !
+  ;
+
+: moveasteroids
+;
+      
+: drawasteroids
+  20 0 do
+    i asteroidactive @ if
+      40
+      i asteroidx @
+      i asteroidy @
+      i asteroidtype @
+      vector!
+      i asteroiddirection @
+      dup directionx @ 
+      i asteroidx @ + i asteroidx !
+      directiony @
+      i asteroidy @ + i asteroidy !
+      i wrapasteroid 
+      i asteroidcolour @
+      i asteroidx @
+      i asteroidy @
+      i asteroidtype @
+      vector!
+    then
+  loop ;
+
 : mainloop
     beepboop
-    14 timer1khz! cs!
     138 0 uslupdate!
     ( copy the bullet coordinates )
     ff44 @ ff09 !
     ff45 @ ff0a ! 
-    3f 140 f0 0 vector!
-    3 140 80 8 vector!
-    c 50 50 9 vector!
-    33 200 f0 a vector!
+    drawasteroids drawship vblank?
     hit? ;
 
 : demoULX3S
@@ -136,7 +250,6 @@ variable lasttimer
     mainloop
     buttons@ 2 and 0<> if 
       fire? then
-    timer1khz? vblank?
     buttons@ 4 and 0<>
   until finish ;
 
@@ -144,9 +257,8 @@ variable lasttimer
   setup
   begin
     mainloop
-    buttons@ 2 and 0= if 
+     buttons@ 2 and 0= if 
       fire? then
-    timer1khz? vblank?
-    buttons@ 1 and 0=
+   buttons@ 1 and 0=
   until finish ;
   

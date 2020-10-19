@@ -342,7 +342,7 @@ C5 (Tenor C) | 25 | 26 | 27 | 28 | 29 | 2a | 2b | 2c | 2d | 2e | 2f | 30
 C6 (Soprano C) | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 3a | 3b | 3c
 C7 (Double High C) | 3d
 
-### Timers
+### Timers and Random Number Generator
 
 * Two 1hz (1 second) counters
     * A systemclock, number of seconds since startup
@@ -352,11 +352,14 @@ C7 (Double High C) | 3d
     * A sleep timer
     * A user resetable timer
 
+* AN LFSR 16 bit pseudo random number generator
+    
 #### Memory Map for the Timers
 
 Hexadecimal<br>Address | Write | Read
 :-----: | ----- | -----
 f004 | | Read the 1hz systemClock
+ffe0 | Reset the 16 bit pseudo random number generator | Read a 16 bit pseudo random number
 ffed | Reset the 1hz user timer | Read the 1hz user timer
 ffee | Start the 1khz user timer | Read the 1khz user timer
 ffef | Start the 1khz sleep timer | Read the 1khz sleep timer
