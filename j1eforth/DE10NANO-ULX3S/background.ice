@@ -7,6 +7,8 @@ algorithm background(
     output! uint$color_depth$ pix_green,
     output! uint$color_depth$ pix_blue,
 
+    input uint16 staticGenerator,
+    
     input uint6 backgroundcolour,
     input uint6 backgroundcolour_alt,
     input uint3 backgroundcolour_mode,
@@ -23,12 +25,6 @@ algorithm background(
     uint3 background_mode = 0;
     uint3 background_fade = 0;
     
-    // Static large number generator
-    uint38 static_0 = 38b10101111110010010001000010100001110001;
-    uint38 static_0a = 38b10101111110010010001000010100001110001;
-    uint27 static_1 = 27b111010101000011010011100001;
-    uint27 static_1a = 27b111010101000011010011100001;
-
     // Variables for SNOW (from @sylefeb)
     int10   dotpos = 0;
     int2    speed = 0;
@@ -50,10 +46,6 @@ algorithm background(
             default: {}
         }
 
-        // Generate static grey scale values
-        static_0a = ( static_0a == 0 ) ? static_0 : static_0a >> 1;
-        static_1a = ( static_0a == 0 ) ? ( static_1a == 0 ) ? static_1 : static_1a >> 1 : static_1a;
-        
         // Increment frame number
         frame = ( ( pix_x == 639 ) && ( pix_y == 470 ) ) ? frame + 1 : frame;
     }
@@ -213,9 +205,9 @@ algorithm background(
             }
             case 6: {
                 // Static
-                pix_red = colourexpand2to$color_depth$[ { static_0a[0,1], static_1a[0,1] } ] >> background_fade;
-                pix_green = colourexpand2to$color_depth$[ { static_0a[0,1], static_1a[0,1] } ] >> background_fade;
-                pix_blue = colourexpand2to$color_depth$[ { static_0a[0,1], static_1a[0,1] } ] >> background_fade;
+                pix_red = colourexpand2to$color_depth$[ staticGenerator[0,2] ] >> background_fade;
+                pix_green = colourexpand2to$color_depth$[ staticGenerator[0,2] ] >> background_fade;
+                pix_blue = colourexpand2to$color_depth$[ staticGenerator[0,2] ] >> background_fade;
             }
             case 7: {
                 // Snow

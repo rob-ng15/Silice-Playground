@@ -127,14 +127,14 @@ setsprites
   3c 140 e0 0 vector!
   30 140 100 0 vector!
   
-  0 0 3 0 1 0 lslsprite!
-  0 1d0 c 1 1 1 lslsprite!
-  270 0 30 2 1 2 lslsprite!
-  270 1d0 3f 3 1 3 lslsprite!
-  0 e8 0 0 1 0 uslsprite!
-  138 0 f 1 1 1 uslsprite!
-  270 e8 33 2 1 2 uslsprite!
-  138 1d0 3c 3 1 3 uslsprite!
+  3  0   0   0 1 0 0 lslsprite!
+  c  0   1d0 1 1 0 1 lslsprite!
+  30 270 0   2 1 1 2 lslsprite!
+  3f 270 1d0 3 1 0 3 lslsprite!
+  0  0   e8  0 1 0 0 uslsprite!
+  f  138 0   1 1 0 1 uslsprite!
+  33 270 e8  2 1 1 2 uslsprite!
+  3c 138 1d0 3 1 0 3 uslsprite!
 
   3f tpubackground! 3 tpuforeground!
 
@@ -181,7 +181,7 @@ setsprites
   3f 140 f0 40 circle!
   3c 140 f0 80 circle!
   
-  0 0 3 0 1 0 lslsprite!
+  3 0 0 0 1 1 0 lslsprite!
 
   3f tpubackground! 3 tpuforeground!
 
@@ -220,7 +220,7 @@ closeencounters
 active command colour x y p0 p1 entry displaylist!
 
 ```
-1 2 3f 10 10 20 20 0 dlentry!!
+1 2 3f 10 10 20 20 0 dlentry!
 1 4 3 50 50 20 0 1 dlentry!
 0 1 dlstart!
 

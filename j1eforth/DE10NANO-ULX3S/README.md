@@ -82,6 +82,8 @@ The VGA DE10NANO/HDMI ULX3S output has the following layers in order:
 * Background
 * Lower Sprite Layer
 * Bitmap with GPU
+    * Vector block drawer
+    * Display list drawer
 * Upper Sprite Layer
 * Character Map with TPU
 * Terminal
@@ -118,7 +120,7 @@ Hexadecimal<br>Address | Write | Read
 :----: | ---- | -----
 fff0 | Set the background colour |
 fff1 | Set the alternative background colour |
-fff2 | Set the background design<br>0 - Solid<br>1 - Small checkerboard<br>2 - Medium checkerboard<br>3 - Large checkerboard<br>4 - Huge checkerboard<br>5 - Rainbow<br>6 - Rolling static<br>7 - Starfield (not implemented) |
+fff2 | Set the background design<br>0 - Solid<br>1 - Small checkerboard<br>2 - Medium checkerboard<br>3 - Large checkerboard<br>4 - Huge checkerboard<br>5 - Rainbow<br>6 - Rolling static<br>7 - Starfield/Snow |
 ffff | Set the fade level for the background layer | VBLANK flag
 
 #### j1eforth BACKGROUND words
@@ -130,69 +132,6 @@ vblank? | Example ```vblank``` wait for vblank
 BACKGROUND<br>Word | Usage
 ----- | -----
 background! | Example: ```3 2 4 background!``` Sets the background to a HUGE blue/dark blue checkerboard
-
-### Lower (and Upper) Sprite Layer
-
-* Sprite Layer
-    * 8 x 16 x 16 1 bit sprites
-    * 4 user settable tiles per sprite
-    * fader level
-    * In layer sprite collision detection, updates at the end of every frame
-    * Sprite to bitmap collision detection, updates at the end of every frame
-
-The lower sprite layer displays between the background and the bitmap; the upper sprite layers displays between the bitmap and the character map.
-
-Each Sprite has the following attributes:
-
-Sprite Tile<br>Map | Active | Tile Number | X | Y | Colour 
------ | ----- | ----- | ----- | ----- | -----
-64 lines of 16 pixels<br>4 x 16 x 16 tiles per Sprite | Display(1) or Hide(0) the Sprite | 0 - 3 Select tile from the sprite tile map | X coordinate | Y coordinate | { rrggbb } colour
-
-#### Memory Map for the LOWER and UPPER SPRITE Layers
-
-Hexadecimal<br>Address<br>ff30 - ff3f for lower sprites<br>ff40 - ff4f for upper sprites | Write | Read
-:-----: | ----- | -----
-ff30 | Set __Active Sprite Number__ referred to as _ASN_ in the following |
-ff31 | Set _ASN_ active | Read _ASN_ active
-ff32 | Set _ASN_ tile number | Read _ASN_ tile number
-ff33 | Set _ASN_ colour | Read _ASN_ colour
-ff34 | Set _ASN_ x coordinate | Read _ASN_ x coordinate
-ff35 | Set _ASN_ y coordinate | Read _ASN_ y coordinate
-ff36 | Set __Tile Map Writer Sprite Number__ referred to as _TMWSN_ in the following<br> | Sprites at flag<br>8 bit { sprite7, sprite6 ... sprite0 } flag of which sprites are visible at the x,y coordinate set below<br>Updates every frame whilst the pixel is being rendered
-ff37 | Set _TMWSN_ tile map line ( 0 - 63 ) | Collision detection flag for sprite 0 { bitmap, 0000000, sprite 7, ... sprite 0 }, updates at the end of every frame
-ff38 | Set _TMWSN_ tile map line bitmap | Collision detection flag for sprite 1 { bitmap, 0000000, sprite 7, ... sprite 0 }, updates at the end of every frame
-ff39 | | Collision detection flag for sprite 2 { bitmap, 0000000, sprite 7, ... sprite 0 }, updates at the end of every frame 
-ff3a | Sprites at x coordinate | Collision detection flag for sprite 3 { bitmap, 0000000, sprite 7, ... sprite 0 }, updates at the end of every frame
-ff3b | Sprites at y coordinate | Collision detection flag for sprite 4 { bitmap, 0000000, sprite 7, ... sprite 0 }, updates at the end of every frame
-ff3c | Update a sprite<br>See notes below | Collision detection flag for sprite 5 { bitmap, 0000000, sprite 7, ... sprite 0 }, updates at the end of every frame
-ff3d | |  Collision detection flag for sprite 6 { bitmap, 0000000, sprite 7, ... sprite 0 }, updates at the end of every frame
-ff3e | |  Collision detection flag for sprite 7 { bitmap, 0000000, sprite 7, ... sprite 0 }, updates at the end of every frame
-ff3f | Set the fade level for the sprite layer
-
-_For the Upper Sprite Layer add 10 to the address, range ff40 - ff4f_.
-
-#### j1eforth SPRITE LAYER words
-
-SPRITE LAYER<br>Word | Usage
------ | -----
-lslsprite! | Example ```10 20 3f 2 1 0 lslsprite!``` set lower sprite layer sprite 0 to 10,20 in colour 3f with tile map number 2 and active
-uslsprite! | Example ```10 20 3f 2 1 0 uslsprite!``` set upper sprite layer sprite 0 to 10,20 in colour 3f with tile map number 2 and active
-lsltile! | Example (put 64 16bit bitmap lines to the stack) ```0 lsltile!``` set lower sprite layer sprite 0 tile map to the 64 bitmap lines
-usltile! | Example (put 64 16bit bitmap lines to the stack) ```0 usltile!``` set upper sprite layer sprite 0 tile map to the 64 bitmap lines
-lslupdate! | Example ```57 lslupdate!``` Update lower sprite layer sprite 0 according to (binary) { 0 000000 0 0 1 010 111 }<br>No change to colour, x wrap, y wrap, Iicrement tile number, y=y+2, x=x-1
-uslupdate! | Example ```86b1 uslupdate!``` Update upper sprite layer sprite 0 according to (binary) { 1 000011 0 1 0 110 001 }<br>Change colour to 3(blue), x wrap, y kill, keep tile number, y=y-2, x=x+1
-
-#### Notes about the SPRITE UPDATE binary code
-
-Bit(s) | Purpose
-:-----: | -----
-15 | Colour action - 0 = leave as is, 1 = change to { rrggbb } as given in bits 14 - 9
-14 - 9 | { rrggbb } colour
-8 | Y action - 0 = wrap y-axis, 1 = set sprite to inactive if it moves off screen
-7 | X action - 0 = wrap x-axis, 1 = set sprite to inactive if it moves off screen
-6 | Tile number action - 0 = leave as is, 1 = increment the tile number (simple animation)
-5 - 3 | Y delta - amount to move along the y-axis, 2's complement number
-2 - 0 | X delta - amount to move along the x-axis, 2's complement number
 
 ### Bitmap Layer with GPU
 
@@ -221,6 +160,9 @@ ff07 | Start GPU<br>1 - Plot a pixel x,y in colour<br>2 - Fill a rectangle from 
 ff08 | | Colour of the pixel at x,y (set below)<br>Updates every frame whilst the selected pixel is being rendered
 ff09 | Set the x coordinate for reading |
 ff0a | Set the y coordinate for reading |
+ff0b | Set __Blit1 Tile Map Writer Tile Number__ referred to as _BTMWTN_ in the following<br> |
+ff0c | Set _BTMWTN_ tile map line ( 0 - 15 ) |
+ff0d | Set _BTMWTN_ tile map line bitmap | 
 ff0f | Set the fade level for the bitmap layer |
 
 #### j1eforth BITMAP and GPU words
@@ -236,10 +178,6 @@ blit1tile! | Example (put 16 16bit bitmap lines to the stack) ```0 bit1tile!``` 
 cs! | Example ```cs!``` clears the bitmap (sets to transparent)
 
 _```gpu?``` waits whilst the GPU is busy, and ```gpu!``` will start the GPU according to the action from the stack. ALl of the above BITMAP and GPU words query the GPU busy flag before commiting their action to the GPU_.
-
-### Upper Sprite Layer
-
-_Details in Lower Sprite Layer section_
 
 ### Character Map with TPU
 
@@ -294,6 +232,78 @@ TERMINAL<br>Word | Usage
 ----- | -----
 terminalshow! | Example ```terminalshow!``` show the blue terminal window
 terminalhide! | Example ```terminalhide!``` hide the blue terminal window
+
+### Lower and Upper Sprite Layers
+
+* Sprite Layer
+    * 8 x 16 x 16 1 bit sprites
+        * Double flag to display as double pixel 32 x 32 per sprite
+        * 4 user settable tiles per sprite
+    * Fader level
+    * In layer sprite collision detection, updates at the end of every frame
+    * Sprite to bitmap collision detection, updates at the end of every frame
+
+The lower sprite layer displays between the background and the bitmap; the upper sprite layers displays between the bitmap and the character map.
+
+Each Sprite has the following attributes:
+
+Sprite Tile<br>Map | Active | Double | Tile Number | X | Y | Colour 
+----- | ----- | ----- | ----- | ----- | | ----- | -----
+64 lines of 16 pixels<br>4 x 16 x 16 tiles | Hide(0)<br>Display(1) | Single pixel 16 x 16 (0)<br>Double Pixel 32 x 32 (1) | 0 - 3 Select tile from the sprite tile map | X coordinate | Y coordinate | { rrggbb } colour
+
+#### Memory Map for the LOWER and UPPER SPRITE Layers
+
+Hexadecimal<br>Address<br>ff30 - ff3f for lower sprites<br>ff50 - ff57 for collision detection<br>ff40 - ff4f for upper sprites<br>5560-ff67 for collision detection | Write | Read
+:-----: | ----- | -----
+ff30 | Set __Active Sprite Number__ referred to as _ASN_ in the following |
+ff31 | Set _ASN_ active flag | Read _ASN_ active flag
+ff32 | Set _ASN_ tile number | Read _ASN_ tile number
+ff33 | Set _ASN_ colour | Read _ASN_ colour
+ff34 | Set _ASN_ x coordinate | Read _ASN_ x coordinate
+ff35 | Set _ASN_ y coordinate | Read _ASN_ y coordinate
+ff36 | Set _ASN_ double flag | Read _ASN_ double flag
+ff37 | Set __Tile Map Writer Sprite Number__ referred to as _TMWSN_ in the following<br> |
+ff38 | Set _TMWSN_ tile map line ( 0 - 63 ) |
+ff39 | Set _TMWSN_ tile map line bitmap | 
+ff3a | | Sprites at flag<br>8 bit { sprite7, sprite6 ... sprite0 } flag of which sprites are visible at the x,y coordinate set below<br>Updates every frame whilst the pixel is being rendered
+ff3b | Sprites at x coordinate |
+ff3c | Sprites at y coordinate |
+ff3d | Update a sprite<br>See notes below |
+ff3f | Set the fade level for the sprite layer
+ | | 
+ff50 | | Collision detection flag for sprite 0 { bitmap, 0000000, sprite 7, ... sprite 0 }
+ff51 | | Collision detection flag for sprite 1 { bitmap, 0000000, sprite 7, ... sprite 0 }
+ff52 | | Collision detection flag for sprite 2 { bitmap, 0000000, sprite 7, ... sprite 0 }
+ff53 | | Collision detection flag for sprite 3 { bitmap, 0000000, sprite 7, ... sprite 0 }
+ff54 | | Collision detection flag for sprite 4 { bitmap, 0000000, sprite 7, ... sprite 0 }
+ff55 | | Collision detection flag for sprite 5 { bitmap, 0000000, sprite 7, ... sprite 0 }
+ff56 | | Collision detection flag for sprite 6 { bitmap, 0000000, sprite 7, ... sprite 0 }
+ff57 | | Collision detection flag for sprite 7 { bitmap, 0000000, sprite 7, ... sprite 0 }
+
+_For the Upper Sprite Layer add 10 to the address, range ff40 - ff4f, ff60 - ff6f_.
+
+#### j1eforth SPRITE LAYER words
+
+SPRITE LAYER<br>Word | Usage
+----- | -----
+lslsprite! | Example ```3f 10 20 2 1 0 0 lslsprite!``` set lower sprite layer sprite 0 to 10,20 in colour 3f with tile map number 2, active and 16x16<br>_NOTE: colour x y tile active double number_
+uslsprite! | Example ```3f 10 20 2 1 1 0 uslsprite!``` set upper sprite layer sprite 0 to 10,20 in colour 3f with tile map number 2,active and 32x32
+lsltile! | Example (put 64 16bit bitmap lines to the stack) ```0 lsltile!``` set lower sprite layer sprite 0 tile map to the 64 bitmap lines
+usltile! | Example (put 64 16bit bitmap lines to the stack) ```0 usltile!``` set upper sprite layer sprite 0 tile map to the 64 bitmap lines
+lslupdate! | Example ```57 lslupdate!``` Update lower sprite layer sprite 0 according to (binary) { 0 000000 0 0 1 010 111 }<br>No change to colour, x wrap, y wrap, Iicrement tile number, y=y+2, x=x-1
+uslupdate! | Example ```86b1 uslupdate!``` Update upper sprite layer sprite 0 according to (binary) { 1 000011 0 1 0 110 001 }<br>Change colour to 3(blue), x wrap, y kill, keep tile number, y=y-2, x=x+1
+
+#### Notes about the SPRITE UPDATE binary code
+
+Bit(s) | Purpose
+:-----: | -----
+15 | Colour action - 0 = leave as is, 1 = change to { rrggbb } as given in bits 14 - 9
+14 - 9 | { rrggbb } colour
+8 | Y action - 0 = wrap y-axis, 1 = set sprite to inactive if it moves off screen
+7 | X action - 0 = wrap x-axis, 1 = set sprite to inactive if it moves off screen
+6 | Tile number action - 0 = leave as is, 1 = increment the tile number (simple animation)
+5 - 3 | Y delta - amount to move along the y-axis, 2's complement number
+2 - 0 | X delta - amount to move along the x-axis, 2's complement number
 
 ### Audio Output
 
@@ -374,6 +384,7 @@ timer1hz@ | Example ```timer1hz@``` puts the 1hz user timer onto the stack
 timer1khz! | Example ```3e8 timer1khz!``` starts the 1khz timer at 1 second ( 3e8 hex = 1000 milliseconds )
 timer1khz? | Example ```timer1khz?``` waits for the 1khz timer to finish
 sleep | Example ```3e8 sleep``` waits for 1 second ( 3e8 hex = 1000 milliseconds )
+rng | Example ```10 rng``` puts a pseudo random number from 0 - f (hex 10 - 1) onto the stack
 
 ## TODO
 
@@ -473,6 +484,11 @@ dlstart! | Example ```8 10 dlstart!``` starts the display list to draw entries 8
 ### BACKGROUND
 
 * Implement more patterns
+
+### Character map
+
+* Change characterGenerator8x16 from BROM to BRAM to allow changes to the font
+* Implement character generator writer in the same format as sprite tile, vector vertex and display list entry writers
 
 ## Notes
 

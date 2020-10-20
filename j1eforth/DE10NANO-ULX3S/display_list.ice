@@ -9,6 +9,7 @@ algorithm displaylist(
     input   uint8   start_entry,
     input   uint8   finish_entry,
     input   uint1   start_displaylist,
+    output  uint4   display_list_active,
     
     input   uint8   writer_entry_number,
     input   uint1   writer_active,
@@ -27,6 +28,7 @@ algorithm displaylist(
     output  int11 gpu_param0,
     output  int11 gpu_param1,
     output  uint4 gpu_write,
+    input   uint4   gpu_active,
 
     // Communication with the VECTOR DRAWER
     output  uint5   vector_block_number,
@@ -34,9 +36,6 @@ algorithm displaylist(
     output  int11   vector_block_xc,
     output  int11   vector_block_yc,
     output  uint1   draw_vector,
-    
-    output  uint4   display_list_active,
-    input   uint4   gpu_active,
     input   uint3   vector_block_active
 ) {
     // 256 display list entries
@@ -55,11 +54,13 @@ algorithm displaylist(
     A.addr0 := entry_number;
     A.wenable0 := 0;
     A.addr1 := writer_entry_number;
+    A.wdata1 := writer_active;
     A.wenable1 := 0;
 
     command.addr0 := entry_number;
     command.wenable0 := 0;
     command.addr1 := writer_entry_number;
+    command.wdata1 := writer_command;
     command.wenable1 := 0;
 
     colour.addr0 := entry_number;
@@ -70,21 +71,25 @@ algorithm displaylist(
     x.addr0 := entry_number;
     x.wenable0 := 0;
     x.addr1 := writer_entry_number;
+    x.wdata1 := writer_x;
     x.wenable1 := 0;
 
     y.addr0 := entry_number;
     y.wenable0 := 0;
     y.addr1 := writer_entry_number;
+    y.wdata1 := writer_y;
     y.wenable1 := 0;
 
     p0.addr0 := entry_number;
     p0.wenable0 := 0;
     p0.addr1 := writer_entry_number;
+    p0.wdata1 := writer_p0;
     p0.wenable1 := 0;
 
     p1.addr0 := entry_number;
     p1.wenable0 := 0;
     p1.addr1 := writer_entry_number;
+    p1.wdata1 := writer_p1;
     p1.wenable1 := 0;
 
     gpu_write := 0;
@@ -115,69 +120,58 @@ algorithm displaylist(
             case 7: { p0.wenable1 = 1; }
             case 8: { p1.wenable1 = 1; }
         }
-        
-        if( start_displaylist == 1 ) {
-            display_list_active = 1;
-        }
     }
+
+    display_list_active = 0;
+    entry_number = 0;
     
     while(1) {
         switch( display_list_active ) {
             case 1: {
-                //gpu_write = 2; gpu_x = 10; gpu_y = 10; gpu_param0 = 20; gpu_param1 = 20; gpu_colour = 63;
-                // Start the start and finish position
-                entry_number = start_entry;
-                finish_number = finish_entry;
+                // Delay to allow reading of the first vertex
                 display_list_active = 2;
             }
             case 2: {
-                // Delay to allow reading of the next entry
+                // Delay to allow reading of the first vertex
                 display_list_active = 3;
             }
             case 3: {
-                // Delay to allow reading of the next entry
-                display_list_active = 4;
+                if( A.rdata0 == 1 ) {
+                    // Wait for the GPU and the VECTOR DRAWER to both finish
+                    display_list_active = ( ( gpu_active > 0 ) || ( vector_block_active > 0 ) ) ? 3 : 4;
+                } else {
+                    entry_number = ( entry_number == finish_number ) ? start_entry : entry_number + 1;
+                    display_list_active = ( entry_number == finish_number ) ? 0 : 1;
+                }
             }
             case 4: {
-                if( A.rdata0  ) {
-                    // Await GPU and VECTOR DRAWER
-                    display_list_active = ( ( gpu_active > 0) || ( vector_block_active > 0 ) ) ? 4 : 5;
+                if( command.rdata0 == 14 ) {
+                    // Dispatch to the VECTOR DRAWER
+                    vector_block_colour = colour.rdata0;
+                    vector_block_number = p0.rdata0;
+                    vector_block_xc = x.rdata0;
+                    vector_block_yc = y.rdata0;
+                    draw_vector = 1;
                 } else {
-                    // Move to the next entry
-                    entry_number = ( entry_number == finish_number ) ?  start_entry : entry_number + 1;
-                    display_list_active = ( entry_number == finish_number ) ? 0 : 2;
+                    // Dispatch to the GPU
+                    gpu_write = command.rdata0;
+                    gpu_colour = colour.rdata0;
+                    gpu_x = x.rdata0;
+                    gpu_y = y.rdata0;
+                    gpu_param0 = p0.rdata0;
+                    gpu_param1 = p1.rdata0;
                 }
+                display_list_active = 5;
             }
             case 5: {
-                // Dispatch entry to GPU or vector block
-                switch( command.rdata0 ) {
-                    case 14: {
-                        // VECTOR BLOCK COMMAND
-                        vector_block_number = __unsigned(p0.rdata0[0,5]);
-                        vector_block_colour = colour.rdata0;
-                        vector_block_xc = x.rdata0;
-                        vector_block_yc = y.rdata0;
-                        draw_vector = 1;
-                    }
-                    default: {
-                        // GPU Command
-                        gpu_write = command.rdata0;
-                        gpu_colour = colour.rdata0;
-                        gpu_x = x.rdata0;
-                        gpu_y = y.rdata0;
-                        gpu_param0 = p0.rdata0;
-                        gpu_param1 = p1.rdata0;
-                    }
-                }
-                // Move to the next entry
                 entry_number = ( entry_number == finish_number ) ? start_entry : entry_number + 1;
-                display_list_active = ( entry_number == finish_number ) ? 0 : 2;
+                display_list_active = ( entry_number == finish_number ) ? 0 : 1;
             }
             default: {
+                display_list_active = ( start_displaylist == 1 ) ? 1 : 0;
                 entry_number = start_entry;
                 finish_number = finish_entry;
-                display_list_active = 0;
             }
         }
-    }
+     }
 }

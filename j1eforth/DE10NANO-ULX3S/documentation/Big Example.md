@@ -1,18 +1,8 @@
 ( store timer1hz@ to generate a beep/boop every other second )
 variable lasttimer
 
-( helper word to create an array )
+: array create cells allot does> cells + ;
 
-: array 
-  create cells allot
-  does> cells + ;
-
-( helper word to create pseudo random numbers )
-( creates random numbers from 0 to stack-1 )
-
-: rng
-  ffe0 @ swap /mod drop ;
-  
 ( storage for 32 (20 hex) asteroids )
 
 20 array asteroidactive
@@ -165,7 +155,7 @@ variable activeasteroids
   ( set the background )
   2a 1 7 background! cs!
   ( hide usl sprite 0 and set monitoring )
-  0 0 0 0 0 0 uslsprite!
+  0 0 0 0 0 0 0 uslsprite!
   0 ff40 ! 
   ( randomly place asteroids )
   placeasteroids ;
@@ -186,17 +176,17 @@ variable activeasteroids
 : fire?
   ( fire if bullet not active )
   ff41 @ 0= if
-    140 ef 3f 0 1 0 uslsprite!
+     3f 140 ef 0 1 0 0 uslsprite!
     4 3d 80 beep!
   then ;
 
 : hit?
   ( see if the bullet has hit the background )
-  ff47 @ 8000 and if
+  ff60 @ 8000 and if
     ( explode )
     1 19 80 beep!
     ( deactivate the bullet )
-    0 0 0 0 0 0 uslsprite!
+    0 0 0 0 0 0 0 uslsprite!
   then ;
 
 : drawship 
@@ -210,9 +200,6 @@ variable activeasteroids
   swap asteroidy !
   ;
 
-: moveasteroids
-;
-      
 : drawasteroids
   20 0 do
     i asteroidactive @ if

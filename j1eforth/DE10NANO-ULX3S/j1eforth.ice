@@ -102,7 +102,7 @@ algorithm pulse1khz(
     }
 }
 
-// 16 bit random number generator 
+// 16 bit random number generator
 algorithm random(
     output  uint16  randomnumber,
     input   uint32  counter50mhz,
@@ -214,7 +214,9 @@ $$end
 
     // RNG random number generator
     // Uses systemClockMHz to reseed if locked
+    uint16 staticGenerator = 0;
     random rng(
+        randomnumber :> staticGenerator,
         counter50mhz <: systemClockMHz
     );
     
@@ -316,6 +318,7 @@ $$end
         pix_red    :> background_r,
         pix_green  :> background_g,
         pix_blue   :> background_b,
+        staticGenerator <: staticGenerator
     );
         
     // Bitmap Window
@@ -794,15 +797,8 @@ $$end
                                                 case 16hff33: { newStackTop = lower_sprites.sprite_read_colour; }
                                                 case 16hff34: { newStackTop = lower_sprites.sprite_read_x; }
                                                 case 16hff35: { newStackTop = lower_sprites.sprite_read_y; }
-                                                case 16hff36: { newStackTop = lower_sprites.sprites_at_xy; }
-                                                case 16hff37: { newStackTop = lower_sprites.collision_0; }
-                                                case 16hff38: { newStackTop = lower_sprites.collision_1; }
-                                                case 16hff39: { newStackTop = lower_sprites.collision_2; }
-                                                case 16hff3a: { newStackTop = lower_sprites.collision_3; }
-                                                case 16hff3b: { newStackTop = lower_sprites.collision_4; }
-                                                case 16hff3c: { newStackTop = lower_sprites.collision_5; }
-                                                case 16hff3d: { newStackTop = lower_sprites.collision_6; }
-                                                case 16hff3e: { newStackTop = lower_sprites.collision_7; }
+                                                case 16hff36: { newStackTop = lower_sprites.sprite_read_double; }
+                                                case 16hff3a: { newStackTop = lower_sprites.sprites_at_xy; }
                                                 
                                                 // UPPER SPRITES READ
                                                 case 16hff41: { newStackTop = upper_sprites.sprite_read_active; }
@@ -810,15 +806,26 @@ $$end
                                                 case 16hff43: { newStackTop = upper_sprites.sprite_read_colour; }
                                                 case 16hff44: { newStackTop = upper_sprites.sprite_read_x; }
                                                 case 16hff45: { newStackTop = upper_sprites.sprite_read_y; }
-                                                case 16hff46: { newStackTop = upper_sprites.sprites_at_xy; }
-                                                case 16hff47: { newStackTop = upper_sprites.collision_0; }
-                                                case 16hff48: { newStackTop = upper_sprites.collision_1; }
-                                                case 16hff49: { newStackTop = upper_sprites.collision_2; }
-                                                case 16hff4a: { newStackTop = upper_sprites.collision_3; }
-                                                case 16hff4b: { newStackTop = upper_sprites.collision_4; }
-                                                case 16hff4c: { newStackTop = upper_sprites.collision_5; }
-                                                case 16hff4d: { newStackTop = upper_sprites.collision_6; }
-                                                case 16hff4e: { newStackTop = upper_sprites.collision_7; }
+                                                case 16hff46: { newStackTop = upper_sprites.sprite_read_double; }
+                                                case 16hff4a: { newStackTop = upper_sprites.sprites_at_xy; }
+
+                                                // SPRITE COLLISION DETECTION
+                                                case 16hff50: { newStackTop = lower_sprites.collision_0; }
+                                                case 16hff51: { newStackTop = lower_sprites.collision_1; }
+                                                case 16hff52: { newStackTop = lower_sprites.collision_2; }
+                                                case 16hff53: { newStackTop = lower_sprites.collision_3; }
+                                                case 16hff54: { newStackTop = lower_sprites.collision_4; }
+                                                case 16hff55: { newStackTop = lower_sprites.collision_5; }
+                                                case 16hff56: { newStackTop = lower_sprites.collision_6; }
+                                                case 16hff57: { newStackTop = lower_sprites.collision_7; }
+                                                case 16hff60: { newStackTop = upper_sprites.collision_0; }
+                                                case 16hff61: { newStackTop = upper_sprites.collision_1; }
+                                                case 16hff62: { newStackTop = upper_sprites.collision_2; }
+                                                case 16hff63: { newStackTop = upper_sprites.collision_3; }
+                                                case 16hff64: { newStackTop = upper_sprites.collision_4; }
+                                                case 16hff65: { newStackTop = upper_sprites.collision_5; }
+                                                case 16hff66: { newStackTop = upper_sprites.collision_6; }
+                                                case 16hff67: { newStackTop = upper_sprites.collision_7; }
                                                 
                                                 // VECTORS
                                                 case 16hff74: { newStackTop = vector_drawer.vector_block_active; }
@@ -914,6 +921,9 @@ $$end
                                     case 16hff07: { gpu_processor.gpu_write = stackNext; }
                                     case 16hff09: { bitmap_window.bitmap_x_read = stackNext; }
                                     case 16hff0a: { bitmap_window.bitmap_y_read = stackNext; }
+                                    case 16hff0b: { gpu_processor.blit1_writer_tile = stackNext; }
+                                    case 16hff0c: { gpu_processor.blit1_writer_line = stackNext; }
+                                    case 16hff0d: { gpu_processor.blit1_writer_bitmap = stackNext;  gpu_processor.blit1_writer_active = 1; }
                                     case 16hff0f: { gpu_processor.gpu_param0 = stackNext; gpu_processor.gpu_write = 7; }
                                     
                                     // TPU Controls
@@ -935,12 +945,13 @@ $$end
                                     case 16hff33: { lower_sprites.sprite_set_colour = stackNext; lower_sprites.sprite_layer_write = 3; }
                                     case 16hff34: { lower_sprites.sprite_set_x = stackNext; lower_sprites.sprite_layer_write = 4; }
                                     case 16hff35: { lower_sprites.sprite_set_y = stackNext; lower_sprites.sprite_layer_write = 5; }
-                                    case 16hff36: { lower_sprites.sprite_writer_sprite = stackNext; }
-                                    case 16hff37: { lower_sprites.sprite_writer_line = stackNext; }
-                                    case 16hff38: { lower_sprites.sprite_writer_bitmap = stackNext; lower_sprites.sprite_writer_active = 1; }
-                                    case 16hff3a: { lower_sprites.sprites_at_x = stackNext; }
-                                    case 16hff3b: { lower_sprites.sprites_at_y = stackNext; }
-                                    case 16hff3c: { lower_sprites.sprite_update = stackNext; lower_sprites.sprite_layer_write = 10; }
+                                    case 16hff36: { lower_sprites.sprite_set_double = stackNext; lower_sprites.sprite_layer_write = 6; }
+                                    case 16hff37: { lower_sprites.sprite_writer_sprite = stackNext; }
+                                    case 16hff38: { lower_sprites.sprite_writer_line = stackNext; }
+                                    case 16hff39: { lower_sprites.sprite_writer_bitmap = stackNext; lower_sprites.sprite_writer_active = 1; }
+                                    case 16hff3b: { lower_sprites.sprites_at_x = stackNext; }
+                                    case 16hff3c: { lower_sprites.sprites_at_y = stackNext; }
+                                    case 16hff3d: { lower_sprites.sprite_update = stackNext; lower_sprites.sprite_layer_write = 10; }
                                     case 16hff3f: { lower_sprites.sprite_layer_fade = stackNext; lower_sprites.sprite_layer_write = 9; }
                                     
                                     // UPPER SPRITE LAYER CONTROLS
@@ -950,12 +961,13 @@ $$end
                                     case 16hff43: { upper_sprites.sprite_set_colour = stackNext; upper_sprites.sprite_layer_write = 3; }
                                     case 16hff44: { upper_sprites.sprite_set_x = stackNext; upper_sprites.sprite_layer_write = 4; }
                                     case 16hff45: { upper_sprites.sprite_set_y = stackNext; upper_sprites.sprite_layer_write = 5; }
-                                    case 16hff46: { upper_sprites.sprite_writer_sprite = stackNext; }
-                                    case 16hff47: { upper_sprites.sprite_writer_line = stackNext; }
-                                    case 16hff48: { upper_sprites.sprite_writer_bitmap = stackNext; upper_sprites.sprite_writer_active = 1; }
-                                    case 16hff4a: { upper_sprites.sprites_at_x = stackNext; }
-                                    case 16hff4b: { upper_sprites.sprites_at_y = stackNext; }
-                                    case 16hff4c: { upper_sprites.sprite_update = stackNext; upper_sprites.sprite_layer_write = 10; }
+                                    case 16hff46: { upper_sprites.sprite_set_double = stackNext; upper_sprites.sprite_layer_write = 6; }
+                                    case 16hff47: { upper_sprites.sprite_writer_sprite = stackNext; }
+                                    case 16hff48: { upper_sprites.sprite_writer_line = stackNext; }
+                                    case 16hff49: { upper_sprites.sprite_writer_bitmap = stackNext; upper_sprites.sprite_writer_active = 1; }
+                                    case 16hff4b: { upper_sprites.sprites_at_x = stackNext; }
+                                    case 16hff4c: { upper_sprites.sprites_at_y = stackNext; }
+                                    case 16hff4d: { upper_sprites.sprite_update = stackNext; upper_sprites.sprite_layer_write = 10; }
                                     case 16hff4f: { upper_sprites.sprite_layer_fade = stackNext; upper_sprites.sprite_layer_write = 9; }
                                     
                                     // VECTOR DRAWER
@@ -1048,6 +1060,7 @@ $$end
                 lower_sprites.sprite_layer_write = 0;
                 lower_sprites.sprite_writer_active = 0;
                 gpu_processor.gpu_write = 0;
+                gpu_processor.blit1_writer_active = 0;
                 character_map_window.tpu_write = 0;
                 upper_sprites.sprite_layer_write = 0;
                 upper_sprites.sprite_writer_active = 0;

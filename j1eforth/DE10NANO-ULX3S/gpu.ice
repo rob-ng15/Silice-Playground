@@ -32,10 +32,16 @@ algorithm gpu(
     input   int16 dl_gpu_param1,
     input   uint4 dl_gpu_write,
 
+    // For setting blit1 tile bitmaps
+    input   uint6   blit1_writer_tile,
+    input   uint4   blit1_writer_line,
+    input   uint16  blit1_writer_bitmap,  
+    input   uint1   blit1_writer_active,
+
     output  uint4 gpu_active
 ) <autorun> {
-    // 256 x 16 x 16 1 bit tilemap for blit1tilemap
-    dualport_bram uint16 blit1tilemap[ 4096 ] = uninitialized;
+    // 64 x 16 x 16 1 bit tilemap for blit1tilemap
+    dualport_bram uint16 blit1tilemap[ 1024 ] = uninitialized;
     
     // GPU work variable storage
     // Present GPU pixel and colour
@@ -61,16 +67,16 @@ algorithm gpu(
     //int11 gpu_radius = uninitialized;
     int11 gpu_count = uninitialized;
     int11 gpu_max_count = uninitialized;
-    uint8 gpu_tile = uninitialized;
+    uint6 gpu_tile = uninitialized;
 
     // blit1tilemap read access for the blit1tilemap
     blit1tilemap.addr0 := gpu_tile * 16 + gpu_active_y;
     blit1tilemap.wenable0 := 0;
         
     // blit1tilemap write access for the GPU to load tilemaps
-    blit1tilemap.addr1 := gpu_param0 * 16 + gpu_param1;
-    blit1tilemap.wdata1 := gpu_param2;
-    blit1tilemap.wenable1 := 0;
+    blit1tilemap.addr1 := blit1_writer_tile * 16 + blit1_writer_line;
+    blit1tilemap.wdata1 := blit1_writer_bitmap;
+    blit1tilemap.wenable1 := blit1_writer_active;
 
     bitmap_write := 0;
     
@@ -137,11 +143,6 @@ algorithm gpu(
                         gpu_h = 15;
                         gpu_tile = gpu_param0;                       
                         gpu_active = 14;
-                    }
-                    case 6: {
-                        // Write to tilemap param0 line param1 value gpu_param2
-                        // Done directly, does not activate the GPU
-                        blit1tilemap.wenable1 = 1;
                     }
                     case 7: {
                         // Set the bitmap fade level
@@ -368,7 +369,7 @@ algorithm gpu(
                     bitmap_colour_write = gpu_active_colour;
                     bitmap_write = 1;
                 }
-                gpu_active = ( gpu_active_y < gpu_h ) ? 14 : ( gpu_active_x < gpu_w ) ? 14 : 0;
+                gpu_active = ( gpu_active_x < gpu_w ) ? 15 : ( gpu_active_y < gpu_h ) ? 14 : 0;
                 gpu_active_x = ( gpu_active_x < gpu_w ) ? gpu_active_x + 1 : 0;
                 gpu_active_y = ( gpu_active_x < gpu_w ) ? gpu_active_y : gpu_active_y + 1;
             }

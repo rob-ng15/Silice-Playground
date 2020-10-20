@@ -77,7 +77,6 @@ algorithm vectors(
     gpu_write := 0;
 
     always {
-        vector_block_active = ( draw_vector ) ? 1 : ( dl_draw_vector) ? 1 : vector_block_active;
         block_number = ( draw_vector ) ? vector_block_number : ( dl_draw_vector) ? dl_vector_block_number : block_number ;
         gpu_colour = ( draw_vector ) ? vector_block_colour : ( dl_draw_vector) ? dl_vector_block_colour : gpu_colour;
     }
@@ -92,29 +91,21 @@ algorithm vectors(
                 vector_block_active = 2;
             }
             case 2: {
-                // Delay to allow reading of the first vertex
-                vector_block_active = 3;
-            }
-            case 3: {
                 // Read the first of the vertices
                 start_x = vector_block_xc + deltax;
                 start_y = vector_block_yc + deltay;
                 vertices_number = 1;
+                vector_block_active = 3;
+            }
+            case 3: {
+                // Delay to allow reading of the next vertices
                 vector_block_active = 4;
             }
             case 4: {
-                // Delay to allow reading of the next vertices
-                vector_block_active = 5;
+                // See if the next of the vertices is active and await the GPU
+                vector_block_active = ( A.rdata0 ) ? ( gpu_active > 0 ) ? 4 : 5 : 0;
             }
             case 5: {
-                // Delay to allow reading of the next vertices
-                vector_block_active = 6;
-            }
-            case 6: {
-                // See if the next of the vertices is active and await the GPU
-                vector_block_active = ( A.rdata0 ) ? ( gpu_active > 0 ) ? 6 : 7 : 0;
-            }
-            case 7: {
                 // Send the line to the GPU
                 gpu_x = start_x;
                 gpu_y = start_y;
@@ -126,10 +117,10 @@ algorithm vectors(
                 start_x = vector_block_xc + deltax;
                 start_y = vector_block_yc + deltay;
                 vertices_number = ( vertices_number == 15 ) ? 0: vertices_number + 1;
-                vector_block_active = ( vertices_number == 15 ) ? 0 : 4;
+                vector_block_active = ( vertices_number == 15 ) ? 0 : 3;
             }
             default: {
-                vector_block_active = 0;
+                vector_block_active = ( draw_vector ) ? 1 : ( dl_draw_vector) ? 1 : 0;
                 vertices_number = 0;
             }
         }

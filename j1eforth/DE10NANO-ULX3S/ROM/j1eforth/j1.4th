@@ -975,6 +975,7 @@ t: timer1hz@ ffed literal @ t;
 t: timer1khz! ffee literal ! t;
 t: timer1khz? begin ffee literal @ 0= until t;
 t: sleep ffef literal ! begin ffef literal @ 0= until t;
+t: rng ffe0 literal @ swap /mod drop t;
 
 ( DISPLAY helper words )
 t: vblank? begin ffff literal @ 0<> until t;
@@ -988,15 +989,15 @@ t: rectangle! ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 l
 t: line! ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 3 literal gpu! t;
 t: circle! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 4 literal gpu! t;
 t: blit1! ff01 literal ! ff00 literal ! ff03 literal ! ff02 literal ! 5 literal gpu! t;
-t: blit1tile! ff03 literal ! 10 literal begin 1- dup ff04 literal ! swap ff05 literal ! 6 literal gpu! dup 0= until drop t;
+t: blit1tile! ff0b literal ! 10 literal begin 1- dup ff0c literal ! swap ff0d literal ! dup 0= until drop t;
 t: cs! 40 literal 0 literal 0 literal 2f7 literal 1df literal rectangle! t;
 
-t: lsltile! ff36 literal ! 40 literal begin 1- dup ff37 literal ! swap ff38 literal ! dup 0= until drop t;
-t: lslsprite! ff30 literal ! ff31 literal ! ff32 literal ! ff33 literal ! ff35 literal ! ff34 literal ! t;
-t: lslupdate! ff30 literal ! ff3c literal ! t;
-t: usltile! ff46 literal ! 40 literal begin 1- dup ff47 literal ! swap ff48 literal ! dup 0= until drop t;
-t: uslsprite! ff40 literal ! ff41 literal ! ff42 literal ! ff43 literal ! ff45 literal ! ff44 literal ! t;
-t: uslupdate! ff40 literal ! ff4c literal ! t;
+t: lsltile! ff37 literal ! 40 literal begin 1- dup ff38 literal ! swap ff39 literal ! dup 0= until drop t;
+t: lslsprite! ( colour x y tile active double number ) ff30 literal ! ff36 literal ! ff31 literal ! ff32 literal ! ff35 literal ! ff34 literal ! ff33 literal ! t;
+t: lslupdate! ff30 literal ! ff3d literal ! t;
+t: usltile! ff47 literal ! 40 literal begin 1- dup ff48 literal ! swap ff49 literal ! dup 0= until drop t;
+t: uslsprite! ( colour x y tile active double number ) ff40 literal ! ff46 literal ! ff41 literal ! ff42 literal ! ff45 literal ! ff44 literal ! ff43 literal ! t;
+t: uslupdate! ff40 literal ! ff4d literal ! t;
 
 t: vectorvertex! ff76 literal ! ff75 literal ! ff78 literal ! ff77 literal ! ff79 literal ! 1 literal ff7a literal ! t;
 t: vector? begin ff74 literal @ 0= until t;
@@ -1032,6 +1033,8 @@ t: tpu.r# base @ rot rot decimal >r str r> over - tpuspaces tputype base ! t;
 
 t: terminalshow! 1 literal ff21 literal ! t;
 t: terminalhide! 0 literal ff21 literal ! t;
+
+( Other useful words https://github.com/howerj/forth-cpu )
 
 target.1 -order set-current
 
