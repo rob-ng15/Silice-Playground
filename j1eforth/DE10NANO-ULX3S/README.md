@@ -48,10 +48,10 @@ __*Not necessarily the most recent build, used for indicative purporses and moni
 
 ```
 Info: Device utilisation:
-Info:          TRELLIS_SLICE: 10780/41820    25%
+Info:          TRELLIS_SLICE: 16975/41820    40%
 Info:             TRELLIS_IO:    34/  365     9%
 Info:                   DCCA:     4/   56     7%
-Info:                 DP16KD:   183/  208    87%
+Info:                 DP16KD:   180/  208    86%
 Info:             MULT18X18D:     6/  156     3%
 Info:                 ALU54B:     0/   78     0%
 Info:                EHXPLLL:     2/    4    50%
@@ -236,7 +236,7 @@ terminalhide! | Example ```terminalhide!``` hide the blue terminal window
 ### Lower and Upper Sprite Layers
 
 * Sprite Layer
-    * 8 x 16 x 16 1 bit sprites
+    * 15 (numbered 0 - 14) x 16 x 16 1 bit sprites
         * Double flag to display as double pixel 32 x 32 per sprite
         * 4 user settable tiles per sprite
     * Fader level
@@ -271,14 +271,21 @@ ff3c | Sprites at y coordinate |
 ff3d | Update a sprite<br>See notes below |
 ff3f | Set the fade level for the sprite layer
  | | 
-ff50 | | Collision detection flag for sprite 0 { bitmap, 0000000, sprite 7, ... sprite 0 }
-ff51 | | Collision detection flag for sprite 1 { bitmap, 0000000, sprite 7, ... sprite 0 }
-ff52 | | Collision detection flag for sprite 2 { bitmap, 0000000, sprite 7, ... sprite 0 }
-ff53 | | Collision detection flag for sprite 3 { bitmap, 0000000, sprite 7, ... sprite 0 }
-ff54 | | Collision detection flag for sprite 4 { bitmap, 0000000, sprite 7, ... sprite 0 }
-ff55 | | Collision detection flag for sprite 5 { bitmap, 0000000, sprite 7, ... sprite 0 }
-ff56 | | Collision detection flag for sprite 6 { bitmap, 0000000, sprite 7, ... sprite 0 }
-ff57 | | Collision detection flag for sprite 7 { bitmap, 0000000, sprite 7, ... sprite 0 }
+ff50 | | Collision detection flag for sprite 0 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff51 | | Collision detection flag for sprite 1 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff52 | | Collision detection flag for sprite 2 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff53 | | Collision detection flag for sprite 3 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff54 | | Collision detection flag for sprite 4 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff55 | | Collision detection flag for sprite 5 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff56 | | Collision detection flag for sprite 6 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff57 | | Collision detection flag for sprite 7 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff58 | | Collision detection flag for sprite 8 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff59 | | Collision detection flag for sprite 9 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff5a | | Collision detection flag for sprite 10 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff5b | | Collision detection flag for sprite 11 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff5c | | Collision detection flag for sprite 12 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff5d | | Collision detection flag for sprite 13 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff5e | | Collision detection flag for sprite 14 { bitmap, sprite14, sprite13, ... sprite 0 }
 
 _For the Upper Sprite Layer add 10 to the address, range ff40 - ff4f, ff60 - ff6f_.
 

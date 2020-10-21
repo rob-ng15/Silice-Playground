@@ -54,7 +54,7 @@ algorithm sprite_layer(
     $$end
     
     // For setting sprite tile bitmaps
-    input   uint3   sprite_writer_sprite,
+    input   uint4   sprite_writer_sprite,
     input   uint6   sprite_writer_line,
     input   uint16  sprite_writer_bitmap,  
     input   uint1   sprite_writer_active,
@@ -91,10 +91,11 @@ algorithm sprite_layer(
 
     // Calculate if each sprite is visible
     $$for i=0,14 do
-        uint1 sprite_$i$_xinsprite := 15 - ( ( pix_x - sprite_x[$i$] ) >> sprite_double[$i$] );
-        uint1 sprite_$i$_visiblex := ( pix_x >= sprite_x[$i$] ) && ( pix_x < sprite_x[$i$] + ( 16 << sprite_double[$i$] ) );
-        uint1 sprite_$i$_visibley := ( pix_y >= sprite_y[$i$] ) && ( pix_y < sprite_y[$i$] + ( 16 << sprite_double[$i$] ) );
-        uint1 sprite_$i$_visible := sprite_$i$_visiblex && sprite_$i$_visibley && ( sprite_$i$_tiles.rdata0[ sprite_$i$_xinsprite, 1 ] ) && sprite_active[$i$] ;
+        uint4 sprite_$i$_xinsprite := 15 - ( ( pix_x - sprite_x[$i$] ) >> sprite_double[$i$] );
+        uint1 sprite_$i$_spritepixel := sprite_$i$_tiles.rdata0[ sprite_$i$_xinsprite, 1 ];
+        uint1 sprite_$i$_visiblex := ( pix_x >= sprite_x[$i$] ) && ( pix_x < ( sprite_x[$i$] + ( 16 << sprite_double[$i$] ) ) );
+        uint1 sprite_$i$_visibley := ( pix_y >= sprite_y[$i$] ) && ( pix_y < ( sprite_y[$i$] + ( 16 << sprite_double[$i$] ) ) );
+        uint1 sprite_$i$_visible := sprite_$i$_visiblex && sprite_$i$_visibley && sprite_$i$_spritepixel  && sprite_active[$i$];
     $$end
 
     // Expand Sprite Update Deltas
@@ -133,11 +134,8 @@ algorithm sprite_layer(
             case 6: { sprite_double[ sprite_set_number ] = sprite_set_double; }
             case 10: {
                 // Perform sprite update
-                // Change the colour
                 sprite_colour[ sprite_set_number ] = ( spriteupdate( sprite_update ).colour_act ) ? spriteupdate( sprite_update ).colour : sprite_colour[ sprite_set_number ];
-                // Change the tile
                 sprite_tile_number[ sprite_set_number ] = ( spriteupdate( sprite_update ).tile_act ) ? sprite_tile_number[ sprite_set_number ] + 1 : sprite_tile_number[ sprite_set_number ];
-                // Move along x-axis
                 switch( { (sprite_y[ sprite_set_number ] < (-16)) || (sprite_y[ sprite_set_number ] > 480), (sprite_x[ sprite_set_number ] < (-16)) || (sprite_x[ sprite_set_number ] > 640) } ) {
                     case 2b00: {
                         sprite_x[ sprite_set_number ] = sprite_x[ sprite_set_number ] + deltax;
