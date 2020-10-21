@@ -798,7 +798,8 @@ $$end
                                                 case 16hff34: { newStackTop = lower_sprites.sprite_read_x; }
                                                 case 16hff35: { newStackTop = lower_sprites.sprite_read_y; }
                                                 case 16hff36: { newStackTop = lower_sprites.sprite_read_double; }
-                                                case 16hff3a: { newStackTop = lower_sprites.sprites_at_xy; }
+                                                case 16hff37: { newStackTop = lower_sprites.sprite_read_colmode; }
+                                                case 16hff3b: { newStackTop = lower_sprites.sprites_at_xy; }
                                                 
                                                 // UPPER SPRITES READ
                                                 case 16hff41: { newStackTop = upper_sprites.sprite_read_active; }
@@ -807,7 +808,8 @@ $$end
                                                 case 16hff44: { newStackTop = upper_sprites.sprite_read_x; }
                                                 case 16hff45: { newStackTop = upper_sprites.sprite_read_y; }
                                                 case 16hff46: { newStackTop = upper_sprites.sprite_read_double; }
-                                                case 16hff4a: { newStackTop = upper_sprites.sprites_at_xy; }
+                                                case 16hff47: { newStackTop = upper_sprites.sprite_read_colmode; }
+                                                case 16hff4b: { newStackTop = upper_sprites.sprites_at_xy; }
 
                                                 // SPRITE COLLISION DETECTION
                                                 case 16hff50: { newStackTop = lower_sprites.collision_0; }
@@ -946,12 +948,13 @@ $$end
                                     case 16hff34: { lower_sprites.sprite_set_x = stackNext; lower_sprites.sprite_layer_write = 4; }
                                     case 16hff35: { lower_sprites.sprite_set_y = stackNext; lower_sprites.sprite_layer_write = 5; }
                                     case 16hff36: { lower_sprites.sprite_set_double = stackNext; lower_sprites.sprite_layer_write = 6; }
-                                    case 16hff37: { lower_sprites.sprite_writer_sprite = stackNext; }
-                                    case 16hff38: { lower_sprites.sprite_writer_line = stackNext; }
-                                    case 16hff39: { lower_sprites.sprite_writer_bitmap = stackNext; lower_sprites.sprite_writer_active = 1; }
-                                    case 16hff3b: { lower_sprites.sprites_at_x = stackNext; }
-                                    case 16hff3c: { lower_sprites.sprites_at_y = stackNext; }
-                                    case 16hff3d: { lower_sprites.sprite_update = stackNext; lower_sprites.sprite_layer_write = 10; }
+                                    case 16hff37: { lower_sprites.sprite_set_colmode = stackNext; lower_sprites.sprite_layer_write = 7; }
+                                    case 16hff38: { lower_sprites.sprite_writer_sprite = stackNext; }
+                                    case 16hff39: { lower_sprites.sprite_writer_line = stackNext; }
+                                    case 16hff3a: { lower_sprites.sprite_writer_bitmap = stackNext; lower_sprites.sprite_writer_active = 1; }
+                                    case 16hff3c: { lower_sprites.sprites_at_x = stackNext; }
+                                    case 16hff3d: { lower_sprites.sprites_at_y = stackNext; }
+                                    case 16hff3e: { lower_sprites.sprite_update = stackNext; lower_sprites.sprite_layer_write = 10; }
                                     case 16hff3f: { lower_sprites.sprite_layer_fade = stackNext; lower_sprites.sprite_layer_write = 9; }
                                     
                                     // UPPER SPRITE LAYER CONTROLS
@@ -962,12 +965,13 @@ $$end
                                     case 16hff44: { upper_sprites.sprite_set_x = stackNext; upper_sprites.sprite_layer_write = 4; }
                                     case 16hff45: { upper_sprites.sprite_set_y = stackNext; upper_sprites.sprite_layer_write = 5; }
                                     case 16hff46: { upper_sprites.sprite_set_double = stackNext; upper_sprites.sprite_layer_write = 6; }
-                                    case 16hff47: { upper_sprites.sprite_writer_sprite = stackNext; }
-                                    case 16hff48: { upper_sprites.sprite_writer_line = stackNext; }
-                                    case 16hff49: { upper_sprites.sprite_writer_bitmap = stackNext; upper_sprites.sprite_writer_active = 1; }
-                                    case 16hff4b: { upper_sprites.sprites_at_x = stackNext; }
-                                    case 16hff4c: { upper_sprites.sprites_at_y = stackNext; }
-                                    case 16hff4d: { upper_sprites.sprite_update = stackNext; upper_sprites.sprite_layer_write = 10; }
+                                    case 16hff47: { upper_sprites.sprite_set_colmode = stackNext; upper_sprites.sprite_layer_write = 7; }
+                                    case 16hff48: { upper_sprites.sprite_writer_sprite = stackNext; }
+                                    case 16hff49: { upper_sprites.sprite_writer_line = stackNext; }
+                                    case 16hff4a: { upper_sprites.sprite_writer_bitmap = stackNext; upper_sprites.sprite_writer_active = 1; }
+                                    case 16hff4c: { upper_sprites.sprites_at_x = stackNext; }
+                                    case 16hff4d: { upper_sprites.sprites_at_y = stackNext; }
+                                    case 16hff4e: { upper_sprites.sprite_update = stackNext; upper_sprites.sprite_layer_write = 10; }
                                     case 16hff4f: { upper_sprites.sprite_layer_fade = stackNext; upper_sprites.sprite_layer_write = 9; }
                                     
                                     // VECTOR DRAWER

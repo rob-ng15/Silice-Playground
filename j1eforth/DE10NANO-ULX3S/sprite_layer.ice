@@ -24,6 +24,7 @@ algorithm sprite_layer(
     input   uint4   sprite_set_number,
     input   uint1   sprite_set_active,
     input   uint1   sprite_set_double,
+    input   uint2   sprite_set_colmode,
     input   uint6   sprite_set_colour,
     input   int11   sprite_set_x,
     input   int11   sprite_set_y,
@@ -32,6 +33,7 @@ algorithm sprite_layer(
     // For reading sprite characteristics for sprite_set_number
     output  uint1   sprite_read_active,
     output  uint1   sprite_read_double,
+    output  uint2   sprite_read_colmode,
     output  uint6   sprite_read_colour,
     output  int11   sprite_read_x,
     output  int11   sprite_read_y,
@@ -72,11 +74,17 @@ algorithm sprite_layer(
     // Stored as registers as needed instantly
     uint1 sprite_active[15] = uninitialised;
     uint1 sprite_double[15] = uninitialised;
+    uint2 sprite_colmode[15] = uninitialised;
     int11 sprite_x[15] = uninitialised;
     int11 sprite_y[15] = uninitialised;
     uint6 sprite_colour[15] = uninitialised;
     uint2 sprite_tile_number[15] = uninitialised;
 
+    // Palette for 3 or 15 colour sprites - shared
+    uint2 paletteR[16] = { 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3 };
+    uint2 paletteG[16] = { 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1 };
+    uint2 paletteB[16] = { 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0};
+    
     // Collision detection storage
     $$for i=0,14 do
         uint16      detect_collision_$i$ = uninitialised;
@@ -91,11 +99,13 @@ algorithm sprite_layer(
 
     // Calculate if each sprite is visible
     $$for i=0,14 do
-        uint4 sprite_$i$_xinsprite := 15 - ( ( pix_x - sprite_x[$i$] ) >> sprite_double[$i$] );
-        uint1 sprite_$i$_spritepixel := sprite_$i$_tiles.rdata0[ sprite_$i$_xinsprite, 1 ];
-        uint1 sprite_$i$_visiblex := ( pix_x >= sprite_x[$i$] ) && ( pix_x < ( sprite_x[$i$] + ( 16 << sprite_double[$i$] ) ) );
+        uint4 sprite_$i$_xinsprite := ( 16 >> sprite_colmode[$i$] ) - 1  - ( ( pix_x - sprite_x[$i$] ) >> sprite_double[$i$] );
+        uint4 sprite_$i$_spritepixel := ( sprite_colmode[$i$] == 0 ) ? sprite_$i$_tiles.rdata0[ sprite_$i$_xinsprite, 1 ] 
+                                        : ( sprite_colmode[$i$] == 1 ) ? sprite_$i$_tiles.rdata0[ sprite_$i$_xinsprite, 2 ]
+                                        : ( sprite_colmode[$i$] == 2 ) ? sprite_$i$_tiles.rdata0[ sprite_$i$_xinsprite, 3 ] : 0;
+        uint1 sprite_$i$_visiblex := ( pix_x >= sprite_x[$i$] ) && ( pix_x < ( sprite_x[$i$] + ( ( 16 >> sprite_colmode[$i$] ) << sprite_double[$i$] ) ) );
         uint1 sprite_$i$_visibley := ( pix_y >= sprite_y[$i$] ) && ( pix_y < ( sprite_y[$i$] + ( 16 << sprite_double[$i$] ) ) );
-        uint1 sprite_$i$_visible := sprite_$i$_visiblex && sprite_$i$_visibley && sprite_$i$_spritepixel  && sprite_active[$i$];
+        uint1 sprite_$i$_visible := sprite_$i$_visiblex && sprite_$i$_visibley && ( sprite_$i$_spritepixel != 0 )  && sprite_active[$i$];
     $$end
 
     // Expand Sprite Update Deltas
@@ -132,6 +142,7 @@ algorithm sprite_layer(
             case 4: { sprite_x[ sprite_set_number ] = sprite_set_x; }
             case 5: { sprite_y[ sprite_set_number ] = sprite_set_y; }
             case 6: { sprite_double[ sprite_set_number ] = sprite_set_double; }
+            case 7: { sprite_colmode[ sprite_set_number ] = sprite_set_colmode; }
             case 10: {
                 // Perform sprite update
                 sprite_colour[ sprite_set_number ] = ( spriteupdate( sprite_update ).colour_act ) ? spriteupdate( sprite_update ).colour : sprite_colour[ sprite_set_number ];
@@ -171,9 +182,20 @@ algorithm sprite_layer(
             if( pix_active ) {
                 $$for i=0,14 do
                     if(  ( sprite_$i$_visible ) ) {
-                        pix_red = colourexpand2to$color_depth$[ sprite_colour[$i$][4,2] ] >> sprite_fade;
-                        pix_green = colourexpand2to$color_depth$[ sprite_colour[$i$][2,2] ] >> sprite_fade;
-                        pix_blue = colourexpand2to$color_depth$[ sprite_colour[$i$][0,2] ] >> sprite_fade;
+                        switch( sprite_colmode[$i$] ) {
+                            case 0: {
+                                // Single colour
+                                pix_red = colourexpand2to$color_depth$[ sprite_colour[$i$][4,2] ] >> sprite_fade;
+                                pix_green = colourexpand2to$color_depth$[ sprite_colour[$i$][2,2] ] >> sprite_fade;
+                                pix_blue = colourexpand2to$color_depth$[ sprite_colour[$i$][0,2] ] >> sprite_fade;
+                            }
+                            default: {
+                                // 3 or 15 colour
+                                pix_red = colourexpand2to$color_depth$[ paletteR[ sprite_$i$_spritepixel ] ] >> sprite_fade;
+                                pix_green = colourexpand2to$color_depth$[ paletteG[ sprite_$i$_spritepixel ] ] >> sprite_fade;
+                                pix_blue = colourexpand2to$color_depth$[ paletteB[ sprite_$i$_spritepixel ] ] >> sprite_fade;
+                            }
+                        }
                         sprite_layer_display = 1;
                         // Perform collision detection
                         detect_collision_$i$ = detect_collision_$i$ | {

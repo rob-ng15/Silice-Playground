@@ -236,9 +236,14 @@ terminalhide! | Example ```terminalhide!``` hide the blue terminal window
 ### Lower and Upper Sprite Layers
 
 * Sprite Layer
-    * 15 (numbered 0 - 14) x 16 x 16 1 bit sprites
+    * 15 (numbered 0 - 14) x 16 x 16 1 bit sprites (see below about colour modes)
         * Double flag to display as double pixel 32 x 32 per sprite
         * 4 user settable tiles per sprite
+        * 3 colour modes
+            * 0 = default 16 x 16 1-bit sprite in sprite selectable colour
+            * 1 = 3 colour combines pixels to give 8 x 16 2-bit in 3 paletted colours plus transparent
+            * 2 = 15 colour combines pixels to give 4 x 16 4-bit in 15 paletted colours plus transparent
+            * _No mechanism at present to change the palette_
     * Fader level
     * In layer sprite collision detection, updates at the end of every frame
     * Sprite to bitmap collision detection, updates at the end of every frame
@@ -247,9 +252,12 @@ The lower sprite layer displays between the background and the bitmap; the upper
 
 Each Sprite has the following attributes:
 
-Sprite Tile<br>Map | Active | Double | Tile Number | X | Y | Colour 
------ | ----- | ----- | ----- | ----- | | ----- | -----
-64 lines of 16 pixels<br>4 x 16 x 16 tiles | Hide(0)<br>Display(1) | Single pixel 16 x 16 (0)<br>Double Pixel 32 x 32 (1) | 0 - 3 Select tile from the sprite tile map | X coordinate | Y coordinate | { rrggbb } colour
+Sprite Tile<br>Map | Active | Double | Colour Mode |Tile Number | X | Y | Colour 
+----- | ----- | ----- | ----- | ----- | -----  | ----- | -----
+64 lines of 16 pixels<br>4 x 16 x 16 tiles | Hide(0)<br>Display(1) | Single pixel 16 x 16 (0)<br>Double Pixel 32 x 32 (1) | 0 - Single colour<br>1 - 3 colour + transparent, 8 x 16 sprite<br>2 - 15 colour + transparent 4 x 16 sprite | 0 - 3 Select tile from the sprite tile map | X coordinate | Y coordinate | { rrggbb } colour for single colour mode
+
+3 colour sprites will be doubled to 16 x 32 pixels. Adjacent pixels are combined to give a 2-bit palette number, 0 being transparent. 
+15 colour sprites will be doubled to 8 x 32 pixels. 4 adjacent pixels are combined to give a 4-bit palette number, 0 being transparent.
 
 #### Memory Map for the LOWER and UPPER SPRITE Layers
 
@@ -262,13 +270,14 @@ ff33 | Set _ASN_ colour | Read _ASN_ colour
 ff34 | Set _ASN_ x coordinate | Read _ASN_ x coordinate
 ff35 | Set _ASN_ y coordinate | Read _ASN_ y coordinate
 ff36 | Set _ASN_ double flag | Read _ASN_ double flag
-ff37 | Set __Tile Map Writer Sprite Number__ referred to as _TMWSN_ in the following<br> |
-ff38 | Set _TMWSN_ tile map line ( 0 - 63 ) |
-ff39 | Set _TMWSN_ tile map line bitmap | 
-ff3a | | Sprites at flag<br>8 bit { sprite7, sprite6 ... sprite0 } flag of which sprites are visible at the x,y coordinate set below<br>Updates every frame whilst the pixel is being rendered
-ff3b | Sprites at x coordinate |
-ff3c | Sprites at y coordinate |
-ff3d | Update a sprite<br>See notes below |
+ff37 | Set _ASN_ colour mode | Read _ASN_ colour mode
+ff38 | Set __Tile Map Writer Sprite Number__ referred to as _TMWSN_ in the following<br> |
+ff39 | Set _TMWSN_ tile map line ( 0 - 63 ) |
+ff3a | Set _TMWSN_ tile map line bitmap | 
+ff3b | | Sprites at flag<br>8 bit { sprite7, sprite6 ... sprite0 } flag of which sprites are visible at the x,y coordinate set below<br>Updates every frame whilst the pixel is being rendered
+ff3c | Sprites at x coordinate |
+ff3d | Sprites at y coordinate |
+ff3e | Update a sprite<br>See notes below |
 ff3f | Set the fade level for the sprite layer
  | | 
 ff50 | | Collision detection flag for sprite 0 { bitmap, sprite14, sprite13, ... sprite 0 }
@@ -288,6 +297,8 @@ ff5d | | Collision detection flag for sprite 13 { bitmap, sprite14, sprite13, ..
 ff5e | | Collision detection flag for sprite 14 { bitmap, sprite14, sprite13, ... sprite 0 }
 
 _For the Upper Sprite Layer add 10 to the address, range ff40 - ff4f, ff60 - ff6f_.
+
+_Range ff70 - ff7f will be for setting sprite layer palette colours. Palettes are the same between lower and upper layers. This is not yet implemented._
 
 #### j1eforth SPRITE LAYER words
 

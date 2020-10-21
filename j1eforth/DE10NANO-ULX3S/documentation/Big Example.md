@@ -3,42 +3,25 @@ variable lasttimer
 
 : array create cells allot does> cells + ;
 
-( storage for 32 (20 hex) asteroids )
+( storage for 12 (c hex) low asteroids )
+( storage for 12 (c hex) high asteroids )
+c array lasteroidactive c array hasteroidactive
+c array lasteroidtype c array hasteroidtype
+c array lasteroiddirection c array hasteroiddirection
 
-20 array asteroidactive
-20 array asteroidtype
-20 array asteroidcolour
-20 array asteroidx
-20 array asteroidy
-20 array asteroiddirection
+( directions table for the asteroid sprite update flag)
+10 array updatedirections
+30 0 updatedirections ! 31 1 updatedirections !
+39 2 updatedirections ! 3a 3 updatedirections !
+2  4 updatedirections ! a  5 updatedirections !
+9  6 updatedirections ! 11 7 updatedirections !
+10 8 updatedirections ! 17 9 updatedirections !
+f  a updatedirections ! e  b updatedirections !
+6  c updatedirections ! 3e d updatedirections !
+3f e updatedirections ! 37 f updatedirections !
 
 ( store number of active asteroids )
 variable activeasteroids
-
-( set directions )
-( compass points initially )
-8 array directionx
-8 array directiony
-0 0 directionx ! 1 1 directionx !
-1 2 directionx ! 1 3 directionx !
-0 4 directionx ! -1 5 directionx !
--1 6 directionx ! -1 7 directionx !
-
--1 0 directiony ! -1 1 directiony !
-0 2 directiony ! 1 3 directiony !
-1 4 directiony ! 1 5 directiony !
-0 6 directiony ! -1 7 directiony !
-
-( set bullet sprite )
-8000 0000 0000 0000 0000 0000 0000 0000
-0000 0000 0000 0000 0000 0000 0000 0000
-0000 0000 0000 0000 0000 0000 0000 0000
-0000 0000 0000 0000 0000 0000 0000 0000
-0000 0000 0000 0000 0000 0000 0000 0000
-0000 0000 0000 0000 0000 0000 0000 0000
-0000 0000 0000 0000 0000 0000 0000 0000
-0000 0000 0000 0000 0000 0000 0000 0000
-0 usltile!
 
 ( set ship vector block )
 1 0 0 0 0 vectorvertex!
@@ -47,104 +30,32 @@ variable activeasteroids
 1 -5 a 0 3 vectorvertex!
 1 0 0 0 4 vectorvertex!
 
-( set big asteroid 1 block )
-1 0 0 8 0 vectorvertex!
-1 -7 -a 8 1 vectorvertex!
-1 -4 -c 8 2 vectorvertex!
-1 13 -a 8 3 vectorvertex!
-1 12 4 8 4 vectorvertex!
-1 9 4 8 5 vectorvertex!
-1 13 10 8 6 vectorvertex!
-1 a 13 8 7 vectorvertex!
-1 0 e 8 8 vectorvertex!
-1 -a 14 8 9 vectorvertex!
-1 -10 6 8 a vectorvertex!
-1 -c -4 8 b vectorvertex!
-1 0 0 8 c vectorvertex!
-
-( set big asteroid 2 block )
-1 0 -10 9 0 vectorvertex!
-1 8 -15 9 1 vectorvertex!
-1 c -e 9 2 vectorvertex!
-1 7 -d 9 3 vectorvertex!
-1 11 -1 9 4 vectorvertex!
-1 7 e 9 5 vectorvertex!
-1 0 b 9 6 vectorvertex!
-1 -6 f 9 7 vectorvertex!
-1 -c b 9 8 vectorvertex!
-1 -8 7 9 9 vectorvertex!
-1 -8 2 9 a vectorvertex!
-1 -f -9 9 b vectorvertex!
-1 -a -13 9 c vectorvertex!
-1 0 -10 9 d vectorvertex!
-
-( set big asteroid 3 block )
-1 -6 -14 a 0 vectorvertex!
-1 8 -f a 1 vectorvertex!
-1 8 -1 a 2 vectorvertex!
-1 f -6 a 3 vectorvertex!
-1 12 2 a 4 vectorvertex!
-1 8 7 a 5 vectorvertex!
-1 b c a 6 vectorvertex!
-1 -4 14 a 7 vectorvertex!
-1 -d 14 a 8 vectorvertex!
-1 -11 11 a 9 vectorvertex!
-1 -11 0 a a vectorvertex!
-1 -10 -7 a b vectorvertex!
-1 -6 -14 a c vectorvertex!
+: setshipsprite
+  2 0 do
+    0100 0100 0380 07c0 07c0 0fe0 0fe0 0fe0
+    1ff0 1ff0 1ff0 3ff8 3ff8 7efc 783c 0000
+    0000 6000 7800 7f00 7ff0 7ff8 3ff8 1fff
+    3ff8 3ff8 7ff0 7ff0 7800 6000 0000 0000
+    0000 3c1e 3f7e 1ffc 1ffc 0ff8 0ff8 0ff8
+    07f0 07f0 07f0 03e0 03e0 01c0 0080 0080
+    0000 0000 0006 001e 00fe 07fe 1ffc 3ffc
+    fff8 3ffc 1ffc 07fe 00fe 001e 0006 0000
+  loop c lsltile! c usltile! ;
+  
+: setbulletsprite
+  2 0 do
+    0000 0000 0000 0000 0000 0100 0100 07c0
+    0100 0100 0000 0000 0000 0000 0000 0000
+    0000 0000 0000 0000 0000 0440 0280 0100
+    0280 0440 0000 0000 0000 0000 0000 0000
+    0000 0000 0000 0000 0000 0100 0380 07c0
+    0380 0100 0000 0000 0000 0000 0000 0000
+    0000 0000 0000 0000 0000 0540 0380 07c0
+    0380 0540 0000 0000 0000 0000 0000 0000
+  loop d lsltile! d usltile! ;
 
 : placeasteroids
   0 activeasteroids !
-  
-  ( set initial colour and deactivate all asteroids )
-  ( colour is used to detect which asteroid )
-  ( the bullet has hit)
-  
-  20 0 do
-    i 10 + i asteroidcolour !
-    0 i asteroidactive !
-    8 rng i asteroiddirection !
-  loop
-  
-  ( place upto 2 asteroid in the top section )
-  3 rng 1+ 0 do
-    activeasteroids @
-    dup 280 rng swap asteroidx !
-    dup a0 rng swap asteroidy !
-    dup 3 rng 8 + swap asteroidtype !
-    1 swap asteroidactive !
-    activeasteroids @ 1+ activeasteroids !
-  loop
-
-  ( place upto 2 asteroid in the bottom section )
-  3 rng 1+ 0 do
-    activeasteroids @
-    dup 280 rng swap asteroidx !
-    dup a0 rng 140 + swap asteroidy !
-    dup 3 rng 8 + swap asteroidtype !
-    1 swap asteroidactive !
-    activeasteroids @ 1+ activeasteroids !
-  loop
-
-  ( place upto 2 asteroid in the left section )
-  3 rng 1+ 0 do
-    activeasteroids @
-    dup d6 rng 1ac + swap asteroidx !
-    dup 1e0 rng swap asteroidy !
-    dup 3 rng 8 + swap asteroidtype !
-    1 swap asteroidactive !
-    activeasteroids @ 1+ activeasteroids !
-  loop
-  
-  ( place upto 2 asteroid in the right section )
-  3 rng 1+ 0 do
-    activeasteroids @
-    dup d6 rng swap asteroidx !
-    dup 1e0 rng swap asteroidy !
-    dup 3 rng 8 + swap asteroidtype !
-    1 swap asteroidactive !
-    activeasteroids @ 1+ activeasteroids !
-  loop
 ;
 
 : setup
@@ -154,10 +65,13 @@ variable activeasteroids
   timer1hz! 0 lasttimer !
   ( set the background )
   2a 1 7 background! cs!
-  ( hide usl sprite 0 and set monitoring )
-  0 0 0 0 0 0 0 uslsprite!
-  0 ff40 ! 
-  ( randomly place asteroids )
+  ( hide all sprites )
+  f 0 do 
+    0 0 0 0 0 0 0 lslsprite!
+    0 0 0 0 0 0 0 uslsprite!
+  loop
+  setshipsprite
+  setbulletsprite
   placeasteroids ;
 
 : finish
@@ -176,76 +90,58 @@ variable activeasteroids
 : fire?
   ( fire if bullet not active )
   ff41 @ 0= if
-     3f 140 ef 0 1 0 0 uslsprite!
+     3f 140 ef 0 1 0 d lslsprite!
+     3f 140 ef 0 1 0 d uslsprite!
     4 3d 80 beep!
   then ;
 
 : hit?
-  ( see if the bullet has hit the background )
-  ff60 @ 8000 and if
-    ( explode )
-    1 19 80 beep!
-    ( deactivate the bullet )
-    0 0 0 0 0 0 0 uslsprite!
-  then ;
-
-: drawship 
-    3f 140 f0 0 vector!
 ;
 
-: wrapasteroid
-  dup dup asteroidx @ 280 /mod drop
-  swap asteroidx !
-  dup asteroidy @ 1e0 /mod drop
-  swap asteroidy !
-  ;
+: drawship 
+    3f 140 f0 0 1 0 c lslsprite!
+    3f 140 f0 0 1 0 c uslsprite!
+    ( monitor bullet )
+    d ff40 ! d ff30 ! ;
+
+: moveasteroids
+  c 0 do
+    i lasteroidactive @ 0<> if
+      i lasteroiddirection @ updatedirections @
+      i lslupdate! then
+    i hasteroidactive @ 0<> if
+      i hasteroiddirection @ updatedirections @
+      i uslupdate! then
+  loop ;
 
 : drawasteroids
-  20 0 do
-    i asteroidactive @ if
-      40
-      i asteroidx @
-      i asteroidy @
-      i asteroidtype @
-      vector!
-      i asteroiddirection @
-      dup directionx @ 
-      i asteroidx @ + i asteroidx !
-      directiony @
-      i asteroidy @ + i asteroidy !
-      i wrapasteroid 
-      i asteroidcolour @
-      i asteroidx @
-      i asteroidy @
-      i asteroidtype @
-      vector!
-    then
+  d 0 do
   loop ;
 
 : mainloop
     beepboop
-    138 0 uslupdate!
-    ( copy the bullet coordinates )
-    ff44 @ ff09 !
-    ff45 @ ff0a ! 
-    drawasteroids drawship vblank?
+    178 d lslupdate!
+    178 d uslupdate!
+    moveasteroids drawship
     hit? ;
 
 : demoULX3S
   setup
   begin
-    mainloop
+    14 timer1khz! mainloop
     buttons@ 2 and 0<> if 
       fire? then
+    timer1khz?
     buttons@ 4 and 0<>
   until finish ;
 
 : demoDE10NANO
   setup
   begin
-    mainloop
+    14 timer1khz! mainloop
      buttons@ 2 and 0= if 
       fire? then
+   timer1khz?
    buttons@ 1 and 0=
   until finish ;
   

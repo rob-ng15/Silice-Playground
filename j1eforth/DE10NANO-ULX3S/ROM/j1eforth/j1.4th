@@ -992,12 +992,12 @@ t: blit1! ff01 literal ! ff00 literal ! ff03 literal ! ff02 literal ! 5 literal 
 t: blit1tile! ff0b literal ! 10 literal begin 1- dup ff0c literal ! swap ff0d literal ! dup 0= until drop t;
 t: cs! 40 literal 0 literal 0 literal 2f7 literal 1df literal rectangle! t;
 
-t: lsltile! ff37 literal ! 40 literal begin 1- dup ff38 literal ! swap ff39 literal ! dup 0= until drop t;
+t: lsltile! ff38 literal ! 40 literal begin 1- dup ff39 literal ! swap ff3a literal ! dup 0= until drop t;
 t: lslsprite! ( colour x y tile active double number ) ff30 literal ! ff36 literal ! ff31 literal ! ff32 literal ! ff35 literal ! ff34 literal ! ff33 literal ! t;
-t: lslupdate! ff30 literal ! ff3d literal ! t;
-t: usltile! ff47 literal ! 40 literal begin 1- dup ff48 literal ! swap ff49 literal ! dup 0= until drop t;
+t: lslupdate! ff30 literal ! ff3e literal ! t;
+t: usltile! ff48 literal ! 40 literal begin 1- dup ff49 literal ! swap ff4a literal ! dup 0= until drop t;
 t: uslsprite! ( colour x y tile active double number ) ff40 literal ! ff46 literal ! ff41 literal ! ff42 literal ! ff45 literal ! ff44 literal ! ff43 literal ! t;
-t: uslupdate! ff40 literal ! ff4d literal ! t;
+t: uslupdate! ff40 literal ! ff4e literal ! t;
 
 t: vectorvertex! ff76 literal ! ff75 literal ! ff78 literal ! ff77 literal ! ff79 literal ! 1 literal ff7a literal ! t;
 t: vector? begin ff74 literal @ 0= until t;
