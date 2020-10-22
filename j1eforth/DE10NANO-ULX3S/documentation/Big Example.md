@@ -90,7 +90,7 @@ variable activeasteroids
 : fire?
   ( fire if bullet not active )
   ff41 @ 0= if
-     3f 140 ef 0 1 0 d lslsprite!
+     3c 140 ef 2 1 0 d lslsprite!
      3f 140 ef 0 1 0 d uslsprite!
     4 3d 80 beep!
   then ;

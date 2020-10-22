@@ -799,7 +799,6 @@ $$end
                                                 case 16hff35: { newStackTop = lower_sprites.sprite_read_y; }
                                                 case 16hff36: { newStackTop = lower_sprites.sprite_read_double; }
                                                 case 16hff37: { newStackTop = lower_sprites.sprite_read_colmode; }
-                                                case 16hff3b: { newStackTop = lower_sprites.sprites_at_xy; }
                                                 
                                                 // UPPER SPRITES READ
                                                 case 16hff41: { newStackTop = upper_sprites.sprite_read_active; }
@@ -809,7 +808,6 @@ $$end
                                                 case 16hff45: { newStackTop = upper_sprites.sprite_read_y; }
                                                 case 16hff46: { newStackTop = upper_sprites.sprite_read_double; }
                                                 case 16hff47: { newStackTop = upper_sprites.sprite_read_colmode; }
-                                                case 16hff4b: { newStackTop = upper_sprites.sprites_at_xy; }
 
                                                 // SPRITE COLLISION DETECTION
                                                 case 16hff50: { newStackTop = lower_sprites.collision_0; }
@@ -952,8 +950,6 @@ $$end
                                     case 16hff38: { lower_sprites.sprite_writer_sprite = stackNext; }
                                     case 16hff39: { lower_sprites.sprite_writer_line = stackNext; }
                                     case 16hff3a: { lower_sprites.sprite_writer_bitmap = stackNext; lower_sprites.sprite_writer_active = 1; }
-                                    case 16hff3c: { lower_sprites.sprites_at_x = stackNext; }
-                                    case 16hff3d: { lower_sprites.sprites_at_y = stackNext; }
                                     case 16hff3e: { lower_sprites.sprite_update = stackNext; lower_sprites.sprite_layer_write = 10; }
                                     case 16hff3f: { lower_sprites.sprite_layer_fade = stackNext; lower_sprites.sprite_layer_write = 9; }
                                     
@@ -969,11 +965,43 @@ $$end
                                     case 16hff48: { upper_sprites.sprite_writer_sprite = stackNext; }
                                     case 16hff49: { upper_sprites.sprite_writer_line = stackNext; }
                                     case 16hff4a: { upper_sprites.sprite_writer_bitmap = stackNext; upper_sprites.sprite_writer_active = 1; }
-                                    case 16hff4c: { upper_sprites.sprites_at_x = stackNext; }
-                                    case 16hff4d: { upper_sprites.sprites_at_y = stackNext; }
                                     case 16hff4e: { upper_sprites.sprite_update = stackNext; upper_sprites.sprite_layer_write = 10; }
                                     case 16hff4f: { upper_sprites.sprite_layer_fade = stackNext; upper_sprites.sprite_layer_write = 9; }
-                                    
+
+                                    // LOWER SPRITE LAYER 3 or 15 colour palette
+                                    case 16hff51: { lower_sprites.sprite_palette_1 = stackNext; }
+                                    case 16hff52: { lower_sprites.sprite_palette_2 = stackNext; }
+                                    case 16hff53: { lower_sprites.sprite_palette_3 = stackNext; }
+                                    case 16hff54: { lower_sprites.sprite_palette_4 = stackNext; }
+                                    case 16hff55: { lower_sprites.sprite_palette_5 = stackNext; }
+                                    case 16hff56: { lower_sprites.sprite_palette_6 = stackNext; }
+                                    case 16hff57: { lower_sprites.sprite_palette_7 = stackNext; }
+                                    case 16hff58: { lower_sprites.sprite_palette_8 = stackNext; }
+                                    case 16hff59: { lower_sprites.sprite_palette_9 = stackNext; }
+                                    case 16hff5a: { lower_sprites.sprite_palette_10 = stackNext; }
+                                    case 16hff5b: { lower_sprites.sprite_palette_11 = stackNext; }
+                                    case 16hff5c: { lower_sprites.sprite_palette_12 = stackNext; }
+                                    case 16hff5d: { lower_sprites.sprite_palette_13 = stackNext; }
+                                    case 16hff5e: { lower_sprites.sprite_palette_14 = stackNext; }
+                                    case 16hff5f: { lower_sprites.sprite_palette_15 = stackNext; }
+
+                                    // UPPER SPRITE LAYER 3 or 15 colour palette
+                                    case 16hff51: { upper_sprites.sprite_palette_1 = stackNext; }
+                                    case 16hff52: { upper_sprites.sprite_palette_2 = stackNext; }
+                                    case 16hff53: { upper_sprites.sprite_palette_3 = stackNext; }
+                                    case 16hff54: { upper_sprites.sprite_palette_4 = stackNext; }
+                                    case 16hff55: { upper_sprites.sprite_palette_5 = stackNext; }
+                                    case 16hff56: { upper_sprites.sprite_palette_6 = stackNext; }
+                                    case 16hff57: { upper_sprites.sprite_palette_7 = stackNext; }
+                                    case 16hff58: { upper_sprites.sprite_palette_8 = stackNext; }
+                                    case 16hff59: { upper_sprites.sprite_palette_9 = stackNext; }
+                                    case 16hff5a: { upper_sprites.sprite_palette_10 = stackNext; }
+                                    case 16hff5b: { upper_sprites.sprite_palette_11 = stackNext; }
+                                    case 16hff5c: { upper_sprites.sprite_palette_12 = stackNext; }
+                                    case 16hff5d: { upper_sprites.sprite_palette_13 = stackNext; }
+                                    case 16hff5e: { upper_sprites.sprite_palette_14 = stackNext; }
+                                    case 16hff5f: { upper_sprites.sprite_palette_15 = stackNext; }
+
                                     // VECTOR DRAWER
                                     case 16hff70: { vector_drawer.vector_block_number = stackNext; }
                                     case 16hff71: { vector_drawer.vector_block_colour = stackNext; }

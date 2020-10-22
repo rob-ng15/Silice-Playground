@@ -42,12 +42,6 @@ algorithm sprite_layer(
     // Flag to set the above
     input   uint4   sprite_layer_write,
 
-    // For determing which sprites are showing at a given pixel
-    // Basic collision detection
-    input   uint11  sprites_at_x,
-    input   uint11  sprites_at_y,
-    output  uint16  sprites_at_xy,
-
     // FULL collision detection
     // Bitmap is set flag
     input   uint1   bitmap_display,
@@ -60,6 +54,12 @@ algorithm sprite_layer(
     input   uint6   sprite_writer_line,
     input   uint16  sprite_writer_bitmap,  
     input   uint1   sprite_writer_active,
+
+    // For setting 3 or 15 colour sprite palette
+    $$for i=1,15 do
+        input uint6 sprite_palette_$i$,
+    $$end
+
     
     // SPRITE LAYER fade level
     input uint3 sprite_layer_fade,
@@ -81,9 +81,7 @@ algorithm sprite_layer(
     uint2 sprite_tile_number[15] = uninitialised;
 
     // Palette for 3 or 15 colour sprites - shared
-    uint2 paletteR[16] = { 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3 };
-    uint2 paletteG[16] = { 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1 };
-    uint2 paletteB[16] = { 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0};
+    uint6 palette[16] = uninitialised;
     
     // Collision detection storage
     $$for i=0,14 do
@@ -121,6 +119,11 @@ algorithm sprite_layer(
         sprite_$i$_tiles.wenable1 := ( sprite_writer_sprite == $i$ ) && sprite_writer_active;
     $$end
 
+    // Set 3 or 15 colour sprite palette
+    $$for i=1,15 do
+        palette[$i$] := sprite_palette_$i$;
+    $$end
+    
     // Default to transparent
     sprite_layer_display := 0;
 
@@ -191,9 +194,9 @@ algorithm sprite_layer(
                             }
                             default: {
                                 // 3 or 15 colour
-                                pix_red = colourexpand2to$color_depth$[ paletteR[ sprite_$i$_spritepixel ] ] >> sprite_fade;
-                                pix_green = colourexpand2to$color_depth$[ paletteG[ sprite_$i$_spritepixel ] ] >> sprite_fade;
-                                pix_blue = colourexpand2to$color_depth$[ paletteB[ sprite_$i$_spritepixel ] ] >> sprite_fade;
+                                pix_red = colourexpand2to$color_depth$[ palette[ sprite_$i$_spritepixel ][4,2] ] >> sprite_fade;
+                                pix_green = colourexpand2to$color_depth$[ palette[ sprite_$i$_spritepixel ][2,2] ] >> sprite_fade;
+                                pix_blue = colourexpand2to$color_depth$[ palette[ sprite_$i$_spritepixel ][0,2] ] >> sprite_fade;
                             }
                         }
                         sprite_layer_display = 1;
@@ -203,18 +206,15 @@ algorithm sprite_layer(
                             sprite_7_visible, sprite_6_visible, sprite_5_visible, sprite_4_visible, sprite_3_visible, sprite_2_visible, sprite_1_visible, sprite_0_visible
                         };
                     }
-                    // Output collision detection
-                    collision_$i$ = ( ( pix_x == 639 ) && ( pix_y == 479 ) ) ? detect_collision_$i$ : collision_$i$;
                 $$end
-                
-                // Perform BASIC collision detection ( ALL of the sprites at x,y )
-                if( ( pix_x == sprites_at_x ) && ( pix_y == sprites_at_y ) ) {
-                    sprites_at_xy = {
-                        1b0, sprite_14_visible, sprite_13_visible, sprite_12_visible, sprite_11_visible, sprite_10_visible, sprite_9_visible, sprite_8_visible, 
-                        sprite_7_visible, sprite_6_visible, sprite_5_visible, sprite_4_visible, sprite_3_visible, sprite_2_visible, sprite_1_visible, sprite_0_visible
-                    };
-                }
             }
+        }
+
+        // Output collision detection
+        if( ( pix_x == 639 ) && ( pix_y == 479 ) ) {
+            $$for i=0,14 do
+                collision_$i$ = ( ( pix_x == 639 ) && ( pix_y == 479 ) ) ? detect_collision_$i$ : collision_$i$;
+            $$end
         }
     }
 }

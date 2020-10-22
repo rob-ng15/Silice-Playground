@@ -243,7 +243,6 @@ terminalhide! | Example ```terminalhide!``` hide the blue terminal window
             * 0 = default 16 x 16 1-bit sprite in sprite selectable colour
             * 1 = 3 colour combines pixels to give 8 x 16 2-bit in 3 paletted colours plus transparent
             * 2 = 15 colour combines pixels to give 4 x 16 4-bit in 15 paletted colours plus transparent
-            * _No mechanism at present to change the palette_
     * Fader level
     * In layer sprite collision detection, updates at the end of every frame
     * Sprite to bitmap collision detection, updates at the end of every frame
@@ -274,31 +273,27 @@ ff37 | Set _ASN_ colour mode | Read _ASN_ colour mode
 ff38 | Set __Tile Map Writer Sprite Number__ referred to as _TMWSN_ in the following<br> |
 ff39 | Set _TMWSN_ tile map line ( 0 - 63 ) |
 ff3a | Set _TMWSN_ tile map line bitmap | 
-ff3b | | Sprites at flag<br>8 bit { sprite7, sprite6 ... sprite0 } flag of which sprites are visible at the x,y coordinate set below<br>Updates every frame whilst the pixel is being rendered
-ff3c | Sprites at x coordinate |
-ff3d | Sprites at y coordinate |
 ff3e | Update a sprite<br>See notes below |
 ff3f | Set the fade level for the sprite layer
  | | 
 ff50 | | Collision detection flag for sprite 0 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff51 | | Collision detection flag for sprite 1 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff52 | | Collision detection flag for sprite 2 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff53 | | Collision detection flag for sprite 3 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff54 | | Collision detection flag for sprite 4 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff55 | | Collision detection flag for sprite 5 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff56 | | Collision detection flag for sprite 6 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff57 | | Collision detection flag for sprite 7 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff58 | | Collision detection flag for sprite 8 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff59 | | Collision detection flag for sprite 9 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff5a | | Collision detection flag for sprite 10 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff5b | | Collision detection flag for sprite 11 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff5c | | Collision detection flag for sprite 12 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff5d | | Collision detection flag for sprite 13 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff5e | | Collision detection flag for sprite 14 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff51 | Set 3 or 15 colour palette 1 | Collision detection flag for sprite 1 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff52 | Set 3 or 15 colour palette 2 | Collision detection flag for sprite 2 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff53 | Set 3 or 15 colour palette 3 | Collision detection flag for sprite 3 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff54 | Set 3 or 15 colour palette 4 | Collision detection flag for sprite 4 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff55 | Set 3 or 15 colour palette 5 | Collision detection flag for sprite 5 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff56 | Set 3 or 15 colour palette 6 | Collision detection flag for sprite 6 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff57 | Set 3 or 15 colour palette 7 | Collision detection flag for sprite 7 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff58 | Set 3 or 15 colour palette 8 | Collision detection flag for sprite 8 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff59 | Set 3 or 15 colour palette 9 | Collision detection flag for sprite 9 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff5a | Set 3 or 15 colour palette a | Collision detection flag for sprite 10 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff5b | Set 3 or 15 colour palette b | Collision detection flag for sprite 11 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff5c | Set 3 or 15 colour palette c | Collision detection flag for sprite 12 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff5d | Set 3 or 15 colour palette d | Collision detection flag for sprite 13 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff5e | Set 3 or 15 colour palette e | Collision detection flag for sprite 14 { bitmap, sprite14, sprite13, ... sprite 0 }
+ff5f | Set 3 or 15 colour palette f | 
 
 _For the Upper Sprite Layer add 10 to the address, range ff40 - ff4f, ff60 - ff6f_.
-
-_Range ff70 - ff7f will be for setting sprite layer palette colours. Palettes are the same between lower and upper layers. This is not yet implemented._
 
 #### j1eforth SPRITE LAYER words
 
@@ -322,6 +317,38 @@ Bit(s) | Purpose
 6 | Tile number action - 0 = leave as is, 1 = increment the tile number (simple animation)
 5 - 3 | Y delta - amount to move along the y-axis, 2's complement number
 2 - 0 | X delta - amount to move along the x-axis, 2's complement number
+
+### VECTOR DRAWER
+
+* Provides 32 vector blocks, each of 16 vertices
+* Each vertex is a displacement from 0, 0 in the range -31 to 0 to 31
+    * Each vertex has an active flag
+        * When drawing the vector block, the vector drawer will stop when it reaches and inactive vertex
+* Tightly coupled to the GPU. The vectors are directly sent to the GPU, when the GPU is ready, when not active
+        
+When drawing a vector block, a colour, x-centre, y-centre and vector block number is provided. This should be quicker than specifiying each line to draw in Forth code, as the vector drawer will send the next vector to the GPU as soon as the previous one is rendered, and will continue in the background with no further intervention from the Forth code.
+
+Hexadecimal<br>Address | Write | Read
+:-----: | ----- | -----
+ff70 | Set the vector block number for drawing
+ff71 | Set the colour for drawing
+ff72 | Set the x centre coordinate for drawing
+ff73 | Set the y centre coordinate for drawing
+ff74 | Start the vector drawing | Vector block busy
+ff75 | Set the vector block number for writing
+ff76 | Set the vertex in the vector block number for writing
+ff77 | Set the x delta of the vertex for writing
+ff78 | Set the y delta of the vertex for writing
+ff79 | Set the active status of the vertex for writing
+ff7a | Write the vertex to the vector block
+
+#### j1eforth VECTOR DRAWER words
+
+VECTOR<br>DRAWER<br>Word | Usage
+----- | -----
+vectorvertex! | Example ```1 -6 -18 a 0 vectorvertex!``` sets vertex 0 in vector block a to -6, -18 and active
+vector? | Example ```vector?``` waits whilst the VECTOR DRAWER is busy
+vector! | Example ```c 50 50 9 vector!``` draws vector block 9 centred at 50, 50 in colour c 
 
 ### Audio Output
 
@@ -428,40 +455,6 @@ rng | Example ```10 rng``` puts a pseudo random number from 0 - f (hex 10 - 1) o
 * COLOUR BLITTER
     * 10 bit { Arrggbb } 16 x 16 blitter from a configurable 64 16 x 16 tilemap (16384 * 7 bit, might be too big for the blockram)
         * A will determine if pixel is placed or missed (mask)
-
-### VECTOR DRAWER ( Work In Progress )
-
-_Coded, still misses the odd line. Wired in to memory map and extra j1eforth words added._
-
-* Provides 32 vector blocks, each of 16 vertices
-* Each vertex is a displacement from 0, 0 in the range -31 to 0 to 31
-    * Each vertex has an active flag
-        * When drawing the vector block, the vector drawer will stop when it reaches and inactive vertex
-* Tightly coupled to the GPU. The vectors are directly sent to the GPU, when the GPU is ready, when not active
-        
-When drawing a vector block, a colour, x-centre, y-centre and vector block number is provided. This should be quicker than specifiying each line to draw in Forth code, as the vector drawer will send the next vector to the GPU as soon as the previous one is rendered, and will continue in the background with no further intervention from the Forth code.
-
-Hexadecimal<br>Address | Write | Read
-:-----: | ----- | -----
-ff70 | Set the vector block number for drawing
-ff71 | Set the colour for drawing
-ff72 | Set the x centre coordinate for drawing
-ff73 | Set the y centre coordinate for drawing
-ff74 | Start the vector drawing | Vector block busy
-ff75 | Set the vector block number for writing
-ff76 | Set the vertex in the vector block number for writing
-ff77 | Set the x delta of the vertex for writing
-ff78 | Set the y delta of the vertex for writing
-ff79 | Set the active status of the vertex for writing
-ff7a | Write the vertex to the vector block
-
-#### j1eforth VECTOR DRAWER words
-
-VECTOR<br>DRAWER<br>Word | Usage
------ | -----
-vectorvertex! | Example ```1 -6 -18 a 0 vectorvertex!``` sets vertex 0 in vector block a to -6, -18 and active
-vector? | Example ```vector?``` waits whilst the VECTOR DRAWER is busy
-vector! | Example ```c 50 50 9 vector!``` draws vector block 9 centred at 50, 50 in colour c 
 
 ### DISPLAY LIST
 
