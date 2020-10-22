@@ -21,7 +21,11 @@ f  a updatedirections ! e  b updatedirections !
 3f e updatedirections ! 37 f updatedirections !
 
 ( store number of active asteroids )
-variable activeasteroids
+variable activelasteroids
+variable activehasteroids
+
+( asteroid temporary )
+variable workasteroid
 
 ( set ship vector block )
 1 0 0 0 0 vectorvertex!
@@ -40,7 +44,7 @@ variable activeasteroids
     07f0 07f0 07f0 03e0 03e0 01c0 0080 0080
     0000 0000 0006 001e 00fe 07fe 1ffc 3ffc
     fff8 3ffc 1ffc 07fe 00fe 001e 0006 0000
-  loop c lsltile! c usltile! ;
+  loop d lsltile! d usltile! ;
   
 : setbulletsprite
   2 0 do
@@ -52,27 +56,85 @@ variable activeasteroids
     0380 0100 0000 0000 0000 0000 0000 0000
     0000 0000 0000 0000 0000 0540 0380 07c0
     0380 0540 0000 0000 0000 0000 0000 0000
-  loop d lsltile! d usltile! ;
+  loop e lsltile! e usltile! ;
 
+  
+: largeasteroidbitmap
+  ffff ffff ffff ffff ffff ffff ffff ffff
+  ffff ffff ffff ffff ffff ffff ffff ffff
+  aaaa 5555 aaaa 5555 aaaa 5555 aaaa 5555
+  aaaa 5555 aaaa 5555 aaaa 5555 aaaa 5555
+  ffff ffff ffff ffff ffff ffff ffff ffff
+  ffff ffff ffff ffff ffff ffff ffff ffff
+  5555 aaaa 5555 aaaa 5555 aaaa 5555 aaaa
+  5555 aaaa 5555 aaaa 5555 aaaa 5555 aaaa ;
+  
+: setlargelasteroid
+  workasteroid !
+  largeasteroidbitmap
+  workasteroid @ lsltile! ;
+
+  : setlargehasteroid
+  workasteroid !
+  largeasteroidbitmap
+  workasteroid @ usltile! ;
+
+( place initial large asteroids )
+( always away from the centre )
+( lower layer, top and left )
+( upper layer, bottom and right )
 : placeasteroids
-  0 activeasteroids !
-;
+  0 activelasteroids ! 0 activehasteroids !
+  4 rng 1+ 0 do
+    20 rng 20 + 280 rng a0 rng 2 rng 2* 1 1 activelasteroids @ lslsprite!
+    20 rng 2/ activelasteroids @ lasteroiddirection !
+    activelasteroids @ setlargelasteroid
+    1 activelasteroids @ lasteroidtype !
+    1 activelasteroids @ lasteroidactive !
+    activelasteroids @ 1+ activelasteroids !
+  loop
+    20 rng 20 + d5 rng 1e0 rng 2 rng 2* 1 1 activelasteroids @ lslsprite!
+    20 rng 2/ activelasteroids @ lasteroiddirection !
+    activelasteroids @ setlargelasteroid
+    1 activelasteroids @ lasteroidtype !
+    1 activelasteroids @ lasteroidactive !
+    activelasteroids @ 1+ activelasteroids !
+  4 rng 1+ 0 do
+    20 rng 20 + 280 rng a0 rng 140 + 2 rng 2* 1 1 activehasteroids @ uslsprite!
+    20 rng 2/ activehasteroids @ hasteroiddirection !
+    activehasteroids @ setlargehasteroid
+    1 activehasteroids @ hasteroidtype !
+    1 activehasteroids @ hasteroidactive !
+    activehasteroids @ 1+ activehasteroids !
+  loop
+    20 rng 20 + d5 rng 1aa + 1e0 rng 2 rng 2* 1 1 activehasteroids @ uslsprite!
+    20 rng 2/ activehasteroids @ hasteroiddirection !
+    activehasteroids @ setlargehasteroid
+    1 activehasteroids @ hasteroidtype !
+    1 activehasteroids @ hasteroidactive !
+    activehasteroids @ 1+ activehasteroids ! ;
 
 : setup
+  ( clear the screen )
+  cs! tpucs!
   ( hide the terminal )
   terminalhide!
   ( reset the second timer )
   timer1hz! 0 lasttimer !
   ( set the background )
-  2a 1 7 background! cs!
+  2a 1 7 background!
   ( hide all sprites )
   f 0 do 
-    0 0 0 0 0 0 0 lslsprite!
-    0 0 0 0 0 0 0 uslsprite!
+    0 0 0 0 0 0 i lslsprite!
+    0 0 0 0 0 0 i uslsprite!
   loop
   setshipsprite
   setbulletsprite
-  placeasteroids ;
+  placeasteroids 
+  ( draw lives )
+  3f 220 1d0 0 vector!
+  3f 240 1d0 0 vector!
+  3f 260 1d0 0 vector! ;
 
 : finish
  terminalshow! ;
@@ -89,23 +151,44 @@ variable activeasteroids
 
 : fire?
   ( fire if bullet not active )
-  ff41 @ 0= if
-     3c 140 ef 2 1 0 d lslsprite!
-     3f 140 ef 0 1 0 d uslsprite!
+  ( bullet exists in lower and upper layers )
+  ( for collision detection )
+  e ff40 ! ff41 @ 0= if
+    3c 140 e6 2 1 0 e lslsprite!
+    30 140 e6 0 1 0 e uslsprite!
     4 3d 80 beep!
   then ;
 
 : hit?
-;
+  ff5e @ 1fff and 0<> if
+    1 4 1f4 beep!
+    0 0 0 0 0 0 e lslsprite!
+    0 0 0 0 0 0 e uslsprite!
+  then
+  ff6e @ 1fff and 0<> if
+    1 4 1f4 beep!
+    0 0 0 0 0 0 e lslsprite!
+    0 0 0 0 0 0 e uslsprite!
+  then ;
 
-: drawship 
-    3f 140 f0 0 1 0 c lslsprite!
-    3f 140 f0 0 1 0 c uslsprite!
-    ( monitor bullet )
-    d ff40 ! d ff30 ! ;
+: crash?
+  ff5d @ 1fff and 0<> if
+    1 4 1f4 beep!
+    setup
+  then
+  ff6d @ 1fff and 0<> if
+    1 4 1f4 beep!
+    setup
+  then ;
+  
+: drawship
+  ( ship exits in lower and upper layers )
+  ( for collision detection )
+  3f 140 f0 0 1 0 d lslsprite!
+  3f 140 f0 0 1 0 d uslsprite! ;
 
 : moveasteroids
-  c 0 do
+  d 0 do
     i lasteroidactive @ 0<> if
       i lasteroiddirection @ updatedirections @
       i lslupdate! then
@@ -114,34 +197,30 @@ variable activeasteroids
       i uslupdate! then
   loop ;
 
-: drawasteroids
-  d 0 do
-  loop ;
-
 : mainloop
+    14 timer1khz!
     beepboop
-    178 d lslupdate!
-    178 d uslupdate!
+    vblank?
+    178 e lslupdate!
+    178 e uslupdate!
     moveasteroids drawship
-    hit? ;
+    hit? crash? timer1khz? ;
 
 : demoULX3S
   setup
   begin
-    14 timer1khz! mainloop
+    mainloop
     buttons@ 2 and 0<> if 
       fire? then
-    timer1khz?
     buttons@ 4 and 0<>
   until finish ;
 
 : demoDE10NANO
   setup
   begin
-    14 timer1khz! mainloop
+     mainloop
      buttons@ 2 and 0= if 
       fire? then
-   timer1khz?
    buttons@ 1 and 0=
   until finish ;
   

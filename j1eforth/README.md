@@ -1,4 +1,5 @@
 # j1eforth
+
 ## Porting to the J1+ CPU and the FOMU USB FPGA, de10nano FPGA with MiSTer I/O Board and the ULX3S FPGA
 
 Written in Silice (https://github.com/sylefeb/Silice), using the _**WIP**_ branch.
@@ -14,6 +15,8 @@ I was looking for a simple design to try building for a FPGA, and came across th
 The FOMU has 120kbit of block ram with a single cycle latency, along with 1024kbit of single port ram (65536 x 16bit) with a dual cycle latency. The J1 CPU was recoded in Silice, adding in the cycle latencies for the block ram and the single port ram. The ROM for the CPU is copied from the block ram to the single port ram as part of the initialisation.
 
 Silice was chosen due to my limited FPGA programming experience.
+
+Once the design was working on the FOMU, I started the porting to the more capable DE10NANO and ULX3S boards, using their included display capabilities to provide a 640 x 480 64 colour display. Once the basic design was working, this was extended to include as many display capabilities as needed. The additions to the design were driven by the aim of creating a simple, but fully functional Forth computer.
 
 ## J1/J1+ CPU Architecture and Comparisons
 

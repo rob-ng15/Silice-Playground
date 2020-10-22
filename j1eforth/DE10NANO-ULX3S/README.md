@@ -10,7 +10,7 @@
 * - PS/2 takes priority over the UART
 * J1+ CPU
 * - 50MHz operation
-* - 5 clock cycles per operation agains 13 clock cycles per operation on the FOMU, giving an effective CPU running at 10MHz
+* - 5 clock cycles per operation against 13 clock cycles per operation on the FOMU, giving an effective CPU running at 10MHz
 
 For communication with j1eforth there is a UART which provides input and output, output is duplicated on the terminal display. The ULX3S will also have PS/2 keyboard input via the us2 connector and a USB OTG and PS/2 to USB converter.
 
@@ -90,6 +90,29 @@ The VGA DE10NANO/HDMI ULX3S output has the following layers in order:
 
 Due to the address space limitations of the J1+ CPU the display layer memories cannot be memory mapped. Control of the display layers is done via memory mapped control registers. _Some_ j1eforth words are provided as helpers.
 
+The initial basic bitmap and terminal windows were extended to include as many capabilities as could fit into the design, which at present is limited by the amount of BRAM available on the ULX3S. The aim being to create a functional general computer running j1eforth, focussing on as many features as possible found in the popular home computers of the 1980s.
+
+For note I owned, and programmed (home computers):
+
+* Game consoles:
+    * Atari VCs 2600
+    * PlayStation 2
+    * PlayStation 3
+* Home computers
+    * Commodore Vic 20
+        * 6502 assembly language
+    * Commodore 64
+        * 6502 assembly language
+        * The motivation for providing sprite layers
+    * Atari ST original 512 and 512FM
+        * 68000 assembly language
+    * Commodore Amiga A500 and A1200
+        * 68000 / 68030 assembly language and C
+
+All of the non-CPU components are provided as co-processors, so that the J1+ CPU can continue executing Forth code whilst the co-processor continues with the assigned task. The terminal window for example operates as a basic display output alongside the UART, with no further intervention required by the j1eforth environment to output to the terminal, other than to output to the UART.
+
+The sample code provided in Big Example.md is used for driving feature development, features are added if they are required by the simple asteroids type game. 
+
 ### Colour hex numbers
 
 Colour<br>Guide<br>__HEX__ | Colour
@@ -106,13 +129,19 @@ Colour<br>Guide<br>__HEX__ | Colour
 
 ### Background Layer
 
-The background layer displays at a pixel if __ALL__ of the layers above are transpoarent.
+The initial concept was to provide a solid colour backdrop to the display if all layers above are transparent, i.e. have nothing to display. This was extended to include the limited texture checkerboards, and once the random number generator was included in the j1eforth design, the static generator. The starfield/snow generator from @sylefeb was included to provide a backdrop for the "Big Example", a simple asteroids type game.
 
 * Background with configurable designs
     * single { rrggbb } colour
     * alternative { rrggbb } colour for some designs
-    * selectable solid, checkerboard, rainbow or rolling static 
-    * fader level
+        * selectable solid
+        * checkerboard
+            * in main and alternative colours
+        * fixed colour rainbow
+        * black/grey/white rolling static
+        * starfield/snow
+            * with main colour stars/snow and alternative colour background
+        * fader level
 
 #### Memory Map for the BACKGROUND Layer
 

@@ -818,6 +818,13 @@ $$end
                                                 case 16hff55: { newStackTop = lower_sprites.collision_5; }
                                                 case 16hff56: { newStackTop = lower_sprites.collision_6; }
                                                 case 16hff57: { newStackTop = lower_sprites.collision_7; }
+                                                case 16hff58: { newStackTop = lower_sprites.collision_8; }
+                                                case 16hff59: { newStackTop = lower_sprites.collision_9; }
+                                                case 16hff5a: { newStackTop = lower_sprites.collision_10; }
+                                                case 16hff5b: { newStackTop = lower_sprites.collision_11; }
+                                                case 16hff5c: { newStackTop = lower_sprites.collision_12; }
+                                                case 16hff5d: { newStackTop = lower_sprites.collision_13; }
+                                                case 16hff5e: { newStackTop = lower_sprites.collision_14; }
                                                 case 16hff60: { newStackTop = upper_sprites.collision_0; }
                                                 case 16hff61: { newStackTop = upper_sprites.collision_1; }
                                                 case 16hff62: { newStackTop = upper_sprites.collision_2; }
@@ -826,6 +833,13 @@ $$end
                                                 case 16hff65: { newStackTop = upper_sprites.collision_5; }
                                                 case 16hff66: { newStackTop = upper_sprites.collision_6; }
                                                 case 16hff67: { newStackTop = upper_sprites.collision_7; }
+                                                case 16hff68: { newStackTop = upper_sprites.collision_8; }
+                                                case 16hff69: { newStackTop = upper_sprites.collision_9; }
+                                                case 16hff6a: { newStackTop = upper_sprites.collision_10; }
+                                                case 16hff6b: { newStackTop = upper_sprites.collision_11; }
+                                                case 16hff6c: { newStackTop = upper_sprites.collision_12; }
+                                                case 16hff6d: { newStackTop = upper_sprites.collision_13; }
+                                                case 16hff6e: { newStackTop = upper_sprites.collision_14; }
                                                 
                                                 // VECTORS
                                                 case 16hff74: { newStackTop = vector_drawer.vector_block_active; }
