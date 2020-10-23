@@ -208,9 +208,11 @@ variable workasteroid
     beepboop
     vblank?
     178 e lslupdate!
-    178 e uslupdate!
+    178 e uslupdate! hit?
     moveasteroids drawship
-    hit? crash? timer1khz? ;
+    178 e lslupdate!
+    178 e uslupdate! hit?
+    crash? timer1khz? ;
 
 : demoULX3S
   setup

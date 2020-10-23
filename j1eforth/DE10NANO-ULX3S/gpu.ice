@@ -22,6 +22,8 @@ algorithm gpu(
     input   uint7 v_gpu_colour,
     input   int11 v_gpu_param0,
     input   int11 v_gpu_param1,
+    input   int11 v_gpu_param2,
+    input   int11 v_gpu_param3,
     input   uint4 v_gpu_write,
 
     // From DISPLAY LIST DRAWER
@@ -30,6 +32,8 @@ algorithm gpu(
     input   uint8 dl_gpu_colour,
     input   int16 dl_gpu_param0,
     input   int16 dl_gpu_param1,
+    input   int16 dl_gpu_param2,
+    input   int16 dl_gpu_param3,
     input   uint4 dl_gpu_write,
 
     // For setting blit1 tile bitmaps
@@ -69,6 +73,17 @@ algorithm gpu(
     int11 gpu_max_count = uninitialized;
     uint6 gpu_tile = uninitialized;
 
+    // GPU inputs, copied to according to Forth, VECTOR or DISPLAY LISTS
+    int11   x = uninitialized;
+    int11   y = uninitialized;
+    uint8   colour = uninitialized;
+    int16   param0 = uninitialized;
+    int16   param1 = uninitialized;
+    int16   param2 = uninitialized;
+    int16   param3 = uninitialized;
+    uint4   write = uninitialized;
+
+
     // blit1tilemap read access for the blit1tilemap
     blit1tilemap.addr0 := gpu_tile * 16 + gpu_active_y;
     blit1tilemap.wenable0 := 0;
@@ -81,7 +96,14 @@ algorithm gpu(
     bitmap_write := 0;
     
     always {
+        x = ( gpu_write != 0 ) ? gpu_x : ( v_gpu_write != 0 ) ? v_gpu_x : ( dl_gpu_write != 0 ) ? dl_gpu_x : x;
+        y = ( gpu_write != 0 ) ? gpu_y : ( v_gpu_write != 0 ) ? v_gpu_y : ( dl_gpu_write != 0 ) ? dl_gpu_y : y;
         gpu_active_colour = ( gpu_write != 0 ) ? gpu_colour : ( v_gpu_write != 0 ) ? v_gpu_colour : ( dl_gpu_write != 0 ) ? dl_gpu_colour : gpu_active_colour;
+        param0 = ( gpu_write != 0 ) ? gpu_param0 : ( v_gpu_write != 0 ) ? v_gpu_param0 : ( dl_gpu_write != 0 ) ? dl_gpu_param0 : param0;
+        param1 = ( gpu_write != 0 ) ? gpu_param1 : ( v_gpu_write != 0 ) ? v_gpu_param1 : ( dl_gpu_write != 0 ) ? dl_gpu_param1 : param1;
+        param2 = ( gpu_write != 0 ) ? gpu_param2 : ( v_gpu_write != 0 ) ? v_gpu_param2 : ( dl_gpu_write != 0 ) ? dl_gpu_param2 : param2;
+        param3 = ( gpu_write != 0 ) ? gpu_param3 : ( v_gpu_write != 0 ) ? v_gpu_param3 : ( dl_gpu_write != 0 ) ? dl_gpu_param3 : param3;
+        write = ( gpu_write != 0 ) ? gpu_write : ( v_gpu_write != 0 ) ? v_gpu_write : ( dl_gpu_write != 0 ) ? dl_gpu_write : 0;
     }
     
     while(1) {
@@ -89,149 +111,70 @@ algorithm gpu(
             // GPU Inactive, allow a new operation to start
             case 0: {
                 // Start the GPU from j1eforth
-                switch( gpu_write ) {
+                switch( write ) {
                     case 1: {
                         // Setup writing a pixel colour to x,y 
                         // Done directly, does not activate the GPU
-                        bitmap_x_write = gpu_x;
-                        bitmap_y_write = gpu_y;
-                        bitmap_colour_write = gpu_colour;
+                        bitmap_x_write = x;
+                        bitmap_y_write = y;
+                        bitmap_colour_write = colour;
                         bitmap_write = 1;
                     }
                     case 2: {
                         // Setup drawing a rectangle from x,y to param0,param1 in colour
                         // Ensures that works left to right, top to bottom
                         // Cut out pixels out of 0 <= x <= 639 , 0 <= y <= 479
-                        gpu_active_x = ( gpu_x < gpu_param0 ) ? ( gpu_x < 0 ? 0 : gpu_x ) : ( gpu_param0 < 0 ? 0 : gpu_param0 );                // left
-                        gpu_active_y = ( gpu_y < gpu_param1 ) ? ( gpu_y < 0 ? 0 : gpu_y ) : ( gpu_param1 < 0 ? 0 : gpu_param1 );                // top
-                        gpu_x2 = ( gpu_x < gpu_param0 ) ? ( gpu_x < 0 ? 0 : gpu_x )  : ( gpu_param0 < 0 ? 0 : gpu_param0 );                     // left - for next line
-                        gpu_x1 = ( gpu_x < gpu_param0 ) ? ( gpu_param0 > 639 ? 639 : gpu_param0 ) : ( gpu_x > 639 ? 639 : gpu_x );              // right - at end of line
-                        gpu_y1 = ( gpu_y < gpu_param1 ) ? ( gpu_param1 > 479 ? 479 : gpu_param1 ) : ( gpu_y > 479 ? 479 : gpu_y );              // bottom - at end of rectangle
+                        gpu_active_x = ( x < param0 ) ? ( x < 0 ? 0 : x ) : ( param0 < 0 ? 0 : param0 );                // left
+                        gpu_active_y = ( y < param1 ) ? ( y < 0 ? 0 : y ) : ( param1 < 0 ? 0 : param1 );                // top
+                        gpu_x2 = ( x < param0 ) ? ( x < 0 ? 0 : x )  : ( param0 < 0 ? 0 : param0 );                     // left - for next line
+                        gpu_x1 = ( x < param0 ) ? ( param0 > 639 ? 639 : param0 ) : ( x > 639 ? 639 : x );              // right - at end of line
+                        gpu_y1 = ( y < param1 ) ? ( param1 > 479 ? 479 : param1 ) : ( y > 479 ? 479 : y );              // bottom - at end of rectangle
                         gpu_active = 1; 
                     }
                     case 3: {
                         // Setup drawing a line from x,y to param0,param1 in colour
                         // Ensure LEFT to RIGHT
-                        gpu_active_x = ( gpu_x < gpu_param0 ) ? gpu_x : gpu_param0;
-                        gpu_active_y = ( gpu_x < gpu_param0 ) ? gpu_y : gpu_param1;
+                        gpu_active_x = ( x < param0 ) ? x : param0;
+                        gpu_active_y = ( x < param0 ) ? y : param1;
                         // Absolute DELTAs
-                        gpu_dx = ( gpu_param0 < gpu_x ) ? gpu_x - gpu_param0 : gpu_param0 - gpu_x;
-                        gpu_dy = ( gpu_param1 < gpu_y )? gpu_y - gpu_param1 : gpu_param1 - gpu_y;
+                        gpu_dx = ( param0 < x ) ? x - param0 : param0 - x;
+                        gpu_dy = ( param1 < y ) ? y - param1 : param1 - y;
                         // Shift X is always POSITIVE
                         gpu_sx = 1;
                         // Shift Y is NEGATIVE or POSITIVE
-                        gpu_sy = ( gpu_x < gpu_param0 ) ? ( gpu_y < gpu_param1 ) ? 1 : -1 : ( gpu_y < gpu_param1 ) ? -1 : 1;
+                        gpu_sy = ( x < param0 ) ? ( y < param1 ) ? 1 : -1 : ( y < param1 ) ? -1 : 1;
                         gpu_count = 0;
                         gpu_active = 2; 
                     }
                     case 4: {
                         // Setup drawing a circle centre x,y or radius param0 in colour
                         gpu_active_x = 0;
-                        gpu_active_y = gpu_param0;
-                        gpu_xc = gpu_x;
-                        gpu_yc = gpu_y;
-                        gpu_numerator = 3 - ( 2 * gpu_param0 );
+                        gpu_active_y = param0;
+                        gpu_xc = x;
+                        gpu_yc = y;
+                        gpu_numerator = 3 - ( 2 * param0 );
                         gpu_active = 6;
                     }
                     case 5: {
                         // Setup 1 bit 16x16 blitter starting at x,y in colour of tile param0
                         gpu_active_x = 0;
                         gpu_active_y = 0;
-                        gpu_x1 = gpu_x;
-                        gpu_y1 = gpu_y;
+                        gpu_x1 = x;
+                        gpu_y1 = y;
                         gpu_w = 15;
                         gpu_h = 15;
-                        gpu_tile = gpu_param0;                       
+                        gpu_tile = param0;                       
                         gpu_active = 14;
                     }
                     case 7: {
                         // Set the bitmap fade level
-                        bitmapcolour_fade = gpu_param0;
+                        bitmapcolour_fade = param0;
                         bitmap_write = 2;
                     }
                     default: {}
                 }
-                
-                // Start the GPU from the VECTOR DRAWER
-                switch( v_gpu_write ) {
-                    case 3: {
-                        // Setup drawing a line from x,y to param0,param1 in colour
-                        // Ensure LEFT to RIGHT
-                        gpu_active_x = ( v_gpu_x < v_gpu_param0 ) ? v_gpu_x : v_gpu_param0;
-                        gpu_active_y = ( v_gpu_x < v_gpu_param0 ) ? v_gpu_y : v_gpu_param1;
-                        // Absolute DELTAs
-                        gpu_dx = ( v_gpu_param0 < v_gpu_x ) ? v_gpu_x - v_gpu_param0 : v_gpu_param0 - v_gpu_x;
-                        gpu_dy = ( v_gpu_param1 < v_gpu_y )? v_gpu_y - v_gpu_param1 : v_gpu_param1 - v_gpu_y;
-                        // Shift X is always POSITIVE
-                        gpu_sx = 1;
-                        // Shift Y is NEGATIVE or POSITIVE
-                        gpu_sy = ( v_gpu_x < v_gpu_param0 ) ? ( v_gpu_y < v_gpu_param1 ) ? 1 : -1 : ( v_gpu_y < v_gpu_param1 ) ? -1 : 1;
-                        gpu_count = 0;
-                        gpu_active = 2; 
-                    }
-                    default: {}
-                }
-                
-                // Start the GPU from the DISPLAY LIST DRAWER
-                switch( dl_gpu_write ) {
-                    case 1: {
-                        // Setup writing a pixel colour to x,y 
-                        // Done directly, does not activate the GPU
-                        bitmap_x_write = dl_gpu_x;
-                        bitmap_y_write = dl_gpu_y;
-                        bitmap_colour_write = dl_gpu_colour;
-                        bitmap_write = 1;
-                    }
-                    case 2: {
-                        // Setup drawing a rectangle from x,y to param0,param1 in colour
-                        // Ensures that works left to right, top to bottom
-                        // Cut out pixels out of 0 <= x <= 639 , 0 <= y <= 479
-                        gpu_active_x = ( dl_gpu_x < dl_gpu_param0 ) ? ( dl_gpu_x < 0 ? 0 : dl_gpu_x ) : ( dl_gpu_param0 < 0 ? 0 : dl_gpu_param0 );       // left
-                        gpu_active_y = ( dl_gpu_y < dl_gpu_param1 ) ? ( dl_gpu_y < 0 ? 0 : dl_gpu_y ) : ( dl_gpu_param1 < 0 ? 0 : dl_gpu_param1 );       // top
-                        gpu_x2 = ( dl_gpu_x < dl_gpu_param0 ) ? ( dl_gpu_x < 0 ? 0 : dl_gpu_x )  : ( dl_gpu_param0 < 0 ? 0 : dl_gpu_param0 );            // left - for next line
-                        gpu_x1 = ( dl_gpu_x < dl_gpu_param0 ) ? ( dl_gpu_param0 > 639 ? 639 : dl_gpu_param0 ) : ( dl_gpu_x > 639 ? 639 : dl_gpu_x );     // right - at end of line
-                        gpu_y1 = ( dl_gpu_y < dl_gpu_param1 ) ? ( dl_gpu_param1 > 479 ? 479 : dl_gpu_param1 ) : ( dl_gpu_y > 479 ? 479 : dl_gpu_y );     // bottom - at end of rectangle
-                        gpu_active = 1; 
-                    }
-                    case 3: {
-                        // Setup drawing a line from x,y to param0,param1 in colour
-                        // Ensure LEFT to RIGHT
-                        gpu_active_x = ( dl_gpu_x < dl_gpu_param0 ) ? dl_gpu_x : dl_gpu_param0;
-                        gpu_active_y = ( dl_gpu_x < dl_gpu_param0 ) ? dl_gpu_y : dl_gpu_param1;
-                        // Absolute DELTAs
-                        gpu_dx = ( dl_gpu_param0 < dl_gpu_x ) ? dl_gpu_x - dl_gpu_param0 : dl_gpu_param0 - dl_gpu_x;
-                        gpu_dy = ( dl_gpu_param1 < dl_gpu_y ) ? dl_gpu_y - dl_gpu_param1 : dl_gpu_param1 - dl_gpu_y;
-                        // Shift X is always POSITIVE
-                        gpu_sx = 1;
-                        // Shift Y is NEGATIVE or POSITIVE
-                        gpu_sy = ( dl_gpu_x < dl_gpu_param0 ) ? ( dl_gpu_y < dl_gpu_param1 ) ? 1 : -1 : ( dl_gpu_y < dl_gpu_param1 ) ? -1 : 1;
-                        gpu_count = 0;
-                        gpu_active = 2; 
-                    }
-                    case 4: {
-                        // Setup drawing a circle centre x,y or radius param0 in colour
-                        gpu_active_x = 0;
-                        gpu_active_y = dl_gpu_param0;
-                        gpu_xc = dl_gpu_x;
-                        gpu_yc = dl_gpu_y;
-                        gpu_numerator = 3 - ( 2 * dl_gpu_param0 );
-                        gpu_active = 6;
-                    }
-                    case 5: {
-                        // Setup 1 bit 16x16 blitter starting at x,y in colour of tile param0
-                        gpu_active_x = 0;
-                        gpu_active_y = 0;
-                        gpu_x1 = dl_gpu_x;
-                        gpu_y1 = dl_gpu_y;
-                        gpu_w = 15;
-                        gpu_h = 15;
-                        gpu_tile = dl_gpu_param0;                       
-                        gpu_active = 14;
-                    }
-                    default: {}
-                }
             }
-            
+                
             // Perform GPU Operation
             // GPU functions 1 pixel per cycle, even during hblank and vblank
             case 1: {
