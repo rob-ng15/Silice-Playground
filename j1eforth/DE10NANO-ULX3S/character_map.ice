@@ -22,7 +22,7 @@ algorithm character_map(
     };
     
     // 80 x 30 character buffer
-    // Setting background to 200 (ALPHA) allows the bitmap/background to show through
+    // Setting background to 40 (ALPHA) allows the bitmap/background to show through
     dualport_bram uint8 character[2400] = uninitialized;
     dualport_bram uint6 foreground[2400] = uninitialized;               // { rrggbb }
     dualport_bram uint7 background[2400] = { 7h40, pad(7h40) };    // { Arrggbb }

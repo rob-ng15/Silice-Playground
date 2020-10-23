@@ -28,7 +28,7 @@ algorithm displaylist(
     output  int11 gpu_param0,
     output  int11 gpu_param1,
     output  uint4 gpu_write,
-    input   uint4   gpu_active,
+    input   uint4 gpu_active,
 
     // Communication with the VECTOR DRAWER
     output  uint5   vector_block_number,
@@ -66,6 +66,7 @@ algorithm displaylist(
     colour.addr0 := entry_number;
     colour.wenable0 := 0;
     colour.addr1 := writer_entry_number;
+    colour.wdata1 := writer_colour;
     colour.wenable1 := 0;
 
     x.addr0 := entry_number;
@@ -128,11 +129,11 @@ algorithm displaylist(
     while(1) {
         switch( display_list_active ) {
             case 1: {
-                // Delay to allow reading of the first vertex
+                // Delay to allow reading of the first entry
                 display_list_active = 2;
             }
             case 2: {
-                // Delay to allow reading of the first vertex
+                // Delay to allow reading of the first entry
                 display_list_active = 3;
             }
             case 3: {
@@ -168,7 +169,7 @@ algorithm displaylist(
                 display_list_active = ( entry_number == finish_number ) ? 0 : 1;
             }
             default: {
-                display_list_active = ( start_displaylist == 1 ) ? 1 : 0;
+                display_list_active = ( start_displaylist == 1 ) ? 1 : display_list_active;
                 entry_number = start_entry;
                 finish_number = finish_entry;
             }

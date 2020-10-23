@@ -1,4 +1,4 @@
-// 10 bit colour either ALPHA (background or lower layer) or red, green, blue { Arrggbb }
+// 7 bit colour either ALPHA (background or lower layer) or red, green, blue { Arrggbb }
 bitfield colour7 {
     uint1   alpha,
     uint2   red,
@@ -6,144 +6,11 @@ bitfield colour7 {
     uint2   blue
 }
 
-// 9bit colour red, green, blue { rrggbb }
+// 6 bit colour red, green, blue { rrggbb }
 bitfield colour6 {
     uint2   red,
     uint2   green, 
     uint2   blue
-}
-
-algorithm multiplex_display(
-    input   uint10 pix_x,
-    input   uint10 pix_y,
-    input   uint1  pix_active,
-    input   uint1  pix_vblank,
-    output! uint$color_depth$ pix_red,
-    output! uint$color_depth$ pix_green,
-    output! uint$color_depth$ pix_blue,
-
-    // BACKGROUND
-    input uint$color_depth$ background_r,
-    input uint$color_depth$ background_g,
-    input uint$color_depth$ background_b,
-
-    // LOWER SPRITES
-    input uint$color_depth$ lower_sprites_r,
-    input uint$color_depth$ lower_sprites_g,
-    input uint$color_depth$ lower_sprites_b,
-    input uint1   lower_sprites_display,
-
-    // BITMAP
-    input uint$color_depth$ bitmap_r,
-    input uint$color_depth$ bitmap_g,
-    input uint$color_depth$ bitmap_b,
-    input uint1   bitmap_display,
-
-    // UPPER SPRITES
-    input uint$color_depth$ upper_sprites_r,
-    input uint$color_depth$ upper_sprites_g,
-    input uint$color_depth$ upper_sprites_b,
-    input uint1   upper_sprites_display,
-
-    // CHARACTER MAP
-    input uint$color_depth$ character_map_r,
-    input uint$color_depth$ character_map_g,
-    input uint$color_depth$ character_map_b,
-    input uint1   character_map_display,
-    
-    // TERMINAL
-    input uint$color_depth$ terminal_r,
-    input uint$color_depth$ terminal_g,
-    input uint$color_depth$ terminal_b,
-    input uint1   terminal_display
-) <autorun> {
-    // RGB is { 0, 0, 0 } by default
-    pix_red   := 0;
-    pix_green := 0;
-    pix_blue  := 0;
-        
-    // Draw the screen
-    while (1) {        
-        if( pix_active ) {
-            // wait until pix_active THEN BACKGROUND -> LOWER SPRITES -> BITMAP -> UPPER SPRITES -> CHARACTER MAP -> TERMINAL
-            pix_red = ( terminal_display ) ? terminal_r : ( character_map_display ) ? character_map_r : ( upper_sprites_display ) ? upper_sprites_r : ( bitmap_display ) ? bitmap_r : ( lower_sprites_display ) ? lower_sprites_r : background_r;
-            pix_green = ( terminal_display ) ? terminal_g : ( character_map_display ) ? character_map_g : ( upper_sprites_display ) ? upper_sprites_g : ( bitmap_display ) ? bitmap_g : ( lower_sprites_display ) ? lower_sprites_g : background_g;
-            pix_blue = ( terminal_display ) ? terminal_b : ( character_map_display ) ? character_map_b : ( upper_sprites_display ) ? upper_sprites_b : ( bitmap_display ) ? bitmap_b : ( lower_sprites_display ) ? lower_sprites_b : background_b;
-        } // pix_active
-    }
-}
-
-// Create 1hz (1 second counter, also can output the baseline 50MHz counter)
-algorithm pulse1hz(
-    output uint32 counter50mhz,
-    output uint16 counter1hz,
-    input  uint1  resetCounter
-) <autorun> {
-    counter50mhz = 0;
-    counter1hz = 0;
-    
-    while (1) {
-        counter1hz = ( resetCounter == 1 ) ? 0 : ( counter50mhz == 50000000 ) ? counter1hz + 1 : counter1hz;
-        counter50mhz = ( resetCounter == 1 ) ? 0 : ( counter50mhz == 50000000 ) ? 0 : counter50mhz + 1;
-    }
-}
-
-// Create 1khz (1 milli-second counter)
-algorithm pulse1khz(
-    output uint16 counter1khz,
-    input  uint16 resetCount,
-    input  uint1  resetCounter
-) <autorun> {
-    uint32 counter50mhz = 0;
-    
-    while (1) {
-        counter1khz = ( resetCounter == 1 ) ? resetCount : ( counter1khz == 0 ) ? 0 : ( counter50mhz == 50000 ) ? counter1khz - 1 : counter1khz;
-        counter50mhz = ( resetCounter == 1 ) ? 0 : ( counter50mhz == 50000 ) ? 0 : counter50mhz + 1;
-    }
-}
-
-// 16 bit random number generator
-// Translation into Silice of LFSR_Plus.v
-// Fixed at 16 bit
-algorithm random(
-    output  uint16  g_noise_out,
-    output  uint16  u_noise_out,
-    input   uint1   resetRandom
-) <autorun> {
-    uint16  rand_out = 0;
-    uint16  rand_ff = 24b011000110111011010011101;
-    uint18  rand_en_ff = 24b001100010011011101100101;
-    uint16  temp_u_noise3 = 0;
-    uint16  temp_u_noise2 = 0;
-    uint16  temp_u_noise1 = 0;
-    uint16  temp_u_noise0 = 0;
-    uint16  temp_g_noise_nxt = uninitialized;
-    
-    always {
-        rand_en_ff = {(rand_en_ff[7,1] ^ rand_en_ff[0,1]) , rand_en_ff[1,17]};
-        rand_ff = { ( rand_ff[5,1] ^ rand_ff[3,1] ^ rand_ff[2,1] ^ rand_ff[0,1]) , rand_ff[1,15] };
-        g_noise_out = ( rand_en_ff[17,1] ) ? temp_g_noise_nxt : ( rand_en_ff[10,1] ) ? rand_out : g_noise_out;
-    }
-    
-    while(1) {
-        if( resetRandom ) {
-            rand_en_ff = 24b001100010011011101100101;
-            rand_ff = 24b011000110111011010011101;
-            rand_out = 0;
-            temp_u_noise3 = 0;
-            temp_u_noise2 = 0;
-            temp_u_noise1 = 0;
-            temp_u_noise0 = 0;
-            g_noise_out = 0;
-        }
-		rand_out = rand_ff;
-        temp_u_noise3 = { rand_out[15,1], rand_out[15,1], rand_out[2,13] };
-        temp_u_noise2 = temp_u_noise3;
-        temp_u_noise1 = temp_u_noise2;
-        temp_u_noise0 = temp_u_noise1;
-        temp_g_noise_nxt = ( rand_en_ff[9,1] ) ? temp_u_noise3 + temp_u_noise2 + temp_u_noise1 + temp_u_noise0 + g_noise_out : temp_u_noise3 + temp_u_noise2 + temp_u_noise1 + temp_u_noise0;
-        u_noise_out = ( rand_en_ff[17,1] ) ? rand_out : u_noise_out;
-    }
 }
 
 // BITFIELDS to help with bit/field access
@@ -632,15 +499,14 @@ $$end
     uint13 uartInBufferNext = 0;
     uint13 uartInBufferTop = 0;
 
-    // UART output FIFO (512 character) as dualport bram (code from @sylefeb)
-    dualport_bram uint8 uartOutBuffer[512] = uninitialized;
-    uint9 uartOutBufferNext = 0;
-    uint9 uartOutBufferTop = 0;
-    uint9 newuartOutBufferTop = 0;
+    // UART output FIFO (16 character) as dualport bram (code from @sylefeb)
+    dualport_bram uint8 uartOutBuffer[16] = uninitialized;
+    uint4 uartOutBufferNext = 0;
+    uint4 uartOutBufferTop = 0;
+    uint4 newuartOutBufferTop = 0;
     
     // register buttons
     uint$NUM_BTNS$ reg_btns = 0;
-
     reg_btns ::= btns;
 
     // BRAM for CPU ram write enable mainained low, pulsed high

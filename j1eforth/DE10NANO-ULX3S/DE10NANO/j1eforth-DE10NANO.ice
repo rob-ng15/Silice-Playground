@@ -3,6 +3,8 @@ $include('../common/vga.ice')
 $include('../common/uart.ice')
 
 // Multiplexed Display Includes
+$include('../multiplex_display.ice')
+$include('../timers_random.ice')
 $include('../terminal.ice')
 $include('../character_map.ice')
 $include('../bitmap.ice')
