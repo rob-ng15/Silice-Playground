@@ -32,7 +32,7 @@ algorithm terminal(
     uint10 yterminalpos := (( pix_vblank ? 0 : pix_y - 416 ) >> 3) * 80; // 8 pixel high characters
 
     // Determine if cursor, and if cursor is flashing
-    uint1 is_cursor := ( xterminalpos == terminal_x ) & ( ( ( pix_y - 416) >> 3 ) == terminal_y );
+    uint1 is_cursor := ( xterminalpos == terminal_x ) && ( ( ( pix_y - 416) >> 3 ) == terminal_y );
     
     // Derive the x and y coordinate within the current 8x8 terminal character block x 0-7, y 0-7
     uint3 xinterminal := (pix_x) & 7;
@@ -56,7 +56,7 @@ algorithm terminal(
     characterGenerator8x8.addr :=  terminal.rdata0 * 8 + yinterminal;
     
     // Default to transparent and active pixels always blue
-    terminal_display := pix_active & showterminal & (pix_y > 415);
+    terminal_display := pix_active && showterminal && (pix_y > 415);
     pix_blue := $color_depth$==6 ? 63 : 255;
     
     // TERMINAL Actions
@@ -70,8 +70,8 @@ algorithm terminal(
                         switch( terminal_character ) {
                             case 8: {
                                 // BACKSPACE, move back one character
-                                terminal_x = ( terminal_x > 0 ) ? terminal_x - 1 : terminal_x;
-                                if( terminal_x > 0 ) {
+                                if( terminal_x != 0 ) {
+                                    terminal_x = terminal_x - 1;
                                     terminal.addr1 = terminal_x + terminal_y * 80;
                                     terminal.wdata1 = 0;
                                     terminal.wenable1 = 1;
@@ -91,10 +91,7 @@ algorithm terminal(
                                 terminal.addr1 = terminal_x + terminal_y * 80;
                                 terminal.wdata1 = terminal_character;
                                 terminal.wenable1 = 1;
-                                if( terminal_x == 79 ) {
-                                    terminal_scroll = 0;
-                                    terminal_active = 1;
-                                } 
+                                terminal_active = ( terminal_x == 79 ) ? 1 : 0;
                                 terminal_x = ( terminal_x == 79 ) ? 0 : terminal_x + 1;
                             }
                         }
@@ -105,14 +102,8 @@ algorithm terminal(
             // Start of TERMINAL SCROLL
             case 1: {
                 // SCROLL
-                if( terminal_scroll == 560 ) {
-                    // Finished Scroll, Move to blank
-                    terminal_active = 4;
-                } else {
-                    // Read the next character down
-                    terminal.addr1 = terminal_scroll + 80;
-                    terminal_active = 2;
-                }
+                terminal_active = ( terminal_scroll == 560 ) ? 4 : 2;
+                terminal.addr1 = terminal_scroll + 80;
             }
             case 2: {
                 // Retrieve the character to move up
@@ -132,20 +123,19 @@ algorithm terminal(
                 terminal.addr1 = terminal_scroll;
                 terminal.wdata1 = 0;
                 terminal.wenable1 = 1;
-                if( terminal_scroll == 640 ) {
-                    // Finish Blank
-                    terminal_active = 0;
-                } else {
-                    terminal_scroll = terminal_scroll + 1;
-                }
+                terminal_active = ( terminal_scroll == 640 ) ? 0 : 4;
+                terminal_scroll = terminal_scroll + 1;
             }
-            default: {terminal_active = 0;}
+            default: {
+                terminal_scroll = 0;
+                terminal_active = 0;
+            }
          } // TERMINAL
     }
 
     // Render the terminal
     while(1) {
-        if( pix_active & showterminal && (pix_y > 415) ) {
+        if( pix_active && showterminal && (pix_y > 415) ) {
             // TERMINAL is in range and showterminal flag
             // Invert colours for cursor if flashing
             switch( terminalpixel ) {
