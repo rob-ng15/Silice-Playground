@@ -138,7 +138,7 @@ algorithm displaylist(
             case 3: {
                 if( A.rdata0 == 1 ) {
                     // Wait for the GPU and the VECTOR DRAWER to both finish
-                    display_list_active = ( ( gpu_active > 0 ) || ( vector_block_active > 0 ) ) ? 3 : 4;
+                    display_list_active = ( gpu_active == 0 ) && ( vector_block_active == 0 ) ? 4 : 3;
                 } else {
                     entry_number = ( entry_number == finish_number ) ? start_entry : entry_number + 1;
                     display_list_active = ( entry_number == finish_number ) ? 0 : 1;

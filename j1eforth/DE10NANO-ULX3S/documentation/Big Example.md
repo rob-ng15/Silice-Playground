@@ -3,6 +3,8 @@ variable lasttimer
 
 : array create cells allot does> cells + ;
 
+variable randomamount
+
 ( storage for 12 (c hex) low asteroids )
 ( storage for 12 (c hex) high asteroids )
 c array lasteroidactive c array hasteroidactive
@@ -86,29 +88,33 @@ variable workasteroid
 : placeasteroids
   0 activelasteroids ! 0 activehasteroids !
   4 rng 1+ 0 do
-    20 rng 20 + 280 rng a0 rng 2 rng 2* 1 1 activelasteroids @ lslsprite!
-    20 rng 2/ activelasteroids @ lasteroiddirection !
+    20 rng 20 + 280 rng a0 rng 2 rng 2* 1 1
+      activelasteroids @ lslsprite!
+    10 rng activelasteroids @ lasteroiddirection !
     activelasteroids @ setlargelasteroid
     1 activelasteroids @ lasteroidtype !
     1 activelasteroids @ lasteroidactive !
     activelasteroids @ 1+ activelasteroids !
   loop
-    20 rng 20 + d5 rng 1e0 rng 2 rng 2* 1 1 activelasteroids @ lslsprite!
-    20 rng 2/ activelasteroids @ lasteroiddirection !
+    20 rng 20 + d5 rng 1e0 rng 2 rng 2* 1 1
+      activelasteroids @ lslsprite!
+    10 rng activelasteroids @ lasteroiddirection !
     activelasteroids @ setlargelasteroid
     1 activelasteroids @ lasteroidtype !
     1 activelasteroids @ lasteroidactive !
     activelasteroids @ 1+ activelasteroids !
   4 rng 1+ 0 do
-    20 rng 20 + 280 rng a0 rng 140 + 2 rng 2* 1 1 activehasteroids @ uslsprite!
-    20 rng 2/ activehasteroids @ hasteroiddirection !
+    20 rng 20 + 280 rng a0 rng 140 + 2 rng 2* 1 1
+      activehasteroids @ uslsprite!
+    10 rng activehasteroids @ hasteroiddirection !
     activehasteroids @ setlargehasteroid
     1 activehasteroids @ hasteroidtype !
     1 activehasteroids @ hasteroidactive !
     activehasteroids @ 1+ activehasteroids !
   loop
-    20 rng 20 + d5 rng 1aa + 1e0 rng 2 rng 2* 1 1 activehasteroids @ uslsprite!
-    20 rng 2/ activehasteroids @ hasteroiddirection !
+    20 rng 20 + d5 rng 1aa + 1e0 rng 2 rng 2* 1 1
+      activehasteroids @ uslsprite!
+    10 rng activehasteroids @ hasteroiddirection !
     activehasteroids @ setlargehasteroid
     1 activehasteroids @ hasteroidtype !
     1 activehasteroids @ hasteroidactive !
@@ -161,23 +167,23 @@ variable workasteroid
 
 : hit?
   ff5e @ 1fff and 0<> if
-    1 4 1f4 beep!
+    4 19 1f4 beep!
     0 0 0 0 0 0 e lslsprite!
     0 0 0 0 0 0 e uslsprite!
   then
   ff6e @ 1fff and 0<> if
-    1 4 1f4 beep!
+    4 19 1f4 beep!
     0 0 0 0 0 0 e lslsprite!
     0 0 0 0 0 0 e uslsprite!
   then ;
 
 : crash?
   ff5d @ 1fff and 0<> if
-    1 4 1f4 beep!
+    4 1 1f4 beep!
     setup
   then
   ff6d @ 1fff and 0<> if
-    1 4 1f4 beep!
+    4 1 1f4 beep!
     setup
   then ;
   

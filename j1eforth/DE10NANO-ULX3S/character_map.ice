@@ -32,7 +32,7 @@ algorithm character_map(
     uint6 colourexpand2to6[4] = {  0, 21, 42, 63 };
     uint8 colourexpand2to8[4] = {  0, 85, 170, 255 };
 
-    // Character position on the screen x 0-79, y 0-29 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
+    // Character position on the screen x 0-79, y 0-29 * 80 ( fetch it two pixels ahead of the actual x pixel, so it is always ready )
     uint8 xcharacterpos := ( pix_active ? (pix_x < 640 ) ? pix_x + 2 : 0 : 0 ) >> 3;
     uint12 ycharacterpos := (( pix_vblank ? 0 : pix_y ) >> 4) * 80; // 16 pixel high characters
     
@@ -90,9 +90,7 @@ algorithm character_map(
                 foreground.wdata1 = tpu_foreground;
                 foreground.wenable1 = 1;
                 
-                if( tpu_active_x == 79 ) {
-                    tpu_active_y = ( tpu_active_y == 29 ) ? 0 : tpu_active_y + 1;
-                }
+                tpu_active_y = ( tpu_active_x == 79 ) ? ( tpu_active_y == 29 ) ? 0 : tpu_active_y + 1 : tpu_active_y;
                 tpu_active_x = ( tpu_active_x == 79 ) ? 0 : tpu_active_x + 1;
             }
             default: {}

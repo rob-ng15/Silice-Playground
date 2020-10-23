@@ -103,7 +103,7 @@ algorithm vectors(
             }
             case 4: {
                 // See if the next of the vertices is active and await the GPU
-                vector_block_active = ( A.rdata0 ) ? ( gpu_active > 0 ) ? 4 : 5 : 0;
+                vector_block_active = ( A.rdata0 ) ? ( gpu_active != 0 ) ? 4 : 5 : 0;
             }
             case 5: {
                 // Send the line to the GPU

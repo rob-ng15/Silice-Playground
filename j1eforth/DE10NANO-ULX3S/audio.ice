@@ -13,6 +13,8 @@ algorithm apu(
     input   uint1   apu_write,
     
     output! uint4   audio_output,
+    
+    input uint16 staticGenerator
 ) <autorun> {
     // 32 step points per waveform
     brom uint4 waveformtable[] = {
@@ -30,11 +32,7 @@ algorithm apu(
         
         // Sine wave,
         7, 8, 10, 11, 12, 13, 13, 14, 15, 14, 13, 13, 12, 11, 10, 8,
-         7, 6, 4, 3, 2, 1, 1, 0, 0, 0, 1, 1, 2, 3, 4, 6,
-
-        // Noise
-        15, 12, 2, 7, 7, 14, 11, 11, 14, 13, 6, 4, 4, 7, 12, 0,
-        5, 9, 6, 4, 1, 6, 0, 7, 3, 6, 9, 3, 4, 12, 1, 10
+        7, 6, 4, 3, 2, 1, 1, 0, 0, 0, 1, 1, 2, 3, 4, 6
     };
     
     // Calculated as 25MHz / note frequency / 32 to give 32 step points per note
@@ -45,7 +43,7 @@ algorithm apu(
         5972, 5637, 5321, 5022, 4740, 4474, 4223, 3986, 3762, 3551, 3352, 3164,                 // 25 = C 4 or Middle C
         2896, 2819, 2660, 2511, 2370, 2237, 2112, 1993, 1881, 1776, 1676, 1582,                 // 37 = C 5 or Tenor C
         1493, 1409, 1330, 1256, 1185, 1119, 1056, 997, 941, 888, 838, 791,                      // 49 = C 6 or Soprano C
-        747, 705, 665,                                                                          // 61 = C 7 or Double High C
+        747, 705, 665                                                                           // 61 = C 7 or Double High C
     };
     
     uint3   selected_waveform = uninitialized;
@@ -62,8 +60,8 @@ algorithm apu(
     frequencytable.addr := selected_note;
     
     always {
-        if( ( selected_note > 0 ) && ( counter25mhz == 0 ) ) {
-            audio_output = selected_audio_output;
+        if( ( selected_note != 0 ) && ( counter25mhz == 0 ) ) {
+            audio_output = ( selected_waveform == 4 ) ? staticGenerator : selected_audio_output;
         }
     }
     
@@ -80,13 +78,13 @@ algorithm apu(
                 counter1khz = 25000;
             }
             default: {
-                if( selected_duration ) {
-                    counter25mhz = ( counter25mhz ) ? counter25mhz - 1 : selected_note_frequency;
-                    step_point = ( counter25mhz ) ? step_point : step_point + 1;
-                    counter1khz = ( counter1khz ) ? counter1khz - 1 : 25000;
-                    selected_duration = ( counter1khz) ? selected_duration : selected_duration - 1;
+                if( selected_duration != 0 ) {
+                    counter25mhz = ( counter25mhz != 0 ) ? counter25mhz - 1 : selected_note_frequency;
+                    step_point = ( counter25mhz != 0 ) ? step_point : step_point + 1;
+                    counter1khz = ( counter1khz != 0 ) ? counter1khz - 1 : 25000;
+                    selected_duration = ( counter1khz != 0 ) ? selected_duration : selected_duration - 1;
                 }
-                selected_note = ( selected_duration ) ? selected_note : 0;
+                selected_note = ( selected_duration != 0 ) ? selected_note : 0;
             }
         }
     }

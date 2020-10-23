@@ -81,7 +81,7 @@ algorithm gpu(
     bitmap_write := 0;
     
     always {
-        gpu_active_colour = ( gpu_write > 0 ) ? gpu_colour : ( v_gpu_write > 0 ) ? v_gpu_colour : ( dl_gpu_write > 0 ) ? dl_gpu_colour : gpu_active_colour;
+        gpu_active_colour = ( gpu_write != 0 ) ? gpu_colour : ( v_gpu_write != 0 ) ? v_gpu_colour : ( dl_gpu_write != 0 ) ? dl_gpu_colour : gpu_active_colour;
     }
     
     while(1) {

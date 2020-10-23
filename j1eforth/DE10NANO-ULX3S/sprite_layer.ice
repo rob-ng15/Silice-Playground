@@ -213,7 +213,7 @@ algorithm sprite_layer(
         // Output collision detection
         if( ( pix_x == 639 ) && ( pix_y == 479 ) ) {
             $$for i=0,14 do
-                collision_$i$ = ( ( pix_x == 639 ) && ( pix_y == 479 ) ) ? detect_collision_$i$ : collision_$i$;
+                collision_$i$ = detect_collision_$i$;
             $$end
         }
     }

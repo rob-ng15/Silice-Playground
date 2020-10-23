@@ -211,9 +211,9 @@ algorithm background(
             }
             case 7: {
                 // Snow
-                rand_x = (pix_x == 0) ? 1 : rand_x * 31421 + 6927;
+                rand_x = ( pix_x == 0)  ? 1 : rand_x * 31421 + 6927;
                 speed  = rand_x[10,2];
-                dotpos = (frame >> speed) + rand_x;
+                dotpos = ( frame >> speed ) + rand_x;
                 if (pix_y == dotpos) {
                     pix_red   = colourexpand2to$color_depth$[ colour6(background).red ] >> background_fade;
                     pix_green = colourexpand2to$color_depth$[ colour6(background).green ] >> background_fade;
