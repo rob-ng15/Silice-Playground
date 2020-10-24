@@ -1,15 +1,11 @@
-$$WIDTH = 640
-$$HEIGHT = 480
-$$SIZE = 307200
-
 algorithm bitmap(
     input   uint10  pix_x,
     input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
-    output! uint$color_depth$ pix_red,
-    output! uint$color_depth$ pix_green,
-    output! uint$color_depth$ pix_blue,
+    output! uint2   pix_red,
+    output! uint2   pix_green,
+    output! uint2   pix_blue,
     output! uint1   bitmap_display,
     
     // GPU to SET and GET pixels
@@ -19,81 +15,36 @@ algorithm bitmap(
     input uint2 bitmap_write,
     input int16 bitmap_x_read,
     input int16 bitmap_y_read,
-    output uint7 bitmap_colour_read,
-    
-    // BITMAP fade level
-    input uint3 bitmapcolour_fade
-
+    output uint7 bitmap_colour_read
 ) <autorun> {
     // 640 x 480 x 7 bit { Arrggbb } colour bitmap
-    dualport_bram uint1 bitmap_A[ $SIZE$ ] = uninitialized;
-    dualport_bram uint2 bitmap_R[ $SIZE$ ] = uninitialized;
-    dualport_bram uint2 bitmap_G[ $SIZE$ ] = uninitialized;
-    dualport_bram uint2 bitmap_B[ $SIZE$ ] = uninitialized;
+    dualport_bram uint7 bitmap[ 307200 ] = uninitialized;
 
-    // Expansion map for { rr } to { rrrrrr }, { gg } to { gggggg }, { bb } to { bbbbbb }
-    // or { rr } tp { rrrrrrrr }, { gg } to { gggggggg }, { bb } to { bbbbbbbb }
-    uint6 colourexpand2to6[4] = {  0, 21, 42, 63 };
-    uint8 colourexpand2to8[4] = {  0, 85, 170, 255 };
-
-    uint3 bitmap_fade = 0;
+    // Write in range?
+    uint1 write_pixel := (bitmap_x_write >= 0 ) && (bitmap_x_write < 640) && (bitmap_y_write >= 0) && (bitmap_y_write < 480) && ( bitmap_write == 1 );
+    
+    // Pixel being read?
+    bitmap_colour_read := ( pix_x == bitmap_x_read ) && ( pix_y == bitmap_y_read ) ? bitmap.rdata0 : bitmap_colour_read;
 
     // Setup the address in the bitmap for the pixel being rendered
     // Use pre-fetching of the next pixel ready for the next cycle
-    bitmap_A.addr0 := ( pix_active ? pix_x + 1 : 0 ) + ( pix_vblank ? 0 : pix_y * $WIDTH$ );
-    bitmap_A.wenable0 := 0;
-    bitmap_R.addr0 := ( pix_active ? pix_x + 1 : 0 ) + ( pix_vblank ? 0 : pix_y * $WIDTH$ );
-    bitmap_R.wenable0 := 0;
-    bitmap_G.addr0 := ( pix_active ? pix_x + 1 : 0 ) + ( pix_vblank ? 0 : pix_y * $WIDTH$ );
-    bitmap_G.wenable0 := 0;
-    bitmap_B.addr0 := ( pix_active ? pix_x + 1 : 0 ) + ( pix_vblank ? 0 : pix_y * $WIDTH$ );
-    bitmap_B.wenable0 := 0;
+    bitmap.addr0 := ( pix_active ? pix_x + 1 : 0 ) + ( pix_vblank ? 0 : pix_y * 640 );
+    bitmap.wenable0 := 0;
     
     // Bitmap write access for the GPU - Only enable when x and y are in range
-    bitmap_A.addr1 := bitmap_x_write + bitmap_y_write * $WIDTH$;
-    bitmap_A.wdata1 := colour7(bitmap_colour_write).alpha;
-    bitmap_A.wenable1 := 0;
-    bitmap_R.addr1 := bitmap_x_write + bitmap_y_write * $WIDTH$;
-    bitmap_R.wdata1 := colour7(bitmap_colour_write).red;
-    bitmap_R.wenable1 := 0;
-    bitmap_G.addr1 := bitmap_x_write + bitmap_y_write * $WIDTH$;
-    bitmap_G.wdata1 := colour7(bitmap_colour_write).green;
-    bitmap_G.wenable1 := 0;
-    bitmap_B.addr1 := bitmap_x_write + bitmap_y_write * $WIDTH$;
-    bitmap_B.wdata1 := colour7(bitmap_colour_write).blue;
-    bitmap_B.wenable1 := 0;
+    bitmap.addr1 := bitmap_x_write + bitmap_y_write * 640;
+    bitmap.wdata1 := bitmap_colour_write;
+    bitmap.wenable1 := write_pixel;
 
     // Default to transparent
-    bitmap_display := pix_active & ~bitmap_A.rdata0;
-    
-    // Write to the bitmap
-    always {
-        switch( bitmap_write ) {
-            case 1: {
-                if( (bitmap_x_write >= 0 ) && (bitmap_x_write < $WIDTH$) && (bitmap_y_write >= 0) && (bitmap_y_write < $HEIGHT$) ) {
-                    bitmap_A.wenable1 = 1;
-                    bitmap_R.wenable1 = 1;
-                    bitmap_G.wenable1 = 1;
-                    bitmap_B.wenable1 = 1;
-                }
-            }
-            case 2: {
-                bitmap_fade = bitmapcolour_fade;
-            }
-        }
-    }
-    
+    bitmap_display := pix_active && ~colour7(bitmap.rdata0).alpha;
+
     // Render the bitmap
     while(1) {
-        if( pix_active ) {
-            if( ~bitmap_A.rdata0 ) {
-                pix_red = colourexpand2to$color_depth$[ bitmap_R.rdata0 ] >> bitmap_fade;
-                pix_green = colourexpand2to$color_depth$[ bitmap_G.rdata0 ] >> bitmap_fade;
-                pix_blue = colourexpand2to$color_depth$[ bitmap_B.rdata0 ] >> bitmap_fade;
-            }
-            if( ( pix_x == bitmap_x_read ) & ( pix_y == bitmap_y_read ) ) {
-                bitmap_colour_read = { bitmap_A.rdata0, bitmap_R.rdata0, bitmap_G.rdata0, bitmap_B.rdata0 };
-            }
+        if( bitmap_display ) {
+            pix_red = colour7( bitmap.rdata0 ).red;
+            pix_green = colour7( bitmap.rdata0).green;
+            pix_blue = colour7(bitmap.rdata0).blue;
         }
     }
 }

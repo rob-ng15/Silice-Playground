@@ -3,9 +3,9 @@ algorithm character_map(
     input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
-    output! uint$color_depth$ pix_red,
-    output! uint$color_depth$ pix_green,
-    output! uint$color_depth$ pix_blue,
+    output! uint2   pix_red,
+    output! uint2   pix_green,
+    output! uint2   pix_blue,
     output! uint1   character_map_display,
     
     // TPU to SET characters, background, foreground
@@ -24,17 +24,15 @@ algorithm character_map(
     // 80 x 30 character buffer
     // Setting background to 40 (ALPHA) allows the bitmap/background to show through
     dualport_bram uint8 character[2400] = uninitialized;
-    dualport_bram uint6 foreground[2400] = uninitialized;               // { rrggbb }
-    dualport_bram uint7 background[2400] = { 7h40, pad(7h40) };    // { Arrggbb }
+    dualport_bram uint6 foreground[2400] = uninitialized;
+    dualport_bram uint7 background[2400] = { 7h40, pad(7h40) };
 
     // Expansion map for { rr } to { rrrrrr }, { gg } to { gggggg }, { bb } to { bbbbbb }
-    // or { rr } tp { rrrrrrrr }, { gg } to { gggggggg }, { bb } to { bbbbbbbb }
     uint6 colourexpand2to6[4] = {  0, 21, 42, 63 };
-    uint8 colourexpand2to8[4] = {  0, 85, 170, 255 };
 
     // Character position on the screen x 0-79, y 0-29 * 80 ( fetch it two pixels ahead of the actual x pixel, so it is always ready )
     uint8 xcharacterpos := ( pix_active ? (pix_x < 640 ) ? pix_x + 2 : 0 : 0 ) >> 3;
-    uint12 ycharacterpos := (( pix_vblank ? 0 : pix_y ) >> 4) * 80; // 16 pixel high characters
+    uint12 ycharacterpos := (( pix_vblank ? 0 : pix_y ) >> 4) * 80;
     
     // Derive the x and y coordinate within the current 8x16 character block x 0-7, y 0-15
     uint3 xincharacter := (pix_x) & 7;
@@ -70,11 +68,11 @@ algorithm character_map(
     // Default to transparent
     character_map_display := pix_active && (( characterpixel ) || ( ~colour7(background.rdata0).alpha ));
     
-    // TPU
-    // tpu_write controls actions
-    // 1 = set cursor position
-    // 2 = draw character in foreground,background at x,y and move to next position
     always {
+        // TPU
+        // tpu_write controls actions
+        // 1 = set cursor position
+        // 2 = draw character in foreground,background at x,y and move to next position
         switch( tpu_write ) {
             case 1: {
                 // Set cursor position
@@ -94,28 +92,26 @@ algorithm character_map(
                 tpu_active_x = ( tpu_active_x == 79 ) ? 0 : tpu_active_x + 1;
             }
             default: {}
-        } // TPU
+        } // TPU        
     }
-
+    
     // Render the character map
     while(1) {
-        if( pix_active ) {
+        if( character_map_display ) {
             // CHARACTER from characterGenerator8x16
             // Determine if background or foreground
             switch( characterpixel ) {
                 case 0: {
                     // BACKGROUND
-                    if( ~colour7(background.rdata0).alpha ) {
-                        pix_red = colourexpand2to$color_depth$[ colour7(background.rdata0).red ];
-                        pix_green = colourexpand2to$color_depth$[ colour7(background.rdata0).green ];
-                        pix_blue = colourexpand2to$color_depth$[ colour7(background.rdata0).blue ];
-                    }
+                    pix_red = colour7(background.rdata0).red;
+                    pix_green = colour7(background.rdata0).green;
+                    pix_blue = colour7(background.rdata0).blue;
                 }
                 case 1: {
                     // foreground
-                    pix_red = colourexpand2to$color_depth$[ colour6(foreground.rdata0).red ];
-                    pix_green = colourexpand2to$color_depth$[ colour6(foreground.rdata0).green ];
-                    pix_blue = colourexpand2to$color_depth$[ colour6(foreground.rdata0).blue ];
+                    pix_red = colour6(foreground.rdata0).red;
+                    pix_green = colour6(foreground.rdata0).green;
+                    pix_blue = colour6(foreground.rdata0).blue;
                 }
             }
         } 

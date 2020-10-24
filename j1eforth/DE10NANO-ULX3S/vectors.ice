@@ -47,14 +47,14 @@ algorithm vectors(
 
     // Extract deltax and deltay for the present vertices
     int11 deltax := { {6{dx.rdata0[5,1]}}, dx.rdata0[0,5] };
-    int11 deltay := { {6{dy.rdata0[5,1]}}, dy.rdata0[0,5]  };
+    int11 deltay := { {6{dy.rdata0[5,1]}}, dy.rdata0[0,5] };
     
     // Vertices being processed, plus first coordinate of each line
     uint5 block_number = uninitialised;
     uint4 vertices_number = uninitialised;
     int11 start_x = uninitialised;
     int11 start_y = uninitialised;
-    
+
     // Set read and write address for the vertices
     A.addr0 := block_number * 16 + vertices_number;
     A.wenable0 := 0;
@@ -77,8 +77,15 @@ algorithm vectors(
     gpu_write := 0;
 
     always {
-        block_number = ( draw_vector ) ? vector_block_number : ( dl_draw_vector) ? dl_vector_block_number : block_number ;
-        gpu_colour = ( draw_vector ) ? vector_block_colour : ( dl_draw_vector) ? dl_vector_block_colour : gpu_colour;
+        if( dl_draw_vector ) {
+            block_number = dl_vector_block_number;
+            gpu_colour = dl_vector_block_colour;
+        } else {
+            if( draw_vector ) {
+                block_number = vector_block_number;
+                gpu_colour = vector_block_colour;
+            }
+        }
     }
     
     vector_block_active = 0;

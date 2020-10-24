@@ -8,8 +8,13 @@ algorithm pulse1hz(
     counter1hz = 0;
     
     while (1) {
-        counter1hz = ( resetCounter == 1 ) ? 0 : ( counter50mhz == 50000000 ) ? counter1hz + 1 : counter1hz;
-        counter50mhz = ( resetCounter == 1 ) ? 0 : ( counter50mhz == 50000000 ) ? 0 : counter50mhz + 1;
+        if( resetCounter == 1) {
+            counter1hz = 0;
+            counter50mhz = 0;
+        } else {
+            counter1hz = ( counter50mhz == 50000000 ) ? counter1hz + 1 : counter1hz;
+            counter50mhz = ( counter50mhz == 50000000 ) ? 0 : counter50mhz + 1;
+        }
     }
 }
 
@@ -22,14 +27,18 @@ algorithm pulse1khz(
     uint32 counter50mhz = 0;
     
     while (1) {
-        counter1khz = ( resetCounter == 1 ) ? resetCount : ( counter1khz == 0 ) ? 0 : ( counter50mhz == 50000 ) ? counter1khz - 1 : counter1khz;
-        counter50mhz = ( resetCounter == 1 ) ? 0 : ( counter50mhz == 50000 ) ? 0 : counter50mhz + 1;
+        if( resetCounter == 1 ) {
+            counter1khz = resetCount;
+            counter50mhz = 0;
+        } else {
+            counter1khz = ( counter1khz == 0 ) ? 0 : ( counter50mhz == 50000 ) ? counter1khz - 1 : counter1khz;
+            counter50mhz = ( counter50mhz == 50000 ) ? 0 : counter50mhz + 1;
+        }
     }
 }
 
 // 16 bit random number generator
 // Translation into Silice of LFSR_Plus.v
-// Fixed at 16 bit
 algorithm random(
     output  uint16  g_noise_out,
     output  uint16  u_noise_out,
@@ -60,13 +69,14 @@ algorithm random(
             temp_u_noise1 = 0;
             temp_u_noise0 = 0;
             g_noise_out = 0;
+        } else {
+            rand_out = rand_ff;
+            temp_u_noise3 = { rand_out[15,1], rand_out[15,1], rand_out[2,13] };
+            temp_u_noise2 = temp_u_noise3;
+            temp_u_noise1 = temp_u_noise2;
+            temp_u_noise0 = temp_u_noise1;
+            temp_g_noise_nxt = ( rand_en_ff[9,1] ) ? temp_u_noise3 + temp_u_noise2 + temp_u_noise1 + temp_u_noise0 + g_noise_out : temp_u_noise3 + temp_u_noise2 + temp_u_noise1 + temp_u_noise0;
+            u_noise_out = ( rand_en_ff[17,1] ) ? rand_out : u_noise_out;
         }
-		rand_out = rand_ff;
-        temp_u_noise3 = { rand_out[15,1], rand_out[15,1], rand_out[2,13] };
-        temp_u_noise2 = temp_u_noise3;
-        temp_u_noise1 = temp_u_noise2;
-        temp_u_noise0 = temp_u_noise1;
-        temp_g_noise_nxt = ( rand_en_ff[9,1] ) ? temp_u_noise3 + temp_u_noise2 + temp_u_noise1 + temp_u_noise0 + g_noise_out : temp_u_noise3 + temp_u_noise2 + temp_u_noise1 + temp_u_noise0;
-        u_noise_out = ( rand_en_ff[17,1] ) ? rand_out : u_noise_out;
     }
 }

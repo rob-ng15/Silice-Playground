@@ -3,9 +3,9 @@ algorithm terminal(
     input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
-    output! uint$color_depth$ pix_red,
-    output! uint$color_depth$ pix_green,
-    output! uint$color_depth$ pix_blue,
+    output! uint2   pix_red,
+    output! uint2   pix_green,
+    output! uint2   pix_blue,
     output! uint1   terminal_display,
     
     input   uint8   terminal_character,
@@ -26,10 +26,10 @@ algorithm terminal(
     // Initial cursor position in the terminal, bottom left
     uint7 terminal_x = 0;
     uint3 terminal_y = 7;
-
+    
     // Character position on the terminal x 0-79, y 0-7 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
     uint7 xterminalpos := ( pix_active ? (pix_x < 640 ) ? pix_x + 2 : 0 : 0 ) >> 3;
-    uint10 yterminalpos := (( pix_vblank ? 0 : pix_y - 416 ) >> 3) * 80; // 8 pixel high characters
+    uint10 yterminalpos := (( pix_vblank ? 0 : pix_y - 416 ) >> 3) * 80;
 
     // Determine if cursor, and if cursor is flashing
     uint1 is_cursor := ( xterminalpos == terminal_x ) && ( ( ( pix_y - 416) >> 3 ) == terminal_y );
@@ -57,11 +57,11 @@ algorithm terminal(
     
     // Default to transparent and active pixels always blue
     terminal_display := pix_active && showterminal && (pix_y > 415);
-    pix_blue := $color_depth$==6 ? 63 : 255;
-    
-    // TERMINAL Actions
-    // Write to terminal, move to next character and scroll
+    pix_blue := 3;
+
     always {
+        // TERMINAL Actions
+        // Write to terminal, move to next character and scroll
          switch( terminal_active ) {
              case 0: {
                 switch( terminal_write ) {
@@ -130,22 +130,22 @@ algorithm terminal(
                 terminal_scroll = 0;
                 terminal_active = 0;
             }
-         } // TERMINAL
+        } // TERMINAL        
     }
-
+    
     // Render the terminal
     while(1) {
-        if( pix_active && showterminal && (pix_y > 415) ) {
+        if( terminal_display ) {
             // TERMINAL is in range and showterminal flag
             // Invert colours for cursor if flashing
             switch( terminalpixel ) {
                 case 0: {
-                    pix_red = ( is_cursor && timer1hz ) ? $color_depth$==6 ? 63 : 255 : 0;
-                    pix_green = ( is_cursor && timer1hz ) ? $color_depth$==6 ? 63 : 255 : 0;
+                    pix_red = ( is_cursor && timer1hz ) ? 3 : 0;
+                    pix_green = ( is_cursor && timer1hz ) ? 3: 0;
                 }
                 case 1: {
-                    pix_red = ( is_cursor && timer1hz ) ? 0 : $color_depth$==6 ? 63 : 255;
-                    pix_green = ( is_cursor && timer1hz ) ? 0 : $color_depth$==6 ? 63 : 255;
+                    pix_red = ( is_cursor && timer1hz ) ? 0 : 3;
+                    pix_green = ( is_cursor && timer1hz ) ? 0 : 3;
                 }
             }
         }

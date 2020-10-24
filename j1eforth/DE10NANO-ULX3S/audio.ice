@@ -83,8 +83,9 @@ algorithm apu(
                     step_point = ( counter25mhz != 0 ) ? step_point : step_point + 1;
                     counter1khz = ( counter1khz != 0 ) ? counter1khz - 1 : 25000;
                     selected_duration = ( counter1khz != 0 ) ? selected_duration : selected_duration - 1;
+                } else {
+                    selected_note = 0;
                 }
-                selected_note = ( selected_duration != 0 ) ? selected_note : 0;
             }
         }
     }

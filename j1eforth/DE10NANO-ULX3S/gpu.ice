@@ -4,7 +4,6 @@ algorithm gpu(
     output! int11 bitmap_y_write,
     output! uint7 bitmap_colour_write,
     output! uint2 bitmap_write,
-    output! uint3 bitmapcolour_fade,
 
     // From j1eforth
     input   int11 gpu_x,
@@ -76,13 +75,11 @@ algorithm gpu(
     // GPU inputs, copied to according to Forth, VECTOR or DISPLAY LISTS
     int11   x = uninitialized;
     int11   y = uninitialized;
-    uint8   colour = uninitialized;
     int16   param0 = uninitialized;
     int16   param1 = uninitialized;
     int16   param2 = uninitialized;
     int16   param3 = uninitialized;
     uint4   write = uninitialized;
-
 
     // blit1tilemap read access for the blit1tilemap
     blit1tilemap.addr0 := gpu_tile * 16 + gpu_active_y;
@@ -96,14 +93,40 @@ algorithm gpu(
     bitmap_write := 0;
     
     always {
-        x = ( gpu_write != 0 ) ? gpu_x : ( v_gpu_write != 0 ) ? v_gpu_x : ( dl_gpu_write != 0 ) ? dl_gpu_x : x;
-        y = ( gpu_write != 0 ) ? gpu_y : ( v_gpu_write != 0 ) ? v_gpu_y : ( dl_gpu_write != 0 ) ? dl_gpu_y : y;
-        gpu_active_colour = ( gpu_write != 0 ) ? gpu_colour : ( v_gpu_write != 0 ) ? v_gpu_colour : ( dl_gpu_write != 0 ) ? dl_gpu_colour : gpu_active_colour;
-        param0 = ( gpu_write != 0 ) ? gpu_param0 : ( v_gpu_write != 0 ) ? v_gpu_param0 : ( dl_gpu_write != 0 ) ? dl_gpu_param0 : param0;
-        param1 = ( gpu_write != 0 ) ? gpu_param1 : ( v_gpu_write != 0 ) ? v_gpu_param1 : ( dl_gpu_write != 0 ) ? dl_gpu_param1 : param1;
-        param2 = ( gpu_write != 0 ) ? gpu_param2 : ( v_gpu_write != 0 ) ? v_gpu_param2 : ( dl_gpu_write != 0 ) ? dl_gpu_param2 : param2;
-        param3 = ( gpu_write != 0 ) ? gpu_param3 : ( v_gpu_write != 0 ) ? v_gpu_param3 : ( dl_gpu_write != 0 ) ? dl_gpu_param3 : param3;
-        write = ( gpu_write != 0 ) ? gpu_write : ( v_gpu_write != 0 ) ? v_gpu_write : ( dl_gpu_write != 0 ) ? dl_gpu_write : 0;
+        if( dl_gpu_write != 0 ) {
+            x = dl_gpu_x;
+            y = dl_gpu_y;
+            gpu_active_colour = dl_gpu_colour;
+            param0 = dl_gpu_param0;
+            param1 = dl_gpu_param1;
+            param2 = dl_gpu_param2;
+            param3 = dl_gpu_param3;
+            write = dl_gpu_write;
+        } else {
+            if( v_gpu_write != 0 ) {
+                x = v_gpu_x;
+                y = v_gpu_y;
+                gpu_active_colour = v_gpu_colour;
+                param0 = v_gpu_param0;
+                param1 = v_gpu_param1;
+                param2 = v_gpu_param2;
+                param3 = v_gpu_param3;
+                write = v_gpu_write;
+            } else {
+                if( gpu_write != 0 ) {
+                    x = gpu_x;
+                    y = gpu_y;
+                    gpu_active_colour = gpu_colour;
+                    param0 = gpu_param0;
+                    param1 = gpu_param1;
+                    param2 = gpu_param2;
+                    param3 = gpu_param3;
+                    write = gpu_write;
+                } else {
+                    write = 0;
+                }
+            }
+        }
     }
     
     while(1) {
@@ -117,7 +140,7 @@ algorithm gpu(
                         // Done directly, does not activate the GPU
                         bitmap_x_write = x;
                         bitmap_y_write = y;
-                        bitmap_colour_write = colour;
+                        bitmap_colour_write = gpu_active_colour;
                         bitmap_write = 1;
                     }
                     case 2: {
@@ -165,11 +188,6 @@ algorithm gpu(
                         gpu_h = 15;
                         gpu_tile = param0;                       
                         gpu_active = 14;
-                    }
-                    case 7: {
-                        // Set the bitmap fade level
-                        bitmapcolour_fade = param0;
-                        bitmap_write = 2;
                     }
                     default: {}
                 }

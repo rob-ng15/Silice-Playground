@@ -3,57 +3,95 @@ algorithm multiplex_display(
     input   uint10 pix_y,
     input   uint1  pix_active,
     input   uint1  pix_vblank,
-    output! uint$color_depth$ pix_red,
-    output! uint$color_depth$ pix_green,
-    output! uint$color_depth$ pix_blue,
+    output! uint6 pix_red,
+    output! uint6 pix_green,
+    output! uint6 pix_blue,
 
     // BACKGROUND
-    input uint$color_depth$ background_r,
-    input uint$color_depth$ background_g,
-    input uint$color_depth$ background_b,
+    input uint2 background_r,
+    input uint2 background_g,
+    input uint2 background_b,
 
+    // TILEMAP
+    input uint2 tilemap_r,
+    input uint2 tilemap_g,
+    input uint2 tilemap_b,
+    input uint1 tilemap_display,
+    
     // LOWER SPRITES
-    input uint$color_depth$ lower_sprites_r,
-    input uint$color_depth$ lower_sprites_g,
-    input uint$color_depth$ lower_sprites_b,
-    input uint1   lower_sprites_display,
+    input uint2 lower_sprites_r,
+    input uint2 lower_sprites_g,
+    input uint2 lower_sprites_b,
+    input uint1 lower_sprites_display,
 
     // BITMAP
-    input uint$color_depth$ bitmap_r,
-    input uint$color_depth$ bitmap_g,
-    input uint$color_depth$ bitmap_b,
-    input uint1   bitmap_display,
+    input uint2 bitmap_r,
+    input uint2 bitmap_g,
+    input uint2 bitmap_b,
+    input uint1 bitmap_display,
 
     // UPPER SPRITES
-    input uint$color_depth$ upper_sprites_r,
-    input uint$color_depth$ upper_sprites_g,
-    input uint$color_depth$ upper_sprites_b,
-    input uint1   upper_sprites_display,
+    input uint2 upper_sprites_r,
+    input uint2 upper_sprites_g,
+    input uint2 upper_sprites_b,
+    input uint1 upper_sprites_display,
 
     // CHARACTER MAP
-    input uint$color_depth$ character_map_r,
-    input uint$color_depth$ character_map_g,
-    input uint$color_depth$ character_map_b,
-    input uint1   character_map_display,
+    input uint2 character_map_r,
+    input uint2 character_map_g,
+    input uint2 character_map_b,
+    input uint1 character_map_display,
     
     // TERMINAL
-    input uint$color_depth$ terminal_r,
-    input uint$color_depth$ terminal_g,
-    input uint$color_depth$ terminal_b,
-    input uint1   terminal_display
+    input uint2 terminal_r,
+    input uint2 terminal_g,
+    input uint2 terminal_b,
+    input uint1 terminal_display
 ) <autorun> {
-    // RGB is { 0, 0, 0 } by default
-    pix_red   := 0;
-    pix_green := 0;
-    pix_blue  := 0;
+    // RGB is background by default
+    pix_red   := { background_r, background_r, background_r };
+    pix_green := { background_g, background_g, background_g };
+    pix_blue  := { background_b, background_b, background_b };
         
     // Draw the screen
     while (1) {        
         if( pix_active ) {
-            // wait until pix_active THEN BACKGROUND -> LOWER SPRITES -> BITMAP -> UPPER SPRITES -> CHARACTER MAP -> TERMINAL
-            pix_red = ( terminal_display ) ? terminal_r : ( character_map_display ) ? character_map_r : ( upper_sprites_display ) ? upper_sprites_r : ( bitmap_display ) ? bitmap_r : ( lower_sprites_display ) ? lower_sprites_r : background_r;
-            pix_green = ( terminal_display ) ? terminal_g : ( character_map_display ) ? character_map_g : ( upper_sprites_display ) ? upper_sprites_g : ( bitmap_display ) ? bitmap_g : ( lower_sprites_display ) ? lower_sprites_g : background_g;
-            pix_blue = ( terminal_display ) ? terminal_b : ( character_map_display ) ? character_map_b : ( upper_sprites_display ) ? upper_sprites_b : ( bitmap_display ) ? bitmap_b : ( lower_sprites_display ) ? lower_sprites_b : background_b;
+            // wait until pix_active THEN BACKGROUND -> TILEMAP -> LOWER SPRITES -> BITMAP -> UPPER SPRITES -> CHARACTER MAP -> TERMINAL
+            if( terminal_display ) {
+                pix_red = { {3{terminal_r}} };
+                pix_green = { {3{terminal_g}} };
+                pix_blue = { {3{terminal_b}} };
+            } else {
+                if( character_map_display ) {
+                    pix_red = { {3{character_map_r}} };
+                    pix_green = { {3{character_map_g}} };
+                    pix_blue = { {3{character_map_b}} };
+                } else {
+                    if( upper_sprites_display ) {
+                        pix_red = { {3{upper_sprites_r}} };
+                        pix_green = { {3{upper_sprites_g}} };
+                        pix_blue = { {3{upper_sprites_b}} };
+                    } else {
+                        if( bitmap_display ) {
+                            pix_red = { {3{bitmap_r}} };
+                            pix_green = { {3{bitmap_g}} };
+                            pix_blue = { {3{bitmap_b}} };
+                        } else {
+                            if( lower_sprites_display ) {
+                                pix_red = { {3{lower_sprites_r}} };
+                                pix_green = { {3{lower_sprites_g}} };
+                                pix_blue = { {3{lower_sprites_b}} };
+                            } else {
+                                if( tilemap_display ) {
+                                    pix_red = { {3{tilemap_r}} };
+                                    pix_green = { {3{tilemap_g}} };
+                                    pix_blue = { {3{tilemap_b}} };
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         } // pix_active
     }
 }

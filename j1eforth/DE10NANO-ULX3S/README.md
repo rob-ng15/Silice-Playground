@@ -141,7 +141,6 @@ The initial concept was to provide a solid colour backdrop to the display if all
         * black/grey/white rolling static
         * starfield/snow
             * with main colour stars/snow and alternative colour background
-        * fader level
 
 #### Memory Map for the BACKGROUND Layer
 
@@ -150,7 +149,6 @@ Hexadecimal<br>Address | Write | Read
 fff0 | Set the background colour |
 fff1 | Set the alternative background colour |
 fff2 | Set the background design<br>0 - Solid<br>1 - Small checkerboard<br>2 - Medium checkerboard<br>3 - Large checkerboard<br>4 - Huge checkerboard<br>5 - Rainbow<br>6 - Rolling static<br>7 - Starfield/Snow |
-ffff | Set the fade level for the background layer | VBLANK flag
 
 #### j1eforth BACKGROUND words
 
@@ -172,7 +170,6 @@ background! | Example: ```3 2 4 background!``` Sets the background to a HUGE blu
         * Circles (via Bresenham's Circle Drawing Algorithm) 
         * Filled rectangles
         * Blitter for 16 x 16 1 bit user settable tiles
-    * Fader level for the bitmap layer
 
 #### Memory Map for the BITMAP Layer and GPU
 
@@ -192,7 +189,6 @@ ff0a | Set the y coordinate for reading |
 ff0b | Set __Blit1 Tile Map Writer Tile Number__ referred to as _BTMWTN_ in the following<br> |
 ff0c | Set _BTMWTN_ tile map line ( 0 - 15 ) |
 ff0d | Set _BTMWTN_ tile map line bitmap | 
-ff0f | Set the fade level for the bitmap layer |
 
 #### j1eforth BITMAP and GPU words
 
@@ -272,7 +268,6 @@ terminalhide! | Example ```terminalhide!``` hide the blue terminal window
             * 0 = default 16 x 16 1-bit sprite in sprite selectable colour
             * 1 = 3 colour combines pixels to give 8 x 16 2-bit in 3 paletted colours plus transparent
             * 2 = 15 colour combines pixels to give 4 x 16 4-bit in 15 paletted colours plus transparent
-    * Fader level
     * In layer sprite collision detection, updates at the end of every frame
     * Sprite to bitmap collision detection, updates at the end of every frame
 
@@ -303,7 +298,6 @@ ff38 | Set __Tile Map Writer Sprite Number__ referred to as _TMWSN_ in the follo
 ff39 | Set _TMWSN_ tile map line ( 0 - 63 ) |
 ff3a | Set _TMWSN_ tile map line bitmap | 
 ff3e | Update a sprite<br>See notes below |
-ff3f | Set the fade level for the sprite layer
  | | 
 ff50 | | Collision detection flag for sprite 0 { bitmap, sprite14, sprite13, ... sprite 0 }
 ff51 | Set 3 or 15 colour palette 1 | Collision detection flag for sprite 1 { bitmap, sprite14, sprite13, ... sprite 0 }
@@ -443,7 +437,7 @@ C7 (Double High C) | 3d
 Hexadecimal<br>Address | Write | Read
 :-----: | ----- | -----
 f004 | | Read the 1hz systemClock
-ffe0 | Reset the 16 bit pseudo random number generator | Read a 16 bit pseudo random number
+ffe8 | Reset the 16 bit pseudo random number generator | Read a 16 bit pseudo random number
 ffed | Reset the 1hz user timer | Read the 1hz user timer
 ffee | Start the 1khz user timer | Read the 1khz user timer
 ffef | Start the 1khz sleep timer | Read the 1khz sleep timer
@@ -462,6 +456,11 @@ rng | Example ```10 rng``` puts a pseudo random number from 0 - f (hex 10 - 1) o
 
 ## TODO
 
+### ALL DISPLAY LAYERS
+
+* Reimplement fader level
+    * Implement via multiplex display directly
+
 ### AUDIO
 
 * Ensure waveforms other than square work
@@ -470,15 +469,25 @@ rng | Example ```10 rng``` puts a pseudo random number from 0 - f (hex 10 - 1) o
 
 ### TILEMAPS
 
-* Put a 42 x 32 tilemap between background and bitmap along with a configurable 256 16 x 16 backtilemap
-    * Tiles would be 1 bit with foreground and background colour per tile (with ALPHA bit)
-    * Tilemap offset of -16 to 16 in x and y to allow scrolling
-    * Tilemap scroller to move tilemap up, down, left, right
-* Put a 42 x 32 tilemap between bitmap and the character map along with a configurable 256 16 x 16 fronttilemap
-    * Tiles would be 1 bit with foreground and background colour per tile (with ALPHA bit)
-    * Tilemap offset of -16 to 16 in x and y to allow scrolling
+_Partially coded. No extra j1eforth words added. Blocks the background at present._
+
+* A 42 x 32 tilemap between background and bitmap along with a configurable 64 16 x 16 tiles
+    * Tiles are 1 bit with foreground and background colour per tile (with ALPHA bit)
+    * Tilemap offset of -15 to 15 in x and y to allow scrolling
     * Tilemap scroller to move tilemap up, down, left, right
 
+Hexadecimal<br>Address | Write | Read
+:-----: | ----- | -----
+ff90 | X cursor position 
+ff91 | Y cursor position
+ff92 | Tile number to write to cursor position
+ff93 | Background colour to write to cursor position
+ff94 | Foreground colour to write to cursor position
+ff95 | Write to cursor position
+ff96 | Set the tile writer tile number
+ff97 | Set the tile writer line number
+ff98 | Bitmap to write to the tile
+    
 ### GPU
 
 * COLOUR BLITTER

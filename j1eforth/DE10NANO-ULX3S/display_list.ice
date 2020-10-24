@@ -55,77 +55,62 @@ algorithm displaylist(
     A.wenable0 := 0;
     A.addr1 := writer_entry_number;
     A.wdata1 := writer_active;
-    A.wenable1 := 0;
+    A.wenable1 := ( writer_write == 1 ) || ( writer_write == 3 );
 
     command.addr0 := entry_number;
     command.wenable0 := 0;
     command.addr1 := writer_entry_number;
     command.wdata1 := writer_command;
-    command.wenable1 := 0;
+    command.wenable1 := ( writer_write == 1 ) || ( writer_write == 4 );
 
     colour.addr0 := entry_number;
     colour.wenable0 := 0;
     colour.addr1 := writer_entry_number;
     colour.wdata1 := writer_colour;
-    colour.wenable1 := 0;
+    colour.wenable1 := ( writer_write == 1 ) || ( writer_write == 5 );
 
     x.addr0 := entry_number;
     x.wenable0 := 0;
     x.addr1 := writer_entry_number;
     x.wdata1 := writer_x;
-    x.wenable1 := 0;
+    x.wenable1 := ( writer_write == 1 ) || ( writer_write == 6 );
 
     y.addr0 := entry_number;
     y.wenable0 := 0;
     y.addr1 := writer_entry_number;
     y.wdata1 := writer_y;
-    y.wenable1 := 0;
+    y.wenable1 := ( writer_write == 1 ) || ( writer_write == 7 );
 
     p0.addr0 := entry_number;
     p0.wenable0 := 0;
     p0.addr1 := writer_entry_number;
     p0.wdata1 := writer_p0;
-    p0.wenable1 := 0;
+    p0.wenable1 := ( writer_write == 1 ) || ( writer_write == 8 );
 
     p1.addr0 := entry_number;
     p1.wenable0 := 0;
     p1.addr1 := writer_entry_number;
     p1.wdata1 := writer_p1;
-    p1.wenable1 := 0;
+    p1.wenable1 := ( writer_write == 1 ) || ( writer_write == 9 );
 
     gpu_write := 0;
     draw_vector := 0;
-    
-    always {
-        switch( writer_write ) {
-            case 1: {
-                // Replace entry
-                A.wenable1 = 1;
-                command.wenable1 = 1;
-                colour.wenable1 = 1;
-                x.wenable1 = 1;
-                y.wenable1 = 1;
-                p0.wenable1 = 1;
-                p1.wenable1 = 1;
-            }
-            case 2: {
-                // Update entry according to update flag { 6-bit y-delta, 6-bit x-delta range -31 to 0 to 31 }
-                // NB: deltas for rectangles move x, y, p0, p1
-                // Vector blocks will wrap when offscreen ( 32 pixels )
-            }
-            // Update individual components
-            case 3: { A.wenable1 = 1; }
-            case 4: { colour.wenable1 = 1; }
-            case 5: { x.wenable1 = 1; }
-            case 6: { y.wenable1 = 1; }
-            case 7: { p0.wenable1 = 1; }
-            case 8: { p1.wenable1 = 1; }
-        }
-    }
 
-    display_list_active = 0;
-    entry_number = 0;
-    
+    // Dispatch to the VECTOR DRAWER
+    vector_block_colour := colour.rdata0;
+    vector_block_number := p0.rdata0;
+    vector_block_xc := x.rdata0;
+    vector_block_yc := y.rdata0;
+    draw_vector := ( display_list_active == 4 ) && ( command.rdata0 == 15 ) ? 1 : 0;
+
+    // Dispatch to the GPU
+    gpu_write := ( display_list_active == 4 ) && ( command.rdata0 != 15 ) ? command.rdata0 : 0;
+    gpu_colour := colour.rdata0;
+    gpu_x := x.rdata0;
+    gpu_y := y.rdata0;
+    gpu_param0 := p0.rdata0;
+    gpu_param1 := p1.rdata0;
+
     while(1) {
         switch( display_list_active ) {
             case 1: {
@@ -146,22 +131,7 @@ algorithm displaylist(
                 }
             }
             case 4: {
-                if( command.rdata0 == 14 ) {
-                    // Dispatch to the VECTOR DRAWER
-                    vector_block_colour = colour.rdata0;
-                    vector_block_number = p0.rdata0;
-                    vector_block_xc = x.rdata0;
-                    vector_block_yc = y.rdata0;
-                    draw_vector = 1;
-                } else {
-                    // Dispatch to the GPU
-                    gpu_write = command.rdata0;
-                    gpu_colour = colour.rdata0;
-                    gpu_x = x.rdata0;
-                    gpu_y = y.rdata0;
-                    gpu_param0 = p0.rdata0;
-                    gpu_param1 = p1.rdata0;
-                }
+                //Pause to allow time to dispatch to VECTOR DRAWER or GPU 
                 display_list_active = 5;
             }
             case 5: {
@@ -169,7 +139,7 @@ algorithm displaylist(
                 display_list_active = ( entry_number == finish_number ) ? 0 : 1;
             }
             default: {
-                display_list_active = ( start_displaylist == 1 ) ? 1 : display_list_active;
+                display_list_active = ( start_displaylist == 1 ) ? 1 : 0;
                 entry_number = start_entry;
                 finish_number = finish_entry;
             }

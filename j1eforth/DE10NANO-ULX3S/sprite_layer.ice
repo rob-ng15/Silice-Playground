@@ -15,9 +15,9 @@ algorithm sprite_layer(
     input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
-    output! uint$color_depth$ pix_red,
-    output! uint$color_depth$ pix_green,
-    output! uint$color_depth$ pix_blue,
+    output! uint2 pix_red,
+    output! uint2 pix_green,
+    output! uint2 pix_blue,
     output! uint1   sprite_layer_display,
     
     // For setting sprite characteristics
@@ -59,17 +59,7 @@ algorithm sprite_layer(
     $$for i=1,15 do
         input uint6 sprite_palette_$i$,
     $$end
-
-    
-    // SPRITE LAYER fade level
-    input uint3 sprite_layer_fade,
-
 ) <autorun> {
-    // Expansion map for { rr } to { rrrrrr }, { gg } to { gggggg }, { bb } to { bbbbbb }
-    // or { rr } tp { rrrrrrrr }, { gg } to { gggggggg }, { bb } to { bbbbbbbb }
-    uint6 colourexpand2to6[4] = {  0, 21, 42, 63 };
-    uint8 colourexpand2to8[4] = {  0, 85, 170, 255 };
-
     // Storage for the sprites
     // Stored as registers as needed instantly
     uint1 sprite_active[15] = uninitialised;
@@ -92,8 +82,6 @@ algorithm sprite_layer(
     $$for i=0,14 do
         dualport_bram uint16 sprite_$i$_tiles[64] = uninitialised;
     $$end
-
-    uint3 sprite_fade = 0;
 
     // Calculate if each sprite is visible
     $$for i=0,14 do
@@ -188,15 +176,15 @@ algorithm sprite_layer(
                         switch( sprite_colmode[$i$] ) {
                             case 0: {
                                 // Single colour
-                                pix_red = colourexpand2to$color_depth$[ sprite_colour[$i$][4,2] ] >> sprite_fade;
-                                pix_green = colourexpand2to$color_depth$[ sprite_colour[$i$][2,2] ] >> sprite_fade;
-                                pix_blue = colourexpand2to$color_depth$[ sprite_colour[$i$][0,2] ] >> sprite_fade;
+                                pix_red = sprite_colour[$i$][4,2];
+                                pix_green = sprite_colour[$i$][2,2];
+                                pix_blue = sprite_colour[$i$][0,2];
                             }
                             default: {
                                 // 3 or 15 colour
-                                pix_red = colourexpand2to$color_depth$[ palette[ sprite_$i$_spritepixel ][4,2] ] >> sprite_fade;
-                                pix_green = colourexpand2to$color_depth$[ palette[ sprite_$i$_spritepixel ][2,2] ] >> sprite_fade;
-                                pix_blue = colourexpand2to$color_depth$[ palette[ sprite_$i$_spritepixel ][0,2] ] >> sprite_fade;
+                                pix_red = palette[ sprite_$i$_spritepixel ][4,2];
+                                pix_green = palette[ sprite_$i$_spritepixel ][2,2];
+                                pix_blue = palette[ sprite_$i$_spritepixel ][0,2];
                             }
                         }
                         sprite_layer_display = 1;
