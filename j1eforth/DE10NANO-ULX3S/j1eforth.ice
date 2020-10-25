@@ -179,9 +179,9 @@ $$end
 
 $$if ULX3S then
     // Adjust 6 bit rgb to 8 bit rgb for HDMI output
-    uint8   video_r8 := { video_r, video_r[0,2] } ;
-    uint8   video_g8 := { video_g, video_g[0,2] };
-    uint8   video_b8 := { video_b, video_b[0,2] };
+    uint8   video_r8 := video_r << 2;
+    uint8   video_g8 := video_g << 2;
+    uint8   video_b8 := video_b << 2;
 
     hdmi video<@clock,!reset> (
         x       :> pix_x,
@@ -197,7 +197,6 @@ $$if ULX3S then
 $$end
 
     // Build up the display layers
-    
     // BACKGROUND
     uint2   background_r = uninitialized;
     uint2   background_g = uninitialized;
@@ -486,16 +485,16 @@ $$end
     uint13  newPC = uninitialized;
 
     // dstack 257x16bit (as 3256 array + stackTop) and pointer, next pointer, write line, delta
-    bram uint16 dstack[256] = uninitialized; // bram (code from @sylefeb)
+    dualport_bram uint16 dstack[256] = uninitialized; // bram (code from @sylefeb)
     uint16  stackTop = 0;
     uint8   dsp = 0;
-    uint8   newDSP = uninitialized;
+    uint8   newDSP = 0;
     uint16  newStackTop = uninitialized;
 
     // rstack 256x16bit and pointer, next pointer, write line
-    bram uint16 rstack[256] = uninitialized; // bram (code from @sylefeb)
+    dualport_bram uint16 rstack[256] = uninitialized; // bram (code from @sylefeb)
     uint8   rsp = 0;
-    uint8   newRSP = uninitialized;
+    uint8   newRSP = 0;
     uint16  rstackWData = uninitialized;
 
     uint16  stackNext = uninitialized;
@@ -511,7 +510,7 @@ $$end
 
     // CYCLE to control each stage
     // CYCLE allows 1 clock cycle for BRAM access
-    uint3 CYCLE = 0;
+    uint2 CYCLE = 0;
     
     // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
     dualport_bram uint8 uartInBuffer[4096] = uninitialized;
@@ -528,15 +527,31 @@ $$end
     uint$NUM_BTNS$ reg_btns = 0;
     reg_btns ::= btns;
 
-    // BRAM for CPU ram write enable mainained low, pulsed high
+    // Setup addresses for the ram
+    // General memory accessed via port 0, Instruction data accessed via port 1
+    ram_0.addr0 := stackTop >> 1;
+    ram_0.wdata0 := stackNext;
     ram_0.wenable0 := 0;
-    ram_0.wenable1 := 0;
+    ram_1.addr0 := stackTop >> 1;
+    ram_1.wdata0 := stackNext;
     ram_1.wenable0 := 0;
     ram_1.wenable1 := 0;
+    // PC for instruction
+    ram_0.addr1 := pc;
+    ram_0.wenable1 := 0;
 
-    // bram for dstack and rstack write enable, maintained low, pulsed high (code from @sylefeb)
-    dstack.wenable := 0;  
-    rstack.wenable := 0;
+    // Setup addresses for the dstack and rstack
+    // Read via port 0, write via port 1
+    dstack.addr0 := dsp;
+    dstack.wenable0 := 0;  
+    dstack.addr1 := newDSP;
+    dstack.wdata1 := stackTop;
+    dstack.wenable1 := 0;  
+    rstack.addr0 := rsp;
+    rstack.wenable0 := 0;
+    rstack.addr1 := newRSP;
+    rstack.wdata1 := rstackWData;
+    rstack.wenable1 := 0;
 
     // UART Buffers
     uartInBuffer.wenable0  := 0;  // always read  on port 0
@@ -581,25 +596,17 @@ $$end
         switch( CYCLE ) {
             // Read stackNext, rStackTop
             case 0: {
-                // read dtsack and rstack brams (code from @sylefeb)
-                stackNext = dstack.rdata;
-                rStackTop = rstack.rdata;
-            
-                // start READ memoryInput = [stackTop] and instruction = [pc] result ready in 1 cycles
-                // PC can only ever be 0 - 8191
-                ram_0.addr1 = pc;
-                // stackTop could be 0 - 32767 with WORD level access
-                ram_0.addr0 = stackTop >> 1;
-                ram_1.addr0 = stackTop >> 1;
-            }
-            case 1: {
-                // wait then read the data from RAM
+                // read dstack and rstack brams (code from @sylefeb)
+                stackNext = dstack.rdata0;
+                rStackTop = rstack.rdata0;
+
+                // read instruction and pre-emptively the memory
                 instruction = ram_0.rdata1;
                 memoryInput = ( stackTop > 16383 ) ? ram_1.rdata0 : ram_0.rdata0;
             }
             
             // J1 CPU Instruction Execute
-            case 2: {
+            case 1: {
                 // +---------------------------------------------------------------+
                 // | F | E | D | C | B | A | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
                 // +---------------------------------------------------------------+
@@ -689,7 +696,7 @@ $$end
                                                             switch( stackTop[0,4] ) {
                                                                 // f000
                                                                 case 4h0: { newStackTop = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1; } 
-                                                                case 4h1: { newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ( uartInBufferNext != uartInBufferTop )}; }
+                                                                case 4h1: { newStackTop = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ( uartInBufferNext != uartInBufferTop )}; }
                                                                 case 4h2: { newStackTop = leds; }
                                                                 case 4h3: { newStackTop = {$16-NUM_BTNS$b0, reg_btns[0,$NUM_BTNS$]}; }
                                                                 case 4h4: { newStackTop = systemClock; }
@@ -1037,9 +1044,9 @@ $$end
                                                    case 4hf: {
                                                         switch( stackTop[0,4] ) {
                                                             // fff0 -
-                                                            case 4h0: { background_generator.backgroundcolour = stackNext; background_generator.backgroundcolour_write = 1; }
-                                                            case 4h1: { background_generator.backgroundcolour_alt = stackNext; background_generator.backgroundcolour_write = 2; }
-                                                            case 4h2: { background_generator.backgroundcolour_mode = stackNext; background_generator.backgroundcolour_write = 3; }
+                                                            case 4h0: { background_generator.backgroundcolour = stackNext; background_generator.background_write = 1; }
+                                                            case 4h1: { background_generator.backgroundcolour_alt = stackNext; background_generator.background_write = 2; }
+                                                            case 4h2: { background_generator.backgroundcolour_mode = stackNext; background_generator.background_write = 3; }
                                                         }
                                                     }
                                                 }
@@ -1048,12 +1055,8 @@ $$end
                                     }
                                     default: {
                                         // WRITE to RAM
-                                        ram_1.addr0 = stackTop >> 1;
-                                        ram_1.wdata0 = stackNext;
-                                        ram_1.wenable0 = ( stackTop > 16383 ) && ( stackTop < 32768 );
-                                        ram_0.addr0 = stackTop >> 1;
-                                        ram_0.wdata0 = stackNext;
                                         ram_0.wenable0 = ( stackTop < 16384 );
+                                        ram_1.wenable0 = ( stackTop > 16383 ) && ( stackTop < 32768 );
                                     }
                                 }
                             }
@@ -1063,68 +1066,46 @@ $$end
             } // J1 CPU Instruction Execute
 
             // update pc and perform mem[t] = n
-            case 3: {
-                // Write to dstack and rstack
-                // bram code for dstack (code from @sylefeb)
-                dstack.wenable = dstackWrite;
-                dstack.addr    = newDSP;
-                dstack.wdata   = stackTop;
-                // bram code for rstack (code from @sylefeb)
-                rstack.wenable = rstackWrite;
-                rstack.addr    = newRSP;
-                rstack.wdata   = rstackWData;
-            }
-            
-            // Update dsp, rsp, pc, stackTop
-            case 4: {
+            case 2: {
+                // Commit to dstack and rstack
+                dstack.wenable1 = dstackWrite;
+                rstack.wenable1 = rstackWrite;
+
+                // Update dsp, rsp, pc, stackTop
                 dsp = newDSP;
                 pc = newPC;
                 stackTop = newStackTop;
                 rsp = newRSP;
-                
-                // Setup addresses for dstack and rstack brams (code from @sylefeb)
-                dstack.addr = newDSP;
-                rstack.addr = newRSP;
+            }
             
-                // RESET BACKGROUND, LOWER SPRITE LAYER, BITMAP, UPPER SPRITE LAYER, CHARACTER MAP and TERMINAL controls
-                background_generator.backgroundcolour_write = 0;
+            case 3: {
+                // RESET Co-Processor ControlsZ
+                background_generator.background_write = 0;
+                tile_map.tile_writer_write = 0; 
+                tile_map.tm_write = 0;
                 lower_sprites.sprite_layer_write = 0;
                 lower_sprites.sprite_writer_active = 0;
                 gpu_processor.gpu_write = 0;
                 gpu_processor.blit1_writer_active = 0;
-                character_map_window.tpu_write = 0;
                 upper_sprites.sprite_layer_write = 0;
                 upper_sprites.sprite_writer_active = 0;
+                character_map_window.tpu_write = 0;
                 terminal_window.terminal_write = 0;
-                tile_map.tile_writer_write = 0; 
-                tile_map.tm_write = 0;
-                
-                // RESET VECTOR controls
                 vector_drawer.draw_vector = 0;
                 vector_drawer.vertices_writer_write = 0;
-
-                // RESET DISPLAY LIST controls
                 displaylist_drawer.start_displaylist = 0;
                 displaylist_drawer.writer_write = 0;
-                
-                // RESET AUDIO controls
                 apu_processor_L.apu_write = 0;
                 apu_processor_R.apu_write = 0;
-                
-                // RESET TIMER controls
                 p1hz.resetCounter = 0;
                 sleepTimer.resetCounter = 0;
                 timer1hz.resetCounter = 0;
                 timer1khz.resetCounter = 0;
-                
-                // RESET RNG control
                 rng.resetRandom = 0;
             }
-            
-            default: {}
         } // switch(CYCLE)
         
-        // Move to next CYCLE ( 0 to 4 , then back to 0 )
-        CYCLE = ( CYCLE == 4 ) ? 0 : CYCLE + 1;
+        // Move to next CYCLE ( 0 to 3 , then back to 0 )
+        CYCLE = ( CYCLE == 3 ) ? 0 : CYCLE + 1;
     } // execute J1 CPU
 }

@@ -48,50 +48,37 @@ algorithm multiplex_display(
     input uint2 terminal_b,
     input uint1 terminal_display
 ) <autorun> {
-    // RGB is background by default
-    pix_red   := { {3{background_r}} };
-    pix_green := { {3{background_g}} };
-    pix_blue  := { {3{background_b}} };
+    // Output defaults to 0
+    pix_red   := 0;
+    pix_green := 0;
+    pix_blue  := 0;
         
     // Draw the screen
     while (1) {        
+        // wait until pix_active THEN BACKGROUND -> TILEMAP -> LOWER SPRITES -> BITMAP -> UPPER SPRITES -> CHARACTER MAP -> TERMINAL
         if( pix_active ) {
-            // wait until pix_active THEN BACKGROUND -> TILEMAP -> LOWER SPRITES -> BITMAP -> UPPER SPRITES -> CHARACTER MAP -> TERMINAL
-            if( terminal_display ) {
-                pix_red = { {3{terminal_r}} };
-                pix_green = { {3{terminal_g}} };
-                pix_blue = { {3{terminal_b}} };
-            } else {
-                if( character_map_display ) {
-                    pix_red = { {3{character_map_r}} };
-                    pix_green = { {3{character_map_g}} };
-                    pix_blue = { {3{character_map_b}} };
-                } else {
-                    if( upper_sprites_display ) {
-                        pix_red = { {3{upper_sprites_r}} };
-                        pix_green = { {3{upper_sprites_g}} };
-                        pix_blue = { {3{upper_sprites_b}} };
-                    } else {
-                        if( bitmap_display ) {
-                            pix_red = { {3{bitmap_r}} };
-                            pix_green = { {3{bitmap_g}} };
-                            pix_blue = { {3{bitmap_b}} };
-                        } else {
-                            if( lower_sprites_display ) {
-                                pix_red = { {3{lower_sprites_r}} };
-                                pix_green = { {3{lower_sprites_g}} };
-                                pix_blue = { {3{lower_sprites_b}} };
-                            } else {
-                                if( tilemap_display ) {
-                                    pix_red = { {3{tilemap_r}} };
-                                    pix_green = { {3{tilemap_g}} };
-                                    pix_blue = { {3{tilemap_b}} };
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            // Select the 2 bit r g or b and expand to 6 bit r g or b
+            pix_red = ( terminal_display ) ? { {3{terminal_r}} } :
+                        ( character_map_display ) ? { {3{character_map_r}} } :
+                        ( upper_sprites_display ) ? { {3{upper_sprites_r}} } :
+                        ( bitmap_display ) ? { {3{bitmap_r}} } :
+                        ( lower_sprites_display ) ? { {3{lower_sprites_r}} } :
+                        ( tilemap_display ) ? { {3{tilemap_r}} } :
+                        { {3{background_r}} };
+            pix_green = ( terminal_display ) ? { {3{terminal_g}} } :
+                        ( character_map_display ) ? { {3{character_map_g}} } :
+                        ( upper_sprites_display ) ? { {3{upper_sprites_g}} } :
+                        ( bitmap_display ) ? { {3{bitmap_g}} } :
+                        ( lower_sprites_display ) ? { {3{lower_sprites_g}} } :
+                        ( tilemap_display ) ? { {3{tilemap_g}} } :
+                        { {3{background_g}} };
+            pix_blue = ( terminal_display ) ? { {3{terminal_b}} } :
+                        ( character_map_display ) ? { {3{character_map_b}} } :
+                        ( upper_sprites_display ) ? { {3{upper_sprites_b}} } :
+                        ( bitmap_display ) ? { {3{bitmap_b}} } :
+                        ( lower_sprites_display ) ? { {3{lower_sprites_b}} } :
+                        ( tilemap_display ) ? { {3{tilemap_b}} } :
+                        { {3{background_b}} };
         } // pix_active
     }
 }

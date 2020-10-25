@@ -10,8 +10,15 @@
     * PS/2 takes priority over the UART
 * J1+ CPU
     * 50MHz operation
-    * 5 clock cycles per operation against 13 clock cycles per operation on the FOMU, giving an effective CPU running at 10MHz
+    * 4 (improved from 5) clock cycles per J1+ CPU operation against 13 clock cycles per operation on the FOMU, giving an effective CPU running at 12.5MHz (improved from 10MHz)
 
+Cycle | Action | Notes
+----- | ----- | -----
+0 | Update stackNext (2nd item on the stack) and rStackTop (1st item on the return stack).<br>Read instruction from PC memory location and stackTop memory location. | Pointers to the correct addresses in the stacks and memory are maintained via wires.
+1 | Execute the J1+ CPU instruction. | Memory writes are started in this cycle. Co-processor operations are started in this cycle.
+2 | Write to the data and return stacks. | Update data and return stack pointers and memory addresses. Memory reads are started in this cycle.
+3 | Clear the co-processor controls. | This is performed in cycle 3 as the J1+ CPU runs at 50MHz, the co-processors at 25MHz. Allows the co-processors to detect the input from cycle 1.
+    
 For communication with j1eforth there is a UART which provides input and output, output is duplicated on the terminal display. The ULX3S eventually will have PS/2 keyboard input via the us2 connector and a USB OTG and PS/2 to USB converter.
 
 __DE10NANO__ Open a terminal in the DE10NANO directory and type ```make de10nano```. Wait. Upload your design your DE10NANO with ```quartus_pgm -m jtag -o "p;BUILD_de10nano/build.sof@2"```. Or download from this repository.
@@ -126,7 +133,7 @@ The sample code provided in [Big Example Part 1.md](documentation/Big%20Example%
 
 ### ALL DISPLAY LAYERS
 
-* Reimplement fader level
+* Re-implement display layer fader level
     * Implement via multiplex display directly
 
 ### AUDIO
@@ -151,6 +158,6 @@ The sample code provided in [Big Example Part 1.md](documentation/Big%20Example%
 * UART rx for the de10nano is on PIN_AG11 which maps to Arduino_IO15. On the MiSTer I/O board this pin is accessible by the USB3-lookalike USER port.
 * UART tx for the de10nano is on PIN_AH9 which maps to Arduino_IO14. On the MiSTer I/O board this pin is accessible by the USB3-lookalike USER port.
 
-I use a USB3 breakout board in the USER port to easily access the above pins. Changing the uart to uart2 in the DE10NANO makefile will change the output pins.
+I use a USB3 breakout board in the USER port to easily access the above pins. Changing the uart to uart2 in the DE10NANO makefile will change the UART pins to others unused by the MiSTer I/O board on the DE10NANO Arduino port to UART rx on PIN_AG8, UART tx on PIN_AH8.
 
 ![USB3 Breakout for UART pins](documentation/images/DE10NANO-USERPORT.jpg)

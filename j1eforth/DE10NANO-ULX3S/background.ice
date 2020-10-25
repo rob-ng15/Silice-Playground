@@ -12,7 +12,7 @@ algorithm background(
     input uint6 backgroundcolour,
     input uint6 backgroundcolour_alt,
     input uint3 backgroundcolour_mode,
-    input uint3 backgroundcolour_write
+    input uint3 background_write
 ) <autorun> {
     uint6 background = 0;
     uint6 background_alt = 0;
@@ -31,7 +31,7 @@ algorithm background(
     pix_blue := 0;
 
     always {
-        switch( backgroundcolour_write ) {
+        switch( background_write ) {
             case 1: { background = backgroundcolour; }
             case 2: { background_alt = backgroundcolour_alt; }
             case 3: { background_mode = backgroundcolour_mode; }

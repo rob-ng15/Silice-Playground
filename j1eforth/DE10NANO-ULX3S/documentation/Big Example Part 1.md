@@ -29,20 +29,20 @@ c400 1c00 7c00 f800 f800 f000 e000 8000
 0000 0000 0000 0000 0000 0000 0000 0000
 4 tmtile!
 
-4 4 1 40 21 tm!
-4 5 2 40 21 tm!
-5 4 3 40 21 tm!
-5 5 4 40 21 tm!
+4 4 1 40 15 tm!
+4 5 2 40 15 tm!
+5 4 3 40 15 tm!
+5 5 4 40 15 tm!
 
-22 e 1 40 20 tm!
-22 f 2 40 20 tm!
-23 e 3 40 20 tm!
-23 f 4 40 20 tm!
+22 e 1 40 14 tm!
+22 f 2 40 14 tm!
+23 e 3 40 14 tm!
+23 f 4 40 14 tm!
 
-1 1c 1 40 11 tm!
-1 1d 2 40 11 tm!
-2 1c 3 40 11 tm!
-2 1d 4 40 11 tm!
+1 1c 1 40 5 tm!
+1 1d 2 40 5 tm!
+2 1c 3 40 5 tm!
+2 1d 4 40 5 tm!
 
 0000 0000 0000 0000 0000 0000 0001 0003
 007e 00c4 0088 0190 0110 0320 03f1 0003
@@ -60,10 +60,10 @@ c400 1c00 7c00 f800 f800 f000 e000 8000
 0000 0000 0000 0000 0000 0000 0000 0000
 8 tmtile!
 
-24 2 5 40 42 tm!
-24 3 6 40 42 tm!
-25 2 7 40 42 tm!
-25 3 8 40 42 tm!
+24 2 5 40 2a tm!
+24 3 6 40 2a tm!
+25 2 7 40 2a tm!
+25 3 8 40 2a tm!
 
 variable hitasteroid
 
@@ -155,7 +155,7 @@ variable workasteroid
   loop
   0 activelasteroids ! 0 activehasteroids !
   4 rng 1+ 0 do
-    3f 20 + 280 rng a0 rng 3 rng 1 1
+    20 rng 20 + 280 rng a0 rng 3 rng 1 1
       activelasteroids @ lslsprite!
     4 rng 4 + activelasteroids @ lasteroiddirection c!
     activelasteroids @ setlargelasteroid
@@ -163,7 +163,7 @@ variable workasteroid
     1 activelasteroids @ lasteroidactive c!
     activelasteroids @ 1+ activelasteroids !
   loop
-    3f 20 + d5 rng 1e0 rng 3 rng 1 1
+    20 rng 20 + d5 rng 1e0 rng 3 rng 1 1
       activelasteroids @ lslsprite!
     4 rng 4 + activelasteroids @ lasteroiddirection c!
     activelasteroids @ setlargelasteroid
@@ -171,7 +171,7 @@ variable workasteroid
     1 activelasteroids @ lasteroidactive c!
     activelasteroids @ 1+ activelasteroids !
   4 rng 1+ 0 do
-    3c 20 + 280 rng a0 rng 140 + 3 rng 1 1
+    20 rng 20 + 280 rng a0 rng 140 + 3 rng 1 1
       activehasteroids @ uslsprite!
     4 rng 4 + activehasteroids @ hasteroiddirection c!
     activehasteroids @ setlargehasteroid
@@ -179,7 +179,7 @@ variable workasteroid
     1 activehasteroids @ hasteroidactive c!
     activehasteroids @ 1+ activehasteroids !
   loop
-    3c 20 + d5 rng 1aa + 1e0 rng 3 rng 1 1
+    20 rng 20 + d5 rng 1aa + 1e0 rng 3 rng 1 1
       activehasteroids @ uslsprite!
     4 rng 4 + activehasteroids @ hasteroiddirection c!
     activehasteroids @ setlargehasteroid
