@@ -178,7 +178,7 @@ $$if DE10NANO then
 $$end
 
 $$if ULX3S then
-    // Adjust 6 biut rgb to 8 bit rgb for HDMI output
+    // Adjust 6 bit rgb to 8 bit rgb for HDMI output
     uint8   video_r8 := { video_r, video_r[0,2] } ;
     uint8   video_g8 := { video_g, video_g[0,2] };
     uint8   video_b8 := { video_b, video_b[0,2] };

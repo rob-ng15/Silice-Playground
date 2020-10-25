@@ -49,9 +49,9 @@ algorithm multiplex_display(
     input uint1 terminal_display
 ) <autorun> {
     // RGB is background by default
-    pix_red   := { background_r, background_r, background_r };
-    pix_green := { background_g, background_g, background_g };
-    pix_blue  := { background_b, background_b, background_b };
+    pix_red   := { {3{background_r}} };
+    pix_green := { {3{background_g}} };
+    pix_blue  := { {3{background_b}} };
         
     // Draw the screen
     while (1) {        

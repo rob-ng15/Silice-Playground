@@ -155,7 +155,7 @@ variable workasteroid
   loop
   0 activelasteroids ! 0 activehasteroids !
   4 rng 1+ 0 do
-    20 rng 20 + 280 rng a0 rng 3 rng 1 1
+    3f 20 + 280 rng a0 rng 3 rng 1 1
       activelasteroids @ lslsprite!
     4 rng 4 + activelasteroids @ lasteroiddirection c!
     activelasteroids @ setlargelasteroid
@@ -163,7 +163,7 @@ variable workasteroid
     1 activelasteroids @ lasteroidactive c!
     activelasteroids @ 1+ activelasteroids !
   loop
-    20 rng 20 + d5 rng 1e0 rng 3 rng 1 1
+    3f 20 + d5 rng 1e0 rng 3 rng 1 1
       activelasteroids @ lslsprite!
     4 rng 4 + activelasteroids @ lasteroiddirection c!
     activelasteroids @ setlargelasteroid
@@ -171,7 +171,7 @@ variable workasteroid
     1 activelasteroids @ lasteroidactive c!
     activelasteroids @ 1+ activelasteroids !
   4 rng 1+ 0 do
-    20 rng 20 + 280 rng a0 rng 140 + 3 rng 1 1
+    3c 20 + 280 rng a0 rng 140 + 3 rng 1 1
       activehasteroids @ uslsprite!
     4 rng 4 + activehasteroids @ hasteroiddirection c!
     activehasteroids @ setlargehasteroid
@@ -179,7 +179,7 @@ variable workasteroid
     1 activehasteroids @ hasteroidactive c!
     activehasteroids @ 1+ activehasteroids !
   loop
-    20 rng 20 + d5 rng 1aa + 1e0 rng 3 rng 1 1
+    3c 20 + d5 rng 1aa + 1e0 rng 3 rng 1 1
       activehasteroids @ uslsprite!
     4 rng 4 + activehasteroids @ hasteroiddirection c!
     activehasteroids @ setlargehasteroid
