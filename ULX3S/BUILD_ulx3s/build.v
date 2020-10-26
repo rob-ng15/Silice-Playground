@@ -1,5 +1,6 @@
 `define HDMI 1
 `define UART 1
+`define GPIO 1
 `define ULX3S 1
 `default_nettype none
 
@@ -20,6 +21,10 @@ module top(
   output [1:0]  sdram_ba,
   output [12:0] sdram_a,
   inout  [15:0] sdram_d,
+`endif  
+`ifdef AUDIO
+  output [3:0] audio_l,
+  output [3:0] audio_r,
 `endif  
 `ifdef OLED  
   // oled
@@ -55,7 +60,11 @@ module top(
   // uart
   output  ftdi_rxd,
   input   ftdi_txd,
-`endif  
+`endif
+
+  output [3:0] audio_l,
+  output [3:0] audio_r,
+
   input  clk_25mhz
   );
 
@@ -109,6 +118,11 @@ wire [3:0]  __main_out_gpdi_dp;
 wire [3:0]  __main_out_gpdi_dn;
 `endif
 
+`ifdef AUDIO
+wire [3:0]  __main_out_audio_l;
+wire [3:0]  __main_out_audio_r;
+`endif
+
 wire ready = btns[0];
 
 reg [31:0] RST_d;
@@ -153,6 +167,10 @@ M_main __main(
   .out_sd_clk    (__main_sd_clk),
   .out_sd_mosi   (__main_sd_mosi),
   .in_sd_miso    (sd_miso),
+`endif  
+`ifdef AUDIO
+  .out_audio_l  (__main_out_audio_l),
+  .out_audio_r  (__main_out_audio_r),
 `endif  
 `ifdef OLED
   .out_oled_clk (__main_oled_clk),
@@ -201,6 +219,11 @@ assign sdram_a       = __main_out_sdram_a;
 assign gp[0+:3]      = __main_out_gp;
 assign gn[0+:3]      = __main_out_gn;
 `endif
+
+`ifdef AUDIO
+assign audio_l       = __main_out_audio_l;
+assign audio_r       = __main_out_audio_r;
+`endif  
 
 `ifdef VGA
 assign gp[0]         = __main_out_vga_vs;
@@ -624,8 +647,8 @@ _q_dc_bias <= 0;
   end else begin
 _q_q_m <= _d_q_m;
 _q_dc_bias <= _d_dc_bias;
-  end
 _q_tmds <= _d_tmds;
+  end
 end
 
 
@@ -784,8 +807,8 @@ _q_mod5 <= _d_mod5;
 _q_shift_r <= _d_shift_r;
 _q_shift_g <= _d_shift_g;
 _q_shift_b <= _d_shift_b;
-  end
 _q_outbits <= _d_outbits;
+  end
 end
 
 
@@ -895,11 +918,11 @@ _q_latch_green <= _d_latch_green;
 _q_latch_blue <= _d_latch_blue;
 _q_prev_sync_ctrl <= _d_prev_sync_ctrl;
 _q_prev_active <= _d_prev_active;
-  end
 _q_x <= _d_x;
 _q_y <= _d_y;
 _q_active <= _d_active;
 _q_vblank <= _d_vblank;
+  end
 end
 
 
@@ -3171,13 +3194,13 @@ _q_terminal_addr1 <= _d_terminal_addr1;
 _q_terminal_x <= _d_terminal_x;
 _q_terminal_scroll <= _d_terminal_scroll;
 _q_terminal_scroll_next <= _d_terminal_scroll_next;
-_q_index <= _d_index;
-  end
 _q_pix_red <= _d_pix_red;
 _q_pix_green <= _d_pix_green;
 _q_pix_blue <= _d_pix_blue;
 _q_terminal_display <= _d_terminal_display;
 _q_terminal_active <= _d_terminal_active;
+_q_index <= _d_index;
+  end
 end
 
 
@@ -3509,11 +3532,11 @@ end else begin
 _q_index <= 0;
 end
   end else begin
-_q_index <= _d_index;
-  end
 _q_pix_red <= _d_pix_red;
 _q_pix_green <= _d_pix_green;
 _q_pix_blue <= _d_pix_blue;
+_q_index <= _d_index;
+  end
 end
 
 
@@ -3611,9 +3634,9 @@ _q_index <= 0;
 end
   end else begin
 _q_counter50mhz <= _d_counter50mhz;
+_q_counter1hz <= _d_counter1hz;
 _q_index <= _d_index;
   end
-_q_counter1hz <= _d_counter1hz;
 end
 
 
@@ -3705,14 +3728,12 @@ endmodule
 module M_main (
 in_btns,
 in_uart_rx,
-in_usb_bd_dp,
-in_usb_bd_dn,
+in_gp,
+in_gn,
 out_leds,
 out_gpdi_dp,
 out_gpdi_dn,
 out_uart_tx,
-out_usb_pu_dp,
-out_usb_pu_dn,
 out_video_r,
 out_video_g,
 out_video_b,
@@ -3726,14 +3747,12 @@ clock
 );
 input  [7:0] in_btns;
 input  [0:0] in_uart_rx;
-input  [0:0] in_usb_bd_dp;
-input  [0:0] in_usb_bd_dn;
+input  [26:0] in_gp;
+input  [26:0] in_gn;
 output  [7:0] out_leds;
 output  [3:0] out_gpdi_dp;
 output  [3:0] out_gpdi_dn;
 output  [0:0] out_uart_tx;
-output  [0:0] out_usb_pu_dp;
-output  [0:0] out_usb_pu_dn;
 output  [5:0] out_video_r;
 output  [5:0] out_video_g;
 output  [5:0] out_video_b;
@@ -3775,6 +3794,8 @@ wire  [7:0] _c_ps2InBuffer_wdata0;
 assign _c_ps2InBuffer_wdata0 = 0;
 wire  [3:0] _c_ps2InBufferNext;
 assign _c_ps2InBufferNext = 0;
+wire  [0:0] _w_ps2_clock;
+wire  [0:0] _w_ps2_data;
 wire  [7:0] _w_video_r8;
 wire  [7:0] _w_video_g8;
 wire  [7:0] _w_video_b8;
@@ -3795,8 +3816,6 @@ reg  [3:0] _d_ps2InBufferTop;
 reg  [3:0] _q_ps2InBufferTop;
 reg  [7:0] _d_leds,_q_leds;
 reg  [0:0] _d_uart_tx,_q_uart_tx;
-reg  [0:0] _d_usb_pu_dp,_q_usb_pu_dp;
-reg  [0:0] _d_usb_pu_dn,_q_usb_pu_dn;
 reg  [0:0] _d_video_hs,_q_video_hs;
 reg  [0:0] _d_video_vs,_q_video_vs;
 reg  [7:0] _d_terminal_window_terminal_character,_q_terminal_window_terminal_character;
@@ -3811,8 +3830,6 @@ assign out_leds = _q_leds;
 assign out_gpdi_dp = _w_video_gpdi_dp;
 assign out_gpdi_dn = _w_video_gpdi_dn;
 assign out_uart_tx = _d_uart_tx;
-assign out_usb_pu_dp = _q_usb_pu_dp;
-assign out_usb_pu_dn = _q_usb_pu_dn;
 assign out_video_r = _w_display_pix_red;
 assign out_video_g = _w_display_pix_green;
 assign out_video_b = _w_display_pix_blue;
@@ -3842,14 +3859,12 @@ _q_ps2InBuffer_wenable1 <= _d_ps2InBuffer_wenable1;
 _q_ps2InBuffer_wdata1 <= _d_ps2InBuffer_wdata1;
 _q_ps2InBuffer_addr1 <= _d_ps2InBuffer_addr1;
 _q_ps2InBufferTop <= _d_ps2InBufferTop;
-_q_index <= _d_index;
-  end
 _q_leds <= _d_leds;
 _q_uart_tx <= _d_uart_tx;
-_q_usb_pu_dp <= _d_usb_pu_dp;
-_q_usb_pu_dn <= _d_usb_pu_dn;
 _q_video_hs <= _d_video_hs;
 _q_video_vs <= _d_video_vs;
+_q_index <= _d_index;
+  end
 _q_terminal_window_terminal_character <= _d_terminal_window_terminal_character;
 _q_terminal_window_terminal_write <= _d_terminal_window_terminal_write;
 _q_terminal_window_showterminal <= _d_terminal_window_showterminal;
@@ -3872,8 +3887,8 @@ ulx3s_clk_50_25 _clk_gen (
 
 ps2kbd _keyboard (
 .clk(clock),
-.ps2_clk(in_usb_bd_dp),
-.ps2_data(in_usb_bd_dn),
+.ps2_clk(_w_ps2_clock),
+.ps2_data(_w_ps2_data),
 .ps2_code(_w_keyboard_ps2_code),
 .strobe(_w_keyboard_strobe)
 );
@@ -3951,6 +3966,8 @@ M_main_mem_ps2InBuffer __mem__ps2InBuffer(
 assign _w_video_b8 = _w_display_pix_blue<<2;
 assign _w_video_g8 = _w_display_pix_green<<2;
 assign _w_video_r8 = _w_display_pix_red<<2;
+assign _w_ps2_data = in_gp[3+:1];
+assign _w_ps2_clock = in_gp[1+:1];
 
 always @* begin
 _d_CYCLE = _q_CYCLE;
@@ -3962,8 +3979,6 @@ _d_ps2InBuffer_addr1 = _q_ps2InBuffer_addr1;
 _d_ps2InBufferTop = _q_ps2InBufferTop;
 _d_leds = _q_leds;
 _d_uart_tx = _q_uart_tx;
-_d_usb_pu_dp = _q_usb_pu_dp;
-_d_usb_pu_dn = _q_usb_pu_dn;
 _d_video_hs = _q_video_hs;
 _d_video_vs = _q_video_vs;
 _d_terminal_window_terminal_character = _q_terminal_window_terminal_character;

@@ -106,9 +106,8 @@ $$end
     pulse1khz timer1khz( );
 
     // RNG random number generator
-    // Uses systemClockMHz to reseed if locked
     uint16 staticGenerator = 0;
-    random rng(
+    random rng <@video_clock,!video_reset> (
         g_noise_out :> staticGenerator
     );
     
@@ -1022,6 +1021,7 @@ $$end
                                                             case 4h6: { tile_map.tile_writer_tile = stackNext; }
                                                             case 4h7: { tile_map.tile_writer_line = stackNext; }
                                                             case 4h8: { tile_map.tile_writer_bitmap = stackNext; tile_map.tile_writer_write = 1; }
+                                                            case 4h9: { tile_map.tm_scrollwrap = stackNext; }
                                                         }
                                                     }
                                                    case 4he: {
@@ -1083,6 +1083,7 @@ $$end
                 background_generator.background_write = 0;
                 tile_map.tile_writer_write = 0; 
                 tile_map.tm_write = 0;
+                tile_map.tm_scrollwrap = 0;
                 lower_sprites.sprite_layer_write = 0;
                 lower_sprites.sprite_writer_active = 0;
                 gpu_processor.gpu_write = 0;

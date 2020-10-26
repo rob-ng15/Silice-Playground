@@ -20,7 +20,10 @@ algorithm tilemap(
     input   uint6   tile_writer_tile,
     input   uint4   tile_writer_line,
     input   uint16  tile_writer_bitmap,  
-    input   uint1   tile_writer_write
+    input   uint1   tile_writer_write,
+    
+    // For scrolling/wrapping
+    input   uint4   tm_scrollwrap
 ) <autorun> {
     // Tile Map 64 x 16 x 16
     dualport_bram uint16 tiles16x16[ 1024 ] = { 0, pad(0) };
@@ -38,13 +41,13 @@ algorithm tilemap(
 
     // Character position on the screen x 0-41, y 0-31 * 42 ( fetch it two pixels ahead of the actual x pixel, so it is always ready )
     // Adjust for the offsets, effective 0 point margin is ( 1,1 ) to ( 40,30 ) with a 1 tile border
-    uint8   xtmpos := ( pix_active ? (pix_x < 640 ) ? pix_x + 2 : 0 : 0 ) >> 4;
-    uint12  ytmpos := (( pix_vblank ? 0 : pix_y ) >> 4) * 42; 
+    uint6   xtmpos := ( pix_active ? (pix_x < 640 ) ? pix_x + ( 10d18 + {{5{tm_offset_x[4,1]}}, tm_offset_x} ) : ( 10d16 + {{5{tm_offset_x[4,1]}}, tm_offset_x} ) : ( 10d16 + {{5{tm_offset_x[4,1]}}, tm_offset_x} ) ) >> 4;
+    uint10  ytmpos := (( pix_vblank ? 0 : pix_y + ( 10d16 + {{5{tm_offset_y[4,1]}}, tm_offset_y} ) ) >> 4) * 42; 
     
     // Derive the x and y coordinate within the current 16x16 tilemap block x 0-7, y 0-15
     // Needs adjusting for the offsets
-    uint4   xintm := (pix_x) & 15;
-    uint4   yintm := (pix_y) & 15;
+    uint4   xintm := { 1b0, (pix_x) & 15 } + tm_offset_x;
+    uint4   yintm := { 1b0, (pix_y) & 15 } + tm_offset_y;
     
     // Derive the actual pixel in the current character
     uint1   tmpixel := tiles16x16.rdata0[15 - xintm,1];
@@ -77,6 +80,45 @@ algorithm tilemap(
 
     // Default to transparent
     tilemap_display := pix_active && (( tmpixel ) || ( ~colour7(background.rdata0).alpha ));
+
+    // Scroll/wrap
+    always {
+        switch( tm_scrollwrap ) {
+            case 1: {
+                // SCROLL LEFT
+                tm_offset_x = ( tm_offset_x == (15) ) ? 0 : tm_offset_x + 1;
+            }
+            case 2: {
+                // SCROLL UP
+                tm_offset_y = ( tm_offset_y == (15) ) ? 0 : tm_offset_y + 1;
+            }
+            case 3: {
+                // SCROLL RIGHT
+                tm_offset_x = ( tm_offset_x == (-15) ) ? 0 : tm_offset_x - 1;
+            }
+            case 4: {
+                // SCROLL DOWN
+                tm_offset_y = ( tm_offset_y == (-15) ) ? 0 : tm_offset_y - 1;
+            }
+            case 5: {
+                // WRAP LEFT
+                tm_offset_x = ( tm_offset_x == (15) ) ? 0 : tm_offset_x + 1;
+            }
+            case 6: {
+                // WRAP UP
+                tm_offset_y = ( tm_offset_y == (15) ) ? 0 : tm_offset_y + 1;
+            }
+            case 7: {
+                // WRAP RIGHT
+                tm_offset_x = ( tm_offset_x == (-15) ) ? 0 : tm_offset_x - 1;
+            }
+            case 8: {
+                // WRAP DOWN
+                tm_offset_y = ( tm_offset_y == (-15) ) ? 0 : tm_offset_y - 1;
+            }
+            default: {}
+        }
+    }
     
     // Render the tilemap
     while(1) {

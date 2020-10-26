@@ -71,10 +71,8 @@ algorithm main(
     input   uint1   uart_rx,
 
     // US2 USB Port
-    input   uint1   usb_bd_dp,
-    input   uint1   usb_bd_dn,
-    output  uint1   usb_pu_dp,
-    output  uint1   usb_pu_dn,
+    input   uint27   gp,
+    input   uint27   gn,
     
     // VGA/HDMI
     output! uint$color_depth$ video_r,
@@ -91,12 +89,14 @@ algorithm main(
     pulse1hz p1hz( counter1hz :> timer1hz );
 
     // PS/2 Keyboard for the ULX3S
+    uint1 ps2_clock := gp[1,1];
+    uint1 ps2_data := gp[3,1];
     uint8 ps2_key = 0;
     uint1 ps2_strobe = 0;
     ps2kbd keyboard(
         clk <: clock,
-        ps2_clk  <: usb_bd_dp,
-        ps2_data <: usb_bd_dn,
+        ps2_clk  <: ps2_clock,
+        ps2_data <: ps2_data,
         ps2_code :> ps2_key,
         strobe   :> ps2_strobe
     );
@@ -203,8 +203,7 @@ algorithm main(
     terminal_window.showcursor = 1;
 
     // Echo PS/2 Input to terminal
-    while( 1 ) {
-        
+    while( 1 ) {        
         switch( CYCLE ) {
             case 0: {
                 if( ~( ps2InBufferNext == ps2InBufferTop ) ) {
@@ -219,8 +218,7 @@ algorithm main(
             
             default: {}
         } // switch(CYCLE)
-        
-    
+            
         CYCLE = ( CYCLE == 2 ) ? 0 : CYCLE + 1;
     }
 }

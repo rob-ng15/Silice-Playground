@@ -4,9 +4,11 @@
   if
     timer1hz@ lasttimer !
     lasttimer @ 3 and 1 = if
-      0 1 1f4 beepL! then
+      0 1 1f4 beepL! 
+      1 ff99 ! then
     lasttimer @ 3 and 3 = if
-      0 2 1f4 beepR! then
+      0 2 1f4 beepR! 
+      2 ff99 ! then
   then ;
 
 : killlhit

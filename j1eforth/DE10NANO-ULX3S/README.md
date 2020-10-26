@@ -153,6 +153,11 @@ The sample code provided in [Big Example Part 1.md](documentation/Big%20Example%
 * Change characterGenerator8x16 from BROM to BRAM to allow changes to the font
 * Implement character generator writer in the same format as the tile map tile, sprite tile, blit1 tile, vector vertex and display list entry writers
 
+### Tile Map
+
+* Add in 1 pixel left/right/up/down offset
+* Add in scroll/wrap functionality
+
 ## Notes
 
 * UART rx for the de10nano is on PIN_AG11 which maps to Arduino_IO15. On the MiSTer I/O board this pin is accessible by the USB3-lookalike USER port.

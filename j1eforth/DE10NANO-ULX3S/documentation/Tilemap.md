@@ -11,7 +11,7 @@ _Partially coded. No extra j1eforth words added._
 ## Memory Map for the Tilemap Layer
 
 Hexadecimal<br>Address | Write | Read
-:-----: | ----- | -----
+----- | ----- | -----
 ff90 | X cursor position 
 ff91 | Y cursor position
 ff92 | Tile number to write to cursor position
@@ -21,3 +21,13 @@ ff95 | Write to cursor position
 ff96 | Set the tile writer tile number
 ff97 | Set the tile writer line number
 ff98 | Bitmap to write to the tile
+ff99 | Scroll or wrap the tilemap (Values below)
+
+Scroll<br>Wrap | Action | Scroll<br>Wrap | Action 
+----- | ----- | ----- | -----
+1 | Move LEFT and SCROLL if necessary | 5 | Move LEFT and WRAP if necessary
+2 | Move UP and SCROLL if necessary | 6 | Move UP and WRAP if necessary
+3 | Move RIGHT and SCROLL if necessary | 7 | Move RIGHT and WRAP if necessary
+4 | Move DOWN and SCROLL if necessary | 8 | Move DOWN and WRAP if necessary
+
+Scrolling will fill the new row/column with transparent background and black foreground with tile number 0. Wrapping will move the old row/column to the new row/column.
