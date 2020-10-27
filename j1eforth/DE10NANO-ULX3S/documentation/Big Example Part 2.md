@@ -4,11 +4,11 @@
   if
     timer1hz@ lasttimer !
     lasttimer @ 3 and 1 = if
-      0 1 1f4 beepL! 
-      1 ff99 ! then
+      1 0 1 1f4 beepL! 
+      5 ff99 ! then
     lasttimer @ 3 and 3 = if
-      0 2 1f4 beepR! 
-      2 ff99 ! then
+      1 0 2 1f4 beepR! 
+      6 ff99 ! then
   then ;
 
 : killlhit
@@ -72,18 +72,18 @@
   e ff40 ! ff41 @ 0= if
     3c 140 e6 2 1 0 e lslsprite!
     30 140 e6 0 1 0 e uslsprite!
-    4 3d 80 beep!
+    2 4 3d 80 beep!
   then ;
     
 : hit?
   ff5e @ 1fff and 0<> if
-    4 19 1f4 beep!
+    3 4 19 1f4 beep!
     lhit
     0 0 0 0 0 0 e lslsprite!
     0 0 0 0 0 0 e uslsprite!
   then
   ff6e @ 1fff and 0<> if
-    4 19 1f4 beep!
+    3 4 19 1f4 beep!
     uhit
     0 0 0 0 0 0 e lslsprite!
     0 0 0 0 0 0 e uslsprite!
@@ -91,11 +91,11 @@
 
 : crash?
   ff5d @ 1fff and 0<> if
-    4 1 1f4 beep!
+    2 4 1 1f4 beep!
     setup
   then
   ff6d @ 1fff and 0<> if
-    4 1 1f4 beep!
+    2 4 1 1f4 beep!
     setup
   then ;
   

@@ -961,10 +961,10 @@ t: buttons@ f003 literal @ t;
 
 ( Audio )
 t: beep! dup ffe2 literal ! ffe6 literal ! dup ffe1 literal ! ffe5 literal ! dup ffe0 literal ! ffe4 literal ! 
-  1 literal ffe3 literal ! 1 literal ffe7 literal ! t;
+  1 literal ffe3 literal ! ffe7 literal ! t;
 t: beep? begin ffe3 literal @ 0= until begin ffe7 literal @ 0= until t;
-t: beepL! ffe2 literal ! ffe1 literal ! ffe0 literal ! 1 literal ffe3 literal ! t;
-t: beepR! ffe6 literal ! ffe5 literal ! ffe4 literal ! 1 literal ffe7 literal ! t;
+t: beepL! ffe2 literal ! ffe1 literal ! ffe0 literal ! ffe3 literal ! t;
+t: beepR! ffe6 literal ! ffe5 literal ! ffe4 literal ! ffe7 literal ! t;
 t: beepL? begin ffe3 literal @ 0= until t;
 t: beepR? begin ffe7 literal @ 0= until t;
 

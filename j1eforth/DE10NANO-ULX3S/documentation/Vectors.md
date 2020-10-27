@@ -1,6 +1,6 @@
 # Vector Drawer
 
-* Provides 32 vector blocks, each of 16 vertices
+* Provides 16 vector blocks, each of 16 vertices
 * Each vertex is a displacement from 0, 0 in the range -31 to 0 to 31
     * Each vertex has an active flag
         * When drawing the vector block, the vector drawer will stop when it reaches an inactive vertex

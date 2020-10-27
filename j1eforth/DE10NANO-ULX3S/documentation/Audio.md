@@ -3,6 +3,7 @@
 Audio output is implemented for the ULX3S only at present. Audio output is via the 3.5mm jack.
 
 * Stereo audio ( two audio processors, left and right )
+    * 3 "notes" per channel
 * Specified notes in the range Deep C to Double High C
 * Selectable waveforms
     * Square (waveform 0)
@@ -29,7 +30,7 @@ ffe7 | Start the Right APU to output the specified note | Milliseconds left on t
 
 AUDIO<br>Word | Usage
 ----- | -----
-beep! | Example ```0 19 3e8 beep!``` outputs a middle c square wave for 1 second ( 3e8 hex = 1000 milliseconds ) to left and right channels
+beep! | Example ```1 0 19 3e8 beep!``` outputs a middle c square wave for 1 second ( 3e8 hex = 1000 milliseconds ) to left and right channels on note 1
 beep? | Example ```beep?``` waits for the APU to finish (present note) on left and right channels
 
 _```beepL!```, ```beepR!``` , ```beepL?``` and ```beepR?``` are for the respective single channels only_

@@ -796,8 +796,8 @@ $$end
                                                                     switch( stackTop[0,4] ) {
                                                                         // ffe0 -
                                                                         case 4h0: { newStackTop = staticGenerator; }
-                                                                        case 4h3: { newStackTop = apu_processor_L.selected_duration; }
-                                                                        case 4h7: { newStackTop = apu_processor_R.selected_duration; }
+                                                                        case 4h3: { newStackTop = apu_processor_L.audio_active; }
+                                                                        case 4h7: { newStackTop = apu_processor_R.audio_active; }
                                                                         case 4hd: { newStackTop = timer1hz.counter1hz; }
                                                                         case 4he: { newStackTop = timer1khz.counter1khz; }
                                                                         case 4hf: { newStackTop = sleepTimer.counter1khz; }
@@ -1030,11 +1030,11 @@ $$end
                                                             case 4h0: { apu_processor_L.waveform = stackNext; }
                                                             case 4h1: { apu_processor_L.note = stackNext; }
                                                             case 4h2: { apu_processor_L.duration = stackNext; }
-                                                            case 4h3: { apu_processor_L.apu_write = 1; }
+                                                            case 4h3: { apu_processor_L.apu_write = stackNext; }
                                                             case 4h4: { apu_processor_R.waveform = stackNext; }
                                                             case 4h5: { apu_processor_R.note = stackNext; }
                                                             case 4h6: { apu_processor_R.duration = stackNext; }
-                                                            case 4h7: { apu_processor_R.apu_write = 1; }
+                                                            case 4h7: { apu_processor_R.apu_write = stackNext; }
                                                             case 4h8: { rng.resetRandom = 1; }
                                                             case 4hd: { timer1hz.resetCounter = 1; }
                                                             case 4he: { timer1khz.resetCount = stackNext; timer1khz.resetCounter = 1; }

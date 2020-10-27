@@ -6,7 +6,7 @@
 // Each vector block has a centre x and y coordinate and a colour { rrggbb } when drawn
 
 algorithm vectors(
-    input   uint5   vector_block_number,
+    input   uint4   vector_block_number,
     input   uint7   vector_block_colour,
     input   int11   vector_block_xc,
     input   int11   vector_block_yc,
@@ -14,7 +14,7 @@ algorithm vectors(
     input   uint1   draw_vector,
 
     // For setting vertices
-    input   uint5   vertices_writer_block,
+    input   uint4   vertices_writer_block,
     input   uint6   vertices_writer_vertex,
     input   int6    vertices_writer_xdelta,  
     input   int6    vertices_writer_ydelta,
@@ -32,7 +32,7 @@ algorithm vectors(
     output  uint4 gpu_write,
 
     // Communication from the DISPLAY LIST DRAWER
-    input  uint5   dl_vector_block_number,
+    input  uint4   dl_vector_block_number,
     input  uint7   dl_vector_block_colour,
     input  int11   dl_vector_block_xc,
     input  int11   dl_vector_block_yc,
@@ -40,10 +40,10 @@ algorithm vectors(
 
     input  uint4 gpu_active
 ) <autorun> {
-    // 32 vector blocks each of 16 vertices
-    dualport_bram uint1 A[512] = uninitialised;    
-    dualport_bram int6 dy[512] = uninitialised;    
-    dualport_bram int6 dx[512] = uninitialised;    
+    // 16 vector blocks each of 16 vertices
+    dualport_bram uint1 A[256] = uninitialised;    
+    dualport_bram int6 dy[256] = uninitialised;    
+    dualport_bram int6 dx[256] = uninitialised;    
 
     // Extract deltax and deltay for the present vertices
     int11 deltax := { {6{dx.rdata0[5,1]}}, dx.rdata0[0,5] };
