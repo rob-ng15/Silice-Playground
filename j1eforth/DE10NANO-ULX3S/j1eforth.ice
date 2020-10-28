@@ -107,7 +107,7 @@ $$end
 
     // RNG random number generator
     uint16 staticGenerator = 0;
-    random rng <@video_clock,!video_reset> (
+    random rng (
         g_noise_out :> staticGenerator
     );
     

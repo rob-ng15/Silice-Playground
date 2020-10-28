@@ -93,9 +93,6 @@ algorithm displaylist(
     p1.wdata1 := writer_p1;
     p1.wenable1 := ( writer_write == 1 ) || ( writer_write == 9 );
 
-    gpu_write := 0;
-    draw_vector := 0;
-
     // Dispatch to the VECTOR DRAWER
     vector_block_colour := colour.rdata0;
     vector_block_number := p0.rdata0;
@@ -135,6 +132,10 @@ algorithm displaylist(
                 display_list_active = 5;
             }
             case 5: {
+                // Reset GPU and VECTOR DRAWER output
+                gpu_write = 0;
+                draw_vector = 0;
+                // Move to the next entry
                 entry_number = ( entry_number == finish_number ) ? start_entry : entry_number + 1;
                 display_list_active = ( entry_number == finish_number ) ? 0 : 1;
             }

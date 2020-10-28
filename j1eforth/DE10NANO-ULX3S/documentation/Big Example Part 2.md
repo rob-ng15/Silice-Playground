@@ -1,7 +1,9 @@
 ( game start here )
 : beepboop
-  timer1hz@ lasttimer @ <>
-  if
+  timer1hz@ lasttimer @ <> if
+    shipdirection @ 1+ shipdirection !
+    shipdirection @ 4 = if
+      0 shipdirection ! then
     timer1hz@ lasttimer !
     lasttimer @ 3 and 1 = if
       1 0 1 1f4 beepL! 
@@ -25,55 +27,56 @@
   
 : lhit
   ( find hit asteroid )
-  0 hitasteroid !
+  ff hitasteroid !
   c 0 do
-  ff50 i + @ 4000 and 0<> if
+  ff50 i + @ 1fff and 0<> if
     i hitasteroid ! then
   loop
-  hitasteroid @ 0<> if
-    killlhit then 
-  activelasteroids @ 1- activelasteroids !
-  hitasteroid @ lasteroidtype c@ 3 = if
-    ( small wipe )
-    0 hitasteroid @ lasteroidtype c!
-    then
-  hitasteroid @ lasteroidtype c@ 2 = if
-    ( medium spawn 2 small )
-    then
-  hitasteroid @ lasteroidtype c@ 1 = if
-    ( large spawn 2 medium )
-    then ;
+  hitasteroid @ ff <> if
+    killlhit
+    activelasteroids @ 1- activelasteroids !
+    hitasteroid @ lasteroidtype c@ 3 = if
+        ( small wipe )
+        0 hitasteroid @ lasteroidtype c!
+        then
+    hitasteroid @ lasteroidtype c@ 2 = if
+        ( medium spawn 2 small )
+        then
+    hitasteroid @ lasteroidtype c@ 1 = if
+        ( large spawn 2 medium )
+    then 
+  then ;
     
 : uhit
   ( find hit asteroid )
-  0 hitasteroid !
+  ff hitasteroid !
   c 0 do
-  ff60 i + @ 4000 and 0<> if
+    ff60 i + @ 1fff and 0<> if
     i hitasteroid ! then
   loop
-  hitasteroid @ 0<> if
-    killhhit then 
-  activehasteroids @ 1- activehasteroids !
-  hitasteroid @ hasteroidtype c@ 3 = if
-    ( small wipe )
-    0 hitasteroid @ hasteroidtype c!
-    then
-  hitasteroid @ hasteroidtype c@ 2 = if
-    ( medium spawn 2 small )
-    then
-  hitasteroid @ hasteroidtype c@ 1 = if
-    ( large spawn 2 medium )
-    then ;
+  hitasteroid @ ff <> if
+    activehasteroids @ 1- activehasteroids !
+    hitasteroid @ hasteroidtype c@ 3 = if
+        ( small wipe )
+        0 hitasteroid @ hasteroidtype c!
+        then
+    hitasteroid @ hasteroidtype c@ 2 = if
+        ( medium spawn 2 small )
+        then
+    hitasteroid @ hasteroidtype c@ 1 = if
+        ( large spawn 2 medium )
+    then 
+  then ;
     
 : fire?
   ( fire if bullet not active )
   ( bullet exists in lower and upper layers )
   ( for collision detection )
   e ff40 ! ff41 @ 0= if
-    3c 140 e6 2 1 0 e lslsprite!
-    30 140 e6 0 1 0 e uslsprite!
-    2 4 3d 80 beep!
-  then ;
+    shipdirection @ bulletdirection !
+    3c 140 f0 2 1 0 e lslsprite!
+    30 140 f0 0 1 0 e uslsprite!
+    2 4 3d 80 beep! then ;
     
 : hit?
   ff5e @ 1fff and 0<> if
@@ -87,7 +90,10 @@
     uhit
     0 0 0 0 0 0 e lslsprite!
     0 0 0 0 0 0 e uslsprite!
-  then ;
+  then 
+  activehasteroids @ activelasteroids @
+  0= if
+    placeasteroids then ;
 
 : crash?
   ff5d @ 1fff and 0<> if
@@ -102,8 +108,8 @@
 : drawship
   ( ship exits in lower and upper layers )
   ( for collision detection )
-  3f 140 f0 0 1 0 d lslsprite!
-  3f 140 f0 0 1 0 d uslsprite! ;
+  3f 140 f0 shipdirection @ 1 0 d lslsprite!
+  3f 140 f0 shipdirection @ 1 0 d uslsprite! ;
 
 : moveasteroids
   d 0 do
@@ -119,11 +125,17 @@
     14 timer1khz!
     beepboop
     vblank?
-    178 e lslupdate!
-    178 e uslupdate! hit?
+    bulletdirection @ updatedirections c@ 180 + 
+      e lslupdate!
+    bulletdirection @ updatedirections c@ 180 + 
+      e uslupdate!
+    hit?
     moveasteroids drawship
-    178 e lslupdate!
-    178 e uslupdate! hit?
+    bulletdirection @ updatedirections c@ 180 + 
+      e lslupdate!
+    bulletdirection @ updatedirections c@ 180 + 
+      e uslupdate!
+    hit?
     crash? timer1khz? ;
 
 : demoULX3S

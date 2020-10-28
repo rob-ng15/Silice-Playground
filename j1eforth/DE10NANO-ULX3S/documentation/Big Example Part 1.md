@@ -71,6 +71,8 @@ c400 1c00 7c00 f800 f800 f000 e000 8000
 7 1b 8 40 10 tm!
 
 variable hitasteroid
+variable shipdirection
+variable bulletdirection
 
 ( storage for 12 (c hex) low asteroids )
 ( storage for 12 (c hex) high asteroids )
@@ -207,6 +209,7 @@ variable workasteroid
     0 0 0 0 0 0 i lslsprite!
     0 0 0 0 0 0 i uslsprite!
   loop
+  0 shipdirection !
   setshipsprite
   setbulletsprite
   placeasteroids 
