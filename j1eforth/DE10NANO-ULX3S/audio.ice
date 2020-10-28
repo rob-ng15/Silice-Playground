@@ -181,31 +181,32 @@ algorithm apu(
                 counter25mhz_3 = 0;
                 counter1khz_3 = 25000;
             }
-        }
-        
-        if( duration_1 != 0 ) {
-            counter25mhz_1 = ( counter25mhz_1 != 0 ) ? counter25mhz_1 - 1 : note_1_frequency;
-            point_1 = ( counter25mhz_1 != 0 ) ? point_1 : point_1 + 1;
-            counter1khz_1 = ( counter1khz_1 != 0 ) ? counter1khz_1 - 1 : 25000;
-            duration_1 = ( counter1khz_1 != 0 ) ? duration_1 : duration_1 - 1;
-        } else {
-            note_1 = 0;
-        }
-        if( duration_2 != 0 ) {
-            counter25mhz_2 = ( counter25mhz_2 != 0 ) ? counter25mhz_2 - 1 : note_2_frequency;
-            point_2 = ( counter25mhz_2 != 0 ) ? point_2 : point_2 + 1;
-            counter1khz_2 = ( counter1khz_2 != 0 ) ? counter1khz_2 - 1 : 25000;
-            duration_2 = ( counter1khz_2 != 0 ) ? duration_2 : duration_2 - 1;
-        } else {
-            note_2 = 0;
-        }
-        if( duration_3 != 0 ) {
-            counter25mhz_3 = ( counter25mhz_3 != 0 ) ? counter25mhz_3 - 1 : note_3_frequency;
-            point_3 = ( counter25mhz_3 != 0 ) ? point_3 : point_3 + 1;
-            counter1khz_3 = ( counter1khz_3 != 0 ) ? counter1khz_3 - 1 : 25000;
-            duration_3 = ( counter1khz_3 != 0 ) ? duration_3 : duration_3 - 1;
-        } else {
-            note_3 = 0;
+            default: {
+                if( duration_1 != 0 ) {
+                    counter25mhz_1 = ( counter25mhz_1 != 0 ) ? counter25mhz_1 - 1 : note_1_frequency;
+                    point_1 = ( counter25mhz_1 != 0 ) ? point_1 : point_1 + 1;
+                    counter1khz_1 = ( counter1khz_1 != 0 ) ? counter1khz_1 - 1 : 25000;
+                    duration_1 = ( counter1khz_1 != 0 ) ? duration_1 : duration_1 - 1;
+                } else {
+                    note_1 = 0;
+                }
+                if( duration_2 != 0 ) {
+                    counter25mhz_2 = ( counter25mhz_2 != 0 ) ? counter25mhz_2 - 1 : note_2_frequency;
+                    point_2 = ( counter25mhz_2 != 0 ) ? point_2 : point_2 + 1;
+                    counter1khz_2 = ( counter1khz_2 != 0 ) ? counter1khz_2 - 1 : 25000;
+                    duration_2 = ( counter1khz_2 != 0 ) ? duration_2 : duration_2 - 1;
+                } else {
+                    note_2 = 0;
+                }
+                if( duration_3 != 0 ) {
+                    counter25mhz_3 = ( counter25mhz_3 != 0 ) ? counter25mhz_3 - 1 : note_3_frequency;
+                    point_3 = ( counter25mhz_3 != 0 ) ? point_3 : point_3 + 1;
+                    counter1khz_3 = ( counter1khz_3 != 0 ) ? counter1khz_3 - 1 : 25000;
+                    duration_3 = ( counter1khz_3 != 0 ) ? duration_3 : duration_3 - 1;
+                } else {
+                    note_3 = 0;
+                }
+            }
         }
    }
 }
