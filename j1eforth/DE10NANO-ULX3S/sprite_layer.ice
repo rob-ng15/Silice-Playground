@@ -10,14 +10,59 @@ bitfield spriteupdate {
     uint2   dx
 }
 
+algorithm sprite(
+    input   uint10  pix_x,
+    input   uint10  pix_y,
+    input   uint1   pix_active,
+    output! uint4   pix_colour,
+    output! uint1   pix_visible,
+
+    input   uint1   sprite_active,
+    input   uint1   sprite_double,
+    input   uint2   sprite_colmode,
+    input   uint2   sprite_tile,
+    input   int11   sprite_x,
+    input   int11   sprite_y,
+
+    input   uint6   writer_line,
+    input   uint16  writer_bitmap,  
+    input   uint1   writer_active
+) {
+    // Sprite Tiles
+    dualport_bram uint16 tiles[64] = uninitialised;
+
+    // Calculate if sprite is visible
+    uint4 xinsprite := ( 16 >> sprite_colmode ) - 1  - ( ( pix_x - sprite_x ) >> sprite_double );
+    uint4 spritepixel := ( sprite_colmode == 0 ) ? tiles.rdata0[ xinsprite, 1 ] 
+                                    : ( sprite_colmode == 1 ) ? tiles.rdata0[ xinsprite, 2 ]
+                                    : ( sprite_colmode == 2 ) ? tiles.rdata0[ xinsprite, 3 ] : 0;
+    uint1 visiblex := ( pix_x >= sprite_x ) && ( pix_x < ( sprite_x + ( ( 16 >> sprite_colmode ) << sprite_double ) ) );
+    uint1 visibley := ( pix_y >= sprite_y ) && ( pix_y < ( sprite_y + ( 16 << sprite_double ) ) );
+    uint1 visible := visiblex && visibley && ( spritepixel != 0 )  && sprite_active;
+
+    // Set read and write address for the tiles
+    tiles.addr0 := sprite_tile * 16 + ( ( pix_y - sprite_y ) >> sprite_double );
+    tiles.wenable0 := 0;
+    tiles.addr1 := writer_line;
+    tiles.wdata1 := writer_bitmap;
+    tiles.wenable1 := writer_active;
+
+    // Output the results
+    pix_colour := spritepixel;
+    pix_visible := visible;
+    
+    while(1) {
+    }
+}
+
 algorithm sprite_layer(
     input   uint10  pix_x,
     input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
-    output! uint2 pix_red,
-    output! uint2 pix_green,
-    output! uint2 pix_blue,
+    output! uint2   pix_red,
+    output! uint2   pix_green,
+    output! uint2   pix_blue,
     output! uint1   sprite_layer_display,
     
     // For setting sprite characteristics
@@ -70,6 +115,34 @@ algorithm sprite_layer(
     uint6 sprite_colour[15] = uninitialised;
     uint2 sprite_tile_number[15] = uninitialised;
 
+    // Setup 15 sprites
+    $$for i=0,14 do
+        uint1 sprite_active_$i$ := sprite_active[$i$];
+        uint1 sprite_double_$i$ := sprite_double[$i$];
+        uint2 sprite_colmode_$i$ := sprite_colmode[$i$];
+        int11 sprite_x_$i$ := sprite_x[$i$];
+        int11 sprite_y_$i$ := sprite_y[$i$];
+        uint2 sprite_tile_number_$i$ := sprite_tile_number[$i$];
+        uint1 sprite_write_active_$i$ := ( sprite_writer_active == 1 ) && ( sprite_writer_sprite == $i$ );
+        
+        sprite sprite_$i$(
+            pix_x <: pix_x,
+            pix_y <: pix_y,
+            pix_active <: pix_active,
+
+            sprite_active <: sprite_active_$i$,
+            sprite_double <: sprite_double_$i$,
+            sprite_colmode <: sprite_colmode_$i$,
+            sprite_tile <: sprite_tile_number_$i$,
+            sprite_x <: sprite_x_$i$,
+            sprite_y <: sprite_y_$i$,
+
+            writer_line <: sprite_writer_line,
+            writer_bitmap <: sprite_writer_bitmap,
+            writer_active <: sprite_write_active_$i$
+        );
+    $$end
+    
     // Palette for 3 or 15 colour sprites - shared
     uint6 palette[16] = uninitialised;
     
@@ -78,35 +151,10 @@ algorithm sprite_layer(
         uint16      detect_collision_$i$ = uninitialised;
     $$end
     
-    // One bram for each sprite
-    $$for i=0,14 do
-        dualport_bram uint16 sprite_$i$_tiles[64] = uninitialised;
-    $$end
-
-    // Calculate if each sprite is visible
-    $$for i=0,14 do
-        uint4 sprite_$i$_xinsprite := ( 16 >> sprite_colmode[$i$] ) - 1  - ( ( pix_x - sprite_x[$i$] ) >> sprite_double[$i$] );
-        uint4 sprite_$i$_spritepixel := ( sprite_colmode[$i$] == 0 ) ? sprite_$i$_tiles.rdata0[ sprite_$i$_xinsprite, 1 ] 
-                                        : ( sprite_colmode[$i$] == 1 ) ? sprite_$i$_tiles.rdata0[ sprite_$i$_xinsprite, 2 ]
-                                        : ( sprite_colmode[$i$] == 2 ) ? sprite_$i$_tiles.rdata0[ sprite_$i$_xinsprite, 3 ] : 0;
-        uint1 sprite_$i$_visiblex := ( pix_x >= sprite_x[$i$] ) && ( pix_x < ( sprite_x[$i$] + ( ( 16 >> sprite_colmode[$i$] ) << sprite_double[$i$] ) ) );
-        uint1 sprite_$i$_visibley := ( pix_y >= sprite_y[$i$] ) && ( pix_y < ( sprite_y[$i$] + ( 16 << sprite_double[$i$] ) ) );
-        uint1 sprite_$i$_visible := sprite_$i$_visiblex && sprite_$i$_visibley && ( sprite_$i$_spritepixel != 0 )  && sprite_active[$i$];
-    $$end
-
     // Expand Sprite Update Deltas
     int11 deltax := { {9{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
     int11 deltay := { {9{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
    
-    // Set read and write address for the sprite tiles
-    $$for i=0,14 do
-        sprite_$i$_tiles.addr0 := sprite_tile_number[$i$] * 16 + ( ( pix_y - sprite_y[$i$] ) >> sprite_double[$i$] );
-        sprite_$i$_tiles.wenable0 := 0;
-        sprite_$i$_tiles.addr1 := sprite_writer_line;
-        sprite_$i$_tiles.wdata1 := sprite_writer_bitmap;
-        sprite_$i$_tiles.wenable1 := ( sprite_writer_sprite == $i$ ) && sprite_writer_active;
-    $$end
-
     // Set 3 or 15 colour sprite palette
     $$for i=1,15 do
         palette[$i$] := sprite_palette_$i$;
@@ -172,7 +220,7 @@ algorithm sprite_layer(
         } else {
             if( pix_active ) {
                 $$for i=0,14 do
-                    if(  ( sprite_$i$_visible ) ) {
+                    if(  ( sprite_$i$.pix_visible ) ) {
                         switch( sprite_colmode[$i$] ) {
                             case 0: {
                                 // Single colour
@@ -182,16 +230,18 @@ algorithm sprite_layer(
                             }
                             default: {
                                 // 3 or 15 colour
-                                pix_red = palette[ sprite_$i$_spritepixel ][4,2];
-                                pix_green = palette[ sprite_$i$_spritepixel ][2,2];
-                                pix_blue = palette[ sprite_$i$_spritepixel ][0,2];
+                                pix_red = palette[ sprite_$i$.pix_colour ][4,2];
+                                pix_green = palette[ sprite_$i$.pix_colour ][2,2];
+                                pix_blue = palette[ sprite_$i$.pix_colour ][0,2];
                             }
                         }
                         sprite_layer_display = 1;
                         // Perform collision detection
                         detect_collision_$i$ = detect_collision_$i$ | {
-                            bitmap_display, sprite_14_visible, sprite_13_visible, sprite_12_visible, sprite_11_visible, sprite_10_visible, sprite_9_visible, sprite_8_visible,  
-                            sprite_7_visible, sprite_6_visible, sprite_5_visible, sprite_4_visible, sprite_3_visible, sprite_2_visible, sprite_1_visible, sprite_0_visible
+                            bitmap_display, sprite_14.pix_visible, sprite_13.pix_visible, sprite_12.pix_visible, sprite_11.pix_visible,
+                            sprite_10.pix_visible, sprite_9.pix_visible, sprite_8.pix_visible, sprite_7.pix_visible,
+                            sprite_6.pix_visible, sprite_5.pix_visible, sprite_4.pix_visible, sprite_3.pix_visible,
+                            sprite_2.pix_visible, sprite_1.pix_visible, sprite_0.pix_visible
                         };
                     }
                 $$end

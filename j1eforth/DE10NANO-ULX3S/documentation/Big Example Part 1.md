@@ -82,8 +82,8 @@ c array lasteroiddirection c array hasteroiddirection
 
 ( directions table for the asteroid sprite update flag)
 10 array updatedirections
-30 0 updatedirections c! 2  1 updatedirections c!
-10 2 updatedirections c! 6  3 updatedirections c!
+20 0 updatedirections c! 2  3 updatedirections c!
+18 2 updatedirections c! 4  3 updatedirections c!
 39 4 updatedirections c! 9  5 updatedirections c!
 f  6 updatedirections c! 3f 7 updatedirections c!
 31 8 updatedirections c! 3a 9 updatedirections c!
@@ -97,6 +97,9 @@ variable activehasteroids
 
 ( asteroid temporary )
 variable workasteroid
+variable spawnasteroid
+variable workx
+variable worky
 
 ( set ship vector block )
 1 0 0 0 0 vectorvertex!
@@ -144,7 +147,7 @@ variable workasteroid
   largeasteroidbitmap
   workasteroid @ lsltile! ;
 
-  : setlargehasteroid
+: setlargehasteroid
   workasteroid !
   largeasteroidbitmap
   workasteroid @ usltile! ;

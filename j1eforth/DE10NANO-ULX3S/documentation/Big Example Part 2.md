@@ -1,17 +1,74 @@
 ( game start here )
 : beepboop
   timer1hz@ lasttimer @ <> if
+    5 ff99 ! 
     shipdirection @ 1+ shipdirection !
     shipdirection @ 4 = if
       0 shipdirection ! then
     timer1hz@ lasttimer !
     lasttimer @ 3 and 1 = if
       1 0 1 1f4 beepL! 
-      5 ff99 ! then
+      then
     lasttimer @ 3 and 3 = if
       1 0 2 1f4 beepR! 
-      6 ff99 ! then
+      then
   then ;
+
+: lfindblank
+  ff spawnasteroid !
+  d 0 do
+    i lasteroidactive c@ 0= if
+      i spawnasteroid ! then
+  loop ;
+
+: lsetmedium
+    1 spawnasteroid @ lasteroidactive c!
+    2 spawnasteroid @ lasteroidtype c!
+    8 rng 4 + spawnasteroid @ lasteroiddirection c!
+    20 rng 20 + workx @ worky @ 3 rng 1 0
+      spawnasteroid @ lslsprite!
+    spawnasteroid @ setlargelasteroid
+    activelasteroids @ 1+ activelasteroids ! ;
+    
+: lspawnmedium
+  hitasteroid @ ff30 !
+  ff34 @ 10 rng - workx !
+  ff35 @ 10 rng - worky !
+  lfindblank spawnasteroid @ ff <> if
+    lsetmedium then
+  lfindblank spawnasteroid @ ff <> if
+    lsetmedium then ;
+: lfindblank
+  ff spawnasteroid !
+  d 0 do
+    i lasteroidactive c@ 0= if
+      i spawnasteroid ! then
+  loop ;
+
+: hfindblank
+  ff spawnasteroid !
+  d 0 do
+    i hasteroidactive c@ 0= if
+      i spawnasteroid ! then
+  loop ;
+ 
+: hsetmedium
+    1 spawnasteroid @ hasteroidactive c!
+    2 spawnasteroid @ hasteroidtype c!
+    8 rng 4 + spawnasteroid @ hasteroiddirection c!
+    20 rng 20 + workx @ worky @ 3 rng 1 0
+      spawnasteroid @ uslsprite!
+    spawnasteroid @ setlargehasteroid
+    activehasteroids @ 1+ activehasteroids ! ;
+    
+: hspawnmedium
+  hitasteroid @ ff40 !
+  ff44 @ 10 rng + workx !
+  ff45 @ 10 rng + worky !
+  hfindblank spawnasteroid @ ff <> if
+    hsetmedium then
+  lfindblank spawnasteroid @ ff <> if
+    hsetmedium then ;
 
 : killlhit
   ( set to explosion tile )
@@ -41,8 +98,10 @@
         then
     hitasteroid @ lasteroidtype c@ 2 = if
         ( medium spawn 2 small )
+        0 hitasteroid @ lasteroidtype c!
         then
     hitasteroid @ lasteroidtype c@ 1 = if
+        lspawnmedium
         ( large spawn 2 medium )
     then 
   then ;
@@ -62,8 +121,10 @@
         then
     hitasteroid @ hasteroidtype c@ 2 = if
         ( medium spawn 2 small )
+        0 hitasteroid @ lasteroidtype c!
         then
     hitasteroid @ hasteroidtype c@ 1 = if
+        hspawnmedium
         ( large spawn 2 medium )
     then 
   then ;
@@ -91,7 +152,7 @@
     0 0 0 0 0 0 e lslsprite!
     0 0 0 0 0 0 e uslsprite!
   then 
-  activehasteroids @ activelasteroids @
+  activehasteroids @ activelasteroids @ +
   0= if
     placeasteroids then ;
 
@@ -124,18 +185,13 @@
 : mainloop
     14 timer1khz!
     beepboop
-    vblank?
     bulletdirection @ updatedirections c@ 180 + 
       e lslupdate!
     bulletdirection @ updatedirections c@ 180 + 
       e uslupdate!
+    vblank?
     hit?
     moveasteroids drawship
-    bulletdirection @ updatedirections c@ 180 + 
-      e lslupdate!
-    bulletdirection @ updatedirections c@ 180 + 
-      e uslupdate!
-    hit?
     crash? timer1khz? ;
 
 : demoULX3S
