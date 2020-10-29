@@ -75,7 +75,10 @@ algorithm gpu(
     int11 gpu_count = uninitialized;
     int11 gpu_max_count = uninitialized;
     uint6 gpu_tile = uninitialized;
-
+    int22 w0 = uninitialized;
+    int22 w1 = uninitialized;
+    int22 w2 = uninitialized;
+    
     // GPU inputs, copied to according to Forth, VECTOR or DISPLAY LISTS
     int11   x = uninitialized;
     int11   y = uninitialized;
@@ -95,6 +98,7 @@ algorithm gpu(
     blit1tilemap.wenable1 := blit1_writer_active;
 
     bitmap_write := 0;
+    bitmap_colour_write := gpu_active_colour;
     
     always {
         if( dl_gpu_write != 0 ) {
@@ -144,7 +148,6 @@ algorithm gpu(
                         // Done directly, does not activate the GPU
                         bitmap_x_write = x;
                         bitmap_y_write = y;
-                        bitmap_colour_write = gpu_active_colour;
                         bitmap_write = 1;
                     }
                     case 2: {
@@ -211,7 +214,7 @@ algorithm gpu(
                         gpu_y1 = param1;
                         gpu_x2 = param2;
                         gpu_y2 = param3;
-                        gpu_active = 21;
+                        gpu_active = 25;
                     }
                     default: {}
                 }
@@ -223,7 +226,6 @@ algorithm gpu(
                 // Rectangle of colour at x,y top left to param0, param1 bottom right
                 bitmap_x_write = gpu_active_x;
                 bitmap_y_write = gpu_active_y;
-                bitmap_colour_write = gpu_active_colour;
                 bitmap_write = 1;
                 // Move to next pixel
                 gpu_active = ( ( gpu_active_x == gpu_x1) && ( gpu_active_y == gpu_y1 ) ) ? 0 : 1;
@@ -242,7 +244,6 @@ algorithm gpu(
                 // Draw the line
                 bitmap_x_write = gpu_active_x;
                 bitmap_y_write = gpu_active_y;
-                bitmap_colour_write = gpu_active_colour;
                 bitmap_write = 1;
                 
                 // Check if done
@@ -271,7 +272,6 @@ algorithm gpu(
                 // Bresenham's Circle Drawing Algorithm - Arc 0
                 bitmap_x_write = gpu_xc + gpu_active_x;
                 bitmap_y_write = gpu_yc + gpu_active_y;
-                bitmap_colour_write = gpu_active_colour;
                 bitmap_write = 1;
                 gpu_active = 7;
             }
@@ -279,7 +279,6 @@ algorithm gpu(
                 // Bresenham's Circle Drawing Algorithm - Arc 1
                 bitmap_x_write = gpu_xc - gpu_active_x;
                 bitmap_y_write = gpu_yc + gpu_active_y;
-                bitmap_colour_write = gpu_active_colour;
                 bitmap_write = 1;
                 gpu_active = 8;
             }
@@ -287,7 +286,6 @@ algorithm gpu(
                 // Bresenham's Circle Drawing Algorithm - Arc 2
                 bitmap_x_write = gpu_xc + gpu_active_x;
                 bitmap_y_write = gpu_yc - gpu_active_y;
-                bitmap_colour_write = gpu_active_colour;
                 bitmap_write = 1;
                 gpu_active = 9;
             }
@@ -295,7 +293,6 @@ algorithm gpu(
                 // Bresenham's Circle Drawing Algorithm - Arc 3
                 bitmap_x_write = gpu_xc - gpu_active_x;
                 bitmap_y_write = gpu_yc - gpu_active_y;
-                bitmap_colour_write = gpu_active_colour;
                 bitmap_write = 1;
                 gpu_active = 10;
             }
@@ -303,7 +300,6 @@ algorithm gpu(
                 // Bresenham's Circle Drawing Algorithm - Arc 4
                 bitmap_x_write = gpu_xc + gpu_active_y;
                 bitmap_y_write = gpu_yc + gpu_active_x;
-                bitmap_colour_write = gpu_active_colour;
                 bitmap_write = 1;
                 gpu_active = 11;
             }
@@ -311,7 +307,6 @@ algorithm gpu(
                 // Bresenham's Circle Drawing Algorithm - Arc 5
                 bitmap_x_write = gpu_xc - gpu_active_y;
                 bitmap_y_write = gpu_yc + gpu_active_x;
-                bitmap_colour_write = gpu_active_colour;
                 bitmap_write = 1;
                 gpu_active = 12;
             }
@@ -319,7 +314,6 @@ algorithm gpu(
                 // Bresenham's Circle Drawing Algorithm - Arc 6
                 bitmap_x_write = gpu_xc + gpu_active_y;
                 bitmap_y_write = gpu_yc - gpu_active_x;
-                bitmap_colour_write = gpu_active_colour;
                 bitmap_write = 1;
                 gpu_active = 13;
             }
@@ -327,7 +321,6 @@ algorithm gpu(
                 // Bresenham's Circle Drawing Algorithm - Arc 7
                 bitmap_x_write = gpu_xc - gpu_active_y;
                 bitmap_y_write = gpu_yc - gpu_active_x;
-                bitmap_colour_write = gpu_active_colour;
                 bitmap_write = 1;
                 if( gpu_active_y >= gpu_active_x ) {
                     gpu_active_x = gpu_active_x + 1;
@@ -354,7 +347,6 @@ algorithm gpu(
                 if( blit1tilemap.rdata0[15 -gpu_active_x,1] ) {
                     bitmap_x_write = gpu_x1 + gpu_active_x;
                     bitmap_y_write = gpu_y1 + gpu_active_y;
-                    bitmap_colour_write = gpu_active_colour;
                     bitmap_write = 1;
                 }
                 gpu_active = ( gpu_active_x < gpu_w ) ? 15 : ( gpu_active_y < gpu_h ) ? 14 : 0;
@@ -364,43 +356,57 @@ algorithm gpu(
 
             case 16: {
                 // Bresenham's Circle Drawing Algorithm
-                // Fill from xc + x, yc - y to xc + x, yc + y
+                // Filled circles
                 bitmap_x_write = gpu_xc + gpu_active_x;
                 bitmap_y_write = gpu_yc + gpu_count;
-                bitmap_colour_write = gpu_active_colour;
                 bitmap_write = 1;
                 gpu_active = 17;
             }
             case 17: {
-                // Bresenham's Circle Drawing Algorithm
-                // Fill from xc + x, yc - y to xc + x, yc + y
                 bitmap_x_write = gpu_xc + gpu_active_x;
                 bitmap_y_write = gpu_yc - gpu_count;
-                bitmap_colour_write = gpu_active_colour;
                 bitmap_write = 1;
                 gpu_active = 18;
             }
             case 18: {
-                // Bresenham's Circle Drawing Algorithm
-                // Fill from xc - x, yc - y to xc + x, yc + y
                 bitmap_x_write = gpu_xc - gpu_active_x;
                 bitmap_y_write = gpu_yc + gpu_count;
-                bitmap_colour_write = gpu_active_colour;
                 bitmap_write = 1;
                 gpu_active = 19;
             }
             case 19: {
-                // Bresenham's Circle Drawing Algorithm
-                // Fill from xc - x, yc - y to xc + x, yc + y
                 bitmap_x_write = gpu_xc - gpu_active_x;
                 bitmap_y_write = gpu_yc - gpu_count;
-                bitmap_colour_write = gpu_active_colour;
+                bitmap_write = 1;
+                gpu_active = 20;
+           }
+            case 20: {
+                bitmap_x_write = gpu_xc + gpu_count;
+                bitmap_y_write = gpu_yc + gpu_active_x;
+                bitmap_write = 1;
+                gpu_active = 21;
+            }
+            case 21: {
+                // Bresenham's Circle Drawing Algorithm
+                bitmap_x_write = gpu_xc - gpu_count;
+                bitmap_y_write = gpu_yc + gpu_active_x;
+                bitmap_write = 1;
+                gpu_active = 22;
+            }
+            case 22: {
+                bitmap_x_write = gpu_xc + gpu_count;
+                bitmap_y_write = gpu_yc - gpu_active_x;
+                bitmap_write = 1;
+                gpu_active = 23;
+            }
+            case 23: {
+                bitmap_x_write = gpu_xc - gpu_count;
+                bitmap_y_write = gpu_yc - gpu_active_x;
                 bitmap_write = 1;
                 gpu_count = gpu_count - 1;
-                gpu_active = ( gpu_count = 0 ) ? 20 : 16;
+                gpu_active = ( gpu_count == 0 ) ? 24 : 16;
             }
-            case 20: {
-                // Bresenham's Circle Drawing Algorithm
+            case 24: {
                 // Calculate the next part of the circle
                 if( gpu_active_y >= gpu_active_x ) {
                     gpu_active_x = gpu_active_x + 1;
@@ -414,35 +420,53 @@ algorithm gpu(
                     }
                     gpu_active = 16;
                 } else {
+                    bitmap_x_write = gpu_xc;
+                    bitmap_y_write = gpu_yc;
+                    bitmap_write = 1;
                     gpu_active = 0;
                 }
             }
 
-            case 60: {
-                // Find minimum and maximum of x, x1 and x2
-                // Find minimum and maximum of y, y1 and y2
+            case 25: {
+                // Brute force filled triangle
+                // Checks EVERY pixel inside the triangle bounding box
+                // Find minimum and maximum of x, x1 and x2 for the bounding box
+                // Find minimum and maximum of y, y1 and y2 for the bounding box
                 gpu_min_x = ( gpu_active_x < gpu_x1 ) ? ( gpu_active_x < gpu_x2 ) ? gpu_active_x : gpu_x2 : gpu_x1;
                 gpu_min_y = ( gpu_active_y < gpu_y1 ) ? ( gpu_active_y < gpu_y2 ) ? gpu_active_y : gpu_y2 : gpu_y1;
                 gpu_max_x = ( gpu_active_x > gpu_x1 ) ? ( gpu_active_x > gpu_x2 ) ? gpu_active_x : gpu_x2 : gpu_x1;
                 gpu_max_y = ( gpu_active_y > gpu_y1 ) ? ( gpu_active_y > gpu_y2 ) ? gpu_active_y : gpu_y2 : gpu_y1;
-                gpu_active = 22;
+                gpu_active = 26;
             }
-            case 61: {
+            case 26: {
+                // Clip to the screen edge
                 gpu_min_x = ( gpu_min_x < 0 ) ? 0 : gpu_min_x;
                 gpu_min_y = ( gpu_min_y < 0 ) ? 0 : gpu_min_y;
                 gpu_max_x = ( gpu_min_x > 639 ) ? 639 : gpu_max_x;
                 gpu_max_y = ( gpu_min_y > 479 ) ? 479 : gpu_max_y;
-                gpu_active = 23;
+                gpu_active = 27;
             }
-            case 62: {
+            case 27: {
+                // Work left to right, top to bottom
                 gpu_sx = gpu_min_x;
                 gpu_sy = gpu_min_y;
-                gpu_active = 24;
+                gpu_active = 28;
             }
-            case 63: {
+            case 28: {
                 w0 = (gpu_x1-gpu_x2)*(gpu_sy-gpu_y1) - (gpu_y2-gpu_y1)*(gpu_sx-gpu_x1);
                 w1 = (gpu_x2-gpu_active_x)*(gpu_sy-gpu_y2) - (gpu_active_y-gpu_y2)*(gpu_sx-gpu_x2);
-                w2 = (gpu_x1-gpu_x2)*(gpu_sy-gpu_y1) - (gpu_y2-gpu_y1)*(gpu_sx-gpu_x1);
+                w2 = (gpu_active_x-gpu_x1)*(gpu_sy-gpu_active_y) - (gpu_y1-gpu_active_y)*(gpu_sx-gpu_active_x);
+                gpu_active = 29;
+            }
+            case 29: {
+                if( ( w0 >= 0 ) && ( w1 >= 0 ) && ( w2 >= 0 ) ) {
+                    bitmap_x_write = gpu_sx;
+                    bitmap_y_write = gpu_sy;
+                    bitmap_write = 1;
+                }
+                gpu_sx = ( gpu_sx < gpu_max_x ) ? gpu_sx + 1 : gpu_min_x;
+                gpu_sy = ( gpu_sx < gpu_max_x ) ? gpu_sy : gpu_sy + 1;
+                gpu_active = ( gpu_sx < gpu_max_x ) && ( gpu_sy < gpu_max_y ) ? 28 : 0;
             }
             
             default: {gpu_active = 0;}

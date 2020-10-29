@@ -126,7 +126,9 @@ The sample code provided in [Big Example Part 1.md](documentation/Big%20Example%
 
 ## Additional Features
 
-* ULX3S has basic stereo sound capabilities [Audio.md](documentation/Audio.md) 
+* ULX3S has basic (polyphonic) stereo sound capabilities [Audio.md](documentation/Audio.md)
+    * There are 3 notes playable per left/right channel
+        * Polyphonic mixing is not good
 * Timers and a pseudo random number generator are provided [Timers.md](documentation/Timers.md) 
 
 ## TODO
@@ -139,7 +141,6 @@ The sample code provided in [Big Example Part 1.md](documentation/Big%20Example%
 ### AUDIO
 
 * Sound for the DE10NANO
-* Allow polyphonic sound (may not be achievable)
 * Volume control
 
 ### GPU
@@ -148,6 +149,13 @@ The sample code provided in [Big Example Part 1.md](documentation/Big%20Example%
     * 10 bit { Arrggbb } 16 x 16 blitter from a configurable 64 16 x 16 tilemap (16384 * 7 bit, might be too big for the blockram)
         * ALPHA will determine if pixel is placed or missed (mask)
 
+* FILLED TRIANGLE
+    * Draw a filled triangle from x,y to param0,param1 to param2,param3
+        * Optimise the algorithm
+
+* FILLED CIRCLE
+    * Optimise the algorithm
+
 ### Character map
 
 * Change characterGenerator8x16 from BROM to BRAM to allow changes to the font
@@ -155,8 +163,12 @@ The sample code provided in [Big Example Part 1.md](documentation/Big%20Example%
 
 ### Tile Map
 
-* Add in 1 pixel left/right/up/down offset
-* Add in scroll/wrap functionality
+* Stop glitches when scrolling/wrapping
+
+### Display Lists
+
+* Get working on ULX3S
+* Add in param2 and param3 to allow for triangles to be dispatched to the GPU
 
 ## Notes
 

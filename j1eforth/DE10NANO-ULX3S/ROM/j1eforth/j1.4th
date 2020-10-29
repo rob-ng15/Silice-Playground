@@ -988,6 +988,8 @@ t: pixel! ff01 literal ! ff00 literal ! ff02 literal ! 1 literal gpu! t;
 t: rectangle! ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 2 literal gpu! t;
 t: line! ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 3 literal gpu! t;
 t: circle! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 4 literal gpu! t;
+t: fcircle! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 6 literal gpu! t;
+t: triangle! ff06 literal ! ff05 literal ! ff04 literal ! ff03 literal ! ff01 literal ! ff00 literal ! ff02 literal ! 7 literal gpu! t;
 t: blit1! ff01 literal ! ff00 literal ! ff03 literal ! ff02 literal ! 5 literal gpu! t;
 t: blit1tile! ff0b literal ! 10 literal begin 1- dup ff0c literal ! swap ff0d literal ! dup 0= until drop t;
 t: cs! 40 literal 0 literal 0 literal 2f7 literal 1df literal rectangle! t;
