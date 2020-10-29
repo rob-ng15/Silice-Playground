@@ -792,6 +792,13 @@ $$end
                                                                         case 4h2: { newStackTop = displaylist_drawer.display_list_active; }
                                                                     }
                                                                 }
+                                                                case 4h9: {
+                                                                    switch( stackTop[0,4] ) {
+                                                                        // ff90 -
+                                                                        case 4h9: { newStackTop = tile_map.tm_lastaction; }
+                                                                        case 4ha: { newStackTop = tile_map.tm_active; }
+                                                                    }
+                                                                }
                                                                 case 4he: {
                                                                     switch( stackTop[0,4] ) {
                                                                         // ffe0 -

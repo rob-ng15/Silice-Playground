@@ -10,6 +10,7 @@ bitfield spriteupdate {
     uint2   dx
 }
 
+// Storage and pixel colour generator for each sprite
 algorithm sprite(
     input   uint10  pix_x,
     input   uint10  pix_y,
@@ -74,6 +75,8 @@ algorithm sprite_layer(
     input   int11   sprite_set_x,
     input   int11   sprite_set_y,
     input   uint2   sprite_set_tile,
+    // Flag to set the above
+    input   uint4   sprite_layer_write,
 
     // For reading sprite characteristics for sprite_set_number
     output  uint1   sprite_read_active,
@@ -84,9 +87,6 @@ algorithm sprite_layer(
     output  int11   sprite_read_y,
     output  uint2   sprite_read_tile,
     input   uint16  sprite_update,
-    // Flag to set the above
-    input   uint4   sprite_layer_write,
-
     // FULL collision detection
     // Bitmap is set flag
     input   uint1   bitmap_display,

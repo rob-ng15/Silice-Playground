@@ -1,7 +1,7 @@
 ( game start here )
 : beepboop
   timer1hz@ lasttimer @ <> if
-    5 ff99 ! 
+    5 tmmove! 
     shipdirection @ 1+ shipdirection !
     shipdirection @ 4 = if
       0 shipdirection ! then
@@ -11,6 +11,7 @@
       then
     lasttimer @ 3 and 3 = if
       1 0 2 1f4 beepR! 
+      6 tmmove!
       then
   then ;
 

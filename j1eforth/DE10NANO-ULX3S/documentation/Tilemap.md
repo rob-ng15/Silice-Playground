@@ -21,7 +21,8 @@ ff95 | Write to cursor position
 ff96 | Set the tile writer tile number
 ff97 | Set the tile writer line number
 ff98 | Bitmap to write to the tile
-ff99 | Scroll or wrap the tilemap (Values below)
+ff99 | Scroll or wrap the tilemap (Values below) | Last action (0) no scroll/wrap, otherwise the action taken
+ff9a | | Tilemap scrolling/wrapping
 
 Scroll<br>Wrap | Action | Scroll<br>Wrap | Action 
 ----- | ----- | ----- | -----

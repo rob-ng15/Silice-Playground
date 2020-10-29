@@ -23,7 +23,8 @@ algorithm tilemap(
     input   uint1   tile_writer_write,
     
     // For scrolling/wrapping
-    input   uint4   tm_scrollwrap,
+    input   uint5   tm_scrollwrap,
+    output  uint5   tm_lastaction,
     output  uint6   tm_active
 ) <autorun> {
     // Tile Map 64 x 16 x 16
@@ -106,48 +107,56 @@ algorithm tilemap(
                 tm_offset_x = ( tm_offset_x == (15) ) ? 0 : tm_offset_x + 1;
                 tm_active = ( tm_offset_x == (15) ) ? 1 : 0;
                 tm_scroll = 1;
+                tm_lastaction = ( tm_offset_x == (15) ) ? tm_scrollwrap : 0;
             }
             case 2: {
                 // SCROLL UP
                 tm_offset_y = ( tm_offset_y == (15) ) ? 0 : tm_offset_y + 1;
                 tm_active = ( tm_offset_y == (15) ) ? 15 : 0;
                 tm_scroll = 1;
+                tm_lastaction = ( tm_offset_y == (15) ) ? tm_scrollwrap : 0;
             }
             case 3: {
                 // SCROLL RIGHT
                 tm_offset_x = ( tm_offset_x == (-15) ) ? 0 : tm_offset_x - 1;
                 tm_active = ( tm_offset_x == (-15) ) ? 8 : 0;
                 tm_scroll = 1;
+                tm_lastaction = ( tm_offset_x == (-15) ) ? tm_scrollwrap : 0;
             }
             case 4: {
                 // SCROLL DOWN
                 tm_offset_y = ( tm_offset_y == (-15) ) ? 0 : tm_offset_y - 1;
                 tm_active = ( tm_offset_y == (-15) ) ? 22 : 0;
                 tm_scroll = 1;
+                tm_lastaction = ( tm_offset_y == (-15) ) ? tm_scrollwrap : 0;
             }
             case 5: {
                 // WRAP LEFT
                 tm_offset_x = ( tm_offset_x == (15) ) ? 0 : tm_offset_x + 1;
                 tm_active = ( tm_offset_x == (15) ) ? 1 : 0;
                 tm_scroll = 0;
+                tm_lastaction = ( tm_offset_x == (15) ) ? tm_scrollwrap : 0;
             }
             case 6: {
                 // WRAP UP
                 tm_offset_y = ( tm_offset_y == (15) ) ? 0 : tm_offset_y + 1;
                 tm_active = ( tm_offset_y == (15) ) ? 15 : 0;
                 tm_scroll = 0;
+                tm_lastaction = ( tm_offset_y == (15) ) ? tm_scrollwrap : 0;
             }
             case 7: {
                 // WRAP RIGHT
                 tm_offset_x = ( tm_offset_x == (-15) ) ? 0 : tm_offset_x - 1;
                 tm_active = ( tm_offset_x == (-15) ) ? 8 : 0;
                 tm_scroll = 0;
+                tm_lastaction = ( tm_offset_x == (-15) ) ? tm_scrollwrap : 0;
             }
             case 8: {
                 // WRAP DOWN
                 tm_offset_y = ( tm_offset_y == (-15) ) ? 0 : tm_offset_y - 1;
                 tm_active = ( tm_offset_y == (-15) ) ? 22 : 0;
                 tm_scroll = 0;
+                tm_lastaction = ( tm_offset_y == (-15) ) ? tm_scrollwrap : 0;
             }
         }
     }
@@ -156,285 +165,309 @@ algorithm tilemap(
     while(1) {
         switch( tm_active ) {
             case 1: {
-                // Scroll/Wrap Left Setup
+                // Setup for scroll/wrap LEFT
                 x_cursor = 0;
                 y_cursor = 0;
-                tile.addr1 = 0;
-                background.addr1 = 0;
-                foreground.addr1 = 0;
                 tm_active = 2;
             }
             case 2: {
-                // Scroll/Wrap Left New Row - Save or wipe end column
-                new_tile = ( tm_scroll == 1 ) ? 0 : tile.rdata1;
-                new_foreground = ( tm_scroll == 1 ) ? 0 : foreground.rdata1;
-                new_background = ( tm_scroll == 1 ) ? 7h40 : background.rdata1;
+                // Setup addresses for the first column
+                tile.addr1 = 0 + ( y_cursor * 42 );
+                foreground.addr1 = 0 + ( y_cursor * 42 );
+                background.addr1 = 0 + ( y_cursor * 42 );
                 tm_active = 3;
             }
             case 3: {
-                // Scroll/Wrap Left Read Next Column
-                tile.addr1 = x_cursor + 1 + ( y_cursor * 42);
-                background.addr1 = x_cursor + 1 + ( y_cursor * 42);
-                foreground.addr1 = x_cursor + 1 + ( y_cursor * 42);
+                // Save the first column
+                new_tile = ( tm_scroll == 1 ) ? 0 : tile.rdata1;
+                new_foreground = ( tm_scroll == 1 ) ? 0 : foreground.rdata1;
+                new_background = ( tm_scroll == 1 ) ? 7h40 : background.rdata1;
                 tm_active = 4;
             }
             case 4: {
-                // Scroll/Wrap Left Read Next Column
-                scroll_tile = tile.rdata1;
-                scroll_foreground = foreground.rdata1;
-                scroll_background = background.rdata1;
-                tile.addr1 = x_cursor + ( y_cursor * 42);
-                background.addr1 = x_cursor + ( y_cursor * 42);
-                foreground.addr1 = x_cursor + ( y_cursor * 42);
+                // Setup addresses for the next column
+                tile.addr1 = ( x_cursor + 1 ) + ( y_cursor * 42 );
+                foreground.addr1 = ( x_cursor + 1 ) + ( y_cursor * 42 );
+                background.addr1 = ( x_cursor + 1 ) + ( y_cursor * 42 );
                 tm_active = 5;
             }
             case 5: {
-                // Scroll/Wrap Left Write Column
-                tile.wdata1 = scroll_tile;
-                tile.wenable1 = 1;
-                foreground.wdata1 = scroll_foreground;
-                foreground.wenable1 = 1;
-                background.wdata1 = scroll_background;
-                background.wenable1 = 1;
+                // Save the next column
+                scroll_tile = tile.rdata1;
+                scroll_foreground = foreground.rdata1;
+                scroll_background = background.rdata1;
                 tm_active = 6;
             }
             case 6: {
-                // Move to next column
-                if( x_cursor == 41 ) {
-                    tile.addr1 = 41 + ( y_cursor * 42);
-                    tile.wdata1 = new_tile;
-                    tile.wenable1 = 1;
-                    foreground.addr1 = 41 + ( y_cursor * 42);
-                    foreground.wdata1 = new_foreground;
-                    foreground.wenable1 = 1;
-                    background.addr1 = 41 + ( y_cursor * 42);
-                    background.wdata1 = new_background;
-                    background.wenable1 = 1;
-                    x_cursor = 0;
-                    y_cursor = ( y_cursor == 31 ) ? 0 : y_cursor + 1;
-                    tm_active = ( y_cursor == 31 ) ? 0 : 7;
-                } else {
-                    x_cursor = x_cursor + 1;
-                    tm_active = 3;
-                }
+                // Write into the present column
+                tile.addr1 = ( x_cursor ) + ( y_cursor * 42 );
+                tile.wdata1 = scroll_tile;
+                tile.wenable1 = 1;
+                foreground.addr1 = ( x_cursor ) + ( y_cursor * 42 );
+                foreground.wdata1 = scroll_foreground;
+                foreground.wenable1 = 1;
+                background.addr1 = ( x_cursor ) + ( y_cursor * 42 );
+                background.wdata1 = scroll_background;
+                background.wenable1 = 1;
+                tm_active = 7;
             }
             case 7: {
-                // Set address for the next row
-                tile.addr1 = x_cursor + ( y_cursor * 42);
-                background.addr1 = x_cursor + ( y_cursor * 42);
-                foreground.addr1 = x_cursor + ( y_cursor * 42);
-                tm_active = 2;
+                if( x_cursor == 40 ) {
+                    // At the last, but one column
+                    // Write into the column
+                    // Move to the next row
+                    tile.addr1 = ( 41 ) + ( y_cursor * 42 );
+                    tile.wdata1 = new_tile;
+                    tile.wenable1 = 1;
+                    foreground.addr1 = ( 41 ) + ( y_cursor * 42 );
+                    foreground.wdata1 = new_foreground;
+                    foreground.wenable1 = 1;
+                    background.addr1 = ( 41 ) + ( y_cursor * 42 );
+                    background.wdata1 = new_background;
+                    background.wenable1 = 1;
+                    if( y_cursor == 31 ) {
+                        // FINISHED
+                        tm_active = 0;
+                    } else {
+                        x_cursor = 0;
+                        y_cursor = y_cursor + 1;
+                        tm_active = 2;
+                    }
+                } else {
+                    // Move to the next column
+                    x_cursor = x_cursor + 1;
+                    tm_active = 4;
+                }
             }
+            
             case 8: {
-                // Scroll/Wrap Right Setup
+                // Setup for scroll/wrap RIGHT
                 x_cursor = 41;
                 y_cursor = 0;
-                tile.addr1 = 0;
-                background.addr1 = 0;
-                foreground.addr1 = 0;
                 tm_active = 9;
             }
             case 9: {
-                // Scroll/Wrap Right New Row - Save or wipe end column
-                new_tile = ( tm_scroll == 1 ) ? 0 : tile.rdata1;
-                new_foreground = ( tm_scroll == 1 ) ? 0 : foreground.rdata1;
-                new_background = ( tm_scroll == 1 ) ? 7h40 : background.rdata1;
+                // Setup addresses for the last column
+                tile.addr1 = 41 + ( y_cursor * 42 );
+                foreground.addr1 = 41 + ( y_cursor * 42 );
+                background.addr1 = 41 + ( y_cursor * 42 );
                 tm_active = 10;
             }
             case 10: {
-                // Scroll/Wrap Right Read Next Column
-                tile.addr1 = x_cursor - 1 + ( y_cursor * 42);
-                background.addr1 = x_cursor - 1 + ( y_cursor * 42);
-                foreground.addr1 = x_cursor - 1 + ( y_cursor * 42);
+                // Save the last column
+                new_tile = ( tm_scroll == 1 ) ? 0 : tile.rdata1;
+                new_foreground = ( tm_scroll == 1 ) ? 0 : foreground.rdata1;
+                new_background = ( tm_scroll == 1 ) ? 7h40 : background.rdata1;
                 tm_active = 11;
             }
             case 11: {
-                // Scroll/Wrap Right Read Next Column
-                scroll_tile = tile.rdata1;
-                scroll_foreground = foreground.rdata1;
-                scroll_background = background.rdata1;
-                tile.addr1 = x_cursor + ( y_cursor * 42);
-                background.addr1 = x_cursor + ( y_cursor * 42);
-                foreground.addr1 = x_cursor + ( y_cursor * 42);
+                // Setup addresses for the next column
+                tile.addr1 = ( x_cursor - 1 ) + ( y_cursor * 42 );
+                foreground.addr1 = ( x_cursor - 1 ) + ( y_cursor * 42 );
+                background.addr1 = ( x_cursor - 1 ) + ( y_cursor * 42 );
                 tm_active = 12;
             }
             case 12: {
-                // Scroll/Wrap Right Write Column
-                tile.wdata1 = scroll_tile;
-                tile.wenable1 = 1;
-                foreground.wdata1 = scroll_foreground;
-                foreground.wenable1 = 1;
-                background.wdata1 = scroll_background;
-                background.wenable1 = 1;
+                // Save the next column
+                scroll_tile = tile.rdata1;
+                scroll_foreground = foreground.rdata1;
+                scroll_background = background.rdata1;
                 tm_active = 13;
             }
             case 13: {
-                // Move to next column
-                if( x_cursor == 1 ) {
-                    tile.addr1 = ( y_cursor * 42);
-                    tile.wdata1 = new_tile;
-                    tile.wenable1 = 1;
-                    foreground.addr1 = ( y_cursor * 42);
-                    foreground.wdata1 = new_foreground;
-                    foreground.wenable1 = 1;
-                    background.addr1 = ( y_cursor * 42);
-                    background.wdata1 = new_background;
-                    background.wenable1 = 1;
-                    x_cursor = 41;
-                    y_cursor = ( y_cursor == 31 ) ? 0 : y_cursor + 1;
-                    tm_active = ( y_cursor == 31 ) ? 0 : 14;
-                } else {
-                    x_cursor = x_cursor - 1;
-                    tm_active = 10;
-                }
+                // Write into the present column
+                tile.addr1 = ( x_cursor ) + ( y_cursor * 42 );
+                tile.wdata1 = scroll_tile;
+                tile.wenable1 = 1;
+                foreground.addr1 = ( x_cursor ) + ( y_cursor * 42 );
+                foreground.wdata1 = scroll_foreground;
+                foreground.wenable1 = 1;
+                background.addr1 = ( x_cursor ) + ( y_cursor * 42 );
+                background.wdata1 = scroll_background;
+                background.wenable1 = 1;
+                tm_active = 14;
             }
             case 14: {
-                // Set address for the next row
-                tile.addr1 = x_cursor + ( y_cursor * 42);
-                background.addr1 = x_cursor + ( y_cursor * 42);
-                foreground.addr1 = x_cursor + ( y_cursor * 42);
-                tm_active = 8;
+                if( x_cursor == 1 ) {
+                    // At the last, but one column
+                    // Write into the column
+                    // Move to the next row
+                    tile.addr1 = ( 0 ) + ( y_cursor * 42 );
+                    tile.wdata1 = new_tile;
+                    tile.wenable1 = 1;
+                    foreground.addr1 = ( 0 ) + ( y_cursor * 42 );
+                    foreground.wdata1 = new_foreground;
+                    foreground.wenable1 = 1;
+                    background.addr1 = ( 0 ) + ( y_cursor * 42 );
+                    background.wdata1 = new_background;
+                    background.wenable1 = 1;
+                    if( y_cursor == 31 ) {
+                        // FINISHED
+                        tm_active = 0;
+                    } else {
+                        x_cursor = 41;
+                        y_cursor = y_cursor + 1;
+                        tm_active = 9;
+                    }
+                } else {
+                    // Move to the next column
+                    x_cursor = x_cursor - 1;
+                    tm_active = 11;
+                }
             }
+
             case 15: {
-                // Scroll/Wrap Up Setup
+                // Setup for scroll/wrap UP
                 x_cursor = 0;
                 y_cursor = 0;
-                tile.addr1 = 0;
-                background.addr1 = 0;
-                foreground.addr1 = 0;
                 tm_active = 16;
             }
             case 16: {
-                // Scroll/Wrap Up New Column - Save or wipe end row
-                new_tile = ( tm_scroll == 1 ) ? 0 : tile.rdata1;
-                new_foreground = ( tm_scroll == 1 ) ? 0 : foreground.rdata1;
-                new_background = ( tm_scroll == 1 ) ? 7h40 : background.rdata1;
+                // Setup addresses for the first row
+                tile.addr1 = x_cursor + ( 0 * 42 );
+                foreground.addr1 = x_cursor + ( 0 * 42 );
+                background.addr1 = x_cursor + ( 0 * 42 );
                 tm_active = 17;
             }
             case 17: {
-                // Scroll/Wrap Up Read Next Row
-                tile.addr1 = x_cursor + 42 + ( y_cursor * 42);
-                background.addr1 = x_cursor + 42 + ( y_cursor * 42);
-                foreground.addr1 = x_cursor + 42 + ( y_cursor * 42);
-                tm_active = 18;
-            }
-            case 18: {
-                // Scroll/Wrap Right Read Next Row
-                scroll_tile = tile.rdata1;
-                scroll_foreground = foreground.rdata1;
-                scroll_background = background.rdata1;
-                tm_active = 19;
-            }
-            case 19: {
-                // Scroll/Wrap Up Write Row
-                tile.addr1 = x_cursor + ( y_cursor * 42);
-                tile.wdata1 = scroll_tile;
-                tile.wenable1 = 1;
-                background.addr1 = x_cursor + ( y_cursor * 42);
-                background.wdata1 = scroll_background;
-                background.wenable1 = 1;
-                foreground.addr1 = x_cursor + ( y_cursor * 42);
-                foreground.wdata1 = scroll_foreground;
-                foreground.wenable1 = 1;
-                tm_active = 20;
-            }
-            case 20: {
-                // Move to next row
-                if( y_cursor == 30 ) {
-                    tile.addr1 = ( x_cursor ) + ( 31 * 42);
-                    tile.wdata1 = new_tile;
-                    tile.wenable1 = 1;
-                    foreground.addr1 = ( x_cursor ) + ( 31 * 42);
-                    foreground.wdata1 = new_foreground;
-                    foreground.wenable1 = 1;
-                    background.addr1 = ( x_cursor ) + ( 31 * 42);
-                    background.wdata1 = new_background;
-                    background.wenable1 = 1;
-                    y_cursor = 0;
-                    x_cursor = ( x_cursor == 41 ) ? 0 : x_cursor + 1;
-                    tm_active = ( x_cursor == 41 ) ? 0 : 21;
-                } else {
-                    y_cursor = y_cursor + 1;
-                    tm_active = 17;
-                }
-            }
-            case 21: {
-                // Set address for the next row
-                tile.addr1 = x_cursor;
-                background.addr1 = x_cursor;
-                foreground.addr1 = x_cursor;
-                tm_active = 16;
-            }
-            case 22: {
-                // Scroll/Wrap Down Setup
-                x_cursor = 0;
-                y_cursor = 31;
-                tile.addr1 = 31 * 42;
-                background.addr1 = 31 * 42;
-                foreground.addr1 = 31 * 42;
-                tm_active = 23;
-            }
-            case 23: {
-                // Scroll/Wrap Up New Column - Save or wipe end row
+                // Save the last row
                 new_tile = ( tm_scroll == 1 ) ? 0 : tile.rdata1;
                 new_foreground = ( tm_scroll == 1 ) ? 0 : foreground.rdata1;
                 new_background = ( tm_scroll == 1 ) ? 7h40 : background.rdata1;
-                tm_active = 24;
+                tm_active = 18;
             }
-            case 24: {
-                // Scroll/Wrap Up Read Next Row
-                tile.addr1 = x_cursor + ( y_cursor * 42) - 42;
-                background.addr1 = x_cursor + ( y_cursor * 42) - 42;
-                foreground.addr1 = x_cursor + ( y_cursor * 42) - 42;
-                tm_active = 25;
+            case 18: {
+                // Setup addresses for the next row
+                tile.addr1 = ( x_cursor  ) + ( y_cursor * 42 ) + 42;
+                foreground.addr1 = ( x_cursor  ) + ( y_cursor * 42 ) + 42;
+                background.addr1 = ( x_cursor  ) + ( y_cursor * 42 ) + 42;
+                tm_active = 19;
             }
-            case 25: {
-                // Scroll/Wrap Up Read Next Row
+            case 19: {
+                // Save the next row
                 scroll_tile = tile.rdata1;
                 scroll_foreground = foreground.rdata1;
                 scroll_background = background.rdata1;
-                tile.addr1 = x_cursor + ( y_cursor * 42);
-                background.addr1 = x_cursor + ( y_cursor * 42);
-                foreground.addr1 = x_cursor + ( y_cursor * 42);
+                tm_active = 20;
+            }
+            case 20: {
+                // Write into the present row
+                tile.addr1 = ( x_cursor ) + ( y_cursor * 42 );
+                tile.wdata1 = scroll_tile;
+                tile.wenable1 = 1;
+                foreground.addr1 = ( x_cursor ) + ( y_cursor * 42 );
+                foreground.wdata1 = scroll_foreground;
+                foreground.wenable1 = 1;
+                background.addr1 = ( x_cursor ) + ( y_cursor * 42 );
+                background.wdata1 = scroll_background;
+                background.wenable1 = 1;
+                tm_active = 21;
+            }
+            case 21: {
+                if( y_cursor == 30 ) {
+                    // At the last, but one row
+                    // Write into the last row
+                    // Move to the next column
+                    tile.addr1 = ( x_cursor ) + ( 31 * 42 );
+                    tile.wdata1 = new_tile;
+                    tile.wenable1 = 1;
+                    foreground.addr1 = ( x_cursor ) + ( 31 * 42 );
+                    foreground.wdata1 = new_foreground;
+                    foreground.wenable1 = 1;
+                    background.addr1 = ( x_cursor ) + ( 31 * 42 );
+                    background.wdata1 = new_background;
+                    background.wenable1 = 1;
+                    if( x_cursor == 41 ) {
+                        // FINISHED
+                        tm_active = 0;
+                    } else {
+                        x_cursor = x_cursor + 1;
+                        y_cursor = 0;
+                        tm_active = 16;
+                    }
+                } else {
+                    // Move to the next row
+                    y_cursor = y_cursor + 1;
+                    tm_active = 18;
+                }
+            }
+
+            case 22: {
+                // Setup for scroll/wrap DOWN
+                x_cursor = 0;
+                y_cursor = 31;
+                tm_active = 23;
+            }
+            case 23: {
+                // Setup addresses for the last row
+                tile.addr1 = x_cursor + ( 31 * 42 );
+                foreground.addr1 = x_cursor + ( 31 * 42 );
+                background.addr1 = x_cursor + ( 31 * 42 );
+                tm_active = 24;
+            }
+            case 24: {
+                // Save the last row
+                new_tile = ( tm_scroll == 1 ) ? 0 : tile.rdata1;
+                new_foreground = ( tm_scroll == 1 ) ? 0 : foreground.rdata1;
+                new_background = ( tm_scroll == 1 ) ? 7h40 : background.rdata1;
+                tm_active = 25;
+            }
+            case 25: {
+                // Setup addresses for the next row
+                tile.addr1 = ( x_cursor  ) + ( y_cursor * 42 ) - 42;
+                foreground.addr1 = ( x_cursor  ) + ( y_cursor * 42 ) - 42;
+                background.addr1 = ( x_cursor  ) + ( y_cursor * 42 ) - 42;
                 tm_active = 26;
             }
             case 26: {
-                // Scroll/Wrap Up Write Row
-                tile.wdata1 = scroll_tile;
-                tile.wenable1 = 1;
-                foreground.wdata1 = scroll_foreground;
-                foreground.wenable1 = 1;
-                background.wdata1 = scroll_background;
-                background.wenable1 = 1;
+                // Save the next row
+                scroll_tile = tile.rdata1;
+                scroll_foreground = foreground.rdata1;
+                scroll_background = background.rdata1;
                 tm_active = 27;
             }
             case 27: {
-                // Move to next row
-                if( y_cursor == 0 ) {
-                    tile.addr1 = ( x_cursor );
-                    tile.wdata1 = new_tile;
-                    tile.wenable1 = 1;
-                    foreground.addr1 = ( x_cursor );
-                    foreground.wdata1 = new_foreground;
-                    foreground.wenable1 = 1;
-                    background.addr1 = ( x_cursor );
-                    background.wdata1 = new_background;
-                    background.wenable1 = 1;
-                    y_cursor = 31;
-                    x_cursor = ( x_cursor == 41 ) ? 0 : x_cursor + 1;
-                    tm_active = ( x_cursor == 41 ) ? 0 : 28;
-                } else {
-                    y_cursor = y_cursor + 1;
-                    tm_active = 24;
-                }
+                // Write into the present row
+                tile.addr1 = ( x_cursor ) + ( y_cursor * 42 );
+                tile.wdata1 = scroll_tile;
+                tile.wenable1 = 1;
+                foreground.addr1 = ( x_cursor ) + ( y_cursor * 42 );
+                foreground.wdata1 = scroll_foreground;
+                foreground.wenable1 = 1;
+                background.addr1 = ( x_cursor ) + ( y_cursor * 42 );
+                background.wdata1 = scroll_background;
+                background.wenable1 = 1;
+                tm_active = 28;
             }
             case 28: {
-                // Set address for the next row
-                tile.addr1 = x_cursor + ( 31 * 42);
-                background.addr1 = x_cursor + ( 31 * 42);
-                foreground.addr1 = x_cursor + ( 31 * 42);
-                tm_active = 23;
+                if( y_cursor == 1 ) {
+                    // At the last, but one row
+                    // Write into the last row
+                    // Move to the next column
+                    tile.addr1 = ( x_cursor ) + ( 0 * 42 );
+                    tile.wdata1 = new_tile;
+                    tile.wenable1 = 1;
+                    foreground.addr1 = ( x_cursor ) + ( 0 * 42 );
+                    foreground.wdata1 = new_foreground;
+                    foreground.wenable1 = 1;
+                    background.addr1 = ( x_cursor ) + ( 0 * 42 );
+                    background.wdata1 = new_background;
+                    background.wenable1 = 1;
+                    if( x_cursor == 41 ) {
+                        // FINISHED
+                        tm_active = 0;
+                    } else {
+                        x_cursor = x_cursor + 1;
+                        y_cursor = 0;
+                        tm_active = 23;
+                    }
+                } else {
+                    // Move to the next row
+                    y_cursor = y_cursor - 1;
+                    tm_active = 26;
+                }
             }
+
             default: { tm_active = 0; }
         }
         

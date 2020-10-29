@@ -13,6 +13,9 @@ variable lasttimer
 
 : tm! ff94 ! ff93 ! ff92 ! ff91 ! ff90 ! 1 ff95 ! ;
 
+: tmmove! begin ff9a @ 0= until
+  ff99 ! ;
+  
 0000 0000 0000 0000 0000 0000 0000 0000
 001f 003f 00ff 01ff 03ff 03ff 07ff 07fc
 1 tmtile!
@@ -82,7 +85,7 @@ c array lasteroiddirection c array hasteroiddirection
 
 ( directions table for the asteroid sprite update flag)
 10 array updatedirections
-20 0 updatedirections c! 2  3 updatedirections c!
+20 0 updatedirections c! 3  1 updatedirections c!
 18 2 updatedirections c! 4  3 updatedirections c!
 39 4 updatedirections c! 9  5 updatedirections c!
 f  6 updatedirections c! 3f 7 updatedirections c!
