@@ -2,9 +2,6 @@
 : beepboop
   timer1hz@ lasttimer @ <> if
     5 tmmove! 
-    shipdirection @ 1+ shipdirection !
-    shipdirection @ 4 = if
-      0 shipdirection ! then
     timer1hz@ lasttimer !
     lasttimer @ 3 and 1 = if
       1 0 1 1f4 beepL! 
@@ -87,18 +84,14 @@
   ( find hit asteroid )
   ff hitasteroid !
   c 0 do
-  ff50 i + @ 1fff and 0<> if
+  ff50 i + @ 4000 and 0<> if
     i hitasteroid ! then
   loop
   hitasteroid @ ff <> if
     killlhit
     activelasteroids @ 1- activelasteroids !
-    hitasteroid @ lasteroidtype c@ 3 = if
-        ( small wipe )
-        0 hitasteroid @ lasteroidtype c!
-        then
     hitasteroid @ lasteroidtype c@ 2 = if
-        ( medium spawn 2 small )
+        ( medium  kill )
         0 hitasteroid @ lasteroidtype c!
         then
     hitasteroid @ lasteroidtype c@ 1 = if
@@ -111,17 +104,13 @@
   ( find hit asteroid )
   ff hitasteroid !
   c 0 do
-    ff60 i + @ 1fff and 0<> if
+    ff60 i + @ 4000 and 0<> if
     i hitasteroid ! then
   loop
   hitasteroid @ ff <> if
     activehasteroids @ 1- activehasteroids !
-    hitasteroid @ hasteroidtype c@ 3 = if
-        ( small wipe )
-        0 hitasteroid @ hasteroidtype c!
-        then
     hitasteroid @ hasteroidtype c@ 2 = if
-        ( medium spawn 2 small )
+        ( medium kill )
         0 hitasteroid @ lasteroidtype c!
         then
     hitasteroid @ hasteroidtype c@ 1 = if
@@ -136,8 +125,8 @@
   ( for collision detection )
   e ff40 ! ff41 @ 0= if
     shipdirection @ bulletdirection !
-    3c 140 f0 2 1 0 e lslsprite!
-    30 140 f0 0 1 0 e uslsprite!
+    3c shipx @ 4 + shipy @ 4 + 2 1 0 e lslsprite!
+    30 shipx @ 4 + shipy @ 4 + 0 1 0 e uslsprite!
     2 4 3d 80 beep! then ;
     
 : hit?
@@ -170,8 +159,8 @@
 : drawship
   ( ship exits in lower and upper layers )
   ( for collision detection )
-  3f 140 f0 shipdirection @ 1 0 d lslsprite!
-  3f 140 f0 shipdirection @ 1 0 d uslsprite! ;
+  3f shipx @ shipy @ shipdirection @ 1 0 d lslsprite!
+  3f shipx @ shipy @ shipdirection @ 1 0 d uslsprite! ;
 
 : moveasteroids
   d 0 do
@@ -182,6 +171,30 @@
       i hasteroiddirection c@ updatedirections c@
       i uslupdate! then
   loop ;
+
+: moveship
+  shipdirection @ 0= if
+    shipy @ 0> if
+      shipy @ 1- shipy ! then then
+  shipdirection @ 1 = if
+    shipx @ 270 < if
+      shipx @ 1+ shipx ! then then
+  shipdirection @ 2 = if
+    shipy @ 1d0 < if
+      shipy @ 1+ shipy ! then then
+  shipdirection @ 3 = if
+    shipx @ 0> if
+      shipx @ 1- shipx ! then then ;
+
+: shipleft
+  shipdirection @ 0= if
+    3 shipdirection !
+    else shipdirection @ 1- shipdirection ! then ;
+
+: shipright
+  shipdirection @ 3 = if
+    0 shipdirection !
+    else  shipdirection @ 1+ shipdirection ! then ;
 
 : mainloop
     14 timer1khz!
@@ -201,6 +214,12 @@
     mainloop
     buttons@ 2 and 0<> if 
       fire? then
+    buttons@ 8 and 0<> if
+      moveship then
+    buttons@ 20 and 0<> if
+      shipleft then
+    buttons@ 40 and 0<> if
+      shipright then
     buttons@ 4 and 0<>
   until finish ;
 
