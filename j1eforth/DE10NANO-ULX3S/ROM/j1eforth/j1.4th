@@ -1005,7 +1005,7 @@ t: vectorvertex! ff76 literal ! ff75 literal ! ff78 literal ! ff77 literal ! ff7
 t: vector? begin ff74 literal @ 0= until t;
 t: vector! vector? ff70 literal ! ff73 literal ! ff72 literal ! ff71 literal ! 1 literal ff74 literal ! t;
 
-t: dlentry! ff83 literal ! ff8a literal ! ff89 literal ! ff88 literal ! ff87 literal ! ff86 literal ! ff85 literal ! ff84 literal ! 1 literal ff8b literal ! t;
+t: dlentry! ff83 literal ! ff8c literal ! ff8b literal ! ff8a literal ! ff89 literal ! ff88 literal ! ff87 literal ! ff86 literal ! ff85 literal ! ff84 literal ! 1 literal ff8d literal ! t;
 t: dlstart! ff81 literal ! ff80 literal ! 1 literal ff82 literal ! t;
 t: dl? begin ff82 literal @ 0= until t;
 
@@ -1032,6 +1032,10 @@ t: tpu.# base @ swap decimal tpu. base ! t;
 t: tpuu.# base @ swap decimal <# #s #> tpuspace tputype base ! t;
 t: tpuu.r# base @ rot rot decimal >r <# #s #> r> over - tpuspaces tputype base ! t;
 t: tpu.r# base @ rot rot decimal >r str r> over - tpuspaces tputype base ! t;
+
+t: tmtile! ff96 literal ! 10 literal begin 1- dup ff97 literal ! swap ff98 literal ! dup 0= until drop t;
+t: tm! ff94 literal ! ff93 literal ! ff92 literal ! ff91 literal ! ff90 literal ! 1 literal ff95 literal ! t;
+t: tmmove! begin ff9a literal @ 0= until ff99 literal ! t;
 
 t: terminalshow! 1 literal ff21 literal ! t;
 t: terminalhide! 0 literal ff21 literal ! t;

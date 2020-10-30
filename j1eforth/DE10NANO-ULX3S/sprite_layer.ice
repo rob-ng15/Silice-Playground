@@ -163,17 +163,17 @@ algorithm sprite_layer(
     // Default to transparent
     sprite_layer_display := 0;
 
+    // Sprite details reader
+    sprite_read_active := sprite_active[ sprite_set_number ];
+    sprite_read_double := sprite_double[ sprite_set_number ];
+    sprite_read_colour := sprite_colour[ sprite_set_number ];
+    sprite_read_x := sprite_x[ sprite_set_number ];
+    sprite_read_y := sprite_y[ sprite_set_number ];
+    sprite_read_tile := sprite_tile_number[ sprite_set_number ];
+
     // Write to the sprite_layer
     // Set tile bitmaps, x coordinate, y coordinate, colour, tile number, visibility, double
     always {
-        // Output the characteristics of the sprite sprite_set_number
-        sprite_read_active = sprite_active[ sprite_set_number ];
-        sprite_read_double = sprite_double[ sprite_set_number ];
-        sprite_read_colour = sprite_colour[ sprite_set_number ];
-        sprite_read_x = sprite_x[ sprite_set_number ];
-        sprite_read_y = sprite_y[ sprite_set_number ];
-        sprite_read_tile = sprite_tile_number[ sprite_set_number ];
-
         switch( sprite_layer_write ) {
             case 1: { sprite_active[ sprite_set_number ] = sprite_set_active; }
             case 2: { sprite_tile_number[ sprite_set_number ] = sprite_set_tile; }

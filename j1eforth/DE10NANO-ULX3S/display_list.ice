@@ -19,7 +19,19 @@ algorithm displaylist(
     input   uint11  writer_y,
     input   uint11  writer_p0,
     input   uint11  writer_p1,
+    input   uint11  writer_p2,
+    input   uint11  writer_p3,
     input   uint4   writer_write,
+
+    output   uint1   read_active,
+    output   uint4   read_command,
+    output   uint7   read_colour,
+    output   uint11  read_x,
+    output   uint11  read_y,
+    output   uint11  read_p0,
+    output   uint11  read_p1,
+    output   uint11  read_p2,
+    output   uint11  read_p3,
 
     // Communication with the GPU
     output  int11 gpu_x,
@@ -27,6 +39,8 @@ algorithm displaylist(
     output  uint7 gpu_colour,
     output  int11 gpu_param0,
     output  int11 gpu_param1,
+    output  int11 gpu_param2,
+    output  int11 gpu_param3,
     output  uint4 gpu_write,
     input   uint4 gpu_active,
 
@@ -46,6 +60,8 @@ algorithm displaylist(
     dualport_bram int11 y[256] = uninitialised;    
     dualport_bram int11 p0[256] = uninitialised;    
     dualport_bram int11 p1[256] = uninitialised;    
+    dualport_bram int11 p2[256] = uninitialised;    
+    dualport_bram int11 p3[256] = uninitialised;    
 
     uint8   entry_number = uninitialised;
     uint8   finish_number = uninitialised;
@@ -93,6 +109,18 @@ algorithm displaylist(
     p1.wdata1 := writer_p1;
     p1.wenable1 := ( writer_write == 1 ) || ( writer_write == 9 );
 
+    p2.addr0 := entry_number;
+    p2.wenable0 := 0;
+    p2.addr1 := writer_entry_number;
+    p2.wdata1 := writer_p2;
+    p2.wenable1 := ( writer_write == 1 ) || ( writer_write == 10 );
+
+    p3.addr0 := entry_number;
+    p3.wenable0 := 0;
+    p3.addr1 := writer_entry_number;
+    p3.wdata1 := writer_p3;
+    p3.wenable1 := ( writer_write == 1 ) || ( writer_write == 11 );
+
     // Dispatch to the VECTOR DRAWER
     vector_block_colour := colour.rdata0;
     vector_block_number := p0.rdata0;
@@ -107,7 +135,20 @@ algorithm displaylist(
     gpu_y := y.rdata0;
     gpu_param0 := p0.rdata0;
     gpu_param1 := p1.rdata0;
+    gpu_param2 := p2.rdata0;
+    gpu_param3 := p3.rdata0;
 
+    // Display List Entry Reader
+    read_active := A.rdata1;
+    read_command := command.rdata1;
+    read_colour := colour.rdata1;
+    read_x := x.rdata1;
+    read_y := y.rdata1;
+    read_p0 := p0.rdata1;
+    read_p1 := p1.rdata1;
+    read_p2 := p2.rdata1;
+    read_p3 := p3.rdata1;
+    
     while(1) {
         switch( display_list_active ) {
             case 1: {

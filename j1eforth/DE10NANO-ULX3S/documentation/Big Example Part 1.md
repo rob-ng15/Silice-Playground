@@ -7,15 +7,6 @@ variable lasttimer
 
 ( set tile map tiles )
 
-: tmtile! ff96 ! 10 0 do
-  f i - ff97 ! ff98 !
-  loop ;
-
-: tm! ff94 ! ff93 ! ff92 ! ff91 ! ff90 ! 1 ff95 ! ;
-
-: tmmove! begin ff9a @ 0= until
-  ff99 ! ;
-  
 0000 0000 0000 0000 0000 0000 0000 0000
 001f 003f 00ff 01ff 03ff 03ff 07ff 07fc
 1 tmtile!

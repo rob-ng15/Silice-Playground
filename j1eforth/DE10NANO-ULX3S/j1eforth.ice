@@ -399,6 +399,8 @@ $$end
     uint7   dl_gpu_colour = uninitialized;
     int11   dl_gpu_param0 = uninitialized;
     int11   dl_gpu_param1 = uninitialized;
+    int11   dl_gpu_param2 = uninitialized;
+    int11   dl_gpu_param3 = uninitialized;
     uint4   dl_gpu_write = uninitialized;
     uint5   dl_vector_block_number = uninitialized;
     uint7   dl_vector_block_colour = uninitialized;
@@ -427,7 +429,9 @@ $$end
         dl_gpu_y <: dl_gpu_y,
         dl_gpu_colour <: dl_gpu_colour,
         dl_gpu_param0 <: dl_gpu_param0,
-        dl_gpu_param1 <: dl_gpu_param1,
+        dl_gpu_param1 <: dl_gpu_param2,
+        dl_gpu_param2 <: dl_gpu_param3,
+        dl_gpu_param3 <: dl_gpu_param1,
         dl_gpu_write <: dl_gpu_write
     );
 
@@ -456,6 +460,8 @@ $$end
         gpu_colour :> dl_gpu_colour,
         gpu_param0 :> dl_gpu_param0,
         gpu_param1 :> dl_gpu_param1,
+        gpu_param2 :> dl_gpu_param2,
+        gpu_param3 :> dl_gpu_param3,
         gpu_write :> dl_gpu_write,
         vector_block_number :> dl_vector_block_number,
         vector_block_colour :> dl_vector_block_colour,
@@ -790,6 +796,15 @@ $$end
                                                                     switch( stackTop[0,4] ) {
                                                                         // ff80 -
                                                                         case 4h2: { newStackTop = displaylist_drawer.display_list_active; }
+                                                                        case 4h4: { newStackTop = displaylist_drawer.read_active; }
+                                                                        case 4h5: { newStackTop = displaylist_drawer.read_command; }
+                                                                        case 4h6: { newStackTop = displaylist_drawer.read_colour; }
+                                                                        case 4h7: { newStackTop = displaylist_drawer.read_x; }
+                                                                        case 4h8: { newStackTop = displaylist_drawer.read_y; }
+                                                                        case 4h9: { newStackTop = displaylist_drawer.read_p0; }
+                                                                        case 4ha: { newStackTop = displaylist_drawer.read_p1; }
+                                                                        case 4hb: { newStackTop = displaylist_drawer.read_p2; }
+                                                                        case 4hc: { newStackTop = displaylist_drawer.read_p3; }
                                                                     }
                                                                 }
                                                                 case 4h9: {
@@ -1013,7 +1028,9 @@ $$end
                                                             case 4h8: { displaylist_drawer.writer_y = stackNext; }
                                                             case 4h9: { displaylist_drawer.writer_p0 = stackNext; }
                                                             case 4ha: { displaylist_drawer.writer_p1 = stackNext; }
-                                                            case 4hb: { displaylist_drawer.writer_write = stackNext; }
+                                                            case 4hb: { displaylist_drawer.writer_p2 = stackNext; }
+                                                            case 4hc: { displaylist_drawer.writer_p3 = stackNext; }
+                                                            case 4hd: { displaylist_drawer.writer_write = stackNext; }
                                                         }
                                                     }
                                                    case 4h9: {
