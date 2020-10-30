@@ -69,6 +69,9 @@ variable shipdirection
 variable shipx
 variable shipy
 variable bulletdirection
+variable counter
+variable score
+variable lives
 
 ( storage for 12 (c hex) low asteroids )
 ( storage for 12 (c hex) high asteroids )
@@ -208,6 +211,9 @@ variable worky
     0 0 0 0 0 0 i lslsprite!
     0 0 0 0 0 0 i uslsprite!
   loop
+  0 score !
+  3 lives !
+  4 counter !
   0 shipdirection !
   138 shipx !
   e8 shipy !

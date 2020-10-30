@@ -135,12 +135,14 @@
     lhit
     0 0 0 0 0 0 e lslsprite!
     0 0 0 0 0 0 e uslsprite!
+    score @ 1+ score !
   then
   ff6e @ 1fff and 0<> if
     3 4 19 1f4 beep!
     uhit
     0 0 0 0 0 0 e lslsprite!
     0 0 0 0 0 0 e uslsprite!
+    score @ 1+ score !
   then 
   activehasteroids @ activelasteroids @ +
   0= if
@@ -196,7 +198,17 @@
     0 shipdirection !
     else  shipdirection @ 1+ shipdirection ! then ;
 
+: drawscore
+  40 tpubackground!
+  3f tpuforeground!
+  26 1 tpuxy!
+  score @ 4 tpu.r# ;
+    
 : mainloop
+    counter @ 0= if
+      4 counter !
+      else counter @ 1- counter !
+      then
     14 timer1khz!
     beepboop
     bulletdirection @ updatedirections c@ 180 + 
@@ -205,7 +217,7 @@
       e uslupdate!
     vblank?
     hit?
-    moveasteroids drawship
+    moveasteroids drawship drawscore
     crash? timer1khz? ;
 
 : demoULX3S
@@ -217,9 +229,11 @@
     buttons@ 8 and 0<> if
       moveship then
     buttons@ 20 and 0<> if
-      shipleft then
+      counter @ 0= if
+      shipleft then then
     buttons@ 40 and 0<> if
-      shipright then
+      counter @ 0= if
+      shipright then then
     buttons@ 4 and 0<>
   until finish ;
 
