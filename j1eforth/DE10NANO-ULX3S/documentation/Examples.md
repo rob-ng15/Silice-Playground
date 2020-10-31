@@ -222,7 +222,6 @@ active command colour x y p0 p1 entry displaylist!
 ```
 1 2 3f 10 10 20 20 0 0 0 dlentry!
 1 6 3 50 50 20 0 0 0 1 dlentry!
-1 7 3c 100 20 80 40 120 90 2 dlentry!
-0 3 dlstart!
+0 2 dlstart!
 
 ```

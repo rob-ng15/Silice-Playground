@@ -75,9 +75,9 @@ algorithm gpu(
     int11 gpu_max_count = uninitialized;
     uint6 gpu_tile = uninitialized;
     // Filled triangle calculations
-    int12 w0 = uninitialized;
-    int12 w1 = uninitialized;
-    int12 w2 = uninitialized;
+    uint1 w0 = uninitialized;
+    uint1 w1 = uninitialized;
+    uint1 w2 = uninitialized;
     
     // GPU inputs, copied to according to Forth, VECTOR or DISPLAY LISTS
     int11   x = uninitialized;
@@ -198,12 +198,13 @@ algorithm gpu(
                     }
                     case 6: {
                         // Setup drawing a filled circle centre x,y or radius param0 in colour
+                        // Minimum radius is 4
                         gpu_active_x = 0;
-                        gpu_active_y = param0;
+                        gpu_active_y = ( param0 < 4 ) ? 4 : param0;
                         gpu_xc = x;
                         gpu_yc = y;
-                        gpu_count = param0;
-                        gpu_numerator = 3 - ( 2 * param0 );
+                        gpu_count = ( param0 < 4 ) ? 4 : param0;
+                        gpu_numerator = 3 - ( 2 * ( ( param0 < 4 ) ? 4 : param0 ) );
                         gpu_active = 16;
                     }
                     case 7: {
@@ -429,7 +430,6 @@ algorithm gpu(
 
             case 25: {
                 // Brute force filled triangle
-                // Checks EVERY pixel inside the triangle bounding box
                 // Find minimum and maximum of x, x1 and x2 for the bounding box
                 // Find minimum and maximum of y, y1 and y2 for the bounding box
                 gpu_min_x = ( gpu_active_x < gpu_x1 ) ? ( ( gpu_active_x < gpu_x2 ) ? gpu_active_x : gpu_x2 ) : ( ( gpu_x1 < gpu_x2 ) ? gpu_x1: gpu_x2 );
@@ -447,45 +447,70 @@ algorithm gpu(
                 gpu_active = 27;
             }
             case 27: {
-                // Work left to right, top to bottom
-                gpu_sx = gpu_min_x;
-                gpu_sy = gpu_min_y;
-                w0 = 0; w1 = 0; w2 = 0;
+                // Find the point closest to the top of the screen
+                if( gpu_y1 < gpu_active_y ) {
+                    gpu_active_x = gpu_x1;
+                    gpu_active_y = gpu_y1;
+                    gpu_x1 = gpu_active_x;
+                    gpu_y1 = gpu_active_y;
+                }
                 gpu_active = 28;
             }
             case 28: {
-                // Calculate 2 x 2 determinant of the pixels in the bounding box to see if in the triangle
-                w0 = ( gpu_x2 - gpu_x1 ) * ( gpu_sy - gpu_y1 ) - ( gpu_y2 - gpu_y1 ) * ( gpu_sx - gpu_x1 );
-                w1 = ( gpu_x2 - gpu_active_x ) * ( gpu_sy - gpu_y2 ) - ( gpu_active_y - gpu_y2 ) * ( gpu_sx - gpu_x2 );
-                w2 = ( gpu_active_x - gpu_x1 ) * ( gpu_sy - gpu_active_y ) - ( gpu_y1 - gpu_active_y ) * ( gpu_sx - gpu_active_x );
-                gpu_count = 127;
+                if( gpu_y2 < gpu_active_y ) {
+                    gpu_active_x = gpu_x2;
+                    gpu_active_y = gpu_y2;
+                    gpu_x2 = gpu_active_x;
+                    gpu_y2 = gpu_active_y;
+                }
                 gpu_active = 29;
             }
             case 29: {
-                // Wait for multipliers or timeout
-                // Not actually sure if needed
-                gpu_active = ( w0 == 0 ) && ( w1 == 0 ) && ( w2 == 0 ) && ( gpu_count > 0 ) ? 29 : 30;
-                gpu_count = gpu_count - 1;
+                // Point order is top of screen then down to the right
+                if( gpu_x1 < gpu_x2 ) {
+                    gpu_x2 = gpu_x1;
+                    gpu_y2 = gpu_y1;
+                    gpu_x1 = gpu_x2;
+                    gpu_y1 = gpu_y2;
+                }
+                gpu_active = 30;
             }
             case 30: {
-                if( ( w0 >= 0 ) && ( w1 >= 0 ) && ( w2 >= 0 ) ) {
-                    bitmap_x_write = gpu_sx;
-                    bitmap_y_write = gpu_sy;
-                    bitmap_write = 1;
-                } else {
-                    bitmap_x_write = gpu_sx;
-                    bitmap_y_write = gpu_sy;
-                    bitmap_colour_write = 3;
-                    bitmap_write = 1;
-                }
+                // Start at the top left
+                gpu_sx = gpu_min_x;
+                gpu_sy = gpu_min_y;
+                gpu_count = 0;
+                gpu_active = 31;
+            }
+            case 31: {
+                // Calculate 2 x 2 determinant of the pixels in the bounding box to see if in the triangle
+                w0 = (( gpu_x2 - gpu_x1 ) * ( gpu_sy - gpu_y1 ) - ( gpu_y2 - gpu_y1 ) * ( gpu_sx - gpu_x1 )) >= 0;
+                w1 = (( gpu_active_x - gpu_x2 ) * ( gpu_sy - gpu_y2 ) - ( gpu_active_y - gpu_y2 ) * ( gpu_sx - gpu_x2 )) >= 0;
+                w2 = (( gpu_x1 - gpu_active_x ) * ( gpu_sy - gpu_active_y ) - ( gpu_y1 - gpu_active_y ) * ( gpu_sx - gpu_active_x )) >= 0;
+                gpu_active = 32;
+            }
+            case 32: {
+                // Draw the pixel if inside the triangle
+                bitmap_x_write = gpu_sx;
+                bitmap_y_write = gpu_sy;
+                bitmap_write = ( w0 && w1 && w2 );
+                gpu_count = ( w0 && w1 && w2 ) ? 1 : gpu_count;
+                
                 if( gpu_sx < gpu_max_x ) {
-                    gpu_sx = gpu_sx + 1;
+                    if( ( gpu_count == 1 ) && ~( w0 && w1 && w2 ) ) {
+                        // Moved backoutside the triangle, move to the next line
+                        gpu_count = 0;
+                        gpu_sx = gpu_min_x;
+                        gpu_sy = gpu_sy + 1;
+                    } else {
+                        gpu_sx = gpu_sx + 1;
+                    }
                 } else {
+                    gpu_count = 0;
                     gpu_sx = gpu_min_x;
                     gpu_sy = gpu_sy + 1;
                 }
-                w0 = 0; w1 = 0; w2 = 0;
-                gpu_active = ( gpu_sx == gpu_max_x) && ( gpu_sy == gpu_max_y ) ? 0 : 28;
+                gpu_active = ( gpu_sy <= gpu_max_y ) ? 31 : 0;
             }
             
             default: {gpu_active = 0;}
