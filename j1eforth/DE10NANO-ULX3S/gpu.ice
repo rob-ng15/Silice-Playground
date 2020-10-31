@@ -74,7 +74,9 @@ algorithm gpu(
     int11 gpu_count = uninitialized;
     int11 gpu_max_count = uninitialized;
     uint6 gpu_tile = uninitialized;
+
     // Filled triangle calculations
+    // Is the point sx,sy inside the triangle given by active_x,active_y x1,y1 x2,y2?
     uint1 w0 = uninitialized;
     uint1 w1 = uninitialized;
     uint1 w2 = uninitialized;
@@ -179,10 +181,10 @@ algorithm gpu(
                     case 4: {
                         // Setup drawing a circle centre x,y or radius param0 in colour
                         gpu_active_x = 0;
-                        gpu_active_y = param0;
+                        gpu_active_y = ( ( param0 < 0 ) ? -param0 : param0 );
                         gpu_xc = x;
                         gpu_yc = y;
-                        gpu_numerator = 3 - ( 2 * param0 );
+                        gpu_numerator = 3 - ( 2 * ( ( param0 < 0 ) ? -param0 : param0 ) );
                         gpu_active = 6;
                     }
                     case 5: {
@@ -198,13 +200,13 @@ algorithm gpu(
                     }
                     case 6: {
                         // Setup drawing a filled circle centre x,y or radius param0 in colour
-                        // Minimum radius is 4
+                        // Minimum radius is 4, radius is always positive
                         gpu_active_x = 0;
-                        gpu_active_y = ( param0 < 4 ) ? 4 : param0;
+                        gpu_active_y = ( ( param0 < 0 ) ? ( ( param0 < -4 ) ? 4 : -param0 ) : ( ( param0 < 4 ) ? 4 : param0 ) );
                         gpu_xc = x;
                         gpu_yc = y;
-                        gpu_count = ( param0 < 4 ) ? 4 : param0;
-                        gpu_numerator = 3 - ( 2 * ( ( param0 < 4 ) ? 4 : param0 ) );
+                        gpu_count = ( ( param0 < 0 ) ? ( ( param0 < -4 ) ? 4 : -param0 ) : ( ( param0 < 4 ) ? 4 : param0 ) );
+                        gpu_numerator = 3 - ( 2 * ( ( param0 < 0 ) ? ( ( param0 < -4 ) ? 4 : -param0 ) : ( ( param0 < 4 ) ? 4 : param0 ) ) );
                         gpu_active = 16;
                     }
                     case 7: {
@@ -483,7 +485,6 @@ algorithm gpu(
                 gpu_active = 31;
             }
             case 31: {
-                // Calculate 2 x 2 determinant of the pixels in the bounding box to see if in the triangle
                 w0 = (( gpu_x2 - gpu_x1 ) * ( gpu_sy - gpu_y1 ) - ( gpu_y2 - gpu_y1 ) * ( gpu_sx - gpu_x1 )) >= 0;
                 w1 = (( gpu_active_x - gpu_x2 ) * ( gpu_sy - gpu_y2 ) - ( gpu_active_y - gpu_y2 ) * ( gpu_sx - gpu_x2 )) >= 0;
                 w2 = (( gpu_x1 - gpu_active_x ) * ( gpu_sy - gpu_active_y ) - ( gpu_y1 - gpu_active_y ) * ( gpu_sx - gpu_active_x )) >= 0;
@@ -506,6 +507,7 @@ algorithm gpu(
                         gpu_sx = gpu_sx + 1;
                     }
                 } else {
+                    // End of line, move to the next line
                     gpu_count = 0;
                     gpu_sx = gpu_min_x;
                     gpu_sy = gpu_sy + 1;

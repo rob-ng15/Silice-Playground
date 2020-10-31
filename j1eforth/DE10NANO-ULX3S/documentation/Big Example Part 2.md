@@ -243,6 +243,9 @@
      mainloop
      buttons@ 2 and 0= if 
       fire? then
+    buttons@ 4 and 0= if
+      counter @ 0= if
+      shipleft then then
    buttons@ 1 and 0=
   until finish ;
 

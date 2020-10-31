@@ -38,7 +38,7 @@ algorithm vectors(
     input  int11   dl_vector_block_yc,
     input  uint1   dl_draw_vector,
 
-    input  uint4 gpu_active
+    input  uint6 gpu_active
 ) <autorun> {
     // 16 vector blocks each of 16 vertices
     dualport_bram uint1 A[256] = uninitialised;    

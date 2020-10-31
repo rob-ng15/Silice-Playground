@@ -42,7 +42,7 @@ algorithm displaylist(
     output  int11 gpu_param2,
     output  int11 gpu_param3,
     output  uint4 gpu_write,
-    input   uint4 gpu_active,
+    input   uint6 gpu_active,
 
     // Communication with the VECTOR DRAWER
     output  uint5   vector_block_number,

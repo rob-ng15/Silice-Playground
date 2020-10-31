@@ -409,7 +409,7 @@ $$end
     uint1   dl_draw_vector = uninitialized;   
     // Status flags
     uint3   vector_block_active = uninitialized;
-    uint4   gpu_active = uninitialized;
+    uint6   gpu_active = uninitialized;
 
     gpu gpu_processor <@video_clock,!video_reset> (
         bitmap_x_write :> bitmap_x_write,
