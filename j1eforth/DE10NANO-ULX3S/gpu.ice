@@ -75,18 +75,9 @@ algorithm gpu(
     int11 gpu_max_count = uninitialized;
     uint6 gpu_tile = uninitialized;
     // Filled triangle calculations
-    int16 w0 = uninitialized;
-    int16 w1 = uninitialized;
-    int16 w2 = uninitialized;
-    int16 w0_row = uninitialized;
-    int16 w1_row = uninitialized;
-    int16 w2_row = uninitialized;
-    int16 a01 = uninitialized;
-    int16 a12 = uninitialized;
-    int16 a20 = uninitialized;
-    int16 b01 = uninitialized;
-    int16 b12 = uninitialized;
-    int16 b20 = uninitialized;
+    int12 w0 = uninitialized;
+    int12 w1 = uninitialized;
+    int12 w2 = uninitialized;
     
     // GPU inputs, copied to according to Forth, VECTOR or DISPLAY LISTS
     int11   x = uninitialized;
@@ -459,50 +450,42 @@ algorithm gpu(
                 // Work left to right, top to bottom
                 gpu_sx = gpu_min_x;
                 gpu_sy = gpu_min_y;
-                a01 = gpu_active_y - gpu_y1;    b01 = gpu_x1 - gpu_active_x;
-                a12 = gpu_y1 - gpu_y2;          b12 = gpu_x2 - gpu_x1;
-                a20 = gpu_y2 - gpu_active_y;    b20 = gpu_active_x - gpu_x2;
+                w0 = 0; w1 = 0; w2 = 0;
                 gpu_active = 28;
             }
             case 28: {
-                // Calculate 2 x 2 determinant of the first pixel in the bounding box to see if in the triangle
-                w0_row = ( gpu_x2 - gpu_x1 ) * ( gpu_sy - gpu_y1 ) - ( gpu_y2 - gpu_y1 ) * ( gpu_sx - gpu_x1 );
-                w1_row = ( gpu_x2 - gpu_active_x ) * ( gpu_sy - gpu_y2 ) - ( gpu_active_y - gpu_y2 ) * ( gpu_sx - gpu_x2 );
-                w2_row = ( gpu_active_x - gpu_x1 ) * ( gpu_sy - gpu_active_y ) - ( gpu_y1 - gpu_active_y ) * ( gpu_sx - gpu_active_x );
+                // Calculate 2 x 2 determinant of the pixels in the bounding box to see if in the triangle
+                w0 = ( gpu_x2 - gpu_x1 ) * ( gpu_sy - gpu_y1 ) - ( gpu_y2 - gpu_y1 ) * ( gpu_sx - gpu_x1 );
+                w1 = ( gpu_x2 - gpu_active_x ) * ( gpu_sy - gpu_y2 ) - ( gpu_active_y - gpu_y2 ) * ( gpu_sx - gpu_x2 );
+                w2 = ( gpu_active_x - gpu_x1 ) * ( gpu_sy - gpu_active_y ) - ( gpu_y1 - gpu_active_y ) * ( gpu_sx - gpu_active_x );
+                gpu_count = 127;
                 gpu_active = 29;
             }
             case 29: {
                 // Wait for multipliers or timeout
                 // Not actually sure if needed
-                gpu_active = ( w0_row == 0 ) && ( w1_row == 0 ) && ( w2_row == 0 ) && ( gpu_count > 0 ) ? 29 : 30;
+                gpu_active = ( w0 == 0 ) && ( w1 == 0 ) && ( w2 == 0 ) && ( gpu_count > 0 ) ? 29 : 30;
                 gpu_count = gpu_count - 1;
             }
             case 30: {
-                w0 = w0_row;
-                w1 = w1_row;
-                w2 = w2_row;
-                gpu_active = 31;
-            }
-            case 31: {
                 if( ( w0 >= 0 ) && ( w1 >= 0 ) && ( w2 >= 0 ) ) {
                     bitmap_x_write = gpu_sx;
                     bitmap_y_write = gpu_sy;
                     bitmap_write = 1;
+                } else {
+                    bitmap_x_write = gpu_sx;
+                    bitmap_y_write = gpu_sy;
+                    bitmap_colour_write = 3;
+                    bitmap_write = 1;
                 }
                 if( gpu_sx < gpu_max_x ) {
                     gpu_sx = gpu_sx + 1;
-                    w0 = w0 + a12;
-                    w1 = w1 + a20;
-                    w2 = w2 + a01;
-                    gpu_active = 31;
                 } else {
                     gpu_sx = gpu_min_x;
                     gpu_sy = gpu_sy + 1;
-                    w0_row = w0_row + b12;
-                    w1_row = w1_row + b20;
-                    w2_row = w2_row + b01;
-                    gpu_active = ( gpu_sy == gpu_max_y ) ? 0 : 30;
                 }
+                w0 = 0; w1 = 0; w2 = 0;
+                gpu_active = ( gpu_sx == gpu_max_x) && ( gpu_sy == gpu_max_y ) ? 0 : 28;
             }
             
             default: {gpu_active = 0;}
