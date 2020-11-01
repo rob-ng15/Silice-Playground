@@ -1,0 +1,14 @@
+AUR
+
+makepkg -sic -skippgpcheck
+
+PACMAN
+
+(update) pacman -Syu
+(search) pacman -Ss
+(clean)  pacman -Qdt
+(delete) pacman -R
+
+silice -f frameworks/de10nano_basic.v -o basic/basic.v j1eforth.ice  
+
+quartus_pgm -m jtag -o "p;BUILD_de10nano/build.sof@2" 

@@ -208,11 +208,11 @@ buttontest
 
 ```
 : closeencounters
-    0 1c 3e8 beep! beep?
-    0 1a 3e8 beep! beep?
-    0 19 3e8 beep! beep?
-    0 d 3e8 beep! beep?
-    0 14 3e8 beep! beep?
+    1 0 1c 3e8 beep! beep?
+    1 0 1a 3e8 beep! beep?
+    1 0 19 3e8 beep! beep?
+    1 0 d 3e8 beep! beep?
+    1 0 14 3e8 beep! beep?
 ;
 closeencounters
 

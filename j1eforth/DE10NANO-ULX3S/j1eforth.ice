@@ -846,8 +846,8 @@ $$end
                                 case 1b1: {
                                     switch( aluop(instruction).operation ) {
                                         case 4b0000: {newStackTop = {16{(stackTop == 0)}};}
-                                        case 4b0001: {newStackTop = ~{16{(stackTop == 0)}};}
-                                        case 4b0010: {newStackTop = ~{16{(stackNext == stackTop)}};}
+                                        case 4b0001: {newStackTop = {16{(stackTop != 0)}};}
+                                        case 4b0010: {newStackTop = {16{(stackNext != stackTop)}};}
                                         case 4b0011: {newStackTop = stackTop + 1;}
                                         case 4b0100: {newStackTop = stackTop << 1;}
                                         case 4b0101: {newStackTop = stackTop >> 1;}
@@ -855,7 +855,7 @@ $$end
                                         case 4b0111: {newStackTop = {16{(__unsigned(stackNext) > __unsigned(stackTop))}};}
                                         case 4b1000: {newStackTop = {16{(__signed(stackTop) < __signed(0))}};}
                                         case 4b1001: {newStackTop = {16{(__signed(stackTop) > __signed(0))}};}
-                                        case 4b1010: {newStackTop = ( __signed(stackTop) < __signed(0) ) ?  - stackTop : stackTop;}
+                                        case 4b1010: {newStackTop = ( __signed(stackTop) < __signed(0) ) ?  -stackTop : stackTop;}
                                         case 4b1011: {newStackTop = ( __signed(stackNext) > __signed(stackTop) ) ? stackNext : stackTop;}
                                         case 4b1100: {newStackTop = ( __signed(stackNext) < __signed(stackTop) ) ? stackNext : stackTop;}
                                         case 4b1101: {newStackTop = -stackTop;}
