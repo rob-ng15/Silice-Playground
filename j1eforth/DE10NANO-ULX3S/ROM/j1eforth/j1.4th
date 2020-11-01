@@ -973,6 +973,7 @@ t: clock@ f004 literal @ t;
 t: timer1hz! 1 literal ffed literal ! t;
 t: timer1hz@ ffed literal @ t;
 t: timer1khz! ffee literal ! t;
+t: timer1hz@ ffee literal @ t;
 t: timer1khz? begin ffee literal @ 0= until t;
 t: sleep ffef literal ! begin ffef literal @ 0= until t;
 t: rng ffe0 literal @ swap /mod drop t;

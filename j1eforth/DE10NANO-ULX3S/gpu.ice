@@ -432,6 +432,9 @@ algorithm gpu(
 
             case 25: {
                 // Brute force filled triangle
+                //   Minimal optimisations
+                //     Bounding box
+                //     Walking stops when exiting the triangle
                 // Find minimum and maximum of x, x1 and x2 for the bounding box
                 // Find minimum and maximum of y, y1 and y2 for the bounding box
                 gpu_min_x = ( gpu_active_x < gpu_x1 ) ? ( ( gpu_active_x < gpu_x2 ) ? gpu_active_x : gpu_x2 ) : ( ( gpu_x1 < gpu_x2 ) ? gpu_x1: gpu_x2 );
@@ -475,46 +478,101 @@ algorithm gpu(
                     gpu_x1 = gpu_x2;
                     gpu_y1 = gpu_y2;
                 }
-                gpu_active = 30;
+                gpu_active = 32;
             }
             case 30: {
+                // More sorting
+            }
+            case 31: {
+                // More sorting
+            }
+            case 32: {
                 // Start at the top left
                 gpu_sx = gpu_min_x;
                 gpu_sy = gpu_min_y;
                 gpu_count = 0;
-                gpu_active = 31;
+                gpu_active = 33;
             }
-            case 31: {
+            case 33: {
+                // Edge calculations to determine if inside the triangle - converted to DSP blocks
                 w0 = (( gpu_x2 - gpu_x1 ) * ( gpu_sy - gpu_y1 ) - ( gpu_y2 - gpu_y1 ) * ( gpu_sx - gpu_x1 )) >= 0;
                 w1 = (( gpu_active_x - gpu_x2 ) * ( gpu_sy - gpu_y2 ) - ( gpu_active_y - gpu_y2 ) * ( gpu_sx - gpu_x2 )) >= 0;
                 w2 = (( gpu_x1 - gpu_active_x ) * ( gpu_sy - gpu_active_y ) - ( gpu_y1 - gpu_active_y ) * ( gpu_sx - gpu_active_x )) >= 0;
-                gpu_active = 32;
+                gpu_active = 34;
             }
-            case 32: {
-                // Draw the pixel if inside the triangle
+            case 34: {
+                // Walk left to right
                 bitmap_x_write = gpu_sx;
                 bitmap_y_write = gpu_sy;
                 bitmap_write = ( w0 && w1 && w2 );
                 gpu_count = ( w0 && w1 && w2 ) ? 1 : gpu_count;
-                
-                if( gpu_sx < gpu_max_x ) {
-                    if( ( gpu_count == 1 ) && ~( w0 && w1 && w2 ) ) {
-                        // Moved backoutside the triangle, move to the next line
+
+                if( ( gpu_count == 1 ) && ~( w0 && w1 && w2 ) ) {
+                    // Exited the triangle
+                    if( ( gpu_max_x - gpu_sx ) < ( gpu_sx - gpu_min_x ) ) {
+                        // Closer to the right
+                        gpu_count = 0;
+                        gpu_sx = gpu_max_x;
+                        gpu_sy = gpu_sy + 1;
+                        gpu_active = ( gpu_sy <= gpu_max_y ) ? 35 : 0;
+                    } else {
+                        // Closer to the left
                         gpu_count = 0;
                         gpu_sx = gpu_min_x;
                         gpu_sy = gpu_sy + 1;
-                    } else {
-                        gpu_sx = gpu_sx + 1;
+                        gpu_active = ( gpu_sy <= gpu_max_y ) ? 33 : 0;
                     }
                 } else {
-                    // End of line, move to the next line
-                    gpu_count = 0;
-                    gpu_sx = gpu_min_x;
-                    gpu_sy = gpu_sy + 1;
+                    if( gpu_sx < gpu_max_x ) {
+                        gpu_sx = gpu_sx + 1;
+                        gpu_active = 33;
+                    } else {
+                        gpu_count = 0;
+                        gpu_sy = gpu_sy + 1;
+                        gpu_active = ( gpu_sy <= gpu_max_y ) ? 35 : 0;
+                    }
                 }
-                gpu_active = ( gpu_sy <= gpu_max_y ) ? 31 : 0;
             }
-            
+            case 35: {
+                // Edge calculations to determine if inside the triangle - converted to DSP blocks
+                w0 = (( gpu_x2 - gpu_x1 ) * ( gpu_sy - gpu_y1 ) - ( gpu_y2 - gpu_y1 ) * ( gpu_sx - gpu_x1 )) >= 0;
+                w1 = (( gpu_active_x - gpu_x2 ) * ( gpu_sy - gpu_y2 ) - ( gpu_active_y - gpu_y2 ) * ( gpu_sx - gpu_x2 )) >= 0;
+                w2 = (( gpu_x1 - gpu_active_x ) * ( gpu_sy - gpu_active_y ) - ( gpu_y1 - gpu_active_y ) * ( gpu_sx - gpu_active_x )) >= 0;
+                gpu_active = 36;
+            }
+            case 36: {
+                // Walk right to left
+                bitmap_x_write = gpu_sx;
+                bitmap_y_write = gpu_sy;
+                bitmap_write = ( w0 && w1 && w2 );
+                gpu_count = ( w0 && w1 && w2 ) ? 1 : gpu_count;
+
+                if( ( gpu_count == 1 ) && ~( w0 && w1 && w2 ) ) {
+                    // Exited the triangle
+                    if( ( gpu_max_x - gpu_sx ) < ( gpu_sx - gpu_min_x ) ) {
+                        // Closer to the right
+                        gpu_count = 0;
+                        gpu_sx = gpu_max_x;
+                        gpu_sy = gpu_sy + 1;
+                        gpu_active = ( gpu_sy <= gpu_max_y ) ? 35 : 0;
+                    } else {
+                        // Closer to the left
+                        gpu_count = 0;
+                        gpu_sx = gpu_min_x;
+                        gpu_sy = gpu_sy + 1;
+                        gpu_active = ( gpu_sy <= gpu_max_y ) ? 33 : 0;
+                    }
+                } else {
+                    if( gpu_sx > gpu_min_x ) {
+                        gpu_sx = gpu_sx - 1;
+                        gpu_active = 35;
+                    } else {
+                        gpu_count = 0;
+                        gpu_sy = gpu_sy + 1;
+                        gpu_active = ( gpu_sy <= gpu_max_y ) ? 33 : 0;
+                    }
+                }
+            }
             default: {gpu_active = 0;}
         }
     }

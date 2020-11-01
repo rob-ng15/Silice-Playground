@@ -20,7 +20,7 @@ cs! drawrectangles
 ```
 : drawcircles
   3f 0 do
-    i 140 f0 3f i - 2* circle!
+    i 140 f0 3f i - 2* fcircle!
   loop ;
 cs! drawcircles
 
@@ -114,13 +114,16 @@ setsprites
 
   15 130 0 150 1e0 rectangle!
   2a 0 e0 280 100 rectangle!
-  3f 140 f0 40 circle!
+  3f 140 f0 40 fcircle!
   3c 140 f0 80 circle!
   3 0 f0 140 0 line!
   3 140 0 280 f0 line!
   3 280 f0 140 1e0 line!
   3 140 1e0 0 f0 line!
-   
+  
+  3 140 e0 150 f0 140 100 triangle!
+  3 140 e0 140 100 130 f0 triangle!
+  
   3 140 f0 0 vector!
   c 150 f0 0 vector!
   33 130 f0 0 vector!
@@ -201,12 +204,12 @@ buttontest
 
 ```
 
-## Audio Test
+## Audio Test (ULX3S only at present)
 
 ```
 : closeencounters
-    0 1a 3e8 beep! beep?
     0 1c 3e8 beep! beep?
+    0 1a 3e8 beep! beep?
     0 19 3e8 beep! beep?
     0 d 3e8 beep! beep?
     0 14 3e8 beep! beep?

@@ -13,8 +13,9 @@
             * "Brute force" algorithm
                 * Vertices best specified as TOP then clockwise from TOP
                     * Some limited checks to arrange vertices
-                * Works from left to right, top to bottom on a bounding box
+                * Works from top to bottom on a bounding box
                     * Optimisation moves to the next line once no longer inside the triangle
+                    * Optimisation moves from left to right or right to left depending upon which side the last point in the previous line was closest to
                 * Quicker than software equivalent
         * Blitter for 16 x 16 1 bit user settable tiles
 
@@ -66,4 +67,4 @@ LINE | 2 | 3 | Operation 3 - Draw a line from x,y to param0,param1 in colour<br>
 CIRCLE | 1 | 8 | Operation 4 - Draw a circle centred at x,y of radius param0 in colour<br>Calculates 1 pixel on 1st arc of the circle, then renders each of the 8 arcs.
 BLIT1 | 1 + 1 per line | 1 | Operation 5 - 1 bit blitter of a 16x16 tile to x,y using tile number param0 in colour<br>Total time is always 1 + 17 x 16 cycles, 273 cycles.
 FILLED CIRCLE | | | Operation 6 - Draw a filled circle centred at x,y of radius param0 in colour<br>Calculates 1 pixel on the 1st arc of the circle, then renders joining lines in each of the 8 arcs<br>Circles with radius less than 4 are drawn as a radius of 4.
-FILLED TRIANGLE | 8 | 2 for every **considered** pixel | Operation 7 - Draw a filled triangle with vertices at x,y param0,param1 param2,param3<br>Not fully optimised. Bounding box calculated and cropped to the screen.<br>Pixels are considered from the left until moved into and then out of the triangle.
+FILLED TRIANGLE | 8 | 2 for every **considered** pixel | Operation 7 - Draw a filled triangle with vertices at x,y param0,param1 param2,param3<br>Not fully optimised. Bounding box calculated and cropped to the screen.<br>After the first line, which always goes from left to right, pixels are considered from the left or the right (depending upon which side was closest at the end of the previous line) until entered then exited the triangle.

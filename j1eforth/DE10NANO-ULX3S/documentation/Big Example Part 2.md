@@ -131,14 +131,14 @@
     
 : hit?
   ff5e @ 1fff and 0<> if
-    3 4 19 1f4 beep!
+    2 4 19 1f4 beep!
     lhit
     0 0 0 0 0 0 e lslsprite!
     0 0 0 0 0 0 e uslsprite!
     score @ 1+ score !
   then
   ff6e @ 1fff and 0<> if
-    3 4 19 1f4 beep!
+    2 4 19 1f4 beep!
     uhit
     0 0 0 0 0 0 e lslsprite!
     0 0 0 0 0 0 e uslsprite!

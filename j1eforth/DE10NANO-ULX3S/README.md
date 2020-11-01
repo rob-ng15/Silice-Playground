@@ -33,13 +33,13 @@ __*Not necessarily the most recent build, used for indicative purporses and moni
 Family : Cyclone V
 Device : 5CSEBA6U23I7
 Timing Models : Final
-Logic utilization (in ALMs) : 6,724 / 41,910 ( 16 % )
-Total registers : 4176
+Logic utilization (in ALMs) : 8,276 / 41,910 ( 20 % )
+Total registers : 4527
 Total pins : 36 / 314 ( 11 % )
 Total virtual pins : 0
-Total block memory bits : 2,668,320 / 5,662,720 ( 47 % )
+Total block memory bits : 2,670,624 / 5,662,720 ( 47 % )
 Total RAM Blocks : 368 / 553 ( 67 % )
-Total DSP Blocks : 5 / 112 ( 4 % )
+Total DSP Blocks : 16 / 112 ( 14 % )
 Total HSSI RX PCSs : 0
 Total HSSI PMA RX Deserializers : 0
 Total HSSI TX PCSs : 0
@@ -54,11 +54,11 @@ __*Not necessarily the most recent build, used for indicative purporses and moni
 
 ```
 Info: Device utilisation:
-Info:          TRELLIS_SLICE: 17707/41820    42%
+Info:          TRELLIS_SLICE: 20464/41820    48%
 Info:             TRELLIS_IO:    34/  365     9%
 Info:                   DCCA:     4/   56     7%
-Info:                 DP16KD:   183/  208    87%
-Info:             MULT18X18D:     8/  156     5%
+Info:                 DP16KD:   180/  208    86%
+Info:             MULT18X18D:    14/  156     8%
 Info:                 ALU54B:     0/   78     0%
 Info:                EHXPLLL:     2/    4    50%
 Info:                EXTREFB:     0/    2     0%
@@ -78,8 +78,7 @@ Info:                DLLDELD:     0/    8     0%
 Info:                 DDRDLL:     0/    4     0%
 Info:                DQSBUFM:     0/   14     0%
 Info:        TRELLIS_ECLKBUF:     0/    8     0%
-Info:           ECLKBRIDGECS:     0/    2     0%
-```
+Info:           ECLKBRIDGECS:     0/    2     0%```
 
 ## VGA/HDMI Multiplexed Display
 
@@ -148,13 +147,6 @@ The sample code provided in [Big Example Part 1.md](documentation/Big%20Example%
 * COLOUR BLITTER
     * 10 bit { Arrggbb } 16 x 16 blitter from a configurable 64 16 x 16 tilemap (16384 * 7 bit, might be too big for the blockram)
         * ALPHA will determine if pixel is placed or missed (mask)
-
-* FILLED TRIANGLE
-    * Draw a filled triangle from x,y to param0,param1 to param2,param3
-        * Optimise the algorithm
-
-* FILLED CIRCLE
-    * Optimise the algorithm
 
 ### Character map
 
