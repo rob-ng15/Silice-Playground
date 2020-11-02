@@ -522,11 +522,11 @@ $$end
     uint13  uartInBufferNext = 0;
     uint13  uartInBufferTop = 0;
 
-    // UART output FIFO (16 character) as dualport bram (code from @sylefeb)
-    dualport_bram uint8 uartOutBuffer[16] = uninitialized;
-    uint4   uartOutBufferNext = 0;
-    uint4   uartOutBufferTop = 0;
-    uint4   newuartOutBufferTop = 0;
+    // UART output FIFO (256 character) as dualport bram (code from @sylefeb)
+    dualport_bram uint8 uartOutBuffer[256] = uninitialized;
+    uint8   uartOutBufferNext = 0;
+    uint8   uartOutBufferTop = 0;
+    uint8   newuartOutBufferTop = 0;
     
     // register buttons
     uint$NUM_BTNS$ reg_btns = 0;
@@ -716,6 +716,12 @@ $$end
                                                                         case 4h8: { newStackTop = bitmap_window.bitmap_colour_read; }
                                                                     }
                                                                 }
+                                                                case 4h1: {
+                                                                   switch( stackTop[0,4] ) {
+                                                                        // ff10 -
+                                                                        case 4h5: { newStackTop = character_map_window.tpu_active; }
+                                                                   }
+                                                                }
                                                                 case 4h2: {
                                                                     switch( stackTop[0,4] ) {
                                                                         // ff20 -
@@ -844,23 +850,24 @@ $$end
                                 }
                                 
                                 case 1b1: {
+                                    // Extra J1+ CPU Operations
                                     switch( aluop(instruction).operation ) {
                                         case 4b0000: {newStackTop = {16{(stackTop == 0)}};}
                                         case 4b0001: {newStackTop = {16{(stackTop != 0)}};}
                                         case 4b0010: {newStackTop = {16{(stackNext != stackTop)}};}
                                         case 4b0011: {newStackTop = stackTop + 1;}
-                                        case 4b0100: {newStackTop = stackTop << 1;}
-                                        case 4b0101: {newStackTop = stackTop >> 1;}
-                                        case 4b0110: {newStackTop = {16{(__signed(stackNext) > __signed(stackTop))}};}
-                                        case 4b0111: {newStackTop = {16{(__unsigned(stackNext) > __unsigned(stackTop))}};}
-                                        case 4b1000: {newStackTop = {16{(__signed(stackTop) < __signed(0))}};}
-                                        case 4b1001: {newStackTop = {16{(__signed(stackTop) > __signed(0))}};}
-                                        case 4b1010: {newStackTop = ( __signed(stackTop) < __signed(0) ) ?  -stackTop : stackTop;}
-                                        case 4b1011: {newStackTop = ( __signed(stackNext) > __signed(stackTop) ) ? stackNext : stackTop;}
-                                        case 4b1100: {newStackTop = ( __signed(stackNext) < __signed(stackTop) ) ? stackNext : stackTop;}
-                                        case 4b1101: {newStackTop = -stackTop;}
-                                        case 4b1110: {newStackTop = stackNext - stackTop;}
-                                        case 4b1111: {newStackTop = {16{(__signed(stackNext) >= __signed(stackTop))}};}
+                                        case 4b0100: {newStackTop = stackNext * stackTop;}
+                                        case 4b0101: {newStackTop = stackTop << 1;}
+                                        case 4b0110: {newStackTop = -stackTop;}
+                                        case 4b0111: {newStackTop = stackTop >> 1;}
+                                        case 4b1000: {newStackTop = stackNext - stackTop;}
+                                        case 4b1001: {newStackTop = {16{(__signed(stackTop) < __signed(0))}};}
+                                        case 4b1010: {newStackTop = {16{(__signed(stackTop) > __signed(0))}};}
+                                        case 4b1011: {newStackTop = {16{(__signed(stackNext) > __signed(stackTop))}};}
+                                        case 4b1100: {newStackTop = {16{(__signed(stackNext) >= __signed(stackTop))}};}
+                                        case 4b1101: {newStackTop = ( __signed(stackTop) < __signed(0) ) ?  -stackTop : stackTop;}
+                                        case 4b1110: {newStackTop = ( __signed(stackNext) > __signed(stackTop) ) ? stackNext : stackTop;}
+                                        case 4b1111: {newStackTop = ( __signed(stackNext) < __signed(stackTop) ) ? stackNext : stackTop;}
                                     }
                                 }
                             } // ALU Operation
@@ -903,7 +910,6 @@ $$end
                                                             case 4hb: { gpu_processor.blit1_writer_tile = stackNext; }
                                                             case 4hc: { gpu_processor.blit1_writer_line = stackNext; }
                                                             case 4hd: { gpu_processor.blit1_writer_bitmap = stackNext;  gpu_processor.blit1_writer_active = 1; }
-                                                            case 14hf: { gpu_processor.gpu_param0 = stackNext; gpu_processor.gpu_write = 7; }
                                                         }
                                                     }
                                                    case 4h1: {
@@ -1103,7 +1109,7 @@ $$end
             }
             
             case 3: {
-                // RESET Co-Processor ControlsZ
+                // RESET Co-Processor Controls
                 background_generator.background_write = 0;
                 tile_map.tile_writer_write = 0; 
                 tile_map.tm_write = 0;

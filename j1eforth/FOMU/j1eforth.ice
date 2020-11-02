@@ -89,16 +89,16 @@ algorithm main(
     uint13  newPC = uninitialized;
 
     // dstack 257x16bit (as 3256 array + stackTop) and pointer, next pointer, write line, delta
-    bram uint16 dstack[256] = uninitialized; // bram (code from @sylefeb)
+    dualport_bram uint16 dstack[256] = uninitialized; // bram (code from @sylefeb)
     uint16  stackTop = 0;
     uint8   dsp = 0;
-    uint8   newDSP = uninitialized;
+    uint8   newDSP = 0;
     uint16  newStackTop = uninitialized;
 
     // rstack 256x16bit and pointer, next pointer, write line
-    bram uint16 rstack[256] = uninitialized; // bram (code from @sylefeb)
+    dualport_bram uint16 rstack[256] = uninitialized; // bram (code from @sylefeb)
     uint8   rsp = 0;
-    uint8   newRSP = uninitialized;
+    uint8   newRSP = 0;
     uint16  rstackWData = uninitialized;
 
     uint16  stackNext = uninitialized;
@@ -133,8 +133,18 @@ algorithm main(
     uint9 newuartOutBufferTop = 0;
     
     // bram for dstack and rstack write enable, maintained low, pulsed high (code from @sylefeb)
-    dstack.wenable         := 0;  
-    rstack.wenable         := 0;
+    // Setup addresses for the dstack and rstack
+    // Read via port 0, write via port 1
+    dstack.addr0 := dsp;
+    dstack.wenable0 := 0;  
+    dstack.addr1 := newDSP;
+    dstack.wdata1 := stackTop;
+    dstack.wenable1 := 0;  
+    rstack.addr0 := rsp;
+    rstack.wenable0 := 0;
+    rstack.addr1 := newRSP;
+    rstack.wdata1 := rstackWData;
+    rstack.wenable1 := 0;
 
     // dual port bram for dtsack and strack
     uartInBuffer.wenable0  := 0;  // always read  on port 0
@@ -229,8 +239,8 @@ algorithm main(
             // Read stackNext, rStackTop
             case 0: {
                // read dtsack and rstack brams (code from @sylefeb)
-                stackNext = dstack.rdata;
-                rStackTop = rstack.rdata;
+                stackNext = dstack.rdata0;
+                rStackTop = rstack.rdata0;
             
                 // start READ memoryInput = [stackTop] result ready in 2 cycles
                 sram_address = stackTop >> 1;
@@ -344,7 +354,7 @@ algorithm main(
                                                 } 
                                                 case 16hf001: {
                                                     // UART status register { 14b0, tx full, rx available }
-                                                    newStackTop = {14b0, uart_in_valid, ~(uartInBufferNext == uartInBufferTop)};
+                                                    newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), (uartInBufferNext != uartInBufferTop)};
                                                 }
                                                 case 16hf002: {
                                                     // RGB LED status
@@ -379,7 +389,7 @@ algorithm main(
                                         case 4b0111: {newStackTop = {16{(__unsigned(stackNext) > __unsigned(stackTop))}};}
                                         case 4b1000: {newStackTop = {16{(__signed(stackTop) < __signed(0))}};}
                                         case 4b1001: {newStackTop = {16{(__signed(stackTop) > __signed(0))}};}
-                                        case 4b1010: {newStackTop = ( __signed(stackTop) < __signed(0) ) ?  - stackTop : stackTop;}
+                                        case 4b1010: {newStackTop = ( __signed(stackTop) < __signed(0) ) ?  -stackTop : stackTop;}
                                         case 4b1011: {newStackTop = ( __signed(stackNext) > __signed(stackTop) ) ? stackNext : stackTop;}
                                         case 4b1100: {newStackTop = ( __signed(stackNext) < __signed(stackTop) ) ? stackNext : stackTop;}
                                         case 4b1101: {newStackTop = -stackTop;}
@@ -425,18 +435,9 @@ algorithm main(
             // update pc and perform mem[t] = n
             case 9: {
                 // Write to dstack and rstack
-                if( dstackWrite ) {
-                    // bram code for dstack (code from @sylefeb)
-                    dstack.wenable = 1;
-                    dstack.addr    = newDSP;
-                    dstack.wdata   = stackTop;
-                }
-                if( rstackWrite ) {
-                    // bram code for rstack (code from @sylefeb)
-                    rstack.wenable = 1;
-                    rstack.addr    = newRSP;
-                    rstack.wdata   = rstackWData;
-                }
+                 // Commit to dstack and rstack
+                dstack.wenable1 = dstackWrite;
+                rstack.wenable1 = rstackWrite;
             }
             
             // Update dsp, rsp, pc, stackTop
@@ -445,10 +446,6 @@ algorithm main(
                 pc = newPC;
                 stackTop = newStackTop;
                 rsp = newRSP;
-                
-                // Setup addresses for dstack and rstack brams (code from @sylefeb)
-                dstack.addr = newDSP;
-                rstack.addr = newRSP;
             }
             
             // reset sram_readwrite

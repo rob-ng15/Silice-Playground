@@ -9,12 +9,14 @@ algorithm character_map(
     output! uint1   character_map_display,
     
     // TPU to SET characters, background, foreground
-    input uint7 tpu_x,
-    input uint5 tpu_y,
-    input uint8 tpu_character,
-    input uint6 tpu_foreground,
-    input uint7 tpu_background,
-    input uint2 tpu_write
+    input   uint7   tpu_x,
+    input   uint5   tpu_y,
+    input   uint8   tpu_character,
+    input   uint6   tpu_foreground,
+    input   uint7   tpu_background,
+    input   uint3   tpu_write,
+    
+    output  uint3   tpu_active
 ) <autorun> {
     // Character ROM 8x16
     brom uint8 characterGenerator8x16[] = {
@@ -68,33 +70,6 @@ algorithm character_map(
     // Default to transparent
     character_map_display := pix_active && (( characterpixel ) || ( ~colour7(background.rdata0).alpha ));
     
-    always {
-        // TPU
-        // tpu_write controls actions
-        // 1 = set cursor position
-        // 2 = draw character in foreground,background at x,y and move to next position
-        switch( tpu_write ) {
-            case 1: {
-                // Set cursor position
-                tpu_active_x = tpu_x;
-                tpu_active_y = tpu_y;
-            }
-            case 2: {
-                // Write character,foreground, background to current cursor position and move onto next character position
-                character.wdata1 = tpu_character;
-                character.wenable1 = 1;
-                background.wdata1 = tpu_background;
-                background.wenable1 = 1;
-                foreground.wdata1 = tpu_foreground;
-                foreground.wenable1 = 1;
-                
-                tpu_active_y = ( tpu_active_x == 79 ) ? ( tpu_active_y == 29 ) ? 0 : tpu_active_y + 1 : tpu_active_y;
-                tpu_active_x = ( tpu_active_x == 79 ) ? 0 : tpu_active_x + 1;
-            }
-            default: {}
-        } // TPU        
-    }
-    
     // Render the character map
     while(1) {
         if( character_map_display ) {
@@ -115,5 +90,57 @@ algorithm character_map(
                 }
             }
         } 
+        
+        switch( tpu_active ) {
+            case 1: {
+                // Clear the character map - implements tpucs!
+                tpu_active_x = 0;
+                tpu_active_y = 0;
+                tpu_active = 2;
+            }
+            case 2: {
+                character.wdata1 = 0;
+                character.wenable1 = ( tpu_active_x <= 79 ) && ( tpu_active_y <= 30 );
+                background.wdata1 = 64;
+                background.wenable1 = ( tpu_active_x <= 79 ) && ( tpu_active_y <= 30 );
+                foreground.wdata1 = 0;
+                foreground.wenable1 = ( tpu_active_x <= 79 ) && ( tpu_active_y <= 30 );
+                tpu_active_y = ( tpu_active_x == 79 ) ? tpu_active_y + 1 : tpu_active_y;
+                tpu_active_x = ( tpu_active_x == 79 ) ? 0 : tpu_active_x + 1;
+                tpu_active = ( tpu_active_x == 79 ) && ( tpu_active_y == 29 ) ? 3 : 2;
+            }
+            case 3: {
+                tpu_active_x = 0;
+                tpu_active_y = 0;
+                tpu_active = 0;
+            }
+            
+            default: {
+                switch( tpu_write ) {
+                    case 1: {
+                        // Set cursor position
+                        tpu_active_x = tpu_x;
+                        tpu_active_y = tpu_y;
+                    }
+                    case 2: {
+                        // Write character,foreground, background to current cursor position and move onto next character position
+                        character.wdata1 = tpu_character;
+                        character.wenable1 = 1;
+                        background.wdata1 = tpu_background;
+                        background.wenable1 = 1;
+                        foreground.wdata1 = tpu_foreground;
+                        foreground.wenable1 = 1;
+                        
+                        tpu_active_y = ( tpu_active_x == 79 ) ? ( tpu_active_y == 29 ) ? 0 : tpu_active_y + 1 : tpu_active_y;
+                        tpu_active_x = ( tpu_active_x == 79 ) ? 0 : tpu_active_x + 1;
+                    }
+                    case 3: {
+                        // Start tpucs!
+                        tpu_active = 1;
+                    }
+                }
+            }
+        } // tpu_active
+        
     }
 }

@@ -14,6 +14,37 @@ Upload the compiled bitstream to your FOMU with `dfu-util -D build.dfu`, or the 
 
 These are for the __HACKER__ variant of the FOMU. Experimental support (not tested) is provided for the __PVT__ variant of the FOMU.
 
+The J1+ CPU adds up to 16 new alu operations, encoded using ALU bit 4 to determine if a J1 or a J1+ ALU operation. The J1+ ALU instruction encoding is:
+
+```
++---------------------------------------------------------------+
+| 0 | 1 | 1 |R2P| ALU OPERATION |T2N|T2R|N2A|J1+| RSTACK| DSTACK|
++---------------------------------------------------------------+
+| F | E | D | C | B | A | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
++---------------------------------------------------------------+
+```
+
+The J1+ new ALU operations are ```==0 <>0 <> +1 *2 /2 signed> unsigned> <0 >0 abs max min negate - signed>=```
+
+Binary ALU Operation Code | J1 CPU | J1+ CPU | J1 CPU Forth Word (notes) | J1+ CPU Forth Word | J1+ Implemented in j1eforth
+:----: | :----: | :----: | :----: | :----: | :----:
+0000 | T | T==0 | (top of stack) | 0= | X
+0001 | N | T<>0 | (next on stack) | 0<> | X
+0010 | T+N | N<>T | + | <> | X
+0011 | T&N | T+1 | and | 1+ | X
+0100 | T&#124;N | T<<1 | or | 2&#42; | X
+0101 | T^N | T>>1 | xor | 2/ | X
+0110 | ~T | N>T | invert | > <br> (signed) | X
+0111 | N==T | NU>T | = | > <br> (unsigned) | X
+1000 | N<T | T<0 | < <br> (signed) | 0< | X
+1001 | N>>T | T>0 | rshift | 0> | X
+1010 | T-1 | ABST | 1- | abs | X
+1011 |  rt | MXNT | (push top of return stack to data stack) | max | X
+1100 | [T] | MNNT | @ <br> (read from memory) | min | X
+1101 | N<<T | -T | lshift | negate | X
+1110 | dsp | N-T | (depth of stacks) | - | X
+1111 | NU<T | N>=T | < <br> (unsigned) | >= <br> (signed) | X
+
 ## Resources on the FOMU
 
 Resource usage has been considerably reduced from my initial attempt at Silice coding, with considerable assistance from @sylefeb who has assisted in using blockrams for the dstack and rstack, and dual ported blockrams for the uart input and output FIFO buffers:

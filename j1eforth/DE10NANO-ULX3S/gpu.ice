@@ -229,7 +229,7 @@ algorithm gpu(
                 // Rectangle of colour at x,y top left to param0, param1 bottom right
                 bitmap_x_write = gpu_active_x;
                 bitmap_y_write = gpu_active_y;
-                bitmap_write = 1;
+                bitmap_write = ( gpu_active_x <= gpu_x1 ) && ( gpu_active_y <= gpu_y1 );
                 // Move to next pixel
                 gpu_active = ( ( gpu_active_x == gpu_x1) && ( gpu_active_y == gpu_y1 ) ) ? 0 : 1;
                 gpu_active_x = ( gpu_active_x == gpu_x1 ) ? gpu_x2 : gpu_active_x + 1;

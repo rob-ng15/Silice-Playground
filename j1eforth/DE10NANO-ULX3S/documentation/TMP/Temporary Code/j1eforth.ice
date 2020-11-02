@@ -183,7 +183,10 @@ $$end
         // CLOCKS
         video_clock <:video_clock,
         video_reset <: video_reset,
-        CPU_CYCLE <: CYCLE,
+        
+        // Memory Address/Data
+        memoryAddress <: stackTop,
+        writeData <: stackNext
     );
     
     // Setup addresses for the ram
@@ -212,8 +215,11 @@ $$end
     rstack.wdata1 := rstackWData;
     rstack.wenable1 := 0;
 
+    // IO Map Read / Write Flags
     IO_Map.memoryWrite := 0;
-    
+    IO_Map.memoryRead := 0;
+    IO_Map.resetCoPro := 0;
+
     // EXECUTE J1 CPU
     while( 1 ) {
         switch( CYCLE ) {
@@ -226,9 +232,6 @@ $$end
                 // read instruction and pre-emptively the memory
                 instruction = ram_0.rdata1;
                 memoryInput = ( stackTop > 16383 ) ? ram_1.rdata0 : ram_0.rdata0;
-                
-                // Set Write Data for Memory Mapped IO
-                IO_Map.writeData = dstack.rdata0;
             }
             
             // J1 CPU Instruction Execute
@@ -313,7 +316,7 @@ $$end
                                         case 4b1001: {newStackTop = stackNext >> nibbles(stackTop).nibble0;}
                                         case 4b1010: {newStackTop = stackTop - 1;}
                                         case 4b1011: {newStackTop = rStackTop;}
-                                        case 4b1100: {newStackTop = ( stackTop < 32768 ) ? memoryInput : IO_Map.readData;}
+                                        case 4b1100: {IO_Map.memoryRead = 1; newStackTop = ( stackTop < 32768 ) ? memoryInput : IO_Map.readData;}
                                         case 4b1101: {newStackTop = stackNext << nibbles(stackTop).nibble0;}
                                         case 4b1110: {newStackTop = {rsp, dsp};}
                                         case 4b1111: {newStackTop = {16{(__unsigned(stackNext) < __unsigned(stackTop))}};}
@@ -321,23 +324,24 @@ $$end
                                 }
                                 
                                 case 1b1: {
+                                    // Extra J1+ CPU Operations
                                     switch( aluop(instruction).operation ) {
-                                        case 4b0000: {newStackTop = {16{(stackTop == 0)}};}
+                                         case 4b0000: {newStackTop = {16{(stackTop == 0)}};}
                                         case 4b0001: {newStackTop = {16{(stackTop != 0)}};}
                                         case 4b0010: {newStackTop = {16{(stackNext != stackTop)}};}
                                         case 4b0011: {newStackTop = stackTop + 1;}
-                                        case 4b0100: {newStackTop = stackTop << 1;}
-                                        case 4b0101: {newStackTop = stackTop >> 1;}
-                                        case 4b0110: {newStackTop = {16{(__signed(stackNext) > __signed(stackTop))}};}
-                                        case 4b0111: {newStackTop = {16{(__unsigned(stackNext) > __unsigned(stackTop))}};}
-                                        case 4b1000: {newStackTop = {16{(__signed(stackTop) < __signed(0))}};}
-                                        case 4b1001: {newStackTop = {16{(__signed(stackTop) > __signed(0))}};}
-                                        case 4b1010: {newStackTop = ( __signed(stackTop) < __signed(0) ) ?  -stackTop : stackTop;}
-                                        case 4b1011: {newStackTop = ( __signed(stackNext) > __signed(stackTop) ) ? stackNext : stackTop;}
-                                        case 4b1100: {newStackTop = ( __signed(stackNext) < __signed(stackTop) ) ? stackNext : stackTop;}
-                                        case 4b1101: {newStackTop = -stackTop;}
-                                        case 4b1110: {newStackTop = stackNext - stackTop;}
-                                        case 4b1111: {newStackTop = {16{(__signed(stackNext) >= __signed(stackTop))}};}
+                                        case 4b0100: {newStackTop = stackNext * stackTop;}
+                                        case 4b0101: {newStackTop = stackTop << 1;}
+                                        case 4b0110: {newStackTop = -stackTop;}
+                                        case 4b0111: {newStackTop = stackTop >> 1;}
+                                        case 4b1000: {newStackTop = stackNext - stackTop;}
+                                        case 4b1001: {newStackTop = {16{(__signed(stackTop) < __signed(0))}};}
+                                        case 4b1010: {newStackTop = {16{(__signed(stackTop) > __signed(0))}};}
+                                        case 4b1011: {newStackTop = {16{(__signed(stackNext) > __signed(stackTop))}};}
+                                        case 4b1100: {newStackTop = {16{(__signed(stackNext) >= __signed(stackTop))}};}
+                                        case 4b1101: {newStackTop = ( __signed(stackTop) < __signed(0) ) ?  -stackTop : stackTop;}
+                                        case 4b1110: {newStackTop = ( __signed(stackNext) > __signed(stackTop) ) ? stackNext : stackTop;}
+                                        case 4b1111: {newStackTop = ( __signed(stackNext) < __signed(stackTop) ) ? stackNext : stackTop;}
                                     }
                                 }
                             } // ALU Operation
@@ -375,8 +379,7 @@ $$end
             }
             
             case 3: {
-                // Set address for Memory Mapped IO
-                IO_Map.memoryAddress = stackTop;
+                IO_Map.resetCoPro = 1;
             }
         } // switch(CYCLE)
         

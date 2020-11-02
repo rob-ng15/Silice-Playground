@@ -250,7 +250,7 @@ variable tuser
 : <> ]asm n<>t d-1 alu asm[ ;
 : 1+ ]asm t+1 alu asm[ ;
 : 2* ]asm t<<1 alu asm[ ;
-( : 2/ ]asm t>>1 alu asm[ ; ) ( uncommenting causes error )
+: half ]asm t>>1 alu asm[ ;
 : > ]asm n>t d-1 alu asm[ ;
 : u> ]asm nu>t d-1 alu asm[ ;
 : 0< ]asm t<0 alu asm[ ;
@@ -259,7 +259,7 @@ variable tuser
 : max ]asm mxnt d-1 alu asm[ ;
 : min ]asm mnnt d-1 alu asm[ ;
 : negate ]asm negt alu asm[ ;
-( : - ]asm n-t d-1 alu asm[ ; ) ( uncommenting causes error )
+: subtract ]asm n-t d-1 alu asm[ ;
 : >= ]asm n>=t d-1 alu asm[ ;
 
 : dup@ ]asm [t] t->n d+1 alu asm[ ;
@@ -381,7 +381,7 @@ t: 0> 0> t;
 t: >= >= t;
 t: tuck swap over t;
 t: -rot swap >r swap r> t;
-t: 2/ 1 literal rshift t;
+t: 2/ half t;
 t: 2* 2* t;
 t: 1+ 1+ t;
 t: sp@ dsp ff literal and t;
@@ -439,7 +439,7 @@ t: 2dup ( w1 w2 -- w1 w2 w1 w2 ) over over t;
 t: negate ( n -- -n ) negate t;
 t: dnegate ( d -- -d )
    invert >r invert 1 literal um+ r> + t;
-t: - ( n1 n2 -- n1-n2 ) negate + t;
+t: - ( n1 n2 -- n1-n2 ) subtract t;
 t: abs ( n -- n ) abs t;
 t: max ( n n -- n ) max t;
 t: min ( n n -- n ) min t;
@@ -541,7 +541,7 @@ t: key ( -- c )
      ?key
 	until f000 literal @ t;
 t: nuf? ( -- t ) ?key dup if drop key =cr literal = then exit t;
-t: timer@ ( -- t ) f004 literal @ t;
+t: clock@ ( -- t ) f004 literal @ t;
 t: led@ ( -- t ) f002 literal @ t;
 t: led! ( c -- ) f002 literal ! t;
 t: buttons@ ( -- t ) f003 literal @ t;

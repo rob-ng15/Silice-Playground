@@ -158,6 +158,10 @@ algorithm tilemap(
                 tm_scroll = 0;
                 tm_lastaction = ( tm_offset_y == (-15) ) ? tm_scrollwrap : 0;
             }
+            case 9: {
+                // CLEAR
+                tm_active = 29;
+            }
         }
     }
     
@@ -468,6 +472,27 @@ algorithm tilemap(
                 }
             }
 
+            case 29: {
+                // tmcs!
+                x_cursor = 0;
+                y_cursor = 0;
+                tm_active = 30;
+            }
+            case 30: {
+                tile.addr1 = ( x_cursor  ) + ( y_cursor * 42 ) - 42;
+                tile.wdata1 = 0;
+                tile.wenable1 = 1;
+                foreground.addr1 = ( x_cursor  ) + ( y_cursor * 42 ) - 42;
+                foreground.wdata1 = 0;
+                foreground.wenable1 = 1;
+                background.addr1 = ( x_cursor  ) + ( y_cursor * 42 ) - 42;
+                background.wdata1 = 64;
+                background.wenable1 = 1;
+                x_cursor = ( x_cursor == 41 ) ? 0 : x_cursor + 1;
+                y_cursor = ( x_cursor == 41 ) ? y_cursor + 1 : y_cursor;
+                tm_active = ( x_cursor == 41 ) && ( y_cursor == 31 ) ? 0 : 30;
+            }
+            
             default: { tm_active = 0; }
         }
         

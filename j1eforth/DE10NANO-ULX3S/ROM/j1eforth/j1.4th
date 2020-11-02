@@ -50,6 +50,7 @@ variable tdp
 : tallot tdp +! ;
 : org tdp ! ;
 
+( Original J1 CPU ALU ops )
 a: t    0000 ;
 a: n    0100 ;
 a: t+n  0200 ;
@@ -67,22 +68,23 @@ a: n<<t 0d00 ;
 a: dsp  0e00 ;
 a: nu<t 0f00 ;
 
+( Extended J1+ CPU ALU ops )
 a: t==0 0010 ;
 a: t<>0 0110 ;
 a: n<>t 0210 ;
 a: t+1  0310 ;
-a: t<<1 0410 ;
-a: t>>1 0510 ;
-a: n>t  0610 ;
-a: nu>t 0710 ;
-a: t<0  0810 ;
-a: t>0  0910 ;
-a: abst 0a10 ;
-a: mxnt 0b10 ;
-a: mnnt 0c10 ;
-a: negt 0d10 ;
-a: n-t  0e10 ;
-a: n>=t 0f10 ;
+a: n*t  0410 ;
+a: t*2  0510 ;
+a: negt 0610 ;
+a: thlf 0710 ;
+a: nsbt 0810 ;
+a: t<0  0910 ;
+a: t>0  0a10 ;
+a: n>t  0b10 ;
+a: n>=t 0c10 ;
+a: abst 0d10 ;
+a: mxnt 0e10 ;
+a: mnnt 0f10 ;
 
 a: t->n 0080 or ;
 a: t->r 0040 or ;
@@ -111,8 +113,8 @@ a: literal
 variable tlast
 variable tuser
 
-0001 constant =ver
-0008 constant =ext
+0002 constant =ver
+0001 constant =ext
 0040 constant =comp
 0080 constant =imed
 7f1f constant =mask
@@ -244,23 +246,23 @@ variable tuser
     ]asm t r-1 alu
     t r-1 alu asm[ ;
 
-( new J1+ ALU operations )
+( Extended J1+ ALU ops )
 : 0= ]asm t==0 alu asm[ ;
 : 0<> ]asm t<>0 alu asm[ ;
 : <> ]asm n<>t d-1 alu asm[ ;
 : 1+ ]asm t+1 alu asm[ ;
-: 2* ]asm t<<1 alu asm[ ;
-( : 2/ ]asm t>>1 alu asm[ ; ) ( uncommenting causes error )
-: > ]asm n>t d-1 alu asm[ ;
-: u> ]asm nu>t d-1 alu asm[ ;
+: * ]asm n*t d-1 alu asm[ ;
+: 2* ]asm t*2 alu asm[ ;
+: negate ]asm negt alu asm[ ;
+: half ]asm thlf alu asm[ ;
+: subtract ]asm nsbt d-1 alu asm[ ;
 : 0< ]asm t<0 alu asm[ ;
 : 0> ]asm t>0 alu asm[ ;
+: > ]asm n>t d-1 alu asm[ ;
+: >= ]asm n>=t d-1 alu asm[ ;
 : abs ]asm abst alu asm[ ;
 : max ]asm mxnt d-1 alu asm[ ;
 : min ]asm mnnt d-1 alu asm[ ;
-: negate ]asm negt alu asm[ ;
-( : - ]asm n-t d-1 alu asm[ ; ) ( uncommenting causes error )
-: >= ]asm n>=t d-1 alu asm[ ;
 
 : dup@ ]asm [t] t->n d+1 alu asm[ ;
 : dup>r ]asm t t->r r+1 alu asm[ ;
@@ -358,7 +360,7 @@ t: = = t;
 t: < < t;
 t: u< u< t;
 t: swap swap t;
-t: u> u> t;
+t: u> swap u< t;
 t: dup dup t;
 t: drop drop t;
 t: over over t;
@@ -381,7 +383,7 @@ t: 0> 0> t;
 t: >= >= t;
 t: tuck swap over t;
 t: -rot swap >r swap r> t;
-t: 2/ 1 literal rshift t;
+t: 2/ half t;
 t: 2* 2* t;
 t: 1+ 1+ t;
 t: sp@ dsp ff literal and t;
@@ -439,7 +441,7 @@ t: 2dup ( w1 w2 -- w1 w2 w1 w2 ) over over t;
 t: negate ( n -- -n ) negate t;
 t: dnegate ( d -- -d )
    invert >r invert 1 literal um+ r> + t;
-t: - ( n1 n2 -- n1-n2 ) negate + t;
+t: - ( n1 n2 -- n1-n2 ) subtract t;
 t: abs ( n -- n ) abs t;
 t: max ( n n -- n ) max t;
 t: min ( n n -- n ) min t;
@@ -470,7 +472,7 @@ t: um* ( u u -- ud )
     for dup um+ >r >r dup um+ r> + r> if
     >r over um+ r> + then
     next rot drop t;
-t: * ( n n -- n ) um* drop t;
+t: * ( n n -- n ) * t;
 t: m* ( n n -- d )
    2dup xor 0< >r abs swap abs um* r> if
     dnegate then exit t;
@@ -561,14 +563,9 @@ t: .r ( n +n -- ) >r str r> over - spaces type t;
 t: u.r ( u +n -- ) >r <# #s #> r> over - spaces type t;
 t: u. ( u -- ) <# #s #> space type t;
 t: . ( w -- ) base @ a literal xor if u. exit then str space type t;
-t: .# base @ swap decimal . base ! t;
-t: u.# base @ swap decimal <# #s #> space type base ! t;
-t: u.r# base @ rot rot decimal >r <# #s #> r> over - spaces type base ! t;
-t: .r# base @ rot rot decimal >r str r> over - spaces type base ! t;
 t: cmove ( b1 b2 u -- ) for aft >r dup c@ r@ c! 1+ r> 1+ then next 2drop t;
 t: pack$ ( b u a -- a ) dup >r 2dup ! 1+ swap cmove r> t;
 t: ? ( a -- ) @ . t;
-
 t: (parse) ( b u c -- b u delta ; <string> )
   temp ! over >r dup if
     1- temp @ bl = if
@@ -796,7 +793,6 @@ t: user ( u -- ; <string> ) token $,n overt compile douser , t;
 t: <create> ( -- ; <string> ) token $,n overt [t] dovar ]asm literal asm[ call, t;
 t: create ( -- ; <string> ) 'create @execute t;
 t: variable ( -- ; <string> ) create 0 literal , t;
-t: 2variable ( -- ; <string> ) create 0 literal , 1 literal cells allot t;
 t: (does>) ( -- )
    r> 1 literal rshift here 1 literal rshift
    last @ name> dup cell+ ]asm 8000 literal asm[ or , ! , t; compile-only
@@ -923,7 +919,7 @@ t: words
    repeat t;
 t: ver ( -- n ) =ver literal 100 literal * =ext literal + t;
 t: hi ( -- )
-   cr ."| $literal eforth j1+ v"
+   cr ."| $literal eforth j1 v"
 	base @ hex
 	ver <# # # 2e literal hold # #>
 	type base ! cr t;
@@ -934,6 +930,7 @@ t: cold ( -- )
    'boot @execute
    quit
    cold t;
+
 
 ( double maths )
 t: 2over >r >r 2dup r> r> rot >r rot r> t;
@@ -973,7 +970,7 @@ t: clock@ f004 literal @ t;
 t: timer1hz! 1 literal ffed literal ! t;
 t: timer1hz@ ffed literal @ t;
 t: timer1khz! ffee literal ! t;
-t: timer1hz@ ffee literal @ t;
+t: timer1khz@ ffee literal @ t;
 t: timer1khz? begin ffee literal @ 0= until t;
 t: sleep ffef literal ! begin ffef literal @ 0= until t;
 t: rng ffe0 literal @ swap /mod drop t;
@@ -1007,20 +1004,15 @@ t: vector? begin ff74 literal @ 0= until t;
 t: vector! vector? ff70 literal ! ff73 literal ! ff72 literal ! ff71 literal ! 1 literal ff74 literal ! t;
 
 t: dlentry! ff83 literal ! ff8c literal ! ff8b literal ! ff8a literal ! ff89 literal ! ff88 literal ! ff87 literal ! ff86 literal ! ff85 literal ! ff84 literal ! 1 literal ff8d literal ! t;
-t: dlstart! ff81 literal ! ff80 literal ! 1 literal ff82 literal ! t;
 t: dl? begin ff82 literal @ 0= until t;
+t: dlstart! dl? ff81 literal ! ff80 literal ! 1 literal ff82 literal ! t;
 
-t: tpu! ff15 literal ! t;
+t: tpu! begin ff15 literal @ 0= until ff15 literal ! t;
 t: tpuxy! ( x y ) ff11 literal ! ff10 literal ! 1 literal tpu! t;
 t: tpuforeground! ( foreground ) ff14 literal ! t;
 t: tpubackground! ( background ) ff13 literal ! t;
 t: tpuemit ( character ) ff12 literal ! 2 literal tpu! t;
-t: tpucs!
-    0 literal 0 literal tpuxy!
-    0 literal tpuforeground!
-    40 literal tpubackground!
-    960 literal for aft 0 literal tpuemit then next 
-    0 literal 0 literal tpuxy! t;
+t: tpucs! 3 literal tpu! t;
 t: tpuspace bl tpuemit t;
 t: tpuspaces 0 literal max for aft tpuspace then next t;
 t: tputype for aft count tpuemit then next drop t;
@@ -1037,12 +1029,11 @@ t: tpu.r# base @ rot rot decimal >r str r> over - tpuspaces tputype base ! t;
 t: tmtile! ff96 literal ! 10 literal begin 1- dup ff97 literal ! swap ff98 literal ! dup 0= until drop t;
 t: tm! ff94 literal ! ff93 literal ! ff92 literal ! ff91 literal ! ff90 literal ! 1 literal ff95 literal ! t;
 t: tmmove! begin ff9a literal @ 0= until ff99 literal ! t;
+t: tmcs! begin ff9a literal @ 0= until 9 literal ff99 literal ! t;
 
 t: terminalshow! 1 literal ff21 literal ! t;
 t: terminalhide! 0 literal ff21 literal ! t;
-
-( Other useful words https://github.com/howerj/forth-cpu )
-
+   
 target.1 -order set-current
 
 there 			[u] dp t!

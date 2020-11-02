@@ -11,6 +11,7 @@
 * J1+ CPU
     * 50MHz operation
     * 4 (improved from 5) clock cycles per J1+ CPU operation against 13 clock cycles per operation on the FOMU, giving an effective CPU running at 12.5MHz (improved from 10MHz)
+    * Changed extra OPCODES
 
 Cycle | Action | Notes
 ----- | ----- | -----
@@ -24,6 +25,39 @@ For communication with j1eforth there is a UART which provides input and output,
 __DE10NANO__ Open a terminal in the DE10NANO directory and type ```make de10nano```. Wait. Upload your design your DE10NANO with ```quartus_pgm -m jtag -o "p;BUILD_de10nano/build.sof@2"```. Or download from this repository.
 
 __ULX3S__ Open a terminal in the ULX3S directory and type ```make ulx3s```. Wait. Upload your design your ULX3S with ```fujproj BUILD_ulx3s/build.bit```. Or download from this repository.
+
+## J1+ Extra ALU OPCODES
+
+The J1+ CPU adds up to 16 new alu operations, encoded using ALU bit 4 to determine if a J1 or a J1+ ALU operation. The J1+ ALU instruction encoding is:
+
+```
++---------------------------------------------------------------+
+| 0 | 1 | 1 |R2P| ALU OPERATION |T2N|T2R|N2A|J1+| RSTACK| DSTACK|
++---------------------------------------------------------------+
+| F | E | D | C | B | A | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
++---------------------------------------------------------------+
+```
+
+The J1+ new ALU operations are ```0= 0<>- <> 1+ * 2* negate 2/ - 0< 0> > >= abs max min``` _NOTE: These are different from the FOMU version of j1eforth._
+
+Binary ALU Operation Code | J1 CPU | J1+ CPU | J1 CPU Forth Word (notes) | J1+ CPU Forth Word | J1+ Implemented in j1eforth
+:----: | :----: | :----: | :----: | :----: | :----:
+0000 | T | T==0 | (top of stack) | 0= | X
+0001 | N | T<>0 | (next on stack) | 0<> | X
+0010 | T+N | N<>T | + | <> | X
+0011 | T&N | T+1 | and | 1+ | X
+0100 | T&#124;N | N&#042;T | or | &#042;<br>16 bit x 16 bit multiply, returning 16 bit result<br>Accelerated by DSP | X
+0101 | T^N | T&#042;2 | xor | 2&#042; | X
+0110 | ~T | NEGT | invert | negate | X
+0111 | N==T | thlf | = | 2/ | X
+1000 | N<T | nsbt | <<br>(signed) | - | X
+1001 | N>>T | t<0 | rshift | 0< | X
+1010 | T-1 | t>0  | 1- | 0> | X
+1011 |  rt | n>t | (push top of return stack to data stack) | > | X
+1100 | [T] | n>=t | @ <br> (read from memory) | >= | X
+1101 | N<<T | abst | lshift | abs | X
+1110 | dsp | mxnt | (depth of stacks) | max | X
+1111 | NU<T | mnnt | <<br> (unsigned) | min | X
 
 ### Resource Usage (DE10NANO)
 
@@ -78,7 +112,8 @@ Info:                DLLDELD:     0/    8     0%
 Info:                 DDRDLL:     0/    4     0%
 Info:                DQSBUFM:     0/   14     0%
 Info:        TRELLIS_ECLKBUF:     0/    8     0%
-Info:           ECLKBRIDGECS:     0/    2     0%```
+Info:           ECLKBRIDGECS:     0/    2     0%
+```
 
 ## VGA/HDMI Multiplexed Display
 

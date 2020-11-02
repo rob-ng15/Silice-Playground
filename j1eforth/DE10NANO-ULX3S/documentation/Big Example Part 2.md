@@ -3,13 +3,16 @@
   timer1hz@ lasttimer @ <> if
     5 tmmove! 
     timer1hz@ lasttimer !
-    lasttimer @ 3 and 1 = if
-      1 0 1 1f4 beepL! 
-      then
-    lasttimer @ 3 and 3 = if
-      1 0 2 1f4 beepR! 
-      6 tmmove!
-      then
+    lasttimer @ 3 and
+    case
+      1 of
+        1 0 1 1f4 beepL! 
+      endof
+      3 of
+        1 0 2 1f4 beepR! 
+        6 tmmove!
+      endof
+    endcase
   then ;
 
 : lfindblank
@@ -30,8 +33,8 @@
     
 : lspawnmedium
   hitasteroid @ ff30 !
-  ff34 @ 10 rng - workx !
-  ff35 @ 10 rng - worky !
+  ff34 @ 20 rng 10 - + workx !
+  ff35 @ 20 rng 10 - + worky !
   lfindblank spawnasteroid @ ff <> if
     lsetmedium then
   lfindblank spawnasteroid @ ff <> if
@@ -61,8 +64,8 @@
     
 : hspawnmedium
   hitasteroid @ ff40 !
-  ff44 @ 10 rng + workx !
-  ff45 @ 10 rng + worky !
+  ff44 @ 20 rng 10 - + workx !
+  ff45 @ 20 rng 10 - + worky !
   hfindblank spawnasteroid @ ff <> if
     hsetmedium then
   lfindblank spawnasteroid @ ff <> if
@@ -89,7 +92,7 @@
   loop
   hitasteroid @ ff <> if
     killlhit
-    activelasteroids @ 1- activelasteroids !
+    -1 activelasteroids +!
     hitasteroid @ lasteroidtype c@ 2 = if
         ( medium  kill )
         0 hitasteroid @ lasteroidtype c!
@@ -108,15 +111,16 @@
     i hitasteroid ! then
   loop
   hitasteroid @ ff <> if
-    activehasteroids @ 1- activehasteroids !
-    hitasteroid @ hasteroidtype c@ 2 = if
-        ( medium kill )
+    -1 activehasteroids +!
+    hitasteroid @ hasteroidtype c@
+    case
+      2 of ( medium kill )
         0 hitasteroid @ lasteroidtype c!
-        then
-    hitasteroid @ hasteroidtype c@ 1 = if
+      endof
+      1 of ( large spawn 2 medium )
         hspawnmedium
-        ( large spawn 2 medium )
-    then 
+      endof
+    endcase
   then ;
     
 : fire?
@@ -136,14 +140,14 @@
     0 0 0 0 0 0 e lslsprite!
     0 0 0 0 0 0 e uslsprite!
     score @ 1+ score !
-  then
+    begin ff5e @ 0= until then
   ff6e @ 1fff and 0<> if
     2 4 19 1f4 beep!
     uhit
     0 0 0 0 0 0 e lslsprite!
     0 0 0 0 0 0 e uslsprite!
     score @ 1+ score !
-  then 
+    begin ff6e @ 0= until then 
   activehasteroids @ activelasteroids @ +
   0= if
     placeasteroids then ;
@@ -175,18 +179,25 @@
   loop ;
 
 : moveship
-  shipdirection @ 0= if
-    shipy @ 0> if
-      shipy @ 1- shipy ! then then
-  shipdirection @ 1 = if
-    shipx @ 270 < if
-      shipx @ 1+ shipx ! then then
-  shipdirection @ 2 = if
-    shipy @ 1d0 < if
-      shipy @ 1+ shipy ! then then
-  shipdirection @ 3 = if
-    shipx @ 0> if
-      shipx @ 1- shipx ! then then ;
+  shipdirection @
+  case
+    0 of
+      shipy @ 0> if
+        shipy @ 1- shipy ! then
+    endof
+    1 of
+      shipx @ 270 < if
+        shipx @ 1+ shipx ! then
+    endof
+    2 of
+      shipy @ 1d0 < if
+        shipy @ 1+ shipy ! then
+    endof
+    3 of
+      shipx @ 0> if
+        shipx @ 1- shipx ! then
+    endof
+  endcase ;
 
 : shipleft
   shipdirection @ 0= if
@@ -205,10 +216,13 @@
   score @ 4 tpu.r# ;
     
 : mainloop
-    counter @ 0= if
-      4 counter !
-      else counter @ 1- counter !
-      then
+    counter @
+    case
+      0 of
+        4 counter !
+      endof
+      -1 counter +!
+    endcase
     14 timer1khz!
     beepboop
     bulletdirection @ updatedirections c@ 180 + 
@@ -216,9 +230,8 @@
     bulletdirection @ updatedirections c@ 180 + 
       e uslupdate!
     vblank?
-    hit?
     moveasteroids drawship drawscore
-    crash? timer1khz? ;
+    crash? timer1khz? hit? ;
 
 : demoULX3S
   setup

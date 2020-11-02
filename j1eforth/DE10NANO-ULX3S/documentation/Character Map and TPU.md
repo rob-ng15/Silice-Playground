@@ -16,7 +16,7 @@ ff11 | Set the TPU y coordinate |
 ff12 | Set the TPU character code |
 ff13 | Set the TPU background colour |
 ff14 | Set the TPU foreground colour |
-ff15 | Start TPU<br>1 - Move to x,y<br>2 - Write character code in foreground colour, background colour to x,y and move to the next position<br>__Note__ No scrolling, wraps back to the top |
+ff15 | Start TPU<br>1 - Move to x,y<br>2 - Write character code in foreground colour, background colour to x,y and move to the next position<br>3 - Clear the character map | TPU busy
 
 ### j1eforth Character Map Layer and TPU words
 

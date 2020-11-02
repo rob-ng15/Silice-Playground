@@ -54,16 +54,6 @@ c400 1c00 7c00 f800 f800 f000 e000 8000
 0000 0000 0000 0000 0000 0000 0000 0000
 8 tmtile!
 
-24 2 5 40 2a tm!
-24 3 6 40 2a tm!
-25 2 7 40 2a tm!
-25 3 8 40 2a tm!
-
-6 1a 5 40 10 tm!
-6 1b 6 40 10 tm!
-7 1a 7 40 10 tm!
-7 1b 8 40 10 tm!
-
 variable hitasteroid
 variable shipdirection
 variable shipx
@@ -161,6 +151,8 @@ variable worky
   c 0 do
     0 i lasteroidactive c!
     0 i hasteroidactive c!
+    0 0 0 0 0 0 i lslsprite!
+    0 0 0 0 0 0 i uslsprite!
   loop
   0 activelasteroids ! 0 activehasteroids !
   4 rng 1+ 0 do
@@ -198,7 +190,7 @@ variable worky
 
 : setup
   ( clear the screen )
-  cs! tpucs! 0 0 tpuxy!
+  cs! tpucs! tmcs! 0 0 tpuxy!
   3f tpuforeground! 40 tpubackground!
   ( hide the terminal )
   terminalhide!
@@ -211,6 +203,28 @@ variable worky
     0 0 0 0 0 0 i lslsprite!
     0 0 0 0 0 0 i uslsprite!
   loop
+  
+    4 4 1 40 15 tm!
+    4 5 2 40 15 tm!
+    5 4 3 40 15 tm!
+    5 5 4 40 15 tm!
+    12 e 1 40 14 tm!
+    12 f 2 40 14 tm!
+    13 e 3 40 14 tm!
+    13 f 4 40 14 tm!
+    22 1c 1 40 5 tm!
+    22 1d 2 40 5 tm!
+    23 1c 3 40 5 tm!
+    23 1d 4 40 5 tm!
+    24 2 5 40 2a tm!
+    24 3 6 40 2a tm!
+    25 2 7 40 2a tm!
+    25 3 8 40 2a tm!
+    6 1a 5 40 10 tm!
+    6 1b 6 40 10 tm!
+    7 1a 7 40 10 tm!
+    7 1b 8 40 10 tm!
+
   0 score !
   3 lives !
   4 counter !

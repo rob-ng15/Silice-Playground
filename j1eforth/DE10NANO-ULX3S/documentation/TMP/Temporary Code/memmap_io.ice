@@ -19,8 +19,8 @@ algorithm memmap_io (
     input   uint$NUM_BTNS$ btns,
         
 $$if ULX3S then
-    output  uint4   gpdi_dp,
-    output  uint4   gpdi_dn,
+    output! uint4   gpdi_dp,
+    output! uint4   gpdi_dn,
 $$end
 
     // UART
@@ -41,13 +41,14 @@ $$end
     // CLOCKS
     input   uint1   video_clock,
     input   uint1   video_reset,
-    input   uint2   CPU_CYCLE,
     
     // Memory access
     input   uint16  memoryAddress,
     input   uint16  writeData,
     input   uint1   memoryWrite,
-    output  uint16  readData
+    input   uint1   memoryRead,
+    output! uint16  readData,
+    input   uint1   resetCoPro
 )  {
     // 1hz timers (p1hz used for systemClock and systemClockMHz, timer1hz for user purposes)
     uint16 systemClock = uninitialized;
@@ -657,151 +658,153 @@ $$end
         } // WRITE IO Memory
         
         // READ IO Memory
-        switch( memoryAddress[12,4] ) {
-            case 4hf: {
-                switch( memoryAddress[8,4] ) {
-                    case 4h0: {
-                        switch( memoryAddress[0,4] ) {
-                            // f000
-                            case 4h0: { readData = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1; } 
-                            case 4h1: { readData = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ( uartInBufferNext != uartInBufferTop )}; }
-                            case 4h2: { readData = leds; }
-                            case 4h3: { readData = {$16-NUM_BTNS$b0, reg_btns[0,$NUM_BTNS$]}; }
-                            case 4h4: { readData = systemClock; }
+        if( memoryRead ) {    
+            switch( memoryAddress[12,4] ) {
+                case 4hf: {
+                    switch( memoryAddress[8,4] ) {
+                        case 4h0: {
+                            switch( memoryAddress[0,4] ) {
+                                // f000
+                                case 4h0: { readData = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1; } 
+                                case 4h1: { readData = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ( uartInBufferNext != uartInBufferTop )}; }
+                                case 4h2: { readData = leds; }
+                                case 4h3: { readData = {$16-NUM_BTNS$b0, reg_btns[0,$NUM_BTNS$]}; }
+                                case 4h4: { readData = systemClock; }
+                            }
                         }
-                    }
-                    case 4hf: {
-                        switch( memoryAddress[4,4] ) {
-                            case 4h0: {
-                                switch( memoryAddress[0,4] ) {
-                                    // ff00 -
-                                    case 4h7: { readData = gpu_processor.gpu_active; }
-                                    case 4h8: { readData = bitmap_window.bitmap_colour_read; }
+                        case 4hf: {
+                            switch( memoryAddress[4,4] ) {
+                                case 4h0: {
+                                    switch( memoryAddress[0,4] ) {
+                                        // ff00 -
+                                        case 4h7: { readData = gpu_processor.gpu_active; }
+                                        case 4h8: { readData = bitmap_window.bitmap_colour_read; }
+                                    }
                                 }
-                            }
-                            case 4h2: {
-                                switch( memoryAddress[0,4] ) {
-                                    // ff20 -
-                                    case 4h0: { readData = terminal_window.terminal_active; }
+                                case 4h2: {
+                                    switch( memoryAddress[0,4] ) {
+                                        // ff20 -
+                                        case 4h0: { readData = terminal_window.terminal_active; }
+                                    }
                                 }
-                            }
-                            case 4h3: {
-                                switch( memoryAddress[0,4] ) {
-                                    // ff30 -
-                                    case 4h1: { readData = lower_sprites.sprite_read_active; }
-                                    case 4h2: { readData = lower_sprites.sprite_read_tile; }
-                                    case 4h3: { readData = lower_sprites.sprite_read_colour; }
-                                    case 4h4: { readData = lower_sprites.sprite_read_x; }
-                                    case 4h5: { readData = lower_sprites.sprite_read_y; }
-                                    case 4h6: { readData = lower_sprites.sprite_read_double; }
-                                    case 4h7: { readData = lower_sprites.sprite_read_colmode; }
+                                case 4h3: {
+                                    switch( memoryAddress[0,4] ) {
+                                        // ff30 -
+                                        case 4h1: { readData = lower_sprites.sprite_read_active; }
+                                        case 4h2: { readData = lower_sprites.sprite_read_tile; }
+                                        case 4h3: { readData = lower_sprites.sprite_read_colour; }
+                                        case 4h4: { readData = lower_sprites.sprite_read_x; }
+                                        case 4h5: { readData = lower_sprites.sprite_read_y; }
+                                        case 4h6: { readData = lower_sprites.sprite_read_double; }
+                                        case 4h7: { readData = lower_sprites.sprite_read_colmode; }
+                                    }
                                 }
-                            }
-                            case 4h4: {
-                                switch( memoryAddress[0,4] ) {
-                                    // ff40 -
-                                    case 4h1: { readData = upper_sprites.sprite_read_active; }
-                                    case 4h2: { readData = upper_sprites.sprite_read_tile; }
-                                    case 4h3: { readData = upper_sprites.sprite_read_colour; }
-                                    case 4h4: { readData = upper_sprites.sprite_read_x; }
-                                    case 4h5: { readData = upper_sprites.sprite_read_y; }
-                                    case 4h6: { readData = upper_sprites.sprite_read_double; }
-                                    case 4h7: { readData = upper_sprites.sprite_read_colmode; }
+                                case 4h4: {
+                                    switch( memoryAddress[0,4] ) {
+                                        // ff40 -
+                                        case 4h1: { readData = upper_sprites.sprite_read_active; }
+                                        case 4h2: { readData = upper_sprites.sprite_read_tile; }
+                                        case 4h3: { readData = upper_sprites.sprite_read_colour; }
+                                        case 4h4: { readData = upper_sprites.sprite_read_x; }
+                                        case 4h5: { readData = upper_sprites.sprite_read_y; }
+                                        case 4h6: { readData = upper_sprites.sprite_read_double; }
+                                        case 4h7: { readData = upper_sprites.sprite_read_colmode; }
+                                    }
                                 }
-                            }
-                            case 4h5: {
-                                switch( memoryAddress[0,4] ) {
-                                    // ff50 -
-                                    case 4h0: { readData = lower_sprites.collision_0; }
-                                    case 4h1: { readData = lower_sprites.collision_1; }
-                                    case 4h2: { readData = lower_sprites.collision_2; }
-                                    case 4h3: { readData = lower_sprites.collision_3; }
-                                    case 4h4: { readData = lower_sprites.collision_4; }
-                                    case 4h5: { readData = lower_sprites.collision_5; }
-                                    case 4h6: { readData = lower_sprites.collision_6; }
-                                    case 4h7: { readData = lower_sprites.collision_7; }
-                                    case 4h8: { readData = lower_sprites.collision_8; }
-                                    case 4h9: { readData = lower_sprites.collision_9; }
-                                    case 4ha: { readData = lower_sprites.collision_10; }
-                                    case 4hb: { readData = lower_sprites.collision_11; }
-                                    case 4hc: { readData = lower_sprites.collision_12; }
-                                    case 4hd: { readData = lower_sprites.collision_13; }
-                                    case 4he: { readData = lower_sprites.collision_14; }
+                                case 4h5: {
+                                    switch( memoryAddress[0,4] ) {
+                                        // ff50 -
+                                        case 4h0: { readData = lower_sprites.collision_0; }
+                                        case 4h1: { readData = lower_sprites.collision_1; }
+                                        case 4h2: { readData = lower_sprites.collision_2; }
+                                        case 4h3: { readData = lower_sprites.collision_3; }
+                                        case 4h4: { readData = lower_sprites.collision_4; }
+                                        case 4h5: { readData = lower_sprites.collision_5; }
+                                        case 4h6: { readData = lower_sprites.collision_6; }
+                                        case 4h7: { readData = lower_sprites.collision_7; }
+                                        case 4h8: { readData = lower_sprites.collision_8; }
+                                        case 4h9: { readData = lower_sprites.collision_9; }
+                                        case 4ha: { readData = lower_sprites.collision_10; }
+                                        case 4hb: { readData = lower_sprites.collision_11; }
+                                        case 4hc: { readData = lower_sprites.collision_12; }
+                                        case 4hd: { readData = lower_sprites.collision_13; }
+                                        case 4he: { readData = lower_sprites.collision_14; }
+                                    }
                                 }
-                            }
-                            case 4h6: {
-                                switch( memoryAddress[0,4] ) {
-                                    // ff60 -
-                                    case 4h0: { readData = upper_sprites.collision_0; }
-                                    case 4h1: { readData = upper_sprites.collision_1; }
-                                    case 4h2: { readData = upper_sprites.collision_2; }
-                                    case 4h3: { readData = upper_sprites.collision_3; }
-                                    case 4h4: { readData = upper_sprites.collision_4; }
-                                    case 4h5: { readData = upper_sprites.collision_5; }
-                                    case 4h6: { readData = upper_sprites.collision_6; }
-                                    case 4h7: { readData = upper_sprites.collision_7; }
-                                    case 4h8: { readData = upper_sprites.collision_8; }
-                                    case 4h9: { readData = upper_sprites.collision_9; }
-                                    case 4ha: { readData = upper_sprites.collision_10; }
-                                    case 4hb: { readData = upper_sprites.collision_11; }
-                                    case 4hc: { readData = upper_sprites.collision_12; }
-                                    case 4hd: { readData = upper_sprites.collision_13; }
-                                    case 4he: { readData = upper_sprites.collision_14; }
+                                case 4h6: {
+                                    switch( memoryAddress[0,4] ) {
+                                        // ff60 -
+                                        case 4h0: { readData = upper_sprites.collision_0; }
+                                        case 4h1: { readData = upper_sprites.collision_1; }
+                                        case 4h2: { readData = upper_sprites.collision_2; }
+                                        case 4h3: { readData = upper_sprites.collision_3; }
+                                        case 4h4: { readData = upper_sprites.collision_4; }
+                                        case 4h5: { readData = upper_sprites.collision_5; }
+                                        case 4h6: { readData = upper_sprites.collision_6; }
+                                        case 4h7: { readData = upper_sprites.collision_7; }
+                                        case 4h8: { readData = upper_sprites.collision_8; }
+                                        case 4h9: { readData = upper_sprites.collision_9; }
+                                        case 4ha: { readData = upper_sprites.collision_10; }
+                                        case 4hb: { readData = upper_sprites.collision_11; }
+                                        case 4hc: { readData = upper_sprites.collision_12; }
+                                        case 4hd: { readData = upper_sprites.collision_13; }
+                                        case 4he: { readData = upper_sprites.collision_14; }
+                                    }
                                 }
-                            }
-                            case 4h7: {
-                                switch( memoryAddress[0,4] ) {
-                                    // ff70 -
-                                    case 4h4: { readData = vector_drawer.vector_block_active; }
+                                case 4h7: {
+                                    switch( memoryAddress[0,4] ) {
+                                        // ff70 -
+                                        case 4h4: { readData = vector_drawer.vector_block_active; }
+                                    }
                                 }
-                            }
-                            case 4h8: {
-                                switch( memoryAddress[0,4] ) {
-                                    // ff80 -
-                                    case 4h2: { readData = displaylist_drawer.display_list_active; }
-                                    case 4h4: { readData = displaylist_drawer.read_active; }
-                                    case 4h5: { readData = displaylist_drawer.read_command; }
-                                    case 4h6: { readData = displaylist_drawer.read_colour; }
-                                    case 4h7: { readData = displaylist_drawer.read_x; }
-                                    case 4h8: { readData = displaylist_drawer.read_y; }
-                                    case 4h9: { readData = displaylist_drawer.read_p0; }
-                                    case 4ha: { readData = displaylist_drawer.read_p1; }
-                                    case 4hb: { readData = displaylist_drawer.read_p2; }
-                                    case 4hc: { readData = displaylist_drawer.read_p3; }
+                                case 4h8: {
+                                    switch( memoryAddress[0,4] ) {
+                                        // ff80 -
+                                        case 4h2: { readData = displaylist_drawer.display_list_active; }
+                                        case 4h4: { readData = displaylist_drawer.read_active; }
+                                        case 4h5: { readData = displaylist_drawer.read_command; }
+                                        case 4h6: { readData = displaylist_drawer.read_colour; }
+                                        case 4h7: { readData = displaylist_drawer.read_x; }
+                                        case 4h8: { readData = displaylist_drawer.read_y; }
+                                        case 4h9: { readData = displaylist_drawer.read_p0; }
+                                        case 4ha: { readData = displaylist_drawer.read_p1; }
+                                        case 4hb: { readData = displaylist_drawer.read_p2; }
+                                        case 4hc: { readData = displaylist_drawer.read_p3; }
+                                    }
                                 }
-                            }
-                            case 4h9: {
-                                switch( memoryAddress[0,4] ) {
-                                    // ff90 -
-                                    case 4h9: { readData = tile_map.tm_lastaction; }
-                                    case 4ha: { readData = tile_map.tm_active; }
+                                case 4h9: {
+                                    switch( memoryAddress[0,4] ) {
+                                        // ff90 -
+                                        case 4h9: { readData = tile_map.tm_lastaction; }
+                                        case 4ha: { readData = tile_map.tm_active; }
+                                    }
                                 }
-                            }
-                            case 4he: {
-                                switch( memoryAddress[0,4] ) {
-                                    // ffe0 -
-                                    case 4h0: { readData = staticGenerator; }
-                                    case 4h3: { readData = apu_processor_L.audio_active; }
-                                    case 4h7: { readData = apu_processor_R.audio_active; }
-                                    case 4hd: { readData = timer1hz.counter1hz; }
-                                    case 4he: { readData = timer1khz.counter1khz; }
-                                    case 4hf: { readData = sleepTimer.counter1khz; }
+                                case 4he: {
+                                    switch( memoryAddress[0,4] ) {
+                                        // ffe0 -
+                                        case 4h0: { readData = staticGenerator; }
+                                        case 4h3: { readData = apu_processor_L.audio_active; }
+                                        case 4h7: { readData = apu_processor_R.audio_active; }
+                                        case 4hd: { readData = timer1hz.counter1hz; }
+                                        case 4he: { readData = timer1khz.counter1khz; }
+                                        case 4hf: { readData = sleepTimer.counter1khz; }
+                                    }
                                 }
-                            }
-                            case 4hf: {
-                                switch( memoryAddress[0,4] ) {
-                                    // fff0 -
-                                    case 4hf: { readData = vblank; }
+                                case 4hf: {
+                                    switch( memoryAddress[0,4] ) {
+                                        // fff0 -
+                                        case 4hf: { readData = vblank; }
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
-        } // READ IO Memory
+            } // READ IO Memory
+        } // memoryRead
                                             
         // RESET Co-Processor Controls
-        if( CPU_CYCLE == 3 ) {
+        if( resetCoPro ) {
             background_generator.background_write = 0;
             tile_map.tile_writer_write = 0; 
             tile_map.tm_write = 0;

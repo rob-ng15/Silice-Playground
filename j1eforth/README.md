@@ -65,39 +65,6 @@ the stack delta (the amount to increment or decrement the stack
 by for their respective stacks: return and data)
 ```
 
-The J1+ CPU adds up to 16 new alu operations, encoded using ALU bit 4 to determine if a J1 or a J1+ ALU operation. The J1+ ALU instruction encoding is:
-
-```
-+---------------------------------------------------------------+
-| 0 | 1 | 1 |R2P| ALU OPERATION |T2N|T2R|N2A|J1+| RSTACK| DSTACK|
-+---------------------------------------------------------------+
-| F | E | D | C | B | A | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
-+---------------------------------------------------------------+
-```
-
-The J1+ new ALU operations are ```==0 <>0 <> +1 *2 /2 signed> unsigned> <0 >0 abs max min negate - signed>=```
-
-Binary ALU Operation Code | J1 CPU | J1+ CPU | J1 CPU Forth Word (notes) | J1+ CPU Forth Word | J1+ Implemented in j1eforth
-:----: | :----: | :----: | :----: | :----: | :----:
-0000 | T | T==0 | (top of stack) | 0= | X
-0001 | N | T<>0 | (next on stack) | 0<> | X
-0010 | T+N | N<>T | + | <> | X
-0011 | T&N | T+1 | and | 1+ | X
-0100 | T&#124;N | T<<1 | or | 2&#42; | X
-0101 | T^N | T>>1 | xor | 2/ | (in CPU not j1eforth)
-0110 | ~T | N>T | invert | > <br> (signed) | X
-0111 | N==T | NU>T | = | > <br> (unsigned) | X
-1000 | N<T | T<0 | < <br> (signed) | 0< | X
-1001 | N>>T | T>0 | rshift | 0> | X
-1010 | T-1 | ABST | 1- | abs | X
-1011 |  rt | MXNT | (push top of return stack to data stack) | max | X
-1100 | [T] | MNNT | @ <br> (read from memory) | min | X
-1101 | N<<T | -T | lshift | negate | X
-1110 | dsp | N-T | (depth of stacks) | - | (in CPU not j1eforth)
-1111 | NU<T | N>=T | < <br> (unsigned) | >= <br> (signed) | X
-
-*I am presently unable to add the 2/ or - to the j1eforth ROM, as the compiled ROM is no longer functional. Some assistance to add these instructions would be appreciated.*
-
 ### Memory Map - Common Peripherals
 
 Memory mapping is used for peripheral access. These memory addresses are common across the FOMU, DE10NANO and ULX3S.
@@ -109,7 +76,7 @@ f000 | INPUT/OUTPUT (best to leave to j1eforth to operate via IN/OUT buffers).<b
 f001 | INPUT/OUTPUT status register (bit 1 = OUTPUT buffer full, bit 0 = INPUT character available, best to leave to j1eforth to operate via IN/OUT buffers).
 f002 | LED input/output bitfield `led led!` sets the LED, `led@` places the LED status onto the stack.<br>FOMU RGB led { r,g,b }<br>DE10NANO and ULX3S { led7, led6, led5, led4, led3, led2, led1, led0 }.
 f003 | BUTTONS input bitfield `buttons@` places the buttons status onto the stack.<br>FOMU { button3, button2, button1, button0 }<br>DE10NANO { switch3, switch2, switch1, switch0, button1, button0 }.<br>ULX3S { button6, button5, button4, button3, button2, button1, button0 }.
-f004 | TIMER 1hz (1 second) counter since boot, `timer@` places the timer onto the stack
+f004 | TIMER 1hz (1 second) counter since boot, `clock@` places the clock onto the stack
 
 ### Forth Words to try
 
