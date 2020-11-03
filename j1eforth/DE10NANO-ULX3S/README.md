@@ -195,7 +195,14 @@ The sample code provided in [Big Example Part 1.md](documentation/Big%20Example%
 ### Display Lists
 
 * Get working on ULX3S
-* Add in param2 and param3 to allow for triangles to be dispatched to the GPU
+
+### Mathematics Co-Processors
+
+* 32 by 16 bit division -> 16 bit quotient and remainder ( unsigned um/mod )
+* 32 by 16 bit division -> 16 bit quotient and remainder ( signed m/mod )
+* 16 * 16 bit multiplication -> 32 bit product ( unsigned um* )
+* 16 * 16 bit multiplication -> 32 bit product ( signed m* )
+* 16 * 16 bit multiplication -> 16 bit product ( implemented via DSP block )
 
 ## Notes
 

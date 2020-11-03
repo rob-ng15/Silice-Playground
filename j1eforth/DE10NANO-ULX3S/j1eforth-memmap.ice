@@ -157,7 +157,7 @@ $$end
 
     // Setup Memory Mapped I/O
     memmap_io IO_Map (
-        //leds :> leds,
+        leds :> leds,
         btns <: btns,
             
 $$if ULX3S then

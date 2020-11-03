@@ -471,6 +471,9 @@ $$end
         vector_block_active <: vector_block_active,
         gpu_active <: gpu_active
     );
+
+    // Mathematics Cop Processors
+    unsigneddiv ummod();
     
     // J1+ CPU
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
@@ -820,6 +823,13 @@ $$end
                                                                         case 4ha: { newStackTop = tile_map.tm_active; }
                                                                     }
                                                                 }
+                                                                case 4hd: {
+                                                                    switch( stackTop[0,4] ) {
+                                                                        case 4h0: { newStackTop = ummod.quotient[0,16]; }
+                                                                        case 4h1: { newStackTop = ummod.remainder[0,16]; }
+                                                                        case 4h3: { newStackTop = ummod.active ; }
+                                                                    }
+                                                                }
                                                                 case 4he: {
                                                                     switch( stackTop[0,4] ) {
                                                                         // ffe0 -
@@ -912,7 +922,7 @@ $$end
                                                             case 4hd: { gpu_processor.blit1_writer_bitmap = stackNext;  gpu_processor.blit1_writer_active = 1; }
                                                         }
                                                     }
-                                                   case 4h1: {
+                                                    case 4h1: {
                                                         switch( stackTop[0,4] ) {
                                                             // ff10 -
                                                             case 4h0: { character_map_window.tpu_x = stackNext; }
@@ -923,14 +933,14 @@ $$end
                                                             case 4h5: { character_map_window.tpu_write = stackNext; }
                                                         }
                                                     }
-                                                   case 4h2: {
+                                                    case 4h2: {
                                                         switch( stackTop[0,4] ) {
                                                             // ff20 -
                                                             case 4h0: { terminal_window.terminal_character = stackNext; terminal_window.terminal_write = 1; }
                                                             case 4h1: { terminal_window.showterminal = stackNext; }
                                                         }
                                                     }
-                                                   case 4h3: {
+                                                    case 4h3: {
                                                         switch( stackTop[0,4] ) {
                                                             // ff30 -
                                                             case 4h0: { lower_sprites.sprite_set_number = stackNext; }
@@ -947,7 +957,7 @@ $$end
                                                             case 4he: { lower_sprites.sprite_update = stackNext; lower_sprites.sprite_layer_write = 10; }
                                                         }
                                                     }
-                                                   case 4h4: {
+                                                    case 4h4: {
                                                         switch( stackTop[0,4] ) {
                                                             // ff40 -
                                                             case 4h0: { upper_sprites.sprite_set_number = stackNext; }
@@ -964,7 +974,7 @@ $$end
                                                             case 4he: { upper_sprites.sprite_update = stackNext; upper_sprites.sprite_layer_write = 10; }
                                                         }
                                                     }
-                                                   case 4h5: {
+                                                    case 4h5: {
                                                         switch( stackTop[0,4] ) {
                                                             // ff50 -
                                                             case 4h1: { lower_sprites.sprite_palette_1 = stackNext; }
@@ -984,7 +994,7 @@ $$end
                                                             case 4hf: { lower_sprites.sprite_palette_15 = stackNext; }
                                                         }
                                                     }
-                                                   case 4h6: {
+                                                    case 4h6: {
                                                         switch( stackTop[0,4] ) {
                                                             // ff60 -
                                                             case 4h1: { upper_sprites.sprite_palette_1 = stackNext; }
@@ -1004,7 +1014,7 @@ $$end
                                                             case 4hf: { upper_sprites.sprite_palette_15 = stackNext; }
                                                         }
                                                     }
-                                                   case 4h7: {
+                                                    case 4h7: {
                                                         switch( stackTop[0,4] ) {
                                                             // ff70 -
                                                             case 4h0: { vector_drawer.vector_block_number = stackNext; }
@@ -1020,7 +1030,7 @@ $$end
                                                             case 4ha: { vector_drawer.vertices_writer_write = 1; }
                                                         }
                                                     }
-                                                   case 4h8: {
+                                                    case 4h8: {
                                                         switch( stackTop[0,4] ) {
                                                             // ff80 -
                                                             case 4h0: { displaylist_drawer.start_entry = stackNext; }
@@ -1039,7 +1049,7 @@ $$end
                                                             case 4hd: { displaylist_drawer.writer_write = stackNext; }
                                                         }
                                                     }
-                                                   case 4h9: {
+                                                    case 4h9: {
                                                         switch( stackTop[0,4] ) {
                                                             // ff90 -
                                                             case 4h0: { tile_map.tm_x = stackNext; }
@@ -1054,7 +1064,15 @@ $$end
                                                             case 4h9: { tile_map.tm_scrollwrap = stackNext; }
                                                         }
                                                     }
-                                                   case 4he: {
+                                                    case 4hd: {
+                                                        switch( stackTop[0,4] ) {
+                                                            case 4h0: {ummod.dividend[16,16] = stackNext;}
+                                                            case 4h1: {ummod.dividend[0,16] = stackNext;}
+                                                            case 4h2: {ummod.divisor = stackNext;}
+                                                            case 4h3: {ummod.start = 1;}
+                                                        }
+                                                    }
+                                                    case 4he: {
                                                         switch( stackTop[0,4] ) {
                                                             // ffe0 -
                                                             case 4h0: { apu_processor_L.waveform = stackNext; }
@@ -1071,7 +1089,7 @@ $$end
                                                             case 4hf: { sleepTimer.resetCount = stackNext; sleepTimer.resetCounter = 1; }
                                                         }
                                                     }
-                                                   case 4hf: {
+                                                    case 4hf: {
                                                         switch( stackTop[0,4] ) {
                                                             // fff0 -
                                                             case 4h0: { background_generator.backgroundcolour = stackNext; background_generator.background_write = 1; }
@@ -1106,6 +1124,9 @@ $$end
                 pc = newPC;
                 stackTop = newStackTop;
                 rsp = newRSP;
+                
+                // RESET Mathematics Co-Processor Controls
+                ummod.start = 0;
             }
             
             case 3: {

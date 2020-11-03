@@ -458,7 +458,7 @@ $$end
                         case 4h0: {
                             switch( memoryAddress[0,4] ) {
                                 // f000 -
-                                case 4h0: { uartOutBuffer.wdata1 = bytes(writeData).byte0; newuartOutBufferTop = uartOutBufferTop + 1; }
+                                case 4h0: { uartOutBuffer.wdata1 = writeData[0,8]; newuartOutBufferTop = uartOutBufferTop + 1; }
                                 case 4h2: { leds = writeData; }
                             }
                         }
@@ -681,9 +681,9 @@ $$end
                                     }
                                 }
                                 case 4h1: {
-                                    switch( stackTop[0,4] ) {
+                                    switch( memoryAddress[0,4] ) {
                                         // ff10 -
-                                        case 4h5: { newStackTop = character_map_window.tpu_active; }
+                                        case 4h5: { readData = character_map_window.tpu_active; }
                                     }
                                 }
                                 case 4h2: {
