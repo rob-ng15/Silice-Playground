@@ -476,6 +476,8 @@ algorithm tilemap(
                 // tmcs!
                 x_cursor = 0;
                 y_cursor = 0;
+                tm_offset_x = 0;
+                tm_offset_y = 0;
                 tm_active = 30;
             }
             case 30: {
