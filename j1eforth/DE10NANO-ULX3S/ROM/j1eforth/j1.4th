@@ -284,7 +284,7 @@ a: up e for up1 next noop exit ;
 =pick org
 
     ]asm down up asm[
-	
+
 there constant =pickbody
 
 	copy ]asm return asm[
@@ -434,48 +434,30 @@ u: 'overt
 u: ';
 u: 'create
 
+t: d! swap over ! 1+ ! t;
+t: d@ dup 1+ @ swap @ t;
 t: ?dup ( w -- w w | 0 ) dup if dup then exit t;
 t: rot ( w1 w2 w3 -- w2 w3 w1 ) >r swap r> swap t;
 t: 2drop ( w w -- ) drop drop t;
 t: 2dup ( w1 w2 -- w1 w2 w1 w2 ) over over t;
 t: negate ( n -- -n ) negate t;
-t: dnegate ( d -- -d )
-   invert >r invert 1 literal um+ r> + t;
+t: dnegate ( d -- -d ) ffa0 literal d! ffac literal d@ t;
 t: - ( n1 n2 -- n1-n2 ) subtract t;
 t: abs ( n -- n ) abs t;
 t: max ( n n -- n ) max t;
 t: min ( n n -- n ) min t;
 t: within ( u ul uh -- t ) over - >r - r> u< t;
-t: um/mod ( udl udh u -- ur uq )
-   2dup u< if
-    negate f literal
-     for >r dup um+ >r >r dup um+ r> + dup
-     r> r@ swap >r um+ r> or if
-      >r drop 1+ r>
-     else
-      drop
-     then r>
-     next drop swap exit
-   then drop 2drop -1 literal dup t;
-t: m/mod ( d n -- r q )
-   dup 0< dup >r if
-    negate >r dnegate r>
-   then >r dup 0< if
-    r@ +
-   then r> um/mod r> if
-    swap negate swap then exit t;
-t: /mod ( n n -- r q ) over 0< swap m/mod t;
-t: mod ( n n -- r ) /mod drop t;
-t: / ( n n -- q ) /mod nip t;
-t: um* ( u u -- ud )
-   0 literal swap f literal
-    for dup um+ >r >r dup um+ r> + r> if
-    >r over um+ r> + then
-    next rot drop t;
+t: ddm! ffd2 literal ! ffd0 literal d! 1 literal ffd3 literal ! t;
+t: um/mod ( udl udh u -- ur uq ) ddm! begin ffd3 literal @ 0= until ffd1 literal @ ffd0 literal @ t;
+t: m/mod ( d n -- r q ) ddm! begin ffd6 literal @ 0= until ffd5 literal @ ffd4 literal @ t;
+t: dm! ffd8 literal ! ffd7 literal ! 1 literal ffd9 literal ! t;
+t: mod ( n n -- r ) dm! begin ffd9 literal @ 0= until ffd8 literal @ t;
+t: / ( n n -- q ) dm! begin ffd9 literal @ 0= until ffd7 literal @ t;
+t: /mod ( n n -- r q ) ddm! begin ffd9 literal @ 0= until ffd8 literal @ ffd7 literal @ t;
+t: x! ffda literal ! ffdb literal ! 1 literal ffdc literal ! t;
+t: um* ( u u -- ud ) x! begin ffdc literal @ 0= until ffda literal d@ t;
+t: m* ( n n -- d ) x! begin ffdf literal @ 0= until ffdd literal d@ t;
 t: * ( n n -- n ) * t;
-t: m* ( n n -- d )
-   2dup xor 0< >r abs swap abs um* r> if
-    dnegate then exit t;
 t: */mod ( n1 n2 n3 -- r q ) >r m* r> m/mod t;
 t: */ ( n1 n2 n3 -- q ) */mod nip t;
 t: cell+ ( a -- a ) =cell literal + t;
@@ -536,7 +518,7 @@ t: tx! ( c -- )
    begin
     f001 literal @ 2 literal and 0=
    until dup
-   f000 literal ! 
+   f000 literal !
    begin
      ff20 literal @ 0=
    until
@@ -741,7 +723,7 @@ t: endcase
    begin
     dup 31 literal =
    while
-    drop			
+    drop
     [t] then ]asm call asm[
    repeat
    30 literal <> <?abort"> $literal bad case construct."
@@ -801,8 +783,8 @@ t: does> ( -- ) compile (does>) noop t; immediate
 t: char ( <char> -- char ) ( -- c ) bl word 1+ c@ t;
 t: [char] char [t] literal ]asm call asm[ t; immediate
 t: constant create , (does>) @ t;
-t: defer create 0 literal , 
-   (does>) 
+t: defer create 0 literal ,
+   (does>)
     @ ?dup 0 literal =
    <?abort"> $literal uninitialized" execute t;
 t: is ' >body ! t; immediate
@@ -937,19 +919,22 @@ t: 2over >r >r 2dup r> r> rot >r rot r> t;
 t: 2swap rot >r rot r> t;
 t: 2nip rot drop rot drop t;
 t: 2rot 2>r 2swap 2r> 2swap t;
-t: d0= or 0= t;
-t: d= >r rot xor swap r> xor or 0= t;
-t: d+ rot + >r over + dup rot u< if r> 1+ else r> then t;
-t: d- dnegate d+ t;
+t: d0= ffa0 literal d! ffbc literal @ t;
+t: d= ffa0 literal d! ffbe literal @ t;
+t: d+ ffa0 literal d! ffa2 literal d! ffa0 literal d@ t;
+t: d- ffa2 literal d! ffa0 literal d! ffa2 literal d@ t;
 t: s>d dup 0< t;
-t: d1+ 1 literal s>d d+ t;
-t: d1- 1 literal s>d dnegate d+ t;
-t: dxor rot xor -rot xor swap t;
-t: dand rot and -rot and swap t;
-t: dor rot or -rot or swap t;
-t: dinvert invert swap invert swap t;
-t: d2* 2dup d+ t;
-t: d2/ dup f literal lshift >r 2/ swap 2/ r> or swap t;
+t: d1+ ffa0 literal d! ffa4 literal d@ t;
+t: d1- ffa0 literal d! ffa6 literal d@ t;
+t: dxor ffa2 literal d! ffa0 literal d! ffb0 literal d@ t;
+t: dand ffa2 literal d! ffa0 literal d! ffb2 literal d@ t;
+t: dor ffa2 literal d! ffa0 literal d! ffb4 literal d@  t;
+t: dinvert ffa0 literal d! ffae literal d@ t;
+t: d2* ffa0 literal d! ffa8 literal d@ t;
+t: d2/ ffa0 literal d! ffaa literal d@ t;
+t: dabs ffa0 literal d! ffb6 literal d@ t;
+t: dmax ffa2 literal d! ffa0 literal d! ffb8 literal d@ t;
+t: dmin ffa2 literal d! ffa0 literal d! ffba literal d@ t;
 
 ( Buttons and LEDs )
 t: led@ f002 literal @ t;
@@ -957,7 +942,7 @@ t: led! f002 literal ! t;
 t: buttons@ f003 literal @ t;
 
 ( Audio )
-t: beep! dup ffe2 literal ! ffe6 literal ! dup ffe1 literal ! ffe5 literal ! dup ffe0 literal ! ffe4 literal ! 
+t: beep! dup ffe2 literal ! ffe6 literal ! dup ffe1 literal ! ffe5 literal ! dup ffe0 literal ! ffe4 literal !
   dup ffe3 literal ! ffe7 literal ! t;
 t: beep? begin ffe3 literal @ 0= until begin ffe7 literal @ 0= until t;
 t: beepL! ffe2 literal ! ffe1 literal ! ffe0 literal ! ffe3 literal ! t;
@@ -1033,7 +1018,7 @@ t: tmcs! begin ff9a literal @ 0= until 9 literal ff99 literal ! t;
 
 t: terminalshow! 1 literal ff21 literal ! t;
 t: terminalhide! 0 literal ff21 literal ! t;
-   
+
 target.1 -order set-current
 
 there 			[u] dp t!

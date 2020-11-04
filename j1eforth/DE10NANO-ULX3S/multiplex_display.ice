@@ -17,7 +17,7 @@ algorithm multiplex_display(
     input uint2 tilemap_g,
     input uint2 tilemap_b,
     input uint1 tilemap_display,
-    
+
     // LOWER SPRITES
     input uint2 lower_sprites_r,
     input uint2 lower_sprites_g,
@@ -41,7 +41,7 @@ algorithm multiplex_display(
     input uint2 character_map_g,
     input uint2 character_map_b,
     input uint1 character_map_display,
-    
+
     // TERMINAL
     input uint2 terminal_r,
     input uint2 terminal_g,
@@ -52,9 +52,9 @@ algorithm multiplex_display(
     pix_red   := 0;
     pix_green := 0;
     pix_blue  := 0;
-        
+
     // Draw the screen
-    while (1) {        
+    while (1) {
         // wait until pix_active THEN BACKGROUND -> TILEMAP -> LOWER SPRITES -> BITMAP -> UPPER SPRITES -> CHARACTER MAP -> TERMINAL
         if( pix_active ) {
             // Select the 2 bit r g or b and expand to 6 bit r g or b

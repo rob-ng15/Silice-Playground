@@ -7,7 +7,7 @@ algorithm tilemap(
     output! uint2   pix_green,
     output! uint2   pix_blue,
     output! uint1   tilemap_display,
-    
+
     // Set TM at x, y, character with foreground and background
     input uint6 tm_x,
     input uint6 tm_y,
@@ -19,9 +19,9 @@ algorithm tilemap(
     // For setting tile bitmaps
     input   uint6   tile_writer_tile,
     input   uint4   tile_writer_line,
-    input   uint16  tile_writer_bitmap,  
+    input   uint16  tile_writer_bitmap,
     input   uint1   tile_writer_write,
-    
+
     // For scrolling/wrapping
     input   uint5   tm_scrollwrap,
     output  uint5   tm_lastaction,
@@ -29,7 +29,7 @@ algorithm tilemap(
 ) <autorun> {
     // Tile Map 64 x 16 x 16
     dualport_bram uint16 tiles16x16[ 1024 ] = { 0, pad(0) };
-    
+
     // 42 x 32 tile map, allows for pixel scrolling with border
     // Setting background to 40 (ALPHA) allows the bitmap/background to show through
     dualport_bram uint6 tile[1344] = uninitialized;
@@ -51,17 +51,17 @@ algorithm tilemap(
     uint6   scroll_tile = uninitialized;
     uint7   scroll_background = uninitialized;
     uint6   scroll_foreground = uninitialized;
-    
+
     // Character position on the screen x 0-41, y 0-31 * 42 ( fetch it two pixels ahead of the actual x pixel, so it is always ready )
     // Adjust for the offsets, effective 0 point margin is ( 1,1 ) to ( 40,30 ) with a 1 tile border
     uint11   xtmpos := ( pix_active ? (pix_x < 640 ) ? pix_x + ( 11d18 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) : ( 11d16 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) : ( 11d16 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) ) >> 4;
-    uint11  ytmpos := (( pix_vblank ? 0 : pix_y + ( 11d16 + {{6{tm_offset_y[4,1]}}, tm_offset_y} ) ) >> 4) * 42; 
-    
+    uint11  ytmpos := (( pix_vblank ? 0 : pix_y + ( 11d16 + {{6{tm_offset_y[4,1]}}, tm_offset_y} ) ) >> 4) * 42;
+
     // Derive the x and y coordinate within the current 16x16 tilemap block x 0-7, y 0-15
     // Needs adjusting for the offsets
     uint4   xintm := { 1b0, (pix_x) & 15 } + tm_offset_x;
     uint4   yintm := { 1b0, (pix_y) & 15 } + tm_offset_y;
-    
+
     // Derive the actual pixel in the current character
     uint1   tmpixel := tiles16x16.rdata0[15 - xintm,1];
 
@@ -79,7 +79,7 @@ algorithm tilemap(
 
     // Setup the reading and writing of the tiles16x16
     tiles16x16.addr0 :=  tile.rdata0 * 16 + yintm;
-    tiles16x16.addr1 := tile_writer_tile * 16 + tile_writer_line; 
+    tiles16x16.addr1 := tile_writer_tile * 16 + tile_writer_line;
     tiles16x16.wdata1 := tile_writer_bitmap;
     tiles16x16.wenable1 := tile_writer_write;
 
@@ -164,7 +164,7 @@ algorithm tilemap(
             }
         }
     }
-    
+
     // Render the tilemap
     while(1) {
         switch( tm_active ) {
@@ -243,7 +243,7 @@ algorithm tilemap(
                     tm_active = 4;
                 }
             }
-            
+
             case 8: {
                 // Setup for scroll/wrap RIGHT
                 x_cursor = 41;
@@ -494,10 +494,10 @@ algorithm tilemap(
                 y_cursor = ( x_cursor == 41 ) ? y_cursor + 1 : y_cursor;
                 tm_active = ( x_cursor == 41 ) && ( y_cursor == 31 ) ? 0 : 30;
             }
-            
+
             default: { tm_active = 0; }
         }
-        
+
         if( tilemap_display ) {
             // Determine if background or foreground
             switch( tmpixel ) {
@@ -514,6 +514,6 @@ algorithm tilemap(
                     pix_blue = colour6(foreground.rdata0).blue;
                 }
             }
-        } 
+        }
     }
 }

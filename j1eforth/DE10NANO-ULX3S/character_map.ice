@@ -7,7 +7,7 @@ algorithm character_map(
     output! uint2   pix_green,
     output! uint2   pix_blue,
     output! uint1   character_map_display,
-    
+
     // TPU to SET characters, background, foreground
     input   uint7   tpu_x,
     input   uint5   tpu_y,
@@ -15,14 +15,14 @@ algorithm character_map(
     input   uint6   tpu_foreground,
     input   uint7   tpu_background,
     input   uint3   tpu_write,
-    
+
     output  uint3   tpu_active
 ) <autorun> {
     // Character ROM 8x16
     brom uint8 characterGenerator8x16[] = {
         $include('ROM/characterROM8x16.inc')
     };
-    
+
     // 80 x 30 character buffer
     // Setting background to 40 (ALPHA) allows the bitmap/background to show through
     dualport_bram uint8 character[2400] = uninitialized;
@@ -35,7 +35,7 @@ algorithm character_map(
     // Character position on the screen x 0-79, y 0-29 * 80 ( fetch it two pixels ahead of the actual x pixel, so it is always ready )
     uint8 xcharacterpos := ( pix_active ? (pix_x < 640 ) ? pix_x + 2 : 0 : 0 ) >> 3;
     uint12 ycharacterpos := (( pix_vblank ? 0 : pix_y ) >> 4) * 80;
-    
+
     // Derive the x and y coordinate within the current 8x16 character block x 0-7, y 0-15
     uint3 xincharacter := (pix_x) & 7;
     uint4 yincharacter := (pix_y) & 15;
@@ -56,7 +56,7 @@ algorithm character_map(
     background.addr0 := xcharacterpos + ycharacterpos;
     background.wenable0 := 0;
 
-    // BRAM write access for the TPU 
+    // BRAM write access for the TPU
     character.addr1 := tpu_active_x + tpu_active_y * 80;
     character.wenable1 := 0;
     background.addr1 := tpu_active_x + tpu_active_y * 80;
@@ -69,7 +69,7 @@ algorithm character_map(
 
     // Default to transparent
     character_map_display := pix_active && (( characterpixel ) || ( ~colour7(background.rdata0).alpha ));
-    
+
     // Render the character map
     while(1) {
         if( character_map_display ) {
@@ -89,8 +89,8 @@ algorithm character_map(
                     pix_blue = colour6(foreground.rdata0).blue;
                 }
             }
-        } 
-        
+        }
+
         switch( tpu_active ) {
             case 1: {
                 // Clear the character map - implements tpucs!
@@ -114,7 +114,7 @@ algorithm character_map(
                 tpu_active_y = 0;
                 tpu_active = 0;
             }
-            
+
             default: {
                 switch( tpu_write ) {
                     case 1: {
@@ -130,7 +130,7 @@ algorithm character_map(
                         background.wenable1 = 1;
                         foreground.wdata1 = tpu_foreground;
                         foreground.wenable1 = 1;
-                        
+
                         tpu_active_y = ( tpu_active_x == 79 ) ? ( tpu_active_y == 29 ) ? 0 : tpu_active_y + 1 : tpu_active_y;
                         tpu_active_x = ( tpu_active_x == 79 ) ? 0 : tpu_active_x + 1;
                     }
@@ -141,6 +141,6 @@ algorithm character_map(
                 }
             }
         } // tpu_active
-        
+
     }
 }

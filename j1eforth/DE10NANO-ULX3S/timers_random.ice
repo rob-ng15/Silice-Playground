@@ -6,7 +6,7 @@ algorithm pulse1hz(
 ) <autorun> {
     counter50mhz = 0;
     counter1hz = 0;
-    
+
     while (1) {
         if( resetCounter == 1) {
             counter1hz = 0;
@@ -25,7 +25,7 @@ algorithm pulse1khz(
     input  uint1  resetCounter
 ) <autorun> {
     uint32 counter50mhz = 0;
-    
+
     while (1) {
         if( resetCounter == 1 ) {
             counter1khz = resetCount;
@@ -52,13 +52,13 @@ algorithm random(
     uint16  temp_u_noise1 = 0;
     uint16  temp_u_noise0 = 0;
     uint16  temp_g_noise_nxt = uninitialized;
-    
+
     always {
         rand_en_ff = {(rand_en_ff[7,1] ^ rand_en_ff[0,1]) , rand_en_ff[1,17]};
         rand_ff = { ( rand_ff[5,1] ^ rand_ff[3,1] ^ rand_ff[2,1] ^ rand_ff[0,1]) , rand_ff[1,15] };
         g_noise_out = ( rand_en_ff[17,1] ) ? temp_g_noise_nxt : ( rand_en_ff[10,1] ) ? rand_out : g_noise_out;
     }
-    
+
     while(1) {
         if( resetRandom ) {
             rand_en_ff = 24b001100010011011101100101;

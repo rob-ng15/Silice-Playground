@@ -26,7 +26,7 @@ algorithm sprite(
     input   int11   sprite_y,
 
     input   uint6   writer_line,
-    input   uint16  writer_bitmap,  
+    input   uint16  writer_bitmap,
     input   uint1   writer_active
 ) {
     // Sprite Tiles
@@ -34,7 +34,7 @@ algorithm sprite(
 
     // Calculate if sprite is visible
     uint4 xinsprite := ( 16 >> sprite_colmode ) - 1  - ( ( pix_x - sprite_x ) >> sprite_double );
-    uint4 spritepixel := ( sprite_colmode == 0 ) ? tiles.rdata0[ xinsprite, 1 ] 
+    uint4 spritepixel := ( sprite_colmode == 0 ) ? tiles.rdata0[ xinsprite, 1 ]
                                     : ( sprite_colmode == 1 ) ? tiles.rdata0[ xinsprite, 2 ]
                                     : ( sprite_colmode == 2 ) ? tiles.rdata0[ xinsprite, 3 ] : 0;
     uint1 visiblex := ( pix_x >= sprite_x ) && ( pix_x < ( sprite_x + ( ( 16 >> sprite_colmode ) << sprite_double ) ) );
@@ -51,7 +51,7 @@ algorithm sprite(
     // Output the results
     pix_colour := spritepixel;
     pix_visible := visible;
-    
+
     while(1) {
     }
 }
@@ -65,7 +65,7 @@ algorithm sprite_layer(
     output! uint2   pix_green,
     output! uint2   pix_blue,
     output! uint1   sprite_layer_display,
-    
+
     // For setting sprite characteristics
     input   uint4   sprite_set_number,
     input   uint1   sprite_set_active,
@@ -93,11 +93,11 @@ algorithm sprite_layer(
     $$for i=0,14 do
         output uint16 collision_$i$,
     $$end
-    
+
     // For setting sprite tile bitmaps
     input   uint4   sprite_writer_sprite,
     input   uint6   sprite_writer_line,
-    input   uint16  sprite_writer_bitmap,  
+    input   uint16  sprite_writer_bitmap,
     input   uint1   sprite_writer_active,
 
     // For setting 3 or 15 colour sprite palette
@@ -124,7 +124,7 @@ algorithm sprite_layer(
         int11 sprite_y_$i$ := sprite_y[$i$];
         uint2 sprite_tile_number_$i$ := sprite_tile_number[$i$];
         uint1 sprite_write_active_$i$ := ( sprite_writer_active == 1 ) && ( sprite_writer_sprite == $i$ );
-        
+
         sprite sprite_$i$(
             pix_x <: pix_x,
             pix_y <: pix_y,
@@ -142,24 +142,24 @@ algorithm sprite_layer(
             writer_active <: sprite_write_active_$i$
         );
     $$end
-    
+
     // Palette for 3 or 15 colour sprites - shared
     uint6 palette[16] = uninitialised;
-    
+
     // Collision detection storage
     $$for i=0,14 do
         uint16      detect_collision_$i$ = uninitialised;
     $$end
-    
+
     // Expand Sprite Update Deltas
     int11 deltax := { {9{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
     int11 deltay := { {9{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
-   
+
     // Set 3 or 15 colour sprite palette
     $$for i=1,15 do
         palette[$i$] := sprite_palette_$i$;
     $$end
-    
+
     // Default to transparent
     sprite_layer_display := 0;
 
@@ -208,10 +208,10 @@ algorithm sprite_layer(
             }
         }
     }
-    
+
     // Render the sprite layer
     while(1) {
-        
+
         if( pix_vblank ) {
             // RESET collision detection
             $$for i=0,14 do

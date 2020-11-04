@@ -7,7 +7,7 @@ algorithm terminal(
     output! uint2   pix_green,
     output! uint2   pix_blue,
     output! uint1   terminal_display,
-    
+
     input   uint8   terminal_character,
     input   uint1   terminal_write,
     input   uint1   showterminal,
@@ -19,28 +19,28 @@ algorithm terminal(
     brom uint8 characterGenerator8x8[] = {
         $include('ROM/characterROM8x8.inc')
     };
-    
+
     // 80 x 4 character buffer for the input/output terminal
     dualport_bram uint8 terminal[640] = uninitialized;
 
     // Initial cursor position in the terminal, bottom left
     uint7 terminal_x = 0;
     uint3 terminal_y = 7;
-    
+
     // Character position on the terminal x 0-79, y 0-7 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
     uint7 xterminalpos := ( pix_active ? (pix_x < 640 ) ? pix_x + 2 : 0 : 0 ) >> 3;
     uint10 yterminalpos := (( pix_vblank ? 0 : pix_y - 416 ) >> 3) * 80;
 
     // Determine if cursor, and if cursor is flashing
     uint1 is_cursor := ( xterminalpos == terminal_x ) && ( ( ( pix_y - 416) >> 3 ) == terminal_y );
-    
+
     // Derive the x and y coordinate within the current 8x8 terminal character block x 0-7, y 0-7
     uint3 xinterminal := (pix_x) & 7;
     uint3 yinterminal := (pix_y) & 7;
 
     // Derive the actual pixel in the current terminal
     uint1 terminalpixel := characterGenerator8x8.rdata[7 - xinterminal,1];
-    
+
     // Terminal active (scroll) flag and temporary storage for scrolling
     uint10 terminal_scroll = 0;
     uint10 terminal_scroll_next = 0;
@@ -54,7 +54,7 @@ algorithm terminal(
 
     // Setup the reading of the characterGenerator8x8 ROM
     characterGenerator8x8.addr :=  terminal.rdata0 * 8 + yinterminal;
-    
+
     // Default to transparent and active pixels always blue
     terminal_display := pix_active && showterminal && (pix_y > 415);
     pix_blue := 3;
@@ -130,9 +130,9 @@ algorithm terminal(
                 terminal_scroll = 0;
                 terminal_active = 0;
             }
-        } // TERMINAL        
+        } // TERMINAL
     }
-    
+
     // Render the terminal
     while(1) {
         if( terminal_display ) {

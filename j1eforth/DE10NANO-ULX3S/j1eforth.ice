@@ -2,14 +2,14 @@
 bitfield colour7 {
     uint1   alpha,
     uint2   red,
-    uint2   green, 
+    uint2   green,
     uint2   blue
 }
 
 // 6 bit colour red, green, blue { rrggbb }
 bitfield colour6 {
     uint2   red,
-    uint2   green, 
+    uint2   green,
     uint2   blue
 }
 
@@ -27,7 +27,7 @@ bitfield literal {
     uint15  literalvalue
 }
 
-// A branch, 0branch or call instruction is 0 followed by 00 = branch, 01 = 0branch, 10 = call followed by 13bit target address 
+// A branch, 0branch or call instruction is 0 followed by 00 = branch, 01 = 0branch, 10 = call followed by 13bit target address
 bitfield callbranch {
     uint1   is_literal,
     uint2   is_callbranchalu,
@@ -41,12 +41,18 @@ bitfield aluop {
     uint4   operation,              // arithmetic / memory read/write operation to perform
     uint1   is_t2n,                 // top to next in stack
     uint1   is_t2r,                 // top to return stack
-    uint1   is_n2memt,              // write to memory       
+    uint1   is_n2memt,              // write to memory
     uint1   is_j1j1plus,            // Original J1 or extra J1+ alu operations
     uint1   rdelta1,                // two's complement adjustment for rsp
     uint1   rdelta0,
     uint1   ddelta1,                // two's complement adjustment for dsp
     uint1   ddelta0
+}
+
+// Simplify access to high/low word
+bitfield words {
+    uint16  hword,
+    uint16  lword
 }
 
 // Simplify access to high/low byte
@@ -67,7 +73,7 @@ algorithm main(
     // LEDS (8 of)
     output  uint8   leds,
     input   uint$NUM_BTNS$ btns,
-        
+
 $$if ULX3S then
     output  uint4   gpdi_dp,
     output  uint4   gpdi_dn,
@@ -80,14 +86,14 @@ $$end
     // AUDIO
     output! uint4   audio_l,
     output! uint4   audio_r,
-    
+
     // VGA/HDMI
     output! uint6   video_r,
     output! uint6   video_g,
     output! uint6   video_b,
     output! uint1   video_hs,
     output! uint1   video_vs
-) 
+)
 $$if ULX3S then
 <@clock_50mhz> // ULX3S has a 25 MHz clock, so we use a PLL to bring it up to 50 MHz
 $$end
@@ -95,7 +101,7 @@ $$end
     // 1hz timers (p1hz used for systemClock and systemClockMHz, timer1hz for user purposes)
     uint16 systemClock = uninitialized;
     uint32 systemClockMHz = uninitialized;
-    pulse1hz p1hz ( 
+    pulse1hz p1hz (
         counter1hz :> systemClock,
         counter50mhz :> systemClockMHz
     );
@@ -110,7 +116,7 @@ $$end
     random rng (
         g_noise_out :> staticGenerator
     );
-    
+
     // UART tx and rx
     // UART written in Silice by https://github.com/sylefeb/Silice
     uart_out uo;
@@ -129,7 +135,7 @@ $$end
     uint1   video_reset = uninitialized;
     uint1   video_clock = uninitialized;
     uint1   pll_lock = uninitialized;
-    
+
     // Generate the 100MHz SDRAM and 25MHz VIDEO clocks
 $$if DE10NANO then
     uint1 sdram_clock = uninitialized;
@@ -139,7 +145,7 @@ $$if DE10NANO then
         outclk_1  :> video_clock,
         locked    :> pll_lock,
         rst       <: reset
-    ); 
+    );
 $$end
 $$if ULX3S then
     uint1 clock_50mhz = uninitialized;
@@ -148,7 +154,7 @@ $$if ULX3S then
         clkout0  :> clock_50mhz,
         clkout1  :> video_clock,
         locked   :> pll_lock
-    ); 
+    );
 $$end
 
     // Video Reset
@@ -216,7 +222,7 @@ $$end
     uint2   tilemap_g = uninitialized;
     uint2   tilemap_b = uninitialized;
     uint1   tilemap_display = uninitialized;
-    
+
     tilemap tile_map <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -227,7 +233,7 @@ $$end
         pix_blue   :> tilemap_b,
         tilemap_display :> tilemap_display,
     );
-    
+
     // Bitmap Window
     uint2   bitmap_r = uninitialized;
     uint2   bitmap_g = uninitialized;
@@ -238,7 +244,7 @@ $$end
     int11   bitmap_y_write = uninitialized;
     uint7   bitmap_colour_write = uninitialized;
     uint2   bitmap_write = uninitialized;
-    
+
     bitmap bitmap_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -259,7 +265,7 @@ $$end
     uint2   lower_sprites_g = uninitialized;
     uint2   lower_sprites_b = uninitialized;
     uint1   lower_sprites_display = uninitialized;
-    
+
     sprite_layer lower_sprites <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -271,13 +277,13 @@ $$end
         sprite_layer_display :> lower_sprites_display,
         bitmap_display <: bitmap_display
     );
-    
+
     // Upper Sprite Layer - Between BITMAP and CHARACTER MAP
     uint2   upper_sprites_r = uninitialized;
     uint2   upper_sprites_g = uninitialized;
     uint2   upper_sprites_b = uninitialized;
     uint1   upper_sprites_display = uninitialized;
-    
+
     sprite_layer upper_sprites <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -289,13 +295,13 @@ $$end
         sprite_layer_display :> upper_sprites_display,
         bitmap_display <: bitmap_display
     );
-        
+
     // Character Map Window
     uint2   character_map_r = uninitialized;
     uint2   character_map_g = uninitialized;
     uint2   character_map_b = uninitialized;
     uint1   character_map_display = uninitialized;
-    
+
     character_map character_map_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -306,13 +312,13 @@ $$end
         pix_blue   :> character_map_b,
         character_map_display :> character_map_display
     );
-    
+
     // Terminal window at the bottom of the screen
     uint2   terminal_r = uninitialized;
     uint2   terminal_g = uninitialized;
     uint2   terminal_b = uninitialized;
     uint1   terminal_display = uninitialized;
-    
+
     terminal terminal_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -348,7 +354,7 @@ $$end
         lower_sprites_g <: lower_sprites_g,
         lower_sprites_b <: lower_sprites_b,
         lower_sprites_display <: lower_sprites_display,
-     
+
         bitmap_r <: bitmap_r,
         bitmap_g <: bitmap_g,
         bitmap_b <: bitmap_b,
@@ -358,12 +364,12 @@ $$end
         upper_sprites_g <: upper_sprites_g,
         upper_sprites_b <: upper_sprites_b,
         upper_sprites_display <: upper_sprites_display,
-     
+
         character_map_r <: character_map_r,
         character_map_g <: character_map_g,
         character_map_b <: character_map_b,
         character_map_display <: character_map_display,
-     
+
         terminal_r <: terminal_r,
         terminal_g <: terminal_g,
         terminal_b <: terminal_b,
@@ -384,7 +390,7 @@ $$end
     // GPU, VECTOR DRAWER and DISPLAY LIST DRAWER
     // The GPU sends rendered pixels to the BITMAP LAYER
     // The VECTOR DRAWER sends lines to be rendered
-    // The DISPLAY LIST DRAWER can send pixels, rectangles, lines, circles, blit1s to the GPU 
+    // The DISPLAY LIST DRAWER can send pixels, rectangles, lines, circles, blit1s to the GPU
     // and vector blocks to draw to the VECTOR DRAWER
     // VECTOR DRAWER to GPU
     int11   v_gpu_x = uninitialized;
@@ -406,7 +412,7 @@ $$end
     uint7   dl_vector_block_colour = uninitialized;
     int11   dl_vector_block_xc = uninitialized;
     int11   dl_vector_block_yc =uninitialized;
-    uint1   dl_draw_vector = uninitialized;   
+    uint1   dl_draw_vector = uninitialized;
     // Status flags
     uint3   vector_block_active = uninitialized;
     uint6   gpu_active = uninitialized;
@@ -473,8 +479,14 @@ $$end
     );
 
     // Mathematics Cop Processors
-    unsigneddiv ummod();
-    
+    unsigneddiv ummod ();
+    signeddiv mmod ();
+    signeddiv16bit divmod ();
+    unsignmult umstar ();
+    signmult mstar ();
+
+    doubleaddsub doperations ();
+
     // J1+ CPU
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
     uint16  instruction = uninitialized;
@@ -486,7 +498,7 @@ $$end
     uint1   rstackWrite := ( is_call | (is_alu & aluop(instruction).is_t2r) );
     uint8   ddelta := { {7{aluop(instruction).ddelta1}}, aluop(instruction).ddelta0 };
     uint8   rdelta := { {7{aluop(instruction).rdelta1}}, aluop(instruction).rdelta0 };
-    
+
     // program counter
     uint13  pc = 0;
     uint13  pcPlusOne := pc + 1;
@@ -519,7 +531,7 @@ $$end
     // CYCLE to control each stage
     // CYCLE allows 1 clock cycle for BRAM access
     uint2 CYCLE = 0;
-    
+
     // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
     dualport_bram uint8 uartInBuffer[4096] = uninitialized;
     uint13  uartInBufferNext = 0;
@@ -530,7 +542,7 @@ $$end
     uint8   uartOutBufferNext = 0;
     uint8   uartOutBufferTop = 0;
     uint8   newuartOutBufferTop = 0;
-    
+
     // register buttons
     uint$NUM_BTNS$ reg_btns = 0;
     reg_btns ::= btns;
@@ -551,10 +563,10 @@ $$end
     // Setup addresses for the dstack and rstack
     // Read via port 0, write via port 1
     dstack.addr0 := dsp;
-    dstack.wenable0 := 0;  
+    dstack.wenable0 := 0;
     dstack.addr1 := newDSP;
     dstack.wdata1 := stackTop;
-    dstack.wenable1 := 0;  
+    dstack.wenable1 := 0;
     rstack.addr0 := rsp;
     rstack.wenable0 := 0;
     rstack.addr1 := newRSP;
@@ -566,32 +578,32 @@ $$end
     uartInBuffer.wenable1  := 1;  // always write on port 1
     uartInBuffer.addr0     := uartInBufferNext; // FIFO reads on next
     uartInBuffer.addr1     := uartInBufferTop;  // FIFO writes on top
-    
+
     uartOutBuffer.wenable0 := 0; // always read  on port 0
-    uartOutBuffer.wenable1 := 1; // always write on port 1    
+    uartOutBuffer.wenable1 := 1; // always write on port 1
     uartOutBuffer.addr0    := uartOutBufferNext; // FIFO reads on next
     uartOutBuffer.addr1    := uartOutBufferTop;  // FIFO writes on top
 
     // Setup the UART
     uo.data_in_ready := 0; // maintain low
-    
+
     // UART input and output buffering
     always {
         // READ from UART if character available and store
         if( ui.data_out_ready ) {
             // writes at uartInBufferTop (code from @sylefeb)
-            uartInBuffer.wdata1  = ui.data_out;            
+            uartInBuffer.wdata1  = ui.data_out;
             uartInBufferTop      = uartInBufferTop + 1;
         }
         // WRITE to UART if characters in buffer and UART is ready
         if( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) ) {
             // reads at uartOutBufferNext (code from @sylefeb)
-            uo.data_in      = uartOutBuffer.rdata0; 
+            uo.data_in      = uartOutBuffer.rdata0;
             uo.data_in_ready     = 1;
             uartOutBufferNext = uartOutBufferNext + 1;
         }
     }
-    
+
     // Setup the terminal
     terminal_window.showterminal = 1;
     terminal_window.showcursor = 1;
@@ -599,8 +611,8 @@ $$end
     // EXECUTE J1 CPU
     while( 1 ) {
         // Update UART output buffer top if character has been put into buffer
-        uartOutBufferTop = newuartOutBufferTop;        
-        
+        uartOutBufferTop = newuartOutBufferTop;
+
         switch( CYCLE ) {
             // Read stackNext, rStackTop
             case 0: {
@@ -612,7 +624,7 @@ $$end
                 instruction = ram_0.rdata1;
                 memoryInput = ( stackTop > 16383 ) ? ram_1.rdata0 : ram_0.rdata0;
             }
-            
+
             // J1 CPU Instruction Execute
             case 1: {
                 // +---------------------------------------------------------------+
@@ -630,20 +642,20 @@ $$end
                 // +---------------------------------------------------------------+
                 // | F | E | D | C | B | A | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
                 // +---------------------------------------------------------------+
-                // 
+                //
                 // T   : Top of data stack
                 // N   : Next on data stack
                 // PC  : Program Counter
-                // 
+                //
                 // LITERAL VALUES : push a value onto the data stack
                 // CONDITIONAL    : BRANCHS pop and test the T
                 // CALLS          : PC+1 onto the return stack
-                // 
+                //
                 // T2N : Move T to N
                 // T2R : Move T to top of return stack
                 // N2A : STORE T to memory location addressed by N
                 // R2P : Move top of return stack to PC
-                // 
+                //
                 // RSTACK and DSTACK are signed values (twos compliment) that are
                 // the stack delta (the amount to increment or decrement the stack
                 // by for their respective stacks: return and data)
@@ -703,7 +715,7 @@ $$end
                                                         case 4h0: {
                                                             switch( stackTop[0,4] ) {
                                                                 // f000
-                                                                case 4h0: { newStackTop = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1; } 
+                                                                case 4h0: { newStackTop = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1; }
                                                                 case 4h1: { newStackTop = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ( uartInBufferNext != uartInBufferTop )}; }
                                                                 case 4h2: { newStackTop = leds; }
                                                                 case 4h3: { newStackTop = {$16-NUM_BTNS$b0, reg_btns[0,$NUM_BTNS$]}; }
@@ -823,11 +835,63 @@ $$end
                                                                         case 4ha: { newStackTop = tile_map.tm_active; }
                                                                     }
                                                                 }
+                                                                case 4ha: {
+                                                                    switch( stackTop[0,4] ) {
+                                                                        case 4h0: { newStackTop = words(doperations.total).hword; }
+                                                                        case 4h1: { newStackTop = words(doperations.total).lword; }
+                                                                        case 4h2: { newStackTop = words(doperations.difference).hword; }
+                                                                        case 4h3: { newStackTop = words(doperations.difference).lword; }
+                                                                        case 4h4: { newStackTop = words(doperations.increment).hword; }
+                                                                        case 4h5: { newStackTop = words(doperations.increment).lword; }
+                                                                        case 4h6: { newStackTop = words(doperations.decrement).hword; }
+                                                                        case 4h7: { newStackTop = words(doperations.decrement).lword; }
+                                                                        case 4h8: { newStackTop = words(doperations.times2).hword; }
+                                                                        case 4h9: { newStackTop = words(doperations.times2).lword; }
+                                                                        case 4ha: { newStackTop = words(doperations.divide2).hword; }
+                                                                        case 4hb: { newStackTop = words(doperations.divide2).lword; }
+                                                                        case 4hc: { newStackTop = words(doperations.negation).hword; }
+                                                                        case 4hd: { newStackTop = words(doperations.negation).lword; }
+                                                                        case 4he: { newStackTop = words(doperations.binaryinvert).hword; }
+                                                                        case 4hf: { newStackTop = words(doperations.binaryinvert).lword; }
+                                                                    }
+                                                                }
+                                                                case 4hb: {
+                                                                    switch( stackTop[0,4] ) {
+                                                                        case 4h0: { newStackTop = words(doperations.binaryxor).hword; }
+                                                                        case 4h1: { newStackTop = words(doperations.binaryxor).lword; }
+                                                                        case 4h2: { newStackTop = words(doperations.binaryand).hword; }
+                                                                        case 4h3: { newStackTop = words(doperations.binaryand).lword; }
+                                                                        case 4h4: { newStackTop = words(doperations.binaryor).hword; }
+                                                                        case 4h5: { newStackTop = words(doperations.binaryor).lword; }
+                                                                        case 4h6: { newStackTop = words(doperations.absolute).hword; }
+                                                                        case 4h7: { newStackTop = words(doperations.absolute).lword; }
+                                                                        case 4h8: { newStackTop = words(doperations.maximum).hword; }
+                                                                        case 4h9: { newStackTop = words(doperations.maximum).lword; }
+                                                                        case 4ha: { newStackTop = words(doperations.minimum).hword; }
+                                                                        case 4hb: { newStackTop = words(doperations.minimum).lword; }
+                                                                        case 4hc: { newStackTop = doperations.zeroequal; }
+                                                                        case 4hd: { newStackTop = doperations.zeroless; }
+                                                                        case 4he: { newStackTop = doperations.equal; }
+                                                                        case 4hf: { newStackTop = doperations.lessthan; }
+                                                                    }
+                                                                }
                                                                 case 4hd: {
                                                                     switch( stackTop[0,4] ) {
                                                                         case 4h0: { newStackTop = ummod.quotient[0,16]; }
                                                                         case 4h1: { newStackTop = ummod.remainder[0,16]; }
-                                                                        case 4h3: { newStackTop = ummod.active ; }
+                                                                        case 4h3: { newStackTop = ummod.active; }
+                                                                        case 4h4: { newStackTop = mmod.quotient[0,16]; }
+                                                                        case 4h5: { newStackTop = mmod.remainder[0,16]; }
+                                                                        case 4h6: { newStackTop = mmod.active; }
+                                                                        case 4h7: { newStackTop = divmod.quotient; }
+                                                                        case 4h8: { newStackTop = divmod.remainder; }
+                                                                        case 4h9: { newStackTop = divmod.active; }
+                                                                        case 4ha: { newStackTop = umstar.product[16,16]; }
+                                                                        case 4hb: { newStackTop = umstar.product[0,16]; }
+                                                                        case 4hc: { newStackTop = umstar.active; }
+                                                                        case 4hd: { newStackTop = mstar.product[16,16]; }
+                                                                        case 4he: { newStackTop = mstar.product[0,16]; }
+                                                                        case 4hf: { newStackTop = mstar.active; }
                                                                     }
                                                                 }
                                                                 case 4he: {
@@ -858,7 +922,7 @@ $$end
                                         case 4b1111: {newStackTop = {16{(__unsigned(stackNext) < __unsigned(stackTop))}};}
                                     }
                                 }
-                                
+
                                 case 1b1: {
                                     // Extra J1+ CPU Operations
                                     switch( aluop(instruction).operation ) {
@@ -881,7 +945,7 @@ $$end
                                     }
                                 }
                             } // ALU Operation
-                            
+
                             // UPDATE newDSP newRSP
                             newDSP = dsp + ddelta;
                             newRSP = rsp + rdelta;
@@ -890,7 +954,7 @@ $$end
                             // Update PC for next instruction, return from call or next instruction
                             newPC = ( aluop(instruction).is_r2pc ) ? rStackTop >> 1 : pcPlusOne;
 
-                            // n2memt mem[t] = n        
+                            // n2memt mem[t] = n
                             if( aluop(instruction).is_n2memt ) {
                                 switch( stackTop[12,4] ) {
                                     case 4hf: {
@@ -1064,12 +1128,26 @@ $$end
                                                             case 4h9: { tile_map.tm_scrollwrap = stackNext; }
                                                         }
                                                     }
+                                                    case 4ha: {
+                                                        switch( stackTop[0,4] ) {
+                                                            case 4h0:  {doperations.operand1h = stackNext; }
+                                                            case 4h1: { doperations.operand1l = stackNext; }
+                                                            case 4h2: { doperations.operand2h = stackNext; }
+                                                            case 4h3: { doperations.operand2l = stackNext; }
+                                                        }
+                                                    }
                                                     case 4hd: {
                                                         switch( stackTop[0,4] ) {
-                                                            case 4h0: {ummod.dividend[16,16] = stackNext;}
-                                                            case 4h1: {ummod.dividend[0,16] = stackNext;}
-                                                            case 4h2: {ummod.divisor = stackNext;}
-                                                            case 4h3: {ummod.start = 1;}
+                                                            case 4h0: { ummod.dividendh = stackNext; mmod.dividendh = stackNext; }
+                                                            case 4h1: { ummod.dividendl = stackNext; mmod.dividendl = stackNext; }
+                                                            case 4h2: { ummod.divisor = stackNext; mmod.divisor = stackNext; }
+                                                            case 4h3: { ummod.start = 1; mmod.start = 1; }
+                                                            case 4h7: { divmod.dividend = stackNext; }
+                                                            case 4h8: { divmod.divisor = stackNext; }
+                                                            case 4h9: { divmod.start = stackNext; }
+                                                            case 4ha: { umstar.factor1 = stackNext; mstar.factor1 = stackNext; }
+                                                            case 4hb: { umstar.factor2 = stackNext; mstar.factor2 = stackNext; }
+                                                            case 4hc: { umstar.start = 1; mstar.start = 1; }
                                                         }
                                                     }
                                                     case 4he: {
@@ -1124,15 +1202,19 @@ $$end
                 pc = newPC;
                 stackTop = newStackTop;
                 rsp = newRSP;
-                
+
                 // RESET Mathematics Co-Processor Controls
                 ummod.start = 0;
+                mmod.start = 0;
+                divmod.start = 0;
+                umstar.start = 0;
+                mstar.start = 0;
             }
-            
+
             case 3: {
                 // RESET Co-Processor Controls
                 background_generator.background_write = 0;
-                tile_map.tile_writer_write = 0; 
+                tile_map.tile_writer_write = 0;
                 tile_map.tm_write = 0;
                 tile_map.tm_scrollwrap = 0;
                 lower_sprites.sprite_layer_write = 0;
@@ -1156,7 +1238,7 @@ $$end
                 rng.resetRandom = 0;
             }
         } // switch(CYCLE)
-        
+
         // Move to next CYCLE ( 0 to 3 , then back to 0 )
         CYCLE = ( CYCLE == 3 ) ? 0 : CYCLE + 1;
     } // execute J1 CPU

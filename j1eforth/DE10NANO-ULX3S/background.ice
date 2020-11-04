@@ -8,7 +8,7 @@ algorithm background(
     output! uint2   pix_blue,
 
     input uint16 staticGenerator,
-    
+
     input uint6 backgroundcolour,
     input uint6 backgroundcolour_alt,
     input uint3 backgroundcolour_mode,
@@ -17,14 +17,14 @@ algorithm background(
     uint6 background = 0;
     uint6 background_alt = 0;
     uint3 background_mode = 0;
-    
+
     // Variables for SNOW (from @sylefeb)
     int10   dotpos = 0;
     int2    speed = 0;
     int2    inv_speed = 0;
     int12   rand_x = 0;
     int32   frame = 0;
-    
+
     // Default to black
     pix_red := 0;
     pix_green := 0;
@@ -41,7 +41,7 @@ algorithm background(
         // Increment frame number for the snow/star field
         frame = ( ( pix_x == 639 ) && ( pix_y == 470 ) ) ? frame + 1 : frame;
     }
-    
+
     while(1) {
         switch( backgroundcolour_mode ) {
             case 0: {
@@ -204,7 +204,7 @@ algorithm background(
                     pix_green = colour6(background_alt).green;
                     pix_blue  = colour6(background_alt).blue;
                 }
-            }                
+            }
             default: {}
         }
     }

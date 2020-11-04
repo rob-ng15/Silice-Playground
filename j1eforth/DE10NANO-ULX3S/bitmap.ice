@@ -7,7 +7,7 @@ algorithm bitmap(
     output! uint2   pix_green,
     output! uint2   pix_blue,
     output! uint1   bitmap_display,
-    
+
     // GPU to SET and GET pixels
     input int11 bitmap_x_write,
     input int11 bitmap_y_write,
@@ -25,7 +25,7 @@ algorithm bitmap(
 
     // Write in range?
     uint1 write_pixel := (bitmap_x_write >= 0 ) && (bitmap_x_write < 640) && (bitmap_y_write >= 0) && (bitmap_y_write < 480) && ( bitmap_write == 1 );
-    
+
     // Pixel being read?
     bitmap_colour_read := ( pix_x == bitmap_x_read ) && ( pix_y == bitmap_y_read ) ? { bitmap_alpha.rdata0, bitmap_red.rdata0, bitmap_green.rdata0, bitmap_blue.rdata0 } : bitmap_colour_read;
 
@@ -39,7 +39,7 @@ algorithm bitmap(
     bitmap_green.wenable0 := 0;
     bitmap_blue.addr0 := ( pix_active ? pix_x + 1 : 0 ) + ( pix_vblank ? 0 : pix_y * 640 );
     bitmap_blue.wenable0 := 0;
-    
+
     // Bitmap write access for the GPU - Only enable when x and y are in range
     bitmap_alpha.addr1 := bitmap_x_write + bitmap_y_write * 640;
     bitmap_alpha.wdata1 := colour7(bitmap_colour_write).alpha;

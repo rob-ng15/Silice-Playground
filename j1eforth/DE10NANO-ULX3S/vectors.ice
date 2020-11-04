@@ -10,19 +10,19 @@ algorithm vectors(
     input   uint7   vector_block_colour,
     input   int11   vector_block_xc,
     input   int11   vector_block_yc,
-    
+
     input   uint1   draw_vector,
 
     // For setting vertices
     input   uint4   vertices_writer_block,
     input   uint6   vertices_writer_vertex,
-    input   int6    vertices_writer_xdelta,  
+    input   int6    vertices_writer_xdelta,
     input   int6    vertices_writer_ydelta,
     input   uint1   vertices_writer_active,
     input   uint1   vertices_writer_write,
-    
+
     output  uint3   vector_block_active,
-    
+
     // Communication with the GPU
     output  int11 gpu_x,
     output  int11 gpu_y,
@@ -41,14 +41,14 @@ algorithm vectors(
     input  uint6 gpu_active
 ) <autorun> {
     // 16 vector blocks each of 16 vertices
-    dualport_bram uint1 A[256] = uninitialised;    
-    dualport_bram int6 dy[256] = uninitialised;    
-    dualport_bram int6 dx[256] = uninitialised;    
+    dualport_bram uint1 A[256] = uninitialised;
+    dualport_bram int6 dy[256] = uninitialised;
+    dualport_bram int6 dx[256] = uninitialised;
 
     // Extract deltax and deltay for the present vertices
     int11 deltax := { {6{dx.rdata0[5,1]}}, dx.rdata0[0,5] };
     int11 deltay := { {6{dy.rdata0[5,1]}}, dy.rdata0[0,5] };
-    
+
     // Vertices being processed, plus first coordinate of each line
     uint5 block_number = uninitialised;
     uint4 vertices_number = uninitialised;
@@ -61,13 +61,13 @@ algorithm vectors(
     A.addr1 := vertices_writer_block * 16 + vertices_writer_vertex;
     A.wdata1 := vertices_writer_active;
     A.wenable1 := vertices_writer_write;
-    
+
     dx.addr0 := block_number * 16 + vertices_number;
     dx.wenable0 := 0;
     dx.addr1 := vertices_writer_block * 16 + vertices_writer_vertex;
     dx.wdata1 := vertices_writer_xdelta;
     dx.wenable1 := vertices_writer_write;
-    
+
     dy.addr0 := block_number * 16 + vertices_number;
     dy.wenable0 := 0;
     dy.addr1 := vertices_writer_block * 16 + vertices_writer_vertex;
@@ -87,10 +87,10 @@ algorithm vectors(
             }
         }
     }
-    
+
     vector_block_active = 0;
     vertices_number = 0;
-    
+
     while(1) {
         switch( vector_block_active ) {
             case 1: {
@@ -119,7 +119,7 @@ algorithm vectors(
                 gpu_param0 = vector_block_xc + deltax;
                 gpu_param1 = vector_block_yc + deltay;
                 gpu_write = 3;
-                
+
                 // Move onto the next of the vertices
                 start_x = vector_block_xc + deltax;
                 start_y = vector_block_yc + deltay;
@@ -134,4 +134,4 @@ algorithm vectors(
     }
 }
 
- 
+

@@ -10,7 +10,7 @@ algorithm displaylist(
     input   uint8   finish_entry,
     input   uint1   start_displaylist,
     output  uint4   display_list_active,
-    
+
     input   uint8   writer_entry_number,
     input   uint1   writer_active,
     input   uint4   writer_command,
@@ -53,19 +53,19 @@ algorithm displaylist(
     input   uint3   vector_block_active
 ) {
     // 256 display list entries
-    dualport_bram uint1 A[256] = uninitialised;    
-    dualport_bram uint4 command[256] = uninitialised;    
-    dualport_bram uint7 colour[256] = uninitialised;    
-    dualport_bram int11 x[256] = uninitialised;    
-    dualport_bram int11 y[256] = uninitialised;    
-    dualport_bram int11 p0[256] = uninitialised;    
-    dualport_bram int11 p1[256] = uninitialised;    
-    dualport_bram int11 p2[256] = uninitialised;    
-    dualport_bram int11 p3[256] = uninitialised;    
+    dualport_bram uint1 A[256] = uninitialised;
+    dualport_bram uint4 command[256] = uninitialised;
+    dualport_bram uint7 colour[256] = uninitialised;
+    dualport_bram int11 x[256] = uninitialised;
+    dualport_bram int11 y[256] = uninitialised;
+    dualport_bram int11 p0[256] = uninitialised;
+    dualport_bram int11 p1[256] = uninitialised;
+    dualport_bram int11 p2[256] = uninitialised;
+    dualport_bram int11 p3[256] = uninitialised;
 
     uint8   entry_number = uninitialised;
     uint8   finish_number = uninitialised;
-    
+
     // Set read address for the display list entry being processed
     A.addr0 := entry_number;
     A.wenable0 := 0;
@@ -148,7 +148,7 @@ algorithm displaylist(
     read_p1 := p1.rdata1;
     read_p2 := p2.rdata1;
     read_p3 := p3.rdata1;
-    
+
     while(1) {
         switch( display_list_active ) {
             case 1: {
@@ -169,7 +169,7 @@ algorithm displaylist(
                 }
             }
             case 4: {
-                //Pause to allow time to dispatch to VECTOR DRAWER or GPU 
+                //Pause to allow time to dispatch to VECTOR DRAWER or GPU
                 display_list_active = 5;
             }
             case 5: {

@@ -38,20 +38,20 @@ algorithm gpu(
     // For setting blit1 tile bitmaps
     input   uint6   blit1_writer_tile,
     input   uint4   blit1_writer_line,
-    input   uint16  blit1_writer_bitmap,  
+    input   uint16  blit1_writer_bitmap,
     input   uint1   blit1_writer_active,
 
     output  uint6 gpu_active
 ) <autorun> {
     // 64 x 16 x 16 1 bit tilemap for blit1tilemap
     dualport_bram uint16 blit1tilemap[ 1024 ] = uninitialized;
-    
+
     // GPU work variable storage
     // Present GPU pixel and colour
     int11 gpu_active_x = uninitialized;
     int11 gpu_active_y = uninitialized;
     uint7 gpu_active_colour = uninitialized;
-    
+
     // Temporary storage for GPU operations with meaningful names centre coordinates, end coordinates, width, height, deltas, radius, etc
     int11 gpu_xc = uninitialized;
     int11 gpu_yc = uninitialized;
@@ -80,7 +80,7 @@ algorithm gpu(
     uint1 w0 = uninitialized;
     uint1 w1 = uninitialized;
     uint1 w2 = uninitialized;
-    
+
     // GPU inputs, copied to according to Forth, VECTOR or DISPLAY LISTS
     int11   x = uninitialized;
     int11   y = uninitialized;
@@ -93,7 +93,7 @@ algorithm gpu(
     // blit1tilemap read access for the blit1tilemap
     blit1tilemap.addr0 := gpu_tile * 16 + gpu_active_y;
     blit1tilemap.wenable0 := 0;
-        
+
     // blit1tilemap write access for the GPU to load tilemaps
     blit1tilemap.addr1 := blit1_writer_tile * 16 + blit1_writer_line;
     blit1tilemap.wdata1 := blit1_writer_bitmap;
@@ -101,7 +101,7 @@ algorithm gpu(
 
     bitmap_write := 0;
     bitmap_colour_write := gpu_active_colour;
-    
+
     always {
         if( dl_gpu_write != 0 ) {
             x = dl_gpu_x;
@@ -138,7 +138,7 @@ algorithm gpu(
             }
         }
     }
-    
+
     while(1) {
         switch( gpu_active ) {
             // GPU Inactive, allow a new operation to start
@@ -146,7 +146,7 @@ algorithm gpu(
                 // Start the GPU from j1eforth
                 switch( write ) {
                     case 1: {
-                        // Setup writing a pixel colour to x,y 
+                        // Setup writing a pixel colour to x,y
                         // Done directly, does not activate the GPU
                         bitmap_x_write = x;
                         bitmap_y_write = y;
@@ -161,7 +161,7 @@ algorithm gpu(
                         gpu_x2 = ( x < param0 ) ? ( x < 0 ? 0 : x )  : ( param0 < 0 ? 0 : param0 );                     // left - for next line
                         gpu_x1 = ( x < param0 ) ? ( param0 > 639 ? 639 : param0 ) : ( x > 639 ? 639 : x );              // right - at end of line
                         gpu_y1 = ( y < param1 ) ? ( param1 > 479 ? 479 : param1 ) : ( y > 479 ? 479 : y );              // bottom - at end of rectangle
-                        gpu_active = 1; 
+                        gpu_active = 1;
                     }
                     case 3: {
                         // Setup drawing a line from x,y to param0,param1 in colour
@@ -176,7 +176,7 @@ algorithm gpu(
                         // Shift Y is NEGATIVE or POSITIVE
                         gpu_sy = ( x < param0 ) ? ( ( y < param1 ) ? 1 : -1 ) : ( ( y < param1 ) ? -1 : 1 );
                         gpu_count = 0;
-                        gpu_active = 2; 
+                        gpu_active = 2;
                     }
                     case 4: {
                         // Setup drawing a circle centre x,y or radius param0 in colour
@@ -195,7 +195,7 @@ algorithm gpu(
                         gpu_y1 = y;
                         gpu_w = 15;
                         gpu_h = 15;
-                        gpu_tile = param0;                       
+                        gpu_tile = param0;
                         gpu_active = 14;
                     }
                     case 6: {
@@ -222,7 +222,7 @@ algorithm gpu(
                     default: {}
                 }
             }
-                
+
             // Perform GPU Operation
             // GPU functions 1 pixel per cycle, even during hblank and vblank
             case 1: {
@@ -248,18 +248,18 @@ algorithm gpu(
                 bitmap_x_write = gpu_active_x;
                 bitmap_y_write = gpu_active_y;
                 bitmap_write = 1;
-                
+
                 // Check if done
                 gpu_active = ( gpu_count < gpu_max_count ) ? 4 : 0;
                 gpu_numerator2 = gpu_numerator;
             }
-            case 4: {          
+            case 4: {
                 // Bresenham's Line Drawing Algorithm.
                 if ( gpu_numerator2 > (-gpu_dx) ) {
                     gpu_numerator = gpu_numerator - gpu_dy;
                     gpu_active_x = gpu_active_x + gpu_sx;
                 }
-                gpu_active = 5;                
+                gpu_active = 5;
             }
             case 5: {
                 // Bresenham's Line Drawing Algorithm
@@ -270,7 +270,7 @@ algorithm gpu(
                 gpu_count = gpu_count + 1;
                 gpu_active = 3;
             }
-            
+
             case 6: {
                 // Bresenham's Circle Drawing Algorithm - Arc 0
                 bitmap_x_write = gpu_xc + gpu_active_x;

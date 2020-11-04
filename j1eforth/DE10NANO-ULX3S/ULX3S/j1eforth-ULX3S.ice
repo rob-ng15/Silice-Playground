@@ -18,6 +18,7 @@ $include('../tile_map.ice')
 $include('../vectors.ice')
 $include('../display_list.ice')
 $include('../audio.ice')
+$include('../mathematics.ice')
 
 import('../common/ulx3s_clk_50_25.v')
 import('../common/reset_conditioner.v')

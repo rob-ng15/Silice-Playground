@@ -2,18 +2,18 @@
 algorithm apu(
     // Waveform selected 0 = square, 1 = sawtooth, 2 = triangle, 3 = sine wave, 4 = noise
     input   uint3   waveform,
-    // Note selected 0 = silence, 1 - x = Deep C through to Double High D (gives 64 distint notes) 
+    // Note selected 0 = silence, 1 - x = Deep C through to Double High D (gives 64 distint notes)
     input   uint6   note,
-    
+
     // Duration in ms, 1000 = 1 second,
     input   uint16  duration,
     output! uint1   audio_active,
-    
+
     // Activate the APU (select the channel, 1, 2 or 3(?) )
     input   uint2   apu_write,
-    
+
     output! uint4   audio_output,
-    
+
     input uint16 staticGenerator
 ) <autorun> {
     // 32 step points per waveform
@@ -21,20 +21,20 @@ algorithm apu(
         // Square wave
         15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        
+
         // Sawtooth wave
         0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7,
         8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15,
-        
+
         // Triangle wave,
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
         15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
-        
+
         // Sine wave,
         7, 8, 10, 11, 12, 13, 13, 14, 15, 14, 13, 13, 12, 11, 10, 8,
         7, 6, 4, 3, 2, 1, 1, 0, 0, 0, 1, 1, 2, 3, 4, 6
     };
-    
+
     // Calculated as 25MHz / note frequency / 32 to give 32 step points per note
     dualport_bram uint16 frequencytable[64] = {
         0,
@@ -45,23 +45,23 @@ algorithm apu(
         1493, 1409, 1330, 1256, 1185, 1119, 1056, 997, 941, 888, 838, 791,                      // 49 = C 6 or Soprano C
         747, 705, 665                                                                           // 61 = C 7 or Double High C
     };
-    
+
     uint3   waveform_1 = uninitialized;
     uint6   note_1 = uninitialized;
-    uint5   point_1 = uninitialized;   
+    uint5   point_1 = uninitialized;
     uint16  counter25mhz_1 = uninitialized;
     uint16  counter1khz_1 = uninitialized;
     uint16  milliseconds_1 = uninitialized;
     uint3   waveform_2 = uninitialized;
     uint6   note_2 = uninitialized;
-    uint5   point_2 = uninitialized;   
+    uint5   point_2 = uninitialized;
     uint16  counter25mhz_2 = uninitialized;
     uint16  counter1khz_2 = uninitialized;
     uint16  milliseconds_2 = uninitialized;
 
     uint16  duration_1 = uninitialized;
     uint16  duration_2 = uninitialized;
-    
+
     uint4   audio_output_1 := waveformtable.rdata0;
     uint16  note_1_frequency := frequencytable.rdata0;
     uint4   audio_output_2 := waveformtable.rdata1;
@@ -71,9 +71,9 @@ algorithm apu(
     frequencytable.addr0 := note_1;
     waveformtable.addr1 := waveform_2 * 32 + point_2;
     frequencytable.addr1 := note_2;
-    
+
     audio_active := ( duration_1 > 0) || ( duration_2 > 0 );
-    
+
     always {
         if( ( note_1 != 0 ) && ( counter25mhz_1 == 0 ) ) {
             audio_output = ( waveform_1 == 4 ) ? staticGenerator : audio_output_1;
@@ -82,7 +82,7 @@ algorithm apu(
             audio_output = ( waveform_2 == 4 ) ? staticGenerator : audio_output_2;
         }
     }
-    
+
     while(1) {
         switch( apu_write) {
             case 1: {

@@ -11,7 +11,27 @@
 * J1+ CPU
     * 50MHz operation
     * 4 (improved from 5) clock cycles per J1+ CPU operation against 13 clock cycles per operation on the FOMU, giving an effective CPU running at 12.5MHz (improved from 10MHz)
-    * Changed extra OPCODES
+    * Changed extra OPCODES to ```0= 0<>- <> 1+ * 2* negate 2/ - 0< 0> > >= abs max min```
+    * Arithmetic Co-Processors Added [Mathematics.md](documentation/Mathematics.md)
+        * 32 bit Addition/Subtraction Unit
+            * Total / Difference
+            * Increment / Decrement
+            * Double / Half
+            * Negation
+            * Binary
+                * Invert
+                * Xor
+                * Or
+                * And
+            * Absolute / Maximum / Minimum
+            * Comparisons
+                * Equal 0
+                * Less than 0
+                * Equal
+                * Less than
+        * 32 bit by 16 bit division giving 16 bit quotient and 16 bit remainder ( signed and unsigned )
+        * 16 bit by 16 bit division giving 16 bit quotient and 16 bit remainder ( signed )
+        * 16 bit by 16 bit multiplication giving 32 bit product ( signed and unsigned )
 
 Cycle | Action | Notes
 ----- | ----- | -----
@@ -19,7 +39,7 @@ Cycle | Action | Notes
 1 | Execute the J1+ CPU instruction. | Memory writes are started in this cycle. Co-processor operations are started in this cycle.
 2 | Write to the data and return stacks. | Update data and return stack pointers and memory addresses. Memory reads are started in this cycle.
 3 | Clear the co-processor controls. | This is performed in cycle 3 as the J1+ CPU runs at 50MHz, the co-processors at 25MHz. Allows the co-processors to detect the input from cycle 1.
-    
+
 For communication with j1eforth there is a UART which provides input and output, output is duplicated on the terminal display. The ULX3S eventually will have PS/2 keyboard input via the us2 connector and a USB OTG and PS/2 to USB converter.
 
 __DE10NANO__ Open a terminal in the DE10NANO directory and type ```make de10nano```. Wait. Upload your design your DE10NANO with ```quartus_pgm -m jtag -o "p;BUILD_de10nano/build.sof@2"```. Or download from this repository.
@@ -119,15 +139,15 @@ Info:           ECLKBRIDGECS:     0/    2     0%
 
 The VGA DE10NANO/HDMI ULX3S output has the following layers in order:
 
-* Background [Background.md](documentation/Background.md) 
-* Tilemap Layer [Tilemap.md](documentation/Tilemap.md) 
-* Lower Sprite Layer [Sprites.md](documentation/Sprites.md) 
+* Background [Background.md](documentation/Background.md)
+* Tilemap Layer [Tilemap.md](documentation/Tilemap.md)
+* Lower Sprite Layer [Sprites.md](documentation/Sprites.md)
 * Bitmap with GPU [Bitmap and GPU.md](documentation/Bitmap%20and%20GPU.md)
-    * Vector block drawer [Vectors.md](documentation/Vectors.md) 
-    * Display list drawer [Display List.md](documentation/Display%20List.md) 
-* Upper Sprite Layer [Sprites.md](documentation/Sprites.md) 
+    * Vector block drawer [Vectors.md](documentation/Vectors.md)
+    * Display list drawer [Display List.md](documentation/Display%20List.md)
+* Upper Sprite Layer [Sprites.md](documentation/Sprites.md)
 * Character Map with TPU [Character Map and TPU.md](documentation/Character%20Map%20and%20TPU.md)
-* Terminal [Terminal.md](documentation/Terminal.md) 
+* Terminal [Terminal.md](documentation/Terminal.md)
 
 All of the display layers operate at 25Mhz, the pixel clock for the 640 x 480 display, all synchronised with each other. These display layers then are combined by the multiplex display [Multiplex Display.md](documentation/Multiplex%20Display.md) to form the display.
 
@@ -156,14 +176,14 @@ All of the non-CPU components are provided as co-processors, so that the J1+ CPU
 
 Simple examples to test some of the features of the display are provided in [Examples.md](documentation/Examples.md)
 
-The sample code provided in [Big Example Part 1.md](documentation/Big%20Example%20Part%201.md) and [Big Example Part 2.md](documentation/Big%20Example%20Part%202.md) is used for driving feature development, features are added if they are required by the simple asteroids type game. 
+The sample code provided in [Big Example Part 1.md](documentation/Big%20Example%20Part%201.md) and [Big Example Part 2.md](documentation/Big%20Example%20Part%202.md) is used for driving feature development, features are added if they are required by the simple asteroids type game.
 
 ## Additional Features
 
 * ULX3S has basic (polyphonic) stereo sound capabilities [Audio.md](documentation/Audio.md)
     * There are 3 notes playable per left/right channel
         * Polyphonic mixing is not good
-* Timers and a pseudo random number generator are provided [Timers.md](documentation/Timers.md) 
+* Timers and a pseudo random number generator are provided [Timers.md](documentation/Timers.md)
 
 ## TODO
 
