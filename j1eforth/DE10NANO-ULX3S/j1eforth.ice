@@ -933,7 +933,7 @@ $$end
                                         case 4b0100: {newStackTop = stackNext * stackTop;}
                                         case 4b0101: {newStackTop = stackTop << 1;}
                                         case 4b0110: {newStackTop = -stackTop;}
-                                        case 4b0111: {newStackTop = stackTop >> 1;}
+                                        case 4b0111: {newStackTop = stackTop >>> 1;}
                                         case 4b1000: {newStackTop = stackNext - stackTop;}
                                         case 4b1001: {newStackTop = {16{(__signed(stackTop) < __signed(0))}};}
                                         case 4b1010: {newStackTop = {16{(__signed(stackTop) > __signed(0))}};}
