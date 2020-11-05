@@ -273,7 +273,7 @@ algorithm doubleaddsub(
     decrement := operand1 - 1;
 
     times2 := operand1 << 1;
-    divide2 := operand1 >>> 1;
+    divide2 := { operand1[31,1], operand1[1,31] };
 
     negation := -operand1;
     binaryinvert := ~operand1;

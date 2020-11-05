@@ -447,16 +447,16 @@ t: abs ( n -- n ) abs t;
 t: max ( n n -- n ) max t;
 t: min ( n n -- n ) min t;
 t: within ( u ul uh -- t ) over - >r - r> u< t;
-t: ddm! ffd2 literal ! ffd0 literal d! 1 literal ffd3 literal ! t;
-t: um/mod ( udl udh u -- ur uq ) ddm! begin ffd3 literal @ 0= until ffd1 literal @ ffd0 literal @ t;
-t: m/mod ( d n -- r q ) ddm! begin ffd6 literal @ 0= until ffd5 literal @ ffd4 literal @ t;
-t: dm! ffd8 literal ! ffd7 literal ! 1 literal ffd9 literal ! t;
-t: mod ( n n -- r ) dm! begin ffd9 literal @ 0= until ffd8 literal @ t;
-t: / ( n n -- q ) dm! begin ffd9 literal @ 0= until ffd7 literal @ t;
-t: /mod ( n n -- r q ) ddm! begin ffd9 literal @ 0= until ffd8 literal @ ffd7 literal @ t;
-t: x! ffda literal ! ffdb literal ! 1 literal ffdc literal ! t;
-t: um* ( u u -- ud ) x! begin ffdc literal @ 0= until ffda literal d@ t;
-t: m* ( n n -- d ) x! begin ffdf literal @ 0= until ffdd literal d@ t;
+t: m/! ffd2 literal ! ffd0 literal d! 1 literal ffd3 literal ! t;
+t: um/mod ( udl udh u -- ur uq ) m/! begin ffd3 literal @ 0= until ffd1 literal @ ffd0 literal @ t;
+t: m/mod ( d n -- r q ) m/! begin ffd6 literal @ 0= until ffd5 literal @ ffd4 literal @ t;
+t: /! ffd8 literal ! ffd7 literal ! 1 literal ffd9 literal ! t;
+t: /mod ( n n -- r q ) /! begin ffd9 literal @ 0= until ffd8 literal @ ffd7 literal @ t;
+t: mod ( n n -- r ) /mod drop t;
+t: / ( n n -- q ) /mod nip t;
+t: m*! ffda literal ! ffdb literal ! 1 literal ffdc literal ! t;
+t: um* ( u u -- ud ) m*! begin ffdc literal @ 0= until ffda literal d@ t;
+t: m* ( n n -- d ) m*! begin ffdf literal @ 0= until ffdd literal d@ t;
 t: * ( n n -- n ) * t;
 t: */mod ( n1 n2 n3 -- r q ) >r m* r> m/mod t;
 t: */ ( n1 n2 n3 -- q ) */mod nip t;
@@ -522,10 +522,7 @@ t: tx! ( c -- )
    begin
      ff20 literal @ 0=
    until
-   ff20 literal !
-   begin
-     ff20 literal @ 0=
-   until t;
+   ff20 literal ! t;
 t: ?key ( -- c ) '?key @execute t;
 t: emit ( c -- ) 'emit @execute t;
 t: key ( -- c )
@@ -783,6 +780,8 @@ t: does> ( -- ) compile (does>) noop t; immediate
 t: char ( <char> -- char ) ( -- c ) bl word 1+ c@ t;
 t: [char] char [t] literal ]asm call asm[ t; immediate
 t: constant create , (does>) @ t;
+t: 2constant create , , does> 2@ t;
+t: 2variable create 2 literal cells allot t;
 t: defer create 0 literal ,
    (does>)
     @ ?dup 0 literal =

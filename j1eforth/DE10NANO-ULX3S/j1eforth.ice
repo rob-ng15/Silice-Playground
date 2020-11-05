@@ -587,6 +587,13 @@ $$end
     // Setup the UART
     uo.data_in_ready := 0; // maintain low
 
+    // RESET Mathematics Co-Processor Controls
+    ummod.start := 0;
+    mmod.start := 0;
+    divmod.start := 0;
+    umstar.start := 0;
+    mstar.start := 0;
+
     // UART input and output buffering
     always {
         // READ from UART if character available and store
@@ -933,7 +940,7 @@ $$end
                                         case 4b0100: {newStackTop = stackNext * stackTop;}
                                         case 4b0101: {newStackTop = stackTop << 1;}
                                         case 4b0110: {newStackTop = -stackTop;}
-                                        case 4b0111: {newStackTop = stackTop >>> 1;}
+                                        case 4b0111: {newStackTop = { stackTop[15,1], stackTop[1,15] }; }
                                         case 4b1000: {newStackTop = stackNext - stackTop;}
                                         case 4b1001: {newStackTop = {16{(__signed(stackTop) < __signed(0))}};}
                                         case 4b1010: {newStackTop = {16{(__signed(stackTop) > __signed(0))}};}
@@ -1202,13 +1209,6 @@ $$end
                 pc = newPC;
                 stackTop = newStackTop;
                 rsp = newRSP;
-
-                // RESET Mathematics Co-Processor Controls
-                ummod.start = 0;
-                mmod.start = 0;
-                divmod.start = 0;
-                umstar.start = 0;
-                mstar.start = 0;
             }
 
             case 3: {
