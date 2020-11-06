@@ -36,15 +36,15 @@ algorithm gpu(
     input   uint4 dl_gpu_write,
 
     // For setting blit1 tile bitmaps
-    input   uint6   blit1_writer_tile,
+    input   uint4   blit1_writer_tile,
     input   uint4   blit1_writer_line,
     input   uint16  blit1_writer_bitmap,
     input   uint1   blit1_writer_active,
 
     output  uint6 gpu_active
 ) <autorun> {
-    // 64 x 16 x 16 1 bit tilemap for blit1tilemap
-    dualport_bram uint16 blit1tilemap[ 1024 ] = uninitialized;
+    // 16 x 16 x 16 1 bit tilemap for blit1tilemap
+    dualport_bram uint16 blit1tilemap[ 256 ] = uninitialized;
 
     // GPU work variable storage
     // Present GPU pixel and colour
@@ -95,14 +95,17 @@ algorithm gpu(
     blit1tilemap.wenable0 := 0;
 
     // blit1tilemap write access for the GPU to load tilemaps
-    blit1tilemap.addr1 := blit1_writer_tile * 16 + blit1_writer_line;
-    blit1tilemap.wdata1 := blit1_writer_bitmap;
-    blit1tilemap.wenable1 := blit1_writer_active;
+    blit1tilemap.wenable1 := 1;
 
     bitmap_write := 0;
     bitmap_colour_write := gpu_active_colour;
 
     always {
+        if( blit1_writer_active ) {
+            blit1tilemap.addr1 = blit1_writer_tile * 16 + blit1_writer_line;
+            blit1tilemap.wdata1 = blit1_writer_bitmap;
+        }
+
         if( dl_gpu_write != 0 ) {
             x = dl_gpu_x;
             y = dl_gpu_y;

@@ -14,7 +14,6 @@ The J1+ CPU has 32 ALU operations, and deals with 16 bit integers. The accelerat
     
 NOTE: j1eforth ```*/mod``` and ```*/``` ( use the above hardware assisted words )
     
-
 ## Memory Map for the Mathematics Accelerators
 
 Hexadecimal<br>Address | Write | Read
@@ -39,21 +38,24 @@ ffbe | | Equal ( operand1 == operand2 )
 ffbf | | Less than ( operand1 < operand2 )
 | |
 ffd0 - ffd1 | Dividend
-ffd0 | | Quotient ( unsigned )
-ffd1 | | Remainder ( unsigned )
+ffd0 | | Quotient
+ffd1 | | Remainder
 ffd2 | Divisor
-ffd3 | Start | Active ( unsigned )
-ffd4 | | Quotient ( signed )
-ffd5 | | Remainder ( signed )
-ffd6 | | Active ( signed )
+ffd3 | Start<br>(1) UNSIGNED (2) SIGNED | Active
 | |
-ffd7 | Dividend | Quotient ( single signed )
-ffd8 | Divisor | Remainder ( single signed )
-ffd9 | Start | Active ( single signed )
+ffd4 | Dividend | Quotient ( single signed )                            ffd4
+ffd5 | Divisor | Remainder ( single signed )                            ffd5
+ffd6 | Start | Active ( single signed )                                 ffd6
 | |
-ffda - ffdb | | Product ( unsigned )
-ffda | Factor 1 |
-ffdb | Factor 2 |
-ffdb | Start | Active ( unsigned )
-ffdd - ffde | | Product ( signed )
-ffdf | | Active ( signed )
+ffd7 - ffd8 | | Product                                                 ffd7 - ffd8
+ffd7 | Factor 1 |                                                       ffd7
+ffd8 | Factor 2 |                                                       ffd8
+ffd9 | Start<br>(1) UNSIGNED (2) SIGNED | Active ( unsigned )           ffd9
+| |
+ffda | |
+ffdb | |
+ffdc | |
+ffdd | |
+ffde | |
+ffdf | |
+

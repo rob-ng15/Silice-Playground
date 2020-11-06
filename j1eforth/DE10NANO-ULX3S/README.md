@@ -87,13 +87,13 @@ __*Not necessarily the most recent build, used for indicative purporses and moni
 Family : Cyclone V
 Device : 5CSEBA6U23I7
 Timing Models : Final
-Logic utilization (in ALMs) : 8,276 / 41,910 ( 20 % )
-Total registers : 4527
+Logic utilization (in ALMs) : 9,001 / 41,910 ( 21 % )
+Total registers : 6170
 Total pins : 36 / 314 ( 11 % )
 Total virtual pins : 0
-Total block memory bits : 2,670,624 / 5,662,720 ( 47 % )
-Total RAM Blocks : 368 / 553 ( 67 % )
-Total DSP Blocks : 16 / 112 ( 14 % )
+Total block memory bits : 2,670,560 / 5,662,720 ( 47 % )
+Total RAM Blocks : 356 / 553 ( 64 % )
+Total DSP Blocks : 17 / 112 ( 15 % )
 Total HSSI RX PCSs : 0
 Total HSSI PMA RX Deserializers : 0
 Total HSSI TX PCSs : 0
@@ -108,11 +108,11 @@ __*Not necessarily the most recent build, used for indicative purporses and moni
 
 ```
 Info: Device utilisation:
-Info:          TRELLIS_SLICE: 20464/41820    48%
+Info:          TRELLIS_SLICE: 16947/41820    40%
 Info:             TRELLIS_IO:    34/  365     9%
 Info:                   DCCA:     4/   56     7%
-Info:                 DP16KD:   180/  208    86%
-Info:             MULT18X18D:    14/  156     8%
+Info:                 DP16KD:   208/  208   100%
+Info:             MULT18X18D:    15/  156     9%
 Info:                 ALU54B:     0/   78     0%
 Info:                EHXPLLL:     2/    4    50%
 Info:                EXTREFB:     0/    2     0%

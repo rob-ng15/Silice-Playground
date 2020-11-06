@@ -57,12 +57,9 @@ algorithm character_map(
     background.wenable0 := 0;
 
     // BRAM write access for the TPU
-    character.addr1 := tpu_active_x + tpu_active_y * 80;
-    character.wenable1 := 0;
-    background.addr1 := tpu_active_x + tpu_active_y * 80;
-    background.wenable1 := 0;
-    foreground.addr1 := tpu_active_x + tpu_active_y * 80;
-    foreground.wenable1 := 0;
+    character.wenable1 := 1;
+    background.wenable1 := 1;
+    foreground.wenable1 := 1;
 
     // Setup the reading of the characterGenerator8x16 ROM
     characterGenerator8x16.addr :=  character.rdata0 * 16 + yincharacter;
@@ -94,17 +91,17 @@ algorithm character_map(
         switch( tpu_active ) {
             case 1: {
                 // Clear the character map - implements tpucs!
+                character.wdata1 = 0;
+                background.wdata1 = 64;
+                foreground.wdata1 = 0;
                 tpu_active_x = 0;
                 tpu_active_y = 0;
                 tpu_active = 2;
             }
             case 2: {
-                character.wdata1 = 0;
-                character.wenable1 = ( tpu_active_x <= 79 ) && ( tpu_active_y <= 30 );
-                background.wdata1 = 64;
-                background.wenable1 = ( tpu_active_x <= 79 ) && ( tpu_active_y <= 30 );
-                foreground.wdata1 = 0;
-                foreground.wenable1 = ( tpu_active_x <= 79 ) && ( tpu_active_y <= 30 );
+                character.addr1 = tpu_active_x + tpu_active_y * 80;
+                background.addr1 = tpu_active_x + tpu_active_y * 80;
+                foreground.addr1 = tpu_active_x + tpu_active_y * 80;
                 tpu_active_y = ( tpu_active_x == 79 ) ? tpu_active_y + 1 : tpu_active_y;
                 tpu_active_x = ( tpu_active_x == 79 ) ? 0 : tpu_active_x + 1;
                 tpu_active = ( tpu_active_x == 79 ) && ( tpu_active_y == 29 ) ? 3 : 2;
@@ -124,12 +121,12 @@ algorithm character_map(
                     }
                     case 2: {
                         // Write character,foreground, background to current cursor position and move onto next character position
+                        character.addr1 = tpu_active_x + tpu_active_y * 80;
+                        background.addr1 = tpu_active_x + tpu_active_y * 80;
+                        foreground.addr1 = tpu_active_x + tpu_active_y * 80;
                         character.wdata1 = tpu_character;
-                        character.wenable1 = 1;
                         background.wdata1 = tpu_background;
-                        background.wenable1 = 1;
                         foreground.wdata1 = tpu_foreground;
-                        foreground.wenable1 = 1;
 
                         tpu_active_y = ( tpu_active_x == 79 ) ? ( tpu_active_y == 29 ) ? 0 : tpu_active_y + 1 : tpu_active_y;
                         tpu_active_x = ( tpu_active_x == 79 ) ? 0 : tpu_active_x + 1;

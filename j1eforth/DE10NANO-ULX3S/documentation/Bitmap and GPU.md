@@ -17,7 +17,7 @@
                     * Optimisation moves to the next line once no longer inside the triangle
                     * Optimisation moves from left to right or right to left depending upon which side the last point in the previous line was closest to
                 * Quicker than software equivalent
-        * Blitter for 16 x 16 1 bit user settable tiles
+        * Blitter for 16 x 16 x 16 1 bit user settable tiles
 
 ## Memory Map for the Bitmap Layer and GPU
 
@@ -36,7 +36,7 @@ ff09 | Set the x coordinate for reading |
 ff0a | Set the y coordinate for reading |
 ff0b | Set blit1 tile writer tile number |
 ff0c | Set blit1 tile map line ( 0 - 15 ) |
-ff0d | Set tile map line bitmap | 
+ff0d | Set tile map line bitmap |
 
 ## j1eforth BITMAP and GPU words
 

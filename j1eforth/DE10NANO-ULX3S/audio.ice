@@ -17,7 +17,7 @@ algorithm apu(
     input uint16 staticGenerator
 ) <autorun> {
     // 32 step points per waveform
-    dualport_bram uint4 waveformtable[] = {
+    uint4 waveformtable[] = {
         // Square wave
         15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -36,7 +36,7 @@ algorithm apu(
     };
 
     // Calculated as 25MHz / note frequency / 32 to give 32 step points per note
-    dualport_bram uint16 frequencytable[64] = {
+    uint16 frequencytable[64] = {
         0,
         23889, 22548, 21283, 20088, 18961, 17897, 16892, 15944, 15049, 14205, 13407, 12655,     // 1 = C 2 or Deep C
         11945, 11274, 10641, 10044, 9480, 8948, 8446, 7972, 7525, 7102, 6704, 6327,             // 13 = C 3
@@ -62,15 +62,10 @@ algorithm apu(
     uint16  duration_1 = uninitialized;
     uint16  duration_2 = uninitialized;
 
-    uint4   audio_output_1 := waveformtable.rdata0;
-    uint16  note_1_frequency := frequencytable.rdata0;
-    uint4   audio_output_2 := waveformtable.rdata1;
-    uint16  note_2_frequency := frequencytable.rdata1;
-
-    waveformtable.addr0 := waveform_1 * 32 + point_1;
-    frequencytable.addr0 := note_1;
-    waveformtable.addr1 := waveform_2 * 32 + point_2;
-    frequencytable.addr1 := note_2;
+    uint4   audio_output_1 := waveformtable[waveform_1 * 32 + point_1];
+    uint16  note_1_frequency := frequencytable[note_1];
+    uint4   audio_output_2 := waveformtable[waveform_2 * 32 + point_2];
+    uint16  note_2_frequency := frequencytable[note_2];
 
     audio_active := ( duration_1 > 0) || ( duration_2 > 0 );
 

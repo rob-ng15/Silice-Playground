@@ -479,11 +479,9 @@ $$end
     );
 
     // Mathematics Cop Processors
-    unsigneddiv ummod ();
-    signeddiv mmod ();
-    signeddiv16bit divmod ();
-    unsignmult umstar ();
-    signmult mstar ();
+    divmod32by16 divmod32by16to16qr ();
+    divmod16by16 divmod16by16to16qr ();
+    multi16by16to32 multiplier16by16to32 ();
 
     doubleaddsub doperations ();
 
@@ -564,14 +562,10 @@ $$end
     // Read via port 0, write via port 1
     dstack.addr0 := dsp;
     dstack.wenable0 := 0;
-    dstack.addr1 := newDSP;
-    dstack.wdata1 := stackTop;
-    dstack.wenable1 := 0;
+    dstack.wenable1 := 1;
     rstack.addr0 := rsp;
     rstack.wenable0 := 0;
-    rstack.addr1 := newRSP;
-    rstack.wdata1 := rstackWData;
-    rstack.wenable1 := 0;
+    rstack.wenable1 := 1;
 
     // UART Buffers
     uartInBuffer.wenable0  := 0;  // always read  on port 0
@@ -588,11 +582,9 @@ $$end
     uo.data_in_ready := 0; // maintain low
 
     // RESET Mathematics Co-Processor Controls
-    ummod.start := 0;
-    mmod.start := 0;
-    divmod.start := 0;
-    umstar.start := 0;
-    mstar.start := 0;
+    divmod32by16to16qr.start := 0;
+    divmod16by16to16qr.start := 0;
+    multiplier16by16to32.start := 0;
 
     // UART input and output buffering
     always {
@@ -790,8 +782,6 @@ $$end
                                                                         case 4ha: { newStackTop = lower_sprites.collision_10; }
                                                                         case 4hb: { newStackTop = lower_sprites.collision_11; }
                                                                         case 4hc: { newStackTop = lower_sprites.collision_12; }
-                                                                        case 4hd: { newStackTop = lower_sprites.collision_13; }
-                                                                        case 4he: { newStackTop = lower_sprites.collision_14; }
                                                                     }
                                                                 }
                                                                 case 4h6: {
@@ -810,8 +800,6 @@ $$end
                                                                         case 4ha: { newStackTop = upper_sprites.collision_10; }
                                                                         case 4hb: { newStackTop = upper_sprites.collision_11; }
                                                                         case 4hc: { newStackTop = upper_sprites.collision_12; }
-                                                                        case 4hd: { newStackTop = upper_sprites.collision_13; }
-                                                                        case 4he: { newStackTop = upper_sprites.collision_14; }
                                                                     }
                                                                 }
                                                                 case 4h7: {
@@ -884,21 +872,15 @@ $$end
                                                                 }
                                                                 case 4hd: {
                                                                     switch( stackTop[0,4] ) {
-                                                                        case 4h0: { newStackTop = ummod.quotient[0,16]; }
-                                                                        case 4h1: { newStackTop = ummod.remainder[0,16]; }
-                                                                        case 4h3: { newStackTop = ummod.active; }
-                                                                        case 4h4: { newStackTop = mmod.quotient[0,16]; }
-                                                                        case 4h5: { newStackTop = mmod.remainder[0,16]; }
-                                                                        case 4h6: { newStackTop = mmod.active; }
-                                                                        case 4h7: { newStackTop = divmod.quotient; }
-                                                                        case 4h8: { newStackTop = divmod.remainder; }
-                                                                        case 4h9: { newStackTop = divmod.active; }
-                                                                        case 4ha: { newStackTop = umstar.product[16,16]; }
-                                                                        case 4hb: { newStackTop = umstar.product[0,16]; }
-                                                                        case 4hc: { newStackTop = umstar.active; }
-                                                                        case 4hd: { newStackTop = mstar.product[16,16]; }
-                                                                        case 4he: { newStackTop = mstar.product[0,16]; }
-                                                                        case 4hf: { newStackTop = mstar.active; }
+                                                                        case 4h0: { newStackTop = divmod32by16to16qr.quotient[0,16]; }
+                                                                        case 4h1: { newStackTop = divmod32by16to16qr.remainder[0,16]; }
+                                                                        case 4h3: { newStackTop = divmod32by16to16qr.active; }
+                                                                        case 4h4: { newStackTop = divmod16by16to16qr.quotient; }
+                                                                        case 4h5: { newStackTop = divmod16by16to16qr.remainder; }
+                                                                        case 4h6: { newStackTop = divmod16by16to16qr.active; }
+                                                                        case 4h7: { newStackTop = multiplier16by16to32.product[16,16]; }
+                                                                        case 4h8: { newStackTop = multiplier16by16to32.product[0,16]; }
+                                                                        case 4h9: { newStackTop = multiplier16by16to32.active; }
                                                                     }
                                                                 }
                                                                 case 4he: {
@@ -1145,16 +1127,16 @@ $$end
                                                     }
                                                     case 4hd: {
                                                         switch( stackTop[0,4] ) {
-                                                            case 4h0: { ummod.dividendh = stackNext; mmod.dividendh = stackNext; }
-                                                            case 4h1: { ummod.dividendl = stackNext; mmod.dividendl = stackNext; }
-                                                            case 4h2: { ummod.divisor = stackNext; mmod.divisor = stackNext; }
-                                                            case 4h3: { ummod.start = 1; mmod.start = 1; }
-                                                            case 4h7: { divmod.dividend = stackNext; }
-                                                            case 4h8: { divmod.divisor = stackNext; }
-                                                            case 4h9: { divmod.start = stackNext; }
-                                                            case 4ha: { umstar.factor1 = stackNext; mstar.factor1 = stackNext; }
-                                                            case 4hb: { umstar.factor2 = stackNext; mstar.factor2 = stackNext; }
-                                                            case 4hc: { umstar.start = 1; mstar.start = 1; }
+                                                            case 4h0: { divmod32by16to16qr.dividendh = stackNext; }
+                                                            case 4h1: { divmod32by16to16qr.dividendl = stackNext; }
+                                                            case 4h2: { divmod32by16to16qr.divisor = stackNext; }
+                                                            case 4h3: { divmod32by16to16qr.start = stackNext; }
+                                                            case 4h4: { divmod16by16to16qr.dividend = stackNext; }
+                                                            case 4h5: { divmod16by16to16qr.divisor = stackNext; }
+                                                            case 4h6: { divmod16by16to16qr.start = stackNext; }
+                                                            case 4h7: { multiplier16by16to32.factor1 = stackNext; }
+                                                            case 4h8: { multiplier16by16to32.factor2 = stackNext; }
+                                                            case 4h9: { multiplier16by16to32.start = stackNext; }
                                                         }
                                                     }
                                                     case 4he: {
@@ -1201,8 +1183,14 @@ $$end
             // update pc and perform mem[t] = n
             case 2: {
                 // Commit to dstack and rstack
-                dstack.wenable1 = dstackWrite;
-                rstack.wenable1 = rstackWrite;
+                if( dstackWrite ) {
+                    dstack.addr1 = newDSP;
+                    dstack.wdata1 = stackTop;
+                }
+                if( rstackWrite ) {
+                    rstack.addr1 = newRSP;
+                    rstack.wdata1 = rstackWData;
+                }
 
                 // Update dsp, rsp, pc, stackTop
                 dsp = newDSP;

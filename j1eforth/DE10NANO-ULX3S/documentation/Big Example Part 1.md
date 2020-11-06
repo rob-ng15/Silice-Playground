@@ -70,6 +70,12 @@ c array lasteroidtype c array hasteroidtype
 c array lasteroiddirection c array hasteroiddirection
 
 ( directions table for the asteroid sprite update flag)
+8 array bulletdirections
+20 0 bulletdirections c! 32 1 bulletdirections c!
+3 2 bulletdirections c! 12 3 bulletdirections c!
+18 4 bulletdirections c! 16 5 bulletdirections c!
+4 6 bulletdirections c! 36 7 bulletdirections c!
+
 10 array updatedirections
 20 0 updatedirections c! 3  1 updatedirections c!
 18 2 updatedirections c! 4  3 updatedirections c!
@@ -97,19 +103,25 @@ variable worky
 1 -5 a 0 3 vectorvertex!
 1 0 0 0 4 vectorvertex!
 
-: setshipsprite
-  2 0 do
+: shipspritedata
     0100 0100 0380 07c0 07c0 0fe0 0fe0 0fe0
     1ff0 1ff0 1ff0 3ff8 3ff8 7efc 783c 0000
+    0001 001e 007e 07fe 1ffe fffc 7ffc 3ff8
+    1ff8 07f8 03f8 01f0 01f0 00e0 0060 0020
     0000 6000 7800 7f00 7ff0 7ff8 3ff8 1fff
     3ff8 3ff8 7ff0 7ff0 7800 6000 0000 0000
+    0020 0060 00e0 01f0 01f0 03f8 07f8 1ff8
+    3ff8 7ffc fffc 1ffe 07fe 007e 001e 0001
     0000 3c1e 3f7e 1ffc 1ffc 0ff8 0ff8 0ff8
     07f0 07f0 07f0 03e0 03e0 01c0 0080 0080
+    0400 0600 0700 0f80 0f80 1fc0 1fe0 1ff8
+    1ffc 3ffe 3fff 7ff8 7fe0 7e00 7800 8000
     0000 0000 0006 001e 00fe 07fe 1ffc 3ffc
     fff8 3ffc 1ffc 07fe 00fe 001e 0006 0000
-  loop d lsltile! d usltile! ;
-  
-: setbulletsprite
+    8000 7800 7e00 7fe0 7ff8 3fff 3ffe 1ffc
+    1ff8 1fe0 1fc0 0f80 0f80 0700 0600 0400 ;
+
+: bulletspritedata
   2 0 do
     0000 0000 0000 0000 0000 0100 0100 07c0
     0100 0100 0000 0000 0000 0000 0000 0000
@@ -119,27 +131,33 @@ variable worky
     0380 0100 0000 0000 0000 0000 0000 0000
     0000 0000 0000 0000 0000 0540 0380 07c0
     0380 0540 0000 0000 0000 0000 0000 0000
-  loop e lsltile! e usltile! ;
-  
-: largeasteroidbitmap
-  07f0 07f8 0ffe 0fff 3f0f ff6e 7f0c 3ffc
-  1fff 3fff 7fff 7ffe 1ffc 07fc 01f8 00f0
+  loop ;
+
+: setshipsprite
+  shipspritedata b lsltile!
+  shipspritedata b usltile! ;
+
+: setbulletsprite
+  bulletspritedata c lsltile!
+  bulletspritedata c usltile! ;
+
+: asteroidbitmap
+  07f0 0ff8 1ffe 1fff 3fff ffff fffe fffc
+  ffff 7fff 7fff 7ffe 3ffc 3ffc 0ff8 00f0
   1008 3c1c 7f1e ffff 7ffe 7ffe 3ff8 3ff0
   1ff8 0ff8 1ffc 7ffe ffff 7ffe 3dfc 1878
-  0787 1f8e 0fde 67fc fffc fffe ffff 7fff 
-  7ffc 3ff8 3ffc 7ffe ffff fffe 3ffc 73f8 
+  0787 1f8e 0fde 67fc fffc fffe ffff 7fff
+  7ffc 3ff8 3ffc 7ffe ffff fffe 3ffc 73f8
+  ffff ffff ffff ffff ffff ffff ffff ffff
+  ffff ffff ffff ffff ffff ffff ffff ffff
+  ffff ffff ffff ffff ffff ffff ffff ffff
+  ffff ffff ffff ffff ffff ffff ffff ffff
+  ffff ffff ffff ffff ffff ffff ffff ffff
+  ffff ffff ffff ffff ffff ffff ffff ffff
+  ffff ffff ffff ffff ffff ffff ffff ffff
+  ffff ffff ffff ffff ffff ffff ffff ffff
   0020 4206 0006 1820 1800 0081 0400 4010
-  0000 0300 0302 6010 6000 0000 0419 8018 ;  
-  
-: setlargelasteroid
-  workasteroid !
-  largeasteroidbitmap
-  workasteroid @ lsltile! ;
-
-: setlargehasteroid
-  workasteroid !
-  largeasteroidbitmap
-  workasteroid @ usltile! ;
+  0000 0300 0302 6010 6000 0000 0419 8018 ;
 
 ( place initial large asteroids )
 ( always away from the centre )
@@ -156,34 +174,30 @@ variable worky
   loop
   0 activelasteroids ! 0 activehasteroids !
   4 rng 1+ 0 do
-    20 rng 20 + 280 rng a0 rng 3 rng 1 1
+    20 rng 20 + 280 rng a0 rng 7 rng 1 1
       activelasteroids @ lslsprite!
     4 rng 4 + activelasteroids @ lasteroiddirection c!
-    activelasteroids @ setlargelasteroid
     1 activelasteroids @ lasteroidtype c!
     1 activelasteroids @ lasteroidactive c!
     activelasteroids @ 1+ activelasteroids !
   loop
-    20 rng 20 + d5 rng 1e0 rng 3 rng 1 1
+    20 rng 20 + d5 rng 1e0 rng 7 rng 1 1
       activelasteroids @ lslsprite!
     4 rng 4 + activelasteroids @ lasteroiddirection c!
-    activelasteroids @ setlargelasteroid
     1 activelasteroids @ lasteroidtype c!
     1 activelasteroids @ lasteroidactive c!
     activelasteroids @ 1+ activelasteroids !
   4 rng 1+ 0 do
-    20 rng 20 + 280 rng a0 rng 140 + 3 rng 1 1
+    20 rng 20 + 280 rng a0 rng 140 + 7 rng 1 1
       activehasteroids @ uslsprite!
     4 rng 4 + activehasteroids @ hasteroiddirection c!
-    activehasteroids @ setlargehasteroid
     1 activehasteroids @ hasteroidtype !
     1 activehasteroids @ hasteroidactive c!
     activehasteroids @ 1+ activehasteroids !
   loop
-    20 rng 20 + d5 rng 1aa + 1e0 rng 3 rng 1 1
+    20 rng 20 + d5 rng 1aa + 1e0 rng 7 rng 1 1
       activehasteroids @ uslsprite!
     4 rng 4 + activehasteroids @ hasteroiddirection c!
-    activehasteroids @ setlargehasteroid
     1 activehasteroids @ hasteroidtype !
     1 activehasteroids @ hasteroidactive c!
     activehasteroids @ 1+ activehasteroids ! ;
@@ -199,11 +213,11 @@ variable worky
   ( set the background )
   2a 1 7 background!
   ( hide all sprites )
-  f 0 do 
+  f 0 do
     0 0 0 0 0 0 i lslsprite!
     0 0 0 0 0 0 i uslsprite!
   loop
-  
+
     4 4 1 40 15 tm!
     4 5 2 40 15 tm!
     5 4 3 40 15 tm!
@@ -233,11 +247,17 @@ variable worky
   e8 shipy !
   setshipsprite
   setbulletsprite
-  placeasteroids 
+  placeasteroids
   ( draw lives )
   3f 220 1d0 0 vector!
   3f 240 1d0 0 vector!
   3f 260 1d0 0 vector! ;
+
+: setasteroidsprites
+  b 0 do
+    asteroidbitmap i lsltile!
+    asteroidbitmap i usltile!
+  loop ;
 
 : finish
  terminalshow! ;

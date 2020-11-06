@@ -41,21 +41,26 @@ algorithm bitmap(
     bitmap_blue.wenable0 := 0;
 
     // Bitmap write access for the GPU - Only enable when x and y are in range
-    bitmap_alpha.addr1 := bitmap_x_write + bitmap_y_write * 640;
-    bitmap_alpha.wdata1 := colour7(bitmap_colour_write).alpha;
-    bitmap_alpha.wenable1 := write_pixel;
-    bitmap_red.addr1 := bitmap_x_write + bitmap_y_write * 640;
-    bitmap_red.wdata1 := colour7(bitmap_colour_write).red;
-    bitmap_red.wenable1 := write_pixel;
-    bitmap_green.addr1 := bitmap_x_write + bitmap_y_write * 640;
-    bitmap_green.wdata1 := colour7(bitmap_colour_write).green;
-    bitmap_green.wenable1 := write_pixel;
-    bitmap_blue.addr1 := bitmap_x_write + bitmap_y_write * 640;
-    bitmap_blue.wdata1 := colour7(bitmap_colour_write).blue;
-    bitmap_blue.wenable1 := write_pixel;
+    bitmap_alpha.wenable1 := 1;
+    bitmap_red.wenable1 := 1;
+    bitmap_green.wenable1 := 1;
+    bitmap_blue.wenable1 := 1;
 
     // Default to transparent
     bitmap_display := pix_active && ~bitmap_alpha.rdata0;
+
+    always {
+        if( write_pixel ) {
+            bitmap_alpha.addr1 = bitmap_x_write + bitmap_y_write * 640;
+            bitmap_alpha.wdata1 = colour7(bitmap_colour_write).alpha;
+            bitmap_red.addr1 = bitmap_x_write + bitmap_y_write * 640;
+            bitmap_red.wdata1 = colour7(bitmap_colour_write).red;
+            bitmap_green.addr1 = bitmap_x_write + bitmap_y_write * 640;
+            bitmap_green.wdata1 = colour7(bitmap_colour_write).green;
+            bitmap_blue.addr1 = bitmap_x_write + bitmap_y_write * 640;
+            bitmap_blue.wdata1 = colour7(bitmap_colour_write).blue;
+        }
+    }
 
     // Render the bitmap
     while(1) {

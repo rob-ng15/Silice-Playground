@@ -3,7 +3,7 @@
 Each Sprite Layer has the following:
 
 * Sprite Layer
-    * 15 (numbered 0 - 14) x 16 x 16 1 bit sprites (see below about colour modes)
+    * 13 (numbered 0 - 12) x 16 x 16 1 bit sprites (see below about colour modes)
         * Double flag to display as double pixel 32 x 32 per sprite
         * 4 user settable tiles per sprite
         * 3 colour modes
@@ -17,11 +17,11 @@ For the j1eforth design there are two sprite layers. The lower sprite layer disp
 
 Each sprite has the following attributes:
 
-Sprite Tile<br>Map | Active | Double | Colour Mode | Tile Number | X | Y | Colour 
+Sprite Tile<br>Map | Active | Double | Colour Mode | Tile Number | X | Y | Colour
 ----- | ----- | ----- | ----- | ----- | -----  | ----- | -----
-64 lines of 16 pixels<br>4 x 16 x 16 tiles | Hide(0)<br>Display(1) | Single pixel 16 x 16 (0)<br>Double Pixel 32 x 32 (1) | 0 - Single colour<br>1 - 3 colour + transparent, 8 x 16 sprite<br>2 - 15 colour + transparent 4 x 16 sprite | 0 - 3 Select tile from the sprite tile map | X coordinate | Y coordinate | { rrggbb } colour for single colour mode
+128 lines of 16 pixels<br>8 x 16 x 16 tiles | Hide(0)<br>Display(1) | Single pixel 16 x 16 (0)<br>Double Pixel 32 x 32 (1) | 0 - Single colour<br>1 - 3 colour + transparent, 8 x 16 sprite<br>2 - 15 colour + transparent 4 x 16 sprite | 0 - 3 Select tile from the sprite tile map | X coordinate | Y coordinate | { rrggbb } colour for single colour mode
 
-3 colour sprites will be doubled to 16 x 32 pixels. Adjacent pixels are combined to give a 2-bit palette number, 0 being transparent. 
+3 colour sprites will be doubled to 16 x 32 pixels. Adjacent pixels are combined to give a 2-bit palette number, 0 being transparent.
 15 colour sprites will be doubled to 8 x 32 pixels. 4 adjacent pixels are combined to give a 4-bit palette number, 0 being transparent.
 
 ## Memory Map for the Sprite Layers
@@ -38,25 +38,25 @@ ff36 | Set _ASN_ double flag | Read _ASN_ double flag
 ff37 | Set _ASN_ colour mode | Read _ASN_ colour mode
 ff38 | Set sprite number for the tile map writer |
 ff39 | Set sprite tile map line ( 0 - 63 ) |
-ff3a | Set sprite tile map line bitmap | 
+ff3a | Set sprite tile map line bitmap |
 ff3e | Update a sprite<br>See notes below |
- | | 
-ff50 | | Collision detection flag for sprite 0 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff51 | Set 3 or 15 colour palette 1 | Collision detection flag for sprite 1 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff52 | Set 3 or 15 colour palette 2 | Collision detection flag for sprite 2 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff53 | Set 3 or 15 colour palette 3 | Collision detection flag for sprite 3 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff54 | Set 3 or 15 colour palette 4 | Collision detection flag for sprite 4 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff55 | Set 3 or 15 colour palette 5 | Collision detection flag for sprite 5 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff56 | Set 3 or 15 colour palette 6 | Collision detection flag for sprite 6 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff57 | Set 3 or 15 colour palette 7 | Collision detection flag for sprite 7 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff58 | Set 3 or 15 colour palette 8 | Collision detection flag for sprite 8 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff59 | Set 3 or 15 colour palette 9 | Collision detection flag for sprite 9 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff5a | Set 3 or 15 colour palette a | Collision detection flag for sprite 10 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff5b | Set 3 or 15 colour palette b | Collision detection flag for sprite 11 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff5c | Set 3 or 15 colour palette c | Collision detection flag for sprite 12 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff5d | Set 3 or 15 colour palette d | Collision detection flag for sprite 13 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff5e | Set 3 or 15 colour palette e | Collision detection flag for sprite 14 { bitmap, sprite14, sprite13, ... sprite 0 }
-ff5f | Set 3 or 15 colour palette f | 
+ | |
+ff50 | | Collision detection flag for sprite 0 { bitmap, 0, 0, sprite12, ... sprite 0 }
+ff51 | Set 3 or 15 colour palette 1 | Collision detection flag for sprite 1 { bitmap, 0, 0, sprite12, ... sprite 0 }
+ff52 | Set 3 or 15 colour palette 2 | Collision detection flag for sprite 2 { bitmap, 0, 0, sprite12, ... sprite 0 }
+ff53 | Set 3 or 15 colour palette 3 | Collision detection flag for sprite 3 { bitmap, 0, 0, sprite12, ... sprite 0 }
+ff54 | Set 3 or 15 colour palette 4 | Collision detection flag for sprite 4 { bitmap, 0, 0, sprite12, ... sprite 0 }
+ff55 | Set 3 or 15 colour palette 5 | Collision detection flag for sprite 5 { bitmap, 0, 0, sprite12, ... sprite 0 }
+ff56 | Set 3 or 15 colour palette 6 | Collision detection flag for sprite 6 { bitmap, 0, 0, sprite12, ... sprite 0 }
+ff57 | Set 3 or 15 colour palette 7 | Collision detection flag for sprite 7 { bitmap, 0, 0, sprite12, ... sprite 0 }
+ff58 | Set 3 or 15 colour palette 8 | Collision detection flag for sprite 8 { bitmap, 0, 0, sprite12, ... sprite 0 }
+ff59 | Set 3 or 15 colour palette 9 | Collision detection flag for sprite 9 { bitmap, 0, 0, sprite12, ... sprite 0 }
+ff5a | Set 3 or 15 colour palette a | Collision detection flag for sprite 10 { bitmap, 0, 0, sprite12, ... sprite 0 }
+ff5b | Set 3 or 15 colour palette b | Collision detection flag for sprite 11 { bitmap, 0, 0, sprite12, ... sprite 0 }
+ff5c | Set 3 or 15 colour palette c | Collision detection flag for sprite 12 { bitmap, 0, 0, sprite12, ... sprite 0 }
+ff5d | Set 3 or 15 colour palette d |  { bitmap, 0, 0, sprite12, ... sprite 0 }
+ff5e | Set 3 or 15 colour palette e |  { bitmap, 0, 0, sprite12, ... sprite 0 }
+ff5f | Set 3 or 15 colour palette f |
 
 _For the Upper Sprite Layer add 10 to the address, range ff40 - ff4f, ff60 - ff6f_.
 
@@ -66,8 +66,8 @@ SPRITE LAYER<br>Word | Usage
 ----- | -----
 lslsprite! | Example ```3f 10 20 2 1 0 0 lslsprite!``` set lower sprite layer sprite 0 to 10,20 in colour 3f with tile map number 2, active and 16x16<br>_NOTE: colour x y tile active double number_
 uslsprite! | Example ```3f 10 20 2 1 1 0 uslsprite!``` set upper sprite layer sprite 0 to 10,20 in colour 3f with tile map number 2,active and 32x32
-lsltile! | Example (put 64 16bit bitmap lines to the stack) ```0 lsltile!``` set lower sprite layer sprite 0 tile map to the 64 bitmap lines
-usltile! | Example (put 64 16bit bitmap lines to the stack) ```0 usltile!``` set upper sprite layer sprite 0 tile map to the 64 bitmap lines
+lsltile! | Example (put 128 16bit bitmap lines to the stack) ```0 lsltile!``` set lower sprite layer sprite 0 tile map to the 64 bitmap lines
+usltile! | Example (put 128 16bit bitmap lines to the stack) ```0 usltile!``` set upper sprite layer sprite 0 tile map to the 64 bitmap lines
 lslupdate! | Example ```57 lslupdate!``` Update lower sprite layer sprite 0 according to (binary) { 0 000000 0 0 1 010 111 }<br>No change to colour, x wrap, y wrap, Iicrement tile number, y=y+2, x=x-1
 uslupdate! | Example ```86b1 uslupdate!``` Update upper sprite layer sprite 0 according to (binary) { 1 000011 0 1 0 110 001 }<br>Change colour to 3(blue), x wrap, y kill, keep tile number, y=y-2, x=x+1
 

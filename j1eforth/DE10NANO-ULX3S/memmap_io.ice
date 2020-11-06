@@ -417,14 +417,11 @@ $$end
     );
 
     // Mathematics Cop Processors
-    unsigneddiv ummod ();
-    signeddiv mmod ();
-    signeddiv16bit divmod ();
-    unsignmult umstar ();
-    signmult mstar ();
+    divmod32by16 divmod32by16to16qr ();
+    divmod16by16 divmod16by16to16qr ();
+    multi16by16to32 multiplier16by16to32 ();
 
     doubleaddsub doperations ();
-
 
     // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
     dualport_bram uint8 uartInBuffer[4096] = uninitialized;
@@ -456,11 +453,9 @@ $$end
     uo.data_in_ready := 0; // maintain low
 
     // RESET Mathematics Co-Processor Controls
-    ummod.start := 0;
-    mmod.start := 0;
-    divmod.start := 0;
-    umstar.start := 0;
-    mstar.start := 0;
+    divmod32by16to16qr.start := 0;
+    divmod16by16to16qr.start := 0;
+    multiplier16by16to32.start := 0;
 
     // UART input and output buffering
     always {
@@ -671,16 +666,16 @@ $$end
                                 }
                                 case 4hd: {
                                     switch( memoryAddress[0,4] ) {
-                                        case 4h0: { ummod.dividendh = writeData; mmod.dividendh = writeData; }
-                                        case 4h1: { ummod.dividendl = writeData; mmod.dividendl = writeData; }
-                                        case 4h2: { ummod.divisor = writeData; mmod.divisor = writeData; }
-                                        case 4h3: { ummod.start = 1; mmod.start = 1; }
-                                        case 4h7: { divmod.dividend = writeData; }
-                                        case 4h8: { divmod.divisor = writeData; }
-                                        case 4h9: { divmod.start = writeData; }
-                                        case 4ha: { umstar.factor1 = writeData; mstar.factor1 = writeData; }
-                                        case 4hb: { umstar.factor2 = writeData; mstar.factor2 = writeData; }
-                                        case 4hc: { umstar.start = 1; mstar.start = 1; }
+                                        case 4h0: { divmod32by16to16qr.dividendh = writeData; }
+                                        case 4h1: { divmod32by16to16qr.dividendl = writeData; }
+                                        case 4h2: { divmod32by16to16qr.divisor = writeData; }
+                                        case 4h3: { divmod32by16to16qr.start = writeData; }
+                                        case 4h4: { divmod16by16to16qr.dividend = writeData; }
+                                        case 4h5: { divmod16by16to16qr.divisor = writeData; }
+                                        case 4h6: { divmod16by16to16qr.start = writeData; }
+                                        case 4h7: { multiplier16by16to32.factor1 = writeData; }
+                                        case 4h8: { multiplier16by16to32.factor2 = writeData; }
+                                        case 4h9: { multiplier16by16to32.start = writeData; }
                                     }
                                 }
                                 case 4he: {
@@ -885,21 +880,15 @@ $$end
                                 }
                                 case 4hd: {
                                     switch( memoryAddress[0,4] ) {
-                                        case 4h0: { readData = ummod.quotient[0,16]; }
-                                        case 4h1: { readData = ummod.remainder[0,16]; }
-                                        case 4h3: { readData = ummod.active; }
-                                        case 4h4: { readData = mmod.quotient[0,16]; }
-                                        case 4h5: { readData = mmod.remainder[0,16]; }
-                                        case 4h6: { readData = mmod.active; }
-                                        case 4h7: { readData = divmod.quotient; }
-                                        case 4h8: { readData = divmod.remainder; }
-                                        case 4h9: { readData = divmod.active; }
-                                        case 4ha: { readData = umstar.product[16,16]; }
-                                        case 4hb: { readData = umstar.product[0,16]; }
-                                        case 4hc: { readData = umstar.active; }
-                                        case 4hd: { readData = mstar.product[16,16]; }
-                                        case 4he: { readData = mstar.product[0,16]; }
-                                        case 4hf: { readData = mstar.active; }
+                                        case 4h0: { readData = divmod32by16to16qr.quotient[0,16]; }
+                                        case 4h1: { readData = divmod32by16to16qr.remainder[0,16]; }
+                                        case 4h3: { readData = divmod32by16to16qr.active; }
+                                        case 4h4: { readData = divmod16by16to16qr.quotient; }
+                                        case 4h5: { readData = divmod16by16to16qr.remainder; }
+                                        case 4h6: { readData = divmod16by16to16qr.active; }
+                                        case 4h7: { readData = multiplier16by16to32.product[16,16]; }
+                                        case 4h8: { readData = multiplier16by16to32.product[0,16]; }
+                                        case 4h9: { readData = multiplier16by16to32.active; }
                                     }
                                 }
                                 case 4he: {

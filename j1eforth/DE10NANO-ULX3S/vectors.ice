@@ -5,6 +5,14 @@
 // Each vertices has an active flag, processing of a vector block stops when the active flag is 0
 // Each vector block has a centre x and y coordinate and a colour { rrggbb } when drawn
 
+bitfield vectorentry {
+    uint1   active,
+    uint1   dxsign,
+    uint5   dx,
+    uint1   dysign,
+    uint5   dy
+}
+
 algorithm vectors(
     input   uint4   vector_block_number,
     input   uint7   vector_block_colour,
@@ -41,13 +49,11 @@ algorithm vectors(
     input  uint6 gpu_active
 ) <autorun> {
     // 16 vector blocks each of 16 vertices
-    dualport_bram uint1 A[256] = uninitialised;
-    dualport_bram int6 dy[256] = uninitialised;
-    dualport_bram int6 dx[256] = uninitialised;
+    dualport_bram uint13 vertex[256] = uninitialised;
 
     // Extract deltax and deltay for the present vertices
-    int11 deltax := { {6{dx.rdata0[5,1]}}, dx.rdata0[0,5] };
-    int11 deltay := { {6{dy.rdata0[5,1]}}, dy.rdata0[0,5] };
+    int11 deltax := { {6{vectorentry(vertex.rdata0).dxsign}}, vectorentry(vertex.rdata0).dx };
+    int11 deltay := { {6{vectorentry(vertex.rdata0).dysign}}, vectorentry(vertex.rdata0).dy };
 
     // Vertices being processed, plus first coordinate of each line
     uint5 block_number = uninitialised;
@@ -56,27 +62,18 @@ algorithm vectors(
     int11 start_y = uninitialised;
 
     // Set read and write address for the vertices
-    A.addr0 := block_number * 16 + vertices_number;
-    A.wenable0 := 0;
-    A.addr1 := vertices_writer_block * 16 + vertices_writer_vertex;
-    A.wdata1 := vertices_writer_active;
-    A.wenable1 := vertices_writer_write;
-
-    dx.addr0 := block_number * 16 + vertices_number;
-    dx.wenable0 := 0;
-    dx.addr1 := vertices_writer_block * 16 + vertices_writer_vertex;
-    dx.wdata1 := vertices_writer_xdelta;
-    dx.wenable1 := vertices_writer_write;
-
-    dy.addr0 := block_number * 16 + vertices_number;
-    dy.wenable0 := 0;
-    dy.addr1 := vertices_writer_block * 16 + vertices_writer_vertex;
-    dy.wdata1 := vertices_writer_ydelta;
-    dy.wenable1 := vertices_writer_write;
+    vertex.addr0 := block_number * 16 + vertices_number;
+    vertex.wenable0 := 0;
+    vertex.wenable1 := 1;
 
     gpu_write := 0;
 
     always {
+        if( vertices_writer_write ) {
+            vertex.addr1 = vertices_writer_block * 16 + vertices_writer_vertex;
+            vertex.wdata1 = { vertices_writer_active, vertices_writer_xdelta, vertices_writer_ydelta };
+        }
+
         if( dl_draw_vector ) {
             block_number = dl_vector_block_number;
             gpu_colour = dl_vector_block_colour;
@@ -110,7 +107,7 @@ algorithm vectors(
             }
             case 4: {
                 // See if the next of the vertices is active and await the GPU
-                vector_block_active = ( A.rdata0 ) ? ( gpu_active != 0 ) ? 4 : 5 : 0;
+                vector_block_active = ( vectorentry(vertex.rdata0).active ) ? ( gpu_active != 0 ) ? 4 : 5 : 0;
             }
             case 5: {
                 // Send the line to the GPU
