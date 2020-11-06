@@ -34,6 +34,8 @@ algorithm sprite(
 
     // Calculate if sprite is visible
     uint4 xinsprite := ( 16 >> sprite_colmode ) - 1  - ( ( pix_x - sprite_x ) >> sprite_double );
+    uint1 xinrange := ( pix_x >= sprite_x ) && ( pix_x < ( sprite_x + ( ( 16 >> sprite_colmode ) << sprite_double ) ) );
+    uint1 yinrange := ( pix_y >= sprite_y ) && ( pix_y < ( sprite_y + ( 16 << sprite_double ) ) );
 
     // Set read and write address for the tiles
     tiles.addr0 := sprite_tile * 16 + ( ( pix_y - sprite_y ) >> sprite_double );
@@ -46,8 +48,7 @@ algorithm sprite(
             tiles.wdata1 = writer_bitmap;
         }
 
-        if( ( ( pix_x >= sprite_x ) && ( pix_x < ( sprite_x + ( ( 16 >> sprite_colmode ) << sprite_double ) ) ) )
-                && ( ( pix_y >= sprite_y ) && ( pix_y < ( sprite_y + ( 16 << sprite_double ) ) ) ) ) {
+        if( sprite_active && xinrange && yinrange ) {
             switch( sprite_colmode ) {
                 case 0: {
                     pix_colour = tiles.rdata0[ xinsprite, 1 ];

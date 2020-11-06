@@ -41,7 +41,6 @@ algorithm pulse1khz(
 // Translation into Silice of LFSR_Plus.v
 algorithm random(
     output  uint16  g_noise_out,
-    output  uint16  u_noise_out,
     input   uint1   resetRandom
 ) <autorun> {
     uint16  rand_out = 0;
@@ -76,7 +75,6 @@ algorithm random(
             temp_u_noise1 = temp_u_noise2;
             temp_u_noise0 = temp_u_noise1;
             temp_g_noise_nxt = ( rand_en_ff[9,1] ) ? temp_u_noise3 + temp_u_noise2 + temp_u_noise1 + temp_u_noise0 + g_noise_out : temp_u_noise3 + temp_u_noise2 + temp_u_noise1 + temp_u_noise0;
-            u_noise_out = ( rand_en_ff[17,1] ) ? rand_out : u_noise_out;
         }
     }
 }

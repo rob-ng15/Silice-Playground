@@ -481,7 +481,7 @@ $$end
     // Mathematics Cop Processors
     divmod32by16 divmod32by16to16qr ();
     divmod16by16 divmod16by16to16qr ();
-    multi16by16to32 multiplier16by16to32 ();
+    multi16by16to32DSP multiplier16by16to32 ();
 
     doubleaddsub doperations ();
 

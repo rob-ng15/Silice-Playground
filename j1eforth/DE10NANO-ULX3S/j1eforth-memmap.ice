@@ -192,21 +192,15 @@ $$end
     // Read via port 0, write via port 1
     dstack.addr0 := dsp;
     dstack.wenable0 := 0;
-    dstack.addr1 := newDSP;
-    dstack.wdata1 := stackTop;
-    dstack.wenable1 := 0;
+    dstack.wenable1 := 1;
     rstack.addr0 := rsp;
     rstack.wenable0 := 0;
-    rstack.addr1 := newRSP;
-    rstack.wdata1 := rstackWData;
-    rstack.wenable1 := 0;
+    rstack.wenable1 := 1;
 
     // IO Map Read / Write Flags
     IO_Map.memoryWrite := ( CYCLE == 1 ) && aluop(instruction).is_n2memt && ( stackTop > 32767 );
     IO_Map.memoryRead := ( CYCLE == 1 ) && is_alu && ( aluop( instruction ).is_j1j1plus == 0 ) && ( aluop( instruction ).operation == 4b1100 );
     IO_Map.resetCoPro := ( CYCLE == 3 );
-
-    leds := { instruction( instruction ).is_litcallbranchalu, 1b0, 1b0, ( CYCLE == 1 ) && aluop(instruction).is_n2memt && ( stackTop > 32767 ), ( CYCLE == 1 ) && is_alu && ( aluop( instruction ).is_j1j1plus == 0 ) && ( aluop( instruction ).operation == 4b1100 ), ( CYCLE == 3 ) };
 
     // EXECUTE J1 CPU
     while( 1 ) {
@@ -355,8 +349,14 @@ $$end
             // update pc and perform mem[t] = n
             case 2: {
                 // Commit to dstack and rstack
-                dstack.wenable1 = dstackWrite;
-                rstack.wenable1 = rstackWrite;
+                if( dstackWrite ) {
+                    dstack.addr1 = newDSP;
+                    dstack.wdata1 = stackTop;
+                }
+                if( rstackWrite ) {
+                    rstack.addr1 = newRSP;
+                    rstack.wdata1 = rstackWData;
+                }
 
                 // Update dsp, rsp, pc, stackTop
                 dsp = newDSP;

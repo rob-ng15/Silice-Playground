@@ -15,6 +15,64 @@
     endcase
   then ;
 
+: lkill
+  hitasteroid @ ff30 !
+  ff33 @ ff34 @ ff35 @ 7 1 ff36 @
+  hitasteroid @ lslsprite!
+  2 4 1 1f4 beep! 1f4 sleep
+  0 0 0 0 0 0 hitasteroid @ lslsprite!
+  0 hitasteroid @ lasteroidactive c!
+  -1 activelasteroids +! ;
+
+: hkill
+  hitasteroid @ ff40 !
+  ff43 @ ff44 @ ff45 @ 7 1 ff46 @
+  hitasteroid @ uslsprite!
+  2 4 1 1f4 beep! 1f4 sleep
+  0 0 0 0 0 0 hitasteroid @ uslsprite!
+  0 hitasteroid @ hasteroidactive c!
+  -1 activehasteroids +! ;
+
+: lhit
+  1 score +!
+  $" LHIT " tpu.$
+  ff hitasteroid !
+  b 0 do
+    i ff50 + @ 1000 and 0<> if
+      i hitasteroid !
+      i tpu. then
+  loop
+  hitasteroid @ ff <> if
+    lkill then
+  0 0 0 0 0 0 c lslsprite!
+  0 0 0 0 0 0 c uslsprite! ;
+
+: hhit
+  1 score +!
+  $" HHIT " tpu.$
+  ff hitasteroid !
+  b 0 do
+    i ff60 + @ 1000 and 0<> if
+      i hitasteroid !
+      i tpu. then
+  loop
+  hitasteroid @ ff <> if
+    hkill then
+  0 0 0 0 0 0 c lslsprite!
+  0 0 0 0 0 0 c uslsprite! ;
+
+: crash?
+  ff5b @ 7ff and
+  ff6b @ 7ff and + 0<> if
+    newlevel
+    then ;
+
+: hit?
+  ff5c @ 7ff and 0<> if
+    lhit then
+  ff6c @ 7ff and 0<> if
+    hhit then ;
+
 : fire?
   ( fire if bullet not active )
   ( bullet exists in lower and upper layers )
@@ -23,7 +81,7 @@
     shipdirection @ bulletdirection !
     3c shipx @ 4 + shipy @ 4 + 2 1 0 c lslsprite!
     30 shipx @ 4 + shipy @ 4 + 0 1 0 c uslsprite!
-    2 4 3d 80 beep! then ;
+    2 4 3d 80 beep! tpucs! then ;
 
 : drawship
   ( ship exits in lower and upper layers )
@@ -92,11 +150,13 @@
       c uslupdate!
     vblank?
     moveasteroids drawship drawscore
-    timer1khz? ;
+    timer1khz?
+    crash? hit? ;
 
 : demoULX3S
   setup
   setasteroidsprites
+  newlevel
   begin
     mainloop
     buttons@ 2 and 0<> if
@@ -115,6 +175,7 @@
 : demoDE10NANO
   setup
   setasteroidsprites
+  newlevel
   begin
      mainloop
      buttons@ 2 and 0= if

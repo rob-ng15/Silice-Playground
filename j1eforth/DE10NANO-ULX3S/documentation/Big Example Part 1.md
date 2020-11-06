@@ -164,7 +164,7 @@ variable worky
 ( lower layer, top and left )
 ( upper layer, bottom and right )
 ( move single diagonal )
-: placeasteroids
+: newlevel
   ( clear asteroids )
   c 0 do
     0 i lasteroidactive c!
@@ -247,7 +247,6 @@ variable worky
   e8 shipy !
   setshipsprite
   setbulletsprite
-  placeasteroids
   ( draw lives )
   3f 220 1d0 0 vector!
   3f 240 1d0 0 vector!

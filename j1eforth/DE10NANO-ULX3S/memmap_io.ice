@@ -419,7 +419,7 @@ $$end
     // Mathematics Cop Processors
     divmod32by16 divmod32by16to16qr ();
     divmod16by16 divmod16by16to16qr ();
-    multi16by16to32 multiplier16by16to32 ();
+    multi16by16to32DSP multiplier16by16to32 ();
 
     doubleaddsub doperations ();
 
@@ -786,8 +786,6 @@ $$end
                                         case 4ha: { readData = lower_sprites.collision_10; }
                                         case 4hb: { readData = lower_sprites.collision_11; }
                                         case 4hc: { readData = lower_sprites.collision_12; }
-                                        case 4hd: { readData = lower_sprites.collision_13; }
-                                        case 4he: { readData = lower_sprites.collision_14; }
                                     }
                                 }
                                 case 4h6: {
@@ -806,8 +804,6 @@ $$end
                                         case 4ha: { readData = upper_sprites.collision_10; }
                                         case 4hb: { readData = upper_sprites.collision_11; }
                                         case 4hc: { readData = upper_sprites.collision_12; }
-                                        case 4hd: { readData = upper_sprites.collision_13; }
-                                        case 4he: { readData = upper_sprites.collision_14; }
                                     }
                                 }
                                 case 4h7: {

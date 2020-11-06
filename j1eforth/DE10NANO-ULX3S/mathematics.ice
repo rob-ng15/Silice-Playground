@@ -133,7 +133,7 @@ algorithm divmod16by16 (
 // UNSIGNED / SIGNED 16 by 16 bit multiplication giving 32 bit product
 // LONG MULTIPLICATION
 
-algorithm multi16by16to32 (
+algorithm multi16by16to32LONGMULT (
     input   uint16  factor1,
     input   uint16  factor2,
     output  uint32  product,
@@ -246,6 +246,7 @@ algorithm multi16by16to32DSP (
             case 3: {
                 product = productsign ? -nosignproduct : nosignproduct;
                 active = 0;
+            }
         }
     }
 }
