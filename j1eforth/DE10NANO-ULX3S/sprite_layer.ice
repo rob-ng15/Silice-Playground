@@ -34,26 +34,37 @@ algorithm sprite(
 
     // Calculate if sprite is visible
     uint4 xinsprite := ( 16 >> sprite_colmode ) - 1  - ( ( pix_x - sprite_x ) >> sprite_double );
-    uint4 spritepixel := ( sprite_colmode == 0 ) ? tiles.rdata0[ xinsprite, 1 ]
-                                    : ( sprite_colmode == 1 ) ? tiles.rdata0[ xinsprite, 2 ]
-                                    : ( sprite_colmode == 2 ) ? tiles.rdata0[ xinsprite, 3 ] : 0;
-    uint1 visiblex := ( pix_x >= sprite_x ) && ( pix_x < ( sprite_x + ( ( 16 >> sprite_colmode ) << sprite_double ) ) );
-    uint1 visibley := ( pix_y >= sprite_y ) && ( pix_y < ( sprite_y + ( 16 << sprite_double ) ) );
-    uint1 visible := visiblex && visibley && ( spritepixel != 0 )  && sprite_active;
 
     // Set read and write address for the tiles
     tiles.addr0 := sprite_tile * 16 + ( ( pix_y - sprite_y ) >> sprite_double );
     tiles.wenable0 := 0;
     tiles.wenable1 := 1;
 
-    // Output the results
-    pix_colour := spritepixel;
-    pix_visible := visible;
-
     while(1) {
         if( writer_active ) {
             tiles.addr1 = writer_line;
             tiles.wdata1 = writer_bitmap;
+        }
+
+        if( ( ( pix_x >= sprite_x ) && ( pix_x < ( sprite_x + ( ( 16 >> sprite_colmode ) << sprite_double ) ) ) )
+                && ( ( pix_y >= sprite_y ) && ( pix_y < ( sprite_y + ( 16 << sprite_double ) ) ) ) ) {
+            switch( sprite_colmode ) {
+                case 0: {
+                    pix_colour = tiles.rdata0[ xinsprite, 1 ];
+                    pix_visible = tiles.rdata0[ xinsprite, 1 ] > 0;
+                }
+                case 1: {
+                    pix_colour = tiles.rdata0[ xinsprite, 2 ];
+                    pix_visible = tiles.rdata0[ xinsprite, 2 ] > 0;
+                }
+                case 2: {
+                    pix_colour = tiles.rdata0[ xinsprite, 4 ];
+                    pix_visible = tiles.rdata0[ xinsprite, 4 ] > 0;
+                }
+                default: { pix_visible = 0; }
+            }
+        } else {
+            pix_visible = 0;
         }
     }
 }

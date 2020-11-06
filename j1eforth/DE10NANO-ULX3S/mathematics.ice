@@ -131,6 +131,7 @@ algorithm divmod16by16 (
 }
 
 // UNSIGNED / SIGNED 16 by 16 bit multiplication giving 32 bit product
+// LONG MULTIPLICATION
 
 algorithm multi16by16to32 (
     input   uint16  factor1,
@@ -177,6 +178,74 @@ algorithm multi16by16to32 (
                 factor2copy = factor2copy >> 1;
                 active = ( factor2copy != 0 ) ? 1 : 0;
             }
+        }
+    }
+}
+
+// UNSIGNED / SIGNED 16 by 16 bit multiplication giving 32 bit product
+// DSP INFERENCE
+
+algorithm multi16by16to32DSP (
+    input   uint16  factor1,
+    input   uint16  factor2,
+    output  uint32  product,
+
+    input   uint2   start,
+    output  uint2   active
+) <autorun> {
+    uint16  factor1copy = 0;
+    uint16  factor2copy = 0;
+
+    uint16  factor1high = 0;
+    uint16  factor1low = 0;
+    uint16  factor2high = 0;
+    uint16  factor2low = 0;
+
+    uint32  nosignproduct = 0;
+    uint1   productsign = 0;
+
+    while(1) {
+        switch( active ) {
+            case 0: {
+                switch( start ) {
+                    case 1: {
+                        // UNSIGNED MULTIPLICATION
+                        product = 0;
+                        factor1copy = factor1;
+                        factor2copy = factor2;
+                        productsign = 0;
+                        active = 1;
+                    }
+                    case 2: {
+                        // SIGNED MULTIPLICATION
+                        product = 0;
+                        factor1copy = factor1[15,1] ? -factor1 : factor1;
+                        factor2copy = factor2[15,1] ? -factor2 : factor2;
+                        productsign = factor1[15,1] != factor2[15,1];
+                        active = 1;
+                    }
+                }
+            }
+
+            case 1: {
+                // SETUP 16 x 16 multipliers
+                factor1high = { 8b0, factor1copy[8,8] };
+                factor1low = { 8b0, factor1copy[0,8] };
+                factor2high = { 8b0, factor2copy[8,8] };
+                factor2low = { 8b0, factor2copy[0,8] };
+                active = 2;
+            }
+            case 2: {
+                // PERFORM UNSIGNED MULTIPLICATION
+                nosignproduct = { 16b0, factor1low * factor2low }
+                                    + { 8b0, factor1high * factor2low, 8b0 }
+                                    + { 8b0, factor1low * factor2high, 8b0 }
+                                    + { factor1high * factor2high, 16b0 };
+                active = 3;
+            }
+            case 3: {
+                product = productsign ? -nosignproduct : nosignproduct;
+                active = 0;
         }
     }
 }

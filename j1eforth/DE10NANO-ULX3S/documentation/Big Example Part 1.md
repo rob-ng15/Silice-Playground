@@ -148,14 +148,14 @@ variable worky
   1ff8 0ff8 1ffc 7ffe ffff 7ffe 3dfc 1878
   0787 1f8e 0fde 67fc fffc fffe ffff 7fff
   7ffc 3ff8 3ffc 7ffe ffff fffe 3ffc 73f8
-  ffff ffff ffff ffff ffff ffff ffff ffff
-  ffff ffff ffff ffff ffff ffff ffff ffff
-  ffff ffff ffff ffff ffff ffff ffff ffff
-  ffff ffff ffff ffff ffff ffff ffff ffff
-  ffff ffff ffff ffff ffff ffff ffff ffff
-  ffff ffff ffff ffff ffff ffff ffff ffff
-  ffff ffff ffff ffff ffff ffff ffff ffff
-  ffff ffff ffff ffff ffff ffff ffff ffff
+  1800 3f98 3ffc 1ffe 1ffe 1ffe 7ffe ffff
+  ffff ffff fffe fffe 3ffc 1ff0 07c0 0180
+  0ff0 1ffc 1ffe 3ffe 3fff 7fff 7fff ffff
+  ffff fffe fffc 7ffc 3ffc 3ff0 3ff0 07e0
+  0000 0000 0000 0180 03c0 03e0 07f8 07fc
+  0ffc 1ffc 1ff8 0ff8 01f0 0000 0000 0000
+  0600 0fe0 1ff8 3ffc 7ffe fffe 0fff 1fff
+  1fff 3fff 7fff 7ffe 3e7c 3c38 3800 3000
   0020 4206 0006 1820 1800 0081 0400 4010
   0000 0300 0302 6010 6000 0000 0419 8018 ;
 
