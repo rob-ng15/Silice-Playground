@@ -142,6 +142,12 @@ algorithm tilemap(
         }
     }
 
+    // Default to 0,0 and transparent
+    tile.addr1 = 0; tile.wdata1 = 0;
+    background.addr1 = 0; background.wdata1 = 64;
+    foreground.addr1 = 0; foreground.wdata1 = 0;
+
+
     // Render the tilemap
     while(1) {
         switch( tm_active ) {

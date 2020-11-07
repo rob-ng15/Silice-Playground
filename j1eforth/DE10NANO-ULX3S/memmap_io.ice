@@ -114,12 +114,20 @@ $$end
     // UART tx and rx
     // UART written in Silice by https://github.com/sylefeb/Silice
     uart_out uo;
-    uart_sender usend (
+    uart_sender usend
+$$if ULX3S then
+<@video_clock,!video_reset>
+$$end
+    (
         io      <:> uo,
         uart_tx :>  uart_tx
     );
     uart_in ui;
-    uart_receiver urecv (
+    uart_receiver urecv
+$$if ULX3S then
+<@video_clock,!video_reset>
+$$end
+    (
         io      <:> ui,
         uart_rx <:  uart_rx
     );
@@ -564,7 +572,6 @@ $$end
                                         case 4h4: { lower_sprites.sprite_set_x = writeData; lower_sprites.sprite_layer_write = 4; }
                                         case 4h5: { lower_sprites.sprite_set_y = writeData; lower_sprites.sprite_layer_write = 5; }
                                         case 4h6: { lower_sprites.sprite_set_double = writeData; lower_sprites.sprite_layer_write = 6; }
-                                        case 4h7: { lower_sprites.sprite_set_colmode = writeData; lower_sprites.sprite_layer_write = 7; }
                                         case 4h8: { lower_sprites.sprite_writer_sprite = writeData; }
                                         case 4h9: { lower_sprites.sprite_writer_line = writeData; }
                                         case 4ha: { lower_sprites.sprite_writer_bitmap = writeData; lower_sprites.sprite_writer_active = 1; }
@@ -581,51 +588,10 @@ $$end
                                         case 4h4: { upper_sprites.sprite_set_x = writeData; upper_sprites.sprite_layer_write = 4; }
                                         case 4h5: { upper_sprites.sprite_set_y = writeData; upper_sprites.sprite_layer_write = 5; }
                                         case 4h6: { upper_sprites.sprite_set_double = writeData; upper_sprites.sprite_layer_write = 6; }
-                                        case 4h7: { upper_sprites.sprite_set_colmode = writeData; upper_sprites.sprite_layer_write = 7; }
                                         case 4h8: { upper_sprites.sprite_writer_sprite = writeData; }
                                         case 4h9: { upper_sprites.sprite_writer_line = writeData; }
                                         case 4ha: { upper_sprites.sprite_writer_bitmap = writeData; upper_sprites.sprite_writer_active = 1; }
                                         case 4he: { upper_sprites.sprite_update = writeData; upper_sprites.sprite_layer_write = 10; }
-                                    }
-                                }
-                                case 4h5: {
-                                    switch( memoryAddress[0,4] ) {
-                                        // ff50 -
-                                        case 4h1: { lower_sprites.sprite_palette_1 = writeData; }
-                                        case 4h2: { lower_sprites.sprite_palette_2 = writeData; }
-                                        case 4h3: { lower_sprites.sprite_palette_3 = writeData; }
-                                        case 4h4: { lower_sprites.sprite_palette_4 = writeData; }
-                                        case 4h5: { lower_sprites.sprite_palette_5 = writeData; }
-                                        case 4h6: { lower_sprites.sprite_palette_6 = writeData; }
-                                        case 4h7: { lower_sprites.sprite_palette_7 = writeData; }
-                                        case 4h8: { lower_sprites.sprite_palette_8 = writeData; }
-                                        case 4h9: { lower_sprites.sprite_palette_9 = writeData; }
-                                        case 4ha: { lower_sprites.sprite_palette_10 = writeData; }
-                                        case 4hb: { lower_sprites.sprite_palette_11 = writeData; }
-                                        case 4hc: { lower_sprites.sprite_palette_12 = writeData; }
-                                        case 4hd: { lower_sprites.sprite_palette_13 = writeData; }
-                                        case 4he: { lower_sprites.sprite_palette_14 = writeData; }
-                                        case 4hf: { lower_sprites.sprite_palette_15 = writeData; }
-                                    }
-                                }
-                                case 4h6: {
-                                    switch( memoryAddress[0,4] ) {
-                                        // ff60 -
-                                        case 4h1: { upper_sprites.sprite_palette_1 = writeData; }
-                                        case 4h2: { upper_sprites.sprite_palette_2 = writeData; }
-                                        case 4h3: { upper_sprites.sprite_palette_3 = writeData; }
-                                        case 4h4: { upper_sprites.sprite_palette_4 = writeData; }
-                                        case 4h5: { upper_sprites.sprite_palette_5 = writeData; }
-                                        case 4h6: { upper_sprites.sprite_palette_6 = writeData; }
-                                        case 4h7: { upper_sprites.sprite_palette_7 = writeData; }
-                                        case 4h8: { upper_sprites.sprite_palette_8 = writeData; }
-                                        case 4h9: { upper_sprites.sprite_palette_9 = writeData; }
-                                        case 4ha: { upper_sprites.sprite_palette_10 = writeData; }
-                                        case 4hb: { upper_sprites.sprite_palette_11 = writeData; }
-                                        case 4hc: { upper_sprites.sprite_palette_12 = writeData; }
-                                        case 4hd: { upper_sprites.sprite_palette_13 = writeData; }
-                                        case 4he: { upper_sprites.sprite_palette_14 = writeData; }
-                                        case 4hf: { upper_sprites.sprite_palette_15 = writeData; }
                                     }
                                 }
                                 case 4h7: {
@@ -777,7 +743,6 @@ $$end
                                         case 4h4: { readData = lower_sprites.sprite_read_x; }
                                         case 4h5: { readData = lower_sprites.sprite_read_y; }
                                         case 4h6: { readData = lower_sprites.sprite_read_double; }
-                                        case 4h7: { readData = lower_sprites.sprite_read_colmode; }
                                     }
                                 }
                                 case 4h4: {
@@ -789,7 +754,6 @@ $$end
                                         case 4h4: { readData = upper_sprites.sprite_read_x; }
                                         case 4h5: { readData = upper_sprites.sprite_read_y; }
                                         case 4h6: { readData = upper_sprites.sprite_read_double; }
-                                        case 4h7: { readData = upper_sprites.sprite_read_colmode; }
                                     }
                                 }
                                 case 4h5: {

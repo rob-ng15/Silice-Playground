@@ -33,14 +33,16 @@ algorithm sprite(
     dualport_bram uint16 tiles[128] = uninitialised;
 
     // Calculate if sprite is visible
-    uint4 xinsprite := ( 16 >> sprite_colmode ) - 1  - ( ( pix_x - sprite_x ) >> sprite_double );
-    uint1 xinrange := ( pix_x >= sprite_x ) && ( pix_x < ( sprite_x + ( ( 16 >> sprite_colmode ) << sprite_double ) ) );
+    uint4 xinsprite := 15  - ( ( pix_x - sprite_x ) >> sprite_double );
+    uint1 xinrange := ( pix_x >= sprite_x ) && ( pix_x < ( sprite_x + ( 16 << sprite_double ) ) );
     uint1 yinrange := ( pix_y >= sprite_y ) && ( pix_y < ( sprite_y + ( 16 << sprite_double ) ) );
 
     // Set read and write address for the tiles
     tiles.addr0 := sprite_tile * 16 + ( ( pix_y - sprite_y ) >> sprite_double );
     tiles.wenable0 := 0;
     tiles.wenable1 := 1;
+
+    pix_visible := 0;
 
     while(1) {
         if( writer_active ) {
@@ -49,23 +51,8 @@ algorithm sprite(
         }
 
         if( sprite_active && xinrange && yinrange ) {
-            switch( sprite_colmode ) {
-                case 0: {
-                    pix_colour = tiles.rdata0[ xinsprite, 1 ];
-                    pix_visible = tiles.rdata0[ xinsprite, 1 ] > 0;
-                }
-                case 1: {
-                    pix_colour = tiles.rdata0[ xinsprite, 2 ];
-                    pix_visible = tiles.rdata0[ xinsprite, 2 ] > 0;
-                }
-                case 2: {
-                    pix_colour = tiles.rdata0[ xinsprite, 4 ];
-                    pix_visible = tiles.rdata0[ xinsprite, 4 ] > 0;
-                }
-                default: { pix_visible = 0; }
-            }
-        } else {
-            pix_visible = 0;
+            pix_colour = tiles.rdata0[ xinsprite, 1 ];
+            pix_visible = tiles.rdata0[ xinsprite, 1 ] > 0;
         }
     }
 }
@@ -123,7 +110,6 @@ algorithm sprite_layer(
     // Stored as registers as needed instantly
     uint1 sprite_active[13] = uninitialised;
     uint1 sprite_double[13] = uninitialised;
-    uint2 sprite_colmode[13] = uninitialised;
     int11 sprite_x[13] = uninitialised;
     int11 sprite_y[13] = uninitialised;
     uint6 sprite_colour[13] = uninitialised;
@@ -146,7 +132,6 @@ algorithm sprite_layer(
 
             sprite_active <: sprite_active_$i$,
             sprite_double <: sprite_double_$i$,
-            sprite_colmode <: sprite_colmode_$i$,
             sprite_tile <: sprite_tile_number_$i$,
             sprite_x <: sprite_x_$i$,
             sprite_y <: sprite_y_$i$,
@@ -195,7 +180,6 @@ algorithm sprite_layer(
             case 4: { sprite_x[ sprite_set_number ] = sprite_set_x; }
             case 5: { sprite_y[ sprite_set_number ] = sprite_set_y; }
             case 6: { sprite_double[ sprite_set_number ] = sprite_set_double; }
-            case 7: { sprite_colmode[ sprite_set_number ] = sprite_set_colmode; }
             case 10: {
                 // Perform sprite update
                 sprite_colour[ sprite_set_number ] = ( spriteupdate( sprite_update ).colour_act ) ? spriteupdate( sprite_update ).colour : sprite_colour[ sprite_set_number ];
@@ -235,21 +219,12 @@ algorithm sprite_layer(
             if( pix_active ) {
                 $$for i=0,12 do
                     if(  ( sprite_$i$.pix_visible ) ) {
-                        switch( sprite_colmode[$i$] ) {
-                            case 0: {
-                                // Single colour
-                                pix_red = sprite_colour[$i$][4,2];
-                                pix_green = sprite_colour[$i$][2,2];
-                                pix_blue = sprite_colour[$i$][0,2];
-                            }
-                            default: {
-                                // 3 or 15 colour
-                                pix_red = palette[ sprite_$i$.pix_colour ][4,2];
-                                pix_green = palette[ sprite_$i$.pix_colour ][2,2];
-                                pix_blue = palette[ sprite_$i$.pix_colour ][0,2];
-                            }
-                        }
+                        // Single colour
+                        pix_red = sprite_colour[$i$][4,2];
+                        pix_green = sprite_colour[$i$][2,2];
+                        pix_blue = sprite_colour[$i$][0,2];
                         sprite_layer_display = 1;
+
                         // Perform collision detection
                         detect_collision_$i$ = detect_collision_$i$ | {
                             bitmap_display, 1b0, 1b0, sprite_12.pix_visible, sprite_11.pix_visible,

@@ -67,6 +67,11 @@ algorithm character_map(
     // Default to transparent
     character_map_display := pix_active && (( characterpixel ) || ( ~colour7(background.rdata0).alpha ));
 
+    // Default to 0,0 and transparent
+    character.addr1 = 0; character.wdata1 = 0;
+    background.addr1 = 0; background.wdata1 = 64;
+    foreground.addr1 = 0; foreground.wdata1 = 0;
+
     // Render the character map
     while(1) {
         if( character_map_display ) {

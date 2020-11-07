@@ -6,10 +6,6 @@ Each Sprite Layer has the following:
     * 13 (numbered 0 - 12) x 16 x 16 1 bit sprites (see below about colour modes)
         * Double flag to display as double pixel 32 x 32 per sprite
         * 4 user settable tiles per sprite
-        * 3 colour modes
-            * 0 = default 16 x 16 1-bit sprite in sprite selectable colour
-            * 1 = 3 colour combines pixels to give 8 x 16 2-bit in 3 paletted colours plus transparent
-            * 2 = 15 colour combines pixels to give 4 x 16 4-bit in 15 paletted colours plus transparent
     * In layer sprite collision detection, updates at the end of every frame
     * Sprite to bitmap collision detection, updates at the end of every frame
 
@@ -17,12 +13,9 @@ For the j1eforth design there are two sprite layers. The lower sprite layer disp
 
 Each sprite has the following attributes:
 
-Sprite Tile<br>Map | Active | Double | Colour Mode | Tile Number | X | Y | Colour
+Sprite Tile<br>Map | Active | Double | | Tile Number | X | Y | Colour
 ----- | ----- | ----- | ----- | ----- | -----  | ----- | -----
-128 lines of 16 pixels<br>8 x 16 x 16 tiles | Hide(0)<br>Display(1) | Single pixel 16 x 16 (0)<br>Double Pixel 32 x 32 (1) | 0 - Single colour<br>1 - 3 colour + transparent, 8 x 16 sprite<br>2 - 15 colour + transparent 4 x 16 sprite | 0 - 3 Select tile from the sprite tile map | X coordinate | Y coordinate | { rrggbb } colour for single colour mode
-
-3 colour sprites will be doubled to 16 x 32 pixels. Adjacent pixels are combined to give a 2-bit palette number, 0 being transparent.
-15 colour sprites will be doubled to 8 x 32 pixels. 4 adjacent pixels are combined to give a 4-bit palette number, 0 being transparent.
+128 lines of 16 pixels<br>8 x 16 x 16 tiles | Hide(0)<br>Display(1) | Single pixel 16 x 16 (0)<br>Double Pixel 32 x 32 (1) |  | 0 - 7Select tile from the sprite tile map | X coordinate | Y coordinate | { rrggbb } colour for single colour mode
 
 ## Memory Map for the Sprite Layers
 
@@ -35,7 +28,6 @@ ff33 | Set _ASN_ colour | Read _ASN_ colour
 ff34 | Set _ASN_ x coordinate | Read _ASN_ x coordinate
 ff35 | Set _ASN_ y coordinate | Read _ASN_ y coordinate
 ff36 | Set _ASN_ double flag | Read _ASN_ double flag
-ff37 | Set _ASN_ colour mode | Read _ASN_ colour mode
 ff38 | Set sprite number for the tile map writer |
 ff39 | Set sprite tile map line ( 0 - 63 ) |
 ff3a | Set sprite tile map line bitmap |
