@@ -429,10 +429,10 @@ $$end
     uint13  uartInBufferTop = 0;
 
     // UART output FIFO (16 character) as dualport bram (code from @sylefeb)
-    dualport_bram uint8 uartOutBuffer[16] = uninitialized;
-    uint4   uartOutBufferNext = 0;
-    uint4   uartOutBufferTop = 0;
-    uint4   newuartOutBufferTop = 0;
+    dualport_bram uint8 uartOutBuffer[256] = uninitialized;
+    uint8   uartOutBufferNext = 0;
+    uint8   uartOutBufferTop = 0;
+    uint8   newuartOutBufferTop = 0;
 
     // register buttons
     uint$NUM_BTNS$ reg_btns = 0;

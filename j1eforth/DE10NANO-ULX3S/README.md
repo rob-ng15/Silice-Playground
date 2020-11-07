@@ -81,19 +81,19 @@ Binary ALU Operation Code | J1 CPU | J1+ CPU | J1 CPU Forth Word (notes) | J1+ C
 
 ### Resource Usage (DE10NANO)
 
-__*Not necessarily the most recent build, used for indicative purporses and monitoring during coding*__
+__UPDATE 2020-11-07 Move to memory mapped I/O and DSP Multiplication__
 
 ```
 Family : Cyclone V
 Device : 5CSEBA6U23I7
 Timing Models : Final
-Logic utilization (in ALMs) : 9,001 / 41,910 ( 21 % )
-Total registers : 6170
+Logic utilization (in ALMs) : 9,947 / 41,910 ( 24 % )
+Total registers : 6386
 Total pins : 36 / 314 ( 11 % )
 Total virtual pins : 0
-Total block memory bits : 2,670,560 / 5,662,720 ( 47 % )
-Total RAM Blocks : 356 / 553 ( 64 % )
-Total DSP Blocks : 17 / 112 ( 15 % )
+Total block memory bits : 2,655,776 / 5,662,720 ( 47 % )
+Total RAM Blocks : 355 / 553 ( 64 % )
+Total DSP Blocks : 21 / 112 ( 19 % )
 Total HSSI RX PCSs : 0
 Total HSSI PMA RX Deserializers : 0
 Total HSSI TX PCSs : 0
@@ -104,15 +104,15 @@ Total DLLs : 0 / 4 ( 0 % )
 
 ### Resource Usage (ULX3S)
 
-__*Not necessarily the most recent build, used for indicative purporses and monitoring during coding*__
+__UPDATE 2020-11-07 Move to DSP Multiplication__
 
 ```
 Info: Device utilisation:
-Info:          TRELLIS_SLICE: 16947/41820    40%
+Info:          TRELLIS_SLICE: 19608/41820    46%
 Info:             TRELLIS_IO:    34/  365     9%
 Info:                   DCCA:     4/   56     7%
-Info:                 DP16KD:   208/  208   100%
-Info:             MULT18X18D:    15/  156     9%
+Info:                 DP16KD:   205/  208    98%
+Info:             MULT18X18D:    19/  156    12%
 Info:                 ALU54B:     0/   78     0%
 Info:                EHXPLLL:     2/    4    50%
 Info:                EXTREFB:     0/    2     0%
@@ -151,7 +151,9 @@ The VGA DE10NANO/HDMI ULX3S output has the following layers in order:
 
 All of the display layers operate at 25Mhz, the pixel clock for the 640 x 480 display, all synchronised with each other. These display layers then are combined by the multiplex display [Multiplex Display.md](documentation/Multiplex%20Display.md) to form the display.
 
-Due to the address space limitations of the J1+ CPU ( 65536 x 16 bit), the display layer memories cannot be memory mapped. Control of the display layers is done via memory mapped control registers. _Some_ j1eforth words are provided as helpers.
+Due to the address space limitations of the J1+ CPU ( 65536 x 16 bit), the display layer memories cannot be memory mapped. Control of the display layers is done via memory mapped control registers.  _Some_ j1eforth words are provided as helpers.
+
+DE10NANO uses a separate memory map file, memmap_io.ice with a separate J1+ CPU in j1eforth.ice. ULX3S uses a combined J1+ CPU and memory map in j1eforth-nomemmap.ice until an issue can be resolved.
 
 The initial basic bitmap and terminal windows were extended to include as many capabilities as could fit into the design, which at present is limited by the amount of BRAM available on the ULX3S. The aim being to create a functional general computer running j1eforth, focussing on as many features as possible found in the popular home computers of the 1980s.
 

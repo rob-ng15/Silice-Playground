@@ -456,7 +456,7 @@ t: /mod ( n n -- r q ) /! begin ffd6 literal @ 0= until ffd5 literal @ ffd4 lite
 t: mod ( n n -- r ) /mod drop t;
 t: / ( n n -- q ) /mod nip t;
 t: m*! ffd7 literal ! ffd8 literal ! t;
-t: m*?  ffd9 literal ! begin ffd9 literal @ 0= until ffd7 literal d@ t;
+t: m*?  ffd9 literal ! ffd7 literal d@ t;
 t: um* ( u u -- ud ) m*! 1 literal m*? t;
 t: m* ( n n -- d ) m*! 2 literal m*? t;
 t: * ( n n -- n ) * t;
