@@ -9,11 +9,11 @@
     * ULX3S has keyboard input (not yet implemented)
     * PS/2 takes priority over the UART
 * J1+ CPU
-    * 50MHz operation
-    * 4 (improved from 5) clock cycles per J1+ CPU operation against 13 clock cycles per operation on the FOMU, giving an effective CPU running at 12.5MHz (improved from 10MHz)
+    * 25MHz ( ULX3S ) or 50MHz ( DE10NANO ) operation
+    * 4 (improved from 5) clock cycles per J1+ CPU operation against 13 clock cycles per operation on the FOMU, giving an effective CPU running at 6.25MHz ( ULX3S ) or 12.5MHz ( DE10NANO )
     * Changed extra OPCODES to ```0= 0<>- <> 1+ * 2* negate 2/ - 0< 0> > >= abs max min```
     * Arithmetic Co-Processors Added [Mathematics.md](documentation/Mathematics.md)
-        * 32 bit Addition/Subtraction Unit
+        * 32 bit Addition/Subtraction Unit ( __SIGNED__ )
             * Total / Difference
             * Increment / Decrement
             * Double / Half
@@ -32,13 +32,16 @@
         * 32 bit by 16 bit division giving 16 bit quotient and 16 bit remainder ( signed and unsigned )
         * 16 bit by 16 bit division giving 16 bit quotient and 16 bit remainder ( signed )
         * 16 bit by 16 bit multiplication giving 32 bit product ( signed and unsigned )
+            * Two implementations provided
+                * Binary long multiplication ( not used )
+                * via DSP blocks ( used )
 
 Cycle | Action | Notes
 ----- | ----- | -----
 0 | Update stackNext (2nd item on the stack) and rStackTop (1st item on the return stack).<br>Read instruction from PC memory location and stackTop memory location. | Pointers to the correct addresses in the stacks and memory are maintained via wires.
 1 | Execute the J1+ CPU instruction. | Memory writes are started in this cycle. Co-processor operations are started in this cycle.
-2 | Write to the data and return stacks. | Update data and return stack pointers and memory addresses. Memory reads are started in this cycle.
-3 | Clear the co-processor controls. | This is performed in cycle 3 as the J1+ CPU runs at 50MHz, the co-processors at 25MHz. Allows the co-processors to detect the input from cycle 1.
+2 | Write to the data and return stacks.<br>ULX3S Clear the co-processor controls. | Update data and return stack pointers and memory addresses. Memory reads are started in this cycle.
+3 | DE10NANO Clear the co-processor controls. |
 
 For communication with j1eforth there is a UART which provides input and output, output is duplicated on the terminal display. The ULX3S eventually will have PS/2 keyboard input via the us2 connector and a USB OTG and PS/2 to USB converter.
 
@@ -104,22 +107,22 @@ Total DLLs : 0 / 4 ( 0 % )
 
 ### Resource Usage (ULX3S)
 
-__UPDATE 2020-11-07 Move to DSP Multiplication__
+__UPDATE 2020-11-07 Move to memory mapped I/O and DSP Multiplication__
 
 ```
 Info: Device utilisation:
-Info:          TRELLIS_SLICE: 19608/41820    46%
+Info:          TRELLIS_SLICE: 20715/41820    49%
 Info:             TRELLIS_IO:    34/  365     9%
-Info:                   DCCA:     4/   56     7%
+Info:                   DCCA:     3/   56     5%
 Info:                 DP16KD:   205/  208    98%
-Info:             MULT18X18D:    19/  156    12%
+Info:             MULT18X18D:    31/  156    19%
 Info:                 ALU54B:     0/   78     0%
 Info:                EHXPLLL:     2/    4    50%
 Info:                EXTREFB:     0/    2     0%
 Info:                   DCUA:     0/    2     0%
 Info:              PCSCLKDIV:     0/    2     0%
 Info:                IOLOGIC:     0/  224     0%
-Info:               SIOLOGIC:     8/  141     5%
+Info:               SIOLOGIC:     4/  141     2%
 Info:                    GSR:     0/    1     0%
 Info:                  JTAGG:     0/    1     0%
 Info:                   OSCG:     0/    1     0%
@@ -201,7 +204,9 @@ The sample code provided in [Big Example Part 1.md](documentation/Big%20Example%
 
 ### GPU
 
-* COLOUR BLITTER
+* Double Sized Blitter
+    * Perform double size blit in 1 bit from 16 x 16 tile to 32 x 32 result
+* Colour Blitter
     * 10 bit { Arrggbb } 16 x 16 blitter from a configurable 64 16 x 16 tilemap (16384 * 7 bit, might be too big for the blockram)
         * ALPHA will determine if pixel is placed or missed (mask)
 

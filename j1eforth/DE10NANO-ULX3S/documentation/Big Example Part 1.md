@@ -63,8 +63,8 @@ variable counter
 variable score
 variable lives
 
-( storage for 12 (c hex) low asteroids )
-( storage for 12 (c hex) high asteroids )
+( storage for 12 low asteroids )
+( storage for 12 high asteroids )
 c array lasteroidactive c array hasteroidactive
 c array lasteroidtype c array hasteroidtype
 c array lasteroiddirection c array hasteroiddirection

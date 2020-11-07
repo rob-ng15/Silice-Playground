@@ -1,5 +1,5 @@
 // we are running the design at 50 MHz instead of the default 25 MHz
-$$ uart_in_clock_freq_mhz = 50
+$$ uart_in_clock_freq_mhz = 25
 
 // VGA/HDMI + UART Driver Includes
 $include('../common/hdmi.ice')
@@ -19,8 +19,9 @@ $include('../vectors.ice')
 $include('../display_list.ice')
 $include('../audio.ice')
 $include('../mathematics.ice')
+$include('../memmap_io.ice')
 
 import('../common/ulx3s_clk_50_25.v')
 import('../common/reset_conditioner.v')
 
-$include('../j1eforth-nomemmap.ice')
+$include('../j1eforth.ice')

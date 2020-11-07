@@ -73,19 +73,41 @@ $$end
     // 1hz timers (p1hz used for systemClock and systemClockMHz, timer1hz for user purposes)
     uint16 systemClock = uninitialized;
     uint32 systemClockMHz = uninitialized;
-    pulse1hz p1hz (
+    pulse1hz p1hz
+$$if DE10NANO then
+    <@video_clock,!video_reset>
+$$end
+    (
         counter1hz :> systemClock,
-        counter50mhz :> systemClockMHz
+        counter25mhz :> systemClockMHz
     );
-    pulse1hz timer1hz( );
+
+    pulse1hz timer1hz
+$$if DE10NANO then
+    <@video_clock,!video_reset>
+$$end
+    ( );
 
     // 1khz timers (sleepTimer used for sleep command, timer1khz for user purposes)
-    pulse1khz sleepTimer( );
-    pulse1khz timer1khz( );
+    pulse1khz sleepTimer
+$$if DE10NANO then
+    <@video_clock,!video_reset>
+$$end
+    ( );
+
+    pulse1khz timer1khz
+$$if DE10NANO then
+<@video_clock,!video_reset>
+$$end
+    ( );
 
     // RNG random number generator
     uint16 staticGenerator = 0;
-    random rng (
+    random rng
+$$if DE10NANO then
+<@video_clock,!video_reset>
+$$end
+    (
         g_noise_out :> staticGenerator
     );
 

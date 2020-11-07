@@ -58,11 +58,7 @@ $$end
     output! uint6   video_b,
     output! uint1   video_hs,
     output! uint1   video_vs
-)
-$$if ULX3S then
-<@clock_50mhz> // ULX3S has a 25 MHz clock, so we use a PLL to bring it up to 50 MHz
-$$end
-{
+) {
     // VGA/HDMI Display
     uint1   video_reset = uninitialized;
     uint1   video_clock = uninitialized;
@@ -200,7 +196,12 @@ $$end
     // IO Map Read / Write Flags
     IO_Map.memoryWrite := ( CYCLE == 1 ) && aluop(instruction).is_n2memt && ( stackTop > 32767 );
     IO_Map.memoryRead := ( CYCLE == 1 ) && is_alu && ( aluop( instruction ).is_j1j1plus == 0 ) && ( aluop( instruction ).operation == 4b1100 );
-    IO_Map.resetCoPro := ( CYCLE == 3 );
+    $$if ULX3S then
+        IO_Map.resetCoPro := ( CYCLE == 2 );
+    $$end
+    $$if DE10NANO then
+        IO_Map.resetCoPro := ( CYCLE == 3 );
+    $$end
 
     // EXECUTE J1 CPU
     while( 1 ) {
