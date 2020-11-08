@@ -118,9 +118,9 @@ $$if ULX3S then
     uint6   video_g = 0;
     uint6   video_b = 0;
 
-    uint8   video_r8 := { video_r, video_r[0,2 };
-    uint8   video_g8 := { video_g, video_g[0,2 };
-    uint8   video_b8 := { video_b, video_b[0,2 };
+    uint8   video_r8 := { video_r, video_r[0,2] };
+    uint8   video_g8 := { video_g, video_g[0,2] };
+    uint8   video_b8 := { video_b, video_b[0,2] };
 
     hdmi video<@clock,!reset> (
         vblank  :> vblank,
@@ -181,7 +181,11 @@ $$end
     uint2 CYCLE = 0;
 
     // Setup Memory Mapped I/O
-    memmap_io IO_Map (
+    memmap_io IO_Map
+$$if ULX3S then
+<@clock,!reset>
+$$end
+(
         leds :> leds,
         btns <: btns,
 

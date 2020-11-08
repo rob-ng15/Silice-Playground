@@ -112,20 +112,12 @@ $$end
     // UART tx and rx
     // UART written in Silice by https://github.com/sylefeb/Silice
     uart_out uo;
-    uart_sender usend
-$$if ULX3S then
-<@video_clock,!video_reset>
-$$end
-    (
+    uart_sender usend <@clock,!reset> (
         io      <:> uo,
         uart_tx :>  uart_tx
     );
     uart_in ui;
-    uart_receiver urecv
-$$if ULX3S then
-<@video_clock,!video_reset>
-$$end
-    (
+    uart_receiver urecv <@clock,!reset> (
         io      <:> ui,
         uart_rx <:  uart_rx
     );
