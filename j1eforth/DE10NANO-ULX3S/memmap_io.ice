@@ -38,11 +38,6 @@ algorithm memmap_io (
     output  uint8   leds,
     input   uint$NUM_BTNS$ btns,
 
-$$if ULX3S then
-    output! uint4   gpdi_dp,
-    output! uint4   gpdi_dn,
-$$end
-
     // UART
     output! uint1   uart_tx,
     input   uint1   uart_rx,
@@ -55,8 +50,10 @@ $$end
     output! uint6   video_r,
     output! uint6   video_g,
     output! uint6   video_b,
-    output! uint1   video_hs,
-    output! uint1   video_vs,
+    input   uint1   vblank,
+    input   uint1   pix_active,
+    input   uint10  pix_x,
+    input   uint10  pix_y,
 
     // CLOCKS
     input   uint1   video_clock,
@@ -73,6 +70,7 @@ $$end
     // 1hz timers (p1hz used for systemClock and systemClockMHz, timer1hz for user purposes)
     uint16 systemClock = uninitialized;
     uint32 systemClockMHz = uninitialized;
+
     pulse1hz p1hz
 $$if DE10NANO then
     <@video_clock,!video_reset>
@@ -132,43 +130,6 @@ $$end
         uart_rx <:  uart_rx
     );
 
-    // Status of the screen, if in range, if in vblank, actual pixel x and y
-    uint1   active = uninitialized;
-    uint1   vblank = uninitialized;
-    uint10  pix_x  = uninitialized;
-    uint10  pix_y  = uninitialized;
-
-    // VGA or HDMI driver
-$$if DE10NANO then
-    vga vga_driver <@video_clock,!video_reset> (
-        vga_hs :> video_hs,
-        vga_vs :> video_vs,
-        active :> active,
-        vblank :> vblank,
-        vga_x  :> pix_x,
-        vga_y  :> pix_y
-    );
-$$end
-
-$$if ULX3S then
-    // Adjust 6 bit rgb to 8 bit rgb for HDMI output
-    uint8   video_r8 := video_r << 2;
-    uint8   video_g8 := video_g << 2;
-    uint8   video_b8 := video_b << 2;
-
-    hdmi video<@clock,!reset> (
-        x       :> pix_x,
-        y       :> pix_y,
-        active  :> active,
-        vblank  :> vblank,
-        gpdi_dp :> gpdi_dp,
-        gpdi_dn :> gpdi_dn,
-        red     <: video_r8,
-        green   <: video_g8,
-        blue    <: video_b8
-    );
-$$end
-
     // CREATE DISPLAY LAYERS
     // BACKGROUND
     uint2   background_r = uninitialized;
@@ -177,7 +138,7 @@ $$end
     background background_generator <@video_clock,!video_reset>  (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
-        pix_active <: active,
+        pix_active <: pix_active,
         pix_vblank <: vblank,
         pix_red    :> background_r,
         pix_green  :> background_g,
@@ -194,7 +155,7 @@ $$end
     tilemap tile_map <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
-        pix_active <: active,
+        pix_active <: pix_active,
         pix_vblank <: vblank,
         pix_red    :> tilemap_r,
         pix_green  :> tilemap_g,
@@ -216,7 +177,7 @@ $$end
     bitmap bitmap_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
-        pix_active <: active,
+        pix_active <: pix_active,
         pix_vblank <: vblank,
         pix_red    :> bitmap_r,
         pix_green  :> bitmap_g,
@@ -237,7 +198,7 @@ $$end
     sprite_layer lower_sprites <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
-        pix_active <: active,
+        pix_active <: pix_active,
         pix_vblank <: vblank,
         pix_red    :> lower_sprites_r,
         pix_green  :> lower_sprites_g,
@@ -255,7 +216,7 @@ $$end
     sprite_layer upper_sprites <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
-        pix_active <: active,
+        pix_active <: pix_active,
         pix_vblank <: vblank,
         pix_red    :> upper_sprites_r,
         pix_green  :> upper_sprites_g,
@@ -273,7 +234,7 @@ $$end
     character_map character_map_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
-        pix_active <: active,
+        pix_active <: pix_active,
         pix_vblank <: vblank,
         pix_red    :> character_map_r,
         pix_green  :> character_map_g,
@@ -290,7 +251,7 @@ $$end
     terminal terminal_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
-        pix_active <: active,
+        pix_active <: pix_active,
         pix_vblank <: vblank,
         pix_red    :> terminal_r,
         pix_green  :> terminal_g,
@@ -303,7 +264,7 @@ $$end
     multiplex_display display <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
-        pix_active <: active,
+        pix_active <: pix_active,
         pix_vblank <: vblank,
         pix_red    :> video_r,
         pix_green  :> video_g,

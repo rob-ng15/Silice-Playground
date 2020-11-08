@@ -43,6 +43,14 @@ $$if ULX3S then
     output  uint4   gpdi_dp,
     output  uint4   gpdi_dn,
 $$end
+$$if DE10NANO then
+    // VGA
+    output! uint6   video_r,
+    output! uint6   video_g,
+    output! uint6   video_b,
+    output! uint1   video_hs,
+    output! uint1   video_vs,
+$$end
 
     // UART
     output! uint1   uart_tx,
@@ -50,14 +58,8 @@ $$end
 
     // AUDIO
     output! uint4   audio_l,
-    output! uint4   audio_r,
+    output! uint4   audio_r
 
-    // VGA/HDMI
-    output! uint6   video_r,
-    output! uint6   video_g,
-    output! uint6   video_b,
-    output! uint1   video_hs,
-    output! uint1   video_vs
 ) {
     // VGA/HDMI Display
     uint1   video_reset = uninitialized;
@@ -91,6 +93,47 @@ $$end
         in  <: reset,
         out :> video_reset
     );
+
+    // Status of the screen, if in range, if in vblank, actual pixel x and y
+    uint1   vblank = uninitialized;
+    uint1   pix_active = uninitialized;
+    uint10  pix_x  = uninitialized;
+    uint10  pix_y  = uninitialized;
+
+    // VGA or HDMI driver
+$$if DE10NANO then
+    vga vga_driver <@video_clock,!video_reset> (
+        vga_hs :> video_hs,
+        vga_vs :> video_vs,
+        vblank :> vblank,
+        active :> pix_active,
+        vga_x  :> pix_x,
+        vga_y  :> pix_y
+    );
+$$end
+
+$$if ULX3S then
+    // Adjust 6 bit rgb to 8 bit rgb for HDMI output
+    uint6   video_r = 0;
+    uint6   video_g = 0;
+    uint6   video_b = 0;
+
+    uint8   video_r8 := { video_r, video_r[0,2 };
+    uint8   video_g8 := { video_g, video_g[0,2 };
+    uint8   video_b8 := { video_b, video_b[0,2 };
+
+    hdmi video<@clock,!reset> (
+        vblank  :> vblank,
+        active  :> pix_active,
+        x       :> pix_x,
+        y       :> pix_y,
+        gpdi_dp :> gpdi_dp,
+        gpdi_dn :> gpdi_dn,
+        red     <: video_r8,
+        green   <: video_g8,
+        blue    <: video_b8
+    );
+$$end
 
     // J1+ CPU
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
@@ -142,11 +185,6 @@ $$end
         leds :> leds,
         btns <: btns,
 
-$$if ULX3S then
-        gpdi_dp :> gpdi_dp,
-        gpdi_dn :> gpdi_dp,
-$$end
-
         // UART
         uart_tx :> uart_tx,
         uart_rx <: uart_rx,
@@ -159,8 +197,10 @@ $$end
         video_r :> video_r,
         video_g :> video_g,
         video_b :> video_b,
-        video_hs :> video_hs,
-        video_vs :> video_vs,
+        vblank <: vblank,
+        pix_active <: pix_active,
+        pix_x <: pix_x,
+        pix_y <: pix_y,
 
         // CLOCKS
         video_clock <:video_clock,

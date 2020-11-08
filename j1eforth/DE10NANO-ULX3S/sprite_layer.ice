@@ -33,9 +33,10 @@ algorithm sprite(
     dualport_bram uint16 tiles[128] = uninitialised;
 
     // Calculate if sprite is visible
+    uint6 spritesize := sprite_double ? 32 : 16;
     uint4 xinsprite := 15  - ( ( pix_x - sprite_x ) >> sprite_double );
-    uint1 xinrange := ( pix_x >= sprite_x ) && ( pix_x < ( sprite_x + ( 16 << sprite_double ) ) );
-    uint1 yinrange := ( pix_y >= sprite_y ) && ( pix_y < ( sprite_y + ( 16 << sprite_double ) ) );
+    uint1 xinrange := ( pix_x >= sprite_x ) && ( pix_x < ( sprite_x + spritesize ) );
+    uint1 yinrange := ( pix_y >= sprite_y ) && ( pix_y < ( sprite_y + spritesize ) );
 
     // Set read and write address for the tiles
     tiles.addr0 := sprite_tile * 16 + ( ( pix_y - sprite_y ) >> sprite_double );

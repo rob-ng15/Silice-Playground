@@ -1,11 +1,4 @@
-( variables and setup code)
-
-( store timer1hz@ to generate a beep/boop every other second )
-variable lasttimer
-
 : array create cells allot does> cells + ;
-
-( set tile map tiles )
 
 0000 0000 0000 0000 0000 0000 0000 0000
 001f 003f 00ff 01ff 03ff 03ff 07ff 07fc
@@ -54,22 +47,29 @@ c400 1c00 7c00 f800 f800 f000 e000 8000
 0000 0000 0000 0000 0000 0000 0000 0000
 8 tmtile!
 
-variable hitasteroid
+variable lasttimer
 variable shipdirection
+variable bulletdirection
 variable shipx
 variable shipy
-variable bulletdirection
 variable counter
 variable score
 variable lives
 
-( storage for 12 low asteroids )
-( storage for 12 high asteroids )
+variable activelasteroids
+variable activehasteroids
+
+variable hitasteroid
+variable workasteroid
+variable spawnasteroid
+variable workx
+variable worky
+
+
 c array lasteroidactive c array hasteroidactive
 c array lasteroidtype c array hasteroidtype
 c array lasteroiddirection c array hasteroiddirection
 
-( directions table for the asteroid sprite update flag)
 8 array bulletdirections
 20 0 bulletdirections c! 32 1 bulletdirections c!
 3 2 bulletdirections c! 12 3 bulletdirections c!
@@ -85,16 +85,6 @@ f  6 updatedirections c! 3f 7 updatedirections c!
 a  a updatedirections c! 11 b updatedirections c!
 17 c updatedirections c! e  d updatedirections c!
 3e e updatedirections c! 37 f updatedirections c!
-
-( store number of active asteroids )
-variable activelasteroids
-variable activehasteroids
-
-( asteroid temporary )
-variable workasteroid
-variable spawnasteroid
-variable workx
-variable worky
 
 ( set ship vector block )
 1 0 0 0 0 vectorvertex!
@@ -159,13 +149,7 @@ variable worky
   0020 4206 0006 1820 1800 0081 0400 4010
   0000 0300 0302 6010 6000 0000 0419 8018 ;
 
-( place initial large asteroids )
-( always away from the centre )
-( lower layer, top and left )
-( upper layer, bottom and right )
-( move single diagonal )
 : newlevel
-  ( clear asteroids )
   c 0 do
     0 i lasteroidactive c!
     0 i hasteroidactive c!
@@ -203,16 +187,11 @@ variable worky
     activehasteroids @ 1+ activehasteroids ! ;
 
 : setup
-  ( clear the screen )
   cs! tpucs! tmcs! 0 0 tpuxy!
   3f tpuforeground! 40 tpubackground!
-  ( hide the terminal )
   terminalhide!
-  ( reset the second timer )
   timer1hz! 0 lasttimer !
-  ( set the background )
   2a 1 7 background!
-  ( hide all sprites )
   f 0 do
     0 0 0 0 0 0 i lslsprite!
     0 0 0 0 0 0 i uslsprite!
@@ -247,7 +226,6 @@ variable worky
   e8 shipy !
   setshipsprite
   setbulletsprite
-  ( draw lives )
   3f 220 1d0 0 vector!
   3f 240 1d0 0 vector!
   3f 260 1d0 0 vector! ;
