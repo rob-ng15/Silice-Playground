@@ -10,6 +10,54 @@ bitfield spriteupdate {
     uint2   dx
 }
 
+// Storage and pixel colour generator for each sprite
+algorithm sprite(
+    input   uint10  pix_x,
+    input   uint10  pix_y,
+    input   uint1   pix_active,
+    output! uint4   pix_colour,
+    output! uint1   pix_visible,
+
+    input   uint1   sprite_active,
+    input   uint1   sprite_double,
+    input   uint2   sprite_colmode,
+    input   uint3   sprite_tile,
+    input   int11   sprite_x,
+    input   int11   sprite_y,
+
+    input   uint7   writer_line,
+    input   uint16  writer_bitmap,
+    input   uint1   writer_active
+) {
+    // Sprite Tiles
+    dualport_bram uint16 tiles[128] = uninitialised;
+
+    // Calculate if sprite is visible
+    uint6 spritesize := sprite_double ? 32 : 16;
+    uint4 xinsprite := 15  - ( ( pix_x - sprite_x ) >> sprite_double );
+    uint1 xinrange := ( pix_x >= sprite_x ) && ( pix_x < ( sprite_x + spritesize ) );
+    uint1 yinrange := ( pix_y >= sprite_y ) && ( pix_y < ( sprite_y + spritesize ) );
+
+    // Set read and write address for the tiles
+    tiles.addr0 := sprite_tile * 16 + ( ( pix_y - sprite_y ) >> sprite_double );
+    tiles.wenable0 := 0;
+    tiles.wenable1 := 1;
+
+    pix_visible := 0;
+
+    while(1) {
+        if( writer_active ) {
+            tiles.addr1 = writer_line;
+            tiles.wdata1 = writer_bitmap;
+        }
+
+        if( sprite_active && xinrange && yinrange ) {
+            pix_colour = tiles.rdata0[ xinsprite, 1 ];
+            pix_visible = tiles.rdata0[ xinsprite, 1 ] > 0;
+        }
+    }
+}
+
 algorithm sprite_layer(
     input   uint10  pix_x,
     input   uint10  pix_y,
@@ -24,6 +72,7 @@ algorithm sprite_layer(
     input   uint4   sprite_set_number,
     input   uint1   sprite_set_active,
     input   uint1   sprite_set_double,
+    input   uint2   sprite_set_colmode,
     input   uint6   sprite_set_colour,
     input   int11   sprite_set_x,
     input   int11   sprite_set_y,
@@ -32,15 +81,14 @@ algorithm sprite_layer(
     input   uint4   sprite_layer_write,
 
     // For reading sprite characteristics for sprite_set_number
-    output uint1   sprite_read_active,
-    output uint1   sprite_read_double,
-    output uint6   sprite_read_colour,
-    output int11   sprite_read_x,
-    output int11   sprite_read_y,
-    output uint3   sprite_read_tile,
-
+    output  uint1   sprite_read_active,
+    output  uint1   sprite_read_double,
+    output  uint2   sprite_read_colmode,
+    output  uint6   sprite_read_colour,
+    output  int11   sprite_read_x,
+    output  int11   sprite_read_y,
+    output  uint3   sprite_read_tile,
     input   uint16  sprite_update,
-
     // FULL collision detection
     // Bitmap is set flag
     input   uint1   bitmap_display,
@@ -52,8 +100,12 @@ algorithm sprite_layer(
     input   uint4   sprite_writer_sprite,
     input   uint7   sprite_writer_line,
     input   uint16  sprite_writer_bitmap,
-    input   uint1   sprite_writer_active
+    input   uint1   sprite_writer_active,
 
+    // For setting 3 or 15 colour sprite palette
+    $$for i=1,15 do
+        input uint6 sprite_palette_$i$,
+    $$end
 ) <autorun> {
     // Storage for the sprites
     // Stored as registers as needed instantly
@@ -64,19 +116,38 @@ algorithm sprite_layer(
     uint6 sprite_colour[13] = uninitialised;
     uint3 sprite_tile_number[13] = uninitialised;
 
+    // Setup 13 sprites
     $$for i=0,12 do
-        // Sprite Tiles
-        dualport_bram uint16 tiles_$i$[128] = uninitialised;
+        uint1 sprite_active_$i$ := sprite_active[$i$];
+        uint1 sprite_double_$i$ := sprite_double[$i$];
+        uint2 sprite_colmode_$i$ := sprite_colmode[$i$];
+        int11 sprite_x_$i$ := sprite_x[$i$];
+        int11 sprite_y_$i$ := sprite_y[$i$];
+        uint3 sprite_tile_number_$i$ := sprite_tile_number[$i$];
+        uint1 sprite_write_active_$i$ := ( sprite_writer_active == 1 ) && ( sprite_writer_sprite == $i$ );
 
-        // Calculate if sprite is visible
-        uint6 spritesize_$i$ := sprite_double[$i$] ? 32 : 16;
-        uint4 xinsprite_$i$ := 15  - ( ( pix_x - sprite_x[$i$] ) >> sprite_double[$i$] );
-        uint4 yinsprite_$i$ := ( pix_y - sprite_y[$i$] ) >> sprite_double[$i$];
-        uint1 xinrange_$i$ := ( pix_x >= sprite_x[$i$] ) && ( pix_x < ( sprite_x[$i$] + spritesize_$i$ ) );
-        uint1 yinrange_$i$ := ( pix_y >= sprite_y[$i$] ) && ( pix_y < ( sprite_y[$i$] + spritesize_$i$ ) );
-        uint1 pix_visible_$i$ := sprite_active[$i$] && xinrange_$i$ && yinrange_$i$ && ( tiles_$i$.rdata0[ xinsprite_$i$, 1 ] == 1 );
+        sprite sprite_$i$(
+            pix_x <: pix_x,
+            pix_y <: pix_y,
+            pix_active <: pix_active,
 
-        // Collision detection flag
+            sprite_active <: sprite_active_$i$,
+            sprite_double <: sprite_double_$i$,
+            sprite_tile <: sprite_tile_number_$i$,
+            sprite_x <: sprite_x_$i$,
+            sprite_y <: sprite_y_$i$,
+
+            writer_line <: sprite_writer_line,
+            writer_bitmap <: sprite_writer_bitmap,
+            writer_active <: sprite_write_active_$i$
+        );
+    $$end
+
+    // Palette for 3 or 15 colour sprites - shared
+    uint6 palette[16] = uninitialised;
+
+    // Collision detection storage
+    $$for i=0,12 do
         uint16      detect_collision_$i$ = uninitialised;
     $$end
 
@@ -84,11 +155,9 @@ algorithm sprite_layer(
     int11 deltax := { {9{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
     int11 deltay := { {9{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
 
-    // Set read and write address for the tiles
-    $$for i=0,12 do
-        tiles_$i$.addr0 := sprite_tile_number[$i$] * 16 + yinsprite_$i$;
-        tiles_$i$.wenable0 := 0;
-        tiles_$i$.wenable1 := 1;
+    // Set 3 or 15 colour sprite palette
+    $$for i=1,15 do
+        palette[$i$] := sprite_palette_$i$;
     $$end
 
     // Default to transparent
@@ -105,18 +174,6 @@ algorithm sprite_layer(
     // Write to the sprite_layer
     // Set tile bitmaps, x coordinate, y coordinate, colour, tile number, visibility, double
     always {
-        // WRITE BITMAP TO SPRITE TILE
-        if( sprite_writer_active ) {
-            switch( sprite_writer_sprite ) {
-                $$for i=0,12 do
-                    case $i$: {
-                        tiles_$i$.addr1 = sprite_writer_line;
-                        tiles_$i$.wdata1 = sprite_writer_bitmap;
-                    }
-                $$end
-            }
-        }
-
         switch( sprite_layer_write ) {
             case 1: { sprite_active[ sprite_set_number ] = sprite_set_active; }
             case 2: { sprite_tile_number[ sprite_set_number ] = sprite_set_tile; }
@@ -162,19 +219,19 @@ algorithm sprite_layer(
         } else {
             if( pix_active ) {
                 $$for i=0,12 do
-                    if(  ( pix_visible_$i$ ) ) {
+                    if(  ( sprite_$i$.pix_visible ) ) {
+                        // Single colour
                         pix_red = sprite_colour[$i$][4,2];
                         pix_green = sprite_colour[$i$][2,2];
                         pix_blue = sprite_colour[$i$][0,2];
-
                         sprite_layer_display = 1;
 
                         // Perform collision detection
                         detect_collision_$i$ = detect_collision_$i$ | {
-                            bitmap_display, 1b0, 1b0, pix_visible_12, pix_visible_11,
-                            pix_visible_10, pix_visible_9, pix_visible_8, pix_visible_7,
-                            pix_visible_6, pix_visible_5, pix_visible_4, pix_visible_3,
-                            pix_visible_2, pix_visible_1, pix_visible_0
+                            bitmap_display, 1b0, 1b0, sprite_12.pix_visible, sprite_11.pix_visible,
+                            sprite_10.pix_visible, sprite_9.pix_visible, sprite_8.pix_visible, sprite_7.pix_visible,
+                            sprite_6.pix_visible, sprite_5.pix_visible, sprite_4.pix_visible, sprite_3.pix_visible,
+                            sprite_2.pix_visible, sprite_1.pix_visible, sprite_0.pix_visible
                         };
                     }
                 $$end

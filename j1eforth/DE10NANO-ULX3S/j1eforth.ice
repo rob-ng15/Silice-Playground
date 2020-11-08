@@ -238,8 +238,8 @@ $$end
     rstack.wenable1 := 1;
 
     // IO Map Read / Write Flags
-    IO_Map.memoryWrite := ( CYCLE == 1 ) && aluop(instruction).is_n2memt && ( stackTop > 32767 );
-    IO_Map.memoryRead := ( CYCLE == 1 ) && is_alu && ( aluop( instruction ).is_j1j1plus == 0 ) && ( aluop( instruction ).operation == 4b1100 );
+    IO_Map.memoryWrite := 0;
+    IO_Map.memoryRead := 0;
     $$if ULX3S then
         IO_Map.resetCoPro := ( CYCLE == 2 );
     $$end
@@ -343,7 +343,14 @@ $$end
                                         case 4b1001: {newStackTop = stackNext >> nibbles(stackTop).nibble0;}
                                         case 4b1010: {newStackTop = stackTop - 1;}
                                         case 4b1011: {newStackTop = rStackTop;}
-                                        case 4b1100: {newStackTop = ( stackTop < 32768 ) ? memoryInput : IO_Map.readData;}
+                                        case 4b1100: {
+                                            if( stackTop < 32768 ) {
+                                                newStackTop = memoryInput;
+                                            } else {
+                                               IO_Map.memoryRead = 1;
+                                               newStackTop = IO_Map.readData;
+                                            }
+                                        }
                                         case 4b1101: {newStackTop = stackNext << nibbles(stackTop).nibble0;}
                                         case 4b1110: {newStackTop = {rsp, dsp};}
                                         case 4b1111: {newStackTop = {16{(__unsigned(stackNext) < __unsigned(stackTop))}};}
@@ -383,8 +390,12 @@ $$end
 
                             // n2memt mem[t] = n
                             if( aluop(instruction).is_n2memt ) {
-                                ram_0.wenable0 = ( stackTop < 16384 );
-                                ram_1.wenable0 = ( stackTop > 16383 ) && ( stackTop < 32768 );
+                                if( stackTop < 32768 ) {
+                                    ram_0.wenable0 = ( stackTop < 16384 );
+                                    ram_1.wenable0 = ( stackTop > 16383 ) && ( stackTop < 32768 );
+                                } else {
+                                    IO_Map.memoryWrite = 1;
+                                }
                             }
                         } // ALU
                     }
