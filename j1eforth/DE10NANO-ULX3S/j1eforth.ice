@@ -135,6 +135,19 @@ $$if ULX3S then
     );
 $$end
 
+    // UART tx and rx
+    // UART written in Silice by @sylefeb https://github.com/sylefeb/Silice
+    uart_out uo;
+    uart_sender usend <@clock,!reset> (
+        io      <:> uo,
+        uart_tx :>  uart_tx
+    );
+    uart_in ui;
+    uart_receiver urecv <@clock,!reset> (
+        io      <:> ui,
+        uart_rx <:  uart_rx
+    );
+
     // J1+ CPU
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
     uint16  instruction = uninitialized;
@@ -190,8 +203,8 @@ $$end
         btns <: btns,
 
         // UART
-        uart_tx :> uart_tx,
-        uart_rx <: uart_rx,
+        ui <:> ui,
+        uo <:> uo,
 
         // AUDIO
         audio_l :> audio_l,

@@ -39,8 +39,8 @@ algorithm memmap_io (
     input   uint$NUM_BTNS$ btns,
 
     // UART
-    output! uint1   uart_tx,
-    input   uint1   uart_rx,
+    io_uart_out uo,
+    io_uart_in ui,
 
     // AUDIO
     output! uint4   audio_l,
@@ -75,6 +75,9 @@ algorithm memmap_io (
 $$if DE10NANO then
     <@video_clock,!video_reset>
 $$end
+$$if ULX3S then
+    <@clock,!reset>
+$$end
     (
         counter1hz :> systemClock,
         counter25mhz :> systemClockMHz
@@ -84,6 +87,9 @@ $$end
 $$if DE10NANO then
     <@video_clock,!video_reset>
 $$end
+$$if ULX3S then
+    <@clock,!reset>
+$$end
     ( );
 
     // 1khz timers (sleepTimer used for sleep command, timer1khz for user purposes)
@@ -91,11 +97,17 @@ $$end
 $$if DE10NANO then
     <@video_clock,!video_reset>
 $$end
+$$if ULX3S then
+    <@clock,!reset>
+$$end
     ( );
 
     pulse1khz timer1khz
 $$if DE10NANO then
-<@video_clock,!video_reset>
+    <@video_clock,!video_reset>
+$$end
+$$if ULX3S then
+    <@clock,!reset>
 $$end
     ( );
 
@@ -103,23 +115,13 @@ $$end
     uint16 staticGenerator = 0;
     random rng
 $$if DE10NANO then
-<@video_clock,!video_reset>
+    <@video_clock,!video_reset>
+$$end
+$$if ULX3S then
+    <@clock,!reset>
 $$end
     (
         g_noise_out :> staticGenerator
-    );
-
-    // UART tx and rx
-    // UART written in Silice by https://github.com/sylefeb/Silice
-    uart_out uo;
-    uart_sender usend <@clock,!reset> (
-        io      <:> uo,
-        uart_tx :>  uart_tx
-    );
-    uart_in ui;
-    uart_receiver urecv <@clock,!reset> (
-        io      <:> ui,
-        uart_rx <:  uart_rx
     );
 
     // CREATE DISPLAY LAYERS
@@ -432,13 +434,13 @@ $$end
     uartOutBuffer.addr0    := uartOutBufferNext; // FIFO reads on next
     uartOutBuffer.addr1    := uartOutBufferTop;  // FIFO writes on top
 
-    // Setup the UART
-    uo.data_in_ready := 0; // maintain low
-
     // RESET Mathematics Co-Processor Controls
     divmod32by16to16qr.start := 0;
     divmod16by16to16qr.start := 0;
     multiplier16by16to32.start := 0;
+
+    // Setup the UART
+    uo.data_in_ready := 0; // maintain low
 
     // UART input and output buffering
     always {
