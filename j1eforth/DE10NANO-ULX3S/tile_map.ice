@@ -106,36 +106,64 @@ algorithm tilemap(
             }
         }
 
-        switch( tm_scrollwrap - 1 ) {
-           case 0: {
+        switch( tm_scrollwrap ) {
+           case 1: {
                 // SCROLL/WRAP LEFT
                 tm_offset_x = ( tm_offset_x == (15) ) ? 0 : tm_offset_x + 1;
                 tm_active = ( tm_offset_x == (15) ) ? 1 : 0;
-                tm_scroll = ( tm_scrollwrap > 5 );
+                tm_scroll = 1;
                 tm_lastaction = ( tm_offset_x == (15) ) ? tm_scrollwrap : 0;
             }
-            case 1: {
+            case 2: {
                 // SCROLL/WRAP UP
                 tm_offset_y = ( tm_offset_y == (15) ) ? 0 : tm_offset_y + 1;
                 tm_active = ( tm_offset_y == (15) ) ? 15 : 0;
-                tm_scroll = ( tm_scrollwrap > 5 );
+                tm_scroll = 1;
                 tm_lastaction = ( tm_offset_y == (15) ) ? tm_scrollwrap : 0;
             }
-            case 2: {
+            case 3: {
                 // SCROLL/WRAP RIGHT
                 tm_offset_x = ( tm_offset_x == (-15) ) ? 0 : tm_offset_x - 1;
                 tm_active = ( tm_offset_x == (-15) ) ? 8 : 0;
-                tm_scroll = ( tm_scrollwrap > 5 );
+                tm_scroll = 1;
                 tm_lastaction = ( tm_offset_x == (-15) ) ? tm_scrollwrap : 0;
             }
-            case 3: {
+            case 4: {
                 // SCROLL/WRAP DOWN
                 tm_offset_y = ( tm_offset_y == (-15) ) ? 0 : tm_offset_y - 1;
                 tm_active = ( tm_offset_y == (-15) ) ? 22 : 0;
-                tm_scroll = ( tm_scrollwrap > 5 );
+                tm_scroll = 1;
                 tm_lastaction = ( tm_offset_y == (-15) ) ? tm_scrollwrap : 0;
             }
+           case 5: {
+                // SCROLL/WRAP LEFT
+                tm_offset_x = ( tm_offset_x == (15) ) ? 0 : tm_offset_x + 1;
+                tm_active = ( tm_offset_x == (15) ) ? 1 : 0;
+                tm_scroll = 1;
+                tm_lastaction = ( tm_offset_x == (15) ) ? tm_scrollwrap : 0;
+            }
+            case 6: {
+                // SCROLL/WRAP UP
+                tm_offset_y = ( tm_offset_y == (15) ) ? 0 : tm_offset_y + 1;
+                tm_active = ( tm_offset_y == (15) ) ? 15 : 0;
+                tm_scroll = 1;
+                tm_lastaction = ( tm_offset_y == (15) ) ? tm_scrollwrap : 0;
+            }
+            case 7: {
+                // SCROLL/WRAP RIGHT
+                tm_offset_x = ( tm_offset_x == (-15) ) ? 0 : tm_offset_x - 1;
+                tm_active = ( tm_offset_x == (-15) ) ? 8 : 0;
+                tm_scroll = 0;
+                tm_lastaction = ( tm_offset_x == (-15) ) ? tm_scrollwrap : 0;
+            }
             case 8: {
+                // SCROLL/WRAP DOWN
+                tm_offset_y = ( tm_offset_y == (-15) ) ? 0 : tm_offset_y - 1;
+                tm_active = ( tm_offset_y == (-15) ) ? 22 : 0;
+                tm_scroll = 0;
+                tm_lastaction = ( tm_offset_y == (-15) ) ? tm_scrollwrap : 0;
+            }
+            case 9: {
                 // CLEAR
                 tm_active = 29;
             }

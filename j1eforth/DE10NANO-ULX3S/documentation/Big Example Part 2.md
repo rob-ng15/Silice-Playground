@@ -7,6 +7,7 @@
     case
       1 of
         1 0 1 1f4 beepL!
+        5 tmmove!
       endof
       3 of
         1 0 2 1f4 beepR!
@@ -159,6 +160,7 @@
     else 1 shipdirection +! then ;
 
 : drawscore
+  activelasteroids @ activehasteroids @ + led!
   40 tpubackground!
   3f tpuforeground!
   26 1 tpuxy!

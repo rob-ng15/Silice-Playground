@@ -9,13 +9,14 @@ algorithm bitmap(
     output! uint1   bitmap_display,
 
     // GPU to SET and GET pixels
-    input int11 bitmap_x_write,
-    input int11 bitmap_y_write,
-    input uint7 bitmap_colour_write,
-    input uint2 bitmap_write,
-    input int16 bitmap_x_read,
-    input int16 bitmap_y_read,
-    output uint7 bitmap_colour_read
+    input   int11   bitmap_x_write,
+    input   int11   bitmap_y_write,
+    input   uint7   bitmap_colour_write,
+    input   uint1   bitmap_write,
+
+    input   int16   bitmap_x_read,
+    input   int16   bitmap_y_read,
+    output  uint7   bitmap_colour_read
 ) <autorun> {
     // 640 x 480 x 7 bit { Arrggbb } colour bitmap
     dualport_bram uint1 bitmap_alpha[ 307200 ] = uninitialized;

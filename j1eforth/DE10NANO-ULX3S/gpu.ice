@@ -3,7 +3,7 @@ algorithm gpu(
     output! int11 bitmap_x_write,
     output! int11 bitmap_y_write,
     output! uint7 bitmap_colour_write,
-    output! uint2 bitmap_write,
+    output! uint1 bitmap_write,
 
     // From j1eforth
     input   int11 gpu_x,
