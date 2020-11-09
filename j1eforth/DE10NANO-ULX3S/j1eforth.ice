@@ -242,11 +242,9 @@ $$end
     // IO Map Read / Write Flags
     IO_Map.memoryWrite := 0;
     IO_Map.memoryRead := 0;
-    $$if ULX3S then
-        IO_Map.resetCoPro := ( CYCLE == 3 );
-    $$end
+
     $$if DE10NANO then
-        IO_Map.resetCoPro := ( CYCLE == 3 );
+        // 50MHz clock specifically named for de10nano
         clock_50mhz := clock;
     $$end
 

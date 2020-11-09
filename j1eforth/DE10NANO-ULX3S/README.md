@@ -40,8 +40,8 @@ Cycle | Action | Notes
 ----- | ----- | -----
 0 | Update stackNext (2nd item on the stack) and rStackTop (1st item on the return stack).<br>Read instruction from PC memory location and stackTop memory location. | Pointers to the correct addresses in the stacks and memory are maintained via wires.
 1 | Execute the J1+ CPU instruction. | Memory writes are started in this cycle. Co-processor operations are started in this cycle.
-2 | Write to the data and return stacks.<br>ULX3S Clear the co-processor controls. | Update data and return stack pointers and memory addresses. Memory reads are started in this cycle.
-3 | DE10NANO Clear the co-processor controls. |
+2 | Write to the data and return stacks. | Update data and return stack pointers and memory addresses. Memory reads are started in this cycle.
+3 | Delay to allow reading/writing to complete. |
 
 For communication with j1eforth there is a UART which provides input and output, output is duplicated on the terminal display. The ULX3S eventually will have PS/2 keyboard input via the us2 connector and a USB OTG and PS/2 to USB converter.
 

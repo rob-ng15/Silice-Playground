@@ -71,57 +71,19 @@ algorithm memmap_io (
     // 1hz timers (p1hz used for systemClock and systemClockMHz, timer1hz for user purposes)
     uint16 systemClock = uninitialized;
     uint32 systemClockMHz = uninitialized;
-
-    pulse1hz p1hz
-$$if DE10NANO then
-    <@video_clock,!video_reset>
-$$end
-$$if ULX3S then
-    <@clock,!reset>
-$$end
-(
+    pulse1hz p1hz <@clock_50mhz,!reset> (
         counter1hz :> systemClock,
-        counter25mhz :> systemClockMHz
+        counter50mhz :> systemClockMHz
     );
-
-    pulse1hz timer1hz
-$$if DE10NANO then
-    <@video_clock,!video_reset>
-$$end
-$$if ULX3S then
-    <@clock,!reset>
-$$end
-    ( );
+    pulse1hz timer1hz <@clock_50mhz,!reset> ( );
 
     // 1khz timers (sleepTimer used for sleep command, timer1khz for user purposes)
-    pulse1khz sleepTimer
-$$if DE10NANO then
-    <@video_clock,!video_reset>
-$$end
-$$if ULX3S then
-    <@clock,!reset>
-$$end
-    ( );
-
-    pulse1khz timer1khz
-$$if DE10NANO then
-    <@video_clock,!video_reset>
-$$end
-$$if ULX3S then
-    <@clock,!reset>
-$$end
-    ( );
+    pulse1khz sleepTimer <@clock_50mhz,!reset> ( );
+    pulse1khz timer1khz <@clock_50mhz,!reset> ( );
 
     // RNG random number generator
     uint16 staticGenerator = 0;
-    random rng
-$$if DE10NANO then
-    <@video_clock,!video_reset>
-$$end
-$$if ULX3S then
-    <@clock,!reset>
-$$end
-    (
+    random rng <@clock_50mhz,!reset> (
         g_noise_out :> staticGenerator
     );
 
@@ -435,6 +397,9 @@ $$end
     uint8   uartOutBufferTop = 0;
     uint8   newuartOutBufferTop = 0;
 
+    // Co-Processor reset counter
+    uint2   coProReset = 0;
+
     // register buttons
     uint$NUM_BTNS$ reg_btns = 0;
     reg_btns ::= btns;
@@ -457,6 +422,13 @@ $$end
     divmod32by16to16qr.start := 0;
     divmod16by16to16qr.start := 0;
     multiplier16by16to32.start := 0;
+
+    // RESET Timer Co-Processor Controls
+    p1hz.resetCounter := 0;
+    sleepTimer.resetCounter := 0;
+    timer1hz.resetCounter := 0;
+    timer1khz.resetCounter := 0;
+    rng.resetRandom := 0;
 
     // UART input and output buffering
     always {
@@ -485,6 +457,8 @@ $$end
 
         // WRITE IO Memory
         if( memoryWrite ) {
+            coProReset = 3;
+
             switch( memoryAddress[12,4] ) {
                 case 4hf: {
                     switch( memoryAddress[8,4] ) {
@@ -667,7 +641,9 @@ $$end
                     }
                 }
             }
-        } // WRITE IO Memory
+        } else { // WRITE IO Memory
+            coProReset = ( coProReset == 0 ) ? 0 : coProReset - 1;
+        }
 
         // READ IO Memory
         if( memoryRead ) {
@@ -869,7 +845,9 @@ $$end
         } // memoryRead
 
         // RESET Co-Processor Controls
-        if( resetCoPro ) {
+        // Main processor and memory map runs at 50MHz, display co-processors at 25MHz
+        // Delay to reset co-processors therefore required
+        if( coProReset == 1 ) {
             background_generator.background_write = 0;
             tile_map.tile_writer_write = 0;
             tile_map.tm_write = 0;
@@ -888,11 +866,6 @@ $$end
             displaylist_drawer.writer_write = 0;
             apu_processor_L.apu_write = 0;
             apu_processor_R.apu_write = 0;
-            p1hz.resetCounter = 0;
-            sleepTimer.resetCounter = 0;
-            timer1hz.resetCounter = 0;
-            timer1khz.resetCounter = 0;
-            rng.resetRandom = 0;
         }
     } // while(1)
 }
