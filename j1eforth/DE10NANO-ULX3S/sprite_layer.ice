@@ -42,8 +42,10 @@ algorithm sprite_layer(
     input   uint16  sprite_update,
 
     // FULL collision detection
-    // Bitmap is set flag
-    input   uint1   bitmap_display,
+    // (1) Bitmap, (2) Tile Map, (3) Other Sprite Layer
+    input   uint1   collision_layer_1,
+    input   uint1   collision_layer_2,
+    input   uint1   collision_layer_3,
     $$for i=0,12 do
         output uint16 collision_$i$,
     $$end
@@ -171,7 +173,7 @@ algorithm sprite_layer(
 
                         // Perform collision detection
                         detect_collision_$i$ = detect_collision_$i$ | {
-                            bitmap_display, 1b0, 1b0, pix_visible_12, pix_visible_11,
+                            collision_layer_1, collision_layer_2, collision_layer_3, pix_visible_12, pix_visible_11,
                             pix_visible_10, pix_visible_9, pix_visible_8, pix_visible_7,
                             pix_visible_6, pix_visible_5, pix_visible_4, pix_visible_3,
                             pix_visible_2, pix_visible_1, pix_visible_0

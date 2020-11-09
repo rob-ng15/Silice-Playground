@@ -9,7 +9,6 @@ bitfield dlentry {
     uint1   active,
     uint4   command,
     uint7   colour,
-    uint1   dysign,
     uint11  x,
     uint11  y,
     uint11  p0,
@@ -66,7 +65,7 @@ algorithm displaylist(
     input   uint3   vector_block_active
 ) {
     // 32 display list entries
-    dualport_bram uint79 dlentries[32] = uninitialised;
+    dualport_bram uint78 dlentries[32] = uninitialised;
 
     uint5   entry_number = uninitialised;
     uint5   finish_number = uninitialised;

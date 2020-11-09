@@ -60,7 +60,11 @@ $$end
     output! uint4   audio_l,
     output! uint4   audio_r
 
-) {
+)
+$$if ULX3S then
+<@clock_50mhz>
+$$end
+{
     // VGA/HDMI Display
     uint1   video_reset = uninitialized;
     uint1   video_clock = uninitialized;
@@ -69,6 +73,8 @@ $$end
     // Generate the 100MHz SDRAM and 25MHz VIDEO clocks
 $$if DE10NANO then
     uint1 sdram_clock = uninitialized;
+    uint1 clock_50mhz = uninitialized;
+
     de10nano_clk_100_25 clk_gen (
         refclk    <: clock,
         outclk_0  :> sdram_clock,
@@ -113,14 +119,9 @@ $$if DE10NANO then
 $$end
 
 $$if ULX3S then
-    // Adjust 6 bit rgb to 8 bit rgb for HDMI output
-    uint6   video_r = 0;
-    uint6   video_g = 0;
-    uint6   video_b = 0;
-
-    uint8   video_r8 := { video_r, video_r[0,2] };
-    uint8   video_g8 := { video_g, video_g[0,2] };
-    uint8   video_b8 := { video_b, video_b[0,2] };
+    uint8   video_r = uninitialized;
+    uint8   video_g = uninitialized;
+    uint8   video_b = uninitialized;
 
     hdmi video<@clock,!reset> (
         vblank  :> vblank,
@@ -129,24 +130,11 @@ $$if ULX3S then
         y       :> pix_y,
         gpdi_dp :> gpdi_dp,
         gpdi_dn :> gpdi_dn,
-        red     <: video_r8,
-        green   <: video_g8,
-        blue    <: video_b8
+        red     <: video_r,
+        green   <: video_g,
+        blue    <: video_b
     );
 $$end
-
-    // UART tx and rx
-    // UART written in Silice by @sylefeb https://github.com/sylefeb/Silice
-    uart_out uo;
-    uart_sender usend <@clock,!reset> (
-        io      <:> uo,
-        uart_tx :>  uart_tx
-    );
-    uart_in ui;
-    uart_receiver urecv <@clock,!reset> (
-        io      <:> ui,
-        uart_rx <:  uart_rx
-    );
 
     // J1+ CPU
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
@@ -169,13 +157,13 @@ $$end
     dualport_bram uint16 dstack[256] = uninitialized; // bram (code from @sylefeb)
     uint16  stackTop = 0;
     uint8   dsp = 0;
-    uint8   newDSP = 0;
+    uint8   newDSP = uninitialized;
     uint16  newStackTop = uninitialized;
 
     // rstack 256x16bit and pointer, next pointer, write line
     dualport_bram uint16 rstack[256] = uninitialized; // bram (code from @sylefeb)
     uint8   rsp = 0;
-    uint8   newRSP = 0;
+    uint8   newRSP = uninitialized;
     uint16  rstackWData = uninitialized;
 
     uint16  stackNext = uninitialized;
@@ -196,15 +184,15 @@ $$end
     // Setup Memory Mapped I/O
     memmap_io IO_Map
 $$if ULX3S then
-<@clock,!reset>
+<@clock_50mhz,!reset>
 $$end
 (
         leds :> leds,
         btns <: btns,
 
         // UART
-        ui <:> ui,
-        uo <:> uo,
+        uart_tx :> uart_tx,
+        uart_rx <: uart_rx,
 
         // AUDIO
         audio_l :> audio_l,
@@ -220,6 +208,7 @@ $$end
         pix_y <: pix_y,
 
         // CLOCKS
+        clock_50mhz <: clock_50mhz,
         video_clock <:video_clock,
         video_reset <: video_reset,
 
@@ -254,10 +243,11 @@ $$end
     IO_Map.memoryWrite := 0;
     IO_Map.memoryRead := 0;
     $$if ULX3S then
-        IO_Map.resetCoPro := ( CYCLE == 2 );
+        IO_Map.resetCoPro := ( CYCLE == 3 );
     $$end
     $$if DE10NANO then
         IO_Map.resetCoPro := ( CYCLE == 3 );
+        clock_50mhz := clock;
     $$end
 
     // EXECUTE J1 CPU

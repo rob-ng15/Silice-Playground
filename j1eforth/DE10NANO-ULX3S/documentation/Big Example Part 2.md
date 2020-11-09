@@ -45,7 +45,10 @@
   hitasteroid @ ff <> if
     lkill then
   0 0 0 0 0 0 c lslsprite!
-  0 0 0 0 0 0 c uslsprite! ;
+  0 0 0 0 0 0 c uslsprite!
+  activehasteroids @ activelasteroids @ +
+  0= if
+    newlevel then ;
 
 : hhit
   1 score +!
@@ -59,7 +62,10 @@
   hitasteroid @ ff <> if
     hkill then
   0 0 0 0 0 0 c lslsprite!
-  0 0 0 0 0 0 c uslsprite! ;
+  0 0 0 0 0 0 c uslsprite!
+  activehasteroids @ activelasteroids @ +
+  0= if
+    newlevel then ;
 
 : crash?
   ff5b @ 7ff and
@@ -102,19 +108,43 @@
   case
     0 of
       shipy @ 0> if
-        shipy @ 1- shipy ! then
+        -1 shipy +! then
     endof
     1 of
       shipx @ 270 < if
-        shipx @ 1+ shipx ! then
+        1 shipx +! then
+      shipy @ 0> if
+        -1 shipy +! then
     endof
     2 of
-      shipy @ 1d0 < if
-        shipy @ 1+ shipy ! then
+      shipx @ 270 < if
+        1 shipx +! then
     endof
     3 of
+      shipx @ 270 < if
+        1 shipx +! then
+      shipy @ 1e0 < if
+        1 shipy +! then
+    endof
+    4 of
+      shipy @ 1e0 < if
+        1 shipy +! then
+    endof
+    5 of
       shipx @ 0> if
-        shipx @ 1- shipx ! then
+        -1 shipx +! then
+      shipy @ 1e0 < if
+        1 shipy +! then
+    endof
+    6 of
+      shipx @ 0> if
+        -1 shipx +! then
+    endof
+    7 of
+      shipx @ 0> if
+        -1 shipx +! then
+      shipy @ 0> if
+        -1 shipy +! then
     endof
   endcase ;
 

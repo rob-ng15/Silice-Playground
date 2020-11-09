@@ -36,7 +36,7 @@ algorithm apu(
     };
 
     // Calculated as 25MHz / note frequency / 32 to give 32 step points per note
-    uint15 frequencytable[64] = {
+    uint16 frequencytable[64] = {
         0,
         23889, 22548, 21283, 20088, 18961, 17897, 16892, 15944, 15049, 14205, 13407, 12655,     // 1 = C 2 or Deep C
         11945, 11274, 10641, 10044, 9480, 8948, 8446, 7972, 7525, 7102, 6704, 6327,             // 13 = C 3
@@ -49,13 +49,13 @@ algorithm apu(
     uint3   waveform_1 = uninitialized;
     uint6   note_1 = uninitialized;
     uint5   point_1 = uninitialized;
-    uint15  counter25mhz_1 = uninitialized;
+    uint16  counter25mhz_1 = uninitialized;
     uint16  counter1khz_1 = uninitialized;
     uint16  milliseconds_1 = uninitialized;
     uint3   waveform_2 = uninitialized;
     uint6   note_2 = uninitialized;
     uint5   point_2 = uninitialized;
-    uint15  counter25mhz_2 = uninitialized;
+    uint16  counter25mhz_2 = uninitialized;
     uint16  counter1khz_2 = uninitialized;
     uint16  milliseconds_2 = uninitialized;
 
@@ -63,17 +63,17 @@ algorithm apu(
     uint16  duration_2 = uninitialized;
 
     uint4   audio_output_1 := waveformtable[waveform_1 * 32 + point_1];
-    uint15  note_1_frequency := frequencytable[note_1];
+    uint16  note_1_frequency := frequencytable[note_1];
     uint4   audio_output_2 := waveformtable[waveform_2 * 32 + point_2];
-    uint15  note_2_frequency := frequencytable[note_2];
+    uint16  note_2_frequency := frequencytable[note_2];
 
     audio_active := ( duration_1 > 0) || ( duration_2 > 0 );
 
     always {
-        if( ( note_1 != 0 ) && ( counter25mhz_1 == 0 ) ) {
+        if( ( duration_1 != 0 ) && ( counter25mhz_1 == 0 ) ) {
             audio_output = ( waveform_1 == 4 ) ? staticGenerator : audio_output_1;
         }
-        if( ( note_2 != 0 ) && ( counter25mhz_2 == 0 ) ) {
+        if( ( duration_2 != 0 ) && ( counter25mhz_2 == 0 ) ) {
             audio_output = ( waveform_2 == 4 ) ? staticGenerator : audio_output_2;
         }
     }
@@ -106,16 +106,12 @@ algorithm apu(
                     point_1 = ( counter25mhz_1 != 0 ) ? point_1 : point_1 + 1;
                     counter1khz_1 = ( counter1khz_1 != 0 ) ? counter1khz_1 - 1 : 25000;
                     duration_1 = ( counter1khz_1 != 0 ) ? duration_1 : duration_1 - 1;
-                } else {
-                    note_1 = 0;
                 }
                 if( duration_2 != 0 ) {
                     counter25mhz_2 = ( counter25mhz_2 != 0 ) ? counter25mhz_2 - 1 : note_2_frequency;
                     point_2 = ( counter25mhz_2 != 0 ) ? point_2 : point_2 + 1;
                     counter1khz_2 = ( counter1khz_2 != 0 ) ? counter1khz_2 - 1 : 25000;
                     duration_2 = ( counter1khz_2 != 0 ) ? duration_2 : duration_2 - 1;
-                } else {
-                    note_2 = 0;
                 }
             }
         }

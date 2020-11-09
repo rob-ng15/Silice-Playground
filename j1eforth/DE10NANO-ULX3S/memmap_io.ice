@@ -39,23 +39,24 @@ algorithm memmap_io (
     input   uint$NUM_BTNS$ btns,
 
     // UART
-    io_uart_out uo,
-    io_uart_in ui,
+    output! uint1   uart_tx,
+    input   uint1   uart_rx,
 
     // AUDIO
     output! uint4   audio_l,
     output! uint4   audio_r,
 
     // VGA/HDMI
-    output! uint6   video_r,
-    output! uint6   video_g,
-    output! uint6   video_b,
+    output! uint8   video_r,
+    output! uint8   video_g,
+    output! uint8   video_b,
     input   uint1   vblank,
     input   uint1   pix_active,
     input   uint10  pix_x,
     input   uint10  pix_y,
 
     // CLOCKS
+    input   uint1   clock_50mhz,
     input   uint1   video_clock,
     input   uint1   video_reset,
 
@@ -78,7 +79,7 @@ $$end
 $$if ULX3S then
     <@clock,!reset>
 $$end
-    (
+(
         counter1hz :> systemClock,
         counter25mhz :> systemClockMHz
     );
@@ -122,6 +123,19 @@ $$if ULX3S then
 $$end
     (
         g_noise_out :> staticGenerator
+    );
+
+    // UART tx and rx
+    // UART written in Silice by https://github.com/sylefeb/Silice
+    uart_out uo;
+    uart_sender usend <@clock_50mhz,!reset> (
+        io      <:> uo,
+        uart_tx :>  uart_tx
+    );
+    uart_in ui;
+    uart_receiver urecv <@clock_50mhz,!reset> (
+        io      <:> ui,
+        uart_rx <:  uart_rx
     );
 
     // CREATE DISPLAY LAYERS
@@ -184,10 +198,15 @@ $$end
     );
 
     // Lower Sprite Layer - Between BACKGROUND and BITMAP
+    // Upper Sprite Layer - Between BITMAP and CHARACTER MAP
     uint2   lower_sprites_r = uninitialized;
     uint2   lower_sprites_g = uninitialized;
     uint2   lower_sprites_b = uninitialized;
     uint1   lower_sprites_display = uninitialized;
+    uint2   upper_sprites_r = uninitialized;
+    uint2   upper_sprites_g = uninitialized;
+    uint2   upper_sprites_b = uninitialized;
+    uint1   upper_sprites_display = uninitialized;
 
     sprite_layer lower_sprites <@video_clock,!video_reset> (
         pix_x      <: pix_x,
@@ -198,14 +217,10 @@ $$end
         pix_green  :> lower_sprites_g,
         pix_blue   :> lower_sprites_b,
         sprite_layer_display :> lower_sprites_display,
-        bitmap_display <: bitmap_display
+        collision_layer_1 <: bitmap_display,
+        collision_layer_2 <: tilemap_display,
+        collision_layer_3 <: upper_sprites_display
     );
-
-    // Upper Sprite Layer - Between BITMAP and CHARACTER MAP
-    uint2   upper_sprites_r = uninitialized;
-    uint2   upper_sprites_g = uninitialized;
-    uint2   upper_sprites_b = uninitialized;
-    uint1   upper_sprites_display = uninitialized;
 
     sprite_layer upper_sprites <@video_clock,!video_reset> (
         pix_x      <: pix_x,
@@ -216,7 +231,9 @@ $$end
         pix_green  :> upper_sprites_g,
         pix_blue   :> upper_sprites_b,
         sprite_layer_display :> upper_sprites_display,
-        bitmap_display <: bitmap_display
+        collision_layer_1 <: bitmap_display,
+        collision_layer_2 <: tilemap_display,
+        collision_layer_3 <: lower_sprites_display
     );
 
     // Character Map Window
@@ -401,12 +418,11 @@ $$end
         gpu_active <: gpu_active
     );
 
-    // Mathematics Cop Processors
-    divmod32by16 divmod32by16to16qr ();
-    divmod16by16 divmod16by16to16qr ();
-    multi16by16to32DSP multiplier16by16to32 ();
-
-    doubleaddsub doperations ();
+    // Mathematics Co-Processors
+    divmod32by16 divmod32by16to16qr <@clock_50mhz,!reset> ();
+    divmod16by16 divmod16by16to16qr <@clock_50mhz,!reset> ();
+    multi16by16to32DSP multiplier16by16to32 <@clock_50mhz,!reset> ();
+    doubleaddsub doperations <@clock_50mhz,!reset> ();
 
     // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
     dualport_bram uint8 uartInBuffer[4096] = uninitialized;
@@ -434,13 +450,13 @@ $$end
     uartOutBuffer.addr0    := uartOutBufferNext; // FIFO reads on next
     uartOutBuffer.addr1    := uartOutBufferTop;  // FIFO writes on top
 
+    // Setup the UART
+    uo.data_in_ready := 0; // maintain low
+
     // RESET Mathematics Co-Processor Controls
     divmod32by16to16qr.start := 0;
     divmod16by16to16qr.start := 0;
     multiplier16by16to32.start := 0;
-
-    // Setup the UART
-    uo.data_in_ready := 0; // maintain low
 
     // UART input and output buffering
     always {

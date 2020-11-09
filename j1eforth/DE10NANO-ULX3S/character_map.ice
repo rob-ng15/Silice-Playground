@@ -77,20 +77,9 @@ algorithm character_map(
         if( character_map_display ) {
             // CHARACTER from characterGenerator8x16
             // Determine if background or foreground
-            switch( characterpixel ) {
-                case 0: {
-                    // BACKGROUND
-                    pix_red = colour7(background.rdata0).red;
-                    pix_green = colour7(background.rdata0).green;
-                    pix_blue = colour7(background.rdata0).blue;
-                }
-                case 1: {
-                    // foreground
-                    pix_red = colour6(foreground.rdata0).red;
-                    pix_green = colour6(foreground.rdata0).green;
-                    pix_blue = colour6(foreground.rdata0).blue;
-                }
-            }
+            pix_red = characterpixel ? colour6(foreground.rdata0).red : colour7(background.rdata0).red;
+            pix_green = characterpixel ? colour6(foreground.rdata0).green : colour7(background.rdata0).green;
+            pix_blue = characterpixel ? colour6(foreground.rdata0).blue : colour7(background.rdata0).blue;
         }
 
         switch( tpu_active ) {

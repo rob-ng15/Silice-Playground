@@ -9,8 +9,8 @@
     * ULX3S has keyboard input (not yet implemented)
     * PS/2 takes priority over the UART
 * J1+ CPU
-    * 25MHz ( ULX3S ) or 50MHz ( DE10NANO ) operation
-    * 4 (improved from 5) clock cycles per J1+ CPU operation against 13 clock cycles per operation on the FOMU, giving an effective CPU running at 6.25MHz ( ULX3S ) or 12.5MHz ( DE10NANO )
+    * 50MHz operation
+    * 4 (improved from 5) clock cycles per J1+ CPU operation against 13 clock cycles per operation on the FOMU, giving an effective CPU running at 12.5MHz
     * Changed extra OPCODES to ```0= 0<>- <> 1+ * 2* negate 2/ - 0< 0> > >= abs max min```
     * Arithmetic Co-Processors Added [Mathematics.md](documentation/Mathematics.md)
         * 32 bit Addition/Subtraction Unit ( __SIGNED__ )

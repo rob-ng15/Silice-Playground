@@ -153,35 +153,14 @@ algorithm background(
             case 5: {
                 // 8 colour rainbow
                 switch( pix_y[6,3] ) {
-                    case 3b000: {
-                        pix_red = 2;
-                    }
-                    case 3b001: {
-                        pix_red = 3;
-                    }
-                    case 3b010: {
-                        pix_red = 3;
-                        pix_green = 2;
-                    }
-                    case 3b011: {
-                        pix_red = 3;
-                        pix_green = 3;
-                    }
-                    case 3b100: {
-                        pix_green = 3;
-                    }
-                    case 3b101: {
-                        pix_blue = 3;
-                    }
-                    case 3b110: {
-                        pix_red = 1;
-                        pix_blue = 2;
-                    }
-                    case 3b111: {
-                        pix_red = 1;
-                        pix_green = 2;
-                        pix_blue = 3;
-                    }
+                    case 3b000: { pix_red = 2; }
+                    case 3b001: { pix_red = 3; }
+                    case 3b010: { pix_red = 3; pix_green = 2; }
+                    case 3b011: { pix_red = 3; pix_green = 3; }
+                    case 3b100: { pix_green = 3; }
+                    case 3b101: { pix_blue = 3; }
+                    case 3b110: { pix_red = 1; pix_blue = 2; }
+                    case 3b111: { pix_red = 1; pix_green = 2; pix_blue = 3; }
                 }
             }
             case 6: {
@@ -191,19 +170,13 @@ algorithm background(
                 pix_blue = staticGenerator[0,2];
             }
             case 7: {
-                // Snow
+                // SNOW (from @sylefeb)
                 rand_x = ( pix_x == 0)  ? 1 : rand_x * 31421 + 6927;
                 speed  = rand_x[10,2];
                 dotpos = ( frame >> speed ) + rand_x;
-                if (pix_y == dotpos) {
-                    pix_red   = colour6(background).red;
-                    pix_green = colour6(background).green;
-                    pix_blue  = colour6(background).blue;
-                } else {
-                    pix_red   = colour6(background_alt).red;
-                    pix_green = colour6(background_alt).green;
-                    pix_blue  = colour6(background_alt).blue;
-                }
+                    pix_red   = (pix_y == dotpos) ? colour6(background).red : colour6(background_alt).red;
+                    pix_green = (pix_y == dotpos) ? colour6(background).green : colour6(background_alt).green;
+                    pix_blue  = (pix_y == dotpos) ? colour6(background).blue : colour6(background_alt).blue;
             }
             default: {}
         }

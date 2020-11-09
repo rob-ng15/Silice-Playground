@@ -3,9 +3,9 @@ algorithm multiplex_display(
     input   uint10 pix_y,
     input   uint1  pix_active,
     input   uint1  pix_vblank,
-    output! uint6 pix_red,
-    output! uint6 pix_green,
-    output! uint6 pix_blue,
+    output! uint8 pix_red,
+    output! uint8 pix_green,
+    output! uint8 pix_blue,
 
     // BACKGROUND
     input uint2 background_r,
@@ -58,27 +58,27 @@ algorithm multiplex_display(
         // wait until pix_active THEN BACKGROUND -> TILEMAP -> LOWER SPRITES -> BITMAP -> UPPER SPRITES -> CHARACTER MAP -> TERMINAL
         if( pix_active ) {
             // Select the 2 bit r g or b and expand to 6 bit r g or b
-            pix_red = ( terminal_display ) ? { {3{terminal_r}} } :
-                        ( character_map_display ) ? { {3{character_map_r}} } :
-                        ( upper_sprites_display ) ? { {3{upper_sprites_r}} } :
-                        ( bitmap_display ) ? { {3{bitmap_r}} } :
-                        ( lower_sprites_display ) ? { {3{lower_sprites_r}} } :
-                        ( tilemap_display ) ? { {3{tilemap_r}} } :
-                        { {3{background_r}} };
-            pix_green = ( terminal_display ) ? { {3{terminal_g}} } :
-                        ( character_map_display ) ? { {3{character_map_g}} } :
-                        ( upper_sprites_display ) ? { {3{upper_sprites_g}} } :
-                        ( bitmap_display ) ? { {3{bitmap_g}} } :
-                        ( lower_sprites_display ) ? { {3{lower_sprites_g}} } :
-                        ( tilemap_display ) ? { {3{tilemap_g}} } :
-                        { {3{background_g}} };
-            pix_blue = ( terminal_display ) ? { {3{terminal_b}} } :
-                        ( character_map_display ) ? { {3{character_map_b}} } :
-                        ( upper_sprites_display ) ? { {3{upper_sprites_b}} } :
-                        ( bitmap_display ) ? { {3{bitmap_b}} } :
-                        ( lower_sprites_display ) ? { {3{lower_sprites_b}} } :
-                        ( tilemap_display ) ? { {3{tilemap_b}} } :
-                        { {3{background_b}} };
+            pix_red = ( terminal_display ) ? { {4{terminal_r}} } :
+                        ( character_map_display ) ? { {4{character_map_r}} } :
+                        ( upper_sprites_display ) ? { {4{upper_sprites_r}} } :
+                        ( bitmap_display ) ? { {4{bitmap_r}} } :
+                        ( lower_sprites_display ) ? { {4{lower_sprites_r}} } :
+                        ( tilemap_display ) ? { {4{tilemap_r}} } :
+                        { {4{background_r}} };
+            pix_green = ( terminal_display ) ? { {4{terminal_g}} } :
+                        ( character_map_display ) ? { {4{character_map_g}} } :
+                        ( upper_sprites_display ) ? { {4{upper_sprites_g}} } :
+                        ( bitmap_display ) ? { {4{bitmap_g}} } :
+                        ( lower_sprites_display ) ? { {4{lower_sprites_g}} } :
+                        ( tilemap_display ) ? { {4{tilemap_g}} } :
+                        { {4{background_g}} };
+            pix_blue = ( terminal_display ) ? { {4{terminal_b}} } :
+                        ( character_map_display ) ? { {4{character_map_b}} } :
+                        ( upper_sprites_display ) ? { {4{upper_sprites_b}} } :
+                        ( bitmap_display ) ? { {4{bitmap_b}} } :
+                        ( lower_sprites_display ) ? { {4{lower_sprites_b}} } :
+                        ( tilemap_display ) ? { {4{tilemap_b}} } :
+                        { {4{background_b}} };
         } // pix_active
     }
 }

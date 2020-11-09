@@ -2,26 +2,23 @@
 
 // UNSIGNED / SIGNED 32 by 16 bit division giving 16 bit remainder and quotient
 // INPUT divisor from j1eforth is 16 bit expanded to 32 bit
-// OUTPUT quotient and remainder are 32 bit, truncated by j1eforth
+// OUTPUT quotient and remainder are 16 bit
 
 algorithm divmod32by16 (
     input   uint16  dividendh,
     input   uint16  dividendl,
     input   uint16  divisor,
-    output  uint32  quotient,
-    output  uint32  remainder,
+    output  uint16  quotient,
+    output  uint16  remainder,
     input   uint2   start,
-    output  uint1   active
+    output  uint2   active
 ) <autorun> {
-    uint32  dividend_copy = 0;
-    uint32  divisor_copy = 0;
-    uint32  quotient_copy = 0;
-    uint32  remainder_copy = 0;
-    uint1   resultsign = 0;
-    uint5   bit = 0;
-
-    quotient := resultsign ? -quotient_copy : quotient_copy;
-    remainder := remainder_copy;
+    uint32  dividend_copy = uninitialized;
+    uint32  divisor_copy = uninitialized;
+    uint32  quotient_copy = uninitialized;
+    uint32  remainder_copy = uninitialized;
+    uint1   resultsign = uninitialized;
+    uint6   bit = uninitialized;
 
     while (1) {
         switch( active ) {
@@ -70,7 +67,13 @@ algorithm divmod32by16 (
                     remainder_copy = { remainder_copy[0,31], dividend_copy[bit - 1,1] };
                 }
                 bit = bit - 1;
-                active = ( bit != 0 ) ? 1 : 0;
+                active = ( bit != 0 ) ? 1 : 2;
+            }
+            case 2: {
+                // Result
+                quotient = resultsign ? -quotient_copy[0,16] : quotient_copy[0,16];
+                remainder = remainder_copy[0,16];
+                active = 0;
             }
         }
     }
@@ -84,17 +87,14 @@ algorithm divmod16by16 (
     output  uint16  quotient,
     output  uint16  remainder,
     input   uint1   start,
-    output  uint1   active
+    output  uint2   active
 ) <autorun> {
-    uint16  dividend_copy = 0;
-    uint16  divisor_copy = 0;
-    uint16  quotient_copy = 0;
-    uint16  remainder_copy = 0;
-    uint1   resultsign = 0;
-    uint5   bit = 0;
-
-    quotient := resultsign ? -quotient_copy : quotient_copy;
-    remainder := remainder_copy;
+    uint16  dividend_copy = uninitialized;
+    uint16  divisor_copy = uninitialized;
+    uint16  quotient_copy = uninitialized;
+    uint16  remainder_copy = uninitialized;
+    uint1   resultsign = uninitialized;
+    uint6   bit = uninitialized;
 
     while (1) {
         switch( active ) {
@@ -124,7 +124,13 @@ algorithm divmod16by16 (
                     remainder_copy = { remainder_copy[0,15], dividend_copy[bit - 1,1] };
                 }
                 bit = bit - 1;
-                active = ( bit != 0 ) ? 1 : 0;
+                active = ( bit != 0 ) ? 1 : 2;
+            }
+            case 2: {
+                // RESULT
+                quotient = resultsign ? -quotient_copy : quotient_copy;
+                remainder = remainder_copy;
+                active = 0;
             }
         }
     }
@@ -141,9 +147,9 @@ algorithm multi16by16to32LONGMULT (
     input   uint2   start,
     output  uint1   active
 ) <autorun> {
-    uint32  factor1copy = 0;
-    uint16  factor2copy = 0;
-    uint1   productsign = 0;
+    uint32  factor1copy = uninitialized;
+    uint16  factor2copy = uninitialized;
+    uint1   productsign = uninitialized;
 
     while(1) {
         switch( active ) {
@@ -193,16 +199,16 @@ algorithm multi16by16to32DSP (
     input   uint2   start,
     output  uint2   active
 ) <autorun> {
-    uint16  factor1copy = 0;
-    uint16  factor2copy = 0;
+    uint16  factor1copy = uninitialized;
+    uint16  factor2copy = uninitialized;
 
-    uint16  factor1high = 0;
-    uint16  factor1low = 0;
-    uint16  factor2high = 0;
-    uint16  factor2low = 0;
+    uint16  factor1high = uninitialized;
+    uint16  factor1low = uninitialized;
+    uint16  factor2high = uninitialized;
+    uint16  factor2low = uninitialized;
 
-    uint32  nosignproduct = 0;
-    uint1   productsign = 0;
+    uint32  nosignproduct = uninitialized;
+    uint1   productsign = uninitialized;
 
     while(1) {
         switch( active ) {

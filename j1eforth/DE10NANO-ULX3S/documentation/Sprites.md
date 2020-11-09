@@ -6,8 +6,11 @@ Each Sprite Layer has the following:
     * 13 (numbered 0 - 12) x 16 x 16 1 bit sprites
         * Double flag to display as double pixel 32 x 32 per sprite
         * 4 user settable tiles per sprite
-    * In layer sprite collision detection, updates at the end of every frame
-    * Sprite to bitmap collision detection, updates at the end of every frame
+    * Collision detection, updates at the end of every frame
+        * Sprite to sprite collision detection - within the layer
+        * Sprite to bitmap collision detection
+        * Sprite to tilemap collision detection ( tilemap is not transparent, background or foreground set )
+        * Sprite to other sprite layer collision detection ( single bit for the whole sprite layer )
 
 For the j1eforth design there are two sprite layers. The lower sprite layer displays between the background and the bitmap; the upper sprite layers displays between the bitmap and the character map.
 
@@ -34,19 +37,19 @@ ff39 | Set sprite tile map line ( 0 - 63 ) |
 ff3a | Set sprite tile map line bitmap |
 ff3e | Update a sprite<br>See notes below |
  | |
-ff50 | | Collision detection flag for sprite 0 { bitmap, 0, 0, sprite12, ... sprite 0 }
-ff51 | | Collision detection flag for sprite 1 { bitmap, 0, 0, sprite12, ... sprite 0 }
-ff52 | | Collision detection flag for sprite 2 { bitmap, 0, 0, sprite12, ... sprite 0 }
-ff53 | | Collision detection flag for sprite 3 { bitmap, 0, 0, sprite12, ... sprite 0 }
-ff54 | | Collision detection flag for sprite 4 { bitmap, 0, 0, sprite12, ... sprite 0 }
-ff55 | | Collision detection flag for sprite 5 { bitmap, 0, 0, sprite12, ... sprite 0 }
-ff56 | | Collision detection flag for sprite 6 { bitmap, 0, 0, sprite12, ... sprite 0 }
-ff57 | | Collision detection flag for sprite 7 { bitmap, 0, 0, sprite12, ... sprite 0 }
-ff58 | | Collision detection flag for sprite 8 { bitmap, 0, 0, sprite12, ... sprite 0 }
-ff59 | | Collision detection flag for sprite 9 { bitmap, 0, 0, sprite12, ... sprite 0 }
-ff5a | | Collision detection flag for sprite 10 { bitmap, 0, 0, sprite12, ... sprite 0 }
-ff5b | | Collision detection flag for sprite 11 { bitmap, 0, 0, sprite12, ... sprite 0 }
-ff5c | | Collision detection flag for sprite 12 { bitmap, 0, 0, sprite12, ... sprite 0 }
+ff50 | | Collision detection flag for sprite 0 { bitmap, tilemap, other sprite layer, sprite12, ... sprite 0 }
+ff51 | | Collision detection flag for sprite 1 { bitmap, tilemap, other sprite layer, sprite12, ... sprite 0 }
+ff52 | | Collision detection flag for sprite 2 { bitmap, tilemap, other sprite layer, sprite12, ... sprite 0 }
+ff53 | | Collision detection flag for sprite 3 { bitmap, tilemap, other sprite layer, sprite12, ... sprite 0 }
+ff54 | | Collision detection flag for sprite 4 { bitmap, tilemap, other sprite layer, sprite12, ... sprite 0 }
+ff55 | | Collision detection flag for sprite 5 { bitmap, tilemap, other sprite layer, sprite12, ... sprite 0 }
+ff56 | | Collision detection flag for sprite 6 { bitmap, tilemap, other sprite layer, sprite12, ... sprite 0 }
+ff57 | | Collision detection flag for sprite 7 { bitmap, tilemap, other sprite layer, sprite12, ... sprite 0 }
+ff58 | | Collision detection flag for sprite 8 { bitmap, tilemap, other sprite layer, sprite12, ... sprite 0 }
+ff59 | | Collision detection flag for sprite 9 { bitmap, tilemap, other sprite layer, sprite12, ... sprite 0 }
+ff5a | | Collision detection flag for sprite 10 { bitmap, tilemap, other sprite layer, sprite12, ... sprite 0 }
+ff5b | | Collision detection flag for sprite 11 { bitmap, tilemap, other sprite layer, sprite12, ... sprite 0 }
+ff5c | | Collision detection flag for sprite 12 { bitmap, tilemap, other sprite layer, sprite12, ... sprite 0 }
 
 _For the Upper Sprite Layer add 10 to the address, range ff40 - ff4f, ff60 - ff6f_.
 
