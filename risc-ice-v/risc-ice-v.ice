@@ -180,7 +180,7 @@ $$end
 $$if ULX3S then
 <@clock_50mhz,!reset>
 $$end
-(
+    (
         leds :> leds,
         btns <: btns,
 
@@ -211,17 +211,8 @@ $$end
         //writeData <: stackNext
     );
 
-    // IO Map Read / Write Flags
-    IO_Map.memoryWrite := 0;
-    IO_Map.memoryRead := 0;
-
-    $$if DE10NANO then
-        // 50MHz clock specifically named for de10nano
-        clock_50mhz := clock;
-    $$end
-
     // ram
-    bram uint32 mem<input!>[] = $meminit$;
+    bram uint32 mem<input!>[8192] = $meminit$;
 
     uint11 wide_addr = uninitialized;
 
@@ -234,6 +225,15 @@ $$end
     );
 
     mem.addr := wide_addr[0,10];
+
+    // IO Map Read / Write Flags
+    IO_Map.memoryWrite := 0;
+    IO_Map.memoryRead := 0;
+
+    $$if DE10NANO then
+        // 50MHz clock specifically named for de10nano
+        clock_50mhz := clock;
+    $$end
 
     // run the CPU
     () <- cpu <- ();
@@ -449,7 +449,6 @@ algorithm rv32i_cpu(
       }
   }
 
-}
 
 // --------------------------------------------------
 // decode next instruction
