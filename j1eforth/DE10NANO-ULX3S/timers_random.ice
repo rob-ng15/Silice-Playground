@@ -1,10 +1,9 @@
 // Create 1hz (1 second counter, also can output the baseline 50MHz counter)
 algorithm pulse1hz(
-    output uint32 counter50mhz,
-    output uint16 counter1hz,
-    input  uint1  resetCounter
+    output  uint16  counter1hz,
+    input   uint1   resetCounter
 ) <autorun> {
-    counter50mhz = 0;
+    uint26  counter50mhz = 0;
     counter1hz = 0;
 
     while (1) {
@@ -20,11 +19,11 @@ algorithm pulse1hz(
 
 // Create 1khz (1 milli-second counter)
 algorithm pulse1khz(
-    output uint16 counter1khz,
-    input  uint16 resetCount,
-    input  uint1  resetCounter
+    output  uint16  counter1khz,
+    input   uint16  resetCount,
+    input   uint1   resetCounter
 ) <autorun> {
-    uint32 counter50mhz = 0;
+    uint16 counter50mhz = 0;
 
     while (1) {
         if( resetCounter == 1 ) {

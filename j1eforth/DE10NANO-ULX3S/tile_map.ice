@@ -69,13 +69,13 @@ algorithm tilemap(
     // tile.rdata0 is the tile, foreground.rdata0 and background.rdata0 are the attribute being rendered
     tile.addr0 := xtmpos + ytmpos;
     tile.wenable0 := 0;
-    tile.wenable1 := 1;
+    tile.wenable1 := 0;
     foreground.addr0 := xtmpos + ytmpos;
     foreground.wenable0 := 0;
-    foreground.wenable1 := 1;
+    foreground.wenable1 := 0;
     background.addr0 := xtmpos + ytmpos;
     background.wenable0 := 0;
-    background.wenable1 := 1;
+    background.wenable1 := 0;
 
     // Setup the reading and writing of the tiles16x16
     tiles16x16.addr0 :=  tile.rdata0 * 16 + yintm;
@@ -139,14 +139,14 @@ algorithm tilemap(
                 // SCROLL/WRAP LEFT
                 tm_offset_x = ( tm_offset_x == (15) ) ? 0 : tm_offset_x + 1;
                 tm_active = ( tm_offset_x == (15) ) ? 1 : 0;
-                tm_scroll = 1;
+                tm_scroll = 0;
                 tm_lastaction = ( tm_offset_x == (15) ) ? tm_scrollwrap : 0;
             }
             case 6: {
                 // SCROLL/WRAP UP
                 tm_offset_y = ( tm_offset_y == (15) ) ? 0 : tm_offset_y + 1;
                 tm_active = ( tm_offset_y == (15) ) ? 15 : 0;
-                tm_scroll = 1;
+                tm_scroll = 0;
                 tm_lastaction = ( tm_offset_y == (15) ) ? tm_scrollwrap : 0;
             }
             case 7: {

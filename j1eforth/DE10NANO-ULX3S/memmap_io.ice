@@ -68,12 +68,10 @@ algorithm memmap_io (
     output! uint16  readData,
     input   uint1   resetCoPro
 ) <autorun> {
-    // 1hz timers (p1hz used for systemClock and systemClockMHz, timer1hz for user purposes)
+    // 1hz timers (p1hz used for systemClock, timer1hz for user purposes)
     uint16 systemClock = uninitialized;
-    uint32 systemClockMHz = uninitialized;
     pulse1hz p1hz <@clock_50mhz,!reset> (
         counter1hz :> systemClock,
-        counter50mhz :> systemClockMHz
     );
     pulse1hz timer1hz <@clock_50mhz,!reset> ( );
 
@@ -384,7 +382,8 @@ algorithm memmap_io (
     divmod32by16 divmod32by16to16qr <@clock_50mhz,!reset> ();
     divmod16by16 divmod16by16to16qr <@clock_50mhz,!reset> ();
     multi16by16to32DSP multiplier16by16to32 <@clock_50mhz,!reset> ();
-    doubleaddsub doperations <@clock_50mhz,!reset> ();
+    doubleaddsub2input doperations2 <@clock_50mhz,!reset> ();
+    doubleaddsub1input doperations1 <@clock_50mhz,!reset> ();
 
     // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
     dualport_bram uint8 uartInBuffer[4096] = uninitialized;
@@ -454,196 +453,6 @@ algorithm memmap_io (
     while(1) {
         // Update UART output buffer top if character has been put into buffer
         uartOutBufferTop = newuartOutBufferTop;
-
-        // WRITE IO Memory
-        if( memoryWrite ) {
-            coProReset = 3;
-
-            switch( memoryAddress[12,4] ) {
-                case 4hf: {
-                    switch( memoryAddress[8,4] ) {
-                        case 4h0: {
-                            switch( memoryAddress[0,4] ) {
-                                // f000 -
-                                case 4h0: { uartOutBuffer.wdata1 = writeData[0,8]; newuartOutBufferTop = uartOutBufferTop + 1; }
-                                case 4h2: { leds = writeData; }
-                            }
-                        }
-                        case 4hf: {
-                            switch( memoryAddress[4,4] ) {
-                                case 4h0: {
-                                    switch( memoryAddress[0,4] ) {
-                                        // ff00 -
-                                        case 4h0: { gpu_processor.gpu_x = writeData; }
-                                        case 4h1: { gpu_processor.gpu_y = writeData; }
-                                        case 4h2: { gpu_processor.gpu_colour = writeData; }
-                                        case 4h3: { gpu_processor.gpu_param0 = writeData; }
-                                        case 4h4: { gpu_processor.gpu_param1 = writeData; }
-                                        case 4h5: { gpu_processor.gpu_param2 = writeData; }
-                                        case 4h6: { gpu_processor.gpu_param3 = writeData; }
-                                        case 4h7: { gpu_processor.gpu_write = writeData; }
-                                        case 4h9: { bitmap_window.bitmap_x_read = writeData; }
-                                        case 4ha: { bitmap_window.bitmap_y_read = writeData; }
-                                        case 4hb: { gpu_processor.blit1_writer_tile = writeData; }
-                                        case 4hc: { gpu_processor.blit1_writer_line = writeData; }
-                                        case 4hd: { gpu_processor.blit1_writer_bitmap = writeData;  gpu_processor.blit1_writer_active = 1; }
-                                    }
-                                }
-                                case 4h1: {
-                                    switch( memoryAddress[0,4] ) {
-                                        // ff10 -
-                                        case 4h0: { character_map_window.tpu_x = writeData; }
-                                        case 4h1: { character_map_window.tpu_y = writeData; }
-                                        case 4h2: { character_map_window.tpu_character = writeData; }
-                                        case 4h3: { character_map_window.tpu_background = writeData; }
-                                        case 4h4: { character_map_window.tpu_foreground = writeData; }
-                                        case 4h5: { character_map_window.tpu_write = writeData; }
-                                    }
-                                }
-                                case 4h2: {
-                                    switch( memoryAddress[0,4] ) {
-                                        // ff20 -
-                                        case 4h0: { terminal_window.terminal_character = writeData; terminal_window.terminal_write = 1; }
-                                        case 4h1: { terminal_window.showterminal = writeData; }
-                                    }
-                                }
-                                case 4h3: {
-                                    switch( memoryAddress[0,4] ) {
-                                        // ff30 -
-                                        case 4h0: { lower_sprites.sprite_set_number = writeData; }
-                                        case 4h1: { lower_sprites.sprite_set_active = writeData; lower_sprites.sprite_layer_write = 1; }
-                                        case 4h2: { lower_sprites.sprite_set_tile = writeData; lower_sprites.sprite_layer_write = 2; }
-                                        case 4h3: { lower_sprites.sprite_set_colour = writeData; lower_sprites.sprite_layer_write = 3; }
-                                        case 4h4: { lower_sprites.sprite_set_x = writeData; lower_sprites.sprite_layer_write = 4; }
-                                        case 4h5: { lower_sprites.sprite_set_y = writeData; lower_sprites.sprite_layer_write = 5; }
-                                        case 4h6: { lower_sprites.sprite_set_double = writeData; lower_sprites.sprite_layer_write = 6; }
-                                        case 4h8: { lower_sprites.sprite_writer_sprite = writeData; }
-                                        case 4h9: { lower_sprites.sprite_writer_line = writeData; }
-                                        case 4ha: { lower_sprites.sprite_writer_bitmap = writeData; lower_sprites.sprite_writer_active = 1; }
-                                        case 4he: { lower_sprites.sprite_update = writeData; lower_sprites.sprite_layer_write = 10; }
-                                    }
-                                }
-                                case 4h4: {
-                                    switch( memoryAddress[0,4] ) {
-                                        // ff40 -
-                                        case 4h0: { upper_sprites.sprite_set_number = writeData; }
-                                        case 4h1: { upper_sprites.sprite_set_active = writeData; upper_sprites.sprite_layer_write = 1; }
-                                        case 4h2: { upper_sprites.sprite_set_tile = writeData; upper_sprites.sprite_layer_write = 2; }
-                                        case 4h3: { upper_sprites.sprite_set_colour = writeData; upper_sprites.sprite_layer_write = 3; }
-                                        case 4h4: { upper_sprites.sprite_set_x = writeData; upper_sprites.sprite_layer_write = 4; }
-                                        case 4h5: { upper_sprites.sprite_set_y = writeData; upper_sprites.sprite_layer_write = 5; }
-                                        case 4h6: { upper_sprites.sprite_set_double = writeData; upper_sprites.sprite_layer_write = 6; }
-                                        case 4h8: { upper_sprites.sprite_writer_sprite = writeData; }
-                                        case 4h9: { upper_sprites.sprite_writer_line = writeData; }
-                                        case 4ha: { upper_sprites.sprite_writer_bitmap = writeData; upper_sprites.sprite_writer_active = 1; }
-                                        case 4he: { upper_sprites.sprite_update = writeData; upper_sprites.sprite_layer_write = 10; }
-                                    }
-                                }
-                                case 4h7: {
-                                    switch( memoryAddress[0,4] ) {
-                                        // ff70 -
-                                        case 4h0: { vector_drawer.vector_block_number = writeData; }
-                                        case 4h1: { vector_drawer.vector_block_colour = writeData; }
-                                        case 4h2: { vector_drawer.vector_block_xc = writeData; }
-                                        case 4h3: { vector_drawer.vector_block_yc = writeData; }
-                                        case 4h4: { vector_drawer.draw_vector = 1; }
-                                        case 4h5: { vector_drawer.vertices_writer_block = writeData; }
-                                        case 4h6: { vector_drawer.vertices_writer_vertex = writeData; }
-                                        case 4h7: { vector_drawer.vertices_writer_xdelta = writeData; }
-                                        case 4h8: { vector_drawer.vertices_writer_ydelta = writeData; }
-                                        case 4h9: { vector_drawer.vertices_writer_active = writeData; }
-                                        case 4ha: { vector_drawer.vertices_writer_write = 1; }
-                                    }
-                                }
-                                case 4h8: {
-                                    switch( memoryAddress[0,4] ) {
-                                        // ff80 -
-                                        case 4h0: { displaylist_drawer.start_entry = writeData; }
-                                        case 4h1: { displaylist_drawer.finish_entry = writeData; }
-                                        case 4h2: { displaylist_drawer.start_displaylist = 1; }
-                                        case 4h3: { displaylist_drawer.writer_entry_number = writeData; }
-                                        case 4h4: { displaylist_drawer.writer_active = writeData; }
-                                        case 4h5: { displaylist_drawer.writer_command = writeData; }
-                                        case 4h6: { displaylist_drawer.writer_colour = writeData; }
-                                        case 4h7: { displaylist_drawer.writer_x = writeData; }
-                                        case 4h8: { displaylist_drawer.writer_y = writeData; }
-                                        case 4h9: { displaylist_drawer.writer_p0 = writeData; }
-                                        case 4ha: { displaylist_drawer.writer_p1 = writeData; }
-                                        case 4hb: { displaylist_drawer.writer_p2 = writeData; }
-                                        case 4hc: { displaylist_drawer.writer_p3 = writeData; }
-                                        case 4hd: { displaylist_drawer.writer_write = writeData; }
-                                    }
-                                }
-                                case 4h9: {
-                                    switch( memoryAddress[0,4] ) {
-                                        // ff90 -
-                                        case 4h0: { tile_map.tm_x = writeData; }
-                                        case 4h1: { tile_map.tm_y = writeData; }
-                                        case 4h2: { tile_map.tm_character = writeData; }
-                                        case 4h3: { tile_map.tm_background = writeData; }
-                                        case 4h4: { tile_map.tm_foreground = writeData; }
-                                        case 4h5: { tile_map.tm_write = 1; }
-                                        case 4h6: { tile_map.tile_writer_tile = writeData; }
-                                        case 4h7: { tile_map.tile_writer_line = writeData; }
-                                        case 4h8: { tile_map.tile_writer_bitmap = writeData; tile_map.tile_writer_write = 1; }
-                                        case 4h9: { tile_map.tm_scrollwrap = writeData; }
-                                    }
-                                }
-                                case 4ha: {
-                                    switch( memoryAddress[0,4] ) {
-                                        case 4h0:  {doperations.operand1h = writeData; }
-                                        case 4h1: { doperations.operand1l = writeData; }
-                                        case 4h2: { doperations.operand2h = writeData; }
-                                        case 4h3: { doperations.operand2l = writeData; }
-                                    }
-                                }
-                                case 4hd: {
-                                    switch( memoryAddress[0,4] ) {
-                                        case 4h0: { divmod32by16to16qr.dividendh = writeData; }
-                                        case 4h1: { divmod32by16to16qr.dividendl = writeData; }
-                                        case 4h2: { divmod32by16to16qr.divisor = writeData; }
-                                        case 4h3: { divmod32by16to16qr.start = writeData; }
-                                        case 4h4: { divmod16by16to16qr.dividend = writeData; }
-                                        case 4h5: { divmod16by16to16qr.divisor = writeData; }
-                                        case 4h6: { divmod16by16to16qr.start = writeData; }
-                                        case 4h7: { multiplier16by16to32.factor1 = writeData; }
-                                        case 4h8: { multiplier16by16to32.factor2 = writeData; }
-                                        case 4h9: { multiplier16by16to32.start = writeData; }
-                                    }
-                                }
-                                case 4he: {
-                                    switch( memoryAddress[0,4] ) {
-                                        // ffe0 -
-                                        case 4h0: { apu_processor_L.waveform = writeData; }
-                                        case 4h1: { apu_processor_L.note = writeData; }
-                                        case 4h2: { apu_processor_L.duration = writeData; }
-                                        case 4h3: { apu_processor_L.apu_write = writeData; }
-                                        case 4h4: { apu_processor_R.waveform = writeData; }
-                                        case 4h5: { apu_processor_R.note = writeData; }
-                                        case 4h6: { apu_processor_R.duration = writeData; }
-                                        case 4h7: { apu_processor_R.apu_write = writeData; }
-                                        case 4h8: { rng.resetRandom = 1; }
-                                        case 4hd: { timer1hz.resetCounter = 1; }
-                                        case 4he: { timer1khz.resetCount = writeData; timer1khz.resetCounter = 1; }
-                                        case 4hf: { sleepTimer.resetCount = writeData; sleepTimer.resetCounter = 1; }
-                                    }
-                                }
-                                case 4hf: {
-                                    switch( memoryAddress[0,4] ) {
-                                        // fff0 -
-                                        case 4h0: { background_generator.backgroundcolour = writeData; background_generator.background_write = 1; }
-                                        case 4h1: { background_generator.backgroundcolour_alt = writeData; background_generator.background_write = 2; }
-                                        case 4h2: { background_generator.backgroundcolour_mode = writeData; background_generator.background_write = 3; }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } else { // WRITE IO Memory
-            coProReset = ( coProReset == 0 ) ? 0 : coProReset - 1;
-        }
 
         // READ IO Memory
         if( memoryRead ) {
@@ -769,42 +578,42 @@ algorithm memmap_io (
                                 }
                                 case 4ha: {
                                     switch( memoryAddress[0,4] ) {
-                                        case 4h0: { readData = words(doperations.total).hword; }
-                                        case 4h1: { readData = words(doperations.total).lword; }
-                                        case 4h2: { readData = words(doperations.difference).hword; }
-                                        case 4h3: { readData = words(doperations.difference).lword; }
-                                        case 4h4: { readData = words(doperations.increment).hword; }
-                                        case 4h5: { readData = words(doperations.increment).lword; }
-                                        case 4h6: { readData = words(doperations.decrement).hword; }
-                                        case 4h7: { readData = words(doperations.decrement).lword; }
-                                        case 4h8: { readData = words(doperations.times2).hword; }
-                                        case 4h9: { readData = words(doperations.times2).lword; }
-                                        case 4ha: { readData = words(doperations.divide2).hword; }
-                                        case 4hb: { readData = words(doperations.divide2).lword; }
-                                        case 4hc: { readData = words(doperations.negation).hword; }
-                                        case 4hd: { readData = words(doperations.negation).lword; }
-                                        case 4he: { readData = words(doperations.binaryinvert).hword; }
-                                        case 4hf: { readData = words(doperations.binaryinvert).lword; }
+                                        case 4h0: { readData = words(doperations2.total).hword; }
+                                        case 4h1: { readData = words(doperations2.total).lword; }
+                                        case 4h2: { readData = words(doperations2.difference).hword; }
+                                        case 4h3: { readData = words(doperations2.difference).lword; }
+                                        case 4h4: { readData = words(doperations1.increment).hword; }
+                                        case 4h5: { readData = words(doperations1.increment).lword; }
+                                        case 4h6: { readData = words(doperations1.decrement).hword; }
+                                        case 4h7: { readData = words(doperations1.decrement).lword; }
+                                        case 4h8: { readData = words(doperations1.times2).hword; }
+                                        case 4h9: { readData = words(doperations1.times2).lword; }
+                                        case 4ha: { readData = words(doperations1.divide2).hword; }
+                                        case 4hb: { readData = words(doperations1.divide2).lword; }
+                                        case 4hc: { readData = words(doperations1.negation).hword; }
+                                        case 4hd: { readData = words(doperations1.negation).lword; }
+                                        case 4he: { readData = words(doperations1.binaryinvert).hword; }
+                                        case 4hf: { readData = words(doperations1.binaryinvert).lword; }
                                     }
                                 }
                                 case 4hb: {
                                     switch( memoryAddress[0,4] ) {
-                                        case 4h0: { readData = words(doperations.binaryxor).hword; }
-                                        case 4h1: { readData = words(doperations.binaryxor).lword; }
-                                        case 4h2: { readData = words(doperations.binaryand).hword; }
-                                        case 4h3: { readData = words(doperations.binaryand).lword; }
-                                        case 4h4: { readData = words(doperations.binaryor).hword; }
-                                        case 4h5: { readData = words(doperations.binaryor).lword; }
-                                        case 4h6: { readData = words(doperations.absolute).hword; }
-                                        case 4h7: { readData = words(doperations.absolute).lword; }
-                                        case 4h8: { readData = words(doperations.maximum).hword; }
-                                        case 4h9: { readData = words(doperations.maximum).lword; }
-                                        case 4ha: { readData = words(doperations.minimum).hword; }
-                                        case 4hb: { readData = words(doperations.minimum).lword; }
-                                        case 4hc: { readData = doperations.zeroequal; }
-                                        case 4hd: { readData = doperations.zeroless; }
-                                        case 4he: { readData = doperations.equal; }
-                                        case 4hf: { readData = doperations.lessthan; }
+                                        case 4h0: { readData = words(doperations2.binaryxor).hword; }
+                                        case 4h1: { readData = words(doperations2.binaryxor).lword; }
+                                        case 4h2: { readData = words(doperations2.binaryand).hword; }
+                                        case 4h3: { readData = words(doperations2.binaryand).lword; }
+                                        case 4h4: { readData = words(doperations2.binaryor).hword; }
+                                        case 4h5: { readData = words(doperations2.binaryor).lword; }
+                                        case 4h6: { readData = words(doperations1.absolute).hword; }
+                                        case 4h7: { readData = words(doperations1.absolute).lword; }
+                                        case 4h8: { readData = words(doperations2.maximum).hword; }
+                                        case 4h9: { readData = words(doperations2.maximum).lword; }
+                                        case 4ha: { readData = words(doperations2.minimum).hword; }
+                                        case 4hb: { readData = words(doperations2.minimum).lword; }
+                                        case 4hc: { readData = doperations1.zeroequal; }
+                                        case 4hd: { readData = doperations1.zeroless; }
+                                        case 4he: { readData = doperations2.equal; }
+                                        case 4hf: { readData = doperations2.lessthan; }
                                     }
                                 }
                                 case 4hd: {
@@ -843,6 +652,161 @@ algorithm memmap_io (
                 }
             } // READ IO Memory
         } // memoryRead
+
+        // WRITE IO Memory
+        if( memoryWrite ) {
+            coProReset = 3;
+
+            switch( memoryAddress[12,4] ) {
+                case 4hf: {
+                    switch( memoryAddress[8,4] ) {
+                        case 4h0: {
+                            switch( memoryAddress[0,4] ) {
+                                // f000 -
+                                case 4h0: { uartOutBuffer.wdata1 = writeData[0,8]; newuartOutBufferTop = uartOutBufferTop + 1; }
+                                case 4h2: { leds = writeData; }
+                            }
+                        }
+                        case 4hf: {
+                            switch( memoryAddress[0,8] ) {
+                                // ff00 -
+                                case 8h00: { gpu_processor.gpu_x = writeData; }
+                                case 8h01: { gpu_processor.gpu_y = writeData; }
+                                case 8h02: { gpu_processor.gpu_colour = writeData; }
+                                case 8h03: { gpu_processor.gpu_param0 = writeData; }
+                                case 8h04: { gpu_processor.gpu_param1 = writeData; }
+                                case 8h05: { gpu_processor.gpu_param2 = writeData; }
+                                case 8h06: { gpu_processor.gpu_param3 = writeData; }
+                                case 8h07: { gpu_processor.gpu_write = writeData; }
+                                case 8h09: { bitmap_window.bitmap_x_read = writeData; }
+                                case 8h0a: { bitmap_window.bitmap_y_read = writeData; }
+                                case 8h0b: { gpu_processor.blit1_writer_tile = writeData; }
+                                case 8h0c: { gpu_processor.blit1_writer_line = writeData; }
+                                case 8h0d: { gpu_processor.blit1_writer_bitmap = writeData;  gpu_processor.blit1_writer_active = 1; }
+
+                                // ff10 -
+                                case 8h10: { character_map_window.tpu_x = writeData; }
+                                case 8h11: { character_map_window.tpu_y = writeData; }
+                                case 8h12: { character_map_window.tpu_character = writeData; }
+                                case 8h13: { character_map_window.tpu_background = writeData; }
+                                case 8h14: { character_map_window.tpu_foreground = writeData; }
+                                case 8h15: { character_map_window.tpu_write = writeData; }
+
+                                // ff20 -
+                                case 8h20: { terminal_window.terminal_character = writeData; terminal_window.terminal_write = 1; }
+                                case 8h21: { terminal_window.showterminal = writeData; }
+
+                                // ff30 -
+                                case 8h30: { lower_sprites.sprite_set_number = writeData; }
+                                case 8h31: { lower_sprites.sprite_set_active = writeData; lower_sprites.sprite_layer_write = 1; }
+                                case 8h32: { lower_sprites.sprite_set_tile = writeData; lower_sprites.sprite_layer_write = 2; }
+                                case 8h33: { lower_sprites.sprite_set_colour = writeData; lower_sprites.sprite_layer_write = 3; }
+                                case 8h34: { lower_sprites.sprite_set_x = writeData; lower_sprites.sprite_layer_write = 4; }
+                                case 8h35: { lower_sprites.sprite_set_y = writeData; lower_sprites.sprite_layer_write = 5; }
+                                case 8h36: { lower_sprites.sprite_set_double = writeData; lower_sprites.sprite_layer_write = 6; }
+                                case 8h38: { lower_sprites.sprite_writer_sprite = writeData; }
+                                case 8h39: { lower_sprites.sprite_writer_line = writeData; }
+                                case 8h3a: { lower_sprites.sprite_writer_bitmap = writeData; lower_sprites.sprite_writer_active = 1; }
+                                case 8h3e: { lower_sprites.sprite_update = writeData; lower_sprites.sprite_layer_write = 10; }
+
+                                // ff40 -
+                                case 8h40: { upper_sprites.sprite_set_number = writeData; }
+                                case 8h41: { upper_sprites.sprite_set_active = writeData; upper_sprites.sprite_layer_write = 1; }
+                                case 8h42: { upper_sprites.sprite_set_tile = writeData; upper_sprites.sprite_layer_write = 2; }
+                                case 8h43: { upper_sprites.sprite_set_colour = writeData; upper_sprites.sprite_layer_write = 3; }
+                                case 8h44: { upper_sprites.sprite_set_x = writeData; upper_sprites.sprite_layer_write = 4; }
+                                case 8h45: { upper_sprites.sprite_set_y = writeData; upper_sprites.sprite_layer_write = 5; }
+                                case 8h46: { upper_sprites.sprite_set_double = writeData; upper_sprites.sprite_layer_write = 6; }
+                                case 8h48: { upper_sprites.sprite_writer_sprite = writeData; }
+                                case 8h49: { upper_sprites.sprite_writer_line = writeData; }
+                                case 8h4a: { upper_sprites.sprite_writer_bitmap = writeData; upper_sprites.sprite_writer_active = 1; }
+                                case 8h4e: { upper_sprites.sprite_update = writeData; upper_sprites.sprite_layer_write = 10; }
+
+                                // ff70 -
+                                case 8h70: { vector_drawer.vector_block_number = writeData; }
+                                case 8h71: { vector_drawer.vector_block_colour = writeData; }
+                                case 8h72: { vector_drawer.vector_block_xc = writeData; }
+                                case 8h73: { vector_drawer.vector_block_yc = writeData; }
+                                case 8h74: { vector_drawer.draw_vector = 1; }
+                                case 8h75: { vector_drawer.vertices_writer_block = writeData; }
+                                case 8h76: { vector_drawer.vertices_writer_vertex = writeData; }
+                                case 8h77: { vector_drawer.vertices_writer_xdelta = writeData; }
+                                case 8h78: { vector_drawer.vertices_writer_ydelta = writeData; }
+                                case 8h79: { vector_drawer.vertices_writer_active = writeData; }
+                                case 8h7a: { vector_drawer.vertices_writer_write = 1; }
+
+                                // ff80 -
+                                case 8h80: { displaylist_drawer.start_entry = writeData; }
+                                case 8h81: { displaylist_drawer.finish_entry = writeData; }
+                                case 8h82: { displaylist_drawer.start_displaylist = 1; }
+                                case 8h83: { displaylist_drawer.writer_entry_number = writeData; }
+                                case 8h84: { displaylist_drawer.writer_active = writeData; }
+                                case 8h85: { displaylist_drawer.writer_command = writeData; }
+                                case 8h86: { displaylist_drawer.writer_colour = writeData; }
+                                case 8h87: { displaylist_drawer.writer_x = writeData; }
+                                case 8h88: { displaylist_drawer.writer_y = writeData; }
+                                case 8h89: { displaylist_drawer.writer_p0 = writeData; }
+                                case 8h8a: { displaylist_drawer.writer_p1 = writeData; }
+                                case 8h8b: { displaylist_drawer.writer_p2 = writeData; }
+                                case 8h8c: { displaylist_drawer.writer_p3 = writeData; }
+                                case 8h8d: { displaylist_drawer.writer_write = writeData; }
+
+                                // ff90 -
+                                case 8h90: { tile_map.tm_x = writeData; }
+                                case 8h91: { tile_map.tm_y = writeData; }
+                                case 8h92: { tile_map.tm_character = writeData; }
+                                case 8h93: { tile_map.tm_background = writeData; }
+                                case 8h94: { tile_map.tm_foreground = writeData; }
+                                case 8h95: { tile_map.tm_write = 1; }
+                                case 8h96: { tile_map.tile_writer_tile = writeData; }
+                                case 8h97: { tile_map.tile_writer_line = writeData; }
+                                case 8h98: { tile_map.tile_writer_bitmap = writeData; tile_map.tile_writer_write = 1; }
+                                case 8h99: { tile_map.tm_scrollwrap = writeData; }
+
+                                // ffa0 -
+                                case 8ha0: { doperations2.operand1h = writeData; doperations1.operand1h = writeData; }
+                                case 8ha1: { doperations2.operand1l = writeData; doperations1.operand1l = writeData; }
+                                case 8ha2: { doperations2.operand2h = writeData; }
+                                case 8ha3: { doperations2.operand2l = writeData; }
+
+                                // ffd0 -
+                                case 8hd0: { divmod32by16to16qr.dividendh = writeData; }
+                                case 8hd1: { divmod32by16to16qr.dividendl = writeData; }
+                                case 8hd2: { divmod32by16to16qr.divisor = writeData; }
+                                case 8hd3: { divmod32by16to16qr.start = writeData; }
+                                case 8hd4: { divmod16by16to16qr.dividend = writeData; }
+                                case 8hd5: { divmod16by16to16qr.divisor = writeData; }
+                                case 8hd6: { divmod16by16to16qr.start = writeData; }
+                                case 8hd7: { multiplier16by16to32.factor1 = writeData; }
+                                case 8hd8: { multiplier16by16to32.factor2 = writeData; }
+                                case 8hd9: { multiplier16by16to32.start = writeData; }
+
+                                // ffe0 -
+                                case 8he0: { apu_processor_L.waveform = writeData; }
+                                case 8he1: { apu_processor_L.note = writeData; }
+                                case 8he2: { apu_processor_L.duration = writeData; }
+                                case 8he3: { apu_processor_L.apu_write = writeData; }
+                                case 8he4: { apu_processor_R.waveform = writeData; }
+                                case 8he5: { apu_processor_R.note = writeData; }
+                                case 8he6: { apu_processor_R.duration = writeData; }
+                                case 8he7: { apu_processor_R.apu_write = writeData; }
+                                case 8he8: { rng.resetRandom = 1; }
+                                case 8hed: { timer1hz.resetCounter = 1; }
+                                case 8hee: { timer1khz.resetCount = writeData; timer1khz.resetCounter = 1; }
+                                case 8hef: { sleepTimer.resetCount = writeData; sleepTimer.resetCounter = 1; }
+
+                                // fff0 -
+                                case 8hf0: { background_generator.backgroundcolour = writeData; background_generator.background_write = 1; }
+                                case 8hf1: { background_generator.backgroundcolour_alt = writeData; background_generator.background_write = 2; }
+                                case 8hf2: { background_generator.backgroundcolour_mode = writeData; background_generator.background_write = 3; }
+                            }
+                        }
+                    }
+                }
+            }
+        } else { // WRITE IO Memory
+            coProReset = ( coProReset == 0 ) ? 0 : coProReset - 1;
+        }
 
         // RESET Co-Processor Controls
         // Main processor and memory map runs at 50MHz, display co-processors at 25MHz

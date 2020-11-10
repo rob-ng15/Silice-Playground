@@ -16,23 +16,82 @@
     endcase
   then ;
 
+: countasteroids
+  0 totalasteroids !
+  b 0 do
+    i lasteroidactive c@ 0<> if
+      1 totalasteroids +! then
+    i hasteroidactive c@ 0<> if
+      1 totalasteroids +! then
+  loop ;
+
+: lspawnasteroid
+  ff spawnasteroid !
+  b 0 do
+    i lasteroidactive c@ 0= if
+      i spawnasteroid ! then
+  loop
+  spawnasteroid @ ff <> if
+    20 rng 20 +
+    workx @ 20 rng 10 - +
+    worky @ 20 rng 10 - +
+    7 rng
+    1 0 spawnasteroid @ lslsprite!
+    2 spawnasteroid lasteroidtype c!
+    8 rng 4 + spawnasteroid @ lasteroiddirection c!
+    2 spawnasteroid @ lasteroidtype c!
+    1 spawnasteroid @ lasteroidactive c! then ;
+
 : lkill
   hitasteroid @ ff30 !
-  ff33 @ ff34 @ ff35 @ 7 1 ff36 @
+  ff34 @ workx !
+  ff35 @ worky !
+  ff33 @ workx @ worky @ 7 1 ff36 @
   hitasteroid @ lslsprite!
   2 4 1 1f4 beep! 1f4 sleep
   0 0 0 0 0 0 hitasteroid @ lslsprite!
   0 hitasteroid @ lasteroidactive c!
-  -1 activelasteroids +! ;
+  hitasteroid @ lasteroidtype c@
+  case
+    1 of
+      lspawnasteroid
+      lspawnasteroid
+    endof
+  endcase ;
+
+: hspawnasteroid
+  ff spawnasteroid !
+  b 0 do
+    i hasteroidactive c@ 0= if
+      i spawnasteroid ! then
+  loop
+  spawnasteroid @ ff <> if
+    20 rng 20 +
+    workx @ 20 rng 10 - +
+    worky @ 20 rng 10 - +
+    7 rng
+    1 0 spawnasteroid @ uslsprite!
+    2 spawnasteroid hasteroidtype c!
+    8 rng 4 + spawnasteroid @ hasteroiddirection c!
+    2 spawnasteroid @ hasteroidtype c!
+    1 spawnasteroid @ hasteroidactive c! then ;
 
 : hkill
   hitasteroid @ ff40 !
-  ff43 @ ff44 @ ff45 @ 7 1 ff46 @
+  ff44 @ workx !
+  ff45 @ worky !
+  ff43 @ workx @ worky @ 7 1 ff46 @
   hitasteroid @ uslsprite!
   2 4 1 1f4 beep! 1f4 sleep
   0 0 0 0 0 0 hitasteroid @ uslsprite!
   0 hitasteroid @ hasteroidactive c!
-  -1 activehasteroids +! ;
+  hitasteroid @ hasteroidtype c@
+  case
+    1 of
+      hspawnasteroid
+      hspawnasteroid
+    endof
+  endcase ;
 
 : lhit
   1 score +!
@@ -47,7 +106,7 @@
     lkill then
   0 0 0 0 0 0 c lslsprite!
   0 0 0 0 0 0 c uslsprite!
-  activehasteroids @ activelasteroids @ +
+  countasteroids totalasteroids @
   0= if
     newlevel then ;
 
@@ -64,7 +123,7 @@
     hkill then
   0 0 0 0 0 0 c lslsprite!
   0 0 0 0 0 0 c uslsprite!
-  activehasteroids @ activelasteroids @ +
+  countasteroids totalasteroids @
   0= if
     newlevel then ;
 
@@ -75,6 +134,9 @@
     then ;
 
 : hit?
+  0 1d tpuxy!
+  ff5c @ ff6c @ 2 base !
+  18 tpu.r 18 tpu.r hex
   ff5c @ 7ff and 0<> if
     lhit then
   ff6c @ 7ff and 0<> if
@@ -160,7 +222,7 @@
     else 1 shipdirection +! then ;
 
 : drawscore
-  activelasteroids @ activehasteroids @ + led!
+  countasteroids totalasteroids @ led!
   40 tpubackground!
   3f tpuforeground!
   26 1 tpuxy!

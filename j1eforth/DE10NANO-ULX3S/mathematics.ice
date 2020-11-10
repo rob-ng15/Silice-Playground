@@ -258,8 +258,9 @@ algorithm multi16by16to32DSP (
 }
 
 // Basic double arithmetic for j1eforth
+// 2 input operations
 
-algorithm doubleaddsub(
+algorithm doubleaddsub2input(
     input   uint16  operand1h,
     input   uint16  operand1l,
     input   uint16  operand2h,
@@ -267,31 +268,59 @@ algorithm doubleaddsub(
 
     output  uint32  total,
     output  uint32  difference,
-    output  uint32  increment,
-    output  uint32  decrement,
-    output  uint32  times2,
-    output  uint32  divide2,
 
-    output  uint32  negation,
-    output  uint32  binaryinvert,
     output  uint32  binaryxor,
     output  uint32  binaryor,
     output  uint32  binaryand,
 
-    output  uint32  absolute,
     output  uint32  maximum,
     output  uint32  minimum,
 
-    output  uint16  zeroequal,
-    output  uint16  zeroless,
     output  uint16  equal,
-    output  uint16  lessthan,
+    output  uint16  lessthan
 ) <autorun> {
     uint32  operand1 := { operand1h, operand1l };
     uint32  operand2 := { operand2h, operand2l };
 
     total := operand1 + operand2;
     difference := operand1 - operand2;
+
+
+    binaryxor := operand1 ^ operand2;
+    binaryor := operand1 | operand2;
+    binaryand := operand1 & operand2;
+
+    maximum := ( operand1 > operand2 ) ? operand1 : operand2;
+    minimum := ( operand1 < operand2 ) ? operand1 : operand2;
+
+    equal := {16{(operand1 == operand2)}};
+    lessthan := {16{(operand1 < operand2)}};
+
+    while(1) {}
+}
+
+// 1 input operations
+
+algorithm doubleaddsub1input(
+    input   uint16  operand1h,
+    input   uint16  operand1l,
+
+    output  uint32  increment,
+    output  uint32  decrement,
+
+    output  uint32  times2,
+    output  uint32  divide2,
+
+    output  uint32  negation,
+
+    output  uint32  binaryinvert,
+
+    output  uint32  absolute,
+
+    output  uint16  zeroequal,
+    output  uint16  zeroless
+) <autorun> {
+    uint32  operand1 := { operand1h, operand1l };
 
     increment := operand1 + 1;
     decrement := operand1 - 1;
@@ -300,20 +329,13 @@ algorithm doubleaddsub(
     divide2 := { operand1[31,1], operand1[1,31] };
 
     negation := -operand1;
+
     binaryinvert := ~operand1;
 
-    binaryxor := operand1 ^ operand2;
-    binaryor := operand1 | operand2;
-    binaryand := operand1 & operand2;
-
     absolute := ( operand1[31,1] ) ? -operand1 : operand1;
-    maximum := ( operand1 > operand2 ) ? operand1 : operand2;
-    minimum := ( operand1 < operand2 ) ? operand1 : operand2;
 
     zeroequal := {16{(operand1 == 0)}};
     zeroless := {16{(operand1 < 0)}};
-    equal := {16{(operand1 == operand2)}};
-    lessthan := {16{(operand1 < operand2)}};
 
     while(1) {}
 }

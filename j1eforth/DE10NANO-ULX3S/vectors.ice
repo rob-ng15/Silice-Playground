@@ -29,7 +29,7 @@ algorithm vectors(
     input   uint1   vertices_writer_active,
     input   uint1   vertices_writer_write,
 
-    output  uint3   vector_block_active,
+    output!  uint3   vector_block_active,
 
     // Communication with the GPU
     output  int11 gpu_x,

@@ -58,6 +58,7 @@ variable lives
 
 variable activelasteroids
 variable activehasteroids
+variable totalasteroids
 
 variable hitasteroid
 variable workasteroid

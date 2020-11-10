@@ -41,7 +41,7 @@ algorithm gpu(
     input   uint16  blit1_writer_bitmap,
     input   uint1   blit1_writer_active,
 
-    output  uint6 gpu_active
+    output!  uint6 gpu_active
 ) <autorun> {
     // 16 x 16 x 16 1 bit tilemap for blit1tilemap
     dualport_bram uint16 blit1tilemap[ 256 ] = uninitialized;

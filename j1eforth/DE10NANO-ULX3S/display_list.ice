@@ -46,22 +46,22 @@ algorithm displaylist(
     output   uint11  read_p3,
 
     // Communication with the GPU
-    output!  int11 gpu_x,
-    output!  int11 gpu_y,
-    output!  uint7 gpu_colour,
-    output!  int11 gpu_param0,
-    output!  int11 gpu_param1,
-    output!  int11 gpu_param2,
-    output!  int11 gpu_param3,
-    output!  uint4 gpu_write,
-    input   uint6 gpu_active,
+    output! int11   gpu_x,
+    output! int11   gpu_y,
+    output! uint7   gpu_colour,
+    output! int11   gpu_param0,
+    output! int11   gpu_param1,
+    output! int11   gpu_param2,
+    output! int11   gpu_param3,
+    output! uint4   gpu_write,
+    input   uint6   gpu_active,
 
     // Communication with the VECTOR DRAWER
-    output!  uint5   vector_block_number,
-    output!  uint7   vector_block_colour,
-    output!  int11   vector_block_xc,
-    output!  int11   vector_block_yc,
-    output!  uint1   draw_vector,
+    output! uint5   vector_block_number,
+    output! uint7   vector_block_colour,
+    output! int11   vector_block_xc,
+    output! int11   vector_block_yc,
+    output! uint1   draw_vector,
     input   uint3   vector_block_active
 ) {
     // 32 display list entries
