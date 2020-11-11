@@ -232,47 +232,35 @@ $$end
         mem_ren   :> icememoryRead,
     );
 
+    // Memory Read / Write Flags
+    // Latch lower 10 bits of the memory address
+    mem.addr := wide_addr[0,10];
+    mem.wdata := icememoryWriteData;
+    mem.wenable := icememoryWrite && ( wide_addr[10,1] == 0);
+
     // IO Map Read / Write Flags
-    IO_Map.memoryWrite := 0;
-    IO_Map.memoryRead := 0;
+    IO_Map.writeData := icememoryWriteData;
+    IO_Map.memoryWrite := icememoryWrite && wide_addr[10,1];
+    IO_Map.memoryRead := icememoryRead && wide_addr[10,1];
 
     $$if DE10NANO then
         // 50MHz clock specifically named for de10nano
         clock_50mhz := clock;
     $$end
 
-    // Latch lower 10 bits of the memory address
-    mem.addr := wide_addr[0,10];
-
+    // Select memory read or i/o read
     always {
-        // Memory Map
-        if( icememoryWrite ) {
-            switch( wide_addr[10,1] ) {
-                case 0: {
-                    mem.wdata = icememoryWriteData;
-                    mem.wenable = icememoryWrite;
-                }
-                case 1: {
-                    IO_Map.memoryAddress = wide_addr;
-                    IO_Map.memoryWrite = 1;
-                }
-            }
-        }
-        if( icememoryRead ) {
-            switch( wide_addr[10,1] ) {
-                case 0: {
-                    icememoryReadData = mem.rdata;
-                }
-                case 1: {
-                    IO_Map.memoryRead = 1;
-                    icememoryReadData = IO_Map.readData;
-                }
-            }
+        switch( wide_addr[10,1] ) {
+            case 1b0: { icememoryReadData = mem.rdata; }
+            case 1b1: { icememoryReadData = IO_Map.readData; }
         }
     }
 
     // run the CPU
     () <- cpu <- ();
+
+    while(1) {
+    }
 }
 
 // --------------------------------------------------
