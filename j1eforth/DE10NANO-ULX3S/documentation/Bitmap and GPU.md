@@ -18,6 +18,9 @@
                     * Optimisation moves from left to right or right to left depending upon which side the last point in the previous line was closest to
                 * Quicker than software equivalent
         * Blitter for 16 x 16 x 16 1 bit user settable tiles
+    * Hardware scrolling
+        * The viewport ( 0, 0 ) can be moved pixel by pixel within the bitmap
+        * Pixels wrap from left/right top/bottom
 
 ## Memory Map for the Bitmap Layer and GPU
 
@@ -31,7 +34,7 @@ ff04 | Set GPU parameter 1 |
 ff05 | Set GPU parameter 2 |
 ff06 | Set GPU parameter 3 |
 ff07 | Start GPU<br>Operation codes are listed in the timings section | GPU busy
-ff08 | | Colour of the pixel at x,y (set below)<br>Updates every frame whilst the selected pixel is being rendered
+ff08 | Scroll the bitmap<br>(1) Left, (2) Up, (3) Right, 4 (Down), (5) Reset | Colour of the pixel at x,y (set below)<br>Updates every frame whilst the selected pixel is being rendered
 ff09 | Set the x coordinate for reading |
 ff0a | Set the y coordinate for reading |
 ff0b | Set blit1 tile writer tile number |

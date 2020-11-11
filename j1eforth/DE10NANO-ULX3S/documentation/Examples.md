@@ -19,8 +19,13 @@ cs! drawrectangles
 
 ```
 : drawcircles
-  3f 0 do
-    i 140 f0 3f i - 2* fcircle!
+  5 ff08 !
+  8 0 do
+    3f 0 do
+      i 140 f0 3f i - 2* fcircle!
+      1 ff08 ! 2 ff08 !
+      20 sleep
+    loop
   loop ;
 cs! drawcircles
 
@@ -217,12 +222,28 @@ buttontest
 
 ```
 
+## Bitmap Scrolling Test
+
+```
+: bitmapscrolling
+  cs! tpucs! 5 ff08 !
+  100 0 do
+    1 ff08 !
+    14 timer1khz! vblank?
+    40 27f 0  27f 1df line!
+    20 rng 20 + 27f 1df rng 27f 1df line!
+    timer1khz?
+  loop ;
+bitmapscrolling
+
+```
+
 ## Audio Test (ULX3S only at present)
 
 ```
 : closeencounters
     1 0 1c 3e8 beep! beep?
-    1 0 1a 3e8 beep! beep?
+    1 0 1d 3e8 beep! beep?
     1 0 19 3e8 beep! beep?
     1 0 d 3e8 beep! beep?
     1 0 14 3e8 beep! beep?

@@ -678,6 +678,7 @@ algorithm memmap_io (
                                 case 8h05: { gpu_processor.gpu_param2 = writeData; }
                                 case 8h06: { gpu_processor.gpu_param3 = writeData; }
                                 case 8h07: { gpu_processor.gpu_write = writeData; }
+                                case 8h08: { bitmap_window.bitmap_write_offset = writeData; }
                                 case 8h09: { bitmap_window.bitmap_x_read = writeData; }
                                 case 8h0a: { bitmap_window.bitmap_y_read = writeData; }
                                 case 8h0b: { gpu_processor.blit1_writer_tile = writeData; }
@@ -818,6 +819,7 @@ algorithm memmap_io (
             tile_map.tm_scrollwrap = 0;
             lower_sprites.sprite_layer_write = 0;
             lower_sprites.sprite_writer_active = 0;
+            bitmap_window.bitmap_write_offset = 0;
             gpu_processor.gpu_write = 0;
             gpu_processor.blit1_writer_active = 0;
             upper_sprites.sprite_layer_write = 0;
