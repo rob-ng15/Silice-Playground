@@ -444,11 +444,22 @@ algorithm memmap_io (
 
         // READ IO Memory
         if( memoryRead ) {
+            switch( memoryAddress ) {
+                case h1000: { readData = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1; }
+                case h1002: { readData = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ( uartInBufferNext != uartInBufferTop )}; }
+                default:    { readData = 0; }
+            }
         } // memoryRead
 
         // WRITE IO Memory
         if( memoryWrite ) {
             coProReset = 3;
+            switch( memoryAddress ) {
+                case h1000: { uartOutBuffer.wdata1 = writeData[0,8]; newuartOutBufferTop = uartOutBufferTop + 1; }
+                case h1004: { terminal_window.terminal_character = writeData; terminal_window.terminal_write = 1; }
+                case h1008: { leds = writeData; }
+                default: {  }
+            }
         } else { // WRITE IO Memory
             coProReset = ( coProReset == 0 ) ? 0 : coProReset - 1;
         }

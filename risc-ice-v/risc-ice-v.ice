@@ -212,19 +212,25 @@ $$end
     );
 
     // ram
-    bram uint32 mem<input!>[8192] = $meminit$;
+    bram uint32 mem<input!>[8192] = {
+        $include('ROM/BIOS.inc')
+        , pad(uninitialized)
+    };
 
-    uint11 wide_addr = uninitialized;
+    uint11  wide_addr = uninitialized;
+    uint1   icememoryWrite = uninitialized;
+    uint1   icememoryRead = uninitialized;
+    uint32  icememoryWriteData = uninitialized;
+    uint32  icememoryReadData = uninitialized;
 
     // cpu
     rv32i_cpu cpu(
         mem_addr  :> wide_addr,
-        mem_rdata <: mem.rdata,
-        mem_wdata :> mem.wdata,
-        mem_wen   :> mem.wenable,
+        mem_rdata <: icememoryReadData,
+        mem_wdata :> icememoryWriteData,
+        mem_wen   :> icememoryWrite,
+        mem_ren   :> icememoryRead,
     );
-
-    mem.addr := wide_addr[0,10];
 
     // IO Map Read / Write Flags
     IO_Map.memoryWrite := 0;
@@ -234,6 +240,36 @@ $$end
         // 50MHz clock specifically named for de10nano
         clock_50mhz := clock;
     $$end
+
+    // Latch lower 10 bits of the memory address
+    mem.addr := wide_addr[0,10];
+
+    always {
+        // Memory Map
+        if( icememoryWrite ) {
+            switch( wide_addr[10,1] ) {
+                case 0: {
+                    mem.wdata = icememoryWriteData;
+                    mem.wenable = icememoryWrite;
+                }
+                case 1: {
+                    IO_Map.memoryAddress = wide_addr;
+                    IO_Map.memoryWrite = 1;
+                }
+            }
+        }
+        if( icememoryRead ) {
+            switch( wide_addr[10,1] ) {
+                case 0: {
+                    icememoryReadData = mem.rdata;
+                }
+                case 1: {
+                    IO_Map.memoryRead = 1;
+                    icememoryReadData = IO_Map.readData;
+                }
+            }
+        }
+    }
 
     // run the CPU
     () <- cpu <- ();
@@ -247,6 +283,7 @@ algorithm rv32i_cpu(
   input   uint32 mem_rdata,
   output! uint32 mem_wdata,
   output! uint1  mem_wen,
+  output! uint1  mem_ren,
 ) <onehot> {
 
   //                 |--------- indicates we don't want the bram inputs to be latched
@@ -321,8 +358,9 @@ algorithm rv32i_cpu(
     j      :> cmp
   );
 
-  // maintain write enable low (pulses high when needed)
+  // maintain write/read enable low (pulses high when needed)
   mem_wen        := 0;
+  mem_ren       := 0;
   // maintain alu enable low (pulses high when needed)
   alu_enable     := 0;
   // maintain read registers (no latched, see bram parameter)
@@ -330,9 +368,10 @@ algorithm rv32i_cpu(
   xregsB.wenable := 0;
   xregsA.addr    := Rtype(instr).rs1;
   xregsB.addr    := Rtype(instr).rs2;
+
   // boot at 0x00
   mem_addr        = 0;
-
+  mem_ren         = 1;
 // __display("pc %d",mem_addr);
 
     // mem_data is now available
@@ -357,6 +396,7 @@ algorithm rv32i_cpu(
         if (load_store) {
           // load data (NOTE: could skip if followed by SW)
           mem_addr    = alu_out>>2;
+          mem_ren     = 1;
 ++: // wait data
           if (~store) {
             uint32 tmp = uninitialized;

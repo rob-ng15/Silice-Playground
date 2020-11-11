@@ -28,7 +28,4 @@ for str in string.gmatch(code, "([^ \n]+)") do
   nentries = nentries + 1
 end
 
-for i=numinit+1,memsize do
-  meminit = meminit .. '32h0,'
-end
-meminit = meminit .. '}'
+meminit = meminit .. 'pad(0)}'
