@@ -1,7 +1,6 @@
 ( game start here )
 : beepboop
   timer1hz@ lasttimer @ <> if
-    5 tmmove!
     timer1hz@ lasttimer !
     lasttimer @ 3 and
     case
@@ -136,7 +135,7 @@
 : hit?
   0 1d tpuxy!
   ff5c @ ff6c @ 2 base !
-  18 tpu.r 18 tpu.r hex
+  18 tpuu.r 18 tpuu.r hex
   ff5c @ 7ff and 0<> if
     lhit then
   ff6c @ 7ff and 0<> if

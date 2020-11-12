@@ -13,7 +13,7 @@ algorithm terminal(
     input   uint1   showterminal,
     input   uint1   showcursor,
     input   uint1   timer1hz,
-    output  uint3    terminal_active
+    output  uint1   terminal_active
 ) <autorun> {
     // Character ROM 8x8 x 256
     brom uint8 characterGenerator8x8[] = {
@@ -28,7 +28,7 @@ algorithm terminal(
     uint3 terminal_y = 7;
 
     // Character position on the terminal x 0-79, y 0-7 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
-    uint7 xterminalpos := ( pix_active ? (pix_x < 640 ) ? pix_x + 2 : 0 : 0 ) >> 3;
+    uint7 xterminalpos := ( pix_active ? pix_x + 2 : 0 ) >> 3;
     uint10 yterminalpos := (( pix_vblank ? 0 : pix_y - 416 ) >> 3) * 80;
 
     // Determine if cursor, and if cursor is flashing
@@ -43,7 +43,7 @@ algorithm terminal(
 
     // Terminal active (scroll) flag and temporary storage for scrolling
     uint10 terminal_scroll = 0;
-    uint10 terminal_scroll_next = 0;
+    uint10 terminal_scroll_character = 0;
 
     // Setup the reading of the terminal memory
     terminal.addr0 := xterminalpos + yterminalpos;
@@ -60,81 +60,6 @@ algorithm terminal(
     pix_blue := 3;
 
     always {
-        // TERMINAL Actions
-        // Write to terminal, move to next character and scroll
-         switch( terminal_active ) {
-             case 0: {
-                switch( terminal_write ) {
-                    case 1: {
-                        // Display character
-                        switch( terminal_character ) {
-                            case 8: {
-                                // BACKSPACE, move back one character
-                                if( terminal_x != 0 ) {
-                                    terminal_x = terminal_x - 1;
-                                    terminal.addr1 = terminal_x + terminal_y * 80;
-                                    terminal.wdata1 = 0;
-                                    terminal.wenable1 = 1;
-                                }
-                            }
-                            case 10: {
-                                // LINE FEED, scroll
-                                terminal_scroll = 0;
-                                terminal_active = 1;
-                            }
-                            case 13: {
-                                // CARRIAGE RETURN
-                                terminal_x = 0;
-                            }
-                            default: {
-                                // Display character
-                                terminal.addr1 = terminal_x + terminal_y * 80;
-                                terminal.wdata1 = terminal_character;
-                                terminal.wenable1 = 1;
-                                terminal_active = ( terminal_x == 79 ) ? 1 : 0;
-                                terminal_x = ( terminal_x == 79 ) ? 0 : terminal_x + 1;
-                            }
-                        }
-                    }
-                    default: {}
-                }
-            }
-            // Start of TERMINAL SCROLL
-            case 1: {
-                // SCROLL
-                terminal_active = ( terminal_scroll == 560 ) ? 4 : 2;
-                terminal.addr1 = terminal_scroll + 80;
-            }
-            case 2: {
-                // Retrieve the character to move up
-                terminal_scroll_next = terminal.rdata1;
-                terminal_active = 3;
-            }
-            case 3: {
-                // Write the character one line up and move onto the next character
-                terminal.addr1 = terminal_scroll;
-                terminal.wdata1 = terminal_scroll_next;
-                terminal.wenable1 = 1;
-                terminal_scroll = terminal_scroll + 1;
-                terminal_active = 1;
-            }
-            case 4: {
-                // Blank out the last line
-                terminal.addr1 = terminal_scroll;
-                terminal.wdata1 = 0;
-                terminal.wenable1 = 1;
-                terminal_active = ( terminal_scroll == 640 ) ? 0 : 4;
-                terminal_scroll = terminal_scroll + 1;
-            }
-            default: {
-                terminal_scroll = 0;
-                terminal_active = 0;
-            }
-        } // TERMINAL
-    }
-
-    // Render the terminal
-    while(1) {
         if( terminal_display ) {
             // TERMINAL is in range and showterminal flag
             // Invert colours for cursor if flashing
@@ -147,6 +72,71 @@ algorithm terminal(
                     pix_red = ( is_cursor && timer1hz ) ? 0 : 3;
                     pix_green = ( is_cursor && timer1hz ) ? 0 : 3;
                 }
+            }
+        }
+    }
+
+    // Render the terminal
+    while(1) {
+        if( terminal_write ) {
+            // Display character
+            switch( terminal_character ) {
+                case 8: {
+                    // BACKSPACE, move back one character
+                    if( terminal_x != 0 ) {
+                        terminal_x = terminal_x - 1;
+                        terminal.addr1 = terminal_x + terminal_y * 80;
+                        terminal.wdata1 = 0;
+                        terminal.wenable1 = 1;
+                    }
+                }
+                case 10: {
+                    // LINE FEED, scroll
+                    terminal_active = 1;
+                }
+                case 13: {
+                    // CARRIAGE RETURN
+                    terminal_x = 0;
+                }
+                default: {
+                    // Display character
+                    terminal.addr1 = terminal_x + terminal_y * 80;
+                    terminal.wdata1 = terminal_character;
+                    terminal.wenable1 = 1;
+                    terminal_active = ( terminal_x == 79 ) ? 1 : 0;
+                    terminal_x = ( terminal_x == 79 ) ? 0 : terminal_x + 1;
+                }
+            }
+        } else {
+            if( terminal_active ) {
+                // SCROLL
+                terminal_scroll = 0;
+                ++:
+                while( terminal_scroll < 560 ) {
+                    // Retrieve character on the next line
+                    terminal.addr1 = terminal_scroll + 80;
+                    ++:
+                    terminal_scroll_character = terminal.rdata1;
+                    ++:
+                    // Write retrieved character
+                    terminal.addr1 = terminal_scroll;
+                    terminal.wdata1 = terminal_scroll_character;
+                    terminal.wenable1 = 1;
+
+                    //++:
+                    terminal_scroll = terminal_scroll + 1;
+                }
+
+                // BLANK LAST LINE
+                while( terminal_scroll < 640 ) {
+                    terminal.addr1 = terminal_scroll;
+                    terminal.wdata1 = 0;
+                    terminal.wenable1 = 1;
+
+                    terminal_scroll = terminal_scroll + 1;
+                }
+
+                terminal_active = 0;
             }
         }
     }

@@ -188,7 +188,7 @@ a  a updatedirections c! 11 b updatedirections c!
     1 activehasteroids +! ;
 
 : setup
-  cs! tpucs! tmcs! 0 0 tpuxy!
+  cs! tmcs! tpucs! 0 0 tpuxy!
   3f tpuforeground! 40 tpubackground!
   terminalhide!
   timer1hz! 0 lasttimer !

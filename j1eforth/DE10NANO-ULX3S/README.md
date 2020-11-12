@@ -10,7 +10,7 @@
     * PS/2 takes priority over the UART
 * J1+ CPU
     * 50MHz operation
-    * 4 (improved from 5) clock cycles per J1+ CPU operation against 13 clock cycles per operation on the FOMU, giving an effective CPU running at 12.5MHz
+    * 3 (improved from 5) clock cycles per J1+ CPU operation against 13 clock cycles per operation on the FOMU, giving an effective CPU running at 16.67MHz
     * Changed extra OPCODES to ```0= 0<>- <> 1+ * 2* negate 2/ - 0< 0> > >= abs max min```
     * Arithmetic Co-Processors Added [Mathematics.md](documentation/Mathematics.md)
         * 32 bit Addition/Subtraction Unit ( __SIGNED__ )
@@ -38,10 +38,9 @@
 
 Cycle | Action | Notes
 ----- | ----- | -----
-0 | Update stackNext (2nd item on the stack) and rStackTop (1st item on the return stack).<br>Read instruction from PC memory location and stackTop memory location. | Pointers to the correct addresses in the stacks and memory are maintained via wires.
-1 | Execute the J1+ CPU instruction. | Memory writes are started in this cycle. Co-processor operations are started in this cycle.
-2 | Write to the data and return stacks. | Update data and return stack pointers and memory addresses. Memory reads are started in this cycle.
-3 | Delay to allow reading/writing to complete. |
+0 | EXECUTE and start MEMORY WRITE |
+1 | COMMIT to STACKS and update stack pointers and program counter |
+2 | FETCH and DECODE |
 
 For communication with j1eforth there is a UART which provides input and output, output is duplicated on the terminal display. The ULX3S eventually will have PS/2 keyboard input via the us2 connector and a USB OTG and PS/2 to USB converter.
 

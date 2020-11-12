@@ -11,7 +11,7 @@ algorithm divmod32by16 (
     output  uint16  quotient,
     output  uint16  remainder,
     input   uint2   start,
-    output  uint2   active
+    output  uint1   active
 ) <autorun> {
     uint32  dividend_copy = uninitialized;
     uint32  divisor_copy = uninitialized;
@@ -21,61 +21,44 @@ algorithm divmod32by16 (
     uint6   bit = uninitialized;
 
     while (1) {
-        switch( active ) {
-            case 0: {
-                switch( start ) {
-                    case 1: {
-                        // UNSIGNED DIVISION
-                        if( divisor != 0 ) {
-                            bit = 32;
-                            quotient_copy = 0;
-                            remainder_copy = 0;
-                            dividend_copy = { dividendh, dividendl };
-                            divisor_copy = { 16b0, divisor };
-                            resultsign = 0;
-                            active = 1;
-                        } else {
-                            resultsign = 0;
-                            quotient_copy = 32hffff;
-                            remainder_copy = 32hffff;
-                        }
-                    }
-                    case 2: {
-                        // SIGNED DIVISION
-                        if( divisor != 0 ) {
-                            bit = 32;
-                            quotient_copy = 0;
-                            remainder_copy = 0;
-                            dividend_copy = dividendh[15,1] ? -{ dividendh, dividendl } : { dividendh, dividendl };
-                            divisor_copy = divisor[15,1] ? { 16b0, -divisor } : { 16b0, divisor };
-                            resultsign = dividendh[15,1] != divisor[15,1];
-                            active = 1;
-                        } else {
-                            resultsign = 0;
-                            quotient_copy = 32hffff;
-                            remainder_copy = 32hffff;
-                        }
-                    }
-                }
-            }
+        if( start != 0 ) {
 
-            case 1: {
-                if( __unsigned( { remainder_copy[0,31], dividend_copy[bit - 1,1] } ) >= __unsigned(divisor_copy) ) {
-                    remainder_copy = { remainder_copy[0,31], dividend_copy[bit - 1,1] } - divisor_copy;
-                    quotient_copy[bit - 1,1] = 1;
-                } else {
-                    remainder_copy = { remainder_copy[0,31], dividend_copy[bit - 1,1] };
+            if( divisor == 0 ) {
+                // DIVIDE BY 0
+                quotient_copy = 32hffff;
+                remainder_copy = divisor;
+            } else {
+                bit = 32;
+                quotient_copy = 0;
+                remainder_copy = 0;
+
+                dividend_copy = ( start == 1 ) ? { dividendh, dividendl } : dividendh[15,1] ? -{ dividendh, dividendl } : { dividendh, dividendl };
+                divisor_copy = ( start == 1 ) ? { 16b0, divisor } : divisor[15,1] ? { 16b0, -divisor } : { 16b0, divisor };
+                resultsign = ( start == 1 ) ? 0 : dividendh[15,1] != divisor[15,1];
+
+                active = 1;
+
+                ++:
+
+                while( bit != 0 ) {
+                    if( __unsigned( { remainder_copy[0,31], dividend_copy[bit - 1,1] } ) >= __unsigned(divisor_copy) ) {
+                        remainder_copy = { remainder_copy[0,31], dividend_copy[bit - 1,1] } - divisor_copy;
+                        quotient_copy[bit - 1,1] = 1;
+                    } else {
+                        remainder_copy = { remainder_copy[0,31], dividend_copy[bit - 1,1] };
+                    }
+                    bit = bit - 1;
                 }
-                bit = bit - 1;
-                active = ( bit != 0 ) ? 1 : 2;
-            }
-            case 2: {
-                // Result
+
+                ++:
+
                 quotient = resultsign ? -quotient_copy[0,16] : quotient_copy[0,16];
                 remainder = remainder_copy[0,16];
                 active = 0;
+
             }
         }
+
     }
 }
 
@@ -87,7 +70,7 @@ algorithm divmod16by16 (
     output  uint16  quotient,
     output  uint16  remainder,
     input   uint1   start,
-    output  uint2   active
+    output  uint1   active
 ) <autorun> {
     uint16  dividend_copy = uninitialized;
     uint16  divisor_copy = uninitialized;
@@ -97,92 +80,36 @@ algorithm divmod16by16 (
     uint6   bit = uninitialized;
 
     while (1) {
-        switch( active ) {
-            case 0: {
-                if( start ) {
-                    if( divisor != 0 ) {
-                        bit = 16;
-                        quotient_copy = 0;
-                        remainder_copy = 0;
-                        dividend_copy = dividend[15,1] ? -dividend : dividend;
-                        divisor_copy = divisor[15,1] ? -divisor : divisor;
-                        resultsign = dividend[15,1] != divisor[15,1];
-                        active = 1;
-                    } else {
-                        resultsign = 0;
-                        quotient_copy = 16hffff;
-                        remainder_copy = 16hffff;
-                    }
-                }
-            }
+        if( start ) {
+            if( divisor != 0 ) {
+                bit = 16;
+                quotient_copy = 0;
+                remainder_copy = 0;
+                dividend_copy = dividend[15,1] ? -dividend : dividend;
+                divisor_copy = divisor[15,1] ? -divisor : divisor;
+                resultsign = dividend[15,1] != divisor[15,1];
+                active = 1;
 
-            case 1: {
-                if( __unsigned( { remainder_copy[0,15], dividend_copy[bit - 1,1] } ) >= __unsigned(divisor_copy) ) {
-                    remainder_copy = { remainder_copy[0,15], dividend_copy[bit - 1,1] } - divisor_copy;
-                    quotient_copy[bit - 1,1] = 1;
-                } else {
-                    remainder_copy = { remainder_copy[0,15], dividend_copy[bit - 1,1] };
+                ++:
+
+                while( bit != 0 ) {
+                    if( __unsigned( { remainder_copy[0,15], dividend_copy[bit - 1,1] } ) >= __unsigned(divisor_copy) ) {
+                        remainder_copy = { remainder_copy[0,15], dividend_copy[bit - 1,1] } - divisor_copy;
+                        quotient_copy[bit - 1,1] = 1;
+                    } else {
+                        remainder_copy = { remainder_copy[0,15], dividend_copy[bit - 1,1] };
+                    }
+                    bit = bit - 1;
                 }
-                bit = bit - 1;
-                active = ( bit != 0 ) ? 1 : 2;
-            }
-            case 2: {
-                // RESULT
+
+                ++:
+
                 quotient = resultsign ? -quotient_copy : quotient_copy;
                 remainder = remainder_copy;
                 active = 0;
-            }
-        }
-    }
-}
-
-// UNSIGNED / SIGNED 16 by 16 bit multiplication giving 32 bit product
-// LONG MULTIPLICATION
-
-algorithm multi16by16to32LONGMULT (
-    input   uint16  factor1,
-    input   uint16  factor2,
-    output  uint32  product,
-
-    input   uint2   start,
-    output  uint1   active
-) <autorun> {
-    uint32  factor1copy = uninitialized;
-    uint16  factor2copy = uninitialized;
-    uint1   productsign = uninitialized;
-
-    while(1) {
-        switch( active ) {
-            case 0: {
-                switch( start ) {
-                    case 1: {
-                        // UNSIGNED MULTIPLICATION
-                        product = 0;
-                        factor1copy = { 16b0, factor1 };
-                        factor2copy = factor2;
-                        productsign = 0;
-                        active = 1;
-                    }
-                    case 2: {
-                        // SIGNED MULTIPLICATION
-                        product = 0;
-                        factor1copy = factor1[15,1] ? { 16b0, -factor1 } : { 16b0, factor1 };
-                        factor2copy = factor2[15,1] ? -factor2 : factor2;
-                        productsign = factor1[15,1] != factor2[15,1];
-                        active = 1;
-                    }
-                }
-            }
-
-            case 1: {
-                // LONG MULTIPLICATION
-                // BINARY SHIFT AND ADD/SUBTRACT
-                if( factor2copy[0,1] ) {
-                    product = ( productsign ) ? product - factor1copy : product + factor1copy;
-                }
-                factor1copy = factor1copy << 1;
-                factor2copy = factor2copy >> 1;
-                active = ( factor2copy != 0 ) ? 1 : 0;
+            } else {
+                quotient_copy = 16hffff;
+                remainder_copy = divisor;
             }
         }
     }
@@ -197,7 +124,7 @@ algorithm multi16by16to32DSP (
     output  uint32  product,
 
     input   uint2   start,
-    output  uint2   active
+    output  uint1   active
 ) <autorun> {
     uint16  factor1copy = uninitialized;
     uint16  factor2copy = uninitialized;
@@ -211,48 +138,45 @@ algorithm multi16by16to32DSP (
     uint1   productsign = uninitialized;
 
     while(1) {
-        switch( active ) {
-            case 0: {
-                switch( start ) {
-                    case 1: {
-                        // UNSIGNED MULTIPLICATION
-                        product = 0;
-                        factor1copy = factor1;
-                        factor2copy = factor2;
-                        productsign = 0;
-                        active = 1;
-                    }
-                    case 2: {
-                        // SIGNED MULTIPLICATION
-                        product = 0;
-                        factor1copy = factor1[15,1] ? -factor1 : factor1;
-                        factor2copy = factor2[15,1] ? -factor2 : factor2;
-                        productsign = factor1[15,1] != factor2[15,1];
-                        active = 1;
-                    }
+        if( start != 0 ) {
+            switch( start ) {
+                case 1: {
+                    // UNSIGNED MULTIPLICATION
+                    factor1copy = factor1;
+                    factor2copy = factor2;
+                    productsign = 0;
+                }
+                case 2: {
+                    // SIGNED MULTIPLICATION
+                    product = 0;
+                    factor1copy = factor1[15,1] ? -factor1 : factor1;
+                    factor2copy = factor2[15,1] ? -factor2 : factor2;
+                    productsign = factor1[15,1] != factor2[15,1];
                 }
             }
+            product = 0;
+            active = 1;
 
-            case 1: {
-                // SETUP 16 x 16 multipliers
-                factor1high = { 8b0, factor1copy[8,8] };
-                factor1low = { 8b0, factor1copy[0,8] };
-                factor2high = { 8b0, factor2copy[8,8] };
-                factor2low = { 8b0, factor2copy[0,8] };
-                active = 2;
-            }
-            case 2: {
-                // PERFORM UNSIGNED MULTIPLICATION
-                nosignproduct = { 16b0, factor1low * factor2low }
-                                    + { 8b0, factor1high * factor2low, 8b0 }
-                                    + { 8b0, factor1low * factor2high, 8b0 }
-                                    + { factor1high * factor2high, 16b0 };
-                active = 3;
-            }
-            case 3: {
-                product = productsign ? -nosignproduct : nosignproduct;
-                active = 0;
-            }
+            ++:
+
+            // SETUP 16 x 16 multipliers
+            factor1high = { 8b0, factor1copy[8,8] };
+            factor1low = { 8b0, factor1copy[0,8] };
+            factor2high = { 8b0, factor2copy[8,8] };
+            factor2low = { 8b0, factor2copy[0,8] };
+
+            ++:
+
+            // PERFORM UNSIGNED MULTIPLICATION
+            nosignproduct = { 16b0, factor1low * factor2low }
+                                + { 8b0, factor1high * factor2low, 8b0 }
+                                + { 8b0, factor1low * factor2high, 8b0 }
+                                + { factor1high * factor2high, 16b0 };
+
+            ++:
+
+            product = productsign ? -nosignproduct : nosignproduct;
+            active = 0;
         }
     }
 }
