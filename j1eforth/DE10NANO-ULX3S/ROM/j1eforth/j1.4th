@@ -989,10 +989,6 @@ t: vectorvertex! ff76 literal ! ff75 literal ! ff78 literal ! ff77 literal ! ff7
 t: vector? begin ff74 literal @ 0= until t;
 t: vector! vector? ff70 literal ! ff73 literal ! ff72 literal ! ff71 literal ! 1 literal ff74 literal ! t;
 
-t: dlentry! ff83 literal ! ff8c literal ! ff8b literal ! ff8a literal ! ff89 literal ! ff88 literal ! ff87 literal ! ff86 literal ! ff85 literal ! ff84 literal ! 1 literal ff8d literal ! t;
-t: dl? begin ff82 literal @ 0= until t;
-t: dlstart! dl? ff81 literal ! ff80 literal ! 1 literal ff82 literal ! t;
-
 t: tpu! begin ff15 literal @ 0= until ff15 literal ! t;
 t: tpuxy! ( x y ) ff11 literal ! ff10 literal ! 1 literal tpu! t;
 t: tpuforeground! ( foreground ) ff14 literal ! t;

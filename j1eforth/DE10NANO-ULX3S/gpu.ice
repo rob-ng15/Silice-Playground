@@ -25,23 +25,13 @@ algorithm gpu(
     input   int11 v_gpu_param3,
     input   uint4 v_gpu_write,
 
-    // From DISPLAY LIST DRAWER
-    input   int11 dl_gpu_x,
-    input   int11 dl_gpu_y,
-    input   uint8 dl_gpu_colour,
-    input   int16 dl_gpu_param0,
-    input   int16 dl_gpu_param1,
-    input   int16 dl_gpu_param2,
-    input   int16 dl_gpu_param3,
-    input   uint4 dl_gpu_write,
-
     // For setting blit1 tile bitmaps
     input   uint4   blit1_writer_tile,
     input   uint4   blit1_writer_line,
     input   uint16  blit1_writer_bitmap,
     input   uint1   blit1_writer_active,
 
-    output!  uint1 gpu_active
+    output  uint1 gpu_active
 ) <autorun> {
     // 16 x 16 x 16 1 bit tilemap for blit1tilemap
     dualport_bram uint16 blit1tilemap[ 256 ] = uninitialized;
@@ -108,39 +98,28 @@ algorithm gpu(
     }
 
     while(1) {
-        if( ( dl_gpu_write != 0 ) ||  ( v_gpu_write != 0 ) || ( gpu_write != 0 ) ) {
-            if( dl_gpu_write != 0 ) {
-                x = dl_gpu_x;
-                y = dl_gpu_y;
-                gpu_active_colour = dl_gpu_colour;
-                param0 = dl_gpu_param0;
-                param1 = dl_gpu_param1;
-                param2 = dl_gpu_param2;
-                param3 = dl_gpu_param3;
-                write = dl_gpu_write;
+        if( ( v_gpu_write != 0 ) || ( gpu_write != 0 ) ) {
+            if( v_gpu_write != 0 ) {
+                x = v_gpu_x;
+                y = v_gpu_y;
+                gpu_active_colour = v_gpu_colour;
+                param0 = v_gpu_param0;
+                param1 = v_gpu_param1;
+                param2 = v_gpu_param2;
+                param3 = v_gpu_param3;
+                write = v_gpu_write;
             } else {
-                if( v_gpu_write != 0 ) {
-                    x = v_gpu_x;
-                    y = v_gpu_y;
-                    gpu_active_colour = v_gpu_colour;
-                    param0 = v_gpu_param0;
-                    param1 = v_gpu_param1;
-                    param2 = v_gpu_param2;
-                    param3 = v_gpu_param3;
-                    write = v_gpu_write;
+                if( gpu_write != 0 ) {
+                    x = gpu_x;
+                    y = gpu_y;
+                    gpu_active_colour = gpu_colour;
+                    param0 = gpu_param0;
+                    param1 = gpu_param1;
+                    param2 = gpu_param2;
+                    param3 = gpu_param3;
+                    write = gpu_write;
                 } else {
-                    if( gpu_write != 0 ) {
-                        x = gpu_x;
-                        y = gpu_y;
-                        gpu_active_colour = gpu_colour;
-                        param0 = gpu_param0;
-                        param1 = gpu_param1;
-                        param2 = gpu_param2;
-                        param3 = gpu_param3;
-                        write = gpu_write;
-                    } else {
-                        write = 0;
-                    }
+                    write = 0;
                 }
             }
 

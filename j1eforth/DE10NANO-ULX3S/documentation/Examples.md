@@ -251,14 +251,3 @@ bitmapscrolling
 closeencounters
 
 ```
-
-## Display List (test area, does not presently output)
-
-active command colour x y p0 p1 entry displaylist!
-
-```
-1 2 3f 10 10 20 20 0 0 0 dlentry!
-1 6 3 50 50 20 0 0 0 1 dlentry!
-0 2 dlstart!
-
-```

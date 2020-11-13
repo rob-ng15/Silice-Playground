@@ -388,8 +388,8 @@ algorithm tilemap(
                 tm_active = ( y_cursor < 31 ) ? 44 : 49;
             }
             case 49: {
-                tiles.addr1 = x_cursor + y_cursor_addr;
-                tiles.wdata1 = scroll_tile;
+                tiles.addr1 = x_cursor + 1302;
+                tiles.wdata1 = new_tile;
                 tiles.wenable1 = 1;
 
                 x_cursor = x_cursor + 1;
@@ -450,8 +450,8 @@ algorithm tilemap(
                 tm_active = ( y_cursor > 0 ) ? 64 : 69;
             }
             case 69: {
-                tiles.addr1 = x_cursor + y_cursor_addr;
-                tiles.wdata1 = scroll_tile;
+                tiles.addr1 = x_cursor;
+                tiles.wdata1 = new_tile;
                 tiles.wenable1 = 1;
 
                 x_cursor = x_cursor + 1;
@@ -475,8 +475,8 @@ algorithm tilemap(
             }
             case 82: {
                 tiles.addr1 = tmcsaddr;
+                tiles.wenable1 = 1;
                 tmcsaddr = tmcsaddr + 1;
-
                 tm_active = 83;
             }
             case 83: {

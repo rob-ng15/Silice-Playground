@@ -304,32 +304,16 @@ $$end
         audio_output :> audio_r
     );
 
-    // GPU, VECTOR DRAWER and DISPLAY LIST DRAWER
+    // GPU, VECTOR DRAWER
     // The GPU sends rendered pixels to the BITMAP LAYER
     // The VECTOR DRAWER sends lines to be rendered
-    // The DISPLAY LIST DRAWER can send pixels, rectangles, lines, circles, blit1s to the GPU
-    // and vector blocks to draw to the VECTOR DRAWER
-    // VECTOR DRAWER to GPU
     int11   v_gpu_x = uninitialized;
     int11   v_gpu_y = uninitialized;
     uint7   v_gpu_colour = uninitialized;
     int11   v_gpu_param0 = uninitialized;
     int11   v_gpu_param1 = uninitialized;
     uint4   v_gpu_write = uninitialized;
-    // Display list to GPU or VECTOR DRAWER
-    int11   dl_gpu_x = uninitialized;
-    int11   dl_gpu_y = uninitialized;
-    uint7   dl_gpu_colour = uninitialized;
-    int11   dl_gpu_param0 = uninitialized;
-    int11   dl_gpu_param1 = uninitialized;
-    int11   dl_gpu_param2 = uninitialized;
-    int11   dl_gpu_param3 = uninitialized;
-    uint4   dl_gpu_write = uninitialized;
-    uint5   dl_vector_block_number = uninitialized;
-    uint7   dl_vector_block_colour = uninitialized;
-    int11   dl_vector_block_xc = uninitialized;
-    int11   dl_vector_block_yc =uninitialized;
-    uint1   dl_draw_vector = uninitialized;
+
     // Status flags
     uint3   vector_block_active = uninitialized;
     uint1   gpu_active = uninitialized;
@@ -347,15 +331,6 @@ $$end
         v_gpu_param0 <: v_gpu_param0,
         v_gpu_param1 <: v_gpu_param1,
         v_gpu_write <: v_gpu_write,
-
-        dl_gpu_x <: dl_gpu_x,
-        dl_gpu_y <: dl_gpu_y,
-        dl_gpu_colour <: dl_gpu_colour,
-        dl_gpu_param0 <: dl_gpu_param0,
-        dl_gpu_param1 <: dl_gpu_param2,
-        dl_gpu_param2 <: dl_gpu_param3,
-        dl_gpu_param3 <: dl_gpu_param1,
-        dl_gpu_write <: dl_gpu_write
     );
 
     // Vector drawer
@@ -368,31 +343,6 @@ $$end
         gpu_write :> v_gpu_write,
         vector_block_active :> vector_block_active,
         gpu_active <: gpu_active,
-
-        dl_vector_block_number <: dl_vector_block_number,
-        dl_vector_block_colour <: dl_vector_block_colour,
-        dl_vector_block_xc <: dl_vector_block_xc,
-        dl_vector_block_yc <: dl_vector_block_yc,
-        dl_draw_vector <: dl_draw_vector,
-    );
-
-    // Display list
-    displaylist displaylist_drawer <@video_clock,!video_reset> (
-        gpu_x :> dl_gpu_x,
-        gpu_y :> dl_gpu_y,
-        gpu_colour :> dl_gpu_colour,
-        gpu_param0 :> dl_gpu_param0,
-        gpu_param1 :> dl_gpu_param1,
-        gpu_param2 :> dl_gpu_param2,
-        gpu_param3 :> dl_gpu_param3,
-        gpu_write :> dl_gpu_write,
-        vector_block_number :> dl_vector_block_number,
-        vector_block_colour :> dl_vector_block_colour,
-        vector_block_xc :> dl_vector_block_xc,
-        vector_block_yc :> dl_vector_block_yc,
-        draw_vector :> dl_draw_vector,
-        vector_block_active <: vector_block_active,
-        gpu_active <: gpu_active
     );
 
     // Mathematics Co-Processors
@@ -571,21 +521,6 @@ $$end
                                         case 4h4: { readData = vector_drawer.vector_block_active; }
                                     }
                                 }
-                                case 4h8: {
-                                    switch( memoryAddress[0,4] ) {
-                                        // ff80 -
-                                        case 4h2: { readData = displaylist_drawer.display_list_active; }
-                                        case 4h4: { readData = displaylist_drawer.read_active; }
-                                        case 4h5: { readData = displaylist_drawer.read_command; }
-                                        case 4h6: { readData = displaylist_drawer.read_colour; }
-                                        case 4h7: { readData = displaylist_drawer.read_x; }
-                                        case 4h8: { readData = displaylist_drawer.read_y; }
-                                        case 4h9: { readData = displaylist_drawer.read_p0; }
-                                        case 4ha: { readData = displaylist_drawer.read_p1; }
-                                        case 4hb: { readData = displaylist_drawer.read_p2; }
-                                        case 4hc: { readData = displaylist_drawer.read_p3; }
-                                    }
-                                }
                                 case 4h9: {
                                     switch( memoryAddress[0,4] ) {
                                         // ff90 -
@@ -753,22 +688,6 @@ $$end
                                 case 8h79: { vector_drawer.vertices_writer_active = writeData; }
                                 case 8h7a: { vector_drawer.vertices_writer_write = 1; }
 
-                                // ff80 -
-                                case 8h80: { displaylist_drawer.start_entry = writeData; }
-                                case 8h81: { displaylist_drawer.finish_entry = writeData; }
-                                case 8h82: { displaylist_drawer.start_displaylist = 1; }
-                                case 8h83: { displaylist_drawer.writer_entry_number = writeData; }
-                                case 8h84: { displaylist_drawer.writer_active = writeData; }
-                                case 8h85: { displaylist_drawer.writer_command = writeData; }
-                                case 8h86: { displaylist_drawer.writer_colour = writeData; }
-                                case 8h87: { displaylist_drawer.writer_x = writeData; }
-                                case 8h88: { displaylist_drawer.writer_y = writeData; }
-                                case 8h89: { displaylist_drawer.writer_p0 = writeData; }
-                                case 8h8a: { displaylist_drawer.writer_p1 = writeData; }
-                                case 8h8b: { displaylist_drawer.writer_p2 = writeData; }
-                                case 8h8c: { displaylist_drawer.writer_p3 = writeData; }
-                                case 8h8d: { displaylist_drawer.writer_write = writeData; }
-
                                 // ff90 -
                                 case 8h90: { tile_map.tm_x = writeData; }
                                 case 8h91: { tile_map.tm_y = writeData; }
@@ -845,8 +764,6 @@ $$end
             terminal_window.terminal_write = 0;
             vector_drawer.draw_vector = 0;
             vector_drawer.vertices_writer_write = 0;
-            displaylist_drawer.start_displaylist = 0;
-            displaylist_drawer.writer_write = 0;
             apu_processor_L.apu_write = 0;
             apu_processor_R.apu_write = 0;
         }

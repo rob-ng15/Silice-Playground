@@ -146,7 +146,6 @@ The VGA DE10NANO/HDMI ULX3S output has the following layers in order:
 * Lower Sprite Layer [Sprites.md](documentation/Sprites.md)
 * Bitmap with GPU [Bitmap and GPU.md](documentation/Bitmap%20and%20GPU.md)
     * Vector block drawer [Vectors.md](documentation/Vectors.md)
-    * Display list drawer [Display List.md](documentation/Display%20List.md)
 * Upper Sprite Layer [Sprites.md](documentation/Sprites.md)
 * Character Map with TPU [Character Map and TPU.md](documentation/Character%20Map%20and%20TPU.md)
 * Terminal [Terminal.md](documentation/Terminal.md)
@@ -212,23 +211,9 @@ The sample code provided in [Big Example Part 1.md](documentation/Big%20Example%
 ### Character map
 
 * Change characterGenerator8x16 from BROM to BRAM to allow changes to the font
-* Implement character generator writer in the same format as the tile map tile, sprite tile, blit1 tile, vector vertex and display list entry writers
-
-### Tile Map
+* Implement character generator writer in the same format as the tile map tile, sprite tile, blit1 tile, vector vertex entry writers
 
 * Stop glitches when scrolling/wrapping
-
-### Display Lists
-
-* Get working on ULX3S
-
-### Mathematics Co-Processors
-
-* 32 by 16 bit division -> 16 bit quotient and remainder ( unsigned um/mod )
-* 32 by 16 bit division -> 16 bit quotient and remainder ( signed m/mod )
-* 16 * 16 bit multiplication -> 32 bit product ( unsigned um* )
-* 16 * 16 bit multiplication -> 32 bit product ( signed m* )
-* 16 * 16 bit multiplication -> 16 bit product ( implemented via DSP block )
 
 ## Notes
 

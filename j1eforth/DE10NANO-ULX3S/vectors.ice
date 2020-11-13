@@ -39,13 +39,6 @@ algorithm vectors(
     output  int11 gpu_param1,
     output  uint4 gpu_write,
 
-    // Communication from the DISPLAY LIST DRAWER
-    input  uint4   dl_vector_block_number,
-    input  uint7   dl_vector_block_colour,
-    input  int11   dl_vector_block_xc,
-    input  int11   dl_vector_block_yc,
-    input  uint1   dl_draw_vector,
-
     input  uint1 gpu_active
 ) <autorun> {
     // 16 vector blocks each of 16 vertices
@@ -77,16 +70,10 @@ algorithm vectors(
             vertex.wdata1 = { vertices_writer_active, vertices_writer_xdelta, vertices_writer_ydelta };
         }
 
-        if( ( dl_draw_vector || draw_vector ) ) {
-            if( dl_draw_vector ) {
-                block_number = dl_vector_block_number;
-                gpu_colour = dl_vector_block_colour;
-            } else {
-                if( draw_vector ) {
-                    block_number = vector_block_number;
-                    gpu_colour = vector_block_colour;
-                }
-            }
+        if( draw_vector ) {
+            block_number = vector_block_number;
+            gpu_colour = vector_block_colour;
+
             vertices_number = 0;
 
             vector_block_active = 1;

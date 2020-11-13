@@ -1,12 +1,12 @@
 ( game start here )
 : beepboop
   timer1hz@ lasttimer @ <> if
+    5 tmmove!
     timer1hz@ lasttimer !
     lasttimer @ 3 and
     case
       1 of
         1 0 1 1f4 beepL!
-        5 tmmove!
       endof
       3 of
         1 0 2 1f4 beepR!
@@ -126,17 +126,50 @@
   0= if
     newlevel then ;
 
+: drawlives
+  cs!
+  lives @
+  case
+    1 of
+      3f 220 1d0 0 vector!
+    endof
+    2 of
+      3f 220 1d0 0 vector!
+      3f 240 1d0 0 vector!
+    endof
+    3 of
+      3f 220 1d0 0 vector!
+      3f 240 1d0 0 vector!
+      3f 260 1d0 0 vector!
+    endof
+  endcase ;
+
+
 : crash?
   ff5b @ 7ff and
   ff6b @ 7ff and + 0<> if
+    setshipcrashsprite
     2 4 1 3e8 beep!
-    beep?
+
+    e000 b uslupdate!
+
+    10 0 do
+      f840 b lslupdate!
+      20 sleep
+      vblank?
+    loop
+
+    0 0 0 0 0 0 b lslsprite!
+    0 0 0 0 0 0 b uslsprite!
 
     0 shipdirection !
     138 shipx !
     e8 shipy !
+    setshipsprite
 
+    -1 lives +!
     newlevel
+    drawlives
     then ;
 
 : hit?
@@ -154,8 +187,41 @@
   ( for collision detection )
   c ff40 ! ff41 @ 0= if
     shipdirection @ bulletdirection !
-    3c shipx @ 4 + shipy @ 4 + 2 1 0 c lslsprite!
-    30 shipx @ 4 + shipy @ 4 + 0 1 0 c uslsprite!
+    shipdirection @
+    case
+      0 of
+        3c shipx @ shipy @ a - 2 1 0 c lslsprite!
+        30 shipx @ shipy @ a - 0 1 0 c uslsprite!
+      endof
+      1 of
+        3c shipx @ 8 + shipy @ a - 2 1 0 c lslsprite!
+        30 shipx @ 8 + shipy @ a - 0 1 0 c uslsprite!
+      endof
+      2 of
+        3c shipx @ a + shipy @ 2 1 0 c lslsprite!
+        30 shipx @ a + shipy @ 0 1 0 c uslsprite!
+      endof
+      3 of
+        3c shipx @ a + shipy @ a + 2 1 0 c lslsprite!
+        30 shipx @ a + shipy @ a + 0 1 0 c uslsprite!
+      endof
+      4 of
+        3c shipx @ shipy @ a + 2 1 0 c lslsprite!
+        30 shipx @ shipy @ a + 0 1 0 c uslsprite!
+      endof
+      5 of
+        3c shipx @ a - shipy @ a + 2 1 0 c lslsprite!
+        30 shipx @ a - shipy @ a + 0 1 0 c uslsprite!
+      endof
+      6 of
+        3c shipx @ a - shipy @ 2 1 0 c lslsprite!
+        30 shipx @ a - shipy @ 0 1 0 c uslsprite!
+      endof
+      7 of
+        3c shipx @ a - shipy @ a - 2 1 0 c lslsprite!
+        30 shipx @ a - shipy @ a - 0 1 0 c uslsprite!
+      endof
+    endcase
     2 4 3d 80 beep! tpucs! then ;
 
 : drawship
@@ -256,6 +322,7 @@
 : demoULX3S
   setup
   setasteroidsprites
+  drawlives
   newlevel
   begin
     mainloop
@@ -269,7 +336,7 @@
     buttons@ 40 and 0<> if
       counter @ 0= if
       shipright then then
-    buttons@ 4 and 0<>
+    lives @ 0=
   until finish ;
 
 : demoDE10NANO
@@ -283,7 +350,8 @@
     buttons@ 4 and 0= if
       counter @ 0= if
       shipleft then then
-   buttons@ 1 and 0=
+   buttons@ 1 and 0= if
+      counter @ 0= if
+      shipright then then
+   lives @ 0=
   until finish ;
-
-

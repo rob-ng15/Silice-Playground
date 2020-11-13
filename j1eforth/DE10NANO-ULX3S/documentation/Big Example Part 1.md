@@ -98,6 +98,24 @@ a  a updatedirections c! 11 b updatedirections c!
     8000 7800 7e00 7fe0 7ff8 3fff 3ffe 1ffc
     1ff8 1fe0 1fc0 0f80 0f80 0700 0600 0400 ;
 
+: shipcrashdata
+  0020 4206 0006 1820 1800 0081 0400 4010
+  0000 0300 0302 6010 6000 0000 0419 8018
+  0000 0300 0302 6010 6000 0000 0419 8018
+  0020 4206 0006 1820 1800 0081 0400 4010
+  0020 4206 0006 1820 1800 0081 0400 4010
+  0000 0300 0302 6010 6000 0000 0419 8018
+  0000 0300 0302 6010 6000 0000 0419 8018
+  0020 4206 0006 1820 1800 0081 0400 4010
+  0020 4206 0006 1820 1800 0081 0400 4010
+  0000 0300 0302 6010 6000 0000 0419 8018
+  0000 0300 0302 6010 6000 0000 0419 8018
+  0020 4206 0006 1820 1800 0081 0400 4010
+  0020 4206 0006 1820 1800 0081 0400 4010
+  0000 0300 0302 6010 6000 0000 0419 8018
+  0000 0300 0302 6010 6000 0000 0419 8018
+  0020 4206 0006 1820 1800 0081 0400 4010 ;
+
 : bulletspritedata
   2 0 do
     0000 0000 0000 0000 0000 0100 0100 07c0
@@ -113,6 +131,10 @@ a  a updatedirections c! 11 b updatedirections c!
 : setshipsprite
   shipspritedata b lsltile!
   shipspritedata b usltile! ;
+
+: setshipcrashsprite
+  shipcrashdata b lsltile!
+  shipcrashdata b usltile! ;
 
 : setbulletsprite
   bulletspritedata c lsltile!
@@ -212,10 +234,7 @@ a  a updatedirections c! 11 b updatedirections c!
   138 shipx !
   e8 shipy !
   setshipsprite
-  setbulletsprite
-  3f 220 1d0 0 vector!
-  3f 240 1d0 0 vector!
-  3f 260 1d0 0 vector! ;
+  setbulletsprite ;
 
 : setasteroidsprites
   b 0 do
