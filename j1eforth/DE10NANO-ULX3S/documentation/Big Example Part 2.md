@@ -47,7 +47,7 @@
   ff35 @ worky !
   ff33 @ workx @ worky @ 7 1 ff36 @
   hitasteroid @ lslsprite!
-  2 4 1 1f4 beep! 1f4 sleep
+  2 4 2 1f4 beep! 1f4 sleep
   0 0 0 0 0 0 hitasteroid @ lslsprite!
   0 hitasteroid @ lasteroidactive c!
   hitasteroid @ lasteroidtype c@
@@ -81,7 +81,7 @@
   ff45 @ worky !
   ff43 @ workx @ worky @ 7 1 ff46 @
   hitasteroid @ uslsprite!
-  2 4 1 1f4 beep! 1f4 sleep
+  2 4 2 1f4 beep! 1f4 sleep
   0 0 0 0 0 0 hitasteroid @ uslsprite!
   0 hitasteroid @ hasteroidactive c!
   hitasteroid @ hasteroidtype c@
@@ -129,6 +129,13 @@
 : crash?
   ff5b @ 7ff and
   ff6b @ 7ff and + 0<> if
+    2 4 1 3e8 beep!
+    beep?
+
+    0 shipdirection !
+    138 shipx !
+    e8 shipy !
+
     newlevel
     then ;
 

@@ -23,7 +23,7 @@ algorithm character_map(
     input   uint7   tpu_background,
     input   uint3   tpu_write,
 
-    output  uint1   tpu_active
+    output  uint2   tpu_active
 ) <autorun> {
     // Character ROM 8x16
     brom uint8 characterGenerator8x16[] = {
@@ -65,7 +65,11 @@ algorithm character_map(
     // Default to transparent
     character_map_display := pix_active && (( characterpixel ) || ( ~charactermapentry(charactermap.rdata0).alpha ));
 
-    always {
+    // Default to 0,0 and transparent
+    charactermap.addr1 = 0; charactermap.wdata1 = { 1b1, 6b0, 6b0, 8b0 };
+
+    // Render the character map
+    while(1) {
         if( character_map_display ) {
             // CHARACTER from characterGenerator8x16
             // Determine if background or foreground
@@ -73,43 +77,43 @@ algorithm character_map(
             pix_green = characterpixel ? charactermap.rdata0[10,2] : charactermap.rdata0[16,2];
             pix_blue = characterpixel ? charactermap.rdata0[8,2] : charactermap.rdata0[14,2];
         }
-    }
 
-    // Default to 0,0 and transparent
-    charactermap.addr1 = 0; charactermap.wdata1 = { 1b1, 6b0, 6b0, 8b0 };
+        switch( tpu_active ) {
+            case 0: {
+                switch( tpu_write ) {
+                    case 1: {
+                        // Set cursor position
+                        tpu_active_x = tpu_x;
+                        tpu_active_y = tpu_y;
+                    }
+                    case 2: {
+                        // Write character,foreground, background to current cursor position and move onto next character position
+                        charactermap.addr1 = tpu_active_x + tpu_active_y * 80;
+                        charactermap.wdata1 = { tpu_background, tpu_foreground, tpu_character };
 
-    // Render the character map
-    while(1) {
-        switch( tpu_write ) {
-            case 1: {
-                // Set cursor position
-                tpu_active_x = tpu_x;
-                tpu_active_y = tpu_y;
-            }
-            case 2: {
-                // Write character,foreground, background to current cursor position and move onto next character position
-                charactermap.addr1 = tpu_active_x + tpu_active_y * 80;
-                charactermap.wdata1 = { tpu_background, tpu_foreground, tpu_character };
-
-                tpu_active_y = ( tpu_active_x == 79 ) ? ( tpu_active_y == 29 ) ? 0 : tpu_active_y + 1 : tpu_active_y;
-                tpu_active_x = ( tpu_active_x == 79 ) ? 0 : tpu_active_x + 1;
-            }
-            case 3: {
-                // Start tpucs!
-                tpu_active = 1;
-                tpu_cs_addr = 0;
-                charactermap.wdata1 = { 1b1, 6b0, 6b0, 8b0 };
-
-                ++:
-
-                while( tpu_cs_addr < 2400 ) {
-                    charactermap.addr1 = tpu_cs_addr;
-                    tpu_cs_addr = tpu_cs_addr + 1;
+                        tpu_active_y = ( tpu_active_x == 79 ) ? ( tpu_active_y == 29 ) ? 0 : tpu_active_y + 1 : tpu_active_y;
+                        tpu_active_x = ( tpu_active_x == 79 ) ? 0 : tpu_active_x + 1;
+                    }
+                    case 3: {
+                        // Start tpucs!
+                        tpu_active_x = 0;
+                        tpu_active_y = 0;
+                        tpu_active = 1;
+                        tpu_cs_addr = 0;
+                        charactermap.wdata1 = { 1b1, 6b0, 6b0, 8b0 };
+                    }
                 }
+            }
 
-                tpu_active = 0;
-                tpu_active_x = 0;
-                tpu_active_y = 0;
+            // TPU CS
+            case 1: {
+                charactermap.addr1 = tpu_cs_addr;
+                tpu_cs_addr = tpu_cs_addr + 1;
+                tpu_active = 2;
+            }
+
+            case 2: {
+                tpu_active = ( tpu_cs_addr < 2400 ) ? 1 : 0;
             }
         }
     }

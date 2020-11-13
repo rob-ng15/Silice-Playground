@@ -30,9 +30,9 @@ algorithm tilemap(
     input   uint1   tile_writer_write,
 
     // For scrolling/wrapping
-    input   uint5   tm_scrollwrap,
-    output  uint5   tm_lastaction,
-    output  uint1   tm_active
+    input   uint4   tm_scrollwrap,
+    output  uint4   tm_lastaction,
+    output  uint8   tm_active
 ) <autorun> {
     // Tile Map 32 x 16 x 16
     dualport_bram uint16 tiles16x16[ 512 ] = { 0, pad(0) };
@@ -59,7 +59,7 @@ algorithm tilemap(
 
     // Character position on the screen x 0-41, y 0-31 * 42 ( fetch it two pixels ahead of the actual x pixel, so it is always ready )
     // Adjust for the offsets, effective 0 point margin is ( 1,1 ) to ( 40,30 ) with a 1 tile border
-    uint11  xtmpos :=  ( pix_active ? pix_x + ( 11d18 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) : pix_x + ( 11d16 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) ) >> 4;
+    uint11  xtmpos :=  ( pix_active ? pix_x + ( 11d18 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) : ( 11d16 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) ) >> 4;
     uint11  ytmpos := (( pix_vblank ? ( 11d16 + {{6{tm_offset_y[4,1]}}, tm_offset_y} ) : pix_y + ( 11d16 + {{6{tm_offset_y[4,1]}}, tm_offset_y} ) ) >> 4) * 42;
 
     // Derive the x and y coordinate within the current 16x16 tilemap block x 0-7, y 0-15
@@ -83,7 +83,10 @@ algorithm tilemap(
     // Default to transparent
     tilemap_display := pix_active && (( tmpixel ) || ( ~tilemapentry(tiles.rdata0).alpha ));
 
-    always {
+    // Default to 0,0 and transparent
+    tiles.addr1 = 0; tiles.wdata1 = { 1b1, 6b0, 6b0, 5b0 };
+
+    while(1) {
         // Render the tilemap
         if( tilemap_display ) {
             // Determine if background or foreground
@@ -106,223 +109,382 @@ algorithm tilemap(
                 tiles.wenable1 = 1;
             }
         }
-    }
 
-    // Default to 0,0 and transparent
-    tiles.addr1 = 0; tiles.wdata1 = { 1b1, 6b0, 6b0, 5b0 };
-
-    while(1) {
-        // Perform Scrolling/Wrapping
-        if( ( tm_scrollwrap >= 0 ) && ( tm_scrollwrap <=8 ) ) {
-            switch( ( tm_scrollwrap - 1 ) & 3 ) {
-                // LEFT
-                case 0: {
-                    if( tm_offset_x == 15 ) {
-                        tm_scroll = ( tm_scrollwrap == 1 ) ? 1 : 0;
-                        tm_lastaction = tm_scrollwrap;
-                        x_cursor = 0;
-                        y_cursor = 0;
-                        y_cursor_addr = 0;
-                        tm_offset_x = 0;
-                        tm_active = 1;
-
-                        ++:
-
-                        while( y_cursor < 32 ) {
-                            x_cursor = 0;
-                            // Setup addresses for the first column
-                            tiles.addr1 = y_cursor_addr;
-                            ++:
-                            // Save the first column
-                            new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles.rdata1;
-                            while( x_cursor < 41 ) {
-                                // Setup addresses for the next column
-                                tiles.addr1 = ( x_cursor + 1 ) + y_cursor_addr;
-                                ++:
-                                scroll_tile = tiles.rdata1;
-                                ++:
-                                tiles.addr1 = ( x_cursor ) + y_cursor_addr;
-                                tiles.wdata1 = scroll_tile;
-                                tiles.wenable1 = 1;
-
-                                x_cursor = x_cursor + 1;
-                            }
-                            tiles.addr1 = ( 41 ) + y_cursor_addr;
-                            tiles.wdata1 = new_tile;
-                            tiles.wenable1 = 1;
-
-                            y_cursor = y_cursor + 1;
-                            y_cursor_addr = y_cursor_addr + 42;
+        switch( tm_active ) {
+            case 0: {
+                // Perform Scrolling/Wrapping
+                switch( tm_scrollwrap ) {
+                    // LEFT
+                    case 1: {
+                        if( tm_offset_x == 15 ) {
+                            tm_scroll = 1;
+                            tm_lastaction = tm_scrollwrap;
+                            tm_active = 1;
+                        } else {
+                            tm_offset_x = tm_offset_x + 1;
+                            tm_lastaction = 0;
                         }
-                        tm_active = 0;
-                    } else {
-                        tm_offset_x = tm_offset_x + 1;
-                        tm_lastaction = 0;
                     }
-                }
 
-                // UP
-                case 1: {
-                    if( tm_offset_y == 15 ) {
-                        tm_scroll = ( tm_scrollwrap == 2 ) ? 1 : 0;
-                        tm_lastaction = tm_scrollwrap;
-                        x_cursor = 0;
-                        y_cursor = 0;
-                        y_cursor_addr = 0;
-                        tm_offset_y = 0;
-                        tm_active = 1;
-
-                        ++:
-
-                        while( x_cursor < 42 ) {
-                            y_cursor = 0;
-                            // Setup addresses for the first row
-                            tiles.addr1 = x_cursor;
-                            ++:
-                            // Save the first row
-                            new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles.rdata1;
-                            while( y_cursor < 31 ) {
-                                // Setup addresses for the next row
-                                tiles.addr1 = x_cursor + y_cursor_addr + 42;
-                                ++:
-                                // Save the next row
-                                scroll_tile = tiles.rdata1;
-                                ++:
-                                // Setup addresses for the present row and write the next row to it
-                                tiles.addr1 = x_cursor + y_cursor_addr;
-                                tiles.wdata1 = scroll_tile;
-                                tiles.wenable1 = 1;
-
-                                y_cursor = y_cursor + 1;
-                                y_cursor_addr = y_cursor_addr + 42;
-                            }
-                            // Copy the last row or blank
-                            tiles.addr1 = x_cursor + 1302;
-                            tiles.wdata1 = new_tile;
-                            tiles.wenable1 = 1;
-
-                            x_cursor = x_cursor + 1;
+                    // UP
+                    case 2: {
+                        if( tm_offset_y == 15 ) {
+                            tm_scroll = 1;
+                            tm_lastaction = tm_scrollwrap;
+                            tm_active = 41;
+                        } else {
+                            tm_offset_y = tm_offset_y + 1;
+                            tm_lastaction = 0;
                         }
-                        tm_active = 0;
-                    } else {
-                        tm_offset_y = tm_offset_y + 1;
-                        tm_lastaction = 0;
                     }
-                }
 
-                // RIGHT
-                case 2: {
-                    if( tm_offset_x == -15 ) {
-                        tm_scroll = ( tm_scrollwrap == 3 ) ? 1 : 0;
-                        tm_lastaction = tm_scrollwrap;
-                        x_cursor = 0;
-                        y_cursor = 0;
-                        y_cursor_addr = 0;
-                        tm_offset_x = 0;
-                        tm_active = 1;
-
-                        ++:
-
-                        while( y_cursor < 32 ) {
-                            x_cursor = 41;
-                            // Setup addresses for the last column
-                            tiles.addr1 = 41 + y_cursor_addr;
-                            ++:
-                            // Save the last column
-                            new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles.rdata1;
-                            while( x_cursor > 0 ) {
-                                // Setup addresses for the next column
-                                tiles.addr1 = ( x_cursor + 1 ) + y_cursor_addr;
-                                ++:
-                                scroll_tile = tiles.rdata1;
-                                ++:
-                                tiles.addr1 = ( x_cursor ) + y_cursor_addr;
-                                tiles.wdata1 = scroll_tile;
-                                tiles.wenable1 = 1;
-
-                                x_cursor = x_cursor - 1;
-                            }
-                            tiles.addr1 = ( 0 ) + y_cursor_addr;
-                            tiles.wdata1 = new_tile;
-                            tiles.wenable1 = 1;
-
-                            y_cursor = y_cursor + 1;
-                            y_cursor_addr = y_cursor_addr + 42;
+                    // RIGHT
+                    case 3: {
+                        if( tm_offset_x == -15 ) {
+                            tm_scroll = 1;
+                            tm_lastaction = tm_scrollwrap;
+                            tm_active = 21;
+                        } else {
+                            tm_offset_x = tm_offset_x - 1;
+                            tm_lastaction = 0;
                         }
-                        tm_active = 0;
-                    } else {
-                        tm_offset_x = tm_offset_x - 1;
-                        tm_lastaction = 0;
                     }
-                }
 
-                // DOWN
-                case 3: {
-                    if( tm_offset_y == -15 ) {
-                        tm_scroll = ( tm_scrollwrap == 4 ) ? 1 : 0;
-                        tm_lastaction = tm_scrollwrap;
-                        x_cursor = 0;
-                        y_cursor = 31;
-                        y_cursor_addr = 1302;
-                        tm_offset_y = 0;
-                        tm_active = 1;
-
-                        ++:
-
-                        while( x_cursor < 42 ) {
-                            y_cursor = 0;
-                            // Setup addresses for the last row
-                            tiles.addr1 = x_cursor + 1302;
-                            ++:
-                            // Save the last row
-                            new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles.rdata1;
-
-                            while( y_cursor > 0 ) {
-                                // Setup addresses for the previous row
-                                tiles.addr1 = x_cursor + y_cursor_addr - 42;
-                                ++:
-                                // Save the next row
-                                scroll_tile = tiles.rdata1;
-                                ++:
-                                // Setup addresses for the present row and write the next row to it
-                                tiles.addr1 = x_cursor + y_cursor_addr;
-                                tiles.wdata1 = scroll_tile;
-                                tiles.wenable1 = 1;
-
-                                y_cursor = y_cursor - 1;
-                                y_cursor_addr = y_cursor_addr - 42;
-                            }
-                            // Copy the last row or blank
-                            tiles.addr1 = x_cursor;
-                            tiles.wdata1 = new_tile;
-                            tiles.wenable1 = 1;
-
-                            x_cursor = x_cursor - 1;
+                    // DOWN
+                    case 4: {
+                        if( tm_offset_y == -15 ) {
+                            tm_scroll = 1;
+                            tm_lastaction = tm_scrollwrap;
+                            tm_active = 61;
+                        } else {
+                            tm_offset_y = tm_offset_y - 1;
+                            tm_lastaction = 0;
                         }
-                        tm_active = 0;
-                    } else {
-                        tm_offset_y = tm_offset_y - 1;
-                        tm_lastaction = 0;
+                    }
+                    // LEFT
+                    case 5: {
+                        if( tm_offset_x == 15 ) {
+                            tm_scroll = 0;
+                            tm_lastaction = tm_scrollwrap;
+                            tm_active = 1;
+                        } else {
+                            tm_offset_x = tm_offset_x + 1;
+                            tm_lastaction = 0;
+                        }
+                    }
+
+                    // UP
+                    case 6: {
+                        if( tm_offset_y == 15 ) {
+                            tm_scroll = 0;
+                            tm_lastaction = tm_scrollwrap;
+                            tm_active = 41;
+                        } else {
+                            tm_offset_y = tm_offset_y + 1;
+                            tm_lastaction = 0;
+                        }
+                    }
+
+                    // RIGHT
+                    case 7: {
+                        if( tm_offset_x == -15 ) {
+                            tm_scroll = 0;
+                            tm_lastaction = tm_scrollwrap;
+                            tm_active = 21;
+                        } else {
+                            tm_offset_x = tm_offset_x - 1;
+                            tm_lastaction = 0;
+                        }
+                    }
+
+                    // DOWN
+                    case 8: {
+                        if( tm_offset_y == -15 ) {
+                            tm_scroll = 0;
+                            tm_lastaction = tm_scrollwrap;
+                            tm_active = 61;
+                        } else {
+                            tm_offset_y = tm_offset_y - 1;
+                            tm_lastaction = 0;
+                        }
+                    }
+
+                    // CLEAR
+                    case 9: {
+                        tm_active = 81;
                     }
                 }
             }
-        } else {
+
+            // SCROLL/WRAP LEFT
+            case 1: {
+                y_cursor = 0;
+                y_cursor_addr = 0;
+
+                tm_active = 2;
+            }
+            case 2: {
+                // New row
+                x_cursor = 0;
+                tiles.addr1 = y_cursor_addr;
+
+                tm_active = 3;
+            }
+            case 3: {
+                new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles.rdata1;
+
+                tm_active = 4;
+            }
+            case 4: {
+                tiles.addr1 = ( x_cursor + 1 ) + y_cursor_addr;
+
+                tm_active = 5;
+            }
+            case 5: {
+                scroll_tile = tiles.rdata1;
+
+                tm_active = 6;
+            }
+            case 6: {
+                tiles.addr1 = ( x_cursor ) + y_cursor_addr;
+                tiles.wdata1 = scroll_tile;
+                tiles.wenable1 = 1;
+
+                tm_active = 7;
+            }
+            case 7: {
+                x_cursor = x_cursor + 1;
+
+                tm_active = 8;
+            }
+            case 8: {
+                tm_active = ( x_cursor < 41 ) ? 4 : 9;
+            }
+            case 9: {
+                tiles.addr1 = ( 41 ) + y_cursor_addr;
+                tiles.wdata1 = new_tile;
+                tiles.wenable1 = 1;
+
+                y_cursor = y_cursor + 1;
+                y_cursor_addr = y_cursor_addr + 42;
+
+                tm_active = 10;
+            }
+            case 10: {
+                tm_active = ( y_cursor < 32 ) ? 2 : 11;
+            }
+            case 11: {
+                tm_offset_x = 0;
+                tm_active = 0;
+            }
+
+            // SCROLL/WRAP RIGHT
+            case 21: {
+                y_cursor = 0;
+                y_cursor_addr = 0;
+
+                tm_active = 22;
+            }
+            case 22: {
+                // New row
+                x_cursor = 41;
+                tiles.addr1 = 41 + y_cursor_addr;
+
+                tm_active = 23;
+            }
+            case 23: {
+                new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles.rdata1;
+
+                tm_active = 24;
+            }
+            case 24: {
+                tiles.addr1 = ( x_cursor - 1 ) + y_cursor_addr;
+
+                tm_active = 25;
+            }
+            case 25: {
+                scroll_tile = tiles.rdata1;
+
+                tm_active = 26;
+            }
+            case 26: {
+                tiles.addr1 = ( x_cursor ) + y_cursor_addr;
+                tiles.wdata1 = scroll_tile;
+                tiles.wenable1 = 1;
+
+                tm_active = 27;
+            }
+            case 27: {
+                x_cursor = x_cursor - 1;
+
+                tm_active = 28;
+            }
+            case 28: {
+                tm_active = ( x_cursor > 0 ) ? 24 : 29;
+            }
+
+            case 29: {
+                tiles.addr1 = y_cursor_addr;
+                tiles.wdata1 = new_tile;
+                tiles.wenable1 = 1;
+
+                y_cursor = y_cursor + 1;
+                y_cursor_addr = y_cursor_addr + 42;
+
+                tm_active = 30;
+            }
+            case 30: {
+                tm_active = ( y_cursor < 32 ) ? 32 : 31;
+            }
+
+            case 31: {
+                tm_offset_x = 0;
+                tm_active = 0;
+            }
+
+            // SCROLL/WRAP UP
+            case 41: {
+                x_cursor = 0;
+
+                tm_active = 42;
+            }
+            case 42: {
+                // New Column
+                y_cursor = 0;
+                y_cursor_addr = 0;
+                tiles.addr1 = x_cursor;
+
+                tm_active = 43;
+            }
+            case 43: {
+                new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles.rdata1;
+
+                tm_active = 44;
+            }
+            case 44: {
+                tiles.addr1 = x_cursor + y_cursor_addr + 42;
+
+                tm_active = 45;
+            }
+            case 45: {
+                scroll_tile = tiles.rdata1;
+
+                tm_active = 46;
+            }
+            case 46: {
+                tiles.addr1 = ( x_cursor ) + y_cursor_addr;
+                tiles.wdata1 = scroll_tile;
+                tiles.wenable1 = 1;
+
+                tm_active = 47;
+            }
+            case 47: {
+                y_cursor = y_cursor + 1;
+                y_cursor_addr = y_cursor_addr + 42;
+
+                tm_active = 48;
+            }
+            case 48: {
+                tm_active = ( y_cursor < 31 ) ? 44 : 49;
+            }
+            case 49: {
+                tiles.addr1 = x_cursor + y_cursor_addr;
+                tiles.wdata1 = scroll_tile;
+                tiles.wenable1 = 1;
+
+                x_cursor = x_cursor + 1;
+
+                tm_active = 50;
+            }
+            case 50: {
+                tm_active = ( x_cursor < 42 ) ? 42 : 51;
+            }
+            case 51: {
+                tm_offset_y = 0;
+                tm_active = 0;
+            }
+
+            // SCROLL/WRAP DOWN
+            case 61: {
+                x_cursor = 0;
+
+                tm_active = 62;
+            }
+            case 62: {
+                // New Column
+                y_cursor = 31;
+                y_cursor_addr = 1302;
+                tiles.addr1 = x_cursor;
+
+                tm_active = 63;
+            }
+            case 63: {
+                new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles.rdata1;
+
+                tm_active = 64;
+            }
+            case 64: {
+                tiles.addr1 = x_cursor + y_cursor_addr - 42;
+
+                tm_active = 65;
+            }
+            case 65: {
+                scroll_tile = tiles.rdata1;
+
+                tm_active = 66;
+            }
+            case 66: {
+                tiles.addr1 = ( x_cursor ) + y_cursor_addr;
+                tiles.wdata1 = scroll_tile;
+                tiles.wenable1 = 1;
+
+                tm_active = 67;
+            }
+            case 67: {
+                y_cursor = y_cursor - 1;
+                y_cursor_addr = y_cursor_addr - 42;
+
+                tm_active = 68;
+            }
+            case 68: {
+                tm_active = ( y_cursor > 0 ) ? 64 : 69;
+            }
+            case 69: {
+                tiles.addr1 = x_cursor + y_cursor_addr;
+                tiles.wdata1 = scroll_tile;
+                tiles.wenable1 = 1;
+
+                x_cursor = x_cursor + 1;
+
+                tm_active = 70;
+            }
+            case 70: {
+                tm_active = ( x_cursor < 42 ) ? 62 : 71;
+            }
+            case 71: {
+                tm_offset_y = 0;
+                tm_active = 0;
+            }
+
             // CLEAR
-            if( tm_scrollwrap == 9 ) {
+            case 81: {
                 tmcsaddr = 0;
                 tiles.wdata1 = { 1b1, 6b0, 6b0, 5b0 };
 
+                tm_active = 82;
+            }
+            case 82: {
+                tiles.addr1 = tmcsaddr;
+                tmcsaddr = tmcsaddr + 1;
+
+                tm_active = 83;
+            }
+            case 83: {
+                tm_active = ( tmcsaddr < 1344 ) ? 82: 84;
+            }
+            case 84: {
                 tm_offset_x = 0;
                 tm_offset_y = 0;
-                tm_active = 1;
-
-                ++:
-
-                while( tmcsaddr < 1344 ) {
-                    tiles.addr1 = tmcsaddr;
-                    tmcsaddr = tmcsaddr + 1;
-                }
-
                 tm_active = 0;
             }
         }

@@ -55,16 +55,14 @@ algorithm bitmap(
     // Default to transparent
     bitmap_display := pix_active && ~colour7(bitmap.rdata0).alpha;
 
-    always {
+    // Render the bitmap
+    while(1) {
         if( bitmap_display ) {
             pix_red = colour7(bitmap.rdata0).red;
             pix_green = colour7(bitmap.rdata0).green;
             pix_blue = colour7(bitmap.rdata0).blue;
         }
-    }
 
-    // Render the bitmap
-    while(1) {
         if( write_pixel == 1 ) {
             bitmap.addr1 = x_write_pixel + y_write_pixel * 640;
             bitmap.wdata1 = bitmap_colour_write;

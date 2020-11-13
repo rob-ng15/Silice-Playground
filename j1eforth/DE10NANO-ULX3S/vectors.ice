@@ -29,7 +29,7 @@ algorithm vectors(
     input   uint1   vertices_writer_active,
     input   uint1   vertices_writer_write,
 
-    output!  uint3   vector_block_active,
+    output!  uint1   vector_block_active,
 
     // Communication with the GPU
     output  int11 gpu_x,
@@ -46,7 +46,7 @@ algorithm vectors(
     input  int11   dl_vector_block_yc,
     input  uint1   dl_draw_vector,
 
-    input  uint6 gpu_active
+    input  uint1 gpu_active
 ) <autorun> {
     // 16 vector blocks each of 16 vertices
     dualport_bram uint13 vertex[256] = uninitialised;
@@ -57,7 +57,7 @@ algorithm vectors(
 
     // Vertices being processed, plus first coordinate of each line
     uint5 block_number = uninitialised;
-    uint4 vertices_number = uninitialised;
+    uint5 vertices_number = uninitialised;
     int11 start_x = uninitialised;
     int11 start_y = uninitialised;
 
@@ -68,65 +68,56 @@ algorithm vectors(
 
     gpu_write := 0;
 
-    always {
+    vector_block_active = 0;
+    vertices_number = 0;
+
+    while(1) {
         if( vertices_writer_write ) {
             vertex.addr1 = vertices_writer_block * 16 + vertices_writer_vertex;
             vertex.wdata1 = { vertices_writer_active, vertices_writer_xdelta, vertices_writer_ydelta };
         }
 
-        if( dl_draw_vector ) {
-            block_number = dl_vector_block_number;
-            gpu_colour = dl_vector_block_colour;
-        } else {
-            if( draw_vector ) {
-                block_number = vector_block_number;
-                gpu_colour = vector_block_colour;
+        if( ( dl_draw_vector || draw_vector ) ) {
+            if( dl_draw_vector ) {
+                block_number = dl_vector_block_number;
+                gpu_colour = dl_vector_block_colour;
+            } else {
+                if( draw_vector ) {
+                    block_number = vector_block_number;
+                    gpu_colour = vector_block_colour;
+                }
             }
-        }
-    }
+            vertices_number = 0;
 
-    vector_block_active = 0;
-    vertices_number = 0;
+            vector_block_active = 1;
 
-    while(1) {
-        switch( vector_block_active ) {
-            case 1: {
-                // Delay to allow reading of the first vertex
-                vector_block_active = 2;
-            }
-            case 2: {
-                // Read the first of the vertices
-                start_x = vector_block_xc + deltax;
-                start_y = vector_block_yc + deltay;
-                vertices_number = 1;
-                vector_block_active = 3;
-            }
-            case 3: {
-                // Delay to allow reading of the next vertices
-                vector_block_active = 4;
-            }
-            case 4: {
-                // See if the next of the vertices is active and await the GPU
-                vector_block_active = ( vectorentry(vertex.rdata0).active ) ? ( gpu_active != 0 ) ? 4 : 5 : 0;
-            }
-            case 5: {
-                // Send the line to the GPU
+            ++:
+
+            start_x = vector_block_xc + deltax;
+            start_y = vector_block_yc + deltay;
+
+            vertices_number = 1;
+
+            ++:
+
+            while( vectorentry(vertex.rdata0).active && ( vertices_number < 16 ) ) {
                 gpu_x = start_x;
                 gpu_y = start_y;
                 gpu_param0 = vector_block_xc + deltax;
                 gpu_param1 = vector_block_yc + deltay;
+
+                while( gpu_active ) {}
+
                 gpu_write = 3;
 
                 // Move onto the next of the vertices
                 start_x = vector_block_xc + deltax;
                 start_y = vector_block_yc + deltay;
-                vertices_number = ( vertices_number == 15 ) ? 0: vertices_number + 1;
-                vector_block_active = ( vertices_number == 15 ) ? 0 : 3;
+                vertices_number = vertices_number + 1;
+                ++:
             }
-            default: {
-                vector_block_active = ( draw_vector ) ? 1 : ( dl_draw_vector) ? 1 : 0;
-                vertices_number = 0;
-            }
+
+            vector_block_active = 0;
         }
     }
 }

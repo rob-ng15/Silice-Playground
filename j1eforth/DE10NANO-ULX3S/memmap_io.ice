@@ -57,6 +57,9 @@ algorithm memmap_io (
 
     // CLOCKS
     input   uint1   clock_50mhz,
+$$if ULX3S then
+    input   uint1   clock_25mhz,
+$$end
     input   uint1   video_clock,
     input   uint1   video_reset,
 
@@ -280,7 +283,7 @@ algorithm memmap_io (
     // Sync'd with video_clock
     apu apu_processor_L
 $$if ULX3S then
-<@clock,!reset>
+<@clock_25mhz,!reset>
 $$end
 $$if DE10NANO then
 <@video_clock,!video_reset>
@@ -291,7 +294,7 @@ $$end
     );
     apu apu_processor_R
 $$if ULX3S then
-<@clock,!reset>
+<@clock_25mhz,!reset>
 $$end
 $$if DE10NANO then
 <@video_clock,!video_reset>
@@ -329,16 +332,9 @@ $$end
     uint1   dl_draw_vector = uninitialized;
     // Status flags
     uint3   vector_block_active = uninitialized;
-    uint6   gpu_active = uninitialized;
+    uint1   gpu_active = uninitialized;
 
-    gpu gpu_processor
-$$if ULX3S then
-<@clock,!reset>
-$$end
-$$if DE10NANO then
-<@video_clock,!video_reset>
-$$end
-    (
+    gpu gpu_processor <@video_clock,!video_reset> (
         bitmap_x_write :> bitmap_x_write,
         bitmap_y_write :> bitmap_y_write,
         bitmap_colour_write :> bitmap_colour_write,
@@ -363,14 +359,7 @@ $$end
     );
 
     // Vector drawer
-    vectors vector_drawer
-$$if ULX3S then
-<@clock,!reset>
-$$end
-$$if DE10NANO then
-<@video_clock,!video_reset>
-$$end
-    (
+    vectors vector_drawer <@video_clock,!video_reset> (
         gpu_x :> v_gpu_x,
         gpu_y :> v_gpu_y,
         gpu_colour :> v_gpu_colour,
@@ -388,14 +377,7 @@ $$end
     );
 
     // Display list
-    displaylist displaylist_drawer
-$$if ULX3S then
-<@clock,!reset>
-$$end
-$$if DE10NANO then
-<@video_clock,!video_reset>
-$$end
-    (
+    displaylist displaylist_drawer <@video_clock,!video_reset> (
         gpu_x :> dl_gpu_x,
         gpu_y :> dl_gpu_y,
         gpu_colour :> dl_gpu_colour,

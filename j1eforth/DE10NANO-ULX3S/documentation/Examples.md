@@ -242,8 +242,8 @@ bitmapscrolling
 
 ```
 : closeencounters
-    1 0 1c 3e8 beep! beep?
     1 0 1d 3e8 beep! beep?
+    1 0 1e 3e8 beep! beep?
     1 0 19 3e8 beep! beep?
     1 0 d 3e8 beep! beep?
     1 0 14 3e8 beep! beep?

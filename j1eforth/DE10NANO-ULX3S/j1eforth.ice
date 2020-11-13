@@ -206,6 +206,9 @@ $$end
 
         // CLOCKS
         clock_50mhz <: clock_50mhz,
+$$if ULX3S then
+        clock_25mhz <: clock,
+$$end
         video_clock <:video_clock,
         video_reset <: video_reset,
 
