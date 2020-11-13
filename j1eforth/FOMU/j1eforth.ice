@@ -12,7 +12,7 @@ bitfield literal {
     uint15 literalvalue
 }
 
-// A branch, 0branch or call instruction is 0 followed by 00 = branch, 01 = 0branch, 10 = call followed by 13bit target address 
+// A branch, 0branch or call instruction is 0 followed by 00 = branch, 01 = 0branch, 10 = call followed by 13bit target address
 bitfield callbranch {
     uint1  is_literal,
     uint2  is_callbranchalu,
@@ -26,7 +26,7 @@ bitfield aluop {
     uint4   operation,              // arithmetic / memory read/write operation to perform
     uint1   is_t2n,                 // top to next in stack
     uint1   is_t2r,                 // top to return stack
-    uint1   is_n2memt,              // write to memory       
+    uint1   is_n2memt,              // write to memory
     uint1   is_j1j1plus,            // Original J1 or extra J1+ alu operations
     uint1   rdelta1,                // two's complement adjustment for rsp
     uint1   rdelta0,
@@ -51,7 +51,7 @@ bitfield nibbles {
 algorithm main(
     // RGB LED
     output  uint3   rgbLED,
-    
+
     // USER buttons
    input   uint4   buttons,
 
@@ -68,7 +68,7 @@ algorithm main(
     input    uint8  uart_out_data,
     input    uint1  uart_out_valid,
     output   uint1  uart_out_ready,
-    
+
     // 1hz timer
     input   uint16 timer1hz
 ) {
@@ -82,7 +82,7 @@ algorithm main(
     uint1   rstackWrite := ( is_call | (is_alu & aluop(instruction).is_t2r) );
     uint8   ddelta := { {7{aluop(instruction).ddelta1}}, aluop(instruction).ddelta0 };
     uint8   rdelta := { {7{aluop(instruction).rdelta1}}, aluop(instruction).rdelta0 };
-    
+
     // program counter
     uint13  pc = 0;
     uint13  pcPlusOne := pc + 1;
@@ -109,14 +109,11 @@ algorithm main(
     bram uint16 rom[] = {
         $include('j1eforthROM.inc')
     };
-    
-    // CYCLE to control each stage
-    // CYCLE allows 1 clock cycle for BRAM access and 3 clock cycles for SPRAM access
+
     // INIT to determine if copying rom to ram or executing
     // INIT 0 SPRAM, INIT 1 ROM to SPRAM, INIT 2 J1 CPU
-    uint4 CYCLE = 0;
     uint2 INIT = 0;
-    
+
     // Address for 0 to SPRAM, copying ROM, plus storage
     uint16 copyaddress = 0;
     uint16 bramREAD = 0;
@@ -131,15 +128,15 @@ algorithm main(
     uint9 uartOutBufferNext = 0;
     uint9 uartOutBufferTop = 0;
     uint9 newuartOutBufferTop = 0;
-    
+
     // bram for dstack and rstack write enable, maintained low, pulsed high (code from @sylefeb)
     // Setup addresses for the dstack and rstack
     // Read via port 0, write via port 1
     dstack.addr0 := dsp;
-    dstack.wenable0 := 0;  
+    dstack.wenable0 := 0;
     dstack.addr1 := newDSP;
     dstack.wdata1 := stackTop;
-    dstack.wenable1 := 0;  
+    dstack.wenable1 := 0;
     rstack.addr0 := rsp;
     rstack.wenable0 := 0;
     rstack.addr1 := newRSP;
@@ -151,9 +148,9 @@ algorithm main(
     uartInBuffer.wenable1  := 1;  // always write on port 1
     uartInBuffer.addr0     := uartInBufferNext; // FIFO reads on next
     uartInBuffer.addr1     := uartInBufferTop;  // FIFO writes on top
-    
+
     uartOutBuffer.wenable0 := 0; // always read  on port 0
-    uartOutBuffer.wenable1 := 1; // always write on port 1    
+    uartOutBuffer.wenable1 := 1; // always write on port 1
     uartOutBuffer.addr0    := uartOutBufferNext; // FIFO reads on next
     uartOutBuffer.addr1    := uartOutBufferTop;  // FIFO writes on top
 
@@ -161,67 +158,45 @@ algorithm main(
         // READ from UART if character available and store
         if( uart_out_valid ) {
             // writes at uartInBufferTop (code from @sylefeb)
-            uartInBuffer.wdata1  = uart_out_data;            
+            uartInBuffer.wdata1  = uart_out_data;
             uart_out_ready       = 1;
-            uartInBufferTop      = uartInBufferTop + 1; 
+            uartInBufferTop      = uartInBufferTop + 1;
         }
     }
-    
+
     // INIT is 0 ZERO SPRAM
     while( INIT == 0 ) {
-        switch(CYCLE) {
-            case 0: {
-                // Setup WRITE to SPRAM
-                sram_address = copyaddress;
-                sram_data_write = 0;
-                sram_readwrite = 1;
-            }
-            case 3: {
-                sram_readwrite = 0;
-                copyaddress = copyaddress + 1;
-            }
-            case 15: {
-                if( copyaddress == 32768 ) {
-                    INIT = 1;
-                    copyaddress = 0;
-                }
-            }
+        copyaddress = 0;
+        ++:
+        while( copyaddress < 32768 ) {
+            sram_address = copyaddress;
+            sram_data_write = 0;
+            sram_readwrite = 1;
+            ++:
+            sram_readwrite = 0;
+            copyaddress = copyaddress + 1;
         }
-        CYCLE = CYCLE + 1;
+        INIT = 1;
     }
-    
+
     // INIT is 1 COPY ROM TO SPRAM
     while( INIT == 1) {
-        switch(CYCLE) {
-            case 0: {
-                // Setup READ from ROM
+        copyaddress = 0;
+        ++:
+        while( copyaddress < 4096 ) {
                 rom.addr = copyaddress;
                 rom.wenable = 0;
-            }
-            case 1: {
-                // READ from ROM
+                ++:
                 bramREAD = rom.rdata;
-            }
-            case 2: {
-                // WRITE to SPRAM
+                ++:
                 sram_address = copyaddress;
                 sram_data_write = bramREAD;
                 sram_readwrite = 1;
-            }
-            case 14: {
+                ++:
                 copyaddress = copyaddress + 1;
                 sram_readwrite = 0;
-            }
-            case 15: {
-                if( copyaddress == 4096 ) {
-                    INIT = 3;
-                    copyaddress = 0;
-                }
-            }
-            default: {
-            }
         }
-        CYCLE = CYCLE + 1;
+        INIT = 3;
     }
 
     // INIT is 3 EXECUTE J1 CPU
@@ -229,74 +204,35 @@ algorithm main(
         // WRITE to UART if characters in buffer and UART is ready
         if( ~(uartOutBufferNext == uartOutBufferTop) & ~( uart_in_valid ) ) {
             // reads at uartOutBufferNext (code from @sylefeb)
-            uart_in_data      = uartOutBuffer.rdata0; 
+            uart_in_data      = uartOutBuffer.rdata0;
             uart_in_valid     = 1;
             uartOutBufferNext = uartOutBufferNext + 1;
         }
         uartOutBufferTop = newuartOutBufferTop;
-        
-        switch( CYCLE ) {
-            // Read stackNext, rStackTop
-            case 0: {
+
                // read dtsack and rstack brams (code from @sylefeb)
                 stackNext = dstack.rdata0;
                 rStackTop = rstack.rdata0;
-            
+
                 // start READ memoryInput = [stackTop] result ready in 2 cycles
                 sram_address = stackTop >> 1;
                 sram_readwrite = 0;
-            }
-            case 3: {
+                ++:
+                ++:
                 // wait then read the data from SPRAM
                 memoryInput = sram_data_read;
-            }
-            
-            case 4: {
+                ++:
                 // start READ instruction = [pc] result ready in 2 cycles
                 sram_address = pc;
                 sram_readwrite = 0;
-            }
-
-            case 7: {
+                ++:
+                ++:
+                ++:
                 // wait then read the instruction from SPRAM
                 instruction = sram_data_read;
-            }
+                ++:
 
-            // J1 CPU Instruction Execute
-            case 8: {
-                // +---------------------------------------------------------------+
-                // | F | E | D | C | B | A | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
-                // +---------------------------------------------------------------+
-                // | 1 |                    LITERAL VALUE                          |
-                // +---------------------------------------------------------------+
-                // | 0 | 0 | 0 |            BRANCH TARGET ADDRESS                  |
-                // +---------------------------------------------------------------+
-                // | 0 | 0 | 1 |            CONDITIONAL BRANCH TARGET ADDRESS      |
-                // +---------------------------------------------------------------+
-                // | 0 | 1 | 0 |            CALL TARGET ADDRESS                    |
-                // +---------------------------------------------------------------+
-                // | 0 | 1 | 1 |R2P| ALU OPERATION |T2N|T2R|N2A|J1P| RSTACK| DSTACK|
-                // +---------------------------------------------------------------+
-                // | F | E | D | C | B | A | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
-                // +---------------------------------------------------------------+
-                // 
-                // T   : Top of data stack
-                // N   : Next on data stack
-                // PC  : Program Counter
-                // 
-                // LITERAL VALUES : push a value onto the data stack
-                // CONDITIONAL    : BRANCHS pop and test the T
-                // CALLS          : PC+1 onto the return stack
-                // 
-                // T2N : Move T to N
-                // T2R : Move T to top of return stack
-                // N2A : STORE T to memory location addressed by N
-                // R2P : Move top of return stack to PC
-                // 
-                // RSTACK and DSTACK are signed values (twos compliment) that are
-                // the stack delta (the amount to increment or decrement the stack
-                // by for their respective stacks: return and data)
-
+                // J1 CPU Instruction Execute
                 if(is_lit) {
                     // LITERAL Push value onto stack
                     newStackTop = immediate;
@@ -351,7 +287,7 @@ algorithm main(
                                                     // INPUT from UART reads at uartInBufferNext (code from @sylefeb)
                                                     newStackTop = { 8b0, uartInBuffer.rdata0 };
                                                     uartInBufferNext = uartInBufferNext + 1;
-                                                } 
+                                                }
                                                 case 16hf001: {
                                                     // UART status register { 14b0, tx full, rx available }
                                                     newStackTop = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), (uartInBufferNext != uartInBufferTop)};
@@ -376,7 +312,7 @@ algorithm main(
                                         case 4b1111: {newStackTop = {16{(__unsigned(stackNext) < __unsigned(stackTop))}};}
                                     }
                                 }
-                                
+
                                 case 1b1: {
                                     switch( aluop(instruction).operation ) {
                                         case 4b0000: {newStackTop = {16{(stackTop == 0)}};}
@@ -398,7 +334,7 @@ algorithm main(
                                     }
                                 }
                             } // ALU Operation
-                            
+
                             // UPDATE newDSP newRSP
                             newDSP = dsp + ddelta;
                             newRSP = rsp + rdelta;
@@ -407,7 +343,7 @@ algorithm main(
                             // Update PC for next instruction, return from call or next instruction
                             newPC = ( aluop(instruction).is_r2pc ) ? rStackTop >> 1 : pcPlusOne;
 
-                            // n2memt mem[t] = n        
+                            // n2memt mem[t] = n
                             if( aluop(instruction).is_n2memt ) {
                                 switch( stackTop ) {
                                     default: {
@@ -429,40 +365,30 @@ algorithm main(
                             }
                         } // ALU
                     }
-                }
-            } // J1 CPU Instruction Execute
+                } // J1 CPU Instruction Execute
 
-            // update pc and perform mem[t] = n
-            case 9: {
+                ++:
                 // Write to dstack and rstack
                  // Commit to dstack and rstack
                 dstack.wenable1 = dstackWrite;
                 rstack.wenable1 = rstackWrite;
-            }
-            
+
+                ++:
             // Update dsp, rsp, pc, stackTop
-            case 10: {
                 dsp = newDSP;
                 pc = newPC;
                 stackTop = newStackTop;
                 rsp = newRSP;
-            }
-            
+
+                ++:
             // reset sram_readwrite
-            case 12: {
                 sram_readwrite = 0;
-            }
-            
-            default: {}
-        } // switch(CYCLE)
-        
+
         // Reset UART
         if(uart_in_ready & uart_in_valid) {
             uart_in_valid = 0;
         }
-    
-        // Move to next CYCLE ( 0 to 12 , then back to 0 )
-        CYCLE = ( CYCLE == 12 ) ? 0 : CYCLE + 1;
+
     } // (INIT==3 execute J1 CPU)
 
 }

@@ -278,11 +278,25 @@ algorithm memmap_io (
 
     // Left and Right audio channels
     // Sync'd with video_clock
-    apu apu_processor_L <@video_clock,!video_reset> (
+    apu apu_processor_L
+$$if ULX3S then
+<@clock,!reset>
+$$end
+$$if DE10NANO then
+<@video_clock,!video_reset>
+$$end
+    (
         staticGenerator <: staticGenerator,
         audio_output :> audio_l
     );
-    apu apu_processor_R <@video_clock,!video_reset> (
+    apu apu_processor_R
+$$if ULX3S then
+<@clock,!reset>
+$$end
+$$if DE10NANO then
+<@video_clock,!video_reset>
+$$end
+    (
         staticGenerator <: staticGenerator,
         audio_output :> audio_r
     );
@@ -317,7 +331,14 @@ algorithm memmap_io (
     uint3   vector_block_active = uninitialized;
     uint6   gpu_active = uninitialized;
 
-    gpu gpu_processor <@video_clock,!video_reset> (
+    gpu gpu_processor
+$$if ULX3S then
+<@clock,!reset>
+$$end
+$$if DE10NANO then
+<@video_clock,!video_reset>
+$$end
+    (
         bitmap_x_write :> bitmap_x_write,
         bitmap_y_write :> bitmap_y_write,
         bitmap_colour_write :> bitmap_colour_write,
@@ -342,7 +363,14 @@ algorithm memmap_io (
     );
 
     // Vector drawer
-    vectors vector_drawer <@video_clock,!video_reset> (
+    vectors vector_drawer
+$$if ULX3S then
+<@clock,!reset>
+$$end
+$$if DE10NANO then
+<@video_clock,!video_reset>
+$$end
+    (
         gpu_x :> v_gpu_x,
         gpu_y :> v_gpu_y,
         gpu_colour :> v_gpu_colour,
@@ -360,7 +388,14 @@ algorithm memmap_io (
     );
 
     // Display list
-    displaylist displaylist_drawer <@video_clock,!video_reset> (
+    displaylist displaylist_drawer
+$$if ULX3S then
+<@clock,!reset>
+$$end
+$$if DE10NANO then
+<@video_clock,!video_reset>
+$$end
+    (
         gpu_x :> dl_gpu_x,
         gpu_y :> dl_gpu_y,
         gpu_colour :> dl_gpu_colour,
