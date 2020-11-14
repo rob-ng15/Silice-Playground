@@ -160,7 +160,7 @@ algorithm displaylist(
     dlentries.wenable1 := 1;
 
     // Dispatch to the GPU
-    gpu_write := 0;
+    gpu_write = 0;
 
     while(1) {
         switch( writer_write ) {
@@ -179,7 +179,7 @@ algorithm displaylist(
                 ++:
                 if( dlentry(dlentries.rdata0).active ) {
                     while( gpu_active != 0 ) {}
-
+                    ++:
                     gpu_write = dlentry(dlentries.rdata0).command;
                     gpu_colour = dlentry(dlentries.rdata0).colour;
                     gpu_x = dlentry(dlentries.rdata0).x;
@@ -188,8 +188,12 @@ algorithm displaylist(
                     gpu_param1 = dlentry(dlentries.rdata0).p1;
                     gpu_param2 = dlentry(dlentries.rdata0).p2;
                     gpu_param3 = dlentry(dlentries.rdata0).p3;
+                    ++:
+                    ++:
+                    gpu_write = 0;
                 }
                 entry_number = entry_number + 1;
+                ++:
             }
             display_list_active = 0;
         }

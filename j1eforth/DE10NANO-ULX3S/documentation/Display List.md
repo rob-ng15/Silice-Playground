@@ -20,7 +20,7 @@ Hexadecimal<br>Address | Write | Read
 ----- | ----- | -----
 ff80 | Set the display list start entry number for drawing
 ff81 | Set the display list finish entry number for drawing
-ff82 | Start the display list drawing from start entry to finish entry |
+ff82 | Start the display list drawing from start entry to finish entry | Display list drawer busy
 ff83 | Set the display entry number for writing/reading
 ff84 | Set the display list entry active status for writing |
 ff85 | Set the display list entry command for writing |

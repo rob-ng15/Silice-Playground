@@ -16,7 +16,7 @@ ff70 | Set the vector block number for drawing
 ff71 | Set the colour for drawing
 ff72 | Set the x centre coordinate for drawing
 ff73 | Set the y centre coordinate for drawing
-ff74 | Start the vector drawing | Display List/Vector block busy
+ff74 | Start the vector drawing | Vector drawer busy
 ff75 | Set the vector block number for writing
 ff76 | Set the vertex in the vector block number for writing
 ff77 | Set the x delta of the vertex for writing
