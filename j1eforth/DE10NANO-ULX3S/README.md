@@ -1,5 +1,7 @@
 # j1eforth
 
+* Written in Silice
+
 ## DE10NANO and ULX3S Enhancements
 
 * Display
@@ -31,10 +33,7 @@
                 * Less than
         * 32 bit by 16 bit division giving 16 bit quotient and 16 bit remainder ( signed and unsigned )
         * 16 bit by 16 bit division giving 16 bit quotient and 16 bit remainder ( signed )
-        * 16 bit by 16 bit multiplication giving 32 bit product ( signed and unsigned )
-            * Two implementations provided
-                * Binary long multiplication ( not used )
-                * via DSP blocks ( used )
+        * 16 bit by 16 bit multiplication giving 32 bit product ( signed and unsigned ) via DSP blocks
 
 Cycle | Action | Notes
 ----- | ----- | -----
@@ -145,6 +144,7 @@ The VGA DE10NANO/HDMI ULX3S output has the following layers in order:
 * Tilemap Layer [Tilemap.md](documentation/Tilemap.md)
 * Lower Sprite Layer [Sprites.md](documentation/Sprites.md)
 * Bitmap with GPU [Bitmap and GPU.md](documentation/Bitmap%20and%20GPU.md)
+    * Display list drawer [Display List.md](documentation/Display%20List.md)
     * Vector block drawer [Vectors.md](documentation/Vectors.md)
 * Upper Sprite Layer [Sprites.md](documentation/Sprites.md)
 * Character Map with TPU [Character Map and TPU.md](documentation/Character%20Map%20and%20TPU.md)
@@ -223,3 +223,5 @@ The sample code provided in [Big Example Part 1.md](documentation/Big%20Example%
 I use a USB3 breakout board in the USER port to easily access the above pins. Changing the uart to uart2 in the DE10NANO makefile will change the UART pins to others unused by the MiSTer I/O board on the DE10NANO Arduino port to UART rx on PIN_AG8, UART tx on PIN_AH8.
 
 ![USB3 Breakout for UART pins](documentation/images/DE10NANO-USERPORT.jpg)
+
+![Silice](documentation/images/Silice.png =256x) Written in Silice

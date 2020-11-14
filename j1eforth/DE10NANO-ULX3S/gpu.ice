@@ -1,3 +1,201 @@
+// Vector Block
+// Stores blocks of upto 16 vertices which can be sent to the GPU for line drawing
+// Each vertices represents a delta from the centre of the vector
+// Deltas are stored as 6 bit 2's complement range -31 to 0 to 31
+// Each vertices has an active flag, processing of a vector block stops when the active flag is 0
+// Each vector block has a centre x and y coordinate and a colour { rrggbb } when drawn
+
+bitfield vectorentry {
+    uint1   active,
+    uint1   dxsign,
+    uint5   dx,
+    uint1   dysign,
+    uint5   dy
+}
+
+algorithm vectors(
+    input   uint5   vector_block_number,
+    input   uint7   vector_block_colour,
+    input   int11   vector_block_xc,
+    input   int11   vector_block_yc,
+    input   uint1   draw_vector,
+
+    // For setting vertices
+    input   uint5   vertices_writer_block,
+    input   uint6   vertices_writer_vertex,
+    input   int6    vertices_writer_xdelta,
+    input   int6    vertices_writer_ydelta,
+    input   uint1   vertices_writer_active,
+    input   uint1   vertices_writer_write,
+
+    output  uint1   vector_block_active,
+
+    // Communication with the GPU
+    output  int11 gpu_x,
+    output  int11 gpu_y,
+    output  uint7 gpu_colour,
+    output  int11 gpu_param0,
+    output  int11 gpu_param1,
+    output  uint4 gpu_write,
+
+    input  uint1 gpu_active
+) <autorun> {
+    // 32 vector blocks each of 16 vertices
+    dualport_bram uint13 vertex[512] = uninitialised;
+
+    // Extract deltax and deltay for the present vertices
+    int11 deltax := { {6{vectorentry(vertex.rdata0).dxsign}}, vectorentry(vertex.rdata0).dx };
+    int11 deltay := { {6{vectorentry(vertex.rdata0).dysign}}, vectorentry(vertex.rdata0).dy };
+
+    // Vertices being processed, plus first coordinate of each line
+    uint5 block_number = uninitialised;
+    uint5 vertices_number = uninitialised;
+    int11 start_x = uninitialised;
+    int11 start_y = uninitialised;
+
+    // Set read and write address for the vertices
+    vertex.addr0 := block_number * 16 + vertices_number;
+    vertex.wenable0 := 0;
+    vertex.wenable1 := 1;
+
+    gpu_write := 0;
+
+    vector_block_active = 0;
+    vertices_number = 0;
+
+    while(1) {
+        if( vertices_writer_write ) {
+            vertex.addr1 = vertices_writer_block * 16 + vertices_writer_vertex;
+            vertex.wdata1 = { vertices_writer_active, vertices_writer_xdelta, vertices_writer_ydelta };
+        }
+
+        if( draw_vector ) {
+            block_number = vector_block_number;
+            gpu_colour = vector_block_colour;
+            vertices_number = 0;
+            vector_block_active = 1;
+            ++:
+            start_x = vector_block_xc + deltax;
+            start_y = vector_block_yc + deltay;
+            vertices_number = 1;
+            ++:
+            while( vectorentry(vertex.rdata0).active && ( vertices_number < 16 ) ) {
+                gpu_x = start_x;
+                gpu_y = start_y;
+                gpu_param0 = vector_block_xc + deltax;
+                gpu_param1 = vector_block_yc + deltay;
+
+                while( gpu_active ) {}
+
+                gpu_write = 3;
+
+                // Move onto the next of the vertices
+                start_x = vector_block_xc + deltax;
+                start_y = vector_block_yc + deltay;
+                vertices_number = vertices_number + 1;
+                ++:
+            }
+            vector_block_active = 0;
+        }
+    }
+}
+
+// Display List
+// Stores GPU or VECTOR commands
+// Each display list entry consists of:
+//      active
+//      command ( 1 - 7 copy details across to the GPU )
+//      x y p0 p1 p2 p3 parameters for the GPU command
+
+bitfield dlentry {
+    uint1   active,
+    uint4   command,
+    uint7   colour,
+    uint11  x,
+    uint11  y,
+    uint11  p0,
+    uint11  p1,
+    uint11  p2,
+    uint11  p3
+}
+
+algorithm displaylist(
+    input   uint5   start_entry,
+    input   uint5   finish_entry,
+    input   uint1   start_displaylist,
+    output  uint1   display_list_active,
+
+    input   uint5   writer_entry_number,
+    input   uint1   writer_active,
+    input   uint4   writer_command,
+    input   uint7   writer_colour,
+    input   uint11  writer_x,
+    input   uint11  writer_y,
+    input   uint11  writer_p0,
+    input   uint11  writer_p1,
+    input   uint11  writer_p2,
+    input   uint11  writer_p3,
+    input   uint4   writer_write,
+
+    // Communication with the GPU
+    output int11   gpu_x,
+    output int11   gpu_y,
+    output uint7   gpu_colour,
+    output int11   gpu_param0,
+    output int11   gpu_param1,
+    output int11   gpu_param2,
+    output int11   gpu_param3,
+    output uint4   gpu_write,
+    input  uint1   gpu_active,
+) {
+    // 32 display list entries
+    dualport_bram uint78 dlentries[32] = uninitialised;
+
+    uint5   entry_number = uninitialised;
+    uint5   finish_number = uninitialised;
+
+    // Set read address for the display list entry being processed
+    dlentries.addr0 := entry_number;
+    dlentries.wenable0 := 0;
+    dlentries.wenable1 := 1;
+
+    // Dispatch to the GPU
+    gpu_write := 0;
+
+    while(1) {
+        switch( writer_write ) {
+            case 1: {
+                dlentries.addr1 = writer_entry_number;
+                dlentries.wdata1 = { writer_active, writer_command, writer_colour, writer_x, writer_y, writer_p0, writer_p1, writer_p2, writer_p3 };
+            }
+        }
+
+        if( start_displaylist ) {
+            entry_number = start_entry;
+            finish_number = finish_entry;
+            display_list_active = 1;
+            ++:
+            while( entry_number <= finish_number ) {
+                ++:
+                if( dlentry(dlentries.rdata0).active ) {
+                    while( gpu_active != 0 ) {}
+
+                    gpu_write = dlentry(dlentries.rdata0).command;
+                    gpu_colour = dlentry(dlentries.rdata0).colour;
+                    gpu_x = dlentry(dlentries.rdata0).x;
+                    gpu_y = dlentry(dlentries.rdata0).y;
+                    gpu_param0 = dlentry(dlentries.rdata0).p0;
+                    gpu_param1 = dlentry(dlentries.rdata0).p1;
+                    gpu_param2 = dlentry(dlentries.rdata0).p2;
+                    gpu_param3 = dlentry(dlentries.rdata0).p3;
+                }
+                entry_number = entry_number + 1;
+            }
+            display_list_active = 0;
+        }
+     }
+}
+
 algorithm gpu(
     // GPU to SET and GET pixels
     output! int11 bitmap_x_write,
@@ -15,26 +213,49 @@ algorithm gpu(
     input   int16 gpu_param3,
     input   uint4 gpu_write,
 
-    // From VECTOR DRAWER
-    input   int11 v_gpu_x,
-    input   int11 v_gpu_y,
-    input   uint7 v_gpu_colour,
-    input   int11 v_gpu_param0,
-    input   int11 v_gpu_param1,
-    input   int11 v_gpu_param2,
-    input   int11 v_gpu_param3,
-    input   uint4 v_gpu_write,
-
     // For setting blit1 tile bitmaps
-    input   uint4   blit1_writer_tile,
+    input   uint5   blit1_writer_tile,
     input   uint4   blit1_writer_line,
     input   uint16  blit1_writer_bitmap,
     input   uint1   blit1_writer_active,
 
-    output  uint1 gpu_active
+    // VECTOR BLOCK
+    input   uint5   vector_block_number,
+    input   uint7   vector_block_colour,
+    input   int11   vector_block_xc,
+    input   int11   vector_block_yc,
+    input   uint1   draw_vector,
+    // For setting vertices
+    input   uint5   vertices_writer_block,
+    input   uint6   vertices_writer_vertex,
+    input   int6    vertices_writer_xdelta,
+    input   int6    vertices_writer_ydelta,
+    input   uint1   vertices_writer_active,
+    input   uint1   vertices_writer_write,
+
+    // DISPLAY LISTS
+    input   uint5   dl_start_entry,
+    input   uint5   dl_finish_entry,
+    input   uint1   dl_start,
+    // For setting entries
+    input   uint5   dl_writer_entry_number,
+    input   uint1   dl_writer_active,
+    input   uint4   dl_writer_command,
+    input   uint7   dl_writer_colour,
+    input   uint11  dl_writer_x,
+    input   uint11  dl_writer_y,
+    input   uint11  dl_writer_p0,
+    input   uint11  dl_writer_p1,
+    input   uint11  dl_writer_p2,
+    input   uint11  dl_writer_p3,
+    input   uint4   dl_writer_write,
+
+    output  uint1   gpu_active,
+    output  uint1   vector_block_active,
+    output  uint1   display_list_active
 ) <autorun> {
-    // 16 x 16 x 16 1 bit tilemap for blit1tilemap
-    dualport_bram uint16 blit1tilemap[ 256 ] = uninitialized;
+    // 32 x 16 x 16 1 bit tilemap for blit1tilemap
+    dualport_bram uint16 blit1tilemap[ 512 ] = uninitialized;
 
     // GPU work variable storage
     // Present GPU pixel and colour
@@ -49,8 +270,6 @@ algorithm gpu(
     int11 gpu_y1 = uninitialized;
     int11 gpu_x2 = uninitialized;
     int11 gpu_y2 = uninitialized;
-    int11 gpu_w = uninitialized;
-    int11 gpu_h = uninitialized;
     int11 gpu_dx = uninitialized;
     int11 gpu_sx = uninitialized;
     int11 gpu_dy = uninitialized;
@@ -80,6 +299,78 @@ algorithm gpu(
     int16   param3 = uninitialized;
     uint4   write = uninitialized;
 
+    // GPU <-> VECTOR DRAWER Communication
+    int11 v_gpu_x = uninitialised;
+    int11 v_gpu_y = uninitialised;
+    uint7 v_gpu_colour = uninitialised;
+    int11 v_gpu_param0 = uninitialised;
+    int11 v_gpu_param1 = uninitialised;
+    uint4 v_gpu_write = uninitialised;
+
+    vectors vector_drawer (
+        vector_block_number <: vector_block_number,
+        vector_block_colour <: vector_block_colour,
+        vector_block_xc <: vector_block_xc,
+        vector_block_yc <: vector_block_yc,
+        draw_vector <: draw_vector,
+        vertices_writer_block <: vertices_writer_block,
+        vertices_writer_vertex <: vertices_writer_vertex,
+        vertices_writer_xdelta <: vertices_writer_xdelta,
+        vertices_writer_ydelta <: vertices_writer_ydelta,
+        vertices_writer_active <: vertices_writer_active,
+        vertices_writer_write <: vertices_writer_write,
+
+        vector_block_active :> vector_block_active,
+
+        gpu_x :> v_gpu_x,
+        gpu_y :> v_gpu_y,
+        gpu_colour :> v_gpu_colour,
+        gpu_param0 :> v_gpu_param0,
+        gpu_param1 :> v_gpu_param1,
+        gpu_write :> v_gpu_write,
+        gpu_active <: gpu_active
+    );
+
+    // GPU <-> DISPLAY LIST COMMUNICATION
+    int11 dl_gpu_x = uninitialised;
+    int11 dl_gpu_y = uninitialised;
+    uint7 dl_gpu_colour = uninitialised;
+    int11 dl_gpu_param0 = uninitialised;
+    int11 dl_gpu_param1 = uninitialised;
+    int11 dl_gpu_param2 = uninitialised;
+    int11 dl_gpu_param3 = uninitialised;
+    uint4 dl_gpu_write = uninitialised;
+
+    displaylist displaylist_drawer (
+        start_entry <: dl_start_entry,
+        finish_entry <: dl_finish_entry,
+        start_displaylist <: dl_start,
+
+        writer_entry_number <: dl_writer_entry_number,
+        writer_active <: dl_writer_active,
+        writer_command <: dl_writer_command,
+        writer_colour <: dl_writer_colour,
+        writer_x <: dl_writer_x,
+        writer_y <: dl_writer_y,
+        writer_p0 <: dl_writer_p0,
+        writer_p1 <: dl_writer_p1,
+        writer_p2 <: dl_writer_p2,
+        writer_p3 <: dl_writer_p3,
+        writer_write <: dl_writer_write,
+
+        display_list_active :> display_list_active,
+
+        gpu_x :> dl_gpu_x,
+        gpu_y :> dl_gpu_y,
+        gpu_colour :> dl_gpu_colour,
+        gpu_param0 :> dl_gpu_param0,
+        gpu_param1 :> dl_gpu_param1,
+        gpu_param2 :> dl_gpu_param2,
+        gpu_param3 :> dl_gpu_param3,
+        gpu_write :> dl_gpu_write,
+        gpu_active <: gpu_active
+    );
+
     // blit1tilemap read access for the blit1tilemap
     blit1tilemap.addr0 := gpu_tile * 16 + gpu_active_y;
     blit1tilemap.wenable0 := 0;
@@ -90,6 +381,7 @@ algorithm gpu(
     bitmap_write := 0;
     bitmap_colour_write := gpu_active_colour;
 
+
     always {
         if( blit1_writer_active ) {
             blit1tilemap.addr1 = blit1_writer_tile * 16 + blit1_writer_line;
@@ -98,28 +390,37 @@ algorithm gpu(
     }
 
     while(1) {
-        if( ( v_gpu_write != 0 ) || ( gpu_write != 0 ) ) {
-            if( v_gpu_write != 0 ) {
-                x = v_gpu_x;
-                y = v_gpu_y;
-                gpu_active_colour = v_gpu_colour;
-                param0 = v_gpu_param0;
-                param1 = v_gpu_param1;
-                param2 = v_gpu_param2;
-                param3 = v_gpu_param3;
-                write = v_gpu_write;
+        if( ( dl_gpu_write != 0 ) || ( v_gpu_write != 0 ) || ( gpu_write != 0 ) ) {
+            if( dl_gpu_write != 0 ) {
+                x = dl_gpu_x;
+                y = dl_gpu_y;
+                gpu_active_colour = dl_gpu_colour;
+                param0 = dl_gpu_param0;
+                param1 = dl_gpu_param1;
+                param2 = dl_gpu_param2;
+                param3 = dl_gpu_param3;
+                write = dl_gpu_write;
             } else {
-                if( gpu_write != 0 ) {
-                    x = gpu_x;
-                    y = gpu_y;
-                    gpu_active_colour = gpu_colour;
-                    param0 = gpu_param0;
-                    param1 = gpu_param1;
-                    param2 = gpu_param2;
-                    param3 = gpu_param3;
-                    write = gpu_write;
+                if( v_gpu_write != 0 ) {
+                    x = v_gpu_x;
+                    y = v_gpu_y;
+                    gpu_active_colour = v_gpu_colour;
+                    param0 = v_gpu_param0;
+                    param1 = v_gpu_param1;
+                    write = v_gpu_write;
                 } else {
-                    write = 0;
+                    if( gpu_write != 0 ) {
+                        x = gpu_x;
+                        y = gpu_y;
+                        gpu_active_colour = gpu_colour;
+                        param0 = gpu_param0;
+                        param1 = gpu_param1;
+                        param2 = gpu_param2;
+                        param3 = gpu_param3;
+                        write = gpu_write;
+                    } else {
+                        write = 0;
+                    }
                 }
             }
 
@@ -141,18 +442,18 @@ algorithm gpu(
                     gpu_active_x = ( x < param0 ) ? ( x < 0 ? 0 : x ) : ( param0 < 0 ? 0 : param0 );                // left
                     gpu_active_y = ( y < param1 ) ? ( y < 0 ? 0 : y ) : ( param1 < 0 ? 0 : param1 );                // top
                     gpu_x1 = ( x < param0 ) ? ( x < 0 ? 0 : x )  : ( param0 < 0 ? 0 : param0 );                     // left - for next line
-                    gpu_w = ( x < param0 ) ? ( param0 > 639 ? 639 : param0 ) : ( x > 639 ? 639 : x );              // right - at end of line
-                    gpu_h = ( y < param1 ) ? ( param1 > 479 ? 479 : param1 ) : ( y > 479 ? 479 : y );              // bottom - at end of rectangle
+                    gpu_max_x = ( x < param0 ) ? ( param0 > 639 ? 639 : param0 ) : ( x > 639 ? 639 : x );              // right - at end of line
+                    gpu_max_y = ( y < param1 ) ? ( param1 > 479 ? 479 : param1 ) : ( y > 479 ? 479 : y );              // bottom - at end of rectangle
                     gpu_active = 1;
 
                     ++:
 
-                    while( ( gpu_active_x <= gpu_w ) && ( gpu_active_y <= gpu_h ) ) {
+                    while( ( gpu_active_x <= gpu_max_x ) && ( gpu_active_y <= gpu_max_y ) ) {
                         bitmap_x_write = gpu_active_x;
                         bitmap_y_write = gpu_active_y;
                         bitmap_write = 1;
-                        gpu_active_x = ( gpu_active_x == gpu_w ) ? gpu_x1 : gpu_active_x + 1;
-                        gpu_active_y = ( gpu_active_x == gpu_w ) ? gpu_active_y + 1 : gpu_active_y;
+                        gpu_active_x = ( gpu_active_x == gpu_max_x ) ? gpu_x1 : gpu_active_x + 1;
+                        gpu_active_y = ( gpu_active_x == gpu_max_x ) ? gpu_active_y + 1 : gpu_active_y;
                     }
 
                     gpu_active = 0;
@@ -275,16 +576,16 @@ algorithm gpu(
                     gpu_active_y = 0;
                     gpu_x1 = x;
                     gpu_y1 = y;
-                    gpu_w = 15;
-                    gpu_h = 15;
+                    gpu_max_x = 15;
+                    gpu_max_y = 15;
                     gpu_tile = param0;
 
                     gpu_active = 1;
 
                     ++:
 
-                    while( gpu_active_y < gpu_h ) {
-                        while( gpu_active_x < gpu_w ) {
+                    while( gpu_active_y < gpu_max_y ) {
+                        while( gpu_active_x < gpu_max_x ) {
                             if( blit1tilemap.rdata0[15 -gpu_active_x,1] ) {
                                 bitmap_x_write = gpu_x1 + gpu_active_x;
                                 bitmap_y_write = gpu_y1 + gpu_active_y;

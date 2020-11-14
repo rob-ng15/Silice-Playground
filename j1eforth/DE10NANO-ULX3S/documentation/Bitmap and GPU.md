@@ -17,7 +17,7 @@
                     * Optimisation moves to the next line once no longer inside the triangle
                     * Optimisation moves from left to right or right to left depending upon which side the last point in the previous line was closest to
                 * Quicker than software equivalent
-        * Blitter for 16 x 16 x 16 1 bit user settable tiles
+        * Blitter for 32 x 16 x 16 1 bit user settable tiles
     * Hardware scrolling
         * The viewport ( 0, 0 ) can be moved pixel by pixel within the bitmap
         * Pixels wrap from left/right top/bottom

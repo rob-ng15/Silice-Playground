@@ -304,45 +304,11 @@ $$end
         audio_output :> audio_r
     );
 
-    // GPU, VECTOR DRAWER
-    // The GPU sends rendered pixels to the BITMAP LAYER
-    // The VECTOR DRAWER sends lines to be rendered
-    int11   v_gpu_x = uninitialized;
-    int11   v_gpu_y = uninitialized;
-    uint7   v_gpu_colour = uninitialized;
-    int11   v_gpu_param0 = uninitialized;
-    int11   v_gpu_param1 = uninitialized;
-    uint4   v_gpu_write = uninitialized;
-
-    // Status flags
-    uint3   vector_block_active = uninitialized;
-    uint1   gpu_active = uninitialized;
-
     gpu gpu_processor <@video_clock,!video_reset> (
         bitmap_x_write :> bitmap_x_write,
         bitmap_y_write :> bitmap_y_write,
         bitmap_colour_write :> bitmap_colour_write,
         bitmap_write :> bitmap_write,
-        gpu_active :> gpu_active,
-
-        v_gpu_x <: v_gpu_x,
-        v_gpu_y <: v_gpu_y,
-        v_gpu_colour <: v_gpu_colour,
-        v_gpu_param0 <: v_gpu_param0,
-        v_gpu_param1 <: v_gpu_param1,
-        v_gpu_write <: v_gpu_write,
-    );
-
-    // Vector drawer
-    vectors vector_drawer <@video_clock,!video_reset> (
-        gpu_x :> v_gpu_x,
-        gpu_y :> v_gpu_y,
-        gpu_colour :> v_gpu_colour,
-        gpu_param0 :> v_gpu_param0,
-        gpu_param1 :> v_gpu_param1,
-        gpu_write :> v_gpu_write,
-        vector_block_active :> vector_block_active,
-        gpu_active <: gpu_active,
     );
 
     // Mathematics Co-Processors
@@ -518,9 +484,17 @@ $$end
                                 case 4h7: {
                                     switch( memoryAddress[0,4] ) {
                                         // ff70 -
-                                        case 4h4: { readData = vector_drawer.vector_block_active; }
+                                        case 4h4: { readData = gpu_processor.vector_block_active; }
                                     }
                                 }
+
+                                case 4h8: {
+                                    switch( memoryAddress[0,4] ) {
+                                        // ff80 -
+                                        case 4h2: { readData = gpu_processor.display_list_active; }
+                                    }
+                                }
+
                                 case 4h9: {
                                     switch( memoryAddress[0,4] ) {
                                         // ff90 -
@@ -676,17 +650,33 @@ $$end
                                 case 8h4e: { upper_sprites.sprite_update = writeData; upper_sprites.sprite_layer_write = 10; }
 
                                 // ff70 -
-                                case 8h70: { vector_drawer.vector_block_number = writeData; }
-                                case 8h71: { vector_drawer.vector_block_colour = writeData; }
-                                case 8h72: { vector_drawer.vector_block_xc = writeData; }
-                                case 8h73: { vector_drawer.vector_block_yc = writeData; }
-                                case 8h74: { vector_drawer.draw_vector = 1; }
-                                case 8h75: { vector_drawer.vertices_writer_block = writeData; }
-                                case 8h76: { vector_drawer.vertices_writer_vertex = writeData; }
-                                case 8h77: { vector_drawer.vertices_writer_xdelta = writeData; }
-                                case 8h78: { vector_drawer.vertices_writer_ydelta = writeData; }
-                                case 8h79: { vector_drawer.vertices_writer_active = writeData; }
-                                case 8h7a: { vector_drawer.vertices_writer_write = 1; }
+                                case 8h70: { gpu_processor.vector_block_number = writeData; }
+                                case 8h71: { gpu_processor.vector_block_colour = writeData; }
+                                case 8h72: { gpu_processor.vector_block_xc = writeData; }
+                                case 8h73: { gpu_processor.vector_block_yc = writeData; }
+                                case 8h74: { gpu_processor.draw_vector = 1; }
+                                case 8h75: { gpu_processor.vertices_writer_block = writeData; }
+                                case 8h76: { gpu_processor.vertices_writer_vertex = writeData; }
+                                case 8h77: { gpu_processor.vertices_writer_xdelta = writeData; }
+                                case 8h78: { gpu_processor.vertices_writer_ydelta = writeData; }
+                                case 8h79: { gpu_processor.vertices_writer_active = writeData; }
+                                case 8h7a: { gpu_processor.vertices_writer_write = 1; }
+
+                                // ff80 -
+                                case 8h80: { gpu_processor.dl_start_entry = writeData; }
+                                case 8h81: { gpu_processor.dl_finish_entry = writeData; }
+                                case 8h82: { gpu_processor.dl_start = 1; }
+                                case 8h83: { gpu_processor.dl_writer_entry_number = writeData; }
+                                case 8h84: { gpu_processor.dl_writer_active = writeData; }
+                                case 8h85: { gpu_processor.dl_writer_command = writeData; }
+                                case 8h86: { gpu_processor.dl_writer_colour = writeData; }
+                                case 8h87: { gpu_processor.dl_writer_x = writeData; }
+                                case 8h88: { gpu_processor.dl_writer_y = writeData; }
+                                case 8h89: { gpu_processor.dl_writer_p0 = writeData; }
+                                case 8h8a: { gpu_processor.dl_writer_p1 = writeData; }
+                                case 8h8b: { gpu_processor.dl_writer_p2 = writeData; }
+                                case 8h8c: { gpu_processor.dl_writer_p3 = writeData; }
+                                case 8h8d: { gpu_processor.dl_writer_write = 1; }
 
                                 // ff90 -
                                 case 8h90: { tile_map.tm_x = writeData; }
@@ -757,13 +747,15 @@ $$end
             lower_sprites.sprite_writer_active = 0;
             bitmap_window.bitmap_write_offset = 0;
             gpu_processor.gpu_write = 0;
+            gpu_processor.draw_vector = 0;
+            gpu_processor.dl_start = 0;
             gpu_processor.blit1_writer_active = 0;
+            gpu_processor.vertices_writer_write = 0;
+            gpu_processor.dl_writer_write = 0;
             upper_sprites.sprite_layer_write = 0;
             upper_sprites.sprite_writer_active = 0;
             character_map_window.tpu_write = 0;
             terminal_window.terminal_write = 0;
-            vector_drawer.draw_vector = 0;
-            vector_drawer.vertices_writer_write = 0;
             apu_processor_L.apu_write = 0;
             apu_processor_R.apu_write = 0;
         }

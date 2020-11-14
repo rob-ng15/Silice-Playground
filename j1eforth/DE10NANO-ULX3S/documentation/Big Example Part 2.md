@@ -145,33 +145,6 @@
   endcase ;
 
 
-: crash?
-  ff5b @ 7ff and
-  ff6b @ 7ff and + 0<> if
-    setshipcrashsprite
-    2 4 1 3e8 beep!
-
-    e000 b uslupdate!
-
-    10 0 do
-      f840 b lslupdate!
-      20 sleep
-      vblank?
-    loop
-
-    0 0 0 0 0 0 b lslsprite!
-    0 0 0 0 0 0 b uslsprite!
-
-    0 shipdirection !
-    138 shipx !
-    e8 shipy !
-    setshipsprite
-
-    -1 lives +!
-    newlevel
-    drawlives
-    then ;
-
 : hit?
   0 1d tpuxy!
   ff5c @ ff6c @ 2 base !
@@ -300,6 +273,44 @@
   26 1 tpuxy!
   score @ 4 tpu.r# ;
 
+: crash?
+  ff5b @ 7ff and
+  ff6b @ 7ff and + 0<> if
+    setshipcrashsprite
+    2 4 1 3e8 beep!
+
+    e000 b uslupdate!
+
+    10 0 do
+      f840 b lslupdate!
+      20 sleep
+      vblank?
+    loop
+
+    0 0 0 0 0 0 b lslsprite!
+    0 0 0 0 0 0 b uslsprite!
+
+    0 shipdirection !
+    138 shipx !
+    e8 shipy !
+    setshipsprite
+
+    -1 lives +!
+    drawlives
+
+    10 0 do
+    begin
+      15 shipx @ shipy @ shipdirection @ 1 0 b lslsprite!
+      15 shipx @ shipy @ shipdirection @ 1 0 b uslsprite!
+      moveasteroids 14 sleep
+      ff5b @ 7ff and
+      ff6b @ 7ff and + 0=
+    until
+    loop
+
+    then ;
+
+
 : mainloop
     counter @
     case
@@ -342,15 +353,18 @@
 : demoDE10NANO
   setup
   setasteroidsprites
+  drawlives
   newlevel
   begin
      mainloop
      buttons@ 2 and 0= if
       fire? then
-    buttons@ 4 and 0= if
+    buttons@ 5 and 0= if
+      moveship then
+    buttons@ 5 and 1 = if
       counter @ 0= if
       shipleft then then
-   buttons@ 1 and 0= if
+   buttons@ 5 and 4 = if
       counter @ 0= if
       shipright then then
    lives @ 0=
