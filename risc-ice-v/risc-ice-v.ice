@@ -135,6 +135,8 @@ algorithm main(
 
     uint32  pc = 0;
     uint32  newPC = uninitialized;
+    uint1   pcIncrement = uninitialized;
+
     uint32  instruction = uninitialized;
 
     int32   registers[32] = { 0, pad(0) };
@@ -186,6 +188,7 @@ algorithm main(
     while(1) {
         // RISC-V
         writeResult = 0;
+        pcIncrement = 0;
 
         // FETCH - 32 bit instruction
         ram.addr = pc[2,14];
@@ -199,7 +202,7 @@ algorithm main(
                 result = { Utype(instruction).immediate_bits_31_12, 12b0 } + pc;
 
                 writeResult = 1;
-                newPC = pc + 4;
+                pcIncrement = 1;
             }
 
             case 7b0110111: {
@@ -207,7 +210,7 @@ algorithm main(
                 result = { Utype(instruction).immediate_bits_31_12, 12b0 };
 
                 writeResult = 1;
-                newPC = pc + 4;
+                pcIncrement = 1;
             }
 
             case 7b1101111: {
@@ -284,7 +287,7 @@ algorithm main(
                 }
 
                 writeResult = 1;
-                newPC = pc + 4;
+                pcIncrement = 1;
             }
 
             case 7b0100011: {
@@ -323,7 +326,7 @@ algorithm main(
                     }
                 }
 
-                newPC = pc + 4;
+                pcIncrement = 1;
             }
 
             case 7b0010011: {
@@ -349,7 +352,7 @@ algorithm main(
                     }
 
                 writeResult = 1;
-                newPC = pc + 4;
+                pcIncrement = 1;
             }
 
             case 7b0110011: {
@@ -376,11 +379,11 @@ algorithm main(
                     }
 
                 writeResult = 1;
-                newPC = pc + 4;
+                pcIncrement = 1;
             }
 
             default: {
-                newPC = pc + 4;
+                pcIncrement = 1;
             }
         }
 
@@ -390,6 +393,6 @@ algorithm main(
             registers[ destReg ] = result;
         }
 
-        pc = newPC;
+        pc = pcIncrement ? pc + 4 : newPC;
     } // RISC-V
 }

@@ -19,5 +19,5 @@ $ARCH-elf-ld -m elf32lriscv -b elf32-littleriscv -Tconfig_c.ld --no-relax -o bui
 $ARCH-elf-objcopy -O verilog build/code.elf build/code.hex
 
 # uncomment to see the actual code, usefull for debugging
- $ARCH-elf-objcopy -O binary build/code.elf build/code.bin
- $ARCH-elf-objdump -D -b binary -m riscv build/code.bin
+$ARCH-elf-objcopy -O binary build/code.elf build/code.bin
+$ARCH-elf-objdump -D -b binary -m riscv build/code.bin
