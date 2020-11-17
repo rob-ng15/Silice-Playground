@@ -56,7 +56,6 @@ algorithm memmap_io (
     input   uint10  pix_y,
 
     // CLOCKS
-    input   uint1   clock_50mhz,
     input   uint1   video_clock,
     input   uint1   video_reset,
 
@@ -66,34 +65,33 @@ algorithm memmap_io (
     input   uint1   memoryWrite,
     input   uint1   memoryRead,
     output! uint16  readData,
-    input   uint1   resetCoPro
 ) <autorun> {
     // 1hz timers (p1hz used for systemClock, timer1hz for user purposes)
     uint16 systemClock = uninitialized;
-    pulse1hz p1hz <@clock_50mhz,!reset> (
+    pulse1hz p1hz (
         counter1hz :> systemClock,
     );
-    pulse1hz timer1hz <@clock_50mhz,!reset> ( );
+    pulse1hz timer1hz ( );
 
     // 1khz timers (sleepTimer used for sleep command, timer1khz for user purposes)
-    pulse1khz sleepTimer <@clock_50mhz,!reset> ( );
-    pulse1khz timer1khz <@clock_50mhz,!reset> ( );
+    pulse1khz sleepTimer ( );
+    pulse1khz timer1khz ( );
 
     // RNG random number generator
     uint16 staticGenerator = 0;
-    random rng <@clock_50mhz,!reset> (
+    random rng (
         g_noise_out :> staticGenerator
     );
 
     // UART tx and rx
     // UART written in Silice by https://github.com/sylefeb/Silice
     uart_out uo;
-    uart_sender usend <@clock_50mhz,!reset> (
+    uart_sender usend (
         io      <:> uo,
         uart_tx :>  uart_tx
     );
     uart_in ui;
-    uart_receiver urecv <@clock_50mhz,!reset> (
+    uart_receiver urecv (
         io      <:> ui,
         uart_rx <:  uart_rx
     );
@@ -278,104 +276,20 @@ algorithm memmap_io (
 
     // Left and Right audio channels
     // Sync'd with video_clock
-    apu apu_processor_L <@video_clock,!video_reset> (
+    apu apu_processor_L (
         staticGenerator <: staticGenerator,
         audio_output :> audio_l
     );
-    apu apu_processor_R <@video_clock,!video_reset> (
+    apu apu_processor_R (
         staticGenerator <: staticGenerator,
         audio_output :> audio_r
     );
-
-    // GPU, VECTOR DRAWER and DISPLAY LIST DRAWER
-    // The GPU sends rendered pixels to the BITMAP LAYER
-    // The VECTOR DRAWER sends lines to be rendered
-    // The DISPLAY LIST DRAWER can send pixels, rectangles, lines, circles, blit1s to the GPU
-    // and vector blocks to draw to the VECTOR DRAWER
-    // VECTOR DRAWER to GPU
-    int11   v_gpu_x = uninitialized;
-    int11   v_gpu_y = uninitialized;
-    uint7   v_gpu_colour = uninitialized;
-    int11   v_gpu_param0 = uninitialized;
-    int11   v_gpu_param1 = uninitialized;
-    uint4   v_gpu_write = uninitialized;
-    // Display list to GPU or VECTOR DRAWER
-    int11   dl_gpu_x = uninitialized;
-    int11   dl_gpu_y = uninitialized;
-    uint7   dl_gpu_colour = uninitialized;
-    int11   dl_gpu_param0 = uninitialized;
-    int11   dl_gpu_param1 = uninitialized;
-    int11   dl_gpu_param2 = uninitialized;
-    int11   dl_gpu_param3 = uninitialized;
-    uint4   dl_gpu_write = uninitialized;
-    uint5   dl_vector_block_number = uninitialized;
-    uint7   dl_vector_block_colour = uninitialized;
-    int11   dl_vector_block_xc = uninitialized;
-    int11   dl_vector_block_yc =uninitialized;
-    uint1   dl_draw_vector = uninitialized;
-    // Status flags
-    uint3   vector_block_active = uninitialized;
-    uint6   gpu_active = uninitialized;
 
     gpu gpu_processor <@video_clock,!video_reset> (
         bitmap_x_write :> bitmap_x_write,
         bitmap_y_write :> bitmap_y_write,
         bitmap_colour_write :> bitmap_colour_write,
         bitmap_write :> bitmap_write,
-        gpu_active :> gpu_active,
-
-        v_gpu_x <: v_gpu_x,
-        v_gpu_y <: v_gpu_y,
-        v_gpu_colour <: v_gpu_colour,
-        v_gpu_param0 <: v_gpu_param0,
-        v_gpu_param1 <: v_gpu_param1,
-        v_gpu_write <: v_gpu_write,
-
-        dl_gpu_x <: dl_gpu_x,
-        dl_gpu_y <: dl_gpu_y,
-        dl_gpu_colour <: dl_gpu_colour,
-        dl_gpu_param0 <: dl_gpu_param0,
-        dl_gpu_param1 <: dl_gpu_param2,
-        dl_gpu_param2 <: dl_gpu_param3,
-        dl_gpu_param3 <: dl_gpu_param1,
-        dl_gpu_write <: dl_gpu_write
-    );
-
-    // Vector drawer
-    vectors vector_drawer <@video_clock,!video_reset> (
-        gpu_x :> v_gpu_x,
-        gpu_y :> v_gpu_y,
-        gpu_colour :> v_gpu_colour,
-        gpu_param0 :> v_gpu_param0,
-        gpu_param1 :> v_gpu_param1,
-        gpu_write :> v_gpu_write,
-        vector_block_active :> vector_block_active,
-        gpu_active <: gpu_active,
-
-        dl_vector_block_number <: dl_vector_block_number,
-        dl_vector_block_colour <: dl_vector_block_colour,
-        dl_vector_block_xc <: dl_vector_block_xc,
-        dl_vector_block_yc <: dl_vector_block_yc,
-        dl_draw_vector <: dl_draw_vector,
-    );
-
-    // Display list
-    displaylist displaylist_drawer <@video_clock,!video_reset> (
-        gpu_x :> dl_gpu_x,
-        gpu_y :> dl_gpu_y,
-        gpu_colour :> dl_gpu_colour,
-        gpu_param0 :> dl_gpu_param0,
-        gpu_param1 :> dl_gpu_param1,
-        gpu_param2 :> dl_gpu_param2,
-        gpu_param3 :> dl_gpu_param3,
-        gpu_write :> dl_gpu_write,
-        vector_block_number :> dl_vector_block_number,
-        vector_block_colour :> dl_vector_block_colour,
-        vector_block_xc :> dl_vector_block_xc,
-        vector_block_yc :> dl_vector_block_yc,
-        draw_vector :> dl_draw_vector,
-        vector_block_active <: vector_block_active,
-        gpu_active <: gpu_active
     );
 
     // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
@@ -417,6 +331,27 @@ algorithm memmap_io (
     timer1khz.resetCounter := 0;
     rng.resetRandom := 0;
 
+    // RESET Co-Processor Controls
+    background_generator.background_write := 0;
+    tile_map.tile_writer_write := 0;
+    tile_map.tm_write := 0;
+    tile_map.tm_scrollwrap := 0;
+    lower_sprites.sprite_layer_write := 0;
+    lower_sprites.sprite_writer_active := 0;
+    bitmap_window.bitmap_write_offset := 0;
+    gpu_processor.gpu_write := 0;
+    gpu_processor.draw_vector := 0;
+    gpu_processor.dl_start := 0;
+    gpu_processor.blit1_writer_active := 0;
+    gpu_processor.vertices_writer_write := 0;
+    gpu_processor.dl_writer_write := 0;
+    upper_sprites.sprite_layer_write := 0;
+    upper_sprites.sprite_writer_active := 0;
+    character_map_window.tpu_write := 0;
+    terminal_window.terminal_write := 0;
+    apu_processor_L.apu_write := 0;
+    apu_processor_R.apu_write := 0;
+
     // UART input and output buffering
     always {
         // READ from UART if character available and store
@@ -445,47 +380,61 @@ algorithm memmap_io (
         // READ IO Memory
         if( memoryRead ) {
             switch( memoryAddress ) {
-                case 16h1000: { readData = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1; }
-                case 16h1002: { readData = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ( uartInBufferNext != uartInBufferTop )}; }
-                default:    { readData = 0; }
+                // UART, LEDS, BUTTONS and CLOCK
+                case 16h8000: { readData = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1; }
+                case 16h8004: { readData = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ( uartInBufferNext != uartInBufferTop )}; }
+                case 16h8008: { readData = { $16-NUM_BTNS$b0, reg_btns[0,$NUM_BTNS$] }; }
+                case 16h800c: { readData = leds; }
+                case 16h8010: { readData = systemClock; }
+
+                // BACKGROUND
+
+                // TILE MAP
+
+                // LOWER SPRITE LAYER
+
+                // GPU and BITMAP
+
+                // UPPER SPRITE LAYER
+
+                // CHARACTER MAP
+
+                // TERMINAL
+                case 16h8100: { readData = terminal_window.terminal_active; }
+
+                // TIMERS and RNG
+
+                // VBLANK
+
             }
-        } // memoryRead
+        }
 
         // WRITE IO Memory
         if( memoryWrite ) {
-            coProReset = 3;
             switch( memoryAddress ) {
-                case 16h1000: { uartOutBuffer.wdata1 = writeData[0,8]; newuartOutBufferTop = uartOutBufferTop + 1; }
-                case 16h1004: { terminal_window.terminal_character = writeData; terminal_window.terminal_write = 1; }
-                case 16h1008: { leds = writeData; }
-                default: {  }
-            }
-        } else { // WRITE IO Memory
-            coProReset = ( coProReset == 0 ) ? 0 : coProReset - 1;
-        }
+                // UART, LEDS
+                case 16h8000: { uartOutBuffer.wdata1 = writeData[0,8]; newuartOutBufferTop = uartOutBufferTop + 1; }
+                case 16h800c: { leds = writeData; }
 
-        // RESET Co-Processor Controls
-        // Main processor and memory map runs at 50MHz, display co-processors at 25MHz
-        // Delay to reset co-processors therefore required
-        if( coProReset == 1 ) {
-            background_generator.background_write = 0;
-            tile_map.tile_writer_write = 0;
-            tile_map.tm_write = 0;
-            tile_map.tm_scrollwrap = 0;
-            lower_sprites.sprite_layer_write = 0;
-            lower_sprites.sprite_writer_active = 0;
-            gpu_processor.gpu_write = 0;
-            gpu_processor.blit1_writer_active = 0;
-            upper_sprites.sprite_layer_write = 0;
-            upper_sprites.sprite_writer_active = 0;
-            character_map_window.tpu_write = 0;
-            terminal_window.terminal_write = 0;
-            vector_drawer.draw_vector = 0;
-            vector_drawer.vertices_writer_write = 0;
-            displaylist_drawer.start_displaylist = 0;
-            displaylist_drawer.writer_write = 0;
-            apu_processor_L.apu_write = 0;
-            apu_processor_R.apu_write = 0;
+                // BACKGROUND
+
+                // TILE MAP
+
+                // LOWER SPRITE LAYER
+
+                // GPU and BITMAP
+
+                // UPPER SPRITE LAYER
+
+                // CHARACTER MAP
+
+                // TERMINAL
+                case 16h8100: { terminal_window.terminal_character = writeData; terminal_window.terminal_write = 1; }
+                case 16h8104: { terminal_window.showterminal = writeData; }
+
+                // TIMERS and RNG
+
+            }
         }
     } // while(1)
 }

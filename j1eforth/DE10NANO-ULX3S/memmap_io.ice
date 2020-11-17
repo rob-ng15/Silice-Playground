@@ -68,8 +68,7 @@ $$end
     input   uint16  writeData,
     input   uint1   memoryWrite,
     input   uint1   memoryRead,
-    output! uint16  readData,
-    input   uint1   resetCoPro
+    output! uint16  readData
 ) <autorun> {
     // 1hz timers (p1hz used for systemClock, timer1hz for user purposes)
     uint16 systemClock = uninitialized;

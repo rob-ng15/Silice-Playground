@@ -8,20 +8,32 @@
 	.globl	main
 	.type	main, @function
 main:
-	addi	sp,sp,-16
-	sw	zero,12(sp)
-	li	a4,4096
-	addi	a3,a4,2
-	j	.L3
-.L6:
+	li	a5,32768
+	li	a4,66
+	sw	a4,256(a5)
+	li	a4,105
+	sw	a4,256(a5)
+	li	a4,111
+	sw	a4,256(a5)
+	li	a4,115
+	sw	a4,256(a5)
+	li	a4,10
+	sw	a4,256(a5)
+	li	a4,13
+	sw	a4,256(a5)
+	li	a4,62
+	sw	a4,256(a5)
+	li	a4,32768
+	j	.L2
+.L5:
 	lw	a5,0(a4)
-	sw	a5,4(a4)
-	sw	a5,8(a4)
-.L3:
-	lhu	a5,0(a3)
-	andi	a5,a5,1
+	sw	a5,0(a4)
+	sw	a5,256(a4)
+	sw	a5,12(a4)
 .L2:
+	lw	a5,4(a4)
+	andi	a5,a5,1
 	beq	a5,zero,.L2
-	j	.L6
+	j	.L5
 	.size	main, .-main
 	.ident	"GCC: (Arch Linux Repositories) 10.2.0"
