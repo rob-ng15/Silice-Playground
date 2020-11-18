@@ -394,13 +394,15 @@ algorithm memmap_io (
                 // LOWER SPRITE LAYER
 
                 // GPU and BITMAP
+                case 16h841c: { readData = gpu_processor.gpu_active; }
+                case 16h84b0: { readData = bitmap_window.bitmap_colour_read; }
 
                 // UPPER SPRITE LAYER
 
                 // CHARACTER MAP
 
                 // TERMINAL
-                case 16h8100: { readData = terminal_window.terminal_active; }
+                case 16h8700: { readData = terminal_window.terminal_active; }
 
                 // TIMERS and RNG
 
@@ -417,20 +419,68 @@ algorithm memmap_io (
                 case 16h800c: { leds = writeData; }
 
                 // BACKGROUND
+                case 16h8100: { background_generator.backgroundcolour = writeData; background_generator.background_write = 1; }
+                case 16h8104: { background_generator.backgroundcolour_alt = writeData; background_generator.background_write = 2; }
+                case 16h8108: { background_generator.backgroundcolour_mode = writeData; background_generator.background_write = 3; }
 
                 // TILE MAP
 
                 // LOWER SPRITE LAYER
 
                 // GPU and BITMAP
+                case 16h8400: { gpu_processor.gpu_x = writeData; }
+                case 16h8404: { gpu_processor.gpu_y = writeData; }
+                case 16h8408: { gpu_processor.gpu_colour = writeData; }
+                case 16h840c: { gpu_processor.gpu_param0 = writeData; }
+                case 16h8410: { gpu_processor.gpu_param1 = writeData; }
+                case 16h8414: { gpu_processor.gpu_param2 = writeData; }
+                case 16h8418: { gpu_processor.gpu_param3 = writeData; }
+                case 16h841c: { gpu_processor.gpu_write = writeData; }
+
+                case 16h8420: { gpu_processor.vector_block_number = writeData; }
+                case 16h8424: { gpu_processor.vector_block_colour = writeData; }
+                case 16h8428: { gpu_processor.vector_block_xc = writeData; }
+                case 16h842c: { gpu_processor.vector_block_yc = writeData; }
+                case 16h8430: { gpu_processor.draw_vector = 1; }
+
+                case 16h8434: { gpu_processor.vertices_writer_block = writeData; }
+                case 16h8438: { gpu_processor.vertices_writer_vertex = writeData; }
+                case 16h843c: { gpu_processor.vertices_writer_xdelta = writeData; }
+                case 16h8440: { gpu_processor.vertices_writer_ydelta = writeData; }
+                case 16h8444: { gpu_processor.vertices_writer_active = writeData; }
+                case 16h8448: { gpu_processor.vertices_writer_write = 1; }
+
+                case 16h8450: { gpu_processor.dl_start_entry = writeData; }
+                case 16h8454: { gpu_processor.dl_finish_entry = writeData; }
+                case 16h8458: { gpu_processor.dl_start = 1; }
+
+                case 16h845c: { gpu_processor.dl_writer_entry_number = writeData; }
+                case 16h8460: { gpu_processor.dl_writer_active = writeData; }
+                case 16h8464: { gpu_processor.dl_writer_colour = writeData; }
+                case 16h8468: { gpu_processor.dl_writer_x = writeData; }
+                case 16h846c: { gpu_processor.dl_writer_y = writeData; }
+                case 16h8470: { gpu_processor.dl_writer_p0 = writeData; }
+                case 16h8474: { gpu_processor.dl_writer_p1 = writeData; }
+                case 16h8478: { gpu_processor.dl_writer_p2 = writeData; }
+                case 16h847c: { gpu_processor.dl_writer_p3 = writeData; }
+                case 16h8480: { gpu_processor.dl_writer_write = 1; }
+
+                case 16h8490: { gpu_processor.blit1_writer_tile = writeData; }
+                case 16h8494: { gpu_processor.blit1_writer_line = writeData; }
+                case 16h8498: { gpu_processor.blit1_writer_bitmap = writeData;  gpu_processor.blit1_writer_active = 1; }
+
+                case 16h84a0: { bitmap_window.bitmap_write_offset = writeData; }
+
+                case 16h84b0: { bitmap_window.bitmap_x_read = writeData; }
+                case 16h84b4: { bitmap_window.bitmap_y_read = writeData; }
 
                 // UPPER SPRITE LAYER
 
                 // CHARACTER MAP
 
                 // TERMINAL
-                case 16h8100: { terminal_window.terminal_character = writeData; terminal_window.terminal_write = 1; }
-                case 16h8104: { terminal_window.showterminal = writeData; }
+                case 16h8700: { terminal_window.terminal_character = writeData; terminal_window.terminal_write = 1; }
+                case 16h8704: { terminal_window.showterminal = writeData; }
 
                 // TIMERS and RNG
 
