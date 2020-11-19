@@ -1,25 +1,25 @@
-int volatile * UART_STATUS = (int volatile *) 0x8004;
+short volatile * UART_STATUS = (short volatile *) 0x8004;
 unsigned char * UART_DATA = (unsigned char *) 0x8000;
-int volatile * BUTTONS = (int volatile *) 0x8008;
-int volatile * LEDS = (int volatile *) 0x800c;
+short volatile * BUTTONS = (short volatile *) 0x8008;
+short volatile * LEDS = (short volatile *) 0x800c;
 
 unsigned char * TERMINAL_OUTPUT = (unsigned char *) 0x8700;
-int volatile * TERMINAL_SHOWHIDE = (int volatile *) 0x8704;
-int volatile * TERMINAL_STATUS = (int volatile *) 0x8700;
+short volatile * TERMINAL_SHOWHIDE = (short volatile *) 0x8704;
+short volatile * TERMINAL_STATUS = (short volatile *) 0x8700;
 
-int volatile * BACKGROUND_COLOUR = (int volatile *) 0x8100;
-int volatile * BACKGROUND_ALTCOLOUR = (int volatile *) 0x8104;
-int volatile * BACKGROUND_MODE = (int volatile *) 0x8108;
+short volatile * BACKGROUND_COLOUR = (short volatile *) 0x8100;
+short volatile * BACKGROUND_ALTCOLOUR = (short volatile *) 0x8104;
+short volatile * BACKGROUND_MODE = (short volatile *) 0x8108;
 
-int volatile * GPU_X = (int volatile *) 0x8400;
-int volatile * GPU_Y = (int volatile *) 0x8404;
-int volatile * GPU_COLOUR = (int volatile *) 0x8408;
-int volatile * GPU_PARAM0 = (int volatile *) 0x840C;
-int volatile * GPU_PARAM1 = (int volatile *) 0x8410;
-int volatile * GPU_PARAM2 = (int volatile *) 0x8414;
-int volatile * GPU_PARAM3 = (int volatile *) 0x8418;
-int volatile * GPU_WRITE = (int volatile *) 0x841C;
-int volatile * GPU_STATUS = (int volatile *) 0x841C;
+short volatile * GPU_X = (short volatile *) 0x8400;
+short volatile * GPU_Y = (short volatile *) 0x8404;
+short volatile * GPU_COLOUR = (short volatile *) 0x8408;
+short volatile * GPU_PARAM0 = (short volatile *) 0x840C;
+short volatile * GPU_PARAM1 = (short volatile *) 0x8410;
+short volatile * GPU_PARAM2 = (short volatile *) 0x8414;
+short volatile * GPU_PARAM3 = (short volatile *) 0x8418;
+short volatile * GPU_WRITE = (short volatile *) 0x841C;
+short volatile * GPU_STATUS = (short volatile *) 0x841C;
 
 void outputcharacter(char c)
 {
@@ -51,7 +51,7 @@ char inputcharacter(void)
     return *UART_DATA;
 }
 
-void gpu_rectangle( int colour, int x1, int y1, int x2, int y2 )
+void gpu_rectangle( short colour, short x1, short y1, short x2, short y2 )
 {
     while( *GPU_STATUS );
 
@@ -63,7 +63,7 @@ void gpu_rectangle( int colour, int x1, int y1, int x2, int y2 )
     *GPU_WRITE = 2;
 }
 
-void gpu_fillcircle( int colour, int x1, int y1, int radius )
+void gpu_fillcircle( short colour, short x1, short y1, short radius )
 {
     while( *GPU_STATUS );
 
@@ -74,7 +74,7 @@ void gpu_fillcircle( int colour, int x1, int y1, int radius )
     *GPU_WRITE = 6;
 }
 
-void gpu_triangle( int colour, int x1, int y1, int x2, int y2, int x3, int y3 )
+void gpu_triangle( short colour, short x1, short y1, short x2, short y2, short x3, short y3 )
 {
     while( *GPU_STATUS );
 
@@ -119,4 +119,3 @@ void main()
         *LEDS = uartData;
     }
 }
-

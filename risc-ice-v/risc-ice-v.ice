@@ -127,31 +127,49 @@ algorithm main(
         blue    <: video_b
     );
 
-    // RISC-V
-    bram    uint32  ram[8192] = {
+    // RISC-V RAM and BIOS
+    bram uint32 ram[8192] = {
         $include('ROM/BIOS.inc')
         , pad(uninitialized)
     };
 
+    // RISC-V REGISTERS
+    //bram int32 registers_1<input!>[32] = { 0, pad(0) };
+    //bram int32 registers_2<input!>[32] = { 0, pad(0) };
+    int32   registers[32] = { 0, pad(0) };
+
+    // RISC-V PROGRAM COUNTER
     uint32  pc = 0;
     uint32  newPC = uninitialized;
     uint1   pcIncrement = uninitialized;
 
+    // RISC-V INSTRUCTION and DECODE
     uint32  instruction = uninitialized;
+    uint7   opCode := Utype(instruction).opCode;
+    uint3   function3 := Rtype(instruction).function3;
+    uint7   function7 := Rtype(instruction).function7;
 
-    int32   registers[32] = { 0, pad(0) };
+    // RISC-V SOURCE REGISTER VALUES and IMMEDIATE VALUE and DESTINATION REGISTER ADDRESS
+    //int32   sourceReg1 := registers_1.rdata;
+    //int32   sourceReg2 := registers_2.rdata;
     int32   sourceReg1 := registers[ Rtype(instruction).sourceReg1 ];
     int32   sourceReg2 := registers[ Rtype(instruction).sourceReg2 ];
-
+    uint32  immediateValue := { {20{instruction[31,1]}}, Itype(instruction).immediate };
     uint5   destReg := Rtype(instruction).destReg;
+
+    // RISC-V ALU RESULTS
     int32   result = uninitialized;
+    int32   Uresult := { Utype(instruction).immediate_bits_31_12, 12b0 };
     uint1   writeResult = uninitialized;
 
-    uint32  branchAddress := pc + { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 };
-    uint32  immediateValue := { {20{instruction[31,1]}}, Itype(instruction).immediate };
+    // RISC-V ADDRESS CALCULATIONS
+    int32   jumpAddress := { {12{Jtype(instruction).immediate_bits_20}}, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + pc;
+    int32   branchAddress := pc + { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 };
+    int32   loadAddress := immediateValue + sourceReg1;
+    int32   storeAddress := { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
 
+    // RETRIEVE FROM MEMORY
     uint32  memoryRead = uninitialized;
-    uint32  memoryAddress = uninitialized;
 
     // Setup Memory Mapped I/O
     memmap_io IO_Map (
@@ -185,6 +203,15 @@ algorithm main(
     IO_Map.memoryWrite := 0;
     IO_Map.memoryRead := 0;
 
+    // REGISTER Read/Write Flags
+    //registers_1.addr := Rtype(instruction).sourceReg1;
+    //registers_1.wenable := 0;
+    //registers_2.addr := Rtype(instruction).sourceReg2;
+    //registers_2.wenable := 0;
+
+    //registers_1.addr = 0; registers_1.wdata = 0;
+    //registers_2.addr = 0; registers_2.wdata = 0;
+
     while(1) {
         // RISC-V
         writeResult = 0;
@@ -195,11 +222,12 @@ algorithm main(
         ++:
         instruction = ram.rdata;
         ++:
+
         // DECODE + EXECUTE
-        switch( Utype(instruction).opCode ) {
+        switch( opCode ) {
             case 7b0010111: {
                 // ADD UPPER IMMEDIATE TO PC
-                result = { Utype(instruction).immediate_bits_31_12, 12b0 } + pc;
+                result = Uresult + pc;
 
                 writeResult = 1;
                 pcIncrement = 1;
@@ -207,7 +235,7 @@ algorithm main(
 
             case 7b0110111: {
                 // LOAD UPPER IMMEDIATE
-                result = { Utype(instruction).immediate_bits_31_12, 12b0 };
+                result = Uresult;
 
                 writeResult = 1;
                 pcIncrement = 1;
@@ -218,7 +246,7 @@ algorithm main(
                 result = pc + 4;
 
                 writeResult = 1;
-                newPC = { {12{Jtype(instruction).immediate_bits_20}}, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + pc;
+                newPC = jumpAddress;
             }
 
             case 7b1100111: {
@@ -226,12 +254,12 @@ algorithm main(
                 result = pc + 4;
 
                 writeResult = 1;
-                newPC = immediateValue + sourceReg1;
+                newPC = loadAddress;
             }
 
             case 7b1100011: {
                 // BRANCH on CONDITION
-                switch( Btype(instruction).function3 ) {
+                switch( function3 ) {
                     case 3b000: { newPC = ( sourceReg1 == sourceReg2 ) ? branchAddress : pc + 4; }
                     case 3b001: { newPC = ( sourceReg1 != sourceReg2 ) ? branchAddress : pc + 4; }
                     case 3b100: { newPC = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? branchAddress : pc + 4; }
@@ -244,15 +272,13 @@ algorithm main(
 
             case 7b0000011: {
                 // LOAD execute even if rd == 0 as may be discarding values in a buffer
-                memoryAddress = immediateValue + registers[ Itype(instruction).sourceReg1 ];
-                ++:
-                switch( memoryAddress[15,1] ) {
+                switch( loadAddress[15,1] ) {
                     case 0: {
-                        ram.addr = memoryAddress[2,14];
+                        ram.addr = loadAddress[2,14];
                         ++:
-                        switch( Itype(instruction).function3 & 3 ) {
+                        switch( function3 & 3 ) {
                             case 2b00: {
-                                switch( memoryAddress[0,2] ) {
+                                switch( loadAddress[0,2] ) {
                                     case 2b00: { memoryRead = { 24b0, ram.rdata[0,8] }; }
                                     case 2b01: { memoryRead = { 24b0, ram.rdata[8,8] }; }
                                     case 2b10: { memoryRead = { 24b0, ram.rdata[16,8] }; }
@@ -260,7 +286,7 @@ algorithm main(
                                 }
                             }
                             case 2b01: {
-                                switch( memoryAddress[1,1] ) {
+                                switch( loadAddress[1,1] ) {
                                     case 1b0: { memoryRead = { 16b0, ram.rdata[0,16] }; }
                                     case 1b1: { memoryRead = { 16b0, ram.rdata[16,16] }; }
                                 }
@@ -272,13 +298,13 @@ algorithm main(
                     }
 
                     case 1: {
-                        IO_Map.memoryAddress = memoryAddress[0,16];
+                        IO_Map.memoryAddress = loadAddress[0,16];
                         IO_Map.memoryRead = 1;
                         memoryRead = IO_Map.readData;
                     }
                 }
                 ++:
-                switch( Itype(instruction).function3  ) {
+                switch( function3  ) {
                     case 3b000: { result = { {24{memoryRead[7,1]}}, memoryRead[0,8] }; }
                     case 3b001: { result = { {16{memoryRead[15,1]}}, memoryRead[0,16] }; }
                     case 3b010: { result = memoryRead; }
@@ -292,15 +318,13 @@ algorithm main(
 
             case 7b0100011: {
                 // STORE
-                memoryAddress = { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
-                ++:
-                switch( memoryAddress[15,1] ) {
+                switch( storeAddress[15,1] ) {
                     case 1b0: {
-                        ram.addr = memoryAddress[2,14];
+                        ram.addr = storeAddress[2,14];
                         ++:
-                        switch( Stype(instruction).function3 & 3 ) {
+                        switch( function3 & 3 ) {
                             case 2b00: {
-                                switch( memoryAddress[0,2] ) {
+                                switch( storeAddress[0,2] ) {
                                     case 2b00: { ram.wdata = { ram.rdata[8,24], sourceReg2[0,8] }; }
                                     case 2b01: { ram.wdata = { ram.rdata[16,16], sourceReg2[0,8], ram.rdata[0,8] }; }
                                     case 2b10: { ram.wdata = { ram.rdata[24,8], sourceReg2[0,8], ram.rdata[0,16] }; }
@@ -308,7 +332,7 @@ algorithm main(
                                 }
                             }
                             case 2b01: {
-                                switch( memoryAddress[1,1] ) {
+                                switch( storeAddress[1,1] ) {
                                     case 1b0: { ram.wdata = { ram.rdata[16,16], sourceReg2[0,16] }; }
                                     case 1b1: { ram.wdata = { sourceReg2[0,16], ram.rdata[0,16] }; }
                                 }
@@ -320,7 +344,7 @@ algorithm main(
                         ram.wenable = 1;
                     }
                     case 1b1: {
-                        IO_Map.memoryAddress = memoryAddress[0,16];
+                        IO_Map.memoryAddress = storeAddress[0,16];
                         IO_Map.writeData = sourceReg2[0,16];
                         IO_Map.memoryWrite = 1;
                     }
@@ -331,9 +355,9 @@ algorithm main(
 
             case 7b0010011: {
                 // INTEGER OPERATION WITH IMMEDIATE PARAMETER
-                    switch( Rtype(instruction).function7) {
+                    switch( function7 ) {
                         case 7b0000000: {
-                            switch( Rtype(instruction).function3 ) {
+                            switch( function3 ) {
                                 case 3b000: { result = sourceReg1 + immediateValue; }
                                 case 3b001: { result = sourceReg1 << ItypeSHIFT( instruction ).shiftCount; }
                                 case 3b010: { result = __signed( sourceReg1 ) < __signed( immediateValue ) ? 1 : 0; }
@@ -345,7 +369,7 @@ algorithm main(
                             }
                         }
                         case 7b0100000: {
-                            switch( Rtype(instruction).function3 ) {
+                            switch( function3 ) {
                                 case 3b101: { result = __signed( sourceReg1 ) >>> ItypeSHIFT( instruction ).shiftCount; }
                             }
                         }
@@ -357,9 +381,9 @@ algorithm main(
 
             case 7b0110011: {
                 // INTEGER OPERATION WITH REGISTER PARAMETER
-                    switch( Rtype(instruction).function7) {
+                    switch( function7 ) {
                         case 7b0000000: {
-                            switch( Rtype(instruction).function3 ) {
+                            switch( function3 ) {
                                 case 3b000: { result = sourceReg1 + sourceReg2; }
                                 case 3b001: { result = sourceReg1 << sourceReg2[0,5]; }
                                 case 3b010: { result = __signed( sourceReg1 ) < __signed( sourceReg2 ) ? 1 : 0; }
@@ -371,7 +395,7 @@ algorithm main(
                             }
                         }
                         case 7b0100000: {
-                            switch( Rtype(instruction).function3 ) {
+                            switch( function3 ) {
                                 case 3b000: { result = sourceReg1 - sourceReg2; }
                                 case 3b101: { result = __signed( sourceReg1 ) >>> sourceReg2[0,5]; }
                             }
@@ -389,7 +413,14 @@ algorithm main(
 
         ++:
 
+        // NEVER write to registers[0]
         if( writeResult && ( destReg != 0 ) ) {
+            //registers_1.addr = destReg;
+            //registers_1.wdata = result;
+            //registers_1.wenable = 1;
+            //registers_2.addr = destReg;
+            //registers_2.wdata = result;
+            //registers_2.wenable = 1;
             registers[ destReg ] = result;
         }
 

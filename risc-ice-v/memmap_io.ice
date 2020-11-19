@@ -404,7 +404,15 @@ algorithm memmap_io (
                 // TERMINAL
                 case 16h8700: { readData = terminal_window.terminal_active; }
 
+                // AUDIO
+                case 16h8808: { readData = apu_processor_L.audio_active; }
+                case 16h8818: { readData = apu_processor_R.audio_active; }
+
                 // TIMERS and RNG
+                case 16h8900: { readData = staticGenerator; }
+                case 16h8910: { readData = timer1hz.counter1hz; }
+                case 16h8920: { readData = timer1khz.counter1khz; }
+                case 16h8930: { readData = sleepTimer.counter1khz; }
 
                 // VBLANK
 
@@ -482,7 +490,22 @@ algorithm memmap_io (
                 case 16h8700: { terminal_window.terminal_character = writeData; terminal_window.terminal_write = 1; }
                 case 16h8704: { terminal_window.showterminal = writeData; }
 
+                // AUDIO
+                case 16h8800: { apu_processor_L.waveform = writeData; }
+                case 16h8804: { apu_processor_L.note = writeData; }
+                case 16h8808: { apu_processor_L.duration = writeData; }
+                case 16h880c: { apu_processor_L.apu_write = writeData; }
+                case 16h8810: { apu_processor_R.waveform = writeData; }
+                case 16h8814: { apu_processor_R.note = writeData; }
+                case 16h8818: { apu_processor_R.duration = writeData; }
+                case 16h881c: { apu_processor_R.apu_write = writeData; }
+
+
                 // TIMERS and RNG
+                case 16h8900: { rng.resetRandom = 1; }
+                case 16h8910: { timer1hz.resetCounter = 1; }
+                case 16h8920: { timer1khz.resetCount = writeData; timer1khz.resetCounter = 1; }
+                case 16h8930: { sleepTimer.resetCount = writeData; sleepTimer.resetCounter = 1; }
 
             }
         }

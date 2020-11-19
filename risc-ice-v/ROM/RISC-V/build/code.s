@@ -11,7 +11,7 @@ outputcharacter:
 	lui	a5,%hi(UART_STATUS)
 	lw	a4,%lo(UART_STATUS)(a5)
 .L2:
-	lw	a5,0(a4)
+	lhu	a5,0(a4)
 	andi	a5,a5,2
 	bne	a5,zero,.L2
 	lui	a5,%hi(UART_DATA)
@@ -83,7 +83,7 @@ inputcharacter:
 	lui	a5,%hi(UART_STATUS)
 	lw	a4,%lo(UART_STATUS)(a5)
 .L21:
-	lw	a5,0(a4)
+	lhu	a5,0(a4)
 	andi	a5,a5,1
 	beq	a5,zero,.L21
 	lui	a5,%hi(UART_DATA)
@@ -98,27 +98,29 @@ gpu_rectangle:
 	lui	a5,%hi(GPU_STATUS)
 	lw	a6,%lo(GPU_STATUS)(a5)
 .L24:
-	lw	a5,0(a6)
+	lhu	a5,0(a6)
+	slli	a5,a5,16
+	srai	a5,a5,16
 	bne	a5,zero,.L24
 	lui	a5,%hi(GPU_COLOUR)
 	lw	a5,%lo(GPU_COLOUR)(a5)
-	sw	a0,0(a5)
+	sh	a0,0(a5)
 	lui	a5,%hi(GPU_X)
 	lw	a5,%lo(GPU_X)(a5)
-	sw	a1,0(a5)
+	sh	a1,0(a5)
 	lui	a5,%hi(GPU_Y)
 	lw	a5,%lo(GPU_Y)(a5)
-	sw	a2,0(a5)
+	sh	a2,0(a5)
 	lui	a5,%hi(GPU_PARAM0)
 	lw	a5,%lo(GPU_PARAM0)(a5)
-	sw	a3,0(a5)
+	sh	a3,0(a5)
 	lui	a5,%hi(GPU_PARAM1)
 	lw	a5,%lo(GPU_PARAM1)(a5)
-	sw	a4,0(a5)
+	sh	a4,0(a5)
 	lui	a5,%hi(GPU_WRITE)
 	lw	a5,%lo(GPU_WRITE)(a5)
 	li	a4,2
-	sw	a4,0(a5)
+	sh	a4,0(a5)
 	ret
 	.size	gpu_rectangle, .-gpu_rectangle
 	.align	2
@@ -128,24 +130,26 @@ gpu_fillcircle:
 	lui	a5,%hi(GPU_STATUS)
 	lw	a4,%lo(GPU_STATUS)(a5)
 .L27:
-	lw	a5,0(a4)
+	lhu	a5,0(a4)
+	slli	a5,a5,16
+	srai	a5,a5,16
 	bne	a5,zero,.L27
 	lui	a5,%hi(GPU_COLOUR)
 	lw	a5,%lo(GPU_COLOUR)(a5)
-	sw	a0,0(a5)
+	sh	a0,0(a5)
 	lui	a5,%hi(GPU_X)
 	lw	a5,%lo(GPU_X)(a5)
-	sw	a1,0(a5)
+	sh	a1,0(a5)
 	lui	a5,%hi(GPU_Y)
 	lw	a5,%lo(GPU_Y)(a5)
-	sw	a2,0(a5)
+	sh	a2,0(a5)
 	lui	a5,%hi(GPU_PARAM0)
 	lw	a5,%lo(GPU_PARAM0)(a5)
-	sw	a3,0(a5)
+	sh	a3,0(a5)
 	lui	a5,%hi(GPU_WRITE)
 	lw	a5,%lo(GPU_WRITE)(a5)
 	li	a4,6
-	sw	a4,0(a5)
+	sh	a4,0(a5)
 	ret
 	.size	gpu_fillcircle, .-gpu_fillcircle
 	.align	2
@@ -155,33 +159,35 @@ gpu_triangle:
 	lui	a7,%hi(GPU_STATUS)
 	lw	t1,%lo(GPU_STATUS)(a7)
 .L30:
-	lw	a7,0(t1)
+	lhu	a7,0(t1)
+	slli	a7,a7,16
+	srai	a7,a7,16
 	bne	a7,zero,.L30
 	lui	a7,%hi(GPU_COLOUR)
 	lw	a7,%lo(GPU_COLOUR)(a7)
-	sw	a0,0(a7)
+	sh	a0,0(a7)
 	lui	a0,%hi(GPU_X)
 	lw	a0,%lo(GPU_X)(a0)
-	sw	a1,0(a0)
+	sh	a1,0(a0)
 	lui	a1,%hi(GPU_Y)
 	lw	a1,%lo(GPU_Y)(a1)
-	sw	a2,0(a1)
+	sh	a2,0(a1)
 	lui	a2,%hi(GPU_PARAM0)
 	lw	a2,%lo(GPU_PARAM0)(a2)
-	sw	a3,0(a2)
+	sh	a3,0(a2)
 	lui	a3,%hi(GPU_PARAM1)
 	lw	a3,%lo(GPU_PARAM1)(a3)
-	sw	a4,0(a3)
+	sh	a4,0(a3)
 	lui	a4,%hi(GPU_PARAM2)
 	lw	a4,%lo(GPU_PARAM2)(a4)
-	sw	a5,0(a4)
+	sh	a5,0(a4)
 	lui	a5,%hi(GPU_PARAM3)
 	lw	a5,%lo(GPU_PARAM3)(a5)
-	sw	a6,0(a5)
+	sh	a6,0(a5)
 	lui	a5,%hi(GPU_WRITE)
 	lw	a5,%lo(GPU_WRITE)(a5)
 	li	a4,7
-	sw	a4,0(a5)
+	sh	a4,0(a5)
 	ret
 	.size	gpu_triangle, .-gpu_triangle
 	.align	2
@@ -276,7 +282,9 @@ main:
 	mv	s0,a0
 	call	outputcharacter
 	lw	a5,%lo(LEDS)(s1)
-	sw	s0,0(a5)
+	slli	s0,s0,16
+	srai	s0,s0,16
+	sh	s0,0(a5)
 	j	.L33
 	.size	main, .-main
 	.globl	GPU_STATUS
