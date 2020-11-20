@@ -1,6 +1,6 @@
 	.file	"test_uart.c"
 	.option nopic
-	.attribute arch, "rv32i2p0"
+	.attribute arch, "rv32i2p0_m2p0"
 	.attribute unaligned_access, 0
 	.attribute stack_align, 16
 	.text
@@ -208,6 +208,19 @@ main:
 	sw	s1,20(sp)
 	sw	s2,16(sp)
 	sw	s3,12(sp)
+	lui	a5,%hi(UART_STATUS)
+	lw	a5,%lo(UART_STATUS)(a5)
+	lbu	a5,0(a5)
+	andi	a5,a5,1
+	beq	a5,zero,.L33
+	lui	s0,%hi(UART_STATUS)
+.L34:
+	call	inputcharacter
+	lw	a5,%lo(UART_STATUS)(s0)
+	lbu	a5,0(a5)
+	andi	a5,a5,1
+	bne	a5,zero,.L34
+.L33:
 	li	a4,479
 	li	a3,639
 	li	a2,0
@@ -292,7 +305,7 @@ main:
 	lui	s3,%hi(.LC1)
 	lui	s2,%hi(.LC2)
 	lui	s1,%hi(LEDS)
-.L33:
+.L35:
 	call	inputcharacter
 	mv	s0,a0
 	addi	a0,s3,%lo(.LC1)
@@ -303,7 +316,7 @@ main:
 	call	outputstring
 	lw	a5,%lo(LEDS)(s1)
 	sb	s0,0(a5)
-	j	.L33
+	j	.L35
 	.size	main, .-main
 	.globl	GPU_STATUS
 	.globl	GPU_WRITE

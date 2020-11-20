@@ -91,6 +91,9 @@ void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2,
 void main()
 {
     unsigned char uartData = 0;
+    // CLEAR the UART buffer
+    while( *UART_STATUS & 1 )
+        uartData = inputcharacter();
 
     // BITMAP CS + LOGO
     gpu_rectangle( 64, 0, 0, 639, 479 );

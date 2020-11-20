@@ -143,8 +143,6 @@ algorithm main(
     uint32  newPC = uninitialized;
     uint1   pcIncrement = uninitialized;
 
-    uint32  delaycounter = uninitialized;
-
     // RISC-V INSTRUCTION and DECODE
     uint32  instruction = uninitialized;
     uint7   opCode := Utype(instruction).opCode;
@@ -200,6 +198,10 @@ algorithm main(
         video_reset <: video_reset
     );
 
+    // MULTIPLICATION and DIVISION units
+    divideremainder dividerunit ();
+    multiplication multiplicationuint ();
+
     // RAM/IO Read/Write Flags
     ram.wenable := 0;
     IO_Map.memoryWrite := 0;
@@ -219,9 +221,6 @@ algorithm main(
     ++:
 
     while(1) {
-        // SLOW IT DOWN
-        delaycounter = 32h5F5E10;
-
         // RISC-V
         writeResult = 0;
         pcIncrement = 0;
@@ -434,6 +433,92 @@ algorithm main(
                             default: { leds = 255 - 192; }
                         }
                     }
+                    case 7b0000001: {
+                        // MULTIPLY / DIVIDE extension decoding
+                        switch( function3 ) {
+                            case 3b000: {
+                                // MUL sign x sign
+                                multiplicationuint.factor_1 = sourceReg1;
+                                multiplicationuint.factor_2 = sourceReg2;
+                                multiplicationuint.dosigned = 1;
+
+                                () <- multiplicationuint <- ();
+
+                                result = multiplicationuint.product[0,32];
+                            }
+                            case 3b001: {
+                                // MULH sign x sign
+                                multiplicationuint.factor_1 = sourceReg1;
+                                multiplicationuint.factor_2 = sourceReg2;
+                                multiplicationuint.dosigned = 1;
+
+                                () <- multiplicationuint <- ();
+
+                                result = multiplicationuint.product[32,32];
+                            }
+                            case 3b010: {
+                                // MULHSU sign x unsign
+                                multiplicationuint.factor_1 = sourceReg1;
+                                multiplicationuint.factor_2 = sourceReg2;
+                                multiplicationuint.dosigned = 2;
+
+                                () <- multiplicationuint <- ();
+
+                                result = multiplicationuint.product[32,32];
+                            }
+                            case 3b011: {
+                                // MULHU unsign x unsign
+                                multiplicationuint.factor_1 = sourceReg1;
+                                multiplicationuint.factor_2 = sourceReg2;
+                                multiplicationuint.dosigned = 0;
+
+                                () <- multiplicationuint <- ();
+
+                                result = multiplicationuint.product[32,32];
+                            }
+                            case 3b100: {
+                                // DIV
+                                dividerunit.dividend = sourceReg1;
+                                dividerunit.divisor = sourceReg2;
+                                dividerunit.dosigned = 1;
+
+                                () <- dividerunit <- ();
+
+                                result = dividerunit.quotient;
+                            }
+                            case 3b101: {
+                                // DIVU
+                                dividerunit.dividend = sourceReg1;
+                                dividerunit.divisor = sourceReg2;
+                                dividerunit.dosigned = 0;
+
+                                () <- dividerunit <- ();
+
+                                result = dividerunit.quotient;
+                            }
+                            case 3b110: {
+                                // REM
+                                dividerunit.dividend = sourceReg1;
+                                dividerunit.divisor = sourceReg2;
+                                dividerunit.dosigned = 1;
+
+                                () <- dividerunit <- ();
+
+                                result = dividerunit.remainder;
+                            }
+                            case 3b111: {
+                                // REMU
+                                dividerunit.dividend = sourceReg1;
+                                dividerunit.divisor = sourceReg2;
+                                dividerunit.dosigned = 0;
+
+                                () <- dividerunit <- ();
+
+                                result = dividerunit.remainder;
+                            }
+
+                        }
+                    }
                     default: { leds = 255 - 192; }
                 }
 
@@ -442,19 +527,7 @@ algorithm main(
             }
 
             default: {
-                leds = 0;
-                while( delaycounter > 0 ) {
-                    delaycounter = delaycounter - 1;
-                }
-                ++:
-                delaycounter = 32h5F5E10;
-                ++:
                 leds = opCode;
-                while( delaycounter > 0 ) {
-                    delaycounter = delaycounter - 1;
-                }
-                ++:
-                delaycounter = 32h5F5E10;
                 pcIncrement = 1;
             }
         }
@@ -473,11 +546,5 @@ algorithm main(
         }
 
         pc = pcIncrement ? pc + 4 : newPC;
-
-        ++:
-
-        while( delaycounter > 0 ) {
-            delaycounter = delaycounter - 1;
-        }
     } // RISC-V
 }
