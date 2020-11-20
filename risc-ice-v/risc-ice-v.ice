@@ -61,8 +61,8 @@ bitfield Stype {
 
 bitfield Utype {
     uint20 immediate_bits_31_12,
-    uint5   destReg,
-    uint7   opCode
+    uint5  destReg,
+    uint7  opCode
 }
 
 algorithm main(
@@ -143,6 +143,8 @@ algorithm main(
     uint32  newPC = uninitialized;
     uint1   pcIncrement = uninitialized;
 
+    uint32  delaycounter = uninitialized;
+
     // RISC-V INSTRUCTION and DECODE
     uint32  instruction = uninitialized;
     uint7   opCode := Utype(instruction).opCode;
@@ -173,7 +175,7 @@ algorithm main(
 
     // Setup Memory Mapped I/O
     memmap_io IO_Map (
-        leds :> leds,
+        //leds :> leds,
         btns <: btns,
 
         // UART
@@ -217,6 +219,9 @@ algorithm main(
     ++:
 
     while(1) {
+        // SLOW IT DOWN
+        delaycounter = 32h5F5E10;
+
         // RISC-V
         writeResult = 0;
         pcIncrement = 0;
@@ -230,6 +235,7 @@ algorithm main(
         // DECODE + EXECUTE
         switch( opCode ) {
             case 7b0010111: {
+                leds = 1;
                 // ADD UPPER IMMEDIATE TO PC
                 result = Uresult + pc;
 
@@ -238,6 +244,7 @@ algorithm main(
             }
 
             case 7b0110111: {
+                leds = 2;
                 // LOAD UPPER IMMEDIATE
                 result = Uresult;
 
@@ -246,6 +253,7 @@ algorithm main(
             }
 
             case 7b1101111: {
+                leds = 4;
                 // JUMP AND LINK
                 result = pc + 4;
 
@@ -254,6 +262,7 @@ algorithm main(
             }
 
             case 7b1100111: {
+                leds = 8;
                 // JUMP AND LINK REGISTER
                 result = pc + 4;
 
@@ -264,17 +273,18 @@ algorithm main(
             case 7b1100011: {
                 // BRANCH on CONDITION
                 switch( function3 ) {
-                    case 3b000: { newPC = ( sourceReg1 == sourceReg2 ) ? branchAddress : pc + 4; }
-                    case 3b001: { newPC = ( sourceReg1 != sourceReg2 ) ? branchAddress : pc + 4; }
-                    case 3b100: { newPC = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? branchAddress : pc + 4; }
-                    case 3b101: { newPC = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? branchAddress : pc + 4; }
-                    case 3b110: { newPC = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? branchAddress : pc + 4; }
-                    case 3b111: { newPC = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? branchAddress : pc + 4; }
-                    default: { newPC = pc + 4; }
+                    case 3b000: { leds = 16; newPC = ( sourceReg1 == sourceReg2 ) ? branchAddress : pc + 4; }
+                    case 3b001: { leds = 16; newPC = ( sourceReg1 != sourceReg2 ) ? branchAddress : pc + 4; }
+                    case 3b100: { leds = 16; newPC = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? branchAddress : pc + 4; }
+                    case 3b101: { leds = 16; newPC = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? branchAddress : pc + 4; }
+                    case 3b110: { leds = 16; newPC = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? branchAddress : pc + 4; }
+                    case 3b111: { leds = 16; newPC = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? branchAddress : pc + 4; }
+                    default: { leds = 255 - 16; newPC = pc + 4; }
                 }
             }
 
             case 7b0000011: {
+                leds = 32;
                 // LOAD execute even if rd == 0 as may be discarding values in a buffer
                 switch( loadAddress[15,1] ) {
                     case 0: {
@@ -321,6 +331,7 @@ algorithm main(
             }
 
             case 7b0100011: {
+                leds = 64;
                 // STORE
                 switch( storeAddress[15,1] ) {
                     case 1b0: {
@@ -359,72 +370,91 @@ algorithm main(
 
             case 7b0010011: {
                 // INTEGER OPERATION WITH IMMEDIATE PARAMETER
-                    switch( function7 ) {
-                        case 7b0000000: {
-                            switch( function3 ) {
-                                case 3b000: { result = sourceReg1 + immediateValue; }
-                                case 3b001: { result = sourceReg1 << ItypeSHIFT( instruction ).shiftCount; }
-                                case 3b010: { result = __signed( sourceReg1 ) < __signed( immediateValue ) ? 32b1 : 32b0; }
-                                case 3b011: {
-                                    if( immediateValue == 1 ) {
-                                        // SLTIU rd, rs1, 1 ( equivalent to SEQZ rd, rs )
-                                        result = ( sourceReg1 == 0 ) ? 32b1 : 0;
-                                    } else {
-                                        result = __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ? 32b1 : 32b0;
-                                    }
-                                }
-                                case 3b100: { result = sourceReg1 ^ immediateValue; }
-                                case 3b101: { result = sourceReg1 >> ItypeSHIFT( instruction ).shiftCount; }
-                                case 3b110: { result = sourceReg1 | immediateValue; }
-                                case 3b111: { result = sourceReg1 & immediateValue; }
-                            }
-                        }
-                        case 7b0100000: {
-                            switch( function3 ) {
-                                case 3b101: { result = { {32{sourceReg1[31,1]}}, sourceReg1 } >> ItypeSHIFT( instruction ).shiftCount; }
-                            }
+                switch( function3 ) {
+                    case 3b000: { leds = 128; result = sourceReg1 + immediateValue; }
+                    case 3b001: { leds = 128; result = sourceReg1 << ItypeSHIFT( instruction ).shiftCount; }
+                    case 3b010: { leds = 128; result = __signed( sourceReg1 ) < __signed( immediateValue ) ? 32b1 : 32b0; }
+                    case 3b011: {
+                        leds = 128;
+                        if( immediateValue == 1 ) {
+                            // SLTIU rd, rs1, 1 ( equivalent to SEQZ rd, rs )
+                            result = ( sourceReg1 == 0 ) ? 32b1 : 0;
+                        } else {
+                            result = __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ? 32b1 : 32b0;
                         }
                     }
+                    case 3b100: { leds = 128; result = sourceReg1 ^ immediateValue; }
+                    case 3b101: {
+                        leds = 128;
+                        if( function7 == 7b0000000 ) {
+                            result = sourceReg1 >> ItypeSHIFT( instruction ).shiftCount;
+                        } else {
+                            result = { {32{sourceReg1[31,1]}}, sourceReg1 } >> ItypeSHIFT( instruction ).shiftCount;
+                        }
+                    }
+                    case 3b110: { leds = 128; result = sourceReg1 | immediateValue; }
+                    case 3b111: { leds = 128; result = sourceReg1 & immediateValue; }
+                    default: { leds = 8haa; }
+                }
 
                 writeResult = 1;
                 pcIncrement = 1;
+
             }
 
             case 7b0110011: {
                 // INTEGER OPERATION WITH REGISTER PARAMETER
-                    switch( function7 ) {
-                        case 7b0000000: {
-                            switch( function3 ) {
-                                case 3b000: { result = sourceReg1 + sourceReg2; }
-                                case 3b001: { result = sourceReg1 << sourceReg2[0,5]; }
-                                case 3b010: { result = __signed( sourceReg1 ) < __signed( sourceReg2 ) ? 1 : 0; }
-                                case 3b011: {
-                                    if( Rtype(instruction).sourceReg1 == 0 ) {
-                                        // SLTU rd, x0, rs2 ( equivalent to SNEZ rd, rs )
-                                        result = ( sourceReg2 != 0 ) ? 32b1 : 32b0;
-                                    } else {
-                                        result = __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ? 1 : 0;
-                                    }
+                switch( function7 ) {
+                    case 7b0000000: {
+                        leds = 192;
+                        switch( function3 ) {
+                            case 3b000: { result = sourceReg1 + sourceReg2; }
+                            case 3b001: { result = sourceReg1 << sourceReg2[0,5]; }
+                            case 3b010: { result = __signed( sourceReg1 ) < __signed( sourceReg2 ) ? 1 : 0; }
+                            case 3b011: {
+                                if( Rtype(instruction).sourceReg1 == 0 ) {
+                                    // SLTU rd, x0, rs2 ( equivalent to SNEZ rd, rs )
+                                    result = ( sourceReg2 != 0 ) ? 32b1 : 32b0;
+                                } else {
+                                    result = __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ? 1 : 0;
                                 }
-                                case 3b100: { result = sourceReg1 ^ sourceReg2; }
-                                case 3b101: { result = sourceReg1 >> sourceReg2[0,5]; }
-                                case 3b110: { result = sourceReg1 | sourceReg2; }
-                                case 3b111: { result = sourceReg1 & sourceReg2; }
                             }
-                        }
-                        case 7b0100000: {
-                            switch( function3 ) {
-                                case 3b000: { result = sourceReg1 - sourceReg2; }
-                                case 3b101: { result = { {32{sourceReg1[31,1]}}, sourceReg1 } >> sourceReg2[0,5]; }
-                            }
+                            case 3b100: { result = sourceReg1 ^ sourceReg2; }
+                            case 3b101: { result = sourceReg1 >> sourceReg2[0,5]; }
+                            case 3b110: { result = sourceReg1 | sourceReg2; }
+                            case 3b111: { result = sourceReg1 & sourceReg2; }
+                            default: { leds = 255 - 192; }
                         }
                     }
+                    case 7b0100000: {
+                        leds = 192;
+                        switch( function3 ) {
+                            case 3b000: { result = sourceReg1 - sourceReg2; }
+                            case 3b101: { result = { {32{sourceReg1[31,1]}}, sourceReg1 } >> sourceReg2[0,5]; }
+                            default: { leds = 255 - 192; }
+                        }
+                    }
+                    default: { leds = 255 - 192; }
+                }
 
                 writeResult = 1;
                 pcIncrement = 1;
             }
 
             default: {
+                leds = 0;
+                while( delaycounter > 0 ) {
+                    delaycounter = delaycounter - 1;
+                }
+                ++:
+                delaycounter = 32h5F5E10;
+                ++:
+                leds = opCode;
+                while( delaycounter > 0 ) {
+                    delaycounter = delaycounter - 1;
+                }
+                ++:
+                delaycounter = 32h5F5E10;
                 pcIncrement = 1;
             }
         }
@@ -443,5 +473,11 @@ algorithm main(
         }
 
         pc = pcIncrement ? pc + 4 : newPC;
+
+        ++:
+
+        while( delaycounter > 0 ) {
+            delaycounter = delaycounter - 1;
+        }
     } // RISC-V
 }

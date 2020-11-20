@@ -11,7 +11,7 @@ outputcharacter:
 	lui	a5,%hi(UART_STATUS)
 	lw	a4,%lo(UART_STATUS)(a5)
 .L2:
-	lhu	a5,0(a4)
+	lbu	a5,0(a4)
 	andi	a5,a5,2
 	bne	a5,zero,.L2
 	lui	a5,%hi(UART_DATA)
@@ -26,7 +26,7 @@ outputcharacter:
 .L9:
 	addi	sp,sp,-16
 	sw	ra,12(sp)
-	li	a0,10
+	li	a0,13
 	call	outputcharacter
 	lw	ra,12(sp)
 	addi	sp,sp,16
@@ -83,7 +83,7 @@ inputcharacter:
 	lui	a5,%hi(UART_STATUS)
 	lw	a4,%lo(UART_STATUS)(a5)
 .L21:
-	lhu	a5,0(a4)
+	lbu	a5,0(a4)
 	andi	a5,a5,1
 	beq	a5,zero,.L21
 	lui	a5,%hi(UART_DATA)
@@ -98,13 +98,12 @@ gpu_rectangle:
 	lui	a5,%hi(GPU_STATUS)
 	lw	a6,%lo(GPU_STATUS)(a5)
 .L24:
-	lhu	a5,0(a6)
-	slli	a5,a5,16
-	srai	a5,a5,16
+	lbu	a5,0(a6)
+	andi	a5,a5,0xff
 	bne	a5,zero,.L24
 	lui	a5,%hi(GPU_COLOUR)
 	lw	a5,%lo(GPU_COLOUR)(a5)
-	sh	a0,0(a5)
+	sb	a0,0(a5)
 	lui	a5,%hi(GPU_X)
 	lw	a5,%lo(GPU_X)(a5)
 	sh	a1,0(a5)
@@ -120,7 +119,7 @@ gpu_rectangle:
 	lui	a5,%hi(GPU_WRITE)
 	lw	a5,%lo(GPU_WRITE)(a5)
 	li	a4,2
-	sh	a4,0(a5)
+	sb	a4,0(a5)
 	ret
 	.size	gpu_rectangle, .-gpu_rectangle
 	.align	2
@@ -130,13 +129,12 @@ gpu_fillcircle:
 	lui	a5,%hi(GPU_STATUS)
 	lw	a4,%lo(GPU_STATUS)(a5)
 .L27:
-	lhu	a5,0(a4)
-	slli	a5,a5,16
-	srai	a5,a5,16
+	lbu	a5,0(a4)
+	andi	a5,a5,0xff
 	bne	a5,zero,.L27
 	lui	a5,%hi(GPU_COLOUR)
 	lw	a5,%lo(GPU_COLOUR)(a5)
-	sh	a0,0(a5)
+	sb	a0,0(a5)
 	lui	a5,%hi(GPU_X)
 	lw	a5,%lo(GPU_X)(a5)
 	sh	a1,0(a5)
@@ -149,7 +147,7 @@ gpu_fillcircle:
 	lui	a5,%hi(GPU_WRITE)
 	lw	a5,%lo(GPU_WRITE)(a5)
 	li	a4,6
-	sh	a4,0(a5)
+	sb	a4,0(a5)
 	ret
 	.size	gpu_fillcircle, .-gpu_fillcircle
 	.align	2
@@ -159,13 +157,12 @@ gpu_triangle:
 	lui	a7,%hi(GPU_STATUS)
 	lw	t1,%lo(GPU_STATUS)(a7)
 .L30:
-	lhu	a7,0(t1)
-	slli	a7,a7,16
-	srai	a7,a7,16
+	lbu	a7,0(t1)
+	andi	a7,a7,0xff
 	bne	a7,zero,.L30
 	lui	a7,%hi(GPU_COLOUR)
 	lw	a7,%lo(GPU_COLOUR)(a7)
-	sh	a0,0(a7)
+	sb	a0,0(a7)
 	lui	a0,%hi(GPU_X)
 	lw	a0,%lo(GPU_X)(a0)
 	sh	a1,0(a0)
@@ -187,17 +184,30 @@ gpu_triangle:
 	lui	a5,%hi(GPU_WRITE)
 	lw	a5,%lo(GPU_WRITE)(a5)
 	li	a4,7
-	sh	a4,0(a5)
+	sb	a4,0(a5)
 	ret
 	.size	gpu_triangle, .-gpu_triangle
+	.section	.rodata.str1.4,"aMS",@progbits,1
+	.align	2
+.LC0:
+	.string	"Welcome to RISC-ICE-V a RISC-V RV32I CPU"
+	.align	2
+.LC1:
+	.string	"You pressed : "
+	.align	2
+.LC2:
+	.string	" <-"
+	.text
 	.align	2
 	.globl	main
 	.type	main, @function
 main:
-	addi	sp,sp,-16
-	sw	ra,12(sp)
-	sw	s0,8(sp)
-	sw	s1,4(sp)
+	addi	sp,sp,-32
+	sw	ra,28(sp)
+	sw	s0,24(sp)
+	sw	s1,20(sp)
+	sw	s2,16(sp)
+	sw	s3,12(sp)
 	li	a4,479
 	li	a3,639
 	li	a2,0
@@ -276,15 +286,23 @@ main:
 	li	a1,0
 	li	a0,2
 	call	gpu_rectangle
+	lui	a0,%hi(.LC0)
+	addi	a0,a0,%lo(.LC0)
+	call	outputstring
+	lui	s3,%hi(.LC1)
+	lui	s2,%hi(.LC2)
 	lui	s1,%hi(LEDS)
 .L33:
 	call	inputcharacter
 	mv	s0,a0
+	addi	a0,s3,%lo(.LC1)
+	call	outputstringnonl
+	mv	a0,s0
 	call	outputcharacter
+	addi	a0,s2,%lo(.LC2)
+	call	outputstring
 	lw	a5,%lo(LEDS)(s1)
-	slli	s0,s0,16
-	srai	s0,s0,16
-	sh	s0,0(a5)
+	sb	s0,0(a5)
 	j	.L33
 	.size	main, .-main
 	.globl	GPU_STATUS
