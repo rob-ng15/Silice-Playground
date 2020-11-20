@@ -1,0 +1,23 @@
+module M_%MODULE%_mem_%NAME%(
+input                  [3:0]               in_%NAME%_wenable,
+input      %DATA_TYPE% [%DATA_WIDTH%:0]    in_%NAME%_wdata,
+input                  [%ADDR_WIDTH%:0]    in_%NAME%_addr,
+output reg %DATA_TYPE% [%DATA_WIDTH%:0]    out_%NAME%_rdata,
+input                                      %CLOCK%
+);
+reg %DATA_TYPE% [%DATA_WIDTH%:0] buffer[%DATA_SIZE%:0];
+always @(posedge %CLOCK%) begin
+  case (in_%NAME%_wenable)
+    4'b0001: buffer[in_%NAME%_addr][7:0] <= in_%NAME%_wdata[7:0];
+    4'b0010: buffer[in_%NAME%_addr][15:8] <= in_%NAME%_wdata[7:0];
+    4'b0100: buffer[in_%NAME%_addr][23:16] <= in_%NAME%_wdata[7:0];
+    4'b1000: buffer[in_%NAME%_addr][31:24] <= in_%NAME%_wdata[7:0];
+    4'b0011: buffer[in_%NAME%_addr][15:0] <= in_%NAME%_wdata[15:0];
+    4'b1100: buffer[in_%NAME%_addr][31:16] <= in_%NAME%_wdata[15:0];
+    4'b1111: buffer[in_%NAME%_addr] <= in_%NAME%_wdata;
+    default:
+  endcase
+  out_%NAME%_rdata <= buffer[in_%NAME%_addr];
+end
+%INITIAL%
+endmodule

@@ -134,8 +134,8 @@ algorithm main(
     };
 
     // RISC-V REGISTERS
-    //bram int32 registers_1<input!>[32] = { 0, pad(0) };
-    //bram int32 registers_2<input!>[32] = { 0, pad(0) };
+    //dualport_bram int32 registers_1[32] = { 0, pad(0) };
+    //dualport_bram int32 registers_2[32] = { 0, pad(0) };
     int32   registers[32] = { 0, pad(0) };
 
     // RISC-V PROGRAM COUNTER
@@ -150,8 +150,8 @@ algorithm main(
     uint7   function7 := Rtype(instruction).function7;
 
     // RISC-V SOURCE REGISTER VALUES and IMMEDIATE VALUE and DESTINATION REGISTER ADDRESS
-    //int32   sourceReg1 := registers_1.rdata;
-    //int32   sourceReg2 := registers_2.rdata;
+    //int32   sourceReg1 := registers_1.rdata0;
+    //int32   sourceReg2 := registers_2.rdata0;
     int32   sourceReg1 := registers[ Rtype(instruction).sourceReg1 ];
     int32   sourceReg2 := registers[ Rtype(instruction).sourceReg2 ];
     uint32  immediateValue := { {20{instruction[31,1]}}, Itype(instruction).immediate };
@@ -204,13 +204,17 @@ algorithm main(
     IO_Map.memoryRead := 0;
 
     // REGISTER Read/Write Flags
-    //registers_1.addr := Rtype(instruction).sourceReg1;
-    //registers_1.wenable := 0;
-    //registers_2.addr := Rtype(instruction).sourceReg2;
-    //registers_2.wenable := 0;
+    //registers_1.addr0 := Rtype(instruction).sourceReg1;
+    //registers_1.wenable0 := 0;
+    //registers_1.wenable1 := 0;
+    //registers_2.addr0 := Rtype(instruction).sourceReg2;
+    //registers_2.wenable0 := 0;
+    //registers_2.wenable1 := 0;
 
-    //registers_1.addr = 0; registers_1.wdata = 0;
-    //registers_2.addr = 0; registers_2.wdata = 0;
+    //registers_1.addr1 = 0; registers_1.wdata1 = 0;
+    //registers_2.addr1 = 0; registers_2.wdata1 = 0;
+
+    ++:
 
     while(1) {
         // RISC-V
@@ -360,8 +364,15 @@ algorithm main(
                             switch( function3 ) {
                                 case 3b000: { result = sourceReg1 + immediateValue; }
                                 case 3b001: { result = sourceReg1 << ItypeSHIFT( instruction ).shiftCount; }
-                                case 3b010: { result = __signed( sourceReg1 ) < __signed( immediateValue ) ? 1 : 0; }
-                                case 3b011: { result = __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ? 1 : 0; }
+                                case 3b010: { result = __signed( sourceReg1 ) < __signed( immediateValue ) ? 32b1 : 32b0; }
+                                case 3b011: {
+                                    if( immediateValue == 1 ) {
+                                        // SLTIU rd, rs1, 1 ( equivalent to SEQZ rd, rs )
+                                        result = ( sourceReg1 == 0 ) ? 32b1 : 0;
+                                    } else {
+                                        result = __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ? 32b1 : 32b0;
+                                    }
+                                }
                                 case 3b100: { result = sourceReg1 ^ immediateValue; }
                                 case 3b101: { result = sourceReg1 >> ItypeSHIFT( instruction ).shiftCount; }
                                 case 3b110: { result = sourceReg1 | immediateValue; }
@@ -370,7 +381,7 @@ algorithm main(
                         }
                         case 7b0100000: {
                             switch( function3 ) {
-                                case 3b101: { result = __signed( sourceReg1 ) >>> ItypeSHIFT( instruction ).shiftCount; }
+                                case 3b101: { result = { {32{sourceReg1[31,1]}}, sourceReg1 } >> ItypeSHIFT( instruction ).shiftCount; }
                             }
                         }
                     }
@@ -387,7 +398,14 @@ algorithm main(
                                 case 3b000: { result = sourceReg1 + sourceReg2; }
                                 case 3b001: { result = sourceReg1 << sourceReg2[0,5]; }
                                 case 3b010: { result = __signed( sourceReg1 ) < __signed( sourceReg2 ) ? 1 : 0; }
-                                case 3b011: { result = __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ? 1 : 0; }
+                                case 3b011: {
+                                    if( Rtype(instruction).sourceReg1 == 0 ) {
+                                        // SLTU rd, x0, rs2 ( equivalent to SNEZ rd, rs )
+                                        result = ( sourceReg2 != 0 ) ? 32b1 : 32b0;
+                                    } else {
+                                        result = __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ? 1 : 0;
+                                    }
+                                }
                                 case 3b100: { result = sourceReg1 ^ sourceReg2; }
                                 case 3b101: { result = sourceReg1 >> sourceReg2[0,5]; }
                                 case 3b110: { result = sourceReg1 | sourceReg2; }
@@ -397,7 +415,7 @@ algorithm main(
                         case 7b0100000: {
                             switch( function3 ) {
                                 case 3b000: { result = sourceReg1 - sourceReg2; }
-                                case 3b101: { result = __signed( sourceReg1 ) >>> sourceReg2[0,5]; }
+                                case 3b101: { result = { {32{sourceReg1[31,1]}}, sourceReg1 } >> sourceReg2[0,5]; }
                             }
                         }
                     }
@@ -415,12 +433,12 @@ algorithm main(
 
         // NEVER write to registers[0]
         if( writeResult && ( destReg != 0 ) ) {
-            //registers_1.addr = destReg;
-            //registers_1.wdata = result;
-            //registers_1.wenable = 1;
-            //registers_2.addr = destReg;
-            //registers_2.wdata = result;
-            //registers_2.wenable = 1;
+            //registers_1.addr1 = destReg;
+            //registers_1.wdata1 = result;
+            //registers_1.wenable1 = 1;
+            //registers_2.addr1 = destReg;
+            //registers_2.wdata1 = result;
+            //registers_2.wenable1 = 1;
             registers[ destReg ] = result;
         }
 

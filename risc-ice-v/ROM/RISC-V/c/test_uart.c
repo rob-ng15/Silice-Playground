@@ -53,7 +53,7 @@ char inputcharacter(void)
 
 void gpu_rectangle( short colour, short x1, short y1, short x2, short y2 )
 {
-    while( *GPU_STATUS );
+    while( *GPU_STATUS != 0 );
 
     *GPU_COLOUR = colour;
     *GPU_X = x1;
@@ -65,7 +65,7 @@ void gpu_rectangle( short colour, short x1, short y1, short x2, short y2 )
 
 void gpu_fillcircle( short colour, short x1, short y1, short radius )
 {
-    while( *GPU_STATUS );
+    while( *GPU_STATUS != 0 );
 
     *GPU_COLOUR = colour;
     *GPU_X = x1;
@@ -76,7 +76,7 @@ void gpu_fillcircle( short colour, short x1, short y1, short radius )
 
 void gpu_triangle( short colour, short x1, short y1, short x2, short y2, short x3, short y3 )
 {
-    while( *GPU_STATUS );
+    while( *GPU_STATUS != 0 );
 
     *GPU_COLOUR = colour;
     *GPU_X = x1;
