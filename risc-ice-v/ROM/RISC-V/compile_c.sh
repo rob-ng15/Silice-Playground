@@ -9,8 +9,8 @@ echo "using $ARCH"
 
 # Following based on FemtoRV compile scripts https://github.com/BrunoLevy/learn-fpga/tree/master/FemtoRV
 
-$ARCH-elf-gcc -fno-unroll-loops -O1 -fno-pic -march=rv32im -mabi=ilp32 -S $1 -o build/code.s
-$ARCH-elf-gcc -fno-unroll-loops -O1 -fno-pic -march=rv32im -mabi=ilp32 -c -o build/code.o $1
+$ARCH-elf-gcc -fno-unroll-loops -O2 -fno-pic -march=rv32im -mabi=ilp32 -S $1 -o build/code.s
+$ARCH-elf-gcc -fno-unroll-loops -O2 -fno-pic -march=rv32im -mabi=ilp32 -c -o build/code.o $1
 
 $ARCH-elf-as -march=rv32im -mabi=ilp32 -o crt0.o crt0.s
 
@@ -20,4 +20,4 @@ $ARCH-elf-objcopy -O verilog build/code.elf build/code.hex
 
 # uncomment to see the actual code, usefull for debugging
 $ARCH-elf-objcopy -O binary build/code.elf build/code.bin
-$ARCH-elf-objdump -D -b binary -m riscv build/code.bin
+#$ARCH-elf-objdump -D -b binary -m riscv build/code.bin

@@ -134,8 +134,8 @@ algorithm main(
     };
 
     // RISC-V REGISTERS
-    //dualport_bram int32 registers_1[32] = { 0, pad(0) };
-    //dualport_bram int32 registers_2[32] = { 0, pad(0) };
+    dualport_bram int32 registers_1[32] = { 0, pad(0) };
+    dualport_bram int32 registers_2[32] = { 0, pad(0) };
     int32   registers[32] = { 0, pad(0) };
 
     // RISC-V PROGRAM COUNTER
@@ -150,10 +150,10 @@ algorithm main(
     uint7   function7 := Rtype(instruction).function7;
 
     // RISC-V SOURCE REGISTER VALUES and IMMEDIATE VALUE and DESTINATION REGISTER ADDRESS
-    //int32   sourceReg1 := registers_1.rdata0;
-    //int32   sourceReg2 := registers_2.rdata0;
-    int32   sourceReg1 := registers[ Rtype(instruction).sourceReg1 ];
-    int32   sourceReg2 := registers[ Rtype(instruction).sourceReg2 ];
+    int32   sourceReg1 := registers_1.rdata0;
+    int32   sourceReg2 := registers_2.rdata0;
+    //int32   sourceReg1 := registers[ Rtype(instruction).sourceReg1 ];
+    //int32   sourceReg2 := registers[ Rtype(instruction).sourceReg2 ];
     uint32  immediateValue := { {20{instruction[31,1]}}, Itype(instruction).immediate };
     uint5   destReg := Rtype(instruction).destReg;
 
@@ -208,15 +208,15 @@ algorithm main(
     IO_Map.memoryRead := 0;
 
     // REGISTER Read/Write Flags
-    //registers_1.addr0 := Rtype(instruction).sourceReg1;
-    //registers_1.wenable0 := 0;
-    //registers_1.wenable1 := 0;
-    //registers_2.addr0 := Rtype(instruction).sourceReg2;
-    //registers_2.wenable0 := 0;
-    //registers_2.wenable1 := 0;
+    registers_1.addr0 := Rtype(instruction).sourceReg1;
+    registers_1.wenable0 := 0;
+    registers_1.wenable1 := 1;
+    registers_2.addr0 := Rtype(instruction).sourceReg2;
+    registers_2.wenable0 := 0;
+    registers_2.wenable1 := 1;
 
-    //registers_1.addr1 = 0; registers_1.wdata1 = 0;
-    //registers_2.addr1 = 0; registers_2.wdata1 = 0;
+    registers_1.addr1 = 0; registers_1.wdata1 = 0;
+    registers_2.addr1 = 0; registers_2.wdata1 = 0;
 
     ++:
 
@@ -229,6 +229,7 @@ algorithm main(
         ram.addr = pc[2,14];
         ++:
         instruction = ram.rdata;
+        ++:
         ++:
 
         // DECODE + EXECUTE
@@ -536,13 +537,11 @@ algorithm main(
 
         // NEVER write to registers[0]
         if( writeResult && ( destReg != 0 ) ) {
-            //registers_1.addr1 = destReg;
-            //registers_1.wdata1 = result;
-            //registers_1.wenable1 = 1;
-            //registers_2.addr1 = destReg;
-            //registers_2.wdata1 = result;
-            //registers_2.wenable1 = 1;
-            registers[ destReg ] = result;
+            registers_1.addr1 = destReg;
+            registers_1.wdata1 = result;
+            registers_2.addr1 = destReg;
+            registers_2.wdata1 = result;
+            //registers[ destReg ] = result;
         }
 
         pc = pcIncrement ? pc + 4 : newPC;
