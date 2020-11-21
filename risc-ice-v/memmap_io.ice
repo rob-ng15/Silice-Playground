@@ -390,16 +390,59 @@ algorithm memmap_io (
                 // BACKGROUND
 
                 // TILE MAP
+                case 16h8230: { readData = tile_map.tm_lastaction; }
+                case 16h8234: { readData = tile_map.tm_active; }
 
                 // LOWER SPRITE LAYER
+                case 16h8304: { readData = lower_sprites.sprite_read_active; }
+                case 16h8308: { readData = lower_sprites.sprite_read_tile; }
+                case 16h830c: { readData = lower_sprites.sprite_read_colour; }
+                case 16h8310: { readData = lower_sprites.sprite_read_x; }
+                case 16h8314: { readData = lower_sprites.sprite_read_y; }
+                case 16h8318: { readData = lower_sprites.sprite_read_double; }
+
+                case 16h8330: { readData = lower_sprites.collision_0; }
+                case 16h8334: { readData = lower_sprites.collision_1; }
+                case 16h8338: { readData = lower_sprites.collision_2; }
+                case 16h833c: { readData = lower_sprites.collision_3; }
+                case 16h8340: { readData = lower_sprites.collision_4; }
+                case 16h8344: { readData = lower_sprites.collision_5; }
+                case 16h8348: { readData = lower_sprites.collision_6; }
+                case 16h834c: { readData = lower_sprites.collision_7; }
+                case 16h8350: { readData = lower_sprites.collision_8; }
+                case 16h8354: { readData = lower_sprites.collision_9; }
+                case 16h8358: { readData = lower_sprites.collision_10; }
+                case 16h835c: { readData = lower_sprites.collision_11; }
+                case 16h8360: { readData = lower_sprites.collision_12; }
 
                 // GPU and BITMAP
                 case 16h841c: { readData = gpu_processor.gpu_active; }
                 case 16h84b0: { readData = bitmap_window.bitmap_colour_read; }
 
                 // UPPER SPRITE LAYER
+                case 16h8504: { readData = upper_sprites.sprite_read_active; }
+                case 16h8508: { readData = upper_sprites.sprite_read_tile; }
+                case 16h850c: { readData = upper_sprites.sprite_read_colour; }
+                case 16h8510: { readData = upper_sprites.sprite_read_x; }
+                case 16h8514: { readData = upper_sprites.sprite_read_y; }
+                case 16h8518: { readData = upper_sprites.sprite_read_double; }
+
+                case 16h8530: { readData = upper_sprites.collision_0; }
+                case 16h8534: { readData = upper_sprites.collision_1; }
+                case 16h8538: { readData = upper_sprites.collision_2; }
+                case 16h853c: { readData = upper_sprites.collision_3; }
+                case 16h8540: { readData = upper_sprites.collision_4; }
+                case 16h8544: { readData = upper_sprites.collision_5; }
+                case 16h8548: { readData = upper_sprites.collision_6; }
+                case 16h854c: { readData = upper_sprites.collision_7; }
+                case 16h8550: { readData = upper_sprites.collision_8; }
+                case 16h8554: { readData = upper_sprites.collision_9; }
+                case 16h8558: { readData = upper_sprites.collision_10; }
+                case 16h855c: { readData = upper_sprites.collision_11; }
+                case 16h8560: { readData = upper_sprites.collision_12; }
 
                 // CHARACTER MAP
+                case 16h8714: { readData = character_map_window.tpu_active; }
 
                 // TERMINAL
                 case 16h8700: { readData = terminal_window.terminal_active; }
@@ -415,7 +458,7 @@ algorithm memmap_io (
                 case 16h8930: { readData = sleepTimer.counter1khz; }
 
                 // VBLANK
-
+                case 16h8ff0: { readData = vblank; }
             }
         }
 
@@ -432,8 +475,32 @@ algorithm memmap_io (
                 case 16h8108: { background_generator.backgroundcolour_mode = writeData; background_generator.background_write = 3; }
 
                 // TILE MAP
+                case 16h8200: { tile_map.tm_x = writeData; }
+                case 16h8204: { tile_map.tm_y = writeData; }
+                case 16h8208: { tile_map.tm_character = writeData; }
+                case 16h820c: { tile_map.tm_background = writeData; }
+                case 16h8210: { tile_map.tm_foreground = writeData; }
+                case 16h8214: { tile_map.tm_write = 1; }
+
+                case 16h8220: { tile_map.tile_writer_tile = writeData; }
+                case 16h8224: { tile_map.tile_writer_line = writeData; }
+                case 16h8228: { tile_map.tile_writer_bitmap = writeData; tile_map.tile_writer_write = 1; }
+
+                case 16h8230: { tile_map.tm_scrollwrap = writeData; }
 
                 // LOWER SPRITE LAYER
+                case 16h8300: { lower_sprites.sprite_set_number = writeData; }
+                case 16h8304: { lower_sprites.sprite_set_active = writeData; lower_sprites.sprite_layer_write = 1; }
+                case 16h8308: { lower_sprites.sprite_set_tile = writeData; lower_sprites.sprite_layer_write = 2; }
+                case 16h830c: { lower_sprites.sprite_set_colour = writeData; lower_sprites.sprite_layer_write = 3; }
+                case 16h8310: { lower_sprites.sprite_set_x = writeData; lower_sprites.sprite_layer_write = 4; }
+                case 16h8314: { lower_sprites.sprite_set_y = writeData; lower_sprites.sprite_layer_write = 5; }
+                case 16h8318: { lower_sprites.sprite_set_double = writeData; lower_sprites.sprite_layer_write = 6; }
+                case 16h831c: { lower_sprites.sprite_update = writeData; lower_sprites.sprite_layer_write = 10; }
+
+                case 16h8320: { lower_sprites.sprite_writer_sprite = writeData; }
+                case 16h8324: { lower_sprites.sprite_writer_line = writeData; }
+                case 16h8328: { lower_sprites.sprite_writer_bitmap = writeData; lower_sprites.sprite_writer_active = 1; }
 
                 // GPU and BITMAP
                 case 16h8400: { gpu_processor.gpu_x = writeData; }
@@ -483,8 +550,26 @@ algorithm memmap_io (
                 case 16h84b4: { bitmap_window.bitmap_y_read = writeData; }
 
                 // UPPER SPRITE LAYER
+                case 16h8500: { upper_sprites.sprite_set_number = writeData; }
+                case 16h8504: { upper_sprites.sprite_set_active = writeData; upper_sprites.sprite_layer_write = 1; }
+                case 16h8508: { upper_sprites.sprite_set_tile = writeData; upper_sprites.sprite_layer_write = 2; }
+                case 16h850c: { upper_sprites.sprite_set_colour = writeData; upper_sprites.sprite_layer_write = 3; }
+                case 16h8510: { upper_sprites.sprite_set_x = writeData; upper_sprites.sprite_layer_write = 4; }
+                case 16h8514: { upper_sprites.sprite_set_y = writeData; upper_sprites.sprite_layer_write = 5; }
+                case 16h8518: { upper_sprites.sprite_set_double = writeData; upper_sprites.sprite_layer_write = 6; }
+                case 16h851c: { upper_sprites.sprite_update = writeData; upper_sprites.sprite_layer_write = 10; }
+
+                case 16h8520: { upper_sprites.sprite_writer_sprite = writeData; }
+                case 16h8524: { upper_sprites.sprite_writer_line = writeData; }
+                case 16h8528: { upper_sprites.sprite_writer_bitmap = writeData; upper_sprites.sprite_writer_active = 1; }
 
                 // CHARACTER MAP
+                case 16h8600: { character_map_window.tpu_x = writeData; }
+                case 16h8604: { character_map_window.tpu_y = writeData; }
+                case 16h8608: { character_map_window.tpu_character = writeData; }
+                case 16h860c: { character_map_window.tpu_background = writeData; }
+                case 16h8610: { character_map_window.tpu_foreground = writeData; }
+                case 16h8614: { character_map_window.tpu_write = writeData; }
 
                 // TERMINAL
                 case 16h8700: { terminal_window.terminal_character = writeData; terminal_window.terminal_write = 1; }
@@ -499,7 +584,6 @@ algorithm memmap_io (
                 case 16h8814: { apu_processor_R.note = writeData; }
                 case 16h8818: { apu_processor_R.duration = writeData; }
                 case 16h881c: { apu_processor_R.apu_write = writeData; }
-
 
                 // TIMERS and RNG
                 case 16h8900: { rng.resetRandom = 1; }
