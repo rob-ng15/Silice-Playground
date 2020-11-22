@@ -12,51 +12,39 @@ algorithm divideremainder (
     uint32  dividend_copy = uninitialized;
     uint32  divisor_copy = uninitialized;
 
-    uint32  last_dividend = uninitialized;
-    uint32  last_divisor = uninitialized;
-    uint1   last_sign = uninitialized;
-
     uint1   resultsign = uninitialized;
     uint6   bit = uninitialized;
 
-    if( ( last_dividend == dividend ) && ( last_divisor == divisor ) && ( last_sign == dosigned ) ) {
-        // Sequence DIV[U] rdq, rs1, rs2; REM[U] rdr. rs1, rs2
-        // NO ACTION REQUIRED
+
+    bit = 32;
+
+    if( divisor == 0 ) {
+        // DIVISON by ZERO
+        quotient = 32hffffffff;
+        remainder = dividend;
     } else {
-        last_dividend = dividend;
-        last_divisor = divisor;
-        last_sign = dosigned;
+        quotient = 0;
+        remainder = 0;
 
-        bit = 32;
+        dividend_copy = ( dosigned == 0 ) ? dividend : ( dividend[31,1] ? -dividend : dividend );
+        divisor_copy = ( dosigned == 0 ) ? divisor : ( divisor[31,1] ? -divisor : divisor );
+        resultsign = ( dosigned == 0 ) ? 0 : dividend[31,1] != divisor[31,1];
 
-        if( divisor == 0 ) {
-            // DIVISON by ZERO
-            quotient = 32hffffffff;
-            remainder = dividend;
-        } else {
-            quotient = 0;
-            remainder = 0;
+        ++:
 
-            dividend_copy = ( dosigned == 0 ) ? dividend : ( dividend[31,1] ? -dividend : dividend );
-            divisor_copy = ( dosigned == 0 ) ? divisor : ( divisor[31,1] ? -divisor : divisor );
-            resultsign = ( dosigned == 0 ) ? 0 : dividend[31,1] != divisor[31,1];
-
-            ++:
-
-            while( bit != 0 ) {
-                if( __unsigned( { remainder[0,31], dividend_copy[bit - 1,1] } ) >= __unsigned(divisor_copy) ) {
-                    remainder = { remainder[0,31], dividend_copy[bit - 1,1] } - divisor_copy;
-                    quotient[bit - 1,1] = 1;
-                } else {
-                    remainder = { remainder[0,31], dividend_copy[bit - 1,1] };
-                }
-                bit = bit - 1;
+        while( bit != 0 ) {
+            if( __unsigned( { remainder[0,31], dividend_copy[bit - 1,1] } ) >= __unsigned(divisor_copy) ) {
+                remainder = { remainder[0,31], dividend_copy[bit - 1,1] } - divisor_copy;
+                quotient[bit - 1,1] = 1;
+            } else {
+                remainder = { remainder[0,31], dividend_copy[bit - 1,1] };
             }
-
-            ++:
-
-            quotient = resultsign ? -quotient : quotient;
+            bit = bit - 1;
         }
+
+        ++:
+
+        quotient = resultsign ? -quotient : quotient;
     }
 }
 
@@ -70,49 +58,18 @@ algorithm multiplication (
     uint64  factor_1_copy = uninitialized;
     uint32  factor_2_copy = uninitialized;
 
-    uint32  last_factor_1 = uninitialized;
-    uint32  last_factor_2 = uninitialized;
-    uint2   last_sign = uninitialized;
-
     uint1   resultsign = uninitialized;
 
-    if( ( last_factor_1 == factor_1 ) && ( last_factor_2 == factor_2 ) && ( last_sign == dosigned ) ) {
-        // Sequence MULH[[S]U] rdh, rs1, rs2; MUL rdl, rs1, rs2
-        // NO ACTION REQUIRED
-    } else {
-        last_factor_1 = factor_1;
-        last_factor_2 = factor_2;
-        last_sign = dosigned;
+    factor_1_copy = ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
+    factor_2_copy = ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
 
-        switch( dosigned ) {
-            case 1: {
-                // SIGNED x SIGNED
-                factor_1_copy = ( factor_1[31,1] ) ? -factor_1 : factor_1;
-                factor_2_copy = ( factor_2[31,1] ) ? -factor_2 : factor_2;
-                resultsign = ( factor_1[31,1] != factor_2[31,1] );
-            }
-            case 2: {
-                // SIGNED x UNSIGNED
-                factor_1_copy = ( factor_1[31,1] ) ? -factor_1 : factor_1;
-                factor_2_copy = factor_2;
-                resultsign = factor_1[31,1];
-            }
-            default: {
-                // UNSIGNED x UNSIGNED
-                factor_1_copy = factor_1;
-                factor_2_copy = factor_2;
-                resultsign = 0;
-            }
-        }
+    resultsign = ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] != factor_2[31,1] ) : factor_1[31,1] );
 
-        ++:
+    ++:
 
-        while( factor_2_copy > 0 ) {
-            if( factor_2_copy[0,1] ) {
-                product = resultsign ? product - factor_1_copy : product + factor_2_copy;
-            }
-            factor_1_copy = factor_1_copy << 1;
-            factor_2_copy = factor_2_copy >> 1;
-        }
+    while( factor_2_copy > 0 ) {
+        product = ( factor_2_copy[0,1] ) ? ( resultsign ? product - factor_1_copy : product + factor_1_copy ) : product;
+        factor_1_copy = factor_1_copy << 1;
+        factor_2_copy = factor_2_copy >> 1;
     }
 }

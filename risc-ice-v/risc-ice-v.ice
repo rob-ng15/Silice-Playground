@@ -136,7 +136,6 @@ algorithm main(
     // RISC-V REGISTERS
     dualport_bram int32 registers_1[32] = { 0, pad(0) };
     dualport_bram int32 registers_2[32] = { 0, pad(0) };
-    int32   registers[32] = { 0, pad(0) };
 
     // RISC-V PROGRAM COUNTER
     uint32  pc = 0;
@@ -152,8 +151,6 @@ algorithm main(
     // RISC-V SOURCE REGISTER VALUES and IMMEDIATE VALUE and DESTINATION REGISTER ADDRESS
     int32   sourceReg1 := registers_1.rdata0;
     int32   sourceReg2 := registers_2.rdata0;
-    //int32   sourceReg1 := registers[ Rtype(instruction).sourceReg1 ];
-    //int32   sourceReg2 := registers[ Rtype(instruction).sourceReg2 ];
     uint32  immediateValue := { {20{instruction[31,1]}}, Itype(instruction).immediate };
     uint5   destReg := Rtype(instruction).destReg;
 
@@ -173,7 +170,7 @@ algorithm main(
 
     // Setup Memory Mapped I/O
     memmap_io IO_Map (
-        //leds :> leds,
+        leds :> leds,
         btns <: btns,
 
         // UART
@@ -218,6 +215,7 @@ algorithm main(
     registers_1.addr1 = 0; registers_1.wdata1 = 0;
     registers_2.addr1 = 0; registers_2.wdata1 = 0;
 
+    ram.addr = pc[2,14];
     ++:
 
     while(1) {
@@ -235,7 +233,6 @@ algorithm main(
         // DECODE + EXECUTE
         switch( opCode ) {
             case 7b0010111: {
-                leds = 1;
                 // ADD UPPER IMMEDIATE TO PC
                 result = Uresult + pc;
 
@@ -244,7 +241,6 @@ algorithm main(
             }
 
             case 7b0110111: {
-                leds = 2;
                 // LOAD UPPER IMMEDIATE
                 result = Uresult;
 
@@ -253,7 +249,6 @@ algorithm main(
             }
 
             case 7b1101111: {
-                leds = 4;
                 // JUMP AND LINK
                 result = pc + 4;
 
@@ -262,7 +257,6 @@ algorithm main(
             }
 
             case 7b1100111: {
-                leds = 8;
                 // JUMP AND LINK REGISTER
                 result = pc + 4;
 
@@ -273,18 +267,17 @@ algorithm main(
             case 7b1100011: {
                 // BRANCH on CONDITION
                 switch( function3 ) {
-                    case 3b000: { leds = 16; newPC = ( sourceReg1 == sourceReg2 ) ? branchAddress : pc + 4; }
-                    case 3b001: { leds = 16; newPC = ( sourceReg1 != sourceReg2 ) ? branchAddress : pc + 4; }
-                    case 3b100: { leds = 16; newPC = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? branchAddress : pc + 4; }
-                    case 3b101: { leds = 16; newPC = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? branchAddress : pc + 4; }
-                    case 3b110: { leds = 16; newPC = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? branchAddress : pc + 4; }
-                    case 3b111: { leds = 16; newPC = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? branchAddress : pc + 4; }
-                    default: { leds = 255 - 16; newPC = pc + 4; }
+                    case 3b000: { newPC = ( sourceReg1 == sourceReg2 ) ? branchAddress : pc + 4; }
+                    case 3b001: { newPC = ( sourceReg1 != sourceReg2 ) ? branchAddress : pc + 4; }
+                    case 3b100: { newPC = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? branchAddress : pc + 4; }
+                    case 3b101: { newPC = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? branchAddress : pc + 4; }
+                    case 3b110: { newPC = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? branchAddress : pc + 4; }
+                    case 3b111: { newPC = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? branchAddress : pc + 4; }
+                    default: { newPC = pc + 4; }
                 }
             }
 
             case 7b0000011: {
-                leds = 32;
                 // LOAD execute even if rd == 0 as may be discarding values in a buffer
                 switch( loadAddress[15,1] ) {
                     case 0: {
@@ -331,7 +324,6 @@ algorithm main(
             }
 
             case 7b0100011: {
-                leds = 64;
                 // STORE
                 switch( storeAddress[15,1] ) {
                     case 1b0: {
@@ -371,11 +363,10 @@ algorithm main(
             case 7b0010011: {
                 // INTEGER OPERATION WITH IMMEDIATE PARAMETER
                 switch( function3 ) {
-                    case 3b000: { leds = 128; result = sourceReg1 + immediateValue; }
-                    case 3b001: { leds = 128; result = sourceReg1 << ItypeSHIFT( instruction ).shiftCount; }
-                    case 3b010: { leds = 128; result = __signed( sourceReg1 ) < __signed( immediateValue ) ? 32b1 : 32b0; }
+                    case 3b000: { result = sourceReg1 + immediateValue; }
+                    case 3b001: { result = sourceReg1 << ItypeSHIFT( instruction ).shiftCount; }
+                    case 3b010: { result = __signed( sourceReg1 ) < __signed( immediateValue ) ? 32b1 : 32b0; }
                     case 3b011: {
-                        leds = 128;
                         if( immediateValue == 1 ) {
                             // SLTIU rd, rs1, 1 ( equivalent to SEQZ rd, rs )
                             result = ( sourceReg1 == 0 ) ? 32b1 : 0;
@@ -383,18 +374,17 @@ algorithm main(
                             result = __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ? 32b1 : 32b0;
                         }
                     }
-                    case 3b100: { leds = 128; result = sourceReg1 ^ immediateValue; }
+                    case 3b100: { result = sourceReg1 ^ immediateValue; }
                     case 3b101: {
-                        leds = 128;
-                        if( function7 == 7b0000000 ) {
+                        if( function7[5,1] == 0 ) {
                             result = sourceReg1 >> ItypeSHIFT( instruction ).shiftCount;
                         } else {
-                            result = { {32{sourceReg1[31,1]}}, sourceReg1 } >> ItypeSHIFT( instruction ).shiftCount;
+                            result = __signed(sourceReg1) >>> ItypeSHIFT( instruction ).shiftCount;
+                            //result = { {32{sourceReg1[31,1]}}, sourceReg1 } >> ItypeSHIFT( instruction ).shiftCount;
                         }
                     }
-                    case 3b110: { leds = 128; result = sourceReg1 | immediateValue; }
-                    case 3b111: { leds = 128; result = sourceReg1 & immediateValue; }
-                    default: { leds = 8haa; }
+                    case 3b110: { result = sourceReg1 | immediateValue; }
+                    case 3b111: { result = sourceReg1 & immediateValue; }
                 }
 
                 writeResult = 1;
@@ -404,9 +394,8 @@ algorithm main(
 
             case 7b0110011: {
                 // INTEGER OPERATION WITH REGISTER PARAMETER
-                switch( function7 ) {
-                    case 7b0000000: {
-                        leds = 192;
+                switch( { function7[5,1] , function7[0,1] } ) {
+                    case 2b00: {
                         switch( function3 ) {
                             case 3b000: { result = sourceReg1 + sourceReg2; }
                             case 3b001: { result = sourceReg1 << sourceReg2[0,5]; }
@@ -423,104 +412,46 @@ algorithm main(
                             case 3b101: { result = sourceReg1 >> sourceReg2[0,5]; }
                             case 3b110: { result = sourceReg1 | sourceReg2; }
                             case 3b111: { result = sourceReg1 & sourceReg2; }
-                            default: { leds = 255 - 192; }
                         }
                     }
-                    case 7b0100000: {
-                        leds = 192;
+
+                    case 2b10: {
                         switch( function3 ) {
                             case 3b000: { result = sourceReg1 - sourceReg2; }
-                            case 3b101: { result = { {32{sourceReg1[31,1]}}, sourceReg1 } >> sourceReg2[0,5]; }
-                            default: { leds = 255 - 192; }
-                        }
-                    }
-                    case 7b0000001: {
-                        // MULTIPLY / DIVIDE extension decoding
-                        switch( function3 ) {
-                            case 3b000: {
-                                // MUL sign x sign
-                                multiplicationuint.factor_1 = sourceReg1;
-                                multiplicationuint.factor_2 = sourceReg2;
-                                multiplicationuint.dosigned = 1;
-
-                                () <- multiplicationuint <- ();
-
-                                result = multiplicationuint.product[0,32];
-                            }
-                            case 3b001: {
-                                // MULH sign x sign
-                                multiplicationuint.factor_1 = sourceReg1;
-                                multiplicationuint.factor_2 = sourceReg2;
-                                multiplicationuint.dosigned = 1;
-
-                                () <- multiplicationuint <- ();
-
-                                result = multiplicationuint.product[32,32];
-                            }
-                            case 3b010: {
-                                // MULHSU sign x unsign
-                                multiplicationuint.factor_1 = sourceReg1;
-                                multiplicationuint.factor_2 = sourceReg2;
-                                multiplicationuint.dosigned = 2;
-
-                                () <- multiplicationuint <- ();
-
-                                result = multiplicationuint.product[32,32];
-                            }
-                            case 3b011: {
-                                // MULHU unsign x unsign
-                                multiplicationuint.factor_1 = sourceReg1;
-                                multiplicationuint.factor_2 = sourceReg2;
-                                multiplicationuint.dosigned = 0;
-
-                                () <- multiplicationuint <- ();
-
-                                result = multiplicationuint.product[32,32];
-                            }
-                            case 3b100: {
-                                // DIV
-                                dividerunit.dividend = sourceReg1;
-                                dividerunit.divisor = sourceReg2;
-                                dividerunit.dosigned = 1;
-
-                                () <- dividerunit <- ();
-
-                                result = dividerunit.quotient;
-                            }
                             case 3b101: {
-                                // DIVU
-                                dividerunit.dividend = sourceReg1;
-                                dividerunit.divisor = sourceReg2;
-                                dividerunit.dosigned = 0;
-
-                                () <- dividerunit <- ();
-
-                                result = dividerunit.quotient;
+                                //result = { {32{sourceReg1[31,1]}}, sourceReg1 } >> sourceReg2[0,5];
+                                result = __signed(sourceReg1) >>> sourceReg2[0,5];
                             }
-                            case 3b110: {
-                                // REM
-                                dividerunit.dividend = sourceReg1;
-                                dividerunit.divisor = sourceReg2;
-                                dividerunit.dosigned = 1;
-
-                                () <- dividerunit <- ();
-
-                                result = dividerunit.remainder;
-                            }
-                            case 3b111: {
-                                // REMU
-                                dividerunit.dividend = sourceReg1;
-                                dividerunit.divisor = sourceReg2;
-                                dividerunit.dosigned = 0;
-
-                                () <- dividerunit <- ();
-
-                                result = dividerunit.remainder;
-                            }
-
                         }
                     }
-                    default: { leds = 255 - 192; }
+
+                    case 2b01: {
+                        // MULTIPLY / DIVIDE extension decoding
+                        switch( function3[2,1] ) {
+                            case 1b0: {
+                                // MULTIPLICATION
+                                multiplicationuint.factor_1 = sourceReg1;
+                                multiplicationuint.factor_2 = sourceReg2;
+
+                                multiplicationuint.dosigned = ( function3[1,1] == 0 ) ? 1 : ( ( function3[0,1] == 0 ) ? 2 : 0 );
+
+                                () <- multiplicationuint <- ();
+
+                                result = ( function3 == 0 ) ? multiplicationuint.product[0,32] : multiplicationuint.product[32,32];
+                            }
+                            case 1b1: {
+                                // DIVISION / REMAINDER
+                                dividerunit.dividend = sourceReg1;
+                                dividerunit.divisor = sourceReg2;
+
+                                dividerunit.dosigned = ~function3[0,1];
+
+                                () <- dividerunit <- ();
+
+                                result = function3[1,1] ? dividerunit.remainder : dividerunit.quotient;
+                            }
+                        }
+                    }
                 }
 
                 writeResult = 1;
@@ -528,7 +459,7 @@ algorithm main(
             }
 
             default: {
-                leds = opCode;
+                // NOP or ILLEGAL INSTRUCTION
                 pcIncrement = 1;
             }
         }
@@ -541,7 +472,6 @@ algorithm main(
             registers_1.wdata1 = result;
             registers_2.addr1 = destReg;
             registers_2.wdata1 = result;
-            //registers[ destReg ] = result;
         }
 
         pc = pcIncrement ? pc + 4 : newPC;

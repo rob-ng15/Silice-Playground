@@ -33,6 +33,19 @@ short volatile * GPU_PARAM3 = (short volatile *) 0x8418;
 unsigned char volatile * GPU_WRITE = (unsigned char volatile *) 0x841C;
 unsigned char volatile * GPU_STATUS = (unsigned char volatile *) 0x841C;
 
+unsigned char volatile * VECTOR_DRAW_BLOCK = (unsigned char volatile *) 0x8420;
+unsigned char volatile * VECTOR_DRAW_COLOUR = (unsigned char volatile *) 0x8424;
+short volatile * VECTOR_DRAW_XC = (short volatile *) 0x8428;
+short volatile * VECTOR_DRAW_YC = (short volatile *) 0x842c;
+unsigned char volatile * VECTOR_DRAW_START = (unsigned char volatile *) 0x8430;
+
+unsigned char volatile * VECTOR_WRITER_BLOCK = (unsigned char volatile *) 0x8434;
+unsigned char volatile * VECTOR_WRITER_VERTEX = (unsigned char volatile *) 0x8438;
+unsigned char volatile * VECTOR_WRITER_ACTIVE = (unsigned char volatile *) 0x8444;
+char volatile * VECTOR_WRITER_DELTAX = (char volatile *) 0x843c;
+char volatile * VECTOR_WRITER_DELTAY = (char volatile *) 0x8440;
+unsigned char volatile * VECTOR_WRITER_COMMIT = (unsigned char volatile *) 0x8448;
+
 unsigned char volatile * LOWER_SPRITE_NUMBER = ( unsigned char volatile * ) 0x8300;
 unsigned char volatile * LOWER_SPRITE_ACTIVE = ( unsigned char volatile * ) 0x8304;
 unsigned char volatile * LOWER_SPRITE_TILE = ( unsigned char volatile * ) 0x8308;
@@ -151,9 +164,24 @@ void tilemap_scrollwrapclear( unsigned char action )
     *TM_SCROLLWRAPCLEAR = action;
 }
 
-void gpu_rectangle( unsigned char colour, short x1, short y1, short x2, short y2 )
+void wait_gpu( void )
 {
     while( *GPU_STATUS != 0 );
+}
+
+void gpu_pixel( unsigned char colour, short x, short y )
+{
+    wait_gpu();
+
+    *GPU_COLOUR = colour;
+    *GPU_X = x;
+    *GPU_Y = y;
+    *GPU_WRITE = 1;
+}
+
+void gpu_rectangle( unsigned char colour, short x1, short y1, short x2, short y2 )
+{
+    wait_gpu();
 
     *GPU_COLOUR = colour;
     *GPU_X = x1;
@@ -168,9 +196,32 @@ void gpu_cs( void )
     gpu_rectangle( 64, 0, 0, 639, 479 );
 }
 
+void gpu_line( unsigned char colour, short x1, short y1, short x2, short y2 )
+{
+    wait_gpu();
+
+    *GPU_COLOUR = colour;
+    *GPU_X = x1;
+    *GPU_Y = y1;
+    *GPU_PARAM0 = x2;
+    *GPU_PARAM1 = y2;
+    *GPU_WRITE = 3;
+}
+
+void gpu_circle( unsigned char colour, short x1, short y1, short radius )
+{
+    wait_gpu();
+
+    *GPU_COLOUR = colour;
+    *GPU_X = x1;
+    *GPU_Y = y1;
+    *GPU_PARAM0 = radius;
+    *GPU_WRITE = 4;
+}
+
 void gpu_fillcircle( unsigned char colour, short x1, short y1, short radius )
 {
-    while( *GPU_STATUS != 0 );
+    wait_gpu();
 
     *GPU_COLOUR = colour;
     *GPU_X = x1;
@@ -181,7 +232,7 @@ void gpu_fillcircle( unsigned char colour, short x1, short y1, short radius )
 
 void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2, short x3, short y3 )
 {
-    while( *GPU_STATUS != 0 );
+    wait_gpu();
 
     *GPU_COLOUR = colour;
     *GPU_X = x1;
@@ -191,6 +242,27 @@ void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2,
     *GPU_PARAM2 = x3;
     *GPU_PARAM3 = y3;
     *GPU_WRITE = 7;
+}
+
+void draw_vector_block( unsigned char block, unsigned char colour, short xc, short yc )
+{
+    while( *VECTOR_DRAW_START != 0);
+
+    *VECTOR_DRAW_BLOCK = block;
+    *VECTOR_DRAW_COLOUR = colour;
+    *VECTOR_DRAW_XC = xc;
+    *VECTOR_DRAW_YC = yc;
+    *VECTOR_DRAW_START = 1;
+}
+
+void set_vector_vertex( unsigned char block, unsigned char vertex, unsigned char active, char deltax, char deltay )
+{
+    *VECTOR_WRITER_BLOCK = block;
+    *VECTOR_WRITER_VERTEX = vertex;
+    *VECTOR_WRITER_ACTIVE = active;
+    *VECTOR_WRITER_DELTAX = deltax;
+    *VECTOR_WRITER_DELTAY = deltay;
+    *VECTOR_WRITER_COMMIT = 1;
 }
 
 void set_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsigned char active, unsigned char colour, short x, short y, unsigned char tile, unsigned char sprite_size)
@@ -420,6 +492,16 @@ void set_ship_sprites( unsigned char exploding )
     }
 }
 
+void set_ship_vector( void )
+{
+    set_vector_vertex( 0, 0, 1, 0, 0 );
+    set_vector_vertex( 0, 1, 1, 5, 10 );
+    set_vector_vertex( 0, 2, 1, 0, 6 );
+    set_vector_vertex( 0, 3, 1, -5, 10 );
+    set_vector_vertex( 0, 4, 1, 0, 0 );
+    set_vector_vertex( 0, 5, 0, 0, 0 );
+}
+
 void set_bullet_sprites( void )
 {
     for( unsigned char line_number = 0; line_number < 64; line_number++ ) {
@@ -485,6 +567,7 @@ void setup_game()
     //tpu_cs();
     set_asteroid_sprites();
     set_ship_sprites( 0 );
+    set_ship_vector();
 
     lives = 0; score = 0;
     shipx = 312; shipy = 232; shipdirection = 0; resetship = 0; bulletdirection = 0;
@@ -571,32 +654,32 @@ void move_ship()
 {
     switch( shipdirection ) {
         case 0:
-            shipy = ( shipy > 0 ) ? shipy - 1 : 0;
+            shipy = ( shipy > 0 ) ? shipy - 1 : 464;
             break;
         case 1:
-            shipx = ( shipx < 624 ) ? shipx + 1 : 624;
-            shipy = ( shipy > 0 ) ? shipy - 1 : 0;
+            shipx = ( shipx < 624 ) ? shipx + 1 : 0;
+            shipy = ( shipy > 0 ) ? shipy - 1 : 464;
             break;
         case 2:
-            shipx = ( shipx < 624 ) ? shipx + 1 : 624;
+            shipx = ( shipx < 624 ) ? shipx + 1 : 0;
             break;
         case 3:
-            shipx = ( shipx < 624 ) ? shipx + 1 : 624;
-            shipy = ( shipy < 464 ) ? shipy + 1 : 464;
+            shipx = ( shipx < 624 ) ? shipx + 1 : 0;
+            shipy = ( shipy < 464 ) ? shipy + 1 : 0;
             break;
         case 4:
-            shipy = ( shipy < 464 ) ? shipy + 1 : 464;
+            shipy = ( shipy < 464 ) ? shipy + 1 : 0;
             break;
         case 5:
             shipx = ( shipx > 0 ) ? shipx - 1 : 624;
-            shipy = ( shipy < 464 ) ? shipy + 1 : 464;
+            shipy = ( shipy < 464 ) ? shipy + 1 : 0;
             break;
         case 6:
             shipx = ( shipx > 0 ) ? shipx - 1 : 624;
             break;
         case 7:
             shipx = ( shipx > 0 ) ? shipx - 1 : 624;
-            shipy = ( shipy > 0 ) ? shipy - 1 : 0;
+            shipy = ( shipy > 0 ) ? shipy - 1 : 464;
             break;
     }
 }
@@ -605,10 +688,13 @@ void draw_lives( void )
 {
     switch( lives ) {
         case 3:
+            draw_vector_block( 0, 63, 608, 464 );
 
         case 2:
+            draw_vector_block( 0, 63, 576, 464 );
 
         case 1:
+            draw_vector_block( 0, 63, 544, 464 );
             break;
     }
 }
@@ -646,11 +732,14 @@ void fire_bullet( void )
     }
     set_sprite( 0, 12, 1, 60, bulletx, bullety, 2, 0);
     set_sprite( 1, 12, 1, 48, bulletx, bullety, 0, 0);
+
+    beep( 3, 2, 4, 61, 128 );
 }
 
 void update_bullet( void )
 {
     update_sprite( 0, 12, bullet_directions[ bulletdirection ] + 384 );
+    update_sprite( 1, 12, bullet_directions[ bulletdirection ] + 384 );
 }
 
 void beepboop( void )
@@ -658,13 +747,14 @@ void beepboop( void )
     if( last_timer != *TIMER1HZ ) {
         last_timer = *TIMER1HZ;
 
+        tilemap_scrollwrapclear( 5 );
+
         switch( *TIMER1HZ & 3 ) {
             case 0:
                 beep( 1, 1, 0, 1, 500 );
+                break;
 
             case 1:
-                // MOVE TILEMAP LEFT
-                tilemap_scrollwrapclear( 5 );
                 break;
 
             case 2:
@@ -691,38 +781,40 @@ void main()
 
     while(1) {
         counter++;
+        *LEDS = *BUTTONS;
 
         // NEW LEVEL NEEDED
         if( count_asteroids() == 0 ) {
             new_level();
         }
 
-        // AWAIT VBLANK and SET DELAY FOR LOOP
+        // AWAIT VBLANK and SET DELAY
         await_vblank();
-        set_timer1khz( 20 );
+        set_timer1khz( 4 );
 
         if( ( lives > 0 ) && !resetship ) {
             // BEEP / BOOP
             beepboop();
 
-            // FIRE?
-            if( ( *BUTTONS & 2 ) != 0 ) {
-                fire_bullet();
-                beep( 3, 2, 4, 61, 128 );
-            }
-            // TURN/MOVE SHIP
-            if( ( *BUTTONS & 8 ) != 0 ) {
-                // MOVE SHIP
-                move_ship();
-            }
-            if( ( ( counter & 3 ) == 0 ) && ( *BUTTONS & 32 ) != 0 ) {
+            // EVERY 4th CYCLE
+            if( ( counter & 3 ) == 0 ) {
                 // TURN LEFT
-                shipdirection = ( shipdirection == 0 ) ? 7 : shipdirection - 1;
-            }
-            if( ( ( counter & 3 ) == 0 ) && ( *BUTTONS & 64 ) != 0 ) {
+                if( ( *BUTTONS & 32 ) != 0 )
+                    shipdirection = ( shipdirection == 0 ) ? 7 : shipdirection - 1;
                 // TURN RIGHT
-                shipdirection = ( shipdirection == 7 ) ? 0 : shipdirection + 1;
+                if( ( *BUTTONS & 64 ) != 0 )
+                    shipdirection = ( shipdirection == 7 ) ? 0 : shipdirection + 1;
             }
+
+            // EVERY CYCLE
+            // FIRE?
+            if( ( *BUTTONS & 2 ) != 0 )
+                fire_bullet();
+
+            // MOVE SHIP
+            if( ( *BUTTONS & 8 ) != 0 )
+                move_ship();
+
             // DRAW WHITE SHIP
             draw_ship( 63 );
 
@@ -734,6 +826,7 @@ void main()
         } else {
             // SEE IF NEW GAME
             if( ( lives == 0 ) && ( ( *BUTTONS & 4 ) != 0 ) ) {
+                gpu_cs();
                 counter = 0;
                 lives = 3; score = 0;
                 shipx = 312; shipy = 232; shipdirection = 0; resetship = 0; bulletdirection = 0;
@@ -747,10 +840,10 @@ void main()
             set_sprite( 0, 12, 0, 0, 0, 0, 0, 0);
             set_sprite( 1, 12, 0, 0, 0, 0, 0, 0);
         }
+
         // UPDATE ASTEROIDS
         move_asteroids();
 
-        // WAIT FOR DELAY
         wait_timer1khz();
     }
 }

@@ -417,6 +417,8 @@ algorithm memmap_io (
 
                 // GPU and BITMAP
                 case 16h841c: { readData = gpu_processor.gpu_active; }
+                case 16h8448: { readData = gpu_processor.vector_block_active; }
+                case 16h8458: { readData = gpu_processor.display_list_active; }
                 case 16h84b0: { readData = bitmap_window.bitmap_colour_read; }
 
                 // UPPER SPRITE LAYER
