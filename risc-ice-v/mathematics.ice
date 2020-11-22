@@ -48,14 +48,14 @@ algorithm divideremainder (
     }
 }
 
-algorithm multiplication (
+algorithm multiplicationBinaryMultiplication (
     input   uint32  factor_1,
     input   uint32  factor_2,
     input   uint2   dosigned,
 
     output  uint64  product
 ) {
-    uint64  factor_1_copy = uninitialized;
+    uint32  factor_1_copy = uninitialized;
     uint32  factor_2_copy = uninitialized;
 
     uint1   resultsign = uninitialized;
@@ -72,4 +72,30 @@ algorithm multiplication (
         factor_1_copy = factor_1_copy << 1;
         factor_2_copy = factor_2_copy >> 1;
     }
+}
+
+algorithm multiplicationDSP (
+    input   uint32  factor_1,
+    input   uint32  factor_2,
+    input   uint2   dosigned,
+
+    output  uint64  product
+) {
+    uint32  factor_1_copy := ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
+    uint32  factor_2_copy := ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
+
+    uint18  A := { 2b0, factor_1_copy[16,16] };
+    uint18  B := { 2b0, factor_1_copy[0,16] };
+    uint18  C := { 2b0, factor_2_copy[16,16] };
+    uint18  D := { 2b0, factor_2_copy[0,16] };
+
+    uint1   resultsign := ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] != factor_2[31,1] ) : factor_1[31,1] );
+
+    ++:
+
+    product = D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 };
+
+    ++:
+
+    product = resultsign ? -product : product;
 }

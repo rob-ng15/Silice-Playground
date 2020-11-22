@@ -197,7 +197,7 @@ algorithm main(
 
     // MULTIPLICATION and DIVISION units
     divideremainder dividerunit ();
-    multiplication multiplicationuint ();
+    multiplicationDSP multiplicationuint ();
 
     // RAM/IO Read/Write Flags
     ram.wenable := 0;

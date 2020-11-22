@@ -126,13 +126,8 @@ algorithm multi16by16to32DSP (
     input   uint2   start,
     output  uint1   active
 ) <autorun> {
-    uint16  factor1copy = uninitialized;
-    uint16  factor2copy = uninitialized;
-
-    uint16  factor1high = uninitialized;
-    uint16  factor1low = uninitialized;
-    uint16  factor2high = uninitialized;
-    uint16  factor2low = uninitialized;
+    uint18  factor1copy = uninitialized;
+    uint18  factor2copy = uninitialized;
 
     uint32  nosignproduct = uninitialized;
     uint1   productsign = uninitialized;
@@ -149,8 +144,8 @@ algorithm multi16by16to32DSP (
                 case 2: {
                     // SIGNED MULTIPLICATION
                     product = 0;
-                    factor1copy = factor1[15,1] ? -factor1 : factor1;
-                    factor2copy = factor2[15,1] ? -factor2 : factor2;
+                    factor1copy = { 2b0, factor1[15,1] ? -factor1 : factor1 };
+                    factor2copy = { 2b0, factor2[15,1] ? -factor2 : factor2 };
                     productsign = factor1[15,1] != factor2[15,1];
                 }
             }
@@ -159,19 +154,8 @@ algorithm multi16by16to32DSP (
 
             ++:
 
-            // SETUP 16 x 16 multipliers
-            factor1high = { 8b0, factor1copy[8,8] };
-            factor1low = { 8b0, factor1copy[0,8] };
-            factor2high = { 8b0, factor2copy[8,8] };
-            factor2low = { 8b0, factor2copy[0,8] };
-
-            ++:
-
             // PERFORM UNSIGNED MULTIPLICATION
-            nosignproduct = { 16b0, factor1low * factor2low }
-                                + { 8b0, factor1high * factor2low, 8b0 }
-                                + { 8b0, factor1low * factor2high, 8b0 }
-                                + { factor1high * factor2high, 16b0 };
+            nosignproduct = factor1copy * factor2copy;
 
             ++:
 

@@ -57,6 +57,7 @@ unsigned char volatile * LOWER_SPRITE_UPDATE = ( unsigned char volatile * ) 0x83
 unsigned char volatile * LOWER_SPRITE_WRITER_NUMBER = ( unsigned char volatile * ) 0x8320;
 unsigned char volatile * LOWER_SPRITE_WRITER_LINE = ( unsigned char volatile * ) 0x8324;
 unsigned short volatile * LOWER_SPRITE_WRITER_BITMAP = ( unsigned short volatile * ) 0x8328;
+unsigned short volatile * LOWER_SPRITE_COLLISION_BASE = ( unsigned short volatile * ) 0x8330;
 
 unsigned char volatile * UPPER_SPRITE_NUMBER = ( unsigned char volatile * ) 0x8500;
 unsigned char volatile * UPPER_SPRITE_ACTIVE = ( unsigned char volatile * ) 0x8504;
@@ -69,6 +70,7 @@ unsigned char volatile * UPPER_SPRITE_UPDATE = ( unsigned char volatile * ) 0x85
 unsigned char volatile * UPPER_SPRITE_WRITER_NUMBER = ( unsigned char volatile * ) 0x8520;
 unsigned char volatile * UPPER_SPRITE_WRITER_LINE = ( unsigned char volatile * ) 0x8524;
 unsigned short volatile * UPPER_SPRITE_WRITER_BITMAP = ( unsigned short volatile * ) 0x8528;
+unsigned short volatile * UPPER_SPRITE_COLLISION_BASE = ( unsigned short volatile * ) 0x8530;
 
 unsigned char volatile * AUDIO_L_WAVEFORM = ( unsigned char volatile * ) 0x8800;
 unsigned char volatile * AUDIO_L_NOTE = ( unsigned char volatile * ) 0x8804;
@@ -113,13 +115,13 @@ void beep( unsigned char channel_number, unsigned char channel_note, unsigned ch
         *AUDIO_L_WAVEFORM = waveform;
         *AUDIO_L_NOTE = note;
         *AUDIO_L_DURATION = duration;
-        *AUDIO_L_START = channel_note + 1;
+        *AUDIO_L_START = channel_note;
     }
     if( ( channel_number & 2 ) != 0 ) {
         *AUDIO_R_WAVEFORM = waveform;
         *AUDIO_R_NOTE = note;
         *AUDIO_R_DURATION = duration;
-        *AUDIO_R_START = channel_note + 1;
+        *AUDIO_R_START = channel_note;
     }
 }
 
@@ -290,6 +292,11 @@ void set_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsign
     }
 }
 
+unsigned short get_sprite_collision( unsigned char sprite_layer, unsigned char sprite_number )
+{
+    return( ( sprite_layer == 0 ) ? LOWER_SPRITE_COLLISION_BASE[sprite_number] : UPPER_SPRITE_COLLISION_BASE[sprite_number] );
+}
+
 unsigned short get_sprite_attribute( unsigned char sprite_layer, unsigned char sprite_number, unsigned char attribute )
 {
     if( sprite_layer == 0 ) {
@@ -385,8 +392,9 @@ void set_sprite_line( unsigned char sprite_layer, unsigned char sprite_number, u
 
     // GLOBAL SPRITE UPDATE VALUES
     unsigned short bullet_directions[] = {
-        0x20, 0x32, 0x3, 0x12, 0x18, 0x16, 0x4, 0x36
+        0x1a0, 0x1b2, 0x183, 0x192, 0x198, 0x196, 0x184, 0x1b6
     };
+
     unsigned short asteroid_directions[] = {
         0x39, 0x9, 0xf, 0x3f, 0x31, 0x3a, 0xa, 0x11, 0x17, 0xe, 0x3e, 0x37
     };
@@ -452,6 +460,14 @@ void set_sprite_line( unsigned char sprite_layer, unsigned char sprite_number, u
         0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0100, 0x0380, 0x07c0,
         0x0380, 0x0100, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
         0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0540, 0x0380, 0x07c0,
+        0x0380, 0x0540, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+        0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0100, 0x0100, 0x07c0,
+        0x0100, 0x0100, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+        0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0440, 0x0280, 0x0100,
+        0x0280, 0x0440, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+        0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0100, 0x0380, 0x07c0,
+        0x0380, 0x0100, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+        0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0540, 0x0380, 0x07c0,
         0x0380, 0x0540, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000
     };
 
@@ -504,11 +520,9 @@ void set_ship_vector( void )
 
 void set_bullet_sprites( void )
 {
-    for( unsigned char line_number = 0; line_number < 64; line_number++ ) {
+    for( unsigned char line_number = 0; line_number < 128; line_number++ ) {
         set_sprite_line( 0, 12, line_number, bullet_bitmap[line_number] );
-        set_sprite_line( 0, 12, line_number, bullet_bitmap[line_number + 64] );
         set_sprite_line( 1, 12, line_number, bullet_bitmap[line_number] );
-        set_sprite_line( 1, 12, line_number, bullet_bitmap[line_number + 64] );
     }
 }
 
@@ -568,6 +582,7 @@ void setup_game()
     set_asteroid_sprites();
     set_ship_sprites( 0 );
     set_ship_vector();
+    set_bullet_sprites();
 
     lives = 0; score = 0;
     shipx = 312; shipy = 232; shipdirection = 0; resetship = 0; bulletdirection = 0;
@@ -738,8 +753,8 @@ void fire_bullet( void )
 
 void update_bullet( void )
 {
-    update_sprite( 0, 12, bullet_directions[ bulletdirection ] + 384 );
-    update_sprite( 1, 12, bullet_directions[ bulletdirection ] + 384 );
+    update_sprite( 0, 12, bullet_directions[ bulletdirection ] );
+    update_sprite( 1, 12, bullet_directions[ bulletdirection ] );
 }
 
 void beepboop( void )
@@ -751,14 +766,16 @@ void beepboop( void )
 
         switch( *TIMER1HZ & 3 ) {
             case 0:
-                beep( 1, 1, 0, 1, 500 );
+                if( lives > 0 )
+                    beep( 1, 1, 0, 1, 500 );
                 break;
 
             case 1:
                 break;
 
             case 2:
-                beep( 2, 1, 0, 2, 500 );
+                if( lives > 0 )
+                    beep( 2, 1, 0, 2, 500 );
                 break;
 
             case 3:
@@ -766,6 +783,14 @@ void beepboop( void )
                 tilemap_scrollwrapclear( 6 );
                 break;
         }
+    }
+}
+
+void check_crash( void )
+{
+    if( ( ( get_sprite_collision( 0, 11 ) & 0x7ff ) != 0 ) || ( ( get_sprite_collision( 1, 11 ) & 0x7ff ) != 0 ) ) {
+        set_ship_sprites( 1 );
+        resetship = 32;
     }
 }
 
@@ -792,9 +817,11 @@ void main()
         await_vblank();
         set_timer1khz( 4 );
 
-        if( ( lives > 0 ) && !resetship ) {
-            // BEEP / BOOP
-            beepboop();
+        // BEEP / BOOP
+        beepboop();
+
+        if( ( lives > 0 ) && ( resetship == 0) ) {
+            // GAME IN ACTION
 
             // EVERY 4th CYCLE
             if( ( counter & 3 ) == 0 ) {
@@ -808,7 +835,7 @@ void main()
 
             // EVERY CYCLE
             // FIRE?
-            if( ( *BUTTONS & 2 ) != 0 )
+            if( ( get_sprite_attribute( 0, 12, 0 ) == 0 ) && ( *BUTTONS & 2 ) != 0 )
                 fire_bullet();
 
             // MOVE SHIP
@@ -824,6 +851,7 @@ void main()
             // CHECK IF HIT BULLET -> ASTEROID
             // CHECK IF CRASHED ASTEROID -> SHIP
         } else {
+            // GAME OVER OR EXPLODING SHIP
             // SEE IF NEW GAME
             if( ( lives == 0 ) && ( ( *BUTTONS & 4 ) != 0 ) ) {
                 gpu_cs();
@@ -833,8 +861,33 @@ void main()
                 draw_lives();
                 new_level();
             }
-            // DRAW GREY SHIP
-            draw_ship( 21 );
+
+            if( ( ( resetship > 1 ) && ( resetship <= 16 ) ) || ( lives == 0 ) ) {
+                // DRAW GREY SHIP
+                draw_ship( 21 );
+                if( ( resetship > 1 ) && ( resetship <= 16 ) ) {
+                    if( ( ( get_sprite_collision( 0, 11 ) & 0x7ff ) == 0 ) && ( ( get_sprite_collision( 1, 11 ) & 0x7ff ) == 0 ) ) {
+                        lives--;
+                        resetship--;
+
+                        gpu_cs();
+                        if( lives == 0 )
+                            risc_ice_v_logo();
+
+                        draw_lives();
+                    }
+                }
+            }
+
+            if( resetship > 16 ) {
+                // EXPLODING SHIP
+                update_sprite( 0, 11, 0xe000 );
+                update_sprite( 1, 11, 0xf840 );
+
+                resetship--;
+                if( resetship == 16 )
+                    set_ship_sprites( 0 );
+            }
 
             // DELETE BULLET
             set_sprite( 0, 12, 0, 0, 0, 0, 0, 0);
