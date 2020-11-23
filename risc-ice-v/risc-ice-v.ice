@@ -139,6 +139,7 @@ algorithm main(
 
     // RISC-V PROGRAM COUNTER
     uint32  pc = 0;
+    uint32  pcPlus4 := pc + 4;
     uint32  newPC = uninitialized;
     uint1   pcIncrement = uninitialized;
 
@@ -242,7 +243,7 @@ algorithm main(
 
             case 7b1101111: {
                 // JUMP AND LINK
-                result = pc + 4;
+                result = pcPlus4;
 
                 writeResult = 1;
                 newPC = jumpAddress;
@@ -250,7 +251,7 @@ algorithm main(
 
             case 7b1100111: {
                 // JUMP AND LINK REGISTER
-                result = pc + 4;
+                result = pcPlus4;
 
                 writeResult = 1;
                 newPC = loadAddress;
@@ -259,12 +260,12 @@ algorithm main(
             case 7b1100011: {
                 // BRANCH on CONDITION
                 switch( function3 ) {
-                    case 3b000: { newPC = ( sourceReg1 == sourceReg2 ) ? branchAddress : pc + 4; }
-                    case 3b001: { newPC = ( sourceReg1 != sourceReg2 ) ? branchAddress : pc + 4; }
-                    case 3b100: { newPC = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? branchAddress : pc + 4; }
-                    case 3b101: { newPC = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? branchAddress : pc + 4; }
-                    case 3b110: { newPC = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? branchAddress : pc + 4; }
-                    case 3b111: { newPC = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? branchAddress : pc + 4; }
+                    case 3b000: { newPC = ( sourceReg1 == sourceReg2 ) ? branchAddress : pcPlus4; }
+                    case 3b001: { newPC = ( sourceReg1 != sourceReg2 ) ? branchAddress : pcPlus4; }
+                    case 3b100: { newPC = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? branchAddress : pcPlus4; }
+                    case 3b101: { newPC = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? branchAddress : pcPlus4; }
+                    case 3b110: { newPC = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? branchAddress : pcPlus4; }
+                    case 3b111: { newPC = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? branchAddress : pcPlus4; }
                     default: { pcIncrement = 1; }
                 }
             }
@@ -364,14 +365,7 @@ algorithm main(
                         }
                     }
                     case 3b100: { result = sourceReg1 ^ immediateValue; }
-                    case 3b101: {
-                        if( function7[5,1] == 0 ) {
-                            result = sourceReg1 >> ItypeSHIFT( instruction ).shiftCount;
-                        } else {
-                            result = __signed(sourceReg1) >>> ItypeSHIFT( instruction ).shiftCount;
-                            //result = { {32{sourceReg1[31,1]}}, sourceReg1 } >> ItypeSHIFT( instruction ).shiftCount;
-                        }
-                    }
+                    case 3b101: { result = ( function7[5,1] == 0 ) ? sourceReg1 >> ItypeSHIFT( instruction ).shiftCount : __signed(sourceReg1) >>> ItypeSHIFT( instruction ).shiftCount; }
                     case 3b110: { result = sourceReg1 | immediateValue; }
                     case 3b111: { result = sourceReg1 & immediateValue; }
                 }
@@ -408,7 +402,6 @@ algorithm main(
                         switch( function3 ) {
                             case 3b000: { result = sourceReg1 - sourceReg2; }
                             case 3b101: {
-                                //result = { {32{sourceReg1[31,1]}}, sourceReg1 } >> sourceReg2[0,5];
                                 result = __signed(sourceReg1) >>> sourceReg2[0,5];
                             }
                         }

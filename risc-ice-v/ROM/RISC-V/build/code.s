@@ -484,8 +484,8 @@ gpu_triangle:
 	.globl	draw_vector_block
 	.type	draw_vector_block, @function
 draw_vector_block:
-	lui	a5,%hi(VECTOR_DRAW_START)
-	lw	a4,%lo(VECTOR_DRAW_START)(a5)
+	lui	a5,%hi(VECTOR_DRAW_STATUS)
+	lw	a4,%lo(VECTOR_DRAW_STATUS)(a5)
 .L41:
 	lbu	a5,0(a4)
 	andi	a5,a5,0xff
@@ -2849,6 +2849,7 @@ main:
 	.globl	VECTOR_WRITER_ACTIVE
 	.globl	VECTOR_WRITER_VERTEX
 	.globl	VECTOR_WRITER_BLOCK
+	.globl	VECTOR_DRAW_STATUS
 	.globl	VECTOR_DRAW_START
 	.globl	VECTOR_DRAW_YC
 	.globl	VECTOR_DRAW_XC
@@ -3813,6 +3814,10 @@ VECTOR_WRITER_VERTEX:
 	.size	VECTOR_WRITER_BLOCK, 4
 VECTOR_WRITER_BLOCK:
 	.word	33844
+	.type	VECTOR_DRAW_STATUS, @object
+	.size	VECTOR_DRAW_STATUS, 4
+VECTOR_DRAW_STATUS:
+	.word	33864
 	.type	VECTOR_DRAW_START, @object
 	.size	VECTOR_DRAW_START, 4
 VECTOR_DRAW_START:

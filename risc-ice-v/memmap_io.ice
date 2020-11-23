@@ -277,11 +277,11 @@ algorithm memmap_io (
 
     // Left and Right audio channels
     // Sync'd with video_clock
-    apu apu_processor_L <@video_clock,!video_reset> (
+    apu apu_processor_L <@clock_50mhz> (
         staticGenerator <: staticGenerator,
         audio_output :> audio_l
     );
-    apu apu_processor_R <@video_clock,!video_reset> (
+    apu apu_processor_R <@clock_50mhz> (
         staticGenerator <: staticGenerator,
         audio_output :> audio_r
     );

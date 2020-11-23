@@ -38,6 +38,7 @@ unsigned char volatile * VECTOR_DRAW_COLOUR = (unsigned char volatile *) 0x8424;
 short volatile * VECTOR_DRAW_XC = (short volatile *) 0x8428;
 short volatile * VECTOR_DRAW_YC = (short volatile *) 0x842c;
 unsigned char volatile * VECTOR_DRAW_START = (unsigned char volatile *) 0x8430;
+unsigned char volatile * VECTOR_DRAW_STATUS = (unsigned char volatile *) 0x8448;
 
 unsigned char volatile * VECTOR_WRITER_BLOCK = (unsigned char volatile *) 0x8434;
 unsigned char volatile * VECTOR_WRITER_VERTEX = (unsigned char volatile *) 0x8438;
@@ -260,7 +261,7 @@ void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2,
 
 void draw_vector_block( unsigned char block, unsigned char colour, short xc, short yc )
 {
-    while( *VECTOR_DRAW_START != 0 );
+    while( *VECTOR_DRAW_STATUS != 0 );
 
     *VECTOR_DRAW_BLOCK = block;
     *VECTOR_DRAW_COLOUR = colour;
