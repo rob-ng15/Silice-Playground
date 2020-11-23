@@ -12,7 +12,7 @@ __ULX3S only at present__
 * CPU
     * 25MHz clock
         * Instructions take varying number of clock cycles for execution
-        * RV32I instruction set ( selection of )
+        * RV32IM instruction set ( selection of )
             * AUIPC
             * LUI
             * JAL and JALR
@@ -29,6 +29,10 @@ __ULX3S only at present__
                 * SLT[U]
                 * AND OR XOR
                 * SLL SRL SRA
+            * HARDWARE MULTIPLICATION AND DIVISION UNITS
+                * MUL MULH[[S]U]
+                * DIV[U] REM[U]
+                    * 2 x main clock ( 50mhz ) operation
             * NOP __ALL OTHER INSTRUCTION CODES__
 * MEMORY
     * 32K ( 8K x 32 bit) of RAM
@@ -57,3 +61,9 @@ __Not all documentation is in place yet. I/O memory mapping not yet finalised.__
 ## BUILD and USAGE Instructions
 
 Open a terminal in the ULX3S directory and type ```make ulx3s```. Wait. Upload your design your ULX3S with ```fujproj BUILD_ulx3s/build.bit```. Or download from this repository.
+
+## COMPILING C CODES
+
+Open a terminal in the ROM/RISC-V directory. Create your own C code in the c directory. Compile with ( for example the asteroids game ) ```./compile_c.sh c/asteroids.c```. Open build/code.bin in okteta. From the menu select File -> Export -> C Array. Use the __unsigned int__ option, save the output as ```code.inc```. Open ```code.inc``` in kwrite or kate, delete the first two and the last lines. Replace ```0x``` with ```32h``` and save as ```BIOS.inc``` in the ROM directory.
+
+Follow the build instructions above and your program will launch once the code has compiled.

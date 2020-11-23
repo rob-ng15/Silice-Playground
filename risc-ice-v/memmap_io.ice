@@ -56,6 +56,7 @@ algorithm memmap_io (
     input   uint10  pix_y,
 
     // CLOCKS
+    input   uint1   clock_50mhz,
     input   uint1   video_clock,
     input   uint1   video_reset,
 
@@ -68,18 +69,18 @@ algorithm memmap_io (
 ) <autorun> {
     // 1hz timers (p1hz used for systemClock, timer1hz for user purposes)
     uint16 systemClock = uninitialized;
-    pulse1hz p1hz (
+    pulse1hz p1hz <@clock_50mhz> (
         counter1hz :> systemClock,
     );
-    pulse1hz timer1hz ( );
+    pulse1hz timer1hz <@clock_50mhz> ( );
 
     // 1khz timers (sleepTimer used for sleep command, timer1khz for user purposes)
-    pulse1khz sleepTimer ( );
-    pulse1khz timer1khz ( );
+    pulse1khz sleepTimer <@clock_50mhz> ( );
+    pulse1khz timer1khz <@clock_50mhz> ( );
 
     // RNG random number generator
     uint16 staticGenerator = 0;
-    random rng (
+    random rng <@clock_50mhz> (
         g_noise_out :> staticGenerator
     );
 
@@ -276,11 +277,11 @@ algorithm memmap_io (
 
     // Left and Right audio channels
     // Sync'd with video_clock
-    apu apu_processor_L (
+    apu apu_processor_L <@video_clock,!video_reset> (
         staticGenerator <: staticGenerator,
         audio_output :> audio_l
     );
-    apu apu_processor_R (
+    apu apu_processor_R <@video_clock,!video_reset> (
         staticGenerator <: staticGenerator,
         audio_output :> audio_r
     );
@@ -397,23 +398,23 @@ algorithm memmap_io (
                 case 16h8304: { readData = lower_sprites.sprite_read_active; }
                 case 16h8308: { readData = lower_sprites.sprite_read_tile; }
                 case 16h830c: { readData = lower_sprites.sprite_read_colour; }
-                case 16h8310: { readData = lower_sprites.sprite_read_x; }
-                case 16h8314: { readData = lower_sprites.sprite_read_y; }
+                case 16h8310: { readData = { {5{lower_sprites.sprite_read_x[10,1]}}, lower_sprites.sprite_read_x }; }
+                case 16h8314: { readData = { {5{lower_sprites.sprite_read_y[10,1]}}, lower_sprites.sprite_read_y }; }
                 case 16h8318: { readData = lower_sprites.sprite_read_double; }
 
                 case 16h8330: { readData = lower_sprites.collision_0; }
-                case 16h8334: { readData = lower_sprites.collision_1; }
-                case 16h8338: { readData = lower_sprites.collision_2; }
-                case 16h833c: { readData = lower_sprites.collision_3; }
-                case 16h8340: { readData = lower_sprites.collision_4; }
-                case 16h8344: { readData = lower_sprites.collision_5; }
-                case 16h8348: { readData = lower_sprites.collision_6; }
-                case 16h834c: { readData = lower_sprites.collision_7; }
-                case 16h8350: { readData = lower_sprites.collision_8; }
-                case 16h8354: { readData = lower_sprites.collision_9; }
-                case 16h8358: { readData = lower_sprites.collision_10; }
-                case 16h835c: { readData = lower_sprites.collision_11; }
-                case 16h8360: { readData = lower_sprites.collision_12; }
+                case 16h8332: { readData = lower_sprites.collision_1; }
+                case 16h8334: { readData = lower_sprites.collision_2; }
+                case 16h8336: { readData = lower_sprites.collision_3; }
+                case 16h8338: { readData = lower_sprites.collision_4; }
+                case 16h833a: { readData = lower_sprites.collision_5; }
+                case 16h833c: { readData = lower_sprites.collision_6; }
+                case 16h833e: { readData = lower_sprites.collision_7; }
+                case 16h8340: { readData = lower_sprites.collision_8; }
+                case 16h8342: { readData = lower_sprites.collision_9; }
+                case 16h8344: { readData = lower_sprites.collision_10; }
+                case 16h8346: { readData = lower_sprites.collision_11; }
+                case 16h8348: { readData = lower_sprites.collision_12; }
 
                 // GPU and BITMAP
                 case 16h841c: { readData = gpu_processor.gpu_active; }
@@ -425,26 +426,26 @@ algorithm memmap_io (
                 case 16h8504: { readData = upper_sprites.sprite_read_active; }
                 case 16h8508: { readData = upper_sprites.sprite_read_tile; }
                 case 16h850c: { readData = upper_sprites.sprite_read_colour; }
-                case 16h8510: { readData = upper_sprites.sprite_read_x; }
-                case 16h8514: { readData = upper_sprites.sprite_read_y; }
+                case 16h8510: { readData = { {5{upper_sprites.sprite_read_x[10,1]}}, upper_sprites.sprite_read_x }; }
+                case 16h8514: { readData = { {5{upper_sprites.sprite_read_y[10,1]}}, upper_sprites.sprite_read_y }; }
                 case 16h8518: { readData = upper_sprites.sprite_read_double; }
 
                 case 16h8530: { readData = upper_sprites.collision_0; }
-                case 16h8534: { readData = upper_sprites.collision_1; }
-                case 16h8538: { readData = upper_sprites.collision_2; }
-                case 16h853c: { readData = upper_sprites.collision_3; }
-                case 16h8540: { readData = upper_sprites.collision_4; }
-                case 16h8544: { readData = upper_sprites.collision_5; }
-                case 16h8548: { readData = upper_sprites.collision_6; }
-                case 16h854c: { readData = upper_sprites.collision_7; }
-                case 16h8550: { readData = upper_sprites.collision_8; }
-                case 16h8554: { readData = upper_sprites.collision_9; }
-                case 16h8558: { readData = upper_sprites.collision_10; }
-                case 16h855c: { readData = upper_sprites.collision_11; }
-                case 16h8560: { readData = upper_sprites.collision_12; }
+                case 16h8532: { readData = upper_sprites.collision_1; }
+                case 16h8534: { readData = upper_sprites.collision_2; }
+                case 16h8536: { readData = upper_sprites.collision_3; }
+                case 16h8538: { readData = upper_sprites.collision_4; }
+                case 16h853a: { readData = upper_sprites.collision_5; }
+                case 16h853c: { readData = upper_sprites.collision_6; }
+                case 16h853e: { readData = upper_sprites.collision_7; }
+                case 16h8540: { readData = upper_sprites.collision_8; }
+                case 16h8542: { readData = upper_sprites.collision_9; }
+                case 16h8544: { readData = upper_sprites.collision_10; }
+                case 16h8546: { readData = upper_sprites.collision_11; }
+                case 16h8548: { readData = upper_sprites.collision_12; }
 
                 // CHARACTER MAP
-                case 16h8714: { readData = character_map_window.tpu_active; }
+                case 16h8614: { readData = character_map_window.tpu_active; }
 
                 // TERMINAL
                 case 16h8700: { readData = terminal_window.terminal_active; }

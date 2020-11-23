@@ -53,7 +53,7 @@ unsigned char volatile * LOWER_SPRITE_COLOUR = ( unsigned char volatile * ) 0x83
 short volatile * LOWER_SPRITE_X = ( short volatile * ) 0x8310;
 short volatile * LOWER_SPRITE_Y = ( short volatile * ) 0x8314;
 unsigned char volatile * LOWER_SPRITE_DOUBLE = ( unsigned char volatile * ) 0x8318;
-unsigned char volatile * LOWER_SPRITE_UPDATE = ( unsigned char volatile * ) 0x831c;
+unsigned short volatile * LOWER_SPRITE_UPDATE = ( unsigned short volatile * ) 0x831c;
 unsigned char volatile * LOWER_SPRITE_WRITER_NUMBER = ( unsigned char volatile * ) 0x8320;
 unsigned char volatile * LOWER_SPRITE_WRITER_LINE = ( unsigned char volatile * ) 0x8324;
 unsigned short volatile * LOWER_SPRITE_WRITER_BITMAP = ( unsigned short volatile * ) 0x8328;
@@ -66,11 +66,18 @@ unsigned char volatile * UPPER_SPRITE_COLOUR = ( unsigned char volatile * ) 0x85
 short volatile * UPPER_SPRITE_X = ( short volatile * ) 0x8510;
 short volatile * UPPER_SPRITE_Y = ( short volatile * ) 0x8514;
 unsigned char volatile * UPPER_SPRITE_DOUBLE = ( unsigned char volatile * ) 0x8518;
-unsigned char volatile * UPPER_SPRITE_UPDATE = ( unsigned char volatile * ) 0x851c;
+unsigned short volatile * UPPER_SPRITE_UPDATE = ( unsigned short volatile * ) 0x851c;
 unsigned char volatile * UPPER_SPRITE_WRITER_NUMBER = ( unsigned char volatile * ) 0x8520;
 unsigned char volatile * UPPER_SPRITE_WRITER_LINE = ( unsigned char volatile * ) 0x8524;
 unsigned short volatile * UPPER_SPRITE_WRITER_BITMAP = ( unsigned short volatile * ) 0x8528;
 unsigned short volatile * UPPER_SPRITE_COLLISION_BASE = ( unsigned short volatile * ) 0x8530;
+
+unsigned char volatile * TPU_X = ( unsigned char volatile * ) 0x8600;
+unsigned char volatile * TPU_Y = ( unsigned char volatile * ) 0x8604;
+unsigned char volatile * TPU_CHARACTER = ( unsigned char volatile * ) 0x8608;
+unsigned char volatile * TPU_BACKGROUND = ( unsigned char volatile * ) 0x860c;
+unsigned char volatile * TPU_FOREGROUND = ( unsigned char volatile * ) 0x8610;
+unsigned char volatile * TPU_COMMIT = ( unsigned char volatile * ) 0x8614;
 
 unsigned char volatile * AUDIO_L_WAVEFORM = ( unsigned char volatile * ) 0x8800;
 unsigned char volatile * AUDIO_L_NOTE = ( unsigned char volatile * ) 0x8804;
@@ -97,6 +104,11 @@ char inputcharacter(void)
 short rng( short range )
 {
     return( *RNG % range );
+}
+
+short qrng( short range )
+{
+    return( *RNG & range );
 }
 
 void set_timer1khz( short counter )
@@ -248,7 +260,7 @@ void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2,
 
 void draw_vector_block( unsigned char block, unsigned char colour, short xc, short yc )
 {
-    while( *VECTOR_DRAW_START != 0);
+    while( *VECTOR_DRAW_START != 0 );
 
     *VECTOR_DRAW_BLOCK = block;
     *VECTOR_DRAW_COLOUR = colour;
@@ -346,7 +358,7 @@ unsigned short get_sprite_attribute( unsigned char sprite_layer, unsigned char s
     }
 }
 
-void update_sprite( unsigned char sprite_layer, unsigned char sprite_number, short update_flag )
+void update_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsigned short update_flag )
 {
     switch( sprite_layer ) {
         case 0:
@@ -377,8 +389,25 @@ void set_sprite_line( unsigned char sprite_layer, unsigned char sprite_number, u
     }
 }
 
+void tpu_cs( void )
+{
+    while( *TPU_COMMIT != 0 );
+    *TPU_COMMIT = 3;
+}
+
+void tpu_outputstring( unsigned char x, unsigned char y, unsigned char background, unsigned char foreground, char *s )
+{
+    *TPU_X = x; *TPU_Y = y; *TPU_BACKGROUND = background; *TPU_FOREGROUND = foreground; *TPU_COMMIT = 1;
+
+    while( *s ) {
+        while( *TPU_COMMIT != 0 );
+        *TPU_CHARACTER = *s; *TPU_COMMIT = 2;
+        s++;
+    }
+}
+
     // GLOBAL VARIABLES
-    int lives = 0, score = 0;
+    unsigned short lives = 0, score = 0;
     int counter = 0;
 
     // SHIP and BULLET
@@ -578,7 +607,7 @@ void setup_game()
 
     tilemap_scrollwrapclear( 9 ); set_tilemap();
 
-    //tpu_cs();
+    tpu_cs();
     set_asteroid_sprites();
     set_ship_sprites( 0 );
     set_ship_vector();
@@ -612,9 +641,9 @@ void new_asteroid( unsigned char asteroid_type )
         } while( ( potentialx >= shipx - 64 ) && ( potentialx <= shipx + 64 ) && ( potentialy >= shipy - 64 ) && ( potentialy <= shipy + 64) );
 
         asteroid_active[ potentialnumber ] = asteroid_type;
-        asteroid_direction[ potentialnumber ] = rng( ( asteroid_type == 2 ) ? 4 : 8 );
+        asteroid_direction[ potentialnumber ] = qrng( ( asteroid_type == 2 ) ? 3 : 7 );
 
-        set_sprite( ( potentialnumber > 10 ) ? 1 : 0, ( potentialnumber > 10 ) ? potentialnumber - 11 : potentialnumber, 1, rng( 32 ) + 32, potentialx, potentialy, rng( 7 ), ( asteroid_type == 2 ) ? 1 : 0 );
+        set_sprite( ( potentialnumber > 10 ) ? 1 : 0, ( potentialnumber > 10 ) ? potentialnumber - 11 : potentialnumber, 1, qrng( 31 ) + 32, potentialx, potentialy, rng( 7 ), ( asteroid_type == 2 ) ? 1 : 0 );
     }
 }
 
@@ -631,7 +660,7 @@ void new_level( void )
     }
 
     // PLACE NEW LARGE ASTEROIDS
-    number_of_asteroids = rng( 4 ) + 4;
+    number_of_asteroids = qrng( 3 ) + 4;
     for( asteroid_number = 0; asteroid_number < number_of_asteroids; asteroid_number++ ) {
         new_asteroid( 2 );
     }
@@ -640,8 +669,15 @@ void new_level( void )
 void move_asteroids( void )
 {
     for( unsigned char asteroid_number = 0; asteroid_number < 22; asteroid_number++ ) {
-        if( asteroid_active[asteroid_number] != 0 ) {
+        if( ( asteroid_active[asteroid_number] != 0 ) && ( asteroid_active[asteroid_number] < 3 ) ) {
             update_sprite( ( asteroid_number > 10) ? 1 : 0, ( asteroid_number > 10) ? asteroid_number - 11 : asteroid_number, asteroid_directions[ asteroid_direction[asteroid_number] ] );
+        }
+        if( asteroid_active[asteroid_number] >= 3 )
+            asteroid_active[asteroid_number]--;
+
+        if( asteroid_active[asteroid_number] == 3 ) {
+            asteroid_active[asteroid_number] = 0;
+            set_sprite( ( asteroid_number > 10) ? 1 : 0, ( asteroid_number > 10) ? asteroid_number - 11 : asteroid_number, 0, 0, 0, 0, 0, 0 );
         }
     }
 }
@@ -697,6 +733,21 @@ void move_ship()
             shipy = ( shipy > 0 ) ? shipy - 1 : 464;
             break;
     }
+}
+
+void draw_score( void )
+{
+    char scorestring[]="Score 000000";
+    unsigned short scorework = score, remainder;
+
+    for( int i = 0; i< 5; i++ ) {
+        remainder = scorework % 10;
+        scorework = scorework / 10;
+
+        scorestring[11 - i] = remainder + '0';
+    }
+
+    tpu_outputstring( 34, 1, 64, ( lives > 0 ) ? 63 : 21, scorestring );
 }
 
 void draw_lives( void )
@@ -760,22 +811,30 @@ void update_bullet( void )
 void beepboop( void )
 {
     if( last_timer != *TIMER1HZ ) {
+        draw_score();
+
         last_timer = *TIMER1HZ;
 
         tilemap_scrollwrapclear( 5 );
 
         switch( *TIMER1HZ & 3 ) {
             case 0:
-                if( lives > 0 )
+                if( lives > 0 ) {
                     beep( 1, 1, 0, 1, 500 );
+                } else {
+                    tpu_outputstring( 25, 18, 64, 3, "Welcome to Risc-ICE-V Asteroids" );
+                }
                 break;
 
             case 1:
                 break;
 
             case 2:
-                if( lives > 0 )
+                if( lives > 0 ) {
                     beep( 2, 1, 0, 2, 500 );
+                } else {
+                    tpu_outputstring( 25, 18, 64, 60, "     Press FIRE 2 to start     " );
+                }
                 break;
 
             case 3:
@@ -786,11 +845,66 @@ void beepboop( void )
     }
 }
 
+void spawn_asteroid( unsigned char asteroid_type, short xc, short yc )
+{
+    unsigned char potentialnumber;
+
+    potentialnumber = find_asteroid_space();
+    if( potentialnumber != 0xff ) {
+        asteroid_active[ potentialnumber ] = asteroid_type;
+        asteroid_direction[ potentialnumber ] = qrng( ( asteroid_type == 2 ) ? 3 : 7 );
+
+        set_sprite( ( potentialnumber > 10 ) ? 1 : 0, ( potentialnumber > 10 ) ? potentialnumber - 11 : potentialnumber,
+                    1, qrng( 31 ) + 32, xc + qrng(15) - 8, yc + qrng(15) - 8, rng( 7 ), ( asteroid_type == 2 ) ? 1 : 0 );
+    }
+}
+
+void check_hit( void )
+{
+    unsigned char asteroid_hit = 0xff, colour, spritesize, spawnextra;
+    short x, y;
+
+    if( ( ( get_sprite_collision( 0, 12 ) & 0x7ff ) != 0 ) || ( ( get_sprite_collision( 1, 12 ) & 0x7ff ) != 0 ) ) {
+        beep( 3, 2, 4, 8, 500 );
+        for( unsigned char asteroid_number = 0; asteroid_number < 22; asteroid_number++ ) {
+            if( get_sprite_collision( ( asteroid_number > 10) ? 1 : 0, ( asteroid_number > 10) ? asteroid_number - 11 : asteroid_number ) & 0x1000 ) {
+                asteroid_hit = asteroid_number;
+            }
+        }
+
+
+        if( ( asteroid_hit != 0xff ) && ( asteroid_active[asteroid_hit] < 3 ) ) {
+            // DELETE BULLET
+            set_sprite( 0, 12, 0, 0, 0, 0, 0, 0);
+            set_sprite( 1, 12, 0, 0, 0, 0, 0, 0);
+
+            score = score + ( 3 - asteroid_active[asteroid_hit] );
+
+            colour = get_sprite_attribute( ( asteroid_hit > 10) ? 1 : 0, ( asteroid_hit > 10) ? asteroid_hit - 11 : asteroid_hit, 2 );
+            x = get_sprite_attribute( ( asteroid_hit > 10) ? 1 : 0, ( asteroid_hit > 10) ? asteroid_hit - 11 : asteroid_hit, 3 );
+            y = get_sprite_attribute( ( asteroid_hit > 10) ? 1 : 0, ( asteroid_hit > 10) ? asteroid_hit - 11 : asteroid_hit, 4 );
+            spritesize = get_sprite_attribute( ( asteroid_hit > 10) ? 1 : 0, ( asteroid_hit > 10) ? asteroid_hit - 11 : asteroid_hit, 5 );
+
+            // SPAWN NEW ASTEROIDS
+            if( asteroid_active[asteroid_hit] == 2 ) {
+                spawnextra = qrng( 1 );
+                for( int i=0; i < 2 + spawnextra; i++ ) {
+                    spawn_asteroid( 1, x, y );
+                }
+            }
+
+            set_sprite( ( asteroid_hit > 10) ? 1 : 0, ( asteroid_hit > 10) ? asteroid_hit - 11 : asteroid_hit, 1, colour, x, y, 7, spritesize );
+            asteroid_active[asteroid_hit] = 25;
+        }
+    }
+}
+
 void check_crash( void )
 {
     if( ( ( get_sprite_collision( 0, 11 ) & 0x7ff ) != 0 ) || ( ( get_sprite_collision( 1, 11 ) & 0x7ff ) != 0 ) ) {
+        beep( 3, 2, 4, 1, 1000 );
         set_ship_sprites( 1 );
-        resetship = 32;
+        resetship = 75;
     }
 }
 
@@ -806,7 +920,7 @@ void main()
 
     while(1) {
         counter++;
-        *LEDS = *BUTTONS;
+        *LEDS = count_asteroids() << ( last_timer & 7 );
 
         // NEW LEVEL NEEDED
         if( count_asteroids() == 0 ) {
@@ -815,7 +929,7 @@ void main()
 
         // AWAIT VBLANK and SET DELAY
         await_vblank();
-        set_timer1khz( 4 );
+        set_timer1khz( 8 );
 
         // BEEP / BOOP
         beepboop();
@@ -849,12 +963,15 @@ void main()
             update_bullet();
 
             // CHECK IF HIT BULLET -> ASTEROID
+            check_hit();
+
             // CHECK IF CRASHED ASTEROID -> SHIP
+            check_crash();
         } else {
             // GAME OVER OR EXPLODING SHIP
             // SEE IF NEW GAME
             if( ( lives == 0 ) && ( ( *BUTTONS & 4 ) != 0 ) ) {
-                gpu_cs();
+                gpu_cs(); tpu_cs();
                 counter = 0;
                 lives = 3; score = 0;
                 shipx = 312; shipy = 232; shipdirection = 0; resetship = 0; bulletdirection = 0;
@@ -862,19 +979,20 @@ void main()
                 new_level();
             }
 
-            if( ( ( resetship > 1 ) && ( resetship <= 16 ) ) || ( lives == 0 ) ) {
+            if( ( ( resetship >= 1 ) && ( resetship <= 16 ) ) || ( lives == 0 ) ) {
                 // DRAW GREY SHIP
                 draw_ship( 21 );
-                if( ( resetship > 1 ) && ( resetship <= 16 ) ) {
+                if( ( resetship >= 1 ) && ( resetship <= 16 ) ) {
                     if( ( ( get_sprite_collision( 0, 11 ) & 0x7ff ) == 0 ) && ( ( get_sprite_collision( 1, 11 ) & 0x7ff ) == 0 ) ) {
-                        lives--;
                         resetship--;
+                        if( resetship == 0 ) {
+                            gpu_cs();
+                            lives--;
+                            draw_lives();
+                        }
 
-                        gpu_cs();
                         if( lives == 0 )
                             risc_ice_v_logo();
-
-                        draw_lives();
                     }
                 }
             }

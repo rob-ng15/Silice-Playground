@@ -134,8 +134,8 @@ algorithm main(
     };
 
     // RISC-V REGISTERS
-    dualport_bram int32 registers_1[32] = { 0, pad(0) };
-    dualport_bram int32 registers_2[32] = { 0, pad(0) };
+    bram int32 registers_1[32] = { 0, pad(0) };
+    bram int32 registers_2[32] = { 0, pad(0) };
 
     // RISC-V PROGRAM COUNTER
     uint32  pc = 0;
@@ -149,8 +149,8 @@ algorithm main(
     uint7   function7 := Rtype(instruction).function7;
 
     // RISC-V SOURCE REGISTER VALUES and IMMEDIATE VALUE and DESTINATION REGISTER ADDRESS
-    int32   sourceReg1 := registers_1.rdata0;
-    int32   sourceReg2 := registers_2.rdata0;
+    int32   sourceReg1 := registers_1.rdata;
+    int32   sourceReg2 := registers_2.rdata;
     uint32  immediateValue := { {20{instruction[31,1]}}, Itype(instruction).immediate };
     uint5   destReg := Rtype(instruction).destReg;
 
@@ -164,9 +164,6 @@ algorithm main(
     int32   branchAddress := pc + { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 };
     int32   loadAddress := immediateValue + sourceReg1;
     int32   storeAddress := { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
-
-    // RETRIEVE FROM MEMORY
-    uint32  memoryRead = uninitialized;
 
     // Setup Memory Mapped I/O
     memmap_io IO_Map (
@@ -191,13 +188,16 @@ algorithm main(
         pix_y <: pix_y,
 
         // CLOCKS
+        clock_50mhz <: clock_50mhz,
         video_clock <:video_clock,
         video_reset <: video_reset
     );
 
     // MULTIPLICATION and DIVISION units
-    divideremainder dividerunit ();
-    multiplicationDSP multiplicationuint ();
+    divideremainder dividerunit <@clock_50mhz> ();
+    multiplicationDSP multiplicationuint <@clock_50mhz> ();
+    dividerunit.start := 0;
+    multiplicationuint.start := 0;
 
     // RAM/IO Read/Write Flags
     ram.wenable := 0;
@@ -205,18 +205,10 @@ algorithm main(
     IO_Map.memoryRead := 0;
 
     // REGISTER Read/Write Flags
-    registers_1.addr0 := Rtype(instruction).sourceReg1;
-    registers_1.wenable0 := 0;
-    registers_1.wenable1 := 1;
-    registers_2.addr0 := Rtype(instruction).sourceReg2;
-    registers_2.wenable0 := 0;
-    registers_2.wenable1 := 1;
-
-    registers_1.addr1 = 0; registers_1.wdata1 = 0;
-    registers_2.addr1 = 0; registers_2.wdata1 = 0;
-
-    ram.addr = pc[2,14];
-    ++:
+    registers_1.addr := Rtype(instruction).sourceReg1;
+    registers_1.wenable := 0;
+    registers_2.addr := Rtype(instruction).sourceReg2;
+    registers_2.wenable := 0;
 
     while(1) {
         // RISC-V
@@ -273,7 +265,7 @@ algorithm main(
                     case 3b101: { newPC = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? branchAddress : pc + 4; }
                     case 3b110: { newPC = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? branchAddress : pc + 4; }
                     case 3b111: { newPC = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? branchAddress : pc + 4; }
-                    default: { newPC = pc + 4; }
+                    default: { pcIncrement = 1; }
                 }
             }
 
@@ -286,20 +278,20 @@ algorithm main(
                         switch( function3 & 3 ) {
                             case 2b00: {
                                 switch( loadAddress[0,2] ) {
-                                    case 2b00: { memoryRead = { 24b0, ram.rdata[0,8] }; }
-                                    case 2b01: { memoryRead = { 24b0, ram.rdata[8,8] }; }
-                                    case 2b10: { memoryRead = { 24b0, ram.rdata[16,8] }; }
-                                    case 2b11: { memoryRead = { 24b0, ram.rdata[24,8] }; }
+                                    case 2b00: { result = function3[2,1] ? { 24b0, ram.rdata[0,8] } : { {24{ram.rdata[7,1]}}, ram.rdata[0,8] }; }
+                                    case 2b01: { result = function3[2,1] ? { 24b0, ram.rdata[8,8] } : { {24{ram.rdata[15,1]}}, ram.rdata[8,8] }; }
+                                    case 2b10: { result = function3[2,1] ? { 24b0, ram.rdata[16,8] } : { {24{ram.rdata[23,1]}}, ram.rdata[16,8] }; }
+                                    case 2b11: { result = function3[2,1] ? { 24b0, ram.rdata[24,8] } : { {24{ram.rdata[31,1]}}, ram.rdata[24,8] }; }
                                 }
                             }
                             case 2b01: {
                                 switch( loadAddress[1,1] ) {
-                                    case 1b0: { memoryRead = { 16b0, ram.rdata[0,16] }; }
-                                    case 1b1: { memoryRead = { 16b0, ram.rdata[16,16] }; }
+                                    case 1b0: { result =  function3[2,1] ? { 16b0, ram.rdata[0,16] } : { {16{ram.rdata[15,1]}}, ram.rdata[0,16] }; }
+                                    case 1b1: { result =  function3[2,1] ? { 16b0, ram.rdata[16,16] } : { {16{ram.rdata[31,1]}}, ram.rdata[16,16] }; }
                                 }
                             }
                             case 2b10: {
-                                memoryRead = ram.rdata;
+                                result = ram.rdata;
                             }
                         }
                     }
@@ -307,16 +299,12 @@ algorithm main(
                     case 1: {
                         IO_Map.memoryAddress = loadAddress[0,16];
                         IO_Map.memoryRead = 1;
-                        memoryRead = IO_Map.readData;
+                        switch( function3 & 3 ) {
+                            case 2b00: { result = function3[2,1] ? { 24b0, IO_Map.readData[0,8] } : { {24{IO_Map.readData[7,1]}}, IO_Map.readData[0,8] }; }
+                            case 2b01: { result = function3[2,1] ? { 16b0, IO_Map.readData } : { {16{IO_Map.readData[15,1]}}, IO_Map.readData }; }
+                            case 2b10: { result = IO_Map.readData; }
+                        }
                     }
-                }
-                ++:
-                switch( function3  ) {
-                    case 3b000: { result = { {24{memoryRead[7,1]}}, memoryRead[0,8] }; }
-                    case 3b001: { result = { {16{memoryRead[15,1]}}, memoryRead[0,16] }; }
-                    case 3b010: { result = memoryRead; }
-                    case 3b100: { result = { 24b0, memoryRead[0,8] }; }
-                    case 3b101: { result = { 16b0, memoryRead[0,16] }; }
                 }
 
                 writeResult = 1;
@@ -328,9 +316,9 @@ algorithm main(
                 switch( storeAddress[15,1] ) {
                     case 1b0: {
                         ram.addr = storeAddress[2,14];
-                        ++:
                         switch( function3 & 3 ) {
                             case 2b00: {
+                                ++:
                                 switch( storeAddress[0,2] ) {
                                     case 2b00: { ram.wdata = { ram.rdata[8,24], sourceReg2[0,8] }; }
                                     case 2b01: { ram.wdata = { ram.rdata[16,16], sourceReg2[0,8], ram.rdata[0,8] }; }
@@ -339,6 +327,7 @@ algorithm main(
                                 }
                             }
                             case 2b01: {
+                                ++:
                                 switch( storeAddress[1,1] ) {
                                     case 1b0: { ram.wdata = { ram.rdata[16,16], sourceReg2[0,16] }; }
                                     case 1b1: { ram.wdata = { sourceReg2[0,16], ram.rdata[0,16] }; }
@@ -432,22 +421,20 @@ algorithm main(
                                 // MULTIPLICATION
                                 multiplicationuint.factor_1 = sourceReg1;
                                 multiplicationuint.factor_2 = sourceReg2;
-
                                 multiplicationuint.dosigned = ( function3[1,1] == 0 ) ? 1 : ( ( function3[0,1] == 0 ) ? 2 : 0 );
-
-                                () <- multiplicationuint <- ();
-
+                                multiplicationuint.start = 1;
+                                ++:
+                                while( multiplicationuint.active ) {}
                                 result = ( function3 == 0 ) ? multiplicationuint.product[0,32] : multiplicationuint.product[32,32];
                             }
                             case 1b1: {
                                 // DIVISION / REMAINDER
                                 dividerunit.dividend = sourceReg1;
                                 dividerunit.divisor = sourceReg2;
-
                                 dividerunit.dosigned = ~function3[0,1];
-
-                                () <- dividerunit <- ();
-
+                                dividerunit.start = 1;
+                                ++:
+                                while( dividerunit.active ) {}
                                 result = function3[1,1] ? dividerunit.remainder : dividerunit.quotient;
                             }
                         }
@@ -468,10 +455,12 @@ algorithm main(
 
         // NEVER write to registers[0]
         if( writeResult && ( destReg != 0 ) ) {
-            registers_1.addr1 = destReg;
-            registers_1.wdata1 = result;
-            registers_2.addr1 = destReg;
-            registers_2.wdata1 = result;
+            registers_1.addr = destReg;
+            registers_1.wdata = result;
+            registers_1.wenable = 1;
+            registers_2.addr = destReg;
+            registers_2.wdata = result;
+            registers_2.wenable = 1;
         }
 
         pc = pcIncrement ? pc + 4 : newPC;

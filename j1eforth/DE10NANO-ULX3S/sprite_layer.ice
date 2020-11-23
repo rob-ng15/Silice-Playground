@@ -83,8 +83,8 @@ algorithm sprite_layer(
     $$end
 
     // Expand Sprite Update Deltas
-    int11 deltax := { {9{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
-    int11 deltay := { {9{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
+    int11   deltax := { {9{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
+    int11   deltay := { {9{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
 
     // Set read and write address for the tiles
     $$for i=0,12 do
@@ -130,25 +130,17 @@ algorithm sprite_layer(
                 // Perform sprite update
                 sprite_colour[ sprite_set_number ] = ( spriteupdate( sprite_update ).colour_act ) ? spriteupdate( sprite_update ).colour : sprite_colour[ sprite_set_number ];
                 sprite_tile_number[ sprite_set_number ] = ( spriteupdate( sprite_update ).tile_act ) ? sprite_tile_number[ sprite_set_number ] + 1 : sprite_tile_number[ sprite_set_number ];
-                switch( { (sprite_y[ sprite_set_number ] < (-16)) || (sprite_y[ sprite_set_number ] > 480), (sprite_x[ sprite_set_number ] < (-16)) || (sprite_x[ sprite_set_number ] > 640) } ) {
-                    case 2b00: {
-                        sprite_x[ sprite_set_number ] = sprite_x[ sprite_set_number ] + deltax;
-                        sprite_y[ sprite_set_number ] = sprite_y[ sprite_set_number ] + deltay;
-                    }
-                    case 2b01: {
-                        sprite_x[ sprite_set_number ] = (sprite_x[ sprite_set_number ] < (-16)) ? 640 : -16;
-                        sprite_y[ sprite_set_number ] = sprite_y[ sprite_set_number ] + deltay;
-                        sprite_active[ sprite_set_number ] = ( spriteupdate( sprite_update ).x_act ) ? 0 : sprite_active[ sprite_set_number ];
-                    }
-                    case 2b10: {
-                        sprite_x[ sprite_set_number ] = sprite_x[ sprite_set_number ] + deltax;
-                        sprite_y[ sprite_set_number ] = (sprite_y[ sprite_set_number ] < (-16)) ? 480 : -16;
-                        sprite_active[ sprite_set_number ] = ( spriteupdate( sprite_update ).y_act ) ? 0 : sprite_active[ sprite_set_number ];
-                    }
-                    case 2b11: {
-                        sprite_active[ sprite_set_number ] = ( spriteupdate( sprite_update ).x_act ) || ( spriteupdate( sprite_update ).y_act ) ? 0 : sprite_active[ sprite_set_number ];
-                    }
-                }
+
+                sprite_x[ sprite_set_number ] = (__signed( sprite_x[ sprite_set_number ] ) < __signed(-16)) ? 640 :
+                                                ( (__signed( sprite_x[ sprite_set_number ] ) > __signed(640)) ? -15 : sprite_x[ sprite_set_number ] + deltax );
+                sprite_y[ sprite_set_number ] = (__signed( sprite_y[ sprite_set_number ] ) < __signed(-16)) ? 480 :
+                                                ( (__signed( sprite_y[ sprite_set_number ] ) > __signed(480)) ? -15 : sprite_y[ sprite_set_number ] + deltay );
+
+                sprite_active[ sprite_set_number ] = ( ( ( (__signed( sprite_x[ sprite_set_number ] ) < __signed(-16)) ||
+                                                        (__signed( sprite_x[ sprite_set_number ] ) > __signed(640)) ) && ( spriteupdate( sprite_update ).x_act ) ) ||
+                                                        ( ( (__signed( sprite_y[ sprite_set_number ] ) < __signed(-16)) ||
+                                                        (__signed( sprite_y[ sprite_set_number ] ) > __signed(480)) ) && spriteupdate( sprite_update ).y_act ) ) ?
+                                                        0 : sprite_active[ sprite_set_number ];
             }
         }
     }
