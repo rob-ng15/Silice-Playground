@@ -104,12 +104,23 @@ char inputcharacter(void)
 
 short rng( short range )
 {
-    return( *RNG % range );
-}
+    short trial;
 
-short qrng( short range )
-{
-    return( *RNG & range );
+    if( range <2 ) {
+        trial = ( range == 0 ) ? 0 : *RNG & 1;
+    } else {
+        if( range < 256 ) {
+            do {
+                trial = *RNG & ( range < 16 ? 0xf : 0xff );
+            } while ( trial > range );
+        } else {
+            do {
+                trial = *RNG;
+            } while ( trial > range );
+        }
+    }
+
+    return( trial );
 }
 
 void set_timer1khz( short counter )
@@ -637,14 +648,14 @@ void new_asteroid( unsigned char asteroid_type )
     potentialnumber = find_asteroid_space();
     if( potentialnumber != 0xff ) {
         do {
-            potentialx = rng( 640 );
-            potentialy = rng( 480 );
+            potentialx = rng( 639 );
+            potentialy = rng( 479 );
         } while( ( potentialx >= shipx - 64 ) && ( potentialx <= shipx + 64 ) && ( potentialy >= shipy - 64 ) && ( potentialy <= shipy + 64) );
 
         asteroid_active[ potentialnumber ] = asteroid_type;
-        asteroid_direction[ potentialnumber ] = qrng( ( asteroid_type == 2 ) ? 3 : 7 );
+        asteroid_direction[ potentialnumber ] = rng( ( asteroid_type == 2 ) ? 3 : 7 );
 
-        set_sprite( ( potentialnumber > 10 ) ? 1 : 0, ( potentialnumber > 10 ) ? potentialnumber - 11 : potentialnumber, 1, qrng( 31 ) + 32, potentialx, potentialy, rng( 7 ), ( asteroid_type == 2 ) ? 1 : 0 );
+        set_sprite( ( potentialnumber > 10 ) ? 1 : 0, ( potentialnumber > 10 ) ? potentialnumber - 11 : potentialnumber, 1, rng( 31 ) + 32, potentialx, potentialy, rng( 6 ), ( asteroid_type == 2 ) ? 1 : 0 );
     }
 }
 
@@ -859,10 +870,10 @@ void spawn_asteroid( unsigned char asteroid_type, short xc, short yc )
     potentialnumber = find_asteroid_space();
     if( potentialnumber != 0xff ) {
         asteroid_active[ potentialnumber ] = asteroid_type;
-        asteroid_direction[ potentialnumber ] = qrng( ( asteroid_type == 2 ) ? 3 : 7 );
+        asteroid_direction[ potentialnumber ] = rng( ( asteroid_type == 2 ) ? 3 : 7 );
 
         set_sprite( ( potentialnumber > 10 ) ? 1 : 0, ( potentialnumber > 10 ) ? potentialnumber - 11 : potentialnumber,
-                    1, qrng( 31 ) + 32, xc + qrng(15) - 8, yc + qrng(15) - 8, rng( 7 ), ( asteroid_type == 2 ) ? 1 : 0 );
+                    1, rng( 31 ) + 32, xc + rng(15) - 8, yc + rng(15) - 8, rng( 6 ), ( asteroid_type == 2 ) ? 1 : 0 );
     }
 }
 
@@ -894,7 +905,7 @@ void check_hit( void )
 
             // SPAWN NEW ASTEROIDS
             if( asteroid_active[asteroid_hit] == 2 ) {
-                spawnextra = 1 + ( ( level < 2 ) ? level : 2 ) + ( ( level > 2 ) ? qrng( 1 ) : 0 );
+                spawnextra = 1 + ( ( level < 2 ) ? level : 2 ) + ( ( level > 2 ) ? rng( 1 ) : 0 );
                 for( int i=0; i < spawnextra; i++ ) {
                     spawn_asteroid( 1, x, y );
                 }

@@ -309,86 +309,67 @@ algorithm main(
                 // AUIPC LUI ALUI ALUR
                 switch( opCode[2,1] ) {
                     case 1b0: {
-                        // ALUI ALUR
-                        switch( opCode[5,1] ) {
-                            case 1b0: {
-                                // INTEGER OPERATION WITH IMMEDIATE PARAMETER
-                                switch( function3 ) {
-                                    case 3b000: { result = sourceReg1 + immediateValue; }
-                                    case 3b001: { result = sourceReg1 << ItypeSHIFT( instruction ).shiftCount; }
-                                    case 3b010: { result = __signed( sourceReg1 ) < __signed( immediateValue ) ? 32b1 : 32b0; }
-                                    case 3b011: {
-                                        if( immediateValue == 1 ) {
-                                            // SLTIU rd, rs1, 1 ( equivalent to SEQZ rd, rs )
-                                            result = ( sourceReg1 == 0 ) ? 32b1 : 0;
-                                        } else {
-                                            result = __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ? 32b1 : 32b0;
-                                        }
-                                    }
-                                    case 3b100: { result = sourceReg1 ^ immediateValue; }
-                                    case 3b101: { result = ( function7[5,1] == 0 ) ? sourceReg1 >> ItypeSHIFT( instruction ).shiftCount : __signed(sourceReg1) >>> ItypeSHIFT( instruction ).shiftCount; }
-                                    case 3b110: { result = sourceReg1 | immediateValue; }
-                                    case 3b111: { result = sourceReg1 & immediateValue; }
+                        if( ( opCode[5,1] == 1 ) && ( function7[0,1] == 1 ) ) {
+                            // M EXTENSION
+                            switch( function3[2,1] ) {
+                                case 1b0: {
+                                    // MULTIPLICATION
+                                    multiplicationuint.factor_1 = sourceReg1;
+                                    multiplicationuint.factor_2 = sourceReg2;
+                                    multiplicationuint.dosigned = ( function3[1,1] == 0 ) ? 1 : ( ( function3[0,1] == 0 ) ? 2 : 0 );
+                                    multiplicationuint.start = 1;
+                                    ++:
+                                    while( multiplicationuint.active ) {}
+                                    result = ( function3 == 0 ) ? multiplicationuint.product[0,32] : multiplicationuint.product[32,32];
+                                }
+                                case 1b1: {
+                                    // DIVISION / REMAINDER
+                                    dividerunit.dividend = sourceReg1;
+                                    dividerunit.divisor = sourceReg2;
+                                    dividerunit.dosigned = ~function3[0,1];
+                                    dividerunit.start = 1;
+                                    ++:
+                                    while( dividerunit.active ) {}
+                                    result = function3[1,1] ? dividerunit.remainder : dividerunit.quotient;
                                 }
                             }
-                            case 1b1: {
-                                // INTEGER OPERATION WITH REGISTER PARAMETER
-                                switch( { function7[5,1] , function7[0,1] } ) {
-                                    case 2b00: {
-                                        switch( function3 ) {
-                                            case 3b000: { result = sourceReg1 + sourceReg2; }
-                                            case 3b001: { result = sourceReg1 << sourceReg2[0,5]; }
-                                            case 3b010: { result = __signed( sourceReg1 ) < __signed( sourceReg2 ) ? 1 : 0; }
-                                            case 3b011: {
-                                                if( Rtype(instruction).sourceReg1 == 0 ) {
-                                                    // SLTU rd, x0, rs2 ( equivalent to SNEZ rd, rs )
-                                                    result = ( sourceReg2 != 0 ) ? 32b1 : 32b0;
-                                                } else {
-                                                    result = __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ? 1 : 0;
-                                                }
-                                            }
-                                            case 3b100: { result = sourceReg1 ^ sourceReg2; }
-                                            case 3b101: { result = sourceReg1 >> sourceReg2[0,5]; }
-                                            case 3b110: { result = sourceReg1 | sourceReg2; }
-                                            case 3b111: { result = sourceReg1 & sourceReg2; }
-                                        }
-                                    }
-
-                                    case 2b10: {
-                                        switch( function3 ) {
-                                            case 3b000: { result = sourceReg1 - sourceReg2; }
-                                            case 3b101: {
-                                                result = __signed(sourceReg1) >>> sourceReg2[0,5];
+                        } else {
+                            // I ALU OPERATIONS
+                            switch( function3 ) {
+                                case 3b000: {
+                                    result = ( ( opCode[5,1] == 1 ) && ( function7[5,1] == 1 ) ) ? sourceReg1 - sourceReg2 :
+                                                                                                sourceReg1 + ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue );
+                                }
+                                case 3b001: { result = sourceReg1 << ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ); }
+                                case 3b010: { result = __signed( sourceReg1 ) < __signed( ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ) ) ? 1 : 0; }
+                                case 3b011: {
+                                    switch( opCode[5,1] ) {
+                                        case 1b0: {
+                                            if( immediateValue == 1 ) {
+                                                // SLTIU rd, rs1, 1 ( equivalent to SEQZ rd, rs )
+                                                result = ( sourceReg1 == 0 ) ? 32b1 : 0;
+                                            } else {
+                                                result = __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ? 32b1 : 32b0;
                                             }
                                         }
-                                    }
-
-                                    case 2b01: {
-                                        // MULTIPLY / DIVIDE extension decoding
-                                        switch( function3[2,1] ) {
-                                            case 1b0: {
-                                                // MULTIPLICATION
-                                                multiplicationuint.factor_1 = sourceReg1;
-                                                multiplicationuint.factor_2 = sourceReg2;
-                                                multiplicationuint.dosigned = ( function3[1,1] == 0 ) ? 1 : ( ( function3[0,1] == 0 ) ? 2 : 0 );
-                                                multiplicationuint.start = 1;
-                                                ++:
-                                                while( multiplicationuint.active ) {}
-                                                result = ( function3 == 0 ) ? multiplicationuint.product[0,32] : multiplicationuint.product[32,32];
-                                            }
-                                            case 1b1: {
-                                                // DIVISION / REMAINDER
-                                                dividerunit.dividend = sourceReg1;
-                                                dividerunit.divisor = sourceReg2;
-                                                dividerunit.dosigned = ~function3[0,1];
-                                                dividerunit.start = 1;
-                                                ++:
-                                                while( dividerunit.active ) {}
-                                                result = function3[1,1] ? dividerunit.remainder : dividerunit.quotient;
+                                        case 1b1: {
+                                            if( Rtype(instruction).sourceReg1 == 0 ) {
+                                                // SLTU rd, x0, rs2 ( equivalent to SNEZ rd, rs )
+                                                result = ( sourceReg2 != 0 ) ? 32b1 : 32b0;
+                                            } else {
+                                                result = __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ? 1 : 0;
                                             }
                                         }
                                     }
                                 }
+                                case 3b100: { result = sourceReg1 ^ ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ); }
+                                case 3b101: {
+                                    result = ( function7[5,1] == 1 ) ? __signed(sourceReg1) >>> ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ) :
+                                                                        sourceReg1 >> ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
+                                }
+                                case 3b101: { result = __signed(sourceReg1) >>> ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ); }
+                                case 3b110: { result = sourceReg1 | ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ); }
+                                case 3b111: { result = sourceReg1 & ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ); }
                             }
                         }
                     }
