@@ -408,7 +408,7 @@ void tpu_outputstring( unsigned char x, unsigned char y, unsigned char backgroun
 }
 
     // GLOBAL VARIABLES
-    unsigned short lives = 0, score = 0;
+    unsigned short lives = 0, score = 0, level = 0;
     int counter = 0;
 
     // SHIP and BULLET
@@ -661,7 +661,7 @@ void new_level( void )
     }
 
     // PLACE NEW LARGE ASTEROIDS
-    number_of_asteroids = qrng( 3 ) + 4;
+    number_of_asteroids = 4 + ( ( level < 4 ) ? level : 4 );
     for( asteroid_number = 0; asteroid_number < number_of_asteroids; asteroid_number++ ) {
         new_asteroid( 2 );
     }
@@ -823,23 +823,29 @@ void beepboop( void )
                 if( lives > 0 ) {
                     beep( 1, 1, 0, 1, 500 );
                 } else {
-                    tpu_outputstring( 25, 18, 64, 3, "Welcome to Risc-ICE-V Asteroids" );
+                    tpu_outputstring( 16, 18, 64, 3, "         Welcome to Risc-ICE-V Asteroids        " );
                 }
                 break;
 
             case 1:
+                if( lives == 0 ) {
+                    tpu_outputstring( 16, 18, 64, 15, "By @robng15 (Twitter) from Whitebridge, Scotland" );
+                }
                 break;
 
             case 2:
                 if( lives > 0 ) {
                     beep( 2, 1, 0, 2, 500 );
                 } else {
-                    tpu_outputstring( 25, 18, 64, 60, "     Press FIRE 2 to start     " );
+                    tpu_outputstring( 16, 18, 64, 60, "                 Press UP to start              " );
                 }
                 break;
 
             case 3:
                 // MOVE TILEMAP UP
+                if( lives == 0 ) {
+                    tpu_outputstring( 16, 18, 64, 48, "          Written in Silice by @sylefeb         " );
+                }
                 tilemap_scrollwrapclear( 6 );
                 break;
         }
@@ -888,8 +894,8 @@ void check_hit( void )
 
             // SPAWN NEW ASTEROIDS
             if( asteroid_active[asteroid_hit] == 2 ) {
-                spawnextra = qrng( 1 );
-                for( int i=0; i < 2 + spawnextra; i++ ) {
+                spawnextra = 1 + ( ( level < 2 ) ? level : 2 ) + ( ( level > 2 ) ? qrng( 1 ) : 0 );
+                for( int i=0; i < spawnextra; i++ ) {
                     spawn_asteroid( 1, x, y );
                 }
             }
@@ -925,6 +931,7 @@ void main()
 
         // NEW LEVEL NEEDED
         if( count_asteroids() == 0 ) {
+            level++;
             new_level();
         }
 
@@ -954,7 +961,7 @@ void main()
                 fire_bullet();
 
             // MOVE SHIP
-            if( ( *BUTTONS & 8 ) != 0 )
+            if( ( *BUTTONS & 4 ) != 0 )
                 move_ship();
 
             // DRAW WHITE SHIP
@@ -971,10 +978,10 @@ void main()
         } else {
             // GAME OVER OR EXPLODING SHIP
             // SEE IF NEW GAME
-            if( ( lives == 0 ) && ( ( *BUTTONS & 4 ) != 0 ) ) {
+            if( ( lives == 0 ) && ( ( *BUTTONS & 8 ) != 0 ) ) {
                 gpu_cs(); tpu_cs();
                 counter = 0;
-                lives = 3; score = 0;
+                lives = 3; score = 0; level = 0;
                 shipx = 312; shipy = 232; shipdirection = 0; resetship = 0; bulletdirection = 0;
                 draw_lives();
                 new_level();
