@@ -90,3 +90,97 @@ algorithm multiplicationDSP (
         }
     }
 }
+
+algorithm shifters (
+    input   int32  sourceReg1,
+    input   int32  sourceReg2,
+    input   int32  immediateValue,
+
+    output  int32  SLL,
+    output  int32  SLLI,
+    output  int32  SRL,
+    output  int32  SRLI,
+    output  int32  SRA,
+    output  int32  SRAI
+) <autorun> {
+    SLL := sourceReg1 << sourceReg2[0,5];
+    SLLI := sourceReg1 << immediateValue[0,5];
+    SRL := sourceReg1 >> sourceReg2[0,5];
+    SRLI := sourceReg1 >> immediateValue[0,5];
+    SRA := __signed( sourceReg1 ) >>> sourceReg2[0,5];
+    SRAI := __signed( sourceReg1 ) >>> immediateValue[0,5];
+
+    while(1) {
+    }
+}
+
+algorithm addsub (
+    input   int32  sourceReg1,
+    input   int32  sourceReg2,
+    input   int32  immediateValue,
+
+    output  int32  ADD,
+    output  int32  ADDI,
+    output  int32  SUB
+) <autorun> {
+    ADD := sourceReg1 + sourceReg2;
+    ADDI := sourceReg1 + immediateValue;
+    SUB := sourceReg1 - sourceReg2;
+
+    while(1) {
+    }
+}
+
+algorithm logical (
+    input   int32  sourceReg1,
+    input   int32  sourceReg2,
+    input   int32  immediateValue,
+
+    output  int32  AND,
+    output  int32  ANDI,
+    output  int32  OR,
+    output  int32  ORI,
+    output  int32  XOR,
+    output  int32  XORI
+) <autorun> {
+    AND := sourceReg1 & sourceReg2;
+    ANDI := sourceReg1 & sourceReg2;
+    OR := sourceReg1 | immediateValue;
+    ORI := sourceReg1 | immediateValue;
+    XOR := sourceReg1 ^ sourceReg2;
+    XORI := sourceReg1 ^ immediateValue;
+
+    while(1) {
+    }
+}
+
+algorithm setlessthan (
+    input   int32  sourceReg1,
+    input   uint5  sourceReg1Number,
+    input   int32  sourceReg2,
+    input   int32  immediateValue,
+
+    output  uint32  SLT,
+    output  uint32  SLTI,
+    output  uint32  SLTU,
+    output  uint32  SLTIU,
+) <autorun> {
+    SLT := ( __signed( sourceReg1 ) < __signed( sourceReg2 ) ) ? 32b1 : 32b0;
+    SLTI := ( __signed( sourceReg1 ) < __signed( immediateValue ) ) ? 32b1 : 32b0;
+
+    while(1) {
+        if( immediateValue == 1 ) {
+            // SLTIU rd, rs1, 1 ( equivalent to SEQZ rd, rs )
+            SLTIU = ( sourceReg1 == 0 ) ? 32b1 : 32b0;
+        } else {
+            SLTIU = __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ? 32b1 : 32b0;
+        }
+
+        if( sourceReg1Number == 0 ) {
+            // SLTU rd, x0, rs2 ( equivalent to SNEZ rd, rs )
+            SLTU = ( sourceReg2 != 0 ) ? 32b1 : 32b0;
+        } else {
+            SLTU = __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ? 1 : 0;
+        }
+    }
+}

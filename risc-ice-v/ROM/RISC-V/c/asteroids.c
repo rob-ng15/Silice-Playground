@@ -102,9 +102,9 @@ char inputcharacter(void)
     return *UART_DATA;
 }
 
-short rng( short range )
+unsigned short rng( unsigned short range )
 {
-    short trial;
+    unsigned short trial;
 
     if( range <2 ) {
         trial = ( range == 0 ) ? 0 : *RNG & 1;

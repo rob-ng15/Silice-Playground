@@ -150,6 +150,7 @@ algorithm main(
 
     // RISC-V SOURCE REGISTER VALUES and IMMEDIATE VALUE and DESTINATION REGISTER ADDRESS
     int32   sourceReg1 := registers_1.rdata;
+    uint5   sourceReg1Number := Rtype(instruction).sourceReg1;
     int32   sourceReg2 := registers_2.rdata;
     uint32  immediateValue := { {20{instruction[31,1]}}, Itype(instruction).immediate };
     uint5   destReg := Rtype(instruction).destReg;
@@ -193,9 +194,36 @@ algorithm main(
         video_reset <: video_reset
     );
 
-    // MULTIPLICATION and DIVISION units
-    divideremainder dividerunit <@clock_50mhz> ();
-    multiplicationDSP multiplicationuint <@clock_50mhz> ();
+    // ALU, MULTIPLICATION and DIVISION units
+    addsub addsubunit <@clock_50mhz> (
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        immediateValue <: immediateValue
+    );
+    logical logicalunit <@clock_50mhz> (
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        immediateValue <: immediateValue
+    );
+    shifters shiftunit <@clock_50mhz> (
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        immediateValue <: immediateValue
+    );
+    setlessthan setlessthanunit <@clock_50mhz> (
+        sourceReg1 <: sourceReg1,
+        sourceReg1Number <: sourceReg1Number,
+        sourceReg2 <: sourceReg2,
+        immediateValue <: immediateValue
+    );
+    divideremainder dividerunit <@clock_50mhz> (
+        dividend <: sourceReg1,
+        divisor <: sourceReg2
+    );
+    multiplicationDSP multiplicationuint <@clock_50mhz> (
+        factor_1 <: sourceReg1,
+        factor_2 <: sourceReg2
+    );
     dividerunit.start := 0;
     multiplicationuint.start := 0;
 
@@ -314,8 +342,6 @@ algorithm main(
                             switch( function3[2,1] ) {
                                 case 1b0: {
                                     // MULTIPLICATION
-                                    multiplicationuint.factor_1 = sourceReg1;
-                                    multiplicationuint.factor_2 = sourceReg2;
                                     multiplicationuint.dosigned = ( function3[1,1] == 0 ) ? 1 : ( ( function3[0,1] == 0 ) ? 2 : 0 );
                                     multiplicationuint.start = 1;
                                     ++:
@@ -324,8 +350,6 @@ algorithm main(
                                 }
                                 case 1b1: {
                                     // DIVISION / REMAINDER
-                                    dividerunit.dividend = sourceReg1;
-                                    dividerunit.divisor = sourceReg2;
                                     dividerunit.dosigned = ~function3[0,1];
                                     dividerunit.start = 1;
                                     ++:
@@ -336,11 +360,8 @@ algorithm main(
                         } else {
                             // I ALU OPERATIONS
                             switch( function3 ) {
-                                case 3b000: {
-                                    result = ( ( opCode[5,1] == 1 ) && ( function7[5,1] == 1 ) ) ? sourceReg1 - sourceReg2 :
-                                                                                                sourceReg1 + ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue );
-                                }
-                                case 3b001: { result = sourceReg1 << ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ); }
+                                case 3b000: { result = ( ( opCode[5,1] == 1 ) && ( function7[5,1] == 1 ) ) ? addsubunit.SUB : ( ( opCode[5,1] == 1 ) ? addsubunit.ADD : addsubunit.ADDI); }
+                                case 3b001: { result = ( opCode[5,1] == 1 ) ? shiftunit.SLL : shiftunit.SLLI; }
                                 case 3b010: { result = __signed( sourceReg1 ) < __signed( ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ) ) ? 1 : 0; }
                                 case 3b011: {
                                     switch( opCode[5,1] ) {
@@ -367,7 +388,6 @@ algorithm main(
                                     result = ( function7[5,1] == 1 ) ? __signed(sourceReg1) >>> ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ) :
                                                                         sourceReg1 >> ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
                                 }
-                                case 3b101: { result = __signed(sourceReg1) >>> ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ); }
                                 case 3b110: { result = sourceReg1 | ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ); }
                                 case 3b111: { result = sourceReg1 & ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ); }
                             }

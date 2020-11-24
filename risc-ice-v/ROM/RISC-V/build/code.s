@@ -25,14 +25,14 @@ inputcharacter:
 rng:
 	mv	a5,a0
 	li	a4,1
-	ble	a0,a4,.L15
+	bleu	a0,a4,.L15
 	li	a4,255
-	bgt	a0,a4,.L7
+	bgtu	a0,a4,.L7
 	lui	a4,%hi(RNG)
 	lw	a3,%lo(RNG)(a4)
 	li	a2,15
 	li	a4,255
-	bgt	a0,a2,.L9
+	bgtu	a0,a2,.L9
 	li	a4,15
 .L9:
 	slli	a4,a4,16
@@ -42,7 +42,7 @@ rng:
 	slli	a0,a0,16
 	srai	a0,a0,16
 	and	a0,a0,a4
-	blt	a5,a0,.L10
+	bltu	a5,a0,.L10
 	ret
 .L15:
 	beq	a0,zero,.L6
@@ -57,8 +57,8 @@ rng:
 .L11:
 	lhu	a0,0(a4)
 	slli	a0,a0,16
-	srai	a0,a0,16
-	blt	a5,a0,.L11
+	srli	a0,a0,16
+	bltu	a5,a0,.L11
 .L6:
 	ret
 	.size	rng, .-rng
@@ -2313,9 +2313,9 @@ spawn_asteroid:
 	sw	s5,20(sp)
 	sw	s6,16(sp)
 	sw	s7,12(sp)
-	mv	s3,a0
-	mv	s1,a1
-	mv	s2,a2
+	mv	s1,a0
+	mv	s2,a1
+	mv	s3,a2
 	call	find_asteroid_space
 	li	a5,255
 	beq	a0,a5,.L251
@@ -2324,10 +2324,10 @@ spawn_asteroid:
 	lui	a5,%hi(.LANCHOR1)
 	addi	a5,a5,%lo(.LANCHOR1)
 	add	a5,a5,a0
-	sb	s3,0(a5)
+	sb	s1,0(a5)
 	li	a5,2
 	li	a0,3
-	beq	s3,a5,.L253
+	beq	s1,a5,.L253
 	li	a0,7
 .L253:
 	call	rng
@@ -2335,8 +2335,8 @@ spawn_asteroid:
 	addi	a5,a5,%lo(.LANCHOR1)
 	add	a5,a5,s4
 	sb	a0,24(a5)
-	sltiu	s5,s0,11
-	xori	s5,s5,1
+	sltiu	s7,s0,11
+	xori	s7,s7,1
 	li	a5,10
 	bleu	s0,a5,.L254
 	addi	s0,s0,-11
@@ -2347,28 +2347,28 @@ spawn_asteroid:
 	mv	s4,a0
 	li	a0,15
 	call	rng
-	mv	s6,a0
+	mv	s5,a0
 	li	a0,15
 	call	rng
-	mv	s7,a0
+	mv	s6,a0
 	li	a0,6
 	call	rng
-	addi	a7,s3,-2
+	addi	a7,s1,-2
+	addi	a5,s3,-8
+	add	a5,s6,a5
 	addi	s2,s2,-8
-	add	a5,s2,s7
-	addi	s1,s1,-8
-	add	a4,s1,s6
+	add	s2,s5,s2
 	addi	a3,s4,32
 	seqz	a7,a7
 	andi	a6,a0,0xff
 	slli	a5,a5,16
 	srai	a5,a5,16
-	slli	a4,a4,16
+	slli	a4,s2,16
 	srai	a4,a4,16
 	andi	a3,a3,0xff
 	li	a2,1
 	mv	a1,s0
-	mv	a0,s5
+	mv	a0,s7
 	call	set_sprite
 .L251:
 	lw	ra,44(sp)
