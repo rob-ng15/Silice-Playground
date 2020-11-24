@@ -139,9 +139,8 @@ algorithm main(
 
     // RISC-V PROGRAM COUNTER
     uint32  pc = 0;
-    uint32  pcPlus4 := pc + 4;
     uint32  newPC = uninitialized;
-    uint1   pcIncrement = uninitialized;
+    uint1   takeBranch = uninitialized;
 
     // RISC-V INSTRUCTION and DECODE
     uint32  instruction = uninitialized;
@@ -158,11 +157,11 @@ algorithm main(
     // RISC-V ALU RESULTS
     int32   result = uninitialized;
     int32   Uresult := { Utype(instruction).immediate_bits_31_12, 12b0 };
-    uint1   writeResult = uninitialized;
+    uint1   writeRegister = uninitialized;
 
     // RISC-V ADDRESS CALCULATIONS
     int32   jumpAddress := { {12{Jtype(instruction).immediate_bits_20}}, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + pc;
-    int32   branchAddress := pc + { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 };
+    int32   branchOffset := { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 };
     int32   loadAddress := immediateValue + sourceReg1;
     int32   storeAddress := { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
 
@@ -213,8 +212,9 @@ algorithm main(
 
     while(1) {
         // RISC-V
-        writeResult = 0;
-        pcIncrement = 0;
+        writeRegister = 1;
+        takeBranch = 0;
+        newPC = pc + 4;
 
         // FETCH - 32 bit instruction
         ram.addr = pc[2,14];
@@ -228,45 +228,35 @@ algorithm main(
             case 7b0010111: {
                 // ADD UPPER IMMEDIATE TO PC
                 result = Uresult + pc;
-
-                writeResult = 1;
-                pcIncrement = 1;
             }
 
             case 7b0110111: {
                 // LOAD UPPER IMMEDIATE
                 result = Uresult;
-
-                writeResult = 1;
-                pcIncrement = 1;
             }
 
             case 7b1101111: {
                 // JUMP AND LINK
-                result = pcPlus4;
-
-                writeResult = 1;
+                result = pc + 4;
                 newPC = jumpAddress;
             }
 
             case 7b1100111: {
                 // JUMP AND LINK REGISTER
-                result = pcPlus4;
-
-                writeResult = 1;
+                result = pc + 4;
                 newPC = loadAddress;
             }
 
             case 7b1100011: {
                 // BRANCH on CONDITION
+                writeRegister = 0;
                 switch( function3 ) {
-                    case 3b000: { newPC = ( sourceReg1 == sourceReg2 ) ? branchAddress : pcPlus4; }
-                    case 3b001: { newPC = ( sourceReg1 != sourceReg2 ) ? branchAddress : pcPlus4; }
-                    case 3b100: { newPC = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? branchAddress : pcPlus4; }
-                    case 3b101: { newPC = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? branchAddress : pcPlus4; }
-                    case 3b110: { newPC = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? branchAddress : pcPlus4; }
-                    case 3b111: { newPC = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? branchAddress : pcPlus4; }
-                    default: { pcIncrement = 1; }
+                    case 3b000: { takeBranch = ( sourceReg1 == sourceReg2 ) ? 1 : 0; }
+                    case 3b001: { takeBranch = ( sourceReg1 != sourceReg2 ) ? 1 : 0; }
+                    case 3b100: { takeBranch = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? 1 : 0; }
+                    case 3b101: { takeBranch = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? 1 : 0; }
+                    case 3b110: { takeBranch = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? 1 : 0; }
+                    case 3b111: { takeBranch = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? 1 : 0; }
                 }
             }
 
@@ -307,13 +297,11 @@ algorithm main(
                         }
                     }
                 }
-
-                writeResult = 1;
-                pcIncrement = 1;
             }
 
             case 7b0100011: {
                 // STORE
+                writeRegister = 0;
                 switch( storeAddress[15,1] ) {
                     case 1b0: {
                         ram.addr = storeAddress[2,14];
@@ -346,8 +334,6 @@ algorithm main(
                         IO_Map.memoryWrite = 1;
                     }
                 }
-
-                pcIncrement = 1;
             }
 
             case 7b0010011: {
@@ -369,10 +355,6 @@ algorithm main(
                     case 3b110: { result = sourceReg1 | immediateValue; }
                     case 3b111: { result = sourceReg1 & immediateValue; }
                 }
-
-                writeResult = 1;
-                pcIncrement = 1;
-
             }
 
             case 7b0110011: {
@@ -433,21 +415,13 @@ algorithm main(
                         }
                     }
                 }
-
-                writeResult = 1;
-                pcIncrement = 1;
-            }
-
-            default: {
-                // NOP or ILLEGAL INSTRUCTION
-                pcIncrement = 1;
             }
         }
 
         ++:
 
         // NEVER write to registers[0]
-        if( writeResult && ( destReg != 0 ) ) {
+        if( writeRegister && ( destReg != 0 ) ) {
             registers_1.addr = destReg;
             registers_1.wdata = result;
             registers_1.wenable = 1;
@@ -456,6 +430,6 @@ algorithm main(
             registers_2.wenable = 1;
         }
 
-        pc = pcIncrement ? pc + 4 : newPC;
+        pc = takeBranch ? pc + branchOffset : newPC;
     } // RISC-V
 }
