@@ -150,7 +150,6 @@ algorithm main(
 
     // RISC-V SOURCE REGISTER VALUES and IMMEDIATE VALUE and DESTINATION REGISTER ADDRESS
     int32   sourceReg1 := registers_1.rdata;
-    uint5   sourceReg1Number := Rtype(instruction).sourceReg1;
     int32   sourceReg2 := registers_2.rdata;
     uint32  immediateValue := { {20{instruction[31,1]}}, Itype(instruction).immediate };
     uint5   destReg := Rtype(instruction).destReg;
@@ -194,28 +193,7 @@ algorithm main(
         video_reset <: video_reset
     );
 
-    // ALU, MULTIPLICATION and DIVISION units
-    addsub addsubunit <@clock_50mhz> (
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-        immediateValue <: immediateValue
-    );
-    logical logicalunit <@clock_50mhz> (
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-        immediateValue <: immediateValue
-    );
-    shifters shiftunit <@clock_50mhz> (
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-        immediateValue <: immediateValue
-    );
-    setlessthan setlessthanunit <@clock_50mhz> (
-        sourceReg1 <: sourceReg1,
-        sourceReg1Number <: sourceReg1Number,
-        sourceReg2 <: sourceReg2,
-        immediateValue <: immediateValue
-    );
+    // MULTIPLICATION and DIVISION units
     divideremainder dividerunit <@clock_50mhz> (
         dividend <: sourceReg1,
         divisor <: sourceReg2
@@ -224,6 +202,8 @@ algorithm main(
         factor_1 <: sourceReg1,
         factor_2 <: sourceReg2
     );
+
+    // MULTIPLICATION and DIVISION Start Flags
     dividerunit.start := 0;
     multiplicationuint.start := 0;
 
@@ -360,26 +340,28 @@ algorithm main(
                         } else {
                             // I ALU OPERATIONS
                             switch( function3 ) {
-                                case 3b000: { result = ( ( opCode[5,1] == 1 ) && ( function7[5,1] == 1 ) ) ? addsubunit.SUB : ( ( opCode[5,1] == 1 ) ? addsubunit.ADD : addsubunit.ADDI); }
-                                case 3b001: { result = ( opCode[5,1] == 1 ) ? shiftunit.SLL : shiftunit.SLLI; }
-                                case 3b010: { result = __signed( sourceReg1 ) < __signed( ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ) ) ? 1 : 0; }
+                                case 3b000: { result = ( ( opCode[5,1] == 1 ) && ( function7[5,1] == 1 ) ) ? sourceReg1 - sourceReg2 : ( ( opCode[5,1] == 1 ) ? sourceReg1 + sourceReg2 : sourceReg1 + immediateValue); }
+                                case 3b001: { result = sourceReg1 << ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ); }
+                                case 3b010: { result = __signed( sourceReg1 ) < __signed( ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ) ) ? 32b1 : 32b0; }
                                 case 3b011: {
                                     switch( opCode[5,1] ) {
                                         case 1b0: {
                                             if( immediateValue == 1 ) {
                                                 // SLTIU rd, rs1, 1 ( equivalent to SEQZ rd, rs )
-                                                result = ( sourceReg1 == 0 ) ? 32b1 : 0;
+                                                result = ( sourceReg1 == 0 ) ? 32b1 : 32b0;
                                             } else {
                                                 result = __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ? 32b1 : 32b0;
                                             }
+                                            // result = ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 32b1 : 32b0 ) : ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ? 32b1 : 32b0 );
                                         }
                                         case 1b1: {
                                             if( Rtype(instruction).sourceReg1 == 0 ) {
                                                 // SLTU rd, x0, rs2 ( equivalent to SNEZ rd, rs )
                                                 result = ( sourceReg2 != 0 ) ? 32b1 : 32b0;
                                             } else {
-                                                result = __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ? 1 : 0;
+                                                result = __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ? 32b1 : 32b0;
                                             }
+                                            // result = ( Rtype(instruction).sourceReg1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 32b1 : 32b0 ) : ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ? 32b1 : 32b0 );
                                         }
                                     }
                                 }
@@ -387,6 +369,16 @@ algorithm main(
                                 case 3b101: {
                                     result = ( function7[5,1] == 1 ) ? __signed(sourceReg1) >>> ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ) :
                                                                         sourceReg1 >> ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
+                                    // switch( opCode[5,1] ) {
+                                    //     case 1b0: {
+                                    //         // SRA SRL
+                                    //         result = ( function7[5,1] == 1 ) ? __signed(sourceReg1) >>> sourceReg2[0,5] : sourceReg1 >> sourceReg2[0,5];
+                                    //      }
+                                    //     case 1b1: {
+                                    //         // SRAI SRLI
+                                    //         result = ( function7[5,1] == 1 ) ? __signed(sourceReg1) >>> ItypeSHIFT( instruction ).shiftCount : sourceReg1 >> ItypeSHIFT( instruction ).shiftCount;
+                                    //     }
+                                    // }
                                 }
                                 case 3b110: { result = sourceReg1 | ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ); }
                                 case 3b111: { result = sourceReg1 & ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ); }
@@ -438,4 +430,90 @@ algorithm main(
 
         pc = takeBranch ? pc + branchOffset : newPC;
     } // RISC-V
+}
+
+// NON I/O MEMORY switch between BRAM and SDRAM ( when implemented )
+
+algorithm memorymap (
+    input   uint32  address,
+    input   uint32  writeData,
+    output  uint32  readData,
+
+    input   uint2   writeSize,
+    input   uint2   readSize,
+
+    output  uint1   memoryBusy
+) <autorun> {
+    // BRAM FAST MEMORY
+    bram uint32 ram[8192] = {
+        $include('ROM/BIOS.inc')
+        , pad(uninitialized)
+    };
+
+
+    while(1) {
+        if( writeSize > 0 ) {
+            ram.addr = address[2,14];
+            switch( writeSize ) {
+                case 1: {
+                    // 8 bit
+                    memoryBusy = 1;
+
+                    ++:
+                    switch( address[0,2] ) {
+                        case 2b00: { ram.wdata = { ram.rdata[8,24], writeData[0,8] }; }
+                        case 2b01: { ram.wdata = { ram.rdata[16,16], writeData[0,8], ram.rdata[0,8] }; }
+                        case 2b10: { ram.wdata = { ram.rdata[24,8], writeData[0,8], ram.rdata[0,16] }; }
+                        case 2b11: { ram.wdata = { writeData[0,8], ram.rdata[0,24] }; }
+                    }
+                }
+                case 2: {
+                    // 16 bit
+                    memoryBusy = 1;
+
+                    ++:
+                    switch( address[1,1] ) {
+                        case 1b0: { ram.wdata = { ram.rdata[16,16], writeData[0,16] }; }
+                        case 1b1: { ram.wdata = { writeData[0,16], ram.rdata[0,16] }; }
+                    }
+                }
+                case 3: {
+                    // 32 bit
+                    ram.wdata = writeData;
+                }
+            }
+            ram.wenable = 1;
+            memoryBusy = 0;
+        }
+
+        if( readSize > 0 ) {
+            memoryBusy = 1;
+
+            ram.addr = address[2,14];
+            ++:
+            switch( readSize ) {
+                case 1: {
+                    // 8 bit
+                    switch( address[0,2] ) {
+                        case 2b00: { readData = { 24b0, ram.rdata[0,8] }; }
+                        case 2b01: { readData = { 24b0, ram.rdata[8,8] }; }
+                        case 2b10: { readData = { 24b0, ram.rdata[16,8] }; }
+                        case 2b11: { readData = { 24b0, ram.rdata[24,8] }; }
+                    }
+                }
+                case 2: {
+                    // 16 bit
+                    switch( address[1,1] ) {
+                        case 1b0: { readData = { 16b0, ram.rdata[0,16] }; }
+                        case 1b1: { readData = { 16b0, ram.rdata[16,16] }; }
+                    }
+                }
+                case 3: {
+                    // 32 bit
+                    readData = ram.rdata;
+                }
+            }
+            memoryBusy = 0;
+        }
+    }
 }
