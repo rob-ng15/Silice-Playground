@@ -1038,6 +1038,118 @@ set_bullet_sprites:
 	jr	ra
 	.size	set_bullet_sprites, .-set_bullet_sprites
 	.align	2
+	.globl	set_ufo_sprite
+	.type	set_ufo_sprite, @function
+set_ufo_sprite:
+	addi	sp,sp,-32
+	sw	ra,28(sp)
+	sw	s0,24(sp)
+	sw	s1,20(sp)
+	sw	s2,16(sp)
+	sw	s3,12(sp)
+	sw	s4,8(sp)
+	sw	s5,4(sp)
+	sw	s6,0(sp)
+	mv	s3,a0
+	lui	s1,%hi(.LANCHOR0)
+	addi	s2,s1,%lo(.LANCHOR0)
+	addi	s2,s2,1024
+	addi	s1,s1,%lo(.LANCHOR0)
+	li	s0,0
+	lui	s6,%hi(ufo_sprite_number)
+	li	s5,10
+	li	s4,128
+	j	.L118
+.L116:
+	lhu	a3,0(s1)
+.L117:
+	mv	a2,s0
+	call	set_sprite_line
+	addi	s0,s0,1
+	andi	s0,s0,0xff
+	addi	s2,s2,2
+	addi	s1,s1,2
+	beq	s0,s4,.L121
+.L118:
+	lbu	a1,%lo(ufo_sprite_number)(s6)
+	sltiu	a0,a1,11
+	xori	a0,a0,1
+	bleu	a1,s5,.L115
+	addi	a1,a1,-11
+	andi	a1,a1,0xff
+.L115:
+	beq	s3,zero,.L116
+	lhu	a3,0(s2)
+	j	.L117
+.L121:
+	lw	ra,28(sp)
+	lw	s0,24(sp)
+	lw	s1,20(sp)
+	lw	s2,16(sp)
+	lw	s3,12(sp)
+	lw	s4,8(sp)
+	lw	s5,4(sp)
+	lw	s6,0(sp)
+	addi	sp,sp,32
+	jr	ra
+	.size	set_ufo_sprite, .-set_ufo_sprite
+	.align	2
+	.globl	set_ufo_bullet_sprite
+	.type	set_ufo_bullet_sprite, @function
+set_ufo_bullet_sprite:
+	addi	sp,sp,-32
+	sw	ra,28(sp)
+	sw	s0,24(sp)
+	sw	s1,20(sp)
+	sw	s2,16(sp)
+	sw	s3,12(sp)
+	sw	s4,8(sp)
+	sw	s5,4(sp)
+	sw	s6,0(sp)
+	mv	s3,a0
+	lui	s1,%hi(.LANCHOR0)
+	addi	s2,s1,%lo(.LANCHOR0)
+	addi	s2,s2,1280
+	addi	s1,s1,%lo(.LANCHOR0)
+	li	s0,0
+	lui	s6,%hi(ufo_bullet_number)
+	li	s5,10
+	li	s4,128
+	j	.L126
+.L124:
+	lhu	a3,0(s1)
+.L125:
+	mv	a2,s0
+	call	set_sprite_line
+	addi	s0,s0,1
+	andi	s0,s0,0xff
+	addi	s2,s2,2
+	addi	s1,s1,2
+	beq	s0,s4,.L129
+.L126:
+	lbu	a1,%lo(ufo_bullet_number)(s6)
+	sltiu	a0,a1,11
+	xori	a0,a0,1
+	bleu	a1,s5,.L123
+	addi	a1,a1,-11
+	andi	a1,a1,0xff
+.L123:
+	beq	s3,zero,.L124
+	lhu	a3,0(s2)
+	j	.L125
+.L129:
+	lw	ra,28(sp)
+	lw	s0,24(sp)
+	lw	s1,20(sp)
+	lw	s2,16(sp)
+	lw	s3,12(sp)
+	lw	s4,8(sp)
+	lw	s5,4(sp)
+	lw	s6,0(sp)
+	addi	sp,sp,32
+	jr	ra
+	.size	set_ufo_bullet_sprite, .-set_ufo_bullet_sprite
+	.align	2
 	.globl	set_tilemap
 	.type	set_tilemap, @function
 set_tilemap:
@@ -1052,16 +1164,16 @@ set_tilemap:
 	sw	s6,0(sp)
 	li	a0,9
 	call	tilemap_scrollwrapclear
-	lui	s4,%hi(.LANCHOR0+1024)
-	addi	s4,s4,%lo(.LANCHOR0+1024)
+	lui	s4,%hi(.LANCHOR0+1536)
+	addi	s4,s4,%lo(.LANCHOR0+1536)
 	li	s2,1
 	li	s6,0
 	li	s3,16
 	li	s5,9
-.L115:
+.L131:
 	mv	s1,s4
 	mv	s0,s6
-.L116:
+.L132:
 	lhu	a2,0(s1)
 	mv	a1,s0
 	mv	a0,s2
@@ -1069,11 +1181,11 @@ set_tilemap:
 	addi	s0,s0,1
 	andi	s0,s0,0xff
 	addi	s1,s1,2
-	bne	s0,s3,.L116
+	bne	s0,s3,.L132
 	addi	s2,s2,1
 	andi	s2,s2,0xff
 	addi	s4,s4,32
-	bne	s2,s5,.L115
+	bne	s2,s5,.L131
 	li	a4,21
 	li	a3,64
 	li	a2,1
@@ -1309,11 +1421,11 @@ setup_game:
 	li	s4,21
 	li	s6,25
 	li	s5,12
-	j	.L127
-.L123:
+	j	.L143
+.L139:
 	sltiu	a0,a1,13
 	xori	a0,a0,1
-.L124:
+.L140:
 	addi	a1,a1,-13
 	li	a7,0
 	li	a6,0
@@ -1323,21 +1435,21 @@ setup_game:
 	li	a2,0
 	andi	a1,a1,0xff
 	call	set_sprite
-	bgtu	s0,s6,.L126
-.L128:
+	bgtu	s0,s6,.L142
+.L144:
 	addi	s1,s1,1
 	addi	s0,s0,1
 	andi	s0,s0,0xff
 	addi	s2,s2,1
 	addi	s3,s3,1
-.L127:
+.L143:
 	andi	a1,s1,0xff
-	bgtu	a1,s4,.L123
+	bgtu	a1,s4,.L139
 	sb	zero,0(s2)
 	sb	zero,0(s3)
 	sltiu	a0,a1,13
 	xori	a0,a0,1
-	bgtu	a1,s5,.L124
+	bgtu	a1,s5,.L140
 	li	a7,0
 	li	a6,0
 	li	a5,0
@@ -1346,8 +1458,8 @@ setup_game:
 	li	a2,0
 	li	a0,0
 	call	set_sprite
-	j	.L128
-.L126:
+	j	.L144
+.L142:
 	call	gpu_cs
 	lui	a5,%hi(TERMINAL_SHOWHIDE)
 	lw	a5,%lo(TERMINAL_SHOWHIDE)(a5)
@@ -1404,18 +1516,18 @@ find_asteroid_space:
 	li	a5,0
 	li	a0,255
 	li	a2,22
-	j	.L134
-.L133:
+	j	.L150
+.L149:
 	addi	a5,a5,1
 	andi	a5,a5,0xff
 	addi	a4,a4,1
-	beq	a5,a2,.L137
-.L134:
+	beq	a5,a2,.L153
+.L150:
 	lbu	a3,0(a4)
-	bne	a3,zero,.L133
+	bne	a3,zero,.L149
 	mv	a0,a5
-	j	.L133
-.L137:
+	j	.L149
+.L153:
 	ret
 	.size	find_asteroid_space, .-find_asteroid_space
 	.align	2
@@ -1433,11 +1545,11 @@ new_asteroid:
 	mv	s5,a0
 	call	find_asteroid_space
 	li	a5,255
-	beq	a0,a5,.L138
+	beq	a0,a5,.L154
 	mv	s2,a0
 	lui	s3,%hi(shipx)
 	lui	s4,%hi(shipy)
-.L141:
+.L157:
 	li	a0,639
 	call	rng
 	slli	s0,a0,16
@@ -1448,15 +1560,15 @@ new_asteroid:
 	srai	s1,s1,16
 	lh	a5,%lo(shipx)(s3)
 	addi	a4,a5,-64
-	blt	s0,a4,.L140
+	blt	s0,a4,.L156
 	addi	a5,a5,64
-	bgt	s0,a5,.L140
+	bgt	s0,a5,.L156
 	lh	a5,%lo(shipy)(s4)
 	addi	a4,a5,-64
-	blt	s1,a4,.L140
+	blt	s1,a4,.L156
 	addi	a5,a5,64
-	ble	s1,a5,.L141
-.L140:
+	ble	s1,a5,.L157
+.L156:
 	mv	s3,s2
 	lui	a5,%hi(.LANCHOR1)
 	addi	a5,a5,%lo(.LANCHOR1)
@@ -1464,9 +1576,9 @@ new_asteroid:
 	sb	s5,0(a5)
 	li	a5,2
 	li	a0,3
-	beq	s5,a5,.L142
+	beq	s5,a5,.L158
 	li	a0,7
-.L142:
+.L158:
 	call	rng
 	lui	a5,%hi(.LANCHOR1)
 	addi	a5,a5,%lo(.LANCHOR1)
@@ -1475,10 +1587,10 @@ new_asteroid:
 	sltiu	s4,s2,11
 	xori	s4,s4,1
 	li	a5,10
-	bleu	s2,a5,.L143
+	bleu	s2,a5,.L159
 	addi	s2,s2,-11
 	andi	s2,s2,0xff
-.L143:
+.L159:
 	li	a0,31
 	call	rng
 	mv	s3,a0
@@ -1495,7 +1607,7 @@ new_asteroid:
 	mv	a1,s2
 	mv	a0,s4
 	call	set_sprite
-.L138:
+.L154:
 	lw	ra,28(sp)
 	lw	s0,24(sp)
 	lw	s1,20(sp)
@@ -1521,7 +1633,7 @@ new_level:
 	addi	s2,s1,24
 	li	s0,0
 	li	s3,22
-.L148:
+.L164:
 	sb	zero,0(s1)
 	sb	zero,0(s2)
 	li	a7,0
@@ -1546,24 +1658,24 @@ new_level:
 	andi	s0,s0,0xff
 	addi	s1,s1,1
 	addi	s2,s2,1
-	bne	s0,s3,.L148
+	bne	s0,s3,.L164
 	lui	a5,%hi(level)
 	lhu	s1,%lo(level)(a5)
 	slli	a4,s1,16
 	srli	a4,a4,16
 	li	a5,4
-	bleu	a4,a5,.L149
+	bleu	a4,a5,.L165
 	li	s1,4
-.L149:
+.L165:
 	addi	s1,s1,4
 	andi	s1,s1,0xff
 	li	s0,0
-.L150:
+.L166:
 	li	a0,2
 	call	new_asteroid
 	addi	s0,s0,1
 	andi	s0,s0,0xff
-	bgtu	s1,s0,.L150
+	bgtu	s1,s0,.L166
 	lw	ra,28(sp)
 	lw	s0,24(sp)
 	lw	s1,20(sp)
@@ -1576,74 +1688,125 @@ new_level:
 	.globl	move_asteroids
 	.type	move_asteroids, @function
 move_asteroids:
-	addi	sp,sp,-48
-	sw	ra,44(sp)
-	sw	s0,40(sp)
-	sw	s1,36(sp)
-	sw	s2,32(sp)
-	sw	s3,28(sp)
-	sw	s4,24(sp)
-	sw	s5,20(sp)
-	sw	s6,16(sp)
-	sw	s7,12(sp)
-	sw	s8,8(sp)
-	sw	s9,4(sp)
-	lui	s2,%hi(.LANCHOR1)
-	addi	s2,s2,%lo(.LANCHOR1)
-	addi	s4,s2,24
+	addi	sp,sp,-64
+	sw	ra,60(sp)
+	sw	s0,56(sp)
+	sw	s1,52(sp)
+	sw	s2,48(sp)
+	sw	s3,44(sp)
+	sw	s4,40(sp)
+	sw	s5,36(sp)
+	sw	s6,32(sp)
+	sw	s7,28(sp)
+	sw	s8,24(sp)
+	sw	s9,20(sp)
+	sw	s10,16(sp)
+	sw	s11,12(sp)
+	lui	s3,%hi(.LANCHOR1)
+	addi	s3,s3,%lo(.LANCHOR1)
+	addi	s4,s3,24
 	li	s1,245
 	li	s0,0
-	li	s7,1
-	li	s8,10
-	lui	s9,%hi(.LANCHOR0)
-	addi	s9,s9,%lo(.LANCHOR0)
-	li	s5,5
-	li	s6,22
-	j	.L160
-.L167:
+	lui	s5,%hi(.LANCHOR0)
+	addi	s5,s5,%lo(.LANCHOR0)
+	lui	s8,%hi(ufo_leftright)
+	lui	s7,%hi(level)
+	lui	s6,%hi(ufo_directions)
+	addi	s6,s6,%lo(ufo_directions)
+	lui	s9,%hi(.LANCHOR1)
+	addi	s9,s9,%lo(.LANCHOR1)
+	j	.L179
+.L188:
 	sltiu	a0,s0,11
 	xori	a0,a0,1
+	li	a5,10
 	mv	a1,s1
-	bgtu	s0,s8,.L156
+	bgtu	s0,a5,.L172
 	mv	a1,s0
-.L156:
+.L172:
 	lbu	a5,0(s4)
 	slli	a5,a5,1
-	add	a5,s9,a5
-	lhu	a2,1280(a5)
+	add	a5,s5,a5
+	lhu	a2,1792(a5)
 	call	update_sprite
-	j	.L155
-.L157:
-	lbu	a5,0(s3)
-	beq	a5,s5,.L165
-.L158:
+	j	.L171
+.L189:
+	sltiu	s10,s0,11
+	xori	s10,s10,1
+	li	a5,10
+	mv	s11,s1
+	bgtu	s0,a5,.L174
+	mv	s11,s0
+.L174:
+	lbu	a5,%lo(ufo_leftright)(s8)
+	lhu	a4,%lo(level)(s7)
+	li	a3,2
+	sgtu	a4,a4,a3
+	slli	a4,a4,1
+	add	a5,a5,a4
+	slli	a5,a5,1
+	add	a5,s6,a5
+	lhu	a2,0(a5)
+	mv	a1,s11
+	mv	a0,s10
+	call	update_sprite
+	li	a2,0
+	mv	a1,s11
+	mv	a0,s10
+	call	get_sprite_attribute
+	bne	a0,zero,.L173
+	call	set_ufo_sprite
+	lui	a4,%hi(ufo_sprite_number)
+	lbu	a5,%lo(ufo_sprite_number)(a4)
+	add	a5,s9,a5
+	sb	zero,0(a5)
+	lui	a5,%hi(ufo_active_counter)
+	sh	zero,%lo(ufo_active_counter)(a5)
+	lui	a5,%hi(ufo_appear_counter)
+	sh	zero,%lo(ufo_appear_counter)(a5)
+	li	a5,-1
+	sb	a5,%lo(ufo_sprite_number)(a4)
+	j	.L173
+.L176:
+	lbu	a4,0(s2)
+	li	a5,5
+	beq	a4,a5,.L186
+.L177:
 	addi	s0,s0,1
 	andi	s0,s0,0xff
-	addi	s2,s2,1
+	addi	s3,s3,1
 	addi	s1,s1,1
 	andi	s1,s1,0xff
 	addi	s4,s4,1
-	beq	s0,s6,.L166
-.L160:
-	mv	s3,s2
-	lbu	a5,0(s2)
+	li	a5,22
+	beq	s0,a5,.L187
+.L179:
+	mv	s2,s3
+	lbu	a5,0(s3)
 	addi	a5,a5,-1
 	andi	a5,a5,0xff
-	bleu	a5,s7,.L167
-.L155:
-	lbu	a5,0(s3)
-	bleu	a5,s5,.L157
+	li	a4,1
+	bleu	a5,a4,.L188
+.L171:
+	lbu	a4,0(s2)
+	li	a5,3
+	beq	a4,a5,.L189
+.L173:
+	lbu	a5,0(s2)
+	li	a4,5
+	bleu	a5,a4,.L176
 	addi	a5,a5,-1
-	sb	a5,0(s3)
-	j	.L157
-.L165:
-	sb	zero,0(s3)
+	sb	a5,0(s2)
+	j	.L176
+.L186:
+	sb	zero,0(s2)
 	sltiu	a0,s0,11
 	xori	a0,a0,1
+	li	a5,10
 	mv	a1,s1
-	bgtu	s0,s8,.L159
+	bgtu	s0,a5,.L178
 	mv	a1,s0
-.L159:
+.L178:
 	li	a7,0
 	li	a6,0
 	li	a5,0
@@ -1651,20 +1814,22 @@ move_asteroids:
 	li	a3,0
 	li	a2,0
 	call	set_sprite
-	j	.L158
-.L166:
-	lw	ra,44(sp)
-	lw	s0,40(sp)
-	lw	s1,36(sp)
-	lw	s2,32(sp)
-	lw	s3,28(sp)
-	lw	s4,24(sp)
-	lw	s5,20(sp)
-	lw	s6,16(sp)
-	lw	s7,12(sp)
-	lw	s8,8(sp)
-	lw	s9,4(sp)
-	addi	sp,sp,48
+	j	.L177
+.L187:
+	lw	ra,60(sp)
+	lw	s0,56(sp)
+	lw	s1,52(sp)
+	lw	s2,48(sp)
+	lw	s3,44(sp)
+	lw	s4,40(sp)
+	lw	s5,36(sp)
+	lw	s6,32(sp)
+	lw	s7,28(sp)
+	lw	s8,24(sp)
+	lw	s9,20(sp)
+	lw	s10,16(sp)
+	lw	s11,12(sp)
+	addi	sp,sp,64
 	jr	ra
 	.size	move_asteroids, .-move_asteroids
 	.align	2
@@ -1675,18 +1840,18 @@ count_asteroids:
 	addi	a5,a5,%lo(.LANCHOR1)
 	addi	a3,a5,22
 	li	a0,0
-	j	.L170
-.L169:
+	j	.L192
+.L191:
 	addi	a5,a5,1
-	beq	a5,a3,.L172
-.L170:
+	beq	a5,a3,.L194
+.L192:
 	lbu	a4,0(a5)
-	beq	a4,zero,.L169
+	beq	a4,zero,.L191
 	addi	a0,a0,1
 	slli	a0,a0,16
 	srai	a0,a0,16
-	j	.L169
-.L172:
+	j	.L191
+.L194:
 	slli	a0,a0,16
 	srli	a0,a0,16
 	ret
@@ -1738,168 +1903,168 @@ move_ship:
 	lui	a5,%hi(shipdirection)
 	lhu	a3,%lo(shipdirection)(a5)
 	li	a4,7
-	bgtu	a3,a4,.L175
+	bgtu	a3,a4,.L197
 	slli	a5,a3,2
-	lui	a4,%hi(.L178)
-	addi	a4,a4,%lo(.L178)
+	lui	a4,%hi(.L200)
+	addi	a4,a4,%lo(.L200)
 	add	a5,a5,a4
 	lw	a5,0(a5)
 	jr	a5
 	.section	.rodata
 	.align	2
 	.align	2
-.L178:
-	.word	.L185
-	.word	.L184
-	.word	.L183
-	.word	.L182
-	.word	.L181
-	.word	.L180
-	.word	.L179
-	.word	.L177
+.L200:
+	.word	.L207
+	.word	.L206
+	.word	.L205
+	.word	.L204
+	.word	.L203
+	.word	.L202
+	.word	.L201
+	.word	.L199
 	.text
-.L185:
+.L207:
 	lui	a5,%hi(shipy)
 	lh	a5,%lo(shipy)(a5)
 	li	a4,464
-	ble	a5,zero,.L186
+	ble	a5,zero,.L208
 	addi	a5,a5,-1
 	slli	a4,a5,16
 	srai	a4,a4,16
-.L186:
+.L208:
 	lui	a5,%hi(shipy)
 	sh	a4,%lo(shipy)(a5)
 	ret
-.L184:
+.L206:
 	lui	a5,%hi(shipx)
 	lh	a5,%lo(shipx)(a5)
 	li	a3,623
 	li	a4,0
-	bgt	a5,a3,.L187
+	bgt	a5,a3,.L209
 	addi	a5,a5,1
 	slli	a4,a5,16
 	srai	a4,a4,16
-.L187:
+.L209:
 	lui	a5,%hi(shipx)
 	sh	a4,%lo(shipx)(a5)
 	lui	a5,%hi(shipy)
 	lh	a5,%lo(shipy)(a5)
 	li	a4,464
-	ble	a5,zero,.L188
+	ble	a5,zero,.L210
 	addi	a5,a5,-1
 	slli	a4,a5,16
 	srai	a4,a4,16
-.L188:
+.L210:
 	lui	a5,%hi(shipy)
 	sh	a4,%lo(shipy)(a5)
 	ret
-.L183:
+.L205:
 	lui	a5,%hi(shipx)
 	lh	a5,%lo(shipx)(a5)
 	li	a3,623
 	li	a4,0
-	bgt	a5,a3,.L189
+	bgt	a5,a3,.L211
 	addi	a5,a5,1
 	slli	a4,a5,16
 	srai	a4,a4,16
-.L189:
+.L211:
 	lui	a5,%hi(shipx)
 	sh	a4,%lo(shipx)(a5)
 	ret
-.L182:
+.L204:
 	lui	a5,%hi(shipx)
 	lh	a5,%lo(shipx)(a5)
 	li	a3,623
 	li	a4,0
-	bgt	a5,a3,.L190
+	bgt	a5,a3,.L212
 	addi	a5,a5,1
 	slli	a4,a5,16
 	srai	a4,a4,16
-.L190:
+.L212:
 	lui	a5,%hi(shipx)
 	sh	a4,%lo(shipx)(a5)
 	lui	a5,%hi(shipy)
 	lh	a5,%lo(shipy)(a5)
 	li	a3,463
 	li	a4,0
-	bgt	a5,a3,.L191
+	bgt	a5,a3,.L213
 	addi	a5,a5,1
 	slli	a4,a5,16
 	srai	a4,a4,16
-.L191:
+.L213:
 	lui	a5,%hi(shipy)
 	sh	a4,%lo(shipy)(a5)
 	ret
-.L181:
+.L203:
 	lui	a5,%hi(shipy)
 	lh	a5,%lo(shipy)(a5)
 	li	a3,463
 	li	a4,0
-	bgt	a5,a3,.L192
+	bgt	a5,a3,.L214
 	addi	a5,a5,1
 	slli	a4,a5,16
 	srai	a4,a4,16
-.L192:
+.L214:
 	lui	a5,%hi(shipy)
 	sh	a4,%lo(shipy)(a5)
 	ret
-.L180:
+.L202:
 	lui	a5,%hi(shipx)
 	lh	a5,%lo(shipx)(a5)
 	li	a4,624
-	ble	a5,zero,.L193
+	ble	a5,zero,.L215
 	addi	a5,a5,-1
 	slli	a4,a5,16
 	srai	a4,a4,16
-.L193:
+.L215:
 	lui	a5,%hi(shipx)
 	sh	a4,%lo(shipx)(a5)
 	lui	a5,%hi(shipy)
 	lh	a5,%lo(shipy)(a5)
 	li	a3,463
 	li	a4,0
-	bgt	a5,a3,.L194
+	bgt	a5,a3,.L216
 	addi	a5,a5,1
 	slli	a4,a5,16
 	srai	a4,a4,16
-.L194:
+.L216:
 	lui	a5,%hi(shipy)
 	sh	a4,%lo(shipy)(a5)
 	ret
-.L179:
+.L201:
 	lui	a5,%hi(shipx)
 	lh	a5,%lo(shipx)(a5)
 	li	a4,624
-	ble	a5,zero,.L195
+	ble	a5,zero,.L217
 	addi	a5,a5,-1
 	slli	a4,a5,16
 	srai	a4,a4,16
-.L195:
+.L217:
 	lui	a5,%hi(shipx)
 	sh	a4,%lo(shipx)(a5)
 	ret
-.L177:
+.L199:
 	lui	a5,%hi(shipx)
 	lh	a5,%lo(shipx)(a5)
 	li	a4,624
-	ble	a5,zero,.L196
+	ble	a5,zero,.L218
 	addi	a5,a5,-1
 	slli	a4,a5,16
 	srai	a4,a4,16
-.L196:
+.L218:
 	lui	a5,%hi(shipx)
 	sh	a4,%lo(shipx)(a5)
 	lui	a5,%hi(shipy)
 	lh	a5,%lo(shipy)(a5)
 	li	a4,464
-	ble	a5,zero,.L197
+	ble	a5,zero,.L219
 	addi	a5,a5,-1
 	slli	a4,a5,16
 	srai	a4,a4,16
+.L219:
+	lui	a5,%hi(shipy)
+	sh	a4,%lo(shipy)(a5)
 .L197:
-	lui	a5,%hi(shipy)
-	sh	a4,%lo(shipy)(a5)
-.L175:
 	ret
 	.size	move_ship, .-move_ship
 	.section	.rodata.str1.4,"aMS",@progbits,1
@@ -1928,13 +2093,13 @@ draw_score:
 	addi	a5,sp,11
 	addi	a1,sp,6
 	li	a2,10
-.L211:
+.L233:
 	remu	a4,a3,a2
 	divu	a3,a3,a2
 	addi	a4,a4,48
 	sb	a4,0(a5)
 	addi	a5,a5,-1
-	bne	a5,a1,.L211
+	bne	a5,a1,.L233
 	lui	a5,%hi(lives)
 	lhu	a3,%lo(lives)(a5)
 	snez	a3,a3
@@ -1959,31 +2124,31 @@ draw_lives:
 	lui	a5,%hi(lives)
 	lhu	a5,%lo(lives)(a5)
 	li	a4,2
-	beq	a5,a4,.L217
+	beq	a5,a4,.L239
 	li	a4,3
-	beq	a5,a4,.L218
+	beq	a5,a4,.L240
 	li	a4,1
-	bne	a5,a4,.L216
-	j	.L219
-.L218:
+	bne	a5,a4,.L238
+	j	.L241
+.L240:
 	li	a3,464
 	li	a2,608
 	li	a1,63
 	li	a0,0
 	call	draw_vector_block
-.L217:
+.L239:
 	li	a3,464
 	li	a2,576
 	li	a1,63
 	li	a0,0
 	call	draw_vector_block
-.L219:
+.L241:
 	li	a3,464
 	li	a2,544
 	li	a1,63
 	li	a0,0
 	call	draw_vector_block
-.L216:
+.L238:
 	lw	ra,12(sp)
 	addi	sp,sp,16
 	jr	ra
@@ -2005,27 +2170,27 @@ fire_bullet:
 	slli	a4,a3,16
 	srli	a4,a4,16
 	li	a5,7
-	bgtu	a4,a5,.L223
+	bgtu	a4,a5,.L245
 	slli	a3,a3,2
-	lui	a5,%hi(.L225)
-	addi	a5,a5,%lo(.L225)
+	lui	a5,%hi(.L247)
+	addi	a5,a5,%lo(.L247)
 	add	a3,a3,a5
 	lw	a5,0(a3)
 	jr	a5
 	.section	.rodata
 	.align	2
 	.align	2
-.L225:
-	.word	.L232
-	.word	.L231
-	.word	.L230
-	.word	.L229
-	.word	.L228
-	.word	.L227
-	.word	.L226
-	.word	.L224
+.L247:
+	.word	.L254
+	.word	.L253
+	.word	.L252
+	.word	.L251
+	.word	.L250
+	.word	.L249
+	.word	.L248
+	.word	.L246
 	.text
-.L232:
+.L254:
 	lui	a5,%hi(shipx)
 	lh	s0,%lo(shipx)(a5)
 	lui	a5,%hi(shipy)
@@ -2033,7 +2198,7 @@ fire_bullet:
 	addi	s1,s1,-10
 	slli	s1,s1,16
 	srai	s1,s1,16
-.L223:
+.L245:
 	li	a7,0
 	li	a6,2
 	mv	a5,s1
@@ -2063,7 +2228,7 @@ fire_bullet:
 	lw	s1,4(sp)
 	addi	sp,sp,16
 	jr	ra
-.L231:
+.L253:
 	lui	a5,%hi(shipx)
 	lhu	s0,%lo(shipx)(a5)
 	addi	s0,s0,8
@@ -2074,8 +2239,8 @@ fire_bullet:
 	addi	s1,s1,-10
 	slli	s1,s1,16
 	srai	s1,s1,16
-	j	.L223
-.L230:
+	j	.L245
+.L252:
 	lui	a5,%hi(shipx)
 	lhu	s0,%lo(shipx)(a5)
 	addi	s0,s0,10
@@ -2083,8 +2248,8 @@ fire_bullet:
 	srai	s0,s0,16
 	lui	a5,%hi(shipy)
 	lh	s1,%lo(shipy)(a5)
-	j	.L223
-.L229:
+	j	.L245
+.L251:
 	lui	a5,%hi(shipx)
 	lhu	s0,%lo(shipx)(a5)
 	addi	s0,s0,10
@@ -2095,8 +2260,8 @@ fire_bullet:
 	addi	s1,s1,10
 	slli	s1,s1,16
 	srai	s1,s1,16
-	j	.L223
-.L228:
+	j	.L245
+.L250:
 	lui	a5,%hi(shipx)
 	lh	s0,%lo(shipx)(a5)
 	lui	a5,%hi(shipy)
@@ -2104,8 +2269,8 @@ fire_bullet:
 	addi	s1,s1,10
 	slli	s1,s1,16
 	srai	s1,s1,16
-	j	.L223
-.L227:
+	j	.L245
+.L249:
 	lui	a5,%hi(shipx)
 	lhu	s0,%lo(shipx)(a5)
 	addi	s0,s0,-10
@@ -2116,8 +2281,8 @@ fire_bullet:
 	addi	s1,s1,10
 	slli	s1,s1,16
 	srai	s1,s1,16
-	j	.L223
-.L226:
+	j	.L245
+.L248:
 	lui	a5,%hi(shipx)
 	lhu	s0,%lo(shipx)(a5)
 	addi	s0,s0,-10
@@ -2125,8 +2290,8 @@ fire_bullet:
 	srai	s0,s0,16
 	lui	a5,%hi(shipy)
 	lh	s1,%lo(shipy)(a5)
-	j	.L223
-.L224:
+	j	.L245
+.L246:
 	lui	a5,%hi(shipx)
 	lhu	s0,%lo(shipx)(a5)
 	addi	s0,s0,-10
@@ -2137,7 +2302,7 @@ fire_bullet:
 	addi	s1,s1,-10
 	slli	s1,s1,16
 	srai	s1,s1,16
-	j	.L223
+	j	.L245
 	.size	fire_bullet, .-fire_bullet
 	.align	2
 	.globl	update_bullet
@@ -2153,14 +2318,14 @@ update_bullet:
 	lh	a5,%lo(bulletdirection)(s1)
 	slli	a5,a5,1
 	add	a5,s0,a5
-	lhu	a2,1304(a5)
+	lhu	a2,1816(a5)
 	li	a1,12
 	li	a0,0
 	call	update_sprite
 	lh	a5,%lo(bulletdirection)(s1)
 	slli	a5,a5,1
 	add	s0,s0,a5
-	lhu	a2,1304(s0)
+	lhu	a2,1816(s0)
 	li	a1,12
 	li	a0,1
 	call	update_sprite
@@ -2195,9 +2360,9 @@ beepboop:
 	srli	a5,a5,16
 	lui	a4,%hi(last_timer)
 	lh	a4,%lo(last_timer)(a4)
-	bne	a4,a5,.L249
+	bne	a4,a5,.L271
 	ret
-.L249:
+.L271:
 	addi	sp,sp,-16
 	sw	ra,12(sp)
 	sw	s0,8(sp)
@@ -2213,14 +2378,14 @@ beepboop:
 	lhu	a5,0(a5)
 	andi	a5,a5,3
 	li	a4,2
-	beq	a5,a4,.L238
-	bgtu	a5,a4,.L239
-	beq	a5,zero,.L240
+	beq	a5,a4,.L260
+	bgtu	a5,a4,.L261
+	beq	a5,zero,.L262
 	li	a4,1
-	bne	a5,a4,.L236
+	bne	a5,a4,.L258
 	lui	a5,%hi(lives)
 	lhu	a5,%lo(lives)(a5)
-	bne	a5,zero,.L236
+	bne	a5,zero,.L258
 	lui	a4,%hi(.LC2)
 	addi	a4,a4,%lo(.LC2)
 	li	a3,15
@@ -2228,19 +2393,19 @@ beepboop:
 	li	a1,18
 	li	a0,16
 	call	tpu_outputstring
-	j	.L236
-.L240:
+	j	.L258
+.L262:
 	lui	a5,%hi(lives)
 	lhu	a5,%lo(lives)(a5)
-	beq	a5,zero,.L242
+	beq	a5,zero,.L264
 	li	a4,500
 	li	a3,1
 	li	a2,0
 	li	a1,1
 	li	a0,1
 	call	beep
-	j	.L236
-.L242:
+	j	.L258
+.L264:
 	lui	a4,%hi(.LC1)
 	addi	a4,a4,%lo(.LC1)
 	li	a3,3
@@ -2248,19 +2413,19 @@ beepboop:
 	li	a1,18
 	li	a0,16
 	call	tpu_outputstring
-	j	.L236
-.L238:
+	j	.L258
+.L260:
 	lui	a5,%hi(lives)
 	lhu	a5,%lo(lives)(a5)
-	beq	a5,zero,.L243
+	beq	a5,zero,.L265
 	li	a4,500
 	li	a3,2
 	li	a2,0
 	li	a1,1
 	li	a0,2
 	call	beep
-	j	.L236
-.L243:
+	j	.L258
+.L265:
 	lui	a4,%hi(.LC3)
 	addi	a4,a4,%lo(.LC3)
 	li	a3,60
@@ -2268,20 +2433,20 @@ beepboop:
 	li	a1,18
 	li	a0,16
 	call	tpu_outputstring
-	j	.L236
-.L239:
+	j	.L258
+.L261:
 	lui	a5,%hi(lives)
 	lhu	a5,%lo(lives)(a5)
-	beq	a5,zero,.L250
-.L244:
+	beq	a5,zero,.L272
+.L266:
 	li	a0,6
 	call	tilemap_scrollwrapclear
-.L236:
+.L258:
 	lw	ra,12(sp)
 	lw	s0,8(sp)
 	addi	sp,sp,16
 	jr	ra
-.L250:
+.L272:
 	lui	a4,%hi(.LC4)
 	addi	a4,a4,%lo(.LC4)
 	li	a3,48
@@ -2289,7 +2454,7 @@ beepboop:
 	li	a1,18
 	li	a0,16
 	call	tpu_outputstring
-	j	.L244
+	j	.L266
 	.size	beepboop, .-beepboop
 	.align	2
 	.globl	spawn_asteroid
@@ -2310,7 +2475,7 @@ spawn_asteroid:
 	mv	s3,a2
 	call	find_asteroid_space
 	li	a5,255
-	beq	a0,a5,.L251
+	beq	a0,a5,.L273
 	mv	s0,a0
 	mv	s4,a0
 	lui	a5,%hi(.LANCHOR1)
@@ -2319,9 +2484,9 @@ spawn_asteroid:
 	sb	s1,0(a5)
 	li	a5,2
 	li	a0,3
-	beq	s1,a5,.L253
+	beq	s1,a5,.L275
 	li	a0,7
-.L253:
+.L275:
 	call	rng
 	lui	a5,%hi(.LANCHOR1)
 	addi	a5,a5,%lo(.LANCHOR1)
@@ -2330,10 +2495,10 @@ spawn_asteroid:
 	sltiu	s7,s0,11
 	xori	s7,s7,1
 	li	a5,10
-	bleu	s0,a5,.L254
+	bleu	s0,a5,.L276
 	addi	s0,s0,-11
 	andi	s0,s0,0xff
-.L254:
+.L276:
 	li	a0,31
 	call	rng
 	mv	s4,a0
@@ -2362,7 +2527,7 @@ spawn_asteroid:
 	mv	a1,s0
 	mv	a0,s7
 	call	set_sprite
-.L251:
+.L273:
 	lw	ra,44(sp)
 	lw	s0,40(sp)
 	lw	s1,36(sp)
@@ -2394,13 +2559,13 @@ check_hit:
 	li	a0,0
 	call	get_sprite_collision
 	andi	a0,a0,2047
-	bne	a0,zero,.L258
+	bne	a0,zero,.L280
 	li	a1,12
 	li	a0,1
 	call	get_sprite_collision
 	andi	a0,a0,2047
-	beq	a0,zero,.L257
-.L258:
+	beq	a0,zero,.L279
+.L280:
 	li	a4,500
 	li	a3,8
 	li	a2,4
@@ -2414,39 +2579,47 @@ check_hit:
 	li	s2,4096
 	li	s1,22
 	li	s3,10
-	j	.L260
-.L274:
+	j	.L282
+.L300:
 	addi	a1,s0,-10
 	andi	a1,a1,0xff
-.L261:
+.L283:
 	mv	s0,a5
-.L260:
+.L282:
 	call	get_sprite_collision
 	and	a0,a0,s2
 	slli	a0,a0,16
 	srli	a0,a0,16
-	beq	a0,zero,.L262
+	beq	a0,zero,.L284
 	mv	s4,s0
-.L262:
+.L284:
 	addi	a5,s0,1
 	andi	a5,a5,0xff
-	beq	a5,s1,.L273
+	beq	a5,s1,.L299
 	sltiu	a0,a5,11
 	xori	a0,a0,1
 	mv	a1,a5
-	bgtu	a5,s3,.L274
-	j	.L261
-.L273:
+	bgtu	a5,s3,.L300
+	j	.L283
+.L299:
 	li	a5,255
-	beq	s4,a5,.L257
+	beq	s4,a5,.L286
 	mv	s5,s4
 	lui	a5,%hi(.LANCHOR1)
 	addi	a5,a5,%lo(.LANCHOR1)
 	add	a5,a5,s4
 	lbu	a4,0(a5)
 	li	a5,2
-	bleu	a4,a5,.L275
-.L257:
+	bleu	a4,a5,.L301
+.L286:
+	mv	s1,s4
+	lui	a5,%hi(.LANCHOR1)
+	addi	a5,a5,%lo(.LANCHOR1)
+	add	a5,a5,s4
+	lbu	a4,0(a5)
+	li	a5,3
+	beq	a4,a5,.L302
+.L279:
 	lw	ra,44(sp)
 	lw	s0,40(sp)
 	lw	s1,36(sp)
@@ -2459,7 +2632,7 @@ check_hit:
 	lw	s8,8(sp)
 	addi	sp,sp,48
 	jr	ra
-.L275:
+.L301:
 	li	a7,0
 	li	a6,0
 	li	a5,0
@@ -2490,10 +2663,10 @@ check_hit:
 	sltiu	s1,s4,11
 	xori	s1,s1,1
 	li	a5,10
-	bleu	s4,a5,.L264
+	bleu	s4,a5,.L287
 	addi	s4,s4,-11
 	andi	s4,s4,0xff
-.L264:
+.L287:
 	li	a2,2
 	mv	a1,s4
 	mv	a0,s1
@@ -2521,8 +2694,8 @@ check_hit:
 	add	a5,a5,s5
 	lbu	a4,0(a5)
 	li	a5,2
-	beq	a4,a5,.L276
-.L265:
+	beq	a4,a5,.L303
+.L288:
 	mv	a7,s8
 	li	a6,7
 	mv	a5,s3
@@ -2537,38 +2710,94 @@ check_hit:
 	add	a5,a5,s5
 	li	a4,32
 	sb	a4,0(a5)
-	j	.L257
-.L276:
+	j	.L279
+.L303:
 	lui	a5,%hi(level)
 	lhu	a5,%lo(level)(a5)
 	mv	s0,a5
 	li	a4,2
-	bleu	a5,a4,.L266
+	bleu	a5,a4,.L289
 	li	s0,2
-.L266:
+.L289:
 	andi	s0,s0,0xff
 	li	a4,2
 	addi	s6,s0,1
 	andi	s6,s6,0xff
-	bgtu	a5,a4,.L277
-.L269:
+	bgtu	a5,a4,.L304
+.L294:
 	li	s0,0
-.L268:
+.L291:
 	mv	a2,s3
 	mv	a1,s2
 	li	a0,1
 	call	spawn_asteroid
 	addi	s0,s0,1
-	blt	s0,s6,.L268
-	j	.L265
-.L277:
+	blt	s0,s6,.L291
+	j	.L288
+.L304:
 	li	a0,1
 	call	rng
 	addi	s0,s0,1
 	add	s0,s0,a0
 	andi	s6,s0,0xff
-	bgt	s6,zero,.L269
-	j	.L265
+	bgt	s6,zero,.L294
+	j	.L288
+.L302:
+	lui	a5,%hi(level)
+	lhu	a3,%lo(level)(a5)
+	li	a4,1
+	li	a5,10
+	bleu	a3,a4,.L292
+	li	a5,20
+.L292:
+	lui	a4,%hi(score)
+	lhu	a3,%lo(score)(a4)
+	add	a5,a5,a3
+	sh	a5,%lo(score)(a4)
+	sltiu	s0,s4,11
+	xori	s0,s0,1
+	li	a5,10
+	bleu	s4,a5,.L293
+	addi	s4,s4,-11
+	andi	s4,s4,0xff
+.L293:
+	li	a2,3
+	mv	a1,s4
+	mv	a0,s0
+	call	get_sprite_attribute
+	mv	s2,a0
+	li	a2,4
+	mv	a1,s4
+	mv	a0,s0
+	call	get_sprite_attribute
+	lui	a5,%hi(level)
+	lhu	a7,%lo(level)(a5)
+	sltiu	a7,a7,2
+	li	a6,7
+	slli	a5,a0,16
+	srai	a5,a5,16
+	slli	a4,s2,16
+	srai	a4,a4,16
+	li	a3,48
+	li	a2,1
+	mv	a1,s4
+	mv	a0,s0
+	call	set_sprite
+	li	a0,0
+	call	set_ufo_sprite
+	lui	a5,%hi(ufo_sprite_number)
+	li	a4,-1
+	sb	a4,%lo(ufo_sprite_number)(a5)
+	lui	a5,%hi(ufo_appear_counter)
+	sh	zero,%lo(ufo_appear_counter)(a5)
+	lui	a5,%hi(ufo_active_counter)
+	sh	zero,%lo(ufo_active_counter)(a5)
+	lui	a5,%hi(.LANCHOR1)
+	addi	a5,a5,%lo(.LANCHOR1)
+	add	a5,a5,s1
+	li	a4,32
+	sb	a4,0(a5)
+	j	.L279
 	.size	check_hit, .-check_hit
 	.align	2
 	.globl	check_crash
@@ -2580,13 +2809,13 @@ check_crash:
 	li	a0,0
 	call	get_sprite_collision
 	andi	a0,a0,2047
-	bne	a0,zero,.L279
+	bne	a0,zero,.L306
 	li	a1,11
 	li	a0,1
 	call	get_sprite_collision
 	andi	a0,a0,2047
-	beq	a0,zero,.L278
-.L279:
+	beq	a0,zero,.L305
+.L306:
 	li	a4,1000
 	li	a3,1
 	li	a2,4
@@ -2598,7 +2827,7 @@ check_crash:
 	lui	a5,%hi(resetship)
 	li	a4,75
 	sh	a4,%lo(resetship)(a5)
-.L278:
+.L305:
 	lw	ra,12(sp)
 	addi	sp,sp,16
 	jr	ra
@@ -2607,56 +2836,130 @@ check_crash:
 	.globl	main
 	.type	main, @function
 main:
-	addi	sp,sp,-32
-	sw	ra,28(sp)
-	sw	s0,24(sp)
-	sw	s1,20(sp)
-	sw	s2,16(sp)
-	sw	s3,12(sp)
-	sw	s4,8(sp)
-	sw	s5,4(sp)
-	sw	s6,0(sp)
+	addi	sp,sp,-48
+	sw	ra,44(sp)
+	sw	s0,40(sp)
+	sw	s1,36(sp)
+	sw	s2,32(sp)
+	sw	s3,28(sp)
+	sw	s4,24(sp)
+	sw	s5,20(sp)
+	sw	s6,16(sp)
+	sw	s7,12(sp)
+	sw	s8,8(sp)
 	lui	a5,%hi(UART_STATUS)
 	lw	a5,%lo(UART_STATUS)(a5)
 	lbu	a5,0(a5)
 	andi	a5,a5,1
-	beq	a5,zero,.L283
+	beq	a5,zero,.L310
 	lui	s0,%hi(UART_STATUS)
-.L284:
+.L311:
 	call	inputcharacter
 	lw	a5,%lo(UART_STATUS)(s0)
 	lbu	a5,0(a5)
 	andi	a5,a5,1
-	bne	a5,zero,.L284
-.L283:
+	bne	a5,zero,.L311
+.L310:
 	call	setup_game
-	lui	s0,%hi(counter)
-	lui	s1,%hi(LEDS)
-	lui	s5,%hi(shipx)
-	li	s4,312
-	lui	s3,%hi(shipy)
-	li	s2,232
-	j	.L299
-.L306:
+	lui	s3,%hi(shipx)
+	li	s2,312
+	lui	s1,%hi(shipy)
+	li	s0,232
+	lui	s4,%hi(.LANCHOR1)
+	addi	s4,s4,%lo(.LANCHOR1)
+	j	.L331
+.L340:
 	lui	a4,%hi(level)
 	lhu	a5,%lo(level)(a4)
 	addi	a5,a5,1
 	sh	a5,%lo(level)(a4)
 	call	new_level
-	j	.L285
-.L307:
+	j	.L312
+.L341:
+	lui	a4,%hi(ufo_appear_counter)
+	lhu	a5,%lo(ufo_appear_counter)(a4)
+	addi	a5,a5,1
+	slli	a5,a5,16
+	srli	a5,a5,16
+	sh	a5,%lo(ufo_appear_counter)(a4)
+	lui	a4,%hi(ufo_active_counter)
+	sh	zero,%lo(ufo_active_counter)(a4)
+	li	a4,512
+	bleu	a5,a4,.L317
+	li	a0,8
+	call	rng
+	bne	a0,zero,.L317
+	call	find_asteroid_space
+	lui	a5,%hi(ufo_sprite_number)
+	sb	a0,%lo(ufo_sprite_number)(a5)
+	li	a5,255
+	beq	a0,a5,.L317
+	lui	a5,%hi(ufo_active_counter)
+	li	a4,1
+	sh	a4,%lo(ufo_active_counter)(a5)
+	lui	a5,%hi(ufo_appear_counter)
+	sh	zero,%lo(ufo_appear_counter)(a5)
+	li	a0,1
+	call	rng
+	lui	a5,%hi(ufo_leftright)
+	sb	a0,%lo(ufo_leftright)(a5)
+	li	a0,1
+	call	set_ufo_sprite
+	lui	a5,%hi(ufo_sprite_number)
+	lbu	s6,%lo(ufo_sprite_number)(a5)
+	sltiu	s7,s6,11
+	xori	s7,s7,1
+	li	a5,10
+	bleu	s6,a5,.L318
+	addi	s6,s6,-11
+	andi	s6,s6,0xff
+.L318:
+	lui	a5,%hi(ufo_leftright)
+	lbu	a4,%lo(ufo_leftright)(a5)
+	li	a5,1
+	li	s8,639
+	beq	a4,a5,.L319
+	lui	a5,%hi(level)
+	lhu	a4,%lo(level)(a5)
+	li	a5,1
+	li	s8,-31
+	bleu	a4,a5,.L319
+	li	s8,-15
+.L319:
+	li	a0,416
+	call	rng
+	lui	a5,%hi(level)
+	lhu	a7,%lo(level)(a5)
+	addi	a5,a0,32
+	sltiu	a7,a7,2
+	li	a6,0
+	slli	a5,a5,16
+	srai	a5,a5,16
+	mv	a4,s8
+	li	a3,19
+	li	a2,1
+	mv	a1,s6
+	mv	a0,s7
+	call	set_sprite
+	lui	a5,%hi(ufo_sprite_number)
+	lbu	a5,%lo(ufo_sprite_number)(a5)
+	add	a5,s4,a5
+	li	a4,3
+	sb	a4,0(a5)
+	j	.L317
+.L342:
 	call	fire_bullet
-	j	.L292
-.L308:
+	j	.L324
+.L343:
 	call	move_ship
-	j	.L293
-.L286:
+	j	.L325
+.L313:
 	lui	a5,%hi(BUTTONS)
 	lw	a5,%lo(BUTTONS)(a5)
 	lbu	a5,0(a5)
 	andi	a5,a5,8
-	bne	a5,zero,.L303
-.L295:
+	bne	a5,zero,.L337
+.L327:
 	li	a0,21
 	call	draw_ship
 	lui	a5,%hi(resetship)
@@ -2665,21 +2968,25 @@ main:
 	slli	a5,a5,16
 	srli	a5,a5,16
 	li	a4,15
-	bleu	a5,a4,.L304
-.L296:
+	bleu	a5,a4,.L338
+.L328:
 	lui	a5,%hi(resetship)
 	lh	a4,%lo(resetship)(a5)
 	li	a5,16
-	bgt	a4,a5,.L305
-.L294:
+	bgt	a4,a5,.L339
+.L326:
+	call	update_bullet
+	call	check_hit
 	call	move_asteroids
 	call	wait_timer1khz
-.L299:
-	lw	a5,%lo(counter)(s0)
+.L331:
+	lui	a4,%hi(counter)
+	lw	a5,%lo(counter)(a4)
 	addi	a5,a5,1
-	sw	a5,%lo(counter)(s0)
+	sw	a5,%lo(counter)(a4)
 	call	count_asteroids
-	lw	a4,%lo(LEDS)(s1)
+	lui	a5,%hi(LEDS)
+	lw	a4,%lo(LEDS)(a5)
 	lui	a5,%hi(last_timer)
 	lhu	a5,%lo(last_timer)(a5)
 	andi	a5,a5,7
@@ -2687,8 +2994,8 @@ main:
 	andi	a0,a0,0xff
 	sb	a0,0(a4)
 	call	count_asteroids
-	beq	a0,zero,.L306
-.L285:
+	beq	a0,zero,.L340
+.L312:
 	call	await_vblank
 	lui	a5,%hi(TIMER1KHZ)
 	lw	a5,%lo(TIMER1KHZ)(a5)
@@ -2697,70 +3004,81 @@ main:
 	call	beepboop
 	lui	a5,%hi(lives)
 	lhu	a5,%lo(lives)(a5)
-	beq	a5,zero,.L286
+	beq	a5,zero,.L313
 	lui	a5,%hi(resetship)
-	lh	a5,%lo(resetship)(a5)
-	bne	a5,zero,.L287
-	lw	a4,%lo(counter)(s0)
-	andi	a4,a4,3
-	bne	a4,zero,.L288
-	lui	a4,%hi(BUTTONS)
-	lw	a3,%lo(BUTTONS)(a4)
-	lbu	a4,0(a3)
-	andi	a4,a4,32
-	beq	a4,zero,.L289
-	lui	a4,%hi(shipdirection)
-	lh	a4,%lo(shipdirection)(a4)
-	li	a2,7
-	beq	a4,zero,.L290
-	addi	a4,a4,-1
-	slli	a2,a4,16
-	srai	a2,a2,16
-.L290:
-	lui	a4,%hi(shipdirection)
-	sh	a2,%lo(shipdirection)(a4)
-.L289:
-	lbu	a4,0(a3)
-	andi	a4,a4,64
-	beq	a4,zero,.L288
-	lui	a4,%hi(shipdirection)
-	lh	a4,%lo(shipdirection)(a4)
+	lh	s5,%lo(resetship)(a5)
+	bne	s5,zero,.L314
+	lui	a5,%hi(ufo_sprite_number)
+	lbu	a4,%lo(ufo_sprite_number)(a5)
+	li	a5,255
+	beq	a4,a5,.L341
+	lui	a5,%hi(ufo_appear_counter)
+	sh	zero,%lo(ufo_appear_counter)(a5)
+	lui	a4,%hi(ufo_active_counter)
+	lhu	a5,%lo(ufo_active_counter)(a4)
+	addi	a5,a5,1
+	sh	a5,%lo(ufo_active_counter)(a4)
+.L317:
+	lui	a5,%hi(counter)
+	lw	a5,%lo(counter)(a5)
+	andi	a5,a5,3
+	bne	a5,zero,.L320
+	lui	a5,%hi(BUTTONS)
+	lw	a4,%lo(BUTTONS)(a5)
+	lbu	a5,0(a4)
+	andi	a5,a5,32
+	beq	a5,zero,.L321
+	lui	a5,%hi(shipdirection)
+	lh	a5,%lo(shipdirection)(a5)
 	li	a3,7
-	beq	a4,a3,.L291
-	addi	a5,a4,1
-	slli	a5,a5,16
-	srai	a5,a5,16
-.L291:
-	lui	a4,%hi(shipdirection)
-	sh	a5,%lo(shipdirection)(a4)
-.L288:
+	beq	a5,zero,.L322
+	addi	a5,a5,-1
+	slli	a3,a5,16
+	srai	a3,a3,16
+.L322:
+	lui	a5,%hi(shipdirection)
+	sh	a3,%lo(shipdirection)(a5)
+.L321:
+	lbu	a5,0(a4)
+	andi	a5,a5,64
+	beq	a5,zero,.L320
+	lui	a5,%hi(shipdirection)
+	lh	a5,%lo(shipdirection)(a5)
+	li	a4,7
+	beq	a5,a4,.L323
+	addi	a5,a5,1
+	slli	s5,a5,16
+	srai	s5,s5,16
+.L323:
+	lui	a5,%hi(shipdirection)
+	sh	s5,%lo(shipdirection)(a5)
+.L320:
 	li	a2,0
 	li	a1,12
 	li	a0,0
 	call	get_sprite_attribute
-	bne	a0,zero,.L292
+	bne	a0,zero,.L324
 	lui	a5,%hi(BUTTONS)
 	lw	a5,%lo(BUTTONS)(a5)
 	lbu	a5,0(a5)
 	andi	a5,a5,2
-	bne	a5,zero,.L307
-.L292:
+	bne	a5,zero,.L342
+.L324:
 	lui	a5,%hi(BUTTONS)
 	lw	a5,%lo(BUTTONS)(a5)
 	lbu	a5,0(a5)
 	andi	a5,a5,4
-	bne	a5,zero,.L308
-.L293:
+	bne	a5,zero,.L343
+.L325:
 	li	a0,63
 	call	draw_ship
-	call	update_bullet
-	call	check_hit
 	call	check_crash
-	j	.L294
-.L303:
+	j	.L326
+.L337:
 	call	gpu_cs
 	call	tpu_cs
-	sw	zero,%lo(counter)(s0)
+	lui	a5,%hi(counter)
+	sw	zero,%lo(counter)(a5)
 	lui	a5,%hi(lives)
 	li	a4,3
 	sh	a4,%lo(lives)(a5)
@@ -2768,59 +3086,74 @@ main:
 	sh	zero,%lo(score)(a5)
 	lui	a5,%hi(level)
 	sh	zero,%lo(level)(a5)
-	sh	s4,%lo(shipx)(s5)
-	sh	s2,%lo(shipy)(s3)
+	sh	s2,%lo(shipx)(s3)
+	sh	s0,%lo(shipy)(s1)
 	lui	a5,%hi(shipdirection)
 	sh	zero,%lo(shipdirection)(a5)
-	lui	s6,%hi(resetship)
-	sh	zero,%lo(resetship)(s6)
+	lui	s5,%hi(resetship)
+	sh	zero,%lo(resetship)(s5)
 	lui	a5,%hi(bulletdirection)
 	sh	zero,%lo(bulletdirection)(a5)
+	lui	a5,%hi(ufo_active_counter)
+	sh	zero,%lo(ufo_active_counter)(a5)
+	lui	a5,%hi(ufo_appear_counter)
+	sh	zero,%lo(ufo_appear_counter)(a5)
+	li	a5,-1
+	lui	a4,%hi(ufo_bullet_number)
+	sb	a5,%lo(ufo_bullet_number)(a4)
+	lui	a4,%hi(ufo_sprite_number)
+	sb	a5,%lo(ufo_sprite_number)(a4)
+	lui	a5,%hi(ufo_leftright)
+	sb	zero,%lo(ufo_leftright)(a5)
 	call	draw_lives
+	call	set_asteroid_sprites
+	li	a0,0
+	call	set_ship_sprites
+	call	set_bullet_sprites
 	call	new_level
-	lhu	a5,%lo(resetship)(s6)
+	lhu	a5,%lo(resetship)(s5)
 	addi	a5,a5,-1
 	slli	a5,a5,16
 	srli	a5,a5,16
 	li	a4,15
-	bleu	a5,a4,.L295
+	bleu	a5,a4,.L327
 	lui	a5,%hi(lives)
 	lhu	a5,%lo(lives)(a5)
-	beq	a5,zero,.L295
-	j	.L296
-.L304:
+	beq	a5,zero,.L327
+	j	.L328
+.L338:
 	li	a1,11
 	li	a0,0
 	call	get_sprite_collision
 	andi	a0,a0,2047
-	bne	a0,zero,.L296
+	bne	a0,zero,.L328
 	li	a1,11
 	li	a0,1
 	call	get_sprite_collision
 	andi	a0,a0,2047
-	bne	a0,zero,.L296
+	bne	a0,zero,.L328
 	lui	a4,%hi(resetship)
 	lhu	a5,%lo(resetship)(a4)
 	addi	a5,a5,-1
 	slli	a5,a5,16
 	srai	a5,a5,16
 	sh	a5,%lo(resetship)(a4)
-	beq	a5,zero,.L309
-.L297:
+	beq	a5,zero,.L344
+.L329:
 	lui	a5,%hi(lives)
 	lhu	a5,%lo(lives)(a5)
-	bne	a5,zero,.L296
+	bne	a5,zero,.L328
 	call	risc_ice_v_logo
-	j	.L296
-.L309:
+	j	.L328
+.L344:
 	call	gpu_cs
 	lui	a4,%hi(lives)
 	lhu	a5,%lo(lives)(a4)
 	addi	a5,a5,-1
 	sh	a5,%lo(lives)(a4)
 	call	draw_lives
-	j	.L297
-.L305:
+	j	.L329
+.L339:
 	li	a2,57344
 	li	a1,11
 	li	a0,0
@@ -2837,33 +3170,36 @@ main:
 	srai	a5,a5,16
 	sh	a5,%lo(resetship)(a4)
 	li	a4,16
-	beq	a5,a4,.L310
-.L298:
-	sh	s4,%lo(shipx)(s5)
-	sh	s2,%lo(shipy)(s3)
+	beq	a5,a4,.L345
+.L330:
+	sh	s2,%lo(shipx)(s3)
+	sh	s0,%lo(shipy)(s1)
 	lui	a5,%hi(shipdirection)
 	sh	zero,%lo(shipdirection)(a5)
-	j	.L294
-.L310:
+	j	.L326
+.L345:
 	li	a0,0
 	call	set_ship_sprites
-	j	.L298
-.L287:
-	addi	a5,a5,-1
-	slli	a5,a5,16
-	srli	a5,a5,16
-	li	a4,15
-	bgtu	a5,a4,.L296
-	j	.L295
+	j	.L330
+.L314:
+	addi	s5,s5,-1
+	slli	s5,s5,16
+	srli	s5,s5,16
+	li	a5,15
+	bgtu	s5,a5,.L328
+	j	.L327
 	.size	main, .-main
 	.globl	tilemap_bitmap
 	.globl	bullet_bitmap
 	.globl	ship_bitmap
+	.globl	ufo_bullet_bitmap
 	.globl	ufo_bitmap
 	.globl	asteroid_bitmap
+	.globl	ufo_directions
 	.globl	asteroid_directions
 	.globl	bullet_directions
 	.globl	last_timer
+	.globl	ufo_leftright
 	.globl	ufo_bullet_number
 	.globl	ufo_sprite_number
 	.globl	asteroid_direction
@@ -2874,6 +3210,8 @@ main:
 	.globl	shipy
 	.globl	shipx
 	.globl	counter
+	.globl	ufo_active_counter
+	.globl	ufo_appear_counter
 	.globl	level
 	.globl	score
 	.globl	lives
@@ -3487,6 +3825,268 @@ bullet_bitmap:
 	.half	0
 	.half	0
 	.half	0
+	.type	ufo_bitmap, @object
+	.size	ufo_bitmap, 256
+ufo_bitmap:
+	.half	0
+	.half	0
+	.half	960
+	.half	960
+	.half	1952
+	.half	4080
+	.half	16380
+	.half	32766
+	.half	-13
+	.half	16380
+	.half	8184
+	.half	4080
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	960
+	.half	960
+	.half	1888
+	.half	4080
+	.half	16380
+	.half	32766
+	.half	-49
+	.half	16380
+	.half	8184
+	.half	4080
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	960
+	.half	960
+	.half	1760
+	.half	4080
+	.half	16380
+	.half	32766
+	.half	-193
+	.half	16380
+	.half	8184
+	.half	4080
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	960
+	.half	960
+	.half	1520
+	.half	4080
+	.half	16380
+	.half	32766
+	.half	-769
+	.half	16380
+	.half	8184
+	.half	4080
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	960
+	.half	960
+	.half	1952
+	.half	4080
+	.half	16380
+	.half	32766
+	.half	-3073
+	.half	16380
+	.half	8184
+	.half	4080
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	960
+	.half	960
+	.half	1888
+	.half	4080
+	.half	16380
+	.half	32766
+	.half	-12289
+	.half	16380
+	.half	8184
+	.half	4080
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	960
+	.half	960
+	.half	1760
+	.half	4080
+	.half	16380
+	.half	32766
+	.half	-1
+	.half	16380
+	.half	8184
+	.half	4080
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	960
+	.half	960
+	.half	1520
+	.half	4080
+	.half	16380
+	.half	32766
+	.half	-1
+	.half	16380
+	.half	8184
+	.half	4080
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.type	ufo_bullet_bitmap, @object
+	.size	ufo_bullet_bitmap, 256
+ufo_bullet_bitmap:
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	128
+	.half	256
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	256
+	.half	128
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	128
+	.half	256
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	256
+	.half	128
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	128
+	.half	256
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	256
+	.half	128
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	128
+	.half	256
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	256
+	.half	128
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
 	.type	tilemap_bitmap, @object
 	.size	tilemap_bitmap, 256
 tilemap_bitmap:
@@ -3636,145 +4236,14 @@ asteroid_directions:
 	.type	bullet_directions, @object
 	.size	bullet_directions, 16
 bullet_directions:
-	.half	416
-	.half	434
-	.half	387
-	.half	402
-	.half	408
-	.half	406
-	.half	388
-	.half	438
-	.type	ufo_bitmap, @object
-	.size	ufo_bitmap, 256
-ufo_bitmap:
-	.half	0
-	.half	0
-	.half	960
-	.half	960
-	.half	1952
-	.half	4080
-	.half	16380
-	.half	32766
-	.half	-13
-	.half	16380
-	.half	8184
-	.half	4080
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	960
-	.half	960
-	.half	1888
-	.half	4080
-	.half	16380
-	.half	32766
-	.half	-49
-	.half	16380
-	.half	8184
-	.half	4080
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	960
-	.half	960
-	.half	1760
-	.half	4080
-	.half	16380
-	.half	32766
-	.half	-193
-	.half	16380
-	.half	8184
-	.half	4080
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	960
-	.half	960
-	.half	1520
-	.half	4080
-	.half	16380
-	.half	32766
-	.half	-769
-	.half	16380
-	.half	8184
-	.half	4080
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	960
-	.half	960
-	.half	1952
-	.half	4080
-	.half	16380
-	.half	32766
-	.half	-3073
-	.half	16380
-	.half	8184
-	.half	4080
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	960
-	.half	960
-	.half	1888
-	.half	4080
-	.half	16380
-	.half	32766
-	.half	-12289
-	.half	16380
-	.half	8184
-	.half	4080
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	960
-	.half	960
-	.half	1760
-	.half	4080
-	.half	16380
-	.half	32766
-	.half	-1
-	.half	16380
-	.half	8184
-	.half	4080
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	960
-	.half	960
-	.half	1520
-	.half	4080
-	.half	16380
-	.half	32766
-	.half	-1
-	.half	16380
-	.half	8184
-	.half	4080
-	.half	0
-	.half	0
-	.half	0
-	.half	0
+	.half	480
+	.half	498
+	.half	451
+	.half	466
+	.half	472
+	.half	470
+	.half	452
+	.half	502
 	.bss
 	.align	2
 	.set	.LANCHOR1,. + 0
@@ -3793,6 +4262,11 @@ asteroid_direction:
 	.size	last_timer, 2
 last_timer:
 	.zero	2
+	.type	ufo_leftright, @object
+	.size	ufo_leftright, 1
+ufo_leftright:
+	.zero	1
+	.zero	1
 	.type	bulletdirection, @object
 	.size	bulletdirection, 2
 bulletdirection:
@@ -3805,10 +4279,19 @@ resetship:
 	.size	shipdirection, 2
 shipdirection:
 	.zero	2
+	.zero	2
 	.type	counter, @object
 	.size	counter, 4
 counter:
 	.zero	4
+	.type	ufo_active_counter, @object
+	.size	ufo_active_counter, 2
+ufo_active_counter:
+	.zero	2
+	.type	ufo_appear_counter, @object
+	.size	ufo_appear_counter, 2
+ufo_appear_counter:
+	.zero	2
 	.type	level, @object
 	.size	level, 2
 level:
@@ -3823,6 +4306,13 @@ lives:
 	.zero	2
 	.section	.sdata,"aw"
 	.align	2
+	.type	ufo_directions, @object
+	.size	ufo_directions, 8
+ufo_directions:
+	.half	450
+	.half	454
+	.half	451
+	.half	452
 	.type	ufo_bullet_number, @object
 	.size	ufo_bullet_number, 1
 ufo_bullet_number:

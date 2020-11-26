@@ -87,8 +87,10 @@ algorithm sprite_layer(
     int11   deltay := { {9{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
 
     // Sprite update helpers
-    int11   sprite_offscreen_negative := sprite_double[ sprite_set_number ] ? -32 : -16;
-    int11   sprite_to_negative := sprite_double[ sprite_set_number ] ? -31 : -15;
+    int11   sprite_offscreen_negative ::= sprite_double[ sprite_set_number ] ? -32 : -16;
+    int11   sprite_to_negative ::= sprite_double[ sprite_set_number ] ? -31 : -15;
+    uint1   sprite_offscreen_x ::= ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_x[ sprite_set_number ] ) > __signed(640) );
+    uint1   sprite_offscreen_y ::= ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_y[ sprite_set_number ] ) > __signed(480) );
 
     // Set read and write address for the tiles
     $$for i=0,12 do
@@ -109,7 +111,7 @@ algorithm sprite_layer(
     sprite_read_tile := sprite_tile_number[ sprite_set_number ];
 
     // Write to the sprite_layer
-    // Set tile bitmaps, x coordinate, y coordinate, colour, tile number, visibility, double
+    // Set tile bitmaps, x coordinate, y coordinate, colour, tile number, visibility, double and update
     always {
         // WRITE BITMAP TO SPRITE TILE
         if( sprite_writer_active ) {
@@ -135,15 +137,13 @@ algorithm sprite_layer(
                 sprite_colour[ sprite_set_number ] = ( spriteupdate( sprite_update ).colour_act ) ? spriteupdate( sprite_update ).colour : sprite_colour[ sprite_set_number ];
                 sprite_tile_number[ sprite_set_number ] = ( spriteupdate( sprite_update ).tile_act ) ? sprite_tile_number[ sprite_set_number ] + 1 : sprite_tile_number[ sprite_set_number ];
 
-                sprite_x[ sprite_set_number ] = ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ? 640 :
-                                                ( (__signed( sprite_x[ sprite_set_number ] ) > __signed(640)) ? ( sprite_to_negative ) : sprite_x[ sprite_set_number ] + deltax );
-                sprite_y[ sprite_set_number ] = ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ? 480 :
-                                                ( (__signed( sprite_y[ sprite_set_number ] ) > __signed(480)) ? ( sprite_to_negative ) : sprite_y[ sprite_set_number ] + deltay );
+                sprite_x[ sprite_set_number ] = sprite_offscreen_x ? ( ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ? 640 : sprite_to_negative ) :
+                                                sprite_x[ sprite_set_number ] + deltax;
 
-                sprite_active[ sprite_set_number ] = ( ( ( (__signed( sprite_x[ sprite_set_number ] ) < __signed(sprite_offscreen_negative)) ||
-                                                        ( __signed( sprite_x[ sprite_set_number ] ) > __signed(640) ) ) && ( spriteupdate( sprite_update ).x_act ) ) ||
-                                                        ( ( (__signed( sprite_y[ sprite_set_number ] ) < __signed(sprite_offscreen_negative)) ||
-                                                        ( __signed( sprite_y[ sprite_set_number ] ) > __signed(480) ) ) && spriteupdate( sprite_update ).y_act ) ) ?
+                sprite_y[ sprite_set_number ] = sprite_offscreen_y ? ( ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ? 480 : sprite_to_negative ) :
+                                                sprite_y[ sprite_set_number ] + deltay;
+
+                sprite_active[ sprite_set_number ] = ( sprite_offscreen_x && spriteupdate( sprite_update ).x_act ) || ( sprite_offscreen_y && spriteupdate( sprite_update ).y_act ) ?
                                                         0 : sprite_active[ sprite_set_number ];
             }
         }
