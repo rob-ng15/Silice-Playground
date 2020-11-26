@@ -340,7 +340,8 @@ algorithm main(
                         } else {
                             // I ALU OPERATIONS
                             switch( function3 ) {
-                                case 3b000: { result = ( ( opCode[5,1] == 1 ) && ( function7[5,1] == 1 ) ) ? sourceReg1 - sourceReg2 : ( ( opCode[5,1] == 1 ) ? sourceReg1 + sourceReg2 : sourceReg1 + immediateValue); }
+                                case 3b000: { result = ( ( opCode[5,1] == 1 ) && ( function7[5,1] == 1 ) ) ? sourceReg1 - sourceReg2 :
+                                    ( ( opCode[5,1] == 1 ) ? __signed(sourceReg1) + __signed(sourceReg2) : __signed(sourceReg1) + __signed(immediateValue) ); }
                                 case 3b001: { result = sourceReg1 << ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ); }
                                 case 3b010: { result = __signed( sourceReg1 ) < __signed( ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ) ) ? 32b1 : 32b0; }
                                 case 3b011: {
