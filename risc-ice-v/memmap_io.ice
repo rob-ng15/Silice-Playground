@@ -81,7 +81,7 @@ algorithm memmap_io (
     // RNG random number generator
     uint16 staticGenerator = 0;
     random rng <@clock_50mhz> (
-        g_noise_out :> staticGenerator
+        g_noise_out :> staticGenerator,
     );
 
     // UART tx and rx
@@ -455,7 +455,8 @@ algorithm memmap_io (
                 case 16h8818: { readData = apu_processor_R.audio_active; }
 
                 // TIMERS and RNG
-                case 16h8900: { readData = staticGenerator; }
+                case 16h8900: { readData = rng.g_noise_out; }
+                case 16h8904: { readData = rng.u_noise_out; }
                 case 16h8910: { readData = timer1hz.counter1hz; }
                 case 16h8920: { readData = timer1khz.counter1khz; }
                 case 16h8930: { readData = sleepTimer.counter1khz; }

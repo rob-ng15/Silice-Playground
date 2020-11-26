@@ -1,7 +1,7 @@
 # RISC-ICE-V
 
 * Written in Silice
-    * Inspired by [ICE-V](https://github.com/sylefeb/Silice/blob/master/projects/ice-v/ice-v.ice) by @sylefeb
+    * Based upon ICE-V by [ICE-V](https://github.com/sylefeb/Silice/blob/master/projects/ice-v/ice-v.ice) by @sylefeb
 
 A simple Risc-V RV32IM 25mhz cpu, matched to the display and peripherals from [j1eforth](https://github.com/rob-ng15/Silice-Playground/tree/master/j1eforth/DE10NANO-ULX3S). Inspired by the need for an easier way to program and use the CPU than Forth.
 
@@ -12,6 +12,10 @@ __ULX3S only at present__
 * CPU
     * 25MHz clock
         * Instructions take varying number of clock cycles for execution
+            * 3 Pipeline Stages
+                * Fetch ( starts partial decode )
+                * Decode and Execute
+                * Dispatch
         * RV32IM instruction set ( selection of )
             * AUIPC
             * LUI

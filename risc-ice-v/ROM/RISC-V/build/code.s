@@ -39,9 +39,7 @@ rng:
 	srai	a4,a4,16
 .L10:
 	lhu	a0,0(a3)
-	slli	a0,a0,16
-	srai	a0,a0,16
-	and	a0,a0,a4
+	and	a0,a4,a0
 	bltu	a5,a0,.L10
 	ret
 .L15:
@@ -52,8 +50,8 @@ rng:
 	andi	a0,a0,1
 	ret
 .L7:
-	lui	a4,%hi(RNG)
-	lw	a4,%lo(RNG)(a4)
+	lui	a4,%hi(ALT_RNG)
+	lw	a4,%lo(ALT_RNG)(a4)
 .L11:
 	lhu	a0,0(a4)
 	slli	a0,a0,16
@@ -68,6 +66,8 @@ rng:
 set_timer1khz:
 	lui	a5,%hi(TIMER1KHZ)
 	lw	a5,%lo(TIMER1KHZ)(a5)
+	slli	a0,a0,16
+	srli	a0,a0,16
 	sh	a0,0(a5)
 	ret
 	.size	set_timer1khz, .-set_timer1khz
@@ -80,7 +80,7 @@ wait_timer1khz:
 .L18:
 	lhu	a5,0(a4)
 	slli	a5,a5,16
-	srai	a5,a5,16
+	srli	a5,a5,16
 	bne	a5,zero,.L18
 	ret
 	.size	wait_timer1khz, .-wait_timer1khz
@@ -872,25 +872,23 @@ tpu_outputstring:
 	.globl	set_asteroid_sprites
 	.type	set_asteroid_sprites, @function
 set_asteroid_sprites:
-	addi	sp,sp,-48
-	sw	ra,44(sp)
-	sw	s0,40(sp)
-	sw	s1,36(sp)
-	sw	s2,32(sp)
-	sw	s3,28(sp)
-	sw	s4,24(sp)
-	sw	s5,20(sp)
-	sw	s6,16(sp)
-	sw	s7,12(sp)
-	li	s5,0
-	lui	s7,%hi(.LANCHOR0)
+	addi	sp,sp,-32
+	sw	ra,28(sp)
+	sw	s0,24(sp)
+	sw	s1,20(sp)
+	sw	s2,16(sp)
+	sw	s3,12(sp)
+	sw	s4,8(sp)
+	sw	s5,4(sp)
+	sw	s6,0(sp)
+	li	s2,0
+	lui	s6,%hi(.LANCHOR0)
 	li	s3,0
 	li	s4,128
-	li	s6,12
+	li	s5,12
 .L97:
-	addi	s1,s7,%lo(.LANCHOR0)
+	addi	s1,s6,%lo(.LANCHOR0)
 	mv	s0,s3
-	andi	s2,s5,0xff
 .L98:
 	lhu	a3,0(s1)
 	mv	a2,s0
@@ -906,20 +904,18 @@ set_asteroid_sprites:
 	andi	s0,s0,0xff
 	addi	s1,s1,2
 	bne	s0,s4,.L98
-	addi	s5,s5,1
-	slli	s5,s5,16
-	srai	s5,s5,16
-	bne	s5,s6,.L97
-	lw	ra,44(sp)
-	lw	s0,40(sp)
-	lw	s1,36(sp)
-	lw	s2,32(sp)
-	lw	s3,28(sp)
-	lw	s4,24(sp)
-	lw	s5,20(sp)
-	lw	s6,16(sp)
-	lw	s7,12(sp)
-	addi	sp,sp,48
+	addi	s2,s2,1
+	andi	s2,s2,0xff
+	bne	s2,s5,.L97
+	lw	ra,28(sp)
+	lw	s0,24(sp)
+	lw	s1,20(sp)
+	lw	s2,16(sp)
+	lw	s3,12(sp)
+	lw	s4,8(sp)
+	lw	s5,4(sp)
+	lw	s6,0(sp)
+	addi	sp,sp,32
 	jr	ra
 	.size	set_asteroid_sprites, .-set_asteroid_sprites
 	.align	2
@@ -1444,23 +1440,22 @@ new_asteroid:
 .L141:
 	li	a0,639
 	call	rng
-	mv	s0,a0
+	slli	s0,a0,16
+	srai	s0,s0,16
 	li	a0,479
 	call	rng
-	mv	s1,a0
-	andi	a4,a0,0xff
-	andi	a3,s0,0xff
+	slli	s1,a0,16
+	srai	s1,s1,16
 	lh	a5,%lo(shipx)(s3)
-	addi	a2,a5,-64
-	blt	a3,a2,.L140
+	addi	a4,a5,-64
+	blt	s0,a4,.L140
 	addi	a5,a5,64
-	bgt	a3,a5,.L140
-	mv	a5,a4
-	lh	a4,%lo(shipy)(s4)
-	addi	a3,a4,-64
-	blt	a5,a3,.L140
-	addi	a4,a4,64
-	ble	a5,a4,.L141
+	bgt	s0,a5,.L140
+	lh	a5,%lo(shipy)(s4)
+	addi	a4,a5,-64
+	blt	s1,a4,.L140
+	addi	a5,a5,64
+	ble	s1,a5,.L141
 .L140:
 	mv	s3,s2
 	lui	a5,%hi(.LANCHOR1)
@@ -1493,8 +1488,8 @@ new_asteroid:
 	addi	a3,s3,32
 	seqz	a7,a7
 	andi	a6,a0,0xff
-	andi	a5,s1,0xff
-	andi	a4,s0,0xff
+	mv	a5,s1
+	mv	a4,s0
 	andi	a3,a3,0xff
 	li	a2,1
 	mv	a1,s2
@@ -1593,36 +1588,34 @@ move_asteroids:
 	sw	s7,12(sp)
 	sw	s8,8(sp)
 	sw	s9,4(sp)
-	sw	s10,0(sp)
 	lui	s2,%hi(.LANCHOR1)
 	addi	s2,s2,%lo(.LANCHOR1)
 	addi	s4,s2,24
 	li	s1,245
 	li	s0,0
-	li	s8,1
-	li	s9,10
-	lui	s10,%hi(.LANCHOR0)
-	addi	s10,s10,%lo(.LANCHOR0)
-	li	s7,2
-	li	s6,3
-	li	s5,22
+	li	s7,1
+	li	s8,10
+	lui	s9,%hi(.LANCHOR0)
+	addi	s9,s9,%lo(.LANCHOR0)
+	li	s5,5
+	li	s6,22
 	j	.L160
 .L167:
 	sltiu	a0,s0,11
 	xori	a0,a0,1
 	mv	a1,s1
-	bgtu	s0,s9,.L156
+	bgtu	s0,s8,.L156
 	mv	a1,s0
 .L156:
 	lbu	a5,0(s4)
 	slli	a5,a5,1
-	add	a5,s10,a5
+	add	a5,s9,a5
 	lhu	a2,1280(a5)
 	call	update_sprite
 	j	.L155
 .L157:
 	lbu	a5,0(s3)
-	beq	a5,s6,.L165
+	beq	a5,s5,.L165
 .L158:
 	addi	s0,s0,1
 	andi	s0,s0,0xff
@@ -1630,16 +1623,16 @@ move_asteroids:
 	addi	s1,s1,1
 	andi	s1,s1,0xff
 	addi	s4,s4,1
-	beq	s0,s5,.L166
+	beq	s0,s6,.L166
 .L160:
 	mv	s3,s2
 	lbu	a5,0(s2)
 	addi	a5,a5,-1
 	andi	a5,a5,0xff
-	bleu	a5,s8,.L167
+	bleu	a5,s7,.L167
 .L155:
 	lbu	a5,0(s3)
-	bleu	a5,s7,.L157
+	bleu	a5,s5,.L157
 	addi	a5,a5,-1
 	sb	a5,0(s3)
 	j	.L157
@@ -1648,7 +1641,7 @@ move_asteroids:
 	sltiu	a0,s0,11
 	xori	a0,a0,1
 	mv	a1,s1
-	bgtu	s0,s9,.L159
+	bgtu	s0,s8,.L159
 	mv	a1,s0
 .L159:
 	li	a7,0
@@ -1671,7 +1664,6 @@ move_asteroids:
 	lw	s7,12(sp)
 	lw	s8,8(sp)
 	lw	s9,4(sp)
-	lw	s10,0(sp)
 	addi	sp,sp,48
 	jr	ra
 	.size	move_asteroids, .-move_asteroids
@@ -2200,7 +2192,7 @@ beepboop:
 	lw	a5,%lo(TIMER1HZ)(a5)
 	lhu	a5,0(a5)
 	slli	a5,a5,16
-	srai	a5,a5,16
+	srli	a5,a5,16
 	lui	a4,%hi(last_timer)
 	lh	a4,%lo(last_timer)(a4)
 	bne	a4,a5,.L249
@@ -2543,7 +2535,7 @@ check_hit:
 	lui	a5,%hi(.LANCHOR1)
 	addi	a5,a5,%lo(.LANCHOR1)
 	add	a5,a5,s5
-	li	a4,25
+	li	a4,32
 	sb	a4,0(a5)
 	j	.L257
 .L276:
@@ -2639,11 +2631,11 @@ main:
 .L283:
 	call	setup_game
 	lui	s0,%hi(counter)
-	lui	s2,%hi(LEDS)
-	lui	s1,%hi(lives)
-	li	s5,3
-	lui	s4,%hi(shipx)
-	li	s3,312
+	lui	s1,%hi(LEDS)
+	lui	s5,%hi(shipx)
+	li	s4,312
+	lui	s3,%hi(shipy)
+	li	s2,232
 	j	.L299
 .L306:
 	lui	a4,%hi(level)
@@ -2679,25 +2671,6 @@ main:
 	lh	a4,%lo(resetship)(a5)
 	li	a5,16
 	bgt	a4,a5,.L305
-.L298:
-	li	a7,0
-	li	a6,0
-	li	a5,0
-	li	a4,0
-	li	a3,0
-	li	a2,0
-	li	a1,12
-	li	a0,0
-	call	set_sprite
-	li	a7,0
-	li	a6,0
-	li	a5,0
-	li	a4,0
-	li	a3,0
-	li	a2,0
-	li	a1,12
-	li	a0,1
-	call	set_sprite
 .L294:
 	call	move_asteroids
 	call	wait_timer1khz
@@ -2706,7 +2679,7 @@ main:
 	addi	a5,a5,1
 	sw	a5,%lo(counter)(s0)
 	call	count_asteroids
-	lw	a4,%lo(LEDS)(s2)
+	lw	a4,%lo(LEDS)(s1)
 	lui	a5,%hi(last_timer)
 	lhu	a5,%lo(last_timer)(a5)
 	andi	a5,a5,7
@@ -2722,7 +2695,8 @@ main:
 	li	a4,8
 	sh	a4,0(a5)
 	call	beepboop
-	lhu	a5,%lo(lives)(s1)
+	lui	a5,%hi(lives)
+	lhu	a5,%lo(lives)(a5)
 	beq	a5,zero,.L286
 	lui	a5,%hi(resetship)
 	lh	a5,%lo(resetship)(a5)
@@ -2787,15 +2761,15 @@ main:
 	call	gpu_cs
 	call	tpu_cs
 	sw	zero,%lo(counter)(s0)
-	sh	s5,%lo(lives)(s1)
+	lui	a5,%hi(lives)
+	li	a4,3
+	sh	a4,%lo(lives)(a5)
 	lui	a5,%hi(score)
 	sh	zero,%lo(score)(a5)
 	lui	a5,%hi(level)
 	sh	zero,%lo(level)(a5)
-	sh	s3,%lo(shipx)(s4)
-	lui	a5,%hi(shipy)
-	li	a4,232
-	sh	a4,%lo(shipy)(a5)
+	sh	s4,%lo(shipx)(s5)
+	sh	s2,%lo(shipy)(s3)
 	lui	a5,%hi(shipdirection)
 	sh	zero,%lo(shipdirection)(a5)
 	lui	s6,%hi(resetship)
@@ -2810,7 +2784,8 @@ main:
 	srli	a5,a5,16
 	li	a4,15
 	bleu	a5,a4,.L295
-	lhu	a5,%lo(lives)(s1)
+	lui	a5,%hi(lives)
+	lhu	a5,%lo(lives)(a5)
 	beq	a5,zero,.L295
 	j	.L296
 .L304:
@@ -2832,15 +2807,17 @@ main:
 	sh	a5,%lo(resetship)(a4)
 	beq	a5,zero,.L309
 .L297:
-	lhu	a5,%lo(lives)(s1)
+	lui	a5,%hi(lives)
+	lhu	a5,%lo(lives)(a5)
 	bne	a5,zero,.L296
 	call	risc_ice_v_logo
 	j	.L296
 .L309:
 	call	gpu_cs
-	lhu	a5,%lo(lives)(s1)
+	lui	a4,%hi(lives)
+	lhu	a5,%lo(lives)(a4)
 	addi	a5,a5,-1
-	sh	a5,%lo(lives)(s1)
+	sh	a5,%lo(lives)(a4)
 	call	draw_lives
 	j	.L297
 .L305:
@@ -2860,7 +2837,14 @@ main:
 	srai	a5,a5,16
 	sh	a5,%lo(resetship)(a4)
 	li	a4,16
-	bne	a5,a4,.L298
+	beq	a5,a4,.L310
+.L298:
+	sh	s4,%lo(shipx)(s5)
+	sh	s2,%lo(shipy)(s3)
+	lui	a5,%hi(shipdirection)
+	sh	zero,%lo(shipdirection)(a5)
+	j	.L294
+.L310:
 	li	a0,0
 	call	set_ship_sprites
 	j	.L298
@@ -2875,10 +2859,13 @@ main:
 	.globl	tilemap_bitmap
 	.globl	bullet_bitmap
 	.globl	ship_bitmap
+	.globl	ufo_bitmap
 	.globl	asteroid_bitmap
 	.globl	asteroid_directions
 	.globl	bullet_directions
 	.globl	last_timer
+	.globl	ufo_bullet_number
+	.globl	ufo_sprite_number
 	.globl	asteroid_direction
 	.globl	asteroid_active
 	.globl	bulletdirection
@@ -2894,6 +2881,7 @@ main:
 	.globl	SLEEPTIMER
 	.globl	TIMER1KHZ
 	.globl	TIMER1HZ
+	.globl	ALT_RNG
 	.globl	RNG
 	.globl	AUDIO_R_START
 	.globl	AUDIO_R_DURATION
@@ -3656,6 +3644,137 @@ bullet_directions:
 	.half	406
 	.half	388
 	.half	438
+	.type	ufo_bitmap, @object
+	.size	ufo_bitmap, 256
+ufo_bitmap:
+	.half	0
+	.half	0
+	.half	960
+	.half	960
+	.half	1952
+	.half	4080
+	.half	16380
+	.half	32766
+	.half	-13
+	.half	16380
+	.half	8184
+	.half	4080
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	960
+	.half	960
+	.half	1888
+	.half	4080
+	.half	16380
+	.half	32766
+	.half	-49
+	.half	16380
+	.half	8184
+	.half	4080
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	960
+	.half	960
+	.half	1760
+	.half	4080
+	.half	16380
+	.half	32766
+	.half	-193
+	.half	16380
+	.half	8184
+	.half	4080
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	960
+	.half	960
+	.half	1520
+	.half	4080
+	.half	16380
+	.half	32766
+	.half	-769
+	.half	16380
+	.half	8184
+	.half	4080
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	960
+	.half	960
+	.half	1952
+	.half	4080
+	.half	16380
+	.half	32766
+	.half	-3073
+	.half	16380
+	.half	8184
+	.half	4080
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	960
+	.half	960
+	.half	1888
+	.half	4080
+	.half	16380
+	.half	32766
+	.half	-12289
+	.half	16380
+	.half	8184
+	.half	4080
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	960
+	.half	960
+	.half	1760
+	.half	4080
+	.half	16380
+	.half	32766
+	.half	-1
+	.half	16380
+	.half	8184
+	.half	4080
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	0
+	.half	960
+	.half	960
+	.half	1520
+	.half	4080
+	.half	16380
+	.half	32766
+	.half	-1
+	.half	16380
+	.half	8184
+	.half	4080
+	.half	0
+	.half	0
+	.half	0
+	.half	0
 	.bss
 	.align	2
 	.set	.LANCHOR1,. + 0
@@ -3704,6 +3823,14 @@ lives:
 	.zero	2
 	.section	.sdata,"aw"
 	.align	2
+	.type	ufo_bullet_number, @object
+	.size	ufo_bullet_number, 1
+ufo_bullet_number:
+	.byte	-1
+	.type	ufo_sprite_number, @object
+	.size	ufo_sprite_number, 1
+ufo_sprite_number:
+	.byte	-1
 	.type	shipy, @object
 	.size	shipy, 2
 shipy:
@@ -3712,6 +3839,7 @@ shipy:
 	.size	shipx, 2
 shipx:
 	.half	312
+	.zero	2
 	.type	VBLANK, @object
 	.size	VBLANK, 4
 VBLANK:
@@ -3728,6 +3856,10 @@ TIMER1KHZ:
 	.size	TIMER1HZ, 4
 TIMER1HZ:
 	.word	35088
+	.type	ALT_RNG, @object
+	.size	ALT_RNG, 4
+ALT_RNG:
+	.word	35076
 	.type	RNG, @object
 	.size	RNG, 4
 RNG:

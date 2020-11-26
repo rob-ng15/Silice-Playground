@@ -359,6 +359,7 @@ algorithm main(
         }
 
         ++:
+        while( memoryController.memoryBusy ) {}
 
         // NEVER write to registers[0]
         if( writeRegister && ( destReg != 0 ) ) {

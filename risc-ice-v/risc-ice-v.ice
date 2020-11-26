@@ -245,16 +245,16 @@ algorithm main(
                                 switch( function3 & 3 ) {
                                     case 2b00: {
                                         switch( loadAddress[0,2] ) {
-                                            case 2b00: { result = function3[2,1] ? { 24b0, ram.rdata[0,8] } : { {24{ram.rdata[7,1]}}, ram.rdata[0,8] }; }
-                                            case 2b01: { result = function3[2,1] ? { 24b0, ram.rdata[8,8] } : { {24{ram.rdata[15,1]}}, ram.rdata[8,8] }; }
-                                            case 2b10: { result = function3[2,1] ? { 24b0, ram.rdata[16,8] } : { {24{ram.rdata[23,1]}}, ram.rdata[16,8] }; }
-                                            case 2b11: { result = function3[2,1] ? { 24b0, ram.rdata[24,8] } : { {24{ram.rdata[31,1]}}, ram.rdata[24,8] }; }
+                                            case 2b00: { result = { {24{ram.rdata[7,1] & ~function3[2,1]}}, ram.rdata[0,8] }; }
+                                            case 2b01: { result = { {24{ram.rdata[15,1] & ~function3[2,1]}}, ram.rdata[8,8] }; }
+                                            case 2b10: { result = { {24{ram.rdata[23,1] & ~function3[2,1]}}, ram.rdata[16,8] }; }
+                                            case 2b11: { result = { {24{ram.rdata[31,1] & ~function3[2,1]}}, ram.rdata[24,8] }; }
                                         }
                                     }
                                     case 2b01: {
                                         switch( loadAddress[1,1] ) {
-                                            case 1b0: { result =  function3[2,1] ? { 16b0, ram.rdata[0,16] } : { {16{ram.rdata[15,1]}}, ram.rdata[0,16] }; }
-                                            case 1b1: { result =  function3[2,1] ? { 16b0, ram.rdata[16,16] } : { {16{ram.rdata[31,1]}}, ram.rdata[16,16] }; }
+                                            case 1b0: { result =  { {16{ram.rdata[15,1] & ~function3[2,1]}}, ram.rdata[0,16] }; }
+                                            case 1b1: { result =  { {16{ram.rdata[31,1] & ~function3[2,1]}}, ram.rdata[16,16] }; }
                                         }
                                     }
                                     case 2b10: {
@@ -267,8 +267,8 @@ algorithm main(
                                 IO_Map.memoryAddress = loadAddress[0,16];
                                 IO_Map.memoryRead = 1;
                                 switch( function3 & 3 ) {
-                                    case 2b00: { result = function3[2,1] ? { 24b0, IO_Map.readData[0,8] } : { {24{IO_Map.readData[7,1]}}, IO_Map.readData[0,8] }; }
-                                    case 2b01: { result = function3[2,1] ? { 16b0, IO_Map.readData } : { {16{IO_Map.readData[15,1]}}, IO_Map.readData }; }
+                                    case 2b00: { result = { {24{IO_Map.readData[7,1] & ~function3[2,1]}}, IO_Map.readData[0,8] }; }
+                                    case 2b01: { result = { {16{IO_Map.readData[15,1] & ~function3[2,1]}}, IO_Map.readData }; }
                                     case 2b10: { result = IO_Map.readData; }
                                 }
                             }
@@ -404,90 +404,4 @@ algorithm main(
 
         pc = takeBranch ? pc + branchOffset : newPC;
     } // RISC-V
-}
-
-// NON I/O MEMORY switch between BRAM and SDRAM ( when implemented )
-
-algorithm memorymap (
-    input   uint32  address,
-    input   uint32  writeData,
-    output  uint32  readData,
-
-    input   uint2   writeSize,
-    input   uint2   readSize,
-
-    output  uint1   memoryBusy
-) <autorun> {
-    // BRAM FAST MEMORY
-    bram uint32 ram[8192] = {
-        $include('ROM/BIOS.inc')
-        , pad(uninitialized)
-    };
-
-
-    while(1) {
-        if( writeSize > 0 ) {
-            ram.addr = address[2,14];
-            switch( writeSize ) {
-                case 1: {
-                    // 8 bit
-                    memoryBusy = 1;
-
-                    ++:
-                    switch( address[0,2] ) {
-                        case 2b00: { ram.wdata = { ram.rdata[8,24], writeData[0,8] }; }
-                        case 2b01: { ram.wdata = { ram.rdata[16,16], writeData[0,8], ram.rdata[0,8] }; }
-                        case 2b10: { ram.wdata = { ram.rdata[24,8], writeData[0,8], ram.rdata[0,16] }; }
-                        case 2b11: { ram.wdata = { writeData[0,8], ram.rdata[0,24] }; }
-                    }
-                }
-                case 2: {
-                    // 16 bit
-                    memoryBusy = 1;
-
-                    ++:
-                    switch( address[1,1] ) {
-                        case 1b0: { ram.wdata = { ram.rdata[16,16], writeData[0,16] }; }
-                        case 1b1: { ram.wdata = { writeData[0,16], ram.rdata[0,16] }; }
-                    }
-                }
-                case 3: {
-                    // 32 bit
-                    ram.wdata = writeData;
-                }
-            }
-            ram.wenable = 1;
-            memoryBusy = 0;
-        }
-
-        if( readSize > 0 ) {
-            memoryBusy = 1;
-
-            ram.addr = address[2,14];
-            ++:
-            switch( readSize ) {
-                case 1: {
-                    // 8 bit
-                    switch( address[0,2] ) {
-                        case 2b00: { readData = { 24b0, ram.rdata[0,8] }; }
-                        case 2b01: { readData = { 24b0, ram.rdata[8,8] }; }
-                        case 2b10: { readData = { 24b0, ram.rdata[16,8] }; }
-                        case 2b11: { readData = { 24b0, ram.rdata[24,8] }; }
-                    }
-                }
-                case 2: {
-                    // 16 bit
-                    switch( address[1,1] ) {
-                        case 1b0: { readData = { 16b0, ram.rdata[0,16] }; }
-                        case 1b1: { readData = { 16b0, ram.rdata[16,16] }; }
-                    }
-                }
-                case 3: {
-                    // 32 bit
-                    readData = ram.rdata;
-                }
-            }
-            memoryBusy = 0;
-        }
-    }
 }
