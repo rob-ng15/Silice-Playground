@@ -11,12 +11,12 @@ algorithm background(
 
     input uint6 backgroundcolour,
     input uint6 backgroundcolour_alt,
-    input uint3 backgroundcolour_mode,
+    input uint4 backgroundcolour_mode,
     input uint3 background_write
 ) <autorun> {
     uint6 background = 0;
     uint6 background_alt = 0;
-    uint3 background_mode = 0;
+    uint4 background_mode = 0;
 
     // Variables for SNOW (from @sylefeb)
     int10   dotpos = 0;
@@ -30,7 +30,7 @@ algorithm background(
     pix_green := 0;
     pix_blue := 0;
 
-    always {
+    while(1) {
         switch( background_write ) {
             case 1: { background = backgroundcolour; }
             case 2: { background_alt = backgroundcolour_alt; }
@@ -40,9 +40,7 @@ algorithm background(
 
         // Increment frame number for the snow/star field
         frame = ( ( pix_x == 639 ) && ( pix_y == 470 ) ) ? frame + 1 : frame;
-    }
 
-    while(1) {
         switch( backgroundcolour_mode ) {
             case 0: {
                 // SOLID

@@ -134,12 +134,14 @@ algorithm main(
     };
 
     // RISC-V REGISTERS
-    bram int32 registers_1[32] = { 0, pad(0) };
-    bram int32 registers_2[32] = { 0, pad(0) };
+    dualport_bram int32 registers_1[64] = { 0, pad(0) };
+    dualport_bram int32 registers_2[64] = { 0, pad(0) };
 
     // RISC-V PROGRAM COUNTER
     uint32  pc = 0;
     uint32  newPC = uninitialized;
+    uint1   compressed = uninitialized;
+    uint1   floatingpoint = uninitialized;
     uint1   takeBranch = uninitialized;
 
     // RISC-V INSTRUCTION and DECODE
@@ -149,17 +151,17 @@ algorithm main(
     uint7   function7 := Rtype(instruction).function7;
 
     // RISC-V SOURCE REGISTER VALUES and IMMEDIATE VALUE and DESTINATION REGISTER ADDRESS
-    int32   sourceReg1 := registers_1.rdata;
-    int32   sourceReg2 := registers_2.rdata;
-    uint32  immediateValue := { {20{instruction[31,1]}}, Itype(instruction).immediate };
+    int32   sourceReg1 := registers_1.rdata0;
+    int32   sourceReg2 := registers_2.rdata0;
+    int32   immediateValue := { {20{instruction[31,1]}}, Itype(instruction).immediate };
 
     // RISC-V ALU RESULTS
     int32   result = uninitialized;
     uint1   writeRegister = uninitialized;
 
     // RISC-V ADDRESS CALCULATIONS
-    int32   loadAddress := immediateValue + sourceReg1;
-    int32   storeAddress := { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
+    uint32  loadAddress := immediateValue + sourceReg1;
+    uint32  storeAddress := { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
 
     // Setup Memory Mapped I/O
     memmap_io IO_Map (
@@ -209,21 +211,117 @@ algorithm main(
     IO_Map.memoryRead := 0;
 
     // REGISTER Read/Write Flags
-    registers_1.addr := Rtype(instruction).sourceReg1;
-    registers_1.wenable := 0;
-    registers_2.addr := Rtype(instruction).sourceReg2;
-    registers_2.wenable := 0;
+    registers_1.addr0 := Rtype(instruction).sourceReg1 + ( floatingpoint ? 32 : 0 );
+    registers_1.wenable0 := 0;
+    registers_1.wenable1 := 1;
+    registers_2.addr0 := Rtype(instruction).sourceReg2 + ( floatingpoint ? 32 : 0 );
+    registers_2.wenable0 := 0;
+    registers_2.wenable1 := 1;
 
     while(1) {
         // RISC-V
         writeRegister = 1;
         takeBranch = 0;
-        newPC = pc + 4;
+        floatingpoint = 0;
+        compressed = 0;
 
         // FETCH - 32 bit instruction
         ram.addr = pc[2,14];
         ++:
-        instruction = ram.rdata;
+        switch( ram.rdata[0,2] ) {
+            case 2b00: {
+                compressed = 1;
+                newPC = pc + 2;
+                switch( ram.rdata[13,3] ) {
+                    case 3b000: {
+                        // ADDI4SPN
+                    }
+                    case 3b001: {
+                        // FLD
+                    }
+                    case 3b010: {
+                        // LW
+                    }
+                    case 3b011: {
+                        // FLW
+                    }
+                    case 3b100: {
+                        // reserved
+                    }
+                    case 3b101: {
+                        // FSD
+                    }
+                    case 3b110: {
+                        // SW
+                    }
+                    case 3b111: {
+                        // FSW
+                    }
+                }
+            }
+            case 2b01: {
+                compressed = 1;
+                newPC = pc + 2;
+                switch( ram.rdata[13,3] ) {
+                    case 3b000: {
+                        // ADDI
+                    }
+                    case 3b001: {
+                        // JAL
+                    }
+                    case 3b010: {
+                        // LI
+                    }
+                    case 3b011: {
+                        // LUI / ADDI16SP
+                    }
+                    case 3b100: {
+                        // MISC-ALU
+                    }
+                    case 3b101: {
+                        // J
+                    }
+                    case 3b110: {
+                        // BEQZ
+                    }
+                    case 3b111: {
+                        // BNEZ
+                    }
+            }
+            case 2b10: {
+                compressed = 1;
+                newPC = pc + 2;
+                switch( ram.rdata[13,3] ) {
+                    case 3b000: {
+                        // SLLI
+                    }
+                    case 3b001: {
+                        // FLDSP
+                    }
+                    case 3b010: {
+                        // LWSP
+                    }
+                    case 3b011: {
+                        // FLWSP
+                    }
+                    case 3b100: {
+                        // J[AL]R / MV / ADD
+                    }
+                    case 3b101: {
+                        // FSDSP
+                    }
+                    case 3b110: {
+                        // SWSP
+                    }
+                    case 3b111: {
+                        // FSWSP
+                    }
+            }
+            case 2b11: {
+                instruction = ram.rdata;
+                newPC = pc + 4;
+            }
+        }
         ++:
         ++:
 
@@ -338,9 +436,9 @@ algorithm main(
                             switch( function3 ) {
                                 case 3b000: {
                                     if( ( opCode[5,1] == 1 ) && ( function7[5,1] == 1 ) ) {
-                                        result = __signed(sourceReg1) - __signed(sourceReg2);
+                                        result =sourceReg1 - sourceReg2;
                                     } else {
-                                        result = __signed(sourceReg1) + ( ( opCode[5,1] == 1 ) ? __signed(sourceReg2) : __signed(immediateValue) ); }
+                                        result = sourceReg1 + ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ); }
                                     }
                                 case 3b001: { result = sourceReg1 << ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ); }
                                 case 3b010: { result = __signed( sourceReg1 ) < ( ( opCode[5,1] == 1 ) ? __signed(sourceReg2) : __signed(immediateValue) ) ? 32b1 : 32b0; }
@@ -409,18 +507,18 @@ algorithm main(
                     }
                 }
             }
+
+            default: { floatingpoint = 1; }
         }
 
         ++:
 
         // NEVER write to registers[0]
         if( writeRegister && ( Rtype(instruction).destReg != 0 ) ) {
-            registers_1.addr = Rtype(instruction).destReg;
-            registers_1.wdata = result;
-            registers_1.wenable = 1;
-            registers_2.addr = Rtype(instruction).destReg;
-            registers_2.wdata = result;
-            registers_2.wenable = 1;
+            registers_1.addr1 = Rtype(instruction).destReg + ( floatingpoint ? 32 : 0 );
+            registers_1.wdata1 = result;
+            registers_2.addr1 = Rtype(instruction).destReg + ( floatingpoint ? 32 : 0 );
+            registers_2.wdata1 = result;
         }
 
         pc = takeBranch ? pc + { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } : newPC;

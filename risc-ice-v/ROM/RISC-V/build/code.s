@@ -3006,7 +3006,6 @@ main:
 	sw	s5,20(sp)
 	sw	s6,16(sp)
 	sw	s7,12(sp)
-	sw	s8,8(sp)
 	lui	a5,%hi(UART_STATUS)
 	lw	a5,%lo(UART_STATUS)(a5)
 	lbu	a5,0(a5)
@@ -3021,21 +3020,21 @@ main:
 	bne	a5,zero,.L323
 .L322:
 	call	setup_game
-	lui	s0,%hi(shipx)
+	lui	s1,%hi(shipx)
 	li	s3,312
-	lui	s1,%hi(shipy)
+	lui	s0,%hi(shipy)
 	li	s2,232
 	lui	s4,%hi(.LANCHOR1)
 	addi	s4,s4,%lo(.LANCHOR1)
-	j	.L348
-.L364:
+	j	.L350
+.L367:
 	lui	a4,%hi(level)
 	lhu	a5,%lo(level)(a4)
 	addi	a5,a5,1
 	sh	a5,%lo(level)(a4)
 	call	new_level
 	j	.L324
-.L365:
+.L368:
 	lui	a5,%hi(ufo_sprite_number)
 	lbu	a4,%lo(ufo_sprite_number)(a5)
 	li	a5,255
@@ -3045,6 +3044,18 @@ main:
 	sb	a0,%lo(ufo_sprite_number)(a5)
 	li	a5,255
 	beq	a0,a5,.L327
+.L329:
+	li	a0,416
+	call	rng
+	addi	s6,a0,32
+	slli	s6,s6,16
+	srai	s6,s6,16
+	lh	a5,%lo(shipy)(s0)
+	addi	a4,a5,-64
+	blt	s6,a4,.L328
+	addi	a5,a5,64
+	ble	s6,a5,.L329
+.L328:
 	li	a0,1
 	call	rng
 	lui	a5,%hi(ufo_leftright)
@@ -3052,40 +3063,33 @@ main:
 	li	a0,1
 	call	set_ufo_sprite
 	lui	a5,%hi(ufo_sprite_number)
-	lbu	s6,%lo(ufo_sprite_number)(a5)
-	sltiu	s7,s6,11
-	xori	s7,s7,1
+	lbu	a1,%lo(ufo_sprite_number)(a5)
+	sltiu	a0,a1,11
+	xori	a0,a0,1
 	li	a5,10
-	bleu	s6,a5,.L328
-	addi	s6,s6,-11
-	andi	s6,s6,0xff
-.L328:
+	bleu	a1,a5,.L330
+	addi	a1,a1,-11
+	andi	a1,a1,0xff
+.L330:
 	lui	a5,%hi(ufo_leftright)
-	lbu	a4,%lo(ufo_leftright)(a5)
+	lbu	a3,%lo(ufo_leftright)(a5)
 	li	a5,1
-	li	s8,639
-	beq	a4,a5,.L329
+	li	a4,639
+	beq	a3,a5,.L331
 	lui	a5,%hi(level)
-	lhu	a4,%lo(level)(a5)
+	lhu	a3,%lo(level)(a5)
 	li	a5,1
-	li	s8,-31
-	bleu	a4,a5,.L329
-	li	s8,-15
-.L329:
-	li	a0,416
-	call	rng
+	li	a4,-31
+	bleu	a3,a5,.L331
+	li	a4,-15
+.L331:
 	lui	a5,%hi(level)
 	lhu	a7,%lo(level)(a5)
-	addi	a5,a0,32
 	sltiu	a7,a7,2
 	li	a6,0
-	slli	a5,a5,16
-	srai	a5,a5,16
-	mv	a4,s8
+	mv	a5,s6
 	li	a3,19
 	li	a2,1
-	mv	a1,s6
-	mv	a0,s7
 	call	set_sprite
 	lui	a5,%hi(ufo_sprite_number)
 	lbu	a5,%lo(ufo_sprite_number)(a5)
@@ -3093,20 +3097,20 @@ main:
 	li	a4,3
 	sb	a4,0(a5)
 	j	.L327
-.L366:
+.L369:
 	lui	a5,%hi(ufo_bullet_number)
 	lbu	s6,%lo(ufo_bullet_number)(a5)
 	li	a5,255
-	bne	s6,a5,.L330
+	bne	s6,a5,.L332
 	lui	a5,%hi(ufo_sprite_number)
 	lbu	a4,%lo(ufo_sprite_number)(a5)
 	li	a5,255
-	beq	a4,a5,.L330
+	beq	a4,a5,.L332
 	call	find_asteroid_space
 	lui	a5,%hi(ufo_bullet_number)
 	sb	a0,%lo(ufo_bullet_number)(a5)
 	li	a5,255
-	beq	a0,a5,.L330
+	beq	a0,a5,.L332
 	li	a0,1
 	call	set_ufo_bullet_sprite
 	lui	a5,%hi(ufo_sprite_number)
@@ -3114,10 +3118,10 @@ main:
 	sltiu	a0,a1,11
 	xori	a0,a0,1
 	li	a5,10
-	bleu	a1,a5,.L331
+	bleu	a1,a5,.L333
 	addi	a1,a1,-11
 	andi	a1,a1,0xff
-.L331:
+.L333:
 	li	a2,3
 	call	get_sprite_attribute
 	slli	s7,a0,16
@@ -3127,33 +3131,33 @@ main:
 	sltiu	a0,a1,11
 	xori	a0,a0,1
 	li	a5,10
-	bleu	a1,a5,.L332
+	bleu	a1,a5,.L334
 	addi	a1,a1,-11
 	andi	a1,a1,0xff
-.L332:
+.L334:
 	li	a2,4
 	call	get_sprite_attribute
 	slli	a5,a0,16
 	srai	a5,a5,16
-	lh	a4,%lo(shipx)(s0)
-	bgt	a4,s7,.L333
-	lh	a4,%lo(shipy)(s1)
-	bgt	a4,a5,.L349
+	lh	a4,%lo(shipx)(s1)
+	blt	a4,s7,.L335
+	lh	a4,%lo(shipy)(s0)
+	blt	a4,a5,.L351
 	li	s6,1
-.L349:
+.L351:
 	addi	s6,s6,2
 	lui	a4,%hi(ufo_bullet_direction)
 	sb	s6,%lo(ufo_bullet_direction)(a4)
-.L335:
+.L337:
 	lui	a4,%hi(ufo_bullet_number)
 	lbu	a1,%lo(ufo_bullet_number)(a4)
 	sltiu	a0,a1,11
 	xori	a0,a0,1
 	li	a4,10
-	bleu	a1,a4,.L336
+	bleu	a1,a4,.L338
 	addi	a1,a1,-11
 	andi	a1,a1,0xff
-.L336:
+.L338:
 	li	a7,0
 	li	a6,0
 	mv	a4,s7
@@ -3165,20 +3169,20 @@ main:
 	add	a5,s4,a5
 	li	a4,4
 	sb	a4,0(a5)
-	j	.L330
-.L367:
+	j	.L332
+.L370:
 	call	fire_bullet
-	j	.L341
-.L368:
+	j	.L343
+.L371:
 	call	move_ship
-	j	.L342
+	j	.L344
 .L325:
 	lui	a5,%hi(BUTTONS)
 	lw	a5,%lo(BUTTONS)(a5)
 	lbu	a5,0(a5)
 	andi	a5,a5,8
-	bne	a5,zero,.L361
-.L344:
+	bne	a5,zero,.L364
+.L346:
 	li	a0,21
 	call	draw_ship
 	lui	a5,%hi(resetship)
@@ -3187,18 +3191,18 @@ main:
 	slli	a5,a5,16
 	srli	a5,a5,16
 	li	a4,15
-	bleu	a5,a4,.L362
-.L345:
+	bleu	a5,a4,.L365
+.L347:
 	lui	a5,%hi(resetship)
 	lh	a4,%lo(resetship)(a5)
 	li	a5,16
-	bgt	a4,a5,.L363
-.L343:
+	bgt	a4,a5,.L366
+.L345:
 	call	update_bullet
 	call	check_hit
 	call	move_asteroids
 	call	wait_timer1khz
-.L348:
+.L350:
 	lui	a4,%hi(counter)
 	lw	a5,%lo(counter)(a4)
 	addi	a5,a5,1
@@ -3213,7 +3217,7 @@ main:
 	andi	a0,a0,0xff
 	sb	a0,0(a4)
 	call	count_asteroids
-	beq	a0,zero,.L364
+	beq	a0,zero,.L367
 .L324:
 	call	await_vblank
 	lui	a5,%hi(TIMER1KHZ)
@@ -3230,69 +3234,69 @@ main:
 	li	a0,64
 	call	rng
 	li	a5,1
-	beq	a0,a5,.L365
+	beq	a0,a5,.L368
 .L327:
 	li	a0,64
 	call	rng
 	li	a5,1
-	beq	a0,a5,.L366
-.L330:
+	beq	a0,a5,.L369
+.L332:
 	lui	a5,%hi(counter)
 	lw	a5,%lo(counter)(a5)
 	andi	a5,a5,3
-	bne	a5,zero,.L337
+	bne	a5,zero,.L339
 	lui	a5,%hi(BUTTONS)
 	lw	a4,%lo(BUTTONS)(a5)
 	lbu	a5,0(a4)
 	andi	a5,a5,32
-	beq	a5,zero,.L338
+	beq	a5,zero,.L340
 	lui	a5,%hi(shipdirection)
 	lh	a5,%lo(shipdirection)(a5)
 	li	a3,7
-	beq	a5,zero,.L339
+	beq	a5,zero,.L341
 	addi	a5,a5,-1
 	slli	a3,a5,16
 	srai	a3,a3,16
-.L339:
+.L341:
 	lui	a5,%hi(shipdirection)
 	sh	a3,%lo(shipdirection)(a5)
-.L338:
+.L340:
 	lbu	a5,0(a4)
 	andi	a5,a5,64
-	beq	a5,zero,.L337
+	beq	a5,zero,.L339
 	lui	a5,%hi(shipdirection)
 	lh	a5,%lo(shipdirection)(a5)
 	li	a4,7
-	beq	a5,a4,.L340
+	beq	a5,a4,.L342
 	addi	a5,a5,1
 	slli	s5,a5,16
 	srai	s5,s5,16
-.L340:
+.L342:
 	lui	a5,%hi(shipdirection)
 	sh	s5,%lo(shipdirection)(a5)
-.L337:
+.L339:
 	li	a2,0
 	li	a1,12
 	li	a0,0
 	call	get_sprite_attribute
-	bne	a0,zero,.L341
+	bne	a0,zero,.L343
 	lui	a5,%hi(BUTTONS)
 	lw	a5,%lo(BUTTONS)(a5)
 	lbu	a5,0(a5)
 	andi	a5,a5,2
-	bne	a5,zero,.L367
-.L341:
+	bne	a5,zero,.L370
+.L343:
 	lui	a5,%hi(BUTTONS)
 	lw	a5,%lo(BUTTONS)(a5)
 	lbu	a5,0(a5)
 	andi	a5,a5,4
-	bne	a5,zero,.L368
-.L342:
+	bne	a5,zero,.L371
+.L344:
 	li	a0,63
 	call	draw_ship
 	call	check_crash
-	j	.L343
-.L361:
+	j	.L345
+.L364:
 	call	gpu_cs
 	call	tpu_cs
 	lui	a5,%hi(counter)
@@ -3304,8 +3308,8 @@ main:
 	sh	zero,%lo(score)(a5)
 	lui	a5,%hi(level)
 	sh	zero,%lo(level)(a5)
-	sh	s3,%lo(shipx)(s0)
-	sh	s2,%lo(shipy)(s1)
+	sh	s3,%lo(shipx)(s1)
+	sh	s2,%lo(shipy)(s0)
 	lui	a5,%hi(shipdirection)
 	sh	zero,%lo(shipdirection)(a5)
 	lui	s5,%hi(resetship)
@@ -3330,44 +3334,44 @@ main:
 	slli	a5,a5,16
 	srli	a5,a5,16
 	li	a4,15
-	bleu	a5,a4,.L344
+	bleu	a5,a4,.L346
 	lui	a5,%hi(lives)
 	lhu	a5,%lo(lives)(a5)
-	beq	a5,zero,.L344
-	j	.L345
-.L362:
+	beq	a5,zero,.L346
+	j	.L347
+.L365:
 	li	a1,11
 	li	a0,0
 	call	get_sprite_collision
 	andi	a0,a0,2047
-	bne	a0,zero,.L345
+	bne	a0,zero,.L347
 	li	a1,11
 	li	a0,1
 	call	get_sprite_collision
 	andi	a0,a0,2047
-	bne	a0,zero,.L345
+	bne	a0,zero,.L347
 	lui	a4,%hi(resetship)
 	lhu	a5,%lo(resetship)(a4)
 	addi	a5,a5,-1
 	slli	a5,a5,16
 	srai	a5,a5,16
 	sh	a5,%lo(resetship)(a4)
-	beq	a5,zero,.L369
-.L346:
+	beq	a5,zero,.L372
+.L348:
 	lui	a5,%hi(lives)
 	lhu	a5,%lo(lives)(a5)
-	bne	a5,zero,.L345
+	bne	a5,zero,.L347
 	call	risc_ice_v_logo
-	j	.L345
-.L369:
+	j	.L347
+.L372:
 	call	gpu_cs
 	lui	a4,%hi(lives)
 	lhu	a5,%lo(lives)(a4)
 	addi	a5,a5,-1
 	sh	a5,%lo(lives)(a4)
 	call	draw_lives
-	j	.L346
-.L363:
+	j	.L348
+.L366:
 	li	a2,57344
 	li	a1,11
 	li	a0,0
@@ -3384,33 +3388,33 @@ main:
 	srai	a5,a5,16
 	sh	a5,%lo(resetship)(a4)
 	li	a4,16
-	beq	a5,a4,.L370
-.L347:
-	sh	s3,%lo(shipx)(s0)
-	sh	s2,%lo(shipy)(s1)
+	beq	a5,a4,.L373
+.L349:
+	sh	s3,%lo(shipx)(s1)
+	sh	s2,%lo(shipy)(s0)
 	lui	a5,%hi(shipdirection)
 	sh	zero,%lo(shipdirection)(a5)
-	j	.L343
-.L370:
+	j	.L345
+.L373:
 	li	a0,0
 	call	set_ship_sprites
-	j	.L347
-.L333:
-	lh	a4,%lo(shipy)(s1)
-	ble	a4,a5,.L351
+	j	.L349
+.L335:
+	lh	a4,%lo(shipy)(s0)
+	bge	a4,a5,.L353
 	li	s6,1
-.L351:
+.L353:
 	addi	s6,s6,6
 	lui	a4,%hi(ufo_bullet_direction)
 	sb	s6,%lo(ufo_bullet_direction)(a4)
-	j	.L335
+	j	.L337
 .L326:
 	addi	s5,s5,-1
 	slli	s5,s5,16
 	srli	s5,s5,16
 	li	a5,15
-	bgtu	s5,a5,.L345
-	j	.L344
+	bgtu	s5,a5,.L347
+	j	.L346
 	.size	main, .-main
 	.globl	tilemap_bitmap
 	.globl	bullet_bitmap

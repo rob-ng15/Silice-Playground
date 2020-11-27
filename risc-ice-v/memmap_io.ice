@@ -342,10 +342,8 @@ algorithm memmap_io (
     bitmap_window.bitmap_write_offset := 0;
     gpu_processor.gpu_write := 0;
     gpu_processor.draw_vector := 0;
-    gpu_processor.dl_start := 0;
     gpu_processor.blit1_writer_active := 0;
     gpu_processor.vertices_writer_write := 0;
-    gpu_processor.dl_writer_write := 0;
     upper_sprites.sprite_layer_write := 0;
     upper_sprites.sprite_writer_active := 0;
     character_map_window.tpu_write := 0;
@@ -419,8 +417,7 @@ algorithm memmap_io (
                 // GPU and BITMAP
                 case 16h841c: { readData = gpu_processor.gpu_active; }
                 case 16h8448: { readData = gpu_processor.vector_block_active; }
-                case 16h8458: { readData = gpu_processor.display_list_active; }
-                case 16h84b0: { readData = bitmap_window.bitmap_colour_read; }
+                case 16h8470: { readData = bitmap_window.bitmap_colour_read; }
 
                 // UPPER SPRITE LAYER
                 case 16h8504: { readData = upper_sprites.sprite_read_active; }
@@ -529,29 +526,14 @@ algorithm memmap_io (
                 case 16h8444: { gpu_processor.vertices_writer_active = writeData; }
                 case 16h8448: { gpu_processor.vertices_writer_write = 1; }
 
-                case 16h8450: { gpu_processor.dl_start_entry = writeData; }
-                case 16h8454: { gpu_processor.dl_finish_entry = writeData; }
-                case 16h8458: { gpu_processor.dl_start = 1; }
+                case 16h8450: { gpu_processor.blit1_writer_tile = writeData; }
+                case 16h8454: { gpu_processor.blit1_writer_line = writeData; }
+                case 16h8458: { gpu_processor.blit1_writer_bitmap = writeData;  gpu_processor.blit1_writer_active = 1; }
 
-                case 16h845c: { gpu_processor.dl_writer_entry_number = writeData; }
-                case 16h8460: { gpu_processor.dl_writer_active = writeData; }
-                case 16h8464: { gpu_processor.dl_writer_colour = writeData; }
-                case 16h8468: { gpu_processor.dl_writer_x = writeData; }
-                case 16h846c: { gpu_processor.dl_writer_y = writeData; }
-                case 16h8470: { gpu_processor.dl_writer_p0 = writeData; }
-                case 16h8474: { gpu_processor.dl_writer_p1 = writeData; }
-                case 16h8478: { gpu_processor.dl_writer_p2 = writeData; }
-                case 16h847c: { gpu_processor.dl_writer_p3 = writeData; }
-                case 16h8480: { gpu_processor.dl_writer_write = 1; }
+                case 16h8460: { bitmap_window.bitmap_write_offset = writeData; }
 
-                case 16h8490: { gpu_processor.blit1_writer_tile = writeData; }
-                case 16h8494: { gpu_processor.blit1_writer_line = writeData; }
-                case 16h8498: { gpu_processor.blit1_writer_bitmap = writeData;  gpu_processor.blit1_writer_active = 1; }
-
-                case 16h84a0: { bitmap_window.bitmap_write_offset = writeData; }
-
-                case 16h84b0: { bitmap_window.bitmap_x_read = writeData; }
-                case 16h84b4: { bitmap_window.bitmap_y_read = writeData; }
+                case 16h8470: { bitmap_window.bitmap_x_read = writeData; }
+                case 16h8474: { bitmap_window.bitmap_y_read = writeData; }
 
                 // UPPER SPRITE LAYER
                 case 16h8500: { upper_sprites.sprite_set_number = writeData; }

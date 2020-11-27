@@ -108,11 +108,8 @@ algorithm sprite_layer(
     sprite_read_y := sprite_y[ sprite_set_number ];
     sprite_read_tile := sprite_tile_number[ sprite_set_number ];
 
-
-
-    while(1) {
-        // Write to the sprite_layer
-        // Set tile bitmaps, x coordinate, y coordinate, colour, tile number, visibility, double and update
+    // SET TILES + ATTRIBUTES
+    always {
         // WRITE BITMAP TO SPRITE TILE
         if( sprite_writer_active ) {
             switch( sprite_writer_sprite ) {
@@ -125,6 +122,7 @@ algorithm sprite_layer(
             }
         }
 
+        // SET ATTRIBUTES + PERFORM UPDATE
         switch( sprite_layer_write ) {
             case 1: { sprite_active[ sprite_set_number ] = sprite_set_active; }
             case 2: { sprite_tile_number[ sprite_set_number ] = sprite_set_tile; }
@@ -153,8 +151,10 @@ algorithm sprite_layer(
                                                 sprite_y[ sprite_set_number ] + deltay;
             }
         }
+    }
 
-        // RENDER + COLLISION DETECTION
+    // RENDER + COLLISION DETECTION
+    while(1) {
         if( pix_vblank ) {
             // RESET collision detection
             $$for i=0,12 do

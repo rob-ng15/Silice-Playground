@@ -1,9 +1,9 @@
 // Runs at 50MHz
 algorithm apu(
     // Waveform selected 0 = square, 1 = sawtooth, 2 = triangle, 3 = sine wave, 4 = noise
-    input   uint3   waveform,
+    input   uint4   waveform,
     // Note selected 0 = silence, 1 - x = Deep C through to Double High D (gives 64 distint notes)
-    input   uint6   note,
+    input   uint7   note,
 
     // Duration in ms, 1000 = 1 second,
     input   uint16  duration,
@@ -17,7 +17,7 @@ algorithm apu(
     input uint16 staticGenerator
 ) <autorun> {
     // 32 step points per waveform
-    brom uint4 waveformtable_1[] = {
+    brom uint4 waveformtable_1[512] = {
         // Square wave
         15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -33,8 +33,10 @@ algorithm apu(
         // Sine wave,
         7, 8, 10, 11, 12, 13, 13, 14, 15, 14, 13, 13, 12, 11, 10, 8,
         7, 6, 4, 3, 2, 1, 1, 0, 0, 0, 1, 1, 2, 3, 4, 6
+
+        ,pad(1)
     };
-    brom uint4 waveformtable_2[] = {
+    brom uint4 waveformtable_2[512] = {
         // Square wave
         15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -50,36 +52,38 @@ algorithm apu(
         // Sine wave,
         7, 8, 10, 11, 12, 13, 13, 14, 15, 14, 13, 13, 12, 11, 10, 8,
         7, 6, 4, 3, 2, 1, 1, 0, 0, 0, 1, 1, 2, 3, 4, 6
+
+        ,pad(1)
     };
 
     // Calculated as 25MHz / note frequency / 32 to give 32 step points per note
-    brom uint16 frequencytable_1[64] = {
+    brom uint16 frequencytable_1[128] = {
         0,
         47778, 45097, 42566, 40177, 37922, 35793, 33784, 31888, 30098, 28409, 26815, 25310,     // 1 = C 2 or Deep C
         23889, 22548, 21283, 20088, 18961, 17897, 16892, 15944, 15049, 14205, 13407, 12655,     // 13 = C 3
         11945, 11274, 10641, 10044, 9480, 8948, 8446, 7972, 7525, 7102, 6704, 6327,             // 25 = C 4 or Middle C
         5972, 5637, 5321, 5022, 4740, 4474, 4223, 3986, 3762, 3551, 3352, 3164,                 // 37 = C 5 or Tenor C
         2896, 2819, 2660, 2511, 2370, 2237, 2112, 1993, 1881, 1776, 1676, 1582,                 // 49 = C 6 or Soprano C
-        1493, 1409, 1330                                                                        // 61 = C 7 or Double High C
+        1493, 1409, 1330, pad(1024)                                                                        // 61 = C 7 or Double High C
     };
-    brom uint16 frequencytable_2[64] = {
+    brom uint16 frequencytable_2[128] = {
         0,
         47778, 45097, 42566, 40177, 37922, 35793, 33784, 31888, 30098, 28409, 26815, 25310,     // 1 = C 2 or Deep C
         23889, 22548, 21283, 20088, 18961, 17897, 16892, 15944, 15049, 14205, 13407, 12655,     // 13 = C 3
         11945, 11274, 10641, 10044, 9480, 8948, 8446, 7972, 7525, 7102, 6704, 6327,             // 25 = C 4 or Middle C
         5972, 5637, 5321, 5022, 4740, 4474, 4223, 3986, 3762, 3551, 3352, 3164,                 // 37 = C 5 or Tenor C
         2896, 2819, 2660, 2511, 2370, 2237, 2112, 1993, 1881, 1776, 1676, 1582,                 // 49 = C 6 or Soprano C
-        1493, 1409, 1330                                                                        // 61 = C 7 or Double High C
+        1493, 1409, 1330, pad(1024)                                                                        // 61 = C 7 or Double High C
     };
 
-    uint3   waveform_1 = uninitialized;
-    uint6   note_1 = uninitialized;
+    uint4   waveform_1 = uninitialized;
+    uint7   note_1 = uninitialized;
     uint5   point_1 = uninitialized;
     uint16  counter50mhz_1 = uninitialized;
     uint16  counter1khz_1 = uninitialized;
     uint16  milliseconds_1 = uninitialized;
-    uint3   waveform_2 = uninitialized;
-    uint6   note_2 = uninitialized;
+    uint4   waveform_2 = uninitialized;
+    uint7   note_2 = uninitialized;
     uint5   point_2 = uninitialized;
     uint16  counter50mhz_2 = uninitialized;
     uint16  counter1khz_2 = uninitialized;

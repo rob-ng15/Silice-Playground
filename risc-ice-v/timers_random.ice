@@ -59,8 +59,6 @@ algorithm random(
         u_noise_out = ( rand_en_ff[17,1] ) ? rand_out : u_noise_out;
     }
 
-
-
     while(1) {
         if( resetRandom ) {
             rand_en_ff = 24b001100010011011101100101;

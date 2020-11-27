@@ -100,106 +100,6 @@ algorithm vectors(
     }
 }
 
-// Display List
-// Stores GPU or VECTOR commands
-// Each display list entry consists of:
-//      active
-//      command ( 1 - 7 copy details across to the GPU )
-//      x y p0 p1 p2 p3 parameters for the GPU command
-
-bitfield dlentry {
-    uint1   active,
-    uint4   command,
-    uint7   colour,
-    uint11  x,
-    uint11  y,
-    uint11  p0,
-    uint11  p1,
-    uint11  p2,
-    uint11  p3
-}
-
-algorithm displaylist(
-    input   uint5   start_entry,
-    input   uint5   finish_entry,
-    input   uint1   start_displaylist,
-    output  uint1   display_list_active,
-
-    input   uint5   writer_entry_number,
-    input   uint1   writer_active,
-    input   uint4   writer_command,
-    input   uint7   writer_colour,
-    input   uint11  writer_x,
-    input   uint11  writer_y,
-    input   uint11  writer_p0,
-    input   uint11  writer_p1,
-    input   uint11  writer_p2,
-    input   uint11  writer_p3,
-    input   uint4   writer_write,
-
-    // Communication with the GPU
-    output int11   gpu_x,
-    output int11   gpu_y,
-    output uint7   gpu_colour,
-    output int11   gpu_param0,
-    output int11   gpu_param1,
-    output int11   gpu_param2,
-    output int11   gpu_param3,
-    output uint4   gpu_write,
-    input  uint1   gpu_active,
-) {
-    // 32 display list entries
-    dualport_bram uint78 dlentries[32] = uninitialised;
-
-    uint5   entry_number = uninitialised;
-    uint5   finish_number = uninitialised;
-
-    // Set read address for the display list entry being processed
-    dlentries.addr0 := entry_number;
-    dlentries.wenable0 := 0;
-    dlentries.wenable1 := 1;
-
-    // Dispatch to the GPU
-    gpu_write = 0;
-
-    while(1) {
-        switch( writer_write ) {
-            case 1: {
-                dlentries.addr1 = writer_entry_number;
-                dlentries.wdata1 = { writer_active, writer_command, writer_colour, writer_x, writer_y, writer_p0, writer_p1, writer_p2, writer_p3 };
-            }
-        }
-
-        if( start_displaylist ) {
-            entry_number = start_entry;
-            finish_number = finish_entry;
-            display_list_active = 1;
-            ++:
-            while( entry_number <= finish_number ) {
-                ++:
-                if( dlentry(dlentries.rdata0).active ) {
-                    while( gpu_active != 0 ) {}
-                    ++:
-                    gpu_write = dlentry(dlentries.rdata0).command;
-                    gpu_colour = dlentry(dlentries.rdata0).colour;
-                    gpu_x = dlentry(dlentries.rdata0).x;
-                    gpu_y = dlentry(dlentries.rdata0).y;
-                    gpu_param0 = dlentry(dlentries.rdata0).p0;
-                    gpu_param1 = dlentry(dlentries.rdata0).p1;
-                    gpu_param2 = dlentry(dlentries.rdata0).p2;
-                    gpu_param3 = dlentry(dlentries.rdata0).p3;
-                    ++:
-                    ++:
-                    gpu_write = 0;
-                }
-                entry_number = entry_number + 1;
-                ++:
-            }
-            display_list_active = 0;
-        }
-     }
-}
-
 algorithm gpu(
     // GPU to SET and GET pixels
     output! int11 bitmap_x_write,
@@ -237,26 +137,8 @@ algorithm gpu(
     input   uint1   vertices_writer_active,
     input   uint1   vertices_writer_write,
 
-    // DISPLAY LISTS
-    input   uint5   dl_start_entry,
-    input   uint5   dl_finish_entry,
-    input   uint1   dl_start,
-    // For setting entries
-    input   uint5   dl_writer_entry_number,
-    input   uint1   dl_writer_active,
-    input   uint4   dl_writer_command,
-    input   uint7   dl_writer_colour,
-    input   uint11  dl_writer_x,
-    input   uint11  dl_writer_y,
-    input   uint11  dl_writer_p0,
-    input   uint11  dl_writer_p1,
-    input   uint11  dl_writer_p2,
-    input   uint11  dl_writer_p3,
-    input   uint4   dl_writer_write,
-
     output  uint1   gpu_active,
-    output  uint1   vector_block_active,
-    output  uint1   display_list_active
+    output  uint1   vector_block_active
 ) <autorun> {
     // 32 x 16 x 16 1 bit tilemap for blit1tilemap
     dualport_bram uint16 blit1tilemap[ 512 ] = uninitialized;
@@ -335,46 +217,6 @@ algorithm gpu(
         gpu_active <: gpu_active
     );
 
-    // GPU <-> DISPLAY LIST COMMUNICATION
-    int11 dl_gpu_x = uninitialised;
-    int11 dl_gpu_y = uninitialised;
-    uint7 dl_gpu_colour = uninitialised;
-    int11 dl_gpu_param0 = uninitialised;
-    int11 dl_gpu_param1 = uninitialised;
-    int11 dl_gpu_param2 = uninitialised;
-    int11 dl_gpu_param3 = uninitialised;
-    uint4 dl_gpu_write = uninitialised;
-
-    displaylist displaylist_drawer (
-        start_entry <: dl_start_entry,
-        finish_entry <: dl_finish_entry,
-        start_displaylist <: dl_start,
-
-        writer_entry_number <: dl_writer_entry_number,
-        writer_active <: dl_writer_active,
-        writer_command <: dl_writer_command,
-        writer_colour <: dl_writer_colour,
-        writer_x <: dl_writer_x,
-        writer_y <: dl_writer_y,
-        writer_p0 <: dl_writer_p0,
-        writer_p1 <: dl_writer_p1,
-        writer_p2 <: dl_writer_p2,
-        writer_p3 <: dl_writer_p3,
-        writer_write <: dl_writer_write,
-
-        display_list_active :> display_list_active,
-
-        gpu_x :> dl_gpu_x,
-        gpu_y :> dl_gpu_y,
-        gpu_colour :> dl_gpu_colour,
-        gpu_param0 :> dl_gpu_param0,
-        gpu_param1 :> dl_gpu_param1,
-        gpu_param2 :> dl_gpu_param2,
-        gpu_param3 :> dl_gpu_param3,
-        gpu_write :> dl_gpu_write,
-        gpu_active <: gpu_active
-    );
-
     // blit1tilemap read access for the blit1tilemap
     blit1tilemap.addr0 := gpu_tile * 16 + gpu_active_y;
     blit1tilemap.wenable0 := 0;
@@ -394,37 +236,26 @@ algorithm gpu(
     }
 
     while(1) {
-        if( ( dl_gpu_write != 0 ) || ( v_gpu_write != 0 ) || ( gpu_write != 0 ) ) {
-            if( dl_gpu_write != 0 ) {
-                x = dl_gpu_x;
-                y = dl_gpu_y;
-                gpu_active_colour = dl_gpu_colour;
-                param0 = dl_gpu_param0;
-                param1 = dl_gpu_param1;
-                param2 = dl_gpu_param2;
-                param3 = dl_gpu_param3;
-                write = dl_gpu_write;
+        if( ( v_gpu_write != 0 ) || ( gpu_write != 0 ) ) {
+            if( v_gpu_write != 0 ) {
+                x = v_gpu_x;
+                y = v_gpu_y;
+                gpu_active_colour = v_gpu_colour;
+                param0 = v_gpu_param0;
+                param1 = v_gpu_param1;
+                write = v_gpu_write;
             } else {
-                if( v_gpu_write != 0 ) {
-                    x = v_gpu_x;
-                    y = v_gpu_y;
-                    gpu_active_colour = v_gpu_colour;
-                    param0 = v_gpu_param0;
-                    param1 = v_gpu_param1;
-                    write = v_gpu_write;
+                if( gpu_write != 0 ) {
+                    x = gpu_x;
+                    y = gpu_y;
+                    gpu_active_colour = gpu_colour;
+                    param0 = gpu_param0;
+                    param1 = gpu_param1;
+                    param2 = gpu_param2;
+                    param3 = gpu_param3;
+                    write = gpu_write;
                 } else {
-                    if( gpu_write != 0 ) {
-                        x = gpu_x;
-                        y = gpu_y;
-                        gpu_active_colour = gpu_colour;
-                        param0 = gpu_param0;
-                        param1 = gpu_param1;
-                        param2 = gpu_param2;
-                        param3 = gpu_param3;
-                        write = gpu_write;
-                    } else {
-                        write = 0;
-                    }
+                    write = 0;
                 }
             }
 
