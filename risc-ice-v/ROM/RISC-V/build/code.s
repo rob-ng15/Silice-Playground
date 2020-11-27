@@ -3021,21 +3021,21 @@ main:
 	bne	a5,zero,.L323
 .L322:
 	call	setup_game
-	lui	s1,%hi(shipx)
+	lui	s0,%hi(shipx)
 	li	s3,312
-	lui	s0,%hi(shipy)
+	lui	s1,%hi(shipy)
 	li	s2,232
 	lui	s4,%hi(.LANCHOR1)
 	addi	s4,s4,%lo(.LANCHOR1)
 	j	.L348
-.L365:
+.L364:
 	lui	a4,%hi(level)
 	lhu	a5,%lo(level)(a4)
 	addi	a5,a5,1
 	sh	a5,%lo(level)(a4)
 	call	new_level
 	j	.L324
-.L366:
+.L365:
 	lui	a5,%hi(ufo_sprite_number)
 	lbu	a4,%lo(ufo_sprite_number)(a5)
 	li	a5,255
@@ -3093,7 +3093,7 @@ main:
 	li	a4,3
 	sb	a4,0(a5)
 	j	.L327
-.L367:
+.L366:
 	lui	a5,%hi(ufo_bullet_number)
 	lbu	s6,%lo(ufo_bullet_number)(a5)
 	li	a5,255
@@ -3120,7 +3120,6 @@ main:
 .L331:
 	li	a2,3
 	call	get_sprite_attribute
-	mv	s8,a0
 	slli	s7,a0,16
 	srai	s7,s7,16
 	lui	a5,%hi(ufo_sprite_number)
@@ -3136,16 +3135,10 @@ main:
 	call	get_sprite_attribute
 	slli	a5,a0,16
 	srai	a5,a5,16
-	lhu	a4,%lo(shipy)(s0)
-	sub	a4,a4,a0
-	slli	a3,a4,16
-	srai	a3,a3,16
-	lhu	a4,%lo(shipx)(s1)
-	sub	a4,a4,s8
-	slli	a4,a4,16
-	srai	a4,a4,16
-	blt	a4,zero,.L361
-	blt	a3,zero,.L349
+	lh	a4,%lo(shipx)(s0)
+	bgt	a4,s7,.L333
+	lh	a4,%lo(shipy)(s1)
+	bgt	a4,a5,.L349
 	li	s6,1
 .L349:
 	addi	s6,s6,2
@@ -3173,13 +3166,10 @@ main:
 	li	a4,4
 	sb	a4,0(a5)
 	j	.L330
-.L372:
-	li	s6,1
-	j	.L351
-.L368:
+.L367:
 	call	fire_bullet
 	j	.L341
-.L369:
+.L368:
 	call	move_ship
 	j	.L342
 .L325:
@@ -3187,7 +3177,7 @@ main:
 	lw	a5,%lo(BUTTONS)(a5)
 	lbu	a5,0(a5)
 	andi	a5,a5,8
-	bne	a5,zero,.L362
+	bne	a5,zero,.L361
 .L344:
 	li	a0,21
 	call	draw_ship
@@ -3197,12 +3187,12 @@ main:
 	slli	a5,a5,16
 	srli	a5,a5,16
 	li	a4,15
-	bleu	a5,a4,.L363
+	bleu	a5,a4,.L362
 .L345:
 	lui	a5,%hi(resetship)
 	lh	a4,%lo(resetship)(a5)
 	li	a5,16
-	bgt	a4,a5,.L364
+	bgt	a4,a5,.L363
 .L343:
 	call	update_bullet
 	call	check_hit
@@ -3223,7 +3213,7 @@ main:
 	andi	a0,a0,0xff
 	sb	a0,0(a4)
 	call	count_asteroids
-	beq	a0,zero,.L365
+	beq	a0,zero,.L364
 .L324:
 	call	await_vblank
 	lui	a5,%hi(TIMER1KHZ)
@@ -3240,12 +3230,12 @@ main:
 	li	a0,64
 	call	rng
 	li	a5,1
-	beq	a0,a5,.L366
+	beq	a0,a5,.L365
 .L327:
 	li	a0,64
 	call	rng
 	li	a5,1
-	beq	a0,a5,.L367
+	beq	a0,a5,.L366
 .L330:
 	lui	a5,%hi(counter)
 	lw	a5,%lo(counter)(a5)
@@ -3290,19 +3280,19 @@ main:
 	lw	a5,%lo(BUTTONS)(a5)
 	lbu	a5,0(a5)
 	andi	a5,a5,2
-	bne	a5,zero,.L368
+	bne	a5,zero,.L367
 .L341:
 	lui	a5,%hi(BUTTONS)
 	lw	a5,%lo(BUTTONS)(a5)
 	lbu	a5,0(a5)
 	andi	a5,a5,4
-	bne	a5,zero,.L369
+	bne	a5,zero,.L368
 .L342:
 	li	a0,63
 	call	draw_ship
 	call	check_crash
 	j	.L343
-.L362:
+.L361:
 	call	gpu_cs
 	call	tpu_cs
 	lui	a5,%hi(counter)
@@ -3314,8 +3304,8 @@ main:
 	sh	zero,%lo(score)(a5)
 	lui	a5,%hi(level)
 	sh	zero,%lo(level)(a5)
-	sh	s3,%lo(shipx)(s1)
-	sh	s2,%lo(shipy)(s0)
+	sh	s3,%lo(shipx)(s0)
+	sh	s2,%lo(shipy)(s1)
 	lui	a5,%hi(shipdirection)
 	sh	zero,%lo(shipdirection)(a5)
 	lui	s5,%hi(resetship)
@@ -3345,7 +3335,7 @@ main:
 	lhu	a5,%lo(lives)(a5)
 	beq	a5,zero,.L344
 	j	.L345
-.L363:
+.L362:
 	li	a1,11
 	li	a0,0
 	call	get_sprite_collision
@@ -3362,14 +3352,14 @@ main:
 	slli	a5,a5,16
 	srai	a5,a5,16
 	sh	a5,%lo(resetship)(a4)
-	beq	a5,zero,.L370
+	beq	a5,zero,.L369
 .L346:
 	lui	a5,%hi(lives)
 	lhu	a5,%lo(lives)(a5)
 	bne	a5,zero,.L345
 	call	risc_ice_v_logo
 	j	.L345
-.L370:
+.L369:
 	call	gpu_cs
 	lui	a4,%hi(lives)
 	lhu	a5,%lo(lives)(a4)
@@ -3377,7 +3367,7 @@ main:
 	sh	a5,%lo(lives)(a4)
 	call	draw_lives
 	j	.L346
-.L364:
+.L363:
 	li	a2,57344
 	li	a1,11
 	li	a0,0
@@ -3394,19 +3384,21 @@ main:
 	srai	a5,a5,16
 	sh	a5,%lo(resetship)(a4)
 	li	a4,16
-	beq	a5,a4,.L371
+	beq	a5,a4,.L370
 .L347:
-	sh	s3,%lo(shipx)(s1)
-	sh	s2,%lo(shipy)(s0)
+	sh	s3,%lo(shipx)(s0)
+	sh	s2,%lo(shipy)(s1)
 	lui	a5,%hi(shipdirection)
 	sh	zero,%lo(shipdirection)(a5)
 	j	.L343
-.L371:
+.L370:
 	li	a0,0
 	call	set_ship_sprites
 	j	.L347
-.L361:
-	blt	a3,zero,.L372
+.L333:
+	lh	a4,%lo(shipy)(s1)
+	ble	a4,a5,.L351
+	li	s6,1
 .L351:
 	addi	s6,s6,6
 	lui	a4,%hi(ufo_bullet_direction)

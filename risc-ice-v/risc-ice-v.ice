@@ -152,16 +152,12 @@ algorithm main(
     int32   sourceReg1 := registers_1.rdata;
     int32   sourceReg2 := registers_2.rdata;
     uint32  immediateValue := { {20{instruction[31,1]}}, Itype(instruction).immediate };
-    uint5   destReg := Rtype(instruction).destReg;
 
     // RISC-V ALU RESULTS
     int32   result = uninitialized;
-    int32   Uresult := { Utype(instruction).immediate_bits_31_12, 12b0 };
     uint1   writeRegister = uninitialized;
 
     // RISC-V ADDRESS CALCULATIONS
-    int32   jumpAddress := { {12{Jtype(instruction).immediate_bits_20}}, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + pc;
-    int32   branchOffset := { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 };
     int32   loadAddress := immediateValue + sourceReg1;
     int32   storeAddress := { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
 
@@ -340,20 +336,42 @@ algorithm main(
                         } else {
                             // I ALU OPERATIONS
                             switch( function3 ) {
-                                case 3b000: { result = ( ( opCode[5,1] == 1 ) && ( function7[5,1] == 1 ) ) ? sourceReg1 - sourceReg2 :
-                                    ( ( opCode[5,1] == 1 ) ? __signed(sourceReg1) + __signed(sourceReg2) : __signed(sourceReg1) + __signed(immediateValue) ); }
+                                case 3b000: {
+                                    if( ( opCode[5,1] == 1 ) && ( function7[5,1] == 1 ) ) {
+                                        result = __signed(sourceReg1) - __signed(sourceReg2);
+                                    } else {
+                                        result = __signed(sourceReg1) + ( ( opCode[5,1] == 1 ) ? __signed(sourceReg2) : __signed(immediateValue) ); }
+                                    }
                                 case 3b001: { result = sourceReg1 << ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ); }
-                                case 3b010: { result = __signed( sourceReg1 ) < __signed( ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ) ) ? 32b1 : 32b0; }
+                                case 3b010: { result = __signed( sourceReg1 ) < ( ( opCode[5,1] == 1 ) ? __signed(sourceReg2) : __signed(immediateValue) ) ? 32b1 : 32b0; }
                                 case 3b011: {
                                     switch( opCode[5,1] ) {
-                                        case 1b0: { result = ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 32b1 : 32b0 ) : ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ? 32b1 : 32b0 ); }
-                                        case 1b1: { result = ( Rtype(instruction).sourceReg1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 32b1 : 32b0 ) : ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ? 32b1 : 32b0 ); }
+                                        case 1b0: {
+                                            if( immediateValue == 1 ) {
+                                                result = ( sourceReg1 == 0 ) ? 32b1 : 32b0;
+                                            } else {
+                                                result = ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 32b1 : 32b0;
+                                            }
+                                        }
+                                        case 1b1: {
+                                            if( Rtype(instruction).sourceReg1 == 0 ) {
+                                                result = ( sourceReg2 != 0 ) ? 32b1 : 32b0;
+                                            } else {
+                                                result = ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 32b1 : 32b0;
+                                            }
+                                        }
                                     }
                                 }
                                 case 3b100: { result = sourceReg1 ^ ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ); }
                                 case 3b101: {
-                                    result = ( function7[5,1] == 1 ) ? __signed(sourceReg1) >>> ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ) :
-                                                                        sourceReg1 >> ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
+                                    switch( function7[5,1] ) {
+                                        case 1b0: {
+                                            result = __signed(sourceReg1) >>> ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
+                                        }
+                                        case 1b1: {
+                                            result = sourceReg1 >> ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
+                                        }
+                                    }
                                 }
                                 case 3b110: { result = sourceReg1 | ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ); }
                                 case 3b111: { result = sourceReg1 & ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ); }
@@ -362,7 +380,7 @@ algorithm main(
                     }
                     case 1b1: {
                         // AUIPC LUI
-                        result = ( opCode[5,1] == 0 ) ? Uresult + pc : Uresult;
+                        result = { Utype(instruction).immediate_bits_31_12, 12b0 } + ( ( opCode[5,1] == 0 ) ? pc : 0 );
                     }
                 }
             }
@@ -385,7 +403,9 @@ algorithm main(
                     case 1b1: {
                         // JUMP AND LINK / JUMP AND LINK REGISTER
                         result = pc + 4;
-                        newPC = ( opCode[3,1] == 1 ) ? jumpAddress : loadAddress;
+                        newPC = ( opCode[3,1] == 1 ) ?
+                                    { {12{Jtype(instruction).immediate_bits_20}}, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + pc :
+                                    loadAddress;
                     }
                 }
             }
@@ -394,15 +414,15 @@ algorithm main(
         ++:
 
         // NEVER write to registers[0]
-        if( writeRegister && ( destReg != 0 ) ) {
-            registers_1.addr = destReg;
+        if( writeRegister && ( Rtype(instruction).destReg != 0 ) ) {
+            registers_1.addr = Rtype(instruction).destReg;
             registers_1.wdata = result;
             registers_1.wenable = 1;
-            registers_2.addr = destReg;
+            registers_2.addr = Rtype(instruction).destReg;
             registers_2.wdata = result;
             registers_2.wenable = 1;
         }
 
-        pc = takeBranch ? pc + branchOffset : newPC;
+        pc = takeBranch ? pc + { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } : newPC;
     } // RISC-V
 }

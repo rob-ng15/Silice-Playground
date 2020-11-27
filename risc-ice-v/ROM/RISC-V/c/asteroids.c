@@ -1043,7 +1043,7 @@ void check_crash( void )
 void main()
 {
     unsigned char uartData = 0;
-    short ufo_x = 0, ufo_y = 0, ufo_x_offset = 0, ufo_y_offset = 0;
+    short ufo_x = 0, ufo_y = 0;
 
     // CLEAR the UART buffer
     while( *UART_STATUS & 1 )
@@ -1093,17 +1093,15 @@ void main()
                     set_ufo_bullet_sprite( 1 );
                     ufo_x = get_sprite_attribute( ( ufo_sprite_number > 10) ? 1 : 0, ( ufo_sprite_number > 10) ? ufo_sprite_number - 11 : ufo_sprite_number, 3 );
                     ufo_y = get_sprite_attribute( ( ufo_sprite_number > 10) ? 1 : 0, ( ufo_sprite_number > 10) ? ufo_sprite_number - 11 : ufo_sprite_number, 4 );
-                    ufo_x_offset = shipx - ufo_x;
-                    ufo_y_offset = shipy - ufo_y;
+                    ufo_bullet_direction = ( ufo_x < shipx ) ? 6 : 2;
 
-                    ufo_bullet_direction = ( ufo_x_offset < 0 ) ? 6 : 2;
                     switch( ufo_bullet_direction ) {
                         case 2:
-                            ufo_bullet_direction += ( ufo_y_offset < 0 ) ? -1 : 1;
+                            ufo_bullet_direction += ( ufo_y < shipy ) ? -1 : 1;
                             break;
 
                         case 6:
-                            ufo_bullet_direction += ( ufo_y_offset < 0 ) ? 1 : -1;
+                            ufo_bullet_direction += ( ufo_y < shipy ) ? 1 : -1;
                             break;
 
                         default:
