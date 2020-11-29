@@ -3,7 +3,7 @@
 //
 // A simple Risc-V RV32I processor
 
-// RISC-V INSTRUCTION BITFIELDS
+// RISC-V BASE INSTRUCTION BITFIELDS
 bitfield    Btype {
     uint1   immediate_bits_12,
     uint6   immediate_bits_10_5,
@@ -51,19 +51,102 @@ bitfield    Rtype {
 }
 
 bitfield Stype {
-    uint7  immediate_bits_11_5,
-    uint5  sourceReg2,
-    uint5  sourceReg1,
-    uint3  function3,
-    uint5  immediate_bits_4_0,
-    uint7  opcode
+    uint7   immediate_bits_11_5,
+    uint5   sourceReg2,
+    uint5   sourceReg1,
+    uint3   function3,
+    uint5   immediate_bits_4_0,
+    uint7   opcode
 }
 
 bitfield Utype {
-    uint20 immediate_bits_31_12,
-    uint5  destReg,
-    uint7  opCode
+    uint20  immediate_bits_31_12,
+    uint5   destReg,
+    uint7   opCode
 }
+
+// COMPRESSED Risc-V Instruction Bitfields
+bitfield    CI {
+    uint3   function3,
+    uint1   ib_5,
+    uint5   rd,
+    uint3   ib_4_2,
+    uint2   ib_7_6,
+    uint2   opcode
+}
+
+bitfield    CIW {
+    uint3   function3,
+    uint6   immediate_bits_8,
+    uint3   destRegPOP,
+    uint2   opcode
+}
+
+bitfield    CB {
+    uint3   function3,
+    uint1   offset_8,
+    uint2   offset_4_3,
+    uint3   rs1_alt,
+    uint2   offset_7_6,
+    uint2   offset_2_1,
+    uint1   offset_5,
+    uint2   opcode
+}
+
+bitfield    CJ {
+    uint3   function3,
+    uint1   ib_11,
+    uint1   ib_4,
+    uint2   ib_9_8,
+    uint1   ib_10,
+    uint1   ib_6,
+    uint1   ib_7,
+    uint3   ib_3_1,
+    uint1   ib_5,
+    uint2   opcode
+}
+
+bitfield    CR {
+    uint4   function4,
+    uint5   rs1,
+    uint5   rs2,
+    uint2   opcode
+}
+
+bitfield    CSS {
+    uint3   function3,
+    uint1   ib_5,
+    uint3   ib_4_2,
+    uint2   ib_7_6,
+    uint5   rs2,
+    uint2   opcode
+}
+
+
+bitfield    CL {
+    uint3   function3,
+    uint3   ib_5_3,
+    uint3   rs1_alt,
+    uint1   ib_2,
+    uint1   ib_6,
+    uint3   rd_alt,
+    uint2   opcode
+}
+
+bitfield    CS {
+    uint3   function3,
+    uint1   ib_5,
+    uint2   ib_4_3,
+    uint3   rs1_alt,
+    uint1   ib_2,
+    uint1   ib_6,
+    uint3   rs2_alt,
+    uint2   opcode
+}
+
+
+
+
 
 algorithm main(
     // LEDS (8 of)
@@ -128,7 +211,7 @@ algorithm main(
     );
 
     // RISC-V RAM and BIOS
-    bram uint32 ram[8192] = {
+    bram uint16 ram[16384] = {
         $include('ROM/BIOS.inc')
         , pad(uninitialized)
     };
@@ -226,7 +309,7 @@ algorithm main(
         compressed = 0;
 
         // FETCH - 32 bit instruction
-        ram.addr = pc[2,14];
+        ram.addr = pc[1,15];
         ++:
         switch( ram.rdata[0,2] ) {
             case 2b00: {
@@ -240,7 +323,9 @@ algorithm main(
                         // FLD
                     }
                     case 3b010: {
-                        // LW
+                        // LW -> lw rd', offset[6:2](rs1')
+                        // { 010 uimm[5:3] rs1' uimm[2][6] rd' 00 }
+                        instruction = { 5b0, CL(ram.rdata).ib_6, CL(ram.rdata).ib_5_3, CL(ram.rdata).ib_2, {2b01,CL(ram.rdata).rs1_alt}, 3b010, {2b01,CL(ram.rdata).rd_alt}, 7b0000011};
                     }
                     case 3b011: {
                         // FLW
@@ -252,7 +337,9 @@ algorithm main(
                         // FSD
                     }
                     case 3b110: {
-                        // SW
+                        // SW -> sw rs2', offset[6:2](rs1')
+                        // { 110 uimm[5:3] rs1' uimm[2][6] rs2' 00 }
+                        instruction = { 5b0, CS(ram.rdata).ib_6, CS(ram.rdata).ib_5, {2b01,CS(ram.rdata).rs2_alt}, {2b01,CS(ram.rdata).rs1_alt}, 3b010, CS(ram.rdata).ib_4_3, CS(ram.rdata).ib_2, 2b0, 7b0100011 };
                     }
                     case 3b111: {
                         // FSW
@@ -267,10 +354,13 @@ algorithm main(
                         // ADDI
                     }
                     case 3b001: {
-                        // JAL
+                        // JAL -> jal x1, offset[11:1]
+                        // { 001, imm[11|4|9:8|10|6|7|3:1|5] 01 }
+                        instruction = { CJ(ram.rdata).ib_11, CJ(ram.rdata).ib_10, CJ(ram.rdata).ib_9_8, CJ(ram.rdata).ib_7, CJ(ram.rdata).ib_6, CJ(ram.rdata).ib_5, CJ(ram.rdata).ib_4, CJ(ram.rdata).ib_3_1, {9{CJ(ram.rdata).ib_11}}, 5h1, 7b1101111 };
                     }
                     case 3b010: {
-                        // LI
+                        // LI -> addi rd, x0, imm[5:0]
+                        // { 010 imm[5] rd!=0 imm[4:0] 01 }
                     }
                     case 3b011: {
                         // LUI / ADDI16SP
@@ -279,14 +369,21 @@ algorithm main(
                         // MISC-ALU
                     }
                     case 3b101: {
-                        // J
+                        // J -> jal, x0, offset[11:1]
+                        // { 101, imm[11|4|9:8|10|6|7|3:1|5] 01 }
+                        instruction = { CJ(ram.rdata).ib_11, CJ(ram.rdata).ib_10, CJ(ram.rdata).ib_9_8, CJ(ram.rdata).ib_7, CJ(ram.rdata).ib_6, CJ(ram.rdata).ib_5, CJ(ram.rdata).ib_4, CJ(ram.rdata).ib_3_1, {9{CJ(ram.rdata).ib_11}}, 5h0, 7b1101111 };
                     }
                     case 3b110: {
-                        // BEQZ
+                        // BEQZ -> beq rs1', x0, offset[8:1]
+                        // { 110, imm[8|4:3] rs1' imm[7:6|2:1|5] 01 }
+                        instruction = { {4{CB(ram.rdata).offset_8}}, CB(ram.rdata).offset_7_6, CB(ram.rdata).offset_5, 5h0, {2b01,CB(ram.rdata).rs1_alt}, 3b000, CB(ram.rdata).offset_4_3, CB(ram.rdata).offset_2_1, CB(ram.rdata).offset_8, 7b1100011 };
                     }
                     case 3b111: {
-                        // BNEZ
+                        // BNEZ -> bne rs1', x0, offset[8:1]
+                        // { 111, imm[8|4:3] rs1' imm[7:6|2:1|5] 01 }
+                        instruction = { {4{CB(ram.rdata).offset_8}}, CB(ram.rdata).offset_7_6, CB(ram.rdata).offset_5, 5h0, {2b01,CB(ram.rdata).rs1_alt}, 3b001, CB(ram.rdata).offset_4_3, CB(ram.rdata).offset_2_1, CB(ram.rdata).offset_8, 7b1100011 };
                     }
+                }
             }
             case 2b10: {
                 compressed = 1;
@@ -299,26 +396,56 @@ algorithm main(
                         // FLDSP
                     }
                     case 3b010: {
-                        // LWSP
+                        // LWSP -> lw rd, offset[7:2](x2)
+                        // { 011 uimm[5] rd uimm[4:2|7:6] 10 }
+                        instruction = { 4b0, CI(ram.rdata).ib_7_6, CI(ram.rdata).ib_5, CI(ram.rdata).ib_4_2, 2b0, 5h2 ,3b010, CI(ram.rdata).rd, 7b0000011 };
                     }
                     case 3b011: {
                         // FLWSP
                     }
                     case 3b100: {
                         // J[AL]R / MV / ADD
+                        switch( ram.rdata[12,1] ) {
+                            case 1b0: {
+                                // JR / MV
+                                if( CR(ram.rdata).rs2 == 0 ) {
+                                    // JR -> jalr x0, rs1, 0
+                                    // { 100 0 rs1 00000 10 }
+                                    instruction = { 12b0, CR(ram.rdata).rs1, 3b000, 5h0, 7b1100111 };
+                                } else {
+                                    // MV
+                                }
+                            }
+                            case 1b1: {
+                                // JALR / ADD
+                                if( CR(ram.rdata).rs2 == 0 ) {
+                                    // JALR -> jalr x1, rs1, 0
+                                    // { 100 1 rs1 00000 10 }
+                                    instruction = { 12b0, CR(ram.rdata).rs1, 3b000, 5h1, 7b1100111 };
+                                } else {
+                                    // ADD
+                                }
+                            }
+                        }
                     }
                     case 3b101: {
                         // FSDSP
                     }
                     case 3b110: {
-                        // SWSP
+                        // SWSP -> sw rs2, offset[7:2](x2)
+                        // { 110 uimm[5][4:2][7:6] rs2 10 }
+                        instruction = { 4b0, CSS(ram.rdata).ib_7_6, CSS(ram.rdata).ib_5, CSS(ram.rdata).rs2, 5h2, 3b010, CSS(ram.rdata).ib_4_2, 2b0, 7b0100011 };
                     }
                     case 3b111: {
                         // FSWSP
                     }
+                }
             }
             case 2b11: {
-                instruction = ram.rdata;
+                instruction = { 16b0, ram.rdata };
+                ram.addr = pc[1,15] + 1;
+                ++:
+                instruction = { ram.rdata, instruction[0,16] };
                 newPC = pc + 4;
             }
         }
@@ -334,25 +461,23 @@ algorithm main(
                         // LOAD execute even if rd == 0 as may be discarding values in a buffer
                         switch( loadAddress[15,1] ) {
                             case 0: {
-                                ram.addr = loadAddress[2,14];
+                                ram.addr = loadAddress[1,15];
                                 ++:
                                 switch( function3 & 3 ) {
                                     case 2b00: {
-                                        switch( loadAddress[0,2] ) {
-                                            case 2b00: { result = { {24{ram.rdata[7,1] & ~function3[2,1]}}, ram.rdata[0,8] }; }
-                                            case 2b01: { result = { {24{ram.rdata[15,1] & ~function3[2,1]}}, ram.rdata[8,8] }; }
-                                            case 2b10: { result = { {24{ram.rdata[23,1] & ~function3[2,1]}}, ram.rdata[16,8] }; }
-                                            case 2b11: { result = { {24{ram.rdata[31,1] & ~function3[2,1]}}, ram.rdata[24,8] }; }
+                                        switch( loadAddress[0,1] ) {
+                                            case 1b0: { result = { {24{ram.rdata[7,1] & ~function3[2,1]}}, ram.rdata[0,8] }; }
+                                            case 1b1: { result = { {24{ram.rdata[15,1] & ~function3[2,1]}}, ram.rdata[8,8] }; }
                                         }
                                     }
                                     case 2b01: {
-                                        switch( loadAddress[1,1] ) {
-                                            case 1b0: { result =  { {16{ram.rdata[15,1] & ~function3[2,1]}}, ram.rdata[0,16] }; }
-                                            case 1b1: { result =  { {16{ram.rdata[31,1] & ~function3[2,1]}}, ram.rdata[16,16] }; }
-                                        }
+                                        result =  { {16{ram.rdata[15,1] & ~function3[2,1]}}, ram.rdata[0,16] };
                                     }
                                     case 2b10: {
-                                        result = ram.rdata;
+                                        result = { 16b0, ram.rdata };
+                                        ram.addr = loadAddress[1,15] + 1;
+                                        ++:
+                                        result = { ram.rdata, result[0,16] };
                                     }
                                 }
                             }
@@ -373,29 +498,29 @@ algorithm main(
                         writeRegister = 0;
                         switch( storeAddress[15,1] ) {
                             case 1b0: {
-                                ram.addr = storeAddress[2,14];
+                                ram.addr = storeAddress[1,15];
                                 switch( function3 & 3 ) {
                                     case 2b00: {
                                         ++:
-                                        switch( storeAddress[0,2] ) {
-                                            case 2b00: { ram.wdata = { ram.rdata[8,24], sourceReg2[0,8] }; }
-                                            case 2b01: { ram.wdata = { ram.rdata[16,16], sourceReg2[0,8], ram.rdata[0,8] }; }
-                                            case 2b10: { ram.wdata = { ram.rdata[24,8], sourceReg2[0,8], ram.rdata[0,16] }; }
-                                            case 2b11: { ram.wdata = { sourceReg2[0,8], ram.rdata[0,24] }; }
+                                        switch( storeAddress[0,1] ) {
+                                            case 1b0: { ram.wdata = { ram.rdata[8,8], sourceReg2[0,8] }; }
+                                            case 1b1: { ram.wdata = { sourceReg2[0,8], ram.rdata[0,8] }; }
                                         }
+                                        ram.wenable = 1;
                                     }
                                     case 2b01: {
-                                        ++:
-                                        switch( storeAddress[1,1] ) {
-                                            case 1b0: { ram.wdata = { ram.rdata[16,16], sourceReg2[0,16] }; }
-                                            case 1b1: { ram.wdata = { sourceReg2[0,16], ram.rdata[0,16] }; }
-                                        }
+                                        ram.wdata = sourceReg2[0,16];
+                                        ram.wenable = 1;
                                     }
                                     case 2b10: {
-                                        ram.wdata = sourceReg2;
+                                        ram.wdata = sourceReg2[0,16];
+                                        ram.wenable = 1;
+                                        ++:
+                                        ram.addr = storeAddress[1,15] + 1;
+                                        ram.wdata = sourceReg2[16,16];
+                                        ram.wenable = 1;
                                     }
                                 }
-                                ram.wenable = 1;
                             }
                             case 1b1: {
                                 IO_Map.memoryAddress = storeAddress[0,16];
@@ -500,7 +625,7 @@ algorithm main(
                     }
                     case 1b1: {
                         // JUMP AND LINK / JUMP AND LINK REGISTER
-                        result = pc + 4;
+                        result = pc + ( compressed ? 2 : 4 );
                         newPC = ( opCode[3,1] == 1 ) ?
                                     { {12{Jtype(instruction).immediate_bits_20}}, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + pc :
                                     loadAddress;

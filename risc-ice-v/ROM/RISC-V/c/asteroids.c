@@ -698,44 +698,6 @@ unsigned char find_asteroid_space( void ) {
     return( asteroid_space );
 }
 
-void new_asteroid( unsigned char asteroid_type )
-{
-    unsigned char potentialnumber;
-    short potentialx, potentialy;
-
-    potentialnumber = find_asteroid_space();
-    if( potentialnumber != 0xff ) {
-        do {
-            potentialx = rng( 639 );
-            potentialy = rng( 479 );
-        } while( ( potentialx >= shipx - 64 ) && ( potentialx <= shipx + 64 ) && ( potentialy >= shipy - 64 ) && ( potentialy <= shipy + 64) );
-
-        asteroid_active[ potentialnumber ] = asteroid_type;
-        asteroid_direction[ potentialnumber ] = rng( ( asteroid_type == 2 ) ? 3 : 7 );
-
-        set_sprite( ASN( potentialnumber), 1, rng( 31 ) + 32, potentialx, potentialy, rng( 6 ), ( asteroid_type == 2 ) ? 1 : 0 );
-    }
-}
-
-void new_level( void )
-{
-    unsigned char number_of_asteroids;
-    unsigned char asteroid_number;
-
-    // CLEAR ASTEROIDS
-    for( asteroid_number = 0; asteroid_number < 22; asteroid_number++ ) {
-        asteroid_active[asteroid_number] = 0; asteroid_direction[asteroid_number] = 0;
-        set_sprite( 0, asteroid_number, 0, 0, 0, 0, 0, 0);
-        set_sprite( 1, asteroid_number, 0, 0, 0, 0, 0, 0);
-    }
-
-    // PLACE NEW LARGE ASTEROIDS
-    number_of_asteroids = 4 + ( ( level < 4 ) ? level : 4 );
-    for( asteroid_number = 0; asteroid_number < number_of_asteroids; asteroid_number++ ) {
-        new_asteroid( 2 );
-    }
-}
-
 void move_asteroids( void )
 {
     for( unsigned char asteroid_number = 0; asteroid_number < 22; asteroid_number++ ) {
@@ -781,7 +743,7 @@ unsigned short count_asteroids( void )
     short number_of_asteroids = 0;
 
     for( unsigned char asteroid_number = 0; asteroid_number < 22; asteroid_number++ ) {
-        if( asteroid_active[asteroid_number] != 0 ) {
+        if( ( asteroid_active[asteroid_number] == 1 ) || ( asteroid_active[asteroid_number] == 2 ) ) {
             number_of_asteroids++;
         }
     }
@@ -1043,12 +1005,19 @@ void check_crash( void )
 
 void main()
 {
-    unsigned char uartData = 0;
-    short ufo_x = 0, ufo_y = 0;
+    unsigned char uartData = 0, potentialnumber = 0;
+    short ufo_x = 0, ufo_y = 0, potentialx = 0, potentialy = 0;
+    unsigned short placeAsteroids = 4, asteroid_number = 0;
 
     // CLEAR the UART buffer
     while( *UART_STATUS & 1 )
         uartData = inputcharacter();
+
+    // CLEAR ASTEROIDS
+    for( asteroid_number = 0; asteroid_number < 22; asteroid_number++ ) {
+        asteroid_active[asteroid_number] = 0; asteroid_direction[asteroid_number] = 0;
+        set_sprite( ASN(asteroid_number), 0, 0, 0, 0, 0, 0);
+    }
 
     setup_game();
 
@@ -1056,10 +1025,39 @@ void main()
         counter++;
         *LEDS = count_asteroids() << ( last_timer & 7 );
 
+        // PLACE NEW LARGE ASTEROIDS
+        if( placeAsteroids > 0 ) {
+            potentialnumber = find_asteroid_space();
+            if( potentialnumber != 0xff ) {
+                switch( rng(3) ) {
+                    case 0:
+                        potentialx = -31;
+                        potentialy = rng(479);
+                        break;
+                    case 1:
+                        potentialx = -639;
+                        potentialy = rng(479);
+                        break;
+                    case 2:
+                        potentialx = rng(639);
+                        potentialy = -31;
+                        break;
+                    case 3:
+                        potentialx = rng(639);
+                        potentialy = 479;
+                        break;
+                }
+                asteroid_active[ potentialnumber ] = 2;
+                asteroid_direction[ potentialnumber ] = rng( 3 );
+                set_sprite( ASN( potentialnumber), 1, rng( 31 ) + 32, potentialx, potentialy, rng( 6 ), 1 );
+            }
+            placeAsteroids--;
+        }
+
         // NEW LEVEL NEEDED
         if( count_asteroids() == 0 ) {
             level++;
-            new_level();
+            placeAsteroids = 4 + ( ( level < 4 ) ? level : 4 );
         }
 
         // AWAIT VBLANK and SET DELAY
@@ -1071,7 +1069,7 @@ void main()
 
         if( ( lives > 0 ) && ( resetship == 0) ) {
             // GAME IN ACTION
-            if( ( rng( 64 ) == 1 ) && ( ufo_sprite_number == 0xff ) ) {
+            if( ( rng( 256 ) == 1 ) && ( ufo_sprite_number == 0xff ) ) {
                 // START UFO
                 ufo_sprite_number = find_asteroid_space();
 
@@ -1088,7 +1086,7 @@ void main()
                 }
             }
 
-            if( ( rng( 64 ) == 1 ) && ( ufo_bullet_number == 0xff ) && ( ufo_sprite_number != 0xff ) ) {
+            if( ( rng( ( level > 3 ) ? 64 : 128 ) == 1 ) && ( ufo_bullet_number == 0xff ) && ( ufo_sprite_number != 0xff ) && ( level != 0 ) ) {
                 // START UFO BULLET
                 ufo_bullet_number = find_asteroid_space();
 
@@ -1145,16 +1143,21 @@ void main()
             // GAME OVER OR EXPLODING SHIP
             // SEE IF NEW GAME
             if( ( lives == 0 ) && ( ( *BUTTONS & 8 ) != 0 ) ) {
+                // CLEAR ASTEROIDS
+                for( asteroid_number = 0; asteroid_number < 22; asteroid_number++ ) {
+                    asteroid_active[asteroid_number] = 0; asteroid_direction[asteroid_number] = 0;
+                    set_sprite( ASN(asteroid_number), 0, 0, 0, 0, 0, 0);
+                }
+
                 gpu_cs(); tpu_cs();
                 counter = 0;
-                lives = 3; score = 0; level = 0;
+                lives = 3; score = 0; level = 0; placeAsteroids = 4;
                 shipx = 312; shipy = 232; shipdirection = 0; resetship = 0; bulletdirection = 0;
                 ufo_bullet_number = 0xff; ufo_sprite_number = 0xff; ufo_leftright = 0;
                 draw_lives();
                 set_asteroid_sprites();
                 set_ship_sprites(0);
                 set_bullet_sprites();
-                new_level();
             }
 
             if( ( ( resetship >= 1 ) && ( resetship <= 16 ) ) || ( lives == 0 ) ) {

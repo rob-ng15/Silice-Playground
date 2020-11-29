@@ -39,7 +39,7 @@ __ULX3S only at present__
                     * 2 x main clock ( 50mhz ) operation
             * NOP __ALL OTHER INSTRUCTION CODES__
 * MEMORY
-    * 32K ( 8K x 32 bit) of RAM
+    * 32K ( 16K x 16 bit) of RAM ( with aligned and misaligned 32 bit read / writes )
     * 32K ( 8K x 32 bit ) of I/O Memory with 16 bit read / write
 * DISPLAY
     * HDMI 640 x 480 ouput
@@ -68,6 +68,6 @@ Open a terminal in the ULX3S directory and type ```make ulx3s```. Wait. Upload y
 
 ## COMPILING C CODES
 
-Open a terminal in the ROM/RISC-V directory. Create your own C code in the c directory. Compile with ( for example the asteroids game ) ```./compile_c.sh c/asteroids.c```. Open build/code.bin in okteta. From the menu select File -> Export -> C Array. Use the __unsigned int__ option, save the output as ```code.inc```. Open ```code.inc``` in kwrite or kate, delete the first two and the last lines. Replace ```0x``` with ```32h``` and save as ```BIOS.inc``` in the ROM directory.
+Open a terminal in the ROM/RISC-V directory. Create your own C code in the c directory. Compile with ( for example the asteroids game ) ```./compile_c.sh c/asteroids.c```. Open build/code.bin in okteta. From the menu select File -> Export -> C Array. Use the __unsigned short__ option, save the output as ```code.inc```. Open ```code.inc``` in kwrite or kate, delete the first two and the last lines. Replace ```0x``` with ```16h``` and save as ```BIOS.inc``` in the ROM directory.
 
 Follow the build instructions above and your program will launch once the code has compiled.
