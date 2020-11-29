@@ -66,34 +66,6 @@ bitfield Utype {
 }
 
 // COMPRESSED Risc-V Instruction Bitfields
-bitfield    CBalu {
-    uint3   function3,
-    uint1   ib_5,
-    uint2   function2,
-    uint3   rd_alt,
-    uint2   logical2,
-    uint3   rd_alt,
-    uint2   opcode
-}
-bitfield    CBalu50 {
-    uint3   function3,
-    uint1   ib_5,
-    uint2   function2,
-    uint3   rd_alt,
-    uint5   ib_4_0,
-    uint2   opcode
-}
-bitfield    CB {
-    uint3   function3,
-    uint1   offset_8,
-    uint2   offset_4_3,
-    uint3   rs1_alt,
-    uint2   offset_7_6,
-    uint2   offset_2_1,
-    uint1   offset_5,
-    uint2   opcode
-}
-
 bitfield    CI {
     uint3   function3,
     uint1   ib_5,
@@ -136,6 +108,36 @@ bitfield    CIlui {
     uint2   opcode
 }
 
+bitfield    CBalu {
+    uint3   function3,
+    uint1   ib_5,
+    uint2   function2,
+    uint3   rd_alt,
+    uint2   logical2,
+    uint3   rd_alt,
+    uint2   opcode
+}
+
+bitfield    CBalu50 {
+    uint3   function3,
+    uint1   ib_5,
+    uint2   function2,
+    uint3   rd_alt,
+    uint5   ib_4_0,
+    uint2   opcode
+}
+
+bitfield    CB {
+    uint3   function3,
+    uint1   offset_8,
+    uint2   offset_4_3,
+    uint3   rs1_alt,
+    uint2   offset_7_6,
+    uint2   offset_2_1,
+    uint1   offset_5,
+    uint2   opcode
+}
+
 bitfield    CJ {
     uint3   function3,
     uint1   ib_11,
@@ -149,6 +151,22 @@ bitfield    CJ {
     uint2   opcode
 }
 
+bitfield    CR {
+    uint4   function4,
+    uint5   rs1,
+    uint5   rs2,
+    uint2   opcode
+}
+
+bitfield    CSS {
+    uint3   function3,
+    uint1   ib_5,
+    uint3   ib_4_2,
+    uint2   ib_7_6,
+    uint5   rs2,
+    uint2   opcode
+}
+
 bitfield    CL {
     uint3   function3,
     uint3   ib_5_3,
@@ -156,13 +174,6 @@ bitfield    CL {
     uint1   ib_2,
     uint1   ib_6,
     uint3   rd_alt,
-    uint2   opcode
-}
-
-bitfield    CR {
-    uint4   function4,
-    uint5   rs1,
-    uint5   rs2,
     uint2   opcode
 }
 
@@ -174,15 +185,6 @@ bitfield    CS {
     uint1   ib_2,
     uint1   ib_6,
     uint3   rs2_alt,
-    uint2   opcode
-}
-
-bitfield    CSS {
-    uint3   function3,
-    uint1   ib_5,
-    uint3   ib_4_2,
-    uint2   ib_7_6,
-    uint5   rs2,
     uint2   opcode
 }
 
@@ -260,15 +262,16 @@ algorithm main(
 
     // RISC-V PROGRAM COUNTER
     uint32  pc = 0;
-    uint32  newPC = uninitialized;
-    uint1   compressed = uninitialized;
-    uint1   floatingpoint = uninitialized;
-    uint1   takeBranch = uninitialized;
+    uint32  newPC = 0;
+    uint1   compressed = 0;
+    uint1   frs1 = 0;
+    uint1   frs2 = 0;
+    uint1   frd = 0;
+    uint1   takeBranch = 0;
 
     // RISC-V INSTRUCTION and DECODE
     uint32  instruction = uninitialized;
     uint32  nop := { 12b000000000000, 5b00000, 3b000, 5b00000, 7b0010011 };
-
     uint7   opCode := Utype(instruction).opCode;
     uint3   function3 := Rtype(instruction).function3;
     uint7   function7 := Rtype(instruction).function7;
@@ -283,6 +286,7 @@ algorithm main(
     uint1   writeRegister = uninitialized;
 
     // RISC-V ADDRESS CALCULATIONS
+    uint32  branchOffset := { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 };
     uint32  loadAddress := immediateValue + sourceReg1;
     uint32  storeAddress := { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
 
@@ -334,10 +338,10 @@ algorithm main(
     IO_Map.memoryRead := 0;
 
     // REGISTER Read/Write Flags
-    registers_1.addr0 := Rtype(instruction).sourceReg1 + ( floatingpoint ? 32 : 0 );
+    registers_1.addr0 := Rtype(instruction).sourceReg1 + ( frs1 ? 32 : 0 );
     registers_1.wenable0 := 0;
     registers_1.wenable1 := 1;
-    registers_2.addr0 := Rtype(instruction).sourceReg2 + ( floatingpoint ? 32 : 0 );
+    registers_2.addr0 := Rtype(instruction).sourceReg2 + ( frs2 ? 32 : 0 );
     registers_2.wenable0 := 0;
     registers_2.wenable1 := 1;
 
@@ -345,7 +349,7 @@ algorithm main(
         // RISC-V
         writeRegister = 1;
         takeBranch = 0;
-        floatingpoint = 0;
+        frs1 = 0; frs2 = 0; frd = 0;
         compressed = 0;
 
         // FETCH - 32 bit instruction
@@ -363,6 +367,8 @@ algorithm main(
                     }
                     case 3b001: {
                         // FLD
+                        frs1 = 1; frs2 = 1; frd = 1;
+                        instruction = nop;
                     }
                     case 3b010: {
                         // LW -> lw rd', offset[6:2](rs1')
@@ -371,12 +377,17 @@ algorithm main(
                     }
                     case 3b011: {
                         // FLW
+                        frs1 = 1; frs2 = 1; frd = 1;
+                        instruction = nop;
                     }
                     case 3b100: {
                         // reserved
+                        instruction = nop;
                     }
                     case 3b101: {
                         // FSD
+                        frs1 = 1; frs2 = 1; frd = 1;
+                        instruction = nop;
                     }
                     case 3b110: {
                         // SW -> sw rs2', offset[6:2](rs1')
@@ -385,6 +396,8 @@ algorithm main(
                     }
                     case 3b111: {
                         // FSW
+                        frs1 = 1; frs2 = 1; frd = 1;
+                        instruction = nop;
                     }
                 }
             }
@@ -478,6 +491,8 @@ algorithm main(
                     }
                     case 3b001: {
                         // FLDSP
+                        frs1 = 1; frs2 = 1; frd = 1;
+                        instruction = nop;
                     }
                     case 3b010: {
                         // LWSP -> lw rd, offset[7:2](x2)
@@ -486,6 +501,8 @@ algorithm main(
                     }
                     case 3b011: {
                         // FLWSP
+                        frs1 = 1; frs2 = 1; frd = 1;
+                        instruction = nop;
                     }
                     case 3b100: {
                         // J[AL]R / MV / ADD
@@ -514,6 +531,8 @@ algorithm main(
                     }
                     case 3b101: {
                         // FSDSP
+                        frs1 = 1; frs2 = 1; frd = 1;
+                        instruction = nop;
                     }
                     case 3b110: {
                         // SWSP -> sw rs2, offset[7:2](x2)
@@ -522,6 +541,8 @@ algorithm main(
                     }
                     case 3b111: {
                         // FSWSP
+                        frs1 = 1; frs2 = 1; frd = 1;
+                        instruction = nop;
                     }
                 }
             }
@@ -716,21 +737,18 @@ algorithm main(
                     }
                 }
             }
-
-            // FORCE registers to BRAM - NO FLOATING POINT AT PRESENT!
-            default: { floatingpoint = 1; }
         }
 
         ++:
 
         // NEVER write to registers[0]
         if( writeRegister && ( Rtype(instruction).destReg != 0 ) ) {
-            registers_1.addr1 = Rtype(instruction).destReg + ( floatingpoint ? 32 : 0 );
+            registers_1.addr1 = Rtype(instruction).destReg + ( frd ? 32 : 0 );
             registers_1.wdata1 = result;
-            registers_2.addr1 = Rtype(instruction).destReg + ( floatingpoint ? 32 : 0 );
+            registers_2.addr1 = Rtype(instruction).destReg + ( frd ? 32 : 0 );
             registers_2.wdata1 = result;
         }
 
-        pc = takeBranch ? pc + { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } : newPC;
+        pc = takeBranch ? pc + branchOffset : newPC;
     } // RISC-V
 }
