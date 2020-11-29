@@ -367,8 +367,7 @@ algorithm main(
                     }
                     case 3b001: {
                         // FLD
-                        frs1 = 1; frs2 = 1; frd = 1;
-                        instruction = nop;
+                        floatingpoint = 1; instruction = nop;
                     }
                     case 3b010: {
                         // LW -> lw rd', offset[6:2](rs1')

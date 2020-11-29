@@ -72,7 +72,7 @@ bitfield    CBalu {
     uint2   function2,
     uint3   rd_alt,
     uint2   logical2,
-    uint3   rd_alt,
+    uint3   rs2_alt,
     uint2   opcode
 }
 bitfield    CBalu50 {
@@ -423,28 +423,42 @@ algorithm main(
                         // MISC-ALU
                         switch( CBalu(ram.rdata).function2 ) {
                             case 2b00: {
-                                // SRLI
+                                // SRLI -> srli rd', rd', shamt[5:0]
+                                // { 100 nzuimm[5] 00 rs1'/rd' nzuimm[4:0] 01 }
+                                instruction = { 7b0000000, CBalu50(ram.rdata).ib_4_0, { 2b01, CBalu50(ram.rdata).rd_alt }, 3b101, { 2b01, CBalu50(ram.rdata).rd_alt }, 7b0010011 };
                             }
                             case 2b01: {
-                                // SRAI
+                                // SRAI -> srai rd', rd', shamt[5:0]
+                                // { 100 nzuimm[5] 01 rs1'/rd' nzuimm[4:0] 01 }
+                                instruction = { 7b0100000, CBalu50(ram.rdata).ib_4_0, { 2b01, CBalu50(ram.rdata).rd_alt }, 3b101, { 2b01, CBalu50(ram.rdata).rd_alt }, 7b0010011 };
                             }
                             case 2b10: {
-                                // ANDI
+                                // ANDI -> andi rd', rd', imm[5:0]
+                                // { 100 imm[5], 10 rs1'/rd' imm[4:0] 01 }
+                                instruction = { {7{CBalu50(ram.rdata).ib_5}}, CBalu50(ram.rdata).ib_4_0, { 2b01, CBalu50(ram.rdata).rd_alt }, 3b111, { 2b01, CBalu50(ram.rdata).rd_alt }, 7b0010011 };
                             }
                             case 2b11: {
                                 // SUB XOR OR AND
                                 switch( CBalu(ram.rdata).logical2 ) {
                                     case 2b00: {
-                                        //SUB
+                                        //SUB -> sub rd', rd', rs2'
+                                        // { 100 0 11 rs1'/rd' 00 rs2' 01 }
+                                        instruction = { 7b0100000, { 2b01, CBalu(ram.rdata).rs2_alt }, { 2b01, CBalu(ram.rdata).rd_alt }, 3b000, { 2b01, CBalu(ram.rdata).rd_alt }, 7b0110011 };
                                     }
                                     case 2b01: {
-                                        // XOR
+                                        // XOR -> xor rd', rd', rs2'
+                                        // { 100 0 11 rs1'/rd' 01 rs2' 01 }
+                                        instruction = { 7b0000000, { 2b01, CBalu(ram.rdata).rs2_alt }, { 2b01, CBalu(ram.rdata).rd_alt }, 3b100, { 2b01, CBalu(ram.rdata).rd_alt }, 7b0110011 };
                                     }
                                     case 2b10: {
-                                        // OR
+                                        // OR -> or rd', rd', rd2'
+                                        // { 100 0 11 rs1'/rd' 10 rs2' 01 }
+                                        instruction = { 7b0000000, { 2b01, CBalu(ram.rdata).rs2_alt }, { 2b01, CBalu(ram.rdata).rd_alt }, 3b110, { 2b01, CBalu(ram.rdata).rd_alt }, 7b0110011 };
                                     }
                                     case 2b11: {
-                                        // AND
+                                        // AND -> and rd', rd', rs2'
+                                        // { 100 0 11 rs1'/rd' 11 rs2' 01 }
+                                        instruction = { 7b0000000, { 2b01, CBalu(ram.rdata).rs2_alt }, { 2b01, CBalu(ram.rdata).rd_alt }, 3b111, { 2b01, CBalu(ram.rdata).rd_alt }, 7b0110011 };
                                     }
                                 }
                             }
@@ -497,7 +511,9 @@ algorithm main(
                                     // { 100 0 rs1 00000 10 }
                                     instruction = { 12b0, CR(ram.rdata).rs1, 3b000, 5h0, 7b1100111 };
                                 } else {
-                                    // MV
+                                    // MV -> add rd, x0, rs2
+                                    // { 100 0 rd!=0 rs2!=0 10 }
+                                    instruction = { 7b0000000, CR(ram.rdata).rs2, 5h0, 3b101, CR(ram.rdata).rs1, 7b0010011 };
                                 }
                             }
                             case 1b1: {
@@ -507,7 +523,9 @@ algorithm main(
                                     // { 100 1 rs1 00000 10 }
                                     instruction = { 12b0, CR(ram.rdata).rs1, 3b000, 5h1, 7b1100111 };
                                 } else {
-                                    // ADD
+                                    // ADD -> add rd, rd, rs2
+                                    // { 100 1 rs1/rd!=0 rs2!=0 10 }
+                                    instruction = { 7b0000000, CR(ram.rdata).rs2, CR(ram.rdata).rs1, 3b101, CR(ram.rdata).rs1, 7b0010011 };
                                 }
                             }
                         }
