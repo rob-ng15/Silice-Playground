@@ -421,7 +421,8 @@ void tpu_outputstring( unsigned char x, unsigned char y, unsigned char backgroun
 
     // MACROS
     // Convert asteroid number to sprite layer and number
-#define ASN(a) ( a > 10) ? 1 : 0, ( a > 10) ? a - 11 : a
+#define ASN(a) ( a > 9) ? 1 : 0, ( a > 9) ? a - 10 : a
+#define MAXASTEROIDS 20
 
     // GLOBAL VARIABLES
     unsigned short lives = 0, score = 0, level = 0;
@@ -431,7 +432,7 @@ void tpu_outputstring( unsigned char x, unsigned char y, unsigned char backgroun
     short shipx = 312, shipy = 232, shipdirection = 0, resetship = 0, bulletdirection = 0;
 
     // ASTEROIDS and UFO
-    unsigned char asteroid_active[22], asteroid_direction[22], ufo_sprite_number = 0xff, ufo_bullet_number = 0xff, ufo_leftright = 0, ufo_bullet_direction = 0;
+    unsigned char asteroid_active[MAXASTEROIDS], asteroid_direction[MAXASTEROIDS], ufo_sprite_number = 0xff, ufo_leftright = 0, ufo_bullet_direction = 0;
 
     // BEEP / BOOP TIMER
     short last_timer = 0;
@@ -578,10 +579,9 @@ void tpu_outputstring( unsigned char x, unsigned char y, unsigned char backgroun
 
 void set_asteroid_sprites( void )
 {
-    for( unsigned char asteroid_number = 0; asteroid_number < 12; asteroid_number++ ) {
+    for( unsigned char asteroid_number = 0; asteroid_number < MAXASTEROIDS; asteroid_number++ ) {
         for( unsigned char line_number = 0; line_number < 128; line_number++ ) {
-            set_sprite_line( 0, asteroid_number, line_number, asteroid_bitmap[line_number] );
-            set_sprite_line( 1, asteroid_number, line_number, asteroid_bitmap[line_number] );
+            set_sprite_line( ASN(asteroid_number), line_number, asteroid_bitmap[line_number] );
         }
     }
 }
@@ -618,9 +618,10 @@ void set_ufo_sprite( unsigned char ufo_asteroid ) {
     }
 }
 
-void set_ufo_bullet_sprite( unsigned char ufo_asteroid ) {
+void set_ufo_bullet_sprites( void ) {
     for( unsigned char line_number = 0; line_number < 128; line_number++ ) {
-        set_sprite_line( ASN( ufo_bullet_number ), line_number, ufo_asteroid ? ufo_bullet_bitmap[line_number] : asteroid_bitmap[line_number] );
+        set_sprite_line( 0, 10, line_number, ufo_bullet_bitmap[line_number] );
+        set_sprite_line( 1, 10, line_number, ufo_bullet_bitmap[line_number] );
     }
 }
 
@@ -662,7 +663,7 @@ void setup_game()
 {
     // CLEAR ALL SPRITES
     for( unsigned char sprite_number = 0; sprite_number < 26; sprite_number++ ) {
-        if( sprite_number < 22 ) {
+        if( sprite_number < MAXASTEROIDS ) {
             asteroid_active[sprite_number] = 0; asteroid_direction[sprite_number] = 0;
         }
         set_sprite( ( sprite_number > 12 ) ? 1 : 0, ( sprite_number > 12 ) ? sprite_number - 13 : sprite_number, 0, 0, 0, 0, 0, 0 );
@@ -681,6 +682,7 @@ void setup_game()
     set_ship_sprites( 0 );
     set_ship_vector();
     set_bullet_sprites();
+    set_ufo_bullet_sprites();
 
     lives = 0; score = 0;
     shipx = 312; shipy = 232; shipdirection = 0; resetship = 0; bulletdirection = 0;
@@ -691,7 +693,7 @@ void setup_game()
 unsigned char find_asteroid_space( void ) {
     unsigned char asteroid_space = 0xff;
 
-    for( unsigned char asteroid_number = 0; asteroid_number < 22; asteroid_number++ ) {
+    for( unsigned char asteroid_number = 0; asteroid_number < MAXASTEROIDS; asteroid_number++ ) {
         asteroid_space = ( asteroid_active[asteroid_number] == 0 ) ? asteroid_number : asteroid_space;
     }
 
@@ -700,30 +702,19 @@ unsigned char find_asteroid_space( void ) {
 
 void move_asteroids( void )
 {
-    for( unsigned char asteroid_number = 0; asteroid_number < 22; asteroid_number++ ) {
+    for( unsigned char asteroid_number = 0; asteroid_number < MAXASTEROIDS; asteroid_number++ ) {
         if( ( asteroid_active[asteroid_number] != 0 ) && ( asteroid_active[asteroid_number] < 3 ) ) {
             update_sprite( ASN( asteroid_number ), asteroid_directions[ asteroid_direction[asteroid_number] ] );
         }
 
         // UFO
         if(  asteroid_active[asteroid_number] == 3 ) {
-            update_sprite( ( asteroid_number > 10) ? 1 : 0, ( asteroid_number > 10) ? asteroid_number - 11 : asteroid_number, ufo_directions[ufo_leftright+ ( level > 2 ? 2 : 0 )] );
+            update_sprite( ASN( asteroid_number ), ufo_directions[ufo_leftright+ ( level > 2 ? 2 : 0 )] );
             if( get_sprite_attribute( ASN( asteroid_number), 0 ) == 0 ) {
                 // UFO OFF SCREEN
                 set_ufo_sprite( 0 );
                 asteroid_active[asteroid_number] = 0;
                 ufo_sprite_number = 0xff;
-            }
-        }
-
-        // UFO BULLET
-        if(  asteroid_active[asteroid_number] == 4 ) {
-            update_sprite( ASN( asteroid_number ), bullet_directions[ufo_bullet_direction] );
-            if( get_sprite_attribute( ASN( asteroid_number ), 0 ) == 0 ) {
-                // UFO BULLET OFF SCREEN
-                set_ufo_bullet_sprite( 0 );
-                asteroid_active[asteroid_number] = 0;
-                ufo_bullet_number = 0xff;
             }
         }
 
@@ -742,7 +733,7 @@ unsigned short count_asteroids( void )
 {
     short number_of_asteroids = 0;
 
-    for( unsigned char asteroid_number = 0; asteroid_number < 22; asteroid_number++ ) {
+    for( unsigned char asteroid_number = 0; asteroid_number < MAXASTEROIDS; asteroid_number++ ) {
         if( ( asteroid_active[asteroid_number] == 1 ) || ( asteroid_active[asteroid_number] == 2 ) ) {
             number_of_asteroids++;
         }
@@ -860,8 +851,13 @@ void fire_bullet( void )
 
 void update_bullet( void )
 {
+    // PLAYER BULLET
     update_sprite( 0, 12, bullet_directions[ bulletdirection ] );
     update_sprite( 1, 12, bullet_directions[ bulletdirection ] );
+
+    // UFO BULLET
+    update_sprite( 0, 10, bullet_directions[ ufo_bullet_direction ] );
+    update_sprite( 1, 10, bullet_directions[ ufo_bullet_direction ] );
 }
 
 void beepboop( void )
@@ -920,19 +916,55 @@ void spawn_asteroid( unsigned char asteroid_type, short xc, short yc )
     }
 }
 
+void check_ufo_bullet_hit( void )
+{
+    unsigned char asteroid_hit = 0xff, colour, spritesize, spawnextra;
+    short x, y;
+
+    if( ( ( get_sprite_collision( 0, 10 ) & 0x3ff ) != 0 ) || ( ( get_sprite_collision( 1, 10 ) & 0x3ff ) != 0 ) ) {
+        beep( 3, 2, 4, 8, 500 );
+        for( unsigned char asteroid_number = 0; asteroid_number < MAXASTEROIDS; asteroid_number++ ) {
+            if( get_sprite_collision( ASN( asteroid_number ) ) & 0x400 ) {
+                asteroid_hit = asteroid_number;
+            }
+        }
+
+        if( ( asteroid_hit != 0xff ) && ( asteroid_active[asteroid_hit] < 3 ) ) {
+            // DELETE BULLET
+            set_sprite( 0, 10, 0, 0, 0, 0, 0, 0);
+            set_sprite( 1, 10, 0, 0, 0, 0, 0, 0);
+
+            colour = get_sprite_attribute( ASN( asteroid_hit ), 2 );
+            x = get_sprite_attribute( ASN( asteroid_hit ), 3 );
+            y = get_sprite_attribute( ASN( asteroid_hit ), 4 );
+            spritesize = get_sprite_attribute( ASN( asteroid_hit ), 5 );
+
+            // SPAWN NEW ASTEROIDS
+            if( asteroid_active[asteroid_hit] == 2 ) {
+                spawnextra = 1 + ( ( level < 2 ) ? level : 2 ) + ( ( level > 2 ) ? rng( 1 ) : 0 );
+                for( int i=0; i < spawnextra; i++ ) {
+                    spawn_asteroid( 1, x, y );
+                }
+            }
+
+            set_sprite( ASN( asteroid_hit ), 1, colour, x, y, 7, spritesize );
+            asteroid_active[asteroid_hit] = 32;
+        }
+    }
+}
+
 void check_hit( void )
 {
     unsigned char asteroid_hit = 0xff, colour, spritesize, spawnextra;
     short x, y;
 
-    if( ( ( get_sprite_collision( 0, 12 ) & 0x7ff ) != 0 ) || ( ( get_sprite_collision( 1, 12 ) & 0x7ff ) != 0 ) ) {
+    if( ( ( get_sprite_collision( 0, 12 ) & 0x3ff ) != 0 ) || ( ( get_sprite_collision( 1, 12 ) & 0x3ff ) != 0 ) ) {
         beep( 3, 2, 4, 8, 500 );
-        for( unsigned char asteroid_number = 0; asteroid_number < 22; asteroid_number++ ) {
+        for( unsigned char asteroid_number = 0; asteroid_number < MAXASTEROIDS; asteroid_number++ ) {
             if( get_sprite_collision( ASN( asteroid_number ) ) & 0x1000 ) {
                 asteroid_hit = asteroid_number;
             }
         }
-
 
         if( ( asteroid_hit != 0xff ) && ( asteroid_active[asteroid_hit] < 3 ) ) {
             // DELETE BULLET
@@ -972,20 +1004,7 @@ void check_hit( void )
                     ufo_sprite_number = 0xff;
                     asteroid_active[asteroid_hit] = 32;
                     break;
-                case 4:
-                    // UFO BULLET
-                    score += 50;
-                    // DELETE BULLET
-                    set_sprite( 0, 12, 0, 0, 0, 0, 0, 0);
-                    set_sprite( 1, 12, 0, 0, 0, 0, 0, 0);
 
-                    x = get_sprite_attribute( ASN( asteroid_hit ), 3 );
-                    y = get_sprite_attribute( ASN( asteroid_hit ), 4 );
-                    set_sprite( ASN( asteroid_hit ), 1, 48, x, y, 7, 0 );
-                    set_ufo_bullet_sprite( 0 );
-                    ufo_bullet_number = 0xff;
-                    asteroid_active[asteroid_hit] = 32;
-                    break;
                 default:
                     // EXPLOSION
                     break;
@@ -997,6 +1016,11 @@ void check_hit( void )
 void check_crash( void )
 {
     if( ( ( get_sprite_collision( 0, 11 ) & 0x7ff ) != 0 ) || ( ( get_sprite_collision( 1, 11 ) & 0x7ff ) != 0 ) ) {
+        if( ( get_sprite_collision( 0, 10 ) & ( 0x800 ) != 0 ) || ( get_sprite_collision( 1, 10 ) & ( 0x800 ) != 0 ) ) {
+            // DELETE UFO BULLET
+            set_sprite( 0, 10, 0, 0, 0, 0, 0, 0);
+            set_sprite( 1, 10, 0, 0, 0, 0, 0, 0);
+        }
         beep( 3, 2, 4, 1, 1000 );
         set_ship_sprites( 1 );
         resetship = 75;
@@ -1014,7 +1038,7 @@ void main()
         uartData = inputcharacter();
 
     // CLEAR ASTEROIDS
-    for( asteroid_number = 0; asteroid_number < 22; asteroid_number++ ) {
+    for( asteroid_number = 0; asteroid_number < MAXASTEROIDS; asteroid_number++ ) {
         asteroid_active[asteroid_number] = 0; asteroid_direction[asteroid_number] = 0;
         set_sprite( ASN(asteroid_number), 0, 0, 0, 0, 0, 0);
     }
@@ -1067,53 +1091,47 @@ void main()
         // BEEP / BOOP
         beepboop();
 
+        if( ( rng( 256 ) == 1 ) && ( ufo_sprite_number == 0xff ) && ( get_sprite_attribute( 0, 10, 0 ) == 0 ) ) {
+            // START UFO
+            ufo_sprite_number = find_asteroid_space();
+
+            if( ufo_sprite_number != 0xff ) {
+                // ROOM for UFO
+                do {
+                    ufo_y = 32 + rng(  416 );
+                } while( ( ufo_y >= shipy - 64 ) && ( ufo_y <= shipy + 64 ) );
+
+                ufo_leftright = rng( 1 );
+                set_ufo_sprite( 1 );
+                set_sprite( ASN( ufo_sprite_number ), 1, 19, ( ufo_leftright == 1 ) ? 639 : ( level < 2 ) ? -31 : -15, ufo_y, 0, ( level < 2 ) ? 1 : 0 );
+                asteroid_active[ ufo_sprite_number ] = 3;
+            }
+        }
+
+        if( ( rng( ( level > 3 ) ? 64 : 128 ) == 1 ) && ( get_sprite_attribute( 0, 10, 0 ) == 0 ) && ( ufo_sprite_number != 0xff ) && ( ( level != 0 ) || ( lives == 0 ) ) ) {
+            // START UFO BULLET
+            ufo_x = get_sprite_attribute( ASN( ufo_sprite_number ), 3 );
+            ufo_y = get_sprite_attribute( ASN( ufo_sprite_number ), 4 );
+            ufo_bullet_direction = ( ufo_x > shipx ) ? 6 : 2;
+
+            switch( ufo_bullet_direction ) {
+                case 2:
+                    ufo_bullet_direction += ( ufo_y > shipy ) ? -1 : 1;
+                    break;
+
+                case 6:
+                    ufo_bullet_direction += ( ufo_y > shipy ) ? 1 : -1;
+                    break;
+
+                default:
+                    break;
+            }
+            set_sprite( 0, 10, 1, 48, ufo_x, ufo_y, 0, 0 );
+            set_sprite( 1, 10, 1, 60, ufo_x, ufo_y, 1, 0 );
+        }
+
         if( ( lives > 0 ) && ( resetship == 0) ) {
             // GAME IN ACTION
-            if( ( rng( 256 ) == 1 ) && ( ufo_sprite_number == 0xff ) ) {
-                // START UFO
-                ufo_sprite_number = find_asteroid_space();
-
-                if( ufo_sprite_number != 0xff ) {
-                    // ROOM for UFO
-                    do {
-                        ufo_y = 32 + rng(  416 );
-                    } while( ( ufo_y >= shipy - 64 ) && ( ufo_y <= shipy + 64 ) );
-
-                    ufo_leftright = rng( 1 );
-                    set_ufo_sprite( 1 );
-                    set_sprite( ASN( ufo_sprite_number ), 1, 19, ( ufo_leftright == 1 ) ? 639 : ( level < 2 ) ? -31 : -15, ufo_y, 0, ( level < 2 ) ? 1 : 0 );
-                    asteroid_active[ ufo_sprite_number ] = 3;
-                }
-            }
-
-            if( ( rng( ( level > 3 ) ? 64 : 128 ) == 1 ) && ( ufo_bullet_number == 0xff ) && ( ufo_sprite_number != 0xff ) && ( level != 0 ) ) {
-                // START UFO BULLET
-                ufo_bullet_number = find_asteroid_space();
-
-                if( ufo_bullet_number != 0xff ) {
-                    // ROOM for UFO BULLET
-
-                    set_ufo_bullet_sprite( 1 );
-                    ufo_x = get_sprite_attribute( ASN( ufo_sprite_number ), 3 );
-                    ufo_y = get_sprite_attribute( ASN( ufo_sprite_number ), 4 );
-                    ufo_bullet_direction = ( ufo_x > shipx ) ? 6 : 2;
-
-                    switch( ufo_bullet_direction ) {
-                        case 2:
-                            ufo_bullet_direction += ( ufo_y > shipy ) ? -1 : 1;
-                            break;
-
-                        case 6:
-                            ufo_bullet_direction += ( ufo_y > shipy ) ? 1 : -1;
-                            break;
-
-                        default:
-                            break;
-                    }
-                    set_sprite( ASN( ufo_bullet_number ), 1, 63, ufo_x, ufo_y, 0, 0 );
-                    asteroid_active[ ufo_bullet_number ] = 4;
-                }
-            }
 
             // EVERY 4th CYCLE
             if( ( counter & 3 ) == 0 ) {
@@ -1144,20 +1162,27 @@ void main()
             // SEE IF NEW GAME
             if( ( lives == 0 ) && ( ( *BUTTONS & 8 ) != 0 ) ) {
                 // CLEAR ASTEROIDS
-                for( asteroid_number = 0; asteroid_number < 22; asteroid_number++ ) {
+                for( asteroid_number = 0; asteroid_number < MAXASTEROIDS; asteroid_number++ ) {
                     asteroid_active[asteroid_number] = 0; asteroid_direction[asteroid_number] = 0;
                     set_sprite( ASN(asteroid_number), 0, 0, 0, 0, 0, 0);
                 }
+
+                // CLEAR BULLETS
+                set_sprite( 0, 10, 0, 0, 0, 0, 0, 0);
+                set_sprite( 1, 10, 0, 0, 0, 0, 0, 0);
+                set_sprite( 0, 11, 0, 0, 0, 0, 0, 0);
+                set_sprite( 1, 11, 0, 0, 0, 0, 0, 0);
 
                 gpu_cs(); tpu_cs();
                 counter = 0;
                 lives = 3; score = 0; level = 0; placeAsteroids = 4;
                 shipx = 312; shipy = 232; shipdirection = 0; resetship = 0; bulletdirection = 0;
-                ufo_bullet_number = 0xff; ufo_sprite_number = 0xff; ufo_leftright = 0;
+                ufo_sprite_number = 0xff; ufo_leftright = 0;
                 draw_lives();
                 set_asteroid_sprites();
                 set_ship_sprites(0);
                 set_bullet_sprites();
+                set_ufo_bullet_sprites();
             }
 
             if( ( ( resetship >= 1 ) && ( resetship <= 16 ) ) || ( lives == 0 ) ) {
@@ -1195,6 +1220,7 @@ void main()
 
         // CHECK IF HIT BULLET -> ASTEROID
         check_hit();
+        check_ufo_bullet_hit();
 
         // UPDATE ASTEROIDS
         move_asteroids();
