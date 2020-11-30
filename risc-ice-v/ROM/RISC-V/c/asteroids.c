@@ -47,6 +47,8 @@ char volatile * VECTOR_WRITER_DELTAX = (char volatile *) 0x843c;
 char volatile * VECTOR_WRITER_DELTAY = (char volatile *) 0x8440;
 unsigned char volatile * VECTOR_WRITER_COMMIT = (unsigned char volatile *) 0x8448;
 
+unsigned char volatile * BITMAP_SCROLLWRAP = (unsigned char volatile *) 0x8460;
+
 unsigned char volatile * LOWER_SPRITE_NUMBER = ( unsigned char volatile * ) 0x8300;
 unsigned char volatile * LOWER_SPRITE_ACTIVE = ( unsigned char volatile * ) 0x8304;
 unsigned char volatile * LOWER_SPRITE_TILE = ( unsigned char volatile * ) 0x8308;
@@ -290,6 +292,11 @@ void set_vector_vertex( unsigned char block, unsigned char vertex, unsigned char
     *VECTOR_WRITER_DELTAX = deltax;
     *VECTOR_WRITER_DELTAY = deltay;
     *VECTOR_WRITER_COMMIT = 1;
+}
+
+void bitmap_scrollwrap( unsigned char action )
+{
+    *BITMAP_SCROLLWRAP = action;
 }
 
 void set_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsigned char active, unsigned char colour, short x, short y, unsigned char tile, unsigned char sprite_size)
@@ -1110,8 +1117,13 @@ void main()
 
         if( ( rng( ( level > 3 ) ? 64 : 128 ) == 1 ) && ( get_sprite_attribute( 0, 10, 0 ) == 0 ) && ( ufo_sprite_number != 0xff ) && ( ( level != 0 ) || ( lives == 0 ) ) ) {
             // START UFO BULLET
-            ufo_x = get_sprite_attribute( ASN( ufo_sprite_number ), 3 );
+            ufo_x = get_sprite_attribute( ASN( ufo_sprite_number ), 3 ) + ( ( level < 2 ) ? 16 : 8 );
             ufo_y = get_sprite_attribute( ASN( ufo_sprite_number ), 4 );
+            if( ufo_y < shipy ) {
+                ufo_y -= 10;
+            } else {
+                ufo_y += ( ( level < 2 ) ? 20 : 10 );
+            }
             ufo_bullet_direction = ( ufo_x > shipx ) ? 6 : 2;
 
             switch( ufo_bullet_direction ) {

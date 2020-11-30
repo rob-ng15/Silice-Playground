@@ -17,7 +17,7 @@ algorithm apu(
     input uint16 staticGenerator
 ) <autorun> {
     // 32 step points per waveform
-    brom uint4 waveformtable_1[] = {
+    brom uint4 waveformtable_1[128] = {
         // Square wave
         15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -33,8 +33,9 @@ algorithm apu(
         // Sine wave,
         7, 8, 10, 11, 12, 13, 13, 14, 15, 14, 13, 13, 12, 11, 10, 8,
         7, 6, 4, 3, 2, 1, 1, 0, 0, 0, 1, 1, 2, 3, 4, 6
+
     };
-    brom uint4 waveformtable_2[] = {
+    brom uint4 waveformtable_2[128] = {
         // Square wave
         15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -50,6 +51,7 @@ algorithm apu(
         // Sine wave,
         7, 8, 10, 11, 12, 13, 13, 14, 15, 14, 13, 13, 12, 11, 10, 8,
         7, 6, 4, 3, 2, 1, 1, 0, 0, 0, 1, 1, 2, 3, 4, 6
+
     };
 
     // Calculated as 25MHz / note frequency / 32 to give 32 step points per note

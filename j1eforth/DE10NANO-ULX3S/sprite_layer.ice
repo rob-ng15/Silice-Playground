@@ -59,12 +59,12 @@ algorithm sprite_layer(
 ) <autorun> {
     // Storage for the sprites
     // Stored as registers as needed instantly
-    uint1 sprite_active[13] = uninitialised;
-    uint1 sprite_double[13] = uninitialised;
-    int11 sprite_x[13] = uninitialised;
-    int11 sprite_y[13] = uninitialised;
-    uint6 sprite_colour[13] = uninitialised;
-    uint3 sprite_tile_number[13] = uninitialised;
+    uint1   sprite_active[13] = uninitialised;
+    uint1   sprite_double[13] = uninitialised;
+    int11   sprite_x[13] = uninitialised;
+    int11   sprite_y[13] = uninitialised;
+    uint6   sprite_colour[13] = uninitialised;
+    uint3   sprite_tile_number[13] = uninitialised;
 
     $$for i=0,12 do
         // Sprite Tiles
@@ -72,11 +72,9 @@ algorithm sprite_layer(
 
         // Calculate if sprite is visible
         uint6 spritesize_$i$ := sprite_double[$i$] ? 32 : 16;
-        uint4 xinsprite_$i$ := 15  - ( ( pix_x - sprite_x[$i$] ) >> sprite_double[$i$] );
-        uint4 yinsprite_$i$ := ( pix_y - sprite_y[$i$] ) >> sprite_double[$i$];
-        uint1 xinrange_$i$ := ( pix_x >= sprite_x[$i$] ) && ( pix_x < ( sprite_x[$i$] + spritesize_$i$ ) );
-        uint1 yinrange_$i$ := ( pix_y >= sprite_y[$i$] ) && ( pix_y < ( sprite_y[$i$] + spritesize_$i$ ) );
-        uint1 pix_visible_$i$ := sprite_active[$i$] && xinrange_$i$ && yinrange_$i$ && ( tiles_$i$.rdata0[ xinsprite_$i$, 1 ] == 1 );
+        uint1 xinrange_$i$ := ( __signed({1b0, pix_x}) >= __signed(sprite_x[$i$]) ) && ( __signed({1b0, pix_x}) < __signed( sprite_x[$i$] + spritesize_$i$ ) );
+        uint1 yinrange_$i$ := ( __signed({1b0, pix_y}) >= __signed(sprite_y[$i$]) ) && ( __signed({1b0, pix_y}) < __signed( sprite_y[$i$] + spritesize_$i$ ) );
+        uint1 pix_visible_$i$ := sprite_active[$i$] && xinrange_$i$ && yinrange_$i$ && ( tiles_$i$.rdata0[ ( 15  - ( ( __signed({1b0, pix_x}) - sprite_x[$i$] ) >> sprite_double[$i$] ) ), 1 ] );
 
         // Collision detection flag
         uint16      detect_collision_$i$ = uninitialised;
@@ -86,9 +84,15 @@ algorithm sprite_layer(
     int11   deltax := { {9{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
     int11   deltay := { {9{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
 
+    // Sprite update helpers
+    int11   sprite_offscreen_negative ::= sprite_double[ sprite_set_number ] ? -32 : -16;
+    int11   sprite_to_negative ::= sprite_double[ sprite_set_number ] ? -31 : -15;
+    uint1   sprite_offscreen_x ::= ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_x[ sprite_set_number ] ) > __signed(640) );
+    uint1   sprite_offscreen_y ::= ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_y[ sprite_set_number ] ) > __signed(480) );
+
     // Set read and write address for the tiles
     $$for i=0,12 do
-        tiles_$i$.addr0 := sprite_tile_number[$i$] * 16 + yinsprite_$i$;
+        tiles_$i$.addr0 := sprite_tile_number[$i$] * 16 + ( ( __signed({1b0, pix_y}) - sprite_y[$i$] ) >> sprite_double[$i$] );
         tiles_$i$.wenable0 := 0;
         tiles_$i$.wenable1 := 1;
     $$end
@@ -104,8 +108,7 @@ algorithm sprite_layer(
     sprite_read_y := sprite_y[ sprite_set_number ];
     sprite_read_tile := sprite_tile_number[ sprite_set_number ];
 
-    // Write to the sprite_layer
-    // Set tile bitmaps, x coordinate, y coordinate, colour, tile number, visibility, double
+    // SET TILES + ATTRIBUTES
     always {
         // WRITE BITMAP TO SPRITE TILE
         if( sprite_writer_active ) {
@@ -119,6 +122,7 @@ algorithm sprite_layer(
             }
         }
 
+        // SET ATTRIBUTES + PERFORM UPDATE
         switch( sprite_layer_write ) {
             case 1: { sprite_active[ sprite_set_number ] = sprite_set_active; }
             case 2: { sprite_tile_number[ sprite_set_number ] = sprite_set_tile; }
@@ -128,26 +132,29 @@ algorithm sprite_layer(
             case 6: { sprite_double[ sprite_set_number ] = sprite_set_double; }
             case 10: {
                 // Perform sprite update
-                sprite_colour[ sprite_set_number ] = ( spriteupdate( sprite_update ).colour_act ) ? spriteupdate( sprite_update ).colour : sprite_colour[ sprite_set_number ];
-                sprite_tile_number[ sprite_set_number ] = ( spriteupdate( sprite_update ).tile_act ) ? sprite_tile_number[ sprite_set_number ] + 1 : sprite_tile_number[ sprite_set_number ];
+                if( spriteupdate( sprite_update ).colour_act ) {
+                    sprite_colour[ sprite_set_number ] = spriteupdate( sprite_update ).colour;
+                }
 
-                sprite_x[ sprite_set_number ] = (__signed( sprite_x[ sprite_set_number ] ) < __signed(-16)) ? 640 :
-                                                ( (__signed( sprite_x[ sprite_set_number ] ) > __signed(640)) ? -15 : sprite_x[ sprite_set_number ] + deltax );
-                sprite_y[ sprite_set_number ] = (__signed( sprite_y[ sprite_set_number ] ) < __signed(-16)) ? 480 :
-                                                ( (__signed( sprite_y[ sprite_set_number ] ) > __signed(480)) ? -15 : sprite_y[ sprite_set_number ] + deltay );
+                if( spriteupdate( sprite_update ).tile_act ) {
+                    sprite_tile_number[ sprite_set_number ] = sprite_tile_number[ sprite_set_number ] + 1;
+                }
 
-                sprite_active[ sprite_set_number ] = ( ( ( (__signed( sprite_x[ sprite_set_number ] ) < __signed(-16)) ||
-                                                        (__signed( sprite_x[ sprite_set_number ] ) > __signed(640)) ) && ( spriteupdate( sprite_update ).x_act ) ) ||
-                                                        ( ( (__signed( sprite_y[ sprite_set_number ] ) < __signed(-16)) ||
-                                                        (__signed( sprite_y[ sprite_set_number ] ) > __signed(480)) ) && spriteupdate( sprite_update ).y_act ) ) ?
-                                                        0 : sprite_active[ sprite_set_number ];
+                if( spriteupdate( sprite_update ).x_act || spriteupdate( sprite_update ).y_act) {
+                    sprite_active[ sprite_set_number ] = ( sprite_offscreen_x || sprite_offscreen_y ) ? 0 : sprite_active[ sprite_set_number ];
+                }
+
+                sprite_x[ sprite_set_number ] = sprite_offscreen_x ? ( ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ? 640 : sprite_to_negative ) :
+                                                sprite_x[ sprite_set_number ] + deltax;
+
+                sprite_y[ sprite_set_number ] = sprite_offscreen_y ? ( ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ? 480 : sprite_to_negative ) :
+                                                sprite_y[ sprite_set_number ] + deltay;
             }
         }
     }
 
-    // Render the sprite layer
+    // RENDER + COLLISION DETECTION
     while(1) {
-
         if( pix_vblank ) {
             // RESET collision detection
             $$for i=0,12 do
