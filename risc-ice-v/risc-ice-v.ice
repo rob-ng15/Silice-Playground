@@ -203,7 +203,7 @@ algorithm main(
     output! uint4   audio_l,
     output! uint4   audio_r
 
-) {
+) <@clock_50mhz> {
     // VGA/HDMI Display
     uint1   video_reset = uninitialized;
     uint1   video_clock = uninitialized;
@@ -290,7 +290,7 @@ algorithm main(
     uint32  storeAddress := { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
 
     // Setup Memory Mapped I/O
-    memmap_io IO_Map (
+    memmap_io IO_Map <@clock_50mhz> (
         leds :> leds,
         btns <: btns,
 
@@ -313,7 +313,8 @@ algorithm main(
 
         // CLOCKS
         clock_50mhz <: clock_50mhz,
-        video_clock <:video_clock,
+        clock_25mhz <: clock,
+        video_clock <: video_clock,
         video_reset <: video_reset
     );
 
@@ -580,7 +581,7 @@ algorithm main(
                                         result = { 16b0, ram.rdata };
                                         ram.addr = loadAddress[1,15] + 1;
                                         ++:
-                                        result = { ram.rdata, result[0,16] };
+                                        result = { ram.rdata, __unsigned(result[0,16]) };
                                     }
                                 }
                             }
@@ -663,11 +664,13 @@ algorithm main(
                             // I ALU OPERATIONS
                             switch( function3 ) {
                                 case 3b000: {
-                                    if( ( opCode[5,1] == 1 ) && ( function7[5,1] == 1 ) ) {
-                                        result =sourceReg1 - sourceReg2;
-                                    } else {
-                                        result = sourceReg1 + ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ); }
-                                    }
+                                    result = sourceReg1 + ( ( opCode[5,1] == 1 ) ? ( ( function7[5,1] == 1 ) ? -sourceReg2 : sourceReg2 ): immediateValue );
+                                    //if( ( opCode[5,1] == 1 ) && ( function7[5,1] == 1 ) ) {
+                                    //    result = sourceReg1 - sourceReg2;
+                                    //} else {
+                                    //    result = sourceReg1 + ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue );
+                                    //}
+                                }
                                 case 3b001: { result = __unsigned( sourceReg1 ) << ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ); }
                                 case 3b010: { result = __signed( sourceReg1 ) < ( ( opCode[5,1] == 1 ) ? __signed(sourceReg2) : __signed(immediateValue) ) ? 32b1 : 32b0; }
                                 case 3b011: {
@@ -695,7 +698,7 @@ algorithm main(
                                             result = __signed(sourceReg1) >>> ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
                                         }
                                         case 1b1: {
-                                            result = sourceReg1 >> ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
+                                            result = __unsigned(sourceReg1) >> ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
                                         }
                                     }
                                 }

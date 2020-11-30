@@ -1119,7 +1119,7 @@ void main()
             // START UFO BULLET
             ufo_x = get_sprite_attribute( ASN( ufo_sprite_number ), 3 ) + ( ( level < 2 ) ? 16 : 8 );
             ufo_y = get_sprite_attribute( ASN( ufo_sprite_number ), 4 );
-            if( ufo_y < shipy ) {
+            if( ufo_y > shipy ) {
                 ufo_y -= 10;
             } else {
                 ufo_y += ( ( level < 2 ) ? 20 : 10 );

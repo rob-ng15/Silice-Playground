@@ -66,7 +66,7 @@ algorithm vectors(
     while(1) {
         if( vertices_writer_write ) {
             vertex.addr1 = vertices_writer_block * 16 + vertices_writer_vertex;
-            vertex.wdata1 = { vertices_writer_active, vertices_writer_xdelta, vertices_writer_ydelta };
+            vertex.wdata1 = { vertices_writer_active, __unsigned(vertices_writer_xdelta), __unsigned(vertices_writer_ydelta) };
         }
 
         if( draw_vector ) {

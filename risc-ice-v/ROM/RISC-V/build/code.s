@@ -3266,7 +3266,7 @@ main:
 	lh	a5,%lo(shipy)(a5)
 	slli	a4,a0,16
 	srai	a4,a4,16
-	ble	a5,a4,.L342
+	bge	a5,a4,.L342
 	addi	a0,a0,-10
 	slli	s0,a0,16
 	srai	s0,s0,16

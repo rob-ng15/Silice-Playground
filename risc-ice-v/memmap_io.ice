@@ -57,6 +57,7 @@ algorithm memmap_io (
 
     // CLOCKS
     input   uint1   clock_50mhz,
+    input   uint1   clock_25mhz,
     input   uint1   video_clock,
     input   uint1   video_reset,
 
@@ -69,30 +70,30 @@ algorithm memmap_io (
 ) <autorun> {
     // 1hz timers (p1hz used for systemClock, timer1hz for user purposes)
     uint16 systemClock = uninitialized;
-    pulse1hz p1hz <@clock_50mhz> (
+    pulse1hz p1hz <@clock_25mhz> (
         counter1hz :> systemClock,
     );
-    pulse1hz timer1hz <@clock_50mhz> ( );
+    pulse1hz timer1hz <@clock_25mhz> ( );
 
     // 1khz timers (sleepTimer used for sleep command, timer1khz for user purposes)
-    pulse1khz sleepTimer <@clock_50mhz> ( );
-    pulse1khz timer1khz <@clock_50mhz> ( );
+    pulse1khz sleepTimer <@clock_25mhz> ( );
+    pulse1khz timer1khz <@clock_25mhz> ( );
 
     // RNG random number generator
     uint16 staticGenerator = 0;
-    random rng <@clock_50mhz> (
+    random rng <@clock_25mhz> (
         g_noise_out :> staticGenerator,
     );
 
     // UART tx and rx
     // UART written in Silice by https://github.com/sylefeb/Silice
     uart_out uo;
-    uart_sender usend (
+    uart_sender usend <@clock_25mhz> (
         io      <:> uo,
         uart_tx :>  uart_tx
     );
     uart_in ui;
-    uart_receiver urecv (
+    uart_receiver urecv <@clock_25mhz> (
         io      <:> ui,
         uart_rx <:  uart_rx
     );
@@ -277,11 +278,11 @@ algorithm memmap_io (
 
     // Left and Right audio channels
     // Sync'd with video_clock
-    apu apu_processor_L <@clock_50mhz> (
+    apu apu_processor_L <@clock_25mhz> (
         staticGenerator <: staticGenerator,
         audio_output :> audio_l
     );
-    apu apu_processor_R <@clock_50mhz> (
+    apu apu_processor_R <@clock_25mhz> (
         staticGenerator <: staticGenerator,
         audio_output :> audio_r
     );
@@ -324,32 +325,6 @@ algorithm memmap_io (
 
     // Setup the UART
     uo.data_in_ready := 0; // maintain low
-
-    // RESET Timer Co-Processor Controls
-    p1hz.resetCounter := 0;
-    sleepTimer.resetCounter := 0;
-    timer1hz.resetCounter := 0;
-    timer1khz.resetCounter := 0;
-    rng.resetRandom := 0;
-
-    // RESET Co-Processor Controls
-    background_generator.background_write := 0;
-    tile_map.tile_writer_write := 0;
-    tile_map.tm_write := 0;
-    tile_map.tm_scrollwrap := 0;
-    lower_sprites.sprite_layer_write := 0;
-    lower_sprites.sprite_writer_active := 0;
-    bitmap_window.bitmap_write_offset := 0;
-    gpu_processor.gpu_write := 0;
-    gpu_processor.draw_vector := 0;
-    gpu_processor.blit1_writer_active := 0;
-    gpu_processor.vertices_writer_write := 0;
-    upper_sprites.sprite_layer_write := 0;
-    upper_sprites.sprite_writer_active := 0;
-    character_map_window.tpu_write := 0;
-    terminal_window.terminal_write := 0;
-    apu_processor_L.apu_write := 0;
-    apu_processor_R.apu_write := 0;
 
     // UART input and output buffering
     always {
@@ -465,6 +440,8 @@ algorithm memmap_io (
 
         // WRITE IO Memory
         if( memoryWrite ) {
+            coProReset = 3;
+
             switch( memoryAddress ) {
                 // UART, LEDS
                 case 16h8000: { uartOutBuffer.wdata1 = writeData[0,8]; newuartOutBufferTop = uartOutBufferTop + 1; }
@@ -578,6 +555,40 @@ algorithm memmap_io (
                 case 16h8930: { sleepTimer.resetCount = writeData; sleepTimer.resetCounter = 1; }
 
             }
+        } else { // WRITE IO Memory
+            coProReset = ( coProReset == 0 ) ? 0 : coProReset - 1;
         }
+
+        // RESET Co-Processor Controls
+        // Main processor and memory map runs at 50MHz, display co-processors at 25MHz
+        // Delay to reset co-processors therefore required
+        if( coProReset == 1 ) {
+            // RESET Timer Co-Processor Controls
+            p1hz.resetCounter = 0;
+            sleepTimer.resetCounter = 0;
+            timer1hz.resetCounter = 0;
+            timer1khz.resetCounter = 0;
+            rng.resetRandom = 0;
+
+            // RESET Co-Processor Controls
+            background_generator.background_write = 0;
+            tile_map.tile_writer_write = 0;
+            tile_map.tm_write = 0;
+            tile_map.tm_scrollwrap = 0;
+            lower_sprites.sprite_layer_write = 0;
+            lower_sprites.sprite_writer_active = 0;
+            bitmap_window.bitmap_write_offset = 0;
+            gpu_processor.gpu_write = 0;
+            gpu_processor.draw_vector = 0;
+            gpu_processor.blit1_writer_active = 0;
+            gpu_processor.vertices_writer_write = 0;
+            upper_sprites.sprite_layer_write = 0;
+            upper_sprites.sprite_writer_active = 0;
+            character_map_window.tpu_write = 0;
+            terminal_window.terminal_write = 0;
+            apu_processor_L.apu_write = 0;
+            apu_processor_R.apu_write = 0;
+        }
+
     } // while(1)
 }
