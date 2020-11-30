@@ -1,10 +1,10 @@
 	.file	"asteroids.c"
 	.option nopic
-	.attribute arch, "rv32i2p0_m2p0"
+	.attribute arch, "rv32i2p0_m2p0_c2p0"
 	.attribute unaligned_access, 0
 	.attribute stack_align, 16
 	.text
-	.align	2
+	.align	1
 	.globl	inputcharacter
 	.type	inputcharacter, @function
 inputcharacter:
@@ -19,7 +19,7 @@ inputcharacter:
 	lbu	a0,0(a5)
 	ret
 	.size	inputcharacter, .-inputcharacter
-	.align	2
+	.align	1
 	.globl	rng
 	.type	rng, @function
 rng:
@@ -60,7 +60,7 @@ rng:
 .L6:
 	ret
 	.size	rng, .-rng
-	.align	2
+	.align	1
 	.globl	set_timer1khz
 	.type	set_timer1khz, @function
 set_timer1khz:
@@ -71,7 +71,7 @@ set_timer1khz:
 	sh	a0,0(a5)
 	ret
 	.size	set_timer1khz, .-set_timer1khz
-	.align	2
+	.align	1
 	.globl	wait_timer1khz
 	.type	wait_timer1khz, @function
 wait_timer1khz:
@@ -84,7 +84,7 @@ wait_timer1khz:
 	bne	a5,zero,.L18
 	ret
 	.size	wait_timer1khz, .-wait_timer1khz
-	.align	2
+	.align	1
 	.globl	beep
 	.type	beep, @function
 beep:
@@ -120,7 +120,7 @@ beep:
 .L20:
 	ret
 	.size	beep, .-beep
-	.align	2
+	.align	1
 	.globl	set_background
 	.type	set_background, @function
 set_background:
@@ -135,7 +135,7 @@ set_background:
 	sb	a2,0(a5)
 	ret
 	.size	set_background, .-set_background
-	.align	2
+	.align	1
 	.globl	terminal_showhide
 	.type	terminal_showhide, @function
 terminal_showhide:
@@ -144,7 +144,7 @@ terminal_showhide:
 	sb	a0,0(a5)
 	ret
 	.size	terminal_showhide, .-terminal_showhide
-	.align	2
+	.align	1
 	.globl	await_vblank
 	.type	await_vblank, @function
 await_vblank:
@@ -156,7 +156,7 @@ await_vblank:
 	beq	a5,zero,.L26
 	ret
 	.size	await_vblank, .-await_vblank
-	.align	2
+	.align	1
 	.globl	set_tilemap_tile
 	.type	set_tilemap_tile, @function
 set_tilemap_tile:
@@ -181,7 +181,7 @@ set_tilemap_tile:
 	sb	a4,0(a5)
 	ret
 	.size	set_tilemap_tile, .-set_tilemap_tile
-	.align	2
+	.align	1
 	.globl	set_tilemap_line
 	.type	set_tilemap_line, @function
 set_tilemap_line:
@@ -196,7 +196,7 @@ set_tilemap_line:
 	sh	a2,0(a5)
 	ret
 	.size	set_tilemap_line, .-set_tilemap_line
-	.align	2
+	.align	1
 	.globl	tilemap_scrollwrapclear
 	.type	tilemap_scrollwrapclear, @function
 tilemap_scrollwrapclear:
@@ -211,7 +211,7 @@ tilemap_scrollwrapclear:
 	sb	a0,0(a5)
 	ret
 	.size	tilemap_scrollwrapclear, .-tilemap_scrollwrapclear
-	.align	2
+	.align	1
 	.globl	wait_gpu
 	.type	wait_gpu, @function
 wait_gpu:
@@ -223,7 +223,7 @@ wait_gpu:
 	bne	a5,zero,.L34
 	ret
 	.size	wait_gpu, .-wait_gpu
-	.align	2
+	.align	1
 	.globl	gpu_pixel
 	.type	gpu_pixel, @function
 gpu_pixel:
@@ -256,7 +256,7 @@ gpu_pixel:
 	addi	sp,sp,16
 	jr	ra
 	.size	gpu_pixel, .-gpu_pixel
-	.align	2
+	.align	1
 	.globl	gpu_rectangle
 	.type	gpu_rectangle, @function
 gpu_rectangle:
@@ -301,7 +301,7 @@ gpu_rectangle:
 	addi	sp,sp,32
 	jr	ra
 	.size	gpu_rectangle, .-gpu_rectangle
-	.align	2
+	.align	1
 	.globl	gpu_cs
 	.type	gpu_cs, @function
 gpu_cs:
@@ -317,7 +317,7 @@ gpu_cs:
 	addi	sp,sp,16
 	jr	ra
 	.size	gpu_cs, .-gpu_cs
-	.align	2
+	.align	1
 	.globl	gpu_line
 	.type	gpu_line, @function
 gpu_line:
@@ -362,7 +362,7 @@ gpu_line:
 	addi	sp,sp,32
 	jr	ra
 	.size	gpu_line, .-gpu_line
-	.align	2
+	.align	1
 	.globl	gpu_circle
 	.type	gpu_circle, @function
 gpu_circle:
@@ -401,7 +401,7 @@ gpu_circle:
 	addi	sp,sp,32
 	jr	ra
 	.size	gpu_circle, .-gpu_circle
-	.align	2
+	.align	1
 	.globl	gpu_fillcircle
 	.type	gpu_fillcircle, @function
 gpu_fillcircle:
@@ -440,7 +440,7 @@ gpu_fillcircle:
 	addi	sp,sp,32
 	jr	ra
 	.size	gpu_fillcircle, .-gpu_fillcircle
-	.align	2
+	.align	1
 	.globl	gpu_triangle
 	.type	gpu_triangle, @function
 gpu_triangle:
@@ -497,7 +497,7 @@ gpu_triangle:
 	addi	sp,sp,32
 	jr	ra
 	.size	gpu_triangle, .-gpu_triangle
-	.align	2
+	.align	1
 	.globl	draw_vector_block
 	.type	draw_vector_block, @function
 draw_vector_block:
@@ -525,7 +525,7 @@ draw_vector_block:
 	sb	a4,0(a5)
 	ret
 	.size	draw_vector_block, .-draw_vector_block
-	.align	2
+	.align	1
 	.globl	set_vector_vertex
 	.type	set_vector_vertex, @function
 set_vector_vertex:
@@ -550,7 +550,7 @@ set_vector_vertex:
 	sb	a4,0(a5)
 	ret
 	.size	set_vector_vertex, .-set_vector_vertex
-	.align	2
+	.align	1
 	.globl	set_sprite
 	.type	set_sprite, @function
 set_sprite:
@@ -605,7 +605,7 @@ set_sprite:
 	sb	a7,0(a5)
 	ret
 	.size	set_sprite, .-set_sprite
-	.align	2
+	.align	1
 	.globl	get_sprite_collision
 	.type	get_sprite_collision, @function
 get_sprite_collision:
@@ -628,7 +628,7 @@ get_sprite_collision:
 	srli	a0,a0,16
 	ret
 	.size	get_sprite_collision, .-get_sprite_collision
-	.align	2
+	.align	1
 	.globl	get_sprite_attribute
 	.type	get_sprite_attribute, @function
 get_sprite_attribute:
@@ -757,7 +757,7 @@ get_sprite_attribute:
 .L63:
 	ret
 	.size	get_sprite_attribute, .-get_sprite_attribute
-	.align	2
+	.align	1
 	.globl	update_sprite
 	.type	update_sprite, @function
 update_sprite:
@@ -782,7 +782,7 @@ update_sprite:
 	sh	a2,0(a5)
 	ret
 	.size	update_sprite, .-update_sprite
-	.align	2
+	.align	1
 	.globl	set_sprite_line
 	.type	set_sprite_line, @function
 set_sprite_line:
@@ -813,7 +813,7 @@ set_sprite_line:
 	sh	a3,0(a5)
 	ret
 	.size	set_sprite_line, .-set_sprite_line
-	.align	2
+	.align	1
 	.globl	tpu_cs
 	.type	tpu_cs, @function
 tpu_cs:
@@ -827,7 +827,7 @@ tpu_cs:
 	sb	a5,0(a4)
 	ret
 	.size	tpu_cs, .-tpu_cs
-	.align	2
+	.align	1
 	.globl	tpu_outputstring
 	.type	tpu_outputstring, @function
 tpu_outputstring:
@@ -868,7 +868,7 @@ tpu_outputstring:
 .L90:
 	ret
 	.size	tpu_outputstring, .-tpu_outputstring
-	.align	2
+	.align	1
 	.globl	set_asteroid_sprites
 	.type	set_asteroid_sprites, @function
 set_asteroid_sprites:
@@ -930,7 +930,7 @@ set_asteroid_sprites:
 	addi	sp,sp,48
 	jr	ra
 	.size	set_asteroid_sprites, .-set_asteroid_sprites
-	.align	2
+	.align	1
 	.globl	set_ship_sprites
 	.type	set_ship_sprites, @function
 set_ship_sprites:
@@ -968,7 +968,7 @@ set_ship_sprites:
 	addi	sp,sp,16
 	jr	ra
 	.size	set_ship_sprites, .-set_ship_sprites
-	.align	2
+	.align	1
 	.globl	set_ship_vector
 	.type	set_ship_vector, @function
 set_ship_vector:
@@ -1014,7 +1014,7 @@ set_ship_vector:
 	addi	sp,sp,16
 	jr	ra
 	.size	set_ship_vector, .-set_ship_vector
-	.align	2
+	.align	1
 	.globl	set_bullet_sprites
 	.type	set_bullet_sprites, @function
 set_bullet_sprites:
@@ -1049,7 +1049,7 @@ set_bullet_sprites:
 	addi	sp,sp,16
 	jr	ra
 	.size	set_bullet_sprites, .-set_bullet_sprites
-	.align	2
+	.align	1
 	.globl	set_ufo_sprite
 	.type	set_ufo_sprite, @function
 set_ufo_sprite:
@@ -1105,7 +1105,7 @@ set_ufo_sprite:
 	addi	sp,sp,32
 	jr	ra
 	.size	set_ufo_sprite, .-set_ufo_sprite
-	.align	2
+	.align	1
 	.globl	set_ufo_bullet_sprites
 	.type	set_ufo_bullet_sprites, @function
 set_ufo_bullet_sprites:
@@ -1140,7 +1140,7 @@ set_ufo_bullet_sprites:
 	addi	sp,sp,16
 	jr	ra
 	.size	set_ufo_bullet_sprites, .-set_ufo_bullet_sprites
-	.align	2
+	.align	1
 	.globl	set_tilemap
 	.type	set_tilemap, @function
 set_tilemap:
@@ -1308,7 +1308,7 @@ set_tilemap:
 	addi	sp,sp,32
 	jr	ra
 	.size	set_tilemap, .-set_tilemap
-	.align	2
+	.align	1
 	.globl	risc_ice_v_logo
 	.type	risc_ice_v_logo, @function
 risc_ice_v_logo:
@@ -1391,7 +1391,7 @@ risc_ice_v_logo:
 	addi	sp,sp,16
 	jr	ra
 	.size	risc_ice_v_logo, .-risc_ice_v_logo
-	.align	2
+	.align	1
 	.globl	setup_game
 	.type	setup_game, @function
 setup_game:
@@ -1499,7 +1499,7 @@ setup_game:
 	addi	sp,sp,32
 	jr	ra
 	.size	setup_game, .-setup_game
-	.align	2
+	.align	1
 	.globl	find_asteroid_space
 	.type	find_asteroid_space, @function
 find_asteroid_space:
@@ -1522,7 +1522,7 @@ find_asteroid_space:
 .L151:
 	ret
 	.size	find_asteroid_space, .-find_asteroid_space
-	.align	2
+	.align	1
 	.globl	move_asteroids
 	.type	move_asteroids, @function
 move_asteroids:
@@ -1662,7 +1662,7 @@ move_asteroids:
 	addi	sp,sp,64
 	jr	ra
 	.size	move_asteroids, .-move_asteroids
-	.align	2
+	.align	1
 	.globl	count_asteroids
 	.type	count_asteroids, @function
 count_asteroids:
@@ -1689,7 +1689,7 @@ count_asteroids:
 	srli	a0,a0,16
 	ret
 	.size	count_asteroids, .-count_asteroids
-	.align	2
+	.align	1
 	.globl	draw_ship
 	.type	draw_ship, @function
 draw_ship:
@@ -1729,7 +1729,7 @@ draw_ship:
 	addi	sp,sp,32
 	jr	ra
 	.size	draw_ship, .-draw_ship
-	.align	2
+	.align	1
 	.globl	move_ship
 	.type	move_ship, @function
 move_ship:
@@ -1905,7 +1905,7 @@ move_ship:
 .LC0:
 	.string	"Score 000000"
 	.text
-	.align	2
+	.align	1
 	.globl	draw_score
 	.type	draw_score, @function
 draw_score:
@@ -1948,7 +1948,7 @@ draw_score:
 	addi	sp,sp,32
 	jr	ra
 	.size	draw_score, .-draw_score
-	.align	2
+	.align	1
 	.globl	draw_lives
 	.type	draw_lives, @function
 draw_lives:
@@ -1986,7 +1986,7 @@ draw_lives:
 	addi	sp,sp,16
 	jr	ra
 	.size	draw_lives, .-draw_lives
-	.align	2
+	.align	1
 	.globl	fire_bullet
 	.type	fire_bullet, @function
 fire_bullet:
@@ -2137,7 +2137,7 @@ fire_bullet:
 	srai	s1,s1,16
 	j	.L227
 	.size	fire_bullet, .-fire_bullet
-	.align	2
+	.align	1
 	.globl	update_bullet
 	.type	update_bullet, @function
 update_bullet:
@@ -2197,7 +2197,7 @@ update_bullet:
 .LC4:
 	.string	"          Written in Silice by @sylefeb         "
 	.text
-	.align	2
+	.align	1
 	.globl	beepboop
 	.type	beepboop, @function
 beepboop:
@@ -2304,7 +2304,7 @@ beepboop:
 	call	tpu_outputstring
 	j	.L248
 	.size	beepboop, .-beepboop
-	.align	2
+	.align	1
 	.globl	spawn_asteroid
 	.type	spawn_asteroid, @function
 spawn_asteroid:
@@ -2388,7 +2388,7 @@ spawn_asteroid:
 	addi	sp,sp,48
 	jr	ra
 	.size	spawn_asteroid, .-spawn_asteroid
-	.align	2
+	.align	1
 	.globl	check_ufo_bullet_hit
 	.type	check_ufo_bullet_hit, @function
 check_ufo_bullet_hit:
@@ -2570,7 +2570,7 @@ check_ufo_bullet_hit:
 	bgt	s8,zero,.L273
 	j	.L269
 	.size	check_ufo_bullet_hit, .-check_ufo_bullet_hit
-	.align	2
+	.align	1
 	.globl	check_hit
 	.type	check_hit, @function
 check_hit:
@@ -2842,7 +2842,7 @@ check_hit:
 	sb	a4,0(a5)
 	j	.L281
 	.size	check_hit, .-check_hit
-	.align	2
+	.align	1
 	.globl	check_crash
 	.type	check_crash, @function
 check_crash:
@@ -2905,7 +2905,7 @@ check_crash:
 	addi	sp,sp,16
 	jr	ra
 	.size	check_crash, .-check_crash
-	.align	2
+	.align	1
 	.globl	main
 	.type	main, @function
 main:

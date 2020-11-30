@@ -139,7 +139,7 @@ algorithm memmap_io (
     int11   bitmap_x_write = uninitialized;
     int11   bitmap_y_write = uninitialized;
     uint7   bitmap_colour_write = uninitialized;
-    uint2   bitmap_write = uninitialized;
+    uint1   bitmap_write = uninitialized;
 
     bitmap bitmap_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
