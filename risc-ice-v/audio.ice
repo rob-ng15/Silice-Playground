@@ -59,33 +59,33 @@ algorithm apu(
     // Calculated as 25MHz / note frequency / 32 to give 32 step points per note
     brom uint16 frequencytable_1[128] = {
         0,
-        23889, 22548, 21283, 20088, 18961, 17897, 16892, 15944, 15049, 14205, 13407, 12655,     // 1 = C 2 or Deep C
-        11945, 11274, 10641, 10044, 9480, 8948, 8446, 7972, 7525, 7102, 6704, 6327,             // 13 = C 3
-        5972, 5637, 5321, 5022, 4740, 4474, 4223, 3986, 3762, 3551, 3352, 3164,                 // 25 = C 4 or Middle C
-        2896, 2819, 2660, 2511, 2370, 2237, 2112, 1993, 1881, 1776, 1676, 1582,                 // 37 = C 5 or Tenor C
-        1493, 1409, 1330, 1256, 1185, 1119, 1056, 997, 941, 888, 838, 791,                      // 49 = C 6 or Soprano C
-        747, 705, 665, pad(1024)                                                                // 61 = C 7 or Double High C
+        47778, 45097, 42566, 40177, 37922, 35793, 33784, 31888, 30098, 28409, 26815, 25310,     // 1 = C 2 or Deep C
+        23889, 22548, 21283, 20088, 18961, 17897, 16892, 15944, 15049, 14205, 13407, 12655,     // 13 = C 3
+        11945, 11274, 10641, 10044, 9480, 8948, 8446, 7972, 7525, 7102, 6704, 6327,             // 25 = C 4 or Middle C
+        5972, 5637, 5321, 5022, 4740, 4474, 4223, 3986, 3762, 3551, 3352, 3164,                 // 37 = C 5 or Tenor C
+        2896, 2819, 2660, 2511, 2370, 2237, 2112, 1993, 1881, 1776, 1676, 1582,                 // 49 = C 6 or Soprano C
+        1493, 1409, 1330, pad(1024)                                                             // 61 = C 7 or Double High C
     };
     brom uint16 frequencytable_2[128] = {
         0,
-        23889, 22548, 21283, 20088, 18961, 17897, 16892, 15944, 15049, 14205, 13407, 12655,     // 1 = C 2 or Deep C
-        11945, 11274, 10641, 10044, 9480, 8948, 8446, 7972, 7525, 7102, 6704, 6327,             // 13 = C 3
-        5972, 5637, 5321, 5022, 4740, 4474, 4223, 3986, 3762, 3551, 3352, 3164,                 // 25 = C 4 or Middle C
-        2896, 2819, 2660, 2511, 2370, 2237, 2112, 1993, 1881, 1776, 1676, 1582,                 // 37 = C 5 or Tenor C
-        1493, 1409, 1330, 1256, 1185, 1119, 1056, 997, 941, 888, 838, 791,                      // 49 = C 6 or Soprano C
-        747, 705, 665, pad(1024)                                                                // 61 = C 7 or Double High C
+        47778, 45097, 42566, 40177, 37922, 35793, 33784, 31888, 30098, 28409, 26815, 25310,     // 1 = C 2 or Deep C
+        23889, 22548, 21283, 20088, 18961, 17897, 16892, 15944, 15049, 14205, 13407, 12655,     // 13 = C 3
+        11945, 11274, 10641, 10044, 9480, 8948, 8446, 7972, 7525, 7102, 6704, 6327,             // 25 = C 4 or Middle C
+        5972, 5637, 5321, 5022, 4740, 4474, 4223, 3986, 3762, 3551, 3352, 3164,                 // 37 = C 5 or Tenor C
+        2896, 2819, 2660, 2511, 2370, 2237, 2112, 1993, 1881, 1776, 1676, 1582,                 // 49 = C 6 or Soprano C
+        1493, 1409, 1330, pad(1024)                                                             // 61 = C 7 or Double High C
     };
 
     uint4   waveform_1 = uninitialized;
     uint7   note_1 = uninitialized;
     uint5   point_1 = uninitialized;
-    uint16  counter25mhz_1 = uninitialized;
+    uint16  counter50mhz_1 = uninitialized;
     uint16  counter1khz_1 = uninitialized;
     uint16  milliseconds_1 = uninitialized;
     uint4   waveform_2 = uninitialized;
     uint7   note_2 = uninitialized;
     uint5   point_2 = uninitialized;
-    uint16  counter25mhz_2 = uninitialized;
+    uint16  counter50mhz_2 = uninitialized;
     uint16  counter1khz_2 = uninitialized;
     uint16  milliseconds_2 = uninitialized;
 
@@ -100,10 +100,10 @@ algorithm apu(
     audio_active := ( duration_1 > 0) || ( duration_2 > 0 );
 
     always {
-        if( ( duration_1 != 0 ) && ( counter25mhz_1 == 0 ) ) {
+        if( ( duration_1 != 0 ) && ( counter50mhz_1 == 0 ) ) {
             audio_output = ( waveform_1 == 4 ) ? staticGenerator : waveformtable_1.rdata;
         }
-        if( ( duration_2 != 0 ) && ( counter25mhz_2 == 0 ) ) {
+        if( ( duration_2 != 0 ) && ( counter50mhz_2 == 0 ) ) {
             audio_output = ( waveform_2 == 4 ) ? staticGenerator : waveformtable_2.rdata;
         }
     }
@@ -117,8 +117,8 @@ algorithm apu(
                 duration_1 = duration;
                 milliseconds_1 = 0;
                 point_1 = 0;
-                counter25mhz_1 = 0;
-                counter1khz_1 = 25000;
+                counter50mhz_1 = 0;
+                counter1khz_1 = 50000;
             }
             case 2: {
                 // Latch the selected note, waveform and duration
@@ -127,20 +127,20 @@ algorithm apu(
                 duration_2 = duration;
                 milliseconds_2 = 0;
                 point_2 = 0;
-                counter25mhz_2 = 0;
-                counter1khz_2 = 25000;
+                counter50mhz_2 = 0;
+                counter1khz_2 = 50000;
             }
             default: {
                 if( duration_1 != 0 ) {
-                    counter25mhz_1 = ( counter25mhz_1 != 0 ) ? counter25mhz_1 - 1 : frequencytable_1.rdata;
-                    point_1 = ( counter25mhz_1 != 0 ) ? point_1 : point_1 + 1;
-                    counter1khz_1 = ( counter1khz_1 != 0 ) ? counter1khz_1 - 1 : 25000;
+                    counter50mhz_1 = ( counter50mhz_1 != 0 ) ? counter50mhz_1 - 1 : frequencytable_1.rdata;
+                    point_1 = ( counter50mhz_1 != 0 ) ? point_1 : point_1 + 1;
+                    counter1khz_1 = ( counter1khz_1 != 0 ) ? counter1khz_1 - 1 : 50000;
                     duration_1 = ( counter1khz_1 != 0 ) ? duration_1 : duration_1 - 1;
                 }
                 if( duration_2 != 0 ) {
-                    counter25mhz_2 = ( counter25mhz_2 != 0 ) ? counter25mhz_2 - 1 : frequencytable_2.rdata;
-                    point_2 = ( counter25mhz_2 != 0 ) ? point_2 : point_2 + 1;
-                    counter1khz_2 = ( counter1khz_2 != 0 ) ? counter1khz_2 - 1 : 25000;
+                    counter50mhz_2 = ( counter50mhz_2 != 0 ) ? counter50mhz_2 - 1 : frequencytable_2.rdata;
+                    point_2 = ( counter50mhz_2 != 0 ) ? point_2 : point_2 + 1;
+                    counter1khz_2 = ( counter1khz_2 != 0 ) ? counter1khz_2 - 1 : 50000;
                     duration_2 = ( counter1khz_2 != 0 ) ? duration_2 : duration_2 - 1;
                 }
             }

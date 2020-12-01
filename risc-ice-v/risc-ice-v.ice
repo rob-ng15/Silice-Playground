@@ -203,7 +203,7 @@ algorithm main(
     output! uint4   audio_l,
     output! uint4   audio_r
 
-) <@clock_50mhz> {
+) {
     // VGA/HDMI Display
     uint1   video_reset = uninitialized;
     uint1   video_clock = uninitialized;
@@ -260,7 +260,6 @@ algorithm main(
 
     // RISC-V PROGRAM COUNTER
     uint32  pc = 0;
-    uint32  jumpDestination = uninitialized;
     uint1   compressed = uninitialized;
     uint1   floatingpoint = uninitialized;
     uint1   takeBranch = uninitialized;
@@ -290,7 +289,7 @@ algorithm main(
     uint32  storeAddress := { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
 
     // Setup Memory Mapped I/O
-    memmap_io IO_Map <@clock_50mhz> (
+    memmap_io IO_Map (
         leds :> leds,
         btns <: btns,
 
@@ -733,7 +732,6 @@ algorithm main(
                         writeRegister = 1;
                         incPC = 0;
                         result = pc + ( compressed ? 2 : 4 );
-                        jumpDestination = ( opCode[3,1] == 1 ) ? jumpOffset + pc : loadAddress;
                     }
                 }
             }
@@ -744,6 +742,7 @@ algorithm main(
 
         ++:
 
+        // WRITE TO REGISTERS
         // NEVER write to registers[0]
         if( writeRegister && ( Rtype(instruction).destReg != 0 ) ) {
             registers_1.addr1 = Rtype(instruction).destReg + ( floatingpoint ? 32 : 0 );
@@ -752,6 +751,7 @@ algorithm main(
             registers_2.wdata1 = result;
         }
 
-        pc = ( incPC ) ? pc + ( ( takeBranch) ? branchOffset : ( compressed ? 2 : 4 ) ) : jumpDestination;
+        // UPDATE PC
+        pc = ( incPC ) ? pc + ( ( takeBranch) ? branchOffset : ( compressed ? 2 : 4 ) ) : ( ( opCode[3,1] == 1 ) ? jumpOffset + pc : loadAddress );
     } // RISC-V
 }
