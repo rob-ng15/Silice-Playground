@@ -16,7 +16,7 @@ __ULX3S only at present__
                 * Fetch ( starts partial decode )
                 * Decode and Execute
                 * Dispatch
-        * RV32IM instruction set ( selection of )
+        * RV32IMC instruction set ( selection of )
             * AUIPC
             * LUI
             * JAL and JALR
@@ -37,21 +37,26 @@ __ULX3S only at present__
                 * MUL MULH[[S]U]
                 * DIV[U] REM[U]
                     * 2 x main clock ( 50mhz ) operation
+            * COMPRESSED ( 16 bit ) INSTRUCTION SUPPORT
+                * Expanded to 32 bit instruction
+                * 1 cycle faster than 32 bit instructions due to less memory fetching
             * NOP __ALL OTHER INSTRUCTION CODES__
+
 * MEMORY
     * 32K ( 16K x 16 bit) of RAM ( with aligned and misaligned 32 bit read / writes )
     * 32K ( 8K x 32 bit ) of I/O Memory with 16 bit read / write
+
 * DISPLAY
     * HDMI 640 x 480 ouput
         * Background [Background.md](documentation/Background.md)
         * Tilemap Layer [Tilemap.md](documentation/Tilemap.md)
         * Lower Sprite Layer [Sprites.md](documentation/Sprites.md)
         * Bitmap with GPU [Bitmap and GPU.md](documentation/Bitmap%20and%20GPU.md)
-            * Display list drawer [Display List.md](documentation/Display%20List.md)
             * Vector block drawer [Vectors.md](documentation/Vectors.md)
         * Upper Sprite Layer [Sprites.md](documentation/Sprites.md)
         * Character Map with TPU [Character Map and TPU.md](documentation/Character%20Map%20and%20TPU.md)
         * Terminal [Terminal.md](documentation/Terminal.md)
+
 * PERIPHERALS
     * UART ( via US1 on the ULX3S )
         * 115200 baud

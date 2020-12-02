@@ -57,7 +57,7 @@ algorithm multiplex_display(
     while (1) {
         // wait until pix_active THEN BACKGROUND -> TILEMAP -> LOWER SPRITES -> BITMAP -> UPPER SPRITES -> CHARACTER MAP -> TERMINAL
         if( pix_active ) {
-            // Select the 2 bit r g or b and expand to 6 bit r g or b
+            // Select the 2 bit r g or b and expand to 8 bit r g or b
             pix_red = ( terminal_display ) ? { {4{terminal_r}} } :
                         ( character_map_display ) ? { {4{character_map_r}} } :
                         ( upper_sprites_display ) ? { {4{upper_sprites_r}} } :

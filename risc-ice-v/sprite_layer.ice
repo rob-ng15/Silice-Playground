@@ -1,13 +1,11 @@
 bitfield spriteupdate {
-    uint1   colour_act,         // 1 change the colour
-    uint6   colour,             // { rrggbb }
     uint1   y_act,              // 1 - kill when off screen, 0 - wrap
     uint1   x_act,              // 1 - kill when off screen, 0 - wrap
     uint1   tile_act,           // 1 - increase the tile number
     uint1   dysign,             // dy - 2's complement update for the y coordinate
-    uint2   dy,
+    uint4   dy,
     uint1   dxsign,             // dx - 2's complement update for the x coordinate
-    uint2   dx
+    uint4   dx
 }
 
 algorithm sprite_layer(
@@ -81,8 +79,8 @@ algorithm sprite_layer(
     $$end
 
     // Expand Sprite Update Deltas
-    int11   deltax := { {9{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
-    int11   deltay := { {9{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
+    int11   deltax := { ( spriteupdate( sprite_update ).dxsign ? 7b1111111 : 7b0000000 ), spriteupdate( sprite_update ).dx };
+    int11   deltay := { ( spriteupdate( sprite_update ).dysign ? 7b1111111 : 7b0000000 ), spriteupdate( sprite_update ).dy };
 
     // Sprite update helpers
     int11   sprite_offscreen_negative ::= sprite_double[ sprite_set_number ] ? -32 : -16;
@@ -110,51 +108,6 @@ algorithm sprite_layer(
 
     // SET TILES + ATTRIBUTES
     always {
-        // WRITE BITMAP TO SPRITE TILE
-        if( sprite_writer_active ) {
-            switch( sprite_writer_sprite ) {
-                $$for i=0,12 do
-                    case $i$: {
-                        tiles_$i$.addr1 = sprite_writer_line;
-                        tiles_$i$.wdata1 = sprite_writer_bitmap;
-                    }
-                $$end
-            }
-        }
-
-        // SET ATTRIBUTES + PERFORM UPDATE
-        switch( sprite_layer_write ) {
-            case 1: { sprite_active[ sprite_set_number ] = sprite_set_active; }
-            case 2: { sprite_tile_number[ sprite_set_number ] = sprite_set_tile; }
-            case 3: { sprite_colour[ sprite_set_number ] = sprite_set_colour; }
-            case 4: { sprite_x[ sprite_set_number ] = sprite_set_x; }
-            case 5: { sprite_y[ sprite_set_number ] = sprite_set_y; }
-            case 6: { sprite_double[ sprite_set_number ] = sprite_set_double; }
-            case 10: {
-                // Perform sprite update
-                if( spriteupdate( sprite_update ).colour_act ) {
-                    sprite_colour[ sprite_set_number ] = spriteupdate( sprite_update ).colour;
-                }
-
-                if( spriteupdate( sprite_update ).tile_act ) {
-                    sprite_tile_number[ sprite_set_number ] = sprite_tile_number[ sprite_set_number ] + 1;
-                }
-
-                if( spriteupdate( sprite_update ).x_act || spriteupdate( sprite_update ).y_act) {
-                    sprite_active[ sprite_set_number ] = ( sprite_offscreen_x || sprite_offscreen_y ) ? 0 : sprite_active[ sprite_set_number ];
-                }
-
-                sprite_x[ sprite_set_number ] = sprite_offscreen_x ? ( ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ?__signed(640) : sprite_to_negative ) :
-                                                sprite_x[ sprite_set_number ] + deltax;
-
-                sprite_y[ sprite_set_number ] = sprite_offscreen_y ? ( ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ? __signed(480) : sprite_to_negative ) :
-                                                sprite_y[ sprite_set_number ] + deltay;
-            }
-        }
-    }
-
-    // RENDER + COLLISION DETECTION
-    while(1) {
         if( pix_vblank ) {
             // RESET collision detection
             $$for i=0,12 do
@@ -187,6 +140,47 @@ algorithm sprite_layer(
             $$for i=0,12 do
                 collision_$i$ = detect_collision_$i$;
             $$end
+        }
+    }
+
+    // RENDER + COLLISION DETECTION
+    while(1) {
+        // WRITE BITMAP TO SPRITE TILE
+        if( sprite_writer_active ) {
+            switch( sprite_writer_sprite ) {
+                $$for i=0,12 do
+                    case $i$: {
+                        tiles_$i$.addr1 = sprite_writer_line;
+                        tiles_$i$.wdata1 = sprite_writer_bitmap;
+                    }
+                $$end
+            }
+        }
+
+        // SET ATTRIBUTES + PERFORM UPDATE
+        switch( sprite_layer_write ) {
+            case 1: { sprite_active[ sprite_set_number ] = sprite_set_active; }
+            case 2: { sprite_tile_number[ sprite_set_number ] = sprite_set_tile; }
+            case 3: { sprite_colour[ sprite_set_number ] = sprite_set_colour; }
+            case 4: { sprite_x[ sprite_set_number ] = sprite_set_x; }
+            case 5: { sprite_y[ sprite_set_number ] = sprite_set_y; }
+            case 6: { sprite_double[ sprite_set_number ] = sprite_set_double; }
+            case 10: {
+                // Perform sprite update
+                if( spriteupdate( sprite_update ).tile_act ) {
+                    sprite_tile_number[ sprite_set_number ] = sprite_tile_number[ sprite_set_number ] + 1;
+                }
+
+                if( spriteupdate( sprite_update ).x_act || spriteupdate( sprite_update ).y_act) {
+                    sprite_active[ sprite_set_number ] = ( sprite_offscreen_x || sprite_offscreen_y ) ? 0 : sprite_active[ sprite_set_number ];
+                }
+
+                sprite_x[ sprite_set_number ] = sprite_offscreen_x ? ( ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ?__signed(640) : sprite_to_negative ) :
+                                                sprite_x[ sprite_set_number ] + deltax;
+
+                sprite_y[ sprite_set_number ] = sprite_offscreen_y ? ( ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ? __signed(480) : sprite_to_negative ) :
+                                                sprite_y[ sprite_set_number ] + deltay;
+            }
         }
     }
 }

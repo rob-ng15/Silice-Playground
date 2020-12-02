@@ -23,7 +23,7 @@ algorithm character_map(
     input   uint7   tpu_background,
     input   uint3   tpu_write,
 
-    output  uint2   tpu_active
+    output  uint1   tpu_active
 ) <autorun> {
     // Character ROM 8x16
     brom uint8 characterGenerator8x16[] = {
@@ -65,11 +65,8 @@ algorithm character_map(
     // Default to transparent
     character_map_display := pix_active && (( characterpixel ) || ( ~charactermapentry(charactermap.rdata0).alpha ));
 
-    // Default to 0,0 and transparent
-    charactermap.addr1 = 0; charactermap.wdata1 = { 1b1, 6b0, 6b0, 8b0 };
-
     // Render the character map
-    while(1) {
+    always {
         if( character_map_display ) {
             // CHARACTER from characterGenerator8x16
             // Determine if background or foreground
@@ -77,7 +74,12 @@ algorithm character_map(
             pix_green = characterpixel ? charactermap.rdata0[10,2] : charactermap.rdata0[16,2];
             pix_blue = characterpixel ? charactermap.rdata0[8,2] : charactermap.rdata0[14,2];
         }
+    }
 
+    // Default to 0,0 and transparent
+    charactermap.addr1 = 0; charactermap.wdata1 = { 1b1, 6b0, 6b0, 8b0 };
+
+    while(1) {
         switch( tpu_active ) {
             case 0: {
                 switch( tpu_write ) {
@@ -107,13 +109,12 @@ algorithm character_map(
 
             // TPU CS
             case 1: {
-                charactermap.addr1 = tpu_cs_addr;
-                tpu_cs_addr = tpu_cs_addr + 1;
-                tpu_active = 2;
-            }
-
-            case 2: {
-                tpu_active = ( tpu_cs_addr < 2400 ) ? 1 : 0;
+                while( tpu_cs_addr < 2400 ) {
+                    charactermap.addr1 = tpu_cs_addr;
+                    tpu_cs_addr = tpu_cs_addr + 1;
+                }
+                ++:
+                tpu_active = 0;
             }
         }
     }

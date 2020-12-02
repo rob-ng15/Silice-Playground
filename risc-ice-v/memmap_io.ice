@@ -394,8 +394,8 @@ algorithm memmap_io (
                 case 16h8304: { readData = lower_sprites.sprite_read_active; }
                 case 16h8308: { readData = lower_sprites.sprite_read_tile; }
                 case 16h830c: { readData = lower_sprites.sprite_read_colour; }
-                case 16h8310: { readData = { {5{lower_sprites.sprite_read_x[10,1]}}, lower_sprites.sprite_read_x }; }
-                case 16h8314: { readData = { {5{lower_sprites.sprite_read_y[10,1]}}, lower_sprites.sprite_read_y }; }
+                case 16h8310: { readData = lower_sprites.sprite_read_x[10,1] ? 16hf800 : 16h0000 | lower_sprites.sprite_read_x; }
+                case 16h8314: { readData = lower_sprites.sprite_read_y[10,1] ? 16hf800 : 16h0000 | lower_sprites.sprite_read_y; }
                 case 16h8318: { readData = lower_sprites.sprite_read_double; }
 
                 case 16h8330: { readData = lower_sprites.collision_0; }
@@ -421,8 +421,8 @@ algorithm memmap_io (
                 case 16h8504: { readData = upper_sprites.sprite_read_active; }
                 case 16h8508: { readData = upper_sprites.sprite_read_tile; }
                 case 16h850c: { readData = upper_sprites.sprite_read_colour; }
-                case 16h8510: { readData = { {5{upper_sprites.sprite_read_x[10,1]}}, upper_sprites.sprite_read_x }; }
-                case 16h8514: { readData = { {5{upper_sprites.sprite_read_y[10,1]}}, upper_sprites.sprite_read_y }; }
+                case 16h8510: { readData = upper_sprites.sprite_read_x[10,1] ? 16hf800 : 16h0000 | upper_sprites.sprite_read_x; }
+                case 16h8514: { readData = upper_sprites.sprite_read_y[10,1] ? 16hf800 : 16h0000 | upper_sprites.sprite_read_y; }
                 case 16h8518: { readData = upper_sprites.sprite_read_double; }
 
                 case 16h8530: { readData = upper_sprites.collision_0; }
