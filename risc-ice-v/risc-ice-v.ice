@@ -210,11 +210,15 @@ algorithm main(
     uint1   pll_lock = uninitialized;
 
     // Generate the 100MHz SDRAM and 25MHz VIDEO clocks
-    uint1 clock_50mhz = uninitialized;
-    ulx3s_clk_50_25 clk_gen (
+    uint1 clock_timers = uninitialized;
+    uint1 clock_sdram = uninitialized;
+    uint1 clock_copro = uninitialized;
+    ulx3s_clk_risc_ice_v clk_gen (
         clkin    <: clock,
-        clkout0  :> clock_50mhz,
+        clkout0  :> clock_timers,
         clkout1  :> video_clock,
+        clkout2  :> clock_sdram,
+        clkout3  :> clock_copro,
         locked   :> pll_lock
     );
 
@@ -311,18 +315,18 @@ algorithm main(
         pix_y <: pix_y,
 
         // CLOCKS
-        clock_50mhz <: clock_50mhz,
+        clock_50mhz <: clock_timers,
         clock_25mhz <: clock,
         video_clock <: video_clock,
         video_reset <: video_reset
     );
 
     // MULTIPLICATION and DIVISION units
-    divideremainder dividerunit <@clock_50mhz> (
+    divideremainder dividerunit <@clock_copro> (
         dividend <: sourceReg1,
         divisor <: sourceReg2
     );
-    multiplicationDSP multiplicationuint <@clock_50mhz> (
+    multiplicationDSP multiplicationuint <@clock_copro> (
         factor_1 <: sourceReg1,
         factor_2 <: sourceReg2
     );

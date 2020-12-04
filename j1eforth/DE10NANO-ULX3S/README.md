@@ -144,7 +144,6 @@ The VGA DE10NANO/HDMI ULX3S output has the following layers in order:
 * Tilemap Layer [Tilemap.md](documentation/Tilemap.md)
 * Lower Sprite Layer [Sprites.md](documentation/Sprites.md)
 * Bitmap with GPU [Bitmap and GPU.md](documentation/Bitmap%20and%20GPU.md)
-    * Display list drawer [Display List.md](documentation/Display%20List.md)
     * Vector block drawer [Vectors.md](documentation/Vectors.md)
 * Upper Sprite Layer [Sprites.md](documentation/Sprites.md)
 * Character Map with TPU [Character Map and TPU.md](documentation/Character%20Map%20and%20TPU.md)

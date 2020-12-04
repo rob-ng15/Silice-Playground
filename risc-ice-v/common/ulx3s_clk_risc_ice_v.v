@@ -2,11 +2,13 @@
 // diamond 3.8-3.9 is untested
 // diamond 3.10 or higher is likely to abort with error about unable to use feedback signal
 // cause of this could be from wrong CPHASE/FPHASE parameters
-module ulx3s_clk_50_25
+module ulx3s_clk_risc_ice_v
 (
     input clkin, // 25 MHz, 0 deg
-    output clkout0, // 50 MHz, 0 deg
-    output clkout1, // 25 MHz, 0 deg
+    output clkout0, // 50 MHz, 0 deg        // TIMERS RANDOM AUDIO SDCARD
+    output clkout1, // 25 MHz, 0 deg        // VIDEO
+    output clkout2, // 165.625 Mhz 0 deg    // SDRAM
+    output clkout3, // 50 MHz 0 deg         // CO-PROCESSORS MEMORY CONTROLLER
     output locked
 );
 (* FREQUENCY_PIN_CLKI="25" *)
@@ -31,6 +33,14 @@ EHXPLLL #(
         .CLKOS_DIV(24),
         .CLKOS_CPHASE(5),
         .CLKOS_FPHASE(0),
+        .CLKOS2_ENABLE("ENABLED"),
+        .CLKOS2_DIV(4),
+        .CLKOS2_CPHASE(1),
+        .CLKOS2_FPHASE(0),
+        .CLKOS3_ENABLE("ENABLED"),
+        .CLKOS3_DIV(12),
+        .CLKOS3_CPHASE(5),
+        .CLKOS3_FPHASE(0),
         .FEEDBK_PATH("CLKOP"),
         .CLKFB_DIV(2)
     ) pll_i (
@@ -39,6 +49,8 @@ EHXPLLL #(
         .CLKI(clkin),
         .CLKOP(clkout0),
         .CLKOS(clkout1),
+        .CLKOS2(clkout2),
+        .CLKOS3(clkout3),
         .CLKFB(clkout0),
         .CLKINTFB(),
         .PHASESEL0(1'b0),
