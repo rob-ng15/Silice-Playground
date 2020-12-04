@@ -64,6 +64,8 @@ algorithm sprite_layer(
     uint6   sprite_colour[13] = uninitialised;
     uint3   sprite_tile_number[13] = uninitialised;
 
+    uint1   output_collisions = 0;
+
     $$for i=0,12 do
         // Sprite Tiles
         dualport_bram uint16 tiles_$i$[128] = uninitialised;
@@ -88,11 +90,13 @@ algorithm sprite_layer(
     uint1   sprite_offscreen_x ::= ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_x[ sprite_set_number ] ) > __signed(640) );
     uint1   sprite_offscreen_y ::= ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_y[ sprite_set_number ] ) > __signed(480) );
 
-    // Set read and write address for the tiles
     $$for i=0,12 do
+        // Set read and write address for the tiles
         tiles_$i$.addr0 := sprite_tile_number[$i$] * 16 + ( ( __signed({1b0, pix_y}) - sprite_y[$i$] ) >>> sprite_double[$i$] );
         tiles_$i$.wenable0 := 0;
         tiles_$i$.wenable1 := 1;
+
+        collision_$i$ := ( output_collisions ) ? detect_collision_$i$ : collision_$i$;
     $$end
 
     // Default to transparent
@@ -106,13 +110,17 @@ algorithm sprite_layer(
     sprite_read_y := sprite_y[ sprite_set_number ];
     sprite_read_tile := sprite_tile_number[ sprite_set_number ];
 
-    // SET TILES + ATTRIBUTES
+    // RENDER + COLLISION DETECTION
     always {
         if( pix_vblank ) {
-            // RESET collision detection
-            $$for i=0,12 do
-                detect_collision_$i$ = 0;
-            $$end
+            if( ~output_collisions ) {
+                // RESET collision detection
+                $$for i=0,12 do
+                    detect_collision_$i$ = 0;
+                $$end
+            } else {
+                output_collisions = 0;
+            }
         } else {
             if( pix_active ) {
                 $$for i=0,12 do
@@ -132,18 +140,14 @@ algorithm sprite_layer(
                         };
                     }
                 $$end
-            }
-        }
 
-        // Output collision detection
-        if( ( pix_x == 639 ) && ( pix_y == 479 ) ) {
-            $$for i=0,12 do
-                collision_$i$ = detect_collision_$i$;
-            $$end
+                // Output collision detection
+                output_collisions = ( pix_x == 639 ) && ( pix_y == 479 );
+            }
         }
     }
 
-    // RENDER + COLLISION DETECTION
+    // SET TILES + ATTRIBUTES
     while(1) {
         // WRITE BITMAP TO SPRITE TILE
         if( sprite_writer_active ) {

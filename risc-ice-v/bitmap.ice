@@ -52,17 +52,11 @@ algorithm bitmap(
     // Bitmap write access for the GPU - Only enable when x and y are in range
     bitmap.wenable1 := 1;
 
-    // Default to transparent
+    // RENDER - Default to transparent
     bitmap_display := pix_active && ~colour7(bitmap.rdata0).alpha;
-
-    // Render the bitmap
-    always {
-        if( bitmap_display ) {
-            pix_red = colour7(bitmap.rdata0).red;
-            pix_green = colour7(bitmap.rdata0).green;
-            pix_blue = colour7(bitmap.rdata0).blue;
-        }
-    }
+    pix_red := colour7(bitmap.rdata0).red;
+    pix_green := colour7(bitmap.rdata0).green;
+    pix_blue := colour7(bitmap.rdata0).blue;
 
     while(1) {
         if( write_pixel == 1 ) {
