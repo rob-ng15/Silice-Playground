@@ -30,7 +30,18 @@ algorithm background(
     pix_green := 0;
     pix_blue := 0;
 
-    always {
+    while(1) {
+        // UPDATE BACKGROUND GENERATOR PARAMETERS
+        switch( background_write ) {
+            case 1: { background = backgroundcolour; }
+            case 2: { background_alt = backgroundcolour_alt; }
+            case 3: { background_mode = backgroundcolour_mode; }
+        }
+
+        // Increment frame number for the snow/star field
+        frame = ( ( pix_x == 639 ) && ( pix_y == 470 ) ) ? frame + 1 : frame;
+
+        // RENDER
         if( pix_active ) {
             switch( backgroundcolour_mode ) {
                 case 0: {
@@ -169,17 +180,5 @@ algorithm background(
                 }
             }
         }
-    }
-
-    while(1) {
-        // UPDATE BACKGROUND GENERATOR PARAMETERS
-        switch( background_write ) {
-            case 1: { background = backgroundcolour; }
-            case 2: { background_alt = backgroundcolour_alt; }
-            case 3: { background_mode = backgroundcolour_mode; }
-        }
-
-        // Increment frame number for the snow/star field
-        frame = ( ( pix_x == 639 ) && ( pix_y == 470 ) ) ? frame + 1 : frame;
     }
 }

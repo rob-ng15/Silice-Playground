@@ -332,7 +332,6 @@ algorithm memmap_io (
 
     // RESET Co-Processor Controls
     background_generator.background_write := 0;
-    tile_map.tile_writer_write := 0;
     tile_map.tm_write := 0;
     tile_map.tm_scrollwrap := 0;
     lower_sprites.sprite_layer_write := 0;
@@ -340,8 +339,6 @@ algorithm memmap_io (
     bitmap_window.bitmap_write_offset := 0;
     gpu_processor.gpu_write := 0;
     gpu_processor.draw_vector := 0;
-    gpu_processor.blit1_writer_active := 0;
-    gpu_processor.vertices_writer_write := 0;
     upper_sprites.sprite_layer_write := 0;
     upper_sprites.sprite_writer_active := 0;
     character_map_window.tpu_write := 0;
@@ -350,21 +347,12 @@ algorithm memmap_io (
     apu_processor_R.apu_write := 0;
 
     // UART input and output buffering
-    always {
-        // READ from UART if character available and store
-        if( ui.data_out_ready ) {
-            // writes at uartInBufferTop (code from @sylefeb)
-            uartInBuffer.wdata1  = ui.data_out;
-            uartInBufferTop      = uartInBufferTop + 1;
-        }
-        // WRITE to UART if characters in buffer and UART is ready
-        if( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) ) {
-            // reads at uartOutBufferNext (code from @sylefeb)
-            uo.data_in      = uartOutBuffer.rdata0;
-            uo.data_in_ready     = 1;
-            uartOutBufferNext = uartOutBufferNext + 1;
-        }
-    }
+    uartInBuffer.wdata1  := ui.data_out;
+    uartInBufferTop      := ( ui.data_out_ready ) ? uartInBufferTop + 1 : uartInBufferTop;
+
+    uo.data_in      := uartOutBuffer.rdata0;
+    uo.data_in_ready     := (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy );
+    uartOutBufferNext := ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) ) ? uartOutBufferNext + 1 : uartOutBufferNext;
 
     // Setup the terminal
     terminal_window.showterminal = 1;
@@ -483,7 +471,7 @@ algorithm memmap_io (
 
                 case 16h8220: { tile_map.tile_writer_tile = writeData; }
                 case 16h8224: { tile_map.tile_writer_line = writeData; }
-                case 16h8228: { tile_map.tile_writer_bitmap = writeData; tile_map.tile_writer_write = 1; }
+                case 16h8228: { tile_map.tile_writer_bitmap = writeData; }
 
                 case 16h8230: { tile_map.tm_scrollwrap = writeData; }
 
@@ -522,11 +510,10 @@ algorithm memmap_io (
                 case 16h843c: { gpu_processor.vertices_writer_xdelta = writeData; }
                 case 16h8440: { gpu_processor.vertices_writer_ydelta = writeData; }
                 case 16h8444: { gpu_processor.vertices_writer_active = writeData; }
-                case 16h8448: { gpu_processor.vertices_writer_write = 1; }
 
                 case 16h8450: { gpu_processor.blit1_writer_tile = writeData; }
                 case 16h8454: { gpu_processor.blit1_writer_line = writeData; }
-                case 16h8458: { gpu_processor.blit1_writer_bitmap = writeData;  gpu_processor.blit1_writer_active = 1; }
+                case 16h8458: { gpu_processor.blit1_writer_bitmap = writeData; }
 
                 case 16h8460: { bitmap_window.bitmap_write_offset = writeData; }
 

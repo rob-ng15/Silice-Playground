@@ -561,10 +561,6 @@ set_vector_vertex:
 	lui	a5,%hi(VECTOR_WRITER_DELTAY)
 	lw	a5,%lo(VECTOR_WRITER_DELTAY)(a5)
 	sb	a4,0(a5)
-	lui	a5,%hi(VECTOR_WRITER_COMMIT)
-	lw	a5,%lo(VECTOR_WRITER_COMMIT)(a5)
-	li	a4,1
-	sb	a4,0(a5)
 	ret
 	.size	set_vector_vertex, .-set_vector_vertex
 	.align	1
@@ -3725,7 +3721,6 @@ main:
 	.globl	LOWER_SPRITE_ACTIVE
 	.globl	LOWER_SPRITE_NUMBER
 	.globl	BITMAP_SCROLLWRAP
-	.globl	VECTOR_WRITER_COMMIT
 	.globl	VECTOR_WRITER_DELTAY
 	.globl	VECTOR_WRITER_DELTAX
 	.globl	VECTOR_WRITER_ACTIVE
@@ -4967,10 +4962,6 @@ LOWER_SPRITE_NUMBER:
 	.size	BITMAP_SCROLLWRAP, 4
 BITMAP_SCROLLWRAP:
 	.word	33888
-	.type	VECTOR_WRITER_COMMIT, @object
-	.size	VECTOR_WRITER_COMMIT, 4
-VECTOR_WRITER_COMMIT:
-	.word	33864
 	.type	VECTOR_WRITER_DELTAY, @object
 	.size	VECTOR_WRITER_DELTAY, 4
 VECTOR_WRITER_DELTAY:

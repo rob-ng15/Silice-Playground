@@ -45,7 +45,6 @@ unsigned char volatile * VECTOR_WRITER_VERTEX = (unsigned char volatile *) 0x843
 unsigned char volatile * VECTOR_WRITER_ACTIVE = (unsigned char volatile *) 0x8444;
 char volatile * VECTOR_WRITER_DELTAX = (char volatile *) 0x843c;
 char volatile * VECTOR_WRITER_DELTAY = (char volatile *) 0x8440;
-unsigned char volatile * VECTOR_WRITER_COMMIT = (unsigned char volatile *) 0x8448;
 
 unsigned char volatile * BITMAP_SCROLLWRAP = (unsigned char volatile *) 0x8460;
 
@@ -303,7 +302,6 @@ void set_vector_vertex( unsigned char block, unsigned char vertex, unsigned char
     *VECTOR_WRITER_ACTIVE = active;
     *VECTOR_WRITER_DELTAX = deltax;
     *VECTOR_WRITER_DELTAY = deltay;
-    *VECTOR_WRITER_COMMIT = 1;
 }
 
 void bitmap_scrollwrap( unsigned char action )

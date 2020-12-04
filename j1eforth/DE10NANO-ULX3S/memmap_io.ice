@@ -362,21 +362,12 @@ $$end
     rng.resetRandom := 0;
 
     // UART input and output buffering
-    always {
-        // READ from UART if character available and store
-        if( ui.data_out_ready ) {
-            // writes at uartInBufferTop (code from @sylefeb)
-            uartInBuffer.wdata1  = ui.data_out;
-            uartInBufferTop      = uartInBufferTop + 1;
-        }
-        // WRITE to UART if characters in buffer and UART is ready
-        if( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) ) {
-            // reads at uartOutBufferNext (code from @sylefeb)
-            uo.data_in      = uartOutBuffer.rdata0;
-            uo.data_in_ready     = 1;
-            uartOutBufferNext = uartOutBufferNext + 1;
-        }
-    }
+    uartInBuffer.wdata1  := ui.data_out;
+    uartInBufferTop      := ( ui.data_out_ready ) ? uartInBufferTop + 1 : uartInBufferTop;
+
+    uo.data_in      := uartOutBuffer.rdata0;
+    uo.data_in_ready     := (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy );
+    uartOutBufferNext := ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) ) ? uartOutBufferNext + 1 : uartOutBufferNext;
 
     // Setup the terminal
     terminal_window.showterminal = 1;
@@ -484,13 +475,6 @@ $$end
                                     switch( memoryAddress[0,4] ) {
                                         // ff70 -
                                         case 4h4: { readData = gpu_processor.vector_block_active; }
-                                    }
-                                }
-
-                                case 4h8: {
-                                    switch( memoryAddress[0,4] ) {
-                                        // ff80 -
-                                        case 4h2: { readData = gpu_processor.display_list_active; }
                                     }
                                 }
 
@@ -608,7 +592,7 @@ $$end
                                 case 8h0a: { bitmap_window.bitmap_y_read = writeData; }
                                 case 8h0b: { gpu_processor.blit1_writer_tile = writeData; }
                                 case 8h0c: { gpu_processor.blit1_writer_line = writeData; }
-                                case 8h0d: { gpu_processor.blit1_writer_bitmap = writeData;  gpu_processor.blit1_writer_active = 1; }
+                                case 8h0d: { gpu_processor.blit1_writer_bitmap = writeData; }
 
                                 // ff10 -
                                 case 8h10: { character_map_window.tpu_x = writeData; }
@@ -659,23 +643,6 @@ $$end
                                 case 8h77: { gpu_processor.vertices_writer_xdelta = writeData; }
                                 case 8h78: { gpu_processor.vertices_writer_ydelta = writeData; }
                                 case 8h79: { gpu_processor.vertices_writer_active = writeData; }
-                                case 8h7a: { gpu_processor.vertices_writer_write = 1; }
-
-                                // ff80 -
-                                case 8h80: { gpu_processor.dl_start_entry = writeData; }
-                                case 8h81: { gpu_processor.dl_finish_entry = writeData; }
-                                case 8h82: { gpu_processor.dl_start = 1; }
-                                case 8h83: { gpu_processor.dl_writer_entry_number = writeData; }
-                                case 8h84: { gpu_processor.dl_writer_active = writeData; }
-                                case 8h85: { gpu_processor.dl_writer_command = writeData; }
-                                case 8h86: { gpu_processor.dl_writer_colour = writeData; }
-                                case 8h87: { gpu_processor.dl_writer_x = writeData; }
-                                case 8h88: { gpu_processor.dl_writer_y = writeData; }
-                                case 8h89: { gpu_processor.dl_writer_p0 = writeData; }
-                                case 8h8a: { gpu_processor.dl_writer_p1 = writeData; }
-                                case 8h8b: { gpu_processor.dl_writer_p2 = writeData; }
-                                case 8h8c: { gpu_processor.dl_writer_p3 = writeData; }
-                                case 8h8d: { gpu_processor.dl_writer_write = 1; }
 
                                 // ff90 -
                                 case 8h90: { tile_map.tm_x = writeData; }
@@ -686,7 +653,7 @@ $$end
                                 case 8h95: { tile_map.tm_write = 1; }
                                 case 8h96: { tile_map.tile_writer_tile = writeData; }
                                 case 8h97: { tile_map.tile_writer_line = writeData; }
-                                case 8h98: { tile_map.tile_writer_bitmap = writeData; tile_map.tile_writer_write = 1; }
+                                case 8h98: { tile_map.tile_writer_bitmap = writeData; }
                                 case 8h99: { tile_map.tm_scrollwrap = writeData; }
 
                                 // ffa0 -
@@ -739,7 +706,6 @@ $$end
         // Delay to reset co-processors therefore required
         if( coProReset == 1 ) {
             background_generator.background_write = 0;
-            tile_map.tile_writer_write = 0;
             tile_map.tm_write = 0;
             tile_map.tm_scrollwrap = 0;
             lower_sprites.sprite_layer_write = 0;
@@ -747,10 +713,6 @@ $$end
             bitmap_window.bitmap_write_offset = 0;
             gpu_processor.gpu_write = 0;
             gpu_processor.draw_vector = 0;
-            gpu_processor.dl_start = 0;
-            gpu_processor.blit1_writer_active = 0;
-            gpu_processor.vertices_writer_write = 0;
-            gpu_processor.dl_writer_write = 0;
             upper_sprites.sprite_layer_write = 0;
             upper_sprites.sprite_writer_active = 0;
             character_map_window.tpu_write = 0;

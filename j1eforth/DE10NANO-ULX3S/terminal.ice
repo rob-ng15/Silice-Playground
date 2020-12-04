@@ -22,6 +22,7 @@ algorithm terminal(
 
     // 80 x 4 character buffer for the input/output terminal
     dualport_bram uint8 terminal[640] = uninitialized;
+    dualport_bram uint8 terminal_copy[640] = uninitialized;
 
     // Initial cursor position in the terminal, bottom left
     uint7 terminal_x = 0;
@@ -48,33 +49,20 @@ algorithm terminal(
     // Setup the reading of the terminal memory
     terminal.addr0 := xterminalpos + yterminalpos;
     terminal.wenable0 := 0;
+    terminal_copy.wenable0 := 0;
 
     // Setup the writing to the terminal memory
-    terminal.wenable1 := 0;
+    terminal.wenable1 := 1;
+    terminal_copy.wenable1 := 1;
 
     // Setup the reading of the characterGenerator8x8 ROM
     characterGenerator8x8.addr :=  terminal.rdata0 * 8 + yinterminal;
 
     // Default to transparent and active pixels always blue
     terminal_display := pix_active && showterminal && (pix_y > 415);
+    pix_red := ( terminalpixel ) ? ( ( is_cursor && timer1hz ) ? 0 : 3 ) : ( ( is_cursor && timer1hz ) ? 3 : 0 );
+    pix_green := ( terminalpixel ) ? ( ( is_cursor && timer1hz ) ? 0 : 3 ) : ( ( is_cursor && timer1hz ) ? 3 : 0 );
     pix_blue := 3;
-
-    always {
-        if( terminal_display ) {
-            // TERMINAL is in range and showterminal flag
-            // Invert colours for cursor if flashing
-            switch( terminalpixel ) {
-                case 0: {
-                    pix_red = ( is_cursor && timer1hz ) ? 3 : 0;
-                    pix_green = ( is_cursor && timer1hz ) ? 3: 0;
-                }
-                case 1: {
-                    pix_red = ( is_cursor && timer1hz ) ? 0 : 3;
-                    pix_green = ( is_cursor && timer1hz ) ? 0 : 3;
-                }
-            }
-        }
-    }
 
     // Render the terminal
     while(1) {
@@ -87,7 +75,8 @@ algorithm terminal(
                         terminal_x = terminal_x - 1;
                         terminal.addr1 = terminal_x + terminal_y * 80;
                         terminal.wdata1 = 0;
-                        terminal.wenable1 = 1;
+                        terminal_copy.addr1 = terminal_x + terminal_y * 80;
+                        terminal_copy.wdata1 = 0;
                     }
                 }
                 case 10: {
@@ -102,7 +91,8 @@ algorithm terminal(
                     // Display character
                     terminal.addr1 = terminal_x + terminal_y * 80;
                     terminal.wdata1 = terminal_character;
-                    terminal.wenable1 = 1;
+                    terminal_copy.addr1 = terminal_x + terminal_y * 80;
+                    terminal_copy.wdata1 = terminal_character;
                     terminal_active = ( terminal_x == 79 ) ? 1 : 0;
                     terminal_x = ( terminal_x == 79 ) ? 0 : terminal_x + 1;
                 }
@@ -114,14 +104,15 @@ algorithm terminal(
                 ++:
                 while( terminal_scroll < 560 ) {
                     // Retrieve character on the next line
-                    terminal.addr1 = terminal_scroll + 80;
+                    terminal_copy.addr0 = terminal_scroll + 80;
                     ++:
-                    terminal_scroll_character = terminal.rdata1;
+                    terminal_scroll_character = terminal_copy.rdata0;
                     ++:
                     // Write retrieved character
                     terminal.addr1 = terminal_scroll;
                     terminal.wdata1 = terminal_scroll_character;
-                    terminal.wenable1 = 1;
+                    terminal_copy.addr1 = terminal_scroll;
+                    terminal_copy.wdata1 = terminal_scroll_character;
 
                     //++:
                     terminal_scroll = terminal_scroll + 1;
@@ -131,7 +122,8 @@ algorithm terminal(
                 while( terminal_scroll < 640 ) {
                     terminal.addr1 = terminal_scroll;
                     terminal.wdata1 = 0;
-                    terminal.wenable1 = 1;
+                    terminal_copy.addr1 = terminal_scroll;
+                    terminal_copy.wdata1 = 0;
 
                     terminal_scroll = terminal_scroll + 1;
                 }

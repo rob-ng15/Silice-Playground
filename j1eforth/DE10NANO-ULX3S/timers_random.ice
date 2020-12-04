@@ -52,12 +52,8 @@ algorithm random(
     uint16  temp_u_noise0 = 0;
     uint16  temp_g_noise_nxt = uninitialized;
 
-    always {
-        rand_en_ff = {(rand_en_ff[7,1] ^ rand_en_ff[0,1]) , rand_en_ff[1,17]};
-        rand_ff = { ( rand_ff[5,1] ^ rand_ff[3,1] ^ rand_ff[2,1] ^ rand_ff[0,1]) , rand_ff[1,15] };
-        g_noise_out = ( rand_en_ff[17,1] ) ? temp_g_noise_nxt : ( rand_en_ff[10,1] ) ? rand_out : g_noise_out;
-        u_noise_out = ( rand_en_ff[17,1] ) ? rand_out : u_noise_out;
-    }
+    g_noise_out := ( rand_en_ff[17,1] ) ? temp_g_noise_nxt : ( rand_en_ff[10,1] ) ? rand_out : g_noise_out;
+    u_noise_out := ( rand_en_ff[17,1] ) ? rand_out : u_noise_out;
 
     while(1) {
         if( resetRandom ) {
@@ -71,6 +67,8 @@ algorithm random(
             g_noise_out = 0;
             u_noise_out = 0;
         } else {
+            rand_en_ff = {(rand_en_ff[7,1] ^ rand_en_ff[0,1]) , rand_en_ff[1,17]};
+            rand_ff = { ( rand_ff[5,1] ^ rand_ff[3,1] ^ rand_ff[2,1] ^ rand_ff[0,1]) , rand_ff[1,15] };
             rand_out = rand_ff;
             temp_u_noise3 = { rand_out[15,1], rand_out[15,1], rand_out[2,13] };
             temp_u_noise2 = temp_u_noise3;

@@ -65,6 +65,7 @@ algorithm sprite_layer(
     int11   sprite_y[13] = uninitialised;
     uint6   sprite_colour[13] = uninitialised;
     uint3   sprite_tile_number[13] = uninitialised;
+    uint1   output_collisions = 0;
 
     $$for i=0,12 do
         // Sprite Tiles
@@ -95,6 +96,8 @@ algorithm sprite_layer(
         tiles_$i$.addr0 := sprite_tile_number[$i$] * 16 + ( ( __signed({1b0, pix_y}) - sprite_y[$i$] ) >> sprite_double[$i$] );
         tiles_$i$.wenable0 := 0;
         tiles_$i$.wenable1 := 1;
+
+        collision_$i$ := ( output_collisions ) ? detect_collision_$i$ : collision_$i$;
     $$end
 
     // Default to transparent
@@ -108,8 +111,44 @@ algorithm sprite_layer(
     sprite_read_y := sprite_y[ sprite_set_number ];
     sprite_read_tile := sprite_tile_number[ sprite_set_number ];
 
-    // SET TILES + ATTRIBUTES
-    always {
+    // RENDER + COLLISION DETECTION
+    while(1) {
+        if( pix_vblank ) {
+            if( ~output_collisions ) {
+                // RESET collision detection
+                $$for i=0,12 do
+                    detect_collision_$i$ = 0;
+                $$end
+            } else {
+                output_collisions = 0;
+            }
+        } else {
+            if( pix_active ) {
+                $$for i=0,12 do
+                    if(  ( pix_visible_$i$ ) ) {
+                        pix_red = sprite_colour[$i$][4,2];
+                        pix_green = sprite_colour[$i$][2,2];
+                        pix_blue = sprite_colour[$i$][0,2];
+
+                        sprite_layer_display = 1;
+
+                        // Perform collision detection
+                        detect_collision_$i$ = detect_collision_$i$ | {
+                            collision_layer_1, collision_layer_2, collision_layer_3, pix_visible_12, pix_visible_11,
+                            pix_visible_10, pix_visible_9, pix_visible_8, pix_visible_7,
+                            pix_visible_6, pix_visible_5, pix_visible_4, pix_visible_3,
+                            pix_visible_2, pix_visible_1, pix_visible_0
+                        };
+                    }
+                $$end
+
+                // Output collision detection
+                output_collisions = ( pix_x == 639 ) && ( pix_y == 479 );
+            }
+        }
+
+
+        // SET TILES + ATTRIBUTES
         // WRITE BITMAP TO SPRITE TILE
         if( sprite_writer_active ) {
             switch( sprite_writer_sprite ) {
@@ -150,43 +189,6 @@ algorithm sprite_layer(
                 sprite_y[ sprite_set_number ] = sprite_offscreen_y ? ( ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ? 480 : sprite_to_negative ) :
                                                 sprite_y[ sprite_set_number ] + deltay;
             }
-        }
-    }
-
-    // RENDER + COLLISION DETECTION
-    while(1) {
-        if( pix_vblank ) {
-            // RESET collision detection
-            $$for i=0,12 do
-                detect_collision_$i$ = 0;
-            $$end
-        } else {
-            if( pix_active ) {
-                $$for i=0,12 do
-                    if(  ( pix_visible_$i$ ) ) {
-                        pix_red = sprite_colour[$i$][4,2];
-                        pix_green = sprite_colour[$i$][2,2];
-                        pix_blue = sprite_colour[$i$][0,2];
-
-                        sprite_layer_display = 1;
-
-                        // Perform collision detection
-                        detect_collision_$i$ = detect_collision_$i$ | {
-                            collision_layer_1, collision_layer_2, collision_layer_3, pix_visible_12, pix_visible_11,
-                            pix_visible_10, pix_visible_9, pix_visible_8, pix_visible_7,
-                            pix_visible_6, pix_visible_5, pix_visible_4, pix_visible_3,
-                            pix_visible_2, pix_visible_1, pix_visible_0
-                        };
-                    }
-                $$end
-            }
-        }
-
-        // Output collision detection
-        if( ( pix_x == 639 ) && ( pix_y == 479 ) ) {
-            $$for i=0,12 do
-                collision_$i$ = detect_collision_$i$;
-            $$end
         }
     }
 }

@@ -27,7 +27,6 @@ algorithm tilemap(
     input   uint5   tile_writer_tile,
     input   uint4   tile_writer_line,
     input   uint16  tile_writer_bitmap,
-    input   uint1   tile_writer_write,
 
     // For scrolling/wrapping
     input   uint4   tm_scrollwrap,
@@ -40,6 +39,7 @@ algorithm tilemap(
     // 42 x 32 tile map, allows for pixel scrolling with border { 7 bits background, 6 bits foreground, 5 bits tile number }
     // Setting background to 40 (ALPHA) allows the bitmap/background to show through
     dualport_bram uint18 tiles[1344] = { 18b100000000000000000, pad(18b100000000000000000) };
+    dualport_bram uint18 tiles_copy[1344] = { 18b100000000000000000, pad(18b100000000000000000) };
 
     // Scroll position - -15 to 0 to 15
     // -15 or 15 will trigger appropriate scroll when next moved in that direction
@@ -73,43 +73,34 @@ algorithm tilemap(
     // Set up reading of the tilemap
     tiles.addr0 := xtmpos + ytmpos;
     tiles.wenable0 := 0;
-    tiles.wenable1 := 0;
+    tiles_copy.wenable0 := 0;
+    tiles.wenable1 := 1;
+    tiles_copy.wenable1 := 1;
 
     // Setup the reading and writing of the tiles16x16
     tiles16x16.addr0 :=  tilemapentry(tiles.rdata0).tilenumber * 16 + yintm;
     tiles16x16.wenable0 := 0;
+    tiles16x16.addr1 := tile_writer_tile * 16 + tile_writer_line;
+    tiles16x16.wdata1 := tile_writer_bitmap;
     tiles16x16.wenable1 := 1;
 
-    // Default to transparent
+    // RENDER - Default to transparent
     tilemap_display := pix_active && ( ( tmpixel ) || ( ~tilemapentry(tiles.rdata0).alpha ) );
-
-    // Render the tilemap
-    always {
-        if( tilemap_display ) {
-            // Determine if background or foreground
-            pix_red = tmpixel ? tiles.rdata0[9,2] : tiles.rdata0[15,2];
-            pix_green = tmpixel ? tiles.rdata0[7,2] : tiles.rdata0[13,2];
-            pix_blue = tmpixel ?  tiles.rdata0[5,2] : tiles.rdata0[11,2];
-        }
-    }
+    pix_red := tmpixel ? tiles.rdata0[9,2] : tiles.rdata0[15,2];
+    pix_green := tmpixel ? tiles.rdata0[7,2] : tiles.rdata0[13,2];
+    pix_blue := tmpixel ?  tiles.rdata0[5,2] : tiles.rdata0[11,2];
 
     // Default to 0,0 and transparent
     tiles.addr1 = 0; tiles.wdata1 = { 1b1, 6b0, 6b0, 5b0 };
+    tiles_copy.addr1 = 0; tiles_copy.wdata1 = { 1b1, 6b0, 6b0, 5b0 };
 
     while(1) {
-        // Update tiles
-        if( tile_writer_write ) {
-            tiles16x16.addr1 = tile_writer_tile * 16 + tile_writer_line;
-            tiles16x16.wdata1 = tile_writer_bitmap;
-        }
-
         // Write character to the tilemap
-        switch( tm_write ) {
-            case 1: {
-                tiles.addr1 = tm_x + tm_y * 42;
-                tiles.wdata1 = { tm_background, tm_foreground, tm_character };
-                tiles.wenable1 = 1;
-            }
+        if( tm_write == 1 ) {
+            tiles.addr1 = tm_x + tm_y * 42;
+            tiles.wdata1 = { tm_background, tm_foreground, tm_character };
+            tiles_copy.addr1 = tm_x + tm_y * 42;
+            tiles_copy.wdata1 = { tm_background, tm_foreground, tm_character };
         }
 
         switch( tm_active ) {
@@ -225,24 +216,26 @@ algorithm tilemap(
                 ++:
                 while( y_cursor < 32 ) {
                     x_cursor = 0;
-                    tiles.addr1 = y_cursor_addr;
+                    tiles_copy.addr0 = y_cursor_addr;
                     ++:
-                    new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles.rdata1;
+                    new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles_copy.rdata0;
                     ++:
                     while( x_cursor < 42 ) {
-                        tiles.addr1 = ( x_cursor + 1 ) + y_cursor_addr;
+                        tiles_copy.addr0 = ( x_cursor + 1 ) + y_cursor_addr;
                         ++:
-                        scroll_tile = tiles.rdata1;
+                        scroll_tile = tiles_copy.rdata0;
                         ++:
                         tiles.addr1 = ( x_cursor ) + y_cursor_addr;
                         tiles.wdata1 = scroll_tile;
-                        tiles.wenable1 = 1;
+                        tiles_copy.addr1 = ( x_cursor ) + y_cursor_addr;
+                        tiles_copy.wdata1 = scroll_tile;
                         x_cursor = x_cursor + 1;
                     }
                     ++:
                     tiles.addr1 = ( 41 ) + y_cursor_addr;
                     tiles.wdata1 = new_tile;
-                    tiles.wenable1 = 1;
+                    tiles_copy.addr1 = ( 41 ) + y_cursor_addr;
+                    tiles_copy.wdata1 = new_tile;
                     y_cursor = y_cursor + 1;
                     y_cursor_addr = y_cursor_addr + 42;
                 }
@@ -258,24 +251,26 @@ algorithm tilemap(
                 ++:
                 while( y_cursor < 32 ) {
                     x_cursor = 41;
-                    tiles.addr1 = 41 + y_cursor_addr;
+                    tiles_copy.addr0 = 41 + y_cursor_addr;
                     ++:
-                    new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles.rdata1;
+                    new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles_copy.rdata0;
                     ++:
                     while( x_cursor > 0 ) {
-                        tiles.addr1 = ( x_cursor - 1 ) + y_cursor_addr;
+                        tiles_copy.addr0 = ( x_cursor - 1 ) + y_cursor_addr;
                         ++:
-                        scroll_tile = tiles.rdata1;
+                        scroll_tile = tiles_copy.rdata0;
                         ++:
                         tiles.addr1 = ( x_cursor ) + y_cursor_addr;
                         tiles.wdata1 = scroll_tile;
-                        tiles.wenable1 = 1;
+                        tiles_copy.addr1 = ( x_cursor ) + y_cursor_addr;
+                        tiles_copy.wdata1 = scroll_tile;
                         x_cursor = x_cursor - 1;
                     }
                     ++:
                     tiles.addr1 = y_cursor_addr;
                     tiles.wdata1 = new_tile;
-                    tiles.wenable1 = 1;
+                    tiles_copy.addr1 = y_cursor_addr;
+                    tiles_copy.wdata1 = new_tile;
                     y_cursor = y_cursor + 1;
                     y_cursor_addr = y_cursor_addr + 42;
                 }
@@ -291,24 +286,26 @@ algorithm tilemap(
                 while( x_cursor < 42 ) {
                     y_cursor = 0;
                     y_cursor_addr = 0;
-                    tiles.addr1 = x_cursor;
+                    tiles_copy.addr0 = x_cursor;
                     ++:
-                    new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles.rdata1;
+                    new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles_copy.rdata0;
                     ++:
                     while( y_cursor < 31 ) {
-                        tiles.addr1 = x_cursor + y_cursor_addr + 42;
+                        tiles_copy.addr0 = x_cursor + y_cursor_addr + 42;
                         ++:
-                        scroll_tile = tiles.rdata1;
+                        scroll_tile = tiles_copy.rdata0;
                         ++:
                         tiles.addr1 = ( x_cursor ) + y_cursor_addr;
                         tiles.wdata1 = scroll_tile;
-                        tiles.wenable1 = 1;
+                        tiles_copy.addr1 = ( x_cursor ) + y_cursor_addr;
+                        tiles_copy.wdata1 = scroll_tile;
                         y_cursor = y_cursor + 1;
                         y_cursor_addr = y_cursor_addr + 42;
                     }
                     tiles.addr1 = x_cursor + 1302;
                     tiles.wdata1 = new_tile;
-                    tiles.wenable1 = 1;
+                    tiles_copy.addr1 = x_cursor + 1302;
+                    tiles_copy.wdata1 = new_tile;
                     x_cursor = x_cursor + 1;
                 }
                 ++:
@@ -323,24 +320,26 @@ algorithm tilemap(
                 while( x_cursor < 42 ) {
                     y_cursor = 0;
                     y_cursor_addr = 1302;
-                    tiles.addr1 = x_cursor;
+                    tiles_copy.addr0 = x_cursor;
                     ++:
-                    new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles.rdata1;
+                    new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles_copy.rdata0;
                     ++:
                     while( y_cursor > 0 ) {
-                        tiles.addr1 = x_cursor + y_cursor_addr - 42;
+                        tiles_copy.addr0 = x_cursor + y_cursor_addr - 42;
                         ++:
-                        scroll_tile = tiles.rdata1;
+                        scroll_tile = tiles_copy.rdata0;
                         ++:
                         tiles.addr1 = ( x_cursor ) + y_cursor_addr;
                         tiles.wdata1 = scroll_tile;
-                        tiles.wenable1 = 1;
+                        tiles_copy.addr1 = ( x_cursor ) + y_cursor_addr;
+                        tiles_copy.wdata1 = scroll_tile;
                         y_cursor = y_cursor - 1;
                         y_cursor_addr = y_cursor_addr - 42;
                     }
                     tiles.addr1 = x_cursor;
                     tiles.wdata1 = new_tile;
-                    tiles.wenable1 = 1;
+                    tiles_copy.addr1 = x_cursor;
+                    tiles_copy.wdata1 = new_tile;
                     x_cursor = x_cursor + 1;
                 }
                 ++:
@@ -352,10 +351,11 @@ algorithm tilemap(
             case 5: {
                 tmcsaddr = 0;
                 tiles.wdata1 = { 1b1, 6b0, 6b0, 5b0 };
+                tiles_copy.wdata1 = { 1b1, 6b0, 6b0, 5b0 };
                 ++:
                 while( tmcsaddr < 1344 ) {
                     tiles.addr1 = tmcsaddr;
-                    tiles.wenable1 = 1;
+                    tiles_copy.addr1 = tmcsaddr;
                     tmcsaddr = tmcsaddr + 1;
                 }
                 ++:

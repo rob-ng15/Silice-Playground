@@ -985,13 +985,9 @@ t: usltile! ff48 literal ! 80 literal begin 1- dup ff49 literal ! swap ff4a lite
 t: uslsprite! ( colour x y tile active double number ) ff40 literal ! ff46 literal ! ff41 literal ! ff42 literal ! ff45 literal ! ff44 literal ! ff43 literal ! t;
 t: uslupdate! ff40 literal ! ff4e literal ! t;
 
-t: vectorvertex! ff76 literal ! ff75 literal ! ff78 literal ! ff77 literal ! ff79 literal ! 1 literal ff7a literal ! t;
+t: vectorvertex! ff76 literal ! ff75 literal ! ff78 literal ! ff77 literal ! ff79 literal ! t;
 t: vector? begin ff74 literal @ 0= until t;
 t: vector! vector? ff70 literal ! ff73 literal ! ff72 literal ! ff71 literal ! 1 literal ff74 literal ! t;
-
-t: dlentry! ff83 literal ! ff8c literal ! ff8b literal ! ff8a literal ! ff89 literal ! ff88 literal ! ff87 literal ! ff86 literal ! ff85 literal ! ff84 literal ! 1 literal ff8d literal ! t;
-t: dl? begin ff82 literal @ 0= until t;
-t: dlstart! dl? ff81 literal ! ff80 literal ! 1 literal ff82 literal ! t;
 
 t: tpu! begin ff15 literal @ 0= until ff15 literal ! t;
 t: tpuxy! ( x y ) ff11 literal ! ff10 literal ! 1 literal tpu! t;

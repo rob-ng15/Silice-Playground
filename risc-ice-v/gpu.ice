@@ -26,7 +26,6 @@ algorithm vectors(
     input   int6    vertices_writer_xdelta,
     input   int6    vertices_writer_ydelta,
     input   uint1   vertices_writer_active,
-    input   uint1   vertices_writer_write,
 
     output  uint1   vector_block_active,
 
@@ -56,6 +55,8 @@ algorithm vectors(
     // Set read and write address for the vertices
     vertex.addr0 := block_number * 16 + vertices_number;
     vertex.wenable0 := 0;
+    vertex.addr1 := vertices_writer_block * 16 + vertices_writer_vertex;
+    vertex.wdata1 := { vertices_writer_active, __unsigned(vertices_writer_xdelta), __unsigned(vertices_writer_ydelta) };
     vertex.wenable1 := 1;
 
     gpu_write := 0;
@@ -64,11 +65,6 @@ algorithm vectors(
     vertices_number = 0;
 
     while(1) {
-        if( vertices_writer_write ) {
-            vertex.addr1 = vertices_writer_block * 16 + vertices_writer_vertex;
-            vertex.wdata1 = { vertices_writer_active, __unsigned(vertices_writer_xdelta), __unsigned(vertices_writer_ydelta) };
-        }
-
         if( draw_vector ) {
             block_number = vector_block_number;
             gpu_colour = vector_block_colour;
@@ -121,7 +117,6 @@ algorithm gpu(
     input   uint5   blit1_writer_tile,
     input   uint4   blit1_writer_line,
     input   uint16  blit1_writer_bitmap,
-    input   uint1   blit1_writer_active,
 
     // VECTOR BLOCK
     input   uint5   vector_block_number,
@@ -135,7 +130,6 @@ algorithm gpu(
     input   int6    vertices_writer_xdelta,
     input   int6    vertices_writer_ydelta,
     input   uint1   vertices_writer_active,
-    input   uint1   vertices_writer_write,
 
     output  uint1   gpu_active,
     output  uint1   vector_block_active
@@ -204,7 +198,6 @@ algorithm gpu(
         vertices_writer_xdelta <: vertices_writer_xdelta,
         vertices_writer_ydelta <: vertices_writer_ydelta,
         vertices_writer_active <: vertices_writer_active,
-        vertices_writer_write <: vertices_writer_write,
 
         vector_block_active :> vector_block_active,
 
@@ -222,18 +215,12 @@ algorithm gpu(
     blit1tilemap.wenable0 := 0;
 
     // blit1tilemap write access for the GPU to load tilemaps
+    blit1tilemap.addr1 := blit1_writer_tile * 16 + blit1_writer_line;
+    blit1tilemap.wdata1 := blit1_writer_bitmap;
     blit1tilemap.wenable1 := 1;
 
     bitmap_write := 0;
     bitmap_colour_write := gpu_active_colour;
-
-
-    always {
-        if( blit1_writer_active ) {
-            blit1tilemap.addr1 = blit1_writer_tile * 16 + blit1_writer_line;
-            blit1tilemap.wdata1 = blit1_writer_bitmap;
-        }
-    }
 
     while(1) {
         if( ( v_gpu_write != 0 ) || ( gpu_write != 0 ) ) {

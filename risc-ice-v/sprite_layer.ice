@@ -110,8 +110,8 @@ algorithm sprite_layer(
     sprite_read_y := sprite_y[ sprite_set_number ];
     sprite_read_tile := sprite_tile_number[ sprite_set_number ];
 
-    // RENDER + COLLISION DETECTION
-    always {
+    while(1) {
+        // RENDER + COLLISION DETECTION
         if( pix_vblank ) {
             if( ~output_collisions ) {
                 // RESET collision detection
@@ -145,10 +145,7 @@ algorithm sprite_layer(
                 output_collisions = ( pix_x == 639 ) && ( pix_y == 479 );
             }
         }
-    }
 
-    // SET TILES + ATTRIBUTES
-    while(1) {
         // WRITE BITMAP TO SPRITE TILE
         if( sprite_writer_active ) {
             switch( sprite_writer_sprite ) {
