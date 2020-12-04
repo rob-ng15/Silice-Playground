@@ -37,7 +37,7 @@ algorithm tilemap(
     // Tile Map 32 x 16 x 16
     dualport_bram uint16 tiles16x16[ 512 ] = { 0, pad(0) };
 
-    // 42 x 32 tile map, allows for pixel scrolling with border
+    // 42 x 32 tile map, allows for pixel scrolling with border { 7 bits background, 6 bits foreground, 5 bits tile number }
     // Setting background to 40 (ALPHA) allows the bitmap/background to show through
     dualport_bram uint18 tiles[1344] = { 18b100000000000000000, pad(18b100000000000000000) };
 
@@ -81,7 +81,7 @@ algorithm tilemap(
     tiles16x16.wenable1 := 1;
 
     // Default to transparent
-    tilemap_display := pix_active && (( tmpixel ) || ( ~tilemapentry(tiles.rdata0).alpha ));
+    tilemap_display := pix_active && ( ( tmpixel ) || ( ~tilemapentry(tiles.rdata0).alpha ) );
 
     // Render the tilemap
     always {
