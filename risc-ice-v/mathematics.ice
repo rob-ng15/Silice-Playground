@@ -93,3 +93,91 @@ algorithm multiplicationDSP (
         }
     }
 }
+
+// SIGNED ADDITION / SUBTRACTION
+algorithm additionsubtraction (
+    input   int32   sourceReg1,
+    input   int32   sourceReg2,
+    input   int32   immediateValue,
+
+    output  int32   ADD,
+    output  int32   ADDI,
+    output  int32   SUB
+) <autorun> {
+    ADD := sourceReg1 + sourceReg2;
+    ADDI := sourceReg1 + immediateValue;
+    SUB := sourceReg1 - sourceReg2;
+
+    while(1) {
+    }
+}
+
+// SHIFT OPERATIONS - LOGICAL and ARITHMETIC
+algorithm shifter (
+    input   int32   sourceReg1,
+    input   int32   sourceReg2,
+    input   uint32  instruction,
+
+    output  int32   SLL,
+    output  int32   SLLI,
+    output  int32   SRL,
+    output  int32   SRLI,
+    output  int32   SRA,
+    output  int32   SRAI
+) <autorun> {
+    SLL := __unsigned(sourceReg1) << sourceReg2[0,5];
+    SLLI := __unsigned(sourceReg1) << ItypeSHIFT( instruction ).shiftCount;
+    SRL := __unsigned(sourceReg1) >> sourceReg2[0,5];
+    SRLI := __unsigned(sourceReg1) >> ItypeSHIFT( instruction ).shiftCount;
+    SRA := __signed(sourceReg1) >>> sourceReg2[0,5];
+    SRAI := __signed(sourceReg1) >>> ItypeSHIFT( instruction ).shiftCount;
+
+    while(1) {
+    }
+}
+
+// BINARY LOGIC OPERATIONS
+algorithm logical (
+    input   int32   sourceReg1,
+    input   int32   sourceReg2,
+    input   int32   immediateValue,
+
+    output  int32   AND,
+    output  int32   ANDI,
+    output  int32   OR,
+    output  int32   ORI,
+    output  int32   XOR,
+    output  int32   XORI
+) <autorun> {
+    AND := sourceReg1 & sourceReg2;
+    ANDI := sourceReg1 & immediateValue;
+    OR := sourceReg1 | sourceReg2;
+    ORI := sourceReg1 | immediateValue;
+    XOR := sourceReg1 ^ sourceReg2;
+    XORI := sourceReg1 ^ immediateValue;
+
+    while(1) {
+    }
+}
+
+// COMPARISONS
+algorithm comparison (
+    input   int32   sourceReg1,
+    input   int32   sourceReg2,
+    input   int32   immediateValue,
+    input   uint32  instruction,
+
+    output  int32   SLT,
+    output  int32   SLTI,
+    output  int32   SLTU,
+    output  int32   SLTUI
+) <autorun> {
+    SLT := __signed( sourceReg1 ) < __signed(sourceReg2) ? 32b1 : 32b0;
+    SLTI := __signed( sourceReg1 ) < __signed(immediateValue) ? 32b1 : 32b0;
+    SLTU := ( Rtype(instruction).sourceReg1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 32b1 : 32b0 );
+    SLTUI := ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 32b1 : 32b0 );
+
+    while(1) {
+    }
+}
+

@@ -321,7 +321,28 @@ algorithm main(
         video_reset <: video_reset
     );
 
-    // MULTIPLICATION and DIVISION units
+    // ADDITION/SUBTRACTION, SHIFTER, BINARY LOGIC, MULTIPLICATION and DIVISION units
+    additionsubtraction addsubunit <@clock_copro> (
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        immediateValue <: immediateValue
+    );
+    shifter shiftunit <@clock_copro> (
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        instruction <: instruction
+    );
+    logical logicalunit <@clock_copro> (
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        immediateValue <: immediateValue
+    );
+    comparison comparisonunit <@clock_copro> (
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        immediateValue <: immediateValue,
+        instruction <: instruction
+    );
     divideremainder dividerunit <@clock_copro> (
         dividend <: sourceReg1,
         divisor <: sourceReg2
@@ -640,12 +661,12 @@ algorithm main(
 
                 switch( opCode[2,1] ) {
                     case 1b0: {
-                        if( ( opCode[5,1] == 1 ) && ( function7[0,1] == 1 ) ) {
+                        if( opCode[5,1] && function7[0,1] ) {
                             // M EXTENSION
                             switch( function3[2,1] ) {
                                 case 1b0: {
                                     // MULTIPLICATION
-                                    multiplicationuint.dosigned = ( function3[1,1] == 0 ) ? 1 : ( ( function3[0,1] == 0 ) ? 2 : 0 );
+                                    multiplicationuint.dosigned =  function3[1,1] ? ( function3[0,1] ? 0 : 2 ) : 1;
                                     multiplicationuint.start = 1;
                                     ++:
                                     while( multiplicationuint.active ) {}
@@ -663,42 +684,20 @@ algorithm main(
                         } else {
                             // I ALU OPERATIONS
                             switch( function3 ) {
-                                case 3b000: { result = sourceReg1 + ( ( opCode[5,1] == 1 ) ? ( ( function7[5,1] == 1 ) ? -sourceReg2 : sourceReg2 ): immediateValue ); }
-                                case 3b001: { result = __unsigned( sourceReg1 ) << ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ); }
-                                case 3b010: { result = __signed( sourceReg1 ) < ( ( opCode[5,1] == 1 ) ? __signed(sourceReg2) : __signed(immediateValue) ) ? 32b1 : 32b0; }
-                                case 3b011: {
-                                    switch( opCode[5,1] ) {
-                                        case 1b0: {
-                                            if( immediateValue == 1 ) {
-                                                result = ( sourceReg1 == 0 ) ? 32b1 : 32b0;
-                                            } else {
-                                                result = ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 32b1 : 32b0;
-                                            }
-                                        }
-                                        case 1b1: {
-                                            if( Rtype(instruction).sourceReg1 == 0 ) {
-                                                result = ( sourceReg2 != 0 ) ? 32b1 : 32b0;
-                                            } else {
-                                                result = ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 32b1 : 32b0;
-                                            }
-                                        }
-                                    }
-                                }
-                                case 3b100: { result = sourceReg1 ^ ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ); }
-                                case 3b101: {
-                                    switch( function7[5,1] ) {
-                                        case 1b0: { result = __signed(sourceReg1) >>> ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ); }
-                                        case 1b1: { result = __unsigned(sourceReg1) >> ( ( opCode[5,1] == 1 ) ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ); }
-                                    }
-                                }
-                                case 3b110: { result = sourceReg1 | ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ); }
-                                case 3b111: { result = sourceReg1 & ( ( opCode[5,1] == 1 ) ? sourceReg2 : immediateValue ); }
+                                case 3b000: { result = opCode[5,1] ? ( function7[5,1] ? addsubunit.SUB : addsubunit.ADD ) : addsubunit.ADDI; }
+                                case 3b001: { result = opCode[5,1] ? shiftunit.SLL : shiftunit.SLLI; }
+                                case 3b010: { result = opCode[5,1] ? comparisonunit.SLT : comparisonunit.SLTI; }
+                                case 3b011: { result = opCode[5,1] ? comparisonunit.SLTU : comparisonunit.SLTUI; }
+                                case 3b100: { result = opCode[5,1] ? logicalunit.XOR : logicalunit.XORI; }
+                                case 3b101: { result = function7[5,1] ? ( opCode[5,1] ? shiftunit.SRA : shiftunit.SRAI ) : ( opCode[5,1] ? shiftunit.SRL : shiftunit.SRLI ); }
+                                case 3b110: { result = opCode[5,1] ? logicalunit.OR : logicalunit.ORI; }
+                                case 3b111: { result = opCode[5,1] ? logicalunit.AND : logicalunit.ANDI; }
                             }
                         }
                     }
                     case 1b1: {
                         // AUIPC LUI
-                        result = { Utype(instruction).immediate_bits_31_12, 12b0 } + ( ( opCode[5,1] == 0 ) ? pc : 0 );
+                        result = { Utype(instruction).immediate_bits_31_12, 12b0 } + ( opCode[5,1] ? 0 : pc );
                     }
                 }
             }
@@ -742,89 +741,6 @@ algorithm main(
         }
 
         // UPDATE PC
-        pc = ( incPC ) ? pc + ( ( takeBranch) ? branchOffset : ( compressed ? 2 : 4 ) ) : ( ( opCode[3,1] == 1 ) ? jumpOffset + pc : loadAddress );
+        pc = ( incPC ) ? pc + ( ( takeBranch) ? branchOffset : ( compressed ? 2 : 4 ) ) : ( opCode[3,1] ? jumpOffset + pc : loadAddress );
     } // RISC-V
-}
-
-algorithm ramController (
-    input   uint32  address,
-    input   uint32  writeData,
-    input   uint2   writeStart,
-    input   uint2   readStart,
-
-    output  uint32  readData,
-    output  uint1   memoryBusy
-) <autorun> {
-
-    // RISC-V RAM and BIOS
-    bram uint16 ram[16384] = {
-        $include('ROM/BIOS.inc')
-        , pad(uninitialized)
-    };
-
-    uint1   active = 0;
-    uint2   readSize = uninitialized;
-
-    memoryBusy := ( writeStart > 0 ) || ( readStart > 0 ) ? 1 : active;
-
-    while(1) {
-        if( readStart > 0 ) {
-            active = 1;
-            ram.addr = address[1,15];
-            readSize = readStart;
-            ++:
-            switch( readSize ) {
-                case 1: {
-                    readData = { 24b0, ( address[0,1] ? ram.rdata[8,8] : ram.rdata[0,8] ) };
-                    active = 0;
-                }
-                case 2: {
-                    readData = { 16b0, ram.rdata };
-                    active = 0;
-                }
-                case 3: {
-                    readData = { 16h0000, ram.rdata };
-                    ram.addr = ram.addr + 1;
-                    ++:
-                    readData = { ram.rdata, readData[0,16] };
-                    active = 0;
-                }
-            }
-        }
-
-        if( writeStart > 0 ) {
-            ram.addr = address[1,15];
-            switch( writeStart ) {
-                case 1: {
-                    active = 1;
-                    ++:
-                    switch( address[0,1] ) {
-                        case 0: {
-                            ram.wdata = { ram.rdata[8,8], writeData[0,8] };
-                        }
-                        case 1: {
-                            ram.wdata = { writeData[0,8], ram.rdata[0,8] };
-                        }
-                    }
-                    ram.wenable = 1;
-                    active = 0;
-                }
-                case 2: {
-                    active = 0;
-                    ram.wdata = writeData[0,16];
-                    ram.wenable = 1;
-                }
-                case 3: {
-                    active = 1;
-                    ram.wdata = writeData[0,16];
-                    ram.wenable = 1;
-                    ++:
-                    active = 0;
-                    ram.addr = ram.addr + 1;
-                    ram.wdata = writeData[16,16];
-                    ram.wenable = 1;
-                }
-            }
-        }
-    }
 }
