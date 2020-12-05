@@ -295,12 +295,12 @@ algorithm memmap_io (
     );
 
     // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
-    dualport_bram uint8 uartInBuffer[4096] = uninitialized;
+    simple_dualport_bram uint8 uartInBuffer[4096] = uninitialized;
     uint13  uartInBufferNext = 0;
     uint13  uartInBufferTop = 0;
 
     // UART output FIFO (16 character) as dualport bram (code from @sylefeb)
-    dualport_bram uint8 uartOutBuffer[256] = uninitialized;
+    simple_dualport_bram uint8 uartOutBuffer[256] = uninitialized;
     uint8   uartOutBufferNext = 0;
     uint8   uartOutBufferTop = 0;
     uint8   newuartOutBufferTop = 0;
@@ -310,12 +310,10 @@ algorithm memmap_io (
     reg_btns ::= btns;
 
     // UART Buffers
-    uartInBuffer.wenable0  := 0;  // always read  on port 0
     uartInBuffer.wenable1  := 1;  // always write on port 1
     uartInBuffer.addr0     := uartInBufferNext; // FIFO reads on next
     uartInBuffer.addr1     := uartInBufferTop;  // FIFO writes on top
 
-    uartOutBuffer.wenable0 := 0; // always read  on port 0
     uartOutBuffer.wenable1 := 1; // always write on port 1
     uartOutBuffer.addr0    := uartOutBufferNext; // FIFO reads on next
     uartOutBuffer.addr1    := uartOutBufferTop;  // FIFO writes on top

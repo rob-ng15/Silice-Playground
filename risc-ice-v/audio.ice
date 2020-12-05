@@ -81,13 +81,11 @@ algorithm apu(
     uint5   point_1 = uninitialized;
     uint16  counter50mhz_1 = uninitialized;
     uint16  counter1khz_1 = uninitialized;
-    uint16  milliseconds_1 = uninitialized;
     uint4   waveform_2 = uninitialized;
     uint7   note_2 = uninitialized;
     uint5   point_2 = uninitialized;
     uint16  counter50mhz_2 = uninitialized;
     uint16  counter1khz_2 = uninitialized;
-    uint16  milliseconds_2 = uninitialized;
 
     uint16  duration_1 = uninitialized;
     uint16  duration_2 = uninitialized;
@@ -115,7 +113,6 @@ algorithm apu(
                 waveform_1 = waveform;
                 note_1 = note;
                 duration_1 = duration;
-                milliseconds_1 = 0;
                 point_1 = 0;
                 counter50mhz_1 = 0;
                 counter1khz_1 = 50000;
@@ -125,7 +122,6 @@ algorithm apu(
                 waveform_2 = waveform;
                 note_2 = note;
                 duration_2 = duration;
-                milliseconds_2 = 0;
                 point_2 = 0;
                 counter50mhz_2 = 0;
                 counter1khz_2 = 50000;

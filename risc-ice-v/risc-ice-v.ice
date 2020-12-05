@@ -259,8 +259,8 @@ algorithm main(
     };
 
     // RISC-V REGISTERS
-    dualport_bram int32 registers_1[64] = { 0, pad(0) };
-    dualport_bram int32 registers_2[64] = { 0, pad(0) };
+    simple_dualport_bram int32 registers_1[64] = { 0, pad(0) };
+    simple_dualport_bram int32 registers_2[64] = { 0, pad(0) };
 
     // RISC-V PROGRAM COUNTER
     uint32  pc = 0;
@@ -342,10 +342,8 @@ algorithm main(
 
     // REGISTER Read/Write Flags
     registers_1.addr0 := Rtype(instruction).sourceReg1 + ( floatingpoint ? 32 : 0 );
-    registers_1.wenable0 := 0;
     registers_1.wenable1 := 1;
     registers_2.addr0 := Rtype(instruction).sourceReg2 + ( floatingpoint ? 32 : 0 );
-    registers_2.wenable0 := 0;
     registers_2.wenable1 := 1;
 
     while(1) {
@@ -746,4 +744,87 @@ algorithm main(
         // UPDATE PC
         pc = ( incPC ) ? pc + ( ( takeBranch) ? branchOffset : ( compressed ? 2 : 4 ) ) : ( ( opCode[3,1] == 1 ) ? jumpOffset + pc : loadAddress );
     } // RISC-V
+}
+
+algorithm ramController (
+    input   uint32  address,
+    input   uint32  writeData,
+    input   uint2   writeStart,
+    input   uint2   readStart,
+
+    output  uint32  readData,
+    output  uint1   memoryBusy
+) <autorun> {
+
+    // RISC-V RAM and BIOS
+    bram uint16 ram[16384] = {
+        $include('ROM/BIOS.inc')
+        , pad(uninitialized)
+    };
+
+    uint1   active = 0;
+    uint2   readSize = uninitialized;
+
+    memoryBusy := ( writeStart > 0 ) || ( readStart > 0 ) ? 1 : active;
+
+    while(1) {
+        if( readStart > 0 ) {
+            active = 1;
+            ram.addr = address[1,15];
+            readSize = readStart;
+            ++:
+            switch( readSize ) {
+                case 1: {
+                    readData = { 24b0, ( address[0,1] ? ram.rdata[8,8] : ram.rdata[0,8] ) };
+                    active = 0;
+                }
+                case 2: {
+                    readData = { 16b0, ram.rdata };
+                    active = 0;
+                }
+                case 3: {
+                    readData = { 16h0000, ram.rdata };
+                    ram.addr = ram.addr + 1;
+                    ++:
+                    readData = { ram.rdata, readData[0,16] };
+                    active = 0;
+                }
+            }
+        }
+
+        if( writeStart > 0 ) {
+            ram.addr = address[1,15];
+            switch( writeStart ) {
+                case 1: {
+                    active = 1;
+                    ++:
+                    switch( address[0,1] ) {
+                        case 0: {
+                            ram.wdata = { ram.rdata[8,8], writeData[0,8] };
+                        }
+                        case 1: {
+                            ram.wdata = { writeData[0,8], ram.rdata[0,8] };
+                        }
+                    }
+                    ram.wenable = 1;
+                    active = 0;
+                }
+                case 2: {
+                    active = 0;
+                    ram.wdata = writeData[0,16];
+                    ram.wenable = 1;
+                }
+                case 3: {
+                    active = 1;
+                    ram.wdata = writeData[0,16];
+                    ram.wenable = 1;
+                    ++:
+                    active = 0;
+                    ram.addr = ram.addr + 1;
+                    ram.wdata = writeData[16,16];
+                    ram.wenable = 1;
+                }
+            }
+        }
+    }
 }

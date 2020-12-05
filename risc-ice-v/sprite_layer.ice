@@ -68,7 +68,7 @@ algorithm sprite_layer(
 
     $$for i=0,12 do
         // Sprite Tiles
-        dualport_bram uint16 tiles_$i$[128] = uninitialised;
+        simple_dualport_bram uint16 tiles_$i$[128] = uninitialised;
 
         // Calculate if sprite is visible
         uint6 spritesize_$i$ := sprite_double[$i$] ? 32 : 16;
@@ -93,7 +93,6 @@ algorithm sprite_layer(
     $$for i=0,12 do
         // Set read and write address for the tiles
         tiles_$i$.addr0 := sprite_tile_number[$i$] * 16 + ( ( __signed({1b0, pix_y}) - sprite_y[$i$] ) >>> sprite_double[$i$] );
-        tiles_$i$.wenable0 := 0;
         tiles_$i$.wenable1 := 1;
 
         collision_$i$ := ( output_collisions ) ? detect_collision_$i$ : collision_$i$;

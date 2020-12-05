@@ -32,7 +32,7 @@ algorithm character_map(
 
     // 80 x 30 character buffer
     // Setting background to 40 (ALPHA) allows the bitmap/background to show through
-    dualport_bram uint21 charactermap[2400] = { 21b100000000000000000000, pad(21b100000000000000000000) };
+    simple_dualport_bram uint21 charactermap[2400] = { 21b100000000000000000000, pad(21b100000000000000000000) };
 
     // Character position on the screen x 0-79, y 0-29 * 80 ( fetch it two pixels ahead of the actual x pixel, so it is always ready )
     uint8 xcharacterpos := ( pix_active ?  pix_x + 2 : 0 ) >> 3;
@@ -54,7 +54,6 @@ algorithm character_map(
 
     // Set up reading of the charactermap
     charactermap.addr0 := xcharacterpos + ycharacterpos;
-    charactermap.wenable0 := 0;
 
     // BRAM write access for the TPU
     charactermap.wenable1 := 1;

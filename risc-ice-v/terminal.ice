@@ -21,8 +21,8 @@ algorithm terminal(
     };
 
     // 80 x 4 character buffer for the input/output terminal
-    dualport_bram uint8 terminal[640] = uninitialized;
-    dualport_bram uint8 terminal_copy[640] = uninitialized;
+    simple_dualport_bram uint8 terminal[640] = uninitialized;
+    simple_dualport_bram uint8 terminal_copy[640] = uninitialized;
 
     // Initial cursor position in the terminal, bottom left
     uint7 terminal_x = 0;
@@ -48,8 +48,6 @@ algorithm terminal(
 
     // Setup the reading of the terminal memory
     terminal.addr0 := xterminalpos + yterminalpos;
-    terminal.wenable0 := 0;
-    terminal_copy.wenable0 := 0;
 
     // Setup the writing to the terminal memory
     terminal.wenable1 := 1;
