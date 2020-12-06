@@ -138,7 +138,7 @@ $$end
 
     // J1+ CPU
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
-    uint16  instruction := ram_0.rdata1;
+    uint16  instruction = uninitialized;
     uint16  immediate := ( literal(instruction).literalvalue );
     uint1   is_alu := ( instruction(instruction).is_litcallbranchalu == 3b011 );
     uint1   is_call := ( instruction(instruction).is_litcallbranchalu == 3b010 );
@@ -155,28 +155,26 @@ $$end
     uint13  newPC = uninitialized;
 
     // dstack 257x16bit (as 3256 array + stackTop) and pointer, next pointer, write line, delta
-    dualport_bram uint16 dstack[256] = uninitialized; // bram (code from @sylefeb)
+    simple_dualport_bram uint16 dstack[256] = uninitialized; // bram (code from @sylefeb)
     uint16  stackTop = 0;
     uint8   dsp = 0;
     uint8   newDSP = uninitialized;
     uint16  newStackTop = uninitialized;
 
     // rstack 256x16bit and pointer, next pointer, write line
-    dualport_bram uint16 rstack[256] = uninitialized; // bram (code from @sylefeb)
+    simple_dualport_bram uint16 rstack[256] = uninitialized; // bram (code from @sylefeb)
     uint8   rsp = 0;
     uint8   newRSP = uninitialized;
     uint16  rstackWData = uninitialized;
 
     uint16  stackNext := dstack.rdata0;
     uint16  rStackTop := rstack.rdata0;
-    uint16  memoryInput := ( stackTop[14,1] ) ? ram_1.rdata0 : ram_0.rdata0;
 
     // 16bit ROM with included with compiled j1eForth developed from https://github.com/samawati/j1eforth
-    dualport_bram uint16 ram_0[8192] = {
+    simple_dualport_bram uint16 ram[16384] = {
         $include('ROM/j1eforthROM.inc')
         , pad(uninitialized)
     };
-    dualport_bram uint16 ram_1[8192] = uninitialized;
 
     // Setup Memory Mapped I/O
     memmap_io IO_Map
@@ -217,26 +215,14 @@ $$end
         writeData <: stackNext
     );
 
-    // Setup addresses for the ram
-    // General memory accessed via port 0, Instruction data accessed via port 1
-    ram_0.addr0 := stackTop >> 1;
-    ram_0.wdata0 := stackNext;
-    ram_0.wenable0 := 0;
-    ram_1.addr0 := stackTop >> 1;
-    ram_1.wdata0 := stackNext;
-    ram_1.wenable0 := 0;
-    ram_1.wenable1 := 0;
-    // PC for instruction
-    ram_0.addr1 := pc;
-    ram_0.wenable1 := 0;
+    // RAM is read via port 0, written via port 1
+    ram.wenable1 := 1;
 
     // Setup addresses for the dstack and rstack
     // Read via port 0, write via port 1
     dstack.addr0 := dsp;
-    dstack.wenable0 := 0;
     dstack.wenable1 := 1;
     rstack.addr0 := rsp;
-    rstack.wenable0 := 0;
     rstack.wenable1 := 1;
 
     // IO Map Read / Write Flags
@@ -248,8 +234,18 @@ $$end
         clock_50mhz := clock;
     $$end
 
+    // Set initial write to top of memory
+    ram.addr1 = 16383;
+    ram.wdata1 = 0;
+
     // EXECUTE J1 CPU
     while( 1 ) {
+        // FETCH INSTRUCTION
+        ram.addr0 = pc;
+        ++:
+        instruction = ram.rdata0;
+        ram.addr0 = stackTop >> 1;
+        ++:
 
         // J1 CPU Instruction Execute
         if(is_lit) {
@@ -304,7 +300,7 @@ $$end
                                         IO_Map.memoryRead = 1;
                                         newStackTop = IO_Map.readData;
                                     } else {
-                                        newStackTop = memoryInput;
+                                        newStackTop = ram.rdata0;
                                     }
                                 }
                                 case 4b1101: {newStackTop = stackNext << nibbles(stackTop).nibble0;}
@@ -345,8 +341,10 @@ $$end
                     newPC = ( aluop(instruction).is_r2pc ) ? rStackTop >> 1 : pcPlusOne;
 
                     // n2memt mem[t] = n
-                    ram_0.wenable0 = is_n2memt && ( stackTop[14,2] == 2b00 );
-                    ram_1.wenable0 = is_n2memt && ( stackTop[14,2] == 2b01 );
+                    if( is_n2memt && ~stackTop[15,1] ) {
+                        ram.addr1 = stackTop >> 1;
+                        ram.wdata1 = stackNext;
+                    }
                     IO_Map.memoryWrite = is_n2memt && ( stackTop[15,1] );
                 } // ALU
             }
@@ -371,6 +369,5 @@ $$end
         rsp = newRSP;
 
         ++:
-
     } // execute J1 CPU
 }

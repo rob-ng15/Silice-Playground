@@ -40,7 +40,7 @@ algorithm vectors(
     input  uint1 gpu_active
 ) <autorun> {
     // 32 vector blocks each of 16 vertices
-    dualport_bram uint13 vertex[512] = uninitialised;
+    simple_dualport_bram uint13 vertex[512] = uninitialised;
 
     // Extract deltax and deltay for the present vertices
     int11 deltax := { {6{vectorentry(vertex.rdata0).dxsign}}, vectorentry(vertex.rdata0).dx };
@@ -54,7 +54,6 @@ algorithm vectors(
 
     // Set read and write address for the vertices
     vertex.addr0 := block_number * 16 + vertices_number;
-    vertex.wenable0 := 0;
     vertex.addr1 := vertices_writer_block * 16 + vertices_writer_vertex;
     vertex.wdata1 := { vertices_writer_active, __unsigned(vertices_writer_xdelta), __unsigned(vertices_writer_ydelta) };
     vertex.wenable1 := 1;
@@ -135,7 +134,7 @@ algorithm gpu(
     output  uint1   vector_block_active
 ) <autorun> {
     // 32 x 16 x 16 1 bit tilemap for blit1tilemap
-    dualport_bram uint16 blit1tilemap[ 512 ] = uninitialized;
+    simple_dualport_bram uint16 blit1tilemap[ 512 ] = uninitialized;
 
     // GPU work variable storage
     // Present GPU pixel and colour
@@ -212,7 +211,6 @@ algorithm gpu(
 
     // blit1tilemap read access for the blit1tilemap
     blit1tilemap.addr0 := gpu_tile * 16 + gpu_active_y;
-    blit1tilemap.wenable0 := 0;
 
     // blit1tilemap write access for the GPU to load tilemaps
     blit1tilemap.addr1 := blit1_writer_tile * 16 + blit1_writer_line;

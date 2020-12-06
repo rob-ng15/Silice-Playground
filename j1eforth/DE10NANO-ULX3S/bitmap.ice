@@ -23,7 +23,7 @@ algorithm bitmap(
     output  uint7   bitmap_colour_read
 ) <autorun> {
     // 640 x 480 x 7 bit { Arrggbb } colour bitmap
-    dualport_bram uint7 bitmap[ 307200 ] = uninitialized;
+    simple_dualport_bram uint7 bitmap[ 307200 ] = uninitialized;
 
     // Offset from ( 0, 0 ) to start drawing
     uint10  x_offset = 0;
@@ -47,7 +47,6 @@ algorithm bitmap(
     // Setup the address in the bitmap for the pixel being rendered
     // Use pre-fetching of the next pixel ready for the next cycle
     bitmap.addr0 := x_pixel + ( y_line * 640 );
-    bitmap.wenable0 := 0;
 
     // Bitmap write access for the GPU - Only enable when x and y are in range
     bitmap.wenable1 := 1;

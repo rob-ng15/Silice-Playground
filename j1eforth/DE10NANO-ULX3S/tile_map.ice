@@ -34,12 +34,12 @@ algorithm tilemap(
     output  uint3   tm_active
 ) <autorun> {
     // Tile Map 32 x 16 x 16
-    dualport_bram uint16 tiles16x16[ 512 ] = { 0, pad(0) };
+    simple_dualport_bram uint16 tiles16x16[ 512 ] = { 0, pad(0) };
 
     // 42 x 32 tile map, allows for pixel scrolling with border { 7 bits background, 6 bits foreground, 5 bits tile number }
     // Setting background to 40 (ALPHA) allows the bitmap/background to show through
-    dualport_bram uint18 tiles[1344] = { 18b100000000000000000, pad(18b100000000000000000) };
-    dualport_bram uint18 tiles_copy[1344] = { 18b100000000000000000, pad(18b100000000000000000) };
+    simple_dualport_bram uint18 tiles[1344] = { 18b100000000000000000, pad(18b100000000000000000) };
+    simple_dualport_bram uint18 tiles_copy[1344] = { 18b100000000000000000, pad(18b100000000000000000) };
 
     // Scroll position - -15 to 0 to 15
     // -15 or 15 will trigger appropriate scroll when next moved in that direction
@@ -72,14 +72,11 @@ algorithm tilemap(
 
     // Set up reading of the tilemap
     tiles.addr0 := xtmpos + ytmpos;
-    tiles.wenable0 := 0;
-    tiles_copy.wenable0 := 0;
     tiles.wenable1 := 1;
     tiles_copy.wenable1 := 1;
 
     // Setup the reading and writing of the tiles16x16
     tiles16x16.addr0 :=  tilemapentry(tiles.rdata0).tilenumber * 16 + yintm;
-    tiles16x16.wenable0 := 0;
     tiles16x16.addr1 := tile_writer_tile * 16 + tile_writer_line;
     tiles16x16.wdata1 := tile_writer_bitmap;
     tiles16x16.wenable1 := 1;

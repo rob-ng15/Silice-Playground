@@ -43,7 +43,7 @@ algorithm background(
 
         // RENDER
         if( pix_active ) {
-            switch( backgroundcolour_mode ) {
+            switch( background_mode ) {
                 case 0: {
                     // SOLID
                     pix_red = colour6(background).red;
