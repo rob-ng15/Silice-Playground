@@ -143,19 +143,19 @@ void wait_timer1khz( void )
     while( *TIMER1KHZ != 0 );
 }
 
-void beep( unsigned char channel_number, unsigned char channel_note, unsigned char waveform, unsigned char note, unsigned short duration )
+void beep( unsigned char channel_number, unsigned char waveform, unsigned char note, unsigned short duration )
 {
     if( ( channel_number & 1 ) != 0 ) {
         *AUDIO_L_WAVEFORM = waveform;
         *AUDIO_L_NOTE = note;
         *AUDIO_L_DURATION = duration;
-        *AUDIO_L_START = channel_note;
+        *AUDIO_L_START = 1;
     }
     if( ( channel_number & 2 ) != 0 ) {
         *AUDIO_R_WAVEFORM = waveform;
         *AUDIO_R_NOTE = note;
         *AUDIO_R_DURATION = duration;
-        *AUDIO_R_START = channel_note;
+        *AUDIO_R_START = 1;
     }
 }
 
@@ -914,7 +914,7 @@ void fire_bullet( void )
     set_sprite( 0, 12, 1, 60, bulletx, bullety, 2, 0);
     set_sprite( 1, 12, 1, 48, bulletx, bullety, 0, 0);
 
-    beep( 2, 2, 4, 61, 128 );
+    beep( 2, 4, 61, 128 );
 }
 
 void update_bullet( void )
@@ -940,7 +940,7 @@ void beepboop( void )
         switch( *TIMER1HZ & 3 ) {
             case 0:
                 if( lives > 0 ) {
-                    beep( 1, 1, 0, 1, 500 );
+                    beep( 1, 0, 1, 500 );
                 } else {
                     tpu_outputstring( 16, 18, 64, 3, "         Welcome to Risc-ICE-V Asteroids        " );
                 }
@@ -954,7 +954,7 @@ void beepboop( void )
 
             case 2:
                 if( lives > 0 ) {
-                    beep( 1, 1, 0, 2, 500 );
+                    beep( 1, 0, 2, 500 );
                 } else {
                     tpu_outputstring( 16, 18, 64, 60, "                 Press UP to start              " );
                 }
@@ -990,7 +990,7 @@ void check_ufo_bullet_hit( void )
     short x, y;
 
     if( ( ( get_sprite_collision( 0, 10 ) & 0x3ff ) != 0 ) || ( ( get_sprite_collision( 1, 10 ) & 0x3ff ) != 0 ) ) {
-        beep( 2, 2, 4, 8, 500 );
+        beep( 2, 4, 8, 500 );
         for( unsigned char asteroid_number = 0; asteroid_number < MAXASTEROIDS; asteroid_number++ ) {
             if( get_sprite_collision( ASN( asteroid_number ) ) & 0x400 ) {
                 asteroid_hit = asteroid_number;
@@ -1026,7 +1026,7 @@ void check_hit( void )
     short x, y;
 
     if( ( ( get_sprite_collision( 0, 12 ) & 0x3ff ) != 0 ) || ( ( get_sprite_collision( 1, 12 ) & 0x3ff ) != 0 ) ) {
-        beep( 2, 2, 4, 8, 500 );
+        beep( 2, 4, 8, 500 );
         for( unsigned char asteroid_number = 0; asteroid_number < MAXASTEROIDS; asteroid_number++ ) {
             if( get_sprite_collision( ASN( asteroid_number ) ) & 0x1000 ) {
                 asteroid_hit = asteroid_number;
@@ -1089,7 +1089,7 @@ void check_crash( void )
             set_sprite_attribute( 0, 10, 0, 0 );
             set_sprite_attribute( 1, 10, 0, 0 );
         }
-        beep( 2, 2, 4, 1, 1000 );
+        beep( 2, 4, 1, 1000 );
         set_ship_sprites( 1 );
         set_sprite_attribute( 0, 10, 1, 0 );
         set_sprite_attribute( 1, 10, 1, 1 );
@@ -1115,7 +1115,7 @@ void main()
         // FLASH LEDS AND BEEP IF UFO ON SCREEN
         *LEDS = ( ufo_sprite_number != 0xff ) && ( counter & 32 ) ? 0xff : 0;
         if( ( ufo_sprite_number != 0xff ) && ( counter & 64 ) && ( lives != 0 ) ) {
-            beep( 2, 2, 3, 63, 32 );
+            beep( 2, 3, 63, 32 );
         }
 
         // PLACE NEW LARGE ASTEROIDS
@@ -1179,7 +1179,7 @@ void main()
 
         if( ( rng( ( level > 3 ) ? 64 : 128 ) == 1 ) && ( get_sprite_attribute( 0, 10, 0 ) == 0 ) && ( ufo_sprite_number != 0xff ) && ( ( level != 0 ) || ( lives == 0 ) ) ) {
             // START UFO BULLET
-            beep( 2, 2, 4, 63, 32 );
+            beep( 2, 4, 63, 32 );
 
             ufo_x = get_sprite_attribute( ASN( ufo_sprite_number ), 3 ) + ( ( level < 2 ) ? 16 : 8 );
             ufo_y = get_sprite_attribute( ASN( ufo_sprite_number ), 4 );

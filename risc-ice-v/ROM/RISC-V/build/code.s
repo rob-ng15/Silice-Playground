@@ -97,31 +97,33 @@ beep:
 	beq	a5,zero,.L21
 	lui	a5,%hi(AUDIO_L_WAVEFORM)
 	lw	a5,%lo(AUDIO_L_WAVEFORM)(a5)
-	sb	a2,0(a5)
+	sb	a1,0(a5)
 	lui	a5,%hi(AUDIO_L_NOTE)
 	lw	a5,%lo(AUDIO_L_NOTE)(a5)
-	sb	a3,0(a5)
+	sb	a2,0(a5)
 	lui	a5,%hi(AUDIO_L_DURATION)
 	lw	a5,%lo(AUDIO_L_DURATION)(a5)
-	sh	a4,0(a5)
+	sh	a3,0(a5)
 	lui	a5,%hi(AUDIO_L_START)
 	lw	a5,%lo(AUDIO_L_START)(a5)
-	sb	a1,0(a5)
+	li	a4,1
+	sb	a4,0(a5)
 .L21:
 	andi	a0,a0,2
 	beq	a0,zero,.L20
 	lui	a5,%hi(AUDIO_R_WAVEFORM)
 	lw	a5,%lo(AUDIO_R_WAVEFORM)(a5)
-	sb	a2,0(a5)
+	sb	a1,0(a5)
 	lui	a5,%hi(AUDIO_R_NOTE)
 	lw	a5,%lo(AUDIO_R_NOTE)(a5)
-	sb	a3,0(a5)
+	sb	a2,0(a5)
 	lui	a5,%hi(AUDIO_R_DURATION)
 	lw	a5,%lo(AUDIO_R_DURATION)(a5)
-	sh	a4,0(a5)
+	sh	a3,0(a5)
 	lui	a5,%hi(AUDIO_R_START)
 	lw	a5,%lo(AUDIO_R_START)(a5)
-	sb	a1,0(a5)
+	li	a4,1
+	sb	a4,0(a5)
 .L20:
 	ret
 	.size	beep, .-beep
@@ -2210,10 +2212,9 @@ fire_bullet:
 	li	a1,12
 	li	a0,1
 	call	set_sprite
-	li	a4,128
-	li	a3,61
-	li	a2,4
-	li	a1,2
+	li	a3,128
+	li	a2,61
+	li	a1,4
 	li	a0,2
 	call	beep
 	lw	ra,12(sp)
@@ -2406,10 +2407,9 @@ beepboop:
 	lui	a5,%hi(lives)
 	lhu	a5,%lo(lives)(a5)
 	beq	a5,zero,.L271
-	li	a4,500
-	li	a3,1
-	li	a2,0
-	li	a1,1
+	li	a3,500
+	li	a2,1
+	li	a1,0
 	li	a0,1
 	call	beep
 	j	.L265
@@ -2426,10 +2426,9 @@ beepboop:
 	lui	a5,%hi(lives)
 	lhu	a5,%lo(lives)(a5)
 	beq	a5,zero,.L272
-	li	a4,500
-	li	a3,2
-	li	a2,0
-	li	a1,1
+	li	a3,500
+	li	a2,2
+	li	a1,0
 	li	a0,1
 	call	beep
 	j	.L265
@@ -2572,10 +2571,9 @@ check_ufo_bullet_hit:
 	andi	a0,a0,1023
 	beq	a0,zero,.L286
 .L287:
-	li	a4,500
-	li	a3,8
-	li	a2,4
-	li	a1,2
+	li	a3,500
+	li	a2,8
+	li	a1,4
 	li	a0,2
 	call	beep
 	li	s0,0
@@ -2728,10 +2726,9 @@ check_hit:
 	andi	a0,a0,1023
 	beq	a0,zero,.L306
 .L307:
-	li	a4,500
-	li	a3,8
-	li	a2,4
-	li	a1,2
+	li	a3,500
+	li	a2,8
+	li	a1,4
 	li	a0,2
 	call	beep
 	li	s0,0
@@ -2991,10 +2988,9 @@ check_crash:
 	li	a0,1
 	call	set_sprite_attribute
 .L335:
-	li	a4,1000
-	li	a3,1
-	li	a2,4
-	li	a1,2
+	li	a3,1000
+	li	a2,1
+	li	a1,4
 	li	a0,2
 	call	beep
 	li	a0,1
@@ -3163,10 +3159,9 @@ main:
 	lui	a5,%hi(lives)
 	lhu	a5,%lo(lives)(a5)
 	beq	a5,zero,.L341
-	li	a4,32
-	li	a3,63
-	li	a2,3
-	li	a1,2
+	li	a3,32
+	li	a2,63
+	li	a1,3
 	li	a0,2
 	call	beep
 	j	.L341
@@ -3312,10 +3307,9 @@ main:
 	lhu	a5,%lo(lives)(a5)
 	bne	a5,zero,.L361
 .L360:
-	li	a4,32
-	li	a3,63
-	li	a2,4
-	li	a1,2
+	li	a3,32
+	li	a2,63
+	li	a1,4
 	li	a0,2
 	call	beep
 	lbu	a1,%lo(ufo_sprite_number)(s4)
