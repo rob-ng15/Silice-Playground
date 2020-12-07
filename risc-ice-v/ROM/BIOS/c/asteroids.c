@@ -3,6 +3,13 @@ unsigned char * UART_DATA = (unsigned char *) 0x8000;
 unsigned char volatile * BUTTONS = (unsigned char volatile *) 0x8008;
 unsigned char volatile * LEDS = (unsigned char volatile *) 0x800c;
 
+unsigned char volatile * SDCARD_READY = (unsigned char volatile *) 0x8f00;
+unsigned char volatile * SDCARD_START = (unsigned char volatile *) 0x8f00;
+unsigned short volatile * SDCARD_SECTOR_LOW = ( unsigned short *) 0x8f08;
+unsigned short volatile * SDCARD_SECTOR_HIGH = ( unsigned short *) 0x8f04;
+unsigned char volatile * SDCARD_ADDRESS = (unsigned char volatile *) 0x8f10;
+unsigned char volatile * SDCARD_DATA = (unsigned char volatile *) 0x8f10;
+
 unsigned char * TERMINAL_OUTPUT = (unsigned char *) 0x8700;
 unsigned char volatile * TERMINAL_SHOWHIDE = (unsigned char volatile *) 0x8704;
 unsigned char volatile * TERMINAL_STATUS = (unsigned char volatile *) 0x8700;
@@ -106,6 +113,30 @@ void *memcpy( void *destination, void *source, unsigned int length )
     for( i = 0; i < length; i++ ) {
         d[i] = s[i];
     }
+}
+
+void outputcharacter(char c)
+{
+	while( (*UART_STATUS & 2) != 0 );
+    *UART_DATA = c;
+    *TERMINAL_OUTPUT = c;
+    if( c == '\n' )
+        outputcharacter('\r');
+}
+void outputstring(char *s)
+{
+	while(*s) {
+		outputcharacter(*s);
+		s++;
+	}
+	outputcharacter('\n');
+}
+void outputstringnonl(char *s)
+{
+	while(*s) {
+		outputcharacter(*s);
+		s++;
+	}
 }
 
 char inputcharacter( void )

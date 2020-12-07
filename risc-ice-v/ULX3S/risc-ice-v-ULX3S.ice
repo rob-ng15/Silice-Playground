@@ -1,8 +1,9 @@
 $$ uart_in_clock_freq_mhz = 25
 
-// VGA/HDMI + UART Driver Includes
+// HDMI + UART + SDCARD Driver Includes
 $include('../common/hdmi.ice')
 $include('../common/uart.ice')
+$include('../common/sdcard.ice')
 
 // Multiplexed Display Includes
 $include('../multiplex_display.ice')
@@ -19,6 +20,7 @@ $include('../mathematics.ice')
 $include('../memmap_io.ice')
 
 import('../common/ulx3s_clk_risc_ice_v.v')
+import('../common/ulx3s_clk_risc_ice_v_2.v')
 import('../common/reset_conditioner.v')
 
 $include('../risc-ice-v.ice')

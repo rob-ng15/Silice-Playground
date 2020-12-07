@@ -201,25 +201,37 @@ algorithm main(
 
     // AUDIO
     output! uint4   audio_l,
-    output! uint4   audio_r
+    output! uint4   audio_r,
 
+    // SDCARD
+    output! uint1   sd_clk,
+    output! uint1   sd_mosi,
+    output! uint1   sd_csn,
+    input   uint1   sd_miso
 ) {
     // VGA/HDMI Display
     uint1   video_reset = uninitialized;
     uint1   video_clock = uninitialized;
-    uint1   pll_lock = uninitialized;
+    uint1   pll_lock_CPU = uninitialized;
+    uint1   pll_lock_AUX = uninitialized;
 
     // Generate the 100MHz SDRAM and 25MHz VIDEO clocks
     uint1 clock_timers = uninitialized;
     uint1 clock_sdram = uninitialized;
     uint1 clock_copro = uninitialized;
-    ulx3s_clk_risc_ice_v clk_gen (
+    uint1 clock_memory = uninitialized;
+    ulx3s_clk_risc_ice_v_CPU clk_gen_CPU (
+        clkin    <: clock,
+        clkout0  :> clock_copro,
+        clkout1  :> clock_memory,
+        clkout2  :> clock_sdram,
+        locked   :> pll_lock_CPU
+    );
+    ulx3s_clk_risc_ice_v_AUX clk_gen_AUX (
         clkin    <: clock,
         clkout0  :> clock_timers,
         clkout1  :> video_clock,
-        clkout2  :> clock_sdram,
-        clkout3  :> clock_copro,
-        locked   :> pll_lock
+        locked   :> pll_lock_AUX
     );
 
     // Video Reset
@@ -305,7 +317,13 @@ algorithm main(
         audio_l :> audio_l,
         audio_r :> audio_r,
 
-        // VGA/HDMI
+        // SDCARD
+        sd_clk :> sd_clk,
+        sd_mosi :> sd_mosi,
+        sd_csn :> sd_csn,
+        sd_miso <: sd_miso,
+
+        // HDMI
         video_r :> video_r,
         video_g :> video_g,
         video_b :> video_b,

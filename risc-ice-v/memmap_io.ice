@@ -46,7 +46,13 @@ algorithm memmap_io (
     output! uint4   audio_l,
     output! uint4   audio_r,
 
-    // VGA/HDMI
+    // SDCARD
+    output! uint1   sd_clk,
+    output! uint1   sd_mosi,
+    output! uint1   sd_csn,
+    input   uint1   sd_miso,
+
+    // HDMI
     output! uint8   video_r,
     output! uint8   video_g,
     output! uint8   video_b,
@@ -294,6 +300,22 @@ algorithm memmap_io (
         bitmap_write :> bitmap_write,
     );
 
+    // SDCARD - Code for the SDCARD from @sylefeb
+    simple_dualport_bram uint8 sdbuffer[512] = uninitialized;
+
+    sdcardio sdcio;
+    sdcard sd(
+        // pins
+        sd_clk      :> sd_clk,
+        sd_mosi     :> sd_mosi,
+        sd_csn      :> sd_csn,
+        sd_miso     <: sd_miso,
+        // io
+        io          <:> sdcio,
+        // bram port
+        store       <:> sdbuffer
+    );
+
     // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
     simple_dualport_bram uint8 uartInBuffer[4096] = uninitialized;
     uint13  uartInBufferNext = 0;
@@ -320,6 +342,9 @@ algorithm memmap_io (
 
     // Setup the UART
     uo.data_in_ready := 0; // maintain low
+
+    // SDCARD Commands
+    sdcio.read_sector := 0;
 
     // RESET Timer Co-Processor Controls
     p1hz.resetCounter := 0;
@@ -442,6 +467,10 @@ algorithm memmap_io (
                 case 16h8920: { readData = timer1khz.counter1khz; }
                 case 16h8930: { readData = sleepTimer.counter1khz; }
 
+                // SDCARD
+                case 16h8f00: { readData = sdcio.ready; }
+                case 16h8f10: { readData = sdbuffer.rdata0; }
+
                 // VBLANK
                 case 16h8ff0: { readData = vblank; }
             }
@@ -559,6 +588,12 @@ algorithm memmap_io (
                 case 16h8910: { timer1hz.resetCounter = 1; }
                 case 16h8920: { timer1khz.resetCount = writeData; timer1khz.resetCounter = 1; }
                 case 16h8930: { sleepTimer.resetCount = writeData; sleepTimer.resetCounter = 1; }
+
+                // SDCARD
+                case 16h8f00: { sdcio.read_sector = 1; }
+                case 16h8f04: { sdcio.addr_sector[16,16] = writeData; }
+                case 16h8f08: { sdcio.addr_sector[0,16] = writeData; }
+                case 16h8f10: { sdbuffer.addr0 = writeData; }
             }
         }
 
