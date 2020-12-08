@@ -7,7 +7,7 @@ unsigned char volatile * SDCARD_READY = (unsigned char volatile *) 0x8f00;
 unsigned char volatile * SDCARD_START = (unsigned char volatile *) 0x8f00;
 unsigned short volatile * SDCARD_SECTOR_LOW = ( unsigned short *) 0x8f08;
 unsigned short volatile * SDCARD_SECTOR_HIGH = ( unsigned short *) 0x8f04;
-unsigned char volatile * SDCARD_ADDRESS = (unsigned char volatile *) 0x8f10;
+unsigned short volatile * SDCARD_ADDRESS = (unsigned short volatile *) 0x8f10;
 unsigned char volatile * SDCARD_DATA = (unsigned char volatile *) 0x8f10;
 
 unsigned char * TERMINAL_OUTPUT = (unsigned char *) 0x8700;
@@ -506,10 +506,18 @@ void tpu_cs( void )
     *TPU_COMMIT = 3;
 }
 
-void tpu_outputstring( unsigned char x, unsigned char y, unsigned char background, unsigned char foreground, char *s )
+void tpu_set(  unsigned char x, unsigned char y, unsigned char background, unsigned char foreground )
 {
     *TPU_X = x; *TPU_Y = y; *TPU_BACKGROUND = background; *TPU_FOREGROUND = foreground; *TPU_COMMIT = 1;
+}
 
+void tpu_output_character( char c ) {
+    while( *TPU_COMMIT != 0 );
+    *TPU_CHARACTER = c; *TPU_COMMIT = 2;
+}
+
+void tpu_outputstring( char *s )
+{
     while( *s ) {
         while( *TPU_COMMIT != 0 );
         *TPU_CHARACTER = *s; *TPU_COMMIT = 2;
@@ -517,8 +525,53 @@ void tpu_outputstring( unsigned char x, unsigned char y, unsigned char backgroun
     }
 }
 
-    // MACROS
-    // Convert asteroid number to sprite layer and number
+void tpu_outputnumber_char( unsigned char value )
+{
+    char valuestring[]="000";
+    unsigned char valuework = value, remainder;
+
+    for( int i = 0; i < 2; i++ ) {
+        remainder = valuework % 10;
+        valuework = valuework / 10;
+
+        valuestring[2 - i] = remainder + '0';
+    }
+
+    tpu_outputstring( valuestring );
+}
+
+void tpu_outputnumber_short( unsigned short value )
+{
+    char valuestring[]="00000";
+    unsigned short valuework = value, remainder;
+
+    for( int i = 0; i < 4; i++ ) {
+        remainder = valuework % 10;
+        valuework = valuework / 10;
+
+        valuestring[4 - i] = remainder + '0';
+    }
+
+    tpu_outputstring( valuestring );
+}
+
+void tpu_outputnumber_int( unsigned int value )
+{
+    char valuestring[]="0000000000";
+    unsigned int valuework = value, remainder;
+
+    for( int i = 0; i < 9; i++ ) {
+        remainder = valuework % 10;
+        valuework = valuework / 10;
+
+        valuestring[9 - i] = remainder + '0';
+    }
+
+    tpu_outputstring( valuestring );
+}
+
+// MACROS
+// Convert asteroid number to sprite layer and number
 #define ASN(a) ( a > 9) ? 1 : 0, ( a > 9) ? a - 10 : a
 #define MAXASTEROIDS 20
 
@@ -883,17 +936,11 @@ void move_ship()
 
 void draw_score( void )
 {
-    char scorestring[]="Score 000000";
-    unsigned short scorework = score, remainder;
+    tpu_set( 34, 1, 64, ( lives > 0 ) ? 63 : 21 ); tpu_outputstring( "Score " );
+    tpu_outputnumber_short( score );
 
-    for( int i = 0; i< 5; i++ ) {
-        remainder = scorework % 10;
-        scorework = scorework / 10;
-
-        scorestring[11 - i] = remainder + '0';
-    }
-
-    tpu_outputstring( 34, 1, 64, ( lives > 0 ) ? 63 : 21, scorestring );
+    tpu_set( 1, 28, 64, ( lives > 0 ) ? 63 : 21 ); tpu_outputstring( "Level " );
+    tpu_outputnumber_short( level );
 }
 
 void draw_lives( void )
@@ -973,13 +1020,15 @@ void beepboop( void )
                 if( lives > 0 ) {
                     beep( 1, 0, 1, 500 );
                 } else {
-                    tpu_outputstring( 16, 18, 64, 3, "         Welcome to Risc-ICE-V Asteroids        " );
+                    tpu_set( 16, 18, 64, 3 );
+                    tpu_outputstring( "         Welcome to Risc-ICE-V Asteroids        " );
                 }
                 break;
 
             case 1:
                 if( lives == 0 ) {
-                    tpu_outputstring( 16, 18, 64, 15, "By @robng15 (Twitter) from Whitebridge, Scotland" );
+                    tpu_set( 16, 18, 64, 15 );
+                    tpu_outputstring( "By @robng15 (Twitter) from Whitebridge, Scotland" );
                 }
                 break;
 
@@ -987,14 +1036,16 @@ void beepboop( void )
                 if( lives > 0 ) {
                     beep( 1, 0, 2, 500 );
                 } else {
-                    tpu_outputstring( 16, 18, 64, 60, "                 Press UP to start              " );
+                    tpu_set( 16, 18, 64, 60 );
+                    tpu_outputstring( "                 Press UP to start              " );
                 }
                 break;
 
             case 3:
                 // MOVE TILEMAP UP
                 if( lives == 0 ) {
-                    tpu_outputstring( 16, 18, 64, 48, "          Written in Silice by @sylefeb         " );
+                    tpu_set( 16, 18, 64, 48 );
+                    tpu_outputstring( "          Written in Silice by @sylefeb         " );
                 }
                 tilemap_scrollwrapclear( 6 );
                 break;

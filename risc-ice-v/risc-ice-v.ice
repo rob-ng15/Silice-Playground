@@ -265,7 +265,7 @@ algorithm main(
     );
 
     // RISC-V RAM and BIOS
-    bram uint16 ram[16384] = {
+    bram uint16 ram[8192] = {
         $include('ROM/BIOS.inc')
         , pad(uninitialized)
     };

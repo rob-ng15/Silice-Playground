@@ -7,7 +7,7 @@ unsigned char volatile * SDCARD_READY = (unsigned char volatile *) 0x8f00;
 unsigned char volatile * SDCARD_START = (unsigned char volatile *) 0x8f00;
 unsigned short volatile * SDCARD_SECTOR_LOW = ( unsigned short *) 0x8f08;
 unsigned short volatile * SDCARD_SECTOR_HIGH = ( unsigned short *) 0x8f04;
-unsigned char volatile * SDCARD_ADDRESS = (unsigned char volatile *) 0x8f10;
+unsigned short volatile * SDCARD_ADDRESS = (unsigned short volatile *) 0x8f10;
 unsigned char volatile * SDCARD_DATA = (unsigned char volatile *) 0x8f10;
 
 unsigned char * TERMINAL_OUTPUT = (unsigned char *) 0x8700;
@@ -105,6 +105,16 @@ unsigned short volatile * SLEEPTIMER = ( unsigned short volatile * ) 0x8930;
 
 unsigned char volatile * VBLANK = ( unsigned char volatile * ) 0x8ff0;
 
+void *memcpy( void *destination, void *source, unsigned int length )
+{
+    unsigned int i;
+    unsigned char *d, *s;
+
+    for( i = 0; i < length; i++ ) {
+        d[i] = s[i];
+    }
+}
+
 void outputcharacter(char c)
 {
 	while( (*UART_STATUS & 2) != 0 );
@@ -130,6 +140,51 @@ void outputstringnonl(char *s)
 		outputcharacter(*s);
 		s++;
 	}
+}
+
+void outputnumber_char( unsigned char value )
+{
+    char valuestring[]="000";
+    unsigned char valuework = value, remainder;
+
+    for( int i = 0; i < 2; i++ ) {
+        remainder = valuework % 10;
+        valuework = valuework / 10;
+
+        valuestring[2 - i] = remainder + '0';
+    }
+
+    outputstringnonl( valuestring );
+}
+
+void outputnumber_short( unsigned short value )
+{
+    char valuestring[]="00000";
+    unsigned short valuework = value, remainder;
+
+    for( int i = 0; i < 4; i++ ) {
+        remainder = valuework % 10;
+        valuework = valuework / 10;
+
+        valuestring[4 - i] = remainder + '0';
+    }
+
+    outputstringnonl( valuestring );
+}
+
+void outputnumber_int( unsigned int value )
+{
+    char valuestring[]="00000000000";
+    unsigned int valuework = value, remainder;
+
+    for( int i = 0; i < 9; i++ ) {
+        remainder = valuework % 10;
+        valuework = valuework / 10;
+
+        valuestring[9 - i] = remainder + '0';
+    }
+
+    outputstringnonl( valuestring );
 }
 
 char inputcharacter(void)
@@ -186,15 +241,68 @@ void tpu_cs( void )
     *TPU_COMMIT = 3;
 }
 
-void tpu_outputstring( unsigned char x, unsigned char y, unsigned char background, unsigned char foreground, char *s )
+void tpu_set(  unsigned char x, unsigned char y, unsigned char background, unsigned char foreground )
 {
     *TPU_X = x; *TPU_Y = y; *TPU_BACKGROUND = background; *TPU_FOREGROUND = foreground; *TPU_COMMIT = 1;
+}
 
+void tpu_output_character( char c ) {
+    while( *TPU_COMMIT != 0 );
+    *TPU_CHARACTER = c; *TPU_COMMIT = 2;
+}
+
+void tpu_outputstring( char *s )
+{
     while( *s ) {
         while( *TPU_COMMIT != 0 );
-        *TPU_CHARACTER = *s; *TPU_COMMIT = 2;
+        tpu_output_character( *s );
         s++;
     }
+}
+
+void tpu_outputnumber_char( unsigned char value )
+{
+    char valuestring[]="000";
+    unsigned char valuework = value, remainder;
+
+    for( int i = 0; i < 2; i++ ) {
+        remainder = valuework % 10;
+        valuework = valuework / 10;
+
+        valuestring[2 - i] = remainder + '0';
+    }
+
+    tpu_outputstring( valuestring );
+}
+
+void tpu_outputnumber_short( unsigned short value )
+{
+    char valuestring[]="00000";
+    unsigned short valuework = value, remainder;
+
+    for( int i = 0; i < 4; i++ ) {
+        remainder = valuework % 10;
+        valuework = valuework / 10;
+
+        valuestring[4 - i] = remainder + '0';
+    }
+
+    tpu_outputstring( valuestring );
+}
+
+void tpu_outputnumber_int( unsigned int value )
+{
+    char valuestring[]="0000000000";
+    unsigned int valuework = value, remainder;
+
+    for( int i = 0; i < 9; i++ ) {
+        remainder = valuework % 10;
+        valuework = valuework / 10;
+
+        valuestring[9 - i] = remainder + '0';
+    }
+
+    tpu_outputstring( valuestring );
 }
 
 // FAT16 FILE SYSTEM
@@ -205,8 +313,8 @@ typedef struct {
     unsigned char start_chs[3];
     unsigned char partition_type;
     unsigned char end_chs[3];
-    unsigned long start_sector;
-    unsigned long length_sectors;
+    unsigned int start_sector;
+    unsigned int length_sectors;
 } __attribute((packed)) PartitionTable;
 
 typedef struct {
@@ -222,13 +330,13 @@ typedef struct {
     unsigned short fat_size_sectors;
     unsigned short sectors_per_track;
     unsigned short number_of_heads;
-    unsigned long hidden_sectors;
-    unsigned long total_sectors_long;
+    unsigned int hidden_sectors;
+    unsigned int total_sectors_long;
 
     unsigned char drive_number;
     unsigned char current_head;
     unsigned char boot_signature;
-    unsigned long volume_id;
+    unsigned int volume_id;
     char volume_label[11];
     char fs_type[8];
     char boot_code[448];
@@ -243,15 +351,60 @@ typedef struct {
     unsigned short modify_time;
     unsigned short modify_date;
     unsigned short starting_cluster;
-    unsigned long file_size;
+    unsigned int file_size;
 } __attribute((packed)) Fat16Entry;
+
+// MASTER BOOT RECORD AND PARTITION TABLE
+unsigned char MBR[512], BOOTSECTOR[512];
+PartitionTable *partition;
+
+void sd_readSector( unsigned int sectorAddress, unsigned char *copyAddress )
+{
+    unsigned short i;
+
+    tpu_set( 40, 0, 0x40, 0x30 ); tpu_outputstring("Sector: "); tpu_outputnumber_int( sectorAddress );
+    while( *SDCARD_READY == 0 ) {}
+
+    *SDCARD_SECTOR_HIGH = ( sectorAddress & 0xffff0000 ) >> 16;
+    *SDCARD_SECTOR_LOW = ( sectorAddress & 0x0000ffff );
+    *SDCARD_START = 1;
+
+    while( *SDCARD_READY == 0 ) {}
+
+    tpu_set( 40, 0, 0x40, 0x0c ); tpu_outputstring("Sector: "); tpu_outputnumber_int( sectorAddress );
+
+    for( i = 0; i < 511; i++ ) {
+        *SDCARD_ADDRESS = i;
+        copyAddress[ i ] = *SDCARD_DATA;
+    }
+}
+
+void sd_readMBR( void ) {
+    // FOR COPYING DATA
+    unsigned short i;
+    unsigned char *copyaddress;
+
+    sd_readSector( 0, MBR );
+}
+
+
+void sd_dumpSector( void ) {
+    unsigned short i;
+    outputstring( "Sector Data" );
+
+    for( i = 0; i < 511; i++ ) {
+        if( ( i & 15 ) == 0 ) {
+            outputstringnonl("\n Offset :" ); outputnumber_short( i );
+        }
+        *SDCARD_ADDRESS = i;
+        outputstringnonl( " " ); outputnumber_char( *SDCARD_DATA );
+    }
+}
 
 void main()
 {
+    unsigned short i;
     unsigned char uartData = 0;
-    // CLEAR the UART buffer
-    while( *UART_STATUS & 1 )
-        uartData = inputcharacter();
 
     gpu_cs();
     tpu_cs();
@@ -270,14 +423,51 @@ void main()
     gpu_rectangle( 2, 0, 12, 25, 37 );
     gpu_rectangle( 2, 0, 37, 8, 100 );
 
-    tpu_outputstring(0, 8, 0x40, 0x3f, "Welcome to RISC-ICE-V a RISC-V RV32IMC CPU");
+    tpu_set( 0, 8, 0x40, 0x3f ); tpu_outputstring( "Welcome to RISC-ICE-V a RISC-V RV32IMC CPU" );
+    tpu_set( 0, 10, 0x40, 0x30 ); tpu_outputstring( "Waiting for SDCARD" );
 
-    tpu_outputstring(0, 10, 0x40, 0x30, "Waiting for SDCARD");
+    while( *SDCARD_READY == 0 ) {}
 
-    while( *SDCARD_READY == 0 );
+    tpu_set( 0, 10, 0x40, 0x0c ); tpu_outputstring( "SCARD Detected    ");
 
-    tpu_outputstring(0, 10, 0x40, 0x0c, "SCARD Detected    ");
-    tpu_outputstring(0, 11, 0x40, 0x03, "Reading Partition Table");
+    tpu_set( 0, 11, 0x40, 0x30 ); tpu_outputstring( "Reading Master Boot Record" );
+    sd_readSector( 0, MBR );
+    partition = (PartitionTable *) &MBR[ 0x1BE ];
+    sd_dumpSector();
+    tpu_set( 0, 11, 0x40, 0x0c ); tpu_outputstring( "Read Master Boot Record   ");
+
+    for( i = 0; i < 4; i++ ) {
+        tpu_set( 2, 13 + i, 0x40, 0x3f ); tpu_outputstring( "Partition : " ); tpu_outputnumber_short( i ); tpu_outputstring( ", Type : " ); tpu_outputnumber_char( partition[i].partition_type );
+        switch( partition[i].partition_type ) {
+            case 4: tpu_outputstring( " FAT16 <32MB" );
+                break;
+            case 6: tpu_outputstring( " FAT16 >32MB" );
+                break;
+            case 14: tpu_outputstring( " FAT16 LBA" );
+                break;
+            default: tpu_outputstring( " Not FAT16" );
+                break;
+        }
+    }
+
+    switch( partition[0].partition_type ) {
+        case 4:
+        case 6:
+        case 14:
+            tpu_set( 0, 18, 0x40, 0x30 ); tpu_outputstring( "Reading Partition 0 Boot Sector");
+            sd_readSector( partition[0].start_sector, BOOTSECTOR );
+            tpu_set( 0, 18, 0x40, 0x0c ); tpu_outputstring( "Read Partition 0 Boot Sector   ");
+            break;
+        default:
+            tpu_set( 0, 18, 0x40, 0x30 ); tpu_outputstring( "ERROR: PLEASE INSERT A VALID FAT16 FORMATTED SDCARD AND PRESS RESET");
+            break;
+    }
+
+    outputstring("\n\n\n\n\n\n\n\nRISC-ICE-V BIOS\nTerminal Echo Starting" );
+
+    // CLEAR the UART buffer
+    while( *UART_STATUS & 1 )
+        uartData = inputcharacter();
 
     while(1) {
         uartData = inputcharacter();

@@ -43,7 +43,9 @@ __ULX3S only at present__
             * NOP __ALL OTHER INSTRUCTION CODES__
 
 * MEMORY
-    * 32K ( 16K x 16 bit) of RAM ( with aligned and misaligned 32 bit read / writes )
+    * 16K ( 8K x 16 bit) of RAM ( with aligned and misaligned 32 bit read / writes )
+        * FAST BRAM - used for BIOS ( and asteroids )
+        * STACK POINTER AT TOP OF BRAM
     * 32K ( 8K x 32 bit ) of I/O Memory with 16 bit read / write
 
 * DISPLAY
@@ -64,6 +66,7 @@ __ULX3S only at present__
     * BUTTONS ( 6 on board buttons )
     * TIMERS ( 1hz and 1khz )
     * STEREO AUDIO ( 2 tone polyphonic per channel )
+    * WIP - FAT16 SDCARD
 
 __Not all documentation is in place yet. I/O memory mapping not yet finalised.__
 
