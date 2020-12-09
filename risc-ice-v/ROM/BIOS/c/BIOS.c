@@ -147,7 +147,7 @@ void outputnumber_char( unsigned char value )
     char valuestring[]="000";
     unsigned char valuework = value, remainder;
 
-    for( int i = 0; i < 2; i++ ) {
+    for( int i = 0; i < 3; i++ ) {
         remainder = valuework % 10;
         valuework = valuework / 10;
 
@@ -162,7 +162,7 @@ void outputnumber_short( unsigned short value )
     char valuestring[]="00000";
     unsigned short valuework = value, remainder;
 
-    for( int i = 0; i < 4; i++ ) {
+    for( int i = 0; i < 5; i++ ) {
         remainder = valuework % 10;
         valuework = valuework / 10;
 
@@ -177,7 +177,7 @@ void outputnumber_int( unsigned int value )
     char valuestring[]="00000000000";
     unsigned int valuework = value, remainder;
 
-    for( int i = 0; i < 9; i++ ) {
+    for( int i = 0; i < 10; i++ ) {
         remainder = valuework % 10;
         valuework = valuework / 10;
 
@@ -355,7 +355,8 @@ typedef struct {
 } __attribute((packed)) Fat16Entry;
 
 // MASTER BOOT RECORD AND PARTITION TABLE
-unsigned char MBR[512], BOOTSECTOR[512];
+unsigned char MBR[512];
+Fat16BootSector BOOTSECTOR;
 PartitionTable *partition;
 
 void sd_readSector( unsigned int sectorAddress, unsigned char *copyAddress )
@@ -373,7 +374,7 @@ void sd_readSector( unsigned int sectorAddress, unsigned char *copyAddress )
 
     tpu_set( 40, 0, 0x40, 0x0c ); tpu_outputstring("Sector: "); tpu_outputnumber_int( sectorAddress );
 
-    for( i = 0; i < 511; i++ ) {
+    for( i = 0; i < 512; i++ ) {
         *SDCARD_ADDRESS = i;
         copyAddress[ i ] = *SDCARD_DATA;
     }
@@ -385,20 +386,6 @@ void sd_readMBR( void ) {
     unsigned char *copyaddress;
 
     sd_readSector( 0, MBR );
-}
-
-
-void sd_dumpSector( void ) {
-    unsigned short i;
-    outputstring( "Sector Data" );
-
-    for( i = 0; i < 511; i++ ) {
-        if( ( i & 15 ) == 0 ) {
-            outputstringnonl("\n Offset :" ); outputnumber_short( i );
-        }
-        *SDCARD_ADDRESS = i;
-        outputstringnonl( " " ); outputnumber_char( *SDCARD_DATA );
-    }
 }
 
 void main()
@@ -423,22 +410,23 @@ void main()
     gpu_rectangle( 2, 0, 12, 25, 37 );
     gpu_rectangle( 2, 0, 37, 8, 100 );
 
-    tpu_set( 0, 8, 0x40, 0x3f ); tpu_outputstring( "Welcome to RISC-ICE-V a RISC-V RV32IMC CPU" );
-    tpu_set( 0, 10, 0x40, 0x30 ); tpu_outputstring( "Waiting for SDCARD" );
+    tpu_set( 16, 5, 0x40, 0x3f ); tpu_outputstring( "Welcome to RISC-ICE-V a RISC-V RV32IMC CPU" );
+    tpu_set( 0, 7, 0x40, 0x30 ); tpu_outputstring( "Waiting for SDCARD" );
 
     while( *SDCARD_READY == 0 ) {}
 
-    tpu_set( 0, 10, 0x40, 0x0c ); tpu_outputstring( "SCARD Detected    ");
+    tpu_set( 0, 7, 0x40, 0x0c ); tpu_outputstring( "SCARD Detected    ");
 
-    tpu_set( 0, 11, 0x40, 0x30 ); tpu_outputstring( "Reading Master Boot Record" );
+    tpu_set( 0, 8, 0x40, 0x30 ); tpu_outputstring( "Reading Master Boot Record" );
     sd_readSector( 0, MBR );
     partition = (PartitionTable *) &MBR[ 0x1BE ];
-    sd_dumpSector();
-    tpu_set( 0, 11, 0x40, 0x0c ); tpu_outputstring( "Read Master Boot Record   ");
+    tpu_set( 0, 8, 0x40, 0x0c ); tpu_outputstring( "Read Master Boot Record   ");
 
     for( i = 0; i < 4; i++ ) {
-        tpu_set( 2, 13 + i, 0x40, 0x3f ); tpu_outputstring( "Partition : " ); tpu_outputnumber_short( i ); tpu_outputstring( ", Type : " ); tpu_outputnumber_char( partition[i].partition_type );
+        tpu_set( 2, 10 + i, 0x40, 0x3f ); tpu_outputstring( "Partition : " ); tpu_outputnumber_short( i ); tpu_outputstring( ", Type : " ); tpu_outputnumber_char( partition[i].partition_type );
         switch( partition[i].partition_type ) {
+            case 0: tpu_outputstring( " No Entry" );
+                break;
             case 4: tpu_outputstring( " FAT16 <32MB" );
                 break;
             case 6: tpu_outputstring( " FAT16 >32MB" );
@@ -454,12 +442,29 @@ void main()
         case 4:
         case 6:
         case 14:
-            tpu_set( 0, 18, 0x40, 0x30 ); tpu_outputstring( "Reading Partition 0 Boot Sector");
-            sd_readSector( partition[0].start_sector, BOOTSECTOR );
-            tpu_set( 0, 18, 0x40, 0x0c ); tpu_outputstring( "Read Partition 0 Boot Sector   ");
+            tpu_set( 0, 15, 0x40, 0x30 ); tpu_outputstring( "Reading Partition 0 Boot Sector");
+            sd_readSector( partition[0].start_sector, (unsigned char *)&BOOTSECTOR );
+            tpu_set( 0, 15, 0x40, 0x0c ); tpu_outputstring( "Read Partition 0 Boot Sector   ");
+            tpu_output_character( '[' );
+            for( i = 0; i < 8; i++ ) {
+                tpu_output_character( BOOTSECTOR.oem[i] );
+            }
+            tpu_output_character( ']' ); tpu_output_character( '[' );
+            for( i = 0; i < 11; i++ ) {
+                tpu_output_character( BOOTSECTOR.volume_label[i] );
+            }
+            tpu_output_character( ']' ); tpu_output_character( '[' );
+            for( i = 0; i < 8; i++ ) {
+                tpu_output_character( BOOTSECTOR.fs_type[i] );
+            }
+            tpu_output_character( ']' );
+            tpu_set( 2, 16, 0x40, 0x3f );
+            tpu_outputstring( "Sector Size: " ); tpu_outputnumber_short( BOOTSECTOR.sector_size );
+            tpu_outputstring( " Cluster Size: " ); tpu_outputnumber_char( BOOTSECTOR.sectors_per_cluster );
+            tpu_outputstring( " Total Sectors: " ); tpu_outputnumber_int( BOOTSECTOR.total_sectors_long );
             break;
         default:
-            tpu_set( 0, 18, 0x40, 0x30 ); tpu_outputstring( "ERROR: PLEASE INSERT A VALID FAT16 FORMATTED SDCARD AND PRESS RESET");
+            tpu_set( 0, 15, 0x40, 0x30 ); tpu_outputstring( "ERROR: PLEASE INSERT A VALID FAT16 FORMATTED SDCARD AND PRESS RESET");
             break;
     }
 

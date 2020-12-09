@@ -75,6 +75,7 @@ algorithm multiplicationDSP (
     uint32  factor_1_copy := ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
     uint32  factor_2_copy := ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
 
+    // CALCULATION AB * CD
     uint18  A := { 2b0, factor_1_copy[16,16] };
     uint18  B := { 2b0, factor_1_copy[0,16] };
     uint18  C := { 2b0, factor_2_copy[16,16] };
@@ -100,13 +101,12 @@ algorithm additionsubtraction (
     input   int32   sourceReg2,
     input   int32   immediateValue,
 
-    output  int32   ADD,
-    output  int32   ADDI,
-    output  int32   SUB
+    input   uint7   opCode,
+    input   uint7   function7,
+
+    output  int32   result,
 ) <autorun> {
-    ADD := sourceReg1 + sourceReg2;
-    ADDI := sourceReg1 + immediateValue;
-    SUB := sourceReg1 - sourceReg2;
+    result := sourceReg1 + ( opCode[5,1] ? ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ) : immediateValue );
 
     while(1) {
     }
@@ -116,21 +116,18 @@ algorithm additionsubtraction (
 algorithm shifter (
     input   int32   sourceReg1,
     input   int32   sourceReg2,
-    input   uint32  instruction,
 
-    output  int32   SLL,
-    output  int32   SLLI,
-    output  int32   SRL,
-    output  int32   SRLI,
-    output  int32   SRA,
-    output  int32   SRAI
+    input   uint32  instruction,
+    input   uint7   opCode,
+    input   uint7   function7,
+
+    output  int32   shiftLEFT,
+    output  int32   shiftRIGHTA,
+    output  int32   shiftRIGHTL,
 ) <autorun> {
-    SLL := __unsigned(sourceReg1) << sourceReg2[0,5];
-    SLLI := __unsigned(sourceReg1) << ItypeSHIFT( instruction ).shiftCount;
-    SRL := __unsigned(sourceReg1) >> sourceReg2[0,5];
-    SRLI := __unsigned(sourceReg1) >> ItypeSHIFT( instruction ).shiftCount;
-    SRA := __signed(sourceReg1) >>> sourceReg2[0,5];
-    SRAI := __signed(sourceReg1) >>> ItypeSHIFT( instruction ).shiftCount;
+    shiftLEFT :=  __unsigned(sourceReg1) << ( opCode[5,1] ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
+    shiftRIGHTA := __signed(sourceReg1) >>> ( opCode[5,1] ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
+    shiftRIGHTL := __unsigned(sourceReg1) >> ( opCode[5,1] ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
 
     while(1) {
     }
@@ -142,19 +139,15 @@ algorithm logical (
     input   int32   sourceReg2,
     input   int32   immediateValue,
 
+    input   uint7   opCode,
+
     output  int32   AND,
-    output  int32   ANDI,
     output  int32   OR,
-    output  int32   ORI,
-    output  int32   XOR,
-    output  int32   XORI
+    output  int32   XOR
 ) <autorun> {
-    AND := sourceReg1 & sourceReg2;
-    ANDI := sourceReg1 & immediateValue;
-    OR := sourceReg1 | sourceReg2;
-    ORI := sourceReg1 | immediateValue;
-    XOR := sourceReg1 ^ sourceReg2;
-    XORI := sourceReg1 ^ immediateValue;
+    AND := sourceReg1 & ( opCode[5,1] ? sourceReg2 : immediateValue );
+    OR := sourceReg1 | ( opCode[5,1] ? sourceReg2 : immediateValue );
+    XOR := sourceReg1 ^ ( opCode[5,1] ? sourceReg2 : immediateValue );
 
     while(1) {
     }
@@ -167,17 +160,36 @@ algorithm comparison (
     input   int32   immediateValue,
     input   uint32  instruction,
 
-    output  int32   SLT,
-    output  int32   SLTI,
-    output  int32   SLTU,
-    output  int32   SLTUI
+    output  uint1   SLT,
+    output  uint1   SLTI,
+    output  uint1   SLTU,
+    output  uint1   SLTUI
 ) <autorun> {
-    SLT := __signed( sourceReg1 ) < __signed(sourceReg2) ? 32b1 : 32b0;
-    SLTI := __signed( sourceReg1 ) < __signed(immediateValue) ? 32b1 : 32b0;
-    SLTU := ( Rtype(instruction).sourceReg1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 32b1 : 32b0 );
-    SLTUI := ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 32b1 : 32b0 );
+    SLT := __signed( sourceReg1 ) < __signed(sourceReg2) ? 1 : 0;
+    SLTI := __signed( sourceReg1 ) < __signed(immediateValue) ? 1 : 0;
+    SLTU := ( Rtype(instruction).sourceReg1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 1 : 0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 1 : 0 );
+    SLTUI := ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 1 : 0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 1 : 0 );
 
     while(1) {
     }
 }
 
+// BRANCH COMPARISIONS
+algorithm branchcomparison (
+    input   int32   sourceReg1,
+    input   int32   sourceReg2,
+    input   uint3   function3,
+    output  uint1   takeBranch
+) <autorun> {
+    while(1) {
+        switch( function3 ) {
+            case 3b000: { takeBranch = ( sourceReg1 == sourceReg2 ) ? 1 : 0; }
+            case 3b001: { takeBranch = ( sourceReg1 != sourceReg2 ) ? 1 : 0; }
+            case 3b100: { takeBranch = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? 1 : 0; }
+            case 3b101: { takeBranch = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? 1 : 0; }
+            case 3b110: { takeBranch = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? 1 : 0; }
+            case 3b111: { takeBranch = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? 1 : 0; }
+            default: { takeBranch = 0; }
+        }
+    }
+}

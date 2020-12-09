@@ -343,17 +343,22 @@ algorithm main(
     additionsubtraction addsubunit <@clock_copro> (
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
-        immediateValue <: immediateValue
+        immediateValue <: immediateValue,
+        opCode <: opCode,
+        function7 <: function7
     );
     shifter shiftunit <@clock_copro> (
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
-        instruction <: instruction
+        instruction <: instruction,
+        opCode <: opCode,
+        function7 <: function7
     );
     logical logicalunit <@clock_copro> (
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
-        immediateValue <: immediateValue
+        immediateValue <: immediateValue,
+        opCode <: opCode,
     );
     comparison comparisonunit <@clock_copro> (
         sourceReg1 <: sourceReg1,
@@ -368,6 +373,11 @@ algorithm main(
     multiplicationDSP multiplicationuint <@clock_copro> (
         factor_1 <: sourceReg1,
         factor_2 <: sourceReg2
+    );
+    branchcomparison branchcomparisonunit <@clock_copro> (
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        function3 <: function3
     );
 
     // MULTIPLICATION and DIVISION Start Flags
@@ -673,11 +683,12 @@ algorithm main(
                 }
             }
 
+            // AUIPC LUI ALUI ALUR
             case 2b01: {
-                // AUIPC LUI ALUI ALUR
                 writeRegister = 1;
 
                 switch( opCode[2,1] ) {
+                    // ALU BASE & M EXTENSION
                     case 1b0: {
                         if( opCode[5,1] && function7[0,1] ) {
                             // M EXTENSION
@@ -700,46 +711,31 @@ algorithm main(
                                 }
                             }
                         } else {
-                            // I ALU OPERATIONS
+                            // BASE I ALU OPERATIONS
                             switch( function3 ) {
-                                case 3b000: { result = opCode[5,1] ? ( function7[5,1] ? addsubunit.SUB : addsubunit.ADD ) : addsubunit.ADDI; }
-                                case 3b001: { result = opCode[5,1] ? shiftunit.SLL : shiftunit.SLLI; }
-                                case 3b010: { result = opCode[5,1] ? comparisonunit.SLT : comparisonunit.SLTI; }
-                                case 3b011: { result = opCode[5,1] ? comparisonunit.SLTU : comparisonunit.SLTUI; }
-                                case 3b100: { result = opCode[5,1] ? logicalunit.XOR : logicalunit.XORI; }
-                                case 3b101: { result = function7[5,1] ? ( opCode[5,1] ? shiftunit.SRA : shiftunit.SRAI ) : ( opCode[5,1] ? shiftunit.SRL : shiftunit.SRLI ); }
-                                case 3b110: { result = opCode[5,1] ? logicalunit.OR : logicalunit.ORI; }
-                                case 3b111: { result = opCode[5,1] ? logicalunit.AND : logicalunit.ANDI; }
+                                case 3b000: { result = addsubunit.result; }
+                                case 3b001: { result = shiftunit.shiftLEFT; }
+                                case 3b010: { result = ( opCode[5,1] ? comparisonunit.SLT : comparisonunit.SLTI ) ? 32b1 : 32b0; }
+                                case 3b011: { result = ( opCode[5,1] ? comparisonunit.SLTU : comparisonunit.SLTUI ) ? 32b1 : 32b0; }
+                                case 3b100: { result = logicalunit.XOR; }
+                                case 3b101: { result = function7[5,1] ? shiftunit.shiftRIGHTA : shiftunit.shiftRIGHTL; }
+                                case 3b110: { result = logicalunit.OR; }
+                                case 3b111: { result = logicalunit.AND; }
                             }
                         }
                     }
-                    case 1b1: {
-                        // AUIPC LUI
-                        result = { Utype(instruction).immediate_bits_31_12, 12b0 } + ( opCode[5,1] ? 0 : pc );
-                    }
+                    // AUIPC LUI
+                    case 1b1: { result = { Utype(instruction).immediate_bits_31_12, 12b0 } + ( opCode[5,1] ? 0 : pc ); }
                 }
             }
 
             case 2b10: {
                 // JUMP BRANCH
                 switch( opCode[2,1] ) {
-                    case 1b0: {
-                        // BRANCH on CONDITION
-                        switch( function3 ) {
-                            case 3b000: { takeBranch = ( sourceReg1 == sourceReg2 ) ? 1 : 0; }
-                            case 3b001: { takeBranch = ( sourceReg1 != sourceReg2 ) ? 1 : 0; }
-                            case 3b100: { takeBranch = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? 1 : 0; }
-                            case 3b101: { takeBranch = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? 1 : 0; }
-                            case 3b110: { takeBranch = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? 1 : 0; }
-                            case 3b111: { takeBranch = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? 1 : 0; }
-                        }
-                    }
-                    case 1b1: {
-                        // JUMP AND LINK / JUMP AND LINK REGISTER
-                        writeRegister = 1;
-                        incPC = 0;
-                        result = pc + ( compressed ? 2 : 4 );
-                    }
+                    // BRANCH on CONDITION
+                    case 1b0: { takeBranch = branchcomparisonunit.takeBranch; }
+                    // JUMP AND LINK / JUMP AND LINK REGISTER
+                    case 1b1: { writeRegister = 1; incPC = 0; result = pc + ( compressed ? 2 : 4 ); }
                 }
             }
 

@@ -87,18 +87,21 @@ outputstringnonl:
 outputnumber_char:
 	li	a5,3158016
 	addi	sp,sp,-32
+	li	a4,10
 	addi	a5,a5,48
 	sw	a5,12(sp)
-	li	a5,10
-	remu	a4,a0,a5
+	divu	a5,a0,a4
 	sw	ra,28(sp)
-	divu	a0,a0,a5
-	addi	a4,a4,48
-	sb	a4,14(sp)
-	remu	a0,a0,a5
+	remu	a0,a0,a4
+	remu	a3,a5,a4
 	addi	a0,a0,48
-	sb	a0,13(sp)
+	sb	a0,14(sp)
 	addi	a0,sp,12
+	divu	a5,a5,a4
+	addi	a3,a3,48
+	sb	a3,13(sp)
+	addi	a5,a5,48
+	sb	a5,12(sp)
 	call	outputstringnonl
 	lw	ra,28(sp)
 	addi	sp,sp,32
@@ -117,15 +120,16 @@ outputnumber_short:
 	sw	ra,28(sp)
 	li	a5,4
 	li	a3,10
+	li	a2,-1
 .L20:
 	remu	a4,a0,a3
-	addi	a2,sp,8
-	add	a2,a2,a5
+	addi	a1,sp,8
+	add	a1,a1,a5
 	addi	a5,a5,-1
 	addi	a4,a4,48
-	sb	a4,0(a2)
+	sb	a4,0(a1)
 	divu	a0,a0,a3
-	bne	a5,zero,.L20
+	bne	a5,a2,.L20
 	addi	a0,sp,8
 	call	outputstringnonl
 	lw	ra,28(sp)
@@ -152,15 +156,16 @@ outputnumber_int:
 	call	memcpy
 	li	a5,9
 	li	a3,10
+	li	a2,-1
 .L24:
 	remu	a4,s0,a3
-	addi	a2,sp,4
-	add	a2,a2,a5
+	addi	a1,sp,4
+	add	a1,a1,a5
 	addi	a5,a5,-1
 	addi	a4,a4,48
-	sb	a4,0(a2)
+	sb	a4,0(a1)
 	divu	s0,s0,a3
-	bne	a5,zero,.L24
+	bne	a5,a2,.L24
 	addi	a0,sp,4
 	call	outputstringnonl
 	lw	ra,28(sp)
@@ -521,7 +526,7 @@ sd_readSector:
 	li	a5,0
 	lui	a0,%hi(SDCARD_ADDRESS)
 	lui	a1,%hi(SDCARD_DATA)
-	li	a4,511
+	li	a4,512
 .L67:
 	lw	a3,%lo(SDCARD_ADDRESS)(a0)
 	slli	a2,a5,16
@@ -552,116 +557,66 @@ sd_readMBR:
 	.section	.rodata.str1.4
 	.align	2
 .LC3:
-	.string	"Sector Data"
-	.align	2
-.LC4:
-	.string	"\n Offset :"
-	.align	2
-.LC5:
-	.string	" "
-	.text
-	.align	1
-	.globl	sd_dumpSector
-	.type	sd_dumpSector, @function
-sd_dumpSector:
-	lui	a0,%hi(.LC3)
-	addi	sp,sp,-32
-	addi	a0,a0,%lo(.LC3)
-	sw	s0,24(sp)
-	sw	s1,20(sp)
-	sw	s2,16(sp)
-	sw	s3,12(sp)
-	sw	s4,8(sp)
-	sw	s5,4(sp)
-	sw	ra,28(sp)
-	li	s0,0
-	call	outputstring
-	lui	s5,%hi(.LC4)
-	lui	s4,%hi(SDCARD_ADDRESS)
-	lui	s3,%hi(.LC5)
-	lui	s2,%hi(SDCARD_DATA)
-	li	s1,511
-.L77:
-	andi	a5,s0,15
-	bne	a5,zero,.L76
-	addi	a0,s5,%lo(.LC4)
-	call	outputstringnonl
-	mv	a0,s0
-	call	outputnumber_short
-.L76:
-	lw	a5,%lo(SDCARD_ADDRESS)(s4)
-	addi	a0,s3,%lo(.LC5)
-	sh	s0,0(a5)
-	call	outputstringnonl
-	lw	a5,%lo(SDCARD_DATA)(s2)
-	addi	s0,s0,1
-	slli	s0,s0,16
-	lbu	a0,0(a5)
-	srli	s0,s0,16
-	andi	a0,a0,0xff
-	call	outputnumber_char
-	bne	s0,s1,.L77
-	lw	ra,28(sp)
-	lw	s0,24(sp)
-	lw	s1,20(sp)
-	lw	s2,16(sp)
-	lw	s3,12(sp)
-	lw	s4,8(sp)
-	lw	s5,4(sp)
-	addi	sp,sp,32
-	jr	ra
-	.size	sd_dumpSector, .-sd_dumpSector
-	.section	.rodata.str1.4
-	.align	2
-.LC6:
 	.string	"Welcome to RISC-ICE-V a RISC-V RV32IMC CPU"
 	.align	2
-.LC7:
+.LC4:
 	.string	"Waiting for SDCARD"
 	.align	2
-.LC8:
+.LC5:
 	.string	"SCARD Detected    "
 	.align	2
-.LC9:
+.LC6:
 	.string	"Reading Master Boot Record"
 	.align	2
-.LC10:
+.LC7:
 	.string	"Read Master Boot Record   "
 	.align	2
-.LC11:
+.LC8:
 	.string	"Partition : "
 	.align	2
-.LC12:
+.LC9:
 	.string	", Type : "
 	.align	2
-.LC13:
+.LC10:
+	.string	" No Entry"
+	.align	2
+.LC11:
 	.string	" FAT16 <32MB"
 	.align	2
-.LC14:
+.LC12:
 	.string	" FAT16 >32MB"
 	.align	2
-.LC15:
+.LC13:
 	.string	" FAT16 LBA"
 	.align	2
-.LC16:
+.LC14:
 	.string	" Not FAT16"
 	.align	2
-.LC17:
+.LC15:
 	.string	"Reading Partition 0 Boot Sector"
 	.align	2
-.LC18:
+.LC16:
 	.string	"Read Partition 0 Boot Sector   "
 	.align	2
+.LC17:
+	.string	"Sector Size: "
+	.align	2
+.LC18:
+	.string	" Cluster Size: "
+	.align	2
 .LC19:
-	.string	"ERROR: PLEASE INSERT A VALID FAT16 FORMATTED SDCARD AND PRESS RESET"
+	.string	" Total Sectors: "
 	.align	2
 .LC20:
-	.string	"\n\n\n\n\n\n\n\nRISC-ICE-V BIOS\nTerminal Echo Starting"
+	.string	"ERROR: PLEASE INSERT A VALID FAT16 FORMATTED SDCARD AND PRESS RESET"
 	.align	2
 .LC21:
-	.string	"You pressed : "
+	.string	"\n\n\n\n\n\n\n\nRISC-ICE-V BIOS\nTerminal Echo Starting"
 	.align	2
 .LC22:
+	.string	"You pressed : "
+	.align	2
+.LC23:
 	.string	" <-"
 	.section	.text.startup,"ax",@progbits
 	.align	1
@@ -767,101 +722,107 @@ main:
 	li	a1,8
 	li	a0,0
 	call	tpu_set
-	lui	a0,%hi(.LC6)
-	addi	a0,a0,%lo(.LC6)
+	lui	a0,%hi(.LC3)
+	addi	a0,a0,%lo(.LC3)
 	call	tpu_outputstring
 	li	a3,48
 	li	a2,64
 	li	a1,10
 	li	a0,0
+	call	tpu_set
+	lui	a0,%hi(.LC4)
+	addi	a0,a0,%lo(.LC4)
+	call	tpu_outputstring
+	lui	a5,%hi(SDCARD_READY)
+	lw	a4,%lo(SDCARD_READY)(a5)
+.L76:
+	lbu	a5,0(a4)
+	andi	a5,a5,0xff
+	beq	a5,zero,.L76
+	li	a3,12
+	li	a2,64
+	li	a1,10
+	li	a0,0
+	call	tpu_set
+	lui	a0,%hi(.LC5)
+	addi	a0,a0,%lo(.LC5)
+	call	tpu_outputstring
+	li	a3,48
+	li	a2,64
+	li	a1,11
+	li	a0,0
+	call	tpu_set
+	lui	a0,%hi(.LC6)
+	addi	a0,a0,%lo(.LC6)
+	call	tpu_outputstring
+	lui	s0,%hi(.LANCHOR0)
+	addi	a1,s0,%lo(.LANCHOR0)
+	li	a0,0
+	call	sd_readSector
+	addi	s1,s0,%lo(.LANCHOR0)
+	addi	s1,s1,446
+	li	a3,12
+	li	a2,64
+	li	a1,11
+	li	a0,0
+	lui	s2,%hi(partition)
+	sw	s1,%lo(partition)(s2)
 	call	tpu_set
 	lui	a0,%hi(.LC7)
 	addi	a0,a0,%lo(.LC7)
 	call	tpu_outputstring
-	lui	a5,%hi(SDCARD_READY)
-	lw	a4,%lo(SDCARD_READY)(a5)
-.L81:
-	lbu	a5,0(a4)
-	andi	a5,a5,0xff
-	beq	a5,zero,.L81
-	li	a3,12
-	li	a2,64
-	li	a1,10
-	li	a0,0
-	call	tpu_set
-	lui	a0,%hi(.LC8)
-	addi	a0,a0,%lo(.LC8)
-	call	tpu_outputstring
-	li	a3,48
-	li	a2,64
-	li	a1,11
-	li	a0,0
-	call	tpu_set
-	lui	a0,%hi(.LC9)
-	lui	s2,%hi(.LANCHOR0)
-	addi	a0,a0,%lo(.LC9)
-	call	tpu_outputstring
-	addi	s1,s2,%lo(.LANCHOR0)
-	addi	a1,s2,%lo(.LANCHOR0)
-	li	a0,0
-	addi	s1,s1,446
-	lui	s0,%hi(partition)
-	call	sd_readSector
-	sw	s1,%lo(partition)(s0)
-	call	sd_dumpSector
-	li	a3,12
-	li	a2,64
-	li	a1,11
-	li	a0,0
-	call	tpu_set
-	lui	a0,%hi(.LC10)
-	addi	a0,a0,%lo(.LC10)
-	call	tpu_outputstring
 	li	s1,0
-	addi	s2,s2,%lo(.LANCHOR0)
-	lui	s5,%hi(.LC11)
+	addi	s0,s0,%lo(.LANCHOR0)
+	lui	s4,%hi(.LC8)
+	lui	s5,%hi(.LC9)
 	lui	s6,%hi(.LC12)
-	li	s7,6
-	lui	s8,%hi(.LC14)
-	lui	s9,%hi(.LC15)
-	li	s4,4
-	lui	s10,%hi(.LC16)
-	lui	s11,%hi(.LC13)
-.L86:
+	lui	s7,%hi(.LC14)
+	lui	s8,%hi(.LC13)
+	lui	s9,%hi(.LC10)
+	li	s3,4
+	lui	s10,%hi(.LC11)
+.L84:
 	addi	a1,s1,13
 	li	a3,63
 	li	a2,64
 	andi	a1,a1,0xff
 	li	a0,2
 	call	tpu_set
-	addi	a0,s5,%lo(.LC11)
+	addi	a0,s4,%lo(.LC8)
 	call	tpu_outputstring
 	slli	a0,s1,16
 	srli	a0,a0,16
 	call	tpu_outputnumber_short
-	addi	a0,s6,%lo(.LC12)
+	addi	a0,s5,%lo(.LC9)
 	call	tpu_outputstring
-	lw	a5,%lo(partition)(s0)
-	slli	s3,s1,4
-	add	a5,a5,s3
+	lw	a5,%lo(partition)(s2)
+	slli	s11,s1,4
+	add	a5,a5,s11
 	lbu	a0,4(a5)
 	call	tpu_outputnumber_char
-	lw	a5,%lo(partition)(s0)
-	addi	a0,s8,%lo(.LC14)
-	add	s3,a5,s3
-	lbu	a5,4(s3)
-	beq	a5,s7,.L99
+	lw	a5,%lo(partition)(s2)
+	li	a4,6
+	addi	a0,s6,%lo(.LC12)
+	add	s11,a5,s11
+	lbu	a5,4(s11)
+	beq	a5,a4,.L103
+	bgtu	a5,a4,.L78
+	addi	a0,s9,%lo(.LC10)
+	beq	a5,zero,.L103
+	addi	a0,s10,%lo(.LC11)
+	beq	a5,s3,.L103
+.L81:
+	addi	a0,s7,%lo(.LC14)
+	j	.L103
+.L78:
 	li	a4,14
-	addi	a0,s9,%lo(.LC15)
-	beq	a5,a4,.L99
-	addi	a0,s11,%lo(.LC13)
-	beq	a5,s4,.L99
-	addi	a0,s10,%lo(.LC16)
-.L99:
+	addi	a0,s8,%lo(.LC13)
+	bne	a5,a4,.L81
+.L103:
 	addi	s1,s1,1
 	call	tpu_outputstring
-	bne	s1,s4,.L86
-	lw	a5,%lo(partition)(s0)
+	bne	s1,s3,.L84
+	lw	a5,%lo(partition)(s2)
 	li	a4,10
 	li	a3,48
 	lbu	a5,4(a5)
@@ -870,69 +831,125 @@ main:
 	addi	a5,a5,-4
 	andi	a5,a5,0xff
 	li	a0,0
-	bgtu	a5,a4,.L87
+	bgtu	a5,a4,.L85
 	li	a4,1
 	sll	a5,a4,a5
 	andi	a5,a5,1029
-	beq	a5,zero,.L87
+	beq	a5,zero,.L85
 	call	tpu_set
-	lui	a0,%hi(.LC17)
-	addi	a0,a0,%lo(.LC17)
+	lui	a0,%hi(.LC15)
+	addi	a0,a0,%lo(.LC15)
 	call	tpu_outputstring
-	lw	a4,%lo(partition)(s0)
-	addi	a1,s2,512
+	lw	a4,%lo(partition)(s2)
+	addi	s1,s0,512
+	mv	a1,s1
 	lbu	a0,9(a4)
 	lbu	a5,8(a4)
+	mv	s2,s1
 	slli	a0,a0,8
 	or	a0,a0,a5
 	lbu	a5,10(a4)
+	addi	s4,s0,520
+	mv	s3,s1
 	slli	a5,a5,16
 	or	a5,a5,a0
 	lbu	a0,11(a4)
 	slli	a0,a0,24
 	or	a0,a0,a5
 	call	sd_readSector
-	li	a0,0
 	li	a3,12
 	li	a2,64
 	li	a1,18
+	li	a0,0
 	call	tpu_set
+	lui	a0,%hi(.LC16)
+	addi	a0,a0,%lo(.LC16)
+	call	tpu_outputstring
+	li	a0,91
+	call	tpu_output_character
+.L86:
+	lbu	a0,3(s3)
+	addi	s3,s3,1
+	call	tpu_output_character
+	bne	s3,s4,.L86
+	li	a0,93
+	call	tpu_output_character
+	li	a0,91
+	call	tpu_output_character
+	addi	s3,s1,11
+.L87:
+	lbu	a0,43(s1)
+	addi	s1,s1,1
+	call	tpu_output_character
+	bne	s3,s1,.L87
+	li	a0,93
+	call	tpu_output_character
+	li	a0,91
+	call	tpu_output_character
+.L88:
+	lbu	a0,54(s2)
+	addi	s2,s2,1
+	call	tpu_output_character
+	bne	s2,s4,.L88
+	li	a0,93
+	call	tpu_output_character
+	li	a3,63
+	li	a2,64
+	li	a1,19
+	li	a0,2
+	call	tpu_set
+	lui	a0,%hi(.LC17)
+	addi	a0,a0,%lo(.LC17)
+	call	tpu_outputstring
+	lbu	a5,524(s0)
+	lbu	a0,523(s0)
+	slli	a5,a5,8
+	or	a0,a5,a0
+	call	tpu_outputnumber_short
 	lui	a0,%hi(.LC18)
 	addi	a0,a0,%lo(.LC18)
-.L100:
 	call	tpu_outputstring
-	lui	a0,%hi(.LC20)
-	addi	a0,a0,%lo(.LC20)
+	lbu	a0,525(s0)
+	call	tpu_outputnumber_char
+	lui	a0,%hi(.LC19)
+	addi	a0,a0,%lo(.LC19)
+	call	tpu_outputstring
+	lw	a0,544(s0)
+	call	tpu_outputnumber_int
+.L89:
+	lui	a0,%hi(.LC21)
+	addi	a0,a0,%lo(.LC21)
 	call	outputstring
 	lui	s0,%hi(UART_STATUS)
-.L89:
+.L90:
 	lw	a5,%lo(UART_STATUS)(s0)
 	lbu	a5,0(a5)
 	andi	a5,a5,1
-	bne	a5,zero,.L90
-	lui	s3,%hi(.LC21)
-	lui	s2,%hi(.LC22)
+	bne	a5,zero,.L91
+	lui	s3,%hi(.LC22)
+	lui	s2,%hi(.LC23)
 	lui	s1,%hi(LEDS)
-.L91:
+.L92:
 	call	inputcharacter
 	mv	s0,a0
-	addi	a0,s3,%lo(.LC21)
+	addi	a0,s3,%lo(.LC22)
 	call	outputstringnonl
 	mv	a0,s0
 	call	outputcharacter
-	addi	a0,s2,%lo(.LC22)
+	addi	a0,s2,%lo(.LC23)
 	call	outputstring
 	lw	a5,%lo(LEDS)(s1)
 	sb	s0,0(a5)
-	j	.L91
-.L87:
+	j	.L92
+.L85:
 	call	tpu_set
-	lui	a0,%hi(.LC19)
-	addi	a0,a0,%lo(.LC19)
-	j	.L100
-.L90:
-	call	inputcharacter
+	lui	a0,%hi(.LC20)
+	addi	a0,a0,%lo(.LC20)
+	call	tpu_outputstring
 	j	.L89
+.L91:
+	call	inputcharacter
+	j	.L90
 	.size	main, .-main
 	.globl	partition
 	.globl	BOOTSECTOR
