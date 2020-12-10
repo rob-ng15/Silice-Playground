@@ -264,12 +264,6 @@ algorithm main(
         blue    <: video_b
     );
 
-    // RISC-V RAM and BIOS
-    bram uint16 ram[8192] = {
-        $include('ROM/BIOS.inc')
-        , pad(uninitialized)
-    };
-
     // RISC-V REGISTERS
     simple_dualport_bram int32 registers_1[64] = { 0, pad(0) };
     simple_dualport_bram int32 registers_2[64] = { 0, pad(0) };
@@ -339,9 +333,15 @@ algorithm main(
         video_reset <: video_reset
     );
 
+    // RAM - BRAM ( and eventually SDRAM )
+    uint16  instruction16 = uninitialized;
+    ramcontroller ram <@clock_memory> (
+        readdata :> instruction16
+    );
+
     // COMPRESSED INSTRUCTION EXPANDER
     compressedexpansion compressedunit <@clock_memory> (
-        instruction16 <: ram.rdata
+        instruction16 <: instruction16
     );
 
     // ADDITION/SUBTRACTION, SHIFTER, BINARY LOGIC, MULTIPLICATION and DIVISION units
@@ -390,7 +390,7 @@ algorithm main(
     multiplicationuint.start := 0;
 
     // RAM/IO Read/Write Flags
-    ram.wenable := 0;
+    ram.writeflag := 0;
     IO_Map.memoryWrite := 0;
     IO_Map.memoryRead := 0;
 
@@ -410,17 +410,17 @@ algorithm main(
 
         // FETCH + EXPAND COMPRESSED INSTRUCTIONS
 
-        ram.addr = pc[1,15];
+        ram.address = pc;
         ++:
-        switch( ram.rdata[0,2] ) {
+        switch( ram.readdata[0,2] ) {
             case 2b00: { compressed = 1; instruction = compressedunit.instruction32; }
             case 2b01: { compressed = 1; instruction = compressedunit.instruction32; }
             case 2b10: { compressed = 1; instruction = compressedunit.instruction32; }
             case 2b11: {
                 instruction = compressedunit.instruction32;
-                ram.addr = ram.addr + 1;
+                ram.address = pc + 2;
                 ++:
-                instruction = { ram.rdata, instruction[0,16] };
+                instruction = { ram.readdata, instruction[0,16] };
             }
         }
         ++:
@@ -438,18 +438,18 @@ algorithm main(
 
                         switch( loadAddress[15,1] ) {
                             case 0: {
-                                ram.addr = loadAddress[1,15];
+                                ram.address = loadAddress;
                                 ++:
                                 switch( function3 & 3 ) {
                                     case 2b00: {
-                                        result = { ( ( ( loadAddress[0,1] ? ram.rdata[15,1] : ram.rdata[7,1] ) & ~function3[2,1] ) ? 24hffffff : 24h000000 ), ( loadAddress[0,1] ? ram.rdata[8,8] : ram.rdata[0,8] ) };
+                                        result = { ( ( ( loadAddress[0,1] ? ram.readdata[15,1] : ram.readdata[7,1] ) & ~function3[2,1] ) ? 24hffffff : 24h000000 ), ( loadAddress[0,1] ? ram.readdata[8,8] : ram.readdata[0,8] ) };
                                     }
-                                    case 2b01: { result = { ( ram.rdata[15,1] & ~function3[2,1] ) ? 16hffff : 16h0000 ,ram.rdata }; }
+                                    case 2b01: { result = { ( ram.readdata[15,1] & ~function3[2,1] ) ? 16hffff : 16h0000 ,ram.readdata }; }
                                     case 2b10: {
-                                        result = { 16h0000, ram.rdata };
-                                        ram.addr = ram.addr + 1;
+                                        result = { 16h0000, ram.readdata };
+                                        ram.address = loadAddress + 2;
                                         ++:
-                                        result = { ram.rdata, result[0,16] };
+                                        result = { ram.readdata, result[0,16] };
                                     }
                                 }
                             }
@@ -469,27 +469,27 @@ algorithm main(
                         // STORE
                         switch( storeAddress[15,1] ) {
                             case 1b0: {
-                                ram.addr = storeAddress[1,15];
+                                ram.address = storeAddress;
                                 switch( function3 & 3 ) {
                                     case 2b00: {
                                         ++:
                                         switch( storeAddress[0,1] ) {
-                                            case 1b0: { ram.wdata = { ram.rdata[8,8], __unsigned( sourceReg2[0,8] ) }; }
-                                            case 1b1: { ram.wdata = { __unsigned( sourceReg2[0,8] ), ram.rdata[0,8] }; }
+                                            case 1b0: { ram.writedata = { ram.readdata[8,8], __unsigned( sourceReg2[0,8] ) }; }
+                                            case 1b1: { ram.writedata = { __unsigned( sourceReg2[0,8] ), ram.readdata[0,8] }; }
                                         }
-                                        ram.wenable = 1;
+                                        ram.writeflag = 1;
                                     }
                                     case 2b01: {
-                                        ram.wdata = __unsigned( sourceReg2[0,16] );
-                                        ram.wenable = 1;
+                                        ram.writedata = __unsigned( sourceReg2[0,16] );
+                                        ram.writeflag = 1;
                                     }
                                     case 2b10: {
-                                        ram.wdata = __unsigned( sourceReg2[0,16] );
-                                        ram.wenable = 1;
+                                        ram.writedata = __unsigned( sourceReg2[0,16] );
+                                        ram.writeflag = 1;
                                         ++:
-                                        ram.addr = ram.addr + 1;
-                                        ram.wdata = __unsigned( sourceReg2[16,16] );
-                                        ram.wenable = 1;
+                                        ram.address = storeAddress + 2;
+                                        ram.writedata = __unsigned( sourceReg2[16,16] );
+                                        ram.writeflag = 1;
                                     }
                                 }
                             }
@@ -578,6 +578,7 @@ algorithm main(
         pc = ( incPC ) ? pc + ( ( takeBranch) ? branchOffset : ( compressed ? 2 : 4 ) ) : ( opCode[3,1] ? jumpOffset + pc : loadAddress );
     } // RISC-V
 }
+
 
 // EXPAND RISC-V 16 BIT COMPRESSED INSTRUCTIONS TO THEIR 32 BIT EQUIVALENT
 
@@ -775,6 +776,41 @@ algorithm compressedexpansion (
             case 2b11: {
                 instruction32= { 16b0, instruction16 };
             }
+        }
+    }
+}
+
+
+// RAM - BRAM ( and eventually SDRAM )
+
+algorithm ramcontroller (
+    input   uint32  address,
+
+    input   uint16  writedata,
+    output  uint16  readdata,
+
+    input   uint2   writeflag,
+    input   uint2   readflag
+) <autorun> {
+
+    // RISC-V RAM and BIOS
+    bram uint16 ram[8192] = {
+        $include('ROM/BIOS.inc')
+        , pad(uninitialized)
+    };
+
+    ram.wenable := 0;
+
+    while(1) {
+        ram.addr = address[1,15];
+
+        //if( readflag ) {
+            readdata = ram.rdata;
+        //}
+
+        if( writeflag ) {
+            ram.wdata = writedata;
+            ram.wenable = 1;
         }
     }
 }
