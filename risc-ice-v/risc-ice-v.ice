@@ -339,6 +339,11 @@ algorithm main(
         video_reset <: video_reset
     );
 
+    // COMPRESSED INSTRUCTION EXPANDER
+    compressedexpansion compressedunit <@clock_memory> (
+        instruction16 <: ram.rdata
+    );
+
     // ADDITION/SUBTRACTION, SHIFTER, BINARY LOGIC, MULTIPLICATION and DIVISION units
     additionsubtraction addsubunit <@clock_copro> (
         sourceReg1 <: sourceReg1,
@@ -408,196 +413,11 @@ algorithm main(
         ram.addr = pc[1,15];
         ++:
         switch( ram.rdata[0,2] ) {
-            case 2b00: {
-                compressed = 1;
-                switch( ram.rdata[13,3] ) {
-                    case 3b000: {
-                        // ADDI4SPN -> addi rd', x2, nzuimm[9:2]
-                        // { 000, nzuimm[5:4|9:6|2|3] rd' 00 } -> { imm[11:0] rs1 000 rd 0010011 }
-                        instruction = { 2b0, CIu94(ram.rdata).ib_9_6, CIu94(ram.rdata).ib_5_4, CIu94(ram.rdata).ib_3, CIu94(ram.rdata).ib_2, 2b00, 5h2, 3b000, {2b01,CIu94(ram.rdata).rd_alt}, 7b0010011 };
-                    }
-                    case 3b001: {
-                        // FLD
-                    }
-                    case 3b010: {
-                        // LW -> lw rd', offset[6:2](rs1')
-                        // { 010 uimm[5:3] rs1' uimm[2][6] rd' 00 } -> { imm[11:0] rs1 010 rd 0000011 }
-                        instruction = { 5b0, CL(ram.rdata).ib_6, CL(ram.rdata).ib_5_3, CL(ram.rdata).ib_2, 2b00, {2b01,CL(ram.rdata).rs1_alt}, 3b010, {2b01,CL(ram.rdata).rd_alt}, 7b0000011};
-                    }
-                    case 3b011: {
-                        // FLW
-                    }
-                    case 3b100: {
-                        // reserved
-                    }
-                    case 3b101: {
-                        // FSD
-                    }
-                    case 3b110: {
-                        // SW -> sw rs2', offset[6:2](rs1')
-                        // { 110 uimm[5:3] rs1' uimm[2][6] rs2' 00 } -> { imm[11:5] rs2 rs1 010 imm[4:0] 0100011 }
-                        instruction = { 5b0, CS(ram.rdata).ib_6, CS(ram.rdata).ib_5, {2b01,CS(ram.rdata).rs2_alt}, {2b01,CS(ram.rdata).rs1_alt}, 3b010, CS(ram.rdata).ib_4_3, CS(ram.rdata).ib_2, 2b0, 7b0100011 };
-                    }
-                    case 3b111: {
-                        // FSW
-                    }
-                }
-            }
-            case 2b01: {
-                compressed = 1;
-                switch( ram.rdata[13,3] ) {
-                    case 3b000: {
-                        // ADDI -> addi rd, rd, nzimm[5:0]
-                        // { 000 nzimm[5] rs1/rd!=0 nzimm[4:0] 01 } -> { imm[11:0] rs1 000 rd 0010011 }
-                        instruction = { CI50(ram.rdata).ib_5 ? 7b1111111 : 7b0000000, CI50(ram.rdata).ib_4_0, CI50(ram.rdata).rd, 3b000, CI50(ram.rdata).rd, 7b0010011 };
-                    }
-                    case 3b001: {
-                        // JAL -> jal x1, offset[11:1]
-                        // { 001, imm[11|4|9:8|10|6|7|3:1|5] 01 } -> { imm[20|10:1|11|19:12] rd 1101111 }
-                        instruction = { CJ(ram.rdata).ib_11, CJ(ram.rdata).ib_10, CJ(ram.rdata).ib_9_8, CJ(ram.rdata).ib_7, CJ(ram.rdata).ib_6, CJ(ram.rdata).ib_5, CJ(ram.rdata).ib_4, CJ(ram.rdata).ib_3_1, CJ(ram.rdata).ib_11 ? 9b111111111 : 9b000000000, 5h1, 7b1101111 };
-                    }
-                    case 3b010: {
-                        // LI -> addi rd, x0, imm[5:0]
-                        // { 010 imm[5] rd!=0 imm[4:0] 01 } -> { imm[11:0] rs1 000 rd 0010011 }
-                        instruction = { CI50(ram.rdata).ib_5 ? 7b1111111 : 7b0000000, CI50(ram.rdata).ib_4_0, 5h0, 3b000, CI(ram.rdata).rd, 7b0010011 };
-                    }
-                    case 3b011: {
-                        // LUI / ADDI16SP
-                        if( ( CI(ram.rdata).rd != 0 ) && ( CI(ram.rdata).rd != 2 ) ) {
-                            // LUI -> lui rd, nzuimm[17:12]
-                            // { 011 nzimm[17] rd!={0,2} nzimm[16:12] 01 } -> { imm[31:12] rd 0110111 }
-                            instruction = { CIlui(ram.rdata).ib_17 ? 15b111111111111111 : 15b000000000000000, CIlui(ram.rdata).ib_16_12, CIlui(ram.rdata).rd, 7b0110111 };
-                        } else {
-                            // ADDI16SP -> addi x2, x2, nzimm[9:4]
-                            // { 011 nzimm[9] 00010 nzimm[4|6|8:7|5] 01 } -> { imm[11:0] rs1 000 rd 0010011 }
-                            instruction = { CI94(ram.rdata).ib_9 ? 3b111 : 3b000, CI94(ram.rdata).ib_8_7, CI94(ram.rdata).ib_6, CI94(ram.rdata).ib_5, CI94(ram.rdata).ib_4, 4b0000, 5h2, 3b000, 5h2, 7b0010011 };
-                        }
-                    }
-                    case 3b100: {
-                        // MISC-ALU
-                        switch( CBalu(ram.rdata).function2 ) {
-                            case 2b00: {
-                                // SRLI -> srli rd', rd', shamt[5:0]
-                                // { 100 nzuimm[5] 00 rs1'/rd' nzuimm[4:0] 01 } -> { 0000000 shamt rs1 101 rd 0010011 }
-                                instruction = { 7b0000000, CBalu50(ram.rdata).ib_4_0, { 2b01, CBalu50(ram.rdata).rd_alt }, 3b101, { 2b01, CBalu50(ram.rdata).rd_alt }, 7b0010011 };
-                            }
-                            case 2b01: {
-                                // SRAI -> srai rd', rd', shamt[5:0]
-                                // { 100 nzuimm[5] 01 rs1'/rd' nzuimm[4:0] 01 } -> { 0100000 shamt rs1 101 rd 0010011 }
-                                instruction = { 7b0100000, CBalu50(ram.rdata).ib_4_0, { 2b01, CBalu50(ram.rdata).rd_alt }, 3b101, { 2b01, CBalu50(ram.rdata).rd_alt }, 7b0010011 };
-                            }
-                            case 2b10: {
-                                // ANDI -> andi rd', rd', imm[5:0]
-                                // { 100 imm[5], 10 rs1'/rd' imm[4:0] 01 } -> { imm[11:0] rs1 111 rd 0010011 }
-                                instruction = { CBalu50(ram.rdata).ib_5 ? 7b1111111 : 7b0000000, CBalu50(ram.rdata).ib_4_0, { 2b01, CBalu50(ram.rdata).rd_alt }, 3b111, { 2b01, CBalu50(ram.rdata).rd_alt }, 7b0010011 };
-                            }
-                            case 2b11: {
-                                // SUB XOR OR AND
-                                switch( CBalu(ram.rdata).logical2 ) {
-                                    case 2b00: {
-                                        //SUB -> sub rd', rd', rs2'
-                                        // { 100 0 11 rs1'/rd' 00 rs2' 01 } -> { 0100000 rs2 rs1 000 rd 0110011 }
-                                        instruction = { 7b0100000, { 2b01, CBalu(ram.rdata).rs2_alt }, { 2b01, CBalu(ram.rdata).rd_alt }, 3b000, { 2b01, CBalu(ram.rdata).rd_alt }, 7b0110011 };
-                                    }
-                                    case 2b01: {
-                                        // XOR -> xor rd', rd', rs2'
-                                        // { 100 0 11 rs1'/rd' 01 rs2' 01 } -> { 0000000 rs2 rs1 100 rd 0110011 }
-                                        instruction = { 7b0000000, { 2b01, CBalu(ram.rdata).rs2_alt }, { 2b01, CBalu(ram.rdata).rd_alt }, 3b100, { 2b01, CBalu(ram.rdata).rd_alt }, 7b0110011 };
-                                    }
-                                    case 2b10: {
-                                        // OR -> or rd', rd', rd2'
-                                        // { 100 0 11 rs1'/rd' 10 rs2' 01 } -> { 0000000 rs2 rs1 110 rd 0110011 }
-                                        instruction = { 7b0000000, { 2b01, CBalu(ram.rdata).rs2_alt }, { 2b01, CBalu(ram.rdata).rd_alt }, 3b110, { 2b01, CBalu(ram.rdata).rd_alt }, 7b0110011 };
-                                    }
-                                    case 2b11: {
-                                        // AND -> and rd', rd', rs2'
-                                        // { 100 0 11 rs1'/rd' 11 rs2' 01 } -> { 0000000 rs2 rs1 111 rd 0110011 }
-                                        instruction = { 7b0000000, { 2b01, CBalu(ram.rdata).rs2_alt }, { 2b01, CBalu(ram.rdata).rd_alt }, 3b111, { 2b01, CBalu(ram.rdata).rd_alt }, 7b0110011 };
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    case 3b101: {
-                        // J -> jal, x0, offset[11:1]
-                        // { 101, imm[11|4|9:8|10|6|7|3:1|5] 01 } -> { imm[20|10:1|11|19:12] rd 1101111 }
-                        instruction = { CJ(ram.rdata).ib_11, CJ(ram.rdata).ib_10, CJ(ram.rdata).ib_9_8, CJ(ram.rdata).ib_7, CJ(ram.rdata).ib_6, CJ(ram.rdata).ib_5, CJ(ram.rdata).ib_4, CJ(ram.rdata).ib_3_1, CJ(ram.rdata).ib_11 ? 9b111111111 : 9b000000000, 5h0, 7b1101111 };
-                    }
-                    case 3b110: {
-                        // BEQZ -> beq rs1', x0, offset[8:1]
-                        // { 110, imm[8|4:3] rs1' imm[7:6|2:1|5] 01 } -> { imm[12|10:5] rs2 rs1 000 imm[4:1|11] 1100011 }
-                        instruction = { CB(ram.rdata).offset_8 ? 4b1111 : 4b0000, CB(ram.rdata).offset_7_6, CB(ram.rdata).offset_5, 5h0, {2b01,CB(ram.rdata).rs1_alt}, 3b000, CB(ram.rdata).offset_4_3, CB(ram.rdata).offset_2_1, CB(ram.rdata).offset_8, 7b1100011 };
-                    }
-                    case 3b111: {
-                        // BNEZ -> bne rs1', x0, offset[8:1]
-                        // { 111, imm[8|4:3] rs1' imm[7:6|2:1|5] 01 } -> { imm[12|10:5] rs2 rs1 001 imm[4:1|11] 1100011 }
-                        instruction = { CB(ram.rdata).offset_8 ? 4b1111 : 4b0000, CB(ram.rdata).offset_7_6, CB(ram.rdata).offset_5, 5h0, {2b01,CB(ram.rdata).rs1_alt}, 3b001, CB(ram.rdata).offset_4_3, CB(ram.rdata).offset_2_1, CB(ram.rdata).offset_8, 7b1100011 };
-                    }
-                }
-            }
-            case 2b10: {
-                compressed = 1;
-                switch( ram.rdata[13,3] ) {
-                    case 3b000: {
-                        // SLLI -> slli rd, rd, shamt[5:0]
-                        // { 000, nzuimm[5], rs1/rd!=0 nzuimm[4:0] 10 } -> { 0000000 shamt rs1 001 rd 0010011 }
-                        instruction = { 7b0000000, CI50(ram.rdata).ib_4_0, CI50(ram.rdata).rd, 3b001, CI50(ram.rdata).rd, 7b0010011 };
-                    }
-                    case 3b001: {
-                        // FLDSP
-                    }
-                    case 3b010: {
-                        // LWSP -> lw rd, offset[7:2](x2)
-                        // { 011 uimm[5] rd uimm[4:2|7:6] 10 } -> { imm[11:0] rs1 010 rd 0000011 }
-                        instruction = { 4b0, CI(ram.rdata).ib_7_6, CI(ram.rdata).ib_5, CI(ram.rdata).ib_4_2, 2b0, 5h2 ,3b010, CI(ram.rdata).rd, 7b0000011 };
-                    }
-                    case 3b011: {
-                        // FLWSP
-                    }
-                    case 3b100: {
-                        // J[AL]R / MV / ADD
-                        switch( ram.rdata[12,1] ) {
-                            case 1b0: {
-                                // JR / MV
-                                if( CR(ram.rdata).rs2 == 0 ) {
-                                    // JR -> jalr x0, rs1, 0
-                                    // { 100 0 rs1 00000 10 } -> { imm[11:0] rs1 000 rd 1100111 }
-                                    instruction = { 12b0, CR(ram.rdata).rs1, 3b000, 5h0, 7b1100111 };
-                                } else {
-                                    // MV -> add rd, x0, rs2
-                                    // { 100 0 rd!=0 rs2!=0 10 } -> { 0000000 rs2 rs1 000 rd 0110011 }
-                                    instruction = { 7b0000000, CR(ram.rdata).rs2, 5h0, 3b000, CR(ram.rdata).rs1, 7b0110011 };
-                                }
-                            }
-                            case 1b1: {
-                                // JALR / ADD
-                                if( CR(ram.rdata).rs2 == 0 ) {
-                                    // JALR -> jalr x1, rs1, 0
-                                    // { 100 1 rs1 00000 10 } -> { imm[11:0] rs1 000 rd 1100111 }
-                                    instruction = { 12b0, CR(ram.rdata).rs1, 3b000, 5h1, 7b1100111 };
-                                } else {
-                                    // ADD -> add rd, rd, rs2
-                                    // { 100 1 rs1/rd!=0 rs2!=0 10 } -> { 0000000 rs2 rs1 000 rd 0110011 }
-                                    instruction = { 7b0000000, CR(ram.rdata).rs2, CR(ram.rdata).rs1, 3b000, CR(ram.rdata).rs1, 7b0110011 };
-                                }
-                            }
-                        }
-                    }
-                    case 3b101: {
-                        // FSDSP
-                    }
-                    case 3b110: {
-                        // SWSP -> sw rs2, offset[7:2](x2)
-                        // { 110 uimm[5][4:2][7:6] rs2 10 } -> { imm[11:5] rs2 rs1 010 imm[4:0] 0100011 }
-                        instruction = { 4b0, CSS(ram.rdata).ib_7_6, CSS(ram.rdata).ib_5, CSS(ram.rdata).rs2, 5h2, 3b010, CSS(ram.rdata).ib_4_2, 2b00, 7b0100011 };
-                    }
-                    case 3b111: {
-                        // FSWSP
-                    }
-                }
-            }
+            case 2b00: { compressed = 1; instruction = compressedunit.instruction32; }
+            case 2b01: { compressed = 1; instruction = compressedunit.instruction32; }
+            case 2b10: { compressed = 1; instruction = compressedunit.instruction32; }
             case 2b11: {
-                instruction = { 16b0, ram.rdata };
+                instruction = compressedunit.instruction32;
                 ram.addr = ram.addr + 1;
                 ++:
                 instruction = { ram.rdata, instruction[0,16] };
@@ -757,4 +577,204 @@ algorithm main(
         // UPDATE PC
         pc = ( incPC ) ? pc + ( ( takeBranch) ? branchOffset : ( compressed ? 2 : 4 ) ) : ( opCode[3,1] ? jumpOffset + pc : loadAddress );
     } // RISC-V
+}
+
+// EXPAND RISC-V 16 BIT COMPRESSED INSTRUCTIONS TO THEIR 32 BIT EQUIVALENT
+
+algorithm compressedexpansion (
+    input   uint16  instruction16,
+    output  uint32  instruction32
+) <autorun> {
+    while(1) {
+        switch( instruction16[0,2] ) {
+            case 2b00: {
+                switch( instruction16[13,3] ) {
+                    case 3b000: {
+                        // ADDI4SPN -> addi rd', x2, nzuimm[9:2]
+                        // { 000, nzuimm[5:4|9:6|2|3] rd' 00 } -> { imm[11:0] rs1 000 rd 0010011 }
+                        instruction32= { 2b0, CIu94(instruction16).ib_9_6, CIu94(instruction16).ib_5_4, CIu94(instruction16).ib_3, CIu94(instruction16).ib_2, 2b00, 5h2, 3b000, {2b01,CIu94(instruction16).rd_alt}, 7b0010011 };
+                    }
+                    case 3b001: {
+                        // FLD
+                    }
+                    case 3b010: {
+                        // LW -> lw rd', offset[6:2](rs1')
+                        // { 010 uimm[5:3] rs1' uimm[2][6] rd' 00 } -> { imm[11:0] rs1 010 rd 0000011 }
+                        instruction32= { 5b0, CL(instruction16).ib_6, CL(instruction16).ib_5_3, CL(instruction16).ib_2, 2b00, {2b01,CL(instruction16).rs1_alt}, 3b010, {2b01,CL(instruction16).rd_alt}, 7b0000011};
+                    }
+                    case 3b011: {
+                        // FLW
+                    }
+                    case 3b100: {
+                        // reserved
+                    }
+                    case 3b101: {
+                        // FSD
+                    }
+                    case 3b110: {
+                        // SW -> sw rs2', offset[6:2](rs1')
+                        // { 110 uimm[5:3] rs1' uimm[2][6] rs2' 00 } -> { imm[11:5] rs2 rs1 010 imm[4:0] 0100011 }
+                        instruction32= { 5b0, CS(instruction16).ib_6, CS(instruction16).ib_5, {2b01,CS(instruction16).rs2_alt}, {2b01,CS(instruction16).rs1_alt}, 3b010, CS(instruction16).ib_4_3, CS(instruction16).ib_2, 2b0, 7b0100011 };
+                    }
+                    case 3b111: {
+                        // FSW
+                    }
+                }
+            }
+            case 2b01: {
+                switch( instruction16[13,3] ) {
+                    case 3b000: {
+                        // ADDI -> addi rd, rd, nzimm[5:0]
+                        // { 000 nzimm[5] rs1/rd!=0 nzimm[4:0] 01 } -> { imm[11:0] rs1 000 rd 0010011 }
+                        instruction32= { CI50(instruction16).ib_5 ? 7b1111111 : 7b0000000, CI50(instruction16).ib_4_0, CI50(instruction16).rd, 3b000, CI50(instruction16).rd, 7b0010011 };
+                    }
+                    case 3b001: {
+                        // JAL -> jal x1, offset[11:1]
+                        // { 001, imm[11|4|9:8|10|6|7|3:1|5] 01 } -> { imm[20|10:1|11|19:12] rd 1101111 }
+                        instruction32= { CJ(instruction16).ib_11, CJ(instruction16).ib_10, CJ(instruction16).ib_9_8, CJ(instruction16).ib_7, CJ(instruction16).ib_6, CJ(instruction16).ib_5, CJ(instruction16).ib_4, CJ(instruction16).ib_3_1, CJ(instruction16).ib_11 ? 9b111111111 : 9b000000000, 5h1, 7b1101111 };
+                    }
+                    case 3b010: {
+                        // LI -> addi rd, x0, imm[5:0]
+                        // { 010 imm[5] rd!=0 imm[4:0] 01 } -> { imm[11:0] rs1 000 rd 0010011 }
+                        instruction32= { CI50(instruction16).ib_5 ? 7b1111111 : 7b0000000, CI50(instruction16).ib_4_0, 5h0, 3b000, CI(instruction16).rd, 7b0010011 };
+                    }
+                    case 3b011: {
+                        // LUI / ADDI16SP
+                        if( ( CI(instruction16).rd != 0 ) && ( CI(instruction16).rd != 2 ) ) {
+                            // LUI -> lui rd, nzuimm[17:12]
+                            // { 011 nzimm[17] rd!={0,2} nzimm[16:12] 01 } -> { imm[31:12] rd 0110111 }
+                            instruction32= { CIlui(instruction16).ib_17 ? 15b111111111111111 : 15b000000000000000, CIlui(instruction16).ib_16_12, CIlui(instruction16).rd, 7b0110111 };
+                        } else {
+                            // ADDI16SP -> addi x2, x2, nzimm[9:4]
+                            // { 011 nzimm[9] 00010 nzimm[4|6|8:7|5] 01 } -> { imm[11:0] rs1 000 rd 0010011 }
+                            instruction32= { CI94(instruction16).ib_9 ? 3b111 : 3b000, CI94(instruction16).ib_8_7, CI94(instruction16).ib_6, CI94(instruction16).ib_5, CI94(instruction16).ib_4, 4b0000, 5h2, 3b000, 5h2, 7b0010011 };
+                        }
+                    }
+                    case 3b100: {
+                        // MISC-ALU
+                        switch( CBalu(instruction16).function2 ) {
+                            case 2b00: {
+                                // SRLI -> srli rd', rd', shamt[5:0]
+                                // { 100 nzuimm[5] 00 rs1'/rd' nzuimm[4:0] 01 } -> { 0000000 shamt rs1 101 rd 0010011 }
+                                instruction32= { 7b0000000, CBalu50(instruction16).ib_4_0, { 2b01, CBalu50(instruction16).rd_alt }, 3b101, { 2b01, CBalu50(instruction16).rd_alt }, 7b0010011 };
+                            }
+                            case 2b01: {
+                                // SRAI -> srai rd', rd', shamt[5:0]
+                                // { 100 nzuimm[5] 01 rs1'/rd' nzuimm[4:0] 01 } -> { 0100000 shamt rs1 101 rd 0010011 }
+                                instruction32= { 7b0100000, CBalu50(instruction16).ib_4_0, { 2b01, CBalu50(instruction16).rd_alt }, 3b101, { 2b01, CBalu50(instruction16).rd_alt }, 7b0010011 };
+                            }
+                            case 2b10: {
+                                // ANDI -> andi rd', rd', imm[5:0]
+                                // { 100 imm[5], 10 rs1'/rd' imm[4:0] 01 } -> { imm[11:0] rs1 111 rd 0010011 }
+                                instruction32= { CBalu50(instruction16).ib_5 ? 7b1111111 : 7b0000000, CBalu50(instruction16).ib_4_0, { 2b01, CBalu50(instruction16).rd_alt }, 3b111, { 2b01, CBalu50(instruction16).rd_alt }, 7b0010011 };
+                            }
+                            case 2b11: {
+                                // SUB XOR OR AND
+                                switch( CBalu(instruction16).logical2 ) {
+                                    case 2b00: {
+                                        //SUB -> sub rd', rd', rs2'
+                                        // { 100 0 11 rs1'/rd' 00 rs2' 01 } -> { 0100000 rs2 rs1 000 rd 0110011 }
+                                        instruction32= { 7b0100000, { 2b01, CBalu(instruction16).rs2_alt }, { 2b01, CBalu(instruction16).rd_alt }, 3b000, { 2b01, CBalu(instruction16).rd_alt }, 7b0110011 };
+                                    }
+                                    case 2b01: {
+                                        // XOR -> xor rd', rd', rs2'
+                                        // { 100 0 11 rs1'/rd' 01 rs2' 01 } -> { 0000000 rs2 rs1 100 rd 0110011 }
+                                        instruction32= { 7b0000000, { 2b01, CBalu(instruction16).rs2_alt }, { 2b01, CBalu(instruction16).rd_alt }, 3b100, { 2b01, CBalu(instruction16).rd_alt }, 7b0110011 };
+                                    }
+                                    case 2b10: {
+                                        // OR -> or rd', rd', rd2'
+                                        // { 100 0 11 rs1'/rd' 10 rs2' 01 } -> { 0000000 rs2 rs1 110 rd 0110011 }
+                                        instruction32= { 7b0000000, { 2b01, CBalu(instruction16).rs2_alt }, { 2b01, CBalu(instruction16).rd_alt }, 3b110, { 2b01, CBalu(instruction16).rd_alt }, 7b0110011 };
+                                    }
+                                    case 2b11: {
+                                        // AND -> and rd', rd', rs2'
+                                        // { 100 0 11 rs1'/rd' 11 rs2' 01 } -> { 0000000 rs2 rs1 111 rd 0110011 }
+                                        instruction32= { 7b0000000, { 2b01, CBalu(instruction16).rs2_alt }, { 2b01, CBalu(instruction16).rd_alt }, 3b111, { 2b01, CBalu(instruction16).rd_alt }, 7b0110011 };
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    case 3b101: {
+                        // J -> jal, x0, offset[11:1]
+                        // { 101, imm[11|4|9:8|10|6|7|3:1|5] 01 } -> { imm[20|10:1|11|19:12] rd 1101111 }
+                        instruction32= { CJ(instruction16).ib_11, CJ(instruction16).ib_10, CJ(instruction16).ib_9_8, CJ(instruction16).ib_7, CJ(instruction16).ib_6, CJ(instruction16).ib_5, CJ(instruction16).ib_4, CJ(instruction16).ib_3_1, CJ(instruction16).ib_11 ? 9b111111111 : 9b000000000, 5h0, 7b1101111 };
+                    }
+                    case 3b110: {
+                        // BEQZ -> beq rs1', x0, offset[8:1]
+                        // { 110, imm[8|4:3] rs1' imm[7:6|2:1|5] 01 } -> { imm[12|10:5] rs2 rs1 000 imm[4:1|11] 1100011 }
+                        instruction32= { CB(instruction16).offset_8 ? 4b1111 : 4b0000, CB(instruction16).offset_7_6, CB(instruction16).offset_5, 5h0, {2b01,CB(instruction16).rs1_alt}, 3b000, CB(instruction16).offset_4_3, CB(instruction16).offset_2_1, CB(instruction16).offset_8, 7b1100011 };
+                    }
+                    case 3b111: {
+                        // BNEZ -> bne rs1', x0, offset[8:1]
+                        // { 111, imm[8|4:3] rs1' imm[7:6|2:1|5] 01 } -> { imm[12|10:5] rs2 rs1 001 imm[4:1|11] 1100011 }
+                        instruction32= { CB(instruction16).offset_8 ? 4b1111 : 4b0000, CB(instruction16).offset_7_6, CB(instruction16).offset_5, 5h0, {2b01,CB(instruction16).rs1_alt}, 3b001, CB(instruction16).offset_4_3, CB(instruction16).offset_2_1, CB(instruction16).offset_8, 7b1100011 };
+                    }
+                }
+            }
+            case 2b10: {
+                switch( instruction16[13,3] ) {
+                    case 3b000: {
+                        // SLLI -> slli rd, rd, shamt[5:0]
+                        // { 000, nzuimm[5], rs1/rd!=0 nzuimm[4:0] 10 } -> { 0000000 shamt rs1 001 rd 0010011 }
+                        instruction32= { 7b0000000, CI50(instruction16).ib_4_0, CI50(instruction16).rd, 3b001, CI50(instruction16).rd, 7b0010011 };
+                    }
+                    case 3b001: {
+                        // FLDSP
+                    }
+                    case 3b010: {
+                        // LWSP -> lw rd, offset[7:2](x2)
+                        // { 011 uimm[5] rd uimm[4:2|7:6] 10 } -> { imm[11:0] rs1 010 rd 0000011 }
+                        instruction32= { 4b0, CI(instruction16).ib_7_6, CI(instruction16).ib_5, CI(instruction16).ib_4_2, 2b0, 5h2 ,3b010, CI(instruction16).rd, 7b0000011 };
+                    }
+                    case 3b011: {
+                        // FLWSP
+                    }
+                    case 3b100: {
+                        // J[AL]R / MV / ADD
+                        switch( instruction16[12,1] ) {
+                            case 1b0: {
+                                // JR / MV
+                                if( CR(instruction16).rs2 == 0 ) {
+                                    // JR -> jalr x0, rs1, 0
+                                    // { 100 0 rs1 00000 10 } -> { imm[11:0] rs1 000 rd 1100111 }
+                                    instruction32= { 12b0, CR(instruction16).rs1, 3b000, 5h0, 7b1100111 };
+                                } else {
+                                    // MV -> add rd, x0, rs2
+                                    // { 100 0 rd!=0 rs2!=0 10 } -> { 0000000 rs2 rs1 000 rd 0110011 }
+                                    instruction32= { 7b0000000, CR(instruction16).rs2, 5h0, 3b000, CR(instruction16).rs1, 7b0110011 };
+                                }
+                            }
+                            case 1b1: {
+                                // JALR / ADD
+                                if( CR(instruction16).rs2 == 0 ) {
+                                    // JALR -> jalr x1, rs1, 0
+                                    // { 100 1 rs1 00000 10 } -> { imm[11:0] rs1 000 rd 1100111 }
+                                    instruction32= { 12b0, CR(instruction16).rs1, 3b000, 5h1, 7b1100111 };
+                                } else {
+                                    // ADD -> add rd, rd, rs2
+                                    // { 100 1 rs1/rd!=0 rs2!=0 10 } -> { 0000000 rs2 rs1 000 rd 0110011 }
+                                    instruction32= { 7b0000000, CR(instruction16).rs2, CR(instruction16).rs1, 3b000, CR(instruction16).rs1, 7b0110011 };
+                                }
+                            }
+                        }
+                    }
+                    case 3b101: {
+                        // FSDSP
+                    }
+                    case 3b110: {
+                        // SWSP -> sw rs2, offset[7:2](x2)
+                        // { 110 uimm[5][4:2][7:6] rs2 10 } -> { imm[11:5] rs2 rs1 010 imm[4:0] 0100011 }
+                        instruction32= { 4b0, CSS(instruction16).ib_7_6, CSS(instruction16).ib_5, CSS(instruction16).rs2, 5h2, 3b010, CSS(instruction16).ib_4_2, 2b00, 7b0100011 };
+                    }
+                    case 3b111: {
+                        // FSWSP
+                    }
+                }
+            }
+            case 2b11: {
+                instruction32= { 16b0, instruction16 };
+            }
+        }
+    }
 }
