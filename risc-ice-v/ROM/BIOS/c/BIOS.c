@@ -272,7 +272,7 @@ void tpu_outputnumber_char( unsigned char value )
         remainder = value % 10;
         value = value / 10;
 
-        valuestring[2 - i] = (char )remainder + '0';
+        valuestring[2 - i] = (char )(remainder + '0');
         i++;
     }
 
@@ -288,7 +288,7 @@ void tpu_outputnumber_short( unsigned short value )
         remainder = value % 10;
         value = value / 10;
 
-        valuestring[4 - i] = (char )remainder + '0';
+        valuestring[4 - i] = (char )(remainder + '0');
         i++;
     }
 
@@ -300,13 +300,13 @@ void tpu_outputnumber_int( unsigned int value )
     char valuestring[]="0000000000";
     unsigned int remainder, i = 0;
 
-    //while( value != 0 ) {
-    //    remainder = value % 10;
-    //    value = value / 10;
-    //
-    //    valuestring[9 - i] = (char )remainder + '0';
-    //    i++;
-    //}
+    while( value != 0 ) {
+        remainder = value % 10;
+        value = value / 10;
+
+        valuestring[9 - i] = (char )(remainder + '0');
+        i++;
+    }
     tpu_outputstring( valuestring );
 }
 
@@ -405,7 +405,7 @@ void sd_readRootDirectory ( void ) {
 
 void main()
 {
-    unsigned short i;
+    unsigned short i,j;
     unsigned char uartData = 0;
 
     gpu_cs();
@@ -491,11 +491,32 @@ void main()
             break;
     }
 
-    outputstring("\n\n\n\n\n\n\n\nRISC-ICE-V BIOS\nTerminal Echo Starting" );
+    outputstring("\n\n\n\n\n\n\n\nRISC-ICE-V BIOS" );
+    outputstring("> ls");
+    for( i = 0; i < BOOTSECTOR.root_dir_entries; i++ ) {
+        switch( ROOTDIRECTORY[i].filename[0] ) {
+            case 0x00:
+                break;
+            case 0xe5: outputstringnonl("[deleted]");
+                break;
+            case 0x2e: outputstringnonl("[directory]");
+                break;
+            default: outputcharacter('[');
+                for( j = 0; j < 8; j++ )
+                    outputcharacter( ROOTDIRECTORY[i].filename[j] );
+                outputcharacter('.');
+                for( j = 0; j < 3; j++ )
+                    outputcharacter( ROOTDIRECTORY[i].ext[j] );
+                outputcharacter('[');
+                break;
+        }
+    }
 
     // CLEAR the UART buffer
     while( *UART_STATUS & 1 )
         uartData = inputcharacter();
+
+    outputstring("\nTerminal Echo Starting");
 
     while(1) {
         uartData = inputcharacter();

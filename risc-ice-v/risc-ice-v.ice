@@ -434,6 +434,7 @@ algorithm main(
             sdram.address = pc;
             sdram.readflag = 1;
             ++:
+            while( sdram.busy ) {}
             switch( sdram.readdata[0,2] ) {
                 case 2b00: { compressed = 1; instruction = compressedunit.instruction32; }
                 case 2b01: { compressed = 1; instruction = compressedunit.instruction32; }
@@ -490,6 +491,7 @@ algorithm main(
                             sdram.address = loadAddress;
                             sdram.readflag = 1;
                             ++:
+                            while( sdram.busy ) {}
                             switch( function3 & 3 ) {
                                 case 2b00: { result = sdram.readdata8; }
                                 case 2b01: { result = sdram.readdata16; }
@@ -498,6 +500,7 @@ algorithm main(
                                     sdram.address = loadAddress + 2;
                                     sdram.readflag = 1;
                                     ++:
+                                    while( sdram.busy ) {}
                                     result = { sdram.readdata, result[0,16] };
                                 }
                             }
@@ -896,14 +899,14 @@ algorithm ramcontrollerSDRAM (
     // CACHE for SDRAM
     // CACHE LINE IS LOWER 12 bits of address, dropping the BYTE address bit
     // CACHE TAG IS REMAINING 12 bits of the 25 bit address
-    bram uint16 cachedata[4096] = uninitialized;
-    bram uint12 cachetag[4096] = uninitialized;
+    bram uint16 cachedata[8192] = uninitialized;
+    bram uint11 cachetag[8192] = uninitialized;
 
     // FLAGS FOR CACHE ACCESS
     cachedata.wenable := 0;
-    cachedata.addr := address[1,12];
+    cachedata.addr := address[1,13];
     cachetag.wenable := 0;
-    cachetag.addr := address[1,12];
+    cachetag.addr := address[1,13];
 
     // RETURN RESULTS FROM CACHE
     readdata := cachedata.rdata;
@@ -915,7 +918,7 @@ algorithm ramcontrollerSDRAM (
     while(1) {
         if( readflag ) {
             // WILL NEED TO CHECK THE CACHETAG, READ FROM SDRAM, AND UPDATE THE CACHE
-            if( cachetag.rdata == address[13,12] ) {
+            if( cachetag.rdata == address[14,11] ) {
                 // CACHE HIT
                 busy = 0;
             } else {
@@ -935,8 +938,9 @@ algorithm ramcontrollerSDRAM (
                 case 2b10: { cachedata.wdata = writedata; }
             }
             cachedata.wenable = 1;
-            cachetag.wdata = address[13,12];
+            cachetag.wdata = address[14,11];
             cachetag.wenable = 1;
+            busy = 0;
         }
     }
 }
