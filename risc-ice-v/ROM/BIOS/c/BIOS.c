@@ -145,13 +145,14 @@ void outputstringnonl(char *s)
 void outputnumber_char( unsigned char value )
 {
     char valuestring[]="000";
-    unsigned char valuework = value, remainder;
+    unsigned char remainder, i = 0;
 
-    for( int i = 0; i < 3; i++ ) {
-        remainder = valuework % 10;
-        valuework = valuework / 10;
+    while( value != 0 ) {
+        remainder = value % 10;
+        value = value / 10;
 
-        valuestring[2 - i] = remainder + '0';
+        valuestring[2 - i] = (char )remainder + '0';
+        i++;
     }
 
     outputstringnonl( valuestring );
@@ -160,13 +161,14 @@ void outputnumber_char( unsigned char value )
 void outputnumber_short( unsigned short value )
 {
     char valuestring[]="00000";
-    unsigned short valuework = value, remainder;
+    unsigned short remainder, i = 0;
 
-    for( int i = 0; i < 5; i++ ) {
-        remainder = valuework % 10;
-        valuework = valuework / 10;
+    while( value != 0 ) {
+        remainder = value % 10;
+        value = value / 10;
 
-        valuestring[4 - i] = remainder + '0';
+        valuestring[4 - i] = (char )remainder + '0';
+        i++;
     }
 
     outputstringnonl( valuestring );
@@ -174,14 +176,15 @@ void outputnumber_short( unsigned short value )
 
 void outputnumber_int( unsigned int value )
 {
-    char valuestring[]="00000000000";
-    unsigned int valuework = value, remainder;
+    char valuestring[]="0000000000";
+    unsigned int remainder, i = 0;
 
-    for( int i = 0; i < 10; i++ ) {
-        remainder = valuework % 10;
-        valuework = valuework / 10;
+    while( value != 0 ) {
+        remainder = value % 10;
+        value = value / 10;
 
-        valuestring[9 - i] = remainder + '0';
+        valuestring[9 - i] = (char )remainder + '0';
+        i++;
     }
 
     outputstringnonl( valuestring );
@@ -263,13 +266,14 @@ void tpu_outputstring( char *s )
 void tpu_outputnumber_char( unsigned char value )
 {
     char valuestring[]="000";
-    unsigned char valuework = value, remainder;
+    unsigned char remainder, i = 0;
 
-    for( int i = 0; i < 2; i++ ) {
-        remainder = valuework % 10;
-        valuework = valuework / 10;
+    while( value != 0 ) {
+        remainder = value % 10;
+        value = value / 10;
 
-        valuestring[2 - i] = remainder + '0';
+        valuestring[2 - i] = (char )remainder + '0';
+        i++;
     }
 
     tpu_outputstring( valuestring );
@@ -278,13 +282,14 @@ void tpu_outputnumber_char( unsigned char value )
 void tpu_outputnumber_short( unsigned short value )
 {
     char valuestring[]="00000";
-    unsigned short valuework = value, remainder;
+    unsigned short remainder, i = 0;
 
-    for( int i = 0; i < 4; i++ ) {
-        remainder = valuework % 10;
-        valuework = valuework / 10;
+    while( value != 0 ) {
+        remainder = value % 10;
+        value = value / 10;
 
-        valuestring[4 - i] = remainder + '0';
+        valuestring[4 - i] = (char )remainder + '0';
+        i++;
     }
 
     tpu_outputstring( valuestring );
@@ -293,15 +298,15 @@ void tpu_outputnumber_short( unsigned short value )
 void tpu_outputnumber_int( unsigned int value )
 {
     char valuestring[]="0000000000";
-    unsigned int valuework = value, remainder;
+    unsigned int remainder, i = 0;
 
-    for( int i = 0; i < 9; i++ ) {
-        remainder = valuework % 10;
-        valuework = valuework / 10;
-
-        valuestring[9 - i] = remainder + '0';
-    }
-
+    //while( value != 0 ) {
+    //    remainder = value % 10;
+    //    value = value / 10;
+    //
+    //    valuestring[9 - i] = (char )remainder + '0';
+    //    i++;
+    //}
     tpu_outputstring( valuestring );
 }
 
@@ -357,7 +362,8 @@ typedef struct {
 // MASTER BOOT RECORD AND PARTITION TABLE
 unsigned char MBR[512];
 Fat16BootSector BOOTSECTOR;
-PartitionTable *partition;
+PartitionTable *PARTITION;
+Fat16Entry *ROOTDIRECTORY;
 
 void sd_readSector( unsigned int sectorAddress, unsigned char *copyAddress )
 {
@@ -386,6 +392,15 @@ void sd_readMBR( void ) {
     unsigned char *copyaddress;
 
     sd_readSector( 0, MBR );
+}
+
+void sd_readRootDirectory ( void ) {
+    unsigned short i;
+
+    // READ ALL OF THE SECTORS OF THE ROOTDIRECTORY
+    for( i = 0; i < ( BOOTSECTOR.root_dir_entries * sizeof( Fat16Entry ) ) / 512; i++ ) {
+        sd_readSector( PARTITION[0].start_sector + BOOTSECTOR.reserved_sectors - 1 + BOOTSECTOR.fat_size_sectors * BOOTSECTOR.number_of_fats, ( (unsigned char *)ROOTDIRECTORY ) + 512 * i );
+    }
 }
 
 void main()
@@ -419,12 +434,12 @@ void main()
 
     tpu_set( 0, 8, 0x40, 0x30 ); tpu_outputstring( "Reading Master Boot Record" );
     sd_readSector( 0, MBR );
-    partition = (PartitionTable *) &MBR[ 0x1BE ];
+    PARTITION = (PartitionTable *) &MBR[ 0x1BE ];
     tpu_set( 0, 8, 0x40, 0x0c ); tpu_outputstring( "Read Master Boot Record   ");
 
     for( i = 0; i < 4; i++ ) {
-        tpu_set( 2, 10 + i, 0x40, 0x3f ); tpu_outputstring( "Partition : " ); tpu_outputnumber_short( i ); tpu_outputstring( ", Type : " ); tpu_outputnumber_char( partition[i].partition_type );
-        switch( partition[i].partition_type ) {
+        tpu_set( 2, 10 + i, 0x40, 0x3f ); tpu_outputstring( "Partition : " ); tpu_outputnumber_short( i ); tpu_outputstring( ", Type : " ); tpu_outputnumber_char( PARTITION[i].partition_type );
+        switch( PARTITION[i].partition_type ) {
             case 0: tpu_outputstring( " No Entry" );
                 break;
             case 4: tpu_outputstring( " FAT16 <32MB" );
@@ -438,13 +453,14 @@ void main()
         }
     }
 
-    switch( partition[0].partition_type ) {
+    switch( PARTITION[0].partition_type ) {
         case 4:
         case 6:
         case 14:
             tpu_set( 0, 15, 0x40, 0x30 ); tpu_outputstring( "Reading Partition 0 Boot Sector");
-            sd_readSector( partition[0].start_sector, (unsigned char *)&BOOTSECTOR );
+            sd_readSector( PARTITION[0].start_sector, (unsigned char *)&BOOTSECTOR );
             tpu_set( 0, 15, 0x40, 0x0c ); tpu_outputstring( "Read Partition 0 Boot Sector   ");
+
             tpu_output_character( '[' );
             for( i = 0; i < 8; i++ ) {
                 tpu_output_character( BOOTSECTOR.oem[i] );
@@ -462,9 +478,16 @@ void main()
             tpu_outputstring( "Sector Size: " ); tpu_outputnumber_short( BOOTSECTOR.sector_size );
             tpu_outputstring( " Cluster Size: " ); tpu_outputnumber_char( BOOTSECTOR.sectors_per_cluster );
             tpu_outputstring( " Total Sectors: " ); tpu_outputnumber_int( BOOTSECTOR.total_sectors_long );
+
+            // SET STORAGE FOR THE RROT DIRECTORY FROM THE TOP OF THE MAIN MEMORY
+            ROOTDIRECTORY = ( Fat16Entry *)( 0x12000000 - BOOTSECTOR.root_dir_entries * sizeof( Fat16Entry ) );
+            tpu_set( 0, 18, 0x40, 0x30 ); tpu_outputstring( "Reading Root Directory");
+            sd_readRootDirectory();
+            tpu_set( 0, 18, 0x40, 0x0c ); tpu_outputstring( "Read Root Directory   ");
             break;
         default:
             tpu_set( 0, 15, 0x40, 0x30 ); tpu_outputstring( "ERROR: PLEASE INSERT A VALID FAT16 FORMATTED SDCARD AND PRESS RESET");
+            while(1) {}
             break;
     }
 
