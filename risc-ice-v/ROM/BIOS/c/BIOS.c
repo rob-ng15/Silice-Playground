@@ -144,7 +144,7 @@ void outputstringnonl(char *s)
 
 void outputnumber_char( unsigned char value )
 {
-    char valuestring[]="000";
+    char valuestring[]="  0";
     unsigned char remainder, i = 0;
 
     while( value != 0 ) {
@@ -160,7 +160,7 @@ void outputnumber_char( unsigned char value )
 
 void outputnumber_short( unsigned short value )
 {
-    char valuestring[]="00000";
+    char valuestring[]="    0";
     unsigned short remainder, i = 0;
 
     while( value != 0 ) {
@@ -176,14 +176,14 @@ void outputnumber_short( unsigned short value )
 
 void outputnumber_int( unsigned int value )
 {
-    char valuestring[]="0000000000";
+    char valuestring[]="         0";
     unsigned int remainder, i = 0;
 
-    while( value != 0 ) {
+    while( value != 0 && ( i < 10 ) ) {
         remainder = value % 10;
         value = value / 10;
 
-        valuestring[9 - i] = (char )remainder + '0';
+        valuestring[9 - i] = ( remainder > 9 ) ? '*' : (char )remainder + '0';
         i++;
     }
 
@@ -265,7 +265,7 @@ void tpu_outputstring( char *s )
 
 void tpu_outputnumber_char( unsigned char value )
 {
-    char valuestring[]="000";
+    char valuestring[]="  0";
     unsigned char remainder, i = 0;
 
     while( value != 0 ) {
@@ -281,7 +281,7 @@ void tpu_outputnumber_char( unsigned char value )
 
 void tpu_outputnumber_short( unsigned short value )
 {
-    char valuestring[]="00000";
+    char valuestring[]="    0";
     unsigned short remainder, i = 0;
 
     while( value != 0 ) {
@@ -297,14 +297,14 @@ void tpu_outputnumber_short( unsigned short value )
 
 void tpu_outputnumber_int( unsigned int value )
 {
-    char valuestring[]="0000000000";
+    char valuestring[]="         0";
     unsigned int remainder, i = 0;
 
-    while( value != 0 ) {
+    while( value != 0 && ( i < 10 ) ) {
         remainder = value % 10;
         value = value / 10;
 
-        valuestring[9 - i] = (char )(remainder + '0');
+        valuestring[9 - i] = ( remainder > 9 ) ? '*' : (char )remainder + '0';
         i++;
     }
     tpu_outputstring( valuestring );
@@ -369,7 +369,7 @@ void sd_readSector( unsigned int sectorAddress, unsigned char *copyAddress )
 {
     unsigned short i;
 
-    tpu_set( 40, 0, 0x40, 0x30 ); tpu_outputstring("Sector: "); tpu_outputnumber_int( sectorAddress );
+    tpu_set( 40, 0, 0x40, 0x30 ); tpu_outputstring("Reading Sector: "); tpu_outputnumber_int( sectorAddress );
     while( *SDCARD_READY == 0 ) {}
 
     *SDCARD_SECTOR_HIGH = ( sectorAddress & 0xffff0000 ) >> 16;
@@ -378,7 +378,7 @@ void sd_readSector( unsigned int sectorAddress, unsigned char *copyAddress )
 
     while( *SDCARD_READY == 0 ) {}
 
-    tpu_set( 40, 0, 0x40, 0x0c ); tpu_outputstring("Sector: "); tpu_outputnumber_int( sectorAddress );
+    tpu_set( 40, 0, 0x40, 0x0c ); tpu_outputstring("Sector Read    : "); tpu_outputnumber_int( sectorAddress );
 
     for( i = 0; i < 512; i++ ) {
         *SDCARD_ADDRESS = i;

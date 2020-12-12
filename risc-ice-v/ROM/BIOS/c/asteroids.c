@@ -123,6 +123,7 @@ void outputcharacter(char c)
     if( c == '\n' )
         outputcharacter('\r');
 }
+
 void outputstring(char *s)
 {
 	while(*s) {
@@ -131,6 +132,7 @@ void outputstring(char *s)
 	}
 	outputcharacter('\n');
 }
+
 void outputstringnonl(char *s)
 {
 	while(*s) {
@@ -139,6 +141,53 @@ void outputstringnonl(char *s)
 	}
 }
 
+void outputnumber_char( unsigned char value )
+{
+    char valuestring[]="  0";
+    unsigned char remainder, i = 0;
+
+    while( value != 0 ) {
+        remainder = value % 10;
+        value = value / 10;
+
+        valuestring[2 - i] = (char )remainder + '0';
+        i++;
+    }
+
+    outputstringnonl( valuestring );
+}
+
+void outputnumber_short( unsigned short value )
+{
+    char valuestring[]="    0";
+    unsigned short remainder, i = 0;
+
+    while( value != 0 ) {
+        remainder = value % 10;
+        value = value / 10;
+
+        valuestring[4 - i] = (char )remainder + '0';
+        i++;
+    }
+
+    outputstringnonl( valuestring );
+}
+
+void outputnumber_int( unsigned int value )
+{
+    char valuestring[]="         0";
+    unsigned int remainder, i = 0;
+
+    while( value != 0 ) {
+        remainder = value % 10;
+        value = value / 10;
+
+        valuestring[9 - i] = ( remainder > 9 ) ? '*' : (char )remainder + '0';
+        i++;
+    }
+
+    outputstringnonl( valuestring );
+}
 char inputcharacter( void )
 {
 	while( !(*UART_STATUS & 1) );
@@ -527,14 +576,15 @@ void tpu_outputstring( char *s )
 
 void tpu_outputnumber_char( unsigned char value )
 {
-    char valuestring[]="000";
-    unsigned char valuework = value, remainder;
+    char valuestring[]="  0";
+    unsigned char remainder, i = 0;
 
-    for( int i = 0; i < 2; i++ ) {
-        remainder = valuework % 10;
-        valuework = valuework / 10;
+    while( value != 0 ) {
+        remainder = value % 10;
+        value = value / 10;
 
-        valuestring[2 - i] = remainder + '0';
+        valuestring[2 - i] = (char )(remainder + '0');
+        i++;
     }
 
     tpu_outputstring( valuestring );
@@ -542,14 +592,15 @@ void tpu_outputnumber_char( unsigned char value )
 
 void tpu_outputnumber_short( unsigned short value )
 {
-    char valuestring[]="00000";
-    unsigned short valuework = value, remainder;
+    char valuestring[]="    0";
+    unsigned short remainder, i = 0;
 
-    for( int i = 0; i < 4; i++ ) {
-        remainder = valuework % 10;
-        valuework = valuework / 10;
+    while( value != 0 ) {
+        remainder = value % 10;
+        value = value / 10;
 
-        valuestring[4 - i] = remainder + '0';
+        valuestring[4 - i] = (char )(remainder + '0');
+        i++;
     }
 
     tpu_outputstring( valuestring );
@@ -557,16 +608,16 @@ void tpu_outputnumber_short( unsigned short value )
 
 void tpu_outputnumber_int( unsigned int value )
 {
-    char valuestring[]="0000000000";
-    unsigned int valuework = value, remainder;
+    char valuestring[]="         0";
+    unsigned int remainder, i = 0;
 
-    for( int i = 0; i < 9; i++ ) {
-        remainder = valuework % 10;
-        valuework = valuework / 10;
+    while( value != 0 ) {
+        remainder = value % 10;
+        value = value / 10;
 
-        valuestring[9 - i] = remainder + '0';
+        valuestring[9 - i] = ( remainder > 9 ) ? '*' : (char )remainder + '0';
+        i++;
     }
-
     tpu_outputstring( valuestring );
 }
 

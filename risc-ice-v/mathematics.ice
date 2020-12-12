@@ -34,9 +34,9 @@ algorithm divideremainder (
                 quotient = 0;
                 remainder = 0;
 
-                dividend_copy = ( dosigned == 0 ) ? dividend : ( dividend[31,1] ? -dividend : dividend );
-                divisor_copy = ( dosigned == 0 ) ? divisor : ( divisor[31,1] ? -divisor : divisor );
-                resultsign = ( dosigned == 0 ) ? 0 : dividend[31,1] != divisor[31,1];
+                dividend_copy = dosigned ? ( dividend[31,1] ? -dividend : dividend ) : dividend;
+                divisor_copy = dosigned ?  ( divisor[31,1] ? -divisor : divisor ) :divisor;
+                resultsign = dosigned ?  dividend[31,1] != divisor[31,1] : 0;
 
                 ++:
 

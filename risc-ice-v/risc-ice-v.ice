@@ -217,6 +217,7 @@ algorithm main(
 
     // Generate the 100MHz SDRAM and 25MHz VIDEO clocks
     uint1 clock_timers = uninitialized;
+    uint1 clock_gpu = uninitialized;
     uint1 clock_sdram = uninitialized;
     uint1 clock_copro = uninitialized;
     uint1 clock_memory = uninitialized;
@@ -231,6 +232,7 @@ algorithm main(
         clkin    <: clock,
         clkout0  :> clock_timers,
         clkout1  :> video_clock,
+        clkout2 :> clock_gpu,
         locked   :> pll_lock_AUX
     );
 
@@ -265,8 +267,8 @@ algorithm main(
     );
 
     // RISC-V REGISTERS
-    simple_dualport_bram int32 registers_1[64] = { 0, pad(0) };
-    simple_dualport_bram int32 registers_2[64] = { 0, pad(0) };
+    simple_dualport_bram int32 registers_1<input!>[64] = { 0, pad(0) };
+    simple_dualport_bram int32 registers_2<input!>[64] = { 0, pad(0) };
 
     // RISC-V PROGRAM COUNTER
     uint32  pc = 0;
@@ -330,6 +332,7 @@ algorithm main(
         clock_50mhz <: clock_timers,
         clock_25mhz <: clock,
         video_clock <: video_clock,
+        gpu_clock <: clock_gpu,
         video_reset <: video_reset
     );
 
@@ -445,6 +448,7 @@ algorithm main(
                     sdram.address = pc + 2;
                     sdram.readflag = 1;
                     ++:
+                    while( sdram.busy ) {}
                     instruction = { sdram.readdata, instruction[0,16] };
                 }
             }
@@ -855,7 +859,7 @@ algorithm ramcontrollerBRAM (
 ) <autorun> {
 
     // RISC-V RAM and BIOS
-    bram uint16 ram[8192] = {
+    bram uint16 ram<input!>[8192] = {
         $include('ROM/BIOS.inc')
         , pad(uninitialized)
     };
@@ -899,8 +903,8 @@ algorithm ramcontrollerSDRAM (
     // CACHE for SDRAM
     // CACHE LINE IS LOWER 12 bits of address, dropping the BYTE address bit
     // CACHE TAG IS REMAINING 12 bits of the 25 bit address
-    bram uint16 cachedata[8192] = uninitialized;
-    bram uint11 cachetag[8192] = uninitialized;
+    bram uint16 cachedata<input!>[8192] = uninitialized;
+    bram uint11 cachetag<input!>[8192] = uninitialized;
 
     // FLAGS FOR CACHE ACCESS
     cachedata.wenable := 0;

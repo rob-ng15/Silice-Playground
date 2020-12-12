@@ -65,6 +65,7 @@ algorithm memmap_io (
     input   uint1   clock_50mhz,
     input   uint1   clock_25mhz,
     input   uint1   video_clock,
+    input   uint1   gpu_clock,
     input   uint1   video_reset,
 
     // Memory access
@@ -151,7 +152,7 @@ algorithm memmap_io (
     uint1   bitmap_write = uninitialized;
 
     // 640 x 480 x 7 bit { Arrggbb } colour bitmap
-    simple_dualport_bram uint7 bitmap[ 307200 ] = uninitialized;
+    simple_dualport_bram uint7 bitmap<@video_clock,@gpu_clock>[ 307200 ] = uninitialized;
 
     bitmap bitmap_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
@@ -167,7 +168,7 @@ algorithm memmap_io (
         bitmap <:> bitmap
     );
 
-    bitmapwriter pixel_writer <@video_clock,!video_reset> (
+    bitmapwriter pixel_writer <@gpu_clock> (
         bitmap_x_write <: bitmap_x_write,
         bitmap_y_write <: bitmap_y_write,
         bitmap_colour_write <: bitmap_colour_write,
