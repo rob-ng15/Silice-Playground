@@ -17,13 +17,15 @@ algorithm divideremainder (
 
     uint1   resultsign = uninitialized;
     uint6   bit = uninitialized;
+    uint6   count = uninitialized;
 
     active = 0;
 
     while(1) {
         if( start ) {
             active = 1;
-            bit = 32;
+            bit = 31;
+
 
             if( divisor == 0 ) {
                 // DIVISON by ZERO
@@ -40,12 +42,12 @@ algorithm divideremainder (
 
                 ++:
 
-                while( bit != 0 ) {
-                    if( __unsigned( { remainder[0,31], dividend_copy[bit - 1,1] } ) >= __unsigned(divisor_copy) ) {
-                        remainder = { remainder[0,31], dividend_copy[bit - 1,1] } - divisor_copy;
-                        quotient[bit - 1,1] = 1;
+                while( bit != 63 ) {
+                    if( __unsigned({ remainder[0,31], dividend_copy[bit,1] }) >= __unsigned(divisor_copy) ) {
+                        remainder = __unsigned({ remainder[0,31], dividend_copy[bit,1] }) - __unsigned(divisor_copy);
+                        quotient[bit,1] = 1;
                     } else {
-                        remainder = { remainder[0,31], dividend_copy[bit - 1,1] };
+                        remainder = { remainder[0,31], dividend_copy[bit,1] };
                     }
                     bit = bit - 1;
                 }

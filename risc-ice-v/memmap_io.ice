@@ -153,7 +153,6 @@ algorithm memmap_io (
 
     // 640 x 480 x 7 bit { Arrggbb } colour bitmap
     simple_dualport_bram uint7 bitmap<@video_clock,@gpu_clock>[ 307200 ] = uninitialized;
-
     bitmap bitmap_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -167,7 +166,6 @@ algorithm memmap_io (
         y_offset :> y_offset,
         bitmap <:> bitmap
     );
-
     bitmapwriter pixel_writer <@gpu_clock> (
         bitmap_x_write <: bitmap_x_write,
         bitmap_y_write <: bitmap_y_write,

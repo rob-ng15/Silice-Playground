@@ -207,7 +207,20 @@ algorithm main(
     output! uint1   sd_clk,
     output! uint1   sd_mosi,
     output! uint1   sd_csn,
-    input   uint1   sd_miso
+    input   uint1   sd_miso,
+
+    // SDRAM
+    output  uint1   sdram_cle,
+    output  uint2   sdram_dqm,
+    output  uint1   sdram_cs,
+    output  uint1   sdram_we,
+    output  uint1   sdram_cas,
+    output  uint1   sdram_ras,
+    output  uint2   sdram_ba,
+    output  uint13  sdram_a,
+    output  uint1   sdram_clk,  // sdram chip clock != internal sdram_clock
+    inout   uint16  sdram_dq,
+
 ) {
     // VGA/HDMI Display
     uint1   video_reset = uninitialized;
@@ -580,7 +593,7 @@ algorithm main(
                                 }
                                 case 1b1: {
                                     // DIVISION / REMAINDER
-                                    dividerunit.dosigned = ~function3[0,1];
+                                    dividerunit.dosigned = function3[0,1] ? 0 : 1;
                                     dividerunit.start = 1;
                                     ++:
                                     while( dividerunit.active ) {}
@@ -935,7 +948,9 @@ algorithm ramcontrollerSDRAM (
         }
 
         if( writeflag ) {
-            // CACHE WRITES THROUGH
+            // CHECK FOR CACHE HIT
+            // IF CACHE HIT, CACHE WRITES THROUGH
+            // ELSE READ FROM SDRAM, MODIFY AND WRITE THROUGH
             switch( function3 & 3 ) {
                 case 2b00: { cachedata.wdata = address[0,1] ? { writedata[0,8], cachedata.rdata[0,8] } : { cachedata.rdata[8,8], writedata[0,8] }; }
                 case 2b01: { cachedata.wdata = writedata; }

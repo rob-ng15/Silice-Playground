@@ -1,9 +1,10 @@
 $$ uart_in_clock_freq_mhz = 25
 
-// HDMI + UART + SDCARD Driver Includes
+// HDMI + UART + SDCARD + SDRAM Driver Includes
 $include('../common/hdmi.ice')
 $include('../common/uart.ice')
 $include('../common/sdcard.ice')
+$include('../common/sdramctrl.ice')
 
 // Multiplexed Display Includes
 $include('../multiplex_display.ice')

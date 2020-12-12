@@ -145,14 +145,14 @@ void outputstringnonl(char *s)
 void outputnumber_char( unsigned char value )
 {
     char valuestring[]="  0";
-    unsigned char remainder, i = 0;
+    unsigned char remainder, i = 2;
 
     while( value != 0 ) {
         remainder = value % 10;
         value = value / 10;
 
-        valuestring[2 - i] = (char )remainder + '0';
-        i++;
+        valuestring[i] = (char )remainder + '0';
+        i--;
     }
 
     outputstringnonl( valuestring );
@@ -161,14 +161,15 @@ void outputnumber_char( unsigned char value )
 void outputnumber_short( unsigned short value )
 {
     char valuestring[]="    0";
-    unsigned short remainder, i = 0;
+    unsigned short remainder;
+    unsigned char i = 4;
 
     while( value != 0 ) {
         remainder = value % 10;
         value = value / 10;
 
-        valuestring[4 - i] = (char )remainder + '0';
-        i++;
+        valuestring[i] = (char )remainder + '0';
+        i--;
     }
 
     outputstringnonl( valuestring );
@@ -177,14 +178,15 @@ void outputnumber_short( unsigned short value )
 void outputnumber_int( unsigned int value )
 {
     char valuestring[]="         0";
-    unsigned int remainder, i = 0;
+    unsigned int remainder;
+    unsigned char i = 9;
 
-    while( value != 0 && ( i < 10 ) ) {
+    while( value != 0 ) {
         remainder = value % 10;
         value = value / 10;
 
-        valuestring[9 - i] = ( remainder > 9 ) ? '*' : (char )remainder + '0';
-        i++;
+        valuestring[i] = ( remainder > 9 ) ? '*' : (char )remainder + '0';
+        i--;
     }
 
     outputstringnonl( valuestring );
@@ -266,14 +268,14 @@ void tpu_outputstring( char *s )
 void tpu_outputnumber_char( unsigned char value )
 {
     char valuestring[]="  0";
-    unsigned char remainder, i = 0;
+    unsigned char remainder, i = 2;
 
     while( value != 0 ) {
         remainder = value % 10;
         value = value / 10;
 
-        valuestring[2 - i] = (char )(remainder + '0');
-        i++;
+        valuestring[i] = remainder + '0';
+        i--;
     }
 
     tpu_outputstring( valuestring );
@@ -282,14 +284,15 @@ void tpu_outputnumber_char( unsigned char value )
 void tpu_outputnumber_short( unsigned short value )
 {
     char valuestring[]="    0";
-    unsigned short remainder, i = 0;
+    unsigned short remainder;
+    unsigned char i = 4;
 
     while( value != 0 ) {
         remainder = value % 10;
         value = value / 10;
 
-        valuestring[4 - i] = (char )(remainder + '0');
-        i++;
+        valuestring[i] = remainder + '0';
+        i--;
     }
 
     tpu_outputstring( valuestring );
@@ -298,17 +301,30 @@ void tpu_outputnumber_short( unsigned short value )
 void tpu_outputnumber_int( unsigned int value )
 {
     char valuestring[]="         0";
-    unsigned int remainder, i = 0;
+    unsigned int remainder;
+    unsigned char i = 9;
 
-    while( value != 0 && ( i < 10 ) ) {
+    while( value != 0  ) {
         remainder = value % 10;
         value = value / 10;
 
-        valuestring[9 - i] = ( remainder > 9 ) ? '*' : (char )remainder + '0';
-        i++;
+        valuestring[i] = ( remainder > 9 ) ? '*' : remainder + '0';
+        i--;
     }
     tpu_outputstring( valuestring );
 }
+
+// SDCARD BLITTER TILES
+unsigned short sdcardtiles[] = {
+    0x0000, 0x0000, 0x0ec0, 0x08a0, 0xea0, 0x02a0, 0x0ec0, 0x0000,
+    0x0a60, 0x0a80, 0x0e80, 0xa80, 0x0a60, 0x0000, 0x0000, 0x0000,
+
+    0x3ff0, 0x3ff8, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ff8, 0x1ffc, 0x1ffc,
+    0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc,
+
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0018, 0x0018, 0x0000
+};
 
 // FAT16 FILE SYSTEM
 // https://codeandlife.com/2012/04/02/simple-fat-and-sd-tutorial-part-1/ USED AS REFERENCE
@@ -369,21 +385,24 @@ void sd_readSector( unsigned int sectorAddress, unsigned char *copyAddress )
 {
     unsigned short i;
 
-    tpu_set( 40, 0, 0x40, 0x30 ); tpu_outputstring("Reading Sector: "); tpu_outputnumber_int( sectorAddress );
+    tpu_set( 40, 0, 0x40, 0x30 ); tpu_outputstring("Reading Sector: "); tpu_outputnumber_short( (unsigned short)sectorAddress );
     while( *SDCARD_READY == 0 ) {}
 
     *SDCARD_SECTOR_HIGH = ( sectorAddress & 0xffff0000 ) >> 16;
     *SDCARD_SECTOR_LOW = ( sectorAddress & 0x0000ffff );
     *SDCARD_START = 1;
+    *LEDS = 255;
 
     while( *SDCARD_READY == 0 ) {}
 
-    tpu_set( 40, 0, 0x40, 0x0c ); tpu_outputstring("Sector Read    : "); tpu_outputnumber_int( sectorAddress );
+    tpu_set( 40, 0, 0x40, 0x0c ); tpu_outputstring("Sector Read    : "); tpu_outputnumber_short( (unsigned short)sectorAddress );
 
     for( i = 0; i < 512; i++ ) {
         *SDCARD_ADDRESS = i;
         copyAddress[ i ] = *SDCARD_DATA;
     }
+
+    *LEDS = 0;
 }
 
 void sd_readMBR( void ) {
@@ -398,8 +417,9 @@ void sd_readRootDirectory ( void ) {
     unsigned short i;
 
     // READ ALL OF THE SECTORS OF THE ROOTDIRECTORY
-    for( i = 0; i < ( BOOTSECTOR.root_dir_entries * sizeof( Fat16Entry ) ) / 512; i++ ) {
-        sd_readSector( PARTITION[0].start_sector + BOOTSECTOR.reserved_sectors - 1 + BOOTSECTOR.fat_size_sectors * BOOTSECTOR.number_of_fats, ( (unsigned char *)ROOTDIRECTORY ) + 512 * i );
+    for( i = 0; i < 16; i++ ) {
+    //for( i = 0; i < ( BOOTSECTOR.root_dir_entries * sizeof( Fat16Entry ) ) / 512; i++ ) {
+        sd_readSector( i + PARTITION[0].start_sector + BOOTSECTOR.reserved_sectors + BOOTSECTOR.fat_size_sectors * BOOTSECTOR.number_of_fats, ( (unsigned char *)ROOTDIRECTORY ) + 512 * i );
     }
 }
 
@@ -474,16 +494,12 @@ void main()
                 tpu_output_character( BOOTSECTOR.fs_type[i] );
             }
             tpu_output_character( ']' );
-            tpu_set( 2, 16, 0x40, 0x3f );
-            tpu_outputstring( "Sector Size: " ); tpu_outputnumber_short( BOOTSECTOR.sector_size );
-            tpu_outputstring( " Cluster Size: " ); tpu_outputnumber_char( BOOTSECTOR.sectors_per_cluster );
-            tpu_outputstring( " Total Sectors: " ); tpu_outputnumber_int( BOOTSECTOR.total_sectors_long );
 
             // SET STORAGE FOR THE RROT DIRECTORY FROM THE TOP OF THE MAIN MEMORY
-            ROOTDIRECTORY = ( Fat16Entry *)( 0x12000000 - BOOTSECTOR.root_dir_entries * sizeof( Fat16Entry ) );
-            tpu_set( 0, 18, 0x40, 0x30 ); tpu_outputstring( "Reading Root Directory");
+            ROOTDIRECTORY = (Fat16Entry *)( 0x12000000 - BOOTSECTOR.root_dir_entries * sizeof( Fat16Entry ) );
+            tpu_set( 0, 16, 0x40, 0x30 ); tpu_outputstring( "Reading Root Directory");
             sd_readRootDirectory();
-            tpu_set( 0, 18, 0x40, 0x0c ); tpu_outputstring( "Read Root Directory   ");
+            tpu_set( 0, 16, 0x40, 0x0c ); tpu_outputstring( "Read Root Directory   ");
             break;
         default:
             tpu_set( 0, 15, 0x40, 0x30 ); tpu_outputstring( "ERROR: PLEASE INSERT A VALID FAT16 FORMATTED SDCARD AND PRESS RESET");
@@ -492,23 +508,25 @@ void main()
     }
 
     outputstring("\n\n\n\n\n\n\n\nRISC-ICE-V BIOS" );
-    outputstring("> ls");
+    outputstring("> ls *.PAW");
     for( i = 0; i < BOOTSECTOR.root_dir_entries; i++ ) {
-        switch( ROOTDIRECTORY[i].filename[0] ) {
-            case 0x00:
-                break;
-            case 0xe5: outputstringnonl("[deleted]");
-                break;
-            case 0x2e: outputstringnonl("[directory]");
-                break;
-            default: outputcharacter('[');
-                for( j = 0; j < 8; j++ )
-                    outputcharacter( ROOTDIRECTORY[i].filename[j] );
-                outputcharacter('.');
-                for( j = 0; j < 3; j++ )
-                    outputcharacter( ROOTDIRECTORY[i].ext[j] );
-                outputcharacter('[');
-                break;
+        if( ROOTDIRECTORY[i].ext[0]=='P' && ROOTDIRECTORY[i].ext[1]=='A' && ROOTDIRECTORY[i].ext[2]=='W' ) {
+            switch( ROOTDIRECTORY[i].filename[0] ) {
+                case 0x00:
+                    break;
+                case 0xe5: outputstringnonl("[deleted]");
+                    break;
+                case 0x2e: outputstringnonl("[directory]");
+                    break;
+                default: outputcharacter('[');
+                    for( j = 0; j < 8; j++ )
+                        outputcharacter( ROOTDIRECTORY[i].filename[j] );
+                    outputcharacter('.');
+                    for( j = 0; j < 3; j++ )
+                        outputcharacter( ROOTDIRECTORY[i].ext[j] );
+                    outputcharacter(']');
+                    break;
+            }
         }
     }
 
@@ -525,4 +543,7 @@ void main()
         outputstring(" <-");
         *LEDS = uartData;
     }
+
+    // CALL SDRAM LOADED PROGRAM
+    ((void(*)(void))0x10000000)();
 }
