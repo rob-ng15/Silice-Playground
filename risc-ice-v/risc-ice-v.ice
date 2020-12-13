@@ -234,18 +234,20 @@ algorithm main(
     uint1 clock_sdram = uninitialized;
     uint1 clock_copro = uninitialized;
     uint1 clock_memory = uninitialized;
+    uint1 clock_cache = uninitialized;
     ulx3s_clk_risc_ice_v_CPU clk_gen_CPU (
         clkin    <: clock,
-        clkout0  :> clock_copro,
-        clkout1  :> clock_memory,
-        clkout2  :> clock_sdram,
+        clkCOPRO :> clock_copro,
+        clkMEMORY  :> clock_memory,
+        clkCACHE :> clock_cache,
+        clkSDRAM  :> clock_sdram,
         locked   :> pll_lock_CPU
     );
     ulx3s_clk_risc_ice_v_AUX clk_gen_AUX (
         clkin    <: clock,
-        clkout0  :> clock_timers,
-        clkout1  :> video_clock,
-        clkout2 :> clock_gpu,
+        clkTIMER  :> clock_timers,
+        clkVIDEO  :> video_clock,
+        clkGPU :> clock_gpu,
         locked   :> pll_lock_AUX
     );
 
@@ -355,7 +357,7 @@ algorithm main(
         readdata :> instruction16,
         function3 <: function3
     );
-    ramcontrollerSDRAM sdram <@clock_memory> (
+    ramcontrollerSDRAM sdram <@clock_cache> (
         readdata :> instruction16,
         function3 <: function3
     );
@@ -448,6 +450,7 @@ algorithm main(
             }
         } else {
             sdram.address = pc;
+            sdram.Icache = 1;
             sdram.readflag = 1;
             ++:
             while( sdram.busy ) {}
@@ -459,6 +462,7 @@ algorithm main(
                     compressed = 0;
                     instruction = compressedunit.instruction32;
                     sdram.address = pc + 2;
+                    sdram.Icache = 1;
                     sdram.readflag = 1;
                     ++:
                     while( sdram.busy ) {}
@@ -506,6 +510,7 @@ algorithm main(
                         } else {
                             // SDRAM
                             sdram.address = loadAddress;
+                            sdram.Icache = 0;
                             sdram.readflag = 1;
                             ++:
                             while( sdram.busy ) {}
@@ -515,6 +520,7 @@ algorithm main(
                                 case 2b10: {
                                     result = { 16h0000, sdram.readdata };
                                     sdram.address = loadAddress + 2;
+                                    sdram.Icache = 0;
                                     sdram.readflag = 1;
                                     ++:
                                     while( sdram.busy ) {}
@@ -870,7 +876,6 @@ algorithm ramcontrollerBRAM (
 
     input   uint1   writeflag
 ) <autorun> {
-
     // RISC-V RAM and BIOS
     bram uint16 ram<input!>[8192] = {
         $include('ROM/BIOS.inc')
@@ -911,55 +916,74 @@ algorithm ramcontrollerSDRAM (
     input   uint1   writeflag,
     input   uint1   readflag,
 
+    input   uint1   Icache,
+
     output  uint1   busy
 ) <autorun> {
-    // CACHE for SDRAM
-    // CACHE LINE IS LOWER 12 bits of address, dropping the BYTE address bit
+    // INSTRUCTION & DATA CACHES for SDRAM
+    // CACHE LINE IS LOWER 12 bits ( 0 - 4095 ) of address, dropping the BYTE address bit
     // CACHE TAG IS REMAINING 12 bits of the 25 bit address
-    bram uint16 cachedata<input!>[8192] = uninitialized;
-    bram uint11 cachetag<input!>[8192] = uninitialized;
+    bram uint16 Dcachedata<input!>[4096] = uninitialized;
+    bram uint12 Dcachetag<input!>[4096] = uninitialized;
+    bram uint16 Icachedata<input!>[4096] = uninitialized;
+    bram uint12 Icachetag<input!>[4096] = uninitialized;
 
     // FLAGS FOR CACHE ACCESS
-    cachedata.wenable := 0;
-    cachedata.addr := address[1,13];
-    cachetag.wenable := 0;
-    cachetag.addr := address[1,13];
+    Dcachedata.wenable := 0; Dcachedata.addr := address[1,12];
+    Dcachetag.wenable := 0; Dcachetag.addr := address[1,12]; Dcachetag.wdata := address[13,12];
+    Icachedata.wenable := 0; Icachedata.addr := address[1,12];
+    Icachetag.wenable := 0; Icachetag.addr := address[1,12]; Icachetag.wdata := address[13,12];
 
-    // RETURN RESULTS FROM CACHE
-    readdata := cachedata.rdata;
-
-    readdata8 := { ( ( ( address[0,1] ? cachedata.rdata[15,1] : cachedata.rdata[7,1] ) & ~function3[2,1] ) ? 24hffffff : 24h000000 ), ( address[0,1] ? cachedata.rdata[8,8] : cachedata.rdata[0,8] ) };
-
-    readdata16 := { ( cachedata.rdata[15,1] & ~function3[2,1] ) ? 16hffff : 16h0000 ,cachedata.rdata };
+    // RETURN RESULTS FROM CACHES
+    // NON-SIGN EXTENDED 16 bit read - for instructions and 32 bit reads
+    readdata := Icache ? Icachedata.rdata : Dcachedata.rdata;
+    // OPTIONAL SIGN EXTENDED 8 bit and 16 bit reads, expanded to 32 bit as per Risc-V Specification
+    readdata8 := { ( ( ( address[0,1] ? Dcachedata.rdata[15,1] : Dcachedata.rdata[7,1] ) & ~function3[2,1] ) ? 24hffffff : 24h000000 ), ( address[0,1] ? Dcachedata.rdata[8,8] : Dcachedata.rdata[0,8] ) };
+    readdata16 := { ( Dcachedata.rdata[15,1] & ~function3[2,1] ) ? 16hffff : 16h0000, Dcachedata.rdata };
 
     while(1) {
         if( readflag ) {
-            // WILL NEED TO CHECK THE CACHETAG, READ FROM SDRAM, AND UPDATE THE CACHE
-            if( cachetag.rdata == address[14,11] ) {
+            if( ( Icache && ( Icachetag.rdata == address[13,12] ) ) || ( Dcachetag.rdata == address[13,12] ) ) {
                 // CACHE HIT
                 busy = 0;
             } else {
                 // CACHE MISS
                 busy = 1;
                 // READ FROM SDRAM
-                // WRITE RESULT TO CACHE
+                // WRITE RESULT TO ICACHE or DCACHE
+                if( Icache ) {
+                    // ICACHE WRITE
+                     Icachetag.wenable = 1;
+               } else {
+                    // DCACHE WRITE
+                }
                 busy = 0;
             }
         }
 
         if( writeflag ) {
-            // CHECK FOR CACHE HIT
-            // IF CACHE HIT, CACHE WRITES THROUGH
-            // ELSE READ FROM SDRAM, MODIFY AND WRITE THROUGH
-            switch( function3 & 3 ) {
-                case 2b00: { cachedata.wdata = address[0,1] ? { writedata[0,8], cachedata.rdata[0,8] } : { cachedata.rdata[8,8], writedata[0,8] }; }
-                case 2b01: { cachedata.wdata = writedata; }
-                case 2b10: { cachedata.wdata = writedata; }
+            busy = 1;
+            if( ( Dcachetag.rdata != address[13,12] ) && ( ( function3 & 3 ) == 0 ) ) {
+                // CACHE MISS 8 BIT WRITE
+                // READ FROM SDRAM, WRITE RESULT INTO DCACHE
+            } else {
+                // WRITE INTO CACHE ( 8 BIT WRITE DATA ALREADY IN CACHE )
+                switch( function3 & 3 ) {
+                    case 2b00: { Dcachedata.wdata = address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] }; }
+                    case 2b01: { Dcachedata.wdata = writedata; }
+                    case 2b10: { Dcachedata.wdata = writedata; }
+                }
+                Dcachedata.wenable = 1; Dcachetag.wenable = 1;
+
+                // CHECK IF ENTRY IS IN ICACHE AND UPDATE
+                if( Icachetag.rdata == address[13,12] ) {
+                    Icachedata.wdata = Dcachedata.wdata;
+                    Icachedata.wenable = 1;
+                }
+
+                // WRITE TO SDRAM
+                busy = 0;
             }
-            cachedata.wenable = 1;
-            cachetag.wdata = address[14,11];
-            cachetag.wenable = 1;
-            busy = 0;
         }
     }
 }

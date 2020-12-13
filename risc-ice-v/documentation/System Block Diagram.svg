@@ -772,62 +772,67 @@
           </g>
         </g>
       </g>
-      <rect
-         style="fill:#ff9955;stroke-width:0.289836"
-         id="rect164-6"
-         width="52.916668"
-         height="47.625"
-         x="98.524147"
-         y="70.674744" />
       <g
-         id="g148"
-         transform="translate(70.830969,4.4837477)">
+         id="g1087"
+         transform="translate(2.017525,-5.2916683)">
+        <rect
+           style="fill:#ff9955;stroke-width:0.3152"
+           id="rect164-6"
+           width="52.916668"
+           height="56.325264"
+           x="98.524147"
+           y="70.674744" />
         <text
            xml:space="preserve"
            style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
-           x="54.148758"
-           y="101.5725"
+           x="124.97973"
+           y="106.05625"
            id="text92"><tspan
              sodipodi:role="line"
-             x="54.148758"
-             y="101.5725"
+             x="124.97973"
+             y="106.05625"
              style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.64444px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;stroke-width:0.264583"
              id="tspan106"><tspan
    id="tspan134"
    style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';text-align:center;text-anchor:middle;stroke-width:0.264583">SDRAM </tspan>32MB</tspan><tspan
              sodipodi:role="line"
-             x="54.148758"
-             y="108.62805"
+             x="124.97973"
+             y="113.1118"
              style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.64444px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;stroke-width:0.264583"
-             id="tspan136">16k Cache</tspan></text>
+             id="tspan136">8k I Cache</tspan><tspan
+             sodipodi:role="line"
+             x="124.97973"
+             y="120.16735"
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.64444px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;stroke-width:0.264583"
+             id="tspan1073">8K D Cache</tspan></text>
         <text
            xml:space="preserve"
            style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
-           x="53.882797"
-           y="87.127869"
+           x="124.71377"
+           y="91.611618"
            id="text96"><tspan
              sodipodi:role="line"
-             x="53.882797"
-             y="87.127869"
+             x="124.71377"
+             y="91.611618"
              style="font-size:5.64444px;text-align:center;text-anchor:middle;stroke-width:0.264583"
              id="tspan102"><tspan
    id="tspan128"
    style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';text-align:center;text-anchor:middle;stroke-width:0.264583">BRAM </tspan>16k</tspan><tspan
              sodipodi:role="line"
-             x="53.882797"
-             y="94.183418"
+             x="124.71377"
+             y="98.667168"
              style="font-size:5.64444px;text-align:center;text-anchor:middle;stroke-width:0.264583"
              id="tspan100">BIOS / Stack</tspan></text>
         <text
            xml:space="preserve"
            style="font-size:8.46667px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
-           x="32.711987"
-           y="77.582863"
+           x="103.54295"
+           y="82.066612"
            id="text126"><tspan
              sodipodi:role="line"
              id="tspan124"
-             x="32.711987"
-             y="77.582863"
+             x="103.54295"
+             y="82.066612"
              style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:8.46667px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';fill:#0000ff;stroke-width:0.264583">MEMORY</tspan></text>
       </g>
       <path
