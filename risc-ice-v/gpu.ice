@@ -396,8 +396,8 @@ algorithm gpu(
                     gpu_active_y = 0;
                     gpu_x1 = x;
                     gpu_y1 = y;
-                    gpu_max_x = 15;
-                    gpu_max_y = 15;
+                    gpu_max_x = 16;
+                    gpu_max_y = 16;
                     gpu_tile = param0;
 
                     gpu_active = 1;
@@ -614,6 +614,44 @@ algorithm gpu(
 
                     gpu_active = 0;
                 }
+
+                case 8: {
+                    // Setup 1 bit 16x16 blitter starting at x,y in colour of tile param0
+                    // Drawn DOUBLE SIZE
+                    gpu_active_x = 0;
+                    gpu_active_y = 0;
+                    gpu_x1 = x;
+                    gpu_y1 = y;
+                    gpu_y2 = 0;
+                    gpu_max_x = 32;
+                    gpu_max_y = 16;
+                    gpu_tile = param0;
+
+                    gpu_active = 1;
+
+                    ++:
+
+                    while( gpu_active_y < gpu_max_y ) {
+                        while( gpu_active_x < gpu_max_x ) {
+                            while( gpu_y2 < 2 ) {
+                                if( blit1tilemap.rdata0[15 - ( gpu_active_x >> 1 ),1] ) {
+                                    bitmap_x_write = gpu_x1 + gpu_active_x;
+                                    bitmap_y_write = gpu_y1 + ( gpu_active_y << 1 ) + gpu_y2;
+                                    bitmap_write = 1;
+                                }
+                                gpu_y2 = gpu_y2 + 1;
+                            }
+                            gpu_active_x = gpu_active_x + 1;
+                            gpu_y2 = 0;
+                        }
+                        gpu_active_x = 0;
+                        gpu_active_y = gpu_active_y + 1;
+                    }
+
+                    gpu_active = 0;
+                }
+
+                default: { gpu_active = 0; }
             }
         }
     }

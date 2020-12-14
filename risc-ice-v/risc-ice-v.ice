@@ -953,7 +953,6 @@ algorithm ramcontrollerSDRAM (
                 // WRITE RESULT TO ICACHE or DCACHE
                 if( Icache ) {
                     // ICACHE WRITE
-                     Icachetag.wenable = 1;
                } else {
                     // DCACHE WRITE
                 }
@@ -976,6 +975,7 @@ algorithm ramcontrollerSDRAM (
                 Dcachedata.wenable = 1; Dcachetag.wenable = 1;
 
                 // CHECK IF ENTRY IS IN ICACHE AND UPDATE
+                // KEEPS CACHES COHERENT WHEN MEMORY IS MODIFIED
                 if( Icachetag.rdata == address[13,12] ) {
                     Icachedata.wdata = Dcachedata.wdata;
                     Icachedata.wenable = 1;

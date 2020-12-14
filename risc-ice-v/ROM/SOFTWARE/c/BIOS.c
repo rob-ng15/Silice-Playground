@@ -71,26 +71,12 @@ void sd_readSector( unsigned int sectorAddress, unsigned char *copyAddress )
 {
     unsigned short i;
 
-    tpu_set( 50, 0, 0x40, 0x30 ); tpu_outputstring("Reading Sector: "); tpu_outputnumber_int( (unsigned short)sectorAddress );
-    while( *SDCARD_READY == 0 ) {}
+    tpu_set( 48, 0, 0x40, 0x30 ); tpu_outputstring("Reading Sector: "); tpu_outputnumber_int( (unsigned short)sectorAddress );
+    set_leds(255); gpu_blit( 0x30, 608, 0, 2, 1 );
+    sdcard_readsector( sectorAddress, copyAddress );
 
-    *SDCARD_SECTOR_HIGH = ( sectorAddress & 0xffff0000 ) >> 16;
-    *SDCARD_SECTOR_LOW = ( sectorAddress & 0x0000ffff );
-    *SDCARD_START = 1;
-    *LEDS = 255;
-    gpu_blit( 0x30, 624, 0, 2 );
-
-    while( *SDCARD_READY == 0 ) {}
-
-    tpu_set( 50, 0, 0x40, 0x0c ); tpu_outputstring("Sector Read    : "); tpu_outputnumber_int( (unsigned short)sectorAddress );
-
-    for( i = 0; i < 512; i++ ) {
-        *SDCARD_ADDRESS = i;
-        copyAddress[ i ] = *SDCARD_DATA;
-    }
-
-    *LEDS = 0;
-    gpu_blit( 0x0c, 624, 0, 2 );
+    tpu_set( 48, 0, 0x40, 0x0c ); tpu_outputstring("Sector Read   : "); tpu_outputnumber_int( (unsigned short)sectorAddress );
+    set_leds(0); gpu_blit( 0x0c, 608, 0, 2, 1 );
 }
 
 void sd_readMBR( void ) {
@@ -110,6 +96,35 @@ void sd_readRootDirectory ( void ) {
     }
 }
 
+void draw_riscv_logo( void )
+{
+    gpu_rectangle( 64, 0, 0, 639, 479 );
+    gpu_rectangle( 56, 0, 0, 100, 100 );
+    gpu_triangle( 63, 100, 33, 100, 100, 50, 100 );
+    gpu_triangle( 2, 100, 50, 100, 100, 66, 100 );
+    gpu_rectangle( 2, 0, 0, 33, 50 );
+    gpu_circle( 63, 25, 25, 26, 1 );
+    gpu_rectangle( 63, 0, 0, 25, 12 );
+    gpu_circle( 2, 25, 25, 12, 1 );
+    gpu_triangle( 63, 0, 33, 67, 100, 0, 100 );
+    gpu_triangle( 2, 0, 50, 50, 100, 0, 100 );
+    gpu_rectangle( 2, 0, 12, 25, 37 );
+    gpu_rectangle( 2, 0, 37, 8, 100 );
+}
+
+void set_sdcard_bitmap( void )
+{
+    set_blitter_bitmap( 0, &sdcardtiles[0] );
+    set_blitter_bitmap( 1, &sdcardtiles[16] );
+    set_blitter_bitmap( 2, &sdcardtiles[32] );
+}
+
+void draw_sdcard( void  )
+{
+    gpu_blit( 0x03, 608, 0, 1, 1 );
+    gpu_blit( 0x3f, 608, 0, 0, 1 );
+}
+
 void main()
 {
     unsigned short i,j;
@@ -118,39 +133,22 @@ void main()
     gpu_cs();
     tpu_cs();
 
-    set_blitter_bitmap( 0, &sdcardtiles[0] );
-    set_blitter_bitmap( 1, &sdcardtiles[16] );
-    set_blitter_bitmap( 2, &sdcardtiles[32] );
-
-    // RISC-V LOGO
-    gpu_rectangle( 64, 0, 0, 639, 479 );
-    gpu_rectangle( 56, 0, 0, 100, 100 );
-    gpu_triangle( 63, 100, 33, 100, 100, 50, 100 );
-    gpu_triangle( 2, 100, 50, 100, 100, 66, 100 );
-    gpu_rectangle( 2, 0, 0, 33, 50 );
-    gpu_fillcircle( 63, 25, 25, 26 );
-    gpu_rectangle( 63, 0, 0, 25, 12 );
-    gpu_fillcircle( 2, 25, 25, 12 );
-    gpu_triangle( 63, 0, 33, 67, 100, 0, 100 );
-    gpu_triangle( 2, 0, 50, 50, 100, 0, 100 );
-    gpu_rectangle( 2, 0, 12, 25, 37 );
-    gpu_rectangle( 2, 0, 37, 8, 100 );
-
-    // SDCARD
-    gpu_blit( 0x03, 624, 0, 1 );
-    gpu_blit( 0x3f, 624, 0, 0 );
+    draw_riscv_logo();
+    set_sdcard_bitmap();
+    draw_sdcard();
 
     tpu_set( 16, 5, 0x40, 0x3f ); tpu_outputstring( "Welcome to PAWS a RISC-V RV32IMC CPU" );
-    sleep( 4000 );
 
     tpu_set( 0, 7, 0x40, 0x30 ); tpu_outputstring( "Waiting for SDCARD" );
-    while( *SDCARD_READY == 0 ) {}
-    tpu_set( 0, 7, 0x40, 0x0c ); tpu_outputstring( "SCARD Detected    ");
-
     tpu_set( 0, 9, 0x40, 0x30 ); tpu_outputstring( "Reading Master Boot Record" );
+    sleep( 4000 );
+
     sd_readSector( 0, MBR );
-    PARTITION = (PartitionTable *) &MBR[ 0x1BE ];
+
+    tpu_set( 0, 7, 0x40, 0x0c ); tpu_outputstring( "SCARD Detected    ");
     tpu_set( 0, 9, 0x40, 0x0c ); tpu_outputstring( "Read Master Boot Record   ");
+
+    PARTITION = (PartitionTable *) &MBR[ 0x1BE ];
 
     for( i = 0; i < 4; i++ ) {
         tpu_set( 2, 10 + i, 0x40, 0x3f ); tpu_outputstring( "Partition : " ); tpu_outputnumber_short( i ); tpu_outputstring( ", Type : " ); tpu_outputnumber_char( PARTITION[i].partition_type );
@@ -239,7 +237,7 @@ void main()
     }
 
     // CLEAR the UART buffer
-    while( *UART_STATUS & 1 )
+    while( inputcharacter_available() )
         uartData = inputcharacter();
 
     outputstring("\nTerminal Echo Starting");
@@ -249,7 +247,7 @@ void main()
         outputstringnonl("You pressed : ");
         outputcharacter( uartData );
         outputstring(" <-");
-        *LEDS = uartData;
+        set_leds(uartData);
     }
 
     // CALL SDRAM LOADED PROGRAM

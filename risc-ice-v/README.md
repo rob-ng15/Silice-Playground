@@ -3,7 +3,7 @@
 * Written in Silice
     * Based upon ICE-V by [ICE-V](https://github.com/sylefeb/Silice/blob/master/projects/ice-v/ice-v.ice) by @sylefeb
 
-A simple Risc-V RV32IM 25mhz cpu, matched to the display and peripherals from [j1eforth](https://github.com/rob-ng15/Silice-Playground/tree/master/j1eforth/DE10NANO-ULX3S). Inspired by the need for an easier way to program and use the CPU than Forth.
+A simple Risc-V RV32IM 25mhz cpu, matched to the display and peripherals from [j1eforth](https://github.com/rob-ng15/Silice-Playground/tree/master/j1eforth/DE10NANO-ULX3S) Inspired by the need for an easier way to program and use the CPU than Forth.
 
 __ULX3S only at present__
 
@@ -65,7 +65,7 @@ __ULX3S only at present__
     * LEDS ( 8 on board leds )
     * BUTTONS ( 6 on board buttons )
     * TIMERS ( 1hz and 1khz )
-    * STEREO AUDIO ( 2 tone polyphonic per channel )
+    * STEREO AUDIO
     * WIP - FAT16 SDCARD
 
 __Not all documentation is in place yet. I/O memory mapping not yet finalised.__
@@ -76,6 +76,8 @@ Open a terminal in the ULX3S directory and type ```make ulx3s```. Wait. Upload y
 
 ## COMPILING C CODES
 
-Open a terminal in the ROM/RISC-V directory. Create your own C code in the c directory. Compile with ( for example the asteroids game ) ```./compile_c.sh c/asteroids.c```. Open build/code.bin in okteta. From the menu select File -> Export -> C Array. Use the __unsigned short__ option, save the output as ```code.inc```. Open ```code.inc``` in kwrite or kate, delete the first two and the last lines. Replace ```0x``` with ```16h``` and save as ```BIOS.inc``` in the ROM directory.
+Open a terminal in the ROM/SOFTWARE directory. Create your own C code in the c directory. Compile with ( for example the asteroids game ) ```./compile_BIOS.sh c/asteroids.c```. Open build/code.bin in okteta. From the menu select File -> Export -> C Array. Use the __unsigned short__ option, save the output as ```code.inc```. Open ```code.inc``` in kwrite or kate, delete the first two and the last lines. Replace ```0x``` with ```16h``` and save as ```BIOS.inc``` in the ROM directory.
+
+A small SDK providing helper functions (libPAWS) for the display and various I/O functions is provided and is automatically linked with the above compilation command. See the (WIP) documentation for details of the helper functions, or look at the BIOS.c and asteroids.c examples.
 
 Follow the build instructions above and your program will launch once the code has compiled.

@@ -59,6 +59,9 @@ char volatile * VECTOR_WRITER_DELTAX = (char volatile *) 0x843c;
 char volatile * VECTOR_WRITER_DELTAY = (char volatile *) 0x8440;
 
 unsigned char volatile * BITMAP_SCROLLWRAP = (unsigned char volatile *) 0x8460;
+unsigned short volatile * BITMAP_PIXEL_READ = (unsigned short volatile *) 0x8470;
+unsigned short volatile * BITMAP_X_READ = (unsigned short volatile *) 0x8470;
+unsigned short volatile * BITMAP_Y_READ = (unsigned short volatile *) 0x8474;
 
 unsigned char volatile * LOWER_SPRITE_NUMBER = ( unsigned char volatile * ) 0x8300;
 unsigned char volatile * LOWER_SPRITE_ACTIVE = ( unsigned char volatile * ) 0x8304;

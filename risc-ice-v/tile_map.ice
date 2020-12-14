@@ -202,6 +202,7 @@ algorithm tilemap(
                     // CLEAR
                     case 9: {
                         tm_active = 5;
+                        tm_lastaction = 9;
                     }
                 }
             }
