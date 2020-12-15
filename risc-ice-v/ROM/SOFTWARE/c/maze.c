@@ -10,11 +10,31 @@ char maze[WIDTH][HEIGHT];
 void initialise_maze( void )
 {
     unsigned short x,y;
+
+    // FILL WITH WALLS
     for( x = 0; x < WIDTH; x++ ) {
         for( y = 0; y < HEIGHT; y++ ) {
             maze[x][y] = '#';
         }
     }
+
+    // ADD BORDERS
+    for( x = 0; x < WIDTH; x++ ) {
+        maze[x][0] = '*';
+        maze[x][ HEIGHT - 1 ] = '*';
+        maze[x][ HEIGHT - 2 ] = '*';
+    }
+    for( y = 0; y < HEIGHT; y++ ) {
+        maze[0][y] = '*';
+        maze[ WIDTH - 1][y] = '*';
+        maze[ WIDTH - 2][y] = '*';
+    }
+
+    // ADD EXTRANCE
+    maze[0][1] = 'E';
+
+    // ADD EXIT
+    maze[ WIDTH - 2 ][ HEIGHT - 3 ] = 'X';
 }
 
 void display_maze( unsigned short currentx, unsigned short currenty )
@@ -31,7 +51,11 @@ void display_maze( unsigned short currentx, unsigned short currenty )
                     gpu_rectangle( 0x03, x * 8, y * 8, x * 8 + 7, y * 8 + 7 );
                     break;
                 case ' ':
+                case 'E':
                     gpu_rectangle( 0x3f, x * 8, y * 8, x * 8 + 7, y * 8 + 7 );
+                    break;
+                case 'X':
+                    gpu_rectangle( 0x3c, x * 8, y * 8, x * 8 + 7, y * 8 + 7 );
                     break;
             }
         }
@@ -40,28 +64,20 @@ void display_maze( unsigned short currentx, unsigned short currenty )
     gpu_rectangle( 0x0c, currentx * 8, currenty * 8, currentx * 8 + 7, currenty * 8 + 7 );
 }
 
+// ADAPTED FROM https://rosettacode.org/wiki/Maze_generation#BASIC
 void generate_maze( void )
 {
-    unsigned short startx, starty, currentx, currenty, oldx, oldy, x, y, done, i;
+    unsigned short currentx, currenty, oldx, oldy, x, y, done, i;
 
     // Start at random location
-    startx = rng( WIDTH ); if( startx % 2 == 0 ) startx++;
-    starty = rng( HEIGHT ); if( starty % 2 == 0 ) starty++;
-    maze[startx][starty] = ' ';
+    currentx = rng( WIDTH ); if( currentx % 2 == 0 ) currentx++;
+    currenty = rng( HEIGHT ); if( currenty % 2 == 0 ) currenty++;
+    maze[currentx][currenty] = ' ';
 
-    currentx = startx;
-    currenty = starty;
     done = 0;
 
     do {
         display_maze( currentx, currenty );
-
-        // RANDOM, RETURN TO START
-        if( rng( 512 == 0 ) ) {
-            currentx = startx;
-            currenty = starty;
-        }
-
         // GENERATE 32 CELLS
         for( i = 0; i < 32; i++ ) {
             // RECORD PRESENT LOCATION
@@ -105,14 +121,6 @@ void finalise_maze( void )
 {
     unsigned short x, y;
 
-    for( x = 0; x < WIDTH; x++ ) {
-        maze[x][0] = '*';
-        maze[x][ HEIGHT -1 ] = '*';
-    }
-    for( y = 0; y < HEIGHT; y++ ) {
-        maze[0][y] = '*';
-        maze[ WIDTH - 1][y] = '*';
-    }
 }
 
 void main( void )
@@ -124,7 +132,6 @@ void main( void )
         initialise_maze();
         generate_maze();
 
-        finalise_maze();
         display_maze( 1, 1 );
 
         tpu_set( 0, 0, 0x40, 0x0c ); tpu_outputstring( "Press FIRE to restart!" );
