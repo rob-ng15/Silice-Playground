@@ -51,8 +51,10 @@ void display_maze( unsigned short currentx, unsigned short currenty )
                     gpu_rectangle( 0x03, x * 8, y * 8, x * 8 + 7, y * 8 + 7 );
                     break;
                 case ' ':
-                case 'E':
-                    gpu_rectangle( 0x3f, x * 8, y * 8, x * 8 + 7, y * 8 + 7 );
+                     gpu_rectangle( 0x3f, x * 8, y * 8, x * 8 + 7, y * 8 + 7 );
+                    break;
+               case 'E':
+                    gpu_rectangle( 0x33, x * 8, y * 8, x * 8 + 7, y * 8 + 7 );
                     break;
                 case 'X':
                     gpu_rectangle( 0x3c, x * 8, y * 8, x * 8 + 7, y * 8 + 7 );
@@ -70,8 +72,8 @@ void generate_maze( void )
     unsigned short currentx, currenty, oldx, oldy, x, y, done, i;
 
     // Start at random location
-    currentx = rng( WIDTH ); if( currentx % 2 == 0 ) currentx++;
-    currenty = rng( HEIGHT ); if( currenty % 2 == 0 ) currenty++;
+    currentx = rng( WIDTH - 2 ); if( currentx % 2 == 0 ) currentx++;
+    currenty = rng( HEIGHT - 2 ); if( currenty % 2 == 0 ) currenty++;
     maze[currentx][currenty] = ' ';
 
     done = 0;

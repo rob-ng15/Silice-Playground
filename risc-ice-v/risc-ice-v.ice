@@ -232,12 +232,12 @@ algorithm main(
     uint1 clock_gpu = uninitialized;
     uint1 clock_copro = uninitialized;
     uint1 clock_memory = uninitialized;
-    uint1 clock_cache = uninitialized;
+    uint1 clock_cpuunit = uninitialized;
     ulx3s_clk_risc_ice_v_CPU clk_gen_CPU (
         clkin    <: clock,
         clkCOPRO :> clock_copro,
         clkMEMORY  :> clock_memory,
-        clkCACHE :> clock_cache,
+        clkCPUUNIT :> clock_cpuunit,
         clkSDRAM  :> sdram_clk,
         locked   :> pll_lock_CPU
     );
@@ -349,17 +349,16 @@ algorithm main(
         video_reset <: video_reset
     );
 
-    // RAM - BRAM ( and eventually SDRAM )
-    ramcontrollerBRAM ram <@clock_memory> ();
-    ramcontrollerSDRAM sdramcache <@clock_cache> ();
+    // RAM - BRAM and SDRAM
+    ramcontroller ram <@clock_memory> ();
 
     // SIGN EXTENDER UNIT
-    signextender signextenderunit <@clock_copro> (
+    signextender signextenderunit <@clock_cpuunit> (
         function3 <: function3
     );
 
     // COMPRESSED INSTRUCTION EXPANDER
-    compressedexpansion compressedunit <@clock_copro> ();
+    compressedexpansion compressedunit <@clock_cpuunit> ();
 
     // ADDITION/SUBTRACTION, SHIFTER, BINARY LOGIC, MULTIPLICATION and DIVISION units
     additionsubtraction addsubunit <@clock_copro> (
@@ -408,8 +407,7 @@ algorithm main(
 
     // RAM/IO Read/Write Flags
     ram.writeflag := 0;
-    sdramcache.readflag := 0;
-    sdramcache.writeflag := 0;
+    ram.readflag := 0;
     IO_Map.memoryWrite := 0;
     IO_Map.memoryRead := 0;
 
@@ -427,30 +425,22 @@ algorithm main(
         floatingpoint = 0;
 
         // FETCH + EXPAND COMPRESSED INSTRUCTIONS
-        if( pc[28,1] ) {
-            sdramcache.address = pc;
-            sdramcache.Icache = 1;
-            sdramcache.readflag = 1;
-            while( sdramcache.busy ) {}
-        } else {
-            ram.address = pc;
-        }
+        ram.address = pc;
+        ram.Icache = 1;
+        ram.readflag = 1;
         ++:
-        switch( pc[28,1] ? sdramcache.readdata[0,2] : ram.readdata[0,2] ) {
-            default: { compressed = 1; compressedunit.instruction16 = pc[28,1] ? sdramcache.readdata : ram.readdata; instruction = compressedunit.instruction32; }
+        while( ram.busy ) {}
+        switch( ram.readdata[0,2] ) {
+            default: { compressed = 1; compressedunit.instruction16 = ram.readdata; instruction = compressedunit.instruction32; }
             case 2b11: {
                 compressed = 0;
-                instruction = { 16b0, pc[28,1] ? sdramcache.readdata : ram.readdata };
-                if( pc[28,1] ) {
-                    sdramcache.address = pc + 2;
-                    sdramcache.Icache = 1;
-                    sdramcache.readflag = 1;
-                    while( sdramcache.busy ) {}
-                } else {
-                    ram.address = pc + 2;
-                }
+                instruction = { 16b0, ram.readdata };
+                ram.address = pc + 2;
+                ram.Icache = 1;
+                ram.readflag = 1;
                 ++:
-                instruction = { pc[28,1] ? sdramcache.readdata : ram.readdata, instruction[0,16] };
+                while( ram.busy ) {}
+                instruction = { ram.readdata, instruction[0,16] };
             }
         }
         ++:
@@ -478,36 +468,27 @@ algorithm main(
                             }
                         } else {
                             // SDRAM or BRAM
-                            if( loadAddress[28,1] ) {
-                                sdramcache.address = loadAddress;
-                                sdramcache.Icache = 0;
-                                sdramcache.readflag = 1;
-                                while( sdramcache.busy ) {}
-                            } else {
-                                ram.address = loadAddress;
-                            }
+                            ram.address = loadAddress;
+                            ram.Icache = 0;
+                            ram.readflag = 1;
                             ++:
+                            while( ram.busy ) {}
                             switch( function3 & 3 ) {
                                 case 2b00: {
-                                    signextenderunit.nosign = loadAddress[28,1] ? ( sdramcache.readdata[loadAddress[0,1] ? 8 : 0, 8] ): ( ram.readdata[loadAddress[0,1] ? 8 : 0, 8] );
+                                    signextenderunit.nosign = ( ram.readdata[loadAddress[0,1] ? 8 : 0, 8] );
                                     result = signextenderunit.withsign;
                                }
                                 case 2b01: {
-                                    signextenderunit.nosign = loadAddress[28,1] ? sdramcache.readdata : ram.readdata;
+                                    signextenderunit.nosign = ram.readdata;
                                     result = signextenderunit.withsign;
                                 }
                                 case 2b10: {
-                                    result = { 16h0000, loadAddress[28,1] ? sdramcache.readdata : ram.readdata };
-                                    if( loadAddress[28,1] ) {
-                                        sdramcache.address = loadAddress + 2;
-                                        sdramcache.Icache = 0;
-                                        sdramcache.readflag = 1;
-                                        while( sdramcache.busy ) {}
-                                    } else {
-                                        ram.address = loadAddress + 2;
-                                    }
+                                    result = { 16h0000, ram.readdata };
+                                    ram.address = loadAddress + 2;
+                                    ram.readflag = 1;
                                     ++:
-                                    result = { loadAddress[28,1] ? sdramcache.readdata : ram.readdata, result[0,16] };
+                                    while( ram.busy ) {}
+                                    result = { ram.readdata, result[0,16] };
                                 }
                             }
                         }
@@ -521,50 +502,28 @@ algorithm main(
                             IO_Map.memoryWrite = 1;
                         } else {
                             // SDRAM or BRAM
-                            sdramcache.address = storeAddress;
                             ram.address = storeAddress;
+                            ram.Icache = 0;
                             switch( function3 & 3 ) {
                                 case 2b00: {
                                     // 8 BIT, READ MODIFY WRITE
-                                    if( storeAddress[28,1] ) {
-                                        sdramcache.Icache = 0;
-                                        sdramcache.readflag = 1;
-                                        while( sdramcache.busy ) {}
-                                        sdramcache.writedata = storeAddress[0,1] ? { sourceReg2[0,8], sdramcache.readdata[0,8] } : { sdramcache.readdata[8,8], sourceReg2[0,8] };
-                                        sdramcache.writeflag = 1;
-                                    } else {
-                                        ++:
-                                        ram.writedata = storeAddress[0,1] ? { sourceReg2[0,8], ram.readdata[0,8] } : { ram.readdata[8,8], sourceReg2[0,8] };
-                                        ram.writeflag = 1;
-                                    }
+                                    ram.readflag = 1;
+                                    ++:
+                                    while( ram.busy ) {}
+                                    ram.writedata = storeAddress[0,1] ? { sourceReg2[0,8], ram.readdata[0,8] } : { ram.readdata[8,8], sourceReg2[0,8] };
+                                    ram.writeflag = 1;
                                 }
                                 case 2b01: {
-                                   if( storeAddress[28,1] ) {
-                                        sdramcache.writedata = sourceReg2[0,16];
-                                        sdramcache.writeflag = 1;
-                                    } else {
-                                        ram.writedata = sourceReg2[0,16];
-                                        ram.writeflag = 1;
-                                    }
+                                    ram.writedata = sourceReg2[0,16];
+                                    ram.writeflag = 1;
                                 }
                                 case 2b10: {
-                                   if( storeAddress[28,1] ) {
-                                        sdramcache.writedata = sourceReg2[0,16];
-                                        sdramcache.writeflag = 1;
-                                    } else {
-                                        ram.writedata = sourceReg2[0,16];
-                                        ram.writeflag = 1;
-                                    }
+                                    ram.writedata = sourceReg2[0,16];
+                                    ram.writeflag = 1;
                                     ++:
-                                   if( storeAddress[28,1] ) {
-                                        sdramcache.address = storeAddress + 2;
-                                        sdramcache.writedata = sourceReg2[16,16];
-                                        sdramcache.writeflag = 1;
-                                    } else {
-                                        ram.address = storeAddress + 2;
-                                        ram.writedata = sourceReg2[16,16];
-                                        ram.writeflag = 1;
-                                    }
+                                    ram.address = storeAddress + 2;
+                                    ram.writedata = sourceReg2[16,16];
+                                    ram.writeflag = 1;
                                 }
                             }
                         }
@@ -873,6 +832,84 @@ algorithm signextender (
 // NOTES: AT PRESENT NO INTERACTION WITH THE SDRAM, CACHE ACTS AS 4K x 16 bit memory for proof of concept
 // LOGIC FOR CACHE HIT AND MISS IN PLACE
 // NEEDS A BUSY FLAG FOR WHEN CACHE MISS AND FOR SDRAM WRITES TO TAKE PLACE
+algorithm ramcontroller (
+    input   uint32  address,
+    input   uint16  writedata,
+    output  uint16  readdata,
+    input   uint1   writeflag,
+    input   uint1   readflag,
+    input   uint1   Icache,
+    output  uint1   busy
+) <autorun> {
+    // RISC-V RAM and BIOS
+    bram uint16 ram<input!>[8192] = {
+        $include('ROM/BIOS.inc')
+        , pad(uninitialized)
+    };
+    // INSTRUCTION & DATA CACHES for SDRAM
+    // CACHE LINE IS LOWER 11 bits ( 0 - 2047 ) of address, dropping the BYTE address bit
+    // CACHE TAG IS REMAINING 13 bits of the 25 bit address + 1 bit for valid flag
+    bram uint16 Dcachedata<input!>[2048] = uninitialized;
+    bram uint14 Dcachetag<input!>[2048] = uninitialized;
+    bram uint16 Icachedata<input!>[2048] = uninitialized;
+    bram uint14 Icachetag<input!>[2048] = uninitialized;
+
+    // FLAGS FOR CACHE ACCESS
+    Dcachedata.wenable := 0; Dcachedata.addr := address[1,11];
+    Dcachetag.wenable := 0; Dcachetag.addr := address[1,11]; Dcachetag.wdata := { 1b1, address[12,13] };
+    Icachedata.wenable := 0; Icachedata.addr := address[1,11];
+    Icachetag.wenable := 0; Icachetag.addr := address[1,11]; Icachetag.wdata := { 1b1, address[12,13] };
+
+    // FLAGS FOR BRAM ACCESS
+    ram.wenable := 0;
+    ram.addr := address[1,15];
+
+    // RETURN RESULTS FROM BRAM OR CACHE
+    readdata := address[28,1] ? ( Icache ? Icachedata.rdata : Dcachedata.rdata ) : ram.rdata;
+
+    while(1) {
+        if( readflag && address[28,1] ) {
+            if( ( Icache && ( Icachetag.rdata == { 1b1, address[12,13] } ) ) || ( Dcachetag.rdata == { 1b1, address[12,13] } ) ) {
+                // CACHE HIT
+                busy = 0;
+            } else {
+                // CACHE MISS
+                busy = 1;
+                // READ FROM SDRAM
+                // WRITE RESULT TO ICACHE or DCACHE
+                if( Icache ) {
+                    // ICACHE WRITE
+                    Icachetag.wenable = 1;
+                } else {
+                    // DCACHE WRITE
+                    Dcachetag.wenable = 1;
+                }
+                busy = 0;
+            }
+        }
+
+        if( writeflag ) {
+            if( address[28,1] ) {
+                busy = 1;
+                // WRITE INTO CACHE
+                Dcachedata.wdata = writedata;
+                Dcachedata.wenable = 1; Dcachetag.wenable = 1;
+
+                // CHECK IF ENTRY IS IN ICACHE AND UPDATE
+                if( Icachetag.rdata == { 1b1, address[12,13] } ) {
+                    Icachedata.wdata = writedata;
+                    Icachedata.wenable = 1;
+                }
+
+                // WRITE TO SDRAM
+                busy = 0;
+            } else {
+                ram.wdata = writedata;
+                ram.wenable = 1;
+            }
+        }
+    }
+}
 
 algorithm ramcontrollerBRAM (
     input   uint32  address,

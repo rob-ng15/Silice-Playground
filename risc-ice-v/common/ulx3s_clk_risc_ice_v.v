@@ -7,7 +7,7 @@ module ulx3s_clk_risc_ice_v_CPU
     input clkin, // 25 MHz, 0 deg
     output clkCOPRO, // 50 MHz, 0 deg        // CO-PROCESSORS
     output clkMEMORY, // 50 MHz, 0 deg       // MEMORY CONTROLLER - BRAM
-    output clkCACHE, // 50 MHz, 0 deg        // MEMORY CONTROLLER - SDRAM CACHE
+    output clkCPUUNIT, // 50 MHz, 0 deg        // MEMORY CONTROLLER - SDRAM CACHE
     output clkSDRAM, // 165.625 Mhz 0 deg    // SDRAM
     output locked
 );
@@ -49,7 +49,7 @@ EHXPLLL #(
         .CLKI(clkin),
         .CLKOP(clkCOPRO),
         .CLKOS(clkMEMORY),
-        .CLKOS2(clkCACHE),
+        .CLKOS2(clkCPUUNIT),
         .CLKOS3(clkSDRAM),
         .CLKFB(clkCOPRO),
         .CLKINTFB(),
