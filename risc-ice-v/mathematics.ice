@@ -19,11 +19,13 @@ algorithm divideremainder (
     uint6   bit = uninitialized;
     uint6   count = uninitialized;
 
-    active = 0;
+    uint1   busy = 0;
+
+    active := ( start ) ? 1 : busy;
 
     while(1) {
         if( start ) {
-            active = 1;
+            busy = 1;
             bit = 31;
 
 
@@ -31,7 +33,7 @@ algorithm divideremainder (
                 // DIVISON by ZERO
                 quotient = 32hffffffff;
                 remainder = dividend;
-                active = 0;
+                busy = 0;
             } else {
                 quotient = 0;
                 remainder = 0;
@@ -55,7 +57,7 @@ algorithm divideremainder (
                 ++:
 
                 quotient = resultsign ? -quotient : quotient;
-                active = 0;
+                busy = 0;
             }
         }
     }
@@ -77,6 +79,8 @@ algorithm multiplicationDSP (
     uint32  factor_1_copy := ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
     uint32  factor_2_copy := ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
 
+    uint1   busy = 0;
+
     // CALCULATION AB * CD
     uint18  A := { 2b0, factor_1_copy[16,16] };
     uint18  B := { 2b0, factor_1_copy[0,16] };
@@ -85,14 +89,16 @@ algorithm multiplicationDSP (
 
     uint1   resultsign := ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] != factor_2[31,1] ) : factor_1[31,1] );
 
+    active := start ? 1 : busy;
+
     while(1) {
         if( start ) {
-            active = 1;
+            busy = 1;
             ++:
             product = D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 };
             ++:
             product = resultsign ? -product : product;
-            active = 0;
+            busy = 0;
         }
     }
 }

@@ -353,10 +353,10 @@ algorithm main(
     ramcontroller ram <@clock_memory> ();
 
     // SIGN EXTENDER UNIT
-    signextender8 signextender8unit <@clock_copro> (
+    signextender8 signextender8unit <@clock_cpuunit> (
         function3 <: function3
     );
-    signextender16 signextender16unit <@clock_copro> (
+    signextender16 signextender16unit <@clock_cpuunit> (
         function3 <: function3
     );
 
@@ -433,6 +433,7 @@ algorithm main(
         ram.address = pc;
         ram.Icache = 1;
         ram.readflag = 1;
+        ++:
         while( ram.busy ) {}
         switch( ram.readdata[0,2] ) {
             case 2b00: { compressed = 1; compressedunit00.instruction16 = ram.readdata; instruction = compressedunit00.instruction32; }
@@ -444,6 +445,7 @@ algorithm main(
                 ram.address = pc + 2;
                 ram.Icache = 1;
                 ram.readflag = 1;
+                ++:
                 while( ram.busy ) {}
                 instruction = { ram.readdata, instruction[0,16] };
             }
@@ -480,6 +482,7 @@ algorithm main(
                             ram.address = loadAddress;
                             ram.Icache = 0;
                             ram.readflag = 1;
+                            ++:
                             while( ram.busy ) {}
                             switch( function3 & 3 ) {
                                 case 2b00: {
@@ -494,6 +497,7 @@ algorithm main(
                                     result = { 16h0000, ram.readdata };
                                     ram.address = loadAddress + 2;
                                     ram.readflag = 1;
+                                    ++:
                                     while( ram.busy ) {}
                                     result = { ram.readdata, result[0,16] };
                                 }
@@ -515,6 +519,7 @@ algorithm main(
                                 case 2b00: {
                                     // 8 BIT, READ MODIFY WRITE
                                     ram.readflag = 1;
+                                    ++:
                                     while( ram.busy ) {}
                                     ram.writedata = storeAddress[0,1] ? { sourceReg2[0,8], ram.readdata[0,8] } : { ram.readdata[8,8], sourceReg2[0,8] };
                                     ram.writeflag = 1;
@@ -594,6 +599,8 @@ algorithm main(
             // FORCE registers to BRAM - NO FLOATING POINT AT PRESENT!
             default: { floatingpoint = 1; }
         }
+
+        ++:
 
         // WRITE TO REGISTERS
         // NEVER write to registers[0]
@@ -860,10 +867,6 @@ algorithm ramcontroller (
     bram uint16 Icachedata<input!>[2048] = uninitialized;
     bram uint14 Icachetag<input!>[2048] = uninitialized;
 
-    // ACTIVE FLAG
-    uint1   active = 0;
-    busy := ( readflag || writeflag ) ? 1 : active;
-
     // FLAGS FOR CACHE ACCESS
     Dcachedata.wenable := 0; Dcachedata.addr := address[1,11];
     Dcachetag.wenable := 0; Dcachetag.addr := address[1,11]; Dcachetag.wdata := { 1b1, address[12,13] };
@@ -881,10 +884,10 @@ algorithm ramcontroller (
         if( readflag && address[28,1] ) {
             if( ( Icache && ( Icachetag.rdata == { 1b1, address[12,13] } ) ) || ( Dcachetag.rdata == { 1b1, address[12,13] } ) ) {
                 // CACHE HIT
-                active = 0;
+                busy = 0;
             } else {
                 // CACHE MISS
-                active = 1;
+                busy = 1;
                 // READ FROM SDRAM
                 // WRITE RESULT TO ICACHE or DCACHE
                 if( Icache ) {
@@ -894,13 +897,13 @@ algorithm ramcontroller (
                     // DCACHE WRITE
                     Dcachetag.wenable = 1;
                 }
-                active = 0;
+                busy = 0;
             }
         }
 
         if( writeflag ) {
             if( address[28,1] ) {
-                active = 1;
+                busy = 1;
                 // WRITE INTO CACHE
                 Dcachedata.wdata = writedata;
                 Dcachedata.wenable = 1; Dcachetag.wenable = 1;
@@ -912,11 +915,11 @@ algorithm ramcontroller (
                 }
 
                 // WRITE TO SDRAM
-                active = 0;
+                busy = 0;
             } else {
                 ram.wdata = writedata;
                 ram.wenable = 1;
-                active = 0;
+                busy = 0;
             }
         }
     }

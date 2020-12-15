@@ -480,6 +480,7 @@ algorithm main(
                             ram.address = loadAddress;
                             ram.Icache = 0;
                             ram.readflag = 1;
+                            ++:
                             while( ram.busy ) {}
                             switch( function3 & 3 ) {
                                 case 2b00: {
@@ -526,7 +527,6 @@ algorithm main(
                                 case 2b10: {
                                     ram.writedata = sourceReg2[0,16];
                                     ram.writeflag = 1;
-                                    ++:
                                     ram.address = storeAddress + 2;
                                     ram.writedata = sourceReg2[16,16];
                                     ram.writeflag = 1;
@@ -860,10 +860,6 @@ algorithm ramcontroller (
     bram uint16 Icachedata<input!>[2048] = uninitialized;
     bram uint14 Icachetag<input!>[2048] = uninitialized;
 
-    // ACTIVE FLAG
-    uint1   active = 0;
-    busy := ( readflag || writeflag ) ? 1 : active;
-
     // FLAGS FOR CACHE ACCESS
     Dcachedata.wenable := 0; Dcachedata.addr := address[1,11];
     Dcachetag.wenable := 0; Dcachetag.addr := address[1,11]; Dcachetag.wdata := { 1b1, address[12,13] };
@@ -881,10 +877,10 @@ algorithm ramcontroller (
         if( readflag && address[28,1] ) {
             if( ( Icache && ( Icachetag.rdata == { 1b1, address[12,13] } ) ) || ( Dcachetag.rdata == { 1b1, address[12,13] } ) ) {
                 // CACHE HIT
-                active = 0;
+                busy = 0;
             } else {
                 // CACHE MISS
-                active = 1;
+                busy = 1;
                 // READ FROM SDRAM
                 // WRITE RESULT TO ICACHE or DCACHE
                 if( Icache ) {
@@ -894,13 +890,13 @@ algorithm ramcontroller (
                     // DCACHE WRITE
                     Dcachetag.wenable = 1;
                 }
-                active = 0;
+                busy = 0;
             }
         }
 
         if( writeflag ) {
             if( address[28,1] ) {
-                active = 1;
+                busy = 1;
                 // WRITE INTO CACHE
                 Dcachedata.wdata = writedata;
                 Dcachedata.wenable = 1; Dcachetag.wenable = 1;
@@ -912,11 +908,11 @@ algorithm ramcontroller (
                 }
 
                 // WRITE TO SDRAM
-                active = 0;
+                busy = 0;
             } else {
                 ram.wdata = writedata;
                 ram.wenable = 1;
-                active = 0;
+                busy = 0;
             }
         }
     }

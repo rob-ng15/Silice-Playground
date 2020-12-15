@@ -74,3 +74,20 @@ extern void tpu_outputnumber_char( unsigned char );
 extern void tpu_outputnumber_short( unsigned short );
 extern void tpu_outputnumber_int( unsigned int );
 
+// COLOURS
+#define TRANSPARENT 0x40
+#define BLACK 0x00
+#define BLUE 0x03
+#define DKBLUE 0x02
+#define GREEN 0x0c
+#define DKGREEN 0x08
+#define CYAN 0x0f
+#define RED 0x30
+#define DKRED 0x20
+#define MAGENTA 0x33
+#define PURPLE 0x13
+#define YELLOW 0x3c
+#define WHITE 0x3f
+#define GREY1 0x15
+#define GREY2 0x2a
+#define ORANGE 0x38

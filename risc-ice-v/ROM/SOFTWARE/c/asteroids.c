@@ -216,17 +216,17 @@ void risc_ice_v_logo( void )
 {
     // BITMAP CS + LOGO
     gpu_cs( );
-    gpu_rectangle( 56, 0, 0, 100, 100 );
-    gpu_triangle( 63, 100, 33, 100, 100, 50, 100 );
-    gpu_triangle( 2, 100, 50, 100, 100, 66, 100 );
-    gpu_rectangle( 2, 0, 0, 33, 50 );
-    gpu_circle( 63, 25, 25, 26, 1 );
-    gpu_rectangle( 63, 0, 0, 25, 12 );
-    gpu_circle( 2, 25, 25, 12, 1 );
-    gpu_triangle( 63, 0, 33, 67, 100, 0, 100 );
-    gpu_triangle( 2, 0, 50, 50, 100, 0, 100 );
-    gpu_rectangle( 2, 0, 12, 25, 37 );
-    gpu_rectangle( 2, 0, 37, 8, 100 );
+    gpu_rectangle( ORANGE, 0, 0, 100, 100 );
+    gpu_triangle( WHITE, 100, 33, 100, 100, 50, 100 );
+    gpu_triangle( DKBLUE, 100, 50, 100, 100, 66, 100 );
+    gpu_rectangle( DKBLUE, 0, 0, 33, 50 );
+    gpu_circle( WHITE, 25, 25, 26, 1 );
+    gpu_rectangle( WHITE, 0, 0, 25, 12 );
+    gpu_circle( DKBLUE, 25, 25, 12, 1 );
+    gpu_triangle( WHITE, 0, 33, 67, 100, 0, 100 );
+    gpu_triangle( DKBLUE, 0, 50, 50, 100, 0, 100 );
+    gpu_rectangle( DKBLUE, 0, 12, 25, 37 );
+    gpu_rectangle( DKBLUE, 0, 37, 8, 100 );
 }
 
 void setup_game()
@@ -355,10 +355,10 @@ void move_ship()
 
 void draw_score( void )
 {
-    tpu_set( 34, 1, 64, ( lives > 0 ) ? 63 : 21 ); tpu_outputstring( "Score " );
+    tpu_set( 34, 1, TRANSPARENT, ( lives > 0 ) ? WHITE : GREY1 ); tpu_outputstring( "Score " );
     tpu_outputnumber_short( score );
 
-    tpu_set( 1, 28, 64, ( lives > 0 ) ? 63 : 21 ); tpu_outputstring( "Level " );
+    tpu_set( 1, 28, TRANSPARENT, ( lives > 0 ) ? WHITE : GREY1 ); tpu_outputstring( "Level " );
     tpu_outputnumber_short( level );
 }
 
@@ -366,13 +366,13 @@ void draw_lives( void )
 {
     switch( lives ) {
         case 3:
-            draw_vector_block( 0, 63, 608, 464 );
+            draw_vector_block( 0, WHITE, 608, 464 );
 
         case 2:
-            draw_vector_block( 0, 63, 576, 464 );
+            draw_vector_block( 0, WHITE, 576, 464 );
 
         case 1:
-            draw_vector_block( 0, 63, 544, 464 );
+            draw_vector_block( 0, WHITE, 544, 464 );
             break;
     }
 }
@@ -408,8 +408,8 @@ void fire_bullet( void )
             bulletx = shipx - 10; bullety = shipy - 10;
             break;
     }
-    set_sprite( 0, 12, 1, 60, bulletx, bullety, 2, 0);
-    set_sprite( 1, 12, 1, 48, bulletx, bullety, 0, 0);
+    set_sprite( 0, 12, 1, YELLOW, bulletx, bullety, 2, 0);
+    set_sprite( 1, 12, 1, RED, bulletx, bullety, 0, 0);
 
     beep( 2, 4, 61, 128 );
 }
@@ -439,14 +439,14 @@ void beepboop( void )
                 if( lives > 0 ) {
                     beep( 1, 0, 1, 500 );
                 } else {
-                    tpu_set( 16, 18, 64, 3 );
+                    tpu_set( 16, 18, TRANSPARENT, BLUE );
                     tpu_outputstring( "         Welcome to Risc-ICE-V Asteroids        " );
                 }
                 break;
 
             case 1:
                 if( lives == 0 ) {
-                    tpu_set( 16, 18, 64, 15 );
+                    tpu_set( 16, 18, TRANSPARENT, CYAN );
                     tpu_outputstring( "By @robng15 (Twitter) from Whitebridge, Scotland" );
                 }
                 break;
@@ -455,7 +455,7 @@ void beepboop( void )
                 if( lives > 0 ) {
                     beep( 1, 0, 2, 500 );
                 } else {
-                    tpu_set( 16, 18, 64, 60 );
+                    tpu_set( 16, 18, TRANSPARENT, YELLOW );
                     tpu_outputstring( "                 Press UP to start              " );
                 }
                 break;
@@ -463,7 +463,7 @@ void beepboop( void )
             case 3:
                 // MOVE TILEMAP UP
                 if( lives == 0 ) {
-                    tpu_set( 16, 18, 64, 48 );
+                    tpu_set( 16, 18, TRANSPARENT, RED );
                     tpu_outputstring( "          Written in Silice by @sylefeb         " );
                 }
                 (void)tilemap_scrollwrapclear( 6 );
@@ -541,7 +541,6 @@ void check_hit( void )
 
             score += ( 3 - asteroid_active[asteroid_hit] );
 
-            colour = get_sprite_attribute( ASN( asteroid_hit ), 2 );
             x = get_sprite_attribute( ASN( asteroid_hit ), 3 );
             y = get_sprite_attribute( ASN( asteroid_hit ), 4 );
             spritesize = get_sprite_attribute( ASN( asteroid_hit ), 5 );
@@ -554,7 +553,7 @@ void check_hit( void )
                 }
             }
 
-            set_sprite( ASN( asteroid_hit ), 1, colour, x, y, 7, spritesize );
+            set_sprite( ASN( asteroid_hit ), 1, RED, x, y, 7, spritesize );
             asteroid_active[asteroid_hit] = 32;
         } else {
             switch( asteroid_active[asteroid_hit] ) {
@@ -568,7 +567,7 @@ void check_hit( void )
                     x = get_sprite_attribute( ASN( asteroid_hit ), 3 );
                     y = get_sprite_attribute( ASN( asteroid_hit ), 4 );
                     set_sprite_attribute( ASN( asteroid_hit ), 1, 7 );
-                    set_sprite_attribute( ASN( asteroid_hit ), 2, 48 );
+                    set_sprite_attribute( ASN( asteroid_hit ), 2, RED );
                     set_ufo_sprite( 0 );
                     ufo_sprite_number = 0xff;
                     asteroid_active[asteroid_hit] = 32;
@@ -673,7 +672,7 @@ void main()
 
                 ufo_leftright = rng( 2 );
                 set_ufo_sprite( 1 );
-                set_sprite( ASN( ufo_sprite_number ), 1, 19, ( ufo_leftright == 1 ) ? 639 : ( level < 2 ) ? -31 : -15, ufo_y, 0, ( level < 2 ) ? 1 : 0 );
+                set_sprite( ASN( ufo_sprite_number ), 1, PURPLE, ( ufo_leftright == 1 ) ? 639 : ( level < 2 ) ? -31 : -15, ufo_y, 0, ( level < 2 ) ? 1 : 0 );
                 asteroid_active[ ufo_sprite_number ] = 3;
             }
         }
@@ -703,8 +702,8 @@ void main()
                 default:
                     break;
             }
-            set_sprite( 0, 10, 1, 48, ufo_x, ufo_y, 0, 0 );
-            set_sprite( 1, 10, 1, 60, ufo_x, ufo_y, 1, 0 );
+            set_sprite( 0, 10, 1, RED, ufo_x, ufo_y, 0, 0 );
+            set_sprite( 1, 10, 1, YELLOW, ufo_x, ufo_y, 1, 0 );
         }
 
         if( ( lives > 0 ) && ( resetship == 0) ) {
@@ -730,7 +729,7 @@ void main()
                 move_ship();
 
             // DRAW WHITE SHIP
-            draw_ship( 63 );
+            draw_ship( WHITE );
 
             // CHECK IF CRASHED ASTEROID -> SHIP
             check_crash();
@@ -764,7 +763,7 @@ void main()
 
             if( ( ( resetship >= 1 ) && ( resetship <= 16 ) ) || ( lives == 0 ) ) {
                 // DRAW GREY SHIP
-                draw_ship( 21 );
+                draw_ship( GREY1 );
                 if( ( resetship >= 1 ) && ( resetship <= 16 ) ) {
                     if( ( ( get_sprite_collision( 0, 11 ) & 0x7ff ) == 0 ) && ( ( get_sprite_collision( 1, 11 ) & 0x7ff ) == 0 ) ) {
                         resetship--;
@@ -784,8 +783,8 @@ void main()
                 // EXPLODING SHIP
                 update_sprite( 0, 11, 0x400 );
                 update_sprite( 1, 11, 0x400 );
-                set_sprite_attribute( 0, 11, 2, ( counter & 1 ) ? 48 : 60 );
-                set_sprite_attribute( 1, 11, 2, ( counter & 1 ) ? 60 : 48 );
+                set_sprite_attribute( 0, 11, 2, ( counter & 1 ) ? RED : YELLOW );
+                set_sprite_attribute( 1, 11, 2, ( counter & 1 ) ? YELLOW : RED );
 
                 resetship--;
                 if( resetship == 16 )
