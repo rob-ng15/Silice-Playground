@@ -268,14 +268,16 @@ algorithm gpu(
 
                     ++:
 
-                    while( ( gpu_active_x <= gpu_max_x ) && ( gpu_active_y <= gpu_max_y ) ) {
-                        bitmap_x_write = gpu_active_x;
-                        bitmap_y_write = gpu_active_y;
-                        bitmap_write = 1;
-                        gpu_active_x = ( gpu_active_x == gpu_max_x ) ? gpu_x1 : gpu_active_x + 1;
-                        gpu_active_y = ( gpu_active_x == gpu_max_x ) ? gpu_active_y + 1 : gpu_active_y;
+                    while( gpu_active_y <= gpu_max_y ) {
+                        while( gpu_active_x <= gpu_max_x ) {
+                            bitmap_x_write = gpu_active_x;
+                            bitmap_y_write = gpu_active_y;
+                            bitmap_write = 1;
+                            gpu_active_x = gpu_active_x + 1;
+                        }
+                        gpu_active_x = gpu_x1;
+                        gpu_active_y = gpu_active_y + 1;
                     }
-
                     gpu_active = 0;
                 }
 

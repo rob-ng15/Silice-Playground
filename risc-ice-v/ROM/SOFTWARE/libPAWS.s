@@ -428,11 +428,21 @@ get_timer1hz:
 	ret
 	.size	get_timer1hz, .-get_timer1hz
 	.align	1
+	.globl	reset_timer1hz
+	.type	reset_timer1hz, @function
+reset_timer1hz:
+	lui	a5,%hi(TIMER1HZ)
+	lw	a5,%lo(TIMER1HZ)(a5)
+	li	a4,1
+	sh	a4,0(a5)
+	ret
+	.size	reset_timer1hz, .-reset_timer1hz
+	.align	1
 	.globl	beep
 	.type	beep, @function
 beep:
 	andi	a5,a0,1
-	beq	a5,zero,.L75
+	beq	a5,zero,.L76
 	lui	a5,%hi(AUDIO_L_WAVEFORM)
 	lw	a5,%lo(AUDIO_L_WAVEFORM)(a5)
 	sb	a1,0(a5)
@@ -446,9 +456,9 @@ beep:
 	lw	a5,%lo(AUDIO_L_START)(a5)
 	li	a4,1
 	sb	a4,0(a5)
-.L75:
+.L76:
 	andi	a0,a0,2
-	beq	a0,zero,.L74
+	beq	a0,zero,.L75
 	lui	a5,%hi(AUDIO_R_WAVEFORM)
 	lw	a5,%lo(AUDIO_R_WAVEFORM)(a5)
 	sb	a1,0(a5)
@@ -462,7 +472,7 @@ beep:
 	lw	a5,%lo(AUDIO_R_START)(a5)
 	li	a4,1
 	sb	a4,0(a5)
-.L74:
+.L75:
 	ret
 	.size	beep, .-beep
 	.align	1
@@ -471,10 +481,10 @@ beep:
 sdcard_wait:
 	lui	a5,%hi(SDCARD_READY)
 	lw	a4,%lo(SDCARD_READY)(a5)
-.L78:
+.L79:
 	lbu	a5,0(a4)
 	andi	a5,a5,0xff
-	beq	a5,zero,.L78
+	beq	a5,zero,.L79
 	ret
 	.size	sdcard_wait, .-sdcard_wait
 	.align	1
@@ -506,7 +516,7 @@ sdcard_readsector:
 	lui	a0,%hi(SDCARD_ADDRESS)
 	lui	a1,%hi(SDCARD_DATA)
 	li	a2,512
-.L81:
+.L82:
 	slli	a3,a5,16
 	srli	a3,a3,16
 	lw	a4,%lo(SDCARD_ADDRESS)(a0)
@@ -516,7 +526,7 @@ sdcard_readsector:
 	add	a4,s0,a5
 	sb	a3,0(a4)
 	addi	a5,a5,1
-	bne	a5,a2,.L81
+	bne	a5,a2,.L82
 	lw	ra,12(sp)
 	lw	s0,8(sp)
 	lw	s1,4(sp)
@@ -548,10 +558,10 @@ get_buttons:
 await_vblank:
 	lui	a5,%hi(VBLANK)
 	lw	a4,%lo(VBLANK)(a5)
-.L87:
+.L88:
 	lbu	a5,0(a4)
 	andi	a5,a5,0xff
-	beq	a5,zero,.L87
+	beq	a5,zero,.L88
 	ret
 	.size	await_vblank, .-await_vblank
 	.align	1
@@ -575,10 +585,10 @@ set_background:
 set_tilemap_tile:
 	lui	a5,%hi(TM_STATUS)
 	lw	a6,%lo(TM_STATUS)(a5)
-.L91:
+.L92:
 	lbu	a5,0(a6)
 	andi	a5,a5,0xff
-	bne	a5,zero,.L91
+	bne	a5,zero,.L92
 	lui	a5,%hi(TM_X)
 	lw	a5,%lo(TM_X)(a5)
 	sb	a0,0(a5)
@@ -611,7 +621,7 @@ set_tilemap_bitmap:
 	lui	a6,%hi(TM_WRITER_LINE_NUMBER)
 	lui	a0,%hi(TM_WRITER_BITMAP)
 	li	a2,16
-.L94:
+.L95:
 	lw	a4,%lo(TM_WRITER_LINE_NUMBER)(a6)
 	andi	a3,a5,0xff
 	sb	a3,0(a4)
@@ -620,7 +630,7 @@ set_tilemap_bitmap:
 	sh	a3,0(a4)
 	addi	a5,a5,1
 	addi	a1,a1,2
-	bne	a5,a2,.L94
+	bne	a5,a2,.L95
 	ret
 	.size	set_tilemap_bitmap, .-set_tilemap_bitmap
 	.align	1
@@ -629,10 +639,10 @@ set_tilemap_bitmap:
 tilemap_scrollwrapclear:
 	lui	a5,%hi(TM_STATUS)
 	lw	a4,%lo(TM_STATUS)(a5)
-.L97:
+.L98:
 	lbu	a5,0(a4)
 	andi	a5,a5,0xff
-	bne	a5,zero,.L97
+	bne	a5,zero,.L98
 	lui	a5,%hi(TM_SCROLLWRAPCLEAR)
 	lw	a4,%lo(TM_SCROLLWRAPCLEAR)(a5)
 	sb	a0,0(a4)
@@ -647,10 +657,10 @@ tilemap_scrollwrapclear:
 wait_gpu:
 	lui	a5,%hi(GPU_STATUS)
 	lw	a4,%lo(GPU_STATUS)(a5)
-.L100:
+.L101:
 	lbu	a5,0(a4)
 	andi	a5,a5,0xff
-	bne	a5,zero,.L100
+	bne	a5,zero,.L101
 	ret
 	.size	wait_gpu, .-wait_gpu
 	.align	1
@@ -857,7 +867,7 @@ set_blitter_bitmap:
 	lui	a6,%hi(BLIT_WRITER_LINE)
 	lui	a0,%hi(BLIT_WRITER_BITMAP)
 	li	a2,16
-.L121:
+.L122:
 	lw	a4,%lo(BLIT_WRITER_LINE)(a6)
 	andi	a3,a5,0xff
 	sb	a3,0(a4)
@@ -866,7 +876,7 @@ set_blitter_bitmap:
 	sh	a3,0(a4)
 	addi	a5,a5,1
 	addi	a1,a1,2
-	bne	a5,a2,.L121
+	bne	a5,a2,.L122
 	ret
 	.size	set_blitter_bitmap, .-set_blitter_bitmap
 	.align	1
@@ -911,10 +921,10 @@ gpu_triangle:
 wait_vector_block:
 	lui	a5,%hi(VECTOR_DRAW_STATUS)
 	lw	a4,%lo(VECTOR_DRAW_STATUS)(a5)
-.L126:
+.L127:
 	lbu	a5,0(a4)
 	andi	a5,a5,0xff
-	bne	a5,zero,.L126
+	bne	a5,zero,.L127
 	ret
 	.size	wait_vector_block, .-wait_vector_block
 	.align	1
@@ -981,10 +991,10 @@ set_vector_vertex:
 	.globl	set_sprite_bitmaps
 	.type	set_sprite_bitmaps, @function
 set_sprite_bitmaps:
-	beq	a0,zero,.L132
+	beq	a0,zero,.L133
 	li	a5,1
-	beq	a0,a5,.L133
-.L134:
+	beq	a0,a5,.L134
+.L135:
 	li	a5,0
 	lui	t4,%hi(LOWER_SPRITE_WRITER_LINE)
 	lui	t3,%hi(LOWER_SPRITE_WRITER_BITMAP)
@@ -992,50 +1002,50 @@ set_sprite_bitmaps:
 	lui	t1,%hi(UPPER_SPRITE_WRITER_LINE)
 	lui	a7,%hi(UPPER_SPRITE_WRITER_BITMAP)
 	li	a4,128
-	j	.L135
-.L132:
+	j	.L136
+.L133:
 	lui	a5,%hi(LOWER_SPRITE_WRITER_NUMBER)
 	lw	a5,%lo(LOWER_SPRITE_WRITER_NUMBER)(a5)
 	sb	a1,0(a5)
-	j	.L134
-.L133:
+	j	.L135
+.L134:
 	lui	a5,%hi(UPPER_SPRITE_WRITER_NUMBER)
 	lw	a5,%lo(UPPER_SPRITE_WRITER_NUMBER)(a5)
 	sb	a1,0(a5)
-	j	.L134
-.L136:
+	j	.L135
+.L137:
 	lw	a1,%lo(LOWER_SPRITE_WRITER_LINE)(t4)
 	andi	a6,a5,0xff
 	sb	a6,0(a1)
 	lw	a1,%lo(LOWER_SPRITE_WRITER_BITMAP)(t3)
 	lhu	a6,0(a2)
 	sh	a6,0(a1)
-.L138:
+.L139:
 	addi	a5,a5,1
 	addi	a2,a2,2
-	beq	a5,a4,.L140
-.L135:
-	beq	a0,zero,.L136
-	bne	a0,a3,.L138
+	beq	a5,a4,.L141
+.L136:
+	beq	a0,zero,.L137
+	bne	a0,a3,.L139
 	lw	a1,%lo(UPPER_SPRITE_WRITER_LINE)(t1)
 	andi	a6,a5,0xff
 	sb	a6,0(a1)
 	lw	a1,%lo(UPPER_SPRITE_WRITER_BITMAP)(a7)
 	lhu	a6,0(a2)
 	sh	a6,0(a1)
-	j	.L138
-.L140:
+	j	.L139
+.L141:
 	ret
 	.size	set_sprite_bitmaps, .-set_sprite_bitmaps
 	.align	1
 	.globl	set_sprite
 	.type	set_sprite, @function
 set_sprite:
-	beq	a0,zero,.L142
+	beq	a0,zero,.L143
 	li	t1,1
-	beq	a0,t1,.L143
+	beq	a0,t1,.L144
 	ret
-.L142:
+.L143:
 	lui	a0,%hi(LOWER_SPRITE_NUMBER)
 	lw	a0,%lo(LOWER_SPRITE_NUMBER)(a0)
 	sb	a1,0(a0)
@@ -1058,7 +1068,7 @@ set_sprite:
 	lw	a5,%lo(LOWER_SPRITE_DOUBLE)(a5)
 	sb	a7,0(a5)
 	ret
-.L143:
+.L144:
 	lui	a0,%hi(UPPER_SPRITE_NUMBER)
 	lw	a0,%lo(UPPER_SPRITE_NUMBER)(a0)
 	sb	a1,0(a0)
@@ -1086,256 +1096,256 @@ set_sprite:
 	.globl	set_sprite_attribute
 	.type	set_sprite_attribute, @function
 set_sprite_attribute:
-	bne	a0,zero,.L146
+	bne	a0,zero,.L147
 	lui	a5,%hi(LOWER_SPRITE_NUMBER)
 	lw	a5,%lo(LOWER_SPRITE_NUMBER)(a5)
 	sb	a1,0(a5)
 	li	a5,5
-	bgtu	a2,a5,.L145
+	bgtu	a2,a5,.L146
 	slli	a2,a2,2
-	lui	a5,%hi(.L149)
-	addi	a5,a5,%lo(.L149)
+	lui	a5,%hi(.L150)
+	addi	a5,a5,%lo(.L150)
 	add	a2,a2,a5
 	lw	a5,0(a2)
 	jr	a5
 	.section	.rodata
 	.align	2
 	.align	2
-.L149:
+.L150:
+	.word	.L155
 	.word	.L154
 	.word	.L153
 	.word	.L152
 	.word	.L151
-	.word	.L150
-	.word	.L148
+	.word	.L149
 	.text
-.L154:
+.L155:
 	lui	a5,%hi(LOWER_SPRITE_ACTIVE)
 	lw	a5,%lo(LOWER_SPRITE_ACTIVE)(a5)
 	andi	a3,a3,0xff
 	sb	a3,0(a5)
 	ret
-.L153:
+.L154:
 	lui	a5,%hi(LOWER_SPRITE_TILE)
 	lw	a5,%lo(LOWER_SPRITE_TILE)(a5)
 	andi	a3,a3,0xff
 	sb	a3,0(a5)
 	ret
-.L152:
+.L153:
 	lui	a5,%hi(LOWER_SPRITE_COLOUR)
 	lw	a5,%lo(LOWER_SPRITE_COLOUR)(a5)
 	andi	a3,a3,0xff
 	sb	a3,0(a5)
 	ret
-.L151:
+.L152:
 	lui	a5,%hi(LOWER_SPRITE_X)
 	lw	a5,%lo(LOWER_SPRITE_X)(a5)
 	sh	a3,0(a5)
 	ret
-.L150:
+.L151:
 	lui	a5,%hi(LOWER_SPRITE_Y)
 	lw	a5,%lo(LOWER_SPRITE_Y)(a5)
 	sh	a3,0(a5)
 	ret
-.L148:
+.L149:
 	lui	a5,%hi(LOWER_SPRITE_DOUBLE)
 	lw	a5,%lo(LOWER_SPRITE_DOUBLE)(a5)
 	andi	a3,a3,0xff
 	sb	a3,0(a5)
 	ret
-.L146:
+.L147:
 	lui	a5,%hi(UPPER_SPRITE_NUMBER)
 	lw	a5,%lo(UPPER_SPRITE_NUMBER)(a5)
 	sb	a1,0(a5)
 	li	a5,5
-	bgtu	a2,a5,.L145
+	bgtu	a2,a5,.L146
 	slli	a2,a2,2
-	lui	a5,%hi(.L156)
-	addi	a5,a5,%lo(.L156)
+	lui	a5,%hi(.L157)
+	addi	a5,a5,%lo(.L157)
 	add	a2,a2,a5
 	lw	a5,0(a2)
 	jr	a5
 	.section	.rodata
 	.align	2
 	.align	2
-.L156:
+.L157:
+	.word	.L162
 	.word	.L161
 	.word	.L160
 	.word	.L159
 	.word	.L158
-	.word	.L157
-	.word	.L155
+	.word	.L156
 	.text
-.L161:
+.L162:
 	lui	a5,%hi(UPPER_SPRITE_ACTIVE)
 	lw	a5,%lo(UPPER_SPRITE_ACTIVE)(a5)
 	andi	a3,a3,0xff
 	sb	a3,0(a5)
 	ret
-.L160:
+.L161:
 	lui	a5,%hi(UPPER_SPRITE_TILE)
 	lw	a5,%lo(UPPER_SPRITE_TILE)(a5)
 	andi	a3,a3,0xff
 	sb	a3,0(a5)
 	ret
-.L159:
+.L160:
 	lui	a5,%hi(UPPER_SPRITE_COLOUR)
 	lw	a5,%lo(UPPER_SPRITE_COLOUR)(a5)
 	andi	a3,a3,0xff
 	sb	a3,0(a5)
 	ret
-.L158:
+.L159:
 	lui	a5,%hi(UPPER_SPRITE_X)
 	lw	a5,%lo(UPPER_SPRITE_X)(a5)
 	sh	a3,0(a5)
 	ret
-.L157:
+.L158:
 	lui	a5,%hi(UPPER_SPRITE_Y)
 	lw	a5,%lo(UPPER_SPRITE_Y)(a5)
 	sh	a3,0(a5)
 	ret
-.L155:
+.L156:
 	lui	a5,%hi(UPPER_SPRITE_DOUBLE)
 	lw	a5,%lo(UPPER_SPRITE_DOUBLE)(a5)
 	andi	a3,a3,0xff
 	sb	a3,0(a5)
-.L145:
+.L146:
 	ret
 	.size	set_sprite_attribute, .-set_sprite_attribute
 	.align	1
 	.globl	get_sprite_attribute
 	.type	get_sprite_attribute, @function
 get_sprite_attribute:
-	bne	a0,zero,.L163
+	bne	a0,zero,.L164
 	lui	a5,%hi(LOWER_SPRITE_NUMBER)
 	lw	a5,%lo(LOWER_SPRITE_NUMBER)(a5)
 	sb	a1,0(a5)
 	li	a5,5
-	bgtu	a2,a5,.L164
+	bgtu	a2,a5,.L165
 	slli	a2,a2,2
-	lui	a5,%hi(.L166)
-	addi	a5,a5,%lo(.L166)
+	lui	a5,%hi(.L167)
+	addi	a5,a5,%lo(.L167)
 	add	a2,a2,a5
 	lw	a5,0(a2)
 	jr	a5
 	.section	.rodata
 	.align	2
 	.align	2
-.L166:
+.L167:
+	.word	.L172
 	.word	.L171
 	.word	.L170
 	.word	.L169
 	.word	.L168
-	.word	.L167
-	.word	.L165
+	.word	.L166
 	.text
-.L171:
+.L172:
 	lui	a5,%hi(LOWER_SPRITE_ACTIVE)
 	lw	a5,%lo(LOWER_SPRITE_ACTIVE)(a5)
 	lbu	a0,0(a5)
 	andi	a0,a0,0xff
 	ret
-.L170:
+.L171:
 	lui	a5,%hi(LOWER_SPRITE_TILE)
 	lw	a5,%lo(LOWER_SPRITE_TILE)(a5)
 	lbu	a0,0(a5)
 	andi	a0,a0,0xff
 	ret
-.L169:
+.L170:
 	lui	a5,%hi(LOWER_SPRITE_COLOUR)
 	lw	a5,%lo(LOWER_SPRITE_COLOUR)(a5)
 	lbu	a0,0(a5)
 	andi	a0,a0,0xff
 	ret
-.L168:
+.L169:
 	lui	a5,%hi(LOWER_SPRITE_X)
 	lw	a5,%lo(LOWER_SPRITE_X)(a5)
 	lhu	a0,0(a5)
 	slli	a0,a0,16
 	srai	a0,a0,16
 	ret
-.L167:
+.L168:
 	lui	a5,%hi(LOWER_SPRITE_Y)
 	lw	a5,%lo(LOWER_SPRITE_Y)(a5)
 	lhu	a0,0(a5)
 	slli	a0,a0,16
 	srai	a0,a0,16
 	ret
-.L165:
+.L166:
 	lui	a5,%hi(LOWER_SPRITE_DOUBLE)
 	lw	a5,%lo(LOWER_SPRITE_DOUBLE)(a5)
 	lbu	a0,0(a5)
 	andi	a0,a0,0xff
 	ret
-.L163:
+.L164:
 	lui	a5,%hi(UPPER_SPRITE_NUMBER)
 	lw	a5,%lo(UPPER_SPRITE_NUMBER)(a5)
 	sb	a1,0(a5)
 	li	a5,5
-	bgtu	a2,a5,.L164
+	bgtu	a2,a5,.L165
 	slli	a2,a2,2
-	lui	a5,%hi(.L174)
-	addi	a5,a5,%lo(.L174)
+	lui	a5,%hi(.L175)
+	addi	a5,a5,%lo(.L175)
 	add	a2,a2,a5
 	lw	a5,0(a2)
 	jr	a5
 	.section	.rodata
 	.align	2
 	.align	2
-.L174:
+.L175:
+	.word	.L180
 	.word	.L179
 	.word	.L178
 	.word	.L177
 	.word	.L176
-	.word	.L175
-	.word	.L173
+	.word	.L174
 	.text
-.L179:
+.L180:
 	lui	a5,%hi(UPPER_SPRITE_ACTIVE)
 	lw	a5,%lo(UPPER_SPRITE_ACTIVE)(a5)
 	lbu	a0,0(a5)
 	andi	a0,a0,0xff
 	ret
-.L178:
+.L179:
 	lui	a5,%hi(UPPER_SPRITE_TILE)
 	lw	a5,%lo(UPPER_SPRITE_TILE)(a5)
 	lbu	a0,0(a5)
 	andi	a0,a0,0xff
 	ret
-.L177:
+.L178:
 	lui	a5,%hi(UPPER_SPRITE_COLOUR)
 	lw	a5,%lo(UPPER_SPRITE_COLOUR)(a5)
 	lbu	a0,0(a5)
 	andi	a0,a0,0xff
 	ret
-.L176:
+.L177:
 	lui	a5,%hi(UPPER_SPRITE_X)
 	lw	a5,%lo(UPPER_SPRITE_X)(a5)
 	lhu	a0,0(a5)
 	slli	a0,a0,16
 	srai	a0,a0,16
 	ret
-.L175:
+.L176:
 	lui	a5,%hi(UPPER_SPRITE_Y)
 	lw	a5,%lo(UPPER_SPRITE_Y)(a5)
 	lhu	a0,0(a5)
 	slli	a0,a0,16
 	srai	a0,a0,16
 	ret
-.L173:
+.L174:
 	lui	a5,%hi(UPPER_SPRITE_DOUBLE)
 	lw	a5,%lo(UPPER_SPRITE_DOUBLE)(a5)
 	lbu	a0,0(a5)
 	andi	a0,a0,0xff
 	ret
-.L164:
+.L165:
 	ret
 	.size	get_sprite_attribute, .-get_sprite_attribute
 	.align	1
 	.globl	get_sprite_collision
 	.type	get_sprite_collision, @function
 get_sprite_collision:
-	bne	a0,zero,.L181
+	bne	a0,zero,.L182
 	slli	a1,a1,1
 	lui	a5,%hi(LOWER_SPRITE_COLLISION_BASE)
 	lw	a5,%lo(LOWER_SPRITE_COLLISION_BASE)(a5)
@@ -1344,7 +1354,7 @@ get_sprite_collision:
 	slli	a0,a0,16
 	srli	a0,a0,16
 	ret
-.L181:
+.L182:
 	slli	a1,a1,1
 	lui	a5,%hi(UPPER_SPRITE_COLLISION_BASE)
 	lw	a5,%lo(UPPER_SPRITE_COLLISION_BASE)(a5)
@@ -1358,11 +1368,11 @@ get_sprite_collision:
 	.globl	update_sprite
 	.type	update_sprite, @function
 update_sprite:
-	beq	a0,zero,.L184
+	beq	a0,zero,.L185
 	li	a5,1
-	beq	a0,a5,.L185
+	beq	a0,a5,.L186
 	ret
-.L184:
+.L185:
 	lui	a5,%hi(LOWER_SPRITE_NUMBER)
 	lw	a5,%lo(LOWER_SPRITE_NUMBER)(a5)
 	sb	a1,0(a5)
@@ -1370,7 +1380,7 @@ update_sprite:
 	lw	a5,%lo(LOWER_SPRITE_UPDATE)(a5)
 	sh	a2,0(a5)
 	ret
-.L185:
+.L186:
 	lui	a5,%hi(UPPER_SPRITE_NUMBER)
 	lw	a5,%lo(UPPER_SPRITE_NUMBER)(a5)
 	sb	a1,0(a5)
@@ -1385,10 +1395,10 @@ update_sprite:
 tpu_cs:
 	lui	a5,%hi(TPU_COMMIT)
 	lw	a4,%lo(TPU_COMMIT)(a5)
-.L188:
+.L189:
 	lbu	a5,0(a4)
 	andi	a5,a5,0xff
-	bne	a5,zero,.L188
+	bne	a5,zero,.L189
 	li	a5,3
 	sb	a5,0(a4)
 	ret
@@ -1421,10 +1431,10 @@ tpu_set:
 tpu_output_character:
 	lui	a5,%hi(TPU_COMMIT)
 	lw	a4,%lo(TPU_COMMIT)(a5)
-.L192:
+.L193:
 	lbu	a5,0(a4)
 	andi	a5,a5,0xff
-	bne	a5,zero,.L192
+	bne	a5,zero,.L193
 	lui	a5,%hi(TPU_CHARACTER)
 	lw	a5,%lo(TPU_CHARACTER)(a5)
 	sb	a0,0(a5)
@@ -1439,24 +1449,24 @@ tpu_output_character:
 	.type	tpu_outputstring, @function
 tpu_outputstring:
 	lbu	a3,0(a0)
-	beq	a3,zero,.L194
+	beq	a3,zero,.L195
 	lui	a2,%hi(TPU_COMMIT)
 	lui	a6,%hi(TPU_CHARACTER)
 	li	a1,2
-.L197:
+.L198:
 	lw	a4,%lo(TPU_COMMIT)(a2)
-.L196:
+.L197:
 	lbu	a5,0(a4)
 	andi	a5,a5,0xff
-	bne	a5,zero,.L196
+	bne	a5,zero,.L197
 	lw	a5,%lo(TPU_CHARACTER)(a6)
 	sb	a3,0(a5)
 	lw	a5,%lo(TPU_COMMIT)(a2)
 	sb	a1,0(a5)
 	addi	a0,a0,1
 	lbu	a3,0(a0)
-	bne	a3,zero,.L197
-.L194:
+	bne	a3,zero,.L198
+.L195:
 	ret
 	.size	tpu_outputstring, .-tpu_outputstring
 	.align	1
