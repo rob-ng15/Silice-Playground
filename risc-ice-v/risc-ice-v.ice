@@ -957,7 +957,7 @@ algorithm ramcontrollerSDRAM (
 
             // CHECK IF ENTRY IS IN ICACHE AND UPDATE
             if( Icachetag.rdata == { 1b1, address[12,13] } ) {
-                Icachedata.wdata = Dcachedata.wdata;
+                Icachedata.wdata = writedata;
                 Icachedata.wenable = 1;
             }
 
