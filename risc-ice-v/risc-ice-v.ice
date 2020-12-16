@@ -377,7 +377,7 @@ algorithm main(
     compressedexpansion01 compressedunit01 <@clock_cpuunit> ();
     compressedexpansion10 compressedunit10 <@clock_cpuunit> ();
 
-    // ADDITION/SUBTRACTION, SHIFTER, BINARY LOGIC, MULTIPLICATION and DIVISION units
+    // ADDITION/SUBTRACTION, SHIFTER, BINARY LOGIC, COMPARISON, BRANCH DECIDER, MULTIPLICATION and DIVISION units
     additionsubtraction addsubunit <@clock_copro> (
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
@@ -464,7 +464,6 @@ algorithm main(
         ++:
 
         // DECODE + EXECUTE
-
         switch( { opCode[6,1], opCode[4,1] } ) {
             case 2b00: {
                 // LOAD STORE

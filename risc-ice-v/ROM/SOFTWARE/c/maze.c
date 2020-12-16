@@ -240,7 +240,7 @@ void walk_maze( unsigned short width, unsigned short height )
 
         // FIND NUMBER OF STEPS FORWARD TO A WALL
         visiblesteps = counttowall( currentx, currenty, direction );
-        if( visiblesteps < 8 ) {
+        if( visiblesteps <= 8 ) {
             // WALL IS NOT AT HORIZON
             switch( maze[currentx + directionx[direction] * visiblesteps][currenty + directiony[direction] * visiblesteps] ) {
                 case 'X':
