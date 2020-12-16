@@ -178,6 +178,27 @@ algorithm background(
                         pix_green = (pix_y == dotpos) ? colour6(background).green : colour6(background_alt).green;
                         pix_blue  = (pix_y == dotpos) ? colour6(background).blue : colour6(background_alt).blue;
                 }
+                case 8: {
+                    pix_red = ( pix_y < 240 ) ? colour6(background).red : colour6(background_alt).red;
+                    pix_green = ( pix_y < 240 ) ? colour6(background).green : colour6(background_alt).green;
+                    pix_blue = ( pix_y < 240 ) ? colour6(background).blue : colour6(background_alt).blue;
+                }
+                case 9: {
+                    pix_red = ( pix_x < 320 ) ? colour6(background).red : colour6(background_alt).red;
+                    pix_green = ( pix_x < 320 ) ? colour6(background).green : colour6(background_alt).green;
+                    pix_blue = ( pix_x < 320 ) ? colour6(background).blue : colour6(background_alt).blue;
+                }
+                case 10: {
+                    if( pix_x < 320 ) {
+                        pix_red = ( pix_y < 240 ) ? colour6(background).red : colour6(background_alt).red;
+                        pix_green = ( pix_y < 240 ) ? colour6(background).green : colour6(background_alt).green;
+                        pix_blue = ( pix_y < 240 ) ? colour6(background).blue : colour6(background_alt).blue;
+                    } else {
+                        pix_red = ( pix_y >= 240 ) ? colour6(background).red : colour6(background_alt).red;
+                        pix_green = ( pix_y >= 240 ) ? colour6(background).green : colour6(background_alt).green;
+                        pix_blue = ( pix_y >= 240 ) ? colour6(background).blue : colour6(background_alt).blue;
+                    }
+                }
             }
         }
     }

@@ -260,6 +260,9 @@ void await_vblank( void )
 //  5 rainbow
 //  6 static
 //  7 @sylefeb's snow/starfield with colour stars and altcolour background
+//  8 split vertical
+//  9 split horizontal
+//  10 quarters
 void set_background( unsigned char colour, unsigned char altcolour, unsigned char backgroundmode )
 {
     *BACKGROUND_COLOUR = colour;
@@ -391,6 +394,18 @@ void gpu_blit( unsigned char colour, short x1, short y1, short tile, unsigned ch
 
     wait_gpu();
     *GPU_WRITE = ( blit_size ) ? 8 : 5;
+}
+
+// BLIT AN 8 x8  ( blit_size == 1 doubled to 16 x 16, blit_size == 1 doubled to 32 x 32 ) CHARACTER ( from tile 0 to 255 ) to (x1,y1) in colour
+void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned char tile, unsigned char blit_size )
+{
+    *GPU_COLOUR = colour;
+    *GPU_X = x1;
+    *GPU_Y = y1;
+    *GPU_PARAM0 = tile;
+
+    wait_gpu();
+    *GPU_WRITE = ( blit_size ) == 0 ? 9 : ( blit_size == 1 ) ? 10 : 11;
 }
 
 // SET THE BLITTER TILE to the 16 x 16 pixel bitmap

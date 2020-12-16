@@ -13,6 +13,8 @@ The display was always envisaged as being in layers, with transparency allowing 
         * black/grey/white rolling static (design 6)
         * starfield/snow (design 7)
             * with main background colour stars/snow and alternative colour background
+        * half:half vertical (design 8) horizontal (design 9)
+        * quarters (design 10)
 
 ## PAWS LIBRARY FUNCTIONS
 

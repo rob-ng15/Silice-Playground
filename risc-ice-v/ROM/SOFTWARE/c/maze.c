@@ -135,7 +135,7 @@ void generate_maze( unsigned short width, unsigned short height, unsigned short 
 }
 
 // DRAW THE MAP IN RIGHT CORENER WITH COMPASS
-void draw_map( unsigned short width, unsigned short height, unsigned short currentx, unsigned short currenty, unsigned short direction )
+void draw_map( unsigned short width, unsigned short height, unsigned short currentx, unsigned short currenty, unsigned short direction, unsigned char mapmaze, unsigned short mappeeks )
 {
     unsigned short x, y;
     unsigned char colour;
@@ -151,7 +151,7 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
             if( ( currentx == x ) && ( currenty == y ) ) {
                 colour = GREEN;
             } else {
-                switch( map[x][y] ) {
+                switch( mapmaze ? map[x][y] : maze[x][y] ) {
                     case '#':
                         colour = BLUE;
                         break;
@@ -184,6 +184,16 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
             break;
         case 3:
             gpu_triangle( GREEN, 468, 1, 468, 19, 463, 10 );
+            break;
+    }
+
+    switch( mappeeks ) {
+        case 2:
+            gpu_character_blit( GREEN, 462, 122, 1, 0 );
+        case 1:
+            gpu_character_blit( GREEN, 462, 130, 1, 0 );
+            break;
+        default:
             break;
     }
 }
@@ -228,7 +238,7 @@ void walk_maze( unsigned short width, unsigned short height )
 {
     // SET START LOCATION TO TOP LEFT FACING EAST
     unsigned short newx = 1, newy = 1, direction = 1, newdirection = 1;
-    unsigned short currentx = 1, currenty = 1, visiblesteps, steps;
+    unsigned short currentx = 1, currenty = 1, visiblesteps, steps, mappeeks = 2;
 
     // LOOP UNTIL REACHED THE EXIT
     while( ( currentx != width - 2 ) || ( currenty != height -3 ) ) {
@@ -245,6 +255,28 @@ void walk_maze( unsigned short width, unsigned short height )
             switch( maze[currentx + directionx[direction] * visiblesteps][currenty + directiony[direction] * visiblesteps] ) {
                 case 'X':
                     gpu_rectangle( YELLOW, 0, perspectivey[ visiblesteps ], 640, 480 - perspectivey[ visiblesteps ] );
+                    switch( visiblesteps ) {
+                        case 1:
+                            gpu_character_blit( GREEN, 256, 48, 'E', 2 );
+                            gpu_character_blit( GREEN, 288, 48, 'X', 2 );
+                            gpu_character_blit( GREEN, 320, 48, 'I', 2 );
+                            gpu_character_blit( GREEN, 352, 48, 'T', 2 );
+                            break;
+                        case 2:
+                            gpu_character_blit( GREEN, 288, 84, 'E', 1 );
+                            gpu_character_blit( GREEN, 304, 84, 'X', 1 );
+                            gpu_character_blit( GREEN, 320, 84, 'I', 1 );
+                            gpu_character_blit( GREEN, 336, 84, 'T', 1 );
+                            break;
+                        case 3:
+                            gpu_character_blit( GREEN, 304, 122, 'E', 0 );
+                            gpu_character_blit( GREEN, 312, 122, 'X', 0 );
+                            gpu_character_blit( GREEN, 320, 122, 'I', 0 );
+                            gpu_character_blit( GREEN, 328, 122, 'T', 0 );
+                            break;
+                        default:
+                            break;
+                    }
                     break;
                 case 'E':
                     gpu_rectangle( MAGENTA, 0, perspectivey[ visiblesteps ], 640, 480 - perspectivey[ visiblesteps ] );
@@ -301,7 +333,7 @@ void walk_maze( unsigned short width, unsigned short height )
             }
         }
 
-        draw_map( width, height, currentx, currenty, direction );
+        draw_map( width, height, currentx, currenty, direction, 1, mappeeks );
 
         // WAIT FOR INPUT TO MOVE
         while( ( currentx == newx ) && ( currenty == newy ) && ( direction == newdirection ) ) {
@@ -334,6 +366,14 @@ void walk_maze( unsigned short width, unsigned short height )
                 }
                 while( get_buttons() & 16 );
             }
+
+            // FIRE2 - PEEK ( only 2 goes! )
+            if( ( get_buttons() & 4 ) && ( mappeeks != 0 ) ) {
+                draw_map( width, height, currentx, currenty, direction, 0, mappeeks );
+                while( get_buttons() & 4 );
+                mappeeks--;
+                draw_map( width, height, currentx, currenty, direction, 1, mappeeks );
+            }
         }
 
         currentx = newx; currenty = newy; direction = newdirection;
@@ -344,25 +384,32 @@ void main( void )
 {
     unsigned short level = 0;
 	while(1) {
+        // SETUP THE SCREEN BLUE/GREEN BACKGROUND
         tpu_cs();
         terminal_showhide( 0 );
+        set_background( DKBLUE, DKGREEN, 8 );
 
+        // GENERATE THE MAZE
         tpu_set( 21, 29, TRANSPARENT, YELLOW ); tpu_outputstring( "Generating Maze - Best to take notes!" );
         tpu_set( 1, 29, TRANSPARENT, BLACK ); tpu_outputstring( "Level: " ); tpu_outputnumber_short( level );
         tpu_set( 60, 29, TRANSPARENT, BLACK ); tpu_outputstring( "Size: " ); tpu_outputnumber_short( levelwidths[level] ); tpu_outputstring( " x " ); tpu_outputnumber_short( levelheights[level] );
-
         initialise_maze( levelwidths[level], levelheights[level] );
         generate_maze( levelwidths[level], levelheights[level], levelgenerationsteps[level] );
         display_maze( levelwidths[level], levelheights[level], 1, 1 );
 
+        // WAIT TO ENTER THE MAZE
         tpu_set( 21, 29, TRANSPARENT, GREEN ); tpu_outputstring(  "     Press FIRE to walk the maze!    " ); while(  ( get_buttons() & 2 ) == 0 );
         tpu_set( 21, 29, TRANSPARENT, PURPLE ); tpu_outputstring( "             Release FIRE!           " ); while( get_buttons() & 2 );
 
+        // ENTER THE MAZE IN 3D
         walk_maze( levelwidths[level], levelheights[level] );
 
+        // COMPLETED THE MAZE, SET BACKGROUND TO STATIC
+        set_background( DKBLUE, DKGREEN, 6 );
         tpu_set( 21, 29, TRANSPARENT, GREEN ); tpu_outputstring( "        Press FIRE to restart!       " ); while(  ( get_buttons() & 2 ) == 0 );
         tpu_set( 21, 29, TRANSPARENT, PURPLE ); tpu_outputstring( "       Release FIRE!      " ); while( get_buttons() & 2  );
 
+        // GO TO THE NEXT LEVEL, OR BACK TO 0
         level = ( level < MAXLEVEL ) ? level + 1 : 0;
     }
 }

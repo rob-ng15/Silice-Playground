@@ -212,10 +212,23 @@ void set_tilemap( void )
     set_tilemap_tile( 6, 26, 5, 64, 16 ); set_tilemap_tile( 6, 27, 6, 64, 16 ); set_tilemap_tile( 7, 26, 7, 64, 16 ); set_tilemap_tile( 7, 27, 8, 64, 16 );
 }
 
+// GENERATE A RANDOM COLOUR WITH AT LEAST ONE OF RED, GREEN, BLUE BEING INTENSITY 2
+unsigned char random_colour( void )
+{
+    unsigned char red, green, blue;
+
+    do {
+        red = rng( 4 );
+        green = rng( 4 );
+        blue = rng( 4 );
+    } while( ( red < 2 ) && ( green < 2 ) && ( blue < 2 ) );
+
+    return( red * 16 + green * 4 + blue );
+}
+
+// DRAW A RISC-V LOGO AT THE TOP LEFT OF THE SCREEN
 void risc_ice_v_logo( void )
 {
-    // BITMAP CS + LOGO
-    gpu_cs( );
     gpu_rectangle( ORANGE, 0, 0, 100, 100 );
     gpu_triangle( WHITE, 100, 33, 100, 100, 50, 100 );
     gpu_triangle( DKBLUE, 100, 50, 100, 100, 66, 100 );
@@ -227,6 +240,15 @@ void risc_ice_v_logo( void )
     gpu_triangle( DKBLUE, 0, 50, 50, 100, 0, 100 );
     gpu_rectangle( DKBLUE, 0, 12, 25, 37 );
     gpu_rectangle( DKBLUE, 0, 37, 8, 100 );
+
+    gpu_character_blit( random_colour(), 176, 224, 'G', 2 );
+    gpu_character_blit( random_colour(), 208, 232, 'A', 2 );
+    gpu_character_blit( random_colour(), 240, 224, 'M', 2 );
+    gpu_character_blit( random_colour(), 272, 232, 'E', 2 );
+    gpu_character_blit( random_colour(), 336, 224, 'O', 2 );
+    gpu_character_blit( random_colour(), 368, 232, 'V', 2 );
+    gpu_character_blit( random_colour(), 400, 224, 'E', 2 );
+    gpu_character_blit( random_colour(), 432, 232, 'R', 2 );
 }
 
 void setup_game()
@@ -244,7 +266,6 @@ void setup_game()
     terminal_showhide( 0 );
     set_background( 42, 1, 7 );
     risc_ice_v_logo();
-
     set_tilemap();
 
     tpu_cs();
@@ -481,7 +502,7 @@ void spawn_asteroid( unsigned char asteroid_type, short xc, short yc )
         asteroid_active[ potentialnumber ] = asteroid_type;
         asteroid_direction[ potentialnumber ] = rng( ( asteroid_type == 2 ) ? 4 : 8 );
 
-        set_sprite( ASN( potentialnumber ), 1, rng( 31 ) + 32, xc + rng(16) - 8, yc + rng(16) - 8, rng( 7 ), ( asteroid_type == 2 ) ? 1 : 0 );
+        set_sprite( ASN( potentialnumber ), 1, random_colour(), xc + rng(16) - 8, yc + rng(16) - 8, rng( 7 ), ( asteroid_type == 2 ) ? 1 : 0 );
     }
 }
 
@@ -642,7 +663,7 @@ void main()
                 }
                 asteroid_active[ potentialnumber ] = 2;
                 asteroid_direction[ potentialnumber ] = rng( 4 );
-                set_sprite( ASN( potentialnumber), 1, rng( 31 ) + 32, potentialx, potentialy, rng( 7 ), 1 );
+                set_sprite( ASN( potentialnumber), 1, random_colour(), potentialx, potentialy, rng( 7 ), 1 );
             }
             placeAsteroids--;
         }

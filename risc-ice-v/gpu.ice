@@ -136,6 +136,11 @@ algorithm gpu(
     // 32 x 16 x 16 1 bit tilemap for blit1tilemap
     simple_dualport_bram uint16 blit1tilemap[ 512 ] = uninitialized;
 
+    // Character ROM 8x8 x 256 for character blitter
+    brom uint8 characterGenerator8x8[] = {
+        $include('ROM/characterROM8x8.inc')
+    };
+
     // GPU work variable storage
     // Present GPU pixel and colour
     int11 gpu_active_x = uninitialized;
@@ -161,7 +166,7 @@ algorithm gpu(
     int11 gpu_numerator2 = uninitialized;
     int11 gpu_count = uninitialized;
     int11 gpu_max_count = uninitialized;
-    uint6 gpu_tile = uninitialized;
+    uint8 gpu_tile = uninitialized;
 
     // Filled triangle calculations
     // Is the point sx,sy inside the triangle given by active_x,active_y x1,y1 x2,y2?
@@ -216,6 +221,9 @@ algorithm gpu(
     blit1tilemap.addr1 := blit1_writer_tile * 16 + blit1_writer_line;
     blit1tilemap.wdata1 := blit1_writer_bitmap;
     blit1tilemap.wenable1 := 1;
+
+    // characterGenerator8x8 read access for the character blitter
+    characterGenerator8x8.addr := gpu_tile * 8 + gpu_active_y;
 
     bitmap_write := 0;
     bitmap_colour_write := gpu_active_colour;
@@ -639,6 +647,108 @@ algorithm gpu(
                                 if( blit1tilemap.rdata0[15 - ( gpu_active_x >> 1 ),1] ) {
                                     bitmap_x_write = gpu_x1 + gpu_active_x;
                                     bitmap_y_write = gpu_y1 + ( gpu_active_y << 1 ) + gpu_y2;
+                                    bitmap_write = 1;
+                                }
+                                gpu_y2 = gpu_y2 + 1;
+                            }
+                            gpu_active_x = gpu_active_x + 1;
+                            gpu_y2 = 0;
+                        }
+                        gpu_active_x = 0;
+                        gpu_active_y = gpu_active_y + 1;
+                    }
+
+                    gpu_active = 0;
+                }
+
+                case 9: {
+                    // Setup 1 bit 8x8 character blitter starting at x,y in colour of character param0
+                    gpu_active_x = 0;
+                    gpu_active_y = 0;
+                    gpu_x1 = x;
+                    gpu_y1 = y;
+                    gpu_max_x = 8;
+                    gpu_max_y = 8;
+                    gpu_tile = param0;
+
+                    gpu_active = 1;
+
+                    ++:
+
+                    while( gpu_active_y < gpu_max_y ) {
+                        while( gpu_active_x < gpu_max_x ) {
+                            if( characterGenerator8x8.rdata[7 - gpu_active_x,1] ) {
+                                bitmap_x_write = gpu_x1 + gpu_active_x;
+                                bitmap_y_write = gpu_y1 + gpu_active_y;
+                                bitmap_write = 1;
+                            }
+                            gpu_active_x = gpu_active_x + 1;
+                        }
+                        gpu_active_x = 0;
+                        gpu_active_y = gpu_active_y + 1;
+                    }
+
+                    gpu_active = 0;
+                }
+
+                case 10: {
+                    // Setup 1 bit 8x8 character blitter starting at x,y in colour of character param0
+                    // Drawn DOUBLE SIZE
+                    gpu_active_x = 0;
+                    gpu_active_y = 0;
+                    gpu_x1 = x;
+                    gpu_y1 = y;
+                    gpu_y2 = 0;
+                    gpu_max_x = 16;
+                    gpu_max_y = 8;
+                    gpu_tile = param0;
+
+                    gpu_active = 1;
+
+                    ++:
+
+                    while( gpu_active_y < gpu_max_y ) {
+                        while( gpu_active_x < gpu_max_x ) {
+                            while( gpu_y2 < 2 ) {
+                                if( characterGenerator8x8.rdata[7 - ( gpu_active_x >> 1 ),1] ) {
+                                    bitmap_x_write = gpu_x1 + gpu_active_x;
+                                    bitmap_y_write = gpu_y1 + ( gpu_active_y << 1 ) + gpu_y2;
+                                    bitmap_write = 1;
+                                }
+                                gpu_y2 = gpu_y2 + 1;
+                            }
+                            gpu_active_x = gpu_active_x + 1;
+                            gpu_y2 = 0;
+                        }
+                        gpu_active_x = 0;
+                        gpu_active_y = gpu_active_y + 1;
+                    }
+
+                    gpu_active = 0;
+                }
+
+                case 11: {
+                    // Setup 1 bit 8x8 character blitter starting at x,y in colour of character param0
+                    // Drawn QUADRUPAL SIZE
+                    gpu_active_x = 0;
+                    gpu_active_y = 0;
+                    gpu_x1 = x;
+                    gpu_y1 = y;
+                    gpu_y2 = 0;
+                    gpu_max_x = 32;
+                    gpu_max_y = 8;
+                    gpu_tile = param0;
+
+                    gpu_active = 1;
+
+                    ++:
+
+                    while( gpu_active_y < gpu_max_y ) {
+                        while( gpu_active_x < gpu_max_x ) {
+                            while( gpu_y2 < 4 ) {
+                                if( characterGenerator8x8.rdata[7 - ( gpu_active_x >> 2 ),1] ) {
+                                    bitmap_x_write = gpu_x1 + gpu_active_x;
+                                    bitmap_y_write = gpu_y1 + ( gpu_active_y << 2 ) + gpu_y2;
                                     bitmap_write = 1;
                                 }
                                 gpu_y2 = gpu_y2 + 1;
