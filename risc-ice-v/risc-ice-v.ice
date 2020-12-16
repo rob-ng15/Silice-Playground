@@ -221,32 +221,44 @@ algorithm main(
     output uint1  sdram_clk,  // sdram chip clock != internal sdram_clock
     inout  uint16 sdram_dq
 ) {
-    // VGA/HDMI Display
+    // CLOCK/RESET GENERATION
     uint1   video_reset = uninitialized;
     uint1   video_clock = uninitialized;
     uint1   pll_lock_CPU = uninitialized;
     uint1   pll_lock_AUX = uninitialized;
+    uint1   pll_lock_SDRAM = uninitialized;
 
-    // Generate the 100MHz SDRAM and 25MHz VIDEO clocks
     uint1 clock_timers = uninitialized;
     uint1 clock_gpu = uninitialized;
     uint1 clock_copro = uninitialized;
     uint1 clock_memory = uninitialized;
     uint1 clock_cpuunit = uninitialized;
+    uint1 clock_sdram = uninitialized;
+
+    // Generate 50MHz clocks for CPU units ( multiplier, divider, shifter, compressed instruction expander, ALU units )
+    // 50MHz clock for the BRAM and CACHE controller
     ulx3s_clk_risc_ice_v_CPU clk_gen_CPU (
         clkin    <: clock,
         clkCOPRO :> clock_copro,
-        clkMEMORY  :> clock_memory,
         clkCPUUNIT :> clock_cpuunit,
-        clkSDRAM  :> sdram_clk,
+        clkMEMORY  :> clock_memory,
         locked   :> pll_lock_CPU
     );
+
+    // Generate the 25MHz video clock, 50MHz clock for timers/audio/random number generator and 50MHz GPU clock
     ulx3s_clk_risc_ice_v_AUX clk_gen_AUX (
         clkin    <: clock,
         clkTIMER  :> clock_timers,
         clkVIDEO  :> video_clock,
         clkGPU :> clock_gpu,
         locked   :> pll_lock_AUX
+    );
+
+    // Generate the 150MHz SDRAM clock
+    ulx3s_clk_risc_ice_v_SDRAM clk_gen_SDRAM (
+        clkin    <: clock,
+        clkSDRAM  :> clock_sdram,
+        locked   :> pll_lock_SDRAM
     );
 
     // Video Reset
@@ -848,10 +860,11 @@ algorithm ramcontroller (
     output  uint1   busy
 ) <autorun> {
     // RISC-V RAM and BIOS
-    bram uint16 ram<input!>[8192] = {
+    bram uint16 ram<input!>[12288] = {
         $include('ROM/BIOS.inc')
         , pad(uninitialized)
     };
+
     // INSTRUCTION & DATA CACHES for SDRAM
     // CACHE LINE IS LOWER 11 bits ( 0 - 2047 ) of address, dropping the BYTE address bit
     // CACHE TAG IS REMAINING 13 bits of the 25 bit address + 1 bit for valid flag
@@ -879,6 +892,7 @@ algorithm ramcontroller (
 
     while(1) {
         if( readflag && address[28,1] ) {
+            // SDRAM
             if( ( Icache && ( Icachetag.rdata == { 1b1, address[12,13] } ) ) || ( Dcachetag.rdata == { 1b1, address[12,13] } ) ) {
                 // CACHE HIT
                 active = 0;
@@ -900,6 +914,7 @@ algorithm ramcontroller (
 
         if( writeflag ) {
             if( address[28,1] ) {
+                // SDRAM
                 active = 1;
                 // WRITE INTO CACHE
                 Dcachedata.wdata = writedata;
@@ -914,6 +929,7 @@ algorithm ramcontroller (
                 // WRITE TO SDRAM
                 active = 0;
             } else {
+                // BRAM
                 ram.wdata = writedata;
                 ram.wenable = 1;
                 active = 0;

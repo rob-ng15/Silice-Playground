@@ -1,4 +1,14 @@
 // STDDEF.H DEFINITIONS
+ #define max(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a > _b ? _a : _b; })
+
+#define min(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a < _b ? _a : _b; })
+
 // FUNCTION DEFINITIONS
 
 // UART AND TERMINAL INPUT / OUTPUT
@@ -52,6 +62,7 @@ extern void gpu_line( unsigned char, short, short, short, short );
 extern void gpu_circle( unsigned char, short, short, short, unsigned char );
 void gpu_blit( unsigned char, short, short, short, unsigned char );
 extern void gpu_triangle( unsigned char, short, short, short, short, short, short );
+extern void gpu_quadrilateral( unsigned char, short, short, short, short, short, short, short, short );
 extern void draw_vector_block( unsigned char, unsigned char, short, short );
 extern void set_vector_vertex( unsigned char, unsigned char , unsigned char, char, char );
 extern void bitmap_scrollwrap( unsigned char );

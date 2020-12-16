@@ -22,6 +22,7 @@ $include('../memmap_io.ice')
 
 import('../common/ulx3s_clk_risc_ice_v.v')
 import('../common/ulx3s_clk_risc_ice_v_2.v')
+import('../common/ulx3s_clk_risc_ice_v_3.v')
 import('../common/reset_conditioner.v')
 
 $include('../risc-ice-v.ice')

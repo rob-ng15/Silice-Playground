@@ -8,7 +8,6 @@ module ulx3s_clk_risc_ice_v_CPU
     output clkCOPRO, // 50 MHz, 0 deg        // CO-PROCESSORS
     output clkMEMORY, // 50 MHz, 0 deg       // MEMORY CONTROLLER - BRAM
     output clkCPUUNIT, // 50 MHz, 0 deg        // MEMORY CONTROLLER - SDRAM CACHE
-    output clkSDRAM, // 165.625 Mhz 0 deg    // SDRAM
     output locked
 );
 (* FREQUENCY_PIN_CLKI="25" *)
@@ -37,10 +36,6 @@ EHXPLLL #(
         .CLKOS2_DIV(12),
         .CLKOS2_CPHASE(5),
         .CLKOS2_FPHASE(0),
-        .CLKOS3_ENABLE("ENABLED"),
-        .CLKOS3_DIV(4),
-        .CLKOS3_CPHASE(1),
-        .CLKOS3_FPHASE(0),
         .FEEDBK_PATH("CLKOP"),
         .CLKFB_DIV(2)
     ) pll_i (
@@ -50,7 +45,6 @@ EHXPLLL #(
         .CLKOP(clkCOPRO),
         .CLKOS(clkMEMORY),
         .CLKOS2(clkCPUUNIT),
-        .CLKOS3(clkSDRAM),
         .CLKFB(clkCOPRO),
         .CLKINTFB(),
         .PHASESEL0(1'b0),

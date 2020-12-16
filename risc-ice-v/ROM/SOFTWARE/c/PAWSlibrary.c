@@ -420,6 +420,33 @@ void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2,
     *GPU_WRITE = 7;
 }
 
+// DRAW A FILLED QUADRILATERAL with vertices (x1,y1) (x2,y2) (x3,y3) (x4,y4) in colour BY DRAWING TWO FILLED TRIANGLES
+// VERTICES SHOULD BE PRESENTED CLOCKWISE FROM THE TOP ( minimal adjustments made to the vertices to comply )
+void gpu_quadrilateral( unsigned char colour, short x1, short y1, short x2, short y2, short x3, short y3, short x4, short y4 )
+{
+    *GPU_COLOUR = colour;
+    *GPU_X = x1;
+    *GPU_Y = y1;
+    *GPU_PARAM0 = x2;
+    *GPU_PARAM1 = y2;
+    *GPU_PARAM2 = x3;
+    *GPU_PARAM3 = y3;
+
+    wait_gpu();
+    *GPU_WRITE = 7;
+
+    *GPU_COLOUR = colour;
+    *GPU_X = x1;
+    *GPU_Y = y1;
+    *GPU_PARAM0 = x3;
+    *GPU_PARAM1 = y3;
+    *GPU_PARAM2 = x4;
+    *GPU_PARAM3 = y4;
+
+    wait_gpu();
+    *GPU_WRITE = 7;
+}
+
 // GPU VECTOR BLOCK
 // 32 VECTOR BLOCKS EACH OF 16 VERTICES ( offsets in the range -15 to 15 from the centre )
 // WHEN ACTIVATED draws lines from a vector block (x0,y0) to (x1,y1), (x1,y1) to (x2,y2), (x2,y2) to (x3,y3) until (x15,y15) or an inactive vertex is encountered
@@ -646,19 +673,20 @@ void update_sprite( unsigned char sprite_layer, unsigned char sprite_number, uns
 // CLEAR THE CHARACTER MAP
 void tpu_cs( void )
 {
-    while( *TPU_COMMIT != 0 );
+    while( *TPU_COMMIT );
     *TPU_COMMIT = 3;
 }
 
 // POSITION THE CURSOR to (x,y) and set background and foreground colours
 void tpu_set(  unsigned char x, unsigned char y, unsigned char background, unsigned char foreground )
 {
+    while( *TPU_COMMIT );
     *TPU_X = x; *TPU_Y = y; *TPU_BACKGROUND = background; *TPU_FOREGROUND = foreground; *TPU_COMMIT = 1;
 }
 
 // OUTPUT A CHARACTER TO THE CHARACTER MAP
 void tpu_output_character( char c ) {
-    while( *TPU_COMMIT != 0 );
+    while( *TPU_COMMIT );
     *TPU_CHARACTER = c; *TPU_COMMIT = 2;
 }
 
@@ -666,7 +694,7 @@ void tpu_output_character( char c ) {
 void tpu_outputstring( char *s )
 {
     while( *s ) {
-        while( *TPU_COMMIT != 0 );
+        while( *TPU_COMMIT );
         *TPU_CHARACTER = *s; *TPU_COMMIT = 2;
         s++;
     }
