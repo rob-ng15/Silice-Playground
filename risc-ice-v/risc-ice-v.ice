@@ -305,15 +305,19 @@ algorithm main(
     // RISC-V INSTRUCTION and DECODE
     uint32  instruction = uninitialized;
     uint32  nop := { 12b000000000000, 5b00000, 3b000, 5b00000, 7b0010011 };
+    uint7   opCode = uninitialized;
+    uint3   function3 = uninitialized;
+    uint7   function7 = uninitialized;
 
-    uint7   opCode := Utype(instruction).opCode;
-    uint3   function3 := Rtype(instruction).function3;
-    uint7   function7 := Rtype(instruction).function7;
-
-    // RISC-V SOURCE REGISTER VALUES and IMMEDIATE VALUE and DESTINATION REGISTER ADDRESS
+    // RISC-V SOURCE REGISTER VALUES
+    uint5   rs1 = uninitialized;
+    uint5   rs2 = uninitialized;
+    uint5   rd = uninitialized;
     int32   sourceReg1 := registers_1.rdata0;
     int32   sourceReg2 := registers_2.rdata0;
-    int32   immediateValue := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Itype(instruction).immediate };
+
+    // IMMEDIATE VALUE
+    int32   immediateValue = uninitialized;
 
     // RISC-V ALU RESULTS
     int32   result = uninitialized;
@@ -376,6 +380,17 @@ algorithm main(
         sourceReg2 <: sourceReg2
     );
 
+    decoder DECODE <@clock_cpuunit> (
+        instruction <: instruction,
+        opCode :> opCode,
+        function3 :> function3,
+        function7 :> function7,
+        rs1 :> rs1,
+        rs2 :> rs2,
+        rd :> rd,
+        immediateValue :> immediateValue
+    );
+
     // BRANCH COMPARISON UNIT
     branchcomparison branchcomparisonunit <@clock_copro> (
         function3 <: function3,
@@ -415,9 +430,9 @@ algorithm main(
     IO_Map.memoryRead := 0;
 
     // REGISTER Read/Write Flags
-    registers_1.addr0 := Rtype(instruction).sourceReg1 + ( floatingpoint ? 32 : 0 );
+    registers_1.addr0 := rs1 + ( floatingpoint ? 32 : 0 );
     registers_1.wenable1 := 1;
-    registers_2.addr0 := Rtype(instruction).sourceReg2 + ( floatingpoint ? 32 : 0 );
+    registers_2.addr0 := rs2 + ( floatingpoint ? 32 : 0 );
     registers_2.wenable1 := 1;
 
     while(1) {
@@ -590,16 +605,44 @@ algorithm main(
 
         // WRITE TO REGISTERS
         // NEVER write to registers[0]
-        if( writeRegister && ( Rtype(instruction).destReg != 0 ) ) {
-            registers_1.addr1 = Rtype(instruction).destReg + ( floatingpoint ? 32 : 0 );
+        if( writeRegister && ( rd != 0 ) ) {
+            registers_1.addr1 = rd + ( floatingpoint ? 32 : 0 );
             registers_1.wdata1 = result;
-            registers_2.addr1 = Rtype(instruction).destReg + ( floatingpoint ? 32 : 0 );
+            registers_2.addr1 = rd + ( floatingpoint ? 32 : 0 );
             registers_2.wdata1 = result;
         }
 
         // UPDATE PC
         pc = ( incPC ) ? pc + ( ( takeBranch) ? branchOffset : ( compressed ? 2 : 4 ) ) : ( opCode[3,1] ? jumpOffset + pc : loadAddress );
     } // RISC-V
+}
+
+// RISC-V INSTRUCTION DECODER
+algorithm decoder (
+    input   uint32  instruction,
+
+    output  uint7   opCode,
+    output  uint3   function3,
+    output  uint7   function7,
+
+    output  uint5   rs1,
+    output  uint5   rs2,
+    output  uint5   rd,
+
+    output  int32   immediateValue
+) <autorun> {
+    opCode := Utype(instruction).opCode;
+    function3 := Rtype(instruction).function3;
+    function7 := Rtype(instruction).function7;
+
+    rs1 := Rtype(instruction).sourceReg1;
+    rs2 := Rtype(instruction).sourceReg2;
+    rd := Rtype(instruction).destReg;
+
+    immediateValue := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Itype(instruction).immediate };
+
+    while(1) {
+    }
 }
 
 // RISC-V BASE ALU
