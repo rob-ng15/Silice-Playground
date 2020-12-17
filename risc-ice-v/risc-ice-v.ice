@@ -364,6 +364,25 @@ algorithm main(
     // RAM - BRAM and SDRAM
     ramcontroller ram <@clock_memory> ();
 
+    // COMPRESSED INSTRUCTION EXPANDER
+    compressedexpansion00 compressedunit00 <@clock_cpuunit> ();
+    compressedexpansion01 compressedunit01 <@clock_cpuunit> ();
+    compressedexpansion10 compressedunit10 <@clock_cpuunit> ();
+
+    // RISC-V BASE ALU
+    alu ALU <@clock_copro> (
+        instruction <: instruction,
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2
+    );
+
+    // BRANCH COMPARISON UNIT
+    branchcomparison branchcomparisonunit <@clock_copro> (
+        function3 <: function3,
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2
+    );
+
     // SIGN EXTENDER UNIT
     signextender8 signextender8unit <@clock_copro> (
         function3 <: function3
@@ -372,38 +391,10 @@ algorithm main(
         function3 <: function3
     );
 
-    // COMPRESSED INSTRUCTION EXPANDER
-    compressedexpansion00 compressedunit00 <@clock_cpuunit> ();
-    compressedexpansion01 compressedunit01 <@clock_cpuunit> ();
-    compressedexpansion10 compressedunit10 <@clock_cpuunit> ();
+    // COMBINER UNIT - TWO 16 BIT HALF WORDS TO 32 BIT WORD
+    halfhalfword combiner161632unit <@clock_cpuunit> ();
 
-    // ADDITION/SUBTRACTION, SHIFTER, BINARY LOGIC, COMPARISON, BRANCH DECIDER, MULTIPLICATION and DIVISION units
-    additionsubtraction addsubunit <@clock_copro> (
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-        immediateValue <: immediateValue,
-        opCode <: opCode,
-        function7 <: function7
-    );
-    shifter shiftunit <@clock_copro> (
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-        instruction <: instruction,
-        opCode <: opCode,
-        function7 <: function7
-    );
-    logical logicalunit <@clock_copro> (
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-        immediateValue <: immediateValue,
-        opCode <: opCode,
-    );
-    comparison comparisonunit <@clock_copro> (
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-        immediateValue <: immediateValue,
-        instruction <: instruction
-    );
+    // BRANCH DECIDER, MULTIPLICATION and DIVISION units
     divideremainder dividerunit <@clock_copro> (
         dividend <: sourceReg1,
         divisor <: sourceReg2
@@ -411,11 +402,6 @@ algorithm main(
     multiplicationDSP multiplicationuint <@clock_copro> (
         factor_1 <: sourceReg1,
         factor_2 <: sourceReg2
-    );
-    branchcomparison branchcomparisonunit <@clock_copro> (
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-        function3 <: function3
     );
 
     // MULTIPLICATION and DIVISION Start Flags
@@ -452,12 +438,13 @@ algorithm main(
             case 2b10: { compressed = 1; compressedunit10.instruction16 = ram.readdata; instruction = compressedunit10.instruction32; }
             case 2b11: {
                 compressed = 0;
-                instruction = { 16b0, ram.readdata };
+                combiner161632unit.LOW = ram.readdata;
                 ram.address = pc + 2;
                 ram.Icache = 1;
                 ram.readflag = 1;
                 while( ram.busy ) {}
-                instruction = { ram.readdata, instruction[0,16] };
+                combiner161632unit.HIGH = ram.readdata;
+                instruction = combiner161632unit.HIGHLOW;
             }
         }
         ++:
@@ -484,7 +471,10 @@ algorithm main(
                                     signextender16unit.nosign = IO_Map.readData;
                                     result = signextender16unit.withsign;
                                 }
-                                case 2b10: { result = { 16h0000, IO_Map.readData }; }
+                                case 2b10: {
+                                    combiner161632unit.LOW = IO_Map.readData;
+                                    result = combiner161632unit.ZEROLOW;
+                                }
                             }
                         } else {
                             // SDRAM or BRAM
@@ -502,11 +492,12 @@ algorithm main(
                                     result = signextender16unit.withsign;
                                 }
                                 case 2b10: {
-                                    result = { 16h0000, ram.readdata };
+                                    combiner161632unit.LOW = ram.readdata;
                                     ram.address = loadAddress + 2;
                                     ram.readflag = 1;
                                     while( ram.busy ) {}
-                                    result = { ram.readdata, result[0,16] };
+                                    combiner161632unit.HIGH = ram.readdata;
+                                    result = combiner161632unit.HIGHLOW;
                                 }
                             }
                         }
@@ -575,16 +566,7 @@ algorithm main(
                             }
                         } else {
                             // BASE I ALU OPERATIONS
-                            switch( function3 ) {
-                                case 3b000: { result = addsubunit.result; }
-                                case 3b001: { result = shiftunit.shiftLEFT; }
-                                case 3b010: { result = ( opCode[5,1] ? comparisonunit.SLT : comparisonunit.SLTI ) ? 32b1 : 32b0; }
-                                case 3b011: { result = ( opCode[5,1] ? comparisonunit.SLTU : comparisonunit.SLTUI ) ? 32b1 : 32b0; }
-                                case 3b100: { result = logicalunit.XOR; }
-                                case 3b101: { result = function7[5,1] ? shiftunit.shiftRIGHTA : shiftunit.shiftRIGHTL; }
-                                case 3b110: { result = logicalunit.OR; }
-                                case 3b111: { result = logicalunit.AND; }
-                            }
+                            result = ALU.result;
                         }
                     }
                     // AUIPC LUI
@@ -618,6 +600,61 @@ algorithm main(
         // UPDATE PC
         pc = ( incPC ) ? pc + ( ( takeBranch) ? branchOffset : ( compressed ? 2 : 4 ) ) : ( opCode[3,1] ? jumpOffset + pc : loadAddress );
     } // RISC-V
+}
+
+// RISC-V BASE ALU
+algorithm alu (
+    input   uint32  instruction,
+    input   int32   sourceReg1,
+    input   int32   sourceReg2,
+
+    output  int32   result
+) <autorun> {
+    uint7   opCode := Utype(instruction).opCode;
+    uint3   function3 := Rtype(instruction).function3;
+    uint7   function7 := Rtype(instruction).function7;
+    int32   immediateValue := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Itype(instruction).immediate };
+
+    int32   shiftRIGHTA := __signed(sourceReg1) >>> ( opCode[5,1] ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
+    int32   shiftRIGHTL := __unsigned(sourceReg1) >> ( opCode[5,1] ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
+
+    uint1   SLT := __signed( sourceReg1 ) < __signed(sourceReg2) ? 1 : 0;
+    uint1   SLTI := __signed( sourceReg1 ) < __signed(immediateValue) ? 1 : 0;
+    uint1   SLTU := ( Rtype(instruction).sourceReg1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 1 : 0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 1 : 0 );
+    uint1   SLTUI := ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 1 : 0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 1 : 0 );
+
+    while(1) {
+        switch( function3 ) {
+            case 3b000: { result = sourceReg1 + ( opCode[5,1] ? ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ) : immediateValue ); }
+            case 3b001: { result = __unsigned(sourceReg1) << ( opCode[5,1] ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ); }
+            case 3b010: { result = ( opCode[5,1] ? SLT : SLTI ) ? 32b1 : 32b0; }
+            case 3b011: { result = ( opCode[5,1] ? SLTU : SLTUI ) ? 32b1 : 32b0; }
+            case 3b100: { result = sourceReg1 ^ ( opCode[5,1] ? sourceReg2 : immediateValue ); }
+            case 3b101: { result = function7[5,1] ? shiftRIGHTA : shiftRIGHTL; }
+            case 3b110: { result = sourceReg1 | ( opCode[5,1] ? sourceReg2 : immediateValue ); }
+            case 3b111: { result = sourceReg1 & ( opCode[5,1] ? sourceReg2 : immediateValue ); }
+        }
+    }
+}
+
+// BRANCH COMPARISIONS
+algorithm branchcomparison (
+    input   uint3   function3,
+    input   int32   sourceReg1,
+    input   int32   sourceReg2,
+    output  uint1   takeBranch
+) <autorun> {
+    while(1) {
+        switch( function3 ) {
+            case 3b000: { takeBranch = ( sourceReg1 == sourceReg2 ) ? 1 : 0; }
+            case 3b001: { takeBranch = ( sourceReg1 != sourceReg2 ) ? 1 : 0; }
+            case 3b100: { takeBranch = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? 1 : 0; }
+            case 3b101: { takeBranch = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? 1 : 0; }
+            case 3b110: { takeBranch = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? 1 : 0; }
+            case 3b111: { takeBranch = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? 1 : 0; }
+            default: { takeBranch = 0; }
+        }
+    }
 }
 
 // EXPAND RISC-V 16 BIT COMPRESSED INSTRUCTIONS TO THEIR 32 BIT EQUIVALENT
@@ -826,20 +863,34 @@ algorithm compressedexpansion10 (
 
 // PERFORM OPTIONAL SIGN EXTENSION FOR 8 BIT AND 16 BIT READS
 algorithm signextender8 (
+    input   uint3   function3,
     input   uint8  nosign,
-    output  uint32  withsign,
-    input   uint3   function3
+    output  uint32  withsign
 ) <autorun> {
     withsign := { ( ( nosign[7,1] & ~function3[2,1] ) ? 24hffffff : 24h000000 ), nosign[0,8] };
     while(1) {
     }
 }
 algorithm signextender16 (
+    input   uint3   function3,
     input   uint16  nosign,
-    output  uint32  withsign,
-    input   uint3   function3
+    output  uint32  withsign
 ) <autorun> {
     withsign := { ( nosign[15,1] & ~function3[2,1] ) ? 16hffff : 16h0000, nosign };
+    while(1) {
+    }
+}
+
+// COMBINE TWO 16 BIT HALF WORDS TO 32 BIT WORD
+algorithm halfhalfword (
+    input   uint16  HIGH,
+    input   uint16  LOW,
+    output  int32   HIGHLOW,
+    output  int32   ZEROLOW
+) <autorun> {
+    HIGHLOW := { HIGH, LOW };
+    ZEROLOW := { 16b0, LOW };
+
     while(1) {
     }
 }
