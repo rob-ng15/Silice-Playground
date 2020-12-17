@@ -324,8 +324,8 @@ algorithm main(
     uint1   writeRegister = uninitialized;
 
     // RISC-V ADDRESS CALCULATIONS
-    uint32  branchOffset := { Btype(instruction).immediate_bits_12 ? 20b11111111111111111111 : 20b00000000000000000000, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 };
-    uint32  jumpOffset := { Jtype(instruction).immediate_bits_20 ? 12b111111111111 : 12b000000000000, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 };
+    uint32  branchOffset = uninitialized;
+    uint32  jumpOffset = uninitialized;
     uint32  loadAddress := immediateValue + sourceReg1;
     uint32  storeAddress := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
 
@@ -373,13 +373,7 @@ algorithm main(
     compressedexpansion01 compressedunit01 <@clock_cpuunit> ();
     compressedexpansion10 compressedunit10 <@clock_cpuunit> ();
 
-    // RISC-V BASE ALU
-    alu ALU <@clock_copro> (
-        instruction <: instruction,
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2
-    );
-
+    // RISC-V 32 BIT INSTRUCTION DECODER
     decoder DECODE <@clock_cpuunit> (
         instruction <: instruction,
         opCode :> opCode,
@@ -389,6 +383,23 @@ algorithm main(
         rs2 :> rs2,
         rd :> rd,
         immediateValue :> immediateValue
+    );
+
+    // RISC-V ADDRESS GENERATOR
+    addressgenerator AGU <@clock_cpuunit> (
+        instruction <: instruction,
+        immediateValue <: immediateValue,
+        sourceReg1 <: sourceReg1,
+
+        branchOffset :> branchOffset,
+        jumpOffset :> jumpOffset
+    );
+
+    // RISC-V BASE ALU
+    alu ALU <@clock_copro> (
+        instruction <: instruction,
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2
     );
 
     // BRANCH COMPARISON UNIT
@@ -640,6 +651,29 @@ algorithm decoder (
     rd := Rtype(instruction).destReg;
 
     immediateValue := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Itype(instruction).immediate };
+
+    while(1) {
+    }
+}
+
+// RISC-V ADDRESS GENERATOR
+algorithm addressgenerator (
+    input   uint32  instruction,
+    input   int32   immediateValue,
+    input   int32   sourceReg1,
+
+    output  uint32  branchOffset,
+    output  uint32  jumpOffset,
+    output  uint32  loadAddress,
+    output  uint32  storeAddress
+) <autorun> {
+    branchOffset := { Btype(instruction).immediate_bits_12 ? 20b11111111111111111111 : 20b00000000000000000000, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 };
+
+    jumpOffset := { Jtype(instruction).immediate_bits_20 ? 12b111111111111 : 12b000000000000, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 };
+
+    loadAddress := immediateValue + sourceReg1;
+
+    storeAddress := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
 
     while(1) {
     }
