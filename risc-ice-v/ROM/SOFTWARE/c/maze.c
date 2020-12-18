@@ -1,8 +1,12 @@
 #include "PAWSlibrary.h"
 
+// MAZE SIZES
 #define MAXWIDTH 40
 #define MAXHEIGHT 30
 #define MAXLEVEL 4
+
+// DRAWING VARIABLES
+#define MAXDEPTH 16
 
 // WIDTH OF MAZE DEPENDING ON LEVEL
 unsigned short levelwidths[] = { 10, 16, 20, 32, 40, 64, 80, 128, 160 };
@@ -10,8 +14,10 @@ unsigned short levelheights[] = { 8, 12, 16, 24, 30, 48, 60, 80, 120 };
 unsigned short levelgenerationsteps[] = { 1, 1, 1, 2, 4, 16, 32, 64, 128 };
 
 // TOP LEFT COORDINATES FOR THE PERSPECTIVE DRAWING
-short perspectivex[] = { 0, 40, 80, 120, 160, 200, 240, 280, 320 };
-short perspectivey[] = { 0, 30, 60, 90, 120, 150, 180, 210, 240 };
+//short perspectivex[] = { 0, 40, 80, 120, 160, 200, 240, 280, 320 };       // MAXDEPTH 8
+//short perspectivey[] = { 0, 30, 60, 90, 120, 150, 180, 210, 240 };        // MAXDEPTH 8
+short perspectivex[] = { 0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320 };
+short perspectivey[] = { 0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240 };
 
 // DIRECTION STEPS IN X and Y
 short directionx[] = { 0, 1, 0, -1 }, leftdirectionx[] = { -1, 0, 1, 0 }, rightdirectionx[] = { 1, 0, -1, 0 };
@@ -263,29 +269,29 @@ void walk_maze( unsigned short width, unsigned short height )
 
         // FIND NUMBER OF STEPS FORWARD TO A WALL
         visiblesteps = counttowall( currentx, currenty, direction );
-        if( visiblesteps <= 7 ) {
+        if( visiblesteps <= MAXDEPTH - 1 ) {
             // WALL IS NOT AT HORIZON
             switch( maze[currentx + directionx[direction] * visiblesteps][currenty + directiony[direction] * visiblesteps] ) {
                 case 'X':
                     gpu_rectangle( YELLOW, 0, perspectivey[ visiblesteps + 1 ], 640, 480 - perspectivey[ visiblesteps + 1 ] );
                     switch( visiblesteps ) {
                         case 1:
-                            gpu_character_blit( GREEN, 256, 68, 'E', 2 );
-                            gpu_character_blit( GREEN, 288, 68, 'X', 2 );
-                            gpu_character_blit( GREEN, 320, 68, 'I', 2 );
-                            gpu_character_blit( GREEN, 352, 68, 'T', 2 );
+                            gpu_character_blit( GREEN, 256, perspectivey[ visiblesteps + 1 ] + 8, 'E', 2 );
+                            gpu_character_blit( GREEN, 288, perspectivey[ visiblesteps + 1 ] + 8, 'X', 2 );
+                            gpu_character_blit( GREEN, 320, perspectivey[ visiblesteps + 1 ] + 8, 'I', 2 );
+                            gpu_character_blit( GREEN, 352, perspectivey[ visiblesteps + 1 ] + 8, 'T', 2 );
                             break;
                         case 2:
-                            gpu_character_blit( GREEN, 288, 94, 'E', 1 );
-                            gpu_character_blit( GREEN, 304, 94, 'X', 1 );
-                            gpu_character_blit( GREEN, 320, 94, 'I', 1 );
-                            gpu_character_blit( GREEN, 336, 94, 'T', 1 );
+                            gpu_character_blit( GREEN, 288, perspectivey[ visiblesteps + 1 ] + 4, 'E', 1 );
+                            gpu_character_blit( GREEN, 304, perspectivey[ visiblesteps + 1 ] + 4, 'X', 1 );
+                            gpu_character_blit( GREEN, 320, perspectivey[ visiblesteps + 1 ] + 4, 'I', 1 );
+                            gpu_character_blit( GREEN, 336, perspectivey[ visiblesteps + 1 ] + 4, 'T', 1 );
                             break;
                         case 3:
-                            gpu_character_blit( GREEN, 304, 122, 'E', 0 );
-                            gpu_character_blit( GREEN, 312, 122, 'X', 0 );
-                            gpu_character_blit( GREEN, 320, 122, 'I', 0 );
-                            gpu_character_blit( GREEN, 328, 122, 'T', 0 );
+                            gpu_character_blit( GREEN, 304, perspectivey[ visiblesteps + 1 ] + 2, 'E', 0 );
+                            gpu_character_blit( GREEN, 312, perspectivey[ visiblesteps + 1 ] + 2, 'X', 0 );
+                            gpu_character_blit( GREEN, 320, perspectivey[ visiblesteps + 1 ] + 2, 'I', 0 );
+                            gpu_character_blit( GREEN, 328, perspectivey[ visiblesteps + 1 ] + 2, 'T', 0 );
                             break;
                         default:
                             break;
@@ -303,7 +309,7 @@ void walk_maze( unsigned short width, unsigned short height )
         }
 
         // MOVE BACKWARDS FROM WALL
-        for( steps = min( visiblesteps, 7 ); steps >= 0; steps-- ) {
+        for( steps = min( visiblesteps, MAXDEPTH - 1 ); steps >= 0; steps-- ) {
             switch( whatisleft( currentx, currenty, direction, steps ) ) {
                 case 'X':
                     left_wall( YELLOW, steps );

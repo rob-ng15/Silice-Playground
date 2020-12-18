@@ -775,12 +775,12 @@ left_wall:
 	slli	a3,a1,1
 	add	a3,a4,a3
 	lh	a1,0(a3)
-	lh	a2,20(a3)
+	lh	a2,36(a3)
 	addi	a5,a5,1
 	slli	a5,a5,1
 	add	a4,a4,a5
 	lh	a3,0(a4)
-	lh	a4,20(a4)
+	lh	a4,36(a4)
 	li	t1,480
 	sub	a6,t1,a4
 	sub	t1,t1,a2
@@ -812,7 +812,7 @@ right_wall:
 	sub	a1,a4,a1
 	slli	a1,a1,16
 	srai	a1,a1,16
-	lh	a2,20(a3)
+	lh	a2,36(a3)
 	addi	a5,a5,1
 	slli	a5,a5,1
 	add	a6,a6,a5
@@ -820,7 +820,7 @@ right_wall:
 	sub	a5,a4,a5
 	slli	a5,a5,16
 	srai	a5,a5,16
-	lh	a3,20(a6)
+	lh	a3,36(a6)
 	li	a4,480
 	sub	a6,a4,a3
 	sub	a4,a4,a2
@@ -870,15 +870,15 @@ walk_maze:
 	lui	a5,%hi(.LANCHOR1)
 	addi	a5,a5,%lo(.LANCHOR1)
 	sw	a5,24(sp)
-	addi	a5,a5,20
+	addi	a5,a5,36
 	sw	a5,28(sp)
 	j	.L154
 .L109:
-	addi	a5,a0,1
-	slli	a5,a5,1
+	addi	s0,a0,1
+	slli	a5,s0,1
 	lw	a4,24(sp)
 	add	a5,a4,a5
-	lh	a2,20(a5)
+	lh	a2,36(a5)
 	li	a4,480
 	sub	a4,a4,a2
 	slli	a4,a4,16
@@ -893,79 +893,124 @@ walk_maze:
 	beq	s1,a5,.L112
 	li	a5,1
 	bne	s1,a5,.L107
+	slli	s0,s0,1
+	lw	a5,24(sp)
+	add	s0,a5,s0
+	lhu	a2,36(s0)
+	addi	a2,a2,8
 	li	a4,2
 	li	a3,69
-	li	a2,68
+	slli	a2,a2,16
+	srai	a2,a2,16
 	li	a1,256
 	li	a0,12
 	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,8
 	li	a4,2
 	li	a3,88
-	li	a2,68
+	slli	a2,a2,16
+	srai	a2,a2,16
 	li	a1,288
 	li	a0,12
 	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,8
 	li	a4,2
 	li	a3,73
-	li	a2,68
+	slli	a2,a2,16
+	srai	a2,a2,16
 	li	a1,320
 	li	a0,12
 	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,8
 	li	a4,2
 	li	a3,84
-	li	a2,68
+	slli	a2,a2,16
+	srai	a2,a2,16
 	li	a1,352
 	li	a0,12
 	call	gpu_character_blit
 	j	.L107
 .L111:
+	slli	s0,s0,1
+	lw	a5,24(sp)
+	add	s0,a5,s0
+	lhu	a2,36(s0)
+	addi	a2,a2,4
 	li	a4,1
 	li	a3,69
-	li	a2,94
+	slli	a2,a2,16
+	srai	a2,a2,16
 	li	a1,288
 	li	a0,12
 	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,4
 	li	a4,1
 	li	a3,88
-	li	a2,94
+	slli	a2,a2,16
+	srai	a2,a2,16
 	li	a1,304
 	li	a0,12
 	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,4
 	li	a4,1
 	li	a3,73
-	li	a2,94
+	slli	a2,a2,16
+	srai	a2,a2,16
 	li	a1,320
 	li	a0,12
 	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,4
 	li	a4,1
 	li	a3,84
-	li	a2,94
+	slli	a2,a2,16
+	srai	a2,a2,16
 	li	a1,336
 	li	a0,12
 	call	gpu_character_blit
 	j	.L107
 .L112:
+	slli	s0,s0,1
+	lw	a5,24(sp)
+	add	s0,a5,s0
+	lhu	a2,36(s0)
+	addi	a2,a2,2
 	li	a4,0
 	li	a3,69
-	li	a2,122
+	slli	a2,a2,16
+	srai	a2,a2,16
 	li	a1,304
 	li	a0,12
 	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,2
 	li	a4,0
 	li	a3,88
-	li	a2,122
+	slli	a2,a2,16
+	srai	a2,a2,16
 	li	a1,312
 	li	a0,12
 	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,2
 	li	a4,0
 	li	a3,73
-	li	a2,122
+	slli	a2,a2,16
+	srai	a2,a2,16
 	li	a1,320
 	li	a0,12
 	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,2
 	li	a4,0
 	li	a3,84
-	li	a2,122
+	slli	a2,a2,16
+	srai	a2,a2,16
 	li	a1,328
 	li	a0,12
 	call	gpu_character_blit
@@ -975,7 +1020,7 @@ walk_maze:
 	slli	a5,a5,1
 	lw	a4,24(sp)
 	add	a5,a4,a5
-	lh	a2,20(a5)
+	lh	a2,36(a5)
 	li	a4,480
 	sub	a4,a4,a2
 	slli	a4,a4,16
@@ -990,7 +1035,7 @@ walk_maze:
 	slli	a5,a5,1
 	lw	a4,24(sp)
 	add	a5,a4,a5
-	lh	a2,20(a5)
+	lh	a2,36(a5)
 	li	a4,480
 	sub	a4,a4,a2
 	slli	a4,a4,16
@@ -1273,7 +1318,7 @@ walk_maze:
 	mv	a0,s4
 	call	counttowall
 	mv	s1,a0
-	li	a5,7
+	li	a5,15
 	bgtu	a0,a5,.L107
 	slli	a3,s5,1
 	lw	a5,20(sp)
@@ -1300,9 +1345,9 @@ walk_maze:
 	li	a4,35
 	beq	a5,a4,.L163
 .L107:
-	li	a5,7
+	li	a5,15
 	ble	s1,a5,.L113
-	li	s1,7
+	li	s1,15
 .L113:
 	slli	s1,s1,16
 	srai	s1,s1,16
@@ -1431,23 +1476,23 @@ main:
 	mv	s9,s0
 	slli	s10,s0,1
 	add	s10,s1,s10
-	lhu	a0,40(s10)
+	lhu	a0,72(s10)
 	call	tpu_outputnumber_short
 	addi	a0,s5,%lo(.LC3)
 	call	tpu_outputstring
-	lhu	a0,60(s10)
+	lhu	a0,92(s10)
 	call	tpu_outputnumber_short
-	lhu	a1,60(s10)
-	lhu	a0,40(s10)
+	lhu	a1,92(s10)
+	lhu	a0,72(s10)
 	call	initialise_maze
-	lhu	a2,80(s10)
-	lhu	a1,60(s10)
-	lhu	a0,40(s10)
+	lhu	a2,112(s10)
+	lhu	a1,92(s10)
+	lhu	a0,72(s10)
 	call	generate_maze
 	li	a3,1
 	li	a2,1
-	lhu	a1,60(s10)
-	lhu	a0,40(s10)
+	lhu	a1,92(s10)
+	lhu	a0,72(s10)
 	call	display_maze
 	li	a3,12
 	li	a2,64
@@ -1473,8 +1518,8 @@ main:
 	bne	a0,zero,.L167
 	slli	s9,s9,1
 	add	s9,s1,s9
-	lhu	a1,60(s9)
-	lhu	a0,40(s9)
+	lhu	a1,92(s9)
+	lhu	a0,72(s9)
 	call	walk_maze
 	li	a2,6
 	li	a1,8
@@ -1527,29 +1572,45 @@ main:
 	.align	2
 	.set	.LANCHOR1,. + 0
 	.type	perspectivex, @object
-	.size	perspectivex, 18
+	.size	perspectivex, 34
 perspectivex:
 	.half	0
+	.half	20
 	.half	40
+	.half	60
 	.half	80
+	.half	100
 	.half	120
+	.half	140
 	.half	160
+	.half	180
 	.half	200
+	.half	220
 	.half	240
+	.half	260
 	.half	280
+	.half	300
 	.half	320
 	.zero	2
 	.type	perspectivey, @object
-	.size	perspectivey, 18
+	.size	perspectivey, 34
 perspectivey:
 	.half	0
+	.half	15
 	.half	30
+	.half	45
 	.half	60
+	.half	75
 	.half	90
+	.half	105
 	.half	120
+	.half	135
 	.half	150
+	.half	165
 	.half	180
+	.half	195
 	.half	210
+	.half	225
 	.half	240
 	.zero	2
 	.type	levelwidths, @object
