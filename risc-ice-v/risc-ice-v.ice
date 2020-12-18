@@ -1093,6 +1093,11 @@ algorithm ramcontroller (
 
     // ACTIVE FLAG
     uint1   active = 0;
+
+    // CACHE TAG match flags
+    uint1   Icachetagmatch := Icachetag.rdata == { 1b1, address[12,13] };
+    uint1   Dcachetagmatch := Dcachetag.rdata == { 1b1, address[12,13] };
+
     busy := ( readflag || writeflag ) ? 1 : active;
 
     // FLAGS FOR CACHE ACCESS
@@ -1111,7 +1116,7 @@ algorithm ramcontroller (
     while(1) {
         if( readflag && address[28,1] ) {
             // SDRAM
-            if( ( Icache && ( Icachetag.rdata == { 1b1, address[12,13] } ) ) || ( Dcachetag.rdata == { 1b1, address[12,13] } ) ) {
+            if( ( Icache && Icachetagmatch ) || Dcachetagmatch ) {
                 // CACHE HIT
                 active = 0;
             } else {
@@ -1139,7 +1144,7 @@ algorithm ramcontroller (
                 Dcachedata.wenable = 1; Dcachetag.wenable = 1;
 
                 // CHECK IF ENTRY IS IN ICACHE AND UPDATE
-                if( Icachetag.rdata == { 1b1, address[12,13] } ) {
+                if( Icachetagmatch ) {
                     Icachedata.wdata = writedata;
                     Icachedata.wenable = 1;
                 }
