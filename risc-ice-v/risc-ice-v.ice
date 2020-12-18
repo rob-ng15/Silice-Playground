@@ -324,7 +324,7 @@ algorithm main(
     int32   result = uninitialized;
     uint1   writeRegister = uninitialized;
 
-    // RISC-V OFFSETS and ADDRESSES - calculated by the address generation unit
+    // RISC-V ADDRESSES - calculated by the address generation unit
     uint32  branchAddress = uninitialized;
     uint32  jumpAddress = uninitialized;
     uint32  loadAddress = uninitialized;
@@ -415,12 +415,9 @@ algorithm main(
     // RISC-V ADDRESS GENERATOR
     addressgenerator AGU <@clock_cpuunit> (
         instruction <: instruction,
-        opCode <: opCode,
         pc <:: pc,
         compressed <: compressed,
-
         sourceReg1 <: sourceReg1,
-        immediateValue <: immediateValue,
 
         pcPLUS2 :> pcPLUS2,
         nextPC :> nextPC,
@@ -737,12 +734,9 @@ algorithm decoder (
 // RISC-V ADDRESS BASE/OFFSET GENERATOR
 algorithm addressgenerator (
     input   uint32  instruction,
-    input   uint7   opCode,
     input   uint32  pc,
     input   uint1   compressed,
-
     input!  int32   sourceReg1,
-    input!  uint32  immediateValue,
 
     output  uint32  pcPLUS2,
     output  uint32  nextPC,
@@ -754,6 +748,9 @@ algorithm addressgenerator (
     output! uint32  loadAddress,
     output! uint32  loadAddressPLUS2
 ) <autorun> {
+    uint7   opCode := Utype(instruction).opCode;
+    int32   immediateValue := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Itype(instruction).immediate };
+
     pcPLUS2 := pc + 2;
     nextPC := pc + ( compressed ? 2 : 4 );
 
