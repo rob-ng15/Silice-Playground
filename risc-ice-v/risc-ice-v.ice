@@ -292,11 +292,12 @@ algorithm main(
     );
 
     // RISC-V REGISTERS
-    simple_dualport_bram int32 registers_1<input!>[64] = { 0, pad(0) };
-    simple_dualport_bram int32 registers_2<input!>[64] = { 0, pad(0) };
+    simple_dualport_bram int32 registers_1 <input!> [64] = { 0, pad(0) };
+    simple_dualport_bram int32 registers_2 <input!> [64] = { 0, pad(0) };
 
     // RISC-V PROGRAM COUNTER
     uint32  pc = 0;
+    uint32  pcPLUS2 := pc + 2;
     uint1   compressed = uninitialized;
     uint1   floatingpoint = uninitialized;
     uint1   takeBranch = uninitialized;
@@ -304,7 +305,6 @@ algorithm main(
 
     // RISC-V INSTRUCTION and DECODE
     uint32  instruction = uninitialized;
-    uint32  nop := { 12b000000000000, 5b00000, 3b000, 5b00000, 7b0010011 };
     uint7   opCode = uninitialized;
     uint3   function3 = uninitialized;
     uint7   function7 = uninitialized;
@@ -323,12 +323,13 @@ algorithm main(
     int32   result = uninitialized;
     uint1   writeRegister = uninitialized;
 
-    // RISC-V ADDRESS CALCULATIONS
+    // RISC-V OFFSETS and ADDRESSES - calculated by the address generation unit
     uint32  branchOffset = uninitialized;
     uint32  jumpOffset = uninitialized;
-    uint32  loadAddress := immediateValue + sourceReg1;
-    uint32  storeAddressBase = uninitialized;
-    uint32  storeAddress := storeAddressBase + sourceReg1;
+    uint32  loadAddress = uninitialized;
+    uint32  loadAddressPLUS2 = uninitialized;
+    uint32  storeAddress = uninitialized;
+    uint32  storeAddressPLUS2 = uninitialized;
     uint32  auipcluiBase = uninitialized;
 
     // Setup Memory Mapped I/O
@@ -413,11 +414,16 @@ algorithm main(
     // RISC-V ADDRESS GENERATOR
     addressgenerator AGU <@clock_cpuunit> (
         instruction <: instruction,
+        sourceReg1 <: sourceReg1,
+        immediateValue <: immediateValue,
 
         branchOffset :> branchOffset,
         jumpOffset :> jumpOffset,
         auipcluiBase :> auipcluiBase,
-        storeAddressBase :> storeAddressBase
+        storeAddress :> storeAddress,
+        storeAddressPLUS2 :> storeAddressPLUS2,
+        loadAddress :> loadAddress,
+        loadAddressPLUS2 :> loadAddressPLUS2
     );
 
     // RISC-V BASE ALU
@@ -491,7 +497,7 @@ algorithm main(
                 // STANDARD 32 bit INSTRUCTION, fetch remaining 16 bits
                 compressed = 0;
                 combiner161632unit.LOW = ram.readdata;
-                ram.address = pc + 2;
+                ram.address = pcPLUS2;
                 ram.readflag = 1;
                 while( ram.busy ) {}
                 combiner161632unit.HIGH = ram.readdata;
@@ -544,7 +550,7 @@ algorithm main(
                                 }
                                 case 2b10: {
                                     combiner161632unit.LOW = ram.readdata;
-                                    ram.address = loadAddress + 2;
+                                    ram.address = loadAddressPLUS2;
                                     ram.readflag = 1;
                                     while( ram.busy ) {}
                                     combiner161632unit.HIGH = ram.readdata;
@@ -580,7 +586,7 @@ algorithm main(
                                     ram.writedata = sourceReg2[0,16];
                                     ram.writeflag = 1;
                                     while( ram.busy ) {}
-                                    ram.address = storeAddress + 2;
+                                    ram.address = storeAddressPLUS2;
                                     ram.writedata = sourceReg2[16,16];
                                     ram.writeflag = 1;
                                 }
@@ -723,11 +729,16 @@ algorithm decoder (
 // RISC-V ADDRESS BASE/OFFSET GENERATOR
 algorithm addressgenerator (
     input   uint32  instruction,
+    input!  int32   sourceReg1,
+    input!  uint32  immediateValue,
 
     output  uint32  branchOffset,
     output  uint32  jumpOffset,
     output  uint32  auipcluiBase,
-    output  uint32  storeAddressBase
+    output!  uint32  storeAddress,
+    output!  uint32  storeAddressPLUS2,
+    output!  uint32  loadAddress,
+    output!  uint32  loadAddressPLUS2
 ) <autorun> {
     branchOffset := { Btype(instruction).immediate_bits_12 ? 20b11111111111111111111 : 20b00000000000000000000, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 };
 
@@ -735,7 +746,11 @@ algorithm addressgenerator (
 
     auipcluiBase := { Utype(instruction).immediate_bits_31_12, 12b0 };
 
-    storeAddressBase := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 };
+    storeAddress := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
+    storeAddressPLUS2 := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1 + 2;
+
+    loadAddress := immediateValue + sourceReg1;
+    loadAddressPLUS2 := immediateValue + sourceReg1 + 2;
 
     while(1) {
     }
