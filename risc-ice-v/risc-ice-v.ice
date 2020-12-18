@@ -313,8 +313,8 @@ algorithm main(
     uint5   rs1 = uninitialized;
     uint5   rs2 = uninitialized;
     uint5   rd = uninitialized;
-    int32   sourceReg1 := registers_1.rdata0;
-    int32   sourceReg2 := registers_2.rdata0;
+    int32   sourceReg1 = uninitialized;
+    int32   sourceReg2 = uninitialized;
 
     // IMMEDIATE VALUE
     int32   immediateValue = uninitialized;
@@ -365,6 +365,29 @@ algorithm main(
         video_clock <: video_clock,
         gpu_clock <: clock_gpu,
         video_reset <: video_reset
+    );
+
+    // RISC-V REGISTER WRITER
+    registersWRITE registersW (
+        rd <: rd,
+        floatingpoint <: floatingpoint,
+        result <: result,
+
+        registers_1 <:> registers_1,
+        registers_2 <:> registers_2
+    );
+
+    // RISC-V REGISTER READER
+    registersREAD registersR (
+        rs1 <: rs1,
+        rs2 <: rs2,
+        floatingpoint <: floatingpoint,
+
+        sourceReg1 :> sourceReg1,
+        sourceReg2 :> sourceReg2,
+
+        registers_1 <:> registers_1,
+        registers_2 <:> registers_2
     );
 
     // RAM - BRAM and SDRAM
@@ -445,10 +468,7 @@ algorithm main(
     IO_Map.memoryRead := 0;
 
     // REGISTER Read/Write Flags
-    registers_1.addr0 := rs1 + ( floatingpoint ? 32 : 0 );
-    registers_1.wenable1 := 1;
-    registers_2.addr0 := rs2 + ( floatingpoint ? 32 : 0 );
-    registers_2.wenable1 := 1;
+    registersW.writeRegister := 0;
 
     while(1) {
         // RISC-V
@@ -618,6 +638,28 @@ algorithm main(
         }
 
         // WRITE TO REGISTERS
+        registersW.writeRegister = writeRegister;
+
+        // UPDATE PC
+        pc = ( incPC ) ? pc + ( ( takeBranch) ? branchOffset : ( compressed ? 2 : 4 ) ) : ( opCode[3,1] ? jumpOffset + pc : loadAddress );
+    } // RISC-V
+}
+
+// RISC-V REGISTER WRITE
+algorithm registersWRITE (
+    input   uint5   rd,
+    input   uint1   writeRegister,
+    input   uint1   floatingpoint,
+    input   int32   result,
+
+    simple_dualbram_port1   registers_1,
+    simple_dualbram_port1   registers_2,
+) <autorun> {
+    registers_1.wenable1 := 1;
+    registers_2.wenable1 := 1;
+
+    while(1) {
+        // WRITE TO REGISTERS
         // NEVER write to registers[0]
         if( writeRegister && ( rd != 0 ) ) {
             registers_1.addr1 = rd + ( floatingpoint ? 32 : 0 );
@@ -625,10 +667,29 @@ algorithm main(
             registers_2.addr1 = rd + ( floatingpoint ? 32 : 0 );
             registers_2.wdata1 = result;
         }
+    }
+}
 
-        // UPDATE PC
-        pc = ( incPC ) ? pc + ( ( takeBranch) ? branchOffset : ( compressed ? 2 : 4 ) ) : ( opCode[3,1] ? jumpOffset + pc : loadAddress );
-    } // RISC-V
+// RISC-V REGISTER READ
+algorithm registersREAD (
+    input   uint5   rs1,
+    input   uint5   rs2,
+    input   uint1   floatingpoint,
+
+    output!  int32   sourceReg1,
+    output!  int32   sourceReg2,
+
+    simple_dualbram_port0   registers_1,
+    simple_dualbram_port0   registers_2,
+) <autorun> {
+    registers_1.addr0 := rs1 + ( floatingpoint ? 32 : 0 );
+    registers_2.addr0 := rs2 + ( floatingpoint ? 32 : 0 );
+
+    sourceReg1 := registers_1.rdata0;
+    sourceReg2 := registers_2.rdata0;
+
+    while(1) {
+    }
 }
 
 // RISC-V INSTRUCTION DECODER
@@ -659,7 +720,7 @@ algorithm decoder (
     }
 }
 
-// RISC-V ADDRESS GENERATOR
+// RISC-V ADDRESS BASE/OFFSET GENERATOR
 algorithm addressgenerator (
     input   uint32  instruction,
 
