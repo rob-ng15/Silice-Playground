@@ -764,43 +764,121 @@ whatisright:
 	ret
 	.size	whatisright, .-whatisright
 	.align	1
+	.globl	left_wall
+	.type	left_wall, @function
+left_wall:
+	addi	sp,sp,-32
+	sw	ra,28(sp)
+	mv	a5,a1
+	lui	a4,%hi(.LANCHOR1)
+	addi	a4,a4,%lo(.LANCHOR1)
+	slli	a3,a1,1
+	add	a3,a4,a3
+	lh	a1,0(a3)
+	lh	a2,20(a3)
+	addi	a5,a5,1
+	slli	a5,a5,1
+	add	a4,a4,a5
+	lh	a3,0(a4)
+	lh	a4,20(a4)
+	li	t1,480
+	sub	a6,t1,a4
+	sub	t1,t1,a2
+	slli	t1,t1,16
+	srai	t1,t1,16
+	sw	t1,0(sp)
+	mv	a7,a1
+	slli	a6,a6,16
+	srai	a6,a6,16
+	mv	a5,a3
+	call	gpu_quadrilateral
+	lw	ra,28(sp)
+	addi	sp,sp,32
+	jr	ra
+	.size	left_wall, .-left_wall
+	.align	1
+	.globl	right_wall
+	.type	right_wall, @function
+right_wall:
+	addi	sp,sp,-32
+	sw	ra,28(sp)
+	mv	a5,a1
+	lui	a6,%hi(.LANCHOR1)
+	addi	a6,a6,%lo(.LANCHOR1)
+	slli	a3,a1,1
+	add	a3,a6,a3
+	li	a4,640
+	lhu	a1,0(a3)
+	sub	a1,a4,a1
+	slli	a1,a1,16
+	srai	a1,a1,16
+	lh	a2,20(a3)
+	addi	a5,a5,1
+	slli	a5,a5,1
+	add	a6,a6,a5
+	lhu	a5,0(a6)
+	sub	a5,a4,a5
+	slli	a5,a5,16
+	srai	a5,a5,16
+	lh	a3,20(a6)
+	li	a4,480
+	sub	a6,a4,a3
+	sub	a4,a4,a2
+	sw	a3,0(sp)
+	mv	a7,a5
+	slli	a6,a6,16
+	srai	a6,a6,16
+	slli	a4,a4,16
+	srai	a4,a4,16
+	mv	a3,a1
+	call	gpu_quadrilateral
+	lw	ra,28(sp)
+	addi	sp,sp,32
+	jr	ra
+	.size	right_wall, .-right_wall
+	.align	1
 	.globl	walk_maze
 	.type	walk_maze, @function
 walk_maze:
-	addi	sp,sp,-112
-	sw	ra,108(sp)
-	sw	s0,104(sp)
-	sw	s1,100(sp)
-	sw	s2,96(sp)
-	sw	s3,92(sp)
-	sw	s4,88(sp)
-	sw	s5,84(sp)
-	sw	s6,80(sp)
-	sw	s7,76(sp)
-	sw	s8,72(sp)
-	sw	s9,68(sp)
-	sw	s10,64(sp)
-	sw	s11,60(sp)
-	sw	a0,36(sp)
-	sw	a1,40(sp)
+	addi	sp,sp,-96
+	sw	ra,92(sp)
+	sw	s0,88(sp)
+	sw	s1,84(sp)
+	sw	s2,80(sp)
+	sw	s3,76(sp)
+	sw	s4,72(sp)
+	sw	s5,68(sp)
+	sw	s6,64(sp)
+	sw	s7,60(sp)
+	sw	s8,56(sp)
+	sw	s9,52(sp)
+	sw	s10,48(sp)
+	sw	s11,44(sp)
+	sw	a0,12(sp)
+	sw	a1,16(sp)
 	li	a5,2
-	sw	a5,24(sp)
-	li	s4,1
-	li	s2,1
+	sw	a5,0(sp)
+	li	s5,1
 	li	s3,1
+	li	s4,1
 	lui	a5,%hi(.LANCHOR0)
 	addi	a5,a5,%lo(.LANCHOR0)
-	sw	a5,28(sp)
-	lui	s6,%hi(.LANCHOR1)
-	addi	s6,s6,%lo(.LANCHOR1)
+	sw	a5,4(sp)
 	lui	a5,%hi(directionx)
 	addi	a5,a5,%lo(directionx)
-	sw	a5,44(sp)
+	sw	a5,20(sp)
+	lui	a5,%hi(.LANCHOR1)
+	addi	a5,a5,%lo(.LANCHOR1)
+	sw	a5,24(sp)
+	addi	a5,a5,20
+	sw	a5,28(sp)
 	j	.L154
-.L105:
-	slli	a5,a0,1
-	add	a5,s6,a5
-	lh	a2,0(a5)
+.L109:
+	addi	a5,a0,1
+	slli	a5,a5,1
+	lw	a4,24(sp)
+	add	a5,a4,a5
+	lh	a2,20(a5)
 	li	a4,480
 	sub	a4,a4,a2
 	slli	a4,a4,16
@@ -810,70 +888,63 @@ walk_maze:
 	li	a0,60
 	call	gpu_rectangle
 	li	a5,2
-	beq	s0,a5,.L107
+	beq	s1,a5,.L111
 	li	a5,3
-	beq	s0,a5,.L108
+	beq	s1,a5,.L112
 	li	a5,1
-	bne	s0,a5,.L103
+	bne	s1,a5,.L107
 	li	a4,2
 	li	a3,69
-	li	a2,48
+	li	a2,68
 	li	a1,256
 	li	a0,12
 	call	gpu_character_blit
 	li	a4,2
 	li	a3,88
-	li	a2,48
+	li	a2,68
 	li	a1,288
 	li	a0,12
 	call	gpu_character_blit
 	li	a4,2
 	li	a3,73
-	li	a2,48
+	li	a2,68
 	li	a1,320
 	li	a0,12
 	call	gpu_character_blit
 	li	a4,2
 	li	a3,84
-	li	a2,48
+	li	a2,68
 	li	a1,352
 	li	a0,12
 	call	gpu_character_blit
-.L109:
-	li	a5,8
-	ble	s0,a5,.L141
-	li	s0,8
-.L141:
-	slli	s0,s0,16
-	srli	s0,s0,16
-	j	.L142
-.L107:
+	j	.L107
+.L111:
 	li	a4,1
 	li	a3,69
-	li	a2,84
+	li	a2,94
 	li	a1,288
 	li	a0,12
 	call	gpu_character_blit
 	li	a4,1
 	li	a3,88
-	li	a2,84
+	li	a2,94
 	li	a1,304
 	li	a0,12
 	call	gpu_character_blit
 	li	a4,1
 	li	a3,73
-	li	a2,84
+	li	a2,94
 	li	a1,320
 	li	a0,12
 	call	gpu_character_blit
 	li	a4,1
 	li	a3,84
-	li	a2,84
+	li	a2,94
 	li	a1,336
 	li	a0,12
 	call	gpu_character_blit
-	j	.L109
-.L108:
+	j	.L107
+.L112:
 	li	a4,0
 	li	a3,69
 	li	a2,122
@@ -898,11 +969,13 @@ walk_maze:
 	li	a1,328
 	li	a0,12
 	call	gpu_character_blit
-	j	.L109
-.L104:
-	slli	a5,a0,1
-	add	a5,s6,a5
-	lh	a2,0(a5)
+	j	.L107
+.L108:
+	addi	a5,a0,1
+	slli	a5,a5,1
+	lw	a4,24(sp)
+	add	a5,a4,a5
+	lh	a2,20(a5)
 	li	a4,480
 	sub	a4,a4,a2
 	slli	a4,a4,16
@@ -911,11 +984,13 @@ walk_maze:
 	li	a1,0
 	li	a0,51
 	call	gpu_rectangle
-	j	.L103
+	j	.L107
 .L163:
-	slli	a5,a0,1
-	add	a5,s6,a5
-	lh	a2,0(a5)
+	addi	a5,a0,1
+	slli	a5,a5,1
+	lw	a4,24(sp)
+	add	a5,a4,a5
+	lh	a2,20(a5)
 	li	a4,480
 	sub	a4,a4,a2
 	slli	a4,a4,16
@@ -924,171 +999,77 @@ walk_maze:
 	li	a1,0
 	li	a0,42
 	call	gpu_rectangle
-	j	.L103
-.L113:
-	bne	a0,s9,.L116
-	addi	a5,s0,-1
-	slli	a5,a5,1
-	add	a5,s6,a5
-	lh	a1,20(a5)
-	lh	a2,0(a5)
-	slli	a4,s0,1
-	add	a4,s6,a4
-	lh	a3,20(a4)
-	lh	a4,0(a4)
-	sub	a6,s5,a4
-	sub	a0,s5,a2
-	slli	a0,a0,16
-	srai	a0,a0,16
-	sw	a0,0(sp)
-	mv	a7,a1
-	slli	a6,a6,16
-	srai	a6,a6,16
-	mv	a5,a3
+	j	.L107
+.L115:
+	bne	a0,s10,.L118
+	mv	a1,s1
 	li	a0,60
-	call	gpu_quadrilateral
-.L116:
+	call	left_wall
+.L118:
 	mv	a3,s0
-	mv	a2,s4
-	mv	a1,s2
-	mv	a0,s3
+	mv	a2,s5
+	mv	a1,s3
+	mv	a0,s4
 	call	whatisright
-	beq	a0,s1,.L117
-	bgtu	a0,s1,.L118
-	beq	a0,s8,.L119
-	bne	a0,s7,.L121
-	addi	a5,s0,-1
-	slli	a5,a5,1
-	add	a5,s6,a5
-	lhu	a1,20(a5)
-	sub	a1,s10,a1
-	slli	a1,a1,16
-	srai	a1,a1,16
-	lh	a2,0(a5)
-	slli	a4,s0,1
-	add	a4,s6,a4
-	lhu	a5,20(a4)
-	sub	a5,s10,a5
-	slli	a5,a5,16
-	srai	a5,a5,16
-	lh	a3,0(a4)
-	sub	a6,s5,a3
-	sub	a4,s5,a2
-	sw	a3,0(sp)
-	mv	a7,a5
-	slli	a6,a6,16
-	srai	a6,a6,16
-	slli	a4,a4,16
-	srai	a4,a4,16
-	mv	a3,a1
+	beq	a0,s2,.L119
+	bgtu	a0,s2,.L120
+	beq	a0,s9,.L121
+	bne	a0,s8,.L123
+	mv	a1,s0
 	li	a0,21
-	call	gpu_quadrilateral
-	j	.L121
-.L114:
-	slli	a5,s0,1
-	add	a5,s6,a5
-	lh	a2,0(a5)
-	sub	a4,s5,a2
+	call	right_wall
+	j	.L123
+.L116:
+	lh	a2,0(s6)
+	li	a5,480
+	sub	a4,a5,a2
 	slli	a4,a4,16
 	srai	a4,a4,16
-	lh	a3,20(a5)
+	lh	a3,0(s7)
 	li	a1,0
 	li	a0,42
 	call	gpu_rectangle
-	j	.L116
-.L112:
-	addi	a5,s0,-1
-	slli	a5,a5,1
-	add	a5,s6,a5
-	lh	a1,20(a5)
-	lh	a2,0(a5)
-	slli	a4,s0,1
-	add	a4,s6,a4
-	lh	a3,20(a4)
-	lh	a4,0(a4)
-	sub	a6,s5,a4
-	sub	a0,s5,a2
-	slli	a0,a0,16
-	srai	a0,a0,16
-	sw	a0,0(sp)
-	mv	a7,a1
-	slli	a6,a6,16
-	srai	a6,a6,16
-	mv	a5,a3
+	j	.L118
+.L114:
+	mv	a1,s1
 	li	a0,51
-	call	gpu_quadrilateral
-	j	.L116
-.L118:
-	bne	a0,s9,.L121
-	addi	a5,s0,-1
-	slli	a5,a5,1
-	add	a5,s6,a5
-	lhu	a1,20(a5)
-	sub	a1,s10,a1
-	slli	a1,a1,16
-	srai	a1,a1,16
-	lh	a2,0(a5)
-	slli	a4,s0,1
-	add	a4,s6,a4
-	lhu	a5,20(a4)
-	sub	a5,s10,a5
-	slli	a5,a5,16
-	srai	a5,a5,16
-	lh	a3,0(a4)
-	sub	a6,s5,a3
-	sub	a4,s5,a2
-	sw	a3,0(sp)
-	mv	a7,a5
-	slli	a6,a6,16
-	srai	a6,a6,16
-	slli	a4,a4,16
-	srai	a4,a4,16
-	mv	a3,a1
+	call	left_wall
+	j	.L118
+.L120:
+	bne	a0,s10,.L123
+	mv	a1,s0
 	li	a0,60
-	call	gpu_quadrilateral
-.L121:
+	call	right_wall
+.L123:
 	addi	s0,s0,-1
-	slli	s0,s0,16
+	slli	s1,s0,16
+	srai	s1,s1,16
+	addi	s7,s7,-2
+	addi	s6,s6,-2
+	blt	s1,zero,.L156
+.L124:
+	slli	s0,s1,16
 	srli	s0,s0,16
-	beq	s0,zero,.L111
-.L122:
 	mv	a3,s0
-	mv	a2,s4
-	mv	a1,s2
-	mv	a0,s3
+	mv	a2,s5
+	mv	a1,s3
+	mv	a0,s4
 	call	whatisleft
-	beq	a0,s1,.L112
-	bgtu	a0,s1,.L113
-	beq	a0,s8,.L114
-	bne	a0,s7,.L116
-	addi	a5,s0,-1
-	slli	a5,a5,1
-	add	a5,s6,a5
-	lh	a1,20(a5)
-	lh	a2,0(a5)
-	slli	a4,s0,1
-	add	a4,s6,a4
-	lh	a3,20(a4)
-	lh	a4,0(a4)
-	sub	a6,s5,a4
-	sub	a0,s5,a2
-	slli	a0,a0,16
-	srai	a0,a0,16
-	sw	a0,0(sp)
-	mv	a7,a1
-	slli	a6,a6,16
-	srai	a6,a6,16
-	mv	a5,a3
+	beq	a0,s2,.L114
+	bgtu	a0,s2,.L115
+	beq	a0,s9,.L116
+	bne	a0,s8,.L118
+	mv	a1,s1
 	li	a0,21
-	call	gpu_quadrilateral
-	j	.L116
-.L119:
-	slli	a5,s0,1
-	add	a5,s6,a5
-	lh	a2,0(a5)
-	sub	a4,s5,a2
-	lhu	a1,20(a5)
-	sub	a1,s10,a1
+	call	left_wall
+	j	.L118
+.L121:
+	lh	a2,0(s6)
+	li	a5,480
+	sub	a4,a5,a2
+	lhu	a1,0(s7)
+	li	a5,640
+	sub	a1,a5,a1
 	slli	a4,a4,16
 	srai	a4,a4,16
 	li	a3,640
@@ -1096,229 +1077,206 @@ walk_maze:
 	srai	a1,a1,16
 	li	a0,42
 	call	gpu_rectangle
-	j	.L121
-.L117:
-	addi	a5,s0,-1
-	slli	a5,a5,1
-	add	a5,s6,a5
-	lhu	a1,20(a5)
-	sub	a1,s10,a1
-	slli	a1,a1,16
-	srai	a1,a1,16
-	lh	a2,0(a5)
-	slli	a4,s0,1
-	add	a4,s6,a4
-	lhu	a5,20(a4)
-	sub	a5,s10,a5
-	slli	a5,a5,16
-	srai	a5,a5,16
-	lh	a3,0(a4)
-	sub	a6,s5,a3
-	sub	a4,s5,a2
-	sw	a3,0(sp)
-	mv	a7,a5
-	slli	a6,a6,16
-	srai	a6,a6,16
-	slli	a4,a4,16
-	srai	a4,a4,16
-	mv	a3,a1
+	j	.L123
+.L119:
+	mv	a1,s0
 	li	a0,51
-	call	gpu_quadrilateral
-	j	.L121
-.L111:
-	lw	a6,24(sp)
+	call	right_wall
+	j	.L123
+.L156:
+	lw	a6,0(sp)
 	li	a5,1
-	mv	a4,s4
-	mv	a3,s2
-	mv	a2,s3
-	lw	a1,40(sp)
-	lw	a0,36(sp)
+	mv	a4,s5
+	mv	a3,s3
+	mv	a2,s4
+	lw	a1,16(sp)
+	lw	a0,12(sp)
 	call	draw_map
-	mv	s0,s4
-	mv	s5,s2
-	mv	s1,s3
-	slli	a5,s4,1
-	lw	a4,44(sp)
-	add	s8,a4,a5
-	lui	s7,%hi(directiony)
-	addi	s7,s7,%lo(directiony)
-	add	s7,s7,a5
-	j	.L139
+	mv	s0,s5
+	mv	s2,s3
+	mv	s1,s4
+	slli	a5,s5,1
+	lw	a4,20(sp)
+	add	s7,a4,a5
+	lui	s6,%hi(directiony)
+	addi	s6,s6,%lo(directiony)
+	add	s6,s6,a5
+	j	.L141
 .L158:
 	beq	s0,zero,.L143
 	addi	s0,s0,-1
 	slli	s0,s0,16
 	srli	s0,s0,16
-.L125:
+.L127:
 	call	get_buttons
 	andi	a0,a0,32
-	bne	a0,zero,.L125
-	j	.L123
+	bne	a0,zero,.L127
+	j	.L125
 .L143:
 	li	s0,3
-	j	.L125
+	j	.L127
 .L159:
 	li	a5,3
 	beq	s0,a5,.L144
 	addi	s0,s0,1
 	slli	s0,s0,16
 	srli	s0,s0,16
-.L128:
+.L130:
 	call	get_buttons
 	andi	a0,a0,64
-	bne	a0,zero,.L128
-	j	.L126
+	bne	a0,zero,.L130
+	j	.L128
 .L144:
 	li	s0,0
-	j	.L128
+	j	.L130
 .L160:
-	lh	a3,0(s8)
-	lh	a4,0(s7)
+	lh	a3,0(s7)
+	lh	a4,0(s6)
 	add	a2,a3,s11
 	slli	a5,a2,4
 	sub	a5,a5,a2
 	slli	a5,a5,1
-	lw	a2,28(sp)
+	lw	a2,4(sp)
 	add	a5,a2,a5
-	lw	a2,32(sp)
+	lw	a2,8(sp)
 	add	a5,a5,a2
 	add	a5,a5,a4
 	lbu	a5,1200(a5)
 	li	a2,32
-	beq	a5,a2,.L130
+	beq	a5,a2,.L132
 	li	a2,88
-	bne	a5,a2,.L132
-.L130:
+	bne	a5,a2,.L134
+.L132:
 	add	s1,s1,a3
 	slli	s1,s1,16
 	srli	s1,s1,16
-	add	s5,s5,a4
-	slli	s5,s5,16
-	srli	s5,s5,16
-.L132:
+	add	s2,s2,a4
+	slli	s2,s2,16
+	srli	s2,s2,16
+.L134:
 	call	get_buttons
 	andi	a0,a0,8
-	bne	a0,zero,.L132
-	j	.L129
+	bne	a0,zero,.L134
+	j	.L131
 .L161:
-	lh	a3,0(s8)
-	lh	a4,0(s7)
+	lh	a3,0(s7)
+	lh	a4,0(s6)
 	sub	a2,s11,a3
-	lw	a5,32(sp)
+	lw	a5,8(sp)
 	sub	a1,a5,a4
 	slli	a5,a2,4
 	sub	a5,a5,a2
 	slli	a5,a5,1
-	lw	a2,28(sp)
+	lw	a2,4(sp)
 	add	a5,a2,a5
 	add	a5,a5,a1
 	lbu	a5,1200(a5)
 	li	a2,32
-	beq	a5,a2,.L134
+	beq	a5,a2,.L136
 	li	a2,88
-	bne	a5,a2,.L136
-.L134:
+	bne	a5,a2,.L138
+.L136:
 	sub	s1,s1,a3
 	slli	s1,s1,16
 	srli	s1,s1,16
-	sub	s5,s5,a4
-	slli	s5,s5,16
-	srli	s5,s5,16
-.L136:
+	sub	s2,s2,a4
+	slli	s2,s2,16
+	srli	s2,s2,16
+.L138:
 	call	get_buttons
 	andi	a0,a0,16
-	bne	a0,zero,.L136
-	j	.L133
-.L137:
-	bne	s1,s3,.L145
-	bne	s5,s2,.L146
-	bne	s4,s0,.L157
+	bne	a0,zero,.L138
+	j	.L135
 .L139:
+	bne	s1,s4,.L145
+	bne	s2,s3,.L146
+	bne	s5,s0,.L157
+.L141:
 	call	get_buttons
 	andi	a0,a0,32
 	bne	a0,zero,.L158
-.L123:
+.L125:
 	call	get_buttons
 	andi	a0,a0,64
 	bne	a0,zero,.L159
-.L126:
+.L128:
 	call	get_buttons
 	andi	a0,a0,8
 	bne	a0,zero,.L160
-.L129:
+.L131:
 	call	get_buttons
 	andi	a0,a0,16
 	bne	a0,zero,.L161
-.L133:
+.L135:
 	call	get_buttons
 	andi	a0,a0,4
-	beq	a0,zero,.L137
-	lw	a5,24(sp)
-	beq	a5,zero,.L137
+	beq	a0,zero,.L139
+	lw	a5,0(sp)
+	beq	a5,zero,.L139
 	mv	a6,a5
 	li	a5,0
-	mv	a4,s4
-	mv	a3,s2
-	mv	a2,s3
-	lw	a1,40(sp)
-	lw	a0,36(sp)
+	mv	a4,s5
+	mv	a3,s3
+	mv	a2,s4
+	lw	a1,16(sp)
+	lw	a0,12(sp)
 	call	draw_map
-.L138:
+.L140:
 	call	get_buttons
 	andi	a0,a0,4
-	bne	a0,zero,.L138
-	lw	a5,24(sp)
+	bne	a0,zero,.L140
+	lw	a5,0(sp)
 	addi	a5,a5,-1
 	slli	a5,a5,16
 	srli	a5,a5,16
-	sw	a5,24(sp)
+	sw	a5,0(sp)
 	mv	a6,a5
 	li	a5,1
-	mv	a4,s4
-	mv	a3,s2
-	mv	a2,s3
-	lw	a1,40(sp)
-	lw	a0,36(sp)
+	mv	a4,s5
+	mv	a3,s3
+	mv	a2,s4
+	lw	a1,16(sp)
+	lw	a0,12(sp)
 	call	draw_map
-	j	.L137
+	j	.L139
 .L157:
-	mv	s4,s0
-	mv	s2,s5
-	mv	s3,s1
+	mv	s5,s0
+	mv	s3,s2
+	mv	s4,s1
 	j	.L154
 .L145:
-	mv	s4,s0
-	mv	s2,s5
-	mv	s3,s1
+	mv	s5,s0
+	mv	s3,s2
+	mv	s4,s1
 .L154:
-	mv	s11,s3
-	lw	a5,36(sp)
+	mv	s11,s4
+	lw	a5,12(sp)
 	addi	a5,a5,-2
-	bne	s3,a5,.L140
-	lw	a5,40(sp)
+	bne	s4,a5,.L142
+	lw	a5,16(sp)
 	addi	a5,a5,-3
-	beq	s2,a5,.L162
-.L140:
-	sw	s2,32(sp)
+	beq	s3,a5,.L162
+.L142:
+	sw	s3,8(sp)
 	slli	a5,s11,4
 	sub	a5,a5,s11
 	slli	a5,a5,1
-	lw	s1,28(sp)
-	add	a5,s1,a5
-	add	a5,a5,s2
+	lw	s0,4(sp)
+	add	a5,s0,a5
+	add	a5,a5,s3
 	li	a4,32
 	sb	a4,0(a5)
 	call	tpu_cs
 	call	gpu_cs
-	mv	a2,s4
-	mv	a1,s2
-	mv	a0,s3
+	mv	a2,s5
+	mv	a1,s3
+	mv	a0,s4
 	call	counttowall
-	mv	s0,a0
-	li	a5,8
-	bgtu	a0,a5,.L103
-	slli	a3,s4,1
-	lw	a5,44(sp)
+	mv	s1,a0
+	li	a5,7
+	bgtu	a0,a5,.L107
+	slli	a3,s5,1
+	lw	a5,20(sp)
 	add	a5,a5,a3
 	lh	a5,0(a5)
 	mul	a5,a5,a0
@@ -1331,52 +1289,56 @@ walk_maze:
 	slli	a5,a4,4
 	sub	a5,a5,a4
 	slli	a5,a5,1
-	add	a5,s1,a5
-	add	a5,a5,s2
+	add	a5,s0,a5
+	add	a5,a5,s3
 	add	a5,a5,a3
 	lbu	a5,1200(a5)
 	li	a4,69
-	beq	a5,a4,.L104
+	beq	a5,a4,.L108
 	li	a4,88
-	beq	a5,a4,.L105
+	beq	a5,a4,.L109
 	li	a4,35
 	beq	a5,a4,.L163
-.L103:
-	li	a5,8
-	ble	s0,a5,.L110
-	li	s0,8
-.L110:
-	slli	s0,s0,16
-	srli	s0,s0,16
-	beq	s0,zero,.L111
-.L142:
-	li	s1,69
-	li	s5,480
-	li	s9,88
-	li	s8,32
-	li	s7,35
-	li	s10,640
-	j	.L122
+.L107:
+	li	a5,7
+	ble	s1,a5,.L113
+	li	s1,7
+.L113:
+	slli	s1,s1,16
+	srai	s1,s1,16
+	addi	s6,s1,1
+	slli	s6,s6,16
+	srai	s6,s6,16
+	slli	s6,s6,1
+	lw	a5,24(sp)
+	add	s7,a5,s6
+	lw	a5,28(sp)
+	add	s6,a5,s6
+	li	s2,69
+	li	s10,88
+	li	s9,32
+	li	s8,35
+	j	.L124
 .L146:
-	mv	s4,s0
-	mv	s2,s5
-	mv	s3,s1
+	mv	s5,s0
+	mv	s3,s2
+	mv	s4,s1
 	j	.L154
 .L162:
-	lw	ra,108(sp)
-	lw	s0,104(sp)
-	lw	s1,100(sp)
-	lw	s2,96(sp)
-	lw	s3,92(sp)
-	lw	s4,88(sp)
-	lw	s5,84(sp)
-	lw	s6,80(sp)
-	lw	s7,76(sp)
-	lw	s8,72(sp)
-	lw	s9,68(sp)
-	lw	s10,64(sp)
-	lw	s11,60(sp)
-	addi	sp,sp,112
+	lw	ra,92(sp)
+	lw	s0,88(sp)
+	lw	s1,84(sp)
+	lw	s2,80(sp)
+	lw	s3,76(sp)
+	lw	s4,72(sp)
+	lw	s5,68(sp)
+	lw	s6,64(sp)
+	lw	s7,60(sp)
+	lw	s8,56(sp)
+	lw	s9,52(sp)
+	lw	s10,48(sp)
+	lw	s11,44(sp)
+	addi	sp,sp,96
 	jr	ra
 	.size	walk_maze, .-walk_maze
 	.section	.rodata.str1.4,"aMS",@progbits,1
@@ -1564,19 +1526,6 @@ main:
 	.data
 	.align	2
 	.set	.LANCHOR1,. + 0
-	.type	perspectivey, @object
-	.size	perspectivey, 18
-perspectivey:
-	.half	0
-	.half	30
-	.half	60
-	.half	90
-	.half	120
-	.half	150
-	.half	180
-	.half	210
-	.half	240
-	.zero	2
 	.type	perspectivex, @object
 	.size	perspectivex, 18
 perspectivex:
@@ -1589,6 +1538,19 @@ perspectivex:
 	.half	240
 	.half	280
 	.half	320
+	.zero	2
+	.type	perspectivey, @object
+	.size	perspectivey, 18
+perspectivey:
+	.half	0
+	.half	30
+	.half	60
+	.half	90
+	.half	120
+	.half	150
+	.half	180
+	.half	210
+	.half	240
 	.zero	2
 	.type	levelwidths, @object
 	.size	levelwidths, 18

@@ -327,7 +327,9 @@ algorithm main(
     uint32  branchOffset = uninitialized;
     uint32  jumpOffset = uninitialized;
     uint32  loadAddress := immediateValue + sourceReg1;
-    uint32  storeAddress := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
+    uint32  storeAddressBase = uninitialized;
+    uint32  storeAddress := storeAddressBase + sourceReg1;
+    uint32  auipcluiBase = uninitialized;
 
     // Setup Memory Mapped I/O
     memmap_io IO_Map (
@@ -391,6 +393,8 @@ algorithm main(
 
         branchOffset :> branchOffset,
         jumpOffset :> jumpOffset,
+        auipcluiBase :> auipcluiBase,
+        storeAddressBase :> storeAddressBase
     );
 
     // RISC-V BASE ALU
@@ -595,7 +599,7 @@ algorithm main(
                         }
                     }
                     // AUIPC LUI
-                    case 1b1: { result = { Utype(instruction).immediate_bits_31_12, 12b0 } + ( opCode[5,1] ? 0 : pc ); }
+                    case 1b1: { result = auipcluiBase + ( opCode[5,1] ? 0 : pc ); }
                 }
             }
 
@@ -661,10 +665,16 @@ algorithm addressgenerator (
 
     output  uint32  branchOffset,
     output  uint32  jumpOffset,
+    output  uint32  auipcluiBase,
+    output  uint32  storeAddressBase
 ) <autorun> {
     branchOffset := { Btype(instruction).immediate_bits_12 ? 20b11111111111111111111 : 20b00000000000000000000, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 };
 
     jumpOffset := { Jtype(instruction).immediate_bits_20 ? 12b111111111111 : 12b000000000000, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 };
+
+    auipcluiBase := { Utype(instruction).immediate_bits_31_12, 12b0 };
+
+    storeAddressBase := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 };
 
     while(1) {
     }

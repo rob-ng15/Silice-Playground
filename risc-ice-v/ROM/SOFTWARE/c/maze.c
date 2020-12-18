@@ -233,12 +233,25 @@ unsigned char whatisright( unsigned short currentx, unsigned short currenty, uns
     return( maze[currentx + directionx[ direction ] * steps + rightdirectionx[ direction ]][currenty + directiony[ direction ] * steps + rightdirectiony[ direction ]] );
 }
 
+
+// DRAW LEFT or RIGHT WALLS
+void left_wall( unsigned char colour, short steps )
+{
+    gpu_quadrilateral( colour, perspectivex[ steps ], perspectivey[ steps ], perspectivex[ steps + 1 ], perspectivey[ steps + 1 ],
+                                perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], perspectivex[ steps ], 480 - perspectivey[ steps ] );
+}
+void right_wall( unsigned char colour, unsigned short steps )
+{
+    gpu_quadrilateral( colour, 640 - perspectivex[ steps ], perspectivey[ steps ], 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ],
+                                640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
+}
+
 // WALK THE MAZE IN 3D
 void walk_maze( unsigned short width, unsigned short height )
 {
     // SET START LOCATION TO TOP LEFT FACING EAST
-    unsigned short newx = 1, newy = 1, direction = 1, newdirection = 1;
-    unsigned short currentx = 1, currenty = 1, visiblesteps, steps, mappeeks = 2;
+    unsigned short newx = 1, newy = 1, direction = 1, newdirection = 1, currentx = 1, currenty = 1, visiblesteps, mappeeks = 2;
+    short steps;
 
     // LOOP UNTIL REACHED THE EXIT
     while( ( currentx != width - 2 ) || ( currenty != height -3 ) ) {
@@ -250,23 +263,23 @@ void walk_maze( unsigned short width, unsigned short height )
 
         // FIND NUMBER OF STEPS FORWARD TO A WALL
         visiblesteps = counttowall( currentx, currenty, direction );
-        if( visiblesteps <= 8 ) {
+        if( visiblesteps <= 7 ) {
             // WALL IS NOT AT HORIZON
             switch( maze[currentx + directionx[direction] * visiblesteps][currenty + directiony[direction] * visiblesteps] ) {
                 case 'X':
-                    gpu_rectangle( YELLOW, 0, perspectivey[ visiblesteps ], 640, 480 - perspectivey[ visiblesteps ] );
+                    gpu_rectangle( YELLOW, 0, perspectivey[ visiblesteps + 1 ], 640, 480 - perspectivey[ visiblesteps + 1 ] );
                     switch( visiblesteps ) {
                         case 1:
-                            gpu_character_blit( GREEN, 256, 48, 'E', 2 );
-                            gpu_character_blit( GREEN, 288, 48, 'X', 2 );
-                            gpu_character_blit( GREEN, 320, 48, 'I', 2 );
-                            gpu_character_blit( GREEN, 352, 48, 'T', 2 );
+                            gpu_character_blit( GREEN, 256, 68, 'E', 2 );
+                            gpu_character_blit( GREEN, 288, 68, 'X', 2 );
+                            gpu_character_blit( GREEN, 320, 68, 'I', 2 );
+                            gpu_character_blit( GREEN, 352, 68, 'T', 2 );
                             break;
                         case 2:
-                            gpu_character_blit( GREEN, 288, 84, 'E', 1 );
-                            gpu_character_blit( GREEN, 304, 84, 'X', 1 );
-                            gpu_character_blit( GREEN, 320, 84, 'I', 1 );
-                            gpu_character_blit( GREEN, 336, 84, 'T', 1 );
+                            gpu_character_blit( GREEN, 288, 94, 'E', 1 );
+                            gpu_character_blit( GREEN, 304, 94, 'X', 1 );
+                            gpu_character_blit( GREEN, 320, 94, 'I', 1 );
+                            gpu_character_blit( GREEN, 336, 94, 'T', 1 );
                             break;
                         case 3:
                             gpu_character_blit( GREEN, 304, 122, 'E', 0 );
@@ -279,10 +292,10 @@ void walk_maze( unsigned short width, unsigned short height )
                     }
                     break;
                 case 'E':
-                    gpu_rectangle( MAGENTA, 0, perspectivey[ visiblesteps ], 640, 480 - perspectivey[ visiblesteps ] );
+                    gpu_rectangle( MAGENTA, 0, perspectivey[ visiblesteps + 1 ], 640, 480 - perspectivey[ visiblesteps + 1 ] );
                     break;
                 case '#':
-                    gpu_rectangle( GREY2, 0, perspectivey[ visiblesteps ], 640, 480 - perspectivey[ visiblesteps ] );
+                    gpu_rectangle( GREY2, 0, perspectivey[ visiblesteps + 1 ], 640, 480 - perspectivey[ visiblesteps + 1 ] );
                     break;
                 default:
                     break;
@@ -290,43 +303,37 @@ void walk_maze( unsigned short width, unsigned short height )
         }
 
         // MOVE BACKWARDS FROM WALL
-        for( steps = min( visiblesteps, 8 ); steps > 0; steps-- ) {
+        for( steps = min( visiblesteps, 7 ); steps >= 0; steps-- ) {
             switch( whatisleft( currentx, currenty, direction, steps ) ) {
                 case 'X':
-                    gpu_quadrilateral( YELLOW, perspectivex[ steps - 1 ], perspectivey[ steps -1 ], perspectivex[ steps ], perspectivey[ steps ],
-                                                perspectivex[ steps ], 480 - perspectivey[ steps ], perspectivex[ steps - 1 ], 480 - perspectivey[ steps -1 ] );
+                    left_wall( YELLOW, steps );
                     break;
                 case ' ':
                     // GAP
-                    gpu_rectangle( GREY2, 0, perspectivey[ steps ], perspectivex[ steps ], 480 - perspectivey[ steps ] );
+                    gpu_rectangle( GREY2, 0, perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
                     break;
                 case 'E':
-                    gpu_quadrilateral( MAGENTA, perspectivex[ steps - 1 ], perspectivey[ steps -1 ], perspectivex[ steps ], perspectivey[ steps ],
-                                                perspectivex[ steps ], 480 - perspectivey[ steps ], perspectivex[ steps - 1 ], 480 - perspectivey[ steps -1 ] );
+                    left_wall( MAGENTA, steps );
                     break;
                 case '#':
-                    gpu_quadrilateral( GREY1, perspectivex[ steps - 1 ], perspectivey[ steps -1 ], perspectivex[ steps ], perspectivey[ steps ],
-                                                perspectivex[ steps ], 480 - perspectivey[ steps ], perspectivex[ steps - 1 ], 480 - perspectivey[ steps -1 ] );
+                    left_wall( GREY1, steps );
                     break;
                 default:
                     break;
             }
             switch( whatisright( currentx, currenty, direction, steps ) ) {
                 case 'X':
-                    gpu_quadrilateral( YELLOW, 640 - perspectivex[ steps - 1 ], perspectivey[ steps - 1 ], 640 - perspectivex[ steps - 1  ], 480 - perspectivey[ steps - 1 ],
-                                                640 - perspectivex[ steps ], 480 - perspectivey[ steps ], 640 - perspectivex[ steps ], perspectivey[ steps ] );
+                    right_wall( YELLOW, steps );
                     break;
                 case ' ':
                     // GAP
-                    gpu_rectangle( GREY2, 640 - perspectivex[ steps ], perspectivey[ steps ], 640, 480 - perspectivey[ steps ] );
+                    gpu_rectangle( GREY2, 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], 640, 480 - perspectivey[ steps + 1 ] );
                     break;
                 case 'E':
-                    gpu_quadrilateral( MAGENTA, 640 - perspectivex[ steps - 1 ], perspectivey[ steps - 1 ], 640 - perspectivex[ steps - 1  ], 480 - perspectivey[ steps - 1 ],
-                                                640 - perspectivex[ steps ], 480 - perspectivey[ steps ], 640 - perspectivex[ steps ], perspectivey[ steps ] );
+                    right_wall( MAGENTA, steps );
                     break;
                 case '#':
-                    gpu_quadrilateral( GREY1, 640 - perspectivex[ steps - 1 ], perspectivey[ steps - 1 ], 640 - perspectivex[ steps - 1  ], 480 - perspectivey[ steps - 1 ],
-                                                640 - perspectivex[ steps ], 480 - perspectivey[ steps ], 640 - perspectivex[ steps ], perspectivey[ steps ] );
+                    right_wall( GREY1, steps );
                     break;
                 default:
                     break;
