@@ -297,7 +297,8 @@ algorithm main(
 
     // RISC-V PROGRAM COUNTER
     uint32  pc = 0;
-    uint32  pcPLUS2 := pc + 2;
+    uint32  pcPLUS2 = uninitialized;
+    uint32  nextPC = uninitialized;
     uint1   compressed = uninitialized;
     uint1   floatingpoint = uninitialized;
     uint1   takeBranch = uninitialized;
@@ -324,13 +325,13 @@ algorithm main(
     uint1   writeRegister = uninitialized;
 
     // RISC-V OFFSETS and ADDRESSES - calculated by the address generation unit
-    uint32  branchOffset = uninitialized;
-    uint32  jumpOffset = uninitialized;
+    uint32  branchAddress = uninitialized;
+    uint32  jumpAddress = uninitialized;
     uint32  loadAddress = uninitialized;
     uint32  loadAddressPLUS2 = uninitialized;
     uint32  storeAddress = uninitialized;
     uint32  storeAddressPLUS2 = uninitialized;
-    uint32  auipcluiBase = uninitialized;
+    uint32  AUIPCLUI = uninitialized;
 
     // Setup Memory Mapped I/O
     memmap_io IO_Map (
@@ -414,12 +415,19 @@ algorithm main(
     // RISC-V ADDRESS GENERATOR
     addressgenerator AGU <@clock_cpuunit> (
         instruction <: instruction,
+        opCode <: opCode,
+        pc <:: pc,
+        compressed <: compressed,
+
         sourceReg1 <: sourceReg1,
         immediateValue <: immediateValue,
 
-        branchOffset :> branchOffset,
-        jumpOffset :> jumpOffset,
-        auipcluiBase :> auipcluiBase,
+        pcPLUS2 :> pcPLUS2,
+        nextPC :> nextPC,
+
+        branchAddress :> branchAddress,
+        jumpAddress :> jumpAddress,
+        AUIPCLUI :> AUIPCLUI,
         storeAddress :> storeAddress,
         storeAddressPLUS2 :> storeAddressPLUS2,
         loadAddress :> loadAddress,
@@ -515,7 +523,7 @@ algorithm main(
                     case 1b0: {
                         // LOAD executes even if rd == 0 as may be discarding values in a buffer
                         writeRegister = 1;
-                        if( ( loadAddress[28,1] == 0 ) && loadAddress[15,1] ) {
+                        if( ~loadAddress[28,1] && loadAddress[15,1] ) {
                             // I/O
                             IO_Map.memoryAddress = loadAddress[0,16];
                             IO_Map.memoryRead = 1;
@@ -561,7 +569,7 @@ algorithm main(
                     }
                     case 1b1: {
                         // STORE
-                        if( ( storeAddress[28,1] == 0 ) && storeAddress[15,1] ) {
+                        if( ~storeAddress[28,1] && storeAddress[15,1] ) {
                             // I/O
                             IO_Map.memoryAddress = storeAddress[0,16];
                             IO_Map.writeData = __unsigned( sourceReg2[0,16] );
@@ -625,7 +633,7 @@ algorithm main(
                         }
                     }
                     // AUIPC LUI
-                    case 1b1: { result = auipcluiBase + ( opCode[5,1] ? 0 : pc ); }
+                    case 1b1: { result = AUIPCLUI; }
                 }
             }
 
@@ -635,7 +643,7 @@ algorithm main(
                     // BRANCH on CONDITION
                     case 1b0: { takeBranch = branchcomparisonunit.takeBranch; }
                     // JUMP AND LINK / JUMP AND LINK REGISTER
-                    case 1b1: { writeRegister = 1; incPC = 0; result = pc + ( compressed ? 2 : 4 ); }
+                    case 1b1: { writeRegister = 1; incPC = 0; result = nextPC; }
                 }
             }
 
@@ -647,7 +655,7 @@ algorithm main(
         registersW.writeRegister = writeRegister;
 
         // UPDATE PC
-        pc = ( incPC ) ? pc + ( ( takeBranch) ? branchOffset : ( compressed ? 2 : 4 ) ) : ( opCode[3,1] ? jumpOffset + pc : loadAddress );
+        pc = ( incPC ) ? ( takeBranch ? branchAddress : nextPC ) : ( opCode[3,1] ? jumpAddress : loadAddress );
     } // RISC-V
 }
 
@@ -659,7 +667,7 @@ algorithm registersWRITE (
     input   int32   result,
 
     simple_dualbram_port1   registers_1,
-    simple_dualbram_port1   registers_2,
+    simple_dualbram_port1   registers_2
 ) <autorun> {
     registers_1.wenable1 := 1;
     registers_2.wenable1 := 1;
@@ -686,7 +694,7 @@ algorithm registersREAD (
     output!  int32   sourceReg2,
 
     simple_dualbram_port0   registers_1,
-    simple_dualbram_port0   registers_2,
+    simple_dualbram_port0   registers_2
 ) <autorun> {
     registers_1.addr0 := rs1 + ( floatingpoint ? 32 : 0 );
     registers_2.addr0 := rs2 + ( floatingpoint ? 32 : 0 );
@@ -729,22 +737,31 @@ algorithm decoder (
 // RISC-V ADDRESS BASE/OFFSET GENERATOR
 algorithm addressgenerator (
     input   uint32  instruction,
+    input   uint7   opCode,
+    input   uint32  pc,
+    input   uint1   compressed,
+
     input!  int32   sourceReg1,
     input!  uint32  immediateValue,
 
-    output  uint32  branchOffset,
-    output  uint32  jumpOffset,
-    output  uint32  auipcluiBase,
-    output!  uint32  storeAddress,
-    output!  uint32  storeAddressPLUS2,
-    output!  uint32  loadAddress,
-    output!  uint32  loadAddressPLUS2
+    output  uint32  pcPLUS2,
+    output  uint32  nextPC,
+    output  uint32  branchAddress,
+    output  uint32  jumpAddress,
+    output  uint32  AUIPCLUI,
+    output! uint32  storeAddress,
+    output! uint32  storeAddressPLUS2,
+    output! uint32  loadAddress,
+    output! uint32  loadAddressPLUS2
 ) <autorun> {
-    branchOffset := { Btype(instruction).immediate_bits_12 ? 20b11111111111111111111 : 20b00000000000000000000, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 };
+    pcPLUS2 := pc + 2;
+    nextPC := pc + ( compressed ? 2 : 4 );
 
-    jumpOffset := { Jtype(instruction).immediate_bits_20 ? 12b111111111111 : 12b000000000000, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 };
+    branchAddress := { Btype(instruction).immediate_bits_12 ? 20b11111111111111111111 : 20b00000000000000000000, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } + pc;
 
-    auipcluiBase := { Utype(instruction).immediate_bits_31_12, 12b0 };
+    jumpAddress := { Jtype(instruction).immediate_bits_20 ? 12b111111111111 : 12b000000000000, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + pc;
+
+    AUIPCLUI := { Utype(instruction).immediate_bits_31_12, 12b0 } + ( opCode[5,1] ? 0 : pc );
 
     storeAddress := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
     storeAddressPLUS2 := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1 + 2;
