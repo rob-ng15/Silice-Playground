@@ -388,11 +388,9 @@ algorithm main(
     // RISC-V ADDRESS GENERATOR
     addressgenerator AGU <@clock_cpuunit> (
         instruction <: instruction,
-        immediateValue <: immediateValue,
-        sourceReg1 <: sourceReg1,
 
         branchOffset :> branchOffset,
-        jumpOffset :> jumpOffset
+        jumpOffset :> jumpOffset,
     );
 
     // RISC-V BASE ALU
@@ -422,10 +420,12 @@ algorithm main(
 
     // BRANCH DECIDER, MULTIPLICATION and DIVISION units
     divideremainder dividerunit <@clock_copro> (
+        function3 <: function3,
         dividend <: sourceReg1,
         divisor <: sourceReg2
     );
     multiplicationDSP multiplicationuint <@clock_copro> (
+        function3 <: function3,
         factor_1 <: sourceReg1,
         factor_2 <: sourceReg2
     );
@@ -577,17 +577,15 @@ algorithm main(
                             switch( function3[2,1] ) {
                                 case 1b0: {
                                     // MULTIPLICATION
-                                    multiplicationuint.dosigned =  function3[1,1] ? ( function3[0,1] ? 0 : 2 ) : 1;
                                     multiplicationuint.start = 1;
                                     while( multiplicationuint.active ) {}
-                                    result = ( function3 == 0 ) ? multiplicationuint.product[0,32] : multiplicationuint.product[32,32];
+                                    result = multiplicationuint.result;
                                 }
                                 case 1b1: {
                                     // DIVISION / REMAINDER
-                                    dividerunit.dosigned = function3[0,1] ? 0 : 1;
                                     dividerunit.start = 1;
                                     while( dividerunit.active ) {}
-                                    result = function3[1,1] ? dividerunit.remainder : dividerunit.quotient;
+                                    result = dividerunit.result;
                                 }
                             }
                         } else {
@@ -659,21 +657,13 @@ algorithm decoder (
 // RISC-V ADDRESS GENERATOR
 algorithm addressgenerator (
     input   uint32  instruction,
-    input   int32   immediateValue,
-    input   int32   sourceReg1,
 
     output  uint32  branchOffset,
     output  uint32  jumpOffset,
-    output  uint32  loadAddress,
-    output  uint32  storeAddress
 ) <autorun> {
     branchOffset := { Btype(instruction).immediate_bits_12 ? 20b11111111111111111111 : 20b00000000000000000000, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 };
 
     jumpOffset := { Jtype(instruction).immediate_bits_20 ? 12b111111111111 : 12b000000000000, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 };
-
-    loadAddress := immediateValue + sourceReg1;
-
-    storeAddress := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
 
     while(1) {
     }
