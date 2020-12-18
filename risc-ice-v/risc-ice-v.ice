@@ -453,20 +453,21 @@ algorithm main(
         incPC = 1;
         floatingpoint = 0;
 
-        // FETCH + EXPAND COMPRESSED INSTRUCTIONS
+        // FETCH + EXPAND COMPRESSED INSTRUCTIONS ( mark as using instruction cache )
         ram.address = pc;
         ram.Icache = 1;
         ram.readflag = 1;
         while( ram.busy ) {}
         switch( ram.readdata[0,2] ) {
+            // COMPRESSED 16 bit INSTRUCTION
             case 2b00: { compressed = 1; compressedunit00.instruction16 = ram.readdata; instruction = compressedunit00.instruction32; }
             case 2b01: { compressed = 1; compressedunit01.instruction16 = ram.readdata; instruction = compressedunit01.instruction32; }
             case 2b10: { compressed = 1; compressedunit10.instruction16 = ram.readdata; instruction = compressedunit10.instruction32; }
             case 2b11: {
+                // STANDARD 32 bit INSTRUCTION, fetch remaining 16 bits
                 compressed = 0;
                 combiner161632unit.LOW = ram.readdata;
                 ram.address = pc + 2;
-                ram.Icache = 1;
                 ram.readflag = 1;
                 while( ram.busy ) {}
                 combiner161632unit.HIGH = ram.readdata;
@@ -503,7 +504,7 @@ algorithm main(
                                 }
                             }
                         } else {
-                            // SDRAM or BRAM
+                            // SDRAM or BRAM ( mark as using data cache )
                             ram.address = loadAddress;
                             ram.Icache = 0;
                             ram.readflag = 1;
@@ -554,7 +555,7 @@ algorithm main(
                                 case 2b10: {
                                     ram.writedata = sourceReg2[0,16];
                                     ram.writeflag = 1;
-                                    ++:
+                                    while( ram.busy ) {}
                                     ram.address = storeAddress + 2;
                                     ram.writedata = sourceReg2[16,16];
                                     ram.writeflag = 1;
