@@ -334,6 +334,7 @@ algorithm main(
     uint32  AUIPCLUI = uninitialized;
 
     // Setup Memory Mapped I/O
+    uint16  IOreadData = uninitialized;
     memmap_io IO_Map (
         leds :> leds,
         btns <: btns,
@@ -366,7 +367,10 @@ algorithm main(
         clock_25mhz <: clock,
         video_clock <: video_clock,
         gpu_clock <: clock_gpu,
-        video_reset <: video_reset
+        video_reset <: video_reset,
+
+        // OUTPUT
+        readData :> IOreadData
     );
 
     // RISC-V REGISTER WRITER
@@ -447,16 +451,21 @@ algorithm main(
         sourceReg2 <: sourceReg2
     );
 
-    // SIGN EXTENDER UNIT
-    signextender8 signextender8unit <@clock_copro> (
-        function3 <: function3
+    // SIGN EXTENDER UNITS
+    signextender8 signextender8unitIO <@clock_copro> (
+        function3 <: function3,
+        nosign <: IOreadData
     );
-    signextender16 signextender16unit <@clock_copro> (
-        function3 <: function3
+    signextender16 signextender16unitIO <@clock_copro> (
+        function3 <: function3,
+        nosign <: IOreadData
     );
 
-    // COMBINER UNIT - TWO 16 BIT HALF WORDS TO 32 BIT WORD
+    // COMBINER UNITS - TWO 16 BIT HALF WORDS TO 32 BIT WORD
     halfhalfword combiner161632unit <@clock_cpuunit> ();
+    halfhalfword combiner161632unitIO <@clock_cpuunit> (
+        LOW <: IOreadData
+    );
 
     // BRANCH DECIDER, MULTIPLICATION and DIVISION units
     divideremainder dividerunit <@clock_copro> (
@@ -527,9 +536,8 @@ algorithm main(
                             IO_Map.memoryAddress = loadAddress[0,16];
                             IO_Map.memoryRead = 1;
                             switch( function3 & 3 ) {
-                                case 2b00: { signextender8unit.nosign = IO_Map.readData[0,8]; result = signextender8unit.withsign; }
-                                case 2b01: { signextender16unit.nosign = IO_Map.readData; result = signextender16unit.withsign; }
-                                case 2b10: { combiner161632unit.LOW = IO_Map.readData; result = combiner161632unit.ZEROLOW; }
+                                case 2b10: { result = combiner161632unitIO.ZEROLOW; }
+                                default: { result = ( ( function3 & 3 ) == 0 ) ? signextender8unitIO.withsign : signextender8unitIO.withsign; }
                             }
                         } else {
                             // SDRAM or BRAM ( mark as using data cache )
@@ -538,8 +546,6 @@ algorithm main(
                             ram.readflag = 1;
                             while( ram.busy ) {}
                             switch( function3 & 3 ) {
-                                case 2b00: { result = ram.readdata8; }
-                                case 2b01: { result = ram.readdata16; }
                                 case 2b10: {
                                     // 32 bit READ as 2 x 16 bit
                                     combiner161632unit.LOW = ram.readdata;
@@ -548,6 +554,10 @@ algorithm main(
                                     while( ram.busy ) {}
                                     combiner161632unit.HIGH = ram.readdata;
                                     result = combiner161632unit.HIGHLOW;
+                                }
+                                default: {
+                                    // 8/16 bit with optional sign extension
+                                    result = ( ( function3 & 3 ) == 0 ) ? ram.readdata8 : ram.readdata16;
                                 }
                             }
                         }
@@ -563,28 +573,19 @@ algorithm main(
                             // SDRAM or BRAM
                             ram.address = storeAddress;
                             ram.Icache = 0;
-                            switch( function3 & 3 ) {
-                                case 2b00: {
-                                    // 8 bit as READ THEN WRITE, MEMORY CONTROLLER IS 16 bit
-                                    ram.readflag = 1;
-                                    while( ram.busy ) {}
-                                    ram.writedata = sourceReg2[0,8];
-                                    ram.writeflag = 1;
-                                }
-                                case 2b01: {
-                                    // 16 bit WRITE
-                                    ram.writedata = sourceReg2[0,16];
-                                    ram.writeflag = 1;
-                                }
-                                case 2b10: {
-                                    // 32 bit WRITE as 2 x 16 bit
-                                    ram.writedata = sourceReg2[0,16];
-                                    ram.writeflag = 1;
-                                    while( ram.busy ) {}
-                                    ram.address = storeAddressPLUS2;
-                                    ram.writedata = sourceReg2[16,16];
-                                    ram.writeflag = 1;
-                                }
+                            // 8 bit, READ then WRITE, 16 bit just WRITE, 32 bit just WRITE LOWER 16 bits
+                            if( ( function3 & 3 ) == 0 ) {
+                                ram.readflag = 1;
+                                while( ram.busy ) {}
+                            }
+                            ram.writedata = sourceReg2[0,16];
+                            ram.writeflag = 1;
+                            // 32 bit, WRITE UPPER 16 bits
+                            if(  ( function3 & 3 ) == 2b10 ) {
+                                while( ram.busy ) {}
+                                ram.address = storeAddressPLUS2;
+                                ram.writedata = sourceReg2[16,16];
+                                ram.writeflag = 1;
                             }
                         }
                     }
