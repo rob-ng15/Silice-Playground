@@ -1116,10 +1116,10 @@ algorithm ramcontroller (
     ram.addr := address[1,15];
 
     // RETURN RESULTS FROM BRAM OR CACHE
-    // 16bit NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
+    // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
     readdata := address[28,1] ? ( Icache ? Icachedata.rdata : Dcachedata.rdata ) : ram.rdata;
 
-    // 8/16 bit OPTIONAL SIGN EXTENSION
+    // 8/16 bit READ WITH OPTIONAL SIGN EXTENSION
     signextender8unit.nosign := address[28,1] ? ( Dcachedata.rdata[address[0,1] ? 8 : 0, 8] ) : ( ram.rdata[address[0,1] ? 8 : 0, 8] );
     signextender16unit.nosign := address[28,1] ? Dcachedata.rdata : ram.rdata;
     readdata8 := signextender8unit.withsign;
@@ -1136,13 +1136,15 @@ algorithm ramcontroller (
                 active = 1;
                 // READ FROM SDRAM
                 // WRITE RESULT TO ICACHE or DCACHE
-                if( Icache ) {
-                    // ICACHE WRITE
-                    Icachetag.wenable = 1;
-                } else {
-                    // DCACHE WRITE
-                    Dcachetag.wenable = 1;
-                }
+                Icachetag.wenable = Icache;
+                Dcachetag.wenable = ~Icache;
+                //if( Icache ) {
+                //    // ICACHE WRITE
+                //    Icachetag.wenable = 1;
+                //} else {
+                //    // DCACHE WRITE
+                //    Dcachetag.wenable = 1;
+                //}
                 active = 0;
             }
         }
@@ -1152,14 +1154,9 @@ algorithm ramcontroller (
                 // SDRAM
                 active = 1;
                 // WRITE INTO CACHE
-                if( ( function3 & 3 ) == 0 ) {
-                    // 8 bit WRITE - ALREADY READ INTO CACHE
-                    Dcachedata.wdata = address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] };
-                } else {
-                    Dcachedata.wdata = writedata;
-                }
-                Dcachedata.wenable = 1; Dcachetag.wenable = 1;
-
+                Dcachedata.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] } ) : writedata;
+                Dcachedata.wenable = 1;
+                Dcachetag.wenable = 1;
                 // CHECK IF ENTRY IS IN ICACHE AND UPDATE
                 if( Icachetagmatch ) {
                     Icachedata.wdata = Dcachedata.wdata;
@@ -1170,12 +1167,7 @@ algorithm ramcontroller (
                 active = 0;
             } else {
                 // BRAM
-                if( ( function3 & 3 ) == 0 ) {
-                    // 8 bit WRITE
-                    ram.wdata = address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] };
-                } else {
-                    ram.wdata = writedata;
-                }
+                ram.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
                 ram.wenable = 1;
                 active = 0;
             }
