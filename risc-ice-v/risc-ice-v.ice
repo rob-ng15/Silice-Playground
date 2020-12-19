@@ -393,7 +393,9 @@ algorithm main(
     );
 
     // RAM - BRAM and SDRAM
-    ramcontroller ram <@clock_memory> ();
+    ramcontroller ram <@clock_memory> (
+        function3 <: function3
+    );
 
     // COMPRESSED INSTRUCTION EXPANDER
     compressedexpansion00 compressedunit00 <@clock_cpuunit> ();
@@ -525,18 +527,9 @@ algorithm main(
                             IO_Map.memoryAddress = loadAddress[0,16];
                             IO_Map.memoryRead = 1;
                             switch( function3 & 3 ) {
-                                case 2b00: {
-                                    signextender8unit.nosign = IO_Map.readData[0,8];
-                                    result = signextender8unit.withsign;
-                                }
-                                case 2b01: {
-                                    signextender16unit.nosign = IO_Map.readData;
-                                    result = signextender16unit.withsign;
-                                }
-                                case 2b10: {
-                                    combiner161632unit.LOW = IO_Map.readData;
-                                    result = combiner161632unit.ZEROLOW;
-                                }
+                                case 2b00: { signextender8unit.nosign = IO_Map.readData[0,8]; result = signextender8unit.withsign; }
+                                case 2b01: { signextender16unit.nosign = IO_Map.readData; result = signextender16unit.withsign; }
+                                case 2b10: { combiner161632unit.LOW = IO_Map.readData; result = combiner161632unit.ZEROLOW; }
                             }
                         } else {
                             // SDRAM or BRAM ( mark as using data cache )
@@ -545,15 +538,10 @@ algorithm main(
                             ram.readflag = 1;
                             while( ram.busy ) {}
                             switch( function3 & 3 ) {
-                                case 2b00: {
-                                    signextender8unit.nosign = ( ram.readdata[loadAddress[0,1] ? 8 : 0, 8] );
-                                    result = signextender8unit.withsign;
-                               }
-                                case 2b01: {
-                                    signextender16unit.nosign = ram.readdata;
-                                    result = signextender16unit.withsign;
-                                }
+                                case 2b00: { result = ram.readdata8; }
+                                case 2b01: { result = ram.readdata16; }
                                 case 2b10: {
+                                    // 32 bit READ as 2 x 16 bit
                                     combiner161632unit.LOW = ram.readdata;
                                     ram.address = loadAddressPLUS2;
                                     ram.readflag = 1;
@@ -567,7 +555,7 @@ algorithm main(
                     case 1b1: {
                         // STORE
                         if( ~storeAddress[28,1] && storeAddress[15,1] ) {
-                            // I/O
+                            // I/O ALWAYS 16bit WRITES
                             IO_Map.memoryAddress = storeAddress[0,16];
                             IO_Map.writeData = __unsigned( sourceReg2[0,16] );
                             IO_Map.memoryWrite = 1;
@@ -588,6 +576,7 @@ algorithm main(
                                     ram.writeflag = 1;
                                 }
                                 case 2b10: {
+                                    // 32 bit WRITE as 2 x 16 bit
                                     ram.writedata = sourceReg2[0,16];
                                     ram.writeflag = 1;
                                     while( ram.busy ) {}
@@ -1063,6 +1052,7 @@ algorithm halfhalfword (
     }
 }
 
+
 // RAM - BRAM controller and SDRAM controller ( with simple write-through cache )
 // MEMORY IS 16 BIT, 8 BIT WRITES HAVE TO BE HANDLED BY THE CPU DOING READ MODIFY WRITE
 // NOTES: AT PRESENT NO INTERACTION WITH THE SDRAM, CACHE ACTS AS 4K x 16 bit memory for proof of concept
@@ -1070,11 +1060,17 @@ algorithm halfhalfword (
 // NEEDS A BUSY FLAG FOR WHEN CACHE MISS AND FOR SDRAM WRITES TO TAKE PLACE
 algorithm ramcontroller (
     input   uint32  address,
-    input   uint16  writedata,
-    output  uint16  readdata,
+    input   uint3   function3,
+
     input   uint1   writeflag,
+    input   uint16  writedata,
+
     input   uint1   readflag,
     input   uint1   Icache,
+    output  uint16  readdata,
+    output  int32   readdata8,
+    output  int32   readdata16,
+
     output  uint1   busy
 ) <autorun> {
     // RISC-V RAM and BIOS
@@ -1098,6 +1094,14 @@ algorithm ramcontroller (
     uint1   Icachetagmatch := Icachetag.rdata == { 1b1, address[12,13] };
     uint1   Dcachetagmatch := Dcachetag.rdata == { 1b1, address[12,13] };
 
+    // SIGN EXTENDER UNIT
+    signextender8 signextender8unit (
+        function3 <: function3
+    );
+    signextender16 signextender16unit (
+        function3 <: function3
+    );
+
     busy := ( readflag || writeflag ) ? 1 : active;
 
     // FLAGS FOR CACHE ACCESS
@@ -1111,7 +1115,14 @@ algorithm ramcontroller (
     ram.addr := address[1,15];
 
     // RETURN RESULTS FROM BRAM OR CACHE
+    // 16bit NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
     readdata := address[28,1] ? ( Icache ? Icachedata.rdata : Dcachedata.rdata ) : ram.rdata;
+
+    // 8/16 bit OPTIONAL SIGN EXTENSION
+    signextender8unit.nosign := address[28,1] ? ( Dcachedata.rdata[address[0,1] ? 8 : 0, 8] ) : ( ram.rdata[address[0,1] ? 8 : 0, 8] );
+    signextender16unit.nosign := address[28,1] ? Dcachedata.rdata : ram.rdata;
+    readdata8 := signextender8unit.withsign;
+    readdata16 := signextender16unit.withsign;
 
     while(1) {
         if( readflag && address[28,1] ) {
