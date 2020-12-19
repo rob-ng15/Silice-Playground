@@ -555,7 +555,7 @@ algorithm main(
                     case 1b1: {
                         // STORE
                         if( ~storeAddress[28,1] && storeAddress[15,1] ) {
-                            // I/O ALWAYS 16bit WRITES
+                            // I/O ALWAYS 16 bit WRITES
                             IO_Map.memoryAddress = storeAddress[0,16];
                             IO_Map.writeData = __unsigned( sourceReg2[0,16] );
                             IO_Map.memoryWrite = 1;
@@ -565,13 +565,14 @@ algorithm main(
                             ram.Icache = 0;
                             switch( function3 & 3 ) {
                                 case 2b00: {
-                                    // 8 BIT, READ MODIFY WRITE
+                                    // 8 bit as READ THEN WRITE, MEMORY CONTROLLER IS 16 bit
                                     ram.readflag = 1;
                                     while( ram.busy ) {}
-                                    ram.writedata = storeAddress[0,1] ? { sourceReg2[0,8], ram.readdata[0,8] } : { ram.readdata[8,8], sourceReg2[0,8] };
+                                    ram.writedata = sourceReg2[0,8];
                                     ram.writeflag = 1;
                                 }
                                 case 2b01: {
+                                    // 16 bit WRITE
                                     ram.writedata = sourceReg2[0,16];
                                     ram.writeflag = 1;
                                 }
@@ -1052,7 +1053,6 @@ algorithm halfhalfword (
     }
 }
 
-
 // RAM - BRAM controller and SDRAM controller ( with simple write-through cache )
 // MEMORY IS 16 BIT, 8 BIT WRITES HAVE TO BE HANDLED BY THE CPU DOING READ MODIFY WRITE
 // NOTES: AT PRESENT NO INTERACTION WITH THE SDRAM, CACHE ACTS AS 4K x 16 bit memory for proof of concept
@@ -1151,12 +1151,17 @@ algorithm ramcontroller (
                 // SDRAM
                 active = 1;
                 // WRITE INTO CACHE
-                Dcachedata.wdata = writedata;
+                if( ( function3 & 3 ) == 0 ) {
+                    // 8 bit WRITE - ALREADY READ INTO CACHE
+                    Dcachedata.wdata = address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] };
+                } else {
+                    Dcachedata.wdata = writedata;
+                }
                 Dcachedata.wenable = 1; Dcachetag.wenable = 1;
 
                 // CHECK IF ENTRY IS IN ICACHE AND UPDATE
                 if( Icachetagmatch ) {
-                    Icachedata.wdata = writedata;
+                    Icachedata.wdata = Dcachedata.wdata;
                     Icachedata.wenable = 1;
                 }
 
@@ -1164,7 +1169,12 @@ algorithm ramcontroller (
                 active = 0;
             } else {
                 // BRAM
-                ram.wdata = writedata;
+                if( ( function3 & 3 ) == 0 ) {
+                    // 8 bit WRITE
+                    ram.wdata = address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] };
+                } else {
+                    ram.wdata = writedata;
+                }
                 ram.wenable = 1;
                 active = 0;
             }
