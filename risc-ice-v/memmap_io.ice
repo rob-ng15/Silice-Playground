@@ -63,7 +63,6 @@ algorithm memmap_io (
 
     // CLOCKS
     input   uint1   clock_50mhz,
-    input   uint1   clock_25mhz,
     input   uint1   video_clock,
     input   uint1   gpu_clock,
     input   uint1   video_reset,
@@ -95,12 +94,12 @@ algorithm memmap_io (
     // UART tx and rx
     // UART written in Silice by https://github.com/sylefeb/Silice
     uart_out uo;
-    uart_sender usend <@clock_25mhz> (
+    uart_sender usend <@clock_50mhz> (
         io      <:> uo,
         uart_tx :>  uart_tx
     );
     uart_in ui;
-    uart_receiver urecv <@clock_25mhz> (
+    uart_receiver urecv <@clock_50mhz> (
         io      <:> ui,
         uart_rx <:  uart_rx
     );
@@ -306,7 +305,7 @@ algorithm memmap_io (
         audio_output :> audio_r
     );
 
-    gpu gpu_processor <@video_clock,!video_reset> (
+    gpu gpu_processor <@gpu_clock> (
         bitmap_x_write :> bitmap_x_write,
         bitmap_y_write :> bitmap_y_write,
         bitmap_colour_write :> bitmap_colour_write,
@@ -317,7 +316,7 @@ algorithm memmap_io (
     simple_dualport_bram uint8 sdbuffer[512] = uninitialized;
 
     sdcardio sdcio;
-    sdcard sd(
+    sdcard sd <@clock_50mhz> (
         // pins
         sd_clk      :> sd_clk,
         sd_mosi     :> sd_mosi,
@@ -339,6 +338,10 @@ algorithm memmap_io (
     uint8   uartOutBufferNext = 0;
     uint8   uartOutBufferTop = 0;
     uint8   newuartOutBufferTop = 0;
+
+    // LATCH MEMORYREAD MEMORYWRITE
+    uint1   LATCHmemoryRead = uninitialized;
+    uint1   LATCHmemoryWrite = uninitialized;
 
     // register buttons
     uint$NUM_BTNS$ reg_btns = 0;
@@ -367,20 +370,20 @@ algorithm memmap_io (
     rng.resetRandom := 0;
 
     // RESET Co-Processor Controls
-    background_generator.background_write := 0;
-    tile_map.tm_write := 0;
-    tile_map.tm_scrollwrap := 0;
-    lower_sprites.sprite_layer_write := 0;
-    lower_sprites.sprite_writer_active := 0;
-    bitmap_window.bitmap_write_offset := 0;
-    gpu_processor.gpu_write := 0;
-    gpu_processor.draw_vector := 0;
-    upper_sprites.sprite_layer_write := 0;
-    upper_sprites.sprite_writer_active := 0;
-    character_map_window.tpu_write := 0;
-    terminal_window.terminal_write := 0;
-    apu_processor_L.apu_write := 0;
-    apu_processor_R.apu_write := 0;
+    //background_generator.background_write := 0;
+    //tile_map.tm_write := 0;
+    //tile_map.tm_scrollwrap := 0;
+    //lower_sprites.sprite_layer_write := 0;
+    //lower_sprites.sprite_writer_active := 0;
+    //bitmap_window.bitmap_write_offset := 0;
+    //gpu_processor.gpu_write := 0;
+    //gpu_processor.draw_vector := 0;
+    //upper_sprites.sprite_layer_write := 0;
+    //upper_sprites.sprite_writer_active := 0;
+    //character_map_window.tpu_write := 0;
+    //terminal_window.terminal_write := 0;
+    //apu_processor_L.apu_write := 0;
+    //apu_processor_R.apu_write := 0;
 
     // UART input and output buffering
     uartInBuffer.wdata1  := ui.data_out;
@@ -399,7 +402,7 @@ algorithm memmap_io (
         uartOutBufferTop = newuartOutBufferTop;
 
         // READ IO Memory
-        if( memoryRead ) {
+        if( memoryRead && ~LATCHmemoryRead ) {
             switch( memoryAddress ) {
                 // UART, LEDS, BUTTONS and CLOCK
                 case 16h8000: { readData = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1; }
@@ -490,7 +493,7 @@ algorithm memmap_io (
         }
 
         // WRITE IO Memory
-        if( memoryWrite ) {
+        if( memoryWrite && ~LATCHmemoryWrite ) {
             switch( memoryAddress ) {
                 // UART, LEDS
                 case 16h8000: { uartOutBuffer.wdata1 = writeData[0,8]; newuartOutBufferTop = uartOutBufferTop + 1; }
@@ -610,5 +613,27 @@ algorithm memmap_io (
             }
         }
 
+        // RESET Co-Processor Controls
+        // IO memory map runs at 50MHz, display co-processors at 25MHz
+        // Delay to reset co-processors therefore required
+        if( ~memoryWrite && ~LATCHmemoryWrite ) {
+            background_generator.background_write = 0;
+            tile_map.tm_write = 0;
+            tile_map.tm_scrollwrap = 0;
+            lower_sprites.sprite_layer_write = 0;
+            lower_sprites.sprite_writer_active = 0;
+            bitmap_window.bitmap_write_offset = 0;
+            gpu_processor.gpu_write = 0;
+            gpu_processor.draw_vector = 0;
+            upper_sprites.sprite_layer_write = 0;
+            upper_sprites.sprite_writer_active = 0;
+            character_map_window.tpu_write = 0;
+            terminal_window.terminal_write = 0;
+            apu_processor_L.apu_write = 0;
+            apu_processor_R.apu_write = 0;
+        }
+
+        LATCHmemoryRead = memoryRead;
+        LATCHmemoryWrite = memoryWrite;
     } // while(1)
 }

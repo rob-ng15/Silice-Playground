@@ -1,4 +1,4 @@
-$$ uart_in_clock_freq_mhz = 25
+$$ uart_in_clock_freq_mhz = 50
 
 // HDMI + UART + SDCARD + SDRAM Driver Includes
 $include('../common/hdmi.ice')

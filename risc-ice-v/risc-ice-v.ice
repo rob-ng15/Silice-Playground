@@ -228,14 +228,15 @@ algorithm main(
     uint1   pll_lock_AUX = uninitialized;
     uint1   pll_lock_SDRAM = uninitialized;
 
-    uint1 clock_timers = uninitialized;
-    uint1 clock_gpu = uninitialized;
-    uint1 clock_copro = uninitialized;
-    uint1 clock_memory = uninitialized;
-    uint1 clock_cpuunit = uninitialized;
-    uint1 clock_sdram = uninitialized;
+    uint1   clock_IO = uninitialized;
+    uint1   clock_timers = uninitialized;
+    uint1   clock_gpu = uninitialized;
+    uint1   clock_copro = uninitialized;
+    uint1   clock_memory = uninitialized;
+    uint1   clock_cpuunit = uninitialized;
+    uint1   clock_sdram = uninitialized;
 
-    // Generate 50MHz clocks for CPU units ( multiplier, divider, shifter, compressed instruction expander, ALU units )
+    // Generate 50MHz clocks for CPU units
     // 50MHz clock for the BRAM and CACHE controller
     ulx3s_clk_risc_ice_v_CPU clk_gen_CPU (
         clkin    <: clock,
@@ -248,6 +249,7 @@ algorithm main(
     // Generate the 25MHz video clock, 50MHz clock for timers/audio/random number generator and 50MHz GPU clock
     ulx3s_clk_risc_ice_v_AUX clk_gen_AUX (
         clkin    <: clock,
+        clkIO :> clock_IO,
         clkTIMER  :> clock_timers,
         clkVIDEO  :> video_clock,
         clkGPU :> clock_gpu,
@@ -335,7 +337,7 @@ algorithm main(
 
     // Setup Memory Mapped I/O
     uint16  IOreadData = uninitialized;
-    memmap_io IO_Map (
+    memmap_io IO_Map <@clock_IO> (
         leds :> leds,
         btns <: btns,
 
@@ -363,8 +365,7 @@ algorithm main(
         pix_y <: pix_y,
 
         // CLOCKS
-        clock_50mhz <: clock_timers,
-        clock_25mhz <: clock,
+        clock_50mhz <: clock_IO,
         video_clock <: video_clock,
         gpu_clock <: clock_gpu,
         video_reset <: video_reset,
@@ -537,7 +538,7 @@ algorithm main(
                             IO_Map.memoryRead = 1;
                             switch( function3 & 3 ) {
                                 case 2b10: { result = combiner161632unitIO.ZEROLOW; }
-                                default: { result = ( ( function3 & 3 ) == 0 ) ? signextender8unitIO.withsign : signextender8unitIO.withsign; }
+                                default: { result = ( ( function3 & 3 ) == 0 ) ? signextender8unitIO.withsign : signextender16unitIO.withsign; }
                             }
                         } else {
                             // SDRAM or BRAM ( mark as using data cache )

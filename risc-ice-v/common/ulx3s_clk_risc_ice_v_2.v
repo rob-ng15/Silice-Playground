@@ -1,9 +1,10 @@
 module ulx3s_clk_risc_ice_v_AUX
 (
-    input clkin, // 25 MHz, 0 deg
-    output clkTIMER, // 50 MHz, 0 deg        // TIMERS RANDOM AUDIO SDCARD
-    output clkVIDEO, // 25 MHz, 0 deg        // VIDEO
-    output clkGPU, // 50 MHz, 0 deg        // GPU
+    input clkin,        // 25 MHz, 0 deg
+    output clkIO,       // 50 MHz, 0 deg        // I/O UART SDCARD
+    output clkTIMER,    // 50 MHz, 0 deg        // TIMERS RANDOM AUDIO SDCARD
+    output clkVIDEO,    // 25 MHz, 0 deg        // VIDEO
+    output clkGPU,      // 50 MHz, 0 deg        // GPU
     output locked
 );
 (* FREQUENCY_PIN_CLKI="25" *)
@@ -32,6 +33,10 @@ EHXPLLL #(
         .CLKOS2_DIV(12),
         .CLKOS2_CPHASE(5),
         .CLKOS2_FPHASE(0),
+        .CLKOS3_ENABLE("ENABLED"),
+        .CLKOS3_DIV(12),
+        .CLKOS3_CPHASE(5),
+        .CLKOS3_FPHASE(0),
         .FEEDBK_PATH("CLKOP"),
         .CLKFB_DIV(2)
     ) pll_i (
@@ -41,6 +46,7 @@ EHXPLLL #(
         .CLKOP(clkTIMER),
         .CLKOS(clkVIDEO),
         .CLKOS2(clkGPU),
+        .CLKOS3(clkIO),
         .CLKFB(clkTIMER),
         .CLKINTFB(),
         .PHASESEL0(1'b0),
