@@ -226,6 +226,19 @@ unsigned char random_colour( void )
     return( red * 16 + green * 4 + blue );
 }
 
+// DRAW GAME OVER IN LARGE MULTICOLOURED LETTERS
+void game_over( void )
+{
+    gpu_character_blit( random_colour(), 176, 224, 'G', 2 );
+    gpu_character_blit( random_colour(), 208, 232, 'A', 2 );
+    gpu_character_blit( random_colour(), 240, 224, 'M', 2 );
+    gpu_character_blit( random_colour(), 272, 232, 'E', 2 );
+    gpu_character_blit( random_colour(), 336, 224, 'O', 2 );
+    gpu_character_blit( random_colour(), 368, 232, 'V', 2 );
+    gpu_character_blit( random_colour(), 400, 224, 'E', 2 );
+    gpu_character_blit( random_colour(), 432, 232, 'R', 2 );
+}
+
 // DRAW A RISC-V LOGO AT THE TOP LEFT OF THE SCREEN
 void risc_ice_v_logo( void )
 {
@@ -240,15 +253,6 @@ void risc_ice_v_logo( void )
     gpu_triangle( DKBLUE, 0, 50, 50, 100, 0, 100 );
     gpu_rectangle( DKBLUE, 0, 12, 25, 37 );
     gpu_rectangle( DKBLUE, 0, 37, 8, 100 );
-
-    gpu_character_blit( random_colour(), 176, 224, 'G', 2 );
-    gpu_character_blit( random_colour(), 208, 232, 'A', 2 );
-    gpu_character_blit( random_colour(), 240, 224, 'M', 2 );
-    gpu_character_blit( random_colour(), 272, 232, 'E', 2 );
-    gpu_character_blit( random_colour(), 336, 224, 'O', 2 );
-    gpu_character_blit( random_colour(), 368, 232, 'V', 2 );
-    gpu_character_blit( random_colour(), 400, 224, 'E', 2 );
-    gpu_character_blit( random_colour(), 432, 232, 'R', 2 );
 }
 
 void setup_game()
@@ -378,9 +382,6 @@ void draw_score( void )
 {
     tpu_set( 34, 1, TRANSPARENT, ( lives > 0 ) ? WHITE : GREY1 ); tpu_outputstring( "Score " );
     tpu_outputnumber_short( score );
-
-    tpu_set( 1, 28, TRANSPARENT, ( lives > 0 ) ? WHITE : GREY1 ); tpu_outputstring( "Level " );
-    tpu_outputnumber_short( level );
 }
 
 void draw_lives( void )
@@ -462,6 +463,7 @@ void beepboop( void )
                 } else {
                     tpu_set( 16, 18, TRANSPARENT, BLUE );
                     tpu_outputstring( "         Welcome to Risc-ICE-V Asteroids        " );
+                    game_over();
                 }
                 break;
 
@@ -469,6 +471,7 @@ void beepboop( void )
                 if( lives == 0 ) {
                     tpu_set( 16, 18, TRANSPARENT, CYAN );
                     tpu_outputstring( "By @robng15 (Twitter) from Whitebridge, Scotland" );
+                    game_over();
                 }
                 break;
 
@@ -478,6 +481,7 @@ void beepboop( void )
                 } else {
                     tpu_set( 16, 18, TRANSPARENT, YELLOW );
                     tpu_outputstring( "                 Press UP to start              " );
+                    game_over();
                 }
                 break;
 
@@ -486,6 +490,7 @@ void beepboop( void )
                 if( lives == 0 ) {
                     tpu_set( 16, 18, TRANSPARENT, RED );
                     tpu_outputstring( "          Written in Silice by @sylefeb         " );
+                    game_over();
                 }
                 (void)tilemap_scrollwrapclear( 6 );
                 break;
@@ -811,12 +816,6 @@ void main()
                 if( resetship == 16 )
                     set_ship_sprites( 0 );
                     shipx = 312; shipy = 232; shipdirection = 0;
-            }
-
-            if( lives == 0 ) {
-                // MOVE RISC-V LOGO
-                bitmap_scrollwrap( 3 );
-                bitmap_scrollwrap( 4 );
             }
         }
 

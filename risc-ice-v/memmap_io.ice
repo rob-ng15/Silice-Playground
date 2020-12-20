@@ -151,7 +151,7 @@ algorithm memmap_io (
     uint1   bitmap_write = uninitialized;
 
     // 640 x 480 x 7 bit { Arrggbb } colour bitmap
-    simple_dualport_bram uint7 bitmap<@video_clock,@gpu_clock>[ 307200 ] = uninitialized;
+    simple_dualport_bram uint7 bitmap <@video_clock,@gpu_clock,input!> [ 307200 ] = uninitialized;
     bitmap bitmap_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -313,7 +313,7 @@ algorithm memmap_io (
     );
 
     // SDCARD - Code for the SDCARD from @sylefeb
-    simple_dualport_bram uint8 sdbuffer[512] = uninitialized;
+    simple_dualport_bram uint8 sdbuffer <@clock_50mhz,@clock_50mhz> [512] = uninitialized;
 
     sdcardio sdcio;
     sdcard sd <@clock_50mhz> (
@@ -329,12 +329,12 @@ algorithm memmap_io (
     );
 
     // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartInBuffer[4096] = uninitialized;
+    simple_dualport_bram uint8 uartInBuffer <@clock_50mhz,@clock_50mhz> [4096] = uninitialized;
     uint13  uartInBufferNext = 0;
     uint13  uartInBufferTop = 0;
 
     // UART output FIFO (16 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartOutBuffer[256] = uninitialized;
+    simple_dualport_bram uint8 uartOutBuffer <@clock_50mhz,@clock_50mhz> [256] = uninitialized;
     uint8   uartOutBufferNext = 0;
     uint8   uartOutBufferTop = 0;
     uint8   newuartOutBufferTop = 0;
@@ -347,51 +347,33 @@ algorithm memmap_io (
     uint$NUM_BTNS$ reg_btns = 0;
     reg_btns ::= btns;
 
-    // UART Buffers
-    uartInBuffer.wenable1  := 1;  // always write on port 1
-    uartInBuffer.addr0     := uartInBufferNext; // FIFO reads on next
-    uartInBuffer.addr1     := uartInBufferTop;  // FIFO writes on top
-
+    // UART Buffers ( code from @sylefeb )
+    uartInBuffer.wenable1 := 1;  // always write on port 1
+    uartInBuffer.addr0 := uartInBufferNext; // FIFO reads on next
+    uartInBuffer.addr1 := uartInBufferTop;  // FIFO writes on top
     uartOutBuffer.wenable1 := 1; // always write on port 1
-    uartOutBuffer.addr0    := uartOutBufferNext; // FIFO reads on next
-    uartOutBuffer.addr1    := uartOutBufferTop;  // FIFO writes on top
+    uartOutBuffer.addr0 := uartOutBufferNext; // FIFO reads on next
+    uartOutBuffer.addr1 := uartOutBufferTop;  // FIFO writes on top
+    uartInBuffer.wdata1 := ui.data_out;
+    uartInBufferTop := ( ui.data_out_ready ) ? uartInBufferTop + 1 : uartInBufferTop;
+    uo.data_in := uartOutBuffer.rdata0;
+    uo.data_in_ready := ( uartOutBufferNext != uartOutBufferTop ) && ( !uo.busy );
+    uartOutBufferNext := ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) ) ? uartOutBufferNext + 1 : uartOutBufferNext;
 
     // Setup the UART
-    uo.data_in_ready := 0; // maintain low
+    //uo.data_in_ready := 0; // maintain low
 
     // SDCARD Commands
     sdcio.read_sector := 0;
 
-    // RESET Timer Co-Processor Controls
+    // RESET TIMER and AUDIO Co-Processor Controls
     p1hz.resetCounter := 0;
     sleepTimer.resetCounter := 0;
     timer1hz.resetCounter := 0;
     timer1khz.resetCounter := 0;
     rng.resetRandom := 0;
-
-    // RESET Co-Processor Controls
-    //background_generator.background_write := 0;
-    //tile_map.tm_write := 0;
-    //tile_map.tm_scrollwrap := 0;
-    //lower_sprites.sprite_layer_write := 0;
-    //lower_sprites.sprite_writer_active := 0;
-    //bitmap_window.bitmap_write_offset := 0;
-    //gpu_processor.gpu_write := 0;
-    //gpu_processor.draw_vector := 0;
-    //upper_sprites.sprite_layer_write := 0;
-    //upper_sprites.sprite_writer_active := 0;
-    //character_map_window.tpu_write := 0;
-    //terminal_window.terminal_write := 0;
-    //apu_processor_L.apu_write := 0;
-    //apu_processor_R.apu_write := 0;
-
-    // UART input and output buffering
-    uartInBuffer.wdata1  := ui.data_out;
-    uartInBufferTop      := ( ui.data_out_ready ) ? uartInBufferTop + 1 : uartInBufferTop;
-
-    uo.data_in      := uartOutBuffer.rdata0;
-    uo.data_in_ready     := (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy );
-    uartOutBufferNext := ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) ) ? uartOutBufferNext + 1 : uartOutBufferNext;
+    apu_processor_L.apu_write := 0;
+    apu_processor_R.apu_write := 0;
 
     // Setup the terminal
     terminal_window.showterminal = 1;
@@ -629,8 +611,6 @@ algorithm memmap_io (
             upper_sprites.sprite_writer_active = 0;
             character_map_window.tpu_write = 0;
             terminal_window.terminal_write = 0;
-            apu_processor_L.apu_write = 0;
-            apu_processor_R.apu_write = 0;
         }
 
         LATCHmemoryRead = memoryRead;

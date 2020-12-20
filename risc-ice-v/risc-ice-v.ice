@@ -229,7 +229,6 @@ algorithm main(
     uint1   pll_lock_SDRAM = uninitialized;
 
     uint1   clock_IO = uninitialized;
-    uint1   clock_timers = uninitialized;
     uint1   clock_gpu = uninitialized;
     uint1   clock_copro = uninitialized;
     uint1   clock_memory = uninitialized;
@@ -250,7 +249,6 @@ algorithm main(
     ulx3s_clk_risc_ice_v_AUX clk_gen_AUX (
         clkin    <: clock,
         clkIO :> clock_IO,
-        clkTIMER  :> clock_timers,
         clkVIDEO  :> video_clock,
         clkGPU :> clock_gpu,
         locked   :> pll_lock_AUX
