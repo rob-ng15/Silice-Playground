@@ -9,16 +9,18 @@
         * Filled circles (via Bresenham's Circle Drawing Algorithm)
             * "Brute force" algorithm, some pixels double drawn
         * Filled rectangles
-        * Filled triangles (_work in progress_)
+        * Filled triangles
             * "Brute force" algorithm
                 * Vertices best specified as TOP then clockwise from TOP
                     * Some limited checks to arrange vertices
                 * Works from top to bottom on a bounding box
                     * Optimisation moves to the next line once no longer inside the triangle
-                    * Optimisation moves from left to right or right to left depending upon which side the last point in the previous line was closest to
+                    * Optimisation starts from left to right or right to left depending upon which side the last point in the previous line was closest to
                 * Quicker than software equivalent
         * Blitter for 32 x 16 x 16 1 bit user settable tiles
-            * Can blit as 16 x 16 pixels or double size 32 x 32 pixels
+            * Can blit as 16 x 16 or 32 x 32 pixels
+        * Character blitter for 256 x 8 x 8 1 bit font
+            * Can blit as 8 x 8, 16 x 16, 32 x 32 or 64 x 64 pixels
     * Hardware scrolling
         * The viewport ( 0, 0 ) can be moved pixel by pixel within the bitmap
         * Pixels wrap from left/right top/bottom
@@ -33,10 +35,10 @@
 ```void gpu_pixel( unsigned char colour, short x, short y )``` Set a pixel
 ```void gpu_rectangle( unsigned char colour, short x1, short y1, short x2, short y2 )``` Draw a filled rectangle from (x1,y1) to (x2,y2)
 ```void gpu_line( unsigned char colour, short x1, short y1, short x2, short y2 )``` Draw a straight line from (x1,y1) to (x2,y2)
-```void gpu_circle( unsigned char colour, short x1, short y1, short radius )``` Draw a circle with centre at (x1,y1)
+```void gpu_circle( unsigned char colour, short x1, short y1, short radius, unsigned char filled )``` Draw a circle with centre at (x1,y1) with radius, optionally filled
 ```void gpu_blit( unsigned char colour, short x1, short y1, short tile, unsigned char blit_size )``` Blit a 16 x 16 pixel tile to (x1,y1) with optional doubling to 32 x 32 pixels
-```void gpu_fillcircle( unsigned char colour, short x1, short y1, short radius )``` Draw a filled circle with centre at (x1,y1)
-```void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2, short x3, short y3 )``` Draw a filled triangle with vertices (x1,y1), (x2,y2) and (x3,y3) _Vertices should be presented clockwise from the top_
+```void gpu_character_blit( unsigned char colour, short x1, short y1, short tile, unsigned char blit_size )``` Blit an 8 x 8 pixel character to (x1,y1) with optional size of 8 x 8, 16 x 16, 32 x 32 or 64 x 64
+```void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2, short x3, short y3 )``` Draw a filled triangle with vertices (x1,y1), (x2,y2) and (x3,y3) _Vertices should be presented clockwise ```void gpu_quadrilateral( unsigned char colour, short x1, short y1, short x2, short y2, short x3, short y3, short x4, short y4 )``` Draw a filled quadrilateral with vertices (x1,y1), (x2,y2) (x3,y3) and (x4,y4)
 
 ```void set_blitter_bitmap( unsigned char tile, unsigned short *bitmap )``` Set a blitter tile (bitmap points to a 16 x 16 bit bitmap)
 

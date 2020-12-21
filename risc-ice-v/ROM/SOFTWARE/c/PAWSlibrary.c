@@ -349,7 +349,7 @@ void gpu_rectangle( unsigned char colour, short x1, short y1, short x2, short y2
     *GPU_PARAM1 = y2;
 
     wait_gpu();
-    *GPU_WRITE = 2;
+    *GPU_WRITE = 3;
 }
 
 // CLEAR THE BITMAP by drawing a transparent rectangle from (0,0) to (639,479) and resetting the bitamp scroll position
@@ -369,7 +369,7 @@ void gpu_line( unsigned char colour, short x1, short y1, short x2, short y2 )
     *GPU_PARAM1 = y2;
 
     wait_gpu();
-    *GPU_WRITE = 3;
+    *GPU_WRITE = 2;
 }
 
 // DRAW A (optional filled) CIRCLE at centre (x1,y1) of radius ( FILLED CIRCLES HAVE A MINIMUM RADIUS OF 4 )
@@ -381,7 +381,7 @@ void gpu_circle( unsigned char colour, short x1, short y1, short radius, unsigne
     *GPU_PARAM0 = radius;
 
     wait_gpu();
-    *GPU_WRITE = filled ? 6 : 4;
+    *GPU_WRITE = filled ? 5 : 4;
 }
 
 // BLIT A 16 x 16 ( blit_size == 1 doubled to 32 x 32 ) TILE ( from tile 0 to 31 ) to (x1,y1) in colour
@@ -391,9 +391,10 @@ void gpu_blit( unsigned char colour, short x1, short y1, short tile, unsigned ch
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = tile;
+    *GPU_PARAM1 = blit_size;
 
     wait_gpu();
-    *GPU_WRITE = ( blit_size ) ? 8 : 5;
+    *GPU_WRITE = 7;
 }
 
 // BLIT AN 8 x8  ( blit_size == 1 doubled to 16 x 16, blit_size == 1 doubled to 32 x 32 ) CHARACTER ( from tile 0 to 255 ) to (x1,y1) in colour
@@ -403,9 +404,10 @@ void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned char
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = tile;
+    *GPU_PARAM1 = blit_size;
 
     wait_gpu();
-    *GPU_WRITE = ( blit_size ) == 0 ? 9 : ( blit_size == 1 ) ? 10 : 11;
+    *GPU_WRITE = 8;
 }
 
 // SET THE BLITTER TILE to the 16 x 16 pixel bitmap
@@ -432,34 +434,15 @@ void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2,
     *GPU_PARAM3 = y3;
 
     wait_gpu();
-    *GPU_WRITE = 7;
+    *GPU_WRITE = 6;
 }
 
 // DRAW A FILLED QUADRILATERAL with vertices (x1,y1) (x2,y2) (x3,y3) (x4,y4) in colour BY DRAWING TWO FILLED TRIANGLES
 // VERTICES SHOULD BE PRESENTED CLOCKWISE FROM THE TOP ( minimal adjustments made to the vertices to comply )
 void gpu_quadrilateral( unsigned char colour, short x1, short y1, short x2, short y2, short x3, short y3, short x4, short y4 )
 {
-    *GPU_COLOUR = colour;
-    *GPU_X = x1;
-    *GPU_Y = y1;
-    *GPU_PARAM0 = x2;
-    *GPU_PARAM1 = y2;
-    *GPU_PARAM2 = x3;
-    *GPU_PARAM3 = y3;
-
-    wait_gpu();
-    *GPU_WRITE = 7;
-
-    *GPU_COLOUR = colour;
-    *GPU_X = x1;
-    *GPU_Y = y1;
-    *GPU_PARAM0 = x3;
-    *GPU_PARAM1 = y3;
-    *GPU_PARAM2 = x4;
-    *GPU_PARAM3 = y4;
-
-    wait_gpu();
-    *GPU_WRITE = 7;
+    gpu_triangle( colour, x1, y1, x2, y2, x3, y3 );
+    gpu_triangle( colour, x1, y1, x3, y3, x4, y4 );
 }
 
 // GPU VECTOR BLOCK
