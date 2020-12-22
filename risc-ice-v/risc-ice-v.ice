@@ -334,9 +334,29 @@ algorithm main(
 
     // RAM - BRAM and SDRAM
     uint16  instruction16 = uninitialized;
-    ramcontroller ram <@clock_memory> (
+    uint32  ramaddress = uninitialized;
+    uint16  ramwritedata = uninitialized;
+    uint16  ramreaddata = uninitialized;
+    int32   ramreaddata8 = uninitialized;
+    int32   ramreaddata16 = uninitialized;
+    uint1   ramreadflag = uninitialized;
+    uint1   ramwriteflag = uninitialized;
+    uint1   ramIcache = uninitialized;
+    uint1   rambusy = uninitialized;
+    // <@clock_memory>
+    ramcontroller ram  <@clock_memory>(
+        address <: ramaddress,
+        writedata <: ramwritedata,
+        readflag <: ramreadflag,
+        writeflag <: ramwriteflag,
+        Icache <: ramIcache,
+
         function3 <: function3,
-        readdata :> instruction16
+        readdata :> instruction16,
+        readdata :> ramreaddata,
+        readdata8 :> ramreaddata8,
+        readdata16 :> ramreaddata16,
+        busy :> rambusy
     );
 
     // MEMORY MAPPED I/O
@@ -435,8 +455,8 @@ algorithm main(
     halfhalfword combiner161632unit <@clock_cpuunit> ();
 
     // RAM/IO Read/Write Flags
-    ram.writeflag := 0;
-    ram.readflag := 0;
+    ramwriteflag := 0;
+    ramreadflag := 0;
     IO_Map.memoryWrite := 0;
     IO_Map.memoryRead := 0;
 
@@ -454,17 +474,17 @@ algorithm main(
         floatingpoint = 0;
 
         // FETCH + EXPAND COMPRESSED INSTRUCTIONS ( mark as using instruction cache )
-        ram.address = pc;
-        ram.Icache = 1;
-        ram.readflag = 1;
-        while( ram.busy ) {}
+        ramaddress = pc;
+        ramIcache = 1;
+        ramreadflag = 1;
+        while( rambusy ) {}
         compressed = compressedunit.compressed;
         switch( compressedunit.compressed ) {
             case 1b0: {
                 combiner161632unit.LOW = compressedunit.instruction32;
-                ram.address = pcPLUS2;
-                ram.readflag = 1;
-                while( ram.busy ) {}
+                ramaddress = pcPLUS2;
+                ramreadflag = 1;
+                while( rambusy ) {}
                 combiner161632unit.HIGH = ram.readdata;
                 instruction = combiner161632unit.HIGHLOW;
             }
@@ -519,17 +539,17 @@ algorithm main(
                     }
                 } else {
                     // SDRAM or BRAM ( mark as using data cache )
-                    ram.address = loadAddress;
-                    ram.Icache = 0;
-                    ram.readflag = 1;
-                    while( ram.busy ) {}
+                    ramaddress = loadAddress;
+                    ramIcache = 0;
+                    ramreadflag = 1;
+                    while( rambusy ) {}
                     switch( function3 & 3 ) {
                         case 2b10: {
                             // 32 bit READ as 2 x 16 bit
                             combiner161632unit.LOW = ram.readdata;
-                            ram.address = loadAddressPLUS2;
-                            ram.readflag = 1;
-                            while( ram.busy ) {}
+                            ramaddress = loadAddressPLUS2;
+                            ramreadflag = 1;
+                            while( rambusy ) {}
                             combiner161632unit.HIGH = ram.readdata;
                             result = combiner161632unit.HIGHLOW;
                         }
@@ -549,22 +569,22 @@ algorithm main(
                     IO_Map.memoryWrite = 1;
                 } else {
                     // SDRAM or BRAM
-                    ram.address = storeAddress;
-                    ram.Icache = 0;
+                    ramaddress = storeAddress;
+                    ramIcache = 0;
                     if( ( function3 & 3 ) == 0 ) {
                         // READ 8 BIT INTO CACHE
-                        ram.readflag = 1;
-                        while( ram.busy ) {}
+                        ramreadflag = 1;
+                        while( rambusy ) {}
                     }
                     // WRITE 8, 16 and LOWER 16 of 32 bits
-                    ram.writedata = sourceReg2[0,16];
-                    ram.writeflag = 1;
+                    ramwritedata = sourceReg2[0,16];
+                    ramwriteflag = 1;
                     if(  ( function3 & 3 ) == 2b10 ) {
                         // WRITE UPPER 16 of 32 bits
-                        while( ram.busy ) {}
-                        ram.address = storeAddressPLUS2;
-                        ram.writedata = sourceReg2[16,16];
-                        ram.writeflag = 1;
+                        while( rambusy ) {}
+                        ramaddress = storeAddressPLUS2;
+                        ramwritedata = sourceReg2[16,16];
+                        ramwriteflag = 1;
                     }
                 }
             }
@@ -669,11 +689,19 @@ algorithm ramcontroller (
     uint1   Dcachetagmatch := Dcachetag.rdata == { 1b1, address[12,13] };
 
     // SIGN EXTENDER UNIT
+    uint8   SE8nosign = uninitialized;
+    int32   SE8sign = uninitialized;
     signextender8 signextender8unit (
-        function3 <: function3
+        function3 <: function3,
+        nosign <: SE8nosign,
+        withsign :> SE8sign
     );
+    uint16  SE16nosign = uninitialized;
+    int32   SE16sign = uninitialized;
     signextender16 signextender16unit (
-        function3 <: function3
+        function3 <: function3,
+        nosign <: SE16nosign,
+        withsign :> SE16sign
     );
 
     busy := ( readflag || writeflag ) ? 1 : active;
@@ -693,10 +721,10 @@ algorithm ramcontroller (
     readdata := address[28,1] ? ( Icache ? Icachedata.rdata : Dcachedata.rdata ) : ram.rdata;
 
     // 8/16 bit READ WITH OPTIONAL SIGN EXTENSION
-    signextender8unit.nosign := address[28,1] ? ( Dcachedata.rdata[address[0,1] ? 8 : 0, 8] ) : ( ram.rdata[address[0,1] ? 8 : 0, 8] );
-    signextender16unit.nosign := address[28,1] ? Dcachedata.rdata : ram.rdata;
-    readdata8 := signextender8unit.withsign;
-    readdata16 := signextender16unit.withsign;
+    SE8nosign := address[28,1] ? ( Dcachedata.rdata[address[0,1] ? 8 : 0, 8] ) : ( ram.rdata[address[0,1] ? 8 : 0, 8] );
+    SE16nosign := address[28,1] ? Dcachedata.rdata : ram.rdata;
+    readdata8 := SE8sign;
+    readdata16 := SE16sign;
 
     while(1) {
         if( readflag && address[28,1] ) {

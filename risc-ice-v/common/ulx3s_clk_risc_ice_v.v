@@ -15,7 +15,7 @@ module ulx3s_clk_risc_ice_v_CPU
 (* FREQUENCY_PIN_CLKOP="50" *)
 (* FREQUENCY_PIN_CLKOS="33.33" *)
 (* FREQUENCY_PIN_CLKOS2="50" *)
-(* FREQUENCY_PIN_CLKOS3="50" *)
+(* FREQUENCY_PIN_CLKOS3="25" *)
 (* ICP_CURRENT="12" *) (* LPF_RESISTOR="8" *) (* MFG_ENABLE_FILTEROPAMP="1" *) (* MFG_GMCREF_SEL="2" *)
 EHXPLLL #(
         .PLLRST_ENA("DISABLED"),
@@ -40,7 +40,7 @@ EHXPLLL #(
         .CLKOS2_CPHASE(5),
         .CLKOS2_FPHASE(0),
         .CLKOS3_ENABLE("ENABLED"),
-        .CLKOS3_DIV(12),
+        .CLKOS3_DIV(24),
         .CLKOS3_CPHASE(5),
         .CLKOS3_FPHASE(0),
         .FEEDBK_PATH("CLKOP"),
