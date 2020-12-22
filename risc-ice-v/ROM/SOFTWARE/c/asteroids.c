@@ -7,6 +7,7 @@
 
     // GLOBAL VARIABLES
     unsigned short lives = 0, score = 0, level = 0;
+    unsigned short shield, fuel;
     int counter = 0;
 
     // SHIP and BULLET
@@ -158,6 +159,34 @@
         0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000
     };
 
+// GENERATE A RANDOM COLOUR WITH AT LEAST ONE OF RED, GREEN, BLUE BEING INTENSITY 2
+unsigned char random_colour( void )
+{
+    unsigned char red, green, blue;
+
+    do {
+        red = rng( 4 );
+        green = rng( 4 );
+        blue = rng( 4 );
+    } while( ( red < 2 ) && ( green < 2 ) && ( blue < 2 ) );
+
+    return( red * 16 + green * 4 + blue );
+}
+
+// GENERATE A RANDOM COLOUR WITH AT LEAST ONE OF RED, GREEN, BLUE BEING INTENSITY 1
+unsigned char random_colour_alt( void )
+{
+    unsigned char red, green, blue;
+
+    do {
+        red = rng( 1 );
+        green = rng( 1 );
+        blue = rng( 1 );
+    } while( ( red + green + blue ) == 0 );
+
+    return( red * 16 + green * 4 + blue );
+}
+
 void set_asteroid_sprites( void )
 {
     for( unsigned char asteroid_number = 0; asteroid_number < MAXASTEROIDS; asteroid_number++ ) {
@@ -167,8 +196,8 @@ void set_asteroid_sprites( void )
 
 void set_ship_sprites( unsigned char exploding )
 {
-        set_sprite_bitmaps( 0, 11, &ship_bitmap[ exploding ? 128 : 0 ] );
-        set_sprite_bitmaps( 1, 11, &ship_bitmap[ exploding ? 128 : 0 ] );
+    set_sprite_bitmaps( 0, 11, &ship_bitmap[ exploding ? 128 : 0 ] );
+    set_sprite_bitmaps( 1, 11, &ship_bitmap[ exploding ? 128 : 0 ] );
 }
 
 void set_ship_vector( void )
@@ -199,31 +228,30 @@ void set_ufo_bullet_sprites( void ) {
 
 void set_tilemap( void )
 {
+    unsigned char x, y, colour;
+
     (void)tilemap_scrollwrapclear( 9 );
 
     for( unsigned char tile_number = 0; tile_number < 8; tile_number++ ) {
         set_tilemap_bitmap( tile_number + 1, &tilemap_bitmap[ tile_number * 16 ] );
     }
 
-    set_tilemap_tile( 4, 4, 1, 64, 21 ); set_tilemap_tile( 4, 5, 2, 64, 21 ); set_tilemap_tile( 5, 4, 3, 64, 21 ); set_tilemap_tile( 5, 5, 4, 64, 21 );
-    set_tilemap_tile( 18, 14, 1, 64, 20 ); set_tilemap_tile( 18, 15, 2, 64, 20 ); set_tilemap_tile( 19, 14, 3, 64, 20 ); set_tilemap_tile( 19, 15, 4, 64, 20 );
-    set_tilemap_tile( 34, 28, 1, 64, 5 ); set_tilemap_tile( 34, 29, 2, 64, 5 ); set_tilemap_tile( 35, 28, 3, 64, 5 ); set_tilemap_tile( 35, 29, 4, 64, 5 );
-    set_tilemap_tile( 36, 2, 5, 64, 42 ); set_tilemap_tile( 36, 3, 6, 64, 42 ); set_tilemap_tile( 37, 2, 7, 64, 42 ); set_tilemap_tile( 37, 3, 8, 64, 42 );
-    set_tilemap_tile( 6, 26, 5, 64, 16 ); set_tilemap_tile( 6, 27, 6, 64, 16 ); set_tilemap_tile( 7, 26, 7, 64, 16 ); set_tilemap_tile( 7, 27, 8, 64, 16 );
-}
+    // RANDOMLY PLACE 4 PLANETS and 4 ROCKET SHIPS
+    for( unsigned char i = 0; i < 4; i++ ) {
+        x = rng( 18 ) + ( x&1 ? 1 : 21 );
+        y = rng( 10 ) + i*10 + 1;
+        colour = random_colour_alt();
 
-// GENERATE A RANDOM COLOUR WITH AT LEAST ONE OF RED, GREEN, BLUE BEING INTENSITY 2
-unsigned char random_colour( void )
-{
-    unsigned char red, green, blue;
+        set_tilemap_tile( x, y, 1, TRANSPARENT, colour ); set_tilemap_tile( x, y+1, 2, TRANSPARENT, colour ); set_tilemap_tile( x+1, y, 3, TRANSPARENT, colour ); set_tilemap_tile( x+1, y+1, 4, TRANSPARENT, colour );
+    }
 
-    do {
-        red = rng( 4 );
-        green = rng( 4 );
-        blue = rng( 4 );
-    } while( ( red < 2 ) && ( green < 2 ) && ( blue < 2 ) );
+    for( unsigned char i = 0; i < 4; i++ ) {
+        x = rng( 18 ) + ( x&1 ? 21 : 1 );
+        y = rng( 10 ) + i*10 + 1;
+        colour = random_colour_alt();
 
-    return( red * 16 + green * 4 + blue );
+        set_tilemap_tile( x, y, 5, TRANSPARENT, colour ); set_tilemap_tile( x, y+1, 6, TRANSPARENT, colour ); set_tilemap_tile( x+1, y, 7, TRANSPARENT, colour ); set_tilemap_tile( x+1, y+1, 8, TRANSPARENT, colour );
+    }
 }
 
 // DRAW GAME OVER IN LARGE MULTICOLOURED LETTERS
@@ -255,6 +283,36 @@ void risc_ice_v_logo( void )
     gpu_rectangle( DKBLUE, 0, 37, 8, 100 );
 }
 
+// DRAW FULL OR ERASE END OF FUEL AND SHIELD BARS
+void drawfuel( unsigned char fullbar )
+{
+    if( fullbar ) {
+        gpu_rectangle( RED, 70, 456, 70 + ( fuel >> 2 ), 463 );
+        gpu_character_blit( RED, 30, 456, 'F', 0 );
+        gpu_character_blit( RED, 38, 456, 'U', 0 );
+        gpu_character_blit( RED, 46, 456, 'E', 0 );
+        gpu_character_blit( RED, 54, 456, 'L', 0 );
+        gpu_character_blit( RED, 62, 456, ':', 0 );
+    } else {
+        gpu_rectangle( TRANSPARENT, 70 + ( fuel >> 2 ), 456, 320, 463 );
+    }
+}
+void drawshield( unsigned char fullbar )
+{
+    if( fullbar ) {
+        gpu_rectangle( BLUE, 70, 464, 70 + shield, 471 );
+        gpu_character_blit( BLUE, 14, 464, 'S', 0 );
+        gpu_character_blit( BLUE, 22, 464, 'H', 0 );
+        gpu_character_blit( BLUE, 30, 464, 'I', 0 );
+        gpu_character_blit( BLUE, 38, 464, 'E', 0 );
+        gpu_character_blit( BLUE, 46, 464, 'L', 0 );
+        gpu_character_blit( BLUE, 54, 464, 'D', 0 );
+        gpu_character_blit( BLUE, 62, 464, ':', 0 );
+    } else {
+        gpu_rectangle( TRANSPARENT, 70 + shield, 464, 320, 471 );
+    }
+}
+
 void setup_game()
 {
     // CLEAR ALL SPRITES
@@ -280,6 +338,9 @@ void setup_game()
     set_ufo_bullet_sprites();
 
     lives = 0; score = 0;
+    fuel = 1000; shield = 250;
+    drawfuel(1); drawshield(1);
+
     shipx = 312; shipy = 232; shipdirection = 0; resetship = 0; bulletdirection = 0;
 
     counter = 0;
@@ -461,7 +522,7 @@ void beepboop( void )
                 if( lives > 0 ) {
                     beep( 1, 0, 1, 500 );
                 } else {
-                    tpu_set( 16, 18, TRANSPARENT, BLUE );
+                    tpu_set( 16, 26, TRANSPARENT, BLUE );
                     tpu_outputstring( "         Welcome to Risc-ICE-V Asteroids        " );
                     game_over();
                 }
@@ -469,7 +530,7 @@ void beepboop( void )
 
             case 1:
                 if( lives == 0 ) {
-                    tpu_set( 16, 18, TRANSPARENT, CYAN );
+                    tpu_set( 16, 26, TRANSPARENT, CYAN );
                     tpu_outputstring( "By @robng15 (Twitter) from Whitebridge, Scotland" );
                     game_over();
                 }
@@ -479,7 +540,7 @@ void beepboop( void )
                 if( lives > 0 ) {
                     beep( 1, 0, 2, 500 );
                 } else {
-                    tpu_set( 16, 18, TRANSPARENT, YELLOW );
+                    tpu_set( 16, 26, TRANSPARENT, YELLOW );
                     tpu_outputstring( "                 Press UP to start              " );
                     game_over();
                 }
@@ -488,7 +549,7 @@ void beepboop( void )
             case 3:
                 // MOVE TILEMAP UP
                 if( lives == 0 ) {
-                    tpu_set( 16, 18, TRANSPARENT, RED );
+                    tpu_set( 16, 26, TRANSPARENT, RED );
                     tpu_outputstring( "          Written in Silice by @sylefeb         " );
                     game_over();
                 }
@@ -597,6 +658,13 @@ void check_hit( void )
                     set_ufo_sprite( 0 );
                     ufo_sprite_number = 0xff;
                     asteroid_active[asteroid_hit] = 32;
+                    // AVOID BONUS FUEL AND SHIELD
+                    fuel += 10 + rng( ( level < 2 ) ? 10 : 40 );
+                    fuel = ( fuel > 1000 ) ? 1000 : fuel;
+                    shield += 5 + rng( ( level < 2 ) ? 5 : 10 );
+                    shield = ( shield > 250 ) ? 250 : shield;
+                    drawfuel(1);
+                    drawshield(1);
                     break;
 
                 default:
@@ -623,7 +691,8 @@ void check_crash( void )
     }
 }
 
-void main()
+// MAIN GAME LOOP STARTS HERE
+void main( void )
 {
     unsigned char uartData = 0, potentialnumber = 0;
     short ufo_x = 0, ufo_y = 0, potentialx = 0, potentialy = 0;
@@ -693,7 +762,7 @@ void main()
             if( ufo_sprite_number != 0xff ) {
                 // ROOM for UFO
                 do {
-                    ufo_y = 32 + rng(  416 );
+                    ufo_y = 32 + rng(  384 );
                 } while( ( ufo_y >= shipy - 64 ) && ( ufo_y <= shipy + 64 ) );
 
                 ufo_leftright = rng( 2 );
@@ -750,15 +819,22 @@ void main()
             if( ( get_sprite_attribute( 0, 12, 0 ) == 0 ) && ( get_buttons() & 2 ) != 0 )
                 fire_bullet();
 
-            // MOVE SHIP
-            if( ( get_buttons() & 4 ) != 0 )
+            // MOVE SHIP, IF FUEL LEFT
+            if( ( ( get_buttons() & 8 ) != 0 ) && ( fuel > 0 ) ) {
                 move_ship();
+                fuel--;
+                drawfuel(0);
+            }
 
-            // DRAW WHITE SHIP
-            draw_ship( WHITE );
-
-            // CHECK IF CRASHED ASTEROID -> SHIP
-            check_crash();
+            // CHECK IF CRASHED ASTEROID -> SHIP, IF SHIELD BUTTON NOT HELD DOWN
+            if( ( ( get_buttons() & 4 ) != 0 ) && ( shield > 0 ) ) {
+                draw_ship( BLUE );
+                shield--;
+                drawshield(0);
+            } else {
+                draw_ship( WHITE );
+                check_crash();
+            }
         } else {
             // GAME OVER OR EXPLODING SHIP
             // SEE IF NEW GAME
@@ -775,10 +851,19 @@ void main()
                 set_sprite_attribute( 0, 12, 0, 0 );
                 set_sprite_attribute( 1, 12, 0, 0 );
 
+                // CLEAR SCREEN, RESET TILEMAP
                 gpu_cs(); tpu_cs();
+                set_tilemap();
+
                 counter = 0;
-                lives = 3; score = 0; level = 0; placeAsteroids = 4;
-                shipx = 312; shipy = 232; shipdirection = 0; resetship = 0; bulletdirection = 0;
+
+                lives = 4; score = 0; level = 0;
+
+                shield = 250; fuel = 1000;
+                drawfuel(1); drawshield(1);
+
+                shipx = 312; shipy = 232; shipdirection = 0; resetship = 16; bulletdirection = 0;
+                placeAsteroids = 4;
                 ufo_sprite_number = 0xff; ufo_leftright = 0;
                 draw_lives();
                 set_asteroid_sprites();
@@ -797,6 +882,8 @@ void main()
                             gpu_cs();
                             lives--;
                             draw_lives();
+                            fuel = 1000;
+                            drawfuel(1); drawshield(1);
                         }
 
                         if( lives == 0 )

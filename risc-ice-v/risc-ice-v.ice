@@ -222,43 +222,41 @@ algorithm main(
     inout  uint16 sdram_dq
 ) {
     // CLOCK/RESET GENERATION
-    uint1   video_reset = uninitialized;
-    uint1   video_clock = uninitialized;
     uint1   pll_lock_CPU = uninitialized;
-    uint1   pll_lock_AUX = uninitialized;
     uint1   pll_lock_SDRAM = uninitialized;
 
-    uint1   clock_IO = uninitialized;
-    uint1   clock_gpu = uninitialized;
     uint1   clock_copro = uninitialized;
-    uint1   clock_memory = uninitialized;
     uint1   clock_cpuunit = uninitialized;
-    uint1   clock_sdram = uninitialized;
+    uint1   clock_memory = uninitialized;
 
     // Generate 50MHz clocks for CPU units
     // 50MHz clock for the BRAM and CACHE controller
     ulx3s_clk_risc_ice_v_CPU clk_gen_CPU (
         clkin    <: clock,
         clkCOPRO :> clock_copro,
-        clkCPUUNIT :> clock_cpuunit,
         clkMEMORY  :> clock_memory,
+        clkCPUUNIT :> clock_cpuunit,
         locked   :> pll_lock_CPU
     );
 
-    // Generate the 25MHz video clock, 50MHz clock for timers/audio/random number generator and 50MHz GPU clock
-    ulx3s_clk_risc_ice_v_AUX clk_gen_AUX (
-        clkin    <: clock,
-        clkIO :> clock_IO,
-        clkVIDEO  :> video_clock,
-        clkGPU :> clock_gpu,
-        locked   :> pll_lock_AUX
+    // Generate the 150MHz SDRAM clock
+    uint1   clock_sdram = uninitialized;
+    ulx3s_clk_risc_ice_v_SDRAM clk_gen_SDRAM (
+        clkin <: clock,
+        clkSDRAM :> clock_sdram,
+        locked :> pll_lock_SDRAM
     );
 
-    // Generate the 150MHz SDRAM clock
-    ulx3s_clk_risc_ice_v_SDRAM clk_gen_SDRAM (
-        clkin    <: clock,
-        clkSDRAM  :> clock_sdram,
-        locked   :> pll_lock_SDRAM
+    // Generate the 25MHz video clock
+    uint1   clock_IO = uninitialized;
+    uint1   video_reset = uninitialized;
+    uint1   video_clock = uninitialized;
+    uint1   pll_lock_AUX = uninitialized;
+    ulx3s_clk_risc_ice_v_AUX clk_gen_AUX (
+        clkin   <: clock,
+        clkIO :> clock_IO,
+        clkVIDEO :> video_clock,
+        locked :> pll_lock_AUX
     );
 
     // Video Reset
@@ -333,27 +331,26 @@ algorithm main(
     uint32  storeAddressPLUS2 = uninitialized;
     uint32  AUIPCLUI = uninitialized;
 
-    // Setup Memory Mapped I/O
-    uint16  IOreadData = uninitialized;
+    // RAM - BRAM and SDRAM
+    uint16  instruction16 = uninitialized;
+    ramcontroller ram <@clock_memory> (
+        function3 <: function3,
+        readdata :> instruction16
+    );
+
+    // MEMORY MAPPED I/O
     memmap_io IO_Map <@clock_IO> (
+        function3 <: function3,
         leds :> leds,
         btns <: btns,
-
-        // UART
         uart_tx :> uart_tx,
         uart_rx <: uart_rx,
-
-        // AUDIO
         audio_l :> audio_l,
         audio_r :> audio_r,
-
-        // SDCARD
         sd_clk :> sd_clk,
         sd_mosi :> sd_mosi,
         sd_csn :> sd_csn,
         sd_miso <: sd_miso,
-
-        // HDMI
         video_r :> video_r,
         video_g :> video_g,
         video_b :> video_b,
@@ -361,15 +358,8 @@ algorithm main(
         pix_active <: pix_active,
         pix_x <: pix_x,
         pix_y <: pix_y,
-
-        // CLOCKS
-        clock_50mhz <: clock_IO,
         video_clock <: video_clock,
-        gpu_clock <: clock_gpu,
-        video_reset <: video_reset,
-
-        // OUTPUT
-        readData :> IOreadData
+        video_reset <: video_reset
     );
 
     // RISC-V REGISTER WRITER
@@ -377,7 +367,6 @@ algorithm main(
         rd <: rd,
         floatingpoint <: floatingpoint,
         result <: result,
-
         registers_1 <:> registers_1,
         registers_2 <:> registers_2
     );
@@ -387,23 +376,22 @@ algorithm main(
         rs1 <: rs1,
         rs2 <: rs2,
         floatingpoint <: floatingpoint,
-
         sourceReg1 :> sourceReg1,
         sourceReg2 :> sourceReg2,
-
         registers_1 <:> registers_1,
         registers_2 <:> registers_2
     );
 
-    // RAM - BRAM and SDRAM
-    ramcontroller ram <@clock_memory> (
-        function3 <: function3
-    );
-
     // COMPRESSED INSTRUCTION EXPANDER
-    compressedexpansion00 compressedunit00 <@clock_cpuunit> ();
-    compressedexpansion01 compressedunit01 <@clock_cpuunit> ();
-    compressedexpansion10 compressedunit10 <@clock_cpuunit> ();
+    compressedexpansion00 compressedunit00 <@clock_cpuunit> (
+        instruction16 <: instruction16
+    );
+    compressedexpansion01 compressedunit01 <@clock_cpuunit> (
+        instruction16 <: instruction16
+    );
+    compressedexpansion10 compressedunit10 <@clock_cpuunit> (
+        instruction16 <: instruction16
+    );
 
     // RISC-V 32 BIT INSTRUCTION DECODER
     decoder DECODE <@clock_cpuunit> (
@@ -423,10 +411,8 @@ algorithm main(
         pc <:: pc,
         compressed <: compressed,
         sourceReg1 <: sourceReg1,
-
         pcPLUS2 :> pcPLUS2,
         nextPC :> nextPC,
-
         branchAddress :> branchAddress,
         jumpAddress :> jumpAddress,
         AUIPCLUI :> AUIPCLUI,
@@ -440,47 +426,18 @@ algorithm main(
     alu ALU <@clock_copro> (
         instruction <: instruction,
         sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2
+        sourceReg2 <: sourceReg2,
     );
 
     // BRANCH COMPARISON UNIT
-    branchcomparison branchcomparisonunit <@clock_copro> (
+    branchcomparison branchcomparisonunit <@clock_cpuunit> (
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2
     );
 
-    // SIGN EXTENDER UNITS
-    signextender8 signextender8unitIO <@clock_copro> (
-        function3 <: function3,
-        nosign <: IOreadData
-    );
-    signextender16 signextender16unitIO <@clock_copro> (
-        function3 <: function3,
-        nosign <: IOreadData
-    );
-
-    // COMBINER UNITS - TWO 16 BIT HALF WORDS TO 32 BIT WORD
+    // COMBINE TWO 16 BIT HALF WORDS TO ONE 32 BIT WORD
     halfhalfword combiner161632unit <@clock_cpuunit> ();
-    halfhalfword combiner161632unitIO <@clock_cpuunit> (
-        LOW <: IOreadData
-    );
-
-    // BRANCH DECIDER, MULTIPLICATION and DIVISION units
-    divideremainder dividerunit <@clock_copro> (
-        function3 <: function3,
-        dividend <: sourceReg1,
-        divisor <: sourceReg2
-    );
-    multiplicationDSP multiplicationuint <@clock_copro> (
-        function3 <: function3,
-        factor_1 <: sourceReg1,
-        factor_2 <: sourceReg2
-    );
-
-    // MULTIPLICATION and DIVISION Start Flags
-    dividerunit.start := 0;
-    multiplicationuint.start := 0;
 
     // RAM/IO Read/Write Flags
     ram.writeflag := 0;
@@ -490,6 +447,9 @@ algorithm main(
 
     // REGISTER Read/Write Flags
     registersW.writeRegister := 0;
+
+    // ALU Start Flag
+    ALU.start := 0;
 
     while(1) {
         // RISC-V
@@ -504,10 +464,6 @@ algorithm main(
         ram.readflag = 1;
         while( ram.busy ) {}
         switch( ram.readdata[0,2] ) {
-            // COMPRESSED 16 bit INSTRUCTION
-            case 2b00: { compressed = 1; compressedunit00.instruction16 = ram.readdata; instruction = compressedunit00.instruction32; }
-            case 2b01: { compressed = 1; compressedunit01.instruction16 = ram.readdata; instruction = compressedunit01.instruction32; }
-            case 2b10: { compressed = 1; compressedunit10.instruction16 = ram.readdata; instruction = compressedunit10.instruction32; }
             case 2b11: {
                 // STANDARD 32 bit INSTRUCTION, fetch remaining 16 bits
                 compressed = 0;
@@ -517,6 +473,11 @@ algorithm main(
                 while( ram.busy ) {}
                 combiner161632unit.HIGH = ram.readdata;
                 instruction = combiner161632unit.HIGHLOW;
+            }
+            default: {
+                // COMPRESSED 16 bit INSTRUCTION
+                compressed = 1;
+                instruction = ( ram.readdata[0,2] == 2b00 ) ? compressedunit00.instruction32 : ( ( ram.readdata[0,2] == 2b01 ) ? compressedunit01.instruction32 : compressedunit10.instruction32 );
             }
         }
         ++:
@@ -535,8 +496,8 @@ algorithm main(
                             IO_Map.memoryAddress = loadAddress[0,16];
                             IO_Map.memoryRead = 1;
                             switch( function3 & 3 ) {
-                                case 2b10: { result = combiner161632unitIO.ZEROLOW; }
-                                default: { result = ( ( function3 & 3 ) == 0 ) ? signextender8unitIO.withsign : signextender16unitIO.withsign; }
+                                case 2b10: { result = IO_Map.readData; }
+                                default: { result = ( ( function3 & 3 ) == 0 ) ? IO_Map.readData8 : IO_Map.readData16; }
                             }
                         } else {
                             // SDRAM or BRAM ( mark as using data cache )
@@ -599,25 +560,11 @@ algorithm main(
                     // ALU BASE & M EXTENSION
                     case 1b0: {
                         if( opCode[5,1] && function7[0,1] ) {
-                            // M EXTENSION
-                            switch( function3[2,1] ) {
-                                case 1b0: {
-                                    // MULTIPLICATION
-                                    multiplicationuint.start = 1;
-                                    while( multiplicationuint.active ) {}
-                                    result = multiplicationuint.result;
-                                }
-                                case 1b1: {
-                                    // DIVISION / REMAINDER
-                                    dividerunit.start = 1;
-                                    while( dividerunit.active ) {}
-                                    result = dividerunit.result;
-                                }
-                            }
-                        } else {
-                            // BASE I ALU OPERATIONS
-                            result = ALU.result;
+                            // START DIVISION / MULTIPLICATION
+                            ALU.start = 1;
+                            while( ALU.busy ) {}
                         }
+                        result = ( opCode[5,1] && function7[0,1] ) ? ALU.Mresult : ALU.result;
                     }
                     // AUIPC LUI
                     case 1b1: { result = AUIPCLUI; }
@@ -646,179 +593,10 @@ algorithm main(
     } // RISC-V
 }
 
-// RISC-V REGISTER WRITE
-algorithm registersWRITE (
-    input   uint5   rd,
-    input   uint1   writeRegister,
-    input   uint1   floatingpoint,
-    input   int32   result,
-
-    simple_dualbram_port1   registers_1,
-    simple_dualbram_port1   registers_2
-) <autorun> {
-    registers_1.wenable1 := 1;
-    registers_2.wenable1 := 1;
-
-    while(1) {
-        // WRITE TO REGISTERS
-        // NEVER write to registers[0]
-        if( writeRegister && ( rd != 0 ) ) {
-            registers_1.addr1 = rd + ( floatingpoint ? 32 : 0 );
-            registers_1.wdata1 = result;
-            registers_2.addr1 = rd + ( floatingpoint ? 32 : 0 );
-            registers_2.wdata1 = result;
-        }
-    }
-}
-
-// RISC-V REGISTER READ
-algorithm registersREAD (
-    input   uint5   rs1,
-    input   uint5   rs2,
-    input   uint1   floatingpoint,
-
-    output!  int32   sourceReg1,
-    output!  int32   sourceReg2,
-
-    simple_dualbram_port0   registers_1,
-    simple_dualbram_port0   registers_2
-) <autorun> {
-    registers_1.addr0 := rs1 + ( floatingpoint ? 32 : 0 );
-    registers_2.addr0 := rs2 + ( floatingpoint ? 32 : 0 );
-
-    sourceReg1 := registers_1.rdata0;
-    sourceReg2 := registers_2.rdata0;
-
-    while(1) {
-    }
-}
-
-// RISC-V INSTRUCTION DECODER
-algorithm decoder (
-    input   uint32  instruction,
-
-    output  uint7   opCode,
-    output  uint3   function3,
-    output  uint7   function7,
-
-    output  uint5   rs1,
-    output  uint5   rs2,
-    output  uint5   rd,
-
-    output  int32   immediateValue
-) <autorun> {
-    opCode := Utype(instruction).opCode;
-    function3 := Rtype(instruction).function3;
-    function7 := Rtype(instruction).function7;
-
-    rs1 := Rtype(instruction).sourceReg1;
-    rs2 := Rtype(instruction).sourceReg2;
-    rd := Rtype(instruction).destReg;
-
-    immediateValue := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Itype(instruction).immediate };
-
-    while(1) {
-    }
-}
-
-// RISC-V ADDRESS BASE/OFFSET GENERATOR
-algorithm addressgenerator (
-    input   uint32  instruction,
-    input   uint32  pc,
-    input   uint1   compressed,
-    input!  int32   sourceReg1,
-
-    output  uint32  pcPLUS2,
-    output  uint32  nextPC,
-    output  uint32  branchAddress,
-    output  uint32  jumpAddress,
-    output  uint32  AUIPCLUI,
-    output! uint32  storeAddress,
-    output! uint32  storeAddressPLUS2,
-    output! uint32  loadAddress,
-    output! uint32  loadAddressPLUS2
-) <autorun> {
-    uint7   opCode := Utype(instruction).opCode;
-    int32   immediateValue := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Itype(instruction).immediate };
-
-    pcPLUS2 := pc + 2;
-    nextPC := pc + ( compressed ? 2 : 4 );
-
-    branchAddress := { Btype(instruction).immediate_bits_12 ? 20b11111111111111111111 : 20b00000000000000000000, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } + pc;
-
-    jumpAddress := { Jtype(instruction).immediate_bits_20 ? 12b111111111111 : 12b000000000000, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + pc;
-
-    AUIPCLUI := { Utype(instruction).immediate_bits_31_12, 12b0 } + ( opCode[5,1] ? 0 : pc );
-
-    storeAddress := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
-    storeAddressPLUS2 := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1 + 2;
-
-    loadAddress := immediateValue + sourceReg1;
-    loadAddressPLUS2 := immediateValue + sourceReg1 + 2;
-
-    while(1) {
-    }
-}
-
-// RISC-V BASE ALU
-algorithm alu (
-    input   uint32  instruction,
-    input   int32   sourceReg1,
-    input   int32   sourceReg2,
-
-    output  int32   result
-) <autorun> {
-    uint7   opCode := Utype(instruction).opCode;
-    uint3   function3 := Rtype(instruction).function3;
-    uint7   function7 := Rtype(instruction).function7;
-    int32   immediateValue := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Itype(instruction).immediate };
-
-    int32   shiftRIGHTA := __signed(sourceReg1) >>> ( opCode[5,1] ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
-    int32   shiftRIGHTL := __unsigned(sourceReg1) >> ( opCode[5,1] ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
-
-    uint1   SLT := __signed( sourceReg1 ) < __signed(sourceReg2) ? 1 : 0;
-    uint1   SLTI := __signed( sourceReg1 ) < __signed(immediateValue) ? 1 : 0;
-    uint1   SLTU := ( Rtype(instruction).sourceReg1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 1 : 0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 1 : 0 );
-    uint1   SLTUI := ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 1 : 0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 1 : 0 );
-
-    while(1) {
-        switch( function3 ) {
-            case 3b000: { result = sourceReg1 + ( opCode[5,1] ? ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ) : immediateValue ); }
-            case 3b001: { result = __unsigned(sourceReg1) << ( opCode[5,1] ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ); }
-            case 3b010: { result = ( opCode[5,1] ? SLT : SLTI ) ? 32b1 : 32b0; }
-            case 3b011: { result = ( opCode[5,1] ? SLTU : SLTUI ) ? 32b1 : 32b0; }
-            case 3b100: { result = sourceReg1 ^ ( opCode[5,1] ? sourceReg2 : immediateValue ); }
-            case 3b101: { result = function7[5,1] ? shiftRIGHTA : shiftRIGHTL; }
-            case 3b110: { result = sourceReg1 | ( opCode[5,1] ? sourceReg2 : immediateValue ); }
-            case 3b111: { result = sourceReg1 & ( opCode[5,1] ? sourceReg2 : immediateValue ); }
-        }
-    }
-}
-
-// BRANCH COMPARISIONS
-algorithm branchcomparison (
-    input   uint3   function3,
-    input   int32   sourceReg1,
-    input   int32   sourceReg2,
-    output  uint1   takeBranch
-) <autorun> {
-    while(1) {
-        switch( function3 ) {
-            case 3b000: { takeBranch = ( sourceReg1 == sourceReg2 ) ? 1 : 0; }
-            case 3b001: { takeBranch = ( sourceReg1 != sourceReg2 ) ? 1 : 0; }
-            case 3b100: { takeBranch = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? 1 : 0; }
-            case 3b101: { takeBranch = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? 1 : 0; }
-            case 3b110: { takeBranch = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? 1 : 0; }
-            case 3b111: { takeBranch = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? 1 : 0; }
-            default: { takeBranch = 0; }
-        }
-    }
-}
-
 // EXPAND RISC-V 16 BIT COMPRESSED INSTRUCTIONS TO THEIR 32 BIT EQUIVALENT
 algorithm compressedexpansion00 (
-    input   uint16  instruction16,
-    output  uint32  instruction32
+    input!  uint16  instruction16,
+    output! uint32  instruction32
 ) <autorun> {
     while(1) {
         switch( instruction16[13,3] ) {
@@ -857,8 +635,8 @@ algorithm compressedexpansion00 (
 }
 
 algorithm compressedexpansion01 (
-    input   uint16  instruction16,
-    output  uint32  instruction32
+    input!  uint16  instruction16,
+    output! uint32  instruction32
 ) <autorun> {
     while(1) {
         switch( instruction16[13,3] ) {
@@ -950,12 +728,12 @@ algorithm compressedexpansion01 (
                 instruction32= { CB(instruction16).offset_8 ? 4b1111 : 4b0000, CB(instruction16).offset_7_6, CB(instruction16).offset_5, 5h0, {2b01,CB(instruction16).rs1_alt}, 3b001, CB(instruction16).offset_4_3, CB(instruction16).offset_2_1, CB(instruction16).offset_8, 7b1100011 };
             }
         }
-        }
+    }
 }
 
 algorithm compressedexpansion10 (
-    input   uint16  instruction16,
-    output  uint32  instruction32
+    input!  uint16  instruction16,
+    output! uint32  instruction32
 ) <autorun> {
     while(1) {
         switch( instruction16[13,3] ) {
@@ -1016,40 +794,6 @@ algorithm compressedexpansion10 (
                 // FSWSP
             }
         }
-    }
-}
-
-// PERFORM OPTIONAL SIGN EXTENSION FOR 8 BIT AND 16 BIT READS
-algorithm signextender8 (
-    input   uint3   function3,
-    input   uint8  nosign,
-    output  uint32  withsign
-) <autorun> {
-    withsign := { ( ( nosign[7,1] & ~function3[2,1] ) ? 24hffffff : 24h000000 ), nosign[0,8] };
-    while(1) {
-    }
-}
-algorithm signextender16 (
-    input   uint3   function3,
-    input   uint16  nosign,
-    output  uint32  withsign
-) <autorun> {
-    withsign := { ( nosign[15,1] & ~function3[2,1] ) ? 16hffff : 16h0000, nosign };
-    while(1) {
-    }
-}
-
-// COMBINE TWO 16 BIT HALF WORDS TO 32 BIT WORD
-algorithm halfhalfword (
-    input   uint16  HIGH,
-    input   uint16  LOW,
-    output  int32   HIGHLOW,
-    output  int32   ZEROLOW
-) <autorun> {
-    HIGHLOW := { HIGH, LOW };
-    ZEROLOW := { 16b0, LOW };
-
-    while(1) {
     }
 }
 

@@ -1,841 +1,1753 @@
-	.file	"BIOS.c"
+	.file	"maze.c"
 	.option nopic
 	.attribute arch, "rv32i2p0_m2p0_c2p0"
 	.attribute unaligned_access, 0
 	.attribute stack_align, 16
 	.text
-	.section	.rodata.str1.4,"aMS",@progbits,1
-	.align	2
-.LC0:
-	.string	"Reading Sector: "
-	.align	2
-.LC1:
-	.string	"Sector Read   : "
-	.text
 	.align	1
-	.globl	sd_readSector
-	.type	sd_readSector, @function
-sd_readSector:
-	addi	sp,sp,-16
-	sw	ra,12(sp)
-	sw	s0,8(sp)
-	sw	s1,4(sp)
-	sw	s2,0(sp)
-	mv	s0,a0
-	mv	s1,a1
-	li	a3,48
-	li	a2,64
-	li	a1,0
-	li	a0,48
-	call	tpu_set
-	lui	a0,%hi(.LC0)
-	addi	a0,a0,%lo(.LC0)
-	call	tpu_outputstring
-	slli	s2,s0,16
-	srli	s2,s2,16
-	mv	a0,s2
-	call	tpu_outputnumber_int
-	li	a0,255
-	call	set_leds
-	li	a4,1
-	li	a3,2
-	li	a2,0
-	li	a1,608
-	li	a0,48
-	call	gpu_blit
-	mv	a1,s1
-	mv	a0,s0
-	call	sdcard_readsector
-	li	a3,12
-	li	a2,64
-	li	a1,0
-	li	a0,48
-	call	tpu_set
-	lui	a0,%hi(.LC1)
-	addi	a0,a0,%lo(.LC1)
-	call	tpu_outputstring
-	mv	a0,s2
-	call	tpu_outputnumber_int
-	li	a0,0
-	call	set_leds
-	li	a4,1
-	li	a3,2
-	li	a2,0
-	li	a1,608
-	li	a0,12
-	call	gpu_blit
-	lw	ra,12(sp)
-	lw	s0,8(sp)
-	lw	s1,4(sp)
-	lw	s2,0(sp)
-	addi	sp,sp,16
-	jr	ra
-	.size	sd_readSector, .-sd_readSector
-	.align	1
-	.globl	sd_readMBR
-	.type	sd_readMBR, @function
-sd_readMBR:
-	addi	sp,sp,-16
-	sw	ra,12(sp)
-	lui	a1,%hi(.LANCHOR0)
-	addi	a1,a1,%lo(.LANCHOR0)
-	li	a0,0
-	call	sd_readSector
-	lw	ra,12(sp)
-	addi	sp,sp,16
-	jr	ra
-	.size	sd_readMBR, .-sd_readMBR
-	.align	1
-	.globl	sd_readRootDirectory
-	.type	sd_readRootDirectory, @function
-sd_readRootDirectory:
-	lui	a5,%hi(.LANCHOR0+528)
-	lw	a5,%lo(.LANCHOR0+528)(a5)
-	srli	a5,a5,8
+	.globl	initialise_maze
+	.type	initialise_maze, @function
+initialise_maze:
+	beq	a0,zero,.L2
+	lui	a6,%hi(.LANCHOR0)
+	addi	a6,a6,%lo(.LANCHOR0)
+	addi	t1,a1,-1
+	slli	t1,t1,16
+	srli	t1,t1,16
+	addi	a2,a6,1201
+	add	a2,a2,t1
+	addi	a5,a0,-1
 	slli	a5,a5,16
 	srli	a5,a5,16
-	slli	a5,a5,5
-	li	a4,511
-	bleu	a5,a4,.L10
+	slli	a7,a5,4
+	sub	a7,a7,a5
+	slli	a7,a7,1
+	addi	a5,a6,30
+	add	a7,a7,a5
+	not	t1,t1
+	li	a3,35
+	j	.L3
+.L4:
+	sb	a3,0(a5)
+	sb	a3,0(a4)
+	addi	a5,a5,1
+	addi	a4,a4,1
+	bne	a5,a2,.L4
+.L6:
+	addi	a6,a6,30
+	addi	a2,a2,30
+	beq	a6,a7,.L2
+.L3:
+	add	a5,t1,a2
+	mv	a4,a6
+	bne	a1,zero,.L4
+	j	.L6
+.L2:
+	lui	a5,%hi(.LANCHOR0)
+	addi	a5,a5,%lo(.LANCHOR0)
+	li	a4,69
+	sb	a4,1201(a5)
+	sb	a4,1(a5)
+	addi	a4,a0,-2
+	addi	a1,a1,-3
+	slli	a2,a4,4
+	sub	a3,a2,a4
+	slli	a3,a3,1
+	add	a3,a5,a3
+	add	a3,a3,a1
+	li	a0,88
+	sb	a0,1200(a3)
+	sb	a0,0(a3)
+	ret
+	.size	initialise_maze, .-initialise_maze
+	.align	1
+	.globl	display_maze
+	.type	display_maze, @function
+display_maze:
+	addi	sp,sp,-96
+	sw	ra,92(sp)
+	sw	s0,88(sp)
+	sw	s1,84(sp)
+	sw	s2,80(sp)
+	sw	s3,76(sp)
+	sw	s4,72(sp)
+	sw	s5,68(sp)
+	sw	s6,64(sp)
+	sw	s7,60(sp)
+	sw	s8,56(sp)
+	sw	s9,52(sp)
+	sw	s10,48(sp)
+	sw	s11,44(sp)
+	sw	a0,24(sp)
+	sw	a3,16(sp)
+	li	a5,640
+	div	a3,a5,a0
+	sw	a3,20(sp)
+	li	s11,480
+	div	s11,s11,a1
+	beq	a0,zero,.L9
+	mv	s7,a1
+	mv	s6,a2
+	li	s2,0
+	lui	a5,%hi(.LANCHOR0+1200)
+	addi	a5,a5,%lo(.LANCHOR0+1200)
+	sw	a5,12(sp)
+	sw	zero,8(sp)
+	li	s5,0
+	addi	a5,a3,-1
+	sw	a5,28(sp)
+	li	s4,69
+	addi	s8,s11,-1
+	j	.L11
+.L23:
+	lw	a5,16(sp)
+	bne	a5,s1,.L12
+	li	s2,12
+	j	.L13
+.L24:
+	bne	a5,s9,.L13
+	li	s2,3
+.L13:
+	addi	s1,s1,1
+	slli	s1,s1,16
+	srli	s1,s1,16
+	add	a4,s0,s8
+	slli	a4,a4,16
+	srai	a4,a4,16
+	lw	a3,4(sp)
+	slli	a2,s0,16
+	srai	a2,a2,16
+	lw	a1,0(sp)
+	mv	a0,s2
+	call	gpu_rectangle
+	add	s0,s11,s0
+	slli	s0,s0,16
+	srli	s0,s0,16
+	addi	s3,s3,1
+	beq	s1,s7,.L17
+.L15:
+	beq	s6,s5,.L23
+.L12:
+	lbu	a5,0(s3)
+	beq	a5,s4,.L19
+	bgtu	a5,s4,.L14
+	bne	a5,s10,.L24
+	li	s2,63
+	j	.L13
+.L14:
+	li	a4,88
+	bne	a5,a4,.L13
+	li	s2,60
+	j	.L13
+.L19:
+	li	s2,51
+	j	.L13
+.L17:
+	addi	s5,s5,1
+	slli	s5,s5,16
+	srli	s5,s5,16
+	lw	a5,20(sp)
+	lw	a4,8(sp)
+	add	a5,a5,a4
+	slli	a5,a5,16
+	srli	a5,a5,16
+	sw	a5,8(sp)
+	lw	a5,12(sp)
+	addi	a5,a5,30
+	sw	a5,12(sp)
+	lw	a5,24(sp)
+	beq	a5,s5,.L9
+.L11:
+	beq	s7,zero,.L17
+	lw	a5,8(sp)
+	slli	a4,a5,16
+	srai	a4,a4,16
+	sw	a4,0(sp)
+	lw	a4,28(sp)
+	add	a5,a5,a4
+	slli	a5,a5,16
+	srai	a5,a5,16
+	sw	a5,4(sp)
+	lw	s3,12(sp)
+	li	s0,0
+	li	s1,0
+	li	s10,32
+	li	s9,35
+	j	.L15
+.L9:
+	lw	ra,92(sp)
+	lw	s0,88(sp)
+	lw	s1,84(sp)
+	lw	s2,80(sp)
+	lw	s3,76(sp)
+	lw	s4,72(sp)
+	lw	s5,68(sp)
+	lw	s6,64(sp)
+	lw	s7,60(sp)
+	lw	s8,56(sp)
+	lw	s9,52(sp)
+	lw	s10,48(sp)
+	lw	s11,44(sp)
+	addi	sp,sp,96
+	jr	ra
+	.size	display_maze, .-display_maze
+	.align	1
+	.globl	generate_maze
+	.type	generate_maze, @function
+generate_maze:
+	addi	sp,sp,-80
+	sw	ra,76(sp)
+	sw	s0,72(sp)
+	sw	s1,68(sp)
+	sw	s2,64(sp)
+	sw	s3,60(sp)
+	sw	s4,56(sp)
+	sw	s5,52(sp)
+	sw	s6,48(sp)
+	sw	s7,44(sp)
+	sw	s8,40(sp)
+	sw	s9,36(sp)
+	sw	s10,32(sp)
+	sw	s11,28(sp)
+	sw	a0,12(sp)
+	mv	s11,a1
+	mv	s7,a2
+	addi	a0,a0,-2
+	slli	a0,a0,16
+	srli	a0,a0,16
+	call	rng
+	mv	s2,a0
+	andi	a5,a0,1
+	bne	a5,zero,.L26
+	addi	s2,a0,1
+	slli	s2,s2,16
+	srli	s2,s2,16
+.L26:
+	addi	a0,s11,-2
+	slli	a0,a0,16
+	srli	a0,a0,16
+	call	rng
+	mv	s3,a0
+	andi	a5,a0,1
+	bne	a5,zero,.L27
+	addi	s3,a0,1
+	slli	s3,s3,16
+	srli	s3,s3,16
+.L27:
+	slli	a5,s2,4
+	sub	a5,a5,s2
+	slli	a4,a5,1
+	lui	a5,%hi(.LANCHOR0)
+	addi	a5,a5,%lo(.LANCHOR0)
+	add	a5,a5,a4
+	add	a5,a5,s3
+	li	a4,32
+	sb	a4,1200(a5)
+	addi	s0,s11,-1
+	lw	a5,12(sp)
+	addi	s6,a5,-1
+	lui	s4,%hi(.LANCHOR0)
+	addi	s4,s4,%lo(.LANCHOR0)
+	j	.L43
+.L30:
+	mv	a3,s3
+	mv	a4,s2
+	bne	a0,s9,.L34
+	bleu	s3,s5,.L34
+	addi	a3,s3,-2
+	slli	a3,a3,16
+	srli	a3,a3,16
+	j	.L34
+.L58:
+	addi	a5,s2,2
+	bge	a5,s6,.L44
+	slli	a4,a5,16
+	srli	a4,a4,16
+	mv	a3,s3
+.L34:
+	slli	a5,a4,4
+	sub	a5,a5,a4
+	slli	a5,a5,1
+	add	a5,s4,a5
+	add	a5,a5,a3
+	lbu	a5,1200(a5)
+	beq	a5,s8,.L56
+.L35:
+	addi	s1,s1,1
+	slli	s1,s1,16
+	srli	s1,s1,16
+	beq	s7,s1,.L57
+	mv	s3,a3
+	mv	s2,a4
+.L36:
+	li	a0,4
+	call	rng
+	beq	a0,s5,.L29
+	bgtu	a0,s5,.L30
+	beq	a0,zero,.L58
+	addi	a5,s3,2
+	bge	a5,s0,.L45
+	slli	a3,a5,16
+	srli	a3,a3,16
+	mv	a4,s2
+	j	.L34
+.L29:
+	bleu	s2,s5,.L46
+	addi	a4,s2,-2
+	slli	a4,a4,16
+	srli	a4,a4,16
+	mv	a3,s3
+	j	.L34
+.L44:
+	mv	a3,s3
+	mv	a4,s2
+	j	.L34
+.L45:
+	mv	a3,s3
+	mv	a4,s2
+	j	.L34
+.L46:
+	mv	a3,s3
+	mv	a4,s2
+	j	.L34
+.L56:
+	slli	a5,a4,4
+	sub	a5,a5,a4
+	slli	a5,a5,1
+	add	a5,s4,a5
+	add	a5,a5,a3
+	sb	s10,1200(a5)
+	add	a2,s2,a4
+	srli	a5,a2,31
+	add	a5,a5,a2
+	srai	a2,a5,1
+	add	a1,s3,a3
+	srli	a5,a1,31
+	add	a5,a5,a1
+	srai	a1,a5,1
+	slli	a5,a2,4
+	sub	a5,a5,a2
+	slli	a5,a5,1
+	add	a5,s4,a5
+	add	a5,a5,a1
+	sb	s10,1200(a5)
+	j	.L35
+.L57:
+	mv	s3,a3
+	mv	s2,a4
+.L28:
+	li	a5,1
+	ble	s6,a5,.L25
+	li	a3,1
+	li	a0,1
+	li	a7,1
+	li	a6,1
+	li	a1,35
+	j	.L37
+.L40:
+	add	a5,a2,a5
+	lbu	a5,1200(a5)
+	sub	a5,a5,a1
+	snez	a5,a5
+	neg	a5,a5
+	and	a3,a3,a5
+	addi	a4,a4,2
+	slli	a4,a4,16
+	srli	a4,a4,16
+	mv	a5,a4
+	blt	a4,s0,.L40
+.L42:
+	addi	a0,a0,2
+	slli	a0,a0,16
+	srli	a0,a0,16
+	mv	a7,a0
+	bge	a0,s6,.L59
+.L37:
+	mv	a4,a6
+	mv	a5,a6
+	ble	s0,a6,.L42
+	slli	a2,a7,4
+	sub	a2,a2,a7
+	slli	a2,a2,1
+	add	a2,s4,a2
+	j	.L40
+.L59:
+	bne	a3,zero,.L25
+.L43:
+	mv	a3,s3
+	mv	a2,s2
+	mv	a1,s11
+	lw	a0,12(sp)
+	call	display_maze
+	beq	s7,zero,.L28
+	li	s1,0
+	li	s5,2
+	li	s9,3
+	li	s8,35
+	li	s10,32
+	j	.L36
+.L25:
+	lw	ra,76(sp)
+	lw	s0,72(sp)
+	lw	s1,68(sp)
+	lw	s2,64(sp)
+	lw	s3,60(sp)
+	lw	s4,56(sp)
+	lw	s5,52(sp)
+	lw	s6,48(sp)
+	lw	s7,44(sp)
+	lw	s8,40(sp)
+	lw	s9,36(sp)
+	lw	s10,32(sp)
+	lw	s11,28(sp)
+	addi	sp,sp,80
+	jr	ra
+	.size	generate_maze, .-generate_maze
+	.align	1
+	.globl	draw_map
+	.type	draw_map, @function
+draw_map:
+	addi	sp,sp,-112
+	sw	ra,108(sp)
+	sw	s0,104(sp)
+	sw	s1,100(sp)
+	sw	s2,96(sp)
+	sw	s3,92(sp)
+	sw	s4,88(sp)
+	sw	s5,84(sp)
+	sw	s6,80(sp)
+	sw	s7,76(sp)
+	sw	s8,72(sp)
+	sw	s9,68(sp)
+	sw	s10,64(sp)
+	sw	s11,60(sp)
+	mv	s0,a0
+	sw	a0,32(sp)
+	mv	s7,a1
+	mv	s8,a2
+	sw	a3,24(sp)
+	sw	a4,40(sp)
+	mv	s6,a5
+	sw	a6,44(sp)
+	li	a5,160
+	div	s1,a5,a0
+	sw	s1,28(sp)
+	li	a5,120
+	div	s10,a5,a1
+	li	a4,140
+	li	a3,640
+	li	a2,0
+	li	a1,460
+	li	a0,56
+	call	gpu_rectangle
+	sw	zero,20(sp)
+	li	a5,475
+	sw	a5,16(sp)
+	beq	s0,zero,.L62
+	li	s2,0
+	li	s5,0
+	addi	a5,s1,-1
+	sw	a5,36(sp)
+	li	s4,69
+	lui	a5,%hi(.LANCHOR0)
+	addi	a5,a5,%lo(.LANCHOR0)
+	sw	a5,8(sp)
+	addi	a5,a5,1200
+	sw	a5,12(sp)
+	addi	s11,s10,-1
+	j	.L61
+.L87:
+	lw	a5,24(sp)
+	bne	a5,s1,.L63
+	li	s2,12
+	j	.L64
+.L65:
+	lw	a5,12(sp)
+	add	a5,a5,s3
+	lbu	a5,0(a5)
+.L66:
+	beq	a5,s4,.L81
+	bgt	a5,s4,.L67
+	li	a4,32
+	beq	a5,a4,.L82
+	li	a4,35
+	bne	a5,a4,.L64
+	li	s2,3
+.L64:
+	addi	s1,s1,1
+	slli	s1,s1,16
+	srli	s1,s1,16
+	add	a4,s0,s11
+	slli	a4,a4,16
+	srai	a4,a4,16
+	lw	a3,4(sp)
+	slli	a2,s0,16
+	srai	a2,a2,16
+	lw	a1,0(sp)
+	mv	a0,s2
+	call	gpu_rectangle
+	add	s0,s10,s0
+	slli	s0,s0,16
+	srli	s0,s0,16
+	addi	s3,s3,1
+	beq	s1,s7,.L70
+.L68:
+	beq	s8,s5,.L87
+.L63:
+	beq	s6,zero,.L65
+	lw	a5,8(sp)
+	add	a5,a5,s3
+	lbu	a5,0(a5)
+	j	.L66
+.L67:
+	bne	a5,s9,.L64
+	li	s2,60
+	j	.L64
+.L81:
+	li	s2,51
+	j	.L64
+.L82:
+	li	s2,63
+	j	.L64
+.L70:
+	addi	s5,s5,1
+	slli	s5,s5,16
+	srli	s5,s5,16
+	lw	a5,28(sp)
+	lw	a4,16(sp)
+	add	a5,a5,a4
+	slli	a5,a5,16
+	srli	a5,a5,16
+	sw	a5,16(sp)
+	lw	a5,20(sp)
+	addi	a5,a5,30
+	sw	a5,20(sp)
+	lw	a5,32(sp)
+	beq	a5,s5,.L62
+.L61:
+	beq	s7,zero,.L70
+	lw	a5,16(sp)
+	slli	a4,a5,16
+	srai	a4,a4,16
+	sw	a4,0(sp)
+	lw	a4,36(sp)
+	add	a5,a5,a4
+	slli	a5,a5,16
+	srai	a5,a5,16
+	sw	a5,4(sp)
+	lw	s3,20(sp)
+	li	s0,10
+	li	s1,0
+	li	s9,88
+	j	.L68
+.L62:
+	li	a6,10
+	li	a5,463
+	li	a4,10
+	li	a3,473
+	li	a2,1
+	li	a1,468
+	li	a0,0
+	call	gpu_triangle
+	li	a6,10
+	li	a5,463
+	li	a4,19
+	li	a3,468
+	li	a2,10
+	li	a1,473
+	li	a0,0
+	call	gpu_triangle
+	li	a5,2
+	lw	a4,40(sp)
+	beq	a4,a5,.L71
+	bgtu	a4,a5,.L72
+	beq	a4,zero,.L88
+	li	a6,19
+	li	a5,468
+	li	a4,10
+	li	a3,473
+	li	a2,1
+	li	a1,468
+	li	a0,12
+	call	gpu_triangle
+	j	.L76
+.L72:
+	li	a5,3
+	lw	a4,40(sp)
+	bne	a4,a5,.L76
+	li	a6,10
+	li	a5,463
+	li	a4,19
+	li	a3,468
+	li	a2,1
+	li	a1,468
+	li	a0,12
+	call	gpu_triangle
+	j	.L76
+.L88:
+	li	a6,10
+	li	a5,463
+	li	a4,10
+	li	a3,473
+	li	a2,1
+	li	a1,468
+	li	a0,12
+	call	gpu_triangle
+.L76:
+	li	a5,1
+	lw	a4,44(sp)
+	beq	a4,a5,.L77
+	li	a5,2
+	bne	a4,a5,.L60
+	li	a4,0
+	li	a3,1
+	li	a2,122
+	li	a1,462
+	li	a0,12
+	call	gpu_character_blit
+.L77:
+	li	a4,0
+	li	a3,1
+	li	a2,130
+	li	a1,462
+	li	a0,12
+	call	gpu_character_blit
+.L60:
+	lw	ra,108(sp)
+	lw	s0,104(sp)
+	lw	s1,100(sp)
+	lw	s2,96(sp)
+	lw	s3,92(sp)
+	lw	s4,88(sp)
+	lw	s5,84(sp)
+	lw	s6,80(sp)
+	lw	s7,76(sp)
+	lw	s8,72(sp)
+	lw	s9,68(sp)
+	lw	s10,64(sp)
+	lw	s11,60(sp)
+	addi	sp,sp,112
+	jr	ra
+.L71:
+	li	a6,10
+	li	a5,463
+	li	a4,19
+	li	a3,468
+	li	a2,10
+	li	a1,473
+	li	a0,12
+	call	gpu_triangle
+	j	.L76
+	.size	draw_map, .-draw_map
+	.align	1
+	.globl	counttowall
+	.type	counttowall, @function
+counttowall:
+	mv	a7,a0
+	mv	t1,a1
+	li	a0,0
+	li	t2,0
+	lui	t0,%hi(.LANCHOR0)
+	addi	t0,t0,%lo(.LANCHOR0)
+	li	a6,1
+	li	t5,69
+	li	t4,88
+	li	t3,35
+	lui	t6,%hi(directionx)
+	addi	t6,t6,%lo(directionx)
+	slli	a5,a2,1
+	add	t6,t6,a5
+	lui	a2,%hi(directiony)
+	addi	a2,a2,%lo(directiony)
+	add	a2,a2,a5
+.L90:
+	mv	a4,t2
+	slli	a5,a7,4
+	sub	a5,a5,a7
+	slli	a5,a5,1
+	add	a5,t0,a5
+	add	a5,a5,t1
+.L91:
+	bne	a4,zero,.L98
+	lbu	a3,1200(a5)
+	mv	a4,a6
+	beq	a3,t5,.L91
+	beq	a3,t4,.L91
+	beq	a3,t3,.L91
+	lhu	a5,0(t6)
+	add	a7,a7,a5
+	slli	a7,a7,16
+	srli	a7,a7,16
+	lhu	a1,0(a2)
+	add	a1,t1,a1
+	slli	t1,a1,16
+	srli	t1,t1,16
+	addi	a0,a0,1
+	slli	a0,a0,16
+	srli	a0,a0,16
+	j	.L90
+.L98:
+	ret
+	.size	counttowall, .-counttowall
+	.align	1
+	.globl	whatisleft
+	.type	whatisleft, @function
+whatisleft:
+	lui	a4,%hi(directionx)
+	slli	a2,a2,1
+	addi	a4,a4,%lo(directionx)
+	add	a4,a4,a2
+	lh	a5,0(a4)
+	mul	a5,a5,a3
+	lui	a4,%hi(leftdirectionx)
+	addi	a4,a4,%lo(leftdirectionx)
+	add	a4,a4,a2
+	lh	a4,0(a4)
+	add	a0,a0,a5
+	add	a0,a0,a4
+	lui	a4,%hi(directiony)
+	addi	a4,a4,%lo(directiony)
+	add	a4,a4,a2
+	lh	a5,0(a4)
+	mul	a3,a5,a3
+	lui	a4,%hi(leftdirectiony)
+	addi	a4,a4,%lo(leftdirectiony)
+	add	a2,a4,a2
+	lh	a2,0(a2)
+	slli	a4,a0,4
+	sub	a0,a4,a0
+	slli	a0,a0,1
+	lui	a5,%hi(.LANCHOR0)
+	addi	a5,a5,%lo(.LANCHOR0)
+	add	a5,a5,a0
+	add	a5,a5,a1
+	add	a5,a5,a3
+	add	a5,a5,a2
+	lbu	a0,1200(a5)
+	ret
+	.size	whatisleft, .-whatisleft
+	.align	1
+	.globl	whatisright
+	.type	whatisright, @function
+whatisright:
+	lui	a4,%hi(directionx)
+	slli	a2,a2,1
+	addi	a4,a4,%lo(directionx)
+	add	a4,a4,a2
+	lh	a5,0(a4)
+	mul	a5,a5,a3
+	lui	a4,%hi(rightdirectionx)
+	addi	a4,a4,%lo(rightdirectionx)
+	add	a4,a4,a2
+	lh	a4,0(a4)
+	add	a0,a0,a5
+	add	a0,a0,a4
+	lui	a4,%hi(directiony)
+	addi	a4,a4,%lo(directiony)
+	add	a4,a4,a2
+	lh	a5,0(a4)
+	mul	a3,a5,a3
+	lui	a4,%hi(rightdirectiony)
+	addi	a4,a4,%lo(rightdirectiony)
+	add	a2,a4,a2
+	lh	a2,0(a2)
+	slli	a4,a0,4
+	sub	a0,a4,a0
+	slli	a0,a0,1
+	lui	a5,%hi(.LANCHOR0)
+	addi	a5,a5,%lo(.LANCHOR0)
+	add	a5,a5,a0
+	add	a5,a5,a1
+	add	a5,a5,a3
+	add	a5,a5,a2
+	lbu	a0,1200(a5)
+	ret
+	.size	whatisright, .-whatisright
+	.align	1
+	.globl	left_wall
+	.type	left_wall, @function
+left_wall:
 	addi	sp,sp,-32
 	sw	ra,28(sp)
-	sw	s0,24(sp)
-	sw	s1,20(sp)
-	sw	s2,16(sp)
-	sw	s3,12(sp)
-	li	s0,0
-	li	a0,0
-	lui	s3,%hi(ROOTDIRECTORY)
-	lui	s2,%hi(PARTITION)
-	lui	s1,%hi(.LANCHOR0)
-	addi	s1,s1,%lo(.LANCHOR0)
-.L7:
-	slli	a2,s0,9
-	lw	a1,%lo(ROOTDIRECTORY)(s3)
-	lw	a3,%lo(PARTITION)(s2)
-	lbu	a5,8(a3)
-	lbu	a4,9(a3)
-	slli	a4,a4,8
-	or	a4,a4,a5
-	lbu	a5,10(a3)
+	mv	a5,a1
+	lui	a4,%hi(.LANCHOR1)
+	addi	a4,a4,%lo(.LANCHOR1)
+	slli	a3,a1,1
+	add	a3,a4,a3
+	lh	a1,0(a3)
+	lh	a2,36(a3)
+	addi	a5,a5,1
+	slli	a5,a5,1
+	add	a4,a4,a5
+	lh	a3,0(a4)
+	lh	a4,36(a4)
+	li	t1,480
+	sub	a6,t1,a4
+	sub	t1,t1,a2
+	slli	t1,t1,16
+	srai	t1,t1,16
+	sw	t1,0(sp)
+	mv	a7,a1
+	slli	a6,a6,16
+	srai	a6,a6,16
+	mv	a5,a3
+	call	gpu_quadrilateral
+	lw	ra,28(sp)
+	addi	sp,sp,32
+	jr	ra
+	.size	left_wall, .-left_wall
+	.align	1
+	.globl	right_wall
+	.type	right_wall, @function
+right_wall:
+	addi	sp,sp,-32
+	sw	ra,28(sp)
+	mv	a5,a1
+	lui	a6,%hi(.LANCHOR1)
+	addi	a6,a6,%lo(.LANCHOR1)
+	slli	a3,a1,1
+	add	a3,a6,a3
+	li	a4,640
+	lhu	a1,0(a3)
+	sub	a1,a4,a1
+	slli	a1,a1,16
+	srai	a1,a1,16
+	lh	a2,36(a3)
+	addi	a5,a5,1
+	slli	a5,a5,1
+	add	a6,a6,a5
+	lhu	a5,0(a6)
+	sub	a5,a4,a5
 	slli	a5,a5,16
-	or	a4,a5,a4
-	lbu	a5,11(a3)
-	slli	a5,a5,24
-	or	a5,a5,a4
-	lhu	a4,526(s1)
-	add	a5,a5,a4
-	lhu	a4,534(s1)
-	lbu	a3,528(s1)
-	mul	a4,a4,a3
-	add	a5,a5,a4
-	add	a1,a1,a2
-	add	a0,a5,a0
-	call	sd_readSector
+	srai	a5,a5,16
+	lh	a3,36(a6)
+	li	a4,480
+	sub	a6,a4,a3
+	sub	a4,a4,a2
+	sw	a3,0(sp)
+	mv	a7,a5
+	slli	a6,a6,16
+	srai	a6,a6,16
+	slli	a4,a4,16
+	srai	a4,a4,16
+	mv	a3,a1
+	call	gpu_quadrilateral
+	lw	ra,28(sp)
+	addi	sp,sp,32
+	jr	ra
+	.size	right_wall, .-right_wall
+	.align	1
+	.globl	walk_maze
+	.type	walk_maze, @function
+walk_maze:
+	addi	sp,sp,-96
+	sw	ra,92(sp)
+	sw	s0,88(sp)
+	sw	s1,84(sp)
+	sw	s2,80(sp)
+	sw	s3,76(sp)
+	sw	s4,72(sp)
+	sw	s5,68(sp)
+	sw	s6,64(sp)
+	sw	s7,60(sp)
+	sw	s8,56(sp)
+	sw	s9,52(sp)
+	sw	s10,48(sp)
+	sw	s11,44(sp)
+	sw	a0,12(sp)
+	sw	a1,16(sp)
+	li	a5,2
+	sw	a5,0(sp)
+	li	s5,1
+	li	s3,1
+	li	s4,1
+	lui	a5,%hi(.LANCHOR0)
+	addi	a5,a5,%lo(.LANCHOR0)
+	sw	a5,4(sp)
+	lui	a5,%hi(directionx)
+	addi	a5,a5,%lo(directionx)
+	sw	a5,20(sp)
+	lui	a5,%hi(.LANCHOR1)
+	addi	a5,a5,%lo(.LANCHOR1)
+	sw	a5,24(sp)
+	addi	a5,a5,36
+	sw	a5,28(sp)
+	j	.L157
+.L109:
+	addi	s0,a0,1
+	slli	a5,s0,1
+	lw	a4,24(sp)
+	add	a5,a4,a5
+	lh	a2,36(a5)
+	li	a4,480
+	sub	a4,a4,a2
+	slli	a4,a4,16
+	srai	a4,a4,16
+	li	a3,640
+	li	a1,0
+	li	a0,60
+	call	gpu_rectangle
+	li	a5,3
+	beq	s1,a5,.L111
+	bgtu	s1,a5,.L112
+	li	a5,1
+	beq	s1,a5,.L113
+	li	a5,2
+	bne	s1,a5,.L107
+	slli	s0,s0,1
+	lw	a5,24(sp)
+	add	s0,a5,s0
+	lhu	a2,36(s0)
+	addi	a2,a2,8
+	li	a4,2
+	li	a3,69
+	slli	a2,a2,16
+	srai	a2,a2,16
+	li	a1,256
+	li	a0,12
+	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,8
+	li	a4,2
+	li	a3,88
+	slli	a2,a2,16
+	srai	a2,a2,16
+	li	a1,288
+	li	a0,12
+	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,8
+	li	a4,2
+	li	a3,73
+	slli	a2,a2,16
+	srai	a2,a2,16
+	li	a1,320
+	li	a0,12
+	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,8
+	li	a4,2
+	li	a3,84
+	slli	a2,a2,16
+	srai	a2,a2,16
+	li	a1,352
+	li	a0,12
+	call	gpu_character_blit
+	j	.L107
+.L112:
+	li	a5,4
+	bne	s1,a5,.L107
+	slli	s0,s0,1
+	lw	a5,24(sp)
+	add	s0,a5,s0
+	lhu	a2,36(s0)
+	addi	a2,a2,2
+	li	a4,0
+	li	a3,69
+	slli	a2,a2,16
+	srai	a2,a2,16
+	li	a1,304
+	li	a0,12
+	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,2
+	li	a4,0
+	li	a3,88
+	slli	a2,a2,16
+	srai	a2,a2,16
+	li	a1,312
+	li	a0,12
+	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,2
+	li	a4,0
+	li	a3,73
+	slli	a2,a2,16
+	srai	a2,a2,16
+	li	a1,320
+	li	a0,12
+	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,2
+	li	a4,0
+	li	a3,84
+	slli	a2,a2,16
+	srai	a2,a2,16
+	li	a1,328
+	li	a0,12
+	call	gpu_character_blit
+	j	.L107
+.L113:
+	slli	s0,s0,1
+	lw	a5,24(sp)
+	add	s0,a5,s0
+	lhu	a2,36(s0)
+	addi	a2,a2,16
+	li	a4,3
+	li	a3,69
+	slli	a2,a2,16
+	srai	a2,a2,16
+	li	a1,192
+	li	a0,12
+	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,16
+	li	a4,3
+	li	a3,88
+	slli	a2,a2,16
+	srai	a2,a2,16
+	li	a1,256
+	li	a0,12
+	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,16
+	li	a4,3
+	li	a3,73
+	slli	a2,a2,16
+	srai	a2,a2,16
+	li	a1,320
+	li	a0,12
+	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,16
+	li	a4,3
+	li	a3,84
+	slli	a2,a2,16
+	srai	a2,a2,16
+	li	a1,384
+	li	a0,12
+	call	gpu_character_blit
+	j	.L107
+.L111:
+	slli	s0,s0,1
+	lw	a5,24(sp)
+	add	s0,a5,s0
+	lhu	a2,36(s0)
+	addi	a2,a2,4
+	li	a4,1
+	li	a3,69
+	slli	a2,a2,16
+	srai	a2,a2,16
+	li	a1,288
+	li	a0,12
+	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,4
+	li	a4,1
+	li	a3,88
+	slli	a2,a2,16
+	srai	a2,a2,16
+	li	a1,304
+	li	a0,12
+	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,4
+	li	a4,1
+	li	a3,73
+	slli	a2,a2,16
+	srai	a2,a2,16
+	li	a1,320
+	li	a0,12
+	call	gpu_character_blit
+	lhu	a2,36(s0)
+	addi	a2,a2,4
+	li	a4,1
+	li	a3,84
+	slli	a2,a2,16
+	srai	a2,a2,16
+	li	a1,336
+	li	a0,12
+	call	gpu_character_blit
+	j	.L107
+.L108:
+	addi	a5,a0,1
+	slli	a5,a5,1
+	lw	a4,24(sp)
+	add	a5,a4,a5
+	lh	a2,36(a5)
+	li	a4,480
+	sub	a4,a4,a2
+	slli	a4,a4,16
+	srai	a4,a4,16
+	li	a3,640
+	li	a1,0
+	li	a0,51
+	call	gpu_rectangle
+	j	.L107
+.L166:
+	addi	a5,a0,1
+	slli	a5,a5,1
+	lw	a4,24(sp)
+	add	a5,a4,a5
+	lh	a2,36(a5)
+	li	a4,480
+	sub	a4,a4,a2
+	slli	a4,a4,16
+	srai	a4,a4,16
+	li	a3,640
+	li	a1,0
+	li	a0,42
+	call	gpu_rectangle
+	j	.L107
+.L118:
+	bne	a0,s10,.L121
+	mv	a1,s1
+	li	a0,60
+	call	left_wall
+.L121:
+	mv	a3,s0
+	mv	a2,s5
+	mv	a1,s3
+	mv	a0,s4
+	call	whatisright
+	beq	a0,s2,.L122
+	bgtu	a0,s2,.L123
+	beq	a0,s9,.L124
+	bne	a0,s8,.L126
+	mv	a1,s0
+	li	a0,21
+	call	right_wall
+	j	.L126
+.L119:
+	lh	a2,0(s6)
+	li	a5,480
+	sub	a4,a5,a2
+	slli	a4,a4,16
+	srai	a4,a4,16
+	lh	a3,0(s7)
+	li	a1,0
+	li	a0,42
+	call	gpu_rectangle
+	j	.L121
+.L117:
+	mv	a1,s1
+	li	a0,51
+	call	left_wall
+	j	.L121
+.L123:
+	bne	a0,s10,.L126
+	mv	a1,s0
+	li	a0,60
+	call	right_wall
+.L126:
+	addi	s0,s0,-1
+	slli	s1,s0,16
+	srai	s1,s1,16
+	addi	s7,s7,-2
+	addi	s6,s6,-2
+	blt	s1,zero,.L159
+.L127:
+	slli	s0,s1,16
+	srli	s0,s0,16
+	mv	a3,s0
+	mv	a2,s5
+	mv	a1,s3
+	mv	a0,s4
+	call	whatisleft
+	beq	a0,s2,.L117
+	bgtu	a0,s2,.L118
+	beq	a0,s9,.L119
+	bne	a0,s8,.L121
+	mv	a1,s1
+	li	a0,21
+	call	left_wall
+	j	.L121
+.L124:
+	lh	a2,0(s6)
+	li	a5,480
+	sub	a4,a5,a2
+	lhu	a1,0(s7)
+	li	a5,640
+	sub	a1,a5,a1
+	slli	a4,a4,16
+	srai	a4,a4,16
+	li	a3,640
+	slli	a1,a1,16
+	srai	a1,a1,16
+	li	a0,42
+	call	gpu_rectangle
+	j	.L126
+.L122:
+	mv	a1,s0
+	li	a0,51
+	call	right_wall
+	j	.L126
+.L159:
+	lw	a6,0(sp)
+	li	a5,1
+	mv	a4,s5
+	mv	a3,s3
+	mv	a2,s4
+	lw	a1,16(sp)
+	lw	a0,12(sp)
+	call	draw_map
+	mv	s0,s5
+	mv	s2,s3
+	mv	s1,s4
+	slli	a5,s5,1
+	lw	a4,20(sp)
+	add	s7,a4,a5
+	lui	s6,%hi(directiony)
+	addi	s6,s6,%lo(directiony)
+	add	s6,s6,a5
+	j	.L144
+.L161:
+	beq	s0,zero,.L146
+	addi	s0,s0,-1
+	slli	s0,s0,16
+	srli	s0,s0,16
+.L130:
+	call	get_buttons
+	andi	a0,a0,32
+	bne	a0,zero,.L130
+	j	.L128
+.L146:
+	li	s0,3
+	j	.L130
+.L162:
+	li	a5,3
+	beq	s0,a5,.L147
 	addi	s0,s0,1
 	slli	s0,s0,16
 	srli	s0,s0,16
-	mv	a0,s0
-	lw	a5,528(s1)
-	slli	a5,a5,8
-	srli	a5,a5,20
-	bltu	s0,a5,.L7
-	lw	ra,28(sp)
-	lw	s0,24(sp)
-	lw	s1,20(sp)
-	lw	s2,16(sp)
-	lw	s3,12(sp)
-	addi	sp,sp,32
-	jr	ra
-.L10:
-	ret
-	.size	sd_readRootDirectory, .-sd_readRootDirectory
-	.align	1
-	.globl	draw_riscv_logo
-	.type	draw_riscv_logo, @function
-draw_riscv_logo:
-	addi	sp,sp,-16
-	sw	ra,12(sp)
-	li	a4,100
-	li	a3,100
-	li	a2,0
-	li	a1,0
-	li	a0,56
-	call	gpu_rectangle
-	li	a6,100
-	li	a5,50
-	li	a4,100
-	li	a3,100
-	li	a2,33
-	li	a1,100
-	li	a0,63
-	call	gpu_triangle
-	li	a6,100
-	li	a5,66
-	li	a4,100
-	li	a3,100
-	li	a2,50
-	li	a1,100
-	li	a0,2
-	call	gpu_triangle
-	li	a4,50
-	li	a3,33
-	li	a2,0
-	li	a1,0
-	li	a0,2
-	call	gpu_rectangle
-	li	a4,1
-	li	a3,26
-	li	a2,25
-	li	a1,25
-	li	a0,63
-	call	gpu_circle
-	li	a4,12
-	li	a3,25
-	li	a2,0
-	li	a1,0
-	li	a0,63
-	call	gpu_rectangle
-	li	a4,1
-	li	a3,12
-	li	a2,25
-	li	a1,25
-	li	a0,2
-	call	gpu_circle
-	li	a6,100
+.L133:
+	call	get_buttons
+	andi	a0,a0,64
+	bne	a0,zero,.L133
+	j	.L131
+.L147:
+	li	s0,0
+	j	.L133
+.L163:
+	lh	a3,0(s7)
+	lh	a4,0(s6)
+	add	a2,a3,s11
+	slli	a5,a2,4
+	sub	a5,a5,a2
+	slli	a5,a5,1
+	lw	a2,4(sp)
+	add	a5,a2,a5
+	lw	a2,8(sp)
+	add	a5,a5,a2
+	add	a5,a5,a4
+	lbu	a5,1200(a5)
+	li	a2,32
+	beq	a5,a2,.L135
+	li	a2,88
+	bne	a5,a2,.L137
+.L135:
+	add	s1,s1,a3
+	slli	s1,s1,16
+	srli	s1,s1,16
+	add	s2,s2,a4
+	slli	s2,s2,16
+	srli	s2,s2,16
+.L137:
+	call	get_buttons
+	andi	a0,a0,8
+	bne	a0,zero,.L137
+	j	.L134
+.L164:
+	lh	a3,0(s7)
+	lh	a4,0(s6)
+	sub	a2,s11,a3
+	lw	a5,8(sp)
+	sub	a1,a5,a4
+	slli	a5,a2,4
+	sub	a5,a5,a2
+	slli	a5,a5,1
+	lw	a2,4(sp)
+	add	a5,a2,a5
+	add	a5,a5,a1
+	lbu	a5,1200(a5)
+	li	a2,32
+	beq	a5,a2,.L139
+	li	a2,88
+	bne	a5,a2,.L141
+.L139:
+	sub	s1,s1,a3
+	slli	s1,s1,16
+	srli	s1,s1,16
+	sub	s2,s2,a4
+	slli	s2,s2,16
+	srli	s2,s2,16
+.L141:
+	call	get_buttons
+	andi	a0,a0,16
+	bne	a0,zero,.L141
+	j	.L138
+.L142:
+	bne	s1,s4,.L148
+	bne	s2,s3,.L149
+	bne	s5,s0,.L160
+.L144:
+	call	get_buttons
+	andi	a0,a0,32
+	bne	a0,zero,.L161
+.L128:
+	call	get_buttons
+	andi	a0,a0,64
+	bne	a0,zero,.L162
+.L131:
+	call	get_buttons
+	andi	a0,a0,8
+	bne	a0,zero,.L163
+.L134:
+	call	get_buttons
+	andi	a0,a0,16
+	bne	a0,zero,.L164
+.L138:
+	call	get_buttons
+	andi	a0,a0,4
+	beq	a0,zero,.L142
+	lw	a5,0(sp)
+	beq	a5,zero,.L142
+	mv	a6,a5
 	li	a5,0
-	li	a4,100
-	li	a3,67
-	li	a2,33
-	li	a1,0
-	li	a0,63
-	call	gpu_triangle
-	li	a6,100
-	li	a5,0
-	li	a4,100
-	li	a3,50
-	li	a2,50
-	li	a1,0
-	li	a0,2
-	call	gpu_triangle
-	li	a4,37
-	li	a3,25
-	li	a2,12
-	li	a1,0
-	li	a0,2
-	call	gpu_rectangle
-	li	a4,100
-	li	a3,8
-	li	a2,37
-	li	a1,0
-	li	a0,2
-	call	gpu_rectangle
-	lw	ra,12(sp)
-	addi	sp,sp,16
+	mv	a4,s5
+	mv	a3,s3
+	mv	a2,s4
+	lw	a1,16(sp)
+	lw	a0,12(sp)
+	call	draw_map
+.L143:
+	call	get_buttons
+	andi	a0,a0,4
+	bne	a0,zero,.L143
+	lw	a5,0(sp)
+	addi	a5,a5,-1
+	slli	a5,a5,16
+	srli	a5,a5,16
+	sw	a5,0(sp)
+	mv	a6,a5
+	li	a5,1
+	mv	a4,s5
+	mv	a3,s3
+	mv	a2,s4
+	lw	a1,16(sp)
+	lw	a0,12(sp)
+	call	draw_map
+	j	.L142
+.L160:
+	mv	s5,s0
+	mv	s3,s2
+	mv	s4,s1
+	j	.L157
+.L148:
+	mv	s5,s0
+	mv	s3,s2
+	mv	s4,s1
+.L157:
+	mv	s11,s4
+	lw	a5,12(sp)
+	addi	a5,a5,-2
+	bne	s4,a5,.L145
+	lw	a5,16(sp)
+	addi	a5,a5,-3
+	beq	s3,a5,.L165
+.L145:
+	sw	s3,8(sp)
+	slli	a5,s11,4
+	sub	a5,a5,s11
+	slli	a5,a5,1
+	lw	s0,4(sp)
+	add	a5,s0,a5
+	add	a5,a5,s3
+	li	a4,32
+	sb	a4,0(a5)
+	call	tpu_cs
+	call	gpu_cs
+	mv	a2,s5
+	mv	a1,s3
+	mv	a0,s4
+	call	counttowall
+	mv	s1,a0
+	li	a5,15
+	bgtu	a0,a5,.L107
+	slli	a3,s5,1
+	lw	a5,20(sp)
+	add	a5,a5,a3
+	lh	a5,0(a5)
+	mul	a5,a5,a0
+	add	a4,a5,s11
+	lui	a5,%hi(directiony)
+	addi	a5,a5,%lo(directiony)
+	add	a5,a5,a3
+	lh	a5,0(a5)
+	mul	a3,a5,a0
+	slli	a5,a4,4
+	sub	a5,a5,a4
+	slli	a5,a5,1
+	add	a5,s0,a5
+	add	a5,a5,s3
+	add	a5,a5,a3
+	lbu	a5,1200(a5)
+	li	a4,69
+	beq	a5,a4,.L108
+	li	a4,88
+	beq	a5,a4,.L109
+	li	a4,35
+	beq	a5,a4,.L166
+.L107:
+	li	a5,15
+	ble	s1,a5,.L116
+	li	s1,15
+.L116:
+	slli	s1,s1,16
+	srai	s1,s1,16
+	addi	s6,s1,1
+	slli	s6,s6,16
+	srai	s6,s6,16
+	slli	s6,s6,1
+	lw	a5,24(sp)
+	add	s7,a5,s6
+	lw	a5,28(sp)
+	add	s6,a5,s6
+	li	s2,69
+	li	s10,88
+	li	s9,32
+	li	s8,35
+	j	.L127
+.L149:
+	mv	s5,s0
+	mv	s3,s2
+	mv	s4,s1
+	j	.L157
+.L165:
+	lw	ra,92(sp)
+	lw	s0,88(sp)
+	lw	s1,84(sp)
+	lw	s2,80(sp)
+	lw	s3,76(sp)
+	lw	s4,72(sp)
+	lw	s5,68(sp)
+	lw	s6,64(sp)
+	lw	s7,60(sp)
+	lw	s8,56(sp)
+	lw	s9,52(sp)
+	lw	s10,48(sp)
+	lw	s11,44(sp)
+	addi	sp,sp,96
 	jr	ra
-	.size	draw_riscv_logo, .-draw_riscv_logo
-	.align	1
-	.globl	set_sdcard_bitmap
-	.type	set_sdcard_bitmap, @function
-set_sdcard_bitmap:
-	addi	sp,sp,-16
-	sw	ra,12(sp)
-	sw	s0,8(sp)
-	lui	a1,%hi(.LANCHOR1)
-	addi	s0,a1,%lo(.LANCHOR1)
-	addi	a1,a1,%lo(.LANCHOR1)
-	li	a0,0
-	call	set_blitter_bitmap
-	addi	a1,s0,32
-	li	a0,1
-	call	set_blitter_bitmap
-	addi	a1,s0,64
-	li	a0,2
-	call	set_blitter_bitmap
-	lw	ra,12(sp)
-	lw	s0,8(sp)
-	addi	sp,sp,16
-	jr	ra
-	.size	set_sdcard_bitmap, .-set_sdcard_bitmap
-	.align	1
-	.globl	draw_sdcard
-	.type	draw_sdcard, @function
-draw_sdcard:
-	addi	sp,sp,-16
-	sw	ra,12(sp)
-	li	a4,1
-	li	a3,1
-	li	a2,0
-	li	a1,608
-	li	a0,3
-	call	gpu_blit
-	li	a4,1
-	li	a3,0
-	li	a2,0
-	li	a1,608
-	li	a0,63
-	call	gpu_blit
-	lw	ra,12(sp)
-	addi	sp,sp,16
-	jr	ra
-	.size	draw_sdcard, .-draw_sdcard
-	.section	.rodata.str1.4
+	.size	walk_maze, .-walk_maze
+	.section	.rodata.str1.4,"aMS",@progbits,1
+	.align	2
+.LC0:
+	.string	"Generating Maze - Best to take notes!"
+	.align	2
+.LC1:
+	.string	"Level: "
 	.align	2
 .LC2:
-	.string	"Welcome to PAWS a RISC-V RV32IMC CPU"
+	.string	"Size: "
 	.align	2
 .LC3:
-	.string	"Waiting for SDCARD"
+	.string	" x "
 	.align	2
 .LC4:
-	.string	"Reading Master Boot Record"
+	.string	"     Press FIRE to walk the maze!    "
 	.align	2
 .LC5:
-	.string	"SCARD Detected    "
+	.string	"             Release FIRE!           "
 	.align	2
 .LC6:
-	.string	"Read Master Boot Record   "
+	.string	"        Press FIRE to restart!       "
 	.align	2
 .LC7:
-	.string	"Partition : "
-	.align	2
-.LC8:
-	.string	", Type : "
-	.align	2
-.LC9:
-	.string	" No Entry"
-	.align	2
-.LC10:
-	.string	" FAT16 <32MB"
-	.align	2
-.LC11:
-	.string	" FAT16 >32MB"
-	.align	2
-.LC12:
-	.string	" FAT16 LBA"
-	.align	2
-.LC13:
-	.string	" Not FAT16"
-	.align	2
-.LC14:
-	.string	"ERROR: PLEASE INSERT A VALID FAT16 FORMATTED SDCARD AND PRESS RESET"
-	.align	2
-.LC15:
-	.string	"Reading Partition 0 Boot Sector"
-	.align	2
-.LC16:
-	.string	"Read Partition 0 Boot Sector   "
-	.align	2
-.LC17:
-	.string	"Sector Size: "
-	.align	2
-.LC18:
-	.string	" Cluster Size: "
-	.align	2
-.LC19:
-	.string	" FATs: "
-	.align	2
-.LC20:
-	.string	" Directory Entries: "
-	.align	2
-.LC21:
-	.string	"Total Sectors: "
-	.align	2
-.LC22:
-	.string	"Reading Root Directory"
-	.align	2
-.LC23:
-	.string	"Read Root Directory   "
-	.align	2
-.LC24:
-	.string	"\n\n\n\n\n\n\n\nRISC-ICE-V BIOS"
-	.align	2
-.LC25:
-	.string	"> ls *.PAW"
-	.align	2
-.LC26:
-	.string	"\nTerminal Echo Starting"
-	.align	2
-.LC27:
-	.string	"You pressed : "
-	.align	2
-.LC28:
-	.string	" <-"
+	.string	"       Release FIRE!      "
 	.text
 	.align	1
 	.globl	main
 	.type	main, @function
 main:
-	addi	sp,sp,-64
-	sw	ra,60(sp)
-	sw	s0,56(sp)
-	sw	s1,52(sp)
-	sw	s2,48(sp)
-	sw	s3,44(sp)
-	sw	s4,40(sp)
-	sw	s5,36(sp)
-	sw	s6,32(sp)
-	sw	s7,28(sp)
-	sw	s8,24(sp)
-	sw	s9,20(sp)
-	sw	s10,16(sp)
-	sw	s11,12(sp)
-	call	gpu_cs
+	addi	sp,sp,-48
+	sw	ra,44(sp)
+	sw	s0,40(sp)
+	sw	s1,36(sp)
+	sw	s2,32(sp)
+	sw	s3,28(sp)
+	sw	s4,24(sp)
+	sw	s5,20(sp)
+	sw	s6,16(sp)
+	sw	s7,12(sp)
+	sw	s8,8(sp)
+	sw	s9,4(sp)
+	sw	s10,0(sp)
+	li	s0,0
+	lui	s8,%hi(.LC0)
+	lui	s7,%hi(.LC1)
+	lui	s6,%hi(.LC2)
+	lui	s1,%hi(.LANCHOR1)
+	addi	s1,s1,%lo(.LANCHOR1)
+	lui	s5,%hi(.LC3)
+	lui	s4,%hi(.LC4)
+	lui	s3,%hi(.LC5)
+	lui	s2,%hi(.LC6)
+	j	.L168
+.L174:
+	li	s0,0
+.L168:
 	call	tpu_cs
-	call	draw_riscv_logo
-	call	set_sdcard_bitmap
-	call	draw_sdcard
-	li	a3,63
-	li	a2,64
-	li	a1,5
-	li	a0,16
-	call	tpu_set
-	lui	a0,%hi(.LC2)
-	addi	a0,a0,%lo(.LC2)
-	call	tpu_outputstring
-	li	a3,48
-	li	a2,64
-	li	a1,7
 	li	a0,0
-	call	tpu_set
-	lui	a0,%hi(.LC3)
-	addi	a0,a0,%lo(.LC3)
-	call	tpu_outputstring
-	li	a3,48
-	li	a2,64
-	li	a1,9
-	li	a0,0
-	call	tpu_set
-	lui	a0,%hi(.LC4)
-	addi	a0,a0,%lo(.LC4)
-	call	tpu_outputstring
-	li	a0,4096
-	addi	a0,a0,-96
-	call	sleep
-	lui	a1,%hi(.LANCHOR0)
-	addi	s0,a1,%lo(.LANCHOR0)
-	addi	a1,a1,%lo(.LANCHOR0)
-	li	a0,0
-	call	sd_readSector
-	li	a3,12
-	li	a2,64
-	li	a1,7
-	li	a0,0
-	call	tpu_set
-	lui	a0,%hi(.LC5)
-	addi	a0,a0,%lo(.LC5)
-	call	tpu_outputstring
-	li	a3,12
-	li	a2,64
-	li	a1,9
-	li	a0,0
-	call	tpu_set
-	lui	a0,%hi(.LC6)
-	addi	a0,a0,%lo(.LC6)
-	call	tpu_outputstring
-	addi	s0,s0,446
-	lui	a5,%hi(PARTITION)
-	sw	s0,%lo(PARTITION)(a5)
-	li	s0,0
-	lui	s4,%hi(.LC7)
-	lui	s3,%hi(.LC8)
-	mv	s2,a5
-	lui	s9,%hi(.LC11)
-	lui	s8,%hi(.LC13)
-	lui	s7,%hi(.LC12)
-	lui	s6,%hi(.LC9)
-	lui	s5,%hi(.LC10)
-	j	.L27
-.L21:
-	li	a4,14
-	bne	a5,a4,.L24
-	addi	a0,s7,%lo(.LC12)
-	call	tpu_outputstring
-	j	.L26
-.L22:
-	addi	a0,s6,%lo(.LC9)
-	call	tpu_outputstring
-.L26:
-	addi	s0,s0,1
-	li	a5,4
-	beq	s0,a5,.L50
-.L27:
-	addi	a1,s0,10
-	li	a3,63
-	li	a2,64
-	andi	a1,a1,0xff
+	call	terminal_showhide
+	li	a2,8
+	li	a1,8
 	li	a0,2
+	call	set_background
+	li	a3,60
+	li	a2,64
+	li	a1,29
+	li	a0,21
 	call	tpu_set
-	addi	a0,s4,%lo(.LC7)
+	addi	a0,s8,%lo(.LC0)
 	call	tpu_outputstring
-	slli	a0,s0,16
-	srli	a0,a0,16
+	li	a3,0
+	li	a2,64
+	li	a1,29
+	li	a0,1
+	call	tpu_set
+	addi	a0,s7,%lo(.LC1)
+	call	tpu_outputstring
+	mv	a0,s0
 	call	tpu_outputnumber_short
-	addi	a0,s3,%lo(.LC8)
-	call	tpu_outputstring
-	slli	s1,s0,4
-	lw	a5,%lo(PARTITION)(s2)
-	add	a5,a5,s1
-	lbu	a0,4(a5)
-	call	tpu_outputnumber_char
-	lw	a5,%lo(PARTITION)(s2)
-	add	s1,a5,s1
-	lbu	a5,4(s1)
-	li	a4,6
-	beq	a5,a4,.L20
-	bgtu	a5,a4,.L21
-	beq	a5,zero,.L22
-	li	a4,4
-	bne	a5,a4,.L24
-	addi	a0,s5,%lo(.LC10)
-	call	tpu_outputstring
-	j	.L26
-.L20:
-	addi	a0,s9,%lo(.LC11)
-	call	tpu_outputstring
-	j	.L26
-.L24:
-	addi	a0,s8,%lo(.LC13)
-	call	tpu_outputstring
-	j	.L26
-.L50:
-	lui	a5,%hi(PARTITION)
-	lw	a5,%lo(PARTITION)(a5)
-	lbu	a5,4(a5)
-	addi	a5,a5,-4
-	andi	a5,a5,0xff
-	li	a4,10
-	bgtu	a5,a4,.L28
-	li	a4,1
-	sll	a5,a4,a5
-	andi	a5,a5,1029
-	bne	a5,zero,.L29
-.L28:
-	li	a3,48
+	li	a3,0
 	li	a2,64
-	li	a1,15
-	li	a0,0
+	li	a1,29
+	li	a0,60
 	call	tpu_set
-	lui	a0,%hi(.LC14)
-	addi	a0,a0,%lo(.LC14)
+	addi	a0,s6,%lo(.LC2)
 	call	tpu_outputstring
-.L30:
-	j	.L30
-.L29:
-	li	a3,48
-	li	a2,64
-	li	a1,15
-	li	a0,0
-	call	tpu_set
-	lui	a0,%hi(.LC15)
-	addi	a0,a0,%lo(.LC15)
+	mv	s9,s0
+	slli	s10,s0,1
+	add	s10,s1,s10
+	lhu	a0,72(s10)
+	call	tpu_outputnumber_short
+	addi	a0,s5,%lo(.LC3)
 	call	tpu_outputstring
-	lui	s2,%hi(.LANCHOR0)
-	addi	s2,s2,%lo(.LANCHOR0)
-	addi	s3,s2,512
-	lui	a5,%hi(PARTITION)
-	lw	a3,%lo(PARTITION)(a5)
-	lbu	a4,8(a3)
-	lbu	a5,9(a3)
-	slli	a5,a5,8
-	or	a4,a5,a4
-	lbu	a5,10(a3)
-	slli	a5,a5,16
-	or	a5,a5,a4
-	lbu	a0,11(a3)
-	slli	a0,a0,24
-	mv	a1,s3
-	or	a0,a0,a5
-	call	sd_readSector
+	lhu	a0,92(s10)
+	call	tpu_outputnumber_short
+	lhu	a1,92(s10)
+	lhu	a0,72(s10)
+	call	initialise_maze
+	lhu	a2,112(s10)
+	lhu	a1,92(s10)
+	lhu	a0,72(s10)
+	call	generate_maze
+	li	a3,1
+	li	a2,1
+	lhu	a1,92(s10)
+	lhu	a0,72(s10)
+	call	display_maze
 	li	a3,12
 	li	a2,64
-	li	a1,15
-	li	a0,0
+	li	a1,29
+	li	a0,21
 	call	tpu_set
-	lui	a0,%hi(.LC16)
-	addi	a0,a0,%lo(.LC16)
+	addi	a0,s4,%lo(.LC4)
 	call	tpu_outputstring
-	li	a0,91
-	call	tpu_output_character
-	mv	s1,s3
-	addi	s2,s2,520
-	mv	s0,s3
-.L31:
-	lbu	a0,3(s0)
-	call	tpu_output_character
-	addi	s0,s0,1
-	bne	s0,s2,.L31
-	li	a0,93
-	call	tpu_output_character
-	li	a0,91
-	call	tpu_output_character
-	lui	s0,%hi(.LANCHOR0+555)
-	addi	s0,s0,%lo(.LANCHOR0+555)
-	addi	s3,s3,54
-.L32:
-	lbu	a0,0(s0)
-	call	tpu_output_character
-	addi	s0,s0,1
-	bne	s0,s3,.L32
-	li	a0,93
-	call	tpu_output_character
-	li	a0,91
-	call	tpu_output_character
-.L33:
-	lbu	a0,54(s1)
-	call	tpu_output_character
-	addi	s1,s1,1
-	bne	s1,s2,.L33
-	li	a0,93
-	call	tpu_output_character
-	li	a3,63
+.L169:
+	call	get_buttons
+	andi	a0,a0,2
+	beq	a0,zero,.L169
+	li	a3,19
 	li	a2,64
-	li	a1,16
+	li	a1,29
+	li	a0,21
+	call	tpu_set
+	addi	a0,s3,%lo(.LC5)
+	call	tpu_outputstring
+.L170:
+	call	get_buttons
+	andi	a0,a0,2
+	bne	a0,zero,.L170
+	slli	s9,s9,1
+	add	s9,s1,s9
+	lhu	a1,92(s9)
+	lhu	a0,72(s9)
+	call	walk_maze
+	li	a2,6
+	li	a1,8
 	li	a0,2
-	call	tpu_set
-	lui	a0,%hi(.LC17)
-	addi	a0,a0,%lo(.LC17)
-	call	tpu_outputstring
-	lui	s0,%hi(.LANCHOR0)
-	addi	s0,s0,%lo(.LANCHOR0)
-	lbu	a0,523(s0)
-	lbu	a5,524(s0)
-	slli	a5,a5,8
-	or	a0,a5,a0
-	call	tpu_outputnumber_short
-	lui	a0,%hi(.LC18)
-	addi	a0,a0,%lo(.LC18)
-	call	tpu_outputstring
-	lbu	a0,525(s0)
-	call	tpu_outputnumber_char
-	lui	a0,%hi(.LC19)
-	addi	a0,a0,%lo(.LC19)
-	call	tpu_outputstring
-	lbu	a0,528(s0)
-	call	tpu_outputnumber_char
-	lui	a0,%hi(.LC20)
-	addi	a0,a0,%lo(.LC20)
-	call	tpu_outputstring
-	lw	a0,528(s0)
-	srli	a0,a0,8
-	slli	a0,a0,16
-	srli	a0,a0,16
-	call	tpu_outputnumber_short
-	li	a3,63
-	li	a2,64
-	li	a1,17
-	li	a0,2
-	call	tpu_set
-	lui	a0,%hi(.LC21)
-	addi	a0,a0,%lo(.LC21)
-	call	tpu_outputstring
-	lw	a0,544(s0)
-	call	tpu_outputnumber_int
-	li	a3,48
-	li	a2,64
-	li	a1,19
-	li	a0,0
-	call	tpu_set
-	lui	s1,%hi(.LC22)
-	addi	a0,s1,%lo(.LC22)
-	call	tpu_outputstring
-	lw	a5,528(s0)
-	srli	a5,a5,8
-	slli	a4,a5,16
-	srli	a4,a4,16
-	li	a5,9437184
-	sub	a5,a5,a4
-	slli	a5,a5,5
-	lui	a4,%hi(ROOTDIRECTORY)
-	sw	a5,%lo(ROOTDIRECTORY)(a4)
-	li	a3,48
-	li	a2,64
-	li	a1,19
-	li	a0,0
-	call	tpu_set
-	addi	a0,s1,%lo(.LC22)
-	call	tpu_outputstring
-	call	sd_readRootDirectory
+	call	set_background
 	li	a3,12
 	li	a2,64
-	li	a1,19
-	li	a0,0
+	li	a1,29
+	li	a0,21
 	call	tpu_set
-	lui	a0,%hi(.LC23)
-	addi	a0,a0,%lo(.LC23)
+	addi	a0,s2,%lo(.LC6)
 	call	tpu_outputstring
-	lui	a0,%hi(.LC24)
-	addi	a0,a0,%lo(.LC24)
-	call	outputstring
-	lui	a0,%hi(.LC25)
-	addi	a0,a0,%lo(.LC25)
-	call	outputstring
-	lw	a5,528(s0)
-	srli	a5,a5,8
-	slli	a5,a5,16
-	srli	a5,a5,16
-	beq	a5,zero,.L39
-	li	s0,0
-	lui	s2,%hi(ROOTDIRECTORY)
-	li	s3,80
-	li	s4,65
-	li	s5,87
-	li	s6,46
-	li	s8,229
-	li	s7,8
-	lui	s1,%hi(.LANCHOR0)
-	addi	s1,s1,%lo(.LANCHOR0)
-	j	.L38
-.L35:
+.L171:
+	call	get_buttons
+	andi	a0,a0,2
+	beq	a0,zero,.L171
+	li	a3,19
+	li	a2,64
+	li	a1,29
+	li	a0,21
+	call	tpu_set
+	lui	a0,%hi(.LC7)
+	addi	a0,a0,%lo(.LC7)
+	call	tpu_outputstring
+.L172:
+	call	get_buttons
+	andi	a0,a0,2
+	bne	a0,zero,.L172
+	li	a5,3
+	bgtu	s0,a5,.L174
 	addi	s0,s0,1
 	slli	s0,s0,16
 	srli	s0,s0,16
-	lw	a5,528(s1)
-	srli	a5,a5,8
-	slli	a5,a5,16
-	srli	a5,a5,16
-	bleu	a5,s0,.L39
-.L38:
-	slli	s9,s0,5
-	lw	a5,%lo(ROOTDIRECTORY)(s2)
-	add	a5,a5,s9
-	lbu	a4,8(a5)
-	bne	a4,s3,.L35
-	lbu	a4,9(a5)
-	bne	a4,s4,.L35
-	lbu	a4,10(a5)
-	bne	a4,s5,.L35
-	lbu	a5,0(a5)
-	beq	a5,s6,.L35
-	beq	a5,s8,.L35
-	beq	a5,zero,.L35
-	li	a0,91
-	call	outputcharacter
-	li	s10,0
-.L36:
-	lw	a5,%lo(ROOTDIRECTORY)(s2)
-	add	a5,a5,s9
-	add	a5,a5,s10
-	lbu	a0,0(a5)
-	call	outputcharacter
-	addi	s10,s10,1
-	bne	s10,s7,.L36
-	mv	a0,s6
-	call	outputcharacter
-	li	s10,0
-	li	s11,3
-.L37:
-	lw	a5,%lo(ROOTDIRECTORY)(s2)
-	add	a5,a5,s9
-	add	a5,a5,s10
-	lbu	a0,8(a5)
-	call	outputcharacter
-	addi	s10,s10,1
-	bne	s10,s11,.L37
-	li	a0,93
-	call	outputcharacter
-	j	.L35
-.L40:
-	call	inputcharacter
-.L39:
-	call	inputcharacter_available
-	bne	a0,zero,.L40
-	lui	a0,%hi(.LC26)
-	addi	a0,a0,%lo(.LC26)
-	call	outputstring
-	lui	s2,%hi(.LC27)
-	lui	s1,%hi(.LC28)
-.L41:
-	call	inputcharacter
-	mv	s0,a0
-	addi	a0,s2,%lo(.LC27)
-	call	outputstringnonl
-	mv	a0,s0
-	call	outputcharacter
-	addi	a0,s1,%lo(.LC28)
-	call	outputstring
-	mv	a0,s0
-	call	set_leds
-	j	.L41
+	j	.L168
 	.size	main, .-main
-	.globl	ROOTDIRECTORY
-	.globl	PARTITION
-	.globl	BOOTSECTOR
-	.globl	MBR
-	.globl	sdcardtiles
+	.globl	map
+	.globl	maze
+	.globl	rightdirectiony
+	.globl	leftdirectiony
+	.globl	directiony
+	.globl	rightdirectionx
+	.globl	leftdirectionx
+	.globl	directionx
+	.globl	perspectivey
+	.globl	perspectivex
+	.globl	levelgenerationsteps
+	.globl	levelheights
+	.globl	levelwidths
 	.data
 	.align	2
 	.set	.LANCHOR1,. + 0
-	.type	sdcardtiles, @object
-	.size	sdcardtiles, 96
-sdcardtiles:
+	.type	perspectivex, @object
+	.size	perspectivex, 34
+perspectivex:
 	.half	0
+	.half	20
+	.half	40
+	.half	60
+	.half	80
+	.half	100
+	.half	120
+	.half	140
+	.half	160
+	.half	180
+	.half	200
+	.half	220
+	.half	240
+	.half	260
+	.half	280
+	.half	300
+	.half	320
+	.zero	2
+	.type	perspectivey, @object
+	.size	perspectivey, 34
+perspectivey:
 	.half	0
-	.half	3776
-	.half	2208
-	.half	3744
-	.half	672
-	.half	3776
-	.half	0
-	.half	2656
-	.half	2688
-	.half	3712
-	.half	2688
-	.half	2656
-	.half	0
-	.half	0
-	.half	0
-	.half	16368
-	.half	16376
-	.half	16380
-	.half	16380
-	.half	16380
-	.half	16376
-	.half	8188
-	.half	8188
-	.half	16380
-	.half	16380
-	.half	16380
-	.half	16380
-	.half	16380
-	.half	16380
-	.half	16380
-	.half	16380
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
-	.half	0
+	.half	15
+	.half	30
+	.half	45
+	.half	60
+	.half	75
+	.half	90
+	.half	105
+	.half	120
+	.half	135
+	.half	150
+	.half	165
+	.half	180
+	.half	195
+	.half	210
+	.half	225
+	.half	240
+	.zero	2
+	.type	levelwidths, @object
+	.size	levelwidths, 18
+levelwidths:
+	.half	10
+	.half	16
+	.half	20
+	.half	32
+	.half	40
+	.half	64
+	.half	80
+	.half	128
+	.half	160
+	.zero	2
+	.type	levelheights, @object
+	.size	levelheights, 18
+levelheights:
+	.half	8
+	.half	12
+	.half	16
 	.half	24
-	.half	24
-	.half	0
+	.half	30
+	.half	48
+	.half	60
+	.half	80
+	.half	120
+	.zero	2
+	.type	levelgenerationsteps, @object
+	.size	levelgenerationsteps, 18
+levelgenerationsteps:
+	.half	1
+	.half	1
+	.half	1
+	.half	2
+	.half	4
+	.half	16
+	.half	32
+	.half	64
+	.half	128
 	.bss
 	.align	2
 	.set	.LANCHOR0,. + 0
-	.type	MBR, @object
-	.size	MBR, 512
-MBR:
-	.zero	512
-	.type	BOOTSECTOR, @object
-	.size	BOOTSECTOR, 512
-BOOTSECTOR:
-	.zero	512
-	.section	.sbss,"aw",@nobits
+	.type	map, @object
+	.size	map, 1200
+map:
+	.zero	1200
+	.type	maze, @object
+	.size	maze, 1200
+maze:
+	.zero	1200
+	.section	.sdata,"aw"
 	.align	2
-	.type	ROOTDIRECTORY, @object
-	.size	ROOTDIRECTORY, 4
-ROOTDIRECTORY:
-	.zero	4
-	.type	PARTITION, @object
-	.size	PARTITION, 4
-PARTITION:
-	.zero	4
+	.type	rightdirectiony, @object
+	.size	rightdirectiony, 8
+rightdirectiony:
+	.half	0
+	.half	1
+	.half	0
+	.half	-1
+	.type	leftdirectiony, @object
+	.size	leftdirectiony, 8
+leftdirectiony:
+	.half	0
+	.half	-1
+	.half	0
+	.half	1
+	.type	directiony, @object
+	.size	directiony, 8
+directiony:
+	.half	-1
+	.half	0
+	.half	1
+	.half	0
+	.type	rightdirectionx, @object
+	.size	rightdirectionx, 8
+rightdirectionx:
+	.half	1
+	.half	0
+	.half	-1
+	.half	0
+	.type	leftdirectionx, @object
+	.size	leftdirectionx, 8
+leftdirectionx:
+	.half	-1
+	.half	0
+	.half	1
+	.half	0
+	.type	directionx, @object
+	.size	directionx, 8
+directionx:
+	.half	0
+	.half	1
+	.half	0
+	.half	-1
 	.ident	"GCC: (Arch Linux Repositories) 10.2.0"

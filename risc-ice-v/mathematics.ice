@@ -1,6 +1,6 @@
-// Hardware Accelerated Multiplication and Division
-// UNSIGNED / SIGNED 32 by 32 bit division giving 32 bit remainder and quotient
+// MATHEMATICAL UNITS
 
+// UNSIGNED / SIGNED 32 by 32 bit division giving 32 bit remainder and quotient
 algorithm divideremainder (
     input   uint3   function3,
 
@@ -31,8 +31,6 @@ algorithm divideremainder (
         if( start ) {
             busy = 1;
             bit = 31;
-
-
             if( divisor == 0 ) {
                 // DIVISON by ZERO
                 quotient = 32hffffffff;
@@ -61,9 +59,7 @@ algorithm divideremainder (
     }
 }
 
-// UNSIGNED / SIGNED 32 by 32 bit multiplication giving 64 bit product
-// DSP BLOCKS
-
+// UNSIGNED / SIGNED 32 by 32 bit multiplication giving 64 bit product using DSP blocks
 algorithm multiplicationDSP (
     input   uint3   function3,
 
@@ -103,5 +99,40 @@ algorithm multiplicationDSP (
             ++:
             busy = 0;
         }
+    }
+}
+
+// PERFORM OPTIONAL SIGN EXTENSION FOR 8 BIT AND 16 BIT READS
+algorithm signextender8 (
+    input   uint3   function3,
+    input   uint8  nosign,
+    output  uint32  withsign
+) <autorun> {
+    withsign := { ( ( nosign[7,1] & ~function3[2,1] ) ? 24hffffff : 24h000000 ), nosign[0,8] };
+    while(1) {
+    }
+}
+
+algorithm signextender16 (
+    input   uint3   function3,
+    input   uint16  nosign,
+    output  uint32  withsign
+) <autorun> {
+    withsign := { ( nosign[15,1] & ~function3[2,1] ) ? 16hffff : 16h0000, nosign };
+    while(1) {
+    }
+}
+
+// COMBINE TWO 16 BIT HALF WORDS TO 32 BIT WORD
+algorithm halfhalfword (
+    input!  uint16  HIGH,
+    input!  uint16  LOW,
+    output! int32   HIGHLOW,
+    output! int32   ZEROLOW
+) <autorun> {
+    HIGHLOW := { HIGH, LOW };
+    ZEROLOW := { 16b0, LOW };
+
+    while(1) {
     }
 }

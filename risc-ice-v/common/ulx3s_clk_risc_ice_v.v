@@ -4,15 +4,16 @@
 // cause of this could be from wrong CPHASE/FPHASE parameters
 module ulx3s_clk_risc_ice_v_CPU
 (
-    input clkin, // 25 MHz, 0 deg
-    output clkCOPRO, // 50 MHz, 0 deg        // CO-PROCESSORS
-    output clkMEMORY, // 50 MHz, 0 deg       // MEMORY CONTROLLER - BRAM
-    output clkCPUUNIT, // 50 MHz, 0 deg        // MEMORY CONTROLLER - SDRAM CACHE
+    input clkin,        // 25 MHz, 0 deg
+    output clkCOPRO,    // 50 MHz, 0 deg        // CO-PROCESSORS
+    output clkCPUUNIT,  // 50 MHz, 0 deg        // CPU SUBUNITS
+    output clkMEMORY,   // 33.33 MHz, 0 deg        // MEMORY CONTROLLER - BRAM
     output locked
 );
 (* FREQUENCY_PIN_CLKI="25" *)
 (* FREQUENCY_PIN_CLKOP="50" *)
-(* FREQUENCY_PIN_CLKOS="25" *)
+(* FREQUENCY_PIN_CLKOS="33.33" *)
+(* FREQUENCY_PIN_CLKOS2="50" *)
 (* ICP_CURRENT="12" *) (* LPF_RESISTOR="8" *) (* MFG_ENABLE_FILTEROPAMP="1" *) (* MFG_GMCREF_SEL="2" *)
 EHXPLLL #(
         .PLLRST_ENA("DISABLED"),
@@ -29,7 +30,7 @@ EHXPLLL #(
         .CLKOP_CPHASE(5),
         .CLKOP_FPHASE(0),
         .CLKOS_ENABLE("ENABLED"),
-        .CLKOS_DIV(12),
+        .CLKOS_DIV(18),
         .CLKOS_CPHASE(5),
         .CLKOS_FPHASE(0),
         .CLKOS2_ENABLE("ENABLED"),

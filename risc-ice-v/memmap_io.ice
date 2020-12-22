@@ -62,44 +62,46 @@ algorithm memmap_io (
     input   uint10  pix_y,
 
     // CLOCKS
-    input   uint1   clock_50mhz,
     input   uint1   video_clock,
-    input   uint1   gpu_clock,
     input   uint1   video_reset,
 
     // Memory access
     input   uint16  memoryAddress,
-    input   uint16  writeData,
+    input   uint3   function3,
     input   uint1   memoryWrite,
     input   uint1   memoryRead,
-    output! uint16  readData,
+
+    input   uint16  writeData,
+    output! uint32  readData,
+    output! uint32  readData8,
+    output! uint32  readData16
 ) <autorun> {
     // 1hz timers (p1hz used for systemClock, timer1hz for user purposes)
     uint16 systemClock = uninitialized;
-    pulse1hz p1hz <@clock_50mhz> (
+    pulse1hz p1hz (
         counter1hz :> systemClock,
     );
-    pulse1hz timer1hz <@clock_50mhz> ( );
+    pulse1hz timer1hz ( );
 
     // 1khz timers (sleepTimer used for sleep command, timer1khz for user purposes)
-    pulse1khz sleepTimer <@clock_50mhz> ( );
-    pulse1khz timer1khz <@clock_50mhz> ( );
+    pulse1khz sleepTimer ( );
+    pulse1khz timer1khz ( );
 
     // RNG random number generator
     uint16 staticGenerator = 0;
-    random rng <@clock_50mhz> (
+    random rng (
         g_noise_out :> staticGenerator,
     );
 
     // UART tx and rx
     // UART written in Silice by https://github.com/sylefeb/Silice
     uart_out uo;
-    uart_sender usend <@clock_50mhz> (
+    uart_sender usend (
         io      <:> uo,
         uart_tx :>  uart_tx
     );
     uart_in ui;
-    uart_receiver urecv <@clock_50mhz> (
+    uart_receiver urecv (
         io      <:> ui,
         uart_rx <:  uart_rx
     );
@@ -151,7 +153,7 @@ algorithm memmap_io (
     uint1   bitmap_write = uninitialized;
 
     // 640 x 480 x 7 bit { Arrggbb } colour bitmap
-    simple_dualport_bram uint7 bitmap <@video_clock,@gpu_clock,input!> [ 307200 ] = uninitialized;
+    simple_dualport_bram uint7 bitmap <@video_clock,@video_clock,input!> [ 307200 ] = uninitialized;
     bitmap bitmap_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -165,7 +167,7 @@ algorithm memmap_io (
         y_offset :> y_offset,
         bitmap <:> bitmap
     );
-    bitmapwriter pixel_writer <@gpu_clock> (
+    bitmapwriter pixel_writer <@video_clock> (
         bitmap_x_write <: bitmap_x_write,
         bitmap_y_write <: bitmap_y_write,
         bitmap_colour_write <: bitmap_colour_write,
@@ -296,16 +298,16 @@ algorithm memmap_io (
 
     // Left and Right audio channels
     // Sync'd with video_clock
-    apu apu_processor_L <@clock_50mhz> (
+    apu apu_processor_L (
         staticGenerator <: staticGenerator,
         audio_output :> audio_l
     );
-    apu apu_processor_R <@clock_50mhz> (
+    apu apu_processor_R (
         staticGenerator <: staticGenerator,
         audio_output :> audio_r
     );
 
-    gpu gpu_processor <@gpu_clock> (
+    gpu gpu_processor <@video_clock> (
         bitmap_x_write :> bitmap_x_write,
         bitmap_y_write :> bitmap_y_write,
         bitmap_colour_write :> bitmap_colour_write,
@@ -313,10 +315,10 @@ algorithm memmap_io (
     );
 
     // SDCARD - Code for the SDCARD from @sylefeb
-    simple_dualport_bram uint8 sdbuffer <@clock_50mhz,@clock_50mhz> [512] = uninitialized;
+    simple_dualport_bram uint8 sdbuffer [512] = uninitialized;
 
     sdcardio sdcio;
-    sdcard sd <@clock_50mhz> (
+    sdcard sd (
         // pins
         sd_clk      :> sd_clk,
         sd_mosi     :> sd_mosi,
@@ -328,13 +330,26 @@ algorithm memmap_io (
         store       <:> sdbuffer
     );
 
+    // SIGN EXTENDER + HALF WORD COMBINER
+    // SIGN EXTENDER UNITS
+    signextender8 signextender8unitIO (
+        function3 <: function3,
+        nosign <: readData,
+        withsign :> readData8
+    );
+    signextender16 signextender16unitIO (
+        function3 <: function3,
+        nosign <: readData,
+        withsign :> readData16
+    );
+
     // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartInBuffer <@clock_50mhz,@clock_50mhz> [4096] = uninitialized;
+    simple_dualport_bram uint8 uartInBuffer [4096] = uninitialized;
     uint13  uartInBufferNext = 0;
     uint13  uartInBufferTop = 0;
 
     // UART output FIFO (16 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartOutBuffer <@clock_50mhz,@clock_50mhz> [256] = uninitialized;
+    simple_dualport_bram uint8 uartOutBuffer [256] = uninitialized;
     uint8   uartOutBufferNext = 0;
     uint8   uartOutBufferTop = 0;
     uint8   newuartOutBufferTop = 0;

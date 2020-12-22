@@ -47,22 +47,13 @@ algorithm gpu(
     // GPU COLOUR
     uint7 gpu_active_colour = uninitialized;
 
-    // GPU inputs, copied to according to Forth, VECTOR or DISPLAY LISTS
-    int11   x = uninitialized;
-    int11   y = uninitialized;
-    int11   param0 = uninitialized;
-    int11   param1 = uninitialized;
-    int11   param2 = uninitialized;
-    int11   param3 = uninitialized;
-    uint4   write = uninitialized;
-
     // GPU <-> VECTOR DRAWER Communication
     int11 v_gpu_x = uninitialised;
     int11 v_gpu_y = uninitialised;
     uint7 v_gpu_colour = uninitialised;
     int11 v_gpu_param0 = uninitialised;
     int11 v_gpu_param1 = uninitialised;
-    uint4 v_gpu_write = uninitialised;
+    uint1 v_gpu_write = uninitialised;
 
     // VECTOR DRAWER UNIT
     vectors vector_drawer (
@@ -90,48 +81,56 @@ algorithm gpu(
 
     // GPU SUBUNITS
     rectangle GPUrectangle(
-        x <: x,
-        y <: y,
-        param0 <: param0,
-        param1 <: param1
+        x <: gpu_x,
+        y <: gpu_y,
+        param0 <: gpu_param0,
+        param1 <: gpu_param1
     );
     line GPUline(
-        x <: x,
-        y <: y,
-        param0 <: param0,
-        param1 <: param1
+        x <: gpu_x,
+        y <: gpu_y,
+        param0 <: gpu_param0,
+        param1 <: gpu_param1
     );
     circle GPUcircle(
-        x <: x,
-        y <: y,
-        param0 <: param0
+        x <: gpu_x,
+        y <: gpu_y,
+        param0 <: gpu_param0
     );
     disc GPUdisc(
-        x <: x,
-        y <: y,
-        param0 <: param0
+        x <: gpu_x,
+        y <: gpu_y,
+        param0 <: gpu_param0
     );
     triangle GPUtriangle(
-        x <: x,
-        y <: y,
-        param0 <: param0,
-        param1 <: param1,
-        param2 <: param2,
-        param3 <: param3,
+        x <: gpu_x,
+        y <: gpu_y,
+        param0 <: gpu_param0,
+        param1 <: gpu_param1,
+        param2 <: gpu_param2,
+        param3 <: gpu_param3,
     );
     blit GPUblit(
-        x <: x,
-        y <: y,
-        param0 <: param0,
-        param1 <: param1,
+        x <: gpu_x,
+        y <: gpu_y,
+        param0 <: gpu_param0,
+        param1 <: gpu_param1,
         blit1tilemap <:> blit1tilemap
     );
     characterblit GPUcharacterblit(
-        x <: x,
-        y <: y,
-        param0 <: param0,
-        param1 <: param1,
+        x <: gpu_x,
+        y <: gpu_y,
+        param0 <: gpu_param0,
+        param1 <: gpu_param1,
         characterGenerator8x8 <:> characterGenerator8x8
+    );
+
+    // DRAW A LINE FROM VECTOR BLOCK OUTPUT
+    line VECTORline(
+        x <: v_gpu_x,
+        y <: v_gpu_y,
+        param0 <: v_gpu_param0,
+        param1 <: v_gpu_param1
     );
 
     // blit1tilemap write access for the GPU to load tilemaps
@@ -151,39 +150,28 @@ algorithm gpu(
     GPUtriangle.start := 0;
     GPUblit.start := 0;
     GPUcharacterblit.start := 0;
+    VECTORline.start := 0;
 
     while(1) {
-        if( ( v_gpu_write != 0 ) || ( gpu_write != 0 ) ) {
-            if( v_gpu_write != 0 ) {
-                x = v_gpu_x;
-                y = v_gpu_y;
-                gpu_active_colour = v_gpu_colour;
-                param0 = v_gpu_param0;
-                param1 = v_gpu_param1;
-                write = v_gpu_write;
-            } else {
-                if( gpu_write != 0 ) {
-                    x = gpu_x;
-                    y = gpu_y;
-                    gpu_active_colour = gpu_colour;
-                    param0 = gpu_param0;
-                    param1 = gpu_param1;
-                    param2 = gpu_param2;
-                    param3 = gpu_param3;
-                    write = gpu_write;
-                } else {
-                    write = 0;
-                }
+        if( v_gpu_write ) {
+            // DRAW LINE FROM (X,Y) to (PARAM0,PARAM1) from VECTOR BLOCK
+            gpu_active_colour = v_gpu_colour;
+            gpu_active = 1;
+            VECTORline.start = 1;
+            while( VECTORline.busy ) {
+                bitmap_x_write = VECTORline.bitmap_x_write;
+                bitmap_y_write = VECTORline.bitmap_y_write;
+                bitmap_write = VECTORline.bitmap_write;
             }
-
-            ++:
-
-            switch( write ) {
+            gpu_active = 0;
+        } else {
+            gpu_active_colour = gpu_colour;
+            switch( gpu_write ) {
                 case 1: {
                     // SET PIXEL (X,Y)
                     // NO GPU ACTIVATION
-                    bitmap_x_write = x;
-                    bitmap_y_write = y;
+                    bitmap_x_write = gpu_x;
+                    bitmap_y_write = gpu_y;
                     bitmap_write = 1;
                 }
 
@@ -881,7 +869,7 @@ algorithm vectors(
     output  uint7 gpu_colour,
     output  int11 gpu_param0,
     output  int11 gpu_param1,
-    output  uint4 gpu_write,
+    output  uint1 gpu_write,
 
     input  uint1 gpu_active
 ) <autorun> {
@@ -927,7 +915,7 @@ algorithm vectors(
                 gpu_param0 = vector_block_xc + deltax;
                 gpu_param1 = vector_block_yc + deltay;
                 while( gpu_active ) {}
-                gpu_write = 2;
+                gpu_write = 1;
                 // Move onto the next of the vertices
                 start_x = vector_block_xc + deltax;
                 start_y = vector_block_yc + deltay;

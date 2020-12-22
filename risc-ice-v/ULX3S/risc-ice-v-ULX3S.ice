@@ -17,8 +17,10 @@ $include('../background.ice')
 $include('../sprite_layer.ice')
 $include('../tile_map.ice')
 $include('../audio.ice')
-$include('../mathematics.ice')
 $include('../memmap_io.ice')
+
+$include('../cpu_functionblocks.ice')
+$include('../mathematics.ice')
 
 import('../common/ulx3s_clk_risc_ice_v.v')
 import('../common/ulx3s_clk_risc_ice_v_2.v')
