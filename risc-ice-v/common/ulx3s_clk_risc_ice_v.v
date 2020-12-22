@@ -7,13 +7,15 @@ module ulx3s_clk_risc_ice_v_CPU
     input clkin,        // 25 MHz, 0 deg
     output clkCOPRO,    // 50 MHz, 0 deg        // CO-PROCESSORS
     output clkCPUUNIT,  // 50 MHz, 0 deg        // CPU SUBUNITS
-    output clkMEMORY,   // 33.33 MHz, 0 deg        // MEMORY CONTROLLER - BRAM
+    output clkMEMORY,   // 33.33 MHz, 0 deg     // MEMORY CONTROLLER - BRAM
+    output clkREGISTERS,// 50 MHz, 0 deg        // CPU REGISTERS
     output locked
 );
 (* FREQUENCY_PIN_CLKI="25" *)
 (* FREQUENCY_PIN_CLKOP="50" *)
 (* FREQUENCY_PIN_CLKOS="33.33" *)
 (* FREQUENCY_PIN_CLKOS2="50" *)
+(* FREQUENCY_PIN_CLKOS3="50" *)
 (* ICP_CURRENT="12" *) (* LPF_RESISTOR="8" *) (* MFG_ENABLE_FILTEROPAMP="1" *) (* MFG_GMCREF_SEL="2" *)
 EHXPLLL #(
         .PLLRST_ENA("DISABLED"),
@@ -37,6 +39,10 @@ EHXPLLL #(
         .CLKOS2_DIV(12),
         .CLKOS2_CPHASE(5),
         .CLKOS2_FPHASE(0),
+        .CLKOS3_ENABLE("ENABLED"),
+        .CLKOS3_DIV(12),
+        .CLKOS3_CPHASE(5),
+        .CLKOS3_FPHASE(0),
         .FEEDBK_PATH("CLKOP"),
         .CLKFB_DIV(2)
     ) pll_i (
@@ -46,6 +52,7 @@ EHXPLLL #(
         .CLKOP(clkCOPRO),
         .CLKOS(clkMEMORY),
         .CLKOS2(clkCPUUNIT),
+        .CLKOS3(clkREGISTERS),
         .CLKFB(clkCOPRO),
         .CLKINTFB(),
         .PHASESEL0(1'b0),

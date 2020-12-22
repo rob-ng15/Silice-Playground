@@ -91,7 +91,8 @@ void sd_readRootDirectory ( void ) {
     unsigned short i;
 
     // READ ALL OF THE SECTORS OF THE ROOTDIRECTORY
-    for( i = 0; i < ( BOOTSECTOR.root_dir_entries * sizeof( Fat16Entry ) ) / 512; i++ ) {
+    for( i = 0; i < 4; i++ ) {
+    //for( i = 0; i < ( BOOTSECTOR.root_dir_entries * sizeof( Fat16Entry ) ) / 512; i++ ) {
         sd_readSector( i + PARTITION[0].start_sector + BOOTSECTOR.reserved_sectors + BOOTSECTOR.fat_size_sectors * BOOTSECTOR.number_of_fats, ( (unsigned char *)ROOTDIRECTORY ) + 512 * i );
     }
 }
