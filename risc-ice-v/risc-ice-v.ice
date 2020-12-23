@@ -451,7 +451,7 @@ algorithm main(
 
     // COMPRESSED INSTRUCTION EXPANDER
     compressedexpansion compressedunit <@clock_cpuunit> (
-        instruction16 <: instruction16
+        instruction16 <: instruction16,
     );
 
     // RISC-V 32 BIT INSTRUCTION DECODER
@@ -498,7 +498,14 @@ algorithm main(
     );
 
     // COMBINE TWO 16 BIT HALF WORDS TO ONE 32 BIT WORD
-    halfhalfword combiner161632unit <@clock_cpuunit> ();
+    uint16  LOW = uninitialized;
+    uint16  HIGH = uninitialized;
+    uint32  HIGHLOW = uninitialized;
+    halfhalfword combiner161632unit <@clock_cpuunit> (
+        LOW <: LOW,
+        HIGH <: HIGH,
+        HIGHLOW :> HIGHLOW
+    );
 
     // RAM/IO Read/Write Flags
     ramwriteflag := 0;
@@ -524,10 +531,10 @@ algorithm main(
         compressed = compressedunit.compressed;
         switch( compressedunit.compressed ) {
             case 1b0: {
-                combiner161632unit.LOW = compressedunit.instruction32;
+                LOW = compressedunit.instruction32;
                 ( ramaddress, ramreadflag, ramIcache ) = ramREADI( pcPLUS2, rambusy );
-                combiner161632unit.HIGH = ramreaddata;
-                instruction = combiner161632unit.HIGHLOW;
+                HIGH = ramreaddata;
+                instruction = HIGHLOW;
             }
             case 1b1: {
                 instruction = compressedunit.instruction32;
@@ -584,10 +591,10 @@ algorithm main(
                     switch( function3 & 3 ) {
                         case 2b10: {
                             // 32 bit READ as 2 x 16 bit
-                            combiner161632unit.LOW = ramreaddata;
+                            LOW = ramreaddata;
                             ( ramaddress, ramreadflag, ramIcache ) = ramREADD( loadAddressPLUS2, rambusy );
-                            combiner161632unit.HIGH = ramreaddata;
-                            result = combiner161632unit.HIGHLOW;
+                            HIGH = ramreaddata;
+                            result = HIGHLOW;
                         }
                         default: {
                             // 8/16 bit with optional sign extension

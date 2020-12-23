@@ -125,8 +125,8 @@ algorithm signextender16 (
 
 // COMBINE TWO 16 BIT HALF WORDS TO 32 BIT WORD
 algorithm halfhalfword (
-    input!  uint16  HIGH,
-    input!  uint16  LOW,
+    input   uint16  HIGH,
+    input   uint16  LOW,
     output! int32   HIGHLOW,
     output! int32   ZEROLOW
 ) <autorun> {
