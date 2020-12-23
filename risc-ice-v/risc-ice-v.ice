@@ -265,8 +265,9 @@ algorithm main(
     inout  uint16 sdram_dq
 ) {
     // CLOCK/RESET GENERATION
-    uint1   pll_lock_CPU = uninitialized;
 
+    // CPU DOMAIN CLOCKS
+    uint1   pll_lock_CPU = uninitialized;
     uint1   clock_copro = uninitialized;
     uint1   clock_cpuunit = uninitialized;
     uint1   clock_memory = uninitialized;
@@ -282,7 +283,7 @@ algorithm main(
         locked   :> pll_lock_CPU
     );
 
-    // Generate the 150MHz SDRAM clock
+    // SDRAM DOMAIN CLOCKS
     uint1   clock_sdram = uninitialized;
     uint1   pll_lock_SDRAM = uninitialized;
     ulx3s_clk_risc_ice_v_SDRAM clk_gen_SDRAM (
@@ -291,7 +292,7 @@ algorithm main(
         locked :> pll_lock_SDRAM
     );
 
-    // Generate the 25MHz video clock and 50MHz I/O clock
+    // I/O DOMAIN CLOCKS
     uint1   clock_IO = uninitialized;
     uint1   video_reset = uninitialized;
     uint1   video_clock = uninitialized;
@@ -450,8 +451,12 @@ algorithm main(
     );
 
     // COMPRESSED INSTRUCTION EXPANDER
+    uint32  instruction32 = uninitialized;
+    uint1   IScompressed = uninitialized;
     compressedexpansion compressedunit <@clock_cpuunit> (
+        compressed :> IScompressed,
         instruction16 <: instruction16,
+        instruction32 :> instruction32,
     );
 
     // RISC-V 32 BIT INSTRUCTION DECODER
@@ -491,10 +496,12 @@ algorithm main(
     );
 
     // BRANCH COMPARISON UNIT
+    uint1   BRANCHtakeBranch = uninitialized;
     branchcomparison branchcomparisonunit <@clock_cpuunit> (
         function3 <: function3,
         sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2
+        sourceReg2 <: sourceReg2,
+        takeBranch :> BRANCHtakeBranch
     );
 
     // COMBINE TWO 16 BIT HALF WORDS TO ONE 32 BIT WORD
@@ -528,16 +535,18 @@ algorithm main(
 
         // FETCH + EXPAND COMPRESSED INSTRUCTIONS
         ( ramaddress, ramreadflag, ramIcache ) = ramREADI( pc, rambusy );
-        compressed = compressedunit.compressed;
-        switch( compressedunit.compressed ) {
+        compressed = IScompressed;
+        switch( IScompressed ) {
             case 1b0: {
-                LOW = compressedunit.instruction32;
+                // 32 bit instruction
+                LOW = instruction32;
                 ( ramaddress, ramreadflag, ramIcache ) = ramREADI( pcPLUS2, rambusy );
                 HIGH = ramreaddata;
                 instruction = HIGHLOW;
             }
             case 1b1: {
-                instruction = compressedunit.instruction32;
+                // 16 bit compressed instruction
+                instruction = instruction32;
             }
         }
 
@@ -608,7 +617,7 @@ algorithm main(
                 if( ~storeAddress[28,1] && storeAddress[15,1] ) {
                     // I/O ALWAYS 16 bit WRITES
                     IO_Map.memoryAddress = storeAddress[0,16];
-                    IO_Map.writeData = __unsigned( sourceReg2[0,16] );
+                    IO_Map.writeData = sourceReg2LOW;
                     IO_Map.memoryWrite = 1;
                 } else {
                     // SDRAM or BRAM

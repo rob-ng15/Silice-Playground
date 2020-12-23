@@ -13,26 +13,6 @@ bitfield colour6 {
     uint2   blue
 }
 
-// Simplify access to high/low word
-bitfield words {
-    uint16  hword,
-    uint16  lword
-}
-
-// Simplify access to high/low byte
-bitfield bytes {
-    uint8   byte1,
-    uint8   byte0
-}
-
-// Simplify access to 4bit nibbles (used to extract shift left/right amount)
-bitfield nibbles {
-    uint4   nibble3,
-    uint4   nibble2,
-    uint4   nibble1,
-    uint4   nibble0
-}
-
 algorithm memmap_io (
     // LEDS (8 of)
     output  uint8   leds,
