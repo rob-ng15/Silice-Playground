@@ -186,6 +186,49 @@ bitfield    CSS {
     uint2   opcode
 }
 
+    // HELPER CIRCUIT - READ INSTRUTION VIA ICACHE
+    circuitry ramREADI(
+        input   address,
+        input   rambusy,
+        output  ramaddress,
+        output  ramreadflag,
+        output  ramIcache
+    ) {
+        ramaddress = address;
+        ramIcache = 1;
+        ramreadflag = 1;
+        while( rambusy ) {}
+    }
+
+    // HELPER CIRCUIT - READ DATA VIA DCACHE
+    circuitry ramREADD(
+        input   address,
+        input   rambusy,
+        output  ramaddress,
+        output  ramreadflag,
+        output  ramIcache
+    ) {
+        ramaddress = address;
+        ramIcache = 0;
+        ramreadflag = 1;
+        while( rambusy ) {}
+    }
+
+    // HELPER CIRCUIT - WRITE DATA
+    circuitry ramWRITE (
+        input   address,
+        input   writedata,
+        input   rambusy,
+        output  ramaddress,
+        output  ramwritedata,
+        output  ramwriteflag
+    ) {
+        ramaddress = address;
+        ramwritedata = writedata;
+        ramwriteflag = 1;
+        while( rambusy ) {}
+    }
+
 algorithm main(
     // LEDS (8 of)
     output  uint8   leds,
@@ -315,6 +358,8 @@ algorithm main(
     uint5   rd = uninitialized;
     int32   sourceReg1 = uninitialized;
     int32   sourceReg2 = uninitialized;
+    uint16  sourceReg2LOW = uninitialized;
+    uint16  sourceReg2HIGH = uninitialized;
 
     // IMMEDIATE VALUE
     int32   immediateValue = uninitialized;
@@ -343,7 +388,6 @@ algorithm main(
     uint1   ramwriteflag = uninitialized;
     uint1   ramIcache = uninitialized;
     uint1   rambusy = uninitialized;
-    // <@clock_memory>
     ramcontroller ram  <@clock_memory>(
         address <: ramaddress,
         writedata <: ramwritedata,
@@ -399,6 +443,8 @@ algorithm main(
         floatingpoint <: floatingpoint,
         sourceReg1 :> sourceReg1,
         sourceReg2 :> sourceReg2,
+        sourceReg2LOW :> sourceReg2LOW,
+        sourceReg2HIGH :> sourceReg2HIGH,
         registers_1 <:> registers_1,
         registers_2 <:> registers_2
     );
@@ -473,19 +519,14 @@ algorithm main(
         incPC = 1;
         floatingpoint = 0;
 
-        // FETCH + EXPAND COMPRESSED INSTRUCTIONS ( mark as using instruction cache )
-        ramaddress = pc;
-        ramIcache = 1;
-        ramreadflag = 1;
-        while( rambusy ) {}
+        // FETCH + EXPAND COMPRESSED INSTRUCTIONS
+        ( ramaddress, ramreadflag, ramIcache ) = ramREADI( pc, rambusy );
         compressed = compressedunit.compressed;
         switch( compressedunit.compressed ) {
             case 1b0: {
                 combiner161632unit.LOW = compressedunit.instruction32;
-                ramaddress = pcPLUS2;
-                ramreadflag = 1;
-                while( rambusy ) {}
-                combiner161632unit.HIGH = ram.readdata;
+                ( ramaddress, ramreadflag, ramIcache ) = ramREADI( pcPLUS2, rambusy );
+                combiner161632unit.HIGH = ramreaddata;
                 instruction = combiner161632unit.HIGHLOW;
             }
             case 1b1: {
@@ -539,23 +580,18 @@ algorithm main(
                     }
                 } else {
                     // SDRAM or BRAM ( mark as using data cache )
-                    ramaddress = loadAddress;
-                    ramIcache = 0;
-                    ramreadflag = 1;
-                    while( rambusy ) {}
+                    ( ramaddress, ramreadflag, ramIcache ) = ramREADD( loadAddress, rambusy );
                     switch( function3 & 3 ) {
                         case 2b10: {
                             // 32 bit READ as 2 x 16 bit
-                            combiner161632unit.LOW = ram.readdata;
-                            ramaddress = loadAddressPLUS2;
-                            ramreadflag = 1;
-                            while( rambusy ) {}
-                            combiner161632unit.HIGH = ram.readdata;
+                            combiner161632unit.LOW = ramreaddata;
+                            ( ramaddress, ramreadflag, ramIcache ) = ramREADD( loadAddressPLUS2, rambusy );
+                            combiner161632unit.HIGH = ramreaddata;
                             result = combiner161632unit.HIGHLOW;
                         }
                         default: {
                             // 8/16 bit with optional sign extension
-                            result = ( ( function3 & 3 ) == 0 ) ? ram.readdata8 : ram.readdata16;
+                            result = ( ( function3 & 3 ) == 0 ) ? ramreaddata8 : ramreaddata16;
                         }
                     }
                 }
@@ -569,22 +605,15 @@ algorithm main(
                     IO_Map.memoryWrite = 1;
                 } else {
                     // SDRAM or BRAM
-                    ramaddress = storeAddress;
-                    ramIcache = 0;
                     if( ( function3 & 3 ) == 0 ) {
                         // READ 8 BIT INTO CACHE
-                        ramreadflag = 1;
-                        while( rambusy ) {}
+                        ( ramaddress, ramreadflag, ramIcache ) = ramREADD( storeAddress, rambusy );
                     }
                     // WRITE 8, 16 and LOWER 16 of 32 bits
-                    ramwritedata = sourceReg2[0,16];
-                    ramwriteflag = 1;
+                    ( ramaddress, ramwritedata, ramwriteflag ) = ramWRITE( storeAddress, sourceReg2LOW, rambusy );
                     if(  ( function3 & 3 ) == 2b10 ) {
                         // WRITE UPPER 16 of 32 bits
-                        while( rambusy ) {}
-                        ramaddress = storeAddressPLUS2;
-                        ramwritedata = sourceReg2[16,16];
-                        ramwriteflag = 1;
+                        ( ramaddress, ramwritedata, ramwriteflag ) = ramWRITE( storeAddressPLUS2, sourceReg2HIGH, rambusy );
                     }
                 }
             }
@@ -650,8 +679,7 @@ algorithm main(
 // MEMORY IS 16 BIT, 8 BIT WRITES HAVE TO BE HANDLED BY THE CPU DOING READ MODIFY WRITE
 // READS 8 and 16 bit READS ARE SIGN EXTENDED
 // NOTES: AT PRESENT NO INTERACTION WITH THE SDRAM, CACHE ACTS AS 2K x 16 bit memory for proof of concept
-// LOGIC FOR CACHE HIT AND MISS IN PLACE
-// NEEDS A BUSY FLAG FOR WHEN CACHE MISS AND FOR SDRAM WRITES TO TAKE PLACE
+
 algorithm ramcontroller (
     input   uint32  address,
     input   uint3   function3,

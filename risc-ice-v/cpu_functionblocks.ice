@@ -29,8 +29,10 @@ algorithm registersREAD (
     input   uint5   rs2,
     input   uint1   floatingpoint,
 
-    output!  int32   sourceReg1,
-    output!  int32   sourceReg2,
+    output! int32   sourceReg1,
+    output! int32   sourceReg2,
+    output! uint16  sourceReg2LOW,
+    output! uint16  sourceReg2HIGH,
 
     simple_dualbram_port0   registers_1,
     simple_dualbram_port0   registers_2
@@ -40,6 +42,8 @@ algorithm registersREAD (
 
     sourceReg1 := registers_1.rdata0;
     sourceReg2 := registers_2.rdata0;
+    sourceReg2LOW := registers_2.rdata0[0,16];
+    sourceReg2HIGH := registers_2.rdata0[16,16];
 
     while(1) {
     }
