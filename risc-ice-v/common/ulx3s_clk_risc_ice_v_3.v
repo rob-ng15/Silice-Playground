@@ -5,11 +5,13 @@
 module ulx3s_clk_risc_ice_v_SDRAM
 (
     input clkin,        // 25 MHz, 0 deg
-    output clkSDRAM,    // 165.625 Mhz 0 deg    // SDRAM
+    output clkout0,     // 25 MHz, 0 deg
+    output clkout1,     // 100 MHz, 180 deg
+    output clkSDRAM,    // 100 Mhz 0 deg    // SDRAM
     output locked
 );
 (* FREQUENCY_PIN_CLKI="25" *)
-(* FREQUENCY_PIN_CLKOP="50" *)
+(* FREQUENCY_PIN_CLKOP="100" *)
 (* FREQUENCY_PIN_CLKOS="25" *)
 (* ICP_CURRENT="12" *) (* LPF_RESISTOR="8" *) (* MFG_ENABLE_FILTEROPAMP="1" *) (* MFG_GMCREF_SEL="2" *)
 EHXPLLL #(
@@ -23,17 +25,27 @@ EHXPLLL #(
         .OUTDIVIDER_MUXD("DIVD"),
         .CLKI_DIV(1),
         .CLKOP_ENABLE("ENABLED"),
-        .CLKOP_DIV(4),
+        .CLKOP_DIV(24),
         .CLKOP_CPHASE(1),
         .CLKOP_FPHASE(0),
+        .CLKOS2_ENABLE("ENABLED"),
+        .CLKOS2_DIV(12),
+        .CLKOS2_CPHASE(5),
+        .CLKOS2_FPHASE(0),
+        .CLKOS3_ENABLE("ENABLED"),
+        .CLKOS3_DIV(12),
+        .CLKOS3_CPHASE(8),
+        .CLKOS3_FPHASE(0),
         .FEEDBK_PATH("CLKOP"),
         .CLKFB_DIV(2)
     ) pll_i (
         .RST(1'b0),
         .STDBY(1'b0),
         .CLKI(clkin),
-        .CLKOP(clkSDRAM),
-        .CLKFB(clkSDRAM),
+        .CLKOP(clkout0),
+        .CLKOS2(clkSDRAM),
+        .CLKOS3(clkout1),
+        .CLKFB(clkout0),
         .CLKINTFB(),
         .PHASESEL0(1'b0),
         .PHASESEL1(1'b0),
