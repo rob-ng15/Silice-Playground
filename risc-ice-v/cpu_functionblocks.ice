@@ -122,8 +122,6 @@ algorithm alu (
     input   int32   sourceReg1,
     input   int32   sourceReg2,
 
-    input   uint1   clock_copro,
-
     input   uint1   start,
     output  uint1   busy,
 

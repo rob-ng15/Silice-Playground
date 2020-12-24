@@ -9,6 +9,16 @@
        __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
 
+// STRUCTURE OF THE SPRITE UPDATE FLAG
+struct sprite_update_flag {
+    unsigned int padding:3;
+    unsigned int y_act:1;
+    unsigned int x_act:1;
+    unsigned int tile_act:1;
+    int dy:5;
+    int dx:5;
+};
+
 // FUNCTION DEFINITIONS
 
 // UART AND TERMINAL INPUT / OUTPUT

@@ -283,17 +283,9 @@ algorithm main(
         locked   :> pll_lock_CPU
     );
 
-    // SDRAM DOMAIN CLOCKS
-    uint1   clock_sdram = uninitialized;
-    uint1   pll_lock_SDRAM = uninitialized;
-    ulx3s_clk_risc_ice_v_SDRAM clk_gen_SDRAM (
-        clkin <: clock,
-        clkSDRAM :> clock_sdram,
-        locked :> pll_lock_SDRAM
-    );
-
-    // I/O DOMAIN CLOCKS
+    // SDRAM + I/O DOMAIN CLOCKS
     uint1   clock_IO = uninitialized;
+    uint1   clock_sdram = uninitialized;
     uint1   video_reset = uninitialized;
     uint1   video_clock = uninitialized;
     uint1   pll_lock_AUX = uninitialized;
@@ -301,6 +293,7 @@ algorithm main(
         clkin   <: clock,
         clkIO :> clock_IO,
         clkVIDEO :> video_clock,
+        clkSDRAM :> clock_sdram,
         locked :> pll_lock_AUX
     );
 
@@ -379,6 +372,22 @@ algorithm main(
     uint32  AUIPCLUI = uninitialized;
 
     // RAM - BRAM and SDRAM
+    // SDRAM chip controller
+    // interface
+    sdram_r16w16_io sio;
+    // algorithm
+    sdram_controller_autoprecharge_r16_w16 sdram <@clock_sdram> (
+        sd        <:> sio,
+        sdram_cle :>  sdram_cle,
+        sdram_dqm :>  sdram_dqm,
+        sdram_cs  :>  sdram_cs,
+        sdram_we  :>  sdram_we,
+        sdram_cas :>  sdram_cas,
+        sdram_ras :>  sdram_ras,
+        sdram_ba  :>  sdram_ba,
+        sdram_a   :>  sdram_a,
+        sdram_dq  <:> sdram_dq
+    );
     uint16  instruction16 = uninitialized;
     uint32  ramaddress = uninitialized;
     uint16  ramwritedata = uninitialized;
@@ -389,7 +398,8 @@ algorithm main(
     uint1   ramwriteflag = uninitialized;
     uint1   ramIcache = uninitialized;
     uint1   rambusy = uninitialized;
-    ramcontroller ram  <@clock_memory>(
+    ramcontroller ram <@clock_memory> (
+        sio <:> sio,
         address <: ramaddress,
         writedata <: ramwritedata,
         readflag <: ramreadflag,
@@ -489,10 +499,19 @@ algorithm main(
     );
 
     // RISC-V BASE ALU
+    //int32   ALUresult = uninitialized;
+    //int32   ALUMresult = uninitialized;
+    //uint1   ALUstart = uninitialized;
+    //uint1   ALUbusy = uninitialized;
     alu ALU <@clock_copro> (
         instruction <: instruction,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
+
+        //result :> ALUresult,
+        //Mresult :> ALUMresult,
+        //start <: ALUstart,
+        //busy :> ALUbusy
     );
 
     // BRANCH COMPARISON UNIT
@@ -524,6 +543,7 @@ algorithm main(
     registersW.writeRegister := 0;
 
     // ALU Start Flag
+    //ALUstart := 0;
     ALU.start := 0;
 
     while(1) {
@@ -556,132 +576,103 @@ algorithm main(
         ++:
 
         // EXECUTE
-        switch( opCode ) {
-            case 7b0110111: {
-                // LUI
-                writeRegister = 1;
-                result = AUIPCLUI;
-            }
-            case 7b0010111: {
-                //AUIPC
-                writeRegister = 1;
-                result = AUIPCLUI;
-            }
-            case 7b1101111: {
-                // JAL
-                writeRegister = 1;
-                incPC = 0;
-                result = nextPC;
-            }
-            case 7b1100111: {
-                // JALR
-                writeRegister = 1;
-                incPC = 0;
-                result = nextPC;
-            }
-            case 7b1100011: {
-                // BRANCH
-                takeBranch = branchcomparisonunit.takeBranch;
-            }
-            case 7b0000011: {
-                // LOAD
-                writeRegister = 1;
-                if( ~loadAddress[28,1] && loadAddress[15,1] ) {
-                    // I/O
-                    IO_Map.memoryAddress = loadAddress[0,16];
-                    IO_Map.memoryRead = 1;
-                    switch( function3 & 3 ) {
-                        case 2b10: { result = IO_Map.readData; }
-                        default: { result = ( ( function3 & 3 ) == 0 ) ? IO_Map.readData8 : IO_Map.readData16; }
-                    }
-                } else {
-                    // SDRAM or BRAM ( mark as using data cache )
-                    ( ramaddress, ramreadflag, ramIcache ) = ramREADD( loadAddress, rambusy );
-                    switch( function3 & 3 ) {
-                        case 2b10: {
-                            // 32 bit READ as 2 x 16 bit
-                            LOW = ramreaddata;
-                            ( ramaddress, ramreadflag, ramIcache ) = ramREADD( loadAddressPLUS2, rambusy );
-                            HIGH = ramreaddata;
-                            result = HIGHLOW;
+        switch( opCode[4,1] ) {
+            case 1b0: {
+                // JAL JALR BRANCH LOAD STORE
+                switch( opCode[6,1] ) {
+                    case 1b0: {
+                        // LOAD STORE
+                        switch( opCode[5,1] ) {
+                            case 1b0: {
+                                // LOAD
+                                writeRegister = 1;
+                                if( ~loadAddress[28,1] && loadAddress[15,1] ) {
+                                    // I/O
+                                    IO_Map.memoryAddress = loadAddress[0,16];
+                                    IO_Map.memoryRead = 1;
+                                    switch( function3 & 3 ) {
+                                        case 2b10: { result = IO_Map.readData; }
+                                        default: { result = ( ( function3 & 3 ) == 0 ) ? IO_Map.readData8 : IO_Map.readData16; }
+                                    }
+                                } else {
+                                    // SDRAM or BRAM ( mark as using data cache )
+                                    ( ramaddress, ramreadflag, ramIcache ) = ramREADD( loadAddress, rambusy );
+                                    switch( function3 & 3 ) {
+                                        case 2b10: {
+                                            // 32 bit READ as 2 x 16 bit
+                                            LOW = ramreaddata;
+                                            ( ramaddress, ramreadflag, ramIcache ) = ramREADD( loadAddressPLUS2, rambusy );
+                                            HIGH = ramreaddata;
+                                            result = HIGHLOW;
+                                        }
+                                        default: {
+                                            // 8/16 bit with optional sign extension
+                                            result = ( ( function3 & 3 ) == 0 ) ? ramreaddata8 : ramreaddata16;
+                                        }
+                                    }
+                                }
+                            }
+                            case 1b1: {
+                                // STORE
+                                if( ~storeAddress[28,1] && storeAddress[15,1] ) {
+                                    // I/O ALWAYS 16 bit WRITES
+                                    IO_Map.memoryAddress = storeAddress[0,16];
+                                    IO_Map.writeData = sourceReg2LOW;
+                                    IO_Map.memoryWrite = 1;
+                                } else {
+                                    // SDRAM or BRAM
+                                    if( ( function3 & 3 ) == 0 ) {
+                                        // READ 8 BIT INTO CACHE
+                                        ( ramaddress, ramreadflag, ramIcache ) = ramREADD( storeAddress, rambusy );
+                                    }
+                                    // WRITE 8, 16 and LOWER 16 of 32 bits
+                                    ( ramaddress, ramwritedata, ramwriteflag ) = ramWRITE( storeAddress, sourceReg2LOW, rambusy );
+                                    if(  ( function3 & 3 ) == 2b10 ) {
+                                        // WRITE UPPER 16 of 32 bits
+                                        ( ramaddress, ramwritedata, ramwriteflag ) = ramWRITE( storeAddressPLUS2, sourceReg2HIGH, rambusy );
+                                    }
+                                }
+                            }
                         }
-                        default: {
-                            // 8/16 bit with optional sign extension
-                            result = ( ( function3 & 3 ) == 0 ) ? ramreaddata8 : ramreaddata16;
+                    }
+                    case 1b1: {
+                        // JAL JALR BRANCH
+                        switch( opCode[2,1] ) {
+                            case 1b0 : {
+                                // BRANCH
+                                takeBranch = BRANCHtakeBranch;
+                            }
+                            case 1b1: {
+                                // JAL JALR
+                                writeRegister = 1;
+                                incPC = 0;
+                                result = nextPC;
+                            }
                         }
                     }
                 }
             }
-            case 7b0100011: {
-                // STORE
-                if( ~storeAddress[28,1] && storeAddress[15,1] ) {
-                    // I/O ALWAYS 16 bit WRITES
-                    IO_Map.memoryAddress = storeAddress[0,16];
-                    IO_Map.writeData = sourceReg2LOW;
-                    IO_Map.memoryWrite = 1;
-                } else {
-                    // SDRAM or BRAM
-                    if( ( function3 & 3 ) == 0 ) {
-                        // READ 8 BIT INTO CACHE
-                        ( ramaddress, ramreadflag, ramIcache ) = ramREADD( storeAddress, rambusy );
+            case 1b1: {
+                // LUI AUIPC ALU
+                switch( opCode[2,1] ) {
+                    case 1b0: {
+                        // ALU
+                        writeRegister = 1;
+                        if( opCode[5,1] && function7[0,1] ) {
+                            ALU.start = 1;
+                            while( ALU.busy ) {}
+                        }
+                        result = ( opCode[5,1] && function7[0,1] ) ? ALU.Mresult : ALU.result;
                     }
-                    // WRITE 8, 16 and LOWER 16 of 32 bits
-                    ( ramaddress, ramwritedata, ramwriteflag ) = ramWRITE( storeAddress, sourceReg2LOW, rambusy );
-                    if(  ( function3 & 3 ) == 2b10 ) {
-                        // WRITE UPPER 16 of 32 bits
-                        ( ramaddress, ramwritedata, ramwriteflag ) = ramWRITE( storeAddressPLUS2, sourceReg2HIGH, rambusy );
+                    case 1b1: {
+                        // AUIPC LUI
+                        writeRegister = 1;
+                        result = AUIPCLUI;
                     }
                 }
-            }
-            case 7b0010011: {
-                // ALUI
-                writeRegister = 1;
-                result = ALU.result;
-            }
-            case 7b0110011: {
-                // ALUR + M EXTENSION
-                writeRegister = 1;
-                if( function7[0,1] ) {
-                    // START DIVISION / MULTIPLICATION
-                    ALU.start = 1;
-                    while( ALU.busy ) {}
-                }
-                result = function7[0,1] ? ALU.Mresult : ALU.result;
-            }
-            case 7b0001111: {
-                // FENCE/FENCE.I
-            }
-            case 7b1110011: {
-                // ECALL/EBREAK/CSR
-            }
-            case 7b0101111: {
-                // A EXTENSION
-            }
-            case 7b0000111: {
-                // F EXTENSION LOAD
-            }
-            case 7b0100111: {
-                // F EXTENSION STORE
-            }
-            case 7b1000011: {
-                // F EXTENSION FMADD.S
-            }
-            case 7b1000111: {
-                // F EXTENSION FMSUB.S
-            }
-            case 7b1001011: {
-                // F EXTENSION FNMSUB.S
-            }
-            case 7b1001111: {
-                // F EXTENSION FNMADD.S
-            }
-            case 7b1010011: {
-                // F EXTENSION main instructions
-            }
-            default: {
-                floatingpoint = 1;
             }
         }
+
 
         // WRITE TO REGISTERS
         registersW.writeRegister = writeRegister;
@@ -697,6 +688,8 @@ algorithm main(
 // NOTES: AT PRESENT NO INTERACTION WITH THE SDRAM, CACHE ACTS AS 2K x 16 bit memory for proof of concept
 
 algorithm ramcontroller (
+    sdram_user      sio,
+
     input   uint32  address,
     input   uint3   function3,
 
@@ -749,6 +742,7 @@ algorithm ramcontroller (
     );
 
     busy := ( readflag || writeflag ) ? 1 : active;
+    sio.in_valid := 0;
 
     // FLAGS FOR CACHE ACCESS
     Dcachedata.wenable := 0; Dcachedata.addr := address[1,11];
@@ -779,17 +773,21 @@ algorithm ramcontroller (
             } else {
                 // CACHE MISS
                 active = 1;
+
                 // READ FROM SDRAM
+                //sio.addr = address;
+                //sio.rw = 0;
+                //sio.in_valid = 1;
+                //while( !sio.done ) {}
+
                 // WRITE RESULT TO ICACHE or DCACHE
                 Icachetag.wenable = Icache;
                 Dcachetag.wenable = ~Icache;
-                //if( Icache ) {
-                //    // ICACHE WRITE
-                //    Icachetag.wenable = 1;
-                //} else {
-                //    // DCACHE WRITE
-                //    Dcachetag.wenable = 1;
-                //}
+                //Icachedata.wdata = sio.data_out;
+                //Icachedata.wenable = Icache;
+                //Dcachedata.wdata = sio.data_out;
+                //Dcachedata.wenable = ~Icache;
+
                 active = 0;
             }
         }
@@ -798,17 +796,22 @@ algorithm ramcontroller (
             if( address[28,1] ) {
                 // SDRAM
                 active = 1;
+
                 // WRITE INTO CACHE
                 Dcachedata.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] } ) : writedata;
+                Icachedata.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] } ) : writedata;
                 Dcachedata.wenable = 1;
                 Dcachetag.wenable = 1;
                 // CHECK IF ENTRY IS IN ICACHE AND UPDATE
-                if( Icachetagmatch ) {
-                    Icachedata.wdata = Dcachedata.wdata;
-                    Icachedata.wenable = 1;
-                }
+                Icachedata.wenable = Icachetagmatch;
 
                 // WRITE TO SDRAM
+                //sio.addr = address;
+                //sio.data_in = Dcachedata.wdata;
+                //sio.rw = 1;
+                //sio.in_valid = 1;
+                //while( !sio.done ) {}
+
                 active = 0;
             } else {
                 // BRAM

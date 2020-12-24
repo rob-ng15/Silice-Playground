@@ -366,7 +366,7 @@ void move_asteroids( void )
 
         // UFO
         if(  asteroid_active[asteroid_number] == 3 ) {
-            update_sprite( ASN( asteroid_number ), ufo_directions[ufo_leftright+ ( level > 2 ? 2 : 0 )] );
+            update_sprite( ASN( asteroid_number ), ufo_directions[ufo_leftright + ( level > 2 ? 2 : 0 )] );
             if( get_sprite_attribute( ASN( asteroid_number), 0 ) == 0 ) {
                 // UFO OFF SCREEN
                 set_ufo_sprite( 0 );

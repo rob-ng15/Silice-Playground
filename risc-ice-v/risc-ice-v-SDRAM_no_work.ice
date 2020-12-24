@@ -283,16 +283,9 @@ algorithm main(
         locked   :> pll_lock_CPU
     );
 
-    // SDRAM DOMAIN CLOCKS
-    uint1   pll_lock_SDRAM = uninitialized;
-    ulx3s_clk_risc_ice_v_SDRAM clk_gen_SDRAM (
-        clkin <: clock,
-        clkSDRAM :> sdram_clk,
-        locked :> pll_lock_SDRAM
-    );
-
-    // I/O DOMAIN CLOCKS
+    // SDRAM + I/O DOMAIN CLOCKS
     uint1   clock_IO = uninitialized;
+    uint1   clock_sdram = uninitialized;
     uint1   video_reset = uninitialized;
     uint1   video_clock = uninitialized;
     uint1   pll_lock_AUX = uninitialized;
@@ -300,6 +293,7 @@ algorithm main(
         clkin   <: clock,
         clkIO :> clock_IO,
         clkVIDEO :> video_clock,
+        clkSDRAM :> clock_sdram,
         locked :> pll_lock_AUX
     );
 
@@ -368,13 +362,22 @@ algorithm main(
     int32   result = uninitialized;
     uint1   writeRegister = uninitialized;
 
+    // RISC-V ADDRESSES - calculated by the address generation unit
+    uint32  branchAddress = uninitialized;
+    uint32  jumpAddress = uninitialized;
+    uint32  loadAddress = uninitialized;
+    uint32  loadAddressPLUS2 = uninitialized;
+    uint32  storeAddress = uninitialized;
+    uint32  storeAddressPLUS2 = uninitialized;
+    uint32  AUIPCLUI = uninitialized;
 
+    // RAM - BRAM and SDRAM
   // SDRAM chip controller
   // interface
-  sdram_r16w16_io sdram_io;
-  // algorithm
-  sdram_controller_autoprecharge_r128_w8 sdram(
-    sd        <:> sdram_io,
+ sdram_r16w16_io sio;
+   // algorithm
+  sdram_controller_autoprecharge_r16_w16 sdram  <@clock_sdram> (
+    sd        <:> sio,
     sdram_cle :>  sdram_cle,
     sdram_dqm :>  sdram_dqm,
     sdram_cs  :>  sdram_cs,
@@ -385,8 +388,6 @@ algorithm main(
     sdram_a   :>  sdram_a,
     sdram_dq  <:> sdram_dq
   );
-
-    // RAM - BRAM and SDRAM
     uint16  instruction16 = uninitialized;
     uint32  ramaddress = uninitialized;
     uint16  ramwritedata = uninitialized;
@@ -398,7 +399,7 @@ algorithm main(
     uint1   ramIcache = uninitialized;
     uint1   rambusy = uninitialized;
     ramcontroller ram  <@clock_memory>(
-        sdram_io <:> sdram_io,
+        sio <:> sio,
         address <: ramaddress,
         writedata <: ramwritedata,
         readflag <: ramreadflag,
@@ -480,14 +481,7 @@ algorithm main(
         immediateValue :> immediateValue
     );
 
-    // RISC-V ADDRESSES - calculated by the address generation unit
-    uint32  branchAddress = uninitialized;
-    uint32  jumpAddress = uninitialized;
-    uint32  loadAddress = uninitialized;
-    uint32  loadAddressPLUS2 = uninitialized;
-    uint32  storeAddress = uninitialized;
-    uint32  storeAddressPLUS2 = uninitialized;
-    uint32  AUIPCLUI = uninitialized;
+    // RISC-V ADDRESS GENERATOR
     addressgenerator AGU <@clock_cpuunit> (
         instruction <: instruction,
         pc <:: pc,
@@ -713,7 +707,7 @@ algorithm main(
 // NOTES: AT PRESENT NO INTERACTION WITH THE SDRAM, CACHE ACTS AS 2K x 16 bit memory for proof of concept
 
 algorithm ramcontroller (
-    sdram_user sdram_io,
+    sdram_user      sio,
 
     input   uint32  address,
     input   uint3   function3,
@@ -767,6 +761,7 @@ algorithm ramcontroller (
     );
 
     busy := ( readflag || writeflag ) ? 1 : active;
+    sio.in_valid := 0;
 
     // FLAGS FOR CACHE ACCESS
     Dcachedata.wenable := 0; Dcachedata.addr := address[1,11];
@@ -799,17 +794,17 @@ algorithm ramcontroller (
                 active = 1;
 
                 // READ FROM SDRAM
-                sdram_io.addr = address;
-                sdram_io.rw = 0;
-                sdram_io.in_valid = 1;
-                while( !sdram_io.done ) {}
+                sio.addr = address;
+                sio.rw = 0;
+                sio.in_valid = 1;
+                while( !sio.done ) {}
 
                 // WRITE RESULT TO ICACHE or DCACHE
                 Icachetag.wenable = Icache;
                 Dcachetag.wenable = ~Icache;
-                Icachedata.wdata = sdram_io.data_out;
+                Icachedata.wdata = sio.data_out;
                 Icachedata.wenable = Icache;
-                Dcachedata.wdata = sdram_io.data_out;
+                Dcachedata.wdata = sio.data_out;
                 Dcachedata.wenable = ~Icache;
 
                 active = 0;
@@ -830,11 +825,11 @@ algorithm ramcontroller (
                 Icachedata.wenable = Icachetagmatch;
 
                 // WRITE TO SDRAM
-                sdram_io.addr = address;
-                sdram_io.data_in = Dcachedata.wdata;
-                sdram_io.rw = 1;
-                sdram_io.in_valid = 1;
-                while( !sdram_io.done ) {}
+                sio.addr = address;
+                sio.data_in = Dcachedata.wdata;
+                sio.rw = 1;
+                sio.in_valid = 1;
+                while( !sio.done ) {}
 
                 active = 0;
             } else {
