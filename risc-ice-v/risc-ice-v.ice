@@ -253,16 +253,16 @@ algorithm main(
     input   uint1   sd_miso,
 
     // SDRAM
-    output uint1  sdram_cle,
-    output uint2  sdram_dqm,
-    output uint1  sdram_cs,
-    output uint1  sdram_we,
-    output uint1  sdram_cas,
-    output uint1  sdram_ras,
-    output uint2  sdram_ba,
-    output uint13 sdram_a,
-    output uint1  sdram_clk,  // sdram chip clock != internal sdram_clock
-    inout  uint16 sdram_dq
+    output! uint1  sdram_cle,
+    output! uint2  sdram_dqm,
+    output! uint1  sdram_cs,
+    output! uint1  sdram_we,
+    output! uint1  sdram_cas,
+    output! uint1  sdram_ras,
+    output! uint2  sdram_ba,
+    output! uint13 sdram_a,
+    output! uint1  sdram_clk,  // sdram chip clock != internal sdram_clock
+    inout   uint16 sdram_dq
 ) {
     // CLOCK/RESET GENERATION
 
@@ -294,6 +294,7 @@ algorithm main(
         clkIO :> clock_IO,
         clkVIDEO :> video_clock,
         clkSDRAM :> clock_sdram,
+        clkSDRAMcontrol :> sdram_clk,
         locked :> pll_lock_AUX
     );
 
@@ -621,10 +622,6 @@ algorithm main(
                                     IO_Map.memoryWrite = 1;
                                 } else {
                                     // SDRAM or BRAM
-                                    if( ( function3 & 3 ) == 0 ) {
-                                        // READ 8 BIT INTO CACHE
-                                        ( ramaddress, ramreadflag, ramIcache ) = ramREADD( storeAddress, rambusy );
-                                    }
                                     // WRITE 8, 16 and LOWER 16 of 32 bits
                                     ( ramaddress, ramwritedata, ramwriteflag ) = ramWRITE( storeAddress, sourceReg2LOW, rambusy );
                                     if(  ( function3 & 3 ) == 2b10 ) {
@@ -798,6 +795,19 @@ algorithm ramcontroller (
                 active = 1;
 
                 // WRITE INTO CACHE
+                if( ( function3 & 3 ) == 0 && ~Dcachetagmatch ) {
+                    // LOAD INTO CACHE FOR BYTE WRITE
+                    // READ FROM SDRAM
+                    //sio.addr = address;
+                    //sio.rw = 0;
+                    //sio.in_valid = 1;
+                    //while( !sio.done ) {}
+
+                    // WRITE RESULT TO DCACHE
+                    Dcachetag.wenable = 1;
+                    //Dcachedata.wdata = sio.data_out;
+                    //Dcachedata.wenable = ~Icache;
+                }
                 Dcachedata.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] } ) : writedata;
                 Icachedata.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] } ) : writedata;
                 Dcachedata.wenable = 1;
@@ -815,6 +825,10 @@ algorithm ramcontroller (
                 active = 0;
             } else {
                 // BRAM
+                if( ( function3 & 3 ) == 0 ) {
+                    // BYTE WRITE - ENSURE ADDRESS IS READY
+                    ++:
+                }
                 ram.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
                 ram.wenable = 1;
                 active = 0;
