@@ -206,7 +206,7 @@ algorithm PAWSCPU (
     simple_dualport_bram int32 registers_1 <input!> [64] = { 0, pad(0) };
     simple_dualport_bram int32 registers_2 <input!> [64] = { 0, pad(0) };
 
-    // RISC-V PROGRAM COUNTER
+    // RISC-V PROGRAM COUNTER AND STATUS
     uint32  pc = 0;
     uint32  pcPLUS2 = uninitialized;
     uint32  nextPC = uninitialized;
@@ -215,37 +215,9 @@ algorithm PAWSCPU (
     uint1   takeBranch = uninitialized;
     uint1   incPC = uninitialized;
 
-    // RISC-V INSTRUCTION and DECODE
-    uint32  instruction = uninitialized;
-    uint7   opCode = uninitialized;
-    uint7   function7 = uninitialized;
-
-    // RISC-V SOURCE REGISTER VALUES
-    uint5   rs1 = uninitialized;
-    uint5   rs2 = uninitialized;
-    uint5   rd = uninitialized;
-    int32   sourceReg1 = uninitialized;
-    int32   sourceReg2 = uninitialized;
-    uint16  sourceReg2LOW = uninitialized;
-    uint16  sourceReg2HIGH = uninitialized;
-
-    // IMMEDIATE VALUE
-    int32   immediateValue = uninitialized;
-
-    // RISC-V ALU RESULTS
+    // RISC-V REGISTER WRITER
     int32   result = uninitialized;
     uint1   writeRegister = uninitialized;
-
-    // RISC-V ADDRESSES - calculated by the address generation unit
-    uint32  branchAddress = uninitialized;
-    uint32  jumpAddress = uninitialized;
-    uint32  loadAddress = uninitialized;
-    uint32  loadAddressPLUS2 = uninitialized;
-    uint32  storeAddress = uninitialized;
-    uint32  storeAddressPLUS2 = uninitialized;
-    uint32  AUIPCLUI = uninitialized;
-
-    // RISC-V REGISTER WRITER
     registersWRITE registersW(
         rd <: rd,
         floatingpoint <: floatingpoint,
@@ -255,6 +227,10 @@ algorithm PAWSCPU (
     );
 
     // RISC-V REGISTER READER
+    int32   sourceReg1 = uninitialized;
+    int32   sourceReg2 = uninitialized;
+    uint16  sourceReg2LOW = uninitialized;
+    uint16  sourceReg2HIGH = uninitialized;
     registersREAD registersR(
         rs1 <: rs1,
         rs2 <: rs2,
@@ -268,6 +244,7 @@ algorithm PAWSCPU (
     );
 
     // COMPRESSED INSTRUCTION EXPANDER
+    uint32  instruction = uninitialized;
     uint32  instruction32 = uninitialized;
     uint1   IScompressed = uninitialized;
     compressedexpansion compressedunit <@clock_cpuunit> (
@@ -277,6 +254,12 @@ algorithm PAWSCPU (
     );
 
     // RISC-V 32 BIT INSTRUCTION DECODER
+    int32   immediateValue = uninitialized;
+    uint7   opCode = uninitialized;
+    uint7   function7 = uninitialized;
+    uint5   rs1 = uninitialized;
+    uint5   rs2 = uninitialized;
+    uint5   rd = uninitialized;
     decoder DECODE <@clock_cpuunit> (
         instruction <: instruction,
         opCode :> opCode,
@@ -289,6 +272,13 @@ algorithm PAWSCPU (
     );
 
     // RISC-V ADDRESS GENERATOR
+    uint32  branchAddress = uninitialized;
+    uint32  jumpAddress = uninitialized;
+    uint32  loadAddress = uninitialized;
+    uint32  loadAddressPLUS2 = uninitialized;
+    uint32  storeAddress = uninitialized;
+    uint32  storeAddressPLUS2 = uninitialized;
+    uint32  AUIPCLUI = uninitialized;
     addressgenerator AGU <@clock_cpuunit> (
         instruction <: instruction,
         pc <:: pc,
