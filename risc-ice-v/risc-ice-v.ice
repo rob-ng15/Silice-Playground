@@ -1,234 +1,3 @@
-// RISC-ICE-V
-// inspired by https://github.com/sylefeb/Silice/blob/master/projects/ice-v/ice-v.ice
-//
-// A simple Risc-V RV32I processor
-
-// RISC-V BASE INSTRUCTION BITFIELDS
-bitfield    Btype {
-    uint1   immediate_bits_12,
-    uint6   immediate_bits_10_5,
-    uint5   sourceReg2,
-    uint5   sourceReg1,
-    uint3   function3,
-    uint4   immediate_bits_4_1,
-    uint1   immediate_bits_11,
-    uint7   opcode
-}
-
-bitfield    Itype {
-    uint12  immediate,
-    uint5   sourceReg1,
-    uint3   function3,
-    uint5   destReg,
-    uint7   opcode
-}
-
-bitfield    ItypeSHIFT {
-    uint7   function7,
-    uint5   shiftCount,
-    uint5   sourceReg1,
-    uint3   function3,
-    uint5   destReg,
-    uint7   opcode
-}
-
-bitfield    Jtype {
-    uint1   immediate_bits_20,
-    uint10  immediate_bits_10_1,
-    uint1   immediate_bits_11,
-    uint8   immediate_bits_19_12,
-    uint5   destReg,
-    uint7   opcode
-}
-
-bitfield    Rtype {
-    uint7   function7,
-    uint5   sourceReg2,
-    uint5   sourceReg1,
-    uint3   function3,
-    uint5   destReg,
-    uint7   opCode
-}
-
-bitfield Stype {
-    uint7   immediate_bits_11_5,
-    uint5   sourceReg2,
-    uint5   sourceReg1,
-    uint3   function3,
-    uint5   immediate_bits_4_0,
-    uint7   opcode
-}
-
-bitfield Utype {
-    uint20  immediate_bits_31_12,
-    uint5   destReg,
-    uint7   opCode
-}
-
-// COMPRESSED Risc-V Instruction Bitfields
-bitfield    CBalu {
-    uint3   function3,
-    uint1   ib_5,
-    uint2   function2,
-    uint3   rd_alt,
-    uint2   logical2,
-    uint3   rs2_alt,
-    uint2   opcode
-}
-bitfield    CBalu50 {
-    uint3   function3,
-    uint1   ib_5,
-    uint2   function2,
-    uint3   rd_alt,
-    uint5   ib_4_0,
-    uint2   opcode
-}
-bitfield    CB {
-    uint3   function3,
-    uint1   offset_8,
-    uint2   offset_4_3,
-    uint3   rs1_alt,
-    uint2   offset_7_6,
-    uint2   offset_2_1,
-    uint1   offset_5,
-    uint2   opcode
-}
-
-bitfield    CI {
-    uint3   function3,
-    uint1   ib_5,
-    uint5   rd,
-    uint3   ib_4_2,
-    uint2   ib_7_6,
-    uint2   opcode
-}
-bitfield    CI50 {
-    uint3   function3,
-    uint1   ib_5,
-    uint5   rd,
-    uint5   ib_4_0,
-    uint2   opcode
-}
-bitfield    CI94 {
-    uint3   function3,
-    uint1   ib_9,
-    uint5   rd,
-    uint1   ib_4,
-    uint1   ib_6,
-    uint2   ib_8_7,
-    uint1   ib_5,
-    uint2   opcode
-}
-bitfield    CIu94 {
-    uint3   function3,
-    uint2   ib_5_4,
-    uint4   ib_9_6,
-    uint1   ib_2,
-    uint1   ib_3,
-    uint3   rd_alt,
-    uint2   opcode
-}
-bitfield    CIlui {
-    uint3   function3,
-    uint1   ib_17,
-    uint5   rd,
-    uint5   ib_16_12,
-    uint2   opcode
-}
-
-bitfield    CJ {
-    uint3   function3,
-    uint1   ib_11,
-    uint1   ib_4,
-    uint2   ib_9_8,
-    uint1   ib_10,
-    uint1   ib_6,
-    uint1   ib_7,
-    uint3   ib_3_1,
-    uint1   ib_5,
-    uint2   opcode
-}
-
-bitfield    CL {
-    uint3   function3,
-    uint3   ib_5_3,
-    uint3   rs1_alt,
-    uint1   ib_2,
-    uint1   ib_6,
-    uint3   rd_alt,
-    uint2   opcode
-}
-
-bitfield    CR {
-    uint4   function4,
-    uint5   rs1,
-    uint5   rs2,
-    uint2   opcode
-}
-
-bitfield    CS {
-    uint3   function3,
-    uint1   ib_5,
-    uint2   ib_4_3,
-    uint3   rs1_alt,
-    uint1   ib_2,
-    uint1   ib_6,
-    uint3   rs2_alt,
-    uint2   opcode
-}
-
-bitfield    CSS {
-    uint3   function3,
-    uint1   ib_5,
-    uint3   ib_4_2,
-    uint2   ib_7_6,
-    uint5   rs2,
-    uint2   opcode
-}
-
-    // HELPER CIRCUIT - READ INSTRUTION VIA ICACHE
-    circuitry ramREADI(
-        input   address,
-        input   rambusy,
-        output  ramaddress,
-        output  ramreadflag,
-        output  ramIcache
-    ) {
-        ramaddress = address;
-        ramIcache = 1;
-        ramreadflag = 1;
-        while( rambusy ) {}
-    }
-
-    // HELPER CIRCUIT - READ DATA VIA DCACHE
-    circuitry ramREADD(
-        input   address,
-        input   rambusy,
-        output  ramaddress,
-        output  ramreadflag,
-        output  ramIcache
-    ) {
-        ramaddress = address;
-        ramIcache = 0;
-        ramreadflag = 1;
-        while( rambusy ) {}
-    }
-
-    // HELPER CIRCUIT - WRITE DATA
-    circuitry ramWRITE (
-        input   address,
-        input   writedata,
-        input   rambusy,
-        output  ramaddress,
-        output  ramwritedata,
-        output  ramwriteflag
-    ) {
-        ramaddress = address;
-        ramwritedata = writedata;
-        ramwriteflag = 1;
-        while( rambusy ) {}
-    }
-
 algorithm main(
     // LEDS (8 of)
     output  uint8   leds,
@@ -263,7 +32,7 @@ algorithm main(
     output! uint13 sdram_a,
     output! uint1  sdram_clk,  // sdram chip clock != internal sdram_clock
     inout   uint16 sdram_dq
-) {
+) <@clock_IO> {
     // CLOCK/RESET GENERATION
 
     // CPU DOMAIN CLOCKS
@@ -271,7 +40,6 @@ algorithm main(
     uint1   clock_copro = uninitialized;
     uint1   clock_cpuunit = uninitialized;
     uint1   clock_memory = uninitialized;
-    uint1   clock_registers = uninitialized;
     // Generate 50MHz clocks for CPU units
     // 50MHz clock for the BRAM and CACHE controller
     ulx3s_clk_risc_ice_v_CPU clk_gen_CPU (
@@ -279,7 +47,6 @@ algorithm main(
         clkCOPRO :> clock_copro,
         clkMEMORY  :> clock_memory,
         clkCPUUNIT :> clock_cpuunit,
-        clkREGISTERS :> clock_registers,
         locked   :> pll_lock_CPU
     );
 
@@ -328,50 +95,6 @@ algorithm main(
         blue    <: video_b
     );
 
-    // RISC-V REGISTERS
-    simple_dualport_bram int32 registers_1 <input!> [64] = { 0, pad(0) };
-    simple_dualport_bram int32 registers_2 <input!> [64] = { 0, pad(0) };
-
-    // RISC-V PROGRAM COUNTER
-    uint32  pc = 0;
-    uint32  pcPLUS2 = uninitialized;
-    uint32  nextPC = uninitialized;
-    uint1   compressed = uninitialized;
-    uint1   floatingpoint = uninitialized;
-    uint1   takeBranch = uninitialized;
-    uint1   incPC = uninitialized;
-
-    // RISC-V INSTRUCTION and DECODE
-    uint32  instruction = uninitialized;
-    uint7   opCode = uninitialized;
-    uint3   function3 = uninitialized;
-    uint7   function7 = uninitialized;
-
-    // RISC-V SOURCE REGISTER VALUES
-    uint5   rs1 = uninitialized;
-    uint5   rs2 = uninitialized;
-    uint5   rd = uninitialized;
-    int32   sourceReg1 = uninitialized;
-    int32   sourceReg2 = uninitialized;
-    uint16  sourceReg2LOW = uninitialized;
-    uint16  sourceReg2HIGH = uninitialized;
-
-    // IMMEDIATE VALUE
-    int32   immediateValue = uninitialized;
-
-    // RISC-V ALU RESULTS
-    int32   result = uninitialized;
-    uint1   writeRegister = uninitialized;
-
-    // RISC-V ADDRESSES - calculated by the address generation unit
-    uint32  branchAddress = uninitialized;
-    uint32  jumpAddress = uninitialized;
-    uint32  loadAddress = uninitialized;
-    uint32  loadAddressPLUS2 = uninitialized;
-    uint32  storeAddress = uninitialized;
-    uint32  storeAddressPLUS2 = uninitialized;
-    uint32  AUIPCLUI = uninitialized;
-
     // RAM - BRAM and SDRAM
     // SDRAM chip controller
     // interface
@@ -389,35 +112,20 @@ algorithm main(
         sdram_a   :>  sdram_a,
         sdram_dq  <:> sdram_dq
     );
-    uint16  instruction16 = uninitialized;
-    uint32  ramaddress = uninitialized;
-    uint16  ramwritedata = uninitialized;
-    uint16  ramreaddata = uninitialized;
-    int32   ramreaddata8 = uninitialized;
-    int32   ramreaddata16 = uninitialized;
-    uint1   ramreadflag = uninitialized;
-    uint1   ramwriteflag = uninitialized;
-    uint1   ramIcache = uninitialized;
-    uint1   rambusy = uninitialized;
-    ramcontroller ram <@clock_memory> (
-        sio <:> sio,
-        address <: ramaddress,
-        writedata <: ramwritedata,
-        readflag <: ramreadflag,
-        writeflag <: ramwriteflag,
-        Icache <: ramIcache,
 
+    // <@clock_memory>
+    uint1   memorybusy = uninitialized;
+    ramcontroller ram <@clock_memory> (
         function3 <: function3,
-        readdata :> instruction16,
-        readdata :> ramreaddata,
-        readdata8 :> ramreaddata8,
-        readdata16 :> ramreaddata16,
-        busy :> rambusy
+        sio <:> sio,
+        Icache <: Icacheflag,
+        address <: address,
+        writedata <: writedata,
+        busy :> memorybusy
     );
 
     // MEMORY MAPPED I/O
     memmap_io IO_Map <@clock_IO> (
-        function3 <: function3,
         leds :> leds,
         btns <: btns,
         uart_tx :> uart_tx,
@@ -436,247 +144,42 @@ algorithm main(
         pix_x <: pix_x,
         pix_y <: pix_y,
         video_clock <: video_clock,
-        video_reset <: video_reset
-    );
+        video_reset <: video_reset,
 
-    // RISC-V REGISTER WRITER
-    registersWRITE registersW (
-        rd <: rd,
-        floatingpoint <: floatingpoint,
-        result <: result,
-        registers_1 <:> registers_1,
-        registers_2 <:> registers_2
-    );
-
-    // RISC-V REGISTER READER
-    registersREAD registersR (
-        rs1 <: rs1,
-        rs2 <: rs2,
-        floatingpoint <: floatingpoint,
-        sourceReg1 :> sourceReg1,
-        sourceReg2 :> sourceReg2,
-        sourceReg2LOW :> sourceReg2LOW,
-        sourceReg2HIGH :> sourceReg2HIGH,
-        registers_1 <:> registers_1,
-        registers_2 <:> registers_2
-    );
-
-    // COMPRESSED INSTRUCTION EXPANDER
-    uint32  instruction32 = uninitialized;
-    uint1   IScompressed = uninitialized;
-    compressedexpansion compressedunit <@clock_cpuunit> (
-        compressed :> IScompressed,
-        instruction16 <: instruction16,
-        instruction32 :> instruction32,
-    );
-
-    // RISC-V 32 BIT INSTRUCTION DECODER
-    decoder DECODE <@clock_cpuunit> (
-        instruction <: instruction,
-        opCode :> opCode,
-        function3 :> function3,
-        function7 :> function7,
-        rs1 :> rs1,
-        rs2 :> rs2,
-        rd :> rd,
-        immediateValue :> immediateValue
-    );
-
-    // RISC-V ADDRESS GENERATOR
-    addressgenerator AGU <@clock_cpuunit> (
-        instruction <: instruction,
-        pc <:: pc,
-        compressed <: compressed,
-        sourceReg1 <: sourceReg1,
-        pcPLUS2 :> pcPLUS2,
-        nextPC :> nextPC,
-        branchAddress :> branchAddress,
-        jumpAddress :> jumpAddress,
-        AUIPCLUI :> AUIPCLUI,
-        storeAddress :> storeAddress,
-        storeAddressPLUS2 :> storeAddressPLUS2,
-        loadAddress :> loadAddress,
-        loadAddressPLUS2 :> loadAddressPLUS2
-    );
-
-    // RISC-V BASE ALU
-    //int32   ALUresult = uninitialized;
-    //int32   ALUMresult = uninitialized;
-    //uint1   ALUstart = uninitialized;
-    //uint1   ALUbusy = uninitialized;
-    alu ALU <@clock_copro> (
-        instruction <: instruction,
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-
-        //result :> ALUresult,
-        //Mresult :> ALUMresult,
-        //start <: ALUstart,
-        //busy :> ALUbusy
-    );
-
-    // BRANCH COMPARISON UNIT
-    uint1   BRANCHtakeBranch = uninitialized;
-    branchcomparison branchcomparisonunit <@clock_cpuunit> (
         function3 <: function3,
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-        takeBranch :> BRANCHtakeBranch
+        memoryAddress <: address,
+        writeData <: writedata
     );
 
-    // COMBINE TWO 16 BIT HALF WORDS TO ONE 32 BIT WORD
-    uint16  LOW = uninitialized;
-    uint16  HIGH = uninitialized;
-    uint32  HIGHLOW = uninitialized;
-    halfhalfword combiner161632unit <@clock_cpuunit> (
-        LOW <: LOW,
-        HIGH <: HIGH,
-        HIGHLOW :> HIGHLOW
+    uint3   function3 = uninitialized;
+    uint32  address = uninitialized;
+    uint16  writedata = uninitialized;
+    uint1   Icacheflag = uninitialized;
+    PAWSCPU CPU <@clock> (
+        function3 :> function3,
+
+        address :> address,
+        writedata :> writedata,
+        Icacheflag :> Icacheflag,
+
+        memorybusy <: memorybusy,
+
+        clock_cpuunit <: clock_cpuunit,
+        clock_copro <: clock_copro
     );
 
-    // RAM/IO Read/Write Flags
-    ramwriteflag := 0;
-    ramreadflag := 0;
-    IO_Map.memoryWrite := 0;
-    IO_Map.memoryRead := 0;
+    // I/O and RAM read/write flags
+    ram.writeflag := CPU.writememory && ~( ~address[28,1] && address[15,1] );
+    ram.readflag := CPU.readmemory && ~( ~address[28,1] && address[15,1] );
+    IO_Map.memoryWrite := CPU.writememory && ~address[28,1] && address[15,1];
+    IO_Map.memoryRead := CPU.readmemory && ~address[28,1] && address[15,1];
 
-    // REGISTER Read/Write Flags
-    registersW.writeRegister := 0;
-
-    // ALU Start Flag
-    //ALUstart := 0;
-    ALU.start := 0;
+    CPU.readdata := ( ~address[28,1] && address[15,1] ) ? IO_Map.readData : ram.readdata;
+    CPU.readdata8 := ( ~address[28,1] && address[15,1] ) ? IO_Map.readData8 : ram.readdata8;
+    CPU.readdata16 := ( ~address[28,1] && address[15,1] ) ? IO_Map.readData16 : ram.readdata16;
 
     while(1) {
-        // RISC-V
-        writeRegister = 0;
-        takeBranch = 0;
-        incPC = 1;
-        floatingpoint = 0;
-
-        // FETCH + EXPAND COMPRESSED INSTRUCTIONS
-        ( ramaddress, ramreadflag, ramIcache ) = ramREADI( pc, rambusy );
-        compressed = IScompressed;
-        switch( IScompressed ) {
-            case 1b0: {
-                // 32 bit instruction
-                LOW = instruction32;
-                ( ramaddress, ramreadflag, ramIcache ) = ramREADI( pcPLUS2, rambusy );
-                HIGH = ramreaddata;
-                instruction = HIGHLOW;
-            }
-            case 1b1: {
-                // 16 bit compressed instruction
-                instruction = instruction32;
-            }
-        }
-
-        // DECODE + REGISTER FETCH
-        // HAPPENS AUTOMATICALLY in DECODE AND REGISTER UNITS
-        ++:
-        ++:
-
-        // EXECUTE
-        switch( opCode[4,1] ) {
-            case 1b0: {
-                // JAL JALR BRANCH LOAD STORE
-                switch( opCode[6,1] ) {
-                    case 1b0: {
-                        // LOAD STORE
-                        switch( opCode[5,1] ) {
-                            case 1b0: {
-                                // LOAD
-                                writeRegister = 1;
-                                if( ~loadAddress[28,1] && loadAddress[15,1] ) {
-                                    // I/O
-                                    IO_Map.memoryAddress = loadAddress[0,16];
-                                    IO_Map.memoryRead = 1;
-                                    switch( function3 & 3 ) {
-                                        case 2b10: { result = IO_Map.readData; }
-                                        default: { result = ( ( function3 & 3 ) == 0 ) ? IO_Map.readData8 : IO_Map.readData16; }
-                                    }
-                                } else {
-                                    // SDRAM or BRAM ( mark as using data cache )
-                                    ( ramaddress, ramreadflag, ramIcache ) = ramREADD( loadAddress, rambusy );
-                                    switch( function3 & 3 ) {
-                                        case 2b10: {
-                                            // 32 bit READ as 2 x 16 bit
-                                            LOW = ramreaddata;
-                                            ( ramaddress, ramreadflag, ramIcache ) = ramREADD( loadAddressPLUS2, rambusy );
-                                            HIGH = ramreaddata;
-                                            result = HIGHLOW;
-                                        }
-                                        default: {
-                                            // 8/16 bit with optional sign extension
-                                            result = ( ( function3 & 3 ) == 0 ) ? ramreaddata8 : ramreaddata16;
-                                        }
-                                    }
-                                }
-                            }
-                            case 1b1: {
-                                // STORE
-                                if( ~storeAddress[28,1] && storeAddress[15,1] ) {
-                                    // I/O ALWAYS 16 bit WRITES
-                                    IO_Map.memoryAddress = storeAddress[0,16];
-                                    IO_Map.writeData = sourceReg2LOW;
-                                    IO_Map.memoryWrite = 1;
-                                } else {
-                                    // SDRAM or BRAM
-                                    // WRITE 8, 16 and LOWER 16 of 32 bits
-                                    ( ramaddress, ramwritedata, ramwriteflag ) = ramWRITE( storeAddress, sourceReg2LOW, rambusy );
-                                    if(  ( function3 & 3 ) == 2b10 ) {
-                                        // WRITE UPPER 16 of 32 bits
-                                        ( ramaddress, ramwritedata, ramwriteflag ) = ramWRITE( storeAddressPLUS2, sourceReg2HIGH, rambusy );
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    case 1b1: {
-                        // JAL JALR BRANCH
-                        switch( opCode[2,1] ) {
-                            case 1b0 : {
-                                // BRANCH
-                                takeBranch = BRANCHtakeBranch;
-                            }
-                            case 1b1: {
-                                // JAL JALR
-                                writeRegister = 1;
-                                incPC = 0;
-                                result = nextPC;
-                            }
-                        }
-                    }
-                }
-            }
-            case 1b1: {
-                // LUI AUIPC ALU
-                switch( opCode[2,1] ) {
-                    case 1b0: {
-                        // ALU
-                        writeRegister = 1;
-                        if( opCode[5,1] && function7[0,1] ) {
-                            ALU.start = 1;
-                            while( ALU.busy ) {}
-                        }
-                        result = ( opCode[5,1] && function7[0,1] ) ? ALU.Mresult : ALU.result;
-                    }
-                    case 1b1: {
-                        // AUIPC LUI
-                        writeRegister = 1;
-                        result = AUIPCLUI;
-                    }
-                }
-            }
-        }
-
-
-        // WRITE TO REGISTERS
-        registersW.writeRegister = writeRegister;
-
-        // UPDATE PC
-        pc = ( incPC ) ? ( takeBranch ? branchAddress : nextPC ) : ( opCode[3,1] ? jumpAddress : loadAddress );
-    } // RISC-V
+    }
 }
 
 // RAM - BRAM controller and SDRAM controller ( with simple write-through cache )
@@ -806,7 +309,8 @@ algorithm ramcontroller (
                     // WRITE RESULT TO DCACHE
                     Dcachetag.wenable = 1;
                     //Dcachedata.wdata = sio.data_out;
-                    //Dcachedata.wenable = ~Icache;
+                    //Dcachedata.wenable = 1;
+                    ++:
                 }
                 Dcachedata.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] } ) : writedata;
                 Icachedata.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] } ) : writedata;

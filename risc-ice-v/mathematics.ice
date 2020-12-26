@@ -105,8 +105,8 @@ algorithm multiplicationDSP (
 // PERFORM OPTIONAL SIGN EXTENSION FOR 8 BIT AND 16 BIT READS
 algorithm signextender8 (
     input   uint3   function3,
-    input   uint8  nosign,
-    output  uint32  withsign
+    input!  uint8  nosign,
+    output! uint32  withsign
 ) <autorun> {
     withsign := { ( ( nosign[7,1] & ~function3[2,1] ) ? 24hffffff : 24h000000 ), nosign[0,8] };
     while(1) {
@@ -115,8 +115,8 @@ algorithm signextender8 (
 
 algorithm signextender16 (
     input   uint3   function3,
-    input   uint16  nosign,
-    output  uint32  withsign
+    input!  uint16  nosign,
+    output! uint32  withsign
 ) <autorun> {
     withsign := { ( nosign[15,1] & ~function3[2,1] ) ? 16hffff : 16h0000, nosign };
     while(1) {
