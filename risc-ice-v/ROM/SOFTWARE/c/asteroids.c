@@ -728,7 +728,6 @@ void main( void )
                 beep( 2, 3, 63, 32 );
             }
         }
-
         // PLACE NEW LARGE ASTEROIDS
         if( placeAsteroids > 0 ) {
             potentialnumber = find_asteroid_space();

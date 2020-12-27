@@ -72,11 +72,11 @@ void sd_readSector( unsigned int sectorAddress, unsigned char *copyAddress )
     unsigned short i;
 
     tpu_set( 48, 0, TRANSPARENT, RED ); tpu_outputstring("Reading Sector: "); tpu_outputnumber_int( (unsigned short)sectorAddress );
-    set_leds(255); gpu_blit( RED, 608, 0, 2, 1 );
+    gpu_blit( RED, 608, 0, 2, 1 );
     sdcard_readsector( sectorAddress, copyAddress );
 
     tpu_set( 48, 0, TRANSPARENT, GREEN ); tpu_outputstring("Sector Read   : "); tpu_outputnumber_int( (unsigned short)sectorAddress );
-    set_leds(0); gpu_blit( GREEN, 608, 0, 2, 1 );
+    gpu_blit( GREEN, 608, 0, 2, 1 );
 }
 
 void sd_readMBR( void ) {
@@ -140,7 +140,6 @@ void main()
 
     tpu_set( 0, 7, TRANSPARENT, RED ); tpu_outputstring( "Waiting for SDCARD" );
     tpu_set( 0, 9, TRANSPARENT, RED ); tpu_outputstring( "Reading Master Boot Record" );
-    sleep( 4000 );
 
     sd_readSector( 0, MBR );
 

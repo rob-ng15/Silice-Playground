@@ -100,7 +100,7 @@ algorithm main(
     // interface
     sdram_r16w16_io sio;
     // algorithm
-    sdram_controller_autoprecharge_r16_w16 sdram <@clock_sdram> (
+    sdram_controller_autoprecharge_r16_w16 sdram32MB <@clock_sdram> (
         sd        <:> sio,
         sdram_cle :>  sdram_cle,
         sdram_dqm :>  sdram_dqm,
@@ -113,15 +113,18 @@ algorithm main(
         sdram_dq  <:> sdram_dq
     );
 
-    // <@clock_memory>
-    uint1   memorybusy = uninitialized;
-    ramcontroller ram <@clock_memory> (
+    // SDRAM and BRAM (for BIOS)
+    sdramcontroller sdram <@clock_memory> (
         function3 <: function3,
         sio <:> sio,
         Icache <: Icacheflag,
         address <: address,
         writedata <: writedata,
-        busy :> memorybusy
+    );
+    bramcontroller ram <@clock_memory> (
+        function3 <: function3,
+        address <: address,
+        writedata <: writedata,
     );
 
     // MEMORY MAPPED I/O
@@ -162,31 +165,95 @@ algorithm main(
         writedata :> writedata,
         Icacheflag :> Icacheflag,
 
-        memorybusy <: memorybusy,
-
         clock_cpuunit <: clock_cpuunit,
         clock_copro <: clock_copro
     );
 
+    CPU.memorybusy := sdram.busy;
+
     // I/O and RAM read/write flags
-    ram.writeflag := CPU.writememory && ~( ~address[28,1] && address[15,1] );
-    ram.readflag := CPU.readmemory && ~( ~address[28,1] && address[15,1] );
+    sdram.writeflag := CPU.writememory && address[28,1];
+    sdram.readflag := CPU.readmemory && address[28,1];
+    ram.writeflag := CPU.writememory && ~address[28,1] && ~address[15,1];
+    ram.readflag := CPU.readmemory && ~address[28,1] && ~address[15,1];
     IO_Map.memoryWrite := CPU.writememory && ~address[28,1] && address[15,1];
     IO_Map.memoryRead := CPU.readmemory && ~address[28,1] && address[15,1];
 
-    CPU.readdata := ( ~address[28,1] && address[15,1] ) ? IO_Map.readData : ram.readdata;
-    CPU.readdata8 := ( ~address[28,1] && address[15,1] ) ? IO_Map.readData8 : ram.readdata8;
-    CPU.readdata16 := ( ~address[28,1] && address[15,1] ) ? IO_Map.readData16 : ram.readdata16;
+    CPU.readdata := address[28,1] ? sdram.readdata : ( address[15,1] ? IO_Map.readData : ram.readdata );
+    CPU.readdata8 := address[28,1] ? sdram.readdata8 : ( address[15,1] ? IO_Map.readData8 : ram.readdata8 );
+    CPU.readdata16 := address[28,1] ? sdram.readdata16 : ( address[15,1] ? IO_Map.readData16 : ram.readdata16 );
 
     while(1) {
     }
 }
 
-// RAM - BRAM controller and SDRAM controller ( with simple write-through cache )
+// RAM - BRAM controller
 // MEMORY IS 16 BIT, 8 bit WRITES ARE READ MODIFY WRITE
 // 8 and 16 bit READS ARE SIGN EXTENDED
+algorithm bramcontroller (
+    input   uint32  address,
+    input   uint3   function3,
 
-algorithm ramcontroller (
+    input   uint1   writeflag,
+    input   uint16  writedata,
+
+    input   uint1   readflag,
+    output  uint16  readdata,
+    output  int32   readdata8,
+    output  int32   readdata16,
+) <autorun> {
+    // RISC-V RAM and BIOS
+    bram uint16 ram <input!> [12288] = {
+        $include('ROM/BIOS.inc')
+        , pad(uninitialized)
+    };
+
+    // SIGN EXTENDER UNIT
+    uint8   SE8nosign = uninitialized;
+    int32   SE8sign = uninitialized;
+    signextender8 signextender8unit (
+        function3 <: function3,
+        nosign <: SE8nosign,
+        withsign :> SE8sign
+    );
+    uint16  SE16nosign = uninitialized;
+    int32   SE16sign = uninitialized;
+    signextender16 signextender16unit (
+        function3 <: function3,
+        nosign <: SE16nosign,
+        withsign :> SE16sign
+    );
+
+    // FLAGS FOR BRAM ACCESS
+    ram.wenable := 0;
+    ram.addr := address[1,15];
+
+    // RETURN RESULTS FROM BRAM OR CACHE
+    // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
+    readdata := ram.rdata;
+
+    // 8/16 bit READ WITH OPTIONAL SIGN EXTENSION
+    SE8nosign := ram.rdata[address[0,1] ? 8 : 0, 8];
+    SE16nosign := ram.rdata;
+    readdata8 := SE8sign;
+    readdata16 := SE16sign;
+
+    while(1) {
+        if( writeflag ) {
+            if( ( function3 & 3 ) == 0 ) {
+                // BYTE WRITE - ENSURE ADDRESS IS READY
+                ++:
+            }
+            ram.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
+            ram.wenable = 1;
+        }
+    }
+}
+
+// RAM - SDRAM CONTROLLER
+// MEMORY IS 16 BIT, 8 bit WRITES ARE READ MODIFY WRITE
+// 8 and 16 bit READS ARE SIGN EXTENDED
+algorithm sdramcontroller (
     sdram_user      sio,
 
     input   uint32  address,
@@ -203,11 +270,13 @@ algorithm ramcontroller (
 
     output  uint1   busy
 ) <autorun> {
-    // RISC-V RAM and BIOS
-    bram uint16 ram <input!> [12288] = {
-        $include('ROM/BIOS.inc')
-        , pad(uninitialized)
-    };
+    // INSTRUCTION & DATA CACHES for SDRAM (32mb)
+    // CACHE LINE IS LOWER 11 bits ( 0 - 2047 ) of address, dropping the BYTE address bit
+    // CACHE TAG IS REMAINING 13 bits of the 26 bit address + 1 bit for valid flag
+    bram uint16 Dcachedata<input!>[2048] = uninitialized;
+    bram uint14 Dcachetag<input!>[2048] = uninitialized;
+    bram uint16 Icachedata<input!>[2048] = uninitialized;
+    bram uint15 Icachetag<input!>[2048] = uninitialized;
 
     // ACTIVE FLAG
     uint1   active = 0;
@@ -228,67 +297,91 @@ algorithm ramcontroller (
         withsign :> SE16sign
     );
 
+    // CACHE TAG match flags
+    uint1   Icachetagmatch := Icachetag.rdata == { 1b1, address[12,14] };
+    uint1   Dcachetagmatch := Dcachetag.rdata == { 1b1, address[12,14] };
+
+    // FLAGS FOR CACHE ACCESS
+    Dcachedata.wenable := 0; Dcachedata.addr := address[1,11];
+    Dcachetag.wenable := 0; Dcachetag.addr := address[1,11]; Dcachetag.wdata := { 1b1, address[12,14] };
+    Icachedata.wenable := 0; Icachedata.addr := address[1,11];
+    Icachetag.wenable := 0; Icachetag.addr := address[1,11]; Icachetag.wdata := { 1b1, address[12,14] };
+
+    // MEMORY ACCESS FLAGS
     busy := ( readflag || writeflag ) ? 1 : active;
     sio.in_valid := 0;
 
-    // FLAGS FOR BRAM ACCESS
-    ram.wenable := 0;
-    ram.addr := address[1,15];
-
-    // RETURN RESULTS FROM BRAM OR CACHE
     // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
-    readdata := address[28,1] ? sio.data_out : ram.rdata;
+    readdata := ( Icache ? Icachedata.rdata : Dcachedata.rdata );
 
     // 8/16 bit READ WITH OPTIONAL SIGN EXTENSION
-    SE8nosign := address[28,1] ? ( sio.data_out[address[0,1] ? 8 : 0, 8] ) : ( ram.rdata[address[0,1] ? 8 : 0, 8] );
-    SE16nosign := address[28,1] ? sio.data_out : ram.rdata;
+    SE8nosign := Dcachedata.rdata[address[0,1] ? 8 : 0, 8];
+    SE16nosign := Dcachedata.rdata;
     readdata8 := SE8sign;
     readdata16 := SE16sign;
 
     while(1) {
-        if( readflag && address[28,1] ) {
+        if( readflag ) {
             // SDRAM
             active = 1;
 
-            // READ FROM SDRAM
-            sio.addr = address;
-            sio.rw = 0;
-            sio.in_valid = 1;
-            while( !sio.done ) {}
+            if( ( Icache && Icachetagmatch ) || Dcachetagmatch ) {
+                // CACHE HIT
+            } else {
+                // CACHE MISS
+                // READ FROM SDRAM
+                sio.addr = address;
+                sio.rw = 0;
+                sio.in_valid = 1;
+                while( !sio.done ) {}
+
+                // WRITE RESULT TO ICACHE or DCACHE
+                Icachetag.wenable = Icache;
+                Dcachetag.wenable = ~Icache;
+                Icachedata.wdata = sio.data_out;
+                Icachedata.wenable = Icache;
+                Dcachedata.wdata = sio.data_out;
+                Dcachedata.wenable = ~Icache;
+                ++:
+            }
 
             active = 0;
         }
 
         if( writeflag ) {
-            if( address[28,1] ) {
-                // SDRAM
-                active = 1;
+            // SDRAM
+            active = 1;
 
-                if( ( function3 & 3 ) == 0 ) {
-                    // READ FROM SDRAM for 8 bit writes
-                    sio.addr = address;
-                    sio.rw = 0;
-                    sio.in_valid = 1;
-                    while( !sio.done ) {}
-                }
-                // WRITE TO SDRAM
+            if( ( function3 & 3 ) == 0 ) {
+                // READ FROM SDRAM for 8 bit writes
                 sio.addr = address;
-                sio.data_in = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], sio.data_out[0,8] } : { sio.data_out[8,8], writedata[0,8] } ) : writedata;
-                sio.rw = 1;
+                sio.rw = 0;
                 sio.in_valid = 1;
                 while( !sio.done ) {}
 
-                active = 0;
-            } else {
-                // BRAM
-                if( ( function3 & 3 ) == 0 ) {
-                    // BYTE WRITE - ENSURE ADDRESS IS READY
-                    ++:
-                }
-                ram.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
-                ram.wenable = 1;
-                active = 0;
+                // WRITE RESULT TO DCACHE
+                Dcachetag.wenable = 1;
+                Dcachedata.wdata = sio.data_out;
+                Dcachedata.wenable = 1;
+                ++:
             }
+
+            // WRITE TO SDRAM
+            sio.addr = address;
+            sio.data_in = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], sio.data_out[0,8] } : { sio.data_out[8,8], writedata[0,8] } ) : writedata;
+            sio.rw = 1;
+            sio.in_valid = 1;
+            while( !sio.done ) {}
+
+            // WRITE TO CACHE
+            Dcachedata.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] } ) : writedata;
+            Icachedata.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] } ) : writedata;
+            Dcachedata.wenable = 1;
+            Dcachetag.wenable = 1;
+            // CHECK IF ENTRY IS IN ICACHE AND UPDATE
+            Icachedata.wenable = Icachetagmatch;
+
+            active = 0;
         }
     }
 }
