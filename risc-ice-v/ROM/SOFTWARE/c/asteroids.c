@@ -524,6 +524,9 @@ void beepboop( void )
                 } else {
                     tpu_set( 16, 26, TRANSPARENT, BLUE );
                     tpu_outputstring( "         Welcome to Risc-ICE-V Asteroids        " );
+
+                    tpu_set( 16, 3, TRANSPARENT, DKBLUE );
+                    tpu_outputstring( "            Controls: Fire 1 - FIRE             " );
                     game_over();
                 }
                 break;
@@ -532,6 +535,9 @@ void beepboop( void )
                 if( lives == 0 ) {
                     tpu_set( 16, 26, TRANSPARENT, CYAN );
                     tpu_outputstring( "By @robng15 (Twitter) from Whitebridge, Scotland" );
+
+                    tpu_set( 16, 3, TRANSPARENT, PURPLE );
+                    tpu_outputstring( "           Controls: Fire 2 - SHIELD            " );
                     game_over();
                 }
                 break;
@@ -542,6 +548,9 @@ void beepboop( void )
                 } else {
                     tpu_set( 16, 26, TRANSPARENT, YELLOW );
                     tpu_outputstring( "                 Press UP to start              " );
+
+                    tpu_set( 16, 3, TRANSPARENT, ORANGE );
+                    tpu_outputstring( "         Controls: Left / Right - TURN          " );
                     game_over();
                 }
                 break;
@@ -551,6 +560,9 @@ void beepboop( void )
                 if( lives == 0 ) {
                     tpu_set( 16, 26, TRANSPARENT, RED );
                     tpu_outputstring( "          Written in Silice by @sylefeb         " );
+
+                    tpu_set( 16, 3, TRANSPARENT, DKRED );
+                    tpu_outputstring( "              Controls: UP - MOVE               " );
                     game_over();
                 }
                 (void)tilemap_scrollwrapclear( 6 );
@@ -708,9 +720,13 @@ void main( void )
         counter++;
 
         // FLASH LEDS AND BEEP IF UFO ON SCREEN
-        set_leds( ( ufo_sprite_number != 0xff ) && ( counter & 32 ) ? 0xff : 0 );
-        if( ( ufo_sprite_number != 0xff ) && ( counter & 64 ) && ( lives != 0 ) ) {
-            beep( 2, 3, 63, 32 );
+        if( ufo_sprite_number != 0xff ) {
+            ufo_x = get_sprite_attribute( ASN( ufo_sprite_number ), 3 );
+            ufo_x = ( ufo_x < 0 ) ? 0 : ( ufo_x > 639 ? 639 : ufo_x );
+            set_leds( 1 << ( 7 - ufo_x / 80 ) );
+            if(  ( counter & 64 ) && ( lives != 0 ) ) {
+                beep( 2, 3, 63, 32 );
+            }
         }
 
         // PLACE NEW LARGE ASTEROIDS
