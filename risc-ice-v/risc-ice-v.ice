@@ -37,6 +37,7 @@ algorithm main(
 
     // CPU DOMAIN CLOCKS
     uint1   pll_lock_CPU = uninitialized;
+    uint1   clock_cpu = uninitialized;
     uint1   clock_copro = uninitialized;
     uint1   clock_cpuunit = uninitialized;
     uint1   clock_memory = uninitialized;
@@ -44,6 +45,7 @@ algorithm main(
     // 50MHz clock for the BRAM and CACHE controller
     ulx3s_clk_risc_ice_v_CPU clk_gen_CPU (
         clkin    <: clock,
+        clkCPU :> clock_cpu,
         clkCOPRO :> clock_copro,
         clkMEMORY  :> clock_memory,
         clkCPUUNIT :> clock_cpuunit,
@@ -274,7 +276,7 @@ algorithm sdramcontroller (
     // CACHE LINE IS LOWER 11 bits ( 0 - 2047 ) of address, dropping the BYTE address bit
     // CACHE TAG IS REMAINING 13 bits of the 26 bit address + 1 bit for valid flag
     bram uint16 Dcachedata<input!>[2048] = uninitialized;
-    bram uint14 Dcachetag<input!>[2048] = uninitialized;
+    bram uint15 Dcachetag<input!>[2048] = uninitialized;
     bram uint16 Icachedata<input!>[2048] = uninitialized;
     bram uint15 Icachetag<input!>[2048] = uninitialized;
 
@@ -322,9 +324,9 @@ algorithm sdramcontroller (
 
     while(1) {
         if( readflag ) {
-            // SDRAM
+            // SDRAM - 1 cycle for CACHE TAG ACCESS
             active = 1;
-
+            ++:
             if( ( Icache && Icachetagmatch ) || Dcachetagmatch ) {
                 // CACHE HIT
             } else {

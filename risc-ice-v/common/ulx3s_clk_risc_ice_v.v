@@ -4,11 +4,12 @@
 // cause of this could be from wrong CPHASE/FPHASE parameters
 module ulx3s_clk_risc_ice_v_CPU
 (
-    input clkin,        // 25 MHz, 0 deg
-    output clkCOPRO,    // 50 MHz, 0 deg        // CO-PROCESSORS
-    output clkCPUUNIT,  // 50 MHz, 0 deg        // CPU SUBUNITS
-    output clkMEMORY,   // 50 MHz, 0 deg     // MEMORY CONTROLLER - BRAM
-    output locked
+    input clkin,         // 25 MHz, 0 deg
+    output  clkCPU,      // 25 MHz               // CPU
+    output  clkCOPRO,    // 50 MHz, 0 deg       // CO-PROCESSORS
+    output  clkCPUUNIT,  // 50 MHz, 0 deg       // CPU SUBUNITS
+    output  clkMEMORY,   // 50 MHz, 0 deg       // MEMORY CONTROLLER - BRAM
+    output  locked
 );
 (* FREQUENCY_PIN_CLKI="25" *)
 (* FREQUENCY_PIN_CLKOP="50" *)
@@ -38,6 +39,10 @@ EHXPLLL #(
         .CLKOS2_DIV(12),
         .CLKOS2_CPHASE(5),
         .CLKOS2_FPHASE(0),
+        .CLKOS3_ENABLE("ENABLED"),
+        .CLKOS3_DIV(24),
+        .CLKOS3_CPHASE(5),
+        .CLKOS3_FPHASE(0),
         .FEEDBK_PATH("CLKOP"),
         .CLKFB_DIV(2)
     ) pll_i (
@@ -47,6 +52,7 @@ EHXPLLL #(
         .CLKOP(clkCOPRO),
         .CLKOS(clkMEMORY),
         .CLKOS2(clkCPUUNIT),
+        .CLKOS3(clkCPU),
         .CLKFB(clkCOPRO),
         .CLKINTFB(),
         .PHASESEL0(1'b0),
