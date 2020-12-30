@@ -1,9 +1,36 @@
 #include "PAWS.h"
 
+typedef unsigned int size_t;
+
+// STANDARD C FUNCTIONS ( from @sylefeb mylibc )
+void*  memcpy(void *dest, const void *src, size_t n) {
+  const void *end = src + n;
+  const unsigned char *bsrc = (const unsigned char *)src;
+  while (bsrc != end) {
+    *(unsigned char*)dest = *(++bsrc);
+  }
+  return dest;
+}
+
+int strlen( char *s ) {
+    int i = 0;
+    while( *s ) {
+        s++;
+        i++;
+    }
+    return(i);
+}
+
+int strcmp(const char *p1, const char *p2) {
+  while (*p1 && (*p1 == *p2)) {
+    p1++; p2++;
+  }
+  return *(const unsigned char*)p1 - *(const unsigned char*)p2;
+}
+
 // INTERNAL HELPER FUNCTIONS
 // CONVERT UNSIGNED INTEGERS TO STRINGS ( CHAR, SHORT and INT VERSIONS )
-void chartostring( unsigned char value, char *s )
-{
+void chartostring( unsigned char value, char *s ) {
     unsigned char remainder, i = 0;
 
     while( value != 0 ) {
@@ -14,8 +41,7 @@ void chartostring( unsigned char value, char *s )
         i++;
     }
 }
-void shorttostring( unsigned short value, char *s )
-{
+void shorttostring( unsigned short value, char *s ) {
     unsigned short remainder;
     unsigned char i = 0;
 
@@ -27,8 +53,7 @@ void shorttostring( unsigned short value, char *s )
         i++;
     }
 }
-void inttostring( unsigned int value, char *s )
-{
+void inttostring( unsigned int value, char *s ) {
     unsigned int remainder;
     unsigned char i = 0;
 
@@ -43,8 +68,7 @@ void inttostring( unsigned int value, char *s )
 
 // OUTPUT TO TERMINAL & UART
 // OUTPUT INDIVIDUAL CHARACTER TO THE UART/TERMINAL
-void outputcharacter(char c)
-{
+void outputcharacter(char c) {
 	while( *UART_STATUS & 2 );
     *UART_DATA = c;
 
@@ -55,8 +79,7 @@ void outputcharacter(char c)
         outputcharacter('\r');
 }
 // OUTPUT NULL TERMINATED STRING TO UART/TERMINAL WITH NEWLINE
-void outputstring(char *s)
-{
+void outputstring(char *s) {
 	while(*s) {
 		outputcharacter(*s);
 		s++;
@@ -64,28 +87,24 @@ void outputstring(char *s)
 	outputcharacter('\n');
 }
 // OUTPUT NULL TERMINATED STRING TO UART/TERMINAL WITH NO NEWLINE
-void outputstringnonl(char *s)
-{
+void outputstringnonl(char *s) {
 	while(*s) {
 		outputcharacter(*s);
 		s++;
 	}
 }
 // OUTPUT UNSIGNED INTEGERS TO UART/TERMINAL ( CHAR, SHORT and INT VERSIONS )
-void outputnumber_char( unsigned char value )
-{
+void outputnumber_char( unsigned char value ) {
     char valuestring[]="  0";
     chartostring( value, valuestring );
     outputstringnonl( valuestring );
 }
-void outputnumber_short( unsigned short value )
-{
+void outputnumber_short( unsigned short value ) {
     char valuestring[]="    0";
     shorttostring( value, valuestring );
     outputstringnonl( valuestring );
 }
-void outputnumber_int( unsigned int value )
-{
+void outputnumber_int( unsigned int value ) {
     char valuestring[]="         0";
     inttostring( value, valuestring );
     outputstringnonl( valuestring );
@@ -93,13 +112,11 @@ void outputnumber_int( unsigned int value )
 
 // INPUT FROM UART
 // RETURN 1 IF UART CHARACTER AVAILABLE, OTHERWISE 0
-unsigned char inputcharacter_available( void )
-{
+unsigned char inputcharacter_available( void ) {
     return( *UART_STATUS & 1 );
 }
 // RETURN CHARACTER FROM UART
-char inputcharacter( void )
-{
+char inputcharacter( void ) {
 	while( !inputcharacter_available() );
     return *UART_DATA;
 }
@@ -108,8 +125,7 @@ char inputcharacter( void )
 
 // PSEUDO RANDOM NUMBER GENERATOR
 // RETURN PSEUDO RANDOM NUMBER 0 <= RNG < RANGE ( effectively 0 to range - 1 )
-unsigned short rng( unsigned short range )
-{
+unsigned short rng( unsigned short range ) {
     unsigned short trial;
 
     switch( range ) {
@@ -149,39 +165,33 @@ unsigned short rng( unsigned short range )
 }
 
 // SLEEP FOR counter milliseconds
-void sleep( unsigned short counter )
-{
+void sleep( unsigned short counter ) {
     *SLEEPTIMER = counter;
     while( *SLEEPTIMER );
 }
 
 // SET THE 1khz COUNTDOWN TIMER
-void set_timer1khz( unsigned short counter )
-{
+void set_timer1khz( unsigned short counter ) {
     *TIMER1KHZ = counter;
 }
 
 // READ THE 1khz COUNTDOWN TIMER
-unsigned short get_timer1khz( void )
-{
+unsigned short get_timer1khz( void ) {
     return( *TIMER1KHZ );
 }
 
 // WAIT FOR THE 1khz COUNTDOWN TIMER
-void wait_timer1khz( void )
-{
+void wait_timer1khz( void ) {
     while( *TIMER1KHZ );
 }
 
 // READ THE 1hz TIMER
-unsigned short get_timer1hz( void )
-{
+unsigned short get_timer1hz( void ) {
     return( *TIMER1HZ );
 }
 
 // RESET THE 1hz TIMER
-void reset_timer1hz( void )
-{
+void reset_timer1hz( void ) {
     *TIMER1HZ = 1;
 }
 
@@ -190,8 +200,7 @@ void reset_timer1hz( void )
 // START A note (1 == DEEP C, 25 == MIDDLE C )
 // OF duration MILLISECONDS TO THE LEFT ( channel_number == 1 ) RIGHT ( channel_number == 2 ) or BOTH ( channel_number == 3 ) AUDIO CHANNEL
 // IN waveform 0 == SQUARE, 1 == SAWTOOTH, 2 == TRIANGLE, 3 == SINE, 4 == WHITE NOISE
-void beep( unsigned char channel_number, unsigned char waveform, unsigned char note, unsigned short duration )
-{
+void beep( unsigned char channel_number, unsigned char waveform, unsigned char note, unsigned short duration ) {
     if( ( channel_number & 1 ) != 0 ) {
         *AUDIO_L_WAVEFORM = waveform;
         *AUDIO_L_NOTE = note;
@@ -208,14 +217,12 @@ void beep( unsigned char channel_number, unsigned char waveform, unsigned char n
 
 // SDCARD FUNCTIONS
 // INTERNAL FUNCTION - WAIT FOR THE SDCARD TO BE READY
-void sdcard_wait( void )
-{
+void sdcard_wait( void ) {
     while( *SDCARD_READY == 0 ) {}
 }
 
 // READ A SECTOR FROM THE SDCARD AND COPY TO MEMORY
-void sdcard_readsector( unsigned int sectorAddress, unsigned char *copyAddress )
-{
+void sdcard_readsector( unsigned int sectorAddress, unsigned char *copyAddress ) {
     unsigned short i;
 
     sdcard_wait();
@@ -232,14 +239,12 @@ void sdcard_readsector( unsigned int sectorAddress, unsigned char *copyAddress )
 
 // I/O FUNCTIONS
 // SET THE LEDS
-void set_leds( unsigned char value )
-{
+void set_leds( unsigned char value ) {
     *LEDS = value;
 }
 
 // READ THE ULX3S JOYSTICK BUTTONS
-unsigned char get_buttons( void )
-{
+unsigned char get_buttons( void ) {
     return( *BUTTONS );
 }
 
@@ -248,8 +253,7 @@ unsigned char get_buttons( void )
 // colour is in the form { Arrggbb } { ALPHA - show layer below, RED, GREEN, BLUE } or { rrggbb } { RED, GREEN, BLUE } giving 64 colours + transparent
 
 // WAIT FOR VBLANK TO START
-void await_vblank( void )
-{
+void await_vblank( void ) {
     while( !*VBLANK != 0 );
 }
 
@@ -263,8 +267,7 @@ void await_vblank( void )
 //  8 split vertical
 //  9 split horizontal
 //  10 quarters
-void set_background( unsigned char colour, unsigned char altcolour, unsigned char backgroundmode )
-{
+void set_background( unsigned char colour, unsigned char altcolour, unsigned char backgroundmode ) {
     *BACKGROUND_COLOUR = colour;
     *BACKGROUND_ALTCOLOUR = altcolour;
     *BACKGROUND_MODE = backgroundmode;
@@ -275,8 +278,7 @@ void set_background( unsigned char colour, unsigned char altcolour, unsigned cha
 // The tilemap can scroll or wrap once x or y is at -15 or 15
 
 // SET THE TILEMAP TILE at (x,y) to tile with colours background and foreground
-void set_tilemap_tile( unsigned char x, unsigned char y, unsigned char tile, unsigned char background, unsigned char foreground)
-{
+void set_tilemap_tile( unsigned char x, unsigned char y, unsigned char tile, unsigned char background, unsigned char foreground) {
     while( *TM_STATUS != 0 );
 
     *TM_X = x;
@@ -288,8 +290,7 @@ void set_tilemap_tile( unsigned char x, unsigned char y, unsigned char tile, uns
 }
 
 // SET THE TILE BITMAP for tile to the 16 x 16 pixel bitmap
-void set_tilemap_bitmap( unsigned char tile, unsigned short *bitmap )
-{
+void set_tilemap_bitmap( unsigned char tile, unsigned short *bitmap ) {
     *TM_WRITER_TILE_NUMBER = tile;
 
     for( int i = 0; i < 16; i ++ ) {
@@ -303,8 +304,7 @@ void set_tilemap_bitmap( unsigned char tile, unsigned short *bitmap )
 //  action == 5 to 8 move the tilemap 1 pixel LEFT, UP, RIGHT, DOWN and WRAP at limit
 //  action == 9 clear the tilemap
 //  RETURNS 0 if no action taken other than pixel shift, action if SCROLL WRAP or CLEAR was actioned
-unsigned char tilemap_scrollwrapclear( unsigned char action )
-{
+unsigned char tilemap_scrollwrapclear( unsigned char action ) {
     while( *TM_STATUS != 0 );
     *TM_SCROLLWRAPCLEAR = action;
     return( *TM_SCROLLWRAPCLEAR );
@@ -316,14 +316,12 @@ unsigned char tilemap_scrollwrapclear( unsigned char action )
 // The GPU can draw pixels, filled rectangles, lines, (filled) circles, filled triangles and has a 16 x 16 pixel blitter from user definable tiles
 
 // INTERNAL FUNCTION - WAIT FOR THE GPU TO FINISH THE LAST COMMAND
-void wait_gpu( void )
-{
+void wait_gpu( void ) {
     while( *GPU_STATUS != 0 );
 }
 
 // SET THE PIXEL at (x,y) to colour
-void gpu_pixel( unsigned char colour, short x, short y )
-{
+void gpu_pixel( unsigned char colour, short x, short y ) {
     wait_gpu();
     *GPU_COLOUR = colour;
     *GPU_X = x;
@@ -333,15 +331,13 @@ void gpu_pixel( unsigned char colour, short x, short y )
 
 // SCROLL THE BITMAP by 1 pixel
 //  action == 1 LEFT, == 2 UP, == 3 RIGHT, == 4 DOWN, == 5 RESET
-void bitmap_scrollwrap( unsigned char action )
-{
+void bitmap_scrollwrap( unsigned char action ) {
     wait_gpu();
     *BITMAP_SCROLLWRAP = action;
 }
 
 // DRAW A FILLED RECTANGLE from (x1,y1) to (x2,y2) in colour
-void gpu_rectangle( unsigned char colour, short x1, short y1, short x2, short y2 )
-{
+void gpu_rectangle( unsigned char colour, short x1, short y1, short x2, short y2 ) {
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
@@ -353,15 +349,13 @@ void gpu_rectangle( unsigned char colour, short x1, short y1, short x2, short y2
 }
 
 // CLEAR THE BITMAP by drawing a transparent rectangle from (0,0) to (639,479) and resetting the bitamp scroll position
-void gpu_cs( void )
-{
+void gpu_cs( void ) {
     bitmap_scrollwrap( 5 );
     gpu_rectangle( 64, 0, 0, 639, 479 );
 }
 
 // DRAW A LINE FROM (x1,y1) to (x2,y2) in colour - uses Bresenham's Line Drawing Algorithm
-void gpu_line( unsigned char colour, short x1, short y1, short x2, short y2 )
-{
+void gpu_line( unsigned char colour, short x1, short y1, short x2, short y2 ) {
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
@@ -373,8 +367,7 @@ void gpu_line( unsigned char colour, short x1, short y1, short x2, short y2 )
 }
 
 // DRAW A (optional filled) CIRCLE at centre (x1,y1) of radius ( FILLED CIRCLES HAVE A MINIMUM RADIUS OF 4 )
-void gpu_circle( unsigned char colour, short x1, short y1, short radius, unsigned char filled )
-{
+void gpu_circle( unsigned char colour, short x1, short y1, short radius, unsigned char filled ) {
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
@@ -385,8 +378,7 @@ void gpu_circle( unsigned char colour, short x1, short y1, short radius, unsigne
 }
 
 // BLIT A 16 x 16 ( blit_size == 1 doubled to 32 x 32 ) TILE ( from tile 0 to 31 ) to (x1,y1) in colour
-void gpu_blit( unsigned char colour, short x1, short y1, short tile, unsigned char blit_size )
-{
+void gpu_blit( unsigned char colour, short x1, short y1, short tile, unsigned char blit_size ) {
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
@@ -398,8 +390,7 @@ void gpu_blit( unsigned char colour, short x1, short y1, short tile, unsigned ch
 }
 
 // BLIT AN 8 x8  ( blit_size == 1 doubled to 16 x 16, blit_size == 1 doubled to 32 x 32 ) CHARACTER ( from tile 0 to 255 ) to (x1,y1) in colour
-void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned char tile, unsigned char blit_size )
-{
+void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned char tile, unsigned char blit_size ) {
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
@@ -411,8 +402,7 @@ void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned char
 }
 
 // SET THE BLITTER TILE to the 16 x 16 pixel bitmap
-void set_blitter_bitmap( unsigned char tile, unsigned short *bitmap )
-{
+void set_blitter_bitmap( unsigned char tile, unsigned short *bitmap ) {
     *BLIT_WRITER_TILE = tile;
 
     for( int i = 0; i < 16; i ++ ) {
@@ -423,8 +413,7 @@ void set_blitter_bitmap( unsigned char tile, unsigned short *bitmap )
 
 // DRAW A FILLED TRIANGLE with vertices (x1,y1) (x2,y2) (x3,y3) in colour
 // VERTICES SHOULD BE PRESENTED CLOCKWISE FROM THE TOP ( minimal adjustments made to the vertices to comply )
-void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2, short x3, short y3 )
-{
+void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2, short x3, short y3 ) {
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
@@ -439,8 +428,7 @@ void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2,
 
 // DRAW A FILLED QUADRILATERAL with vertices (x1,y1) (x2,y2) (x3,y3) (x4,y4) in colour BY DRAWING TWO FILLED TRIANGLES
 // VERTICES SHOULD BE PRESENTED CLOCKWISE FROM THE TOP ( minimal adjustments made to the vertices to comply )
-void gpu_quadrilateral( unsigned char colour, short x1, short y1, short x2, short y2, short x3, short y3, short x4, short y4 )
-{
+void gpu_quadrilateral( unsigned char colour, short x1, short y1, short x2, short y2, short x3, short y3, short x4, short y4 ) {
     gpu_triangle( colour, x1, y1, x2, y2, x3, y3 );
     gpu_triangle( colour, x1, y1, x3, y3, x4, y4 );
 }
@@ -450,15 +438,13 @@ void gpu_quadrilateral( unsigned char colour, short x1, short y1, short x2, shor
 // WHEN ACTIVATED draws lines from a vector block (x0,y0) to (x1,y1), (x1,y1) to (x2,y2), (x2,y2) to (x3,y3) until (x15,y15) or an inactive vertex is encountered
 
 // INTERNAL FUNCTION - WAIT FOR THE VECTOR BLOCK TO FINISH THE LAST COMMAND
-void wait_vector_block( void )
-{
+void wait_vector_block( void ) {
     while( *VECTOR_DRAW_STATUS );
 
 }
 
 // START DRAWING A VECTOR BLOCK centred at (xc,yc) in colour
-void draw_vector_block( unsigned char block, unsigned char colour, short xc, short yc )
-{
+void draw_vector_block( unsigned char block, unsigned char colour, short xc, short yc ) {
     wait_vector_block();
 
     *VECTOR_DRAW_BLOCK = block;
@@ -469,8 +455,7 @@ void draw_vector_block( unsigned char block, unsigned char colour, short xc, sho
 }
 
 // SET A VERTEX IN A VECTOR BLOCK - SET AN INACTIVE VERTEX IF NOT ALL 16 VERTICES ARE TO BE USED
-void set_vector_vertex( unsigned char block, unsigned char vertex, unsigned char active, char deltax, char deltay )
-{
+void set_vector_vertex( unsigned char block, unsigned char vertex, unsigned char active, char deltax, char deltay ) {
     *VECTOR_WRITER_BLOCK = block;
     *VECTOR_WRITER_VERTEX = vertex;
     *VECTOR_WRITER_ACTIVE = active;
@@ -483,8 +468,7 @@ void set_vector_vertex( unsigned char block, unsigned char vertex, unsigned char
 // WITH 13 SPRITES ( 0 to 12 ) each with 8 16 x 16 pixel bitmaps
 
 // SET THE BITMAPS FOR sprite_number in sprite_layer to the 8 x 16 x 16 pixel bitmaps ( 128 16 bit bitmap lines )
-void set_sprite_bitmaps( unsigned char sprite_layer, unsigned char sprite_number, unsigned short *sprite_bitmaps )
-{
+void set_sprite_bitmaps( unsigned char sprite_layer, unsigned char sprite_number, unsigned short *sprite_bitmaps ) {
     switch( sprite_layer ) {
         case 0:
             *LOWER_SPRITE_WRITER_NUMBER = sprite_number;
@@ -508,8 +492,7 @@ void set_sprite_bitmaps( unsigned char sprite_layer, unsigned char sprite_number
 }
 
 // SET SPRITE sprite_number in sprite_layer to active status, in colour to (x,y) with bitmap number tile ( 0 - 7 ) in sprite_size == 0 16 x 16 == 1 32 x 32 pixel size
-void set_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsigned char active, unsigned char colour, short x, short y, unsigned char tile, unsigned char sprite_size)
-{
+void set_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsigned char active, unsigned char colour, short x, short y, unsigned char tile, unsigned char sprite_size) {
     switch( sprite_layer ) {
         case 0:
             *LOWER_SPRITE_NUMBER = sprite_number;
@@ -540,8 +523,7 @@ void set_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsign
 //  attribute == 3 x coordinate
 //  attribute == 4 y coordinate
 //  attribute == 5 size ( 0 == 16 x 16, 1 == 32 x 32 )
-void set_sprite_attribute( unsigned char sprite_layer, unsigned char sprite_number, unsigned char attribute, short value )
-{
+void set_sprite_attribute( unsigned char sprite_layer, unsigned char sprite_number, unsigned char attribute, short value ) {
     if( sprite_layer == 0 ) {
         *LOWER_SPRITE_NUMBER = sprite_number;
         switch( attribute ) {
@@ -589,8 +571,7 @@ void set_sprite_attribute( unsigned char sprite_layer, unsigned char sprite_numb
     }
 }
 
-short get_sprite_attribute( unsigned char sprite_layer, unsigned char sprite_number, unsigned char attribute )
-{
+short get_sprite_attribute( unsigned char sprite_layer, unsigned char sprite_number, unsigned char attribute ) {
     if( sprite_layer == 0 ) {
         *LOWER_SPRITE_NUMBER = sprite_number;
         switch( attribute ) {
@@ -640,8 +621,7 @@ short get_sprite_attribute( unsigned char sprite_layer, unsigned char sprite_num
 
 // RETURN THE COLLISION STATUS for sprite_number in sprite_layer
 //  bit is 1 if sprite is in collision with { bitmap, tilemap, other sprite layer, in layer sprite 12, in layer sprite 11 .. in layer sprite 0 }
-unsigned short get_sprite_collision( unsigned char sprite_layer, unsigned char sprite_number )
-{
+unsigned short get_sprite_collision( unsigned char sprite_layer, unsigned char sprite_number ) {
     return( ( sprite_layer == 0 ) ? LOWER_SPRITE_COLLISION_BASE[sprite_number] : UPPER_SPRITE_COLLISION_BASE[sprite_number] );
 }
 
@@ -650,8 +630,7 @@ unsigned short get_sprite_collision( unsigned char sprite_layer, unsigned char s
 //  x and y action ( 0 == wrap, 1 == kill when moves offscreen )
 //  x and y deltas a 2s complement -15 to 15 range
 //  tile action, increase the tile number ( provides limited animation effects )
-void update_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsigned short update_flag )
-{
+void update_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsigned short update_flag ) {
     switch( sprite_layer ) {
         case 0:
             *LOWER_SPRITE_NUMBER = sprite_number;
@@ -669,15 +648,13 @@ void update_sprite( unsigned char sprite_layer, unsigned char sprite_number, uns
 // NO SCROLLING, CURSOR WRAPS TO THE TOP OF THE SCREEN
 
 // CLEAR THE CHARACTER MAP
-void tpu_cs( void )
-{
+void tpu_cs( void ) {
     while( *TPU_COMMIT );
     *TPU_COMMIT = 3;
 }
 
 // POSITION THE CURSOR to (x,y) and set background and foreground colours
-void tpu_set(  unsigned char x, unsigned char y, unsigned char background, unsigned char foreground )
-{
+void tpu_set(  unsigned char x, unsigned char y, unsigned char background, unsigned char foreground ) {
     while( *TPU_COMMIT );
     *TPU_X = x; *TPU_Y = y; *TPU_BACKGROUND = background; *TPU_FOREGROUND = foreground; *TPU_COMMIT = 1;
 }
@@ -689,8 +666,7 @@ void tpu_output_character( char c ) {
 }
 
 // OUTPUT A NULL TERMINATED STRING TO THE CHARACTER MAP
-void tpu_outputstring( char *s )
-{
+void tpu_outputstring( char *s ) {
     while( *s ) {
         while( *TPU_COMMIT );
         *TPU_CHARACTER = *s; *TPU_COMMIT = 2;
@@ -698,8 +674,7 @@ void tpu_outputstring( char *s )
     }
 }
 
-void tpu_outputstringcentre( unsigned char y, unsigned char background, unsigned char foreground, char *s )
-{
+void tpu_outputstringcentre( unsigned char y, unsigned char background, unsigned char foreground, char *s ) {
     unsigned char slen = 0, *scopy = s;
     while( *scopy ) {
         slen++;
@@ -714,20 +689,17 @@ void tpu_outputstringcentre( unsigned char y, unsigned char background, unsigned
 }
 
 // OUTPUT UNSIGNED INTEGERS TO UART/TERMINAL ( CHAR, SHORT and INT VERSIONS )
-void tpu_outputnumber_char( unsigned char value )
-{
+void tpu_outputnumber_char( unsigned char value ) {
     char valuestring[]="  0";
     chartostring( value, valuestring );
     tpu_outputstring( valuestring );
 }
-void tpu_outputnumber_short( unsigned short value )
-{
+void tpu_outputnumber_short( unsigned short value ) {
     char valuestring[]="    0";
     shorttostring( value, valuestring );
     tpu_outputstring( valuestring );
 }
-void tpu_outputnumber_int( unsigned int value )
-{
+void tpu_outputnumber_int( unsigned int value ) {
     char valuestring[]="         0";
     inttostring( value, valuestring );
     tpu_outputstring( valuestring );
@@ -739,8 +711,7 @@ void tpu_outputnumber_int( unsigned int value )
 // DISPLAYS AT THE BOTTOM OF THE SCREEN
 
 // status == 1 SHOW THE TERMINAL WINDOW, status == 0 HIDE THE TERMINAL WINDOW
-void terminal_showhide( unsigned char status )
-{
+void terminal_showhide( unsigned char status ) {
     *TERMINAL_SHOWHIDE = status;
 }
 

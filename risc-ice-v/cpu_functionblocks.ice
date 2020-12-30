@@ -247,7 +247,6 @@ algorithm PAWSCPU (
     uint32  instruction = uninitialized;
     uint32  instruction32 = uninitialized;
     uint1   IScompressed = uninitialized;
-    // <@clock_cpuunit>
     compressedexpansion compressedunit(
         compressed :> IScompressed,
         instruction16 <: readdata,
@@ -261,7 +260,6 @@ algorithm PAWSCPU (
     uint5   rs1 = uninitialized;
     uint5   rs2 = uninitialized;
     uint5   rd = uninitialized;
-    // <@clock_cpuunit>
     decoder DECODE(
         instruction <: instruction,
         opCode :> opCode,
@@ -281,7 +279,6 @@ algorithm PAWSCPU (
     uint32  storeAddress = uninitialized;
     uint32  storeAddressPLUS2 = uninitialized;
     uint32  AUIPCLUI = uninitialized;
-    // <@clock_cpuunit>
     addressgenerator AGU(
         instruction <: instruction,
         pc <:: pc,
@@ -307,7 +304,6 @@ algorithm PAWSCPU (
 
     // BRANCH COMPARISON UNIT
     uint1   BRANCHtakeBranch = uninitialized;
-    // <@clock_cpuunit>
     branchcomparison branchcomparisonunit(
         function3 <: function3,
         sourceReg1 <: sourceReg1,
@@ -319,7 +315,6 @@ algorithm PAWSCPU (
     uint16  LOW = uninitialized;
     uint16  HIGH = uninitialized;
     uint32  HIGHLOW = uninitialized;
-    // <@clock_cpuunit>
     halfhalfword combiner161632unit(
         LOW <: LOW,
         HIGH <: HIGH,

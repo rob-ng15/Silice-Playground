@@ -9,6 +9,8 @@
        __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
 
+typedef unsigned int size_t;
+
 // STRUCTURE OF THE SPRITE UPDATE FLAG
 struct sprite_update_flag {
     unsigned int padding:3;
@@ -20,6 +22,8 @@ struct sprite_update_flag {
 };
 
 // FUNCTION DEFINITIONS
+extern void*  memcpy(void *dest, const void *src, size_t n);
+extern int    strcmp(const char *p1, const char *p2);
 
 // UART AND TERMINAL INPUT / OUTPUT
 extern void outputcharacter(char);

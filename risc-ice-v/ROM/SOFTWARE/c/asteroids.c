@@ -239,7 +239,7 @@ void set_tilemap( void )
     // RANDOMLY PLACE 4 PLANETS and 4 ROCKET SHIPS
     for( unsigned char i = 0; i < 4; i++ ) {
         x = rng( 18 ) + ( x&1 ? 1 : 21 );
-        y = rng( 10 ) + i*10 + 1;
+        y = rng( 7 ) + i*7 + 1;
         colour = random_colour_alt();
 
         set_tilemap_tile( x, y, 1, TRANSPARENT, colour ); set_tilemap_tile( x, y+1, 2, TRANSPARENT, colour ); set_tilemap_tile( x+1, y, 3, TRANSPARENT, colour ); set_tilemap_tile( x+1, y+1, 4, TRANSPARENT, colour );
@@ -247,7 +247,7 @@ void set_tilemap( void )
 
     for( unsigned char i = 0; i < 4; i++ ) {
         x = rng( 18 ) + ( x&1 ? 21 : 1 );
-        y = rng( 10 ) + i*10 + 1;
+        y = rng( 7 ) + i*7 + 1;
         colour = random_colour_alt();
 
         set_tilemap_tile( x, y, 5, TRANSPARENT, colour ); set_tilemap_tile( x, y+1, 6, TRANSPARENT, colour ); set_tilemap_tile( x+1, y, 7, TRANSPARENT, colour ); set_tilemap_tile( x+1, y+1, 8, TRANSPARENT, colour );

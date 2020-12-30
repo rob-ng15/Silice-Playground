@@ -32,14 +32,13 @@ algorithm main(
     output! uint13 sdram_a,
     output! uint1  sdram_clk,  // sdram chip clock != internal sdram_clock
     inout   uint16 sdram_dq
-) <@clock_IO> {
+) {
     // CLOCK/RESET GENERATION
 
     // CPU DOMAIN CLOCKS
     uint1   pll_lock_CPU = uninitialized;
     uint1   clock_cpu = uninitialized;
     uint1   clock_copro = uninitialized;
-    uint1   clock_cpuunit = uninitialized;
     uint1   clock_memory = uninitialized;
     // Generate 50MHz clocks for CPU units
     // 50MHz clock for the BRAM and CACHE controller
@@ -48,7 +47,6 @@ algorithm main(
         clkCPU :> clock_cpu,
         clkCOPRO :> clock_copro,
         clkMEMORY  :> clock_memory,
-        clkCPUUNIT :> clock_cpuunit,
         locked   :> pll_lock_CPU
     );
 
@@ -150,6 +148,7 @@ algorithm main(
         pix_y <: pix_y,
         video_clock <: video_clock,
         video_reset <: video_reset,
+        clock_IO <: clock_IO,
 
         function3 <: function3,
         memoryAddress <: address,
@@ -167,7 +166,6 @@ algorithm main(
         writedata :> writedata,
         Icacheflag :> Icacheflag,
 
-        clock_cpuunit <: clock_cpuunit,
         clock_copro <: clock_copro
     );
 
