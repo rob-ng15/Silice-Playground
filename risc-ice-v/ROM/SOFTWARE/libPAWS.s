@@ -1539,6 +1539,70 @@ tpu_outputstring:
 	ret
 	.size	tpu_outputstring, .-tpu_outputstring
 	.align	1
+	.globl	tpu_outputstringcentre
+	.type	tpu_outputstringcentre, @function
+tpu_outputstringcentre:
+	addi	sp,sp,-16
+	sw	ra,12(sp)
+	sw	s0,8(sp)
+	sw	s1,4(sp)
+	sw	s2,0(sp)
+	mv	s2,a3
+	lbu	a5,0(a3)
+	beq	a5,zero,.L206
+	mv	a5,a3
+	li	a6,1
+	sub	a6,a6,a3
+.L207:
+	add	s0,a5,a6
+	andi	s0,s0,0xff
+	addi	a5,a5,1
+	lbu	a4,0(a5)
+	bne	a4,zero,.L207
+	mv	a3,a2
+	mv	a2,a1
+	mv	a1,a0
+	li	a0,0
+	call	tpu_set
+	srli	s0,s0,1
+	beq	s0,zero,.L208
+	li	s1,0
+.L209:
+	li	a0,32
+	call	tpu_output_character
+	addi	s1,s1,1
+	slli	s1,s1,16
+	srli	s1,s1,16
+	bne	s1,s0,.L209
+	mv	a0,s2
+	call	tpu_outputstring
+	li	s1,0
+.L211:
+	li	a0,32
+	call	tpu_output_character
+	addi	s1,s1,1
+	slli	s1,s1,16
+	srli	s1,s1,16
+	bne	s1,s0,.L211
+.L205:
+	lw	ra,12(sp)
+	lw	s0,8(sp)
+	lw	s1,4(sp)
+	lw	s2,0(sp)
+	addi	sp,sp,16
+	jr	ra
+.L206:
+	mv	a3,a2
+	mv	a2,a1
+	mv	a1,a0
+	li	a0,0
+	call	tpu_set
+.L208:
+	mv	a0,s2
+	call	tpu_outputstring
+	j	.L205
+	.size	tpu_outputstringcentre, .-tpu_outputstringcentre
+	.align	1
 	.globl	tpu_outputnumber_char
 	.type	tpu_outputnumber_char, @function
 tpu_outputnumber_char:

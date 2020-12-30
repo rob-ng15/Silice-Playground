@@ -698,6 +698,21 @@ void tpu_outputstring( char *s )
     }
 }
 
+void tpu_outputstringcentre( unsigned char y, unsigned char background, unsigned char foreground, char *s )
+{
+    unsigned char slen = 0, *scopy = s;
+    while( *scopy ) {
+        slen++;
+        scopy++;
+    }
+    tpu_set( 0, y, background, foreground );
+    for( unsigned short i = 0; i < slen / 2; i++ )
+        tpu_output_character(' ');
+    tpu_outputstring( s );
+    for( unsigned short i = 0; i < slen / 2; i++ )
+        tpu_output_character(' ');
+}
+
 // OUTPUT UNSIGNED INTEGERS TO UART/TERMINAL ( CHAR, SHORT and INT VERSIONS )
 void tpu_outputnumber_char( unsigned char value )
 {

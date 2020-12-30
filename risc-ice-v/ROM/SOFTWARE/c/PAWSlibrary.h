@@ -92,6 +92,7 @@ extern void tpu_cs( void );
 extern void tpu_set(  unsigned char, unsigned char, unsigned char, unsigned char );
 extern void tpu_output_character( char );
 extern void tpu_outputstring( char * );
+extern void tpu_outputstringcentre( unsigned char, unsigned char, unsigned char, char * );
 extern void tpu_outputnumber_char( unsigned char );
 extern void tpu_outputnumber_short( unsigned short );
 extern void tpu_outputnumber_int( unsigned int );
