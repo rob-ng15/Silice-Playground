@@ -32,7 +32,7 @@ algorithm main(
     output! uint13 sdram_a,
     output! uint1  sdram_clk,  // sdram chip clock != internal sdram_clock
     inout   uint16 sdram_dq
-) {
+) <@clock_memory> {
     // CLOCK/RESET GENERATION
 
     // CPU DOMAIN CLOCKS
@@ -159,7 +159,7 @@ algorithm main(
     uint32  address = uninitialized;
     uint16  writedata = uninitialized;
     uint1   Icacheflag = uninitialized;
-    PAWSCPU CPU <@clock> (
+    PAWSCPU CPU <@clock_cpu> (
         function3 :> function3,
 
         address :> address,
