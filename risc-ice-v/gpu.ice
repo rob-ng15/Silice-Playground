@@ -1,5 +1,5 @@
 // HELPER CIRCUITS
-circuitry min2(
+circuitry min(
     input   value1,
     input   value2,
     output  minimum
@@ -16,7 +16,7 @@ circuitry min3(
     minimum = ( value1 < value2 ) ? ( value1 < value3 ? value1 : value3 ) : ( value2 < value3 ? value2 : value3 );
 }
 
-circuitry max2(
+circuitry max(
     input   value1,
     input   value2,
     output  maximum
@@ -56,6 +56,22 @@ circuitry copycoordinates(
 ) {
     x1 = x;
     y1 = y;
+}
+
+circuitry swapcoordinates(
+    input   x,
+    input   y,
+    input   x1,
+    input   y1,
+    output  x2,
+    output  y2,
+    output  x3,
+    output  y3
+) {
+    x2 = x1;
+    y2 = y1;
+    x3 = x;
+    y3 = y;
 }
 
 circuitry cropleft(
@@ -361,9 +377,9 @@ algorithm rectangle (
     input   int11   param0,
     input   int11   param1,
 
-    output  uint11  bitmap_x_write,
-    output  uint11  bitmap_y_write,
-    output  uint1   bitmap_write,
+    output!  uint11  bitmap_x_write,
+    output!  uint11  bitmap_y_write,
+    output!  uint1   bitmap_write,
 
     input   uint1   start,
     output  uint1   busy
@@ -382,18 +398,22 @@ algorithm rectangle (
         if( start ) {
             active = 1;
             // Setup drawing a rectangle from x,y to param0,param1 in colour
-            // Ensures that works left to right, top to bottom
-            // Cut out pixels out of 0 <= x <= 639 , 0 <= y <= 479
-            gpu_active_x = ( x < param0 ) ? ( x < 0 ? 0 : x ) : ( param0 < 0 ? 0 : param0 );                // left
-            gpu_active_y = ( y < param1 ) ? ( y < 0 ? 0 : y ) : ( param1 < 0 ? 0 : param1 );                // top
-            gpu_x1 = ( x < param0 ) ? ( x < 0 ? 0 : x )  : ( param0 < 0 ? 0 : param0 );                     // left - for next line
-            gpu_max_x = ( x < param0 ) ? ( param0 > 639 ? 639 : param0 ) : ( x > 639 ? 639 : x );           // right - at end of line
-            gpu_max_y = ( y < param1 ) ? ( param1 > 479 ? 479 : param1 ) : ( y > 479 ? 479 : y );           // bottom - at end of rectangle
+            // Ensures that works left to right, top to bottom, crop to screen edges
+            ( gpu_active_x ) = min( x, param0 );
+            ( gpu_active_y ) = min( y, param1 );
+            ( gpu_max_x ) = max( x, param0 );
+            ( gpu_max_y ) = max( y, param1 );
+            ++:
+            ( gpu_active_x ) = cropleft( gpu_active_x );
+            ( gpu_x1 ) = cropleft( gpu_active_x );
+            ( gpu_active_y ) = croptop( gpu_active_y );
+            ( gpu_max_x ) = cropright( gpu_max_x );
+            ( gpu_max_y ) = cropbottom( gpu_max_y );
             ++:
             while( gpu_active_y <= gpu_max_y ) {
+                bitmap_y_write = gpu_active_y;
                 while( gpu_active_x <= gpu_max_x ) {
                     bitmap_x_write = gpu_active_x;
-                    bitmap_y_write = gpu_active_y;
                     bitmap_write = 1;
                     gpu_active_x = gpu_active_x + 1;
                 }
@@ -412,9 +432,9 @@ algorithm line (
     input   int11   param0,
     input   int11   param1,
 
-    output  uint11  bitmap_x_write,
-    output  uint11  bitmap_y_write,
-    output  uint1   bitmap_write,
+    output!  uint11  bitmap_x_write,
+    output!  uint11  bitmap_y_write,
+    output!  uint1   bitmap_write,
 
     input   uint1   start,
     output  uint1   busy
@@ -440,17 +460,17 @@ algorithm line (
             active = 1;
             // Setup drawing a line from x,y to param0,param1 in colour
             // Ensure LEFT to RIGHT
-            gpu_active_x = ( x < param0 ) ? x : param0;
+            ( gpu_active_x ) = min( x, param0 );
             gpu_active_y = ( x < param0 ) ? y : param1;
-            // Absolute DELTAs
-            gpu_dx = ( param0 < x ) ? x - param0 : param0 - x;
-            gpu_dy = ( param1 < y ) ? y - param1 : param1 - y;
-            // Shift Y is NEGATIVE or POSITIVE
+            // Determine if moving UP or DOWN
             gpu_sy = ( x < param0 ) ? ( ( y < param1 ) ? 1 : -1 ) : ( ( y < param1 ) ? -1 : 1 );
-            gpu_count = 0;
+            // Absolute DELTAs
+            ( gpu_dx ) = absdelta( x, param0 );
+            ( gpu_dy ) = absdelta( y, param1 );
             ++:
+            gpu_count = 0;
             gpu_numerator = ( gpu_dx > gpu_dy ) ? ( gpu_dx >> 1 ) : -( gpu_dy >> 1 );
-            gpu_max_count = ( gpu_dx > gpu_dy ) ? gpu_dx : gpu_dy;
+            ( gpu_max_count ) = max( gpu_dx, gpu_dy );
             ++:
             while( gpu_count <= gpu_max_count ) {
                 bitmap_x_write = gpu_active_x;
@@ -458,7 +478,7 @@ algorithm line (
                 bitmap_write = 1;
                 gpu_numerator2 = gpu_numerator;
                 ++:
-                if ( gpu_numerator2 > (-gpu_dx) ) {
+                if( gpu_numerator2 > (-gpu_dx) ) {
                     gpu_numerator = gpu_numerator - gpu_dy;
                     gpu_active_x = gpu_active_x + 1;
                 }
@@ -502,25 +522,22 @@ algorithm circle (
             active = 1;
             // Setup drawing a circle centre x,y or radius param0 in colour
             gpu_active_x = 0;
-            gpu_active_y = ( ( param0 < 0 ) ? -param0 : param0 );
-            gpu_xc = x;
-            gpu_yc = y;
-            gpu_numerator = 3 - ( 2 * ( ( param0 < 0 ) ? -param0 : param0 ) );
+            ( gpu_active_y ) = abs( param0 );
+            ( gpu_xc, gpu_yc ) = copycoordinates( x, y );
+            ++:
+            gpu_numerator = 3 - ( 2 * gpu_active_y );
             ++:
             while( gpu_active_y >= gpu_active_x ) {
                 bitmap_x_write = gpu_xc + gpu_active_x;
                 bitmap_y_write = gpu_yc + gpu_active_y;
                 bitmap_write = 1;
                 ++:
-                bitmap_x_write = gpu_xc + gpu_active_x;
                 bitmap_y_write = gpu_yc - gpu_active_y;
                 bitmap_write = 1;
                 ++:
                 bitmap_x_write = gpu_xc - gpu_active_x;
-                bitmap_y_write = gpu_yc - gpu_active_y;
                 bitmap_write = 1;
                 ++:
-                bitmap_x_write = gpu_xc - gpu_active_x;
                 bitmap_y_write = gpu_yc + gpu_active_y;
                 bitmap_write = 1;
                 ++:
@@ -528,15 +545,12 @@ algorithm circle (
                 bitmap_y_write = gpu_yc + gpu_active_x;
                 bitmap_write = 1;
                 ++:
-                bitmap_x_write = gpu_xc + gpu_active_y;
                 bitmap_y_write = gpu_yc - gpu_active_x;
                 bitmap_write = 1;
                 ++:
                 bitmap_x_write = gpu_xc - gpu_active_y;
-                bitmap_y_write = gpu_yc - gpu_active_x;
                 bitmap_write = 1;
                 ++:
-                bitmap_x_write = gpu_xc - gpu_active_y;
                 bitmap_y_write = gpu_yc + gpu_active_x;
                 bitmap_write = 1;
 
@@ -583,11 +597,13 @@ algorithm disc (
             // Setup drawing a filled circle centre x,y or radius param0 in colour
             // Minimum radius is 4, radius is always positive
             gpu_active_x = 0;
-            gpu_active_y = ( ( param0 < 0 ) ? ( ( param0 < -4 ) ? 4 : -param0 ) : ( ( param0 < 4 ) ? 4 : param0 ) );
-            gpu_xc = x;
-            gpu_yc = y;
-            gpu_count = ( ( param0 < 0 ) ? ( ( param0 < -4 ) ? 4 : -param0 ) : ( ( param0 < 4 ) ? 4 : param0 ) );
-            gpu_numerator = 3 - ( 2 * ( ( param0 < 0 ) ? ( ( param0 < -4 ) ? 4 : -param0 ) : ( ( param0 < 4 ) ? 4 : param0 ) ) );
+            ( gpu_active_y ) = abs( param0 );
+            ( gpu_xc, gpu_yc ) = copycoordinates( x, y );
+            ++:
+            gpu_active_y = ( gpu_active_y < 4 ) ? 4 : gpu_active_y;
+            ++:
+            gpu_count = gpu_active_y;
+            gpu_numerator = 3 - ( 2 * gpu_active_y );
             ++:
             while( gpu_active_y >= gpu_active_x ) {
                 while( gpu_count != 0 ) {
@@ -595,15 +611,12 @@ algorithm disc (
                     bitmap_y_write = gpu_yc + gpu_count;
                     bitmap_write = 1;
                     ++:
-                    bitmap_x_write = gpu_xc + gpu_active_x;
                     bitmap_y_write = gpu_yc - gpu_count;
                     bitmap_write = 1;
                     ++:
                     bitmap_x_write = gpu_xc - gpu_active_x;
-                    bitmap_y_write = gpu_yc - gpu_count;
                     bitmap_write = 1;
                     ++:
-                    bitmap_x_write = gpu_xc - gpu_active_x;
                     bitmap_y_write = gpu_yc + gpu_count;
                     bitmap_write = 1;
                     ++:
@@ -611,15 +624,12 @@ algorithm disc (
                     bitmap_y_write = gpu_yc + gpu_active_x;
                     bitmap_write = 1;
                     ++:
-                    bitmap_x_write = gpu_xc + gpu_count;
                     bitmap_y_write = gpu_yc - gpu_active_x;
                     bitmap_write = 1;
                     ++:
                     bitmap_x_write = gpu_xc - gpu_count;
-                    bitmap_y_write = gpu_yc - gpu_active_x;
                     bitmap_write = 1;
                     ++:
-                    bitmap_x_write = gpu_xc - gpu_count;
                     bitmap_y_write = gpu_yc + gpu_active_x;
                     bitmap_write = 1;
 
@@ -661,7 +671,7 @@ algorithm triangle (
 ) <autorun> {
     int11   gpu_active_x = uninitialized;
     int11   gpu_active_y = uninitialized;
-    int11    gpu_x1 = uninitialized;
+    int11   gpu_x1 = uninitialized;
     int11   gpu_y1 = uninitialized;
     int11   gpu_x2 = uninitialized;
     int11   gpu_y2 = uninitialized;
@@ -689,51 +699,38 @@ algorithm triangle (
         if( start ) {
             active = 1;
             // Setup drawing a filled triangle x,y param0, param1, param2, param3
-            gpu_active_x = x;
-            gpu_active_y = y;
-            gpu_x1 = param0;
-            gpu_y1 = param1;
-            gpu_x2 = param2;
-            gpu_y2 = param3;
+            ( gpu_active_x, gpu_active_y ) = copycoordinates( x, y);
+            ( gpu_x1, gpu_y1 ) = copycoordinates( param0, param1 );
+            ( gpu_x2, gpu_y2 ) = copycoordinates( param2, param3 );
             ++:
             // Find minimum and maximum of x, x1, x2, y, y1 and y2 for the bounding box
-            gpu_min_x = ( gpu_active_x < gpu_x1 ) ? ( ( gpu_active_x < gpu_x2 ) ? gpu_active_x : gpu_x2 ) : ( ( gpu_x1 < gpu_x2 ) ? gpu_x1: gpu_x2 );
-            gpu_min_y = ( gpu_active_y < gpu_y1 ) ? ( ( gpu_active_y < gpu_y2 ) ? gpu_active_y : gpu_y2 ) : ( ( gpu_y1 < gpu_y2 ) ? gpu_y1: gpu_y2 );
-            gpu_max_x = ( gpu_active_x > gpu_x1 ) ? ( ( gpu_active_x > gpu_x2 ) ? gpu_active_x : gpu_x2 ) : ( ( gpu_x1 > gpu_x2 ) ? gpu_x1 : gpu_x2 );
-            gpu_max_y = ( gpu_active_y > gpu_y1 ) ? ( ( gpu_active_y > gpu_y2 ) ? gpu_active_y : gpu_y2 ) : ( ( gpu_y1 > gpu_y2 ) ? gpu_y1 : gpu_y2 );
+            ( gpu_min_x ) = min3( gpu_active_x, gpu_x1, gpu_x2 );
+            ( gpu_min_y ) = min3( gpu_active_y, gpu_y1, gpu_y2 );
+            ( gpu_max_x ) = max3( gpu_active_x, gpu_x1, gpu_x2 );
+            ( gpu_max_y ) = max3( gpu_active_y, gpu_y1, gpu_y2 );
             ++:
             // Clip to the screen edge
-            gpu_min_x = ( gpu_min_x < 0 ) ? 0 : gpu_min_x;
-            gpu_min_y = ( gpu_min_y < 0 ) ? 0 : gpu_min_y;
-            gpu_max_x = ( gpu_min_x > 639 ) ? 639 : gpu_max_x;
-            gpu_max_y = ( gpu_min_y > 479 ) ? 479 : gpu_max_y;
+            ( gpu_min_x ) = cropleft( gpu_min_x );
+            ( gpu_max_x ) = cropright( gpu_max_x );
+            ( gpu_min_y ) = croptop( gpu_min_y );
+            ( gpu_max_y ) = cropbottom( gpu_max_y );
             ++:
-            // Find the point closest to the top of the screen
+            // Find the point closest to the top of the screen ( put into gpu_active_x and gpu_active_y )
             if( gpu_y1 < gpu_active_y ) {
-                gpu_active_x = gpu_x1;
-                gpu_active_y = gpu_y1;
-                gpu_x1 = gpu_active_x;
-                gpu_y1 = gpu_active_y;
+                ( gpu_active_x, gpu_active_y, gpu_x1, gpu_y1 ) = swapcoordinates( gpu_active_x, gpu_active_y, gpu_x1, gpu_y1 );
             }
             ++:
             if( gpu_y2 < gpu_active_y ) {
-                gpu_active_x = gpu_x2;
-                gpu_active_y = gpu_y2;
-                gpu_x2 = gpu_active_x;
-                gpu_y2 = gpu_active_y;
+                ( gpu_active_x, gpu_active_y, gpu_x2, gpu_y2 ) = swapcoordinates( gpu_active_x, gpu_active_y, gpu_x2, gpu_y2 );
             }
             ++:
             // Point order is top of screen then down to the right
             if( gpu_x1 < gpu_x2 ) {
-                gpu_x2 = gpu_x1;
-                gpu_y2 = gpu_y1;
-                gpu_x1 = gpu_x2;
-                gpu_y1 = gpu_y2;
+                ( gpu_x1, gpu_y1, gpu_x2, gpu_y2 ) = swapcoordinates( gpu_x1, gpu_y1, gpu_x2, gpu_y2 );
             }
             ++:
             // Start at the top left
-            gpu_sx = gpu_min_x;
-            gpu_sy = gpu_min_y;
+            ( gpu_sx, gpu_sy ) = copycoordinates( gpu_min_x, gpu_min_y );
             gpu_dx = 1;
             gpu_count = 0;
             ++:
@@ -828,20 +825,17 @@ algorithm blit (
             active = 1;
             gpu_active_x = 0;
             gpu_active_y = 0;
-            gpu_x1 = x;
-            gpu_y1 = y;
+            ( gpu_x1, gpu_y1 ) = copycoordinates( x, y );
             gpu_max_x = 16 << param1;
             gpu_max_y = 16;
             gpu_tile = param0;
             ++:
             while( gpu_active_y < gpu_max_y ) {
                 while( gpu_active_x < gpu_max_x ) {
+                    bitmap_x_write = gpu_x1 + gpu_active_x;
                     while( gpu_y2 < ( 1 << param1 ) ) {
-                        if( blit1tilemap.rdata0[15 - ( gpu_active_x >> param1 ),1] ) {
-                            bitmap_x_write = gpu_x1 + gpu_active_x;
-                            bitmap_y_write = gpu_y1 + ( gpu_active_y << param1 ) + gpu_y2;
-                            bitmap_write = 1;
-                        }
+                        bitmap_y_write = gpu_y1 + ( gpu_active_y << param1 ) + gpu_y2;
+                        bitmap_write = blit1tilemap.rdata0[15 - ( gpu_active_x >> param1 ),1];
                         gpu_y2 = gpu_y2 + 1;
                     }
                     gpu_active_x = gpu_active_x + 1;
@@ -893,20 +887,17 @@ algorithm characterblit (
             active = 1;
             gpu_active_x = 0;
             gpu_active_y = 0;
-            gpu_x1 = x;
-            gpu_y1 = y;
+            ( gpu_x1, gpu_y1 ) = copycoordinates( x, y );
             gpu_max_x = 8 << param1;
             gpu_max_y = 8;
             gpu_tile = param0;
             ++:
             while( gpu_active_y < gpu_max_y ) {
                 while( gpu_active_x < gpu_max_x ) {
+                    bitmap_x_write = gpu_x1 + gpu_active_x;
                     while( gpu_y2 < ( 1 << param1 ) ) {
-                        if( characterGenerator8x8.rdata0[7 - ( gpu_active_x >> param1 ),1] ) {
-                            bitmap_x_write = gpu_x1 + gpu_active_x;
-                            bitmap_y_write = gpu_y1 + ( gpu_active_y << param1 ) + gpu_y2;
-                            bitmap_write = 1;
-                        }
+                        bitmap_y_write = gpu_y1 + ( gpu_active_y << param1 ) + gpu_y2;
+                        bitmap_write = characterGenerator8x8.rdata0[7 - ( gpu_active_x >> param1 ),1];
                         gpu_y2 = gpu_y2 + 1;
                     }
                     gpu_active_x = gpu_active_x + 1;
@@ -1014,3 +1005,4 @@ algorithm vectors(
         }
     }
 }
+
