@@ -7,7 +7,7 @@ algorithm background(
     output! uint2   pix_green,
     output! uint2   pix_blue,
 
-    input uint16 staticGenerator,
+    input   uint16  staticGenerator,
 
     input uint6 backgroundcolour,
     input uint6 backgroundcolour_alt,
@@ -159,9 +159,9 @@ algorithm background(
                 }
                 case 6: {
                     // Static
-                    pix_red = staticGenerator[0,2];
-                    pix_green = staticGenerator[0,2];
-                    pix_blue = staticGenerator[0,2];
+                    pix_red = staticGenerator;
+                    pix_green = staticGenerator;
+                    pix_blue = staticGenerator;
                 }
                 case 7: {
                     // SNOW (from @sylefeb)

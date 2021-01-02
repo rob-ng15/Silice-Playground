@@ -53,7 +53,7 @@ algorithm memmap_io (
     pulse1khz timer1khz( );
 
     // RNG random number generator
-    uint16 staticGenerator = 0;
+    uint16  staticGenerator = uninitialized;
     random rng(
         g_noise_out :> staticGenerator,
     );
@@ -263,7 +263,7 @@ algorithm memmap_io (
 
     // Left and Right audio channels
     apu apu_processor_L(
-        staticGenerator <: staticGenerator,
+        staticGenerator <: staticGenerator4,
         audio_output :> audio_l
     );
     apu apu_processor_R(
