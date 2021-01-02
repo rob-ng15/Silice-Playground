@@ -1,10 +1,3 @@
-bitfield charactermapentry {
-    uint1   alpha,
-    uint6   background,
-    uint6   foreground,
-    uint8   character
-}
-
 algorithm character_map(
     input   uint10  pix_x,
     input   uint10  pix_y,
@@ -51,6 +44,8 @@ algorithm character_map(
 
     // CS Counter
     uint12  tpu_cs_addr = uninitialized;
+    uint12  tpu_count = uninitialized;
+    uint12  tpu_max_count = uninitialized;
 
     // Set up reading of the charactermap
     charactermap.addr0 := xcharacterpos + ycharacterpos;
@@ -76,8 +71,7 @@ algorithm character_map(
                 switch( tpu_write ) {
                     case 1: {
                         // Set cursor position
-                        tpu_active_x = tpu_x;
-                        tpu_active_y = tpu_y;
+                        ( tpu_active_x, tpu_active_y ) = copycoordinates( tpu_x, tpu_y );
                     }
                     case 2: {
                         // Write character,foreground, background to current cursor position and move onto next character position
@@ -88,23 +82,31 @@ algorithm character_map(
                         tpu_active_x = ( tpu_active_x == 79 ) ? 0 : tpu_active_x + 1;
                     }
                     case 3: {
-                        // Start tpucs!
+                        // Start tpucs
                         tpu_active_x = 0;
                         tpu_active_y = 0;
                         tpu_active = 1;
                         tpu_cs_addr = 0;
-                        charactermap.wdata1 = { 1b1, 6b0, 6b0, 8b0 };
+                        tpu_max_count = 2400;
+                    }
+                    case 4: {
+                        // Start tpu_clearline
+                        tpu_active_x = 0;
+                        tpu_active_y = tpu_y;
+                        tpu_active = 1;
+                        tpu_cs_addr = tpu_y * 80;
+                        tpu_max_count = tpu_y * 80 + 80;
                     }
                 }
             }
 
-            // TPU CS
+            // TPU WIPE - WHOLE OR PARTIAL SCREEN
             case 1: {
-                while( tpu_cs_addr < 2400 ) {
+                while( tpu_cs_addr < tpu_max_count ) {
                     charactermap.addr1 = tpu_cs_addr;
                     tpu_cs_addr = tpu_cs_addr + 1;
+                    charactermap.wdata1 = { 1b1, 6b0, 6b0, 8b0 };
                 }
-                ++:
                 tpu_active = 0;
             }
         }

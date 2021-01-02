@@ -251,12 +251,3 @@ bitmapscrolling
 closeencounters
 
 ```
-
-## Display List Testing
-
-```
-1 2 3f 10 10 20 20 0 0 0 dlentry!
-1 6 3 100 100 50 0 0 0 1 dlentry!
-1 7 3c 100 100 120 120 110 130 2 dlentry!
-0 1f dlstart! ff82 @ .
-```

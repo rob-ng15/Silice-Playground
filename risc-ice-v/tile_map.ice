@@ -1,10 +1,3 @@
-bitfield tilemapentry {
-    uint1   alpha,
-    uint6   background,
-    uint6   foreground,
-    uint5   tilenumber
-}
-
 algorithm tilemap(
     input   uint10  pix_x,
     input   uint10  pix_y,

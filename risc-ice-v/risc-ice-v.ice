@@ -37,14 +37,14 @@ algorithm main(
 
     // CPU DOMAIN CLOCKS
     uint1   pll_lock_CPU = uninitialized;
-    uint1   clock_cpu = uninitialized;
+    uint1   cpu_clock = uninitialized;
     uint1   clock_copro = uninitialized;
     uint1   clock_memory = uninitialized;
     // Generate 50MHz clocks for CPU units
     // 50MHz clock for the BRAM and CACHE controller
     ulx3s_clk_risc_ice_v_CPU clk_gen_CPU (
         clkin    <: clock,
-        clkCPU :> clock_cpu,
+        clkCPU :> cpu_clock,
         clkCOPRO :> clock_copro,
         clkMEMORY  :> clock_memory,
         locked   :> pll_lock_CPU
@@ -146,9 +146,9 @@ algorithm main(
         pix_active <: pix_active,
         pix_x <: pix_x,
         pix_y <: pix_y,
+
         video_clock <: video_clock,
         video_reset <: video_reset,
-        clock_IO <: clock_IO,
 
         function3 <: function3,
         memoryAddress <: address,
@@ -159,7 +159,7 @@ algorithm main(
     uint32  address = uninitialized;
     uint16  writedata = uninitialized;
     uint1   Icacheflag = uninitialized;
-    PAWSCPU CPU <@clock_cpu> (
+    PAWSCPU CPU <@cpu_clock> (
         function3 :> function3,
 
         address :> address,

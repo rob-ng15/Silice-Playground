@@ -25,10 +25,10 @@ algorithm background(
     int12   rand_x = 0;
     int32   frame = 0;
 
-    // Default to black
-    pix_red := 0;
-    pix_green := 0;
-    pix_blue := 0;
+    // Default to SOLID
+    pix_red := colour6(background).red;
+    pix_green := colour6(background).green;
+    pix_blue := colour6(background).blue;
 
     while(1) {
         // UPDATE BACKGROUND GENERATOR PARAMETERS
@@ -44,12 +44,6 @@ algorithm background(
         // RENDER
         if( pix_active ) {
             switch( background_mode ) {
-                case 0: {
-                    // SOLID
-                    pix_red = colour6(background).red;
-                    pix_green = colour6(background).green;
-                    pix_blue = colour6(background).blue;
-                }
                 case 1: {
                     // SMALL checkerboard
                     switch( { pix_x[0,1], pix_y[0,1] } ) {

@@ -1,18 +1,3 @@
-// 7 bit colour either ALPHA (background or lower layer) or red, green, blue { Arrggbb }
-bitfield colour7 {
-    uint1   alpha,
-    uint2   red,
-    uint2   green,
-    uint2   blue
-}
-
-// 6 bit colour red, green, blue { rrggbb }
-bitfield colour6 {
-    uint2   red,
-    uint2   green,
-    uint2   blue
-}
-
 algorithm memmap_io (
     // LEDS (8 of)
     output  uint8   leds,
@@ -44,7 +29,6 @@ algorithm memmap_io (
     // CLOCKS
     input   uint1   video_clock,
     input   uint1   video_reset,
-    input   uint1   clock_IO,
 
     // Memory access
     input   uint16  memoryAddress,
@@ -59,30 +43,30 @@ algorithm memmap_io (
 ) <autorun> {
     // 1hz timers (p1hz used for systemClock, timer1hz for user purposes)
     uint16 systemClock = uninitialized;
-    pulse1hz p1hz (
+    pulse1hz p1hz(
         counter1hz :> systemClock,
     );
-    pulse1hz timer1hz ( );
+    pulse1hz timer1hz( );
 
     // 1khz timers (sleepTimer used for sleep command, timer1khz for user purposes)
-    pulse1khz sleepTimer ( );
-    pulse1khz timer1khz ( );
+    pulse1khz sleepTimer( );
+    pulse1khz timer1khz( );
 
     // RNG random number generator
     uint16 staticGenerator = 0;
-    random rng (
+    random rng(
         g_noise_out :> staticGenerator,
     );
 
     // UART tx and rx
     // UART written in Silice by https://github.com/sylefeb/Silice
     uart_out uo;
-    uart_sender usend (
+    uart_sender usend(
         io      <:> uo,
         uart_tx :>  uart_tx
     );
     uart_in ui;
-    uart_receiver urecv (
+    uart_receiver urecv(
         io      <:> ui,
         uart_rx <:  uart_rx
     );
@@ -278,12 +262,11 @@ algorithm memmap_io (
     );
 
     // Left and Right audio channels
-    // Sync'd with video_clock
-    apu apu_processor_L (
+    apu apu_processor_L(
         staticGenerator <: staticGenerator,
         audio_output :> audio_l
     );
-    apu apu_processor_R (
+    apu apu_processor_R(
         staticGenerator <: staticGenerator,
         audio_output :> audio_r
     );

@@ -87,7 +87,43 @@
         0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0100,
         0x0080, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000
     };
-    unsigned short ship_bitmap[] = {
+
+    unsigned short ship_bitmap_upper[] = {
+        0x0100, 0x0100, 0x0280, 0x0440, 0x0440, 0x0820, 0x0820, 0x0820,
+        0x1010, 0x1010, 0x1010, 0x2008, 0x2108, 0x46c4, 0x783c, 0x0000,
+        0x0001, 0x001e, 0x0062, 0x0782, 0x1802, 0xe004, 0x4004, 0x2008,
+        0x1808, 0x0608, 0x0208, 0x0110, 0x0110, 0x00a0, 0x0060, 0x0020,
+        0x0000, 0x6000, 0x5800, 0x4700, 0x40e0, 0x2018, 0x2004, 0x1003,
+        0x2004, 0x2018, 0x40e0, 0x4700, 0x5800, 0x6000, 0x0000, 0x0000,
+        0x0020, 0x0060, 0x00a0, 0x0110, 0x0110, 0x0208, 0x0608, 0x1808,
+        0x2008, 0x4004, 0xe004, 0x1802, 0x0782, 0x0062, 0x001e, 0x0001,
+        0x0000, 0x3c1e, 0x2362, 0x1084, 0x1004, 0x0808, 0x0808, 0x0808,
+        0x0410, 0x0410, 0x0410, 0x0220, 0x0220, 0x0140, 0x0080, 0x0080,
+        0x0400, 0x0600, 0x0500, 0x0880, 0x0880, 0x1040, 0x1060, 0x1018,
+        0x1004, 0x2002, 0x2007, 0x4018, 0x41e0, 0x4600, 0x7800, 0x8000,
+        0x0000, 0x0000, 0x0006, 0x001a, 0x00e2, 0x0702, 0x1804, 0x2004,
+        0xc008, 0x2004, 0x1804, 0x0702, 0x00e2, 0x001a, 0x0006, 0x0000,
+        0x8000, 0x7800, 0x4600, 0x41e0, 0x4018, 0x2007, 0x2002, 0x1004,
+        0x1018, 0x1060, 0x1040, 0x0880, 0x0880, 0x0500, 0x0600, 0x0400,
+        0x0020, 0x4206, 0x0006, 0x1820, 0x1800, 0x0081, 0x0400, 0x4010,
+        0x0000, 0x0300, 0x0302, 0x6010, 0x6000, 0x0000, 0x0419, 0x8018,
+        0x0000, 0x0300, 0x0302, 0x6010, 0x6000, 0x0000, 0x0419, 0x8018,
+        0x0020, 0x4206, 0x0006, 0x1820, 0x1800, 0x0081, 0x0400, 0x4010,
+        0x0020, 0x4206, 0x0006, 0x1820, 0x1800, 0x0081, 0x0400, 0x4010,
+        0x0000, 0x0300, 0x0302, 0x6010, 0x6000, 0x0000, 0x0419, 0x8018,
+        0x0000, 0x0300, 0x0302, 0x6010, 0x6000, 0x0000, 0x0419, 0x8018,
+        0x0020, 0x4206, 0x0006, 0x1820, 0x1800, 0x0081, 0x0400, 0x4010,
+        0x0020, 0x4206, 0x0006, 0x1820, 0x1800, 0x0081, 0x0400, 0x4010,
+        0x0000, 0x0300, 0x0302, 0x6010, 0x6000, 0x0000, 0x0419, 0x8018,
+        0x0000, 0x0300, 0x0302, 0x6010, 0x6000, 0x0000, 0x0419, 0x8018,
+        0x0020, 0x4206, 0x0006, 0x1820, 0x1800, 0x0081, 0x0400, 0x4010,
+        0x0020, 0x4206, 0x0006, 0x1820, 0x1800, 0x0081, 0x0400, 0x4010,
+        0x0000, 0x0300, 0x0302, 0x6010, 0x6000, 0x0000, 0x0419, 0x8018,
+        0x0000, 0x0300, 0x0302, 0x6010, 0x6000, 0x0000, 0x0419, 0x8018,
+        0x0020, 0x4206, 0x0006, 0x1820, 0x1800, 0x0081, 0x0400, 0x4010
+    };
+
+    unsigned short ship_bitmap_lower[] = {
         0x0100, 0x0100, 0x0380, 0x07c0, 0x07c0, 0x0fe0, 0x0fe0, 0x0fe0,
         0x1ff0, 0x1ff0, 0x1ff0, 0x3ff8, 0x3ff8, 0x7efc, 0x783c, 0x0000,
         0x0001, 0x001e, 0x007e, 0x07fe, 0x1ffe, 0xfffc, 0x7ffc, 0x3ff8,
@@ -196,8 +232,8 @@ void set_asteroid_sprites( void )
 
 void set_ship_sprites( unsigned char exploding )
 {
-    set_sprite_bitmaps( 0, 11, &ship_bitmap[ exploding ? 128 : 0 ] );
-    set_sprite_bitmaps( 1, 11, &ship_bitmap[ exploding ? 128 : 0 ] );
+    set_sprite_bitmaps( 0, 11, &ship_bitmap_lower[ exploding ? 128 : 0 ] );
+    set_sprite_bitmaps( 1, 11, &ship_bitmap_upper[ exploding ? 128 : 0 ] );
 }
 
 void set_ship_vector( void )
@@ -287,20 +323,20 @@ void risc_ice_v_logo( void )
 void drawfuel( unsigned char fullbar )
 {
     if( fullbar ) {
-        gpu_rectangle( RED, 70, 456, 70 + ( fuel >> 2 ), 463 );
+        gpu_rectangle( RED, 70, 456, 328, 463 );
         gpu_character_blit( RED, 30, 456, 'F', 0 );
         gpu_character_blit( RED, 38, 456, 'U', 0 );
         gpu_character_blit( RED, 46, 456, 'E', 0 );
         gpu_character_blit( RED, 54, 456, 'L', 0 );
         gpu_character_blit( RED, 62, 456, ':', 0 );
-    } else {
-        gpu_rectangle( TRANSPARENT, 70 + ( fuel >> 2 ), 456, 320, 463 );
     }
+    gpu_character_blit( RED, 71 + ( fuel >> 2 ), 456, 219, 0 );
+    gpu_character_blit( WHITE, 70 + ( fuel >> 2 ), 456, 30, 0 );
 }
 void drawshield( unsigned char fullbar )
 {
     if( fullbar ) {
-        gpu_rectangle( BLUE, 70, 464, 70 + shield, 471 );
+        gpu_rectangle( BLUE, 70, 464, 328, 471 );
         gpu_character_blit( BLUE, 14, 464, 'S', 0 );
         gpu_character_blit( BLUE, 22, 464, 'H', 0 );
         gpu_character_blit( BLUE, 30, 464, 'I', 0 );
@@ -308,9 +344,9 @@ void drawshield( unsigned char fullbar )
         gpu_character_blit( BLUE, 46, 464, 'L', 0 );
         gpu_character_blit( BLUE, 54, 464, 'D', 0 );
         gpu_character_blit( BLUE, 62, 464, ':', 0 );
-    } else {
-        gpu_rectangle( TRANSPARENT, 70 + shield, 464, 320, 471 );
     }
+    gpu_character_blit( BLUE, 71 + shield, 464, 219, 0 );
+    gpu_character_blit( WHITE, 70 + shield, 464, 30, 0 );
 }
 
 void setup_game()
@@ -326,7 +362,7 @@ void setup_game()
     // CLEAR and SET THE BACKGROUND
     gpu_cs();
     terminal_showhide( 0 );
-    set_background( 42, 1, 7 );
+    set_background( GREY2, DKBLUE - 1, BKG_SNOW );
     risc_ice_v_logo();
     set_tilemap();
 
@@ -401,7 +437,7 @@ unsigned short count_asteroids( void )
 
 void draw_ship( unsigned char colour )
 {
-    set_sprite( 0, 11, 1, colour, shipx, shipy, shipdirection, 0);
+    set_sprite( 0, 11, 1, ORANGE, shipx, shipy, shipdirection, 0);
     set_sprite( 1, 11, 1, colour, shipx, shipy, shipdirection, 0);
 }
 
@@ -519,51 +555,55 @@ void beepboop( void )
 
         switch( last_timer & 3 ) {
             case 0:
-                if( lives > 0 ) {
-                    beep( 1, 0, 1, 500 );
-                } else {
-                    tpu_set( 16, 26, TRANSPARENT, BLUE );
-                    tpu_outputstring( "         Welcome to Risc-ICE-V Asteroids        " );
-
-                    tpu_set( 16, 3, TRANSPARENT, DKBLUE );
-                    tpu_outputstring( "            Controls: Fire 1 - FIRE             " );
+                if( lives == 0 ) {
+                    tpu_outputstringcentre( 26, TRANSPARENT, BLUE, "Welcome to Risc-ICE-V Asteroids" );
+                    tpu_outputstringcentre( 3, TRANSPARENT, DKBLUE, "Controls: Fire 1 - FIRE" );
                     game_over();
+                } else {
+                    if( ufo_sprite_number != 0xff ) {
+                        beep( 1, 3, 63, 32 );
+                    } else {
+                        beep( 1, 0, 1, 500 );
+                    }
                 }
                 break;
 
             case 1:
                 if( lives == 0 ) {
-                    tpu_set( 16, 26, TRANSPARENT, CYAN );
-                    tpu_outputstring( "By @robng15 (Twitter) from Whitebridge, Scotland" );
-
-                    tpu_set( 16, 3, TRANSPARENT, PURPLE );
-                    tpu_outputstring( "           Controls: Fire 2 - SHIELD            " );
+                    tpu_outputstringcentre( 26, TRANSPARENT, CYAN, "By @robng15 (Twitter) from Whitebridge, Scotland" );
+                    tpu_outputstringcentre( 3, TRANSPARENT, PURPLE, "Controls: Fire 2 - SHIELD" );
                     game_over();
+                } else {
+                    if( ufo_sprite_number != 0xff ) {
+                        beep( 1, 3, 63, 32 );
+                    }
                 }
                 break;
 
             case 2:
-                if( lives > 0 ) {
-                    beep( 1, 0, 2, 500 );
-                } else {
-                    tpu_set( 16, 26, TRANSPARENT, YELLOW );
-                    tpu_outputstring( "                 Press UP to start              " );
-
-                    tpu_set( 16, 3, TRANSPARENT, ORANGE );
-                    tpu_outputstring( "         Controls: Left / Right - TURN          " );
+                if( lives == 0 ) {
+                    tpu_outputstringcentre( 26, TRANSPARENT, YELLOW, "Press UP to start" );
+                    tpu_outputstringcentre( 3, TRANSPARENT, ORANGE, "Controls: Left / Right - TURN" );
                     game_over();
+                } else {
+                    if( ufo_sprite_number != 0xff ) {
+                        beep( 1, 3, 63, 32 );
+                    } else {
+                        beep( 1, 0, 2, 500 );
+                    }
                 }
                 break;
 
             case 3:
                 // MOVE TILEMAP UP
                 if( lives == 0 ) {
-                    tpu_set( 16, 26, TRANSPARENT, RED );
-                    tpu_outputstring( "          Written in Silice by @sylefeb         " );
-
-                    tpu_set( 16, 3, TRANSPARENT, DKRED );
-                    tpu_outputstring( "              Controls: UP - MOVE               " );
+                    tpu_outputstringcentre( 26, TRANSPARENT, RED, "Written in Silice by @sylefeb" );
+                    tpu_outputstringcentre( 3, TRANSPARENT, DKRED, "Controls: UP - MOVE" );
                     game_over();
+                } else {
+                    if( ufo_sprite_number != 0xff ) {
+                        beep( 1, 3, 63, 32 );
+                    }
                 }
                 (void)tilemap_scrollwrapclear( 6 );
                 break;
@@ -723,11 +763,9 @@ void main( void )
         if( ufo_sprite_number != 0xff ) {
             ufo_x = get_sprite_attribute( ASN( ufo_sprite_number ), 3 );
             ufo_x = ( ufo_x < 0 ) ? 0 : ( ufo_x > 639 ? 639 : ufo_x );
-            set_leds( 1 << ( 7 - ufo_x / 80 ) );
-            if(  ( counter & 64 ) && ( lives != 0 ) ) {
-                beep( 2, 3, 63, 32 );
-            }
         }
+        set_leds( ( ufo_sprite_number != 0xff ) ? 1 << ( 7 - ufo_x / 80 ) : 0 );
+
         // PLACE NEW LARGE ASTEROIDS
         if( placeAsteroids > 0 ) {
             potentialnumber = find_asteroid_space();

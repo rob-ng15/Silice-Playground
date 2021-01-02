@@ -1,13 +1,3 @@
-bitfield spriteupdate {
-    uint1   y_act,              // 1 - kill when off screen, 0 - wrap
-    uint1   x_act,              // 1 - kill when off screen, 0 - wrap
-    uint1   tile_act,           // 1 - increase the tile number
-    uint1   dysign,             // dy - 2's complement update for the y coordinate
-    uint4   dy,
-    uint1   dxsign,             // dx - 2's complement update for the x coordinate
-    uint4   dx
-}
-
 algorithm sprite_layer(
     input   uint10  pix_x,
     input   uint10  pix_y,

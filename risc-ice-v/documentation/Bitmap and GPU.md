@@ -18,7 +18,7 @@
                     * Optimisation starts from left to right or right to left depending upon which side the last point in the previous line was closest to
                 * Quicker than software equivalent
         * Blitter for 32 x 16 x 16 1 bit user settable tiles
-            * Can blit as 16 x 16 or 32 x 32 pixels
+            * Can blit as 16 x 16, 32 x 32, 64 x 64, 128 x 128 pixels
         * Character blitter for 256 x 8 x 8 1 bit font
             * Can blit as 8 x 8, 16 x 16, 32 x 32 or 64 x 64 pixels
     * Hardware scrolling

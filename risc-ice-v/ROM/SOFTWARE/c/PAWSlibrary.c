@@ -653,6 +653,13 @@ void tpu_cs( void ) {
     *TPU_COMMIT = 3;
 }
 
+// CLEAR A LINE
+void tpu_clearline( unsigned char y ) {
+    while( *TPU_COMMIT );
+    *TPU_Y = y;
+    *TPU_COMMIT = 4;
+}
+
 // POSITION THE CURSOR to (x,y) and set background and foreground colours
 void tpu_set(  unsigned char x, unsigned char y, unsigned char background, unsigned char foreground ) {
     while( *TPU_COMMIT );
@@ -675,17 +682,9 @@ void tpu_outputstring( char *s ) {
 }
 
 void tpu_outputstringcentre( unsigned char y, unsigned char background, unsigned char foreground, char *s ) {
-    unsigned char slen = 0, *scopy = s;
-    while( *scopy ) {
-        slen++;
-        scopy++;
-    }
-    tpu_set( 0, y, background, foreground );
-    for( unsigned short i = 0; i < slen / 2; i++ )
-        tpu_output_character(' ');
+    tpu_clearline( y );
+    tpu_set( 40 - ( strlen(s) >> 1 ), y, background, foreground );
     tpu_outputstring( s );
-    for( unsigned short i = 0; i < slen / 2; i++ )
-        tpu_output_character(' ');
 }
 
 // OUTPUT UNSIGNED INTEGERS TO UART/TERMINAL ( CHAR, SHORT and INT VERSIONS )

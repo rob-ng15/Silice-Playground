@@ -137,13 +137,17 @@ $$end
     uint2   bitmap_r = uninitialized;
     uint2   bitmap_g = uninitialized;
     uint2   bitmap_b = uninitialized;
+    uint10  x_offset = uninitialized;
+    uint10  y_offset = uninitialized;
     // From GPU to set a pixel
     uint1   bitmap_display = uninitialized;
     int11   bitmap_x_write = uninitialized;
     int11   bitmap_y_write = uninitialized;
     uint7   bitmap_colour_write = uninitialized;
-    uint2   bitmap_write = uninitialized;
+    uint1   bitmap_write = uninitialized;
 
+    // 640 x 480 x 7 bit { Arrggbb } colour bitmap
+    simple_dualport_bram uint7 bitmap <@video_clock,@video_clock,input!> [ 307200 ] = uninitialized;
     bitmap bitmap_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -153,10 +157,18 @@ $$end
         pix_green  :> bitmap_g,
         pix_blue   :> bitmap_b,
         bitmap_display :> bitmap_display,
+        x_offset :> x_offset,
+        y_offset :> y_offset,
+        bitmap <:> bitmap
+    );
+    bitmapwriter pixel_writer <@video_clock> (
         bitmap_x_write <: bitmap_x_write,
         bitmap_y_write <: bitmap_y_write,
         bitmap_colour_write <: bitmap_colour_write,
-        bitmap_write <: bitmap_write
+        bitmap_write <: bitmap_write,
+        x_offset <: x_offset,
+        y_offset <: y_offset,
+        bitmap <:> bitmap
     );
 
     // Lower Sprite Layer - Between BACKGROUND and BITMAP
@@ -362,7 +374,6 @@ $$end
     // UART input and output buffering
     uartInBuffer.wdata1  := ui.data_out;
     uartInBufferTop      := ( ui.data_out_ready ) ? uartInBufferTop + 1 : uartInBufferTop;
-
     uo.data_in      := uartOutBuffer.rdata0;
     uo.data_in_ready     := (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy );
     uartOutBufferNext := ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) ) ? uartOutBufferNext + 1 : uartOutBufferNext;

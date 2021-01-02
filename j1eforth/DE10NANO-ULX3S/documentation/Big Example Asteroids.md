@@ -52,7 +52,6 @@ variable spawnasteroid
 variable workx
 variable worky
 
-
 c array lasteroidactive c array hasteroidactive
 c array lasteroidtype c array hasteroidtype
 c array lasteroiddirection c array hasteroiddirection
@@ -566,7 +565,7 @@ a  a updatedirections c! 11 b updatedirections c!
       endof
       -1 counter +!
     endcase
-    14 timer1khz!
+    a timer1khz!
     beepboop
     bulletdirection @ bulletdirections c@ 180 +
       c lslupdate!

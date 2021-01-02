@@ -406,7 +406,7 @@ void main( void )
         // SETUP THE SCREEN BLUE/GREEN BACKGROUND
         tpu_cs();
         terminal_showhide( 0 );
-        set_background( DKBLUE, DKGREEN, 8 );
+        set_background( DKBLUE, DKGREEN, BKG_5050_V );
 
         // GENERATE THE MAZE
         tpu_set( 21, 29, TRANSPARENT, YELLOW ); tpu_outputstring( "Generating Maze - Best to take notes!" );

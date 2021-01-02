@@ -131,6 +131,7 @@ void main()
 
     gpu_cs();
     tpu_cs();
+    set_background( DKBLUE, BLACK, BKG_SOLID );
 
     draw_riscv_logo();
     set_sdcard_bitmap();

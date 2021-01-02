@@ -1,190 +1,7 @@
 // RISC-ICE-V
 // inspired by https://github.com/sylefeb/Silice/blob/master/projects/ice-v/ice-v.ice
 //
-// A simple Risc-V RV32I processor
-
-// RISC-V BASE INSTRUCTION BITFIELDS
-bitfield    Btype {
-    uint1   immediate_bits_12,
-    uint6   immediate_bits_10_5,
-    uint5   sourceReg2,
-    uint5   sourceReg1,
-    uint3   function3,
-    uint4   immediate_bits_4_1,
-    uint1   immediate_bits_11,
-    uint7   opcode
-}
-
-bitfield    Itype {
-    uint12  immediate,
-    uint5   sourceReg1,
-    uint3   function3,
-    uint5   destReg,
-    uint7   opcode
-}
-
-bitfield    ItypeSHIFT {
-    uint7   function7,
-    uint5   shiftCount,
-    uint5   sourceReg1,
-    uint3   function3,
-    uint5   destReg,
-    uint7   opcode
-}
-
-bitfield    Jtype {
-    uint1   immediate_bits_20,
-    uint10  immediate_bits_10_1,
-    uint1   immediate_bits_11,
-    uint8   immediate_bits_19_12,
-    uint5   destReg,
-    uint7   opcode
-}
-
-bitfield    Rtype {
-    uint7   function7,
-    uint5   sourceReg2,
-    uint5   sourceReg1,
-    uint3   function3,
-    uint5   destReg,
-    uint7   opCode
-}
-
-bitfield Stype {
-    uint7   immediate_bits_11_5,
-    uint5   sourceReg2,
-    uint5   sourceReg1,
-    uint3   function3,
-    uint5   immediate_bits_4_0,
-    uint7   opcode
-}
-
-bitfield Utype {
-    uint20  immediate_bits_31_12,
-    uint5   destReg,
-    uint7   opCode
-}
-
-// COMPRESSED Risc-V Instruction Bitfields
-bitfield    CBalu {
-    uint3   function3,
-    uint1   ib_5,
-    uint2   function2,
-    uint3   rd_alt,
-    uint2   logical2,
-    uint3   rs2_alt,
-    uint2   opcode
-}
-bitfield    CBalu50 {
-    uint3   function3,
-    uint1   ib_5,
-    uint2   function2,
-    uint3   rd_alt,
-    uint5   ib_4_0,
-    uint2   opcode
-}
-bitfield    CB {
-    uint3   function3,
-    uint1   offset_8,
-    uint2   offset_4_3,
-    uint3   rs1_alt,
-    uint2   offset_7_6,
-    uint2   offset_2_1,
-    uint1   offset_5,
-    uint2   opcode
-}
-
-bitfield    CI {
-    uint3   function3,
-    uint1   ib_5,
-    uint5   rd,
-    uint3   ib_4_2,
-    uint2   ib_7_6,
-    uint2   opcode
-}
-bitfield    CI50 {
-    uint3   function3,
-    uint1   ib_5,
-    uint5   rd,
-    uint5   ib_4_0,
-    uint2   opcode
-}
-bitfield    CI94 {
-    uint3   function3,
-    uint1   ib_9,
-    uint5   rd,
-    uint1   ib_4,
-    uint1   ib_6,
-    uint2   ib_8_7,
-    uint1   ib_5,
-    uint2   opcode
-}
-bitfield    CIu94 {
-    uint3   function3,
-    uint2   ib_5_4,
-    uint4   ib_9_6,
-    uint1   ib_2,
-    uint1   ib_3,
-    uint3   rd_alt,
-    uint2   opcode
-}
-bitfield    CIlui {
-    uint3   function3,
-    uint1   ib_17,
-    uint5   rd,
-    uint5   ib_16_12,
-    uint2   opcode
-}
-
-bitfield    CJ {
-    uint3   function3,
-    uint1   ib_11,
-    uint1   ib_4,
-    uint2   ib_9_8,
-    uint1   ib_10,
-    uint1   ib_6,
-    uint1   ib_7,
-    uint3   ib_3_1,
-    uint1   ib_5,
-    uint2   opcode
-}
-
-bitfield    CL {
-    uint3   function3,
-    uint3   ib_5_3,
-    uint3   rs1_alt,
-    uint1   ib_2,
-    uint1   ib_6,
-    uint3   rd_alt,
-    uint2   opcode
-}
-
-bitfield    CR {
-    uint4   function4,
-    uint5   rs1,
-    uint5   rs2,
-    uint2   opcode
-}
-
-bitfield    CS {
-    uint3   function3,
-    uint1   ib_5,
-    uint2   ib_4_3,
-    uint3   rs1_alt,
-    uint1   ib_2,
-    uint1   ib_6,
-    uint3   rs2_alt,
-    uint2   opcode
-}
-
-bitfield    CSS {
-    uint3   function3,
-    uint1   ib_5,
-    uint3   ib_4_2,
-    uint2   ib_7_6,
-    uint5   rs2,
-    uint2   opcode
-}
+// A simple Risc-V RV32IMC processor
 
 algorithm PAWSCPU (
     output  uint3   function3,
@@ -305,6 +122,7 @@ algorithm PAWSCPU (
     // BRANCH COMPARISON UNIT
     uint1   BRANCHtakeBranch = uninitialized;
     branchcomparison branchcomparisonunit(
+        opCode <: opCode,
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
@@ -639,16 +457,18 @@ algorithm alu (
                 }
             }
         } else {
-            // BASE
-            switch( function3 ) {
-                case 3b000: { result = sourceReg1 + ( opCode[5,1] ? ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ) : immediateValue ); }
-                case 3b001: { result = __unsigned(sourceReg1) << ( opCode[5,1] ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ); }
-                case 3b010: { result = ( opCode[5,1] ? SLT : SLTI ) ? 32b1 : 32b0; }
-                case 3b011: { result = ( opCode[5,1] ? SLTU : SLTUI ) ? 32b1 : 32b0; }
-                case 3b100: { result = sourceReg1 ^ ( opCode[5,1] ? sourceReg2 : immediateValue ); }
-                case 3b101: { result = function7[5,1] ? shiftRIGHTA : shiftRIGHTL; }
-                case 3b110: { result = sourceReg1 | ( opCode[5,1] ? sourceReg2 : immediateValue ); }
-                case 3b111: { result = sourceReg1 & ( opCode[5,1] ? sourceReg2 : immediateValue ); }
+            // BASE ALU - ONLY TRIGGER IF ALU OPERATION
+            if( ( opCode == 7b0010011 ) || ( opCode == 7b0110011 ) ) {
+                switch( function3 ) {
+                    case 3b000: { result = sourceReg1 + ( opCode[5,1] ? ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ) : immediateValue ); }
+                    case 3b001: { result = __unsigned(sourceReg1) << ( opCode[5,1] ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ); }
+                    case 3b010: { result = ( opCode[5,1] ? SLT : SLTI ) ? 32b1 : 32b0; }
+                    case 3b011: { result = ( opCode[5,1] ? SLTU : SLTUI ) ? 32b1 : 32b0; }
+                    case 3b100: { result = sourceReg1 ^ ( opCode[5,1] ? sourceReg2 : immediateValue ); }
+                    case 3b101: { result = function7[5,1] ? shiftRIGHTA : shiftRIGHTL; }
+                    case 3b110: { result = sourceReg1 | ( opCode[5,1] ? sourceReg2 : immediateValue ); }
+                    case 3b111: { result = sourceReg1 & ( opCode[5,1] ? sourceReg2 : immediateValue ); }
+                }
             }
         }
     }
@@ -656,20 +476,24 @@ algorithm alu (
 
 // BRANCH COMPARISIONS
 algorithm branchcomparison (
+    input   uint7   opCode,
     input   uint3   function3,
     input   int32   sourceReg1,
     input   int32   sourceReg2,
     output! uint1   takeBranch
 ) <autorun> {
     while(1) {
-        switch( function3 ) {
-            case 3b000: { takeBranch = ( sourceReg1 == sourceReg2 ) ? 1 : 0; }
-            case 3b001: { takeBranch = ( sourceReg1 != sourceReg2 ) ? 1 : 0; }
-            case 3b100: { takeBranch = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? 1 : 0; }
-            case 3b101: { takeBranch = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? 1 : 0; }
-            case 3b110: { takeBranch = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? 1 : 0; }
-            case 3b111: { takeBranch = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? 1 : 0; }
-            default: { takeBranch = 0; }
+        // ONLY TRIGGER IF A BRANCH INSTRUCTION
+        if( opCode == 7b1100011 ) {
+            switch( function3 ) {
+                case 3b000: { takeBranch = ( sourceReg1 == sourceReg2 ) ? 1 : 0; }
+                case 3b001: { takeBranch = ( sourceReg1 != sourceReg2 ) ? 1 : 0; }
+                case 3b100: { takeBranch = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? 1 : 0; }
+                case 3b101: { takeBranch = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? 1 : 0; }
+                case 3b110: { takeBranch = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? 1 : 0; }
+                case 3b111: { takeBranch = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? 1 : 0; }
+                default: { takeBranch = 0; }
+            }
         }
     }
 }

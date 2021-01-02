@@ -22,8 +22,9 @@ struct sprite_update_flag {
 };
 
 // FUNCTION DEFINITIONS
-extern void*  memcpy(void *dest, const void *src, size_t n);
-extern int    strcmp(const char *p1, const char *p2);
+extern void* memcpy(void *dest, const void *src, size_t n);
+extern int strcmp(const char *p1, const char *p2);
+extern int strlen( char *s );
 
 // UART AND TERMINAL INPUT / OUTPUT
 extern void outputcharacter(char);
@@ -93,6 +94,7 @@ extern void set_sprite_bitmaps( unsigned char, unsigned char, unsigned short * )
 
 // CHARACTER MAP
 extern void tpu_cs( void );
+extern void tpu_clearline( unsigned char );
 extern void tpu_set(  unsigned char, unsigned char, unsigned char, unsigned char );
 extern void tpu_output_character( char );
 extern void tpu_outputstring( char * );
@@ -100,6 +102,19 @@ extern void tpu_outputstringcentre( unsigned char, unsigned char, unsigned char,
 extern void tpu_outputnumber_char( unsigned char );
 extern void tpu_outputnumber_short( unsigned short );
 extern void tpu_outputnumber_int( unsigned int );
+
+// BACKGROUND PATTERN GENERATOR
+#define BKG_SOLID 0
+#define BKG_CHKBRD_1 1
+#define BKG_CHKBRD_2 2
+#define BKG_CHKBRD_3 3
+#define BKG_CHKBRD_4 4
+#define BKG_CHKBRD_5 10
+#define BKG_RAINBOW 5
+#define BKG_STATIC 6
+#define BKG_SNOW 7
+#define BKG_5050_V 8
+#define BKG_5050_H 9
 
 // COLOURS
 #define TRANSPARENT 0x40

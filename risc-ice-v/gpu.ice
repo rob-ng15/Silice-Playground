@@ -1,107 +1,3 @@
-// HELPER CIRCUITS
-circuitry min(
-    input   value1,
-    input   value2,
-    output  minimum
-) {
-    minimum = ( value1 < value2 ) ? value1 : value2;
-}
-
-circuitry min3(
-    input   value1,
-    input   value2,
-    input   value3,
-    output  minimum
-) {
-    minimum = ( value1 < value2 ) ? ( value1 < value3 ? value1 : value3 ) : ( value2 < value3 ? value2 : value3 );
-}
-
-circuitry max(
-    input   value1,
-    input   value2,
-    output  maximum
-) {
-    maximum = ( value1 > value2 ) ? value1 : value2;
-}
-
-circuitry max3(
-    input   value1,
-    input   value2,
-    input   value3,
-    output  maximum
-) {
-    maximum = ( value1 > value2 ) ? ( value1 > value3 ? value1 : value3 ) : ( value2 > value3 ? value2 : value3 );
-}
-
-circuitry abs(
-    input   value1,
-    output  absolute
-) {
-    absolute = ( value1 < 0 ) ? -value1 : value1;
-}
-
-circuitry absdelta(
-    input   value1,
-    input   value2,
-    output  delta
-) {
-    delta = ( value1 < value2 ) ? value2 - value1 : value1 - value2;
-}
-
-circuitry copycoordinates(
-    input   x,
-    input   y,
-    output  x1,
-    output  y1
-) {
-    x1 = x;
-    y1 = y;
-}
-
-circuitry swapcoordinates(
-    input   x,
-    input   y,
-    input   x1,
-    input   y1,
-    output  x2,
-    output  y2,
-    output  x3,
-    output  y3
-) {
-    x2 = x1;
-    y2 = y1;
-    x3 = x;
-    y3 = y;
-}
-
-circuitry cropleft(
-    input   x,
-    output  x1
-) {
-    x1 = ( x < 0 ) ? 0 : x;
-}
-
-circuitry croptop(
-    input   y,
-    output  y1
-) {
-    y1 = ( y < 0 ) ? 0 : y;
-}
-
-circuitry cropright(
-    input   x,
-    output  x1
-) {
-    x1 = ( x > 639 ) ? 639 : x;
-}
-
-circuitry cropbottom(
-    input   y,
-    output  y1
-) {
-    y1 = ( y > 479 ) ? 479 : y;
-}
-
 algorithm gpu(
     // GPU to SET and GET pixels
     output! int11 bitmap_x_write,
@@ -219,13 +115,7 @@ algorithm gpu(
         y <: gpu_y,
         param0 <: gpu_param0,
         param1 <: gpu_param1,
-        blit1tilemap <:> blit1tilemap
-    );
-    characterblit GPUcharacterblit(
-        x <: gpu_x,
-        y <: gpu_y,
-        param0 <: gpu_param0,
-        param1 <: gpu_param1,
+        blit1tilemap <:> blit1tilemap,
         characterGenerator8x8 <:> characterGenerator8x8
     );
 
@@ -253,7 +143,6 @@ algorithm gpu(
     GPUdisc.start := 0;
     GPUtriangle.start := 0;
     GPUblit.start := 0;
-    GPUcharacterblit.start := 0;
     VECTORline.start := 0;
 
     while(1) {
@@ -342,6 +231,7 @@ algorithm gpu(
                 case 7: {
                     // BLIT 16 x 16 TILE PARAM0 TO (X,Y)
                     gpu_active = 1;
+                    GPUblit.tilecharacter = 1;
                     GPUblit.start = 1;
                     while( GPUblit.busy ) {
                         bitmap_x_write = GPUblit.bitmap_x_write;
@@ -355,11 +245,12 @@ algorithm gpu(
                 case 8: {
                     // BLIT 8 x 8 CHARACTER PARAM0 TO (X,Y) as 8 x 8
                     gpu_active = 1;
-                    GPUcharacterblit.start = 1;
-                    while( GPUcharacterblit.busy ) {
-                        bitmap_x_write = GPUcharacterblit.bitmap_x_write;
-                        bitmap_y_write = GPUcharacterblit.bitmap_y_write;
-                        bitmap_write = GPUcharacterblit.bitmap_write;
+                    GPUblit.tilecharacter = 0;
+                    GPUblit.start = 1;
+                    while( GPUblit.busy ) {
+                        bitmap_x_write = GPUblit.bitmap_x_write;
+                        bitmap_y_write = GPUblit.bitmap_y_write;
+                        bitmap_write = GPUblit.bitmap_write;
                     }
                     gpu_active = 0;
                 }
@@ -735,7 +626,6 @@ algorithm triangle (
             gpu_count = 0;
             ++:
             while( gpu_sy <= gpu_max_y ) {
-                ++:
                 // Edge calculations to determine if inside the triangle - converted to DSP blocks
                 w0 = (( gpu_x2 - gpu_x1 ) * ( gpu_sy - gpu_y1 ) - ( gpu_y2 - gpu_y1 ) * ( gpu_sx - gpu_x1 )) >= 0;
                 w1 = (( gpu_active_x - gpu_x2 ) * ( gpu_sy - gpu_y2 ) - ( gpu_active_y - gpu_y2 ) * ( gpu_sx - gpu_x2 )) >= 0;
@@ -787,70 +677,9 @@ algorithm triangle (
     }
 }
 
-// BLIT - OUTPUT PIXELS TO BLIT A 16 x 16 TILE ( PARAM1 == 0 as 16 x 16, == 1 as 32 x 32 )
+// BLIT - ( tilecharacter == 1 ) OUTPUT PIXELS TO BLIT A 16 x 16 TILE ( PARAM1 == 0 as 16 x 16, == 1 as 32 x 32, == 2 as 64 x 64, == 3 as 128 x 128 )
+// BLIT - ( tilecharacter == 0 ) OUTPUT PIXELS TO BLIT AN 8 x 8 CHARACTER ( PARAM1 == 0 as 8 x 8, == 1 as 16 x 16, == 2 as 32 x 32, == 3 as 64 x 64 )
 algorithm blit (
-    input   int11   x,
-    input   int11   y,
-    input   int11   param0,
-    input   uint1   param1,
-
-    output  uint11  bitmap_x_write,
-    output  uint11  bitmap_y_write,
-    output  uint1   bitmap_write,
-
-    input   uint1   start,
-    output  uint1   busy,
-
-    simple_dualbram_port0 blit1tilemap
-) <autorun> {
-    int11   gpu_active_x = uninitialized;
-    int11   gpu_active_y = uninitialized;
-    int11   gpu_x1 = uninitialized;
-    int11   gpu_y1 = uninitialized;
-    int11   gpu_y2 = uninitialised;
-    int11   gpu_max_x = uninitialized;
-    int11   gpu_max_y = uninitialized;
-    uint5   gpu_tile = uninitialized;
-
-    uint1   active = 0;
-
-    // blit1tilemap read access for the blit1tilemap
-    blit1tilemap.addr0 := gpu_tile * 16 + gpu_active_y;
-
-    busy := start ? 1 : active;
-    bitmap_write := 0;
-
-    while(1) {
-        if( start ) {
-            active = 1;
-            gpu_active_x = 0;
-            gpu_active_y = 0;
-            ( gpu_x1, gpu_y1 ) = copycoordinates( x, y );
-            gpu_max_x = 16 << param1;
-            gpu_max_y = 16;
-            gpu_tile = param0;
-            ++:
-            while( gpu_active_y < gpu_max_y ) {
-                while( gpu_active_x < gpu_max_x ) {
-                    bitmap_x_write = gpu_x1 + gpu_active_x;
-                    while( gpu_y2 < ( 1 << param1 ) ) {
-                        bitmap_y_write = gpu_y1 + ( gpu_active_y << param1 ) + gpu_y2;
-                        bitmap_write = blit1tilemap.rdata0[15 - ( gpu_active_x >> param1 ),1];
-                        gpu_y2 = gpu_y2 + 1;
-                    }
-                    gpu_active_x = gpu_active_x + 1;
-                    gpu_y2 = 0;
-                }
-                gpu_active_x = 0;
-                gpu_active_y = gpu_active_y + 1;
-            }
-            active = 0;
-        }
-    }
-}
-
-// BLIT - OUTPUT PIXELS TO BLIT AN 8 x 8 CHARACTER ( PARAM1 == 0 as 8 x 8, == 1 as 16 x 16, == 2 as 32 x 32, == 3 as 64 x 64 )
-algorithm characterblit (
     input   int11   x,
     input   int11   y,
     input   int11   param0,
@@ -861,8 +690,10 @@ algorithm characterblit (
     output  uint1   bitmap_write,
 
     input   uint1   start,
+    input   uint1   tilecharacter,
     output  uint1   busy,
 
+    simple_dualbram_port0 blit1tilemap,
     simple_dualbram_port0 characterGenerator8x8
 ) <autorun> {
     int11   gpu_active_x = uninitialized;
@@ -876,7 +707,8 @@ algorithm characterblit (
 
     uint1   active = 0;
 
-    // characterGenerator8x8 read access for the character blitter
+    // tile and character bitmap addresses
+    blit1tilemap.addr0 := gpu_tile * 16 + gpu_active_y;
     characterGenerator8x8.addr0 := gpu_tile * 8 + gpu_active_y;
 
     busy := start ? 1 : active;
@@ -888,8 +720,8 @@ algorithm characterblit (
             gpu_active_x = 0;
             gpu_active_y = 0;
             ( gpu_x1, gpu_y1 ) = copycoordinates( x, y );
-            gpu_max_x = 8 << param1;
-            gpu_max_y = 8;
+            gpu_max_x = ( tilecharacter ? 16 : 8 ) << param1;
+            gpu_max_y = tilecharacter ? 16 : 8;
             gpu_tile = param0;
             ++:
             while( gpu_active_y < gpu_max_y ) {
@@ -897,7 +729,7 @@ algorithm characterblit (
                     bitmap_x_write = gpu_x1 + gpu_active_x;
                     while( gpu_y2 < ( 1 << param1 ) ) {
                         bitmap_y_write = gpu_y1 + ( gpu_active_y << param1 ) + gpu_y2;
-                        bitmap_write = characterGenerator8x8.rdata0[7 - ( gpu_active_x >> param1 ),1];
+                        bitmap_write = tilecharacter ? blit1tilemap.rdata0[15 - ( gpu_active_x >> param1 ),1] : characterGenerator8x8.rdata0[7 - ( gpu_active_x >> param1 ),1];
                         gpu_y2 = gpu_y2 + 1;
                     }
                     gpu_active_x = gpu_active_x + 1;
@@ -917,15 +749,6 @@ algorithm characterblit (
 // Deltas are stored as 6 bit 2's complement range -31 to 0 to 31
 // Each vertices has an active flag, processing of a vector block stops when the active flag is 0
 // Each vector block has a centre x and y coordinate and a colour { rrggbb } when drawn
-
-bitfield vectorentry {
-    uint1   active,
-    uint1   dxsign,
-    uint5   dx,
-    uint1   dysign,
-    uint5   dy
-}
-
 algorithm vectors(
     input   uint5   vector_block_number,
     input   uint7   vector_block_colour,
@@ -983,21 +806,17 @@ algorithm vectors(
             vertices_number = 0;
             vector_block_active = 1;
             ++:
-            start_x = vector_block_xc + deltax;
-            start_y = vector_block_yc + deltay;
+            ( start_x, start_y ) = deltacoordinates( vector_block_xc, deltax, vector_block_yc, deltay );
             vertices_number = 1;
             ++:
             while( vectorentry(vertex.rdata0).active && ( vertices_number < 16 ) ) {
                 // Dispatch line to GPU
-                gpu_x = start_x;
-                gpu_y = start_y;
-                gpu_param0 = vector_block_xc + deltax;
-                gpu_param1 = vector_block_yc + deltay;
+                ( gpu_x, gpu_y ) = copycoordinates( start_x, start_y );
+                ( gpu_param0, gpu_param1 ) = deltacoordinates( vector_block_xc, deltax, vector_block_yc, deltay );
                 while( gpu_active ) {}
                 gpu_write = 1;
                 // Move onto the next of the vertices
-                start_x = vector_block_xc + deltax;
-                start_y = vector_block_yc + deltay;
+                ( start_x, start_y ) = deltacoordinates( vector_block_xc, deltax, vector_block_yc, deltay );
                 vertices_number = vertices_number + 1;
                 ++:
             }
