@@ -301,6 +301,8 @@ algorithm sdramcontroller (
     uint1   Icachetagmatch := Icachetag.rdata == { 1b1, address[12,14] };
     uint1   Dcachetagmatch := Dcachetag.rdata == { 1b1, address[12,14] };
 
+    // 16 bit aligned address
+
     // FLAGS FOR CACHE ACCESS
     Dcachedata.wenable := 0; Dcachedata.addr := address[1,11];
     Dcachetag.wenable := 0; Dcachetag.addr := address[1,11]; Dcachetag.wdata := { 1b1, address[12,14] };
@@ -310,6 +312,7 @@ algorithm sdramcontroller (
     // MEMORY ACCESS FLAGS
     busy := ( readflag || writeflag ) ? 1 : active;
     sio.in_valid := 0;
+    sio.addr := { address[1,25], 1b0 };
 
     // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
     readdata := ( Icache ? Icachedata.rdata : Dcachedata.rdata );
@@ -330,7 +333,6 @@ algorithm sdramcontroller (
             } else {
                 // CACHE MISS
                 // READ FROM SDRAM
-                sio.addr = address;
                 sio.rw = 0;
                 sio.in_valid = 1;
                 while( !sio.done ) {}
@@ -354,7 +356,6 @@ algorithm sdramcontroller (
 
             if( ( function3 & 3 ) == 0 ) {
                 // READ FROM SDRAM for 8 bit writes
-                sio.addr = address;
                 sio.rw = 0;
                 sio.in_valid = 1;
                 while( !sio.done ) {}
@@ -367,7 +368,6 @@ algorithm sdramcontroller (
             }
 
             // WRITE TO SDRAM
-            sio.addr = address;
             sio.data_in = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], sio.data_out[0,8] } : { sio.data_out[8,8], writedata[0,8] } ) : writedata;
             sio.rw = 1;
             sio.in_valid = 1;

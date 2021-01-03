@@ -35,7 +35,20 @@ void setupboard( void ) {
     // WIPE OUT BOARD
     for( int x = 0; x <= MAX_RANK; x++ ) {
         for( int y = 0; y <= MAX_COLUMN; y++ ) {
-            struct Piece board[x][y] = { .type = NONE, .colour = NEITHER };
+            board[x][y].type = NONE;
+            switch( y ) {
+                case 7:
+                case 6:
+                    board[x][y].colour = AWAY;
+                    break;
+                case 1:
+                case 0:
+                    board[x][y].colour = HOME;
+                    break;
+                default:
+                    board[x][y].colour = NEITHER;
+                    break;
+            }
         }
     }
 }

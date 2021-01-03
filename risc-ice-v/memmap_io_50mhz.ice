@@ -263,7 +263,7 @@ algorithm memmap_io (
 
     // Left and Right audio channels
     apu apu_processor_L(
-        staticGenerator <: staticGenerator4,
+        staticGenerator <: staticGenerator,
         audio_output :> audio_l
     );
     apu apu_processor_R(
