@@ -560,30 +560,41 @@ algorithm triangle (
     input   uint1   start,
     output  uint1   busy
 ) <autorun> {
+    // VERTEX COORDINATES
     int11   gpu_active_x = uninitialized;
     int11   gpu_active_y = uninitialized;
     int11   gpu_x1 = uninitialized;
     int11   gpu_y1 = uninitialized;
     int11   gpu_x2 = uninitialized;
     int11   gpu_y2 = uninitialized;
-    int11   gpu_dx = uninitialized;
-    int11   gpu_sx = uninitialized;
-    int11   gpu_dy = uninitialized;
-    int11   gpu_sy = uninitialized;
+
+    // BOUNDING BOX
     int11   gpu_min_x = uninitialized;
     int11   gpu_max_x = uninitialized;
     int11   gpu_min_y = uninitialized;
     int11   gpu_max_y = uninitialized;
-    uint1   gpu_count = uninitialized;
-    uint1   active = 0;
+
+    // WORK COORDINATES
+    int11   gpu_sx = uninitialized;
+    int11   gpu_sy = uninitialized;
+
+    // WORK DIRECTION ( == 0 left, == 1 right )
+    uint1   gpu_dx = uninitialized;
 
     // Filled triangle calculations
     // Is the point sx,sy inside the triangle given by active_x,active_y x1,y1 x2,y2?
-    uint1 w0 = uninitialized;
-    uint1 w1 = uninitialized;
-    uint1 w2 = uninitialized;
+    uint1   w0 = uninitialized;
+    uint1   w1 = uninitialized;
+    uint1   w2 = uninitialized;
+    uint1   inTriangle := w0 && w1 && w2;
+    uint1   beenInTriangle = uninitialized;
 
+    uint1   active = 0;
     busy := start ? 1 : active;
+
+    // PIXEL TO OUTPUT
+    bitmap_x_write := gpu_sx;
+    bitmap_y_write := gpu_sy;
     bitmap_write := 0;
 
     while(1) {
@@ -623,7 +634,7 @@ algorithm triangle (
             // Start at the top left
             ( gpu_sx, gpu_sy ) = copycoordinates( gpu_min_x, gpu_min_y );
             gpu_dx = 1;
-            gpu_count = 0;
+            beenInTriangle = 0;
             ++:
             while( gpu_sy <= gpu_max_y ) {
                 // Edge calculations to determine if inside the triangle - converted to DSP blocks
@@ -631,19 +642,17 @@ algorithm triangle (
                 w1 = (( gpu_active_x - gpu_x2 ) * ( gpu_sy - gpu_y2 ) - ( gpu_active_y - gpu_y2 ) * ( gpu_sx - gpu_x2 )) >= 0;
                 w2 = (( gpu_x1 - gpu_active_x ) * ( gpu_sy - gpu_active_y ) - ( gpu_y1 - gpu_active_y ) * ( gpu_sx - gpu_active_x )) >= 0;
                 ++:
-                bitmap_x_write = gpu_sx;
-                bitmap_y_write = gpu_sy;
-                bitmap_write = ( w0 && w1 && w2 );
-                gpu_count = ( w0 && w1 && w2 ) ? 1 : gpu_count;
+                bitmap_write = inTriangle;
+                beenInTriangle = inTriangle ? 1 : beenInTriangle;
                 ++:
-                if( gpu_count && ~( w0 && w1 && w2 ) ) {
+                if( beenInTriangle && ~inTriangle ) {
                     // Exited the triangle, move to the next line
-                    gpu_count = 0;
+                    beenInTriangle = 0;
                     gpu_sy = gpu_sy + 1;
                     if( ( gpu_max_x - gpu_sx ) < ( gpu_sx - gpu_min_x ) ) {
                         // Closer to the right
                         gpu_sx = gpu_max_x;
-                        gpu_dx = -1;
+                        gpu_dx = 0;
                     } else {
                         // Closer to the left
                         gpu_sx = gpu_min_x;
@@ -651,21 +660,21 @@ algorithm triangle (
                     }
                 } else {
                     switch( gpu_dx ) {
-                        case 1: {
-                            if( gpu_sx < gpu_max_x ) {
-                                gpu_sx = gpu_sx + 1;
-                            } else {
-                                gpu_dx = -1;
-                                gpu_count = 0;
-                                gpu_sy = gpu_sy + 1;
-                            }
-                        }
-                        default: {
-                            if( gpu_sx > gpu_min_x ) {
+                        case 0: {
+                            if( gpu_sx >= gpu_min_x ) {
                                 gpu_sx = gpu_sx - 1;
                             } else {
                                 gpu_dx = 1;
-                                gpu_count = 0;
+                                beenInTriangle = 0;
+                                gpu_sy = gpu_sy + 1;
+                            }
+                        }
+                        case 1: {
+                            if( gpu_sx <= gpu_max_x ) {
+                                gpu_sx = gpu_sx + 1;
+                            } else {
+                                gpu_dx = 0;
+                                beenInTriangle = 0;
                                 gpu_sy = gpu_sy + 1;
                             }
                         }
@@ -696,13 +705,21 @@ algorithm blit (
     simple_dualbram_port0 blit1tilemap,
     simple_dualbram_port0 characterGenerator8x8
 ) <autorun> {
-    int11   gpu_active_x = uninitialized;
-    int11   gpu_active_y = uninitialized;
+    // POSITION IN TILE/CHARACTER
+    uint8   gpu_active_x = uninitialized;
+    uint8   gpu_active_y = uninitialized;
+
+    // POSITION ON THE SCREEN
     int11   gpu_x1 = uninitialized;
     int11   gpu_y1 = uninitialized;
-    int11   gpu_y2 = uninitialised;
-    int11   gpu_max_x = uninitialized;
-    int11   gpu_max_y = uninitialized;
+    uint5   gpu_y2 = uninitialised;
+
+    // MULTIPLIER FOR THE SIZE
+    uint2   gpu_param1 = uninitialised;
+    uint8   gpu_max_x = uninitialized;
+    uint8   gpu_max_y = uninitialized;
+
+    // TILE/CHARACTER TO BLIT
     uint8   gpu_tile = uninitialized;
 
     uint1   active = 0;
@@ -720,16 +737,17 @@ algorithm blit (
             gpu_active_x = 0;
             gpu_active_y = 0;
             ( gpu_x1, gpu_y1 ) = copycoordinates( x, y );
-            gpu_max_x = ( tilecharacter ? 16 : 8 ) << param1;
+            gpu_param1 = param1;
+            gpu_max_x = ( tilecharacter ? 16 : 8 ) << ( param1 & 3);
             gpu_max_y = tilecharacter ? 16 : 8;
             gpu_tile = param0;
             ++:
             while( gpu_active_y < gpu_max_y ) {
                 while( gpu_active_x < gpu_max_x ) {
                     bitmap_x_write = gpu_x1 + gpu_active_x;
-                    while( gpu_y2 < ( 1 << param1 ) ) {
-                        bitmap_y_write = gpu_y1 + ( gpu_active_y << param1 ) + gpu_y2;
-                        bitmap_write = tilecharacter ? blit1tilemap.rdata0[15 - ( gpu_active_x >> param1 ),1] : characterGenerator8x8.rdata0[7 - ( gpu_active_x >> param1 ),1];
+                    while( gpu_y2 < ( 1 << gpu_param1 ) ) {
+                        bitmap_y_write = gpu_y1 + ( gpu_active_y << gpu_param1 ) + gpu_y2;
+                        bitmap_write = tilecharacter ? blit1tilemap.rdata0[15 - ( gpu_active_x >> gpu_param1 ),1] : characterGenerator8x8.rdata0[7 - ( gpu_active_x >> gpu_param1 ),1];
                         gpu_y2 = gpu_y2 + 1;
                     }
                     gpu_active_x = gpu_active_x + 1;

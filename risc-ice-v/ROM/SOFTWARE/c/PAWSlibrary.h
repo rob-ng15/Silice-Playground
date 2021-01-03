@@ -105,16 +105,16 @@ extern void tpu_outputnumber_int( unsigned int );
 
 // BACKGROUND PATTERN GENERATOR
 #define BKG_SOLID 0
-#define BKG_CHKBRD_1 1
-#define BKG_CHKBRD_2 2
-#define BKG_CHKBRD_3 3
-#define BKG_CHKBRD_4 4
-#define BKG_CHKBRD_5 10
-#define BKG_RAINBOW 5
+#define BKG_5050_V 1
+#define BKG_5050_H 2
+#define BKG_CHKBRD_5 3
+#define BKG_RAINBOW 4
+#define BKG_SNOW 5
 #define BKG_STATIC 6
-#define BKG_SNOW 7
-#define BKG_5050_V 8
-#define BKG_5050_H 9
+#define BKG_CHKBRD_1 7
+#define BKG_CHKBRD_2 8
+#define BKG_CHKBRD_3 9
+#define BKG_CHKBRD_4 10
 
 // COLOURS
 #define TRANSPARENT 0x40

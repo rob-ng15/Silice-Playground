@@ -311,8 +311,9 @@ algorithm sdramcontroller (
 
     // MEMORY ACCESS FLAGS
     busy := ( readflag || writeflag ) ? 1 : active;
-    sio.in_valid := 0;
     sio.addr := { address[1,25], 1b0 };
+    sio.data_in := ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], sio.data_out[0,8] } : { sio.data_out[8,8], writedata[0,8] } ) : writedata;
+    sio.in_valid := 0;
 
     // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
     readdata := ( Icache ? Icachedata.rdata : Dcachedata.rdata );
@@ -368,7 +369,6 @@ algorithm sdramcontroller (
             }
 
             // WRITE TO SDRAM
-            sio.data_in = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], sio.data_out[0,8] } : { sio.data_out[8,8], writedata[0,8] } ) : writedata;
             sio.rw = 1;
             sio.in_valid = 1;
             while( !sio.done ) {}
