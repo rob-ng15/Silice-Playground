@@ -28,6 +28,25 @@ int strcmp(const char *p1, const char *p2) {
   return *(const unsigned char*)p1 - *(const unsigned char*)p2;
 }
 
+// RISC-V CSR FUNCTIONS
+long CSRcycles() {
+   int cycles;
+   asm volatile ("rdcycle %0" : "=r"(cycles));
+   return cycles;
+}
+
+long CSRinstructions() {
+   int insns;
+   asm volatile ("rdinstret %0" : "=r"(insns));
+   return insns;
+}
+
+long CSRtime() {
+  int time;
+  asm volatile ("rdtime %0" : "=r"(time));
+  return time;
+}
+
 // INTERNAL HELPER FUNCTIONS
 // CONVERT UNSIGNED INTEGERS TO STRINGS ( CHAR, SHORT and INT VERSIONS )
 void chartostring( unsigned char value, char *s ) {

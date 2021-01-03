@@ -21,7 +21,12 @@ struct sprite_update_flag {
     int dx:5;
 };
 
-// FUNCTION DEFINITIONS
+// RISC-V CSR FUNCTIONS
+extern long CSRcycles( void );
+extern long CSRinstructions( void );
+extern long CSRtime( void );
+
+// STANDARD FUNCTION DEFINITIONS
 extern void* memcpy(void *dest, const void *src, size_t n);
 extern int strcmp(const char *p1, const char *p2);
 extern int strlen( char *s );

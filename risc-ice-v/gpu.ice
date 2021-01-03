@@ -280,9 +280,12 @@ algorithm rectangle (
     int11   gpu_x1 = uninitialized;
     int11   gpu_max_x = uninitialized;
     int11   gpu_max_y = uninitialized;
-    uint1   active = 0;
 
+    uint1   active = 0;
     busy := start ? 1 : active;
+
+    bitmap_x_write := gpu_active_x;
+    bitmap_y_write := gpu_active_y;
     bitmap_write := 0;
 
     while(1) {
@@ -302,9 +305,7 @@ algorithm rectangle (
             ( gpu_max_y ) = cropbottom( gpu_max_y );
             ++:
             while( gpu_active_y <= gpu_max_y ) {
-                bitmap_y_write = gpu_active_y;
                 while( gpu_active_x <= gpu_max_x ) {
-                    bitmap_x_write = gpu_active_x;
                     bitmap_write = 1;
                     gpu_active_x = gpu_active_x + 1;
                 }
@@ -341,9 +342,12 @@ algorithm line (
     int11   gpu_numerator2 = uninitialized;
     int11   gpu_count = uninitialized;
     int11   gpu_max_count = uninitialized;
-    uint1   active = 0;
 
+    uint1   active = 0;
     busy := start ? 1 : active;
+
+    bitmap_x_write := gpu_active_x;
+    bitmap_y_write := gpu_active_y;
     bitmap_write := 0;
 
     while(1) {
@@ -364,8 +368,6 @@ algorithm line (
             ( gpu_max_count ) = max( gpu_dx, gpu_dy );
             ++:
             while( gpu_count <= gpu_max_count ) {
-                bitmap_x_write = gpu_active_x;
-                bitmap_y_write = gpu_active_y;
                 bitmap_write = 1;
                 gpu_numerator2 = gpu_numerator;
                 ++:
@@ -723,12 +725,14 @@ algorithm blit (
     uint8   gpu_tile = uninitialized;
 
     uint1   active = 0;
+    busy := start ? 1 : active;
 
     // tile and character bitmap addresses
     blit1tilemap.addr0 := gpu_tile * 16 + gpu_active_y;
     characterGenerator8x8.addr0 := gpu_tile * 8 + gpu_active_y;
 
-    busy := start ? 1 : active;
+    bitmap_x_write := gpu_x1 + gpu_active_x;
+    bitmap_y_write := gpu_y1 + ( gpu_active_y << gpu_param1 ) + gpu_y2;
     bitmap_write := 0;
 
     while(1) {
@@ -744,9 +748,7 @@ algorithm blit (
             ++:
             while( gpu_active_y < gpu_max_y ) {
                 while( gpu_active_x < gpu_max_x ) {
-                    bitmap_x_write = gpu_x1 + gpu_active_x;
                     while( gpu_y2 < ( 1 << gpu_param1 ) ) {
-                        bitmap_y_write = gpu_y1 + ( gpu_active_y << gpu_param1 ) + gpu_y2;
                         bitmap_write = tilecharacter ? blit1tilemap.rdata0[15 - ( gpu_active_x >> gpu_param1 ),1] : characterGenerator8x8.rdata0[7 - ( gpu_active_x >> gpu_param1 ),1];
                         gpu_y2 = gpu_y2 + 1;
                     }

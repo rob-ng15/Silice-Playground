@@ -111,6 +111,15 @@ bitfield Utype {
     uint7   opCode
 }
 
+// CSR Risc-V Access Instruction
+bitfield    CSR {
+    uint12  csr,
+    uint5   rs1,
+    uint3   function3,
+    uint5   rd,
+    uint7   opcode
+}
+
 // COMPRESSED Risc-V Instruction Bitfields
 bitfield    CBalu {
     uint3   function3,
@@ -231,3 +240,4 @@ bitfield    CSS {
     uint5   rs2,
     uint2   opcode
 }
+

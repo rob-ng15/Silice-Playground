@@ -14,17 +14,15 @@ algorithm divideremainder (
 ) <autorun> {
     uint32  quotient = uninitialized;
     uint32  remainder = uninitialized;
-    uint32  dividend_copy = uninitialized;
-    uint32  divisor_copy = uninitialized;
-
-    uint1   dosigned := function3[0,1] ? 0 : 1;
-    uint1   resultsign = uninitialized;
+    uint32  dividend_copy := ~function3[0,1] ? ( dividend[31,1] ? -dividend : dividend ) : dividend;
+    uint32  divisor_copy := ~function3[0,1] ? ( divisor[31,1] ? -divisor : divisor ) :divisor;
+    uint1   resultsign := ~function3[0,1] ? dividend[31,1] != divisor[31,1] : 0;
     uint6   bit = uninitialized;
     uint6   count = uninitialized;
 
     uint1   busy = 0;
-
     active := start ? 1 : busy;
+
     result := function3[1,1] ? remainder : ( resultsign ? -quotient : quotient );
 
     while(1) {
@@ -39,9 +37,6 @@ algorithm divideremainder (
             } else {
                 quotient = 0;
                 remainder = 0;
-                dividend_copy = dosigned ? ( dividend[31,1] ? -dividend : dividend ) : dividend;
-                divisor_copy = dosigned ?  ( divisor[31,1] ? -divisor : divisor ) :divisor;
-                resultsign = dosigned ?  dividend[31,1] != divisor[31,1] : 0;
                 ++:
                 while( bit != 63 ) {
                     if( __unsigned({ remainder[0,31], dividend_copy[bit,1] }) >= __unsigned(divisor_copy) ) {
@@ -74,7 +69,6 @@ algorithm multiplicationDSP (
     uint32  factor_1_copy := ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
     uint32  factor_2_copy := ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
     uint64  product = uninitialized;
-    uint1   busy = 0;
 
     // CALCULATION AB * CD
     uint18  A := { 2b0, factor_1_copy[16,16] };
@@ -86,7 +80,9 @@ algorithm multiplicationDSP (
     uint2   dosigned := function3[1,1] ? ( function3[0,1] ? 0 : 2 ) : 1;
     uint1   resultsign := ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] != factor_2[31,1] ) : factor_1[31,1] );
 
+    uint1   busy = 0;
     active := start ? 1 : busy;
+
     result := ( function3 == 0 ) ? product[0,32] : product[32,32];
 
     while(1) {

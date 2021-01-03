@@ -763,11 +763,12 @@ void main( void )
         if( ufo_sprite_number != 0xff ) {
             ufo_x = get_sprite_attribute( ASN( ufo_sprite_number ), 3 );
             ufo_x = ( ufo_x < 0 ) ? 0 : ( ufo_x > 639 ? 639 : ufo_x );
+            ufo_x = 1 << ( 7 - ufo_x / 80 );
         }
-        set_leds( ( ufo_sprite_number != 0xff ) ? 1 << ( 7 - ufo_x / 80 ) : 0 );
+        set_leds( ( ufo_sprite_number != 0xff ) ? ( asteroid_active[ ufo_sprite_number ] == 3 ? ufo_x : 255 ) : 0 );
 
         // PLACE NEW LARGE ASTEROIDS
-        if( placeAsteroids > 0 ) {
+        if( ( placeAsteroids > 0 ) && ( ( counter & 63 ) == 0 ) ) {
             potentialnumber = find_asteroid_space();
             if( potentialnumber != 0xff ) {
                 switch( rng(4) ) {
@@ -796,7 +797,7 @@ void main( void )
         }
 
         // NEW LEVEL NEEDED
-        if( count_asteroids() == 0 ) {
+        if( ( count_asteroids() == 0 ) && ( placeAsteroids == 0 ) ) {
             level++;
             placeAsteroids = 4 + ( ( level < 4 ) ? level : 4 );
         }

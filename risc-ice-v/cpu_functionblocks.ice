@@ -139,6 +139,11 @@ algorithm PAWSCPU (
         HIGHLOW :> HIGHLOW
     );
 
+    // CSR REGISTERS
+    CSRblock CSR(
+        instruction <: instruction
+    );
+
     // MEMORY ACCESS FLAGS
     readmemory := 0;
     writememory := 0;
@@ -148,6 +153,9 @@ algorithm PAWSCPU (
 
     // ALU Start Flag
     ALU.start := 0;
+
+    // CSR instructions retired increment flag
+    CSR.incCSRinstret := 0;
 
     while(1) {
         // RISC-V
@@ -263,6 +271,11 @@ algorithm PAWSCPU (
                 }
                 result = function7[0,1] ? ALU.Mresult : ALU.result;
             }
+            case 5b11100: {
+                // CSR
+                writeRegister = 1;
+                result = CSR.result;
+            }
         }
 
         // WRITE TO REGISTERS
@@ -270,6 +283,9 @@ algorithm PAWSCPU (
 
         // UPDATE PC
         pc = ( incPC ) ? ( takeBranch ? branchAddress : nextPC ) : ( opCode[3,1] ? jumpAddress : loadAddress );
+
+        // Update CSRinstret
+        CSR.incCSRinstret = 1;
     } // RISC-V
 }
 
@@ -704,6 +720,49 @@ algorithm compressedexpansion (
                 compressed = 0;
                 instruction32 = { 16h0000, instruction16 };
             }
+        }
+    }
+}
+
+algorithm CSRblock (
+    input   uint32  instruction,
+    input   uint1   incCSRinstret,
+    output  uint32  result
+) <autorun> {
+    // RDCYCLE[H] and RDTIME[H] are equivalent on PAWSCPU
+    uint64  CSRcycletime = 0;
+    uint64  CSRinstret = 0;
+
+    CSRcycletime := CSRcycletime + 1;
+    CSRinstret := CSRinstret + ( incCSRinstret ? 1 : 0 );
+
+    while(1) {
+        if( ( CSR(instruction).rs1 == 0 ) && ( CSR(instruction).function3 == 3b010 ) ) {
+            switch( CSR(instruction).csr ) {
+                case 12hc00: {
+                    result = CSRcycletime[0,32];
+                }
+                case 12hc80: {
+                    result = CSRcycletime[32,32];
+                }
+                case 12hc01: {
+                    result = CSRcycletime[0,32];
+                }
+                case 12hc81: {
+                    result = CSRcycletime[32,32];
+                }
+                case 12hc02: {
+                    result = CSRinstret[0,32];
+                }
+                case 12hc82: {
+                    result = CSRinstret[32,32];
+                }
+                default: {
+                    result = 0;
+                }
+            }
+        } else {
+            result = 0;
         }
     }
 }
