@@ -8,6 +8,7 @@ $include('../common/sdcard.ice')
 $include('../common/sdram_interfaces.ice')
 $include('../common/sdram_controller_autoprecharge_r16_w16.ice')
 $include('../common/sdram_utils.ice')
+$include('../common/clean_reset.ice')
 
 // Headers
 $include('../definitions.ice')
@@ -33,6 +34,5 @@ $include('../mathematics.ice')
 // CLOCKS
 import('../common/ulx3s_clk_risc_ice_v.v')
 import('../common/ulx3s_clk_risc_ice_v_2.v')
-import('../common/reset_conditioner.v')
 
 $include('../risc-ice-v.ice')

@@ -52,7 +52,8 @@ algorithm main(
 
     // SDRAM + I/O DOMAIN CLOCKS
     uint1   clock_IO = uninitialized;
-    uint1   clock_sdram = uninitialized;
+    uint1   sdram_clock = uninitialized;
+    uint1   sdram_reset = uninitialized;
     uint1   video_reset = uninitialized;
     uint1   video_clock = uninitialized;
     uint1   pll_lock_AUX = uninitialized;
@@ -60,16 +61,19 @@ algorithm main(
         clkin   <: clock,
         clkIO :> clock_IO,
         clkVIDEO :> video_clock,
-        clkSDRAM :> clock_sdram,
+        clkSDRAM :> sdram_clock,
         clkSDRAMcontrol :> sdram_clk,
         locked :> pll_lock_AUX
     );
 
     // Video Reset
-    reset_conditioner vga_rstcond (
-        rcclk <: video_clock ,
-        in  <: reset,
+    clean_reset video_rstcond<@video_clock,!reset> (
         out :> video_reset
+    );
+
+    // SDRAM Reset
+    clean_reset sdram_rstcond<@sdram_clock,!reset> (
+        out :> sdram_reset
     );
 
     // Status of the screen, if in range, if in vblank, actual pixel x and y
@@ -98,10 +102,15 @@ algorithm main(
     // RAM - BRAM and SDRAM
     // SDRAM chip controller
     // interface
-    sdram_r16w16_io sio;
+    sdram_r16w16_io sio_fullrate;
+    sdram_r16w16_io sio_halfrate;
+    sdram_half_speed_access sdaccess <@sdram_clock,!sdram_reset> (
+            sd      <:> sio_fullrate,
+            sdh     <:> sio_halfrate,
+    );
     // algorithm
-    sdram_controller_autoprecharge_r16_w16 sdram32MB <@clock_sdram> (
-        sd        <:> sio,
+    sdram_controller_autoprecharge_r16_w16 sdram32MB <@sdram_clock,!sdram_reset> (
+        sd        <:> sio_fullrate,
         sdram_cle :>  sdram_cle,
         sdram_dqm :>  sdram_dqm,
         sdram_cs  :>  sdram_cs,
@@ -116,7 +125,7 @@ algorithm main(
     // SDRAM and BRAM (for BIOS)
     sdramcontroller sdram <@clock_memory> (
         function3 <: function3,
-        sio <:> sio,
+        sio <:> sio_halfrate,
         Icache <: Icacheflag,
         address <: address,
         writedata <: writedata,
@@ -272,11 +281,11 @@ algorithm sdramcontroller (
 ) <autorun> {
     // INSTRUCTION & DATA CACHES for SDRAM (32mb)
     // CACHE LINE IS LOWER 11 bits ( 0 - 2047 ) of address, dropping the BYTE address bit
-    // CACHE TAG IS REMAINING 13 bits of the 26 bit address + 1 bit for valid flag
-    bram uint16 Dcachedata<input!>[2048] = uninitialized;
-    bram uint15 Dcachetag<input!>[2048] = uninitialized;
-    bram uint16 Icachedata<input!>[2048] = uninitialized;
-    bram uint15 Icachetag<input!>[2048] = uninitialized;
+    // CACHE TAG IS REMAINING 14 bits of the 26 bit address + 1 bit for valid flag
+    bram uint16 Dcachedata <input!> [2048] = uninitialized;
+    bram uint15 Dcachetag <input!> [2048] = uninitialized;
+    bram uint16 Icachedata <input!> [2048] = uninitialized;
+    bram uint15 Icachetag <input!> [2048] = uninitialized;
 
     // ACTIVE FLAG
     uint1   active = 0;
@@ -298,10 +307,9 @@ algorithm sdramcontroller (
     );
 
     // CACHE TAG match flags
-    uint1   Icachetagmatch := Icachetag.rdata == { 1b1, address[12,14] };
-    uint1   Dcachetagmatch := Dcachetag.rdata == { 1b1, address[12,14] };
+    uint1   Icachetagmatch := ( Icachetag.rdata == { 1b1, address[12,14] } );
+    uint1   Dcachetagmatch := ( Dcachetag.rdata == { 1b1, address[12,14] } );
 
-    // 16 bit aligned address
 
     // FLAGS FOR CACHE ACCESS
     Dcachedata.wenable := 0; Dcachedata.addr := address[1,11];
@@ -312,11 +320,10 @@ algorithm sdramcontroller (
     // MEMORY ACCESS FLAGS
     busy := ( readflag || writeflag ) ? 1 : active;
     sio.addr := { address[1,25], 1b0 };
-    sio.data_in := ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], sio.data_out[0,8] } : { sio.data_out[8,8], writedata[0,8] } ) : writedata;
     sio.in_valid := 0;
 
     // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
-    readdata := ( Icache ? Icachedata.rdata : Dcachedata.rdata );
+    readdata := Icache ? Icachedata.rdata : Dcachedata.rdata;
 
     // 8/16 bit READ WITH OPTIONAL SIGN EXTENSION
     SE8nosign := Dcachedata.rdata[address[0,1] ? 8 : 0, 8];
@@ -329,7 +336,7 @@ algorithm sdramcontroller (
             // SDRAM - 1 cycle for CACHE TAG ACCESS
             active = 1;
             ++:
-            if( ( Icache && Icachetagmatch ) || Dcachetagmatch ) {
+            if( ( Icache && Icachetagmatch ) || ( ~Icache && Dcachetagmatch ) ) {
                 // CACHE HIT
             } else {
                 // CACHE MISS
@@ -356,30 +363,43 @@ algorithm sdramcontroller (
             active = 1;
 
             if( ( function3 & 3 ) == 0 ) {
-                // READ FROM SDRAM for 8 bit writes
-                sio.rw = 0;
-                sio.in_valid = 1;
-                while( !sio.done ) {}
-
-                // WRITE RESULT TO DCACHE
-                Dcachetag.wenable = 1;
-                Dcachedata.wdata = sio.data_out;
-                Dcachedata.wenable = 1;
+                // 8 BIT WRITES
+                // SDRAM - 1 cycle for CACHE TAG ACCESS
                 ++:
+                if( Dcachetagmatch ) {
+                    // CACHE HIT
+                    // SETUP WRITE TO CACHE AND SDRAM
+                    Dcachedata.wdata = ( address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] } );
+                    Icachedata.wdata = ( address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] } );
+                    sio.data_in = ( address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] } );
+                } else {
+                    // CACHE MISS, READ FROM SDRAM, MODIFY AND WRITE TO CACHE AND SDRAM
+                    sio.rw = 0;
+                    sio.in_valid = 1;
+                    while( !sio.done ) {}
+
+                    // SETUP WRITE TO CACHE AND SDRAM
+                    Dcachedata.wdata = ( address[0,1] ? { writedata[0,8], sio.data_out[0,8] } : { sio.data_out[8,8], writedata[0,8] } );
+                    Icachedata.wdata = ( address[0,1] ? { writedata[0,8], sio.data_out[0,8] } : { sio.data_out[8,8], writedata[0,8] } );
+                    sio.data_in = ( address[0,1] ? { writedata[0,8], sio.data_out[0,8] } : { sio.data_out[8,8], writedata[0,8] } );
+                }
+            } else {
+                // 16 BIT
+                // SETUP WRITE TO CACHE AND SDRAM
+                Dcachedata.wdata = writedata;
+                Icachedata.wdata = writedata;
+                sio.data_in = writedata;
             }
 
-            // WRITE TO SDRAM
+            // COMPLETE WRITE TO CACHE
+            Dcachedata.wenable = 1;
+            Dcachetag.wenable = 1;
+            Icachedata.wenable = Icachetagmatch;
+
+            // COMPLETE WRITE TO SDRAM
             sio.rw = 1;
             sio.in_valid = 1;
             while( !sio.done ) {}
-
-            // WRITE TO CACHE
-            Dcachedata.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] } ) : writedata;
-            Icachedata.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] } ) : writedata;
-            Dcachedata.wenable = 1;
-            Dcachetag.wenable = 1;
-            // CHECK IF ENTRY IS IN ICACHE AND UPDATE
-            Icachedata.wenable = Icachetagmatch;
 
             active = 0;
         }

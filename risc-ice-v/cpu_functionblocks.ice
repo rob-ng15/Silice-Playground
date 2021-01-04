@@ -246,6 +246,7 @@ algorithm PAWSCPU (
                 // STORE
                 // WRITE 8, 16 and LOWER 16 of 32 bits
                 address = storeAddress;
+                Icacheflag = 0;
                 writedata = sourceReg2LOW;
                 writememory = 1;
                 while( memorybusy ) {}
