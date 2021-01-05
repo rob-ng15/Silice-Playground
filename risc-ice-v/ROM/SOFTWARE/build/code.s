@@ -221,12 +221,18 @@ memorydump16:
 	.string	"\n\nMEMORY DUMP 16 FROM 0x10000100 SDRAM via CACHE"
 	.align	2
 .LC8:
-	.string	"\nTerminal Echo Starting"
+	.string	"\nCLOCK CYCLES: "
 	.align	2
 .LC9:
-	.string	"You pressed : "
+	.string	" INSTRUCTIONS: "
 	.align	2
 .LC10:
+	.string	"\n\nTerminal Echo Starting"
+	.align	2
+.LC11:
+	.string	"You pressed : "
+	.align	2
+.LC12:
 	.string	" <-"
 	.text
 	.align	1
@@ -313,25 +319,39 @@ main:
 	li	a0,268435456
 	addi	a0,a0,256
 	call	memorydump16
+	call	CSRcycles
+	mv	s1,a0
+	call	CSRinstructions
+	mv	s0,a0
+	lui	a0,%hi(.LC8)
+	addi	a0,a0,%lo(.LC8)
+	call	outputstringnonl
+	mv	a0,s1
+	call	outputnumber_int
+	lui	a0,%hi(.LC9)
+	addi	a0,a0,%lo(.LC9)
+	call	outputstringnonl
+	mv	a0,s0
+	call	outputnumber_int
 	j	.L21
 .L22:
 	call	inputcharacter
 .L21:
 	call	inputcharacter_available
 	bne	a0,zero,.L22
-	lui	a0,%hi(.LC8)
-	addi	a0,a0,%lo(.LC8)
+	lui	a0,%hi(.LC10)
+	addi	a0,a0,%lo(.LC10)
 	call	outputstring
-	lui	s2,%hi(.LC9)
-	lui	s1,%hi(.LC10)
+	lui	s2,%hi(.LC11)
+	lui	s1,%hi(.LC12)
 .L23:
 	call	inputcharacter
 	mv	s0,a0
-	addi	a0,s2,%lo(.LC9)
+	addi	a0,s2,%lo(.LC11)
 	call	outputstringnonl
 	mv	a0,s0
 	call	outputcharacter
-	addi	a0,s1,%lo(.LC10)
+	addi	a0,s1,%lo(.LC12)
 	call	outputstring
 	mv	a0,s0
 	call	set_leds

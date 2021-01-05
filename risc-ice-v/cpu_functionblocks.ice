@@ -112,9 +112,14 @@ algorithm PAWSCPU (
         loadAddressPLUS2 :> loadAddressPLUS2
     );
 
-    // RISC-V BASE ALU
-    alu ALU <@clock_copro> (
+    // RISC-V BASE ALU + M EXTENSION
+    aluI ALUI <@clock_copro> (
         instruction <: instruction,
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+    );
+    aluM ALUM <@clock_copro> (
+        function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
     );
@@ -152,7 +157,7 @@ algorithm PAWSCPU (
     registersW.writeRegister := 0;
 
     // ALU Start Flag
-    ALU.start := 0;
+    ALUM.start := 0;
 
     // CSR instructions retired increment flag
     CSR.incCSRinstret := 0;
@@ -261,16 +266,16 @@ algorithm PAWSCPU (
             case 5b00100: {
                 // ALUI
                 writeRegister = 1;
-                result = ALU.result;
+                result = ALUI.result;
             }
             case 5b01100: {
-                // ALUR
+                // ALUR ( BASE + M EXTENSION )
                 writeRegister = 1;
                 if( function7[0,1] ) {
-                    ALU.start = 1;
-                    while( ALU.busy ) {}
+                    ALUM.start = 1;
+                    while( ALUM.busy ) {}
                 }
-                result = function7[0,1] ? ALU.Mresult : ALU.result;
+                result = function7[0,1] ? ALUM.result : ALUI.result;
             }
             case 5b11100: {
                 // CSR
@@ -408,88 +413,6 @@ algorithm addressgenerator (
     }
 }
 
-// RISC-V ALU BASE + M EXTENSION
-algorithm alu (
-    input   uint32  instruction,
-    input   int32   sourceReg1,
-    input   int32   sourceReg2,
-
-    input   uint1   start,
-    output  uint1   busy,
-
-    output  int32   result,
-    output  int32   Mresult
-) <autorun> {
-    uint7   opCode := Utype(instruction).opCode;
-    uint3   function3 := Rtype(instruction).function3;
-    uint7   function7 := Rtype(instruction).function7;
-    int32   immediateValue := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Itype(instruction).immediate };
-
-    int32   shiftRIGHTA := __signed(sourceReg1) >>> ( opCode[5,1] ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
-    int32   shiftRIGHTL := __unsigned(sourceReg1) >> ( opCode[5,1] ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
-
-    uint1   SLT := __signed( sourceReg1 ) < __signed(sourceReg2) ? 1 : 0;
-    uint1   SLTI := __signed( sourceReg1 ) < __signed(immediateValue) ? 1 : 0;
-    uint1   SLTU := ( Rtype(instruction).sourceReg1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 1 : 0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 1 : 0 );
-    uint1   SLTUI := ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 1 : 0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 1 : 0 );
-
-    uint1   active = 0;
-
-    // MULTIPLICATION and DIVISION units
-    divideremainder dividerunit (
-        function3 <: function3,
-        dividend <: sourceReg1,
-        divisor <: sourceReg2
-    );
-    multiplicationDSP multiplicationuint (
-        function3 <: function3,
-        factor_1 <: sourceReg1,
-        factor_2 <: sourceReg2
-    );
-
-    // MULTIPLICATION and DIVISION Start Flags
-    dividerunit.start := 0;
-    multiplicationuint.start := 0;
-    busy := start ? 1 : active;
-
-    while(1) {
-        if( start ) {
-            // M EXTENSION
-            switch( function3[2,1] ) {
-                case 1b0: {
-                    // MULTIPLICATION
-                    active = 1;
-                    multiplicationuint.start = 1;
-                    while( multiplicationuint.active ) {}
-                    Mresult = multiplicationuint.result;
-                    active = 0;
-                }
-                case 1b1: {
-                    // DIVISION / REMAINDER
-                    active = 1;
-                    dividerunit.start = 1;
-                    while( dividerunit.active ) {}
-                    Mresult = dividerunit.result;
-                    active = 0;
-                }
-            }
-        } else {
-            // BASE ALU - ONLY TRIGGER IF ALU OPERATION
-            if( ( opCode == 7b0010011 ) || ( opCode == 7b0110011 ) ) {
-                switch( function3 ) {
-                    case 3b000: { result = sourceReg1 + ( opCode[5,1] ? ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ) : immediateValue ); }
-                    case 3b001: { result = __unsigned(sourceReg1) << ( opCode[5,1] ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ); }
-                    case 3b010: { result = ( opCode[5,1] ? SLT : SLTI ) ? 32b1 : 32b0; }
-                    case 3b011: { result = ( opCode[5,1] ? SLTU : SLTUI ) ? 32b1 : 32b0; }
-                    case 3b100: { result = sourceReg1 ^ ( opCode[5,1] ? sourceReg2 : immediateValue ); }
-                    case 3b101: { result = function7[5,1] ? shiftRIGHTA : shiftRIGHTL; }
-                    case 3b110: { result = sourceReg1 | ( opCode[5,1] ? sourceReg2 : immediateValue ); }
-                    case 3b111: { result = sourceReg1 & ( opCode[5,1] ? sourceReg2 : immediateValue ); }
-                }
-            }
-        }
-    }
-}
 
 // BRANCH COMPARISIONS
 algorithm branchcomparison (
@@ -510,6 +433,101 @@ algorithm branchcomparison (
                 case 3b110: { takeBranch = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? 1 : 0; }
                 case 3b111: { takeBranch = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? 1 : 0; }
                 default: { takeBranch = 0; }
+            }
+        }
+    }
+}
+
+// RISC-V ALU BASE
+algorithm aluI (
+    input   uint32  instruction,
+    input   int32   sourceReg1,
+    input   int32   sourceReg2,
+
+    input   uint1   start,
+    output  uint1   busy,
+
+    output  int32   result,
+) <autorun> {
+    uint7   opCode := Utype(instruction).opCode;
+    uint3   function3 := Rtype(instruction).function3;
+    uint7   function7 := Rtype(instruction).function7;
+    int32   immediateValue := { instruction[31,1] ? 20b11111111111111111111 : 20b00000000000000000000, Itype(instruction).immediate };
+
+    int32   shiftRIGHTA := __signed(sourceReg1) >>> ( opCode[5,1] ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
+    int32   shiftRIGHTL := __unsigned(sourceReg1) >> ( opCode[5,1] ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount );
+
+    uint1   SLT := __signed( sourceReg1 ) < __signed(sourceReg2) ? 1 : 0;
+    uint1   SLTI := __signed( sourceReg1 ) < __signed(immediateValue) ? 1 : 0;
+    uint1   SLTU := ( Rtype(instruction).sourceReg1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 1 : 0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 1 : 0 );
+    uint1   SLTUI := ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 1 : 0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 1 : 0 );
+
+    while(1) {
+        // BASE ALU - ONLY TRIGGER IF ALU OPERATION
+        //if( ( opCode == 7b0010011 ) || ( opCode == 7b0110011 ) ) {
+            switch( function3 ) {
+                case 3b000: { result = sourceReg1 + ( opCode[5,1] ? ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ) : immediateValue ); }
+                case 3b001: { result = __unsigned(sourceReg1) << ( opCode[5,1] ? sourceReg2[0,5] : ItypeSHIFT( instruction ).shiftCount ); }
+                case 3b010: { result = ( opCode[5,1] ? SLT : SLTI ) ? 32b1 : 32b0; }
+                case 3b011: { result = ( opCode[5,1] ? SLTU : SLTUI ) ? 32b1 : 32b0; }
+                case 3b100: { result = sourceReg1 ^ ( opCode[5,1] ? sourceReg2 : immediateValue ); }
+                case 3b101: { result = function7[5,1] ? shiftRIGHTA : shiftRIGHTL; }
+                case 3b110: { result = sourceReg1 | ( opCode[5,1] ? sourceReg2 : immediateValue ); }
+                case 3b111: { result = sourceReg1 & ( opCode[5,1] ? sourceReg2 : immediateValue ); }
+            }
+        //}
+    }
+}
+
+// RISC-V ALU M EXTENSION
+algorithm aluM (
+    input   uint3   function3,
+    input   int32   sourceReg1,
+    input   int32   sourceReg2,
+
+    input   uint1   start,
+    output  uint1   busy,
+
+    output  int32  result
+) <autorun> {
+    // MULTIPLICATION and DIVISION units
+    divideremainder dividerunit (
+        function3 <: function3,
+        dividend <: sourceReg1,
+        divisor <: sourceReg2
+    );
+    multiplicationDSP multiplicationuint (
+        function3 <: function3,
+        factor_1 <: sourceReg1,
+        factor_2 <: sourceReg2
+    );
+
+    uint1   active = 0;
+    busy := start ? 1 : active;
+
+    // MULTIPLICATION and DIVISION Start Flags
+    dividerunit.start := 0;
+    multiplicationuint.start := 0;
+
+    while(1) {
+        if( start ) {
+            switch( function3[2,1] ) {
+                case 1b0: {
+                    // MULTIPLICATION
+                    active = 1;
+                    multiplicationuint.start = 1;
+                    while( multiplicationuint.active ) {}
+                    result = multiplicationuint.result;
+                    active = 0;
+                }
+                case 1b1: {
+                    // DIVISION / REMAINDER
+                    active = 1;
+                    dividerunit.start = 1;
+                    while( dividerunit.active ) {}
+                    result = dividerunit.result;
+                    active = 0;
+                }
             }
         }
     }

@@ -1,4 +1,4 @@
-#include "PAWSlibrary.h"
+#include "BIOSlibrary.h"
 
 void draw_riscv_logo( void ) {
     gpu_rectangle( ORANGE, 0, 0, 100, 100 );
@@ -63,6 +63,7 @@ void main( void ) {
 
     sleep( 4000 );
 
+    // WRITE TO SDRAM / CACHE
     unsigned char *MEMTEST = (unsigned char *) 0x10000000;
     for( unsigned char i = 0; i < 255; i++ ) {
         MEMTEST[i] = i;
@@ -74,10 +75,10 @@ void main( void ) {
 
     outputstring( "\nMEMORY DUMP FROM 0x10000000 CACHE" );
     memorydump( MEMTEST, 256 );
-
     outputstring( "\n\nMEMORY DUMP 16 FROM 0x10000100 CACHE" );
     memorydump16( MEMTEST2, 256 );
 
+    // OVERWHELM THE CACHE
     for( unsigned short i = 0; i < 4096; i++ ) {
         MEMTEST2[i] = i;
     }
@@ -89,12 +90,16 @@ void main( void ) {
     outputstring( "\n\nMEMORY DUMP 16 FROM 0x10000100 SDRAM via CACHE" );
     memorydump16( MEMTEST2, 256 );
 
-    // CLEAR the UART buffer
+    // DIAGNOSTICS
+    int cycles, instructions;
+    cycles = (int)CSRcycles();
+    instructions = (int)CSRinstructions();
+    outputstringnonl( "\nCLOCK CYCLES: " ); outputnumber_int( cycles ); outputstringnonl( " INSTRUCTIONS: " ); outputnumber_int( instructions );
+
+    // TERMINAL ECHO LOOP
     while( inputcharacter_available() )
         uartData = inputcharacter();
-
-    outputstring("\nTerminal Echo Starting");
-
+    outputstring("\n\nTerminal Echo Starting");
     while(1) {
         uartData = inputcharacter();
         outputstringnonl("You pressed : ");
@@ -102,7 +107,4 @@ void main( void ) {
         outputstring(" <-");
         set_leds(uartData);
     }
-
-    // CALL SDRAM LOADED PROGRAM
-    ((void(*)(void))0x10000000)();
 }

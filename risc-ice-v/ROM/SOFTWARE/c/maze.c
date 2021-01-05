@@ -28,6 +28,9 @@ short directiony[] = { -1, 0, 1, 0 }, leftdirectiony[] = { 0, -1, 0, 1 }, rightd
 char maze[MAXWIDTH][MAXHEIGHT];
 char map[MAXWIDTH][MAXHEIGHT];
 
+// POSITION AND DIRECTION OF THE GOST
+unsigned short ghostx[4], ghosty[4], ghostdirection[4];
+
 // CREATE A BLANK MAZE OF WIDTH x HEIGHT
 // ADD ENTRANCE AND EXIT
 void initialise_maze( unsigned short width, unsigned short height )
@@ -49,6 +52,13 @@ void initialise_maze( unsigned short width, unsigned short height )
     // ADD EXIT
     maze[ width - 2 ][ height - 3 ] = 'X';
     map[ width - 2 ][ height - 3 ] = 'X';
+
+    // POSITION GHOSTS AT EXIT FACING WEST
+    for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
+        ghostx[ ghost ] = width - 3;
+        ghosty[ ghost ] = height - 3;
+        ghostdirection[ ghost ] = 3;
+    }
 }
 
 // DRAW THE MAZE FULL SCREEN - USED DURING GENERATION
@@ -154,26 +164,41 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
 
     for( x = 0; x < width; x++ ) {
         for( y = 0; y < height; y++ ) {
-            if( ( currentx == x ) && ( currenty == y ) ) {
-                colour = GREEN;
-            } else {
-                switch( mapmaze ? map[x][y] : maze[x][y] ) {
-                    case '#':
-                        colour = BLUE;
-                        break;
-                    case ' ':
-                        colour = WHITE;
-                        break;
+            switch( mapmaze ? map[x][y] : maze[x][y] ) {
+                case '#':
+                    colour = BLUE;
+                    break;
+                case ' ':
+                    colour = WHITE;
+                    break;
                 case 'E':
-                        colour = MAGENTA;
-                        break;
-                    case 'X':
-                        colour = YELLOW;
-                        break;
-                }
+                    colour = MAGENTA;
+                    break;
+                case 'X':
+                    colour = YELLOW;
+                    break;
             }
             gpu_rectangle( colour, 475 + x * boxwidth, 10 + y * boxheight, 474 + x * boxwidth + boxwidth, 9 + y * boxheight + boxheight );
         }
+    }
+
+    gpu_rectangle( GREEN, 475 + currentx * boxwidth, 10 + currenty * boxheight, 474 + currentx * boxwidth + boxwidth, 9 + currenty * boxheight + boxheight );
+    for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
+        switch( ghost ) {
+            case 0:
+                colour = CYAN;
+                break;
+            case 1:
+                colour = MAGENTA;
+                break;
+            case 2:
+                colour = ORANGE;
+                break;
+            case 3:
+                colour = MAGENTA;
+                break;
+        }
+        gpu_rectangle( colour, 475 + ghostx[ ghost ] * boxwidth, 10 + ghosty[ ghost ] * boxheight, 474 + ghostx[ ghost ] * boxwidth + boxwidth, 9 + ghosty[ ghost ] * boxheight + boxheight );
     }
 
     gpu_triangle( BLACK, 468, 1, 473, 10, 463, 10 );
@@ -194,6 +219,11 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
     }
 
     switch( mappeeks ) {
+        case 4:
+            gpu_character_blit( GREEN, 462, 106, 1, 0 );
+        case 3:
+            gpu_character_blit( GREEN, 462, 114, 1, 0 );
+            break;
         case 2:
             gpu_character_blit( GREEN, 462, 122, 1, 0 );
         case 1:
@@ -252,11 +282,82 @@ void right_wall( unsigned char colour, unsigned short steps )
                                 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
 }
 
+void move_ghost( unsigned short ghostnumber) {
+    // CHECK IF FACING A BLANK SPACE
+    if( maze[ ghostx[ ghostnumber ] + directionx[ ghostdirection[ ghostnumber ] ] ][ ghosty[ ghostnumber ] + directiony[ ghostdirection[ ghostnumber ] ] ] == ' ' ) {
+        // DECIDE IF TURNING LEFT
+        if( maze[ ghostx[ ghostnumber ] + leftdirectionx[ ghostdirection[ ghostnumber ] ] ][ ghosty[ ghostnumber ] + leftdirectionx[ ghostdirection[ ghostnumber ] ] ] == ' ' && ( rng( 32 ) == 0 ) ) {
+            // TURN LEFT
+            ghostdirection[ ghostnumber ] = ( ghostdirection[ ghostnumber ] == 0 ) ? 3 : ghostdirection[ ghostnumber ] - 1;
+            ghostx[ ghostnumber ] += directionx[ ghostdirection[ ghostnumber ] ];
+            ghosty[ ghostnumber ] += directiony[ ghostdirection[ ghostnumber ] ];
+        } else {
+            // DECIDE IF TURNING RIGHT
+            if( maze[ ghostx[ ghostnumber ] + rightdirectionx[ ghostdirection[ ghostnumber ] ] ][ ghosty[ ghostnumber ] + rightdirectionx[ ghostdirection[ ghostnumber ] ] ] == ' ' && ( rng( 32 ) == 0 ) ) {
+                ghostdirection[ ghostnumber ] = ( ghostdirection[ ghostnumber ] == 3 ) ? 0 : ghostdirection[ ghostnumber ] + 1;
+                ghostx[ ghostnumber ] += directionx[ ghostdirection[ ghostnumber ] ];
+                ghosty[ ghostnumber ] += directiony[ ghostdirection[ ghostnumber ] ];
+            } else {
+                // MOVE FORWARD
+                ghostx[ ghostnumber ] += directionx[ ghostdirection[ ghostnumber ] ];
+                ghosty[ ghostnumber ] += directiony[ ghostdirection[ ghostnumber ] ];
+            }
+        }
+    } else {
+        // RANDOM TURN AS AT A WALL
+        if( rng( 2 ) == 0 ) {
+            // TURN LEFT
+            ghostdirection[ ghostnumber ] = ( ghostdirection[ ghostnumber ] == 0 ) ? 3 : ghostdirection[ ghostnumber ] - 1;
+        } else {
+            // TURN RIGHT
+            ghostdirection[ ghostnumber ] = ( ghostdirection[ ghostnumber ] == 3 ) ? 0 : ghostdirection[ ghostnumber ] + 1;
+        }
+    }
+}
+
+// DRAW GHOST AT CORRECT DISTANCE
+void draw_ghost( unsigned short steps, unsigned short ghostnumber ) {
+    unsigned short sizechangex = ( MAXDEPTH - steps ) * 12;
+    unsigned short sizechangey = ( MAXDEPTH - steps ) * 12;
+
+    unsigned char colour;
+    switch( ghostnumber ) {
+        case 0:
+            colour = CYAN;
+            break;
+        case 1:
+            colour = MAGENTA;
+            break;
+        case 2:
+            colour = ORANGE;
+            break;
+        case 3:
+            colour = MAGENTA;
+            break;
+    }
+
+    // MAIN BODY
+    gpu_rectangle( colour, 320 - sizechangex, 240 - sizechangey, 320 + sizechangex, 240 + sizechangey );
+
+    // HEAD
+    gpu_circle( colour, 320, 240 - sizechangey, 12 + 6 * ( MAXDEPTH - steps ), 1 );
+
+    // FRILLS
+    gpu_circle( colour, 320 - 8 - 6 * ( MAXDEPTH - steps ), 240 + sizechangey, 4 + 2 * ( MAXDEPTH - steps ), 1 );
+    gpu_circle( colour, 320, 240 + sizechangey, 4 + 2 * ( MAXDEPTH - steps ), 1 );
+    gpu_circle( colour, 320 + 8 + 6 * ( MAXDEPTH - steps ), 240 + sizechangey, 4 + 2 * ( MAXDEPTH - steps ), 1 );
+}
+
+void draw_pill( unsigned short steps ) {
+    gpu_circle( WHITE, 320, 225 + 15 * ( MAXDEPTH - steps ), 4 + 2 * ( MAXDEPTH - steps ), 1 );
+    gpu_circle( GREY2, 320, 225 + 15 * ( MAXDEPTH - steps ), 4 + 2 * ( MAXDEPTH - steps ), 0 );
+}
+
 // WALK THE MAZE IN 3D
 void walk_maze( unsigned short width, unsigned short height )
 {
     // SET START LOCATION TO TOP LEFT FACING EAST
-    unsigned short newx = 1, newy = 1, direction = 1, newdirection = 1, currentx = 1, currenty = 1, visiblesteps, mappeeks = 2;
+    unsigned short newx = 1, newy = 1, direction = 1, newdirection = 1, currentx = 1, currenty = 1, visiblesteps, mappeeks = 4;
     short steps;
 
     // LOOP UNTIL REACHED THE EXIT
@@ -316,6 +417,19 @@ void walk_maze( unsigned short width, unsigned short height )
 
         // MOVE BACKWARDS FROM WALL
         for( steps = min( visiblesteps, MAXDEPTH - 1 ); steps >= 0; steps-- ) {
+            // DRAW PILL
+            if( maze[ currentx + directionx[ direction ] * steps ][ currenty + directiony[ direction ] * steps ] == ' ' && map[ currentx + directionx[ direction ] * steps ][ currenty + directiony[ direction ] * steps ] != ' ' ) {
+                draw_pill( steps );
+            }
+
+            // DRAW GHOST
+            for( unsigned ghost = 0; ghost < 4; ghost++ ) {
+                if( ( currentx + directionx[ direction ] * steps == ghostx[ ghost ] ) && ( currenty + directiony[ direction ] * steps == ghosty[ ghost ] ) ) {
+                    draw_ghost( steps, ghost );
+                }
+            }
+
+            // DRAW SIDE WALLS
             switch( whatisleft( currentx, currenty, direction, steps ) ) {
                 case 'X':
                     left_wall( YELLOW, steps );
@@ -386,7 +500,7 @@ void walk_maze( unsigned short width, unsigned short height )
                 while( get_buttons() & 16 );
             }
 
-            // FIRE2 - PEEK ( only 2 goes! )
+            // FIRE2 - PEEK ( only 4 goes! )
             if( ( get_buttons() & 4 ) && ( mappeeks != 0 ) ) {
                 draw_map( width, height, currentx, currenty, direction, 0, mappeeks );
                 while( get_buttons() & 4 );
@@ -396,37 +510,63 @@ void walk_maze( unsigned short width, unsigned short height )
         }
 
         currentx = newx; currenty = newy; direction = newdirection;
+        for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
+            move_ghost( ghost );
+        }
     }
 }
 
 void main( void )
 {
-    unsigned short level = 0;
+    unsigned short level = 0, levelselected;
+
 	while(1) {
         // SETUP THE SCREEN BLUE/GREEN BACKGROUND
+        gpu_cs();
         tpu_cs();
         terminal_showhide( 0 );
-        set_background( DKBLUE, DKGREEN, BKG_5050_V );
+        set_background( 0, 0, BKG_RAINBOW );
+
+        levelselected = 0;
+        do {
+            tpu_outputstringcentre( 29, TRANSPARENT, YELLOW, "Select Level" );
+            tpu_set( 1, 29, TRANSPARENT, BLACK ); tpu_outputstring( "Level: " ); tpu_outputnumber_short( level );
+            tpu_set( 60, 29, TRANSPARENT, BLACK ); tpu_outputstring( "Size: " ); tpu_outputnumber_short( levelwidths[level] ); tpu_outputstring( " x " ); tpu_outputnumber_short( levelheights[level] );
+
+            while( get_buttons() == 1 );
+            // LEFT / RIGHT to change level, FIRE to select
+            if( ( get_buttons() & 32 ) != 0 ) {
+                while( get_buttons() & 32 );
+                level = ( level == 0 ) ? MAXLEVEL : level - 1;
+            }
+            if( ( get_buttons() & 64 ) != 0 ) {
+                while( get_buttons() & 64 );
+                level = ( level < MAXLEVEL ) ? level + 1 : 0;
+            }
+            if( ( get_buttons() & 2 ) != 0 ) {
+                while( get_buttons() & 2 );
+                levelselected = 1;
+            }
+        } while( levelselected == 0 );
 
         // GENERATE THE MAZE
-        tpu_set( 21, 29, TRANSPARENT, YELLOW ); tpu_outputstring( "Generating Maze - Best to take notes!" );
-        tpu_set( 1, 29, TRANSPARENT, BLACK ); tpu_outputstring( "Level: " ); tpu_outputnumber_short( level );
-        tpu_set( 60, 29, TRANSPARENT, BLACK ); tpu_outputstring( "Size: " ); tpu_outputnumber_short( levelwidths[level] ); tpu_outputstring( " x " ); tpu_outputnumber_short( levelheights[level] );
+        tpu_outputstringcentre( 29, TRANSPARENT, YELLOW, "Generating Maze - Best to take notes!" );
         initialise_maze( levelwidths[level], levelheights[level] );
         generate_maze( levelwidths[level], levelheights[level], levelgenerationsteps[level] );
         display_maze( levelwidths[level], levelheights[level], 1, 1 );
 
         // WAIT TO ENTER THE MAZE
-        tpu_set( 21, 29, TRANSPARENT, GREEN ); tpu_outputstring(  "     Press FIRE to walk the maze!    " ); while(  ( get_buttons() & 2 ) == 0 );
-        tpu_set( 21, 29, TRANSPARENT, PURPLE ); tpu_outputstring( "             Release FIRE!           " ); while( get_buttons() & 2 );
+        tpu_outputstringcentre( 29, TRANSPARENT, GREEN, "Press FIRE to walk the maze!" ); while( ( get_buttons() & 2 ) == 0 );
+        tpu_outputstringcentre( 29, TRANSPARENT, PURPLE, "Release FIRE!" ); while( get_buttons() & 2 );
 
         // ENTER THE MAZE IN 3D
+        set_background( DKBLUE, DKGREEN, BKG_5050_V );
         walk_maze( levelwidths[level], levelheights[level] );
 
-        // COMPLETED THE MAZE, SET BACKGROUND TO STATIC
-        set_background( DKBLUE, DKGREEN, 6 );
-        tpu_set( 21, 29, TRANSPARENT, GREEN ); tpu_outputstring( "        Press FIRE to restart!       " ); while(  ( get_buttons() & 2 ) == 0 );
-        tpu_set( 21, 29, TRANSPARENT, PURPLE ); tpu_outputstring( "       Release FIRE!      " ); while( get_buttons() & 2  );
+        // COMPLETED THE MAZE
+        set_background( 0, 0, BKG_STATIC );
+        tpu_outputstringcentre( 29, TRANSPARENT, GREEN, "Press FIRE to restart!" ); while( ( get_buttons() & 2 ) == 0 );
+        tpu_outputstringcentre( 29, TRANSPARENT, PURPLE, "Release FIRE!" ); while( get_buttons() & 2  );
 
         // GO TO THE NEXT LEVEL, OR BACK TO 0
         level = ( level < MAXLEVEL ) ? level + 1 : 0;

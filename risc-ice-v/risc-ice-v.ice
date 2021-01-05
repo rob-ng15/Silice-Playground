@@ -287,10 +287,7 @@ algorithm sdramcontroller (
     bram uint16 Icachedata <input!> [2048] = uninitialized;
     bram uint15 Icachetag <input!> [2048] = uninitialized;
 
-    // ACTIVE FLAG
-    uint1   active = 0;
-
-    // SIGN EXTENDER UNIT
+    // SIGN EXTENDER UNITS
     uint8   SE8nosign = uninitialized;
     int32   SE8sign = uninitialized;
     signextender8 signextender8unit (
@@ -310,6 +307,11 @@ algorithm sdramcontroller (
     uint1   Icachetagmatch := ( Icachetag.rdata == { 1b1, address[12,14] } );
     uint1   Dcachetagmatch := ( Dcachetag.rdata == { 1b1, address[12,14] } );
 
+    // MEMORY ACCESS FLAGS
+    uint1   active = 0;
+    busy := ( readflag || writeflag ) ? 1 : active;
+    sio.addr := { address[1,25], 1b0 };
+    sio.in_valid := 0;
 
     // FLAGS FOR CACHE ACCESS
     Dcachedata.wenable := 0; Dcachedata.addr := address[1,11];
@@ -317,17 +319,14 @@ algorithm sdramcontroller (
     Icachedata.wenable := 0; Icachedata.addr := address[1,11];
     Icachetag.wenable := 0; Icachetag.addr := address[1,11]; Icachetag.wdata := { 1b1, address[12,14] };
 
-    // MEMORY ACCESS FLAGS
-    busy := ( readflag || writeflag ) ? 1 : active;
-    sio.addr := { address[1,25], 1b0 };
-    sio.in_valid := 0;
-
     // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
-    readdata := Icache ? Icachedata.rdata : Dcachedata.rdata;
-
+    readdata := ( Icache && Icachetagmatch ) ? Icachedata.rdata : ( ( ~Icache && Dcachetagmatch ) ? Dcachedata.rdata : sio.data_out );
+    //readdata := Icache ? Icachedata.rdata : Dcachedata.rdata;
     // 8/16 bit READ WITH OPTIONAL SIGN EXTENSION
-    SE8nosign := Dcachedata.rdata[address[0,1] ? 8 : 0, 8];
-    SE16nosign := Dcachedata.rdata;
+    SE8nosign := ( ~Icache && Dcachetagmatch ) ? Dcachedata.rdata[address[0,1] ? 8 : 0, 8] : sio.data_out[address[0,1] ? 8 : 0, 8];
+    SE16nosign := ( ~Icache && Dcachetagmatch ) ? Dcachedata.rdata : sio.data_out;
+    //SE8nosign := Dcachedata.rdata[address[0,1] ? 8 : 0, 8];
+    //SE16nosign := Dcachedata.rdata;
     readdata8 := SE8sign;
     readdata16 := SE16sign;
 
@@ -346,50 +345,40 @@ algorithm sdramcontroller (
                 while( !sio.done ) {}
 
                 // WRITE RESULT TO ICACHE or DCACHE
-                Icachetag.wenable = Icache;
+                Dcachedata.wdata = sio.data_out;
+                Dcachedata.wenable = ~Icache;
                 Dcachetag.wenable = ~Icache;
                 Icachedata.wdata = sio.data_out;
                 Icachedata.wenable = Icache;
-                Dcachedata.wdata = sio.data_out;
-                Dcachedata.wenable = ~Icache;
-                ++:
+                Icachetag.wenable = Icache;
             }
 
             active = 0;
         }
 
         if( writeflag ) {
-            // SDRAM
+            // SDRAM writethrough to CACHE
             active = 1;
 
             if( ( function3 & 3 ) == 0 ) {
                 // 8 BIT WRITES
                 // SDRAM - 1 cycle for CACHE TAG ACCESS
                 ++:
-                if( Dcachetagmatch ) {
-                    // CACHE HIT
-                    // SETUP WRITE TO CACHE AND SDRAM
-                    Dcachedata.wdata = ( address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] } );
-                    Icachedata.wdata = ( address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] } );
-                    sio.data_in = ( address[0,1] ? { writedata[0,8], Dcachedata.rdata[0,8] } : { Dcachedata.rdata[8,8], writedata[0,8] } );
-                } else {
+                if( ~Dcachetagmatch ) {
                     // CACHE MISS, READ FROM SDRAM, MODIFY AND WRITE TO CACHE AND SDRAM
                     sio.rw = 0;
                     sio.in_valid = 1;
                     while( !sio.done ) {}
-
-                    // SETUP WRITE TO CACHE AND SDRAM
-                    Dcachedata.wdata = ( address[0,1] ? { writedata[0,8], sio.data_out[0,8] } : { sio.data_out[8,8], writedata[0,8] } );
-                    Icachedata.wdata = ( address[0,1] ? { writedata[0,8], sio.data_out[0,8] } : { sio.data_out[8,8], writedata[0,8] } );
-                    sio.data_in = ( address[0,1] ? { writedata[0,8], sio.data_out[0,8] } : { sio.data_out[8,8], writedata[0,8] } );
                 }
-            } else {
-                // 16 BIT
-                // SETUP WRITE TO CACHE AND SDRAM
-                Dcachedata.wdata = writedata;
-                Icachedata.wdata = writedata;
-                sio.data_in = writedata;
             }
+
+            // SETUP WRITE TO CACHE AND SDRAM
+            Dcachedata.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], Dcachetagmatch ? Dcachedata.rdata[0,8] : sio.data_out[0,8] } :
+                                                                            { Dcachetagmatch ? Dcachedata.rdata[8,8] : sio.data_out[8,8], writedata[0,8] } ) : writedata;
+            Icachedata.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], Dcachetagmatch ? Dcachedata.rdata[0,8] : sio.data_out[0,8] } :
+                                                                            { Dcachetagmatch ? Dcachedata.rdata[8,8] : sio.data_out[8,8], writedata[0,8] } ) : writedata;
+            sio.data_in = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], Dcachetagmatch ? Dcachedata.rdata[0,8] : sio.data_out[0,8] } :
+                                                                            { Dcachetagmatch ? Dcachedata.rdata[8,8] : sio.data_out[8,8], writedata[0,8] } ) : writedata;
 
             // COMPLETE WRITE TO CACHE
             Dcachedata.wenable = 1;
