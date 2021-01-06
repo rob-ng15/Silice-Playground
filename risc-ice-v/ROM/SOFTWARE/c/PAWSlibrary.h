@@ -9,6 +9,8 @@
        __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
 
+#define abs(a) (((a) < 0 )? -(a) : (a))
+
 typedef unsigned int size_t;
 
 // STRUCTURE OF THE SPRITE UPDATE FLAG

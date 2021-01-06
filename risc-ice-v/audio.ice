@@ -21,23 +21,19 @@ algorithm apu(
         // Square wave
         15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-
         // Sawtooth wave
         0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7,
         8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15,
-
         // Triangle wave,
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
         15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
-
         // Sine wave,
         7, 8, 10, 11, 12, 13, 13, 14, 15, 14, 13, 13, 12, 11, 10, 8,
         7, 6, 4, 3, 2, 1, 1, 0, 0, 0, 1, 1, 2, 3, 4, 6
-
         ,pad(1)
     };
 
-    // Calculated as 25MHz / note frequency / 32 to give 32 step points per note
+    // Calculated as 50MHz / note frequency / 32 to give 32 step points per note
     brom uint16 frequencytable[128] = {
         0,
         47778, 45097, 42566, 40177, 37922, 35793, 33784, 31888, 30098, 28409, 26815, 25310,     // 1 = C 2 or Deep C
@@ -48,26 +44,23 @@ algorithm apu(
         1493, 1409, 1330, pad(1024)                                                             // 61 = C 7 or Double High C
     };
 
-    uint4   selected_waveform = uninitialized;
-    uint7   selected_note = uninitialized;
-    uint16  selected_duration = uninitialized;
+    // LATCH SELECTED WAVEFORM NOTE AND DURATION ON APU_WRITE
+    uint4   selected_waveform = uninitialised;
+    uint7   selected_note = uninitialised;
+    uint16  selected_duration = uninitialised;
 
-    uint5   point = uninitialized;
-    uint16  counter50mhz = uninitialized;
-    uint16  counter1khz = uninitialized;
+    // POSITION IN THE WAVETABLE AND TIMERS FOR FREQUENCY AND DURATION
+    uint5   point = uninitialised;
+    uint16  counter50mhz = uninitialised;
+    uint16  counter1khz = uninitialised;
 
     waveformtable.addr := selected_waveform * 32 + point;
     frequencytable.addr := selected_note;
 
-    audio_active := ( selected_duration > 0);
+    audio_active := ( selected_duration > 0 );
 
     while(1) {
-        if( ( selected_duration != 0 ) && ( counter50mhz == 0 ) ) {
-            audio_output = ( selected_waveform == 4 ) ? staticGenerator : waveformtable.rdata;
-        }
-
-        if( apu_write != 0 ) {
-            // Latch the selected note, waveform and duration
+        if( apu_write ) {
             selected_waveform = waveform;
             selected_note = note;
             selected_duration = duration;
@@ -76,6 +69,9 @@ algorithm apu(
             counter1khz = 50000;
         } else {
             if( selected_duration != 0 ) {
+                if( counter50mhz == 0 ) {
+                    audio_output = ( selected_waveform == 4 ) ? staticGenerator : waveformtable.rdata;
+                }
                 counter50mhz = ( counter50mhz != 0 ) ? counter50mhz - 1 : frequencytable.rdata;
                 point = ( counter50mhz != 0 ) ? point : point + 1;
                 counter1khz = ( counter1khz != 0 ) ? counter1khz - 1 : 50000;
