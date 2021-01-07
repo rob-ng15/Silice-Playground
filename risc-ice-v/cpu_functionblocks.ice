@@ -9,14 +9,11 @@ algorithm PAWSCPU (
     output  uint16  writedata,
     output  uint1   writememory,
     input   uint16  readdata,
-    input   int32   readdata8,
-    input   int32   readdata16,
     output  uint1   readmemory,
     output  uint1   Icacheflag,
 
     input   uint1   memorybusy,
 
-    input   uint1   clock_cpuunit,
     input   uint1   clock_copro
 ) <autorun> {
     // RISC-V REGISTERS
@@ -144,10 +141,29 @@ algorithm PAWSCPU (
         HIGHLOW :> HIGHLOW
     );
 
+    uint8   SE8nosign = uninitialized;
+    int32   SE8sign = uninitialized;
+    signextender8 signextender8unit(
+        function3 <: function3,
+        nosign <: SE8nosign,
+        withsign :> SE8sign
+    );
+    uint16  SE16nosign = uninitialized;
+    int32   SE16sign = uninitialized;
+    signextender16 signextender16unit(
+        function3 <: function3,
+        nosign <: SE16nosign,
+        withsign :> SE16sign
+    );
+
     // CSR REGISTERS
     CSRblock CSR(
         instruction <: instruction
     );
+
+    // 8/16 bit READ WITH OPTIONAL SIGN EXTENSION
+    SE8nosign := readdata[address[0,1] ? 8 : 0, 8];
+    SE16nosign := readdata;
 
     // MEMORY ACCESS FLAGS
     readmemory := 0;
@@ -243,7 +259,7 @@ algorithm PAWSCPU (
                     }
                     default: {
                         // 8/16 bit with optional sign extension
-                        result = ( ( function3 & 3 ) == 0 ) ? readdata8 : readdata16;
+                        result = ( ( function3 & 3 ) == 0 ) ? SE8sign : SE16sign;
                     }
                 }
             }
@@ -412,7 +428,6 @@ algorithm addressgenerator (
     while(1) {
     }
 }
-
 
 // BRANCH COMPARISIONS
 algorithm branchcomparison (

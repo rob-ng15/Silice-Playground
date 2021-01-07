@@ -6,8 +6,8 @@ module ulx3s_clk_risc_ice_v_CPU
 (
     input clkin,         // 25 MHz, 0 deg
     output  clkCPU,      // 25 MHz              // CPU
-    output  clkCOPRO,    // 50 MHz, 0 deg       // CO-PROCESSORS
-    output  clk50,    // 50 MHz, 0 deg       // TIMERS RNG
+    output  clkCOPRO,    // 50 MHz, 0 deg       // ALU + MULT/DIV CO-PROCESSOR
+    output  clkCPUUNIT,  // 50 MHz, 0 deg       // FUNCTION BLOCKS FOR THE CPU
     output  clkMEMORY,   // 50 MHz, 0 deg       // MEMORY CONTROLLER - BRAM
     output  locked
 );
@@ -51,7 +51,7 @@ EHXPLLL #(
         .CLKI(clkin),
         .CLKOP(clkCOPRO),
         .CLKOS(clkMEMORY),
-        .CLKOS2(clk50),
+        .CLKOS2(clkCPUUNIT),
         .CLKOS3(clkCPU),
         .CLKFB(clkCOPRO),
         .CLKINTFB(),

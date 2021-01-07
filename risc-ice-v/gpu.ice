@@ -50,7 +50,6 @@ algorithm gpu(
     // GPU <-> VECTOR DRAWER Communication
     int11 v_gpu_x = uninitialised;
     int11 v_gpu_y = uninitialised;
-    uint7 v_gpu_colour = uninitialised;
     int11 v_gpu_param0 = uninitialised;
     int11 v_gpu_param1 = uninitialised;
     uint1 v_gpu_write = uninitialised;
@@ -58,7 +57,6 @@ algorithm gpu(
     // VECTOR DRAWER UNIT
     vectors vector_drawer (
         vector_block_number <: vector_block_number,
-        vector_block_colour <: vector_block_colour,
         vector_block_xc <: vector_block_xc,
         vector_block_yc <: vector_block_yc,
         draw_vector <: draw_vector,
@@ -72,7 +70,6 @@ algorithm gpu(
 
         gpu_x :> v_gpu_x,
         gpu_y :> v_gpu_y,
-        gpu_colour :> v_gpu_colour,
         gpu_param0 :> v_gpu_param0,
         gpu_param1 :> v_gpu_param1,
         gpu_write :> v_gpu_write,
@@ -148,7 +145,7 @@ algorithm gpu(
     while(1) {
         if( v_gpu_write ) {
             // DRAW LINE FROM (X,Y) to (PARAM0,PARAM1) from VECTOR BLOCK
-            gpu_active_colour = v_gpu_colour;
+            gpu_active_colour = vector_block_colour;
             gpu_active = 1;
             VECTORline.start = 1;
             while( VECTORline.busy ) {
@@ -771,7 +768,6 @@ algorithm blit (
 // Each vector block has a centre x and y coordinate and a colour { rrggbb } when drawn
 algorithm vectors(
     input   uint5   vector_block_number,
-    input   uint7   vector_block_colour,
     input   int11   vector_block_xc,
     input   int11   vector_block_yc,
     input   uint1   draw_vector,
@@ -788,7 +784,6 @@ algorithm vectors(
     // Communication with the GPU
     output  int11 gpu_x,
     output  int11 gpu_y,
-    output  uint7 gpu_colour,
     output  int11 gpu_param0,
     output  int11 gpu_param1,
     output  uint1 gpu_write,
@@ -822,7 +817,6 @@ algorithm vectors(
     while(1) {
         if( draw_vector ) {
             block_number = vector_block_number;
-            gpu_colour = vector_block_colour;
             vertices_number = 0;
             vector_block_active = 1;
             ++:

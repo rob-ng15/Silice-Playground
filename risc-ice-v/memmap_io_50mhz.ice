@@ -32,14 +32,11 @@ algorithm memmap_io (
 
     // Memory access
     input   uint16  memoryAddress,
-    input   uint3   function3,
     input   uint1   memoryWrite,
     input   uint1   memoryRead,
 
     input   uint16  writeData,
     output! uint32  readData,
-    output! uint32  readData8,
-    output! uint32  readData16
 ) <autorun> {
     // 1hz timers (p1hz used for systemClock, timer1hz for user purposes)
     uint16 systemClock = uninitialized;
@@ -294,19 +291,6 @@ algorithm memmap_io (
         store       <:> sdbuffer
     );
 
-    // SIGN EXTENDER + HALF WORD COMBINER
-    // SIGN EXTENDER UNITS
-    signextender8 signextender8unitIO (
-        function3 <: function3,
-        nosign <: readData,
-        withsign :> readData8
-    );
-    signextender16 signextender16unitIO (
-        function3 <: function3,
-        nosign <: readData,
-        withsign :> readData16
-    );
-
     // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
     simple_dualport_bram uint8 uartInBuffer [4096] = uninitialized;
     uint13  uartInBufferNext = 0;
@@ -461,9 +445,9 @@ algorithm memmap_io (
                 case 16h800c: { leds = writeData; }
 
                 // BACKGROUND
-                case 16h8100: { background_generator.backgroundcolour = writeData; background_generator.background_write = 1; }
-                case 16h8104: { background_generator.backgroundcolour_alt = writeData; background_generator.background_write = 2; }
-                case 16h8108: { background_generator.backgroundcolour_mode = writeData; background_generator.background_write = 3; }
+                case 16h8100: { background_generator.backgroundcolour = writeData; }
+                case 16h8104: { background_generator.backgroundcolour_alt = writeData; }
+                case 16h8108: { background_generator.backgroundcolour_mode = writeData; }
 
                 // TILE MAP
                 case 16h8200: { tile_map.tm_x = writeData; }
@@ -578,7 +562,6 @@ algorithm memmap_io (
         // IO memory map runs at 50MHz, display co-processors at 25MHz
         // Delay to reset co-processors therefore required
         if( ~memoryWrite && ~LATCHmemoryWrite ) {
-            background_generator.background_write = 0;
             tile_map.tm_write = 0;
             tile_map.tm_scrollwrap = 0;
             lower_sprites.sprite_layer_write = 0;

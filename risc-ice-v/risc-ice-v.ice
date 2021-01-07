@@ -123,6 +123,7 @@ algorithm main(
     );
 
     // SDRAM and BRAM (for BIOS)
+    // FUNCTION3 controls byte read/writes
     sdramcontroller sdram <@clock_memory> (
         function3 <: function3,
         sio <:> sio_halfrate,
@@ -159,7 +160,6 @@ algorithm main(
         video_clock <: video_clock,
         video_reset <: video_reset,
 
-        function3 <: function3,
         memoryAddress <: address,
         writeData <: writedata
     );
@@ -189,8 +189,6 @@ algorithm main(
     IO_Map.memoryRead := CPU.readmemory && ~address[28,1] && address[15,1];
 
     CPU.readdata := address[28,1] ? sdram.readdata : ( address[15,1] ? IO_Map.readData : ram.readdata );
-    CPU.readdata8 := address[28,1] ? sdram.readdata8 : ( address[15,1] ? IO_Map.readData8 : ram.readdata8 );
-    CPU.readdata16 := address[28,1] ? sdram.readdata16 : ( address[15,1] ? IO_Map.readData16 : ram.readdata16 );
 
     while(1) {
     }
@@ -208,30 +206,12 @@ algorithm bramcontroller (
 
     input   uint1   readflag,
     output  uint16  readdata,
-    output  int32   readdata8,
-    output  int32   readdata16,
 ) <autorun> {
     // RISC-V RAM and BIOS
     bram uint16 ram <input!> [12288] = {
         $include('ROM/BIOS.inc')
         , pad(uninitialized)
     };
-
-    // SIGN EXTENDER UNIT
-    uint8   SE8nosign = uninitialized;
-    int32   SE8sign = uninitialized;
-    signextender8 signextender8unit (
-        function3 <: function3,
-        nosign <: SE8nosign,
-        withsign :> SE8sign
-    );
-    uint16  SE16nosign = uninitialized;
-    int32   SE16sign = uninitialized;
-    signextender16 signextender16unit (
-        function3 <: function3,
-        nosign <: SE16nosign,
-        withsign :> SE16sign
-    );
 
     // FLAGS FOR BRAM ACCESS
     ram.wenable := 0;
@@ -240,12 +220,6 @@ algorithm bramcontroller (
     // RETURN RESULTS FROM BRAM OR CACHE
     // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
     readdata := ram.rdata;
-
-    // 8/16 bit READ WITH OPTIONAL SIGN EXTENSION
-    SE8nosign := ram.rdata[address[0,1] ? 8 : 0, 8];
-    SE16nosign := ram.rdata;
-    readdata8 := SE8sign;
-    readdata16 := SE16sign;
 
     while(1) {
         if( writeflag ) {
@@ -274,8 +248,6 @@ algorithm sdramcontroller (
     input   uint1   readflag,
     input   uint1   Icache,
     output  uint16  readdata,
-    output  int32   readdata8,
-    output  int32   readdata16,
 
     output  uint1   busy
 ) <autorun> {
@@ -286,22 +258,6 @@ algorithm sdramcontroller (
     bram uint15 Dcachetag <input!> [2048] = uninitialized;
     bram uint16 Icachedata <input!> [2048] = uninitialized;
     bram uint15 Icachetag <input!> [2048] = uninitialized;
-
-    // SIGN EXTENDER UNITS
-    uint8   SE8nosign = uninitialized;
-    int32   SE8sign = uninitialized;
-    signextender8 signextender8unit (
-        function3 <: function3,
-        nosign <: SE8nosign,
-        withsign :> SE8sign
-    );
-    uint16  SE16nosign = uninitialized;
-    int32   SE16sign = uninitialized;
-    signextender16 signextender16unit (
-        function3 <: function3,
-        nosign <: SE16nosign,
-        withsign :> SE16sign
-    );
 
     // CACHE TAG match flags
     uint1   Icachetagmatch := ( Icachetag.rdata == { 1b1, address[12,14] } );
@@ -321,14 +277,6 @@ algorithm sdramcontroller (
 
     // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
     readdata := ( Icache && Icachetagmatch ) ? Icachedata.rdata : ( ( ~Icache && Dcachetagmatch ) ? Dcachedata.rdata : sio.data_out );
-    //readdata := Icache ? Icachedata.rdata : Dcachedata.rdata;
-    // 8/16 bit READ WITH OPTIONAL SIGN EXTENSION
-    SE8nosign := ( ~Icache && Dcachetagmatch ) ? Dcachedata.rdata[address[0,1] ? 8 : 0, 8] : sio.data_out[address[0,1] ? 8 : 0, 8];
-    SE16nosign := ( ~Icache && Dcachetagmatch ) ? Dcachedata.rdata : sio.data_out;
-    //SE8nosign := Dcachedata.rdata[address[0,1] ? 8 : 0, 8];
-    //SE16nosign := Dcachedata.rdata;
-    readdata8 := SE8sign;
-    readdata16 := SE16sign;
 
     while(1) {
         if( readflag ) {

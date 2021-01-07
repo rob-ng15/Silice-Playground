@@ -18,7 +18,7 @@ algorithm sdram_half_speed_access(
 
   sdh.done     := 0; // pulses high when ready
   sd .in_valid := 0; // pulses high when ready
-  
+
   always {
     // buffer requests
     if (half_clock) { // read only on slow clock
@@ -57,7 +57,7 @@ algorithm sdram_byte_readcache(
   // cached reads
   sameas(sdr.data_out) cached = uninitialized;
   uint26  cached_addr         = 26h3FFFFFF;
-  
+
   always {
 
     if (sdb.in_valid) {
@@ -84,7 +84,7 @@ algorithm sdram_byte_readcache(
         sdr.rw        = 1;
         sdr.addr      = sdb.addr;
         sdr.data_in   = sdb.data_in;
-        sdr.in_valid  = 1; 
+        sdr.in_valid  = 1;
         // not done
         sdb.done      = 0;
         // invalidate cache
