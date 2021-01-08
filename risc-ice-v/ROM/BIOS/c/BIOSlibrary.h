@@ -55,6 +55,7 @@ extern void set_background( unsigned char, unsigned char, unsigned char );
 
 // TERMINAL WINDOW
 extern void terminal_showhide( unsigned char );
+extern void terminal_reset( void );
 
 // GPU AND BITMAP
 extern void gpu_pixel( unsigned char, short, short );

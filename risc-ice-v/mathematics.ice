@@ -89,9 +89,7 @@ algorithm multiplicationDSP (
         if( start ) {
             busy = 1;
             ++:
-            product = D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 };
-            ++:
-            product = resultsign ? -product : product;
+            product = resultsign ? -( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } ) : ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
             ++:
             busy = 0;
         }
@@ -101,10 +99,11 @@ algorithm multiplicationDSP (
 // PERFORM OPTIONAL SIGN EXTENSION FOR 8 BIT AND 16 BIT READS
 algorithm signextender8 (
     input   uint3   function3,
-    input!  uint8  nosign,
+    input!  uint8   nosign,
     output! uint32  withsign
 ) <autorun> {
-    withsign := { ( ( nosign[7,1] & ~function3[2,1] ) ? 24hffffff : 24h000000 ), nosign[0,8] };
+    withsign := ~function3[2,1] ? { {24{nosign[7,1]}}, nosign[0,8] } : nosign[0,8];
+
     while(1) {
     }
 }
@@ -114,7 +113,8 @@ algorithm signextender16 (
     input!  uint16  nosign,
     output! uint32  withsign
 ) <autorun> {
-    withsign := { ( nosign[15,1] & ~function3[2,1] ) ? 16hffff : 16h0000, nosign };
+    withsign := ~function3[2,1] ? { {16{nosign[15,1]}}, nosign[0,16] } : nosign[0,16];
+
     while(1) {
     }
 }

@@ -20,13 +20,12 @@ algorithm pulse1hz(
 // Create 1khz (1 milli-second counter)
 algorithm pulse1khz(
     output  uint16  counter1khz,
-    input   uint16  resetCount,
-    input   uint1   resetCounter
+    input   uint16  resetCount
 ) <autorun> {
     uint16 counter50mhz = 0;
 
     while (1) {
-        if( resetCounter == 1 ) {
+        if( resetCount != 0 ) {
             counter1khz = resetCount;
             counter50mhz = 0;
         } else {

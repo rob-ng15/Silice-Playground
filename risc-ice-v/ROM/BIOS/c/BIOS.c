@@ -157,6 +157,7 @@ void main( void ) {
     unsigned short i,j;
     unsigned char uartData = 0;
 
+    terminal_reset();
     gpu_cs();
     tpu_cs();
     set_background( DKBLUE - 1, BLACK, BKG_SOLID );

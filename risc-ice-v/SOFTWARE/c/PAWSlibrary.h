@@ -70,6 +70,7 @@ extern void set_background( unsigned char, unsigned char, unsigned char );
 
 // TERMINAL WINDOW
 extern void terminal_showhide( unsigned char );
+extern void terminal_reset( void );
 
 // TILEMAP
 extern void set_tilemap_tile( unsigned char, unsigned char, unsigned char, unsigned char, unsigned char );

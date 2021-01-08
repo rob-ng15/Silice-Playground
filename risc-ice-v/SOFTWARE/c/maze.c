@@ -8,6 +8,9 @@
 // DRAWING VARIABLES
 #define MAXDEPTH 16
 
+// LEVEL - DETERMINES SIZE OF MAZE
+unsigned short level = 0;
+
 // WIDTH OF MAZE DEPENDING ON LEVEL
 unsigned short levelwidths[] = { 10, 16, 20, 32, 40, 64, 80, 128, 160 };
 unsigned short levelheights[] = { 8, 12, 16, 24, 30, 48, 60, 80, 120 };
@@ -25,8 +28,8 @@ short directiony[] = { -1, 0, 1, 0 }, leftdirectiony[] = { 0, -1, 0, 1 }, rightd
 
 // STORAGE FOR MAZE and MAP
 // WALLS WILL BE '#' '*' GAPS ' ' ENTRANCE 'E' EXIT 'X'
-char maze[MAXWIDTH][MAXHEIGHT];
-char map[MAXWIDTH][MAXHEIGHT];
+char maze[MAXWIDTH+2][MAXHEIGHT];
+char map[MAXWIDTH+2][MAXHEIGHT];
 
 // POSITION AND DIRECTION OF THE GOST
 unsigned short ghostx[4], ghosty[4], ghostdirection[4];
@@ -131,14 +134,11 @@ void move_ghost( unsigned short ghostnumber) {
         if( maze[ ghostx[ ghostnumber ] + leftdirectionx[ ghostdirection[ ghostnumber ] ] ][ ghosty[ ghostnumber ] + leftdirectionx[ ghostdirection[ ghostnumber ] ] ] == ' ' && ( rng( 32 ) == 0 ) ) {
             // TURN LEFT
             ghostdirection[ ghostnumber ] = ( ghostdirection[ ghostnumber ] == 0 ) ? 3 : ghostdirection[ ghostnumber ] - 1;
-            ghostx[ ghostnumber ] += directionx[ ghostdirection[ ghostnumber ] ];
-            ghosty[ ghostnumber ] += directiony[ ghostdirection[ ghostnumber ] ];
         } else {
             // DECIDE IF TURNING RIGHT
             if( maze[ ghostx[ ghostnumber ] + rightdirectionx[ ghostdirection[ ghostnumber ] ] ][ ghosty[ ghostnumber ] + rightdirectionx[ ghostdirection[ ghostnumber ] ] ] == ' ' && ( rng( 32 ) == 0 ) ) {
+                // TURN RIGHT
                 ghostdirection[ ghostnumber ] = ( ghostdirection[ ghostnumber ] == 3 ) ? 0 : ghostdirection[ ghostnumber ] + 1;
-                ghostx[ ghostnumber ] += directionx[ ghostdirection[ ghostnumber ] ];
-                ghosty[ ghostnumber ] += directiony[ ghostdirection[ ghostnumber ] ];
             } else {
                 // MOVE FORWARD
                 ghostx[ ghostnumber ] += directionx[ ghostdirection[ ghostnumber ] ];
@@ -166,7 +166,7 @@ void draw_pill( unsigned short steps ) {
 
 
 // CREATE A BLANK MAZE OF WIDTH x HEIGHT
-// ADD ENTRANCE AND EXIT
+// ADD ENTRANCE AND EXIT AND GHOSTS
 void initialise_maze( unsigned short width, unsigned short height )
 {
     unsigned short x,y;
@@ -189,9 +189,17 @@ void initialise_maze( unsigned short width, unsigned short height )
 
     // POSITION GHOSTS AT EXIT FACING WEST
     for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
-        ghostx[ ghost ] = width - 3;
-        ghosty[ ghost ] = height - 3;
-        ghostdirection[ ghost ] = 3;
+        if( ghost <= level ) {
+            // AT EXIT
+            ghostx[ ghost ] = width - 3;
+            ghosty[ ghost ] = height - 3;
+            ghostdirection[ ghost ] = 3;
+        } else {
+            // OFF MAP
+            ghostx[ ghost ] = width + 1;
+            ghosty[ ghost ] = height - 3;
+            ghostdirection[ ghost ] = 3;
+        }
     }
 }
 
@@ -318,7 +326,9 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
 
     gpu_rectangle( GREEN, 475 + currentx * boxwidth, 10 + currenty * boxheight, 474 + currentx * boxwidth + boxwidth, 9 + currenty * boxheight + boxheight );
     for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
-        gpu_rectangle( ghostcolour( ghost ), 475 + ghostx[ ghost ] * boxwidth, 10 + ghosty[ ghost ] * boxheight, 474 + ghostx[ ghost ] * boxwidth + boxwidth, 9 + ghosty[ ghost ] * boxheight + boxheight );
+        if( ghost <= level ) {
+            gpu_rectangle( ghostcolour( ghost ), 475 + ghostx[ ghost ] * boxwidth, 10 + ghosty[ ghost ] * boxheight, 474 + ghostx[ ghost ] * boxwidth + boxwidth, 9 + ghosty[ ghost ] * boxheight + boxheight );
+        }
     }
 
     gpu_triangle( BLACK, 468, 1, 473, 10, 463, 10 );
@@ -472,8 +482,10 @@ void walk_maze( unsigned short width, unsigned short height )
 
             // DRAW GHOST
             for( unsigned ghost = 0; ghost < 4; ghost++ ) {
-                if( ( currentx + directionx[ direction ] * steps == ghostx[ ghost ] ) && ( currenty + directiony[ direction ] * steps == ghosty[ ghost ] ) ) {
-                    draw_ghost( steps, ghost, direction );
+                if( ghost <= level ) {
+                    if( ( currentx + directionx[ direction ] * steps == ghostx[ ghost ] ) && ( currenty + directiony[ direction ] * steps == ghosty[ ghost ] ) ) {
+                        draw_ghost( steps, ghost, direction );
+                    }
                 }
             }
 
@@ -559,14 +571,16 @@ void walk_maze( unsigned short width, unsigned short height )
 
         currentx = newx; currenty = newy; direction = newdirection;
         for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
-            move_ghost( ghost );
+            if( ghost <= level ) {
+                move_ghost( ghost );
+            }
         }
     }
 }
 
 void main( void )
 {
-    unsigned short level = 0, levelselected;
+    unsigned short levelselected;
 
 	while(1) {
         // SETUP THE SCREEN BLUE/GREEN BACKGROUND

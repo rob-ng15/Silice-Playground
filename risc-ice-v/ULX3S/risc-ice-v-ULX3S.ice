@@ -28,6 +28,7 @@ $include('../audio.ice')
 $include('../memmap_io_50mhz.ice')
 
 // CPU
+$include('../cpu.ice')
 $include('../cpu_functionblocks.ice')
 $include('../mathematics.ice')
 

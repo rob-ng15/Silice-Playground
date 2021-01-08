@@ -331,16 +331,15 @@ algorithm memmap_io (
 
     // RESET TIMER and AUDIO Co-Processor Controls
     p1hz.resetCounter := 0;
-    sleepTimer.resetCounter := 0;
     timer1hz.resetCounter := 0;
-    timer1khz.resetCounter := 0;
+    sleepTimer.resetCount := 0;
+    timer1khz.resetCount := 0;
     rng.resetRandom := 0;
     apu_processor_L.apu_write := 0;
     apu_processor_R.apu_write := 0;
 
     // Setup the terminal
     terminal_window.showterminal = 1;
-    terminal_window.showcursor = 1;
 
     while(1) {
         // Update UART output buffer top if character has been put into buffer
@@ -366,8 +365,10 @@ algorithm memmap_io (
                 case 16h8304: { readData = lower_sprites.sprite_read_active; }
                 case 16h8308: { readData = lower_sprites.sprite_read_tile; }
                 case 16h830c: { readData = lower_sprites.sprite_read_colour; }
-                case 16h8310: { readData = lower_sprites.sprite_read_x[10,1] ? 16hf800 : 16h0000 | lower_sprites.sprite_read_x; }
-                case 16h8314: { readData = lower_sprites.sprite_read_y[10,1] ? 16hf800 : 16h0000 | lower_sprites.sprite_read_y; }
+                case 16h8310: { readData = { {5{lower_sprites.sprite_read_x[10,1]}}, lower_sprites.sprite_read_x }; }
+                case 16h8314: { readData = { {5{lower_sprites.sprite_read_y[10,1]}}, lower_sprites.sprite_read_y }; }
+                //case 16h8310: { readData = lower_sprites.sprite_read_x[10,1] ? 16hf800 : 16h0000 | lower_sprites.sprite_read_x; }
+                //case 16h8314: { readData = lower_sprites.sprite_read_y[10,1] ? 16hf800 : 16h0000 | lower_sprites.sprite_read_y; }
                 case 16h8318: { readData = lower_sprites.sprite_read_double; }
 
                 case 16h8330: { readData = lower_sprites.collision_0; }
@@ -393,8 +394,10 @@ algorithm memmap_io (
                 case 16h8504: { readData = upper_sprites.sprite_read_active; }
                 case 16h8508: { readData = upper_sprites.sprite_read_tile; }
                 case 16h850c: { readData = upper_sprites.sprite_read_colour; }
-                case 16h8510: { readData = upper_sprites.sprite_read_x[10,1] ? 16hf800 : 16h0000 | upper_sprites.sprite_read_x; }
-                case 16h8514: { readData = upper_sprites.sprite_read_y[10,1] ? 16hf800 : 16h0000 | upper_sprites.sprite_read_y; }
+                case 16h8510: { readData = { {5{upper_sprites.sprite_read_x[10,1]}}, upper_sprites.sprite_read_x }; }
+                case 16h8514: { readData = { {5{upper_sprites.sprite_read_y[10,1]}}, upper_sprites.sprite_read_y }; }
+                //case 16h8510: { readData = upper_sprites.sprite_read_x[10,1] ? 16hf800 : 16h0000 | upper_sprites.sprite_read_x; }
+                //case 16h8514: { readData = upper_sprites.sprite_read_y[10,1] ? 16hf800 : 16h0000 | upper_sprites.sprite_read_y; }
                 case 16h8518: { readData = upper_sprites.sprite_read_double; }
 
                 case 16h8530: { readData = upper_sprites.collision_0; }
@@ -533,6 +536,7 @@ algorithm memmap_io (
                 // TERMINAL
                 case 16h8700: { terminal_window.terminal_character = writeData; terminal_window.terminal_write = 1; }
                 case 16h8704: { terminal_window.showterminal = writeData; }
+                case 16h8708: { terminal_window.terminal_write = 2; }
 
                 // AUDIO
                 case 16h8800: { apu_processor_L.waveform = writeData; }
@@ -547,8 +551,8 @@ algorithm memmap_io (
                 // TIMERS and RNG
                 case 16h8900: { rng.resetRandom = 1; }
                 case 16h8910: { timer1hz.resetCounter = 1; }
-                case 16h8920: { timer1khz.resetCount = writeData; timer1khz.resetCounter = 1; }
-                case 16h8930: { sleepTimer.resetCount = writeData; sleepTimer.resetCounter = 1; }
+                case 16h8920: { timer1khz.resetCount = writeData; }
+                case 16h8930: { sleepTimer.resetCount = writeData; }
 
                 // SDCARD
                 case 16h8f00: { sdcio.read_sector = 1; }

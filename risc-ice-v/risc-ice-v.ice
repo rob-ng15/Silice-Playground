@@ -57,13 +57,18 @@ algorithm main(
     uint1   video_reset = uninitialized;
     uint1   video_clock = uninitialized;
     uint1   pll_lock_AUX = uninitialized;
+    uint1   pll_lock_SDRAM = uninitialized;
     ulx3s_clk_risc_ice_v_AUX clk_gen_AUX (
         clkin   <: clock,
         clkIO :> clock_IO,
         clkVIDEO :> video_clock,
+        locked :> pll_lock_AUX
+    );
+    ulx3s_clk_risc_ice_v_AUX clk_gen_SDRAM (
+        clkin   <: clock,
         clkSDRAM :> sdram_clock,
         clkSDRAMcontrol :> sdram_clk,
-        locked :> pll_lock_AUX
+        locked :> pll_lock_SDRAM
     );
 
     // Video Reset
@@ -125,7 +130,6 @@ algorithm main(
     // SDRAM and BRAM (for BIOS)
     // FUNCTION3 controls byte read/writes
     sdramcontroller sdram <@clock_memory> (
-        function3 <: function3,
         sio <:> sio_halfrate,
         Icache <: Icacheflag,
         address <: address,

@@ -54,6 +54,7 @@ void main( void ) {
     unsigned short i,j;
     unsigned char uartData = 0;
 
+    terminal_reset();
     gpu_cs();
     tpu_cs();
     set_background( DKBLUE - 1, BLACK, BKG_SOLID );
@@ -65,8 +66,8 @@ void main( void ) {
 
     // WRITE TO SDRAM / CACHE
     unsigned char *MEMTEST = (unsigned char *) 0x10000000;
-    for( unsigned char i = 0; i < 255; i++ ) {
-        MEMTEST[i] = i;
+    for( unsigned short i = 0; i < 256; i++ ) {
+        MEMTEST[i] = (unsigned char) i;
     }
     unsigned short *MEMTEST2 = (unsigned short *) 0x10000100;
     for( unsigned short i = 0; i < 256; i++ ) {

@@ -48,12 +48,6 @@ algorithm multiplex_display(
     input uint2 terminal_b,
     input uint1 terminal_display
 ) <autorun> {
-    // Output defaults to 0
-    pix_red   := 0;
-    pix_green := 0;
-    pix_blue  := 0;
-
-    // Draw the screen
     while (1) {
         // wait until pix_active THEN BACKGROUND -> TILEMAP -> LOWER SPRITES -> BITMAP -> UPPER SPRITES -> CHARACTER MAP -> TERMINAL
         if( pix_active ) {

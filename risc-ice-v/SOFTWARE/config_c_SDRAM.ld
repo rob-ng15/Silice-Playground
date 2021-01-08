@@ -7,7 +7,7 @@ ENTRY(_start)
 
 SECTIONS {
   .text 0x10000000 : {
-        crt0.o (.text)
+        build/crt0.o (.text)
         *(.text)
         *(.sdata)
         *(.srodata)

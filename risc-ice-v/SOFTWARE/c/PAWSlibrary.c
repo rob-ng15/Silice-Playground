@@ -733,4 +733,6 @@ void terminal_showhide( unsigned char status ) {
     *TERMINAL_SHOWHIDE = status;
 }
 
-
+void terminal_reset( void ) {
+    *TERMINAL_RESET = 1;
+}

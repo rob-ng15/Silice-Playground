@@ -244,6 +244,7 @@ main:
 	sw	s0,8(sp)
 	sw	s1,4(sp)
 	sw	s2,0(sp)
+	call	terminal_reset
 	call	gpu_cs
 	call	tpu_cs
 	li	a2,0
@@ -262,15 +263,14 @@ main:
 	li	a0,4096
 	addi	a0,a0,-96
 	call	sleep
+	li	s0,268435456
 	li	a5,268435456
-	li	a4,268435456
-	addi	a4,a4,255
+	addi	a5,a5,256
 .L18:
-	sb	a5,0(a5)
-	addi	a5,a5,1
-	bne	a5,a4,.L18
-	li	a4,268435456
-	addi	a4,a4,256
+	sb	s0,0(s0)
+	addi	s0,s0,1
+	bne	s0,a5,.L18
+	mv	a4,s0
 	li	a5,0
 	li	a3,256
 .L19:
@@ -290,19 +290,18 @@ main:
 	addi	a0,a0,%lo(.LC4)
 	call	outputstring
 	li	a1,256
-	li	s0,268435456
-	addi	a0,s0,256
+	li	a0,268435456
+	addi	a0,a0,256
 	call	memorydump16
-	addi	a4,s0,256
 	li	a5,0
-	li	a3,4096
+	li	a4,4096
 .L20:
-	sh	a5,0(a4)
+	sh	a5,0(s0)
 	addi	a5,a5,1
 	slli	a5,a5,16
 	srli	a5,a5,16
-	addi	a4,a4,2
-	bne	a5,a3,.L20
+	addi	s0,s0,2
+	bne	a5,a4,.L20
 	lui	a0,%hi(.LC5)
 	addi	a0,a0,%lo(.LC5)
 	call	outputstring

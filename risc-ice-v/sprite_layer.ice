@@ -71,8 +71,8 @@ algorithm sprite_layer(
     $$end
 
     // Expand Sprite Update Deltas
-    int11   deltax := { ( spriteupdate( sprite_update ).dxsign ? 7b1111111 : 7b0000000 ), spriteupdate( sprite_update ).dx };
-    int11   deltay := { ( spriteupdate( sprite_update ).dysign ? 7b1111111 : 7b0000000 ), spriteupdate( sprite_update ).dy };
+    int11   deltax := { {7{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
+    int11   deltay := { {7{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
 
     // Sprite update helpers
     int11   sprite_offscreen_negative ::= sprite_double[ sprite_set_number ] ? -32 : -16;

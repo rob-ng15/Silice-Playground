@@ -887,6 +887,16 @@ terminal_showhide:
 	sb	a0,0(a5)
 	ret
 	.size	terminal_showhide, .-terminal_showhide
+	.align	1
+	.globl	terminal_reset
+	.type	terminal_reset, @function
+terminal_reset:
+	lui	a5,%hi(TERMINAL_RESET)
+	lw	a5,%lo(TERMINAL_RESET)(a5)
+	li	a4,1
+	sb	a4,0(a5)
+	ret
+	.size	terminal_reset, .-terminal_reset
 	.globl	VBLANK
 	.globl	SLEEPTIMER
 	.globl	TIMER1KHZ
@@ -972,8 +982,9 @@ terminal_showhide:
 	.globl	BACKGROUND_MODE
 	.globl	BACKGROUND_ALTCOLOUR
 	.globl	BACKGROUND_COLOUR
-	.globl	TERMINAL_STATUS
+	.globl	TERMINAL_RESET
 	.globl	TERMINAL_SHOWHIDE
+	.globl	TERMINAL_STATUS
 	.globl	TERMINAL_OUTPUT
 	.globl	SDCARD_DATA
 	.globl	SDCARD_ADDRESS
@@ -1327,14 +1338,18 @@ BACKGROUND_ALTCOLOUR:
 	.size	BACKGROUND_COLOUR, 4
 BACKGROUND_COLOUR:
 	.word	33024
-	.type	TERMINAL_STATUS, @object
-	.size	TERMINAL_STATUS, 4
-TERMINAL_STATUS:
-	.word	34560
+	.type	TERMINAL_RESET, @object
+	.size	TERMINAL_RESET, 4
+TERMINAL_RESET:
+	.word	34568
 	.type	TERMINAL_SHOWHIDE, @object
 	.size	TERMINAL_SHOWHIDE, 4
 TERMINAL_SHOWHIDE:
 	.word	34564
+	.type	TERMINAL_STATUS, @object
+	.size	TERMINAL_STATUS, 4
+TERMINAL_STATUS:
+	.word	34560
 	.type	TERMINAL_OUTPUT, @object
 	.size	TERMINAL_OUTPUT, 4
 TERMINAL_OUTPUT:
