@@ -528,8 +528,11 @@ void walk_maze( unsigned short width, unsigned short height )
 
         draw_map( width, height, currentx, currenty, direction, 1, mappeeks );
 
-        // WAIT FOR INPUT TO MOVE
-        while( ( currentx == newx ) && ( currenty == newy ) && ( direction == newdirection ) ) {
+        // SET 2 second timeout
+        set_timer1khz( 2000 );
+
+        // WAIT FOR INPUT TO MOVE  OR TIMEOUT
+        while( ( currentx == newx ) && ( currenty == newy ) && ( direction == newdirection ) && get_timer1khz() ) {
             // LEFT
             if( get_buttons() & 32 ) {
                 newdirection = ( newdirection == 0 ) ? 3 : newdirection - 1;

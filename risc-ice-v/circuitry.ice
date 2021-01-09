@@ -121,3 +121,30 @@ circuitry cropbottom(
 ) {
     y1 = ( y > 479 ) ? 479 : y;
 }
+
+// INCREASE BY 1 IF SECOND INPUT IS 0
+circuitry incrementifzero(
+    input   x,
+    input   z,
+    output  x1
+) {
+    x1 = ( z == 0 ) ? x + 1 : x;
+}
+
+// DECREASE BY 1 IF SECOND INPUT IS 0
+circuitry decrementifzero(
+    input   x,
+    input   z,
+    output  x1
+) {
+    x1 = ( z == 0 ) ? x - 1 : x;
+}
+
+// IF 0 RESET ELSE DECREASE BY 1
+circuitry decrementorreset(
+    input   x,
+    input   r,
+    output  x1
+) {
+    x1 = ( x != 0 ) ? x - 1 : r;
+}

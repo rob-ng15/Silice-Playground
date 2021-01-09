@@ -276,7 +276,7 @@ algorithm memmap_io (
     );
 
     // SDCARD - Code for the SDCARD from @sylefeb
-    simple_dualport_bram uint8 sdbuffer [512] = uninitialized;
+    simple_dualport_bram uint8 sdbuffer[512] = uninitialized;
 
     sdcardio sdcio;
     sdcard sd (
@@ -367,8 +367,6 @@ algorithm memmap_io (
                 case 16h830c: { readData = lower_sprites.sprite_read_colour; }
                 case 16h8310: { readData = { {5{lower_sprites.sprite_read_x[10,1]}}, lower_sprites.sprite_read_x }; }
                 case 16h8314: { readData = { {5{lower_sprites.sprite_read_y[10,1]}}, lower_sprites.sprite_read_y }; }
-                //case 16h8310: { readData = lower_sprites.sprite_read_x[10,1] ? 16hf800 : 16h0000 | lower_sprites.sprite_read_x; }
-                //case 16h8314: { readData = lower_sprites.sprite_read_y[10,1] ? 16hf800 : 16h0000 | lower_sprites.sprite_read_y; }
                 case 16h8318: { readData = lower_sprites.sprite_read_double; }
 
                 case 16h8330: { readData = lower_sprites.collision_0; }
@@ -396,8 +394,6 @@ algorithm memmap_io (
                 case 16h850c: { readData = upper_sprites.sprite_read_colour; }
                 case 16h8510: { readData = { {5{upper_sprites.sprite_read_x[10,1]}}, upper_sprites.sprite_read_x }; }
                 case 16h8514: { readData = { {5{upper_sprites.sprite_read_y[10,1]}}, upper_sprites.sprite_read_y }; }
-                //case 16h8510: { readData = upper_sprites.sprite_read_x[10,1] ? 16hf800 : 16h0000 | upper_sprites.sprite_read_x; }
-                //case 16h8514: { readData = upper_sprites.sprite_read_y[10,1] ? 16hf800 : 16h0000 | upper_sprites.sprite_read_y; }
                 case 16h8518: { readData = upper_sprites.sprite_read_double; }
 
                 case 16h8530: { readData = upper_sprites.collision_0; }
@@ -510,6 +506,10 @@ algorithm memmap_io (
 
                 case 16h8470: { bitmap_window.bitmap_x_read = writeData; }
                 case 16h8474: { bitmap_window.bitmap_y_read = writeData; }
+
+                case 16h8480: { gpu_processor.character_writer_character = writeData; }
+                case 16h8484: { gpu_processor.character_writer_line = writeData; }
+                case 16h8488: { gpu_processor.character_writer_bitmap = writeData; }
 
                 // UPPER SPRITE LAYER
                 case 16h8500: { upper_sprites.sprite_set_number = writeData; }

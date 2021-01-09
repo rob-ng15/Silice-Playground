@@ -759,14 +759,6 @@ void main( void )
     while(1) {
         counter++;
 
-        // FLASH LEDS AND BEEP IF UFO ON SCREEN
-        if( ufo_sprite_number != 0xff ) {
-            ufo_x = get_sprite_attribute( ASN( ufo_sprite_number ), 3 );
-            ufo_x = ( ufo_x < 0 ) ? 0 : ( ufo_x > 639 ? 639 : ufo_x );
-            ufo_x = 1 << ( 7 - ufo_x / 80 );
-        }
-        set_leds( ( ufo_sprite_number != 0xff ) ? ( asteroid_active[ ufo_sprite_number ] == 3 ? ufo_x : 255 ) : 0 );
-
         // PLACE NEW LARGE ASTEROIDS
         if( ( placeAsteroids > 0 ) && ( ( counter & 63 ) == 0 ) ) {
             potentialnumber = find_asteroid_space();

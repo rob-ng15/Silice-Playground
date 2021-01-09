@@ -139,11 +139,11 @@ algorithm terminal(
             case 2: {
                 // RESET
                 terminal_scroll = 0;
-                terminal.wdata1 = 0;
-                terminal_copy.wdata1 = 0;
                 ++:
                 while( terminal_scroll < 640 ) {
+                    terminal.wdata1 = 0;
                     terminal.addr1 = terminal_scroll;
+                    terminal_copy.wdata1 = 0;
                     terminal_copy.addr1 = terminal_scroll;
                     terminal_scroll = terminal_scroll + 1;
                 }

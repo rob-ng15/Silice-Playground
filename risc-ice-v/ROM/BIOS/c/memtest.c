@@ -66,8 +66,8 @@ void main( void ) {
 
     // WRITE TO SDRAM / CACHE
     unsigned char *MEMTEST = (unsigned char *) 0x10000000;
-    for( unsigned short i = 0; i < 256; i++ ) {
-        MEMTEST[i] = (unsigned char) i;
+    for( unsigned char i = 0; i < 255; i++ ) {
+        MEMTEST[i] = *i;
     }
     unsigned short *MEMTEST2 = (unsigned short *) 0x10000100;
     for( unsigned short i = 0; i < 256; i++ ) {

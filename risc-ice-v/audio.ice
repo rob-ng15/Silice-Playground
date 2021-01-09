@@ -54,6 +54,10 @@ algorithm apu(
     uint16  counter50mhz = uninitialised;
     uint16  counter1khz = uninitialised;
 
+    // WIRES FOR DECREMENT OR RESET
+    uint16  onesecond := 50000;
+    uint16  notefrequency := frequencytable.rdata;
+
     waveformtable.addr := selected_waveform * 32 + point;
     frequencytable.addr := selected_note;
 
@@ -72,10 +76,10 @@ algorithm apu(
                 if( counter50mhz == 0 ) {
                     audio_output = ( selected_waveform == 4 ) ? staticGenerator : waveformtable.rdata;
                 }
-                counter50mhz = ( counter50mhz != 0 ) ? counter50mhz - 1 : frequencytable.rdata;
-                point = ( counter50mhz != 0 ) ? point : point + 1;
-                counter1khz = ( counter1khz != 0 ) ? counter1khz - 1 : 50000;
-                selected_duration = ( counter1khz != 0 ) ? selected_duration : selected_duration - 1;
+                ( counter50mhz ) = decrementorreset( counter50mhz, notefrequency );
+                ( point ) = incrementifzero( point, counter50mhz );
+                ( counter1khz ) = decrementorreset( counter1khz, onesecond );
+                ( selected_duration ) = decrementifzero( selected_duration, counter1khz );
             }
         }
     }

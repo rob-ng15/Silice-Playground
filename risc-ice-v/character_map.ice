@@ -104,8 +104,8 @@ algorithm character_map(
             case 1: {
                 while( tpu_cs_addr < tpu_max_count ) {
                     charactermap.addr1 = tpu_cs_addr;
-                    tpu_cs_addr = tpu_cs_addr + 1;
                     charactermap.wdata1 = { 1b1, 6b0, 6b0, 8b0 };
+                    tpu_cs_addr = tpu_cs_addr + 1;
                 }
                 tpu_active = 0;
             }

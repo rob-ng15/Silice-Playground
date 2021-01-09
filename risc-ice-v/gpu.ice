@@ -20,6 +20,11 @@ algorithm gpu(
     input   uint4   blit1_writer_line,
     input   uint16  blit1_writer_bitmap,
 
+    // For setting character generator bitmaps
+    input   uint8   character_writer_character,
+    input   uint3   character_writer_line,
+    input   uint8   character_writer_bitmap,
+
     // VECTOR BLOCK
     input   uint5   vector_block_number,
     input   uint7   vector_block_colour,
@@ -124,10 +129,15 @@ algorithm gpu(
         param1 <: v_gpu_param1
     );
 
-    // blit1tilemap write access for the GPU to load tilemaps
+    // blit1tilemap write access for the GPU to change tilemaps
     blit1tilemap.addr1 := blit1_writer_tile * 16 + blit1_writer_line;
     blit1tilemap.wdata1 := blit1_writer_bitmap;
     blit1tilemap.wenable1 := 1;
+
+    // characterGenerator8x8 write access for the GPU to change characters
+    characterGenerator8x8.addr1 := character_writer_character * 8 + character_writer_line;
+    characterGenerator8x8.wdata1 := character_writer_bitmap;
+    characterGenerator8x8.wenable1 := 1;
 
     // CONTROLS FOR BITMAP PIXEL WRITER
     bitmap_write := 0;
