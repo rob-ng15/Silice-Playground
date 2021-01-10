@@ -148,3 +148,23 @@ circuitry decrementorreset(
 ) {
     x1 = ( x != 0 ) ? x - 1 : r;
 }
+
+// READ FROM SDRAM
+circuitry SDRAMread(
+    inout   sd
+) {
+    sd.rw = 0;
+    sd.in_valid = 1;
+    while( !sd.done ) {}
+}
+
+// WRITE TO SDRAM
+circuitry SDRAMwrite(
+    inout   sd,
+    input   writedata
+) {
+    sd.data_in = writedata;
+    sd.rw = 1;
+    sd.in_valid = 1;
+    while( !sd.done ) {}
+}

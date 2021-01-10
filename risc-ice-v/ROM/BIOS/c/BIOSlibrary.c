@@ -47,101 +47,7 @@ long CSRtime() {
   return time;
 }
 
-// INTERNAL HELPER FUNCTIONS
-// CONVERT UNSIGNED INTEGERS TO STRINGS ( CHAR, SHORT and INT VERSIONS )
-void chartostring( unsigned char value, char *s ) {
-    unsigned char remainder, i = 0;
-
-    while( value != 0 ) {
-        remainder = value % 10;
-        value = value / 10;
-
-        s[2 - i] = remainder + '0';
-        i++;
-    }
-}
-void shorttostring( unsigned short value, char *s ) {
-    unsigned short remainder;
-    unsigned char i = 0;
-
-    while( value != 0 ) {
-        remainder = value % 10;
-        value = value / 10;
-
-        s[4 - i] = remainder + '0';
-        i++;
-    }
-}
-void inttostring( unsigned int value, char *s ) {
-    unsigned int remainder;
-    unsigned char i = 0;
-
-    while( value != 0 ) {
-        remainder = value % 10;
-        value = value / 10;
-
-        s[9 - i] = remainder + '0';
-        i++;
-    }
-}
-
-// OUTPUT TO TERMINAL & UART
-// OUTPUT INDIVIDUAL CHARACTER TO THE UART/TERMINAL
-void outputcharacter(char c) {
-	while( *UART_STATUS & 2 );
-    *UART_DATA = c;
-
-    while( *TERMINAL_STATUS );
-    *TERMINAL_OUTPUT = c;
-
-    if( c == '\n' )
-        outputcharacter('\r');
-}
-// OUTPUT NULL TERMINATED STRING TO UART/TERMINAL WITH NEWLINE
-void outputstring(char *s) {
-	while(*s) {
-		outputcharacter(*s);
-		s++;
-	}
-	outputcharacter('\n');
-}
-// OUTPUT NULL TERMINATED STRING TO UART/TERMINAL WITH NO NEWLINE
-void outputstringnonl(char *s) {
-	while(*s) {
-		outputcharacter(*s);
-		s++;
-	}
-}
-// OUTPUT UNSIGNED INTEGERS TO UART/TERMINAL ( CHAR, SHORT and INT VERSIONS )
-void outputnumber_char( unsigned char value ) {
-    char valuestring[]="  0";
-    chartostring( value, valuestring );
-    outputstringnonl( valuestring );
-}
-void outputnumber_short( unsigned short value ) {
-    char valuestring[]="    0";
-    shorttostring( value, valuestring );
-    outputstringnonl( valuestring );
-}
-void outputnumber_int( unsigned int value ) {
-    char valuestring[]="         0";
-    inttostring( value, valuestring );
-    outputstringnonl( valuestring );
-}
-
-// INPUT FROM UART
-// RETURN 1 IF UART CHARACTER AVAILABLE, OTHERWISE 0
-unsigned char inputcharacter_available( void ) {
-    return( *UART_STATUS & 1 );
-}
-// RETURN CHARACTER FROM UART
-char inputcharacter( void ) {
-	while( !inputcharacter_available() );
-    return *UART_DATA;
-}
-
 // TIMER AND PSEUDO RANDOM NUMBER GENERATOR
-
 // SLEEP FOR counter milliseconds
 void sleep( unsigned short counter ) {
     *SLEEPTIMER = counter;
@@ -176,11 +82,27 @@ void set_leds( unsigned char value ) {
     *LEDS = value;
 }
 
+// READ THE ULX3S JOYSTICK BUTTONS
+unsigned char get_buttons( void ) {
+    return( *BUTTONS );
+}
+
 // BACKGROUND GENERATOR
 void set_background( unsigned char colour, unsigned char altcolour, unsigned char backgroundmode ) {
     *BACKGROUND_COLOUR = colour;
     *BACKGROUND_ALTCOLOUR = altcolour;
     *BACKGROUND_MODE = backgroundmode;
+}
+
+// SCROLL WRAP or CLEAR the TILEMAP
+//  action == 1 to 4 move the tilemap 1 pixel LEFT, UP, RIGHT, DOWN and SCROLL at limit
+//  action == 5 to 8 move the tilemap 1 pixel LEFT, UP, RIGHT, DOWN and WRAP at limit
+//  action == 9 clear the tilemap
+//  RETURNS 0 if no action taken other than pixel shift, action if SCROLL WRAP or CLEAR was actioned
+unsigned char tilemap_scrollwrapclear( unsigned char action ) {
+    while( *TM_STATUS != 0 );
+    *TM_SCROLLWRAPCLEAR = action;
+    return( *TM_SCROLLWRAPCLEAR );
 }
 
 // GPU AND BITMAP
@@ -290,6 +212,31 @@ void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2,
     *GPU_WRITE = 6;
 }
 
+// SET SPRITE sprite_number in sprite_layer to active status, in colour to (x,y) with bitmap number tile ( 0 - 7 ) in sprite_size == 0 16 x 16 == 1 32 x 32 pixel size
+void set_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsigned char active, unsigned char colour, short x, short y, unsigned char tile, unsigned char sprite_size) {
+    switch( sprite_layer ) {
+        case 0:
+            *LOWER_SPRITE_NUMBER = sprite_number;
+            *LOWER_SPRITE_ACTIVE = active;
+            *LOWER_SPRITE_TILE = tile;
+            *LOWER_SPRITE_COLOUR = colour;
+            *LOWER_SPRITE_X = x;
+            *LOWER_SPRITE_Y = y;
+            *LOWER_SPRITE_DOUBLE = sprite_size;
+            break;
+
+        case 1:
+            *UPPER_SPRITE_NUMBER = sprite_number;
+            *UPPER_SPRITE_ACTIVE = active;
+            *UPPER_SPRITE_TILE = tile;
+            *UPPER_SPRITE_COLOUR = colour;
+            *UPPER_SPRITE_X = x;
+            *UPPER_SPRITE_Y = y;
+            *UPPER_SPRITE_DOUBLE = sprite_size;
+            break;
+    }
+}
+
 // CHARACTER MAP FUNCTIONS
 // The character map is an 80 x 30 character window with a 256 character 8 x 16 pixel character generator ROM )
 // NO SCROLLING, CURSOR WRAPS TO THE TOP OF THE SCREEN
@@ -332,23 +279,6 @@ void tpu_outputstringcentre( unsigned char y, unsigned char background, unsigned
     tpu_clearline( y );
     tpu_set( 40 - ( strlen(s) >> 1 ), y, background, foreground );
     tpu_outputstring( s );
-}
-
-// OUTPUT UNSIGNED INTEGERS TO UART/TERMINAL ( CHAR, SHORT and INT VERSIONS )
-void tpu_outputnumber_char( unsigned char value ) {
-    char valuestring[]="  0";
-    chartostring( value, valuestring );
-    tpu_outputstring( valuestring );
-}
-void tpu_outputnumber_short( unsigned short value ) {
-    char valuestring[]="    0";
-    shorttostring( value, valuestring );
-    tpu_outputstring( valuestring );
-}
-void tpu_outputnumber_int( unsigned int value ) {
-    char valuestring[]="         0";
-    inttostring( value, valuestring );
-    tpu_outputstring( valuestring );
 }
 
 // TERMINAL (NON-OUTPUT)

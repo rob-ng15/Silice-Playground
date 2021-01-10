@@ -1,9 +1,9 @@
 #include "PAWSlibrary.h"
 
 // MAZE SIZES
-#define MAXWIDTH 40
-#define MAXHEIGHT 30
-#define MAXLEVEL 4
+#define MAXWIDTH 160
+#define MAXHEIGHT 120
+#define MAXLEVEL 8
 
 // DRAWING VARIABLES
 #define MAXDEPTH 16
@@ -14,7 +14,7 @@ unsigned short level = 0;
 // WIDTH OF MAZE DEPENDING ON LEVEL
 unsigned short levelwidths[] = { 10, 16, 20, 32, 40, 64, 80, 128, 160 };
 unsigned short levelheights[] = { 8, 12, 16, 24, 30, 48, 60, 80, 120 };
-unsigned short levelgenerationsteps[] = { 1, 1, 1, 2, 4, 16, 32, 64, 128 };
+unsigned short levelgenerationsteps[] = { 1, 2, 4, 4, 8, 16, 64, 128, 512 };
 
 // TOP LEFT COORDINATES FOR THE PERSPECTIVE DRAWING
 //short perspectivex[] = { 0, 40, 80, 120, 160, 200, 240, 280, 320 };       // MAXDEPTH 8
@@ -187,18 +187,18 @@ void initialise_maze( unsigned short width, unsigned short height )
     maze[ width - 2 ][ height - 3 ] = 'X';
     map[ width - 2 ][ height - 3 ] = 'X';
 
-    // POSITION GHOSTS AT EXIT FACING WEST
+    // POSITION GHOSTS AT CENTRE
     for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
         if( ghost <= level ) {
             // AT EXIT
-            ghostx[ ghost ] = width - 3;
-            ghosty[ ghost ] = height - 3;
-            ghostdirection[ ghost ] = 3;
+            ghostx[ ghost ] = width / 2;
+            ghosty[ ghost ] = height / 2;
+            ghostdirection[ ghost ] = ghost;
         } else {
             // OFF MAP
             ghostx[ ghost ] = width + 1;
             ghosty[ ghost ] = height - 3;
-            ghostdirection[ ghost ] = 3;
+            ghostdirection[ ghost ] = ghost;
         }
     }
 }
@@ -600,15 +600,15 @@ void main( void )
 
             while( get_buttons() == 1 );
             // LEFT / RIGHT to change level, FIRE to select
-            if( ( get_buttons() & 32 ) != 0 ) {
+            if( get_buttons() & 32 ) {
                 while( get_buttons() & 32 );
                 level = ( level == 0 ) ? MAXLEVEL : level - 1;
             }
-            if( ( get_buttons() & 64 ) != 0 ) {
+            if( get_buttons() & 64 ) {
                 while( get_buttons() & 64 );
                 level = ( level < MAXLEVEL ) ? level + 1 : 0;
             }
-            if( ( get_buttons() & 2 ) != 0 ) {
+            if( get_buttons() & 2 ) {
                 while( get_buttons() & 2 );
                 levelselected = 1;
             }

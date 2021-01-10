@@ -1,9 +1,9 @@
-# RISC-ICE-V
+# PAWS a Risc-V RVIMC CPU
 
 * Written in Silice
     * Based upon ICE-V by [ICE-V](https://github.com/sylefeb/Silice/blob/master/projects/ice-v/ice-v.ice) by @sylefeb
 
-A simple Risc-V RV32IM 25mhz cpu, matched to the display and peripherals from [j1eforth](https://github.com/rob-ng15/Silice-Playground/tree/master/j1eforth/DE10NANO-ULX3S) Inspired by the need for an easier way to program and use the CPU than Forth.
+A simple Risc-V RV32IMC CPU, matched to the display and peripherals from [j1eforth](https://github.com/rob-ng15/Silice-Playground/tree/master/j1eforth/DE10NANO-ULX3S) Inspired by the need for an easier way to program and use the CPU than Forth.
 
 __ULX3S only at present__
 
@@ -40,24 +40,27 @@ __ULX3S only at present__
             * COMPRESSED ( 16 bit ) INSTRUCTION SUPPORT
                 * Expanded to 32 bit instruction
                 * 1 cycle faster than 32 bit instructions due to less memory fetching
+            * CSR ( Limited )
+                * READ of TIMER[H], CYCLE[H] and INSTRET[H]
             * NOP __ALL OTHER INSTRUCTION CODES__
 
 * MEMORY
-    * 16K ( 8K x 16 bit) of RAM ( with aligned and misaligned 32 bit read / writes )
-        * FAST BRAM - used for BIOS ( and asteroids )
+    * 16K ( 8K x 16 bit) of RAM
+        * FAST BRAM - used for BIOS
         * STACK POINTER AT TOP OF BRAM
     * 32K ( 8K x 32 bit ) of I/O Memory with 16 bit read / write
+    * 32MB of SDRAM with 4K Instruction and 4K Data Caches
 
 * DISPLAY
     * HDMI 640 x 480 ouput
-        * Background [Background.md](documentation/Background.md)
-        * Tilemap Layer [Tilemap.md](documentation/Tilemap.md)
-        * Lower Sprite Layer [Sprites.md](documentation/Sprites.md)
-        * Bitmap with GPU [Bitmap and GPU.md](documentation/Bitmap%20and%20GPU.md)
-            * Vector block drawer [Vectors.md](documentation/Vectors.md)
-        * Upper Sprite Layer [Sprites.md](documentation/Sprites.md)
-        * Character Map with TPU [Character Map and TPU.md](documentation/Character%20Map%20and%20TPU.md)
-        * Terminal [Terminal.md](documentation/Terminal.md)
+        * Background
+        * Tilemap Layer
+        * Lower Sprite Layer
+        * Bitmap with GPU
+            * Vector block drawer
+        * Upper Sprite Layer
+        * Character Map with TPU
+        * Terminal
 
 * PERIPHERALS
     * UART ( via US1 on the ULX3S )
@@ -66,18 +69,15 @@ __ULX3S only at present__
     * BUTTONS ( 6 on board buttons )
     * TIMERS ( 1hz and 1khz )
     * STEREO AUDIO
-    * WIP - FAT16 SDCARD
-
-__Not all documentation is in place yet. I/O memory mapping not yet finalised.__
+    * SDCARD via SPI
+        * FAT16 on PARTITION 0 only
+        * BIOS is able to load *.PAW programs to SDRAM and launch
 
 ## BUILD and USAGE Instructions
 
 Open a terminal in the ULX3S directory and type ```make ulx3s```. Wait. Upload your design your ULX3S with ```fujproj BUILD_ulx3s/build.bit```. Or download from this repository.
 
-## COMPILING C CODES
+## COMPILING C CODE
+Open a terminal in the SOFTWARE directory. Create your own C code in the c directory. Compile with ( for example the asteroids game ) ```./compile_SDRAM.sh c/asteroids.c```. This will create a file code.PAW which can be copied the root directory of a FAT16 formatted SDCARD and loaded via the included BIOS.
 
-Open a terminal in the ROM/SOFTWARE directory. Create your own C code in the c directory. Compile with ( for example the asteroids game ) ```./compile_BIOS.sh c/asteroids.c```. Open build/code.bin in okteta. From the menu select File -> Export -> C Array. Use the __unsigned short__ option, save the output as ```code.inc```. Open ```code.inc``` in kwrite or kate, delete the first two and the last lines. Replace ```0x``` with ```16h``` and save as ```BIOS.inc``` in the ROM directory.
-
-A small SDK providing helper functions (libPAWS) for the display and various I/O functions is provided and is automatically linked with the above compilation command. See the (WIP) documentation for details of the helper functions, or look at the BIOS.c and asteroids.c examples.
-
-Follow the build instructions above and your program will launch once the code has compiled.
+A small SDK providing helper functions (libPAWS) for the display and various I/O functions is provided and is automatically linked with the above compilation command. See the (WIP) documentation for details of the helper functions, or look at the asteroids.c amd maze.c examples.

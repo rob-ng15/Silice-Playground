@@ -31,18 +31,9 @@ extern void* memcpy(void *dest, const void *src, size_t n);
 extern int strcmp(const char *p1, const char *p2);
 extern int strlen( char *s );
 
-// UART AND TERMINAL INPUT / OUTPUT
-extern void outputcharacter(char);
-extern void outputstring(char *);
-extern void outputstringnonl(char *);
-extern void outputnumber_char( unsigned char );
-extern void outputnumber_short( unsigned short );
-extern void outputnumber_int( unsigned int );
-extern char inputcharacter( void );
-unsigned char inputcharacter_available( void );
-
 // BASIC I/O
 extern void set_leds( unsigned char );
+extern unsigned char get_buttons( void );
 
 // TIMERS AND PSEUDO RANDOM NUMBER GENERATOR
 extern void sleep( unsigned short );
@@ -57,6 +48,9 @@ extern void set_background( unsigned char, unsigned char, unsigned char );
 extern void terminal_showhide( unsigned char );
 extern void terminal_reset( void );
 
+// TILEMAP
+extern unsigned char tilemap_scrollwrapclear( unsigned char );
+
 // GPU AND BITMAP
 extern void gpu_pixel( unsigned char, short, short );
 extern void gpu_rectangle( unsigned char, short, short, short, short );
@@ -69,16 +63,16 @@ extern void gpu_triangle( unsigned char, short, short, short, short, short, shor
 extern void bitmap_scrollwrap( unsigned char );
 extern void set_blitter_bitmap( unsigned char, unsigned short * );
 
+// SPRITES
+extern void set_sprite( unsigned char, unsigned char, unsigned char, unsigned char, short, short, unsigned char, unsigned char );
+
 // CHARACTER MAP
 extern void tpu_cs( void );
 extern void tpu_clearline( unsigned char );
-extern void tpu_set(  unsigned char, unsigned char, unsigned char, unsigned char );
+extern void tpu_set( unsigned char, unsigned char, unsigned char, unsigned char );
 extern void tpu_output_character( char );
 extern void tpu_outputstring( char * );
 extern void tpu_outputstringcentre( unsigned char, unsigned char, unsigned char, char * );
-extern void tpu_outputnumber_char( unsigned char );
-extern void tpu_outputnumber_short( unsigned short );
-extern void tpu_outputnumber_int( unsigned int );
 
 // BACKGROUND PATTERN GENERATOR
 #define BKG_SOLID 0

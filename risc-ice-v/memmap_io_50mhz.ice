@@ -27,6 +27,7 @@ algorithm memmap_io (
     input   uint10  pix_y,
 
     // CLOCKS
+    input   uint1   clock25mhz,
     input   uint1   video_clock,
     input   uint1   video_reset,
 
@@ -51,7 +52,7 @@ algorithm memmap_io (
 
     // RNG random number generator
     uint16  staticGenerator = uninitialized;
-    random rng(
+    random rng <@clock25mhz> (
         g_noise_out :> staticGenerator,
     );
 

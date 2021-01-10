@@ -62,24 +62,22 @@ typedef struct {
 } __attribute((packed)) Fat16Entry;
 
 // MASTER BOOT RECORD AND PARTITION TABLE
-unsigned char MBR[512];
-Fat16BootSector BOOTSECTOR;
+unsigned char *MBR = (unsigned char *) 0x12000000 - 0x200;
+Fat16BootSector *BOOTSECTOR = (Fat16BootSector *)0x12000000 - 0x400;
 PartitionTable *PARTITION;
 Fat16Entry *ROOTDIRECTORY;
 unsigned short *FAT;
+unsigned char *CLUSTERBUFFER;
+int DATASTARTSECTOR;
 
-// DEBUG
-unsigned char BUFFER[512];
+unsigned short SELECTEDFILE = 0xffff;
 
 void sd_readSector( unsigned int sectorAddress, unsigned char *copyAddress ) {
     unsigned short i;
 
-    tpu_set( 48, 0, TRANSPARENT, RED ); tpu_outputstring("Reading Sector: "); tpu_outputnumber_int( (unsigned short)sectorAddress );
-    gpu_blit( RED, 608, 0, 2, 1 );
+    gpu_blit( RED, 576, 4, 2, 2 );
     sdcard_readsector( sectorAddress, copyAddress );
-
-    tpu_set( 48, 0, TRANSPARENT, GREEN ); tpu_outputstring("Sector Read   : "); tpu_outputnumber_int( (unsigned short)sectorAddress );
-    gpu_blit( GREEN, 608, 0, 2, 1 );
+    gpu_blit( GREEN, 576, 4, 2, 2 );
 }
 
 void sd_readMBR( void ) {
@@ -94,8 +92,8 @@ void sd_readFAT( void ) {
     unsigned short i;
 
     // READ ALL OF THE SECTORS OF THE FAT
-    for( i = 0; i < BOOTSECTOR.fat_size_sectors; i++ ) {
-        sd_readSector( i + PARTITION[0].start_sector + BOOTSECTOR.reserved_sectors + BOOTSECTOR.fat_size_sectors, ( (unsigned char *)FAT ) + 512 * i );
+    for( i = 0; i < BOOTSECTOR -> fat_size_sectors; i++ ) {
+        sd_readSector( i + PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors, ( (unsigned char *)FAT ) + 512 * i );
     }
 }
 
@@ -103,9 +101,43 @@ void sd_readRootDirectory ( void ) {
     unsigned short i;
 
     // READ ALL OF THE SECTORS OF THE ROOTDIRECTORY
-    for( i = 0; i < ( BOOTSECTOR.root_dir_entries * sizeof( Fat16Entry ) ) / 512; i++ ) {
-        sd_readSector( i + PARTITION[0].start_sector + BOOTSECTOR.reserved_sectors + BOOTSECTOR.fat_size_sectors * BOOTSECTOR.number_of_fats, ( (unsigned char *)ROOTDIRECTORY ) + 512 * i );
+    for( i = 0; i < ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512; i++ ) {
+        sd_readSector( i + PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats, ( (unsigned char *)ROOTDIRECTORY ) + 512 * i );
     }
+}
+
+void sd_readCluster( unsigned short cluster ) {
+    for( unsigned short i = 0; i < BOOTSECTOR -> sectors_per_cluster; i++ ) {
+        sd_readSector( DATASTARTSECTOR + ( cluster - 2 ) * BOOTSECTOR -> sectors_per_cluster + i, CLUSTERBUFFER + i * 512 );
+    }
+}
+
+void sd_findNextFile( void ) {
+    unsigned short i = ( SELECTEDFILE == 0xffff ) ? 0 : SELECTEDFILE + 1;
+    unsigned short filefound = 0;
+
+    while( !filefound ) {
+        if( ROOTDIRECTORY[i].ext[0]=='P' && ROOTDIRECTORY[i].ext[1]=='A' && ROOTDIRECTORY[i].ext[2]=='W' ) {
+            SELECTEDFILE = i;
+            filefound = 1;
+        } else {
+            i = ( i < BOOTSECTOR -> root_dir_entries ) ? i + 1 : 0;
+        }
+    }
+}
+
+void sd_readFile( unsigned short filenumber, unsigned char * copyAddress ) {
+    unsigned short nextCluster = ROOTDIRECTORY[ filenumber ].starting_cluster;
+    int i;
+
+    do {
+        sd_readCluster( nextCluster );
+        for( i = 0; i < BOOTSECTOR -> sectors_per_cluster * 512; i++ ) {
+            *copyAddress = CLUSTERBUFFER[i];
+            copyAddress++;
+        }
+        nextCluster = FAT[ nextCluster ];
+    } while( nextCluster != 0xffff );
 }
 
 void draw_riscv_logo( void ) {
@@ -129,38 +161,27 @@ void set_sdcard_bitmap( void ) {
 }
 
 void draw_sdcard( void  ) {
-    gpu_blit( BLUE, 608, 0, 1, 1 );
-    gpu_blit( WHITE, 608, 0, 0, 1 );
-}
-
-void memorydump( unsigned char *address, unsigned short length ) {
-    outputstring( "Memory Dump" );
-    unsigned char value;
-    for( unsigned short y = 0; y < ( length >> 4 ); y++ ) {
-        outputnumber_int( (unsigned int) address );
-        outputcharacter( ':');
-        outputcharacter( ' ');
-        for( unsigned short x = 0; x < 16; x++ ) {
-            value = *address;
-            outputcharacter( ' ' );
-            outputcharacter( ( value < 32 ) || ( value > 127 ) ? '.' : value );
-            outputcharacter( ' ' );
-            outputnumber_char( value );
-            address++;
-        }
-        sleep( 100 );
-        outputcharacter('\n');
-    }
+    gpu_blit( BLUE, 576, 4, 1, 2 );
+    gpu_blit( WHITE, 576, 4, 0, 2 );
 }
 
 void main( void ) {
     unsigned short i,j;
     unsigned char uartData = 0;
+    unsigned short selectedfile = 0;
 
+    // RESET THE DISPLAY
+    terminal_showhide( 0 );
     terminal_reset();
     gpu_cs();
     tpu_cs();
+    tilemap_scrollwrapclear( 9 );
     set_background( DKBLUE - 1, BLACK, BKG_SOLID );
+
+    for( unsigned short i = 0; i < 13; i++ ) {
+        set_sprite( 0, i, 0, 0, 0, 0, 0, 0 );
+        set_sprite( 1, i, 0, 0, 0, 0, 0, 0 );
+    }
 
     draw_riscv_logo();
     set_sdcard_bitmap();
@@ -169,32 +190,11 @@ void main( void ) {
     tpu_set( 16, 5, TRANSPARENT, WHITE ); tpu_outputstring( "Welcome to PAWS a RISC-V RV32IMC CPU" );
 
     tpu_outputstringcentre( 7, TRANSPARENT, RED, "Waiting for SDCARD" );
-
-    sleep( 4000 );
-
-    tpu_outputstringcentre( 7, TRANSPARENT, RED, "Reading Master Boot Record" );
-
+    sleep( 2000 );
+    tpu_outputstringcentre( 7, TRANSPARENT, GREEN, "SDCARD READY" );
     sd_readSector( 0, MBR );
 
-    tpu_outputstringcentre( 7, TRANSPARENT, GREEN, "Read Master Boot Record");
-
     PARTITION = (PartitionTable *) &MBR[ 0x1BE ];
-
-    for( i = 0; i < 4; i++ ) {
-        tpu_set( 2, 9 + i, TRANSPARENT, 0x3f ); tpu_outputstring( "Partition : " ); tpu_outputnumber_short( i ); tpu_outputstring( ", Type : " ); tpu_outputnumber_char( PARTITION[i].partition_type );
-        switch( PARTITION[i].partition_type ) {
-            case 0: tpu_outputstring( " No Entry" );
-                break;
-            case 4: tpu_outputstring( " FAT16 <32MB" );
-                break;
-            case 6: tpu_outputstring( " FAT16 >32MB" );
-                break;
-            case 14: tpu_outputstring( " FAT16 LBA" );
-                break;
-            default: tpu_outputstring( " Not FAT16" );
-                break;
-        }
-    }
 
     // CHECK FOR VALID PARTITION
     switch( PARTITION[0].partition_type ) {
@@ -209,93 +209,60 @@ void main( void ) {
             break;
     }
 
-    tpu_outputstringcentre( 15, TRANSPARENT, RED, "Reading Partition 0 Boot Sector" );
-    sd_readSector( PARTITION[0].start_sector, (unsigned char *)&BOOTSECTOR );
-    tpu_outputstringcentre( 15, TRANSPARENT, GREEN, "Read Partition 0 Boot Sector " );
-
-    tpu_set( 0, 16, TRANSPARENT, WHITE );
-    tpu_output_character( '[' );
-    for( i = 0; i < 8; i++ ) {
-        tpu_output_character( BOOTSECTOR.oem[i] );
-    }
-    tpu_output_character( ']' ); tpu_output_character( '[' );
-    for( i = 0; i < 11; i++ ) {
-        tpu_output_character( BOOTSECTOR.volume_label[i] );
-    }
-    tpu_output_character( ']' ); tpu_output_character( '[' );
-    for( i = 0; i < 8; i++ ) {
-        tpu_output_character( BOOTSECTOR.fs_type[i] );
-    }
-    tpu_output_character( ']' );
-
-    // OUTPUT PARTITION DETAILS
-    tpu_set( 2, 16, TRANSPARENT, WHITE );
-    tpu_outputstring( "Sector Size: " ); tpu_outputnumber_short( BOOTSECTOR.sector_size );
-    tpu_outputstring( " Cluster Size: " ); tpu_outputnumber_char( BOOTSECTOR.sectors_per_cluster );
-    tpu_outputstring( " FATs: " ); tpu_outputnumber_char( BOOTSECTOR.number_of_fats ); tpu_outputnumber_short( BOOTSECTOR.fat_size_sectors ); tpu_outputstring( " sectors long" );
-    tpu_set( 2, 17, TRANSPARENT, WHITE );
-    tpu_outputstring( "Directory Entries: " ); tpu_outputnumber_short( BOOTSECTOR.root_dir_entries );
-    tpu_outputstring( " Total Sectors: " ); tpu_outputnumber_int( BOOTSECTOR.total_sectors_long );
+    // READ BOOTSECTOR FOR PARTITION 0
+    sd_readSector( PARTITION[0].start_sector, (unsigned char *)BOOTSECTOR );
 
     // READ ROOT DIRECTORY INTO MEMORY
-    tpu_outputstringcentre( 19, TRANSPARENT, RED, "Reading Root Directory" );
     // SET STORAGE FOR THE RROT DIRECTORY FROM THE TOP OF THE MAIN MEMORY
-    ROOTDIRECTORY = (Fat16Entry *)( 0x12000000 - BOOTSECTOR.root_dir_entries * sizeof( Fat16Entry ) );
+    ROOTDIRECTORY = (Fat16Entry *)( 0x12000000 - 0x400 - BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) );
     sd_readRootDirectory();
-    tpu_outputstringcentre( 19, TRANSPARENT, GREEN, "Read Root Directory " );
 
-    // OUTPUT RESULT OF ls *.PAW TO TERMINAL
-    outputstring("\n\n\n\n\n\n\n\nRISC-ICE-V BIOS" );
-    outputstring("> ls *.PAW");
-    for( i = 0; i < BOOTSECTOR.root_dir_entries; i++ ) {
-        if( ROOTDIRECTORY[i].ext[0]=='P' && ROOTDIRECTORY[i].ext[1]=='A' && ROOTDIRECTORY[i].ext[2]=='W' ) {
-            switch( ROOTDIRECTORY[i].filename[0] ) {
-                case 0x00:
-                case 0xe5:
-                case 0x2e:
-                    break;
-                default: outputcharacter('[');
-                    for( j = 0; j < 8; j++ )
-                        outputcharacter( ROOTDIRECTORY[i].filename[j] );
-                    outputcharacter('.');
-                    for( j = 0; j < 3; j++ )
-                        outputcharacter( ROOTDIRECTORY[i].ext[j] );
-                    outputcharacter(']');
-                    break;
+    // READ FAT INTO MEMORY
+    FAT = (unsigned short * ) ROOTDIRECTORY - BOOTSECTOR -> fat_size_sectors * 512;
+    sd_readFAT();
+
+    // SETUP CLUSTERBUFFER
+    CLUSTERBUFFER = (unsigned char * )FAT - BOOTSECTOR -> sectors_per_cluster * 512;
+    DATASTARTSECTOR = PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats + ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512;
+
+    tpu_outputstringcentre( 7, TRANSPARENT, WHITE, "SELECT FILE FOR LOADING" );
+    tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "SCROLL USING FIRE 2, SELECT USING FIRE 1" );
+
+    tpu_outputstringcentre( 10, TRANSPARENT, RED, "NO PAW FILES FOUND" );
+
+    SELECTEDFILE = 0xffff;
+
+    while( !selectedfile ) {
+        if( ( get_buttons() & 4 ) || ( SELECTEDFILE == 0xffff ) ) {
+            while( get_buttons() & 4 );
+            sd_findNextFile();
+            tpu_outputstringcentre( 10, TRANSPARENT, WHITE, "PAW FILE:" );
+            for( i = 0; i < 8; i++ ) {
+                // DISPLAY FILENAME
+                gpu_rectangle( TRANSPARENT, 64, 208, 576, 272 );
+                for( i = 0; i < 8; i++ ) {
+                    gpu_character_blit( WHITE, 64 + i * 64, 208, ROOTDIRECTORY[SELECTEDFILE].filename[i], 3);
+                }
             }
+        }
+        if( ( get_buttons() & 2 ) && ( SELECTEDFILE != 0xffff ) ) {
+            while( get_buttons() & 2 );
+            selectedfile = 1;
         }
     }
 
-    // READ FAT INTO MEMORY
-    tpu_outputstringcentre( 19, TRANSPARENT, RED, "Reading File Allocation Table" );
-    FAT = (unsigned short * ) ROOTDIRECTORY - BOOTSECTOR.fat_size_sectors * 512;
-    sd_readFAT();
-    tpu_outputstringcentre( 19, TRANSPARENT, GREEN, "Read File Allocation Table" );
+    tpu_outputstringcentre( 7, TRANSPARENT, WHITE, "FILE SELECTED" );
+    tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "PREPARING TO LOAD" );
 
-    // DEBUG
-    outputstring( "\nSDRAM from ROOTDIRECTORY" );
-    memorydump( (unsigned char *) ROOTDIRECTORY, 512 );
+    sleep( 2000 );
+    tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "LOADING" );
 
-    outputstring( "\nSDCARD from ROOTDIRECTORY" );
-    sd_readSector( PARTITION[0].start_sector + BOOTSECTOR.reserved_sectors + BOOTSECTOR.fat_size_sectors * BOOTSECTOR.number_of_fats, BUFFER );
-    memorydump( BUFFER, 512 );
+    sd_readFile( SELECTEDFILE, (unsigned char *)0x10000000 );
 
-    outputstring( "\nSDRAM from FAT" );
-    memorydump( (unsigned char *) FAT, 512 );
+    tpu_outputstringcentre( 7, TRANSPARENT, WHITE, "FILE LOADED" );
+    tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "PREPARING TO LAUNCH" );
 
-    // CLEAR the UART buffer
-    while( inputcharacter_available() )
-        uartData = inputcharacter();
-
-    outputstring("\nTerminal Echo Starting");
-
-    while(1) {
-        uartData = inputcharacter();
-        outputstringnonl("You pressed : ");
-        outputcharacter( uartData );
-        outputstring(" <-");
-        set_leds(uartData);
-    }
+    sleep( 2000 );
 
     // CALL SDRAM LOADED PROGRAM
     ((void(*)(void))0x10000000)();

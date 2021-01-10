@@ -734,5 +734,6 @@ void terminal_showhide( unsigned char status ) {
 }
 
 void terminal_reset( void ) {
+    while( *TERMINAL_STATUS );
     *TERMINAL_RESET = 1;
 }

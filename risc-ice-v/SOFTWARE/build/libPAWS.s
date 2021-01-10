@@ -1748,6 +1748,12 @@ terminal_showhide:
 	.globl	terminal_reset
 	.type	terminal_reset, @function
 terminal_reset:
+	lui	a5,%hi(TERMINAL_STATUS)
+	lw	a4,%lo(TERMINAL_STATUS)(a5)
+.L235:
+	lbu	a5,0(a4)
+	andi	a5,a5,0xff
+	bne	a5,zero,.L235
 	lui	a5,%hi(TERMINAL_RESET)
 	lw	a5,%lo(TERMINAL_RESET)(a5)
 	li	a4,1

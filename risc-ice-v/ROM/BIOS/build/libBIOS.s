@@ -88,243 +88,6 @@ CSRtime:
 	ret
 	.size	CSRtime, .-CSRtime
 	.align	1
-	.globl	chartostring
-	.type	chartostring, @function
-chartostring:
-	beq	a0,zero,.L18
-	li	a5,0
-	li	a2,10
-	li	t1,2
-	li	a7,9
-.L20:
-	remu	a3,a0,a2
-	mv	a6,a0
-	divu	a0,a0,a2
-	sub	a4,t1,a5
-	add	a4,a1,a4
-	addi	a3,a3,48
-	sb	a3,0(a4)
-	addi	a5,a5,1
-	andi	a5,a5,0xff
-	bgtu	a6,a7,.L20
-.L18:
-	ret
-	.size	chartostring, .-chartostring
-	.align	1
-	.globl	shorttostring
-	.type	shorttostring, @function
-shorttostring:
-	beq	a0,zero,.L22
-	li	a5,0
-	li	a2,10
-	li	t1,4
-	li	a7,9
-.L24:
-	remu	a3,a0,a2
-	mv	a6,a0
-	divu	a0,a0,a2
-	sub	a4,t1,a5
-	add	a4,a1,a4
-	addi	a3,a3,48
-	sb	a3,0(a4)
-	addi	a5,a5,1
-	andi	a5,a5,0xff
-	bgtu	a6,a7,.L24
-.L22:
-	ret
-	.size	shorttostring, .-shorttostring
-	.align	1
-	.globl	inttostring
-	.type	inttostring, @function
-inttostring:
-	beq	a0,zero,.L26
-	li	a5,0
-	li	a6,10
-	li	a2,9
-.L28:
-	remu	a3,a0,a6
-	mv	a7,a0
-	divu	a0,a0,a6
-	sub	a4,a2,a5
-	add	a4,a1,a4
-	addi	a3,a3,48
-	sb	a3,0(a4)
-	addi	a5,a5,1
-	andi	a5,a5,0xff
-	bgtu	a7,a2,.L28
-.L26:
-	ret
-	.size	inttostring, .-inttostring
-	.align	1
-	.globl	outputcharacter
-	.type	outputcharacter, @function
-outputcharacter:
-	lui	a5,%hi(UART_STATUS)
-	lw	a4,%lo(UART_STATUS)(a5)
-.L31:
-	lbu	a5,0(a4)
-	andi	a5,a5,2
-	bne	a5,zero,.L31
-	lui	a5,%hi(UART_DATA)
-	lw	a5,%lo(UART_DATA)(a5)
-	sb	a0,0(a5)
-	lui	a5,%hi(TERMINAL_STATUS)
-	lw	a4,%lo(TERMINAL_STATUS)(a5)
-.L32:
-	lbu	a5,0(a4)
-	andi	a5,a5,0xff
-	bne	a5,zero,.L32
-	lui	a5,%hi(TERMINAL_OUTPUT)
-	lw	a5,%lo(TERMINAL_OUTPUT)(a5)
-	sb	a0,0(a5)
-	li	a5,10
-	beq	a0,a5,.L40
-	ret
-.L40:
-	addi	sp,sp,-16
-	sw	ra,12(sp)
-	li	a0,13
-	call	outputcharacter
-	lw	ra,12(sp)
-	addi	sp,sp,16
-	jr	ra
-	.size	outputcharacter, .-outputcharacter
-	.align	1
-	.globl	outputstring
-	.type	outputstring, @function
-outputstring:
-	addi	sp,sp,-16
-	sw	ra,12(sp)
-	sw	s0,8(sp)
-	mv	s0,a0
-	lbu	a0,0(a0)
-	beq	a0,zero,.L42
-.L43:
-	call	outputcharacter
-	addi	s0,s0,1
-	lbu	a0,0(s0)
-	bne	a0,zero,.L43
-.L42:
-	li	a0,10
-	call	outputcharacter
-	lw	ra,12(sp)
-	lw	s0,8(sp)
-	addi	sp,sp,16
-	jr	ra
-	.size	outputstring, .-outputstring
-	.align	1
-	.globl	outputstringnonl
-	.type	outputstringnonl, @function
-outputstringnonl:
-	addi	sp,sp,-16
-	sw	ra,12(sp)
-	sw	s0,8(sp)
-	mv	s0,a0
-	lbu	a0,0(a0)
-	beq	a0,zero,.L46
-.L48:
-	call	outputcharacter
-	addi	s0,s0,1
-	lbu	a0,0(s0)
-	bne	a0,zero,.L48
-.L46:
-	lw	ra,12(sp)
-	lw	s0,8(sp)
-	addi	sp,sp,16
-	jr	ra
-	.size	outputstringnonl, .-outputstringnonl
-	.align	1
-	.globl	outputnumber_char
-	.type	outputnumber_char, @function
-outputnumber_char:
-	addi	sp,sp,-32
-	sw	ra,28(sp)
-	li	a5,3153920
-	addi	a5,a5,32
-	sw	a5,12(sp)
-	addi	a1,sp,12
-	call	chartostring
-	addi	a0,sp,12
-	call	outputstringnonl
-	lw	ra,28(sp)
-	addi	sp,sp,32
-	jr	ra
-	.size	outputnumber_char, .-outputnumber_char
-	.align	1
-	.globl	outputnumber_short
-	.type	outputnumber_short, @function
-outputnumber_short:
-	addi	sp,sp,-32
-	sw	ra,28(sp)
-	li	a5,538976256
-	addi	a5,a5,32
-	sw	a5,8(sp)
-	li	a5,48
-	sh	a5,12(sp)
-	addi	a1,sp,8
-	call	shorttostring
-	addi	a0,sp,8
-	call	outputstringnonl
-	lw	ra,28(sp)
-	addi	sp,sp,32
-	jr	ra
-	.size	outputnumber_short, .-outputnumber_short
-	.section	.rodata.str1.4,"aMS",@progbits,1
-	.align	2
-.LC0:
-	.string	"         0"
-	.text
-	.align	1
-	.globl	outputnumber_int
-	.type	outputnumber_int, @function
-outputnumber_int:
-	addi	sp,sp,-32
-	sw	ra,28(sp)
-	lui	a5,%hi(.LC0)
-	addi	a5,a5,%lo(.LC0)
-	lw	a3,0(a5)
-	lw	a4,4(a5)
-	sw	a3,4(sp)
-	sw	a4,8(sp)
-	lhu	a4,8(a5)
-	sh	a4,12(sp)
-	lbu	a5,10(a5)
-	sb	a5,14(sp)
-	addi	a1,sp,4
-	call	inttostring
-	addi	a0,sp,4
-	call	outputstringnonl
-	lw	ra,28(sp)
-	addi	sp,sp,32
-	jr	ra
-	.size	outputnumber_int, .-outputnumber_int
-	.align	1
-	.globl	inputcharacter_available
-	.type	inputcharacter_available, @function
-inputcharacter_available:
-	lui	a5,%hi(UART_STATUS)
-	lw	a5,%lo(UART_STATUS)(a5)
-	lbu	a0,0(a5)
-	andi	a0,a0,1
-	ret
-	.size	inputcharacter_available, .-inputcharacter_available
-	.align	1
-	.globl	inputcharacter
-	.type	inputcharacter, @function
-inputcharacter:
-	addi	sp,sp,-16
-	sw	ra,12(sp)
-.L59:
-	call	inputcharacter_available
-	beq	a0,zero,.L59
-	lui	a5,%hi(UART_DATA)
-	lw	a5,%lo(UART_DATA)(a5)
-	lbu	a0,0(a5)
-	lw	ra,12(sp)
-	addi	sp,sp,16
-	jr	ra
-	.size	inputcharacter, .-inputcharacter
-	.align	1
 	.globl	sleep
 	.type	sleep, @function
 sleep:
@@ -332,11 +95,11 @@ sleep:
 	lw	a4,%lo(SLEEPTIMER)(a5)
 	sh	a0,0(a4)
 	lw	a4,%lo(SLEEPTIMER)(a5)
-.L63:
+.L19:
 	lhu	a5,0(a4)
 	slli	a5,a5,16
 	srli	a5,a5,16
-	bne	a5,zero,.L63
+	bne	a5,zero,.L19
 	ret
 	.size	sleep, .-sleep
 	.align	1
@@ -345,10 +108,10 @@ sleep:
 sdcard_wait:
 	lui	a5,%hi(SDCARD_READY)
 	lw	a4,%lo(SDCARD_READY)(a5)
-.L66:
+.L22:
 	lbu	a5,0(a4)
 	andi	a5,a5,0xff
-	beq	a5,zero,.L66
+	beq	a5,zero,.L22
 	ret
 	.size	sdcard_wait, .-sdcard_wait
 	.align	1
@@ -380,7 +143,7 @@ sdcard_readsector:
 	lui	a0,%hi(SDCARD_ADDRESS)
 	lui	a1,%hi(SDCARD_DATA)
 	li	a2,512
-.L69:
+.L25:
 	slli	a3,a5,16
 	srli	a3,a3,16
 	lw	a4,%lo(SDCARD_ADDRESS)(a0)
@@ -390,7 +153,7 @@ sdcard_readsector:
 	add	a4,s0,a5
 	sb	a3,0(a4)
 	addi	a5,a5,1
-	bne	a5,a2,.L69
+	bne	a5,a2,.L25
 	lw	ra,12(sp)
 	lw	s0,8(sp)
 	lw	s1,4(sp)
@@ -407,6 +170,16 @@ set_leds:
 	ret
 	.size	set_leds, .-set_leds
 	.align	1
+	.globl	get_buttons
+	.type	get_buttons, @function
+get_buttons:
+	lui	a5,%hi(BUTTONS)
+	lw	a5,%lo(BUTTONS)(a5)
+	lbu	a0,0(a5)
+	andi	a0,a0,0xff
+	ret
+	.size	get_buttons, .-get_buttons
+	.align	1
 	.globl	set_background
 	.type	set_background, @function
 set_background:
@@ -422,15 +195,33 @@ set_background:
 	ret
 	.size	set_background, .-set_background
 	.align	1
+	.globl	tilemap_scrollwrapclear
+	.type	tilemap_scrollwrapclear, @function
+tilemap_scrollwrapclear:
+	lui	a5,%hi(TM_STATUS)
+	lw	a4,%lo(TM_STATUS)(a5)
+.L32:
+	lbu	a5,0(a4)
+	andi	a5,a5,0xff
+	bne	a5,zero,.L32
+	lui	a5,%hi(TM_SCROLLWRAPCLEAR)
+	lw	a4,%lo(TM_SCROLLWRAPCLEAR)(a5)
+	sb	a0,0(a4)
+	lw	a5,%lo(TM_SCROLLWRAPCLEAR)(a5)
+	lbu	a0,0(a5)
+	andi	a0,a0,0xff
+	ret
+	.size	tilemap_scrollwrapclear, .-tilemap_scrollwrapclear
+	.align	1
 	.globl	wait_gpu
 	.type	wait_gpu, @function
 wait_gpu:
 	lui	a5,%hi(GPU_STATUS)
 	lw	a4,%lo(GPU_STATUS)(a5)
-.L75:
+.L35:
 	lbu	a5,0(a4)
 	andi	a5,a5,0xff
-	bne	a5,zero,.L75
+	bne	a5,zero,.L35
 	ret
 	.size	wait_gpu, .-wait_gpu
 	.align	1
@@ -630,7 +421,7 @@ set_blitter_bitmap:
 	lui	a6,%hi(BLIT_WRITER_LINE)
 	lui	a0,%hi(BLIT_WRITER_BITMAP)
 	li	a2,16
-.L94:
+.L54:
 	lw	a4,%lo(BLIT_WRITER_LINE)(a6)
 	andi	a3,a5,0xff
 	sb	a3,0(a4)
@@ -639,7 +430,7 @@ set_blitter_bitmap:
 	sh	a3,0(a4)
 	addi	a5,a5,1
 	addi	a1,a1,2
-	bne	a5,a2,.L94
+	bne	a5,a2,.L54
 	ret
 	.size	set_blitter_bitmap, .-set_blitter_bitmap
 	.align	1
@@ -679,15 +470,70 @@ gpu_triangle:
 	jr	ra
 	.size	gpu_triangle, .-gpu_triangle
 	.align	1
+	.globl	set_sprite
+	.type	set_sprite, @function
+set_sprite:
+	beq	a0,zero,.L59
+	li	t1,1
+	beq	a0,t1,.L60
+	ret
+.L59:
+	lui	a0,%hi(LOWER_SPRITE_NUMBER)
+	lw	a0,%lo(LOWER_SPRITE_NUMBER)(a0)
+	sb	a1,0(a0)
+	lui	a1,%hi(LOWER_SPRITE_ACTIVE)
+	lw	a1,%lo(LOWER_SPRITE_ACTIVE)(a1)
+	sb	a2,0(a1)
+	lui	a2,%hi(LOWER_SPRITE_TILE)
+	lw	a2,%lo(LOWER_SPRITE_TILE)(a2)
+	sb	a6,0(a2)
+	lui	a2,%hi(LOWER_SPRITE_COLOUR)
+	lw	a2,%lo(LOWER_SPRITE_COLOUR)(a2)
+	sb	a3,0(a2)
+	lui	a3,%hi(LOWER_SPRITE_X)
+	lw	a3,%lo(LOWER_SPRITE_X)(a3)
+	sh	a4,0(a3)
+	lui	a4,%hi(LOWER_SPRITE_Y)
+	lw	a4,%lo(LOWER_SPRITE_Y)(a4)
+	sh	a5,0(a4)
+	lui	a5,%hi(LOWER_SPRITE_DOUBLE)
+	lw	a5,%lo(LOWER_SPRITE_DOUBLE)(a5)
+	sb	a7,0(a5)
+	ret
+.L60:
+	lui	a0,%hi(UPPER_SPRITE_NUMBER)
+	lw	a0,%lo(UPPER_SPRITE_NUMBER)(a0)
+	sb	a1,0(a0)
+	lui	a1,%hi(UPPER_SPRITE_ACTIVE)
+	lw	a1,%lo(UPPER_SPRITE_ACTIVE)(a1)
+	sb	a2,0(a1)
+	lui	a2,%hi(UPPER_SPRITE_TILE)
+	lw	a2,%lo(UPPER_SPRITE_TILE)(a2)
+	sb	a6,0(a2)
+	lui	a2,%hi(UPPER_SPRITE_COLOUR)
+	lw	a2,%lo(UPPER_SPRITE_COLOUR)(a2)
+	sb	a3,0(a2)
+	lui	a3,%hi(UPPER_SPRITE_X)
+	lw	a3,%lo(UPPER_SPRITE_X)(a3)
+	sh	a4,0(a3)
+	lui	a4,%hi(UPPER_SPRITE_Y)
+	lw	a4,%lo(UPPER_SPRITE_Y)(a4)
+	sh	a5,0(a4)
+	lui	a5,%hi(UPPER_SPRITE_DOUBLE)
+	lw	a5,%lo(UPPER_SPRITE_DOUBLE)(a5)
+	sb	a7,0(a5)
+	ret
+	.size	set_sprite, .-set_sprite
+	.align	1
 	.globl	tpu_cs
 	.type	tpu_cs, @function
 tpu_cs:
 	lui	a5,%hi(TPU_COMMIT)
 	lw	a4,%lo(TPU_COMMIT)(a5)
-.L99:
+.L63:
 	lbu	a5,0(a4)
 	andi	a5,a5,0xff
-	bne	a5,zero,.L99
+	bne	a5,zero,.L63
 	li	a5,3
 	sb	a5,0(a4)
 	ret
@@ -698,10 +544,10 @@ tpu_cs:
 tpu_clearline:
 	lui	a5,%hi(TPU_COMMIT)
 	lw	a4,%lo(TPU_COMMIT)(a5)
-.L102:
+.L66:
 	lbu	a5,0(a4)
 	andi	a5,a5,0xff
-	bne	a5,zero,.L102
+	bne	a5,zero,.L66
 	lui	a5,%hi(TPU_Y)
 	lw	a5,%lo(TPU_Y)(a5)
 	sb	a0,0(a5)
@@ -717,10 +563,10 @@ tpu_clearline:
 tpu_set:
 	lui	a5,%hi(TPU_COMMIT)
 	lw	a4,%lo(TPU_COMMIT)(a5)
-.L105:
+.L69:
 	lbu	a5,0(a4)
 	andi	a5,a5,0xff
-	bne	a5,zero,.L105
+	bne	a5,zero,.L69
 	lui	a5,%hi(TPU_X)
 	lw	a5,%lo(TPU_X)(a5)
 	sb	a0,0(a5)
@@ -745,10 +591,10 @@ tpu_set:
 tpu_output_character:
 	lui	a5,%hi(TPU_COMMIT)
 	lw	a4,%lo(TPU_COMMIT)(a5)
-.L108:
+.L72:
 	lbu	a5,0(a4)
 	andi	a5,a5,0xff
-	bne	a5,zero,.L108
+	bne	a5,zero,.L72
 	lui	a5,%hi(TPU_CHARACTER)
 	lw	a5,%lo(TPU_CHARACTER)(a5)
 	sb	a0,0(a5)
@@ -763,24 +609,24 @@ tpu_output_character:
 	.type	tpu_outputstring, @function
 tpu_outputstring:
 	lbu	a3,0(a0)
-	beq	a3,zero,.L110
+	beq	a3,zero,.L74
 	lui	a2,%hi(TPU_COMMIT)
 	lui	a6,%hi(TPU_CHARACTER)
 	li	a1,2
-.L113:
+.L77:
 	lw	a4,%lo(TPU_COMMIT)(a2)
-.L112:
+.L76:
 	lbu	a5,0(a4)
 	andi	a5,a5,0xff
-	bne	a5,zero,.L112
+	bne	a5,zero,.L76
 	lw	a5,%lo(TPU_CHARACTER)(a6)
 	sb	a3,0(a5)
 	lw	a5,%lo(TPU_COMMIT)(a2)
 	sb	a1,0(a5)
 	addi	a0,a0,1
 	lbu	a3,0(a0)
-	bne	a3,zero,.L113
-.L110:
+	bne	a3,zero,.L77
+.L74:
 	ret
 	.size	tpu_outputstring, .-tpu_outputstring
 	.align	1
@@ -818,66 +664,6 @@ tpu_outputstringcentre:
 	addi	sp,sp,32
 	jr	ra
 	.size	tpu_outputstringcentre, .-tpu_outputstringcentre
-	.align	1
-	.globl	tpu_outputnumber_char
-	.type	tpu_outputnumber_char, @function
-tpu_outputnumber_char:
-	addi	sp,sp,-32
-	sw	ra,28(sp)
-	li	a5,3153920
-	addi	a5,a5,32
-	sw	a5,12(sp)
-	addi	a1,sp,12
-	call	chartostring
-	addi	a0,sp,12
-	call	tpu_outputstring
-	lw	ra,28(sp)
-	addi	sp,sp,32
-	jr	ra
-	.size	tpu_outputnumber_char, .-tpu_outputnumber_char
-	.align	1
-	.globl	tpu_outputnumber_short
-	.type	tpu_outputnumber_short, @function
-tpu_outputnumber_short:
-	addi	sp,sp,-32
-	sw	ra,28(sp)
-	li	a5,538976256
-	addi	a5,a5,32
-	sw	a5,8(sp)
-	li	a5,48
-	sh	a5,12(sp)
-	addi	a1,sp,8
-	call	shorttostring
-	addi	a0,sp,8
-	call	tpu_outputstring
-	lw	ra,28(sp)
-	addi	sp,sp,32
-	jr	ra
-	.size	tpu_outputnumber_short, .-tpu_outputnumber_short
-	.align	1
-	.globl	tpu_outputnumber_int
-	.type	tpu_outputnumber_int, @function
-tpu_outputnumber_int:
-	addi	sp,sp,-32
-	sw	ra,28(sp)
-	lui	a5,%hi(.LC0)
-	addi	a5,a5,%lo(.LC0)
-	lw	a3,0(a5)
-	lw	a4,4(a5)
-	sw	a3,4(sp)
-	sw	a4,8(sp)
-	lhu	a4,8(a5)
-	sh	a4,12(sp)
-	lbu	a5,10(a5)
-	sb	a5,14(sp)
-	addi	a1,sp,4
-	call	inttostring
-	addi	a0,sp,4
-	call	tpu_outputstring
-	lw	ra,28(sp)
-	addi	sp,sp,32
-	jr	ra
-	.size	tpu_outputnumber_int, .-tpu_outputnumber_int
 	.align	1
 	.globl	terminal_showhide
 	.type	terminal_showhide, @function
