@@ -83,13 +83,13 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
 
     // EYE WHITES
     if( steps < ( MAXDEPTH - 1 ) ) {
-        switch( abs( playerdirection - ghostdirection[ ghostnumber ] ) ) {
+        switch( playerdirection <  ghostdirection[ ghostnumber ] ? ghostdirection[ ghostnumber ] - playerdirection : playerdirection - ghostdirection[ ghostnumber ] ) {
             case 0:
                 // SAME DIRECTION, NO EYES
                 break;
             case 1:
-                gpu_circle( WHITE, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2, 1 );
-                // GHOST FACING LEFT
+                // GHOST FACING RIGHT
+                gpu_circle( WHITE, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2, 1 );
                 break;
             case 2:
                 // GHOST DIRECTLY FACING
@@ -97,21 +97,21 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
                 gpu_circle( WHITE, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2, 1 );
                 break;
             case 3:
-                // GHOST FACING RIGHT
-                gpu_circle( WHITE, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2, 1 );
+                // GHOST FACING LEFT
+                gpu_circle( WHITE, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2, 1 );
                 break;
         }
     }
 
     // EYE PUPILS
     if( steps < ( MAXDEPTH - 2 ) ) {
-        switch( abs( playerdirection - ghostdirection[ ghostnumber ] ) ) {
+        switch( playerdirection <  ghostdirection[ ghostnumber ] ? ghostdirection[ ghostnumber ] - playerdirection : playerdirection - ghostdirection[ ghostnumber ] ) {
             case 0:
                 // SAME DIRECTION, NO EYES
                 break;
             case 1:
-                gpu_circle( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 1 );
-                // GHOST FACING LEFT
+                // GHOST FACING RIGHT
+                gpu_circle( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 1 );
                 break;
             case 2:
                 // GHOST DIRECTLY FACING
@@ -119,8 +119,8 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
                 gpu_circle( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 1 );
                 break;
             case 3:
-                // GHOST FACING RIGHT
-                gpu_circle( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 1 );
+                // GHOST FACING LEFT
+                gpu_circle( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 1 );
                 break;
         }
     }
@@ -190,7 +190,7 @@ void initialise_maze( unsigned short width, unsigned short height )
     // POSITION GHOSTS AT CENTRE
     for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
         if( ghost <= level ) {
-            // AT EXIT
+            // AT CENTRE
             ghostx[ ghost ] = width / 2;
             ghosty[ ghost ] = height / 2;
             ghostdirection[ ghost ] = ghost;
@@ -232,7 +232,8 @@ void display_maze( unsigned short width, unsigned short height, unsigned short c
                         break;
                 }
             }
-            gpu_rectangle( colour, x * boxwidth, y * boxheight, x * boxwidth + boxwidth - 1, y * boxheight + boxheight - 1 );
+            if( colour != BLUE )
+                gpu_rectangle( colour, x * boxwidth, y * boxheight, x * boxwidth + boxwidth - 1, y * boxheight + boxheight - 1 );
         }
     }
 }
@@ -292,7 +293,7 @@ void generate_maze( unsigned short width, unsigned short height, unsigned short 
     } while( done == 0 );
 }
 
-// DRAW THE MAP IN RIGHT CORENER WITH COMPASS
+// DRAW THE MAP IN RIGHT CORNER WITH COMPASS
 void draw_map( unsigned short width, unsigned short height, unsigned short currentx, unsigned short currenty, unsigned short direction, unsigned char mapmaze, unsigned short mappeeks )
 {
     unsigned short x, y;
@@ -303,6 +304,7 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
 
     // DRAW MAP BACKGROUND - PARCHMENT
     gpu_rectangle( ORANGE, 460, 0, 640, 140 );
+    gpu_rectangle( BLUE, 475, 10, 639 - boxwidth, 130 );
 
     for( x = 0; x < width; x++ ) {
         for( y = 0; y < height; y++ ) {
@@ -320,7 +322,8 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
                     colour = YELLOW;
                     break;
             }
-            gpu_rectangle( colour, 475 + x * boxwidth, 10 + y * boxheight, 474 + x * boxwidth + boxwidth, 9 + y * boxheight + boxheight );
+            if( colour != BLUE )
+                gpu_rectangle( colour, 475 + x * boxwidth, 10 + y * boxheight, 474 + x * boxwidth + boxwidth, 9 + y * boxheight + boxheight );
         }
     }
 
@@ -402,13 +405,29 @@ unsigned char whatisright( unsigned short currentx, unsigned short currenty, uns
 // DRAW LEFT or RIGHT WALLS
 void left_wall( unsigned char colour, short steps )
 {
-    gpu_quadrilateral( colour, perspectivex[ steps ], perspectivey[ steps ], perspectivex[ steps + 1 ], perspectivey[ steps + 1 ],
+    // USE RECTANGLE + TWO TRIANGLES AS FASTER THAN TWO TRIANGLES FOR LARGE AREAS
+    if( steps < MAXDEPTH -1 ) {
+        gpu_triangle( colour, perspectivex[ steps ], perspectivey[ steps ], perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], perspectivex[ steps ], perspectivey[ steps + 1 ] );
+        gpu_rectangle( colour, perspectivex[ steps ], perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
+        gpu_triangle( colour, perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], perspectivex[ steps ], 480 - perspectivey[ steps ], perspectivex[ steps ], 480 - perspectivey[ steps + 1 ] );
+    } else {
+        // TO PROVIDE THE POINT AT HORIZON
+        gpu_quadrilateral( colour, perspectivex[ steps ], perspectivey[ steps ], perspectivex[ steps + 1 ], perspectivey[ steps + 1 ],
                                 perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], perspectivex[ steps ], 480 - perspectivey[ steps ] );
+    }
 }
 void right_wall( unsigned char colour, unsigned short steps )
 {
-    gpu_quadrilateral( colour, 640 - perspectivex[ steps ], perspectivey[ steps ], 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ],
+    // USE RECTANGLE + TWO TRIANGLES AS FASTER THAN TWO TRIANGLES FOR LARGE AREAS
+    if( steps < MAXDEPTH -1 ) {
+        gpu_triangle( colour, 640 - perspectivex[ steps ], perspectivey[ steps ], 640 - perspectivex[ steps ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
+        gpu_rectangle( colour, 640 - perspectivex[ steps ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
+        gpu_triangle( colour, 640 - perspectivex[ steps ], 480 - perspectivey[ steps + 1 ], 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ], 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ]);
+    } else {
+        // TO PROVIDE THE POINT AT HORIZON
+        gpu_quadrilateral( colour, 640 - perspectivex[ steps ], perspectivey[ steps ], 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ],
                                 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
+    }
 }
 
 // WALK THE MAZE IN 3D
