@@ -1,248 +1,188 @@
-	.file	"chess.c"
+	.file	"template.c"
 	.option nopic
 	.attribute arch, "rv32i2p0_m2p0_c2p0"
 	.attribute unaligned_access, 0
 	.attribute stack_align, 16
 	.text
-	.align	1
-	.globl	setupscreen
-	.type	setupscreen, @function
-setupscreen:
-	addi	sp,sp,-16
-	sw	ra,12(sp)
-	call	gpu_cs
-	call	tpu_cs
-	li	a0,0
-	call	terminal_showhide
-	li	a2,4
-	li	a1,0
-	li	a0,0
-	call	set_background
-	li	a4,456
-	li	a3,536
-	li	a2,24
-	li	a1,104
-	li	a0,0
-	call	gpu_rectangle
-	li	a4,448
-	li	a3,528
-	li	a2,32
-	li	a1,112
-	li	a0,63
-	call	gpu_rectangle
-	lw	ra,12(sp)
-	addi	sp,sp,16
-	jr	ra
-	.size	setupscreen, .-setupscreen
-	.align	1
-	.globl	drawboard
-	.type	drawboard, @function
-drawboard:
-	addi	sp,sp,-80
-	sw	ra,76(sp)
-	sw	s0,72(sp)
-	sw	s1,68(sp)
-	sw	s2,64(sp)
-	sw	s3,60(sp)
-	sw	s4,56(sp)
-	sw	s5,52(sp)
-	sw	s6,48(sp)
-	sw	s7,44(sp)
-	sw	s8,40(sp)
-	sw	s9,36(sp)
-	sw	s10,32(sp)
-	sw	s11,28(sp)
-	lui	s11,%hi(.LANCHOR0)
-	addi	s11,s11,%lo(.LANCHOR0)
-	li	a5,170
-	sw	a5,12(sp)
-	li	s9,120
-	li	s3,0
-	li	s10,1
-	li	s7,2
-	li	s4,8
-	j	.L4
-.L5:
-	addi	a4,s0,50
-	slli	a4,a4,16
-	srai	a4,a4,16
-	mv	a3,s5
-	slli	a2,s0,16
-	srai	a2,a2,16
-	mv	a1,s6
-	li	a0,42
-	call	gpu_rectangle
-	j	.L6
-.L8:
-	addi	a3,a3,48
-	addi	a2,s0,9
-	mv	a4,s7
-	andi	a3,a3,0xff
-	slli	a2,a2,16
-	srai	a2,a2,16
-	mv	a1,s8
-	call	gpu_character_blit
-.L7:
-	addi	s1,s1,1
-	addi	s2,s2,8
-	addi	s0,s0,50
-	slli	s0,s0,16
-	srli	s0,s0,16
-	beq	s1,s4,.L14
-.L9:
-	xor	a5,s3,s1
-	andi	a5,a5,1
-	bne	a5,zero,.L5
-	addi	a4,s0,50
-	slli	a4,a4,16
-	srai	a4,a4,16
-	mv	a3,s5
-	slli	a2,s0,16
-	srai	a2,a2,16
-	mv	a1,s6
-	li	a0,21
-	call	gpu_rectangle
-.L6:
-	lw	a3,0(s2)
-	beq	a3,zero,.L7
-	lw	a5,4(s2)
-	mv	a0,s7
-	beq	a5,s10,.L8
-	li	a0,32
-	j	.L8
-.L14:
-	addi	s3,s3,1
-	addi	s9,s9,50
-	slli	s9,s9,16
-	srli	s9,s9,16
-	lw	a5,12(sp)
-	addi	a5,a5,50
-	slli	a5,a5,16
-	srli	a5,a5,16
-	sw	a5,12(sp)
-	addi	s11,s11,64
-	beq	s3,s4,.L3
-.L4:
-	slli	s6,s9,16
-	srai	s6,s6,16
-	lh	s5,12(sp)
-	addi	s8,s9,9
-	slli	s8,s8,16
-	srai	s8,s8,16
-	mv	s2,s11
-	li	s0,40
-	li	s1,0
-	j	.L9
-.L3:
-	lw	ra,76(sp)
-	lw	s0,72(sp)
-	lw	s1,68(sp)
-	lw	s2,64(sp)
-	lw	s3,60(sp)
-	lw	s4,56(sp)
-	lw	s5,52(sp)
-	lw	s6,48(sp)
-	lw	s7,44(sp)
-	lw	s8,40(sp)
-	lw	s9,36(sp)
-	lw	s10,32(sp)
-	lw	s11,28(sp)
-	addi	sp,sp,80
-	jr	ra
-	.size	drawboard, .-drawboard
-	.align	1
-	.globl	setupboard
-	.type	setupboard, @function
-setupboard:
-	lui	a7,%hi(.LANCHOR0)
-	addi	a6,a7,%lo(.LANCHOR0)
-	addi	t4,a6,512
-	addi	a7,a7,%lo(.LANCHOR0)
-	li	a3,1
-	li	a0,8
-	li	t3,3
-	li	t1,2
-	j	.L16
-.L28:
-	bge	a5,zero,.L26
-.L19:
-	sw	t3,4(a2)
-.L20:
-	addi	a5,a5,1
-	addi	a4,a4,8
-	beq	a5,a0,.L27
-.L23:
-	mv	a2,a4
-	sw	zero,0(a4)
-	ble	a5,a3,.L28
-	addi	a1,a5,-6
-	bgtu	a1,a3,.L19
-	sw	t1,4(a4)
-	j	.L20
-.L26:
-	sw	a3,4(a4)
-	addi	a5,a5,1
-	addi	a4,a4,8
-	j	.L23
-.L27:
-	addi	a7,a7,64
-	beq	a7,t4,.L29
-.L16:
-	mv	a4,a7
-	li	a5,0
-	j	.L23
-.L29:
-	li	a5,1
-.L22:
-	sw	a5,8(a6)
-	sw	a5,48(a6)
-	addi	a6,a6,64
-	bne	a6,t4,.L22
-	lui	a5,%hi(.LANCHOR0)
-	addi	a5,a5,%lo(.LANCHOR0)
-	li	a4,2
-	sw	a4,0(a5)
-	sw	a4,56(a5)
-	sw	a4,448(a5)
-	sw	a4,504(a5)
-	li	a4,4
-	sw	a4,64(a5)
-	sw	a4,384(a5)
-	sw	a4,120(a5)
-	sw	a4,440(a5)
-	li	a4,3
-	sw	a4,128(a5)
-	sw	a4,320(a5)
-	sw	a4,184(a5)
-	sw	a4,376(a5)
-	li	a4,5
-	sw	a4,192(a5)
-	sw	a4,312(a5)
-	li	a4,6
-	sw	a4,256(a5)
-	sw	a4,248(a5)
-	ret
-	.size	setupboard, .-setupboard
+	.section	.rodata.str1.4,"aMS",@progbits,1
+	.align	2
+.LC0:
+	.string	"Press a key to test\n"
+	.align	2
+.LC1:
+	.string	"MBR = "
+	.align	2
+.LC2:
+	.string	"BOOTSECTOR = "
+	.align	2
+.LC3:
+	.string	"PARTITION = "
+	.align	2
+.LC4:
+	.string	"ROOTDIRECTORY = "
+	.align	2
+.LC5:
+	.string	"CLUSTERBUFFER = "
+	.align	2
+.LC6:
+	.string	"CLUSTERSIZE = "
+	.align	2
+.LC7:
+	.string	"MEMORYTOP = "
+	.align	2
+.LC8:
+	.string	"ALLOCATE 32K"
+	.align	2
+.LC9:
+	.string	"newbuffer = "
+	.align	2
+.LC10:
+	.string	"Finding File GALAXY.JPG"
+	.align	2
+.LC11:
+	.string	"JPG"
+	.align	2
+.LC12:
+	.string	"GALAXY"
+	.align	2
+.LC13:
+	.string	"FILE NOT FOUND"
+	.align	2
+.LC14:
+	.string	"FILESIZE = "
+	.text
 	.align	1
 	.globl	main
 	.type	main, @function
 main:
-	addi	sp,sp,-16
-	sw	ra,12(sp)
+	addi	sp,sp,-48
+	sw	ra,44(sp)
+	sw	s0,40(sp)
+	sw	s1,36(sp)
+	sw	s2,32(sp)
+	sw	s3,28(sp)
+	sw	s4,24(sp)
+	sw	s5,20(sp)
+	sw	s6,16(sp)
+	sw	s7,12(sp)
+	sw	s8,8(sp)
+	sw	s9,4(sp)
+	sw	s10,0(sp)
 	call	INITIALISEMEMORY
-	call	setupscreen
-.L31:
-	call	setupboard
-	call	drawboard
+	lui	s8,%hi(.LC0)
+	lui	s7,%hi(.LC1)
+	lui	s6,%hi(MBR)
+	lui	s5,%hi(.LC2)
+	lui	s4,%hi(BOOTSECTOR)
+	lui	s3,%hi(.LC3)
+	lui	s2,%hi(PARTITION)
+	lui	s1,%hi(.LC4)
+	j	.L4
+.L6:
+	lui	a0,%hi(.LC13)
+	addi	a0,a0,%lo(.LC13)
+	call	outputstring
+.L3:
 	call	inputcharacter
-	j	.L31
+.L4:
+	li	a0,1
+	call	terminal_showhide
+	addi	a0,s8,%lo(.LC0)
+	call	outputstring
+	call	inputcharacter
+	addi	a0,s7,%lo(.LC1)
+	call	outputstringnonl
+	lw	a0,%lo(MBR)(s6)
+	call	outputnumber_int
+	li	a0,10
+	call	outputcharacter
+	addi	a0,s5,%lo(.LC2)
+	call	outputstringnonl
+	lw	a0,%lo(BOOTSECTOR)(s4)
+	call	outputnumber_int
+	li	a0,10
+	call	outputcharacter
+	addi	a0,s3,%lo(.LC3)
+	call	outputstringnonl
+	lw	a0,%lo(PARTITION)(s2)
+	call	outputnumber_int
+	li	a0,10
+	call	outputcharacter
+	addi	a0,s1,%lo(.LC4)
+	call	outputstringnonl
+	lui	a5,%hi(ROOTDIRECTORY)
+	lw	a0,%lo(ROOTDIRECTORY)(a5)
+	call	outputnumber_int
+	li	a0,10
+	call	outputcharacter
+	lui	a0,%hi(.LC5)
+	addi	a0,a0,%lo(.LC5)
+	call	outputstringnonl
+	lui	a5,%hi(CLUSTERBUFFER)
+	lw	a0,%lo(CLUSTERBUFFER)(a5)
+	call	outputnumber_int
+	li	a0,10
+	call	outputcharacter
+	lui	a0,%hi(.LC6)
+	addi	a0,a0,%lo(.LC6)
+	call	outputstringnonl
+	lui	a5,%hi(CLUSTERSIZE)
+	lw	a0,%lo(CLUSTERSIZE)(a5)
+	call	outputnumber_int
+	li	a0,10
+	call	outputcharacter
+	li	a0,10
+	call	outputcharacter
+	lui	s10,%hi(.LC7)
+	addi	a0,s10,%lo(.LC7)
+	call	outputstringnonl
+	lui	s9,%hi(MEMORYTOP)
+	lw	a0,%lo(MEMORYTOP)(s9)
+	call	outputnumber_int
+	li	a0,10
+	call	outputcharacter
+	lui	a0,%hi(.LC8)
+	addi	a0,a0,%lo(.LC8)
+	call	outputstring
+	li	a0,32768
+	call	memoryspace
+	mv	s0,a0
+	lui	a0,%hi(.LC9)
+	addi	a0,a0,%lo(.LC9)
+	call	outputstringnonl
+	mv	a0,s0
+	call	outputnumber_int
+	li	a0,10
+	call	outputcharacter
+	addi	a0,s10,%lo(.LC7)
+	call	outputstringnonl
+	lw	a0,%lo(MEMORYTOP)(s9)
+	call	outputnumber_int
+	li	a0,10
+	call	outputcharacter
+	li	a0,10
+	call	outputcharacter
+	call	inputcharacter
+	lui	a0,%hi(.LC10)
+	addi	a0,a0,%lo(.LC10)
+	call	outputstring
+	lui	a1,%hi(.LC11)
+	addi	a1,a1,%lo(.LC11)
+	lui	a0,%hi(.LC12)
+	addi	a0,a0,%lo(.LC12)
+	call	findfilenumber
+	mv	s0,a0
+	li	a5,65536
+	addi	a5,a5,-1
+	beq	a0,a5,.L6
+	lui	a0,%hi(.LC14)
+	addi	a0,a0,%lo(.LC14)
+	call	outputstringnonl
+	mv	a0,s0
+	call	findfilesize
+	call	outputnumber_int
+	li	a0,10
+	call	outputcharacter
+	j	.L3
 	.size	main, .-main
-	.globl	board
-	.bss
-	.align	2
-	.set	.LANCHOR0,. + 0
-	.type	board, @object
-	.size	board, 512
-board:
-	.zero	512
 	.ident	"GCC: (Arch Linux Repositories) 10.2.0"

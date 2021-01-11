@@ -41,6 +41,8 @@ algorithm tilemap(
 
     // Scroller/Wrapper storage
     uint1   tm_scroll = uninitialized;
+    uint1   tm_goleft = uninitialized;
+    uint1   tm_goup = uninitialized;
     uint6   x_cursor = uninitialized;
     uint6   y_cursor = uninitialized;
     uint11  y_cursor_addr = uninitialized;
@@ -102,6 +104,7 @@ algorithm tilemap(
                         if( tm_offset_x == 15 ) {
                             tm_scroll = 1;
                             tm_lastaction = tm_scrollwrap;
+                            tm_goleft = 1;
                             tm_active = 1;
                         } else {
                             tm_offset_x = tm_offset_x + 1;
@@ -114,6 +117,7 @@ algorithm tilemap(
                         if( tm_offset_y == 15 ) {
                             tm_scroll = 1;
                             tm_lastaction = tm_scrollwrap;
+                            tm_goup = 1;
                             tm_active = 3;
                         } else {
                             tm_offset_y = tm_offset_y + 1;
@@ -126,7 +130,8 @@ algorithm tilemap(
                         if( tm_offset_x == -15 ) {
                             tm_scroll = 1;
                             tm_lastaction = tm_scrollwrap;
-                            tm_active = 2;
+                            tm_goleft = 0;
+                            tm_active = 1;
                         } else {
                             tm_offset_x = tm_offset_x - 1;
                             tm_lastaction = 0;
@@ -138,7 +143,8 @@ algorithm tilemap(
                         if( tm_offset_y == -15 ) {
                             tm_scroll = 1;
                             tm_lastaction = tm_scrollwrap;
-                            tm_active = 4;
+                            tm_goup = 0;
+                            tm_active = 3;
                         } else {
                             tm_offset_y = tm_offset_y - 1;
                             tm_lastaction = 0;
@@ -149,6 +155,7 @@ algorithm tilemap(
                         if( tm_offset_x == 15 ) {
                             tm_scroll = 0;
                             tm_lastaction = tm_scrollwrap;
+                            tm_goleft = 1;
                             tm_active = 1;
                         } else {
                             tm_offset_x = tm_offset_x + 1;
@@ -161,6 +168,7 @@ algorithm tilemap(
                         if( tm_offset_y == 15 ) {
                             tm_scroll = 0;
                             tm_lastaction = tm_scrollwrap;
+                            tm_goup = 1;
                             tm_active = 3;
                         } else {
                             tm_offset_y = tm_offset_y + 1;
@@ -173,7 +181,8 @@ algorithm tilemap(
                         if( tm_offset_x == -15 ) {
                             tm_scroll = 0;
                             tm_lastaction = tm_scrollwrap;
-                            tm_active = 2;
+                            tm_goleft = 0;
+                            tm_active = 1;
                         } else {
                             tm_offset_x = tm_offset_x - 1;
                             tm_lastaction = 0;
@@ -185,7 +194,8 @@ algorithm tilemap(
                         if( tm_offset_y == -15 ) {
                             tm_scroll = 0;
                             tm_lastaction = tm_scrollwrap;
-                            tm_active = 4;
+                            tm_goup = 0;
+                            tm_active = 3;
                         } else {
                             tm_offset_y = tm_offset_y - 1;
                             tm_lastaction = 0;
@@ -200,32 +210,30 @@ algorithm tilemap(
                 }
             }
 
-            // SCROLL/WRAP LEFT
+            // SCROLL/WRAP LEFT/RIGHT
             case 1: {
                 y_cursor = 0;
                 y_cursor_addr = 0;
                 ++:
                 while( y_cursor < 32 ) {
-                    x_cursor = 0;
-                    tiles_copy.addr0 = y_cursor_addr;
+                    x_cursor = tm_goleft ? 0 : 41;
+                    tiles_copy.addr0 = tm_goleft ? y_cursor_addr : 41 + y_cursor_addr;
                     ++:
                     new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles_copy.rdata0;
                     ++:
-                    while( x_cursor < 42 ) {
-                        tiles_copy.addr0 = ( x_cursor + 1 ) + y_cursor_addr;
+                    while( tm_goleft ? ( x_cursor < 42 ) : ( x_cursor > 0 ) ) {
+                        tiles_copy.addr0 = tm_goleft ? ( x_cursor + 1 + y_cursor_addr ) : ( x_cursor - 1 + y_cursor_addr);
                         ++:
-                        scroll_tile = tiles_copy.rdata0;
-                        ++:
-                        tiles.addr1 = ( x_cursor ) + y_cursor_addr;
-                        tiles.wdata1 = scroll_tile;
-                        tiles_copy.addr1 = ( x_cursor ) + y_cursor_addr;
-                        tiles_copy.wdata1 = scroll_tile;
-                        x_cursor = x_cursor + 1;
+                        tiles.addr1 = x_cursor + y_cursor_addr;
+                        tiles.wdata1 = tiles_copy.rdata0;
+                        tiles_copy.addr1 = x_cursor + y_cursor_addr;
+                        tiles_copy.wdata1 = tiles_copy.rdata0;
+                        x_cursor = tm_goleft ? ( x_cursor + 1 ) : ( x_cursor - 1);
                     }
                     ++:
-                    tiles.addr1 = ( 41 ) + y_cursor_addr;
+                    tiles.addr1 = tm_goleft ? ( 41 + y_cursor_addr ) : ( y_cursor_addr );
                     tiles.wdata1 = new_tile;
-                    tiles_copy.addr1 = ( 41 ) + y_cursor_addr;
+                    tiles_copy.addr1 = tm_goleft ? ( 41 + y_cursor_addr ) : ( y_cursor_addr );
                     tiles_copy.wdata1 = new_tile;
                     y_cursor = y_cursor + 1;
                     y_cursor_addr = y_cursor_addr + 42;
@@ -235,101 +243,30 @@ algorithm tilemap(
                 tm_active = 0;
             }
 
-            // SCROLL/WRAP RIGHT
-            case 2: {
-                y_cursor = 0;
-                y_cursor_addr = 0;
-                ++:
-                while( y_cursor < 32 ) {
-                    x_cursor = 41;
-                    tiles_copy.addr0 = 41 + y_cursor_addr;
-                    ++:
-                    new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles_copy.rdata0;
-                    ++:
-                    while( x_cursor > 0 ) {
-                        tiles_copy.addr0 = ( x_cursor - 1 ) + y_cursor_addr;
-                        ++:
-                        scroll_tile = tiles_copy.rdata0;
-                        ++:
-                        tiles.addr1 = ( x_cursor ) + y_cursor_addr;
-                        tiles.wdata1 = scroll_tile;
-                        tiles_copy.addr1 = ( x_cursor ) + y_cursor_addr;
-                        tiles_copy.wdata1 = scroll_tile;
-                        x_cursor = x_cursor - 1;
-                    }
-                    ++:
-                    tiles.addr1 = y_cursor_addr;
-                    tiles.wdata1 = new_tile;
-                    tiles_copy.addr1 = y_cursor_addr;
-                    tiles_copy.wdata1 = new_tile;
-                    y_cursor = y_cursor + 1;
-                    y_cursor_addr = y_cursor_addr + 42;
-                }
-                ++:
-                tm_offset_x = 0;
-                tm_active = 0;
-            }
-
-            // SCROLL/WRAP UP
+            // SCROLL/WRAP UP/DOWN
             case 3: {
                 x_cursor = 0;
                 ++:
                 while( x_cursor < 42 ) {
-                    y_cursor = 0;
-                    y_cursor_addr = 0;
+                    y_cursor = tm_goup ? 0 : 31;
+                    y_cursor_addr = tm_goup ? 0 : 1302;
                     tiles_copy.addr0 = x_cursor;
                     ++:
                     new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles_copy.rdata0;
                     ++:
-                    while( y_cursor < 31 ) {
-                        tiles_copy.addr0 = x_cursor + y_cursor_addr + 42;
+                    while( tm_goup ? ( y_cursor < 31 ) : ( y_cursor > 0 ) ) {
+                        tiles_copy.addr0 = tm_goup ? ( x_cursor + y_cursor_addr + 42 ) : ( x_cursor + y_cursor_addr - 42 );
                         ++:
-                        scroll_tile = tiles_copy.rdata0;
-                        ++:
-                        tiles.addr1 = ( x_cursor ) + y_cursor_addr;
-                        tiles.wdata1 = scroll_tile;
-                        tiles_copy.addr1 = ( x_cursor ) + y_cursor_addr;
-                        tiles_copy.wdata1 = scroll_tile;
-                        y_cursor = y_cursor + 1;
-                        y_cursor_addr = y_cursor_addr + 42;
+                        tiles.addr1 = x_cursor + y_cursor_addr;
+                        tiles.wdata1 = tiles_copy.rdata0;
+                        tiles_copy.addr1 = x_cursor + y_cursor_addr;
+                        tiles_copy.wdata1 = tiles_copy.rdata0;
+                        y_cursor = tm_goup ? ( y_cursor + 1 ) : ( y_cursor - 1 );
+                        y_cursor_addr = tm_goup ? ( y_cursor_addr + 42 ) : ( y_cursor_addr - 42 );
                     }
-                    tiles.addr1 = x_cursor + 1302;
+                    tiles.addr1 = tm_goup ? ( x_cursor + 1302 ) : ( x_cursor );
                     tiles.wdata1 = new_tile;
-                    tiles_copy.addr1 = x_cursor + 1302;
-                    tiles_copy.wdata1 = new_tile;
-                    x_cursor = x_cursor + 1;
-                }
-                ++:
-                tm_offset_y = 0;
-                tm_active = 0;
-            }
-
-            // SCROLL/WRAP DOWN
-            case 4: {
-                x_cursor = 0;
-                ++:
-                while( x_cursor < 42 ) {
-                    y_cursor = 0;
-                    y_cursor_addr = 1302;
-                    tiles_copy.addr0 = x_cursor;
-                    ++:
-                    new_tile = ( tm_scroll == 1 ) ? { 1b1, 6b0, 6b0, 5b0 } : tiles_copy.rdata0;
-                    ++:
-                    while( y_cursor > 0 ) {
-                        tiles_copy.addr0 = x_cursor + y_cursor_addr - 42;
-                        ++:
-                        scroll_tile = tiles_copy.rdata0;
-                        ++:
-                        tiles.addr1 = ( x_cursor ) + y_cursor_addr;
-                        tiles.wdata1 = scroll_tile;
-                        tiles_copy.addr1 = ( x_cursor ) + y_cursor_addr;
-                        tiles_copy.wdata1 = scroll_tile;
-                        y_cursor = y_cursor - 1;
-                        y_cursor_addr = y_cursor_addr - 42;
-                    }
-                    tiles.addr1 = x_cursor;
-                    tiles.wdata1 = new_tile;
-                    tiles_copy.addr1 = x_cursor;
+                    tiles_copy.addr1 = tm_goup ? ( x_cursor + 1302 ) : ( x_cursor );
                     tiles_copy.wdata1 = new_tile;
                     x_cursor = x_cursor + 1;
                 }

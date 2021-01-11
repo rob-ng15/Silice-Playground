@@ -85,6 +85,11 @@ extern unsigned int DATASTARTSECTOR;
 // MEMORY
 extern unsigned char *MEMORYTOP;
 extern void INITIALISEMEMORY( void );
+extern unsigned char *memoryspace( unsigned int );
+
+// SIMPLE FILE SYSTEM
+extern unsigned short findfilenumber( unsigned char *, unsigned char * );
+extern unsigned int findfilesize( unsigned short );
 
 // RISC-V CSR FUNCTIONS
 extern long CSRcycles( void );

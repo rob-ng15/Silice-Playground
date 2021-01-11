@@ -1,35 +1,8 @@
 #include "PAWS.h"
-
-// MASTER BOOT RECORD AND PARTITION TABLE
-unsigned char *MBR;
-Fat16BootSector *BOOTSECTOR;
-PartitionTable *PARTITION;
-Fat16Entry *ROOTDIRECTORY;
-unsigned short *FAT;
-unsigned char *CLUSTERBUFFER;
-unsigned int CLUSTERSIZE;
-unsigned int DATASTARTSECTOR;
-
-// MEMORY
-unsigned char *MEMORYTOP;
-
-void INITIALISEMEMORY( void ) {
-    MBR = (unsigned char *) 0x12000000 - 0x200;
-    BOOTSECTOR = (Fat16BootSector *)0x12000000 - 0x400;
-    PARTITION = (PartitionTable *) &MBR[ 0x1BE ];
-    ROOTDIRECTORY = (Fat16Entry *)( 0x12000000 - 0x400 - BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) );
-    FAT = (unsigned short * ) ROOTDIRECTORY - BOOTSECTOR -> fat_size_sectors * 512;
-    CLUSTERBUFFER = (unsigned char * )FAT - BOOTSECTOR -> sectors_per_cluster * 512;
-    CLUSTERSIZE = BOOTSECTOR -> sectors_per_cluster * 512;
-    DATASTARTSECTOR = PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats + ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512;;
-
-// MEMORY
-    MEMORYTOP = CLUSTERBUFFER;
-}
+// STANDARD C FUNCTIONS ( from @sylefeb mylibc )
 
 typedef unsigned int size_t;
 
-// STANDARD C FUNCTIONS ( from @sylefeb mylibc )
 void*  memcpy(void *dest, const void *src, size_t n) {
   const void *end = src + n;
   const unsigned char *bsrc = (const unsigned char *)src;
@@ -53,6 +26,70 @@ int strcmp(const char *p1, const char *p2) {
     p1++; p2++;
   }
   return *(const unsigned char*)p1 - *(const unsigned char*)p2;
+}
+
+// MASTER BOOT RECORD AND PARTITION TABLE
+unsigned char *MBR;
+Fat16BootSector *BOOTSECTOR;
+PartitionTable *PARTITION;
+Fat16Entry *ROOTDIRECTORY;
+unsigned short *FAT;
+unsigned char *CLUSTERBUFFER;
+unsigned int CLUSTERSIZE;
+unsigned int DATASTARTSECTOR;
+
+// MEMORY
+unsigned char *MEMORYTOP;
+
+// SETUP MEMORY POINTERS FOR THE SDCARD - ALREADY PRE-LOADED BY THE BIOS
+void INITIALISEMEMORY( void ) {
+    MBR = (unsigned char *) 0x12000000 - 0x200;
+    BOOTSECTOR = (Fat16BootSector *)0x12000000 - 0x400;
+    PARTITION = (PartitionTable *) &MBR[ 0x1BE ];
+    ROOTDIRECTORY = (Fat16Entry *)( 0x12000000 - 0x400 - BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) );
+    FAT = (unsigned short * ) ROOTDIRECTORY - BOOTSECTOR -> fat_size_sectors * 512;
+    CLUSTERBUFFER = (unsigned char * )FAT - BOOTSECTOR -> sectors_per_cluster * 512;
+    CLUSTERSIZE = BOOTSECTOR -> sectors_per_cluster * 512;
+    DATASTARTSECTOR = PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats + ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512;;
+
+// MEMORY
+    MEMORYTOP = CLUSTERBUFFER;
+}
+
+// ALLOCATE MEMORY, IN UNITS OF CLUSTERSIZE ( allows extra for reading in files )
+unsigned char *memoryspace( unsigned int size ) {
+    unsigned int numberofclusters = size / CLUSTERSIZE;
+
+    if( size % CLUSTERSIZE != 0 )
+        numberofclusters++;
+
+    MEMORYTOP -= numberofclusters * CLUSTERSIZE;
+    return( MEMORYTOP );
+}
+
+// SIMPLE FILE SYSTEM
+unsigned short findfilenumber( unsigned char *filename, unsigned char *ext ) {
+    unsigned short filenumber = 0xffff;
+    unsigned short filenamematch;
+    for( unsigned short i = 0; i < BOOTSECTOR -> root_dir_entries; i++ ) {
+        filenamematch = 1;
+        for( unsigned short c = 0; ( c < 8 ) || ( filename[c] == 0 ); c++ ) {
+            if( filename[c] != ROOTDIRECTORY[i].filename[c] )
+                filenamematch = 0;
+        }
+        for( unsigned short c = 0; ( c < 3 ) || ( ext[c] == 0 ); c++ ) {
+            if( ext[c] != ROOTDIRECTORY[i].ext[c] )
+                filenamematch = 0;
+        }
+        if( filenamematch )
+            filenumber = i;
+    }
+
+    return( filenumber );
+}
+
+unsigned int findfilesize( unsigned short filenumber ) {
+    return( ROOTDIRECTORY[filenumber].file_size );
 }
 
 // RISC-V CSR FUNCTIONS

@@ -114,6 +114,8 @@ unsigned short volatile * SLEEPTIMER = ( unsigned short volatile * ) 0x8930;
 
 unsigned char volatile * VBLANK = ( unsigned char volatile * ) 0x8ff0;
 
+// TYPES AND STRUCTURES
+
 // STRUCTURE OF THE SPRITE UPDATE FLAG
 struct sprite_update_flag {
     unsigned int padding:3;

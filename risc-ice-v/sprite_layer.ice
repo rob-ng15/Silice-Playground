@@ -58,7 +58,7 @@ algorithm sprite_layer(
 
     $$for i=0,12 do
         // Sprite Tiles
-        simple_dualport_bram uint16 tiles_$i$[128] = uninitialised;
+        simple_dualport_bram uint16 tiles_$i$ <input!> [128] = uninitialised;
 
         // Calculate if sprite is visible
         uint6 spritesize_$i$ := sprite_double[$i$] ? 32 : 16;

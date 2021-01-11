@@ -3,6 +3,6 @@
 void main( void ) {
     INITIALISEMEMORY();
 
-	while(1) {
+    while(1) {
     }
 }
