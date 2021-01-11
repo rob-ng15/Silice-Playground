@@ -33,6 +33,7 @@ char map[MAXWIDTH+2][MAXHEIGHT];
 
 // POSITION AND DIRECTION OF THE GOST
 unsigned short ghostx[4], ghosty[4], ghostdirection[4];
+unsigned short ghosteyes[4][4] = { { 0, 1, 2, 3 }, { 3, 0, 1, 2 }, { 2, 3, 0, 1 }, { 1, 2, 3, 0 } };
 
 // GHOST COLOUR SELECTOR
 unsigned char ghostcolour( unsigned short ghost ) {
@@ -83,7 +84,7 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
 
     // EYE WHITES
     if( steps < ( MAXDEPTH - 1 ) ) {
-        switch( playerdirection <  ghostdirection[ ghostnumber ] ? ghostdirection[ ghostnumber ] - playerdirection : playerdirection - ghostdirection[ ghostnumber ] ) {
+        switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
             case 0:
                 // SAME DIRECTION, NO EYES
                 break;
@@ -105,7 +106,7 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
 
     // EYE PUPILS
     if( steps < ( MAXDEPTH - 2 ) ) {
-        switch( playerdirection <  ghostdirection[ ghostnumber ] ? ghostdirection[ ghostnumber ] - playerdirection : playerdirection - ghostdirection[ ghostnumber ] ) {
+        switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
             case 0:
                 // SAME DIRECTION, NO EYES
                 break;
