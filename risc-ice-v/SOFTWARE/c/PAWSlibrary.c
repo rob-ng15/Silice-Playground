@@ -1,5 +1,32 @@
 #include "PAWS.h"
 
+// MASTER BOOT RECORD AND PARTITION TABLE
+unsigned char *MBR;
+Fat16BootSector *BOOTSECTOR;
+PartitionTable *PARTITION;
+Fat16Entry *ROOTDIRECTORY;
+unsigned short *FAT;
+unsigned char *CLUSTERBUFFER;
+unsigned int CLUSTERSIZE;
+unsigned int DATASTARTSECTOR;
+
+// MEMORY
+unsigned char *MEMORYTOP;
+
+void INITIALISEMEMORY( void ) {
+    MBR = (unsigned char *) 0x12000000 - 0x200;
+    BOOTSECTOR = (Fat16BootSector *)0x12000000 - 0x400;
+    PARTITION = (PartitionTable *) &MBR[ 0x1BE ];
+    ROOTDIRECTORY = (Fat16Entry *)( 0x12000000 - 0x400 - BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) );
+    FAT = (unsigned short * ) ROOTDIRECTORY - BOOTSECTOR -> fat_size_sectors * 512;
+    CLUSTERBUFFER = (unsigned char * )FAT - BOOTSECTOR -> sectors_per_cluster * 512;
+    CLUSTERSIZE = BOOTSECTOR -> sectors_per_cluster * 512;
+    DATASTARTSECTOR = PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats + ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512;;
+
+// MEMORY
+    MEMORYTOP = CLUSTERBUFFER;
+}
+
 typedef unsigned int size_t;
 
 // STANDARD C FUNCTIONS ( from @sylefeb mylibc )

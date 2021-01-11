@@ -602,6 +602,8 @@ void walk_maze( unsigned short width, unsigned short height )
 
 void main( void )
 {
+    INITIALISEMEMORY();
+
     unsigned short levelselected;
 
 	while(1) {

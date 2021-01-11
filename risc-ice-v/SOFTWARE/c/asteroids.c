@@ -746,6 +746,8 @@ void check_crash( void )
 // MAIN GAME LOOP STARTS HERE
 void main( void )
 {
+    INITIALISEMEMORY();
+
     unsigned char uartData = 0, potentialnumber = 0;
     short ufo_x = 0, ufo_y = 0, potentialx = 0, potentialy = 0;
     unsigned short placeAsteroids = 4, asteroid_number = 0;

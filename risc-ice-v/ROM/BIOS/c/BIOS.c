@@ -68,7 +68,7 @@ PartitionTable *PARTITION;
 Fat16Entry *ROOTDIRECTORY;
 unsigned short *FAT;
 unsigned char *CLUSTERBUFFER;
-int DATASTARTSECTOR;
+unsigned int DATASTARTSECTOR;
 
 unsigned short SELECTEDFILE = 0xffff;
 

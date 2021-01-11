@@ -23,6 +23,69 @@ struct sprite_update_flag {
     int dx:5;
 };
 
+// FAT16 FILE SYSTEM
+// https://codeandlife.com/2012/04/02/simple-fat-and-sd-tutorial-part-1/ USED AS REFERENCE
+
+typedef struct {
+    unsigned char first_byte;
+    unsigned char start_chs[3];
+    unsigned char partition_type;
+    unsigned char end_chs[3];
+    unsigned int start_sector;
+    unsigned int length_sectors;
+} __attribute((packed)) PartitionTable;
+
+typedef struct {
+    unsigned char jmp[3];
+    char oem[8];
+    unsigned short sector_size;
+    unsigned char sectors_per_cluster;
+    unsigned short reserved_sectors;
+    unsigned char number_of_fats;
+    unsigned short root_dir_entries;
+    unsigned short total_sectors_short; // if zero, later field is used
+    unsigned char media_descriptor;
+    unsigned short fat_size_sectors;
+    unsigned short sectors_per_track;
+    unsigned short number_of_heads;
+    unsigned int hidden_sectors;
+    unsigned int total_sectors_long;
+
+    unsigned char drive_number;
+    unsigned char current_head;
+    unsigned char boot_signature;
+    unsigned int volume_id;
+    char volume_label[11];
+    char fs_type[8];
+    char boot_code[448];
+    unsigned short boot_sector_signature;
+} __attribute((packed)) Fat16BootSector;
+
+typedef struct {
+    unsigned char filename[8];
+    unsigned char ext[3];
+    unsigned char attributes;
+    unsigned char reserved[10];
+    unsigned short modify_time;
+    unsigned short modify_date;
+    unsigned short starting_cluster;
+    unsigned int file_size;
+} __attribute((packed)) Fat16Entry;
+
+// MASTER BOOT RECORD AND PARTITION TABLE
+extern unsigned char *MBR;
+extern Fat16BootSector *BOOTSECTOR;
+extern PartitionTable *PARTITION;
+extern Fat16Entry *ROOTDIRECTORY;
+extern unsigned short *FAT;
+extern unsigned char *CLUSTERBUFFER;
+extern unsigned int CLUSTERSIZE;
+extern unsigned int DATASTARTSECTOR;
+
+// MEMORY
+extern unsigned char *MEMORYTOP;
+extern void INITIALISEMEMORY( void );
+
 // RISC-V CSR FUNCTIONS
 extern long CSRcycles( void );
 extern long CSRinstructions( void );

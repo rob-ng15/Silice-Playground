@@ -115,6 +115,7 @@ void setupboard( void ) {
 }
 
 void main( void ) {
+    INITIALISEMEMORY();
 
     setupscreen();
 
