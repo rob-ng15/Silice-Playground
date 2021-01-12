@@ -36,7 +36,6 @@ __ULX3S only at present__
             * HARDWARE MULTIPLICATION AND DIVISION UNITS
                 * MUL MULH[[S]U]
                 * DIV[U] REM[U]
-                    * 2 x main clock ( 50mhz ) operation
             * COMPRESSED ( 16 bit ) INSTRUCTION SUPPORT
                 * Expanded to 32 bit instruction
                 * 1 cycle faster than 32 bit instructions due to less memory fetching
@@ -71,8 +70,10 @@ __ULX3S only at present__
     * STEREO AUDIO
     * SDCARD via SPI
         * FAT16 on PARTITION 0 only
-        * BIOS is able to load *.PAW programs to SDRAM and launch
 
+* BIOS
+    * FAT16 on PARTITION 0 of SDCARD read via SPI
+    *
 ## BUILD and USAGE Instructions
 
 Open a terminal in the ULX3S directory and type ```make ulx3s```. Wait. Upload your design your ULX3S with ```fujproj BUILD_ulx3s/build.bit```. Or download from this repository.

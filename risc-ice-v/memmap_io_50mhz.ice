@@ -52,7 +52,7 @@ algorithm memmap_io (
 
     // RNG random number generator
     uint16  staticGenerator = uninitialized;
-    random rng <@clock25mhz> (
+    random rng(
         g_noise_out :> staticGenerator,
     );
 

@@ -1,13 +1,12 @@
+// Sprite update flag
 bitfield spriteupdate {
-    uint1   colour_act,         // 1 change the colour
-    uint6   colour,             // { rrggbb }
     uint1   y_act,              // 1 - kill when off screen, 0 - wrap
     uint1   x_act,              // 1 - kill when off screen, 0 - wrap
     uint1   tile_act,           // 1 - increase the tile number
     uint1   dysign,             // dy - 2's complement update for the y coordinate
-    uint2   dy,
+    uint4   dy,
     uint1   dxsign,             // dx - 2's complement update for the x coordinate
-    uint2   dx
+    uint4   dx
 }
 
 algorithm sprite_layer(
@@ -65,25 +64,26 @@ algorithm sprite_layer(
     int11   sprite_y[13] = uninitialised;
     uint6   sprite_colour[13] = uninitialised;
     uint3   sprite_tile_number[13] = uninitialised;
+
     uint1   output_collisions = 0;
 
     $$for i=0,12 do
         // Sprite Tiles
-        simple_dualport_bram uint16 tiles_$i$[128] = uninitialised;
+        simple_dualport_bram uint16 tiles_$i$ <input!> [128] = uninitialised;
 
         // Calculate if sprite is visible
         uint6 spritesize_$i$ := sprite_double[$i$] ? 32 : 16;
         uint1 xinrange_$i$ := ( __signed({1b0, pix_x}) >= __signed(sprite_x[$i$]) ) && ( __signed({1b0, pix_x}) < __signed( sprite_x[$i$] + spritesize_$i$ ) );
         uint1 yinrange_$i$ := ( __signed({1b0, pix_y}) >= __signed(sprite_y[$i$]) ) && ( __signed({1b0, pix_y}) < __signed( sprite_y[$i$] + spritesize_$i$ ) );
-        uint1 pix_visible_$i$ := sprite_active[$i$] && xinrange_$i$ && yinrange_$i$ && ( tiles_$i$.rdata0[ ( 15  - ( ( __signed({1b0, pix_x}) - sprite_x[$i$] ) >> sprite_double[$i$] ) ), 1 ] );
+        uint1 pix_visible_$i$ := sprite_active[$i$] && xinrange_$i$ && yinrange_$i$ && ( tiles_$i$.rdata0[ ( 15  - ( ( __signed({1b0, pix_x}) - sprite_x[$i$] ) >>> sprite_double[$i$] ) ), 1 ] );
 
         // Collision detection flag
         uint16      detect_collision_$i$ = uninitialised;
     $$end
 
     // Expand Sprite Update Deltas
-    int11   deltax := { {9{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
-    int11   deltay := { {9{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
+    int11   deltax := { {7{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
+    int11   deltay := { {7{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
 
     // Sprite update helpers
     int11   sprite_offscreen_negative ::= sprite_double[ sprite_set_number ] ? -32 : -16;
@@ -91,9 +91,9 @@ algorithm sprite_layer(
     uint1   sprite_offscreen_x ::= ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_x[ sprite_set_number ] ) > __signed(640) );
     uint1   sprite_offscreen_y ::= ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_y[ sprite_set_number ] ) > __signed(480) );
 
-    // Set read and write address for the tiles
     $$for i=0,12 do
-        tiles_$i$.addr0 := sprite_tile_number[$i$] * 16 + ( ( __signed({1b0, pix_y}) - sprite_y[$i$] ) >> sprite_double[$i$] );
+        // Set read and write address for the tiles
+        tiles_$i$.addr0 := sprite_tile_number[$i$] * 16 + ( ( __signed({1b0, pix_y}) - sprite_y[$i$] ) >>> sprite_double[$i$] );
         tiles_$i$.wenable1 := 1;
 
         collision_$i$ := ( output_collisions ) ? detect_collision_$i$ : collision_$i$;
@@ -110,8 +110,8 @@ algorithm sprite_layer(
     sprite_read_y := sprite_y[ sprite_set_number ];
     sprite_read_tile := sprite_tile_number[ sprite_set_number ];
 
-    // RENDER + COLLISION DETECTION
     while(1) {
+        // RENDER + COLLISION DETECTION
         if( pix_vblank ) {
             if( ~output_collisions ) {
                 // RESET collision detection
@@ -146,8 +146,6 @@ algorithm sprite_layer(
             }
         }
 
-
-        // SET TILES + ATTRIBUTES
         // WRITE BITMAP TO SPRITE TILE
         if( sprite_writer_active ) {
             switch( sprite_writer_sprite ) {
@@ -170,10 +168,6 @@ algorithm sprite_layer(
             case 6: { sprite_double[ sprite_set_number ] = sprite_set_double; }
             case 10: {
                 // Perform sprite update
-                if( spriteupdate( sprite_update ).colour_act ) {
-                    sprite_colour[ sprite_set_number ] = spriteupdate( sprite_update ).colour;
-                }
-
                 if( spriteupdate( sprite_update ).tile_act ) {
                     sprite_tile_number[ sprite_set_number ] = sprite_tile_number[ sprite_set_number ] + 1;
                 }
@@ -182,10 +176,10 @@ algorithm sprite_layer(
                     sprite_active[ sprite_set_number ] = ( sprite_offscreen_x || sprite_offscreen_y ) ? 0 : sprite_active[ sprite_set_number ];
                 }
 
-                sprite_x[ sprite_set_number ] = sprite_offscreen_x ? ( ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ? 640 : sprite_to_negative ) :
+                sprite_x[ sprite_set_number ] = sprite_offscreen_x ? ( ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ?__signed(640) : sprite_to_negative ) :
                                                 sprite_x[ sprite_set_number ] + deltax;
 
-                sprite_y[ sprite_set_number ] = sprite_offscreen_y ? ( ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ? 480 : sprite_to_negative ) :
+                sprite_y[ sprite_set_number ] = sprite_offscreen_y ? ( ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ? __signed(480) : sprite_to_negative ) :
                                                 sprite_y[ sprite_set_number ] + deltay;
             }
         }

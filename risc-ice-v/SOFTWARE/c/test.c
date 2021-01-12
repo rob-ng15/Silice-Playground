@@ -3,7 +3,7 @@
 void main( void ) {
     INITIALISEMEMORY();
 
-    unsigned char *newbuffer;
+    unsigned char *galaxyfilebuffer;
     unsigned short filenumber;
 	while(1) {
         terminal_showhide( 1 );
@@ -18,12 +18,9 @@ void main( void ) {
         outputstringnonl( "CLUSTERSIZE = " ); outputnumber_int( (int)CLUSTERSIZE ); outputcharacter( '\n' );
         outputcharacter( '\n' );
         outputstringnonl( "MEMORYTOP = " ); outputnumber_int( (int)MEMORYTOP ); outputcharacter( '\n' );
-        outputstring( "ALLOCATE 32K" );
-        newbuffer = memoryspace( 32768 );
-        outputstringnonl( "newbuffer = " ); outputnumber_int( (int)newbuffer ); outputcharacter( '\n' );
-        outputstringnonl( "MEMORYTOP = " ); outputnumber_int( (int)MEMORYTOP ); outputcharacter( '\n' );
         outputcharacter( '\n' );
 
+        outputstring( "Press a key to load GALAXY.JPG\n" );
         (void)inputcharacter();
 
         outputstring( "Finding File GALAXY.JPG");
@@ -32,6 +29,8 @@ void main( void ) {
             outputstring( "FILE NOT FOUND" );
         } else {
             outputstringnonl( "FILESIZE = " ); outputnumber_int( findfilesize( filenumber ) ); outputcharacter( '\n' );
+            galaxyfilebuffer = filememoryspace( findfilesize( filenumber ) );
+            outputstringnonl( "MEMORYTOP = " ); outputnumber_int( (int)MEMORYTOP ); outputcharacter( '\n' );
         }
 
         (void)inputcharacter();

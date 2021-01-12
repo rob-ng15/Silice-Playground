@@ -48,37 +48,102 @@ algorithm multiplex_display(
     input uint2 terminal_b,
     input uint1 terminal_display
 ) <autorun> {
-    // Output defaults to 0
-    pix_red   := 0;
-    pix_green := 0;
-    pix_blue  := 0;
+    uint8   red8 = uninitialised;
+    uint8   green8 = uninitialised;
+    uint8   blue8 = uninitialised;
 
-    // Draw the screen
+    expandcolour RED(
+        terminal_display <: terminal_display,
+        terminal <: terminal_r,
+        character_map_display <: character_map_display,
+        character_map <: character_map_r,
+        upper_sprites_display <: upper_sprites_display,
+        upper_sprites <: upper_sprites_r,
+        bitmap_display <: bitmap_display,
+        bitmap <: bitmap_r,
+        lower_sprites_display <: lower_sprites_display,
+        lower_sprites <: lower_sprites_r,
+        tilemap_display <: tilemap_display,
+        tilemap <: tilemap_r,
+        background <: background_r,
+
+        pix :> red8
+    );
+    expandcolour GREEN(
+        terminal_display <: terminal_display,
+        terminal <: terminal_g,
+        character_map_display <: character_map_display,
+        character_map <: character_map_g,
+        upper_sprites_display <: upper_sprites_display,
+        upper_sprites <: upper_sprites_g,
+        bitmap_display <: bitmap_display,
+        bitmap <: bitmap_g,
+        lower_sprites_display <: lower_sprites_display,
+        lower_sprites <: lower_sprites_g,
+        tilemap_display <: tilemap_display,
+        tilemap <: tilemap_g,
+        background <: background_g,
+
+        pix :> green8
+    );
+    expandcolour BLUE(
+        terminal_display <: terminal_display,
+        terminal <: terminal_b,
+        character_map_display <: character_map_display,
+        character_map <: character_map_b,
+        upper_sprites_display <: upper_sprites_display,
+        upper_sprites <: upper_sprites_b,
+        bitmap_display <: bitmap_display,
+        bitmap <: bitmap_b,
+        lower_sprites_display <: lower_sprites_display,
+        lower_sprites <: lower_sprites_b,
+        tilemap_display <: tilemap_display,
+        tilemap <: tilemap_b,
+        background <: background_b,
+
+        pix :> blue8
+    );
+
+    pix_red := 0;
+    pix_green := 0;
+    pix_blue := 0;
+
+
     while (1) {
-        // wait until pix_active THEN BACKGROUND -> TILEMAP -> LOWER SPRITES -> BITMAP -> UPPER SPRITES -> CHARACTER MAP -> TERMINAL
         if( pix_active ) {
-            // Select the 2 bit r g or b and expand to 8 bit r g or b
-            pix_red = ( terminal_display ) ? { {4{terminal_r}} } :
-                        ( character_map_display ) ? { {4{character_map_r}} } :
-                        ( upper_sprites_display ) ? { {4{upper_sprites_r}} } :
-                        ( bitmap_display ) ? { {4{bitmap_r}} } :
-                        ( lower_sprites_display ) ? { {4{lower_sprites_r}} } :
-                        ( tilemap_display ) ? { {4{tilemap_r}} } :
-                        { {4{background_r}} };
-            pix_green = ( terminal_display ) ? { {4{terminal_g}} } :
-                        ( character_map_display ) ? { {4{character_map_g}} } :
-                        ( upper_sprites_display ) ? { {4{upper_sprites_g}} } :
-                        ( bitmap_display ) ? { {4{bitmap_g}} } :
-                        ( lower_sprites_display ) ? { {4{lower_sprites_g}} } :
-                        ( tilemap_display ) ? { {4{tilemap_g}} } :
-                        { {4{background_g}} };
-            pix_blue = ( terminal_display ) ? { {4{terminal_b}} } :
-                        ( character_map_display ) ? { {4{character_map_b}} } :
-                        ( upper_sprites_display ) ? { {4{upper_sprites_b}} } :
-                        ( bitmap_display ) ? { {4{bitmap_b}} } :
-                        ( lower_sprites_display ) ? { {4{lower_sprites_b}} } :
-                        ( tilemap_display ) ? { {4{tilemap_b}} } :
-                        { {4{background_b}} };
-        } // pix_active
+            pix_red = red8;
+            pix_green = green8;
+            pix_blue = blue8;
+        }
+    }
+}
+
+// EXPAND FROM 2 bit to 8 bit colour
+algorithm expandcolour(
+    input   uint1   terminal_display,
+    input   uint2   terminal,
+    input   uint1   character_map_display,
+    input   uint2   character_map,
+    input   uint1   upper_sprites_display,
+    input   uint2   upper_sprites,
+    input   uint1   bitmap_display,
+    input   uint2   bitmap,
+    input   uint1   lower_sprites_display,
+    input   uint2   lower_sprites,
+    input   uint1   tilemap_display,
+    input   uint2   tilemap,
+    input   uint2   background,
+
+    output! uint8   pix
+) <autorun> {
+    pix := ( terminal_display ) ? { {4{terminal}} } :
+                                ( character_map_display ) ? { {4{character_map}} } :
+                                ( upper_sprites_display ) ? { {4{upper_sprites}} } :
+                                ( bitmap_display ) ? { {4{bitmap}} } :
+                                ( lower_sprites_display ) ? { {4{lower_sprites}} } :
+                                ( tilemap_display ) ? { {4{tilemap}} } :
+                                { {4{background}} };
+
+    while(1) {
     }
 }

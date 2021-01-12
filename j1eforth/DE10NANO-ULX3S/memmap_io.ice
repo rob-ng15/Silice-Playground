@@ -380,7 +380,6 @@ $$end
 
     // Setup the terminal
     terminal_window.showterminal = 1;
-    terminal_window.showcursor = 1;
 
     while(1) {
         // Update UART output buffer top if character has been put into buffer

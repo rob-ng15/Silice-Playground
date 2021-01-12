@@ -13,6 +13,14 @@
 
 typedef unsigned int size_t;
 
+// FOR EASE OF PORTING
+typedef unsigned char  uint8;
+typedef unsigned short uint16;
+typedef unsigned int   uint32;
+typedef signed char  int8;
+typedef signed short int16;
+typedef signed int   int32;
+
 // STRUCTURE OF THE SPRITE UPDATE FLAG
 struct sprite_update_flag {
     unsigned int padding:3;
@@ -86,10 +94,12 @@ extern unsigned int DATASTARTSECTOR;
 extern unsigned char *MEMORYTOP;
 extern void INITIALISEMEMORY( void );
 extern unsigned char *memoryspace( unsigned int );
+unsigned char *filememoryspace( unsigned int );
 
 // SIMPLE FILE SYSTEM
-extern unsigned short findfilenumber( unsigned char *, unsigned char * );
-extern unsigned int findfilesize( unsigned short );
+extern unsigned short sdcard_findfilenumber( unsigned char *, unsigned char * );
+extern unsigned int sdcard_findfilesize( unsigned short );
+extern void sdcard_readfile( unsigned short, unsigned char * );
 
 // RISC-V CSR FUNCTIONS
 extern long CSRcycles( void );

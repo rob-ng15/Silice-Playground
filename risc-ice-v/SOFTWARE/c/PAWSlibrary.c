@@ -56,8 +56,17 @@ void INITIALISEMEMORY( void ) {
     MEMORYTOP = CLUSTERBUFFER;
 }
 
-// ALLOCATE MEMORY, IN UNITS OF CLUSTERSIZE ( allows extra for reading in files )
+// ALLOCATE MEMORY, ENSURE EVEN NUMBER
 unsigned char *memoryspace( unsigned int size ) {
+    if( size & 1 != 0 )
+        size++;
+
+    MEMORYTOP -= size;
+    return( MEMORYTOP );
+}
+
+// ALLOCATE MEMORY, IN UNITS OF CLUSTERSIZE ( allows extra for reading in files )
+unsigned char *filememoryspace( unsigned int size ) {
     unsigned int numberofclusters = size / CLUSTERSIZE;
 
     if( size % CLUSTERSIZE != 0 )
@@ -65,31 +74,6 @@ unsigned char *memoryspace( unsigned int size ) {
 
     MEMORYTOP -= numberofclusters * CLUSTERSIZE;
     return( MEMORYTOP );
-}
-
-// SIMPLE FILE SYSTEM
-unsigned short findfilenumber( unsigned char *filename, unsigned char *ext ) {
-    unsigned short filenumber = 0xffff;
-    unsigned short filenamematch;
-    for( unsigned short i = 0; i < BOOTSECTOR -> root_dir_entries; i++ ) {
-        filenamematch = 1;
-        for( unsigned short c = 0; ( c < 8 ) || ( filename[c] == 0 ); c++ ) {
-            if( filename[c] != ROOTDIRECTORY[i].filename[c] )
-                filenamematch = 0;
-        }
-        for( unsigned short c = 0; ( c < 3 ) || ( ext[c] == 0 ); c++ ) {
-            if( ext[c] != ROOTDIRECTORY[i].ext[c] )
-                filenamematch = 0;
-        }
-        if( filenamematch )
-            filenumber = i;
-    }
-
-    return( filenumber );
-}
-
-unsigned int findfilesize( unsigned short filenumber ) {
-    return( ROOTDIRECTORY[filenumber].file_size );
 }
 
 // RISC-V CSR FUNCTIONS
@@ -800,4 +784,71 @@ void terminal_showhide( unsigned char status ) {
 void terminal_reset( void ) {
     while( *TERMINAL_STATUS );
     *TERMINAL_RESET = 1;
+}
+
+// SIMPLE FILE SYSTEM
+// FILES ARE REFERENCED BY FILENUMBER, 0xffff INDICATES FILE NOT FOUND
+// FILE SIZE CAN BE RETRIEVE
+// FILE CAN BE LOADED INTO MEMORY
+unsigned short sdcard_findfilenumber( unsigned char *filename, unsigned char *ext ) {
+    unsigned short filenumber = 0xffff;
+    unsigned short filenamematch;
+
+    for( unsigned short i = 0; ( i < BOOTSECTOR -> root_dir_entries ) && ( filenumber == 0xffff ); i++ ) {
+        switch( ROOTDIRECTORY[i].filename[0] ) {
+            // NOT TRUE FILES ( deleted, directory pointer )
+            case 0x00:
+            case 0xe5:
+            case 0x05:
+            case 0x2e:
+                break;
+
+            default:
+                filenamematch = 1;
+                for( unsigned short c = 0; ( c < 8 ) || ( filename[c] == 0 ); c++ ) {
+                    if( ( filename[c] != ROOTDIRECTORY[i].filename[c] ) && ( ROOTDIRECTORY[i].filename[c] != ' ' ) ) {
+                        filenamematch = 0;
+                    }
+                }
+                for( unsigned short c = 0; ( c < 3 ) || ( ext[c] == 0 ); c++ ) {
+                    if( ( ext[c] != ROOTDIRECTORY[i].ext[c] ) && ( ROOTDIRECTORY[i].ext[c] != ' ' ) ) {
+                        filenamematch = 0;
+                    }
+                }
+                if( filenamematch )
+                    filenumber = i;
+                break;
+        }
+    }
+
+    return( filenumber );
+}
+
+unsigned int sdcard_findfilesize( unsigned short filenumber ) {
+    return( ROOTDIRECTORY[filenumber].file_size );
+}
+
+
+void sdcard_readcluster( unsigned short cluster ) {
+    for( unsigned short i = 0; i < BOOTSECTOR -> sectors_per_cluster; i++ ) {
+        sdcard_readsector( DATASTARTSECTOR + ( cluster - 2 ) * BOOTSECTOR -> sectors_per_cluster + i, CLUSTERBUFFER + i * 512 );
+    }
+}
+
+void sdcard_readfile( unsigned short filenumber, unsigned char * copyAddress ) {
+    unsigned short nextCluster = ROOTDIRECTORY[ filenumber ].starting_cluster;
+    int i;
+
+    do {
+        sd_readCluster( nextCluster );
+        for( i = 0; i < BOOTSECTOR -> sectors_per_cluster * 512; i++ ) {
+            *copyAddress = CLUSTERBUFFER[i];
+            copyAddress++;
+        }
+        nextCluster = FAT[ nextCluster ];
+    } while( nextCluster != 0xffff );
+}
+
+// JPEG DECODER
+void jpeg_decoder( unsigned char *jpegimagefile ) {
 }

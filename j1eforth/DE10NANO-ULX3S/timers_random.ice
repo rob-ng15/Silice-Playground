@@ -77,8 +77,7 @@ algorithm random(
             temp_u_noise2 = temp_u_noise3;
             temp_u_noise1 = temp_u_noise2;
             temp_u_noise0 = temp_u_noise1;
-            temp_g_noise_nxt = ( rand_en_ff[9,1] ) ? __signed(temp_u_noise3) + __signed(temp_u_noise2) + __signed(temp_u_noise1) + __signed(temp_u_noise0) + __signed(g_noise_out) :
-                                                    __signed(temp_u_noise3) + __signed(temp_u_noise2) + __signed(temp_u_noise1) + __signed(temp_u_noise0);
+            temp_g_noise_nxt =  __signed(temp_u_noise3) + __signed(temp_u_noise2) + __signed(temp_u_noise1) + __signed(temp_u_noise0) + ( rand_en_ff[9,1] ? __signed(g_noise_out) : 0 );
         }
     }
 }

@@ -9,11 +9,10 @@ algorithm terminal(
     output! uint1   terminal_display,
 
     input   uint8   terminal_character,
-    input   uint1   terminal_write,
+    input   uint2   terminal_write,
     input   uint1   showterminal,
-    input   uint1   showcursor,
     input   uint1   timer1hz,
-    output  uint1   terminal_active
+    output  uint2   terminal_active
 ) <autorun> {
     // Character ROM 8x8 x 256
     brom uint8 characterGenerator8x8[] = {
@@ -21,8 +20,8 @@ algorithm terminal(
     };
 
     // 80 x 4 character buffer for the input/output terminal
-    simple_dualport_bram uint8 terminal[640] = uninitialized;
-    simple_dualport_bram uint8 terminal_copy[640] = uninitialized;
+    simple_dualport_bram uint8 terminal <input!> [640] = uninitialized;
+    simple_dualport_bram uint8 terminal_copy <input!> [640] = uninitialized;
 
     // Initial cursor position in the terminal, bottom left
     uint7 terminal_x = 0;
@@ -44,7 +43,6 @@ algorithm terminal(
 
     // Terminal active (scroll) flag and temporary storage for scrolling
     uint10 terminal_scroll = 0;
-    uint10 terminal_scroll_character = 0;
 
     // Setup the reading of the terminal memory
     terminal.addr0 := xterminalpos + yterminalpos;
@@ -64,39 +62,49 @@ algorithm terminal(
 
     // Render the terminal
     while(1) {
-        if( terminal_write ) {
-            // Display character
-            switch( terminal_character ) {
-                case 8: {
-                    // BACKSPACE, move back one character
-                    if( terminal_x != 0 ) {
-                        terminal_x = terminal_x - 1;
-                        terminal.addr1 = terminal_x + terminal_y * 80;
-                        terminal.wdata1 = 0;
-                        terminal_copy.addr1 = terminal_x + terminal_y * 80;
-                        terminal_copy.wdata1 = 0;
+        switch( terminal_active ) {
+            case 0: {
+                switch( terminal_write ) {
+                    case 1: {
+                        // Display character
+                        switch( terminal_character ) {
+                            case 8: {
+                                // BACKSPACE, move back one character
+                                if( terminal_x != 0 ) {
+                                    terminal_x = terminal_x - 1;
+                                    terminal.addr1 = terminal_x + terminal_y * 80;
+                                    terminal.wdata1 = 0;
+                                    terminal_copy.addr1 = terminal_x + terminal_y * 80;
+                                    terminal_copy.wdata1 = 0;
+                                }
+                            }
+                            case 10: {
+                                // LINE FEED, scroll
+                                terminal_active = 1;
+                            }
+                            case 13: {
+                                // CARRIAGE RETURN
+                                terminal_x = 0;
+                            }
+                            default: {
+                                // Display character
+                                terminal.addr1 = terminal_x + terminal_y * 80;
+                                terminal.wdata1 = terminal_character;
+                                terminal_copy.addr1 = terminal_x + terminal_y * 80;
+                                terminal_copy.wdata1 = terminal_character;
+                                terminal_active = ( terminal_x == 79 ) ? 1 : 0;
+                                terminal_x = ( terminal_x == 79 ) ? 0 : terminal_x + 1;
+                            }
+                        }
+                    }
+                    case 2: {
+                        // RESET
+                        terminal_active = 2;
                     }
                 }
-                case 10: {
-                    // LINE FEED, scroll
-                    terminal_active = 1;
-                }
-                case 13: {
-                    // CARRIAGE RETURN
-                    terminal_x = 0;
-                }
-                default: {
-                    // Display character
-                    terminal.addr1 = terminal_x + terminal_y * 80;
-                    terminal.wdata1 = terminal_character;
-                    terminal_copy.addr1 = terminal_x + terminal_y * 80;
-                    terminal_copy.wdata1 = terminal_character;
-                    terminal_active = ( terminal_x == 79 ) ? 1 : 0;
-                    terminal_x = ( terminal_x == 79 ) ? 0 : terminal_x + 1;
-                }
+
             }
-        } else {
-            if( terminal_active ) {
+            case 1: {
                 // SCROLL
                 terminal_scroll = 0;
                 ++:
@@ -104,15 +112,12 @@ algorithm terminal(
                     // Retrieve character on the next line
                     terminal_copy.addr0 = terminal_scroll + 80;
                     ++:
-                    terminal_scroll_character = terminal_copy.rdata0;
-                    ++:
                     // Write retrieved character
                     terminal.addr1 = terminal_scroll;
-                    terminal.wdata1 = terminal_scroll_character;
+                    terminal.wdata1 = terminal_copy.rdata0;
                     terminal_copy.addr1 = terminal_scroll;
-                    terminal_copy.wdata1 = terminal_scroll_character;
+                    terminal_copy.wdata1 = terminal_copy.rdata0;
 
-                    //++:
                     terminal_scroll = terminal_scroll + 1;
                 }
 
@@ -125,6 +130,22 @@ algorithm terminal(
 
                     terminal_scroll = terminal_scroll + 1;
                 }
+
+                terminal_active = 0;
+            }
+            case 2: {
+                // RESET
+                terminal_scroll = 0;
+                ++:
+                while( terminal_scroll < 640 ) {
+                    terminal.addr1 = terminal_scroll;
+                    terminal.wdata1 = 0;
+                    terminal_copy.addr1 = terminal_scroll;
+                    terminal_copy.wdata1 = 0;
+                    terminal_scroll = terminal_scroll + 1;
+                }
+                terminal_x = 0;
+                terminal_y = 7;
 
                 terminal_active = 0;
             }
