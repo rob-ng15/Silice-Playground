@@ -147,7 +147,7 @@ algorithm aluI (
     input   uint5   IshiftCount,
     input   int32   sourceReg1,
 
-    output  int32   result,
+    output! int32   result,
 ) <autorun> {
     while(1) {
         // BASE ALU - ONLY TRIGGER IF ALU OPERATION
@@ -175,7 +175,7 @@ algorithm aluR (
     input   int32   sourceReg1,
     input   int32   sourceReg2,
 
-    output  int32   result,
+    output! int32   result,
 ) <autorun> {
 
     while(1) {
@@ -204,7 +204,7 @@ algorithm aluM (
     input   uint1   start,
     output  uint1   busy,
 
-    output  int32  result
+    output! int32  result
 ) <autorun> {
     // MULTIPLICATION and DIVISION units
     divideremainder dividerunit (
