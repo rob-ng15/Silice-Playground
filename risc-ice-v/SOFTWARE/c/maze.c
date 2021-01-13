@@ -402,7 +402,6 @@ unsigned char whatisright( unsigned short currentx, unsigned short currenty, uns
     return( maze[currentx + directionx[ direction ] * steps + rightdirectionx[ direction ]][currenty + directiony[ direction ] * steps + rightdirectiony[ direction ]] );
 }
 
-
 // DRAW LEFT or RIGHT WALLS
 void left_wall( unsigned char colour, short steps )
 {
@@ -428,6 +427,48 @@ void right_wall( unsigned char colour, unsigned short steps )
         // TO PROVIDE THE POINT AT HORIZON
         gpu_quadrilateral( colour, 640 - perspectivex[ steps ], perspectivey[ steps ], 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ],
                                 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
+    }
+}
+
+void drawleft( unsigned short steps, unsigned char totheleft ) {
+    // DRAW SIDE WALLS
+    switch( totheleft ) {
+        case 'X':
+            left_wall( YELLOW, steps );
+            break;
+        case ' ':
+            // GAP
+            gpu_rectangle( GREY2, 0, perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
+            break;
+        case 'E':
+            left_wall( MAGENTA, steps );
+            break;
+        case '#':
+            left_wall( GREY1, steps );
+            break;
+        default:
+            break;
+    }
+}
+
+void drawright( unsigned short steps, unsigned char totheright ) {
+    // DRAW SIDE WALLS
+    switch( totheright ) {
+        case 'X':
+            right_wall( YELLOW, steps );
+            break;
+        case ' ':
+            // GAP
+            gpu_rectangle( GREY2, 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], 640, 480 - perspectivey[ steps + 1 ] );
+            break;
+        case 'E':
+            right_wall( MAGENTA, steps );
+            break;
+        case '#':
+            right_wall( GREY1, steps );
+            break;
+        default:
+            break;
     }
 }
 
@@ -494,7 +535,7 @@ void walk_maze( unsigned short width, unsigned short height )
         }
 
         // MOVE BACKWARDS FROM WALL
-        for( steps = min( visiblesteps, MAXDEPTH - 1 ); steps >= 0; steps-- ) {
+        for( steps = min( visiblesteps, MAXDEPTH - 1 ); steps > 0; steps-- ) {
             // DRAW PILL
             if( maze[ currentx + directionx[ direction ] * steps ][ currenty + directiony[ direction ] * steps ] == ' ' && map[ currentx + directionx[ direction ] * steps ][ currenty + directiony[ direction ] * steps ] != ' ' ) {
                 draw_pill( steps );
@@ -510,41 +551,13 @@ void walk_maze( unsigned short width, unsigned short height )
             }
 
             // DRAW SIDE WALLS
-            switch( whatisleft( currentx, currenty, direction, steps ) ) {
-                case 'X':
-                    left_wall( YELLOW, steps );
-                    break;
-                case ' ':
-                    // GAP
-                    gpu_rectangle( GREY2, 0, perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
-                    break;
-                case 'E':
-                    left_wall( MAGENTA, steps );
-                    break;
-                case '#':
-                    left_wall( GREY1, steps );
-                    break;
-                default:
-                    break;
-            }
-            switch( whatisright( currentx, currenty, direction, steps ) ) {
-                case 'X':
-                    right_wall( YELLOW, steps );
-                    break;
-                case ' ':
-                    // GAP
-                    gpu_rectangle( GREY2, 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], 640, 480 - perspectivey[ steps + 1 ] );
-                    break;
-                case 'E':
-                    right_wall( MAGENTA, steps );
-                    break;
-                case '#':
-                    right_wall( GREY1, steps );
-                    break;
-                default:
-                    break;
-            }
+            drawleft( steps, whatisleft( currentx, currenty, direction, steps ) );
+            drawright( steps, whatisright( currentx, currenty, direction, steps ) );
         }
+
+        // FINISH UPTO CORNERS
+        drawleft( 0, whatisleft( currentx, currenty, direction, 0 ) );
+        drawright( 0, whatisright( currentx, currenty, direction, 0 ) );
 
         draw_map( width, height, currentx, currenty, direction, 1, mappeeks );
 

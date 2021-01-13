@@ -1842,189 +1842,122 @@ terminal_reset:
 	sb	a4,0(a5)
 	ret
 	.size	terminal_reset, .-terminal_reset
-	.section	.rodata.str1.4
-	.align	2
-.LC1:
-	.string	"Checking: "
-	.text
 	.align	1
-	.globl	findfilenumber
-	.type	findfilenumber, @function
-findfilenumber:
-	addi	sp,sp,-80
-	sw	ra,76(sp)
-	sw	s0,72(sp)
-	sw	s1,68(sp)
-	sw	s2,64(sp)
-	sw	s3,60(sp)
-	sw	s4,56(sp)
-	sw	s5,52(sp)
-	sw	s6,48(sp)
-	sw	s7,44(sp)
-	sw	s8,40(sp)
-	sw	s9,36(sp)
-	sw	s10,32(sp)
-	sw	s11,28(sp)
-	sw	a1,8(sp)
+	.globl	sdcard_findfilenumber
+	.type	sdcard_findfilenumber, @function
+sdcard_findfilenumber:
 	lui	a5,%hi(BOOTSECTOR)
-	lw	a4,%lo(BOOTSECTOR)(a5)
-	lbu	a3,17(a4)
-	lbu	a5,18(a4)
-	slli	a5,a5,8
-	or	a5,a5,a3
-	beq	a5,zero,.L254
-	mv	s4,a0
-	li	s7,0
-	lui	s3,%hi(ROOTDIRECTORY)
-	li	s10,46
-	lui	s11,%hi(BOOTSECTOR)
-	li	s6,32
-	li	a5,65536
-	addi	a5,a5,-1
-	sw	a5,12(sp)
-	j	.L252
-.L261:
-	li	a4,5
-	bne	a5,a4,.L246
-.L244:
-	addi	s7,s7,1
-	slli	s7,s7,16
-	srli	s7,s7,16
-	lw	a4,%lo(BOOTSECTOR)(s11)
-	lbu	a3,17(a4)
-	lbu	a5,18(a4)
-	slli	a5,a5,8
-	or	a5,a5,a3
-	bgeu	s7,a5,.L260
-.L252:
-	slli	s2,s7,5
-	lw	a5,%lo(ROOTDIRECTORY)(s3)
-	add	a5,a5,s2
-	lbu	a5,0(a5)
-	beq	a5,s10,.L244
-	bgtu	a5,s10,.L245
-	bne	a5,zero,.L261
-	j	.L244
-.L245:
-	li	a4,229
-	beq	a5,a4,.L244
-.L246:
-	lui	a5,%hi(.LC1)
-	addi	a0,a5,%lo(.LC1)
-	call	outputstringnonl
-	li	s0,0
-	li	s8,1
-	li	s9,0
-	li	s5,7
-	j	.L257
-.L247:
-	addi	s0,s0,1
-	slli	s0,s0,16
-	srli	s0,s0,16
-	bgtu	s0,s5,.L262
-.L257:
-	add	s1,s4,s0
-	lbu	a0,0(s1)
-	call	outputcharacter
-	lw	a5,%lo(ROOTDIRECTORY)(s3)
-	add	a5,a5,s2
-	add	a5,a5,s0
-	lbu	a0,0(a5)
-	call	outputcharacter
-	lw	a5,%lo(ROOTDIRECTORY)(s3)
-	add	a5,a5,s2
-	add	a5,a5,s0
-	lbu	a5,0(a5)
-	lbu	a4,0(s1)
-	beq	a4,a5,.L247
-	beq	a5,s6,.L247
-	li	a0,35
-	call	outputcharacter
-	mv	s8,s9
-	j	.L247
-.L262:
-	add	a5,s4,s0
-	lbu	a5,0(a5)
-	beq	a5,zero,.L257
-	li	s0,0
-	li	s9,0
-	li	s5,2
-.L258:
-	lw	a5,8(sp)
-	add	s1,a5,s0
-	lbu	a0,0(s1)
-	call	outputcharacter
-	lw	a5,%lo(ROOTDIRECTORY)(s3)
-	add	a5,a5,s2
-	add	a5,a5,s0
-	lbu	a0,8(a5)
-	call	outputcharacter
-	lw	a5,%lo(ROOTDIRECTORY)(s3)
-	add	a5,a5,s2
-	add	a5,a5,s0
-	lbu	a5,8(a5)
-	lbu	a4,0(s1)
-	beq	a4,a5,.L249
-	beq	a5,s6,.L249
-	li	a0,35
-	call	outputcharacter
-	mv	s8,s9
-.L249:
-	addi	s0,s0,1
-	slli	s0,s0,16
-	srli	s0,s0,16
-	bleu	s0,s5,.L258
-	lw	a5,8(sp)
-	add	a5,a5,s0
-	lbu	a5,0(a5)
-	beq	a5,zero,.L258
-	lw	s0,12(sp)
-	beq	s8,zero,.L251
-	mv	s0,s7
-.L251:
-	li	a0,10
-	call	outputcharacter
-	addi	s7,s7,1
-	slli	s7,s7,16
-	srli	s7,s7,16
-	lw	a5,%lo(BOOTSECTOR)(s11)
-	lbu	a4,17(a5)
+	lw	a5,%lo(BOOTSECTOR)(a5)
+	lbu	t5,17(a5)
 	lbu	a5,18(a5)
 	slli	a5,a5,8
-	or	a5,a5,a4
-	bleu	a5,s7,.L256
-	lw	a5,12(sp)
-	bne	s0,a5,.L256
-	j	.L252
-.L254:
-	li	s0,65536
-	addi	s0,s0,-1
-	j	.L256
-.L260:
-	li	s0,65536
-	addi	s0,s0,-1
-.L256:
-	mv	a0,s0
-	lw	ra,76(sp)
-	lw	s0,72(sp)
-	lw	s1,68(sp)
-	lw	s2,64(sp)
-	lw	s3,60(sp)
-	lw	s4,56(sp)
-	lw	s5,52(sp)
-	lw	s6,48(sp)
-	lw	s7,44(sp)
-	lw	s8,40(sp)
-	lw	s9,36(sp)
-	lw	s10,32(sp)
-	lw	s11,28(sp)
-	addi	sp,sp,80
+	or	t5,a5,t5
+	beq	t5,zero,.L257
+	addi	sp,sp,-16
+	sw	s0,12(sp)
+	sw	s1,8(sp)
+	sw	s2,4(sp)
+	mv	a6,a0
+	lui	a5,%hi(ROOTDIRECTORY)
+	lw	t4,%lo(ROOTDIRECTORY)(a5)
+	li	a0,0
+	li	t6,46
+	li	t3,32
+	li	t1,7
+	li	s1,0
+	li	s2,2
+	li	a5,65536
+	addi	s0,a5,-1
+	li	t2,229
+	li	t0,5
+	j	.L253
+.L266:
+	beq	a5,zero,.L244
+	bne	a5,t0,.L264
+.L244:
+	addi	a0,a0,1
+	slli	a0,a0,16
+	srli	a0,a0,16
+	beq	t5,a0,.L265
+	addi	t4,t4,32
+.L253:
+	mv	a7,t4
+	lbu	a5,0(t4)
+	beq	a5,t6,.L244
+	bleu	a5,t6,.L266
+	beq	a5,t2,.L244
+	mv	a5,s1
+	li	a2,1
+	j	.L259
+.L264:
+	mv	a5,s1
+	li	a2,1
+	j	.L259
+.L268:
+	sub	a4,a4,t3
+	seqz	a4,a4
+	neg	a4,a4
+	and	a2,a2,a4
+.L247:
+	addi	a5,a5,1
+	slli	a5,a5,16
+	srli	a5,a5,16
+	bgtu	a5,t1,.L267
+.L259:
+	add	a4,a7,a5
+	lbu	a4,0(a4)
+	add	a3,a6,a5
+	lbu	a3,0(a3)
+	bne	a3,a4,.L268
+	j	.L247
+.L267:
+	add	a4,a6,a5
+	lbu	a4,0(a4)
+	beq	a4,zero,.L259
+	mv	a5,s1
+.L249:
+	add	a4,a7,a5
+	lbu	a4,8(a4)
+	add	a3,a1,a5
+	lbu	a3,0(a3)
+	beq	a3,a4,.L250
+	beq	a4,t3,.L250
+	li	a2,0
+.L250:
+	addi	a5,a5,1
+	slli	a5,a5,16
+	srli	a5,a5,16
+	bleu	a5,s2,.L249
+	add	a4,a1,a5
+	lbu	a4,0(a4)
+	beq	a4,zero,.L249
+	beq	a2,zero,.L244
+	addi	a5,a0,1
+	slli	a5,a5,16
+	srli	a5,a5,16
+	beq	a5,t5,.L258
+	addi	t4,t4,32
+	bne	a0,s0,.L258
+	mv	a0,a5
+	j	.L253
+.L257:
+	li	a0,65536
+	addi	a0,a0,-1
+	ret
+.L265:
+	li	a0,65536
+	addi	a0,a0,-1
+.L258:
+	lw	s0,12(sp)
+	lw	s1,8(sp)
+	lw	s2,4(sp)
+	addi	sp,sp,16
 	jr	ra
-	.size	findfilenumber, .-findfilenumber
+	.size	sdcard_findfilenumber, .-sdcard_findfilenumber
 	.align	1
-	.globl	findfilesize
-	.type	findfilesize, @function
-findfilesize:
+	.globl	sdcard_findfilesize
+	.type	sdcard_findfilesize, @function
+sdcard_findfilesize:
 	lui	a5,%hi(ROOTDIRECTORY)
 	lw	a5,%lo(ROOTDIRECTORY)(a5)
 	slli	a0,a0,5
@@ -2040,7 +1973,121 @@ findfilesize:
 	slli	a0,a0,24
 	or	a0,a0,a4
 	ret
-	.size	findfilesize, .-findfilesize
+	.size	sdcard_findfilesize, .-sdcard_findfilesize
+	.align	1
+	.globl	sdcard_readcluster
+	.type	sdcard_readcluster, @function
+sdcard_readcluster:
+	lui	a5,%hi(BOOTSECTOR)
+	lw	a5,%lo(BOOTSECTOR)(a5)
+	lbu	a5,13(a5)
+	beq	a5,zero,.L275
+	addi	sp,sp,-32
+	sw	ra,28(sp)
+	sw	s0,24(sp)
+	sw	s1,20(sp)
+	sw	s2,16(sp)
+	sw	s3,12(sp)
+	sw	s4,8(sp)
+	li	s0,0
+	lui	s4,%hi(CLUSTERBUFFER)
+	addi	s1,a0,-2
+	lui	s3,%hi(DATASTARTSECTOR)
+	lui	s2,%hi(BOOTSECTOR)
+.L272:
+	slli	a4,s0,9
+	lw	a1,%lo(CLUSTERBUFFER)(s4)
+	mul	a5,s1,a5
+	lw	a0,%lo(DATASTARTSECTOR)(s3)
+	add	a0,a5,a0
+	add	a1,a1,a4
+	add	a0,a0,s0
+	call	sdcard_readsector
+	addi	s0,s0,1
+	slli	s0,s0,16
+	srli	s0,s0,16
+	lw	a5,%lo(BOOTSECTOR)(s2)
+	lbu	a5,13(a5)
+	slli	a4,a5,16
+	srli	a4,a4,16
+	bgtu	a4,s0,.L272
+	lw	ra,28(sp)
+	lw	s0,24(sp)
+	lw	s1,20(sp)
+	lw	s2,16(sp)
+	lw	s3,12(sp)
+	lw	s4,8(sp)
+	addi	sp,sp,32
+	jr	ra
+.L275:
+	ret
+	.size	sdcard_readcluster, .-sdcard_readcluster
+	.align	1
+	.globl	sdcard_readfile
+	.type	sdcard_readfile, @function
+sdcard_readfile:
+	addi	sp,sp,-32
+	sw	ra,28(sp)
+	sw	s0,24(sp)
+	sw	s1,20(sp)
+	sw	s2,16(sp)
+	sw	s3,12(sp)
+	sw	s4,8(sp)
+	sw	s5,4(sp)
+	mv	s0,a1
+	lui	a5,%hi(ROOTDIRECTORY)
+	lw	a5,%lo(ROOTDIRECTORY)(a5)
+	slli	a0,a0,5
+	add	a5,a5,a0
+	lbu	a4,26(a5)
+	lbu	s3,27(a5)
+	slli	s3,s3,8
+	or	s3,s3,a4
+	lui	s1,%hi(BOOTSECTOR)
+	lui	s2,%hi(CLUSTERBUFFER)
+	lui	s5,%hi(FAT)
+	li	s4,65536
+	addi	s4,s4,-1
+.L281:
+	mv	a0,s3
+	call	sdcard_readcluster
+	lw	a5,%lo(BOOTSECTOR)(s1)
+	lbu	a5,13(a5)
+	beq	a5,zero,.L279
+	li	a5,0
+.L280:
+	lw	a4,%lo(CLUSTERBUFFER)(s2)
+	add	a4,a4,a5
+	lbu	a4,0(a4)
+	sb	a4,0(s0)
+	addi	s0,s0,1
+	addi	a5,a5,1
+	lw	a4,%lo(BOOTSECTOR)(s1)
+	lbu	a4,13(a4)
+	slli	a4,a4,9
+	bgt	a4,a5,.L280
+.L279:
+	slli	s3,s3,1
+	lw	a5,%lo(FAT)(s5)
+	add	s3,a5,s3
+	lhu	s3,0(s3)
+	bne	s3,s4,.L281
+	lw	ra,28(sp)
+	lw	s0,24(sp)
+	lw	s1,20(sp)
+	lw	s2,16(sp)
+	lw	s3,12(sp)
+	lw	s4,8(sp)
+	lw	s5,4(sp)
+	addi	sp,sp,32
+	jr	ra
+	.size	sdcard_readfile, .-sdcard_readfile
+	.align	1
+	.globl	jpeg_decoder
+	.type	jpeg_decoder, @function
+jpeg_decoder:
+	ret
+	.size	jpeg_decoder, .-jpeg_decoder
 	.globl	MEMORYTOP
 	.globl	DATASTARTSECTOR
 	.globl	CLUSTERSIZE

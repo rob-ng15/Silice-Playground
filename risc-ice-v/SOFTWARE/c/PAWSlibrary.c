@@ -840,7 +840,7 @@ void sdcard_readfile( unsigned short filenumber, unsigned char * copyAddress ) {
     int i;
 
     do {
-        sd_readCluster( nextCluster );
+        sdcard_readcluster( nextCluster );
         for( i = 0; i < BOOTSECTOR -> sectors_per_cluster * 512; i++ ) {
             *copyAddress = CLUSTERBUFFER[i];
             copyAddress++;
