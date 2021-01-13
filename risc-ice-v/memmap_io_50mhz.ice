@@ -30,6 +30,10 @@ algorithm memmap_io (
     input   uint1   video_clock,
     input   uint1   video_reset,
 
+    // RANDOM NUMBER GENERATOR
+    input   uint16  staticGenerator,
+    input   uint16  staticGeneratorALT,
+
     // Memory access
     input   uint16  memoryAddress,
     input   uint1   memoryWrite,
@@ -48,12 +52,6 @@ algorithm memmap_io (
     // 1khz timers (sleepTimer used for sleep command, timer1khz for user purposes)
     pulse1khz sleepTimer( );
     pulse1khz timer1khz( );
-
-    // RNG random number generator
-    uint16  staticGenerator = uninitialized;
-    random rng(
-        g_noise_out :> staticGenerator,
-    );
 
     // UART tx and rx
     // UART written in Silice by https://github.com/sylefeb/Silice
@@ -334,7 +332,6 @@ algorithm memmap_io (
     timer1hz.resetCounter := 0;
     sleepTimer.resetCount := 0;
     timer1khz.resetCount := 0;
-    rng.resetRandom := 0;
     apu_processor_L.apu_write := 0;
     apu_processor_R.apu_write := 0;
 
@@ -421,8 +418,8 @@ algorithm memmap_io (
                 case 16h8818: { readData = apu_processor_R.audio_active; }
 
                 // TIMERS and RNG
-                case 16h8900: { readData = rng.g_noise_out; }
-                case 16h8904: { readData = rng.u_noise_out; }
+                case 16h8900: { readData = staticGenerator; }
+                case 16h8904: { readData = staticGeneratorALT; }
                 case 16h8910: { readData = timer1hz.counter1hz; }
                 case 16h8920: { readData = timer1khz.counter1khz; }
                 case 16h8930: { readData = sleepTimer.counter1khz; }
@@ -549,7 +546,6 @@ algorithm memmap_io (
                 case 16h881c: { apu_processor_R.apu_write = writeData; }
 
                 // TIMERS and RNG
-                case 16h8900: { rng.resetRandom = 1; }
                 case 16h8910: { timer1hz.resetCounter = 1; }
                 case 16h8920: { timer1khz.resetCount = writeData; }
                 case 16h8930: { sleepTimer.resetCount = writeData; }

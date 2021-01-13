@@ -194,7 +194,6 @@ algorithm tilemap(
                     y_cursor = y_cursor + 1;
                     y_cursor_addr = y_cursor_addr + 42;
                 }
-                ++:
                 tm_offset_x = 0;
                 tm_active = 0;
             }
@@ -226,7 +225,6 @@ algorithm tilemap(
                     tiles_copy.wdata1 = new_tile;
                     x_cursor = x_cursor + 1;
                 }
-                ++:
                 tm_offset_y = 0;
                 tm_active = 0;
             }
@@ -242,7 +240,6 @@ algorithm tilemap(
                     tiles_copy.wdata1 = { 1b1, 6b0, 6b0, 5b0 };
                     tmcsaddr = tmcsaddr + 1;
                 }
-                ++:
 
                 tm_offset_x = 0;
                 tm_offset_y = 0;
