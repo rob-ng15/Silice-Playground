@@ -157,7 +157,6 @@ algorithm main(
         pix_x <: pix_x,
         pix_y <: pix_y,
 
-        clock25mhz <: clock,
         video_clock <: video_clock,
         video_reset <: video_reset,
 

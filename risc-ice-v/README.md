@@ -3,7 +3,7 @@
 * Written in Silice
     * Based upon ICE-V by [ICE-V](https://github.com/sylefeb/Silice/blob/master/projects/ice-v/ice-v.ice) by @sylefeb
 
-A simple Risc-V RV32IMC CPU, matched to the display and peripherals from [j1eforth](https://github.com/rob-ng15/Silice-Playground/tree/master/j1eforth/DE10NANO-ULX3S) Inspired by the need for an easier way to program and use the CPU than Forth.
+A simple (single thread, no interrupts or exceptions/traps), Risc-V RV32IMC CPU, matched to the display and peripherals from [j1eforth](https://github.com/rob-ng15/Silice-Playground/tree/master/j1eforth/DE10NANO-ULX3S) Inspired by the need for an easier way to program and use the CPU than Forth.
 
 __ULX3S only at present__
 

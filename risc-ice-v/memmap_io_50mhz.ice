@@ -27,7 +27,6 @@ algorithm memmap_io (
     input   uint10  pix_y,
 
     // CLOCKS
-    input   uint1   clock25mhz,
     input   uint1   video_clock,
     input   uint1   video_reset,
 
