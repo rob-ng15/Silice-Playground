@@ -93,7 +93,6 @@ algorithm sprite_layer(
     $$for i=0,12 do
         // Set read addresses for the bitmaps and output collisions
         tiles_$i$.addr0 := sprite_tile_number[$i$] * 16 + ( ( __signed({1b0, pix_y}) - sprite_y[$i$] ) >>> sprite_double[$i$] );
-
         collision_$i$ := ( output_collisions ) ? detect_collision_$i$ : collision_$i$;
     $$end
 

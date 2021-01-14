@@ -256,10 +256,10 @@ algorithm compressedexpansion (
     output! uint1   compressed
 ) <autorun> {
     while(1) {
+        compressed = ( i16[0,2] != 2b11 );
+
         switch( i16[0,2] ) {
             case 2b00: {
-                compressed = 1;
-
                 switch( i16[13,3] ) {
                     case 3b000: {
                         // ADDI4SPN -> addi rd', x2, nzuimm[9:2]
@@ -295,8 +295,6 @@ algorithm compressedexpansion (
             }
 
             case 2b01: {
-                compressed = 1;
-
                 switch( i16[13,3] ) {
                     case 3b000: {
                         // ADDI -> addi rd, rd, nzimm[5:0]
@@ -389,8 +387,6 @@ algorithm compressedexpansion (
             }
 
             case 2b10: {
-                compressed = 1;
-
                 switch( i16[13,3] ) {
                     case 3b000: {
                         // SLLI -> slli rd, rd, shamt[5:0]
@@ -452,7 +448,6 @@ algorithm compressedexpansion (
             }
 
             case 2b11: {
-                compressed = 0;
                 i32 = { 16h0000, i16 };
             }
         }

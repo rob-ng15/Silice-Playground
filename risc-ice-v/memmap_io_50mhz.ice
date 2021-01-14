@@ -30,10 +30,6 @@ algorithm memmap_io (
     input   uint1   video_clock,
     input   uint1   video_reset,
 
-    // RANDOM NUMBER GENERATOR
-    input   uint16  staticGenerator,
-    input   uint16  staticGeneratorALT,
-
     // Memory access
     input   uint16  memoryAddress,
     input   uint1   memoryWrite,
@@ -52,6 +48,15 @@ algorithm memmap_io (
     // 1khz timers (sleepTimer used for sleep command, timer1khz for user purposes)
     pulse1khz sleepTimer( );
     pulse1khz timer1khz( );
+
+    // RNG random number generator
+    uint16  staticGenerator = uninitialized;
+    uint16  staticGeneratorALT = uninitialized;
+    random rng(
+        g_noise_out :> staticGenerator,
+        u_noise_out :> staticGeneratorALT
+    );
+
 
     // UART tx and rx
     // UART written in Silice by https://github.com/sylefeb/Silice

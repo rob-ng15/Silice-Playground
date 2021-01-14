@@ -108,6 +108,7 @@ algorithm PAWSCPU (
     );
 
     // RISC-V BASE ALU IMMEDIATE REGISTER + M EXTENSION
+    // <@clock_copro>
     aluI ALUI <@clock_copro> (
         opCode <: opCode,
         function3 <: function3,

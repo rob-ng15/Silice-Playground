@@ -10,7 +10,7 @@ algorithm divideremainder (
     input   uint1   start,
     output  uint1   active,
 
-    output  uint32  result,
+    output! uint32  result,
 ) <autorun> {
     uint32  quotient = uninitialized;
     uint32  remainder = uninitialized;
@@ -64,7 +64,7 @@ algorithm multiplicationDSP (
     input   uint1   start,
     output  uint1   active,
 
-    output  uint32  result
+    output! uint32  result
 ) <autorun> {
     uint32  factor_1_copy := ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
     uint32  factor_2_copy := ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );

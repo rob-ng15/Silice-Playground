@@ -137,14 +137,6 @@ algorithm main(
         writedata <: writedata,
     );
 
-    // RNG random number generator
-    uint16  staticGenerator = uninitialized;
-    uint16  staticGeneratorALT = uninitialized;
-    random rng <@clock> (
-        g_noise_out :> staticGenerator,
-        u_noise_out :> staticGeneratorALT
-    );
-
     // MEMORY MAPPED I/O
     memmap_io IO_Map <@clock_IO> (
         leds :> leds,
@@ -167,10 +159,6 @@ algorithm main(
 
         video_clock <: video_clock,
         video_reset <: video_reset,
-
-        // RNG random number generator
-        staticGenerator <: staticGenerator,
-        staticGeneratorALT <: staticGeneratorALT,
 
         memoryAddress <: address,
         writeData <: writedata

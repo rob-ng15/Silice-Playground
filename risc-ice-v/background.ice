@@ -88,28 +88,9 @@ algorithm background(
 
                 default: {
                     // CHECKERBOARDS
-                        switch( { pix_x[backgroundcolour_mode-7,1], pix_y[backgroundcolour_mode-7,1] } ) {
-                            case 2b00: {
-                                pix_red = colour6(backgroundcolour).red;
-                                pix_green = colour6(backgroundcolour).green;
-                                pix_blue = colour6(backgroundcolour).blue;
-                            }
-                            case 2b01: {
-                                pix_red = colour6(backgroundcolour_alt).red;
-                                pix_green = colour6(backgroundcolour_alt).green;
-                                pix_blue = colour6(backgroundcolour_alt).blue;
-                            }
-                            case 2b10: {
-                                pix_red = colour6(backgroundcolour_alt).red;
-                                pix_green = colour6(backgroundcolour_alt).green;
-                                pix_blue = colour6(backgroundcolour_alt).blue;
-                            }
-                            case 2b11: {
-                                pix_red = colour6(backgroundcolour).red;
-                                pix_green = colour6(backgroundcolour).green;
-                                pix_blue = colour6(backgroundcolour).blue;
-                            }
-                        }
+                    pix_red = ( pix_x[backgroundcolour_mode-7,1] == pix_y[backgroundcolour_mode-7,1] ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
+                    pix_green = ( pix_x[backgroundcolour_mode-7,1] == pix_y[backgroundcolour_mode-7,1] ) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
+                    pix_blue = ( pix_x[backgroundcolour_mode-7,1] == pix_y[backgroundcolour_mode-7,1] ) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
                 }
             }
         }
