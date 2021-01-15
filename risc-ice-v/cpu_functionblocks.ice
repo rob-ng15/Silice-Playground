@@ -1,117 +1,106 @@
 // RISC-V REGISTER WRITE
-algorithm registersWRITE (
-    input   uint5   rd,
-    input   uint1   writeRegister,
-    input   uint1   floatingpoint,
-    input   int32   result,
-
-    simple_dualbram_port1   registers_1,
-    simple_dualbram_port1   registers_2
-) <autorun> {
-    registers_1.wenable1 := 1;
-    registers_2.wenable1 := 1;
-
-    while(1) {
-        // WRITE TO REGISTERS
-        // NEVER write to registers[0]
-        if( writeRegister && ( rd != 0 ) ) {
-            registers_1.addr1 = rd + ( floatingpoint ? 32 : 0 );
-            registers_1.wdata1 = result;
-            registers_2.addr1 = rd + ( floatingpoint ? 32 : 0 );
-            registers_2.wdata1 = result;
-        }
+circuitry registersWRITE (
+    inout   registers_1,
+    inout   registers_2,
+    input   rd,
+    input   writeRegister,
+    input   floatingpoint,
+    input   result,
+) {
+    // WRITE TO REGISTERS
+    // NEVER write to registers[0]
+    if( writeRegister && ( rd != 0 ) ) {
+        registers_1.addr1 = rd + ( floatingpoint ? 32 : 0 );
+        registers_1.wdata1 = result;
+        registers_2.addr1 = rd + ( floatingpoint ? 32 : 0 );
+        registers_2.wdata1 = result;
     }
 }
 
 // RISC-V REGISTER READ
-algorithm registersREAD (
-    input   uint5   rs1,
-    input   uint5   rs2,
-    input   uint1   floatingpoint,
-
-    output! int32   sourceReg1,
-    output! int32   sourceReg2,
-
-    simple_dualbram_port0   registers_1,
-    simple_dualbram_port0   registers_2
-) <autorun> {
-    registers_1.addr0 := rs1 + ( floatingpoint ? 32 : 0 );
-    registers_2.addr0 := rs2 + ( floatingpoint ? 32 : 0 );
-
-    sourceReg1 := registers_1.rdata0;
-    sourceReg2 := registers_2.rdata0;
-
-    while(1) {
-    }
+circuitry registersREAD(
+    inout   registers_1,
+    inout   registers_2,
+    input   rs1,
+    input   rs2,
+    input   floatingpoint,
+    output  sourceReg1,
+    output  sourceReg2
+) {
+    registers_1.addr0 = rs1 + ( floatingpoint ? 32 : 0 );
+    registers_2.addr0 = rs2 + ( floatingpoint ? 32 : 0 );
+    ++:
+    sourceReg1 = registers_1.rdata0;
+    sourceReg2 = registers_2.rdata0;
 }
 
 // RISC-V INSTRUCTION DECODER
-algorithm decoder (
-    input   uint32  instruction,
+circuitry decoder (
+    input   instruction,
 
-    output  uint7   opCode,
-    output  uint3   function3,
-    output  uint7   function7,
+    output  opCode,
+    output  function3,
+    output  function7,
 
-    output  uint5   rs1,
-    output  uint5   rs2,
-    output  uint5   rd,
+    output  rs1,
+    output  rs2,
+    output  rd,
 
-    output  int32   immediateValue,
-    output  uint5   IshiftCount
-) <autorun> {
-    opCode := Utype(instruction).opCode;
-    function3 := Rtype(instruction).function3;
-    function7 := Rtype(instruction).function7;
+    output  immediateValue,
+    output  IshiftCount
+) {
+    opCode = Utype(instruction).opCode;
+    function3 = Rtype(instruction).function3;
+    function7 = Rtype(instruction).function7;
 
-    rs1 := Rtype(instruction).sourceReg1;
-    rs2 := Rtype(instruction).sourceReg2;
-    rd := Rtype(instruction).destReg;
+    rs1 = Rtype(instruction).sourceReg1;
+    rs2 = Rtype(instruction).sourceReg2;
+    rd = Rtype(instruction).destReg;
 
-    immediateValue := { {20{instruction[31,1]}}, Itype(instruction).immediate };
-    IshiftCount := ItypeSHIFT( instruction ).shiftCount;
-
-    while(1) {
-    }
+    immediateValue = { {20{instruction[31,1]}}, Itype(instruction).immediate };
+    IshiftCount = ItypeSHIFT( instruction ).shiftCount;
 }
 
 // RISC-V ADDRESS BASE/OFFSET GENERATOR
-algorithm addressgenerator (
-    input   uint32  instruction,
-    input   uint32  pc,
-    input   uint1   compressed,
-    input!  int32   sourceReg1,
+circuitry addressgenerator (
+    input   opCode,
+    input   pc,
+    input   compressed,
+    input   sourceReg1,
+    input   immediateValue,
 
-    output  uint32  pcPLUS2,
-    output  uint32  nextPC,
-    output  uint32  branchAddress,
-    output  uint32  jumpAddress,
-    output  uint32  AUIPCLUI,
-    output! uint32  storeAddress,
-    output! uint32  storeAddressPLUS2,
-    output! uint32  loadAddress,
-    output! uint32  loadAddressPLUS2
-) <autorun> {
-    uint7   opCode := Utype(instruction).opCode;
-    int32   immediateValue := { {20{instruction[31,1]}}, Itype(instruction).immediate };
+    output  nextPC,
+    output  branchAddress,
+    output  jumpAddress,
+    output  AUIPCLUI,
+    output  storeAddress,
+    output  loadAddress,
+) {
+    nextPC = pc + ( compressed ? 2 : 4 );
 
-    pcPLUS2 := pc + 2;
-    nextPC := pc + ( compressed ? 2 : 4 );
+    branchAddress = { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } + pc;
 
-    branchAddress := { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } + pc;
+    jumpAddress = { {12{Jtype(instruction).immediate_bits_20}}, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + pc;
 
-    jumpAddress := { {12{Jtype(instruction).immediate_bits_20}}, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + pc;
+    AUIPCLUI = { Utype(instruction).immediate_bits_31_12, 12b0 } + ( opCode[5,1] ? 0 : pc );
 
-    AUIPCLUI := { Utype(instruction).immediate_bits_31_12, 12b0 } + ( opCode[5,1] ? 0 : pc );
+    storeAddress = { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
 
-    storeAddress := { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
-    storeAddressPLUS2 := { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1 + 2;
+    loadAddress = immediateValue + sourceReg1;
+}
 
-    loadAddress := immediateValue + sourceReg1;
-    loadAddressPLUS2 := immediateValue + sourceReg1 + 2;
-
-    while(1) {
-    }
+// UPDATE PC
+circuitry newPC(
+    input   opCode,
+    input   incPC,
+    input   nextPC,
+    input   takeBranch,
+    input   branchAddress,
+    input   jumpAddress,
+    input   loadAddress,
+    output  pc
+) {
+    pc = ( incPC ) ? ( takeBranch ? branchAddress : nextPC ) : ( opCode[3,1] ? jumpAddress : loadAddress );
 }
 
 // BRANCH COMPARISIONS
@@ -134,113 +123,48 @@ circuitry branchcomparison (
 }
 
 // RISC-V ALU BASE IMMEDIATE
-algorithm aluI (
-    input   uint7   opCode,
-    input   uint3   function3,
-    input   uint7   function7,
-    input   int32   immediateValue,
-    input   uint5   IshiftCount,
-    input   int32   sourceReg1,
+circuitry aluI (
+    input   opCode,
+    input   function3,
+    input   function7,
+    input   immediateValue,
+    input   IshiftCount,
+    input   sourceReg1,
 
-    output! int32   result,
-) <autorun> {
-    while(1) {
-        // BASE ALU - ONLY TRIGGER IF ALU OPERATION
-        if( opCode == 7b0010011 ) {
-            switch( function3 ) {
-                case 3b000: { result = sourceReg1 + immediateValue; }
-                case 3b001: { result = __unsigned(sourceReg1) << IshiftCount; }
-                case 3b010: { result = __signed( sourceReg1 ) < __signed(immediateValue) ? 32b1 : 32b0; }
-                case 3b011: { result = ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 32b1 : 32b0 ); }
-                case 3b100: { result = sourceReg1 ^ immediateValue; }
-                case 3b101: { result = function7[5,1] ? (__signed(sourceReg1) >>> IshiftCount) : (__unsigned(sourceReg1) >> IshiftCount); }
-                case 3b110: { result = sourceReg1 | immediateValue; }
-                case 3b111: { result = sourceReg1 & immediateValue; }
+    output  result,
+) {
+    switch( function3 ) {
+        case 3b000: { result = sourceReg1 + immediateValue; }
+        case 3b001: { result = __unsigned(sourceReg1) << IshiftCount; }
+        case 3b010: { result = __signed( sourceReg1 ) < __signed(immediateValue) ? 32b1 : 32b0; }
+        case 3b011: { result = ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 32b1 : 32b0 ); }
+        case 3b100: { result = sourceReg1 ^ immediateValue; }
+        case 3b101: { result = function7[5,1] ? (__signed(sourceReg1) >>> IshiftCount) : (__unsigned(sourceReg1) >> IshiftCount); }
+        case 3b110: { result = sourceReg1 | immediateValue; }
+        case 3b111: { result = sourceReg1 & immediateValue; }
             }
-        }
-    }
 }
 
 // RISC-V ALU BASE REGISTER
-algorithm aluR (
-    input   uint7   opCode,
-    input   uint3   function3,
-    input   uint7   function7,
-    input   uint5   rs1,
-    input   int32   sourceReg1,
-    input   int32   sourceReg2,
+circuitry aluR (
+    input   opCode,
+    input   function3,
+    input   function7,
+    input   rs1,
+    input   sourceReg1,
+    input   sourceReg2,
 
-    output! int32   result,
-) <autorun> {
-
-    while(1) {
-        // BASE ALU - ONLY TRIGGER IF ALU OPERATION
-        if( opCode == 7b0110011 ) {
-            switch( function3 ) {
-                case 3b000: { result = sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ); }
-                case 3b001: { result = __unsigned(sourceReg1) << sourceReg2[0,5]; }
-                case 3b010: { result = __signed( sourceReg1 ) < __signed(sourceReg2) ? 32b1 : 32b0; }
-                case 3b011: { result = ( rs1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 32b1 : 32b0 ); }
-                case 3b100: { result = sourceReg1 ^ sourceReg2; }
-                case 3b101: { result = function7[5,1] ? ( __signed(sourceReg1) >>> sourceReg2[0,5]) : (__unsigned(sourceReg1) >> sourceReg2[0,5]); }
-                case 3b110: { result = sourceReg1 | sourceReg2; }
-                case 3b111: { result = sourceReg1 & sourceReg2; }
-            }
-        }
-    }
-}
-
-// RISC-V ALU M EXTENSION
-algorithm aluM (
-    input   uint3   function3,
-    input   int32   sourceReg1,
-    input   int32   sourceReg2,
-
-    input   uint1   start,
-    output  uint1   busy,
-
-    output! int32  result
-) <autorun> {
-    // MULTIPLICATION and DIVISION units
-    divideremainder dividerunit (
-        function3 <: function3,
-        dividend <: sourceReg1,
-        divisor <: sourceReg2
-    );
-    multiplicationDSP multiplicationuint (
-        function3 <: function3,
-        factor_1 <: sourceReg1,
-        factor_2 <: sourceReg2
-    );
-
-    uint1   active = 0;
-    busy := start ? 1 : active;
-
-    // MULTIPLICATION and DIVISION Start Flags
-    dividerunit.start := 0;
-    multiplicationuint.start := 0;
-
-    while(1) {
-        if( start ) {
-            switch( function3[2,1] ) {
-                case 1b0: {
-                    // MULTIPLICATION
-                    active = 1;
-                    multiplicationuint.start = 1;
-                    while( multiplicationuint.active ) {}
-                    result = multiplicationuint.result;
-                    active = 0;
-                }
-                case 1b1: {
-                    // DIVISION / REMAINDER
-                    active = 1;
-                    dividerunit.start = 1;
-                    while( dividerunit.active ) {}
-                    result = dividerunit.result;
-                    active = 0;
-                }
-            }
-        }
+    output  result,
+) {
+    switch( function3 ) {
+        case 3b000: { result = sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ); }
+        case 3b001: { result = __unsigned(sourceReg1) << sourceReg2[0,5]; }
+        case 3b010: { result = __signed( sourceReg1 ) < __signed(sourceReg2) ? 32b1 : 32b0; }
+        case 3b011: { result = ( rs1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 32b1 : 32b0 ); }
+        case 3b100: { result = sourceReg1 ^ sourceReg2; }
+        case 3b101: { result = function7[5,1] ? ( __signed(sourceReg1) >>> sourceReg2[0,5]) : (__unsigned(sourceReg1) >> sourceReg2[0,5]); }
+        case 3b110: { result = sourceReg1 | sourceReg2; }
+        case 3b111: { result = sourceReg1 & sourceReg2; }
     }
 }
 

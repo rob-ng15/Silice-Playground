@@ -30,32 +30,16 @@ algorithm PAWSCPU (
     uint1   incPC = uninitialized;
     uint32  instruction = uninitialized;
 
-    // TEMPORARY STORAGE FOR 16 BIT LOWER PART OF 32 BIT WORD
-    uint16  LOW = uninitialized;
+    // TEMPORARY STORAGE FOR 16 BIT lowWordER PART OF 32 BIT WORD
+    uint16  lowWord = uninitialized;
 
     // RISC-V REGISTER WRITER
     int32   result = uninitialized;
     uint1   writeRegister = uninitialized;
-    registersWRITE registersW(
-        rd <: rd,
-        floatingpoint <: floatingpoint,
-        result <: result,
-        registers_1 <:> registers_1,
-        registers_2 <:> registers_2
-    );
 
     // RISC-V REGISTER READER
     int32   sourceReg1 = uninitialized;
     int32   sourceReg2 = uninitialized;
-    registersREAD registersR(
-        rs1 <: rs1,
-        rs2 <: rs2,
-        floatingpoint <: floatingpoint,
-        sourceReg1 :> sourceReg1,
-        sourceReg2 :> sourceReg2,
-        registers_1 <:> registers_1,
-        registers_2 <:> registers_2
-    );
 
     // RISC-V 32 BIT INSTRUCTION DECODER
     int32   immediateValue = uninitialized;
@@ -65,65 +49,13 @@ algorithm PAWSCPU (
     uint5   rs1 = uninitialized;
     uint5   rs2 = uninitialized;
     uint5   rd = uninitialized;
-    decoder DECODE(
-        instruction <: instruction,
-        opCode :> opCode,
-        function3 :> function3,
-        function7 :> function7,
-        rs1 :> rs1,
-        rs2 :> rs2,
-        rd :> rd,
-        immediateValue :> immediateValue,
-        IshiftCount :> IshiftCount
-    );
 
     // RISC-V ADDRESS GENERATOR
     uint32  branchAddress = uninitialized;
     uint32  jumpAddress = uninitialized;
     uint32  loadAddress = uninitialized;
-    uint32  loadAddressPLUS2 = uninitialized;
     uint32  storeAddress = uninitialized;
-    uint32  storeAddressPLUS2 = uninitialized;
     uint32  AUIPCLUI = uninitialized;
-    addressgenerator AGU(
-        instruction <: instruction,
-        pc <:: pc,
-        compressed <: compressed,
-        sourceReg1 <: sourceReg1,
-        pcPLUS2 :> pcPLUS2,
-        nextPC :> nextPC,
-        branchAddress :> branchAddress,
-        jumpAddress :> jumpAddress,
-        AUIPCLUI :> AUIPCLUI,
-        storeAddress :> storeAddress,
-        storeAddressPLUS2 :> storeAddressPLUS2,
-        loadAddress :> loadAddress,
-        loadAddressPLUS2 :> loadAddressPLUS2
-    );
-
-    // RISC-V BASE ALU IMMEDIATE REGISTER + M EXTENSION
-    // <@clock_copro>
-    aluI ALUI(
-        opCode <: opCode,
-        function3 <: function3,
-        function7 <: function7,
-        immediateValue <: immediateValue,
-        IshiftCount <: IshiftCount,
-        sourceReg1 <: sourceReg1
-    );
-    aluR ALUR(
-        opCode <: opCode,
-        function3 <: function3,
-        function7 <: function7,
-        rs1 <: rs1,
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-    );
-    aluM ALUM(
-        function3 <: function3,
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-    );
 
     // CSR REGISTERS
     CSRblock CSR(
@@ -135,10 +67,8 @@ algorithm PAWSCPU (
     writememory := 0;
 
     // REGISTER Read/Write Flags
-    registersW.writeRegister := 0;
-
-    // ALU Start Flag
-    ALUM.start := 0;
+    registers_1.wenable1 := 1;
+    registers_2.wenable1 := 1;
 
     // CSR instructions retired increment flag
     CSR.incCSRinstret := 0;
@@ -164,18 +94,19 @@ algorithm PAWSCPU (
             case 2b10: { ( instruction ) = compressed10( readdata ); }
             case 2b11: {
                 // 32 BIT INSTRUCTION
-                LOW = readdata;
-                address = pcPLUS2;
+                lowWord = readdata;
+                address = pc + 2;
                 readmemory = 1;
                 while( memorybusy ) {}
-                ( instruction ) = halfhalfword( readdata, LOW );
+                ( instruction ) = halfhalfword( readdata, lowWord );
             }
         }
 
         // DECODE + REGISTER FETCH
         // HAPPENS AUTOMATICALLY in DECODE AND REGISTER UNITS
-        ++:
-        ++:
+        ( opCode, function3, function7, rs1, rs2, rd, immediateValue, IshiftCount ) = decoder( instruction );
+        ( registers_1, registers_2, sourceReg1, sourceReg2 ) = registersREAD( registers_1, registers_2, rs1, rs2, floatingpoint );
+        ( nextPC, branchAddress, jumpAddress, AUIPCLUI, storeAddress, loadAddress ) = addressgenerator( opCode, pc, compressed, sourceReg1, immediateValue );
 
         // EXECUTE
         switch( opCode[2,5] ) {
@@ -213,19 +144,15 @@ algorithm PAWSCPU (
                 readmemory = 1;
                 while( memorybusy ) {}
                 switch( function3 & 3 ) {
-                    case 2b00: {
-                        ( result ) = signextender8( function3, loadAddress, readdata );
-                    }
-                    case 2b01: {
-                        ( result ) = signextender16( function3, readdata );
-                    }
+                    case 2b00: { ( result ) = signextender8( function3, loadAddress, readdata ); }
+                    case 2b01: { ( result ) = signextender16( function3, readdata ); }
                     case 2b10: {
                         // 32 bit READ as 2 x 16 bit
-                        LOW = readdata;
-                        address = loadAddressPLUS2;
+                        lowWord = readdata;
+                        address = loadAddress + 2;
                         readmemory = 1;
                         while( memorybusy ) {}
-                        ( result ) = halfhalfword( readdata, LOW );
+                        ( result ) = halfhalfword( readdata, lowWord );
                     }
                 }
             }
@@ -239,7 +166,7 @@ algorithm PAWSCPU (
                 while( memorybusy ) {}
                 if(  ( function3 & 3 ) == 2b10 ) {
                     // WRITE UPPER 16 of 32 bits
-                    address = storeAddressPLUS2;
+                    address = storeAddress + 2;
                     writedata = sourceReg2[16,16];
                     writememory = 1;
                     while( memorybusy ) {}
@@ -248,16 +175,20 @@ algorithm PAWSCPU (
             case 5b00100: {
                 // ALUI
                 writeRegister = 1;
-                result = ALUI.result;
+                ( result ) = aluI( opCode, function3, function7, immediateValue, IshiftCount, sourceReg1 );
             }
             case 5b01100: {
                 // ALUR ( BASE + M EXTENSION )
                 writeRegister = 1;
-                if( function7[0,1] ) {
-                    ALUM.start = 1;
-                    while( ALUM.busy ) {}
+                switch( function7[0,1] ) {
+                    case 1b0: { ( result ) = aluR( opCode, function3, function7, rs1, sourceReg1, sourceReg2 ); }
+                    case 1b1: {
+                        switch( function3[2,1] ) {
+                            case 1b0: { ( result ) = multiplication( function3, sourceReg1, sourceReg2 ); }
+                            case 1b1: { ( result ) = divideremainder( function3, sourceReg1, sourceReg2 ); }
+                        }
+                    }
                 }
-                result = function7[0,1] ? ALUM.result : ALUR.result;
             }
             case 5b11100: {
                 // CSR
@@ -266,11 +197,9 @@ algorithm PAWSCPU (
             }
         }
 
-        // WRITE TO REGISTERS
-        registersW.writeRegister = writeRegister;
-
-        // UPDATE PC
-        pc = ( incPC ) ? ( takeBranch ? branchAddress : nextPC ) : ( opCode[3,1] ? jumpAddress : loadAddress );
+        // DISPATCH INSTRUCTION
+        ( registers_1, registers_2 ) = registersWRITE( registers_1, registers_2, rd, writeRegister, floatingpoint, result );
+        ( pc ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
 
         // Update CSRinstret
         CSR.incCSRinstret = 1;
