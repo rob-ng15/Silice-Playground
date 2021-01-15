@@ -30,6 +30,9 @@ algorithm PAWSCPU (
     uint1   incPC = uninitialized;
     uint32  instruction = uninitialized;
 
+    // TEMPORARY STORAGE FOR 16 BIT LOWER PART OF 32 BIT WORD
+    uint16  LOW = uninitialized;
+
     // RISC-V REGISTER WRITER
     int32   result = uninitialized;
     uint1   writeRegister = uninitialized;
@@ -100,7 +103,7 @@ algorithm PAWSCPU (
 
     // RISC-V BASE ALU IMMEDIATE REGISTER + M EXTENSION
     // <@clock_copro>
-    aluI ALUI <@clock_copro> (
+    aluI ALUI(
         opCode <: opCode,
         function3 <: function3,
         function7 <: function7,
@@ -108,7 +111,7 @@ algorithm PAWSCPU (
         IshiftCount <: IshiftCount,
         sourceReg1 <: sourceReg1
     );
-    aluR ALUR <@clock_copro> (
+    aluR ALUR(
         opCode <: opCode,
         function3 <: function3,
         function7 <: function7,
@@ -116,55 +119,16 @@ algorithm PAWSCPU (
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
     );
-    aluM ALUM <@clock_copro> (
+    aluM ALUM(
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
-    );
-
-    // BRANCH COMPARISON UNIT
-    uint1   BRANCHtakeBranch = uninitialized;
-    branchcomparison branchcomparisonunit(
-        opCode <: opCode,
-        function3 <: function3,
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-        takeBranch :> BRANCHtakeBranch
-    );
-
-    // COMBINE TWO 16 BIT HALF WORDS TO ONE 32 BIT WORD
-    uint16  LOW = uninitialized;
-    uint16  HIGH = uninitialized;
-    uint32  HIGHLOW = uninitialized;
-    halfhalfword combiner161632unit(
-        LOW <: LOW,
-        HIGH <: HIGH,
-        HIGHLOW :> HIGHLOW
-    );
-
-    uint8   SE8nosign = uninitialized;
-    int32   SE8sign = uninitialized;
-    signextender8 signextender8unit(
-        function3 <: function3,
-        nosign <: SE8nosign,
-        withsign :> SE8sign
-    );
-    uint16  SE16nosign = uninitialized;
-    int32   SE16sign = uninitialized;
-    signextender16 signextender16unit(
-        function3 <: function3,
-        nosign <: SE16nosign,
-        withsign :> SE16sign
     );
 
     // CSR REGISTERS
     CSRblock CSR(
         instruction <: instruction
     );
-
-    // 8/16 bit READ WITH OPTIONAL SIGN EXTENSION
-    SE8nosign := readdata[address[0,1] ? 8 : 0, 8];
-    SE16nosign := readdata;
 
     // MEMORY ACCESS FLAGS
     readmemory := 0;
@@ -204,8 +168,7 @@ algorithm PAWSCPU (
                 address = pcPLUS2;
                 readmemory = 1;
                 while( memorybusy ) {}
-                HIGH = readdata;
-                instruction = HIGHLOW;
+                ( instruction ) = halfhalfword( readdata, LOW );
             }
         }
 
@@ -240,7 +203,7 @@ algorithm PAWSCPU (
             }
             case 5b11000: {
                 // BRANCH
-                takeBranch = BRANCHtakeBranch;
+                ( takeBranch ) = branchcomparison( opCode, function3, sourceReg1, sourceReg2 );
             }
             case 5b00000: {
                 // LOAD
@@ -250,18 +213,19 @@ algorithm PAWSCPU (
                 readmemory = 1;
                 while( memorybusy ) {}
                 switch( function3 & 3 ) {
+                    case 2b00: {
+                        ( result ) = signextender8( function3, loadAddress, readdata );
+                    }
+                    case 2b01: {
+                        ( result ) = signextender16( function3, readdata );
+                    }
                     case 2b10: {
                         // 32 bit READ as 2 x 16 bit
                         LOW = readdata;
                         address = loadAddressPLUS2;
                         readmemory = 1;
                         while( memorybusy ) {}
-                        HIGH = readdata;
-                        result = HIGHLOW;
-                    }
-                    default: {
-                        // 8/16 bit with optional sign extension
-                        result = ( ( function3 & 3 ) == 0 ) ? SE8sign : SE16sign;
+                        ( result ) = halfhalfword( readdata, LOW );
                     }
                 }
             }

@@ -115,26 +115,21 @@ algorithm addressgenerator (
 }
 
 // BRANCH COMPARISIONS
-algorithm branchcomparison (
-    input   uint7   opCode,
-    input   uint3   function3,
-    input   int32   sourceReg1,
-    input   int32   sourceReg2,
-    output! uint1   takeBranch
-) <autorun> {
-    while(1) {
-        // ONLY TRIGGER IF A BRANCH INSTRUCTION
-        if( opCode == 7b1100011 ) {
-            switch( function3 ) {
-                case 3b000: { takeBranch = ( sourceReg1 == sourceReg2 ) ? 1 : 0; }
-                case 3b001: { takeBranch = ( sourceReg1 != sourceReg2 ) ? 1 : 0; }
-                case 3b100: { takeBranch = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? 1 : 0; }
-                case 3b101: { takeBranch = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? 1 : 0; }
-                case 3b110: { takeBranch = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? 1 : 0; }
-                case 3b111: { takeBranch = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? 1 : 0; }
-                default: { takeBranch = 0; }
-            }
-        }
+circuitry branchcomparison (
+    input   opCode,
+    input   function3,
+    input   sourceReg1,
+    input   sourceReg2,
+    output  takeBranch
+) {
+    switch( function3 ) {
+        case 3b000: { takeBranch = ( sourceReg1 == sourceReg2 ) ? 1 : 0; }
+        case 3b001: { takeBranch = ( sourceReg1 != sourceReg2 ) ? 1 : 0; }
+        case 3b100: { takeBranch = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? 1 : 0; }
+        case 3b101: { takeBranch = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? 1 : 0; }
+        case 3b110: { takeBranch = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? 1 : 0; }
+        case 3b111: { takeBranch = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? 1 : 0; }
+        default: { takeBranch = 0; }
     }
 }
 
@@ -488,4 +483,30 @@ circuitry compressed10(
             // FSWSP
         }
     }
+}
+
+// PERFORM OPTIONAL SIGN EXTENSION FOR 8 BIT AND 16 BIT READS
+circuitry signextender8 (
+    input   function3,
+    input   address,
+    input   nosign,
+    output  withsign
+) {
+    withsign = ~function3[2,1] ? { {24{nosign[address[0,1] ? 15 : 7, 1]}}, nosign[address[0,1] ? 8 : 0, 8] } : nosign[address[0,1] ? 8 : 0, 8];
+}
+circuitry signextender16 (
+    input   function3,
+    input   nosign,
+    output  withsign
+) {
+    withsign = ~function3[2,1] ? { {16{nosign[15,1]}}, nosign[0,16] } : nosign[0,16];
+}
+
+// COMBINE TWO 16 BIT HALF WORDS TO 32 BIT WORD
+circuitry halfhalfword (
+    input   HIGH,
+    input   LOW,
+    output  HIGHLOW,
+) {
+    HIGHLOW = { HIGH, LOW };
 }
