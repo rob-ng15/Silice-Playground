@@ -32,7 +32,7 @@ void evolve(void *u, int w, int h) {
 void game(int w, int h) {
 	unsigned univ[h][w];
 	for_xy univ[y][x] = rng( 2 );
-	while (1) {
+	while ( get_buttons() == 1 ) {
 		show(univ, w, h);
 		evolve(univ, w, h);
 		sleep( 200 );

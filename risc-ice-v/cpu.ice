@@ -28,6 +28,7 @@ algorithm PAWSCPU (
     uint1   floatingpoint = uninitialized;
     uint1   takeBranch = uninitialized;
     uint1   incPC = uninitialized;
+    uint32  instruction = uninitialized;
 
     // RISC-V REGISTER WRITER
     int32   result = uninitialized;
@@ -51,16 +52,6 @@ algorithm PAWSCPU (
         sourceReg2 :> sourceReg2,
         registers_1 <:> registers_1,
         registers_2 <:> registers_2
-    );
-
-    // COMPRESSED INSTRUCTION EXPANDER
-    uint32  instruction = uninitialized;
-    uint32  instruction32 = uninitialized;
-    uint1   IScompressed = uninitialized;
-    compressedexpansion compressedunit(
-        compressed :> IScompressed,
-        i16 <: readdata,
-        i32 :> instruction32,
     );
 
     // RISC-V 32 BIT INSTRUCTION DECODER
@@ -200,20 +191,21 @@ algorithm PAWSCPU (
         Icacheflag = 1;
         readmemory = 1;
         while( memorybusy ) {}
-        compressed = IScompressed;
-        switch( IScompressed ) {
-            case 1b0: {
-                // 32 bit instruction
-                LOW = instruction32;
+
+        compressed = ( readdata[0,2] != 2b11 );
+
+        switch( readdata[0,2] ) {
+            case 2b00: { ( instruction ) = compressed00( readdata ); }
+            case 2b01: { ( instruction ) = compressed01( readdata ); }
+            case 2b10: { ( instruction ) = compressed10( readdata ); }
+            case 2b11: {
+                // 32 BIT INSTRUCTION
+                LOW = readdata;
                 address = pcPLUS2;
                 readmemory = 1;
                 while( memorybusy ) {}
                 HIGH = readdata;
                 instruction = HIGHLOW;
-            }
-            case 1b1: {
-                // 16 bit compressed instruction
-                instruction = instruction32;
             }
         }
 

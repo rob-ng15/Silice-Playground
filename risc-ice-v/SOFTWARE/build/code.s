@@ -233,48 +233,64 @@ game:
 	sw	s5,4(sp)
 	sw	s6,0(sp)
 	addi	s0,sp,32
-	mv	s4,a0
-	mv	s1,a1
+	mv	s6,a0
+	mv	s2,a1
 	mul	a5,a1,a0
 	slli	a5,a5,2
 	addi	a5,a5,15
 	andi	a5,a5,-16
 	sub	sp,sp,a5
-	mv	s3,sp
-	ble	a0,zero,.L48
-	slli	s6,a0,2
-	srli	s6,s6,2
-	li	s5,0
+	mv	s4,sp
+	ble	a0,zero,.L44
+	slli	s5,a0,2
+	srli	s5,s5,2
+	li	s3,0
 	j	.L45
 .L46:
 	li	a0,2
 	call	rng
-	mul	a5,s6,s2
-	add	a5,a5,s5
+	mul	a5,s5,s1
+	add	a5,a5,s3
 	slli	a5,a5,2
-	add	a5,s3,a5
+	add	a5,s4,a5
 	sw	a0,0(a5)
-	addi	s2,s2,1
-	bne	s1,s2,.L46
+	addi	s1,s1,1
+	bne	s2,s1,.L46
 .L47:
-	addi	s5,s5,1
-	beq	s4,s5,.L48
+	addi	s3,s3,1
+	beq	s6,s3,.L44
 .L45:
-	li	s2,0
-	bgt	s1,zero,.L46
+	li	s1,0
+	bgt	s2,zero,.L46
 	j	.L47
-.L48:
-	mv	a2,s1
-	mv	a1,s4
-	mv	a0,s3
+.L44:
+	li	s1,1
+	j	.L48
+.L49:
+	mv	a2,s2
+	mv	a1,s6
+	mv	a0,s4
 	call	show
-	mv	a2,s1
-	mv	a1,s4
-	mv	a0,s3
+	mv	a2,s2
+	mv	a1,s6
+	mv	a0,s4
 	call	evolve
 	li	a0,200
 	call	sleep
-	j	.L48
+.L48:
+	call	get_buttons
+	beq	a0,s1,.L49
+	addi	sp,s0,-32
+	lw	ra,28(sp)
+	lw	s0,24(sp)
+	lw	s1,20(sp)
+	lw	s2,16(sp)
+	lw	s3,12(sp)
+	lw	s4,8(sp)
+	lw	s5,4(sp)
+	lw	s6,0(sp)
+	addi	sp,sp,32
+	jr	ra
 	.size	game, .-game
 	.align	1
 	.globl	main
@@ -291,8 +307,10 @@ main:
 	li	a1,0
 	li	a0,0
 	call	set_background
+.L55:
 	li	a1,60
 	li	a0,80
 	call	game
+	j	.L55
 	.size	main, .-main
 	.ident	"GCC: (Arch Linux Repositories) 10.2.0"
