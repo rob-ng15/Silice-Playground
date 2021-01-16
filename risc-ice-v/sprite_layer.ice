@@ -1,3 +1,34 @@
+// UPDATE COLLISION DETECTION FLAGS
+circuitry updatecollision(
+    output  newcollisionflag,
+    input   oldcollisionflag,
+    input   mypixel,
+
+    input   collision_layer_1,
+    input   collision_layer_2,
+    input   collision_layer_3,
+    input   pix_visible_12,
+    input   pix_visible_11,
+    input   pix_visible_10,
+    input   pix_visible_9,
+    input   pix_visible_8,
+    input   pix_visible_7,
+    input   pix_visible_6,
+    input   pix_visible_5,
+    input   pix_visible_4,
+    input   pix_visible_3,
+    input   pix_visible_2,
+    input   pix_visible_1,
+    input   pix_visible_0
+) {
+        newcollisionflag = mypixel ? oldcollisionflag | {
+                            collision_layer_1, collision_layer_2, collision_layer_3, pix_visible_12, pix_visible_11,
+                            pix_visible_10, pix_visible_9, pix_visible_8, pix_visible_7,
+                            pix_visible_6, pix_visible_5, pix_visible_4, pix_visible_3,
+                            pix_visible_2, pix_visible_1, pix_visible_0
+                        } : oldcollisionflag;
+}
+
 algorithm sprite_layer(
     input   uint10  pix_x,
     input   uint10  pix_y,
@@ -120,22 +151,58 @@ algorithm sprite_layer(
             }
         } else {
             if( pix_active ) {
+                pix_red = pix_visible_12 ? sprite_colour[12][4,2] :
+                            pix_visible_11 ? sprite_colour[11][4,2] :
+                            pix_visible_10 ? sprite_colour[10][4,2] :
+                            pix_visible_9 ? sprite_colour[9][4,2] :
+                            pix_visible_8 ? sprite_colour[8][4,2] :
+                            pix_visible_7 ? sprite_colour[7][4,2] :
+                            pix_visible_6 ? sprite_colour[6][4,2] :
+                            pix_visible_5 ? sprite_colour[5][4,2] :
+                            pix_visible_4 ? sprite_colour[4][4,2] :
+                            pix_visible_3 ? sprite_colour[3][4,2] :
+                            pix_visible_2 ? sprite_colour[2][4,2] :
+                            pix_visible_1 ? sprite_colour[1][4,2] :
+                            pix_visible_0 ? sprite_colour[0][4,2] : 0;
+
+                pix_green= pix_visible_12 ? sprite_colour[12][2,2] :
+                            pix_visible_11 ? sprite_colour[11][2,2] :
+                            pix_visible_10 ? sprite_colour[10][2,2] :
+                            pix_visible_9 ? sprite_colour[9][2,2] :
+                            pix_visible_8 ? sprite_colour[8][2,2] :
+                            pix_visible_7 ? sprite_colour[7][2,2] :
+                            pix_visible_6 ? sprite_colour[6][2,2] :
+                            pix_visible_5 ? sprite_colour[5][2,2] :
+                            pix_visible_4 ? sprite_colour[4][2,2] :
+                            pix_visible_3 ? sprite_colour[3][2,2] :
+                            pix_visible_2 ? sprite_colour[2][2,2] :
+                            pix_visible_1 ? sprite_colour[1][2,2] :
+                            pix_visible_0 ? sprite_colour[0][2,2] : 0;
+
+                pix_blue = pix_visible_12 ? sprite_colour[12][0,2] :
+                            pix_visible_11 ? sprite_colour[11][0,2] :
+                            pix_visible_10 ? sprite_colour[10][0,2] :
+                            pix_visible_9 ? sprite_colour[9][0,2] :
+                            pix_visible_8 ? sprite_colour[8][0,2] :
+                            pix_visible_7 ? sprite_colour[7][0,2] :
+                            pix_visible_6 ? sprite_colour[6][0,2] :
+                            pix_visible_5 ? sprite_colour[5][0,2] :
+                            pix_visible_4 ? sprite_colour[4][0,2] :
+                            pix_visible_3 ? sprite_colour[3][0,2] :
+                            pix_visible_2 ? sprite_colour[2][0,2] :
+                            pix_visible_1 ? sprite_colour[1][0,2] :
+                            pix_visible_0 ? sprite_colour[0][0,2] : 0;
+
+                sprite_layer_display = pix_visible_12 | pix_visible_11 | pix_visible_10 | pix_visible_9 | pix_visible_8 | pix_visible_7 | pix_visible_6 | pix_visible_5 |
+                    pix_visible_4 | pix_visible_3 | pix_visible_2 | pix_visible_1 | pix_visible_0;
+
                 $$for i=0,12 do
-                    if(  ( pix_visible_$i$ ) ) {
-                        pix_red = sprite_colour[$i$][4,2];
-                        pix_green = sprite_colour[$i$][2,2];
-                        pix_blue = sprite_colour[$i$][0,2];
-
-                        sprite_layer_display = 1;
-
-                        // Perform collision detection
-                        detect_collision_$i$ = detect_collision_$i$ | {
-                            collision_layer_1, collision_layer_2, collision_layer_3, pix_visible_12, pix_visible_11,
-                            pix_visible_10, pix_visible_9, pix_visible_8, pix_visible_7,
-                            pix_visible_6, pix_visible_5, pix_visible_4, pix_visible_3,
-                            pix_visible_2, pix_visible_1, pix_visible_0
-                        };
-                    }
+                    // UPDATE COLLISION DETECTION FLAGS
+                    ( detect_collision_$i$ ) = updatecollision( detect_collision_$i$, pix_visible_$i$,
+                                                                collision_layer_1, collision_layer_2, collision_layer_3, pix_visible_12, pix_visible_11,
+                                                                pix_visible_10, pix_visible_9, pix_visible_8, pix_visible_7,
+                                                                pix_visible_6, pix_visible_5, pix_visible_4, pix_visible_3,
+                                                                pix_visible_2, pix_visible_1, pix_visible_0 );
                 $$end
 
                 // Output collision detection
