@@ -29,6 +29,7 @@ algorithm memmap_io (
     // CLOCKS
     input   uint1   video_clock,
     input   uint1   video_reset,
+    input   uint1   gpu_clock,
 
     // Memory access
     input   uint16  memoryAddress,
@@ -46,13 +47,13 @@ algorithm memmap_io (
     pulse1hz timer1hz( );
 
     // 1khz timers (sleepTimer used for sleep command, timer1khz for user purposes)
-    pulse1khz sleepTimer( );
+    pulse1khz sleepTimer ( );
     pulse1khz timer1khz( );
 
     // RNG random number generator
     uint16  staticGenerator = uninitialized;
     uint16  staticGeneratorALT = uninitialized;
-    random rng(
+    random rng <@video_clock> (
         g_noise_out :> staticGenerator,
         u_noise_out :> staticGeneratorALT
     );

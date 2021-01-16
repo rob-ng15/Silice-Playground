@@ -12,9 +12,7 @@ algorithm PAWSCPU (
     output  uint1   readmemory,
     output  uint1   Icacheflag,
 
-    input   uint1   memorybusy,
-
-    input   uint1   clock_copro
+    input   uint1   memorybusy
 ) <autorun> {
     // RISC-V REGISTERS
     simple_dualport_bram int32 registers_1 <input!> [64] = { 0, pad(0) };

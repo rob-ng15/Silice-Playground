@@ -6,8 +6,8 @@ module ulx3s_clk_risc_ice_v_CPU
 (
     input clkin,         // 25 MHz, 0 deg
     output  clkCPU,      // 25 MHz              // CPU
-    output  clkCOPRO,    // 50 MHz, 0 deg       // ALU + MULT/DIV CO-PROCESSOR
-    output  clkCPUUNIT,  // 50 MHz, 0 deg       // FUNCTION BLOCKS FOR THE CPU
+    output  clkVIDEO,    // 25 MHz, 0 deg       // VIDEO
+    output  clkGPU,      // 25 MHz, 0 deg       // GPU
     output  clkMEMORY,   // 50 MHz, 0 deg       // MEMORY CONTROLLER - BRAM
     output  locked
 );
@@ -32,11 +32,11 @@ EHXPLLL #(
         .CLKOP_CPHASE(5),
         .CLKOP_FPHASE(0),
         .CLKOS_ENABLE("ENABLED"),
-        .CLKOS_DIV(12),
+        .CLKOS_DIV(24),
         .CLKOS_CPHASE(5),
         .CLKOS_FPHASE(0),
         .CLKOS2_ENABLE("ENABLED"),
-        .CLKOS2_DIV(12),
+        .CLKOS2_DIV(24),
         .CLKOS2_CPHASE(5),
         .CLKOS2_FPHASE(0),
         .CLKOS3_ENABLE("ENABLED"),
@@ -49,11 +49,11 @@ EHXPLLL #(
         .RST(1'b0),
         .STDBY(1'b0),
         .CLKI(clkin),
-        .CLKOP(clkCOPRO),
-        .CLKOS(clkMEMORY),
-        .CLKOS2(clkCPUUNIT),
+        .CLKOP(clkMEMORY),
+        .CLKOS(clkVIDEO),
+        .CLKOS2(clkGPU),
         .CLKOS3(clkCPU),
-        .CLKFB(clkCOPRO),
+        .CLKFB(clkMEMORY),
         .CLKINTFB(),
         .PHASESEL0(1'b0),
         .PHASESEL1(1'b0),

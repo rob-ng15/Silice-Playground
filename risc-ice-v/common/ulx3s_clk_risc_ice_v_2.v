@@ -1,8 +1,8 @@
 module ulx3s_clk_risc_ice_v_AUX
 (
     input   clkin,              // 25 MHz, 0 deg
-    output  clkIO,              // 50 MHz, 0 deg        // I/O controller, UART, SDCARD
-    output  clkVIDEO,           // 25 MHz, 0 deg        // VIDEO
+    output  clk50,
+    output  clk25,
     output  clkSDRAM,           // 100 MHz, 0 deg       // SDRAM
     output  clkSDRAMcontrol,    // 100 MHz, 180 deg     // SDRAM controller
     output  locked
@@ -43,11 +43,11 @@ EHXPLLL #(
         .RST(1'b0),
         .STDBY(1'b0),
         .CLKI(clkin),
-        .CLKOP(clkIO),
-        .CLKOS(clkVIDEO),
+        .CLKOP(clk50),
+        .CLKOS(clk25),
         .CLKOS2(clkSDRAM),
         .CLKOS3(clkSDRAMcontrol),
-        .CLKFB(clkIO),
+        .CLKFB(clk50),
         .CLKINTFB(),
         .PHASESEL0(1'b0),
         .PHASESEL1(1'b0),

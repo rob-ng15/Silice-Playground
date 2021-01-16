@@ -493,41 +493,41 @@ void walk_maze( unsigned short width, unsigned short height )
             // WALL IS NOT AT HORIZON
             switch( maze[currentx + directionx[direction] * visiblesteps][currenty + directiony[direction] * visiblesteps] ) {
                 case 'X':
-                    gpu_rectangle( YELLOW, 0, perspectivey[ visiblesteps + 1 ], 640, 480 - perspectivey[ visiblesteps + 1 ] );
+                    gpu_rectangle( YELLOW, 0, perspectivey[ visiblesteps ], 640, 480 - perspectivey[ visiblesteps ] );
                     switch( visiblesteps ) {
                         case 1:
-                            gpu_character_blit( GREEN, 192, perspectivey[ visiblesteps + 1 ] + 16, 'E', 3 );
-                            gpu_character_blit( GREEN, 256, perspectivey[ visiblesteps + 1 ] + 16, 'X', 3 );
-                            gpu_character_blit( GREEN, 320, perspectivey[ visiblesteps + 1 ] + 16, 'I', 3 );
-                            gpu_character_blit( GREEN, 384, perspectivey[ visiblesteps + 1 ] + 16, 'T', 3 );
+                            gpu_character_blit( GREEN, 192, perspectivey[ visiblesteps ] + 16, 'E', 3 );
+                            gpu_character_blit( GREEN, 256, perspectivey[ visiblesteps ] + 16, 'X', 3 );
+                            gpu_character_blit( GREEN, 320, perspectivey[ visiblesteps ] + 16, 'I', 3 );
+                            gpu_character_blit( GREEN, 384, perspectivey[ visiblesteps ] + 16, 'T', 3 );
                             break;
                         case 2:
-                            gpu_character_blit( GREEN, 256, perspectivey[ visiblesteps + 1 ] + 8, 'E', 2 );
-                            gpu_character_blit( GREEN, 288, perspectivey[ visiblesteps + 1 ] + 8, 'X', 2 );
-                            gpu_character_blit( GREEN, 320, perspectivey[ visiblesteps + 1 ] + 8, 'I', 2 );
-                            gpu_character_blit( GREEN, 352, perspectivey[ visiblesteps + 1 ] + 8, 'T', 2 );
+                            gpu_character_blit( GREEN, 256, perspectivey[ visiblesteps ] + 8, 'E', 2 );
+                            gpu_character_blit( GREEN, 288, perspectivey[ visiblesteps ] + 8, 'X', 2 );
+                            gpu_character_blit( GREEN, 320, perspectivey[ visiblesteps ] + 8, 'I', 2 );
+                            gpu_character_blit( GREEN, 352, perspectivey[ visiblesteps ] + 8, 'T', 2 );
                             break;
                         case 3:
-                            gpu_character_blit( GREEN, 288, perspectivey[ visiblesteps + 1 ] + 4, 'E', 1 );
-                            gpu_character_blit( GREEN, 304, perspectivey[ visiblesteps + 1 ] + 4, 'X', 1 );
-                            gpu_character_blit( GREEN, 320, perspectivey[ visiblesteps + 1 ] + 4, 'I', 1 );
-                            gpu_character_blit( GREEN, 336, perspectivey[ visiblesteps + 1 ] + 4, 'T', 1 );
+                            gpu_character_blit( GREEN, 288, perspectivey[ visiblesteps ] + 4, 'E', 1 );
+                            gpu_character_blit( GREEN, 304, perspectivey[ visiblesteps ] + 4, 'X', 1 );
+                            gpu_character_blit( GREEN, 320, perspectivey[ visiblesteps ] + 4, 'I', 1 );
+                            gpu_character_blit( GREEN, 336, perspectivey[ visiblesteps ] + 4, 'T', 1 );
                             break;
                         case 4:
-                            gpu_character_blit( GREEN, 304, perspectivey[ visiblesteps + 1 ] + 2, 'E', 0 );
-                            gpu_character_blit( GREEN, 312, perspectivey[ visiblesteps + 1 ] + 2, 'X', 0 );
-                            gpu_character_blit( GREEN, 320, perspectivey[ visiblesteps + 1 ] + 2, 'I', 0 );
-                            gpu_character_blit( GREEN, 328, perspectivey[ visiblesteps + 1 ] + 2, 'T', 0 );
+                            gpu_character_blit( GREEN, 304, perspectivey[ visiblesteps ] + 2, 'E', 0 );
+                            gpu_character_blit( GREEN, 312, perspectivey[ visiblesteps ] + 2, 'X', 0 );
+                            gpu_character_blit( GREEN, 320, perspectivey[ visiblesteps ] + 2, 'I', 0 );
+                            gpu_character_blit( GREEN, 328, perspectivey[ visiblesteps ] + 2, 'T', 0 );
                             break;
                         default:
                             break;
                     }
                     break;
                 case 'E':
-                    gpu_rectangle( MAGENTA, 0, perspectivey[ visiblesteps + 1 ], 640, 480 - perspectivey[ visiblesteps + 1 ] );
+                    gpu_rectangle( MAGENTA, 0, perspectivey[ visiblesteps ], 640, 480 - perspectivey[ visiblesteps ] );
                     break;
                 case '#':
-                    gpu_rectangle( GREY2, 0, perspectivey[ visiblesteps + 1 ], 640, 480 - perspectivey[ visiblesteps + 1 ] );
+                    gpu_rectangle( GREY2, 0, perspectivey[ visiblesteps ], 640, 480 - perspectivey[ visiblesteps ] );
                     break;
                 default:
                     break;
@@ -535,7 +535,7 @@ void walk_maze( unsigned short width, unsigned short height )
         }
 
         // MOVE BACKWARDS FROM WALL
-        for( steps = min( visiblesteps, MAXDEPTH - 1 ); steps > 0; steps-- ) {
+        for( steps = min( visiblesteps - 1, MAXDEPTH - 1 ); steps > 0; steps-- ) {
             // DRAW PILL
             if( maze[ currentx + directionx[ direction ] * steps ][ currenty + directiony[ direction ] * steps ] == ' ' && map[ currentx + directionx[ direction ] * steps ][ currenty + directiony[ direction ] * steps ] != ' ' ) {
                 draw_pill( steps );

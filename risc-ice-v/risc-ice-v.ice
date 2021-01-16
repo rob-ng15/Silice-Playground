@@ -35,43 +35,39 @@ algorithm main(
 ) <@clock_memory> {
     // CLOCK/RESET GENERATION
 
-    // CPU DOMAIN CLOCKS
+    // CPU + MEMORY + VIDEO DOMAIN CLOCKS
     uint1   pll_lock_CPU = uninitialized;
     uint1   cpu_clock = uninitialized;
-    uint1   clock_copro = uninitialized;
     uint1   clock_memory = uninitialized;
-    // Generate 50MHz clocks for CPU units
-    // 50MHz clock for the BRAM and CACHE controller
+    uint1   video_clock = uninitialized;
+    uint1   gpu_clock = uninitialized;
     ulx3s_clk_risc_ice_v_CPU clk_gen_CPU (
         clkin    <: clock,
         clkCPU :> cpu_clock,
-        clkCOPRO :> clock_copro,
+        clkGPU :> gpu_clock,
+        clkVIDEO :> video_clock,
         clkMEMORY  :> clock_memory,
         locked   :> pll_lock_CPU
     );
 
-    // SDRAM + I/O DOMAIN CLOCKS
-    uint1   clock_IO = uninitialized;
+    // SDRAM  CLOCKS
     uint1   sdram_clock = uninitialized;
-    uint1   sdram_reset = uninitialized;
-    uint1   video_reset = uninitialized;
-    uint1   video_clock = uninitialized;
     uint1   pll_lock_AUX = uninitialized;
     ulx3s_clk_risc_ice_v_AUX clk_gen_AUX (
         clkin   <: clock,
-        clkIO :> clock_IO,
-        clkVIDEO :> video_clock,
         clkSDRAM :> sdram_clock,
         clkSDRAMcontrol :> sdram_clk,
         locked :> pll_lock_AUX
     );
 
     // Video Reset
+    uint1   video_reset = uninitialized;
     clean_reset video_rstcond<@video_clock,!reset> (
         out :> video_reset
     );
 
     // SDRAM Reset
+    uint1   sdram_reset = uninitialized;
     clean_reset sdram_rstcond<@sdram_clock,!reset> (
         out :> sdram_reset
     );
@@ -138,7 +134,7 @@ algorithm main(
     );
 
     // MEMORY MAPPED I/O
-    memmap_io IO_Map <@clock_IO> (
+    memmap_io IO_Map <@clock_memory> (
         leds :> leds,
         btns <: btns,
         uart_tx :> uart_tx,
@@ -159,6 +155,7 @@ algorithm main(
 
         video_clock <: video_clock,
         video_reset <: video_reset,
+        gpu_clock <: gpu_clock,
 
         memoryAddress <: address,
         writeData <: writedata
@@ -174,8 +171,6 @@ algorithm main(
         address :> address,
         writedata :> writedata,
         Icacheflag :> Icacheflag,
-
-        clock_copro <: clock_copro
     );
 
     CPU.memorybusy := sdram.busy;
@@ -234,6 +229,27 @@ algorithm bramcontroller (
 // RAM - SDRAM CONTROLLER
 // MEMORY IS 16 BIT, 8 bit WRITES ARE READ MODIFY WRITE
 // INSTRUCTION AND DATA CACHES
+
+// READ FROM SDRAM
+circuitry SDRAMread(
+    inout   sd
+) {
+    sd.rw = 0;
+    sd.in_valid = 1;
+    while( !sd.done ) {}
+}
+
+// WRITE TO SDRAM
+circuitry SDRAMwrite(
+    inout   sd,
+    input   writedata
+) {
+    sd.data_in = writedata;
+    sd.rw = 1;
+    sd.in_valid = 1;
+    while( !sd.done ) {}
+}
+
 algorithm sdramcontroller (
     sdram_user      sio,
 
