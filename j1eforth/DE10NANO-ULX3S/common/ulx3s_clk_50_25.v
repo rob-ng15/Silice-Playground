@@ -5,8 +5,9 @@
 module ulx3s_clk_50_25
 (
     input clkin, // 25 MHz, 0 deg
-    output clkout0, // 50 MHz, 0 deg
-    output clkout1, // 25 MHz, 0 deg
+    output clkout0, // 50 MHz, 0 deg for I/O
+    output clkout1, // 25 MHz, 0 deg for VIDEO
+    output clkout2, // 25 MHz, 0 deg for CPU
     output locked
 );
 (* FREQUENCY_PIN_CLKI="25" *)
@@ -31,6 +32,10 @@ EHXPLLL #(
         .CLKOS_DIV(24),
         .CLKOS_CPHASE(5),
         .CLKOS_FPHASE(0),
+        .CLKOS2_ENABLE("ENABLED"),
+        .CLKOS2_DIV(24),
+        .CLKOS2_CPHASE(5),
+        .CLKOS2_FPHASE(0),
         .FEEDBK_PATH("CLKOP"),
         .CLKFB_DIV(2)
     ) pll_i (
@@ -39,6 +44,7 @@ EHXPLLL #(
         .CLKI(clkin),
         .CLKOP(clkout0),
         .CLKOS(clkout1),
+        .CLKOS2(clkout2),
         .CLKFB(clkout0),
         .CLKINTFB(),
         .PHASESEL0(1'b0),

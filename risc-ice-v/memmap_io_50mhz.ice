@@ -47,7 +47,7 @@ algorithm memmap_io (
     pulse1hz timer1hz( );
 
     // 1khz timers (sleepTimer used for sleep command, timer1khz for user purposes)
-    pulse1khz sleepTimer ( );
+    pulse1khz sleepTimer( );
     pulse1khz timer1khz( );
 
     // RNG random number generator

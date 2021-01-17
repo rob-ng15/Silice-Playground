@@ -161,12 +161,7 @@ algorithm gpu(
     output  uint1   vector_block_active
 ) <autorun> {
     // 32 x 16 x 16 1 bit tilemap for blit1tilemap
-    simple_dualport_bram uint16 blit1tilemap[ 512 ] = uninitialized;
-
-    // Character ROM 8x8 x 256 for character blitter
-    simple_dualport_bram uint8 characterGenerator8x8[] = {
-        $include('ROM/characterROM8x8.inc')
-    };
+    simple_dualport_bram uint16 blit1tilemap <input!> [ 512 ] = uninitialized;
 
     // GPU COLOUR
     uint7 gpu_active_colour = uninitialized;
@@ -178,6 +173,15 @@ algorithm gpu(
     int11 v_gpu_param0 = uninitialised;
     int11 v_gpu_param1 = uninitialised;
     uint1 v_gpu_write = uninitialised;
+
+    // BLIT TILE WRITER
+    blittilebitmapwriter BTBM(
+        blit1_writer_tile <: blit1_writer_tile,
+        blit1_writer_line <: blit1_writer_line,
+        blit1_writer_bitmap <: blit1_writer_bitmap,
+
+        blit1tilemap <:> blit1tilemap
+    );
 
     // VECTOR DRAWER UNIT
     vectors vector_drawer (
@@ -239,8 +243,7 @@ algorithm gpu(
         y <: gpu_y,
         param0 <: gpu_param0,
         param1 <: gpu_param1,
-        blit1tilemap <:> blit1tilemap,
-        characterGenerator8x8 <:> characterGenerator8x8
+        blit1tilemap <:> blit1tilemap
     );
 
     // DRAW A LINE FROM VECTOR BLOCK OUTPUT
@@ -250,11 +253,6 @@ algorithm gpu(
         param0 <: v_gpu_param0,
         param1 <: v_gpu_param1
     );
-
-    // blit1tilemap write access for the GPU to load tilemaps
-    blit1tilemap.addr1 := blit1_writer_tile * 16 + blit1_writer_line;
-    blit1tilemap.wdata1 := blit1_writer_bitmap;
-    blit1tilemap.wenable1 := 1;
 
     // CONTROLS FOR BITMAP PIXEL WRITER
     bitmap_write := 0;
@@ -888,7 +886,7 @@ algorithm vectors(
     input  uint1 gpu_active
 ) <autorun> {
     // 32 vector blocks each of 16 vertices
-    simple_dualport_bram uint13 vertex[512] = uninitialised;
+    simple_dualport_bram uint13 vertex <input!> [512] = uninitialised;
 
     // Extract deltax and deltay for the present vertices
     int11 deltax := { {6{vectorentry(vertex.rdata0).dxsign}}, vectorentry(vertex.rdata0).dx };
@@ -900,11 +898,18 @@ algorithm vectors(
     int11 start_x = uninitialised;
     int11 start_y = uninitialised;
 
+    vertexwriter VW(
+        vertices_writer_block <: vertices_writer_block,
+        vertices_writer_vertex <: vertices_writer_vertex,
+        vertices_writer_xdelta <: vertices_writer_xdelta,
+        vertices_writer_ydelta <: vertices_writer_ydelta,
+        vertices_writer_active <: vertices_writer_active,
+
+        vertex <:> vertex
+    );
+
     // Set read and write address for the vertices
     vertex.addr0 := block_number * 16 + vertices_number;
-    vertex.addr1 := vertices_writer_block * 16 + vertices_writer_vertex;
-    vertex.wdata1 := { vertices_writer_active, __unsigned(vertices_writer_xdelta), __unsigned(vertices_writer_ydelta) };
-    vertex.wenable1 := 1;
 
     gpu_write := 0;
 
@@ -934,5 +939,39 @@ algorithm vectors(
             }
             vector_block_active = 0;
         }
+    }
+}
+
+algorithm blittilebitmapwriter(
+    // For setting blit1 tile bitmaps
+    input   uint5   blit1_writer_tile,
+    input   uint4   blit1_writer_line,
+    input   uint16  blit1_writer_bitmap,
+
+    simple_dualbram_port1 blit1tilemap
+) <autorun> {
+    blit1tilemap.wenable1 := 1;
+
+    while(1) {
+        blit1tilemap.addr1 = blit1_writer_tile * 16 + blit1_writer_line;
+        blit1tilemap.wdata1 = blit1_writer_bitmap;
+    }
+}
+
+algorithm vertexwriter(
+    // For setting vertices
+    input   uint5   vertices_writer_block,
+    input   uint6   vertices_writer_vertex,
+    input   int6    vertices_writer_xdelta,
+    input   int6    vertices_writer_ydelta,
+    input   uint1   vertices_writer_active,
+
+    simple_dualbram_port1 vertex
+) <autorun> {
+    vertex.wenable1 := 1;
+
+    while(1) {
+        vertex.addr1 = vertices_writer_block * 16 + vertices_writer_vertex;
+        vertex.wdata1 = { vertices_writer_active, __unsigned(vertices_writer_xdelta), __unsigned(vertices_writer_ydelta) };
     }
 }

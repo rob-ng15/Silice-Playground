@@ -14,10 +14,6 @@ algorithm background(
     input uint4 backgroundcolour_mode,
     input uint3 background_write
 ) <autorun> {
-    uint6 background = 0;
-    uint6 background_alt = 0;
-    uint4 background_mode = 0;
-
     // Variables for SNOW (from @sylefeb)
     int10   dotpos = 0;
     int2    speed = 0;
@@ -25,135 +21,29 @@ algorithm background(
     int12   rand_x = 0;
     int32   frame = 0;
 
-    // Default to SOLID
-    pix_red := colour6(background).red;
-    pix_green := colour6(background).green;
-    pix_blue := colour6(background).blue;
-
     while(1) {
-        // UPDATE BACKGROUND GENERATOR PARAMETERS
-        switch( background_write ) {
-            case 1: { background = backgroundcolour; }
-            case 2: { background_alt = backgroundcolour_alt; }
-            case 3: { background_mode = backgroundcolour_mode; }
-        }
-
         // Increment frame number for the snow/star field
         frame = ( ( pix_x == 639 ) && ( pix_y == 470 ) ) ? frame + 1 : frame;
 
         // RENDER
         if( pix_active ) {
-            switch( background_mode ) {
-                case 1: {
-                    // SMALL checkerboard
-                    switch( { pix_x[0,1], pix_y[0,1] } ) {
-                        case 2b00: {
-                            pix_red = colour6(background).red;
-                            pix_green = colour6(background).green;
-                            pix_blue = colour6(background).blue;
-                        }
-                        case 2b01: {
-                            pix_red = colour6(background_alt).red;
-                            pix_green = colour6(background_alt).green;
-                            pix_blue = colour6(background_alt).blue;
-                        }
-                        case 2b10: {
-                            pix_red = colour6(background_alt).red;
-                            pix_green = colour6(background_alt).green;
-                            pix_blue = colour6(background_alt).blue;
-                        }
-                        case 2b11: {
-                            pix_red = colour6(background).red;
-                            pix_green = colour6(background).green;
-                            pix_blue = colour6(background).blue;
-                        }
-                    }
-                }
-                case 2: {
-                    // MEDIUM checkerboard
-                    switch( { pix_x[1,1], pix_y[1,1] } ) {
-                        case 2b00: {
-                            pix_red = colour6(background).red;
-                            pix_green = colour6(background).green;
-                            pix_blue = colour6(background).blue;
-                        }
-                        case 2b01: {
-                            pix_red = colour6(background_alt).red;
-                            pix_green = colour6(background_alt).green;
-                            pix_blue = colour6(background_alt).blue;
-                        }
-                        case 2b10: {
-                            pix_red = colour6(background_alt).red;
-                            pix_green = colour6(background_alt).green;
-                            pix_blue = colour6(background_alt).blue;
-                        }
-                        case 2b11: {
-                            pix_red = colour6(background).red;
-                            pix_green = colour6(background).green;
-                            pix_blue = colour6(background).blue;
-                        }
-                    }
-                }
-                case 3: {
-                    // LARGE checkerboard
-                    switch( { pix_x[2,1], pix_y[2,1] } ) {
-                        case 2b00: {
-                            pix_red = colour6(background).red;
-                            pix_green = colour6(background).green;
-                            pix_blue = colour6(background).blue;
-                        }
-                        case 2b01: {
-                            pix_red = colour6(background_alt).red;
-                            pix_green = colour6(background_alt).green;
-                            pix_blue = colour6(background_alt).blue;
-                        }
-                        case 2b10: {
-                            pix_red = colour6(background_alt).red;
-                            pix_green = colour6(background_alt).green;
-                            pix_blue = colour6(background_alt).blue;
-                        }
-                        case 2b11: {
-                            pix_red = colour6(background).red;
-                            pix_green = colour6(background).green;
-                            pix_blue = colour6(background).blue;
-                        }
-                    }
-                }
-                case 4: {
-                    // HUGE checkerboard
-                    switch( { pix_x[3,1], pix_y[3,1] } ) {
-                        case 2b00: {
-                            pix_red = colour6(background).red;
-                            pix_green = colour6(background).green;
-                            pix_blue = colour6(background).blue;
-                        }
-                        case 2b01: {
-                            pix_red = colour6(background_alt).red;
-                            pix_green = colour6(background_alt).green;
-                            pix_blue = colour6(background_alt).blue;
-                        }
-                        case 2b10: {
-                            pix_red = colour6(background_alt).red;
-                            pix_green = colour6(background_alt).green;
-                            pix_blue = colour6(background_alt).blue;
-                        }
-                        case 2b11: {
-                            pix_red = colour6(background).red;
-                            pix_green = colour6(background).green;
-                            pix_blue = colour6(background).blue;
-                        }
-                    }
+            switch( backgroundcolour_mode ) {
+                case 0: {
+                    // SOLID
+                    pix_red = colour6(backgroundcolour).red;
+                    pix_green = colour6(backgroundcolour).green;
+                    pix_blue = colour6(backgroundcolour).blue;
                 }
                 case 5: {
                     // 8 colour rainbow
                     switch( pix_y[6,3] ) {
-                        case 3b000: { pix_red = 2; }
-                        case 3b001: { pix_red = 3; }
-                        case 3b010: { pix_red = 3; pix_green = 2; }
-                        case 3b011: { pix_red = 3; pix_green = 3; }
-                        case 3b100: { pix_green = 3; }
-                        case 3b101: { pix_blue = 3; }
-                        case 3b110: { pix_red = 1; pix_blue = 2; }
+                        case 3b000: { pix_red = 2; pix_green = 0; pix_blue = 0; }
+                        case 3b001: { pix_red = 3; pix_green = 0; pix_blue = 0; }
+                        case 3b010: { pix_red = 3; pix_green = 2; pix_blue = 0; }
+                        case 3b011: { pix_red = 3; pix_green = 3; pix_blue = 0; }
+                        case 3b100: { pix_red = 0; pix_green = 3; pix_blue = 0; }
+                        case 3b101: { pix_red = 0; pix_green = 0; pix_blue = 3; }
+                        case 3b110: { pix_red = 1; pix_green = 0; pix_blue = 2; }
                         case 3b111: { pix_red = 1; pix_green = 2; pix_blue = 3; }
                     }
                 }
@@ -168,10 +58,17 @@ algorithm background(
                     rand_x = ( pix_x == 0)  ? 1 : rand_x * 31421 + 6927;
                     speed  = rand_x[10,2];
                     dotpos = ( frame >> speed ) + rand_x;
-                        pix_red   = (pix_y == dotpos) ? colour6(background).red : colour6(background_alt).red;
-                        pix_green = (pix_y == dotpos) ? colour6(background).green : colour6(background_alt).green;
-                        pix_blue  = (pix_y == dotpos) ? colour6(background).blue : colour6(background_alt).blue;
+                        pix_red   = (pix_y == dotpos) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
+                        pix_green = (pix_y == dotpos) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
+                        pix_blue  = (pix_y == dotpos) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
                 }
+                default: {
+                    // CHECKERBOARDS
+                    pix_red = ( pix_x[backgroundcolour_mode-1,1] == pix_y[backgroundcolour_mode-1,1] ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
+                    pix_green = ( pix_x[backgroundcolour_mode-1,1] == pix_y[backgroundcolour_mode-1,1] ) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
+                    pix_blue = ( pix_x[backgroundcolour_mode-1,1] == pix_y[backgroundcolour_mode-1,1] ) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
+                }
+
             }
         }
     }
