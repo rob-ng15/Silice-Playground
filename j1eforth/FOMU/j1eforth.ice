@@ -113,7 +113,6 @@ circuitry j1eforthALU(
     input   stackTop,
     input   stackNext,
     input   rStackTop,
-    input   IOmemoryRead,
     input   RAMmemoryRead,
 
     output  newStackTop
@@ -131,7 +130,7 @@ circuitry j1eforthALU(
         case 4b1001: {newStackTop = stackNext >> nibbles(stackTop).nibble0;}
         case 4b1010: {newStackTop = stackTop - 1;}
         case 4b1011: {newStackTop = rStackTop;}
-        case 4b1100: {newStackTop = stackTop[15,1] ? IOmemoryRead : RAMmemoryRead;}
+        case 4b1100: {newStackTop = RAMmemoryRead;}
         case 4b1101: {newStackTop = stackNext << nibbles(stackTop).nibble0;}
         case 4b1110: {newStackTop = {rsp, dsp};}
         case 4b1111: {newStackTop = {16{(__unsigned(stackNext) < __unsigned(stackTop))}};}
@@ -188,7 +187,6 @@ circuitry commitRSTACK(
         rstack.wdata1 = rstackWData;
     }
 }
-
 
 algorithm main(
     // RGB LED
@@ -249,10 +247,9 @@ algorithm main(
     uint16  stackNext = uninitialized;
     uint16  rStackTop = uninitialized;
     uint16  memoryInput = uninitialized;
-    uint16  IOmemoryRead = uninitialized;
 
     // 16bit ROM with included compiled j1eForth from https://github.com/samawati/j1eforth
-    bram uint16 rom[] = {
+    brom uint16 rom[] = {
         $include('j1eforthROM.inc')
     };
 
@@ -260,9 +257,8 @@ algorithm main(
     // INIT 0 SPRAM, INIT 1 ROM to SPRAM, INIT 2 J1 CPU
     uint2 INIT = 0;
 
-    // Address for 0 to SPRAM, copying ROM, plus storage
+    // Address for 0 to SPRAM, copying ROM
     uint16 copyaddress = 0;
-    uint16 bramREAD = 0;
 
     // UART input FIFO (32 character) as dualport bram (code from @sylefeb)
     simple_dualport_bram uint8 uartInBuffer[512] = uninitialized;
@@ -323,12 +319,9 @@ algorithm main(
         ++:
         while( copyaddress < 4096 ) {
                 rom.addr = copyaddress;
-                rom.wenable = 0;
-                ++:
-                bramREAD = rom.rdata;
                 ++:
                 sram_address = copyaddress;
-                sram_data_write = bramREAD;
+                sram_data_write = rom.rdata;
                 sram_readwrite = 1;
                 ++:
                 copyaddress = copyaddress + 1;
@@ -371,42 +364,32 @@ algorithm main(
                 ++:
 
                 // J1 CPU Instruction Execute
-                if(is_lit) {
+                if( is_lit ) {
                     // LITERAL Push value onto stack
                     ( newStackTop, newPC, newDSP, newRSP ) = j1eforthliteral( immediate, pcPlusOne, dsp, rsp );
                 } else {
-                    switch( callbranch(instruction).is_callbranchalu ) { // BRANCH 0BRANCH CALL ALU
+                    switch( is_callbranchalu ) { // BRANCH 0BRANCH CALL ALU
+                        default: {
+                            // CALL BRANCH 0BRANCH INSTRUCTIONS
+                            ( newStackTop, newPC, newDSP, newRSP ) = j1eforthcallbranch( is_callbranchalu, stackTop, stackNext, callBranchAddress, pcPlusOne, dsp, rsp );
+                            rstackWData = pcPlusOne << 1;
+                        }
                         case 2b11: {
                             // ALU
                             switch( aluop(instruction).is_j1j1plus ) {
                                 case 1b0: {
                                     if( ( aluop(instruction).operation == 4b1100 ) && stackTop[15,1] ) {
                                         switch( stackTop ) {
-                                            case 16hf000: {
-                                                // INPUT from UART reads at uartInBufferNext (code from @sylefeb)
-                                                IOmemoryRead = { 8b0, uartInBuffer.rdata0 };
-                                                uartInBufferNext = uartInBufferNext + 1;
-                                            }
-                                            case 16hf001: {
-                                                // UART status register { 14b0, tx full, rx available }
-                                                IOmemoryRead = {14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), (uartInBufferNext != uartInBufferTop)};
-                                            }
-                                            case 16hf002: {
-                                                // RGB LED status
-                                                IOmemoryRead = rgbLED;
-                                            }
-                                            case 16hf003: {
-                                                // user buttons
-                                                IOmemoryRead = {12b0, buttons};
-                                            }
-                                            case 16hf004: {
-                                                // 1hz timer
-                                                IOmemoryRead = timer1hz;
-                                            }
+                                            case 16hf000: { newStackTop = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1; }
+                                            case 16hf001: { newStackTop = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), (uartInBufferNext != uartInBufferTop) }; }
+                                            case 16hf002: { newStackTop = rgbLED; }
+                                            case 16hf003: { newStackTop = { 12b0, buttons }; }
+                                            case 16hf004: { newStackTop = timer1hz; }
                                             default: {newStackTop = 0;}
                                         }
+                                    } else {
+                                        ( newStackTop ) = j1eforthALU( instruction, dsp, rsp, stackTop, stackNext, rStackTop, memoryInput );
                                     }
-                                    ( newStackTop ) = j1eforthALU( instruction, dsp, rsp, stackTop, stackNext, rStackTop, IOmemoryRead, memoryInput );
                                 }
                                 case 1b1: {
                                     ( newStackTop ) = j1eforthplusALU( instruction, stackTop, stackNext );
@@ -423,39 +406,30 @@ algorithm main(
 
                             // n2memt mem[t] = n
                             if( is_n2memt ) {
-                                switch( stackTop[15,1] ) {
-                                    case 1b0: {
+                                switch( stackTop ) {
+                                    default: {
                                         // WRITE to SPRAM
                                         sram_address = stackTop >> 1;
                                         sram_data_write = stackNext;
                                         sram_readwrite = 1;
                                     }
-                                    case 1b1: {
-                                        switch( stackTop[15,1] ) {
-                                            case 16hf000: {
-                                                // OUTPUT to UART (dualport blockram code from @sylefeb)
-                                                uartOutBuffer.wdata1 = bytes(stackNext).byte0;
-                                                newuartOutBufferTop = uartOutBufferTop + 1;
-                                            }
-                                            case 16hf002: {
-                                                // OUTPUT to rgbLED
-                                                rgbLED = stackNext;
-                                            }
-                                       }
+                                    case 16hf000: {
+                                        // OUTPUT to UART (dualport blockram code from @sylefeb)
+                                        uartOutBuffer.wdata1 = bytes(stackNext).byte0;
+                                        newuartOutBufferTop = uartOutBufferTop + 1;
+                                    }
+                                    case 16hf002: {
+                                        // OUTPUT to rgbLED
+                                        rgbLED = stackNext;
                                     }
                                 }
                             }
                         } // ALU
-
-                        default: {
-                            // CALL BRANCH 0BRANCH INSTRUCTIONS
-                            ( newStackTop, newPC, newDSP, newRSP ) = j1eforthcallbranch( is_callbranchalu, stackTop, stackNext, callBranchAddress, pcPlusOne, dsp, rsp );
-                            rstackWData = pcPlusOne << 1;
-                        }
                     }
                 } // J1 CPU Instruction Execute
 
                 ++:
+                // Write to dstack and rstack
                 // Commit to dstack and rstack
                 ( dstack ) = commitDSTACK( dstack, dstackWrite, newDSP, stackTop );
                 ( rstack ) = commitRSTACK( rstack, rstackWrite, newRSP, rstackWData );
@@ -477,5 +451,4 @@ algorithm main(
         }
 
     } // (INIT==3 execute J1 CPU)
-
 }
