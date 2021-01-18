@@ -3,6 +3,13 @@ algorithm main(
     output uint1 rgbB,
     output uint1 rgbG,
     output uint1 rgbR,
+
+    // SPRAM Interface
+    output uint16   sram_addr,
+    output uint16   sram_data_in,
+    input  uint16   sram_data_out,
+    output uint1    sram_wren,
+
     // UART Interface
     output   uint8 uart_in_data,
     output   uint1 uart_in_valid,
@@ -16,7 +23,7 @@ algorithm main(
 
     // Turn off the lights
     rgbR = 0; rgbG = 0; rgbB = 0;
-    
+
     while (1) {
         // when uart data available
         if(uart_out_valid) {
@@ -34,7 +41,7 @@ algorithm main(
                 }
                 // BLUE from B
                 case 66: {
-                    rgbR = 1;
+                    rgbB = 1;
                     character = 66;
                 }
                 // OFF from X

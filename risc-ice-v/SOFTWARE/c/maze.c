@@ -189,11 +189,15 @@ void initialise_maze( unsigned short width, unsigned short height )
     map[ width - 2 ][ height - 3 ] = 'X';
 
     // POSITION GHOSTS AT CENTRE
+    unsigned short potentialx = width / 2, potentialy= height / 2;
+    if( maze[ potentialx ][ potentialy ] != ' ' )
+        potentialx--;
+
     for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
         if( ghost <= level ) {
             // AT CENTRE
-            ghostx[ ghost ] = width / 2;
-            ghosty[ ghost ] = height / 2;
+            ghostx[ ghost ] = potentialx;
+            ghosty[ ghost ] = potentialy;
             ghostdirection[ ghost ] = ghost;
         } else {
             // OFF MAP
@@ -629,7 +633,8 @@ void main( void )
 
         levelselected = 0;
         do {
-            tpu_outputstringcentre( 29, TRANSPARENT, YELLOW, "Select Level" );
+            tpu_outputstringcentre( 26, TRANSPARENT, YELLOW, "Select Level" );
+            tpu_outputstringcentre( 27, TRANSPARENT, YELLOW, "Increase/Decrease by LEFT/RIGHT - Select by FIRE" );
             tpu_set( 1, 29, TRANSPARENT, BLACK ); tpu_outputstring( "Level: " ); tpu_outputnumber_short( level );
             tpu_set( 60, 29, TRANSPARENT, BLACK ); tpu_outputstring( "Size: " ); tpu_outputnumber_short( levelwidths[level] ); tpu_outputstring( " x " ); tpu_outputnumber_short( levelheights[level] );
 

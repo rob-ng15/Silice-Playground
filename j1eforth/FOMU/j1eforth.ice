@@ -288,15 +288,19 @@ algorithm main(
     uartOutBuffer.addr0    := uartOutBufferNext; // FIFO reads on next
     uartOutBuffer.addr1    := uartOutBufferTop;  // FIFO writes on top
 
-    always {
-        // READ from UART if character available and store
-        if( uart_out_valid ) {
-            // writes at uartInBufferTop (code from @sylefeb)
-            uartInBuffer.wdata1  = uart_out_data;
-            uart_out_ready       = 1;
-            uartInBufferTop      = uartInBufferTop + 1;
-        }
-    }
+    // UART input and output buffering
+    uartInBuffer.wdata1  := uart_out_data;
+    uartInBufferTop      := ( uart_out_valid ) ? uartInBufferTop + 1 : uartInBufferTop;
+    uart_out_ready := uart_out_valid ? 1 : uart_out_ready;
+    //always {
+    //    // READ from UART if character available and store
+    //    if( uart_out_valid ) {
+    //        // writes at uartInBufferTop (code from @sylefeb)
+    //        uartInBuffer.wdata1  = uart_out_data;
+    //        uart_out_ready       = 1;
+    //        uartInBufferTop      = uartInBufferTop + 1;
+    //    }
+    //}
 
     // INIT is 0 ZERO SPRAM
     while( INIT == 0 ) {

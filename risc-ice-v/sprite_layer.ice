@@ -101,6 +101,7 @@ algorithm sprite_layer(
         uint16      detect_collision_$i$ = uninitialised;
     $$end
 
+    // UPDATE THE SPRITE TILE BITMAPS
     spritebitmapwriter SBMW(
         sprite_writer_sprite <: sprite_writer_sprite,
         sprite_writer_line <: sprite_writer_line,

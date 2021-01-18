@@ -83,7 +83,7 @@ algorithm bitmapwriter (
     bitmap.wenable1 := 1;
 
     while(1) {
-        if( write_pixel == 1 ) {
+        if( write_pixel ) {
             bitmap.addr1 = x_write_pixel + y_write_pixel * 640;
             bitmap.wdata1 = bitmap_colour_write;
         }
