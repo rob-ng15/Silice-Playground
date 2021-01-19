@@ -3,6 +3,162 @@
 //
 // A simple Risc-V RV32IMC processor
 
+// RISC-V
+
+// BASE IMMEDIATE - with some B extensions
+circuitry aluI (
+    input   opCode,
+    input   function3,
+    input   function7,
+    input   immediateValue,
+    input   IshiftCount,
+    input   sourceReg1,
+
+    output  result,
+) {
+    switch( function3 ) {
+        case 3b000: { result = sourceReg1 + immediateValue; }
+        case 3b001: {
+            switch( function7 ) {
+                case 7b0000000: { ( result ) = SLL( sourceReg1, IshiftCount ); }
+                case 7b0010000: { ( result ) = SLO( sourceReg1, IshiftCount ); }
+                case 7b0010100: { ( result ) = SBSET( sourceReg1, IshiftCount ); }
+                case 7b0100100: { ( result ) = SBCLR( sourceReg1, IshiftCount ); }
+                case 7b0110000: {
+                    switch( IshiftCount ) {
+                        case 5b00000: {
+                            // CLZ
+                            if( sourceReg1 == 0 ) {
+                                result = 32;
+                            } else {
+                                result = 0;
+                                while( ~sourceReg1[31,1] ) {
+                                    result = result + 1;
+                                    sourceReg1 = sourceReg1 << 1;
+                                }
+                            }
+                        }
+                        case 5b00001: {
+                            // CTZ
+                            if( sourceReg1 == 0 ) {
+                                result = 32;
+                            } else {
+                                result = 0;
+                                while( ~sourceReg1[0,1] ) {
+                                    result = result + 1;
+                                    sourceReg1 = sourceReg1 >> 1;
+                                }
+                            }
+                        }
+                        case 5b00010: {
+                            // PCNT
+                            result = 0;
+                            while( sourceReg1 != 0 ) {
+                                result = sourceReg1[0,1] ? result + 1 : result;
+                                sourceReg1 = sourceReg1 >> 1;
+                            }
+                        }
+                        case 5b00100: { result = { {24{sourceReg1[7,1]}}, sourceReg1[0, 8] }; }     // SEXT.B
+                        case 5b00101: { result = { {16{sourceReg1[15,1]}}, sourceReg1[0, 16] }; }   // SEXT.H
+                    }
+                }
+                case 7b0110100: { ( result ) = SBINV( sourceReg1, IshiftCount ); }
+            }
+        }
+        case 3b010: { result = __signed( sourceReg1 ) < __signed(immediateValue) ? 32b1 : 32b0; }
+        case 3b011: { result = ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 32b1 : 32b0 ); }
+        case 3b100: { result = sourceReg1 ^ immediateValue; }
+        case 3b101: {
+            switch( function7 ) {
+                case 7b0000000: { ( result ) = SRL( sourceReg1, IshiftCount); }
+                case 7b0010000: { ( result ) = SRO( sourceReg1, IshiftCount); }
+                case 7b0010100: { ( result ) = GORC( sourceReg1, IshiftCount); }
+                case 7b0100000: { ( result ) = SRA( sourceReg1, IshiftCount); }
+                case 7b0100100: { ( result ) = SBEXT( sourceReg1, IshiftCount ); }
+                case 7b0110000: { ( result ) = ROR( sourceReg1, IshiftCount);  }
+                case 7b0110100: { ( result ) = GREV( sourceReg1, IshiftCount); }
+            }
+        }
+        case 3b110: { result = sourceReg1 | immediateValue; }
+        case 3b111: { result = sourceReg1 & immediateValue; }
+    }
+}
+
+// BASE REGISTER - with some B extensions
+circuitry aluR (
+    input   opCode,
+    input   function3,
+    input   function7,
+    input   rs1,
+    input   sourceReg1,
+    input   sourceReg2,
+
+    output  result,
+) {
+    switch( function3 ) {
+        case 3b000: { result = sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ); }
+        case 3b001: {
+            switch( function7 ) {
+                case 7b0000000: { ( result ) = SLL( sourceReg1, sourceReg2 ); }
+                case 7b0010000: { ( result ) = SLO( sourceReg1, sourceReg2 ); }
+                case 7b0010100: { ( result ) = SBSET( sourceReg1, sourceReg2 ); }
+                case 7b0100100: { ( result ) = SBCLR( sourceReg1, sourceReg2 ); }
+                case 7b0110000: { ( result ) = ROL( sourceReg1, sourceReg2 ); }
+                case 7b0110100: { ( result ) = SBINV( sourceReg1, sourceReg2 ); }
+            }
+        }
+        case 3b010: {
+            switch( function7 ) {
+                // STL SH1ADD
+                case 7b0000000: { result = __signed( sourceReg1 ) < __signed(sourceReg2) ? 32b1 : 32b0; }
+                case 7b0010000: { result = ( sourceReg1 << 1 ) + sourceReg2; }
+            }
+        }
+        case 3b011: { result = ( rs1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 32b1 : 32b0 ); }
+        case 3b100: {
+            switch( function7 ) {
+                // XOR PACK MIN SH2ADD XNOR PACKU
+                case 7b0000000: { result = sourceReg1 ^ sourceReg2; }
+                case 7b0000100: { result = { sourceReg2[0,16], sourceReg1[0,16] }; }
+                case 7b0000101: { result = ( __signed( sourceReg1 ) < __signed( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
+                case 7b0010000: { result = ( sourceReg1 << 2 ) + sourceReg2; }
+                case 7b0100000: { result = sourceReg1 ^ ~sourceReg2; }
+                case 7b0100100: { result = { sourceReg2[16,16], sourceReg1[16,16] }; }
+            }
+        }
+        case 3b101: {
+            switch( function7 ) {
+                case 7b0000000: { ( result ) = SRL( sourceReg1, sourceReg2 ); }
+                case 7b0000101: { result = ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
+                case 7b0010000: { ( result ) = SRO( sourceReg1, sourceReg2 ); }
+                case 7b0010100: { ( result ) = GORC( sourceReg1, sourceReg2 ); }
+                case 7b0100000: { ( result ) = SRA( sourceReg1, sourceReg2 ); }
+                case 7b0100100: { ( result ) = SBEXT( sourceReg1, sourceReg2 ); }
+                case 7b0110000: { ( result ) = ROR( sourceReg1, sourceReg2 ); }
+                case 7b0110100: { ( result ) = GREV( sourceReg1, sourceReg2 ); }
+            }
+        }
+        case 3b110: {
+            switch( function7 ) {
+                // OR MAX SH3ADD ORN
+                case 7b0000000: { result = sourceReg1 | sourceReg2; }
+                case 7b0000101: { result = ( __signed( sourceReg1 ) > __signed( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
+                case 7b0010000: { result = ( sourceReg1 << 3 ) + sourceReg2; }
+                case 7b0100000: { result = sourceReg1 | ~sourceReg2; }
+            }
+        }
+        case 3b111: {
+            switch( function7 ) {
+                // AND PACKH MAXU ANDN
+                case 7b0000000: { result = sourceReg1 & sourceReg2; }
+                case 7b0000100: { result = { 16b0, sourceReg2[0,8], sourceReg1[0,8] }; }
+                case 7b0000101: { result = ( __unsigned( sourceReg1 ) > __unsigned( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
+                case 7b0100000: { result = sourceReg1 & ~sourceReg2; }
+            }
+        }
+    }
+}
+
 algorithm PAWSCPU (
     output  uint3   function3,
     output  uint32  address,
@@ -171,21 +327,21 @@ algorithm PAWSCPU (
                 }
             }
             case 5b00100: {
-                // ALUI
+                // ALUI ( BASE + SOME B EXTENSION )
                 writeRegister = 1;
                 ( result ) = aluI( opCode, function3, function7, immediateValue, IshiftCount, sourceReg1 );
             }
             case 5b01100: {
-                // ALUR ( BASE + M EXTENSION )
+                // ALUR ( BASE + M EXTENSION + SOME B EXTENSION )
                 writeRegister = 1;
-                switch( function7[0,1] ) {
-                    case 1b0: { ( result ) = aluR( opCode, function3, function7, rs1, sourceReg1, sourceReg2 ); }
-                    case 1b1: {
+                switch( function7 ) {
+                    case 7b0000001: {
                         switch( function3[2,1] ) {
                             case 1b0: { ( result ) = multiplication( function3, sourceReg1, sourceReg2 ); }
                             case 1b1: { ( result ) = divideremainder( function3, sourceReg1, sourceReg2 ); }
                         }
                     }
+                    default: { ( result ) = aluR( opCode, function3, function7, rs1, sourceReg1, sourceReg2 ); }
                 }
             }
             case 5b11100: {

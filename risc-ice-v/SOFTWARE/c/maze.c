@@ -654,6 +654,9 @@ void main( void )
             }
         } while( levelselected == 0 );
 
+        tpu_outputstringcentre( 26, TRANSPARENT, YELLOW, "" );
+        tpu_outputstringcentre( 27, TRANSPARENT, YELLOW, "" );
+
         // GENERATE THE MAZE
         tpu_outputstringcentre( 29, TRANSPARENT, YELLOW, "Generating Maze - Best to take notes!" );
         initialise_maze( levelwidths[level], levelheights[level] );

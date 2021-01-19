@@ -122,52 +122,7 @@ circuitry branchcomparison (
     }
 }
 
-// RISC-V ALU BASE IMMEDIATE
-circuitry aluI (
-    input   opCode,
-    input   function3,
-    input   function7,
-    input   immediateValue,
-    input   IshiftCount,
-    input   sourceReg1,
-
-    output  result,
-) {
-    switch( function3 ) {
-        case 3b000: { result = sourceReg1 + immediateValue; }
-        case 3b001: { result = __unsigned(sourceReg1) << IshiftCount; }
-        case 3b010: { result = __signed( sourceReg1 ) < __signed(immediateValue) ? 32b1 : 32b0; }
-        case 3b011: { result = ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 32b1 : 32b0 ); }
-        case 3b100: { result = sourceReg1 ^ immediateValue; }
-        case 3b101: { result = function7[5,1] ? (__signed(sourceReg1) >>> IshiftCount) : (__unsigned(sourceReg1) >> IshiftCount); }
-        case 3b110: { result = sourceReg1 | immediateValue; }
-        case 3b111: { result = sourceReg1 & immediateValue; }
-            }
-}
-
-// RISC-V ALU BASE REGISTER
-circuitry aluR (
-    input   opCode,
-    input   function3,
-    input   function7,
-    input   rs1,
-    input   sourceReg1,
-    input   sourceReg2,
-
-    output  result,
-) {
-    switch( function3 ) {
-        case 3b000: { result = sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ); }
-        case 3b001: { result = __unsigned(sourceReg1) << sourceReg2[0,5]; }
-        case 3b010: { result = __signed( sourceReg1 ) < __signed(sourceReg2) ? 32b1 : 32b0; }
-        case 3b011: { result = ( rs1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 32b1 : 32b0 ); }
-        case 3b100: { result = sourceReg1 ^ sourceReg2; }
-        case 3b101: { result = function7[5,1] ? ( __signed(sourceReg1) >>> sourceReg2[0,5]) : (__unsigned(sourceReg1) >> sourceReg2[0,5]); }
-        case 3b110: { result = sourceReg1 | sourceReg2; }
-        case 3b111: { result = sourceReg1 & sourceReg2; }
-    }
-}
-
+// RISC-V MANDATORY CSR REGISTERS
 algorithm CSRblock (
     input   uint32  instruction,
     input   uint1   incCSRinstret,

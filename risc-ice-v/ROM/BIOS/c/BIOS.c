@@ -199,10 +199,10 @@ void main( void ) {
     gpu_character_blit( WHITE, 136, 4, 'A', 2);
     gpu_character_blit( WHITE, 168, 4, 'W', 2);
     gpu_character_blit( WHITE, 200, 4, 'S', 2);
-    tpu_set( 14, 2, TRANSPARENT, WHITE ); tpu_outputstring( "RISC-V RV32IMC" );
+    tpu_set( 13, 2, TRANSPARENT, WHITE ); tpu_outputstring( "RISC-V RV32IMC" );
 
     for( unsigned short i = 0; i < 64; i++ )
-        gpu_rectangle( i, i * 10, 447, 9 + i * 10, 479 );
+        gpu_rectangle( i, i * 10, 447, 9 + i * 10, 463 );
 
     tpu_outputstringcentre( 7, TRANSPARENT, RED, "Waiting for SDCARD" );
     sleep( 2000 );
