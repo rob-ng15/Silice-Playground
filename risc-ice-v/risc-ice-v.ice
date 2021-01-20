@@ -191,6 +191,22 @@ algorithm main(
 
 // RAM - BRAM controller
 // MEMORY IS 16 BIT, 8 bit WRITES ARE READ MODIFY WRITE
+
+// WRITE TO BRAM
+circuitry BRAMwrite(
+    inout   ram,
+    input   function3,
+    input   address,
+    input   writedata
+) {
+    ram.addr = address[1,15];
+    if( ( function3 & 3 ) == 0 ) {
+        ++:
+    }
+    ram.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
+    ram.wenable = 1;
+}
+
 algorithm bramcontroller (
     input   uint32  address,
     input   uint3   function3,
@@ -199,7 +215,7 @@ algorithm bramcontroller (
     input   uint16  writedata,
 
     input   uint1   readflag,
-    output  uint16  readdata,
+    output  uint16  readdata
 ) <autorun> {
     // RISC-V RAM and BIOS
     bram uint16 ram <input!> [8192] = {
@@ -216,12 +232,13 @@ algorithm bramcontroller (
 
     while(1) {
         if( writeflag ) {
-            if( ( function3 & 3 ) == 0 ) {
-                // BYTE WRITE - ENSURE ADDRESS IS READY
-                ++:
-            }
-            ram.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
-            ram.wenable = 1;
+            ( ram ) = BRAMwrite( ram, function3, address, writedata );
+            //if( ( function3 & 3 ) == 0 ) {
+            //    // BYTE WRITE - ENSURE ADDRESS IS READY
+            //    ++:
+            //}
+            //ram.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
+            //ram.wenable = 1;
         }
     }
 }

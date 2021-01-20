@@ -43,23 +43,24 @@ __ULX3S only at present__
             * COMPRESSED ( 16 bit ) INSTRUCTION SUPPORT
                 * Expanded to 32 bit instruction
                 * 1 cycle faster than 32 bit instructions due to less memory fetching
-        * RV32B instructions ( selection of __NOT TESTED__ )
-            * Zba - sh1add sh2add sh3add
-            * Zbb - clz ctz pcnt min[u] max[u] sext.[b][h] andn orn xnor pack ror[i] orc.b
-            * Zbc - ( todo clmul )
-            * Zbe - pack[h] ( todo bdep bext )
-            * zbf - pack[h] ( todo bfp )
-            * Zbp - andn orn xnor pack[u][h] rol ror[i] grev[i] gorc[i] ( todo shfl[i] unshfl[i] xperm )
-            * Zbr - ( todo crc32 )
-            * Zbs - sbset[i] sbclr[i] sbinv[i] sbext[i]
-            * Zbt - ( todo cmov cmix fsl fsr[i] )
+        * RV32B instructions ( __NOT TESTED__ )
+            * Based on Draft Version from October 26 2020
+                * Zba - sh1add sh2add sh3add
+                * Zbb - clz ctz pcnt min[u] max[u] sext.[bh] andn orn xnor pack ror[i] orc.b
+                * Zbc - clmul[rh]
+                * Zbe - bdep bext pack[h]
+                * zbf - bfp pack[h]
+                * Zbp - andn orn xnor pack[hu] rol ror[i] grev[i] gorc[i] shfl[i] unshfl[i] xperm[nbhw]
+                * Zbr - ( todo crc32 )
+                * Zbs - sbset[i] sbclr[i] sbinv[i] sbext[i]
+                * Zbt - cmov cmix fsl fsr[i]
         * NOP __ALL OTHER INSTRUCTION CODES__
 
 * MEMORY
     * 16K ( 8K x 16 bit) of RAM
         * FAST BRAM - used for BIOS
         * STACK POINTER AT TOP OF BRAM
-    * 32K ( 8K x 32 bit ) of I/O Memory with 16 bit read / write
+    * 32K ( 8K x 32 bit ) of I/O Registers with 16 bit read / write
     * 32MB of SDRAM with 4K Instruction and 4K Data Caches
 
 * DISPLAY
