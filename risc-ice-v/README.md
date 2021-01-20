@@ -50,7 +50,7 @@ __ULX3S only at present__
                 * Zbc - clmul[rh]
                 * Zbe - bdep bext pack[h]
                 * zbf - bfp pack[h]
-                * Zbp - andn orn xnor pack[hu] rol ror[i] grev[i] gorc[i] shfl[i] unshfl[i] xperm[nbhw]
+                * Zbp - andn orn xnor pack[hu] rol ror[i] grev[i] gorc[i] shfl[i] unshfl[i] xperm[nbh]
                 * Zbr - ( todo crc32 )
                 * Zbs - sbset[i] sbclr[i] sbinv[i] sbext[i]
                 * Zbt - cmov cmix fsl fsr[i]
