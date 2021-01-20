@@ -483,6 +483,8 @@ algorithm memmap_io (
                 case 16h8400: { gpu_processor.gpu_x = writeData; }
                 case 16h8404: { gpu_processor.gpu_y = writeData; }
                 case 16h8408: { gpu_processor.gpu_colour = writeData; }
+                case 16h8409: { gpu_processor.gpu_colour_alt = writeData; }
+                case 16h840a: { gpu_processor.gpu_dithermode = writeData; }
                 case 16h840c: { gpu_processor.gpu_param0 = writeData; }
                 case 16h8410: { gpu_processor.gpu_param1 = writeData; }
                 case 16h8414: { gpu_processor.gpu_param2 = writeData; }

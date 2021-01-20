@@ -6,35 +6,33 @@
 #define for_y for (int y = 0; y < h; y++)
 #define for_xy for_x for_y
 
-void show(void *u, int w, int h) {
-	int (*univ)[w] = u;
+unsigned char universe[80][60];
+unsigned char new[80][60];
+
+void show(int w, int h) {
 	for_y for_x
-        gpu_rectangle( univ[y][x] ? BLACK : TRANSPARENT, x * 8, y * 8, x * 8 + 7, y * 8 + 7 );
+        gpu_rectangle( universe[y][x] ? BLACK : TRANSPARENT, x * 8, y * 8, x * 8 + 7, y * 8 + 7 );
 }
 
-void evolve(void *u, int w, int h) {
-	unsigned (*univ)[w] = u;
-	unsigned new[h][w];
-
+void evolve(int w, int h) {
 	for_y for_x {
 		int n = 0;
 		for (int y1 = y - 1; y1 <= y + 1; y1++)
 			for (int x1 = x - 1; x1 <= x + 1; x1++)
-				if (univ[(y1 + h) % h][(x1 + w) % w])
+				if (universe[(y1 + h) % h][(x1 + w) % w])
 					n++;
 
-		if (univ[y][x]) n--;
-		new[y][x] = (n == 3 || (n == 2 && univ[y][x]));
+		if (universe[y][x]) n--;
+		new[y][x] = (n == 3 || (n == 2 && universe[y][x]));
 	}
-	for_y for_x univ[y][x] = new[y][x];
+	for_y for_x universe[y][x] = new[y][x];
 }
 
 void game(int w, int h) {
-	unsigned univ[h][w];
-	for_xy univ[y][x] = rng( 2 );
+	for_xy universe[y][x] = rng( 2 );
 	while ( get_buttons() == 1 ) {
-		show(univ, w, h);
-		evolve(univ, w, h);
+		show(w, h);
+		evolve(w, h);
 		sleep( 200 );
 	}
 }

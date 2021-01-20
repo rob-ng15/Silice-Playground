@@ -403,6 +403,12 @@ void bitmap_scrollwrap( unsigned char action ) {
     *BITMAP_SCROLLWRAP = action;
 }
 
+// SET GPU DITHER MODE AND ALTERNATIVE COLOUR
+void gpu_dither( unsigned char mode, unsigned char colour ) {
+    *GPU_COLOUR_ALT = colour;
+    *GPU_DITHERMODE = mode;
+}
+
 // DRAW A FILLED RECTANGLE from (x1,y1) to (x2,y2) in colour
 void gpu_rectangle( unsigned char colour, short x1, short y1, short x2, short y2 ) {
     *GPU_COLOUR = colour;

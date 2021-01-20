@@ -125,11 +125,23 @@ void sd_findNextFile( void ) {
     unsigned short filefound = 0;
 
     while( !filefound ) {
-        if( ROOTDIRECTORY[i].ext[0]=='P' && ROOTDIRECTORY[i].ext[1]=='A' && ROOTDIRECTORY[i].ext[2]=='W' ) {
-            SELECTEDFILE = i;
-            filefound = 1;
-        } else {
-            i = ( i < BOOTSECTOR -> root_dir_entries ) ? i + 1 : 0;
+        switch( ROOTDIRECTORY[i].filename[0] ) {
+            // NOT TRUE FILES ( deleted, directory pointer )
+            case 0x00:
+            case 0xe5:
+            case 0x05:
+            case 0x2e:
+                i = ( i < BOOTSECTOR -> root_dir_entries ) ? i + 1 : 0;
+                break;
+
+            default:
+                if( ROOTDIRECTORY[i].ext[0]=='P' && ROOTDIRECTORY[i].ext[1]=='A' && ROOTDIRECTORY[i].ext[2]=='W' ) {
+                    SELECTEDFILE = i;
+                    filefound = 1;
+                } else {
+                    i = ( i < BOOTSECTOR -> root_dir_entries ) ? i + 1 : 0;
+                }
+                break;
         }
     }
 }

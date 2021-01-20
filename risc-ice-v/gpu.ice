@@ -1,19 +1,20 @@
 algorithm gpu(
     // GPU to SET and GET pixels
-    output! int11 bitmap_x_write,
-    output! int11 bitmap_y_write,
-    output! uint7 bitmap_colour_write,
-    output! uint1 bitmap_write,
+    output! int11   bitmap_x_write,
+    output! int11   bitmap_y_write,
+    output! uint7   bitmap_colour_write,
+    output! uint1   bitmap_write,
 
-    // From j1eforth
-    input   int11 gpu_x,
-    input   int11 gpu_y,
-    input   uint8 gpu_colour,
-    input   int11 gpu_param0,
-    input   int11 gpu_param1,
-    input   int11 gpu_param2,
-    input   int11 gpu_param3,
-    input   uint4 gpu_write,
+    input   int11   gpu_x,
+    input   int11   gpu_y,
+    input   uint7   gpu_colour,
+    input   uint7   gpu_colour_alt,
+    input   int11   gpu_param0,
+    input   int11   gpu_param1,
+    input   int11   gpu_param2,
+    input   int11   gpu_param3,
+    input   uint4   gpu_write,
+    input   uint2   gpu_dithermode,
 
     // For setting blit1 tile bitmaps
     input   uint5   blit1_writer_tile,
@@ -50,7 +51,9 @@ algorithm gpu(
     };
 
     // GPU COLOUR
-    uint7 gpu_active_colour = uninitialized;
+    uint7   gpu_active_colour = uninitialized;
+    uint7   gpu_active_colour_alt = uninitialized;
+    uint2   gpu_active_dithermode = uninitialised;
 
     // GPU <-> VECTOR DRAWER Communication
     int11 v_gpu_x = uninitialised;
@@ -145,7 +148,8 @@ algorithm gpu(
 
     // CONTROLS FOR BITMAP PIXEL WRITER
     bitmap_write := 0;
-    bitmap_colour_write := gpu_active_colour;
+    bitmap_colour_write := ( gpu_active_dithermode == 0 ) ? gpu_active_colour : ( ( gpu_active_dithermode == 1 ) ? ( ( bitmap_x_write[0,1] == bitmap_y_write[0,1] ) ? gpu_active_colour : gpu_active_colour_alt ) :
+                                                                        ( ( bitmap_x_write[0,1] != bitmap_y_write[0,1] ) ? gpu_active_colour : gpu_active_colour_alt ) );
 
     // CONTROLS FOR GPU SUBUNITS
     GPUrectangle.start := 0;
@@ -160,6 +164,7 @@ algorithm gpu(
         if( v_gpu_write ) {
             // DRAW LINE FROM (X,Y) to (PARAM0,PARAM1) from VECTOR BLOCK
             gpu_active_colour = vector_block_colour;
+            gpu_active_dithermode = 0;
             gpu_active = 1;
             VECTORline.start = 1;
             while( VECTORline.busy ) {
@@ -170,10 +175,12 @@ algorithm gpu(
             gpu_active = 0;
         } else {
             gpu_active_colour = gpu_colour;
+            gpu_active_colour_alt = gpu_colour_alt;
             switch( gpu_write ) {
                 case 1: {
                     // SET PIXEL (X,Y)
                     // NO GPU ACTIVATION
+                    gpu_active_dithermode = 0;
                     bitmap_x_write = gpu_x;
                     bitmap_y_write = gpu_y;
                     bitmap_write = 1;
@@ -182,6 +189,7 @@ algorithm gpu(
                 case 2: {
                     // DRAW LINE FROM (X,Y) to (PARAM0,PARAM1)
                     gpu_active = 1;
+                    gpu_active_dithermode = 0;
                     GPUline.start = 1;
                     while( GPUline.busy ) {
                         bitmap_x_write = GPUline.bitmap_x_write;
@@ -194,6 +202,7 @@ algorithm gpu(
                 case 3: {
                     // DRAW RECTANGLE FROM (X,Y) to (PARAM0,PARAM1)
                     gpu_active = 1;
+                    gpu_active_dithermode = gpu_dithermode;
                     GPUrectangle.start = 1;
                     while( GPUrectangle.busy ) {
                         bitmap_x_write = GPUrectangle.bitmap_x_write;
@@ -206,6 +215,7 @@ algorithm gpu(
                 case 4: {
                     // DRAW CIRCLE CENTRE (X,Y) with RADIUS PARAM0
                     gpu_active = 1;
+                    gpu_active_dithermode = 0;
                     GPUcircle.start = 1;
                     while( GPUcircle.busy ) {
                         bitmap_x_write = GPUcircle.bitmap_x_write;
@@ -218,6 +228,7 @@ algorithm gpu(
                 case 5: {
                     // DRAW FILLED CIRCLE CENTRE (X,Y) with RADIUS PARAM0
                     gpu_active = 1;
+                    gpu_active_dithermode = gpu_dithermode;
                     GPUdisc.start = 1;
                     while( GPUdisc.busy ) {
                         bitmap_x_write = GPUdisc.bitmap_x_write;
@@ -230,6 +241,7 @@ algorithm gpu(
                 case 6: {
                     // DRAW FILLED TRIANGLE WITH VERTICES (X,Y) (PARAM0,PARAM1) (PARAM2,PARAM3)
                     gpu_active = 1;
+                    gpu_active_dithermode = gpu_dithermode;
                     GPUtriangle.start = 1;
                     while( GPUtriangle.busy ) {
                         bitmap_x_write = GPUtriangle.bitmap_x_write;
@@ -242,6 +254,7 @@ algorithm gpu(
                 case 7: {
                     // BLIT 16 x 16 TILE PARAM0 TO (X,Y)
                     gpu_active = 1;
+                    gpu_active_dithermode = 0;
                     GPUblit.tilecharacter = 1;
                     GPUblit.start = 1;
                     while( GPUblit.busy ) {
@@ -256,6 +269,7 @@ algorithm gpu(
                 case 8: {
                     // BLIT 8 x 8 CHARACTER PARAM0 TO (X,Y) as 8 x 8
                     gpu_active = 1;
+                    gpu_active_dithermode = 0;
                     GPUblit.tilecharacter = 0;
                     GPUblit.start = 1;
                     while( GPUblit.busy ) {
@@ -558,6 +572,22 @@ algorithm disc (
 }
 
 //  TRIANGLE - OUTPUT PIXELS TO DRAW A FILLED TRIANGLE
+circuitry insideTriangle(
+    input   sx,
+    input   sy,
+    input   x,
+    input   y,
+    input   x1,
+    input   y1,
+    input   x2,
+    input   y2,
+    output  inside
+) {
+    inside = ( (( x2 - x1 ) * ( sy - y1 ) - ( y2 - y1 ) * ( sx - x1 )) >= 0 ) &&
+             ( (( x - x2 ) * ( sy - y2 ) - ( y - y2 ) * ( sx - x2 )) >= 0 ) &&
+             ( (( x1 - x ) * ( sy - y ) - ( y1 - y ) * ( sx - x )) >= 0 );
+}
+
 algorithm triangle (
     input   int11   x,
     input   int11   y,
@@ -596,10 +626,7 @@ algorithm triangle (
 
     // Filled triangle calculations
     // Is the point sx,sy inside the triangle given by active_x,active_y x1,y1 x2,y2?
-    uint1   w0 = uninitialized;
-    uint1   w1 = uninitialized;
-    uint1   w2 = uninitialized;
-    uint1   inTriangle := w0 && w1 && w2;
+    uint1   inTriangle = uninitialized;
     uint1   beenInTriangle = uninitialized;
 
     uint1   active = 0;
@@ -651,12 +678,9 @@ algorithm triangle (
             ++:
             while( gpu_sy <= gpu_max_y ) {
                 // Edge calculations to determine if inside the triangle - converted to DSP blocks
-                w0 = (( gpu_x2 - gpu_x1 ) * ( gpu_sy - gpu_y1 ) - ( gpu_y2 - gpu_y1 ) * ( gpu_sx - gpu_x1 )) >= 0;
-                w1 = (( gpu_active_x - gpu_x2 ) * ( gpu_sy - gpu_y2 ) - ( gpu_active_y - gpu_y2 ) * ( gpu_sx - gpu_x2 )) >= 0;
-                w2 = (( gpu_x1 - gpu_active_x ) * ( gpu_sy - gpu_active_y ) - ( gpu_y1 - gpu_active_y ) * ( gpu_sx - gpu_active_x )) >= 0;
-                ++:
-                bitmap_write = inTriangle;
+                ( inTriangle ) = insideTriangle( gpu_sx, gpu_sy, gpu_active_x, gpu_active_y, gpu_x1, gpu_y1, gpu_x2, gpu_y2 );
                 beenInTriangle = inTriangle ? 1 : beenInTriangle;
+                bitmap_write = inTriangle;
                 ++:
                 if( beenInTriangle && ~inTriangle ) {
                     // Exited the triangle, move to the next line

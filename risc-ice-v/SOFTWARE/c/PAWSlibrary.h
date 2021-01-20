@@ -156,6 +156,7 @@ extern void set_tilemap_bitmap( unsigned char, unsigned short * );
 extern unsigned char tilemap_scrollwrapclear( unsigned char );
 
 // GPU AND BITMAP
+void gpu_dither( unsigned char , unsigned char );
 extern void gpu_pixel( unsigned char, short, short );
 extern void gpu_rectangle( unsigned char, short, short, short, short );
 extern void gpu_cs( void );
@@ -210,12 +211,19 @@ extern void tpu_outputnumber_int( unsigned int );
 #define GREEN 0x0c
 #define DKGREEN 0x08
 #define CYAN 0x0f
+#define DKCYAN 0x0b
 #define RED 0x30
 #define DKRED 0x20
 #define MAGENTA 0x33
+#define DKMAGENTA 0x22
 #define PURPLE 0x13
 #define YELLOW 0x3c
+#define DKYELLOW 0x28
 #define WHITE 0x3f
 #define GREY1 0x15
 #define GREY2 0x2a
 #define ORANGE 0x38
+
+#define DITHEROFF 0, BLACK
+#define DITHERON1 1
+#define DITHERON2 2

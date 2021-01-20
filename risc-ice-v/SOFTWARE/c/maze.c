@@ -65,6 +65,9 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
     unsigned short eyeoffsety = sizechangey / 2;
     unsigned char colour = ghostcolour( ghostnumber );
 
+    // SOLID
+    gpu_dither( DITHEROFF );
+
     // MAIN BODY
     gpu_rectangle( colour, centrex - sizechangex, centrey - sizechangey, centrex + sizechangex, centrey + sizechangey );
 
@@ -407,8 +410,10 @@ unsigned char whatisright( unsigned short currentx, unsigned short currenty, uns
 }
 
 // DRAW LEFT or RIGHT WALLS
-void left_wall( unsigned char colour, short steps )
+void left_wall( unsigned char colour, unsigned char colour_alt, short steps )
 {
+    gpu_dither( DITHERON1, colour_alt);
+
     // USE RECTANGLE + TWO TRIANGLES AS FASTER THAN TWO TRIANGLES FOR LARGE AREAS
     if( steps < MAXDEPTH -1 ) {
         gpu_triangle( colour, perspectivex[ steps ], perspectivey[ steps ], perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], perspectivex[ steps ], perspectivey[ steps + 1 ] );
@@ -419,9 +424,13 @@ void left_wall( unsigned char colour, short steps )
         gpu_quadrilateral( colour, perspectivex[ steps ], perspectivey[ steps ], perspectivex[ steps + 1 ], perspectivey[ steps + 1 ],
                                 perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], perspectivex[ steps ], 480 - perspectivey[ steps ] );
     }
+
+    gpu_dither( DITHEROFF );
 }
-void right_wall( unsigned char colour, unsigned short steps )
+void right_wall( unsigned char colour, unsigned char colour_alt, unsigned short steps )
 {
+    gpu_dither( DITHERON2, colour_alt);
+
     // USE RECTANGLE + TWO TRIANGLES AS FASTER THAN TWO TRIANGLES FOR LARGE AREAS
     if( steps < MAXDEPTH -1 ) {
         gpu_triangle( colour, 640 - perspectivex[ steps ], perspectivey[ steps ], 640 - perspectivex[ steps ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
@@ -432,23 +441,25 @@ void right_wall( unsigned char colour, unsigned short steps )
         gpu_quadrilateral( colour, 640 - perspectivex[ steps ], perspectivey[ steps ], 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ],
                                 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
     }
+
+    gpu_dither( DITHEROFF );
 }
 
 void drawleft( unsigned short steps, unsigned char totheleft ) {
     // DRAW SIDE WALLS
     switch( totheleft ) {
         case 'X':
-            left_wall( YELLOW, steps );
+            left_wall( YELLOW, DKYELLOW, steps );
             break;
         case ' ':
             // GAP
             gpu_rectangle( GREY2, 0, perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
             break;
         case 'E':
-            left_wall( MAGENTA, steps );
+            left_wall( MAGENTA, DKMAGENTA, steps );
             break;
         case '#':
-            left_wall( GREY1, steps );
+            left_wall( GREY1, GREY2, steps );
             break;
         default:
             break;
@@ -459,17 +470,17 @@ void drawright( unsigned short steps, unsigned char totheright ) {
     // DRAW SIDE WALLS
     switch( totheright ) {
         case 'X':
-            right_wall( YELLOW, steps );
+            right_wall( YELLOW, DKYELLOW, steps );
             break;
         case ' ':
             // GAP
             gpu_rectangle( GREY2, 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], 640, 480 - perspectivey[ steps + 1 ] );
             break;
         case 'E':
-            right_wall( MAGENTA, steps );
+            right_wall( MAGENTA, DKMAGENTA, steps );
             break;
         case '#':
-            right_wall( GREY1, steps );
+            right_wall( GREY1, GREY2, steps );
             break;
         default:
             break;
@@ -488,6 +499,7 @@ void walk_maze( unsigned short width, unsigned short height )
         // SET CURRENT LOCATION TO VISITED
         map[currentx][currenty] = ' ';
 
+        await_vblank();
         tpu_cs();
         gpu_cs();
 
