@@ -1,5 +1,5 @@
 // STDDEF.H DEFINITIONS
- #define max(a,b) \
+#define max(a,b) \
    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
@@ -14,12 +14,12 @@
 typedef unsigned int size_t;
 
 // FOR EASE OF PORTING
-typedef unsigned char  uint8;
-typedef unsigned short uint16;
-typedef unsigned int   uint32;
-typedef signed char  int8;
-typedef signed short int16;
-typedef signed int   int32;
+typedef unsigned char   uint8;
+typedef unsigned short  uint16;
+typedef unsigned int    uint32;
+typedef signed char     int8;
+typedef signed short    int16;
+typedef signed int      int32;
 
 // STRUCTURE OF THE SPRITE UPDATE FLAG
 struct sprite_update_flag {
