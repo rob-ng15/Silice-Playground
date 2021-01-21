@@ -58,7 +58,6 @@ algorithm memmap_io (
         u_noise_out :> staticGeneratorALT
     );
 
-
     // UART tx and rx
     // UART written in Silice by https://github.com/sylefeb/Silice
     uart_out uo;
@@ -119,7 +118,7 @@ algorithm memmap_io (
     uint1   bitmap_write = uninitialized;
 
     // 640 x 480 x 7 bit { Arrggbb } colour bitmap
-    simple_dualport_bram uint7 bitmap <@video_clock,@video_clock,input!> [ 307200 ] = uninitialized;
+    simple_dualport_bram uint7 bitmap <@video_clock,@gpu_clock,input!> [ 307200 ] = uninitialized;
     bitmap bitmap_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -133,7 +132,7 @@ algorithm memmap_io (
         y_offset :> y_offset,
         bitmap <:> bitmap
     );
-    bitmapwriter pixel_writer <@video_clock> (
+    bitmapwriter pixel_writer <@gpu_clock> (
         bitmap_x_write <: bitmap_x_write,
         bitmap_y_write <: bitmap_y_write,
         bitmap_colour_write <: bitmap_colour_write,
@@ -272,7 +271,7 @@ algorithm memmap_io (
         audio_output :> audio_r
     );
 
-    gpu gpu_processor <@video_clock> (
+    gpu gpu_processor <@gpu_clock> (
         bitmap_x_write :> bitmap_x_write,
         bitmap_y_write :> bitmap_y_write,
         bitmap_colour_write :> bitmap_colour_write,

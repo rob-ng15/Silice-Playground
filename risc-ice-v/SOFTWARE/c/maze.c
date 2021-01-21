@@ -6,7 +6,7 @@
 #define MAXLEVEL 8
 
 // DRAWING VARIABLES
-#define MAXDEPTH 16
+#define MAXDEPTH 14
 
 // LEVEL - DETERMINES SIZE OF MAZE
 unsigned short level = 0;
@@ -17,10 +17,10 @@ unsigned short levelheights[] = { 8, 12, 16, 24, 30, 48, 60, 80, 120 };
 unsigned short levelgenerationsteps[] = { 1, 2, 4, 4, 8, 16, 64, 128, 512 };
 
 // TOP LEFT COORDINATES FOR THE PERSPECTIVE DRAWING
-//short perspectivex[] = { 0, 40, 80, 120, 160, 200, 240, 280, 320 };       // MAXDEPTH 8
-//short perspectivey[] = { 0, 30, 60, 90, 120, 150, 180, 210, 240 };        // MAXDEPTH 8
-short perspectivex[] = { 0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320 };
-short perspectivey[] = { 0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240 };
+short perspectivex[] = { 0, 100, 170, 218, 251, 273, 288, 298, 305, 310, 313, 315, 317, 318, 320 };
+short perspectivey[] = { 0,  75, 128, 164, 188, 205, 216, 224, 229, 232, 235, 236, 238, 239, 240 };
+//short perspectivex[] = { 0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320 };
+//short perspectivey[] = { 0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240 };
 
 // DIRECTION STEPS IN X and Y
 short directionx[] = { 0, 1, 0, -1 }, leftdirectionx[] = { -1, 0, 1, 0 }, rightdirectionx[] = { 1, 0, -1, 0 };
@@ -55,11 +55,11 @@ unsigned char ghostcolour( unsigned short ghost ) {
 
 // DRAW GHOST AT CORRECT DISTANCE
 void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned short playerdirection ) {
-    unsigned short sizechangex = ( MAXDEPTH - steps ) * 6;
-    unsigned short sizechangey = ( MAXDEPTH - steps ) * 6;
+    unsigned short sizechangex = ( MAXDEPTH - steps ) * 2;
+    unsigned short sizechangey = ( MAXDEPTH - steps ) * 2;
 
     unsigned short centrex = 320;
-    unsigned short centrey = 240 + sizechangey;
+    unsigned short centrey = 480 - perspectivey[ steps ];
     unsigned short offsetx = ( sizechangex * 2 ) / 6;
     unsigned short eyeoffsetx = ( sizechangex + offsetx ) / 2;
     unsigned short eyeoffsety = sizechangey / 2;
@@ -164,8 +164,8 @@ void move_ghost( unsigned short ghostnumber) {
 
 // DRAW A PILL
 void draw_pill( unsigned short steps ) {
-    gpu_circle( WHITE, 320, 225 + 15 * ( MAXDEPTH - steps ), 4 + 2 * ( MAXDEPTH - steps ), 1 );
-    gpu_circle( GREY2, 320, 225 + 15 * ( MAXDEPTH - steps ), 4 + 2 * ( MAXDEPTH - steps ), 0 );
+    gpu_circle( WHITE, 320, 480 - perspectivey[ steps ], ( MAXDEPTH - steps ), 1 );
+    gpu_circle( GREY2, 320, 480 - perspectivey[ steps ], ( MAXDEPTH - steps ), 0 );
 }
 
 

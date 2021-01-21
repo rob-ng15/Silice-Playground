@@ -413,6 +413,19 @@ algorithm line (
 }
 
 // CIRCLE - OUTPUT PIXELS TO DRAW AN OUTLINE CIRCLE
+circuitry updatenumerator(
+    output  new_numerator,
+    input   gpu_numerator,
+    input   gpu_active_x,
+    input   gpu_active_y
+) {
+    if( gpu_numerator > 0 ) {
+        new_numerator = gpu_numerator + 4 * (gpu_active_x - gpu_active_y) + 10;
+    } else {
+        new_numerator = gpu_numerator + 4 * gpu_active_x + 6;
+    }
+}
+
 algorithm circle (
     input   int11   x,
     input   int11   y,
@@ -473,12 +486,8 @@ algorithm circle (
                 bitmap_write = 1;
 
                 gpu_active_x = gpu_active_x + 1;
-                if( gpu_numerator > 0 ) {
-                    gpu_numerator = gpu_numerator + 4 * (gpu_active_x - gpu_active_y) + 10;
-                    gpu_active_y = gpu_active_y - 1;
-                } else {
-                    gpu_numerator = gpu_numerator + 4 * gpu_active_x + 6;
-                }
+                gpu_active_y = ( gpu_numerator > 0 ) ? gpu_active_y - 1 : gpu_active_y;
+                ( gpu_numerator ) = updatenumerator( gpu_numerator, gpu_active_x, gpu_active_y );
             }
             active = 0;
         }
@@ -554,14 +563,9 @@ algorithm disc (
                     gpu_count = gpu_count - 1;
                 }
                 gpu_active_x = gpu_active_x + 1;
-                if( gpu_numerator > 0 ) {
-                    gpu_numerator = gpu_numerator + 4 * (gpu_active_x - gpu_active_y) + 10;
-                    gpu_active_y = gpu_active_y - 1;
-                    gpu_count = gpu_active_y - 1;
-                } else {
-                    gpu_numerator = gpu_numerator + 4 * gpu_active_x + 6;
-                    gpu_count = gpu_active_y;
-                }
+                gpu_active_y = ( gpu_numerator > 0 ) ? gpu_active_y - 1 : gpu_active_y;
+                gpu_count = ( gpu_numerator > 0 ) ? gpu_active_y - 1 : gpu_active_y;
+                ( gpu_numerator ) = updatenumerator( gpu_numerator, gpu_active_x, gpu_active_y );
             }
             bitmap_x_write = gpu_xc;
             bitmap_y_write = gpu_yc;
@@ -681,7 +685,6 @@ algorithm triangle (
                 ( inTriangle ) = insideTriangle( gpu_sx, gpu_sy, gpu_active_x, gpu_active_y, gpu_x1, gpu_y1, gpu_x2, gpu_y2 );
                 beenInTriangle = inTriangle ? 1 : beenInTriangle;
                 bitmap_write = inTriangle;
-                ++:
                 if( beenInTriangle && ~inTriangle ) {
                     // Exited the triangle, move to the next line
                     beenInTriangle = 0;
