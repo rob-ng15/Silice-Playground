@@ -457,7 +457,6 @@ algorithm circle (
             ( gpu_xc, gpu_yc ) = copycoordinates( x, y );
             ++:
             gpu_numerator = 3 - ( 2 * gpu_active_y );
-            ++:
             while( gpu_active_y >= gpu_active_x ) {
                 bitmap_x_write = gpu_xc + gpu_active_x;
                 bitmap_y_write = gpu_yc + gpu_active_y;
@@ -528,10 +527,9 @@ algorithm disc (
             ( gpu_xc, gpu_yc ) = copycoordinates( x, y );
             ++:
             gpu_active_y = ( gpu_active_y < 4 ) ? 4 : gpu_active_y;
+            gpu_count = ( gpu_active_y < 4 ) ? 4 : gpu_active_y;
             ++:
-            gpu_count = gpu_active_y;
             gpu_numerator = 3 - ( 2 * gpu_active_y );
-            ++:
             while( gpu_active_y >= gpu_active_x ) {
                 while( gpu_count != 0 ) {
                     bitmap_x_write = gpu_xc + gpu_active_x;
@@ -626,7 +624,7 @@ algorithm triangle (
     int11   gpu_sy = uninitialized;
 
     // WORK DIRECTION ( == 0 left, == 1 right )
-    uint1   gpu_dx = uninitialized;
+    uint1   gpu_dx = 1;
 
     // Filled triangle calculations
     // Is the point sx,sy inside the triangle given by active_x,active_y x1,y1 x2,y2?
@@ -644,6 +642,9 @@ algorithm triangle (
     while(1) {
         if( start ) {
             active = 1;
+            gpu_dx = 1;
+            beenInTriangle = 0;
+
             // Setup drawing a filled triangle x,y param0, param1, param2, param3
             ( gpu_active_x, gpu_active_y ) = copycoordinates( x, y);
             ( gpu_x1, gpu_y1 ) = copycoordinates( param0, param1 );
@@ -677,9 +678,6 @@ algorithm triangle (
             ++:
             // Start at the top left
             ( gpu_sx, gpu_sy ) = copycoordinates( gpu_min_x, gpu_min_y );
-            gpu_dx = 1;
-            beenInTriangle = 0;
-            ++:
             while( gpu_sy <= gpu_max_y ) {
                 // Edge calculations to determine if inside the triangle - converted to DSP blocks
                 ( inTriangle ) = insideTriangle( gpu_sx, gpu_sy, gpu_active_x, gpu_active_y, gpu_x1, gpu_y1, gpu_x2, gpu_y2 );
