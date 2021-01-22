@@ -541,3 +541,51 @@ circuitry aluR (
         }
     }
 }
+
+// ATOMIC A EXTENSION ALU
+circuitry aluA (
+    input   function7,
+    input   memoryinput,
+    input   sourceReg2,
+
+    output  result
+) {
+    switch( function7[2,5] ) {
+        case 5b00000: {
+            // AMOADD
+            result = memoryinput + sourceReg2;
+        }
+        case 5b00001: {
+            // AMOSWAP
+            result = sourceReg2;
+        }
+        case 5b00100: {
+            // AMOXOR
+            result = memoryinput ^ sourceReg2;
+        }
+        case 5b01000: {
+            // AMOOR
+            result = memoryinput | sourceReg2;
+        }
+        case 5b01100: {
+            // AMOAND
+            result = memoryinput & sourceReg2;
+        }
+        case 5b10000: {
+            // AMOMIN
+            result = __signed( memoryinput ) < __signed( sourceReg2 ) ? memoryinput : sourceReg2;
+        }
+        case 5b10100: {
+            // AMOMAX
+            result = __signed( memoryinput ) > __signed( sourceReg2 ) ? memoryinput : sourceReg2;
+        }
+        case 5b11000: {
+            // AMOMINU
+            result = __unsigned( memoryinput ) < __unsigned( sourceReg2 ) ? memoryinput : sourceReg2;
+        }
+        case 5b11100: {
+            // AMOMAXU
+            result = __unsigned( memoryinput ) > __unsigned( sourceReg2 ) ? memoryinput : sourceReg2;
+        }
+    }
+}

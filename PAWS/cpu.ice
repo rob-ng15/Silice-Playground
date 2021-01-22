@@ -27,7 +27,7 @@ algorithm PAWSCPU (
     uint32  pcPLUS2 = uninitialized;
     uint32  nextPC = uninitialized;
     uint1   compressed = uninitialized;
-    uint1   floatingpoint = uninitialized;
+    uint4   floatingpoint = uninitialized;
     uint1   takeBranch = uninitialized;
     uint1   incPC = uninitialized;
     uint32  instruction = uninitialized;
@@ -37,6 +37,7 @@ algorithm PAWSCPU (
 
     // RISC-V REGISTER WRITER
     int32   result = uninitialized;
+    int32   Aresult = uninitialized;
     uint1   writeRegister = uninitialized;
 
     // RISC-V REGISTER READER
@@ -83,7 +84,10 @@ algorithm PAWSCPU (
         writeRegister = 0;
         takeBranch = 0;
         incPC = 1;
-        floatingpoint = 0;
+
+        // FLOATING POINT REGISTER FLAG
+        // { rs1 is float, rs2 is float, rs3 is float, rd is float }
+        floatingpoint = 4b0000;
 
         // FETCH + EXPAND COMPRESSED INSTRUCTIONS
         address = pc;
@@ -199,6 +203,78 @@ algorithm PAWSCPU (
                 // CSR
                 writeRegister = 1;
                 result = CSR.result;
+            }
+            case 5b01011: {
+                // ATOMIC OPERATIONS
+                switch( function7[2,5] ) {
+                    case 5b00010: {
+                        // LR.W
+                        writeRegister = 1;
+                        address = sourceReg1;
+                        readmemory = 1;
+                        while( memorybusy ) {}
+                        lowWord = readdata;
+                        address = sourceReg1 + 2;
+                        readmemory = 1;
+                        while( memorybusy ) {}
+                        ( result ) = halfhalfword( readdata, lowWord );
+                    }
+                    case 5b00011: {
+                        // SC.W
+                        writeRegister = 1;
+                        result = 0;
+
+                        address = sourceReg1;
+                        writedata = sourceReg2[0,16];
+                        writememory = 1;
+                        while( memorybusy ) {}
+                        address = sourceReg1 + 2;
+                        writedata = sourceReg2[16,16];
+                        writememory = 1;
+                        while( memorybusy ) {}
+                    }
+                    default: {
+                        // ATOMIC LOAD - MODIFY - STORE
+                        writeRegister = 1;
+                        Icacheflag = 0;
+
+                        // LOAD 32 bit
+                        address = sourceReg1;
+                        readmemory = 1;
+                        while( memorybusy ) {}
+                        lowWord = readdata;
+                        address = sourceReg1 + 2;
+                        readmemory = 1;
+                        while( memorybusy ) {}
+                        ( result ) = halfhalfword( readdata, lowWord );
+
+                        ( Aresult ) = aluA( function7, result, sourceReg2 );
+
+                        // STORE 32 bit
+                        address = sourceReg1;
+                        writedata = Aresult[0,16];
+                        writememory = 1;
+                        while( memorybusy ) {}
+                        address = sourceReg1 + 2;
+                        writedata = Aresult[16,16];
+                        writememory = 1;
+                        while( memorybusy ) {}
+                    }
+                }
+            }
+
+            // SINGLE PRECISION FLOATING POINT INSTRUCTIONS
+            case 5b00001: {
+                // FLW
+            }
+            case 5b01001: {
+                // FSW
+            }
+            case 5b10100: {
+                // SINGLE PRECISION FLOATING POINT ALU OPERATIONS
+            }
+            default: {
+                // SINGLE PRECISION FMADD FMSUB FNMSUB FNMADD
             }
         }
 

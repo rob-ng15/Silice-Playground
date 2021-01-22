@@ -1,5 +1,4 @@
-# PAWS a Risc-V RVIMCB CPU - Programming Guide
-
+# PAWS a Risc-V RV32IMCB CPU - Programming Guide
 
 ## COMPILING C CODE
 

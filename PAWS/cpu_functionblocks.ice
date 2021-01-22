@@ -11,11 +11,11 @@ circuitry registersWRITE (
     // WRITE TO REGISTERS
     // NEVER write to registers[0]
     if( writeRegister && ( rd != 0 ) ) {
-        registers_1.addr1 = rd + ( floatingpoint ? 32 : 0 );
+        registers_1.addr1 = rd + ( floatingpoint[3,1] ? 32 : 0 );
         registers_1.wdata1 = result;
-        registers_2.addr1 = rd + ( floatingpoint ? 32 : 0 );
+        registers_2.addr1 = rd + ( floatingpoint[2,1] ? 32 : 0 );
         registers_2.wdata1 = result;
-        registers_3.addr1 = rd + ( floatingpoint ? 32 : 0 );
+        registers_3.addr1 = rd + ( floatingpoint[1,1] ? 32 : 0 );
         registers_3.wdata1 = result;
     }
 }
@@ -33,9 +33,9 @@ circuitry registersREAD(
     output  sourceReg2,
     output  sourceReg3
 ) {
-    registers_1.addr0 = rs1 + ( floatingpoint ? 32 : 0 );
-    registers_2.addr0 = rs2 + ( floatingpoint ? 32 : 0 );
-    registers_3.addr0 = rs2 + ( floatingpoint ? 32 : 0 );
+    registers_1.addr0 = rs1 + ( floatingpoint[0,1] ? 32 : 0 );
+    registers_2.addr0 = rs2 + ( floatingpoint[0,1] ? 32 : 0 );
+    registers_3.addr0 = rs2 + ( floatingpoint[0,1] ? 32 : 0 );
     ++:
     sourceReg1 = registers_1.rdata0;
     sourceReg2 = registers_2.rdata0;
