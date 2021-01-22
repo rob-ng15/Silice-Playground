@@ -211,7 +211,7 @@ void main( void ) {
     gpu_character_blit( WHITE, 136, 4, 'A', 2);
     gpu_character_blit( WHITE, 168, 4, 'W', 2);
     gpu_character_blit( WHITE, 200, 4, 'S', 2);
-    tpu_set( 13, 2, TRANSPARENT, WHITE ); tpu_outputstring( "RISC-V RV32IMC" );
+    tpu_set( 13, 2, TRANSPARENT, WHITE ); tpu_outputstring( "RISC-V RV32IMACB CPU" );
 
     for( unsigned short i = 0; i < 64; i++ )
         gpu_rectangle( i, i * 10, 447, 9 + i * 10, 463 );
@@ -285,6 +285,14 @@ void main( void ) {
     tpu_outputstringcentre( 7, TRANSPARENT, WHITE, "FILE LOADED" );
     tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "PREPARING TO LAUNCH" );
     sleep( 1000 );
+
+    // RESET THE DISPLAY
+    terminal_showhide( 0 );
+    terminal_reset();
+    gpu_cs();
+    tpu_cs();
+    tilemap_scrollwrapclear( 9 );
+    set_background( BLACK, BLACK, BKG_SOLID );
 
     // CALL SDRAM LOADED PROGRAM
     ((void(*)(void))0x10000000)();

@@ -225,5 +225,4 @@ extern void tpu_outputnumber_int( unsigned int );
 #define ORANGE 0x38
 
 #define DITHEROFF 0, BLACK
-#define DITHERON1 1
-#define DITHERON2 2
+#define DITHERON 1

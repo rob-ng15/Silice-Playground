@@ -14,7 +14,7 @@ algorithm gpu(
     input   int11   gpu_param2,
     input   int11   gpu_param3,
     input   uint4   gpu_write,
-    input   uint2   gpu_dithermode,
+    input   uint1   gpu_dithermode,
 
     // For setting blit1 tile bitmaps
     input   uint5   blit1_writer_tile,
@@ -148,8 +148,7 @@ algorithm gpu(
 
     // CONTROLS FOR BITMAP PIXEL WRITER
     bitmap_write := 0;
-    bitmap_colour_write := ( gpu_active_dithermode == 0 ) ? gpu_active_colour : ( ( gpu_active_dithermode == 1 ) ? ( ( bitmap_x_write[0,1] == bitmap_y_write[0,1] ) ? gpu_active_colour : gpu_active_colour_alt ) :
-                                                                        ( ( bitmap_x_write[0,1] != bitmap_y_write[0,1] ) ? gpu_active_colour : gpu_active_colour_alt ) );
+    bitmap_colour_write := ( gpu_active_dithermode == 0 ) ? gpu_active_colour : ( ( bitmap_x_write[0,1] == bitmap_y_write[0,1] ) ? gpu_active_colour : gpu_active_colour_alt );
 
     // CONTROLS FOR GPU SUBUNITS
     GPUrectangle.start := 0;

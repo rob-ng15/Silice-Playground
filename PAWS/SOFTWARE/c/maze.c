@@ -19,8 +19,12 @@ unsigned short levelgenerationsteps[] = { 1, 2, 4, 4, 8, 16, 64, 128, 512 };
 // TOP LEFT COORDINATES FOR THE PERSPECTIVE DRAWING
 short perspectivex[] = { 0, 100, 170, 218, 251, 273, 288, 298, 305, 310, 313, 315, 317, 318, 320 };
 short perspectivey[] = { 0,  75, 128, 164, 188, 205, 216, 224, 229, 232, 235, 236, 238, 239, 240 };
-//short perspectivex[] = { 0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320 };
-//short perspectivey[] = { 0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240 };
+
+// GHOST SIZE FOR PERSPECTIVE DRAWING
+unsigned short ghostsize[] = { 90, 63, 45, 33, 24, 15, 12, 9, 6, 3, 3, 2, 2, 1, 1 };
+
+// PILL SIZE FOR PERSPECTIVE DRAWING
+unsigned short pillsize[] = { 33, 30, 27, 24, 21, 18, 15, 12, 9, 6, 4, 3, 2, 1, 1 };
 
 // DIRECTION STEPS IN X and Y
 short directionx[] = { 0, 1, 0, -1 }, leftdirectionx[] = { -1, 0, 1, 0 }, rightdirectionx[] = { 1, 0, -1, 0 };
@@ -55,38 +59,43 @@ unsigned char ghostcolour( unsigned short ghost ) {
 
 // DRAW GHOST AT CORRECT DISTANCE
 void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned short playerdirection ) {
-    unsigned short sizechangex = ( MAXDEPTH - steps ) * 2;
-    unsigned short sizechangey = ( MAXDEPTH - steps ) * 2;
+    unsigned short sizechange = ghostsize[ steps ];
 
     unsigned short centrex = 320;
     unsigned short centrey = 480 - perspectivey[ steps ];
-    unsigned short offsetx = ( sizechangex * 2 ) / 6;
-    unsigned short eyeoffsetx = ( sizechangex + offsetx ) / 2;
-    unsigned short eyeoffsety = sizechangey / 2;
+    unsigned short offsetx = ( sizechange * 2 ) / 6;
+    unsigned short eyeoffsetx = ( sizechange + offsetx ) / 2;
+    unsigned short eyeoffsety = sizechange / 2;
     unsigned char colour = ghostcolour( ghostnumber );
 
     // SOLID
     gpu_dither( DITHEROFF );
 
     // MAIN BODY
-    gpu_rectangle( colour, centrex - sizechangex, centrey - sizechangey, centrex + sizechangex, centrey + sizechangey );
+    gpu_rectangle( colour, centrex - sizechange, centrey - sizechange, centrex + sizechange, centrey + sizechange );
 
     // HEAD
-    gpu_circle( colour, centrex, centrey - sizechangey, sizechangex, 1 );
+    gpu_circle( colour, centrex, centrey - sizechange, sizechange, 1 );
 
     // FRILLS
-    if( steps < ( MAXDEPTH - 1 ) ) {
-        gpu_circle( colour, centrex - ( offsetx * 2 ), centrey + sizechangey, offsetx, 1 );
-        gpu_circle( colour, centrex, centrey + sizechangey, offsetx, 1 );
-        gpu_circle( colour, centrex + ( offsetx * 2 ), centrey + sizechangey, offsetx, 1 );
-    } else {
-        gpu_pixel( colour, centrex - offsetx, centrey + sizechangey + 1 );
-        gpu_pixel( colour, centrex, centrey + sizechangey + 1 );
-        gpu_pixel( colour, centrex + offsetx, centrey + sizechangey + 1 );
+    switch( sizechange ) {
+        case 1:
+        case 2:
+        case 3:
+            gpu_pixel( colour, centrex - offsetx, centrey + sizechange + 1 );
+            gpu_pixel( colour, centrex, centrey + sizechange + 1 );
+            gpu_pixel( colour, centrex + offsetx, centrey + sizechange + 1 );
+            break;
+
+        default:
+            gpu_circle( colour, centrex - ( offsetx * 2 ), centrey + sizechange, offsetx, 1 );
+            gpu_circle( colour, centrex, centrey + sizechange, offsetx, 1 );
+            gpu_circle( colour, centrex + ( offsetx * 2 ), centrey + sizechange, offsetx, 1 );
+            break;
     }
 
     // EYE WHITES
-    if( steps < ( MAXDEPTH - 1 ) ) {
+    if( sizechange > 6 ) {
         switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
             case 0:
                 // SAME DIRECTION, NO EYES
@@ -108,7 +117,7 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
     }
 
     // EYE PUPILS
-    if( steps < ( MAXDEPTH - 2 ) ) {
+    if( sizechange > 9 ) {
         switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
             case 0:
                 // SAME DIRECTION, NO EYES
@@ -164,8 +173,22 @@ void move_ghost( unsigned short ghostnumber) {
 
 // DRAW A PILL
 void draw_pill( unsigned short steps ) {
-    gpu_circle( WHITE, 320, 480 - perspectivey[ steps ], ( MAXDEPTH - steps ), 1 );
-    gpu_circle( GREY2, 320, 480 - perspectivey[ steps ], ( MAXDEPTH - steps ), 0 );
+    switch( pillsize[ steps ] ) {
+        case 1:
+            gpu_pixel( WHITE, 320, 480 - perspectivey[ steps ] );
+            break;
+        case 2:
+            gpu_rectangle( WHITE, 319, 480 - perspectivey[ steps ] - 1, 320, 480 - perspectivey[ steps ] );
+            break;
+        case 3:
+            gpu_rectangle( WHITE, 319, 479 - perspectivey[ steps ], 321, 481 - perspectivey[ steps ] );
+            break;
+
+        default:
+            gpu_circle( WHITE, 320, 480 - perspectivey[ steps ], pillsize[ steps ], 1 );
+            gpu_circle( GREY2, 320, 480 - perspectivey[ steps ], pillsize[ steps ], 0 );
+            break;
+    }
 }
 
 
@@ -412,7 +435,7 @@ unsigned char whatisright( unsigned short currentx, unsigned short currenty, uns
 // DRAW LEFT or RIGHT WALLS
 void left_wall( unsigned char colour, unsigned char colour_alt, short steps )
 {
-    gpu_dither( DITHERON1, colour_alt);
+    gpu_dither( DITHERON, colour_alt);
 
     // USE RECTANGLE + TWO TRIANGLES AS FASTER THAN TWO TRIANGLES FOR LARGE AREAS
     if( steps < MAXDEPTH -1 ) {
@@ -429,7 +452,7 @@ void left_wall( unsigned char colour, unsigned char colour_alt, short steps )
 }
 void right_wall( unsigned char colour, unsigned char colour_alt, unsigned short steps )
 {
-    gpu_dither( DITHERON2, colour_alt);
+    gpu_dither( DITHERON, colour_alt);
 
     // USE RECTANGLE + TWO TRIANGLES AS FASTER THAN TWO TRIANGLES FOR LARGE AREAS
     if( steps < MAXDEPTH -1 ) {
