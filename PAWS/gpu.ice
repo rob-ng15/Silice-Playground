@@ -661,20 +661,19 @@ algorithm triangle (
             ( gpu_min_y ) = croptop( gpu_min_y );
             ( gpu_max_y ) = cropbottom( gpu_max_y );
             ++:
-            // Find the point closest to the top of the screen ( put into gpu_active_x and gpu_active_y )
+            // Put points in order so that ( gpu_active_x, gpu_active_y ) is at top, then ( gpu_x1, gpu_y1 ) and ( gpu_x2, gpu_y2 ) are clockwise from there
             if( gpu_y1 < gpu_active_y ) {
                 ( gpu_active_x, gpu_active_y, gpu_x1, gpu_y1 ) = swapcoordinates( gpu_active_x, gpu_active_y, gpu_x1, gpu_y1 );
+                ++:
             }
-            ++:
             if( gpu_y2 < gpu_active_y ) {
                 ( gpu_active_x, gpu_active_y, gpu_x2, gpu_y2 ) = swapcoordinates( gpu_active_x, gpu_active_y, gpu_x2, gpu_y2 );
+                ++:
             }
-            ++:
-            // Point order is top of screen then down to the right
             if( gpu_x1 < gpu_x2 ) {
                 ( gpu_x1, gpu_y1, gpu_x2, gpu_y2 ) = swapcoordinates( gpu_x1, gpu_y1, gpu_x2, gpu_y2 );
+                ++:
             }
-            ++:
             // Start at the top left
             ( gpu_sx, gpu_sy ) = copycoordinates( gpu_min_x, gpu_min_y );
             while( gpu_sy <= gpu_max_y ) {

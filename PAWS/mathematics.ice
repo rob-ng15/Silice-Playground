@@ -78,13 +78,26 @@ circuitry LSHIFT(
     input   type,
     output  result
 ) {
-    switch( type ) {
-        case 0: { result = __unsigned(sourceReg1) << shiftcount[0,5]; }
-        case 1: { result = ~( ~sourceReg1 << shiftcount[0,5] ); }
-        case 3: { result = ( sourceReg1 << shiftcount[0,5] ) | ( sourceReg1 >> ( ( 32 - shiftcount[0,5] ) & 31 ) ); }
+    switch( shiftcount[0,5] ) {
+        case 0: { result = sourceReg1; }
+        $$for i = 1, 31 do
+            $$ remain = 32 - i
+            case $i$: { result = { sourceReg1[ 0, $remain$ ], ( type == 3 ) ? sourceReg1[ $remain$, $i$ ] : {$i${ type == 0 ? 1b0 : 1b1 }} }; }
+        $$end
     }
-
 }
+//circuitry LSHIFT(
+//    input   sourceReg1,
+//    input   shiftcount,
+//    input   type,
+//    output  result
+//) {
+//    switch( type ) {
+//        case 0: { result = __unsigned(sourceReg1) << shiftcount[0,5]; }
+//        case 1: { result = ~( ~sourceReg1 << shiftcount[0,5] ); }
+//        case 3: { result = ( sourceReg1 << shiftcount[0,5] ) | ( sourceReg1 >> ( ( 32 - shiftcount[0,5] ) & 31 ) ); }
+//    }
+//}
 
 // type == 0 SRL == 1 SRO == 2 SRA == 3 ROR
 circuitry RSHIFT(
@@ -93,14 +106,27 @@ circuitry RSHIFT(
     input   type,
     output  result
 ) {
-    switch( type ) {
-        case 0: { result = __unsigned(sourceReg1) >> shiftcount[0,5]; }
-        case 1: { result = ~( ~sourceReg1 >> shiftcount[0,5] ); }
-        case 2: { result = __signed(sourceReg1) >>> shiftcount[0,5]; }
-        case 3: { result = ( sourceReg1 >> shiftcount[0,5] ) | ( sourceReg1 << ( ( 32 - shiftcount[0,5] ) & 31 ) ); }
+    switch( shiftcount[0,5] ) {
+        case 0: { result = sourceReg1; }
+        $$for i = 1, 31 do
+            $$ remain = 32 - i
+            case $i$: { result = { ( type == 3 ) ? sourceReg1[ $remain$, $i$ ] : {$i${ type == 2 ? sourceReg1[31,1] : type == 0 ? 1b0 : 1b1 }}, sourceReg1[ $i$, $remain$ ] }; }
+        $$end
     }
-
 }
+//circuitry RSHIFT(
+//    input   sourceReg1,
+//    input   shiftcount,
+//    input   type,
+//    output  result
+//) {
+//    switch( type ) {
+//        case 0: { result = __unsigned(sourceReg1) >> shiftcount[0,5]; }
+//        case 1: { result = ~( ~sourceReg1 >> shiftcount[0,5] ); }
+//        case 2: { result = __signed(sourceReg1) >>> shiftcount[0,5]; }
+//        case 3: { result = ( sourceReg1 >> shiftcount[0,5] ) | ( sourceReg1 << ( ( 32 - shiftcount[0,5] ) & 31 ) ); }
+//    }
+//}
 
 circuitry SBSET(
     input   sourceReg1,
