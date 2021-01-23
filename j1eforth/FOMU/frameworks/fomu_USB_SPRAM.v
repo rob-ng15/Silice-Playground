@@ -21,7 +21,7 @@ $$FOMU=1
 $$HARDWARE=1
 
 module top(
-  // 48MHz Clock Input
+  // 12MHz Clock Input
   input   clki,
   // LED outputs
   output rgb0,          // blue
@@ -44,24 +44,26 @@ module top(
 );
 
     // Connect to system clock (with buffering)
-    wire clk, clk_48mhz;
+    wire clk;
     SB_GB clk_gb (
         .USER_SIGNAL_TO_GLOBAL_BUFFER(clki),
         .GLOBAL_BUFFER_OUTPUT(clk)
     );
-    assign clk_48mhz = clk;
+
+    wire clk_usb, locked;
+    pll usbpll( .clock_in( clk ), .clock_usb( clk_usb ), .locked( locked ) );
 
     // Create 1hz (1 second counter)
-    reg [31:0] counter48mhz;
+    reg [31:0] counter12mhz;
     reg [15:0] counter1hz;
-    always @(posedge clk_48mhz) begin
-        if( counter48mhz == 48000000 ) begin
+    always @(posedge clk) begin
+        if( counter12mhz == 12000000 ) begin
             counter1hz <= counter1hz + 1;
-            counter48mhz <= 0;
+            counter12mhz <= 0;
         end else begin
-            counter48mhz <= counter48mhz + 1;
+            counter12mhz <= counter12mhz + 1;
         end
-    end 
+    end
 
     // RGB LED Driver
     wire rgbB, rgbG, rgbR;
@@ -109,7 +111,7 @@ module top(
         .MASKWREN(4'b1111),
         .WREN(sram_wren & (sram_addr[15:14]==2'b00)),
         .CHIPSELECT(sram_addr[15:14]==2'b00),
-        .CLOCK(clk_48mhz),
+        .CLOCK(clk),
         .STANDBY(1'b0),
         .SLEEP(1'b0),
         .POWEROFF(1'b1),
@@ -121,7 +123,7 @@ module top(
         .MASKWREN(4'b1111),
         .WREN(sram_wren & (sram_addr[15:14]==2'b01)),
         .CHIPSELECT(sram_addr[15:14]==2'b01),
-        .CLOCK(clk_48mhz),
+        .CLOCK(clk),
         .STANDBY(1'b0),
         .SLEEP(1'b0),
         .POWEROFF(1'b1),
@@ -133,7 +135,7 @@ module top(
         .MASKWREN(4'b1111),
         .WREN(sram_wren & (sram_addr[15:14]==2'b10)),
         .CHIPSELECT(sram_addr[15:14]==2'b10),
-        .CLOCK(clk_48mhz),
+        .CLOCK(clk),
         .STANDBY(1'b0),
         .SLEEP(1'b0),
         .POWEROFF(1'b1),
@@ -145,7 +147,7 @@ module top(
         .MASKWREN(4'b1111),
         .WREN(sram_wren & (sram_addr[15:14]==2'b11)),
         .CHIPSELECT(sram_addr[15:14]==2'b11),
-        .CLOCK(clk_48mhz),
+        .CLOCK(clk),
         .STANDBY(1'b0),
         .SLEEP(1'b0),
         .POWEROFF(1'b1),
@@ -176,12 +178,12 @@ module top(
     wire run_main;
     assign run_main = 1'b1;
 
-    
+
     // USB_ACM UART CODE
     // Generate reset signal
     reg [5:0] reset_cnt = 0;
     wire reset = ~reset_cnt[5];
-    always @(posedge clk_48mhz)
+    always @(posedge clk_usb)
             reset_cnt <= reset_cnt + reset;
 
     // uart pipeline in
@@ -194,7 +196,7 @@ module top(
 
     // usb uart - this instanciates the entire USB device.
     usb_uart uart (
-        .clk_48mhz  (clk_48mhz),
+        .clk_48mhz  (clk_usb),
         .reset      (reset),
 
         // pins
@@ -213,10 +215,10 @@ module top(
 
     // USB Host Detect Pull Up
     assign usb_dp_pu = 1'b1;
-    
-    
+
+
     M_main __main(
-    .clock        (clk_48mhz),
+    .clock        (clk),
     .reset        (RST_q[0]),
     .out_rgbLED   ({rgbR, rgbG, rgbB}),
     .in_buttons   ({user_4, user_3, user_2, user_1}),
@@ -227,7 +229,7 @@ module top(
     .out_sram_data_write (sram_data_in),
     .in_sram_data_read   (sram_data_read),
     .out_sram_readwrite  (sram_wren),
-   
+
     // uart pipeline in
     .out_uart_in_data( uart_in_data ),
     .out_uart_in_valid( uart_in_valid ),
@@ -236,7 +238,7 @@ module top(
     .in_uart_out_data( uart_out_data ),
     .in_uart_out_valid( uart_out_valid ),
     .out_uart_out_ready( uart_out_ready  ),
-    
+
     .in_timer1hz ( counter1hz )
 );
 

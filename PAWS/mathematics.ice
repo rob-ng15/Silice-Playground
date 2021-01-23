@@ -71,63 +71,101 @@ circuitry multiplication(
 }
 
 // BIT MANIPULATION CIRCUITS
-// type == 0 SLL == 1 SLO == 3 ROL
-circuitry LSHIFT(
+
+// BARREL SHIFTERS / ROTATORS
+circuitry SLL(
     input   sourceReg1,
     input   shiftcount,
-    input   type,
     output  result
 ) {
     switch( shiftcount[0,5] ) {
         case 0: { result = sourceReg1; }
         $$for i = 1, 31 do
             $$ remain = 32 - i
-            case $i$: { result = { sourceReg1[ 0, $remain$ ], ( type == 3 ) ? sourceReg1[ $remain$, $i$ ] : {$i${ type == 0 ? 1b0 : 1b1 }} }; }
+            case $i$: { result = { sourceReg1[ 0, $remain$ ], {$i${ 1b0 }} }; }
         $$end
     }
 }
-//circuitry LSHIFT(
-//    input   sourceReg1,
-//    input   shiftcount,
-//    input   type,
-//    output  result
-//) {
-//    switch( type ) {
-//        case 0: { result = __unsigned(sourceReg1) << shiftcount[0,5]; }
-//        case 1: { result = ~( ~sourceReg1 << shiftcount[0,5] ); }
-//        case 3: { result = ( sourceReg1 << shiftcount[0,5] ) | ( sourceReg1 >> ( ( 32 - shiftcount[0,5] ) & 31 ) ); }
-//    }
-//}
-
-// type == 0 SRL == 1 SRO == 2 SRA == 3 ROR
-circuitry RSHIFT(
+circuitry SLO(
     input   sourceReg1,
     input   shiftcount,
-    input   type,
     output  result
 ) {
     switch( shiftcount[0,5] ) {
         case 0: { result = sourceReg1; }
         $$for i = 1, 31 do
             $$ remain = 32 - i
-            case $i$: { result = { ( type == 3 ) ? sourceReg1[ $remain$, $i$ ] : {$i${ type == 2 ? sourceReg1[31,1] : type == 0 ? 1b0 : 1b1 }}, sourceReg1[ $i$, $remain$ ] }; }
+            case $i$: { result = { sourceReg1[ 0, $remain$ ], {$i${ 1b1 }} }; }
         $$end
     }
 }
-//circuitry RSHIFT(
-//    input   sourceReg1,
-//    input   shiftcount,
-//    input   type,
-//    output  result
-//) {
-//    switch( type ) {
-//        case 0: { result = __unsigned(sourceReg1) >> shiftcount[0,5]; }
-//        case 1: { result = ~( ~sourceReg1 >> shiftcount[0,5] ); }
-//        case 2: { result = __signed(sourceReg1) >>> shiftcount[0,5]; }
-//        case 3: { result = ( sourceReg1 >> shiftcount[0,5] ) | ( sourceReg1 << ( ( 32 - shiftcount[0,5] ) & 31 ) ); }
-//    }
-//}
+circuitry ROL(
+    input   sourceReg1,
+    input   shiftcount,
+    output  result
+) {
+    switch( shiftcount[0,5] ) {
+        case 0: { result = sourceReg1; }
+        $$for i = 1, 31 do
+            $$ remain = 32 - i
+            case $i$: { result = { sourceReg1[ 0, $remain$ ], sourceReg1[ $remain$, $i$ ] }; }
+        $$end
+    }
+}
+circuitry SRL(
+    input   sourceReg1,
+    input   shiftcount,
+    output  result
+) {
+    switch( shiftcount[0,5] ) {
+        case 0: { result = sourceReg1; }
+        $$for i = 1, 31 do
+            $$ remain = 32 - i
+            case $i$: { result = { {$i${ 1b0 }}, sourceReg1[ $i$, $remain$ ] }; }
+        $$end
+    }
+}
+circuitry SRA(
+    input   sourceReg1,
+    input   shiftcount,
+    output  result
+) {
+    switch( shiftcount[0,5] ) {
+        case 0: { result = sourceReg1; }
+        $$for i = 1, 31 do
+            $$ remain = 32 - i
+            case $i$: { result = { {$i${ sourceReg1[31,1] }}, sourceReg1[ $i$, $remain$ ] }; }
+        $$end
+    }
+}
+circuitry SRO(
+    input   sourceReg1,
+    input   shiftcount,
+    output  result
+) {
+    switch( shiftcount[0,5] ) {
+        case 0: { result = sourceReg1; }
+        $$for i = 1, 31 do
+            $$ remain = 32 - i
+            case $i$: { result = { {$i${ 1b1 }}, sourceReg1[ $i$, $remain$ ] }; }
+        $$end
+    }
+}
+circuitry ROR(
+    input   sourceReg1,
+    input   shiftcount,
+    output  result
+) {
+    switch( shiftcount[0,5] ) {
+        case 0: { result = sourceReg1; }
+        $$for i = 1, 31 do
+            $$ remain = 32 - i
+            case $i$: { result = { sourceReg1[ $remain$, $i$ ], sourceReg1[ $i$, $remain$ ] }; }
+        $$end
+    }
+}
 
+// BIT SET CLR INV EXTRACT
 circuitry SBSET(
     input   sourceReg1,
     input   shiftcount,
@@ -135,7 +173,6 @@ circuitry SBSET(
 ) {
     result = sourceReg1 | ( 1 << shiftcount );
 }
-
 circuitry SBCLR(
     input   sourceReg1,
     input   shiftcount,
@@ -143,7 +180,6 @@ circuitry SBCLR(
 ) {
     result = sourceReg1 & ~( 1 << shiftcount );
 }
-
 circuitry SBINV(
     input   sourceReg1,
     input   shiftcount,
@@ -151,7 +187,6 @@ circuitry SBINV(
 ) {
     result = sourceReg1 ^ ( 1 << shiftcount );
 }
-
 circuitry SBEXT(
     input   sourceReg1,
     input   shiftcount,
@@ -160,26 +195,35 @@ circuitry SBEXT(
     result = sourceReg1[shiftcount,1];
 }
 
-// type == 0 GREV == 1 GORC
-circuitry GREVGORC(
+// GENERAL REVERSE / GENERAL OR CONDITIONAL
+circuitry GREV(
     input   sourceReg1,
     input   shiftcount,
-    input   type,
     output  result
 ) {
     result = sourceReg1;
     ++:
-    if( shiftcount[0,1] ) { result = ( type == 1 ) ? result : 0 | ( ( result & 32h55555555 ) << 1 ) | ( ( result & 32haaaaaaaa ) >> 1 ); }
+    if( shiftcount[0,1] ) { result = ( ( result & 32h55555555 ) << 1 ) | ( ( result & 32haaaaaaaa ) >> 1 ); ++: }
+    if( shiftcount[1,1] ) { result = ( ( result & 32h33333333 ) << 2 ) | ( ( result & 32hcccccccc ) >> 2 ); ++: }
+    if( shiftcount[2,1] ) { result = ( ( result & 32h0f0f0f0f ) << 4 ) | ( ( result & 32hf0f0f0f0 ) >> 4 ); ++: }
+    if( shiftcount[3,1] ) { result = ( ( result & 32h00ff00ff ) << 8 ) | ( ( result & 32hff00ff00 ) >> 8 ); ++: }
+    if( shiftcount[4,1] ) { result = ( ( result & 32h0000ffff ) << 16 ) | ( ( result & 32hffff0000 ) >> 16 ); }
+}
+circuitry GORC(
+    input   sourceReg1,
+    input   shiftcount,
+    output  result
+) {
+    result = sourceReg1;
     ++:
-    if( shiftcount[1,1] ) { result = ( type == 1 ) ? result : 0 | ( ( result & 32h33333333 ) << 2 ) | ( ( result & 32hcccccccc ) >> 2 ); }
-    ++:
-    if( shiftcount[2,1] ) { result = ( type == 1 ) ? result : 0 | ( ( result & 32h0f0f0f0f ) << 4 ) | ( ( result & 32hf0f0f0f0 ) >> 4 ); }
-    ++:
-    if( shiftcount[3,1] ) { result = ( type == 1 ) ? result : 0 | ( ( result & 32h00ff00ff ) << 8 ) | ( ( result & 32hff00ff00 ) >> 8 ); }
-    ++:
-    if( shiftcount[4,1] ) { result = ( type == 1 ) ? result : 0 | ( ( result & 32h0000ffff ) << 16 ) | ( ( result & 32hffff0000 ) >> 16 ); }
+    if( shiftcount[0,1] ) { result = result | ( ( result & 32h55555555 ) << 1 ) | ( ( result & 32haaaaaaaa ) >> 1 ); ++: }
+    if( shiftcount[1,1] ) { result = result | ( ( result & 32h33333333 ) << 2 ) | ( ( result & 32hcccccccc ) >> 2 ); ++: }
+    if( shiftcount[2,1] ) { result = result | ( ( result & 32h0f0f0f0f ) << 4 ) | ( ( result & 32hf0f0f0f0 ) >> 4 ); ++: }
+    if( shiftcount[3,1] ) { result = result | ( ( result & 32h00ff00ff ) << 8 ) | ( ( result & 32hff00ff00 ) >> 8 ); ++: }
+    if( shiftcount[4,1] ) { result = result | ( ( result & 32h0000ffff ) << 16 ) | ( ( result & 32hffff0000 ) >> 16 ); }
 }
 
+// SHUFFLE / UNSHUFFLE
 circuitry shuffle32_stage(
     input   src,
     input   maskL,
@@ -191,11 +235,9 @@ circuitry shuffle32_stage(
     ++:
     x = x | ( ( src << N ) & maskL ) | ( ( src >> N ) & maskR );
 }
-
-circuitry SHUFFLE(
+circuitry SHFL(
     input   sourceReg1,
     input   sourceReg2,
-    input   type,
     output  result
 ) {
     uint4   N8 = 8; uint32 N8A = 32h00ff0000; uint32 N8B = 32h0000ff00;
@@ -205,27 +247,34 @@ circuitry SHUFFLE(
 
     result = sourceReg1;
     ++:
-    switch( type ) {
-        case 0: {
-            if( sourceReg2[3,1] ) { ( result ) = shuffle32_stage( result, N8A, N8B, N8 ); }
-            if( sourceReg2[2,1] ) { ( result ) = shuffle32_stage( result, N4A, N4B, N4 ); }
-            if( sourceReg2[1,1] ) { ( result ) = shuffle32_stage( result, N2A, N2B, N2 ); }
-            if( sourceReg2[0,1] ) { ( result ) = shuffle32_stage( result, N1A, N1B, N1 ); }
-        }
-        case 1: {
-            if( sourceReg2[0,1] ) { ( result ) = shuffle32_stage( result, N1A, N1B, N1 ); }
-            if( sourceReg2[1,1] ) { ( result ) = shuffle32_stage( result, N2A, N2B, N2 ); }
-            if( sourceReg2[2,1] ) { ( result ) = shuffle32_stage( result, N4A, N4B, N4 ); }
-            if( sourceReg2[3,1] ) { ( result ) = shuffle32_stage( result, N8A, N8B, N8 ); }
-        }
-    }
+    if( sourceReg2[3,1] ) { ( result ) = shuffle32_stage( result, N8A, N8B, N8 ); }
+    if( sourceReg2[2,1] ) { ( result ) = shuffle32_stage( result, N4A, N4B, N4 ); }
+    if( sourceReg2[1,1] ) { ( result ) = shuffle32_stage( result, N2A, N2B, N2 ); }
+    if( sourceReg2[0,1] ) { ( result ) = shuffle32_stage( result, N1A, N1B, N1 ); }
+}
+circuitry UNSHFL(
+    input   sourceReg1,
+    input   sourceReg2,
+    output  result
+) {
+    uint4   N8 = 8; uint32 N8A = 32h00ff0000; uint32 N8B = 32h0000ff00;
+    uint4   N4 = 4; uint32 N4A = 32h0f000f00; uint32 N4B = 32h00f000f0;
+    uint4   N2 = 2; uint32 N2A = 32h30303030; uint32 N2B = 32h0c0c0c0c;
+    uint4   N1 = 1; uint32 N1A = 32h44444444; uint32 N1B = 32h22222222;
+
+    result = sourceReg1;
+    ++:
+    if( sourceReg2[0,1] ) { ( result ) = shuffle32_stage( result, N1A, N1B, N1 ); }
+    if( sourceReg2[1,1] ) { ( result ) = shuffle32_stage( result, N2A, N2B, N2 ); }
+    if( sourceReg2[2,1] ) { ( result ) = shuffle32_stage( result, N4A, N4B, N4 ); }
+    if( sourceReg2[3,1] ) { ( result ) = shuffle32_stage( result, N8A, N8B, N8 ); }
 }
 
-circuitry FSHIFT(
+// FUNNEL SHIFTS
+circuitry FSL(
     input   sourceReg1,
     input   sourceReg3,
     input   shiftcount,
-    input   type,
     output  result
 ) {
     uint32  A = uninitialised;
@@ -241,7 +290,28 @@ circuitry FSHIFT(
         B = sourceReg3;
     }
     ++:
-    result = ( C > 0 ) ? ( ( type == 0 ) ? ( ( A << C ) | ( B >> ( 32 - C ) ) ) : ( ( A >> C ) | ( B << ( 32 - C ) ) ) ) : A;
+    result = ( C > 0 ) ? ( ( A << C ) | ( B >> ( 32 - C ) ) ) : A;
+}
+circuitry FSR(
+    input   sourceReg1,
+    input   sourceReg3,
+    input   shiftcount,
+    output  result
+) {
+    uint32  A = uninitialised;
+    uint32  B = uninitialised;
+    uint32  C = uninitialised;
+
+    if( shiftcount >= 32 ) {
+        C = shiftcount - 32;
+        A = sourceReg3;
+        B = sourceReg1;
+    } else {
+        A = sourceReg1;
+        B = sourceReg3;
+    }
+    ++:
+    result = ( C > 0 ) ? ( ( A >> C ) | ( B << ( 32 - C ) ) ) : A;
 }
 
 circuitry CMOV(
@@ -262,34 +332,57 @@ circuitry CMIX(
     result = ( sourceReg1 & sourceReg2 ) | ( sourceReg3 & ~sourceReg2 );
 }
 
-// CLMUL type == 0 CLMUL == 1 CLMULH == 2 CLMULR
+// CARRYLESS MULTIPLY
 circuitry CLMUL(
     input   sourceReg1,
     input   sourceReg2,
-    input   type,
     output  result
 ) {
-    uint6   i = uninitialised;
-    i = ( type == 1 ) ? 1 : 0;
+    uint6   i = 0;
     result = 0;
     ++:
     while( i < 32 ) {
         if( sourceReg2[i,1] ) {
-            switch( type ) {
-                case 0: { result = result ^ ( sourceReg1 << i ); }
-                case 1: { result = result ^ ( sourceReg1 << ( 32 - i ) ); }
-                case 2: { result = result ^ ( sourceReg1 << ( 31 - i ) ); }
-            }
+            result = result ^ ( sourceReg1 << i );
+        }
+        i = i + 1;
+    }
+}
+circuitry CLMULH(
+    input   sourceReg1,
+    input   sourceReg2,
+    output  result
+) {
+    uint6   i = 1;
+    result = 0;
+    ++:
+    while( i < 32 ) {
+        if( sourceReg2[i,1] ) {
+            result = result ^ ( sourceReg1 << ( 32 - i ) );
+        }
+        i = i + 1;
+    }
+}
+circuitry CLMULR(
+    input   sourceReg1,
+    input   sourceReg2,
+    output  result
+) {
+    uint6   i = 0;
+    result = 0;
+    ++:
+    while( i < 32 ) {
+        if( sourceReg2[i,1] ) {
+            result = result ^ ( sourceReg1 << ( 31 - i ) );
         }
         i = i + 1;
     }
 }
 
-// type == 0 BEXT == 1 BDEP
-circuitry BEXTBDEP(
+// BITS EXTRACT / DEPOSIT
+circuitry BEXT(
     input   sourceReg1,
     input   sourceReg2,
-    input   type,
     output  result
 ) {
     uint6   i = 0;
@@ -298,7 +391,7 @@ circuitry BEXTBDEP(
     ++:
     while( i < 32 ) {
         if( sourceReg2[i,1] ) {
-            if( sourceReg1[ ( type == 1 ) ? j : i, 1] ) {
+            if( sourceReg1[ i, 1] ) {
                 result = result | ( 1 << j );
             }
             j = j + 1;
@@ -306,7 +399,25 @@ circuitry BEXTBDEP(
         i = i + 1;
     }
 }
-
+circuitry BDEP(
+    input   sourceReg1,
+    input   sourceReg2,
+    output  result
+) {
+    uint6   i = 0;
+    uint6   j = 0;
+    result = 0;
+    ++:
+    while( i < 32 ) {
+        if( sourceReg2[i,1] ) {
+            if( sourceReg1[ j, 1] ) {
+                result = result | ( 1 << j );
+            }
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+}
 circuitry BFP(
     input   sourceReg1,
     input   sourceReg2,
@@ -360,10 +471,7 @@ circuitry CRC32(
     result = sourceReg1;
     ++:
     while( i < nbits ) {
-        switch( type ) {
-            case 0: { result = ( result >> 1 ) ^ ( 32hedb88320 & ~( ( sourceReg1 & 1 ) - 1 ) ); }
-            case 1: { result = ( result >> 1 ) ^ ( 32h82f63b78 & ~( ( sourceReg1 & 1 ) - 1 ) ); }
-        }
+        result = ( result >> 1 ) ^ ( ( type == 0 ? 32hedb88320 : 32h82f63b78) & ~( ( sourceReg1 & 1 ) - 1 ) );
         i = i + 1;
     }
 }
@@ -387,11 +495,11 @@ circuitry aluI (
         case 3b000: { result = sourceReg1 + immediateValue; }
         case 3b001: {
             switch( function7 ) {
-                case 7b0000000: { T = 0; ( result ) = LSHIFT( sourceReg1, IshiftCount, T ); }
-                case 7b0010000: { T = 1; ( result ) = LSHIFT( sourceReg1, IshiftCount, T ); }
+                case 7b0000000: { ( result ) = SLL( sourceReg1, IshiftCount ); }
+                case 7b0010000: { ( result ) = SLO( sourceReg1, IshiftCount ); }
                 case 7b0010100: { ( result ) = SBSET( sourceReg1, IshiftCount ); }
                 case 7b0100100: { ( result ) = SBCLR( sourceReg1, IshiftCount ); }
-                case 7b0000100: { T = 0; ( result ) = SHUFFLE( sourceReg1, IshiftCount, T ); }
+                case 7b0000100: { ( result ) = SHFL( sourceReg1, IshiftCount ); }
                 case 7b0110000: {
                     switch( IshiftCount ) {
                         case 5b00000: {
@@ -444,17 +552,17 @@ circuitry aluI (
         case 3b100: { result = sourceReg1 ^ immediateValue; }
         case 3b101: {
             if( function7[1,1] ) {
-                T = 0; ( result ) = FSHIFT( sourceReg1, sourceReg3, IshiftCount, T );
+                ( result ) = FSR( sourceReg1, sourceReg3, IshiftCount );
             } else {
                 switch( function7 ) {
-                    case 7b0000000: { T = 0; ( result ) = RSHIFT( sourceReg1, IshiftCount, T ); }
-                    case 7b0000100: { T = 1; ( result ) = SHUFFLE( sourceReg1, IshiftCount, T ); }
-                    case 7b0010000: { T = 1; ( result ) = RSHIFT( sourceReg1, IshiftCount, T ); }
-                    case 7b0010100: { T = 1; ( result ) = GREVGORC( sourceReg1, IshiftCount, T ); }
-                    case 7b0100000: { T = 2; ( result ) = RSHIFT( sourceReg1, IshiftCount, T ); }
+                    case 7b0000000: { ( result ) = SRL( sourceReg1, IshiftCount ); }
+                    case 7b0000100: { ( result ) = UNSHFL( sourceReg1, IshiftCount ); }
+                    case 7b0010000: { ( result ) = SRO( sourceReg1, IshiftCount ); }
+                    case 7b0010100: { ( result ) = GORC( sourceReg1, IshiftCount ); }
+                    case 7b0100000: { ( result ) = SRA( sourceReg1, IshiftCount ); }
                     case 7b0100100: { ( result ) = SBEXT( sourceReg1, IshiftCount ); }
-                    case 7b0110000: { T = 3; ( result ) = RSHIFT( sourceReg1, IshiftCount, T );  }
-                    case 7b0110100: { T = 0; ( result ) = GREVGORC( sourceReg1, IshiftCount, T ); }
+                    case 7b0110000: { ( result ) = ROR( sourceReg1, IshiftCount );  }
+                    case 7b0110100: { ( result ) = GREV( sourceReg1, IshiftCount ); }
                 }
             }
         }
@@ -483,16 +591,16 @@ circuitry aluR (
         case 3b001: {
             switch( function7[0,2] ) {
                 case 2b11: { ( result) = CMIX( sourceReg1, sourceReg2, sourceReg3 ); }
-                case 2b10: { T = 1; ( result ) = FSHIFT( sourceReg1, sourceReg3, sourceReg2, T ); }
+                case 2b10: { ( result ) = FSR( sourceReg1, sourceReg3, sourceReg2 ); }
                 default: {
                     switch( function7 ) {
-                        case 7b0000000: { T = 0; ( result ) = LSHIFT( sourceReg1, sourceReg2, T ); }
-                        case 7b0000100: { T = 0; ( result ) = SHUFFLE( sourceReg1, sourceReg2, T ); }
-                        case 7b0000101: { N = 0; ( result ) = CLMUL( sourceReg1, sourceReg2, N ); }
-                        case 7b0010000: { T = 1; ( result ) = LSHIFT( sourceReg1, sourceReg2, T ); }
+                        case 7b0000000: { ( result ) = SLL( sourceReg1, sourceReg2 ); }
+                        case 7b0000100: { ( result ) = SHFL( sourceReg1, sourceReg2 ); }
+                        case 7b0000101: { ( result ) = CLMUL( sourceReg1, sourceReg2 ); }
+                        case 7b0010000: { ( result ) = SLO( sourceReg1, sourceReg2 ); }
                         case 7b0010100: { ( result ) = SBSET( sourceReg1, sourceReg2 ); }
                         case 7b0100100: { ( result ) = SBCLR( sourceReg1, sourceReg2 ); }
-                        case 7b0110000: { T = 3; ( result ) = LSHIFT( sourceReg1, sourceReg2, T ); }
+                        case 7b0110000: { ( result ) = ROL( sourceReg1, sourceReg2 ); }
                         case 7b0110100: { ( result ) = SBINV( sourceReg1, sourceReg2 ); }
                     }
                 }
@@ -501,14 +609,14 @@ circuitry aluR (
         case 3b010: {
             switch( function7 ) {
                 case 7b0000000: { result = __signed( sourceReg1 ) < __signed(sourceReg2) ? 32b1 : 32b0; }
-                case 7b0000101: { N = 2; ( result ) = CLMUL( sourceReg1, sourceReg2, N ); }
+                case 7b0000101: { ( result ) = CLMULR( sourceReg1, sourceReg2 ); }
                 case 7b0010000: { result = ( sourceReg1 << 1 ) + sourceReg2; }
             }
         }
         case 3b011: {
             switch( function7 ) {
                 case 7b0000000: {result = ( rs1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 32b1 : 32b0 ); }
-                case 7b0000101: { N = 1; ( result ) = CLMUL( sourceReg1, sourceReg2, N ); }
+                case 7b0000101: { ( result ) = CLMULH( sourceReg1, sourceReg2 ); }
                 case 7b0010100: { N = 2; ( result ) = XPERM( sourceReg1, sourceReg2, N ); }
             }
         }
@@ -527,18 +635,18 @@ circuitry aluR (
         case 3b101: {
             switch( function7[0,2] ) {
                 case 2b11: { ( result ) = CMOV( sourceReg1, sourceReg2, sourceReg3 ); }
-                case 2b10: { T = 0; ( result ) = FSHIFT( sourceReg1, sourceReg3, sourceReg2, T ); }
+                case 2b10: { ( result ) = FSR( sourceReg1, sourceReg3, sourceReg2 ); }
                 default: {
                     switch( function7 ) {
-                        case 7b0000000: { T = 0; ( result ) = RSHIFT( sourceReg1, sourceReg2, T ); }
-                        case 7b0000100: { T = 1; ( result ) = SHUFFLE( sourceReg1, sourceReg2, T ); }
+                        case 7b0000000: { ( result ) = SRL( sourceReg1, sourceReg2 ); }
+                        case 7b0000100: { ( result ) = UNSHFL( sourceReg1, sourceReg2 ); }
                         case 7b0000101: { result = ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
-                        case 7b0010000: { T = 1; ( result ) = RSHIFT( sourceReg1, sourceReg2, T ); }
-                        case 7b0010100: { T = 1; ( result ) = GREVGORC( sourceReg1, sourceReg2, T ); }
-                        case 7b0100000: { T = 2; ( result ) = RSHIFT( sourceReg1, sourceReg2, T ); }
+                        case 7b0010000: { T = 1; ( result ) = SRO( sourceReg1, sourceReg2 ); }
+                        case 7b0010100: { ( result ) = GORC( sourceReg1, sourceReg2 ); }
+                        case 7b0100000: { ( result ) = SRA( sourceReg1, sourceReg2 ); }
                         case 7b0100100: { ( result ) = SBEXT( sourceReg1, sourceReg2 ); }
-                        case 7b0110000: { T = 3; ( result ) = RSHIFT( sourceReg1, sourceReg2, T ); }
-                        case 7b0110100: { T = 0; ( result ) = GREVGORC( sourceReg1, sourceReg2, T ); }
+                        case 7b0110000: { ( result ) = ROR( sourceReg1, sourceReg2 ); }
+                        case 7b0110100: { ( result ) = GREV( sourceReg1, sourceReg2 ); }
                     }
                 }
             }
@@ -547,12 +655,12 @@ circuitry aluR (
             switch( function7 ) {
                 // OR BEXT MAX SH3ADD ORN BDEP
                 case 7b0000000: { result = sourceReg1 | sourceReg2; }
-                case 7b0000100: { N = 0; ( result ) = BEXTBDEP( sourceReg1, sourceReg2, N ); }
+                case 7b0000100: { ( result ) = BEXT( sourceReg1, sourceReg2 ); }
                 case 7b0000101: { result = ( __signed( sourceReg1 ) > __signed( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
                 case 7b0010000: { result = ( sourceReg1 << 3 ) + sourceReg2; }
                 case 7b0010100: { N = 4; ( result ) = XPERM( sourceReg1, sourceReg2, N ); }
                 case 7b0100000: { result = sourceReg1 | ~sourceReg2; }
-                case 7b0100100: { N = 1; ( result ) = BEXTBDEP( sourceReg1, sourceReg2, N ); }
+                case 7b0100100: { ( result ) = BDEP( sourceReg1, sourceReg2 ); }
             }
         }
         case 3b111: {

@@ -24,7 +24,7 @@ short perspectivey[] = { 0,  75, 128, 164, 188, 205, 216, 224, 229, 232, 235, 23
 unsigned short ghostsize[] = { 90, 63, 45, 33, 24, 15, 12, 9, 6, 3, 3, 2, 2, 1, 1 };
 
 // PILL SIZE FOR PERSPECTIVE DRAWING
-unsigned short pillsize[] = { 33, 30, 27, 24, 21, 18, 15, 12, 9, 6, 4, 3, 2, 1, 1 };
+unsigned short pillsize[] = { 24, 20, 16, 12, 10, 8, 6, 5, 4, 3, 3, 2, 2, 1, 1 };
 
 // DIRECTION STEPS IN X and Y
 short directionx[] = { 0, 1, 0, -1 }, leftdirectionx[] = { -1, 0, 1, 0 }, rightdirectionx[] = { 1, 0, -1, 0 };
@@ -117,7 +117,7 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
     }
 
     // EYE PUPILS
-    if( sizechange > 9 ) {
+    if( sizechange > 12 ) {
         switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
             case 0:
                 // SAME DIRECTION, NO EYES
