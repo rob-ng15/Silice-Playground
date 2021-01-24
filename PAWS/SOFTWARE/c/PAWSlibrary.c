@@ -324,6 +324,11 @@ void await_vblank( void ) {
     while( !*VBLANK != 0 );
 }
 
+// SET THE LAYER ORDER FOR THE DISPLAY
+void screen_mode( unsigned char screenmode ) {
+    *SCREENMODE = screenmode;
+}
+
 // BACKGROUND GENERATOR
 // backgroundmode ==
 //  0 SOLID in colour
@@ -855,6 +860,60 @@ void sdcard_readfile( unsigned short filenumber, unsigned char * copyAddress ) {
     } while( nextCluster != 0xffff );
 }
 
-// JPEG DECODER
-void jpeg_decoder( unsigned char *jpegimagefile ) {
+// NETPBM DECODER
+unsigned int skipcomment( unsigned char *netppmimagefile, unsigned int location ) {
+    while( netppmimagefile[ location ] != 0x0a )
+        location++;
+    location++;
+    return( location );
+}
+
+void netppm_decoder( unsigned char *netppmimagefile, unsigned char transparent ) {
+    unsigned int location = 3;
+    unsigned short width = 0, height = 0, depth = 0;
+    unsigned char colour;
+
+    // CHECK HEADER
+    if( ( netppmimagefile[0] == 0x50 ) && ( netppmimagefile[1] == 0x36 ) && ( netppmimagefile[2] == 0x0a ) ) {
+        // VALID HEADER
+
+        // SKIP COMMENT
+        if( netppmimagefile[ location ] == 0x23 ) {
+            location = skipcomment( netppmimagefile, location );
+        }
+
+        // READ WIDTH
+        while( netppmimagefile[ location ] != 0x20 ) {
+            width = width * 10 + netppmimagefile[ location ] - 0x30;
+            location++;
+        }
+        location++;
+
+        // READ HEIGHT
+        while( netppmimagefile[ location ] != 0x0a ) {
+            height = height * 10 + netppmimagefile[ location ] - 0x30;
+            location++;
+        }
+        location++;
+
+        // READ DEPTH
+        while( netppmimagefile[ location ] != 0x0a ) {
+            depth = depth * 10 + netppmimagefile[ location ] - 0x30;
+            location++;
+        }
+        location++;
+
+        // 24 bit image
+        if( depth == 255 ) {
+            for( unsigned short y = 0; y < height; y++ ) {
+                for( unsigned short x = 0; x < width; x++ ) {
+                    colour = ( netppmimagefile[ location++ ] & 0xc0 ) >> 2;
+                    colour = colour + ( ( netppmimagefile[ location++ ] & 0xc0 ) >> 4 );
+                    colour = colour + ( ( netppmimagefile[ location++ ] & 0xc0 ) >> 6 );
+                    if( colour != transparent )
+                        gpu_pixel( colour, x, y );
+                }
+            }
+        }
+    }
 }

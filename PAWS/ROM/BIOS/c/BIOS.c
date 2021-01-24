@@ -192,6 +192,8 @@ void main( void ) {
     unsigned short selectedfile = 0;
 
     // RESET THE DISPLAY
+    screen_mode( 0 );
+
     terminal_showhide( 0 );
     terminal_reset();
     gpu_cs();
@@ -287,11 +289,9 @@ void main( void ) {
     sleep( 1000 );
 
     // RESET THE DISPLAY
-    terminal_showhide( 0 );
     terminal_reset();
     gpu_cs();
     tpu_cs();
-    tilemap_scrollwrapclear( 9 );
     set_background( BLACK, BLACK, BKG_SOLID );
 
     // CALL SDRAM LOADED PROGRAM

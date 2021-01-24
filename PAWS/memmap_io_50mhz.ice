@@ -564,7 +564,10 @@ algorithm memmap_io (
                 case 16h8f04: { sdcio.addr_sector[16,16] = writeData; }
                 case 16h8f08: { sdcio.addr_sector[0,16] = writeData; }
                 case 16h8f10: { sdbuffer.addr0 = writeData; }
-            }
+
+                 // DISPLAY LAYER ORDERING
+                case 16h8ff0: { display.display_order = writeData; }
+           }
         }
 
         // RESET Co-Processor Controls

@@ -142,6 +142,7 @@ extern void sdcard_readsector( unsigned int, unsigned char * );
 
 // DISPLAY
 extern void await_vblank( void );
+extern void screen_mode( unsigned char );
 
 // BACKGROUND GENERATOR
 extern void set_background( unsigned char, unsigned char, unsigned char );
@@ -189,6 +190,9 @@ extern void tpu_outputstringcentre( unsigned char, unsigned char, unsigned char,
 extern void tpu_outputnumber_char( unsigned char );
 extern void tpu_outputnumber_short( unsigned short );
 extern void tpu_outputnumber_int( unsigned int );
+
+// IMAGE DECODERS
+extern void netppm_decoder( unsigned char *, unsigned char );
 
 // BACKGROUND PATTERN GENERATOR
 #define BKG_SOLID 0

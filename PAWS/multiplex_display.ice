@@ -7,6 +7,9 @@ algorithm multiplex_display(
     output! uint8 pix_green,
     output! uint8 pix_blue,
 
+    // DISPLAY ORDER
+    input   uint2   display_order,
+
     // BACKGROUND
     input uint2 background_r,
     input uint2 background_g,
@@ -53,6 +56,7 @@ algorithm multiplex_display(
     uint8   blue8 = uninitialised;
 
     expandcolour RED(
+        display_order <: display_order,
         terminal_display <: terminal_display,
         terminal <: terminal_r,
         character_map_display <: character_map_display,
@@ -70,6 +74,7 @@ algorithm multiplex_display(
         pix :> red8
     );
     expandcolour GREEN(
+        display_order <: display_order,
         terminal_display <: terminal_display,
         terminal <: terminal_g,
         character_map_display <: character_map_display,
@@ -87,6 +92,7 @@ algorithm multiplex_display(
         pix :> green8
     );
     expandcolour BLUE(
+        display_order <: display_order,
         terminal_display <: terminal_display,
         terminal <: terminal_b,
         character_map_display <: character_map_display,
@@ -120,6 +126,7 @@ algorithm multiplex_display(
 
 // EXPAND FROM 2 bit to 8 bit colour
 algorithm expandcolour(
+    input   uint2   display_order,
     input   uint1   terminal_display,
     input   uint2   terminal,
     input   uint1   character_map_display,
@@ -136,14 +143,41 @@ algorithm expandcolour(
 
     output! uint8   pix
 ) <autorun> {
-    pix := ( terminal_display ) ? { {4{terminal}} } :
-                                ( character_map_display ) ? { {4{character_map}} } :
-                                ( upper_sprites_display ) ? { {4{upper_sprites}} } :
-                                ( bitmap_display ) ? { {4{bitmap}} } :
-                                ( lower_sprites_display ) ? { {4{lower_sprites}} } :
-                                ( tilemap_display ) ? { {4{tilemap}} } :
-                                { {4{background}} };
 
     while(1) {
+        switch( display_order ) {
+            case 0: {
+                // BACKGROUND -> TILEMAP -> LOWER_SPRITES -> BITMAP -> UPPER_SPRITES -> CHARACTER_MAP -> TERMINAL
+                pix = ( terminal_display ) ? { {4{terminal}} } :
+                                            ( character_map_display ) ? { {4{character_map}} } :
+                                            ( upper_sprites_display ) ? { {4{upper_sprites}} } :
+                                            ( bitmap_display ) ? { {4{bitmap}} } :
+                                            ( lower_sprites_display ) ? { {4{lower_sprites}} } :
+                                            ( tilemap_display ) ? { {4{tilemap}} } :
+                                            { {4{background}} };
+            }
+            case 1: {
+                // BACKGROUND -> TILEMAP -> BITMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP -> TERMINAL
+                pix = ( terminal_display ) ? { {4{terminal}} } :
+                                            ( character_map_display ) ? { {4{character_map}} } :
+                                            ( upper_sprites_display ) ? { {4{upper_sprites}} } :
+                                            ( lower_sprites_display ) ? { {4{lower_sprites}} } :
+                                            ( bitmap_display ) ? { {4{bitmap}} } :
+                                            ( tilemap_display ) ? { {4{tilemap}} } :
+                                            { {4{background}} };
+            }
+            case 2: {
+                // BACKGROUND -> BITMAP -> TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP -> TERMINAL
+                pix = ( terminal_display ) ? { {4{terminal}} } :
+                                            ( character_map_display ) ? { {4{character_map}} } :
+                                            ( upper_sprites_display ) ? { {4{upper_sprites}} } :
+                                            ( lower_sprites_display ) ? { {4{lower_sprites}} } :
+                                            ( tilemap_display ) ? { {4{tilemap}} } :
+                                            ( bitmap_display ) ? { {4{bitmap}} } :
+                                            { {4{background}} };
+            }
+            case 3: {
+            }
+        }
     }
 }

@@ -41,6 +41,9 @@ extern void sleep( unsigned short );
 // SDCARD
 extern void sdcard_readsector( unsigned int, unsigned char * );
 
+// DISPLAY LAYER ORDERING
+extern void screen_mode( unsigned char );
+
 // BACKGROUND GENERATOR
 extern void set_background( unsigned char, unsigned char, unsigned char );
 

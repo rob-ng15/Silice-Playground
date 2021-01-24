@@ -115,6 +115,7 @@ unsigned short volatile * TIMER1KHZ = ( unsigned short volatile * ) 0x8920;
 unsigned short volatile * SLEEPTIMER = ( unsigned short volatile * ) 0x8930;
 
 unsigned char volatile * VBLANK = ( unsigned char volatile * ) 0x8ff0;
+unsigned char volatile * SCREENMODE = ( unsigned char volatile * ) 0x8ff0;
 
 // TYPES AND STRUCTURES
 

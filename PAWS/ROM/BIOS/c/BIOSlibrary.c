@@ -87,6 +87,11 @@ unsigned char get_buttons( void ) {
     return( *BUTTONS );
 }
 
+// SET THE LAYER ORDER FOR THE DISPLAY
+void screen_mode( unsigned char screenmode ) {
+    *SCREENMODE = screenmode;
+}
+
 // BACKGROUND GENERATOR
 void set_background( unsigned char colour, unsigned char altcolour, unsigned char backgroundmode ) {
     *BACKGROUND_COLOUR = colour;

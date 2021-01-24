@@ -1,5 +1,8 @@
 #include "PAWSlibrary.h"
 
+// INCLUDE GALAXY BACKDROP
+#include "GALAXYPPM.h"
+
 // MACROS
 // Convert asteroid number to sprite layer and number
 #define ASN(a) ( a > 9) ? 1 : 0, ( a > 9) ? a - 10 : a
@@ -306,6 +309,9 @@ void game_over( void )
 // DRAW A RISC-V LOGO AT THE TOP LEFT OF THE SCREEN
 void risc_ice_v_logo( void )
 {
+    // DISPLAY GALAXY PPM IMAGE
+    netppm_decoder( &galaxyppm[0], BLACK );
+
     gpu_rectangle( ORANGE, 0, 0, 100, 100 );
     gpu_triangle( WHITE, 100, 33, 100, 100, 50, 100 );
     gpu_triangle( DKBLUE, 100, 50, 100, 100, 66, 100 );
@@ -317,6 +323,7 @@ void risc_ice_v_logo( void )
     gpu_triangle( DKBLUE, 0, 50, 50, 100, 0, 100 );
     gpu_rectangle( DKBLUE, 0, 12, 25, 37 );
     gpu_rectangle( DKBLUE, 0, 37, 8, 100 );
+
 }
 
 // DRAW FULL OR ERASE END OF FUEL AND SHIELD BARS
@@ -358,6 +365,9 @@ void setup_game()
         }
         set_sprite( ( sprite_number > 12 ) ? 1 : 0, ( sprite_number > 12 ) ? sprite_number - 13 : sprite_number, 0, 0, 0, 0, 0, 0 );
     }
+
+    // DROP THE BITMAP TO JUST ABOVE THE BACKGROUND
+    screen_mode( 2 );
 
     // CLEAR and SET THE BACKGROUND
     gpu_cs();
