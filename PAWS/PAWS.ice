@@ -233,12 +233,6 @@ algorithm bramcontroller (
     while(1) {
         if( writeflag ) {
             ( ram ) = BRAMwrite( ram, function3, address, writedata );
-            //if( ( function3 & 3 ) == 0 ) {
-            //    // BYTE WRITE - ENSURE ADDRESS IS READY
-            //    ++:
-            //}
-            //ram.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
-            //ram.wenable = 1;
         }
     }
 }

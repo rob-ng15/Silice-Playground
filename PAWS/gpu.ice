@@ -398,8 +398,8 @@ algorithm line (
                 if( gpu_numerator2 > (-gpu_dx) ) {
                     gpu_numerator = gpu_numerator - gpu_dy;
                     gpu_active_x = gpu_active_x + 1;
+                    ++:
                 }
-                ++:
                 if( gpu_numerator2 < gpu_dy ) {
                     gpu_numerator = gpu_numerator + gpu_dx;
                     gpu_active_y = gpu_active_y + gpu_sy;
@@ -860,9 +860,9 @@ algorithm vectors(
 
     while(1) {
         if( draw_vector ) {
+            vector_block_active = 1;
             block_number = vector_block_number;
             vertices_number = 0;
-            vector_block_active = 1;
             ++:
             ( start_x, start_y ) = deltacoordinates( vector_block_xc, deltax, vector_block_yc, deltay );
             vertices_number = 1;

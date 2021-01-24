@@ -1,6 +1,10 @@
 $$ uart_in_clock_freq_mhz = 50
 $$read_burst_length = 1
 
+// CLOCKS
+import('../common/ulx3s_clk_risc_ice_v.v')
+import('../common/ulx3s_clk_risc_ice_v_2.v')
+
 // HDMI + UART + SDCARD + SDRAM Driver Includes
 $include('../common/hdmi.ice')
 $include('../common/uart.ice')
@@ -32,8 +36,5 @@ $include('../cpu_functionblocks.ice')
 $include('../mathematics.ice')
 $include('../cpu.ice')
 
-// CLOCKS
-import('../common/ulx3s_clk_risc_ice_v.v')
-import('../common/ulx3s_clk_risc_ice_v_2.v')
-
-$include('../risc-ice-v.ice')
+// MAIN
+$include('../PAWS.ice')

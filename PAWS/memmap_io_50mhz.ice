@@ -326,6 +326,8 @@ algorithm memmap_io (
     uo.data_in_ready := ( uartOutBufferNext != uartOutBufferTop ) && ( !uo.busy );
     uartOutBufferNext := ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) ) ? uartOutBufferNext + 1 : uartOutBufferNext;
 
+    // Setup the random number generators
+
     // Setup the UART
     //uo.data_in_ready := 0; // maintain low
 
