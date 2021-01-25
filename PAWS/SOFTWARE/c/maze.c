@@ -651,6 +651,8 @@ void walk_maze( unsigned short width, unsigned short height )
         currentx = newx; currenty = newy; direction = newdirection;
         for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
             if( ghost <= level ) {
+                if( ( ghostx[ ghost ] == currentx ) && ( ghosty[ ghost ] == currenty ) )
+                    dead = 1;
                 move_ghost( ghost );
                 if( ( ghostx[ ghost ] == currentx ) && ( ghosty[ ghost ] == currenty ) )
                     dead = 1;
