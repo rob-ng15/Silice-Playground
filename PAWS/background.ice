@@ -20,6 +20,9 @@ algorithm background(
     int12   rand_x = 0;
     int32   frame = 0;
 
+    uint1   tophalf := pix_y < 240;
+    uint1   lefthalf := pix_x < 320;
+
     while(1) {
         // Increment frame number for the snow/star field
         frame = ( ( pix_x == 639 ) && ( pix_y == 470 ) ) ? frame + 1 : frame;
@@ -35,27 +38,21 @@ algorithm background(
                 }
                 case 1: {
                     // 50:50 HORIZONTAL SPLIT
-                    pix_red = ( pix_y < 240 ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
-                    pix_green = ( pix_y < 240 ) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
-                    pix_blue = ( pix_y < 240 ) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
+                    pix_red = ( tophalf ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
+                    pix_green = ( tophalf ) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
+                    pix_blue = ( tophalf ) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
                 }
                 case 2: {
                 // 50:50 VERTICAL SPLIT
-                    pix_red = ( pix_x < 320 ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
-                    pix_green = ( pix_x < 320 ) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
-                    pix_blue = ( pix_x < 320 ) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
+                    pix_red = ( lefthalf ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
+                    pix_green = ( lefthalf ) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
+                    pix_blue = ( lefthalf ) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
                 }
                 case 3: {
                 // QUARTERS
-                    if( pix_x < 320 ) {
-                        pix_red = ( pix_y < 240 ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
-                        pix_green = ( pix_y < 240 ) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
-                        pix_blue = ( pix_y < 240 ) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
-                    } else {
-                        pix_red = ( pix_y >= 240 ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
-                        pix_green = ( pix_y >= 240 ) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
-                        pix_blue = ( pix_y >= 240 ) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
-                    }
+                    pix_red = ( lefthalf == tophalf ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
+                    pix_green = ( lefthalf == tophalf ) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
+                    pix_blue = ( lefthalf == tophalf ) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
                 }
                 case 4: {
                     // 8 colour rainbow

@@ -107,8 +107,9 @@ extern long CSRinstructions( void );
 extern long CSRtime( void );
 
 // STANDARD FUNCTION DEFINITIONS
-extern void* memcpy(void *dest, const void *src, size_t n);
-extern int strcmp(const char *p1, const char *p2);
+extern void* memcpy( void *dest, const void *src, size_t n );
+extern void *memset( void *s, int c, size_t n );
+extern int strcmp( const char *p1, const char *p2 );
 extern int strlen( char *s );
 
 // UART AND TERMINAL INPUT / OUTPUT
@@ -192,7 +193,9 @@ extern void tpu_outputnumber_short( unsigned short );
 extern void tpu_outputnumber_int( unsigned int );
 
 // IMAGE DECODERS
-extern void netppm_decoder( unsigned char *, unsigned char );
+extern void netppm_display( unsigned char *, unsigned char );
+extern void netppm_decoder( unsigned char *, unsigned char * );
+extern void bitmapblit( unsigned char *, unsigned short , unsigned short , short, short, unsigned char  );
 
 // BACKGROUND PATTERN GENERATOR
 #define BKG_SOLID 0

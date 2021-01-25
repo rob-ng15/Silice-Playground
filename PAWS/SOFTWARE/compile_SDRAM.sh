@@ -10,12 +10,12 @@ export PATH=$PATH:$DIR/../../tools/fpga-binutils/mingw32/bin/
 echo "using $ARCH"
 
 # Following based on FemtoRV compile scripts https://github.com/BrunoLevy/learn-fpga/tree/master/FemtoRV
-$ARCH-elf-gcc -fno-unroll-loops -O1 -fno-pic -march=rv32imac -mabi=ilp32 -S c/PAWSlibrary.c -o build/libPAWS.s
-$ARCH-elf-gcc -fno-unroll-loops -O1 -fno-pic -march=rv32imac -mabi=ilp32 -c -o build/libPAWS.o c/PAWSlibrary.c
+$ARCH-elf-gcc -fno-unroll-loops -O2 -fno-builtin -fno-pic -march=rv32imac -mabi=ilp32 -S c/PAWSlibrary.c -o build/libPAWS.s
+$ARCH-elf-gcc -fno-unroll-loops -O2 -fno-builtin -fno-pic -march=rv32imac -mabi=ilp32 -c -o build/libPAWS.o c/PAWSlibrary.c
 $ARCH-elf-ar -cvq build/libPAWS.a build/libPAWS.o
 
-$ARCH-elf-gcc -fno-unroll-loops -O1 -fno-pic -march=rv32imac -mabi=ilp32 -S $1 -o build/code.s
-$ARCH-elf-gcc -fno-unroll-loops -O1 -fno-pic -march=rv32imac -mabi=ilp32 -c -o build/code.o $1
+$ARCH-elf-gcc -fno-unroll-loops -O2 -fno-builtin -fno-pic -march=rv32imac -mabi=ilp32 -S $1 -o build/code.s
+$ARCH-elf-gcc -fno-unroll-loops -O2 -fno-builtin -fno-pic -march=rv32imac -mabi=ilp32 -c -o build/code.o $1
 
 $ARCH-elf-as -march=rv32imac -mabi=ilp32 -o build/crt0.o crt0.s
 

@@ -1,15 +1,21 @@
 #include "PAWS.h"
-// STANDARD C FUNCTIONS ( from @sylefeb mylibc )
 
 typedef unsigned int size_t;
 
-void*  memcpy(void *dest, const void *src, size_t n) {
-  const void *end = src + n;
+// STANDARD C FUNCTIONS ( from @sylefeb mylibc )
+
+void *memcpy(void *dest, const void *src, size_t n) {
   const unsigned char *bsrc = (const unsigned char *)src;
-  while (bsrc != end) {
+  while ( n-- ) {
     *(unsigned char*)dest = *(++bsrc);
   }
-  return dest;
+}
+
+void *memset(void *s, int c,  unsigned int n)
+{
+    unsigned char* p = s;
+    while( n-- )
+        *p++ = (unsigned char)c;
 }
 
 int strlen( char *s ) {
@@ -868,7 +874,7 @@ unsigned int skipcomment( unsigned char *netppmimagefile, unsigned int location 
     return( location );
 }
 
-void netppm_decoder( unsigned char *netppmimagefile, unsigned char transparent ) {
+void netppm_display( unsigned char *netppmimagefile, unsigned char transparent ) {
     unsigned int location = 3;
     unsigned short width = 0, height = 0, depth = 0;
     unsigned char colour;
@@ -878,7 +884,7 @@ void netppm_decoder( unsigned char *netppmimagefile, unsigned char transparent )
         // VALID HEADER
 
         // SKIP COMMENT
-        if( netppmimagefile[ location ] == 0x23 ) {
+        while( netppmimagefile[ location ] == 0x23 ) {
             location = skipcomment( netppmimagefile, location );
         }
 
@@ -913,6 +919,72 @@ void netppm_decoder( unsigned char *netppmimagefile, unsigned char transparent )
                     if( colour != transparent )
                         gpu_pixel( colour, x, y );
                 }
+            }
+        }
+    }
+}
+
+// DECODE NETPPM FILE TO ARRAY
+void netppm_decoder( unsigned char *netppmimagefile, unsigned char *buffer ) {
+    unsigned int location = 3, bufferpos = 0;
+    unsigned short width = 0, height = 0, depth = 0;
+    unsigned char colour;
+
+    // CHECK HEADER
+    if( ( netppmimagefile[0] == 0x50 ) && ( netppmimagefile[1] == 0x36 ) && ( netppmimagefile[2] == 0x0a ) ) {
+        // VALID HEADER
+
+        // SKIP COMMENT
+        while( netppmimagefile[ location ] == 0x23 ) {
+            location = skipcomment( netppmimagefile, location );
+        }
+
+        // READ WIDTH
+        while( netppmimagefile[ location ] != 0x20 ) {
+            width = width * 10 + netppmimagefile[ location ] - 0x30;
+            location++;
+        }
+        location++;
+
+        // READ HEIGHT
+        while( netppmimagefile[ location ] != 0x0a ) {
+            height = height * 10 + netppmimagefile[ location ] - 0x30;
+            location++;
+        }
+        location++;
+
+        // READ DEPTH
+        while( netppmimagefile[ location ] != 0x0a ) {
+            depth = depth * 10 + netppmimagefile[ location ] - 0x30;
+            location++;
+        }
+        location++;
+
+        // 24 bit image
+        if( depth == 255 ) {
+            outputstring( "Copying Image to bitmap");
+            for( unsigned short y = 0; y < height; y++ ) {
+                for( unsigned short x = 0; x < width; x++ ) {
+                    colour = ( netppmimagefile[ location++ ] & 0xc0 ) >> 2;
+                    colour = colour + ( ( netppmimagefile[ location++ ] & 0xc0 ) >> 4 );
+                    colour = colour + ( ( netppmimagefile[ location++ ] & 0xc0 ) >> 6 );
+                    buffer[ bufferpos++ ] = colour;
+                }
+            }
+        }
+    }
+}
+
+void bitmapblit( unsigned char *buffer, unsigned short width, unsigned short height, short xpos, short ypos, unsigned char transparent ) {
+    unsigned int bufferpos = 0;
+    unsigned char colour;
+
+    for( unsigned short y = 0; y < height; y++ ) {
+        for( unsigned short x = 0; x < width; x++ ) {
+            colour = buffer[ bufferpos++ ];
+            if( colour != transparent ) {
+                gpu_pixel( colour, xpos + x, ypos + y );
+
             }
         }
     }

@@ -6,8 +6,8 @@
 #define for_y for (int y = 0; y < h; y++)
 #define for_xy for_x for_y
 
-unsigned char universe[80][60];
-unsigned char new[80][60];
+unsigned char universe[60][80];
+unsigned char new[60][80];
 
 void show(int w, int h) {
 	for_y for_x

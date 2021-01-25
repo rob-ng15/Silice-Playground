@@ -2,6 +2,7 @@
 
 // INCLUDE GALAXY BACKDROP
 #include "GALAXYPPM.h"
+unsigned char *galaxybitmap;
 
 // MACROS
 // Convert asteroid number to sprite layer and number
@@ -309,8 +310,8 @@ void game_over( void )
 // DRAW A RISC-V LOGO AT THE TOP LEFT OF THE SCREEN
 void risc_ice_v_logo( void )
 {
-    // DISPLAY GALAXY PPM IMAGE
-    netppm_decoder( &galaxyppm[0], BLACK );
+    // DISPLAY GALAXY BITMAP
+    bitmapblit( galaxybitmap, 640, 480, 0, 0, BLACK );
 
     gpu_rectangle( ORANGE, 0, 0, 100, 100 );
     gpu_triangle( WHITE, 100, 33, 100, 100, 50, 100 );
@@ -757,6 +758,10 @@ void check_crash( void )
 void main( void )
 {
     INITIALISEMEMORY();
+
+    // DECODE GALAXY PPM to BITMAP
+    galaxybitmap = memoryspace( 640 * 480 );
+    netppm_decoder( &galaxyppm[0], galaxybitmap );
 
     unsigned char uartData = 0, potentialnumber = 0;
     short ufo_x = 0, ufo_y = 0, potentialx = 0, potentialy = 0;

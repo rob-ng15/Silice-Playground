@@ -1,5 +1,9 @@
 #include "PAWSlibrary.h"
 
+// INCLUDE TOMBSTONE IMAGE
+#include "TOMBSTONEPPM.h"
+unsigned char *tombstonebitmap;
+
 // MAZE SIZES
 #define MAXWIDTH 160
 #define MAXHEIGHT 120
@@ -514,11 +518,11 @@ void drawright( unsigned short steps, unsigned char totheright ) {
 void walk_maze( unsigned short width, unsigned short height )
 {
     // SET START LOCATION TO TOP LEFT FACING EAST
-    unsigned short newx = 1, newy = 1, direction = 1, newdirection = 1, currentx = 1, currenty = 1, visiblesteps, mappeeks = 4;
+    unsigned short newx = 1, newy = 1, direction = 1, newdirection = 1, currentx = 1, currenty = 1, visiblesteps, mappeeks = 4, dead = 0;
     short steps;
 
-    // LOOP UNTIL REACHED THE EXIT
-    while( ( currentx != width - 2 ) || ( currenty != height -3 ) ) {
+    // LOOP UNTIL REACHED THE EXIT OR DEAD
+    while( ( ( currentx != width - 2 ) || ( currenty != height -3 ) ) && ( dead == 0 ) ) {
         // SET CURRENT LOCATION TO VISITED
         map[currentx][currenty] = ' ';
 
@@ -648,14 +652,28 @@ void walk_maze( unsigned short width, unsigned short height )
         for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
             if( ghost <= level ) {
                 move_ghost( ghost );
+                if( ( ghostx[ ghost ] == currentx ) && ( ghosty[ ghost ] == currenty ) )
+                    dead = 1;
             }
         }
+    }
+
+    if( dead ) {
+        gpu_cs();
+        // DISPLAY TOMBSTONE BITMAP
+        bitmapblit( tombstonebitmap, 320, 298, 160, 91, WHITE );
+        while( get_buttons() != 1 );
     }
 }
 
 void main( void )
 {
     INITIALISEMEMORY();
+
+    // DECODE TOMBSTONE PPM TO BITMAP
+    tombstonebitmap = memoryspace( 320* 298 );
+    netppm_decoder( &tombstoneppm[0], tombstonebitmap );
+
 
     unsigned short levelselected;
 

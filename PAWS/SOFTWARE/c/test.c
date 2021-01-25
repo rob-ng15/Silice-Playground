@@ -29,7 +29,7 @@ void backgrounddemo( void ) {
     tpu_outputstringcentre( 29, TRANSPARENT, WHITE, "Background Generator Test" );
 
     for( uint8 bkg = 0; bkg < 16; bkg++ ) {
-        set_background( rng( 64 ), rng( 64 ), bkg );
+        set_background( PURPLE, ORANGE, bkg );
         sleep( 1000 );
     }
 }
