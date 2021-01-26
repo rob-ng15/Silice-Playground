@@ -311,11 +311,9 @@ void generate_maze( unsigned short width, unsigned short height, unsigned short 
                             if( count == 1 ) {
                                 maze[ x ][ y - 1 ] = ' ';
                             } else {
-                                maze[ lastx + rng( count ) * 2 ][ y - 1 ] = ' ';
-                                if( count > 5 )
+                                for( unsigned short connectors = 0; connectors < ( count >> 2 ) + 1; connectors++ ) {
                                     maze[ lastx + rng( count ) * 2 ][ y - 1 ] = ' ';
-                                if( count > 11 )
-                                    maze[ lastx + rng( count ) * 2 ][ y - 1 ] = ' ';
+                                }
                             }
                             lastx = x + 2;
                             count = 0;

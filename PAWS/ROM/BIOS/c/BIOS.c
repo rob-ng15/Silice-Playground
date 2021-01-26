@@ -190,7 +190,7 @@ void main( void ) {
     unsigned short i,j;
     unsigned char uartData = 0;
     unsigned short selectedfile = 0;
-    unsigned short *sdramaddress;
+    unsigned int *sdramaddress;
 
     // RESET THE DISPLAY
     screen_mode( 0 );
@@ -219,14 +219,15 @@ void main( void ) {
     for( unsigned short i = 0; i < 64; i++ )
         gpu_rectangle( i, i * 10, 447, 9 + i * 10, 463 );
 
-    tpu_outputstringcentre( 7, TRANSPARENT, RED, "Waiting for SDCARD" );
+    tpu_outputstringcentre( 7, TRANSPARENT, RED, "SDRAM Initialising" );
 
     // CLEAR SDRAM
-    for( sdramaddress = (unsigned short *)0x10000000; sdramaddress < (unsigned short *)0x12000000; sdramaddress++ )
+    for( sdramaddress = (unsigned int *)0x10000000; sdramaddress < (unsigned int *)0x12000000; sdramaddress++ )
         *sdramaddress  = 0;
 
+    tpu_outputstringcentre( 7, TRANSPARENT, RED, "Waiting for SDCARD" );
     sd_readSector( 0, MBR );
-    tpu_outputstringcentre( 7, TRANSPARENT, GREEN, "SDCARD READY" );
+    tpu_outputstringcentre( 7, TRANSPARENT, GREEN, "SDCARD Ready" );
 
     PARTITION = (PartitionTable *) &MBR[ 0x1BE ];
 
@@ -238,7 +239,7 @@ void main( void ) {
             break;
         default:
             // UNKNOWN PARTITION TYPE
-            tpu_outputstringcentre( 7, TRANSPARENT, RED, "ERROR: PLEASE INSERT A VALID FAT16 FORMATTED SDCARD AND PRESS RESET" );
+            tpu_outputstringcentre( 7, TRANSPARENT, RED, "ERROR: Please Insert A FAT16 SDCARD and Press RESET" );
             while(1) {}
             break;
     }
@@ -257,9 +258,9 @@ void main( void ) {
     sd_readFAT();
 
     // FILE SELECTOR
-    tpu_outputstringcentre( 7, TRANSPARENT, WHITE, "SELECT FILE FOR LOADING" );
+    tpu_outputstringcentre( 7, TRANSPARENT, WHITE, "Select PAW File" );
     tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "SELECT USING FIRE 1 - SCROLL USING FIRE 2" );
-    tpu_outputstringcentre( 10, TRANSPARENT, RED, "NO PAW FILES FOUND" );
+    tpu_outputstringcentre( 10, TRANSPARENT, RED, "ERROR: No PAW Files Found" );
     SELECTEDFILE = 0xffff;
 
     // FILE SELECTOR, LOOP UNTIL FILE SELECTED (FIRE 1 PRESSED WITH A VALID FILE)
@@ -268,7 +269,7 @@ void main( void ) {
         if( ( get_buttons() & 4 ) || ( SELECTEDFILE == 0xffff ) ) {
             while( get_buttons() & 4 );
             sd_findNextFile();
-            tpu_outputstringcentre( 10, TRANSPARENT, WHITE, "PAW FILE:" );
+            tpu_outputstringcentre( 10, TRANSPARENT, WHITE, "Current PAW File:" );
             for( i = 0; i < 8; i++ ) {
                 // DISPLAY FILENAME
                 gpu_rectangle( TRANSPARENT, 64, 208, 576, 272 );
@@ -284,13 +285,13 @@ void main( void ) {
         }
     }
 
-    tpu_outputstringcentre( 7, TRANSPARENT, WHITE, "FILE SELECTED" );
-    tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "PREPARING TO LOAD" );
+    tpu_outputstringcentre( 7, TRANSPARENT, WHITE, "PAW File" );
+    tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "SELECTED" );
     sleep( 1000 );
     tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "LOADING" );
     sd_readFile( SELECTEDFILE, (unsigned char *)0x10000000 );
     tpu_outputstringcentre( 7, TRANSPARENT, WHITE, "FILE LOADED" );
-    tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "PREPARING TO LAUNCH" );
+    tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "LAUNCHING" );
     sleep( 1000 );
 
     // RESET THE DISPLAY

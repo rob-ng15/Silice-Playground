@@ -20,8 +20,8 @@ algorithm terminal(
     };
 
     // 80 x 4 character buffer for the input/output terminal
-    simple_dualport_bram uint8 terminal <input!> [640] = uninitialized;
-    simple_dualport_bram uint8 terminal_copy <input!> [640] = uninitialized;
+    simple_dualport_bram uint8 terminal <input!> [640] = { 32, pad(32) };
+    simple_dualport_bram uint8 terminal_copy <input!> [640] = { 32, pad(32) };
 
     // Initial cursor position in the terminal, bottom left
     uint7 terminal_x = 0;
