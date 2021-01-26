@@ -190,6 +190,7 @@ void main( void ) {
     unsigned short i,j;
     unsigned char uartData = 0;
     unsigned short selectedfile = 0;
+    unsigned short *sdramaddress;
 
     // RESET THE DISPLAY
     screen_mode( 0 );
@@ -219,7 +220,11 @@ void main( void ) {
         gpu_rectangle( i, i * 10, 447, 9 + i * 10, 463 );
 
     tpu_outputstringcentre( 7, TRANSPARENT, RED, "Waiting for SDCARD" );
-    sleep( 2000 );
+
+    // CLEAR SDRAM
+    for( sdramaddress = (unsigned short *)0x10000000; sdramaddress < (unsigned short *)0x12000000; sdramaddress++ )
+        *sdramaddress  = 0;
+
     sd_readSector( 0, MBR );
     tpu_outputstringcentre( 7, TRANSPARENT, GREEN, "SDCARD READY" );
 
