@@ -122,6 +122,23 @@ circuitry cropbottom(
     y1 = ( y > 479 ) ? 479 : y;
 }
 
+// CROP (x1,y1) to left and top, (x2,y2) to right and bottom
+circuitry cropscreen(
+    input   x1,
+    input   y1,
+    input   x2,
+    input   y2,
+    output  newx1,
+    output  newy1,
+    output  newx2,
+    output  newy2
+) {
+    newx1 = ( x1 < 0 ) ? 0 : x1;
+    newy1 = ( y1 < 0 ) ? 0 : y1;
+    newx2 = ( x2 > 639 ) ? 639 : x2;
+    newy2 = ( y1 > 479 ) ? 479 : y2;
+}
+
 // INCREASE BY 1 IF SECOND INPUT IS 0
 circuitry incrementifzero(
     input   x,

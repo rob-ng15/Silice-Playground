@@ -322,11 +322,8 @@ algorithm rectangle (
             ( gpu_max_x ) = max( x, param0 );
             ( gpu_max_y ) = max( y, param1 );
             ++:
-            ( gpu_active_x ) = cropleft( gpu_active_x );
+            ( gpu_active_x, gpu_active_y, gpu_max_x, gpu_max_y ) = cropscreen( gpu_active_x, gpu_active_y, gpu_max_x, gpu_max_y );
             ( gpu_x1 ) = cropleft( gpu_active_x );
-            ( gpu_active_y ) = croptop( gpu_active_y );
-            ( gpu_max_x ) = cropright( gpu_max_x );
-            ( gpu_max_y ) = cropbottom( gpu_max_y );
             ++:
             while( gpu_active_y <= gpu_max_y ) {
                 while( gpu_active_x <= gpu_max_x ) {
@@ -656,10 +653,7 @@ algorithm triangle (
             ( gpu_max_y ) = max3( gpu_active_y, gpu_y1, gpu_y2 );
             ++:
             // Clip to the screen edge
-            ( gpu_min_x ) = cropleft( gpu_min_x );
-            ( gpu_max_x ) = cropright( gpu_max_x );
-            ( gpu_min_y ) = croptop( gpu_min_y );
-            ( gpu_max_y ) = cropbottom( gpu_max_y );
+            ( gpu_min_x, gpu_min_y, gpu_max_x, gpu_max_y ) = cropscreen( gpu_min_x, gpu_min_y, gpu_max_x, gpu_max_y );
             ++:
             // Put points in order so that ( gpu_active_x, gpu_active_y ) is at top, then ( gpu_x1, gpu_y1 ) and ( gpu_x2, gpu_y2 ) are clockwise from there
             if( gpu_y1 < gpu_active_y ) {

@@ -273,59 +273,61 @@ void display_maze( unsigned short width, unsigned short height, unsigned short c
     }
 }
 
-// ADAPTED FROM https://rosettacode.org/wiki/Maze_generation#BASIC
+// ADAPTED FROM https://weblog.jamisbuck.org/2011/2/3/maze-generation-sidewinder-algorithm.html#
 // GENERATE A MAZE OF WIDTH x HEIGHT - DRAW DURING GENERATION
-void generate_maze( unsigned short width, unsigned short height, unsigned short steps )
-{
-    unsigned short currentx, currenty, oldx, oldy, x, y, i, done;
+void generate_maze( unsigned short width, unsigned short height, unsigned short steps ) {
+    unsigned short x, y;
+    unsigned short lastx, count;
 
-    // Start at random location
-    currentx = rng( width - 2 ); if( currentx % 2 == 0 ) currentx++;
-    currenty = rng( height - 2 ); if( currenty % 2 == 0 ) currenty++;
-    maze[currentx][currenty] = ' ';
+    for( y = 1; y < height - 1; y += 2 ) {
+        lastx = 1;
+        count = 1;
 
-    done = 0;
-
-    do {
-        display_maze( width, height, currentx, currenty );
-
-        // GENERATE CELLS
-        for( i = 0; i < steps; i++ ) {
-            // RECORD PRESENT LOCATION
-            oldx = currentx;
-            oldy = currenty;
-
-            // Move in a random direction
-            switch( rng(4) ) {
-                case 0:
-                    if( currentx + 2 < width - 1 ) currentx += 2;
-                    break;
-                case 1:
-                    if( currenty + 2 < height - 1 ) currenty += 2;
-                    break;
-                case 2:
-                    if( currentx - 2 > 0 ) currentx -= 2;
-                    break;
-                case 3:
-                    if( currenty - 2 > 0 ) currenty -= 2;
-                    break;
-            }
-
-            // Connect cell if not visited
-            if( maze[currentx][currenty] == '#' ) {
-                maze[currentx][currenty] = ' ';
-                maze[ ( currentx + oldx ) / 2 ][ ( currenty + oldy ) / 2 ] = ' ';
-            }
-        }
-
-        // Check if all cells visited
-        done = 1;
         for( x = 1; x < width - 1; x += 2 ) {
-            for( y = 1; y < height - 1; y += 2 ) {
-                if( maze[x][y] == '#' ) done = 0;
+            maze[ x ][ y ] = ' ';
+            if( y > 1 ) {
+                // NOT ON FIRST ROW
+                if( x != width - 3 ) {
+                    // NOT AT END OF ROW, EITHER MOVE RIGHT, OR STOP AND CONNECT ONE CELL UP
+                    switch( rng( 3 ) ) {
+                        case 0:
+                        case 1:
+                            // CONTINUE RIGHT
+                            maze[ x + 1][ y ] = ' ';
+                            count++;
+                            break;
+                        case 2:
+                            // STOP AND CONNECT ONE CELL UP
+                            if( count == 1 ) {
+                                maze[ x ][ y - 1 ] = ' ';
+                            } else {
+                                maze[ lastx + rng( count ) * 2 ][ y - 1 ] = ' ';
+                                if( count > 5 )
+                                    maze[ lastx + rng( count ) * 2 ][ y - 1 ] = ' ';
+                                if( count > 11 )
+                                    maze[ lastx + rng( count ) * 2 ][ y - 1 ] = ' ';
+                            }
+                            lastx = x + 2;
+                            count = 0;
+                            break;
+                    }
+                } else {
+                    // AT END OF ROW, STOP AND CONNECT ONE CELL UP
+                    if( count == 1 ) {
+                        maze[ x ][ y - 1 ] = ' ';
+                    } else {
+                        maze[ lastx + rng( count ) * 2 ][ y - 1 ] = ' ';
+                    }
+                }
+            } else {
+                // FIRST ROW, CONNECT
+                if( x != width - 3 ) {
+                    maze[ x + 1 ][ y ] = ' ';
+                }
             }
         }
-    } while( done == 0 );
+        display_maze( width, height, 1, 1 );
+    }
 }
 
 // DRAW THE MAP IN RIGHT CORNER WITH COMPASS
@@ -522,7 +524,7 @@ void walk_maze( unsigned short width, unsigned short height )
     short steps;
 
     // LOOP UNTIL REACHED THE EXIT OR DEAD
-    while( ( ( currentx != width - 2 ) || ( currenty != height -3 ) ) && ( dead == 0 ) ) {
+    while( ( ( currentx != width - 2 ) || ( currenty != height - 3 ) ) && ( dead == 0 ) ) {
         // SET CURRENT LOCATION TO VISITED
         map[currentx][currenty] = ' ';
 
@@ -661,7 +663,6 @@ void walk_maze( unsigned short width, unsigned short height )
     }
 
     if( dead ) {
-        gpu_cs();
         // DISPLAY TOMBSTONE BITMAP
         bitmapblit( tombstonebitmap, 320, 298, 160, 91, WHITE );
         while( get_buttons() != 1 );
