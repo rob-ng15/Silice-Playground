@@ -219,11 +219,21 @@ void initialise_maze( unsigned short width, unsigned short height )
     map[ width - 2 ][ height - 3 ] = 'X';
 
     // POSITION GHOSTS AT CENTRE
-    unsigned short potentialx = width / 2, potentialy= height / 2;
-    if( maze[ potentialx ][ potentialy ] != ' ' )
-        potentialx--;
+    unsigned short potentialx, potentialy;
 
     for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
+     // POSITION GHOSTS AT CENTRE - with slight offset
+        potentialx = width / 2; potentialy= height / 2;
+        switch( rng( 2 ) ) {
+            case 0:
+                potentialx -= 2 * rng( level );
+                break;
+            case 1:
+                potentialx += 2 * rng( level );
+                break;
+        }
+        if( maze[ potentialx ][ potentialy ] != ' ' )
+            potentialx--;
         if( ghost <= level ) {
             // AT CENTRE
             ghostx[ ghost ] = potentialx;
