@@ -168,6 +168,8 @@ extern void gpu_blit( unsigned char, short, short, short, unsigned char );
 extern void gpu_character_blit( unsigned char, short, short, unsigned char, unsigned char );
 extern void gpu_triangle( unsigned char, short, short, short, short, short, short );
 extern void gpu_quadrilateral( unsigned char, short, short, short, short, short, short, short, short );
+extern void gpu_outputstring( unsigned char, short, short, char *, unsigned char );
+extern void gpu_outputstringcentre( unsigned char, short, short, char *, unsigned char );
 extern void draw_vector_block( unsigned char, unsigned char, short, short );
 extern void set_vector_vertex( unsigned char, unsigned char , unsigned char, char, char );
 extern void bitmap_scrollwrap( unsigned char );

@@ -192,9 +192,20 @@ void main( void ) {
     unsigned short selectedfile = 0;
     unsigned int *sdramaddress;
 
+    // CLEAR SDRAM
     // RESET THE DISPLAY
-    screen_mode( 0 );
+    gpu_cs();
+    tpu_cs();
+    set_background( BLACK, BLACK, BKG_SOLID );
+    terminal_showhide( 1 );
+    outputstringnonl( " SDRAM Test: " );
+    for( sdramaddress = (unsigned int *)0x10000000; sdramaddress < (unsigned int *)0x12000000; sdramaddress++ ) {
+        *sdramaddress  = 0;
+        if( ( (int)sdramaddress & 0xfffff ) == 0 )
+            outputcharacter( '*' );
+    }
 
+    // RESET THE DISPLAY
     terminal_showhide( 0 );
     terminal_reset();
     gpu_cs();
@@ -218,12 +229,6 @@ void main( void ) {
 
     for( unsigned short i = 0; i < 64; i++ )
         gpu_rectangle( i, i * 10, 447, 9 + i * 10, 463 );
-
-    tpu_outputstringcentre( 7, TRANSPARENT, RED, "SDRAM Initialising" );
-
-    // CLEAR SDRAM
-    for( sdramaddress = (unsigned int *)0x10000000; sdramaddress < (unsigned int *)0x12000000; sdramaddress++ )
-        *sdramaddress  = 0;
 
     tpu_outputstringcentre( 7, TRANSPARENT, RED, "Waiting for SDCARD" );
     sd_readSector( 0, MBR );

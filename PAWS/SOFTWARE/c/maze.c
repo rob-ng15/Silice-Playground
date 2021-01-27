@@ -4,6 +4,10 @@
 #include "TOMBSTONEPPM.h"
 unsigned char *tombstonebitmap;
 
+// INCLUDE CONTROLS IMAGE
+#include "ULX3SPPM.h"
+unsigned char *ulx3sbitmap;
+
 // MAZE SIZES
 #define MAXWIDTH 160
 #define MAXHEIGHT 120
@@ -66,7 +70,7 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
     unsigned short sizechange = ghostsize[ steps ];
 
     unsigned short centrex = 320;
-    unsigned short centrey = 480 - perspectivey[ steps ];
+    unsigned short centrey = 240;
     unsigned short offsetx = ( sizechange * 2 ) / 6;
     unsigned short eyeoffsetx = ( sizechange + offsetx ) / 2;
     unsigned short eyeoffsety = sizechange / 2;
@@ -86,6 +90,7 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
         case 1:
         case 2:
         case 3:
+        case 6:
             gpu_pixel( colour, centrex - offsetx, centrey + sizechange + 1 );
             gpu_pixel( colour, centrex, centrey + sizechange + 1 );
             gpu_pixel( colour, centrex + offsetx, centrey + sizechange + 1 );
@@ -99,7 +104,7 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
     }
 
     // EYE WHITES
-    if( sizechange > 6 ) {
+    if( eyeoffsetx >= 8 ) {
         switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
             case 0:
                 // SAME DIRECTION, NO EYES
@@ -121,7 +126,7 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
     }
 
     // EYE PUPILS
-    if( sizechange > 12 ) {
+    if( eyeoffsetx >= 16 ) {
         switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
             case 0:
                 // SAME DIRECTION, NO EYES
@@ -148,18 +153,29 @@ void move_ghost( unsigned short ghostnumber) {
     // CHECK IF FACING A BLANK SPACE
     if( maze[ ghostx[ ghostnumber ] + directionx[ ghostdirection[ ghostnumber ] ] ][ ghosty[ ghostnumber ] + directiony[ ghostdirection[ ghostnumber ] ] ] == ' ' ) {
         // DECIDE IF TURNING LEFT
-        if( maze[ ghostx[ ghostnumber ] + leftdirectionx[ ghostdirection[ ghostnumber ] ] ][ ghosty[ ghostnumber ] + leftdirectionx[ ghostdirection[ ghostnumber ] ] ] == ' ' && ( rng( 32 ) == 0 ) ) {
+        if( maze[ ghostx[ ghostnumber ] + leftdirectionx[ ghostdirection[ ghostnumber ] ] ][ ghosty[ ghostnumber ] + leftdirectiony[ ghostdirection[ ghostnumber ] ] ] == ' ' && ( rng( 4 ) == 0 ) ) {
             // TURN LEFT
             ghostdirection[ ghostnumber ] = ( ghostdirection[ ghostnumber ] == 0 ) ? 3 : ghostdirection[ ghostnumber ] - 1;
         } else {
             // DECIDE IF TURNING RIGHT
-            if( maze[ ghostx[ ghostnumber ] + rightdirectionx[ ghostdirection[ ghostnumber ] ] ][ ghosty[ ghostnumber ] + rightdirectionx[ ghostdirection[ ghostnumber ] ] ] == ' ' && ( rng( 32 ) == 0 ) ) {
+            if( maze[ ghostx[ ghostnumber ] + rightdirectionx[ ghostdirection[ ghostnumber ] ] ][ ghosty[ ghostnumber ] + rightdirectiony[ ghostdirection[ ghostnumber ] ] ] == ' ' && ( rng( 4 ) == 0 ) ) {
                 // TURN RIGHT
                 ghostdirection[ ghostnumber ] = ( ghostdirection[ ghostnumber ] == 3 ) ? 0 : ghostdirection[ ghostnumber ] + 1;
             } else {
-                // MOVE FORWARD
-                ghostx[ ghostnumber ] += directionx[ ghostdirection[ ghostnumber ] ];
-                ghosty[ ghostnumber ] += directiony[ ghostdirection[ ghostnumber ] ];
+                // MOVE FORWARD OR RANDOMLY TURN
+                switch( rng( 16 ) ) {
+                    case 0:
+                        // RANDOMLY TURN LEFT
+                        break;
+                    case 1:
+                        // RANDOMLY TURN RIGHT
+                        break;
+                    default:
+                        // MOVE FORWARD
+                        ghostx[ ghostnumber ] += directionx[ ghostdirection[ ghostnumber ] ];
+                        ghosty[ ghostnumber ] += directiony[ ghostdirection[ ghostnumber ] ];
+                        break;
+                }
             }
         }
     } else {
@@ -525,7 +541,7 @@ void drawright( unsigned short steps, unsigned char totheright ) {
 }
 
 // WALK THE MAZE IN 3D
-void walk_maze( unsigned short width, unsigned short height )
+unsigned short walk_maze( unsigned short width, unsigned short height )
 {
     // SET START LOCATION TO TOP LEFT FACING EAST
     unsigned short newx = 1, newy = 1, direction = 1, newdirection = 1, currentx = 1, currenty = 1, visiblesteps, mappeeks = 4, dead = 0;
@@ -670,21 +686,23 @@ void walk_maze( unsigned short width, unsigned short height )
         }
     }
 
-    if( dead ) {
-        // DISPLAY TOMBSTONE BITMAP
-        bitmapblit( tombstonebitmap, 320, 298, 160, 91, WHITE );
-        while( get_buttons() != 1 );
-    }
+    return dead;
 }
 
 void main( void )
 {
+    unsigned short firstrun = 1;
+
     INITIALISEMEMORY();
+    set_background( 0, 0, BKG_RAINBOW );
 
     // DECODE TOMBSTONE PPM TO BITMAP
-    tombstonebitmap = memoryspace( 320* 298 );
+    tombstonebitmap = memoryspace( 320 * 298 );
     netppm_decoder( &tombstoneppm[0], tombstonebitmap );
 
+    // DECODE CONTROLS PPM TO BITMAP
+    ulx3sbitmap = memoryspace( 320 * 219 );
+    netppm_decoder( &ulx3sppm[0], ulx3sbitmap );
 
     unsigned short levelselected;
 
@@ -694,6 +712,30 @@ void main( void )
         tpu_cs();
         terminal_showhide( 0 );
         set_background( 0, 0, BKG_RAINBOW );
+
+        if( firstrun ) {
+            gpu_outputstringcentre( YELLOW, 320, 8, "3D MONSTER MAZE", 2 );
+
+            // DISPLAY ULX3 BITMAP
+            bitmapblit( ulx3sbitmap, 320, 219, 160, 131, BLUE );
+
+            // DRAW JOYSTICK AND LABEL
+            gpu_circle( BLACK, 480, 340, 8, 1 );
+            gpu_circle( BLACK, 480, 358, 8, 1 );
+            gpu_circle( BLACK, 440, 358, 8, 1 );
+            gpu_circle( BLACK, 520, 358, 8, 1 );
+            gpu_circle( BLACK, 400, 358, 8, 1 );
+            gpu_circle( BLACK, 360, 358, 8, 1 );
+            gpu_outputstringcentre( CYAN, 480, 322, "STEP", 0 );
+            gpu_outputstringcentre( CYAN, 480, 368, "BACK", 0 );
+            gpu_outputstringcentre( CYAN, 440, 368, "TURN", 0 );
+            gpu_outputstringcentre( CYAN, 440, 376, "LEFT", 0 );
+            gpu_outputstringcentre( CYAN, 520, 368, "TURN", 0 );
+            gpu_outputstringcentre( CYAN, 520, 376, "RIGHT", 0 );
+            gpu_outputstringcentre( CYAN, 400, 368, "PEEK", 0 );
+            gpu_outputstringcentre( CYAN, 360, 368, "POWER", 0 );
+            firstrun = 0;
+        }
 
         levelselected = 0;
         do {
@@ -722,6 +764,7 @@ void main( void )
         tpu_outputstringcentre( 27, TRANSPARENT, YELLOW, "" );
 
         // GENERATE THE MAZE
+        gpu_cs();
         tpu_outputstringcentre( 29, TRANSPARENT, YELLOW, "Generating Maze - Best to take notes!" );
         initialise_maze( levelwidths[level], levelheights[level] );
         generate_maze( levelwidths[level], levelheights[level], levelgenerationsteps[level] );
@@ -733,14 +776,21 @@ void main( void )
 
         // ENTER THE MAZE IN 3D
         set_background( DKBLUE, DKGREEN, BKG_5050_V );
-        walk_maze( levelwidths[level], levelheights[level] );
+        if( walk_maze( levelwidths[level], levelheights[level] ) ) {
+            // DISPLAY TOMBSTONE BITMAP AND RESET TO BEGINNING
+            gpu_cs();
+            bitmapblit( tombstonebitmap, 320, 298, 160, 91, WHITE );
+            level = 0;
+            firstrun = 1;
+        } else {
+            // COMPLETED THE MAZE
+            set_background( 0, 0, BKG_STATIC );
 
-        // COMPLETED THE MAZE
-        set_background( 0, 0, BKG_STATIC );
+            // GO TO THE NEXT LEVEL
+            level = ( level < MAXLEVEL ) ? level + 1 : MAXLEVEL;
+        }
+
         tpu_outputstringcentre( 29, TRANSPARENT, GREEN, "Press FIRE to restart!" ); while( ( get_buttons() & 2 ) == 0 );
         tpu_outputstringcentre( 29, TRANSPARENT, PURPLE, "Release FIRE!" ); while( get_buttons() & 2  );
-
-        // GO TO THE NEXT LEVEL, OR BACK TO 0
-        level = ( level < MAXLEVEL ) ? level + 1 : 0;
     }
 }

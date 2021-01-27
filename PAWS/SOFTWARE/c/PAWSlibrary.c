@@ -517,6 +517,19 @@ void gpu_quadrilateral( unsigned char colour, short x1, short y1, short x2, shor
     gpu_triangle( colour, x1, y1, x3, y3, x4, y4 );
 }
 
+// OUTPUT A STRING TO THE GPU
+void gpu_outputstring( unsigned char colour, short x, short y, char *s, unsigned char size ) {
+    while( *s ) {
+        gpu_character_blit( colour, x, y, *s++, size );
+        x = x + ( 8 << size );
+    }
+}
+// OUTPUT A STRING TO THE GPU - CENTRED AT ( x,y )
+void gpu_outputstringcentre( unsigned char colour, short x, short y, char *s, unsigned char size ) {
+    x = x - ( ( strlen( s ) * ( 8 << size ) ) /2 );
+    gpu_outputstring( colour, x, y, s, size );
+}
+
 // GPU VECTOR BLOCK
 // 32 VECTOR BLOCKS EACH OF 16 VERTICES ( offsets in the range -15 to 15 from the centre )
 // WHEN ACTIVATED draws lines from a vector block (x0,y0) to (x1,y1), (x1,y1) to (x2,y2), (x2,y2) to (x3,y3) until (x15,y15) or an inactive vertex is encountered
@@ -962,7 +975,6 @@ void netppm_decoder( unsigned char *netppmimagefile, unsigned char *buffer ) {
 
         // 24 bit image
         if( depth == 255 ) {
-            outputstring( "Copying Image to bitmap");
             for( unsigned short y = 0; y < height; y++ ) {
                 for( unsigned short x = 0; x < width; x++ ) {
                     colour = ( netppmimagefile[ location++ ] & 0xc0 ) >> 2;

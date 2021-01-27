@@ -20,8 +20,68 @@ algorithm terminal(
     };
 
     // 80 x 4 character buffer for the input/output terminal
-    simple_dualport_bram uint8 terminal <input!> [640] = { 32, pad(32) };
-    simple_dualport_bram uint8 terminal_copy <input!> [640] = { 32, pad(32) };
+    simple_dualport_bram uint8 terminal <input!> [640] = {
+        8h20, 8h57, 8h65, 8h6c,
+        8h63, 8h6f, 8h6d, 8h65,
+        8h20, 8h74, 8h6f, 8h20,
+        8h50, 8h41, 8h57, 8h53,
+        8h20, 8h2d, 8h20, 8h41,
+        8h20, 8h52, 8h69, 8h73,
+        8h63, 8h2d, 8h56, 8h20,
+        8h52, 8h56, 8h33, 8h32,
+        8h49, 8h4d, 8h41, 8h43,
+        8h42, 8h20, 8h53, 8h79,
+        8h73, 8h74, 8h65, 8h6d,
+        8h20, 8h4f, 8h6e, 8h20,
+        8h54, 8h68, 8h65, 8h20,
+        8h55, 8h4c, 8h58, 8h33,
+        8h53, 8h20, 8h20, 8h20,
+        8h20, 8h20, 8h20, 8h20,
+        8h20, 8h20, 8h20, 8h20,
+        8h20, 8h20, 8h20, 8h20,
+        8h20, 8h20, 8h20, 8h20,
+        8h20, 8h20, 8h20, 8h20,
+        8h20, 8h53, 8h44, 8h52,
+        8h41, 8h4d, 8h20, 8h49,
+        8h6e, 8h69, 8h74, 8h69,
+        8h61, 8h6c, 8h69, 8h73,
+        8h69, 8h6e, 8h67, 8h20,
+        8h2d, 8h20, 8h50, 8h6c,
+        8h65, 8h61, 8h73, 8h65,
+        8h20, 8h57, 8h61, 8h69,
+        8h74, pad(32)
+    };
+    simple_dualport_bram uint8 terminal_copy <input!> [640] = {
+        8h20, 8h57, 8h65, 8h6c,
+        8h63, 8h6f, 8h6d, 8h65,
+        8h20, 8h74, 8h6f, 8h20,
+        8h50, 8h41, 8h57, 8h53,
+        8h20, 8h2d, 8h20, 8h41,
+        8h20, 8h52, 8h69, 8h73,
+        8h63, 8h2d, 8h56, 8h20,
+        8h52, 8h56, 8h33, 8h32,
+        8h49, 8h4d, 8h41, 8h43,
+        8h42, 8h20, 8h53, 8h79,
+        8h73, 8h74, 8h65, 8h6d,
+        8h20, 8h4f, 8h6e, 8h20,
+        8h54, 8h68, 8h65, 8h20,
+        8h55, 8h4c, 8h58, 8h33,
+        8h53, 8h20, 8h20, 8h20,
+        8h20, 8h20, 8h20, 8h20,
+        8h20, 8h20, 8h20, 8h20,
+        8h20, 8h20, 8h20, 8h20,
+        8h20, 8h20, 8h20, 8h20,
+        8h20, 8h20, 8h20, 8h20,
+        8h20, 8h53, 8h44, 8h52,
+        8h41, 8h4d, 8h20, 8h49,
+        8h6e, 8h69, 8h74, 8h69,
+        8h61, 8h6c, 8h69, 8h73,
+        8h69, 8h6e, 8h67, 8h20,
+        8h2d, 8h20, 8h50, 8h6c,
+        8h65, 8h61, 8h73, 8h65,
+        8h20, 8h57, 8h61, 8h69,
+        8h74, pad(32)
+    };
 
     // Initial cursor position in the terminal, bottom left
     uint7 terminal_x = 0;

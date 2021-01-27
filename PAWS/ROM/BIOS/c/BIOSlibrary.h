@@ -48,6 +48,8 @@ extern void screen_mode( unsigned char );
 extern void set_background( unsigned char, unsigned char, unsigned char );
 
 // TERMINAL WINDOW
+extern void outputcharacter(char );
+extern void outputstringnonl(char *);
 extern void terminal_showhide( unsigned char );
 extern void terminal_reset( void );
 

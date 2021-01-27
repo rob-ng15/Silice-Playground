@@ -286,7 +286,24 @@ void tpu_outputstringcentre( unsigned char y, unsigned char background, unsigned
     tpu_outputstring( s );
 }
 
-// TERMINAL (NON-OUTPUT)
+// TERMINAL
+void outputcharacter(char c) {
+	while( *UART_STATUS & 2 );
+    *UART_DATA = c;
+
+    while( *TERMINAL_STATUS );
+    *TERMINAL_OUTPUT = c;
+
+    if( c == '\n' )
+        outputcharacter('\r');
+}
+// OUTPUT NULL TERMINATED STRING TO UART/TERMINAL WITH NO NEWLINE
+void outputstringnonl(char *s) {
+	while(*s) {
+		outputcharacter(*s);
+		s++;
+	}
+}
 
 // TERMINAL is an 80 x 8 character window ( white text, blue background ) with a 256 character 8 x 8 pixel character generator ROM )
 // DISPLAYS AT THE BOTTOM OF THE SCREEN
