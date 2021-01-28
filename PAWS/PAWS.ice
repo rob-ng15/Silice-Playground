@@ -276,16 +276,20 @@ algorithm sdramcontroller (
 
     output  uint1   busy
 ) <autorun> {
-    // INSTRUCTION & DATA CACHES for SDRAM (32mb)
+    // INSTRUCTION CACHE for SDRAM 8k
+    // CACHE LINE IS LOWER 12 bits ( 0 - 2047 ) of address, dropping the BYTE address bit
+    // CACHE TAG IS REMAINING 13 bits of the 26 bit address + 1 bit for valid flag
+    bram uint16 Icachedata <input!> [4096] = uninitialized;
+    bram uint15 Icachetag <input!> [4096] = uninitialized;
+
+    // DATA CACHE for SDRAM 4k
     // CACHE LINE IS LOWER 11 bits ( 0 - 2047 ) of address, dropping the BYTE address bit
     // CACHE TAG IS REMAINING 14 bits of the 26 bit address + 1 bit for valid flag
     bram uint16 Dcachedata <input!> [2048] = uninitialized;
     bram uint15 Dcachetag <input!> [2048] = uninitialized;
-    bram uint16 Icachedata <input!> [2048] = uninitialized;
-    bram uint15 Icachetag <input!> [2048] = uninitialized;
 
     // CACHE TAG match flags
-    uint1   Icachetagmatch := ( Icachetag.rdata == { 1b1, address[12,14] } );
+    uint1   Icachetagmatch := ( Icachetag.rdata == { 1b1, address[13,13] } );
     uint1   Dcachetagmatch := ( Dcachetag.rdata == { 1b1, address[12,14] } );
 
     // VALUE TO WRITE THROUGH CACHE TO SDRAM
@@ -299,10 +303,10 @@ algorithm sdramcontroller (
     sio.in_valid := 0;
 
     // FLAGS FOR CACHE ACCESS
+    Icachedata.wenable := 0; Icachedata.addr := address[1,12];
+    Icachetag.wenable := 0; Icachetag.addr := address[1,12]; Icachetag.wdata := { 1b1, address[13,13] };
     Dcachedata.wenable := 0; Dcachedata.addr := address[1,11];
     Dcachetag.wenable := 0; Dcachetag.addr := address[1,11]; Dcachetag.wdata := { 1b1, address[12,14] };
-    Icachedata.wenable := 0; Icachedata.addr := address[1,11];
-    Icachetag.wenable := 0; Icachetag.addr := address[1,11]; Icachetag.wdata := { 1b1, address[12,14] };
 
     // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
     readdata := ( Icache && Icachetagmatch ) ? Icachedata.rdata : ( ( ~Icache && Dcachetagmatch ) ? Dcachedata.rdata : sio.data_out );

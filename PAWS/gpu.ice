@@ -14,7 +14,7 @@ algorithm gpu(
     input   int11   gpu_param2,
     input   int11   gpu_param3,
     input   uint4   gpu_write,
-    input   uint1   gpu_dithermode,
+    input   uint3   gpu_dithermode,
 
     // For setting blit1 tile bitmaps
     input   uint5   blit1_writer_tile,
@@ -53,7 +53,7 @@ algorithm gpu(
     // GPU COLOUR
     uint7   gpu_active_colour = uninitialized;
     uint7   gpu_active_colour_alt = uninitialized;
-    uint2   gpu_active_dithermode = uninitialised;
+    uint3   gpu_active_dithermode = uninitialised;
 
     // GPU <-> VECTOR DRAWER Communication
     int11 v_gpu_x = uninitialised;

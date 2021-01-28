@@ -474,6 +474,7 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
         }
     }
 
+    // DRAW COMPASS
     gpu_triangle( BLACK, 468, 1, 473, 10, 463, 10 );
     gpu_triangle( BLACK, 473, 10, 468, 19, 463, 10 );
     switch( direction ) {
@@ -491,19 +492,9 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
             break;
     }
 
-    switch( mappeeks ) {
-        case 4:
-            gpu_character_blit( GREEN, 462, 106, 1, 0 );
-        case 3:
-            gpu_character_blit( GREEN, 462, 114, 1, 0 );
-        case 2:
-            gpu_character_blit( GREEN, 462, 122, 1, 0 );
-        case 1:
-            gpu_character_blit( GREEN, 462, 130, 1, 0 );
-            break;
-        default:
-            break;
-    }
+    // DRAW MAPPEEKS
+    for( unsigned peek = 0; peek < mappeeks; peek++ )
+        gpu_character_blit( GREEN, 462, 130 - ( peek * 8 ), 1, 0 );
 }
 
 // CALCULATE NUMBER OF STEPS TO HIT A WALL
