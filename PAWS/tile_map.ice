@@ -217,7 +217,7 @@ algorithm tilemap(
                         tiles_copy.addr1 = x_cursor + y_cursor_addr;
                         tiles_copy.wdata1 = tiles_copy.rdata0;
                         y_cursor = y_cursor + ( tm_goup ? 1 : (-1) );
-                        y_cursor_addr = y_cursor + ( tm_goup ? 42 : (-42) );
+                        y_cursor_addr = y_cursor_addr + ( tm_goup ? 42 : (-42) );
                     }
                     tiles.addr1 = x_cursor + ( tm_goup ? 1302 : 0 );
                     tiles.wdata1 = new_tile;

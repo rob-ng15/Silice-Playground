@@ -27,12 +27,6 @@ unsigned short levelheights[] = { 8, 12, 16, 24, 30, 48, 60 };
 short perspectivex[] = { 0, 100, 170, 218, 251, 273, 288, 298, 305, 310, 313, 315, 317, 318, 320 };
 short perspectivey[] = { 0,  75, 128, 164, 188, 205, 216, 224, 229, 232, 235, 236, 238, 239, 240 };
 
-// GHOST SIZE FOR PERSPECTIVE DRAWING
-unsigned short ghostsize[] = { 90, 63, 45, 33, 24, 15, 12, 9, 6, 3, 3, 2, 2, 1, 1 };
-
-// PILL SIZE FOR PERSPECTIVE DRAWING
-unsigned short pillsize[] = { 24, 20, 16, 12, 10, 8, 6, 5, 4, 3, 3, 2, 2, 1, 1 };
-
 // DIRECTION STEPS IN X and Y
 short directionx[] = { 0, 1, 0, -1 }, leftdirectionx[] = { -1, 0, 1, 0 }, rightdirectionx[] = { 1, 0, -1, 0 };
 short directiony[] = { -1, 0, 1, 0 }, leftdirectiony[] = { 0, -1, 0, 1 }, rightdirectiony[] = { 0, 1, 0, -1 };
@@ -83,6 +77,8 @@ unsigned char whatisat( unsigned short x, unsigned short y, unsigned char mapmaz
             return( ( maze[ x >> 4 ][ y ] >> ( x & 0xf ) ) & 1 ? '#' : ' ' );
         case 1:
             return( ( map[ x >> 4 ][ y ] >> ( x & 0xf ) ) & 1 ? '#' : ' ' );
+        default:
+            return( '?' );
     }
 }
 
@@ -137,22 +133,20 @@ unsigned char ghostcolour( unsigned short ghost ) {
     switch( ghost ) {
         case 0:
             return( CYAN );
-            break;
         case 1:
             return( MAGENTA );
-            break;
         case 2:
             return( ORANGE );
-            break;
         case 3:
             return( RED );
-            break;
+        default:
+            return( BLACK );
     }
 }
 
 // DRAW GHOST AT CORRECT DISTANCE
 void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned short playerdirection ) {
-    unsigned short sizechange = ghostsize[ steps ];
+    unsigned short sizechange = ( 320 - perspectivex[ steps ] ) * 3 / 8;
 
     unsigned short centrex = 320;
     unsigned short centrey = 240;
@@ -189,7 +183,7 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
     }
 
     // EYE WHITES
-    if( eyeoffsetx >= 8 ) {
+    if( eyeoffsetx / 2 >= 4 ) {
         switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
             case 0:
                 // SAME DIRECTION, NO EYES
@@ -208,10 +202,25 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
                 gpu_circle( WHITE, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2, 1 );
                 break;
         }
+    } else {
+        switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
+            case 0:
+                break;
+            case 1:
+                gpu_pixel( WHITE, centrex + eyeoffsetx, centrey - eyeoffsety );
+                break;
+            case 2:
+                gpu_pixel( WHITE, centrex - eyeoffsetx, centrey - eyeoffsety );
+                gpu_pixel( WHITE, centrex + eyeoffsetx, centrey - eyeoffsety );
+                break;
+            case 3:
+                gpu_pixel( WHITE, centrex - eyeoffsetx, centrey - eyeoffsety );
+                break;
+        }
     }
 
     // EYE PUPILS
-    if( eyeoffsetx >= 16 ) {
+    if( eyeoffsetx / 4 >= 4 ) {
         switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
             case 0:
                 // SAME DIRECTION, NO EYES
@@ -228,6 +237,21 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
             case 3:
                 // GHOST FACING LEFT
                 gpu_circle( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 1 );
+                break;
+        }
+    } else {
+        switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
+            case 0:
+                break;
+            case 1:
+                gpu_pixel( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety );
+                break;
+            case 2:
+                gpu_pixel( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety );
+                gpu_pixel( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety );
+                break;
+            case 3:
+                gpu_pixel( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety );
                 break;
         }
     }
@@ -278,20 +302,21 @@ void move_ghost( unsigned short ghostnumber) {
 
 // DRAW A PILL
 void draw_pill( unsigned short steps ) {
-    switch( pillsize[ steps ] ) {
+    unsigned short pillsize = ( 320 - perspectivex[ steps ] ) / 8;
+
+    switch( pillsize ) {
+        case 0:
+            break;
+
         case 1:
-            gpu_pixel( WHITE, 320, 480 - perspectivey[ steps ] );
-            break;
         case 2:
-            gpu_rectangle( WHITE, 319, 480 - perspectivey[ steps ] - 1, 320, 480 - perspectivey[ steps ] );
-            break;
         case 3:
-            gpu_rectangle( WHITE, 319, 479 - perspectivey[ steps ], 321, 481 - perspectivey[ steps ] );
+            gpu_pixel( WHITE, 320, 480 - perspectivey[ steps ] );
             break;
 
         default:
-            gpu_circle( WHITE, 320, 480 - perspectivey[ steps ], pillsize[ steps ], 1 );
-            gpu_circle( GREY2, 320, 480 - perspectivey[ steps ], pillsize[ steps ], 0 );
+            gpu_circle( WHITE, 320, 480 - perspectivey[ steps ], pillsize, 1 );
+            gpu_circle( GREY2, 320, 480 - perspectivey[ steps ], pillsize, 0 );
             break;
     }
 }
@@ -429,7 +454,6 @@ void generate_maze( unsigned short width, unsigned short height ) {
                 }
             }
         }
-        display_maze( width, height, 1, 1 );
     }
 }
 
@@ -522,36 +546,28 @@ unsigned short counttowall( unsigned short currentx, unsigned short currenty, un
 void left_wall( unsigned char colour, unsigned char colour_alt, short steps )
 {
     gpu_dither( DITHERON, colour_alt);
-
     // USE RECTANGLE + TWO TRIANGLES AS FASTER THAN TWO TRIANGLES FOR LARGE AREAS
-    if( steps < MAXDEPTH -1 ) {
-        gpu_triangle( colour, perspectivex[ steps ], perspectivey[ steps ], perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], perspectivex[ steps ], perspectivey[ steps + 1 ] );
-        gpu_rectangle( colour, perspectivex[ steps ], perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
-        gpu_triangle( colour, perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], perspectivex[ steps ], 480 - perspectivey[ steps ], perspectivex[ steps ], 480 - perspectivey[ steps + 1 ] );
-    } else {
-        // TO PROVIDE THE POINT AT HORIZON
-        gpu_quadrilateral( colour, perspectivex[ steps ], perspectivey[ steps ], perspectivex[ steps + 1 ], perspectivey[ steps + 1 ],
-                                perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], perspectivex[ steps ], 480 - perspectivey[ steps ] );
-    }
-
+    gpu_triangle( colour, perspectivex[ steps ], perspectivey[ steps ], perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], perspectivex[ steps ], perspectivey[ steps + 1 ] );
+    gpu_rectangle( colour, perspectivex[ steps ], perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
+    gpu_triangle( colour, perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], perspectivex[ steps ], 480 - perspectivey[ steps ], perspectivex[ steps ], 480 - perspectivey[ steps + 1 ] );
     gpu_dither( DITHEROFF );
+    gpu_line( colour, perspectivex[ steps ], perspectivey[ steps ], perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
+    gpu_line( colour, perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
+    gpu_line( colour, perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], perspectivex[ steps ], 480 - perspectivey[ steps ] );
+    gpu_line( colour, perspectivex[ steps ], 480 - perspectivey[ steps ], perspectivex[ steps ], perspectivey[ steps ] );
 }
 void right_wall( unsigned char colour, unsigned char colour_alt, unsigned short steps )
 {
     gpu_dither( DITHERON, colour_alt);
-
     // USE RECTANGLE + TWO TRIANGLES AS FASTER THAN TWO TRIANGLES FOR LARGE AREAS
-    if( steps < MAXDEPTH -1 ) {
-        gpu_triangle( colour, 640 - perspectivex[ steps ], perspectivey[ steps ], 640 - perspectivex[ steps ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
-        gpu_rectangle( colour, 640 - perspectivex[ steps ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
-        gpu_triangle( colour, 640 - perspectivex[ steps ], 480 - perspectivey[ steps + 1 ], 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ], 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ]);
-    } else {
-        // TO PROVIDE THE POINT AT HORIZON
-        gpu_quadrilateral( colour, 640 - perspectivex[ steps ], perspectivey[ steps ], 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ],
-                                640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
-    }
-
+    gpu_triangle( colour, 640 - perspectivex[ steps ], perspectivey[ steps ], 640 - perspectivex[ steps ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
+    gpu_rectangle( colour, 640 - perspectivex[ steps ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
+    gpu_triangle( colour, 640 - perspectivex[ steps ], 480 - perspectivey[ steps + 1 ], 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ], 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ]);
     gpu_dither( DITHEROFF );
+    gpu_line( colour, 640 - perspectivex[ steps ], perspectivey[ steps ], 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ] );
+    gpu_line( colour, 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ], 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
+    gpu_line( colour, 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
+    gpu_line( colour, 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps ], perspectivey[ steps ] );
 }
 
 void drawleft( unsigned short steps, unsigned char totheleft ) {
@@ -563,6 +579,7 @@ void drawleft( unsigned short steps, unsigned char totheleft ) {
         case ' ':
             // GAP
             gpu_rectangle( GREY2, 0, perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
+            gpu_line( GREY1, perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480- perspectivey[ steps + 1 ] );
             break;
         case 'E':
             left_wall( MAGENTA, DKMAGENTA, steps );
@@ -584,6 +601,7 @@ void drawright( unsigned short steps, unsigned char totheright ) {
         case ' ':
             // GAP
             gpu_rectangle( GREY2, 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], 640, 480 - perspectivey[ steps + 1 ] );
+            gpu_line( GREY1, 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ],  480 - perspectivey[ steps + 1 ] );
             break;
         case 'E':
             right_wall( MAGENTA, DKMAGENTA, steps );
@@ -726,7 +744,7 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
     return dead;
 }
 
-void main( void ) {
+int main( void ) {
     unsigned short firstrun = 1;
 
     INITIALISEMEMORY();
@@ -783,7 +801,7 @@ void main( void ) {
 
         // GENERATE THE MAZE
         gpu_cs();
-        tpu_outputstringcentre( 29, TRANSPARENT, YELLOW, "Generating Maze - Best to take notes!" );
+        tpu_outputstringcentre( 29, TRANSPARENT, YELLOW, "Generating Maze" );
         initialise_maze( levelwidths[level], levelheights[level] );
         generate_maze( levelwidths[level], levelheights[level] );
         display_maze( levelwidths[level], levelheights[level], 1, 1 );

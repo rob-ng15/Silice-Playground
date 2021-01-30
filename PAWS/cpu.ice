@@ -67,6 +67,12 @@ algorithm PAWSCPU (
         instruction <: instruction
     );
 
+    // LAST INSTRUCTION CACHE
+    uint32  lastpccache[32] = { 32hffffffff, pad(32hffffffff) };
+    uint32  lastinstructioncache[32] = uninitialized;
+    uint1   lastcompressedcache[32] = uninitialized;
+    uint5   lastcachepointer = 0;
+
     // MEMORY ACCESS FLAGS
     readmemory := 0;
     writememory := 0;
@@ -89,26 +95,51 @@ algorithm PAWSCPU (
         // { rs1 is float, rs2 is float, rs3 is float, rd is float }
         floatingpoint = 4b0000;
 
-        // FETCH + EXPAND COMPRESSED INSTRUCTIONS
-        address = pc;
-        Icacheflag = 1;
-        readmemory = 1;
-        while( memorybusy ) {}
+        // CHECK IF PC IS IN LAST INSTRUCTION CACHE
+        if(
+            $$for i = 0, 30 do
+                ( pc == lastpccache[ $i$ ] ) ||
+            $$end
+                ( pc == lastpccache[ 31] ) ) {
+                // RETRIEVE FROM LAST INSTRUCTION CACHE
+                instruction = ( pc == lastpccache[ 0 ] ) ? lastinstructioncache[ 0 ] :
+                                $$for i = 1, 30 do
+                                 ( pc == lastpccache[ $i$ ] ) ? lastinstructioncache[ $i$ ] :
+                                $$end
+                                lastinstructioncache[ 31 ];
+                compressed = ( pc == lastpccache[ 0 ] ) ? lastcompressedcache[ 0 ] :
+                                $$for i = 1, 30 do
+                                 ( pc == lastpccache[ $i$ ] ) ? lastcompressedcache[ $i$ ] :
+                                $$end
+                                lastcompressedcache[ 31 ];
+        } else {
+            // FETCH + EXPAND COMPRESSED INSTRUCTIONS
+            address = pc;
+            Icacheflag = 1;
+            readmemory = 1;
+            while( memorybusy ) {}
 
-        compressed = ( readdata[0,2] != 2b11 );
+            compressed = ( readdata[0,2] != 2b11 );
 
-        switch( readdata[0,2] ) {
-            case 2b00: { ( instruction ) = compressed00( readdata ); }
-            case 2b01: { ( instruction ) = compressed01( readdata ); }
-            case 2b10: { ( instruction ) = compressed10( readdata ); }
-            case 2b11: {
-                // 32 BIT INSTRUCTION
-                lowWord = readdata;
-                address = pc + 2;
-                readmemory = 1;
-                while( memorybusy ) {}
-                ( instruction ) = halfhalfword( readdata, lowWord );
+            switch( readdata[0,2] ) {
+                case 2b00: { ( instruction ) = compressed00( readdata ); }
+                case 2b01: { ( instruction ) = compressed01( readdata ); }
+                case 2b10: { ( instruction ) = compressed10( readdata ); }
+                case 2b11: {
+                    // 32 BIT INSTRUCTION
+                    lowWord = readdata;
+                    address = pc + 2;
+                    readmemory = 1;
+                    while( memorybusy ) {}
+                    ( instruction ) = halfhalfword( readdata, lowWord );
+                }
             }
+
+            // UPDATE LASTCACHE
+            lastpccache[ lastcachepointer ] = pc;
+            lastinstructioncache[ lastcachepointer ] = instruction;
+            lastcompressedcache[ lastcachepointer ] = compressed;
+            lastcachepointer = lastcachepointer + 1;
         }
 
         // DECODE + REGISTER FETCH

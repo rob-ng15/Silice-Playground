@@ -161,6 +161,7 @@ extern unsigned char tilemap_scrollwrapclear( unsigned char );
 void gpu_dither( unsigned char , unsigned char );
 extern void gpu_pixel( unsigned char, short, short );
 extern void gpu_rectangle( unsigned char, short, short, short, short );
+extern void gpu_box( unsigned char, short, short, short, short );
 extern void gpu_cs( void );
 extern void gpu_line( unsigned char, short, short, short, short );
 extern void gpu_circle( unsigned char, short, short, short, unsigned char );

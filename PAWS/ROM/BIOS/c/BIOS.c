@@ -186,6 +186,17 @@ void draw_sdcard( void  ) {
     gpu_blit( WHITE, 576, 4, 0, 2 );
 }
 
+void reset_display( unsigned char terminalvisible ) {
+    gpu_cs();
+    tpu_cs();
+    tilemap_scrollwrapclear( 9 );
+    terminal_showhide( terminalvisible );
+    for( unsigned short i = 0; i < 13; i++ ) {
+        set_sprite( 0, i, 0, 0, 0, 0, 0, 0 );
+        set_sprite( 1, i, 0, 0, 0, 0, 0, 0 );
+    }
+}
+
 void main( void ) {
     unsigned short i,j;
     unsigned char uartData = 0;
@@ -194,10 +205,8 @@ void main( void ) {
 
     // CLEAR SDRAM
     // RESET THE DISPLAY
-    gpu_cs();
-    tpu_cs();
+    reset_display( 1 );
     set_background( BLACK, BLACK, BKG_SOLID );
-    terminal_showhide( 1 );
     outputstringnonl( " SDRAM Test: " );
     for( sdramaddress = (unsigned int *)0x10000000; sdramaddress < (unsigned int *)0x12000000; sdramaddress++ ) {
         *sdramaddress  = 0;
@@ -206,16 +215,8 @@ void main( void ) {
     }
 
     // RESET THE DISPLAY
-    terminal_showhide( 0 );
-    terminal_reset();
-    gpu_cs();
-    tpu_cs();
-    tilemap_scrollwrapclear( 9 );
+    reset_display( 0 );
     set_background( DKBLUE - 1, BLACK, BKG_SOLID );
-    for( unsigned short i = 0; i < 13; i++ ) {
-        set_sprite( 0, i, 0, 0, 0, 0, 0, 0 );
-        set_sprite( 1, i, 0, 0, 0, 0, 0, 0 );
-    }
 
     // SETUP INITIAL WELCOME MESSAGE
     draw_riscv_logo();
@@ -301,8 +302,7 @@ void main( void ) {
 
     // RESET THE DISPLAY
     terminal_reset();
-    gpu_cs();
-    tpu_cs();
+    reset_display( 0 );
     set_background( BLACK, BLACK, BKG_SOLID );
 
     // CALL SDRAM LOADED PROGRAM

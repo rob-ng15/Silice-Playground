@@ -17,3 +17,4 @@ _start:
 exit:
    .word 0
    ret
+

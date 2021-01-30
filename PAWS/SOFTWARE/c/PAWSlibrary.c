@@ -9,6 +9,7 @@ void *memcpy(void *dest, const void *src, size_t n) {
   while ( n-- ) {
     *(unsigned char*)dest = *(++bsrc);
   }
+  return(0);
 }
 
 void *memset(void *s, int c,  unsigned int n)
@@ -16,6 +17,7 @@ void *memset(void *s, int c,  unsigned int n)
     unsigned char* p = s;
     while( n-- )
         *p++ = (unsigned char)c;
+    return(0);
 }
 
 int strlen( char *s ) {
@@ -64,7 +66,7 @@ void INITIALISEMEMORY( void ) {
 
 // ALLOCATE MEMORY, ENSURE EVEN NUMBER
 unsigned char *memoryspace( unsigned int size ) {
-    if( size & 1 != 0 )
+    if( ( size & 1 ) != 0 )
         size++;
 
     MEMORYTOP -= size;
@@ -142,10 +144,10 @@ void inttostring( unsigned int value, char *s ) {
 // OUTPUT TO TERMINAL & UART
 // OUTPUT INDIVIDUAL CHARACTER TO THE UART/TERMINAL
 void outputcharacter(char c) {
-	while( *UART_STATUS & 2 );
+	while( *UART_STATUS & 2 ) {}
     *UART_DATA = c;
 
-    while( *TERMINAL_STATUS );
+    while( *TERMINAL_STATUS ) {}
     *TERMINAL_OUTPUT = c;
 
     if( c == '\n' )
@@ -190,7 +192,7 @@ unsigned char inputcharacter_available( void ) {
 }
 // RETURN CHARACTER FROM UART
 char inputcharacter( void ) {
-	while( !inputcharacter_available() );
+	while( !inputcharacter_available() ) {}
     return *UART_DATA;
 }
 
@@ -327,7 +329,7 @@ unsigned char get_buttons( void ) {
 
 // WAIT FOR VBLANK TO START
 void await_vblank( void ) {
-    while( !*VBLANK != 0 );
+    while( !*VBLANK );
 }
 
 // SET THE LAYER ORDER FOR THE DISPLAY
@@ -393,18 +395,10 @@ unsigned char tilemap_scrollwrapclear( unsigned char action ) {
 // The bitmap can be moved 1 pixel at a time LEFT, RIGHT, UP, DOWN for scrolling
 // The GPU can draw pixels, filled rectangles, lines, (filled) circles, filled triangles and has a 16 x 16 pixel blitter from user definable tiles
 
+
 // INTERNAL FUNCTION - WAIT FOR THE GPU TO FINISH THE LAST COMMAND
 void wait_gpu( void ) {
     while( *GPU_STATUS != 0 );
-}
-
-// SET THE PIXEL at (x,y) to colour
-void gpu_pixel( unsigned char colour, short x, short y ) {
-    wait_gpu();
-    *GPU_COLOUR = colour;
-    *GPU_X = x;
-    *GPU_Y = y;
-    *GPU_WRITE = 1;
 }
 
 // SCROLL THE BITMAP by 1 pixel
@@ -420,7 +414,37 @@ void gpu_dither( unsigned char mode, unsigned char colour ) {
     *GPU_DITHERMODE = mode;
 }
 
+
+// SET THE PIXEL at (x,y) to colour
+void gpu_pixel( unsigned char colour, short x, short y ) {
+    wait_gpu();
+    *GPU_COLOUR = colour;
+    *GPU_X = x;
+    *GPU_Y = y;
+    *GPU_WRITE = 1;
+}
+
+// DRAW A LINE FROM (x1,y1) to (x2,y2) in colour - uses Bresenham's Line Drawing Algorithm
+void gpu_line( unsigned char colour, short x1, short y1, short x2, short y2 ) {
+    *GPU_COLOUR = colour;
+    *GPU_X = x1;
+    *GPU_Y = y1;
+    *GPU_PARAM0 = x2;
+    *GPU_PARAM1 = y2;
+
+    wait_gpu();
+    *GPU_WRITE = 2;
+}
+
 // DRAW A FILLED RECTANGLE from (x1,y1) to (x2,y2) in colour
+void gpu_box( unsigned char colour, short x1, short y1, short x2, short y2 ) {
+    gpu_line( colour, x1, y1, x2, y1 );
+    gpu_line( colour, x2, y1, x2, y2 );
+    gpu_line( colour, x2, y2, x1, y2 );
+    gpu_line( colour, x1, y2, x1, y1 );
+}
+
+// DRAW AN OUTLINE BOX from (x1,y1) to (x2,y2) in colour
 void gpu_rectangle( unsigned char colour, short x1, short y1, short x2, short y2 ) {
     *GPU_COLOUR = colour;
     *GPU_X = x1;
@@ -438,17 +462,6 @@ void gpu_cs( void ) {
     gpu_rectangle( 64, 0, 0, 639, 479 );
 }
 
-// DRAW A LINE FROM (x1,y1) to (x2,y2) in colour - uses Bresenham's Line Drawing Algorithm
-void gpu_line( unsigned char colour, short x1, short y1, short x2, short y2 ) {
-    *GPU_COLOUR = colour;
-    *GPU_X = x1;
-    *GPU_Y = y1;
-    *GPU_PARAM0 = x2;
-    *GPU_PARAM1 = y2;
-
-    wait_gpu();
-    *GPU_WRITE = 2;
-}
 
 // DRAW A (optional filled) CIRCLE at centre (x1,y1) of radius ( FILLED CIRCLES HAVE A MINIMUM RADIUS OF 4 )
 void gpu_circle( unsigned char colour, short x1, short y1, short radius, unsigned char filled ) {
@@ -674,44 +687,36 @@ short get_sprite_attribute( unsigned char sprite_layer, unsigned char sprite_num
         switch( attribute ) {
             case 0:
                 return( (short)*LOWER_SPRITE_ACTIVE );
-                break;
             case 1:
                 return( (short)*LOWER_SPRITE_TILE );
-                break;
             case 2:
                 return( (short)*LOWER_SPRITE_COLOUR );
-                break;
             case 3:
                 return( *LOWER_SPRITE_X );
-                break;
             case 4:
                 return( *LOWER_SPRITE_Y );
-                break;
             case 5:
                 return( (short)*LOWER_SPRITE_DOUBLE );
-                break;
+            default:
+                return( 0 );
         }
     } else {
         *UPPER_SPRITE_NUMBER = sprite_number;
         switch( attribute ) {
             case 0:
                 return( (short)*UPPER_SPRITE_ACTIVE );
-                break;
             case 1:
                 return( (short)*UPPER_SPRITE_TILE );
-                break;
             case 2:
                 return( (short)*UPPER_SPRITE_COLOUR );
-                break;
             case 3:
                 return( *UPPER_SPRITE_X );
-                break;
             case 4:
                 return( *UPPER_SPRITE_Y );
-                break;
             case 5:
                 return( (short)*UPPER_SPRITE_DOUBLE );
-                break;
+            default:
+                return( 0 );
         }
     }
 }
@@ -989,15 +994,20 @@ void netppm_decoder( unsigned char *netppmimagefile, unsigned char *buffer ) {
 
 void bitmapblit( unsigned char *buffer, unsigned short width, unsigned short height, short xpos, short ypos, unsigned char transparent ) {
     unsigned int bufferpos = 0;
-    unsigned char colour;
+    unsigned short *twocolour = (unsigned short *)buffer;
+    unsigned char colour, colour2;
 
-    for( unsigned short y = 0; y < height; y++ ) {
-        for( unsigned short x = 0; x < width; x++ ) {
-            colour = buffer[ bufferpos++ ];
+    for( unsigned short y = ypos; y < ypos + height; y++ ) {
+        for( unsigned short x = xpos; x < xpos + width; x = x + 2 ) {
+            colour2 = twocolour[ bufferpos ] >> 8;
+            colour = twocolour[ bufferpos ] & 0xff;
             if( colour != transparent ) {
-                gpu_pixel( colour, xpos + x, ypos + y );
-
+                gpu_pixel( colour, x, y );
             }
+            if( colour2 != transparent ) {
+                gpu_pixel( colour2, x + 1, y );
+            }
+            bufferpos++;
         }
     }
 }
