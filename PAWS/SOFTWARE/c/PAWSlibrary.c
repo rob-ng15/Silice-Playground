@@ -992,21 +992,21 @@ void netppm_decoder( unsigned char *netppmimagefile, unsigned char *buffer ) {
     }
 }
 
+// COPY A BITMAP STORED IN MEMORY TO THE GPU_COLOUR
+// FOR SPEED USES AN OPTIMISED INLINE VERSION OF GPU_PIXEL
 void bitmapblit( unsigned char *buffer, unsigned short width, unsigned short height, short xpos, short ypos, unsigned char transparent ) {
     unsigned int bufferpos = 0;
     unsigned short *twocolour = (unsigned short *)buffer;
     unsigned char colour, colour2;
 
+    wait_gpu();
     for( unsigned short y = ypos; y < ypos + height; y++ ) {
+        *GPU_Y = y;
         for( unsigned short x = xpos; x < xpos + width; x = x + 2 ) {
-            colour2 = twocolour[ bufferpos ] >> 8;
             colour = twocolour[ bufferpos ] & 0xff;
-            if( colour != transparent ) {
-                gpu_pixel( colour, x, y );
-            }
-            if( colour2 != transparent ) {
-                gpu_pixel( colour2, x + 1, y );
-            }
+            colour2 = twocolour[ bufferpos ] >> 8;
+            *GPU_COLOUR = colour; *GPU_X = x; *GPU_WRITE = ( colour != transparent );
+            *GPU_COLOUR = colour2; *GPU_X = x + 1; *GPU_WRITE = ( colour2 != transparent );
             bufferpos++;
         }
     }

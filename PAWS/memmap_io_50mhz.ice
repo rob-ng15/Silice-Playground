@@ -388,7 +388,7 @@ algorithm memmap_io (
                 case 16h8348: { readData = lower_sprites.collision_12; }
 
                 // GPU and BITMAP
-                case 16h841c: { readData = gpu_processor.gpu_active; }
+                case 16h841c: { readData = gpu_processor.gpu_active | gpu_processor.vector_block_active; }
                 case 16h8448: { readData = gpu_processor.vector_block_active; }
                 case 16h8470: { readData = bitmap_window.bitmap_colour_read; }
 
