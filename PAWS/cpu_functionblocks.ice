@@ -5,17 +5,17 @@ circuitry registersWRITE (
     inout   registers_3,
     input   rd,
     input   writeRegister,
-    input   floatingpoint,
+    input   SMT,
     input   result,
 ) {
     // WRITE TO REGISTERS
     // NEVER write to registers[0]
     if( writeRegister && ( rd != 0 ) ) {
-        registers_1.addr1 = rd + ( floatingpoint[3,1] ? 32 : 0 );
+        registers_1.addr1 = rd + ( SMT ? 32 : 0 );
         registers_1.wdata1 = result;
-        registers_2.addr1 = rd + ( floatingpoint[2,1] ? 32 : 0 );
+        registers_2.addr1 = rd + ( SMT ? 32 : 0 );
         registers_2.wdata1 = result;
-        registers_3.addr1 = rd + ( floatingpoint[1,1] ? 32 : 0 );
+        registers_3.addr1 = rd + ( SMT ? 32 : 0 );
         registers_3.wdata1 = result;
     }
 }
@@ -28,14 +28,14 @@ circuitry registersREAD(
     input   rs1,
     input   rs2,
     input   rs3,
-    input   floatingpoint,
+    input   SMT,
     output  sourceReg1,
     output  sourceReg2,
     output  sourceReg3
 ) {
-    registers_1.addr0 = rs1 + ( floatingpoint[0,1] ? 32 : 0 );
-    registers_2.addr0 = rs2 + ( floatingpoint[0,1] ? 32 : 0 );
-    registers_3.addr0 = rs2 + ( floatingpoint[0,1] ? 32 : 0 );
+    registers_1.addr0 = rs1 + ( SMT ? 32 : 0 );
+    registers_2.addr0 = rs2 + ( SMT ? 32 : 0 );
+    registers_3.addr0 = rs2 + ( SMT ? 32 : 0 );
     ++:
     sourceReg1 = registers_1.rdata0;
     sourceReg2 = registers_2.rdata0;
@@ -136,35 +136,45 @@ circuitry branchcomparison (
 algorithm CSRblock (
     input   uint32  instruction,
     input   uint1   incCSRinstret,
+    input   uint1   SMT,
     output  uint32  result
 ) <autorun> {
     // RDCYCLE[H] and RDTIME[H] are equivalent on PAWSCPU
+    uint64  CSRtimer = 0;
     uint64  CSRcycletime = 0;
+    uint64  CSRcycletimeSMT = 0;
     uint64  CSRinstret = 0;
+    uint64  CSRinstretSMT = 0;
 
-    CSRcycletime := CSRcycletime + 1;
-    CSRinstret := CSRinstret + ( incCSRinstret ? 1 : 0 );
+    CSRtimer := CSRtimer + 1;
+    CSRcycletime := CSRcycletime + ~SMT;
+    CSRinstret := CSRinstret + ( incCSRinstret & (~SMT) );
+    CSRcycletimeSMT := CSRcycletime + SMT;
+    CSRinstretSMT := CSRinstret + ( incCSRinstret & (SMT) );
 
     while(1) {
         if( ( CSR(instruction).rs1 == 0 ) && ( CSR(instruction).function3 == 3b010 ) ) {
             switch( CSR(instruction).csr ) {
                 case 12hc00: {
-                    result = CSRcycletime[0,32];
+                    result = SMT ? CSRcycletimeSMT[0,32] : CSRcycletime[0,32];
                 }
                 case 12hc80: {
-                    result = CSRcycletime[32,32];
+                    result = SMT ? CSRcycletimeSMT[32,32] :  CSRcycletime[32,32];
                 }
                 case 12hc01: {
-                    result = CSRcycletime[0,32];
+                    result = CSRtimer[0,32];
                 }
                 case 12hc81: {
-                    result = CSRcycletime[32,32];
+                    result = CSRtimer[32,32];
                 }
                 case 12hc02: {
-                    result = CSRinstret[0,32];
+                    result = SMT ? CSRinstretSMT[0,32] : CSRinstret[0,32];
                 }
                 case 12hc82: {
-                    result = CSRinstret[32,32];
+                    result = SMT ? CSRinstretSMT[32,32] : CSRinstret[32,32];
+                }
+                case 12hf14: {
+                    result = SMT;
                 }
                 default: {
                     result = 0;

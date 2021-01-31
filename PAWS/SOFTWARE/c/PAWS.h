@@ -117,6 +117,11 @@ unsigned short volatile * SLEEPTIMER = ( unsigned short volatile * ) 0x8930;
 unsigned char volatile * VBLANK = ( unsigned char volatile * ) 0x8ff0;
 unsigned char volatile * SCREENMODE = ( unsigned char volatile * ) 0x8ff0;
 
+// HANDLE SMT - RUNNING STATUS AND POINTER TO CODE TO RUN
+unsigned char volatile * SMTSTATUS = ( unsigned char volatile *) 0xffff;
+unsigned int volatile * SMTPCH = ( unsigned int volatile * ) 0xfff0;
+unsigned int volatile * SMTPCL = ( unsigned int volatile * ) 0xfff2;
+
 // TYPES AND STRUCTURES
 
 // STRUCTURE OF THE SPRITE UPDATE FLAG

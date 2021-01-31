@@ -15,26 +15,19 @@ algorithm PAWSCPU (
     output  uint1   readmemory,
     output  uint1   Icacheflag,
 
-    input   uint1   memorybusy,
-
-    input   uint1   SMTRUNNING,
-    input   uint32  SMTSTARTPC
+    input   uint1   memorybusy
 ) <autorun> {
     // RISC-V REGISTERS
     simple_dualport_bram int32 registers_1 <input!> [64] = { 0, pad(0) };
     simple_dualport_bram int32 registers_2 <input!> [64] = { 0, pad(0) };
     simple_dualport_bram int32 registers_3 <input!> [64] = { 0, pad(0) };
 
-    // SMT FLAG
-    // RUNNING ON HART 0 OR HART 1
-    // DUPLICATES PROGRAM COUNTER, REGISTER FILE AND LAST INSTRUCTION CACHE
-    uint1   SMT = 0;
-
-    // RISC-V PROGRAM COUNTERS AND STATUS
+    // RISC-V PROGRAM COUNTER AND STATUS
     uint32  pc = 0;
-    uint32  pcSMT = 0;
+    uint32  pcPLUS2 = uninitialized;
     uint32  nextPC = uninitialized;
     uint1   compressed = uninitialized;
+    uint4   floatingpoint = uninitialized;
     uint1   takeBranch = uninitialized;
     uint1   incPC = uninitialized;
     uint32  instruction = uninitialized;
@@ -71,20 +64,14 @@ algorithm PAWSCPU (
 
     // CSR REGISTERS
     CSRblock CSR(
-        instruction <: instruction,
-        SMT <: SMT
+        instruction <: instruction
     );
 
-    // LAST INSTRUCTION CACHE FOR MAIN AND SMT THREAD
+    // LAST INSTRUCTION CACHE
     uint32  lastpccache[32] = { 32hffffffff, pad(32hffffffff) };
     uint32  lastinstructioncache[32] = uninitialized;
     uint1   lastcompressedcache[32] = uninitialized;
     uint5   lastcachepointer = 0;
-
-    uint32  lastpccacheSMT[8] = { 32hffffffff, pad(32hffffffff) };
-    uint32  lastinstructioncacheSMT[8] = uninitialized;
-    uint1   lastcompressedcacheSMT[8] = uninitialized;
-    uint3   lastcachepointerSMT = 0;
 
     // MEMORY ACCESS FLAGS
     readmemory := 0;
@@ -104,44 +91,30 @@ algorithm PAWSCPU (
         takeBranch = 0;
         incPC = 1;
 
+        // FLOATING POINT REGISTER FLAG
+        // { rs1 is float, rs2 is float, rs3 is float, rd is float }
+        floatingpoint = 4b0000;
+
         // CHECK IF PC IS IN LAST INSTRUCTION CACHE
-        if( ( ~SMT && (
+        if(
             $$for i = 0, 30 do
                 ( pc == lastpccache[ $i$ ] ) ||
             $$end
-                ( pc == lastpccache[ 31] ) ) ) ||
-            ( SMT && (
-            $$for i = 0, 6 do
-                ( pcSMT == lastpccacheSMT[ $i$ ] ) ||
-            $$end
-                ( pcSMT == lastpccacheSMT[ 7] ) ) ) ) {
+                ( pc == lastpccache[ 31] ) ) {
                 // RETRIEVE FROM LAST INSTRUCTION CACHE
-                if( SMT ) {
-                    instruction = ( pcSMT == lastpccacheSMT[ 0 ] ) ? lastinstructioncacheSMT[ 0 ] :
-                                    $$for i = 1, 6 do
-                                    ( pcSMT == lastpccacheSMT[ $i$ ] ) ? lastinstructioncacheSMT[ $i$ ] :
-                                    $$end
-                                    lastinstructioncacheSMT[ 7 ];
-                    compressed = ( pcSMT == lastpccacheSMT[ 0 ] ) ? lastcompressedcacheSMT[ 0 ] :
-                                    $$for i = 1, 6 do
-                                    ( pcSMT == lastpccacheSMT[ $i$ ] ) ? lastcompressedcacheSMT[ $i$ ] :
-                                    $$end
-                                    lastcompressedcacheSMT[ 7 ];
-                } else {
-                    instruction = ( pc == lastpccache[ 0 ] ) ? lastinstructioncache[ 0 ] :
-                                    $$for i = 1, 30 do
-                                    ( pc == lastpccache[ $i$ ] ) ? lastinstructioncache[ $i$ ] :
-                                    $$end
-                                    lastinstructioncache[ 31 ];
-                    compressed = ( pc == lastpccache[ 0 ] ) ? lastcompressedcache[ 0 ] :
-                                    $$for i = 1, 30 do
-                                    ( pc == lastpccache[ $i$ ] ) ? lastcompressedcache[ $i$ ] :
-                                    $$end
-                                    lastcompressedcache[ 31 ];
-                }
+                instruction = ( pc == lastpccache[ 0 ] ) ? lastinstructioncache[ 0 ] :
+                                $$for i = 1, 30 do
+                                 ( pc == lastpccache[ $i$ ] ) ? lastinstructioncache[ $i$ ] :
+                                $$end
+                                lastinstructioncache[ 31 ];
+                compressed = ( pc == lastpccache[ 0 ] ) ? lastcompressedcache[ 0 ] :
+                                $$for i = 1, 30 do
+                                 ( pc == lastpccache[ $i$ ] ) ? lastcompressedcache[ $i$ ] :
+                                $$end
+                                lastcompressedcache[ 31 ];
         } else {
             // FETCH + EXPAND COMPRESSED INSTRUCTIONS
-            address = SMT ? pcSMT : pc;
+            address = pc;
             Icacheflag = 1;
             readmemory = 1;
             while( memorybusy ) {}
@@ -155,7 +128,7 @@ algorithm PAWSCPU (
                 case 2b11: {
                     // 32 BIT INSTRUCTION
                     lowWord = readdata;
-                    address = ( SMT ? pcSMT : pc ) + 2;
+                    address = pc + 2;
                     readmemory = 1;
                     while( memorybusy ) {}
                     ( instruction ) = halfhalfword( readdata, lowWord );
@@ -163,28 +136,17 @@ algorithm PAWSCPU (
             }
 
             // UPDATE LASTCACHE
-            if( SMT ) {
-                lastpccacheSMT[ lastcachepointerSMT ] = pcSMT;
-                lastinstructioncacheSMT[ lastcachepointerSMT ] = instruction;
-                lastcompressedcacheSMT[ lastcachepointerSMT ] = compressed;
-                lastcachepointerSMT = lastcachepointerSMT + 1;
-            } else {
-                lastpccache[ lastcachepointer ] = pc;
-                lastinstructioncache[ lastcachepointer ] = instruction;
-                lastcompressedcache[ lastcachepointer ] = compressed;
-                lastcachepointer = lastcachepointer + 1;
-            }
+            lastpccache[ lastcachepointer ] = pc;
+            lastinstructioncache[ lastcachepointer ] = instruction;
+            lastcompressedcache[ lastcachepointer ] = compressed;
+            lastcachepointer = lastcachepointer + 1;
         }
 
         // DECODE + REGISTER FETCH
         // HAPPENS AUTOMATICALLY in DECODE AND REGISTER UNITS
         ( opCode, function3, function7, rs1, rs2, rs3, rd, immediateValue, IshiftCount ) = decoder( instruction );
-        ( registers_1, registers_2, registers_3, sourceReg1, sourceReg2, sourceReg3 ) = registersREAD( registers_1, registers_2, registers_3, rs1, rs2, rs3, SMT );
-        if( SMT ) {
-            ( nextPC, branchAddress, jumpAddress, AUIPCLUI, storeAddress, loadAddress ) = addressgenerator( opCode, pcSMT, compressed, sourceReg1, immediateValue );
-        } else {
-            ( nextPC, branchAddress, jumpAddress, AUIPCLUI, storeAddress, loadAddress ) = addressgenerator( opCode, pc, compressed, sourceReg1, immediateValue );
-        }
+        ( registers_1, registers_2, registers_3, sourceReg1, sourceReg2, sourceReg3 ) = registersREAD( registers_1, registers_2, registers_3, rs1, rs2, rs3, floatingpoint );
+        ( nextPC, branchAddress, jumpAddress, AUIPCLUI, storeAddress, loadAddress ) = addressgenerator( opCode, pc, compressed, sourceReg1, immediateValue );
 
         // EXECUTE
         switch( opCode[2,5] ) {
@@ -331,26 +293,27 @@ algorithm PAWSCPU (
                     }
                 }
             }
+
+            // SINGLE PRECISION FLOATING POINT INSTRUCTIONS
+            case 5b00001: {
+                // FLW
+            }
+            case 5b01001: {
+                // FSW
+            }
+            case 5b10100: {
+                // SINGLE PRECISION FLOATING POINT ALU OPERATIONS
+            }
+            default: {
+                // SINGLE PRECISION FMADD FMSUB FNMSUB FNMADD
+            }
         }
 
         // DISPATCH INSTRUCTION
-        ( registers_1, registers_2, registers_3 ) = registersWRITE( registers_1, registers_2, registers_3, rd, writeRegister, SMT, result );
-        if( SMT ) {
-            ( pcSMT ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
-        } else {
-            ( pc ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
-        }
+        ( registers_1, registers_2, registers_3 ) = registersWRITE( registers_1, registers_2, registers_3, rd, writeRegister, floatingpoint, result );
+        ( pc ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
 
         // Update CSRinstret
         CSR.incCSRinstret = 1;
-
-        // UPDATE MAIN OR SMT
-        if( SMTRUNNING ) {
-            SMT = ~SMT;
-        } else {
-            // RESET PC COUNTER FOR SMT
-            SMT = 0;
-            pcSMT = SMTSTARTPC;
-        }
     } // RISC-V
 }

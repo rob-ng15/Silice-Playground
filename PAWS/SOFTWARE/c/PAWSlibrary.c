@@ -1011,3 +1011,14 @@ void bitmapblit( unsigned char *buffer, unsigned short width, unsigned short hei
         }
     }
 }
+
+// SMT START AND STOP
+void SMTSTOP( void ) {
+    *SMTSTATUS = 0;
+}
+
+void SMTSTART( unsigned int code ) {
+    *SMTPCH = ( code & 0xffff0000 ) >> 16;
+    *SMTPCL = ( code & 0x0000ffff );
+    *SMTSTATUS = 1;
+}

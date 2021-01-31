@@ -38,6 +38,10 @@ algorithm memmap_io (
 
     input   uint16  writeData,
     output! uint32  readData,
+
+    // SMT STATUS
+    output  uint1   SMTRUNNING,
+    output  uint32  SMTSTARTPC
 ) <autorun> {
     // 1hz timers (p1hz used for systemClock, timer1hz for user purposes)
     uint16 systemClock = uninitialized;
@@ -345,6 +349,10 @@ algorithm memmap_io (
     // Setup the terminal
     terminal_window.showterminal = 1;
 
+    // DISBLE SMT ON STARTUP
+    SMTRUNNING = 0;
+    SMTSTARTPC = 0;
+
     while(1) {
         // Update UART output buffer top if character has been put into buffer
         uartOutBufferTop = newuartOutBufferTop;
@@ -437,6 +445,9 @@ algorithm memmap_io (
 
                 // VBLANK
                 case 16h8ff0: { readData = vblank; }
+
+                // SMT STATUS
+                case 16hffff: { readData = SMTRUNNING; }
             }
         }
 
@@ -567,6 +578,11 @@ algorithm memmap_io (
 
                  // DISPLAY LAYER ORDERING
                 case 16h8ff0: { display.display_order = writeData; }
+
+                // SMT STATUS
+                case 16hfff0: { SMTSTARTPC[16,16] = writeData; }
+                case 16hfff2: { SMTSTARTPC[0,16] = writeData; }
+                case 16hffff: { SMTRUNNING = writeData; }
            }
         }
 

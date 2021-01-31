@@ -200,6 +200,10 @@ extern void netppm_display( unsigned char *, unsigned char );
 extern void netppm_decoder( unsigned char *, unsigned char * );
 extern void bitmapblit( unsigned char *, unsigned short , unsigned short , short, short, unsigned char  );
 
+// SMT START AND STOP
+extern void SMTSTOP( void );
+extern void SMTSTART( unsigned int );
+
 // BACKGROUND PATTERN GENERATOR
 #define BKG_SOLID 0
 #define BKG_5050_V 1

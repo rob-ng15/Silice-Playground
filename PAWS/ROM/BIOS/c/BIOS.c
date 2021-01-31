@@ -62,6 +62,9 @@ typedef struct {
     unsigned int file_size;
 } __attribute((packed)) Fat16Entry;
 
+// SMTSTATUS
+unsigned char volatile * SMTSTATUS = ( unsigned char volatile *) 0xffff;
+
 // MASTER BOOT RECORD AND PARTITION TABLE, STORED FROM TOP OF MEMORY
 unsigned char *MBR = (unsigned char *) 0x12000000 - 0x200;
 Fat16BootSector *BOOTSECTOR = (Fat16BootSector *)0x12000000 - 0x400;
@@ -202,6 +205,9 @@ void main( void ) {
     unsigned char uartData = 0;
     unsigned short selectedfile = 0;
     unsigned int *sdramaddress;
+
+    // STOP SMT
+    *SMTSTATUS = 0;
 
     // CLEAR SDRAM
     // RESET THE DISPLAY

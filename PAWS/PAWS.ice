@@ -134,6 +134,8 @@ algorithm main(
     );
 
     // MEMORY MAPPED I/O
+    uint1   SMTRUNNING = uninitialized;
+    uint32  SMTSTARTPC = uninitialized;
     memmap_io IO_Map <@clock_memory> (
         leds :> leds,
         btns <: btns,
@@ -158,7 +160,10 @@ algorithm main(
         gpu_clock <: gpu_clock,
 
         memoryAddress <: address,
-        writeData <: writedata
+        writeData <: writedata,
+
+        SMTRUNNING :> SMTRUNNING,
+        SMTSTARTPC :> SMTSTARTPC
     );
 
     uint3   function3 = uninitialized;
@@ -171,6 +176,9 @@ algorithm main(
         address :> address,
         writedata :> writedata,
         Icacheflag :> Icacheflag,
+
+        SMTRUNNING <: SMTRUNNING,
+        SMTSTARTPC <: SMTSTARTPC
     );
 
     CPU.memorybusy := sdram.busy;
