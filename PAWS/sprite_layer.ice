@@ -127,29 +127,18 @@ algorithm sprite_layer(
         $$end
     );
 
-    // MAIN ACCESS
-    // Expand Sprite Update Deltas
-    int11   deltax := { {7{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
-    int11   deltay := { {7{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
-    // Sprite update helpers
-    int11   sprite_offscreen_negative ::= sprite_double[ sprite_set_number ] ? -32 : -16;
-    int11   sprite_to_negative ::= sprite_double[ sprite_set_number ] ? -31 : -15;
-    uint1   sprite_offscreen_x ::= ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_x[ sprite_set_number ] ) > __signed(640) );
-    uint1   sprite_offscreen_y ::= ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_y[ sprite_set_number ] ) > __signed(480) );
-
-    // SMT ACCESS
-    // Expand Sprite Update Deltas
-    int11   deltax_SMT := { {7{spriteupdate( sprite_update_SMT ).dxsign}}, spriteupdate( sprite_update_SMT ).dx };
-    int11   deltay_SMT := { {7{spriteupdate( sprite_update_SMT ).dysign}}, spriteupdate( sprite_update_SMT ).dy };
-    // Sprite update helpers
-    int11   sprite_offscreen_negative_SMT ::= sprite_double[ sprite_set_number_SMT ] ? -32 : -16;
-    int11   sprite_to_negative_SMT ::= sprite_double[ sprite_set_number_SMT ] ? -31 : -15;
-    uint1   sprite_offscreen_x_SMT ::= ( __signed( sprite_x[ sprite_set_number_SMT ] ) < __signed( sprite_offscreen_negative_SMT ) ) || ( __signed( sprite_x[ sprite_set_number_SMT ] ) > __signed(640) );
-    uint1   sprite_offscreen_y_SMT ::= ( __signed( sprite_y[ sprite_set_number_SMT ] ) < __signed( sprite_offscreen_negative_SMT ) ) || ( __signed( sprite_y[ sprite_set_number_SMT ] ) > __signed(480) );
-
     // MAIN OR SMT
     uint1   MAINSMT := ( sprite_layer_write > 0 );
     uint4   SPRITE_NUMBER := ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT;
+
+    // Expand Sprite Update Deltas
+    int11   deltax := MAINSMT ? { {7{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx } : { {7{spriteupdate( sprite_update_SMT ).dxsign}}, spriteupdate( sprite_update_SMT ).dx };
+    int11   deltay := MAINSMT ? { {7{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy } : { {7{spriteupdate( sprite_update_SMT ).dysign}}, spriteupdate( sprite_update_SMT ).dy };
+    // Sprite update helpers
+    int11   sprite_offscreen_negative ::= sprite_double[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ? -32 : -16;
+    int11   sprite_to_negative ::= sprite_double[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ? -31 : -15;
+    uint1   sprite_offscreen_x ::= ( __signed( sprite_x[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_x[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) > __signed(640) );
+    uint1   sprite_offscreen_y ::= ( __signed( sprite_y[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_y[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) > __signed(480) );
 
     $$for i=0,12 do
         // Set read addresses for the bitmaps and output collisions
@@ -257,38 +246,20 @@ algorithm sprite_layer(
             case 5: { sprite_y[ SPRITE_NUMBER ] = MAINSMT ? sprite_set_y : sprite_set_y_SMT; }
             case 6: { sprite_double[ SPRITE_NUMBER ] = MAINSMT ? sprite_set_double : sprite_set_double_SMT; }
             case 10: {
-                switch( MAINSMT ) {
-                    case 0: {
-                        // Perform sprite update
-                        if( spriteupdate( sprite_update_SMT ).tile_act ) {
-                            sprite_tile_number[ sprite_set_number_SMT ] = sprite_tile_number[ sprite_set_number_SMT ] + 1;
-                        }
-
-                        if( spriteupdate( sprite_update_SMT ).x_act || spriteupdate( sprite_update_SMT ).y_act) {
-                            sprite_active[ sprite_set_number_SMT ] = ( sprite_offscreen_x_SMT || sprite_offscreen_y_SMT ) ? 0 : sprite_active[ sprite_set_number_SMT ];
-                        }
-
-                        sprite_x[ sprite_set_number_SMT ] = sprite_offscreen_x_SMT ? ( ( __signed( sprite_x[ sprite_set_number_SMT ] ) < __signed( sprite_offscreen_negative_SMT ) ) ?__signed(640) : sprite_to_negative_SMT ) : sprite_x[ sprite_set_number_SMT ] + deltax_SMT;
-
-                        sprite_y[ sprite_set_number_SMT ] = sprite_offscreen_y_SMT ? ( ( __signed( sprite_y[ sprite_set_number_SMT ] ) < __signed( sprite_offscreen_negative_SMT ) ) ? __signed(480) : sprite_to_negative_SMT ) : sprite_y[ sprite_set_number_SMT ] + deltay_SMT;
-                    }
-                    case 1: {
-                        // Perform sprite update
-                        if( spriteupdate( sprite_update ).tile_act ) {
-                            sprite_tile_number[ sprite_set_number ] = sprite_tile_number[ sprite_set_number ] + 1;
-                        }
-
-                        if( spriteupdate( sprite_update ).x_act || spriteupdate( sprite_update ).y_act) {
-                            sprite_active[ sprite_set_number ] = ( sprite_offscreen_x || sprite_offscreen_y ) ? 0 : sprite_active[ sprite_set_number ];
-                        }
-
-                        sprite_x[ sprite_set_number ] = sprite_offscreen_x ? ( ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ?__signed(640) : sprite_to_negative ) :
-                                                        sprite_x[ sprite_set_number ] + deltax;
-
-                        sprite_y[ sprite_set_number ] = sprite_offscreen_y ? ( ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ? __signed(480) : sprite_to_negative ) :
-                                                        sprite_y[ sprite_set_number ] + deltay;
-                    }
+                // Perform sprite update
+                if( MAINSMT ? sprite_update[10,1] : sprite_update_SMT[10,1] ) {
+                    sprite_tile_number[ SPRITE_NUMBER ] = sprite_tile_number[ SPRITE_NUMBER ] + 1;
                 }
+
+                if( MAINSMT ? sprite_update[11,1] : sprite_update_SMT[11,1] || MAINSMT ? sprite_update[12,1] : sprite_update_SMT[12,1] ) {
+                    sprite_active[ SPRITE_NUMBER ] = ( sprite_offscreen_x || sprite_offscreen_y ) ? 0 : sprite_active[ SPRITE_NUMBER ];
+                }
+
+                sprite_x[ SPRITE_NUMBER ] = sprite_offscreen_x ? ( ( __signed( sprite_x[ SPRITE_NUMBER ] ) < __signed( sprite_offscreen_negative ) ) ?__signed(640) : sprite_to_negative ) :
+                                                sprite_x[ SPRITE_NUMBER ] + deltax;
+
+                sprite_y[ SPRITE_NUMBER ] = sprite_offscreen_y ? ( ( __signed( sprite_y[ SPRITE_NUMBER ] ) < __signed( sprite_offscreen_negative ) ) ? __signed(480) : sprite_to_negative ) :
+                                                sprite_y[ SPRITE_NUMBER ] + deltay;
             }
         }
     }

@@ -578,7 +578,7 @@ void drawleft( unsigned short steps, unsigned char totheleft ) {
             break;
         case ' ':
             // GAP
-            gpu_rectangle( GREY2, 0, perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
+            gpu_rectangle( GREY2, perspectivex[ steps ], perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
             gpu_line( GREY1, perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480- perspectivey[ steps + 1 ] );
             break;
         case 'E':
@@ -600,7 +600,7 @@ void drawright( unsigned short steps, unsigned char totheright ) {
             break;
         case ' ':
             // GAP
-            gpu_rectangle( GREY2, 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], 640, 480 - perspectivey[ steps + 1 ] );
+            gpu_rectangle( GREY2, 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps ], 480 - perspectivey[ steps + 1 ] );
             gpu_line( GREY1, 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ],  480 - perspectivey[ steps + 1 ] );
             break;
         case 'E':
@@ -620,6 +620,7 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
     // SET START LOCATION TO TOP LEFT FACING EAST
     unsigned short newx = 1, newy = 1, direction = 1, newdirection = 1, currentx = 1, currenty = 1, visiblesteps, mappeeks = 4, dead = 0;
     short steps;
+    unsigned char ghostdrawn;
 
     // LOOP UNTIL REACHED THE EXIT OR DEAD
     while( ( ( currentx != width - 2 ) || ( currenty != height - 3 ) ) && ( dead == 0 ) ) {
@@ -636,16 +637,16 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
             // WALL IS NOT AT HORIZON
             switch( whatisfront( currentx, currenty, direction, visiblesteps ) ) {
                 case 'X':
-                    gpu_rectangle( YELLOW, 0, perspectivey[ visiblesteps ], 640, 480 - perspectivey[ visiblesteps ] );
+                    gpu_rectangle( YELLOW, perspectivex[ visiblesteps ], perspectivey[ visiblesteps ], 640 - perspectivex[ visiblesteps ], 480 - perspectivey[ visiblesteps ] );
                     if( visiblesteps <= 4 ) {
                         gpu_outputstringcentre( DKGREEN, 320, perspectivey[ visiblesteps ] + ( 2 << ( 4 - visiblesteps ) ), "EXIT", 4 - visiblesteps );
                     }
                     break;
                 case 'E':
-                    gpu_rectangle( MAGENTA, 0, perspectivey[ visiblesteps ], 640, 480 - perspectivey[ visiblesteps ] );
+                    gpu_rectangle( MAGENTA, perspectivex[ visiblesteps ], perspectivey[ visiblesteps ], 640 - perspectivex[ visiblesteps ], 480 - perspectivey[ visiblesteps ] );
                     break;
                 case '#':
-                    gpu_rectangle( GREY2, 0, perspectivey[ visiblesteps ], 640, 480 - perspectivey[ visiblesteps ] );
+                    gpu_rectangle( GREY2, perspectivex[ visiblesteps ], perspectivey[ visiblesteps ], 640 - perspectivex[ visiblesteps ], 480 - perspectivey[ visiblesteps ] );
                     break;
                 default:
                     break;
@@ -659,18 +660,23 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
                 draw_pill( steps );
             }
 
+            // DRAW SIDE WALLS
+            drawleft( steps, whatisleft( currentx, currenty, direction, steps ) );
+            drawright( steps, whatisright( currentx, currenty, direction, steps ) );
+        }
+
+        // DRAW GHOST IF ONE IS VISIBLE
+        ghostdrawn = 0;
+        for( steps = 1; ( steps <= min( visiblesteps - 1, MAXDEPTH - 1 ) ) && ( ghostdrawn == 0 ); steps++ ) {
             // DRAW GHOST
             for( unsigned ghost = 0; ghost < 4; ghost++ ) {
                 if( ghost <= level ) {
                     if( ( currentx + directionx[ direction ] * steps == ghostx[ ghost ] ) && ( currenty + directiony[ direction ] * steps == ghosty[ ghost ] ) ) {
                         draw_ghost( steps, ghost, direction );
+                        ghostdrawn = 1;
                     }
                 }
             }
-
-            // DRAW SIDE WALLS
-            drawleft( steps, whatisleft( currentx, currenty, direction, steps ) );
-            drawright( steps, whatisright( currentx, currenty, direction, steps ) );
         }
 
         // FINISH UPTO CORNERS
