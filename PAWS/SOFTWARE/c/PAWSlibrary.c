@@ -240,54 +240,91 @@ unsigned short rng( unsigned short range ) {
 }
 
 // SLEEP FOR counter milliseconds
-void sleep( unsigned short counter ) {
-    *SLEEPTIMER = counter;
-    while( *SLEEPTIMER );
+void sleep( unsigned short counter, unsigned char timer ) {
+    switch( timer ) {
+        case 0:
+            *SLEEPTIMER0 = counter;
+            while( *SLEEPTIMER0 );
+            break;
+        case 1:
+            *SLEEPTIMER1 = counter;
+            while( *SLEEPTIMER1 );
+            break;
+    }
 }
 
 // SET THE 1khz COUNTDOWN TIMER
-void set_timer1khz( unsigned short counter ) {
-    *TIMER1KHZ = counter;
+void set_timer1khz( unsigned short counter, unsigned char timer ) {
+    switch( timer ) {
+        case 0:
+            *TIMER1KHZ0 = counter;
+            break;
+        case 1:
+            *TIMER1KHZ1 = counter;
+            break;
+    }
 }
 
 // READ THE 1khz COUNTDOWN TIMER
-unsigned short get_timer1khz( void ) {
-    return( *TIMER1KHZ );
+unsigned short get_timer1khz( unsigned char timer  ) {
+    return( timer ? *TIMER1KHZ1 : *TIMER1KHZ0 );
 }
 
 // WAIT FOR THE 1khz COUNTDOWN TIMER
-void wait_timer1khz( void ) {
-    while( *TIMER1KHZ );
+void wait_timer1khz( unsigned char timer  ) {
+    while( timer ? *TIMER1KHZ1 : *TIMER1KHZ0 );
 }
 
 // READ THE 1hz TIMER
-unsigned short get_timer1hz( void ) {
-    return( *TIMER1HZ );
+unsigned short get_timer1hz( unsigned char timer  ) {
+    return( timer ? *TIMER1HZ1 : *TIMER1HZ0 );
 }
 
 // RESET THE 1hz TIMER
-void reset_timer1hz( void ) {
-    *TIMER1HZ = 1;
+void reset_timer1hz( unsigned char timer  ) {
+    switch( timer ) {
+        case 0:
+            *TIMER1HZ0 = 1;
+            break;
+        case 1:
+            *TIMER1HZ1 = 1;
+            break;
+    }
+}
+
+// RETURN SYSTEM CLOCK - 1 second pulses from startup
+unsigned short systemclock( void ) {
+    return( *SYSTEMCLOCK );
 }
 
 // AUDIO OUTPUT
-
 // START A note (1 == DEEP C, 25 == MIDDLE C )
 // OF duration MILLISECONDS TO THE LEFT ( channel_number == 1 ) RIGHT ( channel_number == 2 ) or BOTH ( channel_number == 3 ) AUDIO CHANNEL
 // IN waveform 0 == SQUARE, 1 == SAWTOOTH, 2 == TRIANGLE, 3 == SINE, 4 == WHITE NOISE
 void beep( unsigned char channel_number, unsigned char waveform, unsigned char note, unsigned short duration ) {
-    if( ( channel_number & 1 ) != 0 ) {
+    if( ( channel_number & 1 ) ) {
         *AUDIO_L_WAVEFORM = waveform;
         *AUDIO_L_NOTE = note;
         *AUDIO_L_DURATION = duration;
         *AUDIO_L_START = 1;
     }
-    if( ( channel_number & 2 ) != 0 ) {
+    if( ( channel_number & 2 ) ) {
         *AUDIO_R_WAVEFORM = waveform;
         *AUDIO_R_NOTE = note;
         *AUDIO_R_DURATION = duration;
         *AUDIO_R_START = 1;
     }
+}
+
+void await_beep( unsigned char channel_number ) {
+    if( channel_number & 1 )
+        while( *AUDIO_L_DURATION ) {}
+    if( channel_number & 2 )
+        while( *AUDIO_R_DURATION ) {}
+}
+
+unsigned short get_beep_duration( unsigned char channel_number ) {
+    return( ( channel_number & 1) ? *AUDIO_L_DURATION : *AUDIO_R_DURATION );
 }
 
 // SDCARD FUNCTIONS
@@ -573,7 +610,7 @@ void set_vector_vertex( unsigned char block, unsigned char vertex, unsigned char
     *VECTOR_WRITER_DELTAY = deltay;
 }
 
-// SPRITE LAYERS
+// SPRITE LAYERS - MAIN ACCESS
 // TWO SPRITE LAYERS ( 0 == lower above background and tilemap, below bitmap, 1 == upper above bitmap, below character map and terminal )
 // WITH 13 SPRITES ( 0 to 12 ) each with 8 16 x 16 pixel bitmaps
 
@@ -741,6 +778,133 @@ void update_sprite( unsigned char sprite_layer, unsigned char sprite_number, uns
         case 1:
             *UPPER_SPRITE_NUMBER = sprite_number;
             *UPPER_SPRITE_UPDATE = update_flag;
+            break;
+    }
+}
+
+// SPRITE LAYERS - SMT ACCESS
+// DUPLICATE TO ALLOW BOTH THREADS TO USE SPRITES - VIA SMT SPRITE REGISTERS
+void set_sprite_SMT( unsigned char sprite_layer, unsigned char sprite_number, unsigned char active, unsigned char colour, short x, short y, unsigned char tile, unsigned char sprite_size) {
+    switch( sprite_layer ) {
+        case 0:
+            *LOWER_SPRITE_NUMBER_SMT = sprite_number;
+            *LOWER_SPRITE_ACTIVE_SMT = active;
+            *LOWER_SPRITE_TILE_SMT = tile;
+            *LOWER_SPRITE_COLOUR_SMT = colour;
+            *LOWER_SPRITE_X_SMT = x;
+            *LOWER_SPRITE_Y_SMT = y;
+            *LOWER_SPRITE_DOUBLE_SMT = sprite_size;
+            break;
+
+        case 1:
+            *UPPER_SPRITE_NUMBER_SMT = sprite_number;
+            *UPPER_SPRITE_ACTIVE_SMT = active;
+            *UPPER_SPRITE_TILE_SMT = tile;
+            *UPPER_SPRITE_COLOUR_SMT = colour;
+            *UPPER_SPRITE_X_SMT = x;
+            *UPPER_SPRITE_Y_SMT = y;
+            *UPPER_SPRITE_DOUBLE_SMT = sprite_size;
+            break;
+    }
+}
+
+void set_sprite_attribute_SMT( unsigned char sprite_layer, unsigned char sprite_number, unsigned char attribute, short value ) {
+    if( sprite_layer == 0 ) {
+        *LOWER_SPRITE_NUMBER_SMT = sprite_number;
+        switch( attribute ) {
+            case 0:
+                *LOWER_SPRITE_ACTIVE_SMT = ( unsigned char) value;
+                break;
+            case 1:
+                *LOWER_SPRITE_TILE_SMT = ( unsigned char) value;
+                break;
+            case 2:
+                *LOWER_SPRITE_COLOUR_SMT = ( unsigned char) value;
+                break;
+            case 3:
+                *LOWER_SPRITE_X_SMT = value;
+                break;
+            case 4:
+                *LOWER_SPRITE_Y_SMT = value;
+                break;
+            case 5:
+                *LOWER_SPRITE_DOUBLE_SMT = ( unsigned char) value;
+                break;
+        }
+    } else {
+        *UPPER_SPRITE_NUMBER_SMT = sprite_number;
+        switch( attribute ) {
+            case 0:
+                *UPPER_SPRITE_ACTIVE_SMT = ( unsigned char) value;
+                break;
+            case 1:
+                *UPPER_SPRITE_TILE_SMT = ( unsigned char) value;
+                break;
+            case 2:
+                *UPPER_SPRITE_COLOUR_SMT = ( unsigned char) value;
+                break;
+            case 3:
+                *UPPER_SPRITE_X_SMT = value;
+                break;
+            case 4:
+                *UPPER_SPRITE_Y_SMT = value;
+                break;
+            case 5:
+                *UPPER_SPRITE_DOUBLE_SMT = ( unsigned char) value;
+                break;
+        }
+    }
+}
+
+short get_sprite_attribute_SMT( unsigned char sprite_layer, unsigned char sprite_number, unsigned char attribute ) {
+    if( sprite_layer == 0 ) {
+        *LOWER_SPRITE_NUMBER_SMT = sprite_number;
+        switch( attribute ) {
+            case 0:
+                return( (short)*LOWER_SPRITE_ACTIVE_SMT );
+            case 1:
+                return( (short)*LOWER_SPRITE_TILE_SMT );
+            case 2:
+                return( (short)*LOWER_SPRITE_COLOUR_SMT );
+            case 3:
+                return( *LOWER_SPRITE_X_SMT );
+            case 4:
+                return( *LOWER_SPRITE_Y_SMT );
+            case 5:
+                return( (short)*LOWER_SPRITE_DOUBLE_SMT );
+            default:
+                return( 0 );
+        }
+    } else {
+        *UPPER_SPRITE_NUMBER_SMT = sprite_number;
+        switch( attribute ) {
+            case 0:
+                return( (short)*UPPER_SPRITE_ACTIVE_SMT );
+            case 1:
+                return( (short)*UPPER_SPRITE_TILE_SMT );
+            case 2:
+                return( (short)*UPPER_SPRITE_COLOUR_SMT );
+            case 3:
+                return( *UPPER_SPRITE_X_SMT );
+            case 4:
+                return( *UPPER_SPRITE_Y_SMT );
+            case 5:
+                return( (short)*UPPER_SPRITE_DOUBLE_SMT );
+            default:
+                return( 0 );
+        }
+    }
+}
+
+void update_sprite_SMT( unsigned char sprite_layer, unsigned char sprite_number, unsigned short update_flag ) {
+    switch( sprite_layer ) {
+        case 0:
+            *LOWER_SPRITE_NUMBER_SMT = sprite_number;
+            *LOWER_SPRITE_UPDATE_SMT = update_flag;
+            break;
+        case 1:
+            *UPPER_SPRITE_NUMBER_SMT = sprite_number;
+            *UPPER_SPRITE_UPDATE_SMT = update_flag;
             break;
     }
 }

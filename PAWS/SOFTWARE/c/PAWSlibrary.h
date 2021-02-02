@@ -11,6 +11,8 @@
 
 #define abs(a) (((a) < 0 )? -(a) : (a))
 
+#define NULL 0
+
 typedef unsigned int size_t;
 
 // FOR EASE OF PORTING
@@ -127,16 +129,19 @@ extern void set_leds( unsigned char );
 extern unsigned char get_buttons( void );
 
 // TIMERS AND PSEUDO RANDOM NUMBER GENERATOR
+extern unsigned short systemclock( void );
 extern unsigned short rng( unsigned short );
-extern void sleep( unsigned short );
-extern void set_timer1khz( unsigned short );
-extern unsigned short get_timer1khz( void );
-extern void wait_timer1khz( void );
-extern unsigned short get_timer1hz( void );
-extern void reset_timer1hz( void );
+extern void sleep( unsigned short, unsigned char );
+extern void set_timer1khz( unsigned short, unsigned char );
+extern unsigned short get_timer1khz( unsigned char );
+extern void wait_timer1khz( unsigned char );
+extern unsigned short get_timer1hz( unsigned char );
+extern void reset_timer1hz( unsigned char );
 
 // AUDIO
 extern void beep( unsigned char, unsigned char, unsigned char, unsigned short );
+extern void await_beep( unsigned char );
+extern unsigned short get_beep_duration( unsigned char );
 
 // SDCARD
 extern void sdcard_readsector( unsigned int, unsigned char * );
@@ -176,13 +181,19 @@ extern void set_vector_vertex( unsigned char, unsigned char , unsigned char, cha
 extern void bitmap_scrollwrap( unsigned char );
 extern void set_blitter_bitmap( unsigned char, unsigned short * );
 
-// SPRITES
+// SPRITES - MAIN ACCESS
 extern void set_sprite( unsigned char, unsigned char, unsigned char, unsigned char, short, short, unsigned char, unsigned char );
-extern unsigned short get_sprite_collision( unsigned char, unsigned char );
 extern short get_sprite_attribute( unsigned char, unsigned char , unsigned char );
 extern void set_sprite_attribute( unsigned char, unsigned char, unsigned char, short );
 extern void update_sprite( unsigned char, unsigned char, unsigned short );
+extern unsigned short get_sprite_collision( unsigned char, unsigned char );
 extern void set_sprite_bitmaps( unsigned char, unsigned char, unsigned short * );
+
+// SPRITES - SMT ACCESS
+extern void set_sprite_SMT( unsigned char, unsigned char, unsigned char, unsigned char, short, short, unsigned char, unsigned char );
+extern short get_sprite_attribute_SMT( unsigned char, unsigned char , unsigned char );
+extern void set_sprite_attribute_SMT( unsigned char, unsigned char, unsigned char, short );
+extern void update_sprite_SMT( unsigned char, unsigned char, unsigned short );
 
 // CHARACTER MAP
 extern void tpu_cs( void );

@@ -177,6 +177,14 @@ algorithm expandcolour(
                                             { {4{background}} };
             }
             case 3: {
+                // BACKGROUND -> TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> BITMAP -> CHARACTER_MAP -> TERMINAL
+                pix = ( terminal_display ) ? { {4{terminal}} } :
+                                            ( character_map_display ) ? { {4{character_map}} } :
+                                            ( bitmap_display ) ? { {4{bitmap}} } :
+                                            ( upper_sprites_display ) ? { {4{upper_sprites}} } :
+                                            ( lower_sprites_display ) ? { {4{lower_sprites}} } :
+                                            ( tilemap_display ) ? { {4{tilemap}} } :
+                                            { {4{background}} };
             }
         }
     }

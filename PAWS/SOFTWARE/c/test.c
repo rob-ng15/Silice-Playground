@@ -41,6 +41,7 @@ void colourtable( void ) {
             gpu_rectangle( colour++, x * 80, y * 60, 79 + x * 80, 59 + y * 60 );
         }
     }
+    sleep( 1000, 0 );
 }
 
 // DISPLAY THE BACKGROUNDS
@@ -50,7 +51,7 @@ void backgrounddemo( void ) {
 
     for( uint8 bkg = 0; bkg < 16; bkg++ ) {
         set_background( PURPLE, ORANGE, bkg );
-        sleep( 1000 );
+        sleep( 1000, 0 );
     }
 }
 
@@ -82,7 +83,7 @@ void tilemapdemo( void ) {
     }
 
     for( unsigned short i = 0; i < 128; i++ ) {
-        sleep( 20 );
+        await_vblank();
         (void)tilemap_scrollwrapclear( 5 );
         (void)tilemap_scrollwrapclear( 6 );
     }
@@ -101,7 +102,7 @@ void gpudemo( void ) {
     for( i = 0; i < 2048; i++ ) {
         gpu_pixel( rng( 64 ), rng( 640 ), rng( 480 ) );
     }
-    sleep( 1000 );
+    sleep( 1000, 0 );
 
     // LINES
     gpu_cs();
@@ -109,7 +110,7 @@ void gpudemo( void ) {
     for( i = 0; i < 1024; i++ ) {
         gpu_line( rng( 64 ), rng( 640 ), rng( 480 ), rng( 640 ), rng( 480 ) );
     }
-    sleep( 1000 );
+    sleep( 1000, 0 );
 
     // RECTANGLES
     gpu_cs();
@@ -119,7 +120,7 @@ void gpudemo( void ) {
         gpu_rectangle( rng( 64 ), rng( 640 ), rng( 480 ), rng( 640 ), rng( 480 ) );
     }
     gpu_dither( DITHEROFF );
-    sleep( 1000 );
+    sleep( 1000, 0 );
 
     // CIRCLES
     gpu_cs();
@@ -129,7 +130,7 @@ void gpudemo( void ) {
         gpu_circle( rng( 64 ), rng( 640 ), rng( 480 ), rng( 32 ), rng( 1 ) );
     }
     gpu_dither( DITHEROFF );
-    sleep( 1000 );
+    sleep( 1000, 0 );
 
     // TRIANGLES
     gpu_cs();
@@ -142,7 +143,7 @@ void gpudemo( void ) {
         gpu_triangle( rng( 64 ), x1, y1, x2, y2, x3, y3 );
     }
     gpu_dither( DITHEROFF );
-    sleep( 1000 );
+    sleep( 1000, 0 );
 
     // BLITTER
 
@@ -152,7 +153,7 @@ void gpudemo( void ) {
     for( i = 0; i < 1024; i++ ) {
         gpu_character_blit( rng( 64 ), rng( 640 ), rng( 480 ), rng( 256 ), rng( 4 ) );
     }
-    sleep( 1000 );
+    sleep( 1000, 0 );
 
 }
 
@@ -160,7 +161,6 @@ void main( void ) {
     INITIALISEMEMORY();
 	while(1) {
         colourtable();
-        sleep( 2000 );
 
         backgrounddemo();
 

@@ -81,10 +81,10 @@ algorithm PAWSCPU (
     uint1   lastcompressedcache[32] = uninitialized;
     uint5   lastcachepointer = 0;
 
-    uint32  lastpccacheSMT[8] = { 32hffffffff, pad(32hffffffff) };
-    uint32  lastinstructioncacheSMT[8] = uninitialized;
-    uint1   lastcompressedcacheSMT[8] = uninitialized;
-    uint3   lastcachepointerSMT = 0;
+    uint32  lastpccacheSMT[32] = { 32hffffffff, pad(32hffffffff) };
+    uint32  lastinstructioncacheSMT[32] = uninitialized;
+    uint1   lastcompressedcacheSMT[32] = uninitialized;
+    uint5   lastcachepointerSMT = 0;
 
     // MEMORY ACCESS FLAGS
     readmemory := 0;
@@ -109,24 +109,24 @@ algorithm PAWSCPU (
             $$for i = 0, 30 do
                 ( pc == lastpccache[ $i$ ] ) ||
             $$end
-                ( pc == lastpccache[ 31] ) ) ) ||
+                ( pc == lastpccache[ 31 ] ) ) ) ||
             ( SMT && (
-            $$for i = 0, 6 do
+            $$for i = 0, 30 do
                 ( pcSMT == lastpccacheSMT[ $i$ ] ) ||
             $$end
-                ( pcSMT == lastpccacheSMT[ 7] ) ) ) ) {
+                ( pcSMT == lastpccacheSMT[ 31 ] ) ) ) ) {
                 // RETRIEVE FROM LAST INSTRUCTION CACHE
                 if( SMT ) {
                     instruction = ( pcSMT == lastpccacheSMT[ 0 ] ) ? lastinstructioncacheSMT[ 0 ] :
-                                    $$for i = 1, 6 do
+                                    $$for i = 1, 30 do
                                     ( pcSMT == lastpccacheSMT[ $i$ ] ) ? lastinstructioncacheSMT[ $i$ ] :
                                     $$end
-                                    lastinstructioncacheSMT[ 7 ];
+                                    lastinstructioncacheSMT[ 31 ];
                     compressed = ( pcSMT == lastpccacheSMT[ 0 ] ) ? lastcompressedcacheSMT[ 0 ] :
-                                    $$for i = 1, 6 do
+                                    $$for i = 1, 30 do
                                     ( pcSMT == lastpccacheSMT[ $i$ ] ) ? lastcompressedcacheSMT[ $i$ ] :
                                     $$end
-                                    lastcompressedcacheSMT[ 7 ];
+                                    lastcompressedcacheSMT[ 31 ];
                 } else {
                     instruction = ( pc == lastpccache[ 0 ] ) ? lastinstructioncache[ 0 ] :
                                     $$for i = 1, 30 do

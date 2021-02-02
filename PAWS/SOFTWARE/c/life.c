@@ -12,8 +12,9 @@ int w = 80, h = 60;
 
 void show( void ) {
     // SET STACK
-    asm volatile ("li sp ,0x3000");
+    asm volatile ("li sp ,0x2000");
     while( 1 ) {
+        await_vblank();
         for_y for_x
             gpu_rectangle( universe[y][x] ? BLACK : TRANSPARENT, x * 8, y * 8, x * 8 + 7, y * 8 + 7 );
     }
@@ -37,7 +38,7 @@ void game( void ) {
 	for_xy universe[y][x] = rng( 2 );
 	while ( get_buttons() == 1 ) {
 		evolve();
-		sleep( 50 );
+		sleep( 50, 0 );
 	}
 }
 

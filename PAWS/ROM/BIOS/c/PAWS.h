@@ -3,6 +3,7 @@ unsigned char volatile * UART_STATUS = (unsigned char volatile *) 0x8004;
 unsigned char * UART_DATA = (unsigned char *) 0x8000;
 unsigned char volatile * BUTTONS = (unsigned char volatile *) 0x8008;
 unsigned char volatile * LEDS = (unsigned char volatile *) 0x800c;
+unsigned short volatile * SYSTEMCLOCK = (unsigned short volatile *) 0x8010;
 
 unsigned char volatile * SDCARD_READY = (unsigned char volatile *) 0x8f00;
 unsigned char volatile * SDCARD_START = (unsigned char volatile *) 0x8f00;
@@ -35,6 +36,8 @@ unsigned char volatile * TM_STATUS = (unsigned char volatile *) 0x8234;
 short volatile * GPU_X = (short volatile *) 0x8400;
 short volatile * GPU_Y = (short volatile *) 0x8404;
 unsigned char volatile * GPU_COLOUR = (unsigned char volatile *) 0x8408;
+unsigned char volatile * GPU_COLOUR_ALT = (unsigned char volatile *) 0x8409;
+unsigned char volatile * GPU_DITHERMODE = (unsigned char volatile *) 0x840A;
 short volatile * GPU_PARAM0 = (short volatile *) 0x840C;
 short volatile * GPU_PARAM1 = (short volatile *) 0x8410;
 short volatile * GPU_PARAM2 = (short volatile *) 0x8414;
@@ -76,6 +79,14 @@ unsigned char volatile * LOWER_SPRITE_WRITER_NUMBER = ( unsigned char volatile *
 unsigned char volatile * LOWER_SPRITE_WRITER_LINE = ( unsigned char volatile * ) 0x8324;
 unsigned short volatile * LOWER_SPRITE_WRITER_BITMAP = ( unsigned short volatile * ) 0x8328;
 unsigned short volatile * LOWER_SPRITE_COLLISION_BASE = ( unsigned short volatile * ) 0x8330;
+unsigned char volatile * LOWER_SPRITE_NUMBER_SMT = ( unsigned char volatile * ) 0x9300;
+unsigned char volatile * LOWER_SPRITE_ACTIVE_SMT = ( unsigned char volatile * ) 0x9304;
+unsigned char volatile * LOWER_SPRITE_TILE_SMT = ( unsigned char volatile * ) 0x9308;
+unsigned char volatile * LOWER_SPRITE_COLOUR_SMT = ( unsigned char volatile * ) 0x930c;
+short volatile * LOWER_SPRITE_X_SMT = ( short volatile * ) 0x9310;
+short volatile * LOWER_SPRITE_Y_SMT = ( short volatile * ) 0x9314;
+unsigned char volatile * LOWER_SPRITE_DOUBLE_SMT = ( unsigned char volatile * ) 0x9318;
+unsigned short volatile * LOWER_SPRITE_UPDATE_SMT = ( unsigned short volatile * ) 0x931c;
 
 unsigned char volatile * UPPER_SPRITE_NUMBER = ( unsigned char volatile * ) 0x8500;
 unsigned char volatile * UPPER_SPRITE_ACTIVE = ( unsigned char volatile * ) 0x8504;
@@ -89,6 +100,14 @@ unsigned char volatile * UPPER_SPRITE_WRITER_NUMBER = ( unsigned char volatile *
 unsigned char volatile * UPPER_SPRITE_WRITER_LINE = ( unsigned char volatile * ) 0x8524;
 unsigned short volatile * UPPER_SPRITE_WRITER_BITMAP = ( unsigned short volatile * ) 0x8528;
 unsigned short volatile * UPPER_SPRITE_COLLISION_BASE = ( unsigned short volatile * ) 0x8530;
+unsigned char volatile * UPPER_SPRITE_NUMBER_SMT = ( unsigned char volatile * ) 0x9500;
+unsigned char volatile * UPPER_SPRITE_ACTIVE_SMT = ( unsigned char volatile * ) 0x9504;
+unsigned char volatile * UPPER_SPRITE_TILE_SMT = ( unsigned char volatile * ) 0x9508;
+unsigned char volatile * UPPER_SPRITE_COLOUR_SMT = ( unsigned char volatile * ) 0x950c;
+short volatile * UPPER_SPRITE_X_SMT = ( short volatile * ) 0x9510;
+short volatile * UPPER_SPRITE_Y_SMT = ( short volatile * ) 0x9514;
+unsigned char volatile * UPPER_SPRITE_DOUBLE_SMT = ( unsigned char volatile * ) 0x9518;
+unsigned short volatile * UPPER_SPRITE_UPDATE_SMT = ( unsigned short volatile * ) 0x951c;
 
 unsigned char volatile * TPU_X = ( unsigned char volatile * ) 0x8600;
 unsigned char volatile * TPU_Y = ( unsigned char volatile * ) 0x8604;
@@ -108,9 +127,79 @@ unsigned char volatile * AUDIO_R_START = ( unsigned char volatile * ) 0x881c;
 
 unsigned short volatile * RNG = ( unsigned short volatile * ) 0x8900;
 unsigned short volatile * ALT_RNG = ( unsigned short volatile * ) 0x8904;
-unsigned short volatile * TIMER1HZ = ( unsigned short volatile * ) 0x8910;
-unsigned short volatile * TIMER1KHZ = ( unsigned short volatile * ) 0x8920;
-unsigned short volatile * SLEEPTIMER = ( unsigned short volatile * ) 0x8930;
+unsigned short volatile * TIMER1HZ0 = ( unsigned short volatile * ) 0x8910;
+unsigned short volatile * TIMER1KHZ0 = ( unsigned short volatile * ) 0x8920;
+unsigned short volatile * SLEEPTIMER0 = ( unsigned short volatile * ) 0x8930;
+unsigned short volatile * TIMER1HZ1 = ( unsigned short volatile * ) 0x8914;
+unsigned short volatile * TIMER1KHZ1 = ( unsigned short volatile * ) 0x8924;
+unsigned short volatile * SLEEPTIMER1 = ( unsigned short volatile * ) 0x8934;
 
 unsigned char volatile * VBLANK = ( unsigned char volatile * ) 0x8ff0;
 unsigned char volatile * SCREENMODE = ( unsigned char volatile * ) 0x8ff0;
+
+// HANDLE SMT - RUNNING STATUS AND POINTER TO CODE TO RUN
+unsigned char volatile * SMTSTATUS = ( unsigned char volatile *) 0xffff;
+unsigned int volatile * SMTPCH = ( unsigned int volatile * ) 0xfff0;
+unsigned int volatile * SMTPCL = ( unsigned int volatile * ) 0xfff2;
+
+// TYPES AND STRUCTURES
+
+// STRUCTURE OF THE SPRITE UPDATE FLAG
+struct sprite_update_flag {
+    unsigned int padding:3;
+    unsigned int y_act:1;
+    unsigned int x_act:1;
+    unsigned int tile_act:1;
+    int dy:5;
+    int dx:5;
+};
+
+// FAT16 FILE SYSTEM
+// https://codeandlife.com/2012/04/02/simple-fat-and-sd-tutorial-part-1/ USED AS REFERENCE
+
+typedef struct {
+    unsigned char first_byte;
+    unsigned char start_chs[3];
+    unsigned char partition_type;
+    unsigned char end_chs[3];
+    unsigned int start_sector;
+    unsigned int length_sectors;
+} __attribute((packed)) PartitionTable;
+
+typedef struct {
+    unsigned char jmp[3];
+    char oem[8];
+    unsigned short sector_size;
+    unsigned char sectors_per_cluster;
+    unsigned short reserved_sectors;
+    unsigned char number_of_fats;
+    unsigned short root_dir_entries;
+    unsigned short total_sectors_short; // if zero, later field is used
+    unsigned char media_descriptor;
+    unsigned short fat_size_sectors;
+    unsigned short sectors_per_track;
+    unsigned short number_of_heads;
+    unsigned int hidden_sectors;
+    unsigned int total_sectors_long;
+
+    unsigned char drive_number;
+    unsigned char current_head;
+    unsigned char boot_signature;
+    unsigned int volume_id;
+    char volume_label[11];
+    char fs_type[8];
+    char boot_code[448];
+    unsigned short boot_sector_signature;
+} __attribute((packed)) Fat16BootSector;
+
+typedef struct {
+    unsigned char filename[8];
+    unsigned char ext[3];
+    unsigned char attributes;
+    unsigned char reserved[10];
+    unsigned short modify_time;
+    unsigned short modify_date;
+    unsigned short starting_cluster;
+    unsigned int file_size;
+} __attribute((packed)) Fat16Entry;
+
