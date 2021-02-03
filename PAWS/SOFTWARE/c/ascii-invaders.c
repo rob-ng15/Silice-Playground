@@ -214,41 +214,30 @@ int main( void ) {
     //signal(SIGALRM, handleTimer);
 
     while(1) {
-        switch(inputcharacter()) {
-            case 'q':
-                    cleanUp(0);
-                    break;
-            case 'j':
-#ifdef USE_KEYS
-            case 'z':
-#endif
-                    gun.move = -2;
-                    break;
-            case 'k':
-#ifdef USE_KEYS
-            case 'x':
-#endif
-                    gun.move = 2;
-                    break;
-            case ' ':
-                    if (game.state == STATE_INTRO) {
-                        game.lives = 3;
-                        game.score = 0;
-                        game.state = STATE_PLAY;
-                        resetShields();
+        sleep( 20, 0 );
+        handleTimer( 1 );
+        if( ( get_buttons() & 2 ) != 0 ) {
+            if (game.state == STATE_INTRO) {
+                game.lives = 3;
+                game.score = 0;
+                game.state = STATE_PLAY;
+                resetShields();
 
-                        resetAliens();
-                        game.timer = 0;
-                        clear();
-                        paintShelters();
-                    } else if (game.state == STATE_PLAY
-                            && game.timer > GUNNER_ENTRANCE
-                            && gun.missile.y == 0) {
-                        gun.missile.x = gun.x;
-                        gun.missile.y = LINES - GUNNER_HEIGHT - 1;
-                    }
-                    break;
+                resetAliens();
+                game.timer = 0;
+                clear();
+                paintShelters();
+            } else if (game.state == STATE_PLAY
+                    && game.timer > GUNNER_ENTRANCE
+                    && gun.missile.y == 0) {
+                gun.missile.x = gun.x;
+                gun.missile.y = LINES - GUNNER_HEIGHT - 1;
+            }
         }
+        if( ( get_buttons() & 32 ) != 0 )
+            gun.move = -2;
+        if( ( get_buttons() & 64 ) != 0 )
+            gun.move = 2;
     }
 
     return 0;   // not reached
@@ -409,8 +398,8 @@ void handleTimer(int signal) {
     // handle alien movements
     if (--aliens.paintWait <= 0) {
         // time to repaint one row of aliens (speeds up as you shoot aliens)
-        aliens.paintWait = (int) ((double) PAINT_WAIT * ((double) aliens.count
-            / (double) (aliens.cols * aliens.rows)));;
+        aliens.paintWait = (int) (PAINT_WAIT * (aliens.count
+            / (aliens.cols * aliens.rows)));;
         aliens.paintRow--;
         paintAlienRow(aliens.paintRow, 0);
         refresh();
@@ -542,8 +531,8 @@ void handleTimer(int signal) {
             int y = gun.missile.y - aliens.y;
             if (x % ALIEN_WIDTH != 0 && x % ALIEN_WIDTH != ALIEN_WIDTH -1) {
                 // it didn't sneak between two aliens
-                x /= ALIEN_WIDTH;
-                y /= ALIEN_HEIGHT;
+                x = x / ALIEN_WIDTH;
+                y = y / ALIEN_HEIGHT;
                 alien = aliens.table[(y * aliens.cols) + x];
                 if (alien > ALIEN_EMPTY) {
                     game.score += alien * 10;

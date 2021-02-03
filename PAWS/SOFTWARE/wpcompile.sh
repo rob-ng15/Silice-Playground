@@ -21,4 +21,3 @@ $ARCH-elf-as -march=rv32imac -mabi=ilp32 -o build/crt0.o crt0.s
 $ARCH-elf-ld --as-needed --gc-sections -m elf32lriscv -b elf32-littleriscv -Tconfig_c_SDRAM.ld --no-relax -o build/code.elf build/code.o build/libPAWS.o
 
 $ARCH-elf-objcopy -O binary build/code.elf $2
-
