@@ -76,14 +76,10 @@ algorithm PAWSCPU (
     );
 
     // LAST INSTRUCTION CACHE FOR MAIN AND SMT THREAD
-    uint32  lastpccache[32] = { 32hffffffff, pad(32hffffffff) };
-    uint32  lastinstructioncache[32] = uninitialized;
-    uint1   lastcompressedcache[32] = uninitialized;
+    uint32  lastpccache[64] = { 32hffffffff, pad(32hffffffff) };
+    uint32  lastinstructioncache[64] = uninitialized;
+    uint1   lastcompressedcache[64] = uninitialized;
     uint5   lastcachepointer = 0;
-
-    uint32  lastpccacheSMT[32] = { 32hffffffff, pad(32hffffffff) };
-    uint32  lastinstructioncacheSMT[32] = uninitialized;
-    uint1   lastcompressedcacheSMT[32] = uninitialized;
     uint5   lastcachepointerSMT = 0;
 
     // MEMORY ACCESS FLAGS
@@ -105,40 +101,25 @@ algorithm PAWSCPU (
         incPC = 1;
 
         // CHECK IF PC IS IN LAST INSTRUCTION CACHE
-        if( ( ~SMT && (
+        if(
             $$for i = 0, 30 do
-                ( pc == lastpccache[ $i$ ] ) ||
+            $$j = 32 + i
+                ( ( SMT ? pcSMT : pc ) == lastpccache[ SMT ? $j$ : $i$ ] ) ||
             $$end
-                ( pc == lastpccache[ 31 ] ) ) ) ||
-            ( SMT && (
-            $$for i = 0, 30 do
-                ( pcSMT == lastpccacheSMT[ $i$ ] ) ||
-            $$end
-                ( pcSMT == lastpccacheSMT[ 31 ] ) ) ) ) {
+            ( ( SMT ? pcSMT : pc ) == lastpccache[ SMT ? 63 : 31 ] ) ) {
                 // RETRIEVE FROM LAST INSTRUCTION CACHE
-                if( SMT ) {
-                    instruction = ( pcSMT == lastpccacheSMT[ 0 ] ) ? lastinstructioncacheSMT[ 0 ] :
-                                    $$for i = 1, 30 do
-                                    ( pcSMT == lastpccacheSMT[ $i$ ] ) ? lastinstructioncacheSMT[ $i$ ] :
-                                    $$end
-                                    lastinstructioncacheSMT[ 31 ];
-                    compressed = ( pcSMT == lastpccacheSMT[ 0 ] ) ? lastcompressedcacheSMT[ 0 ] :
-                                    $$for i = 1, 30 do
-                                    ( pcSMT == lastpccacheSMT[ $i$ ] ) ? lastcompressedcacheSMT[ $i$ ] :
-                                    $$end
-                                    lastcompressedcacheSMT[ 31 ];
-                } else {
-                    instruction = ( pc == lastpccache[ 0 ] ) ? lastinstructioncache[ 0 ] :
-                                    $$for i = 1, 30 do
-                                    ( pc == lastpccache[ $i$ ] ) ? lastinstructioncache[ $i$ ] :
-                                    $$end
-                                    lastinstructioncache[ 31 ];
-                    compressed = ( pc == lastpccache[ 0 ] ) ? lastcompressedcache[ 0 ] :
-                                    $$for i = 1, 30 do
-                                    ( pc == lastpccache[ $i$ ] ) ? lastcompressedcache[ $i$ ] :
-                                    $$end
-                                    lastcompressedcache[ 31 ];
-                }
+                instruction = ( ( SMT ? pcSMT : pc ) == lastpccache[ SMT ? 32 : 0 ] ) ? lastinstructioncache[ SMT ? 32 : 0 ] :
+                            $$for i = 0, 30 do
+                            $$j = 32 + i
+                                ( ( SMT ? pcSMT : pc ) == lastpccache[ SMT ? $j$ : $i$ ] ) ? lastinstructioncache[ SMT ? $j$ : $i$ ] :
+                            $$end
+                            lastinstructioncache[ SMT ? 63 : 31 ];
+                compressed = ( ( SMT ? pcSMT : pc ) == lastpccache[ SMT ? 32 : 0 ] ) ? lastcompressedcache[ SMT ? 32 : 0 ] :
+                            $$for i = 0, 30 do
+                            $$j = 32 + i
+                                ( ( SMT ? pcSMT : pc ) == lastpccache[ SMT ? $j$ : $i$ ] ) ? lastcompressedcache[ SMT ? $j$ : $i$ ] :
+                            $$end
+                            lastinstructioncache[ SMT ? 63 : 31 ];
         } else {
             // FETCH + EXPAND COMPRESSED INSTRUCTIONS
             address = SMT ? pcSMT : pc;
@@ -163,17 +144,11 @@ algorithm PAWSCPU (
             }
 
             // UPDATE LASTCACHE
-            if( SMT ) {
-                lastpccacheSMT[ lastcachepointerSMT ] = pcSMT;
-                lastinstructioncacheSMT[ lastcachepointerSMT ] = instruction;
-                lastcompressedcacheSMT[ lastcachepointerSMT ] = compressed;
-                lastcachepointerSMT = lastcachepointerSMT + 1;
-            } else {
-                lastpccache[ lastcachepointer ] = pc;
-                lastinstructioncache[ lastcachepointer ] = instruction;
-                lastcompressedcache[ lastcachepointer ] = compressed;
-                lastcachepointer = lastcachepointer + 1;
-            }
+            lastpccache[ SMT ? lastcachepointerSMT + 32: lastcachepointer ] = SMT ? pcSMT : pc;
+            lastinstructioncache[ SMT ? lastcachepointerSMT + 32 : lastcachepointer ] = instruction;
+            lastcompressedcache[ SMT ? lastcachepointerSMT + 32 : lastcachepointer ] = compressed;
+            lastcachepointer = lastcachepointer + ~SMT;
+            lastcachepointerSMT = lastcachepointerSMT + SMT;
         }
 
         // DECODE + REGISTER FETCH

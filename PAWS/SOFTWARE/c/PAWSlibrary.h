@@ -12,8 +12,13 @@
 #define abs(a) (((a) < 0 )? -(a) : (a))
 
 #define NULL 0
+#define true 1
+#define false 0
+#define TRUE 1
+#define FALSE 0
 
 typedef unsigned int size_t;
+typedef unsigned short bool;
 
 // FOR EASE OF PORTING
 typedef unsigned char   uint8;
@@ -130,6 +135,7 @@ extern unsigned char get_buttons( void );
 
 // TIMERS AND PSEUDO RANDOM NUMBER GENERATOR
 extern unsigned short systemclock( void );
+extern unsigned short time( int );
 extern unsigned short rng( unsigned short );
 extern void sleep( unsigned short, unsigned char );
 extern void set_timer1khz( unsigned short, unsigned char );

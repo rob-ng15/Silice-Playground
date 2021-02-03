@@ -332,11 +332,7 @@ void drawfuel( unsigned char fullbar )
 {
     if( fullbar ) {
         gpu_rectangle( RED, 70, 456, 328, 463 );
-        gpu_character_blit( RED, 30, 456, 'F', 0 );
-        gpu_character_blit( RED, 38, 456, 'U', 0 );
-        gpu_character_blit( RED, 46, 456, 'E', 0 );
-        gpu_character_blit( RED, 54, 456, 'L', 0 );
-        gpu_character_blit( RED, 62, 456, ':', 0 );
+        gpu_outputstring( RED, 30, 456, "FUEL:", 0 );
     }
     gpu_character_blit( RED, 71 + ( fuel >> 2 ), 456, 219, 0 );
     gpu_character_blit( WHITE, 70 + ( fuel >> 2 ), 456, 30, 0 );
@@ -345,13 +341,7 @@ void drawshield( unsigned char fullbar )
 {
     if( fullbar ) {
         gpu_rectangle( BLUE, 70, 464, 328, 471 );
-        gpu_character_blit( BLUE, 14, 464, 'S', 0 );
-        gpu_character_blit( BLUE, 22, 464, 'H', 0 );
-        gpu_character_blit( BLUE, 30, 464, 'I', 0 );
-        gpu_character_blit( BLUE, 38, 464, 'E', 0 );
-        gpu_character_blit( BLUE, 46, 464, 'L', 0 );
-        gpu_character_blit( BLUE, 54, 464, 'D', 0 );
-        gpu_character_blit( BLUE, 62, 464, ':', 0 );
+        gpu_outputstring( BLUE, 14, 464, "SHIELD:", 0 );
     }
     gpu_character_blit( BLUE, 71 + shield, 464, 219, 0 );
     gpu_character_blit( WHITE, 70 + shield, 464, 30, 0 );

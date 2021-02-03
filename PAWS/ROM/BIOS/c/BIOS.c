@@ -431,6 +431,10 @@ void sd_readCluster( unsigned short cluster ) {
     }
 }
 
+unsigned short checkextension( unsigned short i ) {
+    return( ROOTDIRECTORY[i].ext[0]=='P' && ROOTDIRECTORY[i].ext[1]=='A' && ROOTDIRECTORY[i].ext[2]=='W' );
+}
+
 // SEARCH FOR THE NEXT PAW FILE, WILL LOCK IF NO FILE FOUND
 void sd_findNextFile( void ) {
     unsigned short i = ( SELECTEDFILE == 0xffff ) ? 0 : SELECTEDFILE + 1;
@@ -447,11 +451,37 @@ void sd_findNextFile( void ) {
                 break;
 
             default:
-                if( ROOTDIRECTORY[i].ext[0]=='P' && ROOTDIRECTORY[i].ext[1]=='A' && ROOTDIRECTORY[i].ext[2]=='W' ) {
+                if( checkextension( i ) ) {
                     SELECTEDFILE = i;
                     filefound = 1;
                 } else {
                     i = ( i < BOOTSECTOR -> root_dir_entries ) ? i + 1 : 0;
+                }
+                break;
+        }
+    }
+}
+// SEARCH FOR THE NEXT PAW FILE, WILL LOCK IF NO FILE FOUND
+void sd_findPrevFile( void ) {
+    unsigned short i = ( SELECTEDFILE == 0xffff ) ? 0 : SELECTEDFILE - 1;
+    unsigned short filefound = 0;
+
+    while( !filefound ) {
+        switch( ROOTDIRECTORY[i].filename[0] ) {
+            // NOT TRUE FILES ( deleted, directory pointer )
+            case 0x00:
+            case 0xe5:
+            case 0x05:
+            case 0x2e:
+                i = ( i == 0 ) ? i < BOOTSECTOR -> root_dir_entries -1 : i - 1;
+                break;
+
+            default:
+                if( checkextension( i ) ) {
+                    SELECTEDFILE = i;
+                    filefound = 1;
+                } else {
+                i = ( i == 0 ) ? i < BOOTSECTOR -> root_dir_entries -1 : i - 1;
                 }
                 break;
         }
@@ -506,6 +536,17 @@ void reset_display( unsigned char terminalvisible ) {
     for( unsigned short i = 0; i < 13; i++ ) {
         set_sprite( 0, i, 0, 0, 0, 0, 0, 0 );
         set_sprite( 1, i, 0, 0, 0, 0, 0, 0 );
+    }
+}
+
+void displayfilename( void ) {
+    tpu_outputstringcentre( 10, TRANSPARENT, WHITE, "Current PAW File:" );
+    for( unsigned short i = 0; i < 8; i++ ) {
+        // DISPLAY FILENAME
+        gpu_rectangle( TRANSPARENT, 64, 208, 576, 272 );
+        for( i = 0; i < 8; i++ ) {
+            gpu_character_blit( WHITE, 64 + i * 64, 208, ROOTDIRECTORY[SELECTEDFILE].filename[i], 3);
+        }
     }
 }
 
@@ -580,24 +621,23 @@ void main( void ) {
 
     // FILE SELECTOR
     tpu_outputstringcentre( 7, TRANSPARENT, WHITE, "Select PAW File" );
-    tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "SELECT USING FIRE 1 - SCROLL USING FIRE 2" );
+    tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "SELECT USING FIRE 1 - SCROLL USING LEFT & RIGHT" );
     tpu_outputstringcentre( 10, TRANSPARENT, RED, "ERROR: No PAW Files Found" );
     SELECTEDFILE = 0xffff;
 
     // FILE SELECTOR, LOOP UNTIL FILE SELECTED (FIRE 1 PRESSED WITH A VALID FILE)
     while( !selectedfile ) {
-        // FIRE 2 - SEARCH FOR NEXT FILE
-        if( ( get_buttons() & 4 ) || ( SELECTEDFILE == 0xffff ) ) {
-            while( get_buttons() & 4 );
+        // RIGHT - SEARCH FOR NEXT FILE
+        if( ( get_buttons() & 64 ) || ( SELECTEDFILE == 0xffff ) ) {
+            while( get_buttons() & 64 );
             sd_findNextFile();
-            tpu_outputstringcentre( 10, TRANSPARENT, WHITE, "Current PAW File:" );
-            for( i = 0; i < 8; i++ ) {
-                // DISPLAY FILENAME
-                gpu_rectangle( TRANSPARENT, 64, 208, 576, 272 );
-                for( i = 0; i < 8; i++ ) {
-                    gpu_character_blit( WHITE, 64 + i * 64, 208, ROOTDIRECTORY[SELECTEDFILE].filename[i], 3);
-                }
-            }
+            displayfilename();
+        }
+        // LEFT - SEARCH FOR PREVIOUS FILE
+        if( ( get_buttons() & 32 ) || ( SELECTEDFILE == 0xffff ) ) {
+            while( get_buttons() & 32 );
+            sd_findPrevFile();
+            displayfilename();
         }
         // FIRE 1 - SELECT FILE
         if( ( get_buttons() & 2 ) && ( SELECTEDFILE != 0xffff ) ) {

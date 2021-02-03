@@ -296,6 +296,9 @@ void reset_timer1hz( unsigned char timer  ) {
 unsigned short systemclock( void ) {
     return( *SYSTEMCLOCK );
 }
+unsigned short time( int timer ) {
+    return( *SYSTEMCLOCK );
+}
 
 // AUDIO OUTPUT
 // START A note (1 == DEEP C, 25 == MIDDLE C )

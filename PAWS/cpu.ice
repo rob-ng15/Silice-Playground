@@ -33,6 +33,7 @@ algorithm PAWSCPU (
     // RISC-V PROGRAM COUNTERS AND STATUS
     uint32  pc = 0;
     uint32  pcSMT = 0;
+    uint32  PC := SMT ? pcSMT : pc;
     uint32  nextPC = uninitialized;
     uint1   compressed = uninitialized;
     uint1   takeBranch = uninitialized;
@@ -105,43 +106,26 @@ algorithm PAWSCPU (
         incPC = 1;
 
         // CHECK IF PC IS IN LAST INSTRUCTION CACHE
-        if( ( ~SMT && (
+        if(
             $$for i = 0, 30 do
-                ( pc == lastpccache[ $i$ ] ) ||
+                ( PC == ( SMT ? lastpccacheSMT[ $i$ ] : lastpccache[ $i$ ] ) ) ||
             $$end
-                ( pc == lastpccache[ 31 ] ) ) ) ||
-            ( SMT && (
-            $$for i = 0, 30 do
-                ( pcSMT == lastpccacheSMT[ $i$ ] ) ||
-            $$end
-                ( pcSMT == lastpccacheSMT[ 31 ] ) ) ) ) {
+            ( PC == ( SMT ? lastpccacheSMT[ 31 ] : lastpccache[ 31 ] ) ) ) {
                 // RETRIEVE FROM LAST INSTRUCTION CACHE
-                if( SMT ) {
-                    instruction = ( pcSMT == lastpccacheSMT[ 0 ] ) ? lastinstructioncacheSMT[ 0 ] :
-                                    $$for i = 1, 30 do
-                                    ( pcSMT == lastpccacheSMT[ $i$ ] ) ? lastinstructioncacheSMT[ $i$ ] :
-                                    $$end
-                                    lastinstructioncacheSMT[ 31 ];
-                    compressed = ( pcSMT == lastpccacheSMT[ 0 ] ) ? lastcompressedcacheSMT[ 0 ] :
-                                    $$for i = 1, 30 do
-                                    ( pcSMT == lastpccacheSMT[ $i$ ] ) ? lastcompressedcacheSMT[ $i$ ] :
-                                    $$end
-                                    lastcompressedcacheSMT[ 31 ];
-                } else {
-                    instruction = ( pc == lastpccache[ 0 ] ) ? lastinstructioncache[ 0 ] :
-                                    $$for i = 1, 30 do
-                                    ( pc == lastpccache[ $i$ ] ) ? lastinstructioncache[ $i$ ] :
-                                    $$end
-                                    lastinstructioncache[ 31 ];
-                    compressed = ( pc == lastpccache[ 0 ] ) ? lastcompressedcache[ 0 ] :
-                                    $$for i = 1, 30 do
-                                    ( pc == lastpccache[ $i$ ] ) ? lastcompressedcache[ $i$ ] :
-                                    $$end
-                                    lastcompressedcache[ 31 ];
-                }
+                instruction = ( PC == ( SMT ? lastpccacheSMT[ 0 ] : lastpccache[ 0 ] ) ) ? ( SMT ? lastinstructioncacheSMT[ 0 ] : lastinstructioncache[ 0 ] ) :
+                                $$for i = 1, 30 do
+                                    ( PC == ( SMT ? lastpccacheSMT[ $i$ ] : lastpccache[ $i$ ] ) ) ? ( SMT ? lastinstructioncacheSMT[ $i$ ] : lastinstructioncache[ $i$ ] ) :
+                                $$end
+                                ( SMT ? lastinstructioncacheSMT[ 31 ] : lastinstructioncache[ 31 ] );
+
+                compressed = ( PC == ( SMT ? lastpccacheSMT[ 0 ] : lastpccache[ 0 ] ) ) ? ( SMT ? lastcompressedcacheSMT[ 0 ] : lastcompressedcache[ 0 ] ) :
+                                $$for i = 1, 30 do
+                                    ( PC == ( SMT ? lastpccacheSMT[ $i$ ] : lastpccache[ $i$ ] ) ) ? ( SMT ? lastcompressedcacheSMT[ $i$ ] : lastcompressedcache[ $i$ ] ) :
+                                $$end
+                                ( SMT ? lastcompressedcacheSMT[ 31 ] : lastcompressedcache[ 31 ] );
         } else {
             // FETCH + EXPAND COMPRESSED INSTRUCTIONS
-            address = SMT ? pcSMT : pc;
+            address = PC;
             Icacheflag = 1;
             readmemory = 1;
             while( memorybusy ) {}
@@ -155,7 +139,7 @@ algorithm PAWSCPU (
                 case 2b11: {
                     // 32 BIT INSTRUCTION
                     lowWord = readdata;
-                    address = ( SMT ? pcSMT : pc ) + 2;
+                    address = PC + 2;
                     readmemory = 1;
                     while( memorybusy ) {}
                     ( instruction ) = halfhalfword( readdata, lowWord );
@@ -180,11 +164,7 @@ algorithm PAWSCPU (
         // HAPPENS AUTOMATICALLY in DECODE AND REGISTER UNITS
         ( opCode, function3, function7, rs1, rs2, rs3, rd, immediateValue, IshiftCount ) = decoder( instruction );
         ( registers_1, registers_2, registers_3, sourceReg1, sourceReg2, sourceReg3 ) = registersREAD( registers_1, registers_2, registers_3, rs1, rs2, rs3, SMT );
-        if( SMT ) {
-            ( nextPC, branchAddress, jumpAddress, AUIPCLUI, storeAddress, loadAddress ) = addressgenerator( opCode, pcSMT, compressed, sourceReg1, immediateValue );
-        } else {
-            ( nextPC, branchAddress, jumpAddress, AUIPCLUI, storeAddress, loadAddress ) = addressgenerator( opCode, pc, compressed, sourceReg1, immediateValue );
-        }
+        ( nextPC, branchAddress, jumpAddress, AUIPCLUI, storeAddress, loadAddress ) = addressgenerator( opCode, PC, compressed, sourceReg1, immediateValue );
 
         // EXECUTE
         switch( opCode[2,5] ) {

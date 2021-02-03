@@ -171,34 +171,52 @@ circuitry SBSET(
     input   shiftcount,
     output  result
 ) {
-    result = sourceReg1;
-    ++:
-    result[ shiftcount, 1 ] = 1b1;
+    switch( shiftcount ) {
+        case 0: { result = { sourceReg1[ 1, 31 ], 1b1 }; }
+        $$for i = 1, 30 do
+        $$j = i + 1
+        $$remain = 31 - i;
+            case $i$: { result = { sourceReg1[ $j$, $remain$ ], 1b1, sourceReg1[ 0, $i$ ] }; }
+        $$end
+        case 31: { result = { 1b1, sourceReg1[0, 31 ] }; }
+    }
 }
 circuitry SBCLR(
     input   sourceReg1,
     input   shiftcount,
     output  result
 ) {
-    result = sourceReg1;
-    ++:
-    result[ shiftcount, 1 ] = 1b0;
+    switch( shiftcount ) {
+        case 0: { result = { sourceReg1[ 1, 31 ], 1b0 }; }
+        $$for i = 1, 30 do
+        $$j = i + 1
+        $$remain = 31 - i;
+            case $i$: { result = { sourceReg1[ $j$, $remain$ ], 1b0, sourceReg1[ 0, $i$ ] }; }
+        $$end
+        case 31: { result = { 1b0, sourceReg1[0, 31 ] }; }
+    }
 }
 circuitry SBINV(
     input   sourceReg1,
     input   shiftcount,
     output  result
 ) {
-    result = sourceReg1;
-    ++:
-    result[ shiftcount, 1 ] = ~result[ shiftcount, 1 ];
+    switch( shiftcount ) {
+        case 0: { result = { sourceReg1[ 1, 31 ], ~sourceReg1[0,1] }; }
+        $$for i = 1, 30 do
+        $$j = i + 1
+        $$remain = 31 - i;
+            case $i$: { result = { sourceReg1[ $j$, $remain$ ], ~sourceReg1[ $i$, 1 ], sourceReg1[ 0, $i$ ] }; }
+        $$end
+        case 31: { result = { ~sourceReg1[31,1], sourceReg1[0, 31 ] }; }
+    }
 }
 circuitry SBEXT(
     input   sourceReg1,
     input   shiftcount,
     output  result
 ) {
-    result = sourceReg1[ shiftcount,1 ];
+    result = sourceReg1[ shiftcount, 1 ];
 }
 
 // GENERAL REVERSE / GENERAL OR CONDITIONAL
