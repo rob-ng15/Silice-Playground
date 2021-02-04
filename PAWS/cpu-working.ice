@@ -77,14 +77,10 @@ algorithm PAWSCPU (
     );
 
     // LAST INSTRUCTION CACHE FOR MAIN AND SMT THREAD
-    uint32  lastpccache[32] = { 32hffffffff, pad(32hffffffff) };
-    uint32  lastinstructioncache[32] = uninitialized;
-    uint1   lastcompressedcache[32] = uninitialized;
+    uint32  lastpccache[64] = { 32hffffffff, pad(32hffffffff) };
+    uint32  lastinstructioncache[64] = uninitialized;
+    uint1   lastcompressedcache[64] = uninitialized;
     uint5   lastcachepointer = 0;
-
-    uint32  lastpccacheSMT[32] = { 32hffffffff, pad(32hffffffff) };
-    uint32  lastinstructioncacheSMT[32] = uninitialized;
-    uint1   lastcompressedcacheSMT[32] = uninitialized;
     uint5   lastcachepointerSMT = 0;
 
     // MEMORY ACCESS FLAGS
@@ -108,21 +104,24 @@ algorithm PAWSCPU (
         // CHECK IF PC IS IN LAST INSTRUCTION CACHE
         if(
             $$for i = 0, 30 do
-                ( PC == ( SMT ? lastpccacheSMT[ $i$ ] : lastpccache[ $i$ ] ) ) ||
+            $$j = 32 + i
+                ( PC == ( lastpccache[ SMT ? $j$ : $i$ ] ) ) ||
             $$end
-            ( PC == ( SMT ? lastpccacheSMT[ 31 ] : lastpccache[ 31 ] ) ) ) {
+            ( PC == ( lastpccache[ SMT ? 63 : 31 ] ) ) ) {
                 // RETRIEVE FROM LAST INSTRUCTION CACHE
-                instruction = ( PC == ( SMT ? lastpccacheSMT[ 0 ] : lastpccache[ 0 ] ) ) ? ( SMT ? lastinstructioncacheSMT[ 0 ] : lastinstructioncache[ 0 ] ) :
+                instruction = ( PC == ( lastpccache[ SMT ? 32 : 0 ] ) ) ? ( lastinstructioncache[ SMT ? 32 : 0 ] ) :
                                 $$for i = 1, 30 do
-                                    ( PC == ( SMT ? lastpccacheSMT[ $i$ ] : lastpccache[ $i$ ] ) ) ? ( SMT ? lastinstructioncacheSMT[ $i$ ] : lastinstructioncache[ $i$ ] ) :
+                                $$j = 32 + i
+                                    ( PC == ( lastpccache[ SMT ? $j$ : $i$ ] ) ) ? ( lastinstructioncache[ SMT ? $j$ : $i$ ] ) :
                                 $$end
-                                ( SMT ? lastinstructioncacheSMT[ 31 ] : lastinstructioncache[ 31 ] );
+                                ( lastinstructioncache[ SMT ? 63 : 31 ] );
 
-                compressed = ( PC == ( SMT ? lastpccacheSMT[ 0 ] : lastpccache[ 0 ] ) ) ? ( SMT ? lastcompressedcacheSMT[ 0 ] : lastcompressedcache[ 0 ] ) :
+                compressed = ( PC == ( lastpccache[ SMT ? 32 : 0 ] ) ) ? ( lastcompressedcache[ SMT ? 32 : 0 ] ) :
                                 $$for i = 1, 30 do
-                                    ( PC == ( SMT ? lastpccacheSMT[ $i$ ] : lastpccache[ $i$ ] ) ) ? ( SMT ? lastcompressedcacheSMT[ $i$ ] : lastcompressedcache[ $i$ ] ) :
+                                $$j = 32 + i
+                                    ( PC == ( lastpccache[ SMT ? $j$ : $i$ ] ) ) ? ( lastcompressedcache[ SMT ? $j$ : $i$ ] ) :
                                 $$end
-                                ( SMT ? lastcompressedcacheSMT[ 31 ] : lastcompressedcache[ 31 ] );
+                                ( lastcompressedcache[ SMT ? 63 : 31 ] );
         } else {
             // FETCH + EXPAND COMPRESSED INSTRUCTIONS
             address = PC;
@@ -147,15 +146,12 @@ algorithm PAWSCPU (
             }
 
             // UPDATE LASTCACHE
+            lastpccache[ SMT ? lastcachepointerSMT + 32 : lastcachepointer ] = PC;
+            lastinstructioncache[  SMT ? lastcachepointerSMT + 32 : lastcachepointer ] = instruction;
+            lastcompressedcache[  SMT ? lastcachepointerSMT + 32 : lastcachepointer ] = compressed;
             if( SMT ) {
-                lastpccacheSMT[ lastcachepointerSMT ] = pcSMT;
-                lastinstructioncacheSMT[ lastcachepointerSMT ] = instruction;
-                lastcompressedcacheSMT[ lastcachepointerSMT ] = compressed;
                 lastcachepointerSMT = lastcachepointerSMT + 1;
             } else {
-                lastpccache[ lastcachepointer ] = pc;
-                lastinstructioncache[ lastcachepointer ] = instruction;
-                lastcompressedcache[ lastcachepointer ] = compressed;
                 lastcachepointer = lastcachepointer + 1;
             }
         }

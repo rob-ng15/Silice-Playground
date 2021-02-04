@@ -9,11 +9,23 @@ void main( void ) {
     unsigned short trebleposition = 0;
 
     while(1) {
-        if( !get_beep_duration( 1 ) ) {
-            if( tune_treble[ trebleposition ] != 0xff ) {
-                beep( 1, 2, tune_treble[ trebleposition ], size_treble[ trebleposition ] << 4 );
-                trebleposition++;
+        trebleposition = 0;
+
+        while( tune_treble[ trebleposition ] != 0xff ) {
+            if( !get_beep_duration( 1 ) ) {
+                if( tune_treble[ trebleposition ] != 0xff ) {
+                    beep( 1, 0, tune_treble[ trebleposition ], size_treble[ trebleposition ] << 4 );
+                    trebleposition++;
+                }
             }
+        }
+
+        sleep( 4000, 0 );
+
+        for( unsigned char note = 1; note < 64; note++ ) {
+            beep( 1, 0 , note, 500 );
+            await_beep( 1 );
+            sleep( 250, 0 );
         }
     }
 }

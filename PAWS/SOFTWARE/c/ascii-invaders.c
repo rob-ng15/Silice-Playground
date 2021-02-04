@@ -1,5 +1,6 @@
 #include "PAWSlibrary.h"
 #include "curses.h"
+#include "malloc.h"
 
 struct Bomb {
     int x;
@@ -45,14 +46,6 @@ struct Bomb {
 #define STATE_EXPLODE 3
 #define STATE_WAIT 4
 #define STATE_GAMEOVER 5
-
-// TEMPORARY
-unsigned char *malloc( unsigned int size ) {
-    return( memoryspace( size ) );
-}
-
-void free( unsigned char *memory ) {
-}
 
 const char *alienBlank =  "      ";
 const char *alien30[] = { " {@@} ",
@@ -214,7 +207,6 @@ int main( void ) {
     //signal(SIGALRM, handleTimer);
 
     while(1) {
-        sleep( 20, 0 );
         handleTimer( 1 );
         if( ( get_buttons() & 2 ) != 0 ) {
             if (game.state == STATE_INTRO) {
@@ -369,7 +361,7 @@ void handleTimer(int signal) {
             // find the first alien from the bottom
             for (y = aliens.emptyBottom - 1; y >= 0; y--) {
                 if (aliens.table[(aliens.cols * y) + x] > ALIEN_EMPTY) {
-                    if (rng(16) == 0) {
+                    if (rng(64) == 0) {
                         addBomb(aliens.x + (x * ALIEN_WIDTH) + (ALIEN_WIDTH / 2),
                             aliens.y + (y * ALIEN_HEIGHT) + ALIEN_HEIGHT - 1);
                     }

@@ -76,12 +76,14 @@ algorithm PAWSCPU (
         SMT <: SMT
     );
 
-    // LAST INSTRUCTION CACHE FOR MAIN AND SMT THREAD
-    uint32  lastpccache[64] = { 32hffffffff, pad(32hffffffff) };
-    uint32  lastinstructioncache[64] = uninitialized;
-    uint1   lastcompressedcache[64] = uninitialized;
-    uint5   lastcachepointer = 0;
-    uint5   lastcachepointerSMT = 0;
+    // On CPU instruction cache
+    instructioncache Icache(
+        PC <: PC,
+        SMT <: SMT,
+        newinstruction <: instruction,
+        newcompressed <: compressed
+    );
+    Icache.updatecache := 0;
 
     // MEMORY ACCESS FLAGS
     readmemory := 0;
@@ -102,26 +104,9 @@ algorithm PAWSCPU (
         incPC = 1;
 
         // CHECK IF PC IS IN LAST INSTRUCTION CACHE
-        if(
-            $$for i = 0, 30 do
-            $$j = 32 + i
-                ( PC == ( lastpccache[ SMT ? $j$ : $i$ ] ) ) ||
-            $$end
-            ( PC == ( lastpccache[ SMT ? 63 : 31 ] ) ) ) {
-                // RETRIEVE FROM LAST INSTRUCTION CACHE
-                instruction = ( PC == ( lastpccache[ SMT ? 32 : 0 ] ) ) ? ( lastinstructioncache[ SMT ? 32 : 0 ] ) :
-                                $$for i = 1, 30 do
-                                $$j = 32 + i
-                                    ( PC == ( lastpccache[ SMT ? $j$ : $i$ ] ) ) ? ( lastinstructioncache[ SMT ? $j$ : $i$ ] ) :
-                                $$end
-                                ( lastinstructioncache[ SMT ? 63 : 31 ] );
-
-                compressed = ( PC == ( lastpccache[ SMT ? 32 : 0 ] ) ) ? ( lastcompressedcache[ SMT ? 32 : 0 ] ) :
-                                $$for i = 1, 30 do
-                                $$j = 32 + i
-                                    ( PC == ( lastpccache[ SMT ? $j$ : $i$ ] ) ) ? ( lastcompressedcache[ SMT ? $j$ : $i$ ] ) :
-                                $$end
-                                ( lastcompressedcache[ SMT ? 63 : 31 ] );
+        if( Icache.incache ) {
+            instruction = Icache.instruction;
+            compressed = Icache.compressed;
         } else {
             // FETCH + EXPAND COMPRESSED INSTRUCTIONS
             address = PC;
@@ -146,14 +131,7 @@ algorithm PAWSCPU (
             }
 
             // UPDATE LASTCACHE
-            lastpccache[ SMT ? lastcachepointerSMT + 32 : lastcachepointer ] = PC;
-            lastinstructioncache[  SMT ? lastcachepointerSMT + 32 : lastcachepointer ] = instruction;
-            lastcompressedcache[  SMT ? lastcachepointerSMT + 32 : lastcachepointer ] = compressed;
-            if( SMT ) {
-                lastcachepointerSMT = lastcachepointerSMT + 1;
-            } else {
-                lastcachepointer = lastcachepointer + 1;
-            }
+            Icache.updatecache = 1;
         }
 
         // DECODE + REGISTER FETCH
@@ -329,4 +307,61 @@ algorithm PAWSCPU (
             pcSMT = SMTSTARTPC;
         }
     } // RISC-V
+}
+
+// ON CPU SMALL INSTRUCTION CACHE
+algorithm instructioncache(
+    input   uint32  PC,
+    input   uint1   SMT,
+    output  uint1   incache,
+
+    input   uint1   updatecache,
+    input   uint32  newinstruction,
+    input   uint1   newcompressed,
+
+    output  uint32  instruction,
+    output  uint1   compressed
+) <autorun> {
+    // LAST INSTRUCTION CACHE FOR MAIN AND SMT THREAD
+    uint32  lastpccache[64] = { 32hffffffff, pad(32hffffffff) };
+    uint32  lastinstructioncache[64] = uninitialized;
+    uint1   lastcompressedcache[64] = uninitialized;
+    uint5   lastcachepointer = 0;
+    uint5   lastcachepointerSMT = 0;
+
+    // CHECK IF PC IS IN LAST INSTRUCTION CACHE
+    incache :=
+        $$for i = 0, 30 do
+        $$j = 32 + i
+            ( PC == ( lastpccache[ SMT ? $j$ : $i$ ] ) ) ||
+        $$end
+        ( PC == ( lastpccache[ SMT ? 63 : 31 ] ) );
+
+    // RETRIEVE FROM LAST INSTRUCTION CACHE
+    instruction := ( PC == ( lastpccache[ SMT ? 32 : 0 ] ) ) ? ( lastinstructioncache[ SMT ? 32 : 0 ] ) :
+                    $$for i = 1, 30 do
+                    $$j = 32 + i
+                        ( PC == ( lastpccache[ SMT ? $j$ : $i$ ] ) ) ? ( lastinstructioncache[ SMT ? $j$ : $i$ ] ) :
+                    $$end
+                    ( lastinstructioncache[ SMT ? 63 : 31 ] );
+
+    compressed := ( PC == ( lastpccache[ SMT ? 32 : 0 ] ) ) ? ( lastcompressedcache[ SMT ? 32 : 0 ] ) :
+                    $$for i = 1, 30 do
+                    $$j = 32 + i
+                        ( PC == ( lastpccache[ SMT ? $j$ : $i$ ] ) ) ? ( lastcompressedcache[ SMT ? $j$ : $i$ ] ) :
+                    $$end
+                    ( lastcompressedcache[ SMT ? 63 : 31 ] );
+
+    while(1) {
+        if( updatecache ) {
+            lastpccache[ SMT ? lastcachepointerSMT + 32 : lastcachepointer ] = PC;
+            lastinstructioncache[  SMT ? lastcachepointerSMT + 32 : lastcachepointer ] = newinstruction;
+            lastcompressedcache[  SMT ? lastcachepointerSMT + 32 : lastcachepointer ] = newcompressed;
+            if( SMT ) {
+                lastcachepointerSMT = lastcachepointerSMT + 1;
+            } else {
+                lastcachepointer = lastcachepointer + 1;
+            }
+        }
+    }
 }
