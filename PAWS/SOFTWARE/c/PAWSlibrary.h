@@ -129,6 +129,8 @@ extern void outputnumber_int( unsigned int );
 extern char inputcharacter( void );
 unsigned char inputcharacter_available( void );
 
+int printf( const char *,... );
+
 // BASIC I/O
 extern void set_leds( unsigned char );
 extern unsigned char get_buttons( void );

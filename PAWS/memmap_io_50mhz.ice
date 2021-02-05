@@ -517,7 +517,7 @@ algorithm memmap_io (
                 // LOWER SPRITE LAYER - SMT
                 case 16h9300: { lower_sprites.sprite_set_number_SMT = writeData; }
                 case 16h9304: { lower_sprites.sprite_set_active_SMT = writeData; lower_sprites.sprite_layer_write_SMT = 1; }
-                case 16h99308: { lower_sprites.sprite_set_tile_SMT = writeData; lower_sprites.sprite_layer_write_SMT = 2; }
+                case 16h9308: { lower_sprites.sprite_set_tile_SMT = writeData; lower_sprites.sprite_layer_write_SMT = 2; }
                 case 16h930c: { lower_sprites.sprite_set_colour_SMT = writeData; lower_sprites.sprite_layer_write_SMT = 3; }
                 case 16h9310: { lower_sprites.sprite_set_x_SMT = writeData; lower_sprites.sprite_layer_write_SMT = 4; }
                 case 16h9314: { lower_sprites.sprite_set_y_SMT = writeData; lower_sprites.sprite_layer_write_SMT = 5; }

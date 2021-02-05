@@ -2,7 +2,6 @@
 circuitry registersWRITE (
     inout   registers_1,
     inout   registers_2,
-    inout   registers_3,
     input   rd,
     input   writeRegister,
     input   SMT,
@@ -15,8 +14,6 @@ circuitry registersWRITE (
         registers_1.wdata1 = result;
         registers_2.addr1 = rd + ( SMT ? 32 : 0 );
         registers_2.wdata1 = result;
-        registers_3.addr1 = rd + ( SMT ? 32 : 0 );
-        registers_3.wdata1 = result;
     }
 }
 
@@ -24,22 +21,17 @@ circuitry registersWRITE (
 circuitry registersREAD(
     inout   registers_1,
     inout   registers_2,
-    inout   registers_3,
     input   rs1,
     input   rs2,
-    input   rs3,
     input   SMT,
     output  sourceReg1,
     output  sourceReg2,
-    output  sourceReg3
 ) {
     registers_1.addr0 = rs1 + ( SMT ? 32 : 0 );
     registers_2.addr0 = rs2 + ( SMT ? 32 : 0 );
-    registers_3.addr0 = rs2 + ( SMT ? 32 : 0 );
     ++:
     sourceReg1 = registers_1.rdata0;
     sourceReg2 = registers_2.rdata0;
-    sourceReg3 = registers_3.rdata0;
 }
 
 // RISC-V INSTRUCTION DECODER
@@ -52,7 +44,6 @@ circuitry decoder (
 
     output  rs1,
     output  rs2,
-    output  rs3,
     output  rd,
 
     output  immediateValue,
@@ -64,7 +55,6 @@ circuitry decoder (
 
     rs1 = Rtype(instruction).sourceReg1;
     rs2 = Rtype(instruction).sourceReg2;
-    rs3 = instruction[27,5];
     rd = Rtype(instruction).destReg;
 
     immediateValue = { {20{instruction[31,1]}}, Itype(instruction).immediate };

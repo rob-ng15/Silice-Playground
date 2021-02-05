@@ -6,14 +6,35 @@ typedef struct block {
 	struct block   *prev;
 }		block_t;
 
-#ifndef ALLOC_UNIT
-#define ALLOC_UNIT 1024 * 1024
+#ifndef MALLOC_MEMORY
+#define MALLOC_MEMORY 4096 * 1024
 #endif
 
-#define BLOCK_MEM(ptr) ((void *)((unsigned long)ptr + sizeof(block_t)))
-#define BLOCK_HEADER(ptr) ((void *)((unsigned long)ptr - sizeof(block_t)))
+#ifndef ALLOC_UNIT
+#define ALLOC_UNIT 1024
+#endif
+
+#define BLOCK_MEM(ptr) ((void *)((unsigned int)ptr + sizeof(block_t)))
+#define BLOCK_HEADER(ptr) ((void *)((unsigned int)ptr - sizeof(block_t)))
 
 static block_t *head = NULL;
+unsigned short __malloc_init = 0;
+
+/* stats prints some debug information regarding the
+ * current program break and the blocks on the free list */
+void
+stats(char *prefix)
+{
+	printf("[%s] program break: %x\n", prefix, MEMORYTOP);
+	block_t        *ptr = head;
+	printf("[%s] free list: \n", prefix);
+	int		c = 0;
+	while (ptr) {
+		printf("(%d) <%d> (size: %d)\n", c, ptr, ptr->size);
+		ptr = ptr->next;
+		c++;
+	}
+}
 
 /* fl_remove removes a block from the free list
  * and adjusts the head accordingly */
@@ -42,7 +63,7 @@ fl_add(block_t * b)
 {
 	b->prev = NULL;
 	b->next = NULL;
-	if (!head || (unsigned long)head > (unsigned long)b) {
+	if (!head || (unsigned int)head > (unsigned int)b) {
 		if (head) {
 			head->prev = b;
 		}
@@ -51,7 +72,7 @@ fl_add(block_t * b)
 	} else {
 		block_t        *curr = head;
 		while (curr->next
-		       && (unsigned long)curr->next < (unsigned long)b) {
+		       && (unsigned int)curr->next < (unsigned int)b) {
 			curr = curr->next;
 		}
 		b->next = curr->next;
@@ -70,10 +91,10 @@ void
 scan_merge()
 {
 	block_t        *curr = head;
-	unsigned long	header_curr, header_next;
+	unsigned int	header_curr, header_next;
 	while (curr->next) {
-		header_curr = (unsigned long)curr;
-		header_next = (unsigned long)curr->next;
+		header_curr = (unsigned int)curr;
+		header_next = (unsigned int)curr->next;
 		if (header_curr + curr->size + sizeof(block_t) == header_next) {
 			/* found two continuous addressed blocks, merge them
 			 * and create a new block with the sum of their sizes */
@@ -87,7 +108,7 @@ scan_merge()
 		}
 		curr = curr->next;
 	}
-	header_curr = (unsigned long)curr;
+	header_curr = (unsigned int)curr;
 }
 
 /* splits the block b by creating a new block after size bytes,
@@ -95,7 +116,7 @@ scan_merge()
 block_t * split(block_t * b, size_t size)
 {
 	void           *mem_block = BLOCK_MEM(b);
-	block_t        *newptr = (block_t *) ((unsigned long)mem_block + size);
+	block_t        *newptr = (block_t *) ((unsigned int)mem_block + size);
 	newptr->size = b->size - (size + sizeof(block_t));
 	b->size = size;
 	return newptr;
@@ -108,6 +129,19 @@ malloc(size_t size)
 	block_t        *ptr, *newptr;
 	size_t		alloc_size = size >= ALLOC_UNIT ? size + sizeof(block_t)
 		: ALLOC_UNIT;
+
+    // REQUEST MEMORY SPACE FROM PAWS
+    if( !__malloc_init ) {
+        ptr = (block_t *)memoryspace( MALLOC_MEMORY );
+        ptr->next = NULL;
+        ptr->prev = NULL;
+        ptr->size = MALLOC_MEMORY - sizeof(block_t);
+        fl_add( ptr );
+        __malloc_init = 1;
+        printf( "MALLOC INITIALISED: Reserved: <%x>\n", MALLOC_MEMORY );
+    }
+
+    printf("MALLOC Request: Size: <%x> Given: <%x>\n", size, alloc_size);
 	ptr = head;
 	while (ptr) {
 		if (ptr->size >= size + sizeof(block_t)) {
@@ -126,29 +160,14 @@ malloc(size_t size)
 			ptr = ptr->next;
 		}
 	}
-	/* We are unable to find a free block on our free list, so we
-	 * should ask the OS for memory using sbrk. We will alloc
-	 * more alloc_size bytes (probably way more than requested) and then
-	 * split the newly allocated block to keep the spare space on our free
-	 * list */
-	ptr = (block_t *)memoryspace(alloc_size);
-	if (!ptr) {
-		return NULL;
-	}
-	ptr->next = NULL;
-	ptr->prev = NULL;
-	ptr->size = alloc_size - sizeof(block_t);
-	if (alloc_size > size + sizeof(block_t)) {
-		newptr = split(ptr, size);
-		fl_add(newptr);
-	}
-	return BLOCK_MEM(ptr);
+    return NULL;
 }
 
 void
 free(void *ptr)
 {
 	fl_add(BLOCK_HEADER(ptr));
+	stats("before scan");
 	scan_merge();
 }
 
@@ -156,4 +175,5 @@ void
 _cleanup()
 {
 	head = NULL;
+	stats("_cleanup end");
 }

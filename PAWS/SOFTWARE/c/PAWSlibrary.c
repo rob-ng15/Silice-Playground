@@ -1,4 +1,5 @@
 #include "PAWS.h"
+#include <stdarg.h>
 
 typedef unsigned int size_t;
 
@@ -1188,4 +1189,63 @@ void SMTSTART( unsigned int code ) {
     *SMTPCH = ( code & 0xffff0000 ) >> 16;
     *SMTPCL = ( code & 0x0000ffff );
     *SMTSTATUS = 1;
+}
+
+// printf code from https://github.com/sylefeb/Silice/tree/wip/projects/ram-ice-v/tests/mylibc
+
+void __print_string(const char* s) {
+   for(const char* p = s; *p; ++p) {
+      outputcharacter(*p);
+   }
+}
+
+void __print_dec(int val) {
+   char buffer[255];
+   char *p = buffer;
+   if(val < 0) {
+      outputcharacter('-');
+      __print_dec(-val);
+      return;
+   }
+   while (val || p == buffer) {
+      *(p++) = val % 10;
+      val = val / 10;
+   }
+   while (p != buffer) {
+      outputcharacter('0' + *(--p));
+   }
+}
+
+void __print_hex_digits(unsigned int val, int nbdigits) {
+   for (int i = (4*nbdigits)-4; i >= 0; i -= 4) {
+      outputcharacter("0123456789ABCDEF"[(val >> i) % 16]);
+   }
+}
+
+void __print_hex(unsigned int val) {
+   __print_hex_digits(val, 8);
+}
+
+int printf( const char *fmt,... ) {
+    va_list ap;
+    for( va_start( ap, fmt ); *fmt; fmt++ ) {
+        if( *fmt == '%' ) {
+            fmt++;
+        if( *fmt=='s' )
+            __print_string( va_arg( ap, char * ) );
+        else if( *fmt == 'x' )
+            __print_hex( va_arg( ap, int ) );
+        else if( *fmt == 'd' )
+            __print_dec(va_arg(ap,int) );
+        else if( *fmt == 'c' )
+            outputcharacter( va_arg( ap, int ) );
+        else
+            outputcharacter( *fmt );
+        } else {
+            outputcharacter( *fmt );
+        }
+    }
+    va_end(ap);
+
+    return( 1 );
 }

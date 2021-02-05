@@ -23,7 +23,6 @@ algorithm PAWSCPU (
     // RISC-V REGISTERS
     simple_dualport_bram int32 registers_1 <input!> [64] = { 0, pad(0) };
     simple_dualport_bram int32 registers_2 <input!> [64] = { 0, pad(0) };
-    simple_dualport_bram int32 registers_3 <input!> [64] = { 0, pad(0) };
 
     // SMT FLAG
     // RUNNING ON HART 0 OR HART 1
@@ -60,7 +59,6 @@ algorithm PAWSCPU (
     uint5   IshiftCount = uninitialized;
     uint5   rs1 = uninitialized;
     uint5   rs2 = uninitialized;
-    uint5   rs3 = uninitialized;
     uint5   rd = uninitialized;
 
     // RISC-V ADDRESS GENERATOR
@@ -92,7 +90,6 @@ algorithm PAWSCPU (
     // REGISTER Read/Write Flags
     registers_1.wenable1 := 1;
     registers_2.wenable1 := 1;
-    registers_3.wenable1 := 1;
 
     // CSR instructions retired increment flag
     CSR.incCSRinstret := 0;
@@ -136,8 +133,8 @@ algorithm PAWSCPU (
 
         // DECODE + REGISTER FETCH
         // HAPPENS AUTOMATICALLY in DECODE AND REGISTER UNITS
-        ( opCode, function3, function7, rs1, rs2, rs3, rd, immediateValue, IshiftCount ) = decoder( instruction );
-        ( registers_1, registers_2, registers_3, sourceReg1, sourceReg2, sourceReg3 ) = registersREAD( registers_1, registers_2, registers_3, rs1, rs2, rs3, SMT );
+        ( opCode, function3, function7, rs1, rs2, rd, immediateValue, IshiftCount ) = decoder( instruction );
+        ( registers_1, registers_2, sourceReg1, sourceReg2 ) = registersREAD( registers_1, registers_2, rs1, rs2, SMT );
         ( nextPC, branchAddress, jumpAddress, AUIPCLUI, storeAddress, loadAddress ) = addressgenerator( opCode, PC, compressed, sourceReg1, immediateValue );
 
         // EXECUTE
@@ -207,7 +204,7 @@ algorithm PAWSCPU (
             case 5b00100: {
                 // ALUI ( BASE + SOME B EXTENSION )
                 writeRegister = 1;
-                ( result ) = aluI( opCode, function3, function7, immediateValue, IshiftCount, sourceReg1, sourceReg3 );
+                ( result ) = aluI( opCode, function3, function7, immediateValue, IshiftCount, sourceReg1 );
             }
             case 5b01100: {
                 // ALUR ( BASE + M EXTENSION + SOME B EXTENSION )
@@ -219,7 +216,7 @@ algorithm PAWSCPU (
                             case 1b1: { ( result ) = divideremainder( function3, sourceReg1, sourceReg2 ); }
                         }
                     }
-                    default: { ( result ) = aluR( opCode, function3, function7, rs1, sourceReg1, sourceReg2, sourceReg3 ); }
+                    default: { ( result ) = aluR( opCode, function3, function7, rs1, sourceReg1, sourceReg2 ); }
                 }
             }
             case 5b11100: {
@@ -288,7 +285,7 @@ algorithm PAWSCPU (
         }
 
         // DISPATCH INSTRUCTION
-        ( registers_1, registers_2, registers_3 ) = registersWRITE( registers_1, registers_2, registers_3, rd, writeRegister, SMT, result );
+        ( registers_1, registers_2 ) = registersWRITE( registers_1, registers_2, rd, writeRegister, SMT, result );
         if( SMT ) {
             ( pcSMT ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
         } else {
