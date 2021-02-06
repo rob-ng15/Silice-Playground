@@ -17,6 +17,43 @@
 #define TRUE 1
 #define FALSE 0
 
+// BACKGROUND PATTERN GENERATOR
+#define BKG_SOLID 0
+#define BKG_5050_V 1
+#define BKG_5050_H 2
+#define BKG_CHKBRD_5 3
+#define BKG_RAINBOW 4
+#define BKG_SNOW 5
+#define BKG_STATIC 6
+#define BKG_CHKBRD_1 7
+#define BKG_CHKBRD_2 8
+#define BKG_CHKBRD_3 9
+#define BKG_CHKBRD_4 10
+
+// COLOURS
+#define TRANSPARENT 0x40
+#define BLACK 0x00
+#define BLUE 0x03
+#define DKBLUE 0x02
+#define GREEN 0x0c
+#define DKGREEN 0x08
+#define CYAN 0x0f
+#define DKCYAN 0x0b
+#define RED 0x30
+#define DKRED 0x20
+#define MAGENTA 0x33
+#define DKMAGENTA 0x22
+#define PURPLE 0x13
+#define YELLOW 0x3c
+#define DKYELLOW 0x28
+#define WHITE 0x3f
+#define GREY1 0x15
+#define GREY2 0x2a
+#define ORANGE 0x38
+
+#define DITHEROFF 0, BLACK
+#define DITHERON 1
+
 typedef unsigned int size_t;
 typedef unsigned short bool;
 
@@ -97,12 +134,6 @@ extern unsigned char *CLUSTERBUFFER;
 extern unsigned int CLUSTERSIZE;
 extern unsigned int DATASTARTSECTOR;
 
-// MEMORY
-extern unsigned char *MEMORYTOP;
-extern void INITIALISEMEMORY( void );
-extern unsigned char *memoryspace( unsigned int );
-unsigned char *filememoryspace( unsigned int );
-
 // SIMPLE FILE SYSTEM
 extern unsigned short sdcard_findfilenumber( unsigned char *, unsigned char * );
 extern unsigned int sdcard_findfilesize( unsigned short );
@@ -128,8 +159,6 @@ extern void outputnumber_short( unsigned short );
 extern void outputnumber_int( unsigned int );
 extern char inputcharacter( void );
 unsigned char inputcharacter_available( void );
-
-int printf( const char *,... );
 
 // BASIC I/O
 extern void set_leds( unsigned char );
@@ -223,39 +252,51 @@ extern void bitmapblit( unsigned char *, unsigned short , unsigned short , short
 extern void SMTSTOP( void );
 extern void SMTSTART( unsigned int );
 
-// BACKGROUND PATTERN GENERATOR
-#define BKG_SOLID 0
-#define BKG_5050_V 1
-#define BKG_5050_H 2
-#define BKG_CHKBRD_5 3
-#define BKG_RAINBOW 4
-#define BKG_SNOW 5
-#define BKG_STATIC 6
-#define BKG_CHKBRD_1 7
-#define BKG_CHKBRD_2 8
-#define BKG_CHKBRD_3 9
-#define BKG_CHKBRD_4 10
+// SIMPLE STANDARD LIBRARY FUNCTIONS
+int printf( const char *,... );
+
+// SIMPLE MALLOC
+extern void INITIALISEMEMORY( void );
+unsigned char *filemealloc( unsigned int );
+void *malloc(size_t );
+void free(void *);
+
+// SIMPLE CURSES
+#define COLORS 64
+#define COLOR_PAIRS 16
+#define COLOR_PAIR(a) a
 
 // COLOURS
-#define TRANSPARENT 0x40
-#define BLACK 0x00
-#define BLUE 0x03
-#define DKBLUE 0x02
-#define GREEN 0x0c
-#define DKGREEN 0x08
-#define CYAN 0x0f
-#define DKCYAN 0x0b
-#define RED 0x30
-#define DKRED 0x20
-#define MAGENTA 0x33
-#define DKMAGENTA 0x22
-#define PURPLE 0x13
-#define YELLOW 0x3c
-#define DKYELLOW 0x28
-#define WHITE 0x3f
-#define GREY1 0x15
-#define GREY2 0x2a
+#define COLOR_BLACK 0x00
+#define COLOR_BLUE 0x03
+#define COLOR_GREEN 0x0c
+#define COLOR_CYAN 0x0f
+#define COLOR_RED 0x30
+#define COLOR_MAGENTA 0x33
+#define COLOR_YELLOW 0x3c
+#define COLOR_WHITE 0x3f
 #define ORANGE 0x38
 
-#define DITHEROFF 0, BLACK
-#define DITHERON 1
+#define COLS 80
+#define LINES 30
+
+void initscr( void );
+int endwin( void );
+int refresh( void );
+int clear( void );
+void cbreak( void );
+void echo( void );
+void noecho( void );
+void curs_set( int );
+int start_color( void );
+bool has_colors( void );
+bool can_change_color( void );
+int init_pair( short pair, short f, short b );
+int move( int y, int x );
+int addch( unsigned char ch );
+int mvaddch( int y, int x, unsigned char ch );
+int printw( const char *fmt,... );
+int mvprintw( int y, int x, const char *fmt,... );
+int attron( int attrs );
+int deleteln( void );
+int clrtoeol( void );

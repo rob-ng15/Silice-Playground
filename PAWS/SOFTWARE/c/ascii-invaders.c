@@ -1,6 +1,4 @@
 #include "PAWSlibrary.h"
-#include "curses.h"
-#include "malloc.h"
 
 struct Bomb {
     int x;

@@ -697,11 +697,11 @@ void main( void )
     set_background( 0, 0, BKG_RAINBOW );
 
     // DECODE TOMBSTONE PPM TO BITMAP
-    tombstonebitmap = memoryspace( 320 * 298 );
+    tombstonebitmap = malloc( 320 * 298 );
     netppm_decoder( &tombstoneppm[0], tombstonebitmap );
 
     // DECODE CONTROLS PPM TO BITMAP
-    ulx3sbitmap = memoryspace( 320 * 219 );
+    ulx3sbitmap = malloc( 320 * 219 );
     netppm_decoder( &ulx3sppm[0], ulx3sbitmap );
 
     unsigned short levelselected;

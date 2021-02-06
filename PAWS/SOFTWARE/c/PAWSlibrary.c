@@ -50,41 +50,6 @@ unsigned int DATASTARTSECTOR;
 // MEMORY
 unsigned char *MEMORYTOP;
 
-// SETUP MEMORY POINTERS FOR THE SDCARD - ALREADY PRE-LOADED BY THE BIOS
-void INITIALISEMEMORY( void ) {
-    MBR = (unsigned char *) 0x12000000 - 0x200;
-    BOOTSECTOR = (Fat16BootSector *)0x12000000 - 0x400;
-    PARTITION = (PartitionTable *) &MBR[ 0x1BE ];
-    ROOTDIRECTORY = (Fat16Entry *)( 0x12000000 - 0x400 - BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) );
-    FAT = (unsigned short * ) ROOTDIRECTORY - BOOTSECTOR -> fat_size_sectors * 512;
-    CLUSTERBUFFER = (unsigned char * )FAT - BOOTSECTOR -> sectors_per_cluster * 512;
-    CLUSTERSIZE = BOOTSECTOR -> sectors_per_cluster * 512;
-    DATASTARTSECTOR = PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats + ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512;;
-
-// MEMORY
-    MEMORYTOP = CLUSTERBUFFER;
-}
-
-// ALLOCATE MEMORY, ENSURE EVEN NUMBER
-unsigned char *memoryspace( unsigned int size ) {
-    if( ( size & 1 ) != 0 )
-        size++;
-
-    MEMORYTOP -= size;
-    return( MEMORYTOP );
-}
-
-// ALLOCATE MEMORY, IN UNITS OF CLUSTERSIZE ( allows extra for reading in files )
-unsigned char *filememoryspace( unsigned int size ) {
-    unsigned int numberofclusters = size / CLUSTERSIZE;
-
-    if( size % CLUSTERSIZE != 0 )
-        numberofclusters++;
-
-    MEMORYTOP -= numberofclusters * CLUSTERSIZE;
-    return( MEMORYTOP );
-}
-
 // RISC-V CSR FUNCTIONS
 long CSRcycles() {
    int cycles;
@@ -1248,4 +1213,457 @@ int printf( const char *fmt,... ) {
     va_end(ap);
 
     return( 1 );
+}
+
+// SIMPLE CURSES LIBRARY
+char            __curses_character[80][30], __curses_background[80][30], __curses_foreground[80][30];
+unsigned char   __curses_backgroundcolours[16], __curses_foregroundcolours[16], __curses_cursor = 1;
+
+unsigned short  __curses_x = 0, __curses_y = 0, __curses_fore = WHITE, __curses_back = BLACK;
+
+void initscr( void ) {
+    for( unsigned x = 0; x < 80; x++ ) {
+        for( unsigned y = 0; y < 30; y++ ) {
+            __curses_character[x][y] = 0;
+            __curses_background[x][y] = TRANSPARENT;
+            __curses_foreground[x][y] = BLACK;
+        }
+    }
+    __curses_x = 0; __curses_y = 0; __curses_fore = WHITE; __curses_back = BLACK;
+}
+
+int endwin( void ) {
+    return( true );
+}
+
+int refresh( void ) {
+    for( unsigned char y = 0; y < 30; y ++ ) {
+        for( unsigned char x = 0; x < 80; x++ ) {
+            if( ( x == __curses_x ) && ( y == __curses_y ) && ( __curses_cursor ) && ( systemclock() & 1 ) ) {
+                tpu_set( x, y, __curses_fore, __curses_back );
+            } else {
+                tpu_set( x, y, __curses_background[x][y], __curses_foreground[x][y] );
+            }
+            tpu_output_character( __curses_character[x][y] );
+        }
+    }
+
+    return( true );
+}
+
+int clear( void ) {
+    initscr();
+    return( true );
+}
+
+void cbreak( void ) {
+}
+
+void echo( void ) {
+}
+
+void noecho( void ) {
+}
+
+void curs_set( int visibility ) {
+    __curses_cursor = visibility;
+}
+
+int start_color( void ) {
+    for( unsigned short i = 0; i < 15; i++ ) {
+        __curses_foregroundcolours[i] = BLACK;
+        __curses_backgroundcolours[i] = BLACK;
+    }
+    __curses_foregroundcolours[0] = BLACK;
+    __curses_foregroundcolours[1] = RED;
+    __curses_foregroundcolours[2] = GREEN;
+    __curses_foregroundcolours[3] = YELLOW;
+    __curses_foregroundcolours[4] = BLUE;
+    __curses_foregroundcolours[5] = MAGENTA;
+    __curses_foregroundcolours[6] = CYAN;
+    __curses_foregroundcolours[7] = WHITE;
+
+    return( true );
+}
+
+bool has_colors( void ) {
+    return( true );
+}
+
+bool can_change_color( void ) {
+    return( true );
+}
+
+int init_pair( short pair, short f, short b ) {
+    __curses_foregroundcolours[ pair ] = f;
+    __curses_backgroundcolours[ pair ] = b;
+
+    return( true );
+}
+
+int move( int y, int x ) {
+    __curses_x = ( unsigned short ) ( x < 0 ) ? 0 : ( x > 79 ) ? 79 : x;
+    __curses_y = ( unsigned short ) ( y < 0 ) ? 0 : ( y > 29 ) ? 29 : y;
+
+    return( true );
+}
+
+int addch( unsigned char ch ) {
+    __curses_character[ __curses_x ][ __curses_y ] = ch;
+    __curses_background[ __curses_x ][ __curses_y ] = __curses_back;
+    __curses_foreground[ __curses_x ][ __curses_y ] = __curses_fore;
+    if( __curses_x == 79 ) {
+        __curses_x = 0;
+        __curses_y = ( __curses_y == 29 ) ? 0 : __curses_y + 1;
+    } {
+        __curses_x++;
+    }
+
+    return( true );
+}
+
+int mvaddch( int y, int x, unsigned char ch ) {
+    (void)move( y, x );
+    return( addch( ch ) );
+}
+
+// printw and mvprintw uses printf code from https://github.com/sylefeb/Silice/tree/wip/projects/ram-ice-v/tests/mylibc
+
+void __curses_print_string(const char* s) {
+   for(const char* p = s; *p; ++p) {
+      addch(*p);
+   }
+}
+
+void __curses_print_dec(int val) {
+   char buffer[255];
+   char *p = buffer;
+   if(val < 0) {
+      addch('-');
+      __curses_print_dec(-val);
+      return;
+   }
+   while (val || p == buffer) {
+      *(p++) = val % 10;
+      val = val / 10;
+   }
+   while (p != buffer) {
+      addch('0' + *(--p));
+   }
+}
+
+void __curses_print_hex_digits(unsigned int val, int nbdigits) {
+   for (int i = (4*nbdigits)-4; i >= 0; i -= 4) {
+      addch("0123456789ABCDEF"[(val >> i) % 16]);
+   }
+}
+
+void __curses_print_hex(unsigned int val) {
+   __curses_print_hex_digits(val, 8);
+}
+
+int printw( const char *fmt,... ) {
+    va_list ap;
+    for( va_start( ap, fmt ); *fmt; fmt++ ) {
+        if( *fmt == '%' ) {
+            fmt++;
+        if( *fmt=='s' )
+            __curses_print_string( va_arg( ap, char * ) );
+        else if( *fmt == 'x' )
+            __curses_print_hex( va_arg( ap, int ) );
+        else if( *fmt == 'd' )
+            __curses_print_dec(va_arg(ap,int) );
+        else if( *fmt == 'c' )
+            addch( va_arg( ap, int ) );
+        else
+            addch( *fmt );
+        } else {
+            addch( *fmt );
+        }
+    }
+    va_end(ap);
+
+    return( true );
+}
+
+int mvprintw( int y, int x, const char *fmt,... ) {
+    move( y, x );
+
+    va_list ap;
+    for( va_start( ap, fmt ); *fmt; fmt++ ) {
+        if( *fmt == '%' ) {
+            fmt++;
+        if( *fmt=='s' )
+            __curses_print_string( va_arg( ap, char * ) );
+        else if( *fmt == 'x' )
+            __curses_print_hex( va_arg( ap, int ) );
+        else if( *fmt == 'd' )
+            __curses_print_dec(va_arg(ap,int) );
+        else if( *fmt == 'c' )
+            addch( va_arg( ap, int ) );
+        else
+            addch( *fmt );
+        } else {
+            addch( *fmt );
+        }
+    }
+    va_end(ap);
+
+    return( true );
+}
+
+int attron( int attrs ) {
+    __curses_fore = __curses_foregroundcolours[ attrs ];
+    __curses_back = __curses_backgroundcolours[ attrs ];
+    return( true );
+}
+
+int deleteln( void ) {
+    if( __curses_y == 29 ) {
+        // BLANK LAST LINE
+        for( unsigned char x = 0; x < 80; x++ ) {
+            __curses_character[x][29] = 0;
+            __curses_background[x][29] = __curses_back;
+            __curses_foreground[x][29] = __curses_fore;
+        }
+    } else {
+        // MOVE LINES UP
+        for( unsigned char y = __curses_y; y < 29; y++ ) {
+            for( unsigned char x = 0; x < 80; x++ ) {
+                __curses_character[x][y] = __curses_character[x][y+1];
+                __curses_background[x][y] = __curses_background[x][y+1];
+                __curses_foreground[x][y] = __curses_foreground[x][y+1];
+            }
+        }
+
+        // BLANK LAST LINE
+        for( unsigned char x = 0; x < 80; x++ ) {
+            __curses_character[x][29] = 0;
+            __curses_background[x][29] = __curses_back;
+            __curses_foreground[x][29] = __curses_fore;
+        }
+    }
+
+    return( true );
+}
+
+int clrtoeol( void ) {
+    for( int x = __curses_x; x < 80; x++ ) {
+            __curses_character[x][__curses_y] = 0;
+            __curses_background[x][__curses_y] = __curses_back;
+            __curses_foreground[x][__curses_y] = __curses_fore;
+    }
+    return( true );
+}
+
+// Based on https://github.com/andrestc/linux-prog/blob/master/ch7/malloc.c
+
+typedef struct block {
+	size_t		size;
+	struct block   *next;
+	struct block   *prev;
+}		block_t;
+
+#ifndef MALLOC_MEMORY
+#define MALLOC_MEMORY (unsigned int)CLUSTERBUFFER - 0x10800000
+#endif
+
+#ifndef ALLOC_UNIT
+#define ALLOC_UNIT 1024
+#endif
+
+#define BLOCK_MEM(ptr) ((void *)((unsigned int)ptr + sizeof(block_t)))
+#define BLOCK_HEADER(ptr) ((void *)((unsigned int)ptr - sizeof(block_t)))
+
+static block_t *head = NULL;
+unsigned short __malloc_init = 0;
+
+/* stats prints some debug information regarding the
+ * current program break and the blocks on the free list */
+void
+stats(char *prefix)
+{
+	printf("[%s] program break: %x\n", prefix, MEMORYTOP);
+	block_t        *ptr = head;
+	printf("[%s] free list: \n", prefix);
+	int		c = 0;
+	while (ptr) {
+		printf("(%d) <%d> (size: %d)\n", c, ptr, ptr->size);
+		ptr = ptr->next;
+		c++;
+	}
+}
+
+/* fl_remove removes a block from the free list
+ * and adjusts the head accordingly */
+void
+fl_remove(block_t * b)
+{
+	if (!b->prev) {
+		if (b->next) {
+			head = b->next;
+		} else {
+			head = NULL;
+		}
+	} else {
+		b->prev->next = b->next;
+	}
+	if (b->next) {
+		b->next->prev = b->prev;
+	}
+}
+
+/* fl_add adds a block to the free list keeping
+ * the list sorted by the block begin address,
+ * this helps when scanning for continuous blocks */
+void
+fl_add(block_t * b)
+{
+	b->prev = NULL;
+	b->next = NULL;
+	if (!head || (unsigned int)head > (unsigned int)b) {
+		if (head) {
+			head->prev = b;
+		}
+		b->next = head;
+		head = b;
+	} else {
+		block_t        *curr = head;
+		while (curr->next
+		       && (unsigned int)curr->next < (unsigned int)b) {
+			curr = curr->next;
+		}
+		b->next = curr->next;
+		curr->next = b;
+	}
+}
+
+/* scan_merge scans the free list in order to find
+ * continuous free blocks that can be merged and also
+ * checks if our last free block ends where the program
+ * break is. If it does, and the free block is larger then
+ * MIN_DEALLOC then the block is released to the OS, by
+ * calling brk to set the program break to the begin of
+ * the block */
+void
+scan_merge()
+{
+	block_t        *curr = head;
+	unsigned int	header_curr, header_next;
+	while (curr->next) {
+		header_curr = (unsigned int)curr;
+		header_next = (unsigned int)curr->next;
+		if (header_curr + curr->size + sizeof(block_t) == header_next) {
+			/* found two continuous addressed blocks, merge them
+			 * and create a new block with the sum of their sizes */
+			curr->size += curr->next->size + sizeof(block_t);
+			curr->next = curr->next->next;
+			if (curr->next) {
+				curr->next->prev = curr;
+			} else {
+				break;
+			}
+		}
+		curr = curr->next;
+	}
+	header_curr = (unsigned int)curr;
+}
+
+/* splits the block b by creating a new block after size bytes,
+ * this new block is returned */
+block_t * split(block_t * b, size_t size)
+{
+	void           *mem_block = BLOCK_MEM(b);
+	block_t        *newptr = (block_t *) ((unsigned int)mem_block + size);
+	newptr->size = b->size - (size + sizeof(block_t));
+	b->size = size;
+	return newptr;
+}
+
+void *malloc(size_t size) {
+	void           *block_mem;
+	block_t        *ptr, *newptr;
+	size_t		alloc_size = size >= ALLOC_UNIT ? size + sizeof(block_t)
+		: ALLOC_UNIT;
+
+    if( !__malloc_init ) {
+        __malloc_init = 1;
+        ptr = (block_t *)CLUSTERBUFFER;
+        printf( "MALLOC Reserved: <%x> at <%x>\n", MALLOC_MEMORY, ptr );
+        ptr->next = NULL;
+        ptr->prev = NULL;
+        ptr->size = MALLOC_MEMORY - sizeof(block_t);
+        if (MALLOC_MEMORY > size + sizeof(block_t)) {
+            newptr = split(ptr, size);
+            fl_add(newptr);
+        }
+        return BLOCK_MEM(ptr);
+    }
+
+	ptr = head;
+	while (ptr) {
+		if (ptr->size >= size + sizeof(block_t)) {
+			block_mem = BLOCK_MEM(ptr);
+            printf("MALLOC Request: Size: <%x> Given: <%x> at <%x>\n", size, alloc_size, block_mem);
+			fl_remove(ptr);
+			if (ptr->size == size) {
+				// we found a perfect sized block, return it
+				return block_mem;
+			}
+			// our block is bigger then requested, split it and add
+			// the spare to our free list
+			newptr = split(ptr, size);
+			fl_add(newptr);
+			return block_mem;
+		} else {
+			ptr = ptr->next;
+		}
+	}
+	/* We are unable to find a free block on our free list, so we
+	 * should ask the OS for memory using sbrk. We will alloc
+	 * more alloc_size bytes (probably way more than requested) and then
+	 * split the newly allocated block to keep the spare space on our free
+	 * list */
+	return NULL;
+}
+
+void free(void *ptr) {
+	fl_add(BLOCK_HEADER(ptr));
+	stats("before scan");
+	scan_merge();
+}
+
+void
+_cleanup()
+{
+	head = NULL;
+	stats("_cleanup end");
+}
+
+
+// ALLOCATE MEMORY, IN UNITS OF CLUSTERSIZE ( allows extra for reading in files )
+unsigned char *filemalloc( unsigned int size ) {
+    unsigned int numberofclusters = size / CLUSTERSIZE;
+
+    if( size % CLUSTERSIZE != 0 )
+        numberofclusters++;
+
+    return( malloc( numberofclusters * CLUSTERSIZE ) );
+}
+
+// SETUP MEMORY POINTERS FOR THE SDCARD - ALREADY PRE-LOADED BY THE BIOS
+void INITIALISEMEMORY( void ) {
+    // SDCARD FILE SYSTEM
+    MBR = (unsigned char *) 0x12000000 - 0x200;
+    BOOTSECTOR = (Fat16BootSector *)0x12000000 - 0x400;
+    PARTITION = (PartitionTable *) &MBR[ 0x1BE ];
+    ROOTDIRECTORY = (Fat16Entry *)( 0x12000000 - 0x400 - BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) );
+    FAT = (unsigned short * ) ROOTDIRECTORY - BOOTSECTOR -> fat_size_sectors * 512;
+    CLUSTERBUFFER = (unsigned char * )FAT - BOOTSECTOR -> sectors_per_cluster * 512;
+    CLUSTERSIZE = BOOTSECTOR -> sectors_per_cluster * 512;
+    DATASTARTSECTOR = PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats + ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512;;
+
+    // MEMORY
+    MEMORYTOP = CLUSTERBUFFER;
+    __malloc_init = 0;
 }

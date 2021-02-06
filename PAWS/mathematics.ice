@@ -73,29 +73,17 @@ circuitry multiplication(
 // BIT MANIPULATION CIRCUITS
 
 // BARREL SHIFTERS / ROTATORS
-circuitry SLL(
+circuitry LEFTshifter(
     input   sourceReg1,
     input   shiftcount,
+    input   function7,
     output  result
 ) {
     switch( shiftcount[0,5] ) {
         case 0: { result = sourceReg1; }
         $$for i = 1, 31 do
             $$ remain = 32 - i
-            case $i$: { result = { sourceReg1[ 0, $remain$ ], {$i${ 1b0 }} }; }
-        $$end
-    }
-}
-circuitry SLO(
-    input   sourceReg1,
-    input   shiftcount,
-    output  result
-) {
-    switch( shiftcount[0,5] ) {
-        case 0: { result = sourceReg1; }
-        $$for i = 1, 31 do
-            $$ remain = 32 - i
-            case $i$: { result = { sourceReg1[ 0, $remain$ ], {$i${ 1b1 }} }; }
+            case $i$: { result = { sourceReg1[ 0, $remain$ ], {$i${ function7[4,1] }} }; }
         $$end
     }
 }
@@ -112,45 +100,27 @@ circuitry ROL(
         $$end
     }
 }
-circuitry SRL(
+circuitry RIGHTshifter(
     input   sourceReg1,
     input   shiftcount,
+    input   function7,
     output  result
 ) {
+    uint1   bit = uninitialised;
+    switch( function7[4,2] ) {
+        case 2b00: { bit = 0; }
+        case 2b01: { bit = 1; }
+        case 2b10: { bit = sourceReg1[31,1]; }
+    }
     switch( shiftcount[0,5] ) {
         case 0: { result = sourceReg1; }
         $$for i = 1, 31 do
             $$ remain = 32 - i
-            case $i$: { result = { {$i${ 1b0 }}, sourceReg1[ $i$, $remain$ ] }; }
+            case $i$: { result = { {$i${bit}}, sourceReg1[ $i$, $remain$ ] }; }
         $$end
     }
 }
-circuitry SRA(
-    input   sourceReg1,
-    input   shiftcount,
-    output  result
-) {
-    switch( shiftcount[0,5] ) {
-        case 0: { result = sourceReg1; }
-        $$for i = 1, 31 do
-            $$ remain = 32 - i
-            case $i$: { result = { {$i${ sourceReg1[31,1] }}, sourceReg1[ $i$, $remain$ ] }; }
-        $$end
-    }
-}
-circuitry SRO(
-    input   sourceReg1,
-    input   shiftcount,
-    output  result
-) {
-    switch( shiftcount[0,5] ) {
-        case 0: { result = sourceReg1; }
-        $$for i = 1, 31 do
-            $$ remain = 32 - i
-            case $i$: { result = { {$i${ 1b1 }}, sourceReg1[ $i$, $remain$ ] }; }
-        $$end
-    }
-}
+
 circuitry ROR(
     input   sourceReg1,
     input   shiftcount,
@@ -166,49 +136,26 @@ circuitry ROR(
 }
 
 // BIT SET CLR INV EXTRACT
-circuitry SBSET(
+circuitry SBSetClrInv(
     input   sourceReg1,
     input   shiftcount,
+    input   function7,
     output  result
 ) {
-    switch( shiftcount[0,5] ) {
-        case 0: { result = { sourceReg1[ 1, 31 ], 1b1 }; }
-        $$for i = 1, 30 do
-        $$j = i + 1
-        $$remain = 31 - i;
-            case $i$: { result = { sourceReg1[ $j$, $remain$ ], 1b1, sourceReg1[ 0, $i$ ] }; }
-        $$end
-        case 31: { result = { 1b1, sourceReg1[0, 31 ] }; }
+    uint1   bit = uninitialised;
+    switch( function7[4,2] ) {
+        case 2b01: { bit = 1; }
+        case 2b10: { bit = 0; }
+        case 2b11: { bit = ~sourceReg1[shiftcount,1]; }
     }
-}
-circuitry SBCLR(
-    input   sourceReg1,
-    input   shiftcount,
-    output  result
-) {
     switch( shiftcount[0,5] ) {
-        case 0: { result = { sourceReg1[ 1, 31 ], 1b0 }; }
+        case 0: { result = { sourceReg1[ 1, 31 ], bit }; }
         $$for i = 1, 30 do
         $$j = i + 1
         $$remain = 31 - i;
-            case $i$: { result = { sourceReg1[ $j$, $remain$ ], 1b0, sourceReg1[ 0, $i$ ] }; }
+            case $i$: { result = { sourceReg1[ $j$, $remain$ ], bit, sourceReg1[ 0, $i$ ] }; }
         $$end
-        case 31: { result = { 1b0, sourceReg1[0, 31 ] }; }
-    }
-}
-circuitry SBINV(
-    input   sourceReg1,
-    input   shiftcount,
-    output  result
-) {
-    switch( shiftcount[0,5] ) {
-        case 0: { result = { sourceReg1[ 1, 31 ], ~sourceReg1[0,1] }; }
-        $$for i = 1, 30 do
-        $$j = i + 1
-        $$remain = 31 - i;
-            case $i$: { result = { sourceReg1[ $j$, $remain$ ], ~sourceReg1[ $i$, 1 ], sourceReg1[ 0, $i$ ] }; }
-        $$end
-        case 31: { result = { ~sourceReg1[31,1], sourceReg1[0, 31 ] }; }
+        case 31: { result = { bit, sourceReg1[0, 31 ] }; }
     }
 }
 circuitry SBEXT(
@@ -259,8 +206,8 @@ circuitry shuffle32_stage(
     uint32  B = uninitialised;
 
     x = src & ~( maskL | maskR );
-    ( A ) = SLL( src, N );
-    ( B ) = SRL( src, N );
+    A = src << N;
+    B = src >> N;
     ++:
     x = x | ( A & maskL ) | ( B & maskR );
 }
@@ -303,44 +250,20 @@ circuitry UNSHFL(
 circuitry CLMUL(
     input   sourceReg1,
     input   sourceReg2,
+    input   function3,
     output  result
 ) {
-    uint6   i = 0;
+    uint6   i = uninitialised;
+    i = ( function3 == 3b011 ) ? 1 : 0;
     result = 0;
     ++:
     while( i < 32 ) {
         if( sourceReg2[i,1] ) {
-            result = result ^ ( sourceReg1 << i );
-        }
-        i = i + 1;
-    }
-}
-circuitry CLMULH(
-    input   sourceReg1,
-    input   sourceReg2,
-    output  result
-) {
-    uint6   i = 1;
-    result = 0;
-    ++:
-    while( i < 32 ) {
-        if( sourceReg2[i,1] ) {
-            result = result ^ ( sourceReg1 << ( 32 - i ) );
-        }
-        i = i + 1;
-    }
-}
-circuitry CLMULR(
-    input   sourceReg1,
-    input   sourceReg2,
-    output  result
-) {
-    uint6   i = 0;
-    result = 0;
-    ++:
-    while( i < 32 ) {
-        if( sourceReg2[i,1] ) {
-            result = result ^ ( sourceReg1 << ( 31 - i ) );
+            switch( function3 ) {
+                case 3b001: { result = result ^ ( sourceReg1 << i ); }
+                case 3b010: { result = result ^ ( sourceReg1 << ( 32 - i ) ); }
+                case 3b011: { result = result ^ ( sourceReg1 << ( 31 - i ) ); }
+            }
         }
         i = i + 1;
     }
@@ -397,97 +320,52 @@ circuitry BFP(
     length = ( sourceReg2[24,4] == 0 ) ? 16 : sourceReg2[24,4];
     offset = sourceReg2[16,5];
     ++:
-    ( mask ) = SLO( mask, offset );
+    mask = ~(~mask << offset);
     ++:
     result = ( ( sourceReg2 << offset ) & mask ) | ( sourceReg1 & ~mask );
 }
 
 // XPERM for nibble, byte and half-word
 // CALCULATE result = result | ( ( sourceReg1 >> pos ) & mask ) << i
-circuitry xpermOR(
-    input   result,
-    input   sourceReg1,
-    input   pos,
-    input   mask,
-    input   shiftcount,
-    output  newresult
-) {
-    uint32  A = uninitialised;
-    uint32  B = uninitialised;
-
-    ( A ) = SRL( sourceReg1, pos );
-    ++:
-    A = A & mask;
-    ++:
-    ( A ) = SLL( A, i );
-
-    newresult = result | A;
-}
-
-circuitry XPERMn(
+circuitry xperm(
     input   sourceReg1,
     input   sourceReg2,
+    input   sz_log2,
     output  result
 ) {
-    uint6   i = 0;
-    uint32  sz = 3b100;
-    uint32  mask = 2b1111;
+    uint6   sz = uninitialised;
+    uint32  mask = uninitialised;
     uint32  pos = uninitialised;
+    uint6   i = uninitialised;
 
+    sz = 1 << sz_log2;
+    mask = ( 1 << ( 1 << sz_log2 ) ) - 1;
     result = 0;
+    i = 0;
     ++:
     while( i < 32 ) {
-        pos = ( ( sourceReg2 >> i ) & mask ) << 2;
+        pos = ( ( sourceReg2 >> i ) & mask ) << sz_log2;
         ++:
         if( pos < 32 ) {
-            ( result ) = xpermOR( result, sourceReg1, pos, mask, sz );
+            result = result | (( sourceReg1 >> pos ) & mask ) << i;
         }
         i = i + sz;
     }
 }
-circuitry XPERMb(
+circuitry XPERM(
     input   sourceReg1,
     input   sourceReg2,
+    input   function3,
     output  result
 ) {
-    uint6   i = 0;
-    uint32  sz = 4b1000;
-    uint32  mask = 8b11111111;
-    uint32  pos = uninitialised;
-
-    result = 0;
-    ++:
-    while( i < 32 ) {
-        pos = ( ( sourceReg2 >> i ) & mask ) << 3;
-        ++:
-        if( pos < 32 ) {
-            ( result ) = xpermOR( result, sourceReg1, pos, mask, sz );
-        }
-        i = i + sz;
+    uint3   sz_log2 = uninitialised;
+    switch( function3 ) {
+        case 3b010: { sz_log2 = 2; }
+        case 3b100: { sz_log2 = 3; }
+        case 3b110: { sz_log2 = 4; }
     }
+    ( result ) = xperm( sourceReg1, sourceReg2, sz_log2 );
 }
-circuitry XPERMh(
-    input   sourceReg1,
-    input   sourceReg2,
-    output  result
-) {
-    uint6   i = 0;
-    uint32  sz = 5b10000;
-    uint32  mask = 16b1111111111111111;
-    uint32  pos = uninitialised;
-
-    result = 0;
-    ++:
-    while( i < 32 ) {
-        pos = ( ( sourceReg2 >> i ) & mask ) << 4;
-        ++:
-        if( pos < 32 ) {
-            ( result ) = xpermOR( result, sourceReg1, pos, mask, sz );
-        }
-        i = i + sz;
-    }
-}
-
 
 // BASE IMMEDIATE - with some B extensions
 circuitry aluI (
@@ -504,11 +382,6 @@ circuitry aluI (
         case 3b000: { result = sourceReg1 + immediateValue; }
         case 3b001: {
             switch( function7 ) {
-                case 7b0000000: { ( result ) = SLL( sourceReg1, IshiftCount ); }
-                case 7b0010000: { ( result ) = SLO( sourceReg1, IshiftCount ); }
-                case 7b0010100: { ( result ) = SBSET( sourceReg1, IshiftCount ); }
-                case 7b0100100: { ( result ) = SBCLR( sourceReg1, IshiftCount ); }
-                case 7b0000100: { ( result ) = SHFL( sourceReg1, IshiftCount ); }
                 case 7b0110000: {
                     switch( IshiftCount ) {
                         case 5b00000: {
@@ -519,7 +392,7 @@ circuitry aluI (
                                 result = 0;
                                 while( ~sourceReg1[31,1] ) {
                                     result = result + 1;
-                                    sourceReg1 = sourceReg1 << 1;
+                                    sourceReg1 = { sourceReg1[0,31], 1b0 };
                                 }
                             }
                         }
@@ -531,7 +404,7 @@ circuitry aluI (
                                 result = 0;
                                 while( ~sourceReg1[0,1] ) {
                                     result = result + 1;
-                                    sourceReg1 = sourceReg1 >> 1;
+                                    sourceReg1 = { 1b0, sourceReg1[1,31] };
                                 }
                             }
                         }
@@ -539,15 +412,21 @@ circuitry aluI (
                             // PCNT
                             result = 0;
                             while( sourceReg1 != 0 ) {
-                                result = sourceReg1[0,1] ? result + 1 : result;
-                                sourceReg1 = sourceReg1 >> 1;
+                                result = result + sourceReg1[0,1];
+                                sourceReg1 = { 1b0, sourceReg1[1,31] };
                             }
                         }
                         case 5b00100: { result = { {24{sourceReg1[7,1]}}, sourceReg1[0, 8] }; }     // SEXT.B
                         case 5b00101: { result = { {16{sourceReg1[15,1]}}, sourceReg1[0, 16] }; }   // SEXT.H
                     }
                 }
-                case 7b0110100: { ( result ) = SBINV( sourceReg1, IshiftCount ); }
+                case 7b0000100: { ( result ) = SHFL( sourceReg1, IshiftCount ); }
+                default: {
+                    switch( function7[2,1] ) {
+                        case 0: { ( result ) = LEFTshifter( sourceReg1, IshiftCount, function7 ); }
+                        case 1: { ( result ) = SBSetClrInv( sourceReg1, IshiftCount, function7 ); }
+                    }
+                }
             }
         }
         case 3b010: { result = __signed( sourceReg1 ) < __signed(immediateValue) ? 32b1 : 32b0; }
@@ -555,14 +434,12 @@ circuitry aluI (
         case 3b100: { result = sourceReg1 ^ immediateValue; }
         case 3b101: {
             switch( function7 ) {
-                case 7b0000000: { ( result ) = SRL( sourceReg1, IshiftCount ); }
                 case 7b0000100: { ( result ) = UNSHFL( sourceReg1, IshiftCount ); }
-                case 7b0010000: { ( result ) = SRO( sourceReg1, IshiftCount ); }
                 case 7b0010100: { ( result ) = GORC( sourceReg1, IshiftCount ); }
-                case 7b0100000: { ( result ) = SRA( sourceReg1, IshiftCount ); }
                 case 7b0100100: { ( result ) = SBEXT( sourceReg1, IshiftCount ); }
                 case 7b0110000: { ( result ) = ROR( sourceReg1, IshiftCount );  }
                 case 7b0110100: { ( result ) = GREV( sourceReg1, IshiftCount ); }
+                default: {  ( result ) = RIGHTshifter( sourceReg1, IshiftCount, function7 ); }
             }
         }
         case 3b110: { result = sourceReg1 | immediateValue; }
@@ -581,82 +458,82 @@ circuitry aluR (
 
     output  result
 ) {
-    uint5   Rshiftcount = uninitialised;
-    Rshiftcount = sourceReg2[0,5];
+    uint5   RshiftCount = uninitialised;
+    RshiftCount = sourceReg2[0,5];
 
-    switch( function3 ) {
-        case 3b000: { result = sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ); }
-        case 3b001: {
-            switch( function7 ) {
-                case 7b0000000: { ( result ) = SLL( sourceReg1, Rshiftcount ); }
-                case 7b0000100: { ( result ) = SHFL( sourceReg1, Rshiftcount ); }
-                case 7b0000101: { ( result ) = CLMUL( sourceReg1, sourceReg2 ); }
-                case 7b0010000: { ( result ) = SLO( sourceReg1, Rshiftcount ); }
-                case 7b0010100: { ( result ) = SBSET( sourceReg1, Rshiftcount ); }
-                case 7b0100100: { ( result ) = SBCLR( sourceReg1, Rshiftcount ); }
-                case 7b0110000: { ( result ) = ROL( sourceReg1, Rshiftcount ); }
-                case 7b0110100: { ( result ) = SBINV( sourceReg1, Rshiftcount ); }
+    switch( function7 ) {
+        case 7b0010100: {
+            switch( function3 ) {
+                case 3b101: { ( result ) = GORC( sourceReg1, RshiftCount ); }
+                default: { ( result ) = XPERM( sourceReg1, sourceReg2, function3 ); }
             }
         }
-        case 3b010: {
-            switch( function7 ) {
-                case 7b0000000: { result = __signed( sourceReg1 ) < __signed(sourceReg2) ? 32b1 : 32b0; }
-                case 7b0000101: { ( result ) = CLMULR( sourceReg1, sourceReg2 ); }
-                case 7b0010000: { result = ( sourceReg1 << 1 ) + sourceReg2; }
+        case 7b0000101: {
+            switch( function3 ) {
+                case 3b100: { result = ( __signed( sourceReg1 ) < __signed( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
+                case 3b101: { result = ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
+                case 3b110: { result = ( __signed( sourceReg1 ) > __signed( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
+                case 3b111: { result = ( __unsigned( sourceReg1 ) > __unsigned( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
+                default: { ( result ) = CLMUL( sourceReg1, sourceReg2, function3 ); }
             }
         }
-        case 3b011: {
-            switch( function7 ) {
-                case 7b0000000: {result = ( rs1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 32b1 : 32b0 ); }
-                case 7b0000101: { ( result ) = CLMULH( sourceReg1, sourceReg2 ); }
-                case 7b0010100: { ( result ) = XPERMn( sourceReg1, sourceReg2 ); }
-            }
-        }
-        case 3b100: {
-            switch( function7 ) {
-                // XOR PACK MIN SH2ADD XNOR PACKU
-                case 7b0000000: { result = sourceReg1 ^ sourceReg2; }
-                case 7b0000100: { result = { sourceReg2[0,16], sourceReg1[0,16] }; }
-                case 7b0000101: { result = ( __signed( sourceReg1 ) < __signed( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
-                case 7b0010000: { result = ( sourceReg1 << 2 ) + sourceReg2; }
-                case 7b0010100: { ( result ) = XPERMb( sourceReg1, sourceReg2 ); }
-                case 7b0100000: { result = sourceReg1 ^ ~sourceReg2; }
-                case 7b0100100: { result = { sourceReg2[16,16], sourceReg1[16,16] }; }
-            }
-        }
-        case 3b101: {
-            switch( function7 ) {
-                case 7b0000000: { ( result ) = SRL( sourceReg1, Rshiftcount ); }
-                case 7b0000100: { ( result ) = UNSHFL( sourceReg1, Rshiftcount ); }
-                case 7b0000101: { result = ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
-                case 7b0010000: { ( result ) = SRO( sourceReg1, Rshiftcount ); }
-                case 7b0010100: { ( result ) = GORC( sourceReg1, Rshiftcount ); }
-                case 7b0100000: { ( result ) = SRA( sourceReg1, Rshiftcount ); }
-                case 7b0100100: { ( result ) = SBEXT( sourceReg1, Rshiftcount ); }
-                case 7b0110000: { ( result ) = ROR( sourceReg1, Rshiftcount ); }
-                case 7b0110100: { ( result ) = GREV( sourceReg1, Rshiftcount ); }
-            }
-        }
-        case 3b110: {
-            switch( function7 ) {
-                // OR BEXT MAX SH3ADD ORN BDEP
-                case 7b0000000: { result = sourceReg1 | sourceReg2; }
-                case 7b0000100: { ( result ) = BEXT( sourceReg1, sourceReg2 ); }
-                case 7b0000101: { result = ( __signed( sourceReg1 ) > __signed( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
-                case 7b0010000: { result = ( sourceReg1 << 3 ) + sourceReg2; }
-                case 7b0010100: { ( result ) = XPERMh( sourceReg1, sourceReg2 ); }
-                case 7b0100000: { result = sourceReg1 | ~sourceReg2; }
-                case 7b0100100: { ( result ) = BDEP( sourceReg1, sourceReg2 ); }
-            }
-        }
-        case 3b111: {
-            switch( function7 ) {
-                // AND PACKH MAXU ANDN BFP
-                case 7b0000000: { result = sourceReg1 & sourceReg2; }
-                case 7b0000100: { result = { 16b0, sourceReg2[0,8], sourceReg1[0,8] }; }
-                case 7b0000101: { result = ( __unsigned( sourceReg1 ) > __unsigned( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
-                case 7b0100000: { result = sourceReg1 & ~sourceReg2; }
-                case 7b0100100: { ( result ) = BFP( sourceReg1, sourceReg2 ); }
+        default: {
+            switch( function3 ) {
+                case 3b000: { result = sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ); }
+                case 3b001: {
+                    switch( function7 ) {
+                        case 7b0000100: { ( result ) = SHFL( sourceReg1, RshiftCount ); }
+                        case 7b0110000: { ( result ) = ROL( sourceReg1, RshiftCount ); }
+                        default: {
+                            switch( function7[2,1] ) {
+                                case 0: { ( result ) = LEFTshifter( sourceReg1, RshiftCount, function7 ); }
+                                case 1: { ( result ) = SBSetClrInv( sourceReg1, RshiftCount, function7 ); }
+                            }
+                        }
+                    }
+                }
+                case 3b010: {
+                    switch( function7 ) {
+                        case 7b0000000: { result = __signed( sourceReg1 ) < __signed(sourceReg2) ? 32b1 : 32b0; }
+                        case 7b0010000: { result = { sourceReg[1,31], 1b0 } + sourceReg2; }
+                    }
+                }
+                case 3b011: { result = ( rs1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 32b1 : 32b0 ); }
+                case 3b100: {
+                    switch( function7 ) {
+                        // XOR PACK MIN SH2ADD XNOR PACKU
+                        case 7b0000100: { result = { sourceReg2[0,16], sourceReg1[0,16] }; }
+                        case 7b0010000: { result = { sourceReg1[2,30], 2b00 } + sourceReg2; }
+                        case 7b0100100: { result = { sourceReg2[16,16], sourceReg1[16,16] }; }
+                        default: { result = sourceReg1 ^ ( function7[5,1] ? ~sourceReg2 : sourceReg2 ); }
+                    }
+                }
+                case 3b101: {
+                    switch( function7 ) {
+                        case 7b0000100: { ( result ) = UNSHFL( sourceReg1, RshiftCount ); }
+                        case 7b0100100: { ( result ) = SBEXT( sourceReg1, RshiftCount ); }
+                        case 7b0110000: { ( result ) = ROR( sourceReg1, RshiftCount ); }
+                        case 7b0110100: { ( result ) = GREV( sourceReg1, RshiftCount ); }
+                        default:  { ( result ) = RIGHTshifter( sourceReg1, RshiftCount, function3 ); }
+                    }
+                }
+                case 3b110: {
+                    switch( function7 ) {
+                        // OR BEXT MAX SH3ADD ORN BDEP
+                        case 7b0000100: { ( result ) = BEXT( sourceReg1, sourceReg2 ); }
+                        case 7b0010000: { result = { sourceReg[3,29], 3b000 } + sourceReg2; }
+                        case 7b0100100: { ( result ) = BDEP( sourceReg1, sourceReg2 ); }
+                        default: { result = sourceReg1 | ( function7[5,1] ? ~sourceReg2 : sourceReg2 ); }
+                    }
+                }
+                case 3b111: {
+                    switch( function7 ) {
+                        // AND PACKH MAXU ANDN BFP
+                        case 7b0000100: { result = { 16b0, sourceReg2[0,8], sourceReg1[0,8] }; }
+                        case 7b0100100: { ( result ) = BFP( sourceReg1, sourceReg2 ); }
+                        default: { result = sourceReg1 & ( function7[5,1] ? ~sourceReg2 : sourceReg2 ); }
+                    }
+                }
             }
         }
     }
@@ -671,41 +548,14 @@ circuitry aluA (
     output  result
 ) {
     switch( function7[2,5] ) {
-        case 5b00000: {
-            // AMOADD
-            result = memoryinput + sourceReg2;
-        }
-        case 5b00001: {
-            // AMOSWAP
-            result = sourceReg2;
-        }
-        case 5b00100: {
-            // AMOXOR
-            result = memoryinput ^ sourceReg2;
-        }
-        case 5b01000: {
-            // AMOOR
-            result = memoryinput | sourceReg2;
-        }
-        case 5b01100: {
-            // AMOAND
-            result = memoryinput & sourceReg2;
-        }
-        case 5b10000: {
-            // AMOMIN
-            result = __signed( memoryinput ) < __signed( sourceReg2 ) ? memoryinput : sourceReg2;
-        }
-        case 5b10100: {
-            // AMOMAX
-            result = __signed( memoryinput ) > __signed( sourceReg2 ) ? memoryinput : sourceReg2;
-        }
-        case 5b11000: {
-            // AMOMINU
-            result = __unsigned( memoryinput ) < __unsigned( sourceReg2 ) ? memoryinput : sourceReg2;
-        }
-        case 5b11100: {
-            // AMOMAXU
-            result = __unsigned( memoryinput ) > __unsigned( sourceReg2 ) ? memoryinput : sourceReg2;
-        }
+        case 5b00000: { result = memoryinput + sourceReg2; }                                                        // AMOADD
+        case 5b00001: { result = sourceReg2; }                                                                      // AMOSWAP
+        case 5b00100: { result = memoryinput ^ sourceReg2; }                                                        // AMOXOR
+        case 5b01000: { result = memoryinput | sourceReg2; }                                                        // AMOOR
+        case 5b01100: { result = memoryinput & sourceReg2; }                                                        // AMOAND
+        case 5b10000: { result = __signed( memoryinput ) < __signed( sourceReg2 ) ? memoryinput : sourceReg2; }     // AMOMIN
+        case 5b10100: { result = __signed( memoryinput ) > __signed( sourceReg2 ) ? memoryinput : sourceReg2; }     // AMOMAX
+        case 5b11000: { result = __unsigned( memoryinput ) < __unsigned( sourceReg2 ) ? memoryinput : sourceReg2; } // AMOMINU
+        case 5b11100: { result = __unsigned( memoryinput ) > __unsigned( sourceReg2 ) ? memoryinput : sourceReg2; } // AMOMAXU
     }
 }

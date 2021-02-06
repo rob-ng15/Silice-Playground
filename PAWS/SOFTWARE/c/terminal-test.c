@@ -1,5 +1,4 @@
 #include "PAWSlibrary.h"
-#include "curses.h"
 
 void terminalrefresh( void ) {
     // SETUP STACKPOINTER FOR THE SMT THREAD

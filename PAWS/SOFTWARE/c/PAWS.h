@@ -143,6 +143,16 @@ unsigned int volatile * SMTPCH = ( unsigned int volatile * ) 0xfff0;
 unsigned int volatile * SMTPCL = ( unsigned int volatile * ) 0xfff2;
 
 // TYPES AND STRUCTURES
+typedef unsigned int size_t;
+typedef unsigned short bool;
+
+// FOR EASE OF PORTING
+typedef unsigned char   uint8;
+typedef unsigned short  uint16;
+typedef unsigned int    uint32;
+typedef signed char     int8;
+typedef signed short    int16;
+typedef signed int      int32;
 
 // STRUCTURE OF THE SPRITE UPDATE FLAG
 struct sprite_update_flag {
@@ -203,3 +213,30 @@ typedef struct {
     unsigned int file_size;
 } __attribute((packed)) Fat16Entry;
 
+// COLOURS
+#define TRANSPARENT 0x40
+#define BLACK 0x00
+#define BLUE 0x03
+#define DKBLUE 0x02
+#define GREEN 0x0c
+#define DKGREEN 0x08
+#define CYAN 0x0f
+#define DKCYAN 0x0b
+#define RED 0x30
+#define DKRED 0x20
+#define MAGENTA 0x33
+#define DKMAGENTA 0x22
+#define PURPLE 0x13
+#define YELLOW 0x3c
+#define DKYELLOW 0x28
+#define WHITE 0x3f
+#define GREY1 0x15
+#define GREY2 0x2a
+#define ORANGE 0x38
+
+// STANDARD CONSTANTS
+#define NULL 0
+#define true 1
+#define false 0
+#define TRUE 1
+#define FALSE 0

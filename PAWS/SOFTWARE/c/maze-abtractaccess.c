@@ -9,8 +9,8 @@ unsigned char *tombstonebitmap;
 unsigned char *ulx3sbitmap;
 
 // MAZE SIZES
-#define MAXWIDTH 80
-#define MAXHEIGHT 60
+#define MAXWIDTH 160
+#define MAXHEIGHT 120
 #define MAXLEVEL 6
 
 // DRAWING VARIABLES
@@ -20,8 +20,8 @@ unsigned char *ulx3sbitmap;
 unsigned short level = 0;
 
 // WIDTH OF MAZE DEPENDING ON LEVEL
-unsigned short levelwidths[] = { 10, 16, 20, 32, 40, 64, 80 };
-unsigned short levelheights[] = { 8, 12, 16, 24, 30, 48, 60 };
+unsigned short levelwidths[] = { 10, 16, 20, 32, 40, 80, 160 };
+unsigned short levelheights[] = { 8, 12, 16, 24, 30, 60, 120 };
 
 // TOP LEFT COORDINATES FOR THE PERSPECTIVE DRAWING
 short perspectivex[] = { 0, 100, 170, 218, 251, 273, 288, 298, 305, 310, 313, 315, 317, 318, 320 };
@@ -470,24 +470,26 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
     gpu_rectangle( ORANGE, 460, 0, 640, 140 );
     gpu_rectangle( BLUE, 475, 10, 639 - boxwidth, 130 );
 
-    for( x = 0; x < width; x++ ) {
-        for( y = 0; y < height; y++ ) {
-            switch( mapmaze ? whatisat( x, y, 1) : whatisat( x, y, 0 ) ) {
-                case '#':
-                    colour = BLUE;
-                    break;
-                case ' ':
-                    colour = WHITE;
-                    break;
-                case 'E':
-                    colour = MAGENTA;
-                    break;
-                case 'X':
-                    colour = YELLOW;
-                    break;
+    if( !(( level == 6 ) && ( mapmaze == 1 )) ) {
+        for( x = 0; x < width; x++ ) {
+            for( y = 0; y < height; y++ ) {
+                switch( mapmaze ? whatisat( x, y, 1) : whatisat( x, y, 0 ) ) {
+                    case '#':
+                        colour = BLUE;
+                        break;
+                    case ' ':
+                        colour = WHITE;
+                        break;
+                    case 'E':
+                        colour = MAGENTA;
+                        break;
+                    case 'X':
+                        colour = YELLOW;
+                        break;
+                }
+                if( colour != BLUE )
+                    gpu_rectangle( colour, 475 + x * boxwidth, 10 + y * boxheight, 474 + x * boxwidth + boxwidth, 9 + y * boxheight + boxheight );
             }
-            if( colour != BLUE )
-                gpu_rectangle( colour, 475 + x * boxwidth, 10 + y * boxheight, 474 + x * boxwidth + boxwidth, 9 + y * boxheight + boxheight );
         }
     }
 
@@ -757,11 +759,11 @@ int main( void ) {
     set_background( 0, 0, BKG_RAINBOW );
 
     // DECODE TOMBSTONE PPM TO BITMAP
-    tombstonebitmap = memoryspace( 320 * 298 );
+    tombstonebitmap = malloc( 320 * 298 );
     netppm_decoder( &tombstoneppm[0], tombstonebitmap );
 
     // DECODE CONTROLS PPM TO BITMAP
-    ulx3sbitmap = memoryspace( 320 * 219 );
+    ulx3sbitmap = malloc( 320 * 219 );
     netppm_decoder( &ulx3sppm[0], ulx3sbitmap );
 
     unsigned short levelselected;

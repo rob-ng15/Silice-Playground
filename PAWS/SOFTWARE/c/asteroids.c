@@ -750,7 +750,7 @@ void main( void )
     INITIALISEMEMORY();
 
     // DECODE GALAXY PPM to BITMAP
-    galaxybitmap = memoryspace( 640 * 480 );
+    galaxybitmap = malloc( 640 * 480 );
     netppm_decoder( &galaxyppm[0], galaxybitmap );
 
     unsigned char uartData = 0, potentialnumber = 0;
