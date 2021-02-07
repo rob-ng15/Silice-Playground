@@ -1,4 +1,4 @@
-// ALU - BASE - M EXTENSION - B EXTENSION
+// ALU S- BASE - M EXTENSION - B EXTENSION
 
 // UNSIGNED / SIGNED 32 by 32 bit division giving 32 bit remainder and quotient
 algorithm aluMdivideremain(
@@ -9,7 +9,7 @@ algorithm aluMdivideremain(
     input   uint32  dividend,
     input   uint32  divisor,
 
-    output  uint32  result
+    output! uint32  result
 ) <autorun> {
     uint32  quotient = uninitialized;
     uint32  remainder = uninitialized;
@@ -61,7 +61,7 @@ algorithm aluMmultiply(
     input   uint32  factor_1,
     input   uint32  factor_2,
 
-    output  uint32  result
+    output! uint32  result
 ) <autorun> {
     // FULLY SIGNED / PARTIALLY SIGNED / UNSIGNED and RESULT SIGNED FLAGS
     uint2   dosigned = uninitialized;
@@ -103,8 +103,7 @@ algorithm aluMmultiply(
     }
 }
 
-
-// BASE IMMEDIATE - with some B extensions
+// BASE IMMEDIATE + B extensions
 circuitry aluI (
     input   opCode,
     input   function3,
@@ -184,103 +183,248 @@ circuitry aluI (
     }
 }
 
-// BASE REGISTER - with some B extensions
-circuitry aluR (
-    input   opCode,
-    input   function3,
-    input   function7,
-    input   rs1,
-    input   sourceReg1,
-    input   sourceReg2,
+// BASE REGISTER + B extensions
 
-    output  result
-) {
-    uint5   RshiftCount = uninitialised;
-    RshiftCount = sourceReg2[0,5];
+// B EXTENSION GORC XPERM + SBSET
+algorithm aluR7b0010100 (
+    input   uint1   start,
+    output  uint1   busy,
 
-    switch( function7 ) {
-        case 7b0010100: {
+    input   uint3   function3,
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+
+    output! uint32  result
+) <autorun> {
+    uint5   RshiftCount := sourceReg2[0,5];
+
+    uint1   active = 0;
+    busy := start ? 1 : active;
+
+    while(1) {
+        if( start ) {
+            active = 1;
+
             switch( function3 ) {
+                case 3b001: { ( result ) = SBSET( sourceReg1, RshiftCount ); }
                 case 3b101: { ( result ) = GORC( sourceReg1, RshiftCount ); }
                 default: { ( result ) = XPERM( sourceReg1, sourceReg2, function3 ); }
             }
+
+            active = 0;
         }
-        case 7b0000101: {
+    }
+}
+// B EXTENSION CLMUL + MIN[U] MAX[U]
+algorithm aluR7b0000101 (
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint3   function3,
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+
+    output! uint32  result
+) <autorun> {
+    uint1   active = 0;
+    busy := start ? 1 : active;
+
+    while(1) {
+        if( start ) {
             switch( function3 ) {
                 case 3b100: { result = ( __signed( sourceReg1 ) < __signed( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
                 case 3b101: { result = ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
                 case 3b110: { result = ( __signed( sourceReg1 ) > __signed( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
                 case 3b111: { result = ( __unsigned( sourceReg1 ) > __unsigned( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
-                default: { ( result ) = CLMUL( sourceReg1, sourceReg2, function3 ); }
-            }
-        }
-        default: {
-            switch( function3 ) {
-                case 3b000: { result = sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ); }
-                case 3b001: {
-                    switch( function7 ) {
-                        case 7b0000100: { ( result ) = SHFL( sourceReg1, RshiftCount ); }
-                        case 7b0110000: { ( result ) = ROL( sourceReg1, RshiftCount ); }
-                        default: {
-                            switch( function7[2,1] ) {
-                                case 0: { ( result ) = LEFTshifter( sourceReg1, RshiftCount, function7 ); }
-                                case 1: { ( result ) = SBSetClrInv( sourceReg1, RshiftCount, function7 ); }
-                            }
-                        }
-                    }
-                }
-                case 3b010: {
-                    switch( function7 ) {
-                        case 7b0000000: { result = __signed( sourceReg1 ) < __signed(sourceReg2) ? 32b1 : 32b0; }
-                        case 7b0010000: { result = { sourceReg1[1,31], 1b0 } + sourceReg2; }
-                    }
-                }
-                case 3b011: { result = ( rs1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 32b1 : 32b0 ); }
-                case 3b100: {
-                    switch( function7 ) {
-                        // XOR PACK MIN SH2ADD XNOR PACKU
-                        case 7b0000100: { result = { sourceReg2[0,16], sourceReg1[0,16] }; }
-                        case 7b0010000: { result = { sourceReg1[2,30], 2b00 } + sourceReg2; }
-                        case 7b0100100: { result = { sourceReg2[16,16], sourceReg1[16,16] }; }
-                        default: { result = sourceReg1 ^ ( function7[5,1] ? ~sourceReg2 : sourceReg2 ); }
-                    }
-                }
-                case 3b101: {
-                    switch( function7 ) {
-                        case 7b0000100: { ( result ) = UNSHFL( sourceReg1, RshiftCount ); }
-                        case 7b0100100: { ( result ) = SBEXT( sourceReg1, RshiftCount ); }
-                        case 7b0110000: { ( result ) = ROR( sourceReg1, RshiftCount ); }
-                        case 7b0110100: { ( result ) = GREV( sourceReg1, RshiftCount ); }
-                        default:  { ( result ) = RIGHTshifter( sourceReg1, RshiftCount, function3 ); }
-                    }
-                }
-                case 3b110: {
-                    switch( function7 ) {
-                        // OR BEXT MAX SH3ADD ORN BDEP
-                        case 7b0000100: { ( result ) = BEXT( sourceReg1, sourceReg2 ); }
-                        case 7b0010000: { result = { sourceReg1[3,29], 3b000 } + sourceReg2; }
-                        case 7b0100100: { ( result ) = BDEP( sourceReg1, sourceReg2 ); }
-                        default: { result = sourceReg1 | ( function7[5,1] ? ~sourceReg2 : sourceReg2 ); }
-                    }
-                }
-                case 3b111: {
-                    switch( function7 ) {
-                        // AND PACKH MAXU ANDN BFP
-                        case 7b0000100: { result = { 16b0, sourceReg2[0,8], sourceReg1[0,8] }; }
-                        case 7b0100100: { ( result ) = BFP( sourceReg1, sourceReg2 ); }
-                        default: { result = sourceReg1 & ( function7[5,1] ? ~sourceReg2 : sourceReg2 ); }
-                    }
+                default: {
+                    active = 1;
+                    ( result ) = CLMUL( sourceReg1, sourceReg2, function3 );
+                    active = 0;
                 }
             }
         }
     }
 }
+// B EXTENSION SHFL UNSHFL BEXT + PACK PACKH
+algorithm aluR7b0000100 (
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint3   function3,
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+
+    output! uint32  result
+) <autorun> {
+    uint5   RshiftCount := sourceReg2[0,5];
+
+    uint1   active = 0;
+    busy := start ? 1 : active;
+
+    while(1) {
+        if( start ) {
+            switch( function3 ) {
+                case 3b001: {
+                    active = 1;
+                    ( result ) = SHFL( sourceReg1, RshiftCount );
+                    active = 0;
+                }
+                case 3b101: {
+                    active = 1;
+                    ( result ) = UNSHFL( sourceReg1, RshiftCount );
+                    active = 0;
+                }
+                case 3b110: {
+                    active = 1;
+                    ( result ) = BEXT( sourceReg1, sourceReg2 );
+                    active = 0;
+                }
+                case 3b100: { result = { sourceReg2[0,16], sourceReg1[0,16] }; }
+                case 3b111: { result = { 16b0, sourceReg2[0,8], sourceReg1[0,8] }; }
+            }
+        }
+    }
+}
+// B EXTENSION GREV + SBINV
+algorithm aluR7b0110100 (
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint3   function3,
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+
+    output! uint32  result
+) <autorun> {
+    uint5   RshiftCount := sourceReg2[0,5];
+
+    uint1   active = 0;
+    busy := start ? 1 : active;
+
+    while(1) {
+        if( start ) {
+            active = 1;
+            switch( function3 ) {
+                case 3b001: { ( result ) = SBINV( sourceReg1, RshiftCount ); }
+                default: {
+                    active = 1;
+                    ( result ) = GREV( sourceReg1, RshiftCount );
+                    active = 0;
+                }
+            }
+        }
+    }
+}
+// B EXTENSION BDEP BFP + PACKU SBCLR SBEXT
+algorithm aluR7b0100100 (
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint3   function3,
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+
+    output! uint32  result
+) <autorun> {
+    uint5   RshiftCount := sourceReg2[0,5];
+
+    uint1   active = 0;
+    busy := start ? 1 : active;
+
+    while(1) {
+        if( start ) {
+            switch( function3 ) {
+                case 3b001: { ( result ) = SBCLR( sourceReg1, RshiftCount ); }
+                case 3b100: { result = { sourceReg2[16,16], sourceReg1[16,16] }; }
+                case 3b101: { ( result ) = SBEXT( sourceReg1, RshiftCount ); }
+                case 3b110: {
+                    active = 1;
+                    ( result ) = BDEP( sourceReg1, sourceReg2 );
+                    active = 0;
+                }
+                case 3b111: {
+                    active = 1;
+                    ( result ) = BFP( sourceReg1, sourceReg2 );
+                    active = 0;
+                }
+            }
+        }
+    }
+}
+// BASE ADD SUB SLL SLT SLTU XOR SRL SRA OR AND + B EXTENSION ROL SLO SH1/2/3ADD XNOR ROR SRO ORN ANDN
+algorithm aluR (
+    input   uint7   opCode,
+    input   uint3   function3,
+    input   uint7   function7,
+    input   uint5   rs1,
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+
+    output! uint32  result
+) <autorun> {
+    uint5   RshiftCount := sourceReg2[0,5];
+
+    while(1) {
+        if( opCode == 7b0110011 ) {
+            switch( function3 ) {
+                case 3b000: {
+                    // ADD SUB
+                    result = sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 );
+                }
+                case 3b001: {
+                    // ROL SLL SLO
+                    switch( function7 ) {
+                        case 7b0110000: { ( result ) = ROL( sourceReg1, RshiftCount ); }
+                        default: { ( result ) = LEFTshifter( sourceReg1, RshiftCount, function7 ); }
+                    }
+                }
+                case 3b010: {
+                // SLT SH1ADD
+                    switch( function7 ) {
+                        case 7b0000000: { result = __signed( sourceReg1 ) < __signed(sourceReg2) ? 32b1 : 32b0; }
+                        case 7b0010000: { result = { sourceReg1[1,31], 1b0 } + sourceReg2; }
+                    }
+                }
+                case 3b011: {
+                    // SLTU
+                    result = ( rs1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 32b1 : 32b0 );
+                }
+                case 3b100: {
+                    // SH2ADD XOR XNOR
+                    switch( function7 ) {
+                        case 7b0010000: { result = { sourceReg1[2,30], 2b00 } + sourceReg2; }
+                        default: { result = sourceReg1 ^ ( function7[5,1] ? ~sourceReg2 : sourceReg2 ); }
+                    }
+                }
+                case 3b101: {
+                    // ROR SRL SRA SRO
+                    switch( function7 ) {
+                        case 7b0110000: { ( result ) = ROR( sourceReg1, RshiftCount ); }
+                        default:  { ( result ) = RIGHTshifter( sourceReg1, RshiftCount, function3 ); }
+                    }
+                }
+                case 3b110: {
+                    // SH3ADD OR ORN
+                    switch( function7 ) {
+                        case 7b0010000: { result = { sourceReg1[3,29], 3b000 } + sourceReg2; }
+                        default: { result = sourceReg1 | ( function7[5,1] ? ~sourceReg2 : sourceReg2 ); }
+                    }
+                }
+                case 3b111: {
+                    // AND ANDN
+                    result = sourceReg1 & ( function7[5,1] ? ~sourceReg2 : sourceReg2 );
+                }
+            }
+        }
+    }
+}
+
 // RISC-V MANDATORY CSR REGISTERS
 algorithm CSRblock(
     input   uint32  instruction,
     input   uint1   incCSRinstret,
     input   uint1   SMT,
-    output  uint32  result
+    output! uint32  result
 ) <autorun> {
     // RDCYCLE[H] and RDTIME[H] are equivalent on PAWSCPU
     uint64  CSRtimer = 0;
@@ -318,7 +462,7 @@ algorithm aluA (
     input   uint32  memoryinput,
     input   uint32  sourceReg2,
 
-    output  uint32  result
+    output! uint32  result
 ) <autorun> {
     while(1) {
         if( opCode == 7b0101111 ) {
