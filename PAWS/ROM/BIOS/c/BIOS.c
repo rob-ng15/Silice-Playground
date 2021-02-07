@@ -234,6 +234,13 @@ void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned char
     *GPU_WRITE = 8;
 }
 
+// OUTPUT A STRING TO THE GPU
+void gpu_outputstring( unsigned char colour, short x, short y, char *s, unsigned char size ) {
+    while( *s ) {
+        gpu_character_blit( colour, x, y, *s++, size );
+        x = x + ( 8 << size );
+    }
+}
 // SET THE BLITTER TILE to the 16 x 16 pixel bitmap
 void set_blitter_bitmap( unsigned char tile, unsigned short *bitmap ) {
     *BLIT_WRITER_TILE = tile;
@@ -404,14 +411,17 @@ void sd_readMBR( void ) {
     sd_readSector( 0, MBR );
 }
 
+void sd_readSectors( unsigned int start_sector, unsigned int number_of_sectors, unsigned char *copyaddress ) {
+    for( unsigned int i = 0; i < number_of_sectors; i++ )
+        sd_readSector( start_sector + i, copyaddress + 512 * i );
+}
+
 // READ FILE ALLOCATION TABLE
 void sd_readFAT( void ) {
     unsigned short i;
 
     // READ ALL OF THE SECTORS OF THE FAT
-    for( i = 0; i < BOOTSECTOR -> fat_size_sectors; i++ ) {
-        sd_readSector( i + PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors, ( (unsigned char *)FAT ) + 512 * i );
-    }
+    sd_readSectors( PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors, BOOTSECTOR -> fat_size_sectors, (unsigned char *)FAT );
 }
 
 // READ ROOT DIRECTORY
@@ -419,16 +429,12 @@ void sd_readRootDirectory ( void ) {
     unsigned short i;
 
     // READ ALL OF THE SECTORS OF THE ROOTDIRECTORY
-    for( i = 0; i < ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512; i++ ) {
-        sd_readSector( i + PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats, ( (unsigned char *)ROOTDIRECTORY ) + 512 * i );
-    }
+    sd_readSectors( PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats, ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512, (unsigned char *)ROOTDIRECTORY );
 }
 
 // READ A FILE CLUSTER ( the minimum size of a file in FAT16 )
 void sd_readCluster( unsigned short cluster ) {
-    for( unsigned short i = 0; i < BOOTSECTOR -> sectors_per_cluster; i++ ) {
-        sd_readSector( DATASTARTSECTOR + ( cluster - 2 ) * BOOTSECTOR -> sectors_per_cluster + i, CLUSTERBUFFER + i * 512 );
-    }
+    sd_readSectors( DATASTARTSECTOR + ( cluster - 2 ) * BOOTSECTOR -> sectors_per_cluster, BOOTSECTOR -> sectors_per_cluster, CLUSTERBUFFER );
 }
 
 unsigned short checkextension( unsigned short i ) {
@@ -436,8 +442,8 @@ unsigned short checkextension( unsigned short i ) {
 }
 
 // SEARCH FOR THE NEXT PAW FILE, WILL LOCK IF NO FILE FOUND
-void sd_findNextFile( void ) {
-    unsigned short i = ( SELECTEDFILE == 0xffff ) ? 0 : SELECTEDFILE + 1;
+void sd_findFile( unsigned short direction ) {
+    unsigned short i = ( SELECTEDFILE == 0xffff ) ? 0 : ( direction ? SELECTEDFILE + 1 : SELECTEDFILE - 1 );
     unsigned short filefound = 0;
 
     while( !filefound ) {
@@ -447,41 +453,23 @@ void sd_findNextFile( void ) {
             case 0xe5:
             case 0x05:
             case 0x2e:
-                i = ( i < BOOTSECTOR -> root_dir_entries ) ? i + 1 : 0;
-                break;
-
-            default:
-                if( checkextension( i ) ) {
-                    SELECTEDFILE = i;
-                    filefound = 1;
-                } else {
+                if( direction ) {
                     i = ( i < BOOTSECTOR -> root_dir_entries ) ? i + 1 : 0;
+                } else {
+                    i = ( i == 0 ) ? BOOTSECTOR -> root_dir_entries - 1 : i - 1;
                 }
                 break;
-        }
-    }
-}
-// SEARCH FOR THE NEXT PAW FILE, WILL LOCK IF NO FILE FOUND
-void sd_findPrevFile( void ) {
-    unsigned short i = ( SELECTEDFILE == 0xffff ) ? 0 : SELECTEDFILE - 1;
-    unsigned short filefound = 0;
-
-    while( !filefound ) {
-        switch( ROOTDIRECTORY[i].filename[0] ) {
-            // NOT TRUE FILES ( deleted, directory pointer )
-            case 0x00:
-            case 0xe5:
-            case 0x05:
-            case 0x2e:
-                i = ( i == 0 ) ? i < BOOTSECTOR -> root_dir_entries -1 : i - 1;
-                break;
 
             default:
                 if( checkextension( i ) ) {
                     SELECTEDFILE = i;
                     filefound = 1;
                 } else {
-                i = ( i == 0 ) ? i < BOOTSECTOR -> root_dir_entries -1 : i - 1;
+                    if( direction ) {
+                        i = ( i < BOOTSECTOR -> root_dir_entries ) ? i + 1 : 0;
+                    } else {
+                        i = ( i == 0 ) ? BOOTSECTOR -> root_dir_entries - 1 : i - 1;
+                    }
                 }
                 break;
         }
@@ -529,6 +517,7 @@ void draw_sdcard( void  ) {
 }
 
 void reset_display( unsigned char terminalvisible ) {
+    *GPU_DITHERMODE = 0;
     gpu_cs();
     tpu_cs();
     tilemap_scrollwrapclear( 9 );
@@ -548,6 +537,10 @@ void displayfilename( void ) {
             gpu_character_blit( WHITE, 64 + i * 64, 208, ROOTDIRECTORY[SELECTEDFILE].filename[i], 3);
         }
     }
+}
+
+void waitbuttonrelease( void ) {
+    while( get_buttons() != 1 );
 }
 
 void main( void ) {
@@ -578,11 +571,8 @@ void main( void ) {
     draw_riscv_logo();
     set_sdcard_bitmap();
     draw_sdcard();
-    gpu_character_blit( WHITE, 104, 4, 'P', 2);
-    gpu_character_blit( WHITE, 136, 4, 'A', 2);
-    gpu_character_blit( WHITE, 168, 4, 'W', 2);
-    gpu_character_blit( WHITE, 200, 4, 'S', 2);
-    tpu_set( 13, 2, TRANSPARENT, WHITE ); tpu_outputstring( "RISC-V RV32IMACB CPU" );
+    gpu_outputstring( WHITE, 104, 4, "PAWS", 2 );
+    tpu_set( 13, 2, TRANSPARENT, WHITE ); tpu_outputstring( "RISC-V RV32IMCB CPU" );
 
     for( unsigned short i = 0; i < 64; i++ )
         gpu_rectangle( i, i * 10, 447, 9 + i * 10, 463 );
@@ -601,7 +591,7 @@ void main( void ) {
             break;
         default:
             // UNKNOWN PARTITION TYPE
-            tpu_outputstringcentre( 7, TRANSPARENT, RED, "ERROR: Please Insert A FAT16 SDCARD and Press RESET" );
+            tpu_outputstringcentre( 7, TRANSPARENT, RED, "Please Insert A FAT16 SDCARD and Press RESET" );
             while(1) {}
             break;
     }
@@ -622,38 +612,38 @@ void main( void ) {
     // FILE SELECTOR
     tpu_outputstringcentre( 7, TRANSPARENT, WHITE, "Select PAW File" );
     tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "SELECT USING FIRE 1 - SCROLL USING LEFT & RIGHT" );
-    tpu_outputstringcentre( 10, TRANSPARENT, RED, "ERROR: No PAW Files Found" );
+    tpu_outputstringcentre( 10, TRANSPARENT, RED, "No PAW Files Found" );
     SELECTEDFILE = 0xffff;
 
     // FILE SELECTOR, LOOP UNTIL FILE SELECTED (FIRE 1 PRESSED WITH A VALID FILE)
     while( !selectedfile ) {
         // RIGHT - SEARCH FOR NEXT FILE
         if( ( get_buttons() & 64 ) || ( SELECTEDFILE == 0xffff ) ) {
-            while( get_buttons() & 64 );
-            sd_findNextFile();
+            waitbuttonrelease();
+            sd_findFile(1);
             displayfilename();
         }
         // LEFT - SEARCH FOR PREVIOUS FILE
         if( ( get_buttons() & 32 ) || ( SELECTEDFILE == 0xffff ) ) {
-            while( get_buttons() & 32 );
-            sd_findPrevFile();
+            waitbuttonrelease();
+            sd_findFile(0);
             displayfilename();
         }
         // FIRE 1 - SELECT FILE
         if( ( get_buttons() & 2 ) && ( SELECTEDFILE != 0xffff ) ) {
-            while( get_buttons() & 2 );
+            waitbuttonrelease();
             selectedfile = 1;
         }
     }
 
     tpu_outputstringcentre( 7, TRANSPARENT, WHITE, "PAW File" );
     tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "SELECTED" );
-    sleep( 1000 );
+    sleep( 500 );
     tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "LOADING" );
     sd_readFile( SELECTEDFILE, (unsigned char *)0x10000000 );
-    tpu_outputstringcentre( 7, TRANSPARENT, WHITE, "FILE LOADED" );
+    tpu_outputstringcentre( 7, TRANSPARENT, WHITE, "LOADED" );
     tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "LAUNCHING" );
-    sleep( 1000 );
+    sleep( 500 );
 
     // RESET THE DISPLAY
     terminal_reset();

@@ -11,7 +11,7 @@ unsigned char *ulx3sbitmap;
 // MAZE SIZES
 #define MAXWIDTH 160
 #define MAXHEIGHT 120
-#define MAXLEVEL 8
+#define MAXLEVEL 6
 
 // DRAWING VARIABLES
 #define MAXDEPTH 14
@@ -20,54 +20,133 @@ unsigned char *ulx3sbitmap;
 unsigned short level = 0;
 
 // WIDTH OF MAZE DEPENDING ON LEVEL
-unsigned short levelwidths[] = { 10, 16, 20, 32, 40, 64, 80, 128, 160 };
-unsigned short levelheights[] = { 8, 12, 16, 24, 30, 48, 60, 80, 120 };
-unsigned short levelgenerationsteps[] = { 1, 2, 4, 4, 8, 16, 64, 128, 512 };
+unsigned short levelwidths[] = { 10, 16, 20, 32, 40, 80, 160 };
+unsigned short levelheights[] = { 8, 12, 16, 24, 30, 60, 120 };
 
 // TOP LEFT COORDINATES FOR THE PERSPECTIVE DRAWING
 short perspectivex[] = { 0, 100, 170, 218, 251, 273, 288, 298, 305, 310, 313, 315, 317, 318, 320 };
 short perspectivey[] = { 0,  75, 128, 164, 188, 205, 216, 224, 229, 232, 235, 236, 238, 239, 240 };
 
-// GHOST SIZE FOR PERSPECTIVE DRAWING
-unsigned short ghostsize[] = { 90, 63, 45, 33, 24, 15, 12, 9, 6, 3, 3, 2, 2, 1, 1 };
-
-// PILL SIZE FOR PERSPECTIVE DRAWING
-unsigned short pillsize[] = { 24, 20, 16, 12, 10, 8, 6, 5, 4, 3, 3, 2, 2, 1, 1 };
-
 // DIRECTION STEPS IN X and Y
 short directionx[] = { 0, 1, 0, -1 }, leftdirectionx[] = { -1, 0, 1, 0 }, rightdirectionx[] = { 1, 0, -1, 0 };
 short directiony[] = { -1, 0, 1, 0 }, leftdirectiony[] = { 0, -1, 0, 1 }, rightdirectiony[] = { 0, 1, 0, -1 };
 
-// STORAGE FOR MAZE and MAP
+// STORAGE FOR MAZE and MAP PLUS ACCESS FUNCTIONS USING A BIT ARRAY
 // WALLS WILL BE '#' '*' GAPS ' ' ENTRANCE 'E' EXIT 'X'
-char maze[MAXWIDTH+2][MAXHEIGHT];
-char map[MAXWIDTH+2][MAXHEIGHT];
+unsigned short maze[ MAXWIDTH >> 4 ][MAXHEIGHT];
+unsigned short map[ MAXWIDTH >> 4 ][MAXHEIGHT];
 
 // POSITION AND DIRECTION OF THE GOST
 unsigned short ghostx[4], ghosty[4], ghostdirection[4];
 unsigned short ghosteyes[4][4] = { { 0, 1, 2, 3 }, { 3, 0, 1, 2 }, { 2, 3, 0, 1 }, { 1, 2, 3, 0 } };
+
+// DRAW WELCOME SCREEN
+void drawwelcome( void ) {
+    gpu_outputstringcentre( YELLOW, 320, 8, "3D MONSTER MAZE", 2 );
+
+    // DISPLAY ULX3 BITMAP
+    bitmapblit( ulx3sbitmap, 320, 219, 160, 131, BLUE );
+
+    // DRAW JOYSTICK AND LABEL
+    gpu_circle( BLACK, 480, 340, 8, 1 );
+    gpu_circle( BLACK, 480, 358, 8, 1 );
+    gpu_circle( BLACK, 440, 358, 8, 1 );
+    gpu_circle( BLACK, 520, 358, 8, 1 );
+    gpu_circle( BLACK, 400, 358, 8, 1 );
+    gpu_circle( BLACK, 360, 358, 8, 1 );
+    gpu_outputstringcentre( CYAN, 480, 322, "STEP", 0 );
+    gpu_outputstringcentre( CYAN, 480, 368, "BACK", 0 );
+    gpu_outputstringcentre( CYAN, 440, 368, "TURN", 0 );
+    gpu_outputstringcentre( CYAN, 440, 376, "LEFT", 0 );
+    gpu_outputstringcentre( CYAN, 520, 368, "TURN", 0 );
+    gpu_outputstringcentre( CYAN, 520, 376, "RIGHT", 0 );
+    gpu_outputstringcentre( CYAN, 400, 368, "PEEK", 0 );
+    gpu_outputstringcentre( CYAN, 360, 368, "POWER", 0 );
+}
+
+// RETURN CONTENTS OF == 0 MAZE == 1 MAP at ( X, Y )
+unsigned char whatisat( unsigned short x, unsigned short y, unsigned char mapmaze ) {
+    if( ( x == 0 ) && ( y == 1 ) ) {
+        return( 'E' );
+    }
+    if( ( ( x == levelwidths[ level ] - 2 ) && ( y == levelheights[ level ] - 3 ) ) ) {
+        return( 'X' );
+    }
+    switch( mapmaze ) {
+        case 0:
+            return( ( maze[ x >> 4 ][ y ] >> ( x & 0xf ) ) & 1 ? '#' : ' ' );
+        case 1:
+            return( ( map[ x >> 4 ][ y ] >> ( x & 0xf ) ) & 1 ? '#' : ' ' );
+        default:
+            return( '?' );
+    }
+}
+
+// SET THE CONTENTS OF == 0 MAZE == 1 MAP at ( X, Y )
+void setat( unsigned short x, unsigned short y, unsigned char value, unsigned char mapmaze ) {
+    switch( mapmaze ) {
+        case 0:
+            switch( value ) {
+                case ' ':
+                    maze[ x >> 4 ][ y ] &= ~( 1 << ( x & 0x0f ) );
+                    break;
+                case '#':
+                    maze[ x >> 4 ][ y ] |= ( 1 << ( x & 0x0f ) );
+                    break;
+            }
+            break;
+        case 1:
+            switch( value ) {
+                case ' ':
+                    map[ x >> 4 ][ y ] &= ~( 1 << ( x & 0x0f ) );
+                    break;
+                case '#':
+                    map[ x >> 4 ][ y ] |= ( 1 << ( x & 0x0f ) );
+                    break;
+            }
+            break;
+    }
+}
+
+// FIND WHAT IS TO THE FRONT AT STEPS IN FRONT
+unsigned char whatisfront( unsigned short currentx, unsigned short currenty, unsigned short direction, unsigned short steps ) {
+    return( whatisat( currentx + directionx[ direction ] * steps, currenty + directiony[ direction ] * steps, 0 ) );
+}
+
+// FIND WHAT IS BEHIND AT STEPS IN REAR
+unsigned char whatisbehind( unsigned short currentx, unsigned short currenty, unsigned short direction, unsigned short steps ) {
+    return( whatisat( currentx - directionx[ direction ] * steps, currenty - directiony[ direction ] * steps, 0 ) );
+}
+
+// FIND WHAT IS TO THE LEFT AT STEPS IN FRONT
+unsigned char whatisleft( unsigned short currentx, unsigned short currenty, unsigned short direction, unsigned short steps ) {
+    return( whatisat( currentx + directionx[ direction ] * steps + leftdirectionx[ direction ], currenty + directiony[ direction ] * steps + leftdirectiony[ direction ], 0 ) );
+}
+
+// FIND WHAT IS TO THE RIGHT AT STEPS IN FRONT
+unsigned char whatisright( unsigned short currentx, unsigned short currenty, unsigned short direction, unsigned short steps ) {
+    return( whatisat( currentx + directionx[ direction ] * steps + rightdirectionx[ direction ], currenty + directiony[ direction ] * steps + rightdirectiony[ direction ], 0 ) );
+}
 
 // GHOST COLOUR SELECTOR
 unsigned char ghostcolour( unsigned short ghost ) {
     switch( ghost ) {
         case 0:
             return( CYAN );
-            break;
         case 1:
             return( MAGENTA );
-            break;
         case 2:
             return( ORANGE );
-            break;
         case 3:
             return( RED );
-            break;
+        default:
+            return( BLACK );
     }
 }
 
 // DRAW GHOST AT CORRECT DISTANCE
 void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned short playerdirection ) {
-    unsigned short sizechange = ghostsize[ steps ];
+    unsigned short sizechange = ( 320 - perspectivex[ steps ] ) * 3 / 8;
 
     unsigned short centrex = 320;
     unsigned short centrey = 240;
@@ -104,7 +183,7 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
     }
 
     // EYE WHITES
-    if( eyeoffsetx >= 8 ) {
+    if( eyeoffsetx / 2 >= 4 ) {
         switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
             case 0:
                 // SAME DIRECTION, NO EYES
@@ -123,10 +202,25 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
                 gpu_circle( WHITE, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2, 1 );
                 break;
         }
+    } else {
+        switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
+            case 0:
+                break;
+            case 1:
+                gpu_pixel( WHITE, centrex + eyeoffsetx, centrey - eyeoffsety );
+                break;
+            case 2:
+                gpu_pixel( WHITE, centrex - eyeoffsetx, centrey - eyeoffsety );
+                gpu_pixel( WHITE, centrex + eyeoffsetx, centrey - eyeoffsety );
+                break;
+            case 3:
+                gpu_pixel( WHITE, centrex - eyeoffsetx, centrey - eyeoffsety );
+                break;
+        }
     }
 
     // EYE PUPILS
-    if( eyeoffsetx >= 16 ) {
+    if( eyeoffsetx / 4 >= 4 ) {
         switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
             case 0:
                 // SAME DIRECTION, NO EYES
@@ -143,6 +237,21 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
             case 3:
                 // GHOST FACING LEFT
                 gpu_circle( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 1 );
+                break;
+        }
+    } else {
+        switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
+            case 0:
+                break;
+            case 1:
+                gpu_pixel( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety );
+                break;
+            case 2:
+                gpu_pixel( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety );
+                gpu_pixel( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety );
+                break;
+            case 3:
+                gpu_pixel( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety );
                 break;
         }
     }
@@ -151,14 +260,14 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
 // MOVE A GHOST RANDOMLY IN THE MAZE
 void move_ghost( unsigned short ghostnumber) {
     // CHECK IF FACING A BLANK SPACE
-    if( maze[ ghostx[ ghostnumber ] + directionx[ ghostdirection[ ghostnumber ] ] ][ ghosty[ ghostnumber ] + directiony[ ghostdirection[ ghostnumber ] ] ] == ' ' ) {
+    if( whatisfront( ghostx[ ghostnumber ], ghosty[ ghostnumber ], ghostdirection[ ghostnumber ], 1 ) == ' ' ) {
         // DECIDE IF TURNING LEFT
-        if( maze[ ghostx[ ghostnumber ] + leftdirectionx[ ghostdirection[ ghostnumber ] ] ][ ghosty[ ghostnumber ] + leftdirectiony[ ghostdirection[ ghostnumber ] ] ] == ' ' && ( rng( 4 ) == 0 ) ) {
+        if( ( whatisleft( ghostx[ ghostnumber ], ghosty[ ghostnumber ], ghostdirection[ ghostnumber ], 0 ) == ' ' ) && ( rng( 4 ) == 0 ) ) {
             // TURN LEFT
             ghostdirection[ ghostnumber ] = ( ghostdirection[ ghostnumber ] == 0 ) ? 3 : ghostdirection[ ghostnumber ] - 1;
         } else {
             // DECIDE IF TURNING RIGHT
-            if( maze[ ghostx[ ghostnumber ] + rightdirectionx[ ghostdirection[ ghostnumber ] ] ][ ghosty[ ghostnumber ] + rightdirectiony[ ghostdirection[ ghostnumber ] ] ] == ' ' && ( rng( 4 ) == 0 ) ) {
+            if( ( whatisright( ghostx[ ghostnumber ], ghosty[ ghostnumber ], ghostdirection[ ghostnumber ], 0 ) == ' ' ) && ( rng( 4 ) == 0 ) ) {
                 // TURN RIGHT
                 ghostdirection[ ghostnumber ] = ( ghostdirection[ ghostnumber ] == 3 ) ? 0 : ghostdirection[ ghostnumber ] + 1;
             } else {
@@ -193,20 +302,21 @@ void move_ghost( unsigned short ghostnumber) {
 
 // DRAW A PILL
 void draw_pill( unsigned short steps ) {
-    switch( pillsize[ steps ] ) {
+    unsigned short pillsize = ( 320 - perspectivex[ steps ] ) / 8;
+
+    switch( pillsize ) {
+        case 0:
+            break;
+
         case 1:
-            gpu_pixel( WHITE, 320, 480 - perspectivey[ steps ] );
-            break;
         case 2:
-            gpu_rectangle( WHITE, 319, 480 - perspectivey[ steps ] - 1, 320, 480 - perspectivey[ steps ] );
-            break;
         case 3:
-            gpu_rectangle( WHITE, 319, 479 - perspectivey[ steps ], 321, 481 - perspectivey[ steps ] );
+            gpu_pixel( WHITE, 320, 480 - perspectivey[ steps ] );
             break;
 
         default:
-            gpu_circle( WHITE, 320, 480 - perspectivey[ steps ], pillsize[ steps ], 1 );
-            gpu_circle( GREY2, 320, 480 - perspectivey[ steps ], pillsize[ steps ], 0 );
+            gpu_circle( WHITE, 320, 480 - perspectivey[ steps ], pillsize, 1 );
+            gpu_circle( GREY2, 320, 480 - perspectivey[ steps ], pillsize, 0 );
             break;
     }
 }
@@ -221,18 +331,10 @@ void initialise_maze( unsigned short width, unsigned short height )
     // FILL WITH WALLS
     for( x = 0; x < width; x++ ) {
         for( y = 0; y < height; y++ ) {
-            maze[x][y] = '#';
-            map[x][y] = '#';
+            setat( x, y, '#', 0 );
+            setat( x, y, '#', 1 );
         }
     }
-
-    // ADD EXTRANCE
-    maze[0][1] = 'E';
-    map[0][1] = 'E';
-
-    // ADD EXIT
-    maze[ width - 2 ][ height - 3 ] = 'X';
-    map[ width - 2 ][ height - 3 ] = 'X';
 
     // POSITION GHOSTS AT CENTRE
     unsigned short potentialx, potentialy;
@@ -248,7 +350,7 @@ void initialise_maze( unsigned short width, unsigned short height )
                 potentialx += 2 * rng( level );
                 break;
         }
-        if( maze[ potentialx ][ potentialy ] != ' ' )
+        if( whatisat( potentialx, potentialy, 0 ) != ' ' )
             potentialx--;
         if( ghost <= level ) {
             // AT CENTRE
@@ -278,7 +380,7 @@ void display_maze( unsigned short width, unsigned short height, unsigned short c
             if( ( currentx == x ) && ( currenty == y ) ) {
                 colour = GREEN;
             } else {
-                switch( maze[x][y] ) {
+                switch( whatisat( x, y, 0 ) ) {
                     case '#':
                         colour = BLUE;
                         break;
@@ -301,7 +403,7 @@ void display_maze( unsigned short width, unsigned short height, unsigned short c
 
 // ADAPTED FROM https://weblog.jamisbuck.org/2011/2/3/maze-generation-sidewinder-algorithm.html#
 // GENERATE A MAZE OF WIDTH x HEIGHT - DRAW DURING GENERATION
-void generate_maze( unsigned short width, unsigned short height, unsigned short steps ) {
+void generate_maze( unsigned short width, unsigned short height ) {
     unsigned short x, y;
     unsigned short lastx, count;
 
@@ -310,25 +412,25 @@ void generate_maze( unsigned short width, unsigned short height, unsigned short 
         count = 1;
 
         for( x = 1; x < width - 1; x += 2 ) {
-            maze[ x ][ y ] = ' ';
+            setat( x, y, ' ', 0 );
             if( y > 1 ) {
                 // NOT ON FIRST ROW
                 if( x != width - 3 ) {
-                    // NOT AT END OF ROW, EITHER MOVE RIGHT, OR STOP AND CONNECT ONE CELL UP
+                    // NOT AT END OF ROW, EITHER MOVE RIGHT, OR STOP AND CONNECT CELLS UP
                     switch( rng( 3 ) ) {
                         case 0:
                         case 1:
                             // CONTINUE RIGHT
-                            maze[ x + 1][ y ] = ' ';
+                            setat( x + 1, y, ' ', 0 );
                             count++;
                             break;
                         case 2:
-                            // STOP AND CONNECT ONE CELL UP
+                            // STOP AND CONNECT CELLS UP
                             if( count == 1 ) {
-                                maze[ x ][ y - 1 ] = ' ';
+                                setat( x, y - 1, ' ', 0 );
                             } else {
                                 for( unsigned short connectors = 0; connectors < ( count >> 2 ) + 1; connectors++ ) {
-                                    maze[ lastx + rng( count ) * 2 ][ y - 1 ] = ' ';
+                                    setat( lastx + rng( count ) * 2, y - 1, ' ', 0 );
                                 }
                             }
                             lastx = x + 2;
@@ -336,21 +438,22 @@ void generate_maze( unsigned short width, unsigned short height, unsigned short 
                             break;
                     }
                 } else {
-                    // AT END OF ROW, STOP AND CONNECT ONE CELL UP
+                    // AT END OF ROW, STOP AND CONNECT CELLS UP
                     if( count == 1 ) {
-                        maze[ x ][ y - 1 ] = ' ';
+                        setat( x, y - 1, ' ', 0 );
                     } else {
-                        maze[ lastx + rng( count ) * 2 ][ y - 1 ] = ' ';
+                        for( unsigned short connectors = 0; connectors < ( count >> 2 ) + 1; connectors++ ) {
+                            setat( lastx + rng( count ) * 2, y - 1, ' ', 0 );
+                        }
                     }
                 }
             } else {
                 // FIRST ROW, CONNECT
                 if( x != width - 3 ) {
-                    maze[ x + 1 ][ y ] = ' ';
+                    setat( x + 1, y, ' ', 0 );
                 }
             }
         }
-        display_maze( width, height, 1, 1 );
     }
 }
 
@@ -367,24 +470,26 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
     gpu_rectangle( ORANGE, 460, 0, 640, 140 );
     gpu_rectangle( BLUE, 475, 10, 639 - boxwidth, 130 );
 
-    for( x = 0; x < width; x++ ) {
-        for( y = 0; y < height; y++ ) {
-            switch( mapmaze ? map[x][y] : maze[x][y] ) {
-                case '#':
-                    colour = BLUE;
-                    break;
-                case ' ':
-                    colour = WHITE;
-                    break;
-                case 'E':
-                    colour = MAGENTA;
-                    break;
-                case 'X':
-                    colour = YELLOW;
-                    break;
+    if( !(( level == 6 ) && ( mapmaze == 1 )) ) {
+        for( x = 0; x < width; x++ ) {
+            for( y = 0; y < height; y++ ) {
+                switch( mapmaze ? whatisat( x, y, 1) : whatisat( x, y, 0 ) ) {
+                    case '#':
+                        colour = BLUE;
+                        break;
+                    case ' ':
+                        colour = WHITE;
+                        break;
+                    case 'E':
+                        colour = MAGENTA;
+                        break;
+                    case 'X':
+                        colour = YELLOW;
+                        break;
+                }
+                if( colour != BLUE )
+                    gpu_rectangle( colour, 475 + x * boxwidth, 10 + y * boxheight, 474 + x * boxwidth + boxwidth, 9 + y * boxheight + boxheight );
             }
-            if( colour != BLUE )
-                gpu_rectangle( colour, 475 + x * boxwidth, 10 + y * boxheight, 474 + x * boxwidth + boxwidth, 9 + y * boxheight + boxheight );
         }
     }
 
@@ -395,6 +500,7 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
         }
     }
 
+    // DRAW COMPASS
     gpu_triangle( BLACK, 468, 1, 473, 10, 463, 10 );
     gpu_triangle( BLACK, 473, 10, 468, 19, 463, 10 );
     switch( direction ) {
@@ -412,19 +518,9 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
             break;
     }
 
-    switch( mappeeks ) {
-        case 4:
-            gpu_character_blit( GREEN, 462, 106, 1, 0 );
-        case 3:
-            gpu_character_blit( GREEN, 462, 114, 1, 0 );
-        case 2:
-            gpu_character_blit( GREEN, 462, 122, 1, 0 );
-        case 1:
-            gpu_character_blit( GREEN, 462, 130, 1, 0 );
-            break;
-        default:
-            break;
-    }
+    // DRAW MAPPEEKS
+    for( unsigned peek = 0; peek < mappeeks; peek++ )
+        gpu_character_blit( GREEN, 462, 130 - ( peek * 8 ), 1, 0 );
 }
 
 // CALCULATE NUMBER OF STEPS TO HIT A WALL
@@ -433,15 +529,13 @@ unsigned short counttowall( unsigned short currentx, unsigned short currenty, un
     unsigned short steps = 0, foundwall = 0;
 
     while( foundwall == 0 ) {
-        switch( maze[currentx][currenty] ) {
+        switch( whatisfront( currentx, currenty, direction, steps ) ) {
             case '#':
             case 'E':
             case 'X':
                 foundwall = 1;
                 break;
             default:
-                currentx += directionx[ direction ];
-                currenty += directiony[ direction ];
                 steps++;
                 break;
         }
@@ -450,52 +544,32 @@ unsigned short counttowall( unsigned short currentx, unsigned short currenty, un
     return( steps );
 }
 
-// FIND WHAT IS TO THE LEFT AT STEPS IN FRONT
-unsigned char whatisleft( unsigned short currentx, unsigned short currenty, unsigned short direction, unsigned short steps )
-{
-    return( maze[currentx + directionx[ direction ] * steps + leftdirectionx[ direction ]][currenty + directiony[ direction ] * steps + leftdirectiony[ direction ]] );
-}
-
-// FIND WHAT IS TO THE RIGHT AT STEPS IN FRONT
-unsigned char whatisright( unsigned short currentx, unsigned short currenty, unsigned short direction, unsigned short steps )
-{
-    return( maze[currentx + directionx[ direction ] * steps + rightdirectionx[ direction ]][currenty + directiony[ direction ] * steps + rightdirectiony[ direction ]] );
-}
-
 // DRAW LEFT or RIGHT WALLS
 void left_wall( unsigned char colour, unsigned char colour_alt, short steps )
 {
     gpu_dither( DITHERON, colour_alt);
-
     // USE RECTANGLE + TWO TRIANGLES AS FASTER THAN TWO TRIANGLES FOR LARGE AREAS
-    if( steps < MAXDEPTH -1 ) {
-        gpu_triangle( colour, perspectivex[ steps ], perspectivey[ steps ], perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], perspectivex[ steps ], perspectivey[ steps + 1 ] );
-        gpu_rectangle( colour, perspectivex[ steps ], perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
-        gpu_triangle( colour, perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], perspectivex[ steps ], 480 - perspectivey[ steps ], perspectivex[ steps ], 480 - perspectivey[ steps + 1 ] );
-    } else {
-        // TO PROVIDE THE POINT AT HORIZON
-        gpu_quadrilateral( colour, perspectivex[ steps ], perspectivey[ steps ], perspectivex[ steps + 1 ], perspectivey[ steps + 1 ],
-                                perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], perspectivex[ steps ], 480 - perspectivey[ steps ] );
-    }
-
+    gpu_triangle( colour, perspectivex[ steps ], perspectivey[ steps ], perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], perspectivex[ steps ], perspectivey[ steps + 1 ] );
+    gpu_rectangle( colour, perspectivex[ steps ], perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
+    gpu_triangle( colour, perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], perspectivex[ steps ], 480 - perspectivey[ steps ], perspectivex[ steps ], 480 - perspectivey[ steps + 1 ] );
     gpu_dither( DITHEROFF );
+    gpu_line( colour, perspectivex[ steps ], perspectivey[ steps ], perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
+    gpu_line( colour, perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
+    gpu_line( colour, perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], perspectivex[ steps ], 480 - perspectivey[ steps ] );
+    gpu_line( colour, perspectivex[ steps ], 480 - perspectivey[ steps ], perspectivex[ steps ], perspectivey[ steps ] );
 }
 void right_wall( unsigned char colour, unsigned char colour_alt, unsigned short steps )
 {
     gpu_dither( DITHERON, colour_alt);
-
     // USE RECTANGLE + TWO TRIANGLES AS FASTER THAN TWO TRIANGLES FOR LARGE AREAS
-    if( steps < MAXDEPTH -1 ) {
-        gpu_triangle( colour, 640 - perspectivex[ steps ], perspectivey[ steps ], 640 - perspectivex[ steps ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
-        gpu_rectangle( colour, 640 - perspectivex[ steps ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
-        gpu_triangle( colour, 640 - perspectivex[ steps ], 480 - perspectivey[ steps + 1 ], 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ], 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ]);
-    } else {
-        // TO PROVIDE THE POINT AT HORIZON
-        gpu_quadrilateral( colour, 640 - perspectivex[ steps ], perspectivey[ steps ], 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ],
-                                640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
-    }
-
+    gpu_triangle( colour, 640 - perspectivex[ steps ], perspectivey[ steps ], 640 - perspectivex[ steps ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
+    gpu_rectangle( colour, 640 - perspectivex[ steps ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
+    gpu_triangle( colour, 640 - perspectivex[ steps ], 480 - perspectivey[ steps + 1 ], 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ], 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ]);
     gpu_dither( DITHEROFF );
+    gpu_line( colour, 640 - perspectivex[ steps ], perspectivey[ steps ], 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ] );
+    gpu_line( colour, 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ], 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
+    gpu_line( colour, 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
+    gpu_line( colour, 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps ], perspectivey[ steps ] );
 }
 
 void drawleft( unsigned short steps, unsigned char totheleft ) {
@@ -506,7 +580,8 @@ void drawleft( unsigned short steps, unsigned char totheleft ) {
             break;
         case ' ':
             // GAP
-            gpu_rectangle( GREY2, 0, perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
+            gpu_rectangle( GREY2, perspectivex[ steps ], perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
+            gpu_line( GREY1, perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480- perspectivey[ steps + 1 ] );
             break;
         case 'E':
             left_wall( MAGENTA, DKMAGENTA, steps );
@@ -527,7 +602,8 @@ void drawright( unsigned short steps, unsigned char totheright ) {
             break;
         case ' ':
             // GAP
-            gpu_rectangle( GREY2, 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], 640, 480 - perspectivey[ steps + 1 ] );
+            gpu_rectangle( GREY2, 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps ], 480 - perspectivey[ steps + 1 ] );
+            gpu_line( GREY1, 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ],  480 - perspectivey[ steps + 1 ] );
             break;
         case 'E':
             right_wall( MAGENTA, DKMAGENTA, steps );
@@ -546,11 +622,12 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
     // SET START LOCATION TO TOP LEFT FACING EAST
     unsigned short newx = 1, newy = 1, direction = 1, newdirection = 1, currentx = 1, currenty = 1, visiblesteps, mappeeks = 4, dead = 0;
     short steps;
+    unsigned char ghostdrawn;
 
     // LOOP UNTIL REACHED THE EXIT OR DEAD
     while( ( ( currentx != width - 2 ) || ( currenty != height - 3 ) ) && ( dead == 0 ) ) {
         // SET CURRENT LOCATION TO VISITED
-        map[currentx][currenty] = ' ';
+        setat( currentx, currenty, ' ', 1 );
 
         await_vblank();
         tpu_cs();
@@ -560,43 +637,18 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
         visiblesteps = counttowall( currentx, currenty, direction );
         if( visiblesteps <= MAXDEPTH - 1 ) {
             // WALL IS NOT AT HORIZON
-            switch( maze[currentx + directionx[direction] * visiblesteps][currenty + directiony[direction] * visiblesteps] ) {
+            switch( whatisfront( currentx, currenty, direction, visiblesteps ) ) {
                 case 'X':
-                    gpu_rectangle( YELLOW, 0, perspectivey[ visiblesteps ], 640, 480 - perspectivey[ visiblesteps ] );
-                    switch( visiblesteps ) {
-                        case 1:
-                            gpu_character_blit( GREEN, 192, perspectivey[ visiblesteps ] + 16, 'E', 3 );
-                            gpu_character_blit( GREEN, 256, perspectivey[ visiblesteps ] + 16, 'X', 3 );
-                            gpu_character_blit( GREEN, 320, perspectivey[ visiblesteps ] + 16, 'I', 3 );
-                            gpu_character_blit( GREEN, 384, perspectivey[ visiblesteps ] + 16, 'T', 3 );
-                            break;
-                        case 2:
-                            gpu_character_blit( GREEN, 256, perspectivey[ visiblesteps ] + 8, 'E', 2 );
-                            gpu_character_blit( GREEN, 288, perspectivey[ visiblesteps ] + 8, 'X', 2 );
-                            gpu_character_blit( GREEN, 320, perspectivey[ visiblesteps ] + 8, 'I', 2 );
-                            gpu_character_blit( GREEN, 352, perspectivey[ visiblesteps ] + 8, 'T', 2 );
-                            break;
-                        case 3:
-                            gpu_character_blit( GREEN, 288, perspectivey[ visiblesteps ] + 4, 'E', 1 );
-                            gpu_character_blit( GREEN, 304, perspectivey[ visiblesteps ] + 4, 'X', 1 );
-                            gpu_character_blit( GREEN, 320, perspectivey[ visiblesteps ] + 4, 'I', 1 );
-                            gpu_character_blit( GREEN, 336, perspectivey[ visiblesteps ] + 4, 'T', 1 );
-                            break;
-                        case 4:
-                            gpu_character_blit( GREEN, 304, perspectivey[ visiblesteps ] + 2, 'E', 0 );
-                            gpu_character_blit( GREEN, 312, perspectivey[ visiblesteps ] + 2, 'X', 0 );
-                            gpu_character_blit( GREEN, 320, perspectivey[ visiblesteps ] + 2, 'I', 0 );
-                            gpu_character_blit( GREEN, 328, perspectivey[ visiblesteps ] + 2, 'T', 0 );
-                            break;
-                        default:
-                            break;
+                    gpu_rectangle( YELLOW, perspectivex[ visiblesteps ], perspectivey[ visiblesteps ], 640 - perspectivex[ visiblesteps ], 480 - perspectivey[ visiblesteps ] );
+                    if( visiblesteps <= 4 ) {
+                        gpu_outputstringcentre( DKGREEN, 320, perspectivey[ visiblesteps ] + ( 2 << ( 4 - visiblesteps ) ), "EXIT", 4 - visiblesteps );
                     }
                     break;
                 case 'E':
-                    gpu_rectangle( MAGENTA, 0, perspectivey[ visiblesteps ], 640, 480 - perspectivey[ visiblesteps ] );
+                    gpu_rectangle( MAGENTA, perspectivex[ visiblesteps ], perspectivey[ visiblesteps ], 640 - perspectivex[ visiblesteps ], 480 - perspectivey[ visiblesteps ] );
                     break;
                 case '#':
-                    gpu_rectangle( GREY2, 0, perspectivey[ visiblesteps ], 640, 480 - perspectivey[ visiblesteps ] );
+                    gpu_rectangle( GREY2, perspectivex[ visiblesteps ], perspectivey[ visiblesteps ], 640 - perspectivex[ visiblesteps ], 480 - perspectivey[ visiblesteps ] );
                     break;
                 default:
                     break;
@@ -606,22 +658,27 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
         // MOVE BACKWARDS FROM WALL
         for( steps = min( visiblesteps - 1, MAXDEPTH - 1 ); steps > 0; steps-- ) {
             // DRAW PILL
-            if( maze[ currentx + directionx[ direction ] * steps ][ currenty + directiony[ direction ] * steps ] == ' ' && map[ currentx + directionx[ direction ] * steps ][ currenty + directiony[ direction ] * steps ] != ' ' ) {
+            if( ( whatisfront( currentx, currenty, direction, steps ) == ' ' ) && ( whatisat( currentx + directionx[ direction ] * steps, currenty + directiony[ direction ] * steps, 1 ) != ' ' ) ) {
                 draw_pill( steps );
-            }
-
-            // DRAW GHOST
-            for( unsigned ghost = 0; ghost < 4; ghost++ ) {
-                if( ghost <= level ) {
-                    if( ( currentx + directionx[ direction ] * steps == ghostx[ ghost ] ) && ( currenty + directiony[ direction ] * steps == ghosty[ ghost ] ) ) {
-                        draw_ghost( steps, ghost, direction );
-                    }
-                }
             }
 
             // DRAW SIDE WALLS
             drawleft( steps, whatisleft( currentx, currenty, direction, steps ) );
             drawright( steps, whatisright( currentx, currenty, direction, steps ) );
+        }
+
+        // DRAW GHOST IF ONE IS VISIBLE
+        ghostdrawn = 0;
+        for( steps = 1; ( steps <= min( visiblesteps - 1, MAXDEPTH - 1 ) ) && ( ghostdrawn == 0 ); steps++ ) {
+            // DRAW GHOST
+            for( unsigned ghost = 0; ghost < 4; ghost++ ) {
+                if( ghost <= level ) {
+                    if( ( currentx + directionx[ direction ] * steps == ghostx[ ghost ] ) && ( currenty + directiony[ direction ] * steps == ghosty[ ghost ] ) ) {
+                        draw_ghost( steps, ghost, direction );
+                        ghostdrawn = 1;
+                    }
+                }
+            }
         }
 
         // FINISH UPTO CORNERS
@@ -649,18 +706,24 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
 
             // FORWARD
             if( get_buttons() & 8 ) {
-                if( ( maze[ currentx + directionx[direction] ][ currenty + directiony[direction] ] == ' '  ) || ( maze[ currentx + directionx[direction] ][ currenty + directiony[direction] ] == 'X'  ) ) {
-                    newx += directionx[direction];
-                    newy += directiony[direction];
+                switch( whatisfront( currentx, currenty, direction, 1 ) ) {
+                    case ' ':
+                    case 'X':
+                        newx += directionx[direction];
+                        newy += directiony[direction];
+                        break;
                 }
                 while( get_buttons() & 8 );
             }
 
             // BACKWARD
             if( get_buttons() & 16 ) {
-                if( ( maze[ currentx - directionx[direction] ][ currenty - directiony[direction] ] == ' '  ) || ( maze[ currentx - directionx[direction] ][ currenty - directiony[direction] ] == 'X'  ) ) {
-                    newx -= directionx[direction];
-                    newy -= directiony[direction];
+                switch( whatisbehind( currentx, currenty, direction, 1 ) ) {
+                    case ' ':
+                    case 'X':
+                        newx -= directionx[direction];
+                        newy -= directiony[direction];
+                        break;
                 }
                 while( get_buttons() & 16 );
             }
@@ -689,8 +752,7 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
     return dead;
 }
 
-void main( void )
-{
+int main( void ) {
     unsigned short firstrun = 1;
 
     INITIALISEMEMORY();
@@ -705,6 +767,7 @@ void main( void )
     netppm_decoder( &ulx3sppm[0], ulx3sbitmap );
 
     unsigned short levelselected;
+    level = 0;
 
 	while(1) {
         // SETUP THE SCREEN BLUE/GREEN BACKGROUND
@@ -714,26 +777,7 @@ void main( void )
         set_background( 0, 0, BKG_RAINBOW );
 
         if( firstrun ) {
-            gpu_outputstringcentre( YELLOW, 320, 8, "3D MONSTER MAZE", 2 );
-
-            // DISPLAY ULX3 BITMAP
-            bitmapblit( ulx3sbitmap, 320, 219, 160, 131, BLUE );
-
-            // DRAW JOYSTICK AND LABEL
-            gpu_circle( BLACK, 480, 340, 8, 1 );
-            gpu_circle( BLACK, 480, 358, 8, 1 );
-            gpu_circle( BLACK, 440, 358, 8, 1 );
-            gpu_circle( BLACK, 520, 358, 8, 1 );
-            gpu_circle( BLACK, 400, 358, 8, 1 );
-            gpu_circle( BLACK, 360, 358, 8, 1 );
-            gpu_outputstringcentre( CYAN, 480, 322, "STEP", 0 );
-            gpu_outputstringcentre( CYAN, 480, 368, "BACK", 0 );
-            gpu_outputstringcentre( CYAN, 440, 368, "TURN", 0 );
-            gpu_outputstringcentre( CYAN, 440, 376, "LEFT", 0 );
-            gpu_outputstringcentre( CYAN, 520, 368, "TURN", 0 );
-            gpu_outputstringcentre( CYAN, 520, 376, "RIGHT", 0 );
-            gpu_outputstringcentre( CYAN, 400, 368, "PEEK", 0 );
-            gpu_outputstringcentre( CYAN, 360, 368, "POWER", 0 );
+            drawwelcome();
             firstrun = 0;
         }
 
@@ -765,9 +809,9 @@ void main( void )
 
         // GENERATE THE MAZE
         gpu_cs();
-        tpu_outputstringcentre( 29, TRANSPARENT, YELLOW, "Generating Maze - Best to take notes!" );
+        tpu_outputstringcentre( 29, TRANSPARENT, YELLOW, "Generating Maze" );
         initialise_maze( levelwidths[level], levelheights[level] );
-        generate_maze( levelwidths[level], levelheights[level], levelgenerationsteps[level] );
+        generate_maze( levelwidths[level], levelheights[level] );
         display_maze( levelwidths[level], levelheights[level], 1, 1 );
 
         // WAIT TO ENTER THE MAZE

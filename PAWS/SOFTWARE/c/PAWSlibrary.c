@@ -1465,7 +1465,7 @@ typedef struct block {
 }		block_t;
 
 #ifndef MALLOC_MEMORY
-#define MALLOC_MEMORY (unsigned int)CLUSTERBUFFER - 0x10800000
+#define MALLOC_MEMORY ( 1024 * 1024 )
 #endif
 
 #ifndef ALLOC_UNIT
@@ -1477,22 +1477,6 @@ typedef struct block {
 
 static block_t *head = NULL;
 unsigned short __malloc_init = 0;
-
-/* stats prints some debug information regarding the
- * current program break and the blocks on the free list */
-void
-stats(char *prefix)
-{
-	printf("[%s] program break: %x\n", prefix, MEMORYTOP);
-	block_t        *ptr = head;
-	printf("[%s] free list: \n", prefix);
-	int		c = 0;
-	while (ptr) {
-		printf("(%d) <%d> (size: %d)\n", c, ptr, ptr->size);
-		ptr = ptr->next;
-		c++;
-	}
-}
 
 /* fl_remove removes a block from the free list
  * and adjusts the head accordingly */
@@ -1587,24 +1571,18 @@ void *malloc(size_t size) {
 		: ALLOC_UNIT;
 
     if( !__malloc_init ) {
+        head = (block_t *)MEMORYTOP - MALLOC_MEMORY;
+        MEMORYTOP -= MALLOC_MEMORY;
+        head->next = NULL;
+        head->prev = NULL;
+        head->size = MALLOC_MEMORY - sizeof(block_t);
         __malloc_init = 1;
-        ptr = (block_t *)CLUSTERBUFFER;
-        printf( "MALLOC Reserved: <%x> at <%x>\n", MALLOC_MEMORY, ptr );
-        ptr->next = NULL;
-        ptr->prev = NULL;
-        ptr->size = MALLOC_MEMORY - sizeof(block_t);
-        if (MALLOC_MEMORY > size + sizeof(block_t)) {
-            newptr = split(ptr, size);
-            fl_add(newptr);
-        }
-        return BLOCK_MEM(ptr);
     }
 
 	ptr = head;
 	while (ptr) {
 		if (ptr->size >= size + sizeof(block_t)) {
 			block_mem = BLOCK_MEM(ptr);
-            printf("MALLOC Request: Size: <%x> Given: <%x> at <%x>\n", size, alloc_size, block_mem);
 			fl_remove(ptr);
 			if (ptr->size == size) {
 				// we found a perfect sized block, return it
@@ -1629,7 +1607,6 @@ void *malloc(size_t size) {
 
 void free(void *ptr) {
 	fl_add(BLOCK_HEADER(ptr));
-	stats("before scan");
 	scan_merge();
 }
 
@@ -1637,11 +1614,18 @@ void
 _cleanup()
 {
 	head = NULL;
-	stats("_cleanup end");
 }
 
 
-// ALLOCATE MEMORY, IN UNITS OF CLUSTERSIZE ( allows extra for reading in files )
+// SIMPLE FILE HANDLING - READ ONLY AT PRESENT - LOADS FILE INTO MEMORY - MAX SIZE DETERMINED BY MALLOC_MEMORY, DEFAULT 1M
+typedef struct filepointer {
+	unsigned short sdcard_filenumber;
+    unsigned int   filesize;
+	unsigned int   cursor;
+    unsigned char *fileinmemory;
+} FILE;
+
+// ALLOCATE MEMORY FOR FILES, IN UNITS OF CLUSTERSIZE ( allows extra for reading in files )
 unsigned char *filemalloc( unsigned int size ) {
     unsigned int numberofclusters = size / CLUSTERSIZE;
 
@@ -1649,6 +1633,38 @@ unsigned char *filemalloc( unsigned int size ) {
         numberofclusters++;
 
     return( malloc( numberofclusters * CLUSTERSIZE ) );
+}
+
+FILE *fopen( const char *filename, const char *mode ) {
+    FILE *filepointer;
+    unsigned char splitfilename[[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 }, splitfilename[4] = { 0, 0, 0, 0 };
+
+    if( mode[0] != 'r' ) {
+        // READ ONLY
+        return( NULL );
+    } else {
+        // SPLIT FILENAME AND EXTENSION
+        sdcard_filenumber = sdcard_findfilenumber( splitfilename, splitfilename );
+        if( sdcard_filenumber == 0xffff ) {
+            // FILE NOT FOUND
+            return( NULL );
+        } else {
+            filepointer = malloc( sizeof(FILE) );
+            filepointer -> sdcard_filenumber = sdcard_filenumber;
+            filepointer -> filesize = sdcard_findfilesize( sdcard_filenumber );
+            filepointer -> cursor = 0;
+            filepointer -> fileinmemory = filemalloc( filepointer -> filesize );
+
+            sdcard_readfile( filepointer -> sdcard_filenumber, filepointer -> fileinmemory );
+            return( filepointer );
+        }
+    }
+}
+
+int fclose( FILE *stream ) {
+    free( stream -> fileinmemory );
+    free( stream );
+    return( 0 );
 }
 
 // SETUP MEMORY POINTERS FOR THE SDCARD - ALREADY PRE-LOADED BY THE BIOS

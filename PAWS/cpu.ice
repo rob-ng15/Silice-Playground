@@ -44,13 +44,12 @@ algorithm PAWSCPU (
 
     // RISC-V REGISTER WRITER
     int32   result = uninitialized;
-    int32   Aresult = uninitialized;
+    int32   AMOmemory = uninitialized;
     uint1   writeRegister = uninitialized;
 
     // RISC-V REGISTER READER
     int32   sourceReg1 = uninitialized;
     int32   sourceReg2 = uninitialized;
-    int32   sourceReg3 = uninitialized;
 
     // RISC-V 32 BIT INSTRUCTION DECODER
     int32   immediateValue = uninitialized;
@@ -68,7 +67,26 @@ algorithm PAWSCPU (
     uint32  storeAddress = uninitialized;
     uint32  AUIPCLUI = uninitialized;
 
-    // CSR REGISTERS
+    // ALU BLOCKS
+    aluA ALUA(
+        opCode <: opCode,
+        function7 <: function7,
+        memoryinput <: AMOmemory,
+        sourceReg2 <: sourceReg2
+    );
+
+    aluMdivideremain ALUMD(
+        function3 <: function3,
+        dividend <: sourceReg1,
+        divisor <: sourceReg2
+    );
+
+    aluMmultiply ALUMM(
+        function3 <: function3,
+        factor_1 <: sourceReg1,
+        factor_2 <: sourceReg2
+    );
+
     CSRblock CSR(
         instruction <: instruction,
         SMT <: SMT
@@ -91,7 +109,9 @@ algorithm PAWSCPU (
     registers_1.wenable1 := 1;
     registers_2.wenable1 := 1;
 
-    // CSR instructions retired increment flag
+    // ALU START FLAGS
+    ALUMD.start := 0;
+    ALUMM.start := 0;
     CSR.incCSRinstret := 0;
 
     while(1) {
@@ -212,8 +232,16 @@ algorithm PAWSCPU (
                 switch( function7 ) {
                     case 7b0000001: {
                         switch( function3[2,1] ) {
-                            case 1b0: { ( result ) = multiplication( function3, sourceReg1, sourceReg2 ); }
-                            case 1b1: { ( result ) = divideremainder( function3, sourceReg1, sourceReg2 ); }
+                            case 1b0: {
+                                ALUMM.start = 1;
+                                while( ALUMM.busy ) {}
+                                result = ALUMM.result;
+                            }
+                            case 1b1: {
+                                ALUMD.start = 1;
+                                while( ALUMD.busy ) {}
+                                result = ALUMD.result;
+                            }
                         }
                     }
                     default: { ( result ) = aluR( opCode, function3, function7, rs1, sourceReg1, sourceReg2 ); }
@@ -230,6 +258,9 @@ algorithm PAWSCPU (
                     case 5b00010: {
                         // LR.W
                         writeRegister = 1;
+                        Icacheflag = 0;
+
+                        // LOAD 32 bit
                         address = sourceReg1;
                         readmemory = 1;
                         while( memorybusy ) {}
@@ -242,6 +273,7 @@ algorithm PAWSCPU (
                     case 5b00011: {
                         // SC.W
                         writeRegister = 1;
+                        Icacheflag = 0;
                         result = 0;
 
                         address = sourceReg1;
@@ -266,17 +298,17 @@ algorithm PAWSCPU (
                         address = sourceReg1 + 2;
                         readmemory = 1;
                         while( memorybusy ) {}
-                        ( result ) = halfhalfword( readdata, lowWord );
+                        ( AMOmemory ) = halfhalfword( readdata, lowWord );
 
-                        ( Aresult ) = aluA( function7, result, sourceReg2 );
+                        // ALGORITHM ALUA WILL AUTOMATICALLY TRIGGER AND GENERATE RESULT
 
                         // STORE 32 bit
                         address = sourceReg1;
-                        writedata = Aresult[0,16];
+                        writedata = ALUA.result[0,16];
                         writememory = 1;
                         while( memorybusy ) {}
                         address = sourceReg1 + 2;
-                        writedata = Aresult[16,16];
+                        writedata = ALUA.result[16,16];
                         writememory = 1;
                         while( memorybusy ) {}
                     }

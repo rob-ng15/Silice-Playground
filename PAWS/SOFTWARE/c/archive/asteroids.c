@@ -394,40 +394,32 @@ unsigned char find_asteroid_space( void ) {
     return( ( spaces_free == 1 ) ? 0xff : asteroid_space );
 }
 
-void move_asteroids( void ) {
-    // SETUP STACKPOINTER FOR THE SMT THREAD
-    asm volatile ("li sp ,0x2000");
+void move_asteroids( void )
+{
+    for( unsigned char asteroid_number = 0; asteroid_number < MAXASTEROIDS; asteroid_number++ ) {
+        if( ( asteroid_active[asteroid_number] != 0 ) && ( asteroid_active[asteroid_number] < 3 ) ) {
+            update_sprite( ASN( asteroid_number ), asteroid_directions[ asteroid_direction[asteroid_number] ] );
+        }
 
-    while(1) {
-        await_vblank();
-        set_timer1khz( 4, 1 );
-
-        for( unsigned char asteroid_number = 0; asteroid_number < MAXASTEROIDS; asteroid_number++ ) {
-            if( ( asteroid_active[asteroid_number] != 0 ) && ( asteroid_active[asteroid_number] < 3 ) ) {
-                update_sprite_SMT( ASN( asteroid_number ), asteroid_directions[ asteroid_direction[asteroid_number] ] );
-            }
-
-            // UFO
-            if(  asteroid_active[asteroid_number] == 3 ) {
-                update_sprite_SMT( ASN( asteroid_number ), ufo_directions[ufo_leftright + ( level > 2 ? 2 : 0 )] );
-                if( get_sprite_attribute_SMT( ASN( asteroid_number), 0 ) == 0 ) {
-                    // UFO OFF SCREEN
-                    set_ufo_sprite( 0 );
-                    asteroid_active[asteroid_number] = 0;
-                    ufo_sprite_number = 0xff;
-                }
-            }
-
-            // EXPLOSION - STATIC and countdown
-            if( asteroid_active[asteroid_number] > 5 )
-                asteroid_active[asteroid_number]--;
-
-            if( asteroid_active[asteroid_number] == 5 ) {
+        // UFO
+        if(  asteroid_active[asteroid_number] == 3 ) {
+            update_sprite( ASN( asteroid_number ), ufo_directions[ufo_leftright + ( level > 2 ? 2 : 0 )] );
+            if( get_sprite_attribute( ASN( asteroid_number), 0 ) == 0 ) {
+                // UFO OFF SCREEN
+                set_ufo_sprite( 0 );
                 asteroid_active[asteroid_number] = 0;
-                set_sprite_SMT( ASN( asteroid_number ), 0, 0, 0, 0, 0, 0 );
+                ufo_sprite_number = 0xff;
             }
         }
-    wait_timer1khz( 1 );
+
+        // EXPLOSION - STATIC and countdown
+        if( asteroid_active[asteroid_number] > 5 )
+            asteroid_active[asteroid_number]--;
+
+        if( asteroid_active[asteroid_number] == 5 ) {
+            asteroid_active[asteroid_number] = 0;
+            set_sprite( ASN( asteroid_number ), 0, 0, 0, 0, 0, 0 );
+        }
     }
 }
 
@@ -769,9 +761,7 @@ void main( void )
     while( inputcharacter_available() )
         uartData = inputcharacter();
 
-    // INITIALISE ALL VARIABLES AND START THE ASTEROID MOVING THREAD
     setup_game();
-    SMTSTART( (unsigned int )move_asteroids );
 
     while(1) {
         counter++;
@@ -813,7 +803,7 @@ void main( void )
 
         // AWAIT VBLANK and SET DELAY
         await_vblank();
-        set_timer1khz( 4, 0 );
+        set_timer1khz( 8, 0 );
 
         // BEEP / BOOP
         beepboop();
@@ -975,6 +965,9 @@ void main( void )
         // CHECK IF HIT BULLET -> ASTEROID
         check_hit();
         check_ufo_bullet_hit();
+
+        // UPDATE ASTEROIDS
+        move_asteroids();
 
         wait_timer1khz( 0 );
     }

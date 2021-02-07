@@ -257,7 +257,6 @@ int printf( const char *,... );
 
 // SIMPLE MALLOC
 extern void INITIALISEMEMORY( void );
-unsigned char *filemealloc( unsigned int );
 void *malloc(size_t );
 void free(void *);
 
