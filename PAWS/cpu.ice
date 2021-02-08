@@ -90,42 +90,20 @@ algorithm PAWSCPU (
         factor_2 <: sourceReg2
     );
 
-    // BASE REGISTER & REGISTER ALU OPERATIONS + SINGLE CYCLE B EXTENSION OPERATIONS
+    // BASE REGISTER + IMMEDIATE ALU OPERATIONS + B EXTENSION OPERATIONS
+    aluI ALUI(
+        function3 <: function3,
+        function7 <: function7,
+        IshiftCount <: IshiftCount,
+        sourceReg1 <: sourceReg1,
+        immediateValue <: immediateValue
+    );
+
+    // BASE REGISTER & REGISTER ALU OPERATIONS + B EXTENSION OPERATIONS
     aluR ALUR(
-        opCode <: opCode,
         function3 <: function3,
         function7 <: function7,
         rs1 <: rs1,
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2
-    );
-    // B EXTENSION GORC XPERM + SBET ( sbset is single cycle but shares same function7 coding as GORC XPERM )
-    aluR7b0010100 ALUR7b0010100(
-        function3 <: function3,
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2
-    );
-    // B EXTENSION CLMUL + MIN[U] MAX[U] ( min and max are single cycle but share same function7 coding as CLMUL operations )
-    aluR7b0000101 ALUR7b0000101(
-        function3 <: function3,
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2
-    );
-    // B EXTENSION SHFL UNSHFL BEXT + PACK PACKH ( pack and packh are single cycle but share same function7 coding as SHFL UNSHFL )
-    aluR7b0000100 ALUR7b0000100(
-        function3 <: function3,
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2
-    );
-    // B EXTENSION GREV + SBINV ( sbinv is single cycle but shares same function7 coding as GREV )
-    aluR7b0110100 ALUR7b0110100(
-        function3 <: function3,
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2
-    );
-    // B EXTENSION BDEP BFP + PACKU SBCLR SBEXT ( packu, sbclr and sbext are single cycle share share same function7 coding as BDEP BFP )
-    aluR7b0100100 ALUR7b0100100(
-        function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2
     );
@@ -155,11 +133,8 @@ algorithm PAWSCPU (
     // ALU START FLAGS
     ALUMD.start := 0;
     ALUMM.start := 0;
-    ALUR7b0010100.start := 0;
-    ALUR7b0000101.start := 0;
-    ALUR7b0000100.start := 0;
-    ALUR7b0110100.start := 0;
-    ALUR7b0100100.start := 0;
+    ALUI.start := 0;
+    ALUR.start := 0;
     CSR.incCSRinstret := 0;
 
     while(1) {
@@ -272,7 +247,9 @@ algorithm PAWSCPU (
             case 5b00100: {
                 // ALUI ( BASE + SOME B EXTENSION )
                 writeRegister = 1;
-                ( result ) = aluI( opCode, function3, function7, immediateValue, IshiftCount, sourceReg1 );
+                ALUI.start = 1;
+                while( ALUI.busy ) {}
+                result = ALUI.result;
             }
             case 5b01100: {
                 // ALUR ( BASE + M EXTENSION + SOME B EXTENSION - B EXTENSION SPLIT ACROSS MULTIPLE BLOCKS AND IN MAIN BLOCK)
@@ -292,32 +269,11 @@ algorithm PAWSCPU (
                             }
                         }
                     }
-                    case 7b0010100: {
-                        ALUR7b0010100.start = 1;
-                        while( ALUR7b0010100.busy ) {}
-                        result = ALUR7b0010100.result;
+                    default: {
+                        ALUR.start = 1;
+                        while( ALUR.busy ) {}
+                        result = ALUR.result;
                     }
-                    case 7b0000101: {
-                        ALUR7b0000101.start = 1;
-                        while( ALUR7b0000101.busy ) {}
-                        result = ALUR7b0000101.result;
-                    }
-                    case 7b0000100: {
-                        ALUR7b0000100.start = 1;
-                        while( ALUR7b0000100.busy ) {}
-                        result = ALUR7b0000100.result;
-                    }
-                    case 7b0110100: {
-                        ALUR7b0110100.start = 1;
-                        while( ALUR7b0110100.busy ) {}
-                        result = ALUR7b0110100.result;
-                    }
-                    case 7b0100100: {
-                        ALUR7b0100100.start = 1;
-                        while( ALUR7b0100100.busy ) {}
-                        result = ALUR7b0100100.result;
-                    }
-                    default: { result = ALUR.result; }
                 }
             }
             case 5b11100: {

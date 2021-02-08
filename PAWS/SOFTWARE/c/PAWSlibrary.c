@@ -1309,14 +1309,41 @@ int move( int y, int x ) {
 }
 
 int addch( unsigned char ch ) {
-    __curses_character[ __curses_x ][ __curses_y ] = ch;
-    __curses_background[ __curses_x ][ __curses_y ] = __curses_back;
-    __curses_foreground[ __curses_x ][ __curses_y ] = __curses_fore;
-    if( __curses_x == 79 ) {
-        __curses_x = 0;
-        __curses_y = ( __curses_y == 29 ) ? 0 : __curses_y + 1;
-    } {
-        __curses_x++;
+    switch( ch ) {
+        case '\b': {
+            // BACKSPACE
+            if( __curses_x ) {
+                __curses_x--;
+            } else {
+                if( __curses_y ) {
+                    __curses_y--;
+                    __curses_x = 79;
+                }
+            }
+            break;
+        }
+        case '\n': {
+            // LINE FEED
+            __curses_x = 0;
+            __curses_y = ( __curses_y == 29 ) ? 0 : __curses_y + 1;
+            break;
+        }
+        case '\r': {
+            // CARRIAGE RETURN
+            __curses_x = 0;
+            break;
+        }
+        default: {
+            __curses_character[ __curses_x ][ __curses_y ] = ch;
+            __curses_background[ __curses_x ][ __curses_y ] = __curses_back;
+            __curses_foreground[ __curses_x ][ __curses_y ] = __curses_fore;
+            if( __curses_x == 79 ) {
+                __curses_x = 0;
+                __curses_y = ( __curses_y == 29 ) ? 0 : __curses_y + 1;
+            } {
+                __curses_x++;
+            }
+        }
     }
 
     return( true );
@@ -1637,16 +1664,33 @@ unsigned char *filemalloc( unsigned int size ) {
 
 FILE *fopen( const char *filename, const char *mode ) {
     FILE *filepointer;
-    unsigned char splitfilename[[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 }, splitfilename[4] = { 0, 0, 0, 0 };
+    unsigned short sdcard_filenumber;
+    unsigned char splitfilename[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 }, splitextension[4] = { 0, 0, 0, 0 };
+    unsigned short i, j;
 
     if( mode[0] != 'r' ) {
         // READ ONLY
         return( NULL );
     } else {
         // SPLIT FILENAME AND EXTENSION
-        sdcard_filenumber = sdcard_findfilenumber( splitfilename, splitfilename );
+        i = 0; j = 0;
+        while( filename[i] && ( filename[i] != '.' ) && ( i < 8 ) ) {
+            splitfilename[i] = filename[i];
+            i++;
+        }
+        if( filename[i] == '.' ) {
+            i++;
+            while( filename[i] && ( j < 3 ) ) {
+                splitextension[j] = filename[i];
+                i++;
+            }
+        }
+        printf( "Filename <%s> Split to <%s> <%s>\n", filename, splitfilename, splitextension);
+
+        sdcard_filenumber = sdcard_findfilenumber( splitfilename, splitextension );
         if( sdcard_filenumber == 0xffff ) {
             // FILE NOT FOUND
+            printf( "FILE NOT FOUND\n" );
             return( NULL );
         } else {
             filepointer = malloc( sizeof(FILE) );
@@ -1656,15 +1700,20 @@ FILE *fopen( const char *filename, const char *mode ) {
             filepointer -> fileinmemory = filemalloc( filepointer -> filesize );
 
             sdcard_readfile( filepointer -> sdcard_filenumber, filepointer -> fileinmemory );
+            printf( "File size <%d> read into memory at <%x>\n", filepointer -> filesize, filepointer -> fileinmemory );
             return( filepointer );
         }
     }
 }
 
 int fclose( FILE *stream ) {
-    free( stream -> fileinmemory );
-    free( stream );
-    return( 0 );
+    if( stream ) {
+        free( stream -> fileinmemory );
+        free( stream );
+        return( 0 );
+    } else {
+        return( 1 );
+    }
 }
 
 // SETUP MEMORY POINTERS FOR THE SDCARD - ALREADY PRE-LOADED BY THE BIOS

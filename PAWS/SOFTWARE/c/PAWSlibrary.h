@@ -253,7 +253,16 @@ extern void SMTSTOP( void );
 extern void SMTSTART( unsigned int );
 
 // SIMPLE STANDARD LIBRARY FUNCTIONS
+typedef struct filepointer {
+	unsigned short sdcard_filenumber;
+    unsigned int   filesize;
+	unsigned int   cursor;
+    unsigned char *fileinmemory;
+} FILE;
+
 int printf( const char *,... );
+FILE *fopen( const char *, const char * );
+int fclose( FILE * );
 
 // SIMPLE MALLOC
 extern void INITIALISEMEMORY( void );

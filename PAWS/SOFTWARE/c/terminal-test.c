@@ -10,14 +10,20 @@ void terminalrefresh( void ) {
 }
 
 void main( void ) {
+    int i;
+
     INITIALISEMEMORY();
+
     // set up curses library
     initscr();
+    start_color();
 
     SMTSTART( (unsigned int )terminalrefresh );
 
-    for( unsigned char i = 0; i < 255; i++ ) {
-        addch( i );
+    move( 0, 0 );
+    for( i = 1; i < 8 ; i++ ) {
+        attron( i );
+        printw( "Terminal Test: Colour <%d>\n", i );
     }
 
     while(1) {

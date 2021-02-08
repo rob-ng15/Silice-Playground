@@ -388,8 +388,8 @@ void handleTimer(int signal) {
     // handle alien movements
     if (--aliens.paintWait <= 0) {
         // time to repaint one row of aliens (speeds up as you shoot aliens)
-        aliens.paintWait = (int) (PAINT_WAIT * (aliens.count
-            / (aliens.cols * aliens.rows)));;
+        aliens.paintWait = 2;
+        //aliens.paintWait = (int) (PAINT_WAIT * (aliens.count / (aliens.cols * aliens.rows)));;
         aliens.paintRow--;
         paintAlienRow(aliens.paintRow, 0);
         refresh();

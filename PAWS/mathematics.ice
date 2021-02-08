@@ -104,82 +104,127 @@ algorithm aluMmultiply(
 }
 
 // BASE IMMEDIATE + B extensions
-circuitry aluI (
-    input   opCode,
-    input   function3,
-    input   function7,
-    input   immediateValue,
-    input   IshiftCount,
-    input   sourceReg1,
+algorithm aluI (
+    input   uint1   start,
+    output! uint1   busy,
 
-    output  result
-) {
-    switch( function3 ) {
-        case 3b000: { result = sourceReg1 + immediateValue; }
-        case 3b001: {
-            switch( function7 ) {
-                case 7b0110000: {
-                    switch( IshiftCount ) {
-                        case 5b00000: {
-                            // CLZ
-                            if( sourceReg1 == 0 ) {
-                                result = 32;
-                            } else {
-                                result = 0;
-                                while( ~sourceReg1[31,1] ) {
-                                    result = result + 1;
-                                    sourceReg1 = { sourceReg1[0,31], 1b0 };
+    input   uint3   function3,
+    input   uint7   function7,
+    input   uint5   IshiftCount,
+    input   uint32  sourceReg1,
+    input   uint32  immediateValue,
+
+    output! uint32   result
+) <autorun> {
+    uint32  bitcount = uninitialized;
+    busy = 0;
+
+    while(1) {
+        if( start) {
+            switch( function3 ) {
+                case 3b001: {
+                    switch( function7 ) {
+                        case 7b0110000: {
+                            switch( IshiftCount ) {
+                                case 5b00000: {
+                                    // CLZ
+                                    if( sourceReg1 == 0 ) {
+                                        result = 32;
+                                    } else {
+                                        busy = 1;
+                                        bitcount = sourceReg1;
+                                        result = 0;
+                                        ++:
+                                        while( ~bitcount[31,1] ) {
+                                            result = result + 1;
+                                            bitcount = { bitcount[0,31], 1b0 };
+                                        }
+                                        busy = 0;
+                                    }
                                 }
-                            }
-                        }
-                        case 5b00001: {
-                            // CTZ
-                            if( sourceReg1 == 0 ) {
-                                result = 32;
-                            } else {
-                                result = 0;
-                                while( ~sourceReg1[0,1] ) {
-                                    result = result + 1;
-                                    sourceReg1 = { 1b0, sourceReg1[1,31] };
+                                case 5b00001: {
+                                    // CTZ
+                                    if( sourceReg1 == 0 ) {
+                                        result = 32;
+                                    } else {
+                                        busy = 1;
+                                        bitcount = sourceReg1;
+                                        result = 0;
+                                        ++:
+                                        while( ~bitcount[0,1] ) {
+                                            result = result + 1;
+                                            bitcount = { 1b0, bitcount[1,31] };
+                                        }
+                                        busy = 0;
+                                    }
                                 }
+                                case 5b00010: {
+                                    // PCNT
+                                    if( sourceReg1 == 0 ) {
+                                        result = 0;
+                                    } else {
+                                        busy = 1;
+                                        bitcount = sourceReg1;
+                                        result = 0;
+                                        ++:
+                                        while( bitcount != 0 ) {
+                                            result = result + bitcount[0,1];
+                                            bitcount = { 1b0, bitcount[1,31] };
+                                        }
+                                        busy = 0;
+                                    }
+                                }
+                                case 5b00100: { result = { {24{sourceReg1[7,1]}}, sourceReg1[0, 8] }; }     // SEXT.B
+                                case 5b00101: { result = { {16{sourceReg1[15,1]}}, sourceReg1[0, 16] }; }   // SEXT.H
                             }
                         }
-                        case 5b00010: {
-                            // PCNT
-                            result = 0;
-                            while( sourceReg1 != 0 ) {
-                                result = result + sourceReg1[0,1];
-                                sourceReg1 = { 1b0, sourceReg1[1,31] };
+                        case 7b0000100: {
+                            busy = 1;
+                            ( result ) = SHFL( sourceReg1, IshiftCount );
+                            busy = 0;
+                        }
+                        default: {
+                            switch( function7[2,1] ) {
+                                case 0: { ( result ) = LEFTshifter( sourceReg1, IshiftCount, function7 ); }
+                                case 1: { ( result ) = SBSetClrInv( sourceReg1, IshiftCount, function7 ); }
                             }
                         }
-                        case 5b00100: { result = { {24{sourceReg1[7,1]}}, sourceReg1[0, 8] }; }     // SEXT.B
-                        case 5b00101: { result = { {16{sourceReg1[15,1]}}, sourceReg1[0, 16] }; }   // SEXT.H
                     }
                 }
-                case 7b0000100: { ( result ) = SHFL( sourceReg1, IshiftCount ); }
+                case 3b101: {
+                    switch( function7 ) {
+                        case 7b0000100: {
+                            busy = 1;
+                            ( result ) = UNSHFL( sourceReg1, IshiftCount );
+                            busy = 0;
+                        }
+                        case 7b0010100: {
+                            busy = 1;
+                            ( result ) = GORC( sourceReg1, IshiftCount );
+                            busy = 0;
+                        }
+                        case 7b0100100: { result = sourceReg1[ IshiftCount, 1 ]; }
+                        case 7b0110000: { ( result ) = ROR( sourceReg1, IshiftCount );  }
+                        case 7b0110100: {
+                            busy = 1;
+                            ( result ) = GREV( sourceReg1, IshiftCount );
+                            busy = 0;
+                        }
+                        default: {  ( result ) = RIGHTshifter( sourceReg1, IshiftCount, function7 ); }
+                    }
+                }
                 default: {
-                    switch( function7[2,1] ) {
-                        case 0: { ( result ) = LEFTshifter( sourceReg1, IshiftCount, function7 ); }
-                        case 1: { ( result ) = SBSetClrInv( sourceReg1, IshiftCount, function7 ); }
+                    switch( function3 ) {
+                        case 3b000: { result = sourceReg1 + immediateValue; }
+                        case 3b010: { result = __signed( sourceReg1 ) < __signed(immediateValue) ? 32b1 : 32b0; }
+                        case 3b011: { result = ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 32b1 : 32b0 ); }
+                        case 3b100: { result = sourceReg1 ^ immediateValue; }
+                        case 3b110: { result = sourceReg1 | immediateValue; }
+                        case 3b111: { result = sourceReg1 & immediateValue; }
                     }
                 }
             }
         }
-        case 3b010: { result = __signed( sourceReg1 ) < __signed(immediateValue) ? 32b1 : 32b0; }
-        case 3b011: { result = ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 32b1 : 32b0 ); }
-        case 3b100: { result = sourceReg1 ^ immediateValue; }
-        case 3b101: {
-            switch( function7 ) {
-                case 7b0000100: { ( result ) = UNSHFL( sourceReg1, IshiftCount ); }
-                case 7b0010100: { ( result ) = GORC( sourceReg1, IshiftCount ); }
-                case 7b0100100: { ( result ) = SBEXT( sourceReg1, IshiftCount ); }
-                case 7b0110000: { ( result ) = ROR( sourceReg1, IshiftCount );  }
-                case 7b0110100: { ( result ) = GREV( sourceReg1, IshiftCount ); }
-                default: {  ( result ) = RIGHTshifter( sourceReg1, IshiftCount, function7 ); }
-            }
-        }
-        case 3b110: { result = sourceReg1 | immediateValue; }
-        case 3b111: { result = sourceReg1 & immediateValue; }
     }
 }
 
@@ -336,7 +381,7 @@ algorithm aluR7b0100100 (
             switch( function3 ) {
                 case 3b001: { ( result ) = SBCLR( sourceReg1, RshiftCount ); }
                 case 3b100: { result = { sourceReg2[16,16], sourceReg1[16,16] }; }
-                case 3b101: { ( result ) = SBEXT( sourceReg1, RshiftCount ); }
+                case 3b101: { result = sourceReg1[ RshiftCount, 1 ]; }
                 case 3b110: {
                     active = 1;
                     ( result ) = BDEP( sourceReg1, sourceReg2 );
@@ -353,7 +398,9 @@ algorithm aluR7b0100100 (
 }
 // BASE ADD SUB SLL SLT SLTU XOR SRL SRA OR AND + B EXTENSION ROL SLO SH1/2/3ADD XNOR ROR SRO ORN ANDN
 algorithm aluR (
-    input   uint7   opCode,
+    input   uint1   start,
+    output! uint1   busy,
+
     input   uint3   function3,
     input   uint7   function7,
     input   uint5   rs1,
@@ -364,60 +411,139 @@ algorithm aluR (
 ) <autorun> {
     uint5   RshiftCount := sourceReg2[0,5];
 
+    // B EXTENSION GORC XPERM + SBET ( sbset is single cycle but shares same function7 coding as GORC XPERM )
+    aluR7b0010100 ALUR7b0010100(
+        function3 <: function3,
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2
+    );
+    // B EXTENSION CLMUL + MIN[U] MAX[U] ( min and max are single cycle but share same function7 coding as CLMUL operations )
+    aluR7b0000101 ALUR7b0000101(
+        function3 <: function3,
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2
+    );
+    // B EXTENSION SHFL UNSHFL BEXT + PACK PACKH ( pack and packh are single cycle but share same function7 coding as SHFL UNSHFL )
+    aluR7b0000100 ALUR7b0000100(
+        function3 <: function3,
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2
+    );
+    // B EXTENSION GREV + SBINV ( sbinv is single cycle but shares same function7 coding as GREV )
+    aluR7b0110100 ALUR7b0110100(
+        function3 <: function3,
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2
+    );
+    // B EXTENSION BDEP BFP + PACKU SBCLR SBEXT ( packu, sbclr and sbext are single cycle share share same function7 coding as BDEP BFP )
+    aluR7b0100100 ALUR7b0100100(
+        function3 <: function3,
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2
+    );
+
+    // START FLAGS FOR ALU SUB BLOCKS
+    ALUR7b0010100.start := 0;
+    ALUR7b0000101.start := 0;
+    ALUR7b0000100.start := 0;
+    ALUR7b0110100.start := 0;
+    ALUR7b0100100.start := 0;
+    busy = 0;
+
     while(1) {
-        if( opCode == 7b0110011 ) {
-            switch( function3 ) {
-                case 3b000: {
-                    // ADD SUB
-                    result = sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 );
+        if( start ) {
+            switch( function7 ) {
+                case 7b0010100: {
+                    busy = 1;
+                    ALUR7b0010100.start = 1;
+                    while( ALUR7b0010100.busy ) {}
+                    result = ALUR7b0010100.result;
+                    busy = 0;
                 }
-                case 3b001: {
-                    // ROL SLL SLO
-                    switch( function7 ) {
-                        case 7b0110000: { ( result ) = ROL( sourceReg1, RshiftCount ); }
-                        default: { ( result ) = LEFTshifter( sourceReg1, RshiftCount, function7 ); }
+                case 7b0000101: {
+                    busy = 1;
+                    ALUR7b0000101.start = 1;
+                    while( ALUR7b0000101.busy ) {}
+                    result = ALUR7b0000101.result;
+                    busy = 0;
+                }
+                case 7b0000100: {
+                    busy = 1;
+                    ALUR7b0000100.start = 1;
+                    while( ALUR7b0000100.busy ) {}
+                    result = ALUR7b0000100.result;
+                    busy = 0;
+                }
+                case 7b0110100: {
+                    busy = 1;
+                    ALUR7b0110100.start = 1;
+                    while( ALUR7b0110100.busy ) {}
+                    result = ALUR7b0110100.result;
+                    busy = 0;
+                }
+                case 7b0100100: {
+                    busy = 1;
+                    ALUR7b0100100.start = 1;
+                    while( ALUR7b0100100.busy ) {}
+                    result = ALUR7b0100100.result;
+                    busy = 0;
+                }
+                default: {
+                    switch( function3 ) {
+                        case 3b000: {
+                            // ADD SUB
+                            result = sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 );
+                        }
+                        case 3b001: {
+                            // ROL SLL SLO
+                            switch( function7 ) {
+                                case 7b0110000: { ( result ) = ROL( sourceReg1, RshiftCount ); }
+                                default: { ( result ) = LEFTshifter( sourceReg1, RshiftCount, function7 ); }
+                            }
+                        }
+                        case 3b010: {
+                        // SLT SH1ADD
+                            switch( function7 ) {
+                                case 7b0000000: { result = __signed( sourceReg1 ) < __signed(sourceReg2) ? 32b1 : 32b0; }
+                                case 7b0010000: { result = { sourceReg1[1,31], 1b0 } + sourceReg2; }
+                            }
+                        }
+                        case 3b011: {
+                            // SLTU
+                            result = ( rs1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 32b1 : 32b0 );
+                        }
+                        case 3b100: {
+                            // SH2ADD XOR XNOR
+                            switch( function7 ) {
+                                case 7b0010000: { result = { sourceReg1[2,30], 2b00 } + sourceReg2; }
+                                default: { result = sourceReg1 ^ ( function7[5,1] ? ~sourceReg2 : sourceReg2 ); }
+                            }
+                        }
+                        case 3b101: {
+                            // ROR SRL SRA SRO
+                            switch( function7 ) {
+                                case 7b0110000: { ( result ) = ROR( sourceReg1, RshiftCount ); }
+                                default:  { ( result ) = RIGHTshifter( sourceReg1, RshiftCount, function3 ); }
+                            }
+                        }
+                        case 3b110: {
+                            // SH3ADD OR ORN
+                            switch( function7 ) {
+                                case 7b0010000: { result = { sourceReg1[3,29], 3b000 } + sourceReg2; }
+                                default: { result = sourceReg1 | ( function7[5,1] ? ~sourceReg2 : sourceReg2 ); }
+                            }
+                        }
+                        case 3b111: {
+                            // AND ANDN
+                            result = sourceReg1 & ( function7[5,1] ? ~sourceReg2 : sourceReg2 );
+                        }
                     }
-                }
-                case 3b010: {
-                // SLT SH1ADD
-                    switch( function7 ) {
-                        case 7b0000000: { result = __signed( sourceReg1 ) < __signed(sourceReg2) ? 32b1 : 32b0; }
-                        case 7b0010000: { result = { sourceReg1[1,31], 1b0 } + sourceReg2; }
-                    }
-                }
-                case 3b011: {
-                    // SLTU
-                    result = ( rs1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 32b1 : 32b0 );
-                }
-                case 3b100: {
-                    // SH2ADD XOR XNOR
-                    switch( function7 ) {
-                        case 7b0010000: { result = { sourceReg1[2,30], 2b00 } + sourceReg2; }
-                        default: { result = sourceReg1 ^ ( function7[5,1] ? ~sourceReg2 : sourceReg2 ); }
-                    }
-                }
-                case 3b101: {
-                    // ROR SRL SRA SRO
-                    switch( function7 ) {
-                        case 7b0110000: { ( result ) = ROR( sourceReg1, RshiftCount ); }
-                        default:  { ( result ) = RIGHTshifter( sourceReg1, RshiftCount, function3 ); }
-                    }
-                }
-                case 3b110: {
-                    // SH3ADD OR ORN
-                    switch( function7 ) {
-                        case 7b0010000: { result = { sourceReg1[3,29], 3b000 } + sourceReg2; }
-                        default: { result = sourceReg1 | ( function7[5,1] ? ~sourceReg2 : sourceReg2 ); }
-                    }
-                }
-                case 3b111: {
-                    // AND ANDN
-                    result = sourceReg1 & ( function7[5,1] ? ~sourceReg2 : sourceReg2 );
                 }
             }
         }
     }
 }
+
 
 // RISC-V MANDATORY CSR REGISTERS
 algorithm CSRblock(
