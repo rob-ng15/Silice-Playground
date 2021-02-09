@@ -104,20 +104,17 @@ algorithm aluMmultiply(
 }
 
 // BASE IMMEDIATE + B extensions
-algorithm aluI (
+algorithm aluIb001(
     input   uint1   start,
     output! uint1   busy,
 
-    input   uint3   function3,
     input   uint7   function7,
     input   uint5   IshiftCount,
     input   uint32  sourceReg1,
-    input   uint32  immediateValue,
 
-    output! uint32   result
+    output! uint32  result
 ) <autorun> {
-
-    // SBSET SBCLR SBINV + BARREL SHIFTERS / ROTATORS
+    // SBSET SBCLR SBINV + BARREL SHIFTER
     singlebitops SBSCI(
         start <: start,
         sourceReg1 <: sourceReg1,
@@ -130,6 +127,93 @@ algorithm aluI (
         function7 <: function7,
         shiftcount <: IshiftCount,
     );
+
+    uint32  bitcount = uninitialized;
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            switch( function7 ) {
+                case 7b0110000: {
+                    switch( IshiftCount ) {
+                        case 5b00000: {
+                            // CLZ
+                            if( sourceReg1 == 0 ) {
+                                result = 32;
+                            } else {
+                                busy = 1;
+                                bitcount = sourceReg1;
+                                result = 0;
+                                ++:
+                                while( ~bitcount[31,1] ) {
+                                    result = result + 1;
+                                    bitcount = { bitcount[0,31], 1b0 };
+                                }
+                                busy = 0;
+                            }
+                        }
+                        case 5b00001: {
+                            // CTZ
+                            if( sourceReg1 == 0 ) {
+                                result = 32;
+                            } else {
+                                busy = 1;
+                                bitcount = sourceReg1;
+                                result = 0;
+                                ++:
+                                while( ~bitcount[0,1] ) {
+                                    result = result + 1;
+                                    bitcount = { 1b0, bitcount[1,31] };
+                                }
+                                busy = 0;
+                            }
+                        }
+                        case 5b00010: {
+                            // PCNT
+                            if( sourceReg1 == 0 ) {
+                                result = 0;
+                            } else {
+                                busy = 1;
+                                bitcount = sourceReg1;
+                                result = 0;
+                                ++:
+                                while( bitcount != 0 ) {
+                                    result = result + bitcount[0,1];
+                                    bitcount = { 1b0, bitcount[1,31] };
+                                }
+                                busy = 0;
+                            }
+                        }
+                        case 5b00100: { result = { {24{sourceReg1[7,1]}}, sourceReg1[0, 8] }; }     // SEXT.B
+                        case 5b00101: { result = { {16{sourceReg1[15,1]}}, sourceReg1[0, 16] }; }   // SEXT.H
+                    }
+                }
+                case 7b0000100: {
+                    busy = 1;
+                    ( result ) = SHFL( sourceReg1, IshiftCount );
+                    busy = 0;
+                }
+                default: {
+                    switch( function7[2,1] ) {
+                        case 0: { result = barrelLEFT.result; }
+                        case 1: { result = SBSCI.result; }
+                    }
+                }
+            }
+        }
+    }
+}
+algorithm aluIb101(
+    input   uint1   start,
+    output! uint1   busy,
+
+    input   uint7   function7,
+    input   uint5   IshiftCount,
+    input   uint32  sourceReg1,
+
+    output! uint32  result
+) <autorun> {
+    // BARREL SHIFTERS / ROTATORS
     BSHIFTright barrelRIGHT(
         start <: start,
         sourceReg1 <: sourceReg1,
@@ -143,102 +227,78 @@ algorithm aluI (
         shiftcount <: IshiftCount,
     );
 
-    uint32  bitcount = uninitialized;
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            switch( function7 ) {
+                case 7b0000100: {
+                    busy = 1;
+                    ( result ) = UNSHFL( sourceReg1, IshiftCount );
+                    busy = 0;
+                }
+                case 7b0010100: {
+                    busy = 1;
+                    ( result ) = GORC( sourceReg1, IshiftCount );
+                    busy = 0;
+                }
+                case 7b0100100: { result = sourceReg1[ IshiftCount, 1 ]; }
+                case 7b0110000: { result = barrelROTATE.result;  }
+                case 7b0110100: {
+                    busy = 1;
+                    ( result ) = GREV( sourceReg1, IshiftCount );
+                    busy = 0;
+                }
+                default: {  result = barrelRIGHT.result; }
+            }
+        }
+    }
+}
+algorithm aluI (
+    input   uint1   start,
+    output! uint1   busy,
+
+    input   uint3   function3,
+    input   uint7   function7,
+    input   uint5   IshiftCount,
+    input   uint32  sourceReg1,
+    input   uint32  immediateValue,
+
+    output! uint32   result
+) <autorun> {
+    // FUNCTION3 == 001 block
+    aluIb001 ALUIb001(
+        function7 <: function7,
+        IshiftCount <: IshiftCount,
+        sourceReg1 <: sourceReg1
+    );
+    aluIb101 ALUIb101(
+        function7 <: function7,
+        IshiftCount <: IshiftCount,
+        sourceReg1 <: sourceReg1
+    );
+
+    // START FLAGS FOR ALU SUB BLOCKS
+    ALUIb001.start := 0;
+    ALUIb101.start := 0;
     busy = 0;
 
     while(1) {
         if( start) {
             switch( function3 ) {
                 case 3b001: {
-                    switch( function7 ) {
-                        case 7b0110000: {
-                            switch( IshiftCount ) {
-                                case 5b00000: {
-                                    // CLZ
-                                    if( sourceReg1 == 0 ) {
-                                        result = 32;
-                                    } else {
-                                        busy = 1;
-                                        bitcount = sourceReg1;
-                                        result = 0;
-                                        ++:
-                                        while( ~bitcount[31,1] ) {
-                                            result = result + 1;
-                                            bitcount = { bitcount[0,31], 1b0 };
-                                        }
-                                        busy = 0;
-                                    }
-                                }
-                                case 5b00001: {
-                                    // CTZ
-                                    if( sourceReg1 == 0 ) {
-                                        result = 32;
-                                    } else {
-                                        busy = 1;
-                                        bitcount = sourceReg1;
-                                        result = 0;
-                                        ++:
-                                        while( ~bitcount[0,1] ) {
-                                            result = result + 1;
-                                            bitcount = { 1b0, bitcount[1,31] };
-                                        }
-                                        busy = 0;
-                                    }
-                                }
-                                case 5b00010: {
-                                    // PCNT
-                                    if( sourceReg1 == 0 ) {
-                                        result = 0;
-                                    } else {
-                                        busy = 1;
-                                        bitcount = sourceReg1;
-                                        result = 0;
-                                        ++:
-                                        while( bitcount != 0 ) {
-                                            result = result + bitcount[0,1];
-                                            bitcount = { 1b0, bitcount[1,31] };
-                                        }
-                                        busy = 0;
-                                    }
-                                }
-                                case 5b00100: { result = { {24{sourceReg1[7,1]}}, sourceReg1[0, 8] }; }     // SEXT.B
-                                case 5b00101: { result = { {16{sourceReg1[15,1]}}, sourceReg1[0, 16] }; }   // SEXT.H
-                            }
-                        }
-                        case 7b0000100: {
-                            busy = 1;
-                            ( result ) = SHFL( sourceReg1, IshiftCount );
-                            busy = 0;
-                        }
-                        default: {
-                            switch( function7[2,1] ) {
-                                case 0: { result = barrelLEFT.result; }
-                                case 1: { result = SBSCI.result; }
-                            }
-                        }
-                    }
+                    busy = 1;
+                    ALUIb001.start = 1;
+                    while( ALUIb001.busy ) {}
+                    result = ALUIb001.result;
+                    busy = 0;
                 }
                 case 3b101: {
-                    switch( function7 ) {
-                        case 7b0000100: {
-                            busy = 1;
-                            ( result ) = UNSHFL( sourceReg1, IshiftCount );
-                            busy = 0;
-                        }
-                        case 7b0010100: {
-                            busy = 1;
-                            ( result ) = GORC( sourceReg1, IshiftCount );
-                            busy = 0;
-                        }
-                        case 7b0100100: { result = sourceReg1[ IshiftCount, 1 ]; }
-                        case 7b0110000: { result = barrelROTATE.result;  }
-                        case 7b0110100: {
-                            busy = 1;
-                            ( result ) = GREV( sourceReg1, IshiftCount );
-                            busy = 0;
-                        }
-                        default: {  result = barrelRIGHT.result; }
-                    }
+                    busy = 1;
+                    ALUIb101.start = 1;
+                    while( ALUIb101.busy ) {}
+                    result = ALUIb101.result;
+                    busy = 0;
                 }
                 default: {
                     switch( function3 ) {
