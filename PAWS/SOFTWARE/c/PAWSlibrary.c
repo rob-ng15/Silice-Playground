@@ -51,19 +51,19 @@ unsigned int DATASTARTSECTOR;
 unsigned char *MEMORYTOP;
 
 // RISC-V CSR FUNCTIONS
-long CSRcycles() {
+unsigned int CSRcycles() {
    int cycles;
    asm volatile ("rdcycle %0" : "=r"(cycles));
    return cycles;
 }
 
-long CSRinstructions() {
+unsigned int CSRinstructions() {
    int insns;
    asm volatile ("rdinstret %0" : "=r"(insns));
    return insns;
 }
 
-long CSRtime() {
+unsigned int CSRtime() {
   int time;
   asm volatile ("rdtime %0" : "=r"(time));
   return time;
@@ -1145,7 +1145,7 @@ void bitmapblit( unsigned char *buffer, unsigned short width, unsigned short hei
     }
 }
 
-// SMT START AND STOP
+// SMT START STOP AND STATUS
 void SMTSTOP( void ) {
     *SMTSTATUS = 0;
 }
@@ -1154,6 +1154,10 @@ void SMTSTART( unsigned int code ) {
     *SMTPCH = ( code & 0xffff0000 ) >> 16;
     *SMTPCL = ( code & 0x0000ffff );
     *SMTSTATUS = 1;
+}
+
+unsigned char SMTSTATE( void ) {
+    return( *SMTSTATUS );
 }
 
 // printf code from https://github.com/sylefeb/Silice/tree/wip/projects/ram-ice-v/tests/mylibc

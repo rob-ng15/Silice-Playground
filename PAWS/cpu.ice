@@ -76,27 +76,13 @@ algorithm PAWSCPU (
         sourceReg2 <: sourceReg2
     );
 
-    // M EXTENSION DIVIDER
-    aluMdivideremain ALUMD(
-        function3 <: function3,
-        dividend <: sourceReg1,
-        divisor <: sourceReg2
-    );
-
-    // M EXTENSION BLOCK MULTIPLIER
-    aluMmultiply ALUMM(
-        function3 <: function3,
-        factor_1 <: sourceReg1,
-        factor_2 <: sourceReg2
-    );
-
     // BASE REGISTER + IMMEDIATE ALU OPERATIONS + B EXTENSION OPERATIONS
     aluI ALUI(
         function3 <: function3,
         function7 <: function7,
         IshiftCount <: IshiftCount,
         sourceReg1 <: sourceReg1,
-        immediateValue <: immediateValue
+        immediateValue <: immediateValue,
     );
 
     // BASE REGISTER & REGISTER ALU OPERATIONS + B EXTENSION OPERATIONS
@@ -105,7 +91,7 @@ algorithm PAWSCPU (
         function7 <: function7,
         rs1 <: rs1,
         sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2
+        sourceReg2 <: sourceReg2,
     );
 
     CSRblock CSR(
@@ -131,8 +117,6 @@ algorithm PAWSCPU (
     registers_2.wenable1 := 1;
 
     // ALU START FLAGS
-    ALUMD.start := 0;
-    ALUMM.start := 0;
     ALUI.start := 0;
     ALUR.start := 0;
     CSR.incCSRinstret := 0;
@@ -245,36 +229,18 @@ algorithm PAWSCPU (
                 }
             }
             case 5b00100: {
-                // ALUI ( BASE + SOME B EXTENSION )
+                // ALUI ( BASE + B EXTENSION )
                 writeRegister = 1;
                 ALUI.start = 1;
                 while( ALUI.busy ) {}
                 result = ALUI.result;
             }
             case 5b01100: {
-                // ALUR ( BASE + M EXTENSION + SOME B EXTENSION - B EXTENSION SPLIT ACROSS MULTIPLE BLOCKS AND IN MAIN BLOCK)
+                // ALUR ( BASE + M EXTENSION + B EXTENSION )
                 writeRegister = 1;
-                switch( function7 ) {
-                    case 7b0000001: {
-                        switch( function3[2,1] ) {
-                            case 1b0: {
-                                ALUMM.start = 1;
-                                while( ALUMM.busy ) {}
-                                result = ALUMM.result;
-                            }
-                            case 1b1: {
-                                ALUMD.start = 1;
-                                while( ALUMD.busy ) {}
-                                result = ALUMD.result;
-                            }
-                        }
-                    }
-                    default: {
-                        ALUR.start = 1;
-                        while( ALUR.busy ) {}
-                        result = ALUR.result;
-                    }
-                }
+                ALUR.start = 1;
+                while( ALUR.busy ) {}
+                result = ALUR.result;
             }
             case 5b11100: {
                 // CSR

@@ -116,6 +116,33 @@ algorithm aluI (
 
     output! uint32   result
 ) <autorun> {
+
+    // SBSET SBCLR SBINV + BARREL SHIFTERS / ROTATORS
+    singlebitops SBSCI(
+        start <: start,
+        sourceReg1 <: sourceReg1,
+        function7 <: function7,
+        shiftcount <: IshiftCount,
+    );
+    BSHIFTleft barrelLEFT(
+        start <: start,
+        sourceReg1 <: sourceReg1,
+        function7 <: function7,
+        shiftcount <: IshiftCount,
+    );
+    BSHIFTright barrelRIGHT(
+        start <: start,
+        sourceReg1 <: sourceReg1,
+        function7 <: function7,
+        shiftcount <: IshiftCount,
+    );
+    BROTATE barrelROTATE(
+        start <: start,
+        sourceReg1 <: sourceReg1,
+        function3 <: function3,
+        shiftcount <: IshiftCount,
+    );
+
     uint32  bitcount = uninitialized;
     busy = 0;
 
@@ -185,8 +212,8 @@ algorithm aluI (
                         }
                         default: {
                             switch( function7[2,1] ) {
-                                case 0: { ( result ) = LEFTshifter( sourceReg1, IshiftCount, function7 ); }
-                                case 1: { ( result ) = SBSetClrInv( sourceReg1, IshiftCount, function7 ); }
+                                case 0: { result = barrelLEFT.result; }
+                                case 1: { result = SBSCI.result; }
                             }
                         }
                     }
@@ -204,13 +231,13 @@ algorithm aluI (
                             busy = 0;
                         }
                         case 7b0100100: { result = sourceReg1[ IshiftCount, 1 ]; }
-                        case 7b0110000: { ( result ) = ROR( sourceReg1, IshiftCount );  }
+                        case 7b0110000: { result = barrelROTATE.result;  }
                         case 7b0110100: {
                             busy = 1;
                             ( result ) = GREV( sourceReg1, IshiftCount );
                             busy = 0;
                         }
-                        default: {  ( result ) = RIGHTshifter( sourceReg1, IshiftCount, function7 ); }
+                        default: {  result = barrelRIGHT.result; }
                     }
                 }
                 default: {
@@ -229,41 +256,39 @@ algorithm aluI (
 }
 
 // BASE REGISTER + B extensions
-
 // B EXTENSION GORC XPERM + SBSET
 algorithm aluR7b0010100 (
     input   uint1   start,
-    output  uint1   busy,
+    output! uint1   busy,
 
     input   uint3   function3,
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
+    input   uint32  SBSCIoutput,
 
     output! uint32  result
 ) <autorun> {
     uint5   RshiftCount := sourceReg2[0,5];
-
-    uint1   active = 0;
-    busy := start ? 1 : active;
+    busy = 0;
 
     while(1) {
         if( start ) {
-            active = 1;
+            busy = 1;
 
             switch( function3 ) {
-                case 3b001: { ( result ) = SBSET( sourceReg1, RshiftCount ); }
+                case 3b001: { result = SBSCIoutput; }
                 case 3b101: { ( result ) = GORC( sourceReg1, RshiftCount ); }
                 default: { ( result ) = XPERM( sourceReg1, sourceReg2, function3 ); }
             }
 
-            active = 0;
+            busy = 0;
         }
     }
 }
 // B EXTENSION CLMUL + MIN[U] MAX[U]
 algorithm aluR7b0000101 (
     input   uint1   start,
-    output  uint1   busy,
+    output! uint1   busy,
 
     input   uint3   function3,
     input   uint32  sourceReg1,
@@ -271,8 +296,7 @@ algorithm aluR7b0000101 (
 
     output! uint32  result
 ) <autorun> {
-    uint1   active = 0;
-    busy := start ? 1 : active;
+    busy = 0;
 
     while(1) {
         if( start ) {
@@ -282,9 +306,9 @@ algorithm aluR7b0000101 (
                 case 3b110: { result = ( __signed( sourceReg1 ) > __signed( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
                 case 3b111: { result = ( __unsigned( sourceReg1 ) > __unsigned( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
                 default: {
-                    active = 1;
+                    busy = 1;
                     ( result ) = CLMUL( sourceReg1, sourceReg2, function3 );
-                    active = 0;
+                    busy = 0;
                 }
             }
         }
@@ -293,7 +317,7 @@ algorithm aluR7b0000101 (
 // B EXTENSION SHFL UNSHFL BEXT + PACK PACKH
 algorithm aluR7b0000100 (
     input   uint1   start,
-    output  uint1   busy,
+    output! uint1   busy,
 
     input   uint3   function3,
     input   uint32  sourceReg1,
@@ -302,27 +326,25 @@ algorithm aluR7b0000100 (
     output! uint32  result
 ) <autorun> {
     uint5   RshiftCount := sourceReg2[0,5];
-
-    uint1   active = 0;
-    busy := start ? 1 : active;
+    busy = 0;
 
     while(1) {
         if( start ) {
             switch( function3 ) {
                 case 3b001: {
-                    active = 1;
+                    busy = 1;
                     ( result ) = SHFL( sourceReg1, RshiftCount );
-                    active = 0;
+                    busy = 0;
                 }
                 case 3b101: {
-                    active = 1;
+                    busy = 1;
                     ( result ) = UNSHFL( sourceReg1, RshiftCount );
-                    active = 0;
+                    busy = 0;
                 }
                 case 3b110: {
-                    active = 1;
+                    busy = 1;
                     ( result ) = BEXT( sourceReg1, sourceReg2 );
-                    active = 0;
+                    busy = 0;
                 }
                 case 3b100: { result = { sourceReg2[0,16], sourceReg1[0,16] }; }
                 case 3b111: { result = { 16b0, sourceReg2[0,8], sourceReg1[0,8] }; }
@@ -333,28 +355,26 @@ algorithm aluR7b0000100 (
 // B EXTENSION GREV + SBINV
 algorithm aluR7b0110100 (
     input   uint1   start,
-    output  uint1   busy,
+    output! uint1   busy,
 
     input   uint3   function3,
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
+    input   uint32  SBSCIoutput,
 
     output! uint32  result
 ) <autorun> {
     uint5   RshiftCount := sourceReg2[0,5];
-
-    uint1   active = 0;
-    busy := start ? 1 : active;
+    busy = 0;
 
     while(1) {
         if( start ) {
-            active = 1;
             switch( function3 ) {
-                case 3b001: { ( result ) = SBINV( sourceReg1, RshiftCount ); }
+                case 3b001: { result = SBSCIoutput; }
                 default: {
-                    active = 1;
+                    busy = 1;
                     ( result ) = GREV( sourceReg1, RshiftCount );
-                    active = 0;
+                    busy = 0;
                 }
             }
         }
@@ -363,34 +383,33 @@ algorithm aluR7b0110100 (
 // B EXTENSION BDEP BFP + PACKU SBCLR SBEXT
 algorithm aluR7b0100100 (
     input   uint1   start,
-    output  uint1   busy,
+    output! uint1   busy,
 
     input   uint3   function3,
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
+    input   uint32  SBSCIoutput,
 
     output! uint32  result
 ) <autorun> {
     uint5   RshiftCount := sourceReg2[0,5];
-
-    uint1   active = 0;
-    busy := start ? 1 : active;
+    busy = 0;
 
     while(1) {
         if( start ) {
             switch( function3 ) {
-                case 3b001: { ( result ) = SBCLR( sourceReg1, RshiftCount ); }
+                case 3b001: { result = SBSCIoutput; }
                 case 3b100: { result = { sourceReg2[16,16], sourceReg1[16,16] }; }
                 case 3b101: { result = sourceReg1[ RshiftCount, 1 ]; }
                 case 3b110: {
-                    active = 1;
+                    busy = 1;
                     ( result ) = BDEP( sourceReg1, sourceReg2 );
-                    active = 0;
+                    busy = 0;
                 }
                 case 3b111: {
-                    active = 1;
+                    busy = 1;
                     ( result ) = BFP( sourceReg1, sourceReg2 );
-                    active = 0;
+                    busy = 0;
                 }
             }
         }
@@ -411,11 +430,54 @@ algorithm aluR (
 ) <autorun> {
     uint5   RshiftCount := sourceReg2[0,5];
 
+    // M EXTENSION DIVIDER
+    aluMdivideremain ALUMD(
+        function3 <: function3,
+        dividend <: sourceReg1,
+        divisor <: sourceReg2
+    );
+
+    // M EXTENSION BLOCK MULTIPLIER
+    aluMmultiply ALUMM(
+        function3 <: function3,
+        factor_1 <: sourceReg1,
+        factor_2 <: sourceReg2
+    );
+
+    // SBSET SBCLR SBINV + BARREL SHIFTERS / ROTATORS
+    uint32  SBSCIoutput = uninitialized;
+    singlebitops SBSCI(
+        start <: start,
+        sourceReg1 <: sourceReg1,
+        function7 <: function7,
+        shiftcount <: RshiftCount,
+        result :> SBSCIoutput
+    );
+    BSHIFTleft barrelLEFT(
+        start <: start,
+        sourceReg1 <: sourceReg1,
+        function7 <: function7,
+        shiftcount <: RshiftCount,
+    );
+    BSHIFTright barrelRIGHT(
+        start <: start,
+        sourceReg1 <: sourceReg1,
+        function7 <: function7,
+        shiftcount <: RshiftCount,
+    );
+    BROTATE barrelROTATE(
+        start <: start,
+        sourceReg1 <: sourceReg1,
+        function3 <: function3,
+        shiftcount <: RshiftCount,
+    );
+
     // B EXTENSION GORC XPERM + SBET ( sbset is single cycle but shares same function7 coding as GORC XPERM )
     aluR7b0010100 ALUR7b0010100(
         function3 <: function3,
         sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2
+        sourceReg2 <: sourceReg2,
+        SBSCIoutput <: SBSCIoutput
     );
     // B EXTENSION CLMUL + MIN[U] MAX[U] ( min and max are single cycle but share same function7 coding as CLMUL operations )
     aluR7b0000101 ALUR7b0000101(
@@ -433,16 +495,22 @@ algorithm aluR (
     aluR7b0110100 ALUR7b0110100(
         function3 <: function3,
         sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2
+        sourceReg2 <: sourceReg2,
+        SBSCIoutput <: SBSCIoutput
+
     );
     // B EXTENSION BDEP BFP + PACKU SBCLR SBEXT ( packu, sbclr and sbext are single cycle share share same function7 coding as BDEP BFP )
     aluR7b0100100 ALUR7b0100100(
         function3 <: function3,
         sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2
+        sourceReg2 <: sourceReg2,
+        SBSCIoutput <: SBSCIoutput
+
     );
 
     // START FLAGS FOR ALU SUB BLOCKS
+    ALUMD.start := 0;
+    ALUMM.start := 0;
     ALUR7b0010100.start := 0;
     ALUR7b0000101.start := 0;
     ALUR7b0000100.start := 0;
@@ -453,6 +521,24 @@ algorithm aluR (
     while(1) {
         if( start ) {
             switch( function7 ) {
+                // M EXTENSION MULTIPLICATION AND DIVISION
+                case 7b0000001: {
+                    busy = 1;
+                    switch( function3[2,1] ) {
+                        case 1b0: {
+                            ALUMM.start = 1;
+                            while( ALUMM.busy ) {}
+                            result = ALUMM.result;
+                        }
+                        case 1b1: {
+                            ALUMD.start = 1;
+                            while( ALUMD.busy ) {}
+                            result = ALUMD.result;
+                        }
+                    }
+                    busy = 0;
+                }
+                // B EXTENSION BLOCKS
                 case 7b0010100: {
                     busy = 1;
                     ALUR7b0010100.start = 1;
@@ -488,6 +574,7 @@ algorithm aluR (
                     result = ALUR7b0100100.result;
                     busy = 0;
                 }
+                // BASE + REMAINING B EXTENSION
                 default: {
                     switch( function3 ) {
                         case 3b000: {
@@ -497,8 +584,8 @@ algorithm aluR (
                         case 3b001: {
                             // ROL SLL SLO
                             switch( function7 ) {
-                                case 7b0110000: { ( result ) = ROL( sourceReg1, RshiftCount ); }
-                                default: { ( result ) = LEFTshifter( sourceReg1, RshiftCount, function7 ); }
+                                case 7b0110000: { result = barrelROTATE.result; }
+                                default: { result = barrelLEFT.result; }
                             }
                         }
                         case 3b010: {
@@ -522,8 +609,8 @@ algorithm aluR (
                         case 3b101: {
                             // ROR SRL SRA SRO
                             switch( function7 ) {
-                                case 7b0110000: { ( result ) = ROR( sourceReg1, RshiftCount ); }
-                                default:  { ( result ) = RIGHTshifter( sourceReg1, RshiftCount, function3 ); }
+                                case 7b0110000: { result = barrelROTATE.result; }
+                                default:  { result = barrelRIGHT.result; }
                             }
                         }
                         case 3b110: {

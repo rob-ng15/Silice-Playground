@@ -251,6 +251,7 @@ extern void bitmapblit( unsigned char *, unsigned short , unsigned short , short
 // SMT START AND STOP
 extern void SMTSTOP( void );
 extern void SMTSTART( unsigned int );
+extern unsigned char SMTSTATE( void );
 
 // SIMPLE STANDARD LIBRARY FUNCTIONS
 typedef struct filepointer {

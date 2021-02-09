@@ -348,141 +348,104 @@ circuitry halfhalfword (
 
 // BIT MANIPULATION CIRCUITS
 // BARREL SHIFTERS / ROTATORS
-circuitry LEFTshifter(
-    input   sourceReg1,
-    input   shiftcount,
-    input   function7,
-    output  result
-) {
-    switch( shiftcount[0,5] ) {
-        case 0: { result = sourceReg1; }
-        $$for i = 1, 31 do
-            $$ remain = 32 - i
-            case $i$: { result = { sourceReg1[ 0, $remain$ ], {$i${ function7[4,1] }} }; }
-        $$end
+algorithm BSHIFTleft(
+    input   uint1   start,
+
+    input   uint32  sourceReg1,
+    input   uint5   shiftcount,
+    input   uint7   function7,
+    output! uint32  result
+) <autorun> {
+    while(1) {
+        if( start ) {
+            switch( shiftcount ) {
+                case 0: { result = sourceReg1; }
+                $$for i = 1, 31 do
+                    $$ remain = 32 - i
+                    case $i$: { result = { sourceReg1[ 0, $remain$ ], {$i${ function7[4,1] }} }; }
+                $$end
+            }
+        }
     }
 }
-circuitry ROL(
-    input   sourceReg1,
-    input   shiftcount,
-    output  result
-) {
-    switch( shiftcount[0,5] ) {
-        case 0: { result = sourceReg1; }
-        $$for i = 1, 31 do
-            $$ remain = 32 - i
-            case $i$: { result = { sourceReg1[ 0, $remain$ ], sourceReg1[ $remain$, $i$ ] }; }
-        $$end
-    }
-}
-circuitry RIGHTshifter(
-    input   sourceReg1,
-    input   shiftcount,
-    input   function7,
-    output  result
-) {
+algorithm BSHIFTright(
+    input   uint1   start,
+
+    input   uint32  sourceReg1,
+    input   uint5   shiftcount,
+    input   uint7   function7,
+    output! uint32  result
+) <autorun> {
     uint1   bit = uninitialised;
-    switch( function7[4,2] ) {
-        case 2b00: { bit = 0; }
-        case 2b01: { bit = 1; }
-        case 2b10: { bit = sourceReg1[31,1]; }
-    }
-    switch( shiftcount[0,5] ) {
-        case 0: { result = sourceReg1; }
-        $$for i = 1, 31 do
-            $$ remain = 32 - i
-            case $i$: { result = { {$i${bit}}, sourceReg1[ $i$, $remain$ ] }; }
-        $$end
+
+    while(1) {
+        switch( function7[4,2] ) {
+            case 2b00: { bit = 0; }
+            case 2b01: { bit = 1; }
+            case 2b10: { bit = sourceReg1[31,1]; }
+        }
+        if( start ) {
+            switch( shiftcount ) {
+                case 0: { result = sourceReg1; }
+                $$for i = 1, 31 do
+                    $$ remain = 32 - i
+                    case $i$: { result = { {$i${bit}}, sourceReg1[ $i$, $remain$ ] }; }
+                $$end
+            }
+        }
     }
 }
-circuitry ROR(
-    input   sourceReg1,
-    input   shiftcount,
-    output  result
-) {
-    switch( shiftcount[0,5] ) {
-        case 0: { result = sourceReg1; }
-        $$for i = 1, 31 do
-            $$ remain = 32 - i
-            case $i$: { result = { sourceReg1[ $remain$, $i$ ], sourceReg1[ $i$, $remain$ ] }; }
-        $$end
+algorithm BROTATE(
+    input   uint1   start,
+
+    input   uint32  sourceReg1,
+    input   uint5   shiftcount,
+    input   uint3   function3,
+    output! uint32  result
+) <autorun> {
+    uint5   rotatecount = uninitialised;
+
+    while(1) {
+        switch( function3 ) {
+            default: { rotatecount = shiftcount; }
+            case 3b001: { rotatecount = 32 - shiftcount; }
+        }
+        if( start ) {
+            switch( rotatecount ) {
+                case 0: { result = sourceReg1; }
+                $$for i = 1, 31 do
+                    $$ remain = 32 - i
+                    case $i$: { result = { sourceReg1[ $remain$, $i$ ], sourceReg1[ $i$, $remain$ ] }; }
+                $$end
+            }
+        }
     }
 }
 
-// BIT SET CLR INV EXTRACT
-circuitry SBSetClrInv(
-    input   sourceReg1,
-    input   shiftcount,
-    input   function7,
-    output  result
-) {
-    uint1   bit = uninitialised;
-    switch( function7[4,2] ) {
-        case 2b01: { bit = 1; }
-        case 2b10: { bit = 0; }
-        case 2b11: { bit = ~sourceReg1[shiftcount,1]; }
+// SINGLE BIT OPERATIONS SET CLEAR INVERT
+algorithm singlebitops(
+    input   uint1   start,
+
+    input   uint32  sourceReg1,
+    input   uint5   shiftcount,
+    input   uint7   function7,
+    output! uint32  result
+) <autorun> {
+    uint1   bit := ( function7[4,2] == 2b11 ) ? ~sourceReg1[shiftcount,1] : function7[4,1];
+
+    while(1) {
+        if( start ) {
+            switch( shiftcount ) {
+                case 0: { result = { sourceReg1[ 1, 31 ], bit }; }
+                $$for i = 1, 30 do
+                $$j = i + 1
+                $$remain = 31 - i;
+                    case $i$: { result = { sourceReg1[ $j$, $remain$ ], bit, sourceReg1[ 0, $i$ ] }; }
+                $$end
+                case 31: { result = { bit, sourceReg1[0, 31 ] }; }
+            }
+        }
     }
-    switch( shiftcount[0,5] ) {
-        case 0: { result = { sourceReg1[ 1, 31 ], bit }; }
-        $$for i = 1, 30 do
-        $$j = i + 1
-        $$remain = 31 - i;
-            case $i$: { result = { sourceReg1[ $j$, $remain$ ], bit, sourceReg1[ 0, $i$ ] }; }
-        $$end
-        case 31: { result = { bit, sourceReg1[0, 31 ] }; }
-    }
-}
-circuitry SBSET(
-    input   sourceReg1,
-    input   shiftcount,
-    output  result
-) {
-    switch( shiftcount[0,5] ) {
-        case 0: { result = { sourceReg1[ 1, 31 ], 1b1 }; }
-        $$for i = 1, 30 do
-        $$j = i + 1
-        $$remain = 31 - i;
-            case $i$: { result = { sourceReg1[ $j$, $remain$ ], 1b1, sourceReg1[ 0, $i$ ] }; }
-        $$end
-        case 31: { result = { 1b1, sourceReg1[0, 31 ] }; }
-    }
-}
-circuitry SBCLR(
-    input   sourceReg1,
-    input   shiftcount,
-    output  result
-) {
-    switch( shiftcount[0,5] ) {
-        case 0: { result = { sourceReg1[ 1, 31 ], 1b0 }; }
-        $$for i = 1, 30 do
-        $$j = i + 1
-        $$remain = 31 - i;
-            case $i$: { result = { sourceReg1[ $j$, $remain$ ], 1b0, sourceReg1[ 0, $i$ ] }; }
-        $$end
-        case 31: { result = { 1b0, sourceReg1[0, 31 ] }; }
-    }
-}
-circuitry SBINV(
-    input   sourceReg1,
-    input   shiftcount,
-    output  result
-) {
-    switch( shiftcount[0,5] ) {
-        case 0: { result = { sourceReg1[ 1, 31 ], ~sourceReg1[0,1] }; }
-        $$for i = 1, 30 do
-        $$j = i + 1
-        $$remain = 31 - i;
-            case $i$: { result = { sourceReg1[ $j$, $remain$ ], ~sourceReg1[$i$,1], sourceReg1[ 0, $i$ ] }; }
-        $$end
-        case 31: { result = { ~sourceReg1[31,1], sourceReg1[0, 31 ] }; }
-    }
-}
-circuitry SBEXT(
-    input   sourceReg1,
-    input   shiftcount,
-    output  result
-) {
-    result = sourceReg1[ shiftcount[0,5], 1 ];
 }
 
 // GENERAL REVERSE / GENERAL OR CONDITIONAL

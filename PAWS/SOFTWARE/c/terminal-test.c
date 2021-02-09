@@ -27,5 +27,7 @@ void main( void ) {
     }
 
     while(1) {
+        mvprintw( 29, 0, "CPU Cycles <%d> CPU Instructions <%d> Cycles / Instructions <%d>", CSRcycles(), CSRinstructions(), CSRcycles() / CSRinstructions() );
+        sleep( 1000, 0 );
     }
 }
