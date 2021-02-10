@@ -449,31 +449,57 @@ algorithm singlebitops(
 }
 
 // GENERAL REVERSE / GENERAL OR CONDITIONAL
-circuitry GREV(
-    input   sourceReg1,
-    input   shiftcount,
-    output  result
-) {
-    result = sourceReg1;
-    ++:
-    if( shiftcount[0,1] ) { result = ( ( result & 32h55555555 ) << 1 ) | ( ( result & 32haaaaaaaa ) >> 1 ); ++: }
-    if( shiftcount[1,1] ) { result = ( ( result & 32h33333333 ) << 2 ) | ( ( result & 32hcccccccc ) >> 2 ); ++: }
-    if( shiftcount[2,1] ) { result = ( ( result & 32h0f0f0f0f ) << 4 ) | ( ( result & 32hf0f0f0f0 ) >> 4 ); ++: }
-    if( shiftcount[3,1] ) { result = ( ( result & 32h00ff00ff ) << 8 ) | ( ( result & 32hff00ff00 ) >> 8 ); ++: }
-    if( shiftcount[4,1] ) { result = ( ( result & 32h0000ffff ) << 16 ) | ( ( result & 32hffff0000 ) >> 16 ); }
+algorithm grev(
+    input   uint1   start,
+    output! uint1   busy,
+
+    input   uint32  sourceReg1,
+    input   uint5   shiftcount,
+    output! uint32  result
+) <autorun> {
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+
+            result = sourceReg1;
+            ++:
+            if( shiftcount[0,1] ) { result = ( ( result & 32h55555555 ) << 1 ) | ( ( result & 32haaaaaaaa ) >> 1 ); ++: }
+            if( shiftcount[1,1] ) { result = ( ( result & 32h33333333 ) << 2 ) | ( ( result & 32hcccccccc ) >> 2 ); ++: }
+            if( shiftcount[2,1] ) { result = ( ( result & 32h0f0f0f0f ) << 4 ) | ( ( result & 32hf0f0f0f0 ) >> 4 ); ++: }
+            if( shiftcount[3,1] ) { result = ( ( result & 32h00ff00ff ) << 8 ) | ( ( result & 32hff00ff00 ) >> 8 ); ++: }
+            if( shiftcount[4,1] ) { result = ( ( result & 32h0000ffff ) << 16 ) | ( ( result & 32hffff0000 ) >> 16 ); }
+
+            busy = 0;
+        }
+    }
 }
-circuitry GORC(
-    input   sourceReg1,
-    input   shiftcount,
-    output  result
-) {
-    result = sourceReg1;
-    ++:
-    if( shiftcount[0,1] ) { result = result | ( ( result & 32h55555555 ) << 1 ) | ( ( result & 32haaaaaaaa ) >> 1 ); ++: }
-    if( shiftcount[1,1] ) { result = result | ( ( result & 32h33333333 ) << 2 ) | ( ( result & 32hcccccccc ) >> 2 ); ++: }
-    if( shiftcount[2,1] ) { result = result | ( ( result & 32h0f0f0f0f ) << 4 ) | ( ( result & 32hf0f0f0f0 ) >> 4 ); ++: }
-    if( shiftcount[3,1] ) { result = result | ( ( result & 32h00ff00ff ) << 8 ) | ( ( result & 32hff00ff00 ) >> 8 ); ++: }
-    if( shiftcount[4,1] ) { result = result | ( ( result & 32h0000ffff ) << 16 ) | ( ( result & 32hffff0000 ) >> 16 ); }
+algorithm gorc(
+    input   uint1   start,
+    output! uint1   busy,
+
+    input   uint32  sourceReg1,
+    input   uint5   shiftcount,
+    output! uint32  result
+) <autorun> {
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+
+            result = sourceReg1;
+            ++:
+            if( shiftcount[0,1] ) { result = result | ( ( result & 32h55555555 ) << 1 ) | ( ( result & 32haaaaaaaa ) >> 1 ); ++: }
+            if( shiftcount[1,1] ) { result = result | ( ( result & 32h33333333 ) << 2 ) | ( ( result & 32hcccccccc ) >> 2 ); ++: }
+            if( shiftcount[2,1] ) { result = result | ( ( result & 32h0f0f0f0f ) << 4 ) | ( ( result & 32hf0f0f0f0 ) >> 4 ); ++: }
+            if( shiftcount[3,1] ) { result = result | ( ( result & 32h00ff00ff ) << 8 ) | ( ( result & 32hff00ff00 ) >> 8 ); ++: }
+            if( shiftcount[4,1] ) { result = result | ( ( result & 32h0000ffff ) << 16 ) | ( ( result & 32hffff0000 ) >> 16 ); }
+
+            busy = 0;
+        }
+    }
 }
 
 // SHUFFLE / UNSHUFFLE
@@ -493,158 +519,246 @@ circuitry shuffle32_stage(
     ++:
     x = x | ( A & maskL ) | ( B & maskR );
 }
-circuitry SHFL(
-    input   sourceReg1,
-    input   shiftcount,
-    output  result
-) {
+algorithm shfl(
+    input   uint1   start,
+    output! uint1   busy,
+
+    input   uint32  sourceReg1,
+    input   uint5   shiftcount,
+    output! uint32  result
+) <autorun> {
     uint4   N8 = 8; uint32 N8A = 32h00ff0000; uint32 N8B = 32h0000ff00;
     uint4   N4 = 4; uint32 N4A = 32h0f000f00; uint32 N4B = 32h00f000f0;
     uint4   N2 = 2; uint32 N2A = 32h30303030; uint32 N2B = 32h0c0c0c0c;
     uint4   N1 = 1; uint32 N1A = 32h44444444; uint32 N1B = 32h22222222;
 
-    result = sourceReg1;
-    ++:
-    if( shiftcount[3,1] ) { ( result ) = shuffle32_stage( result, N8A, N8B, N8 ); }
-    if( shiftcount[2,1] ) { ( result ) = shuffle32_stage( result, N4A, N4B, N4 ); }
-    if( shiftcount[1,1] ) { ( result ) = shuffle32_stage( result, N2A, N2B, N2 ); }
-    if( shiftcount[0,1] ) { ( result ) = shuffle32_stage( result, N1A, N1B, N1 ); }
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+
+            result = sourceReg1;
+            ++:
+            if( shiftcount[3,1] ) { ( result ) = shuffle32_stage( result, N8A, N8B, N8 ); }
+            if( shiftcount[2,1] ) { ( result ) = shuffle32_stage( result, N4A, N4B, N4 ); }
+            if( shiftcount[1,1] ) { ( result ) = shuffle32_stage( result, N2A, N2B, N2 ); }
+            if( shiftcount[0,1] ) { ( result ) = shuffle32_stage( result, N1A, N1B, N1 ); }
+
+            busy = 0;
+        }
+    }
 }
-circuitry UNSHFL(
-    input   sourceReg1,
-    input   shiftcount,
-    output  result
-) {
+algorithm unshfl(
+    input   uint1   start,
+    output! uint1   busy,
+
+    input   uint32  sourceReg1,
+    input   uint5   shiftcount,
+    output! uint32  result
+) <autorun> {
     uint4   N8 = 8; uint32 N8A = 32h00ff0000; uint32 N8B = 32h0000ff00;
     uint4   N4 = 4; uint32 N4A = 32h0f000f00; uint32 N4B = 32h00f000f0;
     uint4   N2 = 2; uint32 N2A = 32h30303030; uint32 N2B = 32h0c0c0c0c;
     uint4   N1 = 1; uint32 N1A = 32h44444444; uint32 N1B = 32h22222222;
 
-    result = sourceReg1;
-    ++:
-    if( shiftcount[0,1] ) { ( result ) = shuffle32_stage( result, N1A, N1B, N1 ); }
-    if( shiftcount[1,1] ) { ( result ) = shuffle32_stage( result, N2A, N2B, N2 ); }
-    if( shiftcount[2,1] ) { ( result ) = shuffle32_stage( result, N4A, N4B, N4 ); }
-    if( shiftcount[3,1] ) { ( result ) = shuffle32_stage( result, N8A, N8B, N8 ); }
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+
+            result = sourceReg1;
+            ++:
+            if( shiftcount[0,1] ) { ( result ) = shuffle32_stage( result, N1A, N1B, N1 ); }
+            if( shiftcount[1,1] ) { ( result ) = shuffle32_stage( result, N2A, N2B, N2 ); }
+            if( shiftcount[2,1] ) { ( result ) = shuffle32_stage( result, N4A, N4B, N4 ); }
+            if( shiftcount[3,1] ) { ( result ) = shuffle32_stage( result, N8A, N8B, N8 ); }
+
+            busy = 0;
+        }
+    }
 }
 
 // CARRYLESS MULTIPLY
-circuitry CLMUL(
-    input   sourceReg1,
-    input   sourceReg2,
-    input   function3,
-    output  result
-) {
+algorithm clmul(
+    input   uint1   start,
+    output! uint1   busy,
+
+    input   uint3   function3,
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+    output! uint32  result
+) <autorun> {
     uint6   i = uninitialised;
-    i = ( function3 == 3b011 ) ? 1 : 0;
-    result = 0;
-    ++:
-    while( i < 32 ) {
-        if( sourceReg2[i,1] ) {
-            switch( function3 ) {
-                case 3b001: { result = result ^ ( sourceReg1 << i ); }
-                case 3b010: { result = result ^ ( sourceReg1 << ( 32 - i ) ); }
-                case 3b011: { result = result ^ ( sourceReg1 << ( 31 - i ) ); }
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+
+            i = ( function3 == 3b011 ) ? 1 : 0;
+            result = 0;
+            ++:
+            while( i < 32 ) {
+                if( sourceReg2[i,1] ) {
+                    switch( function3 ) {
+                        case 3b001: { result = result ^ ( sourceReg1 << i ); }
+                        case 3b010: { result = result ^ ( sourceReg1 << ( 32 - i ) ); }
+                        case 3b011: { result = result ^ ( sourceReg1 << ( 31 - i ) ); }
+                    }
+                }
+                i = i + 1;
             }
+
+            busy = 0;
         }
-        i = i + 1;
     }
 }
 
 // BITS EXTRACT / DEPOSIT
-circuitry BEXT(
-    input   sourceReg1,
-    input   sourceReg2,
-    output  result
-) {
-    uint6   i = 0;
-    uint6   j = 0;
-    result = 0;
-    ++:
-    while( i < 32 ) {
-        if( sourceReg2[i,1] ) {
-            if( sourceReg1[ i, 1] ) {
-                result[ j, 1 ] = 1b1;
+algorithm bext(
+    input   uint1   start,
+    output! uint1   busy,
+
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+    output! uint32  result
+) <autorun> {
+    uint6   i = uninitialised;
+    uint6   j = uninitialised;
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+
+            i = 0;
+            j = 0;
+            result = 0;
+            ++:
+            while( i < 32 ) {
+                if( sourceReg2[i,1] ) {
+                    if( sourceReg1[ i, 1] ) {
+                        result[ j, 1 ] = 1b1;
+                    }
+                    j = j + 1;
+                }
+                i = i + 1;
             }
-            j = j + 1;
+
+            busy = 0;
         }
-        i = i + 1;
     }
 }
-circuitry BDEP(
-    input   sourceReg1,
-    input   sourceReg2,
-    output  result
-) {
-    uint6   i = 0;
-    uint6   j = 0;
-    result = 0;
-    ++:
-    while( i < 32 ) {
-        if( sourceReg2[i,1] ) {
-            if( sourceReg1[ j, 1] ) {
-                result[ j, 1 ] = 1b1;
+algorithm bdep(
+    input   uint1   start,
+    output! uint1   busy,
+
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+    output! uint32  result
+) <autorun> {
+    uint6   i = uninitialised;
+    uint6   j = uninitialised;
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+
+            i = 0;
+            j = 0;
+            result = 0;
+            ++:
+            while( i < 32 ) {
+                if( sourceReg2[i,1] ) {
+                    if( sourceReg1[ j, 1] ) {
+                        result[ j, 1 ] = 1b1;
+                    }
+                    j = j + 1;
+                }
+                i = i + 1;
             }
-            j = j + 1;
+
+            busy = 0;
         }
-        i = i + 1;
     }
 }
-circuitry BFP(
-    input   sourceReg1,
-    input   sourceReg2,
-    output  result
-) {
+algorithm bfp(
+    input   uint1   start,
+    output! uint1   busy,
+
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+    output! uint32  result
+) <autorun> {
     uint5   length = uninitialised;
     uint6   offset = uninitialised;
-    uint32  mask = 0;
+    uint32  mask = uninitialised;
 
-    length = ( sourceReg2[24,4] == 0 ) ? 16 : sourceReg2[24,4];
-    offset = sourceReg2[16,5];
-    ++:
-    mask = ~(~mask << offset);
-    ++:
-    result = ( ( sourceReg2 << offset ) & mask ) | ( sourceReg1 & ~mask );
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+
+            mask = 0;
+            length = ( sourceReg2[24,4] == 0 ) ? 16 : sourceReg2[24,4];
+            offset = sourceReg2[16,5];
+            ++:
+            mask = ~(~mask << offset);
+            ++:
+            result = ( ( sourceReg2 << offset ) & mask ) | ( sourceReg1 & ~mask );
+
+            busy = 0;
+        }
+    }
 }
 
 // XPERM for nibble, byte and half-word
-// CALCULATE result = result | ( ( sourceReg1 >> pos ) & mask ) << i
-circuitry xperm(
-    input   sourceReg1,
-    input   sourceReg2,
-    input   sz_log2,
-    output  result
-) {
+algorithm xperm(
+    input   uint1   start,
+    output! uint1   busy,
+
+    input   uint3   function3,
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+    output! uint32  result
+) <autorun> {
+    uint3   sz_log2 = uninitialised;
     uint6   sz = uninitialised;
     uint32  mask = uninitialised;
     uint32  pos = uninitialised;
     uint6   i = uninitialised;
 
-    sz = 1 << sz_log2;
-    mask = ( 1 << ( 1 << sz_log2 ) ) - 1;
-    result = 0;
-    i = 0;
-    ++:
-    while( i < 32 ) {
-        pos = ( ( sourceReg2 >> i ) & mask ) << sz_log2;
-        ++:
-        if( pos < 32 ) {
-            result = result | (( sourceReg1 >> pos ) & mask ) << i;
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+
+            switch( function3 ) {
+                case 3b010: { sz_log2 = 2; }
+                case 3b100: { sz_log2 = 3; }
+                case 3b110: { sz_log2 = 4; }
+            }
+            ++:
+            sz = 1 << sz_log2;
+            mask = ( 1 << ( 1 << sz_log2 ) ) - 1;
+            result = 0;
+            i = 0;
+            ++:
+            while( i < 32 ) {
+                pos = ( ( sourceReg2 >> i ) & mask ) << sz_log2;
+                ++:
+                if( pos < 32 ) {
+                    result = result | (( sourceReg1 >> pos ) & mask ) << i;
+                }
+                i = i + sz;
+            }
+
+            busy = 0;
         }
-        i = i + sz;
     }
-}
-circuitry XPERM(
-    input   sourceReg1,
-    input   sourceReg2,
-    input   function3,
-    output  result
-) {
-    uint3   sz_log2 = uninitialised;
-    switch( function3 ) {
-        case 3b010: { sz_log2 = 2; }
-        case 3b100: { sz_log2 = 3; }
-        case 3b110: { sz_log2 = 4; }
-    }
-    ( result ) = xperm( sourceReg1, sourceReg2, sz_log2 );
 }

@@ -68,7 +68,7 @@ algorithm bitmapwriter (
     input   uint7   bitmap_colour_write_alt,
     input   uint1   bitmap_write,
     input   uint3   gpu_active_dithermode,
-    input   uint1   staticGenerator,
+    input   uint16  staticGenerator,
     input   uint10  x_offset,
     input   uint10  y_offset,
 
@@ -97,7 +97,7 @@ algorithm bitmapwriter (
                 case 4: { bitmap.wdata1 = ( ( bitmap_x_write[0,1] || bitmap_y_write[0,1] ) ? bitmap_colour_write : bitmap_colour_write_alt ); }
                 case 5: { bitmap.wdata1 = ( ( bitmap_x_write[0,2] == bitmap_y_write[0,2] ) ? bitmap_colour_write : bitmap_colour_write_alt ); }
                 case 6: { bitmap.wdata1 = ( ( bitmap_x_write[0,2] == ~bitmap_y_write[0,2] ) ? bitmap_colour_write : bitmap_colour_write_alt ); }
-                case 7: { bitmap.wdata1 = ( staticGenerator ? bitmap_colour_write : bitmap_colour_write_alt ); }
+                case 7: { bitmap.wdata1 = ( staticGenerator[0,1] ? bitmap_colour_write : bitmap_colour_write_alt ); }
                 default: { bitmap.wdata1 = bitmap_colour_write; }
             }
         }

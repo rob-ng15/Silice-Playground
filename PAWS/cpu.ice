@@ -70,7 +70,6 @@ algorithm PAWSCPU (
     // ALU BLOCKS
     // ATOMIC MEMORY OPERATIONS
     aluA ALUA(
-        opCode <: opCode,
         function7 <: function7,
         memoryinput <: AMOmemory,
         sourceReg2 <: sourceReg2
@@ -117,8 +116,10 @@ algorithm PAWSCPU (
     registers_2.wenable1 := 1;
 
     // ALU START FLAGS
+    ALUA.start := 0;
     ALUI.start := 0;
     ALUR.start := 0;
+    CSR.start := 0;
     CSR.incCSRinstret := 0;
 
     while(1) {
@@ -245,6 +246,7 @@ algorithm PAWSCPU (
             case 5b11100: {
                 // CSR
                 writeRegister = 1;
+                CSR.start = 1;
                 result = CSR.result;
             }
             case 5b01011: {
@@ -295,7 +297,7 @@ algorithm PAWSCPU (
                         while( memorybusy ) {}
                         ( AMOmemory ) = halfhalfword( readdata, lowWord );
 
-                        // ALGORITHM ALUA WILL AUTOMATICALLY TRIGGER AND GENERATE RESULT
+                        ALUA.start = 1;
 
                         // STORE 32 bit
                         address = sourceReg1;
