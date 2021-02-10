@@ -43,13 +43,7 @@ algorithm multiplex_display(
     input uint2 character_map_r,
     input uint2 character_map_g,
     input uint2 character_map_b,
-    input uint1 character_map_display,
-
-    // TERMINAL
-    input uint2 terminal_r,
-    input uint2 terminal_g,
-    input uint2 terminal_b,
-    input uint1 terminal_display
+    input uint1 character_map_display
 ) <autorun> {
     uint8   red8 = uninitialised;
     uint8   green8 = uninitialised;
@@ -57,8 +51,6 @@ algorithm multiplex_display(
 
     expandcolour RED(
         display_order <: display_order,
-        terminal_display <: terminal_display,
-        terminal <: terminal_r,
         character_map_display <: character_map_display,
         character_map <: character_map_r,
         upper_sprites_display <: upper_sprites_display,
@@ -75,8 +67,6 @@ algorithm multiplex_display(
     );
     expandcolour GREEN(
         display_order <: display_order,
-        terminal_display <: terminal_display,
-        terminal <: terminal_g,
         character_map_display <: character_map_display,
         character_map <: character_map_g,
         upper_sprites_display <: upper_sprites_display,
@@ -93,8 +83,6 @@ algorithm multiplex_display(
     );
     expandcolour BLUE(
         display_order <: display_order,
-        terminal_display <: terminal_display,
-        terminal <: terminal_b,
         character_map_display <: character_map_display,
         character_map <: character_map_b,
         upper_sprites_display <: upper_sprites_display,
@@ -127,8 +115,6 @@ algorithm multiplex_display(
 // EXPAND FROM 2 bit to 8 bit colour
 algorithm expandcolour(
     input   uint2   display_order,
-    input   uint1   terminal_display,
-    input   uint2   terminal,
     input   uint1   character_map_display,
     input   uint2   character_map,
     input   uint1   upper_sprites_display,
@@ -147,9 +133,8 @@ algorithm expandcolour(
     while(1) {
         switch( display_order ) {
             case 0: {
-                // BACKGROUND -> TILEMAP -> LOWER_SPRITES -> BITMAP -> UPPER_SPRITES -> CHARACTER_MAP -> TERMINAL
-                pix = ( terminal_display ) ? { {4{terminal}} } :
-                                            ( character_map_display ) ? { {4{character_map}} } :
+                // BACKGROUND -> TILEMAP -> LOWER_SPRITES -> BITMAP -> UPPER_SPRITES -> CHARACTER_MAP
+                pix = ( character_map_display ) ? { {4{character_map}} } :
                                             ( upper_sprites_display ) ? { {4{upper_sprites}} } :
                                             ( bitmap_display ) ? { {4{bitmap}} } :
                                             ( lower_sprites_display ) ? { {4{lower_sprites}} } :
@@ -157,9 +142,8 @@ algorithm expandcolour(
                                             { {4{background}} };
             }
             case 1: {
-                // BACKGROUND -> TILEMAP -> BITMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP -> TERMINAL
-                pix = ( terminal_display ) ? { {4{terminal}} } :
-                                            ( character_map_display ) ? { {4{character_map}} } :
+                // BACKGROUND -> TILEMAP -> BITMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP
+                pix = ( character_map_display ) ? { {4{character_map}} } :
                                             ( upper_sprites_display ) ? { {4{upper_sprites}} } :
                                             ( lower_sprites_display ) ? { {4{lower_sprites}} } :
                                             ( bitmap_display ) ? { {4{bitmap}} } :
@@ -167,9 +151,8 @@ algorithm expandcolour(
                                             { {4{background}} };
             }
             case 2: {
-                // BACKGROUND -> BITMAP -> TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP -> TERMINAL
-                pix = ( terminal_display ) ? { {4{terminal}} } :
-                                            ( character_map_display ) ? { {4{character_map}} } :
+                // BACKGROUND -> BITMAP -> TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP
+                pix = ( character_map_display ) ? { {4{character_map}} } :
                                             ( upper_sprites_display ) ? { {4{upper_sprites}} } :
                                             ( lower_sprites_display ) ? { {4{lower_sprites}} } :
                                             ( tilemap_display ) ? { {4{tilemap}} } :
@@ -177,9 +160,8 @@ algorithm expandcolour(
                                             { {4{background}} };
             }
             case 3: {
-                // BACKGROUND -> TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> BITMAP -> CHARACTER_MAP -> TERMINAL
-                pix = ( terminal_display ) ? { {4{terminal}} } :
-                                            ( character_map_display ) ? { {4{character_map}} } :
+                // BACKGROUND -> TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> BITMAP -> CHARACTER_MAP
+                pix = ( character_map_display ) ? { {4{character_map}} } :
                                             ( bitmap_display ) ? { {4{bitmap}} } :
                                             ( upper_sprites_display ) ? { {4{upper_sprites}} } :
                                             ( lower_sprites_display ) ? { {4{lower_sprites}} } :

@@ -52,7 +52,14 @@
 #define ORANGE 0x38
 
 #define DITHEROFF 0, BLACK
-#define DITHERON 1
+#define DITHERCHECK 1
+#define DITHERVSTRIPE 2
+#define DITHERHSTRIPE 3
+#define DITHERHATCH 4
+#define DITHERRSLOPE 5
+#define DITHERLSLOPE 6
+#define DITHERSTATIC 7
+
 
 typedef unsigned int size_t;
 typedef unsigned short bool;
@@ -189,10 +196,6 @@ extern void screen_mode( unsigned char );
 
 // BACKGROUND GENERATOR
 extern void set_background( unsigned char, unsigned char, unsigned char );
-
-// TERMINAL WINDOW
-extern void terminal_showhide( unsigned char );
-extern void terminal_reset( void );
 
 // TILEMAP
 extern void set_tilemap_tile( unsigned char, unsigned char, unsigned char, unsigned char, unsigned char );

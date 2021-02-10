@@ -122,6 +122,8 @@ algorithm memmap_io (
     int11   bitmap_x_write = uninitialized;
     int11   bitmap_y_write = uninitialized;
     uint7   bitmap_colour_write = uninitialized;
+    uint7   bitmap_colour_write_alt = uninitialized;
+    uint3   gpu_active_dithermode = uninitialized;
     uint1   bitmap_write = uninitialized;
 
     // 640 x 480 x 7 bit { Arrggbb } colour bitmap
@@ -143,7 +145,10 @@ algorithm memmap_io (
         bitmap_x_write <: bitmap_x_write,
         bitmap_y_write <: bitmap_y_write,
         bitmap_colour_write <: bitmap_colour_write,
+        bitmap_colour_write_alt <: bitmap_colour_write_alt,
         bitmap_write <: bitmap_write,
+        gpu_active_dithermode <: gpu_active_dithermode,
+        staticGenerator <: staticGenerator,
         x_offset <: x_offset,
         y_offset <: y_offset,
         bitmap <:> bitmap
@@ -205,24 +210,6 @@ algorithm memmap_io (
         character_map_display :> character_map_display
     );
 
-    // Terminal window at the bottom of the screen
-    uint2   terminal_r = uninitialized;
-    uint2   terminal_g = uninitialized;
-    uint2   terminal_b = uninitialized;
-    uint1   terminal_display = uninitialized;
-
-    terminal terminal_window <@video_clock,!video_reset> (
-        pix_x      <: pix_x,
-        pix_y      <: pix_y,
-        pix_active <: pix_active,
-        pix_vblank <: vblank,
-        pix_red    :> terminal_r,
-        pix_green  :> terminal_g,
-        pix_blue   :> terminal_b,
-        terminal_display :> terminal_display,
-        timer1hz   <: systemClock
-    );
-
     // Combine the display layers for display
     multiplex_display display <@video_clock,!video_reset> (
         pix_x      <: pix_x,
@@ -260,12 +247,7 @@ algorithm memmap_io (
         character_map_r <: character_map_r,
         character_map_g <: character_map_g,
         character_map_b <: character_map_b,
-        character_map_display <: character_map_display,
-
-        terminal_r <: terminal_r,
-        terminal_g <: terminal_g,
-        terminal_b <: terminal_b,
-        terminal_display <: terminal_display
+        character_map_display <: character_map_display
     );
 
     // Left and Right audio channels
@@ -282,7 +264,9 @@ algorithm memmap_io (
         bitmap_x_write :> bitmap_x_write,
         bitmap_y_write :> bitmap_y_write,
         bitmap_colour_write :> bitmap_colour_write,
+        bitmap_colour_write_alt :> bitmap_colour_write_alt,
         bitmap_write :> bitmap_write,
+        gpu_active_dithermode :> gpu_active_dithermode
     );
 
     // SDCARD - Code for the SDCARD from @sylefeb
@@ -351,9 +335,6 @@ algorithm memmap_io (
     timer1khz1.resetCount := 0;
     apu_processor_L.apu_write := 0;
     apu_processor_R.apu_write := 0;
-
-    // Setup the terminal
-    terminal_window.showterminal = 1;
 
     // DISBLE SMT ON STARTUP
     SMTRUNNING = 0;
@@ -448,9 +429,6 @@ algorithm memmap_io (
 
                 // CHARACTER MAP
                 case 16h8614: { readData = character_map_window.tpu_active; }
-
-                // TERMINAL
-                case 16h8700: { readData = terminal_window.terminal_active; }
 
                 // AUDIO
                 case 16h8808: { readData = apu_processor_L.audio_active; }
@@ -599,11 +577,6 @@ algorithm memmap_io (
                 case 16h8610: { character_map_window.tpu_foreground = writeData; }
                 case 16h8614: { character_map_window.tpu_write = writeData; }
 
-                // TERMINAL
-                case 16h8700: { terminal_window.terminal_character = writeData; terminal_window.terminal_write = 1; }
-                case 16h8704: { terminal_window.showterminal = writeData; }
-                case 16h8708: { terminal_window.terminal_write = 2; }
-
                 // AUDIO
                 case 16h8800: { apu_processor_L.waveform = writeData; }
                 case 16h8804: { apu_processor_L.note = writeData; }
@@ -654,7 +627,6 @@ algorithm memmap_io (
             upper_sprites.sprite_layer_write_SMT = 0;
             upper_sprites.sprite_writer_active = 0;
             character_map_window.tpu_write = 0;
-            terminal_window.terminal_write = 0;
         }
 
         LATCHmemoryRead = memoryRead;

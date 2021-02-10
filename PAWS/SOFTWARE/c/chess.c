@@ -34,7 +34,6 @@ void setupscreen( void ) {
     // CLEAR and SET THE BACKGROUND
     gpu_cs();
     tpu_cs();
-    terminal_showhide( 0 );
     set_background( 0, 0, BKG_RAINBOW );
 
     // CLEAR THE SCREEN AND DRAW THE FRAME

@@ -22,8 +22,6 @@ unsigned short tilemap_bitmap[] = {
 
 void displayreset( void ) {
     // RESET THE DISPLAY
-    terminal_showhide( 0 );
-    terminal_reset();
     gpu_cs();
     tpu_cs();
     tilemap_scrollwrapclear( 9 );
@@ -116,7 +114,7 @@ void gpudemo( void ) {
     gpu_cs();
     tpu_outputstringcentre( 29, TRANSPARENT, WHITE, "GPU Rectangle Drawing Test - Solid & Dither" );
     for( i = 0; i < 1024; i++ ) {
-        gpu_dither( rng(1), rng( 64 ) );
+        gpu_dither( rng(8), rng( 64 ) );
         gpu_rectangle( rng( 64 ), rng( 640 ), rng( 480 ), rng( 640 ), rng( 480 ) );
     }
     gpu_dither( DITHEROFF );
@@ -126,7 +124,7 @@ void gpudemo( void ) {
     gpu_cs();
     tpu_outputstringcentre( 29, TRANSPARENT, WHITE, "GPU Circle Drawing Test - Solid & Dither" );
     for( i = 0; i < 1024; i++ ) {
-        gpu_dither( rng(1), rng( 64 ) );
+        gpu_dither( rng(8), rng( 64 ) );
         gpu_circle( rng( 64 ), rng( 640 ), rng( 480 ), rng( 32 ), rng( 1 ) );
     }
     gpu_dither( DITHEROFF );
@@ -139,7 +137,7 @@ void gpudemo( void ) {
         x1 = rng( 640 ); y1 = rng( 480 );
         x2 = x1 + rng( 100 ); y2 = y1 + rng( 100 );
         x3 = x2 - rng( 100 ); y3 = y1 + rng( 100 );
-        gpu_dither( rng(1), rng( 64 ) );
+        gpu_dither( rng(8), rng( 64 ) );
         gpu_triangle( rng( 64 ), x1, y1, x2, y2, x3, y3 );
     }
     gpu_dither( DITHEROFF );

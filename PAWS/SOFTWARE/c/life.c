@@ -47,7 +47,6 @@ void main( void ) {
 
     gpu_cs();
     tpu_cs();
-    terminal_showhide( 0 );
     set_background( BLACK, BLACK, BKG_RAINBOW );
 
     // START THREAD THAT DISPLAYS THE BOARD

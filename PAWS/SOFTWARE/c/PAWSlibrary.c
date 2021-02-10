@@ -107,19 +107,15 @@ void inttostring( unsigned int value, char *s ) {
     }
 }
 
-// OUTPUT TO TERMINAL & UART
-// OUTPUT INDIVIDUAL CHARACTER TO THE UART/TERMINAL
+// OUTPUT TO UART
+// OUTPUT INDIVIDUAL CHARACTER TO THE UART
 void outputcharacter(char c) {
 	while( *UART_STATUS & 2 ) {}
     *UART_DATA = c;
-
-    while( *TERMINAL_STATUS ) {}
-    *TERMINAL_OUTPUT = c;
-
     if( c == '\n' )
         outputcharacter('\r');
 }
-// OUTPUT NULL TERMINATED STRING TO UART/TERMINAL WITH NEWLINE
+// OUTPUT NULL TERMINATED STRING TO UART WITH NEWLINE
 void outputstring(char *s) {
 	while(*s) {
 		outputcharacter(*s);
@@ -127,14 +123,14 @@ void outputstring(char *s) {
 	}
 	outputcharacter('\n');
 }
-// OUTPUT NULL TERMINATED STRING TO UART/TERMINAL WITH NO NEWLINE
+// OUTPUT NULL TERMINATED STRING TO UART WITH NO NEWLINE
 void outputstringnonl(char *s) {
 	while(*s) {
 		outputcharacter(*s);
 		s++;
 	}
 }
-// OUTPUT UNSIGNED INTEGERS TO UART/TERMINAL ( CHAR, SHORT and INT VERSIONS )
+// OUTPUT UNSIGNED INTEGERS TO UART ( CHAR, SHORT and INT VERSIONS )
 void outputnumber_char( unsigned char value ) {
     char valuestring[]="  0";
     chartostring( value, valuestring );
@@ -330,7 +326,7 @@ unsigned char get_buttons( void ) {
 }
 
 // DISPLAY FUNCTIONS
-// FUNCTIONS ARE IN LAYER ORDER: BACKGROUND, TILEMAP, SPRITES (for LOWER ), BITMAP & GPU, ( UPPER SPRITES ), CHARACTERMAP & TPU, TERMINAL WINDOW
+// FUNCTIONS ARE IN LAYER ORDER: BACKGROUND, TILEMAP, SPRITES (for LOWER ), BITMAP & GPU, ( UPPER SPRITES ), CHARACTERMAP & TPU
 // colour is in the form { Arrggbb } { ALPHA - show layer below, RED, GREEN, BLUE } or { rrggbb } { RED, GREEN, BLUE } giving 64 colours + transparent
 
 // WAIT FOR VBLANK TO START
@@ -580,7 +576,7 @@ void set_vector_vertex( unsigned char block, unsigned char vertex, unsigned char
 }
 
 // SPRITE LAYERS - MAIN ACCESS
-// TWO SPRITE LAYERS ( 0 == lower above background and tilemap, below bitmap, 1 == upper above bitmap, below character map and terminal )
+// TWO SPRITE LAYERS ( 0 == lower above background and tilemap, below bitmap, 1 == upper above bitmap, below character map )
 // WITH 13 SPRITES ( 0 to 12 ) each with 8 16 x 16 pixel bitmaps
 
 // SET THE BITMAPS FOR sprite_number in sprite_layer to the 8 x 16 x 16 pixel bitmaps ( 128 16 bit bitmap lines )
@@ -922,7 +918,7 @@ void tpu_outputstringcentre( unsigned char y, unsigned char background, unsigned
     tpu_outputstring( s );
 }
 
-// OUTPUT UNSIGNED INTEGERS TO UART/TERMINAL ( CHAR, SHORT and INT VERSIONS )
+// OUTPUT UNSIGNED INTEGERS TO TPU ( CHAR, SHORT and INT VERSIONS )
 void tpu_outputnumber_char( unsigned char value ) {
     char valuestring[]="  0";
     chartostring( value, valuestring );
@@ -937,21 +933,6 @@ void tpu_outputnumber_int( unsigned int value ) {
     char valuestring[]="         0";
     inttostring( value, valuestring );
     tpu_outputstring( valuestring );
-}
-
-// TERMINAL (NON-OUTPUT)
-
-// TERMINAL is an 80 x 8 character window ( white text, blue background ) with a 256 character 8 x 8 pixel character generator ROM )
-// DISPLAYS AT THE BOTTOM OF THE SCREEN
-
-// status == 1 SHOW THE TERMINAL WINDOW, status == 0 HIDE THE TERMINAL WINDOW
-void terminal_showhide( unsigned char status ) {
-    *TERMINAL_SHOWHIDE = status;
-}
-
-void terminal_reset( void ) {
-    while( *TERMINAL_STATUS );
-    *TERMINAL_RESET = 1;
 }
 
 // SIMPLE FILE SYSTEM

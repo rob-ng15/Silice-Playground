@@ -12,11 +12,6 @@ unsigned short volatile * SDCARD_SECTOR_HIGH = ( unsigned short *) 0x8f04;
 unsigned short volatile * SDCARD_ADDRESS = (unsigned short volatile *) 0x8f10;
 unsigned char volatile * SDCARD_DATA = (unsigned char volatile *) 0x8f10;
 
-unsigned char * TERMINAL_OUTPUT = (unsigned char *) 0x8700;
-unsigned char volatile * TERMINAL_STATUS = (unsigned char volatile *) 0x8700;
-unsigned char volatile * TERMINAL_SHOWHIDE = (unsigned char volatile *) 0x8704;
-unsigned char volatile * TERMINAL_RESET = (unsigned char volatile *) 0x8708;
-
 unsigned char volatile * BACKGROUND_COLOUR = (unsigned char volatile *) 0x8100;
 unsigned char volatile * BACKGROUND_ALTCOLOUR = (unsigned char volatile *) 0x8104;
 unsigned char volatile * BACKGROUND_MODE = (unsigned char volatile *) 0x8108;

@@ -335,37 +335,6 @@ void tpu_outputstringcentre( unsigned char y, unsigned char background, unsigned
     tpu_outputstring( s );
 }
 
-// TERMINAL
-void outputcharacter(char c) {
-	while( *UART_STATUS & 2 );
-    *UART_DATA = c;
-
-    while( *TERMINAL_STATUS );
-    *TERMINAL_OUTPUT = c;
-
-    if( c == '\n' )
-        outputcharacter('\r');
-}
-// OUTPUT NULL TERMINATED STRING TO UART/TERMINAL WITH NO NEWLINE
-void outputstringnonl(char *s) {
-	while(*s) {
-		outputcharacter(*s);
-		s++;
-	}
-}
-
-// TERMINAL is an 80 x 8 character window ( white text, blue background ) with a 256 character 8 x 8 pixel character generator ROM )
-// DISPLAYS AT THE BOTTOM OF THE SCREEN
-
-// status == 1 SHOW THE TERMINAL WINDOW, status == 0 HIDE THE TERMINAL WINDOW
-void terminal_showhide( unsigned char status ) {
-    *TERMINAL_SHOWHIDE = status;
-}
-
-void terminal_reset( void ) {
-    *TERMINAL_RESET = 1;
-}
-
 typedef unsigned int size_t;
 
 // SDCARD BLITTER TILES
@@ -516,12 +485,11 @@ void draw_sdcard( void  ) {
     gpu_blit( WHITE, 576, 4, 0, 2 );
 }
 
-void reset_display( unsigned char terminalvisible ) {
+void reset_display( void ) {
     *GPU_DITHERMODE = 0;
     gpu_cs();
     tpu_cs();
     tilemap_scrollwrapclear( 9 );
-    terminal_showhide( terminalvisible );
     for( unsigned short i = 0; i < 13; i++ ) {
         set_sprite( 0, i, 0, 0, 0, 0, 0, 0 );
         set_sprite( 1, i, 0, 0, 0, 0, 0, 0 );
@@ -554,17 +522,19 @@ void main( void ) {
 
     // CLEAR SDRAM
     // RESET THE DISPLAY
-    reset_display( 1 );
+    reset_display();
     set_background( BLACK, BLACK, BKG_SOLID );
-    outputstringnonl( " SDRAM Test: " );
+
+    tpu_set( 0, 28, TRANSPARENT, WHITE ); tpu_outputstring( "PAWS Risc-V RV32IMCB BIOS" );
+    tpu_set( 0, 29, TRANSPARENT, WHITE ); tpu_outputstring( "SDRAM Test: " );
     for( sdramaddress = (unsigned int *)0x10000000; sdramaddress < (unsigned int *)0x12000000; sdramaddress++ ) {
         *sdramaddress  = 0;
         if( ( (int)sdramaddress & 0xfffff ) == 0 )
-            outputcharacter( '*' );
+            tpu_output_character( '*' );
     }
 
     // RESET THE DISPLAY
-    reset_display( 0 );
+    reset_display();
     set_background( DKBLUE - 1, BLACK, BKG_SOLID );
 
     // SETUP INITIAL WELCOME MESSAGE
@@ -646,8 +616,7 @@ void main( void ) {
     sleep( 500 );
 
     // RESET THE DISPLAY
-    terminal_reset();
-    reset_display( 0 );
+    reset_display();
     set_background( BLACK, BLACK, BKG_SOLID );
 
     // CALL SDRAM LOADED PROGRAM

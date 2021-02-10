@@ -65,8 +65,10 @@ algorithm bitmapwriter (
     input   int11   bitmap_x_write,
     input   int11   bitmap_y_write,
     input   uint7   bitmap_colour_write,
+    input   uint7   bitmap_colour_write_alt,
     input   uint1   bitmap_write,
-
+    input   uint3   gpu_active_dithermode,
+    input   uint1   staticGenerator,
     input   uint10  x_offset,
     input   uint10  y_offset,
 
@@ -85,7 +87,19 @@ algorithm bitmapwriter (
     while(1) {
         if( write_pixel ) {
             bitmap.addr1 = x_write_pixel + y_write_pixel * 640;
-            bitmap.wdata1 = bitmap_colour_write;
+            // DITHER PATTERNS
+            // == 0 SOLID == 1 CHECKERBOARD == 2 VERTICAL STRIPES == 3 HORIZONTAL STRIPES == 4 CROSSHATCH == 5 RIGHT SLOPE == 6 LEFT SLOPE == 7 STATIC
+            switch( gpu_active_dithermode ) {
+                case 0: { bitmap.wdata1 = bitmap_colour_write; }
+                case 1: { bitmap.wdata1 = ( ( bitmap_x_write[0,1] == bitmap_y_write[0,1] ) ? bitmap_colour_write : bitmap_colour_write_alt ); }
+                case 2: { bitmap.wdata1 = ( bitmap_x_write[0,1] ? bitmap_colour_write : bitmap_colour_write_alt ); }
+                case 3: { bitmap.wdata1 = ( bitmap_y_write[0,1] ? bitmap_colour_write : bitmap_colour_write_alt ); }
+                case 4: { bitmap.wdata1 = ( ( bitmap_x_write[0,1] || bitmap_y_write[0,1] ) ? bitmap_colour_write : bitmap_colour_write_alt ); }
+                case 5: { bitmap.wdata1 = ( ( bitmap_x_write[0,2] == bitmap_y_write[0,2] ) ? bitmap_colour_write : bitmap_colour_write_alt ); }
+                case 6: { bitmap.wdata1 = ( ( bitmap_x_write[0,2] == ~bitmap_y_write[0,2] ) ? bitmap_colour_write : bitmap_colour_write_alt ); }
+                case 7: { bitmap.wdata1 = ( staticGenerator ? bitmap_colour_write : bitmap_colour_write_alt ); }
+                default: { bitmap.wdata1 = bitmap_colour_write; }
+            }
         }
     }
 }

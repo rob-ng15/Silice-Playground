@@ -362,7 +362,6 @@ void setup_game()
 
     // CLEAR and SET THE BACKGROUND
     gpu_cs();
-    terminal_showhide( 0 );
     set_background( GREY2, DKBLUE - 1, BKG_SNOW );
     risc_ice_v_logo();
     set_tilemap();

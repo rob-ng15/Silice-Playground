@@ -208,6 +208,7 @@ algorithm aluIb101(
     output! uint1   busy,
 
     input   uint7   function7,
+    input   uint3   function3,
     input   uint5   IshiftCount,
     input   uint32  sourceReg1,
 
@@ -274,6 +275,7 @@ algorithm aluI (
     );
     aluIb101 ALUIb101(
         function7 <: function7,
+        function3 <: function3,
         IshiftCount <: IshiftCount,
         sourceReg1 <: sourceReg1
     );

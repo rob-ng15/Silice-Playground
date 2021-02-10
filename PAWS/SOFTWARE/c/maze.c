@@ -547,7 +547,17 @@ unsigned short counttowall( unsigned short currentx, unsigned short currenty, un
 // DRAW LEFT or RIGHT WALLS
 void left_wall( unsigned char colour, unsigned char colour_alt, short steps )
 {
-    gpu_dither( DITHERON, colour_alt);
+    switch( colour ) {
+        case YELLOW:
+            gpu_dither( DITHERVSTRIPE, colour_alt);
+            break;
+        case MAGENTA:
+            gpu_dither( DITHERHATCH, colour_alt);
+            break;
+        default:
+            gpu_dither( DITHERCHECK, colour_alt);
+            break;
+    }
     // USE RECTANGLE + TWO TRIANGLES AS FASTER THAN TWO TRIANGLES FOR LARGE AREAS
     gpu_triangle( colour, perspectivex[ steps ], perspectivey[ steps ], perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], perspectivex[ steps ], perspectivey[ steps + 1 ] );
     gpu_rectangle( colour, perspectivex[ steps ], perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
@@ -560,7 +570,17 @@ void left_wall( unsigned char colour, unsigned char colour_alt, short steps )
 }
 void right_wall( unsigned char colour, unsigned char colour_alt, unsigned short steps )
 {
-    gpu_dither( DITHERON, colour_alt);
+    switch( colour ) {
+        case YELLOW:
+            gpu_dither( DITHERVSTRIPE, colour_alt);
+            break;
+        case MAGENTA:
+            gpu_dither( DITHERHATCH, colour_alt);
+            break;
+        default:
+            gpu_dither( DITHERCHECK, colour_alt);
+            break;
+    }
     // USE RECTANGLE + TWO TRIANGLES AS FASTER THAN TWO TRIANGLES FOR LARGE AREAS
     gpu_triangle( colour, 640 - perspectivex[ steps ], perspectivey[ steps ], 640 - perspectivex[ steps ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
     gpu_rectangle( colour, 640 - perspectivex[ steps ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
@@ -773,7 +793,6 @@ int main( void ) {
         // SETUP THE SCREEN BLUE/GREEN BACKGROUND
         gpu_cs();
         tpu_cs();
-        terminal_showhide( 0 );
         set_background( 0, 0, BKG_RAINBOW );
 
         if( firstrun ) {

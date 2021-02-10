@@ -3,7 +3,9 @@ algorithm gpu(
     output! int11   bitmap_x_write,
     output! int11   bitmap_y_write,
     output! uint7   bitmap_colour_write,
+    output! uint7   bitmap_colour_write_alt,
     output! uint1   bitmap_write,
+    output! uint3   gpu_active_dithermode,
 
     input   int11   gpu_x,
     input   int11   gpu_y,
@@ -53,7 +55,6 @@ algorithm gpu(
     // GPU COLOUR
     uint7   gpu_active_colour = uninitialized;
     uint7   gpu_active_colour_alt = uninitialized;
-    uint3   gpu_active_dithermode = uninitialised;
 
     // GPU <-> VECTOR DRAWER Communication
     int11 v_gpu_x = uninitialised;
@@ -148,7 +149,8 @@ algorithm gpu(
 
     // CONTROLS FOR BITMAP PIXEL WRITER
     bitmap_write := 0;
-    bitmap_colour_write := ( gpu_active_dithermode == 0 ) ? gpu_active_colour : ( ( bitmap_x_write[0,1] == bitmap_y_write[0,1] ) ? gpu_active_colour : gpu_active_colour_alt );
+    bitmap_colour_write := gpu_active_colour;
+    bitmap_colour_write_alt := gpu_active_colour_alt;
 
     // CONTROLS FOR GPU SUBUNITS
     GPUrectangle.start := 0;
