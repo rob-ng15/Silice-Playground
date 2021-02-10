@@ -5,7 +5,7 @@ algorithm gpu(
     output! uint7   bitmap_colour_write,
     output! uint7   bitmap_colour_write_alt,
     output! uint1   bitmap_write,
-    output! uint3   gpu_active_dithermode,
+    output! uint4   gpu_active_dithermode,
 
     input   int11   gpu_x,
     input   int11   gpu_y,
@@ -16,7 +16,7 @@ algorithm gpu(
     input   int11   gpu_param2,
     input   int11   gpu_param3,
     input   uint4   gpu_write,
-    input   uint3   gpu_dithermode,
+    input   uint4   gpu_dithermode,
 
     // For setting blit1 tile bitmaps
     input   uint5   blit1_writer_tile,

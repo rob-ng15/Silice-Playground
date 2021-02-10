@@ -67,7 +67,7 @@ algorithm bitmapwriter (
     input   uint7   bitmap_colour_write,
     input   uint7   bitmap_colour_write_alt,
     input   uint1   bitmap_write,
-    input   uint3   gpu_active_dithermode,
+    input   uint4   gpu_active_dithermode,
     input   uint16  staticGenerator,
     input   uint10  x_offset,
     input   uint10  y_offset,
@@ -88,16 +88,62 @@ algorithm bitmapwriter (
         if( write_pixel ) {
             bitmap.addr1 = x_write_pixel + y_write_pixel * 640;
             // DITHER PATTERNS
-            // == 0 SOLID == 1 CHECKERBOARD == 2 VERTICAL STRIPES == 3 HORIZONTAL STRIPES == 4 CROSSHATCH == 5 RIGHT SLOPE == 6 LEFT SLOPE == 7 STATIC
+            // == 0 SOLID == 1 SMALL CHECKERBOARD == 2 MED CHECKERBOARD == 3 LARGE CHECKERBOARD == 4 VERTICAL STRIPES == 5 HORIZONTAL STRIPES == 6 CROSSHATCH == 7 LEFT SLOPE
+            // == 8 RIGHT SLOPE == 9 LEFT TRIANGLE == 10 RIGHT TRIANGLE == 15 STATIC
             switch( gpu_active_dithermode ) {
                 case 0: { bitmap.wdata1 = bitmap_colour_write; }
-                case 1: { bitmap.wdata1 = ( ( bitmap_x_write[0,1] == bitmap_y_write[0,1] ) ? bitmap_colour_write : bitmap_colour_write_alt ); }
-                case 2: { bitmap.wdata1 = ( bitmap_x_write[0,1] ? bitmap_colour_write : bitmap_colour_write_alt ); }
-                case 3: { bitmap.wdata1 = ( bitmap_y_write[0,1] ? bitmap_colour_write : bitmap_colour_write_alt ); }
-                case 4: { bitmap.wdata1 = ( ( bitmap_x_write[0,1] || bitmap_y_write[0,1] ) ? bitmap_colour_write : bitmap_colour_write_alt ); }
-                case 5: { bitmap.wdata1 = ( ( bitmap_x_write[0,2] == bitmap_y_write[0,2] ) ? bitmap_colour_write : bitmap_colour_write_alt ); }
-                case 6: { bitmap.wdata1 = ( ( bitmap_x_write[0,2] == ~bitmap_y_write[0,2] ) ? bitmap_colour_write : bitmap_colour_write_alt ); }
-                case 7: { bitmap.wdata1 = ( staticGenerator[0,1] ? bitmap_colour_write : bitmap_colour_write_alt ); }
+                case 1: { bitmap.wdata1 = ( bitmap_x_write[0,1] == bitmap_y_write[0,1] ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                case 2: { bitmap.wdata1 = ( bitmap_x_write[1,1] == bitmap_y_write[1,1] ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                case 3: { bitmap.wdata1 = ( bitmap_x_write[2,1] == bitmap_y_write[2,1] ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                case 4: { bitmap.wdata1 = bitmap_x_write[0,1] ? bitmap_colour_write : bitmap_colour_write_alt; }
+                case 5: { bitmap.wdata1 = bitmap_y_write[0,1] ? bitmap_colour_write : bitmap_colour_write_alt; }
+                case 6: { bitmap.wdata1 = ( bitmap_x_write[0,1] || bitmap_y_write[0,1] ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                case 7: { bitmap.wdata1 = ( bitmap_x_write[0,2] == bitmap_y_write[0,2] ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                case 8: { bitmap.wdata1 = ( bitmap_x_write[0,2] == ~bitmap_y_write[0,2] ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                case 9: {
+                    switch( bitmap_y_write[0,2] ) {
+                        case 2b00: { bitmap.wdata1 = ( bitmap_x_write[0,2] == 2b00 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 2b01: { bitmap.wdata1 = ( bitmap_x_write[0,2] < 2b10 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 2b10: { bitmap.wdata1 = ( bitmap_x_write[0,2] != 2b11 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 2b11: { bitmap.wdata1 = bitmap_colour_write; }
+                    }
+                }
+                case 10: {
+                    switch( bitmap_y_write[0,2] ) {
+                        case 2b00: { bitmap.wdata1 = ( bitmap_x_write[0,2] == 2b11 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 2b01: { bitmap.wdata1 = ( bitmap_x_write[0,2] > 2b01 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 2b10: { bitmap.wdata1 = ( bitmap_x_write[0,2] != 2b00 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 2b11: { bitmap.wdata1 = bitmap_colour_write; }
+                    }
+                }
+                case 11: {
+                    switch( bitmap_y_write[0,2] ) {
+                        case 2b01: { bitmap.wdata1 = ( bitmap_x_write[0,1] == bitmap_x_write[1,1] ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 2b10: { bitmap.wdata1 = ( bitmap_x_write[0,1] == bitmap_x_write[1,1] ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        default:  { bitmap.wdata1 = bitmap_colour_write; }
+                    }
+                }
+                case 12: {
+                    switch( bitmap_y_write[0,2] ) {
+                        case 2b00: { bitmap.wdata1 = ( bitmap_x_write[0,1] != bitmap_x_write[1,1] ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 2b11: { bitmap.wdata1 = ( bitmap_x_write[0,1] != bitmap_x_write[1,1] ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        default: { bitmap.wdata1 = bitmap_colour_write; }
+                    }
+                }
+                case 13: {
+                    switch( bitmap_y_write[0,3] ) {
+                        case 3b000: { bitmap.wdata1 = bitmap_colour_write; }
+                        case 3b001: { bitmap.wdata1 = ( bitmap_x_write[0,2] != 2b00 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 3b010: { bitmap.wdata1 = ( bitmap_x_write[0,2] != 2b00 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 3b011: { bitmap.wdata1 = ( bitmap_x_write[0,2] != 2b00 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 3b100: { bitmap.wdata1 = bitmap_colour_write; }
+                        case 3b101: { bitmap.wdata1 = ( bitmap_x_write[0,2] != 2b10 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 3b110: { bitmap.wdata1 = ( bitmap_x_write[0,2] != 2b10 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 3b111: { bitmap.wdata1 = ( bitmap_x_write[0,2] != 2b10 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                    }
+                }
+                case 14: { bitmap.wdata1 = staticGenerator[0,6]; }
+                case 15: { bitmap.wdata1 = ( staticGenerator[0,1] ? bitmap_colour_write : bitmap_colour_write_alt ); }
                 default: { bitmap.wdata1 = bitmap_colour_write; }
             }
         }

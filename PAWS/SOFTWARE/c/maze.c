@@ -549,13 +549,13 @@ void left_wall( unsigned char colour, unsigned char colour_alt, short steps )
 {
     switch( colour ) {
         case YELLOW:
-            gpu_dither( DITHERVSTRIPE, colour_alt);
+            gpu_dither( DITHERLSLOPE, colour_alt);
             break;
         case MAGENTA:
-            gpu_dither( DITHERHATCH, colour_alt);
+            gpu_dither( DITHERLSLOPE, colour_alt);
             break;
         default:
-            gpu_dither( DITHERCHECK, colour_alt);
+            gpu_dither( DITHERCHECK1, colour_alt);
             break;
     }
     // USE RECTANGLE + TWO TRIANGLES AS FASTER THAN TWO TRIANGLES FOR LARGE AREAS
@@ -572,13 +572,13 @@ void right_wall( unsigned char colour, unsigned char colour_alt, unsigned short 
 {
     switch( colour ) {
         case YELLOW:
-            gpu_dither( DITHERVSTRIPE, colour_alt);
+            gpu_dither( DITHERRSLOPE, colour_alt);
             break;
         case MAGENTA:
-            gpu_dither( DITHERHATCH, colour_alt);
+            gpu_dither( DITHERRSLOPE, colour_alt);
             break;
         default:
-            gpu_dither( DITHERCHECK, colour_alt);
+            gpu_dither( DITHERCHECK1, colour_alt);
             break;
     }
     // USE RECTANGLE + TWO TRIANGLES AS FASTER THAN TWO TRIANGLES FOR LARGE AREAS

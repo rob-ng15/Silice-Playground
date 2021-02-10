@@ -84,6 +84,7 @@ void tilemapdemo( void ) {
         await_vblank();
         (void)tilemap_scrollwrapclear( 5 );
         (void)tilemap_scrollwrapclear( 6 );
+        sleep( 20, 0 );
     }
 }
 
@@ -114,7 +115,7 @@ void gpudemo( void ) {
     gpu_cs();
     tpu_outputstringcentre( 29, TRANSPARENT, WHITE, "GPU Rectangle Drawing Test - Solid & Dither" );
     for( i = 0; i < 1024; i++ ) {
-        gpu_dither( rng(8), rng( 64 ) );
+        gpu_dither( rng(16), rng( 64 ) );
         gpu_rectangle( rng( 64 ), rng( 640 ), rng( 480 ), rng( 640 ), rng( 480 ) );
     }
     gpu_dither( DITHEROFF );
@@ -124,7 +125,7 @@ void gpudemo( void ) {
     gpu_cs();
     tpu_outputstringcentre( 29, TRANSPARENT, WHITE, "GPU Circle Drawing Test - Solid & Dither" );
     for( i = 0; i < 1024; i++ ) {
-        gpu_dither( rng(8), rng( 64 ) );
+        gpu_dither( rng(16), rng( 64 ) );
         gpu_circle( rng( 64 ), rng( 640 ), rng( 480 ), rng( 32 ), rng( 1 ) );
     }
     gpu_dither( DITHEROFF );
@@ -137,7 +138,7 @@ void gpudemo( void ) {
         x1 = rng( 640 ); y1 = rng( 480 );
         x2 = x1 + rng( 100 ); y2 = y1 + rng( 100 );
         x3 = x2 - rng( 100 ); y3 = y1 + rng( 100 );
-        gpu_dither( rng(8), rng( 64 ) );
+        gpu_dither( rng(16), rng( 64 ) );
         gpu_triangle( rng( 64 ), x1, y1, x2, y2, x3, y3 );
     }
     gpu_dither( DITHEROFF );
@@ -155,6 +156,23 @@ void gpudemo( void ) {
 
 }
 
+void ditherdemo( void ) {
+    unsigned char dithermode = 0;
+    unsigned short x, y;
+
+    gpu_cs();
+    tpu_outputstringcentre( 29, TRANSPARENT, WHITE, "GPU Dither Modes" );
+
+    for( y = 0; y < 4; y++ ) {
+        for( x = 0; x < 4; x++ ) {
+            gpu_dither( dithermode++, PURPLE );
+            gpu_rectangle( ORANGE, x * 160, y * 120, x * 160 + 159, y * 120 + 119 );
+        }
+    }
+    gpu_dither( DITHEROFF );
+    sleep( 2000, 0 );
+}
+
 void main( void ) {
     INITIALISEMEMORY();
 	while(1) {
@@ -165,5 +183,7 @@ void main( void ) {
         tilemapdemo();
 
         gpudemo();
+
+        ditherdemo();
     }
 }
