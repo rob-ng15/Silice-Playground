@@ -35,7 +35,6 @@ algorithm PAWSCPU (
     uint32  PC := SMT ? pcSMT : pc;
     uint32  nextPC = uninitialized;
     uint1   compressed = uninitialized;
-    uint1   takeBranch = uninitialized;
     uint1   incPC = uninitialized;
     uint32  instruction = uninitialized;
 
@@ -66,6 +65,16 @@ algorithm PAWSCPU (
     uint32  loadAddress = uninitialized;
     uint32  storeAddress = uninitialized;
     uint32  AUIPCLUI = uninitialized;
+
+    // BRANCH COMPARISON UNIT
+    uint1   takeBranch = uninitialized;
+    branchcomparison BRANCHUNIT(
+        opCode <: opCode,
+        function3 <: function3,
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        takeBranch :> takeBranch
+    );
 
     // ALU BLOCKS
     // ATOMIC MEMORY OPERATIONS
@@ -125,7 +134,7 @@ algorithm PAWSCPU (
     while(1) {
         // RISC-V
         writeRegister = 0;
-        takeBranch = 0;
+        //takeBranch = 0;
         incPC = 1;
 
         // CHECK IF PC IS IN LAST INSTRUCTION CACHE
@@ -190,8 +199,7 @@ algorithm PAWSCPU (
                 result = nextPC;
             }
             case 5b11000: {
-                // BRANCH
-                ( takeBranch ) = branchcomparison( opCode, function3, sourceReg1, sourceReg2 );
+                // BRANCH - HAPPENS IN BRANCH COMPARISON UNIT
             }
             case 5b00000: {
                 // LOAD

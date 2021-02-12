@@ -14,7 +14,7 @@ algorithm apu(
 
     output! uint4   audio_output,
 
-    input uint16    staticGenerator
+    input uint4    staticGenerator
 ) <autorun> {
     // 32 step points per waveform
     brom uint4 waveformtable[512] = {

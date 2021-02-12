@@ -104,21 +104,27 @@ circuitry newPC(
 }
 
 // BRANCH COMPARISIONS
-circuitry branchcomparison (
-    input   opCode,
-    input   function3,
-    input   sourceReg1,
-    input   sourceReg2,
-    output  takeBranch
-) {
-    switch( function3 ) {
-        case 3b000: { takeBranch = ( sourceReg1 == sourceReg2 ) ? 1 : 0; }
-        case 3b001: { takeBranch = ( sourceReg1 != sourceReg2 ) ? 1 : 0; }
-        case 3b100: { takeBranch = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? 1 : 0; }
-        case 3b101: { takeBranch = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? 1 : 0; }
-        case 3b110: { takeBranch = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? 1 : 0; }
-        case 3b111: { takeBranch = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? 1 : 0; }
-        default: { takeBranch = 0; }
+algorithm branchcomparison (
+    input   uint7   opCode,
+    input   uint3   function3,
+    input   int32   sourceReg1,
+    input   int32   sourceReg2,
+    output  uint1   takeBranch
+) <autorun> {
+    while(1) {
+        if( opCode == 7b1100011 ) {
+            switch( function3 ) {
+                case 3b000: { takeBranch = ( sourceReg1 == sourceReg2 ) ? 1 : 0; }
+                case 3b001: { takeBranch = ( sourceReg1 != sourceReg2 ) ? 1 : 0; }
+                case 3b100: { takeBranch = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? 1 : 0; }
+                case 3b101: { takeBranch = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? 1 : 0; }
+                case 3b110: { takeBranch = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? 1 : 0; }
+                case 3b111: { takeBranch = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? 1 : 0; }
+                default: { takeBranch = 0; }
+            }
+        } else {
+            takeBranch = 0;
+        }
     }
 }
 
@@ -133,31 +139,17 @@ circuitry compressed00(
             // { 000, nzuimm[5:4|9:6|2|3] rd' 00 } -> { imm[11:0] rs1 000 rd 0010011 }
             i32 = { 2b0, CIu94(i16).ib_9_6, CIu94(i16).ib_5_4, CIu94(i16).ib_3, CIu94(i16).ib_2, 2b00, 5h2, 3b000, {2b01,CIu94(i16).rd_alt}, 7b0010011 };
         }
-        case 3b001: {
-            // FLD
-        }
         case 3b010: {
             // LW -> lw rd', offset[6:2](rs1')
             // { 010 uimm[5:3] rs1' uimm[2][6] rd' 00 } -> { imm[11:0] rs1 010 rd 0000011 }
             i32 = { 5b0, CL(i16).ib_6, CL(i16).ib_5_3, CL(i16).ib_2, 2b00, {2b01,CL(i16).rs1_alt}, 3b010, {2b01,CL(i16).rd_alt}, 7b0000011};
-        }
-        case 3b011: {
-            // FLW
-        }
-        case 3b100: {
-            // reserved
-        }
-        case 3b101: {
-            // FSD
         }
         case 3b110: {
             // SW -> sw rs2', offset[6:2](rs1')
             // { 110 uimm[5:3] rs1' uimm[2][6] rs2' 00 } -> { imm[11:5] rs2 rs1 010 imm[4:0] 0100011 }
             i32 = { 5b0, CS(i16).ib_6, CS(i16).ib_5, {2b01,CS(i16).rs2_alt}, {2b01,CS(i16).rs1_alt}, 3b010, CS(i16).ib_4_3, CS(i16).ib_2, 2b0, 7b0100011 };
         }
-        case 3b111: {
-            // FSW
-        }
+        default: { i32 = { 25b0, 7b0010011 }; }
     }
 }
 
@@ -182,15 +174,33 @@ circuitry compressed01(
             i32 = { {7{CI50(i16).ib_5}}, CI50(i16).ib_4_0, 5h0, 3b000, CI(i16).rd, 7b0010011 };
         }
         case 3b011: {
-            // LUI / ADDI16SP
-            if( ( CI(i16).rd != 0 ) && ( CI(i16).rd != 2 ) ) {
-                // LUI -> lui rd, nzuimm[17:12]
-                // { 011 nzimm[17] rd!={0,2} nzimm[16:12] 01 } -> { imm[31:12] rd 0110111 }
-                i32 = { {15{CIlui(i16).ib_17}}, CIlui(i16).ib_16_12, CIlui(i16).rd, 7b0110111 };
-            } else {
-                // ADDI16SP -> addi x2, x2, nzimm[9:4]
-                // { 011 nzimm[9] 00010 nzimm[4|6|8:7|5] 01 } -> { imm[11:0] rs1 000 rd 0010011 }
-                i32 = { {3{CI94(i16).ib_9}}, CI94(i16).ib_8_7, CI94(i16).ib_6, CI94(i16).ib_5, CI94(i16).ib_4, 4b0000, 5h2, 3b000, 5h2, 7b0010011 };
+            switch( CI(i16).rd ) {
+                case 2: {
+                    // ADDI16SP -> addi x2, x2, nzimm[9:4]
+                    // { 011 nzimm[9] 00010 nzimm[4|6|8:7|5] 01 } -> { imm[11:0] rs1 000 rd 0010011 }
+                    i32 = { {3{CI94(i16).ib_9}}, CI94(i16).ib_8_7, CI94(i16).ib_6, CI94(i16).ib_5, CI94(i16).ib_4, 4b0000, 5h2, 3b000, 5h2, 7b0010011 };
+                }
+                default: {
+                    if( CI(i16).rd != 0 ) {
+                        // LUI -> lui rd, nzuimm[17:12]
+                        // { 011 nzimm[17] rd!={0,2} nzimm[16:12] 01 } -> { imm[31:12] rd 0110111 }
+                        i32 = { {15{CIlui(i16).ib_17}}, CIlui(i16).ib_16_12, CIlui(i16).rd, 7b0110111 };
+                    } else {
+                        switch( i16[10,2] ) {
+                            case 2b00: {
+                                // C.NOT -> xori rd, rs, -1
+                                // { 011 0 00 rs1'/rd' 00000 01 } -> { 111111111111 rs1 100 rd 0010011 }
+                                i32 = { 12b111111111111, { 2b01, CBalu50(i16).rd_alt }, 3b100, { 2b01, CBalu50(i16).rd_alt }, 7b0010011 };
+                            }
+                            case 2b01: {
+                                // C.NEG -> sub rd, x0, rs
+                                // { 011 0 01 rs1'/rd' 00000 01 } -> { 0100000 rs2 rs1 000 rd 0010011 }
+                                i32 = { 7b0100000, { 2b01, CBalu50(i16).rd_alt }, 5b00000, 3b000, { 2b01, CBalu50(i16).rd_alt }, 7b0110011 };
+                            }
+                            default: { i32 = { 25b0, 7b0010011 }; }
+                        }
+                    }
+                }
             }
         }
         case 3b100: {
@@ -253,6 +263,7 @@ circuitry compressed01(
             // { 111, imm[8|4:3] rs1' imm[7:6|2:1|5] 01 } -> { imm[12|10:5] rs2 rs1 001 imm[4:1|11] 1100011 }
             i32 = { {4{CB(i16).offset_8}}, CB(i16).offset_7_6, CB(i16).offset_5, 5h0, {2b01,CB(i16).rs1_alt}, 3b001, CB(i16).offset_4_3, CB(i16).offset_2_1, CB(i16).offset_8, 7b1100011 };
         }
+        default: { i32 = { 25b0, 7b0010011 }; }
     }
 }
 
@@ -266,16 +277,10 @@ circuitry compressed10(
             // { 000, nzuimm[5], rs1/rd!=0 nzuimm[4:0] 10 } -> { 0000000 shamt rs1 001 rd 0010011 }
             i32 = { 7b0000000, CI50(i16).ib_4_0, CI50(i16).rd, 3b001, CI50(i16).rd, 7b0010011 };
         }
-        case 3b001: {
-            // FLDSP
-        }
         case 3b010: {
             // LWSP -> lw rd, offset[7:2](x2)
             // { 011 uimm[5] rd uimm[4:2|7:6] 10 } -> { imm[11:0] rs1 010 rd 0000011 }
             i32 = { 4b0, CI(i16).ib_7_6, CI(i16).ib_5, CI(i16).ib_4_2, 2b0, 5h2 ,3b010, CI(i16).rd, 7b0000011 };
-        }
-        case 3b011: {
-            // FLWSP
         }
         case 3b100: {
             // J[AL]R / MV / ADD
@@ -306,17 +311,12 @@ circuitry compressed10(
                 }
             }
         }
-        case 3b101: {
-            // FSDSP
-        }
         case 3b110: {
             // SWSP -> sw rs2, offset[7:2](x2)
             // { 110 uimm[5][4:2][7:6] rs2 10 } -> { imm[11:5] rs2 rs1 010 imm[4:0] 0100011 }
             i32 = { 4b0, CSS(i16).ib_7_6, CSS(i16).ib_5, CSS(i16).rs2, 5h2, 3b010, CSS(i16).ib_4_2, 2b00, 7b0100011 };
         }
-        case 3b111: {
-            // FSWSP
-        }
+        default: { i32 = { 25b0, 7b0010011 }; }
     }
 }
 

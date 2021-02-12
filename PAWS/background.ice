@@ -7,7 +7,7 @@ algorithm background(
     output! uint2   pix_green,
     output! uint2   pix_blue,
 
-    input   uint16  staticGenerator,
+    input   uint2  staticGenerator,
 
     input uint6 backgroundcolour,
     input uint6 backgroundcolour_alt,

@@ -361,7 +361,7 @@ void set_background( unsigned char colour, unsigned char altcolour, unsigned cha
 
 // SET THE TILEMAP TILE at (x,y) to tile with colours background and foreground
 void set_tilemap_tile( unsigned char x, unsigned char y, unsigned char tile, unsigned char background, unsigned char foreground) {
-    while( *TM_STATUS != 0 );
+    while( *TM_STATUS );
 
     *TM_X = x;
     *TM_Y = y;
@@ -387,7 +387,7 @@ void set_tilemap_bitmap( unsigned char tile, unsigned short *bitmap ) {
 //  action == 9 clear the tilemap
 //  RETURNS 0 if no action taken other than pixel shift, action if SCROLL WRAP or CLEAR was actioned
 unsigned char tilemap_scrollwrapclear( unsigned char action ) {
-    while( *TM_STATUS != 0 );
+    while( *TM_STATUS );
     *TM_SCROLLWRAPCLEAR = action;
     return( *TM_SCROLLWRAPCLEAR );
 }
@@ -400,7 +400,7 @@ unsigned char tilemap_scrollwrapclear( unsigned char action ) {
 
 // INTERNAL FUNCTION - WAIT FOR THE GPU TO FINISH THE LAST COMMAND
 void wait_gpu( void ) {
-    while( *GPU_STATUS != 0 );
+    while( *GPU_STATUS );
 }
 
 // SCROLL THE BITMAP by 1 pixel

@@ -564,9 +564,9 @@ void left_wall( unsigned char colour, unsigned char colour_alt, short steps )
     gpu_triangle( colour, perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], perspectivex[ steps ], 480 - perspectivey[ steps ], perspectivex[ steps ], 480 - perspectivey[ steps + 1 ] );
     gpu_dither( DITHEROFF );
     gpu_line( colour, perspectivex[ steps ], perspectivey[ steps ], perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
-    gpu_line( colour, perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
+    //gpu_line( colour, perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
     gpu_line( colour, perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], perspectivex[ steps ], 480 - perspectivey[ steps ] );
-    gpu_line( colour, perspectivex[ steps ], 480 - perspectivey[ steps ], perspectivex[ steps ], perspectivey[ steps ] );
+    //gpu_line( colour, perspectivex[ steps ], 480 - perspectivey[ steps ], perspectivex[ steps ], perspectivey[ steps ] );
 }
 void right_wall( unsigned char colour, unsigned char colour_alt, unsigned short steps )
 {
@@ -586,9 +586,9 @@ void right_wall( unsigned char colour, unsigned char colour_alt, unsigned short 
     gpu_rectangle( colour, 640 - perspectivex[ steps ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
     gpu_triangle( colour, 640 - perspectivex[ steps ], 480 - perspectivey[ steps + 1 ], 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ], 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ]);
     gpu_dither( DITHEROFF );
-    gpu_line( colour, 640 - perspectivex[ steps ], perspectivey[ steps ], 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ] );
+    //gpu_line( colour, 640 - perspectivex[ steps ], perspectivey[ steps ], 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ] );
     gpu_line( colour, 640 - perspectivex[ steps  ], 480 - perspectivey[ steps ], 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ] );
-    gpu_line( colour, 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
+    //gpu_line( colour, 640 - perspectivex[ steps + 1 ], 480 - perspectivey[ steps + 1 ], 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
     gpu_line( colour, 640 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], 640 - perspectivex[ steps ], perspectivey[ steps ] );
 }
 

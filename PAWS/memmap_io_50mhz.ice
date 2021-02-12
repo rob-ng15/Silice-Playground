@@ -60,6 +60,10 @@ algorithm memmap_io (
     // RNG random number generator
     uint16  staticGenerator = uninitialized;
     uint16  staticGeneratorALT = uninitialized;
+    uint1   static1bit := staticGenerator[0,1];
+    uint2   static2bit := staticGenerator[0,2];
+    uint4   static4bit := staticGenerator[0,4];
+    uint6   static6bit := staticGenerator[0,6];
     random rng <@video_clock> (
         g_noise_out :> staticGenerator,
         u_noise_out :> staticGeneratorALT
@@ -91,7 +95,7 @@ algorithm memmap_io (
         pix_red    :> background_r,
         pix_green  :> background_g,
         pix_blue   :> background_b,
-        staticGenerator <: staticGenerator
+        staticGenerator <: static2bit
     );
 
     // TILEMAP
@@ -148,7 +152,8 @@ algorithm memmap_io (
         bitmap_colour_write_alt <: bitmap_colour_write_alt,
         bitmap_write <: bitmap_write,
         gpu_active_dithermode <: gpu_active_dithermode,
-        staticGenerator <: staticGenerator,
+        static1bit <: static1bit,
+        static6bit <: static6bit,
         x_offset <: x_offset,
         y_offset <: y_offset,
         bitmap <:> bitmap
@@ -252,11 +257,11 @@ algorithm memmap_io (
 
     // Left and Right audio channels
     apu apu_processor_L(
-        staticGenerator <: staticGenerator,
+        staticGenerator <: static4bit,
         audio_output :> audio_l
     );
     apu apu_processor_R(
-        staticGenerator <: staticGenerator,
+        staticGenerator <: static4bit,
         audio_output :> audio_r
     );
 
@@ -349,7 +354,7 @@ algorithm memmap_io (
             switch( memoryAddress ) {
                 // UART, LEDS, BUTTONS and CLOCK
                 case 16h8000: { readData = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1; }
-                case 16h8004: { readData = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), ( uartInBufferNext != uartInBufferTop )}; }
+                case 16h8004: { readData = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ) ? 1b1 : 1b0, ( uartInBufferNext != uartInBufferTop ) ? 1b1 : 1b0 }; }
                 case 16h8008: { readData = { $16-NUM_BTNS$b0, reg_btns[0,$NUM_BTNS$] }; }
                 case 16h800c: { readData = leds; }
                 case 16h8010: { readData = systemClock; }
@@ -392,8 +397,8 @@ algorithm memmap_io (
                 case 16h8348: { readData = lower_sprites.collision_12; }
 
                 // GPU and BITMAP
-                case 16h841c: { readData = gpu_processor.gpu_active | gpu_processor.vector_block_active; }
-                case 16h8448: { readData = gpu_processor.vector_block_active; }
+                case 16h841c: { readData = ( gpu_processor.gpu_active || gpu_processor.vector_block_active ) ? 1 : 0; }
+                case 16h8448: { readData = gpu_processor.vector_block_active ? 1 : 0; }
                 case 16h8470: { readData = bitmap_window.bitmap_colour_read; }
 
                 // UPPER SPRITE LAYER - MAIN
@@ -445,14 +450,14 @@ algorithm memmap_io (
                 case 16h8934: { readData = sleepTimer1.counter1khz; }
 
                 // SDCARD
-                case 16h8f00: { readData = sdcio.ready; }
+                case 16h8f00: { readData = sdcio.ready ? 1 : 0; }
                 case 16h8f10: { readData = sdbuffer.rdata0; }
 
                 // VBLANK
-                case 16h8ff0: { readData = vblank; }
+                case 16h8ff0: { readData = vblank ? 1 : 0; }
 
                 // SMT STATUS
-                case 16hffff: { readData = SMTRUNNING; }
+                case 16hffff: { readData = SMTRUNNING ? 1 : 0; }
             }
         }
 
