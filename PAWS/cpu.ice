@@ -197,9 +197,9 @@ algorithm PAWSCPU (
         }
 
         // DECODE + REGISTER FETCH + ADDRESS GENERATION
-        ++: //( opCode, function3, function7, rs1, rs2, rd, immediateValue, IshiftCount ) = decoder( instruction );
-        ++: //( registers_1, registers_2, sourceReg1, sourceReg2 ) = registersREAD( registers_1, registers_2, rs1, rs2, SMT );
-        ++: //( nextPC, branchAddress, jumpAddress, AUIPCLUI, storeAddress, loadAddress ) = addressgenerator( opCode, PC, compressed, sourceReg1, immediateValue );
+        ++:
+        ++:
+        ++:
 
         // EXECUTE
         switch( opCode[2,5] ) {
@@ -348,9 +348,10 @@ algorithm PAWSCPU (
             }
         }
 
-        // DISPATCH INSTRUCTION
+        // REGISTERS WRITE
         REGISTERS.write = ( writeRegister  && ( rd != 0 ) ) ? 1 : 0;
 
+        // UPDATE PC
         if( SMT ) {
             ( pcSMT ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
         } else {
@@ -360,7 +361,7 @@ algorithm PAWSCPU (
         // Update CSRinstret
         CSR.incCSRinstret = 1;
 
-        // UPDATE MAIN OR SMT
+        // SWITCH THREADS IF SMT IS RUNNING
         if( SMTRUNNING ) {
             SMT = ~SMT;
         } else {

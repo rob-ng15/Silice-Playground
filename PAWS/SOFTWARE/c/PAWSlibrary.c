@@ -438,7 +438,7 @@ void gpu_line( unsigned char colour, short x1, short y1, short x2, short y2 ) {
     *GPU_WRITE = 2;
 }
 
-// DRAW A FILLED RECTANGLE from (x1,y1) to (x2,y2) in colour
+// DRAW AN OUTLINE RECTANGLE from (x1,y1) to (x2,y2) in colour
 void gpu_box( unsigned char colour, short x1, short y1, short x2, short y2 ) {
     gpu_line( colour, x1, y1, x2, y1 );
     gpu_line( colour, x2, y1, x2, y2 );
@@ -552,7 +552,6 @@ void gpu_outputstringcentre( unsigned char colour, short x, short y, char *s, un
 // INTERNAL FUNCTION - WAIT FOR THE VECTOR BLOCK TO FINISH THE LAST COMMAND
 void wait_vector_block( void ) {
     while( *VECTOR_DRAW_STATUS );
-
 }
 
 // START DRAWING A VECTOR BLOCK centred at (xc,yc) in colour

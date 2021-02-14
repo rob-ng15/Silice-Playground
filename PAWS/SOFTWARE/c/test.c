@@ -20,6 +20,111 @@ unsigned short tilemap_bitmap[] = {
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000
 };
 
+unsigned char *backgroundnames[] = {
+    "BKG_SOLID",
+    "BKG_5050_V",
+    "BKG_5050_H",
+    "BKG_CHKBRD_5",
+    "BKG_RAINBOW",
+    "BKG_SNOW",
+    "BKG_STATIC",
+    "BKG_CHKBRD_1",
+    "BKG_CHKBRD_2",
+    "BKG_CHKBRD_3",
+    "BKG_CHKBRD_4",
+    "BKG_HATCH",
+    "BKG_LSLOPE",
+    "BKG_RSLOPE",
+    "BKG_VSTRIPE",
+    "BKG_HSTRIPE"
+};
+
+unsigned char *dithernames[] = {
+    "DITHEROFF",
+    "DITHERCHECK1",
+    "DITHERCHECK2",
+    "DITHERCHECK3",
+    "DITHERVSTRIPE",
+    "DITHERHSTRIPE",
+    "DITHERHATCH",
+    "DITHERLSLOPE",
+    "DITHERRSLOPE",
+    "DITHERLTRIANGLE",
+    "DITHERRTRIANGLE",
+    "DITHERENCLOSED",
+    "DITHEROCTAGON",
+    "DITHERBRICK",
+    "DITHER64COLSTATIC",
+    "DITHER2COLSTATIC"
+};
+
+unsigned char *colournames[] = {
+    "BLACK",
+    "0x01",
+    "DKBLUE",
+    "BLUE",
+    "0x04",
+    "0x05",
+    "0x06",
+    "LTBLUE",
+    "DKGREEN",
+    "0x09",
+    "0x0a",
+    "DKCYAN",
+    "GREEN",
+    "0x0d",
+    "0x0e",
+    "CYAN",
+    "0x10",
+    "DKPURPLE",
+    "0x12",
+    "PURPLE",
+    "0x14",
+    "GREY1",
+    "0x16",
+    "LTPURPLE",
+    "0x18",
+    "0x19",
+    "0x1a",
+    "0x1b",
+    "0x1c",
+    "LTGREEN",
+    "0x1e",
+    "LTCYAN",
+    "DKRED",
+    "0x21",
+    "DKMAGENTA",
+    "0x23",
+    "BROWN",
+    "0x25",
+    "0x26",
+    "0x27",
+    "DKYELLOW",
+    "0x29",
+    "GREY2",
+    "0x2b",
+    "0x2c",
+    "0x2d",
+    "0x2e",
+    "0x2f",
+    "RED",
+    "0x31",
+    "0x32",
+    "MAGENTA",
+    "DKORANGE",
+    "LTRED",
+    "0x36",
+    "LTMAGENTA",
+    "ORANGE",
+    "LTORANGE",
+    "PEACH",
+    "PINK",
+    "YELLOW",
+    "LTYELLOW",
+    "0x3e",
+    "WHITE"
+};
+
 void displayreset( void ) {
     // RESET THE DISPLAY
     gpu_cs();
@@ -36,7 +141,8 @@ void colourtable( void ) {
     uint8 colour = 0;
     for( uint16 y = 0; y < 8; y++ ) {
         for( uint16 x = 0; x < 8; x++ ) {
-            gpu_rectangle( colour++, x * 80, y * 60, 79 + x * 80, 59 + y * 60 );
+            gpu_rectangle( colour, x * 80, y * 60, 79 + x * 80, 59 + y * 60 );
+            gpu_outputstringcentre( 63 - colour, x * 80 + 40, y * 60 + 30, colournames[colour++], 0 );
         }
     }
     sleep( 1000, 0 );
@@ -45,10 +151,11 @@ void colourtable( void ) {
 // DISPLAY THE BACKGROUNDS
 void backgrounddemo( void ) {
     displayreset();
-    tpu_outputstringcentre( 29, TRANSPARENT, WHITE, "Background Generator Test" );
+    tpu_outputstringcentre( 28, TRANSPARENT, WHITE, "Background Generator Test" );
 
     for( uint8 bkg = 0; bkg < 16; bkg++ ) {
         set_background( PURPLE, ORANGE, bkg );
+        tpu_outputstringcentre( 29, TRANSPARENT, WHITE, backgroundnames[bkg] );
         sleep( 1000, 0 );
     }
 }
@@ -161,12 +268,13 @@ void ditherdemo( void ) {
     unsigned short x, y;
 
     gpu_cs();
-    tpu_outputstringcentre( 29, TRANSPARENT, WHITE, "GPU Dither Modes" );
+    tpu_outputstringcentre( 28, TRANSPARENT, WHITE, "GPU Dither Modes" );
 
     for( y = 0; y < 4; y++ ) {
         for( x = 0; x < 4; x++ ) {
-            gpu_dither( dithermode++, PURPLE );
+            gpu_dither( dithermode, PURPLE );
             gpu_rectangle( ORANGE, x * 160, y * 120, x * 160 + 159, y * 120 + 119 );
+            gpu_outputstringcentre( BLACK, x * 160 + 80, y * 120 + 4, dithernames[dithermode++], 0 );
         }
     }
     gpu_dither( DITHEROFF );

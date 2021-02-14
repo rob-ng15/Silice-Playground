@@ -23,6 +23,9 @@ unsigned char *pacman3dbitmap;
 // LEVEL - DETERMINES SIZE OF MAZE
 unsigned short level = 0;
 
+// POWER STATUS
+unsigned short powerstatus = 0, powerpills = 0;
+
 // WIDTH OF MAZE DEPENDING ON LEVEL
 unsigned short levelwidths[] = { 10, 16, 16, 20, 20, 32, 32, 32, 40, 40, 80, 80, 160, 160 };
 unsigned short levelheights[] = { 8, 10, 12, 12, 20, 20, 24, 30, 30, 40, 40, 60,  60, 120 };
@@ -157,7 +160,7 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
     unsigned short offsetx = ( sizechange * 2 ) / 6;
     unsigned short eyeoffsetx = ( sizechange + offsetx ) / 2;
     unsigned short eyeoffsety = sizechange / 2;
-    unsigned char colour = ghostcolour( ghostnumber );
+    unsigned char colour = powerstatus ? DKPURPLE : ghostcolour( ghostnumber );
 
     // SOLID
     gpu_dither( DITHEROFF );
@@ -224,39 +227,41 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
     }
 
     // EYE PUPILS
-    if( eyeoffsetx / 4 >= 4 ) {
-        switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
-            case 0:
-                // SAME DIRECTION, NO EYES
-                break;
-            case 1:
-                // GHOST FACING RIGHT
-                gpu_circle( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 1 );
-                break;
-            case 2:
-                // GHOST DIRECTLY FACING
-                gpu_circle( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 1 );
-                gpu_circle( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 1 );
-                break;
-            case 3:
-                // GHOST FACING LEFT
-                gpu_circle( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 1 );
-                break;
-        }
-    } else {
-        switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
-            case 0:
-                break;
-            case 1:
-                gpu_pixel( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety );
-                break;
-            case 2:
-                gpu_pixel( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety );
-                gpu_pixel( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety );
-                break;
-            case 3:
-                gpu_pixel( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety );
-                break;
+    if( !powerstatus ) {
+        if( eyeoffsetx / 4 >= 4 ) {
+            switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
+                case 0:
+                    // SAME DIRECTION, NO EYES
+                    break;
+                case 1:
+                    // GHOST FACING RIGHT
+                    gpu_circle( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 1 );
+                    break;
+                case 2:
+                    // GHOST DIRECTLY FACING
+                    gpu_circle( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 1 );
+                    gpu_circle( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 1 );
+                    break;
+                case 3:
+                    // GHOST FACING LEFT
+                    gpu_circle( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 1 );
+                    break;
+            }
+        } else {
+            switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
+                case 0:
+                    break;
+                case 1:
+                    gpu_pixel( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety );
+                    break;
+                case 2:
+                    gpu_pixel( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety );
+                    gpu_pixel( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety );
+                    break;
+                case 3:
+                    gpu_pixel( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety );
+                    break;
+            }
         }
     }
 }
@@ -501,7 +506,7 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
             gpu_rectangle( GREEN, 475 + currentx * boxwidth, 10 + currenty * boxheight, 474 + currentx * boxwidth + boxwidth, 9 + currenty * boxheight + boxheight );
             for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
                 if( ghost <= level ) {
-                    gpu_rectangle( ghostcolour( ghost ), 475 + ghostx[ ghost ] * boxwidth, 10 + ghosty[ ghost ] * boxheight, 474 + ghostx[ ghost ] * boxwidth + boxwidth, 9 + ghosty[ ghost ] * boxheight + boxheight );
+                    gpu_rectangle( ( powerstatus ? DKPURPLE : ghostcolour( ghost ) ), 475 + ghostx[ ghost ] * boxwidth, 10 + ghosty[ ghost ] * boxheight, 474 + ghostx[ ghost ] * boxwidth + boxwidth, 9 + ghosty[ ghost ] * boxheight + boxheight );
                 }
             }
             break;
@@ -544,7 +549,7 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
                             gpu_rectangle( GREEN, 475 + x * 10, 10 + y * 10, 484 + x * 10, 19 + y * 10 );
                         for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
                             if( ( ghost <= level ) && ( ghostx[ ghost ] == dox ) && ( ghosty[ ghost ] == doy ) ) {
-                                gpu_rectangle( ghostcolour( ghost ), 475 + x * 10, 10 + y * 10, 484 + x * 10, 19 + y * 10 );
+                                gpu_rectangle( ( powerstatus ? DKPURPLE : ghostcolour( ghost ) ), 475 + x * 10, 10 + y * 10, 484 + x * 10, 19 + y * 10 );
                             }
                         }
                     }
@@ -574,7 +579,11 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
 
     // DRAW MAPPEEKS
     for( unsigned peek = 0; peek < mappeeks; peek++ )
-        gpu_character_blit( GREEN, 462, 130 - ( peek * 8 ), 1, 0 );
+        gpu_character_blit( GREEN, 462, 130 - ( peek * 10 ), 1, 0 );
+
+    // DRAW POWER PILLS
+    for( unsigned power = 0; power < powerpills; power++ )
+        gpu_character_blit( DKPURPLE, 462, 90 - ( power * 10 ), 4, 0 );
 }
 
 // CALCULATE NUMBER OF STEPS TO HIT A WALL
@@ -694,7 +703,7 @@ void drawright( unsigned short steps, unsigned char totheright ) {
 unsigned short walk_maze( unsigned short width, unsigned short height )
 {
     // SET START LOCATION TO TOP LEFT FACING EAST
-    unsigned short newx = 1, newy = 1, direction = 1, newdirection = 1, currentx = 1, currenty = 1, visiblesteps, mappeeks = 4, dead = 0;
+    unsigned short newx = 1, newy = 1, direction = 1, newdirection = 1, currentx = 1, currenty = 1, currentpower = 0, visiblesteps, mappeeks = 4, dead = 0;
     short steps;
     unsigned char ghostdrawn;
 
@@ -765,7 +774,15 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
         set_timer1khz( 2000, 0 );
 
         // WAIT FOR INPUT TO MOVE  OR TIMEOUT
-        while( ( currentx == newx ) && ( currenty == newy ) && ( direction == newdirection ) && get_timer1khz( 0 ) ) {
+        currentpower = powerstatus;
+        while( ( currentx == newx ) && ( currenty == newy ) && ( direction == newdirection ) && get_timer1khz( 0 ) && ( currentpower == powerstatus ) ) {
+            // POWER UP
+            if( ( get_buttons() & 2 ) && ( powerpills > 0 ) ) {
+                while( get_buttons() & 2 );
+                powerstatus += 4;
+                powerpills--;
+            }
+
             // LEFT
             if( get_buttons() & 32 ) {
                 newdirection = ( newdirection == 0 ) ? 3 : newdirection - 1;
@@ -780,6 +797,7 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
 
             // FORWARD
             if( get_buttons() & 8 ) {
+                while( get_buttons() & 8 );
                 switch( whatisfront( currentx, currenty, direction, 1 ) ) {
                     case ' ':
                     case 'X':
@@ -787,19 +805,18 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
                         newy += directiony[direction];
                         break;
                 }
-                while( get_buttons() & 8 );
             }
 
             // BACKWARD
             if( get_buttons() & 16 ) {
                 switch( whatisbehind( currentx, currenty, direction, 1 ) ) {
+                while( get_buttons() & 16 );
                     case ' ':
                     case 'X':
                         newx -= directionx[direction];
                         newy -= directiony[direction];
                         break;
                 }
-                while( get_buttons() & 16 );
             }
 
             // FIRE2 - PEEK ( only 4 goes! )
@@ -812,14 +829,18 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
         }
 
         currentx = newx; currenty = newy; direction = newdirection;
-        for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
-            if( ghost <= level ) {
-                if( ( ghostx[ ghost ] == currentx ) && ( ghosty[ ghost ] == currenty ) )
-                    dead = 1;
-                move_ghost( ghost );
-                if( ( ghostx[ ghost ] == currentx ) && ( ghosty[ ghost ] == currenty ) )
-                    dead = 1;
+        if( powerstatus == 0 ) {
+            for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
+                if( ghost <= level ) {
+                    if( ( ghostx[ ghost ] == currentx ) && ( ghosty[ ghost ] == currenty ) )
+                        dead = 1;
+                    move_ghost( ghost );
+                    if( ( ghostx[ ghost ] == currentx ) && ( ghosty[ ghost ] == currenty ) )
+                        dead = 1;
+                }
             }
+        } else {
+            powerstatus--;
         }
     }
 
@@ -861,6 +882,9 @@ int main( void ) {
             bitmapblit( pacman3dbitmap, 640, 480, 0, 0, BLACK );
         }
 
+        // RESET POWER PILL STATUS
+        powerstatus = 0;
+
         levelselected = 0;
         do {
             tpu_outputstringcentre( 26, TRANSPARENT, YELLOW, "Select Level" );
@@ -897,6 +921,9 @@ int main( void ) {
         // WAIT TO ENTER THE MAZE
         tpu_outputstringcentre( 29, TRANSPARENT, GREEN, "Press FIRE to walk the maze!" ); while( ( get_buttons() & 2 ) == 0 );
         tpu_outputstringcentre( 29, TRANSPARENT, PURPLE, "Release FIRE!" ); while( get_buttons() & 2 );
+
+        // SET NUMBER OF POWER PILLS
+        powerpills = ( level < 4 ) ? level + 1 : 4;
 
         // ENTER THE MAZE IN 3D
         set_background( DKBLUE, DKGREEN, BKG_5050_V );

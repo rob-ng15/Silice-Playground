@@ -72,9 +72,9 @@ algorithm background(
                     rand_x = ( pix_x == 0)  ? 1 : rand_x * 31421 + 6927;
                     speed  = rand_x[10,2];
                     dotpos = ( frame >> speed ) + rand_x;
-                        pix_red   = (pix_y == dotpos) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
-                        pix_green = (pix_y == dotpos) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
-                        pix_blue  = (pix_y == dotpos) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
+                    pix_red   = (pix_y == dotpos) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
+                    pix_green = (pix_y == dotpos) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
+                    pix_blue  = (pix_y == dotpos) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
                 }
                 case 6: {
                     // STATIC
@@ -82,7 +82,36 @@ algorithm background(
                     pix_green = staticGenerator;
                     pix_blue = staticGenerator;
                 }
-
+                case 11: {
+                    // CROSSHATCH
+                    pix_red   = ( pix_x[0,1] || pix_y[0,1] ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
+                    pix_green = ( pix_x[0,1] || pix_y[0,1] ) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
+                    pix_blue  = ( pix_x[0,1] || pix_y[0,1] ) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
+                }
+                case 12: {
+                    // LSLOPE
+                    pix_red   = ( pix_x[0,2] == pix_y[0,2] ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
+                    pix_green = ( pix_x[0,2] == pix_y[0,2] ) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
+                    pix_blue  = ( pix_x[0,2] == pix_y[0,2] ) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
+                }
+                case 13: {
+                    // RSLOPE
+                    pix_red   = ( pix_x[0,2] == ~pix_y[0,2] ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
+                    pix_green = ( pix_x[0,2] == ~pix_y[0,2] ) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
+                    pix_blue  = ( pix_x[0,2] == ~pix_y[0,2] ) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
+                }
+                case 14: {
+                    // VSTRIPES
+                    pix_red   = pix_x[0,1] ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
+                    pix_green = pix_x[0,1] ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
+                    pix_blue  = pix_x[0,1] ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
+                }
+                case 15: {
+                    // HSTRIPES
+                    pix_red   = pix_y[0,1] ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
+                    pix_green = pix_y[0,1] ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
+                    pix_blue  = pix_y[0,1] ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
+                }
                 default: {
                     // CHECKERBOARDS
                     pix_red = ( pix_x[backgroundcolour_mode-7,1] == pix_y[backgroundcolour_mode-7,1] ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;

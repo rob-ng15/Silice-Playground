@@ -29,27 +29,46 @@
 #define BKG_CHKBRD_2 8
 #define BKG_CHKBRD_3 9
 #define BKG_CHKBRD_4 10
+#define BKG_HATCH 11
+#define BKG_LSLOPE 12
+#define BKG_RSLOPE 13
+#define BKG_VSTRIPE 14
+#define BKG_HSTRIPE 15
+
 
 // COLOURS
 #define TRANSPARENT 0x40
 #define BLACK 0x00
-#define BLUE 0x03
 #define DKBLUE 0x02
-#define GREEN 0x0c
+#define BLUE 0x03
+#define LTBLUE 0x07
 #define DKGREEN 0x08
-#define CYAN 0x0f
+#define GREEN 0x0c
+#define LTGREEN 0x1d
 #define DKCYAN 0x0b
-#define RED 0x30
+#define CYAN 0x0f
+#define LTCYAN 0x1f
 #define DKRED 0x20
-#define MAGENTA 0x33
+#define RED 0x30
+#define LTRED 0x35
 #define DKMAGENTA 0x22
+#define MAGENTA 0x33
+#define LTMAGENTA 0x37
+#define DKPURPLE 0x11
 #define PURPLE 0x13
-#define YELLOW 0x3c
+#define LTPURPLE 0x17
 #define DKYELLOW 0x28
-#define WHITE 0x3f
+#define YELLOW 0x3c
+#define LTYELLOW 0x3d
+#define DKORANGE 0x34
+#define ORANGE 0x38
+#define LTORANGE 0x39
+#define BROWN 0x24
+#define PEACH 0x3a
+#define PINK 0x3b
 #define GREY1 0x15
 #define GREY2 0x2a
-#define ORANGE 0x38
+#define WHITE 0x3f
 
 #define DITHEROFF 0, BLACK
 #define DITHERCHECK1 1
