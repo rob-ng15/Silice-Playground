@@ -35,20 +35,25 @@ algorithm registers(
     simple_dualport_bram int32 registers_1 <input!> [64] = { 0, pad(0) };
     simple_dualport_bram int32 registers_2 <input!> [64] = { 0, pad(0) };
 
-    // REGISTER Read/Write Flags
+    // READ FROM REGISTERS
+    registers_1.addr0 := rs1 + ( SMT ? 32 : 0 );
+    registers_2.addr0 := rs2 + ( SMT ? 32 : 0 );
     sourceReg1 := registers_1.rdata0;
     sourceReg2 := registers_2.rdata0;
+
+    // REGISTERS WRITE FLAG
     registers_1.wenable1 := 1;
     registers_2.wenable1 := 1;
 
-    while(1) {
-        // READ FROM REGISTERS
-        registers_1.addr0 = rs1 + ( SMT ? 32 : 0 );
-        registers_2.addr0 = rs2 + ( SMT ? 32 : 0 );
+    // SET REGISTER 0 to 0
+    registers_1.addr1 = 0;
+    registers_1.wdata1 = 0;
+    registers_2.addr1 = 0;
+    registers_2.wdata1 = 0;
 
+    while(1) {
         // WRITE TO REGISTERS
-        // NEVER write to registers[0]
-        if( write && ( rd != 0 ) ) {
+        if( write ) {
             registers_1.addr1 = rd + ( SMT ? 32 : 0 );
             registers_1.wdata1 = result;
             registers_2.addr1 = rd + ( SMT ? 32 : 0 );
@@ -70,7 +75,7 @@ algorithm decoder (
     output  uint5   rd,
 
     output  int32   immediateValue,
-    outputzgh  uint5   IshiftCount
+    output  uint5   IshiftCount
 ) <autorun> {
     while(1) {
         opCode = Utype(instruction).opCode;

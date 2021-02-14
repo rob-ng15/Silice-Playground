@@ -1202,7 +1202,7 @@ int printf( const char *fmt,... ) {
 
 // SIMPLE CURSES LIBRARY
 char            __curses_character[80][30], __curses_background[80][30], __curses_foreground[80][30];
-unsigned char   __curses_backgroundcolours[16], __curses_foregroundcolours[16], __curses_cursor = 1;
+unsigned char   __curses_backgroundcolours[16], __curses_foregroundcolours[16], __curses_cursor = 1, __curses_scroll = 1;
 
 unsigned short  __curses_x = 0, __curses_y = 0, __curses_fore = WHITE, __curses_back = BLACK;
 
@@ -1214,7 +1214,7 @@ void initscr( void ) {
             __curses_foreground[x][y] = BLACK;
         }
     }
-    __curses_x = 0; __curses_y = 0; __curses_fore = WHITE; __curses_back = BLACK;
+    __curses_x = 0; __curses_y = 0; __curses_fore = WHITE; __curses_back = BLACK; __curses_cursor = 1; __curses_scroll = 1;
 }
 
 int endwin( void ) {
@@ -1293,6 +1293,16 @@ int move( int y, int x ) {
     return( true );
 }
 
+void __scroll( void ) {
+    for( unsigned short y = 0; y < 29; y++ ) {
+        for( unsigned short x = 0; x < 80; x++ ) {
+            __curses_character[ x ][ y ] = __curses_character[ x ][ y + 1 ];
+            __curses_background[ x ][ y ] = __curses_background[ x ][ y + 1 ];
+            __curses_foreground[ x ][ y ] = __curses_foreground[ x ][ y + 1 ];
+        }
+    }
+}
+
 int addch( unsigned char ch ) {
     switch( ch ) {
         case '\b': {
@@ -1310,7 +1320,15 @@ int addch( unsigned char ch ) {
         case '\n': {
             // LINE FEED
             __curses_x = 0;
-            __curses_y = ( __curses_y == 29 ) ? 0 : __curses_y + 1;
+            if( __curses_y == 29 ) {
+                if( __curses_scroll ) {
+                    __scroll();
+                } else {
+                    __curses_y = 0;
+                }
+            } else {
+                __curses_y++;
+            }
             break;
         }
         case '\r': {
@@ -1324,8 +1342,16 @@ int addch( unsigned char ch ) {
             __curses_foreground[ __curses_x ][ __curses_y ] = __curses_fore;
             if( __curses_x == 79 ) {
                 __curses_x = 0;
-                __curses_y = ( __curses_y == 29 ) ? 0 : __curses_y + 1;
-            } {
+                if( __curses_y == 29 ) {
+                    if( __curses_scroll ) {
+                        __scroll();
+                    } else {
+                        __curses_y = 0;
+                    }
+                } else {
+                    __curses_y++;
+                }
+            } else {
                 __curses_x++;
             }
         }

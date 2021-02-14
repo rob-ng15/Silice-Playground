@@ -194,6 +194,7 @@ algorithm gpu(
             gpu_active_param3 = gpucommand(commandlist.rdata0).gpu_param3;
             bitmap_colour_write = gpucommand(commandlist.rdata0).gpu_colour;
             bitmap_colour_write_alt = gpucommand(commandlist.rdata0).gpu_colour_alt;
+            ++:
 
             switch( gpucommand(commandlist.rdata0).gpu_write ) {
                 case 1: {

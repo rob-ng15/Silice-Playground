@@ -1,92 +1,97 @@
-// RISC-V REGISTER WRITE
-circuitry registersWRITE (
-    inout   registers_1,
-    inout   registers_2,
-    input   rd,
-    input   writeRegister,
-    input   SMT,
-    input   result,
-) {
-    // WRITE TO REGISTERS
-    // NEVER write to registers[0]
-    if( writeRegister && ( rd != 0 ) ) {
-        registers_1.addr1 = rd + ( SMT ? 32 : 0 );
-        registers_1.wdata1 = result;
-        registers_2.addr1 = rd + ( SMT ? 32 : 0 );
-        registers_2.wdata1 = result;
+// RISC-V REGISTERS
+algorithm registers(
+    input   uint1   SMT,
+    input   uint5   rs1,
+    input   uint5   rs2,
+    input   uint5   rd,
+    input   uint1   write,
+    input   int32   result,
+    output! int32   sourceReg1,
+    output! int32   sourceReg2
+) <autorun> {
+    // RISC-V REGISTERS
+    simple_dualport_bram int32 registers_1 <input!> [64] = { 0, pad(0) };
+    simple_dualport_bram int32 registers_2 <input!> [64] = { 0, pad(0) };
+
+    // READ FROM REGISTERS
+    registers_1.addr0 := rs1 + ( SMT ? 32 : 0 );
+    registers_2.addr0 := rs2 + ( SMT ? 32 : 0 );
+    sourceReg1 := registers_1.rdata0;
+    sourceReg2 := registers_2.rdata0;
+
+    // REGISTERS WRITE FLAG
+    registers_1.wenable1 := 1;
+    registers_2.wenable1 := 1;
+
+    // SET REGISTER 0 to 0
+    registers_1.addr1 = 0;
+    registers_1.wdata1 = 0;
+    registers_2.addr1 = 0;
+    registers_2.wdata1 = 0;
+
+    while(1) {
+        // WRITE TO REGISTERS
+        if( write ) {
+            registers_1.addr1 = rd + ( SMT ? 32 : 0 );
+            registers_1.wdata1 = result;
+            registers_2.addr1 = rd + ( SMT ? 32 : 0 );
+            registers_2.wdata1 = result;
+        }
     }
 }
 
-// RISC-V REGISTER READ
-circuitry registersREAD(
-    inout   registers_1,
-    inout   registers_2,
-    input   rs1,
-    input   rs2,
-    input   SMT,
-    output  sourceReg1,
-    output  sourceReg2,
-) {
-    registers_1.addr0 = rs1 + ( SMT ? 32 : 0 );
-    registers_2.addr0 = rs2 + ( SMT ? 32 : 0 );
-    ++:
-    sourceReg1 = registers_1.rdata0;
-    sourceReg2 = registers_2.rdata0;
-}
-
 // RISC-V INSTRUCTION DECODER
-circuitry decoder (
-    input   instruction,
+algorithm decoder (
+    input   uint32  instruction,
 
-    output  opCode,
-    output  function3,
-    output  function7,
+    output  uint7   opCode,
+    output  uint3   function3,
+    output  uint7   function7,
 
-    output  rs1,
-    output  rs2,
-    output  rd,
+    output  uint5   rs1,
+    output  uint5   rs2,
+    output  uint5   rd,
 
-    output  immediateValue,
-    output  IshiftCount
-) {
-    opCode = Utype(instruction).opCode;
-    function3 = Rtype(instruction).function3;
-    function7 = Rtype(instruction).function7;
+    output  int32   immediateValue,
+    output  uint5   IshiftCount
+) <autorun> {
+    while(1) {
+        opCode = Utype(instruction).opCode;
+        function3 = Rtype(instruction).function3;
+        function7 = Rtype(instruction).function7;
 
-    rs1 = Rtype(instruction).sourceReg1;
-    rs2 = Rtype(instruction).sourceReg2;
-    rd = Rtype(instruction).destReg;
+        rs1 = Rtype(instruction).sourceReg1;
+        rs2 = Rtype(instruction).sourceReg2;
+        rd = Rtype(instruction).destReg;
 
-    immediateValue = { {20{instruction[31,1]}}, Itype(instruction).immediate };
-    IshiftCount = ItypeSHIFT( instruction ).shiftCount;
+        immediateValue = { {20{instruction[31,1]}}, Itype(instruction).immediate };
+        IshiftCount = ItypeSHIFT( instruction ).shiftCount;
+    }
 }
 
 // RISC-V ADDRESS BASE/OFFSET GENERATOR
-circuitry addressgenerator (
-    input   opCode,
-    input   pc,
-    input   compressed,
-    input   sourceReg1,
-    input   immediateValue,
+algorithm addressgenerator (
+    input   uint32  instruction,
+    input   uint32  pc,
+    input   uint1   compressed,
+    input   int32   sourceReg1,
+    input   int32   immediateValue,
 
-    output  nextPC,
-    output  branchAddress,
-    output  jumpAddress,
-    output  AUIPCLUI,
-    output  storeAddress,
-    output  loadAddress,
-) {
-    nextPC = pc + ( compressed ? 2 : 4 );
-
-    branchAddress = { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } + pc;
-
-    jumpAddress = { {12{Jtype(instruction).immediate_bits_20}}, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + pc;
-
-    AUIPCLUI = { Utype(instruction).immediate_bits_31_12, 12b0 } + ( opCode[5,1] ? 0 : pc );
-
-    storeAddress = { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
-
-    loadAddress = immediateValue + sourceReg1;
+    output  uint32  nextPC,
+    output  uint32  branchAddress,
+    output  uint32  jumpAddress,
+    output  uint32  AUIPCLUI,
+    output  uint32  storeAddress,
+    output  uint32  loadAddress,
+) <autorun> {
+    while(1) {
+        nextPC = pc + ( compressed ? 2 : 4 );
+        branchAddress = { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } + pc;
+        jumpAddress = { {12{Jtype(instruction).immediate_bits_20}}, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + pc;
+        AUIPCLUI = { Utype(instruction).immediate_bits_31_12, 12b0 } + ( instruction[5,1] ? 0 : pc );
+        storeAddress = { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } + sourceReg1;
+        loadAddress = immediateValue + sourceReg1;
+    }
 }
 
 // UPDATE PC

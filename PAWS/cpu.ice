@@ -20,10 +20,6 @@ algorithm PAWSCPU (
     input   uint1   SMTRUNNING,
     input   uint32  SMTSTARTPC
 ) <autorun> {
-    // RISC-V REGISTERS
-    simple_dualport_bram int32 registers_1 <input!> [64] = { 0, pad(0) };
-    simple_dualport_bram int32 registers_2 <input!> [64] = { 0, pad(0) };
-
     // SMT FLAG
     // RUNNING ON HART 0 OR HART 1
     // DUPLICATES PROGRAM COUNTER, REGISTER FILE AND LAST INSTRUCTION CACHE
@@ -33,7 +29,6 @@ algorithm PAWSCPU (
     uint32  pc = 0;
     uint32  pcSMT = 0;
     uint32  PC := SMT ? pcSMT : pc;
-    uint32  nextPC = uninitialized;
     uint1   compressed = uninitialized;
     uint1   incPC = uninitialized;
     uint32  instruction = uninitialized;
@@ -46,10 +41,6 @@ algorithm PAWSCPU (
     int32   AMOmemory = uninitialized;
     uint1   writeRegister = uninitialized;
 
-    // RISC-V REGISTER READER
-    int32   sourceReg1 = uninitialized;
-    int32   sourceReg2 = uninitialized;
-
     // RISC-V 32 BIT INSTRUCTION DECODER
     int32   immediateValue = uninitialized;
     uint7   opCode = uninitialized;
@@ -58,13 +49,51 @@ algorithm PAWSCPU (
     uint5   rs1 = uninitialized;
     uint5   rs2 = uninitialized;
     uint5   rd = uninitialized;
+    decoder DECODER(
+        instruction <: instruction,
+        opCode :> opCode,
+        function3 :> function3,
+        function7 :> function7,
+        rs1 :> rs1,
+        rs2 :> rs2,
+        rd :> rd,
+        immediateValue :> immediateValue,
+        IshiftCount :> IshiftCount
+    );
+
+    // RISC-V REGISTERS
+    int32   sourceReg1 = uninitialized;
+    int32   sourceReg2 = uninitialized;
+    registers REGISTERS(
+        SMT <:: SMT,
+        rs1 <: rs1,
+        rs2 <: rs2,
+        rd <: rd,
+        result <: result,
+        sourceReg1 :> sourceReg1,
+        sourceReg2 :> sourceReg2
+    );
 
     // RISC-V ADDRESS GENERATOR
+    uint32  nextPC = uninitialized;
     uint32  branchAddress = uninitialized;
     uint32  jumpAddress = uninitialized;
     uint32  loadAddress = uninitialized;
     uint32  storeAddress = uninitialized;
     uint32  AUIPCLUI = uninitialized;
+    addressgenerator AGU(
+        instruction <: instruction,
+        pc <:: PC,
+        compressed <: compressed,
+        sourceReg1 <: sourceReg1,
+        immediateValue <: immediateValue,
+        nextPC :> nextPC,
+        branchAddress :> branchAddress,
+        jumpAddress :> jumpAddress,
+        AUIPCLUI :> AUIPCLUI,
+        storeAddress :> storeAddress,
+        loadAddress :> loadAddress
+    );
 
     // BRANCH COMPARISON UNIT
     uint1   takeBranch = uninitialized;
@@ -120,9 +149,8 @@ algorithm PAWSCPU (
     readmemory := 0;
     writememory := 0;
 
-    // REGISTER Read/Write Flags
-    registers_1.wenable1 := 1;
-    registers_2.wenable1 := 1;
+    // REGISTERS Write FLAG
+    REGISTERS.write := 0;
 
     // ALU START FLAGS
     ALUA.start := 0;
@@ -168,11 +196,10 @@ algorithm PAWSCPU (
             Icache.updatecache = 1;
         }
 
-        // DECODE + REGISTER FETCH
-        // HAPPENS AUTOMATICALLY in DECODE AND REGISTER UNITS
-        ( opCode, function3, function7, rs1, rs2, rd, immediateValue, IshiftCount ) = decoder( instruction );
-        ( registers_1, registers_2, sourceReg1, sourceReg2 ) = registersREAD( registers_1, registers_2, rs1, rs2, SMT );
-        ( nextPC, branchAddress, jumpAddress, AUIPCLUI, storeAddress, loadAddress ) = addressgenerator( opCode, PC, compressed, sourceReg1, immediateValue );
+        // DECODE + REGISTER FETCH + ADDRESS GENERATION
+        ++: //( opCode, function3, function7, rs1, rs2, rd, immediateValue, IshiftCount ) = decoder( instruction );
+        ++: //( registers_1, registers_2, sourceReg1, sourceReg2 ) = registersREAD( registers_1, registers_2, rs1, rs2, SMT );
+        ++: //( nextPC, branchAddress, jumpAddress, AUIPCLUI, storeAddress, loadAddress ) = addressgenerator( opCode, PC, compressed, sourceReg1, immediateValue );
 
         // EXECUTE
         switch( opCode[2,5] ) {
@@ -322,7 +349,8 @@ algorithm PAWSCPU (
         }
 
         // DISPATCH INSTRUCTION
-        ( registers_1, registers_2 ) = registersWRITE( registers_1, registers_2, rd, writeRegister, SMT, result );
+        REGISTERS.write = ( writeRegister  && ( rd != 0 ) ) ? 1 : 0;
+
         if( SMT ) {
             ( pcSMT ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
         } else {

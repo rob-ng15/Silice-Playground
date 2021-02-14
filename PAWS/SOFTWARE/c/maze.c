@@ -8,10 +8,14 @@ unsigned char *tombstonebitmap;
 #include "ULX3SPPM.h"
 unsigned char *ulx3sbitmap;
 
+// INCLUDE 3D PACMAN BACKDROP
+#include "3DPACMAN.h"
+unsigned char *pacman3dbitmap;
+
 // MAZE SIZES
 #define MAXWIDTH 160
 #define MAXHEIGHT 120
-#define MAXLEVEL 6
+#define MAXLEVEL 14
 
 // DRAWING VARIABLES
 #define MAXDEPTH 14
@@ -20,8 +24,8 @@ unsigned char *ulx3sbitmap;
 unsigned short level = 0;
 
 // WIDTH OF MAZE DEPENDING ON LEVEL
-unsigned short levelwidths[] = { 10, 16, 20, 32, 40, 80, 160 };
-unsigned short levelheights[] = { 8, 12, 16, 24, 30, 60, 120 };
+unsigned short levelwidths[] = { 10, 16, 16, 20, 20, 32, 32, 32, 40, 40, 80, 80, 160, 160 };
+unsigned short levelheights[] = { 8, 10, 12, 12, 20, 20, 24, 30, 30, 40, 40, 60,  60, 120 };
 
 // TOP LEFT COORDINATES FOR THE PERSPECTIVE DRAWING
 short perspectivex[] = { 0, 100, 170, 218, 251, 273, 288, 298, 305, 310, 313, 315, 317, 318, 320 };
@@ -460,7 +464,7 @@ void generate_maze( unsigned short width, unsigned short height ) {
 // DRAW THE MAP IN RIGHT CORNER WITH COMPASS
 void draw_map( unsigned short width, unsigned short height, unsigned short currentx, unsigned short currenty, unsigned short direction, unsigned char mapmaze, unsigned short mappeeks )
 {
-    unsigned short x, y;
+    short x, y, dox, doy;
     unsigned char colour;
 
     unsigned short boxwidth = 160 / width;
@@ -470,35 +474,85 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
     gpu_rectangle( ORANGE, 460, 0, 640, 140 );
     gpu_rectangle( BLUE, 475, 10, 639 - boxwidth, 130 );
 
-    if( !(( level == 6 ) && ( mapmaze == 1 )) ) {
-        for( x = 0; x < width; x++ ) {
-            for( y = 0; y < height; y++ ) {
-                switch( mapmaze ? whatisat( x, y, 1) : whatisat( x, y, 0 ) ) {
-                    case '#':
-                        colour = BLUE;
-                        break;
-                    case ' ':
-                        colour = WHITE;
-                        break;
-                    case 'E':
-                        colour = MAGENTA;
-                        break;
-                    case 'X':
-                        colour = YELLOW;
-                        break;
+    switch( mapmaze ) {
+        case 0:
+            // DRAW WHOLE MAP
+            for( x = 0; x < width; x++ ) {
+                for( y = 0; y < height; y++ ) {
+                    switch( whatisat( x, y, 0 ) ) {
+                        case ' ':
+                            colour = WHITE;
+                            break;
+                        case 'E':
+                            colour = MAGENTA;
+                            break;
+                        case 'X':
+                            colour = YELLOW;
+                            break;
+                        default:
+                            colour = BLUE;
+                            break;
+                    }
+                    if( colour != BLUE )
+                        gpu_rectangle( colour, 475 + x * boxwidth, 10 + y * boxheight, 474 + x * boxwidth + boxwidth, 9 + y * boxheight + boxheight );
                 }
-                if( colour != BLUE )
-                    gpu_rectangle( colour, 475 + x * boxwidth, 10 + y * boxheight, 474 + x * boxwidth + boxwidth, 9 + y * boxheight + boxheight );
             }
-        }
+            // DRAW CURRENT LOCATION AND GHOSTS
+            gpu_rectangle( GREEN, 475 + currentx * boxwidth, 10 + currenty * boxheight, 474 + currentx * boxwidth + boxwidth, 9 + currenty * boxheight + boxheight );
+            for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
+                if( ghost <= level ) {
+                    gpu_rectangle( ghostcolour( ghost ), 475 + ghostx[ ghost ] * boxwidth, 10 + ghosty[ ghost ] * boxheight, 474 + ghostx[ ghost ] * boxwidth + boxwidth, 9 + ghosty[ ghost ] * boxheight + boxheight );
+                }
+            }
+            break;
+
+        case 1:
+            // DRAW LOCAL MAP
+            for( x = 0; x < 16; x++ ) {
+                for( y = 0; y < 12; y++ ) {
+                    if( ( currentx - 8 ) < 0 ) {
+                        dox = x;
+                    } else {
+                        dox = currentx - 8 + x;
+                    }
+                    if( ( currenty - 8 ) < 0 ) {
+                        doy = y;
+                    } else {
+                        doy = currenty - 8 + y;
+                    }
+
+                    if( ( dox >=0 ) && ( dox < width ) && ( doy >= 0 ) && ( doy < height ) ) {
+                        switch( whatisat( dox, doy, 1 ) ) {
+                            case ' ':
+                                colour = WHITE;
+                                break;
+                            case 'E':
+                                colour = MAGENTA;
+                                break;
+                            case 'X':
+                                colour = YELLOW;
+                                break;
+                            default:
+                                colour = BLUE;
+                                break;
+                        }
+                        if( colour != BLUE )
+                            gpu_rectangle( colour, 475 + x * 10, 10 + y * 10, 484 + x * 10, 19 + y * 10 );
+
+                        // DRAW CURRENT LOCATION AND GHOSTS
+                        if( ( dox == currentx ) && ( doy == currenty ) )
+                            gpu_rectangle( GREEN, 475 + x * 10, 10 + y * 10, 484 + x * 10, 19 + y * 10 );
+                        for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
+                            if( ( ghost <= level ) && ( ghostx[ ghost ] == dox ) && ( ghosty[ ghost ] == doy ) ) {
+                                gpu_rectangle( ghostcolour( ghost ), 475 + x * 10, 10 + y * 10, 484 + x * 10, 19 + y * 10 );
+                            }
+                        }
+                    }
+                }
+            }
+            break;
     }
 
-    gpu_rectangle( GREEN, 475 + currentx * boxwidth, 10 + currenty * boxheight, 474 + currentx * boxwidth + boxwidth, 9 + currenty * boxheight + boxheight );
-    for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
-        if( ghost <= level ) {
-            gpu_rectangle( ghostcolour( ghost ), 475 + ghostx[ ghost ] * boxwidth, 10 + ghosty[ ghost ] * boxheight, 474 + ghostx[ ghost ] * boxwidth + boxwidth, 9 + ghosty[ ghost ] * boxheight + boxheight );
-        }
-    }
 
     // DRAW COMPASS
     gpu_triangle( BLACK, 468, 1, 473, 10, 463, 10 );
@@ -786,6 +840,10 @@ int main( void ) {
     ulx3sbitmap = malloc( 320 * 219 );
     netppm_decoder( &ulx3sppm[0], ulx3sbitmap );
 
+    // DECODE 3D PACMAN TO BITMAP
+    pacman3dbitmap = malloc( 640 * 480 );
+    netppm_decoder( &pacman3dppm[0], pacman3dbitmap );
+
     unsigned short levelselected;
     level = 0;
 
@@ -798,6 +856,9 @@ int main( void ) {
         if( firstrun ) {
             drawwelcome();
             firstrun = 0;
+        } else {
+            // DISPLAY 3D PACMAN BITMAP
+            bitmapblit( pacman3dbitmap, 640, 480, 0, 0, BLACK );
         }
 
         levelselected = 0;
