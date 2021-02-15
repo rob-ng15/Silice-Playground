@@ -15,7 +15,7 @@ unsigned char *pacman3dbitmap;
 // MAZE SIZES
 #define MAXWIDTH 160
 #define MAXHEIGHT 120
-#define MAXLEVEL 14
+#define MAXLEVEL 13
 
 // DRAWING VARIABLES
 #define MAXDEPTH 14

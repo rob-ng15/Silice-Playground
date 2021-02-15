@@ -33,7 +33,7 @@ algorithm PAWSCPU (
     uint1   incPC = uninitialized;
     uint32  instruction = uninitialized;
 
-    // TEMPORARY STORAGE FOR 16 BIT lowWordER PART OF 32 BIT WORD
+    // TEMPORARY STORAGE FOR 16 BIT LOWER PART OF 32 BIT WORD
     uint16  lowWord = uninitialized;
 
     // RISC-V REGISTER WRITER
@@ -106,6 +106,38 @@ algorithm PAWSCPU (
     );
 
     // ALU BLOCKS
+
+    // SHIFTERS
+    uint32  LSHIFToutput = uninitialized;
+    uint32  RSHIFToutput = uninitialized;
+    uint32  ROTATEoutput = uninitialized;
+    uint32  SBSCIoutput = uninitialized;
+    uint5   shiftcount := ( opCode == 7b0010011 ) ? IshiftCount : sourceReg2[0,5];
+    BSHIFTleft LEFTSHIFT(
+        sourceReg1 <: sourceReg1,
+        shiftcount <: shiftcount,
+        function7 <: function7,
+        result :> LSHIFToutput
+    );
+    BSHIFTright RIGHTSHIFT(
+        sourceReg1 <: sourceReg1,
+        shiftcount <: shiftcount,
+        function7 <: function7,
+        result :> RSHIFToutput
+    );
+    BROTATE ROTATE(
+        sourceReg1 <: sourceReg1,
+        shiftcount <: shiftcount,
+        function3 <: function3,
+        result :> ROTATEoutput
+    );
+    singlebitops SBSCI(
+        sourceReg1 <: sourceReg1,
+        function7 <: function7,
+        shiftcount <: shiftcount,
+        result :> SBSCIoutput
+    );
+
     // ATOMIC MEMORY OPERATIONS
     aluA ALUA(
         function7 <: function7,
@@ -120,6 +152,11 @@ algorithm PAWSCPU (
         IshiftCount <: IshiftCount,
         sourceReg1 <: sourceReg1,
         immediateValue <: immediateValue,
+
+        LSHIFToutput <: LSHIFToutput,
+        RSHIFToutput <: RSHIFToutput,
+        ROTATEoutput <: ROTATEoutput,
+        SBSCIoutput <: SBSCIoutput
     );
 
     // BASE REGISTER & REGISTER ALU OPERATIONS + B EXTENSION OPERATIONS
@@ -129,6 +166,11 @@ algorithm PAWSCPU (
         rs1 <: rs1,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
+
+        LSHIFToutput <: LSHIFToutput,
+        RSHIFToutput <: RSHIFToutput,
+        ROTATEoutput <: ROTATEoutput,
+        SBSCIoutput <: SBSCIoutput
     );
 
     CSRblock CSR(
@@ -158,6 +200,10 @@ algorithm PAWSCPU (
     ALUR.start := 0;
     CSR.start := 0;
     CSR.incCSRinstret := 0;
+    LEFTSHIFT.start := ( ( opCode == 7b0010011 ) || ( opCode == 7b0110011 ) ) ? 1 : 0;
+    RIGHTSHIFT.start := ( ( opCode == 7b0010011 ) || ( opCode == 7b0110011 ) ) ? 1 : 0;
+    ROTATE.start := ( ( opCode == 7b0010011 ) || ( opCode == 7b0110011 ) ) ? 1 : 0;
+    SBSCI.start := ( ( opCode == 7b0010011 ) || ( opCode == 7b0110011 ) ) ? 1 : 0;
 
     while(1) {
         // RISC-V
