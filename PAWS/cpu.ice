@@ -29,9 +29,20 @@ algorithm PAWSCPU (
     uint32  pc = 0;
     uint32  pcSMT = 0;
     uint32  PC := SMT ? pcSMT : pc;
-    uint1   compressed = uninitialized;
     uint1   incPC = uninitialized;
+
+    // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
+    uint1   compressed = uninitialized;
+    compressed00 COMPRESSED00(
+        i16 <: readdata
+    );
+    compressed01 COMPRESSED01(
+        i16 <: readdata
+    );
+    compressed10 COMPRESSED10(
+        i16 <: readdata
+    );
 
     // TEMPORARY STORAGE FOR 16 BIT LOWER PART OF 32 BIT WORD
     uint16  lowWord = uninitialized;
@@ -106,13 +117,14 @@ algorithm PAWSCPU (
     );
 
     // ALU BLOCKS
+    uint1   ALUIorR := ( opCode == 7b0010011 ) ? 1 : 0;
 
     // SHIFTERS
     uint32  LSHIFToutput = uninitialized;
     uint32  RSHIFToutput = uninitialized;
     uint32  ROTATEoutput = uninitialized;
     uint32  SBSCIoutput = uninitialized;
-    uint5   shiftcount := ( opCode == 7b0010011 ) ? IshiftCount : sourceReg2[0,5];
+    uint5   shiftcount := ALUIorR ? IshiftCount : sourceReg2[0,5];
     BSHIFTleft LEFTSHIFT(
         sourceReg1 <: sourceReg1,
         shiftcount <: shiftcount,
@@ -138,6 +150,40 @@ algorithm PAWSCPU (
         result :> SBSCIoutput
     );
 
+    // SHARED MULTICYCLE BIT MANIPULATION OPERATIONS
+    uint32  SHFLoutput = uninitialized;
+    uint1   SHFLbusy = uninitialized;
+    shfl SHFL(
+        sourceReg1 <: sourceReg1,
+        shiftcount <: shiftcount,
+        busy :> SHFLbusy,
+        result :> SHFLoutput
+    );
+    uint32  UNSHFLoutput = uninitialized;
+    uint1   UNSHFLbusy = uninitialized;
+    unshfl UNSHFL(
+        sourceReg1 <: sourceReg1,
+        shiftcount <: shiftcount,
+        busy :> UNSHFLbusy,
+        result :> UNSHFLoutput
+    );
+    uint32  GREVoutput = uninitialized;
+    uint1   GREVbusy = uninitialized;
+    grev GREV(
+        sourceReg1 <: sourceReg1,
+        shiftcount <: shiftcount,
+        busy :> GREVbusy,
+        result :> GREVoutput
+    );
+    uint32  GORCoutput = uninitialized;
+    uint1   GORCbusy = uninitialized;
+    gorc GORC(
+        sourceReg1 <: sourceReg1,
+        shiftcount <: shiftcount,
+        busy :> GORCbusy,
+        result :> GORCoutput
+    );
+
     // ATOMIC MEMORY OPERATIONS
     aluA ALUA(
         function7 <: function7,
@@ -156,7 +202,16 @@ algorithm PAWSCPU (
         LSHIFToutput <: LSHIFToutput,
         RSHIFToutput <: RSHIFToutput,
         ROTATEoutput <: ROTATEoutput,
-        SBSCIoutput <: SBSCIoutput
+        SBSCIoutput <: SBSCIoutput,
+
+        SHFLoutput <: SHFLoutput,
+        SHFLbusy <: SHFLbusy,
+        UNSHFLoutput <: UNSHFLoutput,
+        UNSHFLbusy <: UNSHFLbusy,
+        GREVoutput <: GREVoutput,
+        GREVbusy <: GREVbusy,
+        GORCoutput <: GORCoutput,
+        GORCbusy <: GORCbusy
     );
 
     // BASE REGISTER & REGISTER ALU OPERATIONS + B EXTENSION OPERATIONS
@@ -170,7 +225,16 @@ algorithm PAWSCPU (
         LSHIFToutput <: LSHIFToutput,
         RSHIFToutput <: RSHIFToutput,
         ROTATEoutput <: ROTATEoutput,
-        SBSCIoutput <: SBSCIoutput
+        SBSCIoutput <: SBSCIoutput,
+
+        SHFLoutput <: SHFLoutput,
+        SHFLbusy <: SHFLbusy,
+        UNSHFLoutput <: UNSHFLoutput,
+        UNSHFLbusy <: UNSHFLbusy,
+        GREVoutput <: GREVoutput,
+        GREVbusy <: GREVbusy,
+        GORCoutput <: GORCoutput,
+        GORCbusy <: GORCbusy
     );
 
     CSRblock CSR(
@@ -200,10 +264,14 @@ algorithm PAWSCPU (
     ALUR.start := 0;
     CSR.start := 0;
     CSR.incCSRinstret := 0;
-    LEFTSHIFT.start := ( ( opCode == 7b0010011 ) || ( opCode == 7b0110011 ) ) ? 1 : 0;
-    RIGHTSHIFT.start := ( ( opCode == 7b0010011 ) || ( opCode == 7b0110011 ) ) ? 1 : 0;
-    ROTATE.start := ( ( opCode == 7b0010011 ) || ( opCode == 7b0110011 ) ) ? 1 : 0;
-    SBSCI.start := ( ( opCode == 7b0010011 ) || ( opCode == 7b0110011 ) ) ? 1 : 0;
+    LEFTSHIFT.start := 0;
+    RIGHTSHIFT.start := 0;
+    ROTATE.start := 0;
+    SBSCI.start := 0;
+    SHFL.start := 0;
+    UNSHFL.start := 0;
+    GREV.start := 0;
+    GORC.start := 0;
 
     while(1) {
         // RISC-V
@@ -225,9 +293,9 @@ algorithm PAWSCPU (
             compressed = ( readdata[0,2] != 2b11 );
 
             switch( readdata[0,2] ) {
-                case 2b00: { ( instruction ) = compressed00( readdata ); }
-                case 2b01: { ( instruction ) = compressed01( readdata ); }
-                case 2b10: { ( instruction ) = compressed10( readdata ); }
+                case 2b00: { instruction = COMPRESSED00.i32; }
+                case 2b01: { instruction = COMPRESSED01.i32; }
+                case 2b10: { instruction = COMPRESSED10.i32; }
                 case 2b11: {
                     // 32 BIT INSTRUCTION
                     lowWord = readdata;
@@ -310,20 +378,6 @@ algorithm PAWSCPU (
                     while( memorybusy ) {}
                 }
             }
-            case 5b00100: {
-                // ALUI ( BASE + B EXTENSION )
-                writeRegister = 1;
-                ALUI.start = 1;
-                while( ALUI.busy ) {}
-                result = ALUI.result;
-            }
-            case 5b01100: {
-                // ALUR ( BASE + M EXTENSION + B EXTENSION )
-                writeRegister = 1;
-                ALUR.start = 1;
-                while( ALUR.busy ) {}
-                result = ALUR.result;
-            }
             case 5b11100: {
                 // CSR
                 writeRegister = 1;
@@ -391,6 +445,30 @@ algorithm PAWSCPU (
                         while( memorybusy ) {}
                     }
                 }
+            }
+
+            // ALUI or ALUR
+            default: {
+                writeRegister = 1;
+
+                // START SHIFTERS
+                LEFTSHIFT.start = 1;
+                RIGHTSHIFT.start = 1;
+                ROTATE.start = 1;
+                SBSCI.start = 1;
+
+                // START SHARED MULTICYCLE BLOCKS - SHFL UNSHFL GORC GREV
+                SHFL.start = ( ( function3 == 3b001 ) && ( function7 == 7b0000100 ) ) ? 1 : 0;
+                UNSHFL.start = ( ( function3 == 3b101 ) && ( function7 == 7b0000100 ) ) ? 1 : 0;
+                GREV.start = ( ( function3 == 3b101 ) && ( function7 == 7b0110100 ) ) ? 1 : 0;
+                GORC.start = ( ( function3 == 3b101 ) && ( function7 == 7b0010100 ) ) ? 1 : 0;
+
+                // START ALUI or ALUR
+                ALUI.start = ALUIorR;
+                ALUR.start = ~ALUIorR;
+
+                while( ALUI.busy || ALUR.busy ) {}
+                result = ALUIorR ? ALUI.result : ALUR.result;
             }
         }
 
