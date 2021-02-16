@@ -58,7 +58,7 @@ algorithm apu(
     uint16  onesecond := 50000;
     uint16  notefrequency := frequencytable.rdata;
 
-    waveformtable.addr := selected_waveform * 32 + point;
+    waveformtable.addr := { selected_waveform, point };
     frequencytable.addr := selected_note;
 
     audio_active := ( selected_duration > 0 );

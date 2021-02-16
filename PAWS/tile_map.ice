@@ -77,7 +77,7 @@ algorithm tilemap(
     tiles_copy.wenable1 := 1;
 
     // Setup the reading and writing of the tiles16x16
-    tiles16x16.addr0 :=  tilemapentry(tiles.rdata0).tilenumber * 16 + yintm;
+    tiles16x16.addr0 :=  { tilemapentry(tiles.rdata0).tilenumber, yintm };
 
     // RENDER - Default to transparent
     tilemap_display := pix_active && ( ( tmpixel ) || ( ~tilemapentry(tiles.rdata0).alpha ) );
@@ -259,7 +259,7 @@ algorithm tilebitmapwriter(
     tiles16x16.wenable1 := 1;
 
     while(1) {
-        tiles16x16.addr1 = tile_writer_tile * 16 + tile_writer_line;
+        tiles16x16.addr1 = { tile_writer_tile, tile_writer_line };
         tiles16x16.wdata1 = tile_writer_bitmap;
     }
 }

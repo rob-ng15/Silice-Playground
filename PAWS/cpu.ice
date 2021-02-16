@@ -155,37 +155,23 @@ algorithm PAWSCPU (
     );
 
     // SHARED MULTICYCLE BIT MANIPULATION OPERATIONS
-    uint32  SHFLoutput = uninitialized;
-    uint1   SHFLbusy = uninitialized;
-    shfl SHFL(
+    uint32  SHFLUNSHFLoutput = uninitialized;
+    uint1   SHFLUNSHFLbusy = uninitialized;
+    shflunshfl SHFLUNSHFL(
         sourceReg1 <: sourceReg1,
         shiftcount <: shiftcount,
-        busy :> SHFLbusy,
-        result :> SHFLoutput
+        function3 <: function3,
+        busy :> SHFLUNSHFLbusy,
+        result :> SHFLUNSHFLoutput
     );
-    uint32  UNSHFLoutput = uninitialized;
-    uint1   UNSHFLbusy = uninitialized;
-    unshfl UNSHFL(
+    uint32  GREVGORCoutput = uninitialized;
+    uint1   GREVGORCbusy = uninitialized;
+    grevgorc GREVGORC(
         sourceReg1 <: sourceReg1,
         shiftcount <: shiftcount,
-        busy :> UNSHFLbusy,
-        result :> UNSHFLoutput
-    );
-    uint32  GREVoutput = uninitialized;
-    uint1   GREVbusy = uninitialized;
-    grev GREV(
-        sourceReg1 <: sourceReg1,
-        shiftcount <: shiftcount,
-        busy :> GREVbusy,
-        result :> GREVoutput
-    );
-    uint32  GORCoutput = uninitialized;
-    uint1   GORCbusy = uninitialized;
-    gorc GORC(
-        sourceReg1 <: sourceReg1,
-        shiftcount <: shiftcount,
-        busy :> GORCbusy,
-        result :> GORCoutput
+        function7 <: function7,
+        busy :> GREVGORCbusy,
+        result :> GREVGORCoutput
     );
 
     // ATOMIC MEMORY OPERATIONS
@@ -208,14 +194,10 @@ algorithm PAWSCPU (
         ROTATEoutput <: ROTATEoutput,
         SBSCIoutput <: SBSCIoutput,
 
-        SHFLoutput <: SHFLoutput,
-        SHFLbusy <: SHFLbusy,
-        UNSHFLoutput <: UNSHFLoutput,
-        UNSHFLbusy <: UNSHFLbusy,
-        GREVoutput <: GREVoutput,
-        GREVbusy <: GREVbusy,
-        GORCoutput <: GORCoutput,
-        GORCbusy <: GORCbusy
+        SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
+        SHFLUNSHFLbusy <: SHFLUNSHFLbusy,
+        GREVGORCoutput <: GREVGORCoutput,
+        GREVGORCbusy <: GREVGORCbusy
     );
 
     // BASE REGISTER & REGISTER ALU OPERATIONS + B EXTENSION OPERATIONS
@@ -231,14 +213,10 @@ algorithm PAWSCPU (
         ROTATEoutput <: ROTATEoutput,
         SBSCIoutput <: SBSCIoutput,
 
-        SHFLoutput <: SHFLoutput,
-        SHFLbusy <: SHFLbusy,
-        UNSHFLoutput <: UNSHFLoutput,
-        UNSHFLbusy <: UNSHFLbusy,
-        GREVoutput <: GREVoutput,
-        GREVbusy <: GREVbusy,
-        GORCoutput <: GORCoutput,
-        GORCbusy <: GORCbusy
+        SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
+        SHFLUNSHFLbusy <: SHFLUNSHFLbusy,
+        GREVGORCoutput <: GREVGORCoutput,
+        GREVGORCbusy <: GREVGORCbusy
     );
 
     CSRblock CSR(
@@ -273,10 +251,8 @@ algorithm PAWSCPU (
     RIGHTSHIFT.start := 0;
     ROTATE.start := 0;
     SBSCI.start := 0;
-    SHFL.start := 0;
-    UNSHFL.start := 0;
-    GREV.start := 0;
-    GORC.start := 0;
+    SHFLUNSHFL.start := 0;
+    GREVGORC.start := 0;
 
     while(1) {
         // RISC-V
@@ -315,7 +291,7 @@ algorithm PAWSCPU (
             Icache.updatecache = 1;
         }
 
-        // DECODE + REGISTER FETCH + ADDRESS GENERATION
+        // TIME TO ALLOW DECODE + REGISTER FETCH + ADDRESS GENERATION
         ++:
         ++:
         ++:
@@ -374,7 +350,6 @@ algorithm PAWSCPU (
             }
             case 5b01000: {
                 // STORE
-                // WRITE 8, 16 and LOWER 16 of 32 bits
                 memoryoutput = sourceReg2;
             }
             case 5b11100: {
@@ -417,10 +392,8 @@ algorithm PAWSCPU (
                 SBSCI.start = 1;
 
                 // START SHARED MULTICYCLE BLOCKS - SHFL UNSHFL GORC GREV
-                SHFL.start = ( ( function3 == 3b001 ) && ( function7 == 7b0000100 ) ) ? 1 : 0;
-                UNSHFL.start = ( ( function3 == 3b101 ) && ( function7 == 7b0000100 ) ) ? 1 : 0;
-                GREV.start = ( ( function3 == 3b101 ) && ( function7 == 7b0110100 ) ) ? 1 : 0;
-                GORC.start = ( ( function3 == 3b101 ) && ( function7 == 7b0010100 ) ) ? 1 : 0;
+                SHFLUNSHFL.start = ( ( ( function3 == 3b001 ) || ( function3 == 3b101 ) ) && ( function7 == 7b0000100 ) ) ? 1 : 0;
+                GREVGORC.start = ( ( function3 == 3b101 ) && ( ( function7 == 7b0110100 ) || ( function7 == 7b0010100 ) ) ) ? 1 : 0;
 
                 // START ALUI or ALUR
                 ALUI.start = ALUIorR;
@@ -491,34 +464,34 @@ algorithm instructioncache(
     uint5   lastcachepointer = 0;
     uint5   lastcachepointerSMT = 0;
 
+    uint6   pointer := SMT ? { 1b1, lastcachepointerSMT } : { 1b0, lastcachepointer };
+
     // CHECK IF PC IS IN LAST INSTRUCTION CACHE
     incache :=
         $$for i = 0, 30 do
-        $$j = 32 + i
-            ( PC == ( lastpccache[ SMT ? $j$ : $i$ ] ) ) ||
+            ( PC == ( lastpccache[ { SMT, 5d$i$ } ] ) ) ||
         $$end
-        ( PC == ( lastpccache[ SMT ? 63 : 31 ] ) );
+        ( PC == ( lastpccache[ { SMT, 5b11111 } ] ) );
 
     // RETRIEVE FROM LAST INSTRUCTION CACHE
-    instruction := ( PC == ( lastpccache[ SMT ? 32 : 0 ] ) ) ? ( lastinstructioncache[ SMT ? 32 : 0 ] ) :
+    instruction := ( PC == ( lastpccache[ { SMT, 5b00000 } ] ) ) ? ( lastinstructioncache[ { SMT, 5b00000 } ] ) :
                     $$for i = 1, 30 do
-                    $$j = 32 + i
-                        ( PC == ( lastpccache[ SMT ? $j$ : $i$ ] ) ) ? ( lastinstructioncache[ SMT ? $j$ : $i$ ] ) :
+                        ( PC == ( lastpccache[ { SMT, 5d$i$ } ] ) ) ? ( lastinstructioncache[ { SMT, 5d$i$ } ] ) :
                     $$end
-                    ( lastinstructioncache[ SMT ? 63 : 31 ] );
+                    ( lastinstructioncache[ { SMT, 5b11111 } ] );
 
-    compressed := ( PC == ( lastpccache[ SMT ? 32 : 0 ] ) ) ? ( lastcompressedcache[ SMT ? 32 : 0 ] ) :
+    compressed := ( PC == ( lastpccache[ { SMT, 5b00000 } ] ) ) ? ( lastcompressedcache[ { SMT, 5b00000 } ] ) :
                     $$for i = 1, 30 do
-                    $$j = 32 + i
-                        ( PC == ( lastpccache[ SMT ? $j$ : $i$ ] ) ) ? ( lastcompressedcache[ SMT ? $j$ : $i$ ] ) :
+                        ( PC == ( lastpccache[ { SMT, 5d$i$ } ] ) ) ? ( lastcompressedcache[ { SMT, 5d$i$ }  ] ) :
                     $$end
-                    ( lastcompressedcache[ SMT ? 63 : 31 ] );
+                    ( lastcompressedcache[ { SMT, 5b11111 } ] );
 
     while(1) {
         if( updatecache ) {
-            lastpccache[ SMT ? lastcachepointerSMT + 32 : lastcachepointer ] = PC;
-            lastinstructioncache[  SMT ? lastcachepointerSMT + 32 : lastcachepointer ] = newinstruction;
-            lastcompressedcache[  SMT ? lastcachepointerSMT + 32 : lastcachepointer ] = newcompressed;
+            lastpccache[ pointer ] = PC;
+            lastinstructioncache[  pointer ] = newinstruction;
+            lastcompressedcache[  pointer ] = newcompressed;
+
             if( SMT ) {
                 lastcachepointerSMT = lastcachepointerSMT + 1;
             } else {

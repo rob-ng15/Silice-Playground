@@ -14,8 +14,8 @@ algorithm registers(
     simple_dualport_bram int32 registers_2 <input!> [64] = { 0, pad(0) };
 
     // READ FROM REGISTERS
-    registers_1.addr0 := rs1 + ( SMT ? 32 : 0 );
-    registers_2.addr0 := rs2 + ( SMT ? 32 : 0 );
+    registers_1.addr0 := { SMT, rs1 };
+    registers_2.addr0 := { SMT, rs2 };
     sourceReg1 := registers_1.rdata0;
     sourceReg2 := registers_2.rdata0;
 
@@ -32,9 +32,9 @@ algorithm registers(
     while(1) {
         // WRITE TO REGISTERS
         if( write ) {
-            registers_1.addr1 = rd + ( SMT ? 32 : 0 );
+            registers_1.addr1 = { SMT, rd };
             registers_1.wdata1 = result;
-            registers_2.addr1 = rd + ( SMT ? 32 : 0 );
+            registers_2.addr1 = { SMT, rd };
             registers_2.wdata1 = result;
         }
     }
@@ -460,12 +460,13 @@ algorithm singlebitops(
 }
 
 // GENERAL REVERSE / GENERAL OR CONDITIONAL
-algorithm grev(
+algorithm grevgorc(
     input   uint1   start,
     output! uint1   busy,
 
     input   uint32  sourceReg1,
     input   uint5   shiftcount,
+    input   uint7   function7,
     output! uint32  result
 ) <autorun> {
     busy = 0;
@@ -476,37 +477,11 @@ algorithm grev(
 
             result = sourceReg1;
             ++:
-            if( shiftcount[0,1] ) { result = ( ( result & 32h55555555 ) << 1 ) | ( ( result & 32haaaaaaaa ) >> 1 ); ++: }
-            if( shiftcount[1,1] ) { result = ( ( result & 32h33333333 ) << 2 ) | ( ( result & 32hcccccccc ) >> 2 ); ++: }
-            if( shiftcount[2,1] ) { result = ( ( result & 32h0f0f0f0f ) << 4 ) | ( ( result & 32hf0f0f0f0 ) >> 4 ); ++: }
-            if( shiftcount[3,1] ) { result = ( ( result & 32h00ff00ff ) << 8 ) | ( ( result & 32hff00ff00 ) >> 8 ); ++: }
-            if( shiftcount[4,1] ) { result = ( ( result & 32h0000ffff ) << 16 ) | ( ( result & 32hffff0000 ) >> 16 ); }
-
-            busy = 0;
-        }
-    }
-}
-algorithm gorc(
-    input   uint1   start,
-    output! uint1   busy,
-
-    input   uint32  sourceReg1,
-    input   uint5   shiftcount,
-    output! uint32  result
-) <autorun> {
-    busy = 0;
-
-    while(1) {
-        if( start ) {
-            busy = 1;
-
-            result = sourceReg1;
-            ++:
-            if( shiftcount[0,1] ) { result = result | ( ( result & 32h55555555 ) << 1 ) | ( ( result & 32haaaaaaaa ) >> 1 ); ++: }
-            if( shiftcount[1,1] ) { result = result | ( ( result & 32h33333333 ) << 2 ) | ( ( result & 32hcccccccc ) >> 2 ); ++: }
-            if( shiftcount[2,1] ) { result = result | ( ( result & 32h0f0f0f0f ) << 4 ) | ( ( result & 32hf0f0f0f0 ) >> 4 ); ++: }
-            if( shiftcount[3,1] ) { result = result | ( ( result & 32h00ff00ff ) << 8 ) | ( ( result & 32hff00ff00 ) >> 8 ); ++: }
-            if( shiftcount[4,1] ) { result = result | ( ( result & 32h0000ffff ) << 16 ) | ( ( result & 32hffff0000 ) >> 16 ); }
+            if( shiftcount[0,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h55555555 ) << 1 ) | ( ( result & 32haaaaaaaa ) >> 1 ); ++: }
+            if( shiftcount[1,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h33333333 ) << 2 ) | ( ( result & 32hcccccccc ) >> 2 ); ++: }
+            if( shiftcount[2,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h0f0f0f0f ) << 4 ) | ( ( result & 32hf0f0f0f0 ) >> 4 ); ++: }
+            if( shiftcount[3,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h00ff00ff ) << 8 ) | ( ( result & 32hff00ff00 ) >> 8 ); ++: }
+            if( shiftcount[4,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h0000ffff ) << 16 ) | ( ( result & 32hffff0000 ) >> 16 ); }
 
             busy = 0;
         }
@@ -529,6 +504,48 @@ circuitry shuffle32_stage(
     B = src >> N;
     ++:
     x = x | ( A & maskL ) | ( B & maskR );
+}
+algorithm shflunshfl(
+    input   uint1   start,
+    output! uint1   busy,
+
+    input   uint32  sourceReg1,
+    input   uint5   shiftcount,
+    input   uint3   function3,
+    output! uint32  result
+) <autorun> {
+    uint3   count = uninitialized;
+    uint2   i = uninitialized;
+
+    uint4   N8 = 8; uint32 N8A = 32h00ff0000; uint32 N8B = 32h0000ff00;
+    uint4   N4 = 4; uint32 N4A = 32h0f000f00; uint32 N4B = 32h00f000f0;
+    uint4   N2 = 2; uint32 N2A = 32h30303030; uint32 N2B = 32h0c0c0c0c;
+    uint4   N1 = 1; uint32 N1A = 32h44444444; uint32 N1B = 32h22222222;
+
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+
+            result = sourceReg1;
+            count = 0;
+            i = ( function3 == 3b101) ? 0 : 3;
+            ++:
+            while( count < 4 ) {
+                switch( i ) {
+                    case 0: { if( shiftcount[0,1] ) { ( result ) = shuffle32_stage( result, N1A, N1B, N1 ); } }
+                    case 1: { if( shiftcount[1,1] ) { ( result ) = shuffle32_stage( result, N2A, N2B, N2 ); } }
+                    case 2: { if( shiftcount[2,1] ) { ( result ) = shuffle32_stage( result, N4A, N4B, N4 ); } }
+                    case 3: { if( shiftcount[3,1] ) { ( result ) = shuffle32_stage( result, N8A, N8B, N8 ); } }
+                }
+                i = ( function3 == 3b101) ? i + 1 : i - 1;
+                count = count + 1;
+            }
+
+            busy = 0;
+        }
+    }
 }
 algorithm shfl(
     input   uint1   start,
@@ -718,7 +735,7 @@ algorithm bfp(
             length = ( sourceReg2[24,4] == 0 ) ? 16 : sourceReg2[24,4];
             offset = sourceReg2[16,5];
             ++:
-            mask = ~(~mask << offset);
+            mask = ~(~mask << length) << offset;
             ++:
             result = ( ( sourceReg2 << offset ) & mask ) | ( sourceReg1 & ~mask );
 

@@ -115,8 +115,8 @@ algorithm aluIb001(
     input   uint32  LSHIFToutput,
     input   uint32  SBSCIoutput,
 
-    input   uint32  SHFLoutput,
-    input   uint1   SHFLbusy,
+    input   uint32  SHFLUNSHFLoutput,
+    input   uint1   SHFLUNSHFLbusy,
 
     output! uint32  result
 ) <autorun> {
@@ -171,8 +171,8 @@ algorithm aluIb001(
                 }
                 case 7b0000100: {
                     busy = 1;
-                    while( SHFLbusy ) {}
-                    result = SHFLoutput;
+                    while( SHFLUNSHFLbusy ) {}
+                    result = SHFLUNSHFLoutput;
                     busy = 0;
                 }
                 default: {
@@ -197,13 +197,10 @@ algorithm aluIb101(
     input   uint32  RSHIFToutput,
     input   uint32  ROTATEoutput,
 
-    input   uint32  UNSHFLoutput,
-    input   uint1   UNSHFLbusy,
-    input   uint32  GREVoutput,
-    input   uint1   GREVbusy,
-    input   uint32  GORCoutput,
-    input   uint1   GORCbusy,
-
+    input   uint32  SHFLUNSHFLoutput,
+    input   uint1   SHFLUNSHFLbusy,
+    input   uint32  GREVGORCoutput,
+    input   uint1   GREVGORCbusy,
     output! uint32  result
 ) <autorun> {
     // START FLAGS FOR ALU SUB BLOCKS
@@ -214,22 +211,22 @@ algorithm aluIb101(
             switch( function7 ) {
                 case 7b0000100: {
                     busy = 1;
-                    while( UNSHFLbusy ) {}
-                    result = UNSHFLoutput;
+                    while( SHFLUNSHFLbusy ) {}
+                    result = SHFLUNSHFLoutput;
                     busy = 0;
                 }
                 case 7b0010100: {
                     busy = 1;
-                    while( GORCbusy ) {}
-                    result = GORCoutput;
+                    while( GREVGORCbusy ) {}
+                    result = GREVGORCoutput;
                     busy = 0;
                 }
                 case 7b0100100: { result = sourceReg1[ IshiftCount, 1 ]; }
                 case 7b0110000: { result = ROTATEoutput;  }
                 case 7b0110100: {
                     busy = 1;
-                    while( GREVbusy ) {}
-                    result = GREVoutput;
+                    while( GREVGORCbusy ) {}
+                    result = GREVGORCoutput;
                     busy = 0;
                 }
                 default: {  result = RSHIFToutput; }
@@ -252,14 +249,10 @@ algorithm aluI (
     input   uint32  ROTATEoutput,
     input   uint32  SBSCIoutput,
 
-    input   uint32  SHFLoutput,
-    input   uint1   SHFLbusy,
-    input   uint32  UNSHFLoutput,
-    input   uint1   UNSHFLbusy,
-    input   uint32  GREVoutput,
-    input   uint1   GREVbusy,
-    input   uint32  GORCoutput,
-    input   uint1   GORCbusy,
+    input   uint32  SHFLUNSHFLoutput,
+    input   uint1   SHFLUNSHFLbusy,
+    input   uint32  GREVGORCoutput,
+    input   uint1   GREVGORCbusy,
 
     output! uint32   result
 ) <autorun> {
@@ -270,8 +263,8 @@ algorithm aluI (
         sourceReg1 <: sourceReg1,
         LSHIFToutput <: LSHIFToutput,
         SBSCIoutput <: SBSCIoutput,
-        SHFLoutput <: SHFLoutput,
-        SHFLbusy <: SHFLbusy
+        SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
+        SHFLUNSHFLbusy <: SHFLUNSHFLbusy
     );
     aluIb101 ALUIb101(
         function7 <: function7,
@@ -280,12 +273,10 @@ algorithm aluI (
         sourceReg1 <: sourceReg1,
         RSHIFToutput <: RSHIFToutput,
         ROTATEoutput <: ROTATEoutput,
-        UNSHFLoutput <: UNSHFLoutput,
-        UNSHFLbusy <: UNSHFLbusy,
-        GREVoutput <: GREVoutput,
-        GREVbusy <: GREVbusy,
-        GORCoutput <: GORCoutput,
-        GORCbusy <: GORCbusy
+        SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
+        SHFLUNSHFLbusy <: SHFLUNSHFLbusy,
+        GREVGORCoutput <: GREVGORCoutput,
+        GREVGORCbusy <: GREVGORCbusy,
     );
 
     // START FLAGS FOR ALU SUB BLOCKS
@@ -336,8 +327,8 @@ algorithm aluR7b0010100 (
     input   uint32  sourceReg2,
     input   uint32  SBSCIoutput,
 
-    input   uint32  GORCoutput,
-    input   uint1   GORCbusy,
+    input   uint32  GREVGORCoutput,
+    input   uint1   GREVGORCbusy,
 
     output! uint32  result
 ) <autorun> {
@@ -360,8 +351,8 @@ algorithm aluR7b0010100 (
                 case 3b001: { result = SBSCIoutput; }
                 case 3b101: {
                     busy = 1;
-                    while( GORCbusy ) {}
-                    result = GORCoutput;
+                    while( GREVGORCbusy ) {}
+                    result = GREVGORCoutput;
                     busy = 0;
                 }
                 default: {
@@ -425,10 +416,8 @@ algorithm aluR7b0000100 (
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
 
-    input   uint32  SHFLoutput,
-    input   uint1   SHFLbusy,
-    input   uint32  UNSHFLoutput,
-    input   uint1   UNSHFLbusy,
+    input   uint32  SHFLUNSHFLoutput,
+    input   uint1   SHFLUNSHFLbusy,
 
     output! uint32  result
 ) <autorun> {
@@ -449,14 +438,14 @@ algorithm aluR7b0000100 (
             switch( function3 ) {
                 case 3b001: {
                     busy = 1;
-                    while( SHFLbusy ) {}
-                    result = SHFLoutput;
+                    while( SHFLUNSHFLbusy ) {}
+                    result = SHFLUNSHFLoutput;
                     busy = 0;
                 }
                 case 3b101: {
                     busy = 1;
-                    while( UNSHFLbusy ) {}
-                    result = UNSHFLoutput;
+                    while( SHFLUNSHFLbusy ) {}
+                    result = SHFLUNSHFLoutput;
                     busy = 0;
                 }
                 case 3b110: {
@@ -482,8 +471,8 @@ algorithm aluR7b0110100 (
     input   uint32  sourceReg2,
     input   uint32  SBSCIoutput,
 
-    input   uint32  GREVoutput,
-    input   uint1   GREVbusy,
+    input   uint32  GREVGORCoutput,
+    input   uint1   GREVGORCbusy,
 
     output! uint32  result
 ) <autorun> {
@@ -498,8 +487,8 @@ algorithm aluR7b0110100 (
                 case 3b001: { result = SBSCIoutput; }
                 default: {
                     busy = 1;
-                    while( GREVbusy ) {}
-                    result = GREVoutput;
+                    while( GREVGORCbusy ) {}
+                    result = GREVGORCoutput;
                     busy = 0;
                 }
             }
@@ -525,7 +514,7 @@ algorithm aluR7b0100100 (
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2
     );
-    bext BFP(
+    bfp BFP(
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2
     );
@@ -575,14 +564,10 @@ algorithm aluR (
     input   uint32  ROTATEoutput,
     input   uint32  SBSCIoutput,
 
-    input   uint32  SHFLoutput,
-    input   uint1   SHFLbusy,
-    input   uint32  UNSHFLoutput,
-    input   uint1   UNSHFLbusy,
-    input   uint32  GREVoutput,
-    input   uint1   GREVbusy,
-    input   uint32  GORCoutput,
-    input   uint1   GORCbusy,
+    input   uint32  SHFLUNSHFLoutput,
+    input   uint1   SHFLUNSHFLbusy,
+    input   uint32  GREVGORCoutput,
+    input   uint1   GREVGORCbusy,
 
     output! uint32  result
 ) <autorun> {
@@ -608,8 +593,8 @@ algorithm aluR (
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
         SBSCIoutput <: SBSCIoutput,
-        GORCoutput <: GORCoutput,
-        GORCbusy <: GORCbusy
+        GREVGORCoutput <: GREVGORCoutput,
+        GREVGORCbusy <: GREVGORCbusy
     );
     // B EXTENSION CLMUL + MIN[U] MAX[U] ( min and max are single cycle but share same function7 coding as CLMUL operations )
     aluR7b0000101 ALUR7b0000101(
@@ -622,10 +607,8 @@ algorithm aluR (
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
-        SHFLoutput <: SHFLoutput,
-        SHFLbusy <: SHFLbusy,
-        UNSHFLoutput <: UNSHFLoutput,
-        UNSHFLbusy <: UNSHFLbusy
+        SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
+        SHFLUNSHFLbusy <: SHFLUNSHFLbusy,
     );
     // B EXTENSION GREV + SBINV ( sbinv is single cycle but shares same function7 coding as GREV )
     aluR7b0110100 ALUR7b0110100(
@@ -633,9 +616,8 @@ algorithm aluR (
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
         SBSCIoutput <: SBSCIoutput,
-
-        GREVoutput <: GREVoutput,
-        GREVbusy <: GREVbusy
+        GREVGORCoutput <: GREVGORCoutput,
+        GREVGORCbusy <: GREVGORCbusy
     );
     // B EXTENSION BDEP BFP + PACKU SBCLR SBEXT ( packu, sbclr and sbext are single cycle share share same function7 coding as BDEP BFP )
     aluR7b0100100 ALUR7b0100100(

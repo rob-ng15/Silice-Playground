@@ -33,7 +33,7 @@ unsigned char *galaxybitmap;
     };
 
     unsigned short ufo_directions[] = {
-        0x1c02, 0x1c1e, 0x1c04, 0x1c1c
+        0x1c02, 0x1c1e, 0x1c03, 0x1c1d
     };
 
     // GLOBAL GRAPHICS

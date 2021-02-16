@@ -420,7 +420,7 @@ circuitry updatenumerator(
     if( gpu_numerator > 0 ) {
         new_numerator = gpu_numerator + 4 * (gpu_active_x - gpu_active_y) + 10;
     } else {
-        new_numerator = gpu_numerator + 4 * gpu_active_x + 6;
+        new_numerator = gpu_numerator + { gpu_active_x, 2b00 } + 6;
     }
 }
 
@@ -454,7 +454,7 @@ algorithm circle (
             ( gpu_active_y ) = abs( param0 );
             ( gpu_xc, gpu_yc ) = copycoordinates( x, y );
             ++:
-            gpu_numerator = 3 - ( 2 * gpu_active_y );
+            gpu_numerator = 3 - ( { gpu_active_y, 1b0 } );
             while( gpu_active_y >= gpu_active_x ) {
                 bitmap_x_write = gpu_xc + gpu_active_x;
                 bitmap_y_write = gpu_yc + gpu_active_y;
@@ -527,7 +527,7 @@ algorithm disc (
             gpu_active_y = ( gpu_active_y < 4 ) ? 4 : gpu_active_y;
             gpu_count = ( gpu_active_y < 4 ) ? 4 : gpu_active_y;
             ++:
-            gpu_numerator = 3 - ( 2 * gpu_active_y );
+            gpu_numerator = 3 - ( { gpu_active_y, 1b0 } );
             while( gpu_active_y >= gpu_active_x ) {
                 while( gpu_count != 0 ) {
                     bitmap_x_write = gpu_xc + gpu_active_x;
@@ -758,8 +758,8 @@ algorithm blit (
     busy := start ? 1 : active;
 
     // tile and character bitmap addresses
-    blit1tilemap.addr0 := gpu_tile * 16 + gpu_active_y;
-    characterGenerator8x8.addr0 := gpu_tile * 8 + gpu_active_y;
+    blit1tilemap.addr0 := { gpu_tile, gpu_active_y[0,4] };
+    characterGenerator8x8.addr0 := { gpu_tile, gpu_active_y[0,3] };
 
     bitmap_x_write := gpu_x1 + gpu_active_x;
     bitmap_y_write := gpu_y1 + ( gpu_active_y << gpu_param1 ) + gpu_y2;
@@ -847,7 +847,7 @@ algorithm vectors(
     );
 
     // Set read and write address for the vertices
-    vertex.addr0 := block_number * 16 + vertices_number;
+    vertex.addr0 := { block_number, vertices_number };
 
     gpu_write := 0;
 
@@ -897,10 +897,10 @@ algorithm blittilebitmapwriter(
     characterGenerator8x8.wenable1 := 1;
 
     while(1) {
-        blit1tilemap.addr1 = blit1_writer_tile * 16 + blit1_writer_line;
+        blit1tilemap.addr1 = { blit1_writer_tile, blit1_writer_line };
         blit1tilemap.wdata1 = blit1_writer_bitmap;
 
-        characterGenerator8x8.addr1 = character_writer_character * 8 + character_writer_line;
+        characterGenerator8x8.addr1 = { character_writer_character, character_writer_line };
         characterGenerator8x8.wdata1 = character_writer_bitmap;
     }
 }
@@ -918,7 +918,7 @@ algorithm vertexwriter(
     vertex.wenable1 := 1;
 
     while(1) {
-        vertex.addr1 = vertices_writer_block * 16 + vertices_writer_vertex;
+        vertex.addr1 = { vertices_writer_block, vertices_writer_vertex };
         vertex.wdata1 = { vertices_writer_active, __unsigned(vertices_writer_xdelta), __unsigned(vertices_writer_ydelta) };
     }
 }

@@ -111,7 +111,7 @@ algorithm sprite_layer(
         uint1 xinrange_$i$ := ( __signed({1b0, pix_x}) >= __signed(sprite_x[$i$]) ) && ( __signed({1b0, pix_x}) < __signed( sprite_x[$i$] + spritesize_$i$ ) );
         uint1 yinrange_$i$ := ( __signed({1b0, pix_y}) >= __signed(sprite_y[$i$]) ) && ( __signed({1b0, pix_y}) < __signed( sprite_y[$i$] + spritesize_$i$ ) );
         uint1 pix_visible_$i$ := sprite_active[$i$] && xinrange_$i$ && yinrange_$i$ && ( tiles_$i$.rdata0[ ( 15  - ( ( __signed({1b0, pix_x}) - sprite_x[$i$] ) >>> sprite_double[$i$] ) ), 1 ] );
-
+        uint4 yinsprite_$i$ := ( __signed({1b0, pix_y}) - sprite_y[$i$] ) >>> sprite_double[$i$];
         // Collision detection flag
         uint16      detect_collision_$i$ = uninitialised;
     $$end
@@ -142,7 +142,7 @@ algorithm sprite_layer(
 
     $$for i=0,12 do
         // Set read addresses for the bitmaps and output collisions
-        tiles_$i$.addr0 := sprite_tile_number[$i$] * 16 + ( ( __signed({1b0, pix_y}) - sprite_y[$i$] ) >>> sprite_double[$i$] );
+        tiles_$i$.addr0 := { sprite_tile_number[$i$], yinsprite_$i$ };
         collision_$i$ := ( output_collisions ) ? detect_collision_$i$ : collision_$i$;
     $$end
 
@@ -190,7 +190,7 @@ algorithm sprite_layer(
                             pix_visible_3 ? sprite_colour[3][4,2] :
                             pix_visible_2 ? sprite_colour[2][4,2] :
                             pix_visible_1 ? sprite_colour[1][4,2] :
-                            pix_visible_0 ? sprite_colour[0][4,2] : 0;
+                            sprite_colour[0][4,2];
 
                 pix_green= pix_visible_12 ? sprite_colour[12][2,2] :
                             pix_visible_11 ? sprite_colour[11][2,2] :
@@ -204,7 +204,7 @@ algorithm sprite_layer(
                             pix_visible_3 ? sprite_colour[3][2,2] :
                             pix_visible_2 ? sprite_colour[2][2,2] :
                             pix_visible_1 ? sprite_colour[1][2,2] :
-                            pix_visible_0 ? sprite_colour[0][2,2] : 0;
+                            sprite_colour[0][2,2];
 
                 pix_blue = pix_visible_12 ? sprite_colour[12][0,2] :
                             pix_visible_11 ? sprite_colour[11][0,2] :
@@ -218,7 +218,7 @@ algorithm sprite_layer(
                             pix_visible_3 ? sprite_colour[3][0,2] :
                             pix_visible_2 ? sprite_colour[2][0,2] :
                             pix_visible_1 ? sprite_colour[1][0,2] :
-                            pix_visible_0 ? sprite_colour[0][0,2] : 0;
+                            sprite_colour[0][0,2];
 
                 sprite_layer_display = pix_visible_12 | pix_visible_11 | pix_visible_10 | pix_visible_9 | pix_visible_8 | pix_visible_7 | pix_visible_6 | pix_visible_5 |
                     pix_visible_4 | pix_visible_3 | pix_visible_2 | pix_visible_1 | pix_visible_0;
