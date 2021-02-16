@@ -171,7 +171,7 @@ algorithm main(
     uint16  writedata = uninitialized;
     uint1   Icacheflag = uninitialized;
     PAWSCPU CPU <@cpu_clock> (
-        function3 :> function3,
+        accesssize :> function3,
 
         address :> address,
         writedata :> writedata,

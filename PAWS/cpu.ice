@@ -7,7 +7,7 @@
 //          ALU FUNCTIONALITY LISTED IN mathematics.ice
 
 algorithm PAWSCPU (
-    output  uint3   function3,
+    output  uint3   accesssize,
     output  uint32  address,
     output  uint16  writedata,
     output  uint1   writememory,
@@ -49,12 +49,16 @@ algorithm PAWSCPU (
 
     // RISC-V REGISTER WRITER
     int32   result = uninitialized;
-    int32   AMOmemory = uninitialized;
     uint1   writeRegister = uninitialized;
+    uint32  memoryinput = uninitialized;
+    uint32  memoryoutput = uninitialized;
+    uint1   memoryload := ( ( opCode == 7b0000011 ) || ( ( opCode == 7b0101111 ) && ( function7[2,5] != 5b00011 ) ) ) ? 1 : 0;
+    uint1   memorystore := ( ( opCode == 7b0100011 ) || ( ( opCode == 7b0101111 ) && ( function7[2,5] != 5b00010 ) ) ) ? 1 : 0;
 
     // RISC-V 32 BIT INSTRUCTION DECODER
     int32   immediateValue = uninitialized;
     uint7   opCode = uninitialized;
+    uint3   function3 = uninitialized;
     uint7   function7 = uninitialized;
     uint5   IshiftCount = uninitialized;
     uint5   rs1 = uninitialized;
@@ -187,7 +191,7 @@ algorithm PAWSCPU (
     // ATOMIC MEMORY OPERATIONS
     aluA ALUA(
         function7 <: function7,
-        memoryinput <: AMOmemory,
+        memoryinput <: memoryinput,
         sourceReg2 <: sourceReg2
     );
 
@@ -252,6 +256,7 @@ algorithm PAWSCPU (
     Icache.updatecache := 0;
 
     // MEMORY ACCESS FLAGS
+    accesssize := ( opCode == 7b0101111 ) ? 3b010 : function3;
     readmemory := 0;
     writememory := 0;
 
@@ -315,6 +320,26 @@ algorithm PAWSCPU (
         ++:
         ++:
 
+        // LOAD FROM MEMORY
+        if( memoryload ) {
+            address = loadAddress;
+            Icacheflag = 0;
+            readmemory = 1;
+            while( memorybusy ) {}
+            switch( accesssize & 3 ) {
+                case 2b00: { ( memoryinput ) = signextender8( function3, loadAddress, readdata ); }
+                case 2b01: { ( memoryinput ) = signextender16( function3, readdata ); }
+                case 2b10: {
+                    // 32 bit READ as 2 x 16 bit
+                    lowWord = readdata;
+                    address = loadAddress + 2;
+                    readmemory = 1;
+                    while( memorybusy ) {}
+                    ( memoryinput ) = halfhalfword( readdata, lowWord );
+                }
+            }
+        }
+
         // EXECUTE
         switch( opCode[2,5] ) {
             case 5b01101: {
@@ -345,38 +370,12 @@ algorithm PAWSCPU (
             case 5b00000: {
                 // LOAD
                 writeRegister = 1;
-                address = loadAddress;
-                Icacheflag = 0;
-                readmemory = 1;
-                while( memorybusy ) {}
-                switch( function3 & 3 ) {
-                    case 2b00: { ( result ) = signextender8( function3, loadAddress, readdata ); }
-                    case 2b01: { ( result ) = signextender16( function3, readdata ); }
-                    case 2b10: {
-                        // 32 bit READ as 2 x 16 bit
-                        lowWord = readdata;
-                        address = loadAddress + 2;
-                        readmemory = 1;
-                        while( memorybusy ) {}
-                        ( result ) = halfhalfword( readdata, lowWord );
-                    }
-                }
+                result = memoryinput;
             }
             case 5b01000: {
                 // STORE
                 // WRITE 8, 16 and LOWER 16 of 32 bits
-                address = storeAddress;
-                Icacheflag = 0;
-                writedata = sourceReg2[0,16];
-                writememory = 1;
-                while( memorybusy ) {}
-                if(  ( function3 & 3 ) == 2b10 ) {
-                    // WRITE UPPER 16 of 32 bits
-                    address = storeAddress + 2;
-                    writedata = sourceReg2[16,16];
-                    writememory = 1;
-                    while( memorybusy ) {}
-                }
+                memoryoutput = sourceReg2;
             }
             case 5b11100: {
                 // CSR
@@ -386,63 +385,23 @@ algorithm PAWSCPU (
             }
             case 5b01011: {
                 // ATOMIC OPERATIONS
+                writeRegister = 1;
+
                 switch( function7[2,5] ) {
                     case 5b00010: {
                         // LR.W
-                        writeRegister = 1;
-                        Icacheflag = 0;
-
-                        // LOAD 32 bit
-                        address = sourceReg1;
-                        readmemory = 1;
-                        while( memorybusy ) {}
-                        lowWord = readdata;
-                        address = sourceReg1 + 2;
-                        readmemory = 1;
-                        while( memorybusy ) {}
-                        ( result ) = halfhalfword( readdata, lowWord );
+                        result = memoryinput;
                     }
                     case 5b00011: {
                         // SC.W
-                        writeRegister = 1;
-                        Icacheflag = 0;
+                        memoryoutput = sourceReg2;
                         result = 0;
-
-                        address = sourceReg1;
-                        writedata = sourceReg2[0,16];
-                        writememory = 1;
-                        while( memorybusy ) {}
-                        address = sourceReg1 + 2;
-                        writedata = sourceReg2[16,16];
-                        writememory = 1;
-                        while( memorybusy ) {}
                     }
                     default: {
                         // ATOMIC LOAD - MODIFY - STORE
-                        writeRegister = 1;
-                        Icacheflag = 0;
-
-                        // LOAD 32 bit
-                        address = sourceReg1;
-                        readmemory = 1;
-                        while( memorybusy ) {}
-                        lowWord = readdata;
-                        address = sourceReg1 + 2;
-                        readmemory = 1;
-                        while( memorybusy ) {}
-                        ( AMOmemory ) = halfhalfword( readdata, lowWord );
-
+                        result = memoryinput;
                         ALUA.start = 1;
-
-                        // STORE 32 bit
-                        address = sourceReg1;
-                        writedata = ALUA.result[0,16];
-                        writememory = 1;
-                        while( memorybusy ) {}
-                        address = sourceReg1 + 2;
-                        writedata = ALUA.result[16,16];
-                        writememory = 1;
-                        while( memorybusy ) {}
+                        memoryoutput = ALUA.result;
                     }
                 }
             }
@@ -469,6 +428,22 @@ algorithm PAWSCPU (
 
                 while( ALUI.busy || ALUR.busy ) {}
                 result = ALUIorR ? ALUI.result : ALUR.result;
+            }
+        }
+
+        // STORE TO MEMORY
+        if( memorystore ) {
+            address = storeAddress;
+            Icacheflag = 0;
+            writedata = memoryoutput[0,16];
+            writememory = 1;
+            while( memorybusy ) {}
+            if(  ( accesssize & 3 ) == 2b10 ) {
+                // WRITE UPPER 16 of 32 bits
+                address = storeAddress + 2;
+                writedata = memoryoutput[16,16];
+                writememory = 1;
+                while( memorybusy ) {}
             }
         }
 
