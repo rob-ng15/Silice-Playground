@@ -31,7 +31,8 @@ algorithm bitmap(
     // Setup the address in the bitmap for the pixel being rendered
     // Use pre-fetching of the next pixel ready for the next cycle
     // y_line * 640 + x_pixel
-    bitmap.addr0 := { y_line, 7b0 } + { y_line, 9b0 } + x_pixel;
+    bitmap.addr0 := y_line * 640 + x_pixel;
+    //bitmap.addr0 := { y_line, 7b0 } + { y_line, 9b0 } + x_pixel;
 
     // RENDER - Default to transparent
     bitmap_display := pix_active && ~bitmap.rdata0[6,1];
@@ -89,7 +90,8 @@ algorithm bitmapwriter (
     while(1) {
         if( write_pixel ) {
             // SET PIXEL ADDRESSS y_write_pixel * 640 + x_write_pixel
-            bitmap.addr1 = { y_write_pixel, 7b0 } + { y_write_pixel, 9b0 } + x_write_pixel;
+            bitmap.addr1 = y_write_pixel * 640 + x_write_pixel;
+            //bitmap.addr1 = { y_write_pixel, 7b0 } + { y_write_pixel, 9b0 } + x_write_pixel;
 
             // DITHER PATTERNS
             // == 0 SOLID == 1 SMALL CHECKERBOARD == 2 MED CHECKERBOARD == 3 LARGE CHECKERBOARD == 4 VERTICAL STRIPES == 5 HORIZONTAL STRIPES == 6 CROSSHATCH == 7 LEFT SLOPE

@@ -418,7 +418,7 @@ circuitry updatenumerator(
     input   gpu_active_y
 ) {
     if( gpu_numerator > 0 ) {
-        new_numerator = gpu_numerator + 4 * (gpu_active_x - gpu_active_y) + 10;
+        new_numerator = gpu_numerator + { (gpu_active_x - gpu_active_y), 2b00 } + 10;
     } else {
         new_numerator = gpu_numerator + { gpu_active_x, 2b00 } + 6;
     }

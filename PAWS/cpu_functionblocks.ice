@@ -1,8 +1,8 @@
 // RISC-V REGISTERS
 algorithm registers(
     input   uint1   SMT,
-    input   uint5   rs1,
-    input   uint5   rs2,
+    input!  uint5   rs1,
+    input!  uint5   rs2,
     input   uint5   rd,
     input   uint1   write,
     input   int32   result,
@@ -48,8 +48,8 @@ algorithm decoder (
     output  uint3   function3,
     output  uint7   function7,
 
-    output  uint5   rs1,
-    output  uint5   rs2,
+    output! uint5   rs1,
+    output! uint5   rs2,
     output  uint5   rd,
 
     output  int32   immediateValue,
@@ -74,7 +74,7 @@ algorithm addressgenerator (
     input   uint32  instruction,
     input   uint32  pc,
     input   uint1   compressed,
-    input   int32   sourceReg1,
+    input!  int32   sourceReg1,
     input   int32   immediateValue,
 
     output  uint32  nextPC,
@@ -547,66 +547,6 @@ algorithm shflunshfl(
         }
     }
 }
-algorithm shfl(
-    input   uint1   start,
-    output! uint1   busy,
-
-    input   uint32  sourceReg1,
-    input   uint5   shiftcount,
-    output! uint32  result
-) <autorun> {
-    uint4   N8 = 8; uint32 N8A = 32h00ff0000; uint32 N8B = 32h0000ff00;
-    uint4   N4 = 4; uint32 N4A = 32h0f000f00; uint32 N4B = 32h00f000f0;
-    uint4   N2 = 2; uint32 N2A = 32h30303030; uint32 N2B = 32h0c0c0c0c;
-    uint4   N1 = 1; uint32 N1A = 32h44444444; uint32 N1B = 32h22222222;
-
-    busy = 0;
-
-    while(1) {
-        if( start ) {
-            busy = 1;
-
-            result = sourceReg1;
-            ++:
-            if( shiftcount[3,1] ) { ( result ) = shuffle32_stage( result, N8A, N8B, N8 ); }
-            if( shiftcount[2,1] ) { ( result ) = shuffle32_stage( result, N4A, N4B, N4 ); }
-            if( shiftcount[1,1] ) { ( result ) = shuffle32_stage( result, N2A, N2B, N2 ); }
-            if( shiftcount[0,1] ) { ( result ) = shuffle32_stage( result, N1A, N1B, N1 ); }
-
-            busy = 0;
-        }
-    }
-}
-algorithm unshfl(
-    input   uint1   start,
-    output! uint1   busy,
-
-    input   uint32  sourceReg1,
-    input   uint5   shiftcount,
-    output! uint32  result
-) <autorun> {
-    uint4   N8 = 8; uint32 N8A = 32h00ff0000; uint32 N8B = 32h0000ff00;
-    uint4   N4 = 4; uint32 N4A = 32h0f000f00; uint32 N4B = 32h00f000f0;
-    uint4   N2 = 2; uint32 N2A = 32h30303030; uint32 N2B = 32h0c0c0c0c;
-    uint4   N1 = 1; uint32 N1A = 32h44444444; uint32 N1B = 32h22222222;
-
-    busy = 0;
-
-    while(1) {
-        if( start ) {
-            busy = 1;
-
-            result = sourceReg1;
-            ++:
-            if( shiftcount[0,1] ) { ( result ) = shuffle32_stage( result, N1A, N1B, N1 ); }
-            if( shiftcount[1,1] ) { ( result ) = shuffle32_stage( result, N2A, N2B, N2 ); }
-            if( shiftcount[2,1] ) { ( result ) = shuffle32_stage( result, N4A, N4B, N4 ); }
-            if( shiftcount[3,1] ) { ( result ) = shuffle32_stage( result, N8A, N8B, N8 ); }
-
-            busy = 0;
-        }
-    }
-}
 
 // CARRYLESS MULTIPLY
 algorithm clmul(
@@ -644,13 +584,14 @@ algorithm clmul(
     }
 }
 
-// BITS EXTRACT / DEPOSIT
-algorithm bext(
+// BITS EXTRACT / DEPOSIT / PLACE
+algorithm bextbdep(
     input   uint1   start,
     output! uint1   busy,
 
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
+    input   uint7   function7,
     output! uint32  result
 ) <autorun> {
     uint6   i = uninitialised;
@@ -667,41 +608,7 @@ algorithm bext(
             ++:
             while( i < 32 ) {
                 if( sourceReg2[i,1] ) {
-                    if( sourceReg1[ i, 1] ) {
-                        result[ j, 1 ] = 1b1;
-                    }
-                    j = j + 1;
-                }
-                i = i + 1;
-            }
-
-            busy = 0;
-        }
-    }
-}
-algorithm bdep(
-    input   uint1   start,
-    output! uint1   busy,
-
-    input   uint32  sourceReg1,
-    input   uint32  sourceReg2,
-    output! uint32  result
-) <autorun> {
-    uint6   i = uninitialised;
-    uint6   j = uninitialised;
-    busy = 0;
-
-    while(1) {
-        if( start ) {
-            busy = 1;
-
-            i = 0;
-            j = 0;
-            result = 0;
-            ++:
-            while( i < 32 ) {
-                if( sourceReg2[i,1] ) {
-                    if( sourceReg1[ j, 1] ) {
+                    if( sourceReg1[ ( ( function7 == 7b0100100 ) ? j : i ), 1] ) {
                         result[ j, 1 ] = 1b1;
                     }
                     j = j + 1;
@@ -884,4 +791,31 @@ algorithm cpop(
 
         }
     }
+}
+
+// MIN[U] MAX[U] curcuits
+circuitry MIN(
+    input   value1,
+    input   value2,
+    output  result
+) {
+    result = ( __signed(value1) < __signed(value2) ) ? value1 : value2;
+}circuitry MINU(
+    input   value1,
+    input   value2,
+    output  result
+) {
+    result = ( __unsigned(value1) < __unsigned(value2) ) ? value1 : value2;
+}circuitry MAX(
+    input   value1,
+    input   value2,
+    output  result
+) {
+    result = ( __signed(value1) > __signed(value2) ) ? value1 : value2;
+}circuitry MAXU(
+    input   value1,
+    input   value2,
+    output  result
+) {
+    result = ( __unsigned(value1) > __unsigned(value2) ) ? value1 : value2;
 }

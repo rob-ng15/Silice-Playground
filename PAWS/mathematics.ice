@@ -105,6 +105,7 @@ algorithm aluMmultiply(
 
 // BASE IMMEDIATE + B extensions
 algorithm aluIb001(
+    input   uint1   clock_cpualu,
     input   uint1   start,
     output! uint1   busy,
 
@@ -120,13 +121,13 @@ algorithm aluIb001(
 
     output! uint32  result
 ) <autorun> {
-    clz CLZ(
+    clz CLZ <@clock_cpualu> (
         sourceReg1 <: sourceReg1
     );
-    ctz CTZ(
+    ctz CTZ <@clock_cpualu> (
         sourceReg1 <: sourceReg1
     );
-    cpop CPOP(
+    cpop CPOP <@clock_cpualu> (
         sourceReg1 <: sourceReg1
     );
 
@@ -208,33 +209,29 @@ algorithm aluIb101(
 
     while(1) {
         if( start ) {
-            switch( function7 ) {
-                case 7b0000100: {
-                    busy = 1;
-                    while( SHFLUNSHFLbusy ) {}
-                    result = SHFLUNSHFLoutput;
-                    busy = 0;
+            if( ( function7 == 7b0010100 ) || ( function7 == 7b0110100 ) ) {
+                busy = 1;
+                while( GREVGORCbusy ) {}
+                result = GREVGORCoutput;
+                busy = 0;
+            } else {
+                switch( function7 ) {
+                    case 7b0000100: {
+                        busy = 1;
+                        while( SHFLUNSHFLbusy ) {}
+                        result = SHFLUNSHFLoutput;
+                        busy = 0;
+                    }
+                    case 7b0100100: { result = sourceReg1[ IshiftCount, 1 ]; }
+                    case 7b0110000: { result = ROTATEoutput;  }
+                    default: {  result = RSHIFToutput; }
                 }
-                case 7b0010100: {
-                    busy = 1;
-                    while( GREVGORCbusy ) {}
-                    result = GREVGORCoutput;
-                    busy = 0;
-                }
-                case 7b0100100: { result = sourceReg1[ IshiftCount, 1 ]; }
-                case 7b0110000: { result = ROTATEoutput;  }
-                case 7b0110100: {
-                    busy = 1;
-                    while( GREVGORCbusy ) {}
-                    result = GREVGORCoutput;
-                    busy = 0;
-                }
-                default: {  result = RSHIFToutput; }
             }
         }
     }
 }
 algorithm aluI (
+    input   uint1   clock_cpualu,
     input   uint1   start,
     output! uint1   busy,
 
@@ -258,6 +255,7 @@ algorithm aluI (
 ) <autorun> {
     // FUNCTION3 == 001 block
     aluIb001 ALUIb001(
+        clock_cpualu <: clock_cpualu,
         function7 <: function7,
         IshiftCount <: IshiftCount,
         sourceReg1 <: sourceReg1,
@@ -319,6 +317,7 @@ algorithm aluI (
 // BASE REGISTER + B extensions
 // B EXTENSION GORC XPERM + SBSET
 algorithm aluR7b0010100 (
+    input   uint1   clock_cpualu,
     input   uint1   start,
     output! uint1   busy,
 
@@ -335,7 +334,7 @@ algorithm aluR7b0010100 (
     uint5   RshiftCount := sourceReg2[0,5];
 
     // XPERM
-    xperm XPERM(
+    xperm XPERM <@clock_cpualu> (
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2
@@ -368,6 +367,7 @@ algorithm aluR7b0010100 (
 }
 // B EXTENSION CLMUL + MIN[U] MAX[U]
 algorithm aluR7b0000101 (
+    input   uint1   clock_cpualu,
     input   uint1   start,
     output! uint1   busy,
 
@@ -378,7 +378,7 @@ algorithm aluR7b0000101 (
     output! uint32  result
 ) <autorun> {
     // CLMUL
-    clmul CLMUL(
+    clmul CLMUL <@clock_cpualu> (
         function3 <: function3,
 
         sourceReg1 <: sourceReg1,
@@ -392,10 +392,10 @@ algorithm aluR7b0000101 (
     while(1) {
         if( start ) {
             switch( function3 ) {
-                case 3b100: { result = ( __signed( sourceReg1 ) < __signed( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
-                case 3b101: { result = ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
-                case 3b110: { result = ( __signed( sourceReg1 ) > __signed( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
-                case 3b111: { result = ( __unsigned( sourceReg1 ) > __unsigned( sourceReg2 ) ) ? sourceReg1 : sourceReg2; }
+                case 3b100: { ( result ) = MIN( sourceReg1, sourceReg2 ); }
+                case 3b101: { ( result ) = MINU( sourceReg1, sourceReg2 ); }
+                case 3b110: { ( result ) = MAX( sourceReg1, sourceReg2 ); }
+                case 3b111: { ( result ) = MAXU( sourceReg1, sourceReg2 ); }
                 default: {
                     busy = 1;
                     CLMUL.start = 1;
@@ -418,45 +418,33 @@ algorithm aluR7b0000100 (
 
     input   uint32  SHFLUNSHFLoutput,
     input   uint1   SHFLUNSHFLbusy,
+    input   uint32  BEXTBDEPoutput,
+    input   uint1   BEXTBDEPbusy,
 
     output! uint32  result
 ) <autorun> {
     uint5   RshiftCount := sourceReg2[0,5];
 
-    // BEXT
-    bext BEXT(
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2
-    );
-
     // START FLAGS FOR ALU SUB BLOCKS
-    BEXT.start := 0;
     busy = 0;
 
     while(1) {
         if( start ) {
             switch( function3 ) {
-                case 3b001: {
-                    busy = 1;
-                    while( SHFLUNSHFLbusy ) {}
-                    result = SHFLUNSHFLoutput;
-                    busy = 0;
-                }
-                case 3b101: {
-                    busy = 1;
-                    while( SHFLUNSHFLbusy ) {}
-                    result = SHFLUNSHFLoutput;
-                    busy = 0;
-                }
                 case 3b110: {
                     busy = 1;
-                    BEXT.start = 1;
-                    while( BEXT.busy ) {}
-                    result = BEXT.result;
+                    while( BEXTBDEPbusy ) {}
+                    result = BEXTBDEPoutput;
                     busy = 0;
                 }
                 case 3b100: { result = { sourceReg2[0,16], sourceReg1[0,16] }; }
                 case 3b111: { result = { 16b0, sourceReg2[0,8], sourceReg1[0,8] }; }
+                default: {
+                    busy = 1;
+                    while( SHFLUNSHFLbusy ) {}
+                    result = SHFLUNSHFLoutput;
+                    busy = 0;
+                }
             }
         }
     }
@@ -497,6 +485,7 @@ algorithm aluR7b0110100 (
 }
 // B EXTENSION BDEP BFP + PACKU SBCLR SBEXT
 algorithm aluR7b0100100 (
+    input   uint1   clock_cpualu,
     input   uint1   start,
     output! uint1   busy,
 
@@ -504,23 +493,20 @@ algorithm aluR7b0100100 (
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
     input   uint32  SBSCIoutput,
+    input   uint32  BEXTBDEPoutput,
+    input   uint1   BEXTBDEPbusy,
 
     output! uint32  result
 ) <autorun> {
     uint5   RshiftCount := sourceReg2[0,5];
 
-    // BDEP BEXT
-    bext BDEP(
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2
-    );
-    bfp BFP(
+    // BFP
+    bfp BFP <@clock_cpualu> (
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2
     );
 
     // START FLAGS FOR ALU SUB BLOCKS
-    BDEP.start := 0;
     BFP.start := 0;
     busy = 0;
 
@@ -532,9 +518,8 @@ algorithm aluR7b0100100 (
                 case 3b101: { result = sourceReg1[ RshiftCount, 1 ]; }
                 case 3b110: {
                     busy = 1;
-                    BDEP.start = 1;
-                    while( BDEP.busy ) {}
-                    result = BDEP.result;
+                    while( BEXTBDEPbusy ) {}
+                    result = BEXTBDEPoutput;
                     busy = 0;
                 }
                 case 3b111: {
@@ -550,6 +535,7 @@ algorithm aluR7b0100100 (
 }
 // BASE ADD SUB SLL SLT SLTU XOR SRL SRA OR AND + B EXTENSION ROL SLO SH1/2/3ADD XNOR ROR SRO ORN ANDN
 algorithm aluR (
+    input   uint1   clock_cpualu,
     input   uint1   start,
     output! uint1   busy,
 
@@ -574,21 +560,34 @@ algorithm aluR (
     uint5   RshiftCount := sourceReg2[0,5];
 
     // M EXTENSION DIVIDER
-    aluMdivideremain ALUMD(
+    aluMdivideremain ALUMD <@clock_cpualu> (
         function3 <: function3,
         dividend <: sourceReg1,
         divisor <: sourceReg2
     );
 
     // M EXTENSION BLOCK MULTIPLIER
-    aluMmultiply ALUMM(
+    aluMmultiply ALUMM <@clock_cpualu> (
         function3 <: function3,
         factor_1 <: sourceReg1,
         factor_2 <: sourceReg2
     );
 
+    // BEXT BDEP UNIT
+    uint32  BEXTBDEPoutput = uninitialized;
+    uint1   BEXTBDEPbusy = uninitialized;
+    bextbdep BEXTBDEP <@clock_cpualu> (
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        function7 <: function7,
+
+        result :> BEXTBDEPoutput,
+        busy :> BEXTBDEPbusy
+    );
+
     // B EXTENSION GORC XPERM + SBET ( sbset is single cycle but shares same function7 coding as GORC XPERM )
     aluR7b0010100 ALUR7b0010100(
+        clock_cpualu <: clock_cpualu,
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
@@ -598,6 +597,7 @@ algorithm aluR (
     );
     // B EXTENSION CLMUL + MIN[U] MAX[U] ( min and max are single cycle but share same function7 coding as CLMUL operations )
     aluR7b0000101 ALUR7b0000101(
+        clock_cpualu <: clock_cpualu,
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2
@@ -609,6 +609,8 @@ algorithm aluR (
         sourceReg2 <: sourceReg2,
         SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
         SHFLUNSHFLbusy <: SHFLUNSHFLbusy,
+        BEXTBDEPoutput <: BEXTBDEPoutput,
+        BEXTBDEPbusy <: BEXTBDEPbusy
     );
     // B EXTENSION GREV + SBINV ( sbinv is single cycle but shares same function7 coding as GREV )
     aluR7b0110100 ALUR7b0110100(
@@ -621,10 +623,13 @@ algorithm aluR (
     );
     // B EXTENSION BDEP BFP + PACKU SBCLR SBEXT ( packu, sbclr and sbext are single cycle share share same function7 coding as BDEP BFP )
     aluR7b0100100 ALUR7b0100100(
+        clock_cpualu <: clock_cpualu,
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
-        SBSCIoutput <: SBSCIoutput
+        SBSCIoutput <: SBSCIoutput,
+        BEXTBDEPoutput <: BEXTBDEPoutput,
+        BEXTBDEPbusy <: BEXTBDEPbusy
     );
 
     // START FLAGS FOR ALU SUB BLOCKS
@@ -635,6 +640,8 @@ algorithm aluR (
     ALUR7b0000100.start := 0;
     ALUR7b0110100.start := 0;
     ALUR7b0100100.start := 0;
+    BEXTBDEP.start := 0;
+
     busy = 0;
 
     while(1) {
@@ -674,6 +681,7 @@ algorithm aluR (
                 }
                 case 7b0000100: {
                     busy = 1;
+                    BEXTBDEP.start = ( function3 == 3b110 ) ? 1 : 0;
                     ALUR7b0000100.start = 1;
                     while( ALUR7b0000100.busy ) {}
                     result = ALUR7b0000100.result;
@@ -688,6 +696,7 @@ algorithm aluR (
                 }
                 case 7b0100100: {
                     busy = 1;
+                    BEXTBDEP.start = ( function3 == 3b110 ) ? 1 : 0;
                     ALUR7b0100100.start = 1;
                     while( ALUR7b0100100.busy ) {}
                     result = ALUR7b0100100.result;
@@ -801,15 +810,15 @@ algorithm aluA (
     while(1) {
         if( start ) {
             switch( function7[2,5] ) {
-                case 5b00000: { result = memoryinput + sourceReg2; }                                                        // AMOADD
-                case 5b00001: { result = sourceReg2; }                                                                      // AMOSWAP
-                case 5b00100: { result = memoryinput ^ sourceReg2; }                                                        // AMOXOR
-                case 5b01000: { result = memoryinput | sourceReg2; }                                                        // AMOOR
-                case 5b01100: { result = memoryinput & sourceReg2; }                                                        // AMOAND
-                case 5b10000: { result = __signed( memoryinput ) < __signed( sourceReg2 ) ? memoryinput : sourceReg2; }     // AMOMIN
-                case 5b10100: { result = __signed( memoryinput ) > __signed( sourceReg2 ) ? memoryinput : sourceReg2; }     // AMOMAX
-                case 5b11000: { result = __unsigned( memoryinput ) < __unsigned( sourceReg2 ) ? memoryinput : sourceReg2; } // AMOMINU
-                case 5b11100: { result = __unsigned( memoryinput ) > __unsigned( sourceReg2 ) ? memoryinput : sourceReg2; } // AMOMAXU
+                case 5b00000: { result = memoryinput + sourceReg2; }            // AMOADD
+                case 5b00001: { result = sourceReg2; }                          // AMOSWAP
+                case 5b00100: { result = memoryinput ^ sourceReg2; }            // AMOXOR
+                case 5b01000: { result = memoryinput | sourceReg2; }            // AMOOR
+                case 5b01100: { result = memoryinput & sourceReg2; }            // AMOAND
+                case 5b10000: { ( result ) = MIN( memoryinput, sourceReg2); }   // AMOMIN
+                case 5b10100: { ( result ) = MAX( memoryinput, sourceReg2); }   // AMOMAX
+                case 5b11000: { ( result ) = MINU( memoryinput, sourceReg2); }  // AMOMINU
+                case 5b11100: { ( result ) = MAXU( memoryinput, sourceReg2); }  // AMOMAXU
             }
         }
     }

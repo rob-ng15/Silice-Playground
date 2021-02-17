@@ -7,6 +7,9 @@
 //          ALU FUNCTIONALITY LISTED IN mathematics.ice
 
 algorithm PAWSCPU (
+    input   uint1   clock_cpualu,
+    input   uint1   clock_cpufunc,
+
     output  uint3   accesssize,
     output  uint32  address,
     output  uint16  writedata,
@@ -34,13 +37,13 @@ algorithm PAWSCPU (
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
     uint1   compressed = uninitialized;
-    compressed00 COMPRESSED00(
+    compressed00 COMPRESSED00 <@clock_cpufunc> (
         i16 <: readdata
     );
-    compressed01 COMPRESSED01(
+    compressed01 COMPRESSED01 <@clock_cpufunc> (
         i16 <: readdata
     );
-    compressed10 COMPRESSED10(
+    compressed10 COMPRESSED10 <@clock_cpufunc> (
         i16 <: readdata
     );
 
@@ -129,25 +132,25 @@ algorithm PAWSCPU (
     uint32  ROTATEoutput = uninitialized;
     uint32  SBSCIoutput = uninitialized;
     uint5   shiftcount := ALUIorR ? IshiftCount : sourceReg2[0,5];
-    BSHIFTleft LEFTSHIFT(
+    BSHIFTleft LEFTSHIFT <@clock_cpualu> (
         sourceReg1 <: sourceReg1,
         shiftcount <: shiftcount,
         function7 <: function7,
         result :> LSHIFToutput
     );
-    BSHIFTright RIGHTSHIFT(
+    BSHIFTright RIGHTSHIFT <@clock_cpualu> (
         sourceReg1 <: sourceReg1,
         shiftcount <: shiftcount,
         function7 <: function7,
         result :> RSHIFToutput
     );
-    BROTATE ROTATE(
+    BROTATE ROTATE <@clock_cpualu> (
         sourceReg1 <: sourceReg1,
         shiftcount <: shiftcount,
         function3 <: function3,
         result :> ROTATEoutput
     );
-    singlebitops SBSCI(
+    singlebitops SBSCI <@clock_cpualu> (
         sourceReg1 <: sourceReg1,
         function7 <: function7,
         shiftcount <: shiftcount,
@@ -157,7 +160,7 @@ algorithm PAWSCPU (
     // SHARED MULTICYCLE BIT MANIPULATION OPERATIONS
     uint32  SHFLUNSHFLoutput = uninitialized;
     uint1   SHFLUNSHFLbusy = uninitialized;
-    shflunshfl SHFLUNSHFL(
+    shflunshfl SHFLUNSHFL <@clock_cpualu> (
         sourceReg1 <: sourceReg1,
         shiftcount <: shiftcount,
         function3 <: function3,
@@ -166,7 +169,7 @@ algorithm PAWSCPU (
     );
     uint32  GREVGORCoutput = uninitialized;
     uint1   GREVGORCbusy = uninitialized;
-    grevgorc GREVGORC(
+    grevgorc GREVGORC <@clock_cpualu> (
         sourceReg1 <: sourceReg1,
         shiftcount <: shiftcount,
         function7 <: function7,
@@ -183,6 +186,7 @@ algorithm PAWSCPU (
 
     // BASE REGISTER + IMMEDIATE ALU OPERATIONS + B EXTENSION OPERATIONS
     aluI ALUI(
+        clock_cpualu <: clock_cpualu,
         function3 <: function3,
         function7 <: function7,
         IshiftCount <: IshiftCount,
@@ -202,6 +206,7 @@ algorithm PAWSCPU (
 
     // BASE REGISTER & REGISTER ALU OPERATIONS + B EXTENSION OPERATIONS
     aluR ALUR(
+        clock_cpualu <: clock_cpualu,
         function3 <: function3,
         function7 <: function7,
         rs1 <: rs1,
@@ -292,7 +297,6 @@ algorithm PAWSCPU (
         }
 
         // TIME TO ALLOW DECODE + REGISTER FETCH + ADDRESS GENERATION
-        ++:
         ++:
         ++:
 

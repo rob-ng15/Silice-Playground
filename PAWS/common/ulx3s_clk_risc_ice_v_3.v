@@ -2,20 +2,19 @@
 // diamond 3.8-3.9 is untested
 // diamond 3.10 or higher is likely to abort with error about unable to use feedback signal
 // cause of this could be from wrong CPHASE/FPHASE parameters
-module ulx3s_clk_risc_ice_v_CPU
+module ulx3s_clk_risc_ice_v_VIDEO
 (
     input clkin,         // 25 MHz, 0 deg
-    output  clkCPU,      // 25 MHz              // CPU
-    output  clkMEMORY,   // 50 MHz, 0 deg       // MEMORY CONTROLLER - BRAM
-    output  clkALUblock, // 50 MHz, 0 deg       // FOR MULTICYCLE ALU BLOCKS
-    output  clkCPUfunc,  // 50 MHz, 0 deg       // FOR CPU UNITS
+    output  clkVIDEO,    // 25 MHz, 0 deg       // VIDEO
+    output  clkGPU,      // 25 MHz, 0 deg       // GPU
+    output  clk50,       // 50 MHz, 0 deg       // MEMORY CONTROLLER - BRAM
     output  locked
 );
 (* FREQUENCY_PIN_CLKI="25" *)
 (* FREQUENCY_PIN_CLKOP="50" *)
 (* FREQUENCY_PIN_CLKOS="25" *)
-(* FREQUENCY_PIN_CLKOS2="50" *)
-(* FREQUENCY_PIN_CLKOS3="50" *)
+(* FREQUENCY_PIN_CLKOS2="25" *)
+(* FREQUENCY_PIN_CLKOS3="25" *)
 (* ICP_CURRENT="12" *) (* LPF_RESISTOR="8" *) (* MFG_ENABLE_FILTEROPAMP="1" *) (* MFG_GMCREF_SEL="2" *)
 EHXPLLL #(
         .PLLRST_ENA("DISABLED"),
@@ -36,11 +35,11 @@ EHXPLLL #(
         .CLKOS_CPHASE(5),
         .CLKOS_FPHASE(0),
         .CLKOS2_ENABLE("ENABLED"),
-        .CLKOS2_DIV(12),
+        .CLKOS2_DIV(24),
         .CLKOS2_CPHASE(5),
         .CLKOS2_FPHASE(0),
         .CLKOS3_ENABLE("ENABLED"),
-        .CLKOS3_DIV(12),
+        .CLKOS3_DIV(24),
         .CLKOS3_CPHASE(5),
         .CLKOS3_FPHASE(0),
         .FEEDBK_PATH("CLKOP"),
@@ -49,11 +48,10 @@ EHXPLLL #(
         .RST(1'b0),
         .STDBY(1'b0),
         .CLKI(clkin),
-        .CLKOP(clkMEMORY),
-        .CLKOS(clkCPU),
-        .CLKOS2(clkALUblock),
-        .CLKOS3(clkCPUfunc),
-        .CLKFB(clkMEMORY),
+        .CLKOP(clk50),
+        .CLKOS(clkVIDEO),
+        .CLKOS2(clkGPU),
+        .CLKFB(clk50),
         .CLKINTFB(),
         .PHASESEL0(1'b0),
         .PHASESEL1(1'b0),

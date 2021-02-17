@@ -35,21 +35,30 @@ algorithm main(
 ) <@clock_memory> {
     // CLOCK/RESET GENERATION
 
-    // CPU + MEMORY + VIDEO DOMAIN CLOCKS
+    // CPU + MEMORY
     uint1   pll_lock_CPU = uninitialized;
     uint1   cpu_clock = uninitialized;
     uint1   clock_memory = uninitialized;
-    uint1   video_clock = uninitialized;
-    uint1   gpu_clock = uninitialized;
+    uint1   clock_cpualu = uninitialized;
+    uint1   clock_cpufunc = uninitialized;
     ulx3s_clk_risc_ice_v_CPU clk_gen_CPU (
         clkin    <: clock,
         clkCPU :> cpu_clock,
-        clkGPU :> gpu_clock,
-        clkVIDEO :> video_clock,
         clkMEMORY  :> clock_memory,
+        clkALUblock :> clock_cpualu,
+        clkCPUfunc :> clock_cpufunc,
         locked   :> pll_lock_CPU
     );
-
+    // VIDEO DOMAIN CLOCKS
+    uint1   pll_lock_VIDEO = uninitialized;
+    uint1   video_clock = uninitialized;
+    uint1   gpu_clock = uninitialized;
+    ulx3s_clk_risc_ice_v_VIDEO clk_gen_VIDEO (
+        clkin    <: clock,
+        clkGPU :> gpu_clock,
+        clkVIDEO :> video_clock,
+        locked   :> pll_lock_VIDEO
+    );
     // SDRAM  CLOCKS
     uint1   sdram_clock = uninitialized;
     uint1   pll_lock_AUX = uninitialized;
@@ -171,8 +180,10 @@ algorithm main(
     uint16  writedata = uninitialized;
     uint1   Icacheflag = uninitialized;
     PAWSCPU CPU <@cpu_clock> (
-        accesssize :> function3,
+        clock_cpualu <: clock_cpualu,
+        clock_cpufunc <: clock_cpufunc,
 
+        accesssize :> function3,
         address :> address,
         writedata :> writedata,
         Icacheflag :> Icacheflag,
