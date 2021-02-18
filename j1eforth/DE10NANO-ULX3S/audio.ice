@@ -92,8 +92,8 @@ algorithm apu(
     uint16  duration_1 = uninitialized;
     uint16  duration_2 = uninitialized;
 
-    waveformtable_1.addr := waveform_1 * 32 + point_1;
-    waveformtable_2.addr := waveform_2 * 32 + point_2;
+    waveformtable_1.addr := { waveform_1, point_1 };
+    waveformtable_2.addr := { waveform_2, point_2 };
     frequencytable_1.addr := note_1;
     frequencytable_2.addr := note_2;
 

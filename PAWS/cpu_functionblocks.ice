@@ -482,11 +482,6 @@ algorithm grevgorc(
             if( shiftcount[2,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( { ( result & 32h0f0f0f0f ), 4b0 } ) | ( ( result & 32hf0f0f0f0 ) >> 4 ); ++: }
             if( shiftcount[3,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( { ( result & 32h00ff00ff ), 8b0 } ) | ( ( result & 32hff00ff00 ) >> 8 ); ++: }
             if( shiftcount[4,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( { ( result & 32h0000ffff ), 16b0 } ) | ( ( result & 32hffff0000 ) >> 16 ); }
-            //if( shiftcount[0,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h55555555 ) << 1 ) | ( ( result & 32haaaaaaaa ) >> 1 ); ++: }
-            //if( shiftcount[1,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h33333333 ) << 2 ) | ( ( result & 32hcccccccc ) >> 2 ); ++: }
-            //if( shiftcount[2,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h0f0f0f0f ) << 4 ) | ( ( result & 32hf0f0f0f0 ) >> 4 ); ++: }
-            //if( shiftcount[3,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h00ff00ff ) << 8 ) | ( ( result & 32hff00ff00 ) >> 8 ); ++: }
-            //if( shiftcount[4,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h0000ffff ) << 16 ) | ( ( result & 32hffff0000 ) >> 16 ); }
 
             busy = 0;
         }
@@ -580,11 +575,6 @@ algorithm clmul(
             while( i < 32 ) {
                 if( sourceReg2[i,1] ) {
                     result = result ^ ( sourceReg1 << ( function3 == 3b001 ) ? i : ( ( function3 == 3b001 ) ? ( 32 - i ) : ( 31 - i ) ) );
-                    //switch( function3 ) {
-                    //    case 3b001: { result = result ^ ( sourceReg1 << i ); }
-                    //    case 3b010: { result = result ^ ( sourceReg1 << ( 32 - i ) ); }
-                    //    case 3b011: { result = result ^ ( sourceReg1 << ( 31 - i ) ); }
-                    //}
                 }
                 i = i + 1;
             }
@@ -684,13 +674,10 @@ algorithm xperm(
             busy = 1;
 
             switch( function3 ) {
-                case 3b010: { sz_log2 = 2; }
-                case 3b100: { sz_log2 = 3; }
-                case 3b110: { sz_log2 = 4; }
+                case 3b010: { sz_log2 = 2; sz = 6b000100; mask = 32h0000000f; }
+                case 3b100: { sz_log2 = 3; sz = 6b001000; mask = 32h000000ff; }
+                case 3b110: { sz_log2 = 4; sz = 6b010000; mask = 32h0000ffff; }
             }
-            ++:
-            sz = 1 << sz_log2;
-            mask = ( 1 << ( 1 << sz_log2 ) ) - 1;
             result = 0;
             i = 0;
             ++:
@@ -792,8 +779,8 @@ algorithm cpop(
                 result = 0;
                 ++:
                 while( bitcount != 0 ) {
-                    result = result + ( bitcount[0,1] ? 1 : 0 ) + ( bitcount[31,1] ? 1 : 0 );
-                    bitcount = { bitcount[16,15], 2b0, bitcount[1,15] };
+                    result = result + ( bitcount[0,1] ? 1 : 0 );
+                    bitcount = { 1b0, bitcount[1,31] };
                 }
 
                 busy = 0;

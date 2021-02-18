@@ -846,7 +846,7 @@ algorithm vectors(
         vertex <:> vertex
     );
 
-    // Set read and write address for the vertices
+    // Set read address for the vertices
     vertex.addr0 := { block_number, vertices_number };
 
     gpu_write := 0;

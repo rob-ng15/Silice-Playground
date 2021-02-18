@@ -1,3 +1,11 @@
+// Entry in the tilemap
+bitfield tilemapentry {
+    uint1   alpha,
+    uint6   background,
+    uint6   foreground,
+    uint5   tilenumber
+}
+
 algorithm tilemap(
     input   uint10  pix_x,
     input   uint10  pix_y,
@@ -70,8 +78,8 @@ algorithm tilemap(
     tiles_copy.wenable1 := 1;
 
     // Setup the reading and writing of the tiles16x16
-    tiles16x16.addr0 :=  tilemapentry(tiles.rdata0).tilenumber * 16 + yintm;
-    tiles16x16.addr1 := tile_writer_tile * 16 + tile_writer_line;
+    tiles16x16.addr0 :=  { tilemapentry(tiles.rdata0).tilenumber, yintm };
+    tiles16x16.addr1 := { tile_writer_tile, tile_writer_line };
     tiles16x16.wdata1 := tile_writer_bitmap;
     tiles16x16.wenable1 := 1;
 

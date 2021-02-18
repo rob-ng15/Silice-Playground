@@ -179,6 +179,14 @@ algorithm gpu(
     int11 v_gpu_param1 = uninitialised;
     uint1 v_gpu_write = uninitialised;
 
+    // BLIT TILE WRITER
+    blittilebitmapwriter BTBM(
+        blit1_writer_tile <: blit1_writer_tile,
+        blit1_writer_line <: blit1_writer_line,
+        blit1_writer_bitmap <: blit1_writer_bitmap,
+        blit1tilemap <:> blit1tilemap,
+    );
+
     // VECTOR DRAWER UNIT
     vectors vector_drawer (
         vector_block_number <: vector_block_number,
@@ -250,11 +258,6 @@ algorithm gpu(
         param0 <: v_gpu_param0,
         param1 <: v_gpu_param1
     );
-
-    // blit1tilemap write access for the GPU to load tilemaps
-    blit1tilemap.addr1 := blit1_writer_tile * 16 + blit1_writer_line;
-    blit1tilemap.wdata1 := blit1_writer_bitmap;
-    blit1tilemap.wenable1 := 1;
 
     // CONTROLS FOR BITMAP PIXEL WRITER
     bitmap_write := 0;
@@ -525,7 +528,7 @@ algorithm circle (
             ( gpu_active_y ) = abs( param0 );
             ( gpu_xc, gpu_yc ) = copycoordinates( x, y );
             ++:
-            gpu_numerator = 3 - ( 2 * gpu_active_y );
+            gpu_numerator = 3 - { gpu_active_y, 1b0 };
             ++:
             while( gpu_active_y >= gpu_active_x ) {
                 bitmap_x_write = gpu_xc + gpu_active_x;
@@ -556,10 +559,10 @@ algorithm circle (
 
                 gpu_active_x = gpu_active_x + 1;
                 if( gpu_numerator > 0 ) {
-                    gpu_numerator = gpu_numerator + 4 * (gpu_active_x - gpu_active_y) + 10;
+                    gpu_numerator = gpu_numerator + { (gpu_active_x - gpu_active_y), 2b00 } + 10;
                     gpu_active_y = gpu_active_y - 1;
                 } else {
-                    gpu_numerator = gpu_numerator + 4 * gpu_active_x + 6;
+                    gpu_numerator = gpu_numerator + { gpu_active_x, 2b00 } + 6;
                 }
             }
             active = 0;
@@ -603,7 +606,7 @@ algorithm disc (
             gpu_active_y = ( gpu_active_y < 4 ) ? 4 : gpu_active_y;
             ++:
             gpu_count = gpu_active_y;
-            gpu_numerator = 3 - ( 2 * gpu_active_y );
+            gpu_numerator = 3 - { gpu_active_y, 1b0 };
             ++:
             while( gpu_active_y >= gpu_active_x ) {
                 while( gpu_count != 0 ) {
@@ -637,11 +640,11 @@ algorithm disc (
                 }
                 gpu_active_x = gpu_active_x + 1;
                 if( gpu_numerator > 0 ) {
-                    gpu_numerator = gpu_numerator + 4 * (gpu_active_x - gpu_active_y) + 10;
+                    gpu_numerator = gpu_numerator + { (gpu_active_x - gpu_active_y), 2b00 } + 10;
                     gpu_active_y = gpu_active_y - 1;
                     gpu_count = gpu_active_y - 1;
                 } else {
-                    gpu_numerator = gpu_numerator + 4 * gpu_active_x + 6;
+                    gpu_numerator = gpu_numerator + { gpu_active_x, 2b00 } + 6;
                     gpu_count = gpu_active_y;
                 }
             }
@@ -815,7 +818,7 @@ algorithm blit (
     uint1   active = 0;
 
     // tile and character bitmap addresses
-    blit1tilemap.addr0 := gpu_tile * 16 + gpu_active_y;
+    blit1tilemap.addr0 := { gpu_tile, gpu_active_y[0,4] };
 
     busy := start ? 1 : active;
     bitmap_write := 0;
@@ -900,12 +903,18 @@ algorithm vectors(
     int11 start_x = uninitialised;
     int11 start_y = uninitialised;
 
-    // Set read and write address for the vertices
-    vertex.addr0 := block_number * 16 + vertices_number;
-    vertex.addr1 := vertices_writer_block * 16 + vertices_writer_vertex;
-    vertex.wdata1 := { vertices_writer_active, __unsigned(vertices_writer_xdelta), __unsigned(vertices_writer_ydelta) };
-    vertex.wenable1 := 1;
+    vertexwriter VW(
+        vertices_writer_block <: vertices_writer_block,
+        vertices_writer_vertex <: vertices_writer_vertex,
+        vertices_writer_xdelta <: vertices_writer_xdelta,
+        vertices_writer_ydelta <: vertices_writer_ydelta,
+        vertices_writer_active <: vertices_writer_active,
 
+        vertex <:> vertex
+    );
+
+    // Set read address for the vertices
+    vertex.addr0 := { block_number, vertices_number[0,4] };
     gpu_write := 0;
 
     vector_block_active = 0;
@@ -934,5 +943,39 @@ algorithm vectors(
             }
             vector_block_active = 0;
         }
+    }
+}
+
+algorithm blittilebitmapwriter(
+    // For setting blit1 tile bitmaps
+    input   uint5   blit1_writer_tile,
+    input   uint4   blit1_writer_line,
+    input   uint16  blit1_writer_bitmap,
+
+    simple_dualbram_port1 blit1tilemap,
+) <autorun> {
+    blit1tilemap.wenable1 := 1;
+
+    while(1) {
+        blit1tilemap.addr1 = { blit1_writer_tile, blit1_writer_line };
+        blit1tilemap.wdata1 = blit1_writer_bitmap;
+    }
+}
+
+algorithm vertexwriter(
+    // For setting vertices
+    input   uint5   vertices_writer_block,
+    input   uint6   vertices_writer_vertex,
+    input   int6    vertices_writer_xdelta,
+    input   int6    vertices_writer_ydelta,
+    input   uint1   vertices_writer_active,
+
+    simple_dualbram_port1 vertex
+) <autorun> {
+    vertex.wenable1 := 1;
+
+    while(1) {
+        vertex.addr1 = { vertices_writer_block, vertices_writer_vertex };
+        vertex.wdata1 = { vertices_writer_active, __unsigned(vertices_writer_xdelta), __unsigned(vertices_writer_ydelta) };
     }
 }

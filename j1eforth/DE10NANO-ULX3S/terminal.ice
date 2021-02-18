@@ -52,7 +52,7 @@ algorithm terminal(
     terminal_copy.wenable1 := 1;
 
     // Setup the reading of the characterGenerator8x8 ROM
-    characterGenerator8x8.addr :=  terminal.rdata0 * 8 + yinterminal;
+    characterGenerator8x8.addr :=  { terminal.rdata0, yinterminal };
 
     // Default to transparent and active pixels always blue
     terminal_display := pix_active && showterminal && (pix_y > 415);

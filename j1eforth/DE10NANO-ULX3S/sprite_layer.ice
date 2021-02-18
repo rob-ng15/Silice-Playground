@@ -76,10 +76,22 @@ algorithm sprite_layer(
         uint1 xinrange_$i$ := ( __signed({1b0, pix_x}) >= __signed(sprite_x[$i$]) ) && ( __signed({1b0, pix_x}) < __signed( sprite_x[$i$] + spritesize_$i$ ) );
         uint1 yinrange_$i$ := ( __signed({1b0, pix_y}) >= __signed(sprite_y[$i$]) ) && ( __signed({1b0, pix_y}) < __signed( sprite_y[$i$] + spritesize_$i$ ) );
         uint1 pix_visible_$i$ := sprite_active[$i$] && xinrange_$i$ && yinrange_$i$ && ( tiles_$i$.rdata0[ ( 15  - ( ( __signed({1b0, pix_x}) - sprite_x[$i$] ) >>> sprite_double[$i$] ) ), 1 ] );
+        uint4 yinsprite_$i$ := ( __signed({1b0, pix_y}) - sprite_y[$i$] ) >>> sprite_double[$i$];
 
         // Collision detection flag
         uint16      detect_collision_$i$ = uninitialised;
     $$end
+
+    // UPDATE THE SPRITE TILE BITMAPS
+    spritebitmapwriter SBMW(
+        sprite_writer_sprite <: sprite_writer_sprite,
+        sprite_writer_line <: sprite_writer_line,
+        sprite_writer_bitmap <: sprite_writer_bitmap,
+        sprite_writer_active <: sprite_writer_active,
+        $$for i=0,12 do
+            tiles_$i$ <:> tiles_$i$,
+        $$end
+    );
 
     // Expand Sprite Update Deltas
     int11   deltax := { {7{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
@@ -93,9 +105,7 @@ algorithm sprite_layer(
 
     $$for i=0,12 do
         // Set read and write address for the tiles
-        tiles_$i$.addr0 := sprite_tile_number[$i$] * 16 + ( ( __signed({1b0, pix_y}) - sprite_y[$i$] ) >>> sprite_double[$i$] );
-        tiles_$i$.wenable1 := 1;
-
+        tiles_$i$.addr0 := { sprite_tile_number[$i$], yinsprite_$i$ };
         collision_$i$ := ( output_collisions ) ? detect_collision_$i$ : collision_$i$;
     $$end
 
@@ -146,19 +156,7 @@ algorithm sprite_layer(
             }
         }
 
-        // WRITE BITMAP TO SPRITE TILE
-        if( sprite_writer_active ) {
-            switch( sprite_writer_sprite ) {
-                $$for i=0,12 do
-                    case $i$: {
-                        tiles_$i$.addr1 = sprite_writer_line;
-                        tiles_$i$.wdata1 = sprite_writer_bitmap;
-                    }
-                $$end
-            }
-        }
-
-        // SET ATTRIBUTES + PERFORM UPDATE
+         // SET ATTRIBUTES + PERFORM UPDATE
         switch( sprite_layer_write ) {
             case 1: { sprite_active[ sprite_set_number ] = sprite_set_active; }
             case 2: { sprite_tile_number[ sprite_set_number ] = sprite_set_tile; }
@@ -181,6 +179,35 @@ algorithm sprite_layer(
 
                 sprite_y[ sprite_set_number ] = sprite_offscreen_y ? ( ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ? __signed(480) : sprite_to_negative ) :
                                                 sprite_y[ sprite_set_number ] + deltay;
+            }
+        }
+    }
+}
+
+algorithm spritebitmapwriter(
+    input   uint4   sprite_writer_sprite,
+    input   uint7   sprite_writer_line,
+    input   uint16  sprite_writer_bitmap,
+    input   uint1   sprite_writer_active,
+
+    $$for i=0,12 do
+        simple_dualbram_port1 tiles_$i$,
+    $$end
+) <autorun> {
+    $$for i=0,12 do
+        tiles_$i$.wenable1 := 1;
+    $$end
+
+    while(1) {
+        // WRITE BITMAP TO SPRITE TILE
+        if( sprite_writer_active ) {
+            switch( sprite_writer_sprite ) {
+                $$for i=0,12 do
+                    case $i$: {
+                        tiles_$i$.addr1 = sprite_writer_line;
+                        tiles_$i$.wdata1 = sprite_writer_bitmap;
+                    }
+                $$end
             }
         }
     }

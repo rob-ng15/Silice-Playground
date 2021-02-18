@@ -21,12 +21,12 @@ circuitry updatecollision(
     input   pix_visible_1,
     input   pix_visible_0
 ) {
-        newcollisionflag = mypixel ? oldcollisionflag | {
-                            collision_layer_1, collision_layer_2, collision_layer_3, pix_visible_12, pix_visible_11,
-                            pix_visible_10, pix_visible_9, pix_visible_8, pix_visible_7,
-                            pix_visible_6, pix_visible_5, pix_visible_4, pix_visible_3,
-                            pix_visible_2, pix_visible_1, pix_visible_0
-                        } : oldcollisionflag;
+    newcollisionflag = mypixel ? oldcollisionflag | {
+                        collision_layer_1, collision_layer_2, collision_layer_3, pix_visible_12, pix_visible_11,
+                        pix_visible_10, pix_visible_9, pix_visible_8, pix_visible_7,
+                        pix_visible_6, pix_visible_5, pix_visible_4, pix_visible_3,
+                        pix_visible_2, pix_visible_1, pix_visible_0
+                    } : oldcollisionflag;
 }
 
 algorithm sprite_layer(

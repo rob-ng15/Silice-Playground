@@ -59,7 +59,7 @@ algorithm character_map(
     charactermap.wenable1 := 1;
 
     // Setup the reading of the characterGenerator8x16 ROM
-    characterGenerator8x16.addr :=  charactermapentry(charactermap.rdata0).character * 16 + yincharacter;
+    characterGenerator8x16.addr :=  { charactermapentry(charactermap.rdata0).character, yincharacter };
 
     // RENDER - Default to transparent
     character_map_display := pix_active && (( characterpixel ) || ( ~charactermapentry(charactermap.rdata0).alpha ));

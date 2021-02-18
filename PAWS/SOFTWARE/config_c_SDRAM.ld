@@ -16,4 +16,6 @@ SECTIONS {
         *(.rodata)
         *(.rodata.str1.4)
   } >ram
+  . = ALIGN(8);
+PROVIDE( _end = .);
 }

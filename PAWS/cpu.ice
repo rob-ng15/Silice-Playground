@@ -9,6 +9,7 @@
 algorithm PAWSCPU (
     input   uint1   clock_cpualu,
     input   uint1   clock_cpufunc,
+    input   uint1   clock_cpucache,
 
     output  uint3   accesssize,
     output  uint32  address,
@@ -37,13 +38,13 @@ algorithm PAWSCPU (
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
     uint1   compressed = uninitialized;
-    compressed00 COMPRESSED00(
+    compressed00 COMPRESSED00 <@clock_cpufunc> (
         i16 <: readdata
     );
-    compressed01 COMPRESSED01(
+    compressed01 COMPRESSED01 <@clock_cpufunc> (
         i16 <: readdata
     );
-    compressed10 COMPRESSED10(
+    compressed10 COMPRESSED10 <@clock_cpufunc> (
         i16 <: readdata
     );
 
@@ -229,7 +230,7 @@ algorithm PAWSCPU (
     );
 
     // On CPU instruction cache
-    instructioncache Icache(
+    instructioncache Icache <@clock_cpucache> (
         PC <: PC,
         SMT <: SMT,
         newinstruction <: instruction,
@@ -466,6 +467,7 @@ algorithm instructioncache(
     uint5   lastcachepointer = 0;
     uint5   lastcachepointerSMT = 0;
 
+    uint1   LATCHupdate = 0;
     uint6   pointer := SMT ? { 1b1, lastcachepointerSMT } : { 1b0, lastcachepointer };
 
     // CHECK IF PC IS IN LAST INSTRUCTION CACHE
@@ -489,7 +491,7 @@ algorithm instructioncache(
                     ( lastcompressedcache[ { SMT, 5b11111 } ] );
 
     while(1) {
-        if( updatecache ) {
+        if( updatecache && ~LATCHupdate ) {
             lastpccache[ pointer ] = PC;
             lastinstructioncache[  pointer ] = newinstruction;
             lastcompressedcache[  pointer ] = newcompressed;
@@ -500,5 +502,6 @@ algorithm instructioncache(
                 lastcachepointer = lastcachepointer + 1;
             }
         }
+        LATCHupdate = updatecache;
     }
 }

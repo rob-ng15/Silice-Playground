@@ -65,13 +65,15 @@ algorithm main(
         clkVIDEO :> video_clock,
         locked   :> pll_lock_VIDEO
     );
-    // SDRAM  CLOCKS
+    // SDRAM  CLOCKS + ON CPU CACHE
     uint1   sdram_clock = uninitialized;
+    uint1   clock_cpucache = uninitialized;
     uint1   pll_lock_AUX = uninitialized;
     ulx3s_clk_risc_ice_v_AUX clk_gen_AUX (
         clkin   <: clock,
         clkSDRAM :> sdram_clock,
         clkSDRAMcontrol :> sdram_clk,
+        clkCPUcache :> clock_cpucache,
         locked :> pll_lock_AUX
     );
 
@@ -188,6 +190,7 @@ algorithm main(
     PAWSCPU CPU <@cpu_clock> (
         clock_cpualu <: clock_cpualu,
         clock_cpufunc <: clock_cpufunc,
+        clock_cpucache <: clock_cpucache,
 
         accesssize :> function3,
         address :> address,
@@ -201,12 +204,14 @@ algorithm main(
     // PS2 KEYBOARD
     uint8   ps2_code = uninitialized;
     uint1   ps2_ready = uninitialized;
-    ps2_intf PS2(
-        CLK <: clock,
-        PS2_CLK <: usb_fpga_bd_dp,
-        PS2_DATA <: usb_fpga_bd_dn,
-        DATA :> ps2_code,
-        VALID :> ps2_ready
+    uint1   ps2_enable_rcv = 1;
+    ps2_port PS2(
+        clk <: clock,
+        enable_rcv <: ps2_enable_rcv,
+        ps2clk_ext <: usb_fpga_bd_dp,
+        ps2data_ext <: usb_fpga_bd_dn,
+        scancode :> ps2_code,
+        kb_interrupt :> ps2_ready
     );
 
     // SDRAM -> CPU BUSY STATE
@@ -225,7 +230,6 @@ algorithm main(
     // SETUP PS2
     usb_fpga_pu_dp := 1;
     usb_fpga_pu_dn := 1;
-    //PS2.nRESET := 0;
 
     while(1) {
     }
