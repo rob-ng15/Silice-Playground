@@ -6,6 +6,9 @@ import('../common/ulx3s_clk_risc_ice_v.v')
 import('../common/ulx3s_clk_risc_ice_v_2.v')
 import('../common/ulx3s_clk_risc_ice_v_3.v')
 
+// PS2 KEYBOARD
+import('../common/ps2.v')
+
 // HDMI + UART + SDCARD + SDRAM Driver Includes
 $include('../common/hdmi.ice')
 $include('../common/uart.ice')

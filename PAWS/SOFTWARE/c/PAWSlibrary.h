@@ -191,8 +191,10 @@ extern void outputstringnonl(char *);
 extern void outputnumber_char( unsigned char );
 extern void outputnumber_short( unsigned short );
 extern void outputnumber_int( unsigned int );
-extern char inputcharacter( void );
-unsigned char inputcharacter_available( void );
+extern char uartinputcharacter( void );
+extern unsigned char uartcharacter_available( void );
+extern char ps2inputcharacter( void );
+extern unsigned char ps2character_available( void );
 
 // BASIC I/O
 extern void set_leds( unsigned char );

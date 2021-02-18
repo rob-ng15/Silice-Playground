@@ -7,6 +7,10 @@ algorithm memmap_io (
     output! uint1   uart_tx,
     input   uint1   uart_rx,
 
+    // PS2
+    input   uint8   ps2_code,
+    input   uint1   ps2_ready,
+
     // AUDIO
     output! uint4   audio_l,
     output! uint4   audio_r,
@@ -301,6 +305,11 @@ algorithm memmap_io (
     uint8   uartOutBufferTop = 0;
     uint8   newuartOutBufferTop = 0;
 
+    // PS2 inputFIFO ( 256 character ) as dualport bram
+    simple_dualport_bram uint8 ps2InBuffer [256] = uninitialized;
+    uint8   ps2InBufferNext = 0;
+    uint8   ps2InBufferTop = 0;
+
     // LATCH MEMORYREAD MEMORYWRITE
     uint1   LATCHmemoryRead = uninitialized;
     uint1   LATCHmemoryWrite = uninitialized;
@@ -322,10 +331,12 @@ algorithm memmap_io (
     uo.data_in_ready := ( uartOutBufferNext != uartOutBufferTop ) && ( !uo.busy );
     uartOutBufferNext := ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) ) ? uartOutBufferNext + 1 : uartOutBufferNext;
 
-    // Setup the random number generators
-
-    // Setup the UART
-    //uo.data_in_ready := 0; // maintain low
+    // PS2 BUFFERS
+    ps2InBuffer.wenable1 := 1;  // always write on port 1
+    ps2InBuffer.addr0 := ps2InBufferNext; // FIFO reads on next
+    ps2InBuffer.addr1 := ps2InBufferTop;  // FIFO writes on top
+    ps2InBuffer.wdata1 := ps2_code;
+    ps2InBufferTop := ( ps2_ready ) ? ps2InBufferTop + 1 : ps2InBufferTop;
 
     // SDCARD Commands
     sdcio.read_sector := 0;
@@ -354,7 +365,9 @@ algorithm memmap_io (
             switch( memoryAddress ) {
                 // UART, LEDS, BUTTONS and CLOCK
                 case 16h8000: { readData = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1; }
+                case 16h8002: { readData = { 8b0, ps2InBuffer.rdata0 }; ps2InBufferNext = ps2InBufferNext + 1; }
                 case 16h8004: { readData = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ) ? 1b1 : 1b0, ( uartInBufferNext != uartInBufferTop ) ? 1b1 : 1b0 }; }
+                case 16h8006: { readData = { 15b0, ( ps2InBufferNext != ps2InBufferTop ) ? 1b1 : 1b0 }; }
                 case 16h8008: { readData = { $16-NUM_BTNS$b0, reg_btns[0,$NUM_BTNS$] }; }
                 case 16h800c: { readData = leds; }
                 case 16h8010: { readData = systemClock; }
@@ -458,6 +471,9 @@ algorithm memmap_io (
 
                 // SMT STATUS
                 case 16hffff: { readData = SMTRUNNING ? 1 : 0; }
+
+                // RETURN NULL VALUE
+                default: { readData = 0; }
             }
         }
 

@@ -41,7 +41,7 @@ algorithm registers(
 }
 
 // RISC-V INSTRUCTION DECODER
-algorithm decoder (
+algorithm decoder(
     input   uint32  instruction,
 
     output  uint7   opCode,
@@ -70,7 +70,7 @@ algorithm decoder (
 }
 
 // RISC-V ADDRESS BASE/OFFSET GENERATOR
-algorithm addressgenerator (
+algorithm addressgenerator(
     input   uint32  instruction,
     input   uint32  pc,
     input   uint1   compressed,
@@ -109,7 +109,7 @@ circuitry newPC(
 }
 
 // BRANCH COMPARISIONS
-algorithm branchcomparison (
+algorithm branchcomparison(
     input   uint7   opCode,
     input   uint3   function3,
     input   int32   sourceReg1,
@@ -332,7 +332,7 @@ algorithm compressed10(
 }
 
 // PERFORM OPTIONAL SIGN EXTENSION FOR 8 BIT AND 16 BIT READS
-circuitry signextender8 (
+circuitry signextender8(
     input   function3,
     input   address,
     input   nosign,
@@ -340,7 +340,7 @@ circuitry signextender8 (
 ) {
     withsign = ~function3[2,1] ? { {24{nosign[address[0,1] ? 15 : 7, 1]}}, nosign[address[0,1] ? 8 : 0, 8] } : nosign[address[0,1] ? 8 : 0, 8];
 }
-circuitry signextender16 (
+circuitry signextender16(
     input   function3,
     input   nosign,
     output  withsign
@@ -349,7 +349,7 @@ circuitry signextender16 (
 }
 
 // COMBINE TWO 16 BIT HALF WORDS TO 32 BIT WORD
-circuitry halfhalfword (
+circuitry halfhalfword(
     input   HIGH,
     input   LOW,
     output  HIGHLOW,
@@ -477,11 +477,16 @@ algorithm grevgorc(
 
             result = sourceReg1;
             ++:
-            if( shiftcount[0,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h55555555 ) << 1 ) | ( ( result & 32haaaaaaaa ) >> 1 ); ++: }
-            if( shiftcount[1,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h33333333 ) << 2 ) | ( ( result & 32hcccccccc ) >> 2 ); ++: }
-            if( shiftcount[2,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h0f0f0f0f ) << 4 ) | ( ( result & 32hf0f0f0f0 ) >> 4 ); ++: }
-            if( shiftcount[3,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h00ff00ff ) << 8 ) | ( ( result & 32hff00ff00 ) >> 8 ); ++: }
-            if( shiftcount[4,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h0000ffff ) << 16 ) | ( ( result & 32hffff0000 ) >> 16 ); }
+            if( shiftcount[0,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( { ( result & 32h55555555 ), 1b0 } ) | ( ( result & 32haaaaaaaa ) >> 1 ); ++: }
+            if( shiftcount[1,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( { ( result & 32h33333333 ), 2b0 } ) | ( ( result & 32hcccccccc ) >> 2 ); ++: }
+            if( shiftcount[2,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( { ( result & 32h0f0f0f0f ), 4b0 } ) | ( ( result & 32hf0f0f0f0 ) >> 4 ); ++: }
+            if( shiftcount[3,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( { ( result & 32h00ff00ff ), 8b0 } ) | ( ( result & 32hff00ff00 ) >> 8 ); ++: }
+            if( shiftcount[4,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( { ( result & 32h0000ffff ), 16b0 } ) | ( ( result & 32hffff0000 ) >> 16 ); }
+            //if( shiftcount[0,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h55555555 ) << 1 ) | ( ( result & 32haaaaaaaa ) >> 1 ); ++: }
+            //if( shiftcount[1,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h33333333 ) << 2 ) | ( ( result & 32hcccccccc ) >> 2 ); ++: }
+            //if( shiftcount[2,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h0f0f0f0f ) << 4 ) | ( ( result & 32hf0f0f0f0 ) >> 4 ); ++: }
+            //if( shiftcount[3,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h00ff00ff ) << 8 ) | ( ( result & 32hff00ff00 ) >> 8 ); ++: }
+            //if( shiftcount[4,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h0000ffff ) << 16 ) | ( ( result & 32hffff0000 ) >> 16 ); }
 
             busy = 0;
         }
@@ -500,8 +505,12 @@ circuitry shuffle32_stage(
     uint32  B = uninitialised;
 
     x = src & ~( maskL | maskR );
-    A = src << N;
-    B = src >> N;
+    switch( N ) {
+        case 1: { A = { src[0,31] , 1b0 }; B = { 1b0, src[1,31] }; }
+        case 2: { A = { src[0,30] , 2b0 }; B = { 2b0, src[2,30] }; }
+        case 4: { A = { src[0,28] , 4b0 }; B = { 4b0, src[4,28] }; }
+        case 8: { A = { src[0,24] , 8b0 }; B = { 8b0, src[8,24] }; }
+    }
     ++:
     x = x | ( A & maskL ) | ( B & maskR );
 }
@@ -570,11 +579,12 @@ algorithm clmul(
             ++:
             while( i < 32 ) {
                 if( sourceReg2[i,1] ) {
-                    switch( function3 ) {
-                        case 3b001: { result = result ^ ( sourceReg1 << i ); }
-                        case 3b010: { result = result ^ ( sourceReg1 << ( 32 - i ) ); }
-                        case 3b011: { result = result ^ ( sourceReg1 << ( 31 - i ) ); }
-                    }
+                    result = result ^ ( sourceReg1 << ( function3 == 3b001 ) ? i : ( ( function3 == 3b001 ) ? ( 32 - i ) : ( 31 - i ) ) );
+                    //switch( function3 ) {
+                    //    case 3b001: { result = result ^ ( sourceReg1 << i ); }
+                    //    case 3b010: { result = result ^ ( sourceReg1 << ( 32 - i ) ); }
+                    //    case 3b011: { result = result ^ ( sourceReg1 << ( 31 - i ) ); }
+                    //}
                 }
                 i = i + 1;
             }
@@ -812,7 +822,8 @@ circuitry MIN(
     output  result
 ) {
     result = ( __signed(value1) > __signed(value2) ) ? value1 : value2;
-}circuitry MAXU(
+}
+circuitry MAXU(
     input   value1,
     input   value2,
     output  result

@@ -56,6 +56,10 @@ algorithm memmap_io (
     input   uint10  pix_y,
 
     // CLOCKS
+    input   uint1   clock_50mhz,
+$$if ULX3S then
+    input   uint1   clock_25mhz,
+$$end
     input   uint1   video_clock,
     input   uint1   video_reset,
 
@@ -68,30 +72,30 @@ algorithm memmap_io (
 ) <autorun> {
     // 1hz timers (p1hz used for systemClock, timer1hz for user purposes)
     uint16 systemClock = uninitialized;
-    pulse1hz p1hz <@video_clock,!video_reset> (
+    pulse1hz p1hz <@clock_50mhz,!reset> (
         counter1hz :> systemClock,
     );
-    pulse1hz timer1hz <@video_clock,!video_reset> ( );
+    pulse1hz timer1hz <@clock_50mhz,!reset> ( );
 
     // 1khz timers (sleepTimer used for sleep command, timer1khz for user purposes)
-    pulse1khz sleepTimer <@video_clock,!video_reset> ( );
-    pulse1khz timer1khz <@video_clock,!video_reset> ( );
+    pulse1khz sleepTimer <@clock_50mhz,!reset> ( );
+    pulse1khz timer1khz <@clock_50mhz,!reset> ( );
 
     // RNG random number generator
     uint16 staticGenerator = 0;
-    random rng <@video_clock,!video_reset> (
+    random rng <@clock_50mhz,!reset> (
         g_noise_out :> staticGenerator
     );
 
     // UART tx and rx
     // UART written in Silice by https://github.com/sylefeb/Silice
     uart_out uo;
-    uart_sender usend(
+    uart_sender usend <@clock_50mhz,!reset> (
         io      <:> uo,
         uart_tx :>  uart_tx
     );
     uart_in ui;
-    uart_receiver urecv(
+    uart_receiver urecv <@clock_50mhz,!reset> (
         io      <:> ui,
         uart_rx <:  uart_rx
     );
@@ -288,11 +292,25 @@ algorithm memmap_io (
 
     // Left and Right audio channels
     // Sync'd with video_clock
-    apu apu_processor_L <@video_clock,!video_reset> (
+    apu apu_processor_L
+$$if ULX3S then
+<@clock_25mhz,!reset>
+$$end
+$$if DE10NANO then
+<@video_clock,!video_reset>
+$$end
+    (
         staticGenerator <: staticGenerator,
         audio_output :> audio_l
     );
-    apu apu_processor_R <@video_clock,!video_reset> (
+    apu apu_processor_R
+$$if ULX3S then
+<@clock_25mhz,!reset>
+$$end
+$$if DE10NANO then
+<@video_clock,!video_reset>
+$$end
+    (
         staticGenerator <: staticGenerator,
         audio_output :> audio_r
     );
@@ -305,11 +323,11 @@ algorithm memmap_io (
     );
 
     // Mathematics Co-Processors
-    divmod32by16 divmod32by16to16qr();
-    divmod16by16 divmod16by16to16qr();
-    multi16by16to32DSP multiplier16by16to32();
-    doubleaddsub2input doperations2();
-    doubleaddsub1input doperations1();
+    divmod32by16 divmod32by16to16qr <@clock_50mhz,!reset> ();
+    divmod16by16 divmod16by16to16qr <@clock_50mhz,!reset> ();
+    multi16by16to32DSP multiplier16by16to32 <@clock_50mhz,!reset> ();
+    doubleaddsub2input doperations2 <@clock_50mhz,!reset> ();
+    doubleaddsub1input doperations1 <@clock_50mhz,!reset> ();
 
     // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
     simple_dualport_bram uint8 uartInBuffer[4096] = uninitialized;
@@ -322,9 +340,8 @@ algorithm memmap_io (
     uint8   uartOutBufferTop = 0;
     uint8   newuartOutBufferTop = 0;
 
-    // LATCH MEMORYREAD MEMORYWRITE
-    uint1   LATCHmemoryRead = uninitialized;
-    uint1   LATCHmemoryWrite = uninitialized;
+    // Co-Processor reset counter
+    uint2   coProReset = 0;
 
     // register buttons
     uint$NUM_BTNS$ reg_btns = 0;
@@ -347,6 +364,13 @@ algorithm memmap_io (
     divmod16by16to16qr.start := 0;
     multiplier16by16to32.start := 0;
 
+    // RESET Timer Co-Processor Controls
+    p1hz.resetCounter := 0;
+    sleepTimer.resetCounter := 0;
+    timer1hz.resetCounter := 0;
+    timer1khz.resetCounter := 0;
+    rng.resetRandom := 0;
+
     // UART input and output buffering
     uartInBuffer.wdata1  := ui.data_out;
     uartInBufferTop      := ( ui.data_out_ready ) ? uartInBufferTop + 1 : uartInBufferTop;
@@ -362,7 +386,7 @@ algorithm memmap_io (
         uartOutBufferTop = newuartOutBufferTop;
 
         // READ IO Memory
-        if( memoryRead && ~LATCHmemoryRead ) {
+        if( memoryRead ) {
             switch( memoryAddress[12,4] ) {
                 case 4hf: {
                     switch( memoryAddress[8,4] ) {
@@ -547,7 +571,9 @@ algorithm memmap_io (
         } // memoryRead
 
         // WRITE IO Memory
-        if( memoryWrite && ~LATCHmemoryWrite ) {
+        if( memoryWrite ) {
+            coProReset = 3;
+
             switch( memoryAddress[12,4] ) {
                 case 4hf: {
                     switch( memoryAddress[8,4] ) {
@@ -665,6 +691,7 @@ algorithm memmap_io (
                                 case 8he5: { apu_processor_R.note = writeData; }
                                 case 8he6: { apu_processor_R.duration = writeData; }
                                 case 8he7: { apu_processor_R.apu_write = writeData; }
+                                case 8he8: { rng.resetRandom = 1; }
                                 case 8hed: { timer1hz.resetCounter = 1; }
                                 case 8hee: { timer1khz.resetCount = writeData; timer1khz.resetCounter = 1; }
                                 case 8hef: { sleepTimer.resetCount = writeData; sleepTimer.resetCounter = 1; }
@@ -678,12 +705,14 @@ algorithm memmap_io (
                     }
                 }
             }
+        } else { // WRITE IO Memory
+            coProReset = ( coProReset == 0 ) ? 0 : coProReset - 1;
         }
 
         // RESET Co-Processor Controls
         // Main processor and memory map runs at 50MHz, display co-processors at 25MHz
         // Delay to reset co-processors therefore required
-        if( ~memoryWrite && ~LATCHmemoryWrite ) {
+        if( coProReset == 1 ) {
             background_generator.background_write = 0;
             tile_map.tm_write = 0;
             tile_map.tm_scrollwrap = 0;
@@ -698,14 +727,6 @@ algorithm memmap_io (
             terminal_window.terminal_write = 0;
             apu_processor_L.apu_write = 0;
             apu_processor_R.apu_write = 0;
-
-            // RESET Timer Co-Processor Controls
-            p1hz.resetCounter = 0;
-            sleepTimer.resetCounter = 0;
-            timer1hz.resetCounter = 0;
-            timer1khz.resetCounter = 0;
         }
-        LATCHmemoryRead = memoryRead;
-        LATCHmemoryWrite = memoryWrite;
     } // while(1)
 }

@@ -37,13 +37,13 @@ algorithm PAWSCPU (
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
     uint1   compressed = uninitialized;
-    compressed00 COMPRESSED00 <@clock_cpufunc> (
+    compressed00 COMPRESSED00(
         i16 <: readdata
     );
-    compressed01 COMPRESSED01 <@clock_cpufunc> (
+    compressed01 COMPRESSED01(
         i16 <: readdata
     );
-    compressed10 COMPRESSED10 <@clock_cpufunc> (
+    compressed10 COMPRESSED10(
         i16 <: readdata
     );
 
@@ -185,8 +185,7 @@ algorithm PAWSCPU (
     );
 
     // BASE REGISTER + IMMEDIATE ALU OPERATIONS + B EXTENSION OPERATIONS
-    aluI ALUI(
-        clock_cpualu <: clock_cpualu,
+    aluI ALUI <@clock_cpualu> (
         function3 <: function3,
         function7 <: function7,
         IshiftCount <: IshiftCount,
@@ -205,8 +204,7 @@ algorithm PAWSCPU (
     );
 
     // BASE REGISTER & REGISTER ALU OPERATIONS + B EXTENSION OPERATIONS
-    aluR ALUR(
-        clock_cpualu <: clock_cpualu,
+    aluR ALUR <@clock_cpualu> (
         function3 <: function3,
         function7 <: function7,
         rs1 <: rs1,
@@ -224,6 +222,7 @@ algorithm PAWSCPU (
         GREVGORCbusy <: GREVGORCbusy
     );
 
+    // MANDATORY RISC-V CSR REGISTERS + HARTID == 0 MAIN THREAD == 1 SMT THREAD
     CSRblock CSR(
         instruction <: instruction,
         SMT <: SMT
@@ -402,7 +401,6 @@ algorithm PAWSCPU (
                 // START ALUI or ALUR
                 ALUI.start = ALUIorR;
                 ALUR.start = ~ALUIorR;
-
                 while( ALUI.busy || ALUR.busy ) {}
                 result = ALUIorR ? ALUI.result : ALUR.result;
             }

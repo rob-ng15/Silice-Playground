@@ -27,7 +27,8 @@ void main( void ) {
     }
 
     while(1) {
-        mvprintw( 29, 0, "Cycles <%x> Instructions <%x> Cycles / Instructions <%x>\n", CSRcycles(), CSRinstructions(), CSRcycles() / CSRinstructions() );
-        sleep( 1000, 0 );
+        if( ps2character_available ) {
+            mvprintw( 29, 0, "PS2 Keycode <%x>\n", ps2inputcharacter() );
+        }
     }
 }

@@ -1,7 +1,7 @@
 module ulx3s_clk_risc_ice_v_AUX
 (
     input   clkin,              // 25 MHz, 0 deg
-    output  clk50,
+    output  clkCPUcache,
     output  clk25,
     output  clkSDRAM,           // 100 MHz, 0 deg       // SDRAM
     output  clkSDRAMcontrol,    // 100 MHz, 180 deg     // SDRAM controller
@@ -43,11 +43,11 @@ EHXPLLL #(
         .RST(1'b0),
         .STDBY(1'b0),
         .CLKI(clkin),
-        .CLKOP(clk50),
+        .CLKOP(clkCPUcache),
         .CLKOS(clk25),
         .CLKOS2(clkSDRAM),
         .CLKOS3(clkSDRAMcontrol),
-        .CLKFB(clk50),
+        .CLKFB(clkCPUcache),
         .CLKINTFB(),
         .PHASESEL0(1'b0),
         .PHASESEL1(1'b0),

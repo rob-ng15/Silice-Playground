@@ -1,6 +1,8 @@
 // I/O MEMORY MAPPED REGISTER DEFINITIONS
 unsigned char volatile * UART_STATUS = (unsigned char volatile *) 0x8004;
 unsigned char * UART_DATA = (unsigned char *) 0x8000;
+unsigned char volatile * PS2_STATUS = (unsigned char volatile *) 0x8006;
+unsigned char * PS2_DATA = (unsigned char *) 0x8002;
 unsigned char volatile * BUTTONS = (unsigned char volatile *) 0x8008;
 unsigned char volatile * LEDS = (unsigned char volatile *) 0x800c;
 unsigned short volatile * SYSTEMCLOCK = (unsigned short volatile *) 0x8010;

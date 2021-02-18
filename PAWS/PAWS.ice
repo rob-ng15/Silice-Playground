@@ -11,6 +11,12 @@ algorithm main(
     output! uint1   uart_tx,
     input   uint1   uart_rx,
 
+    // PS2
+    output  uint1   usb_fpga_pu_dp,
+    output  uint1   usb_fpga_pu_dn,
+    input   uint1   usb_fpga_bd_dp,
+    input   uint1   usb_fpga_bd_dn,
+
     // AUDIO
     output! uint4   audio_l,
     output! uint4   audio_r,
@@ -86,12 +92,10 @@ algorithm main(
     uint1   pix_active = uninitialized;
     uint10  pix_x  = uninitialized;
     uint10  pix_y  = uninitialized;
-
-    // VGA or HDMI driver
+    // HDMI driver
     uint8   video_r = uninitialized;
     uint8   video_g = uninitialized;
     uint8   video_b = uninitialized;
-
     hdmi video<@clock,!reset> (
         vblank  :> vblank,
         active  :> pix_active,
@@ -105,7 +109,7 @@ algorithm main(
     );
 
     // RAM - BRAM and SDRAM
-    // SDRAM chip controller
+    // SDRAM chip controller by @sylefeb
     // interface
     sdram_r16w16_io sio_fullrate;
     sdram_r16w16_io sio_halfrate;
@@ -142,7 +146,7 @@ algorithm main(
         writedata <: writedata,
     );
 
-    // MEMORY MAPPED I/O
+    // MEMORY MAPPED I/O + SMT CONTROLS
     uint1   SMTRUNNING = uninitialized;
     uint32  SMTSTARTPC = uninitialized;
     memmap_io IO_Map <@clock_memory> (
@@ -150,6 +154,8 @@ algorithm main(
         btns <: btns,
         uart_tx :> uart_tx,
         uart_rx <: uart_rx,
+        ps2_code <: ps2_code,
+        ps2_ready <: ps2_ready,
         audio_l :> audio_l,
         audio_r :> audio_r,
         sd_clk :> sd_clk,
@@ -192,6 +198,18 @@ algorithm main(
         SMTSTARTPC <: SMTSTARTPC
     );
 
+    // PS2 KEYBOARD
+    uint8   ps2_code = uninitialized;
+    uint1   ps2_ready = uninitialized;
+    ps2_intf PS2(
+        CLK <: clock,
+        PS2_CLK <: usb_fpga_bd_dp,
+        PS2_DATA <: usb_fpga_bd_dn,
+        DATA :> ps2_code,
+        VALID :> ps2_ready
+    );
+
+    // SDRAM -> CPU BUSY STATE
     CPU.memorybusy := sdram.busy;
 
     // I/O and RAM read/write flags
@@ -203,6 +221,11 @@ algorithm main(
     IO_Map.memoryRead := CPU.readmemory && ~address[28,1] && address[15,1];
 
     CPU.readdata := address[28,1] ? sdram.readdata : ( address[15,1] ? IO_Map.readData : ram.readdata );
+
+    // SETUP PS2
+    usb_fpga_pu_dp := 1;
+    usb_fpga_pu_dn := 1;
+    //PS2.nRESET := 0;
 
     while(1) {
     }
@@ -226,7 +249,7 @@ circuitry BRAMwrite(
     ram.wenable = 1;
 }
 
-algorithm bramcontroller (
+algorithm bramcontroller(
     input   uint32  address,
     input   uint3   function3,
 
@@ -280,7 +303,7 @@ circuitry SDRAMwrite(
     while( !sd.done ) {}
 }
 
-algorithm sdramcontroller (
+algorithm sdramcontroller(
     sdram_user      sio,
 
     input   uint32  address,

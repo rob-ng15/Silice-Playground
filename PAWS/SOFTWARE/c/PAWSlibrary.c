@@ -149,13 +149,24 @@ void outputnumber_int( unsigned int value ) {
 
 // INPUT FROM UART
 // RETURN 1 IF UART CHARACTER AVAILABLE, OTHERWISE 0
-unsigned char inputcharacter_available( void ) {
+unsigned char uartcharacter_available( void ) {
     return( *UART_STATUS & 1 );
 }
 // RETURN CHARACTER FROM UART
-char inputcharacter( void ) {
-	while( !inputcharacter_available() ) {}
+char uartinputcharacter( void ) {
+	while( !uartcharacter_available() ) {}
     return *UART_DATA;
+}
+
+// INPUT FROM UART
+// RETURN 1 IF UART CHARACTER AVAILABLE, OTHERWISE 0
+unsigned char ps2character_available( void ) {
+    return( *PS2_STATUS & 1 );
+}
+// RETURN CHARACTER FROM UART
+char ps2inputcharacter( void ) {
+	while( !ps2character_available() ) {}
+    return *PS2_DATA;
 }
 
 // TIMER AND PSEUDO RANDOM NUMBER GENERATOR
@@ -1493,6 +1504,7 @@ int clrtoeol( void ) {
     return( true );
 }
 
+// SIMPLE MALLOC
 // Based on https://github.com/andrestc/linux-prog/blob/master/ch7/malloc.c
 
 typedef struct block {
@@ -1517,8 +1529,7 @@ unsigned short __malloc_init = 0;
 
 /* fl_remove removes a block from the free list
  * and adjusts the head accordingly */
-void
-fl_remove(block_t * b)
+void fl_remove(block_t * b)
 {
 	if (!b->prev) {
 		if (b->next) {
@@ -1537,8 +1548,7 @@ fl_remove(block_t * b)
 /* fl_add adds a block to the free list keeping
  * the list sorted by the block begin address,
  * this helps when scanning for continuous blocks */
-void
-fl_add(block_t * b)
+void fl_add(block_t * b)
 {
 	b->prev = NULL;
 	b->next = NULL;
@@ -1566,9 +1576,7 @@ fl_add(block_t * b)
  * MIN_DEALLOC then the block is released to the OS, by
  * calling brk to set the program break to the begin of
  * the block */
-void
-scan_merge()
-{
+void scan_merge() {
 	block_t        *curr = head;
 	unsigned int	header_curr, header_next;
 	while (curr->next) {
@@ -1592,8 +1600,7 @@ scan_merge()
 
 /* splits the block b by creating a new block after size bytes,
  * this new block is returned */
-block_t * split(block_t * b, size_t size)
-{
+block_t * split(block_t * b, size_t size) {
 	void           *mem_block = BLOCK_MEM(b);
 	block_t        *newptr = (block_t *) ((unsigned int)mem_block + size);
 	newptr->size = b->size - (size + sizeof(block_t));
@@ -1647,9 +1654,7 @@ void free(void *ptr) {
 	scan_merge();
 }
 
-void
-_cleanup()
-{
+void _cleanup() {
 	head = NULL;
 }
 

@@ -105,7 +105,6 @@ algorithm aluMmultiply(
 
 // BASE IMMEDIATE + B extensions
 algorithm aluIb001(
-    input   uint1   clock_cpualu,
     input   uint1   start,
     output! uint1   busy,
 
@@ -121,13 +120,13 @@ algorithm aluIb001(
 
     output! uint32  result
 ) <autorun> {
-    clz CLZ <@clock_cpualu> (
+    clz CLZ(
         sourceReg1 <: sourceReg1
     );
-    ctz CTZ <@clock_cpualu> (
+    ctz CTZ(
         sourceReg1 <: sourceReg1
     );
-    cpop CPOP <@clock_cpualu> (
+    cpop CPOP(
         sourceReg1 <: sourceReg1
     );
 
@@ -231,7 +230,6 @@ algorithm aluIb101(
     }
 }
 algorithm aluI (
-    input   uint1   clock_cpualu,
     input   uint1   start,
     output! uint1   busy,
 
@@ -255,7 +253,6 @@ algorithm aluI (
 ) <autorun> {
     // FUNCTION3 == 001 block
     aluIb001 ALUIb001(
-        clock_cpualu <: clock_cpualu,
         function7 <: function7,
         IshiftCount <: IshiftCount,
         sourceReg1 <: sourceReg1,
@@ -317,7 +314,6 @@ algorithm aluI (
 // BASE REGISTER + B extensions
 // B EXTENSION GORC XPERM + SBSET
 algorithm aluR7b0010100 (
-    input   uint1   clock_cpualu,
     input   uint1   start,
     output! uint1   busy,
 
@@ -334,7 +330,7 @@ algorithm aluR7b0010100 (
     uint5   RshiftCount := sourceReg2[0,5];
 
     // XPERM
-    xperm XPERM <@clock_cpualu> (
+    xperm XPERM(
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2
@@ -367,7 +363,6 @@ algorithm aluR7b0010100 (
 }
 // B EXTENSION CLMUL + MIN[U] MAX[U]
 algorithm aluR7b0000101 (
-    input   uint1   clock_cpualu,
     input   uint1   start,
     output! uint1   busy,
 
@@ -378,7 +373,7 @@ algorithm aluR7b0000101 (
     output! uint32  result
 ) <autorun> {
     // CLMUL
-    clmul CLMUL <@clock_cpualu> (
+    clmul CLMUL(
         function3 <: function3,
 
         sourceReg1 <: sourceReg1,
@@ -485,7 +480,6 @@ algorithm aluR7b0110100 (
 }
 // B EXTENSION BDEP BFP + PACKU SBCLR SBEXT
 algorithm aluR7b0100100 (
-    input   uint1   clock_cpualu,
     input   uint1   start,
     output! uint1   busy,
 
@@ -501,7 +495,7 @@ algorithm aluR7b0100100 (
     uint5   RshiftCount := sourceReg2[0,5];
 
     // BFP
-    bfp BFP <@clock_cpualu> (
+    bfp BFP (
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2
     );
@@ -535,7 +529,6 @@ algorithm aluR7b0100100 (
 }
 // BASE ADD SUB SLL SLT SLTU XOR SRL SRA OR AND + B EXTENSION ROL SLO SH1/2/3ADD XNOR ROR SRO ORN ANDN
 algorithm aluR (
-    input   uint1   clock_cpualu,
     input   uint1   start,
     output! uint1   busy,
 
@@ -560,14 +553,14 @@ algorithm aluR (
     uint5   RshiftCount := sourceReg2[0,5];
 
     // M EXTENSION DIVIDER
-    aluMdivideremain ALUMD <@clock_cpualu> (
+    aluMdivideremain ALUMD(
         function3 <: function3,
         dividend <: sourceReg1,
         divisor <: sourceReg2
     );
 
     // M EXTENSION BLOCK MULTIPLIER
-    aluMmultiply ALUMM <@clock_cpualu> (
+    aluMmultiply ALUMM(
         function3 <: function3,
         factor_1 <: sourceReg1,
         factor_2 <: sourceReg2
@@ -576,7 +569,7 @@ algorithm aluR (
     // BEXT BDEP UNIT
     uint32  BEXTBDEPoutput = uninitialized;
     uint1   BEXTBDEPbusy = uninitialized;
-    bextbdep BEXTBDEP <@clock_cpualu> (
+    bextbdep BEXTBDEP(
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
         function7 <: function7,
@@ -587,7 +580,6 @@ algorithm aluR (
 
     // B EXTENSION GORC XPERM + SBET ( sbset is single cycle but shares same function7 coding as GORC XPERM )
     aluR7b0010100 ALUR7b0010100(
-        clock_cpualu <: clock_cpualu,
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
@@ -597,7 +589,6 @@ algorithm aluR (
     );
     // B EXTENSION CLMUL + MIN[U] MAX[U] ( min and max are single cycle but share same function7 coding as CLMUL operations )
     aluR7b0000101 ALUR7b0000101(
-        clock_cpualu <: clock_cpualu,
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2
@@ -623,7 +614,6 @@ algorithm aluR (
     );
     // B EXTENSION BDEP BFP + PACKU SBCLR SBEXT ( packu, sbclr and sbext are single cycle share share same function7 coding as BDEP BFP )
     aluR7b0100100 ALUR7b0100100(
-        clock_cpualu <: clock_cpualu,
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
