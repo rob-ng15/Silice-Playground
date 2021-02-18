@@ -34,6 +34,180 @@ bitfield aluop {
     uint1   ddelta0
 }
 
+<<<<<<< HEAD
+=======
+// CIRCUITRY FOR PUSHING LITERAL VALUE TO THE STACK
+circuitry j1eforthliteral(
+    input   immediate,
+    input   pcPlusOne,
+    input   dsp,
+    input   rsp,
+
+    output  newStackTop,
+    output  newPC,
+    output  newDSP,
+    output  newRSP
+) {
+    newStackTop = immediate;
+    newPC = pcPlusOne;
+    newDSP = dsp + 1;
+    newRSP = rsp;
+}
+
+// CIRCUITRY FOR HANDLING CALL BRANCH 0BRANCH INSTRUCTIONS
+circuitry j1eforthcallbranch(
+    input   is_callbranchalu,
+    input   stackTop,
+    input   stackNext,
+    input   callBranchAddress,
+    input   pcPlusOne,
+    input   dsp,
+    input   rsp,
+
+    output  newStackTop,
+    output  newPC,
+    output  newDSP,
+    output  newRSP
+) {
+    switch( is_callbranchalu ) {
+        case 2b00: {
+            // BRANCH
+            newStackTop = stackTop;
+            newPC = callBranchAddress;
+            newDSP = dsp;
+            newRSP = rsp;
+        }
+        case 2b01: {
+            // 0BRANCH
+            newStackTop = stackNext;
+            newPC = ( stackTop == 0 ) ? callBranchAddress : pcPlusOne;
+            newDSP = dsp - 1;
+            newRSP = rsp;
+        }
+        case 2b10: {
+            // CALL
+            newStackTop = stackTop;
+            newPC = callBranchAddress;
+            newDSP = dsp;
+            newRSP = rsp + 1;
+        }
+    }
+}
+
+// CIRCUITRY FOR J1 ALU AND J1PLUS ALU OPERATIONS
+// BARREL SHIFTERS
+circuitry SLL(
+    input   sourceReg1,
+    input   shiftcount,
+    output  result
+) {
+    switch( shiftcount[0,3] ) {
+        case 0: { result = sourceReg1; }
+        $$for i = 1, 15 do
+            $$ remain = 16 - i
+            case $i$: { result = { sourceReg1[ 0, $remain$ ], {$i${ 1b0 }} }; }
+        $$end
+    }
+}
+circuitry SRL(
+    input   sourceReg1,
+    input   shiftcount,
+    output  result
+) {
+    switch( shiftcount[0,3] ) {
+        case 0: { result = sourceReg1; }
+        $$for i = 1, 15 do
+            $$ remain = 16 - i
+            case $i$: { result = { {$i${ 1b0 }}, sourceReg1[ $i$, $remain$ ] }; }
+        $$end
+    }
+}
+
+circuitry j1eforthALU(
+    input   instruction,
+    input   dsp,
+    input   rsp,
+    input   stackTop,
+    input   stackNext,
+    input   rStackTop,
+    input   IOmemoryRead,
+    input   RAMmemoryRead,
+
+    output  newStackTop
+) {
+    switch( aluop(instruction).operation ) {
+        case 4b0000: {newStackTop = stackTop;}
+        case 4b0001: {newStackTop = stackNext;}
+        case 4b0010: {newStackTop = stackTop + stackNext;}
+        case 4b0011: {newStackTop = stackTop & stackNext;}
+        case 4b0100: {newStackTop = stackTop | stackNext;}
+        case 4b0101: {newStackTop = stackTop ^ stackNext;}
+        case 4b0110: {newStackTop = ~stackTop;}
+        case 4b0111: {newStackTop = {16{(stackNext == stackTop)}};}
+        case 4b1000: {newStackTop = {16{(__signed(stackNext) < __signed(stackTop))}};}
+        case 4b1001: {( newStackTop ) = SRL( stackNext,stackTop );}
+        case 4b1010: {newStackTop = stackTop - 1;}
+        case 4b1011: {newStackTop = rStackTop;}
+        case 4b1100: {newStackTop = stackTop[15,1] ? IOmemoryRead : RAMmemoryRead;}
+        case 4b1101: {( newStackTop ) = SLL( stackNext,stackTop );}
+        case 4b1110: {newStackTop = {rsp, dsp};}
+        case 4b1111: {newStackTop = {16{(__unsigned(stackNext) < __unsigned(stackTop))}};}
+    }
+}
+
+circuitry j1eforthplusALU(
+    input   instruction,
+    input   stackTop,
+    input   stackNext,
+
+    output  newStackTop
+) {
+    switch( aluop(instruction).operation ) {
+        case 4b0000: {newStackTop = {16{(stackTop == 0)}};}
+        case 4b0001: {newStackTop = {16{(stackTop != 0)}};}
+        case 4b0010: {newStackTop = {16{(stackNext != stackTop)}};}
+        case 4b0011: {newStackTop = stackTop + 1;}
+        case 4b0100: {newStackTop = stackNext * stackTop;}
+        case 4b0101: {newStackTop = { stackTop[1,15], 1b0 };}
+        case 4b0110: {newStackTop = -stackTop;}
+        case 4b0111: {newStackTop = { stackTop[15,1], stackTop[1,15]}; }
+        case 4b1000: {newStackTop = stackNext - stackTop;}
+        case 4b1001: {newStackTop = {16{(__signed(stackTop) < __signed(0))}};}
+        case 4b1010: {newStackTop = {16{(__signed(stackTop) > __signed(0))}};}
+        case 4b1011: {newStackTop = {16{(__signed(stackNext) > __signed(stackTop))}};}
+        case 4b1100: {newStackTop = {16{(__signed(stackNext) >= __signed(stackTop))}};}
+        case 4b1101: {newStackTop = ( __signed(stackTop) < __signed(0) ) ?  -stackTop : stackTop;}
+        case 4b1110: {newStackTop = ( __signed(stackNext) > __signed(stackTop) ) ? stackNext : stackTop;}
+        case 4b1111: {newStackTop = ( __signed(stackNext) < __signed(stackTop) ) ? stackNext : stackTop;}
+    }
+}
+
+// CIRCUITRY FOR WRITING TO THE STACKS
+circuitry commitDSTACK(
+    inout   dstack,
+    input   dstackWrite,
+    input   newDSP,
+    input   stackTop
+) {
+    if( dstackWrite ) {
+        dstack.addr1 = newDSP;
+        dstack.wdata1 = stackTop;
+    }
+}
+
+circuitry commitRSTACK(
+    inout   rstack,
+    input   rstackWrite,
+    input   newRSP,
+    input   rstackWData
+) {
+    if( rstackWrite ) {
+        rstack.addr1 = newRSP;
+        rstack.wdata1 = rstackWData;
+    }
+}
+
+>>>>>>> cfe2deb29812b2ae5010ae6eca9188226b934a6d
 algorithm main(
     // LEDS (8 of)
     output  uint8   leds,
