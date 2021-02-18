@@ -34,7 +34,6 @@ bitfield aluop {
     uint1   ddelta0
 }
 
-<<<<<<< HEAD
 // CIRCUITRY FOR PUSHING LITERAL VALUE TO THE STACK
 circuitry j1eforthliteral(
     input   immediate,
@@ -206,8 +205,6 @@ circuitry commitRSTACK(
     }
 }
 
-=======
->>>>>>> parent of e41215c... j1eforth backporting fixes from Risc-V plus ulx3s re-clocking
 algorithm main(
     // LEDS (8 of)
     output  uint8   leds,
@@ -229,6 +226,12 @@ $$end
     // UART
     output! uint1   uart_tx,
     input   uint1   uart_rx,
+
+    // PS2
+    output  uint1   usb_fpga_pu_dp,
+    output  uint1   usb_fpga_pu_dn,
+    input   uint1   usb_fpga_bd_dp,
+    input   uint1   usb_fpga_bd_dn,
 
     // AUDIO
     output! uint4   audio_l,
