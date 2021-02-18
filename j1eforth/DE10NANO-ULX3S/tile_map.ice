@@ -42,6 +42,13 @@ algorithm tilemap(
     simple_dualport_bram uint18 tiles <input!> [1344] = { 18b100000000000000000, pad(18b100000000000000000) };
     simple_dualport_bram uint18 tiles_copy <input!> [1344] = { 18b100000000000000000, pad(18b100000000000000000) };
 
+    tilebitmapwriter TBMW(
+        tile_writer_tile <: tile_writer_tile,
+        tile_writer_line <: tile_writer_line,
+        tile_writer_bitmap <: tile_writer_bitmap,
+        tiles16x16 <:> tiles16x16
+    );
+
     // Scroll position - -15 to 0 to 15
     // -15 or 15 will trigger appropriate scroll when next moved in that direction
     int5    tm_offset_x = 0;
@@ -77,11 +84,8 @@ algorithm tilemap(
     tiles.wenable1 := 1;
     tiles_copy.wenable1 := 1;
 
-    // Setup the reading and writing of the tiles16x16
+    // Setup the reading of the tiles16x16
     tiles16x16.addr0 :=  { tilemapentry(tiles.rdata0).tilenumber, yintm };
-    tiles16x16.addr1 := { tile_writer_tile, tile_writer_line };
-    tiles16x16.wdata1 := tile_writer_bitmap;
-    tiles16x16.wenable1 := 1;
 
     // RENDER - Default to transparent
     tilemap_display := pix_active && ( ( tmpixel ) || ( ~tilemapentry(tiles.rdata0).alpha ) );
@@ -253,5 +257,20 @@ algorithm tilemap(
                 tm_active = 0;
             }
         }
+    }
+}
+
+algorithm tilebitmapwriter(
+    input   uint5   tile_writer_tile,
+    input   uint4   tile_writer_line,
+    input   uint16  tile_writer_bitmap,
+
+    simple_dualbram_port1 tiles16x16
+) <autorun> {
+    tiles16x16.wenable1 := 1;
+
+    while(1) {
+        tiles16x16.addr1 = { tile_writer_tile, tile_writer_line };
+        tiles16x16.wdata1 = tile_writer_bitmap;
     }
 }

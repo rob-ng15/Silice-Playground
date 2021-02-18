@@ -394,7 +394,7 @@ $$end
                             switch( memoryAddress[0,4] ) {
                                 // f000
                                 case 4h0: { readData = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1; }
-                                case 4h1: { readData = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ) ? 1b0 : 1b0, ( uartInBufferNext != uartInBufferTop ) ? 1b1 : 1b0 }; }
+                                case 4h1: { readData = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ) ? 1b1 : 1b0, ( uartInBufferNext == uartInBufferTop ) ? 1b0 : 1b1 }; }
                                 case 4h2: { readData = leds; }
                                 case 4h3: { readData = {$16-NUM_BTNS$b0, reg_btns[0,$NUM_BTNS$]}; }
                                 case 4h4: { readData = systemClock; }

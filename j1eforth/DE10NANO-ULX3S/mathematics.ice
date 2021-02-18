@@ -233,7 +233,7 @@ algorithm doubleaddsub1input(
     increment := operand1 + 1;
     decrement := operand1 - 1;
 
-    times2 := operand1 << 1;
+    times2 := {operand1[1,31],1b0};
     divide2 := { operand1[31,1], operand1[1,31] };
 
     negation := -operand1;
