@@ -38,13 +38,13 @@ algorithm PAWSCPU (
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
     uint1   compressed = uninitialized;
-    compressed00 COMPRESSED00(
+    compressed00 COMPRESSED00 <@clock_cpufunc> (
         i16 <: readdata
     );
-    compressed01 COMPRESSED01(
+    compressed01 COMPRESSED01 <@clock_cpufunc> (
         i16 <: readdata
     );
-    compressed10 COMPRESSED10(
+    compressed10 COMPRESSED10 <@clock_cpufunc> (
         i16 <: readdata
     );
 

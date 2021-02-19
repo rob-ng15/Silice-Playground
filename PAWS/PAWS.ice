@@ -16,8 +16,9 @@ algorithm main(
     output  uint28  gp,
 
     // USB HID
-    input   uint64  usboutput,
-    input   uint1   usbvalid,
+    inout   uint1   usb_fpga_bd_dp,
+    inout   uint1   usb_fpga_bd_dn,
+    input   uint1   usb_fpga_dp,
 
     // AUDIO
     output! uint4   audio_l,
@@ -70,12 +71,14 @@ algorithm main(
     // SDRAM  CLOCKS + ON CPU CACHE
     uint1   sdram_clock = uninitialized;
     uint1   clock_cpucache = uninitialized;
+    uint1   clock_usb = uninitialized;
     uint1   pll_lock_AUX = uninitialized;
     ulx3s_clk_risc_ice_v_AUX clk_gen_AUX (
         clkin   <: clock,
         clkSDRAM :> sdram_clock,
         clkSDRAMcontrol :> sdram_clk,
         clkCPUcache :> clock_cpucache,
+        clk6 :> clock_usb,
         locked :> pll_lock_AUX
     );
 
@@ -184,6 +187,20 @@ algorithm main(
         SMTRUNNING :> SMTRUNNING,
         SMTSTARTPC :> SMTSTARTPC
     );
+
+    // USB HID
+    uint64  usboutput = uninitialized;
+    uint1   usbvalid = uninitialized;
+    uint1   usbreset := ~btns[0,1];
+    //UsbHostHid USBHID(
+    //    clkout2 <: clock_usb,
+    //    reset <: usbreset,
+    //    io_usbDif <: usb_fpga_dp,
+    //    io_usbDp <:> usb_fpga_bd_dp,
+    //    io_usbDn <:> usb_fpga_bd_dn,
+    //    io_hidReport :> usboutput,
+    //    io_hidValid :> usbvalid
+    //);
 
     uint3   function3 = uninitialized;
     uint32  address = uninitialized;
