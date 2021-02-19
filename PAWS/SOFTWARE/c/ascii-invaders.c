@@ -440,8 +440,8 @@ void handleTimer(int signal) {
         addch(' ');
         if (++(b->y) < LINES) {
             if (gun.missile.y != 0
-                    && abs(b->x - gun.missile.x) < 2
-                    && abs(b->y - gun.missile.y) < 2) {
+                    && ABS(b->x - gun.missile.x) < 2
+                    && ABS(b->y - gun.missile.y) < 2) {
                 // collision with missile
                 removeBomb(b);
                 move(gun.missile.y, gun.missile.x);
@@ -548,7 +548,7 @@ void handleTimer(int signal) {
                 && gun.missile.x >= ma.x
                 && gun.missile.x <= ma.x + ALIEN_WIDTH) {
             // chose a 'random' number of points, either 50, 100 or 150
-            int points = ((time(0) % 3) + 1) * 50;
+            int points = ((systemclock() % 3) + 1) * 50;
             int i;
             game.score += points;
             // remove ma

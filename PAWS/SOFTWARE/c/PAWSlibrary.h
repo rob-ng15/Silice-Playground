@@ -1,15 +1,15 @@
 // STDDEF.H DEFINITIONS
-#define max(a,b) \
+#define MAX(a,b) \
    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
 
-#define min(a,b) \
+#define MIN(a,b) \
    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
 
-#define abs(a) (((a) < 0 )? -(a) : (a))
+#define ABS(a) (((a) < 0 )? -(a) : (a))
 
 #define NULL 0
 #define true 1
@@ -184,17 +184,15 @@ extern void *memset( void *s, int c, size_t n );
 extern int strcmp( const char *p1, const char *p2 );
 extern int strlen( char *s );
 
-// UART AND TERMINAL INPUT / OUTPUT
+// UART INPUT / OUTPUT
 extern void outputcharacter(char);
 extern void outputstring(char *);
 extern void outputstringnonl(char *);
 extern void outputnumber_char( unsigned char );
 extern void outputnumber_short( unsigned short );
 extern void outputnumber_int( unsigned int );
-extern char uartinputcharacter( void );
-extern unsigned char uartcharacter_available( void );
-extern char ps2inputcharacter( void );
-extern unsigned char ps2character_available( void );
+extern char inputcharacter( void );
+extern unsigned char character_available( void );
 
 // BASIC I/O
 extern void set_leds( unsigned char );
@@ -279,6 +277,25 @@ extern void tpu_outputnumber_int( unsigned int );
 extern void netppm_display( unsigned char *, unsigned char );
 extern void netppm_decoder( unsigned char *, unsigned char * );
 extern void bitmapblit( unsigned char *, unsigned short , unsigned short , short, short, unsigned char  );
+
+typedef enum _nj_result {
+    NJ_OK = 0,        // no error, decoding successful
+    NJ_NO_JPEG,       // not a JPEG file
+    NJ_UNSUPPORTED,   // unsupported format
+    NJ_OUT_OF_MEM,    // out of memory
+    NJ_INTERNAL_ERR,  // internal error
+    NJ_SYNTAX_ERROR,  // syntax error
+    __NJ_FINISHED,    // used internally, will never be reported
+} nj_result_t;
+
+extern void njInit(void);
+extern nj_result_t njDecode(const void* jpeg, const int size);
+extern int njGetWidth(void);
+extern int njGetHeight(void);
+extern int njIsColor(void);
+extern unsigned char* njGetImage(void);
+extern int njGetImageSize(void);
+extern void njDone(void);
 
 // SMT START AND STOP
 extern void SMTSTOP( void );

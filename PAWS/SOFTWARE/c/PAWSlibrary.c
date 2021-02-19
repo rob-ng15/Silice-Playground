@@ -149,24 +149,13 @@ void outputnumber_int( unsigned int value ) {
 
 // INPUT FROM UART
 // RETURN 1 IF UART CHARACTER AVAILABLE, OTHERWISE 0
-unsigned char uartcharacter_available( void ) {
+unsigned char character_available( void ) {
     return( *UART_STATUS & 1 );
 }
 // RETURN CHARACTER FROM UART
-char uartinputcharacter( void ) {
-	while( !uartcharacter_available() ) {}
+char inputcharacter( void ) {
+	while( !character_available() ) {}
     return *UART_DATA;
-}
-
-// INPUT FROM UART
-// RETURN 1 IF UART CHARACTER AVAILABLE, OTHERWISE 0
-unsigned char ps2character_available( void ) {
-    return( *PS2_STATUS & 1 );
-}
-// RETURN CHARACTER FROM UART
-char ps2inputcharacter( void ) {
-	while( !ps2character_available() ) {}
-    return *PS2_DATA;
 }
 
 // TIMER AND PSEUDO RANDOM NUMBER GENERATOR
@@ -1514,7 +1503,7 @@ typedef struct block {
 }		block_t;
 
 #ifndef MALLOC_MEMORY
-#define MALLOC_MEMORY ( 1024 * 1024 )
+#define MALLOC_MEMORY ( 4096 * 1024 )
 #endif
 
 #ifndef ALLOC_UNIT
@@ -1732,6 +1721,7 @@ int fclose( FILE *stream ) {
 }
 
 // SETUP MEMORY POINTERS FOR THE SDCARD - ALREADY PRE-LOADED BY THE BIOS
+extern unsigned char * _bss_start, * _bss_end;
 void INITIALISEMEMORY( void ) {
     // SDCARD FILE SYSTEM
     MBR = (unsigned char *) 0x12000000 - 0x200;
@@ -1743,7 +1733,13 @@ void INITIALISEMEMORY( void ) {
     CLUSTERSIZE = BOOTSECTOR -> sectors_per_cluster * 512;
     DATASTARTSECTOR = PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats + ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512;;
 
+    // WIPE BSS SECTION
+    if( &_bss_end - &_bss_start )
+        memset( &_bss_start, 0,  &_bss_end - &_bss_start);
+
     // MEMORY
     MEMORYTOP = CLUSTERBUFFER;
-    __malloc_init = 0;
+    //__malloc_init = 0;
 }
+
+#include "nanojpeg.c"

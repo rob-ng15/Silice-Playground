@@ -38,13 +38,13 @@ algorithm PAWSCPU (
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
     uint1   compressed = uninitialized;
-    compressed00 COMPRESSED00 <@clock_cpufunc> (
+    compressed00 COMPRESSED00(
         i16 <: readdata
     );
-    compressed01 COMPRESSED01 <@clock_cpufunc> (
+    compressed01 COMPRESSED01(
         i16 <: readdata
     );
-    compressed10 COMPRESSED10 <@clock_cpufunc> (
+    compressed10 COMPRESSED10(
         i16 <: readdata
     );
 
@@ -124,58 +124,16 @@ algorithm PAWSCPU (
         takeBranch :> takeBranch
     );
 
-    // ALU BLOCKS
-    uint1   ALUIorR := ( opCode == 7b0010011 ) ? 1 : 0;
-
-    // SHIFTERS
-    uint32  LSHIFToutput = uninitialized;
-    uint32  RSHIFToutput = uninitialized;
-    uint32  ROTATEoutput = uninitialized;
-    uint32  SBSCIoutput = uninitialized;
-    uint5   shiftcount := ALUIorR ? IshiftCount : sourceReg2[0,5];
-    BSHIFTleft LEFTSHIFT <@clock_cpualu> (
-        sourceReg1 <: sourceReg1,
-        shiftcount <: shiftcount,
-        function7 <: function7,
-        result :> LSHIFToutput
-    );
-    BSHIFTright RIGHTSHIFT <@clock_cpualu> (
-        sourceReg1 <: sourceReg1,
-        shiftcount <: shiftcount,
-        function7 <: function7,
-        result :> RSHIFToutput
-    );
-    BROTATE ROTATE <@clock_cpualu> (
-        sourceReg1 <: sourceReg1,
-        shiftcount <: shiftcount,
+    // ALU
+    alu ALU <@clock_cpualu> (
+        opCode <: opCode,
         function3 <: function3,
-        result :> ROTATEoutput
-    );
-    singlebitops SBSCI <@clock_cpualu> (
-        sourceReg1 <: sourceReg1,
         function7 <: function7,
-        shiftcount <: shiftcount,
-        result :> SBSCIoutput
-    );
-
-    // SHARED MULTICYCLE BIT MANIPULATION OPERATIONS
-    uint32  SHFLUNSHFLoutput = uninitialized;
-    uint1   SHFLUNSHFLbusy = uninitialized;
-    shflunshfl SHFLUNSHFL <@clock_cpualu> (
+        rs1 <: rs1,
         sourceReg1 <: sourceReg1,
-        shiftcount <: shiftcount,
-        function3 <: function3,
-        busy :> SHFLUNSHFLbusy,
-        result :> SHFLUNSHFLoutput
-    );
-    uint32  GREVGORCoutput = uninitialized;
-    uint1   GREVGORCbusy = uninitialized;
-    grevgorc GREVGORC <@clock_cpualu> (
-        sourceReg1 <: sourceReg1,
-        shiftcount <: shiftcount,
-        function7 <: function7,
-        busy :> GREVGORCbusy,
-        result :> GREVGORCoutput
+        sourceReg2 <: sourceReg2,
+        IshiftCount <: IshiftCount,
+        immediateValue <: immediateValue
     );
 
     // ATOMIC MEMORY OPERATIONS
@@ -185,58 +143,25 @@ algorithm PAWSCPU (
         sourceReg2 <: sourceReg2
     );
 
-    // BASE REGISTER + IMMEDIATE ALU OPERATIONS + B EXTENSION OPERATIONS
-    aluI ALUI <@clock_cpualu> (
-        function3 <: function3,
-        function7 <: function7,
-        IshiftCount <: IshiftCount,
-        sourceReg1 <: sourceReg1,
-        immediateValue <: immediateValue,
-
-        LSHIFToutput <: LSHIFToutput,
-        RSHIFToutput <: RSHIFToutput,
-        ROTATEoutput <: ROTATEoutput,
-        SBSCIoutput <: SBSCIoutput,
-
-        SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
-        SHFLUNSHFLbusy <: SHFLUNSHFLbusy,
-        GREVGORCoutput <: GREVGORCoutput,
-        GREVGORCbusy <: GREVGORCbusy
-    );
-
-    // BASE REGISTER & REGISTER ALU OPERATIONS + B EXTENSION OPERATIONS
-    aluR ALUR <@clock_cpualu> (
-        function3 <: function3,
-        function7 <: function7,
-        rs1 <: rs1,
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-
-        LSHIFToutput <: LSHIFToutput,
-        RSHIFToutput <: RSHIFToutput,
-        ROTATEoutput <: ROTATEoutput,
-        SBSCIoutput <: SBSCIoutput,
-
-        SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
-        SHFLUNSHFLbusy <: SHFLUNSHFLbusy,
-        GREVGORCoutput <: GREVGORCoutput,
-        GREVGORCbusy <: GREVGORCbusy
-    );
-
     // MANDATORY RISC-V CSR REGISTERS + HARTID == 0 MAIN THREAD == 1 SMT THREAD
     CSRblock CSR(
         instruction <: instruction,
         SMT <: SMT
     );
 
-    // On CPU instruction cache
+    // On CPU instruction cache - MAIN AND SMT THREADS
     instructioncache Icache <@clock_cpucache> (
-        PC <: PC,
-        SMT <: SMT,
+        PC <: pc,
+        newinstruction <: instruction,
+        newcompressed <: compressed
+    );
+    instructioncache IcacheSMT <@clock_cpucache> (
+        PC <: pcSMT,
         newinstruction <: instruction,
         newcompressed <: compressed
     );
     Icache.updatecache := 0;
+    IcacheSMT.updatecache := 0;
 
     // MEMORY ACCESS FLAGS
     accesssize := ( opCode == 7b0101111 ) ? 3b010 : function3;
@@ -247,17 +172,7 @@ algorithm PAWSCPU (
     REGISTERS.write := 0;
 
     // ALU START FLAGS
-    ALUA.start := 0;
-    ALUI.start := 0;
-    ALUR.start := 0;
-    CSR.start := 0;
-    CSR.incCSRinstret := 0;
-    LEFTSHIFT.start := 0;
-    RIGHTSHIFT.start := 0;
-    ROTATE.start := 0;
-    SBSCI.start := 0;
-    SHFLUNSHFL.start := 0;
-    GREVGORC.start := 0;
+    ALU.start := 0;
 
     while(1) {
         // RISC-V
@@ -266,9 +181,9 @@ algorithm PAWSCPU (
         incPC = 1;
 
         // CHECK IF PC IS IN LAST INSTRUCTION CACHE
-        if( Icache.incache ) {
-            instruction = Icache.instruction;
-            compressed = Icache.compressed;
+        if( SMT ? IcacheSMT.incache : Icache.incache ) {
+            instruction = SMT ? IcacheSMT.instruction : Icache.instruction;
+            compressed = SMT ? IcacheSMT.compressed : Icache.compressed;
         } else {
             // FETCH + EXPAND COMPRESSED INSTRUCTIONS
             address = PC;
@@ -293,7 +208,7 @@ algorithm PAWSCPU (
             }
 
             // UPDATE LASTCACHE
-            Icache.updatecache = 1;
+            Icache.updatecache = ~SMT; IcacheSMT.updatecache = SMT;
         }
 
         // TIME TO ALLOW DECODE + REGISTER FETCH + ADDRESS GENERATION
@@ -389,21 +304,10 @@ algorithm PAWSCPU (
             default: {
                 writeRegister = 1;
 
-                // START SHIFTERS
-                LEFTSHIFT.start = 1;
-                RIGHTSHIFT.start = 1;
-                ROTATE.start = 1;
-                SBSCI.start = 1;
-
-                // START SHARED MULTICYCLE BLOCKS - SHFL UNSHFL GORC GREV
-                SHFLUNSHFL.start = ( ( ( function3 == 3b001 ) || ( function3 == 3b101 ) ) && ( function7 == 7b0000100 ) ) ? 1 : 0;
-                GREVGORC.start = ( ( function3 == 3b101 ) && ( ( function7 == 7b0110100 ) || ( function7 == 7b0010100 ) ) ) ? 1 : 0;
-
-                // START ALUI or ALUR
-                ALUI.start = ALUIorR;
-                ALUR.start = ~ALUIorR;
-                while( ALUI.busy || ALUR.busy ) {}
-                result = ALUIorR ? ALUI.result : ALUR.result;
+                // START ALU
+                ALU.start = 1;
+                while( ALU.busy ) {}
+                result = ALU.result;
             }
         }
 
@@ -450,7 +354,6 @@ algorithm PAWSCPU (
 // ON CPU SMALL INSTRUCTION CACHE
 algorithm instructioncache(
     input   uint32  PC,
-    input   uint1   SMT,
     output  uint1   incache,
 
     input   uint1   updatecache,
@@ -460,47 +363,40 @@ algorithm instructioncache(
     output  uint32  instruction,
     output  uint1   compressed
 ) <autorun> {
-    // LAST INSTRUCTION CACHE FOR MAIN AND SMT THREAD
-    uint32  lastpccache[64] = { 32hffffffff, pad(32hffffffff) };
-    uint32  lastinstructioncache[64] = uninitialized;
-    uint1   lastcompressedcache[64] = uninitialized;
-    uint5   lastcachepointer = 0;
-    uint5   lastcachepointerSMT = 0;
+    // LAST INSTRUCTION CACHE
+    uint32  lastpccache[16] = { 32hffffffff, pad(32hffffffff) };
+    uint32  lastinstructioncache[16] = uninitialized;
+    uint1   lastcompressedcache[16] = uninitialized;
+    uint4   lastcachepointer = 0;
 
     uint1   LATCHupdate = 0;
-    uint6   pointer := SMT ? { 1b1, lastcachepointerSMT } : { 1b0, lastcachepointer };
 
     // CHECK IF PC IS IN LAST INSTRUCTION CACHE
     incache :=
-        $$for i = 0, 30 do
-            ( PC == ( lastpccache[ { SMT, 5d$i$ } ] ) ) ||
+        $$for i = 0, 14 do
+            ( PC == ( lastpccache[ $i$ ] ) ) ||
         $$end
-        ( PC == ( lastpccache[ { SMT, 5b11111 } ] ) );
+        ( PC == ( lastpccache[ 15 ] ) );
 
     // RETRIEVE FROM LAST INSTRUCTION CACHE
-    instruction := ( PC == ( lastpccache[ { SMT, 5b00000 } ] ) ) ? ( lastinstructioncache[ { SMT, 5b00000 } ] ) :
-                    $$for i = 1, 30 do
-                        ( PC == ( lastpccache[ { SMT, 5d$i$ } ] ) ) ? ( lastinstructioncache[ { SMT, 5d$i$ } ] ) :
+    instruction := ( PC == ( lastpccache[ 0 ] ) ) ? ( lastinstructioncache[ 0 ] ) :
+                    $$for i = 1, 14 do
+                        ( PC == ( lastpccache[ $i$ ] ) ) ? ( lastinstructioncache[ $i$ ] ) :
                     $$end
-                    ( lastinstructioncache[ { SMT, 5b11111 } ] );
+                    ( lastinstructioncache[ 15 ] );
 
-    compressed := ( PC == ( lastpccache[ { SMT, 5b00000 } ] ) ) ? ( lastcompressedcache[ { SMT, 5b00000 } ] ) :
-                    $$for i = 1, 30 do
-                        ( PC == ( lastpccache[ { SMT, 5d$i$ } ] ) ) ? ( lastcompressedcache[ { SMT, 5d$i$ }  ] ) :
+    compressed := ( PC == ( lastpccache[ 0 ] ) ) ? ( lastcompressedcache[ 0 ] ) :
+                    $$for i = 1, 14 do
+                        ( PC == ( lastpccache[ $i$ ] ) ) ? ( lastcompressedcache[ $i$  ] ) :
                     $$end
-                    ( lastcompressedcache[ { SMT, 5b11111 } ] );
+                    ( lastcompressedcache[ 15 ] );
 
     while(1) {
         if( updatecache && ~LATCHupdate ) {
-            lastpccache[ pointer ] = PC;
-            lastinstructioncache[  pointer ] = newinstruction;
-            lastcompressedcache[  pointer ] = newcompressed;
-
-            if( SMT ) {
-                lastcachepointerSMT = lastcachepointerSMT + 1;
-            } else {
-                lastcachepointer = lastcachepointer + 1;
-            }
+            lastpccache[ lastcachepointer ] = PC;
+            lastinstructioncache[  lastcachepointer ] = newinstruction;
+            lastcompressedcache[  lastcachepointer ] = newcompressed;
+            lastcachepointer = lastcachepointer + 1;
         }
         LATCHupdate = updatecache;
     }

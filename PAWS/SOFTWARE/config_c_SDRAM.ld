@@ -11,10 +11,13 @@ SECTIONS {
         *(.text)
         *(.sdata)
         *(.data)
-        *(.bss)
         *(.srodata)
         *(.rodata)
         *(.rodata.str1.4)
+        . = ALIGN(8);
+        _bss_start = ABSOLUTE(.) ;
+        *(.bss)
+        _bss_end = ABSOLUTE(.) ;
   } >ram
   . = ALIGN(8);
 PROVIDE( _end = .);

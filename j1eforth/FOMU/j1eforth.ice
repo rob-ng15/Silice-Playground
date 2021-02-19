@@ -111,7 +111,7 @@ circuitry SLL(
     input   shiftcount,
     output  result
 ) {
-    switch( shiftcount[0,3] ) {
+    switch( shiftcount[0,4] ) {
         case 0: { result = sourceReg1; }
         $$for i = 1, 15 do
             $$ remain = 16 - i
@@ -124,7 +124,7 @@ circuitry SRL(
     input   shiftcount,
     output  result
 ) {
-    switch( shiftcount[0,3] ) {
+    switch( shiftcount[0,4] ) {
         case 0: { result = sourceReg1; }
         $$for i = 1, 15 do
             $$ remain = 16 - i
@@ -413,7 +413,7 @@ algorithm main(
                                     if( ( aluop(instruction).operation == 4b1100 ) && stackTop[15,1] ) {
                                         switch( stackTop ) {
                                             case 16hf000: { newStackTop = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1; }
-                                            case 16hf001: { newStackTop = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), (uartInBufferNext != uartInBufferTop) }; }
+                                            case 16hf001: { newStackTop = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ) ? 1b1 : 1b0, (uartInBufferNext != uartInBufferTop) ? 1b1 : 1b0 }; }
                                             case 16hf002: { newStackTop = rgbLED; }
                                             case 16hf003: { newStackTop = { 12b0, buttons }; }
                                             case 16hf004: { newStackTop = timer1hz; }

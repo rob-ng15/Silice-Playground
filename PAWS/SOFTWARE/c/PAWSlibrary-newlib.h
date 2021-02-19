@@ -1,3 +1,15 @@
+#define MAX(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a > _b ? _a : _b; })
+
+#define MIN(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a < _b ? _a : _b; })
+
+#define ABS(a) (((a) < 0 )? -(a) : (a))
+
 #define NULL 0
 #define true 1
 #define false 0
@@ -178,10 +190,8 @@ extern void outputstringnonl(char *);
 extern void outputnumber_char( unsigned char );
 extern void outputnumber_short( unsigned short );
 extern void outputnumber_int( unsigned int );
-extern char uartinputcharacter( void );
-extern unsigned char uartcharacter_available( void );
-extern char ps2inputcharacter( void );
-extern unsigned char ps2character_available( void );
+extern char inputcharacter( void );
+extern unsigned char character_available( void );
 
 // BASIC I/O
 extern void set_leds( unsigned char );

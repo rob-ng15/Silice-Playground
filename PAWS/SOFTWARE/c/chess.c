@@ -122,6 +122,6 @@ void main( void ) {
         setupboard();
         drawboard();
 
-        (void)inputcharacter();
+        (void)uartinputcharacter();
     }
 }

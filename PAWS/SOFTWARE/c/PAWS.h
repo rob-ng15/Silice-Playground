@@ -1,11 +1,16 @@
 // I/O MEMORY MAPPED REGISTER DEFINITIONS
 unsigned char volatile * UART_STATUS = (unsigned char volatile *) 0x8004;
 unsigned char * UART_DATA = (unsigned char *) 0x8000;
-unsigned char volatile * PS2_STATUS = (unsigned char volatile *) 0x8006;
-unsigned char * PS2_DATA = (unsigned char *) 0x8002;
 unsigned char volatile * BUTTONS = (unsigned char volatile *) 0x8008;
 unsigned char volatile * LEDS = (unsigned char volatile *) 0x800c;
 unsigned short volatile * SYSTEMCLOCK = (unsigned short volatile *) 0x8010;
+
+// USB HID
+unsigned short volatile * USBHID_VALID = (unsigned short volatile *) 0x8080;
+unsigned short volatile * USBHID_MODIFIERS = (unsigned short volatile *) 0x8082;
+unsigned short volatile * USBHID_KEYS12 = (unsigned short volatile *) 0x8084;
+unsigned short volatile * USBHID_KEYS34 = (unsigned short volatile *) 0x8086;
+unsigned short volatile * USBHID_KEYS56 = (unsigned short volatile *) 0x8088;
 
 unsigned char volatile * SDCARD_READY = (unsigned char volatile *) 0x8f00;
 unsigned char volatile * SDCARD_START = (unsigned char volatile *) 0x8f00;

@@ -477,7 +477,7 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
 
     // DRAW MAP BACKGROUND - PARCHMENT
     gpu_rectangle( ORANGE, 460, 0, 640, 140 );
-    gpu_rectangle( BLUE, 475, 10, 639 - boxwidth, 130 );
+    gpu_rectangle( BLUE, 475, 10, 630, 130 );
 
     switch( mapmaze ) {
         case 0:
@@ -513,7 +513,7 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
 
         case 1:
             // DRAW LOCAL MAP
-            for( x = 0; x < 16; x++ ) {
+            for( x = 0; x < 15; x++ ) {
                 for( y = 0; y < 12; y++ ) {
                     if( ( currentx - 8 ) < 0 ) {
                         dox = x;
@@ -739,7 +739,7 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
         }
 
         // MOVE BACKWARDS FROM WALL
-        for( steps = min( visiblesteps - 1, MAXDEPTH - 1 ); steps > 0; steps-- ) {
+        for( steps = MIN( visiblesteps - 1, MAXDEPTH - 1 ); steps > 0; steps-- ) {
             // DRAW PILL
             if( ( whatisfront( currentx, currenty, direction, steps ) == ' ' ) && ( whatisat( currentx + directionx[ direction ] * steps, currenty + directiony[ direction ] * steps, 1 ) != ' ' ) ) {
                 draw_pill( steps );
@@ -752,7 +752,7 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
 
         // DRAW GHOST IF ONE IS VISIBLE
         ghostdrawn = 0;
-        for( steps = 1; ( steps <= min( visiblesteps - 1, MAXDEPTH - 1 ) ) && ( ghostdrawn == 0 ); steps++ ) {
+        for( steps = 1; ( steps <= MIN( visiblesteps - 1, MAXDEPTH - 1 ) ) && ( ghostdrawn == 0 ); steps++ ) {
             // DRAW GHOST
             for( unsigned ghost = 0; ghost < 4; ghost++ ) {
                 if( ghost <= level ) {
@@ -866,7 +866,7 @@ int main( void ) {
     netppm_decoder( &pacman3dppm[0], pacman3dbitmap );
 
     unsigned short levelselected;
-    level = 0;
+    //level = 0;
 
 	while(1) {
         // SETUP THE SCREEN BLUE/GREEN BACKGROUND

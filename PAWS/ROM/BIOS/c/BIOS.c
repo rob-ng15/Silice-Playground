@@ -515,23 +515,23 @@ void main( void ) {
     unsigned short i,j;
     unsigned char uartData = 0;
     unsigned short selectedfile = 0;
-    unsigned int *sdramaddress;
+    //unsigned int *sdramaddress;
 
     // STOP SMT
     *SMTSTATUS = 0;
 
     // CLEAR SDRAM
     // RESET THE DISPLAY
-    reset_display();
-    set_background( BLACK, BLACK, BKG_SOLID );
+    //reset_display();
+    //set_background( BLACK, BLACK, BKG_SOLID );
 
-    tpu_set( 0, 28, TRANSPARENT, WHITE ); tpu_outputstring( "PAWS Risc-V RV32IMCB BIOS" );
-    tpu_set( 0, 29, TRANSPARENT, WHITE ); tpu_outputstring( "SDRAM Test: " );
-    for( sdramaddress = (unsigned int *)0x10000000; sdramaddress < (unsigned int *)0x12000000; sdramaddress++ ) {
-        *sdramaddress  = 0;
-        if( ( (int)sdramaddress & 0xfffff ) == 0 )
-            tpu_output_character( '*' );
-    }
+    //tpu_set( 0, 28, TRANSPARENT, WHITE ); tpu_outputstring( "PAWS Risc-V RV32IMCB BIOS" );
+    //tpu_set( 0, 29, TRANSPARENT, WHITE ); tpu_outputstring( "SDRAM Test: " );
+    //for( sdramaddress = (unsigned int *)0x10000000; sdramaddress < (unsigned int *)0x12000000; sdramaddress++ ) {
+    //    *sdramaddress  = 0;
+    //    if( ( (int)sdramaddress & 0xfffff ) == 0 )
+    //        tpu_output_character( '*' );
+    //}
 
     // RESET THE DISPLAY
     reset_display();

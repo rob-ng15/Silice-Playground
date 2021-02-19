@@ -749,6 +749,147 @@ algorithm aluR (
     }
 }
 
+// ALU - ALU for immediate-register operations and register-register operations
+algorithm alu (
+    input   uint1   start,
+    output! uint1   busy,
+
+    input   uint7   opCode,
+    input   uint3   function3,
+    input   uint7   function7,
+    input   uint5   rs1,
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+    input   uint5   IshiftCount,
+    input   uint32  immediateValue,
+
+    output! uint32  result
+) <autorun> {
+    uint1   ALUIorR := ( opCode == 7b0010011 ) ? 1 : 0;
+    uint5   shiftcount := ALUIorR ? IshiftCount : sourceReg2[0,5];
+
+    // SHIFTERS
+    uint32  LSHIFToutput = uninitialized;
+    uint32  RSHIFToutput = uninitialized;
+    uint32  ROTATEoutput = uninitialized;
+    uint32  SBSCIoutput = uninitialized;
+    BSHIFTleft LEFTSHIFT(
+        sourceReg1 <: sourceReg1,
+        shiftcount <: shiftcount,
+        function7 <: function7,
+        result :> LSHIFToutput
+    );
+    BSHIFTright RIGHTSHIFT(
+        sourceReg1 <: sourceReg1,
+        shiftcount <: shiftcount,
+        function7 <: function7,
+        result :> RSHIFToutput
+    );
+    BROTATE ROTATE(
+        sourceReg1 <: sourceReg1,
+        shiftcount <: shiftcount,
+        function3 <: function3,
+        result :> ROTATEoutput
+    );
+    singlebitops SBSCI(
+        sourceReg1 <: sourceReg1,
+        function7 <: function7,
+        shiftcount <: shiftcount,
+        result :> SBSCIoutput
+    );
+
+    // SHARED MULTICYCLE BIT MANIPULATION OPERATIONS
+    uint32  SHFLUNSHFLoutput = uninitialized;
+    uint1   SHFLUNSHFLbusy = uninitialized;
+    shflunshfl SHFLUNSHFL(
+        sourceReg1 <: sourceReg1,
+        shiftcount <: shiftcount,
+        function3 <: function3,
+        busy :> SHFLUNSHFLbusy,
+        result :> SHFLUNSHFLoutput
+    );
+    uint32  GREVGORCoutput = uninitialized;
+    uint1   GREVGORCbusy = uninitialized;
+    grevgorc GREVGORC(
+        sourceReg1 <: sourceReg1,
+        shiftcount <: shiftcount,
+        function7 <: function7,
+        busy :> GREVGORCbusy,
+        result :> GREVGORCoutput
+    );
+
+    // BASE REGISTER + IMMEDIATE ALU OPERATIONS + B EXTENSION OPERATIONS
+    aluI ALUI(
+        function3 <: function3,
+        function7 <: function7,
+        IshiftCount <: IshiftCount,
+        sourceReg1 <: sourceReg1,
+        immediateValue <: immediateValue,
+
+        LSHIFToutput <: LSHIFToutput,
+        RSHIFToutput <: RSHIFToutput,
+        ROTATEoutput <: ROTATEoutput,
+        SBSCIoutput <: SBSCIoutput,
+
+        SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
+        SHFLUNSHFLbusy <: SHFLUNSHFLbusy,
+        GREVGORCoutput <: GREVGORCoutput,
+        GREVGORCbusy <: GREVGORCbusy
+    );
+
+    // BASE REGISTER & REGISTER ALU OPERATIONS + B EXTENSION OPERATIONS
+    aluR ALUR(
+        function3 <: function3,
+        function7 <: function7,
+        rs1 <: rs1,
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+
+        LSHIFToutput <: LSHIFToutput,
+        RSHIFToutput <: RSHIFToutput,
+        ROTATEoutput <: ROTATEoutput,
+        SBSCIoutput <: SBSCIoutput,
+
+        SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
+        SHFLUNSHFLbusy <: SHFLUNSHFLbusy,
+        GREVGORCoutput <: GREVGORCoutput,
+        GREVGORCbusy <: GREVGORCbusy
+    );
+
+    // ALU START FLAGS
+    ALUI.start := 0;
+    ALUR.start := 0;
+    LEFTSHIFT.start := 0;
+    RIGHTSHIFT.start := 0;
+    ROTATE.start := 0;
+    SBSCI.start := 0;
+    SHFLUNSHFL.start := 0;
+    GREVGORC.start := 0;
+
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            // START SHIFTERS
+            LEFTSHIFT.start = 1;
+            RIGHTSHIFT.start = 1;
+            ROTATE.start = 1;
+            SBSCI.start = 1;
+
+            // START SHARED MULTICYCLE BLOCKS - SHFL UNSHFL GORC GREV
+            SHFLUNSHFL.start = ( ( ( function3 == 3b001 ) || ( function3 == 3b101 ) ) && ( function7 == 7b0000100 ) ) ? 1 : 0;
+            GREVGORC.start = ( ( function3 == 3b101 ) && ( ( function7 == 7b0110100 ) || ( function7 == 7b0010100 ) ) ) ? 1 : 0;
+
+            // START ALUI or ALUR
+            busy = 1;
+            ALUI.start = ALUIorR;
+            ALUR.start = ~ALUIorR;
+            while( ALUI.busy || ALUR.busy ) {}
+            result = ALUIorR ? ALUI.result : ALUR.result;
+            busy = 0;
+        }
+    }
+}
 
 // RISC-V MANDATORY CSR REGISTERS
 algorithm CSRblock(

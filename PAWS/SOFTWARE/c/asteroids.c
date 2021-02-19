@@ -764,10 +764,6 @@ void main( void )
     short ufo_x = 0, ufo_y = 0, potentialx = 0, potentialy = 0;
     unsigned short placeAsteroids = 4, asteroid_number = 0;
 
-    // CLEAR the UART buffer
-    while( inputcharacter_available() )
-        uartData = inputcharacter();
-
     // INITIALISE ALL VARIABLES AND START THE ASTEROID MOVING THREAD
     setup_game();
     SMTSTART( (unsigned int )move_asteroids );

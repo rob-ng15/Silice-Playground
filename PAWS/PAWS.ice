@@ -11,11 +11,13 @@ algorithm main(
     output! uint1   uart_tx,
     input   uint1   uart_rx,
 
-    // PS2
-    output  uint1   usb_fpga_pu_dp,
-    output  uint1   usb_fpga_pu_dn,
-    input   uint1   usb_fpga_bd_dp,
-    input   uint1   usb_fpga_bd_dn,
+    // GPIO
+    input   uint28  gn,
+    output  uint28  gp,
+
+    // USB HID
+    input   uint64  usboutput,
+    input   uint1   usbvalid,
 
     // AUDIO
     output! uint4   audio_l,
@@ -55,7 +57,7 @@ algorithm main(
         clkCPUfunc :> clock_cpufunc,
         locked   :> pll_lock_CPU
     );
-    // VIDEO DOMAIN CLOCKS
+    // VIDEO + USB DOMAIN CLOCKS
     uint1   pll_lock_VIDEO = uninitialized;
     uint1   video_clock = uninitialized;
     uint1   gpu_clock = uninitialized;
@@ -156,8 +158,8 @@ algorithm main(
         btns <: btns,
         uart_tx :> uart_tx,
         uart_rx <: uart_rx,
-        ps2_code <: ps2_code,
-        ps2_ready <: ps2_ready,
+        usboutput <: usboutput,
+        usbvalid <: usbvalid,
         audio_l :> audio_l,
         audio_r :> audio_r,
         sd_clk :> sd_clk,
@@ -201,19 +203,6 @@ algorithm main(
         SMTSTARTPC <: SMTSTARTPC
     );
 
-    // PS2 KEYBOARD
-    uint8   ps2_code = uninitialized;
-    uint1   ps2_ready = uninitialized;
-    uint1   ps2_enable_rcv = 1;
-    ps2_port PS2(
-        clk <: clock,
-        enable_rcv <: ps2_enable_rcv,
-        ps2clk_ext <: usb_fpga_bd_dp,
-        ps2data_ext <: usb_fpga_bd_dn,
-        scancode :> ps2_code,
-        kb_interrupt :> ps2_ready
-    );
-
     // SDRAM -> CPU BUSY STATE
     CPU.memorybusy := sdram.busy;
 
@@ -226,10 +215,6 @@ algorithm main(
     IO_Map.memoryRead := CPU.readmemory && ~address[28,1] && address[15,1];
 
     CPU.readdata := address[28,1] ? sdram.readdata : ( address[15,1] ? IO_Map.readData : ram.readdata );
-
-    // SETUP PS2
-    usb_fpga_pu_dp := 1;
-    usb_fpga_pu_dn := 1;
 
     while(1) {
     }

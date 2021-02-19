@@ -1,6 +1,19 @@
 #include "PAWS.h"
 #include <stdarg.h>
 #include <stdlib.h>
+#include <stdio.h>
+
+#define MAX(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a > _b ? _a : _b; })
+
+#define MIN(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a < _b ? _a : _b; })
+
+#define ABS(a) (((a) < 0 )? -(a) : (a))
 
 typedef unsigned int size_t;
 
@@ -152,25 +165,15 @@ void outputnumber_int( unsigned int value ) {
 
 // INPUT FROM UART
 // RETURN 1 IF UART CHARACTER AVAILABLE, OTHERWISE 0
-unsigned char uartcharacter_available( void ) {
+unsigned char character_available( void ) {
     return( *UART_STATUS & 1 );
 }
 // RETURN CHARACTER FROM UART
-char uartinputcharacter( void ) {
-	while( !uartcharacter_available() ) {}
+char inputcharacter( void ) {
+	while( !character_available() ) {}
     return *UART_DATA;
 }
 
-// INPUT FROM UART
-// RETURN 1 IF UART CHARACTER AVAILABLE, OTHERWISE 0
-unsigned char ps2character_available( void ) {
-    return( *PS2_STATUS & 1 );
-}
-// RETURN CHARACTER FROM UART
-char ps2inputcharacter( void ) {
-	while( !ps2character_available() ) {}
-    return *PS2_DATA;
-}
 
 // TIMER AND PSEUDO RANDOM NUMBER GENERATOR
 
@@ -1317,87 +1320,32 @@ int mvaddch( int y, int x, unsigned char ch ) {
     return( addch( ch ) );
 }
 
-// printw and mvprintw uses printf code from https://github.com/sylefeb/Silice/tree/wip/projects/ram-ice-v/tests/mylibc
-
 void __curses_print_string(const char* s) {
    for(const char* p = s; *p; ++p) {
       addch(*p);
    }
 }
 
-void __curses_print_dec(int val) {
-   char buffer[255];
-   char *p = buffer;
-   if(val < 0) {
-      addch('-');
-      __curses_print_dec(-val);
-      return;
-   }
-   while (val || p == buffer) {
-      *(p++) = val % 10;
-      val = val / 10;
-   }
-   while (p != buffer) {
-      addch('0' + *(--p));
-   }
-}
-
-void __curses_print_hex_digits(unsigned int val, int nbdigits) {
-   for (int i = (4*nbdigits)-4; i >= 0; i -= 4) {
-      addch("0123456789ABCDEF"[(val >> i) % 16]);
-   }
-}
-
-void __curses_print_hex(unsigned int val) {
-   __curses_print_hex_digits(val, 8);
-}
-
 int printw( const char *fmt,... ) {
-    va_list ap;
-    for( va_start( ap, fmt ); *fmt; fmt++ ) {
-        if( *fmt == '%' ) {
-            fmt++;
-        if( *fmt=='s' )
-            __curses_print_string( va_arg( ap, char * ) );
-        else if( *fmt == 'x' )
-            __curses_print_hex( va_arg( ap, int ) );
-        else if( *fmt == 'd' )
-            __curses_print_dec(va_arg(ap,int) );
-        else if( *fmt == 'c' )
-            addch( va_arg( ap, int ) );
-        else
-            addch( *fmt );
-        } else {
-            addch( *fmt );
-        }
-    }
-    va_end(ap);
+    static char buffer[1024];
+    va_list args;
+    va_start (args, fmt);
+    vsnprintf( buffer, 1023, fmt, args);
+    va_end(args);
 
+    __curses_print_string( buffer );
     return( true );
 }
 
 int mvprintw( int y, int x, const char *fmt,... ) {
-    move( y, x );
+    static char buffer[1024];
+    va_list args;
+    va_start (args, fmt);
+    vsnprintf( buffer, 1023, fmt, args);
+    va_end(args);
 
-    va_list ap;
-    for( va_start( ap, fmt ); *fmt; fmt++ ) {
-        if( *fmt == '%' ) {
-            fmt++;
-        if( *fmt=='s' )
-            __curses_print_string( va_arg( ap, char * ) );
-        else if( *fmt == 'x' )
-            __curses_print_hex( va_arg( ap, int ) );
-        else if( *fmt == 'd' )
-            __curses_print_dec(va_arg(ap,int) );
-        else if( *fmt == 'c' )
-            addch( va_arg( ap, int ) );
-        else
-            addch( *fmt );
-        } else {
-            addch( *fmt );
-        }
-    }
-    va_end(ap);
+    move( y, x );
+    __curses_print_string( buffer );
 
     return( true );
 }
@@ -1446,34 +1394,22 @@ int clrtoeol( void ) {
     return( true );
 }
 
-// SETUP MEMORY POINTERS FOR THE SDCARD - ALREADY PRE-LOADED BY THE BIOS
-void INITIALISEMEMORY( void ) {
-    // SDCARD FILE SYSTEM
-    MBR = (unsigned char *) 0x12000000 - 0x200;
-    BOOTSECTOR = (Fat16BootSector *)0x12000000 - 0x400;
-    PARTITION = (PartitionTable *) &MBR[ 0x1BE ];
-    ROOTDIRECTORY = (Fat16Entry *)( 0x12000000 - 0x400 - BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) );
-    FAT = (unsigned short * ) ROOTDIRECTORY - BOOTSECTOR -> fat_size_sectors * 512;
-    CLUSTERBUFFER = (unsigned char * )FAT - BOOTSECTOR -> sectors_per_cluster * 512;
-    CLUSTERSIZE = BOOTSECTOR -> sectors_per_cluster * 512;
-    DATASTARTSECTOR = PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats + ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512;;
-
-    // MEMORY
-    MEMORYTOP = CLUSTERBUFFER;
-}
-
-extern unsigned int _end;
 // newlib support routines
+extern unsigned int _end;
+unsigned char *_heap;
 unsigned char *_sbrk( int incr ) {
-  static unsigned char *heap = NULL;
   unsigned char *prev_heap;
 
-  if (heap == NULL) {
-    heap = (unsigned char *)&_end;
-  }
-  prev_heap = heap;
+  outputstringnonl( "I am in _sbrk Request :" ); outputnumber_int( ABS(incr) );
 
-  heap += incr;
+  if (_heap == NULL) {
+    _heap = (unsigned char *)&_end;
+  }
+  prev_heap = _heap;
+
+  _heap += ABS(incr);
+
+  outputstringnonl( " New Heap :" ); outputnumber_int( (int)_heap ); outputstring(".");
 
   return prev_heap;
 }
@@ -1497,7 +1433,7 @@ long _read( int fd, const void *buf, size_t cnt ) {
             case 0:
             case 1:
             case 2:
-                *buffer++ = uartinputcharacter();
+                *buffer++ = inputcharacter();
                 break;
         }
     }
@@ -1535,4 +1471,27 @@ unsigned char *filemalloc( unsigned int size ) {
         numberofclusters++;
 
     return( malloc( numberofclusters * CLUSTERSIZE ) );
+}
+
+// SETUP MEMORY POINTERS FOR THE SDCARD - ALREADY PRE-LOADED BY THE BIOS
+extern unsigned char *_bss_start, *_bss_end;
+
+void INITIALISEMEMORY( void ) {
+    // SDCARD FILE SYSTEM
+    MBR = (unsigned char *) 0x12000000 - 0x200;
+    BOOTSECTOR = (Fat16BootSector *)0x12000000 - 0x400;
+    PARTITION = (PartitionTable *) &MBR[ 0x1BE ];
+    ROOTDIRECTORY = (Fat16Entry *)( 0x12000000 - 0x400 - BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) );
+    FAT = (unsigned short * ) ROOTDIRECTORY - BOOTSECTOR -> fat_size_sectors * 512;
+    CLUSTERBUFFER = (unsigned char * )FAT - BOOTSECTOR -> sectors_per_cluster * 512;
+    CLUSTERSIZE = BOOTSECTOR -> sectors_per_cluster * 512;
+    DATASTARTSECTOR = PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats + ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512;;
+
+    // WIPE BSS SECTION
+    if( &_bss_end - &_bss_start )
+        memset( &_bss_start, 0,  &_bss_end - &_bss_start);
+
+    // MEMORY
+    MEMORYTOP = CLUSTERBUFFER;
+    _heap = NULL;
 }
