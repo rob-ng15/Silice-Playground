@@ -990,7 +990,6 @@ unsigned int sdcard_findfilesize( unsigned short filenumber ) {
     return( ROOTDIRECTORY[filenumber].file_size );
 }
 
-
 void sdcard_readcluster( unsigned short cluster ) {
     for( unsigned short i = 0; i < BOOTSECTOR -> sectors_per_cluster; i++ ) {
         sdcard_readsector( DATASTARTSECTOR + ( cluster - 2 ) * BOOTSECTOR -> sectors_per_cluster + i, CLUSTERBUFFER + i * 512 );
@@ -1395,21 +1394,25 @@ int clrtoeol( void ) {
 }
 
 // newlib support routines
-extern unsigned int _end;
+#ifndef MALLOC_MEMORY
+#define MALLOC_MEMORY ( 16384 * 1024 )
+#endif
+
 unsigned char *_heap;
 unsigned char *_sbrk( int incr ) {
   unsigned char *prev_heap;
 
-  outputstringnonl( "I am in _sbrk Request :" ); outputnumber_int( ABS(incr) );
+  outputstringnonl( "I am in _sbrk Request :" ); outputnumber_int( incr );
 
   if (_heap == NULL) {
-    _heap = (unsigned char *)&_end;
+    outputstringnonl( " (SBRK INIT) " );
+    _heap = (unsigned char *)MEMORYTOP - MALLOC_MEMORY - 32;
   }
   prev_heap = _heap;
 
-  _heap += ABS(incr);
+  _heap += incr;
 
-  outputstringnonl( " New Heap :" ); outputnumber_int( (int)_heap ); outputstring(".");
+  outputstringnonl( " New Heap :" ); outputnumber_int( (int)_heap ); outputstring("\n");
 
   return prev_heap;
 }
@@ -1474,8 +1477,6 @@ unsigned char *filemalloc( unsigned int size ) {
 }
 
 // SETUP MEMORY POINTERS FOR THE SDCARD - ALREADY PRE-LOADED BY THE BIOS
-extern unsigned char *_bss_start, *_bss_end;
-
 void INITIALISEMEMORY( void ) {
     // SDCARD FILE SYSTEM
     MBR = (unsigned char *) 0x12000000 - 0x200;
@@ -1487,11 +1488,9 @@ void INITIALISEMEMORY( void ) {
     CLUSTERSIZE = BOOTSECTOR -> sectors_per_cluster * 512;
     DATASTARTSECTOR = PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats + ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512;;
 
-    // WIPE BSS SECTION
-    if( &_bss_end - &_bss_start )
-        memset( &_bss_start, 0,  &_bss_end - &_bss_start);
-
     // MEMORY
     MEMORYTOP = CLUSTERBUFFER;
     _heap = NULL;
+    outputstringnonl("SBRK(0): "); _sbrk(0);
+    outputstringnonl("FREE(MALLOC(32)): "); free(malloc( 32  ) );
 }

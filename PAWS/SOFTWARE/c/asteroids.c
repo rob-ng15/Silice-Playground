@@ -1,4 +1,5 @@
 #include "PAWSlibrary.h"
+#include <stdlib.h>
 
 // INCLUDE GALAXY BACKDROP
 #include "GALAXYPPM.h"

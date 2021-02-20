@@ -1,5 +1,7 @@
 #include "PAWSlibrary.h"
 #include "GALAXYJPG.h"
+#include <stdio.h>
+
 void main( void ) {
     INITIALISEMEMORY();
 

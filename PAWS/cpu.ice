@@ -68,7 +68,7 @@ algorithm PAWSCPU (
     uint5   rs1 = uninitialized;
     uint5   rs2 = uninitialized;
     uint5   rd = uninitialized;
-    decoder DECODER(
+    decoder DECODER <@clock_cpufunc> (
         instruction <: instruction,
         opCode :> opCode,
         function3 :> function3,
@@ -151,17 +151,12 @@ algorithm PAWSCPU (
 
     // On CPU instruction cache - MAIN AND SMT THREADS
     instructioncache Icache <@clock_cpucache> (
-        PC <: pc,
-        newinstruction <: instruction,
-        newcompressed <: compressed
-    );
-    instructioncache IcacheSMT <@clock_cpucache> (
-        PC <: pcSMT,
+        PC <: PC,
+        SMT <: SMT,
         newinstruction <: instruction,
         newcompressed <: compressed
     );
     Icache.updatecache := 0;
-    IcacheSMT.updatecache := 0;
 
     // MEMORY ACCESS FLAGS
     accesssize := ( opCode == 7b0101111 ) ? 3b010 : function3;
@@ -181,9 +176,9 @@ algorithm PAWSCPU (
         incPC = 1;
 
         // CHECK IF PC IS IN LAST INSTRUCTION CACHE
-        if( SMT ? IcacheSMT.incache : Icache.incache ) {
-            instruction = SMT ? IcacheSMT.instruction : Icache.instruction;
-            compressed = SMT ? IcacheSMT.compressed : Icache.compressed;
+        if( Icache.incache ) {
+            instruction = Icache.instruction;
+            compressed = Icache.compressed;
         } else {
             // FETCH + EXPAND COMPRESSED INSTRUCTIONS
             address = PC;
@@ -208,7 +203,7 @@ algorithm PAWSCPU (
             }
 
             // UPDATE LASTCACHE
-            Icache.updatecache = ~SMT; IcacheSMT.updatecache = SMT;
+            Icache.updatecache = 1;
         }
 
         // TIME TO ALLOW DECODE + REGISTER FETCH + ADDRESS GENERATION
@@ -353,7 +348,9 @@ algorithm PAWSCPU (
 
 // ON CPU SMALL INSTRUCTION CACHE
 algorithm instructioncache(
-    input!   uint32  PC,
+    input!  uint32  PC,
+    input!  uint1   SMT,
+
     output  uint1   incache,
 
     input   uint1   updatecache,
@@ -364,32 +361,34 @@ algorithm instructioncache(
     output  uint1   compressed
 ) <autorun> {
     // LAST INSTRUCTION CACHE
-    uint32  lastpccache[32] = { 32hffffffff, pad(32hffffffff) };
-    uint32  lastinstructioncache[32] = uninitialized;
-    uint1   lastcompressedcache[32] = uninitialized;
+    uint32  lastpccache[64] = { 32hffffffff, pad(32hffffffff) };
+    uint32  lastinstructioncache[64] = uninitialized;
+    uint1   lastcompressedcache[64] = uninitialized;
     uint8   location = 8hff;
     uint5   lastcachepointer = 0;
+    uint5   lastcachepointerSMT = 0;
     uint1   LATCHupdate = 0;
 
     // CHECK IF PC IS IN LAST INSTRUCTION CACHE
     location :=
         $$for i = 0, 30 do
-            ( PC == ( lastpccache[ $i$ ] ) ) ? $i$ :
+            ( PC == ( lastpccache[ { SMT, 5d$i$ } ] ) ) ? $i$ :
         $$end
-        ( PC == ( lastpccache[ 31 ] ) ) ? 31 : 8hff;
+        ( PC == ( lastpccache[ { SMT, 5d31 } ] ) ) ? 31 : 8hff;
 
     incache := ( location == 8hff ) ? 0 : 1;
 
     // RETRIEVE FROM LAST INSTRUCTION CACHE
-    instruction := lastinstructioncache[ ( location == 8hff ) ? 0 : location ];
-    compressed := lastcompressedcache[ ( location == 8hff ) ? 0 : location ];
+    instruction := lastinstructioncache[ ( location == 8hff ) ? 0 : { SMT, location[0,5] } ];
+    compressed := lastcompressedcache[ ( location == 8hff ) ? 0 : { SMT, location[0,5] } ];
 
     while(1) {
         if( updatecache && ~LATCHupdate ) {
-            lastpccache[ lastcachepointer ] = PC;
-            lastinstructioncache[  lastcachepointer ] = newinstruction;
-            lastcompressedcache[  lastcachepointer ] = newcompressed;
-            lastcachepointer = lastcachepointer + 1;
+            lastpccache[ { SMT, SMT ? lastcachepointerSMT : lastcachepointer } ] = PC;
+            lastinstructioncache[ { SMT, SMT ? lastcachepointerSMT : lastcachepointer } ] = newinstruction;
+            lastcompressedcache[ { SMT, SMT ? lastcachepointerSMT : lastcachepointer } ] = newcompressed;
+            lastcachepointer = lastcachepointer + SMT ? 0 : 1;
+            lastcachepointerSMT = lastcachepointerSMT + SMT ? 1 : 0;
         }
         LATCHupdate = updatecache;
     }

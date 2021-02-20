@@ -308,9 +308,9 @@ algorithm memmap_io (
     );
 
     // USB HID
-    uint64  usboutput = uninitialized;
-    uint1   usbvalid = uninitialized;
-    uint1   usbreset := ~btns[0,1];
+    //uint160 usboutput = uninitialized;
+    //uint1   usbvalid = uninitialized;
+    //uint1   usbreset := ~btns[0,1];
     //UsbHostHid USBHID <@clock_25mhz> (
     //    clkout2 <: clock_usb,
     //    reset <: usbreset,
@@ -386,13 +386,13 @@ algorithm memmap_io (
                 case 16h8010: { readData = systemClock; }
 
                 // USB HID INPUT VALID - 1 WHILST KEY IS PRESSED
-                case 16h8080: { readData = usbvalid ? 1 : 0; }
+                //case 16h8080: { readData = usbvalid ? 1 : 0; }
                 // USB HID MODIFIERS SHIFT, CTRL, ETC
-                case 16h8082: { readData = { 8b0, usboutput[0,8] }; }
+                //case 16h8082: { readData = { 8b0, usboutput[0,8] }; }
                 // KEY SLOTS 1 & 2, 3 & 4, 5 & 6
-                case 16h8084: { readData = usboutput[16,16]; }
-                case 16h8086: { readData = usboutput[32,16]; }
-                case 16h8088: { readData = usboutput[48,16]; }
+                //case 16h8084: { readData = usboutput[16,16]; }
+                //case 16h8086: { readData = usboutput[32,16]; }
+                //case 16h8088: { readData = usboutput[48,16]; }
 
                 // BACKGROUND
 

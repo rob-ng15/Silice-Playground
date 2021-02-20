@@ -1,4 +1,6 @@
 #include "PAWSlibrary.h"
+#include <stdlib.h>
+#include <stdio.h>
 
 struct Bomb {
     int x;
@@ -770,6 +772,10 @@ void paintAlienRow(int row, int clean) {
 }
 
 void initGame() {
+    //memset(&game,0,sizeof(game));
+    //memset(&aliens,0,sizeof(aliens));
+    //memset(&gun,0,sizeof(gun));
+    //memset(&ma,0,sizeof(ma));
 
     aliens.cols = (COLS / ALIEN_WIDTH) - 4;
     aliens.rows = (LINES / ALIEN_HEIGHT) - 4;

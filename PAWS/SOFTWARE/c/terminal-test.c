@@ -1,4 +1,9 @@
 #include "PAWSlibrary.h"
+#include <stdlib.h>
+#include <stdio.h>
+
+    int i;
+    unsigned char *memoryblock, *memoryblock2;
 
 void terminalrefresh( void ) {
     // SETUP STACKPOINTER FOR THE SMT THREAD
@@ -9,8 +14,8 @@ void terminalrefresh( void ) {
     }
 }
 
-extern int _bss_start, _bss_end, _end;
 extern char *MEMORYTOP;
+extern int _bss_start, _bss_end;
 
 unsigned short volatile * myUSBHID_VALID = (unsigned short volatile *) 0x8080;
 unsigned short volatile * myUSBHID_MODIFIERS = (unsigned short volatile *) 0x8082;
@@ -19,9 +24,6 @@ unsigned short volatile * myUSBHID_KEYS34 = (unsigned short volatile *) 0x8086;
 unsigned short volatile * myUSBHID_KEYS56 = (unsigned short volatile *) 0x8088;
 
 void main( void ) {
-    int i;
-    unsigned char *memoryblock, *memoryblock2;
-
     INITIALISEMEMORY();
 
     // set up curses library
@@ -36,8 +38,8 @@ void main( void ) {
         printw( "Terminal Test: Colour <%d>\n", i );
     }
 
-    printw( "\nBSS START <%x> END <%x>\n", &_bss_start, &_bss_end );
-    printw( "HEAP START <%x> MEMORYTOP <%x>\n", &_end, MEMORYTOP );
+    printw( "MEMORYTOP <%x>\n", MEMORYTOP );
+    printw( "_BSS START <%x> _BSS_END <%x>\n", &_bss_start, &_bss_end );
 
     memoryblock = malloc( 1024 );
     printw( "\nMEMORYBLOCK <%x>\n", memoryblock );

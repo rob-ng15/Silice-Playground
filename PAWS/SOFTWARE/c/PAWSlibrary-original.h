@@ -1,3 +1,4 @@
+// STDDEF.H DEFINITIONS
 #define MAX(a,b) \
    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
@@ -183,7 +184,7 @@ extern void *memset( void *s, int c, size_t n );
 extern int strcmp( const char *p1, const char *p2 );
 extern int strlen( char *s );
 
-// UART AND TERMINAL INPUT / OUTPUT
+// UART INPUT / OUTPUT
 extern void outputcharacter(char);
 extern void outputstring(char *);
 extern void outputstringnonl(char *);
@@ -199,7 +200,7 @@ extern unsigned char get_buttons( void );
 
 // TIMERS AND PSEUDO RANDOM NUMBER GENERATOR
 extern unsigned short systemclock( void );
-extern unsigned short secondssincestart( int );
+extern unsigned short time( int );
 extern unsigned short rng( unsigned short );
 extern void sleep( unsigned short, unsigned char );
 extern void set_timer1khz( unsigned short, unsigned char );
@@ -301,7 +302,23 @@ extern void njDone(void);
 extern void SMTSTOP( void );
 extern void SMTSTART( unsigned int );
 extern unsigned char SMTSTATE( void );
+
+// SIMPLE STANDARD LIBRARY FUNCTIONS
+typedef struct filepointer {
+	unsigned short sdcard_filenumber;
+    unsigned int   filesize;
+	unsigned int   cursor;
+    unsigned char *fileinmemory;
+} FILE;
+
+int printf( const char *,... );
+FILE *fopen( const char *, const char * );
+int fclose( FILE * );
+
+// SIMPLE MALLOC
 extern void INITIALISEMEMORY( void );
+void *malloc(size_t );
+void free(void *);
 
 // SIMPLE CURSES
 #define COLORS 64
@@ -322,27 +339,23 @@ extern void INITIALISEMEMORY( void );
 #define COLS 80
 #define LINES 30
 
-// SIMPLE CURSES
-extern void initscr( void );
-extern int endwin( void );
-extern int refresh( void );
-extern int clear( void );
-extern void cbreak( void );
-extern void echo( void );
-extern void noecho( void );
-extern void curs_set( int );
-extern int start_color( void );
-extern bool has_colors( void );
-extern bool can_change_color( void );
-extern int init_pair( short pair, short f, short b );
-extern int move( int y, int x );
-extern int addch( unsigned char ch );
-extern int mvaddch( int y, int x, unsigned char ch );
-extern int printw( const char *fmt,... );
-extern int mvprintw( int y, int x, const char *fmt,... );
-extern int attron( int attrs );
-extern int deleteln( void );
-extern int clrtoeol( void );
-
-// FILEMALLOC TO ALLOCATE SPACE FOR FILES
-extern unsigned char *filemalloc( unsigned int );
+void initscr( void );
+int endwin( void );
+int refresh( void );
+int clear( void );
+void cbreak( void );
+void echo( void );
+void noecho( void );
+void curs_set( int );
+int start_color( void );
+bool has_colors( void );
+bool can_change_color( void );
+int init_pair( short pair, short f, short b );
+int move( int y, int x );
+int addch( unsigned char ch );
+int mvaddch( int y, int x, unsigned char ch );
+int printw( const char *fmt,... );
+int mvprintw( int y, int x, const char *fmt,... );
+int attron( int attrs );
+int deleteln( void );
+int clrtoeol( void );

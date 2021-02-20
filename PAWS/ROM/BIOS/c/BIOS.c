@@ -53,6 +53,12 @@ void*  memcpy(void *dest, const void *src, size_t n) {
   }
   return dest;
 }
+void *memset(void *s, int c,  unsigned int n) {
+    unsigned char* p = s;
+    while( n-- )
+        *p++ = (unsigned char)c;
+    return(0);
+}
 
 int strlen( char *s ) {
     int i = 0;
@@ -445,6 +451,10 @@ void sd_findFile( unsigned short direction ) {
     }
 }
 
+unsigned int sdcard_findfilesize( unsigned short filenumber ) {
+    return( ROOTDIRECTORY[filenumber].file_size );
+}
+
 // READ A FILE CLUSTER BY CLUSTER INTO MEMORY
 void sd_readFile( unsigned short filenumber, unsigned char * copyAddress ) {
     unsigned short nextCluster = ROOTDIRECTORY[ filenumber ].starting_cluster;
@@ -520,19 +530,6 @@ void main( void ) {
     // STOP SMT
     *SMTSTATUS = 0;
 
-    // CLEAR SDRAM
-    // RESET THE DISPLAY
-    //reset_display();
-    //set_background( BLACK, BLACK, BKG_SOLID );
-
-    //tpu_set( 0, 28, TRANSPARENT, WHITE ); tpu_outputstring( "PAWS Risc-V RV32IMCB BIOS" );
-    //tpu_set( 0, 29, TRANSPARENT, WHITE ); tpu_outputstring( "SDRAM Test: " );
-    //for( sdramaddress = (unsigned int *)0x10000000; sdramaddress < (unsigned int *)0x12000000; sdramaddress++ ) {
-    //    *sdramaddress  = 0;
-    //    if( ( (int)sdramaddress & 0xfffff ) == 0 )
-    //        tpu_output_character( '*' );
-    //}
-
     // RESET THE DISPLAY
     reset_display();
     set_background( DKBLUE - 1, BLACK, BKG_SOLID );
@@ -548,6 +545,7 @@ void main( void ) {
         gpu_rectangle( i, i * 10, 447, 9 + i * 10, 463 );
 
     tpu_outputstringcentre( 7, TRANSPARENT, RED, "Waiting for SDCARD" );
+    sleep(2000);
     sd_readSector( 0, MBR );
     tpu_outputstringcentre( 7, TRANSPARENT, GREEN, "SDCARD Ready" );
 
@@ -613,7 +611,7 @@ void main( void ) {
     sd_readFile( SELECTEDFILE, (unsigned char *)0x10000000 );
     tpu_outputstringcentre( 7, TRANSPARENT, WHITE, "LOADED" );
     tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "LAUNCHING" );
-    sleep( 500 );
+    sleep(500);
 
     // RESET THE DISPLAY
     reset_display();

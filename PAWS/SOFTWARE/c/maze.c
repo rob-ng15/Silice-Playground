@@ -1,4 +1,5 @@
 #include "PAWSlibrary.h"
+#include <stdlib.h>
 
 // INCLUDE TOMBSTONE IMAGE
 #include "TOMBSTONEPPM.h"
@@ -866,7 +867,6 @@ int main( void ) {
     netppm_decoder( &pacman3dppm[0], pacman3dbitmap );
 
     unsigned short levelselected;
-    //level = 0;
 
 	while(1) {
         // SETUP THE SCREEN BLUE/GREEN BACKGROUND

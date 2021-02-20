@@ -1,19 +1,5 @@
 #include "PAWS.h"
 #include <stdarg.h>
-#include <stdlib.h>
-#include <stdio.h>
-
-#define MAX(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a > _b ? _a : _b; })
-
-#define MIN(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a < _b ? _a : _b; })
-
-#define ABS(a) (((a) < 0 )? -(a) : (a))
 
 typedef unsigned int size_t;
 
@@ -62,8 +48,6 @@ unsigned int CLUSTERSIZE;
 unsigned int DATASTARTSECTOR;
 
 // MEMORY
-unsigned char *MEMORYHEAP = (unsigned char *)0x10800000;
-unsigned char *MEMORYHEAPTOP = (unsigned char *)0x10800000;
 unsigned char *MEMORYTOP;
 
 // RISC-V CSR FUNCTIONS
@@ -174,7 +158,6 @@ char inputcharacter( void ) {
     return *UART_DATA;
 }
 
-
 // TIMER AND PSEUDO RANDOM NUMBER GENERATOR
 
 // PSEUDO RANDOM NUMBER GENERATOR
@@ -273,6 +256,9 @@ void reset_timer1hz( unsigned char timer  ) {
 
 // RETURN SYSTEM CLOCK - 1 second pulses from startup
 unsigned short systemclock( void ) {
+    return( *SYSTEMCLOCK );
+}
+unsigned short time( int timer ) {
     return( *SYSTEMCLOCK );
 }
 
@@ -1154,6 +1140,64 @@ unsigned char SMTSTATE( void ) {
     return( *SMTSTATUS );
 }
 
+// printf code from https://github.com/sylefeb/Silice/tree/wip/projects/ram-ice-v/tests/mylibc
+
+void __print_string(const char* s) {
+   for(const char* p = s; *p; ++p) {
+      outputcharacter(*p);
+   }
+}
+
+void __print_dec(int val) {
+   char buffer[255];
+   char *p = buffer;
+   if(val < 0) {
+      outputcharacter('-');
+      __print_dec(-val);
+      return;
+   }
+   while (val || p == buffer) {
+      *(p++) = val % 10;
+      val = val / 10;
+   }
+   while (p != buffer) {
+      outputcharacter('0' + *(--p));
+   }
+}
+
+void __print_hex_digits(unsigned int val, int nbdigits) {
+   for (int i = (4*nbdigits)-4; i >= 0; i -= 4) {
+      outputcharacter("0123456789ABCDEF"[(val >> i) % 16]);
+   }
+}
+
+void __print_hex(unsigned int val) {
+   __print_hex_digits(val, 8);
+}
+
+int printf( const char *fmt,... ) {
+    va_list ap;
+    for( va_start( ap, fmt ); *fmt; fmt++ ) {
+        if( *fmt == '%' ) {
+            fmt++;
+        if( *fmt=='s' )
+            __print_string( va_arg( ap, char * ) );
+        else if( *fmt == 'x' )
+            __print_hex( va_arg( ap, int ) );
+        else if( *fmt == 'd' )
+            __print_dec(va_arg(ap,int) );
+        else if( *fmt == 'c' )
+            outputcharacter( va_arg( ap, int ) );
+        else
+            outputcharacter( *fmt );
+        } else {
+            outputcharacter( *fmt );
+        }
+    }
+    va_end(ap);
+
+    return( 1 );
+}
 
 // SIMPLE CURSES LIBRARY
 char            __curses_character[80][30], __curses_background[80][30], __curses_foreground[80][30];
@@ -1320,32 +1364,87 @@ int mvaddch( int y, int x, unsigned char ch ) {
     return( addch( ch ) );
 }
 
+// printw and mvprintw uses printf code from https://github.com/sylefeb/Silice/tree/wip/projects/ram-ice-v/tests/mylibc
+
 void __curses_print_string(const char* s) {
    for(const char* p = s; *p; ++p) {
       addch(*p);
    }
 }
 
-int printw( const char *fmt,... ) {
-    static char buffer[1024];
-    va_list args;
-    va_start (args, fmt);
-    vsnprintf( buffer, 1023, fmt, args);
-    va_end(args);
+void __curses_print_dec(int val) {
+   char buffer[255];
+   char *p = buffer;
+   if(val < 0) {
+      addch('-');
+      __curses_print_dec(-val);
+      return;
+   }
+   while (val || p == buffer) {
+      *(p++) = val % 10;
+      val = val / 10;
+   }
+   while (p != buffer) {
+      addch('0' + *(--p));
+   }
+}
 
-    __curses_print_string( buffer );
+void __curses_print_hex_digits(unsigned int val, int nbdigits) {
+   for (int i = (4*nbdigits)-4; i >= 0; i -= 4) {
+      addch("0123456789ABCDEF"[(val >> i) % 16]);
+   }
+}
+
+void __curses_print_hex(unsigned int val) {
+   __curses_print_hex_digits(val, 8);
+}
+
+int printw( const char *fmt,... ) {
+    va_list ap;
+    for( va_start( ap, fmt ); *fmt; fmt++ ) {
+        if( *fmt == '%' ) {
+            fmt++;
+        if( *fmt=='s' )
+            __curses_print_string( va_arg( ap, char * ) );
+        else if( *fmt == 'x' )
+            __curses_print_hex( va_arg( ap, int ) );
+        else if( *fmt == 'd' )
+            __curses_print_dec(va_arg(ap,int) );
+        else if( *fmt == 'c' )
+            addch( va_arg( ap, int ) );
+        else
+            addch( *fmt );
+        } else {
+            addch( *fmt );
+        }
+    }
+    va_end(ap);
+
     return( true );
 }
 
 int mvprintw( int y, int x, const char *fmt,... ) {
-    static char buffer[1024];
-    va_list args;
-    va_start (args, fmt);
-    vsnprintf( buffer, 1023, fmt, args);
-    va_end(args);
-
     move( y, x );
-    __curses_print_string( buffer );
+
+    va_list ap;
+    for( va_start( ap, fmt ); *fmt; fmt++ ) {
+        if( *fmt == '%' ) {
+            fmt++;
+        if( *fmt=='s' )
+            __curses_print_string( va_arg( ap, char * ) );
+        else if( *fmt == 'x' )
+            __curses_print_hex( va_arg( ap, int ) );
+        else if( *fmt == 'd' )
+            __curses_print_dec(va_arg(ap,int) );
+        else if( *fmt == 'c' )
+            addch( va_arg( ap, int ) );
+        else
+            addch( *fmt );
+        } else {
+            addch( *fmt );
+        }
+    }
+    va_end(ap);
 
     return( true );
 }
@@ -1394,83 +1493,168 @@ int clrtoeol( void ) {
     return( true );
 }
 
-// newlib support routines
+// SIMPLE MALLOC
+// Based on https://github.com/andrestc/linux-prog/blob/master/ch7/malloc.c
+
+typedef struct block {
+	size_t		size;
+	struct block   *next;
+	struct block   *prev;
+}		block_t;
+
 #ifndef MALLOC_MEMORY
 #define MALLOC_MEMORY ( 16384 * 1024 )
 #endif
 
-unsigned char *_heap;
-unsigned char *_sbrk( int incr ) {
-  unsigned char *prev_heap;
+#ifndef ALLOC_UNIT
+#define ALLOC_UNIT 1024
+#endif
 
-  outputstringnonl( "I am in _sbrk Request :" );  outputnumber_int( incr );
+#define BLOCK_MEM(ptr) ((void *)((unsigned int)ptr + sizeof(block_t)))
+#define BLOCK_HEADER(ptr) ((void *)((unsigned int)ptr - sizeof(block_t)))
 
-  if (_heap == NULL) {
-    outputstringnonl( " (SBRK INIT) " );
-    _heap = (unsigned char *)MEMORYTOP - MALLOC_MEMORY - 32;
-  }
-  prev_heap = _heap;
+static block_t *head = NULL;
+unsigned short __malloc_init = 0;
 
-  if( incr < 0 ) {
-      outputstringnonl( " NEGATIVE REQUEST :" ); outputnumber_int( ABS(incr) );
-      _heap = _heap;
-  } else {
-    _heap += incr;
-  }
-
-  outputstringnonl( " New Heap :" ); outputnumber_int( (int)_heap ); outputstring("\n");
-
-  return prev_heap;
+/* fl_remove removes a block from the free list
+ * and adjusts the head accordingly */
+void fl_remove(block_t * b)
+{
+	if (!b->prev) {
+		if (b->next) {
+			head = b->next;
+		} else {
+			head = NULL;
+		}
+	} else {
+		b->prev->next = b->next;
+	}
+	if (b->next) {
+		b->next->prev = b->prev;
+	}
 }
 
-long _write( int fd, const void *buf, size_t cnt ) {
-    unsigned char *buffer = (unsigned char *)buf;
-    while( cnt-- ) {
-        switch( fd ) {
-            case 0:
-            case 1:
-            case 2:
-                outputcharacter( *buffer++ );
-                break;
-        }
+/* fl_add adds a block to the free list keeping
+ * the list sorted by the block begin address,
+ * this helps when scanning for continuous blocks */
+void fl_add(block_t * b)
+{
+	b->prev = NULL;
+	b->next = NULL;
+	if (!head || (unsigned int)head > (unsigned int)b) {
+		if (head) {
+			head->prev = b;
+		}
+		b->next = head;
+		head = b;
+	} else {
+		block_t        *curr = head;
+		while (curr->next
+		       && (unsigned int)curr->next < (unsigned int)b) {
+			curr = curr->next;
+		}
+		b->next = curr->next;
+		curr->next = b;
+	}
+}
+
+/* scan_merge scans the free list in order to find
+ * continuous free blocks that can be merged and also
+ * checks if our last free block ends where the program
+ * break is. If it does, and the free block is larger then
+ * MIN_DEALLOC then the block is released to the OS, by
+ * calling brk to set the program break to the begin of
+ * the block */
+void scan_merge() {
+	block_t        *curr = head;
+	unsigned int	header_curr, header_next;
+	while (curr->next) {
+		header_curr = (unsigned int)curr;
+		header_next = (unsigned int)curr->next;
+		if (header_curr + curr->size + sizeof(block_t) == header_next) {
+			/* found two continuous addressed blocks, merge them
+			 * and create a new block with the sum of their sizes */
+			curr->size += curr->next->size + sizeof(block_t);
+			curr->next = curr->next->next;
+			if (curr->next) {
+				curr->next->prev = curr;
+			} else {
+				break;
+			}
+		}
+		curr = curr->next;
+	}
+	header_curr = (unsigned int)curr;
+}
+
+/* splits the block b by creating a new block after size bytes,
+ * this new block is returned */
+block_t * split(block_t * b, size_t size) {
+	void           *mem_block = BLOCK_MEM(b);
+	block_t        *newptr = (block_t *) ((unsigned int)mem_block + size);
+	newptr->size = b->size - (size + sizeof(block_t));
+	b->size = size;
+	return newptr;
+}
+
+extern int _end;
+void *malloc(size_t size) {
+	void           *block_mem;
+	block_t        *ptr, *newptr;
+	size_t		alloc_size = size >= ALLOC_UNIT ? size + sizeof(block_t)
+		: ALLOC_UNIT;
+
+    if( !__malloc_init ) {
+        head = (block_t *) (MEMORYTOP - MALLOC_MEMORY);
+        head->next = NULL;
+        head->prev = NULL;
+        head->size = MALLOC_MEMORY - sizeof(block_t);
+        __malloc_init = 1;
     }
+
+	ptr = head;
+	while (ptr) {
+		if (ptr->size >= size + sizeof(block_t)) {
+			block_mem = BLOCK_MEM(ptr);
+			fl_remove(ptr);
+			if (ptr->size == size) {
+				// we found a perfect sized block, return it
+				return block_mem;
+			}
+			// our block is bigger then requested, split it and add
+			// the spare to our free list
+			newptr = split(ptr, size);
+			fl_add(newptr);
+			return block_mem;
+		} else {
+			ptr = ptr->next;
+		}
+	}
+	/* We are unable to find a free block on our free list, so we
+	 * should ask the OS for memory using sbrk. We will alloc
+	 * more alloc_size bytes (probably way more than requested) and then
+	 * split the newly allocated block to keep the spare space on our free
+	 * list */
+	return NULL;
 }
-long _read( int fd, const void *buf, size_t cnt ) {
-    unsigned char *buffer = (unsigned char *)buf;
-    while( cnt-- ) {
-        switch( fd ) {
-            case 0:
-            case 1:
-            case 2:
-                *buffer++ = inputcharacter();
-                break;
-        }
-    }
+
+void free(void *ptr) {
+	fl_add(BLOCK_HEADER(ptr));
+	scan_merge();
 }
-int _open( const char *file, int flags, int mode ) {
-    return( -1 );
+
+void _cleanup() {
+	head = NULL;
 }
-int _close( int fd ) {
-    return( -1 );
-}
-int _fstat( int fd ) {
-    return( 0 );
-}
-int _isatty( int fd ) {
-    return( 0 );
-}
-int _lseek( int fd, int pos, int whence ) {
-    return( 0 );
-}
-int _getpid() {
-    return( 0 );
-}
-int _kill() {
-    return( -1 );
-}
-void _exit() {
-    ((void(*)(void))0x00000000)();
-}
+
+
+// SIMPLE FILE HANDLING - READ ONLY AT PRESENT - LOADS FILE INTO MEMORY - MAX SIZE DETERMINED BY MALLOC_MEMORY, DEFAULT 1M
+typedef struct filepointer {
+	unsigned short sdcard_filenumber;
+    unsigned int   filesize;
+	unsigned int   cursor;
+    unsigned char *fileinmemory;
+} FILE;
 
 // ALLOCATE MEMORY FOR FILES, IN UNITS OF CLUSTERSIZE ( allows extra for reading in files )
 unsigned char *filemalloc( unsigned int size ) {
@@ -1482,8 +1666,62 @@ unsigned char *filemalloc( unsigned int size ) {
     return( malloc( numberofclusters * CLUSTERSIZE ) );
 }
 
+FILE *fopen( const char *filename, const char *mode ) {
+    FILE *filepointer;
+    unsigned short sdcard_filenumber;
+    unsigned char splitfilename[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 }, splitextension[4] = { 0, 0, 0, 0 };
+    unsigned short i, j;
+
+    if( mode[0] != 'r' ) {
+        // READ ONLY
+        return( NULL );
+    } else {
+        // SPLIT FILENAME AND EXTENSION
+        i = 0; j = 0;
+        while( filename[i] && ( filename[i] != '.' ) && ( i < 8 ) ) {
+            splitfilename[i] = filename[i];
+            i++;
+        }
+        if( filename[i] == '.' ) {
+            i++;
+            while( filename[i] && ( j < 3 ) ) {
+                splitextension[j] = filename[i];
+                i++;
+            }
+        }
+        printf( "Filename <%s> Split to <%s> <%s>\n", filename, splitfilename, splitextension);
+
+        sdcard_filenumber = sdcard_findfilenumber( splitfilename, splitextension );
+        if( sdcard_filenumber == 0xffff ) {
+            // FILE NOT FOUND
+            printf( "FILE NOT FOUND\n" );
+            return( NULL );
+        } else {
+            filepointer = malloc( sizeof(FILE) );
+            filepointer -> sdcard_filenumber = sdcard_filenumber;
+            filepointer -> filesize = sdcard_findfilesize( sdcard_filenumber );
+            filepointer -> cursor = 0;
+            filepointer -> fileinmemory = filemalloc( filepointer -> filesize );
+
+            sdcard_readfile( filepointer -> sdcard_filenumber, filepointer -> fileinmemory );
+            printf( "File size <%d> read into memory at <%x>\n", filepointer -> filesize, filepointer -> fileinmemory );
+            return( filepointer );
+        }
+    }
+}
+
+int fclose( FILE *stream ) {
+    if( stream ) {
+        free( stream -> fileinmemory );
+        free( stream );
+        return( 0 );
+    } else {
+        return( 1 );
+    }
+}
+
 // SETUP MEMORY POINTERS FOR THE SDCARD - ALREADY PRE-LOADED BY THE BIOS
-extern int _bss_start, _bss_end;
+extern unsigned char * _bss_start, * _bss_end;
 void INITIALISEMEMORY( void ) {
     // SDCARD FILE SYSTEM
     MBR = (unsigned char *) 0x12000000 - 0x200;
@@ -1495,18 +1733,13 @@ void INITIALISEMEMORY( void ) {
     CLUSTERSIZE = BOOTSECTOR -> sectors_per_cluster * 512;
     DATASTARTSECTOR = PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats + ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512;;
 
-    // CLEAR BSS
-    outputstringnonl("_BSS_START: "); outputnumber_int( (int)&_bss_start);
-    outputstringnonl(" _BSS_END: "); outputnumber_int( (int)&_bss_end);  outputcharacter('\n');
-
-    memset( &_bss_start, 0, &_bss_end - &_bss_end );
+    // WIPE BSS SECTION
+    if( &_bss_end - &_bss_start )
+        memset( &_bss_start, 0,  &_bss_end - &_bss_start);
 
     // MEMORY
     MEMORYTOP = CLUSTERBUFFER;
-    _heap = NULL;
-    outputstringnonl("SBRK(0): "); _sbrk(0);
-    outputstringnonl("FREE(MALLOC(32)): "); free(malloc( 32  ) ); outputcharacter('\n');
+    __malloc_init = 0;
 }
-
 
 #include "nanojpeg.c"
