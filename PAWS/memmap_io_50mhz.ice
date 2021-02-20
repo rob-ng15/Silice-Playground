@@ -8,8 +8,9 @@ algorithm memmap_io (
     input   uint1   uart_rx,
 
     // USB HID
-    input   uint64  usboutput,
-    input   uint1   usbvalid,
+    inout   uint1   usb_fpga_bd_dp,
+    inout   uint1   usb_fpga_bd_dn,
+    input   uint1   usb_fpga_dp,
 
     // AUDIO
     output! uint4   audio_l,
@@ -21,19 +22,16 @@ algorithm memmap_io (
     output! uint1   sd_csn,
     input   uint1   sd_miso,
 
-    // HDMI
-    output! uint8   video_r,
-    output! uint8   video_g,
-    output! uint8   video_b,
-    input   uint1   vblank,
-    input   uint1   pix_active,
-    input   uint10  pix_x,
-    input   uint10  pix_y,
+    // HDMI OUTPUT
+    output  uint4   gpdi_dp,
+    output  uint4   gpdi_dn,
 
     // CLOCKS
+    input   uint1   clock_25mhz,
     input   uint1   video_clock,
     input   uint1   video_reset,
     input   uint1   gpu_clock,
+    input   uint1   clock_usb,
 
     // Memory access
     input   uint16  memoryAddress,
@@ -86,7 +84,28 @@ algorithm memmap_io (
         uart_rx <:  uart_rx
     );
 
+    // HDMI driver
+    // Status of the screen, if in range, if in vblank, actual pixel x and y
+    uint1   vblank = uninitialized;
+    uint1   pix_active = uninitialized;
+    uint10  pix_x  = uninitialized;
+    uint8   video_r = uninitialized;
+    uint8   video_g = uninitialized;
+    uint8   video_b = uninitialized;
+    hdmi video<@clock_25mhz,!reset> (
+        vblank  :> vblank,
+        active  :> pix_active,
+        x       :> pix_x,
+        y       :> pix_y,
+        gpdi_dp :> gpdi_dp,
+        gpdi_dn :> gpdi_dn,
+        red     <: video_r,
+        green   <: video_g,
+        blue    <: video_b
+    );
+
     // CREATE DISPLAY LAYERS
+    uint10  pix_y  = uninitialized;
     // BACKGROUND
     uint2   background_r = uninitialized;
     uint2   background_g = uninitialized;
@@ -207,7 +226,6 @@ algorithm memmap_io (
     uint2   character_map_g = uninitialized;
     uint2   character_map_b = uninitialized;
     uint1   character_map_display = uninitialized;
-
     character_map character_map_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -280,7 +298,6 @@ algorithm memmap_io (
 
     // SDCARD - Code for the SDCARD from @sylefeb
     simple_dualport_bram uint8 sdbuffer[512] = uninitialized;
-
     sdcardio sdcio;
     sdcard sd (
         // pins
@@ -294,6 +311,20 @@ algorithm memmap_io (
         store       <:> sdbuffer
     );
 
+    // USB HID
+    uint64  usboutput = uninitialized;
+    uint1   usbvalid = uninitialized;
+    uint1   usbreset := ~btns[0,1];
+    //UsbHostHid USBHID <@clock_25mhz> (
+    //    clkout2 <: clock_usb,
+    //    reset <: usbreset,
+    //    io_usbDif <: usb_fpga_dp,
+    //    io_usbDp <:> usb_fpga_bd_dp,
+    //    io_usbDn <:> usb_fpga_bd_dn,
+    //    io_hidReport :> usboutput,
+    //    io_hidValid :> usbvalid
+    //);
+
     // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
     simple_dualport_bram uint8 uartInBuffer [4096] = uninitialized;
     uint13  uartInBufferNext = 0;
@@ -304,7 +335,6 @@ algorithm memmap_io (
     uint8   uartOutBufferNext = 0;
     uint8   uartOutBufferTop = 0;
     uint8   newuartOutBufferTop = 0;
-
 
     // LATCH MEMORYREAD MEMORYWRITE
     uint1   LATCHmemoryRead = uninitialized;

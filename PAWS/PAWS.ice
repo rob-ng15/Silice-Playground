@@ -58,7 +58,8 @@ algorithm main(
         clkCPUfunc :> clock_cpufunc,
         locked   :> pll_lock_CPU
     );
-    // VIDEO + USB DOMAIN CLOCKS
+
+    // VIDEO + CLOCKS
     uint1   pll_lock_VIDEO = uninitialized;
     uint1   video_clock = uninitialized;
     uint1   gpu_clock = uninitialized;
@@ -68,7 +69,13 @@ algorithm main(
         clkVIDEO :> video_clock,
         locked   :> pll_lock_VIDEO
     );
-    // SDRAM  CLOCKS + ON CPU CACHE
+    // Video Reset
+    uint1   video_reset = uninitialized;
+    clean_reset video_rstcond<@video_clock,!reset> (
+        out :> video_reset
+    );
+
+    // SDRAM  CLOCKS + ON CPU CACHE + USB DOMAIN CLOCKS
     uint1   sdram_clock = uninitialized;
     uint1   clock_cpucache = uninitialized;
     uint1   clock_usb = uninitialized;
@@ -81,38 +88,10 @@ algorithm main(
         clk6 :> clock_usb,
         locked :> pll_lock_AUX
     );
-
-    // Video Reset
-    uint1   video_reset = uninitialized;
-    clean_reset video_rstcond<@video_clock,!reset> (
-        out :> video_reset
-    );
-
     // SDRAM Reset
     uint1   sdram_reset = uninitialized;
     clean_reset sdram_rstcond<@sdram_clock,!reset> (
         out :> sdram_reset
-    );
-
-    // Status of the screen, if in range, if in vblank, actual pixel x and y
-    uint1   vblank = uninitialized;
-    uint1   pix_active = uninitialized;
-    uint10  pix_x  = uninitialized;
-    uint10  pix_y  = uninitialized;
-    // HDMI driver
-    uint8   video_r = uninitialized;
-    uint8   video_g = uninitialized;
-    uint8   video_b = uninitialized;
-    hdmi video<@clock,!reset> (
-        vblank  :> vblank,
-        active  :> pix_active,
-        x       :> pix_x,
-        y       :> pix_y,
-        gpdi_dp :> gpdi_dp,
-        gpdi_dn :> gpdi_dn,
-        red     <: video_r,
-        green   <: video_g,
-        blue    <: video_b
     );
 
     // RAM - BRAM and SDRAM
@@ -161,25 +140,23 @@ algorithm main(
         btns <: btns,
         uart_tx :> uart_tx,
         uart_rx <: uart_rx,
-        usboutput <: usboutput,
-        usbvalid <: usbvalid,
+        usb_fpga_bd_dp <:> usb_fpga_bd_dp,
+        usb_fpga_bd_dn <:> usb_fpga_bd_dn,
+        usb_fpga_dp <: usb_fpga_dp,
         audio_l :> audio_l,
         audio_r :> audio_r,
         sd_clk :> sd_clk,
         sd_mosi :> sd_mosi,
         sd_csn :> sd_csn,
         sd_miso <: sd_miso,
-        video_r :> video_r,
-        video_g :> video_g,
-        video_b :> video_b,
-        vblank <: vblank,
-        pix_active <: pix_active,
-        pix_x <: pix_x,
-        pix_y <: pix_y,
+        gpdi_dp :> gpdi_dp,
+        gpdi_dn :> gpdi_dn,
 
+        clock_25mhz <: clock,
         video_clock <: video_clock,
         video_reset <: video_reset,
         gpu_clock <: gpu_clock,
+        clock_usb <: clock_usb,
 
         memoryAddress <: address,
         writeData <: writedata,
@@ -187,20 +164,6 @@ algorithm main(
         SMTRUNNING :> SMTRUNNING,
         SMTSTARTPC :> SMTSTARTPC
     );
-
-    // USB HID
-    uint64  usboutput = uninitialized;
-    uint1   usbvalid = uninitialized;
-    uint1   usbreset := ~btns[0,1];
-    //UsbHostHid USBHID(
-    //    clkout2 <: clock_usb,
-    //    reset <: usbreset,
-    //    io_usbDif <: usb_fpga_dp,
-    //    io_usbDp <:> usb_fpga_bd_dp,
-    //    io_usbDn <:> usb_fpga_bd_dn,
-    //    io_hidReport :> usboutput,
-    //    io_hidValid :> usbvalid
-    //);
 
     uint3   function3 = uninitialized;
     uint32  address = uninitialized;

@@ -353,7 +353,7 @@ algorithm PAWSCPU (
 
 // ON CPU SMALL INSTRUCTION CACHE
 algorithm instructioncache(
-    input   uint32  PC,
+    input!   uint32  PC,
     output  uint1   incache,
 
     input   uint1   updatecache,
@@ -368,28 +368,21 @@ algorithm instructioncache(
     uint32  lastinstructioncache[16] = uninitialized;
     uint1   lastcompressedcache[16] = uninitialized;
     uint4   lastcachepointer = 0;
-
+    uint8   location = 8hff;
     uint1   LATCHupdate = 0;
 
     // CHECK IF PC IS IN LAST INSTRUCTION CACHE
-    incache :=
+    location :=
         $$for i = 0, 14 do
-            ( PC == ( lastpccache[ $i$ ] ) ) ||
+            ( PC == ( lastpccache[ $i$ ] ) ) ? $i$ :
         $$end
-        ( PC == ( lastpccache[ 15 ] ) );
+        ( PC == ( lastpccache[ 15 ] ) ) ? 15 : 8hff;
+
+    incache := ( location == 8hff ) ? 0 : 1;
 
     // RETRIEVE FROM LAST INSTRUCTION CACHE
-    instruction := ( PC == ( lastpccache[ 0 ] ) ) ? ( lastinstructioncache[ 0 ] ) :
-                    $$for i = 1, 14 do
-                        ( PC == ( lastpccache[ $i$ ] ) ) ? ( lastinstructioncache[ $i$ ] ) :
-                    $$end
-                    ( lastinstructioncache[ 15 ] );
-
-    compressed := ( PC == ( lastpccache[ 0 ] ) ) ? ( lastcompressedcache[ 0 ] ) :
-                    $$for i = 1, 14 do
-                        ( PC == ( lastpccache[ $i$ ] ) ) ? ( lastcompressedcache[ $i$  ] ) :
-                    $$end
-                    ( lastcompressedcache[ 15 ] );
+    instruction := lastinstructioncache[ ( location == 8hff ) ? 0 : location ];
+    compressed := lastcompressedcache[ ( location == 8hff ) ? 0 : location ];
 
     while(1) {
         if( updatecache && ~LATCHupdate ) {
