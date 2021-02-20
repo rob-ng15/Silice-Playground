@@ -126,7 +126,6 @@ algorithm memmap_io (
     uint2   tilemap_g = uninitialized;
     uint2   tilemap_b = uninitialized;
     uint1   tilemap_display = uninitialized;
-
     tilemap tile_map <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -152,7 +151,6 @@ algorithm memmap_io (
     uint7   bitmap_colour_write_alt = uninitialized;
     uint3   gpu_active_dithermode = uninitialized;
     uint1   bitmap_write = uninitialized;
-
     // 640 x 480 x 7 bit { Arrggbb } colour bitmap
     simple_dualport_bram uint7 bitmap <@video_clock,@gpu_clock,input!> [ 307200 ] = uninitialized;
     bitmap bitmap_window <@video_clock,!video_reset> (
@@ -192,7 +190,6 @@ algorithm memmap_io (
     uint2   upper_sprites_g = uninitialized;
     uint2   upper_sprites_b = uninitialized;
     uint1   upper_sprites_display = uninitialized;
-
     sprite_layer lower_sprites <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -206,7 +203,6 @@ algorithm memmap_io (
         collision_layer_2 <: tilemap_display,
         collision_layer_3 <: upper_sprites_display
     );
-
     sprite_layer upper_sprites <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,

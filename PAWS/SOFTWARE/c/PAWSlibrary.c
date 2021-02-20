@@ -1597,6 +1597,7 @@ block_t * split(block_t * b, size_t size) {
 	return newptr;
 }
 
+extern int _end;
 void *malloc(size_t size) {
 	void           *block_mem;
 	block_t        *ptr, *newptr;
@@ -1604,8 +1605,7 @@ void *malloc(size_t size) {
 		: ALLOC_UNIT;
 
     if( !__malloc_init ) {
-        head = (block_t *)MEMORYTOP - MALLOC_MEMORY;
-        MEMORYTOP -= MALLOC_MEMORY;
+        head = (block_t *) (MEMORYTOP - MALLOC_MEMORY);
         head->next = NULL;
         head->prev = NULL;
         head->size = MALLOC_MEMORY - sizeof(block_t);
@@ -1739,7 +1739,7 @@ void INITIALISEMEMORY( void ) {
 
     // MEMORY
     MEMORYTOP = CLUSTERBUFFER;
-    //__malloc_init = 0;
+    __malloc_init = 0;
 }
 
 #include "nanojpeg.c"

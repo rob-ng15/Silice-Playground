@@ -364,19 +364,19 @@ algorithm instructioncache(
     output  uint1   compressed
 ) <autorun> {
     // LAST INSTRUCTION CACHE
-    uint32  lastpccache[16] = { 32hffffffff, pad(32hffffffff) };
-    uint32  lastinstructioncache[16] = uninitialized;
-    uint1   lastcompressedcache[16] = uninitialized;
-    uint4   lastcachepointer = 0;
+    uint32  lastpccache[32] = { 32hffffffff, pad(32hffffffff) };
+    uint32  lastinstructioncache[32] = uninitialized;
+    uint1   lastcompressedcache[32] = uninitialized;
     uint8   location = 8hff;
+    uint5   lastcachepointer = 0;
     uint1   LATCHupdate = 0;
 
     // CHECK IF PC IS IN LAST INSTRUCTION CACHE
     location :=
-        $$for i = 0, 14 do
+        $$for i = 0, 30 do
             ( PC == ( lastpccache[ $i$ ] ) ) ? $i$ :
         $$end
-        ( PC == ( lastpccache[ 15 ] ) ) ? 15 : 8hff;
+        ( PC == ( lastpccache[ 31 ] ) ) ? 31 : 8hff;
 
     incache := ( location == 8hff ) ? 0 : 1;
 
