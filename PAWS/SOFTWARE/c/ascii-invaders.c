@@ -160,15 +160,15 @@ void moveAliensDown();
 
 int main( void ) {
     INITIALISEMEMORY();
+    // CLEAR and SET THE BACKGROUND
+    gpu_cs();
+    set_background( GREY2, DKBLUE - 1, BKG_SNOW );
 
     // set up curses library
     initscr();
     cbreak();
     noecho();
-#ifdef USE_COLORS
     curs_set(0); // hide cursor
-#endif
-    initscr();
     cbreak();
     noecho();
 #ifdef USE_KEYS
@@ -177,14 +177,14 @@ int main( void ) {
 #ifdef USE_COLORS
     if (has_colors()) {
         start_color();
-        init_pair(0, COLOR_BLACK, COLOR_BLACK);
-        init_pair(1, COLOR_GREEN, COLOR_BLACK);
-        init_pair(2, COLOR_RED, COLOR_BLACK);
-        init_pair(3, COLOR_CYAN, COLOR_BLACK);
-        init_pair(4, COLOR_WHITE, COLOR_BLACK);
-        init_pair(5, COLOR_MAGENTA, COLOR_BLACK);
-        init_pair(6, COLOR_BLUE, COLOR_BLACK);
-        init_pair(7, COLOR_YELLOW, COLOR_BLACK);
+        init_pair(0, COLOR_BLACK, TRANSPARENT);
+        init_pair(1, COLOR_GREEN, TRANSPARENT);
+        init_pair(2, COLOR_RED, TRANSPARENT);
+        init_pair(3, COLOR_CYAN, TRANSPARENT);
+        init_pair(4, COLOR_WHITE, TRANSPARENT);
+        init_pair(5, COLOR_MAGENTA, TRANSPARENT);
+        init_pair(6, COLOR_BLUE, TRANSPARENT);
+        init_pair(7, COLOR_YELLOW, TRANSPARENT);
     }
 #endif
     game.screenCols = COLS;
@@ -361,7 +361,7 @@ void handleTimer(int signal) {
             // find the first alien from the bottom
             for (y = aliens.emptyBottom - 1; y >= 0; y--) {
                 if (aliens.table[(aliens.cols * y) + x] > ALIEN_EMPTY) {
-                    if (rng(64) == 0) {
+                    if (rng(128) == 0) {
                         addBomb(aliens.x + (x * ALIEN_WIDTH) + (ALIEN_WIDTH / 2),
                             aliens.y + (y * ALIEN_HEIGHT) + ALIEN_HEIGHT - 1);
                     }
@@ -746,10 +746,14 @@ void paintAlienRow(int row, int clean) {
                     printw("%s", alien10[line + i]);
                     break;
                 case ALIEN20:
+                    attron(COLOR_PAIR(3));
                     printw("%s", alien20[line + i]);
+                    attron(COLOR_PAIR(4));
                     break;
                 case ALIEN30:
+                    attron(COLOR_PAIR(6));
                     printw("%s", alien30[line + i]);
+                    attron(COLOR_PAIR(4));
                     break;
                 case ALIEN_EXPLODE1:
                     //printw("%s", alienExplode[i]);

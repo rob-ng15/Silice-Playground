@@ -3,6 +3,10 @@ algorithm memmap_io (
     output  uint8   leds,
     input   uint$NUM_BTNS$ btns,
 
+   // GPIO
+    input   uint28  gn,
+    output  uint28  gp,
+
     // UART
     output! uint1   uart_tx,
     input   uint1   uart_rx,
@@ -307,13 +311,28 @@ algorithm memmap_io (
         store       <:> sdbuffer
     );
 
+    // PS PORT
+    uint8   ps2keycode = uninitialized;
+    uint1   ps2valid = uninitialized;
+    uint1   ps2enable = 1;
+    uint1   ps2clk_ext := gn[1,1];
+    uint1   ps2data_ext := gn[3,1];
+    ps2_port PS2 <@clock_25mhz> (
+        clk <: clock_25mhz,
+        enable_rcv <: ps2enable,
+        ps2clk_ext <: ps2clk_ext,
+        ps2data_ext <: ps2data_ext,
+        kb_interrupt :> ps2valid,
+        scancode :> ps2keycode
+    );
+
     // USB HID
     uint160 usboutput = uninitialized;
     uint1   usbvalid = uninitialized;
     uint1   usbreset := ~btns[0,1];
     UsbHostHid USBHID <@clock_25mhz> (
         clkout2 <: clock_usb,
-    //    //reset <: reset,
+        //reset <: usbreset,
         io_usbDif <: usb_fpga_dp,
         io_usbDp <:> usb_fpga_bd_dp,
         io_usbDn <:> usb_fpga_bd_dn,
@@ -367,6 +386,9 @@ algorithm memmap_io (
     apu_processor_L.apu_write := 0;
     apu_processor_R.apu_write := 0;
 
+    // ENABLE PS2 PORT
+    gp[0,4] = 4b1111;
+
     // DISBLE SMT ON STARTUP
     SMTRUNNING = 0;
     SMTSTARTPC = 0;
@@ -384,6 +406,10 @@ algorithm memmap_io (
                 case 16h8008: { readData = { $16-NUM_BTNS$b0, reg_btns[0,$NUM_BTNS$] }; }
                 case 16h800c: { readData = leds; }
                 case 16h8010: { readData = systemClock; }
+
+                // PS2
+                case 16h8040: { readData = ps2valid; }
+                case 16h8044: { readData = ps2keycode; }
 
                 // USB HID INPUT VALID - 1 WHILST KEY IS PRESSED
                 case 16h8080: { readData = usbvalid ? 1 : 0; }

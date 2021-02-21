@@ -3,31 +3,39 @@ algorithm registers(
     input   uint1   SMT,
     input!  uint5   rs1,
     input!  uint5   rs2,
+    input!  uint5   rs3,
     input   uint5   rd,
     input   uint1   write,
     input   int32   result,
     output! int32   sourceReg1,
-    output! int32   sourceReg2
+    output! int32   sourceReg2,
+    output! int32   sourceReg3
 ) <autorun> {
     // RISC-V REGISTERS
     simple_dualport_bram int32 registers_1 <input!> [64] = { 0, pad(0) };
     simple_dualport_bram int32 registers_2 <input!> [64] = { 0, pad(0) };
+    simple_dualport_bram int32 registers_3 <input!> [64] = { 0, pad(0) };
 
     // READ FROM REGISTERS
     registers_1.addr0 := { SMT, rs1 };
     registers_2.addr0 := { SMT, rs2 };
+    registers_3.addr0 := { SMT, rs3 };
     sourceReg1 := registers_1.rdata0;
     sourceReg2 := registers_2.rdata0;
+    sourceReg3 := registers_3.rdata0;
 
     // REGISTERS WRITE FLAG
     registers_1.wenable1 := 1;
     registers_2.wenable1 := 1;
+    registers_3.wenable1 := 1;
 
     // SET REGISTER 0 to 0
     registers_1.addr1 = 0;
     registers_1.wdata1 = 0;
     registers_2.addr1 = 0;
     registers_2.wdata1 = 0;
+    registers_3.addr1 = 0;
+    registers_3.wdata1 = 0;
 
     while(1) {
         // WRITE TO REGISTERS
@@ -36,6 +44,8 @@ algorithm registers(
             registers_1.wdata1 = result;
             registers_2.addr1 = { SMT, rd };
             registers_2.wdata1 = result;
+            registers_3.addr1 = { SMT, rd };
+            registers_3.wdata1 = result;
         }
     }
 }
@@ -45,11 +55,13 @@ algorithm decoder(
     input   uint32  instruction,
 
     output  uint7   opCode,
+    output  uint2   function2,
     output  uint3   function3,
     output  uint7   function7,
 
     output! uint5   rs1,
     output! uint5   rs2,
+    output! uint5   rs3,
     output  uint5   rd,
 
     output  int32   immediateValue,
@@ -57,11 +69,13 @@ algorithm decoder(
 ) <autorun> {
     while(1) {
         opCode = Utype(instruction).opCode;
+        function2 = R4type(instruction).function2;
         function3 = Rtype(instruction).function3;
         function7 = Rtype(instruction).function7;
 
         rs1 = Rtype(instruction).sourceReg1;
         rs2 = Rtype(instruction).sourceReg2;
+        rs3 = R4type(instruction).sourceReg3;
         rd = Rtype(instruction).destReg;
 
         immediateValue = { {20{instruction[31,1]}}, Itype(instruction).immediate };

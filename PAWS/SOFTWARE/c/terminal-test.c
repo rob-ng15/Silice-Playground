@@ -11,6 +11,9 @@ void terminalrefresh( void ) {
     }
 }
 
+unsigned short volatile * myPS2_VALID = (unsigned short volatile *) 0x8040;
+unsigned short volatile * myPS2_KEYCODE = (unsigned short volatile *) 0x8044;
+
 unsigned short volatile * myUSBHID_VALID = (unsigned short volatile *) 0x8080;
 unsigned short volatile * myUSBHID_MODIFIERS = (unsigned short volatile *) 0x8082;
 unsigned short volatile * myUSBHID_KEYS12 = (unsigned short volatile *) 0x8084;
@@ -39,7 +42,8 @@ int main( void ) {
     printw("\nFLOAT TEST: x = %f, y = %f, x * y = %f, x / y = %f\n\n", x, y, x*y, x / y );
 
     while(1) {
-        mvprintw( 15, 0, "SYSTEMTIME <%d>\n  CPU CYCLES <%d>\n  CPU INSTRUCTIONS <%d>\n    CYCLES / INSTRUCTIONS <%f>", CSRtime(), CSRcycles(), CSRinstructions(), CSRcycles()/CSRinstructions() );
+        mvprintw( 15, 0, "SYSTEMTIME <%lu>\n  CPU CYCLES <%lu>\n  CPU INSTRUCTIONS <%lu>\n    CYCLES / INSTRUCTIONS <%f>", CSRtime(), CSRcycles(), CSRinstructions(), CSRcycles()/CSRinstructions() );
+        mvprintw( 27, 0, "PS2 Valid <%x> Keycode <%x>", *myPS2_VALID, *myPS2_KEYCODE );
         mvprintw( 29, 0, "USB HID Valid <%x> Modifiers <%x> Keycodes <%x> <%x> <%x>", *myUSBHID_VALID, *myUSBHID_MODIFIERS, *myUSBHID_KEYS12, *myUSBHID_KEYS34, *myUSBHID_KEYS56 );
     }
 }

@@ -1055,7 +1055,7 @@ unsigned char SMTSTATE( void ) {
 char            __curses_character[80][30], __curses_background[80][30], __curses_foreground[80][30];
 unsigned char   __curses_backgroundcolours[16], __curses_foregroundcolours[16], __curses_cursor = 1, __curses_scroll = 1;
 
-unsigned short  __curses_x = 0, __curses_y = 0, __curses_fore = WHITE, __curses_back = BLACK;
+unsigned int  __curses_x = 0, __curses_y = 0, __curses_fore = WHITE, __curses_back = BLACK;
 
 void initscr( void ) {
     for( unsigned x = 0; x < 80; x++ ) {
@@ -1075,7 +1075,7 @@ int endwin( void ) {
 int refresh( void ) {
     for( unsigned char y = 0; y < 30; y ++ ) {
         for( unsigned char x = 0; x < 80; x++ ) {
-            if( ( x == __curses_x ) && ( y == __curses_y ) && ( __curses_cursor ) && ( systemclock() & 1 ) ) {
+            if( ( x == __curses_x ) && ( y == __curses_y ) && ( __curses_cursor == 1 ) && ( systemclock() & 1 ) ) {
                 tpu_set( x, y, __curses_fore, __curses_back );
             } else {
                 tpu_set( x, y, __curses_background[x][y], __curses_foreground[x][y] );
@@ -1088,7 +1088,14 @@ int refresh( void ) {
 }
 
 int clear( void ) {
-    initscr();
+    for( unsigned x = 0; x < 80; x++ ) {
+        for( unsigned y = 0; y < 30; y++ ) {
+            __curses_character[x][y] = 0;
+            __curses_background[x][y] = TRANSPARENT;
+            __curses_foreground[x][y] = BLACK;
+        }
+    }
+    __curses_x = 0; __curses_y = 0; __curses_fore = WHITE; __curses_back = BLACK;
     return( true );
 }
 

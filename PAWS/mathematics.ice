@@ -755,11 +755,13 @@ algorithm alu (
     output! uint1   busy,
 
     input   uint7   opCode,
+    input   uint2   function2,
     input   uint3   function3,
     input   uint7   function7,
     input   uint5   rs1,
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
+    input   uint32  sourceReg3,
     input   uint5   IshiftCount,
     input   uint32  immediateValue,
 

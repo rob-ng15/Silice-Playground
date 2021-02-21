@@ -56,19 +56,23 @@ algorithm PAWSCPU (
     // RISC-V 32 BIT INSTRUCTION DECODER
     int32   immediateValue = uninitialized;
     uint7   opCode = uninitialized;
+    uint2   function2 = uninitialized;
     uint3   function3 = uninitialized;
     uint7   function7 = uninitialized;
     uint5   IshiftCount = uninitialized;
     uint5   rs1 = uninitialized;
     uint5   rs2 = uninitialized;
+    uint5   rs3 = uninitialized;
     uint5   rd = uninitialized;
     decoder DECODER <@clock_cpufunc> (
         instruction <: instruction,
         opCode :> opCode,
+        function2 :> function2,
         function3 :> function3,
         function7 :> function7,
         rs1 :> rs1,
         rs2 :> rs2,
+        rs3 :> rs3,
         rd :> rd,
         immediateValue :> immediateValue,
         IshiftCount :> IshiftCount
@@ -77,6 +81,7 @@ algorithm PAWSCPU (
     // RISC-V REGISTERS
     int32   sourceReg1 = uninitialized;
     int32   sourceReg2 = uninitialized;
+    int32   sourceReg3 = uninitialized;
     registers REGISTERS(
         SMT <:: SMT,
         rs1 <: rs1,
@@ -84,7 +89,8 @@ algorithm PAWSCPU (
         rd <: rd,
         result <: result,
         sourceReg1 :> sourceReg1,
-        sourceReg2 :> sourceReg2
+        sourceReg2 :> sourceReg2,
+        sourceReg3 :> sourceReg3
     );
 
     // RISC-V ADDRESS GENERATOR
@@ -121,11 +127,13 @@ algorithm PAWSCPU (
     // ALU
     alu ALU <@clock_cpualu> (
         opCode <: opCode,
+        function2 <: function2,
         function3 <: function3,
         function7 <: function7,
         rs1 <: rs1,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
+        sourceReg3 <: sourceReg3,
         IshiftCount <: IshiftCount,
         immediateValue <: immediateValue
     );

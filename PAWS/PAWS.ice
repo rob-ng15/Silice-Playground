@@ -136,6 +136,8 @@ algorithm main(
     uint1   SMTRUNNING = uninitialized;
     uint32  SMTSTARTPC = uninitialized;
     memmap_io IO_Map <@clock_memory> (
+        gn <: gn,
+        gp :> gp,
         leds :> leds,
         btns <: btns,
         uart_tx :> uart_tx,
