@@ -38,13 +38,7 @@ algorithm PAWSCPU (
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
     uint1   compressed = uninitialized;
-    compressed00 COMPRESSED00 <@clock_cpufunc> (
-        i16 <: readdata
-    );
-    compressed01 COMPRESSED01 <@clock_cpufunc> (
-        i16 <: readdata
-    );
-    compressed10 COMPRESSED10 <@clock_cpufunc> (
+    compressed COMPRESSED <@clock_cpufunc> (
         i16 <: readdata
     );
 
@@ -137,7 +131,7 @@ algorithm PAWSCPU (
     );
 
     // ATOMIC MEMORY OPERATIONS
-    aluA ALUA(
+    aluA ALUA <@clock_cpualu> (
         function7 <: function7,
         memoryinput <: memoryinput,
         sourceReg2 <: sourceReg2
@@ -189,9 +183,7 @@ algorithm PAWSCPU (
             compressed = ( readdata[0,2] != 2b11 );
 
             switch( readdata[0,2] ) {
-                case 2b00: { instruction = COMPRESSED00.i32; }
-                case 2b01: { instruction = COMPRESSED01.i32; }
-                case 2b10: { instruction = COMPRESSED10.i32; }
+                default: { instruction = COMPRESSED.i32; }
                 case 2b11: {
                     // 32 BIT INSTRUCTION
                     lowWord = readdata;

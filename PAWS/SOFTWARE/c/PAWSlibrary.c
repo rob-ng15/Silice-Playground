@@ -2,54 +2,9 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
-
-#define MAX(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a > _b ? _a : _b; })
-
-#define MIN(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a < _b ? _a : _b; })
-
-#define ABS(a) (((a) < 0 )? -(a) : (a))
+#include <string.h>
 
 typedef unsigned int size_t;
-
-// STANDARD C FUNCTIONS ( from @sylefeb mylibc )
-
-void *memcpy(void *dest, const void *src, size_t n) {
-  const unsigned char *bsrc = (const unsigned char *)src;
-  while ( n-- ) {
-    *(unsigned char*)dest = *(++bsrc);
-  }
-  return(0);
-}
-
-void *memset(void *s, int c,  unsigned int n)
-{
-    unsigned char* p = s;
-    while( n-- )
-        *p++ = (unsigned char)c;
-    return(0);
-}
-
-int strlen( char *s ) {
-    int i = 0;
-    while( *s ) {
-        s++;
-        i++;
-    }
-    return(i);
-}
-
-int strcmp(const char *p1, const char *p2) {
-  while (*p1 && (*p1 == *p2)) {
-    p1++; p2++;
-  }
-  return *(const unsigned char*)p1 - *(const unsigned char*)p2;
-}
 
 // MASTER BOOT RECORD AND PARTITION TABLE
 unsigned char *MBR;
@@ -67,60 +22,22 @@ unsigned char *MEMORYHEAPTOP = (unsigned char *)0x10800000;
 unsigned char *MEMORYTOP;
 
 // RISC-V CSR FUNCTIONS
-unsigned int CSRcycles() {
+unsigned long CSRcycles() {
    int cycles;
    asm volatile ("rdcycle %0" : "=r"(cycles));
    return cycles;
 }
 
-unsigned int CSRinstructions() {
+unsigned long CSRinstructions() {
    int insns;
    asm volatile ("rdinstret %0" : "=r"(insns));
    return insns;
 }
 
-unsigned int CSRtime() {
+unsigned long CSRtime() {
   int time;
   asm volatile ("rdtime %0" : "=r"(time));
   return time;
-}
-
-// INTERNAL HELPER FUNCTIONS
-// CONVERT UNSIGNED INTEGERS TO STRINGS ( CHAR, SHORT and INT VERSIONS )
-void chartostring( unsigned char value, char *s ) {
-    unsigned char remainder, i = 0;
-
-    while( value != 0 ) {
-        remainder = value % 10;
-        value = value / 10;
-
-        s[2 - i] = remainder + '0';
-        i++;
-    }
-}
-void shorttostring( unsigned short value, char *s ) {
-    unsigned short remainder;
-    unsigned char i = 0;
-
-    while( value != 0 ) {
-        remainder = value % 10;
-        value = value / 10;
-
-        s[4 - i] = remainder + '0';
-        i++;
-    }
-}
-void inttostring( unsigned int value, char *s ) {
-    unsigned int remainder;
-    unsigned char i = 0;
-
-    while( value != 0 ) {
-        remainder = value % 10;
-        value = value / 10;
-
-        s[9 - i] = remainder + '0';
-        i++;
-    }
 }
 
 // OUTPUT TO UART
@@ -131,38 +48,6 @@ void outputcharacter(char c) {
     if( c == '\n' )
         outputcharacter('\r');
 }
-// OUTPUT NULL TERMINATED STRING TO UART WITH NEWLINE
-void outputstring(char *s) {
-	while(*s) {
-		outputcharacter(*s);
-		s++;
-	}
-	outputcharacter('\n');
-}
-// OUTPUT NULL TERMINATED STRING TO UART WITH NO NEWLINE
-void outputstringnonl(char *s) {
-	while(*s) {
-		outputcharacter(*s);
-		s++;
-	}
-}
-// OUTPUT UNSIGNED INTEGERS TO UART ( CHAR, SHORT and INT VERSIONS )
-void outputnumber_char( unsigned char value ) {
-    char valuestring[]="  0";
-    chartostring( value, valuestring );
-    outputstringnonl( valuestring );
-}
-void outputnumber_short( unsigned short value ) {
-    char valuestring[]="    0";
-    shorttostring( value, valuestring );
-    outputstringnonl( valuestring );
-}
-void outputnumber_int( unsigned int value ) {
-    char valuestring[]="         0";
-    inttostring( value, valuestring );
-    outputstringnonl( valuestring );
-}
-
 // INPUT FROM UART
 // RETURN 1 IF UART CHARACTER AVAILABLE, OTHERWISE 0
 unsigned char character_available( void ) {
@@ -173,7 +58,6 @@ char inputcharacter( void ) {
 	while( !character_available() ) {}
     return *UART_DATA;
 }
-
 
 // TIMER AND PSEUDO RANDOM NUMBER GENERATOR
 
@@ -547,16 +431,33 @@ void gpu_quadrilateral( unsigned char colour, short x1, short y1, short x2, shor
 }
 
 // OUTPUT A STRING TO THE GPU
-void gpu_outputstring( unsigned char colour, short x, short y, char *s, unsigned char size ) {
+void gpu_printf( unsigned char colour, short x, short y, unsigned char size, const char *fmt,... ) {
+    static char buffer[81];
+    va_list args;
+    va_start (args, fmt);
+    vsnprintf( buffer, 80, fmt, args);
+    va_end(args);
+
+    char *s = buffer;
     while( *s ) {
         gpu_character_blit( colour, x, y, *s++, size );
         x = x + ( 8 << size );
     }
 }
 // OUTPUT A STRING TO THE GPU - CENTRED AT ( x,y )
-void gpu_outputstringcentre( unsigned char colour, short x, short y, char *s, unsigned char size ) {
+void gpu_printf_centre( unsigned char colour, short x, short y, unsigned char size, const char *fmt,... ) {
+    static char buffer[81];
+    va_list args;
+    va_start (args, fmt);
+    vsnprintf( buffer, 80, fmt, args);
+    va_end(args);
+
+    char *s = buffer;
     x = x - ( ( strlen( s ) * ( 8 << size ) ) /2 );
-    gpu_outputstring( colour, x, y, s, size );
+    while( *s ) {
+        gpu_character_blit( colour, x, y, *s++, size );
+        x = x + ( 8 << size );
+    }
 }
 
 // GPU VECTOR BLOCK
@@ -910,13 +811,11 @@ void tpu_set(  unsigned char x, unsigned char y, unsigned char background, unsig
     *TPU_X = x; *TPU_Y = y; *TPU_BACKGROUND = background; *TPU_FOREGROUND = foreground; *TPU_COMMIT = 1;
 }
 
-// OUTPUT A CHARACTER TO THE CHARACTER MAP
+// OUTPUT CHARACTER, STRING, and PRINTF EQUIVALENT FOR THE TPU
 void tpu_output_character( char c ) {
     while( *TPU_COMMIT );
     *TPU_CHARACTER = c; *TPU_COMMIT = 2;
 }
-
-// OUTPUT A NULL TERMINATED STRING TO THE CHARACTER MAP
 void tpu_outputstring( char *s ) {
     while( *s ) {
         while( *TPU_COMMIT );
@@ -924,28 +823,25 @@ void tpu_outputstring( char *s ) {
         s++;
     }
 }
+void tpu_printf( const char *fmt,... ) {
+    static char buffer[1024];
+    va_list args;
+    va_start (args, fmt);
+    vsnprintf( buffer, 1023, fmt, args);
+    va_end(args);
 
-void tpu_outputstringcentre( unsigned char y, unsigned char background, unsigned char foreground, char *s ) {
+    tpu_outputstring( buffer );
+}
+void tpu_printf_centre( unsigned char y, unsigned char background, unsigned char foreground,  const char *fmt,...  ) {
+    static char buffer[811];
+    va_list args;
+    va_start (args, fmt);
+    vsnprintf( buffer, 80, fmt, args);
+    va_end(args);
+
     tpu_clearline( y );
-    tpu_set( 40 - ( strlen(s) >> 1 ), y, background, foreground );
-    tpu_outputstring( s );
-}
-
-// OUTPUT UNSIGNED INTEGERS TO TPU ( CHAR, SHORT and INT VERSIONS )
-void tpu_outputnumber_char( unsigned char value ) {
-    char valuestring[]="  0";
-    chartostring( value, valuestring );
-    tpu_outputstring( valuestring );
-}
-void tpu_outputnumber_short( unsigned short value ) {
-    char valuestring[]="    0";
-    shorttostring( value, valuestring );
-    tpu_outputstring( valuestring );
-}
-void tpu_outputnumber_int( unsigned int value ) {
-    char valuestring[]="         0";
-    inttostring( value, valuestring );
-    tpu_outputstring( valuestring );
+    tpu_set( 40 - ( strlen(buffer) >> 1 ), y, background, foreground );
+    tpu_outputstring( buffer );
 }
 
 // SIMPLE FILE SYSTEM
@@ -1403,22 +1299,16 @@ unsigned char *_heap;
 unsigned char *_sbrk( int incr ) {
   unsigned char *prev_heap;
 
-  outputstringnonl( "I am in _sbrk Request :" );  outputnumber_int( incr );
-
   if (_heap == NULL) {
-    outputstringnonl( " (SBRK INIT) " );
     _heap = (unsigned char *)MEMORYTOP - MALLOC_MEMORY - 32;
   }
   prev_heap = _heap;
 
   if( incr < 0 ) {
-      outputstringnonl( " NEGATIVE REQUEST :" ); outputnumber_int( ABS(incr) );
       _heap = _heap;
   } else {
     _heap += incr;
   }
-
-  outputstringnonl( " New Heap :" ); outputnumber_int( (int)_heap ); outputstring("\n");
 
   return prev_heap;
 }
@@ -1434,6 +1324,7 @@ long _write( int fd, const void *buf, size_t cnt ) {
                 break;
         }
     }
+    return(0);
 }
 long _read( int fd, const void *buf, size_t cnt ) {
     unsigned char *buffer = (unsigned char *)buf;
@@ -1446,6 +1337,7 @@ long _read( int fd, const void *buf, size_t cnt ) {
                 break;
         }
     }
+    return(0);
 }
 int _open( const char *file, int flags, int mode ) {
     return( -1 );
@@ -1468,8 +1360,9 @@ int _getpid() {
 int _kill() {
     return( -1 );
 }
-void _exit() {
+void  __attribute__ ((noreturn)) _exit( int status ){
     ((void(*)(void))0x00000000)();
+    while(1);
 }
 
 // ALLOCATE MEMORY FOR FILES, IN UNITS OF CLUSTERSIZE ( allows extra for reading in files )
@@ -1496,16 +1389,11 @@ void INITIALISEMEMORY( void ) {
     DATASTARTSECTOR = PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats + ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512;;
 
     // CLEAR BSS
-    outputstringnonl("_BSS_START: "); outputnumber_int( (int)&_bss_start);
-    outputstringnonl(" _BSS_END: "); outputnumber_int( (int)&_bss_end);  outputcharacter('\n');
-
     memset( &_bss_start, 0, &_bss_end - &_bss_end );
 
     // MEMORY
     MEMORYTOP = CLUSTERBUFFER;
     _heap = NULL;
-    outputstringnonl("SBRK(0): "); _sbrk(0);
-    outputstringnonl("FREE(MALLOC(32)): "); free(malloc( 32  ) ); outputcharacter('\n');
 }
 
 

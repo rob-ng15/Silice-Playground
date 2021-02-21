@@ -2,11 +2,11 @@
 #include "GALAXYJPG.h"
 #include <stdio.h>
 
-void main( void ) {
+int main( void ) {
     INITIALISEMEMORY();
 
     int width, height,counter;
-    char *imagebuffer, colour;
+    unsigned char *imagebuffer, colour;
 
     // JPEG LIBRARY
     njInit();

@@ -113,7 +113,7 @@ void setupboard( void ) {
     board[3][7].type = KING;
 }
 
-void main( void ) {
+int main( void ) {
     INITIALISEMEMORY();
 
     setupscreen();

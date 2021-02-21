@@ -1,14 +1,3 @@
-#define MAX(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a > _b ? _a : _b; })
-
-#define MIN(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a < _b ? _a : _b; })
-
-#define ABS(a) (((a) < 0 )? -(a) : (a))
 
 #define NULL 0
 #define true 1
@@ -177,19 +166,8 @@ extern long CSRcycles( void );
 extern long CSRinstructions( void );
 extern long CSRtime( void );
 
-// STANDARD FUNCTION DEFINITIONS
-extern void* memcpy( void *dest, const void *src, size_t n );
-extern void *memset( void *s, int c, size_t n );
-extern int strcmp( const char *p1, const char *p2 );
-extern int strlen( char *s );
-
 // UART AND TERMINAL INPUT / OUTPUT
 extern void outputcharacter(char);
-extern void outputstring(char *);
-extern void outputstringnonl(char *);
-extern void outputnumber_char( unsigned char );
-extern void outputnumber_short( unsigned short );
-extern void outputnumber_int( unsigned int );
 extern char inputcharacter( void );
 extern unsigned char character_available( void );
 
@@ -240,8 +218,8 @@ extern void gpu_blit( unsigned char, short, short, short, unsigned char );
 extern void gpu_character_blit( unsigned char, short, short, unsigned char, unsigned char );
 extern void gpu_triangle( unsigned char, short, short, short, short, short, short );
 extern void gpu_quadrilateral( unsigned char, short, short, short, short, short, short, short, short );
-extern void gpu_outputstring( unsigned char, short, short, char *, unsigned char );
-extern void gpu_outputstringcentre( unsigned char, short, short, char *, unsigned char );
+extern void gpu_printf( unsigned char, short, short, unsigned char, const char *,...  );
+extern void gpu_printf_centre( unsigned char, short, short, unsigned char, const char *,...  );
 extern void draw_vector_block( unsigned char, unsigned char, short, short );
 extern void set_vector_vertex( unsigned char, unsigned char , unsigned char, char, char );
 extern void bitmap_scrollwrap( unsigned char );
@@ -267,10 +245,8 @@ extern void tpu_clearline( unsigned char );
 extern void tpu_set(  unsigned char, unsigned char, unsigned char, unsigned char );
 extern void tpu_output_character( char );
 extern void tpu_outputstring( char * );
-extern void tpu_outputstringcentre( unsigned char, unsigned char, unsigned char, char * );
-extern void tpu_outputnumber_char( unsigned char );
-extern void tpu_outputnumber_short( unsigned short );
-extern void tpu_outputnumber_int( unsigned int );
+extern void tpu_printf( const char *,... );
+extern void tpu_printf_centre( unsigned char, unsigned char, unsigned char, const char *,... );
 
 // IMAGE DECODERS
 extern void netppm_display( unsigned char *, unsigned char );

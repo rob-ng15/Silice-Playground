@@ -42,7 +42,7 @@ void game( void ) {
 	}
 }
 
-void main( void ) {
+int main( void ) {
     INITIALISEMEMORY();
 
     gpu_cs();

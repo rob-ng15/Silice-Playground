@@ -1,17 +1,18 @@
 #include "PAWSlibrary.h"
 #include <stdlib.h>
+#define min(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a < _b ? _a : _b; })
 
 // INCLUDE TOMBSTONE IMAGE
-#include "TOMBSTONEPPM.h"
-unsigned char *tombstonebitmap;
+#include "TOMBSTONE_BMP.h"
 
 // INCLUDE CONTROLS IMAGE
-#include "ULX3SPPM.h"
-unsigned char *ulx3sbitmap;
+#include "ULX3S_BMP.h"
 
 // INCLUDE 3D PACMAN BACKDROP
-#include "3DPACMAN.h"
-unsigned char *pacman3dbitmap;
+#include "3DPACMAN_BMP.h"
 
 // MAZE SIZES
 #define MAXWIDTH 160
@@ -50,7 +51,7 @@ unsigned short ghosteyes[4][4] = { { 0, 1, 2, 3 }, { 3, 0, 1, 2 }, { 2, 3, 0, 1 
 
 // DRAW WELCOME SCREEN
 void drawwelcome( void ) {
-    gpu_outputstringcentre( YELLOW, 320, 8, "3D MONSTER MAZE", 2 );
+    gpu_printf_centre( YELLOW, 320, 8, 2, "3D MONSTER MAZE" );
 
     // DISPLAY ULX3 BITMAP
     bitmapblit( ulx3sbitmap, 320, 219, 160, 131, BLUE );
@@ -62,14 +63,14 @@ void drawwelcome( void ) {
     gpu_circle( BLACK, 520, 358, 8, 1 );
     gpu_circle( BLACK, 400, 358, 8, 1 );
     gpu_circle( BLACK, 360, 358, 8, 1 );
-    gpu_outputstringcentre( CYAN, 480, 322, "STEP", 0 );
-    gpu_outputstringcentre( CYAN, 480, 368, "BACK", 0 );
-    gpu_outputstringcentre( CYAN, 440, 368, "TURN", 0 );
-    gpu_outputstringcentre( CYAN, 440, 376, "LEFT", 0 );
-    gpu_outputstringcentre( CYAN, 520, 368, "TURN", 0 );
-    gpu_outputstringcentre( CYAN, 520, 376, "RIGHT", 0 );
-    gpu_outputstringcentre( CYAN, 400, 368, "PEEK", 0 );
-    gpu_outputstringcentre( CYAN, 360, 368, "POWER", 0 );
+    gpu_printf_centre( CYAN, 480, 322, 0, "STEP" );
+    gpu_printf_centre( CYAN, 480, 368, 0, "BACK" );
+    gpu_printf_centre( CYAN, 440, 368, 0, "TURN" );
+    gpu_printf_centre( CYAN, 440, 376, 0, "LEFT" );
+    gpu_printf_centre( CYAN, 520, 368, 0, "TURN" );
+    gpu_printf_centre( CYAN, 520, 376, 0, "RIGHT" );
+    gpu_printf_centre( CYAN, 400, 368, 0, "PEEK" );
+    gpu_printf_centre( CYAN, 360, 368, 0, "POWER" );
 }
 
 // RETURN CONTENTS OF == 0 MAZE == 1 MAP at ( X, Y )
@@ -725,7 +726,7 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
                 case 'X':
                     gpu_rectangle( YELLOW, perspectivex[ visiblesteps ], perspectivey[ visiblesteps ], 640 - perspectivex[ visiblesteps ], 480 - perspectivey[ visiblesteps ] );
                     if( visiblesteps <= 4 ) {
-                        gpu_outputstringcentre( DKGREEN, 320, perspectivey[ visiblesteps ] + ( 2 << ( 4 - visiblesteps ) ), "EXIT", 4 - visiblesteps );
+                        gpu_printf_centre( DKGREEN, 320, perspectivey[ visiblesteps ] + ( 2 << ( 4 - visiblesteps ) ), 4 - visiblesteps, "EXIT" );
                     }
                     break;
                 case 'E':
@@ -740,7 +741,7 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
         }
 
         // MOVE BACKWARDS FROM WALL
-        for( steps = MIN( visiblesteps - 1, MAXDEPTH - 1 ); steps > 0; steps-- ) {
+        for( steps = min( visiblesteps - 1, MAXDEPTH - 1 ); steps > 0; steps-- ) {
             // DRAW PILL
             if( ( whatisfront( currentx, currenty, direction, steps ) == ' ' ) && ( whatisat( currentx + directionx[ direction ] * steps, currenty + directiony[ direction ] * steps, 1 ) != ' ' ) ) {
                 draw_pill( steps );
@@ -753,7 +754,7 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
 
         // DRAW GHOST IF ONE IS VISIBLE
         ghostdrawn = 0;
-        for( steps = 1; ( steps <= MIN( visiblesteps - 1, MAXDEPTH - 1 ) ) && ( ghostdrawn == 0 ); steps++ ) {
+        for( steps = 1; ( steps <= min( visiblesteps - 1, MAXDEPTH - 1 ) ) && ( ghostdrawn == 0 ); steps++ ) {
             // DRAW GHOST
             for( unsigned ghost = 0; ghost < 4; ghost++ ) {
                 if( ghost <= level ) {
@@ -811,7 +812,7 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
             // BACKWARD
             if( get_buttons() & 16 ) {
                 switch( whatisbehind( currentx, currenty, direction, 1 ) ) {
-                while( get_buttons() & 16 );
+                while( get_buttons() & 16 ) {}
                     case ' ':
                     case 'X':
                         newx -= directionx[direction];
@@ -854,18 +855,6 @@ int main( void ) {
     INITIALISEMEMORY();
     set_background( 0, 0, BKG_RAINBOW );
 
-    // DECODE TOMBSTONE PPM TO BITMAP
-    tombstonebitmap = malloc( 320 * 298 );
-    netppm_decoder( &tombstoneppm[0], tombstonebitmap );
-
-    // DECODE CONTROLS PPM TO BITMAP
-    ulx3sbitmap = malloc( 320 * 219 );
-    netppm_decoder( &ulx3sppm[0], ulx3sbitmap );
-
-    // DECODE 3D PACMAN TO BITMAP
-    pacman3dbitmap = malloc( 640 * 480 );
-    netppm_decoder( &pacman3dppm[0], pacman3dbitmap );
-
     unsigned short levelselected;
 
 	while(1) {
@@ -887,10 +876,10 @@ int main( void ) {
 
         levelselected = 0;
         do {
-            tpu_outputstringcentre( 26, TRANSPARENT, YELLOW, "Select Level" );
-            tpu_outputstringcentre( 27, TRANSPARENT, YELLOW, "Increase/Decrease by LEFT/RIGHT - Select by FIRE" );
-            tpu_set( 1, 29, TRANSPARENT, BLACK ); tpu_outputstring( "Level: " ); tpu_outputnumber_short( level );
-            tpu_set( 60, 29, TRANSPARENT, BLACK ); tpu_outputstring( "Size: " ); tpu_outputnumber_short( levelwidths[level] ); tpu_outputstring( " x " ); tpu_outputnumber_short( levelheights[level] );
+            tpu_printf_centre( 26, TRANSPARENT, YELLOW, "Select Level" );
+            tpu_printf_centre( 27, TRANSPARENT, YELLOW, "Increase/Decrease by LEFT/RIGHT - Select by FIRE" );
+            tpu_set( 1, 29, TRANSPARENT, BLACK ); tpu_printf( "Level: %3d", level );
+            tpu_set( 60, 29, TRANSPARENT, BLACK ); tpu_printf( "Size: %5d x %5d", levelwidths[level], levelheights[level] );
 
             while( get_buttons() == 1 );
             // LEFT / RIGHT to change level, FIRE to select
@@ -908,19 +897,19 @@ int main( void ) {
             }
         } while( levelselected == 0 );
 
-        tpu_outputstringcentre( 26, TRANSPARENT, YELLOW, "" );
-        tpu_outputstringcentre( 27, TRANSPARENT, YELLOW, "" );
+        tpu_printf_centre( 26, TRANSPARENT, YELLOW, "" );
+        tpu_printf_centre( 27, TRANSPARENT, YELLOW, "" );
 
         // GENERATE THE MAZE
         gpu_cs();
-        tpu_outputstringcentre( 29, TRANSPARENT, YELLOW, "Generating Maze" );
+        tpu_printf_centre( 29, TRANSPARENT, YELLOW, "Generating Maze" );
         initialise_maze( levelwidths[level], levelheights[level] );
         generate_maze( levelwidths[level], levelheights[level] );
         display_maze( levelwidths[level], levelheights[level], 1, 1 );
 
         // WAIT TO ENTER THE MAZE
-        tpu_outputstringcentre( 29, TRANSPARENT, GREEN, "Press FIRE to walk the maze!" ); while( ( get_buttons() & 2 ) == 0 );
-        tpu_outputstringcentre( 29, TRANSPARENT, PURPLE, "Release FIRE!" ); while( get_buttons() & 2 );
+        tpu_printf_centre( 29, TRANSPARENT, GREEN, "Press FIRE to walk the maze!" ); while( ( get_buttons() & 2 ) == 0 );
+        tpu_printf_centre( 29, TRANSPARENT, PURPLE, "Release FIRE!" ); while( get_buttons() & 2 );
 
         // SET NUMBER OF POWER PILLS
         powerpills = ( level < 4 ) ? level + 1 : 4;
@@ -941,7 +930,7 @@ int main( void ) {
             level = ( level < MAXLEVEL ) ? level + 1 : MAXLEVEL;
         }
 
-        tpu_outputstringcentre( 29, TRANSPARENT, GREEN, "Press FIRE to restart!" ); while( ( get_buttons() & 2 ) == 0 );
-        tpu_outputstringcentre( 29, TRANSPARENT, PURPLE, "Release FIRE!" ); while( get_buttons() & 2  );
+        tpu_printf_centre( 29, TRANSPARENT, GREEN, "Press FIRE to restart!" ); while( ( get_buttons() & 2 ) == 0 );
+        tpu_printf_centre( 29, TRANSPARENT, PURPLE, "Release FIRE!" ); while( get_buttons() & 2  );
     }
 }

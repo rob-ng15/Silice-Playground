@@ -442,8 +442,8 @@ void handleTimer(int signal) {
         addch(' ');
         if (++(b->y) < LINES) {
             if (gun.missile.y != 0
-                    && ABS(b->x - gun.missile.x) < 2
-                    && ABS(b->y - gun.missile.y) < 2) {
+                    && abs(b->x - gun.missile.x) < 2
+                    && abs(b->y - gun.missile.y) < 2) {
                 // collision with missile
                 removeBomb(b);
                 move(gun.missile.y, gun.missile.x);

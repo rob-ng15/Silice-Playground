@@ -95,6 +95,15 @@ bitfield    Rtype {
     uint5   destReg,
     uint7   opCode
 }
+bitfield    R4type {
+    uint5   sourceReg3,
+    uint2   function2,
+    uint5   sourceReg2,
+    uint5   sourceReg1,
+    uint3   function3,
+    uint5   destReg,
+    uint7   opCode
+}
 
 bitfield Stype {
     uint7   immediate_bits_11_5,

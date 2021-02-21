@@ -14,9 +14,9 @@ NM="riscv64-elf-nm"
 RANLIB="riscv64-elf-ranlib"
 
 # Following based on FemtoRV compile scripts https://github.com/BrunoLevy/learn-fpga/tree/master/FemtoRV
-$ARCH-elf-gcc -ffunction-sections -fdata-sections -Os -I/usr/riscv32-elf/include/ -march=rv32imac -mabi=ilp32 -c -o build/libPAWS.o c/PAWSlibrary.c
+clang --target=riscv32 -ffunction-sections -fdata-sections -O2 -I/usr/riscv32-elf/include/ -march=rv32imac -mabi=ilp32 -c -o build/libPAWS.o c/PAWSlibrary.c
 $AR -cvq build/libPAWS.a build/libPAWS.o
-$ARCH-elf-gcc -ffunction-sections -fdata-sections -Os -I/usr/riscv32-elf/include/ -march=rv32imac -mabi=ilp32 -c -o build/code.o $1
+clang --target=riscv32 -ffunction-sections -fdata-sections -O2 -I/usr/riscv32-elf/include/ -march=rv32imac -mabi=ilp32 -c -o build/code.o $1
 $ARCH-elf-as -march=rv32imac -mabi=ilp32 -o build/crt0.o crt0.s
 $ARCH-elf-ld --as-needed --gc-sections -m elf32lriscv -b elf32-littleriscv -Tconfig_c_SDRAM.ld --no-relax -o build/code.elf build/code.o build/libPAWS.o /usr/riscv32-elf/lib/rv32imac/ilp32/libc.a /usr/riscv32-elf/lib/rv32imac/ilp32/libm.a /usr/lib/gcc/riscv64-elf/10.2.0/rv32imac/ilp32/libgcc.a
 

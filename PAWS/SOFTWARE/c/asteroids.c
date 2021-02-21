@@ -2,8 +2,7 @@
 #include <stdlib.h>
 
 // INCLUDE GALAXY BACKDROP
-#include "GALAXYPPM.h"
-unsigned char *galaxybitmap;
+#include "GALAXY_BMP.h"
 
 // MACROS
 // Convert asteroid number to sprite layer and number
@@ -333,7 +332,7 @@ void drawfuel( unsigned char fullbar )
 {
     if( fullbar ) {
         gpu_rectangle( RED, 70, 456, 328, 463 );
-        gpu_outputstring( RED, 30, 456, "FUEL:", 0 );
+        gpu_printf( RED, 30, 456, 0, "FUEL:" );
     }
     gpu_character_blit( RED, 71 + ( fuel >> 2 ), 456, 219, 0 );
     gpu_character_blit( WHITE, 70 + ( fuel >> 2 ), 456, 30, 0 );
@@ -342,7 +341,7 @@ void drawshield( unsigned char fullbar )
 {
     if( fullbar ) {
         gpu_rectangle( BLUE, 70, 464, 328, 471 );
-        gpu_outputstring( BLUE, 14, 464, "SHIELD:", 0 );
+        gpu_printf( BLUE, 14, 464, 0, "SHIELD:" );
     }
     gpu_character_blit( BLUE, 71 + shield, 464, 219, 0 );
     gpu_character_blit( WHITE, 70 + shield, 464, 30, 0 );
@@ -486,8 +485,7 @@ void move_ship()
 
 void draw_score( void )
 {
-    tpu_set( 34, 1, TRANSPARENT, ( lives > 0 ) ? WHITE : GREY1 ); tpu_outputstring( "Score " );
-    tpu_outputnumber_short( score );
+    tpu_set( 34, 1, TRANSPARENT, ( lives > 0 ) ? WHITE : GREY1 ); tpu_printf( "Score %5d", score );
 }
 
 void draw_lives( void )
@@ -565,8 +563,8 @@ void beepboop( void )
         switch( last_timer & 3 ) {
             case 0:
                 if( lives == 0 ) {
-                    tpu_outputstringcentre( 26, TRANSPARENT, BLUE, "Welcome to Risc-ICE-V Asteroids" );
-                    tpu_outputstringcentre( 3, TRANSPARENT, DKBLUE, "Controls: Fire 1 - FIRE" );
+                    tpu_printf_centre( 26, TRANSPARENT, BLUE, "Welcome to Risc-ICE-V Asteroids" );
+                    tpu_printf_centre( 3, TRANSPARENT, DKBLUE, "Controls: Fire 1 - FIRE" );
                     game_over();
                 } else {
                     if( ufo_sprite_number != 0xff ) {
@@ -579,8 +577,8 @@ void beepboop( void )
 
             case 1:
                 if( lives == 0 ) {
-                    tpu_outputstringcentre( 26, TRANSPARENT, CYAN, "By @robng15 (Twitter) from Whitebridge, Scotland" );
-                    tpu_outputstringcentre( 3, TRANSPARENT, PURPLE, "Controls: Fire 2 - SHIELD" );
+                    tpu_printf_centre( 26, TRANSPARENT, CYAN, "By @robng15 (Twitter) from Whitebridge, Scotland" );
+                    tpu_printf_centre( 3, TRANSPARENT, PURPLE, "Controls: Fire 2 - SHIELD" );
                     game_over();
                 } else {
                     if( ufo_sprite_number != 0xff ) {
@@ -591,8 +589,8 @@ void beepboop( void )
 
             case 2:
                 if( lives == 0 ) {
-                    tpu_outputstringcentre( 26, TRANSPARENT, YELLOW, "Press UP to start" );
-                    tpu_outputstringcentre( 3, TRANSPARENT, ORANGE, "Controls: Left / Right - TURN" );
+                    tpu_printf_centre( 26, TRANSPARENT, YELLOW, "Press UP to start" );
+                    tpu_printf_centre( 3, TRANSPARENT, ORANGE, "Controls: Left / Right - TURN" );
                     game_over();
                 } else {
                     if( ufo_sprite_number != 0xff ) {
@@ -606,8 +604,8 @@ void beepboop( void )
             case 3:
                 // MOVE TILEMAP UP
                 if( lives == 0 ) {
-                    tpu_outputstringcentre( 26, TRANSPARENT, RED, "Written in Silice by @sylefeb" );
-                    tpu_outputstringcentre( 3, TRANSPARENT, DKRED, "Controls: UP - MOVE" );
+                    tpu_printf_centre( 26, TRANSPARENT, RED, "Written in Silice by @sylefeb" );
+                    tpu_printf_centre( 3, TRANSPARENT, DKRED, "Controls: UP - MOVE" );
                     game_over();
                 } else {
                     if( ufo_sprite_number != 0xff ) {
@@ -739,7 +737,7 @@ void check_hit( void )
 void check_crash( void )
 {
     if( ( ( get_sprite_collision( 0, 11 ) & 0x7ff ) != 0 ) || ( ( get_sprite_collision( 1, 11 ) & 0x7ff ) != 0 ) ) {
-        if( ( get_sprite_collision( 0, 10 ) & ( 0x800 ) != 0 ) || ( get_sprite_collision( 1, 10 ) & ( 0x800 ) != 0 ) ) {
+        if( ( ( get_sprite_collision( 0, 10 ) &  0x800 ) != 0 ) || ( ( get_sprite_collision( 1, 10 ) & 0x800 ) != 0 ) ) {
             // DELETE UFO BULLET
             set_sprite_attribute( 0, 10, 0, 0 );
             set_sprite_attribute( 1, 10, 0, 0 );
@@ -753,13 +751,8 @@ void check_crash( void )
 }
 
 // MAIN GAME LOOP STARTS HERE
-void main( void )
-{
+int main( void ) {
     INITIALISEMEMORY();
-
-    // DECODE GALAXY PPM to BITMAP
-    galaxybitmap = malloc( 640 * 480 );
-    netppm_decoder( &galaxyppm[0], galaxybitmap );
 
     unsigned char uartData = 0, potentialnumber = 0;
     short ufo_x = 0, ufo_y = 0, potentialx = 0, potentialy = 0;

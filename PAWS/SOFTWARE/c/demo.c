@@ -20,7 +20,7 @@ unsigned short tilemap_bitmap[] = {
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000
 };
 
-unsigned char *backgroundnames[] = {
+char *backgroundnames[] = {
     "BKG_SOLID",
     "BKG_5050_V",
     "BKG_5050_H",
@@ -39,7 +39,7 @@ unsigned char *backgroundnames[] = {
     "BKG_HSTRIPE"
 };
 
-unsigned char *dithernames[] = {
+char *dithernames[] = {
     "DITHEROFF",
     "DITHERCHECK1",
     "DITHERCHECK2",
@@ -58,7 +58,7 @@ unsigned char *dithernames[] = {
     "DITHER2COLSTATIC"
 };
 
-unsigned char *colournames[] = {
+char *colournames[] = {
     "BLACK",
     "0x01",
     "DKBLUE",
@@ -136,13 +136,14 @@ void displayreset( void ) {
 // DISPLAY COLOUR CHART
 void colourtable( void ) {
     displayreset();
-    tpu_outputstringcentre( 29, TRANSPARENT, WHITE, "Colour Test" );
+    tpu_printf_centre( 29, TRANSPARENT, WHITE, "Colour Test" );
 
     uint8 colour = 0;
     for( uint16 y = 0; y < 8; y++ ) {
         for( uint16 x = 0; x < 8; x++ ) {
             gpu_rectangle( colour, x * 80, y * 60, 79 + x * 80, 59 + y * 60 );
-            gpu_outputstringcentre( 63 - colour, x * 80 + 40, y * 60 + 30, colournames[colour++], 0 );
+            gpu_printf_centre( 63 - colour, x * 80 + 40, y * 60 + 30, 0, colournames[colour] );
+            colour++;
         }
     }
     sleep( 1000, 0 );
@@ -151,11 +152,11 @@ void colourtable( void ) {
 // DISPLAY THE BACKGROUNDS
 void backgrounddemo( void ) {
     displayreset();
-    tpu_outputstringcentre( 28, TRANSPARENT, WHITE, "Background Generator Test" );
+    tpu_printf_centre( 28, TRANSPARENT, WHITE, "Background Generator Test" );
 
     for( uint8 bkg = 0; bkg < 16; bkg++ ) {
         set_background( PURPLE, ORANGE, bkg );
-        tpu_outputstringcentre( 29, TRANSPARENT, WHITE, backgroundnames[bkg] );
+        tpu_printf_centre( 29, TRANSPARENT, WHITE, backgroundnames[bkg] );
         sleep( 1000, 0 );
     }
 }
@@ -164,7 +165,7 @@ void backgrounddemo( void ) {
 void tilemapdemo( void ) {
     displayreset();
     set_background( WHITE, DKBLUE, BKG_SNOW );
-    tpu_outputstringcentre( 29, TRANSPARENT, WHITE, "Tilemap Scroll With Wrap Test" );
+    tpu_printf_centre( 29, TRANSPARENT, WHITE, "Tilemap Scroll With Wrap Test" );
 
     unsigned char x, y, colour;
     (void)tilemap_scrollwrapclear( 9 );
@@ -204,7 +205,7 @@ void gpudemo( void ) {
 
     // POINTS
     gpu_cs();
-    tpu_outputstringcentre( 29, TRANSPARENT, WHITE, "GPU Plot Pixels Test" );
+    tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Plot Pixels Test" );
     for( i = 0; i < 2048; i++ ) {
         gpu_pixel( rng( 64 ), rng( 640 ), rng( 480 ) );
     }
@@ -212,7 +213,7 @@ void gpudemo( void ) {
 
     // LINES
     gpu_cs();
-    tpu_outputstringcentre( 29, TRANSPARENT, WHITE, "GPU Line Drawing Test" );
+    tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Line Drawing Test" );
     for( i = 0; i < 1024; i++ ) {
         gpu_line( rng( 64 ), rng( 640 ), rng( 480 ), rng( 640 ), rng( 480 ) );
     }
@@ -220,7 +221,7 @@ void gpudemo( void ) {
 
     // RECTANGLES
     gpu_cs();
-    tpu_outputstringcentre( 29, TRANSPARENT, WHITE, "GPU Rectangle Drawing Test - Solid & Dither" );
+    tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Rectangle Drawing Test - Solid & Dither" );
     for( i = 0; i < 1024; i++ ) {
         gpu_dither( rng(16), rng( 64 ) );
         gpu_rectangle( rng( 64 ), rng( 640 ), rng( 480 ), rng( 640 ), rng( 480 ) );
@@ -230,7 +231,7 @@ void gpudemo( void ) {
 
     // CIRCLES
     gpu_cs();
-    tpu_outputstringcentre( 29, TRANSPARENT, WHITE, "GPU Circle Drawing Test - Solid & Dither" );
+    tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Circle Drawing Test - Solid & Dither" );
     for( i = 0; i < 1024; i++ ) {
         gpu_dither( rng(16), rng( 64 ) );
         gpu_circle( rng( 64 ), rng( 640 ), rng( 480 ), rng( 32 ), rng( 1 ) );
@@ -240,7 +241,7 @@ void gpudemo( void ) {
 
     // TRIANGLES
     gpu_cs();
-    tpu_outputstringcentre( 29, TRANSPARENT, WHITE, "GPU Triangle Drawing Test - Solid & Dither" );
+    tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Triangle Drawing Test - Solid & Dither" );
     for( i = 0; i < 1024; i++ ) {
         x1 = rng( 640 ); y1 = rng( 480 );
         x2 = x1 + rng( 100 ); y2 = y1 + rng( 100 );
@@ -255,7 +256,7 @@ void gpudemo( void ) {
 
     // CHARACTER BLITTER
     gpu_cs();
-    tpu_outputstringcentre( 29, TRANSPARENT, WHITE, "GPU Character Blitter Test" );
+    tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Character Blitter Test" );
     for( i = 0; i < 1024; i++ ) {
         gpu_character_blit( rng( 64 ), rng( 640 ), rng( 480 ), rng( 256 ), rng( 4 ) );
     }
@@ -268,20 +269,20 @@ void ditherdemo( void ) {
     unsigned short x, y;
 
     gpu_cs();
-    tpu_outputstringcentre( 28, TRANSPARENT, WHITE, "GPU Dither Modes" );
+    tpu_printf_centre( 28, TRANSPARENT, WHITE, "GPU Dither Modes" );
 
     for( y = 0; y < 4; y++ ) {
         for( x = 0; x < 4; x++ ) {
             gpu_dither( dithermode, PURPLE );
             gpu_rectangle( ORANGE, x * 160, y * 120, x * 160 + 159, y * 120 + 119 );
-            gpu_outputstringcentre( BLACK, x * 160 + 80, y * 120 + 4, dithernames[dithermode++], 0 );
+            gpu_printf_centre( BLACK, x * 160 + 80, y * 120 + 4, 0, dithernames[dithermode++] );
         }
     }
     gpu_dither( DITHEROFF );
     sleep( 2000, 0 );
 }
 
-void main( void ) {
+int main( void ) {
     INITIALISEMEMORY();
 	while(1) {
         colourtable();

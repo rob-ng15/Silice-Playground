@@ -2,9 +2,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-    int i;
-    unsigned char *memoryblock, *memoryblock2;
-
 void terminalrefresh( void ) {
     // SETUP STACKPOINTER FOR THE SMT THREAD
     asm volatile ("li sp ,0x2000");
@@ -14,16 +11,17 @@ void terminalrefresh( void ) {
     }
 }
 
-extern char *MEMORYTOP;
-extern int _bss_start, _bss_end;
-
 unsigned short volatile * myUSBHID_VALID = (unsigned short volatile *) 0x8080;
 unsigned short volatile * myUSBHID_MODIFIERS = (unsigned short volatile *) 0x8082;
 unsigned short volatile * myUSBHID_KEYS12 = (unsigned short volatile *) 0x8084;
 unsigned short volatile * myUSBHID_KEYS34 = (unsigned short volatile *) 0x8086;
 unsigned short volatile * myUSBHID_KEYS56 = (unsigned short volatile *) 0x8088;
 
-void main( void ) {
+int main( void ) {
+    int i;
+
+    float x = 0.5, y = 0.75;
+
     INITIALISEMEMORY();
 
     // set up curses library
@@ -38,17 +36,14 @@ void main( void ) {
         printw( "Terminal Test: Colour <%d>\n", i );
     }
 
-    printw( "MEMORYTOP <%x>\n", MEMORYTOP );
-    printw( "_BSS START <%x> _BSS_END <%x>\n", &_bss_start, &_bss_end );
-
-    memoryblock = malloc( 1024 );
-    printw( "\nMEMORYBLOCK <%x>\n", memoryblock );
-    memoryblock2 = malloc( 2048 );
-    printw( "\nMEMORYBLOCK2 <%x>\n", memoryblock2 );
+    printw("\nFLOAT TEST: x = %f, y = %f, x * y = %f, x / y = %f\n\n", x, y, x*y, x / y );
 
     while(1) {
-        if( *myUSBHID_VALID ) {
-            mvprintw( 29, 0, "USB HID Modifiers <%x> Keycodes <%x> <%x> <%x>\n", *myUSBHID_MODIFIERS, *myUSBHID_KEYS12, *myUSBHID_KEYS34, *myUSBHID_KEYS56 );
-        }
+        mvprintw( 15, 0, "SYSTEMTIME <%d>\n  CPU CYCLES <%d>\n  CPU INSTRUCTIONS <%d>\n    CYCLES / INSTRUCTIONS <%f>", CSRtime(), CSRcycles(), CSRinstructions(), CSRcycles()/CSRinstructions() );
+        mvprintw( 29, 0, "USB HID Valid <%x> Modifiers <%x> Keycodes <%x> <%x> <%x>", *myUSBHID_VALID, *myUSBHID_MODIFIERS, *myUSBHID_KEYS12, *myUSBHID_KEYS34, *myUSBHID_KEYS56 );
     }
 }
+
+extern long CSRcycles( void );
+extern long CSRinstructions( void );
+extern long CSRtime( void );
