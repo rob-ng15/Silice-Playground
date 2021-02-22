@@ -388,9 +388,14 @@ algorithm aluR7b0000101 (
         if( start ) {
             switch( function3 ) {
                 case 3b100: { ( result ) = MIN( sourceReg1, sourceReg2 ); }
-                case 3b101: { ( result ) = MINU( sourceReg1, sourceReg2 ); }
-                case 3b110: { ( result ) = MAX( sourceReg1, sourceReg2 ); }
+                case 3b110: { ( result ) = MINU( sourceReg1, sourceReg2 ); }
+                case 3b101: { ( result ) = MAX( sourceReg1, sourceReg2 ); }
                 case 3b111: { ( result ) = MAXU( sourceReg1, sourceReg2 ); }
+                // 0.93+ ENCODINGS
+                //case 3b100: { ( result ) = MIN( sourceReg1, sourceReg2 ); }
+                //case 3b101: { ( result ) = MINU( sourceReg1, sourceReg2 ); }
+                //case 3b110: { ( result ) = MAX( sourceReg1, sourceReg2 ); }
+                //case 3b111: { ( result ) = MAXU( sourceReg1, sourceReg2 ); }
                 default: {
                     busy = 1;
                     CLMUL.start = 1;
@@ -532,11 +537,13 @@ algorithm aluR (
     input   uint1   start,
     output! uint1   busy,
 
+    input   uint2   function2,
     input   uint3   function3,
     input   uint7   function7,
     input   uint5   rs1,
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
+    input   uint32  sourceReg3,
 
     input   uint32  LSHIFToutput,
     input   uint32  RSHIFToutput,
@@ -700,14 +707,25 @@ algorithm aluR (
                             result = sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 );
                         }
                         case 3b001: {
-                            // ROL SLL SLO
-                            switch( function7 ) {
-                                case 7b0110000: { result = ROTATEoutput; }
-                                default: { result = LSHIFToutput; }
+                            switch( function2 ) {
+                                case 2b11: {
+                                    // CMIX
+                                    result = ( sourceReg1 & sourceReg2 ) | ( sourceReg3 & ~sourceReg2 );
+                                }
+                                case 2b10: {
+                                    // FSL
+                                }
+                                default: {
+                                    // ROL SLL SLO
+                                    switch( function7 ) {
+                                        case 7b0110000: { result = ROTATEoutput; }
+                                        default: { result = LSHIFToutput; }
+                                    }
+                                }
                             }
                         }
                         case 3b010: {
-                        // SLT SH1ADD
+                            // SLT SH1ADD
                             switch( function7 ) {
                                 case 7b0000000: { result = __signed( sourceReg1 ) < __signed(sourceReg2) ? 32b1 : 32b0; }
                                 case 7b0010000: { result = { sourceReg1[1,31], 1b0 } + sourceReg2; }
@@ -725,10 +743,21 @@ algorithm aluR (
                             }
                         }
                         case 3b101: {
-                            // ROR SRL SRA SRO
-                            switch( function7 ) {
-                                case 7b0110000: { result = ROTATEoutput; }
-                                default:  { result = RSHIFToutput; }
+                            switch( function2 ) {
+                                case 2b11: {
+                                    // CMOV
+                                    result = ( sourceReg2 != 0 ) ? sourceReg1 : sourceReg3;
+                                }
+                                case 2b10: {
+                                    // FSR
+                                }
+                                default: {
+                                    // ROR SRL SRA SRO
+                                    switch( function7 ) {
+                                        case 7b0110000: { result = ROTATEoutput; }
+                                        default:  { result = RSHIFToutput; }
+                                    }
+                                }
                             }
                         }
                         case 3b110: {
@@ -841,11 +870,13 @@ algorithm alu (
 
     // BASE REGISTER & REGISTER ALU OPERATIONS + B EXTENSION OPERATIONS
     aluR ALUR(
+        function2 <: function2,
         function3 <: function3,
         function7 <: function7,
         rs1 <: rs1,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
+        sourceReg3 <: sourceReg3,
 
         LSHIFToutput <: LSHIFToutput,
         RSHIFToutput <: RSHIFToutput,
