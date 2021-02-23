@@ -195,7 +195,7 @@ algorithm aluIb101(
     input   uint32  sourceReg1,
 
     input   uint32  RSHIFToutput,
-    input   uint32  ROTATEoutput,
+    //input   uint32  RROTATEoutput,
 
     input   uint32  SHFLUNSHFLoutput,
     input   uint1   SHFLUNSHFLbusy,
@@ -222,14 +222,14 @@ algorithm aluIb101(
                         busy = 0;
                     }
                     case 7b0100100: { result = sourceReg1[ IshiftCount, 1 ]; }
-                    case 7b0110000: { result = ROTATEoutput;  }
+                    //case 7b0110000: { result = RROTATEoutput;  }
                     default: {  result = RSHIFToutput; }
                 }
             }
         }
     }
 }
-algorithm aluI (
+algorithm aluI(
     input   uint1   start,
     output! uint1   busy,
 
@@ -241,7 +241,7 @@ algorithm aluI (
 
     input   uint32  LSHIFToutput,
     input   uint32  RSHIFToutput,
-    input   uint32  ROTATEoutput,
+    //input   uint32  RROTATEoutput,
     input   uint32  SBSCIoutput,
 
     input   uint32  SHFLUNSHFLoutput,
@@ -267,7 +267,7 @@ algorithm aluI (
         IshiftCount <: IshiftCount,
         sourceReg1 <: sourceReg1,
         RSHIFToutput <: RSHIFToutput,
-        ROTATEoutput <: ROTATEoutput,
+        //RROTATEoutput <: RROTATEoutput,
         SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
         SHFLUNSHFLbusy <: SHFLUNSHFLbusy,
         GREVGORCoutput <: GREVGORCoutput,
@@ -532,7 +532,7 @@ algorithm aluR7b0100100 (
         }
     }
 }
-// BASE ADD SUB SLL SLT SLTU XOR SRL SRA OR AND + B EXTENSION ROL SLO SH1/2/3ADD XNOR ROR SRO ORN ANDN
+// BASE ADD SUB SLL SLT SLTU XOR SRL SRA OR AND + B EXTENSION ROL SLO SH1/2/3ADD XNOR ROR SRO ORN ANDN + CMOV CMIX + (not yet implemented FSL FSR space)
 algorithm aluR (
     input   uint1   start,
     output! uint1   busy,
@@ -547,7 +547,8 @@ algorithm aluR (
 
     input   uint32  LSHIFToutput,
     input   uint32  RSHIFToutput,
-    input   uint32  ROTATEoutput,
+    //input   uint32  LROTATEoutput,
+    //input   uint32  RROTATEoutput,
     input   uint32  SBSCIoutput,
 
     input   uint32  SHFLUNSHFLoutput,
@@ -718,7 +719,7 @@ algorithm aluR (
                                 default: {
                                     // ROL SLL SLO
                                     switch( function7 ) {
-                                        case 7b0110000: { result = ROTATEoutput; }
+                                        //case 7b0110000: { result = LROTATEoutput; }
                                         default: { result = LSHIFToutput; }
                                     }
                                 }
@@ -739,7 +740,7 @@ algorithm aluR (
                             // SH2ADD XOR XNOR
                             switch( function7 ) {
                                 case 7b0010000: { result = { sourceReg1[2,30], 2b00 } + sourceReg2; }
-                                default: { result = sourceReg1 ^ ( function7[5,1] ? ~sourceReg2 : sourceReg2 ); }
+                                default: { result = sourceReg1 ^ ( ( function7[5,1] == 1 ) ? ~sourceReg2 : sourceReg2 ); }
                             }
                         }
                         case 3b101: {
@@ -754,7 +755,7 @@ algorithm aluR (
                                 default: {
                                     // ROR SRL SRA SRO
                                     switch( function7 ) {
-                                        case 7b0110000: { result = ROTATEoutput; }
+                                        //case 7b0110000: { result = RROTATEoutput; }
                                         default:  { result = RSHIFToutput; }
                                     }
                                 }
@@ -764,12 +765,12 @@ algorithm aluR (
                             // SH3ADD OR ORN
                             switch( function7 ) {
                                 case 7b0010000: { result = { sourceReg1[3,29], 3b000 } + sourceReg2; }
-                                default: { result = sourceReg1 | ( function7[5,1] ? ~sourceReg2 : sourceReg2 ); }
+                                default: { result = sourceReg1 | ( ( function7[5,1] == 1 ) ? ~sourceReg2 : sourceReg2 ); }
                             }
                         }
                         case 3b111: {
                             // AND ANDN
-                            result = sourceReg1 & ( function7[5,1] ? ~sourceReg2 : sourceReg2 );
+                            result = sourceReg1 & ( ( function7[5,1] == 1 ) ? ~sourceReg2 : sourceReg2 );
                         }
                     }
                 }
@@ -779,7 +780,7 @@ algorithm aluR (
 }
 
 // ALU - ALU for immediate-register operations and register-register operations
-algorithm alu (
+algorithm alu(
     input   uint1   start,
     output! uint1   busy,
 
@@ -802,7 +803,8 @@ algorithm alu (
     // SHIFTERS
     uint32  LSHIFToutput = uninitialized;
     uint32  RSHIFToutput = uninitialized;
-    uint32  ROTATEoutput = uninitialized;
+    //uint32  LROTATEoutput = uninitialized;
+    //uint32  RROTATEoutput = uninitialized;
     uint32  SBSCIoutput = uninitialized;
     BSHIFTleft LEFTSHIFT(
         sourceReg1 <: sourceReg1,
@@ -816,12 +818,18 @@ algorithm alu (
         function7 <: function7,
         result :> RSHIFToutput
     );
-    BROTATE ROTATE(
-        sourceReg1 <: sourceReg1,
-        shiftcount <: shiftcount,
-        function3 <: function3,
-        result :> ROTATEoutput
-    );
+    //BROTATEL ROTATEL(
+    //    sourceReg1 <: sourceReg1,
+    //    shiftcount <: shiftcount,
+    //    function3 <: function3,
+    //    result :> LROTATEoutput
+    //);
+    //BROTATER ROTATER(
+    //    sourceReg1 <: sourceReg1,
+    //    shiftcount <: shiftcount,
+    //    function3 <: function3,
+    //    result :> RROTATEoutput
+    //);
     singlebitops SBSCI(
         sourceReg1 <: sourceReg1,
         function7 <: function7,
@@ -859,7 +867,7 @@ algorithm alu (
 
         LSHIFToutput <: LSHIFToutput,
         RSHIFToutput <: RSHIFToutput,
-        ROTATEoutput <: ROTATEoutput,
+        //RROTATEoutput <: RROTATEoutput,
         SBSCIoutput <: SBSCIoutput,
 
         SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
@@ -880,7 +888,8 @@ algorithm alu (
 
         LSHIFToutput <: LSHIFToutput,
         RSHIFToutput <: RSHIFToutput,
-        ROTATEoutput <: ROTATEoutput,
+        //LROTATEoutput <: LROTATEoutput,
+        //RROTATEoutput <: RROTATEoutput,
         SBSCIoutput <: SBSCIoutput,
 
         SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
@@ -892,10 +901,10 @@ algorithm alu (
     // ALU START FLAGS
     ALUI.start := 0;
     ALUR.start := 0;
-    LEFTSHIFT.start := 0;
-    RIGHTSHIFT.start := 0;
-    ROTATE.start := 0;
-    SBSCI.start := 0;
+    //LEFTSHIFT.start := 0;
+    //RIGHTSHIFT.start := 0;
+    //ROTATE.start := 0;
+    //SBSCI.start := 0;
     SHFLUNSHFL.start := 0;
     GREVGORC.start := 0;
 
@@ -904,10 +913,10 @@ algorithm alu (
     while(1) {
         if( start ) {
             // START SHIFTERS
-            LEFTSHIFT.start = 1;
-            RIGHTSHIFT.start = 1;
-            ROTATE.start = 1;
-            SBSCI.start = 1;
+            //LEFTSHIFT.start = 1;
+            //RIGHTSHIFT.start = 1;
+            //ROTATE.start = 1;
+            //SBSCI.start = 1;
 
             // START SHARED MULTICYCLE BLOCKS - SHFL UNSHFL GORC GREV
             SHFLUNSHFL.start = ( ( ( function3 == 3b001 ) || ( function3 == 3b101 ) ) && ( function7 == 7b0000100 ) ) ? 1 : 0;

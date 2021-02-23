@@ -367,101 +367,59 @@ circuitry halfhalfword(
 // BIT MANIPULATION CIRCUITS
 // BARREL SHIFTERS / ROTATORS
 algorithm BSHIFTleft(
-    input   uint1   start,
+    //input   uint1   start,
 
     input   uint32  sourceReg1,
     input   uint5   shiftcount,
     input   uint7   function7,
     output! uint32  result
 ) <autorun> {
+    //uint1   bit := function7[4,1] ? 1b1 : 1b0;
+
     while(1) {
-        if( start ) {
-            switch( shiftcount ) {
-                case 0: { result = sourceReg1; }
-                $$for i = 1, 31 do
-                    $$ remain = 32 - i
-                    case $i$: { result = { sourceReg1[ 0, $remain$ ], {$i${ function7[4,1] }} }; }
-                $$end
-            }
+        switch( function7[4,2] ) {
+            case 2b00: { result = sourceReg1 << shiftcount; }
+            case 2b01: { result = ~( ~sourceReg1 << shiftcount ); }
+            case 2b11: { result = ( sourceReg1 << shiftcount ) | ( sourceReg1 >> ( 32 - shiftcount ) ); }
         }
     }
 }
 algorithm BSHIFTright(
-    input   uint1   start,
+    //input   uint1   start,
 
     input   uint32  sourceReg1,
     input   uint5   shiftcount,
     input   uint7   function7,
     output! uint32  result
 ) <autorun> {
-    uint1   bit = uninitialised;
+    //uint1   bit := ( function7[4,2] == 2b10 ) ? sourceReg1[31,1] : ( function7[4,1] ? 1b1 : 1b0 );
 
     while(1) {
         switch( function7[4,2] ) {
-            case 2b00: { bit = 0; }
-            case 2b01: { bit = 1; }
-            case 2b10: { bit = sourceReg1[31,1]; }
-        }
-        if( start ) {
-            switch( shiftcount ) {
-                case 0: { result = sourceReg1; }
-                $$for i = 1, 31 do
-                    $$ remain = 32 - i
-                    case $i$: { result = { {$i${bit}}, sourceReg1[ $i$, $remain$ ] }; }
-                $$end
-            }
-        }
-    }
-}
-algorithm BROTATE(
-    input   uint1   start,
-
-    input   uint32  sourceReg1,
-    input   uint5   shiftcount,
-    input   uint3   function3,
-    output! uint32  result
-) <autorun> {
-    uint5   rotatecount = uninitialised;
-
-    while(1) {
-        switch( function3 ) {
-            default: { rotatecount = shiftcount; }
-            case 3b001: { rotatecount = 32 - shiftcount; }
-        }
-        if( start ) {
-            switch( rotatecount ) {
-                case 0: { result = sourceReg1; }
-                $$for i = 1, 31 do
-                    $$ remain = 32 - i
-                    case $i$: { result = { sourceReg1[ $remain$, $i$ ], sourceReg1[ $i$, $remain$ ] }; }
-                $$end
-            }
+            case 2b00: { result = sourceReg1 >> shiftcount; }
+            case 2b01: { result = ~( ~sourceReg1 >> shiftcount ); }
+            case 2b10: { result = __signed(sourceReg1) >>> shiftcount; }
+            case 2b11: { result = ( sourceReg1 >> shiftcount ) | ( sourceReg1 << ( 32 - shiftcount ) ); }
         }
     }
 }
 
 // SINGLE BIT OPERATIONS SET CLEAR INVERT
 algorithm singlebitops(
-    input   uint1   start,
+    //input   uint1   start,
 
     input   uint32  sourceReg1,
     input   uint5   shiftcount,
     input   uint7   function7,
     output! uint32  result
 ) <autorun> {
-    uint1   bit := ( function7[4,2] == 2b11 ) ? ~sourceReg1[shiftcount,1] : function7[4,1];
+    //uint1   bit := ( function7[4,2] == 2b11 ) ? ( sourceReg1[shiftcount,1] ? 1b0 : 1b1 ) : ( function7[4,1] ? 1b1 : 1b0 );
 
     while(1) {
-        if( start ) {
-            switch( shiftcount ) {
-                case 0: { result = { sourceReg1[ 1, 31 ], bit }; }
-                $$for i = 1, 30 do
-                $$j = i + 1
-                $$remain = 31 - i;
-                    case $i$: { result = { sourceReg1[ $j$, $remain$ ], bit, sourceReg1[ 0, $i$ ] }; }
-                $$end
-                case 31: { result = { bit, sourceReg1[0, 31 ] }; }
-            }
+        switch( function7[4,2] ) {
+            case 2b01: { result = sourceReg1 | ( 1 << shiftcount ); }
+            case 2b10: { result = sourceReg1 & ~( 1 << shiftcount ); }
+            case 2b11: { result = sourceReg1 ^ ( 1 << shiftcount ); }
         }
     }
 }

@@ -19,8 +19,8 @@ struct Bomb {
 
 #define BOMB_ANIM_SIZE 4 // "frames" in bomb anim
 
-#define FPS 15          // frames per second
-#define PAINT_WAIT 2    // how many frames between row repaints
+#define FPS 5          // frames per second
+#define PAINT_WAIT 1    // how many frames between row repaints
 
 #define ALIEN30 3
 #define ALIEN20 2
@@ -38,7 +38,7 @@ struct Bomb {
 #define MA_HEIGHT 2
 #define MA_WIDTH 6
 
-#define GUNNER_ENTRANCE 40 // how many frames before gunner appears
+#define GUNNER_ENTRANCE 4 // how many frames before gunner appears
 #define MA_ENTRANCE 400 // how many frames before MA comes on the screen
 
 #define STATE_INTRO 1
@@ -158,6 +158,16 @@ int removeBomb(struct Bomb *b);
 void freeBombs();
 void moveAliensDown();
 
+void smttimer( void ) {
+    // SETUP STACKPOINTER FOR THE SMT THREAD
+    asm volatile ("li sp ,0x2000");
+
+    while(1) {
+        await_vblank();
+        handleTimer( 1 );
+    }
+}
+
 int main( void ) {
     INITIALISEMEMORY();
     // CLEAR and SET THE BACKGROUND
@@ -207,9 +217,9 @@ int main( void ) {
     //signal(SIGALRM, handleTimer);
 
     while(1) {
-        handleTimer( 1 );
         if( ( get_buttons() & 2 ) != 0 ) {
             if (game.state == STATE_INTRO) {
+                SMTSTOP();
                 game.lives = 3;
                 game.score = 0;
                 game.state = STATE_PLAY;
@@ -219,6 +229,8 @@ int main( void ) {
                 game.timer = 0;
                 clear();
                 paintShelters();
+
+                SMTSTART( (unsigned int )smttimer );
             } else if (game.state == STATE_PLAY
                     && game.timer > GUNNER_ENTRANCE
                     && gun.missile.y == 0) {
@@ -267,16 +279,17 @@ void handleTimer(int signal) {
         // intro anim
         return;
     } else if (game.state == STATE_WAIT) {
-        if (game.timer++ == 10) {
+        if (game.timer++ == 2) {
             game.state = STATE_PLAY;
             paintScore();
         }
         return;
     } else if (game.state == STATE_GAMEOVER) {
-        if (game.timer++ == 40) {
-            game.state = STATE_INTRO;
+        if (game.timer++ == 4) {
             paintIntro();
             refresh();
+            game.state = STATE_INTRO;
+            SMTSTOP();
         }
         // game over anim
         return;
@@ -285,7 +298,7 @@ void handleTimer(int signal) {
         if (gun.explodeTimer++ % 4 == 0) {
             paintGunner();
         }
-        if (gun.explodeTimer == 40) {
+        if (gun.explodeTimer == 4) {
             if (game.lives-- == 0) {
                 // game over
                 game.state = STATE_GAMEOVER;
@@ -335,7 +348,7 @@ void handleTimer(int signal) {
 #endif
         if (ma.pointsTimer != 0) {
             // ma has been shot and is now just showing points
-            if (ma.pointsTimer++ == 20) {
+            if (ma.pointsTimer++ == 4) {
                 mvprintw(2, ma.x, "%s", alienBlank);
                 ma.pointsTimer = 0;
                 ma.x = 0;
@@ -390,8 +403,8 @@ void handleTimer(int signal) {
     // handle alien movements
     if (--aliens.paintWait <= 0) {
         // time to repaint one row of aliens (speeds up as you shoot aliens)
-        aliens.paintWait = 2;
-        //aliens.paintWait = (int) (PAINT_WAIT * (aliens.count / (aliens.cols * aliens.rows)));;
+        //aliens.paintWait = 2;
+        aliens.paintWait = (int) (PAINT_WAIT * (aliens.count / (aliens.cols * aliens.rows)));;
         aliens.paintRow--;
         paintAlienRow(aliens.paintRow, 0);
         refresh();

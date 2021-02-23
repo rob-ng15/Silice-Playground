@@ -42,8 +42,8 @@ short directiony[] = { -1, 0, 1, 0 }, leftdirectiony[] = { 0, -1, 0, 1 }, rightd
 
 // STORAGE FOR MAZE and MAP PLUS ACCESS FUNCTIONS USING A BIT ARRAY
 // WALLS WILL BE '#' '*' GAPS ' ' ENTRANCE 'E' EXIT 'X'
-unsigned short maze[ MAXWIDTH >> 4 ][MAXHEIGHT];
-unsigned short map[ MAXWIDTH >> 4 ][MAXHEIGHT];
+unsigned int maze[ MAXWIDTH >> 5 ][MAXHEIGHT];
+unsigned int map[ MAXWIDTH >> 5 ][MAXHEIGHT];
 
 // POSITION AND DIRECTION OF THE GOST
 unsigned short ghostx[4], ghosty[4], ghostdirection[4];
@@ -83,9 +83,9 @@ unsigned char whatisat( unsigned short x, unsigned short y, unsigned char mapmaz
     }
     switch( mapmaze ) {
         case 0:
-            return( ( maze[ x >> 4 ][ y ] >> ( x & 0xf ) ) & 1 ? '#' : ' ' );
+            return( ( maze[ x >> 5 ][ y ] >> ( x & 0x1f ) ) & 1 ? '#' : ' ' );
         case 1:
-            return( ( map[ x >> 4 ][ y ] >> ( x & 0xf ) ) & 1 ? '#' : ' ' );
+            return( ( map[ x >> 5 ][ y ] >> ( x & 0x1f ) ) & 1 ? '#' : ' ' );
         default:
             return( '?' );
     }
@@ -97,20 +97,20 @@ void setat( unsigned short x, unsigned short y, unsigned char value, unsigned ch
         case 0:
             switch( value ) {
                 case ' ':
-                    maze[ x >> 4 ][ y ] &= ~( 1 << ( x & 0x0f ) );
+                    maze[ x >> 5 ][ y ] &= ~( 1 << ( x & 0x1f ) );
                     break;
                 case '#':
-                    maze[ x >> 4 ][ y ] |= ( 1 << ( x & 0x0f ) );
+                    maze[ x >> 5 ][ y ] |= ( 1 << ( x & 0x1f ) );
                     break;
             }
             break;
         case 1:
             switch( value ) {
                 case ' ':
-                    map[ x >> 4 ][ y ] &= ~( 1 << ( x & 0x0f ) );
+                    map[ x >> 5 ][ y ] &= ~( 1 << ( x & 0x1f ) );
                     break;
                 case '#':
-                    map[ x >> 4 ][ y ] |= ( 1 << ( x & 0x0f ) );
+                    map[ x >> 5 ][ y ] |= ( 1 << ( x & 0x1f ) );
                     break;
             }
             break;

@@ -38,7 +38,7 @@ algorithm PAWSCPU (
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
     uint1   compressed = uninitialized;
-    compressed COMPRESSED <@clock_cpufunc> (
+    compressed COMPRESSED(
         i16 <: readdata
     );
 
@@ -64,7 +64,7 @@ algorithm PAWSCPU (
     uint5   rs2 = uninitialized;
     uint5   rs3 = uninitialized;
     uint5   rd = uninitialized;
-    decoder DECODER <@clock_cpufunc> (
+    decoder DECODER(
         instruction <: instruction,
         opCode :> opCode,
         function2 :> function2,
@@ -86,6 +86,7 @@ algorithm PAWSCPU (
         SMT <:: SMT,
         rs1 <: rs1,
         rs2 <: rs2,
+        rs3 <: rs3,
         rd <: rd,
         result <: result,
         sourceReg1 :> sourceReg1,
