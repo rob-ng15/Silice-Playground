@@ -129,11 +129,17 @@ algorithm aluIb001(
     cpop CPOP(
         sourceReg1 <: sourceReg1
     );
+    crc32 CRC32(
+        sourceReg1 <: sourceReg1,
+        shiftcount <: IshiftCount
+    );
 
     // START FLAGS FOR ALU SUB BLOCKS
     CLZ.start := 0;
     CTZ.start := 0;
     CPOP.start := 0;
+    CRC32.start := 0;
+
     busy = 0;
 
     while(1) {
@@ -167,6 +173,14 @@ algorithm aluIb001(
                         }
                         case 5b00100: { result = { {24{sourceReg1[7,1]}}, sourceReg1[0, 8] }; }     // SEXT.B
                         case 5b00101: { result = { {16{sourceReg1[15,1]}}, sourceReg1[0, 16] }; }   // SEXT.H
+                        default: {
+                            // CPOP
+                            busy = 1;
+                            CRC32.start = 1;
+                            while( CRC32.busy ) {}
+                            result = CRC32.result;
+                            busy = 0;
+                        }
                     }
                 }
                 case 7b0000100: {
@@ -195,8 +209,9 @@ algorithm aluIb101(
     input   uint32  sourceReg1,
 
     input   uint32  RSHIFToutput,
-    //input   uint32  RROTATEoutput,
 
+    input   uint32  FUNNELoutput,
+    input   uint1   FUNNELbusy,
     input   uint32  SHFLUNSHFLoutput,
     input   uint1   SHFLUNSHFLbusy,
     input   uint32  GREVGORCoutput,
@@ -222,8 +237,16 @@ algorithm aluIb101(
                         busy = 0;
                     }
                     case 7b0100100: { result = sourceReg1[ IshiftCount, 1 ]; }
-                    //case 7b0110000: { result = RROTATEoutput;  }
-                    default: {  result = RSHIFToutput; }
+                    default: {
+                        if( function7[1,1] ) {
+                            busy = 1;
+                            while( FUNNELbusy ) {}
+                            result = FUNNELoutput;
+                            busy = 0;
+                        } else {
+                            result = RSHIFToutput;
+                        }
+                    }
                 }
             }
         }
@@ -241,9 +264,10 @@ algorithm aluI(
 
     input   uint32  LSHIFToutput,
     input   uint32  RSHIFToutput,
-    //input   uint32  RROTATEoutput,
     input   uint32  SBSCIoutput,
 
+    input   uint32  FUNNELoutput,
+    input   uint1   FUNNELbusy,
     input   uint32  SHFLUNSHFLoutput,
     input   uint1   SHFLUNSHFLbusy,
     input   uint32  GREVGORCoutput,
@@ -267,7 +291,8 @@ algorithm aluI(
         IshiftCount <: IshiftCount,
         sourceReg1 <: sourceReg1,
         RSHIFToutput <: RSHIFToutput,
-        //RROTATEoutput <: RROTATEoutput,
+        FUNNELoutput <: FUNNELoutput,
+        FUNNELbusy <: FUNNELbusy,
         SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
         SHFLUNSHFLbusy <: SHFLUNSHFLbusy,
         GREVGORCoutput <: GREVGORCoutput,
@@ -547,10 +572,10 @@ algorithm aluR (
 
     input   uint32  LSHIFToutput,
     input   uint32  RSHIFToutput,
-    //input   uint32  LROTATEoutput,
-    //input   uint32  RROTATEoutput,
     input   uint32  SBSCIoutput,
 
+    input   uint32  FUNNELoutput,
+    input   uint1   FUNNELbusy,
     input   uint32  SHFLUNSHFLoutput,
     input   uint1   SHFLUNSHFLbusy,
     input   uint32  GREVGORCoutput,
@@ -717,10 +742,14 @@ algorithm aluR (
                                     // FSL
                                 }
                                 default: {
-                                    // ROL SLL SLO
-                                    switch( function7 ) {
-                                        //case 7b0110000: { result = LROTATEoutput; }
-                                        default: { result = LSHIFToutput; }
+                                    // ROL SLL SLO FSL
+                                    if( function7[0,2] == 2b10 ) {
+                                        busy = 1;
+                                        while( FUNNELbusy ) {}
+                                        result = FUNNELoutput;
+                                        busy = 0;
+                                    } else {
+                                        result = LSHIFToutput;
                                     }
                                 }
                             }
@@ -753,10 +782,14 @@ algorithm aluR (
                                     // FSR
                                 }
                                 default: {
-                                    // ROR SRL SRA SRO
-                                    switch( function7 ) {
-                                        //case 7b0110000: { result = RROTATEoutput; }
-                                        default:  { result = RSHIFToutput; }
+                                    // ROR SRL SRA SRO FSR
+                                    if( function7[0,2] == 2b10 ) {
+                                        busy = 1;
+                                        while( FUNNELbusy ) {}
+                                        result = FUNNELoutput;
+                                        busy = 0;
+                                    } else {
+                                        result = RSHIFToutput;
                                     }
                                 }
                             }
@@ -799,12 +832,11 @@ algorithm alu(
 ) <autorun> {
     uint1   ALUIorR := ( opCode == 7b0010011 ) ? 1 : 0;
     uint5   shiftcount := ALUIorR ? IshiftCount : sourceReg2[0,5];
+    uint6   Fshiftcount := ALUIorR ? { function7[0,1], IshiftCount } : sourceReg2[0,6];
 
     // SHIFTERS
     uint32  LSHIFToutput = uninitialized;
     uint32  RSHIFToutput = uninitialized;
-    //uint32  LROTATEoutput = uninitialized;
-    //uint32  RROTATEoutput = uninitialized;
     uint32  SBSCIoutput = uninitialized;
     BSHIFTleft LEFTSHIFT(
         sourceReg1 <: sourceReg1,
@@ -818,23 +850,21 @@ algorithm alu(
         function7 <: function7,
         result :> RSHIFToutput
     );
-    //BROTATEL ROTATEL(
-    //    sourceReg1 <: sourceReg1,
-    //    shiftcount <: shiftcount,
-    //    function3 <: function3,
-    //    result :> LROTATEoutput
-    //);
-    //BROTATER ROTATER(
-    //    sourceReg1 <: sourceReg1,
-    //    shiftcount <: shiftcount,
-    //    function3 <: function3,
-    //    result :> RROTATEoutput
-    //);
     singlebitops SBSCI(
         sourceReg1 <: sourceReg1,
         function7 <: function7,
         shiftcount <: shiftcount,
         result :> SBSCIoutput
+    );
+    uint32  FUNNELoutput = uninitialized;
+    uint1   FUNNELbusy = uninitialized;
+    funnelshift FUNNEL(
+        sourceReg1 <: sourceReg1,
+        sourceReg3 <: sourceReg3,
+        shiftcount <: Fshiftcount,
+        function3 <: function3,
+        busy :> FUNNELbusy,
+        result :> FUNNELoutput
     );
 
     // SHARED MULTICYCLE BIT MANIPULATION OPERATIONS
@@ -867,9 +897,10 @@ algorithm alu(
 
         LSHIFToutput <: LSHIFToutput,
         RSHIFToutput <: RSHIFToutput,
-        //RROTATEoutput <: RROTATEoutput,
         SBSCIoutput <: SBSCIoutput,
 
+        FUNNELoutput <: FUNNELoutput,
+        FUNNELbusy <: FUNNELbusy,
         SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
         SHFLUNSHFLbusy <: SHFLUNSHFLbusy,
         GREVGORCoutput <: GREVGORCoutput,
@@ -888,10 +919,10 @@ algorithm alu(
 
         LSHIFToutput <: LSHIFToutput,
         RSHIFToutput <: RSHIFToutput,
-        //LROTATEoutput <: LROTATEoutput,
-        //RROTATEoutput <: RROTATEoutput,
         SBSCIoutput <: SBSCIoutput,
 
+        FUNNELoutput <: FUNNELoutput,
+        FUNNELbusy <: FUNNELbusy,
         SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
         SHFLUNSHFLbusy <: SHFLUNSHFLbusy,
         GREVGORCoutput <: GREVGORCoutput,
@@ -901,10 +932,7 @@ algorithm alu(
     // ALU START FLAGS
     ALUI.start := 0;
     ALUR.start := 0;
-    //LEFTSHIFT.start := 0;
-    //RIGHTSHIFT.start := 0;
-    //ROTATE.start := 0;
-    //SBSCI.start := 0;
+    FUNNEL.start := 0;
     SHFLUNSHFL.start := 0;
     GREVGORC.start := 0;
 
@@ -912,13 +940,8 @@ algorithm alu(
 
     while(1) {
         if( start ) {
-            // START SHIFTERS
-            //LEFTSHIFT.start = 1;
-            //RIGHTSHIFT.start = 1;
-            //ROTATE.start = 1;
-            //SBSCI.start = 1;
-
-            // START SHARED MULTICYCLE BLOCKS - SHFL UNSHFL GORC GREV
+            // START SHARED MULTICYCLE BLOCKS - SHFL UNSHFL GORC GREV FUNNEL
+            FUNNEL.start = ( function3 == 3b001 ) || ( function3 == 3b101 );
             SHFLUNSHFL.start = ( ( ( function3 == 3b001 ) || ( function3 == 3b101 ) ) && ( function7 == 7b0000100 ) ) ? 1 : 0;
             GREVGORC.start = ( ( function3 == 3b101 ) && ( ( function7 == 7b0110100 ) || ( function7 == 7b0010100 ) ) ) ? 1 : 0;
 

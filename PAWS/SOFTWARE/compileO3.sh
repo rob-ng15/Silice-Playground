@@ -15,7 +15,7 @@ CFLAGS="-march=rv32imac -mabi=ilp32 -ffunction-sections -fdata-sections -Ofast -
 LFLAGS=" --as-needed --gc-sections -m elf32lriscv -b elf32-littleriscv --no-relax "
 LCONFIG="-Tconfig_c_SDRAM.ld"
 INCLUDE="-I/usr/riscv32-elf/include/"
-LIBRARY="/usr/riscv32-elf/lib/rv32imac/ilp32/libc.a /usr/riscv32-elf/lib/rv32imac/ilp32/libm.a /usr/lib/gcc/riscv64-elf/10.2.0/rv32imac/ilp32/libgcc.a"
+LIBRARY="/usr/riscv64-elf/lib/rv32imac/ilp32/libc.a /usr/riscv64-elf/lib/rv32imac/ilp32/libm.a /usr/lib/gcc/riscv64-elf/10.2.0/rv32imac/ilp32/libgcc.a"
 
 # Following based on FemtoRV compile scripts https://github.com/BrunoLevy/learn-fpga/tree/master/FemtoRV
 $ARCH-elf-gcc $INCLUDE $CFLAGS -c -o build/libPAWS.o c/PAWSlibrary.c

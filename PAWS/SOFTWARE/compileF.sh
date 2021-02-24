@@ -11,16 +11,16 @@ AR="riscv64-elf-ar"
 NM="riscv64-elf-nm"
 RANLIB="riscv64-elf-ranlib"
 
-CFLAGS="-march=rv32imac -mabi=ilp32 -ffunction-sections -fdata-sections -O2 -fno-pic -fno-unroll-loops"
+CFLAGS="-march=rv32imafc -mabi=ilp32f -ffunction-sections -fdata-sections -O2 -fno-pic -fno-unroll-loops"
 LFLAGS=" --as-needed --gc-sections -m elf32lriscv -b elf32-littleriscv --no-relax "
 LCONFIG="-Tconfig_c_SDRAM.ld"
 INCLUDE="-I/usr/riscv32-elf/include/"
-LIBRARY="/usr/riscv64-elf/lib/rv32imac/ilp32/libc.a /usr/riscv64-elf/lib/rv32imac/ilp32/libm.a /usr/lib/gcc/riscv64-elf/10.2.0/rv32imac/ilp32/libgcc.a"
+LIBRARY="/usr/riscv64-elf/lib/rv32imafc/ilp32f/libc.a /usr/riscv64-elf/lib/rv32imafc/ilp32f/libm.a /usr/lib/gcc/riscv64-elf/10.2.0/rv32imafc/ilp32f/libgcc.a"
 
 # Following based on FemtoRV compile scripts https://github.com/BrunoLevy/learn-fpga/tree/master/FemtoRV
 $ARCH-elf-gcc $INCLUDE $CFLAGS -c -o build/libPAWS.o c/PAWSlibrary.c
 $AR -cvq build/libPAWS.a build/libPAWS.o
 $ARCH-elf-gcc $INCLUDE $CFLAGS -c -o build/code.o $1
-$ARCH-elf-as -march=rv32imac -mabi=ilp32 -o build/crt0.o crt0.s
+$ARCH-elf-as -march=rv32imafc -mabi=ilp32 -o build/crt0.o crt0.s
 $ARCH-elf-ld $LFLAGS $LCONFIG -o build/code.elf build/code.o build/libPAWS.o $LIBRARY
 $ARCH-elf-objcopy -O binary build/code.elf $2

@@ -12,8 +12,8 @@ algorithm memmap_io (
     input   uint1   uart_rx,
 
     // USB HID
-    inout   uint1   usb_fpga_bd_dp,
-    inout   uint1   usb_fpga_bd_dn,
+    input   uint1   usb_fpga_bd_dp,
+    input   uint1   usb_fpga_bd_dn,
     input   uint1   usb_fpga_dp,
 
     // AUDIO
@@ -315,13 +315,11 @@ algorithm memmap_io (
     uint8   ps2keycode = uninitialized;
     uint1   ps2valid = uninitialized;
     uint1   ps2enable = 1;
-    uint1   ps2clk_ext := gn[1,1];
-    uint1   ps2data_ext := gn[3,1];
     ps2_port PS2 <@clock_25mhz> (
         clk <: clock_25mhz,
         enable_rcv <: ps2enable,
-        ps2clk_ext <: ps2clk_ext,
-        ps2data_ext <: ps2data_ext,
+        ps2clk_ext <: usb_fpga_bd_dp,
+        ps2data_ext <: usb_fpga_bd_dn,
         kb_interrupt :> ps2valid,
         scancode :> ps2keycode
     );
@@ -385,9 +383,6 @@ algorithm memmap_io (
     timer1khz1.resetCount := 0;
     apu_processor_L.apu_write := 0;
     apu_processor_R.apu_write := 0;
-
-    // ENABLE PS2 PORT
-    gp[0,4] = 4b1111;
 
     // DISBLE SMT ON STARTUP
     SMTRUNNING = 0;

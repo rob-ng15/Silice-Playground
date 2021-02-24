@@ -50,8 +50,8 @@ algorithm PAWSCPU (
     uint1   writeRegister = uninitialized;
     uint32  memoryinput = uninitialized;
     uint32  memoryoutput = uninitialized;
-    uint1   memoryload := ( ( opCode == 7b0000011 ) || ( ( opCode == 7b0101111 ) && ( function7[2,5] != 5b00011 ) ) ) ? 1 : 0;
-    uint1   memorystore := ( ( opCode == 7b0100011 ) || ( ( opCode == 7b0101111 ) && ( function7[2,5] != 5b00010 ) ) ) ? 1 : 0;
+    uint1   memoryload := ( ( opCode == 7b0000011 ) || ( opCode == 7b0000111 ) || ( ( opCode == 7b0101111 ) && ( function7[2,5] != 5b00011 ) ) ) ? 1 : 0;
+    uint1   memorystore := ( ( opCode == 7b0100011 ) || ( opCode == 7b0100111 ) || ( ( opCode == 7b0101111 ) && ( function7[2,5] != 5b00010 ) ) ) ? 1 : 0;
 
     // RISC-V 32 BIT INSTRUCTION DECODER
     int32   immediateValue = uninitialized;
@@ -92,6 +92,22 @@ algorithm PAWSCPU (
         sourceReg1 :> sourceReg1,
         sourceReg2 :> sourceReg2,
         sourceReg3 :> sourceReg3
+    );
+    // RISC-V FLOATING POINT REGISTERS
+    uint32  sourceReg1F = uninitialized;
+    uint32  sourceReg2F = uninitialized;
+    uint32  sourceReg3F = uninitialized;
+    uint1   frd = uninitialized;
+    registers REGISTERSF(
+        SMT <:: SMT,
+        rs1 <: rs1,
+        rs2 <: rs2,
+        rs3 <: rs3,
+        rd <: rd,
+        result <: result,
+        sourceReg1 :> sourceReg1F,
+        sourceReg2 :> sourceReg2F,
+        sourceReg3 :> sourceReg3F
     );
 
     // RISC-V ADDRESS GENERATOR
@@ -146,6 +162,19 @@ algorithm PAWSCPU (
         sourceReg2 <: sourceReg2
     );
 
+    // FLOATING POINT OPERATIONS
+    fpu FPU <@clock_cpualu> (
+        opCode <: opCode,
+        function3 <: function3,
+        function7 <: function7,
+        rs1 <: rs1,
+        rs2 <: rs2,
+        sourceReg1 <: sourceReg1,
+        sourceReg1F <: sourceReg1F,
+        sourceReg2F <: sourceReg2F,
+        sourceReg3F <: sourceReg3F,
+    );
+
     // MANDATORY RISC-V CSR REGISTERS + HARTID == 0 MAIN THREAD == 1 SMT THREAD
     CSRblock CSR(
         instruction <: instruction,
@@ -162,7 +191,7 @@ algorithm PAWSCPU (
     Icache.updatecache := 0;
 
     // MEMORY ACCESS FLAGS
-    accesssize := ( opCode == 7b0101111 ) ? 3b010 : function3;
+    accesssize := ( ( opCode == 7b0101111 ) || ( opCode == 7b0000111 ) || ( opCode == 7b0100111 ) ) ? 3b010 : function3;
     readmemory := 0;
     writememory := 0;
 
@@ -171,12 +200,13 @@ algorithm PAWSCPU (
 
     // ALU START FLAGS
     ALU.start := 0;
+    FPU.start := 0;
 
     while(1) {
-        // RISC-V
+        // RISC-V - RESET FLAGS
         writeRegister = 0;
-        //takeBranch = 0;
         incPC = 1;
+        frd = 0;
 
         // CHECK IF PC IS IN LAST INSTRUCTION CACHE
         if( Icache.incache ) {
@@ -267,6 +297,16 @@ algorithm PAWSCPU (
                 // STORE
                 memoryoutput = sourceReg2;
             }
+            case 5b00001: {
+                // FLOATING POINT LOAD
+                writeRegister = 1;
+                frd = 1;
+                result = memoryinput;
+            }
+            case 5b01001: {
+                // FLOATING POINT STORE
+                memoryoutput = sourceReg2F;
+            }
             case 5b11100: {
                 // CSR
                 writeRegister = 1;
@@ -296,6 +336,42 @@ algorithm PAWSCPU (
                 }
             }
 
+            // FPU
+            case 5b10000: {
+                // FMADD.S
+                FPU.start = 1;
+                while( FPU.busy ) {}
+                frd = FPU.frd;
+                result = FPU.result;
+            }
+            case 5b10001: {
+                // FMSUB.S
+                FPU.start = 1;
+                while( FPU.busy ) {}
+                frd = FPU.frd;
+                result = FPU.result;
+            }
+            case 5b10010: {
+                // FNMSUB.S
+                FPU.start = 1;
+                while( FPU.busy ) {}
+                frd = FPU.frd;
+                result = FPU.result;
+            }
+            case 5b10011: {
+                // FNMADD.S
+                FPU.start = 1;
+                while( FPU.busy ) {}
+                frd = FPU.frd;
+                result = FPU.result;
+            }
+            case 5b10100: {
+                // OTHER FPU OPERATION
+                FPU.start = 1;
+                while( FPU.busy ) {}
+                frd = FPU.frd;
+                result = FPU.result;
+            }
             // ALUI or ALUR
             default: {
                 writeRegister = 1;
@@ -324,7 +400,10 @@ algorithm PAWSCPU (
         }
 
         // REGISTERS WRITE
-        REGISTERS.write = ( writeRegister  && ( rd != 0 ) ) ? 1 : 0;
+        switch( frd ) {
+            case 0: { REGISTERS.write = ( writeRegister  && ( rd != 0 ) ) ? 1 : 0; }
+            case 1: { REGISTERSF.write = ( writeRegister  && ( rd != 0 ) ) ? 1 : 0; }
+        }
 
         // UPDATE PC
         if( SMT ) {

@@ -16,8 +16,8 @@ algorithm main(
     output  uint28  gp,
 
     // USB HID
-    inout   uint1   usb_fpga_bd_dp,
-    inout   uint1   usb_fpga_bd_dn,
+    input   uint1   usb_fpga_bd_dp,
+    input   uint1   usb_fpga_bd_dn,
     input   uint1   usb_fpga_dp,
 
     // AUDIO
@@ -142,8 +142,8 @@ algorithm main(
         btns <: btns,
         uart_tx :> uart_tx,
         uart_rx <: uart_rx,
-        usb_fpga_bd_dp <:> usb_fpga_bd_dp,
-        usb_fpga_bd_dn <:> usb_fpga_bd_dn,
+        usb_fpga_bd_dp <: usb_fpga_bd_dp,
+        usb_fpga_bd_dn <: usb_fpga_bd_dn,
         usb_fpga_dp <: usb_fpga_dp,
         audio_l :> audio_l,
         audio_r :> audio_r,

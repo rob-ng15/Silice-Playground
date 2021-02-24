@@ -14,7 +14,7 @@ RANLIB="riscv64-elf-ranlib"
 CFLAGS="--target=riscv32 -ffunction-sections -fdata-sections -O2 -fno-pic -fno-unroll-loops -menable-experimental-extensions -march=rv32imacb0p92 -mabi=ilp32"
 INCLUDES="-I/usr/riscv32-elf/include/"
 LFLAGS="--as-needed --gc-sections -m elf32lriscv -b elf32-littleriscv -Tconfig_c_SDRAM.ld --no-relax"
-LIBRARY="/usr/riscv32-elf/lib/rv32imac/ilp32/libc.a /usr/riscv32-elf/lib/rv32imac/ilp32/libm.a /usr/lib/gcc/riscv64-elf/10.2.0/rv32imac/ilp32/libgcc.a"
+LIBRARY="/usr/riscv64-elf/lib/rv32imac/ilp32/libc.a /usr/riscv64-elf/lib/rv32imac/ilp32/libm.a /usr/lib/gcc/riscv64-elf/10.2.0/rv32imac/ilp32/libgcc.a"
 
 # Following based on FemtoRV compile scripts https://github.com/BrunoLevy/learn-fpga/tree/master/FemtoRV
 clang $CFLAGS $INCLUDES -S -o build/libPAWS.s c/PAWSlibrary.c
