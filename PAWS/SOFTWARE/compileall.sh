@@ -2,6 +2,7 @@
 ./compile.sh c/asteroids.c PAWS/ASTROIDS.PAW
 ./compile.sh c/chess.c PAWS/CHESS.PAW
 ./compile.sh c/demo.c PAWS/DEMO.PAW
+./compile.sh c/fractal.c PAWS/FRACTAL.PAW
 ./compile.sh c/jpeg-test.c PAWS/JPEG.PAW
 ./compile.sh c/life.c PAWS/LIFE.PAW
 ./compile.sh c/maze.c PAWS/3DMAZE.PAW

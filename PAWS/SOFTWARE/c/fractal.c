@@ -49,9 +49,10 @@ int main( void ) {
       }
       else {
         /* exterior */
-        gpu_pixel( k>>4, i, j);
+        gpu_pixel( k>>4, i, 479);
       };
     }
+    bitmap_scrollwrap( 2 );
   }
 
     while(1) {

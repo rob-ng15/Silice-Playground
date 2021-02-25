@@ -78,14 +78,14 @@ algorithm main(
     // SDRAM  CLOCKS + ON CPU CACHE + USB DOMAIN CLOCKS
     uint1   sdram_clock = uninitialized;
     uint1   clock_cpucache = uninitialized;
-    uint1   clock_usb = uninitialized;
+    uint1   clock_cpufpu = uninitialized;
     uint1   pll_lock_AUX = uninitialized;
     ulx3s_clk_risc_ice_v_AUX clk_gen_AUX (
         clkin   <: clock,
         clkSDRAM :> sdram_clock,
         clkSDRAMcontrol :> sdram_clk,
         clkCPUcache :> clock_cpucache,
-        clk6 :> clock_usb,
+        clkFPUblock :> clock_cpufpu,
         locked :> pll_lock_AUX
     );
     // SDRAM Reset
@@ -158,7 +158,6 @@ algorithm main(
         video_clock <: video_clock,
         video_reset <: video_reset,
         gpu_clock <: gpu_clock,
-        clock_usb <: clock_usb,
 
         memoryAddress <: address,
         writeData <: writedata,
@@ -173,6 +172,7 @@ algorithm main(
     uint1   Icacheflag = uninitialized;
     PAWSCPU CPU <@cpu_clock> (
         clock_cpualu <: clock_cpualu,
+        clock_cpufpu <: clock_cpufpu,
         clock_cpufunc <: clock_cpufunc,
         clock_cpucache <: clock_cpucache,
 

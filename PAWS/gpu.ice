@@ -33,6 +33,7 @@ algorithm gpu(
     input   uint7   vector_block_colour,
     input   int11   vector_block_xc,
     input   int11   vector_block_yc,
+    input   uint3   vector_block_scale,
     input   uint1   draw_vector,
     // For setting vertices
     input   uint5   vertices_writer_block,
@@ -82,6 +83,7 @@ algorithm gpu(
         vector_block_number <: vector_block_number,
         vector_block_xc <: vector_block_xc,
         vector_block_yc <: vector_block_yc,
+        vector_block_scale <: vector_block_scale,
         draw_vector <: draw_vector,
         vertices_writer_block <: vertices_writer_block,
         vertices_writer_vertex <: vertices_writer_vertex,
@@ -803,6 +805,7 @@ algorithm vectors(
     input   uint5   vector_block_number,
     input   int11   vector_block_xc,
     input   int11   vector_block_yc,
+    input   uint3   vector_block_scale,
     input   uint1   draw_vector,
 
     // For setting vertices
@@ -860,17 +863,17 @@ algorithm vectors(
             block_number = vector_block_number;
             vertices_number = 0;
             ++:
-            ( start_x, start_y ) = deltacoordinates( vector_block_xc, deltax, vector_block_yc, deltay );
+            ( start_x, start_y ) = deltacoordinates( vector_block_xc, deltax, vector_block_yc, deltay, vector_block_scale );
             vertices_number = 1;
             ++:
             while( vectorentry(vertex.rdata0).active && ( vertices_number < 16 ) ) {
                 // Dispatch line to GPU
                 ( gpu_x, gpu_y ) = copycoordinates( start_x, start_y );
-                ( gpu_param0, gpu_param1 ) = deltacoordinates( vector_block_xc, deltax, vector_block_yc, deltay );
+                ( gpu_param0, gpu_param1 ) = deltacoordinates( vector_block_xc, deltax, vector_block_yc, deltay, vector_block_scale );
                 while( gpu_active ) {}
                 gpu_write = 1;
                 // Move onto the next of the vertices
-                ( start_x, start_y ) = deltacoordinates( vector_block_xc, deltax, vector_block_yc, deltay );
+                ( start_x, start_y ) = copycoordinates( gpu_param0, gpu_param1 );
                 vertices_number = vertices_number + 1;
                 ++:
             }

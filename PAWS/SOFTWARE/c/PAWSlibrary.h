@@ -220,7 +220,7 @@ extern void gpu_triangle( unsigned char, short, short, short, short, short, shor
 extern void gpu_quadrilateral( unsigned char, short, short, short, short, short, short, short, short );
 extern void gpu_printf( unsigned char, short, short, unsigned char, const char *,...  );
 extern void gpu_printf_centre( unsigned char, short, short, unsigned char, const char *,...  );
-extern void draw_vector_block( unsigned char, unsigned char, short, short );
+extern void draw_vector_block( unsigned char, unsigned char, short, short, unsigned char );
 extern void set_vector_vertex( unsigned char, unsigned char , unsigned char, char, char );
 extern void bitmap_scrollwrap( unsigned char );
 extern void set_blitter_bitmap( unsigned char, unsigned short * );

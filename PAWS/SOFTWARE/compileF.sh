@@ -18,9 +18,9 @@ INCLUDE="-I/usr/riscv32-elf/include/"
 LIBRARY="/usr/riscv64-elf/lib/rv32imafc/ilp32f/libc.a /usr/riscv64-elf/lib/rv32imafc/ilp32f/libm.a /usr/lib/gcc/riscv64-elf/10.2.0/rv32imafc/ilp32f/libgcc.a"
 
 # Following based on FemtoRV compile scripts https://github.com/BrunoLevy/learn-fpga/tree/master/FemtoRV
+$ARCH-elf-gcc $CFLAGS -c -o build/crt0.o crt0.c
 $ARCH-elf-gcc $INCLUDE $CFLAGS -c -o build/libPAWS.o c/PAWSlibrary.c
 $AR -cvq build/libPAWS.a build/libPAWS.o
 $ARCH-elf-gcc $INCLUDE $CFLAGS -c -o build/code.o $1
-$ARCH-elf-as -march=rv32imafc -mabi=ilp32 -o build/crt0.o crt0.s
 $ARCH-elf-ld $LFLAGS $LCONFIG -o build/code.elf build/code.o build/libPAWS.o $LIBRARY
 $ARCH-elf-objcopy -O binary build/code.elf $2

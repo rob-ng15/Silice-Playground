@@ -33,4 +33,8 @@ SECTIONS {
     {
         *(.rodata*)
     } > ram
+    eh_frame :
+    {
+    KEEP (*(.eh_frame))
+    } > ram
 }

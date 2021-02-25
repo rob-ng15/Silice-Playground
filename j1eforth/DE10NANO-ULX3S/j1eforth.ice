@@ -56,11 +56,14 @@ $$end
     output! uint1   uart_tx,
     input   uint1   uart_rx,
 
-    // PS2
-    output  uint1   usb_fpga_pu_dp,
-    output  uint1   usb_fpga_pu_dn,
+    // GPIO
+    input   uint28  gn,
+    output  uint28  gp,
+
+    // USB HID
     input   uint1   usb_fpga_bd_dp,
     input   uint1   usb_fpga_bd_dn,
+    input   uint1   usb_fpga_dp,
 
     // AUDIO
     output! uint4   audio_l,

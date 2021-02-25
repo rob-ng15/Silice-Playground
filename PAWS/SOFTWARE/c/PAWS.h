@@ -55,6 +55,7 @@ unsigned char volatile * VECTOR_DRAW_BLOCK = (unsigned char volatile *) 0x8420;
 unsigned char volatile * VECTOR_DRAW_COLOUR = (unsigned char volatile *) 0x8424;
 short volatile * VECTOR_DRAW_XC = (short volatile *) 0x8428;
 short volatile * VECTOR_DRAW_YC = (short volatile *) 0x842c;
+unsigned char volatile * VECTOR_DRAW_SCALE = (unsigned char volatile *) 0x842e;
 unsigned char volatile * VECTOR_DRAW_START = (unsigned char volatile *) 0x8430;
 unsigned char volatile * VECTOR_DRAW_STATUS = (unsigned char volatile *) 0x8448;
 

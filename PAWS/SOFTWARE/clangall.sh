@@ -2,6 +2,7 @@
 ./clang.sh c/asteroids.c PAWS/CLANGA.PAW
 ./clang.sh c/chess.c PAWS/CLANGC.PAW
 ./clang.sh c/demo.c PAWS/CLANGD.PAW
+./clang.sh c/fractal.c PAWS/CLANGF.PAW
 ./clang.sh c/jpeg-test.c PAWS/CLANGJ.PAW
 ./clang.sh c/life.c PAWS/CLANGL.PAW
 ./clang.sh c/maze.c PAWS/CLANGM.PAW

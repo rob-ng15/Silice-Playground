@@ -26,7 +26,7 @@ algorithm aluMdivideremain(
             active = 1;
             dividend_copy = ~function3[0,1] ? ( dividend[31,1] ? -dividend : dividend ) : dividend;
             divisor_copy = ~function3[0,1] ? ( divisor[31,1] ? -divisor : divisor ) : divisor;
-            resultsign = ~function3[0,1] ? dividend[31,1] != divisor[31,1] : 0;
+            resultsign = ~function3[0,1] ? dividend[31,1] ^ divisor[31,1] : 0;
             quotient = 0;
             remainder = 0;
             bit = 31;
@@ -84,7 +84,7 @@ algorithm aluMmultiply(
             active = 1;
 
             dosigned = function3[1,1] ? ( function3[0,1] ? 0 : 2 ) : 1;
-            resultsign = ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] != factor_2[31,1] ) : factor_1[31,1] );
+            resultsign = ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
             factor_1_copy = ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
             factor_2_copy = ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
             ++:

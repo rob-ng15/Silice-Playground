@@ -470,13 +470,14 @@ void wait_vector_block( void ) {
 }
 
 // START DRAWING A VECTOR BLOCK centred at (xc,yc) in colour
-void draw_vector_block( unsigned char block, unsigned char colour, short xc, short yc ) {
+void draw_vector_block( unsigned char block, unsigned char colour, short xc, short yc, unsigned char scale ) {
     wait_vector_block();
 
     *VECTOR_DRAW_BLOCK = block;
     *VECTOR_DRAW_COLOUR = colour;
     *VECTOR_DRAW_XC = xc;
     *VECTOR_DRAW_YC = yc;
+    *VECTOR_DRAW_SCALE = scale;
     *VECTOR_DRAW_START = 1;
 }
 

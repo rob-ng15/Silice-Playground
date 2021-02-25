@@ -492,13 +492,13 @@ void draw_lives( void )
 {
     switch( lives ) {
         case 3:
-            draw_vector_block( 0, WHITE, 608, 464 );
+            draw_vector_block( 0, WHITE, 608, 464, 1 );
 
         case 2:
-            draw_vector_block( 0, WHITE, 576, 464 );
+            draw_vector_block( 0, WHITE, 576, 464, 0 );
 
         case 1:
-            draw_vector_block( 0, WHITE, 544, 464 );
+            draw_vector_block( 0, WHITE, 544, 464, 5 );
             break;
     }
 }

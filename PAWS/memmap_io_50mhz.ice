@@ -587,6 +587,7 @@ algorithm memmap_io (
                 case 16h8424: { gpu_processor.vector_block_colour = writeData; }
                 case 16h8428: { gpu_processor.vector_block_xc = writeData; }
                 case 16h842c: { gpu_processor.vector_block_yc = writeData; }
+                case 16h842e: { gpu_processor.vector_block_scale = writeData; }
                 case 16h8430: { gpu_processor.draw_vector = 1; }
 
                 case 16h8434: { gpu_processor.vertices_writer_block = writeData; }

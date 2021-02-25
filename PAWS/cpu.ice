@@ -8,6 +8,7 @@
 
 algorithm PAWSCPU (
     input   uint1   clock_cpualu,
+    input   uint1   clock_cpufpu,
     input   uint1   clock_cpufunc,
     input   uint1   clock_cpucache,
 
@@ -33,12 +34,13 @@ algorithm PAWSCPU (
     uint32  pc = 0;
     uint32  pcSMT = 0;
     uint32  PC := SMT ? pcSMT : pc;
+    uint32  PCplus2 := PC + 2;
     uint1   incPC = uninitialized;
 
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
     uint1   compressed = uninitialized;
-    compressed COMPRESSED(
+    compressed COMPRESSED <@clock_cpufunc> (
         i16 <: readdata
     );
 
@@ -50,6 +52,8 @@ algorithm PAWSCPU (
     uint1   writeRegister = uninitialized;
     uint32  memoryinput = uninitialized;
     uint32  memoryoutput = uninitialized;
+    uint16  memoryoutputLOW := memoryoutput[0,16];
+    uint16  memoryoutputHIGH := memoryoutput[16,16];
     uint1   memoryload := ( ( opCode == 7b0000011 ) || ( opCode == 7b0000111 ) || ( ( opCode == 7b0101111 ) && ( function7[2,5] != 5b00011 ) ) ) ? 1 : 0;
     uint1   memorystore := ( ( opCode == 7b0100011 ) || ( opCode == 7b0100111 ) || ( ( opCode == 7b0101111 ) && ( function7[2,5] != 5b00010 ) ) ) ? 1 : 0;
 
@@ -64,7 +68,7 @@ algorithm PAWSCPU (
     uint5   rs2 = uninitialized;
     uint5   rs3 = uninitialized;
     uint5   rd = uninitialized;
-    decoder DECODER(
+    decoder DECODER <@clock_cpufunc> (
         instruction <: instruction,
         opCode :> opCode,
         function2 :> function2,
@@ -115,7 +119,9 @@ algorithm PAWSCPU (
     uint32  branchAddress = uninitialized;
     uint32  jumpAddress = uninitialized;
     uint32  loadAddress = uninitialized;
+    uint32  loadAddressplus2 := loadAddress + 2;
     uint32  storeAddress = uninitialized;
+    uint32  storeAddressplus2 := storeAddress + 2;
     uint32  AUIPCLUI = uninitialized;
     addressgenerator AGU(
         instruction <: instruction,
@@ -163,7 +169,7 @@ algorithm PAWSCPU (
     );
 
     // FLOATING POINT OPERATIONS
-    fpu FPU <@clock_cpualu> (
+    fpu FPU <@clock_cpufpu> (
         opCode <: opCode,
         function3 <: function3,
         function7 <: function7,
@@ -214,10 +220,8 @@ algorithm PAWSCPU (
             compressed = Icache.compressed;
         } else {
             // FETCH + EXPAND COMPRESSED INSTRUCTIONS
-            address = PC;
             Icacheflag = 1;
-            readmemory = 1;
-            while( memorybusy ) {}
+            ( address, readmemory ) = fetch( PC, memorybusy );
 
             compressed = ( readdata[0,2] != 2b11 );
 
@@ -226,9 +230,7 @@ algorithm PAWSCPU (
                 case 2b11: {
                     // 32 BIT INSTRUCTION
                     lowWord = readdata;
-                    address = PC + 2;
-                    readmemory = 1;
-                    while( memorybusy ) {}
+                    ( address, readmemory ) = fetch( PCplus2, memorybusy );
                     ( instruction ) = halfhalfword( readdata, lowWord );
                 }
             }
@@ -243,19 +245,15 @@ algorithm PAWSCPU (
 
         // LOAD FROM MEMORY
         if( memoryload ) {
-            address = loadAddress;
             Icacheflag = 0;
-            readmemory = 1;
-            while( memorybusy ) {}
+            ( address, readmemory ) = fetch( loadAddress, memorybusy );
             switch( accesssize & 3 ) {
                 case 2b00: { ( memoryinput ) = signextender8( function3, loadAddress, readdata ); }
                 case 2b01: { ( memoryinput ) = signextender16( function3, readdata ); }
                 case 2b10: {
                     // 32 bit READ as 2 x 16 bit
                     lowWord = readdata;
-                    address = loadAddress + 2;
-                    readmemory = 1;
-                    while( memorybusy ) {}
+                    ( address, readmemory ) = fetch( loadAddressplus2, memorybusy );
                     ( memoryinput ) = halfhalfword( readdata, lowWord );
                 }
             }
@@ -385,17 +383,11 @@ algorithm PAWSCPU (
 
         // STORE TO MEMORY
         if( memorystore ) {
-            address = storeAddress;
             Icacheflag = 0;
-            writedata = memoryoutput[0,16];
-            writememory = 1;
-            while( memorybusy ) {}
+            ( address, writedata, writememory ) = store( storeAddress, memoryoutputLOW, memorybusy );
             if(  ( accesssize & 3 ) == 2b10 ) {
                 // WRITE UPPER 16 of 32 bits
-                address = storeAddress + 2;
-                writedata = memoryoutput[16,16];
-                writememory = 1;
-                while( memorybusy ) {}
+                ( address, writedata, writememory ) = store( storeAddressplus2, memoryoutputHIGH, memorybusy );
             }
         }
 

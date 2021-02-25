@@ -21,8 +21,8 @@ algorithm bitmap(
     simple_dualbram_port0 bitmap
 ) <autorun> {
     // Pixel x and y fetching ( adjusting for offset )
-    uint10  x_plus_one := ( pix_x + x_offset + 1 ) > 639 ? ( pix_x + x_offset + 1 ) - 639 : ( pix_x + x_offset + 1 );
-    uint10  y_line := pix_vblank ? y_offset : ( ( pix_y + y_offset ) > 479 ? ( pix_y + y_offset ) - 479 : ( pix_y + y_offset ) );
+    uint10  x_plus_one := ( pix_x + x_offset + 1 ) > 639 ? ( pix_x + x_offset + 1 ) - 640 : ( pix_x + x_offset + 1 );
+    uint10  y_line := pix_vblank ? y_offset : ( ( pix_y + y_offset ) > 479 ? ( pix_y + y_offset ) - 480 : ( pix_y + y_offset ) );
     uint10  x_pixel := pix_active ? x_plus_one : x_offset;
 
     // Pixel being read?
@@ -73,8 +73,8 @@ algorithm bitmapwriter (
     simple_dualbram_port1 bitmap
 ) <autorun> {
     // Pixel x and y for writing ( adjusting for offset )
-    uint10  x_write_pixel := ( bitmap_x_write + x_offset ) > 639 ? ( bitmap_x_write + x_offset ) - 639 : ( bitmap_x_write + x_offset );
-    uint10  y_write_pixel := ( bitmap_y_write + y_offset ) > 479 ? ( bitmap_y_write + y_offset ) - 479 : ( bitmap_y_write + y_offset );
+    uint10  x_write_pixel := ( bitmap_x_write + x_offset ) > 639 ? ( bitmap_x_write + x_offset ) - 640 : ( bitmap_x_write + x_offset );
+    uint10  y_write_pixel := ( bitmap_y_write + y_offset ) > 479 ? ( bitmap_y_write + y_offset ) - 480 : ( bitmap_y_write + y_offset );
 
     // Write in range?
     uint1 write_pixel := (bitmap_x_write >= 0 ) && (bitmap_x_write < 640) && (bitmap_y_write >= 0) && (bitmap_y_write <= 479) && bitmap_write;

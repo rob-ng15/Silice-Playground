@@ -17,11 +17,10 @@ LFLAGS="--as-needed --gc-sections -m elf32lriscv -b elf32-littleriscv -Tconfig_c
 LIBRARY="/usr/riscv64-elf/lib/rv32imafc/ilp32f/libc.a /usr/riscv64-elf/lib/rv32imafc/ilp32f/libm.a /usr/lib/gcc/riscv64-elf/10.2.0/rv32imafc/ilp32f/libgcc.a"
 
 # Following based on FemtoRV compile scripts https://github.com/BrunoLevy/learn-fpga/tree/master/FemtoRV
-clang $CFLAGS $INCLUDES -S -o build/libPAWS.s c/PAWSlibrary.c
+clang $CFLAGS -c -o build/crt0.o crt0.c
 clang $CFLAGS $INCLUDES -c -o build/libPAWS.o c/PAWSlibrary.c
 $AR -cvq build/libPAWS.a build/libPAWS.o
 clang $CFLAGS $INCLUDES -S -o build/code.s $1
 clang $CFLAGS $INCLUDES -c -o build/code.o $1
-$ARCH-elf-as -march=rv32imafc -mabi=ilp32 -o build/crt0.o crt0.s
 $ARCH-elf-ld $LFLAGS -o build/code.elf build/code.o build/libPAWS.o $LIBRARY
 $ARCH-elf-objcopy -O binary build/code.elf $2

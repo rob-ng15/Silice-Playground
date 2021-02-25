@@ -4,7 +4,7 @@ module ulx3s_clk_risc_ice_v_AUX
     output  clkCPUcache,
     output  clkSDRAM,           // 100 MHz, 0 deg       // SDRAM
     output  clkSDRAMcontrol,    // 100 MHz, 180 deg     // SDRAM controller
-    output  clk6,
+    output  clkFPUblock,
     output  locked
 );
 (* FREQUENCY_PIN_CLKI="25" *)
@@ -30,11 +30,11 @@ EHXPLLL #(
         .CLKOS_CPHASE(8),
         .CLKOS_FPHASE(0),
         .CLKOS2_ENABLE("ENABLED"),
-        .CLKOS2_DIV(6),
+        .CLKOS2_DIV(12),
         .CLKOS2_CPHASE(5),
         .CLKOS2_FPHASE(0),
         .CLKOS3_ENABLE("ENABLED"),
-        .CLKOS3_DIV(104),
+        .CLKOS3_DIV(6),
         .CLKOS3_CPHASE(5),
         .CLKOS3_FPHASE(0),
         .FEEDBK_PATH("CLKOP"),
@@ -45,8 +45,8 @@ EHXPLLL #(
         .CLKI(clkin),
         .CLKOP(clkCPUcache),
         .CLKOS(clkSDRAMcontrol),
-        .CLKOS2(clkSDRAM),
-        .CLKOS3(clk6),
+        .CLKOS2(clkFPUblock),
+        .CLKOS3(clkSDRAM),
         .CLKFB(clkCPUcache),
         .CLKINTFB(),
         .PHASESEL0(1'b0),
