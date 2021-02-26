@@ -26,7 +26,6 @@ bitfield floatingpointcsr{
     uint5   fflags
 }
 
-
 algorithm fpu(
     input   uint1   start,
     output! uint1   busy,
@@ -106,22 +105,27 @@ algorithm fpu(
                         case 5b00000: {
                             // FADD.S
                             frd = 1;
+                            result = sourceReg1F + sourceReg2F;
                         }
                         case 5b00001: {
                             // FSUB.S
                             frd = 1;
+                            result = sourceReg1F - sourceReg2F;
                         }
                         case 5b00010: {
                             // FMUL.S
                             frd = 1;
+                            result = sourceReg1F | sourceReg2F;
                         }
                         case 5b00011: {
                             // FDIV.S
                             frd = 1;
+                            result = sourceReg1F & sourceReg2F;
                         }
                         case 5b010011: {
                             // FSQRT.S
                             frd = 1;
+                            result = sourceReg1F ^ sourceReg2F;
                         }
                         case 5b00100: {
                             // FSGNJ.S FNGNJN.S FSGNJX.S
@@ -144,10 +148,15 @@ algorithm fpu(
                         case 5b00101: {
                             // FMIN.S FMAX.S
                             frd = 1;
+                            switch( function3[0,1] ) {
+                                case 0: { result = ( sourceReg1F < sourceReg2F ) ? sourceReg1F : sourceReg2F; }
+                                case 1: { result = ( sourceReg1F > sourceReg2F ) ? sourceReg1F : sourceReg2F; }
+                            }
                         }
                         case 5b11000: {
                             // FCVT.W.S FCVT.WU.S
                             frd = 0;
+                            result = sourceReg1F;
                         }
                         case 5b11100: {
                             // FMV.X.W
@@ -157,14 +166,21 @@ algorithm fpu(
                         case 5b10100: {
                             // FEQ.S FLT.S FLE.S
                             frd = 0;
+                            switch( function3 ) {
+                                case 3b000: { result = ( sourceReg1F <= sourceReg2F ) ? 1 : 0; }
+                                case 3b001: { result = ( sourceReg1F < sourceReg2F ) ? 1 : 0; }
+                                case 3b010: { result = ( sourceReg1F == sourceReg2F ) ? 1 : 0; }
+                            }
                         }
                         case 5b11100: {
                             // FCLASS.S
                             frd = 0;
+                            result = { 23b0, 9b000100000 };
                         }
                         case 5b11010: {
                             // FCVT.S.W FCVT.S.WU
                             frd = 1;
+                            result = sourceReg1;
                         }
                         case 5b11110: {
                             // FMV.W.X

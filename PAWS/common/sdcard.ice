@@ -11,13 +11,14 @@
 //
 //      GNU AFFERO GENERAL PUBLIC LICENSE
 //        Version 3, 19 November 2007
-//      
-//  A copy of the license full text is included in 
+//
+//  A copy of the license full text is included in
 //  the distribution, please refer to it for details.
 
 group sdcardio {
   uint32 addr_sector = 0,
   uint1  read_sector = 0,
+  uint16 offset      = 0,
   uint1  ready       = 0,
 }
 
@@ -25,6 +26,7 @@ interface sdcardio_ctrl {
   input!  addr_sector,
   input!  read_sector,
   output  ready,
+  input   offset,
 }
 
 algorithm sdcard(
@@ -35,11 +37,11 @@ algorithm sdcard(
   // read io
   sdcardio_ctrl  io,
   // storage
-  simple_dualbram_port1 store
+  simple_dualport_bram_port1 store
 ) <autorun> {
-  
+
   // assert(sizeof(io.addr_sector) == 32);
-  
+
   subroutine send(
     input  uint48   cmd,
     readwrites      sd_clk,
@@ -49,7 +51,7 @@ algorithm sdcard(
     uint48 shift = uninitialized;
     shift        = cmd;
     while (count < $2*256*48$) { // 48 clock pulses @~400 kHz (assumes 50 MHz clock)
-      if ((count&255) == 255) {      
+      if ((count&255) == 255) {
         sd_clk  = ~sd_clk;
         if (!sd_clk) {
           sd_mosi = shift[47,1];
@@ -60,7 +62,7 @@ algorithm sdcard(
     }
     sd_mosi = 1;
   }
-  
+
   subroutine read(
     input  uint6    len,
     input  uint1    wait,
@@ -69,7 +71,7 @@ algorithm sdcard(
     readwrites      sd_clk,
     writes          sd_mosi,
     reads           sd_miso
-  ) {  
+  ) {
     uint16 count = 0;
     uint6  n     = 0;
     answer       = 40hffffffffff;
@@ -83,10 +85,10 @@ algorithm sdcard(
           answer  = {answer[0,39],sd_miso};
         }
       }
-      count = count + 1;      
+      count = count + 1;
     }
   }
-  
+
   uint24 count  = 0;
   uint40 status = 0;
   uint48 cmd0   = 48b010000000000000000000000000000000000000010010101;
@@ -96,22 +98,22 @@ algorithm sdcard(
   uint48 cmd16  = 48b010100000000000000000000000000100000000000010101;
   uint48 cmd17  = 48b010100010000000000000000000000000000000001010101;
   //                 01ccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarrrrrrr1
-  
+
   uint1  do_read_sector = 0;
   uint32 do_addr_sector = 0;
-  
+
   store.wenable1 := 1; // writes
-  
+
   always {
-    
+
     if (io.read_sector) {
       do_read_sector = 1;
       do_addr_sector = io.addr_sector;
-      io.ready = 0;
+      io.ready       = 0;
     }
- 
+
   }
-  
+
   sd_mosi = 1;
   sd_csn  = 1;
   sd_clk  = 0;
@@ -119,8 +121,8 @@ algorithm sdcard(
   // wait 2 msec (power up), @50 MHz
   count = 0;
   while (count < 100000) { count = count + 1; }
-  
-  // request SPI mode  
+
+  // request SPI mode
   count   = 0;
   while (count < $2*256*80$) { // 74+ clock pulses @~400 kHz (assumes 50 MHz clock)
     if ((count&255) == 255) {
@@ -129,13 +131,13 @@ algorithm sdcard(
     count = count + 1;
   }
 
-  sd_csn         = 0; 
+  sd_csn         = 0;
   store.addr1    = 0;
-  
+
   // init
   () <- send <- (cmd0);
   (status) <- read <- (8,1,255);
-  
+
   () <- send <- (cmd8);
   (status) <- read <- (40,1,255);
 
@@ -152,11 +154,11 @@ algorithm sdcard(
   () <- send <- (cmd16);
   (status) <- read <- (8,1,255);
 
-  io.ready = 1;  
-  
+  io.ready = 1;
+
   // ready to work
   while (1) {
-    
+
     if (do_read_sector) {
       do_read_sector = 0;
 
@@ -166,27 +168,30 @@ algorithm sdcard(
       (status) <- read <- (8,1,3); // response
 
       if (status[0,8] == 8h00) {
+        uint9 progress = 0;
+
         (status) <- read <- (1,1,3); // start token
-        
-        store.addr1 = 0;
-        (store.wdata1) <- read <- (8,0,3); // bytes  
-        while (store.addr1 < 511) {
-          (store.wdata1) <- read <- (8,0,3); // bytes          
+
+        store.addr1 = io.offset;
+        (store.wdata1) <- read <- (8,0,3); // bytes
+        while (progress < 511) {
+          (store.wdata1) <- read <- (8,0,3); // bytes
           store.addr1 = store.addr1 + 1;
-        }        
+          progress    = progress + 1;
+        }
         (status) <- read <- (16,1,3); // CRC
-        
+
         io.ready = 1;
 
       } else {
-      
+
         io.ready = 1;
 
       }
     }
-    
+
   }
-  
+
 }
 
-// ------------------------- 
+// -------------------------

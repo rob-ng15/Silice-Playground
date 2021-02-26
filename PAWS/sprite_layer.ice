@@ -272,7 +272,7 @@ algorithm spritebitmapwriter(
     input   uint1   sprite_writer_active,
 
     $$for i=0,12 do
-        simple_dualbram_port1 tiles_$i$,
+        simple_dualport_bram_port1 tiles_$i$,
     $$end
 ) <autorun> {
     $$for i=0,12 do

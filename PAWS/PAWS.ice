@@ -5,7 +5,6 @@ algorithm main(
 
     // HDMI OUTPUT
     output  uint4   gpdi_dp,
-    output  uint4   gpdi_dn,
 
     // UART
     output! uint1   uart_tx,
@@ -16,9 +15,8 @@ algorithm main(
     output  uint28  gp,
 
     // USB HID
-    input   uint1   usb_fpga_bd_dp,
-    input   uint1   usb_fpga_bd_dn,
-    input   uint1   usb_fpga_dp,
+    input   uint1   us2_bd_dp,
+    input   uint1   us2_bd_dn,
 
     // AUDIO
     output! uint4   audio_l,
@@ -142,9 +140,8 @@ algorithm main(
         btns <: btns,
         uart_tx :> uart_tx,
         uart_rx <: uart_rx,
-        usb_fpga_bd_dp <: usb_fpga_bd_dp,
-        usb_fpga_bd_dn <: usb_fpga_bd_dn,
-        usb_fpga_dp <: usb_fpga_dp,
+        us2_bd_dp <: us2_bd_dp,
+        us2_bd_dn <: us2_bd_dn,
         audio_l :> audio_l,
         audio_r :> audio_r,
         sd_clk :> sd_clk,
@@ -152,7 +149,6 @@ algorithm main(
         sd_csn :> sd_csn,
         sd_miso <: sd_miso,
         gpdi_dp :> gpdi_dp,
-        gpdi_dn :> gpdi_dn,
 
         clock_25mhz <: clock,
         video_clock <: video_clock,

@@ -254,7 +254,7 @@ algorithm tilebitmapwriter(
     input   uint4   tile_writer_line,
     input   uint16  tile_writer_bitmap,
 
-    simple_dualbram_port1 tiles16x16
+    simple_dualport_bram_port1 tiles16x16
 ) <autorun> {
     tiles16x16.wenable1 := 1;
 

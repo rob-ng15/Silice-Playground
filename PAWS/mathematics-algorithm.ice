@@ -1,6 +1,109 @@
 // ALU S- BASE - M EXTENSION - B EXTENSION
 
-// BASE IMMEDIATE WITH B EXTENSIONS
+// UNSIGNED / SIGNED 32 by 32 bit division giving 32 bit remainder and quotient
+algorithm aluMdivideremain(
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint3   function3,
+    input   uint32  dividend,
+    input   uint32  divisor,
+
+    output! uint32  result
+) <autorun> {
+    uint32  quotient = uninitialized;
+    uint32  remainder = uninitialized;
+    uint32  dividend_copy = uninitialized;
+    uint32  divisor_copy = uninitialized;
+    uint1   resultsign = uninitialized;
+    uint6   bit = uninitialized;
+
+    uint1   active = 0;
+    busy := start ? 1 : active;
+
+    while(1) {
+        if( start ) {
+            active = 1;
+            dividend_copy = ~function3[0,1] ? ( dividend[31,1] ? -dividend : dividend ) : dividend;
+            divisor_copy = ~function3[0,1] ? ( divisor[31,1] ? -divisor : divisor ) : divisor;
+            resultsign = ~function3[0,1] ? dividend[31,1] ^ divisor[31,1] : 0;
+            quotient = 0;
+            remainder = 0;
+            bit = 31;
+            ++:
+
+            if( divisor != 0 ) {
+                while( bit != 63 ) {
+                    if( __unsigned({ remainder[0,31], dividend_copy[bit,1] }) >= __unsigned(divisor_copy) ) {
+                        remainder = __unsigned({ remainder[0,31], dividend_copy[bit,1] }) - __unsigned(divisor_copy);
+                        quotient[bit,1] = 1;
+                    } else {
+                        remainder = { remainder[0,31], dividend_copy[bit,1] };
+                    }
+                    bit = bit - 1;
+                }
+                result = function3[1,1] ? remainder : ( resultsign ? -quotient : quotient );
+            } else {
+                result = function3[1,1] ? dividend : 32hffffffff;
+            }
+
+            active = 0;
+        }
+    }
+}
+
+// UNSIGNED / SIGNED 32 by 32 bit multiplication giving 64 bit product using DSP blocks
+algorithm aluMmultiply(
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint3   function3,
+    input   uint32  factor_1,
+    input   uint32  factor_2,
+
+    output! uint32  result
+) <autorun> {
+    // FULLY SIGNED / PARTIALLY SIGNED / UNSIGNED and RESULT SIGNED FLAGS
+    uint2   dosigned = uninitialized;
+    uint1   resultsign = uninitialized;
+    uint32  factor_1_copy = uninitialized;
+    uint32  factor_2_copy = uninitialized;
+    uint64  product = uninitialized;
+
+    // Calculation is split into 4 18 x 18 multiplications for DSP
+    uint18  A = uninitialized;
+    uint18  B = uninitialized;
+    uint18  C = uninitialized;
+    uint18  D = uninitialized;
+
+    uint1   active = 0;
+    busy := start ? 1 : active;
+
+    while(1) {
+        if( start ) {
+            active = 1;
+
+            dosigned = function3[1,1] ? ( function3[0,1] ? 0 : 2 ) : 1;
+            resultsign = ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
+            factor_1_copy = ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
+            factor_2_copy = ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
+            ++:
+            A = { 2b0, factor_1_copy[16,16] };
+            B = { 2b0, factor_1_copy[0,16] };
+            C = { 2b0, factor_2_copy[16,16] };
+            D = { 2b0, factor_2_copy[0,16] };
+            ++:
+            product = resultsign ? -( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } ) : ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
+            ++:
+            result = ( function3 == 0 ) ? product[0,32] : product[32,32];
+
+            active = 0;
+        }
+
+    }
+}
+
+// BASE IMMEDIATE + B extensions
 algorithm aluIb001(
     input   uint1   start,
     output! uint1   busy,
@@ -480,80 +583,21 @@ algorithm aluR (
 
     output! uint32  result
 ) <autorun> {
-    // UNSIGNED / SIGNED 32 by 32 bit division giving 32 bit remainder and quotient
-    subroutine divideremain(
-        input   uint3   dosign,
-        input   uint32  dividend,
-        input   uint32  divisor,
-
-        output  uint32  quotientremainder
-    ) {
-        uint32  quotient = uninitialized;
-        uint32  remainder = uninitialized;
-        uint32  dividend_copy = uninitialized;
-        uint32  divisor_copy = uninitialized;
-        uint1   quotientremaindersign = uninitialized;
-        uint6   bit = uninitialized;
-
-        dividend_copy = ~dosign[0,1] ? ( dividend[31,1] ? -dividend : dividend ) : dividend;
-        divisor_copy = ~dosign[0,1] ? ( divisor[31,1] ? -divisor : divisor ) : divisor;
-        quotientremaindersign = ~dosign[0,1] ? dividend[31,1] ^ divisor[31,1] : 0;
-        quotient = 0;
-        remainder = 0;
-        bit = 31;
-        ++:
-
-        if( divisor != 0 ) {
-            while( bit != 63 ) {
-                if( __unsigned({ remainder[0,31], dividend_copy[bit,1] }) >= __unsigned(divisor_copy) ) {
-                    remainder = __unsigned({ remainder[0,31], dividend_copy[bit,1] }) - __unsigned(divisor_copy);
-                    quotient[bit,1] = 1;
-                } else {
-                    remainder = { remainder[0,31], dividend_copy[bit,1] };
-                }
-                bit = bit - 1;
-            }
-            quotientremainder = dosign[1,1] ? remainder : ( quotientremaindersign ? -quotient : quotient );
-        } else {
-            quotientremainder = dosign[1,1] ? dividend : 32hffffffff;
-        }
-    }
-    // UNSIGNED / SIGNED 32 by 32 bit multiplication giving 64 bit product using DSP blocks
-    subroutine multiplier(
-        input   uint3   dosign,
-        input   uint32  factor_1,
-        input   uint32  factor_2,
-
-        output  uint32  productHorL
-    ) {
-        uint2   dosigned = uninitialized;
-        uint1   productsign = uninitialized;
-        uint32  factor_1_copy = uninitialized;
-        uint32  factor_2_copy = uninitialized;
-        uint64  product = uninitialized;
-
-        // Calculation is split into 4 18 x 18 multiplications for DSP
-        uint18  A = uninitialized;
-        uint18  B = uninitialized;
-        uint18  C = uninitialized;
-        uint18  D = uninitialized;
-
-        dosigned = dosign[1,1] ? ( dosign[0,1] ? 0 : 2 ) : 1;
-        productsign = ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
-        factor_1_copy = ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
-        factor_2_copy = ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
-        ++:
-        A = { 2b0, factor_1_copy[16,16] };
-        B = { 2b0, factor_1_copy[0,16] };
-        C = { 2b0, factor_2_copy[16,16] };
-        D = { 2b0, factor_2_copy[0,16] };
-        ++:
-        product = productsign ? -( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } ) : ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
-        ++:
-        productHorL = ( dosign == 0 ) ? product[0,32] : product[32,32];
-    }
-
     uint5   RshiftCount := sourceReg2[0,5];
+
+    // M EXTENSION DIVIDER
+    aluMdivideremain ALUMD(
+        function3 <: function3,
+        dividend <: sourceReg1,
+        divisor <: sourceReg2
+    );
+
+    // M EXTENSION BLOCK MULTIPLIER
+    aluMmultiply ALUMM(
+        function3 <: function3,
+        factor_1 <: sourceReg1,
+        factor_2 <: sourceReg2
+    );
 
     // BEXT BDEP UNIT
     uint32  BEXTBDEPoutput = uninitialized;
@@ -612,6 +656,8 @@ algorithm aluR (
     );
 
     // START FLAGS FOR ALU SUB BLOCKS
+    ALUMD.start := 0;
+    ALUMM.start := 0;
     ALUR7b0010100.start := 0;
     ALUR7b0000101.start := 0;
     ALUR7b0000100.start := 0;
@@ -628,8 +674,16 @@ algorithm aluR (
                 case 7b0000001: {
                     busy = 1;
                     switch( function3[2,1] ) {
-                        case 1b0: { ( result ) <- multiplier <- ( function3, sourceReg1, sourceReg2 ); }
-                        case 1b1: { ( result ) <- divideremain <- ( function3, sourceReg1, sourceReg2 ); }
+                        case 1b0: {
+                            ALUMM.start = 1;
+                            while( ALUMM.busy ) {}
+                            result = ALUMM.result;
+                        }
+                        case 1b1: {
+                            ALUMD.start = 1;
+                            while( ALUMD.busy ) {}
+                            result = ALUMD.result;
+                        }
                     }
                     busy = 0;
                 }

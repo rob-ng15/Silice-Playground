@@ -12,9 +12,8 @@ algorithm memmap_io (
     input   uint1   uart_rx,
 
     // USB HID
-    input   uint1   usb_fpga_bd_dp,
-    input   uint1   usb_fpga_bd_dn,
-    input   uint1   usb_fpga_dp,
+    input   uint1   us2_bd_dp,
+    input   uint1   us2_bd_dn,
 
     // AUDIO
     output! uint4   audio_l,
@@ -28,7 +27,6 @@ algorithm memmap_io (
 
     // HDMI OUTPUT
     output  uint4   gpdi_dp,
-    output  uint4   gpdi_dn,
 
     // CLOCKS
     input   uint1   clock_25mhz,
@@ -102,7 +100,6 @@ algorithm memmap_io (
         x       :> pix_x,
         y       :> pix_y,
         gpdi_dp :> gpdi_dp,
-        gpdi_dn :> gpdi_dn,
         red     <: video_r,
         green   <: video_g,
         blue    <: video_b
@@ -315,13 +312,11 @@ algorithm memmap_io (
     uint8   ps2keycode = uninitialized;
     uint1   ps2valid = uninitialized;
     uint1   ps2enable = 1;
-    ps2_port PS2 <@clock_25mhz> (
-        clk <: clock_25mhz,
-        enable_rcv <: ps2enable,
-        ps2clk_ext <: usb_fpga_bd_dp,
-        ps2data_ext <: usb_fpga_bd_dn,
-        kb_interrupt :> ps2valid,
-        scancode :> ps2keycode
+    ps2 PS2 <@clock_25mhz> (
+        ps2clk_ext <: us2_bd_dp,
+        ps2data_ext <: us2_bd_dn,
+        valid :> ps2valid,
+        data :> ps2keycode
     );
 
     // USB HID
@@ -332,8 +327,8 @@ algorithm memmap_io (
     //    clkout2 <: clock_usb,
     //    //reset <: usbreset,
     //    io_usbDif <: usb_fpga_dp,
-    //    io_usbDp <:> usb_fpga_bd_dp,
-    //    io_usbDn <:> usb_fpga_bd_dn,
+    //    io_usbDp <:> us2_bd_dp,
+    //    io_usbDn <:> us2_bd_dn,
     //    io_hidReport :> usboutput,
     //    io_hidValid :> usbvalid
     //);
