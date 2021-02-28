@@ -1,29 +1,4 @@
 // HELPER CIRCUITS
-// CPU FETCH 16 bit WORD FROM MEMORY
-circuitry fetch(
-    input   location,
-    input   memorybusy,
-    output  address,
-    output  readmemory
-) {
-    address = location;
-    readmemory = 1;
-    while( memorybusy ) {}
-}
-// CPU STORE 16 bit WORD TO MEMORY
-circuitry store(
-    input   location,
-    input   value,
-    input   memorybusy,
-    output  address,
-    output  writedata,
-    output  writememory
-) {
-    address = location;
-    writedata = value;
-    writememory = 1;
-    while( memorybusy ) {}
-}
 
 // MINIMUM OF 2 VALUES
 circuitry min(
@@ -106,20 +81,6 @@ circuitry swapcoordinates(
     y2 = y1;
     x3 = x;
     y3 = y;
-}
-
-// ADJUST COORDINATES BY DELTAS
-circuitry deltacoordinates(
-    input   x,
-    input   dx,
-    input   y,
-    input   dy,
-    input   scale,
-    output  xdx,
-    output  ydy
-) {
-    xdx = x + ( scale[2,1] ? ( __signed(dx) >>> scale[0,2] ) : ( dx << scale[0,2] ) );
-    ydy = y + ( scale[2,1] ? ( __signed(dy) >>> scale[0,2] ) : ( dy << scale[0,2] ) );
 }
 
 // CROP COORDINATES TO SCREEN RANGE

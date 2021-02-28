@@ -51,6 +51,7 @@ int main( void ) {
         /* exterior */
         gpu_pixel( k>>4, i, 479);
       };
+      tpu_printf_centre( 0, TRANSPARENT, WHITE, "@ ( %3d, %3d )", i, j );
     }
     bitmap_scrollwrap( 2 );
   }

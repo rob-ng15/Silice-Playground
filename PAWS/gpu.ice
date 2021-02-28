@@ -1,27 +1,12 @@
 // CALCULATE IF A PIXEL IS INSIDE THE TRIANGLE BEING DRAWN
-circuitry insideTriangle(
-    input   sx,
-    input   sy,
-    input   x,
-    input   y,
-    input   x1,
-    input   y1,
-    input   x2,
-    input   y2,
-    output  inside
-) {
+circuitry insideTriangle( input sx, input sy, input x, input y, input x1, input y1, input x2, input y2, output inside ) {
     inside = ( (( x2 - x1 ) * ( sy - y1 ) - ( y2 - y1 ) * ( sx - x1 )) >= 0 ) &&
              ( (( x - x2 ) * ( sy - y2 ) - ( y - y2 ) * ( sx - x2 )) >= 0 ) &&
              ( (( x1 - x ) * ( sy - y ) - ( y1 - y ) * ( sx - x )) >= 0 );
 }
 
 // UPDATE THE NUMERATOR FOR THE CIRCLE BEING DRAWN
-circuitry updatenumerator(
-    output  new_numerator,
-    input   gpu_numerator,
-    input   gpu_active_x,
-    input   gpu_active_y
-) {
+circuitry updatenumerator( input gpu_numerator, input gpu_active_x, input gpu_active_y,  output new_numerator ) {
     if( gpu_numerator > 0 ) {
         new_numerator = gpu_numerator + { (gpu_active_x - gpu_active_y), 2b00 } + 10;
     } else {
@@ -78,16 +63,7 @@ algorithm gpu(
     output  uint1   vector_block_active
 ) <autorun> {
     // RECTANGLE - OUTPUT PIXELS TO DRAW A RECTANGLE
-    subroutine rectangle(
-        input   int11   x,
-        input   int11   y,
-        input   int11   param0,
-        input   int11   param1,
-
-        writes  bitmap_x_write,
-        writes  bitmap_y_write,
-        writes  bitmap_write
-    ) {
+    subroutine rectangle( reads gpu_x, reads gpu_y, reads gpu_param0, reads gpu_param1, writes bitmap_x_write, writes bitmap_y_write, writes bitmap_write ) {
         int11   gpu_active_x = uninitialized;
         int11   gpu_active_y = uninitialized;
         int11   gpu_x1 = uninitialized;
@@ -96,10 +72,10 @@ algorithm gpu(
 
         // Setup drawing a rectangle from x,y to param0,param1 in colour
         // Ensures that works left to right, top to bottom, crop to screen edges
-        ( gpu_active_x ) = min( x, param0 );
-        ( gpu_active_y ) = min( y, param1 );
-        ( gpu_max_x ) = max( x, param0 );
-        ( gpu_max_y ) = max( y, param1 );
+        ( gpu_active_x ) = min( gpu_x, gpu_param0 );
+        ( gpu_active_y ) = min( gpu_y, gpu_param1 );
+        ( gpu_max_x ) = max( gpu_x, gpu_param0 );
+        ( gpu_max_y ) = max( gpu_y, gpu_param1 );
         ++:
         ( gpu_active_x, gpu_active_y, gpu_max_x, gpu_max_y ) = cropscreen( gpu_active_x, gpu_active_y, gpu_max_x, gpu_max_y );
         ( gpu_x1 ) = cropleft( gpu_active_x );
@@ -115,16 +91,7 @@ algorithm gpu(
         }
     }
     // LINE - OUTPUT PIXELS TO DRAW A LINE
-    subroutine line(
-        input   int11   x,
-        input   int11   y,
-        input   int11   param0,
-        input   int11   param1,
-
-        writes  bitmap_x_write,
-        writes  bitmap_y_write,
-        writes  bitmap_write
-    ) {
+    subroutine line( input int11 x, input int11 y, input int11 param0, input int11 param1, writes bitmap_x_write, writes bitmap_y_write, writes bitmap_write ) {
         int11   gpu_active_x = uninitialized;
         int11   gpu_active_y = uninitialized;
         int11   gpu_dx = uninitialized;
@@ -170,10 +137,9 @@ algorithm gpu(
     }
     //  CIRCLE - OUTPUT PIXELS TO DRAW AN OUTLINE OR FILLED CIRCLE
     subroutine circle(
-        input   int11   x,
-        input   int11   y,
-        input   int11   param0,
-
+        reads   gpu_x,
+        reads   gpu_y,
+        reads   gpu_param0,
         reads   filledcircle,
         writes  bitmap_x_write,
         writes  bitmap_y_write,
@@ -189,8 +155,8 @@ algorithm gpu(
         // Setup drawing a filled circle centre x,y or radius param0 in colour
         // Minimum radius is 4, radius is always positive
         gpu_active_x = 0;
-        ( gpu_active_y ) = abs( param0 );
-        ( gpu_xc, gpu_yc ) = copycoordinates( x, y );
+        ( gpu_active_y ) = abs( gpu_param0 );
+        ( gpu_xc, gpu_yc ) = copycoordinates( gpu_x, gpu_y );
         ++:
         if( filledcircle ) {
             gpu_active_y = ( gpu_active_y < 4 ) ? 4 : gpu_active_y;
@@ -269,13 +235,12 @@ algorithm gpu(
     }
     //  TRIANGLE - OUTPUT PIXELS TO DRAW A FILLED TRIANGLE
     subroutine triangle(
-        input   int11   x,
-        input   int11   y,
-        input   int11   param0,
-        input   int11   param1,
-        input   int11   param2,
-        input   int11   param3,
-
+        reads   gpu_x,
+        reads   gpu_y,
+        reads   gpu_param0,
+        reads   gpu_param1,
+        reads   gpu_param2,
+        reads   gpu_param3,
         writes  bitmap_x_write,
         writes  bitmap_y_write,
         writes  bitmap_write
@@ -310,9 +275,9 @@ algorithm gpu(
         beenInTriangle = 0;
 
         // Setup drawing a filled triangle x,y param0, param1, param2, param3
-        ( gpu_active_x, gpu_active_y ) = copycoordinates( x, y);
-        ( gpu_x1, gpu_y1 ) = copycoordinates( param0, param1 );
-        ( gpu_x2, gpu_y2 ) = copycoordinates( param2, param3 );
+        ( gpu_active_x, gpu_active_y ) = copycoordinates( gpu_x, gpu_y);
+        ( gpu_x1, gpu_y1 ) = copycoordinates( gpu_param0, gpu_param1 );
+        ( gpu_x2, gpu_y2 ) = copycoordinates( gpu_param2, gpu_param3 );
         ++:
         // Find minimum and maximum of x, x1, x2, y, y1 and y2 for the bounding box
         ( gpu_min_x ) = min3( gpu_active_x, gpu_x1, gpu_x2 );
@@ -384,10 +349,10 @@ algorithm gpu(
     // BLIT - ( tilecharacter == 1 ) OUTPUT PIXELS TO BLIT A 16 x 16 TILE ( PARAM1 == 0 as 16 x 16, == 1 as 32 x 32, == 2 as 64 x 64, == 3 as 128 x 128 )
     // BLIT - ( tilecharacter == 0 ) OUTPUT PIXELS TO BLIT AN 8 x 8 CHARACTER ( PARAM1 == 0 as 8 x 8, == 1 as 16 x 16, == 2 as 32 x 32, == 3 as 64 x 64 )
     subroutine blit(
-        input   int11   x,
-        input   int11   y,
-        input   int11   param0,
-        input   uint2   param1,
+        reads   gpu_x,
+        reads   gpu_y,
+        reads   gpu_param0,
+        reads   gpu_param1,
 
         reads   tilecharacter,
         writes  bitmap_x_write,
@@ -415,11 +380,11 @@ algorithm gpu(
 
         gpu_active_x = 0;
         gpu_active_y = 0;
-        ( gpu_x1, gpu_y1 ) = copycoordinates( x, y );
-        gpu_scale = param1;
-        gpu_max_x = ( tilecharacter ? 16 : 8 ) << ( param1 & 3);
+        ( gpu_x1, gpu_y1 ) = copycoordinates( gpu_x, gpu_y );
+        gpu_scale = gpu_param1;
+        gpu_max_x = ( tilecharacter ? 16 : 8 ) << ( gpu_param1 & 3);
         gpu_max_y = tilecharacter ? 16 : 8;
-        gpu_tile = param0;
+        gpu_tile = gpu_param0;
         ++:
         while( gpu_active_y < gpu_max_y ) {
             while( gpu_active_x < gpu_max_x ) {
@@ -536,7 +501,7 @@ algorithm gpu(
                     // DRAW RECTANGLE FROM (X,Y) to (PARAM0,PARAM1)
                     gpu_active = 1;
                     gpu_active_dithermode = gpu_dithermode;
-                    () <- rectangle <- ( gpu_x, gpu_y, gpu_param0, gpu_param1 );
+                    () <- rectangle <- ();
                     gpu_active = 0;
                 }
 
@@ -545,7 +510,7 @@ algorithm gpu(
                     gpu_active = 1;
                     gpu_active_dithermode = 0;
                     filledcircle = 0;
-                    () <- circle <- ( gpu_x, gpu_y, gpu_param0 );
+                    () <- circle <- ();
                     gpu_active = 0;
                 }
 
@@ -554,7 +519,7 @@ algorithm gpu(
                     gpu_active = 1;
                     gpu_active_dithermode = gpu_dithermode;
                     filledcircle = 1;
-                    () <- circle <- ( gpu_x, gpu_y, gpu_param0 );
+                    () <- circle <- ();
                     gpu_active = 0;
                 }
 
@@ -562,7 +527,7 @@ algorithm gpu(
                     // DRAW FILLED TRIANGLE WITH VERTICES (X,Y) (PARAM0,PARAM1) (PARAM2,PARAM3)
                     gpu_active = 1;
                     gpu_active_dithermode = gpu_dithermode;
-                    () <- triangle <- ( gpu_x, gpu_y, gpu_param0, gpu_param1, gpu_param2, gpu_param3 );
+                    () <- triangle <- ();
                     gpu_active = 0;
                 }
 
@@ -571,7 +536,7 @@ algorithm gpu(
                     gpu_active = 1;
                     gpu_active_dithermode = 0;
                     tilecharacter = 1;
-                    () <- blit <- ( gpu_x, gpu_y, gpu_param0, gpu_param1 );
+                    () <- blit <- ();
                     gpu_active = 0;
                 }
 
@@ -581,7 +546,7 @@ algorithm gpu(
                     gpu_active = 1;
                     gpu_active_dithermode = 0;
                     tilecharacter = 0;
-                    () <- blit <- ( gpu_x, gpu_y, gpu_param0, gpu_param1 );
+                    () <- blit <- ();
                     gpu_active = 0;
                 }
 
@@ -595,9 +560,24 @@ algorithm gpu(
 // Vector Block
 // Stores blocks of upto 16 vertices which can be sent to the GPU for line drawing
 // Each vertices represents a delta from the centre of the vector
-// Deltas are stored as 6 bit 2's complement range -31 to 0 to 31
+// Deltas are stored as 6 bit 2's complement range -31 to 0 to 31 ( can be scaled on output by x2, x4, x8, /2, /4, /8
 // Each vertices has an active flag, processing of a vector block stops when the active flag is 0
 // Each vector block has a centre x and y coordinate and a colour { rrggbb } when drawn
+
+// ADJUST COORDINATES BY DELTAS
+circuitry deltacoordinates(
+    input   x,
+    input   dx,
+    input   y,
+    input   dy,
+    input   scale,
+    output  xdx,
+    output  ydy
+) {
+    xdx = x + ( scale[2,1] ? ( __signed(dx) >>> scale[0,2] ) : ( dx << scale[0,2] ) );
+    ydy = y + ( scale[2,1] ? ( __signed(dy) >>> scale[0,2] ) : ( dy << scale[0,2] ) );
+}
+
 algorithm vectors(
     input   uint5   vector_block_number,
     input   int11   vector_block_xc,

@@ -182,7 +182,7 @@ algorithm main(
     );
 
     // SDRAM -> CPU BUSY STATE
-    CPU.memorybusy := sdram.busy;
+    CPU.memorybusy := sdram.busy || CPU.writememory || CPU.readmemory;
 
     // I/O and RAM read/write flags
     sdram.writeflag := CPU.writememory && address[28,1];

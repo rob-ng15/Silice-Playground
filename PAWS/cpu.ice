@@ -6,6 +6,44 @@
 // RISC-V - MAIN CPU LOOP
 //          ALU FUNCTIONALITY LISTED IN mathematics.ice
 
+// CPU FETCH 16 bit WORD FROM MEMORY FOR INSTRUCTION BUILDING
+circuitry fetch( input location, input memorybusy, output address, output readmemory ) {
+    address = location;
+    readmemory = 1;
+    while( memorybusy ) {}
+}
+// CPU LOAD FROM MEMORY
+circuitry load( input accesssize, input location, input memorybusy, input readdata, output address, output readmemory, output memoryinput ) {
+    address = location;
+    readmemory = 1;
+    while( memorybusy ) {}
+    switch( accesssize & 3 ) {
+        case 2b00: { ( memoryinput ) = signextender8( accesssize, location, readdata ); }
+        case 2b01: { ( memoryinput ) = signextender16( accesssize, readdata ); }
+        case 2b10: {
+            // 32 bit READ as 2 x 16 bit
+            memoryinput[0,16] = readdata;
+            address = location + 2;
+            readmemory = 1;
+            while( memorybusy ) {}
+            memoryinput[16,16] = readdata;
+        }
+    }
+}
+// CPU STORE TO MEMORY
+circuitry store( input accesssize, input location, input value, input memorybusy, output address, output writedata,  output writememory ) {
+    address = location;
+    writedata = value[0,16];
+    writememory = 1;
+    while( memorybusy ) {}
+    if(  ( accesssize & 3 ) == 2b10 ) {
+        address = location + 2;
+        writedata = value[16,16];
+        writememory = 1;
+        while( memorybusy ) {}
+    }
+}
+
 algorithm PAWSCPU (
     input   uint1   clock_cpualu,
     input   uint1   clock_cpufpu,
@@ -44,16 +82,11 @@ algorithm PAWSCPU (
         i16 <: readdata
     );
 
-    // TEMPORARY STORAGE FOR 16 BIT LOWER PART OF 32 BIT WORD
-    uint16  lowWord = uninitialized;
-
     // RISC-V REGISTER WRITER
     int32   result = uninitialized;
     uint1   writeRegister = uninitialized;
     uint32  memoryinput = uninitialized;
     uint32  memoryoutput = uninitialized;
-    uint16  memoryoutputLOW := memoryoutput[0,16];
-    uint16  memoryoutputHIGH := memoryoutput[16,16];
     uint1   memoryload := ( ( opCode == 7b0000011 ) || ( opCode == 7b0000111 ) || ( ( opCode == 7b0101111 ) && ( function7[2,5] != 5b00011 ) ) ) ? 1 : 0;
     uint1   memorystore := ( ( opCode == 7b0100011 ) || ( opCode == 7b0100111 ) || ( ( opCode == 7b0101111 ) && ( function7[2,5] != 5b00010 ) ) ) ? 1 : 0;
 
@@ -169,7 +202,7 @@ algorithm PAWSCPU (
     );
 
     // FLOATING POINT OPERATIONS
-    fpu FPU <@clock_cpufpu> (
+    fpu FPU <@clock_cpualu> (
         opCode <: opCode,
         function3 <: function3,
         function7 <: function7,
@@ -207,6 +240,7 @@ algorithm PAWSCPU (
     // ALU START FLAGS
     ALU.start := 0;
     FPU.start := 0;
+    CSR.incCSRinstret := 0;
 
     while(1) {
         // RISC-V - RESET FLAGS
@@ -229,9 +263,9 @@ algorithm PAWSCPU (
                 default: { instruction = COMPRESSED.i32; }
                 case 2b11: {
                     // 32 BIT INSTRUCTION
-                    lowWord = readdata;
+                    instruction[0,16] = readdata;
                     ( address, readmemory ) = fetch( PCplus2, memorybusy );
-                    ( instruction ) = halfhalfword( readdata, lowWord );
+                    instruction[16,16] = readdata;
                 }
             }
 
@@ -246,17 +280,7 @@ algorithm PAWSCPU (
         // LOAD FROM MEMORY
         if( memoryload ) {
             Icacheflag = 0;
-            ( address, readmemory ) = fetch( loadAddress, memorybusy );
-            switch( accesssize & 3 ) {
-                case 2b00: { ( memoryinput ) = signextender8( function3, loadAddress, readdata ); }
-                case 2b01: { ( memoryinput ) = signextender16( function3, readdata ); }
-                case 2b10: {
-                    // 32 bit READ as 2 x 16 bit
-                    lowWord = readdata;
-                    ( address, readmemory ) = fetch( loadAddressplus2, memorybusy );
-                    ( memoryinput ) = halfhalfword( readdata, lowWord );
-                }
-            }
+            ( address, readmemory, memoryinput ) = load( accesssize, loadAddress, memorybusy, readdata );
         }
 
         // EXECUTE
@@ -334,86 +358,52 @@ algorithm PAWSCPU (
                 }
             }
 
-            // FPU
-            case 5b10000: {
-                // FMADD.S
-                FPU.start = 1;
-                while( FPU.busy ) {}
-                frd = FPU.frd;
-                result = FPU.result;
-            }
-            case 5b10001: {
-                // FMSUB.S
-                FPU.start = 1;
-                while( FPU.busy ) {}
-                frd = FPU.frd;
-                result = FPU.result;
-            }
-            case 5b10010: {
-                // FNMSUB.S
-                FPU.start = 1;
-                while( FPU.busy ) {}
-                frd = FPU.frd;
-                result = FPU.result;
-            }
-            case 5b10011: {
-                // FNMADD.S
-                FPU.start = 1;
-                while( FPU.busy ) {}
-                frd = FPU.frd;
-                result = FPU.result;
-            }
-            case 5b10100: {
-                // OTHER FPU OPERATION
-                FPU.start = 1;
-                while( FPU.busy ) {}
-                frd = FPU.frd;
-                result = FPU.result;
-            }
-            // ALUI or ALUR
+            // FPU, ALUI or ALUR
             default: {
                 writeRegister = 1;
 
-                // START ALU
-                ALU.start = 1;
-                while( ALU.busy ) {}
-                result = ALU.result;
+                // START ALU/FPU
+                switch( opCode[6,1] ) {
+                    case 0: {
+                        ALU.start = 1;
+                        if( ALU.busy ) {
+                            while( ALU.busy ) {}
+                        }
+                        result = ALU.result;
+                    }
+                    case 1: {
+                        FPU.start = 1;
+                        if( FPU.busy ) {
+                            while( FPU.busy ) {}
+                        }
+                        frd = FPU.frd;
+                        result = FPU.result;
+                    }
+                }
             }
         }
 
         // STORE TO MEMORY
         if( memorystore ) {
             Icacheflag = 0;
-            ( address, writedata, writememory ) = store( storeAddress, memoryoutputLOW, memorybusy );
-            if(  ( accesssize & 3 ) == 2b10 ) {
-                // WRITE UPPER 16 of 32 bits
-                ( address, writedata, writememory ) = store( storeAddressplus2, memoryoutputHIGH, memorybusy );
-            }
+            ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy );
         }
 
         // REGISTERS WRITE
-        switch( frd ) {
-            case 0: { REGISTERS.write = ( writeRegister  && ( rd != 0 ) ) ? 1 : 0; }
-            case 1: { REGISTERSF.write = ( writeRegister  && ( rd != 0 ) ) ? 1 : 0; }
-        }
-
-        // UPDATE PC
-        if( SMT ) {
-            ( pcSMT ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
-        } else {
-            ( pc ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
-        }
+        REGISTERS.write = ( writeRegister  && ( rd != 0 ) ) ? ~frd : 0;
+        REGISTERSF.write = ( writeRegister  && ( rd != 0 ) ) ? frd : 0;
 
         // Update CSRinstret
         CSR.incCSRinstret = 1;
 
-        // SWITCH THREADS IF SMT IS RUNNING
-        if( SMTRUNNING ) {
-            SMT = ~SMT;
-        } else {
-            // RESET PC COUNTER FOR SMT
+        // UPDATE PC + SWITCH THREADS IF SMT ENABLED
+        if( SMT ) {
+            ( pcSMT ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
             SMT = 0;
-            pcSMT = SMTSTARTPC;
+        } else {
+            ( pc ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
+            SMT = SMTRUNNING;
+            pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC;
         }
     } // RISC-V
 }

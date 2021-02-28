@@ -17,25 +17,78 @@ algorithm aluIb001(
 
     output! uint32  result
 ) <autorun> {
-    clz CLZ(
-        sourceReg1 <: sourceReg1
-    );
-    ctz CTZ(
-        sourceReg1 <: sourceReg1
-    );
-    cpop CPOP(
-        sourceReg1 <: sourceReg1
-    );
-    crc32 CRC32(
-        sourceReg1 <: sourceReg1,
-        shiftcount <: IshiftCount
-    );
+    // COUNT LEADING 0s, TRAILING 0s, POPULATION OF 1s
+    subroutine clz( reads sourceReg1, readwrites result ) {
+        uint32  bitcount = uninitialized;
+        if( sourceReg1 == 0 ) {
+            result = 32;
+        } else {
 
-    // START FLAGS FOR ALU SUB BLOCKS
-    CLZ.start := 0;
-    CTZ.start := 0;
-    CPOP.start := 0;
-    CRC32.start := 0;
+            bitcount = sourceReg1;
+            result = 0;
+            ++:
+            while( ~bitcount[31,1] ) {
+                result = result + 1;
+                bitcount = { bitcount[0,31], 1b0 };
+            }
+        }
+    }
+    subroutine ctz( reads sourceReg1, readwrites result ) {
+        uint32  bitcount = uninitialized;
+        if( sourceReg1 == 0 ) {
+            result = 32;
+        } else {
+
+            bitcount = sourceReg1;
+            result = 0;
+            ++:
+            while( ~bitcount[0,1] ) {
+                result = result + 1;
+                bitcount = { 1b0, bitcount[1,31] };
+            }
+        }
+    }
+    subroutine cpop( reads sourceReg1, readwrites result ) {
+        uint32  bitcount = uninitialized;
+        if( sourceReg1 == 0 ) {
+            result = 0;
+        } else {
+
+            bitcount = sourceReg1;
+            result = 0;
+            ++:
+            while( bitcount != 0 ) {
+                result = result + ( bitcount[0,1] ? 1 : 0 );
+                bitcount = { 1b0, bitcount[1,31] };
+            }
+
+        }
+    }
+    // CRC32 and CRC32C for byte, half-word and word
+    subroutine crc32(reads sourceReg1, reads IshiftCount, readwrites result ){
+        uint6   nbits = uninitialised;
+        uint6   i = uninitialised;
+
+        result = sourceReg1;
+        i = 0;
+        switch( IshiftCount[0,2] ) {
+            case 2b00: { nbits = 8; }
+            case 2b01: { nbits = 16; }
+            case 2b10: { nbits = 32; }
+        }
+        ++:
+        while( i < nbits ) {
+            switch( IshiftCount[3,1] ) {
+                case 1b0: {
+                    result = ( result >> 1 ) ^ ( 32hedb88320 & ~( ( result & 1 ) -1 ) );
+                }
+                case 1b1: {
+                    result = ( result >> 1 ) ^ ( 32h82f63b78 & ~( ( result & 1 ) -1 ) );
+                }
+            }
+            i = i + 1;
+        }
+    }
 
     busy = 0;
 
@@ -43,42 +96,28 @@ algorithm aluIb001(
         if( start ) {
             switch( function7 ) {
                 case 7b0110000: {
+                    busy = 1;
                     switch( IshiftCount ) {
                         case 5b00000: {
                             // CLZ
-                            busy = 1;
-                            CLZ.start = 1;
-                            while( CLZ.busy ) {}
-                            result = CLZ.result;
-                            busy = 0;
+                            (  ) <- clz <- ( );
                         }
                         case 5b00001: {
                             // CTZ
-                            busy = 1;
-                            CTZ.start = 1;
-                            while( CTZ.busy ) {}
-                            result = CTZ.result;
-                            busy = 0;
+                            (  ) <- ctz <- ( );
                         }
                         case 5b00010: {
                             // CPOP
-                            busy = 1;
-                            CPOP.start = 1;
-                            while( CPOP.busy ) {}
-                            result = CPOP.result;
-                            busy = 0;
+                            (  ) <- cpop <- ( );
                         }
                         case 5b00100: { result = { {24{sourceReg1[7,1]}}, sourceReg1[0, 8] }; }     // SEXT.B
                         case 5b00101: { result = { {16{sourceReg1[15,1]}}, sourceReg1[0, 16] }; }   // SEXT.H
                         default: {
-                            // CPOP
-                            busy = 1;
-                            CRC32.start = 1;
-                            while( CRC32.busy ) {}
-                            result = CRC32.result;
-                            busy = 0;
+                            // CRC32 / CRC32C
+                            (  ) <- crc32 <- ( );
                         }
                     }
+                    busy = 0;
                 }
                 case 7b0000100: {
                     busy = 1;
@@ -207,14 +246,18 @@ algorithm aluI(
                 case 3b001: {
                     busy = 1;
                     ALUIb001.start = 1;
-                    while( ALUIb001.busy ) {}
+                    if( ALUIb001.busy ) {
+                        while( ALUIb001.busy ) {}
+                    }
                     result = ALUIb001.result;
                     busy = 0;
                 }
                 case 3b101: {
                     busy = 1;
                     ALUIb101.start = 1;
-                    while( ALUIb101.busy ) {}
+                    if( ALUIb101.busy ) {
+                        while( ALUIb101.busy ) {}
+                    }
                     result = ALUIb101.result;
                     busy = 0;
                 }
@@ -895,7 +938,9 @@ algorithm alu(
             busy = 1;
             ALUI.start = ALUIorR;
             ALUR.start = ~ALUIorR;
-            while( ALUI.busy || ALUR.busy ) {}
+            if( ALUI.busy || ALUR.busy ) {
+                while( ALUI.busy || ALUR.busy ) {}
+            }
             result = ALUIorR ? ALUI.result : ALUR.result;
             busy = 0;
         }

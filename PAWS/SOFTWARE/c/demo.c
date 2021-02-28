@@ -262,6 +262,20 @@ void gpudemo( void ) {
     }
     sleep( 1000, 0 );
 
+    // VECTOR TEST
+    gpu_cs();
+    tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Vector Draw Test" );
+    set_vector_vertex( 0, 0, 1, 0, 0 );
+    set_vector_vertex( 0, 1, 1, 5, 10 );
+    set_vector_vertex( 0, 2, 1, 0, 6 );
+    set_vector_vertex( 0, 3, 1, -5, 10 );
+    set_vector_vertex( 0, 4, 1, 0, 0 );
+    set_vector_vertex( 0, 5, 0, 0, 0 );
+    for( i = 0; i < 1024; i++ ) {
+        draw_vector_block( 0, rng( 64 ), rng( 640 ), rng( 480 ), rng(8) );
+    }
+    sleep( 1000, 0 );
+
 }
 
 void ditherdemo( void ) {
