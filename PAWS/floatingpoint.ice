@@ -88,12 +88,12 @@ algorithm fpu(
             expA = exp;
             ++:
             if( zeros < 8 ) {
-                a = number >> ( zeros - 8 );
-                expA = expA + ( zeros - 8 );
+                a = number >> ( 8 - zeros );
+                expA = expA + ( 8 - zeros );
             } else {
                 if( zeros > 8 ) {
-                    a = number << ( 8 - zeros );
-                    expA = expA - ( 8 - zeros );
+                    a = number << ( zeros - 8 );
+                    expA = expA - ( zeros - 8 );
                 }
             }
             ++:
@@ -114,10 +114,10 @@ algorithm fpu(
             expA = exp + 127;
             ++:
             if( zeros < 8 ) {
-                a = number >> ( zeros - 8 );
+                a = number >> ( 8 - zeros );
             } else {
                 if( zeros > 8 ) {
-                    a = number << ( 8 - zeros );
+                    a = number << ( zeros - 8 );
                 }
             }
             F32 = { sign, expA[0,8], a[0,23] };
@@ -136,10 +136,10 @@ algorithm fpu(
             expA = exp + 127;
             ++:
             if( zeros < 40 ) {
-                a = number >> ( zeros - 40 );
+                a = number >> ( 40 - zeros );
             } else {
                 if( zeros > 40 ) {
-                    a = number << ( 40 - zeros );
+                    a = number << ( zeros - 40 );
                 }
             }
             F32 = { sign, expA[0,8], a[0,23] };
@@ -258,12 +258,12 @@ algorithm fpu(
             }
             ++:
             total = sigA - sigB;
+            expA = expA - 127;
             ++:
             if( total[23,8] != 0 ) {
                 sign = ~sign;
                 total = -total;
             }
-            expA = expA - 127;
             ++:
             ( F32 ) <- normalise32adjexp <- ( sign, expA, total );
         }
@@ -364,24 +364,24 @@ algorithm fpu(
         lessthan = ( signA != signB ) ? signA && ((( a | b ) << 1) != 0 ) : ( a != b ) && ( signA ^ ( a < b));
     }
     // LESS THAN EQUAL OMPARISON OF 2 FLOATING POINT NUMBERS
-    subroutine floatlessequal( input uint32 a, input uint32 b, output uint32 equalto ) {
+    subroutine floatlessequal( input uint32 a, input uint32 b, output uint32 lessequalto ) {
         uint1   signA = uninitialised;
         uint1   signB = uninitialised;
 
         signA = floatingpointnumber( a ).sign;
         signB = floatingpointnumber( b ).sign;
         ++:
-        equalto = ( a == b ) || (((a | b) << 1) == 0 );
+        lessequalto = ( signA != signB ) ? signA || ((( a | b )<<1) != 0 ) : ( a == b ) || ( signA ^ ( a < b ));
     }
     // EQUAL COMPARISON OF 2 FLOATING POINT NUMBERS
-    subroutine floatequal( input uint32 a, input uint32 b, output uint32 lessthanequal ) {
+    subroutine floatequal( input uint32 a, input uint32 b, output uint32 equaltoo ) {
         uint1   signA = uninitialised;
         uint1   signB = uninitialised;
 
         signA = floatingpointnumber( a ).sign;
         signB = floatingpointnumber( b ).sign;
         ++:
-        lessthanequal = ( signA != signB ) ? signA || ((( a | b ) << 1) != 0 ) : ( a != b ) || ( signA ^ ( a < b));
+        equaltoo = ( a == b ) || ((( a | b )<<1) != 0 );
     }
 
     // CHANGE SIGN OF A PACKED FLOATING POINT NUMBER
@@ -435,7 +435,7 @@ algorithm fpu(
                         case 2b11: {
                             ( sourceReg1Falt ) <- changesign <- ( workingresult );
                             ( sourceReg3Falt ) <- changesign <- ( sourceReg3F );
-                            ( result ) <- floatadd <- ( sourceReg3Falt, sourceReg1Falt );
+                            ( result ) <- floatsub <- ( sourceReg3Falt, sourceReg1Falt );
                         }
                     }
                 }
@@ -457,7 +457,7 @@ algorithm fpu(
                         case 2b11: {
                             ( sourceReg1Falt ) <- changesign <- ( workingresult );
                             ( sourceReg3Falt ) <- changesign <- ( sourceReg3F );
-                            ( result ) <- floatadd <- ( sourceReg3Falt, sourceReg1Falt );
+                            ( result ) <- floatsub <- ( sourceReg3Falt, sourceReg1Falt );
                         }
                     }
                 }
@@ -514,7 +514,7 @@ algorithm fpu(
                                 case 2b11: {
                                     ( sourceReg1Falt ) <- changesign <- ( sourceReg1F );
                                     ( sourceReg2Falt ) <- changesign <- ( sourceReg2F );
-                                    ( result ) <- floatadd <- ( sourceReg2Falt, sourceReg1Falt );
+                                    ( result ) <- floatsub <- ( sourceReg2Falt, sourceReg1Falt );
                                 }
                             }
                         }

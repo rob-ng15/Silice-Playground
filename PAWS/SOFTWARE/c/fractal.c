@@ -27,6 +27,7 @@ int main( void ) {
   int i,j; /* Pixel counters */
   int k; /* Iteration counter */
   for (j = 0; j < yres; j++) {
+    bitmap_scrollwrap( 2 );
     y = ymax - j * dy;
     for(i = 0; i < xres; i++) {
       float u = 0.0;
@@ -51,9 +52,8 @@ int main( void ) {
         /* exterior */
         gpu_pixel( k>>4, i, 479);
       };
-      tpu_printf_centre( 0, TRANSPARENT, WHITE, "@ ( %3d, %3d )", i, j );
+      tpu_printf_centre( 0, TRANSPARENT, WHITE, "@ ( %3d, %3d ) k = %d", i, j, k );
     }
-    bitmap_scrollwrap( 2 );
   }
 
     while(1) {
