@@ -149,7 +149,8 @@ algorithm fpu(
     // CONVERT SIGNED/UNSIGNED INTEGERS TO FLOAT
     subroutine inttofloat( input uint32 a, output uint32 F32, reads rs2, calls countleadingzeros32 ) {
         uint1   sign = uninitialised;
-        int8    exp = uninitialised;
+        uint8   exp = uninitialised;
+        uint8   zeros = uninitialised;
         uint32  number = uninitialised;
 
         switch( rs2[0,1] ) {
@@ -168,18 +169,17 @@ algorithm fpu(
         if( number == 0 ) {
             F32 = { sign, 31b0 };
         } else {
-            ( exp ) <- countleadingzeros32 <- ( number );
+            ( zeros ) <- countleadingzeros32 <- ( number );
             ++:
-            exp = 31 - exp;
-            if( exp > 24 ) {
-                number = number >> ( exp - 24 );
+            if( zeros < 8 ) {
+                number = number >> ( 8 - zeros );
             } else {
-                if( exp < 24 ) {
-                    number = number << ( 24 - exp );
+                if( zeros > 8 ) {
+                    number = number << ( zeros - 8 );
                 }
             }
             ++:
-            exp = exp + 127;
+            exp = 158 - zeros;
             F32 = { sign, exp[0,8], number[0,23] };
         }
     }
@@ -259,7 +259,7 @@ algorithm fpu(
             ++:
             total = sigA - sigB;
             ++:
-            if( total[24,8] != 0 ) {
+            if( total[23,8] != 0 ) {
                 sign = ~sign;
                 total = -total;
             }
@@ -404,22 +404,80 @@ algorithm fpu(
                 case 5b10000: {
                     // FMADD.S
                     frd = 1;
-                    result = sourceReg1F;
+                    ( workingresult ) <- floatmultiply <- ( sourceReg1F, sourceReg2F );
+                    switch( { workingresult[31,1], sourceReg3F[31,1] } ) {
+                        case 2b00: { ( result ) <- floatadd <- ( workingresult, sourceReg3F ); }
+                        case 2b01: {
+                            ( sourceReg3Falt ) <- changesign <- ( sourceReg3F );
+                            ( result ) <- floatsub <- ( workingresult, sourceReg3Falt );
+                        }
+                        case 2b10: {
+                            ( sourceReg1Falt ) <- changesign <- ( workingresult );
+                            ( result ) <- floatsub <- ( sourceReg3F, sourceReg1Falt );
+                        }
+                        case 2b11: { ( result ) <- floatadd <- ( workingresult, sourceReg3F ); }
+                    }
                 }
                 case 5b10001: {
                     // FMSUB.S
                     frd = 1;
-                    result = sourceReg1F;
+                    ( workingresult ) <- floatmultiply <- ( sourceReg1F, sourceReg2F );
+                    switch( { workingresult[31,1], sourceReg3F[31,1] } ) {
+                        case 2b00: { ( result ) <- floatsub <- ( workingresult, sourceReg3F ); }
+                        case 2b01: {
+                            ( sourceReg3Falt ) <- changesign <- ( sourceReg3F );
+                            ( result ) <- floatadd <- ( workingresult, sourceReg3Falt );
+                        }
+                        case 2b10: {
+                            ( sourceReg1Falt ) <- changesign <- ( workingresult );
+                            ( result ) <- floatsub <- ( sourceReg3F, sourceReg1Falt );
+                        }
+                        case 2b11: {
+                            ( sourceReg1Falt ) <- changesign <- ( workingresult );
+                            ( sourceReg3Falt ) <- changesign <- ( sourceReg3F );
+                            ( result ) <- floatadd <- ( sourceReg3Falt, sourceReg1Falt );
+                        }
+                    }
                 }
                 case 5b10010: {
                     // FNMSUB.S
                     frd = 1;
-                    result = sourceReg1F;
+                    ( sourceReg1Falt ) <- changesign <- ( sourceReg1F );
+                    ( workingresult ) <- floatmultiply <- ( sourceReg1Falt, sourceReg2F );
+                    switch( { workingresult[31,1], sourceReg3F[31,1] } ) {
+                        case 2b00: { ( result ) <- floatsub <- ( workingresult, sourceReg3F ); }
+                        case 2b01: {
+                            ( sourceReg3Falt ) <- changesign <- ( sourceReg3F );
+                            ( result ) <- floatadd <- ( workingresult, sourceReg3Falt );
+                        }
+                        case 2b10: {
+                            ( sourceReg1Falt ) <- changesign <- ( workingresult );
+                            ( result ) <- floatsub <- ( sourceReg3F, sourceReg1Falt );
+                        }
+                        case 2b11: {
+                            ( sourceReg1Falt ) <- changesign <- ( workingresult );
+                            ( sourceReg3Falt ) <- changesign <- ( sourceReg3F );
+                            ( result ) <- floatadd <- ( sourceReg3Falt, sourceReg1Falt );
+                        }
+                    }
                 }
                 case 5b10011: {
                     // FNMADD.S
                     frd = 1;
-                    result = sourceReg1F;
+                    ( sourceReg1Falt ) <- changesign <- ( sourceReg1F );
+                    ( workingresult ) <- floatmultiply <- ( sourceReg1Falt, sourceReg2F );
+                    switch( { workingresult[31,1], sourceReg3F[31,1] } ) {
+                        case 2b00: { ( result ) <- floatadd <- ( workingresult, sourceReg3F ); }
+                        case 2b01: {
+                            ( sourceReg3Falt ) <- changesign <- ( sourceReg3F );
+                            ( result ) <- floatsub <- ( workingresult, sourceReg3Falt );
+                        }
+                        case 2b10: {
+                            ( sourceReg1Falt ) <- changesign <- ( workingresult );
+                            ( result ) <- floatsub <- ( sourceReg3F, sourceReg1Falt );
+                        }
+                        case 2b11: { ( result ) <- floatadd <- ( workingresult, sourceReg3F ); }
+                    }
                 }
                 case 5b10100: {
                     // NON 3 REGISTER FPU OPERATIONS

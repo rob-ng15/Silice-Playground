@@ -184,7 +184,7 @@ $$end
     uint16  IOmemoryRead := IO_Map.readData;
     uint16  RAMmemoryRead := ram.rdata0;
 
-    j1eforthALU ALU
+    alu ALU
     $$if ULX3S then
         <@clock_50mhz,!reset>
     $$end
@@ -200,20 +200,6 @@ $$end
 
         IOmemoryRead <: IOmemoryRead,
         RAMmemoryRead <: RAMmemoryRead
-    );
-
-    j1eforthplusALU ALUplus
-    $$if ULX3S then
-        <@clock_50mhz,!reset>
-    $$end
-    (
-        instruction <: instruction,
-
-        dsp <: dsp,
-        rsp <: rsp,
-
-        stackTop <: stackTop,
-        stackNext <: stackNext
     );
 
     j1eforthcallbranch CALLBRANCH
@@ -295,8 +281,8 @@ $$end
     $$end
 
     // ALU START FLAGS
-    ALU.start := 0;
-    ALUplus.start := 0;
+    //ALU.start := 0;
+    //ALUplus.start := 0;
 
     // Set initial write to top of memory
     ram.addr1 = 16383;
@@ -325,9 +311,9 @@ $$end
                     if( ~aluop(instruction).is_j1j1plus && ( aluop(instruction).operation == 4b1100 ) && stackTop[15,1] ) {
                         IO_Map.memoryRead = 1;
                     }
-                    ALU.start = ~aluop(instruction).is_j1j1plus;
-                    ALUplus.start = aluop(instruction).is_j1j1plus;
-                    newStackTop = aluop(instruction).is_j1j1plus ? ALUplus.newStackTop : ALU.newStackTop;
+                    //ALU.start = ~aluop(instruction).is_j1j1plus;
+                    //ALUplus.start = aluop(instruction).is_j1j1plus;
+                    newStackTop = ALU.newStackTop;
 
                     // UPDATE newDSP newRSP
                     newDSP = dsp + ddelta;
@@ -377,8 +363,54 @@ $$end
     } // execute J1 CPU
 }
 
+// ALU for J1 CPU and J1PLUS CPU operations
+algorithm alu(
+    //input   uint1   start,
+    input   uint16  instruction,
+
+    input   uint8   dsp,
+    input   uint8   rsp,
+
+    input   uint16  stackTop,
+    input   uint16  stackNext,
+    input   uint16  rStackTop,
+
+    input   uint16  IOmemoryRead,
+    input   uint16  RAMmemoryRead,
+
+    output! uint16  newStackTop
+) <autorun> {
+    j1eforthALU ALU(
+        instruction <: instruction,
+
+        dsp <: dsp,
+        rsp <: rsp,
+
+        stackTop <: stackTop,
+        stackNext <: stackNext,
+        rStackTop <: rStackTop,
+
+        IOmemoryRead <: IOmemoryRead,
+        RAMmemoryRead <: RAMmemoryRead
+    );
+
+    j1eforthplusALU ALUplus(
+        instruction <: instruction,
+
+        dsp <: dsp,
+        rsp <: rsp,
+
+        stackTop <: stackTop,
+        stackNext <: stackNext
+    );
+
+    while(1) {
+        newStackTop = aluop(instruction).is_j1j1plus ? ALUplus.newStackTop : ALU.newStackTop;
+    }
+}
+
 algorithm j1eforthALU(
-    input   uint1   start,
+    //input   uint1   start,
     input   uint16  instruction,
 
     input   uint8   dsp,
@@ -394,7 +426,7 @@ algorithm j1eforthALU(
     output! uint16  newStackTop
 ) <autorun> {
     while(1) {
-        if( start ) {
+        //if( start ) {
             switch( aluop(instruction).operation ) {
                 case 4b0000: {newStackTop = stackTop;}
                 case 4b0001: {newStackTop = stackNext;}
@@ -413,11 +445,11 @@ algorithm j1eforthALU(
                 case 4b1110: {newStackTop = {rsp, dsp};}
                 case 4b1111: {newStackTop = {16{(__unsigned(stackNext) < __unsigned(stackTop))}};}
             }
-        }
+        //}
     }
 }
 algorithm j1eforthplusALU(
-    input   uint1   start,
+    //input   uint1   start,
     input   uint16  instruction,
 
     input   uint8   dsp,
@@ -429,7 +461,7 @@ algorithm j1eforthplusALU(
     output! uint16  newStackTop
 ) <autorun> {
     while(1) {
-        if( start ) {
+        //if( start ) {
             switch( aluop(instruction).operation ) {
                 case 4b0000: {newStackTop = {16{(stackTop == 0)}};}
                 case 4b0001: {newStackTop = {16{(stackTop != 0)}};}
@@ -448,7 +480,7 @@ algorithm j1eforthplusALU(
                 case 4b1110: {newStackTop = ( __signed(stackNext) > __signed(stackTop) ) ? stackNext : stackTop;}
                 case 4b1111: {newStackTop = ( __signed(stackNext) < __signed(stackTop) ) ? stackNext : stackTop;}
             }
-        }
+       // }
     }
 }
 

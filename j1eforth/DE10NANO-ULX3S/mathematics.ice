@@ -4,7 +4,7 @@
 // INPUT divisor from j1eforth is 16 bit expanded to 32 bit
 // OUTPUT quotient and remainder are 16 bit
 
-algorithm divmod32by16 (
+algorithm divmod32by16(
     input   uint16  dividendh,
     input   uint16  dividendl,
     input   uint16  divisor,
@@ -64,7 +64,7 @@ algorithm divmod32by16 (
 
 // SIGNED 16 by 16 bit division giving 16 bit remainder and quotient
 
-algorithm divmod16by16 (
+algorithm divmod16by16(
     input   uint16  dividend,
     input   uint16  divisor,
     output  uint16  quotient,
@@ -118,7 +118,7 @@ algorithm divmod16by16 (
 // UNSIGNED / SIGNED 16 by 16 bit multiplication giving 32 bit product
 // DSP INFERENCE
 
-algorithm multi16by16to32DSP (
+algorithm multi16by16to32DSP(
     input   uint16  factor1,
     input   uint16  factor2,
     output  uint32  product,

@@ -18,7 +18,7 @@ algorithm bitmap(
     input   int16   bitmap_y_read,
     output  uint7   bitmap_colour_read,
 
-    simple_dualbram_port0 bitmap
+    simple_dualport_bram_port0 bitmap
 ) <autorun> {
     // Pixel x and y fetching ( adjusting for offset )
     uint10  x_plus_one := ( pix_x + x_offset + 1 ) > 639 ? ( pix_x + x_offset + 1 ) - 640 : ( pix_x + x_offset + 1 );
@@ -70,7 +70,7 @@ algorithm bitmapwriter (
     input   uint10  x_offset,
     input   uint10  y_offset,
 
-    simple_dualbram_port1 bitmap
+    simple_dualport_bram_port1 bitmap
 ) <autorun> {
     // Pixel x and y for writing ( adjusting for offset )
     uint10  x_write_pixel := ( bitmap_x_write + x_offset ) > 639 ? ( bitmap_x_write + x_offset ) - 640 : ( bitmap_x_write + x_offset );
