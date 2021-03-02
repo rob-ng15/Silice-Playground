@@ -48,31 +48,21 @@ algorithm fpu(
         uint32  bitstream = uninitialised;
 
         bitstream = a;
-        count = 0;
-        ++:
-        if( a == 0 ) {
-            count = 32;
-        } else {
-            if( bitstream[16,16] == 0 ) {
-                count = 16;
-                bitstream = { bitstream[0,16], 16b0 };
-                ++:
-            }
-            if( bitstream[24,8] == 0 ) {
-                count = count + 8;
-                bitstream = { bitstream[0, 24], 8b0 };
-                ++:
-            }
-            while( ~bitstream[31,1] ) {
-                count = count + 1;
-                bitstream = { bitstream[0,31], 1b0 };
+        switch( bitstream ) {
+            case 0: { count = 32; }
+            default: {
+                count = 0;
+                while( ~bitstream[31,1] ) {
+                    count = count + 1;
+                    bitstream = { bitstream[0,31], 1b0 };
+                }
             }
         }
     }
     // NORMALISE A 32BT MANTISSA, ADJUST EXPONENT
-    subroutine normalise32adjexp( input uint1 sign, input int16 exp, input uint32 number, output uint32 F32, calls countleadingzeros32 ) {
+    subroutine normalise32( input uint1 sign, input int8 exp, input uint32 number, output uint32 F32, calls countleadingzeros32 ) {
         uint8  zeros = uninitialised;
-        int16   expA = uninitialised;
+        int8   expA = uninitialised;
         uint32  a = uninitialised;
 
         if( number == 0 ) {
@@ -95,43 +85,23 @@ algorithm fpu(
             F32 = { sign, expA[0,8], a[0,23] };
         }
     }
-    // NORMALISE A 32BT MANTISSA, LEAVE EXPONENT
-    subroutine normalise32( input uint1 sign, input int16 exp, input uint32 number, output uint32 F32, calls countleadingzeros32 ) {
-        uint8  zeros = uninitialised;
-        int16   expA = uninitialised;
-        uint32  a = uninitialised;
-
-        if( number == 0 ) {
-            F32 = { sign, 31b0 };
-        } else {
-            ( zeros ) <- countleadingzeros32 <- ( number );
-            expA = exp + 127;
-            ++:
-            if( zeros < 8 ) {
-                a = number >> ( 8 - zeros );
-            } else {
-                if( zeros > 8 ) {
-                    a = number << ( zeros - 8 );
-                }
-            }
-            F32 = { sign, expA[0,8], a[0,23] };
-        }
-    }
-    // NORMALISE A 48BIT MANTISSA WITH 16BIT EXPONENT - RESULT FROM MULTIPLICATION
+    // NORMALISE A 48BIT MANTISSA WITH 16BIT EXPONENT ( for results of multiplication )
     subroutine normalise48( input uint1 sign, input int16 exp, input uint64 number, output uint32 F32 ) {
+        uint8   zeros = uninitialised;
         int16   expA = uninitialised;
         uint64  a = uninitialised;
 
         if( number == 0 ) {
             F32 = { sign, 31b0 };
         } else {
-            a = number;
             expA = exp + 127;
             ++:
-            //while( a[48,16] != 0 ) {
-            //    a = { 1b0, a[1,63] };
-            //    expA = expA + 1;
-            //}
+            if( number[48,1] ) {
+                a = number >> 1;
+                expA = expA + 1;
+            } else {
+                a = number;
+            }
             F32 = { sign, expA[0,8], a[24,23] };
         }
     }
@@ -177,8 +147,8 @@ algorithm fpu(
     // ADDITION OF 2 FLOATING POINT NUMBERS - SAME SIGN
     subroutine floatadd( input uint32 a, input uint32 b, output uint32 F32, calls normalise32 ) {
         uint1   sign = uninitialised;
-        int16    expA = uninitialised;
-        int16    expB = uninitialised;
+        int8    expA = uninitialised;
+        int8    expB = uninitialised;
         uint32  sigA = uninitialised;
         uint32  sigB = uninitialised;
         uint32  total = uninitialised;
@@ -217,8 +187,8 @@ algorithm fpu(
     // SUBTRACTION OF 2 FLOATING POINT NUMBERS
     subroutine floatsub( input uint32 a, input uint32 b, output uint32 F32, calls normalise32 ) {
         uint1   sign = uninitialised;
-        int16    expA = uninitialised;
-        int16    expB = uninitialised;
+        int8    expA = uninitialised;
+        int8    expB = uninitialised;
         uint32  sigA = uninitialised;
         uint32  sigB = uninitialised;
         uint32  total = uninitialised;
@@ -264,6 +234,7 @@ algorithm fpu(
         uint1   productsign = uninitialised;
         uint64  product = uninitialised;
         int16   productexp = uninitialised;
+
         int16   expA = uninitialised;
         int16   expB = uninitialised;
 
@@ -275,17 +246,21 @@ algorithm fpu(
 
         expA = floatingpointnumber( a ).exponent;
         expB = floatingpointnumber( b ).exponent;
-        A = { 10b0, 1b1, a[16,7] };
-        B = { 2b0, a[0,16] };
-        C = { 10b0, 1b1, b[16,7] };
-        D = { 2b0, b[0,16] };
+        ++:
+        productsign = a[31,1] ^ b[31,1];
         ++:
         if( ( expA == 0 ) || ( expB == 0 ) ) {
             F32 = { productsign, 31b0 };
         } else {
-            productsign = a[31,1] ^ b[31,1];
+            expA = expA - 127;
+            expB = expB - 127;
+            A = { 10b0, 1b1, a[16,7] };
+            B = { 2b0, a[0,16] };
+            C = { 10b0, 1b1, b[16,7] };
+            D = { 2b0, b[0,16] };
+            ++:
             product = ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
-            productexp = expA + expB - 254;
+            productexp = expA + expB;
             ++:
             ( F32 ) <- normalise48 <- ( productsign, productexp, product );
         }
@@ -294,24 +269,19 @@ algorithm fpu(
     // SIGNED DIVISION OF 2 FLOATING POINT NUMBERS
     subroutine floatdivide( input uint32 a, input uint32 b, output uint32 F32, calls normalise32 ) {
         uint1   quotientsign = uninitialised;
-        int16   quotientexp = uninitialised;
+        int8    quotientexp = uninitialised;
         uint32  quotient = uninitialised;
         uint32  remainder = uninitialised;
         uint6   bit = uninitialised;
 
-        int16   expA = uninitialised;
-        int16   expB = uninitialised;
+        int8    expA = uninitialised;
+        int8    expB = uninitialised;
         uint32  sigA = uninitialised;
         uint32  sigB = uninitialised;
 
-        sigA = { 9b1, a[0,23] };
-        sigB = { 9b1, b[0,23] };
-        quotientsign = a[31,1] ^ b[31,1];
-        quotient = 0;
-        remainder = 0;
-        bit = 31;
         expA = floatingpointnumber( a ).exponent;
         expB = floatingpointnumber( b ).exponent;
+        quotientsign = a[31,1] ^ b[31,1];
         ++:
         if(  expB == 0 ) {
             // DIVIDE BY ZERO
@@ -320,6 +290,14 @@ algorithm fpu(
             if( expA == 0 ) {
                 F32 = { quotientsign, 31b0 };
             } else {
+                expA = expA - 127;
+                expB = expB - 127;
+                sigA = { 9b1, a[0,23] };
+                sigB = { 9b1, b[0,23] };
+                bit = 31;
+                quotient = 0;
+                remainder = 0;
+                ++:
                 quotientexp = expA - expB;
                 while( bit != 63 ) {
                     if( __unsigned({ remainder[0,31], sigA[bit,1] }) >= __unsigned(sigB) ) {
@@ -353,7 +331,7 @@ algorithm fpu(
         signA = floatingpointnumber( a ).sign;
         signB = floatingpointnumber( b ).sign;
         ++:
-        lessequalto = ( signA != signB ) ? signA || ((( a | b ) << 1) == 0 ) : ( a == b ) || ( signA ^ ( a < b ));
+        lessequalto = ( signA != signB ) ? signA || ((( a | b )<<1) == 0 ) : ( a == b ) || ( signA ^ ( a < b ));
     }
     // EQUAL COMPARISON OF 2 FLOATING POINT NUMBERS
     subroutine floatequal( input uint32 a, input uint32 b, output uint32 equaltoo ) {
@@ -363,55 +341,19 @@ algorithm fpu(
         signA = floatingpointnumber( a ).sign;
         signB = floatingpointnumber( b ).sign;
         ++:
-        equaltoo = ( a == b ) || ((( a | b ) << 1) == 0 );
+        equaltoo = ( a == b ) || ((( a | b )<<1 ) == 0 );
     }
 
     // CHANGE SIGN OF A PACKED FLOATING POINT NUMBER
     subroutine changesign( input uint32 a, output uint32 F32 ) {
-        F32 = { ~a[31,1], a[0,31] };
+        F32 = a;
+        ++:
+        F32[31,1] = ~F32[31,1];
     }
 
-    // PERFORM ADD OR SUBTRACT BY APPROPRIATE SWITCHING OF SIGNS AND CHANGING TO ADD OR SUBTRACT
-    subroutine doadd( input uint32 a, input uint32 b, output uint32 F32, calls floatadd, calls floatsub, calls changesign ) {
-        uint32  aswapsign = uninitialised;
-        uint32  bswapsign = uninitialised;
-
-        switch( { a[31,1], b[31,1] } ) {
-            case 2b00: { ( F32 ) <- floatadd <- ( a, b ); }
-            case 2b01: {
-                ( bswapsign ) <- changesign <- ( b );
-                ( F32 ) <- floatsub <- ( a, bswapsign );
-            }
-            case 2b10: {
-                ( aswapsign ) <- changesign <- ( a );
-                ( F32 ) <- floatsub <- ( b, a );
-            }
-            case 2b11: { ( F32 ) <- floatadd <- ( a, b ); }
-        }
-    }
-    subroutine dosub( input uint32 a, input uint32 b, output uint32 F32, calls floatadd, calls floatsub, calls changesign ) {
-        uint32  aswapsign = uninitialised;
-        uint32  bswapsign = uninitialised;
-
-        switch( { a[31,1], b[31,1] } ) {
-            case 2b00: { ( F32 ) <- floatsub <- ( a, b ); }
-            case 2b01: {
-                ( bswapsign ) <- changesign <- ( b );
-                ( F32 ) <- floatadd <- ( a, bswapsign );
-            }
-            case 2b10: {
-                ( aswapsign ) <- changesign <- ( a );
-                ( F32 ) <- floatsub <- ( b, a );
-            }
-            case 2b11: {
-                ( aswapsign ) <- changesign <- ( a );
-                ( bswapsign ) <- changesign <- ( b );
-                ( F32 ) <- floatsub <- ( bswapsign, aswapsign );
-            }
-        }
-    }
-
-    uint32  sourceReg1Fswapsign = uninitialised;
+    uint32  sourceReg1Falt = uninitialised;
+    uint32  sourceReg2Falt = uninitialised;
+    uint32  sourceReg3Falt = uninitialised;
     uint32  workingresult = uninitialised;
 
     while(1) {
@@ -423,27 +365,79 @@ algorithm fpu(
                     // FMADD.S
                     frd = 1;
                     ( workingresult ) <- floatmultiply <- ( sourceReg1F, sourceReg2F );
-                    ( result ) <- doadd <- ( workingresult, sourceReg3F );
+                    switch( { workingresult[31,1], sourceReg3F[31,1] } ) {
+                        case 2b00: { ( result ) <- floatadd <- ( workingresult, sourceReg3F ); }
+                        case 2b01: {
+                            ( sourceReg3Falt ) <- changesign <- ( sourceReg3F );
+                            ( result ) <- floatsub <- ( workingresult, sourceReg3Falt );
+                        }
+                        case 2b10: {
+                            ( sourceReg1Falt ) <- changesign <- ( workingresult );
+                            ( result ) <- floatsub <- ( sourceReg3F, sourceReg1Falt );
+                        }
+                        case 2b11: { ( result ) <- floatadd <- ( workingresult, sourceReg3F ); }
+                    }
                 }
                 case 5b10001: {
                     // FMSUB.S
                     frd = 1;
                     ( workingresult ) <- floatmultiply <- ( sourceReg1F, sourceReg2F );
-                    ( result ) <- dosub <- ( workingresult, sourceReg3F );
+                    switch( { workingresult[31,1], sourceReg3F[31,1] } ) {
+                        case 2b00: { ( result ) <- floatsub <- ( workingresult, sourceReg3F ); }
+                        case 2b01: {
+                            ( sourceReg3Falt ) <- changesign <- ( sourceReg3F );
+                            ( result ) <- floatadd <- ( workingresult, sourceReg3Falt );
+                        }
+                        case 2b10: {
+                            ( sourceReg1Falt ) <- changesign <- ( workingresult );
+                            ( result ) <- floatsub <- ( sourceReg3F, sourceReg1Falt );
+                        }
+                        case 2b11: {
+                            ( sourceReg1Falt ) <- changesign <- ( workingresult );
+                            ( sourceReg3Falt ) <- changesign <- ( sourceReg3F );
+                            ( result ) <- floatsub <- ( sourceReg3Falt, sourceReg1Falt );
+                        }
+                    }
                 }
                 case 5b10010: {
                     // FNMSUB.S
                     frd = 1;
-                    ( workingresult ) <- changesign <- ( sourceReg1F );
-                    ( workingresult ) <- floatmultiply <- ( workingresult, sourceReg2F );
-                    ( result ) <- dosub <- ( workingresult, sourceReg3F );
+                    ( sourceReg1Falt ) <- changesign <- ( sourceReg1F );
+                    ( workingresult ) <- floatmultiply <- ( sourceReg1Falt, sourceReg2F );
+                    switch( { workingresult[31,1], sourceReg3F[31,1] } ) {
+                        case 2b00: { ( result ) <- floatsub <- ( workingresult, sourceReg3F ); }
+                        case 2b01: {
+                            ( sourceReg3Falt ) <- changesign <- ( sourceReg3F );
+                            ( result ) <- floatadd <- ( workingresult, sourceReg3Falt );
+                        }
+                        case 2b10: {
+                            ( sourceReg1Falt ) <- changesign <- ( workingresult );
+                            ( result ) <- floatsub <- ( sourceReg3F, sourceReg1Falt );
+                        }
+                        case 2b11: {
+                            ( sourceReg1Falt ) <- changesign <- ( workingresult );
+                            ( sourceReg3Falt ) <- changesign <- ( sourceReg3F );
+                            ( result ) <- floatsub <- ( sourceReg3Falt, sourceReg1Falt );
+                        }
+                    }
                 }
                 case 5b10011: {
                     // FNMADD.S
                     frd = 1;
-                    ( workingresult ) <- changesign <- ( sourceReg1F );
-                    ( workingresult ) <- floatmultiply <- ( workingresult, sourceReg2F );
-                    ( result ) <- doadd <- ( workingresult, sourceReg3F );
+                    ( sourceReg1Falt ) <- changesign <- ( sourceReg1F );
+                    ( workingresult ) <- floatmultiply <- ( sourceReg1Falt, sourceReg2F );
+                    switch( { workingresult[31,1], sourceReg3F[31,1] } ) {
+                        case 2b00: { ( result ) <- floatadd <- ( workingresult, sourceReg3F ); }
+                        case 2b01: {
+                            ( sourceReg3Falt ) <- changesign <- ( sourceReg3F );
+                            ( result ) <- floatsub <- ( workingresult, sourceReg3Falt );
+                        }
+                        case 2b10: {
+                            ( sourceReg1Falt ) <- changesign <- ( workingresult );
+                            ( result ) <- floatsub <- ( sourceReg3F, sourceReg1Falt );
+                        }
+                        case 2b11: { ( result ) <- floatadd <- ( workingresult, sourceReg3F ); }
+                    }
                 }
                 case 5b10100: {
                     // NON 3 REGISTER FPU OPERATIONS
@@ -451,12 +445,38 @@ algorithm fpu(
                         case 5b00000: {
                             // FADD.S
                             frd = 1;
-                            ( result ) <- doadd <- ( sourceReg1F, sourceReg2F );
+                            switch( { sourceReg1F[31,1], sourceReg2F[31,1] } ) {
+                                case 2b00: { ( result ) <- floatadd <- ( sourceReg1F, sourceReg2F ); }
+                                case 2b01: {
+                                    ( sourceReg2Falt ) <- changesign <- ( sourceReg2F );
+                                    ( result ) <- floatsub <- ( sourceReg1F, sourceReg2Falt );
+                                }
+                                case 2b10: {
+                                    ( sourceReg1Falt ) <- changesign <- ( sourceReg1F );
+                                    ( result ) <- floatsub <- ( sourceReg2F, sourceReg1Falt );
+                                }
+                                case 2b11: { ( result ) <- floatadd <- ( sourceReg1F, sourceReg2F ); }
+                            }
                         }
                         case 5b00001: {
                             // FSUB.S
                             frd = 1;
-                            ( result ) <- dosub <- ( sourceReg1F, sourceReg2F );
+                            switch( { sourceReg1F[31,1], sourceReg2F[31,1] } ) {
+                                case 2b00: { ( result ) <- floatsub <- ( sourceReg1F, sourceReg2F ); }
+                                case 2b01: {
+                                    ( sourceReg2Falt ) <- changesign <- ( sourceReg2F );
+                                    ( result ) <- floatadd <- ( sourceReg1F, sourceReg2Falt );
+                                }
+                                case 2b10: {
+                                    ( sourceReg1Falt ) <- changesign <- ( sourceReg1F );
+                                    ( result ) <- floatsub <- ( sourceReg2F, sourceReg1Falt );
+                                }
+                                case 2b11: {
+                                    ( sourceReg1Falt ) <- changesign <- ( sourceReg1F );
+                                    ( sourceReg2Falt ) <- changesign <- ( sourceReg2F );
+                                    ( result ) <- floatsub <- ( sourceReg2Falt, sourceReg1Falt );
+                                }
+                            }
                         }
                         case 5b00010: {
                             // FMUL.S

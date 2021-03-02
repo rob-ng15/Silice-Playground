@@ -6,8 +6,8 @@ unsigned short volatile * myPS2_VALID = (unsigned short volatile *) 0x8040;
 unsigned short volatile * myPS2_KEYCODE = (unsigned short volatile *) 0x8044;
 
 int main( void ) {
-    int i;
-    float x = 0.50f, y = 0.25f;
+    int i, j, k;
+    float x, y;
 
     INITIALISEMEMORY();
 
@@ -24,6 +24,10 @@ int main( void ) {
         }
 
         printw( "\nFloating Point Tests:\n\n" );
+        j = rng(32) - 16; x = (float) j;
+        k = rng(32) - 16; y= (float) k;
+        printw( "j = %d, k = %d, x = %f, y = %f\n\n", j, k, x, y );
+
         for( i = 0; i < 8; i++ ) {
             printw("x %f, y %f\n    + %f, - %f, * %f, / %f, =%d <%d <=%d\n", x, y, x+y, x-y, x*y, x/y, x==y, x<y, x<=y );
             switch( rng(4 ) ) {
@@ -47,8 +51,6 @@ int main( void ) {
         }
         refresh();
         clear();
-        sleep( 4000, 0 );
-        x = (float)rng(8);
-        y = (float)rng(8);
+        sleep( 16000, 0 );
     }
 }
