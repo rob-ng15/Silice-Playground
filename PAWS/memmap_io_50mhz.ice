@@ -11,7 +11,7 @@ algorithm memmap_io (
     output! uint1   uart_tx,
     input   uint1   uart_rx,
 
-    // USB HID
+    // USB for PS/2
     input   uint1   us2_bd_dp,
     input   uint1   us2_bd_dn,
 
@@ -71,19 +71,6 @@ algorithm memmap_io (
     random rng <@video_clock> (
         g_noise_out :> staticGenerator,
         u_noise_out :> staticGeneratorALT
-    );
-
-    // UART tx and rx
-    // UART written in Silice by https://github.com/sylefeb/Silice
-    uart_out uo;
-    uart_sender usend(
-        io      <:> uo,
-        uart_tx :>  uart_tx
-    );
-    uart_in ui;
-    uart_receiver urecv(
-        io      <:> ui,
-        uart_rx <:  uart_rx
     );
 
     // HDMI driver
@@ -309,36 +296,35 @@ algorithm memmap_io (
     );
 
     // PS PORT
-    uint8   ps2keycode = uninitialized;
-    uint1   ps2valid = uninitialized;
-    uint1   ps2enable = 1;
     ps2 PS2 <@clock_25mhz> (
         ps2clk_ext <: us2_bd_dp,
         ps2data_ext <: us2_bd_dn,
-        valid :> ps2valid,
-        data :> ps2keycode
     );
 
-    // USB HID
-    //uint160 usboutput = uninitialized;
-    //uint1   usbvalid = uninitialized;
-    //uint1   usbreset := ~btns[0,1];
-    //UsbHostHid USBHID <@clock_25mhz> (
-    //    clkout2 <: clock_usb,
-    //    //reset <: usbreset,
-    //    io_usbDif <: usb_fpga_dp,
-    //    io_usbDp <:> us2_bd_dp,
-    //    io_usbDn <:> us2_bd_dn,
-    //    io_hidReport :> usboutput,
-    //    io_hidValid :> usbvalid
-    //);
+    // PS/2 input FIFO (256 character) as dualport bram (code from @sylefeb)
+    simple_dualport_bram uint8 ps2Buffer [256] = uninitialized;
+    uint8  ps2BufferNext = 0;
+    uint7  ps2BufferTop = 0;
 
-    // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartInBuffer [4096] = uninitialized;
-    uint13  uartInBufferNext = 0;
-    uint13  uartInBufferTop = 0;
+    // UART tx and rx
+    // UART written in Silice by https://github.com/sylefeb/Silice
+    uart_out uo;
+    uart_sender usend(
+        io      <:> uo,
+        uart_tx :>  uart_tx
+    );
+    uart_in ui;
+    uart_receiver urecv(
+        io      <:> ui,
+        uart_rx <:  uart_rx
+    );
 
-    // UART output FIFO (16 character) as dualport bram (code from @sylefeb)
+    // UART input FIFO (256 character) as dualport bram (code from @sylefeb)
+    simple_dualport_bram uint8 uartInBuffer [256] = uninitialized;
+    uint8  uartInBufferNext = 0;
+    uint8  uartInBufferTop = 0;
+
+    // UART output FIFO (256 character) as dualport bram (code from @sylefeb)
     simple_dualport_bram uint8 uartOutBuffer [256] = uninitialized;
     uint8   uartOutBufferNext = 0;
     uint8   uartOutBufferTop = 0;
@@ -352,6 +338,13 @@ algorithm memmap_io (
     uint$NUM_BTNS$ reg_btns = 0;
     reg_btns ::= btns;
 
+    // PS2 Buffers
+    ps2Buffer.wenable1 := 1;  // always write on port 1
+    ps2Buffer.addr0 := ps2BufferNext; // FIFO reads on next
+    ps2Buffer.addr1 := ps2BufferTop;  // FIFO writes on top
+    ps2Buffer.wdata1 := PS2.data;
+    ps2BufferTop := PS2.valid ? ps2BufferTop + 1 : ps2BufferTop;
+
     // UART Buffers ( code from @sylefeb )
     uartInBuffer.wenable1 := 1;  // always write on port 1
     uartInBuffer.addr0 := uartInBufferNext; // FIFO reads on next
@@ -360,7 +353,7 @@ algorithm memmap_io (
     uartOutBuffer.addr0 := uartOutBufferNext; // FIFO reads on next
     uartOutBuffer.addr1 := uartOutBufferTop;  // FIFO writes on top
     uartInBuffer.wdata1 := ui.data_out;
-    uartInBufferTop := ( ui.data_out_ready ) ? uartInBufferTop + 1 : uartInBufferTop;
+    uartInBufferTop := ui.data_out_ready ? uartInBufferTop + 1 : uartInBufferTop;
     uo.data_in := uartOutBuffer.rdata0;
     uo.data_in_ready := ( uartOutBufferNext != uartOutBufferTop ) && ( !uo.busy );
     uartOutBufferNext := ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) ) ? uartOutBufferNext + 1 : uartOutBufferNext;
@@ -398,17 +391,8 @@ algorithm memmap_io (
                 case 16h8010: { readData = systemClock; }
 
                 // PS2
-                case 16h8040: { readData = ps2valid; }
-                case 16h8044: { readData = ps2keycode; }
-
-                // USB HID INPUT VALID - 1 WHILST KEY IS PRESSED
-                //case 16h8080: { readData = usbvalid ? 1 : 0; }
-                // USB HID MODIFIERS SHIFT, CTRL, ETC
-                //case 16h8082: { readData = { 8b0, usboutput[0,8] }; }
-                // KEY SLOTS 1 & 2, 3 & 4, 5 & 6
-                //case 16h8084: { readData = usboutput[16,16]; }
-                //case 16h8086: { readData = usboutput[32,16]; }
-                //case 16h8088: { readData = usboutput[48,16]; }
+                case 16h8040: { readData = ( ps2BufferNext != ps2BufferTop ) ? 1 : 0; }
+                case 16h8044: { readData = { 8b0, ps2Buffer.rdata0 }; ps2BufferNext = ps2BufferNext + 1; }
 
                 // BACKGROUND
 
