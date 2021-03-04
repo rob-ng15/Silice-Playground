@@ -1,23 +1,23 @@
 // I/O MEMORY MAPPED REGISTER DEFINITIONS
 unsigned char volatile * UART_STATUS = (unsigned char volatile *) 0x8004;
-unsigned char * UART_DATA = (unsigned char *) 0x8000;
+unsigned char volatile * UART_DATA = (unsigned char volatile *) 0x8000;
 unsigned char volatile * BUTTONS = (unsigned char volatile *) 0x8008;
 unsigned char volatile * LEDS = (unsigned char volatile *) 0x800c;
 unsigned short volatile * SYSTEMCLOCK = (unsigned short volatile *) 0x8010;
 
-// USB HID
-unsigned short volatile * USBHID_VALID = (unsigned short volatile *) 0x8080;
-unsigned short volatile * USBHID_MODIFIERS = (unsigned short volatile *) 0x8082;
-unsigned short volatile * USBHID_KEYS12 = (unsigned short volatile *) 0x8084;
-unsigned short volatile * USBHID_KEYS34 = (unsigned short volatile *) 0x8086;
-unsigned short volatile * USBHID_KEYS56 = (unsigned short volatile *) 0x8088;
+// PS/2 KEYBOARD
+unsigned char volatile * PS2_AVAILABLE = (unsigned char volatile *) 0x8040;
+unsigned char volatile * PS2_KEYCODE = (unsigned char volatile *) 0x8044;
 
+// SDCARD
 unsigned char volatile * SDCARD_READY = (unsigned char volatile *) 0x8f00;
 unsigned char volatile * SDCARD_START = (unsigned char volatile *) 0x8f00;
 unsigned short volatile * SDCARD_SECTOR_LOW = ( unsigned short *) 0x8f08;
 unsigned short volatile * SDCARD_SECTOR_HIGH = ( unsigned short *) 0x8f04;
 unsigned short volatile * SDCARD_ADDRESS = (unsigned short volatile *) 0x8f10;
 unsigned char volatile * SDCARD_DATA = (unsigned char volatile *) 0x8f10;
+
+// DISPLAY UNITS
 
 unsigned char volatile * BACKGROUND_COLOUR = (unsigned char volatile *) 0x8100;
 unsigned char volatile * BACKGROUND_ALTCOLOUR = (unsigned char volatile *) 0x8104;
