@@ -302,7 +302,7 @@ algorithm memmap_io (
     );
 
     // PS/2 input FIFO (256 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 ps2Buffer <input!> [256] = uninitialized;
+    simple_dualport_bram uint8 ps2Buffer[256] = uninitialized;
     uint8  ps2BufferNext = 0;
     uint7  ps2BufferTop = 0;
 
@@ -320,12 +320,12 @@ algorithm memmap_io (
     );
 
     // UART input FIFO (256 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartInBuffer <input!> [256] = uninitialized;
+    simple_dualport_bram uint8 uartInBuffer[256] = uninitialized;
     uint8  uartInBufferNext = 0;
     uint8  uartInBufferTop = 0;
 
     // UART output FIFO (256 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartOutBuffer <input!> [256] = uninitialized;
+    simple_dualport_bram uint8 uartOutBuffer[256] = uninitialized;
     uint8   uartOutBufferNext = 0;
     uint8   uartOutBufferTop = 0;
     uint8   newuartOutBufferTop = 0;

@@ -27,6 +27,10 @@ algorithm aluMdivideremain(
             dividend_copy = ~dosign[0,1] ? ( dividend[31,1] ? -dividend : dividend ) : dividend;
             divisor_copy = ~dosign[0,1] ? ( divisor[31,1] ? -divisor : divisor ) : divisor;
             quotientremaindersign = ~dosign[0,1] ? dividend[31,1] ^ divisor[31,1] : 0;
+            quotient = 0;
+            remainder = 0;
+            bit = 31;
+            ++:
             if( divisor != 0 ) {
                 while( bit != 63 ) {
                     if( __unsigned({ remainder[0,31], dividend_copy[bit,1] }) >= __unsigned(divisor_copy) ) {
@@ -44,9 +48,6 @@ algorithm aluMdivideremain(
 
             busy = 0;
         }
-        quotient = 0;
-        remainder = 0;
-        bit = 31;
     }
 }
 
@@ -83,11 +84,14 @@ algorithm aluMmultiply(
             productsign = ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
             factor_1_copy = ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
             factor_2_copy = ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
+            ++:
             A = { 2b0, factor_1_copy[16,16] };
             B = { 2b0, factor_1_copy[0,16] };
             C = { 2b0, factor_2_copy[16,16] };
             D = { 2b0, factor_2_copy[0,16] };
+            ++:
             product = productsign ? -( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } ) : ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
+            ++:
             result = ( dosign == 0 ) ? product[0,32] : product[32,32];
 
             busy = 0;

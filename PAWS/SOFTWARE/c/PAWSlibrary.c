@@ -102,7 +102,7 @@ void ps2_decode( void ) {
 char ps2_available( void ) {
     if( ps2_decoded ) {
         return TRUE;
-    else {
+    } else {
         ps2_decode();
         return ps2_decoded;
     }
@@ -110,8 +110,10 @@ char ps2_available( void ) {
 
 // RETURN A DECODED ASCII CHARACTER
 char ps2inputcharacter( void ) {
-    while( !ps2_decoded ) {}
-    ps_decoded = 0;
+    while( !ps2_decoded ) {
+        ps2_decode();
+    }
+    ps2_decoded = 0;
     return ps2_character;
 }
 

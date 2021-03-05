@@ -434,21 +434,18 @@ algorithm floataddsub(
             sigB = { 9b1, value2[0,23] };
             sign = value1[31,1];
             ++:
-            if( ( expA == 0 ) || ( expB == 0 ) ) {
-                if( expA == 0 ) {
-                    result = ( operation == 0 ) ? value2 : { ~value2[31,1], value2[0,31] };
-                } else {
-                    result = value1;
-                }
+            if( ( expA | expB ) == 0 ) {
+                result = ( expB == 0 ) ? value1 : ( operation == 0 ) ? value2 : { ~value2[31,1], value2[0,31] };
             } else {
                 // ADJUST TO EQUAL EXPONENTS
                 if( expA < expB ) {
                     sigA = sigA >> ( expB - expA );
                     expA = expB;
-                }
-                if( expB < expA ) {
-                    sigB = sigB >> ( expA - expB );
-                    expB = expA;
+                } else {
+                    if( expB < expA ) {
+                        sigB = sigB >> ( expA - expB );
+                        expB = expA;
+                    }
                 }
                 ++:
                 expA = expA - 127;
@@ -500,7 +497,8 @@ algorithm floatmultiply(
         if( start ) {
             busy = 1;
 
-            if( ( expA == 0 ) || ( expB == 0 ) ) {
+            ++:
+            if( ( expA | expB ) == 0 ) {
                 result = { productsign, 31b0 };
             } else {
                 ( result ) = normalise( productsign, productexp, product32 );
@@ -544,24 +542,20 @@ algorithm floatdivide(
             bit = 31;
             ++:
             ( sigB ) = alignright( sigB );
-            if(  expB == 0 ) {
+            if( ( expA | expB ) == 0 ) {
                 // DIVIDE BY ZERO
-                result = { quotientsign, 8b11111111, 23b0 };
+                result = ( expA == 0 ) ? { quotientsign, 31b0 } : { quotientsign, 8b11111111, 23b0 };
             } else {
-                if( expA == 0 ) {
-                    result = { quotientsign, 31b0 };
-                } else {
-                    while( bit != 63 ) {
-                        if( __unsigned({ remainder[0,31], sigA[bit,1] }) >= __unsigned(sigB) ) {
-                                remainder = __unsigned({ remainder[0,31], sigA[bit,1] }) - __unsigned(sigB);
-                                quotient[bit,1] = 1;
-                        } else {
-                            remainder = { remainder[0,31], sigA[bit,1] };
-                        }
-                        bit = bit - 1;
+                while( bit != 63 ) {
+                    if( __unsigned({ remainder[0,31], sigA[bit,1] }) >= __unsigned(sigB) ) {
+                            remainder = __unsigned({ remainder[0,31], sigA[bit,1] }) - __unsigned(sigB);
+                            quotient[bit,1] = 1;
+                    } else {
+                        remainder = { remainder[0,31], sigA[bit,1] };
                     }
-                   ( result ) = normalise( quotientsign, quotientexp, quotient );
+                    bit = bit - 1;
                 }
+                ( result ) = normalise( quotientsign, quotientexp, quotient );
             }
 
             busy = 0;
