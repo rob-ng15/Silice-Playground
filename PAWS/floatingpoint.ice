@@ -258,12 +258,11 @@ circuitry alignright( input number, output alignedright ) {
 circuitry countleadingzeros( input a, output count ) {
     uint32  bitstream = uninitialised;
     bitstream = a;
+    count = 0;
     ++:
     if( bitstream == 0 ) {
         count = 32;
     } else {
-        count = 0;
-        ++:
         while( ~bitstream[31,1] ) {
             bitstream = bitstream << 1;
             count = count + 1;
@@ -382,21 +381,20 @@ algorithm floataddsub(
         if( start ) {
             busy = 1;
 
+            operation = ( a[31,1] == b[31,1] ) ? addsub : ~addsub;
+
             switch( addsub ) {
                 case 0: {
                     switch( { a[31,1], b[31,1] } ) {
                         case 2b01: {
-                            operation = 1;
                             value1 = a;
                             value2 = { ~b[31,1], b[0,31] };
                         }
                         case 2b10: {
-                            operation = 1;
                             value1 = b;
                             value2 = { ~a[31,1], a[0,31] };
                          }
                         default: {
-                            operation = 0;
                             value1 = a;
                             value2 = b;
                         }
@@ -405,24 +403,16 @@ algorithm floataddsub(
                 case 1: {
                     switch( { a[31,1], b[31,1] } ) {
                         case 2b00: {
-                            operation = 1;
                             value1 = a;
                             value2 = b;
                         }
-                        case 2b01: {
-                            operation = 0;
-                            value1 = a;
-                            value2 = { ~b[31,1], b[0,31] };
-                        }
-                        case 2b10: {
-                            operation = 1;
-                            value1 = b;
-                            value2 = { ~a[31,1], a[0,31] };
-                        }
                         case 2b11: {
-                            operation = 1;
                             value1 = { ~b[31,1], b[0,31] };
                             value2 = { ~a[31,1], a[0,31] };
+                        }
+                        default: {
+                            value1 = a;
+                            value2 = ( { a[31,1], b[31,1] } == 2b10 ) ? b : { ~b[31,1], b[0,31] };
                         }
                     }
                 }
@@ -456,11 +446,15 @@ algorithm floataddsub(
                         if( totaldifference[31,1] ) {
                             ++:
                             sign = ~sign;
-                            totaldifference = -totaldifference;
+                            totaldifference = ( -totaldifference ) | 24h800000;
                         }
                     }
                 }
-                ( result ) = normaliseexp( sign, expA, totaldifference );
+                if( totaldifference == 0 ) {
+                    result = { sign, 31b0 };
+                } else {
+                    ( result ) = normaliseexp( sign, expA, totaldifference );
+                }
             }
 
             busy = 0;
@@ -501,7 +495,11 @@ algorithm floatmultiply(
             if( ( expA | expB ) == 0 ) {
                 result = { productsign, 31b0 };
             } else {
-                ( result ) = normalise( productsign, productexp, product32 );
+                if( product32 == 0 ) {
+                    result = { productsign, 31b0 };
+                } else {
+                    ( result ) = normalise( productsign, productexp, product32 );
+                }
             }
 
             busy = 0;
@@ -555,7 +553,11 @@ algorithm floatdivide(
                     }
                     bit = bit - 1;
                 }
-                ( result ) = normalise( quotientsign, quotientexp, quotient );
+                if( quotient == 0 ) {
+                    result = { quotientsign, 31b0 };
+                } else {
+                    ( result ) = normalise( quotientsign, quotientexp, quotient );
+                }
             }
 
             busy = 0;
