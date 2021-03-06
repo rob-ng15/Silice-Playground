@@ -58,63 +58,17 @@ char inputcharacter( void ) {
 	while( !character_available() ) {}
     return *UART_DATA;
 }
-
-// PS/2 KEYBOARD DECODER
-#define LSHIFT 1
-#define RSHIFT 2
-#define LCTRL 4
-#define RCTRL 8
-#define LALT 16
-#define RALT 32
-#define CAPSLOCK 64
-#define NUMLOCK 128
-#define LWIN 256
-#define RWIN 512
-#define SCROLL 1024
-
-unsigned char ps2_decoded = 0, ps2_character = 0;
-unsigned short specialkeys = 0;
-
-// PERFORM THE DECODING OF THE PS/2 KEYCODES
-void ps2_decode( void ) {
-    unsigned char keycode;
-
-    if( *PS2_AVAILABLE ) {
-        keycode = *PS2_KEYCODE;
-        switch( keycode ) {
-            // MULTIPLE KEY CODE
-            case 0xe0:
-                break;
-            // PAUSE/BREAK
-            case 0xe1:
-                break;
-            // RELEASE
-            case 0xf0:
-                // WAIT FOR FOLLOW UP CODE
-                while( !*PS2_AVAILABLE ) {}
-                keycode = *PS2_KEYCODE;
-                break;
-        }
-    }
-}
-
+// INPUT FROM PS2
 // RETURN IF A CHARACTER IS AVAILABLE
-char ps2_available( void ) {
-    if( ps2_decoded ) {
-        return TRUE;
-    } else {
-        ps2_decode();
-        return ps2_decoded;
-    }
+char ps2_character_available( void ) {
+    return *PS2_AVAILABLE;
 }
 
 // RETURN A DECODED ASCII CHARACTER
-char ps2inputcharacter( void ) {
-    while( !ps2_decoded ) {
-        ps2_decode();
+char ps2_inputcharacter( void ) {
+    while( !*PS2_AVAILABLE ) {
     }
-    ps2_decoded = 0;
-    return ps2_character;
+    return *PS2_DATA;
 }
 
 // TIMER AND PSEUDO RANDOM NUMBER GENERATOR

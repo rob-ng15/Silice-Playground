@@ -7,7 +7,7 @@ unsigned short volatile * SYSTEMCLOCK = (unsigned short volatile *) 0x8010;
 
 // PS/2 KEYBOARD
 unsigned char volatile * PS2_AVAILABLE = (unsigned char volatile *) 0x8040;
-unsigned char volatile * PS2_KEYCODE = (unsigned char volatile *) 0x8044;
+unsigned char volatile * PS2_DATA = (unsigned char volatile *) 0x8044;
 
 // SDCARD
 unsigned char volatile * SDCARD_READY = (unsigned char volatile *) 0x8f00;

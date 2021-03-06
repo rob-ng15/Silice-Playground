@@ -295,10 +295,10 @@ algorithm memmap_io (
         store       <:> sdbuffer
     );
 
-    // PS PORT
-    ps2 PS2(
-        ps2clk_ext <: us2_bd_dp,
-        ps2data_ext <: us2_bd_dn,
+    // PS 2 ASCII
+    ps2ascii PS2(
+        us2_bd_dp <: us2_bd_dp,
+        us2_bd_dn <: us2_bd_dn,
     );
 
     // PS/2 input FIFO (256 character) as dualport bram (code from @sylefeb)
@@ -342,8 +342,8 @@ algorithm memmap_io (
     ps2Buffer.wenable1 := 1;  // always write on port 1
     ps2Buffer.addr0 := ps2BufferNext; // FIFO reads on next
     ps2Buffer.addr1 := ps2BufferTop;  // FIFO writes on top
-    ps2Buffer.wdata1 := PS2.data;
-    ps2BufferTop := PS2.valid ? ps2BufferTop + 1 : ps2BufferTop;
+    ps2Buffer.wdata1 := PS2.ascii;
+    ps2BufferTop := PS2.asciivalid ? ps2BufferTop + 1 : ps2BufferTop;
 
     // UART Buffers ( code from @sylefeb )
     uartInBuffer.wenable1 := 1;  // always write on port 1

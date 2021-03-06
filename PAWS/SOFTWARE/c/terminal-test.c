@@ -60,7 +60,7 @@ int main( void ) {
             if( *myPS2_AVAILABLE ) {
                 lastPS2_KEYCODE = *myPS2_KEYCODE;
             }
-            mvprintw( 29, 0, "PS2 VALID <%1x> LAST KEYCODE <%2x>", *myPS2_AVAILABLE, lastPS2_KEYCODE );
+            mvprintw( 29, 0, "PS2 AVAILABLE <%1x> LAST CHARACTER <%2x>", *myPS2_AVAILABLE, lastPS2_KEYCODE );
             refresh();
         }
         clear();

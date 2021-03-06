@@ -7,7 +7,7 @@ module ulx3s_clk_risc_ice_v_CPU
     input clkin,         // 25 MHz, 0 deg
     output  clkCPU,      // 25 MHz              // CPU
     output  clkMEMORY,   // 50 MHz, 0 deg       // MEMORY CONTROLLER - BRAM
-    output  clkALUblock, // 50 MHz, 0 deg       // FOR MULTICYCLE ALU BLOCKS
+    output  clkALUblock, // 25 MHz, 0 deg       // FOR MULTICYCLE ALU BLOCKS
     output  clkCPUfunc,  // 50 MHz, 0 deg       // FOR CPU UNITS
     output  locked
 );
@@ -36,7 +36,7 @@ EHXPLLL #(
         .CLKOS_CPHASE(5),
         .CLKOS_FPHASE(0),
         .CLKOS2_ENABLE("ENABLED"),
-        .CLKOS2_DIV(12),
+        .CLKOS2_DIV(24),
         .CLKOS2_CPHASE(5),
         .CLKOS2_FPHASE(0),
         .CLKOS3_ENABLE("ENABLED"),

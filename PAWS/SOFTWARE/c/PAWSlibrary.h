@@ -172,8 +172,8 @@ extern char inputcharacter( void );
 extern unsigned char character_available( void );
 
 // PS/2
-extern char ps2_available( void );
-extern char ps2inputcharacter( void );
+extern char ps2_character_available( void );
+extern char ps2_inputcharacter( void );
 
 // BASIC I/O
 extern void set_leds( unsigned char );

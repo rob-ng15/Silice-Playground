@@ -249,7 +249,7 @@ algorithm fpu(
 circuitry alignright( input number, output alignedright ) {
     alignedright = number;
     ++:
-    while( ~alignedright[0,1] ) {
+    while( ~alignedright[0,1] && ( alignedright != 0 ) ) {
         alignedright = alignedright >> 1;
     }
 }
@@ -321,30 +321,15 @@ algorithm inttofloat(
         if( start ) {
             busy = 1;
 
-            switch( rs2[0,1] ) {
-                case 0: {
-                    // SIGNED
-                    sign = a[31,1];
-                    number = a[31,1] ? -a : a;
-                }
-                case 1: {
-                    // UNSIGNED
-                    sign = 0;
-                    number = a;
-                }
-            }
+            // SIGNED / UNSIGNED
+            sign = rs2[0,1] ? 0 : a[31,1];
+            number = rs2[0,1] ? a : ( a[31,1] ? -a : a );
             ++:
             if( number == 0 ) {
                 result = { sign, 31b0 };
             } else {
                 ( zeros ) = countleadingzeros( number );
-                if( zeros < 8 ) {
-                    number = number >> ( 8 - zeros );
-                } else {
-                    if( zeros > 8 ) {
-                        number = number << ( zeros - 8 );
-                    }
-                }
+                number = ( zeros < 8 ) ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
                 exp = 158 - zeros;
                 result = { sign, exp[0,8], number[0,23] };
             }
@@ -370,6 +355,7 @@ algorithm floataddsub(
     uint32  sigA = uninitialised;
     uint32  sigB = uninitialised;
     uint32  totaldifference = uninitialised;
+    uint8   bitcount = uninitialised;
 
     // == 0 ADD == 1 SUB
     uint1   operation = uninitialised;
@@ -444,9 +430,18 @@ algorithm floataddsub(
                     case 1: {
                         totaldifference = sigA - sigB;
                         if( totaldifference[31,1] ) {
-                            ++:
+                            // DEAL WITH SIGN SWAP AND ADD BACK IN THE MSB IN CORRECT LOCATION
+                            bitcount = 31;
                             sign = ~sign;
-                            totaldifference = ( -totaldifference ) | 24h800000;
+                            ++:
+                            while( totaldifference[bitcount,1 ] && ( bitcount != 255 ) ) {
+                                bitcount = bitcount - 1;
+                            }
+                            if( bitcount != 255 ) {
+                                totaldifference = ( -totaldifference ) | ( 1 << ( bitcount +1 ) );
+                            } else {
+                                totaldifference = 0;
+                            }
                         }
                     }
                 }
