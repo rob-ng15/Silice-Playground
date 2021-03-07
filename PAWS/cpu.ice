@@ -244,7 +244,7 @@ algorithm PAWSCPU (
 
     while(1) {
         // RISC-V - RESET FLAGS
-        writeRegister = 0;
+        writeRegister = 1;
         incPC = 1;
         frd = 0;
 
@@ -287,58 +287,52 @@ algorithm PAWSCPU (
         switch( opCode[2,5] ) {
             case 5b01101: {
                 // LUI
-                writeRegister = 1;
                 result = AUIPCLUI;
             }
             case 5b00101: {
                 // AUIPC
-                writeRegister = 1;
                 result = AUIPCLUI;
             }
             case 5b11011: {
                 // JAL
-                writeRegister = 1;
                 incPC = 0;
                 result = nextPC;
             }
             case 5b11001: {
                 // JALR
-                writeRegister = 1;
                 incPC = 0;
                 result = nextPC;
             }
             case 5b11000: {
                 // BRANCH - HAPPENS IN BRANCH COMPARISON UNIT
+                writeRegister = 0;
             }
             case 5b00000: {
                 // LOAD
-                writeRegister = 1;
                 result = memoryinput;
             }
             case 5b01000: {
                 // STORE
+                writeRegister = 0;
                 memoryoutput = sourceReg2;
             }
             case 5b00001: {
                 // FLOATING POINT LOAD
-                writeRegister = 1;
                 frd = 1;
                 result = memoryinput;
             }
             case 5b01001: {
                 // FLOATING POINT STORE
+                writeRegister = 0;
                 memoryoutput = sourceReg2F;
             }
             case 5b11100: {
                 // CSR
-                writeRegister = 1;
                 CSR.start = 1;
                 result = CSR.result;
             }
             case 5b01011: {
                 // ATOMIC OPERATIONS
-                writeRegister = 1;
-
                 switch( function7[2,5] ) {
                     case 5b00010: {
                         // LR.W
@@ -360,8 +354,6 @@ algorithm PAWSCPU (
 
             // FPU, ALUI or ALUR
             default: {
-                writeRegister = 1;
-
                 // START ALU/FPU
                 switch( opCode[6,1] ) {
                     case 0: {

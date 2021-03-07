@@ -16,46 +16,6 @@ algorithm apu(
 
     input uint16 staticGenerator
 ) <autorun> {
-    // 32 step points per waveform
-    brom uint4 waveformtable_1[512] = {
-        // Square wave
-        15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-
-        // Sawtooth wave
-        0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7,
-        8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15,
-
-        // Triangle wave,
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-        15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
-
-        // Sine wave,
-        7, 8, 10, 11, 12, 13, 13, 14, 15, 14, 13, 13, 12, 11, 10, 8,
-        7, 6, 4, 3, 2, 1, 1, 0, 0, 0, 1, 1, 2, 3, 4, 6
-
-        ,pad(1)
-    };
-    brom uint4 waveformtable_2[512] = {
-        // Square wave
-        15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-
-        // Sawtooth wave
-        0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7,
-        8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15,
-
-        // Triangle wave,
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-        15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
-
-        // Sine wave,
-        7, 8, 10, 11, 12, 13, 13, 14, 15, 14, 13, 13, 12, 11, 10, 8,
-        7, 6, 4, 3, 2, 1, 1, 0, 0, 0, 1, 1, 2, 3, 4, 6
-
-        ,pad(1)
-    };
-
     // Calculated as 25MHz / note frequency / 32 to give 32 step points per note
     brom uint16 frequencytable_1[128] = {
         0,
@@ -92,8 +52,6 @@ algorithm apu(
     uint16  duration_1 = uninitialized;
     uint16  duration_2 = uninitialized;
 
-    waveformtable_1.addr := { waveform_1, point_1 };
-    waveformtable_2.addr := { waveform_2, point_2 };
     frequencytable_1.addr := note_1;
     frequencytable_2.addr := note_2;
 
@@ -101,10 +59,52 @@ algorithm apu(
 
     always {
         if( ( duration_1 != 0 ) && ( counter25mhz_1 == 0 ) ) {
-            audio_output = ( waveform_1 == 4 ) ? staticGenerator : waveformtable_1.rdata;
+            switch( waveform_1 ) {
+                case 0: {
+                    // SQUARE
+                    audio_output = { {4{~point_1[4,1]}} };
+                }
+                case 1: {
+                    // SAWTOOTH
+                    audio_output = point_1[1,4];
+                }
+                case 2: {
+                    // TRIANGLE
+                    audio_output = point_1[4,1] ? 15 - point_1[0,4] : point_1[0,4];
+                }
+                case 3: {
+                    // SINE
+                    audio_output = point_1[4,1] ? 15 - point_1[1,3] : point_1[1,3];
+                }
+                case 4: {
+                    // WHITE NOISE
+                    audio_output = staticGenerator;
+                }
+            }
         }
         if( ( duration_2 != 0 ) && ( counter25mhz_2 == 0 ) ) {
-            audio_output = ( waveform_2 == 4 ) ? staticGenerator : waveformtable_2.rdata;
+            switch( waveform_2 ) {
+                case 0: {
+                    // SQUARE
+                    audio_output = { {4{~point_2[4,1]}} };
+                }
+                case 1: {
+                    // SAWTOOTH
+                    audio_output = point_2[1,4];
+                }
+                case 2: {
+                    // TRIANGLE
+                    audio_output = point_2[4,1] ? 15 - point_2[0,4] : point_2[0,4];
+                }
+                case 3: {
+                    // SINE
+                    audio_output = point_2[4,1] ? 15 - point_2[1,3] : point_2[1,3];
+                }
+                case 4: {
+                    // WHITE NOISE
+                    audio_output = staticGenerator;
+                }
+            }
         }
     }
 

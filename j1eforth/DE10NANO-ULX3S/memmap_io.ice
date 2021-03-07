@@ -59,6 +59,9 @@ algorithm memmap_io (
     input   uint1   clock_50mhz,
 $$if ULX3S then
     input   uint1   clock_25mhz,
+    // USB for PS/2
+    input   uint1   us2_bd_dp,
+    input   uint1   us2_bd_dn,
 $$end
     input   uint1   video_clock,
     input   uint1   video_reset,
@@ -70,6 +73,10 @@ $$end
     input   uint1   memoryRead,
     output! uint16  readData
 ) <autorun> {
+    // LATCH MEMORYREAD MEMORYWRITE
+    uint1   LATCHmemoryRead = uninitialized;
+    uint1   LATCHmemoryWrite = uninitialized;
+
     // 1hz timers (p1hz used for systemClock, timer1hz for user purposes)
     uint16 systemClock = uninitialized;
     pulse1hz p1hz <@clock_50mhz,!reset> (
@@ -322,6 +329,20 @@ $$end
         bitmap_write :> bitmap_write,
     );
 
+$$if ULX3S then
+    // PS 2 ASCII
+    ps2ascii PS2(
+        clock_25mhz <: clock_25mhz,
+        us2_bd_dp <: us2_bd_dp,
+        us2_bd_dn <: us2_bd_dn,
+    );
+$$end
+
+    // PS/2 input FIFO (256 character) as dualport bram (code from @sylefeb)
+    simple_dualport_bram uint8 ps2Buffer <input!> [256] = uninitialized;
+    uint8  ps2BufferNext = 0;
+    uint7  ps2BufferTop = 0;
+
     // Mathematics Co-Processors
     divmod32by16 divmod32by16to16qr <@clock_50mhz,!reset> ();
     divmod16by16 divmod16by16to16qr <@clock_50mhz,!reset> ();
@@ -346,6 +367,15 @@ $$end
     // register buttons
     uint$NUM_BTNS$ reg_btns = 0;
     reg_btns ::= btns;
+
+    // PS2 Buffers
+    ps2Buffer.wenable1 := 1;  // always write on port 1
+    ps2Buffer.addr0 := ps2BufferNext; // FIFO reads on next
+    ps2Buffer.addr1 := ps2BufferTop;  // FIFO writes on top
+$$if ULX3S then
+    ps2Buffer.wdata1 := PS2.ascii;
+    ps2BufferTop := PS2.asciivalid ? ps2BufferTop + 1 : ps2BufferTop;
+$$end
 
     // UART Buffers
     uartInBuffer.wenable1  := 1;  // always write on port 1
@@ -386,15 +416,22 @@ $$end
         uartOutBufferTop = newuartOutBufferTop;
 
         // READ IO Memory
-        if( memoryRead ) {
+        if( memoryRead && ~LATCHmemoryRead ) {
             switch( memoryAddress[12,4] ) {
                 case 4hf: {
                     switch( memoryAddress[8,4] ) {
                         case 4h0: {
                             switch( memoryAddress[0,4] ) {
                                 // f000
-                                case 4h0: { readData = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1; }
-                                case 4h1: { readData = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ) ? 1b1 : 1b0, ( uartInBufferNext == uartInBufferTop ) ? 1b0 : 1b1 }; }
+                                case 4h0: {
+                                    if( ps2BufferNext != ps2BufferTop ) {
+                                        readData = { 8b0, ps2Buffer.rdata0 };
+                                        ps2BufferNext = ps2BufferNext + 1;
+                                    } else {
+                                        readData = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1;
+                                    }
+                                }
+                                case 4h1: { readData = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ) ? 1b1 : 1b0, ( ( ps2BufferNext == ps2BufferTop ) && ( uartInBufferNext == uartInBufferTop  ) ) ? 1b0 : 1b1 }; }
                                 case 4h2: { readData = leds; }
                                 case 4h3: { readData = {$16-NUM_BTNS$b0, reg_btns[0,$NUM_BTNS$]}; }
                                 case 4h4: { readData = systemClock; }
@@ -571,7 +608,7 @@ $$end
         } // memoryRead
 
         // WRITE IO Memory
-        if( memoryWrite ) {
+        if( memoryWrite && ~LATCHmemoryWrite ) {
             coProReset = 3;
 
             switch( memoryAddress[12,4] ) {
@@ -705,14 +742,12 @@ $$end
                     }
                 }
             }
-        } else { // WRITE IO Memory
-            coProReset = ( coProReset == 0 ) ? 0 : coProReset - 1;
         }
 
         // RESET Co-Processor Controls
         // Main processor and memory map runs at 50MHz, display co-processors at 25MHz
         // Delay to reset co-processors therefore required
-        if( coProReset == 1 ) {
+        if( ~memoryWrite && ~LATCHmemoryWrite ) {
             background_generator.background_write = 0;
             tile_map.tm_write = 0;
             tile_map.tm_scrollwrap = 0;
@@ -728,5 +763,8 @@ $$end
             apu_processor_L.apu_write = 0;
             apu_processor_R.apu_write = 0;
         }
+
+        LATCHmemoryRead = memoryRead;
+        LATCHmemoryWrite = memoryWrite;
     } // while(1)
 }

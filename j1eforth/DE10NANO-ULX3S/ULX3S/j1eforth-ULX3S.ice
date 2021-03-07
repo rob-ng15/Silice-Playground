@@ -1,9 +1,10 @@
 // we are running the design at 50 MHz instead of the default 25 MHz
 $$ uart_in_clock_freq_mhz = 50
 
-// VGA/HDMI + UART Driver Includes
+// VGA/HDMI + UART Driver + PS/2 DRIVER Includes
 $include('../common/hdmi.ice')
 $include('../common/uart.ice')
+$include('../common/ps2.ice')
 
 // Multiplexed Display Includes
 $include('../multiplex_display.ice')

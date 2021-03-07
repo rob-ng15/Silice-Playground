@@ -14,7 +14,7 @@ algorithm main(
     input   uint28  gn,
     output  uint28  gp,
 
-    // USB HID
+    // USB PS/2
     input   uint1   us2_bd_dp,
     input   uint1   us2_bd_dn,
 

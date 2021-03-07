@@ -297,6 +297,7 @@ algorithm memmap_io (
 
     // PS 2 ASCII
     ps2ascii PS2(
+        clock_25mhz <: clock_25mhz,
         us2_bd_dp <: us2_bd_dp,
         us2_bd_dn <: us2_bd_dn,
     );

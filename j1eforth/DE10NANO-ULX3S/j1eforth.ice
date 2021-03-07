@@ -42,6 +42,9 @@ algorithm main(
 $$if ULX3S then
     output  uint4   gpdi_dp,
     output  uint4   gpdi_dn,
+    // USB PS/2
+    input   uint1   us2_bd_dp,
+    input   uint1   us2_bd_dn,
 $$end
 $$if DE10NANO then
     // VGA
@@ -71,7 +74,7 @@ $$end
 
 )
 $$if ULX3S then
-<@clock_50mhz>
+<@clock_j1cpu>
 $$end
 {
     // VGA/HDMI Display
@@ -94,10 +97,12 @@ $$if DE10NANO then
 $$end
 $$if ULX3S then
     uint1 clock_50mhz = uninitialized;
+    uint1 clock_j1cpu = uninitialized;
     ulx3s_clk_50_25 clk_gen (
         clkin    <: clock,
         clkout0  :> clock_50mhz,
         clkout1  :> video_clock,
+        clkout2  :> clock_j1cpu,
         locked   :> pll_lock
     );
 $$end
@@ -234,6 +239,10 @@ $$end
         // UART
         uart_tx :> uart_tx,
         uart_rx <: uart_rx,
+
+        // USB PS/2 KEYBOARD
+        us2_bd_dp <: us2_bd_dp,
+        us2_bd_dn <: us2_bd_dn,
 
         // AUDIO
         audio_l :> audio_l,

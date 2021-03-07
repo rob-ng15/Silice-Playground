@@ -355,7 +355,7 @@ algorithm floataddsub(
     uint32  sigA = uninitialised;
     uint32  sigB = uninitialised;
     uint32  totaldifference = uninitialised;
-    uint8   bitcount = uninitialised;
+    uint6   bitcount = uninitialised;
 
     // == 0 ADD == 1 SUB
     uint1   operation = uninitialised;
@@ -368,6 +368,7 @@ algorithm floataddsub(
             busy = 1;
 
             operation = ( a[31,1] == b[31,1] ) ? addsub : ~addsub;
+            bitcount = 31;
 
             switch( addsub ) {
                 case 0: {
@@ -417,13 +418,14 @@ algorithm floataddsub(
                 if( expA < expB ) {
                     sigA = sigA >> ( expB - expA );
                     expA = expB;
+                    ++:
                 } else {
                     if( expB < expA ) {
                         sigB = sigB >> ( expA - expB );
                         expB = expA;
+                        ++:
                     }
                 }
-                ++:
                 expA = expA - 127;
                 switch( operation ) {
                     case 0: { totaldifference = sigA + sigB; }
@@ -431,13 +433,11 @@ algorithm floataddsub(
                         totaldifference = sigA - sigB;
                         if( totaldifference[31,1] ) {
                             // DEAL WITH SIGN SWAP AND ADD BACK IN THE MSB IN CORRECT LOCATION
-                            bitcount = 31;
                             sign = ~sign;
-                            ++:
-                            while( totaldifference[bitcount,1 ] && ( bitcount != 255 ) ) {
+                            while( totaldifference[bitcount,1 ] && ( bitcount != 63 ) ) {
                                 bitcount = bitcount - 1;
                             }
-                            if( bitcount != 255 ) {
+                            if( bitcount != 63 ) {
                                 totaldifference = ( -totaldifference ) | ( 1 << ( bitcount +1 ) );
                             } else {
                                 totaldifference = 0;
@@ -512,7 +512,7 @@ algorithm floatdivide(
     output! uint32  result
 ) <autorun> {
     uint1   quotientsign := a[31,1] ^ b[31,1];
-    int16   quotientexp := expA - expB;
+    int16   quotientexp = uninitialised;
     uint32  quotient = uninitialised;
     uint32  remainder = uninitialised;
     uint6   bit = uninitialised;
@@ -528,6 +528,7 @@ algorithm floatdivide(
         if( start ) {
             busy = 1;
 
+            quotientexp = expA - expB;
             sigA = { 1b1, a[0,23], 8b0 };
             sigB = { 9b1, b[0,23] };
             quotient = 0;
@@ -551,6 +552,10 @@ algorithm floatdivide(
                 if( quotient == 0 ) {
                     result = { quotientsign, 31b0 };
                 } else {
+                    while( quotient[30,2] == 0 ) {
+                        quotient = quotient << 1;
+                        quotientexp = quotientexp - 1;
+                    }
                     ( result ) = normalise( quotientsign, quotientexp, quotient );
                 }
             }

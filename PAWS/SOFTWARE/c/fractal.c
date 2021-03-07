@@ -1,7 +1,4 @@
 #include "PAWSlibrary.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
 #include <stdint.h>
 
 int main( void ) {
@@ -30,6 +27,7 @@ int main( void ) {
     bitmap_scrollwrap( 2 );
     y = ymax - j * dy;
     for(i = 0; i < xres; i++) {
+        gpu_pixel( WHITE, i, 479);
       float u = 0.0;
       float v= 0.0;
       float u2 = u * u;
@@ -47,12 +45,12 @@ int main( void ) {
         /* interior */
         //const unsigned char black[] = {0, 0, 0, 0, 0, 0};
         //fwrite (black, 6, 1, fp);
+        gpu_pixel( BLACK, i, 479);
       }
       else {
         /* exterior */
         gpu_pixel( k>>4, i, 479);
       };
-      tpu_printf_centre( 0, TRANSPARENT, WHITE, "@ ( %3d, %3d ) k = %d", i, j, k );
     }
   }
 

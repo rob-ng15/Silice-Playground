@@ -62,17 +62,17 @@ algorithm aluMmultiply(
 
     output! uint32  result
 ) <autorun> {
-    uint2   dosigned = uninitialized;
-    uint1   productsign = uninitialized;
-    uint32  factor_1_copy = uninitialized;
-    uint32  factor_2_copy = uninitialized;
-    uint64  product = uninitialized;
+    uint2   dosigned := dosign[1,1] ? ( dosign[0,1] ? 0 : 2 ) : 1;
+    uint1   productsign := ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
+    uint32  factor_1_copy := ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
+    uint32  factor_2_copy := ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
+    uint64  product := productsign ? -( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } ) : ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
 
     // Calculation is split into 4 18 x 18 multiplications for DSP
-    uint18  A = uninitialized;
-    uint18  B = uninitialized;
-    uint18  C = uninitialized;
-    uint18  D = uninitialized;
+    uint18  A := { 2b0, factor_1_copy[16,16] };
+    uint18  B := { 2b0, factor_1_copy[0,16] };
+    uint18  C := { 2b0, factor_2_copy[16,16] };
+    uint18  D := { 2b0, factor_2_copy[0,16] };
 
     busy = 0;
 
@@ -80,17 +80,6 @@ algorithm aluMmultiply(
         if( start ) {
             busy = 1;
 
-            dosigned = dosign[1,1] ? ( dosign[0,1] ? 0 : 2 ) : 1;
-            productsign = ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
-            factor_1_copy = ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
-            factor_2_copy = ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
-            ++:
-            A = { 2b0, factor_1_copy[16,16] };
-            B = { 2b0, factor_1_copy[0,16] };
-            C = { 2b0, factor_2_copy[16,16] };
-            D = { 2b0, factor_2_copy[0,16] };
-            ++:
-            product = productsign ? -( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } ) : ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
             ++:
             result = ( dosign == 0 ) ? product[0,32] : product[32,32];
 
