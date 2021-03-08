@@ -56,7 +56,6 @@ algorithm PAWSCPU (
     output  uint1   writememory,
     input   uint16  readdata,
     output  uint1   readmemory,
-    output  uint1   Icacheflag,
 
     input   uint1   memorybusy,
 
@@ -254,7 +253,6 @@ algorithm PAWSCPU (
             compressed = Icache.compressed;
         } else {
             // FETCH + EXPAND COMPRESSED INSTRUCTIONS
-            Icacheflag = 1;
             ( address, readmemory ) = fetch( PC, memorybusy );
 
             compressed = ( readdata[0,2] != 2b11 );
@@ -279,7 +277,6 @@ algorithm PAWSCPU (
 
         // LOAD FROM MEMORY
         if( memoryload ) {
-            Icacheflag = 0;
             ( address, readmemory, memoryinput ) = load( accesssize, loadAddress, memorybusy, readdata );
         }
 
@@ -377,7 +374,6 @@ algorithm PAWSCPU (
 
         // STORE TO MEMORY
         if( memorystore ) {
-            Icacheflag = 0;
             ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy );
         }
 

@@ -120,7 +120,6 @@ algorithm main(
     sdramcontroller sdram <@clock_memory> (
         sio <:> sio_halfrate,
         function3 <: function3,
-        Icache <: Icacheflag,
         address <: address,
         writedata <: writedata,
     );
@@ -165,7 +164,6 @@ algorithm main(
     uint3   function3 = uninitialized;
     uint32  address = uninitialized;
     uint16  writedata = uninitialized;
-    uint1   Icacheflag = uninitialized;
     PAWSCPU CPU <@cpu_clock> (
         clock_cpualu <: clock_cpualu,
         clock_cpufpu <: clock_cpufpu,
@@ -175,7 +173,6 @@ algorithm main(
         accesssize :> function3,
         address :> address,
         writedata :> writedata,
-        Icacheflag :> Icacheflag,
 
         SMTRUNNING <: SMTRUNNING,
         SMTSTARTPC <: SMTSTARTPC
@@ -280,30 +277,22 @@ algorithm sdramcontroller(
     input   uint16  writedata,
 
     input   uint1   readflag,
-    input   uint1   Icache,
     output  uint16  readdata,
 
     output  uint1   busy
 ) <autorun> {
-    // INSTRUCTION CACHE for SDRAM 8k
-    // CACHE LINE IS LOWER 11 bits ( 0 - 2047 ) of address, dropping the BYTE address bit
-    // CACHE TAG IS REMAINING 14 bits of the 26 bit address + 1 bit for valid flag
-    bram uint16 Icachedata <input!> [2048] = uninitialized;
-    bram uint15 Icachetag <input!> [2048] = uninitialized;
+    // CACHE for SDRAM 16k
+    // CACHE LINE IS LOWER 12 bits ( 0 - 4095 ) of address, dropping the BYTE address bit
+    // CACHE TAG IS REMAINING 13 bits of the 26 bit address + 1 bit for valid flag
+    bram uint16 cachedata <input!> [4096] = uninitialized;
+    bram uint14 cachetag <input!> [4096] = uninitialized;
 
-    // DATA CACHE for SDRAM 4k
-    // CACHE LINE IS LOWER 11 bits ( 0 - 2047 ) of address, dropping the BYTE address bit
-    // CACHE TAG IS REMAINING 14 bits of the 26 bit address + 1 bit for valid flag
-    bram uint16 Dcachedata <input!> [2048] = uninitialized;
-    bram uint15 Dcachetag <input!> [2048] = uninitialized;
-
-    // CACHE TAG match flags
-    uint1   Icachetagmatch := ( Icachetag.rdata == { 1b1, address[12,14] } );
-    uint1   Dcachetagmatch := ( Dcachetag.rdata == { 1b1, address[12,14] } );
+    // CACHE TAG match flag
+    uint1   cachetagmatch := ( cachetag.rdata == { 1b1, address[13,13] } );
 
     // VALUE TO WRITE THROUGH CACHE TO SDRAM
-    uint16  writethrough := ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], Dcachetagmatch ? Dcachedata.rdata[0,8] : sio.data_out[0,8] } :
-                                                                            { Dcachetagmatch ? Dcachedata.rdata[8,8] : sio.data_out[8,8], writedata[0,8] } ) : writedata;
+    uint16  writethrough := ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cachedata.rdata[0,8] : sio.data_out[0,8] } :
+                                                                            { cachetagmatch ? cachedata.rdata[8,8] : sio.data_out[8,8], writedata[0,8] } ) : writedata;
 
     // MEMORY ACCESS FLAGS
     uint1   active = 0;
@@ -312,33 +301,28 @@ algorithm sdramcontroller(
     sio.in_valid := 0;
 
     // FLAGS FOR CACHE ACCESS
-    Icachedata.wenable := 0; Icachedata.addr := address[1,11];
-    Icachetag.wenable := 0; Icachetag.addr := address[1,11]; Icachetag.wdata := { 1b1, address[12,14] };
-    Dcachedata.wenable := 0; Dcachedata.addr := address[1,11];
-    Dcachetag.wenable := 0; Dcachetag.addr := address[1,11]; Dcachetag.wdata := { 1b1, address[12,14] };
+    cachedata.wenable := 0; cachedata.addr := address[1,12];
+    cachetag.wenable := 0; cachetag.addr := address[1,12]; cachetag.wdata := { 1b1, address[13,13] };
 
     // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
-    readdata := ( Icache && Icachetagmatch ) ? Icachedata.rdata : ( ( ~Icache && Dcachetagmatch ) ? Dcachedata.rdata : sio.data_out );
+    readdata := cachetagmatch ? cachedata.rdata : sio.data_out;
 
     while(1) {
         if( readflag ) {
             // SDRAM - 1 cycle for CACHE TAG ACCESS
             active = 1;
             ++:
-            if( ( Icache && Icachetagmatch ) || ( ~Icache && Dcachetagmatch ) ) {
+            if( cachetagmatch ) {
                 // CACHE HIT
             } else {
                 // CACHE MISS
                 // READ FROM SDRAM
                 ( sio ) = SDRAMread( sio );
 
-                // WRITE RESULT TO ICACHE or DCACHE
-                Dcachedata.wdata = sio.data_out;
-                Dcachedata.wenable = ~Icache;
-                Dcachetag.wenable = ~Icache;
-                Icachedata.wdata = sio.data_out;
-                Icachedata.wenable = Icache;
-                Icachetag.wenable = Icache;
+                // WRITE RESULT TO CACHE
+                cachedata.wdata = sio.data_out;
+                cachedata.wenable = 1;
+                cachetag.wenable = 1;
             }
 
             active = 0;
@@ -352,18 +336,16 @@ algorithm sdramcontroller(
                 // 8 BIT WRITES
                 // SDRAM - 1 cycle for CACHE TAG ACCESS
                 ++:
-                if( ~Dcachetagmatch ) {
+                if( ~cachetagmatch ) {
                     // CACHE MISS, READ FROM SDRAM
                     ( sio ) = SDRAMread( sio );
                 }
             }
 
             // WRITE TO CACHE
-            Dcachedata.wdata = writethrough;
-            Icachedata.wdata = writethrough;
-            Dcachedata.wenable = 1;
-            Dcachetag.wenable = 1;
-            Icachedata.wenable = Icachetagmatch;
+            cachedata.wdata = writethrough;
+            cachedata.wenable = 1;
+            cachetag.wenable = 1;
 
             // COMPLETE WRITE TO SDRAM
             ( sio ) = SDRAMwrite( sio, writethrough );

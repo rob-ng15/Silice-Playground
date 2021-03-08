@@ -1,6 +1,10 @@
 #include "PAWSlibrary.h"
 #include <stdint.h>
 
+// NORMAL IS 1023 AND 4, FAST IS 63 AND 0
+#define MAXITER 63
+#define ITERSHIFT 0
+
 int main( void ) {
     INITIALISEMEMORY();
 
@@ -10,7 +14,7 @@ int main( void ) {
   const float ymin = 0.004640;
   const float ymax = 0.004810;
   /* Maximum number of iterations, at most 65535. */
-  const uint16_t maxiter = 1023;
+  const uint16_t maxiter = MAXITER;
   /* Image size */
   const int xres = 640;
   const int yres = 480;
@@ -49,7 +53,7 @@ int main( void ) {
       }
       else {
         /* exterior */
-        gpu_pixel( k>>4, i, 479);
+        gpu_pixel( k>>ITERSHIFT, i, 479);
       };
     }
   }
