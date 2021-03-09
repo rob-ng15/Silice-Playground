@@ -325,7 +325,6 @@ algorithm PAWSCPU (
             }
             case 5b11100: {
                 // CSR
-                CSR.start = 1;
                 result = CSR.result;
             }
             case 5b01011: {
@@ -343,7 +342,6 @@ algorithm PAWSCPU (
                     default: {
                         // ATOMIC LOAD - MODIFY - STORE
                         result = memoryinput;
-                        ALUA.start = 1;
                         memoryoutput = ALUA.result;
                     }
                 }
@@ -355,16 +353,12 @@ algorithm PAWSCPU (
                 switch( opCode[6,1] ) {
                     case 0: {
                         ALU.start = 1;
-                        if( ALU.busy ) {
-                            while( ALU.busy ) {}
-                        }
+                        while( ALU.busy ) {}
                         result = ALU.result;
                     }
                     case 1: {
                         FPU.start = 1;
-                        if( FPU.busy ) {
-                            while( FPU.busy ) {}
-                        }
+                        while( FPU.busy ) {}
                         frd = FPU.frd;
                         result = FPU.result;
                     }

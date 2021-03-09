@@ -944,7 +944,6 @@ algorithm alu(
 
 // RISC-V MANDATORY CSR REGISTERS
 algorithm CSRblock(
-    input   uint1   start,
     input   uint32  instruction,
     input   uint1   incCSRinstret,
     input   uint1   SMT,
@@ -964,7 +963,7 @@ algorithm CSRblock(
     CSRinstretSMT := CSRinstretSMT + ( ( incCSRinstret & SMT ) ? 1 : 0);
 
     while(1) {
-        if( start && ( CSR(instruction).rs1 == 0 ) && ( CSR(instruction).function3 == 3b010 ) ) {
+        //if( start && ( CSR(instruction).rs1 == 0 ) && ( CSR(instruction).function3 == 3b010 ) ) {
             switch( CSR(instruction).csr ) {
                 case 12hc00: { result = SMT ? CSRcycletimeSMT[0,32] : CSRcycletime[0,32]; }
                 case 12hc80: { result = SMT ? CSRcycletimeSMT[32,32] :  CSRcycletime[32,32]; }
@@ -975,14 +974,12 @@ algorithm CSRblock(
                 case 12hf14: { result = SMT; }
                 default: { result = 0; }
             }
-        }
+        //}
     }
 }
 
 // ATOMIC A EXTENSION ALU
 algorithm aluA (
-    input   uint1   start,
-
     input   uint7   function7,
     input   uint32  memoryinput,
     input   uint32  sourceReg2,
@@ -990,18 +987,16 @@ algorithm aluA (
     output! uint32  result
 ) <autorun> {
     while(1) {
-        if( start ) {
-            switch( function7[2,5] ) {
-                case 5b00000: { result = memoryinput + sourceReg2; }            // AMOADD
-                case 5b00001: { result = sourceReg2; }                          // AMOSWAP
-                case 5b00100: { result = memoryinput ^ sourceReg2; }            // AMOXOR
-                case 5b01000: { result = memoryinput | sourceReg2; }            // AMOOR
-                case 5b01100: { result = memoryinput & sourceReg2; }            // AMOAND
-                case 5b10000: { ( result ) = MIN( memoryinput, sourceReg2); }   // AMOMIN
-                case 5b10100: { ( result ) = MAX( memoryinput, sourceReg2); }   // AMOMAX
-                case 5b11000: { ( result ) = MINU( memoryinput, sourceReg2); }  // AMOMINU
-                case 5b11100: { ( result ) = MAXU( memoryinput, sourceReg2); }  // AMOMAXU
-            }
+        switch( function7[2,5] ) {
+            case 5b00000: { result = memoryinput + sourceReg2; }            // AMOADD
+            case 5b00001: { result = sourceReg2; }                          // AMOSWAP
+            case 5b00100: { result = memoryinput ^ sourceReg2; }            // AMOXOR
+            case 5b01000: { result = memoryinput | sourceReg2; }            // AMOOR
+            case 5b01100: { result = memoryinput & sourceReg2; }            // AMOAND
+            case 5b10000: { ( result ) = MIN( memoryinput, sourceReg2); }   // AMOMIN
+            case 5b10100: { ( result ) = MAX( memoryinput, sourceReg2); }   // AMOMAX
+            case 5b11000: { ( result ) = MINU( memoryinput, sourceReg2); }  // AMOMINU
+            case 5b11100: { ( result ) = MAXU( memoryinput, sourceReg2); }  // AMOMAXU
         }
     }
 }

@@ -430,18 +430,11 @@ algorithm floataddsub(
                 switch( operation ) {
                     case 0: { totaldifference = sigA + sigB; }
                     case 1: {
-                        totaldifference = sigA - sigB;
-                        if( totaldifference[31,1] ) {
-                            // DEAL WITH SIGN SWAP AND ADD BACK IN THE MSB IN CORRECT LOCATION
+                        if( sigB > sigA ) {
                             sign = ~sign;
-                            while( totaldifference[bitcount,1 ] && ( bitcount != 63 ) ) {
-                                bitcount = bitcount - 1;
-                            }
-                            if( bitcount != 63 ) {
-                                totaldifference = ( -totaldifference ) | ( 1 << ( bitcount +1 ) );
-                            } else {
-                                totaldifference = 0;
-                            }
+                            totaldifference = sigB - sigA;
+                        } else {
+                            totaldifference = sigA - sigB;
                         }
                     }
                 }
@@ -552,8 +545,7 @@ algorithm floatdivide(
                 if( quotient == 0 ) {
                     result = { quotientsign, 31b0 };
                 } else {
-                    while( quotient[30,2] == 0 ) {
-                        quotient = quotient << 1;
+                    if( quotient[30,2] == 0 ) {
                         quotientexp = quotientexp - 1;
                     }
                     ( result ) = normalise( quotientsign, quotientexp, quotient );

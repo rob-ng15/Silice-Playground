@@ -34,24 +34,20 @@ int main( void ) {
             printw("x %f, y %f\n    + = %f, - = %f, * = %f, / = %f\n    =%d <%d <=%d    ", x, y, x+y, x-y, x*y, x/y, x==y, x<y, x<=y );
             switch( rng(4 ) ) {
                 case 0:
-                    x += 2.0f;
-                    y -= 2.0f;
-                    printw("x += 2 = %f, y -= 2 = %f\n", x, y );
+                    printw( "x + 2 , y - 2\n" );
+                    x = x + 2; y = y - 2;
                     break;
                 case 1:
-                    x -= 2.0f;
-                    y += 2.0f;
-                    printw("x -= 2 = %f, y += 2 = %f\n", x, y );
+                    printw( "x - 2 , y + 2\n" );
+                    x = x - 2; y = y + 2;
                     break;
                 case 2:
-                    x *= 2.0f;
-                    y /= 2.0f;
-                    printw("x *= 2 = %f, y /= 2 = %f\n", x, y );
+                    printw( "x * 2 , y / 2\n" );
+                    x = x * 2; y = y / 2;
                     break;
                 case 3:
-                    y *= 2.0f;
-                    x /= 2.0f;
-                    printw("x /= 2 = %f, y *= 2 = %f\n", x, y );
+                    printw( "x / 2 , y * 2\n" );
+                    x = x / 2; y = y * 2;
                     break;
             }
         }
