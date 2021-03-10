@@ -294,7 +294,7 @@ algorithm sdramcontroller(
     uint1   cachetagmatch := ( cachetag.rdata0 == { 1b1, address[13,13] } );
 
     // SDRAM OUTPUT
-    uint16  sioREAD := sio.data_out;
+    uint16  sioREAD := sio.data_out[0,16];
 
     // VALUE TO WRITE THROUGH CACHE TO SDRAM
     uint16  writethrough := ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cachedata.rdata0[0,8] : sio.data_out[0,8] } :
@@ -311,7 +311,7 @@ algorithm sdramcontroller(
     cachetag.wenable1 := 1; cachetag.addr0 := address[1,12];
 
     // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
-    readdata := cachetagmatch ? cachedata.rdata0 : sio.data_out;
+    readdata := cachetagmatch ? cachedata.rdata0 : sio.data_out[0,16];
 
     while(1) {
         if( readflag ) {

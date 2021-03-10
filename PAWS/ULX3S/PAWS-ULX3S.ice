@@ -1,5 +1,4 @@
 $$ uart_in_clock_freq_mhz = 50
-$$read_burst_length = 1
 
 // CLOCKS
 import('../common/ulx3s_clk_risc_ice_v.v')
