@@ -263,11 +263,9 @@ circuitry SDRAMwrite( inout sd, input writedata ) {
 }
 
 // UPDATE CACHE
-circuitry CACHEupdate( inout cachedata, inout cachetag, input address, input cachevalue ) {
-    cachedata.addr1 = address[1,12];
-    cachedata.wdata1 = cachevalue;
-    cachetag.addr1 = address[1,12];
-    cachetag.wdata1 = { 1b1, address[13,13] };
+circuitry CACHEupdate( inout cache, input address, input cachevalue ) {
+    cache.addr1 = address[1,12];
+    cache.wdata1 = { 1b1, address[13,13], cachevalue };
 }
 
 algorithm sdramcontroller(
@@ -287,37 +285,34 @@ algorithm sdramcontroller(
     // CACHE for SDRAM 16k
     // CACHE LINE IS LOWER 12 bits ( 0 - 4095 ) of address, dropping the BYTE address bit
     // CACHE TAG IS REMAINING 13 bits of the 26 bit address + 1 bit for valid flag
-    simple_dualport_bram uint16 cachedata <input!> [4096] = uninitialized;
-    simple_dualport_bram uint14 cachetag <input!> [4096] = uninitialized;
+    simple_dualport_bram uint30 cache <input!> [4096] = uninitialized;
 
     // CACHE TAG match flag
-    uint1   cachetagmatch := ( cachetag.rdata0 == { 1b1, address[13,13] } );
+    uint1   cachetagmatch := ( cache.rdata0[16,14] == { 1b1, address[13,13] } );
 
     // SDRAM OUTPUT
     uint16  sioREAD := sio.data_out[0,16];
 
     // VALUE TO WRITE THROUGH CACHE TO SDRAM
-    uint16  writethrough := ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cachedata.rdata0[0,8] : sio.data_out[0,8] } :
-                                                                            { cachetagmatch ? cachedata.rdata0[8,8] : sio.data_out[8,8], writedata[0,8] } ) : writedata;
+    uint16  writethrough := ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cache.rdata0[0,8] : sio.data_out[0,8] } :
+                                                                            { cachetagmatch ? cache.rdata0[8,8] : sio.data_out[8,8], writedata[0,8] } ) : writedata;
 
     // MEMORY ACCESS FLAGS
-    uint1   active = 0;
-    busy := ( readflag || writeflag ) ? 1 : active;
     sio.addr := { address[1,25], 1b0 };
     sio.in_valid := 0;
 
     // FLAGS FOR CACHE ACCESS
-    cachedata.wenable1 := 1; cachedata.addr0 := address[1,12];
-    cachetag.wenable1 := 1; cachetag.addr0 := address[1,12];
+    cache.wenable1 := 1; cache.addr0 := address[1,12];
 
     // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
-    readdata := cachetagmatch ? cachedata.rdata0 : sio.data_out[0,16];
+    readdata := cachetagmatch ? cache.rdata0[0,16] : sio.data_out[0,16];
 
     while(1) {
         if( readflag ) {
             // SDRAM - 1 cycle for CACHE TAG ACCESS
-            active = 1;
+            busy = 1;
             ++:
+
             if( cachetagmatch ) {
                 // CACHE HIT
             } else {
@@ -326,15 +321,15 @@ algorithm sdramcontroller(
                 ( sio ) = SDRAMread( sio );
 
                 // WRITE RESULT TO CACHE
-                ( cachedata, cachetag ) = CACHEupdate( cachedata, cachetag, address, sioREAD );
+                ( cache ) = CACHEupdate( cache, address, sioREAD );
             }
 
-            active = 0;
+            busy = 0;
         }
 
         if( writeflag ) {
             // SDRAM writethrough to CACHE
-            active = 1;
+            busy = 1;
 
             if( ( function3 & 3 ) == 0 ) {
                 // 8 BIT WRITES
@@ -347,12 +342,12 @@ algorithm sdramcontroller(
             }
 
             // WRITE TO CACHE
-            ( cachedata, cachetag ) = CACHEupdate( cachedata, cachetag, address, writethrough );
+            ( cache ) = CACHEupdate( cache, address, writethrough );
 
             // COMPLETE WRITE TO SDRAM
             ( sio ) = SDRAMwrite( sio, writethrough );
 
-            active = 0;
+            busy = 0;
         }
     }
 }
