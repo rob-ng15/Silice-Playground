@@ -179,7 +179,7 @@ algorithm main(
     );
 
     // SDRAM -> CPU BUSY STATE
-    CPU.memorybusy := sdram.busy || CPU.writememory || CPU.readmemory;
+    CPU.memorybusy := sdram.busy || CPU.readmemory || CPU.writememory;
 
     // I/O and RAM read/write flags
     sdram.writeflag := CPU.writememory && address[28,1];
@@ -298,6 +298,8 @@ algorithm sdramcontroller(
                                                                             { cachetagmatch ? cache.rdata0[8,8] : sio.data_out[8,8], writedata[0,8] } ) : writedata;
 
     // MEMORY ACCESS FLAGS
+    uint1   doread = uninitialized;
+    uint1   dowrite = uninitialized;
     sio.addr := { address[1,25], 1b0 };
     sio.in_valid := 0;
 
@@ -308,44 +310,35 @@ algorithm sdramcontroller(
     readdata := cachetagmatch ? cache.rdata0[0,16] : sio.data_out[0,16];
 
     while(1) {
-        if( readflag ) {
-            // SDRAM - 1 cycle for CACHE TAG ACCESS
-            busy = 1;
-            ++:
+        doread = readflag;
+        dowrite = writeflag;
 
-            if( cachetagmatch ) {
-                // CACHE HIT
-            } else {
-                // CACHE MISS
-                // READ FROM SDRAM
-                ( sio ) = SDRAMread( sio );
-
-                // WRITE RESULT TO CACHE
-                ( cache ) = CACHEupdate( cache, address, sioREAD );
-            }
-
-            busy = 0;
-        }
-
-        if( writeflag ) {
-            // SDRAM writethrough to CACHE
+        if( doread || dowrite ) {
             busy = 1;
 
-            if( ( function3 & 3 ) == 0 ) {
-                // 8 BIT WRITES
+            if( doread || ( dowrite && ( ( function3 & 3 ) == 0 ) ) ) {
                 // SDRAM - 1 cycle for CACHE TAG ACCESS
                 ++:
-                if( ~cachetagmatch ) {
-                    // CACHE MISS, READ FROM SDRAM
+
+                if( cachetagmatch ) {
+                    // CACHE HIT
+                } else {
+                    // CACHE MISS
+                    // READ FROM SDRAM
                     ( sio ) = SDRAMread( sio );
+
+                    // WRITE RESULT TO CACHE
+                    if( doread ) {
+                        ( cache ) = CACHEupdate( cache, address, sioREAD );
+                    }
                 }
             }
-
-            // WRITE TO CACHE
-            ( cache ) = CACHEupdate( cache, address, writethrough );
-
-            // COMPLETE WRITE TO SDRAM
-            ( sio ) = SDRAMwrite( sio, writethrough );
+            if( dowrite ) {
+                // WRITE RESULT TO CACHE
+                ( cache ) = CACHEupdate( cache, address, writethrough );
+                // COMPLETE WRITE TO SDRAM
+                ( sio ) = SDRAMwrite( sio, writethrough );
+            }
 
             busy = 0;
         }
