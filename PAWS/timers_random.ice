@@ -1,18 +1,18 @@
-// Create 1hz (1 second counter, also can output the baseline 50MHz counter)
+// Create 1hz (1 second counter, also can output the baseline 25MHz counter)
 algorithm pulse1hz(
     output! uint16  counter1hz,
     input   uint1   resetCounter
 ) <autorun> {
-    uint26  counter50mhz = 0;
+    uint26  counter25mhz = 0;
     counter1hz = 0;
 
     while (1) {
         if( resetCounter == 1) {
             counter1hz = 0;
-            counter50mhz = 0;
+            counter25mhz = 0;
         } else {
-            counter1hz = ( counter50mhz == 50000000 ) ? counter1hz + 1 : counter1hz;
-            counter50mhz = ( counter50mhz == 50000000 ) ? 0 : counter50mhz + 1;
+            counter1hz = ( counter25mhz == 25000000 ) ? counter1hz + 1 : counter1hz;
+            counter25mhz = ( counter25mhz == 25000000 ) ? 0 : counter25mhz + 1;
         }
     }
 }
@@ -22,15 +22,15 @@ algorithm pulse1khz(
     output! uint16  counter1khz,
     input   uint16  resetCount
 ) <autorun> {
-    uint16 counter50mhz = 0;
+    uint16 counter25mhz = 0;
 
     while (1) {
         if( resetCount != 0 ) {
             counter1khz = resetCount;
-            counter50mhz = 0;
+            counter25mhz = 0;
         } else {
-            counter1khz = ( counter1khz == 0 ) ? 0 : ( counter50mhz == 50000 ) ? counter1khz - 1 : counter1khz;
-            counter50mhz = ( counter50mhz == 50000 ) ? 0 : counter50mhz + 1;
+            counter1khz = ( counter1khz == 0 ) ? 0 : ( counter25mhz == 25000 ) ? counter1khz - 1 : counter1khz;
+            counter25mhz = ( counter25mhz == 25000 ) ? 0 : counter25mhz + 1;
         }
     }
 }

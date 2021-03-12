@@ -49,17 +49,17 @@ algorithm memmap_io (
 ) <autorun> {
     // 1hz timers (p1hz used for systemClock, timer1hz for user purposes)
     uint16 systemClock = uninitialized;
-    pulse1hz p1hz(
+    pulse1hz p1hz <@clock_25mhz> (
         counter1hz :> systemClock,
     );
-    pulse1hz timer1hz0( );
-    pulse1hz timer1hz1( );
+    pulse1hz timer1hz0 <@clock_25mhz> ( );
+    pulse1hz timer1hz1 <@clock_25mhz> ( );
 
     // 1khz timers (sleepTimers used for sleep command, timer1khzs for user purposes)
-    pulse1khz sleepTimer0( );
-    pulse1khz timer1khz0( );
-    pulse1khz sleepTimer1( );
-    pulse1khz timer1khz1( );
+    pulse1khz sleepTimer0 <@clock_25mhz> ( );
+    pulse1khz timer1khz0 <@clock_25mhz> ( );
+    pulse1khz sleepTimer1 <@clock_25mhz> ( );
+    pulse1khz timer1khz1 <@clock_25mhz> ( );
 
     // RNG random number generator
     uint16  staticGenerator = uninitialized;
@@ -68,7 +68,7 @@ algorithm memmap_io (
     uint2   static2bit := staticGenerator[0,2];
     uint4   static4bit := staticGenerator[0,4];
     uint6   static6bit := staticGenerator[0,6];
-    random rng <@video_clock> (
+    random rng <@clock_25mhz> (
         g_noise_out :> staticGenerator,
         u_noise_out :> staticGeneratorALT
     );
@@ -262,11 +262,11 @@ algorithm memmap_io (
     );
 
     // Left and Right audio channels
-    apu apu_processor_L(
+    apu apu_processor_L <@clock_25mhz> (
         staticGenerator <: static4bit,
         audio_output :> audio_l
     );
-    apu apu_processor_R(
+    apu apu_processor_R <@clock_25mhz> (
         staticGenerator <: static4bit,
         audio_output :> audio_r
     );
@@ -361,17 +361,6 @@ algorithm memmap_io (
 
     // SDCARD Commands
     sdcio.read_sector := 0;
-
-    // RESET TIMER and AUDIO Co-Processor Controls
-    p1hz.resetCounter := 0;
-    timer1hz0.resetCounter := 0;
-    sleepTimer0.resetCount := 0;
-    timer1khz0.resetCount := 0;
-    timer1hz1.resetCounter := 0;
-    sleepTimer1.resetCount := 0;
-    timer1khz1.resetCount := 0;
-    apu_processor_L.apu_write := 0;
-    apu_processor_R.apu_write := 0;
 
     // DISBLE SMT ON STARTUP
     SMTRUNNING = 0;
@@ -660,6 +649,7 @@ algorithm memmap_io (
         // IO memory map runs at 50MHz, display co-processors at 25MHz
         // Delay to reset co-processors therefore required
         if( ~memoryWrite && ~LATCHmemoryWrite ) {
+            // RESET DISPLAY Co-Processor Controls
             tile_map.tm_write = 0;
             tile_map.tm_scrollwrap = 0;
             lower_sprites.sprite_layer_write = 0;
@@ -672,6 +662,17 @@ algorithm memmap_io (
             upper_sprites.sprite_layer_write_SMT = 0;
             upper_sprites.sprite_writer_active = 0;
             character_map_window.tpu_write = 0;
+
+            // RESET TIMER and AUDIO Co-Processor Controls
+            p1hz.resetCounter = 0;
+            timer1hz0.resetCounter = 0;
+            sleepTimer0.resetCount = 0;
+            timer1khz0.resetCount = 0;
+            timer1hz1.resetCounter = 0;
+            sleepTimer1.resetCount = 0;
+            timer1khz1.resetCount = 0;
+            apu_processor_L.apu_write = 0;
+            apu_processor_R.apu_write = 0;
         }
 
         LATCHmemoryRead = memoryRead;

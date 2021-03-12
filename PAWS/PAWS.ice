@@ -179,7 +179,7 @@ algorithm main(
     );
 
     // SDRAM -> CPU BUSY STATE
-    CPU.memorybusy := sdram.busy || CPU.readmemory || CPU.writememory;
+    CPU.memorybusy := sdram.busy || ( CPU.readmemory && ~address[28,1] && ~address[15,1] );
 
     // I/O and RAM read/write flags
     sdram.writeflag := CPU.writememory && address[28,1];
@@ -206,10 +206,10 @@ circuitry BRAMwrite(
     input   writedata
 ) {
     ram.addr = address[1,15];
-    if( ( function3 & 3 ) == 0 ) {
+    if( function3[0,2] == 0 ) {
         ++:
     }
-    ram.wdata = ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
+    ram.wdata = ( function3[0,2] == 0 ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
     ram.wenable = 1;
 }
 
@@ -294,7 +294,7 @@ algorithm sdramcontroller(
     uint16  sioREAD := sio.data_out[0,16];
 
     // VALUE TO WRITE THROUGH CACHE TO SDRAM
-    uint16  writethrough := ( ( function3 & 3 ) == 0 ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cache.rdata0[0,8] : sio.data_out[0,8] } :
+    uint16  writethrough := ( function3[0,2] == 0 ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cache.rdata0[0,8] : sio.data_out[0,8] } :
                                                                             { cachetagmatch ? cache.rdata0[8,8] : sio.data_out[8,8], writedata[0,8] } ) : writedata;
 
     // MEMORY ACCESS FLAGS
@@ -316,7 +316,7 @@ algorithm sdramcontroller(
         if( doread || dowrite ) {
             busy = 1;
 
-            if( doread || ( dowrite && ( ( function3 & 3 ) == 0 ) ) ) {
+            if( doread || ( dowrite && ( function3[0,2] == 0 ) ) ) {
                 // SDRAM - 1 cycle for CACHE TAG ACCESS
                 ++:
 

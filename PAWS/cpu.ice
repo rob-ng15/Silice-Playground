@@ -17,7 +17,7 @@ circuitry load( input accesssize, input location, input memorybusy, input readda
     address = location;
     readmemory = 1;
     while( memorybusy ) {}
-    switch( accesssize & 3 ) {
+    switch( accesssize[0,2] ) {
         case 2b00: { ( memoryinput ) = signextender8( accesssize, location, readdata ); }
         case 2b01: { ( memoryinput ) = signextender16( accesssize, readdata ); }
         case 2b10: {
@@ -36,7 +36,7 @@ circuitry store( input accesssize, input location, input value, input memorybusy
     writedata = value[0,16];
     writememory = 1;
     while( memorybusy ) {}
-    if(  ( accesssize & 3 ) == 2b10 ) {
+    if( accesssize[0,2] == 2b10 ) {
         address = location + 2;
         writedata = value[16,16];
         writememory = 1;
@@ -54,7 +54,7 @@ algorithm PAWSCPU (
     output  uint32  address,
     output  uint16  writedata,
     output  uint1   writememory,
-    input   uint16  readdata,
+    input!  uint16  readdata,
     output  uint1   readmemory,
 
     input   uint1   memorybusy,
