@@ -262,7 +262,7 @@ circuitry SDRAMread( inout sd, inout cachebram, input addr ) {
         while( !sd.done ) {}
 
         cachebram.addr1 = physicaladdress[1,14];
-        cachebram.wdata1 = { 1b1, physicaladdress[15,12], sd.data_out[0,16] };
+        cachebram.wdata1 = { 1b1, physicaladdress[15,15], sd.data_out[0,16] };
         physicaladdress = physicaladdress + 2;
         count = count + 1;
     }
@@ -280,7 +280,7 @@ circuitry SDRAMwrite( inout sd, input addr, input writevalue ) {
 // UPDATE CACHE
 circuitry CACHEupdate( inout cachebram, input addr, input cachevalue ) {
     cachebram.addr1 = addr[1,14];
-    cachebram.wdata1 = { 1b1, addr[15,12], cachevalue };
+    cachebram.wdata1 = { 1b1, addr[15,15], cachevalue };
 }
 
 algorithm sdramcontroller(
@@ -297,13 +297,13 @@ algorithm sdramcontroller(
 
     output  uint1   busy
 ) <autorun> {
-    // CACHE for SDRAM 16k
+    // CACHE for SDRAM 32k
     // CACHE LINE IS LOWER 15 bits ( 0 - 32767 ) of address, dropping the BYTE address bit
-    // CACHE TAG IS REMAINING 11 bits of the 26 bit address + 1 bit for valid flag
+    // CACHE TAG IS REMAINING 15 bits of the 26 bit address + 1 bit for valid flag
     simple_dualport_bram uint32 cache <input!> [16384] = uninitialized;
 
     // CACHE TAG match flag
-    uint1   cachetagmatch := ( cache.rdata0[16,13] == { 1b1, address[15,12] } ) ? 1 : 0;
+    uint1   cachetagmatch := ( cache.rdata0[16,16] == { 1b1, address[15,15] } ) ? 1 : 0;
 
     // SDRAM OUTPUT
     uint16  sioREAD := sio.data_out[0,16];
