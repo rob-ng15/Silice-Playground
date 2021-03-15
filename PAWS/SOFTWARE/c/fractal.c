@@ -16,8 +16,8 @@ int main( void ) {
   /* Maximum number of iterations, at most 65535. */
   const uint16_t maxiter = MAXITER;
   /* Image size */
-  const int xres = 640;
-  const int yres = 480;
+  const int xres = 320;
+  const int yres = 240;
 
   /* Precompute pixel width and height. */
   float dx=(xmax-xmin)/xres;
@@ -31,7 +31,7 @@ int main( void ) {
     bitmap_scrollwrap( 2 );
     y = ymax - j * dy;
     for(i = 0; i < xres; i++) {
-        gpu_pixel( WHITE, i, 479);
+        gpu_pixel( WHITE, i, 239);
       float u = 0.0;
       float v= 0.0;
       float u2 = u * u;
@@ -49,11 +49,11 @@ int main( void ) {
         /* interior */
         //const unsigned char black[] = {0, 0, 0, 0, 0, 0};
         //fwrite (black, 6, 1, fp);
-        gpu_pixel( BLACK, i, 479);
+        gpu_pixel( BLACK, i, 239);
       }
       else {
         /* exterior */
-        gpu_pixel( k>>ITERSHIFT, i, 479);
+        gpu_pixel( k>>ITERSHIFT, i, 239);
       };
     }
   }

@@ -25,7 +25,7 @@ int main( void ) {
             colour = ( imagebuffer[ counter++ ] & 0xc0 ) >> 2;
             colour = colour + ( ( imagebuffer[ counter++ ] & 0xc0 ) >> 4 );
             colour = colour + ( ( imagebuffer[ counter++ ] & 0xc0 ) >> 6 );
-            gpu_pixel( colour, x, 479 );
+            gpu_pixel( colour, x, 239 );
         }
         bitmap_scrollwrap( 2 );
     }

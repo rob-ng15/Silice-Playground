@@ -7,17 +7,18 @@
 #define for_xy for_x for_y
 
 unsigned char universe[60][80];
-unsigned char new[60][80];
+unsigned char new[60][80], framebuffer = 0;
 int w = 80, h = 60;
 
 void show( void ) {
-    // SET STACK
-    asm volatile ("li sp ,0x2000");
-    while( 1 ) {
-        await_vblank();
-        for_y for_x
-            gpu_rectangle( universe[y][x] ? BLACK : TRANSPARENT, x * 8, y * 8, x * 8 + 7, y * 8 + 7 );
-    }
+    bitmap_draw( 1 - framebuffer );
+
+    for_y for_x
+        gpu_rectangle( universe[y][x] ? BLACK : TRANSPARENT, x * 4, y * 4, x * 4 + 3, y * 4 + 3 );
+
+    // SWITCH THE FRAMEBUFFER
+    framebuffer = 1 - framebuffer;
+    bitmap_display( framebuffer );
 }
 
 void evolve( void) {
@@ -36,9 +37,11 @@ void evolve( void) {
 
 void game( void ) {
 	for_xy universe[y][x] = rng( 2 );
-	while ( get_buttons() == 1 ) {
+
+	while( get_buttons() == 1 ) {
 		evolve();
-		sleep( 50, 0 );
+        show();
+        sleep( 50, 0 );
 	}
 }
 
@@ -48,9 +51,6 @@ int main( void ) {
     gpu_cs();
     tpu_cs();
     set_background( BLACK, BLACK, BKG_RAINBOW );
-
-    // START THREAD THAT DISPLAYS THE BOARD
-    SMTSTART( (unsigned int )show );
 
     while(1) {
         game();

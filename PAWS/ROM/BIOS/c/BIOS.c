@@ -372,9 +372,9 @@ unsigned short SELECTEDFILE = 0xffff;
 void sd_readSector( unsigned int sectorAddress, unsigned char *copyAddress ) {
     unsigned short i;
 
-    gpu_blit( RED, 576, 4, 2, 2 );
+    gpu_blit( RED, 256, 2, 2, 2 );
     sdcard_readsector( sectorAddress, copyAddress );
-    gpu_blit( GREEN, 576, 4, 2, 2 );
+    gpu_blit( GREEN, 256, 2, 2, 2 );
 }
 
 // READ SECTOR 0, THE MASTER BOOT RECORD
@@ -491,13 +491,15 @@ void set_sdcard_bitmap( void ) {
 }
 
 void draw_sdcard( void  ) {
-    gpu_blit( BLUE, 576, 4, 1, 2 );
-    gpu_blit( WHITE, 576, 4, 0, 2 );
+    gpu_blit( BLUE, 256, 2, 1, 2 );
+    gpu_blit( WHITE, 256, 2, 0, 2 );
 }
 
 void reset_display( void ) {
     *GPU_DITHERMODE = 0;
-    gpu_cs();
+    *FRAMEBUFFER_DRAW = 1; gpu_cs();
+    *FRAMEBUFFER_DRAW = 0; gpu_cs();
+    *FRAMEBUFFER_DISPLAY = 0;
     tpu_cs();
     tilemap_scrollwrapclear( 9 );
     for( unsigned short i = 0; i < 13; i++ ) {
@@ -507,12 +509,12 @@ void reset_display( void ) {
 }
 
 void displayfilename( void ) {
-    tpu_outputstringcentre( 10, TRANSPARENT, WHITE, "Current PAW File:" );
+    tpu_outputstringcentre( 18, TRANSPARENT, WHITE, "Current PAW File:" );
     for( unsigned short i = 0; i < 8; i++ ) {
         // DISPLAY FILENAME
-        gpu_rectangle( TRANSPARENT, 64, 208, 576, 272 );
+        gpu_rectangle( TRANSPARENT, 0, 192, 319, 224 );
         for( i = 0; i < 8; i++ ) {
-            gpu_character_blit( WHITE, 64 + i * 64, 208, ROOTDIRECTORY[SELECTEDFILE].filename[i], 3);
+            gpu_character_blit( WHITE, 32 + i * 32, 192, ROOTDIRECTORY[SELECTEDFILE].filename[i], 2);
         }
     }
 }
@@ -539,15 +541,17 @@ void main( void ) {
     set_sdcard_bitmap();
     draw_sdcard();
     gpu_outputstring( WHITE, 104, 4, "PAWS", 2 );
-    tpu_set( 13, 2, TRANSPARENT, WHITE ); tpu_outputstring( "RISC-V RV32IMCB CPU" );
+    tpu_set( 26, 4, TRANSPARENT, WHITE ); tpu_outputstring( "RISC-V RV32IMCB CPU" );
 
-    for( unsigned short i = 0; i < 64; i++ )
-        gpu_rectangle( i, i * 10, 447, 9 + i * 10, 463 );
+    for( unsigned short i = 0; i < 64; i++ ) {
+        gpu_rectangle( i, i * 5, 184, 4 + i * 5, 188 );
+        gpu_rectangle( i, i * 5, 227, 4 + i * 5, 231 );
+    }
 
-    tpu_outputstringcentre( 7, TRANSPARENT, RED, "Waiting for SDCARD" );
+    tpu_outputstringcentre( 15, TRANSPARENT, RED, "Waiting for SDCARD" );
     sleep(2000);
     sd_readSector( 0, MBR );
-    tpu_outputstringcentre( 7, TRANSPARENT, GREEN, "SDCARD Ready" );
+    tpu_outputstringcentre( 15, TRANSPARENT, GREEN, "SDCARD Ready" );
 
     PARTITION = (PartitionTable *) &MBR[ 0x1BE ];
 
@@ -559,7 +563,7 @@ void main( void ) {
             break;
         default:
             // UNKNOWN PARTITION TYPE
-            tpu_outputstringcentre( 7, TRANSPARENT, RED, "Please Insert A FAT16 SDCARD and Press RESET" );
+            tpu_outputstringcentre( 15, TRANSPARENT, RED, "Please Insert A FAT16 SDCARD and Press RESET" );
             while(1) {}
             break;
     }
@@ -578,9 +582,9 @@ void main( void ) {
     sd_readFAT();
 
     // FILE SELECTOR
-    tpu_outputstringcentre( 7, TRANSPARENT, WHITE, "Select PAW File" );
-    tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "SELECT USING FIRE 1 - SCROLL USING LEFT & RIGHT" );
-    tpu_outputstringcentre( 10, TRANSPARENT, RED, "No PAW Files Found" );
+    tpu_outputstringcentre( 15, TRANSPARENT, WHITE, "Select PAW File" );
+    tpu_outputstringcentre( 16, TRANSPARENT, WHITE, "SELECT USING FIRE 1 - SCROLL USING LEFT & RIGHT" );
+    tpu_outputstringcentre( 18, TRANSPARENT, RED, "No PAW Files Found" );
     SELECTEDFILE = 0xffff;
 
     // FILE SELECTOR, LOOP UNTIL FILE SELECTED (FIRE 1 PRESSED WITH A VALID FILE)
@@ -604,13 +608,13 @@ void main( void ) {
         }
     }
 
-    tpu_outputstringcentre( 7, TRANSPARENT, WHITE, "PAW File" );
-    tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "SELECTED" );
+    tpu_outputstringcentre( 15, TRANSPARENT, WHITE, "PAW File" );
+    tpu_outputstringcentre( 16, TRANSPARENT, WHITE, "SELECTED" );
     sleep( 500 );
-    tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "LOADING" );
+    tpu_outputstringcentre( 16, TRANSPARENT, WHITE, "LOADING" );
     sd_readFile( SELECTEDFILE, (unsigned char *)0x10000000 );
-    tpu_outputstringcentre( 7, TRANSPARENT, WHITE, "LOADED" );
-    tpu_outputstringcentre( 8, TRANSPARENT, WHITE, "LAUNCHING" );
+    tpu_outputstringcentre( 15, TRANSPARENT, WHITE, "LOADED" );
+    tpu_outputstringcentre( 16, TRANSPARENT, WHITE, "LAUNCHING" );
     sleep(500);
 
     // RESET THE DISPLAY

@@ -140,7 +140,8 @@ algorithm memmap_io (
     uint3   gpu_active_dithermode = uninitialized;
     uint1   bitmap_write = uninitialized;
     // 640 x 480 x 7 bit { Arrggbb } colour bitmap
-    simple_dualport_bram uint7 bitmap <@video_clock,@gpu_clock,input!> [ 307200 ] = uninitialized;
+    simple_dualport_bram uint7 bitmap_0 <@video_clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint7 bitmap_1 <@video_clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
     bitmap bitmap_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -152,7 +153,8 @@ algorithm memmap_io (
         bitmap_display :> bitmap_display,
         x_offset :> x_offset,
         y_offset :> y_offset,
-        bitmap <:> bitmap
+        bitmap_0 <:> bitmap_0,
+        bitmap_1 <:> bitmap_1
     );
     bitmapwriter pixel_writer <@gpu_clock> (
         bitmap_x_write <: bitmap_x_write,
@@ -165,7 +167,8 @@ algorithm memmap_io (
         static6bit <: static6bit,
         x_offset <: x_offset,
         y_offset <: y_offset,
-        bitmap <:> bitmap
+        bitmap_0 <:> bitmap_0,
+        bitmap_1 <:> bitmap_1
     );
 
     // Lower Sprite Layer - Between BACKGROUND and BITMAP
@@ -635,8 +638,10 @@ algorithm memmap_io (
                 case 16h8f08: { sdcio.addr_sector[0,16] = writeData; }
                 case 16h8f10: { sdbuffer.addr0 = writeData; }
 
-                 // DISPLAY LAYER ORDERING
+                 // DISPLAY LAYER ORDERING / FRAMEBUFFER SELECTION
                 case 16h8ff0: { display.display_order = writeData; }
+                case 16h8ff2: { bitmap_window.framebuffer = writeData; }
+                case 16h8ff4: { pixel_writer.framebuffer = writeData; }
 
                 // SMT STATUS
                 case 16hfff0: { SMTSTARTPC[16,16] = writeData; }

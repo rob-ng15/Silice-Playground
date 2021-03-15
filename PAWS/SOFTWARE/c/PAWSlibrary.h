@@ -146,6 +146,9 @@ typedef struct {
     unsigned int file_size;
 } __attribute((packed)) Fat16Entry;
 
+// MEMORY
+extern unsigned char *MEMORYTOP;
+
 // MASTER BOOT RECORD AND PARTITION TABLE
 extern unsigned char *MBR;
 extern Fat16BootSector *BOOTSECTOR;
@@ -201,6 +204,8 @@ extern void sdcard_readsector( unsigned int, unsigned char * );
 // DISPLAY
 extern void await_vblank( void );
 extern void screen_mode( unsigned char );
+extern void bitmap_display( unsigned char );
+extern void bitmap_draw( unsigned char );
 
 // BACKGROUND GENERATOR
 extern void set_background( unsigned char, unsigned char, unsigned char );

@@ -139,6 +139,8 @@ unsigned short volatile * SLEEPTIMER1 = ( unsigned short volatile * ) 0x8934;
 
 unsigned char volatile * VBLANK = ( unsigned char volatile * ) 0x8ff0;
 unsigned char volatile * SCREENMODE = ( unsigned char volatile * ) 0x8ff0;
+unsigned char volatile * FRAMEBUFFER_DISPLAY = ( unsigned char volatile * ) 0x8ff2;
+unsigned char volatile * FRAMEBUFFER_DRAW = ( unsigned char volatile * ) 0x8ff4;
 
 // HANDLE SMT - RUNNING STATUS AND POINTER TO CODE TO RUN
 unsigned char volatile * SMTSTATUS = ( unsigned char volatile *) 0xffff;

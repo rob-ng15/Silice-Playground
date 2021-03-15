@@ -430,7 +430,7 @@ algorithm floataddsub(
                 switch( operation ) {
                     case 0: { totaldifference = sigA + sigB; }
                     case 1: {
-                        if( sigB > sigA ) {
+                        if( ~sign && ( sigB > sigA ) ) {
                             sign = ~sign;
                             totaldifference = sigB - sigA;
                         } else {

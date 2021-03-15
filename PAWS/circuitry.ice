@@ -100,13 +100,13 @@ circuitry cropright(
     input   x,
     output  x1
 ) {
-    x1 = ( x > 639 ) ? 639 : x;
+    x1 = ( x > 319 ) ? 319 : x;
 }
 circuitry cropbottom(
     input   y,
     output  y1
 ) {
-    y1 = ( y > 479 ) ? 479 : y;
+    y1 = ( y > 239 ) ? 239 : y;
 }
 
 // CROP (x1,y1) to left and top, (x2,y2) to right and bottom
@@ -122,8 +122,8 @@ circuitry cropscreen(
 ) {
     newx1 = ( x1 < 0 ) ? 0 : x1;
     newy1 = ( y1 < 0 ) ? 0 : y1;
-    newx2 = ( x2 > 639 ) ? 639 : x2;
-    newy2 = ( y1 > 479 ) ? 479 : y2;
+    newx2 = ( x2 > 319 ) ? 319 : x2;
+    newy2 = ( y1 > 239 ) ? 239 : y2;
 }
 
 // INCREASE BY 1 IF SECOND INPUT IS 0

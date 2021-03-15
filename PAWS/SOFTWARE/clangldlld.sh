@@ -20,7 +20,6 @@ LIBRARY="/usr/riscv64-elf/lib/rv32imac/ilp32/libc.a /usr/riscv64-elf/lib/rv32ima
 clang $CFLAGS -c -o build/crt0.o crt0.c
 clang $CFLAGS $INCLUDES -c -o build/libPAWS.o c/PAWSlibrary.c
 $AR -cvq build/libPAWS.a build/libPAWS.o
-clang $CFLAGS $INCLUDES -S -o build/code.s $1
 clang $CFLAGS $INCLUDES -c -o build/code.o $1
 ld.lld $LFLAGS -o build/code.elf build/code.o build/libPAWS.o $LIBRARY
 $ARCH-elf-objcopy -O binary build/code.elf $2

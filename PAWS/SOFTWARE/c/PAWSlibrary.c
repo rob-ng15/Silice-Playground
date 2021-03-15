@@ -17,8 +17,6 @@ unsigned int CLUSTERSIZE;
 unsigned int DATASTARTSECTOR;
 
 // MEMORY
-unsigned char *MEMORYHEAP = (unsigned char *)0x10800000;
-unsigned char *MEMORYHEAPTOP = (unsigned char *)0x10800000;
 unsigned char *MEMORYTOP;
 
 // RISC-V CSR FUNCTIONS
@@ -249,6 +247,16 @@ void screen_mode( unsigned char screenmode ) {
     *SCREENMODE = screenmode;
 }
 
+// SET THE FRAMEBUFFER TO DISPLAY / DRAW
+void bitmap_display( unsigned char framebuffer ) {
+    await_vblank();
+    *FRAMEBUFFER_DISPLAY = framebuffer;
+}
+
+void bitmap_draw( unsigned char framebuffer ) {
+    *FRAMEBUFFER_DRAW = framebuffer;
+}
+
 // BACKGROUND GENERATOR
 // backgroundmode ==
 //  0 SOLID in colour
@@ -371,7 +379,7 @@ void gpu_rectangle( unsigned char colour, short x1, short y1, short x2, short y2
 // CLEAR THE BITMAP by drawing a transparent rectangle from (0,0) to (639,479) and resetting the bitamp scroll position
 void gpu_cs( void ) {
     bitmap_scrollwrap( 5 );
-    gpu_rectangle( 64, 0, 0, 639, 479 );
+    gpu_rectangle( 64, 0, 0, 319, 239 );
 }
 
 

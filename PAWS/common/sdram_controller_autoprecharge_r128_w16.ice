@@ -182,7 +182,7 @@ $$end
   uint13 row         = 0;
   uint2  bank        = 0;
   uint10 col         = 0;
-  uint8  data        = 0;
+  uint16 data        = 0;
   uint1  do_rw       = 0;
   uint1  byte        = 0;
 

@@ -17,6 +17,8 @@ int main( void ) {
     initscr();
     start_color();
 
+    unsigned char *oldmemorytop, *memoryblock, *newmemorytop;
+    oldmemorytop = MEMORYTOP; memoryblock = malloc( 320 * 240 ); newmemorytop = MEMORYTOP;
 
     while(1) {
         move( 0, 0 );
@@ -56,6 +58,7 @@ int main( void ) {
             if( *myPS2_AVAILABLE ) {
                 lastPS2_KEYCODE = *myPS2_KEYCODE;
             }
+            mvprintw( 27, 0, "MEMORY TOP OLD <%ud> BLOCK <%ud> TOP NEW <%ud>", (int)oldmemorytop, (int)memoryblock, (int)newmemorytop );
             mvprintw( 29, 0, "PS2 AVAILABLE <%1x> LAST CHARACTER <%2x>", *myPS2_AVAILABLE, lastPS2_KEYCODE );
             refresh();
         }

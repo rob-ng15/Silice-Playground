@@ -160,7 +160,7 @@ void moveAliensDown();
 
 void smttimer( void ) {
     // SETUP STACKPOINTER FOR THE SMT THREAD
-    asm volatile ("li sp ,0x2000");
+    asm volatile ("li sp ,0x4000");
 
     while(1) {
         await_vblank();

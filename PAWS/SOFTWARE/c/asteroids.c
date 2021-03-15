@@ -297,14 +297,14 @@ void set_tilemap( void )
 // DRAW GAME OVER IN LARGE MULTICOLOURED LETTERS
 void game_over( void )
 {
-    gpu_character_blit( random_colour(), 176, 224, 'G', 2 );
-    gpu_character_blit( random_colour(), 208, 232, 'A', 2 );
-    gpu_character_blit( random_colour(), 240, 224, 'M', 2 );
-    gpu_character_blit( random_colour(), 272, 232, 'E', 2 );
-    gpu_character_blit( random_colour(), 336, 224, 'O', 2 );
-    gpu_character_blit( random_colour(), 368, 232, 'V', 2 );
-    gpu_character_blit( random_colour(), 400, 224, 'E', 2 );
-    gpu_character_blit( random_colour(), 432, 232, 'R', 2 );
+    gpu_character_blit( random_colour(), 16, 116, 'G', 2 );
+    gpu_character_blit( random_colour(), 48, 124, 'A', 2 );
+    gpu_character_blit( random_colour(), 80, 116, 'M', 2 );
+    gpu_character_blit( random_colour(), 112, 124, 'E', 2 );
+    gpu_character_blit( random_colour(), 176, 116, 'O', 2 );
+    gpu_character_blit( random_colour(), 208, 124, 'V', 2 );
+    gpu_character_blit( random_colour(), 240, 116, 'E', 2 );
+    gpu_character_blit( random_colour(), 272, 124, 'R', 2 );
 }
 
 // DRAW A RISC-V LOGO AT THE TOP LEFT OF THE SCREEN
@@ -331,20 +331,20 @@ void risc_ice_v_logo( void )
 void drawfuel( unsigned char fullbar )
 {
     if( fullbar ) {
-        gpu_rectangle( RED, 70, 456, 328, 463 );
-        gpu_printf( RED, 30, 456, 0, "FUEL:" );
+        gpu_rectangle( RED, 62, 216, 319, 223 );
+        gpu_printf( RED, 22, 216, 0, "FUEL:" );
     }
-    gpu_character_blit( RED, 71 + ( fuel >> 2 ), 456, 219, 0 );
-    gpu_character_blit( WHITE, 70 + ( fuel >> 2 ), 456, 30, 0 );
+    gpu_character_blit( RED, 63 + ( fuel >> 2 ), 216, 219, 0 );
+    gpu_character_blit( WHITE, 62 + ( fuel >> 2 ), 216, 30, 0 );
 }
 void drawshield( unsigned char fullbar )
 {
     if( fullbar ) {
-        gpu_rectangle( BLUE, 70, 464, 328, 471 );
-        gpu_printf( BLUE, 14, 464, 0, "SHIELD:" );
+        gpu_rectangle( BLUE, 62, 224, 319, 231 );
+        gpu_printf( BLUE, 6, 224, 0, "SHIELD:" );
     }
-    gpu_character_blit( BLUE, 71 + shield, 464, 219, 0 );
-    gpu_character_blit( WHITE, 70 + shield, 464, 30, 0 );
+    gpu_character_blit( BLUE, 63 + shield, 224, 219, 0 );
+    gpu_character_blit( WHITE, 62 + shield, 224, 30, 0 );
 }
 
 void setup_game()
@@ -395,7 +395,7 @@ unsigned char find_asteroid_space( void ) {
 
 void move_asteroids( void ) {
     // SETUP STACKPOINTER FOR THE SMT THREAD
-    asm volatile ("li sp ,0x2000");
+    asm volatile ("li sp ,0x4000");
 
     while(1) {
         await_vblank();
@@ -490,16 +490,8 @@ void draw_score( void )
 
 void draw_lives( void )
 {
-    switch( lives ) {
-        case 3:
-            draw_vector_block( 0, WHITE, 608, 464, 1 );
-
-        case 2:
-            draw_vector_block( 0, WHITE, 576, 464, 0 );
-
-        case 1:
-            draw_vector_block( 0, WHITE, 544, 464, 5 );
-            break;
+    for( unsigned short i = 0; i < lives; i++ ) {
+        draw_vector_block( 0, WHITE, 304, 16 + i * 16, 0 );
     }
 }
 
