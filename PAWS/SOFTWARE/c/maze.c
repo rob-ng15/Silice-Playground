@@ -354,11 +354,11 @@ void initialise_maze( unsigned short width, unsigned short height )
         switch( rng( 2 ) ) {
             case 0:
                 potentialx -= 3 * rng( level );
-                potentialy += 2 * rng( level );
+                potentialy += rng( level );
                 break;
             case 1:
                 potentialx += 3 * rng( level );
-                potentialy -= 2 * rng( level );
+                potentialy -= rng( level );
                 break;
         }
         if( whatisat( potentialx, potentialy, 0 ) != ' ' )
@@ -877,7 +877,7 @@ int main( void ) {
             firstrun = 0;
         } else {
             // DISPLAY 3D PACMAN BITMAP
-            bitmapblit( pacman3dbitmap, 640, 480, 0, 0, BLACK );
+            bitmapblit( pacman3dbitmap, 320, 240, 0, 0, BLACK );
         }
 
         // RESET POWER PILL STATUS

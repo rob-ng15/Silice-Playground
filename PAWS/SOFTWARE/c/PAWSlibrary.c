@@ -56,12 +56,12 @@ char inputcharacter( void ) {
 	while( !character_available() ) {}
     return *UART_DATA;
 }
+
 // INPUT FROM PS2
 // RETURN IF A CHARACTER IS AVAILABLE
 char ps2_character_available( void ) {
     return *PS2_AVAILABLE;
 }
-
 // RETURN A DECODED ASCII CHARACTER
 char ps2_inputcharacter( void ) {
     while( !*PS2_AVAILABLE ) {
@@ -452,7 +452,7 @@ void gpu_quadrilateral( unsigned char colour, short x1, short y1, short x2, shor
 
 // OUTPUT A STRING TO THE GPU
 void gpu_printf( unsigned char colour, short x, short y, unsigned char size, const char *fmt,... ) {
-    static char buffer[81];
+    char *buffer = (char *)0x1000;
     va_list args;
     va_start (args, fmt);
     vsnprintf( buffer, 80, fmt, args);
@@ -466,7 +466,7 @@ void gpu_printf( unsigned char colour, short x, short y, unsigned char size, con
 }
 // OUTPUT A STRING TO THE GPU - CENTRED AT ( x,y )
 void gpu_printf_centre( unsigned char colour, short x, short y, unsigned char size, const char *fmt,... ) {
-    static char buffer[81];
+    char *buffer = (char *)0x1000;
     va_list args;
     va_start (args, fmt);
     vsnprintf( buffer, 80, fmt, args);
@@ -845,7 +845,7 @@ void tpu_outputstring( char *s ) {
     }
 }
 void tpu_printf( const char *fmt,... ) {
-    static char buffer[1024];
+    char *buffer = (char *)0x1000;
     va_list args;
     va_start (args, fmt);
     vsnprintf( buffer, 1023, fmt, args);
@@ -854,7 +854,7 @@ void tpu_printf( const char *fmt,... ) {
     tpu_outputstring( buffer );
 }
 void tpu_printf_centre( unsigned char y, unsigned char background, unsigned char foreground,  const char *fmt,...  ) {
-    static char buffer[811];
+    char *buffer = (char *)0x1000;
     va_list args;
     va_start (args, fmt);
     vsnprintf( buffer, 80, fmt, args);
@@ -1073,12 +1073,17 @@ unsigned char SMTSTATE( void ) {
 
 
 // SIMPLE CURSES LIBRARY
-char            __curses_character[80][30], __curses_background[80][30], __curses_foreground[80][30];
+char            *__curses_character[80], *__curses_background[80], *__curses_foreground[80];
 unsigned char   __curses_backgroundcolours[16], __curses_foregroundcolours[16], __curses_cursor = 1, __curses_scroll = 1;
 
 unsigned int  __curses_x = 0, __curses_y = 0, __curses_fore = WHITE, __curses_back = BLACK;
 
 void initscr( void ) {
+    for( unsigned x = 0; x < 80; x++ ) {
+        __curses_character[x] = (char *)(0x1400 + 30*x);
+        __curses_background[x] = (char *)(0x1d60 + 30*x);
+        __curses_foreground[x] = (char *)(0x26c0 + 30*x);
+    }
     for( unsigned x = 0; x < 80; x++ ) {
         for( unsigned y = 0; y < 30; y++ ) {
             __curses_character[x][y] = 0;
@@ -1251,7 +1256,7 @@ void __curses_print_string(const char* s) {
 }
 
 int printw( const char *fmt,... ) {
-    static char buffer[1024];
+    char *buffer = (char *)0x1000;
     va_list args;
     va_start (args, fmt);
     vsnprintf( buffer, 1023, fmt, args);
@@ -1262,7 +1267,7 @@ int printw( const char *fmt,... ) {
 }
 
 int mvprintw( int y, int x, const char *fmt,... ) {
-    static char buffer[1024];
+    char *buffer = (char *)0x1000;
     va_list args;
     va_start (args, fmt);
     vsnprintf( buffer, 1023, fmt, args);

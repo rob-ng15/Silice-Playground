@@ -8,14 +8,15 @@ int main( void ) {
     int width, height,counter;
     unsigned char *imagebuffer, colour;
 
+    printf( "JPEG DECODER:\n" );
     tpu_printf_centre( 0, TRANSPARENT, WHITE, "DECODING JPEG" );
 
     // JPEG LIBRARY
-    njInit();
-    njDecode( &galaxyjpg[0], 71555 );
+    njInit(); printf( "    njInit()\n");
+    njDecode( &galaxyjpg[0], 71555 ); printf( "    njDecode()\n" );
     width = njGetWidth();
-    height = njGetHeight();
-    imagebuffer=njGetImage();
+    height = njGetHeight(); printf( "    Image %u x %u()\n", width, height );
+    imagebuffer=njGetImage(); printf( "    Buffer %u\n", (unsigned int)imagebuffer );
 
     tpu_printf_centre( 0, TRANSPARENT, WHITE, "DISPLAYING JPEG %d x %d", width, height );
 

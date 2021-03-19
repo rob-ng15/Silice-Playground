@@ -17,6 +17,7 @@ int main( void ) {
     initscr();
     start_color();
 
+    unsigned long cycles, time, insn;
     unsigned char *oldmemorytop, *memoryblock, *newmemorytop;
     oldmemorytop = MEMORYTOP; memoryblock = malloc( 320 * 240 ); newmemorytop = MEMORYTOP;
 
@@ -53,12 +54,16 @@ int main( void ) {
                     break;
             }
         }
+
+        time = CSRtime(); cycles = CSRcycles(); insn = CSRinstructions();
+        mvprintw( 25, 0, "TIME <%u> INSN <%u> CYCLES <%u> CYCLES per INSN <%u>", time, insn, cycles, cycles/insn );
+        mvprintw( 27, 0, "MEMORY TOP OLD <%u> BLOCK <%u> TOP NEW <%u>", (int)oldmemorytop, (int)memoryblock, (int)newmemorytop );
+
         set_timer1khz( 16000, 0 );
         while( get_timer1khz(0) ) {
             if( *myPS2_AVAILABLE ) {
                 lastPS2_KEYCODE = *myPS2_KEYCODE;
             }
-            mvprintw( 27, 0, "MEMORY TOP OLD <%ud> BLOCK <%ud> TOP NEW <%ud>", (int)oldmemorytop, (int)memoryblock, (int)newmemorytop );
             mvprintw( 29, 0, "PS2 AVAILABLE <%1x> LAST CHARACTER <%2x>", *myPS2_AVAILABLE, lastPS2_KEYCODE );
             refresh();
         }

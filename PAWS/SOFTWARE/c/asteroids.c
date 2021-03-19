@@ -268,7 +268,7 @@ void set_ufo_bullet_sprites( void ) {
 
 void set_tilemap( void )
 {
-    unsigned char x, y, colour;
+    unsigned char i, x, y, colour;
 
     (void)tilemap_scrollwrapclear( 9 );
 
@@ -277,7 +277,7 @@ void set_tilemap( void )
     }
 
     // RANDOMLY PLACE 4 PLANETS and 4 ROCKET SHIPS
-    for( unsigned char i = 0; i < 4; i++ ) {
+    for( i = 0; i < 4; i++ ) {
         x = rng( 18 ) + ( x&1 ? 1 : 21 );
         y = rng( 7 ) + i*7 + 1;
         colour = random_colour_alt();
@@ -285,7 +285,7 @@ void set_tilemap( void )
         set_tilemap_tile( x, y, 1, TRANSPARENT, colour ); set_tilemap_tile( x, y+1, 2, TRANSPARENT, colour ); set_tilemap_tile( x+1, y, 3, TRANSPARENT, colour ); set_tilemap_tile( x+1, y+1, 4, TRANSPARENT, colour );
     }
 
-    for( unsigned char i = 0; i < 4; i++ ) {
+    for( i = 0; i < 4; i++ ) {
         x = rng( 18 ) + ( x&1 ? 21 : 1 );
         y = rng( 7 ) + i*7 + 1;
         colour = random_colour_alt();
@@ -311,7 +311,7 @@ void game_over( void )
 void risc_ice_v_logo( void )
 {
     // DISPLAY GALAXY BITMAP
-    bitmapblit( galaxybitmap, 640, 480, 0, 0, BLACK );
+    bitmapblit( galaxybitmap, 320, 240, 0, 0, BLACK );
 
     gpu_rectangle( ORANGE, 0, 0, 100, 100 );
     gpu_triangle( WHITE, 100, 33, 100, 100, 50, 100 );

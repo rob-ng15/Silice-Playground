@@ -545,9 +545,9 @@ algorithm floatdivide(
                 if( quotient == 0 ) {
                     result = { quotientsign, 31b0 };
                 } else {
-                    if( quotient[30,2] == 0 ) {
-                        quotientexp = quotientexp - 1;
-                    }
+                    //if( quotient[30,2] == 0 ) {
+                    //    quotientexp = quotientexp - 1;
+                    //}
                     ( result ) = normalise( quotientsign, quotientexp, quotient );
                 }
             }

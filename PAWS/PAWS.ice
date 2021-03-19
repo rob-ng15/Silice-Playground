@@ -198,21 +198,6 @@ algorithm main(
 // RAM - BRAM controller
 // MEMORY IS 16 BIT, 8 bit WRITES ARE READ MODIFY WRITE
 
-// WRITE TO BRAM
-circuitry BRAMwrite(
-    inout   ram,
-    input   function3,
-    input   address,
-    input   writedata
-) {
-    ram.addr = address[1,15];
-    if( function3[0,2] == 0 ) {
-        ++:
-    }
-    ram.wdata = ( function3[0,2] == 0 ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
-    ram.wenable = 1;
-}
-
 algorithm bramcontroller(
     input   uint32  address,
     input   uint3   function3,
@@ -238,7 +223,11 @@ algorithm bramcontroller(
 
     while(1) {
         if( writeflag ) {
-            ( ram ) = BRAMwrite( ram, function3, address, writedata );
+            if( function3[0,2] == 0 ) {
+                ++:
+            }
+            ram.wdata = ( function3[0,2] == 0 ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
+            ram.wenable = 1;
         }
     }
 }
@@ -246,43 +235,6 @@ algorithm bramcontroller(
 // RAM - SDRAM CONTROLLER
 // MEMORY IS 16 BIT, 8 bit WRITES ARE READ MODIFY WRITE
 // CACHE
-
-// READ FROM SDRAM
-circuitry SDRAMread( inout sd, inout cachebram, input addr ) {
-    uint32  physicaladdress = uninitialized;
-    uint4   count = uninitialized;
-
-    physicaladdress = addr;
-    count = 0;
-
-    while( count < 8 ) {
-        sd.addr = { physicaladdress[1,25], 1b0 };
-        sd.rw = 0;
-        sd.in_valid = 1;
-        while( !sd.done ) {}
-
-        cachebram.addr1 = physicaladdress[1,14];
-        cachebram.wdata1 = { 1b1, physicaladdress[15,15], sd.data_out[0,16] };
-        physicaladdress = physicaladdress + 2;
-        count = count + 1;
-    }
-}
-
-// WRITE TO SDRAM
-circuitry SDRAMwrite( inout sd, input addr, input writevalue ) {
-    sd.addr = { addr[1,25], 1b0 };
-    sd.data_in = writevalue;
-    sd.rw = 1;
-    sd.in_valid = 1;
-    while( !sd.done ) {}
-}
-
-// UPDATE CACHE
-circuitry CACHEupdate( inout cachebram, input addr, input cachevalue ) {
-    cachebram.addr1 = addr[1,14];
-    cachebram.wdata1 = { 1b1, addr[15,15], cachevalue };
-}
-
 algorithm sdramcontroller(
     sdram_user      sio,
 
@@ -299,28 +251,27 @@ algorithm sdramcontroller(
 ) <autorun> {
     // CACHE for SDRAM 32k
     // CACHE LINE IS LOWER 15 bits ( 0 - 32767 ) of address, dropping the BYTE address bit
-    // CACHE TAG IS REMAINING 15 bits of the 26 bit address + 1 bit for valid flag
-    simple_dualport_bram uint32 cache <input!> [16384] = uninitialized;
+    // CACHE TAG IS REMAINING 11 bits of the 26 bit address + 1 bit for valid flag
+    simple_dualport_bram uint28 cache <input!> [16384] = uninitialized;
 
     // CACHE TAG match flag
-    uint1   cachetagmatch := ( cache.rdata0[16,16] == { 1b1, address[15,15] } ) ? 1 : 0;
-
-    // SDRAM OUTPUT
-    uint16  sioREAD := sio.data_out[0,16];
+    uint1   cachetagmatch := ( cache.rdata0[16,12] == { 1b1, address[15,11] } ) ? 1 : 0;
 
     // VALUE TO WRITE THROUGH CACHE TO SDRAM
-    uint16  writethrough := ( function3[0,2] == 0 ) ? ( address[0,1] ? { writedata[0,8], cache.rdata0[0,8] } : { cache.rdata0[8,8], writedata[0,8] } ) : writedata;
+    uint16  writethrough := ( function3[0,2] == 0 ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cache.rdata0[0,8] : sio.data_out[0,8] } :
+                                                                        { cachetagmatch ? cache.rdata0[8,8] : sio.data_out[8,8], writedata[0,8] } ) : writedata;
 
     // MEMORY ACCESS FLAGS
     uint1   doread = uninitialized;
     uint1   dowrite = uninitialized;
+    sio.addr := { address[1,25], 1b0 };
     sio.in_valid := 0;
 
     // FLAGS FOR CACHE ACCESS
     cache.wenable1 := 1; cache.addr0 := address[1,14];
 
     // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
-    readdata := cache.rdata0[0,16];
+    readdata := cachetagmatch ? cache.rdata0[0,16] : sio.data_out[0,16];
 
     while(1) {
         doread = readflag;
@@ -333,20 +284,27 @@ algorithm sdramcontroller(
                 // SDRAM - 1 cycle for CACHE TAG ACCESS
                 ++:
 
-                if( cachetagmatch ) {
-                    // CACHE HIT
-                } else {
+                if( ~cachetagmatch ) {
                     // CACHE MISS
                     // READ FROM SDRAM
-                    ( sio, cache ) = SDRAMread( sio, cache, address );
+                    sio.rw = 0;
+                    sio.in_valid = 1;
+                    while( !sio.done ) {}
+                    // WRITE RESULT TO CACHE
+                    cache.addr1 = address[1,14];
+                    cache.wdata1 = { 1b1, address[15,11], sio.data_out[0,16] };
                 }
             }
 
             if( dowrite ) {
                 // WRITE RESULT TO CACHE
-                ( cache ) = CACHEupdate( cache, address, writethrough );
+                cache.addr1 = address[1,14];
+                cache.wdata1 = { 1b1, address[15,11], writethrough };
                 // COMPLETE WRITE TO SDRAM
-                ( sio ) = SDRAMwrite( sio, address, writethrough );
+                sio.data_in = writethrough;
+                sio.rw = 1;
+                sio.in_valid = 1;
+                while( !sio.done ) {}
             }
 
             busy = 0;
