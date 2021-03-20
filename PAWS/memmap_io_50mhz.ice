@@ -129,12 +129,12 @@ algorithm memmap_io (
     uint2   bitmap_r = uninitialized;
     uint2   bitmap_g = uninitialized;
     uint2   bitmap_b = uninitialized;
-    uint10  x_offset = uninitialized;
-    uint10  y_offset = uninitialized;
+    uint9  x_offset = uninitialized;
+    uint8  y_offset = uninitialized;
     // From GPU to set a pixel
     uint1   bitmap_display = uninitialized;
-    int11   bitmap_x_write = uninitialized;
-    int11   bitmap_y_write = uninitialized;
+    int10   bitmap_x_write = uninitialized;
+    int10   bitmap_y_write = uninitialized;
     uint7   bitmap_colour_write = uninitialized;
     uint7   bitmap_colour_write_alt = uninitialized;
     uint3   gpu_active_dithermode = uninitialized;

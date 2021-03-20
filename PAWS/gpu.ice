@@ -16,21 +16,21 @@ circuitry updatenumerator( input gpu_numerator, input gpu_active_x, input gpu_ac
 
 algorithm gpu(
     // GPU to SET and GET pixels
-    output! int11   bitmap_x_write,
-    output! int11   bitmap_y_write,
+    output! int10   bitmap_x_write,
+    output! int10   bitmap_y_write,
     output! uint7   bitmap_colour_write,
     output! uint7   bitmap_colour_write_alt,
     output! uint1   bitmap_write,
     output! uint4   gpu_active_dithermode,
 
-    input   int11   gpu_x,
-    input   int11   gpu_y,
+    input   int10   gpu_x,
+    input   int10   gpu_y,
     input   uint7   gpu_colour,
     input   uint7   gpu_colour_alt,
-    input   int11   gpu_param0,
-    input   int11   gpu_param1,
-    input   int11   gpu_param2,
-    input   int11   gpu_param3,
+    input   int10   gpu_param0,
+    input   int10   gpu_param1,
+    input   int10   gpu_param2,
+    input   int10   gpu_param3,
     input   uint4   gpu_write,
     input   uint4   gpu_dithermode,
 
@@ -47,8 +47,8 @@ algorithm gpu(
     // VECTOR BLOCK
     input   uint5   vector_block_number,
     input   uint7   vector_block_colour,
-    input   int11   vector_block_xc,
-    input   int11   vector_block_yc,
+    input   int10   vector_block_xc,
+    input   int10   vector_block_yc,
     input   uint3   vector_block_scale,
     input   uint1   draw_vector,
     // For setting vertices
@@ -74,10 +74,10 @@ algorithm gpu(
     uint7   gpu_active_colour_alt = uninitialized;
 
     // GPU <-> VECTOR DRAWER Communication
-    int11 v_gpu_x = uninitialised;
-    int11 v_gpu_y = uninitialised;
-    int11 v_gpu_param0 = uninitialised;
-    int11 v_gpu_param1 = uninitialised;
+    int10 v_gpu_x = uninitialised;
+    int10 v_gpu_y = uninitialised;
+    int10 v_gpu_param0 = uninitialised;
+    int10 v_gpu_param1 = uninitialised;
     uint1 v_gpu_write = uninitialised;
 
     // BLIT TILE WRITER
@@ -303,23 +303,23 @@ algorithm gpu(
 
 // RECTANGLE - OUTPUT PIXELS TO DRAW A RECTANGLE
 algorithm rectangle (
-    input   int11   x,
-    input   int11   y,
-    input   int11   param0,
-    input   int11   param1,
+    input   int10   x,
+    input   int10   y,
+    input   int10   param0,
+    input   int10   param1,
 
-    output!  uint11  bitmap_x_write,
-    output!  uint11  bitmap_y_write,
+    output!  int10   bitmap_x_write,
+    output!  int10   bitmap_y_write,
     output!  uint1   bitmap_write,
 
     input   uint1   start,
     output  uint1   busy
 ) <autorun> {
-    int11   gpu_active_x = uninitialized;
-    int11   gpu_active_y = uninitialized;
-    int11   gpu_x1 = uninitialized;
-    int11   gpu_max_x = uninitialized;
-    int11   gpu_max_y = uninitialized;
+    int10   gpu_active_x = uninitialized;
+    int10   gpu_active_y = uninitialized;
+    int10   gpu_x1 = uninitialized;
+    int10   gpu_max_x = uninitialized;
+    int10   gpu_max_y = uninitialized;
 
     uint1   active = 0;
     busy := start ? 1 : active;
@@ -356,29 +356,29 @@ algorithm rectangle (
 
 // LINE - OUTPUT PIXELS TO DRAW A LINE
 algorithm line (
-    input   int11   x,
-    input   int11   y,
-    input   int11   param0,
-    input   int11   param1,
+    input   int10   x,
+    input   int10   y,
+    input   int10   param0,
+    input   int10   param1,
 
-    output!  uint11  bitmap_x_write,
-    output!  uint11  bitmap_y_write,
-    output!  uint1   bitmap_write,
+    output! int10   bitmap_x_write,
+    output! int10   bitmap_y_write,
+    output! uint1   bitmap_write,
 
     input   uint1   start,
     output  uint1   busy
 ) <autorun> {
-    int11   gpu_active_x = uninitialized;
-    int11   gpu_active_y = uninitialized;
-    int11   gpu_dx = uninitialized;
-    int11   gpu_dy = uninitialized;
-    int11   gpu_sy = uninitialized;
-    int11   gpu_max_x = uninitialized;
-    int11   gpu_max_y = uninitialized;
-    int11   gpu_numerator = uninitialized;
-    int11   gpu_numerator2 = uninitialized;
-    int11   gpu_count = uninitialized;
-    int11   gpu_max_count = uninitialized;
+    int10   gpu_active_x = uninitialized;
+    int10   gpu_active_y = uninitialized;
+    int10   gpu_dx = uninitialized;
+    int10   gpu_dy = uninitialized;
+    int10   gpu_sy = uninitialized;
+    int10   gpu_max_x = uninitialized;
+    int10   gpu_max_y = uninitialized;
+    int10   gpu_numerator = uninitialized;
+    int10   gpu_numerator2 = uninitialized;
+    int10   gpu_count = uninitialized;
+    int10   gpu_max_count = uninitialized;
 
     uint1   active = 0;
     busy := start ? 1 : active;
@@ -426,24 +426,24 @@ algorithm line (
 
 //  CIRCLE - OUTPUT PIXELS TO DRAW AN OUTLINE OR FILLED CIRCLE
 algorithm circle(
-    input   int11   x,
-    input   int11   y,
-    input   int11   param0,
+    input   int10   x,
+    input   int10   y,
+    input   int10   param0,
     input   uint1   filledcircle,
 
-    output  uint11  bitmap_x_write,
-    output  uint11  bitmap_y_write,
+    output  int10  bitmap_x_write,
+    output  int10  bitmap_y_write,
     output  uint1   bitmap_write,
 
     input   uint1   start,
     output  uint1   busy
 ) <autorun> {
-    int11   gpu_active_x = uninitialized;
-    int11   gpu_active_y = uninitialized;
-    int11   gpu_xc = uninitialized;
-    int11   gpu_yc = uninitialized;
-    int11   gpu_numerator = uninitialized;
-    int11   gpu_count = uninitialised;
+    int10   gpu_active_x = uninitialized;
+    int10   gpu_active_y = uninitialized;
+    int10   gpu_xc = uninitialized;
+    int10   gpu_yc = uninitialized;
+    int10   gpu_numerator = uninitialized;
+    uint10  gpu_count = uninitialised;
 
     uint1   active = 0;
     busy := start ? 1 : active;
@@ -538,37 +538,37 @@ algorithm circle(
 }
 
 algorithm triangle (
-    input   int11   x,
-    input   int11   y,
-    input   int11   param0,
-    input   int11   param1,
-    input   int11   param2,
-    input   int11   param3,
+    input   int10   x,
+    input   int10   y,
+    input   int10   param0,
+    input   int10   param1,
+    input   int10   param2,
+    input   int10   param3,
 
-    output  uint11  bitmap_x_write,
-    output  uint11  bitmap_y_write,
+    output  int10  bitmap_x_write,
+    output  int10  bitmap_y_write,
     output  uint1   bitmap_write,
 
     input   uint1   start,
     output  uint1   busy
 ) <autorun> {
     // VERTEX COORDINATES
-    int11   gpu_active_x = uninitialized;
-    int11   gpu_active_y = uninitialized;
-    int11   gpu_x1 = uninitialized;
-    int11   gpu_y1 = uninitialized;
-    int11   gpu_x2 = uninitialized;
-    int11   gpu_y2 = uninitialized;
+    int10   gpu_active_x = uninitialized;
+    int10   gpu_active_y = uninitialized;
+    int10   gpu_x1 = uninitialized;
+    int10   gpu_y1 = uninitialized;
+    int10   gpu_x2 = uninitialized;
+    int10   gpu_y2 = uninitialized;
 
     // BOUNDING BOX
-    int11   gpu_min_x = uninitialized;
-    int11   gpu_max_x = uninitialized;
-    int11   gpu_min_y = uninitialized;
-    int11   gpu_max_y = uninitialized;
+    int10   gpu_min_x = uninitialized;
+    int10   gpu_max_x = uninitialized;
+    int10   gpu_min_y = uninitialized;
+    int10   gpu_max_y = uninitialized;
 
     // WORK COORDINATES
-    int11   gpu_sx = uninitialized;
-    int11   gpu_sy = uninitialized;
+    int10   gpu_sx = uninitialized;
+    int10   gpu_sy = uninitialized;
 
     // WORK DIRECTION ( == 0 left, == 1 right )
     uint1   gpu_dx = 1;
@@ -670,13 +670,13 @@ algorithm triangle (
 // BLIT - ( tilecharacter == 1 ) OUTPUT PIXELS TO BLIT A 16 x 16 TILE ( PARAM1 == 0 as 16 x 16, == 1 as 32 x 32, == 2 as 64 x 64, == 3 as 128 x 128 )
 // BLIT - ( tilecharacter == 0 ) OUTPUT PIXELS TO BLIT AN 8 x 8 CHARACTER ( PARAM1 == 0 as 8 x 8, == 1 as 16 x 16, == 2 as 32 x 32, == 3 as 64 x 64 )
 algorithm blit (
-    input   int11   x,
-    input   int11   y,
-    input   int11   param0,
+    input   int10   x,
+    input   int10   y,
+    input   uint8   param0,
     input   uint2   param1,
 
-    output  uint11  bitmap_x_write,
-    output  uint11  bitmap_y_write,
+    output  int10  bitmap_x_write,
+    output  int10  bitmap_y_write,
     output  uint1   bitmap_write,
 
     input   uint1   start,
@@ -687,18 +687,18 @@ algorithm blit (
     simple_dualport_bram_port0 characterGenerator8x8
 ) <autorun> {
     // POSITION IN TILE/CHARACTER
-    uint8   gpu_active_x = uninitialized;
-    uint8   gpu_active_y = uninitialized;
+    uint7   gpu_active_x = uninitialized;
+    uint7   gpu_active_y = uninitialized;
 
     // POSITION ON THE SCREEN
-    int11   gpu_x1 = uninitialized;
-    int11   gpu_y1 = uninitialized;
+    int10   gpu_x1 = uninitialized;
+    int10   gpu_y1 = uninitialized;
     uint5   gpu_y2 = uninitialised;
 
     // MULTIPLIER FOR THE SIZE
     uint2   gpu_param1 = uninitialised;
-    uint8   gpu_max_x = uninitialized;
-    uint8   gpu_max_y = uninitialized;
+    uint7   gpu_max_x = uninitialized;
+    uint7   gpu_max_y = uninitialized;
 
     // TILE/CHARACTER TO BLIT
     uint8   gpu_tile = uninitialized;
@@ -757,8 +757,8 @@ circuitry deltacoordinates( input x, input dx, input y, input dy, input scale, o
 
 algorithm vectors(
     input   uint5   vector_block_number,
-    input   int11   vector_block_xc,
-    input   int11   vector_block_yc,
+    input   int10   vector_block_xc,
+    input   int10   vector_block_yc,
     input   uint3   vector_block_scale,
     input   uint1   draw_vector,
 
@@ -772,11 +772,11 @@ algorithm vectors(
     output  uint1   vector_block_active,
 
     // Communication with the GPU
-    output  int11 gpu_x,
-    output  int11 gpu_y,
-    output  int11 gpu_param0,
-    output  int11 gpu_param1,
-    output  uint1 gpu_write,
+    output  int10   gpu_x,
+    output  int10   gpu_y,
+    output  int10   gpu_param0,
+    output  int10   gpu_param1,
+    output  uint1   gpu_write,
 
     input  uint1 gpu_active
 ) <autorun> {
@@ -784,14 +784,14 @@ algorithm vectors(
     simple_dualport_bram uint13 vertex <input!> [512] = uninitialised;
 
     // Extract deltax and deltay for the present vertices
-    int11 deltax := { {6{vectorentry(vertex.rdata0).dxsign}}, vectorentry(vertex.rdata0).dx };
-    int11 deltay := { {6{vectorentry(vertex.rdata0).dysign}}, vectorentry(vertex.rdata0).dy };
+    int10 deltax := { {5{vectorentry(vertex.rdata0).dxsign}}, vectorentry(vertex.rdata0).dx };
+    int10 deltay := { {5{vectorentry(vertex.rdata0).dysign}}, vectorentry(vertex.rdata0).dy };
 
     // Vertices being processed, plus first coordinate of each line
     uint5 block_number = uninitialised;
     uint5 vertices_number = uninitialised;
-    int11 start_x = uninitialised;
-    int11 start_y = uninitialised;
+    int10 start_x = uninitialised;
+    int10 start_y = uninitialised;
 
     vertexwriter VW(
         vertices_writer_block <: vertices_writer_block,

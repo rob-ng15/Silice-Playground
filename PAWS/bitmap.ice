@@ -11,24 +11,24 @@ algorithm bitmap(
 
     // Hardware scrolling
     input   uint3   bitmap_write_offset,
-    output  uint10  x_offset,
-    output  uint10  y_offset,
+    output  uint9   x_offset,
+    output  uint8   y_offset,
 
     // Pixel reader
-    input   int16   bitmap_x_read,
-    input   int16   bitmap_y_read,
+    input   int10   bitmap_x_read,
+    input   int10   bitmap_y_read,
     output  uint7   bitmap_colour_read,
 
     simple_dualport_bram_port0 bitmap_0,
     simple_dualport_bram_port0 bitmap_1
 ) <autorun> {
     // Pixel x and y fetching ( adjusting for offset )
-    uint10  x_plus_one := ( pix_x[1,9] + x_offset + 1 ) > 319 ? ( pix_x[1,9] + x_offset + 1 ) - 320 : ( pix_x[1,9] + x_offset + 1 );
-    uint10  y_line := pix_vblank ? y_offset : ( ( pix_y[1,9] + y_offset ) > 239 ? ( pix_y[1,9] + y_offset ) - 240 : ( pix_y[1,9] + y_offset ) );
-    uint10  x_pixel := pix_active ? x_plus_one : x_offset;
+    uint9  x_plus_one := ( pix_x[1,9] + x_offset + 1 ) > 319 ? ( pix_x[1,9] + x_offset + 1 ) - 320 : ( pix_x[1,9] + x_offset + 1 );
+    uint8  y_line := pix_vblank ? y_offset : ( ( pix_y[1,9] + y_offset ) > 239 ? ( pix_y[1,9] + y_offset ) - 240 : ( pix_y[1,9] + y_offset ) );
+    uint9  x_pixel := pix_active ? x_plus_one : x_offset;
 
     // Pixel being read?
-    bitmap_colour_read := ( pix_x == bitmap_x_read ) && ( pix_y == bitmap_y_read ) ? ( framebuffer ? bitmap_1.rdata0 : bitmap_0.rdata0 ) : bitmap_colour_read;
+    bitmap_colour_read := ( pix_x[1,9] == bitmap_x_read ) && ( pix_y[1,9] == bitmap_y_read ) ? ( framebuffer ? bitmap_1.rdata0 : bitmap_0.rdata0 ) : bitmap_colour_read;
 
     // Setup the address in the bitmap for the pixel being rendered
     // Use pre-fetching of the next pixel ready for the next cycle
@@ -67,16 +67,16 @@ algorithm bitmap(
 algorithm bitmapwriter (
     // SET pixels
     input   uint1   framebuffer,
-    input   int11   bitmap_x_write,
-    input   int11   bitmap_y_write,
+    input   int10   bitmap_x_write,
+    input   int10   bitmap_y_write,
     input   uint7   bitmap_colour_write,
     input   uint7   bitmap_colour_write_alt,
     input   uint1   bitmap_write,
     input   uint4   gpu_active_dithermode,
     input   uint1   static1bit,
     input   uint6   static6bit,
-    input   uint10  x_offset,
-    input   uint10  y_offset,
+    input   uint9   x_offset,
+    input   uint8   y_offset,
 
     simple_dualport_bram_port1 bitmap_0,
     simple_dualport_bram_port1 bitmap_1
@@ -84,8 +84,8 @@ algorithm bitmapwriter (
     uint7   pixeltowrite = uninitialised;
 
     // Pixel x and y for writing ( adjusting for offset )
-    uint10  x_write_pixel := ( bitmap_x_write + x_offset ) > 319 ? ( bitmap_x_write + x_offset ) - 320 : ( bitmap_x_write + x_offset );
-    uint10  y_write_pixel := ( bitmap_y_write + y_offset ) > 239 ? ( bitmap_y_write + y_offset ) - 240 : ( bitmap_y_write + y_offset );
+    int10  x_write_pixel := ( bitmap_x_write + x_offset ) > 319 ? ( bitmap_x_write + x_offset ) - 320 : ( bitmap_x_write + x_offset );
+    int10  y_write_pixel := ( bitmap_y_write + y_offset ) > 239 ? ( bitmap_y_write + y_offset ) - 240 : ( bitmap_y_write + y_offset );
 
     // Write in range?
     uint1 write_pixel := (bitmap_x_write >= 0 ) && (bitmap_x_write < 320) && (bitmap_y_write >= 0) && (bitmap_y_write <= 239) && bitmap_write;
