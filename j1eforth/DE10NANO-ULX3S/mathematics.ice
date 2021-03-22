@@ -187,8 +187,8 @@ algorithm doubleaddsub2input(
     output  uint16  equal,
     output  uint16  lessthan
 ) <autorun> {
-    uint32  operand1 := { operand1h, operand1l };
-    uint32  operand2 := { operand2h, operand2l };
+    int32  operand1 := { operand1h, operand1l };
+    int32  operand2 := { operand2h, operand2l };
 
     total := operand1 + operand2;
     difference := operand1 - operand2;
@@ -228,7 +228,7 @@ algorithm doubleaddsub1input(
     output  uint16  zeroequal,
     output  uint16  zeroless
 ) <autorun> {
-    uint32  operand1 := { operand1h, operand1l };
+    int32  operand1 := { operand1h, operand1l };
 
     increment := operand1 + 1;
     decrement := operand1 - 1;
@@ -243,7 +243,7 @@ algorithm doubleaddsub1input(
     absolute := ( operand1[31,1] ) ? -operand1 : operand1;
 
     zeroequal := {16{(operand1 == 0)}};
-    zeroless := {16{(operand1 < 0)}};
+    zeroless := {16{operand1[31,1]}};
 
     while(1) {}
 }

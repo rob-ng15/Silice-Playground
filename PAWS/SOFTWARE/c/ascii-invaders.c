@@ -1,12 +1,11 @@
 #include "PAWSlibrary.h"
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 
 struct Bomb {
-    short x;
-    short y;
-    short anim;
+    int x;
+    int y;
+    int anim;
     struct Bomb *next;
 };
 
@@ -100,44 +99,44 @@ const char *bombAnim =   "\\|/-";
 // the stack of main.  Down with globalisation!
 
 struct {
-    short score;
-    short lives;
-    short state;
-    short screenCols;         // screen columns
-    short screenRows;         // screen rows
-    short timer;              // timer used to switch between game states
+    int score;
+    int lives;
+    int state;
+    int screenCols;         // screen columns
+    int screenRows;         // screen rows
+    int timer;              // timer used to switch between game states
     //struct itimerval myTimer;   // alarm signal timer
 } game;
 
 struct {
-    short rows, cols;         // how many rows and columns of aliens are there?
-    short x, y;               // alien position
-    short *table;             // the table of aliens
+    int rows, cols;         // how many rows and columns of aliens are there?
+    int x, y;               // alien position
+    int *table;             // the table of aliens
     // which rows and columns have been cleared?
-    short emptyLeft, emptyRight, emptyTop, emptyBottom;
-    short direction;
-    short paintRow;           // cursor for repainting row by row
-    short paintWait;          // counter for repainting row by row
-    short sideAnim;           // staggered sideways movement
-    short count;              // how many aliens are left?
-    short anim;               // used for wiggling
+    int emptyLeft, emptyRight, emptyTop, emptyBottom;
+    int direction;
+    int paintRow;           // cursor for repainting row by row
+    int paintWait;          // counter for repainting row by row
+    int sideAnim;           // staggered sideways movement
+    int count;              // how many aliens are left?
+    int anim;               // used for wiggling
     struct Bomb *headBomb;  // linked list of bombs
 } aliens;
 
 struct {
-    short x;                  // x position
-    short move;               // buffered moves
-    short explodeTimer;       // timer used when gunner explodes
+    int x;                  // x position
+    int move;               // buffered moves
+    int explodeTimer;       // timer used when gunner explodes
     struct {
-        short x;              // x position
-        short y;              // y position
+        int x;              // x position
+        int y;              // y position
     } missile;
     char *shields;          // pointer to shield table
 } gun;
 
 struct {
-    short x;                  // x position
-    short pointsTimer;        // how long to leave the points on the screen
+    int x;                  // x position
+    int pointsTimer;        // how long to leave the points on the screen
 } ma;
 
 
@@ -145,17 +144,17 @@ void paintShelters();
 void resetAliens();
 void resetShields();
 void initGame();
-void cleanUp(short signal);
-void handleTimer(short signal);
-void paintAlienRow(short row, short clean);
+void cleanUp(int signal);
+void handleTimer(int signal);
+void paintAlienRow(int row, int clean);
 void paintGunner();
 void paintIntro();
-void paintExplodingAlien(short y, short x);
-void removeAlien(short y, short x);
+void paintExplodingAlien(int y, int x);
+void removeAlien(int y, int x);
 void paintScore();
 void trimAliens();
-void addBomb(short x, short y);
-short removeBomb(struct Bomb *b);
+void addBomb(int x, int y);
+int removeBomb(struct Bomb *b);
 void freeBombs();
 void moveAliensDown();
 
@@ -169,7 +168,7 @@ void smttimer( void ) {
     }
 }
 
-short main( void ) {
+int main( void ) {
     INITIALISEMEMORY();
     // CLEAR and SET THE BACKGROUND
     gpu_cs();
@@ -231,7 +230,7 @@ short main( void ) {
                 clear();
                 paintShelters();
 
-                SMTSTART( (unsigned int)smttimer );
+                SMTSTART( (unsigned int )smttimer );
             } else if (game.state == STATE_PLAY
                     && game.timer > GUNNER_ENTRANCE
                     && gun.missile.y == 0) {
@@ -249,7 +248,7 @@ short main( void ) {
 }
 
 void paintShelters() {
-    short n, y, x;
+    int n, y, x;
 
 #ifdef USE_COLORS
     if (has_colors()) attron(COLOR_PAIR(1));
@@ -268,11 +267,11 @@ void paintShelters() {
  * Handle timer signal.  This is the logic that moves all the sprites
  * around the screen.
  */
-void handleTimer(short signal) {
+void handleTimer(int signal) {
     // TODO!  This should take a pointer to the game state, which points
     // to object on the stack of main, instead of accessing evil
     // global variables.
-    short x;
+    int x;
     struct Bomb *b;
 
     // check which state the game is in
@@ -311,8 +310,8 @@ void handleTimer(short signal) {
                 // start next life
                 // if the aliens have reached the shields
                 // then move them back up to the top of the screen
-                short lastLine = aliens.y + (ALIEN_HEIGHT * aliens.emptyBottom) - 1;
-                short shieldTop = LINES - GUNNER_HEIGHT - SHELTER_HEIGHT - 1;
+                int lastLine = aliens.y + (ALIEN_HEIGHT * aliens.emptyBottom) - 1;
+                int shieldTop = LINES - GUNNER_HEIGHT - SHELTER_HEIGHT - 1;
                 if (lastLine >= shieldTop) aliens.y = 0;
 
                 game.timer = 0;
@@ -329,7 +328,7 @@ void handleTimer(short signal) {
     }
 
     // otherwise handle game play...
-    game.timer += 2;
+    game.timer++;
 
     if (game.timer == GUNNER_ENTRANCE && game.state == STATE_PLAY) {
         paintGunner();
@@ -342,7 +341,7 @@ void handleTimer(short signal) {
 
     // if ma is currently on, display
     if (ma.x > 0) {
-        short i;
+        int i;
 
 #ifdef USE_COLORS
         if (has_colors()) attron(COLOR_PAIR(2));
@@ -371,7 +370,7 @@ void handleTimer(short signal) {
     // drop bombs
     if (game.timer > GUNNER_ENTRANCE) {
         for (x = aliens.emptyLeft; x < aliens.emptyRight; x++) {
-            short y;
+            int y;
             // find the first alien from the bottom
             for (y = aliens.emptyBottom - 1; y >= 0; y--) {
                 if (aliens.table[(aliens.cols * y) + x] > ALIEN_EMPTY) {
@@ -403,7 +402,7 @@ void handleTimer(short signal) {
 
     // handle alien movements
     if (--aliens.paintWait <= 0) {
-        // time to repashort one row of aliens (speeds up as you shoot aliens)
+        // time to repaint one row of aliens (speeds up as you shoot aliens)
         //aliens.paintWait = 2;
         aliens.paintWait = (int) (PAINT_WAIT * (aliens.count / (aliens.cols * aliens.rows)));;
         aliens.paintRow--;
@@ -532,9 +531,9 @@ void handleTimer(short signal) {
                 + (ALIEN_WIDTH * aliens.cols)
             && gun.missile.y < aliens.y + ALIEN_HEIGHT * aliens.rows &&
                 gun.missile.y >= aliens.y) {
-            short alien;
-            short x = gun.missile.x - aliens.x;
-            short y = gun.missile.y - aliens.y;
+            int alien;
+            int x = gun.missile.x - aliens.x;
+            int y = gun.missile.y - aliens.y;
             if (x % ALIEN_WIDTH != 0 && x % ALIEN_WIDTH != ALIEN_WIDTH -1) {
                 // it didn't sneak between two aliens
                 x = x / ALIEN_WIDTH;
@@ -564,8 +563,8 @@ void handleTimer(short signal) {
                 && gun.missile.x >= ma.x
                 && gun.missile.x <= ma.x + ALIEN_WIDTH) {
             // chose a 'random' number of points, either 50, 100 or 150
-            short points = ((systemclock() % 3) + 1) * 50;
-            short i;
+            int points = ((systemclock() % 3) + 1) * 50;
+            int i;
             game.score += points;
             // remove ma
             for (i = 0; i < MA_HEIGHT; i++)
@@ -587,14 +586,14 @@ void moveAliensDown() {
     // figure out which screen row the bottom alien is one
     // and if it's over the sheilds then clear the line of
     // the shields or at the bottom of the screen
-    short lastLine = ++aliens.y + (ALIEN_HEIGHT * aliens.emptyBottom) - 1;
-    short topShield = LINES - GUNNER_HEIGHT - SHELTER_HEIGHT - 1;
-    short gunnerTop = LINES - GUNNER_HEIGHT - 1;
+    int lastLine = ++aliens.y + (ALIEN_HEIGHT * aliens.emptyBottom) - 1;
+    int topShield = LINES - GUNNER_HEIGHT - SHELTER_HEIGHT - 1;
+    int gunnerTop = LINES - GUNNER_HEIGHT - 1;
 
     if (lastLine >= topShield && lastLine < topShield + SHELTER_HEIGHT) {
         // clear the shield line
-        short i = (lastLine - topShield) * game.screenCols;
-        short j;
+        int i = (lastLine - topShield) * game.screenCols;
+        int j;
         for (j = 0; j < game.screenCols; j++) {
             gun.shields[i + j] = ' ';   // DEBUG
         }
@@ -615,9 +614,9 @@ void moveAliensDown() {
  */
 void trimAliens() {
     // update empty line pointers
-    short found = 0;
+    int found = 0;
     for (;;) {
-        short i;
+        int i;
         for (i = 0; i < aliens.rows; i++) {
             if (aliens.table[(i * aliens.cols) + aliens.emptyLeft]
                     != ALIEN_EMPTY) {
@@ -631,7 +630,7 @@ void trimAliens() {
 
     found = 0;
     for (;;) {
-        short i;
+        int i;
         for (i = 0; i < aliens.rows; i++) {
             if (aliens.table[(i * aliens.cols) + aliens.emptyRight - 1]
                     != ALIEN_EMPTY) {
@@ -645,7 +644,7 @@ void trimAliens() {
 
     found = 0;
     for (;;) {
-        short i;
+        int i;
         for (i = 0; i < aliens.cols; i++) {
             if (aliens.table[((aliens.emptyBottom - 1) * aliens.cols) + i]
                     != ALIEN_EMPTY) {
@@ -661,14 +660,14 @@ void trimAliens() {
 /**
  * Ends and tidies up.
  */
-void cleanUp(short signal) {
+void cleanUp(int signal) {
     if (aliens.table != NULL) free(aliens.table);
     if (gun.shields != NULL) free(gun.shields);
     endwin();
 }
 
 void paintGunner() {
-    short i;
+    int i;
 #ifdef USE_COLORS
     if (has_colors()) attron(COLOR_PAIR(1));
 #endif
@@ -683,8 +682,8 @@ void paintGunner() {
     }
 }
 
-void paintExplodingAlien(short y, short x) {
-    short i;
+void paintExplodingAlien(int y, int x) {
+    int i;
     for (i = 0; i < ALIEN_HEIGHT; i++) {
         move((y * ALIEN_HEIGHT) + aliens.y + i, (x * ALIEN_WIDTH) + aliens.x
             + (y > aliens.paintRow ? aliens.direction : 0));
@@ -694,8 +693,8 @@ void paintExplodingAlien(short y, short x) {
     }
 }
 
-void removeAlien(short y, short x) {
-    short i;
+void removeAlien(int y, int x) {
+    int i;
     for (i = 0; i < ALIEN_HEIGHT; i++) {
         move((y * ALIEN_HEIGHT) + aliens.y + i, (x * ALIEN_WIDTH) + aliens.x);
         printw("%s", alienBlank);
@@ -716,10 +715,10 @@ void paintScore() {
 /**
  * Paints a row of aliens (but doesn't call refresh).
  * @param row which row of aliens to draw
- * @param clean whether to pashort the line above this row of aliens white
+ * @param clean whether to paint the line above this row of aliens white
  */
-void paintAlienRow(short row, short clean) {
-    short x, i;
+void paintAlienRow(int row, int clean) {
+    int x, i;
 
     if (clean) {
         move((row * ALIEN_HEIGHT) + aliens.y - 1, 0);
@@ -750,8 +749,8 @@ void paintAlienRow(short row, short clean) {
 
     // draw the aliens
     for (x = aliens.emptyLeft; x < aliens.emptyRight; x++) {
-        short line = ALIEN_HEIGHT * aliens.anim;
-        short alien = aliens.table[(row * aliens.cols) + x];
+        int line = ALIEN_HEIGHT * aliens.anim;
+        int alien = aliens.table[(row * aliens.cols) + x];
         for (i = 0; i < ALIEN_HEIGHT; i++) {
             move((row * ALIEN_HEIGHT) + aliens.y + i,
                     (x * ALIEN_WIDTH) + aliens.x);
@@ -844,7 +843,7 @@ void paintIntro() {
 }
 
 void resetAliens() {
-    short x, y = 0;
+    int x, y = 0;
 
     // we make one row of alien30s...
     for (x = 0; x < aliens.cols; x++)
@@ -882,11 +881,11 @@ void resetAliens() {
  * Sets up the shields.
  */
 void resetShields() {
-    short x, y;
+    int x, y;
     for (y = 0; y < SHELTER_HEIGHT * game.screenCols; gun.shields[y++] = ' ');
     for (x = 0; x < game.screenCols - 10; x += 10) {
         for (y = 0; y < SHELTER_HEIGHT; y++) {
-            short i = 0;
+            int i = 0;
             while (shelter[y][i] != 0) {
                 gun.shields[(y * game.screenCols) + x + i] = shelter[y][i];
                 i++;
@@ -900,7 +899,7 @@ void resetShields() {
  * @param x the x coordinate
  * @param y the y coordinate
  */
-void addBomb(short x, short y) {
+void addBomb(int x, int y) {
     struct Bomb *b;
     b = malloc(sizeof(struct Bomb));
     if (b == NULL) {
@@ -923,7 +922,7 @@ void addBomb(short x, short y) {
  * @param b bomb pointer
  * @return whether the bomb was found
  */
-short removeBomb(struct Bomb *b) {
+int removeBomb(struct Bomb *b) {
     struct Bomb *this;
     struct Bomb *last;
 

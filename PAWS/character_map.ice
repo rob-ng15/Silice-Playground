@@ -32,8 +32,8 @@ algorithm character_map(
     uint12 ycharacterpos := (( pix_vblank ? 0 : pix_y ) >> 4) * 80;
 
     // Derive the x and y coordinate within the current 8x16 character block x 0-7, y 0-15
-    uint3 xincharacter := (pix_x) & 7;
-    uint4 yincharacter := (pix_y) & 15;
+    uint3 xincharacter := pix_x[0,3];
+    uint4 yincharacter := pix_y[0,4];
 
     // Derive the actual pixel in the current character
     uint1 characterpixel := characterGenerator8x16.rdata[7 - xincharacter,1];

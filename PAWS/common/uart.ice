@@ -17,8 +17,6 @@ $$  if DE10NANO then
 $$    uart_in_clock_freq_mhz = 50
 $$  elseif ULX3S then
 $$    uart_in_clock_freq_mhz = 25
-$$  elseif ICEBREAKER then
-$$    uart_in_clock_freq_mhz = 12
 $$  else
 $$    error("[uart] clock frequency 'uart_in_clock_freq_mhz' not specified")
 $$  end
@@ -46,7 +44,7 @@ interface io_uart_out
 
 algorithm uart_sender(
   io_uart_out  io,
-  output uint1 uart_tx = 1
+  output uint1 uart_tx
 ) <autorun> {
   
   uint10 interval      = $math.floor(0.5 + uart_in_clock_freq_mhz * 1000000 / 115200)$;
@@ -75,6 +73,8 @@ algorithm uart_sender(
       }
     }
   }
+
+  uart_tx = 1;
 
 }
 

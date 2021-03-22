@@ -1073,22 +1073,20 @@ unsigned char SMTSTATE( void ) {
 
 
 // SIMPLE CURSES LIBRARY
-char            *__curses_character[80], *__curses_background[80], *__curses_foreground[80];
+#define COLS 80
+#define LINES 30
+
+char            *__curses_character = (char *)0x1400, *__curses_background = (char *)0x1d60, *__curses_foreground = (char *)0x26c0;
 unsigned char   __curses_backgroundcolours[16], __curses_foregroundcolours[16], __curses_cursor = 1, __curses_scroll = 1;
 
 unsigned int  __curses_x = 0, __curses_y = 0, __curses_fore = WHITE, __curses_back = BLACK;
 
 void initscr( void ) {
-    for( unsigned x = 0; x < 80; x++ ) {
-        __curses_character[x] = (char *)(0x1400 + 30*x);
-        __curses_background[x] = (char *)(0x1d60 + 30*x);
-        __curses_foreground[x] = (char *)(0x26c0 + 30*x);
-    }
-    for( unsigned x = 0; x < 80; x++ ) {
-        for( unsigned y = 0; y < 30; y++ ) {
-            __curses_character[x][y] = 0;
-            __curses_background[x][y] = TRANSPARENT;
-            __curses_foreground[x][y] = BLACK;
+    for( unsigned x = 0; x < COLS; x++ ) {
+        for( unsigned y = 0; y < LINES; y++ ) {
+            *(__curses_character + y*COLS + x) = 0;
+            *(__curses_background + y*COLS + x) = TRANSPARENT;
+            *(__curses_foreground + y*COLS + x) = BLACK;
         }
     }
     __curses_x = 0; __curses_y = 0; __curses_fore = WHITE; __curses_back = BLACK; __curses_cursor = 1; __curses_scroll = 1;
@@ -1099,14 +1097,14 @@ int endwin( void ) {
 }
 
 int refresh( void ) {
-    for( unsigned char y = 0; y < 30; y ++ ) {
-        for( unsigned char x = 0; x < 80; x++ ) {
+    for( unsigned char y = 0; y < LINES; y ++ ) {
+        for( unsigned char x = 0; x < COLS; x++ ) {
             if( ( x == __curses_x ) && ( y == __curses_y ) && ( __curses_cursor == 1 ) && ( systemclock() & 1 ) ) {
                 tpu_set( x, y, __curses_fore, __curses_back );
             } else {
-                tpu_set( x, y, __curses_background[x][y], __curses_foreground[x][y] );
+                tpu_set( x, y, *(__curses_background + y*COLS + x), *(__curses_foreground + y*COLS +x) );
             }
-            tpu_output_character( __curses_character[x][y] );
+            tpu_output_character( *(__curses_character + y*COLS + x) );
         }
     }
 
@@ -1114,11 +1112,11 @@ int refresh( void ) {
 }
 
 int clear( void ) {
-    for( unsigned x = 0; x < 80; x++ ) {
-        for( unsigned y = 0; y < 30; y++ ) {
-            __curses_character[x][y] = 0;
-            __curses_background[x][y] = TRANSPARENT;
-            __curses_foreground[x][y] = BLACK;
+    for( unsigned x = 0; x < COLS; x++ ) {
+        for( unsigned y = 0; y < LINES; y++ ) {
+            *(__curses_character + y*COLS + x) = 0;
+            *(__curses_background + y*COLS + x) = TRANSPARENT;
+            *(__curses_foreground + y*COLS + x) = BLACK;
         }
     }
     __curses_x = 0; __curses_y = 0; __curses_fore = WHITE; __curses_back = BLACK;
@@ -1178,11 +1176,11 @@ int move( int y, int x ) {
 }
 
 void __scroll( void ) {
-    for( unsigned short y = 0; y < 29; y++ ) {
-        for( unsigned short x = 0; x < 80; x++ ) {
-            __curses_character[ x ][ y ] = __curses_character[ x ][ y + 1 ];
-            __curses_background[ x ][ y ] = __curses_background[ x ][ y + 1 ];
-            __curses_foreground[ x ][ y ] = __curses_foreground[ x ][ y + 1 ];
+    for( unsigned short y = 0; y < LINES-1; y++ ) {
+        for( unsigned short x = 0; x < COLS; x++ ) {
+            *(__curses_character + y*COLS + x) = *(__curses_character + (y+1)*COLS + x);
+            *(__curses_background + y*COLS + x) = *(__curses_background + (y+1)*COLS + x);
+            *(__curses_foreground + y*COLS + x) = *(__curses_foreground + (y+1)*COLS + x);
         }
     }
 }
@@ -1221,9 +1219,9 @@ int addch( unsigned char ch ) {
             break;
         }
         default: {
-            __curses_character[ __curses_x ][ __curses_y ] = ch;
-            __curses_background[ __curses_x ][ __curses_y ] = __curses_back;
-            __curses_foreground[ __curses_x ][ __curses_y ] = __curses_fore;
+            *(__curses_character + __curses_y*COLS + __curses_x) = ch;
+            *(__curses_background + __curses_y*COLS + __curses_x) = __curses_back;
+            *(__curses_foreground + __curses_y*COLS + __curses_x) = __curses_fore;
             if( __curses_x == 79 ) {
                 __curses_x = 0;
                 if( __curses_y == 29 ) {
@@ -1289,25 +1287,25 @@ int deleteln( void ) {
     if( __curses_y == 29 ) {
         // BLANK LAST LINE
         for( unsigned char x = 0; x < 80; x++ ) {
-            __curses_character[x][29] = 0;
-            __curses_background[x][29] = __curses_back;
-            __curses_foreground[x][29] = __curses_fore;
+            *(__curses_character + 29*COLS + x) = 0;
+            *(__curses_background + 29*COLS + x) = __curses_back;
+            *(__curses_foreground + 29*COLS + x) = __curses_fore;
         }
     } else {
         // MOVE LINES UP
         for( unsigned char y = __curses_y; y < 29; y++ ) {
             for( unsigned char x = 0; x < 80; x++ ) {
-                __curses_character[x][y] = __curses_character[x][y+1];
-                __curses_background[x][y] = __curses_background[x][y+1];
-                __curses_foreground[x][y] = __curses_foreground[x][y+1];
+                *(__curses_character + y*COLS + x) = *(__curses_character + (y+1)*COLS +x);
+                *(__curses_background + y*COLS + x) = *(__curses_background + (y+1)*COLS +x);
+                *(__curses_foreground + y*COLS + x) = *(__curses_foreground + (y+1)*COLS +x);
             }
         }
 
         // BLANK LAST LINE
         for( unsigned char x = 0; x < 80; x++ ) {
-            __curses_character[x][29] = 0;
-            __curses_background[x][29] = __curses_back;
-            __curses_foreground[x][29] = __curses_fore;
+            *(__curses_character + 29*COLS + x) = 0;
+            *(__curses_background + 29*COLS + x) = __curses_back;
+            *(__curses_foreground + 29*COLS + x) = __curses_fore;
         }
     }
 
@@ -1316,9 +1314,9 @@ int deleteln( void ) {
 
 int clrtoeol( void ) {
     for( int x = __curses_x; x < 80; x++ ) {
-            __curses_character[x][__curses_y] = 0;
-            __curses_background[x][__curses_y] = __curses_back;
-            __curses_foreground[x][__curses_y] = __curses_fore;
+            *(__curses_character + __curses_y*COLS + x) = 0;
+            *(__curses_background + __curses_y*COLS + x) = __curses_back;
+            *(__curses_foreground + __curses_y*COLS + x) = __curses_fore;
     }
     return( true );
 }

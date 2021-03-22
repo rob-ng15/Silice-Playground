@@ -22,6 +22,7 @@ int main( void ) {
     oldmemorytop = MEMORYTOP; memoryblock = malloc( 320 * 240 ); newmemorytop = MEMORYTOP;
 
     while(1) {
+        clear();
         move( 0, 0 );
         for( i = 1; i < 8 ; i++ ) {
             attron( i );
@@ -59,15 +60,11 @@ int main( void ) {
         mvprintw( 25, 0, "TIME <%u> INSN <%u> CYCLES <%u> CYCLES per INSN <%u>", time, insn, cycles, cycles/insn );
         mvprintw( 27, 0, "MEMORY TOP OLD <%u> BLOCK <%u> TOP NEW <%u>", (int)oldmemorytop, (int)memoryblock, (int)newmemorytop );
 
-        set_timer1khz( 16000, 0 );
-        while( get_timer1khz(0) ) {
-            if( *myPS2_AVAILABLE ) {
-                lastPS2_KEYCODE = *myPS2_KEYCODE;
-            }
-            mvprintw( 29, 0, "PS2 AVAILABLE <%1x> LAST CHARACTER <%2x>", *myPS2_AVAILABLE, lastPS2_KEYCODE );
-            refresh();
+        if( *myPS2_AVAILABLE ) {
+            lastPS2_KEYCODE = *myPS2_KEYCODE;
         }
-        clear();
-
+        mvprintw( 29, 0, "PS2 AVAILABLE <%1x> LAST CHARACTER <%2x>", *myPS2_AVAILABLE, lastPS2_KEYCODE );
+        refresh();
+        sleep( 1000, 0 );
     }
 }

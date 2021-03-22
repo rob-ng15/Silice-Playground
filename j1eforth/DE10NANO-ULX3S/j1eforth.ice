@@ -166,7 +166,7 @@ $$end
 
     // program counter
     uint13  pc = 0;
-    uint13  pcPlusOne := pc + 1;
+    uint13  pcPlusOne ::= pc + 1;
     uint13  newPC = uninitialized;
     uint13  callBranchAddress := callbranch(instruction).address;
 
@@ -320,8 +320,6 @@ $$end
                     if( ~aluop(instruction).is_j1j1plus && ( aluop(instruction).operation == 4b1100 ) && stackTop[15,1] ) {
                         IO_Map.memoryRead = 1;
                     }
-                    //ALU.start = ~aluop(instruction).is_j1j1plus;
-                    //ALUplus.start = aluop(instruction).is_j1j1plus;
                     newStackTop = ALU.newStackTop;
 
                     // UPDATE newDSP newRSP
@@ -419,7 +417,6 @@ algorithm alu(
 }
 
 algorithm j1eforthALU(
-    //input   uint1   start,
     input   uint16  instruction,
 
     input   uint8   dsp,
@@ -435,30 +432,27 @@ algorithm j1eforthALU(
     output! uint16  newStackTop
 ) <autorun> {
     while(1) {
-        //if( start ) {
-            switch( aluop(instruction).operation ) {
-                case 4b0000: {newStackTop = stackTop;}
-                case 4b0001: {newStackTop = stackNext;}
-                case 4b0010: {newStackTop = stackTop + stackNext;}
-                case 4b0011: {newStackTop = stackTop & stackNext;}
-                case 4b0100: {newStackTop = stackTop | stackNext;}
-                case 4b0101: {newStackTop = stackTop ^ stackNext;}
-                case 4b0110: {newStackTop = ~stackTop;}
-                case 4b0111: {newStackTop = {16{(stackNext == stackTop)}};}
-                case 4b1000: {newStackTop = {16{(__signed(stackNext) < __signed(stackTop))}};}
-                case 4b1001: {newStackTop = __signed(stackNext) >>> nibbles(stackTop).nibble0;}
-                case 4b1010: {newStackTop = stackTop - 1;}
-                case 4b1011: {newStackTop = rStackTop;}
-                case 4b1100: {newStackTop = stackTop[15,1] ? IOmemoryRead : RAMmemoryRead;}
-                case 4b1101: {newStackTop = stackNext << nibbles(stackTop).nibble0;}
-                case 4b1110: {newStackTop = {rsp, dsp};}
-                case 4b1111: {newStackTop = {16{(__unsigned(stackNext) < __unsigned(stackTop))}};}
-            }
-        //}
+        switch( aluop(instruction).operation ) {
+            case 4b0000: {newStackTop = stackTop;}
+            case 4b0001: {newStackTop = stackNext;}
+            case 4b0010: {newStackTop = stackTop + stackNext;}
+            case 4b0011: {newStackTop = stackTop & stackNext;}
+            case 4b0100: {newStackTop = stackTop | stackNext;}
+            case 4b0101: {newStackTop = stackTop ^ stackNext;}
+            case 4b0110: {newStackTop = ~stackTop;}
+            case 4b0111: {newStackTop = {16{(stackNext == stackTop)}};}
+            case 4b1000: {newStackTop = {16{(__signed(stackNext) < __signed(stackTop))}};}
+            case 4b1001: {newStackTop = __signed(stackNext) >>> nibbles(stackTop).nibble0;}
+            case 4b1010: {newStackTop = stackTop - 1;}
+            case 4b1011: {newStackTop = rStackTop;}
+            case 4b1100: {newStackTop = stackTop[15,1] ? IOmemoryRead : RAMmemoryRead;}
+            case 4b1101: {newStackTop = stackNext << nibbles(stackTop).nibble0;}
+            case 4b1110: {newStackTop = {rsp, dsp};}
+            case 4b1111: {newStackTop = {16{(__unsigned(stackNext) < __unsigned(stackTop))}};}
+        }
     }
 }
 algorithm j1eforthplusALU(
-    //input   uint1   start,
     input   uint16  instruction,
 
     input   uint8   dsp,
@@ -467,29 +461,27 @@ algorithm j1eforthplusALU(
     input   uint16  stackTop,
     input   uint16  stackNext,
 
-    output! uint16  newStackTop
+    output  uint16  newStackTop
 ) <autorun> {
     while(1) {
-        //if( start ) {
-            switch( aluop(instruction).operation ) {
-                case 4b0000: {newStackTop = {16{(stackTop == 0)}};}
-                case 4b0001: {newStackTop = {16{(stackTop != 0)}};}
-                case 4b0010: {newStackTop = {16{(stackNext != stackTop)}};}
-                case 4b0011: {newStackTop = stackTop + 1;}
-                case 4b0100: {newStackTop = stackNext * stackTop;}
-                case 4b0101: {newStackTop = {stackTop[0,15], 1b0 };}
-                case 4b0110: {newStackTop = -stackTop;}
-                case 4b0111: {newStackTop = { stackTop[15,1], stackTop[1,15]}; }
-                case 4b1000: {newStackTop = stackNext - stackTop;}
-                case 4b1001: {newStackTop = {16{(__signed(stackTop) < __signed(0))}};}
-                case 4b1010: {newStackTop = {16{(__signed(stackTop) > __signed(0))}};}
-                case 4b1011: {newStackTop = {16{(__signed(stackNext) > __signed(stackTop))}};}
-                case 4b1100: {newStackTop = {16{(__signed(stackNext) >= __signed(stackTop))}};}
-                case 4b1101: {newStackTop = ( __signed(stackTop) < __signed(0) ) ?  -stackTop : stackTop;}
-                case 4b1110: {newStackTop = ( __signed(stackNext) > __signed(stackTop) ) ? stackNext : stackTop;}
-                case 4b1111: {newStackTop = ( __signed(stackNext) < __signed(stackTop) ) ? stackNext : stackTop;}
-            }
-       // }
+        switch( aluop(instruction).operation ) {
+            case 4b0000: {newStackTop = {16{(stackTop == 0)}};}
+            case 4b0001: {newStackTop = {16{(stackTop != 0)}};}
+            case 4b0010: {newStackTop = {16{(stackNext != stackTop)}};}
+            case 4b0011: {newStackTop = stackTop + 1;}
+            case 4b0100: {newStackTop = stackNext * stackTop;}
+            case 4b0101: {newStackTop = {stackTop[0,15], 1b0 };}
+            case 4b0110: {newStackTop = -stackTop;}
+            case 4b0111: {newStackTop = { stackTop[15,1], stackTop[1,15]}; }
+            case 4b1000: {newStackTop = stackNext - stackTop;}
+            case 4b1001: {newStackTop = {16{(__signed(stackTop) < __signed(0))}};}
+            case 4b1010: {newStackTop = {16{(__signed(stackTop) > __signed(0))}};}
+            case 4b1011: {newStackTop = {16{(__signed(stackNext) > __signed(stackTop))}};}
+            case 4b1100: {newStackTop = {16{(__signed(stackNext) >= __signed(stackTop))}};}
+            case 4b1101: {newStackTop = ( __signed(stackTop) < __signed(0) ) ?  -stackTop : stackTop;}
+            case 4b1110: {newStackTop = ( __signed(stackNext) > __signed(stackTop) ) ? stackNext : stackTop;}
+            case 4b1111: {newStackTop = ( __signed(stackNext) < __signed(stackTop) ) ? stackNext : stackTop;}
+        }
     }
 }
 
@@ -502,10 +494,10 @@ algorithm j1eforthcallbranch(
     input   uint8   dsp,
     input   uint8   rsp,
 
-    output! uint16  newStackTop,
-    output! uint13  newPC,
-    output! uint8   newDSP,
-    output! uint8   newRSP,
+    output  uint16  newStackTop,
+    output  uint13  newPC,
+    output  uint8   newDSP,
+    output  uint8   newRSP,
 ) <autorun> {
     while(1) {
         // ONLY TRIGGER IF CALL BRANCH 0BRANCH

@@ -521,9 +521,9 @@ algorithm floatdivide(
         if( start ) {
             busy = 1;
 
-            quotientexp = expA - expB;
             sigA = { 1b1, a[0,23], 8b0 };
             sigB = { 9b1, b[0,23] };
+            quotientexp = expA - expB;
             quotient = 0;
             remainder = 0;
             bit = 31;
@@ -545,9 +545,6 @@ algorithm floatdivide(
                 if( quotient == 0 ) {
                     result = { quotientsign, 31b0 };
                 } else {
-                    //if( quotient[30,2] == 0 ) {
-                    //    quotientexp = quotientexp - 1;
-                    //}
                     ( result ) = normalise( quotientsign, quotientexp, quotient );
                 }
             }

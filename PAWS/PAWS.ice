@@ -181,7 +181,7 @@ algorithm main(
     // SDRAM -> CPU BUSY STATE
     CPU.memorybusy := sdram.busy || ( CPU.readmemory && ~address[28,1] && ~address[15,1] );
 
-    // I/O and RAM read/write flags
+    // I/O and RAM read/write flags - address[28,1] == 0 BRAM or I/O == 1 SDRAM, address[15,1] == 0 BRAM == 1 I/O
     sdram.writeflag := CPU.writememory && address[28,1];
     sdram.readflag := CPU.readmemory && address[28,1];
     ram.writeflag := CPU.writememory && ~address[28,1] && ~address[15,1];

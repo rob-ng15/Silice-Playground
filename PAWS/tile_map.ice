@@ -65,8 +65,8 @@ algorithm tilemap(
 
     // Derive the x and y coordinate within the current 16x16 tilemap block x 0-7, y 0-15
     // Needs adjusting for the offsets
-    uint4   xintm := { 1b0, (pix_x) & 15 } + tm_offset_x;
-    uint4   yintm := { 1b0, (pix_y) & 15 } + tm_offset_y;
+    uint4   xintm := { 1b0, pix_x[0,4] } + tm_offset_x;
+    uint4   yintm := { 1b0, pix_y[0,4] } + tm_offset_y;
 
     // Derive the actual pixel in the current character
     uint1   tmpixel := tiles16x16.rdata0[15 - xintm,1];

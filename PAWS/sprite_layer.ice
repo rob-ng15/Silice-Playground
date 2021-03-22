@@ -105,13 +105,14 @@ algorithm sprite_layer(
     $$for i=0,12 do
         // Sprite Tiles
         simple_dualport_bram uint16 tiles_$i$ <input!> [128] = uninitialised;
+        uint1 pix_visible_$i$ = uninitialised;
+        sprite_generator SPRITE_$i$(
+            pix_x <: pix_x,
+            pix_y <: pix_y,
+            pix_visible :> pix_visible_$i$,
+            tiles <:> tiles_$i$
+        );
 
-        // Calculate if sprite is visible
-        uint6 spritesize_$i$ := sprite_double[$i$] ? 32 : 16;
-        uint1 xinrange_$i$ := ( __signed({1b0, pix_x}) >= __signed(sprite_x[$i$]) ) && ( __signed({1b0, pix_x}) < __signed( sprite_x[$i$] + spritesize_$i$ ) );
-        uint1 yinrange_$i$ := ( __signed({1b0, pix_y}) >= __signed(sprite_y[$i$]) ) && ( __signed({1b0, pix_y}) < __signed( sprite_y[$i$] + spritesize_$i$ ) );
-        uint1 pix_visible_$i$ := sprite_active[$i$] && xinrange_$i$ && yinrange_$i$ && ( tiles_$i$.rdata0[ ( 15  - ( ( __signed({1b0, pix_x}) - sprite_x[$i$] ) >>> sprite_double[$i$] ) ), 1 ] );
-        uint4 yinsprite_$i$ := ( __signed({1b0, pix_y}) - sprite_y[$i$] ) >>> sprite_double[$i$];
         // Collision detection flag
         uint16      detect_collision_$i$ = uninitialised;
     $$end
@@ -141,9 +142,15 @@ algorithm sprite_layer(
     uint1   sprite_offscreen_y ::= ( __signed( sprite_y[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_y[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) > __signed(480) );
 
     $$for i=0,12 do
-        // Set read addresses for the bitmaps and output collisions
-        tiles_$i$.addr0 := { sprite_tile_number[$i$], yinsprite_$i$ };
+        // Output collisions
         collision_$i$ := ( output_collisions ) ? detect_collision_$i$ : collision_$i$;
+
+        // Set sprite generator parameters
+        SPRITE_$i$.sprite_active := sprite_active[$i$];
+        SPRITE_$i$.sprite_double := sprite_double[$i$];
+        SPRITE_$i$.sprite_x := sprite_x[$i$];
+        SPRITE_$i$.sprite_y := sprite_y[$i$];
+        SPRITE_$i$.sprite_tile_number := sprite_tile_number[$i$];
     $$end
 
     // Default to transparent
@@ -262,6 +269,33 @@ algorithm sprite_layer(
                                                 sprite_y[ SPRITE_NUMBER ] + deltay;
             }
         }
+    }
+}
+
+algorithm sprite_generator(
+    input   uint10  pix_x,
+    input   uint10  pix_y,
+    input   uint1   sprite_active,
+    input   uint1   sprite_double,
+    input   int11   sprite_x,
+    input   int11   sprite_y,
+    input   uint3   sprite_tile_number,
+    simple_dualport_bram_port0 tiles,
+    output! uint1   pix_visible
+) <autorun> {
+    // Calculate position in sprite
+    uint6 spritesize := sprite_double ? 32 : 16;
+    uint1 xinrange := ( __signed({1b0, pix_x}) >= __signed(sprite_x) ) && ( __signed({1b0, pix_x}) < __signed( sprite_x + spritesize ) );
+    uint1 yinrange := ( __signed({1b0, pix_y}) >= __signed(sprite_y) ) && ( __signed({1b0, pix_y}) < __signed( sprite_y + spritesize) );
+    uint4 yinsprite := ( __signed({1b0, pix_y}) - sprite_y ) >>> sprite_double;
+
+    // READ ADDRESS FOR SPRITE
+    tiles.addr0 := { sprite_tile_number, yinsprite };
+
+    // Determine if pixel is visible
+    pix_visible := sprite_active && xinrange && yinrange && ( tiles.rdata0[ ( 15  - ( ( __signed({1b0, pix_x}) - sprite_x ) >>> sprite_double ) ), 1 ] );
+
+    while(1) {
     }
 }
 

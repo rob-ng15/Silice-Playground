@@ -12,7 +12,7 @@ NM="riscv64-elf-nm"
 RANLIB="riscv64-elf-ranlib"
 
 CFLAGS="-march=rv32imac -mabi=ilp32 -ffunction-sections -fdata-sections -Ofast -fno-pic -fno-unroll-loops"
-LFLAGS=" --as-needed --gc-sections -m elf32lriscv -b elf32-littleriscv --no-relax "
+LFLAGS=" --as-needed --gc-sections -m elf32lriscv -b elf32-littleriscv --no-relax"
 LCONFIG="-Tconfig_c_SDRAM.ld"
 INCLUDE="-I/usr/riscv32-elf/include/"
 LIBRARY="/usr/riscv64-elf/lib/rv32imac/ilp32/libc.a /usr/riscv64-elf/lib/rv32imac/ilp32/libm.a /usr/lib/gcc/riscv64-elf/10.2.0/rv32imac/ilp32/libgcc.a"
