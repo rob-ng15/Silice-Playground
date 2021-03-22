@@ -38,20 +38,20 @@ algorithm character_map(
     // Derive the actual pixel in the current character
     uint1 characterpixel := characterGenerator8x16.rdata[7 - xincharacter,1];
 
-    // TPU character position
-    uint7 tpu_active_x = 0;
-    uint5 tpu_active_y = 0;
-
-    // CS Counter
-    uint12  tpu_cs_addr = uninitialized;
-    uint12  tpu_count = uninitialized;
-    uint12  tpu_max_count = uninitialized;
+    // CHARACTER MAP WRITER
+    character_map_writer CMW(
+        charactermap <:> charactermap,
+        tpu_x <: tpu_x,
+        tpu_y <: tpu_y,
+        tpu_character <: tpu_character,
+        tpu_foreground <: tpu_foreground,
+        tpu_background <: tpu_background,
+        tpu_write <: tpu_write,
+        tpu_active :> tpu_active
+    );
 
     // Set up reading of the charactermap
     charactermap.addr0 := xcharacterpos + ycharacterpos;
-
-    // BRAM write access for the TPU
-    charactermap.wenable1 := 1;
 
     // Setup the reading of the characterGenerator8x16 ROM
     characterGenerator8x16.addr :=  { charactermapentry(charactermap.rdata0).character, yincharacter };
@@ -61,6 +61,35 @@ algorithm character_map(
     pix_red := characterpixel ? charactermap.rdata0[12,2] : charactermap.rdata0[18,2];
     pix_green := characterpixel ? charactermap.rdata0[10,2] : charactermap.rdata0[16,2];
     pix_blue := characterpixel ? charactermap.rdata0[8,2] : charactermap.rdata0[14,2];
+
+    while(1) {
+    }
+}
+
+algorithm character_map_writer(
+    simple_dualport_bram_port1 charactermap,
+
+// TPU to SET characters, background, foreground
+    input   uint7   tpu_x,
+    input   uint5   tpu_y,
+    input   uint8   tpu_character,
+    input   uint6   tpu_foreground,
+    input   uint7   tpu_background,
+    input   uint3   tpu_write,
+
+    output  uint1   tpu_active
+) <autorun> {
+    // Counter for clearscreen
+    uint12  tpu_cs_addr = uninitialized;
+    uint12  tpu_count = uninitialized;
+    uint12  tpu_max_count = uninitialized;
+
+    // TPU character position
+    uint7 tpu_active_x = 0;
+    uint5 tpu_active_y = 0;
+
+    // BRAM write access for the TPU
+    charactermap.wenable1 := 1;
 
     // Default to 0,0 and transparent
     charactermap.addr1 = 0; charactermap.wdata1 = { 1b1, 6b0, 6b0, 8b0 };

@@ -189,6 +189,7 @@ algorithm gpu(
         } else {
             gpu_active_colour = gpu_colour;
             gpu_active_colour_alt = gpu_colour_alt;
+            gpu_active = ( gpu_write > 1 ) ? 1 : 0;
             switch( gpu_write ) {
                 case 1: {
                     // SET PIXEL (X,Y)
@@ -201,7 +202,6 @@ algorithm gpu(
 
                 case 2: {
                     // DRAW LINE FROM (X,Y) to (PARAM0,PARAM1)
-                    gpu_active = 1;
                     gpu_active_dithermode = 0;
                     GPUline.start = 1;
                     while( GPUline.busy ) {
@@ -209,12 +209,10 @@ algorithm gpu(
                         bitmap_y_write = GPUline.bitmap_y_write;
                         bitmap_write = GPUline.bitmap_write;
                     }
-                    gpu_active = 0;
                 }
 
                 case 3: {
                     // DRAW RECTANGLE FROM (X,Y) to (PARAM0,PARAM1)
-                    gpu_active = 1;
                     gpu_active_dithermode = gpu_dithermode;
                     GPUrectangle.start = 1;
                     while( GPUrectangle.busy ) {
@@ -222,12 +220,10 @@ algorithm gpu(
                         bitmap_y_write = GPUrectangle.bitmap_y_write;
                         bitmap_write = GPUrectangle.bitmap_write;
                     }
-                    gpu_active = 0;
                 }
 
                 case 4: {
                     // DRAW CIRCLE CENTRE (X,Y) with RADIUS PARAM0
-                    gpu_active = 1;
                     gpu_active_dithermode = 0;
                     GPUcircle.filledcircle = 0;
                     GPUcircle.start = 1;
@@ -236,12 +232,10 @@ algorithm gpu(
                         bitmap_y_write = GPUcircle.bitmap_y_write;
                         bitmap_write = GPUcircle.bitmap_write;
                     }
-                    gpu_active = 0;
                 }
 
                 case 5: {
                     // DRAW FILLED CIRCLE CENTRE (X,Y) with RADIUS PARAM0
-                    gpu_active = 1;
                     gpu_active_dithermode = gpu_dithermode;
                     GPUcircle.filledcircle = 1;
                     GPUcircle.start = 1;
@@ -250,12 +244,10 @@ algorithm gpu(
                         bitmap_y_write = GPUcircle.bitmap_y_write;
                         bitmap_write = GPUcircle.bitmap_write;
                     }
-                    gpu_active = 0;
                 }
 
                 case 6: {
                     // DRAW FILLED TRIANGLE WITH VERTICES (X,Y) (PARAM0,PARAM1) (PARAM2,PARAM3)
-                    gpu_active = 1;
                     gpu_active_dithermode = gpu_dithermode;
                     GPUtriangle.start = 1;
                     while( GPUtriangle.busy ) {
@@ -263,12 +255,10 @@ algorithm gpu(
                         bitmap_y_write = GPUtriangle.bitmap_y_write;
                         bitmap_write = GPUtriangle.bitmap_write;
                     }
-                    gpu_active = 0;
                 }
 
                 case 7: {
                     // BLIT 16 x 16 TILE PARAM0 TO (X,Y)
-                    gpu_active = 1;
                     gpu_active_dithermode = 0;
                     GPUblit.tilecharacter = 1;
                     GPUblit.start = 1;
@@ -277,13 +267,11 @@ algorithm gpu(
                         bitmap_y_write = GPUblit.bitmap_y_write;
                         bitmap_write = GPUblit.bitmap_write;
                     }
-                    gpu_active = 0;
                 }
 
 
                 case 8: {
                     // BLIT 8 x 8 CHARACTER PARAM0 TO (X,Y) as 8 x 8
-                    gpu_active = 1;
                     gpu_active_dithermode = 0;
                     GPUblit.tilecharacter = 0;
                     GPUblit.start = 1;
@@ -292,11 +280,9 @@ algorithm gpu(
                         bitmap_y_write = GPUblit.bitmap_y_write;
                         bitmap_write = GPUblit.bitmap_write;
                     }
-                    gpu_active = 0;
                 }
-
-                default: { gpu_active = 0; }
             }
+            gpu_active = 0;
         }
     }
 }
