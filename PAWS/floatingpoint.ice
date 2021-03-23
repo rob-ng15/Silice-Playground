@@ -45,18 +45,19 @@ algorithm fpu(
 ) <autorun> {
 
     inttofloat FPUfloat( a <: sourceReg1, rs2 <: rs2 );
-    floataddsub FPUaddsub();
-    floatmultiply FPUmultiply();
-    floatdivide FPUdivide();
-
-    // TEMPORARY STORAGE FFOR FUSED MUL / ADD / SUB OPERATIONS AND COMPARISIONS
-    uint32  workingresult = uninitialised;
-    uint1   comparison = uninitialised;
+    floataddsub FPUaddsub( a <: sourceReg1F, b <: sourceReg2F );
+    floatmultiply FPUmultiply( a <: sourceReg1F, b <: sourceReg2F );
+    floatdivide FPUdivide( a <: sourceReg1F, b <: sourceReg2F );
+    floatfused FPUfused( function7 <: function7, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F, sourceReg3F <: sourceReg3F );
+    floatsqrt FPUsqrt( sourceReg1F <: sourceReg1F );
+    floatcomparison FPUcomparison( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
+    floatsign FPUsign( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
 
     FPUfloat.start := 0;
     FPUaddsub.start := 0;
     FPUmultiply.start := 0;
     FPUdivide.start := 0;
+    FPUfused.start := 0;
 
     while(1) {
         if( start ) {
@@ -70,8 +71,6 @@ algorithm fpu(
                             // FADD.S
                             frd = 1;
                             FPUaddsub.addsub = 0;
-                            FPUaddsub.a = sourceReg1F;
-                            FPUaddsub.b = sourceReg2F;
                             FPUaddsub.start = 1;
                             while( FPUaddsub.busy ) {}
                             result = FPUaddsub.result;
@@ -80,8 +79,6 @@ algorithm fpu(
                             // FSUB.S
                             frd = 1;
                             FPUaddsub.addsub = 1;
-                            FPUaddsub.a = sourceReg1F;
-                            FPUaddsub.b = sourceReg2F;
                             FPUaddsub.start = 1;
                             while( FPUaddsub.busy ) {}
                             result = FPUaddsub.result;
@@ -89,8 +86,6 @@ algorithm fpu(
                         case 5b00010: {
                             // FMUL.S
                             frd = 1;
-                            FPUmultiply.a = sourceReg1F;
-                            FPUmultiply.b = sourceReg2F;
                             FPUmultiply.start = 1;
                             while( FPUmultiply.busy ) {}
                             result = FPUmultiply.result;
@@ -98,8 +93,6 @@ algorithm fpu(
                         case 5b00011: {
                             // FDIV.S
                             frd = 1;
-                            FPUdivide.a = sourceReg1F;
-                            FPUdivide.b = sourceReg2F;
                             FPUdivide.start = 1;
                             while( FPUdivide.busy ) {}
                             result = FPUdivide.result;
@@ -117,61 +110,22 @@ algorithm fpu(
                                 }
                             } else {
                                 // FIRST APPROXIMATIONS IS 1
-                                result = 32h3f800000;
-                                workingresult = sourceReg1F;
-                                ++:
-                                // LOOP UNTIL MANTISSAS ACROSS ITERATIONS ARE APPROXIMATELY EQUAL
-                                while( result[1,31] != workingresult[1,31] ) {
-                                    // x(i+1 ) = ( x(i) + n / x(i) ) / 2;
-                                    // DO n/x(i)
-                                    FPUdivide.a = sourceReg1F;
-                                    FPUdivide.b = result;
-                                    FPUdivide.start = 1;
-                                    while( FPUdivide.busy ) {}
-                                    workingresult = FPUdivide.result;
-
-                                    // DO x(i) + n/x(i)
-                                    FPUaddsub.addsub = 0;
-                                    FPUaddsub.a = result;
-                                    FPUaddsub.b = workingresult;
-                                    FPUaddsub.start = 1;
-                                    while( FPUaddsub.busy ) {}
-                                    result = FPUaddsub.result;
-
-                                    // DO (x(i) + n/x(i))/2
-                                    FPUdivide.a = workingresult;
-                                    FPUdivide.b = 32h40000000;
-                                    FPUdivide.start = 1;
-                                    while( FPUdivide.busy ) {}
-                                    result = FPUdivide.result;
-                                }
+                                FPUsqrt.start = 1;
+                                while( FPUsqrt.busy ) {}
+                                result = FPUsqrt.result;
                             }
                         }
                         case 5b00100: {
                             // FSGNJ.S FNGNJN.S FSGNJX.S
                             frd = 1;
-                            switch( function3 ) {
-                                case 3b000: {
-                                    // FSGNJ.S
-                                    result = { sourceReg2F[31,1] ? 1b1 : 1b0, sourceReg1F[0,31] };
-                                }
-                                case 3b001: {
-                                    // FSGNJN.S
-                                    result = { sourceReg2F[31,1] ? 1b0 : 1b1, sourceReg1F[0,31] };
-                                }
-                                case 3b010: {
-                                    // FSGNJX.S
-                                    result = { sourceReg1F[31,1] ^ sourceReg2F[31,1], sourceReg1F[0,31] };
-                                }
-                            }
+                            result = FPUsign.result;
                         }
                         case 5b00101: {
                             // FMIN.S FMAX.S
                             frd = 1;
-                            comparison = ( sourceReg1F[31,1] != sourceReg2F[31,1] ) ? sourceReg1F[31,1] && ((( sourceReg1F | sourceReg2F ) << 1) != 0 ) : ( sourceReg1F != sourceReg2F ) && ( sourceReg1F[31,1] ^ ( sourceReg1F < sourceReg2F));
                             switch( function3[0,1] ) {
-                                case 0: { result = comparison ? sourceReg1F : sourceReg2F; }
-                                case 1: { result = comparison ? sourceReg2F : sourceReg1F; }
+                                case 0: { result = FPUcomparison.comparison ? sourceReg1F : sourceReg2F; }
+                                case 1: { result = FPUcomparison.comparison ? sourceReg2F : sourceReg1F; }
                             }
                         }
                         case 5b11000: {
@@ -187,21 +141,7 @@ algorithm fpu(
                         case 5b10100: {
                             // FEQ.S FLT.S FLE.S
                             frd = 0;
-                            switch( function3 ) {
-                                case 3b000: {
-                                    // LESS THAN EQUAL OMPARISON OF 2 FLOATING POINT NUMBERS
-                                    comparison = ( sourceReg1F[31,1] != sourceReg2F[31,1] ) ? sourceReg1F[31,1] || ((( sourceReg1F | sourceReg2F ) << 1) == 0 ) : ( sourceReg1F == sourceReg2F ) || ( sourceReg1F[31,1] ^ ( sourceReg1F < sourceReg2F ));
-                                }
-                                case 3b001: {
-                                    // LESS THAN COMPARISON OF 2 FLOATING POINT NUMBERS
-                                    comparison = ( sourceReg1F[31,1] != sourceReg2F[31,1] ) ? sourceReg1F[31,1] && ((( sourceReg1F | sourceReg2F ) << 1) != 0 ) : ( sourceReg1F != sourceReg2F ) && ( sourceReg1F[31,1] ^ ( sourceReg1F < sourceReg2F));
-                                }
-                                case 3b010: {
-                                    // EQUAL COMPARISON OF 2 FLOATING POINT NUMBERS
-                                    comparison = ( sourceReg1F == sourceReg2F ) || ((( sourceReg1F | sourceReg2F ) << 1) == 0 );
-                                }
-                            }
-                            result = { 31b0, comparison };
+                            result = { 31b0, FPUcomparison.comparison };
                         }
                         case 5b11100: {
                             // FCLASS.S
@@ -223,18 +163,9 @@ algorithm fpu(
                         default: {
                             // FMADD.S FMSUB.S FNMSUB.S FNMADD.S
                             frd = 1;
-                            FPUmultiply.a = function7[3,1] ? { ~sourceReg1F[31,1], sourceReg1F[0,31] } : sourceReg1F;
-                            FPUmultiply.b = sourceReg2F;
-                            FPUmultiply.start = 1;
-                            while( FPUmultiply.busy ) {}
-                            workingresult = FPUmultiply.result;
-
-                            FPUaddsub.addsub = ( function7[2,1] == function7[3,1] ) ? 0 : 1;
-                            FPUaddsub.a = workingresult;
-                            FPUaddsub.b = sourceReg3F;
-                            FPUaddsub.start = 1;
-                            while( FPUaddsub.busy ) {}
-                            result = FPUaddsub.result;
+                            FPUfused.start = 1;
+                            while( FPUfused.busy ) {}
+                            result = FPUfused.result;
                         }
                     }
                 }
@@ -550,6 +481,144 @@ algorithm floatdivide(
             }
 
             busy = 0;
+        }
+    }
+}
+
+algorithm floatfused(
+    input   uint1   start,
+    output! uint1   busy,
+
+    input   uint7   function7,
+    input   uint32  sourceReg1F,
+    input   uint32  sourceReg2F,
+    input   uint32  sourceReg3F,
+    output  uint32  result,
+) <autorun> {
+    uint32  workingresult = uninitialised;
+    floatmultiply FPUmultiply( b <: sourceReg2F, result :> workingresult );
+    floataddsub FPUaddsub( a <: workingresult, b <: sourceReg3F, result :> result );
+
+    FPUmultiply.a := function7[3,1] ? { ~sourceReg1F[31,1], sourceReg1F[0,31] } : sourceReg1F;
+    FPUaddsub.addsub := ( function7[2,1] == function7[3,1] ) ? 0 : 1;
+
+    FPUmultiply.start := 0;
+    FPUaddsub.start := 0;
+
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+
+            FPUmultiply.start = 1;
+            while( FPUmultiply.busy ) {}
+            FPUaddsub.start = 1;
+            while( FPUaddsub.busy ) {}
+
+            busy = 0;
+        }
+    }
+}
+
+algorithm floatsqrt(
+    input   uint1   start,
+    output! uint1   busy,
+
+    input   uint32  sourceReg1F,
+    output  uint32  result,
+) <autorun> {
+    uint32  workingresult = uninitialised;
+    floatdivide FPUdivide( );
+    floataddsub FPUaddsub( );
+
+    FPUdivide.start := 0;
+    FPUaddsub.start := 0;
+
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+
+            // FIRST APPROXIMATIONS IS 1
+            result = 32h3f800000;
+            workingresult = sourceReg1F;
+            ++:
+            // LOOP UNTIL MANTISSAS ACROSS ITERATIONS ARE APPROXIMATELY EQUAL
+            while( result[1,31] != workingresult[1,31] ) {
+                // x(i+1 ) = ( x(i) + n / x(i) ) / 2;
+                // DO n/x(i)
+                FPUdivide.a = sourceReg1F;
+                FPUdivide.b = result;
+                FPUdivide.start = 1;
+                while( FPUdivide.busy ) {}
+                workingresult = FPUdivide.result;
+
+                // DO x(i) + n/x(i)
+                FPUaddsub.addsub = 0;
+                FPUaddsub.a = result;
+                FPUaddsub.b = workingresult;
+                FPUaddsub.start = 1;
+                while( FPUaddsub.busy ) {}
+                result = FPUaddsub.result;
+
+                // DO (x(i) + n/x(i))/2
+                FPUdivide.a = workingresult;
+                FPUdivide.b = 32h40000000;
+                FPUdivide.start = 1;
+                while( FPUdivide.busy ) {}
+                result = FPUdivide.result;
+            }
+
+            busy = 0;
+        }
+    }
+}
+algorithm floatcomparison(
+    input   uint3   function3,
+    input   uint32  sourceReg1F,
+    input   uint32  sourceReg2F,
+    output  uint1   comparison,
+) <autorun> {
+    while(1) {
+        switch( function3 ) {
+            case 3b000: {
+                // LESS THAN EQUAL OMPARISON OF 2 FLOATING POINT NUMBERS
+                comparison = ( sourceReg1F[31,1] != sourceReg2F[31,1] ) ? sourceReg1F[31,1] || ((( sourceReg1F | sourceReg2F ) << 1) == 0 ) : ( sourceReg1F == sourceReg2F ) || ( sourceReg1F[31,1] ^ ( sourceReg1F < sourceReg2F ));
+            }
+            case 3b001: {
+                // LESS THAN COMPARISON OF 2 FLOATING POINT NUMBERS
+                comparison = ( sourceReg1F[31,1] != sourceReg2F[31,1] ) ? sourceReg1F[31,1] && ((( sourceReg1F | sourceReg2F ) << 1) != 0 ) : ( sourceReg1F != sourceReg2F ) && ( sourceReg1F[31,1] ^ ( sourceReg1F < sourceReg2F));
+            }
+            case 3b010: {
+                // EQUAL COMPARISON OF 2 FLOATING POINT NUMBERS
+                comparison = ( sourceReg1F == sourceReg2F ) || ((( sourceReg1F | sourceReg2F ) << 1) == 0 );
+            }
+        }
+    }
+}
+
+algorithm floatsign(
+    input   uint3   function3,
+    input   uint32  sourceReg1F,
+    input   uint32  sourceReg2F,
+    output  uint32  result,
+) <autorun> {
+    while(1) {
+        switch( function3 ) {
+            case 3b000: {
+                // FSGNJ.S
+                result = { sourceReg2F[31,1] ? 1b1 : 1b0, sourceReg1F[0,31] };
+            }
+            case 3b001: {
+                // FSGNJN.S
+                result = { sourceReg2F[31,1] ? 1b0 : 1b1, sourceReg1F[0,31] };
+            }
+            case 3b010: {
+                // FSGNJX.S
+                result = { sourceReg1F[31,1] ^ sourceReg2F[31,1], sourceReg1F[0,31] };
+            }
         }
     }
 }

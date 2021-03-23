@@ -286,16 +286,12 @@ algorithm aluI(
             switch( function3 ) {
                 case 3b001: {
                     ALUIb001.start = 1;
-                    if( ALUIb001.busy ) {
-                        while( ALUIb001.busy ) {}
-                    }
+                    while( ALUIb001.busy ) {}
                     result = ALUIb001.result;
                 }
                 case 3b101: {
                     ALUIb101.start = 1;
-                    if( ALUIb101.busy ) {
-                        while( ALUIb101.busy ) {}
-                    }
+                    while( ALUIb101.busy ) {}
                     result = ALUIb101.result;
                 }
                 default: {
@@ -540,6 +536,38 @@ algorithm aluR000(
         result = sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 );
     }
 }
+algorithm aluR001(
+    output! uint1   busy,
+    input   int32   sourceReg1,
+    input   int32   sourceReg2,
+    input   int32   sourceReg3,
+    input   uint1   FUNNELbusy,
+    input   int32   FUNNELoutput,
+    input   int32   LSHIFToutput,
+    input   uint2   function2,
+    output  int32   result
+) <autorun> {
+    busy = 0;
+    while(1) {
+        switch( function2 ) {
+            case 2b11: {
+                // CMIX
+                result = ( sourceReg1 & sourceReg2 ) | ( sourceReg3 & ~sourceReg2 );
+            }
+            case 2b10: {
+                // FSL
+                busy = 1;
+                while( FUNNELbusy ) {}
+                result = FUNNELoutput;
+                busy = 0;
+            }
+            default: {
+                // ROL SLL SLO
+                result = LSHIFToutput;
+            }
+        }
+    }
+}
 algorithm aluR010(
     input   int32   sourceReg1,
     input   int32   sourceReg2,
@@ -573,6 +601,38 @@ algorithm aluR100(
         switch( function7 ) {
             case 7b0010000: { result = { sourceReg1[2,30], 2b00 } + sourceReg2; }
             default: { result = sourceReg1 ^ ( ( function7[5,1] == 1 ) ? ~sourceReg2 : sourceReg2 ); }
+        }
+    }
+}
+algorithm aluR101(
+    output! uint1   busy,
+    input   int32   sourceReg1,
+    input   int32   sourceReg2,
+    input   int32   sourceReg3,
+    input   uint1   FUNNELbusy,
+    input   int32   FUNNELoutput,
+    input   int32   RSHIFToutput,
+    input   uint2   function2,
+    output  int32   result
+) <autorun> {
+    busy = 0;
+    while(1) {
+        switch( function2 ) {
+            case 2b11: {
+                // CMOV
+                result = ( sourceReg2 != 0 ) ? sourceReg1 : sourceReg3;
+            }
+            case 2b10: {
+                // FSR
+                busy = 1;
+                while( FUNNELbusy ) {}
+                result = FUNNELoutput;
+                busy = 0;
+            }
+            default: {
+                // ROR SRL SRA SRO
+                result = RSHIFToutput;
+            }
         }
     }
 }
@@ -701,6 +761,44 @@ algorithm aluR (
         sourceReg2 <: sourceReg2,
         function7 <: function7
     );
+    aluR001 ALUR001(
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        sourceReg3 <: sourceReg3,
+        FUNNELbusy <: FUNNELbusy,
+        FUNNELoutput <: FUNNELoutput,
+        LSHIFToutput <: LSHIFToutput,
+        function2 <: function2
+    );
+    aluR010 ALUR010(
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        function7 <: function7
+    );
+    aluR011 ALUR011(
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        rs1 <: rs1
+    );
+    aluR100 ALUR100(
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        function7 <: function7
+    );
+    aluR101 ALUR101(
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        sourceReg3 <: sourceReg3,
+        FUNNELbusy <: FUNNELbusy,
+        FUNNELoutput <: FUNNELoutput,
+        RSHIFToutput <: RSHIFToutput,
+        function2 <: function2
+    );
+    aluR110 ALUR110(
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        function7 <: function7
+    );
     aluR111 ALUR111(
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
@@ -774,63 +872,28 @@ algorithm aluR (
                             result = ALUR000.result;
                         }
                         case 3b001: {
-                            switch( function2 ) {
-                                case 2b11: {
-                                    // CMIX
-                                    result = ( sourceReg1 & sourceReg2 ) | ( sourceReg3 & ~sourceReg2 );
-                                }
-                                case 2b10: {
-                                    // FSL
-                                    while( FUNNELbusy ) {}
-                                    result = FUNNELoutput;
-                                }
-                                default: {
-                                    // ROL SLL SLO
-                                    result = LSHIFToutput;
-                                }
-                            }
+                            while( ALUR001.busy ) {}
+                            result = ALUR001.result;
                         }
                         case 3b010: {
                             // SLT SH1ADD
-                            switch( function7 ) {
-                                case 7b0000000: { result = __signed( sourceReg1 ) < __signed(sourceReg2) ? 32b1 : 32b0; }
-                                case 7b0010000: { result = { sourceReg1[1,31], 1b0 } + sourceReg2; }
-                            }
+                            result = ALUR010.result;
                         }
                         case 3b011: {
                             // SLTU
-                            result = ( rs1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 32b1 : 32b0 );
+                            result = ALUR011.result;
                         }
                         case 3b100: {
                             // SH2ADD XOR XNOR
-                            switch( function7 ) {
-                                case 7b0010000: { result = { sourceReg1[2,30], 2b00 } + sourceReg2; }
-                                default: { result = sourceReg1 ^ ( ( function7[5,1] == 1 ) ? ~sourceReg2 : sourceReg2 ); }
-                            }
+                            result = ALUR100.result;
                         }
                         case 3b101: {
-                            switch( function2 ) {
-                                case 2b11: {
-                                    // CMOV
-                                    result = ( sourceReg2 != 0 ) ? sourceReg1 : sourceReg3;
-                                }
-                                case 2b10: {
-                                    // FSR
-                                    while( FUNNELbusy ) {}
-                                    result = FUNNELoutput;
-                                }
-                                default: {
-                                    // ROR SRL SRA SRO
-                                    result = RSHIFToutput;
-                                }
-                            }
+                            while( ALUR101.busy ) {}
+                            result = ALUR101.result;
                         }
                         case 3b110: {
                             // SH3ADD OR ORN
-                            switch( function7 ) {
-                                case 7b0010000: { result = { sourceReg1[3,29], 3b000 } + sourceReg2; }
-                                default: { result = sourceReg1 | ( ( function7[5,1] == 1 ) ? ~sourceReg2 : sourceReg2 ); }
-                            }
+                            result = ALUR110.result;
                         }
                         case 3b111: {
                             // AND ANDN
@@ -973,7 +1036,7 @@ algorithm alu(
     while(1) {
         if( start ) {
             // START SHARED MULTICYCLE BLOCKS - SHFL UNSHFL GORC GREV FUNNEL ( need to correctly specify start of funnel shifts )
-            FUNNEL.start = ( function3 == 3b001 ) || ( function3 == 3b101 ) ? 1 : 0;
+            FUNNEL.start = ( ( function3 == 3b001 ) || ( function3 == 3b101 ) ) && ( function2 == 2b10 ) ? 1 : 0;
             SHFLUNSHFL.start = ( ( ( function3 == 3b001 ) || ( function3 == 3b101 ) ) && ( function7 == 7b0000100 ) ) ? 1 : 0;
             GREVGORC.start = ( ( function3 == 3b101 ) && ( ( function7 == 7b0110100 ) || ( function7 == 7b0010100 ) ) ) ? 1 : 0;
 
