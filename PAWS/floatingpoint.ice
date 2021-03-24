@@ -100,20 +100,10 @@ algorithm fpu(
                         case 5b010011: {
                             // FSQRT.S
                             frd = 1;
-                            if( ( floatingpointnumber( sourceReg1F ).exponent == 0 ) || ( sourceReg1F[31,1] ) ) {
-                                if( sourceReg1F[31,1] ) {
-                                    // NEGATIVE
-                                    result = { sourceReg1F[31,1], 8b11111111, 23b0 };
-                                } else {
-                                    // ZERO
-                                    result = 0;
-                                }
-                            } else {
-                                // FIRST APPROXIMATIONS IS 1
-                                FPUsqrt.start = 1;
-                                while( FPUsqrt.busy ) {}
-                                result = FPUsqrt.result;
-                            }
+                            // FIRST APPROXIMATIONS IS 1
+                            FPUsqrt.start = 1;
+                            while( FPUsqrt.busy ) {}
+                            result = FPUsqrt.result;
                         }
                         case 5b00100: {
                             // FSGNJ.S FNGNJN.S FSGNJX.S
@@ -541,40 +531,51 @@ algorithm floatsqrt(
         if( start ) {
             busy = 1;
 
-            // FIRST APPROXIMATIONS IS 1
-            result = 32h3f800000;
-            workingresult = sourceReg1F;
-            ++:
-            // LOOP UNTIL MANTISSAS ACROSS ITERATIONS ARE APPROXIMATELY EQUAL
-            while( result[1,31] != workingresult[1,31] ) {
-                // x(i+1 ) = ( x(i) + n / x(i) ) / 2;
-                // DO n/x(i)
-                FPUdivide.a = sourceReg1F;
-                FPUdivide.b = result;
-                FPUdivide.start = 1;
-                while( FPUdivide.busy ) {}
-                workingresult = FPUdivide.result;
+            if( ( floatingpointnumber( sourceReg1F ).exponent == 0 ) || ( sourceReg1F[31,1] ) ) {
+                if( sourceReg1F[31,1] ) {
+                    // NEGATIVE
+                    result = { sourceReg1F[31,1], 8b11111111, 23b0 };
+                } else {
+                    // ZERO
+                    result = 0;
+                }
+            } else {
+                // FIRST APPROXIMATIONS IS 1
+                result = 32h3f800000;
+                workingresult = sourceReg1F;
+                ++:
+                // LOOP UNTIL MANTISSAS ACROSS ITERATIONS ARE APPROXIMATELY EQUAL
+                while( result[1,31] != workingresult[1,31] ) {
+                    // x(i+1 ) = ( x(i) + n / x(i) ) / 2;
+                    // DO n/x(i)
+                    FPUdivide.a = sourceReg1F;
+                    FPUdivide.b = result;
+                    FPUdivide.start = 1;
+                    while( FPUdivide.busy ) {}
+                    workingresult = FPUdivide.result;
 
-                // DO x(i) + n/x(i)
-                FPUaddsub.addsub = 0;
-                FPUaddsub.a = result;
-                FPUaddsub.b = workingresult;
-                FPUaddsub.start = 1;
-                while( FPUaddsub.busy ) {}
-                result = FPUaddsub.result;
+                    // DO x(i) + n/x(i)
+                    FPUaddsub.addsub = 0;
+                    FPUaddsub.a = result;
+                    FPUaddsub.b = workingresult;
+                    FPUaddsub.start = 1;
+                    while( FPUaddsub.busy ) {}
+                    result = FPUaddsub.result;
 
-                // DO (x(i) + n/x(i))/2
-                FPUdivide.a = workingresult;
-                FPUdivide.b = 32h40000000;
-                FPUdivide.start = 1;
-                while( FPUdivide.busy ) {}
-                result = FPUdivide.result;
+                    // DO (x(i) + n/x(i))/2
+                    FPUdivide.a = workingresult;
+                    FPUdivide.b = 32h40000000;
+                    FPUdivide.start = 1;
+                    while( FPUdivide.busy ) {}
+                    result = FPUdivide.result;
+                }
             }
 
             busy = 0;
         }
     }
 }
+
 algorithm floatcomparison(
     input   uint3   function3,
     input   uint32  sourceReg1F,
