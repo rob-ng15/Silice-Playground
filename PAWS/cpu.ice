@@ -54,7 +54,7 @@ algorithm PAWSCPU (
     output  uint32  address,
     output  uint16  writedata,
     output  uint1   writememory,
-    input!  uint16  readdata,
+    input   uint16  readdata,
     output  uint1   readmemory,
 
     input   uint1   memorybusy,
@@ -392,8 +392,8 @@ algorithm PAWSCPU (
 
 // ON CPU SMALL INSTRUCTION CACHE
 algorithm instructioncache(
-    input!  uint32  PC,
-    input!  uint1   SMT,
+    input   uint32  PC,
+    input   uint1   SMT,
 
     output  uint1   incache,
 

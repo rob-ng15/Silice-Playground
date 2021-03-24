@@ -59,9 +59,9 @@ algorithm decoder(
     output  uint3   function3,
     output  uint7   function7,
 
-    output! uint5   rs1,
-    output! uint5   rs2,
-    output! uint5   rs3,
+    output  uint5   rs1,
+    output  uint5   rs2,
+    output  uint5   rs3,
     output  uint5   rd,
 
     output  int32   immediateValue,

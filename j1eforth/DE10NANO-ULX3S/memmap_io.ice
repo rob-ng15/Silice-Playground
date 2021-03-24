@@ -71,7 +71,7 @@ $$end
     input   uint16  writeData,
     input   uint1   memoryWrite,
     input   uint1   memoryRead,
-    output! uint16  readData
+    output  uint16  readData
 ) <autorun> {
     // LATCH MEMORYREAD MEMORYWRITE
     uint1   LATCHmemoryRead = uninitialized;

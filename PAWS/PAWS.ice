@@ -311,33 +311,3 @@ algorithm sdramcontroller(
         }
     }
 }
-
-algorithm cache(
-    input   uint32  readaddress,
-    output  uint1   cachetagmatch,
-    output  uint16  readdata,
-
-    input   uint32  writeaddress,
-    input   uint16  writedata,
-    input   uint1   update
-) <autorun> {
-    // CACHE for SDRAM 32k
-    // CACHE LINE IS LOWER 15 bits ( 0 - 32767 ) of address, dropping the BYTE address bit
-    // CACHE TAG IS REMAINING 11 bits of the 26 bit address + 1 bit for valid flag
-    simple_dualport_bram uint28 cache <input!> [16384] = uninitialized;
-
-    // FLAGS FOR CACHE ACCESS
-    cache.wenable1 := 1; cache.addr0 := readaddress[1,14];
-
-    // CACHE TAG match flag and read output
-    cachetagmatch := ( cache.rdata0[16,12] == { 1b1, readaddress[15,11] } ) ? 1 : 0;
-    readdata = cache.rdata0[0,16];
-
-    while(1) {
-        if( update ) {
-            // WRITE RESULT TO CACHE
-            cache.addr1 = writeaddress[1,14];
-            cache.wdata1 = { 1b1, writeaddress[15,11], writedata };
-        }
-    }
-}

@@ -41,7 +41,7 @@ algorithm memmap_io (
     input   uint1   memoryRead,
 
     input   uint16  writeData,
-    output! uint32  readData,
+    output  uint32  readData,
 
     // SMT STATUS
     output  uint1   SMTRUNNING,

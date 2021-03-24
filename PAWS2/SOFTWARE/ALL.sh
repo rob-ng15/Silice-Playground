@@ -1,3 +1,0 @@
-./clangall.sh
-./compileall.sh
-
