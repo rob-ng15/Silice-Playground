@@ -1,15 +1,15 @@
 // RISC-V REGISTERS
 algorithm registers(
     input   uint1   SMT,
-    input!  uint5   rs1,
-    input!  uint5   rs2,
-    input!  uint5   rs3,
+    input  uint5   rs1,
+    input  uint5   rs2,
+    input  uint5   rs3,
     input   uint5   rd,
     input   uint1   write,
     input   int32   result,
-    output! int32   sourceReg1,
-    output! int32   sourceReg2,
-    output! int32   sourceReg3
+    output int32   sourceReg1,
+    output int32   sourceReg2,
+    output int32   sourceReg3
 ) <autorun> {
     // RISC-V REGISTERS
     simple_dualport_bram int32 registers_1 <input!> [64] = { 0, pad(0) };
@@ -88,7 +88,7 @@ algorithm addressgenerator(
     input   uint32  instruction,
     input   uint32  pc,
     input   uint1   compressed,
-    input!  int32   sourceReg1,
+    input   int32   sourceReg1,
     input   int32   immediateValue,
 
     output  uint32  nextPC,
@@ -151,7 +151,7 @@ algorithm branchcomparison(
 // COMPRESSED INSTRUCTION EXPANSION
 algorithm compressed(
     input   uint16  i16,
-    output! uint32  i32
+    output  uint32  i32
 ) <autorun> {
     while(1) {
         switch( i16[0,2] ) {
@@ -356,15 +356,11 @@ circuitry halfhalfword(
 // BIT MANIPULATION CIRCUITS
 // BARREL SHIFTERS / ROTATORS
 algorithm BSHIFTleft(
-    //input   uint1   start,
-
     input   uint32  sourceReg1,
     input   uint5   shiftcount,
     input   uint7   function7,
     output! uint32  result
 ) <autorun> {
-    //uint1   bit := function7[4,1] ? 1b1 : 1b0;
-
     while(1) {
         switch( function7[4,2] ) {
             case 2b00: { result = sourceReg1 << shiftcount; }
@@ -374,15 +370,11 @@ algorithm BSHIFTleft(
     }
 }
 algorithm BSHIFTright(
-    //input   uint1   start,
-
     input   uint32  sourceReg1,
     input   uint5   shiftcount,
     input   uint7   function7,
     output! uint32  result
 ) <autorun> {
-    //uint1   bit := ( function7[4,2] == 2b10 ) ? sourceReg1[31,1] : ( function7[4,1] ? 1b1 : 1b0 );
-
     while(1) {
         switch( function7[4,2] ) {
             case 2b00: { result = sourceReg1 >> shiftcount; }
@@ -395,15 +387,11 @@ algorithm BSHIFTright(
 
 // SINGLE BIT OPERATIONS SET CLEAR INVERT
 algorithm singlebitops(
-    //input   uint1   start,
-
     input   uint32  sourceReg1,
     input   uint5   shiftcount,
     input   uint7   function7,
     output! uint32  result
 ) <autorun> {
-    //uint1   bit := ( function7[4,2] == 2b11 ) ? ( sourceReg1[shiftcount,1] ? 1b0 : 1b1 ) : ( function7[4,1] ? 1b1 : 1b0 );
-
     while(1) {
         switch( function7[4,2] ) {
             case 2b01: { result = sourceReg1 | ( 1 << shiftcount ); }

@@ -1058,7 +1058,7 @@ algorithm CSRblock(
     input   uint32  instruction,
     input   uint1   incCSRinstret,
     input   uint1   SMT,
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     // RDCYCLE[H] and RDTIME[H] are equivalent on PAWSCPU
     uint64  CSRtimer = 0;
@@ -1095,7 +1095,7 @@ algorithm aluA (
     input   uint32  memoryinput,
     input   uint32  sourceReg2,
 
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     while(1) {
         switch( function7[2,5] ) {

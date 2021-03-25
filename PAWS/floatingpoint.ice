@@ -28,7 +28,7 @@ bitfield floatingpointcsr{
 
 algorithm fpu(
     input   uint1   start,
-    output! uint1   busy,
+    output uint1   busy,
 
     input   uint7   opCode,
     input   uint3   function3,
@@ -40,8 +40,8 @@ algorithm fpu(
     input   uint32  sourceReg2F,
     input   uint32  sourceReg3F,
 
-    output! uint32  result,
-    output! uint1   frd
+    output uint32  result,
+    output uint1   frd
 ) <autorun> {
 
     inttofloat FPUfloat( a <: sourceReg1, rs2 <: rs2 );

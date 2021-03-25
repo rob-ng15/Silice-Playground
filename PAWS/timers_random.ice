@@ -1,6 +1,6 @@
 // Create 1hz (1 second counter, also can output the baseline 25MHz counter)
 algorithm pulse1hz(
-    output! uint16  counter1hz,
+    output  uint16  counter1hz,
     input   uint1   resetCounter
 ) <autorun> {
     uint26  counter25mhz = 0;
@@ -19,7 +19,7 @@ algorithm pulse1hz(
 
 // Create 1khz (1 milli-second counter)
 algorithm pulse1khz(
-    output! uint16  counter1khz,
+    output  uint16  counter1khz,
     input   uint16  resetCount
 ) <autorun> {
     uint16 counter25mhz = 0;
@@ -38,8 +38,8 @@ algorithm pulse1khz(
 // 16 bit random number generator
 // Translation into Silice of LFSR_Plus.v
 algorithm random(
-    output! uint16  g_noise_out,
-    output! uint16  u_noise_out,
+    output  uint16  g_noise_out,
+    output  uint16  u_noise_out,
 ) <autorun> {
     uint16  rand_out = 0;
     uint16  rand_ff = 24b011000110111011010011101;
