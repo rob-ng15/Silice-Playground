@@ -89,10 +89,10 @@ circuitry updatenumerator( input gpu_numerator, input gpu_active_x, input gpu_ac
 
 algorithm gpu(
     // GPU to SET and GET pixels
-    output! int11 bitmap_x_write,
-    output! int11 bitmap_y_write,
-    output! uint7 bitmap_colour_write,
-    output! uint1 bitmap_write,
+    output int11 bitmap_x_write,
+    output int11 bitmap_y_write,
+    output uint7 bitmap_colour_write,
+    output uint1 bitmap_write,
 
     // From j1eforth
     input   int11 gpu_x,
@@ -341,9 +341,9 @@ algorithm rectangle (
     input   int11   param0,
     input   int11   param1,
 
-    output!  uint11  bitmap_x_write,
-    output!  uint11  bitmap_y_write,
-    output!  uint1   bitmap_write,
+    output  uint11  bitmap_x_write,
+    output  uint11  bitmap_y_write,
+    output  uint1   bitmap_write,
 
     input   uint1   start,
     output  uint1   busy
@@ -394,9 +394,9 @@ algorithm line (
     input   int11   param0,
     input   int11   param1,
 
-    output!  uint11  bitmap_x_write,
-    output!  uint11  bitmap_y_write,
-    output!  uint1   bitmap_write,
+    output  uint11  bitmap_x_write,
+    output  uint11  bitmap_y_write,
+    output  uint1   bitmap_write,
 
     input   uint1   start,
     output  uint1   busy

@@ -910,7 +910,7 @@ algorithm aluR (
 // ALU - ALU for immediate-register operations and register-register operations
 algorithm alu(
     input   uint1   start,
-    output! uint1   busy,
+    output uint1   busy,
 
     input   uint7   opCode,
     input   uint2   function2,
@@ -923,7 +923,7 @@ algorithm alu(
     input   uint5   IshiftCount,
     input   uint32  immediateValue,
 
-    output! uint32  result
+    output uint32  result
 ) <autorun> {
     uint1   ALUIorR := ( opCode == 7b0010011 ) ? 1 : 0;
     uint5   shiftcount := ALUIorR ? IshiftCount : sourceReg2[0,5];
