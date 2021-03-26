@@ -7,7 +7,7 @@ algorithm apu(
 
     // Duration in ms, 1000 = 1 second,
     input   uint16  duration,
-    output! uint1   audio_active,
+    output  uint1   audio_active,
 
     // Activate the APU (select the channel, 1, 2 or 3(?) )
     input   uint1   apu_write,

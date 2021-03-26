@@ -3,13 +3,13 @@
 // UNSIGNED / SIGNED 32 by 32 bit division giving 32 bit remainder and quotient
 algorithm aluMdivideremain(
     input   uint1   start,
-    output! uint1   busy,
+    output uint1   busy,
 
     input   uint3   dosign,
     input   uint32  dividend,
     input   uint32  divisor,
 
-    output! uint32  result
+    output uint32  result
 ) <autorun> {
     uint32  quotient = uninitialized;
     uint32  remainder = uninitialized;
@@ -54,13 +54,13 @@ algorithm aluMdivideremain(
 // UNSIGNED / SIGNED 32 by 32 bit multiplication giving 64 bit product using DSP blocks
 algorithm aluMmultiply(
     input   uint1   start,
-    output! uint1   busy,
+    output uint1   busy,
 
     input   uint3   dosign,
     input   uint32  factor_1,
     input   uint32  factor_2,
 
-    output! uint32  result
+    output uint32  result
 ) <autorun> {
     uint2   dosigned := dosign[1,1] ? ( dosign[0,1] ? 0 : 2 ) : 1;
     uint1   productsign := ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );

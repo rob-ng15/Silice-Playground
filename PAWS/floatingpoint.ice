@@ -28,7 +28,7 @@ bitfield floatingpointcsr{
 
 algorithm fpu(
     input   uint1   start,
-    output uint1   busy,
+    output  uint1   busy,
 
     input   uint7   opCode,
     input   uint3   function3,
