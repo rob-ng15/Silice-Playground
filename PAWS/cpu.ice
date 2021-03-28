@@ -45,11 +45,6 @@ circuitry store( input accesssize, input location, input value, input memorybusy
 }
 
 algorithm PAWSCPU (
-    input   uint1   clock_cpualu,
-    input   uint1   clock_cpufpu,
-    input   uint1   clock_cpufunc,
-    input   uint1   clock_cpucache,
-
     output  uint3   accesssize,
     output  uint32  address,
     output  uint16  writedata,
@@ -77,9 +72,7 @@ algorithm PAWSCPU (
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
     uint1   compressed = uninitialized;
-    compressed COMPRESSED <@clock_cpufunc> (
-        i16 <: readdata
-    );
+    compressed COMPRESSED( );
 
     // RISC-V REGISTER WRITER
     int32   result = uninitialized;
@@ -100,7 +93,7 @@ algorithm PAWSCPU (
     uint5   rs2 = uninitialized;
     uint5   rs3 = uninitialized;
     uint5   rd = uninitialized;
-    decoder DECODER <@clock_cpufunc> (
+    decoder DECODER(
         instruction <: instruction,
         opCode :> opCode,
         function2 :> function2,
@@ -180,7 +173,7 @@ algorithm PAWSCPU (
     );
 
     // ALU
-    alu ALU <@clock_cpualu> (
+    alu ALU(
         opCode <: opCode,
         function2 <: function2,
         function3 <: function3,
@@ -194,14 +187,14 @@ algorithm PAWSCPU (
     );
 
     // ATOMIC MEMORY OPERATIONS
-    aluA ALUA <@clock_cpualu> (
+    aluA ALUA(
         function7 <: function7,
         memoryinput <: memoryinput,
         sourceReg2 <: sourceReg2
     );
 
     // FLOATING POINT OPERATIONS
-    fpu FPU <@clock_cpualu> (
+    fpu FPU(
         opCode <: opCode,
         function3 <: function3,
         function7 <: function7,
@@ -220,7 +213,7 @@ algorithm PAWSCPU (
     );
 
     // On CPU instruction cache - MAIN AND SMT THREADS
-    instructioncache Icache <@clock_cpucache> (
+    instructioncache Icache(
         PC <: PC,
         SMT <: SMT,
         newinstruction <: instruction,
@@ -254,11 +247,9 @@ algorithm PAWSCPU (
         } else {
             // FETCH + EXPAND COMPRESSED INSTRUCTIONS
             ( address, readmemory ) = fetch( PC, memorybusy );
-
             compressed = ( readdata[0,2] != 2b11 );
-
             switch( readdata[0,2] ) {
-                default: { instruction = COMPRESSED.i32; }
+                default: { COMPRESSED.i16 = readdata; ++: instruction = COMPRESSED.i32; }
                 case 2b11: {
                     // 32 BIT INSTRUCTION
                     instruction[0,16] = readdata;
@@ -272,6 +263,7 @@ algorithm PAWSCPU (
         }
 
         // TIME TO ALLOW DECODE + REGISTER FETCH + ADDRESS GENERATION
+        ++:
         ++:
         ++:
 

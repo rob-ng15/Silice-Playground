@@ -44,16 +44,10 @@ algorithm main(
 
     // CPU + MEMORY
     uint1   pll_lock_CPU = uninitialized;
-    uint1   cpu_clock = uninitialized;
     uint1   clock_memory = uninitialized;
-    uint1   clock_cpualu = uninitialized;
-    uint1   clock_cpufunc = uninitialized;
     ulx3s_clk_risc_ice_v_CPU clk_gen_CPU (
         clkin    <: clock,
-        clkCPU :> cpu_clock,
         clkMEMORY  :> clock_memory,
-        clkALUblock :> clock_cpualu,
-        clkCPUfunc :> clock_cpufunc,
         locked   :> pll_lock_CPU
     );
 
@@ -75,15 +69,11 @@ algorithm main(
 
     // SDRAM  CLOCKS + ON CPU CACHE + USB DOMAIN CLOCKS
     uint1   sdram_clock = uninitialized;
-    uint1   clock_cpucache = uninitialized;
-    uint1   clock_cpufpu = uninitialized;
     uint1   pll_lock_AUX = uninitialized;
     ulx3s_clk_risc_ice_v_AUX clk_gen_AUX (
         clkin   <: clock,
         clkSDRAM :> sdram_clock,
         clkSDRAMcontrol :> sdram_clk,
-        clkCPUcache :> clock_cpucache,
-        clkFPUblock :> clock_cpufpu,
         locked :> pll_lock_AUX
     );
     // SDRAM Reset
@@ -164,12 +154,7 @@ algorithm main(
     uint3   function3 = uninitialized;
     uint32  address = uninitialized;
     uint16  writedata = uninitialized;
-    PAWSCPU CPU <@cpu_clock> (
-        clock_cpualu <: clock_cpualu,
-        clock_cpufpu <: clock_cpufpu,
-        clock_cpufunc <: clock_cpufunc,
-        clock_cpucache <: clock_cpucache,
-
+    PAWSCPU CPU <@clock_memory> (
         accesssize :> function3,
         address :> address,
         writedata :> writedata,
@@ -179,7 +164,8 @@ algorithm main(
     );
 
     // SDRAM -> CPU BUSY STATE
-    CPU.memorybusy := sdram.busy || ( CPU.readmemory && ~address[28,1] && ~address[15,1] );
+    CPU.memorybusy := sdram.busy || CPU.readmemory || CPU.writememory;
+    //CPU.memorybusy := sdram.busy || ( CPU.readmemory && ~address[28,1] && ~address[15,1] );
 
     // I/O and RAM read/write flags - address[28,1] == 0 BRAM or I/O == 1 SDRAM, address[15,1] == 0 BRAM == 1 I/O
     sdram.writeflag := CPU.writememory && address[28,1];
