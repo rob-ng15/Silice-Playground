@@ -3,13 +3,13 @@
 // UNSIGNED / SIGNED 32 by 32 bit division giving 32 bit remainder and quotient
 algorithm aluMdivideremain(
     input   uint1   start,
-    output uint1   busy,
+    output  uint1   busy,
 
     input   uint3   dosign,
     input   uint32  dividend,
     input   uint32  divisor,
 
-    output uint32  result
+    output  uint32  result
 ) <autorun> {
     uint32  quotient = uninitialized;
     uint32  remainder = uninitialized;
@@ -54,13 +54,13 @@ algorithm aluMdivideremain(
 // UNSIGNED / SIGNED 32 by 32 bit multiplication giving 64 bit product using DSP blocks
 algorithm aluMmultiply(
     input   uint1   start,
-    output uint1   busy,
+    output  uint1   busy,
 
     input   uint3   dosign,
     input   uint32  factor_1,
     input   uint32  factor_2,
 
-    output uint32  result
+    output  uint32  result
 ) <autorun> {
     uint2   dosigned := dosign[1,1] ? ( dosign[0,1] ? 0 : 2 ) : 1;
     uint1   productsign := ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
@@ -103,7 +103,7 @@ algorithm aluIb001(
     input   uint32  SHFLUNSHFLoutput,
     input   uint1   SHFLUNSHFLbusy,
 
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     // COUNT LEADINGS 0s, TRAILING 0s, POPULATION
     clz CLZ(
@@ -196,7 +196,7 @@ algorithm aluIb101(
     input   uint1   SHFLUNSHFLbusy,
     input   uint32  GREVGORCoutput,
     input   uint1   GREVGORCbusy,
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     // START FLAGS FOR ALU SUB BLOCKS
     busy = 0;
@@ -249,7 +249,7 @@ algorithm aluI(
     input   uint32  GREVGORCoutput,
     input   uint1   GREVGORCbusy,
 
-    output! uint32   result
+    output  uint32   result
 ) <autorun> {
     // FUNCTION3 == 001 block
     aluIb001 ALUIb001(
@@ -324,7 +324,7 @@ algorithm aluR7b0010100 (
     input   uint32  GREVGORCoutput,
     input   uint1   GREVGORCbusy,
 
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     uint5   RshiftCount := sourceReg2[0,5];
 
@@ -367,7 +367,7 @@ algorithm aluR7b0000101 (
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
 
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     // CLMUL
     clmul CLMUL(
@@ -418,7 +418,7 @@ algorithm aluR7b0000100 (
     input   uint32  BEXTBDEPoutput,
     input   uint1   BEXTBDEPbusy,
 
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     uint5   RshiftCount := sourceReg2[0,5];
 
@@ -457,7 +457,7 @@ algorithm aluR7b0110100 (
     input   uint32  GREVGORCoutput,
     input   uint1   GREVGORCbusy,
 
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     uint5   RshiftCount := sourceReg2[0,5];
 
@@ -490,7 +490,7 @@ algorithm aluR7b0100100 (
     input   uint32  BEXTBDEPoutput,
     input   uint1   BEXTBDEPbusy,
 
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     uint5   RshiftCount := sourceReg2[0,5];
 
@@ -683,7 +683,7 @@ algorithm aluR (
     input   uint32  GREVGORCoutput,
     input   uint1   GREVGORCbusy,
 
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     // M EXTENSION MULTIPLICATION AND DIVISION
     aluMdivideremain ALUMD(
@@ -910,7 +910,7 @@ algorithm aluR (
 // ALU - ALU for immediate-register operations and register-register operations
 algorithm alu(
     input   uint1   start,
-    output uint1   busy,
+    output  uint1   busy,
 
     input   uint7   opCode,
     input   uint2   function2,
@@ -923,7 +923,7 @@ algorithm alu(
     input   uint5   IshiftCount,
     input   uint32  immediateValue,
 
-    output uint32  result
+    output  uint32  result
 ) <autorun> {
     uint1   ALUIorR := ( opCode == 7b0010011 ) ? 1 : 0;
     uint5   shiftcount := ALUIorR ? IshiftCount : sourceReg2[0,5];

@@ -224,12 +224,12 @@ circuitry normaliseexp( input sign, input exp, input number, output F32 ) {
 // CONVERT SIGNED/UNSIGNED INTEGERS TO FLOAT
 algorithm inttofloat(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint32  a,
     input   uint5   rs2,
 
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     uint1   sign = uninitialised;
     uint8   exp = uninitialised;
@@ -262,13 +262,13 @@ algorithm inttofloat(
 
 algorithm floataddsub(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint32  a,
     input   uint32  b,
     input   uint1   addsub,
 
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     uint1   sign = uninitialised;
     int16   expA = uninitialised;
@@ -373,12 +373,12 @@ algorithm floataddsub(
 
 algorithm floatmultiply(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint32  a,
     input   uint32  b,
 
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     uint1   productsign := a[31,1] ^ b[31,1];
     uint64  product := ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
@@ -418,12 +418,12 @@ algorithm floatmultiply(
 
 algorithm floatdivide(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint32  a,
     input   uint32  b,
 
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     uint1   quotientsign := a[31,1] ^ b[31,1];
     int16   quotientexp = uninitialised;
@@ -477,7 +477,7 @@ algorithm floatdivide(
 
 algorithm floatfused(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint7   function7,
     input   uint32  sourceReg1F,
@@ -513,7 +513,7 @@ algorithm floatfused(
 
 algorithm floatsqrt(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint32  sourceReg1F,
     output  uint32  result,

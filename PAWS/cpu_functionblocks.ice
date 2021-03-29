@@ -1,15 +1,15 @@
 // RISC-V REGISTERS
 algorithm registers(
     input   uint1   SMT,
-    input  uint5   rs1,
-    input  uint5   rs2,
-    input  uint5   rs3,
+    input   uint5   rs1,
+    input   uint5   rs2,
+    input   uint5   rs3,
     input   uint5   rd,
     input   uint1   write,
     input   int32   result,
-    output int32   sourceReg1,
-    output int32   sourceReg2,
-    output int32   sourceReg3
+    output  int32   sourceReg1,
+    output  int32   sourceReg2,
+    output  int32   sourceReg3
 ) <autorun> {
     // RISC-V REGISTERS
     simple_dualport_bram int32 registers_1 <input!> [64] = { 0, pad(0) };
@@ -359,7 +359,7 @@ algorithm BSHIFTleft(
     input   uint32  sourceReg1,
     input   uint5   shiftcount,
     input   uint7   function7,
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     while(1) {
         switch( function7[4,2] ) {
@@ -373,7 +373,7 @@ algorithm BSHIFTright(
     input   uint32  sourceReg1,
     input   uint5   shiftcount,
     input   uint7   function7,
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     while(1) {
         switch( function7[4,2] ) {
@@ -390,7 +390,7 @@ algorithm singlebitops(
     input   uint32  sourceReg1,
     input   uint5   shiftcount,
     input   uint7   function7,
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     while(1) {
         switch( function7[4,2] ) {
@@ -403,13 +403,13 @@ algorithm singlebitops(
 // FUNNEL SHIFT LEFT AND RIGHT
 algorithm funnelshift(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint32  sourceReg1,
     input   uint32  sourceReg3,
     input   uint6   shiftcount,
     input   uint7   function3,
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     uint32  A = uninitialised;
     uint32  B = uninitialised;
@@ -448,12 +448,12 @@ algorithm funnelshift(
 // GENERAL REVERSE / GENERAL OR CONDITIONAL
 algorithm grevgorc(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint32  sourceReg1,
     input   uint5   shiftcount,
     input   uint7   function7,
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     busy = 0;
 
@@ -497,12 +497,12 @@ circuitry shuffle32_stage(
 }
 algorithm shflunshfl(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint32  sourceReg1,
     input   uint5   shiftcount,
     input   uint3   function3,
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     uint3   count = uninitialized;
     uint2   i = uninitialized;
@@ -541,12 +541,12 @@ algorithm shflunshfl(
 // CARRYLESS MULTIPLY
 algorithm clmul(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint3   function3,
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     uint6   i = uninitialised;
     busy = 0;
@@ -573,12 +573,12 @@ algorithm clmul(
 // BITS EXTRACT / DEPOSIT / PLACE
 algorithm bextbdep(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
     input   uint7   function7,
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     uint6   i = uninitialised;
     uint6   j = uninitialised;
@@ -608,11 +608,11 @@ algorithm bextbdep(
 }
 algorithm bfp(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     uint5   length = uninitialised;
     uint6   offset = uninitialised;
@@ -640,11 +640,11 @@ algorithm bfp(
 // COUNT LEADING 0s, TRAILING 0s, POPULATION OF 1s
 algorithm clz(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint32  sourceReg1,
 
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     uint32  bitcount = uninitialized;
 
@@ -668,11 +668,11 @@ algorithm clz(
 }
 algorithm ctz(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint32  sourceReg1,
 
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     uint32  bitcount = uninitialized;
 
@@ -696,11 +696,11 @@ algorithm ctz(
 }
 algorithm cpop(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint32  sourceReg1,
 
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     uint32  bitcount = uninitialized;
 
@@ -726,12 +726,12 @@ algorithm cpop(
 // CRC32 and CRC32C for byte, half-word and word
 algorithm crc32(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint32  sourceReg1,
     input   uint5   IshiftCount,
 
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     uint6   nbits = uninitialised;
     uint6   i = uninitialised;
@@ -771,12 +771,12 @@ algorithm crc32(
 // XPERM for nibble, byte and half-word
 algorithm xperm(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint3   function3,
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
-    output! uint32  result
+    output  uint32  result
 ) <autorun> {
     uint3   sz_log2 = uninitialised;
     uint6   sz = uninitialised;

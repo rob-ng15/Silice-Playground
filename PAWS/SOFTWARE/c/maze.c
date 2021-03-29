@@ -330,53 +330,6 @@ void draw_pill( unsigned short steps ) {
     }
 }
 
-
-// CREATE A BLANK MAZE OF WIDTH x HEIGHT
-// ADD ENTRANCE AND EXIT AND GHOSTS
-void initialise_maze( unsigned short width, unsigned short height )
-{
-    unsigned short x,y;
-
-    // FILL WITH WALLS
-    for( x = 0; x < width; x++ ) {
-        for( y = 0; y < height; y++ ) {
-            setat( x, y, '#', 0 );
-            setat( x, y, '#', 1 );
-        }
-    }
-
-    // POSITION GHOSTS AT CENTRE
-    unsigned short potentialx, potentialy;
-
-    for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
-     // POSITION GHOSTS AT CENTRE - with slight offset
-        potentialx = width / 2; potentialy= height / 2;
-        switch( rng( 2 ) ) {
-            case 0:
-                potentialx -= 3 * rng( level );
-                potentialy += rng( level );
-                break;
-            case 1:
-                potentialx += 3 * rng( level );
-                potentialy -= rng( level );
-                break;
-        }
-        if( whatisat( potentialx, potentialy, 0 ) != ' ' )
-            potentialx--;
-        if( ghost <= level ) {
-            // AT CENTRE
-            ghostx[ ghost ] = potentialx;
-            ghosty[ ghost ] = potentialy;
-            ghostdirection[ ghost ] = ghost;
-        } else {
-            // OFF MAP
-            ghostx[ ghost ] = width + 1;
-            ghosty[ ghost ] = height - 3;
-            ghostdirection[ ghost ] = ghost;
-        }
-    }
-}
-
 // DRAW THE MAZE FULL SCREEN - USED DURING GENERATION
 void display_maze( unsigned short width, unsigned short height, unsigned short currentx, unsigned short currenty )
 {
@@ -418,6 +371,15 @@ void generate_maze( unsigned short width, unsigned short height ) {
     unsigned short x, y;
     unsigned short lastx, count;
 
+    // FILL WITH WALLS
+    for( x = 0; x < width; x++ ) {
+        for( y = 0; y < height; y++ ) {
+            setat( x, y, '#', 0 );
+            setat( x, y, '#', 1 );
+        }
+    }
+
+    // WORK DOWN LINE BY LINE
     for( y = 1; y < height - 1; y += 2 ) {
         lastx = 1;
         count = 1;
@@ -463,6 +425,43 @@ void generate_maze( unsigned short width, unsigned short height ) {
                 if( x != width - 3 ) {
                     setat( x + 1, y, ' ', 0 );
                 }
+            }
+        }
+    }
+
+    // POSITION 2,3,4 GHOSTS AT CENTRE 1 AT EXIT
+    unsigned short potentialx, potentialy;
+
+    for( unsigned short ghost = 0; ghost < 4; ghost++ ) {
+     // POSITION GHOSTS AT CENTRE - with slight offset
+        potentialx = width / 2; potentialy= height / 2;
+        if( ghost == 0 ) {
+           ghostx[ ghost ] = width - 3;
+           ghosty[ ghost ] = height - 3;
+           ghostdirection[ ghost ] = 3;
+        } else {
+            switch( rng( 2 ) ) {
+                case 0:
+                    potentialx -= 3 * rng( level );
+                    potentialy += rng( level );
+                    break;
+                case 1:
+                    potentialx += 3 * rng( level );
+                    potentialy -= rng( level );
+                    break;
+            }
+            if( whatisat( potentialx, potentialy, 0 ) != ' ' )
+                potentialx--;
+            if( ghost <= level ) {
+                // AT CENTRE
+                ghostx[ ghost ] = potentialx;
+                ghosty[ ghost ] = potentialy;
+                ghostdirection[ ghost ] = ghost;
+            } else {
+                // OFF MAP
+                ghostx[ ghost ] = width + 1;
+                ghosty[ ghost ] = height - 3;
+                ghostdirection[ ghost ] = ghost;
             }
         }
     }
@@ -709,7 +708,7 @@ void drawright( unsigned short steps, unsigned char totheright ) {
 unsigned short walk_maze( unsigned short width, unsigned short height )
 {
     // SET START LOCATION TO TOP LEFT FACING EAST
-    unsigned short newx = 1, newy = 1, direction = 1, newdirection = 1, currentx = 1, currenty = 1, visiblesteps, mappeeks = 4, peekactive = 0, dead = 0;
+    unsigned short newx = 1, newy = 1, direction = 1, newdirection = 1, currentx = 1, currenty = 1, visiblesteps, mappeeks = 4, peekactive = 100, dead = 0;
     short steps;
     unsigned char ghostdrawn;
 
@@ -912,7 +911,6 @@ int main( void ) {
         // GENERATE THE MAZE
         gpu_cs();
         tpu_printf_centre( 29, TRANSPARENT, YELLOW, "Generating Maze" );
-        initialise_maze( levelwidths[level], levelheights[level] );
         generate_maze( levelwidths[level], levelheights[level] );
         display_maze( levelwidths[level], levelheights[level], 1, 1 );
 
