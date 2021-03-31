@@ -39,15 +39,21 @@ algorithm main(
     output! uint13 sdram_a,
     output! uint1  sdram_clk,  // sdram chip clock != internal sdram_clock
     inout   uint16 sdram_dq
-) <@clock_memory> {
+) <@clock_system> {
     // CLOCK/RESET GENERATION
 
     // CPU + MEMORY
     uint1   pll_lock_CPU = uninitialized;
-    uint1   clock_memory = uninitialized;
+    uint1   clock_system = uninitialized;
+    uint1   clock_100_1 = uninitialized;
+    uint1   clock_100_2 = uninitialized;
+    uint1   clock_100_3 = uninitialized;
     ulx3s_clk_risc_ice_v_CPU clk_gen_CPU (
         clkin    <: clock,
-        clkMEMORY  :> clock_memory,
+        clkSYSTEM  :> clock_system,
+        clk100_1  :> clock_100_1,
+        clk100_2  :> clock_100_2,
+        clk100_3  :> clock_100_3,
         locked   :> pll_lock_CPU
     );
 
@@ -107,13 +113,13 @@ algorithm main(
 
     // SDRAM and BRAM (for BIOS)
     // FUNCTION3 controls byte read/writes
-    sdramcontroller sdram <@clock_memory> (
+    sdramcontroller sdram <@clock_system> (
         sio <:> sio_halfrate,
         function3 <: function3,
         address <: address,
         writedata <: writedata,
     );
-    bramcontroller ram <@clock_memory> (
+    bramcontroller ram <@clock_system> (
         function3 <: function3,
         address <: address,
         writedata <: writedata,
@@ -122,7 +128,7 @@ algorithm main(
     // MEMORY MAPPED I/O + SMT CONTROLS
     uint1   SMTRUNNING = uninitialized;
     uint32  SMTSTARTPC = uninitialized;
-    memmap_io IO_Map <@clock_memory> (
+    memmap_io IO_Map <@clock_system> (
         gn <: gn,
         gp :> gp,
         leds :> leds,
@@ -154,7 +160,9 @@ algorithm main(
     uint3   function3 = uninitialized;
     uint32  address = uninitialized;
     uint16  writedata = uninitialized;
-    PAWSCPU CPU <@clock_memory> (
+    PAWSCPU CPU <@clock_system> (
+        clock_100mhz <: clock_100_1,
+
         accesssize :> function3,
         address :> address,
         writedata :> writedata,
