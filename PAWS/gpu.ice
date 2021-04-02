@@ -1,19 +1,3 @@
-// CALCULATE IF A PIXEL IS INSIDE THE TRIANGLE BEING DRAWN
-circuitry insideTriangle( input sx, input sy, input x, input y, input x1, input y1, input x2, input y2, output inside ) {
-    inside = ( (( x2 - x1 ) * ( sy - y1 ) - ( y2 - y1 ) * ( sx - x1 )) >= 0 ) &&
-             ( (( x - x2 ) * ( sy - y2 ) - ( y - y2 ) * ( sx - x2 )) >= 0 ) &&
-             ( (( x1 - x ) * ( sy - y ) - ( y1 - y ) * ( sx - x )) >= 0 );
-}
-
-// UPDATE THE NUMERATOR FOR THE CIRCLE BEING DRAWN
-circuitry updatenumerator( input gpu_numerator, input gpu_active_x, input gpu_active_y,  output new_numerator ) {
-    if( gpu_numerator > 0 ) {
-        new_numerator = gpu_numerator + { (gpu_active_x - gpu_active_y), 2b00 } + 10;
-    } else {
-        new_numerator = gpu_numerator + { gpu_active_x, 2b00 } + 6;
-    }
-}
-
 algorithm gpu(
     // GPU to SET and GET pixels
     output int10   bitmap_x_write,
@@ -411,6 +395,14 @@ algorithm line (
 }
 
 //  CIRCLE - OUTPUT PIXELS TO DRAW AN OUTLINE OR FILLED CIRCLE
+// UPDATE THE NUMERATOR FOR THE CIRCLE BEING DRAWN
+circuitry updatenumerator( input gpu_numerator, input gpu_active_x, input gpu_active_y,  output new_numerator ) {
+    if( gpu_numerator > 0 ) {
+        new_numerator = gpu_numerator + { (gpu_active_x - gpu_active_y), 2b00 } + 10;
+    } else {
+        new_numerator = gpu_numerator + { gpu_active_x, 2b00 } + 6;
+    }
+}
 algorithm circle(
     input   int10   x,
     input   int10   y,
@@ -429,7 +421,7 @@ algorithm circle(
     int10   gpu_xc = uninitialized;
     int10   gpu_yc = uninitialized;
     int10   gpu_numerator = uninitialized;
-    uint10  gpu_count = uninitialised;
+    int10   gpu_count = uninitialised;
 
     uint1   active = 0;
     busy := start ? 1 : active;
@@ -446,12 +438,13 @@ algorithm circle(
             if( filledcircle ) {
                 gpu_active_y = ( gpu_active_y < 4 ) ? 4 : gpu_active_y;
                 gpu_count = ( gpu_active_y < 4 ) ? 4 : gpu_active_y;
+            } else {
+                gpu_count = gpu_active_y;
             }
             ++:
             gpu_numerator = 3 - ( { gpu_active_y, 1b0 } );
             while( gpu_active_y >= gpu_active_x ) {
-                if( filledcircle ) {
-                    while( gpu_count != 0 ) {
+                    while( gpu_count != (-1) ) {
                         bitmap_x_write = gpu_xc + gpu_active_x;
                         bitmap_y_write = gpu_yc + gpu_count;
                         bitmap_write = 1;
@@ -478,44 +471,12 @@ algorithm circle(
                         bitmap_y_write = gpu_yc + gpu_active_x;
                         bitmap_write = 1;
 
-                        gpu_count = gpu_count - 1;
+                        gpu_count = filledcircle ? gpu_count - 1 : (-1);
                     }
-                } else {
-                    bitmap_x_write = gpu_xc + gpu_active_x;
-                    bitmap_y_write = gpu_yc + gpu_active_y;
-                    bitmap_write = 1;
-                    ++:
-                    bitmap_y_write = gpu_yc - gpu_active_y;
-                    bitmap_write = 1;
-                    ++:
-                    bitmap_x_write = gpu_xc - gpu_active_x;
-                    bitmap_write = 1;
-                    ++:
-                    bitmap_y_write = gpu_yc + gpu_active_y;
-                    bitmap_write = 1;
-                    ++:
-                    bitmap_x_write = gpu_xc + gpu_active_y;
-                    bitmap_y_write = gpu_yc + gpu_active_x;
-                    bitmap_write = 1;
-                    ++:
-                    bitmap_y_write = gpu_yc - gpu_active_x;
-                    bitmap_write = 1;
-                    ++:
-                    bitmap_x_write = gpu_xc - gpu_active_y;
-                    bitmap_write = 1;
-                    ++:
-                    bitmap_y_write = gpu_yc + gpu_active_x;
-                    bitmap_write = 1;
-                }
                 gpu_active_x = gpu_active_x + 1;
                 gpu_active_y = ( gpu_numerator > 0 ) ? gpu_active_y - 1 : gpu_active_y;
                 gpu_count = ( gpu_numerator > 0 ) ? gpu_active_y - 1 : gpu_active_y;
                 ( gpu_numerator ) = updatenumerator( gpu_numerator, gpu_active_x, gpu_active_y );
-            }
-            if( filledcircle ) {
-                bitmap_x_write = gpu_xc;
-                bitmap_y_write = gpu_yc;
-                bitmap_write = 1;
             }
 
             active = 0;
@@ -523,6 +484,13 @@ algorithm circle(
     }
 }
 
+// TRIANGLE - OUTPUT PIXELS TO DRAW A FILLED TRIANGLE
+// CALCULATE IF A PIXEL IS INSIDE THE TRIANGLE BEING DRAWN
+circuitry insideTriangle( input sx, input sy, input x, input y, input x1, input y1, input x2, input y2, output inside ) {
+    inside = ( (( x2 - x1 ) * ( sy - y1 ) - ( y2 - y1 ) * ( sx - x1 )) >= 0 ) &&
+             ( (( x - x2 ) * ( sy - y2 ) - ( y - y2 ) * ( sx - x2 )) >= 0 ) &&
+             ( (( x1 - x ) * ( sy - y ) - ( y1 - y ) * ( sx - x )) >= 0 );
+}
 algorithm triangle (
     input   int10   x,
     input   int10   y,

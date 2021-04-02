@@ -131,7 +131,7 @@ algorithm main(
     memmap_io IO_Map <@clock_system> (
         gn <: gn,
         gp :> gp,
-        leds :> leds,
+        //leds :> leds,
         btns <: btns,
         uart_tx :> uart_tx,
         uart_rx <: uart_rx,
@@ -161,7 +161,10 @@ algorithm main(
     uint32  address = uninitialized;
     uint16  writedata = uninitialized;
     PAWSCPU CPU <@clock_system> (
-        clock_100mhz <: clock_100_1,
+        leds :> leds,
+
+        clock_CPUdecoder <: clock_100_1,
+        clock_CPUcache <: clock_100_2,
 
         accesssize :> function3,
         address :> address,
@@ -173,7 +176,6 @@ algorithm main(
 
     // SDRAM -> CPU BUSY STATE
     CPU.memorybusy := sdram.busy || CPU.readmemory || CPU.writememory;
-    //CPU.memorybusy := sdram.busy || ( CPU.readmemory && ~address[28,1] && ~address[15,1] );
 
     // I/O and RAM read/write flags - address[28,1] == 0 BRAM or I/O == 1 SDRAM, address[15,1] == 0 BRAM == 1 I/O
     sdram.writeflag := CPU.writememory && address[28,1];
@@ -248,6 +250,11 @@ algorithm sdramcontroller(
     // CACHE TAG IS REMAINING 11 bits of the 26 bit address + 1 bit for valid flag
     simple_dualport_bram uint28 cache <input!> [16384] = uninitialized;
 
+    cachewriter CW(
+        address <: address,
+        cache <:> cache
+    );
+
     // CACHE TAG match flag
     uint1   cachetagmatch := ( cache.rdata0[16,12] == { 1b1, address[15,11] } ) ? 1 : 0;
 
@@ -262,7 +269,8 @@ algorithm sdramcontroller(
     sio.in_valid := 0;
 
     // FLAGS FOR CACHE ACCESS
-    cache.wenable1 := 1; cache.addr0 := address[1,14];
+    cache.addr0 := address[1,14];
+    CW.update := 0;
 
     // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
     readdata := cachetagmatch ? cache.rdata0[0,16] : sio.data_out[0,16];
@@ -285,15 +293,15 @@ algorithm sdramcontroller(
                     sio.in_valid = 1;
                     while( !sio.done ) {}
                     // WRITE RESULT TO CACHE
-                    cache.addr1 = address[1,14];
-                    cache.wdata1 = { 1b1, address[15,11], sio.data_out[0,16] };
+                    CW.writedata = sio.data_out;
+                    CW.update = 1;
                 }
             }
 
             if( dowrite ) {
                 // WRITE RESULT TO CACHE
-                cache.addr1 = address[1,14];
-                cache.wdata1 = { 1b1, address[15,11], writethrough };
+                CW.writedata = writethrough;
+                CW.update = 1;
                 // COMPLETE WRITE TO SDRAM
                 sio.data_in = writethrough;
                 sio.rw = 1;
@@ -302,6 +310,22 @@ algorithm sdramcontroller(
             }
 
             busy = 0;
+        }
+    }
+}
+
+algorithm cachewriter(
+    input   uint32  address,
+    input   uint16  writedata,
+    input   uint1   update,
+    simple_dualport_bram_port1 cache
+) <autorun> {
+    cache.wenable1 := 1;
+
+    while(1) {
+        if( update ) {
+            cache.addr1 = address[1,14];
+            cache.wdata1 = { 1b1, address[15,11], writedata[0,16] };
         }
     }
 }

@@ -45,7 +45,10 @@ circuitry store( input accesssize, input location, input value, input memorybusy
 }
 
 algorithm PAWSCPU(
-    input   uint1   clock_100mhz,
+    output  uint8   leds,
+    input   uint1   clock_CPUdecoder,
+    input   uint1   clock_CPUcache,
+
     output  uint3   accesssize,
     output  uint32  address,
     output  uint16  writedata,
@@ -58,6 +61,8 @@ algorithm PAWSCPU(
     input   uint1   SMTRUNNING,
     input   uint32  SMTSTARTPC
 ) <autorun> {
+    uint8   spinner = 17;
+
     // SMT FLAG
     // RUNNING ON HART 0 OR HART 1
     // DUPLICATES PROGRAM COUNTER, REGISTER FILE AND LAST INSTRUCTION CACHE
@@ -73,7 +78,7 @@ algorithm PAWSCPU(
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
     uint1   compressed = uninitialized;
-    compressed COMPRESSED <@clock_100mhz> (
+    compressed COMPRESSED <@clock_CPUdecoder> (
         i16 <: readdata
     );
 
@@ -96,7 +101,7 @@ algorithm PAWSCPU(
     uint5   rs2 = uninitialized;
     uint5   rs3 = uninitialized;
     uint5   rd = uninitialized;
-    decoder DECODER <@clock_100mhz> (
+    decoder DECODER <@clock_CPUdecoder> (
         instruction <: instruction,
         opCode :> opCode,
         function2 :> function2,
@@ -216,13 +221,18 @@ algorithm PAWSCPU(
     );
 
     // On CPU instruction cache - MAIN AND SMT THREADS
-    instructioncache Icache(
-        PC <: PC,
-        SMT <: SMT,
+    instructioncache Icache <@clock_CPUcache> (
+        PC <: pc,
+        newinstruction <: instruction,
+        newcompressed <: compressed
+    );
+    instructioncache IcacheSMT <@clock_CPUcache> (
+        PC <: pcSMT,
         newinstruction <: instruction,
         newcompressed <: compressed
     );
     Icache.updatecache := 0;
+    IcacheSMT.updatecache := 0;
 
     // MEMORY ACCESS FLAGS
     accesssize := ( ( opCode == 7b0101111 ) || ( opCode == 7b0000111 ) || ( opCode == 7b0100111 ) ) ? 3b010 : function3;
@@ -237,6 +247,8 @@ algorithm PAWSCPU(
     FPU.start := 0;
     CSR.incCSRinstret := 0;
 
+    leds := spinner;
+
     while(1) {
         // RISC-V - RESET FLAGS
         writeRegister = 1;
@@ -244,9 +256,11 @@ algorithm PAWSCPU(
         frd = 0;
 
         // CHECK IF PC IS IN LAST INSTRUCTION CACHE
-        if( Icache.incache ) {
-            instruction = Icache.instruction;
-            compressed = Icache.compressed;
+        if( SMT ? IcacheSMT.incache : Icache.incache ) {
+            spinner = SMT ? { spinner[4,3], spinner[7,1], spinner[0,4] } : { spinner[4,4], spinner[0,3], spinner[3,1] };
+
+            instruction = SMT ? IcacheSMT.instruction : Icache.instruction;
+            compressed = SMT ? IcacheSMT.compressed : Icache.compressed;
         } else {
             // FETCH + EXPAND COMPRESSED INSTRUCTIONS
             ( address, readmemory ) = fetch( PC, memorybusy );
@@ -262,7 +276,8 @@ algorithm PAWSCPU(
             }
 
             // UPDATE LASTCACHE
-            Icache.updatecache = 1;
+            Icache.updatecache = SMT ? 0 : 1;
+            IcacheSMT.updatecache = SMT ? 1 : 0;
         }
 
         // TIME TO ALLOW DECODE + REGISTER FETCH + ADDRESS GENERATION
@@ -361,11 +376,6 @@ algorithm PAWSCPU(
             }
         }
 
-        // STORE TO MEMORY
-        if( memorystore ) {
-            ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy );
-        }
-
         // REGISTERS WRITE
         REGISTERS.write = ( writeRegister  && ( rd != 0 ) ) ? ~frd : 0;
         REGISTERSF.write = ( writeRegister  && ( rd != 0 ) ) ? frd : 0;
@@ -382,13 +392,17 @@ algorithm PAWSCPU(
             SMT = SMTRUNNING;
             pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC;
         }
-    } // RISC-V
+
+         // STORE TO MEMORY
+        if( memorystore ) {
+            ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy );
+        }
+   } // RISC-V
 }
 
 // ON CPU SMALL INSTRUCTION CACHE
 algorithm instructioncache(
     input   uint32  PC,
-    input   uint1   SMT,
 
     output  uint1   incache,
 
@@ -400,35 +414,96 @@ algorithm instructioncache(
     output  uint1   compressed
 ) <autorun> {
     // LAST INSTRUCTION CACHE
-    uint32  lastpccache[64] = { 32hffffffff, pad(32hffffffff) };
-    uint32  lastinstructioncache[64] = uninitialized;
-    uint1   lastcompressedcache[64] = uninitialized;
-    uint8   location = 8hff;
-    uint5   lastcachepointer = 0;
-    uint5   lastcachepointerSMT = 0;
+    uint4   location = uninitialized;
+    uint3   lastcachepointer = 0;
     uint1   LATCHupdate = 0;
+
+    p P(
+        location :> location,
+        incache :> incache,
+        PC <: PC,
+        pointer <: lastcachepointer
+    );
+    i I(
+        location <: location,
+        newinstruction <: newinstruction,
+        pointer <: lastcachepointer,
+        instruction :> instruction
+    );
+    c C(
+        location <: location,
+        newcompressed <: newcompressed,
+        pointer <: lastcachepointer,
+        compressed :> compressed
+    );
+
+    P.update := updatecache && ~LATCHupdate;
+    I.update := updatecache && ~LATCHupdate;
+    C.update := updatecache && ~LATCHupdate;
+
+    while(1) {
+        if( ~updatecache && LATCHupdate ) {
+            lastcachepointer = lastcachepointer + 1;
+        }
+        LATCHupdate = updatecache;
+    }
+}
+
+algorithm p(
+    output  uint4   location,
+    output  uint1   incache,
+    input   uint32  PC,
+    input   uint1   update,
+    input   uint3   pointer
+) <autorun> {
+    uint32  lastpccache[8] = { 32hffffffff, pad(32hffffffff) };
 
     // CHECK IF PC IS IN LAST INSTRUCTION CACHE
     location :=
-        $$for i = 0, 30 do
-            ( PC == ( lastpccache[ { SMT, 5d$i$ } ] ) ) ? $i$ :
+        $$for i = 0, 6 do
+            ( PC == ( lastpccache[ $i$ ] ) ) ? $i$ :
         $$end
-        ( PC == ( lastpccache[ { SMT, 5d31 } ] ) ) ? 31 : 8hff;
-
-    incache := ( location == 8hff ) ? 0 : 1;
-
-    // RETRIEVE FROM LAST INSTRUCTION CACHE
-    instruction := lastinstructioncache[ ( location == 8hff ) ? 0 : { SMT, location[0,5] } ];
-    compressed := lastcompressedcache[ ( location == 8hff ) ? 0 : { SMT, location[0,5] } ];
+        ( PC == ( lastpccache[ 7 ] ) ) ? 7 : 4hf;
+    incache := ( location == 4hf ) ? 0 : 1;
 
     while(1) {
-        if( updatecache && ~LATCHupdate ) {
-            lastpccache[ { SMT, SMT ? lastcachepointerSMT : lastcachepointer } ] = PC;
-            lastinstructioncache[ { SMT, SMT ? lastcachepointerSMT : lastcachepointer } ] = newinstruction;
-            lastcompressedcache[ { SMT, SMT ? lastcachepointerSMT : lastcachepointer } ] = newcompressed;
-            lastcachepointer = lastcachepointer + SMT ? 0 : 1;
-            lastcachepointerSMT = lastcachepointerSMT + SMT ? 1 : 0;
+        if( update ) {
+            lastpccache[ pointer ] = PC;
         }
-        LATCHupdate = updatecache;
+    }
+}
+
+algorithm i(
+    input   uint4   location,
+    output  uint32  instruction,
+    input   uint1   update,
+    input   uint32  newinstruction,
+    input   uint3   pointer
+) <autorun> {
+    uint32  lastinstructioncache[8] = uninitialized;
+    instruction := lastinstructioncache[ ( location == 4hf ) ? 0 : location ];
+
+    while(1) {
+        if( update ) {
+            lastinstructioncache[ pointer ] = newinstruction;
+        }
+    }
+}
+
+algorithm c(
+    input   uint4   location,
+    output  uint1   compressed,
+    input   uint1   update,
+    input   uint1   newcompressed,
+    input   uint3   pointer
+) <autorun> {
+    uint8   lastcompressedcache = 0;
+    // RETRIEVE FROM LAST INSTRUCTION CACHE
+    compressed := lastcompressedcache[ ( location == 4hf ) ? 0 : location, 1 ];
+
+    while(1) {
+        if( update ) {
+            lastcompressedcache[ pointer, 1 ] = newcompressed;
+        }
     }
 }

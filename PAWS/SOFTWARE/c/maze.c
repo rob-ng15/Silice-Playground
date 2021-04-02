@@ -442,11 +442,11 @@ void generate_maze( unsigned short width, unsigned short height ) {
         } else {
             switch( rng( 2 ) ) {
                 case 0:
-                    potentialx -= 3 * rng( level );
+                    potentialx -= 2 * rng( level );
                     potentialy += rng( level );
                     break;
                 case 1:
-                    potentialx += 3 * rng( level );
+                    potentialx += 2 * rng( level );
                     potentialy -= rng( level );
                     break;
             }

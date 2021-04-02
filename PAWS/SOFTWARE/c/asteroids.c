@@ -10,7 +10,7 @@
 #define MAXASTEROIDS 20
 
     // GLOBAL VARIABLES
-    unsigned short lives = 0, score = 0, level = 99;
+    unsigned short lives = 0, score = 0, level = 0;
     unsigned short shield, fuel;
     int counter = 0;
 
@@ -748,7 +748,7 @@ int main( void ) {
 
     unsigned char uartData = 0, potentialnumber = 0;
     short ufo_x = 0, ufo_y = 0, potentialx = 0, potentialy = 0;
-    unsigned short placeAsteroids = 99, asteroid_number = 0;
+    unsigned short placeAsteroids = 4, asteroid_number = 0;
 
     // INITIALISE ALL VARIABLES AND START THE ASTEROID MOVING THREAD
     setup_game();
@@ -931,7 +931,7 @@ int main( void ) {
                         }
 
                         if( lives == 0 ) {
-                            level = 99; placeAsteroids = 99;
+                            placeAsteroids = 4;
                             risc_ice_v_logo();
                         }
                     }
