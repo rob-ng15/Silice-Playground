@@ -83,7 +83,7 @@ unsigned short rng( unsigned short range ) {
 
         case 1:
         case 2:
-            trial = *ALT_RNG & 1;
+            trial = *RNG & 1;
             break;
 
         case 4:
@@ -100,12 +100,12 @@ unsigned short rng( unsigned short range ) {
         case 8192:
         case 16384:
         case 32768:
-            trial = *ALT_RNG & ( range - 1 );
+            trial = *RNG & ( range - 1 );
             break;
 
         default:
             do {
-                trial = (range < 256 ) ? *ALT_RNG & 255 : *RNG;
+                trial = (range < 256 ) ? *RNG & 255 : *RNG;
             } while ( trial >= range );
     }
 
@@ -1130,6 +1130,14 @@ void echo( void ) {
 }
 
 void noecho( void ) {
+}
+
+void scroll( void ) {
+    __curses_scroll = 1;
+}
+
+void noscroll( void ) {
+    __curses_scroll = 0;
 }
 
 void curs_set( int visibility ) {

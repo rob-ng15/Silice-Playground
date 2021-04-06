@@ -20,7 +20,7 @@ struct Bomb {
 #define BOMB_ANIM_SIZE 4 // "frames" in bomb anim
 
 #define FPS 5          // frames per second
-#define PAINT_WAIT 1    // how many frames between row repaints
+#define PAINT_WAIT 4   // how many frames between row repaints
 
 #define ALIEN30 3
 #define ALIEN20 2
@@ -158,16 +158,6 @@ int removeBomb(struct Bomb *b);
 void freeBombs();
 void moveAliensDown();
 
-void smttimer( void ) {
-    // SETUP STACKPOINTER FOR THE SMT THREAD
-    asm volatile ("li sp ,0x4000");
-
-    while(1) {
-        await_vblank();
-        handleTimer( 1 );
-    }
-}
-
 int main( void ) {
     INITIALISEMEMORY();
     // CLEAR and SET THE BACKGROUND
@@ -176,11 +166,10 @@ int main( void ) {
 
     // set up curses library
     initscr();
-    cbreak();
-    noecho();
     curs_set(0); // hide cursor
     cbreak();
     noecho();
+    noscroll();
 #ifdef USE_KEYS
     //keypad(stdscr, TRUE);
 #endif
@@ -219,7 +208,6 @@ int main( void ) {
     while(1) {
         if( ( get_buttons() & 2 ) != 0 ) {
             if (game.state == STATE_INTRO) {
-                SMTSTOP();
                 game.lives = 3;
                 game.score = 0;
                 game.state = STATE_PLAY;
@@ -230,7 +218,6 @@ int main( void ) {
                 clear();
                 paintShelters();
 
-                SMTSTART( (unsigned int )smttimer );
             } else if (game.state == STATE_PLAY
                     && game.timer > GUNNER_ENTRANCE
                     && gun.missile.y == 0) {
@@ -242,6 +229,8 @@ int main( void ) {
             gun.move = -2;
         if( ( get_buttons() & 64 ) != 0 )
             gun.move = 2;
+
+        handleTimer( 1 );
     }
 
     return 0;   // not reached
@@ -403,11 +392,11 @@ void handleTimer(int signal) {
     // handle alien movements
     if (--aliens.paintWait <= 0) {
         // time to repaint one row of aliens (speeds up as you shoot aliens)
-        //aliens.paintWait = 2;
         aliens.paintWait = (int) (PAINT_WAIT * (aliens.count / (aliens.cols * aliens.rows)));;
         aliens.paintRow--;
         paintAlienRow(aliens.paintRow, 0);
         refresh();
+
         if (aliens.paintRow <= aliens.emptyTop) {
             // time to move the block of aliens
             aliens.paintRow = aliens.emptyBottom;               // reset counter

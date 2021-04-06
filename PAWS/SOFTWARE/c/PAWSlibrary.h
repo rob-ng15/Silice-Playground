@@ -315,6 +315,8 @@ extern int clear( void );
 extern void cbreak( void );
 extern void echo( void );
 extern void noecho( void );
+extern void scroll( void );
+extern void noscroll( void );
 extern void curs_set( int );
 extern int start_color( void );
 extern bool has_colors( void );

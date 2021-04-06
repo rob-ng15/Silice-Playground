@@ -426,6 +426,8 @@ void generate_maze( unsigned short width, unsigned short height ) {
                     setat( x + 1, y, ' ', 0 );
                 }
             }
+            await_vblank();
+            display_maze( levelwidths[level], levelheights[level], 1, 1 );
         }
     }
 

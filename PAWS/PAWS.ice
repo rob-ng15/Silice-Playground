@@ -131,7 +131,7 @@ algorithm main(
     memmap_io IO_Map <@clock_system> (
         gn <: gn,
         gp :> gp,
-        //leds :> leds,
+        leds :> leds,
         btns <: btns,
         uart_tx :> uart_tx,
         uart_rx <: uart_rx,
@@ -161,8 +161,6 @@ algorithm main(
     uint32  address = uninitialized;
     uint16  writedata = uninitialized;
     PAWSCPU CPU <@clock_system> (
-        leds :> leds,
-
         clock_CPUdecoder <: clock_100_1,
         clock_CPUcache <: clock_100_2,
 

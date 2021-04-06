@@ -45,7 +45,6 @@ circuitry store( input accesssize, input location, input value, input memorybusy
 }
 
 algorithm PAWSCPU(
-    output  uint8   leds,
     input   uint1   clock_CPUdecoder,
     input   uint1   clock_CPUcache,
 
@@ -61,8 +60,6 @@ algorithm PAWSCPU(
     input   uint1   SMTRUNNING,
     input   uint32  SMTSTARTPC
 ) <autorun> {
-    uint8   spinner = 17;
-
     // SMT FLAG
     // RUNNING ON HART 0 OR HART 1
     // DUPLICATES PROGRAM COUNTER, REGISTER FILE AND LAST INSTRUCTION CACHE
@@ -247,8 +244,6 @@ algorithm PAWSCPU(
     FPU.start := 0;
     CSR.incCSRinstret := 0;
 
-    leds := spinner;
-
     while(1) {
         // RISC-V - RESET FLAGS
         writeRegister = 1;
@@ -257,8 +252,6 @@ algorithm PAWSCPU(
 
         // CHECK IF PC IS IN LAST INSTRUCTION CACHE
         if( SMT ? IcacheSMT.incache : Icache.incache ) {
-            spinner = SMT ? { spinner[4,3], spinner[7,1], spinner[0,4] } : { spinner[4,4], spinner[0,3], spinner[3,1] };
-
             instruction = SMT ? IcacheSMT.instruction : Icache.instruction;
             compressed = SMT ? IcacheSMT.compressed : Icache.compressed;
         } else {
@@ -414,8 +407,8 @@ algorithm instructioncache(
     output  uint1   compressed
 ) <autorun> {
     // LAST INSTRUCTION CACHE
-    uint4   location = uninitialized;
-    uint3   lastcachepointer = 0;
+    uint3   location = uninitialized;
+    uint2   lastcachepointer = 0;
     uint1   LATCHupdate = 0;
 
     p P(
@@ -450,60 +443,51 @@ algorithm instructioncache(
 }
 
 algorithm p(
-    output  uint4   location,
+    output  uint3   location,
     output  uint1   incache,
     input   uint32  PC,
     input   uint1   update,
-    input   uint3   pointer
+    input   uint2   pointer
 ) <autorun> {
-    uint32  lastpccache[8] = { 32hffffffff, pad(32hffffffff) };
+    uint32  lastpccache[4] = { 32hffffffff, pad(32hffffffff) };
 
     // CHECK IF PC IS IN LAST INSTRUCTION CACHE
     location :=
-        $$for i = 0, 6 do
+        $$for i = 0, 2 do
             ( PC == ( lastpccache[ $i$ ] ) ) ? $i$ :
         $$end
-        ( PC == ( lastpccache[ 7 ] ) ) ? 7 : 4hf;
-    incache := ( location == 4hf ) ? 0 : 1;
+        ( PC == ( lastpccache[ 3 ] ) ) ? 3: 3h7;
+    incache := ( location == 3h7 ) ? 0 : 1;
+    lastpccache[ pointer ] := update ? PC : lastpccache[ pointer ];
 
-    while(1) {
-        if( update ) {
-            lastpccache[ pointer ] = PC;
-        }
-    }
+    while(1) {}
 }
 
 algorithm i(
-    input   uint4   location,
+    input   uint3   location,
     output  uint32  instruction,
     input   uint1   update,
     input   uint32  newinstruction,
-    input   uint3   pointer
+    input   uint2   pointer
 ) <autorun> {
-    uint32  lastinstructioncache[8] = uninitialized;
-    instruction := lastinstructioncache[ ( location == 4hf ) ? 0 : location ];
+    uint32  lastinstructioncache[4] = uninitialized;
+    instruction := lastinstructioncache[ ( location == 3h7 ) ? 0 : location ];
+    lastinstructioncache[ pointer ] := update ? newinstruction : lastinstructioncache[ pointer ];
 
-    while(1) {
-        if( update ) {
-            lastinstructioncache[ pointer ] = newinstruction;
-        }
-    }
+    while(1) {}
 }
 
 algorithm c(
-    input   uint4   location,
+    input   uint3   location,
     output  uint1   compressed,
     input   uint1   update,
     input   uint1   newcompressed,
-    input   uint3   pointer
+    input   uint2   pointer
 ) <autorun> {
-    uint8   lastcompressedcache = 0;
+    uint4   lastcompressedcache = 0;
     // RETRIEVE FROM LAST INSTRUCTION CACHE
-    compressed := lastcompressedcache[ ( location == 4hf ) ? 0 : location, 1 ];
+    compressed := lastcompressedcache[ ( location == 3h7 ) ? 0 : location, 1 ];
+    lastcompressedcache[ pointer, 1 ] := update ? newcompressed : lastcompressedcache[ pointer, 1 ];
 
-    while(1) {
-        if( update ) {
-            lastcompressedcache[ pointer, 1 ] = newcompressed;
-        }
-    }
+    while(1) {}
 }
