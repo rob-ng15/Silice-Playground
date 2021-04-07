@@ -304,7 +304,8 @@ algorithm memmap_io (
         uart_rx <: uart_rx
     );
 
-    ps2buffer PS2(
+    // PS2 CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
+    ps2buffer PS2 <@clock_25mhz> (
         clock_25mhz <: clock_25mhz,
         us2_bd_dp <: us2_bd_dp,
         us2_bd_dn <: us2_bd_dn
@@ -318,10 +319,9 @@ algorithm memmap_io (
     uint$NUM_BTNS$ reg_btns = 0;
     reg_btns ::= btns;
 
-    // UART & PS2 BUFFER FLAGS
+    // UART FLAGS
     UART.inread := 0;
     UART.outwrite := 0;
-    PS2.inread := 0;
 
     // SDCARD Commands
     sdcio.read_sector := 0;
@@ -636,6 +636,9 @@ algorithm memmap_io (
             timer1khz1.resetCount = 0;
             apu_processor_L.apu_write = 0;
             apu_processor_R.apu_write = 0;
+
+            // RESET PS2 Buffer Controls
+            PS2.inread = 0;
         }
 
         LATCHmemoryRead = memoryRead;

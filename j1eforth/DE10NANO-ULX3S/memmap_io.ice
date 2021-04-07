@@ -59,10 +59,11 @@ algorithm memmap_io (
     input   uint1   clock_50mhz,
 $$if ULX3S then
     input   uint1   clock_25mhz,
+$$end
     // USB for PS/2
     input   uint1   us2_bd_dp,
     input   uint1   us2_bd_dn,
-$$end
+
     input   uint1   video_clock,
     input   uint1   video_reset,
 
@@ -92,19 +93,6 @@ $$end
     uint16 staticGenerator = 0;
     random rng <@clock_50mhz,!reset> (
         g_noise_out :> staticGenerator
-    );
-
-    // UART tx and rx
-    // UART written in Silice by https://github.com/sylefeb/Silice
-    uart_out uo;
-    uart_sender usend <@clock_50mhz,!reset> (
-        io      <:> uo,
-        uart_tx :>  uart_tx
-    );
-    uart_in ui;
-    uart_receiver urecv <@clock_50mhz,!reset> (
-        io      <:> ui,
-        uart_rx <:  uart_rx
     );
 
     // CREATE DISPLAY LAYERS
@@ -329,19 +317,18 @@ $$end
         bitmap_write :> bitmap_write,
     );
 
-$$if ULX3S then
-    // PS 2 ASCII
-    ps2ascii PS2(
+    // UART CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
+    uart UART(
+        uart_tx :> uart_tx,
+        uart_rx <: uart_rx
+    );
+
+    // PS2 CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
+    ps2buffer PS2(
         clock_25mhz <: clock_25mhz,
         us2_bd_dp <: us2_bd_dp,
-        us2_bd_dn <: us2_bd_dn,
+        us2_bd_dn <: us2_bd_dn
     );
-$$end
-
-    // PS/2 input FIFO (256 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 ps2Buffer <input!> [256] = uninitialized;
-    uint8  ps2BufferNext = 0;
-    uint7  ps2BufferTop = 0;
 
     // Mathematics Co-Processors
     divmod32by16 divmod32by16to16qr <@clock_50mhz,!reset> ();
@@ -350,44 +337,12 @@ $$end
     doubleaddsub2input doperations2 <@clock_50mhz,!reset> ();
     doubleaddsub1input doperations1 <@clock_50mhz,!reset> ();
 
-    // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartInBuffer[4096] = uninitialized;
-    uint13  uartInBufferNext = 0;
-    uint13  uartInBufferTop = 0;
-
-    // UART output FIFO (16 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartOutBuffer[256] = uninitialized;
-    uint8   uartOutBufferNext = 0;
-    uint8   uartOutBufferTop = 0;
-    uint8   newuartOutBufferTop = 0;
-
     // Co-Processor reset counter
     uint2   coProReset = 0;
 
     // register buttons
     uint$NUM_BTNS$ reg_btns = 0;
     reg_btns ::= btns;
-
-    // PS2 Buffers
-    ps2Buffer.wenable1 := 1;  // always write on port 1
-    ps2Buffer.addr0 := ps2BufferNext; // FIFO reads on next
-    ps2Buffer.addr1 := ps2BufferTop;  // FIFO writes on top
-$$if ULX3S then
-    ps2Buffer.wdata1 := PS2.ascii;
-    ps2BufferTop := PS2.asciivalid ? ps2BufferTop + 1 : ps2BufferTop;
-$$end
-
-    // UART Buffers
-    uartInBuffer.wenable1  := 1;  // always write on port 1
-    uartInBuffer.addr0     := uartInBufferNext; // FIFO reads on next
-    uartInBuffer.addr1     := uartInBufferTop;  // FIFO writes on top
-
-    uartOutBuffer.wenable1 := 1; // always write on port 1
-    uartOutBuffer.addr0    := uartOutBufferNext; // FIFO reads on next
-    uartOutBuffer.addr1    := uartOutBufferTop;  // FIFO writes on top
-
-    // Setup the UART
-    uo.data_in_ready := 0; // maintain low
 
     // RESET Mathematics Co-Processor Controls
     divmod32by16to16qr.start := 0;
@@ -401,20 +356,15 @@ $$end
     timer1khz.resetCounter := 0;
     rng.resetRandom := 0;
 
-    // UART input and output buffering
-    uartInBuffer.wdata1  := ui.data_out;
-    uartInBufferTop      := ( ui.data_out_ready ) ? uartInBufferTop + 1 : uartInBufferTop;
-    uo.data_in      := uartOutBuffer.rdata0;
-    uo.data_in_ready     := (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy );
-    uartOutBufferNext := ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) ) ? uartOutBufferNext + 1 : uartOutBufferNext;
+    // UART AND PS2 FLAGS
+    UART.inread := 0;
+    UART.outwrite := 0;
+    PS2.inread := 0;
 
     // Setup the terminal
     terminal_window.showterminal = 1;
 
     while(1) {
-        // Update UART output buffer top if character has been put into buffer
-        uartOutBufferTop = newuartOutBufferTop;
-
         // READ IO Memory
         if( memoryRead && ~LATCHmemoryRead ) {
             switch( memoryAddress[12,4] ) {
@@ -424,14 +374,15 @@ $$end
                             switch( memoryAddress[0,4] ) {
                                 // f000
                                 case 4h0: {
-                                    if( ps2BufferNext != ps2BufferTop ) {
-                                        readData = { 8b0, ps2Buffer.rdata0 };
-                                        ps2BufferNext = ps2BufferNext + 1;
+                                    if( PS2.inavailable ) {
+                                        readData = { 8b0, PS2.inchar };
+                                        PS2.inread = 1;
                                     } else {
-                                        readData = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1;
+                                        readData = { 8b0, UART.inchar };
+                                        UART.inread = 1;
                                     }
                                 }
-                                case 4h1: { readData = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ) ? 1b1 : 1b0, ( ( ps2BufferNext == ps2BufferTop ) && ( uartInBufferNext == uartInBufferTop  ) ) ? 1b0 : 1b1 }; }
+                                case 4h1: { readData = { 14b0, UART.outfull, ( UART.inavailable || PS2.inavailable ) ? 1b1: 1b0 }; }
                                 case 4h2: { readData = leds; }
                                 case 4h3: { readData = {$16-NUM_BTNS$b0, reg_btns[0,$NUM_BTNS$]}; }
                                 case 4h4: { readData = systemClock; }
@@ -617,7 +568,7 @@ $$end
                         case 4h0: {
                             switch( memoryAddress[0,4] ) {
                                 // f000 -
-                                case 4h0: { uartOutBuffer.wdata1 = writeData[0,8]; newuartOutBufferTop = uartOutBufferTop + 1; }
+                                case 4h0: { UART.outchar = writeData[0,8]; UART.outwrite = 1; }
                                 case 4h2: { leds = writeData; }
                             }
                         }
@@ -767,4 +718,113 @@ $$end
         LATCHmemoryRead = memoryRead;
         LATCHmemoryWrite = memoryWrite;
     } // while(1)
+}
+
+// UART BUFFER CONTROLLER
+algorithm uart(
+    // UART
+    output! uint1   uart_tx,
+    input   uint1   uart_rx,
+
+    output  uint1   inavailable,
+    output  uint1   outfull,
+
+    output  uint8   inchar,
+    input   uint1   inread,
+    input   uint8   outchar,
+    input   uint1   outwrite
+) <autorun> {
+    // UART tx and rx
+    // UART written in Silice by https://github.com/sylefeb/Silice
+    uart_out uo;
+    uart_sender usend(
+        io      <:> uo,
+        uart_tx :>  uart_tx
+    );
+    uart_in ui;
+    uart_receiver urecv(
+        io      <:> ui,
+        uart_rx <:  uart_rx
+    );
+
+    // UART input FIFO (256 character) as dualport bram (code from @sylefeb)
+    simple_dualport_bram uint8 uartInBuffer <input!> [256] = uninitialized;
+    uint8  uartInBufferNext = 0;
+    uint8  uartInBufferTop = 0;
+
+    // UART output FIFO (256 character) as dualport bram (code from @sylefeb)
+    simple_dualport_bram uint8 uartOutBuffer <input!> [256] = uninitialized;
+    uint8   uartOutBufferNext = 0;
+    uint8   uartOutBufferTop = 0;
+    uint8   newuartOutBufferTop = 0;
+
+    // FLAGS
+    inavailable := ( uartInBufferNext != uartInBufferTop ) ? 1b1 : 1b0;
+    outfull := ( uartOutBufferTop + 1 == uartOutBufferNext ) ? 1b1 : 1b0;
+    inchar := uartInBuffer.rdata0;
+
+    // UART Buffers ( code from @sylefeb )
+    uartInBuffer.wenable1 := 1;  // always write on port 1
+    uartInBuffer.addr0 := uartInBufferNext; // FIFO reads on next
+    uartInBuffer.addr1 := uartInBufferTop;  // FIFO writes on top
+    uartOutBuffer.wenable1 := 1; // always write on port 1
+    uartOutBuffer.addr0 := uartOutBufferNext; // FIFO reads on next
+    uartOutBuffer.addr1 := uartOutBufferTop;  // FIFO writes on top
+    uartInBuffer.wdata1 := ui.data_out;
+    uartInBufferTop := ui.data_out_ready ? uartInBufferTop + 1 : uartInBufferTop;
+    uo.data_in := uartOutBuffer.rdata0;
+    uo.data_in_ready := ( uartOutBufferNext != uartOutBufferTop ) && ( !uo.busy );
+    uartOutBufferNext := ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) ) ? uartOutBufferNext + 1 : uartOutBufferNext;
+
+    while(1) {
+        if( inread ) {
+            uartInBufferNext = uartInBufferNext + 1;
+        }
+        if( outwrite ) {
+            uartOutBuffer.wdata1 = outchar;
+            uartOutBufferTop = uartOutBufferTop + 1;
+        }
+    }
+}
+
+// PS2 BUFFER CONTROLLER
+algorithm ps2buffer(
+    input   uint1   clock_25mhz,
+
+    // USB for PS/2
+    input   uint1   us2_bd_dp,
+    input   uint1   us2_bd_dn,
+
+    output  uint1   inavailable,
+    output  uint8   inchar,
+    input   uint1   inread
+) <autorun> {
+    // PS/2 input FIFO (256 character) as dualport bram (code from @sylefeb)
+    simple_dualport_bram uint8 ps2Buffer <input!> [256] = uninitialized;
+    uint8  ps2BufferNext = 0;
+    uint7  ps2BufferTop = 0;
+
+    // PS 2 ASCII
+    ps2ascii PS2(
+        clock_25mhz <: clock_25mhz,
+        us2_bd_dp <: us2_bd_dp,
+        us2_bd_dn <: us2_bd_dn,
+    );
+
+    // PS2 Buffers
+    ps2Buffer.wenable1 := 1;  // always write on port 1
+    ps2Buffer.addr0 := ps2BufferNext; // FIFO reads on next
+    ps2Buffer.addr1 := ps2BufferTop;  // FIFO writes on top
+    ps2Buffer.wdata1 := PS2.ascii;
+    ps2BufferTop := PS2.asciivalid ? ps2BufferTop + 1 : ps2BufferTop;
+
+    // FLAGS
+    inavailable := ( ps2BufferNext != ps2BufferTop ) ? 1 : 0;
+    inchar := ps2Buffer.rdata0;
+
+    while(1) {
+        if( inread ) {
+            ps2BufferNext = ps2BufferNext + 1;
+        }
+    }
 }
