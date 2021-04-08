@@ -56,7 +56,7 @@ $$if DE10NANO then
 $$end
 
     // UART
-    output! uint1   uart_tx,
+    output  uint1   uart_tx,
     input   uint1   uart_rx,
 
     // GPIO
@@ -69,8 +69,8 @@ $$end
     input   uint1   usb_fpga_dp,
 
     // AUDIO
-    output! uint4   audio_l,
-    output! uint4   audio_r
+    output  uint4   audio_l,
+    output  uint4   audio_r
 
 )
 $$if ULX3S then

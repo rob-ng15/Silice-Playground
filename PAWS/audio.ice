@@ -12,7 +12,7 @@ algorithm apu(
     // Activate the APU (select the channel, 1, 2 or 3(?) )
     input   uint1   apu_write,
 
-    output! uint4   audio_output,
+    output  uint4   audio_output,
 
     input uint4    staticGenerator
 ) <autorun> {

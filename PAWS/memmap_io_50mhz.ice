@@ -8,7 +8,7 @@ algorithm memmap_io (
     output  uint28  gp,
 
     // UART
-    output! uint1   uart_tx,
+    output  uint1   uart_tx,
     input   uint1   uart_rx,
 
     // USB for PS/2
@@ -16,13 +16,13 @@ algorithm memmap_io (
     input   uint1   us2_bd_dn,
 
     // AUDIO
-    output! uint4   audio_l,
-    output! uint4   audio_r,
+    output  uint4   audio_l,
+    output  uint4   audio_r,
 
     // SDCARD
-    output! uint1   sd_clk,
-    output! uint1   sd_mosi,
-    output! uint1   sd_csn,
+    output  uint1   sd_clk,
+    output  uint1   sd_mosi,
+    output  uint1   sd_csn,
     input   uint1   sd_miso,
 
     // HDMI OUTPUT
@@ -283,21 +283,6 @@ algorithm memmap_io (
         gpu_active_dithermode :> gpu_active_dithermode
     );
 
-    // SDCARD - Code for the SDCARD from @sylefeb
-    simple_dualport_bram uint8 sdbuffer[512] = uninitialized;
-    sdcardio sdcio;
-    sdcard sd(
-        // pins
-        sd_clk      :> sd_clk,
-        sd_mosi     :> sd_mosi,
-        sd_csn      :> sd_csn,
-        sd_miso     <: sd_miso,
-        // io
-        io          <:> sdcio,
-        // bram port
-        store       <:> sdbuffer
-    );
-
     // UART CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
     uart UART(
         uart_tx :> uart_tx,
@@ -309,6 +294,14 @@ algorithm memmap_io (
         clock_25mhz <: clock_25mhz,
         us2_bd_dp <: us2_bd_dp,
         us2_bd_dn <: us2_bd_dn
+    );
+
+    // SDCARD AND BUFFER
+    sdcardbuffer SDCARD(
+        sd_clk :> sd_clk,
+        sd_mosi :> sd_mosi,
+        sd_csn :> sd_csn,
+        sd_miso <: sd_miso
     );
 
     // LATCH MEMORYREAD MEMORYWRITE
@@ -323,8 +316,8 @@ algorithm memmap_io (
     UART.inread := 0;
     UART.outwrite := 0;
 
-    // SDCARD Commands
-    sdcio.read_sector := 0;
+    // SDCARD FLAGS
+    SDCARD.readsector := 0;
 
     // DISBLE SMT ON STARTUP
     SMTRUNNING = 0;
@@ -436,8 +429,8 @@ algorithm memmap_io (
                 case 16h8934: { readData = sleepTimer1.counter1khz; }
 
                 // SDCARD
-                case 16h8f00: { readData = sdcio.ready ? 1 : 0; }
-                case 16h8f10: { readData = sdbuffer.rdata0; }
+                case 16h8f00: { readData = SDCARD.ready; }
+                case 16h8f10: { readData = SDCARD.bufferdata; }
 
                 // VBLANK
                 case 16h8ff0: { readData = vblank ? 1 : 0; }
@@ -591,10 +584,10 @@ algorithm memmap_io (
                 case 16h8934: { sleepTimer1.resetCount = writeData; }
 
                 // SDCARD
-                case 16h8f00: { sdcio.read_sector = 1; }
-                case 16h8f04: { sdcio.addr_sector[16,16] = writeData; }
-                case 16h8f08: { sdcio.addr_sector[0,16] = writeData; }
-                case 16h8f10: { sdbuffer.addr0 = writeData; }
+                case 16h8f00: { SDCARD.readsector = 1; }
+                case 16h8f04: { SDCARD.sectoraddressH = writeData; }
+                case 16h8f08: { SDCARD.sectoraddressL = writeData; }
+                case 16h8f10: { SDCARD.bufferaddress = writeData; }
 
                  // DISPLAY LAYER ORDERING / FRAMEBUFFER SELECTION
                 case 16h8ff0: { display.display_order = writeData; }
@@ -605,7 +598,7 @@ algorithm memmap_io (
                 case 16hfff0: { SMTSTARTPC[16,16] = writeData; }
                 case 16hfff2: { SMTSTARTPC[0,16] = writeData; }
                 case 16hffff: { SMTRUNNING = writeData; }
-           }
+            }
         }
 
         // RESET Co-Processor Controls
@@ -649,7 +642,7 @@ algorithm memmap_io (
 // UART BUFFER CONTROLLER
 algorithm uart(
     // UART
-    output! uint1   uart_tx,
+    output  uint1   uart_tx,
     input   uint1   uart_rx,
 
     output  uint1   inavailable,
@@ -753,4 +746,44 @@ algorithm ps2buffer(
             ps2BufferNext = ps2BufferNext + 1;
         }
     }
+}
+
+// SDCARD AND BUFFER CONTROLLER
+algorithm sdcardbuffer(
+    // SDCARD
+    output  uint1   sd_clk,
+    output  uint1   sd_mosi,
+    output  uint1   sd_csn,
+    input   uint1   sd_miso,
+
+    input   uint1   readsector,
+    input   uint16  sectoraddressH,
+    input   uint16  sectoraddressL,
+    input   uint9   bufferaddress,
+    output  uint1   ready,
+    output  uint8   bufferdata
+) <autorun> {
+    // SDCARD - Code for the SDCARD from @sylefeb
+    simple_dualport_bram uint8 sdbuffer[512] = uninitialized;
+    sdcardio sdcio;
+    sdcard sd(
+        // pins
+        sd_clk      :> sd_clk,
+        sd_mosi     :> sd_mosi,
+        sd_csn      :> sd_csn,
+        sd_miso     <: sd_miso,
+        // io
+        io          <:> sdcio,
+        // bram port
+        store       <:> sdbuffer
+    );
+
+    // SDCARD Commands
+    sdcio.read_sector := readsector;
+    sdcio.addr_sector := { sectoraddressH, sectoraddressL };
+    sdbuffer.addr0 := bufferaddress;
+    ready := sdcio.ready;
+    bufferdata := sdbuffer.rdata0;
+
+    while(1) {}
 }

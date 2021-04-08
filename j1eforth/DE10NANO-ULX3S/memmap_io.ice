@@ -39,12 +39,12 @@ algorithm memmap_io (
     input   uint$NUM_BTNS$ btns,
 
     // UART
-    output! uint1   uart_tx,
+    output  uint1   uart_tx,
     input   uint1   uart_rx,
 
     // AUDIO
-    output! uint4   audio_l,
-    output! uint4   audio_r,
+    output  uint4   audio_l,
+    output  uint4   audio_r,
 
     // VGA/HDMI
     output! uint8   video_r,

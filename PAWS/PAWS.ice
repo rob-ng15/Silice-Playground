@@ -7,7 +7,7 @@ algorithm main(
     output  uint4   gpdi_dp,
 
     // UART
-    output! uint1   uart_tx,
+    output  uint1   uart_tx,
     input   uint1   uart_rx,
 
     // GPIO
@@ -19,13 +19,13 @@ algorithm main(
     input   uint1   us2_bd_dn,
 
     // AUDIO
-    output! uint4   audio_l,
-    output! uint4   audio_r,
+    output  uint4   audio_l,
+    output  uint4   audio_r,
 
     // SDCARD
-    output! uint1   sd_clk,
-    output! uint1   sd_mosi,
-    output! uint1   sd_csn,
+    output  uint1   sd_clk,
+    output  uint1   sd_mosi,
+    output  uint1   sd_csn,
     input   uint1   sd_miso,
 
     // SDRAM

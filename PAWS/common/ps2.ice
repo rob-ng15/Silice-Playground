@@ -30,9 +30,9 @@ algorithm ps2ascii(
     asciivalid := 0;
 
     while(1) {
-        if( ps2valid ) {
+        if( ps2valid  && ~LATCHvalid ) {
             newascii = 8hff;
-            switch( ps2keycode && ~LATCHvalid ) {
+            switch( ps2keycode ) {
                 case 8he0: { startmulti = 1; }
                 case 8hf0: { startbreak = 1; }
                 default: {

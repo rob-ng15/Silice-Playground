@@ -91,7 +91,7 @@ algorithm aluMmultiply(
 // BASE IMMEDIATE WITH B EXTENSIONS
 algorithm aluIb001(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint7   function7,
     input   uint5   IshiftCount,
@@ -181,7 +181,7 @@ algorithm aluIb001(
 }
 algorithm aluIb101(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint7   function7,
     input   uint3   function3,
