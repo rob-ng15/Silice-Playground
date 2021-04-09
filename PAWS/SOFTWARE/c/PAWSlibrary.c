@@ -86,26 +86,9 @@ unsigned short rng( unsigned short range ) {
             trial = *RNG & 1;
             break;
 
-        case 4:
-        case 8:
-        case 16:
-        case 32:
-        case 64:
-        case 128:
-        case 256:
-        case 512:
-        case 1024:
-        case 2048:
-        case 4096:
-        case 8192:
-        case 16384:
-        case 32768:
-            trial = *RNG & ( range - 1 );
-            break;
-
         default:
             do {
-                trial = (range < 256 ) ? *RNG & 255 : *RNG;
+                trial = (range < 256 ) ? *ALT_RNG & 255 : *RNG;
             } while ( trial >= range );
     }
 
