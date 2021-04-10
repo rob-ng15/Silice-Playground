@@ -394,9 +394,6 @@ unsigned char find_asteroid_space( void ) {
 }
 
 void move_asteroids( void ) {
-    // SETUP STACKPOINTER FOR THE SMT THREAD
-    asm volatile ("li sp ,0x4000");
-
     while(1) {
         await_vblank();
         set_timer1khz( 4, 1 );
@@ -743,6 +740,13 @@ void check_crash( void )
 }
 
 // MAIN GAME LOOP STARTS HERE
+void smt_thread( void ) {
+    // SETUP STACKPOINTER FOR THE SMT THREAD
+    asm volatile ("li sp ,0x4000");
+
+    while(1) move_asteroids();
+}
+
 int main( void ) {
     INITIALISEMEMORY();
 
@@ -752,7 +756,7 @@ int main( void ) {
 
     // INITIALISE ALL VARIABLES AND START THE ASTEROID MOVING THREAD
     setup_game();
-    SMTSTART( (unsigned int )move_asteroids );
+    SMTSTART( (unsigned int )smt_thread );
 
     while(1) {
         counter++;
