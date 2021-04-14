@@ -128,21 +128,21 @@ algorithm PAWSCPU(
         sourceReg3 :> sourceReg3
     );
     // RISC-V FLOATING POINT REGISTERS
-    uint32  sourceReg1F = uninitialized;
-    uint32  sourceReg2F = uninitialized;
-    uint32  sourceReg3F = uninitialized;
+    //uint32  sourceReg1F = uninitialized;
+    //uint32  sourceReg2F = uninitialized;
+    //uint32  sourceReg3F = uninitialized;
     uint1   frd = uninitialized;
-    registers REGISTERSF(
-        SMT <:: SMT,
-        rs1 <: rs1,
-        rs2 <: rs2,
-        rs3 <: rs3,
-        rd <: rd,
-        result <: result,
-        sourceReg1 :> sourceReg1F,
-        sourceReg2 :> sourceReg2F,
-        sourceReg3 :> sourceReg3F
-    );
+    //registers REGISTERSF(
+    //    SMT <:: SMT,
+    //    rs1 <: rs1,
+    //    rs2 <: rs2,
+    //    rs3 <: rs3,
+    //    rd <: rd,
+    //    result <: result,
+    //    sourceReg1 :> sourceReg1F,
+    //    sourceReg2 :> sourceReg2F,
+    //    sourceReg3 :> sourceReg3F
+    //);
 
     // RISC-V ADDRESS GENERATOR
     uint32  nextPC = uninitialized;
@@ -199,17 +199,17 @@ algorithm PAWSCPU(
     );
 
     // FLOATING POINT OPERATIONS
-    fpu FPU(
-        opCode <: opCode,
-        function3 <: function3,
-        function7 <: function7,
-        rs1 <: rs1,
-        rs2 <: rs2,
-        sourceReg1 <: sourceReg1,
-        sourceReg1F <: sourceReg1F,
-        sourceReg2F <: sourceReg2F,
-        sourceReg3F <: sourceReg3F,
-    );
+    //fpu FPU(
+    //    opCode <: opCode,
+    //    function3 <: function3,
+    //    function7 <: function7,
+    //    rs1 <: rs1,
+    //    rs2 <: rs2,
+    //    sourceReg1 <: sourceReg1,
+    //    sourceReg1F <: sourceReg1F,
+    //    sourceReg2F <: sourceReg2F,
+    //    sourceReg3F <: sourceReg3F,
+    //);
 
     // MANDATORY RISC-V CSR REGISTERS + HARTID == 0 MAIN THREAD == 1 SMT THREAD
     CSRblock CSR(
@@ -241,7 +241,7 @@ algorithm PAWSCPU(
 
     // ALU START FLAGS
     ALU.start := 0;
-    FPU.start := 0;
+    //FPU.start := 0;
     CSR.incCSRinstret := 0;
 
     while(1) {
@@ -316,16 +316,16 @@ algorithm PAWSCPU(
                 writeRegister = 0;
                 memoryoutput = sourceReg2;
             }
-            case 5b00001: {
-                // FLOATING POINT LOAD
-                frd = 1;
-                result = memoryinput;
-            }
-            case 5b01001: {
-                // FLOATING POINT STORE
-                writeRegister = 0;
-                memoryoutput = sourceReg2F;
-            }
+            //case 5b00001: {
+            //    // FLOATING POINT LOAD
+            //    frd = 1;
+            //    result = memoryinput;
+            //}
+            //case 5b01001: {
+            //    // FLOATING POINT STORE
+            //    writeRegister = 0;
+            //    memoryoutput = sourceReg2F;
+            //}
             case 5b11100: {
                 // CSR
                 result = CSR.result;
@@ -359,19 +359,19 @@ algorithm PAWSCPU(
                         while( ALU.busy ) {}
                         result = ALU.result;
                     }
-                    case 1: {
-                        FPU.start = 1;
-                        while( FPU.busy ) {}
-                        frd = FPU.frd;
-                        result = FPU.result;
-                    }
+                    //case 1: {
+                    //    FPU.start = 1;
+                    //    while( FPU.busy ) {}
+                    //    frd = FPU.frd;
+                    //    result = FPU.result;
+                    //}
                 }
             }
         }
 
         // REGISTERS WRITE
         REGISTERS.write = ( writeRegister  && ( rd != 0 ) ) ? ~frd : 0;
-        REGISTERSF.write = ( writeRegister  && ( rd != 0 ) ) ? frd : 0;
+        //REGISTERSF.write = ( writeRegister  && ( rd != 0 ) ) ? frd : 0;
 
         // Update CSRinstret
         CSR.incCSRinstret = 1;
@@ -457,7 +457,8 @@ algorithm p(
             ( PC == ( lastpccache[ $i$ ] ) ) ? $i$ :
         $$end
         ( PC == ( lastpccache[ 3 ] ) ) ? 3: 3h7;
-    incache := ( location == 3h7 ) ? 0 : 1;
+    //incache := ( location == 3h7 ) ? 0 : 1;
+    incache := 0; // DISABLE FOR TESTING
     lastpccache[ pointer ] := update ? PC : lastpccache[ pointer ];
 
     while(1) {}

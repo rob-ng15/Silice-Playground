@@ -23,9 +23,9 @@ algorithm bitmap(
     simple_dualport_bram_port0 bitmap_1
 ) <autorun> {
     // Pixel x and y fetching ( adjusting for offset )
-    uint9  x_plus_one := ( pix_x[1,9] + x_offset + 1 ) > 319 ? ( pix_x[1,9] + x_offset + 1 ) - 320 : ( pix_x[1,9] + x_offset + 1 );
-    uint8  y_line := pix_vblank ? y_offset : ( ( pix_y[1,9] + y_offset ) > 239 ? ( pix_y[1,9] + y_offset ) - 240 : ( pix_y[1,9] + y_offset ) );
-    uint9  x_pixel := pix_active ? x_plus_one : x_offset;
+    uint9  x_plus_one <: ( pix_x[1,9] + x_offset + 1 ) > 319 ? ( pix_x[1,9] + x_offset + 1 ) - 320 : ( pix_x[1,9] + x_offset + 1 );
+    uint8  y_line <: pix_vblank ? y_offset : ( ( pix_y[1,9] + y_offset ) > 239 ? ( pix_y[1,9] + y_offset ) - 240 : ( pix_y[1,9] + y_offset ) );
+    uint9  x_pixel <: pix_active ? x_plus_one : x_offset;
 
     // Pixel being read?
     bitmap_colour_read := ( pix_x[1,9] == bitmap_x_read ) && ( pix_y[1,9] == bitmap_y_read ) ? ( framebuffer ? bitmap_1.rdata0 : bitmap_0.rdata0 ) : bitmap_colour_read;
@@ -84,11 +84,11 @@ algorithm bitmapwriter (
     uint7   pixeltowrite = uninitialised;
 
     // Pixel x and y for writing ( adjusting for offset )
-    int10  x_write_pixel := ( bitmap_x_write + x_offset ) > 319 ? ( bitmap_x_write + x_offset ) - 320 : ( bitmap_x_write + x_offset );
-    int10  y_write_pixel := ( bitmap_y_write + y_offset ) > 239 ? ( bitmap_y_write + y_offset ) - 240 : ( bitmap_y_write + y_offset );
+    int10  x_write_pixel <: ( bitmap_x_write + x_offset ) > 319 ? ( bitmap_x_write + x_offset ) - 320 : ( bitmap_x_write + x_offset );
+    int10  y_write_pixel <: ( bitmap_y_write + y_offset ) > 239 ? ( bitmap_y_write + y_offset ) - 240 : ( bitmap_y_write + y_offset );
 
     // Write in range?
-    uint1 write_pixel := (bitmap_x_write >= 0 ) && (bitmap_x_write < 320) && (bitmap_y_write >= 0) && (bitmap_y_write <= 239) && bitmap_write;
+    uint1 write_pixel <: (bitmap_x_write >= 0 ) && (bitmap_x_write < 320) && (bitmap_y_write >= 0) && (bitmap_y_write <= 239) && bitmap_write;
 
     // Bitmap write access for the GPU - Only enable when x and y are in range
     bitmap_0.wenable1 := 1;

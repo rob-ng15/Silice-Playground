@@ -1,19 +1,11 @@
 // Runs at 25MHz
 algorithm apu(
-    // Waveform selected 0 = square, 1 = sawtooth, 2 = triangle, 3 = sine wave, 4 = noise
     input   uint4   waveform,
-    // Note selected 0 = silence, 1 - x = Deep C through to Double High D (gives 64 distint notes)
     input   uint7   note,
-
-    // Duration in ms, 1000 = 1 second,
     input   uint16  duration,
     output  uint1   audio_active,
-
-    // Activate the APU (select the channel, 1, 2 or 3(?) )
     input   uint1   apu_write,
-
     output  uint4   audio_output,
-
     input uint4    staticGenerator
 ) <autorun> {
     // Calculated as 25MHz / note frequency / 32 to give 32 step points per note
@@ -38,10 +30,10 @@ algorithm apu(
     uint16  counter1khz = uninitialised;
 
     // WIRES FOR DECREMENT OR RESET
-    uint16  onesecond := 25000;
-    uint16  notefrequency := frequencytable.rdata;
+    uint16  onesecond <: 25000;
+    uint16  notefrequency <: frequencytable.rdata;
     frequencytable.addr := selected_note;
-    audio_active := ( selected_duration > 0 );
+    audio_active := ( selected_duration != 0 );
 
     while(1) {
         if( apu_write ) {

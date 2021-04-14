@@ -20,8 +20,8 @@ algorithm background(
     int12   rand_x = 0;
     int32   frame = 0;
 
-    uint1   tophalf := pix_y < 240;
-    uint1   lefthalf := pix_x < 320;
+    uint1   tophalf <: pix_y < 240;
+    uint1   lefthalf <: pix_x < 320;
 
     while(1) {
         // Increment frame number for the snow/star field

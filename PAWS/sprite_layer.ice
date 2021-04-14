@@ -53,8 +53,8 @@ algorithm sprite_layer(
     output uint1   sprite_read_active,
     output uint1   sprite_read_double,
     output uint6   sprite_read_colour,
-    output int11   sprite_read_x,
-    output int11   sprite_read_y,
+    output int16   sprite_read_x,
+    output int16   sprite_read_y,
     output uint3   sprite_read_tile,
 
     // For setting sprite characteristics - SMT ACCESS
@@ -71,8 +71,8 @@ algorithm sprite_layer(
     output uint1   sprite_read_active_SMT,
     output uint1   sprite_read_double_SMT,
     output uint6   sprite_read_colour_SMT,
-    output int11   sprite_read_x_SMT,
-    output int11   sprite_read_y_SMT,
+    output int16   sprite_read_x_SMT,
+    output int16   sprite_read_y_SMT,
     output uint3   sprite_read_tile_SMT,
 
     // FULL collision detection
@@ -160,16 +160,16 @@ algorithm sprite_layer(
     sprite_read_active := sprite_active[ sprite_set_number ];
     sprite_read_double := sprite_double[ sprite_set_number ];
     sprite_read_colour := sprite_colour[ sprite_set_number ];
-    sprite_read_x := sprite_x[ sprite_set_number ];
-    sprite_read_y := sprite_y[ sprite_set_number ];
+    sprite_read_x := { sprite_x[ sprite_set_number ] < 0 ? 5b1111 : 5b0000, sprite_x[ sprite_set_number ] };
+    sprite_read_y := { sprite_y[ sprite_set_number ] < 0 ? 5b1111 : 5b0000, sprite_y[ sprite_set_number ] };
     sprite_read_tile := sprite_tile_number[ sprite_set_number ];
 
     // Sprite details reader - SMT ACCESS
     sprite_read_active_SMT := sprite_active[ sprite_set_number_SMT ];
     sprite_read_double_SMT := sprite_double[ sprite_set_number_SMT ];
     sprite_read_colour_SMT := sprite_colour[ sprite_set_number_SMT ];
-    sprite_read_x_SMT := sprite_x[ sprite_set_number_SMT ];
-    sprite_read_y_SMT := sprite_y[ sprite_set_number_SMT ];
+    sprite_read_x_SMT := { sprite_x[ sprite_set_number_SMT ] < 0 ? 5b1111 : 5b0000, sprite_x[ sprite_set_number_SMT ] };
+    sprite_read_y_SMT := { sprite_x[ sprite_set_number_SMT ] < 0 ? 5b1111 : 5b0000, sprite_x[ sprite_set_number_SMT ] };
     sprite_read_tile_SMT := sprite_tile_number[ sprite_set_number_SMT ];
 
     while(1) {

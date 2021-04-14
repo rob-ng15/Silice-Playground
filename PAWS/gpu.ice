@@ -45,14 +45,6 @@ algorithm gpu(
     output  uint1   gpu_active,
     output  uint1   vector_block_active
 ) <autorun> {
-    // 32 x 16 x 16 1 bit tilemap for blit1tilemap
-    simple_dualport_bram uint16 blit1tilemap <input!> [ 512 ] = uninitialized;
-
-    // Character ROM 8x8 x 256 for character blitter
-    simple_dualport_bram uint8 characterGenerator8x8 <input!> [] = {
-        $include('ROM/characterROM8x8.inc')
-    };
-
     // GPU COLOUR
     uint7   gpu_active_colour = uninitialized;
     uint7   gpu_active_colour_alt = uninitialized;
@@ -63,20 +55,6 @@ algorithm gpu(
     int10 v_gpu_param0 = uninitialised;
     int10 v_gpu_param1 = uninitialised;
     uint1 v_gpu_write = uninitialised;
-
-    // BLIT TILE WRITER
-    blittilebitmapwriter BTBM(
-        blit1_writer_tile <: blit1_writer_tile,
-        blit1_writer_line <: blit1_writer_line,
-        blit1_writer_bitmap <: blit1_writer_bitmap,
-
-        character_writer_character <: character_writer_character,
-        character_writer_line <: character_writer_line,
-        character_writer_bitmap <: character_writer_bitmap,
-
-        blit1tilemap <:> blit1tilemap,
-        characterGenerator8x8 <:> characterGenerator8x8
-    );
 
     // VECTOR DRAWER UNIT
     vectors vector_drawer (
@@ -128,12 +106,18 @@ algorithm gpu(
         param3 <: gpu_param3,
     );
     blit GPUblit(
+        blit1_writer_tile <: blit1_writer_tile,
+        blit1_writer_line <: blit1_writer_line,
+        blit1_writer_bitmap <: blit1_writer_bitmap,
+
+        character_writer_character <: character_writer_character,
+        character_writer_line <: character_writer_line,
+        character_writer_bitmap <: character_writer_bitmap,
+
         x <: gpu_x,
         y <: gpu_y,
         param0 <: gpu_param0,
-        param1 <: gpu_param1,
-        blit1tilemap <:> blit1tilemap,
-        characterGenerator8x8 <:> characterGenerator8x8
+        param1 <: gpu_param1
     );
 
     // DRAW A LINE FROM VECTOR BLOCK OUTPUT
@@ -623,23 +607,78 @@ algorithm triangle (
 
 // BLIT - ( tilecharacter == 1 ) OUTPUT PIXELS TO BLIT A 16 x 16 TILE ( PARAM1 == 0 as 16 x 16, == 1 as 32 x 32, == 2 as 64 x 64, == 3 as 128 x 128 )
 // BLIT - ( tilecharacter == 0 ) OUTPUT PIXELS TO BLIT AN 8 x 8 CHARACTER ( PARAM1 == 0 as 8 x 8, == 1 as 16 x 16, == 2 as 32 x 32, == 3 as 64 x 64 )
+algorithm blittilebitmapwriter(
+    // For setting blit1 tile bitmaps
+    input   uint5   blit1_writer_tile,
+    input   uint4   blit1_writer_line,
+    input   uint16  blit1_writer_bitmap,
+
+    // For setting character generator bitmaps
+    input   uint8   character_writer_character,
+    input   uint3   character_writer_line,
+    input   uint8   character_writer_bitmap,
+
+    simple_dualport_bram_port1 blit1tilemap,
+    simple_dualport_bram_port1 characterGenerator8x8
+) <autorun> {
+    blit1tilemap.wenable1 := 1;
+    characterGenerator8x8.wenable1 := 1;
+
+    while(1) {
+        blit1tilemap.addr1 = { blit1_writer_tile, blit1_writer_line };
+        blit1tilemap.wdata1 = blit1_writer_bitmap;
+
+        characterGenerator8x8.addr1 = { character_writer_character, character_writer_line };
+        characterGenerator8x8.wdata1 = character_writer_bitmap;
+    }
+}
+
 algorithm blit (
+    // For setting blit1 tile bitmaps
+    input   uint5   blit1_writer_tile,
+    input   uint4   blit1_writer_line,
+    input   uint16  blit1_writer_bitmap,
+
+    // For setting character generator bitmaps
+    input   uint8   character_writer_character,
+    input   uint3   character_writer_line,
+    input   uint8   character_writer_bitmap,
+
     input   int10   x,
     input   int10   y,
     input   uint8   param0,
     input   uint2   param1,
 
-    output  int10  bitmap_x_write,
-    output  int10  bitmap_y_write,
+    output  int10   bitmap_x_write,
+    output  int10   bitmap_y_write,
     output  uint1   bitmap_write,
 
     input   uint1   start,
     input   uint1   tilecharacter,
     output  uint1   busy,
-
-    simple_dualport_bram_port0 blit1tilemap,
-    simple_dualport_bram_port0 characterGenerator8x8
 ) <autorun> {
+    // 32 x 16 x 16 1 bit tilemap for blit1tilemap
+    simple_dualport_bram uint16 blit1tilemap <input!> [ 512 ] = uninitialized;
+
+    // Character ROM 8x8 x 256 for character blitter
+    simple_dualport_bram uint8 characterGenerator8x8 <input!> [] = {
+        $include('ROM/characterROM8x8.inc')
+    };
+
+    // BLIT TILE WRITER
+    blittilebitmapwriter BTBM(
+        blit1_writer_tile <: blit1_writer_tile,
+        blit1_writer_line <: blit1_writer_line,
+        blit1_writer_bitmap <: blit1_writer_bitmap,
+
+        character_writer_character <: character_writer_character,
+        character_writer_line <: character_writer_line,
+        character_writer_bitmap <: character_writer_bitmap,
+
+        blit1tilemap <:> blit1tilemap,
+        characterGenerator8x8 <:> characterGenerator8x8
+    );
+
     // POSITION IN TILE/CHARACTER
     uint7   gpu_active_x = uninitialized;
     uint7   gpu_active_y = uninitialized;
@@ -787,32 +826,6 @@ algorithm vectors(
             }
             vector_block_active = 0;
         }
-    }
-}
-
-algorithm blittilebitmapwriter(
-    // For setting blit1 tile bitmaps
-    input   uint5   blit1_writer_tile,
-    input   uint4   blit1_writer_line,
-    input   uint16  blit1_writer_bitmap,
-
-    // For setting character generator bitmaps
-    input   uint8   character_writer_character,
-    input   uint3   character_writer_line,
-    input   uint8   character_writer_bitmap,
-
-    simple_dualport_bram_port1 blit1tilemap,
-    simple_dualport_bram_port1 characterGenerator8x8
-) <autorun> {
-    blit1tilemap.wenable1 := 1;
-    characterGenerator8x8.wenable1 := 1;
-
-    while(1) {
-        blit1tilemap.addr1 = { blit1_writer_tile, blit1_writer_line };
-        blit1tilemap.wdata1 = blit1_writer_bitmap;
-
-        characterGenerator8x8.addr1 = { character_writer_character, character_writer_line };
-        characterGenerator8x8.wdata1 = character_writer_bitmap;
     }
 }
 

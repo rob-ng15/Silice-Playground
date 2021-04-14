@@ -348,16 +348,16 @@ algorithm memmap_io (
                 case 16h8304: { readData = lower_sprites.sprite_read_active; }
                 case 16h8308: { readData = lower_sprites.sprite_read_tile; }
                 case 16h830c: { readData = lower_sprites.sprite_read_colour; }
-                case 16h8310: { readData = { {5{lower_sprites.sprite_read_x[10,1]}}, lower_sprites.sprite_read_x }; }
-                case 16h8314: { readData = { {5{lower_sprites.sprite_read_y[10,1]}}, lower_sprites.sprite_read_y }; }
+                case 16h8310: { readData = lower_sprites.sprite_read_x; }
+                case 16h8314: { readData = lower_sprites.sprite_read_y; }
                 case 16h8318: { readData = lower_sprites.sprite_read_double; }
 
                 // LOWER SPRITE LAYER - SMT
                 case 16h9304: { readData = lower_sprites.sprite_read_active_SMT; }
                 case 16h9308: { readData = lower_sprites.sprite_read_tile_SMT; }
                 case 16h930c: { readData = lower_sprites.sprite_read_colour_SMT; }
-                case 16h9310: { readData = { {5{lower_sprites.sprite_read_x_SMT[10,1]}}, lower_sprites.sprite_read_x_SMT }; }
-                case 16h9314: { readData = { {5{lower_sprites.sprite_read_y_SMT[10,1]}}, lower_sprites.sprite_read_y_SMT }; }
+                case 16h9310: { readData = lower_sprites.sprite_read_x_SMT; }
+                case 16h9314: { readData = lower_sprites.sprite_read_y_SMT; }
                 case 16h9318: { readData = lower_sprites.sprite_read_double_SMT; }
 
                 // LOWER SPRITE LAYER - COLLISION DETECTION
@@ -384,16 +384,16 @@ algorithm memmap_io (
                 case 16h8504: { readData = upper_sprites.sprite_read_active; }
                 case 16h8508: { readData = upper_sprites.sprite_read_tile; }
                 case 16h850c: { readData = upper_sprites.sprite_read_colour; }
-                case 16h8510: { readData = { {5{upper_sprites.sprite_read_x[10,1]}}, upper_sprites.sprite_read_x }; }
-                case 16h8514: { readData = { {5{upper_sprites.sprite_read_y[10,1]}}, upper_sprites.sprite_read_y }; }
+                case 16h8510: { readData = upper_sprites.sprite_read_x; }
+                case 16h8514: { readData = upper_sprites.sprite_read_y; }
                 case 16h8518: { readData = upper_sprites.sprite_read_double; }
 
                 // UPPER SPRITE LAYER - SMT
                 case 16h9504: { readData = upper_sprites.sprite_read_active_SMT; }
                 case 16h9508: { readData = upper_sprites.sprite_read_tile_SMT; }
                 case 16h950c: { readData = upper_sprites.sprite_read_colour_SMT; }
-                case 16h9510: { readData = { {5{upper_sprites.sprite_read_x_SMT[10,1]}}, upper_sprites.sprite_read_x_SMT }; }
-                case 16h9514: { readData = { {5{upper_sprites.sprite_read_y_SMT[10,1]}}, upper_sprites.sprite_read_y_SMT }; }
+                case 16h9510: { readData = upper_sprites.sprite_read_x_SMT; }
+                case 16h9514: { readData = upper_sprites.sprite_read_y_SMT; }
                 case 16h9518: { readData = upper_sprites.sprite_read_double_SMT; }
 
                 // UPPER SPRITE LAYER - COLLISION DETECTION

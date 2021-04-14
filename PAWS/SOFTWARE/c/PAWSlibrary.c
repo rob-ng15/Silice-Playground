@@ -219,6 +219,10 @@ unsigned char get_buttons( void ) {
 // DISPLAY FUNCTIONS
 // FUNCTIONS ARE IN LAYER ORDER: BACKGROUND, TILEMAP, SPRITES (for LOWER ), BITMAP & GPU, ( UPPER SPRITES ), CHARACTERMAP & TPU
 // colour is in the form { Arrggbb } { ALPHA - show layer below, RED, GREEN, BLUE } or { rrggbb } { RED, GREEN, BLUE } giving 64 colours + transparent
+// INTERNAL FUNCTION - WAIT FOR THE GPU TO FINISH THE LAST COMMAND
+void wait_gpu( void ) {
+    while( *GPU_STATUS );
+}
 
 // WAIT FOR VBLANK TO START
 void await_vblank( void ) {
@@ -237,6 +241,7 @@ void bitmap_display( unsigned char framebuffer ) {
 }
 
 void bitmap_draw( unsigned char framebuffer ) {
+    wait_gpu();
     *FRAMEBUFFER_DRAW = framebuffer;
 }
 
@@ -299,10 +304,6 @@ unsigned char tilemap_scrollwrapclear( unsigned char action ) {
 // The GPU can draw pixels, filled rectangles, lines, (filled) circles, filled triangles and has a 16 x 16 pixel blitter from user definable tiles
 
 
-// INTERNAL FUNCTION - WAIT FOR THE GPU TO FINISH THE LAST COMMAND
-void wait_gpu( void ) {
-    while( *GPU_STATUS );
-}
 
 // SCROLL THE BITMAP by 1 pixel
 //  action == 1 LEFT, == 2 UP, == 3 RIGHT, == 4 DOWN, == 5 RESET
