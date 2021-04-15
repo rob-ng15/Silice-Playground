@@ -14,26 +14,26 @@
      _a > _b ? _a : _b; })
 
 // GRAPHICS
-// ALIENS ARE BLITTER OBJECTS, 2 DESIGNS PER ALIEN TYPE FOR ANIMATION, 2 FOR EXPLOSION, 2 FOR UFO, 1 FOR BUNKERS
+// ALIENS ARE BLITTER OBJECTS, 2 DESIGNS PER ALIEN TYPE FOR ANIMATION, 2 FOR EXPLOSION, 2 FOR UFO, 2 FOR BUNKERS
 unsigned short blitter_bitmaps[] = {
-    0b0001100000000000,
-    0b0011111000000000,
-    0b0111111100000000,
-    0b1101101100000000,
-    0b1111111100000000,
-    0b0101101000000000,
-    0b1000000100000000,
-    0b0100001000000000,
+    0b0000011000000000,
+    0b0000111110000000,
+    0b0001111111000000,
+    0b0011011011000000,
+    0b0011111111000000,
+    0b0001011010000000,
+    0b0010000001000000,
+    0b0001000010000000,
     0,0,0,0,0,0,0,0,
 
-    0b0001100000000000,
-    0b0011111000000000,
-    0b0111111100000000,
-    0b1101101100000000,
-    0b1111111100000000,
-    0b0010010000000000,
-    0b0101101000000000,
-    0b1010010100000000,
+    0b0000011000000000,
+    0b0000111110000000,
+    0b0001111111000000,
+    0b0011011011000000,
+    0b0011111111000000,
+    0b0000100100000000,
+    0b0001011010000000,
+    0b0010100101000000,
     0,0,0,0,0,0,0,0,
 
     0b0010000010000000,
@@ -94,8 +94,23 @@ unsigned short blitter_bitmaps[] = {
     0b1000100010001000,
     0,0,0,0,0,0,0,0,0,
 
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0b0000011111000000,
+    0b0001111111110000,
+    0b0011111111111000,
+    0b0110101010101100,
+    0b1111111111111110,
+    0b0011101110111000,
+    0b0001000000010000,
+    0,0,0,0,0,0,0,0,0,
+
+    0b0000011111000000,
+    0b0001111111110000,
+    0b0011111111111000,
+    0b0110111011101100,
+    0b1111111111111110,
+    0b0011101110111000,
+    0b0001000000010000,
+    0,0,0,0,0,0,0,0,0,
 
     0b0000011111111111,
     0b0000111111111111,
@@ -209,6 +224,16 @@ struct Swarm {
 };
 struct Swarm AlienSwarm;
 
+#define UFOONSCREEN 1
+#define UFOEXPLODE 2
+struct Ufo {
+    short active, score;
+    short counter;
+    short x, direction;
+    short lastufo;
+};
+struct Ufo UFO;
+
 // CURRENT FRAMEBUFFER
 unsigned short framebuffer = 0;
 
@@ -243,8 +268,8 @@ void initialise_graphics( void ) {
 }
 
 void reset_aliens( void ) {
-    bitmap_draw( 0 );gpu_cs();
-    bitmap_draw( 1 );gpu_cs();
+    bitmap_draw( 0 ); gpu_cs();
+    bitmap_draw( 1 ); gpu_cs();
 
     // SET THE ALIENS
     for( short y = 0; y < 5; y++ ) {
@@ -298,7 +323,7 @@ void reset_player( void ) {
     Ship.state = SHIPRESET;
     Ship.counter = 32;
     Ship.x = 320 - 12;
-    Ship.y = 469;
+    Ship.y = 465;
 }
 
 void reset_game( void ) {
@@ -309,6 +334,8 @@ void reset_game( void ) {
     Ship.life = 3;
 
     reset_aliens();
+    UFO.active = 0;
+    UFO.lastufo = 1000;
 }
 
 short count_aliens( void ) {
@@ -328,6 +355,9 @@ short count_aliens( void ) {
 }
 
 void trim_aliens( void ) {
+    // DEBUG
+    set_tilemap_tile( 1, 30, 9, TRANSPARENT, GREY2 );
+
     short left = 10, right = 0, top = 4, bottom = 0, pixel = 16;
 
     // CHECK IF ANY ALIENS LEFT
@@ -361,6 +391,9 @@ void trim_aliens( void ) {
 }
 
 void draw_aliens( void ) {
+    // DEBUG
+    set_tilemap_tile( 1, 30, 8, TRANSPARENT, GREY2 );
+
     // DRAW ALIEN SWARM
     for( short y = AlienSwarm.toprow; y <= AlienSwarm.bottomrow; y++ ) {
         for( short x = AlienSwarm.leftcolumn; x <= AlienSwarm.rightcolumn; x++ ) {
@@ -385,14 +418,31 @@ void draw_aliens( void ) {
             }
         }
     }
+
+    // DRAW UFO
+    switch( UFO.active ) {
+        case UFOONSCREEN:
+            gpu_blit( MAGENTA, UFO.x, 16, 10 + framebuffer, 0 );
+            break;
+        case UFOEXPLODE:
+            gpu_printf_centre( framebuffer ? RED : LTRED, UFO.x + 7, 16, 0, "%d", UFO.score );
+            break;
+        default:
+            break;
+    }
 }
 
 void move_aliens( void ) {
+    // DEBUG
+    set_tilemap_tile( 1, 30, 7, TRANSPARENT, GREY2 );
+
     // FIND AN ALIEN
     if( ( Aliens[ AlienSwarm.row * 11 + AlienSwarm.column ].type != 0 ) && ( AlienSwarm.newdirection ) ) {
         AlienSwarm.newdirection = 0;
     } else {
         do {
+            // DEBUG
+            set_tilemap_tile( 1, 30, 7, TRANSPARENT, PURPLE );
             switch( AlienSwarm.direction ) {
                 case 1:
                     AlienSwarm.column--;
@@ -433,9 +483,11 @@ void move_aliens( void ) {
                 default:
                     break;
             }
-        } while( Aliens[ AlienSwarm.row * 11 + AlienSwarm.column ].type == 0 );
+        } while( ( Aliens[ AlienSwarm.row * 11 + AlienSwarm.column ].type == 0 ) && ( AlienSwarm.direction < 2 ) );
     }
 
+    // DEBUG
+    set_tilemap_tile( 1, 30, 7, TRANSPARENT, ORANGE );
     switch( AlienSwarm.direction ) {
         // MOVE LEFT OR RIGHT
         case 0:
@@ -447,6 +499,8 @@ void move_aliens( void ) {
         // MOVE DOWN AND CHANGE DIRECTION
         case 2:
         case 3:
+            // DEBUG
+            set_tilemap_tile( 1, 30, 7, TRANSPARENT, YELLOW );
             for( short y = AlienSwarm.toprow; y <= AlienSwarm.bottomrow; y++ ) {
                 for( short x = AlienSwarm.leftcolumn; x <= AlienSwarm.rightcolumn; x++ ) {
                     Aliens[ y * 11 + x ].y += 8;
@@ -458,12 +512,61 @@ void move_aliens( void ) {
     }
 }
 
+void ufo_actions( void ) {
+    // DEBUG
+    set_tilemap_tile( 1, 30, 6, TRANSPARENT, GREY2 );
+
+    switch( UFO.active ) {
+        case 0:
+            if( !UFO.lastufo ) {
+                if( !rng(8) ) {
+                    UFO.active = UFOONSCREEN;
+                    switch( rng(1) ) {
+                        case 0:
+                            UFO.x = -15;
+                            UFO.direction = 1;
+                            break;
+                        case 1:
+                            UFO.x = 320;
+                            UFO.direction = 0;
+                            break;
+                    }
+                }
+            } else {
+                UFO.lastufo--;
+            }
+            break;
+        case UFOONSCREEN:
+            // MOVE THE UFO
+            UFO.x += ( ( UFO.direction ) ? 1 : -1 ) * ( ( Ship.level > 0 ) ? 1 : framebuffer );
+            if( ( UFO.x < -15 ) || ( UFO.x > 320 ) ) {
+                UFO.active = 0;
+                UFO.lastufo = 1000;
+            }
+            break;
+        case UFOEXPLODE:
+            if( !UFO.counter ) {
+                UFO.active = 0;
+                UFO.lastufo = 1000;
+            } else {
+                UFO.counter--;
+            }
+            break;
+    }
+}
+
+
 void bomb_actions( void ) {
     short bombdropped = 0, bombcolumn, bombrow, attempts = 8;
     short bomb_x, bomb_y;
 
+    // DEBUG
+    set_tilemap_tile( 1, 30, 5, TRANSPARENT, GREY2 );
+
     // CHECK IF HIT AND MOVE BOMBS
     for( short i = 2; i < 13; i++ ) {
+        // DEBUG
+        set_tilemap_tile( 1, 30, 5, TRANSPARENT, PURPLE );
         if( get_sprite_collision( 0, i ) & 0x8000 ) {
             // HIT THE BUNKER
             bomb_x = get_sprite_attribute( 0, i , 3 ) / 2 - rng(4) + 2;
@@ -493,11 +596,13 @@ void bomb_actions( void ) {
     // CHECK IF FIRING
     AlienSwarm.lastbombtimer -= ( AlienSwarm.lastbombtimer ) > 0 ? 1 : 0;
     if( !AlienSwarm.lastbombtimer && !rng(4) ) {
+        // DEBUG
+        set_tilemap_tile( 1, 30, 5, TRANSPARENT, ORANGE );
         for( short i = 2; ( i < 13 ) && !bombdropped; i++ ) {
             if( !get_sprite_attribute( 0, i, 0 ) ) {
                 // BOMB SLOT FOUND
                 // FIND A COLUMN AND BOTTOM ROW ALIEN
-                while( !bombdropped ) {
+                while( !bombdropped && attempts ) {
                     bombcolumn = rng(11);
                     for( bombrow = 4; ( bombrow >= 0 ) && attempts && !bombdropped; bombrow-- ) {
                         switch( Aliens[ bombrow * 11 + bombcolumn ].type ) {
@@ -520,6 +625,9 @@ void bomb_actions( void ) {
 }
 
 short missile_actions( void ) {
+    // DEBUG
+    set_tilemap_tile( 1, 30, 4, TRANSPARENT, GREY2 );
+
     short missile_x, missile_y, alien_hit = 0, points = 0;
 
     // CHECK IF PLAYER MISSILE HAS HIT
@@ -546,9 +654,9 @@ short missile_actions( void ) {
             }
         }
         if( !alien_hit ) {
-            if( missile_x > 24 ) {
+            set_sprite_attribute( 0, 1, 0, 0 );
+            if( missile_y > 24 ) {
                 // HIT A BUNKER
-                set_sprite_attribute( 0, 1, 0, 0 );
                 missile_x = missile_x - rng(4) + 2;
                 missile_y = missile_y - rng(2) - 1;
                 bitmap_draw( 0 ); gpu_blit( TRANSPARENT, missile_x, missile_y, 14, 0 );
@@ -556,6 +664,10 @@ short missile_actions( void ) {
                 bitmap_draw( !framebuffer );
             } else {
                 // HIT UFO
+                UFO.active = UFOEXPLODE;
+                UFO.counter = 100;
+                UFO.score = ( rng(3) + 1 ) * 50;
+                points = UFO.score;
             }
         }
     }
@@ -569,13 +681,16 @@ short missile_actions( void ) {
         }
     } else {
         // MOVE MISSILE
-        update_sprite( 0, 1, 0b1111101100000 );
+        update_sprite( 0, 1, 0b1111101000000 );
     }
 
     return( points );
 }
 
 void player_actions( void ) {
+    // DEBUG
+    set_tilemap_tile( 1, 30, 3, TRANSPARENT, GREY2 );
+
     if( ( get_sprite_collision( 0, 0 ) & 0x8000 ) && ( Ship.state != SHIPEXPLODE ) ) {
         // ALIEN HAS HIT SHIP
         Ship.state = SHIPEXPLODE;
@@ -594,7 +709,7 @@ void player_actions( void ) {
             break;
         case SHIPRESET:
             // RESET
-            set_sprite( 0, 0, 0, GREEN, Ship.x, Ship.y, 0, 1 );
+            set_sprite( 0, 0, 0, DKGREEN, Ship.x, Ship.y, 0, 1 );
             Ship.counter--;
             if( !Ship.counter ) Ship.state = SHIPPLAY;
             break;
@@ -617,11 +732,11 @@ void player_actions( void ) {
 void draw_status( void ) {
     char scorestring[9];
 
+    // DEBUG
+    set_tilemap_tile( 1, 30, 2, TRANSPARENT, GREY2 );
+
     // GENERATE THE SCORE STRING
     sprintf( &scorestring[0], "%8u", Ship.score );
-
-    // CLEAR THE TILEMAP
-    tilemap_scrollwrapclear( 9 );
 
     // PRINT THE SCORE
     for( short i = 0; i < 8; i++ ) {
@@ -642,12 +757,14 @@ void play( void ) {
     reset_game();
 
     while( Ship.life > 0 ) {
-        // ADJUST SIZE OF ALIEN GRID
-        trim_aliens();
+        // DEBUG
+        set_tilemap_tile( 1, 30, 1, TRANSPARENT, GREY2 );
 
         // DRAW TO HIDDEN FRAME BUFFER
         bitmap_draw( !framebuffer );
 
+        // ADJUST SIZE OF ALIEN GRID
+        trim_aliens();
         if( Ship.state != SHIPEXPLODE ) {
             // MOVE ALIENS
             move_aliens();
@@ -657,6 +774,7 @@ void play( void ) {
         }
 
         player_actions();
+        ufo_actions();
 
         // UPDATE THE SCREEN
         gpu_rectangle( TRANSPARENT, 0, 16, 319, AlienSwarm.bottompixel );
@@ -675,6 +793,8 @@ int main( void ) {
     INITIALISEMEMORY();
     set_background( GREY2, DKBLUE - 1, BKG_SNOW );
 
+    // CLEAR THE TILEMAP
+    tilemap_scrollwrapclear( 9 );
 
     while(1) {
         bitmap_draw( 0 );gpu_cs();
