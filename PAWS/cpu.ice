@@ -46,7 +46,6 @@ circuitry store( input accesssize, input location, input value, input memorybusy
 
 algorithm PAWSCPU(
     input   uint1   clock_CPUdecoder,
-    input   uint1   clock_CPUcache,
 
     output  uint3   accesssize,
     output  uint32  address,
@@ -217,20 +216,6 @@ algorithm PAWSCPU(
         SMT <: SMT
     );
 
-    // On CPU instruction cache - MAIN AND SMT THREADS
-    instructioncache Icache <@clock_CPUcache> (
-        PC <: pc,
-        newinstruction <: instruction,
-        newcompressed <: compressed
-    );
-    instructioncache IcacheSMT <@clock_CPUcache> (
-        PC <: pcSMT,
-        newinstruction <: instruction,
-        newcompressed <: compressed
-    );
-    Icache.updatecache := 0;
-    IcacheSMT.updatecache := 0;
-
     // MEMORY ACCESS FLAGS
     accesssize := ( ( opCode == 7b0101111 ) || ( opCode == 7b0000111 ) || ( opCode == 7b0100111 ) ) ? 3b010 : function3;
     readmemory := 0;
@@ -250,30 +235,21 @@ algorithm PAWSCPU(
         incPC = 1;
         frd = 0;
 
-        // CHECK IF PC IS IN LAST INSTRUCTION CACHE
-        if( SMT ? IcacheSMT.incache : Icache.incache ) {
-            instruction = SMT ? IcacheSMT.instruction : Icache.instruction;
-            compressed = SMT ? IcacheSMT.compressed : Icache.compressed;
-        } else {
-            // FETCH + EXPAND COMPRESSED INSTRUCTIONS
-            ( address, readmemory ) = fetch( PC, memorybusy );
-            compressed = ( readdata[0,2] != 2b11 );
-            switch( readdata[0,2] ) {
-                default: { instruction = COMPRESSED.i32; }
-                case 2b11: {
-                    // 32 BIT INSTRUCTION
-                    instruction[0,16] = readdata;
-                    ( address, readmemory ) = fetch( PCplus2, memorybusy );
-                    instruction[16,16] = readdata;
-                }
+        // FETCH + EXPAND COMPRESSED INSTRUCTIONS
+        ( address, readmemory ) = fetch( PC, memorybusy );
+        compressed = ( readdata[0,2] != 2b11 );
+        switch( readdata[0,2] ) {
+            default: { instruction = COMPRESSED.i32; }
+            case 2b11: {
+                // 32 BIT INSTRUCTION
+                instruction[0,16] = readdata;
+                ( address, readmemory ) = fetch( PCplus2, memorybusy );
+                instruction[16,16] = readdata;
             }
-
-            // UPDATE LASTCACHE
-            Icache.updatecache = SMT ? 0 : 1;
-            IcacheSMT.updatecache = SMT ? 1 : 0;
         }
 
         // TIME TO ALLOW DECODE + REGISTER FETCH + ADDRESS GENERATION
+        ++:
         ++:
         ++:
         ++:
@@ -352,20 +328,11 @@ algorithm PAWSCPU(
 
             // FPU, ALUI or ALUR
             default: {
-                // START ALU/FPU
-                switch( opCode[6,1] ) {
-                    case 0: {
-                        ALU.start = 1;
-                        while( ALU.busy ) {}
-                        result = ALU.result;
-                    }
-                    case 1: {
-                        FPU.start = 1;
-                        while( FPU.busy ) {}
-                        frd = FPU.frd;
-                        result = FPU.result;
-                    }
-                }
+                ALU.start = ~opCode[6,1];
+                FPU.start = opCode[6,1];
+                while( ALU.busy || FPU.busy ) {}
+                frd = opCode[6,1] ? FPU.frd : 0;
+                result = opCode[6,1] ? FPU.result : ALU.result;
             }
         }
 
@@ -391,104 +358,4 @@ algorithm PAWSCPU(
             ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy );
         }
    } // RISC-V
-}
-
-// ON CPU SMALL INSTRUCTION CACHE
-algorithm instructioncache(
-    input   uint32  PC,
-
-    output  uint1   incache,
-
-    input   uint1   updatecache,
-    input   uint32  newinstruction,
-    input   uint1   newcompressed,
-
-    output  uint32  instruction,
-    output  uint1   compressed
-) <autorun> {
-    // LAST INSTRUCTION CACHE
-    uint3   location = uninitialized;
-    uint2   lastcachepointer = 0;
-    uint1   LATCHupdate = 0;
-
-    p P(
-        location :> location,
-        incache :> incache,
-        PC <: PC,
-        pointer <: lastcachepointer
-    );
-    i I(
-        location <: location,
-        newinstruction <: newinstruction,
-        pointer <: lastcachepointer,
-        instruction :> instruction
-    );
-    c C(
-        location <: location,
-        newcompressed <: newcompressed,
-        pointer <: lastcachepointer,
-        compressed :> compressed
-    );
-
-    P.update := updatecache && ~LATCHupdate;
-    I.update := updatecache && ~LATCHupdate;
-    C.update := updatecache && ~LATCHupdate;
-
-    while(1) {
-        if( ~updatecache && LATCHupdate ) {
-            lastcachepointer = lastcachepointer + 1;
-        }
-        LATCHupdate = updatecache;
-    }
-}
-
-algorithm p(
-    output  uint3   location,
-    output  uint1   incache,
-    input   uint32  PC,
-    input   uint1   update,
-    input   uint2   pointer
-) <autorun> {
-    uint32  lastpccache[4] = { 32hffffffff, pad(32hffffffff) };
-
-    // CHECK IF PC IS IN LAST INSTRUCTION CACHE
-    location :=
-        $$for i = 0, 2 do
-            ( PC == ( lastpccache[ $i$ ] ) ) ? $i$ :
-        $$end
-        ( PC == ( lastpccache[ 3 ] ) ) ? 3: 3h7;
-    //incache := ( location == 3h7 ) ? 0 : 1;
-    incache := 0; // DISABLE FOR TESTING
-    lastpccache[ pointer ] := update ? PC : lastpccache[ pointer ];
-
-    while(1) {}
-}
-
-algorithm i(
-    input   uint3   location,
-    output  uint32  instruction,
-    input   uint1   update,
-    input   uint32  newinstruction,
-    input   uint2   pointer
-) <autorun> {
-    uint32  lastinstructioncache[4] = uninitialized;
-    instruction := lastinstructioncache[ ( location == 3h7 ) ? 0 : location ];
-    lastinstructioncache[ pointer ] := update ? newinstruction : lastinstructioncache[ pointer ];
-
-    while(1) {}
-}
-
-algorithm c(
-    input   uint3   location,
-    output  uint1   compressed,
-    input   uint1   update,
-    input   uint1   newcompressed,
-    input   uint2   pointer
-) <autorun> {
-    uint4   lastcompressedcache = 0;
-    // RETRIEVE FROM LAST INSTRUCTION CACHE
-    compressed := lastcompressedcache[ ( location == 3h7 ) ? 0 : location, 1 ];
-    lastcompressedcache[ pointer, 1 ] := update ? newcompressed : lastcompressedcache[ pointer, 1 ];
-
-    while(1) {}
 }

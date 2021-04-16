@@ -162,7 +162,6 @@ algorithm main(
     uint16  writedata = uninitialized;
     PAWSCPU CPU <@clock_system> (
         clock_CPUdecoder <: clock_100_1,
-        clock_CPUcache <: clock_100_2,
 
         accesssize :> function3,
         address :> address,

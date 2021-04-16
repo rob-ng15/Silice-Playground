@@ -221,6 +221,7 @@ struct Swarm {
     short leftcolumn, rightcolumn, toprow, bottomrow, bottompixel;
     short row, column, direction, newdirection;
     short lastbombtimer;
+    short count;
 };
 struct Swarm AlienSwarm;
 
@@ -231,6 +232,7 @@ struct Ufo {
     short counter;
     short x, direction;
     short lastufo;
+    short pitchcount;
 };
 struct Ufo UFO;
 
@@ -301,6 +303,7 @@ void reset_aliens( void ) {
     AlienSwarm.direction = 1;
     AlienSwarm.newdirection = 1;
     AlienSwarm.lastbombtimer = 0;
+    AlienSwarm.count = 55;
 
     // REMOVE THE PLAYER, MISSILE AND BOMBS
     for( short i = 0; i < 13; i++ ) {
@@ -338,22 +341,6 @@ void reset_game( void ) {
     UFO.lastufo = 1000;
 }
 
-short count_aliens( void ) {
-    short total = 0;
-
-    for( short y = 0; y < 5; y++ ) {
-        for( short x = 0; x < 11; x++ ) {
-            switch( Aliens[ y * 11 + x ].type ) {
-                case 0:
-                    break;
-                default:
-                    total++;
-            }
-        }
-    }
-    return( total );
-}
-
 void trim_aliens( void ) {
     // DEBUG
     set_tilemap_tile( 1, 30, 9, TRANSPARENT, GREY2 );
@@ -361,7 +348,7 @@ void trim_aliens( void ) {
     short left = 10, right = 0, top = 4, bottom = 0, pixel = 16;
 
     // CHECK IF ANY ALIENS LEFT
-    if( !count_aliens() ) {
+    if( !AlienSwarm.count ) {
         reset_aliens();
         Ship.level++;
     }
@@ -374,6 +361,7 @@ void trim_aliens( void ) {
                     break;
                 case 4:
                     Aliens[ y * 11 + x ].type = 0;
+                    AlienSwarm.count--;
                 default:
                     left = min( left, x );
                     right = max( right, x );
@@ -423,9 +411,17 @@ void draw_aliens( void ) {
     switch( UFO.active ) {
         case UFOONSCREEN:
             gpu_blit( MAGENTA, UFO.x, 16, 10 + framebuffer, 0 );
+            if( !get_beep_duration( 1 ) ) {
+                beep( 1, 2, UFO.pitchcount ? 25 : 37, 100 );
+                UFO.pitchcount = !UFO.pitchcount;
+            }
             break;
         case UFOEXPLODE:
             gpu_printf_centre( framebuffer ? RED : LTRED, UFO.x + 7, 16, 0, "%d", UFO.score );
+            if( !get_beep_duration( 1 ) ) {
+                beep( 1, 1, UFO.pitchcount ? 37 : 49, 25 );
+                UFO.pitchcount = !UFO.pitchcount;
+            }
             break;
         default:
             break;
@@ -451,7 +447,9 @@ void move_aliens( void ) {
                         AlienSwarm.row++;
                     }
                     if( AlienSwarm.row > AlienSwarm.bottomrow ) {
-                        beep( 1, 0, 1, 100 );
+                        if( !UFO.active ) {
+                            beep( 1, 0, 1, 100 );
+                        }
                         AlienSwarm.row = AlienSwarm.toprow;
                         AlienSwarm.column = AlienSwarm.rightcolumn;
                         for( short y = AlienSwarm.toprow; y <= AlienSwarm.bottomrow; y++ ) {
@@ -469,7 +467,9 @@ void move_aliens( void ) {
                         AlienSwarm.row++;
                     }
                     if( AlienSwarm.row > AlienSwarm.bottomrow ) {
-                        beep( 1, 0, 1, 100 );
+                        if( !UFO.active ) {
+                            beep( 1, 0, 1, 100 );
+                        }
                         AlienSwarm.row = AlienSwarm.toprow;
                         AlienSwarm.column = AlienSwarm.leftcolumn;
                         for( short y = AlienSwarm.toprow; y <= AlienSwarm.bottomrow; y++ ) {
@@ -675,9 +675,11 @@ short missile_actions( void ) {
     // FIRE? OR MOVE MISSILE
     if( !get_sprite_attribute( 0, 1, 0 ) ) {
         // NO MISSILE, CHECK IF FIRE
-        if( get_buttons() & 2  ) {
+        if( ( get_buttons() & 2 ) && ( Ship.state == SHIPPLAY ) ) {
             set_sprite( 0, 1, 1, GREEN, Ship.x + 8, Ship.y - 10, 0, 1 );
-            beep( 2, 4, 61, 128 );
+            if( !get_beep_duration( 2 ) ) {
+                beep( 2, 4, 61, 128 );
+            }
         }
     } else {
         // MOVE MISSILE
@@ -715,13 +717,15 @@ void player_actions( void ) {
             break;
         case SHIPEXPLODE:
             // EXPLODE
-            set_sprite( 0, 0, 1, RED, Ship.x, Ship.y, 0, 1 );
+            beep( 2, 4, 1 + framebuffer, 25 );
+            set_sprite( 0, 0, 1, framebuffer ? RED : ORANGE, Ship.x, Ship.y, 0, 1 );
             Ship.counter--;
             if( !Ship.counter ) {
                 Ship.life--;
                 if( get_sprite_collision( 0, 0 ) & 0x8000 ) {
                     // SHIP HIT BY ALIEN, NOT MISSILE
                     reset_aliens();
+                    trim_aliens();
                 }
                 reset_player();
             }
