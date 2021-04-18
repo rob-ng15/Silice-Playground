@@ -160,16 +160,16 @@ algorithm sprite_layer(
     sprite_read_active := sprite_active[ sprite_set_number ];
     sprite_read_double := sprite_double[ sprite_set_number ];
     sprite_read_colour := sprite_colour[ sprite_set_number ];
-    sprite_read_x := { sprite_x[ sprite_set_number ] < 0 ? 5b1111 : 5b0000, sprite_x[ sprite_set_number ] };
-    sprite_read_y := { sprite_y[ sprite_set_number ] < 0 ? 5b1111 : 5b0000, sprite_y[ sprite_set_number ] };
+    sprite_read_x := { sprite_x[ sprite_set_number ] < 0 ? 5b1111 : 5b0000, __unsigned(sprite_x[ sprite_set_number ]) };
+    sprite_read_y := { sprite_y[ sprite_set_number ] < 0 ? 5b1111 : 5b0000, __unsigned(sprite_y[ sprite_set_number ]) };
     sprite_read_tile := sprite_tile_number[ sprite_set_number ];
 
     // Sprite details reader - SMT ACCESS
     sprite_read_active_SMT := sprite_active[ sprite_set_number_SMT ];
     sprite_read_double_SMT := sprite_double[ sprite_set_number_SMT ];
     sprite_read_colour_SMT := sprite_colour[ sprite_set_number_SMT ];
-    sprite_read_x_SMT := { sprite_x[ sprite_set_number_SMT ] < 0 ? 5b1111 : 5b0000, sprite_x[ sprite_set_number_SMT ] };
-    sprite_read_y_SMT := { sprite_x[ sprite_set_number_SMT ] < 0 ? 5b1111 : 5b0000, sprite_x[ sprite_set_number_SMT ] };
+    sprite_read_x_SMT := { sprite_x[ sprite_set_number_SMT ] < 0 ? 5b1111 : 5b0000, __unsigned(sprite_x[ sprite_set_number_SMT ]) };
+    sprite_read_y_SMT := { sprite_x[ sprite_set_number_SMT ] < 0 ? 5b1111 : 5b0000, __unsigned(sprite_x[ sprite_set_number_SMT ]) };
     sprite_read_tile_SMT := sprite_tile_number[ sprite_set_number_SMT ];
 
     while(1) {

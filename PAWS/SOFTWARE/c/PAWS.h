@@ -51,6 +51,10 @@ unsigned char volatile * BLIT_WRITER_TILE = (unsigned char volatile *) 0x8450;
 unsigned char volatile * BLIT_WRITER_LINE = (unsigned char volatile *) 0x8454;
 unsigned short volatile * BLIT_WRITER_BITMAP = (unsigned short volatile *) 0x8458;
 
+unsigned char volatile * BLIT_CHWRITER_TILE = (unsigned char volatile *) 0x8480;
+unsigned char volatile * BLIT_CHWRITER_LINE = (unsigned char volatile *) 0x8484;
+unsigned char volatile * BLIT_CHWRITER_BITMAP = (unsigned char volatile *) 0x8488;
+
 unsigned char volatile * VECTOR_DRAW_BLOCK = (unsigned char volatile *) 0x8420;
 unsigned char volatile * VECTOR_DRAW_COLOUR = (unsigned char volatile *) 0x8424;
 short volatile * VECTOR_DRAW_XC = (short volatile *) 0x8428;

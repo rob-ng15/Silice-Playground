@@ -46,6 +46,8 @@ circuitry store( input accesssize, input location, input value, input memorybusy
 
 algorithm PAWSCPU(
     input   uint1   clock_CPUdecoder,
+    input   uint1   clock_ALU,
+    input   uint1   clock_FPU,
 
     output  uint3   accesssize,
     output  uint32  address,
@@ -178,6 +180,8 @@ algorithm PAWSCPU(
 
     // ALU
     alu ALU(
+        clock_ALU <: clock_ALU,
+
         opCode <: opCode,
         function2 <: function2,
         function3 <: function3,
@@ -199,6 +203,8 @@ algorithm PAWSCPU(
 
     // FLOATING POINT OPERATIONS
     fpu FPU(
+        clock_FPU <: clock_FPU,
+
         opCode <: opCode,
         function3 <: function3,
         function7 <: function7,

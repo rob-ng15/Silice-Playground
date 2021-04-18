@@ -36,12 +36,12 @@ algorithm memmap_io (
     input   uint1   clock_usb,
 
     // Memory access
-    input   uint16  memoryAddress,
+    input   uint32  memoryAddress,
     input   uint1   memoryWrite,
     input   uint1   memoryRead,
 
     input   uint16  writeData,
-    output  uint32  readData,
+    output  uint16  readData,
 
     // SMT STATUS
     output  uint1   SMTRUNNING,
@@ -64,10 +64,10 @@ algorithm memmap_io (
     // RNG random number generator
     uint16  staticGenerator = uninitialized;
     uint16  staticGeneratorALT = uninitialized;
-    uint1   static1bit := staticGenerator[0,1];
-    uint2   static2bit := staticGenerator[0,2];
-    uint4   static4bit := staticGenerator[0,4];
-    uint6   static6bit := staticGenerator[0,6];
+    uint1   static1bit <: staticGenerator[0,1];
+    uint2   static2bit <: staticGenerator[0,2];
+    uint4   static4bit <: staticGenerator[0,4];
+    uint6   static6bit <: staticGenerator[0,6];
     random rng <@clock_25mhz> (
         g_noise_out :> staticGenerator,
         u_noise_out :> staticGeneratorALT
@@ -137,7 +137,7 @@ algorithm memmap_io (
     int10   bitmap_y_write = uninitialized;
     uint7   bitmap_colour_write = uninitialized;
     uint7   bitmap_colour_write_alt = uninitialized;
-    uint3   gpu_active_dithermode = uninitialized;
+    uint4   gpu_active_dithermode = uninitialized;
     uint1   bitmap_write = uninitialized;
     // 640 x 480 x 7 bit { Arrggbb } colour bitmap
     simple_dualport_bram uint7 bitmap_0 <@video_clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
@@ -326,7 +326,7 @@ algorithm memmap_io (
     while(1) {
         // READ IO Memory
         if( memoryRead && ~LATCHmemoryRead ) {
-            switch( memoryAddress ) {
+            switch( memoryAddress[0,16] ) {
                 // UART, LEDS, BUTTONS and CLOCK
                 case 16h8000: { readData = { 8b0, UART.inchar }; UART.inread = 1; }
                 case 16h8004: { readData = { 14b0, UART.outfull, UART.inavailable }; }
@@ -348,16 +348,16 @@ algorithm memmap_io (
                 case 16h8304: { readData = lower_sprites.sprite_read_active; }
                 case 16h8308: { readData = lower_sprites.sprite_read_tile; }
                 case 16h830c: { readData = lower_sprites.sprite_read_colour; }
-                case 16h8310: { readData = lower_sprites.sprite_read_x; }
-                case 16h8314: { readData = lower_sprites.sprite_read_y; }
+                case 16h8310: { readData = __unsigned(lower_sprites.sprite_read_x); }
+                case 16h8314: { readData = __unsigned(lower_sprites.sprite_read_y); }
                 case 16h8318: { readData = lower_sprites.sprite_read_double; }
 
                 // LOWER SPRITE LAYER - SMT
                 case 16h9304: { readData = lower_sprites.sprite_read_active_SMT; }
                 case 16h9308: { readData = lower_sprites.sprite_read_tile_SMT; }
                 case 16h930c: { readData = lower_sprites.sprite_read_colour_SMT; }
-                case 16h9310: { readData = lower_sprites.sprite_read_x_SMT; }
-                case 16h9314: { readData = lower_sprites.sprite_read_y_SMT; }
+                case 16h9310: { readData = __unsigned(lower_sprites.sprite_read_x_SMT); }
+                case 16h9314: { readData = __unsigned(lower_sprites.sprite_read_y_SMT); }
                 case 16h9318: { readData = lower_sprites.sprite_read_double_SMT; }
 
                 // LOWER SPRITE LAYER - COLLISION DETECTION
@@ -384,16 +384,16 @@ algorithm memmap_io (
                 case 16h8504: { readData = upper_sprites.sprite_read_active; }
                 case 16h8508: { readData = upper_sprites.sprite_read_tile; }
                 case 16h850c: { readData = upper_sprites.sprite_read_colour; }
-                case 16h8510: { readData = upper_sprites.sprite_read_x; }
-                case 16h8514: { readData = upper_sprites.sprite_read_y; }
+                case 16h8510: { readData = __unsigned(upper_sprites.sprite_read_x); }
+                case 16h8514: { readData = __unsigned(upper_sprites.sprite_read_y); }
                 case 16h8518: { readData = upper_sprites.sprite_read_double; }
 
                 // UPPER SPRITE LAYER - SMT
                 case 16h9504: { readData = upper_sprites.sprite_read_active_SMT; }
                 case 16h9508: { readData = upper_sprites.sprite_read_tile_SMT; }
                 case 16h950c: { readData = upper_sprites.sprite_read_colour_SMT; }
-                case 16h9510: { readData = upper_sprites.sprite_read_x_SMT; }
-                case 16h9514: { readData = upper_sprites.sprite_read_y_SMT; }
+                case 16h9510: { readData = __unsigned(upper_sprites.sprite_read_x_SMT); }
+                case 16h9514: { readData = __unsigned(upper_sprites.sprite_read_y_SMT); }
                 case 16h9518: { readData = upper_sprites.sprite_read_double_SMT; }
 
                 // UPPER SPRITE LAYER - COLLISION DETECTION
@@ -445,7 +445,7 @@ algorithm memmap_io (
 
         // WRITE IO Memory
         if( memoryWrite && ~LATCHmemoryWrite ) {
-            switch( memoryAddress ) {
+            switch( memoryAddress[0,16] ) {
                 // UART, LEDS
                 case 16h8000: { UART.outchar = writeData[0,8]; UART.outwrite = 1; }
                 case 16h800c: { leds = writeData; }

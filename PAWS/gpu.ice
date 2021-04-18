@@ -80,6 +80,7 @@ algorithm gpu(
     );
 
     // GPU SUBUNITS
+    uint4   gpu_unit = 0;
     rectangle GPUrectangle(
         x <: gpu_x,
         y <: gpu_y,
@@ -157,8 +158,9 @@ algorithm gpu(
         } else {
             gpu_active_colour = gpu_colour;
             gpu_active_colour_alt = gpu_colour_alt;
-            gpu_active = ( gpu_write > 1 ) ? 1 : 0;
+            gpu_unit = gpu_write;
             switch( gpu_write ) {
+                case 0: {}
                 case 1: {
                     // SET PIXEL (X,Y)
                     // NO GPU ACTIVATION
@@ -168,89 +170,86 @@ algorithm gpu(
                     bitmap_write = 1;
                 }
 
-                case 2: {
-                    // DRAW LINE FROM (X,Y) to (PARAM0,PARAM1)
-                    gpu_active_dithermode = 0;
-                    GPUline.start = 1;
-                    while( GPUline.busy ) {
-                        bitmap_x_write = GPUline.bitmap_x_write;
-                        bitmap_y_write = GPUline.bitmap_y_write;
-                        bitmap_write = GPUline.bitmap_write;
+                default: {
+                    // START THE GPU DRAWING UNIT
+                    gpu_active = 1;
+                    switch( gpu_unit ) {
+                        case 2: {
+                            // DRAW LINE FROM (X,Y) to (PARAM0,PARAM1)
+                            gpu_active_dithermode = 0;
+                            GPUline.start = 1;
+                        }
+                        case 3: {
+                            // DRAW RECTANGLE FROM (X,Y) to (PARAM0,PARAM1)
+                            gpu_active_dithermode = gpu_dithermode;
+                            GPUrectangle.start = 1;
+                        }
+                        case 4: {
+                            // DRAW CIRCLE CENTRE (X,Y) with RADIUS PARAM0
+                            gpu_active_dithermode = 0;
+                            GPUcircle.filledcircle = 0;
+                            GPUcircle.start = 1;
+                        }
+                        case 5: {
+                            // DRAW FILLED CIRCLE CENTRE (X,Y) with RADIUS PARAM0
+                            gpu_active_dithermode = gpu_dithermode;
+                            GPUcircle.filledcircle = 1;
+                            GPUcircle.start = 1;
+                        }
+                        case 6: {
+                            // DRAW FILLED TRIANGLE WITH VERTICES (X,Y) (PARAM0,PARAM1) (PARAM2,PARAM3)
+                            gpu_active_dithermode = gpu_dithermode;
+                            GPUtriangle.start = 1;
+                        }
+                        case 7: {
+                            // BLIT 16 x 16 TILE PARAM0 TO (X,Y)
+                            gpu_active_dithermode = 0;
+                            GPUblit.tilecharacter = 1;
+                            GPUblit.start = 1;
+                        }
+                        case 8: {
+                            // BLIT 8 x 8 CHARACTER PARAM0 TO (X,Y) as 8 x 8
+                            gpu_active_dithermode = 0;
+                            GPUblit.tilecharacter = 0;
+                            GPUblit.start = 1;
+                        }
                     }
-                }
-
-                case 3: {
-                    // DRAW RECTANGLE FROM (X,Y) to (PARAM0,PARAM1)
-                    gpu_active_dithermode = gpu_dithermode;
-                    GPUrectangle.start = 1;
-                    while( GPUrectangle.busy ) {
-                        bitmap_x_write = GPUrectangle.bitmap_x_write;
-                        bitmap_y_write = GPUrectangle.bitmap_y_write;
-                        bitmap_write = GPUrectangle.bitmap_write;
+                    while( GPUline.busy || GPUrectangle.busy ||  GPUcircle.busy || GPUtriangle.busy ||  GPUblit.busy ) {
+                        switch( gpu_unit ) {
+                            case 2: {
+                                bitmap_x_write = GPUline.bitmap_x_write;
+                                bitmap_y_write = GPUline.bitmap_y_write;
+                            }
+                            case 3: {
+                                bitmap_x_write = GPUrectangle.bitmap_x_write;
+                                bitmap_y_write = GPUrectangle.bitmap_y_write;
+                            }
+                            case 4: {
+                                bitmap_x_write = GPUcircle.bitmap_x_write;
+                                bitmap_y_write = GPUcircle.bitmap_y_write;
+                            }
+                            case 5: {
+                                bitmap_x_write = GPUcircle.bitmap_x_write;
+                                bitmap_y_write = GPUcircle.bitmap_y_write;
+                            }
+                            case 6: {
+                                bitmap_x_write = GPUtriangle.bitmap_x_write;
+                                bitmap_y_write = GPUtriangle.bitmap_y_write;
+                            }
+                            case 7: {
+                                bitmap_x_write = GPUblit.bitmap_x_write;
+                                bitmap_y_write = GPUblit.bitmap_y_write;
+                            }
+                            case 8: {
+                                bitmap_x_write = GPUblit.bitmap_x_write;
+                                bitmap_y_write = GPUblit.bitmap_y_write;
+                            }
+                         }
+                        bitmap_write = GPUline.bitmap_write || GPUrectangle.bitmap_write || GPUcircle.bitmap_write || GPUtriangle.bitmap_write || GPUblit.bitmap_write;
                     }
-                }
-
-                case 4: {
-                    // DRAW CIRCLE CENTRE (X,Y) with RADIUS PARAM0
-                    gpu_active_dithermode = 0;
-                    GPUcircle.filledcircle = 0;
-                    GPUcircle.start = 1;
-                    while( GPUcircle.busy ) {
-                        bitmap_x_write = GPUcircle.bitmap_x_write;
-                        bitmap_y_write = GPUcircle.bitmap_y_write;
-                        bitmap_write = GPUcircle.bitmap_write;
-                    }
-                }
-
-                case 5: {
-                    // DRAW FILLED CIRCLE CENTRE (X,Y) with RADIUS PARAM0
-                    gpu_active_dithermode = gpu_dithermode;
-                    GPUcircle.filledcircle = 1;
-                    GPUcircle.start = 1;
-                    while( GPUcircle.busy ) {
-                        bitmap_x_write = GPUcircle.bitmap_x_write;
-                        bitmap_y_write = GPUcircle.bitmap_y_write;
-                        bitmap_write = GPUcircle.bitmap_write;
-                    }
-                }
-
-                case 6: {
-                    // DRAW FILLED TRIANGLE WITH VERTICES (X,Y) (PARAM0,PARAM1) (PARAM2,PARAM3)
-                    gpu_active_dithermode = gpu_dithermode;
-                    GPUtriangle.start = 1;
-                    while( GPUtriangle.busy ) {
-                        bitmap_x_write = GPUtriangle.bitmap_x_write;
-                        bitmap_y_write = GPUtriangle.bitmap_y_write;
-                        bitmap_write = GPUtriangle.bitmap_write;
-                    }
-                }
-
-                case 7: {
-                    // BLIT 16 x 16 TILE PARAM0 TO (X,Y)
-                    gpu_active_dithermode = 0;
-                    GPUblit.tilecharacter = 1;
-                    GPUblit.start = 1;
-                    while( GPUblit.busy ) {
-                        bitmap_x_write = GPUblit.bitmap_x_write;
-                        bitmap_y_write = GPUblit.bitmap_y_write;
-                        bitmap_write = GPUblit.bitmap_write;
-                    }
-                }
-
-
-                case 8: {
-                    // BLIT 8 x 8 CHARACTER PARAM0 TO (X,Y) as 8 x 8
-                    gpu_active_dithermode = 0;
-                    GPUblit.tilecharacter = 0;
-                    GPUblit.start = 1;
-                    while( GPUblit.busy ) {
-                        bitmap_x_write = GPUblit.bitmap_x_write;
-                        bitmap_y_write = GPUblit.bitmap_y_write;
-                        bitmap_write = GPUblit.bitmap_write;
-                    }
+                    gpu_active = 0;
                 }
             }
-            gpu_active = 0;
         }
     }
 }

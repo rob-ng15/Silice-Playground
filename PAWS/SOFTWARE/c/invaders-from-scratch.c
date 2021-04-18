@@ -168,8 +168,8 @@ unsigned short bullet_bitmaps[] = {
     0b0100000000000000, 0b0100000000000000, 0b0100000000000000, 0b0100000000000000, 0b0100000000000000, 0,0,0,0,0,0,0,0,0,0,0,
 };
 
-// NUMBER BITMAPS FOR SCORE / HI-SCORE AND LIVES LEFT + PLAYER FOR LIFE COUNT
-unsigned short number_bitmaps[] = {
+// TILEMAP NUMBER BITMAPS FOR SCORE / HI-SCORE AND LIVES LEFT + PLAYER FOR LIFE COUNT
+unsigned short tilemap_bitmaps[] = {
     0xfffe, 0xfffe, 0xc006, 0xc006, 0xc006, 0xc006, 0xc006, 0xc006,
     0xc006, 0xc006, 0xc006, 0xc006, 0xc006, 0xfffe, 0xfffe, 0x0000,
 
@@ -208,6 +208,374 @@ unsigned short number_bitmaps[] = {
     0b1111111111100000,
     0b1111111111100000,
     0b1111111111100000,
+
+    // PLANET AND ROCKETSHIP 32 x 32 TILEMAPS FROM ASTEROIDS FOR BACKGROUND GRAPHICS
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x001f, 0x003f, 0x00ff, 0x01ff, 0x03ff, 0x03ff, 0x07ff, 0x07fc,
+    0x1ff1, 0x37c7, 0x279c, 0x33f1, 0x1fc7, 0x011f, 0x00ff, 0x003f,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0xc000, 0xf000, 0xf800, 0xff00, 0xf900, 0xe700, 0x0c00, 0x7400,
+    0xc400, 0x1c00, 0x7c00, 0xf800, 0xf800, 0xf000, 0xe000, 0x8000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0001, 0x0003,
+    0x007e, 0x00c4, 0x0088, 0x0190, 0x0110, 0x0320, 0x03f1, 0x0003,
+    0x0006, 0x0005, 0x0022, 0x0008, 0x0480, 0x0024, 0x0020, 0x0090,
+    0x0000, 0x0040, 0x0000, 0x0010, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x007e, 0x07e2, 0x1e02, 0x7006, 0xe604, 0x8f0c, 0x198c,
+    0x1998, 0x0f18, 0x0630, 0x0060, 0x6060, 0xd0c0, 0xa180, 0x4300,
+    0x8600, 0x0a00, 0x3200, 0xc200, 0x8200, 0x9c00, 0xf000, 0xc000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000
+};
+
+// NEW FONT FOR GPU BLITTER CHARACTERS, REPLACES NUMERALS, UPPER CASE AND @ ?
+unsigned char symbol_bitmaps[] = {
+    0b11111110,
+    0b00000010,
+    0b00000010,
+    0b11111110,
+    0b10000000,
+    0b00000000,
+    0b10000000,
+    0,
+
+    0b11111110,
+    0b10000010,
+    0b10011110,
+    0b10010010,
+    0b10011110,
+    0b10000000,
+    0b11111110,
+    0
+};
+
+unsigned char number_bitmaps[] = {
+    0b11111110,
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b11111110,
+    0,
+
+    0b00000010,
+    0b00000010,
+    0b00000010,
+    0b00000010,
+    0b00000010,
+    0b00000010,
+    0b00000010,
+    0,
+
+    0b11111110,
+    0b00000010,
+    0b00000010,
+    0b11111110,
+    0b10000000,
+    0b10000000,
+    0b11111110,
+    0,
+
+    0b11111110,
+    0b00000010,
+    0b00000010,
+    0b11111110,
+    0b00000010,
+    0b00000010,
+    0b11111110,
+    0,
+
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b11111110,
+    0b10000010,
+    0b00000010,
+    0b00000010,
+    0,
+
+    0b11111110,
+    0b10000000,
+    0b10000000,
+    0b11111110,
+    0b00000010,
+    0b00000010,
+    0b11111110,
+    0,
+
+    0b10000000,
+    0b10000000,
+    0b10000000,
+    0b11111110,
+    0b10000010,
+    0b10000010,
+    0b11111110,
+    0,
+
+    0b11111110,
+    0b00000010,
+    0b00000010,
+    0b00000010,
+    0b00000010,
+    0b00000010,
+    0b00000010,
+    0,
+
+    0b11111110,
+    0b10000010,
+    0b10000010,
+    0b11111110,
+    0b10000010,
+    0b10000010,
+    0b11111110,
+    0,
+
+    0b11111110,
+    0b10000010,
+    0b10000010,
+    0b11111110,
+    0b00000010,
+    0b00000010,
+    0b00000010,
+    0
+};
+
+unsigned char letter_bitmaps[208] = {
+    0b01111100,
+    0b10000010,
+    0b10000010,
+    0b11111110,
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0,
+
+    0b11111100,
+    0b10000010,
+    0b10000010,
+    0b11111100,
+    0b10000010,
+    0b10000010,
+    0b11111100,
+    0,
+
+    0b01111110,
+    0b10000000,
+    0b10000000,
+    0b10000000,
+    0b10000000,
+    0b10000000,
+    0b01111110,
+    0,
+
+    0b11111100,
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b11111100,
+    0,
+
+    0b11111110,
+    0b10000000,
+    0b10000000,
+    0b11111110,
+    0b10000000,
+    0b10000000,
+    0b11111110,
+    0,
+
+    0b11111110,
+    0b10000000,
+    0b10000000,
+    0b11111110,
+    0b10000000,
+    0b10000000,
+    0b10000000,
+    0,
+
+    0b01111110,
+    0b10000000,
+    0b10000000,
+    0b10000000,
+    0b10001110,
+    0b10000010,
+    0b01111110,
+    0,
+
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b11111110,
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0,
+
+    0b11111110,
+    0b00010000,
+    0b00010000,
+    0b00010000,
+    0b00010000,
+    0b00010000,
+    0b11111110,
+    0,
+
+    0b11111110,
+    0b00000010,
+    0b00000010,
+    0b00000010,
+    0b10000010,
+    0b10000010,
+    0b11111100,
+    0,
+
+    0b10001000,
+    0b10010000,
+    0b10100000,
+    0b11000000,
+    0b10100000,
+    0b10010000,
+    0b10001000,
+    0,
+
+    0b10000000,
+    0b10000000,
+    0b10000000,
+    0b10000000,
+    0b10000000,
+    0b10000000,
+    0b11111110,
+    0,
+
+    0b11000110,
+    0b10101010,
+    0b10010010,
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0,
+
+    0b11000010,
+    0b10100010,
+    0b10010010,
+    0b10010010,
+    0b10010010,
+    0b10001010,
+    0b10000110,
+    0,
+
+    0b01111100,
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b01111100,
+    0,
+
+    0b11111100,
+    0b10000010,
+    0b10000010,
+    0b11111100,
+    0b10000000,
+    0b10000000,
+    0b10000000,
+    0,
+
+    0b01111100,
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b10001010,
+    0b10000110,
+    0b10111110,
+    0b00000001,
+
+    0b11111100,
+    0b10000010,
+    0b10000010,
+    0b11111100,
+    0b10001000,
+    0b10000100,
+    0b10000010,
+    0,
+
+    0b01111100,
+    0b10000010,
+    0b10000000,
+    0b01111100,
+    0b00000010,
+    0b10000010,
+    0b01111100,
+    0,
+
+    0b11111110,
+    0b00010000,
+    0b00010000,
+    0b00010000,
+    0b00010000,
+    0b00010000,
+    0b00010000,
+    0,
+
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b01111100,
+    0,
+
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b01000100,
+    0b00101000,
+    0b00010000,
+    0,
+
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b01011010,
+    0b00100100,
+    0b00100100,
+    0,
+
+    0b10000010,
+    0b01000100,
+    0b00101000,
+    0b00010000,
+    0b00101000,
+    0b01000100,
+    0b10000010,
+    0,
+
+    0b10000010,
+    0b10000010,
+    0b10000010,
+    0b01111110,
+    0b00000010,
+    0b10000010,
+    0b01111100,
+    0,
+
+    0b11111110,
+    0b00000010,
+    0b00000100,
+    0b00111000,
+    0b01000000,
+    0b10000000,
+    0b11111110,
+    0
+
 };
 
 #define MAXALIENS 55
@@ -243,6 +611,7 @@ unsigned short framebuffer = 0;
 #define SHIPPLAY 0
 #define SHIPRESET 1
 #define SHIPEXPLODE 2
+#define SHIPEXPLODE2 3
 struct Player {
     int score;
     short x, y;
@@ -263,9 +632,20 @@ void initialise_graphics( void ) {
         set_sprite_bitmaps( 0, i, &bullet_bitmaps[0] );
     }
 
-    // SET TILEMAP TILES - NUMBERS AND SHIP GRAPHIC
-    for( short i = 0; i < 11; i++ ) {
-        set_tilemap_bitmap( i + 1, &number_bitmaps[ 16 * i ] );
+    // SET TILEMAP TILES - NUMBERS AND SHIP GRAPHIC + 32 x 32 PLANET AND ROCKET
+    for( short i = 0; i < 19; i++ ) {
+        set_tilemap_bitmap( i + 1, &tilemap_bitmaps[ 16 * i ] );
+    }
+
+    // UPDATE THE BLITTER FONT
+    set_blitter_chbitmap( '?', &symbol_bitmaps[0] );
+    set_blitter_chbitmap( '@', &symbol_bitmaps[8] );
+
+    for( short i = 0; i < 10; i++ ) {
+        set_blitter_chbitmap( i + '0', &number_bitmaps[ i * 8 ] );
+    }
+    for( short i = 0; i < 26; i++ ) {
+        set_blitter_chbitmap( i + 'A', &letter_bitmaps[ i * 8 ] );
     }
 }
 
@@ -342,9 +722,6 @@ void reset_game( void ) {
 }
 
 void trim_aliens( void ) {
-    // DEBUG
-    set_tilemap_tile( 1, 30, 9, TRANSPARENT, GREY2 );
-
     short left = 10, right = 0, top = 4, bottom = 0, pixel = 16;
 
     // CHECK IF ANY ALIENS LEFT
@@ -379,9 +756,6 @@ void trim_aliens( void ) {
 }
 
 void draw_aliens( void ) {
-    // DEBUG
-    set_tilemap_tile( 1, 30, 8, TRANSPARENT, GREY2 );
-
     // DRAW ALIEN SWARM
     for( short y = AlienSwarm.toprow; y <= AlienSwarm.bottomrow; y++ ) {
         for( short x = AlienSwarm.leftcolumn; x <= AlienSwarm.rightcolumn; x++ ) {
@@ -429,17 +803,13 @@ void draw_aliens( void ) {
 }
 
 void move_aliens( void ) {
-    // DEBUG
-    set_tilemap_tile( 1, 30, 7, TRANSPARENT, GREY2 );
 
     // FIND AN ALIEN
     if( ( Aliens[ AlienSwarm.row * 11 + AlienSwarm.column ].type != 0 ) && ( AlienSwarm.newdirection ) ) {
         AlienSwarm.newdirection = 0;
     } else {
         do {
-            // DEBUG
-            set_tilemap_tile( 1, 30, 7, TRANSPARENT, PURPLE );
-            switch( AlienSwarm.direction ) {
+             switch( AlienSwarm.direction ) {
                 case 1:
                     AlienSwarm.column--;
                     if( AlienSwarm.column < AlienSwarm.leftcolumn ) {
@@ -486,8 +856,6 @@ void move_aliens( void ) {
         } while( ( Aliens[ AlienSwarm.row * 11 + AlienSwarm.column ].type == 0 ) && ( AlienSwarm.direction < 2 ) );
     }
 
-    // DEBUG
-    set_tilemap_tile( 1, 30, 7, TRANSPARENT, ORANGE );
     switch( AlienSwarm.direction ) {
         // MOVE LEFT OR RIGHT
         case 0:
@@ -499,8 +867,6 @@ void move_aliens( void ) {
         // MOVE DOWN AND CHANGE DIRECTION
         case 2:
         case 3:
-            // DEBUG
-            set_tilemap_tile( 1, 30, 7, TRANSPARENT, YELLOW );
             for( short y = AlienSwarm.toprow; y <= AlienSwarm.bottomrow; y++ ) {
                 for( short x = AlienSwarm.leftcolumn; x <= AlienSwarm.rightcolumn; x++ ) {
                     Aliens[ y * 11 + x ].y += 8;
@@ -513,9 +879,6 @@ void move_aliens( void ) {
 }
 
 void ufo_actions( void ) {
-    // DEBUG
-    set_tilemap_tile( 1, 30, 6, TRANSPARENT, GREY2 );
-
     switch( UFO.active ) {
         case 0:
             if( !UFO.lastufo ) {
@@ -560,13 +923,8 @@ void bomb_actions( void ) {
     short bombdropped = 0, bombcolumn, bombrow, attempts = 8;
     short bomb_x, bomb_y;
 
-    // DEBUG
-    set_tilemap_tile( 1, 30, 5, TRANSPARENT, GREY2 );
-
     // CHECK IF HIT AND MOVE BOMBS
     for( short i = 2; i < 13; i++ ) {
-        // DEBUG
-        set_tilemap_tile( 1, 30, 5, TRANSPARENT, PURPLE );
         if( get_sprite_collision( 0, i ) & 0x8000 ) {
             // HIT THE BUNKER
             bomb_x = get_sprite_attribute( 0, i , 3 ) / 2 - rng(4) + 2;
@@ -596,8 +954,6 @@ void bomb_actions( void ) {
     // CHECK IF FIRING
     AlienSwarm.lastbombtimer -= ( AlienSwarm.lastbombtimer ) > 0 ? 1 : 0;
     if( !AlienSwarm.lastbombtimer && !rng(4) ) {
-        // DEBUG
-        set_tilemap_tile( 1, 30, 5, TRANSPARENT, ORANGE );
         for( short i = 2; ( i < 13 ) && !bombdropped; i++ ) {
             if( !get_sprite_attribute( 0, i, 0 ) ) {
                 // BOMB SLOT FOUND
@@ -625,9 +981,6 @@ void bomb_actions( void ) {
 }
 
 short missile_actions( void ) {
-    // DEBUG
-    set_tilemap_tile( 1, 30, 4, TRANSPARENT, GREY2 );
-
     short missile_x, missile_y, alien_hit = 0, points = 0;
 
     // CHECK IF PLAYER MISSILE HAS HIT
@@ -690,12 +1043,9 @@ short missile_actions( void ) {
 }
 
 void player_actions( void ) {
-    // DEBUG
-    set_tilemap_tile( 1, 30, 3, TRANSPARENT, GREY2 );
-
-    if( ( get_sprite_collision( 0, 0 ) & 0x8000 ) && ( Ship.state != SHIPEXPLODE ) ) {
+    if( ( get_sprite_collision( 0, 0 ) & 0x8000 ) && ( Ship.state != SHIPEXPLODE2 ) ) {
         // ALIEN HAS HIT SHIP
-        Ship.state = SHIPEXPLODE;
+        Ship.state = SHIPEXPLODE2;
         Ship.counter = 100;
         for( short i = 1; i < 13; i++ ) {
             set_sprite_attribute( 0, i, 0, 0 );
@@ -722,11 +1072,18 @@ void player_actions( void ) {
             Ship.counter--;
             if( !Ship.counter ) {
                 Ship.life--;
-                if( get_sprite_collision( 0, 0 ) & 0x8000 ) {
-                    // SHIP HIT BY ALIEN, NOT MISSILE
-                    reset_aliens();
-                    trim_aliens();
-                }
+                reset_player();
+            }
+           break;
+        case SHIPEXPLODE2:
+            // EXPLODE
+            beep( 2, 4, 1 + framebuffer, 25 );
+            set_sprite( 0, 0, 1, framebuffer ? RED : ORANGE, Ship.x, Ship.y, 0, 1 );
+            Ship.counter--;
+            if( !Ship.counter ) {
+                Ship.life--;
+                reset_aliens();
+                trim_aliens();
                 reset_player();
             }
            break;
@@ -735,9 +1092,6 @@ void player_actions( void ) {
 
 void draw_status( void ) {
     char scorestring[9];
-
-    // DEBUG
-    set_tilemap_tile( 1, 30, 2, TRANSPARENT, GREY2 );
 
     // GENERATE THE SCORE STRING
     sprintf( &scorestring[0], "%8u", Ship.score );
@@ -761,15 +1115,12 @@ void play( void ) {
     reset_game();
 
     while( Ship.life > 0 ) {
-        // DEBUG
-        set_tilemap_tile( 1, 30, 1, TRANSPARENT, GREY2 );
-
         // DRAW TO HIDDEN FRAME BUFFER
         bitmap_draw( !framebuffer );
 
         // ADJUST SIZE OF ALIEN GRID
         trim_aliens();
-        if( Ship.state != SHIPEXPLODE ) {
+        if( Ship.state < SHIPEXPLODE ) {
             // MOVE ALIENS
             move_aliens();
             // HANDLE MISSILES AND BOMBS
@@ -793,10 +1144,212 @@ void play( void ) {
     }
 }
 
+void missile_demo( void ) {
+    short missile_x, missile_y, alien_hit = 0;
+
+    // CHECK IF PLAYER MISSILE HAS HIT
+    if( get_sprite_collision( 0, 1 ) & 0x8000 ) {
+        missile_x = get_sprite_attribute( 0, 1, 3 ) / 2;
+        missile_y = get_sprite_attribute( 0, 1, 4 ) / 2;
+        for( short y = AlienSwarm.toprow; y <= AlienSwarm.bottomrow && !alien_hit; y++ ) {
+            for( short x = AlienSwarm.leftcolumn; x <= AlienSwarm.rightcolumn && !alien_hit; x++ ) {
+                switch( Aliens[ y * 11 + x ].type ) {
+                    case 1:
+                    case 2:
+                    case 3:
+                        if( ( missile_x >= Aliens[ y * 11 + x ].x - 3 ) && ( missile_x <= Aliens[ y * 11 + x ].x + 13 ) && ( missile_y >= Aliens[ y * 11 + x ].y - 4 ) && ( missile_y <= Aliens[ y * 11 + x ].y + 12 ) ) {
+                            beep( 2, 4, 8, 500 );
+                            set_sprite_attribute( 0, 1, 0, 0 );
+                            Aliens[ y * 11 + x ].type = 16;
+                            alien_hit = 1;
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        if( !alien_hit && ( missile_y < 110 ) ) {
+            set_sprite_attribute( 0, 1, 0, 0 );
+            // HIT A BUNKER
+            missile_x = missile_x - rng(4) + 2;
+            missile_y = missile_y - rng(2) - 1;
+            bitmap_draw( 0 ); gpu_blit( TRANSPARENT, missile_x, missile_y, 14, 0 );
+            bitmap_draw( 1 ); gpu_blit( TRANSPARENT, missile_x, missile_y, 14, 0 );
+            bitmap_draw( !framebuffer );
+        }
+    }
+
+    // FIRE? OR MOVE MISSILE
+    if( !get_sprite_attribute( 0, 1, 0 ) ) {
+        // NO MISSILE, CHECK IF FIRE
+        if( ( Ship.state == SHIPPLAY ) && !rng(8) ) {
+            set_sprite( 0, 1, 1, GREEN, Ship.x + 8, Ship.y - 10, 0, 1 );
+            if( !get_beep_duration( 2 ) ) {
+                beep( 2, 4, 61, 128 );
+            }
+        }
+    } else {
+        // MOVE MISSILE
+        update_sprite( 0, 1, 0b1111101000000 );
+    }
+}
+
+void demo_actions( void ) {
+    if( ( get_sprite_collision( 0, 0 ) & 0x8000 ) && ( Ship.state != SHIPEXPLODE2 ) ) {
+        // ALIEN HAS HIT SHIP
+        Ship.state = SHIPEXPLODE2;
+        Ship.counter = 100;
+        for( short i = 1; i < 13; i++ ) {
+            set_sprite_attribute( 0, i, 0, 0 );
+        }
+    }
+    switch( Ship.state ) {
+        case SHIPPLAY:
+            // CODE TO MOVE
+            set_sprite( 0, 0, 1, GREEN, Ship.x, Ship.y, 0, 1 );
+            break;
+        case SHIPRESET:
+            // RESET
+            set_sprite( 0, 0, 0, DKGREEN, Ship.x, Ship.y, 0, 1 );
+            Ship.counter--;
+            if( !Ship.counter ) Ship.state = SHIPPLAY;
+            break;
+        case SHIPEXPLODE:
+            // EXPLODE
+            beep( 2, 4, 1 + framebuffer, 25 );
+            set_sprite( 0, 0, 1, framebuffer ? RED : ORANGE, Ship.x, Ship.y, 0, 1 );
+            Ship.counter--;
+            if( !Ship.counter ) {
+                reset_player();
+            }
+           break;
+        case SHIPEXPLODE2:
+            // EXPLODE
+            beep( 2, 4, 1 + framebuffer, 25 );
+            set_sprite( 0, 0, 1, framebuffer ? RED : ORANGE, Ship.x, Ship.y, 0, 1 );
+            Ship.counter--;
+            if( !Ship.counter ) {
+                reset_aliens();
+                trim_aliens();
+                reset_player();
+            }
+           break;
+    }
+}
+
+void attract( void ) {
+    short mode = 0, animation = 0, move_amount = 0;
+
+    initialise_graphics();
+
+    while( !( get_buttons() & 8 ) ) {
+        bitmap_draw( 0 );gpu_cs();
+        bitmap_draw( 1 );gpu_cs();
+        tpu_cs();
+        // CLEAR THE SPRITES
+        for( short i = 0; i < 13; i++ ) {
+            set_sprite_attribute( 0, i, 0, 0 );
+        }
+        set_timer1khz( 16000, 0 );
+        if( mode ) {
+            initialise_graphics();
+            reset_aliens();
+            trim_aliens();
+            reset_player();
+        } else {
+        }
+        while( get_timer1khz( 0 ) && !( get_buttons() & 8 ) ) {
+            if( !get_timer1khz( 1 ) ) {
+                animation = !animation;
+                set_timer1khz( 1000, 1 );
+            }
+            switch( mode ) {
+                case 0:
+                    // WELCOME SCREEN
+                    // DRAW TO HIDDEN FRAME BUFFER
+                    bitmap_draw( !framebuffer ); gpu_cs();
+                    gpu_blit( WHITE, 128, 64, 2 + animation, 1 ); gpu_printf_centre( RED, 176, 64, 1, "%d", 30 );
+                    gpu_blit( WHITE, 128, 96, 4 + animation, 1 ); gpu_printf_centre( RED, 176, 96, 1, "%d", 20 );
+                    gpu_blit( WHITE, 128, 128, 6 + animation, 1 ); gpu_printf_centre( RED, 176, 128, 1, "%d", 10 );
+                    gpu_blit( MAGENTA, 126, 160, 10 + animation, 1 ); gpu_printf_centre( RED, 176, 160, 1, "?" );
+
+                    switch( animation ) {
+                        case 0:
+                            gpu_printf_centre( WHITE, 160, 32, 1, "PAWS" );
+                            gpu_printf_centre( WHITE, 160, 208, 0, "BY @ROBNG15 WHITEBRIDGE, SCOTLAND" );
+                            break;
+                        case 1:
+                            gpu_printf_centre( WHITE, 160, 32, 1, "SPACE INVADERS" );
+                            gpu_printf_centre( WHITE, 160, 208, 0, "PRESS UP TO START" );
+                            break;
+                    }
+
+                    // SWITCH THE FRAMEBUFFER
+                    await_vblank();
+                    framebuffer = !framebuffer;
+                    bitmap_display( framebuffer );
+
+                    draw_status();
+                    break;
+                case 1:
+                    // MINI DEMO
+                    // DRAW TO HIDDEN FRAME BUFFER
+                    bitmap_draw( !framebuffer );
+                    // ADJUST SIZE OF ALIEN GRID
+                    trim_aliens();
+                    // MOVE ALIENS
+                    if( Ship.state < SHIPEXPLODE ) {
+                        // MOVE ALIENS
+                        move_aliens();
+                        // HANDLE MISSILES AND BOMBS
+                        missile_demo();
+                        bomb_actions();
+                    }
+                    // MOVE THE DEMO SHIP
+                    while( !move_amount ) {
+                        move_amount = rng( 64 ) - 32;
+                    }
+                    if( move_amount < 0 ) {
+                        Ship.x += ( Ship.x > 0 ) ? -2 : 0;
+                        move_amount++;
+                    } else {
+                        Ship.x += ( Ship.x < 617 ) ? 2 : 0;
+                        move_amount--;
+                    }
+                    demo_actions();
+                    // UPDATE THE SCREEN
+                    gpu_rectangle( TRANSPARENT, 0, 16, 319, AlienSwarm.bottompixel );
+                    draw_aliens();
+
+                    // MESSAGE
+                    gpu_rectangle( TRANSPARENT, 0, 120, 319, 128 );
+                    switch( animation ) {
+                        case 0:
+                            gpu_printf_centre( WHITE, 160, 120, 0, "PAWS SPACE INVADERS" );
+                            break;
+                        case 1:
+                            gpu_printf_centre( WHITE, 160, 120, 0, "PRESS UP TO START" );
+                            break;
+                    }
+
+                    // SWITCH THE FRAMEBUFFER
+                    await_vblank();
+                    framebuffer = !framebuffer;
+                    bitmap_display( framebuffer );
+
+                    draw_status();
+                    break;
+            }
+        }
+        mode = !mode;
+    }
+    tpu_cs();
+}
+
 int main( void ) {
     INITIALISEMEMORY();
     set_background( GREY2, DKBLUE - 1, BKG_SNOW );
-
     // CLEAR THE TILEMAP
     tilemap_scrollwrapclear( 9 );
 
@@ -804,7 +1357,7 @@ int main( void ) {
         bitmap_draw( 0 );gpu_cs();
         bitmap_draw( 1 );gpu_cs();
 
+        attract();
         play();
-        sleep( 8000, 0 );
     }
 }

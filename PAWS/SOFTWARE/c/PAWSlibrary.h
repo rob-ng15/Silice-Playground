@@ -233,6 +233,7 @@ extern void draw_vector_block( unsigned char, unsigned char, short, short, unsig
 extern void set_vector_vertex( unsigned char, unsigned char , unsigned char, char, char );
 extern void bitmap_scrollwrap( unsigned char );
 extern void set_blitter_bitmap( unsigned char, unsigned short * );
+extern void set_blitter_chbitmap( unsigned char, unsigned char * );
 
 // SPRITES - MAIN ACCESS
 extern void set_sprite( unsigned char, unsigned char, unsigned char, unsigned char, short, short, unsigned char, unsigned char );

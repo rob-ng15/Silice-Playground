@@ -162,6 +162,8 @@ algorithm main(
     uint16  writedata = uninitialized;
     PAWSCPU CPU <@clock_system> (
         clock_CPUdecoder <: clock_100_1,
+        clock_ALU <: clock_100_2,
+        clock_FPU <: clock_100_3,
 
         accesssize :> function3,
         address :> address,
@@ -253,10 +255,10 @@ algorithm sdramcontroller(
     );
 
     // CACHE TAG match flag
-    uint1   cachetagmatch := ( cache.rdata0[16,12] == { 1b1, address[15,11] } ) ? 1 : 0;
+    uint1   cachetagmatch <: ( cache.rdata0[16,12] == { 1b1, address[15,11] } ) ? 1 : 0;
 
     // VALUE TO WRITE THROUGH CACHE TO SDRAM
-    uint16  writethrough := ( function3[0,2] == 0 ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cache.rdata0[0,8] : sio.data_out[0,8] } :
+    uint16  writethrough <: ( function3[0,2] == 0 ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cache.rdata0[0,8] : sio.data_out[0,8] } :
                                                                         { cachetagmatch ? cache.rdata0[8,8] : sio.data_out[8,8], writedata[0,8] } ) : writedata;
 
     // MEMORY ACCESS FLAGS

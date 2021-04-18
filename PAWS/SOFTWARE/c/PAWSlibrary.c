@@ -412,6 +412,16 @@ void set_blitter_bitmap( unsigned char tile, unsigned short *bitmap ) {
     }
 }
 
+// SET THE BLITTER CHARACTER TILE to the 8 x 8 pixel bitmap
+void set_blitter_chbitmap( unsigned char tile, unsigned char *bitmap ) {
+    *BLIT_CHWRITER_TILE = tile;
+
+    for( int i = 0; i < 8; i ++ ) {
+        *BLIT_CHWRITER_LINE = i;
+        *BLIT_CHWRITER_BITMAP = bitmap[i];
+    }
+}
+
 // DRAW A FILLED TRIANGLE with vertices (x1,y1) (x2,y2) (x3,y3) in colour
 // VERTICES SHOULD BE PRESENTED CLOCKWISE FROM THE TOP ( minimal adjustments made to the vertices to comply )
 void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2, short x3, short y3 ) {
