@@ -88,10 +88,6 @@ algorithm gpu(
         param1 <: gpu_param1
     );
     line GPUline(
-        x <: gpu_x,
-        y <: gpu_y,
-        param0 <: gpu_param0,
-        param1 <: gpu_param1
     );
     circle GPUcircle(
         x <: gpu_x,
@@ -121,14 +117,6 @@ algorithm gpu(
         param1 <: gpu_param1
     );
 
-    // DRAW A LINE FROM VECTOR BLOCK OUTPUT
-    line VECTORline(
-        x <: v_gpu_x,
-        y <: v_gpu_y,
-        param0 <: v_gpu_param0,
-        param1 <: v_gpu_param1
-    );
-
     // CONTROLS FOR BITMAP PIXEL WRITER
     bitmap_write := 0;
     bitmap_colour_write := gpu_active_colour;
@@ -140,7 +128,6 @@ algorithm gpu(
     GPUcircle.start := 0;
     GPUtriangle.start := 0;
     GPUblit.start := 0;
-    VECTORline.start := 0;
 
     while(1) {
         if( v_gpu_write ) {
@@ -148,11 +135,12 @@ algorithm gpu(
             gpu_active_colour = vector_block_colour;
             gpu_active_dithermode = 0;
             gpu_active = 1;
-            VECTORline.start = 1;
-            while( VECTORline.busy ) {
-                bitmap_x_write = VECTORline.bitmap_x_write;
-                bitmap_y_write = VECTORline.bitmap_y_write;
-                bitmap_write = VECTORline.bitmap_write;
+            GPUline.x = v_gpu_x; GPUline.y = v_gpu_y; GPUline.param0 = v_gpu_param0; GPUline.param1 = v_gpu_param1;
+            GPUline.start = 1;
+            while( GPUline.busy ) {
+                bitmap_x_write = GPUline.bitmap_x_write;
+                bitmap_y_write = GPUline.bitmap_y_write;
+                bitmap_write = GPUline.bitmap_write;
             }
             gpu_active = 0;
         } else {
@@ -177,6 +165,7 @@ algorithm gpu(
                         case 2: {
                             // DRAW LINE FROM (X,Y) to (PARAM0,PARAM1)
                             gpu_active_dithermode = 0;
+                            GPUline.x = gpu_x; GPUline.y = gpu_y; GPUline.param0 = gpu_param0; GPUline.param1 = gpu_param1;
                             GPUline.start = 1;
                         }
                         case 3: {

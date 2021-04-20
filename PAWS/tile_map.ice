@@ -37,6 +37,7 @@ algorithm tilemap(
     // -15 or 15 will trigger appropriate scroll when next moved in that direction
     int5    tm_offset_x = uninitialized;
     int5    tm_offset_y = uninitialized;
+
     tile_map_writer TMW(
         tiles <:> tiles,
         tm_x <: tm_x,
@@ -61,16 +62,16 @@ algorithm tilemap(
 
     // Character position on the screen x 0-41, y 0-31 * 42 ( fetch it two pixels ahead of the actual x pixel, so it is always ready )
     // Adjust for the offsets, effective 0 point margin is ( 1,1 ) to ( 40,30 ) with a 1 tile border
-    uint11  xtmpos :=  ( pix_active ? pix_x + ( 11d18 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) : ( 11d16 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) ) >> 4;
-    uint11  ytmpos := (( pix_vblank ? ( 11d16 + {{6{tm_offset_y[4,1]}}, tm_offset_y} ) : pix_y + ( 11d16 + {{6{tm_offset_y[4,1]}}, tm_offset_y} ) ) >> 4) * 42;
+    uint11  xtmpos <:  ( pix_active ? pix_x + ( 11d18 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) : ( 11d16 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) ) >> 4;
+    uint11  ytmpos <: (( pix_vblank ? ( 11d16 + {{6{tm_offset_y[4,1]}}, tm_offset_y} ) : pix_y + ( 11d16 + {{6{tm_offset_y[4,1]}}, tm_offset_y} ) ) >> 4) * 42;
 
     // Derive the x and y coordinate within the current 16x16 tilemap block x 0-7, y 0-15
     // Needs adjusting for the offsets
-    uint4   xintm := { 1b0, pix_x[0,4] } + tm_offset_x;
-    uint4   yintm := { 1b0, pix_y[0,4] } + tm_offset_y;
+    uint4   xintm <: { 1b0, pix_x[0,4] } + tm_offset_x;
+    uint4   yintm <: { 1b0, pix_y[0,4] } + tm_offset_y;
 
     // Derive the actual pixel in the current character
-    uint1   tmpixel := tiles16x16.rdata0[15 - xintm,1];
+    uint1   tmpixel <: tiles16x16.rdata0[15 - xintm,1];
 
     // Set up reading of the tilemap
     tiles.addr0 := xtmpos + ytmpos;
@@ -84,8 +85,7 @@ algorithm tilemap(
     pix_green := tmpixel ? tiles.rdata0[7,2] : tiles.rdata0[13,2];
     pix_blue := tmpixel ?  tiles.rdata0[5,2] : tiles.rdata0[11,2];
 
-    while(1) {
-    }
+    while(1) {}
 }
 
 algorithm tile_map_writer(
