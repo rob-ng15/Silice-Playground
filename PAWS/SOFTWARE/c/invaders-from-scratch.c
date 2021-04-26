@@ -173,8 +173,8 @@ unsigned short tilemap_bitmaps[] = {
     0xfffe, 0xfffe, 0xc006, 0xc006, 0xc006, 0xc006, 0xc006, 0xc006,
     0xc006, 0xc006, 0xc006, 0xc006, 0xc006, 0xfffe, 0xfffe, 0x0000,
 
-    0x0180, 0x0180, 0x0180, 0x0180, 0x0180, 0x0180, 0x0180, 0x0180,
-    0x0180, 0x0180, 0x0180, 0x0180, 0x0180, 0x0180, 0x0180, 0x0180,
+    0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006,
+    0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0000,
 
     0xfffe, 0xfffe, 0x0006, 0x0006, 0x0006, 0x0006, 0xfffe, 0xfffe,
     0xc000, 0xc000, 0xc000, 0xc000, 0xc000, 0xfffe, 0xfffe, 0x0000,
@@ -303,13 +303,13 @@ unsigned char number_bitmaps[] = {
     0b11111110,
     0,
 
-    0b00010000,
-    0b00010000,
-    0b00010000,
-    0b00010000,
-    0b00010000,
-    0b00010000,
-    0b00010000,
+    0b00000010,
+    0b00000010,
+    0b00000010,
+    0b00000010,
+    0b00000010,
+    0b00000010,
+    0b00000010,
     0,
 
     0b11111110,
@@ -1321,7 +1321,12 @@ void demo_actions( void ) {
 void attract( void ) {
     short mode = 0, animation = 0, move_amount = 0;
 
+<<<<<<< HEAD
     UFO.active = 0;
+=======
+    initialise_graphics();
+
+>>>>>>> parent of 5d4dafd... Tidy up and simplification
     while( !( get_buttons() & 8 ) ) {
         bitmap_draw( 0 );gpu_cs();
         bitmap_draw( 1 );gpu_cs();

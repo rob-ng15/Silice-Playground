@@ -2,11 +2,15 @@
 
 // UNSIGNED / SIGNED 32 by 32 bit division giving 32 bit remainder and quotient
 algorithm aluMdivideremain(
+    input   uint1   start,
+    output  uint1   busy,
+
     input   uint3   dosign,
     input   uint32  dividend,
     input   uint32  divisor,
+
     output  uint32  result
-) {
+) <autorun> {
     uint32  quotient = uninitialized;
     uint32  remainder = uninitialized;
     uint32  dividend_copy = uninitialized;
@@ -14,37 +18,50 @@ algorithm aluMdivideremain(
     uint1   quotientremaindersign = uninitialized;
     uint6   bit = uninitialized;
 
-    dividend_copy = ~dosign[0,1] ? ( dividend[31,1] ? -dividend : dividend ) : dividend;
-    divisor_copy = ~dosign[0,1] ? ( divisor[31,1] ? -divisor : divisor ) : divisor;
-    quotientremaindersign = ~dosign[0,1] ? dividend[31,1] ^ divisor[31,1] : 0;
-    quotient = 0;
-    remainder = 0;
-    bit = 31;
-    ++:
-    if( divisor != 0 ) {
-        while( bit != 63 ) {
-            if( __unsigned({ remainder[0,31], dividend_copy[bit,1] }) >= __unsigned(divisor_copy) ) {
-                remainder = __unsigned({ remainder[0,31], dividend_copy[bit,1] }) - __unsigned(divisor_copy);
-                quotient[bit,1] = 1;
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+
+            dividend_copy = ~dosign[0,1] ? ( dividend[31,1] ? -dividend : dividend ) : dividend;
+            divisor_copy = ~dosign[0,1] ? ( divisor[31,1] ? -divisor : divisor ) : divisor;
+            quotientremaindersign = ~dosign[0,1] ? dividend[31,1] ^ divisor[31,1] : 0;
+            quotient = 0;
+            remainder = 0;
+            bit = 31;
+            ++:
+            if( divisor != 0 ) {
+                while( bit != 63 ) {
+                    if( __unsigned({ remainder[0,31], dividend_copy[bit,1] }) >= __unsigned(divisor_copy) ) {
+                        remainder = __unsigned({ remainder[0,31], dividend_copy[bit,1] }) - __unsigned(divisor_copy);
+                        quotient[bit,1] = 1;
+                    } else {
+                        remainder = { remainder[0,31], dividend_copy[bit,1] };
+                    }
+                    bit = bit - 1;
+                }
+                result = dosign[1,1] ? remainder : ( quotientremaindersign ? -quotient : quotient );
             } else {
-                remainder = { remainder[0,31], dividend_copy[bit,1] };
+                result = dosign[1,1] ? dividend : 32hffffffff;
             }
-            bit = bit - 1;
+
+            busy = 0;
         }
-        result = dosign[1,1] ? remainder : ( quotientremaindersign ? -quotient : quotient );
-    } else {
-        result = dosign[1,1] ? dividend : 32hffffffff;
     }
 }
 
 // UNSIGNED / SIGNED 32 by 32 bit multiplication giving 64 bit product using DSP blocks
 algorithm aluMmultiply(
+    input   uint1   start,
+    output  uint1   busy,
+
     input   uint3   dosign,
     input   uint32  factor_1,
     input   uint32  factor_2,
 
     output  uint32  result
-) {
+) <autorun> {
     uint2   dosigned := dosign[1,1] ? ( dosign[0,1] ? 0 : 2 ) : 1;
     uint1   productsign := ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
     uint32  factor_1_copy := ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
@@ -57,11 +74,19 @@ algorithm aluMmultiply(
     uint18  C := { 2b0, factor_2_copy[16,16] };
     uint18  D := { 2b0, factor_2_copy[0,16] };
 
-    ++:
-    result = ( dosign == 0 ) ? product[0,32] : product[32,32];
+    busy = 0;
 
+    while(1) {
+        if( start ) {
+            busy = 1;
+
+            ++:
+            result = ( dosign == 0 ) ? product[0,32] : product[32,32];
+
+            busy = 0;
+        }
+    }
 }
-
 
 // BASE IMMEDIATE WITH B EXTENSIONS
 algorithm aluIb001(
@@ -664,13 +689,12 @@ algorithm aluR (
 
     output  uint32  result
 ) <autorun> {
+    // M EXTENSION MULTIPLICATION AND DIVISION
     aluMdivideremain ALUMD(
         dosign <: function3,
         dividend <: sourceReg1,
         divisor <: sourceReg2
     );
-
-    // M EXTENSION MULTIPLICATION AND DIVISION
     aluMmultiply ALUMM(
         dosign <: function3,
         factor_1 <: sourceReg1,
@@ -786,6 +810,8 @@ algorithm aluR (
     );
 
     // START FLAGS FOR ALU SUB BLOCKS
+    ALUMD.start := 0;
+    ALUMM.start := 0;
     ALUR7b0010100.start := 0;
     ALUR7b0000101.start := 0;
     ALUR7b0000100.start := 0;
@@ -803,10 +829,14 @@ algorithm aluR (
                 case 7b0000001: {
                     switch( function3[2,1] ) {
                         case 1b0: {
-                            ( result ) <- ALUMM <- ();
+                            ALUMM.start = 1;
+                            while( ALUMM.busy ) {}
+                            result = ALUMM.result;
                         }
                         case 1b1: {
-                            ( result ) <- ALUMD <- ();
+                            ALUMD.start = 1;
+                            while( ALUMD.busy ) {}
+                            result = ALUMD.result;
                         }
                     }
                 }

@@ -186,7 +186,8 @@ algorithm main(
 
     CPU.readdata := address[28,1] ? sdram.readdata : ( address[15,1] ? IO_Map.readData : ram.readdata );
 
-    while(1) {}
+    while(1) {
+    }
 }
 
 // RAM - BRAM controller
