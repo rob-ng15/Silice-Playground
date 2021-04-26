@@ -225,7 +225,51 @@ unsigned short tilemap_bitmaps[] = {
     0x0000, 0x007e, 0x07e2, 0x1e02, 0x7006, 0xe604, 0x8f0c, 0x198c,
     0x1998, 0x0f18, 0x0630, 0x0060, 0x6060, 0xd0c0, 0xa180, 0x4300,
     0x8600, 0x0a00, 0x3200, 0xc200, 0x8200, 0x9c00, 0xf000, 0xc000,
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+
+    // MOONSCAPE BACKGROUND LEFT WEDGES, SOLID, RIGHT WEDGES
+    0,0,0,0,0,0,0,
+    0b0000000000000001,
+    0b0000000000000111,
+    0b0000000000011111,
+    0b0000000001111111,
+    0b0000000111111111,
+    0b0000011111111111,
+    0b0001111111111111,
+    0b0111111111111111,
+    0b1111111111111111,
+
+    0b0000000000000111,
+    0b0000000000011111,
+    0b0000000001111111,
+    0b0000000111111111,
+    0b0000011111111111,
+    0b0001111111111111,
+    0b0111111111111111,
+    0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
+
+    0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
+    0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
+
+    0b1110000000000000,
+    0b1111100000000000,
+    0b1111111000000000,
+    0b1111111110000000,
+    0b1111111111100000,
+    0b1111111111111000,
+    0b1111111111111110,
+    0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
+
+    0,0,0,0,0,0,0,
+    0b1000000000000000,
+    0b1110000000000000,
+    0b1111100000000000,
+    0b1111111000000000,
+    0b1111111110000000,
+    0b1111111111100000,
+    0b1111111111111000,
+    0b1111111111111110,
+    0b1111111111111111,
 };
 
 // NEW FONT FOR GPU BLITTER CHARACTERS, REPLACES NUMERALS, UPPER CASE AND @ ?
@@ -620,7 +664,41 @@ struct Player {
 };
 struct Player Ship;
 
+void draw_moonscape( void ) {
+    // PLACE MOONSCAPE ON THE TILEMAP
+    for( short x = 0; x < 8; x++ ) {
+        // LEFT WEDGE
+        set_tilemap_tile( x * 2, 30 - x,  20, TRANSPARENT, GREY1 );
+        set_tilemap_tile( 1 + x * 2, 30 - x,  21, TRANSPARENT, GREY1 );
+        // RIGHT WEDGE
+        set_tilemap_tile( 41 - x * 2, 30 - x,  24, TRANSPARENT, GREY1 );
+        set_tilemap_tile( 40 - x * 2, 30 - x,  23, TRANSPARENT, GREY1 );
+        // SOLID BLOCKS
+        for( short x1 = 2 + x * 2; x1 < 40 - x * 2; x1++ ) {
+            set_tilemap_tile( x1, 30 - x,  22, TRANSPARENT, GREY1 );
+        }
+    }
+
+    // PLACE PLANETS
+
+    // PLACE ROCKETS
+    set_tilemap_tile( 5, 12, 16, TRANSPARENT, PURPLE );
+    set_tilemap_tile( 5, 13, 17, TRANSPARENT, PURPLE );
+    set_tilemap_tile( 6, 12, 18, TRANSPARENT, PURPLE );
+    set_tilemap_tile( 6, 13, 19, TRANSPARENT, PURPLE );
+
+    set_tilemap_tile( 28, 22, 16, TRANSPARENT, DKORANGE );
+    set_tilemap_tile( 28, 23, 17, TRANSPARENT, DKORANGE );
+    set_tilemap_tile( 29, 22, 18, TRANSPARENT, DKORANGE );
+    set_tilemap_tile( 29, 23, 19, TRANSPARENT, DKORANGE );
+}
+
 void initialise_graphics( void ) {
+    // SET THE BACKGROUND - DKBLUE AND GREY2 STARFIELD
+    set_background( GREY2, DKBLUE - 1, BKG_SNOW );
+    // CLEAR THE TILEMAP
+    tilemap_scrollwrapclear( 9 );
+
     // SET BLITTER OBJECTS - ALIENS, EXPLOSIONS, UFO AND BUNKERS
     for( short i = 0; i < 15; i++ ) {
         set_blitter_bitmap( i + 2, &blitter_bitmaps[ 16 * i ] );
@@ -633,7 +711,7 @@ void initialise_graphics( void ) {
     }
 
     // SET TILEMAP TILES - NUMBERS AND SHIP GRAPHIC + 32 x 32 PLANET AND ROCKET
-    for( short i = 0; i < 19; i++ ) {
+    for( short i = 0; i < 24; i++ ) {
         set_tilemap_bitmap( i + 1, &tilemap_bitmaps[ 16 * i ] );
     }
 
@@ -647,6 +725,8 @@ void initialise_graphics( void ) {
     for( short i = 0; i < 26; i++ ) {
         set_blitter_chbitmap( i + 'A', &letter_bitmaps[ i * 8 ] );
     }
+
+    draw_moonscape();
 }
 
 void reset_aliens( void ) {
@@ -687,7 +767,7 @@ void reset_aliens( void ) {
 
     // REMOVE THE PLAYER, MISSILE AND BOMBS
     for( short i = 0; i < 13; i++ ) {
-        set_sprite_attribute( 0, i, 0, 0 );
+        set_sprite_attribute( 0, i, SPRITE_ACTIVE, 0 );
     }
 
     // DRAW BUNKERS
@@ -803,7 +883,6 @@ void draw_aliens( void ) {
 }
 
 void move_aliens( void ) {
-
     // FIND AN ALIEN
     if( ( Aliens[ AlienSwarm.row * 11 + AlienSwarm.column ].type != 0 ) && ( AlienSwarm.newdirection ) ) {
         AlienSwarm.newdirection = 0;
@@ -929,24 +1008,25 @@ void bomb_actions( void ) {
             // HIT THE BUNKER
             bomb_x = get_sprite_attribute( 0, i , 3 ) / 2 - rng(4) + 2;
             bomb_y = get_sprite_attribute( 0, i , 4 ) / 2 + rng(2) + 1;
-            set_sprite_attribute( 0, i, 0, 0 );
+            set_sprite_attribute( 0, i, SPRITE_ACTIVE, 0 );
             bitmap_draw( 0 ); gpu_blit( TRANSPARENT, bomb_x, bomb_y, 14, 0 );
             bitmap_draw( 1 ); gpu_blit( TRANSPARENT, bomb_x, bomb_y, 14, 0 );
             bitmap_draw( !framebuffer );
         } else {
+            set_sprite_attribute( 0, i, SPRITE_COLOUR, framebuffer ? ORANGE : LTRED );
             update_sprite( 0, i, 0b1110010000000 );
         }
         if( get_sprite_collision( 0, i ) & 2 ) {
             // HIT THE PLAYER MISSILE
-            set_sprite_attribute( 0, i, 0, 0 );
-            set_sprite_attribute( 0, 1, 0, 0 );
+            set_sprite_attribute( 0, i, SPRITE_ACTIVE, 0 );
+            set_sprite_attribute( 0, 1, SPRITE_ACTIVE, 0 );
         }
         if( get_sprite_collision( 0,i ) & 1 ) {
             // HIT THE PLAYER
             Ship.state = SHIPEXPLODE;
             Ship.counter = 100;
             for( short i = 1; i < 13; i++ ) {
-                set_sprite_attribute( 0, i, 0, 0 );
+                set_sprite_attribute( 0, i, SPRITE_ACTIVE, 0 );
             }
         }
     }
@@ -996,7 +1076,7 @@ short missile_actions( void ) {
                         if( ( missile_x >= Aliens[ y * 11 + x ].x - 3 ) && ( missile_x <= Aliens[ y * 11 + x ].x + 13 ) && ( missile_y >= Aliens[ y * 11 + x ].y - 4 ) && ( missile_y <= Aliens[ y * 11 + x ].y + 12 ) ) {
                             beep( 2, 4, 8, 500 );
                             points = ( 4 - Aliens[ y * 11 + x ].type ) * 10;
-                            set_sprite_attribute( 0, 1, 0, 0 );
+                            set_sprite_attribute( 0, 1, SPRITE_ACTIVE, 0 );
                             Aliens[ y * 11 + x ].type = 16;
                             alien_hit = 1;
                         }
@@ -1007,7 +1087,7 @@ short missile_actions( void ) {
             }
         }
         if( !alien_hit ) {
-            set_sprite_attribute( 0, 1, 0, 0 );
+            set_sprite_attribute( 0, 1, SPRITE_ACTIVE, 0 );
             if( missile_y > 24 ) {
                 // HIT A BUNKER
                 missile_x = missile_x - rng(4) + 2;
@@ -1036,7 +1116,8 @@ short missile_actions( void ) {
         }
     } else {
         // MOVE MISSILE
-        update_sprite( 0, 1, 0b1111101000000 );
+        set_sprite_attribute( 0, 1, SPRITE_COLOUR, framebuffer ? GREEN : LTGREEN );
+        update_sprite( 0, 1, 0b1111001100000 );
     }
 
     return( points );
@@ -1048,7 +1129,7 @@ void player_actions( void ) {
         Ship.state = SHIPEXPLODE2;
         Ship.counter = 100;
         for( short i = 1; i < 13; i++ ) {
-            set_sprite_attribute( 0, i, 0, 0 );
+            set_sprite_attribute( 0, i, SPRITE_ACTIVE, 0 );
         }
     }
     switch( Ship.state ) {
@@ -1111,7 +1192,6 @@ void draw_status( void ) {
 }
 
 void play( void ) {
-    initialise_graphics();
     reset_game();
 
     while( Ship.life > 0 ) {
@@ -1159,7 +1239,7 @@ void missile_demo( void ) {
                     case 3:
                         if( ( missile_x >= Aliens[ y * 11 + x ].x - 3 ) && ( missile_x <= Aliens[ y * 11 + x ].x + 13 ) && ( missile_y >= Aliens[ y * 11 + x ].y - 4 ) && ( missile_y <= Aliens[ y * 11 + x ].y + 12 ) ) {
                             beep( 2, 4, 8, 500 );
-                            set_sprite_attribute( 0, 1, 0, 0 );
+                            set_sprite_attribute( 0, 1, SPRITE_ACTIVE, 0 );
                             Aliens[ y * 11 + x ].type = 16;
                             alien_hit = 1;
                         }
@@ -1170,7 +1250,7 @@ void missile_demo( void ) {
             }
         }
         if( !alien_hit && ( missile_y < 110 ) ) {
-            set_sprite_attribute( 0, 1, 0, 0 );
+            set_sprite_attribute( 0, 1, SPRITE_ACTIVE, 0 );
             // HIT A BUNKER
             missile_x = missile_x - rng(4) + 2;
             missile_y = missile_y - rng(2) - 1;
@@ -1201,7 +1281,7 @@ void demo_actions( void ) {
         Ship.state = SHIPEXPLODE2;
         Ship.counter = 100;
         for( short i = 1; i < 13; i++ ) {
-            set_sprite_attribute( 0, i, 0, 0 );
+            set_sprite_attribute( 0, i, SPRITE_ACTIVE, 0 );
         }
     }
     switch( Ship.state ) {
@@ -1241,20 +1321,17 @@ void demo_actions( void ) {
 void attract( void ) {
     short mode = 0, animation = 0, move_amount = 0;
 
-    initialise_graphics();
     UFO.active = 0;
-
     while( !( get_buttons() & 8 ) ) {
         bitmap_draw( 0 );gpu_cs();
         bitmap_draw( 1 );gpu_cs();
         tpu_cs();
         // CLEAR THE SPRITES
         for( short i = 0; i < 13; i++ ) {
-            set_sprite_attribute( 0, i, 0, 0 );
+            set_sprite_attribute( 0, i, SPRITE_ACTIVE, 0 );
         }
         set_timer1khz( 16000, 0 );
         if( mode ) {
-            initialise_graphics();
             reset_aliens();
             trim_aliens();
             reset_player();
@@ -1350,9 +1427,7 @@ void attract( void ) {
 
 int main( void ) {
     INITIALISEMEMORY();
-    set_background( GREY2, DKBLUE - 1, BKG_SNOW );
-    // CLEAR THE TILEMAP
-    tilemap_scrollwrapclear( 9 );
+    initialise_graphics();
 
     while(1) {
         bitmap_draw( 0 );gpu_cs();

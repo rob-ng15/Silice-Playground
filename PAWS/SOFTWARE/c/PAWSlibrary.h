@@ -75,6 +75,12 @@
 #define DITHER64COLSTATIC 14
 #define DITHER2COLSTATIC 15
 
+#define SPRITE_ACTIVE 0
+#define SPRITE_TILE 1
+#define SPRITE_COLOUR 2
+#define SPRITE_X 3
+#define SPRITE_Y 4
+#define SPRITE_DOUBLE 5
 
 typedef unsigned int size_t;
 typedef unsigned short bool;
