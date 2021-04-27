@@ -295,8 +295,7 @@ algorithm sprite_generator(
     // Determine if pixel is visible
     pix_visible := sprite_active && xinrange && yinrange && ( tiles.rdata0[ ( 15  - ( ( __signed({1b0, pix_x}) - sprite_x ) >>> sprite_double ) ), 1 ] );
 
-    while(1) {
-    }
+    while(1) {}
 }
 
 algorithm spritebitmapwriter(

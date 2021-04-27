@@ -173,8 +173,8 @@ unsigned short tilemap_bitmaps[] = {
     0xfffe, 0xfffe, 0xc006, 0xc006, 0xc006, 0xc006, 0xc006, 0xc006,
     0xc006, 0xc006, 0xc006, 0xc006, 0xc006, 0xfffe, 0xfffe, 0x0000,
 
-    0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006,
-    0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0000,
+    0x0180, 0x0180, 0x0180, 0x0180, 0x0180, 0x0180, 0x0180, 0x0180,
+    0x0180, 0x0180, 0x0180, 0x0180, 0x0180, 0x0180, 0x0180, 0x0180,
 
     0xfffe, 0xfffe, 0x0006, 0x0006, 0x0006, 0x0006, 0xfffe, 0xfffe,
     0xc000, 0xc000, 0xc000, 0xc000, 0xc000, 0xfffe, 0xfffe, 0x0000,
@@ -227,7 +227,7 @@ unsigned short tilemap_bitmaps[] = {
     0x8600, 0x0a00, 0x3200, 0xc200, 0x8200, 0x9c00, 0xf000, 0xc000,
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 
-    // MOONSCAPE BACKGROUND LEFT WEDGES, SOLID, RIGHT WEDGES
+    // MOONSCAPE BACKGROUND LEFT WEDGES, SOLID, RIGHT WEDGES, LEFT AND RIGHT MOUNTAIN SLOPES
     0,0,0,0,0,0,0,
     0b0000000000000001,
     0b0000000000000111,
@@ -270,119 +270,60 @@ unsigned short tilemap_bitmaps[] = {
     0b1111111111111000,
     0b1111111111111110,
     0b1111111111111111,
+
+    0b0000000000000001,
+    0b0000000000000011,
+    0b0000000000000111,
+    0b0000000000001111,
+    0b0000000000011111,
+    0b0000000000111111,
+    0b0000000001111111,
+    0b0000000011111111,
+    0b0000000111111111,
+    0b0000001111111111,
+    0b0000011111111111,
+    0b0000111111111111,
+    0b0001111111111111,
+    0b0011111111111111,
+    0b0111111111111111,
+    0b1111111111111111,
+
+    0b1000000000000000,
+    0b1100000000000000,
+    0b1110000000000000,
+    0b1111000000000000,
+    0b1111100000000000,
+    0b1111110000000000,
+    0b1111111000000000,
+    0b1111111100000000,
+    0b1111111110000000,
+    0b1111111111000000,
+    0b1111111111100000,
+    0b1111111111110000,
+    0b1111111111111000,
+    0b1111111111111100,
+    0b1111111111111110,
+    0b1111111111111111,
+
 };
 
 // NEW FONT FOR GPU BLITTER CHARACTERS, REPLACES NUMERALS, UPPER CASE AND @ ?
 unsigned char symbol_bitmaps[] = {
-    0b11111110,
-    0b00000010,
-    0b00000010,
-    0b11111110,
-    0b10000000,
-    0b00000000,
-    0b10000000,
-    0,
-
-    0b11111110,
-    0b10000010,
-    0b10011110,
-    0b10010010,
-    0b10011110,
-    0b10000000,
-    0b11111110,
-    0
+    0b11111110, 0b00000010, 0b00000010, 0b11111110, 0b10000000, 0b00000000, 0b10000000, 0,
+    0b11111110, 0b10000010, 0b10011110, 0b10010010, 0b10011110, 0b10000000, 0b11111110, 0
 };
 
 unsigned char number_bitmaps[] = {
-    0b11111110,
-    0b10000010,
-    0b10000010,
-    0b10000010,
-    0b10000010,
-    0b10000010,
-    0b11111110,
-    0,
-
-    0b00000010,
-    0b00000010,
-    0b00000010,
-    0b00000010,
-    0b00000010,
-    0b00000010,
-    0b00000010,
-    0,
-
-    0b11111110,
-    0b00000010,
-    0b00000010,
-    0b11111110,
-    0b10000000,
-    0b10000000,
-    0b11111110,
-    0,
-
-    0b11111110,
-    0b00000010,
-    0b00000010,
-    0b11111110,
-    0b00000010,
-    0b00000010,
-    0b11111110,
-    0,
-
-    0b10000010,
-    0b10000010,
-    0b10000010,
-    0b11111110,
-    0b10000010,
-    0b00000010,
-    0b00000010,
-    0,
-
-    0b11111110,
-    0b10000000,
-    0b10000000,
-    0b11111110,
-    0b00000010,
-    0b00000010,
-    0b11111110,
-    0,
-
-    0b10000000,
-    0b10000000,
-    0b10000000,
-    0b11111110,
-    0b10000010,
-    0b10000010,
-    0b11111110,
-    0,
-
-    0b11111110,
-    0b00000010,
-    0b00000010,
-    0b00000010,
-    0b00000010,
-    0b00000010,
-    0b00000010,
-    0,
-
-    0b11111110,
-    0b10000010,
-    0b10000010,
-    0b11111110,
-    0b10000010,
-    0b10000010,
-    0b11111110,
-    0,
-
-    0b11111110,
-    0b10000010,
-    0b10000010,
-    0b11111110,
-    0b00000010,
-    0b00000010,
-    0b00000010,
-    0
+    0b11111110, 0b10000010, 0b10000010, 0b10000010, 0b10000010, 0b10000010, 0b11111110, 0,
+    0b00010000, 0b00010000, 0b00010000, 0b00010000, 0b00010000, 0b00010000, 0b00010000, 0,
+    0b11111110, 0b00000010, 0b00000010, 0b11111110, 0b10000000, 0b10000000, 0b11111110, 0,
+    0b11111110, 0b00000010, 0b00000010, 0b11111110, 0b00000010, 0b00000010, 0b11111110, 0,
+    0b10000010, 0b10000010, 0b10000010, 0b11111110, 0b10000010, 0b00000010, 0b00000010, 0,
+    0b11111110, 0b10000000, 0b10000000, 0b11111110, 0b00000010, 0b00000010, 0b11111110, 0,
+    0b10000000, 0b10000000, 0b10000000, 0b11111110, 0b10000010, 0b10000010, 0b11111110, 0,
+    0b11111110, 0b00000010, 0b00000010, 0b00000010, 0b00000010, 0b00000010, 0b00000010, 0,
+    0b11111110, 0b10000010, 0b10000010, 0b11111110, 0b10000010, 0b10000010, 0b11111110, 0,
+    0b11111110, 0b10000010, 0b10000010, 0b11111110, 0b00000010, 0b00000010, 0b00000010, 0
 };
 
 unsigned char letter_bitmaps[208] = {
@@ -664,33 +605,71 @@ struct Player {
 };
 struct Player Ship;
 
+char moonscape[][42] = {
+    ".....................12...................",
+    "....................1772..................",
+    ".........12......1217777212......12......1",
+    "........1772..1217777777777212..1772....17",
+    "2......177772177777777777777772177772..177",
+    "72....177777777348888888856777777777721777",
+    "772..1777777734888888888888567777777777777",
+    "777217777773488888888888888885677777777777",
+    "777777777348888888888888888888856777777777",
+    "777777734888888888888888888888888567777777",
+    "777773488888888888888888888888888885677777",
+    "777348888888888888888888888888888888856777",
+    "734888888888888888888888888888888888888567",
+    "488888888888888888888888888888888888888885"
+};
+
 void draw_moonscape( void ) {
     // PLACE MOONSCAPE ON THE TILEMAP
-    for( short x = 0; x < 8; x++ ) {
-        // LEFT WEDGE
-        set_tilemap_tile( x * 2, 30 - x,  20, TRANSPARENT, GREY1 );
-        set_tilemap_tile( 1 + x * 2, 30 - x,  21, TRANSPARENT, GREY1 );
-        // RIGHT WEDGE
-        set_tilemap_tile( 41 - x * 2, 30 - x,  24, TRANSPARENT, GREY1 );
-        set_tilemap_tile( 40 - x * 2, 30 - x,  23, TRANSPARENT, GREY1 );
-        // SOLID BLOCKS
-        for( short x1 = 2 + x * 2; x1 < 40 - x * 2; x1++ ) {
-            set_tilemap_tile( x1, 30 - x,  22, TRANSPARENT, GREY1 );
+    for( short y = 0; y < 13; y++ ) {
+        for( short x = 0; x < 42; x++ ) {
+            switch( moonscape[y][x] ) {
+                case '.':
+                    set_tilemap_tile( x, 18 + y, 0, TRANSPARENT, TRANSPARENT );
+                    break;
+                case '1':
+                    set_tilemap_tile( x, 18 + y, 25, TRANSPARENT, GREY2 );
+                    break;
+                case '2':
+                    set_tilemap_tile( x, 18 + y, 26, TRANSPARENT, GREY2 );
+                    break;
+                case '3':
+                    set_tilemap_tile( x, 18 + y, 20, GREY2, GREY1 );
+                    break;
+                case '4':
+                    set_tilemap_tile( x, 18 + y, 21, GREY2, GREY1 );
+                    break;
+                case '5':
+                    set_tilemap_tile( x, 18 + y, 23, GREY2, GREY1 );
+                    break;
+                case '6':
+                    set_tilemap_tile( x, 18 + y, 24, GREY2, GREY1 );
+                    break;
+                case '7':
+                    set_tilemap_tile( x, 18 + y, 22, TRANSPARENT, GREY2 );
+                    break;
+                case '8':
+                    set_tilemap_tile( x, 18 + y, 22, TRANSPARENT, GREY1 );
+                    break;
+            }
         }
     }
 
     // PLACE PLANETS
 
     // PLACE ROCKETS
-    set_tilemap_tile( 5, 12, 16, TRANSPARENT, PURPLE );
-    set_tilemap_tile( 5, 13, 17, TRANSPARENT, PURPLE );
-    set_tilemap_tile( 6, 12, 18, TRANSPARENT, PURPLE );
-    set_tilemap_tile( 6, 13, 19, TRANSPARENT, PURPLE );
+    set_tilemap_tile( 3, 19, 16, TRANSPARENT, PURPLE );
+    set_tilemap_tile( 3, 20, 17, TRANSPARENT, PURPLE );
+    set_tilemap_tile( 4, 19, 18, TRANSPARENT, PURPLE );
+    set_tilemap_tile( 4, 20, 19, TRANSPARENT, PURPLE );
 
-    set_tilemap_tile( 28, 22, 16, TRANSPARENT, DKORANGE );
-    set_tilemap_tile( 28, 23, 17, TRANSPARENT, DKORANGE );
-    set_tilemap_tile( 29, 22, 18, TRANSPARENT, DKORANGE );
-    set_tilemap_tile( 29, 23, 19, TRANSPARENT, DKORANGE );
+    set_tilemap_tile( 28, 22, 16, GREY2, DKORANGE );
+    set_tilemap_tile( 28, 23, 17, GREY2, DKORANGE );
+    set_tilemap_tile( 29, 22, 18, GREY2, DKORANGE );
+    set_tilemap_tile( 29, 23, 19, GREY2, DKORANGE );
 }
 
 void initialise_graphics( void ) {
@@ -711,7 +690,7 @@ void initialise_graphics( void ) {
     }
 
     // SET TILEMAP TILES - NUMBERS AND SHIP GRAPHIC + 32 x 32 PLANET AND ROCKET
-    for( short i = 0; i < 24; i++ ) {
+    for( short i = 0; i < 26; i++ ) {
         set_tilemap_bitmap( i + 1, &tilemap_bitmaps[ 16 * i ] );
     }
 
@@ -1321,12 +1300,7 @@ void demo_actions( void ) {
 void attract( void ) {
     short mode = 0, animation = 0, move_amount = 0;
 
-<<<<<<< HEAD
     UFO.active = 0;
-=======
-    initialise_graphics();
-
->>>>>>> parent of 5d4dafd... Tidy up and simplification
     while( !( get_buttons() & 8 ) ) {
         bitmap_draw( 0 );gpu_cs();
         bitmap_draw( 1 );gpu_cs();

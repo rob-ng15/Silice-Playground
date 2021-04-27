@@ -35,6 +35,33 @@ algorithm apu(
     frequencytable.addr := selected_note;
     audio_active := ( selected_duration != 0 );
 
+    always {
+        if( ( selected_duration != 0 ) && ( counter25mhz == 0 ) ) {
+            switch( selected_waveform ) {
+                case 0: {
+                    // SQUARE
+                    audio_output = { {4{~point[4,1]}} };
+                }
+                case 1: {
+                    // SAWTOOTH
+                    audio_output = point[1,4];
+                }
+                case 2: {
+                    // TRIANGLE
+                    audio_output = point[4,1] ? 15 - point[0,4] : point[0,4];
+                }
+                case 3: {
+                    // SINE
+                    audio_output = point[4,1] ? 15 - point[1,3] : point[1,3];
+                }
+                case 4: {
+                    // WHITE NOISE
+                    audio_output = staticGenerator;
+                }
+            }
+        }
+    }
+
     while(1) {
         if( apu_write ) {
             selected_waveform = waveform;
@@ -45,30 +72,6 @@ algorithm apu(
             counter1khz = 25000;
         } else {
             if( selected_duration != 0 ) {
-                if( counter25mhz == 0 ) {
-                    switch( selected_waveform ) {
-                        case 0: {
-                            // SQUARE
-                            audio_output = { {4{~point[4,1]}} };
-                        }
-                        case 1: {
-                            // SAWTOOTH
-                            audio_output = point[1,4];
-                        }
-                        case 2: {
-                            // TRIANGLE
-                            audio_output = point[4,1] ? 15 - point[0,4] : point[0,4];
-                        }
-                        case 3: {
-                            // SINE
-                            audio_output = point[4,1] ? 15 - point[1,3] : point[1,3];
-                        }
-                        case 4: {
-                            // WHITE NOISE
-                            audio_output = staticGenerator;
-                        }
-                    }
-                }
                 ( counter25mhz ) = decrementorreset( counter25mhz, notefrequency );
                 ( point ) = incrementifzero( point, counter25mhz );
                 ( counter1khz ) = decrementorreset( counter1khz, onesecond );

@@ -21,14 +21,6 @@ bitfield charactermapentry {
     uint8   character
 }
 
-// Entry in the tilemap
-bitfield tilemapentry {
-    uint1   alpha,
-    uint6   background,
-    uint6   foreground,
-    uint5   tilenumber
-}
-
 // Vertex in the vector block
 bitfield vectorentry {
     uint1   active,
