@@ -63,19 +63,22 @@ algorithm apu(
     }
 
     while(1) {
-        if( apu_write ) {
-            selected_waveform = waveform;
-            selected_note = note;
-            selected_duration = duration;
-            point = 0;
-            counter25mhz = 0;
-            counter1khz = 25000;
-        } else {
-            if( selected_duration != 0 ) {
-                ( counter25mhz ) = decrementorreset( counter25mhz, notefrequency );
-                ( point ) = incrementifzero( point, counter25mhz );
-                ( counter1khz ) = decrementorreset( counter1khz, onesecond );
-                ( selected_duration ) = decrementifzero( selected_duration, counter1khz );
+        switch( apu_write ) {
+            case 1: {
+                selected_waveform = waveform;
+                selected_note = note;
+                selected_duration = duration;
+                point = 0;
+                counter25mhz = 0;
+                counter1khz = 25000;
+            }
+            case 0: {
+                if( selected_duration != 0 ) {
+                    ( counter25mhz ) = decrementorreset( counter25mhz, notefrequency );
+                    ( point ) = incrementifzero( point, counter25mhz );
+                    ( counter1khz ) = decrementorreset( counter1khz, onesecond );
+                    ( selected_duration ) = decrementifzero( selected_duration, counter1khz );
+                }
             }
         }
     }

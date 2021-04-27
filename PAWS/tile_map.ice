@@ -11,13 +11,13 @@ algorithm tilemap(
     // Set TM at x, y, character with foreground and background
     input uint6 tm_x,
     input uint6 tm_y,
-    input uint5 tm_character,
+    input uint6 tm_character,
     input uint6 tm_foreground,
     input uint7 tm_background,
     input uint1 tm_write,
 
     // For setting tile bitmaps
-    input   uint5   tile_writer_tile,
+    input   uint6   tile_writer_tile,
     input   uint4   tile_writer_line,
     input   uint16  tile_writer_bitmap,
 
@@ -26,12 +26,12 @@ algorithm tilemap(
     output  uint4   tm_lastaction,
     output  uint2   tm_active
 ) <autorun> {
-    // Tiles 32 x 16 x 16
-    simple_dualport_bram uint16 tiles16x16 <input!> [ 512 ] = { 0, pad(0) };
+    // Tiles 64 x 16 x 16
+    simple_dualport_bram uint16 tiles16x16 <input!> [ 1024 ] = { 0, pad(0) };
 
     // 42 x 32 tile map, allows for pixel scrolling with border { 7 bits background, 6 bits foreground, 5 bits tile number }
     // Setting background to 40 (ALPHA) allows the bitmap/background to show through
-    simple_dualport_bram uint5 tiles[1344] = { 0, pad(0) };
+    simple_dualport_bram uint6 tiles[1344] = { 0, pad(0) };
     simple_dualport_bram uint13 colours[1344] = { 13h10000, pad(13h10000) };
 
     // Scroll position - -15 to 0 to 15
@@ -87,8 +87,6 @@ algorithm tilemap(
     pix_red := tmpixel ? colours.rdata0[4,2] : colours.rdata0[10,2];
     pix_green := tmpixel ? colours.rdata0[2,2] : colours.rdata0[8,2];
     pix_blue := tmpixel ?  colours.rdata0[0,2] : colours.rdata0[6,2];
-
-    //while(1) {}
 }
 
 algorithm tile_map_writer(
@@ -98,7 +96,7 @@ algorithm tile_map_writer(
     // Set TM at x, y, character with foreground and background
     input uint6 tm_x,
     input uint6 tm_y,
-    input uint5 tm_character,
+    input uint6 tm_character,
     input uint6 tm_foreground,
     input uint7 tm_background,
     input uint1 tm_write,
@@ -112,7 +110,7 @@ algorithm tile_map_writer(
     output  uint2   tm_active
 ) <autorun> {
     // COPY OF TILEMAP FOR SCROLLING
-    simple_dualport_bram uint5 tiles_copy[1344] = { 0, pad(0) };
+    simple_dualport_bram uint6 tiles_copy[1344] = { 0, pad(0) };
     simple_dualport_bram uint13 colours_copy[1344] = { 13h10000, pad(13h10000) };
 
     // Scroller/Wrapper storage
@@ -122,7 +120,7 @@ algorithm tile_map_writer(
     uint6   x_cursor = uninitialized;
     uint6   y_cursor = uninitialized;
     uint11  y_cursor_addr = uninitialized;
-    uint5   new_tile = uninitialized;
+    uint6   new_tile = uninitialized;
     uint13  new_colour = uninitialized;
 
     // CLEARSCROLL address
@@ -335,7 +333,7 @@ algorithm tile_map_writer(
 }
 
 algorithm tilebitmapwriter(
-    input   uint5   tile_writer_tile,
+    input   uint6   tile_writer_tile,
     input   uint4   tile_writer_line,
     input   uint16  tile_writer_bitmap,
 

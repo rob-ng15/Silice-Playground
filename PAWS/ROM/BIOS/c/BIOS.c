@@ -501,6 +501,7 @@ void reset_display( void ) {
     *FRAMEBUFFER_DRAW = 0; gpu_cs();
     *FRAMEBUFFER_DISPLAY = 0;
     tpu_cs();
+    screen_mode( 0 );
     tilemap_scrollwrapclear( 9 );
     for( unsigned short i = 0; i < 13; i++ ) {
         set_sprite( 0, i, 0, 0, 0, 0, 0, 0 );

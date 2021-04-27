@@ -35,6 +35,18 @@ unsigned short volatile * TM_WRITER_BITMAP = (unsigned short volatile *) 0x8228;
 unsigned char volatile * TM_SCROLLWRAPCLEAR = (unsigned char volatile *) 0x8230;
 unsigned char volatile * TM_STATUS = (unsigned char volatile *) 0x8234;
 
+unsigned char volatile * TMU_X = (unsigned char volatile *) 0x8280;
+unsigned char volatile * TMU_Y = (unsigned char volatile *) 0x8284;
+unsigned char volatile * TMU_TILE = (unsigned char volatile *) 0x8288;
+unsigned char volatile * TMU_BACKGROUND = (unsigned char volatile *) 0x828c;
+unsigned char volatile * TMU_FOREGROUND = (unsigned char volatile *) 0x8290;
+unsigned char volatile * TMU_COMMIT = (unsigned char volatile *) 0x8294;
+unsigned char volatile * TMU_WRITER_TILE_NUMBER = (unsigned char volatile *) 0x82a0;
+unsigned char volatile * TMU_WRITER_LINE_NUMBER = (unsigned char volatile *) 0x82a4;
+unsigned short volatile * TMU_WRITER_BITMAP = (unsigned short volatile *) 0x82a8;
+unsigned char volatile * TMU_SCROLLWRAPCLEAR = (unsigned char volatile *) 0x82b0;
+unsigned char volatile * TMU_STATUS = (unsigned char volatile *) 0x82b4;
+
 short volatile * GPU_X = (short volatile *) 0x8400;
 short volatile * GPU_Y = (short volatile *) 0x8404;
 unsigned char volatile * GPU_COLOUR = (unsigned char volatile *) 0x8408;
@@ -249,3 +261,7 @@ typedef struct {
 #define false 0
 #define TRUE 1
 #define FALSE 0
+
+// LOWER AND UPPER SPRITES/TILEMAPS
+#define LOWER 0
+#define UPPER 1

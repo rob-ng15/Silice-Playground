@@ -1,9 +1,13 @@
-
+// STANDARD CONSTANTS
 #define NULL 0
 #define true 1
 #define false 0
 #define TRUE 1
 #define FALSE 0
+
+// DISPLAY LAYERS
+#define LOWER_LAYER 0
+#define UPPER_LAYER 1
 
 // BACKGROUND PATTERN GENERATOR
 #define BKG_SOLID 0
@@ -22,7 +26,6 @@
 #define BKG_RSLOPE 13
 #define BKG_VSTRIPE 14
 #define BKG_HSTRIPE 15
-
 
 // COLOURS
 #define TRANSPARENT 0x40
