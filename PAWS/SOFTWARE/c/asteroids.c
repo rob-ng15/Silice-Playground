@@ -270,10 +270,12 @@ void set_tilemap( void )
 {
     unsigned char i, x, y, colour;
 
-    (void)tilemap_scrollwrapclear( 9 );
+    (void)tilemap_scrollwrapclear(  LOWER_LAYER, 9 );
+    (void)tilemap_scrollwrapclear(  UPPER_LAYER, 9 );
 
-    for( unsigned char tile_number = 0; tile_number < 8; tile_number++ ) {
-        set_tilemap_bitmap( tile_number + 1, &tilemap_bitmap[ tile_number * 16 ] );
+    for( unsigned char tile_number = 0; tile_number < 4; tile_number++ ) {
+        set_tilemap_bitmap( LOWER_LAYER, tile_number + 1, &tilemap_bitmap[ tile_number * 16 ] );
+        set_tilemap_bitmap( UPPER_LAYER, tile_number + 1, &tilemap_bitmap[ 64 + tile_number * 16 ] );
     }
 
     // RANDOMLY PLACE 4 PLANETS and 4 ROCKET SHIPS
@@ -282,7 +284,7 @@ void set_tilemap( void )
         y = rng( 7 ) + i*7 + 1;
         colour = random_colour_alt();
 
-        set_tilemap_tile( x, y, 1, TRANSPARENT, colour ); set_tilemap_tile( x, y+1, 2, TRANSPARENT, colour ); set_tilemap_tile( x+1, y, 3, TRANSPARENT, colour ); set_tilemap_tile( x+1, y+1, 4, TRANSPARENT, colour );
+        set_tilemap_tile( LOWER_LAYER, x, y, 1, TRANSPARENT, colour ); set_tilemap_tile( LOWER_LAYER, x, y+1, 2, TRANSPARENT, colour ); set_tilemap_tile( LOWER_LAYER, x+1, y, 3, TRANSPARENT, colour ); set_tilemap_tile( LOWER_LAYER, x+1, y+1, 4, TRANSPARENT, colour );
     }
 
     for( i = 0; i < 4; i++ ) {
@@ -290,7 +292,7 @@ void set_tilemap( void )
         y = rng( 7 ) + i*7 + 1;
         colour = random_colour_alt();
 
-        set_tilemap_tile( x, y, 5, TRANSPARENT, colour ); set_tilemap_tile( x, y+1, 6, TRANSPARENT, colour ); set_tilemap_tile( x+1, y, 7, TRANSPARENT, colour ); set_tilemap_tile( x+1, y+1, 8, TRANSPARENT, colour );
+        set_tilemap_tile( UPPER_LAYER, x, y, 1, TRANSPARENT, colour ); set_tilemap_tile( UPPER_LAYER, x, y+1, 2, TRANSPARENT, colour ); set_tilemap_tile( UPPER_LAYER, x+1, y, 3, TRANSPARENT, colour ); set_tilemap_tile( UPPER_LAYER, x+1, y+1, 4, TRANSPARENT, colour );
     }
 }
 
@@ -547,7 +549,8 @@ void beepboop( void )
 
         last_timer = get_timer1hz( 0 );
 
-        (void)tilemap_scrollwrapclear( 5 );
+        (void)tilemap_scrollwrapclear( LOWER_LAYER, 5 );
+        //(void)tilemap_scrollwrapclear( UPPER_LAYER, 7 );
 
         switch( last_timer & 3 ) {
             case 0:
@@ -601,7 +604,8 @@ void beepboop( void )
                         beep( 1, 3, 63, 32 );
                     }
                 }
-                (void)tilemap_scrollwrapclear( 6 );
+                (void)tilemap_scrollwrapclear( LOWER_LAYER, 6 );
+                //(void)tilemap_scrollwrapclear( UPPER_LAYER, 8 );
                 break;
         }
     }

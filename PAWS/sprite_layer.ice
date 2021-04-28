@@ -129,17 +129,17 @@ algorithm sprite_layer(
     );
 
     // MAIN OR SMT
-    uint1   MAINSMT := ( sprite_layer_write > 0 );
-    uint4   SPRITE_NUMBER := ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT;
+    uint1   MAINSMT <: ( sprite_layer_write != 0 );
+    uint4   SPRITE_NUMBER <: ( sprite_layer_write != 0 ) ? sprite_set_number : sprite_set_number_SMT;
 
     // Expand Sprite Update Deltas
-    int11   deltax := MAINSMT ? { {7{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx } : { {7{spriteupdate( sprite_update_SMT ).dxsign}}, spriteupdate( sprite_update_SMT ).dx };
-    int11   deltay := MAINSMT ? { {7{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy } : { {7{spriteupdate( sprite_update_SMT ).dysign}}, spriteupdate( sprite_update_SMT ).dy };
+    int11   deltax <: MAINSMT ? { {7{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx } : { {7{spriteupdate( sprite_update_SMT ).dxsign}}, spriteupdate( sprite_update_SMT ).dx };
+    int11   deltay <: MAINSMT ? { {7{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy } : { {7{spriteupdate( sprite_update_SMT ).dysign}}, spriteupdate( sprite_update_SMT ).dy };
     // Sprite update helpers
-    int11   sprite_offscreen_negative ::= sprite_double[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ? -32 : -16;
-    int11   sprite_to_negative ::= sprite_double[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ? -31 : -15;
-    uint1   sprite_offscreen_x ::= ( __signed( sprite_x[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_x[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) > __signed(640) );
-    uint1   sprite_offscreen_y ::= ( __signed( sprite_y[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_y[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) > __signed(480) );
+    int11   sprite_offscreen_negative <:: sprite_double[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ? -32 : -16;
+    int11   sprite_to_negative <:: sprite_double[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ? -31 : -15;
+    uint1   sprite_offscreen_x <:: ( __signed( sprite_x[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_x[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) > __signed(640) );
+    uint1   sprite_offscreen_y <:: ( __signed( sprite_y[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_y[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) > __signed(480) );
 
     $$for i=0,12 do
         // Output collisions
@@ -284,18 +284,16 @@ algorithm sprite_generator(
     output! uint1   pix_visible
 ) <autorun> {
     // Calculate position in sprite
-    uint6 spritesize := sprite_double ? 32 : 16;
-    uint1 xinrange := ( __signed({1b0, pix_x}) >= __signed(sprite_x) ) && ( __signed({1b0, pix_x}) < __signed( sprite_x + spritesize ) );
-    uint1 yinrange := ( __signed({1b0, pix_y}) >= __signed(sprite_y) ) && ( __signed({1b0, pix_y}) < __signed( sprite_y + spritesize) );
-    uint4 yinsprite := ( __signed({1b0, pix_y}) - sprite_y ) >>> sprite_double;
+    uint6 spritesize <: sprite_double ? 32 : 16;
+    uint1 xinrange <: ( __signed({1b0, pix_x}) >= __signed(sprite_x) ) && ( __signed({1b0, pix_x}) < __signed( sprite_x + spritesize ) );
+    uint1 yinrange <: ( __signed({1b0, pix_y}) >= __signed(sprite_y) ) && ( __signed({1b0, pix_y}) < __signed( sprite_y + spritesize) );
+    uint4 yinsprite <: ( __signed({1b0, pix_y}) - sprite_y ) >>> sprite_double;
 
     // READ ADDRESS FOR SPRITE
     tiles.addr0 := { sprite_tile_number, yinsprite };
 
     // Determine if pixel is visible
     pix_visible := sprite_active && xinrange && yinrange && ( tiles.rdata0[ ( 15  - ( ( __signed({1b0, pix_x}) - sprite_x ) >>> sprite_double ) ), 1 ] );
-
-    while(1) {}
 }
 
 algorithm spritebitmapwriter(

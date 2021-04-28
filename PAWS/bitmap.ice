@@ -64,7 +64,7 @@ algorithm bitmap(
    }
 }
 
-algorithm bitmapwriter (
+algorithm bitmapwriter(
     // SET pixels
     input   uint1   framebuffer,
     input   int10   bitmap_x_write,

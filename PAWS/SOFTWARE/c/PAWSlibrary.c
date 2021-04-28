@@ -266,24 +266,50 @@ void set_background( unsigned char colour, unsigned char altcolour, unsigned cha
 // The tilemap can scroll or wrap once x or y is at -15 or 15
 
 // SET THE TILEMAP TILE at (x,y) to tile with colours background and foreground
-void set_tilemap_tile( unsigned char x, unsigned char y, unsigned char tile, unsigned char background, unsigned char foreground) {
-    while( *TM_STATUS );
+void set_tilemap_tile( unsigned char tm_layer, unsigned char x, unsigned char y, unsigned char tile, unsigned char background, unsigned char foreground) {
+    switch( tm_layer ) {
+        case 0:
+            while( *LOWER_TM_STATUS );
 
-    *TM_X = x;
-    *TM_Y = y;
-    *TM_TILE = tile;
-    *TM_BACKGROUND = background;
-    *TM_FOREGROUND = foreground;
-    *TM_COMMIT = 1;
+            *LOWER_TM_X = x;
+            *LOWER_TM_Y = y;
+            *LOWER_TM_TILE = tile;
+            *LOWER_TM_BACKGROUND = background;
+            *LOWER_TM_FOREGROUND = foreground;
+            *LOWER_TM_COMMIT = 1;
+            break;
+        case 1:
+            while( *UPPER_TM_STATUS );
+
+            *UPPER_TM_X = x;
+            *UPPER_TM_Y = y;
+            *UPPER_TM_TILE = tile;
+            *UPPER_TM_BACKGROUND = background;
+            *UPPER_TM_FOREGROUND = foreground;
+            *UPPER_TM_COMMIT = 1;
+            break;
+    }
 }
 
 // SET THE TILE BITMAP for tile to the 16 x 16 pixel bitmap
-void set_tilemap_bitmap( unsigned char tile, unsigned short *bitmap ) {
-    *TM_WRITER_TILE_NUMBER = tile;
+void set_tilemap_bitmap( unsigned char tm_layer, unsigned char tile, unsigned short *bitmap ) {
+    switch( tm_layer ) {
+        case 0:
+            *LOWER_TM_WRITER_TILE_NUMBER = tile;
 
-    for( int i = 0; i < 16; i ++ ) {
-        *TM_WRITER_LINE_NUMBER = i;
-        *TM_WRITER_BITMAP = bitmap[i];
+            for( int i = 0; i < 16; i ++ ) {
+                *LOWER_TM_WRITER_LINE_NUMBER = i;
+                *LOWER_TM_WRITER_BITMAP = bitmap[i];
+            }
+            break;
+        case 1:
+            *UPPER_TM_WRITER_TILE_NUMBER = tile;
+
+            for( int i = 0; i < 16; i ++ ) {
+                *UPPER_TM_WRITER_LINE_NUMBER = i;
+                *UPPER_TM_WRITER_BITMAP = bitmap[i];
+            }
+            break;
     }
 }
 
@@ -292,18 +318,24 @@ void set_tilemap_bitmap( unsigned char tile, unsigned short *bitmap ) {
 //  action == 5 to 8 move the tilemap 1 pixel LEFT, UP, RIGHT, DOWN and WRAP at limit
 //  action == 9 clear the tilemap
 //  RETURNS 0 if no action taken other than pixel shift, action if SCROLL WRAP or CLEAR was actioned
-unsigned char tilemap_scrollwrapclear( unsigned char action ) {
-    while( *TM_STATUS );
-    *TM_SCROLLWRAPCLEAR = action;
-    return( *TM_SCROLLWRAPCLEAR );
+unsigned char tilemap_scrollwrapclear( unsigned char tm_layer, unsigned char action ) {
+    switch( tm_layer ) {
+        case 0:
+            while( *LOWER_TM_STATUS );
+            *LOWER_TM_SCROLLWRAPCLEAR = action;
+            break;
+        case 1:
+            while( *UPPER_TM_STATUS );
+            *UPPER_TM_SCROLLWRAPCLEAR = action;
+            break;
+    }
+    return( tm_layer ? *UPPER_TM_SCROLLWRAPCLEAR : *LOWER_TM_SCROLLWRAPCLEAR );
 }
 
 // GPU AND BITMAP
 // The bitmap is 640 x 480 pixels (0,0) is ALWAYS top left even if the bitmap has been offset
 // The bitmap can be moved 1 pixel at a time LEFT, RIGHT, UP, DOWN for scrolling
 // The GPU can draw pixels, filled rectangles, lines, (filled) circles, filled triangles and has a 16 x 16 pixel blitter from user definable tiles
-
-
 
 // SCROLL THE BITMAP by 1 pixel
 //  action == 1 LEFT, == 2 UP, == 3 RIGHT, == 4 DOWN, == 5 RESET

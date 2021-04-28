@@ -109,20 +109,34 @@ algorithm memmap_io (
         staticGenerator <: static2bit
     );
 
-    // TILEMAP
-    uint2   tilemap_r = uninitialized;
-    uint2   tilemap_g = uninitialized;
-    uint2   tilemap_b = uninitialized;
-    uint1   tilemap_display = uninitialized;
-    tilemap tile_map <@video_clock,!video_reset> (
+    // Tilemaps - Lower and Upper
+    uint2   lower_tilemap_r = uninitialized;
+    uint2   lower_tilemap_g = uninitialized;
+    uint2   lower_tilemap_b = uninitialized;
+    uint1   lower_tilemap_display = uninitialized;
+    uint2   upper_tilemap_r = uninitialized;
+    uint2   upper_tilemap_g = uninitialized;
+    uint2   upper_tilemap_b = uninitialized;
+    uint1   upper_tilemap_display = uninitialized;
+    tilemap lower_tile_map <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: pix_active,
         pix_vblank <: vblank,
-        pix_red    :> tilemap_r,
-        pix_green  :> tilemap_g,
-        pix_blue   :> tilemap_b,
-        tilemap_display :> tilemap_display,
+        pix_red    :> lower_tilemap_r,
+        pix_green  :> lower_tilemap_g,
+        pix_blue   :> lower_tilemap_b,
+        tilemap_display :> lower_tilemap_display,
+    );
+    tilemap upper_tile_map <@video_clock,!video_reset> (
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: pix_active,
+        pix_vblank <: vblank,
+        pix_red    :> upper_tilemap_r,
+        pix_green  :> upper_tilemap_g,
+        pix_blue   :> upper_tilemap_b,
+        tilemap_display :> upper_tilemap_display,
     );
 
     // Bitmap Window
@@ -171,8 +185,7 @@ algorithm memmap_io (
         bitmap_1 <:> bitmap_1
     );
 
-    // Lower Sprite Layer - Between BACKGROUND and BITMAP
-    // Upper Sprite Layer - Between BITMAP and CHARACTER MAP
+    // Sprite Layers - Lower and Upper
     uint2   lower_sprites_r = uninitialized;
     uint2   lower_sprites_g = uninitialized;
     uint2   lower_sprites_b = uninitialized;
@@ -191,7 +204,7 @@ algorithm memmap_io (
         pix_blue   :> lower_sprites_b,
         sprite_layer_display :> lower_sprites_display,
         collision_layer_1 <: bitmap_display,
-        collision_layer_2 <: tilemap_display,
+        collision_layer_2 <: lower_tilemap_display,
         collision_layer_3 <: upper_sprites_display
     );
     sprite_layer upper_sprites <@video_clock,!video_reset> (
@@ -204,7 +217,7 @@ algorithm memmap_io (
         pix_blue   :> upper_sprites_b,
         sprite_layer_display :> upper_sprites_display,
         collision_layer_1 <: bitmap_display,
-        collision_layer_2 <: tilemap_display,
+        collision_layer_2 <: lower_tilemap_display,
         collision_layer_3 <: lower_sprites_display
     );
 
@@ -238,25 +251,30 @@ algorithm memmap_io (
         background_g <: background_g,
         background_b <: background_b,
 
-        tilemap_r <: tilemap_r,
-        tilemap_g <: tilemap_g,
-        tilemap_b <: tilemap_b,
-        tilemap_display <: tilemap_display,
+        lower_tilemap_r <: lower_tilemap_r,
+        lower_tilemap_g <: lower_tilemap_g,
+        lower_tilemap_b <: lower_tilemap_b,
+        lower_tilemap_display <: lower_tilemap_display,
+
+        upper_tilemap_r <: upper_tilemap_r,
+        upper_tilemap_g <: upper_tilemap_g,
+        upper_tilemap_b <: upper_tilemap_b,
+        upper_tilemap_display <: upper_tilemap_display,
 
         lower_sprites_r <: lower_sprites_r,
         lower_sprites_g <: lower_sprites_g,
         lower_sprites_b <: lower_sprites_b,
         lower_sprites_display <: lower_sprites_display,
 
-        bitmap_r <: bitmap_r,
-        bitmap_g <: bitmap_g,
-        bitmap_b <: bitmap_b,
-        bitmap_display <: bitmap_display,
-
         upper_sprites_r <: upper_sprites_r,
         upper_sprites_g <: upper_sprites_g,
         upper_sprites_b <: upper_sprites_b,
         upper_sprites_display <: upper_sprites_display,
+
+        bitmap_r <: bitmap_r,
+        bitmap_g <: bitmap_g,
+        bitmap_b <: bitmap_b,
+        bitmap_display <: bitmap_display,
 
         character_map_r <: character_map_r,
         character_map_g <: character_map_g,
@@ -341,8 +359,10 @@ algorithm memmap_io (
                 // BACKGROUND
 
                 // TILE MAP
-                case 16h8230: { readData = tile_map.tm_lastaction; }
-                case 16h8234: { readData = tile_map.tm_active; }
+                case 16h8230: { readData = lower_tile_map.tm_lastaction; }
+                case 16h8234: { readData = lower_tile_map.tm_active; }
+                case 16h82b0: { readData = upper_tile_map.tm_lastaction; }
+                case 16h82b4: { readData = upper_tile_map.tm_active; }
 
                 // LOWER SPRITE LAYER - MAIN
                 case 16h8304: { readData = lower_sprites.sprite_read_active; }
@@ -456,18 +476,26 @@ algorithm memmap_io (
                 case 16h8108: { background_generator.backgroundcolour_mode = writeData; }
 
                 // TILE MAP
-                case 16h8200: { tile_map.tm_x = writeData; }
-                case 16h8204: { tile_map.tm_y = writeData; }
-                case 16h8208: { tile_map.tm_character = writeData; }
-                case 16h820c: { tile_map.tm_background = writeData; }
-                case 16h8210: { tile_map.tm_foreground = writeData; }
-                case 16h8214: { tile_map.tm_write = 1; }
-
-                case 16h8220: { tile_map.tile_writer_tile = writeData; }
-                case 16h8224: { tile_map.tile_writer_line = writeData; }
-                case 16h8228: { tile_map.tile_writer_bitmap = writeData; }
-
-                case 16h8230: { tile_map.tm_scrollwrap = writeData; }
+                case 16h8200: { lower_tile_map.tm_x = writeData; }
+                case 16h8204: { lower_tile_map.tm_y = writeData; }
+                case 16h8208: { lower_tile_map.tm_character = writeData; }
+                case 16h820c: { lower_tile_map.tm_background = writeData; }
+                case 16h8210: { lower_tile_map.tm_foreground = writeData; }
+                case 16h8214: { lower_tile_map.tm_write = 1; }
+                case 16h8220: { lower_tile_map.tile_writer_tile = writeData; }
+                case 16h8224: { lower_tile_map.tile_writer_line = writeData; }
+                case 16h8228: { lower_tile_map.tile_writer_bitmap = writeData; }
+                case 16h8230: { lower_tile_map.tm_scrollwrap = writeData; }
+                case 16h8280: { upper_tile_map.tm_x = writeData; }
+                case 16h8284: { upper_tile_map.tm_y = writeData; }
+                case 16h8288: { upper_tile_map.tm_character = writeData; }
+                case 16h828c: { upper_tile_map.tm_background = writeData; }
+                case 16h8290: { upper_tile_map.tm_foreground = writeData; }
+                case 16h8294: { upper_tile_map.tm_write = 1; }
+                case 16h82a0: { upper_tile_map.tile_writer_tile = writeData; }
+                case 16h82a4: { upper_tile_map.tile_writer_line = writeData; }
+                case 16h82a8: { upper_tile_map.tile_writer_bitmap = writeData; }
+                case 16h82b0: { upper_tile_map.tm_scrollwrap = writeData; }
 
                 // LOWER SPRITE LAYER - MAIN
                 case 16h8300: { lower_sprites.sprite_set_number = writeData; }
@@ -606,17 +634,19 @@ algorithm memmap_io (
         // Delay to reset co-processors therefore required
         if( ~memoryWrite && ~LATCHmemoryWrite ) {
             // RESET DISPLAY Co-Processor Controls
-            tile_map.tm_write = 0;
-            tile_map.tm_scrollwrap = 0;
+            lower_tile_map.tm_write = 0;
+            lower_tile_map.tm_scrollwrap = 0;
+            upper_tile_map.tm_write = 0;
+            upper_tile_map.tm_scrollwrap = 0;
             lower_sprites.sprite_layer_write = 0;
             lower_sprites.sprite_layer_write_SMT = 0;
             lower_sprites.sprite_writer_active = 0;
-            bitmap_window.bitmap_write_offset = 0;
-            gpu_processor.gpu_write = 0;
-            gpu_processor.draw_vector = 0;
             upper_sprites.sprite_layer_write = 0;
             upper_sprites.sprite_layer_write_SMT = 0;
             upper_sprites.sprite_writer_active = 0;
+            bitmap_window.bitmap_write_offset = 0;
+            gpu_processor.gpu_write = 0;
+            gpu_processor.draw_vector = 0;
             character_map_window.tpu_write = 0;
 
             // RESET TIMER and AUDIO Co-Processor Controls

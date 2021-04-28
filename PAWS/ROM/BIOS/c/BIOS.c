@@ -152,10 +152,19 @@ void set_background( unsigned char colour, unsigned char altcolour, unsigned cha
 //  action == 5 to 8 move the tilemap 1 pixel LEFT, UP, RIGHT, DOWN and WRAP at limit
 //  action == 9 clear the tilemap
 //  RETURNS 0 if no action taken other than pixel shift, action if SCROLL WRAP or CLEAR was actioned
-unsigned char tilemap_scrollwrapclear( unsigned char action ) {
-    while( *TM_STATUS != 0 );
-    *TM_SCROLLWRAPCLEAR = action;
-    return( *TM_SCROLLWRAPCLEAR );
+unsigned char tilemap_scrollwrapclear( unsigned char tm_layer, unsigned char action ) {
+    switch( tm_layer ) {
+        case 0:
+            while( *LOWER_TM_STATUS != 0 );
+            *LOWER_TM_SCROLLWRAPCLEAR = action;
+            return( *LOWER_TM_SCROLLWRAPCLEAR );
+            break;
+        case 1:
+            while( *UPPER_TM_STATUS != 0 );
+            *UPPER_TM_SCROLLWRAPCLEAR = action;
+            return( *UPPER_TM_SCROLLWRAPCLEAR );
+            break;
+    }
 }
 
 // GPU AND BITMAP
@@ -502,7 +511,8 @@ void reset_display( void ) {
     *FRAMEBUFFER_DISPLAY = 0;
     tpu_cs();
     screen_mode( 0 );
-    tilemap_scrollwrapclear( 9 );
+    tilemap_scrollwrapclear( 0, 9 );
+    tilemap_scrollwrapclear( 1, 9 );
     for( unsigned short i = 0; i < 13; i++ ) {
         set_sprite( 0, i, 0, 0, 0, 0, 0, 0 );
         set_sprite( 1, i, 0, 0, 0, 0, 0, 0 );

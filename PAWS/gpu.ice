@@ -761,8 +761,8 @@ algorithm vectors(
     int10 deltay := { {5{vectorentry(vertex.rdata0).dysign}}, vectorentry(vertex.rdata0).dy };
 
     // Vertices being processed, plus first coordinate of each line
-    uint5 block_number = uninitialised;
-    uint5 vertices_number = uninitialised;
+    uint5 block_number = 0;
+    uint5 vertices_number = 0;
     int10 start_x = uninitialised;
     int10 start_y = uninitialised;
 
@@ -780,9 +780,6 @@ algorithm vectors(
     vertex.addr0 := { block_number, vertices_number };
 
     gpu_write := 0;
-
-    vector_block_active = 0;
-    vertices_number = 0;
 
     while(1) {
         if( draw_vector ) {
@@ -808,7 +805,6 @@ algorithm vectors(
         }
     }
 }
-
 algorithm vertexwriter(
     // For setting vertices
     input   uint5   vertices_writer_block,
@@ -820,9 +816,6 @@ algorithm vertexwriter(
     simple_dualport_bram_port1 vertex
 ) <autorun> {
     vertex.wenable1 := 1;
-
-    while(1) {
-        vertex.addr1 = { vertices_writer_block, vertices_writer_vertex };
-        vertex.wdata1 = { vertices_writer_active, __unsigned(vertices_writer_xdelta), __unsigned(vertices_writer_ydelta) };
-    }
+    vertex.addr1 := { vertices_writer_block, vertices_writer_vertex };
+    vertex.wdata1 := { vertices_writer_active, __unsigned(vertices_writer_xdelta), __unsigned(vertices_writer_ydelta) };
 }

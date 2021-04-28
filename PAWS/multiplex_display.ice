@@ -15,17 +15,25 @@ algorithm multiplex_display(
     input uint2 background_g,
     input uint2 background_b,
 
-    // TILEMAP
-    input uint2 tilemap_r,
-    input uint2 tilemap_g,
-    input uint2 tilemap_b,
-    input uint1 tilemap_display,
+    // TILEMAPS
+    input uint2 lower_tilemap_r,
+    input uint2 lower_tilemap_g,
+    input uint2 lower_tilemap_b,
+    input uint1 lower_tilemap_display,
+    input uint2 upper_tilemap_r,
+    input uint2 upper_tilemap_g,
+    input uint2 upper_tilemap_b,
+    input uint1 upper_tilemap_display,
 
-    // LOWER SPRITES
+    // SPRITES
     input uint2 lower_sprites_r,
     input uint2 lower_sprites_g,
     input uint2 lower_sprites_b,
     input uint1 lower_sprites_display,
+    input uint2 upper_sprites_r,
+    input uint2 upper_sprites_g,
+    input uint2 upper_sprites_b,
+    input uint1 upper_sprites_display,
 
     // BITMAP
     input uint2 bitmap_r,
@@ -33,11 +41,6 @@ algorithm multiplex_display(
     input uint2 bitmap_b,
     input uint1 bitmap_display,
 
-    // UPPER SPRITES
-    input uint2 upper_sprites_r,
-    input uint2 upper_sprites_g,
-    input uint2 upper_sprites_b,
-    input uint1 upper_sprites_display,
 
     // CHARACTER MAP
     input uint2 character_map_r,
@@ -59,8 +62,10 @@ algorithm multiplex_display(
         bitmap <: bitmap_r,
         lower_sprites_display <: lower_sprites_display,
         lower_sprites <: lower_sprites_r,
-        tilemap_display <: tilemap_display,
-        tilemap <: tilemap_r,
+        lower_tilemap_display <: lower_tilemap_display,
+        lower_tilemap <: lower_tilemap_r,
+        upper_tilemap_display <: upper_tilemap_display,
+        upper_tilemap <: upper_tilemap_r,
         background <: background_r,
 
         pix :> red8
@@ -75,8 +80,10 @@ algorithm multiplex_display(
         bitmap <: bitmap_g,
         lower_sprites_display <: lower_sprites_display,
         lower_sprites <: lower_sprites_g,
-        tilemap_display <: tilemap_display,
-        tilemap <: tilemap_g,
+        lower_tilemap_display <: lower_tilemap_display,
+        lower_tilemap <: lower_tilemap_g,
+        upper_tilemap_display <: upper_tilemap_display,
+        upper_tilemap <: upper_tilemap_g,
         background <: background_g,
 
         pix :> green8
@@ -91,8 +98,10 @@ algorithm multiplex_display(
         bitmap <: bitmap_b,
         lower_sprites_display <: lower_sprites_display,
         lower_sprites <: lower_sprites_b,
-        tilemap_display <: tilemap_display,
-        tilemap <: tilemap_b,
+        lower_tilemap_display <: lower_tilemap_display,
+        lower_tilemap <: lower_tilemap_b,
+        upper_tilemap_display <: upper_tilemap_display,
+        upper_tilemap <: upper_tilemap_b,
         background <: background_b,
 
         pix :> blue8
@@ -123,8 +132,10 @@ algorithm expandcolour(
     input   uint2   bitmap,
     input   uint1   lower_sprites_display,
     input   uint2   lower_sprites,
-    input   uint1   tilemap_display,
-    input   uint2   tilemap,
+    input   uint1   lower_tilemap_display,
+    input   uint2   lower_tilemap,
+    input   uint1   upper_tilemap_display,
+    input   uint2   upper_tilemap,
     input   uint2   background,
 
     output! uint8   pix
@@ -133,39 +144,43 @@ algorithm expandcolour(
     while(1) {
         switch( display_order ) {
             case 0: {
-                // BACKGROUND -> TILEMAP -> LOWER_SPRITES -> BITMAP -> UPPER_SPRITES -> CHARACTER_MAP
+                // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> BITMAP -> UPPER_SPRITES -> CHARACTER_MAP
                 pix = ( character_map_display ) ? { {4{character_map}} } :
                                             ( upper_sprites_display ) ? { {4{upper_sprites}} } :
                                             ( bitmap_display ) ? { {4{bitmap}} } :
                                             ( lower_sprites_display ) ? { {4{lower_sprites}} } :
-                                            ( tilemap_display ) ? { {4{tilemap}} } :
+                                            ( upper_tilemap_display ) ? { {4{upper_tilemap}} } :
+                                            ( lower_tilemap_display ) ? { {4{lower_tilemap}} } :
                                             { {4{background}} };
             }
             case 1: {
-                // BACKGROUND -> TILEMAP -> BITMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP
+                // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> BITMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP
                 pix = ( character_map_display ) ? { {4{character_map}} } :
                                             ( upper_sprites_display ) ? { {4{upper_sprites}} } :
                                             ( lower_sprites_display ) ? { {4{lower_sprites}} } :
                                             ( bitmap_display ) ? { {4{bitmap}} } :
-                                            ( tilemap_display ) ? { {4{tilemap}} } :
+                                            ( upper_tilemap_display ) ? { {4{upper_tilemap}} } :
+                                            ( lower_tilemap_display ) ? { {4{lower_tilemap}} } :
                                             { {4{background}} };
             }
             case 2: {
-                // BACKGROUND -> BITMAP -> TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP
+                // BACKGROUND -> BITMAP -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP
                 pix = ( character_map_display ) ? { {4{character_map}} } :
                                             ( upper_sprites_display ) ? { {4{upper_sprites}} } :
                                             ( lower_sprites_display ) ? { {4{lower_sprites}} } :
-                                            ( tilemap_display ) ? { {4{tilemap}} } :
+                                            ( upper_tilemap_display ) ? { {4{upper_tilemap}} } :
+                                            ( lower_tilemap_display ) ? { {4{lower_tilemap}} } :
                                             ( bitmap_display ) ? { {4{bitmap}} } :
                                             { {4{background}} };
             }
             case 3: {
-                // BACKGROUND -> TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> BITMAP -> CHARACTER_MAP
+                // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> BITMAP -> CHARACTER_MAP
                 pix = ( character_map_display ) ? { {4{character_map}} } :
                                             ( bitmap_display ) ? { {4{bitmap}} } :
                                             ( upper_sprites_display ) ? { {4{upper_sprites}} } :
                                             ( lower_sprites_display ) ? { {4{lower_sprites}} } :
-                                            ( tilemap_display ) ? { {4{tilemap}} } :
+                                            ( upper_tilemap_display ) ? { {4{upper_tilemap}} } :
+                                            ( lower_tilemap_display ) ? { {4{lower_tilemap}} } :
                                             { {4{background}} };
             }
         }

@@ -169,6 +169,51 @@ unsigned short bullet_bitmaps[] = {
 };
 
 // TILEMAP NUMBER BITMAPS FOR SCORE / HI-SCORE AND LIVES LEFT + PLAYER FOR LIFE COUNT
+unsigned short tilemap_bitmaps_back[] = {
+    0b0000000000000001,
+    0b0000000000000011,
+    0b0000000000000111,
+    0b0000000000001111,
+    0b0000000000011111,
+    0b0000000000111111,
+    0b0000000001111111,
+    0b0000000011111111,
+    0b0000000111111111,
+    0b0000001111111111,
+    0b0000011111111111,
+    0b0000111111111111,
+    0b0001111111111111,
+    0b0011111111111111,
+    0b0111111111111111,
+    0b1111111111111111,
+
+    0b1000000000000000,
+    0b1100000000000000,
+    0b1110000000000000,
+    0b1111000000000000,
+    0b1111100000000000,
+    0b1111110000000000,
+    0b1111111000000000,
+    0b1111111100000000,
+    0b1111111110000000,
+    0b1111111111000000,
+    0b1111111111100000,
+    0b1111111111110000,
+    0b1111111111111000,
+    0b1111111111111100,
+    0b1111111111111110,
+    0b1111111111111111,
+
+    // PLANET 32 x 32 TILEMAPS FROM ASTEROIDS FOR BACKGROUND GRAPHICS
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x001f, 0x003f, 0x00ff, 0x01ff, 0x03ff, 0x03ff, 0x07ff, 0x07fc,
+    0x1ff1, 0x37c7, 0x279c, 0x33f1, 0x1fc7, 0x011f, 0x00ff, 0x003f,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0xc000, 0xf000, 0xf800, 0xff00, 0xf900, 0xe700, 0x0c00, 0x7400,
+    0xc400, 0x1c00, 0x7c00, 0xf800, 0xf800, 0xf000, 0xe000, 0x8000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+ };
 unsigned short tilemap_bitmaps[] = {
     0xfffe, 0xfffe, 0xc006, 0xc006, 0xc006, 0xc006, 0xc006, 0xc006,
     0xc006, 0xc006, 0xc006, 0xc006, 0xc006, 0xfffe, 0xfffe, 0x0000,
@@ -209,15 +254,7 @@ unsigned short tilemap_bitmaps[] = {
     0b1111111111100000,
     0b1111111111100000,
 
-    // PLANET AND ROCKETSHIP 32 x 32 TILEMAPS FROM ASTEROIDS FOR BACKGROUND GRAPHICS
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-    0x001f, 0x003f, 0x00ff, 0x01ff, 0x03ff, 0x03ff, 0x07ff, 0x07fc,
-    0x1ff1, 0x37c7, 0x279c, 0x33f1, 0x1fc7, 0x011f, 0x00ff, 0x003f,
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-    0xc000, 0xf000, 0xf800, 0xff00, 0xf900, 0xe700, 0x0c00, 0x7400,
-    0xc400, 0x1c00, 0x7c00, 0xf800, 0xf800, 0xf000, 0xe000, 0x8000,
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    // ROCKETSHIP LAUNCHED 32 x 32 TILEMAPS FROM ASTEROIDS FOR BACKGROUND GRAPHICS
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0001, 0x0003,
     0x007e, 0x00c4, 0x0088, 0x0190, 0x0110, 0x0320, 0x03f1, 0x0003,
     0x0006, 0x0005, 0x0022, 0x0008, 0x0480, 0x0024, 0x0020, 0x0090,
@@ -226,6 +263,65 @@ unsigned short tilemap_bitmaps[] = {
     0x1998, 0x0f18, 0x0630, 0x0060, 0x6060, 0xd0c0, 0xa180, 0x4300,
     0x8600, 0x0a00, 0x3200, 0xc200, 0x8200, 0x9c00, 0xf000, 0xc000,
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+
+    // ROCKETSHIP GROUNDED 32 x 32 TILEMAPS FOR BACKGROUND GRAPHICS
+    0b0000000000000001,
+    0b0000000000000010,
+    0b0000000000000100,
+    0b0000000000001000,
+    0b0000000000001000,
+    0b0000000000010000,
+    0b0000000000010000,
+    0b0000000000010000,
+    0b0000000000100000,
+    0b0000000000100011,
+    0b0000000000100010,
+    0b0000000000100010,
+    0b0000000000100011,
+    0b0000000000100000,
+    0b0000000000100000,
+    0b0000000000100000,
+
+    0b0000000001100010,
+    0b0000000011100010,
+    0b0000000100100010,
+    0b0000001000100010,
+    0b0000001000100010,
+    0b0000000100010010,
+    0b0000000010001010,
+    0b0000000010010000,
+    0b0000000001100000,
+    0b0000000001000000,
+    0,0,0,0,0,0,
+
+    0b1000000000000000,
+    0b0100000000000000,
+    0b0010000000000000,
+    0b0001000000000000,
+    0b0001000000000000,
+    0b0000100000000000,
+    0b0000100000000000,
+    0b0000100000000000,
+    0b0000010000000000,
+    0b1100010000000000,
+    0b0100010000000000,
+    0b0100010000000000,
+    0b1100010000000000,
+    0b0000010000000000,
+    0b0000010000000000,
+    0b0000010000000000,
+
+    0b0100011000000000,
+    0b0100011100000000,
+    0b0100010010000000,
+    0b0100010001000000,
+    0b0100010001000000,
+    0b0100100010000000,
+    0b0101000100000000,
+    0b0000100100000000,
+    0b0000011000000000,
+    0b0000001000000000,
+    0,0,0,0,0,0,
 
     // MOONSCAPE BACKGROUND LEFT WEDGES, RIGHT WEDGES, LEFT AND RIGHT MOUNTAIN SLOPES
     0,0,0,0,0,0,0,
@@ -301,7 +397,6 @@ unsigned short tilemap_bitmaps[] = {
     0b1111111111111100,
     0b1111111111111110,
     0b1111111111111111,
-
 };
 
 // NEW FONT FOR GPU BLITTER CHARACTERS, REPLACES NUMERALS, UPPER CASE AND @ ?
@@ -602,78 +697,130 @@ struct Player {
 };
 struct Player Ship;
 
-char moonscape[][42] = {
+char moonscape_back[][42] = {
+    "..........................................",
+    "..........................................",
+    ".12.......................................",
+    "1882..12..............................12..",
+    "888821882............................1882.",
+    "888888888888888888888888888888888888888888",
+    "888888888888888888888888888888888888888888",
+    "888888888888888888888888888888888888888888",
+    "888888888888888888888888888888888888888888",
+    "888888888888888888888888888888888888888888",
+    "888888888888888888888888888888888888888888",
+    "888888888888888888888888888888888888888888",
+    "888888888888888888888888888888888888888888",
+    "888888888888888888888888888888888888888888",
+};
+
+char moonscape_front[][42] = {
     ".....................12...................",
     "....................1772..................",
     ".........12......1217777212......12......1",
     "........1772..1217777777777212..1772....17",
     "2......177772177777777777777772177772..177",
-    "72....177777777348888888856777777777721777",
-    "772..1777777734888888888888567777777777777",
-    "777217777773488888888888888885677777777777",
-    "777777777348888888888888888888856777777777",
-    "777777734888888888888888888888888567777777",
-    "777773488888888888888888888888888885677777",
-    "777348888888888888888888888888888888856777",
-    "734888888888888888888888888888888888888567",
-    "488888888888888888888888888888888888888885"
+    "72....17777777734........56777777777721777",
+    "772..1777777734............567777777777777",
+    "7772177777734................5677777777777",
+    "77777777734....................56777777777",
+    "777777734........................567777777",
+    "7777734............................5677777",
+    "77734................................56777",
+    "734....................................567",
+    "4........................................5"
 };
 
 void draw_moonscape( void ) {
-    // PLACE MOONSCAPE ON THE TILEMAP
+    // PLACE MOONSCAPE ON THE TILEMAPS
     for( short y = 0; y < 13; y++ ) {
         for( short x = 0; x < 42; x++ ) {
-            switch( moonscape[y][x] ) {
+            switch( moonscape_back[y][x] ) {
                 case '.':
-                    set_tilemap_tile( x, 18 + y, 0, TRANSPARENT, TRANSPARENT );
+                    set_tilemap_tile( LOWER_LAYER, x, 18 + y, 0, TRANSPARENT, TRANSPARENT );
                     break;
                 case '1':
-                    set_tilemap_tile( x, 18 + y, 24, TRANSPARENT, GREY2 );
+                    set_tilemap_tile( LOWER_LAYER, x, 18 + y, 1, TRANSPARENT, GREY1 );
                     break;
                 case '2':
-                    set_tilemap_tile( x, 18 + y, 25, TRANSPARENT, GREY2 );
-                    break;
-                case '3':
-                    set_tilemap_tile( x, 18 + y, 20, GREY2, GREY1 );
-                    break;
-                case '4':
-                    set_tilemap_tile( x, 18 + y, 21, GREY2, GREY1 );
-                    break;
-                case '5':
-                    set_tilemap_tile( x, 18 + y, 22, GREY2, GREY1 );
-                    break;
-                case '6':
-                    set_tilemap_tile( x, 18 + y, 23, GREY2, GREY1 );
-                    break;
-                case '7':
-                    set_tilemap_tile( x, 18 + y, 0, GREY2, GREY2 );
+                    set_tilemap_tile( LOWER_LAYER, x, 18 + y, 2, TRANSPARENT, GREY1 );
                     break;
                 case '8':
-                    set_tilemap_tile( x, 18 + y, 0, GREY1, GREY1 );
+                    set_tilemap_tile( LOWER_LAYER, x, 18 + y, 0, GREY1, GREY1 );
+                    break;
+            }
+            switch( moonscape_front[y][x] ) {
+                case '.':
+                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 0, TRANSPARENT, TRANSPARENT );
+                    break;
+                case '1':
+                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 24, TRANSPARENT, GREY2 );
+                    break;
+                case '2':
+                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 25, TRANSPARENT, GREY2 );
+                    break;
+                case '3':
+                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 20, GREY2, GREY1 );
+                    break;
+                case '4':
+                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 21, GREY2, GREY1 );
+                    break;
+                case '5':
+                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 22, GREY2, GREY1 );
+                    break;
+                case '6':
+                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 23, GREY2, GREY1 );
+                    break;
+                case '7':
+                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 0, GREY2, GREY2 );
+                    break;
+                case '8':
+                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 0, GREY1, GREY1 );
                     break;
             }
         }
     }
 
     // PLACE PLANETS
+    set_tilemap_tile( LOWER_LAYER, 6, 5, 3, TRANSPARENT, LTBLUE );
+    set_tilemap_tile( LOWER_LAYER, 6, 6, 4, TRANSPARENT, LTBLUE );
+    set_tilemap_tile( LOWER_LAYER, 7, 5, 5, TRANSPARENT, LTBLUE );
+    set_tilemap_tile( LOWER_LAYER, 7, 6, 6, TRANSPARENT, LTBLUE );
+    set_tilemap_tile( LOWER_LAYER, 33, 7, 3, TRANSPARENT, PEACH );
+    set_tilemap_tile( LOWER_LAYER, 33, 8, 4, TRANSPARENT, PEACH );
+    set_tilemap_tile( LOWER_LAYER, 34, 7, 5, TRANSPARENT, PEACH );
+    set_tilemap_tile( LOWER_LAYER, 34, 8, 6, TRANSPARENT, PEACH );
 
     // PLACE ROCKETS
-    set_tilemap_tile( 3, 19, 16, TRANSPARENT, PURPLE );
-    set_tilemap_tile( 3, 20, 17, TRANSPARENT, PURPLE );
-    set_tilemap_tile( 4, 19, 18, TRANSPARENT, PURPLE );
-    set_tilemap_tile( 4, 20, 19, TRANSPARENT, PURPLE );
+    set_tilemap_tile( UPPER_LAYER, 3, 18, 12, TRANSPARENT, PURPLE );
+    set_tilemap_tile( UPPER_LAYER, 3, 19, 13, TRANSPARENT, PURPLE );
+    set_tilemap_tile( UPPER_LAYER, 4, 18, 14, TRANSPARENT, PURPLE );
+    set_tilemap_tile( UPPER_LAYER, 4, 19, 15, TRANSPARENT, PURPLE );
+    set_tilemap_tile( UPPER_LAYER, 30, 20, 12, TRANSPARENT, DKORANGE );
+    set_tilemap_tile( UPPER_LAYER, 30, 21, 13, TRANSPARENT, DKORANGE );
+    set_tilemap_tile( UPPER_LAYER, 31, 20, 14, TRANSPARENT, DKORANGE );
+    set_tilemap_tile( UPPER_LAYER, 31, 21, 15, TRANSPARENT, DKORANGE );
 
-    set_tilemap_tile( 28, 22, 16, GREY2, DKORANGE );
-    set_tilemap_tile( 28, 23, 17, GREY2, DKORANGE );
-    set_tilemap_tile( 29, 22, 18, GREY2, DKORANGE );
-    set_tilemap_tile( 29, 23, 19, GREY2, DKORANGE );
+    set_tilemap_tile( UPPER_LAYER, 17, 23, 16, TRANSPARENT, DKCYAN );
+    set_tilemap_tile( UPPER_LAYER, 17, 24, 17, TRANSPARENT, DKCYAN );
+    set_tilemap_tile( UPPER_LAYER, 18, 23, 18, TRANSPARENT, DKCYAN );
+    set_tilemap_tile( UPPER_LAYER, 18, 24, 19, TRANSPARENT, DKCYAN );
+    set_tilemap_tile( UPPER_LAYER, 23, 24, 16, TRANSPARENT, LTPURPLE );
+    set_tilemap_tile( UPPER_LAYER, 23, 25, 17, TRANSPARENT, LTPURPLE );
+    set_tilemap_tile( UPPER_LAYER, 24, 24, 18, TRANSPARENT, LTPURPLE );
+    set_tilemap_tile( UPPER_LAYER, 24, 25, 19, TRANSPARENT, LTPURPLE );
+    set_tilemap_tile( UPPER_LAYER, 20, 25, 16, TRANSPARENT, DKYELLOW );
+    set_tilemap_tile( UPPER_LAYER, 20, 26, 17, TRANSPARENT, DKYELLOW );
+    set_tilemap_tile( UPPER_LAYER, 21, 25, 18, TRANSPARENT, DKYELLOW );
+    set_tilemap_tile( UPPER_LAYER, 21, 26, 19, TRANSPARENT, DKYELLOW );
 }
 
 void initialise_graphics( void ) {
     // SET THE BACKGROUND - DKBLUE AND GREY2 STARFIELD
     set_background( GREY2, DKBLUE - 1, BKG_SNOW );
-    // CLEAR THE TILEMAP
-    tilemap_scrollwrapclear( 9 );
+    // CLEAR THE TILEMAPS
+    tilemap_scrollwrapclear( LOWER_LAYER, 9 );
+    tilemap_scrollwrapclear( UPPER_LAYER, 9 );
 
     // SET BLITTER OBJECTS - ALIENS, EXPLOSIONS, UFO AND BUNKERS
     for( short i = 0; i < 15; i++ ) {
@@ -686,9 +833,12 @@ void initialise_graphics( void ) {
         set_sprite_bitmaps( UPPER_LAYER, i, &bullet_bitmaps[0] );
     }
 
-    // SET TILEMAP TILES - NUMBERS AND SHIP GRAPHIC + 32 x 32 PLANET AND ROCKET
+    // SET TILEMAP TILES - NUMBERS AND SHIP GRAPHIC + 32 x 32 PLANET AND ROCKET + WEDGES FOR MOONSCAPE
+    for( short i = 0; i < 6; i++ ) {
+        set_tilemap_bitmap( LOWER_LAYER, i + 1, &tilemap_bitmaps_back[ 16 * i ] );
+    }
     for( short i = 0; i < 25; i++ ) {
-        set_tilemap_bitmap( i + 1, &tilemap_bitmaps[ 16 * i ] );
+        set_tilemap_bitmap( UPPER_LAYER, i + 1, &tilemap_bitmaps[ 16 * i ] );
     }
 
     // UPDATE THE BLITTER FONT
@@ -1164,16 +1314,16 @@ void draw_status( void ) {
 
     // PRINT THE SCORE
     for( short i = 0; i < 8; i++ ) {
-        set_tilemap_tile( 17 + i, 1,  ( scorestring[i] == ' ' ) ? 1 : scorestring[i] - 47, TRANSPARENT, GREY2 );
+        set_tilemap_tile( UPPER_LAYER, 17 + i, 1,  ( scorestring[i] == ' ' ) ? 1 : scorestring[i] - 47, TRANSPARENT, GREY2 );
     }
     // PRINT THE LIVES LEFT
-    set_tilemap_tile( 35, 1,  Ship.life + 1, TRANSPARENT, GREY2 );
+    set_tilemap_tile( UPPER_LAYER, 35, 1,  Ship.life + 1, TRANSPARENT, GREY2 );
     for( short i = 0; i < 3; i++ ) {
-        set_tilemap_tile( 37 + i, 1,  ( i < Ship.life ) ? 11 : 0, TRANSPARENT, GREY2 );
+        set_tilemap_tile( UPPER_LAYER, 37 + i, 1,  ( i < Ship.life ) ? 11 : 0, TRANSPARENT, GREY2 );
     }
     // PRINT THE LEVEL ( 2 DIGITS )
-    set_tilemap_tile( 2, 1,  ( Ship.level / 10 ) + 1, TRANSPARENT, GREY2 );
-    set_tilemap_tile( 3, 1,  ( Ship.level % 10 ) + 1, TRANSPARENT, GREY2 );
+    set_tilemap_tile( UPPER_LAYER, 2, 1,  ( Ship.level / 10 ) + 1, TRANSPARENT, GREY2 );
+    set_tilemap_tile( UPPER_LAYER, 3, 1,  ( Ship.level % 10 ) + 1, TRANSPARENT, GREY2 );
 }
 
 void play( void ) {

@@ -220,9 +220,9 @@ extern void bitmap_draw( unsigned char );
 extern void set_background( unsigned char, unsigned char, unsigned char );
 
 // TILEMAP
-extern void set_tilemap_tile( unsigned char, unsigned char, unsigned char, unsigned char, unsigned char );
-extern void set_tilemap_bitmap( unsigned char, unsigned short * );
-extern unsigned char tilemap_scrollwrapclear( unsigned char );
+extern void set_tilemap_tile( unsigned char, unsigned char, unsigned char, unsigned char, unsigned char, unsigned char );
+extern void set_tilemap_bitmap( unsigned char, unsigned char, unsigned short * );
+extern unsigned char tilemap_scrollwrapclear( unsigned char, unsigned char );
 
 // GPU AND BITMAP
 void gpu_dither( unsigned char , unsigned char );

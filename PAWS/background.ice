@@ -23,9 +23,10 @@ algorithm background(
     uint1   tophalf <: pix_y < 240;
     uint1   lefthalf <: pix_x < 320;
 
+    frame := ( ( pix_x == 639 ) && ( pix_y == 470 ) ) ? frame + 1 : frame;
+
     while(1) {
         // Increment frame number for the snow/star field
-        frame = ( ( pix_x == 639 ) && ( pix_y == 470 ) ) ? frame + 1 : frame;
 
         // RENDER
         if( pix_active ) {
