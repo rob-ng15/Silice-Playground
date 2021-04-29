@@ -69,8 +69,8 @@ algorithm PAWSCPU(
     // RISC-V PROGRAM COUNTERS AND STATUS
     uint32  pc = 0;
     uint32  pcSMT = 0;
-    uint32  PC := SMT ? pcSMT : pc;
-    uint32  PCplus2 := PC + 2;
+    uint32  PC <: SMT ? pcSMT : pc;
+    uint32  PCplus2 <: PC + 2;
     uint1   incPC = uninitialized;
 
     // COMPRESSED INSTRUCTION EXPANDER
@@ -343,25 +343,28 @@ algorithm PAWSCPU(
         }
 
         // REGISTERS WRITE
-        REGISTERS.write = ( writeRegister  && ( rd != 0 ) ) ? ~frd : 0;
-        REGISTERSF.write = ( writeRegister  && ( rd != 0 ) ) ? frd : 0;
+        REGISTERS.write = writeRegister ? ~frd : 0;
+        REGISTERSF.write = writeRegister ? frd : 0;
 
         // Update CSRinstret
         CSR.incCSRinstret = 1;
 
-        // UPDATE PC + SWITCH THREADS IF SMT ENABLED
-        if( SMT ) {
-            ( pcSMT ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
-            SMT = 0;
-        } else {
-            ( pc ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
-            SMT = SMTRUNNING;
-            pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC;
-        }
-
-         // STORE TO MEMORY
+        // STORE TO MEMORY
         if( memorystore ) {
             ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy );
+        }
+
+        // UPDATE PC + SWITCH THREADS IF SMT ENABLED
+        switch( SMT ) {
+            case 1b1: {
+                ( pcSMT ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
+                SMT = 0;
+            }
+            case 1b0: {
+                ( pc ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
+                SMT = SMTRUNNING;
+                pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC;
+            }
         }
    } // RISC-V
 }

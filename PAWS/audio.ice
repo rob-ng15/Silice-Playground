@@ -24,7 +24,7 @@ algorithm apu(
     uint7   selected_note = uninitialised;
     uint16  selected_duration = uninitialised;
 
-    // POSITION IN THE WAVETABLE AND TIMERS FOR FREQUENCY AND DURATION
+    // POSITION IN THE WAVEFORM AND TIMERS FOR FREQUENCY AND DURATION
     uint5   point = uninitialised;
     uint16  counter25mhz = uninitialised;
     uint16  counter1khz = uninitialised;
@@ -64,14 +64,6 @@ algorithm apu(
 
     while(1) {
         switch( apu_write ) {
-            case 1: {
-                selected_waveform = waveform;
-                selected_note = note;
-                selected_duration = duration;
-                point = 0;
-                counter25mhz = 0;
-                counter1khz = 25000;
-            }
             case 0: {
                 if( selected_duration != 0 ) {
                     ( counter25mhz ) = decrementorreset( counter25mhz, notefrequency );
@@ -79,6 +71,14 @@ algorithm apu(
                     ( counter1khz ) = decrementorreset( counter1khz, onesecond );
                     ( selected_duration ) = decrementifzero( selected_duration, counter1khz );
                 }
+            }
+            case 1: {
+                selected_waveform = waveform;
+                selected_note = note;
+                selected_duration = duration;
+                point = 0;
+                counter25mhz = 0;
+                counter1khz = 25000;
             }
         }
     }

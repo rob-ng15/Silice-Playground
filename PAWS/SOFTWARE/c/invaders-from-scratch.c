@@ -731,6 +731,22 @@ char moonscape_front[][42] = {
     "4........................................5"
 };
 
+// HELPER TO REMOVE ALL/SOME SPRITES
+void remove_sprites( short start_sprite ) {
+    for( short i = start_sprite; i < 13; i++ ) {
+        set_sprite_attribute( UPPER_LAYER, i, SPRITE_ACTIVE, 0 );
+    }
+}
+
+// HELPER FOR PLACING A 4 TILE 32 x 32 TILE TO THE TILEMAPS
+void set_tilemap_32x32tile( unsigned char tm_layer, short x, short y, unsigned char start_tile, unsigned char background, unsigned char foreground ) {
+    set_tilemap_tile( tm_layer, x, y, start_tile, background, foreground );
+    set_tilemap_tile( tm_layer, x, y + 1, start_tile + 1, background, foreground );
+    set_tilemap_tile( tm_layer, x + 1, y, start_tile + 2, background, foreground );
+    set_tilemap_tile( tm_layer, x + 1, y + 1, start_tile + 3, background, foreground );
+}
+
+// SETUP THE BACKDROP - MOUNTAINS, LANDING AREA, ROCKETS AND PLANETS
 void draw_moonscape( void ) {
     // PLACE MOONSCAPE ON THE TILEMAPS
     for( short y = 0; y < 13; y++ ) {
@@ -782,37 +798,15 @@ void draw_moonscape( void ) {
     }
 
     // PLACE PLANETS
-    set_tilemap_tile( LOWER_LAYER, 6, 5, 3, TRANSPARENT, LTBLUE );
-    set_tilemap_tile( LOWER_LAYER, 6, 6, 4, TRANSPARENT, LTBLUE );
-    set_tilemap_tile( LOWER_LAYER, 7, 5, 5, TRANSPARENT, LTBLUE );
-    set_tilemap_tile( LOWER_LAYER, 7, 6, 6, TRANSPARENT, LTBLUE );
-    set_tilemap_tile( LOWER_LAYER, 33, 7, 3, TRANSPARENT, PEACH );
-    set_tilemap_tile( LOWER_LAYER, 33, 8, 4, TRANSPARENT, PEACH );
-    set_tilemap_tile( LOWER_LAYER, 34, 7, 5, TRANSPARENT, PEACH );
-    set_tilemap_tile( LOWER_LAYER, 34, 8, 6, TRANSPARENT, PEACH );
+    set_tilemap_32x32tile( LOWER_LAYER, 6, 5, 3, TRANSPARENT, LTBLUE );
+    set_tilemap_32x32tile( LOWER_LAYER, 33, 7, 3, TRANSPARENT, PEACH );
 
     // PLACE ROCKETS
-    set_tilemap_tile( UPPER_LAYER, 3, 18, 12, TRANSPARENT, PURPLE );
-    set_tilemap_tile( UPPER_LAYER, 3, 19, 13, TRANSPARENT, PURPLE );
-    set_tilemap_tile( UPPER_LAYER, 4, 18, 14, TRANSPARENT, PURPLE );
-    set_tilemap_tile( UPPER_LAYER, 4, 19, 15, TRANSPARENT, PURPLE );
-    set_tilemap_tile( UPPER_LAYER, 30, 20, 12, TRANSPARENT, DKORANGE );
-    set_tilemap_tile( UPPER_LAYER, 30, 21, 13, TRANSPARENT, DKORANGE );
-    set_tilemap_tile( UPPER_LAYER, 31, 20, 14, TRANSPARENT, DKORANGE );
-    set_tilemap_tile( UPPER_LAYER, 31, 21, 15, TRANSPARENT, DKORANGE );
-
-    set_tilemap_tile( UPPER_LAYER, 17, 23, 16, TRANSPARENT, DKCYAN );
-    set_tilemap_tile( UPPER_LAYER, 17, 24, 17, TRANSPARENT, DKCYAN );
-    set_tilemap_tile( UPPER_LAYER, 18, 23, 18, TRANSPARENT, DKCYAN );
-    set_tilemap_tile( UPPER_LAYER, 18, 24, 19, TRANSPARENT, DKCYAN );
-    set_tilemap_tile( UPPER_LAYER, 23, 24, 16, TRANSPARENT, LTPURPLE );
-    set_tilemap_tile( UPPER_LAYER, 23, 25, 17, TRANSPARENT, LTPURPLE );
-    set_tilemap_tile( UPPER_LAYER, 24, 24, 18, TRANSPARENT, LTPURPLE );
-    set_tilemap_tile( UPPER_LAYER, 24, 25, 19, TRANSPARENT, LTPURPLE );
-    set_tilemap_tile( UPPER_LAYER, 20, 25, 16, TRANSPARENT, DKYELLOW );
-    set_tilemap_tile( UPPER_LAYER, 20, 26, 17, TRANSPARENT, DKYELLOW );
-    set_tilemap_tile( UPPER_LAYER, 21, 25, 18, TRANSPARENT, DKYELLOW );
-    set_tilemap_tile( UPPER_LAYER, 21, 26, 19, TRANSPARENT, DKYELLOW );
+    set_tilemap_32x32tile( UPPER_LAYER, 3, 18, 12, TRANSPARENT, PURPLE );
+    set_tilemap_32x32tile( UPPER_LAYER, 30, 20, 12, TRANSPARENT, DKORANGE );
+    set_tilemap_32x32tile( UPPER_LAYER, 17, 23, 16, TRANSPARENT, DKCYAN );
+    set_tilemap_32x32tile( UPPER_LAYER, 23, 24, 16, TRANSPARENT, LTPURPLE );
+    set_tilemap_32x32tile( UPPER_LAYER, 20, 25, 16, TRANSPARENT, DKYELLOW );
 }
 
 void initialise_graphics( void ) {
@@ -892,9 +886,7 @@ void reset_aliens( void ) {
     AlienSwarm.count = 55;
 
     // REMOVE THE PLAYER, MISSILE AND BOMBS
-    for( short i = 0; i < 13; i++ ) {
-        set_sprite_attribute( UPPER_LAYER, i, SPRITE_ACTIVE, 0 );
-    }
+    remove_sprites( 0 );
 
     // DRAW BUNKERS
     for( short i = 0; i < 2; i++ ) {
@@ -1160,9 +1152,7 @@ void bomb_actions( void ) {
             // HIT THE PLAYER
             Ship.state = SHIPEXPLODE;
             Ship.counter = 100;
-            for( short i = 1; i < 13; i++ ) {
-                set_sprite_attribute( UPPER_LAYER, i, SPRITE_ACTIVE, 0 );
-            }
+            remove_sprites( 1 );
         }
     }
 
@@ -1232,10 +1222,12 @@ short missile_actions( void ) {
                 bitmap_draw( !framebuffer );
             } else {
                 // HIT UFO
-                UFO.active = UFOEXPLODE;
-                UFO.counter = 100;
-                UFO.score = ( rng(3) + 1 ) * 50;
-                points = UFO.score;
+                if( UFO.active == UFOONSCREEN ) {
+                    UFO.active = UFOEXPLODE;
+                    UFO.counter = 100;
+                    UFO.score = ( rng(3) + 1 ) * 50;
+                    points = UFO.score;
+                }
             }
         }
     }
@@ -1263,9 +1255,7 @@ void player_actions( void ) {
         // ALIEN HAS HIT SHIP
         Ship.state = SHIPEXPLODE2;
         Ship.counter = 100;
-        for( short i = 1; i < 13; i++ ) {
-            set_sprite_attribute( UPPER_LAYER, i, SPRITE_ACTIVE, 0 );
-        }
+        remove_sprites( 1 );
     }
     switch( Ship.state ) {
         case SHIPPLAY:
@@ -1525,10 +1515,10 @@ void attract( void ) {
                     }
                     if( move_amount < 0 ) {
                         Ship.x += ( Ship.x > 0 ) ? -2 : 0;
-                        move_amount++;
+                        move_amount = ( Ship.x > 0 ) ? move_amount + 1 : 0;
                     } else {
                         Ship.x += ( Ship.x < 617 ) ? 2 : 0;
-                        move_amount--;
+                        move_amount = ( Ship.x < 617 ) ? move_amount - 1 : 0;
                     }
                     demo_actions();
                     // UPDATE THE SCREEN

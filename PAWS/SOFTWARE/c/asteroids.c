@@ -549,7 +549,7 @@ void beepboop( void )
 
         last_timer = get_timer1hz( 0 );
 
-        (void)tilemap_scrollwrapclear( LOWER_LAYER, 5 );
+        //(void)tilemap_scrollwrapclear( LOWER_LAYER, 5 );
         //(void)tilemap_scrollwrapclear( UPPER_LAYER, 7 );
 
         switch( last_timer & 3 ) {
@@ -604,7 +604,7 @@ void beepboop( void )
                         beep( 1, 3, 63, 32 );
                     }
                 }
-                (void)tilemap_scrollwrapclear( LOWER_LAYER, 6 );
+                //(void)tilemap_scrollwrapclear( LOWER_LAYER, 6 );
                 //(void)tilemap_scrollwrapclear( UPPER_LAYER, 8 );
                 break;
         }

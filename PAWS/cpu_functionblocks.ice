@@ -39,7 +39,7 @@ algorithm registers(
 
     while(1) {
         // WRITE TO REGISTERS
-        if( write ) {
+        if( write && ( rd != 0 ) ) {
             registers_1.addr1 = { SMT, rd };
             registers_1.wdata1 = result;
             registers_2.addr1 = { SMT, rd };
@@ -67,20 +67,16 @@ algorithm decoder(
     output  int32   immediateValue,
     output  uint5   IshiftCount
 ) <autorun> {
-    while(1) {
-        opCode = Utype(instruction).opCode;
-        function2 = R4type(instruction).function2;
-        function3 = Rtype(instruction).function3;
-        function7 = Rtype(instruction).function7;
-
-        rs1 = Rtype(instruction).sourceReg1;
-        rs2 = Rtype(instruction).sourceReg2;
-        rs3 = R4type(instruction).sourceReg3;
-        rd = Rtype(instruction).destReg;
-
-        immediateValue = { {20{instruction[31,1]}}, Itype(instruction).immediate };
-        IshiftCount = ItypeSHIFT( instruction ).shiftCount;
-    }
+    opCode := Utype(instruction).opCode;
+    function2 := R4type(instruction).function2;
+    function3 := Rtype(instruction).function3;
+    function7 := Rtype(instruction).function7;
+    rs1 := Rtype(instruction).sourceReg1;
+    rs2 := Rtype(instruction).sourceReg2;
+    rs3 := R4type(instruction).sourceReg3;
+    rd := Rtype(instruction).destReg;
+    immediateValue := { {20{instruction[31,1]}}, Itype(instruction).immediate };
+    IshiftCount := ItypeSHIFT( instruction ).shiftCount;
 }
 
 // RISC-V ADDRESS BASE/OFFSET GENERATOR
@@ -98,14 +94,12 @@ algorithm addressgenerator(
     output  uint32  storeAddress,
     output  uint32  loadAddress,
 ) <autorun> {
-    while(1) {
-        nextPC = pc + ( compressed ? 2 : 4 );
-        branchAddress = { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } + pc;
-        jumpAddress = { {12{Jtype(instruction).immediate_bits_20}}, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + pc;
-        AUIPCLUI = { Utype(instruction).immediate_bits_31_12, 12b0 } + ( instruction[5,1] ? 0 : pc );
-        storeAddress = ( ( instruction[0,7] == 7b0101111 ) ? 0 : { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } ) + sourceReg1;
-        loadAddress = ( ( instruction[0,7] == 7b0101111 ) ? 0 : immediateValue ) + sourceReg1;
-    }
+    nextPC := pc + ( compressed ? 2 : 4 );
+    branchAddress := { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } + pc;
+    jumpAddress := { {12{Jtype(instruction).immediate_bits_20}}, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + pc;
+    AUIPCLUI := { Utype(instruction).immediate_bits_31_12, 12b0 } + ( instruction[5,1] ? 0 : pc );
+    storeAddress := ( ( instruction[0,7] == 7b0101111 ) ? 0 : { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } ) + sourceReg1;
+    loadAddress := ( ( instruction[0,7] == 7b0101111 ) ? 0 : immediateValue ) + sourceReg1;
 }
 
 // UPDATE PC
@@ -411,25 +405,14 @@ algorithm funnelshift(
     input   uint7   function3,
     output  uint32  result
 ) <autorun> {
-    uint32  A = uninitialised;
-    uint32  B = uninitialised;
-    uint32  fshiftcount = uninitialised;
-    busy = 0;
+    uint32  A <: ( shiftcount >= 32 ) ? sourceReg3 : sourceReg1;
+    uint32  B <: ( shiftcount >= 32 ) ? sourceReg1 : sourceReg3;
+    uint32  fshiftcount <: ( shiftcount >= 32 ) ? shiftcount - 32 : shiftcount;
 
     while(1) {
         if( start ) {
             busy = 1;
 
-            if( shiftcount >= 32 ) {
-                A = sourceReg3;
-                B = sourceReg1;
-                fshiftcount = shiftcount - 32;
-            } else {
-                A = sourceReg1;
-                B = sourceReg3;
-                fshiftcount = shiftcount;
-            }
-            ++:
             switch( function3 ) {
                 case 3b001: {
                     // FSL
@@ -440,6 +423,7 @@ algorithm funnelshift(
                     result = ( fshiftcount != 0 ) ? ( ( A >> fshiftcount ) | ( B << ( 32 - fshiftcount ) ) ) : A;
                 }
             }
+
             busy = 0;
         }
     }
@@ -614,8 +598,8 @@ algorithm bfp(
     input   uint32  sourceReg2,
     output  uint32  result
 ) <autorun> {
-    uint5   length = uninitialised;
-    uint6   offset = uninitialised;
+    uint5   length <: ( sourceReg2[24,4] == 0 ) ? 16 : sourceReg2[24,4];
+    uint6   offset <: sourceReg2[16,5];
     uint32  mask = uninitialised;
 
     busy = 0;
@@ -625,8 +609,6 @@ algorithm bfp(
             busy = 1;
 
             mask = 0;
-            length = ( sourceReg2[24,4] == 0 ) ? 16 : sourceReg2[24,4];
-            offset = sourceReg2[16,5];
             ++:
             mask = ~(~mask << length) << offset;
             ++:
@@ -735,7 +717,6 @@ algorithm crc32(
 ) <autorun> {
     uint6   nbits = uninitialised;
     uint6   i = uninitialised;
-
 
     busy = 0;
 

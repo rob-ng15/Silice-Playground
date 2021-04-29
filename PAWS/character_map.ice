@@ -61,9 +61,6 @@ algorithm character_map(
     pix_red := characterpixel ? charactermap.rdata0[12,2] : charactermap.rdata0[18,2];
     pix_green := characterpixel ? charactermap.rdata0[10,2] : charactermap.rdata0[16,2];
     pix_blue := characterpixel ? charactermap.rdata0[8,2] : charactermap.rdata0[14,2];
-
-    while(1) {
-    }
 }
 
 algorithm character_map_writer(
