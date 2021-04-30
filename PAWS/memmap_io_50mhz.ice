@@ -814,6 +814,4 @@ algorithm sdcardbuffer(
     sdbuffer.addr0 := bufferaddress;
     ready := sdcio.ready;
     bufferdata := sdbuffer.rdata0;
-
-    while(1) {}
 }

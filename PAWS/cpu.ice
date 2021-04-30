@@ -175,7 +175,7 @@ algorithm PAWSCPU(
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
-        takeBranch :> takeBranch
+        //takeBranch :> takeBranch
     );
 
     // ALU
@@ -238,7 +238,7 @@ algorithm PAWSCPU(
     while(1) {
         // RISC-V - RESET FLAGS
         writeRegister = 1;
-        incPC = 1;
+        incPC = 1; takeBranch = 0;
         frd = 0;
 
         // FETCH + EXPAND COMPRESSED INSTRUCTIONS
@@ -288,6 +288,7 @@ algorithm PAWSCPU(
             case 5b11000: {
                 // BRANCH - HAPPENS IN BRANCH COMPARISON UNIT
                 writeRegister = 0;
+                takeBranch = BRANCHUNIT.takeBranch;
             }
             case 5b00000: {
                 // LOAD

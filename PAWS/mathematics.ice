@@ -31,21 +31,23 @@ algorithm aluMdivideremain(
             remainder = 0;
             bit = 31;
             ++:
-            if( divisor != 0 ) {
-                while( bit != 63 ) {
-                    if( __unsigned({ remainder[0,31], dividend_copy[bit,1] }) >= __unsigned(divisor_copy) ) {
-                        remainder = __unsigned({ remainder[0,31], dividend_copy[bit,1] }) - __unsigned(divisor_copy);
-                        quotient[bit,1] = 1;
-                    } else {
-                        remainder = { remainder[0,31], dividend_copy[bit,1] };
-                    }
-                    bit = bit - 1;
+            switch( divisor ) {
+                case 0: {
+                    result = dosign[1,1] ? dividend : 32hffffffff;
                 }
-                result = dosign[1,1] ? remainder : ( quotientremaindersign ? -quotient : quotient );
-            } else {
-                result = dosign[1,1] ? dividend : 32hffffffff;
+                default: {
+                    while( bit != 63 ) {
+                        if( __unsigned({ remainder[0,31], dividend_copy[bit,1] }) >= __unsigned(divisor_copy) ) {
+                            remainder = __unsigned({ remainder[0,31], dividend_copy[bit,1] }) - __unsigned(divisor_copy);
+                            quotient[bit,1] = 1;
+                        } else {
+                            remainder = { remainder[0,31], dividend_copy[bit,1] };
+                        }
+                        bit = bit - 1;
+                    }
+                    result = dosign[1,1] ? remainder : ( quotientremaindersign ? -quotient : quotient );
+                }
             }
-
             busy = 0;
         }
     }
@@ -121,7 +123,6 @@ algorithm aluIb001(
        sourceReg1 <: sourceReg1,
        IshiftCount <: IshiftCount
     );
-
 
     // START FLAGS FOR ALU SUB BLOCKS
     CLZ.start := 0;
@@ -286,26 +287,22 @@ algorithm aluI(
         if( start) {
             busy = 1;
             switch( function3 ) {
+                case 3b000: { result = sourceReg1 + immediateValue; }
                 case 3b001: {
                     ALUIb001.start = 1;
                     while( ALUIb001.busy ) {}
                     result = ALUIb001.result;
                 }
+                case 3b010: { result = __signed( sourceReg1 ) < __signed(immediateValue) ? 32b1 : 32b0; }
+                case 3b011: { result = ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 32b1 : 32b0 ); }
+                case 3b100: { result = sourceReg1 ^ immediateValue; }
                 case 3b101: {
                     ALUIb101.start = 1;
                     while( ALUIb101.busy ) {}
                     result = ALUIb101.result;
                 }
-                default: {
-                    switch( function3 ) {
-                        case 3b000: { result = sourceReg1 + immediateValue; }
-                        case 3b010: { result = __signed( sourceReg1 ) < __signed(immediateValue) ? 32b1 : 32b0; }
-                        case 3b011: { result = ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 32b1 : 32b0 ); }
-                        case 3b100: { result = sourceReg1 ^ immediateValue; }
-                        case 3b110: { result = sourceReg1 | immediateValue; }
-                        case 3b111: { result = sourceReg1 & immediateValue; }
-                    }
-                }
+                case 3b110: { result = sourceReg1 | immediateValue; }
+                case 3b111: { result = sourceReg1 & immediateValue; }
             }
             busy = 0;
         }
@@ -931,9 +928,8 @@ algorithm alu(
 
     output  uint32  result
 ) <autorun> {
-    uint1   ALUIorR := ( opCode == 7b0010011 ) ? 1 : 0;
-    uint5   shiftcount := ALUIorR ? IshiftCount : sourceReg2[0,5];
-    uint6   Fshiftcount := ALUIorR ? { function7[0,1], IshiftCount } : sourceReg2[0,6];
+    uint5   shiftcount := opCode[5,1] ? sourceReg2[0,5] : IshiftCount;
+    uint6   Fshiftcount := opCode[5,1] ? sourceReg2[0,6] : { function7[0,1], IshiftCount };
 
     // SHIFTERS
     uint32  LSHIFToutput = uninitialized;
@@ -1052,12 +1048,12 @@ algorithm alu(
 
             // START ALUI or ALUR
             busy = 1;
-            ALUI.start = ALUIorR;
-            ALUR.start = ~ALUIorR;
+            ALUI.start = ~opCode[5,1];
+            ALUR.start = opCode[5,1];
             if( ALUI.busy || ALUR.busy ) {
                 while( ALUI.busy || ALUR.busy ) {}
             }
-            result = ALUIorR ? ALUI.result : ALUR.result;
+            result = opCode[5,1] ? ALUR.result : ALUI.result;
             busy = 0;
         }
     }

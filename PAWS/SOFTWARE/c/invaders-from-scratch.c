@@ -1374,7 +1374,7 @@ void missile_demo( void ) {
                 }
             }
         }
-        if( !alien_hit && ( missile_y < 110 ) ) {
+        if( !alien_hit && ( missile_y >= 208 ) ) {
             set_sprite_attribute( UPPER_LAYER, 1, SPRITE_ACTIVE, 0 );
             // HIT A BUNKER
             missile_x = missile_x - rng(4) + 2;

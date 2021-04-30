@@ -125,23 +125,18 @@ algorithm branchcomparison(
     output  uint1   takeBranch
 ) <autorun> {
     while(1) {
-        if( opCode == 7b1100011 ) {
-            switch( function3 ) {
-                case 3b000: { takeBranch = ( sourceReg1 == sourceReg2 ) ? 1 : 0; }
-                case 3b001: { takeBranch = ( sourceReg1 != sourceReg2 ) ? 1 : 0; }
-                case 3b100: { takeBranch = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? 1 : 0; }
-                case 3b101: { takeBranch = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? 1 : 0; }
-                case 3b110: { takeBranch = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? 1 : 0; }
-                case 3b111: { takeBranch = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? 1 : 0; }
-                default: { takeBranch = 0; }
-            }
-        } else {
-            takeBranch = 0;
+        switch( function3 ) {
+            case 3b000: { takeBranch = ( sourceReg1 == sourceReg2 ) ? 1 : 0; }
+            case 3b001: { takeBranch = ( sourceReg1 != sourceReg2 ) ? 1 : 0; }
+            case 3b100: { takeBranch = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? 1 : 0; }
+            case 3b101: { takeBranch = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? 1 : 0; }
+            case 3b110: { takeBranch = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? 1 : 0; }
+            case 3b111: { takeBranch = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? 1 : 0; }
+            default: { takeBranch = 0; }
         }
     }
 }
 
-// COMPRESSED INSTRUCTION EXPANSION
 // COMPRESSED INSTRUCTION EXPANSION
 algorithm compressed(
     input   uint16  i16,
