@@ -471,9 +471,13 @@ algorithm memmap_io (
                 case 16h800c: { leds = writeData; }
 
                 // BACKGROUND
-                case 16h8100: { background_generator.backgroundcolour = writeData; }
-                case 16h8104: { background_generator.backgroundcolour_alt = writeData; }
-                case 16h8108: { background_generator.backgroundcolour_mode = writeData; }
+                case 16h8100: { background_generator.backgroundcolour = writeData; background_generator.background_update = 1; }
+                case 16h8104: { background_generator.backgroundcolour_alt = writeData; background_generator.background_update = 2; }
+                case 16h8108: { background_generator.backgroundcolour_mode = writeData; background_generator.background_update = 3; }
+                case 16h8180: { background_generator.copper_program = writeData; }
+                case 16h8182: { background_generator.copper_address = writeData; }
+                case 16h8184: { background_generator.copper_high = writeData; }
+                case 16h8186: { background_generator.copper_low = writeData; }
 
                 // TILE MAP
                 case 16h8200: { lower_tile_map.tm_x = writeData; }
@@ -634,6 +638,8 @@ algorithm memmap_io (
         // Delay to reset co-processors therefore required
         if( ~memoryWrite && ~LATCHmemoryWrite ) {
             // RESET DISPLAY Co-Processor Controls
+            background_generator.background_update = 0;
+            background_generator.copper_program = 0;
             lower_tile_map.tm_write = 0;
             lower_tile_map.tm_scrollwrap = 0;
             upper_tile_map.tm_write = 0;

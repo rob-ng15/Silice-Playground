@@ -9,10 +9,30 @@ algorithm background(
 
     input   uint2  staticGenerator,
 
-    input uint6 backgroundcolour,
-    input uint6 backgroundcolour_alt,
-    input uint4 backgroundcolour_mode,
+    input   uint6   backgroundcolour,
+    input   uint6   backgroundcolour_alt,
+    input   uint4   backgroundcolour_mode,
+    input   uint2   background_update,
+
+    input   uint1   copper_status,
+    input   uint1   copper_program,
+    input   uint6   copper_address,
+    input   uint16  copper_high,
+    input   uint16  copper_low
 ) <autorun> {
+    // BACKGROUND CO-PROCESSOR PROGRAM STORAGE
+    // { 3 bit command, 3 bit mask, 10 bit coordinate, 4 bit mode, 6 bit colour 2, 6 bit colour 1 }
+    // COMMANDS - 0 = goto, 1 = wait vblank, 2 = wait hblank, 3 = wait ypos, 4 = wait xpos, 5 = , 6 =, 7 =
+    // MASK { change mode, change colour  2, change colour 1 }
+    simple_dualport_bram uint32 copper <input!> [ 64 ] = { 0, pad(0) };
+    uint1   copper_execute = uninitialised;
+    uint6   PC = 0;
+
+    // MODE AND COLOUR DEFAULTS
+    uint6   b_colour = 0;
+    uint6   b_alt = 0;
+    uint4   b_mode = 0;
+
     // Variables for SNOW (from @sylefeb)
     int10   dotpos = 0;
     int2    speed = 0;
@@ -23,37 +43,112 @@ algorithm background(
     uint1   tophalf <: ( pix_y < 240 );
     uint1   lefthalf <: ( pix_x < 320 );
 
+    // COPPER PROGRAM FLAGS
+    copper.addr0 := PC;
+    copper.wenable1 := 1;
+
+    // Increment frame number for the snow/star field
     frame := ( ( pix_x == 639 ) && ( pix_y == 470 ) ) ? frame + 1 : frame;
 
-    while(1) {
-        // Increment frame number for the snow/star field
+    always {
+        // CHANGE A PROGRAM LINE IN THE COPPER MEMORY
+        switch( copper_program ) {
+            case 1: {
+                copper.addr1 = copper_address;
+                copper.wdata1 = { copper_high, copper_low };
+            }
+        }
 
+        // UPDATE THE BACKGROUND GENERATOR FROM RISC-V
+        switch( background_update ) {
+            case 2b01: { b_colour = backgroundcolour; }
+            case 2b10: { b_alt = backgroundcolour_alt; }
+            case 2b11: { b_mode = backgroundcolour_mode; }
+        }
+
+        // UPDATE THE BACKGROUND GENERATOR FROM THE COPPER
+        copper_execute = 0;
+        switch( copper_status ) {
+            case 0: { PC = 0; }
+            case 1: {
+                switch( copper.rdata0[29,3] ) {
+                    case 3b000: {
+                        // GO TO TOP
+                        PC = 0;
+                    }
+                    case 3b001: {
+                        switch( pix_vblank ) {
+                            case 0: {}
+                            case 1: {
+                                PC = PC + 1;
+                                copper_execute = 1;
+                            }
+                        }
+                    }
+                    case 3b010: {
+                        switch( pix_active ) {
+                            case 0: {}
+                            case 1: {
+                                PC = PC + 1;
+                                copper_execute = 1;
+                            }
+                        }
+                    }
+                    case 3b011: {
+                        if( pix_y == copper.rdata0[12,9] ) {
+                            PC = PC + 1;
+                            copper_execute = 1;
+                        }
+                    }
+                    case 3b100: {
+                        if( pix_x == copper.rdata0[12,10] ) {
+                            PC = PC + 1;
+                            copper_execute = 1;
+                        }
+                    }
+                }
+            }
+        }
+        if( copper_execute ) {
+            switch( copper.rdata0[26,1] ) {
+                case 1: { b_colour = copper.rdata0[0,6]; }
+            }
+            switch( copper.rdata0[27,1] ) {
+                case 1: { b_alt = copper.rdata0[6,6]; }
+            }
+            switch( copper.rdata0[28,1] ) {
+                case 1: { b_mode = copper.rdata0[12,4]; }
+            }
+        }
+    }
+
+    while(1) {
         // RENDER
         if( pix_active ) {
-            switch( backgroundcolour_mode ) {
+            switch( b_mode ) {
                 case 0: {
                     // SOLID
-                    pix_red = colour6(backgroundcolour).red;
-                    pix_green = colour6(backgroundcolour).green;
-                    pix_blue = colour6(backgroundcolour).blue;
+                    pix_red = colour6(b_colour).red;
+                    pix_green = colour6(b_colour).green;
+                    pix_blue = colour6(b_colour).blue;
                 }
                 case 1: {
                     // 50:50 HORIZONTAL SPLIT
-                    pix_red = ( tophalf ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
-                    pix_green = ( tophalf ) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
-                    pix_blue = ( tophalf ) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
+                    pix_red = ( tophalf ) ? colour6(b_colour).red : colour6(b_alt).red;
+                    pix_green = ( tophalf ) ? colour6(b_colour).green : colour6(b_alt).green;
+                    pix_blue = ( tophalf ) ? colour6(b_colour).blue : colour6(b_alt).blue;
                 }
                 case 2: {
                 // 50:50 VERTICAL SPLIT
-                    pix_red = ( lefthalf ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
-                    pix_green = ( lefthalf ) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
-                    pix_blue = ( lefthalf ) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
+                    pix_red = ( lefthalf ) ? colour6(b_colour).red : colour6(b_alt).red;
+                    pix_green = ( lefthalf ) ? colour6(b_colour).green : colour6(b_alt).green;
+                    pix_blue = ( lefthalf ) ? colour6(b_colour).blue : colour6(b_alt).blue;
                 }
                 case 3: {
                 // QUARTERS
-                    pix_red = ( lefthalf == tophalf ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
-                    pix_green = ( lefthalf == tophalf ) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
-                    pix_blue = ( lefthalf == tophalf ) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
+                    pix_red = ( lefthalf == tophalf ) ? colour6(b_colour).red : colour6(b_alt).red;
+                    pix_green = ( lefthalf == tophalf ) ? colour6(b_colour).green : colour6(b_alt).green;
+                    pix_blue = ( lefthalf == tophalf ) ? colour6(b_colour).blue : colour6(b_alt).blue;
                 }
                 case 4: {
                     // 8 colour rainbow
@@ -73,9 +168,9 @@ algorithm background(
                     rand_x = ( pix_x == 0)  ? 1 : rand_x * 31421 + 6927;
                     speed  = rand_x[10,2];
                     dotpos = ( frame >> speed ) + rand_x;
-                    pix_red   = (pix_y == dotpos) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
-                    pix_green = (pix_y == dotpos) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
-                    pix_blue  = (pix_y == dotpos) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
+                    pix_red   = (pix_y == dotpos) ? colour6(b_colour).red : colour6(b_alt).red;
+                    pix_green = (pix_y == dotpos) ? colour6(b_colour).green : colour6(b_alt).green;
+                    pix_blue  = (pix_y == dotpos) ? colour6(b_colour).blue : colour6(b_alt).blue;
                 }
                 case 6: {
                     // STATIC
@@ -85,39 +180,39 @@ algorithm background(
                 }
                 case 11: {
                     // CROSSHATCH
-                    pix_red   = ( pix_x[0,1] || pix_y[0,1] ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
-                    pix_green = ( pix_x[0,1] || pix_y[0,1] ) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
-                    pix_blue  = ( pix_x[0,1] || pix_y[0,1] ) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
+                    pix_red   = ( pix_x[0,1] || pix_y[0,1] ) ? colour6(b_colour).red : colour6(b_alt).red;
+                    pix_green = ( pix_x[0,1] || pix_y[0,1] ) ? colour6(b_colour).green : colour6(b_alt).green;
+                    pix_blue  = ( pix_x[0,1] || pix_y[0,1] ) ? colour6(b_colour).blue : colour6(b_alt).blue;
                 }
                 case 12: {
                     // LSLOPE
-                    pix_red   = ( pix_x[0,2] == pix_y[0,2] ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
-                    pix_green = ( pix_x[0,2] == pix_y[0,2] ) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
-                    pix_blue  = ( pix_x[0,2] == pix_y[0,2] ) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
+                    pix_red   = ( pix_x[0,2] == pix_y[0,2] ) ? colour6(b_colour).red : colour6(b_alt).red;
+                    pix_green = ( pix_x[0,2] == pix_y[0,2] ) ? colour6(b_colour).green : colour6(b_alt).green;
+                    pix_blue  = ( pix_x[0,2] == pix_y[0,2] ) ? colour6(b_colour).blue : colour6(b_alt).blue;
                 }
                 case 13: {
                     // RSLOPE
-                    pix_red   = ( pix_x[0,2] == ~pix_y[0,2] ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
-                    pix_green = ( pix_x[0,2] == ~pix_y[0,2] ) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
-                    pix_blue  = ( pix_x[0,2] == ~pix_y[0,2] ) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
+                    pix_red   = ( pix_x[0,2] == ~pix_y[0,2] ) ? colour6(b_colour).red : colour6(b_alt).red;
+                    pix_green = ( pix_x[0,2] == ~pix_y[0,2] ) ? colour6(b_colour).green : colour6(b_alt).green;
+                    pix_blue  = ( pix_x[0,2] == ~pix_y[0,2] ) ? colour6(b_colour).blue : colour6(b_alt).blue;
                 }
                 case 14: {
                     // VSTRIPES
-                    pix_red   = pix_x[0,1] ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
-                    pix_green = pix_x[0,1] ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
-                    pix_blue  = pix_x[0,1] ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
+                    pix_red   = pix_x[0,1] ? colour6(b_colour).red : colour6(b_alt).red;
+                    pix_green = pix_x[0,1] ? colour6(b_colour).green : colour6(b_alt).green;
+                    pix_blue  = pix_x[0,1] ? colour6(b_colour).blue : colour6(b_alt).blue;
                 }
                 case 15: {
                     // HSTRIPES
-                    pix_red   = pix_y[0,1] ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
-                    pix_green = pix_y[0,1] ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
-                    pix_blue  = pix_y[0,1] ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
+                    pix_red   = pix_y[0,1] ? colour6(b_colour).red : colour6(b_alt).red;
+                    pix_green = pix_y[0,1] ? colour6(b_colour).green : colour6(b_alt).green;
+                    pix_blue  = pix_y[0,1] ? colour6(b_colour).blue : colour6(b_alt).blue;
                 }
                 default: {
                     // CHECKERBOARDS
-                    pix_red = ( pix_x[backgroundcolour_mode-7,1] == pix_y[backgroundcolour_mode-7,1] ) ? colour6(backgroundcolour).red : colour6(backgroundcolour_alt).red;
-                    pix_green = ( pix_x[backgroundcolour_mode-7,1] == pix_y[backgroundcolour_mode-7,1] ) ? colour6(backgroundcolour).green : colour6(backgroundcolour_alt).green;
-                    pix_blue = ( pix_x[backgroundcolour_mode-7,1] == pix_y[backgroundcolour_mode-7,1] ) ? colour6(backgroundcolour).blue : colour6(backgroundcolour_alt).blue;
+                    pix_red = ( pix_x[b_mode-7,1] == pix_y[b_mode-7,1] ) ? colour6(b_colour).red : colour6(b_alt).red;
+                    pix_green = ( pix_x[b_mode-7,1] == pix_y[b_mode-7,1] ) ? colour6(b_colour).green : colour6(b_alt).green;
+                    pix_blue = ( pix_x[b_mode-7,1] == pix_y[b_mode-7,1] ) ? colour6(b_colour).blue : colour6(b_alt).blue;
                 }
             }
         }
