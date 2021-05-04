@@ -23,6 +23,16 @@ unsigned char volatile * BACKGROUND_COLOUR = (unsigned char volatile *) 0x8100;
 unsigned char volatile * BACKGROUND_ALTCOLOUR = (unsigned char volatile *) 0x8104;
 unsigned char volatile * BACKGROUND_MODE = (unsigned char volatile *) 0x8108;
 
+unsigned char volatile * BACKGROUND_COPPER_PROGRAM = (unsigned char volatile *) 0x8180;
+unsigned char volatile * BACKGROUND_COPPER_STARTSTOP = (unsigned char volatile *) 0x8181;
+unsigned char volatile * BACKGROUND_COPPER_ADDRESS = (unsigned char volatile *) 0x8182;
+unsigned char volatile * BACKGROUND_COPPER_COMMAND = (unsigned char volatile *) 0x8183;
+unsigned char volatile * BACKGROUND_COPPER_CONDITION = (unsigned char volatile *) 0x8184;
+unsigned short volatile * BACKGROUND_COPPER_COORDINATE = (unsigned short volatile *) 0x8186;
+unsigned char volatile * BACKGROUND_COPPER_MODE = (unsigned char volatile *) 0x8188;
+unsigned char volatile * BACKGROUND_COPPER_ALT = (unsigned char volatile *) 0x8189;
+unsigned char volatile * BACKGROUND_COPPER_COLOUR = (unsigned char volatile *) 0x818a;
+
 unsigned char volatile * LOWER_TM_X = (unsigned char volatile *) 0x8200;
 unsigned char volatile * LOWER_TM_Y = (unsigned char volatile *) 0x8204;
 unsigned char volatile * LOWER_TM_TILE = (unsigned char volatile *) 0x8208;

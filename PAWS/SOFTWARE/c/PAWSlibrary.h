@@ -27,6 +27,22 @@
 #define BKG_VSTRIPE 14
 #define BKG_HSTRIPE 15
 
+// BACKGROUND COPPER COMMANDS
+#define COPPER_JUMP 0
+#define COPPER_JUMP_ALWAYS 0
+#define COPPER_JUMP_IF_VBLANK 1
+#define COPPER_JUMP_IF_HBLANK 2
+#define COPPER_JUMP_IF_Y_LESS 3
+#define COPPER_JUMP_IF_X_LESS 4
+#define COPPER_JUMP_IF_VARIABLE_LESS 5
+#define COPPER_WAIT_VBLANK 1
+#define COPPER_WAIT_HBLANK 2
+#define COPPER_WAIT_Y 3
+#define COPPER_WAIT_X 4
+#define COPPER_WAIT_VARIABLE 5
+#define COPPER_VARIABLE 6
+#define COPPER_SET_FROM_VARIABLE 7
+
 // COLOURS
 #define TRANSPARENT 0x40
 #define BLACK 0x00
@@ -218,6 +234,8 @@ extern void bitmap_draw( unsigned char );
 
 // BACKGROUND GENERATOR
 extern void set_background( unsigned char, unsigned char, unsigned char );
+extern void copper_startstop( unsigned char ) ;
+extern void copper_program( unsigned char, unsigned char, unsigned char, unsigned short, unsigned char, unsigned char, unsigned char );
 
 // TILEMAP
 extern void set_tilemap_tile( unsigned char, unsigned char, unsigned char, unsigned char, unsigned char, unsigned char );

@@ -261,6 +261,31 @@ void set_background( unsigned char colour, unsigned char altcolour, unsigned cha
     *BACKGROUND_MODE = backgroundmode;
 }
 
+// BACKGROUND COPPER
+void copper_startstop( unsigned char status ) {
+    *BACKGROUND_COPPER_STARTSTOP = status;
+}
+
+struct copper_command {
+    unsigned int command:3;
+    unsigned int condition:3;
+    unsigned int coordinate:10;
+    unsigned int mode:4;
+    unsigned int altcolour:6;
+    unsigned int colour:6;
+};
+
+void copper_program( unsigned char address, unsigned char command, unsigned char condition, unsigned short coordinate, unsigned char mode, unsigned char altcolour, unsigned char colour ) {
+    *BACKGROUND_COPPER_ADDRESS = address;
+    *BACKGROUND_COPPER_COMMAND = command;
+    *BACKGROUND_COPPER_CONDITION = condition;
+    *BACKGROUND_COPPER_COORDINATE = coordinate;
+    *BACKGROUND_COPPER_MODE = mode;
+    *BACKGROUND_COPPER_ALT = altcolour;
+    *BACKGROUND_COPPER_COLOUR = colour;
+    *BACKGROUND_COPPER_PROGRAM = 1;
+}
+
 // SCROLLABLE TILEMAP
 // The tilemap is 42 x 32, with 40 x 30 displayed, with an x and y offset in the range -15 to 15 to scroll the tilemap
 // The tilemap can scroll or wrap once x or y is at -15 or 15

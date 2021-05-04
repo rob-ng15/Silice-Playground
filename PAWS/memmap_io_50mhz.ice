@@ -475,9 +475,14 @@ algorithm memmap_io (
                 case 16h8104: { background_generator.backgroundcolour_alt = writeData; background_generator.background_update = 2; }
                 case 16h8108: { background_generator.backgroundcolour_mode = writeData; background_generator.background_update = 3; }
                 case 16h8180: { background_generator.copper_program = writeData; }
+                case 16h8181: { background_generator.copper_status = writeData; }
                 case 16h8182: { background_generator.copper_address = writeData; }
-                case 16h8184: { background_generator.copper_high = writeData; }
-                case 16h8186: { background_generator.copper_low = writeData; }
+                case 16h8183: { background_generator.copper_command = writeData; }
+                case 16h8184: { background_generator.copper_condition = writeData; }
+                case 16h8186: { background_generator.copper_coordinate = writeData; }
+                case 16h8188: { background_generator.copper_mode = writeData; }
+                case 16h8189: { background_generator.copper_alt = writeData; }
+                case 16h818a: { background_generator.copper_colour = writeData; }
 
                 // TILE MAP
                 case 16h8200: { lower_tile_map.tm_x = writeData; }

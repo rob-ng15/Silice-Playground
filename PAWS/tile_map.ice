@@ -287,29 +287,33 @@ algorithm tile_map_writer(
                     new_colour = tm_scroll ? 13h1000 : colours_copy.rdata0;
                     ++:
                     while( tm_goup ? ( y_cursor < 31 ) : ( y_cursor > 0 ) ) {
-                        tiles_copy.addr0 = x_cursor + y_cursor_addr + ( tm_goup ? 42 : (-42) );
-                        colours_copy.addr0 = x_cursor + y_cursor_addr + ( tm_goup ? 42 : (-42) );
+                        temp_1 = tm_goup ? x_cursor + y_cursor_addr + 42 : x_cursor + y_cursor_addr - 42;
+                        tiles_copy.addr0 = temp_1;
+                        colours_copy.addr0 = temp_1;
                         ++:
-                        tiles.addr1 = x_cursor + y_cursor_addr;
+                        temp_1 = x_cursor + y_cursor_addr;
+                        tiles.addr1 = temp_1;
                         tiles.wdata1 = tiles_copy.rdata0;
-                        tiles_copy.addr1 = x_cursor + y_cursor_addr;
+                        tiles_copy.addr1 = temp_1;
                         tiles_copy.wdata1 = tiles_copy.rdata0;
-                        colours.addr1 = x_cursor + y_cursor_addr;
+                        colours.addr1 = temp_1;
                         colours.wdata1 = colours_copy.rdata0;
-                        colours_copy.addr1 = x_cursor + y_cursor_addr;
+                        colours_copy.addr1 = temp_1;
                         colours_copy.wdata1 = colours_copy.rdata0;
-                        y_cursor = y_cursor + ( tm_goup ? 1 : (-1) );
-                        y_cursor_addr = y_cursor_addr + ( tm_goup ? 42 : (-42) );
+                        y_cursor = tm_goup ? y_cursor + 1 : y_cursor - 1;
+                        y_cursor_addr = tm_goup ? y_cursor_addr + 42 : y_cursor_addr - 42;
                     }
                     ++:
-                    tiles.addr1 = x_cursor + ( tm_goup ? 1302 : 0 );
+                    temp_1 = x_cursor + ( tm_goup ? 1302 : 0 );
+                    tiles.addr1 = temp_1;
                     tiles.wdata1 = new_tile;
-                    tiles_copy.addr1 = x_cursor + ( tm_goup ? 1302 : 0 );
+                    tiles_copy.addr1 = temp_1;
                     tiles_copy.wdata1 = new_tile;
-                    colours.addr1 = x_cursor + ( tm_goup ? 1302 : 0 );
+                    colours.addr1 = temp_1;
                     colours.wdata1 = new_colour;
-                    colours_copy.addr1 = x_cursor + ( tm_goup ? 1302 : 0 );
+                    colours_copy.addr1 = temp_1;
                     colours_copy.wdata1 = new_colour;
+                    ++:
                     x_cursor = x_cursor + 1;
                 }
                 tm_offset_y = 0;

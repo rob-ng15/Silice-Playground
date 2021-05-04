@@ -17,15 +17,21 @@ algorithm background(
     input   uint1   copper_status,
     input   uint1   copper_program,
     input   uint6   copper_address,
-    input   uint16  copper_high,
-    input   uint16  copper_low
+    input   uint3   copper_command,
+    input   uint3   copper_condition,
+    input   uint10  copper_coordinate,
+    input   uint4   copper_mode,
+    input   uint6   copper_alt,
+    input   uint6   copper_colour
 ) <autorun> {
     // BACKGROUND CO-PROCESSOR PROGRAM STORAGE
     // { 3 bit command, 3 bit mask, 10 bit coordinate, 4 bit mode, 6 bit colour 2, 6 bit colour 1 }
     // COMMANDS - 0 = goto, 1 = wait vblank, 2 = wait hblank, 3 = wait ypos, 4 = wait xpos, 5 = , 6 =, 7 =
     // MASK { change mode, change colour  2, change colour 1 }
-    simple_dualport_bram uint32 copper <input!> [ 64 ] = { 0, pad(0) };
+    simple_dualport_bram uint32 copper [ 64 ] = { 0, pad(0) };
     uint1   copper_execute = uninitialised;
+    uint1   copper_branch = uninitialised;
+    uint10  copper_variable = uninitialised;
     uint6   PC = 0;
 
     // MODE AND COLOUR DEFAULTS
@@ -52,77 +58,11 @@ algorithm background(
 
     always {
         // CHANGE A PROGRAM LINE IN THE COPPER MEMORY
-        switch( copper_program ) {
-            case 1: {
-                copper.addr1 = copper_address;
-                copper.wdata1 = { copper_high, copper_low };
-            }
+        if( copper_program ) {
+            copper.addr1 = copper_address;
+            copper.wdata1 = { copper_command, copper_condition, copper_coordinate, copper_mode, copper_alt, copper_colour };
         }
 
-        // UPDATE THE BACKGROUND GENERATOR FROM RISC-V
-        switch( background_update ) {
-            case 2b01: { b_colour = backgroundcolour; }
-            case 2b10: { b_alt = backgroundcolour_alt; }
-            case 2b11: { b_mode = backgroundcolour_mode; }
-        }
-
-        // UPDATE THE BACKGROUND GENERATOR FROM THE COPPER
-        copper_execute = 0;
-        switch( copper_status ) {
-            case 0: { PC = 0; }
-            case 1: {
-                switch( copper.rdata0[29,3] ) {
-                    case 3b000: {
-                        // GO TO TOP
-                        PC = 0;
-                    }
-                    case 3b001: {
-                        switch( pix_vblank ) {
-                            case 0: {}
-                            case 1: {
-                                PC = PC + 1;
-                                copper_execute = 1;
-                            }
-                        }
-                    }
-                    case 3b010: {
-                        switch( pix_active ) {
-                            case 0: {}
-                            case 1: {
-                                PC = PC + 1;
-                                copper_execute = 1;
-                            }
-                        }
-                    }
-                    case 3b011: {
-                        if( pix_y == copper.rdata0[12,9] ) {
-                            PC = PC + 1;
-                            copper_execute = 1;
-                        }
-                    }
-                    case 3b100: {
-                        if( pix_x == copper.rdata0[12,10] ) {
-                            PC = PC + 1;
-                            copper_execute = 1;
-                        }
-                    }
-                }
-            }
-        }
-        if( copper_execute ) {
-            switch( copper.rdata0[26,1] ) {
-                case 1: { b_colour = copper.rdata0[0,6]; }
-            }
-            switch( copper.rdata0[27,1] ) {
-                case 1: { b_alt = copper.rdata0[6,6]; }
-            }
-            switch( copper.rdata0[28,1] ) {
-                case 1: { b_mode = copper.rdata0[12,4]; }
-            }
-        }
-    }
-
-    while(1) {
         // RENDER
         if( pix_active ) {
             switch( b_mode ) {
@@ -215,6 +155,72 @@ algorithm background(
                     pix_blue = ( pix_x[b_mode-7,1] == pix_y[b_mode-7,1] ) ? colour6(b_colour).blue : colour6(b_alt).blue;
                 }
             }
+        }
+    }
+
+    while(1) {
+        copper_execute = 0;
+        copper_branch = 0;
+
+        switch( background_update ) {
+            case 2b00: {
+                // UPDATE THE BACKGROUND GENERATOR FROM THE COPPER
+                if( copper_status ) {
+                    switch( copper.rdata0[29,3] ) {
+                        case 3b000: {
+                            // JUMP ON CONDITION
+                            switch( copper.rdata0[26,3] ) {
+                                case 3b000: { copper_branch = 1; }
+                                case 3b001: { copper_branch = pix_vblank ? 1 : 0; }
+                                case 3b010: { copper_branch = pix_active ? 0 : 1; }
+                                case 3b011: { copper_branch = ( pix_y < copper.rdata0[16,10] ) ? 1 : 0; }
+                                case 3b100: { copper_branch = ( pix_x < copper.rdata0[16,10] ) ? 1 : 0; }
+                                case 3b101: { copper_branch = ( copper_variable < copper.rdata0[16,10] ) ? 1 : 0; }
+                            }
+                            PC = copper_branch ? copper.rdata0[0,6] : PC + 1;
+                            //++:
+                        }
+                        default: {
+                            switch( copper.rdata0[29,3] ) {
+                                case 3b001: { copper_execute = pix_vblank ? 1 : 0; }
+                                case 3b010: { copper_execute = pix_active ? 1 : 0; }
+                                case 3b011: { copper_execute = ( pix_y == copper.rdata0[16,10] ) ? 1 : 0; }
+                                case 3b100: { copper_execute = ( pix_x == copper.rdata0[16,10] ) ? 1 : 0; }
+                                case 3b101: { copper_execute = ( copper_variable == ( copper.rdata0[16,1] ? pix_y : pix_x ) ) ? 1 : 0; }
+                                case 3b110: {
+                                    switch( copper.rdata0[26,3] ) {
+                                        case 3b001: { copper_variable = copper.rdata0[16,10]; }
+                                        case 3b010: { copper_variable = copper_variable + copper.rdata0[16,10]; }
+                                        case 3b100: { copper_variable = copper_variable - copper.rdata0[16,10]; }
+                                    }
+                                    copper_branch = 1;
+                                    //++:
+                                }
+                                case 3b111: {
+                                    if( copper.rdata0[26,1] ) { b_colour = copper_variable; }
+                                    if( copper.rdata0[27,1] ) { b_alt = copper_variable; }
+                                    if( copper.rdata0[28,1] ) { b_mode = copper_variable; }
+                                    copper_branch = 1;
+                                    //++:
+                                }
+                            }
+                            if( copper_execute ) {
+                                if( copper.rdata0[26,1] ) { b_colour = copper.rdata0[0,6]; }
+                                if( copper.rdata0[27,1] ) { b_alt = copper.rdata0[6,6]; }
+                                if( copper.rdata0[28,1] ) { b_mode = copper.rdata0[12,4]; }
+                                copper_branch = 1;
+                            }
+                            PC = PC + copper_branch;
+                        }
+                    }
+                } else {
+                    PC = 0;
+                }
+            }
+            // UPDATE THE BACKGROUND FROM RISC-V
+            case 2b01: { b_colour = backgroundcolour; }
+            case 2b10: { b_alt = backgroundcolour_alt; }
+            case 2b11: { b_mode = backgroundcolour_mode; }
         }
     }
 }
