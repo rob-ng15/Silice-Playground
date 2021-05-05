@@ -256,6 +256,7 @@ void bitmap_draw( unsigned char framebuffer ) {
 //  9 split horizontal
 //  10 quarters
 void set_background( unsigned char colour, unsigned char altcolour, unsigned char backgroundmode ) {
+    *BACKGROUND_COPPER_STARTSTOP = 0;
     *BACKGROUND_COLOUR = colour;
     *BACKGROUND_ALTCOLOUR = altcolour;
     *BACKGROUND_MODE = backgroundmode;

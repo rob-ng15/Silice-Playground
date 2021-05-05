@@ -746,6 +746,30 @@ void set_tilemap_32x32tile( unsigned char tm_layer, short x, short y, unsigned c
     set_tilemap_tile( tm_layer, x + 1, y + 1, start_tile + 3, background, foreground );
 }
 
+// PROGRAM THE BACKGROUND COPPER FOR THE FALLING STARS
+void program_background( void ) {
+    copper_startstop( 0 );
+    copper_program( 0, COPPER_WAIT_Y, 7, 0, BKG_SNOW, DKBLUE, WHITE );
+    copper_program( 1, COPPER_WAIT_X, 7, 0, BKG_SNOW, DKBLUE, WHITE );
+    copper_program( 2, COPPER_JUMP, COPPER_JUMP_IF_Y_LESS, 32, 0, 0, 1 );
+    copper_program( 3, COPPER_WAIT_X, 7, 0, BKG_SNOW, DKBLUE - 1, RED );
+    copper_program( 4, COPPER_JUMP, COPPER_JUMP_IF_Y_LESS, 64, 0, 0, 3 );
+    copper_program( 5, COPPER_WAIT_X, 7, 0, BKG_SNOW, DKBLUE - 1, ORANGE );
+    copper_program( 6, COPPER_JUMP, COPPER_JUMP_IF_Y_LESS, 96, 0, 0, 5 );
+    copper_program( 7, COPPER_WAIT_X, 7, 0, BKG_SNOW, DKBLUE - 1, YELLOW );
+    copper_program( 8, COPPER_JUMP, COPPER_JUMP_IF_Y_LESS, 128, 0, 0, 7 );
+    copper_program( 9, COPPER_WAIT_X, 7, 0, BKG_SNOW, DKBLUE - 1, GREEN );
+    copper_program( 10, COPPER_JUMP, COPPER_JUMP_IF_Y_LESS, 160, 0, 0, 9 );
+    copper_program( 11, COPPER_WAIT_X, 7, 0, BKG_SNOW, DKBLUE - 1, BLUE );
+    copper_program( 12, COPPER_JUMP, COPPER_JUMP_IF_Y_LESS, 192, 0, 0, 11 );
+    copper_program( 13, COPPER_WAIT_X, 7, 0, BKG_SNOW, DKBLUE - 1, DKPURPLE );
+    copper_program( 14, COPPER_JUMP, COPPER_JUMP_IF_Y_LESS, 224, 0, 0, 13 );
+    copper_program( 15, COPPER_WAIT_X, 7, 0, BKG_SNOW, DKBLUE - 1, MAGENTA );
+    copper_program( 16, COPPER_JUMP, COPPER_JUMP_IF_NOT_VBLANK, 0, 0, 0, 15 );
+    copper_program( 17, COPPER_JUMP, COPPER_JUMP_ALWAYS, 0, 0, 0, 1 );
+    copper_startstop( 1 );
+}
+
 // SETUP THE BACKDROP - MOUNTAINS, LANDING AREA, ROCKETS AND PLANETS
 void draw_moonscape( void ) {
     // PLACE MOONSCAPE ON THE TILEMAPS
@@ -810,8 +834,8 @@ void draw_moonscape( void ) {
 }
 
 void initialise_graphics( void ) {
-    // SET THE BACKGROUND - DKBLUE AND GREY2 STARFIELD
-    set_background( GREY2, DKBLUE - 1, BKG_SNOW );
+    // SET THE BACKGROUND - MULTICOLOURED STARFIELD VIA COPPER
+    program_background();
     // CLEAR THE TILEMAPS
     tilemap_scrollwrapclear( LOWER_LAYER, 9 );
     tilemap_scrollwrapclear( UPPER_LAYER, 9 );
