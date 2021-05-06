@@ -12,13 +12,6 @@ $$ OF = 4
 $$ DZ = 8
 $$ NV = 16
 
-// BITFIELD FOR FLOATING POINT NUMBER
-bitfield floatingpointnumber{
-    uint1   sign,
-    uint8   exponent,
-    uint23  fraction
-}
-
 // BITFIELD FOR FLOATING POINT CSR REGISTER
 bitfield floatingpointcsr{
     uint24  reserved,
@@ -45,12 +38,8 @@ algorithm fpu(
     output uint32  result,
     output uint1   frd
 ) <autorun> {
-    uint2   classE = uninitialised;
-    uint1   classF = uninitialised;
 
     inttofloat FPUfloat( a <: sourceReg1, rs2 <: rs2 );
-    floattoint FPUint( f <: sourceReg1 );
-    floattouint FPUuint( f <: sourceReg1 );
     floataddsub FPUaddsub( a <: sourceReg1F, b <: sourceReg2F );
     floatmultiply FPUmultiply( a <: sourceReg1F, b <: sourceReg2F );
     floatdivide FPUdivide( a <: sourceReg1F, b <: sourceReg2F );
@@ -60,8 +49,6 @@ algorithm fpu(
     floatsign FPUsign( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
 
     FPUfloat.start := 0;
-    FPUint.start := 0;
-    FPUuint.start := 0;
     FPUaddsub.start := 0;
     FPUmultiply.start := 0;
     FPUdivide.start := 0;
@@ -129,10 +116,7 @@ algorithm fpu(
                         case 5b11000: {
                             // FCVT.W.S FCVT.WU.S
                             frd = 0;
-                            FPUint.start = ~rs2[0,1];
-                            FPUuint.start = rs2[0,1];
-                            while( FPUint.busy || FPUuint.busy ) {}
-                            result = rs2[0,1] ? FPUuint.result : FPUint.result;
+                            result = sourceReg1F;
                         }
                         case 5b11100: {
                             // FMV.X.W
@@ -147,14 +131,7 @@ algorithm fpu(
                         case 5b11100: {
                             // FCLASS.S
                             frd = 0;
-                            classE = { ( floatingpointnumber(sourceReg1F).exponent ) == 8hff, ( floatingpointnumber(sourceReg1F).exponent ) == 8h00 };
-                            classF = ( floatingpointnumber(sourceReg1F).fraction ) == 23h0000;
-                            switch( classE ) {
-                                case 2b00: { result = floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b000000010 } : { 23b0, 9b000100000 }; }
-                                case 2b01: { result = floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b000001000 } : { 23b0, 9b000010000 }; }
-                                case 2b10: { result = classF ? ( floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b000000001 } : { 23b0, 9b001000000 } ) :
-                                                                ( floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b100000000 } : { 23b0, 9b010000000 } ); }
-                            }
+                            result = { 23b0, 9b000100000 };
                         }
                         case 5b11010: {
                             // FCVT.S.W FCVT.S.WU
@@ -389,110 +366,6 @@ algorithm floataddsub(
     }
 }
 
-algorithm floatmultiply(
-    input   uint1   start,
-    output  uint1   busy,
-
-    input   uint32  a,
-    input   uint32  b,
-
-    output  uint32  result
-) <autorun> {
-    uint1   productsign := a[31,1] ^ b[31,1];
-    uint64  product := ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
-    uint32  product32 := product[16,32];
-    int16   productexp := expA + expB - 254;
-
-    int16   expA := floatingpointnumber( a ).exponent;
-    int16   expB := floatingpointnumber( b ).exponent;
-
-    // Calculation is split into 4 18 x 18 multiplications for DSP
-    uint18  A := { 10b0, 1b1, a[16,7] };
-    uint18  B := { 2b0, a[0,16] };
-    uint18  C := { 10b0, 1b1, b[16,7] };
-    uint18  D := { 2b0, b[0,16] };
-
-    busy = 0;
-
-    while(1) {
-        if( start ) {
-            busy = 1;
-
-            ++:
-            if( ( expA | expB ) == 0 ) {
-                result = { productsign, 31b0 };
-            } else {
-                if( product32 == 0 ) {
-                    result = { productsign, 31b0 };
-                } else {
-                    ( result ) = normalise( productsign, productexp, product32 );
-                }
-            }
-
-            busy = 0;
-        }
-    }
-}
-
-algorithm floatdivide(
-    input   uint1   start,
-    output  uint1   busy,
-
-    input   uint32  a,
-    input   uint32  b,
-
-    output  uint32  result
-) <autorun> {
-    uint1   quotientsign := a[31,1] ^ b[31,1];
-    int16   quotientexp = uninitialised;
-    uint32  quotient = uninitialised;
-    uint32  remainder = uninitialised;
-    uint6   bit = uninitialised;
-
-    int16   expA := floatingpointnumber( a ).exponent;
-    int16   expB := floatingpointnumber( b ).exponent;
-    uint32  sigA = uninitialised;
-    uint32  sigB = uninitialised;
-
-    busy = 0;
-
-    while(1) {
-        if( start ) {
-            busy = 1;
-
-            sigA = { 1b1, a[0,23], 8b0 };
-            sigB = { 9b1, b[0,23] };
-            quotientexp = expA - expB;
-            quotient = 0;
-            remainder = 0;
-            bit = 31;
-            ++:
-            ( sigB ) = alignright( sigB );
-            if( ( expA | expB ) == 0 ) {
-                // DIVIDE BY ZERO
-                result = ( expA == 0 ) ? { quotientsign, 31b0 } : { quotientsign, 8b11111111, 23b0 };
-            } else {
-                while( bit != 63 ) {
-                    if( __unsigned({ remainder[0,31], sigA[bit,1] }) >= __unsigned(sigB) ) {
-                            remainder = __unsigned({ remainder[0,31], sigA[bit,1] }) - __unsigned(sigB);
-                            quotient[bit,1] = 1;
-                    } else {
-                        remainder = { remainder[0,31], sigA[bit,1] };
-                    }
-                    bit = bit - 1;
-                }
-                if( quotient == 0 ) {
-                    result = { quotientsign, 31b0 };
-                } else {
-                    ( result ) = normalise( quotientsign, quotientexp, quotient );
-                }
-            }
-
-            busy = 0;
-        }
-    }
-}
-
 algorithm floatfused(
     input   uint1   start,
     output  uint1   busy,
@@ -671,65 +544,264 @@ $$float_size = 32
 $$int_size = 32
 $$uint_size = 32
 
-algorithm floattouint(
-    input uint$float_size$ f,
-    output uint$uint_size$ result,
-    output uint1 busy,
-    input  uint1 start
-) <autorun> {
-    uint$exponant_size$ one_exponent <: {1b1,$exponant_size-1$b0};
-    uint$exponant_size$ exponant <: f[$mantissa_size$, $exponant_size$] + 1;
-    result = 0;
+bitfield float{
+    uint1 sign,
+    uint$exponant_size$ exponant,
+    uint$mantissa_size$ fraction,
+}
 
+// BITFIELD FOR FLOATING POINT NUMBER
+bitfield floatingpointnumber{
+    uint1   sign,
+    uint8   exponent,
+    uint23  fraction
+}
+
+algorithm float_inf(input uint$float_size$ f1, input uint$float_size$ f2, output uint1 inf){
+    inf = 0;
+    if(f1[$float_size-1$, 1] & ~f2[$float_size-1$, 1]){
+        inf = 1;
+    }else{
+        if(f1[$mantissa_size$, $exponant_size$] < f2[$mantissa_size$, $exponant_size$]){
+            inf = 1;
+        }
+    }
+}
+
+algorithm float_sup(input uint$float_size$ f1, input uint$float_size$ f2, output uint1 inf){
+    inf = 0;
+    if(~f1[$float_size-1$, 1] & f2[$float_size-1$, 1]){
+        inf = 1;
+    }else{
+        if(f1[$mantissa_size$, $exponant_size$] > f2[$mantissa_size$, $exponant_size$]){
+            inf = 1;
+        }
+    }
+}
+
+// Based upon https://github.com/ThibaultTricard/Silice-float/blob/main/src/float_div.ice
+// Modified to perform special cases checks and to use start and busy flags
+algorithm floatdivide(input  uint$float_size$ a,
+                    input  uint$float_size$ b,
+                    output uint$float_size$ result,
+                    output uint1 busy,
+                    input  uint1 start)
+<autorun>{
+    uint1 f3_s(0);
+    int$exponant_size+1$ a_e(0); //<: a[$mantissa_size$, $exponant_size$];
+    int$exponant_size+1$ b_e(0);
+    int$exponant_size+1$ f3_e(0);
+    uint$exponant_size$ r_e(0);
+
+    uint$mantissa_size*2 + 2$ a_m(0);
+    uint$mantissa_size*2 + 2$ f3_m(0);
+    uint$mantissa_size*2 + 2$ remain(0);
+
+// +1 to fix loss of one bit of precision in the mantissa
+$$for i=0,mantissa_size+1 do
+    uint$mantissa_size*2 + 2$ b_m$i$ = uninitialized;
+$$end
+
+    uint$exponant_size$ bias        <: ~{1b1, $exponant_size-1$b0};
     while(1){
         if(start){
             busy = 1;
+            //sign
+            f3_s = (a[$float_size-1$,1] == b[$float_size-1$,1]) ? 0 : 1; //sign of the result
 
-            if(f[$float_size-1$, 1] ){
-                result = 0;
-            }
-            else{
-                if(exponant[$exponant_size-1$, 1]){
-                    if(exponant == one_exponent){
-                        result =1;
-                    }else{
-                        $$for i=uint_size-1,1,-1 do
-                        if($i$ == exponant[0,$exponant_size-1$]){
-                            $$if i == 0 then
-                            result = (1 << $i$);
-                            $$else
-                            $$start = math.max(mantissa_size-i,0)
-                            $$size = math.min(i, mantissa_size)
-                            result = (1 << $i$) +  f[$start$, $size$];
-                            $$end
-                        }else{
-                        $$end
-                        $$for i=uint_size-1,1,-1 do
-                        }
-                        $$end
-                    }
+            //exponent
+            a_e= a[$mantissa_size$, $exponant_size$] -bias;
+            b_e= b[$mantissa_size$, $exponant_size$] -bias;
+
+            f3_e = (a_e - b_e) + bias;
+            r_e = f3_e[0, $exponant_size$];
+
+            //mantissa
+            a_m = {1b1, a[0, $mantissa_size$], $mantissa_size+1$b0};
+
+            // +1 to fix loss of one bit of precision in the mantissa
+            $$for i=0,mantissa_size+1 do
+                b_m$i$ = {1b1, b[0, $mantissa_size$]} << $i$;
+            $$end
+
+            remain = a_m;
+            $$for i=mantissa_size+1,0,-1 do
+                ++:
+                if(remain >= b_m$i$){
+                    remain = remain - b_m$i$;
+                    f3_m = f3_m + (1 << $i$);
                 }
-            }
+            $$end
+
+            result = {f3_s,
+            f3_m[$mantissa_size+1$,1] ? r_e : r_e - 1b1,
+            f3_m[$mantissa_size+1$,1] ? f3_m[1,$mantissa_size$] : f3_m[0,$mantissa_size$]};
 
             busy = 0;
         }
     }
 }
 
-algorithm floattoint(
-    input  uint$float_size$ f,
-    output int$int_size$ result,
+// Based upon https://github.com/ThibaultTricard/Silice-float/blob/main/src/float_mul.ice
+// Modified to perform special cases checks and to use start and busy flags
+algorithm floatmultiply(
+    input uint$float_size$ a,
+    input uint$float_size$ b,
+    output uint$float_size$ result,
     output uint1 busy,
-    input  uint1 start
-) <autorun> {
+    input  uint1 start)
+<autorun>{
+    int$exponant_size+1$ e1         <: a[$mantissa_size$, $exponant_size$];
+    int$exponant_size+1$ e2         <: b[$mantissa_size$, $exponant_size$];
+    uint$mantissa_size +1$ m1       <: {1b1, a[0, $mantissa_size$]};
+    uint$mantissa_size +1$ m2       <: {1b1, b[0, $mantissa_size$]};
+    uint$exponant_size$ one_inv     <: {1b1, $exponant_size-1$b0};
+    uint$exponant_size$ bias        <: ~{1b1, $exponant_size-1$b0};
+    uint1 r_s                       <: a[$float_size-1$,1] == b[$float_size-1$,1] ? b[$float_size-1$,1] : 1b1;
+    uint$mantissa_size$ r_m(0);
+    uint$exponant_size$ r_e(0);
+
+    //mantissa multiplication
+    uint$(mantissa_size +1)*2$ tmp(0);
+    uint$(mantissa_size +1)*2$ r_0 <: m2[0,1] ? {$mantissa_size +1$b0,m1} : $(mantissa_size +1)*2$b0;
+$$for i=1,mantissa_size do
+    uint$(mantissa_size +1)*2$ r_$i$ <: m2[$i$,1] ? {$mantissa_size +1-i$b0,m1,$i$b0} : $(mantissa_size +1)*2$b0;
+$$end
+    uint$float_size$  tmp_res  = 0;
+    always{
+        if(start){
+            busy = 1;
+            tmp =
+        $$for i=0,mantissa_size-1 do
+            r_$i$+
+        $$end
+            r_$mantissa_size$;
+
+            r_m = tmp[$mantissa_size*2 +1$,1] ? tmp[$mantissa_size+1$, $mantissa_size$] : tmp[$mantissa_size$, $mantissa_size$];
+            r_e = (e1-bias) + (e2-bias) + bias + tmp[$mantissa_size*2 +1$,1];
+
+            tmp_res = {r_s,r_e,r_m};
+            busy = 0;
+        }
+        result =  tmp_res;
+    }
+}
+
+
+algorithm uint_to_float(input uint$uint_size$ u, output uint$float_size$ f){
+    uint1 s <: 0;
+    uint$exponant_size$ exponant = 0;
+    uint$mantissa_size$ mantissa = 0;
+    $$for i=uint_size-1,1,-1 do
+        if(u[$i$,1]){
+            exponant = {1b1, $exponant_size-1$d$i$} -1;
+            $$ending=i
+            $$size=math.min(ending,mantissa_size)
+            $$start=(ending-size)
+            $$padding=math.max(mantissa_size-size,0)
+            $$if padding==0 then
+            mantissa = u[$start$,$size$];
+            $$else
+            mantissa = {u[$start$,$size$], $mantissa_size-i$d0};
+            $$end
+        } else {
+    $$end
+        if(u[0,1]){
+            exponant = {1b1, $exponant_size-1$d$0$} -1;
+            mantissa = 0;
+        }
+    $$for i=0,uint_size-2 do
+        }
+    $$end
+    f = {s, exponant, mantissa};
+}
+
+
+//equivalent to a ceil
+algorithm float_to_uint(input uint$float_size$ f, output uint$uint_size$ u){
+    uint$exponant_size$ one_exponent <: {1b1,$exponant_size-1$b0};
+    uint$exponant_size$ exponant <: f[$mantissa_size$, $exponant_size$] + 1;
+    u = 0;
+
+    if(f[$float_size-1$, 1] ){
+        u = 0;
+    }
+    else{
+        if(exponant[$exponant_size-1$, 1]){
+            if(exponant == one_exponent){
+                u =1;
+            }else{
+                $$for i=uint_size-1,1,-1 do
+                if($i$ == exponant[0,$exponant_size-1$]){
+                    $$if i == 0 then
+                    u = (1 << $i$);
+                    $$else
+                    $$start = math.max(mantissa_size-i,0)
+                    $$size = math.min(i, mantissa_size)
+                    u = (1 << $i$) +  f[$start$, $size$];
+                    $$end
+                }else{
+                $$end
+                $$for i=uint_size-1,1,-1 do
+                }
+                $$end
+            }
+        }
+    }
+}
+
+algorithm int_to_float(input int$int_size$ i,
+                       output uint$float_size$ res,
+                       output uint1 ready,
+                       input  uint1 wr)
+<autorun>{
+    uint$int_size$ u <: i[$int_size-1$,1] ? ((~i)+1) : i;
+    uint1 s <: i[$int_size-1$,1];
+    uint$exponant_size$ exponant = 0;
+    uint$mantissa_size$ mantissa = 0;
+    uint$float_size$  tmp_res  = 0;
+    always{
+        if(wr){
+            $$for i=int_size-1,1,-1 do
+                if(u[$i$,1]){
+                    exponant = {1b1, $exponant_size-1$d$i$} -1;
+                    $$ending=i
+                    $$size=math.min(ending,mantissa_size)
+                    $$start=(ending-size)
+                    $$padding=math.max(mantissa_size-size,0)
+                    $$if padding==0 then
+                    mantissa = u[$start$,$size$];
+                    $$else
+                    mantissa = {u[$start$,$size$], $mantissa_size-i$d0};
+                    $$end
+                } else {
+            $$end
+                if(u[0,1]){
+                    exponant = {1b1, $exponant_size-1$d$0$} -1;
+                    mantissa = 0;
+                }
+            $$for i=0,uint_size-2 do
+                }
+            $$end
+            tmp_res = {s, exponant, mantissa};
+            ready = 1;
+        }
+        res = tmp_res;
+    }
+}
+
+algorithm float_to_int(
+    input  uint$float_size$ f,
+    output int$int_size$ res,
+    output uint1 ready,
+    input  uint1 wr)
+ <autorun>{
     uint$exponant_size$ one_exponent <: {1b1,$exponant_size-1$b0};
     uint$exponant_size$ exponant <: f[$mantissa_size$, $exponant_size$] + 1;
     uint$int_size$  u = 0;
     uint$int_size$  tmp_res  = 0;
-    while(1){
-        if(start){
-            busy = 1;
-
+    always{
+        if(wr){
             if(f[$float_size-1$, 1] ){
                 u = 0;
             }
@@ -756,10 +828,9 @@ algorithm floattoint(
                 }
             }
             tmp_res = f[$float_size-1$,1] ? (~u)+1 : u;
-            result = tmp_res;
-
-            busy = 0;
+            ready = 1;
         }
+        res = tmp_res;
     }
 
 }
