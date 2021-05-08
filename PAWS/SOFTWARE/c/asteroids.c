@@ -199,6 +199,20 @@
         0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000
     };
 
+// PROGRAM THE BACKGROUND COPPER FOR THE FALLING STARS
+void program_background( void ) {
+    // FALLING STARS ON A BLACK GROUND, STARS CYCLE THROUGH COLOURS EVERY FRAME
+    copper_startstop( 0 );
+    copper_program( 0, COPPER_VARIABLE, COPPER_SET_VARIABLE, 1, 0, 0, 0 );
+    copper_program( 1, COPPER_WAIT_Y, 6, 0, BKG_SNOW, BLACK, 0 );
+    copper_program( 2, COPPER_SET_FROM_VARIABLE, 1, 0, 0, 0, 0 );
+    copper_program( 3, COPPER_VARIABLE, COPPER_ADD_VARIABLE, 1, 0, 0, 0 );
+    copper_program( 4, COPPER_JUMP, COPPER_JUMP_IF_NOT_VBLANK, 0, 0, 0, 4 );
+    copper_program( 5, COPPER_JUMP, COPPER_JUMP_IF_VARIABLE_LESS, 64, 0, 0, 1 );
+    copper_program( 17, COPPER_JUMP, COPPER_JUMP_ALWAYS, 0, 0, 0, 0 );
+    copper_startstop( 1 );
+}
+
 // GENERATE A RANDOM COLOUR WITH AT LEAST ONE OF RED, GREEN, BLUE BEING INTENSITY 2
 unsigned char random_colour( void )
 {
@@ -349,8 +363,7 @@ void drawshield( unsigned char fullbar )
     gpu_character_blit( WHITE, 62 + shield, 224, 30, 0 );
 }
 
-void setup_game()
-{
+void setup_game() {
     // CLEAR ALL SPRITES
     for( unsigned char sprite_number = 0; sprite_number < 26; sprite_number++ ) {
         if( sprite_number < MAXASTEROIDS ) {
@@ -364,7 +377,7 @@ void setup_game()
 
     // CLEAR and SET THE BACKGROUND
     gpu_cs();
-    set_background( GREY2, DKBLUE - 1, BKG_SNOW );
+    program_background();
     risc_ice_v_logo();
     set_tilemap();
 

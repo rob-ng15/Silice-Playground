@@ -205,7 +205,8 @@ algorithm memmap_io (
         sprite_layer_display :> lower_sprites_display,
         collision_layer_1 <: bitmap_display,
         collision_layer_2 <: lower_tilemap_display,
-        collision_layer_3 <: upper_sprites_display
+        collision_layer_3 <: upper_tilemap_display,
+        collision_layer_4 <: upper_sprites_display
     );
     sprite_layer upper_sprites <@video_clock,!video_reset> (
         pix_x      <: pix_x,

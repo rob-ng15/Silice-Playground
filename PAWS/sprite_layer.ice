@@ -76,11 +76,12 @@ algorithm sprite_layer(
     output uint3   sprite_read_tile_SMT,
 
     // FULL collision detection
-    // (1) Bitmap, (2) Tile Map, (3) Other Sprite Layer
+    // (1) Bitmap, (2) Tile Map L, (3) Tile Map U, (4) Other Sprite Layer
     input   uint1   collision_layer_1,
     input   uint1   collision_layer_2,
     input   uint1   collision_layer_3,
-    $$for i=0,12 do
+    input   uint1   collision_layer_4,
+    $$for i=0,15 do
         output uint16 collision_$i$,
     $$end
 
@@ -93,16 +94,16 @@ algorithm sprite_layer(
 ) <autorun> {
     // Storage for the sprites
     // Stored as registers as needed instantly
-    uint1   sprite_active[13] = uninitialised;
-    uint1   sprite_double[13] = uninitialised;
-    int11   sprite_x[13] = uninitialised;
-    int11   sprite_y[13] = uninitialised;
-    uint6   sprite_colour[13] = uninitialised;
-    uint3   sprite_tile_number[13] = uninitialised;
+    uint1   sprite_active[16] = uninitialised;
+    uint1   sprite_double[16] = uninitialised;
+    int11   sprite_x[16] = uninitialised;
+    int11   sprite_y[16] = uninitialised;
+    uint6   sprite_colour[16] = uninitialised;
+    uint3   sprite_tile_number[16] = uninitialised;
 
     uint1   output_collisions = 0;
 
-    $$for i=0,12 do
+    $$for i=0,15 do
         // Sprite Tiles
         simple_dualport_bram uint16 tiles_$i$ <input!> [128] = uninitialised;
         uint1 pix_visible_$i$ = uninitialised;
@@ -123,7 +124,7 @@ algorithm sprite_layer(
         sprite_writer_line <: sprite_writer_line,
         sprite_writer_bitmap <: sprite_writer_bitmap,
         sprite_writer_active <: sprite_writer_active,
-        $$for i=0,12 do
+        $$for i=0,15 do
             tiles_$i$ <:> tiles_$i$,
         $$end
     );
@@ -141,7 +142,7 @@ algorithm sprite_layer(
     uint1   sprite_offscreen_x <:: ( __signed( sprite_x[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_x[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) > __signed(640) );
     uint1   sprite_offscreen_y <:: ( __signed( sprite_y[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_y[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) > __signed(480) );
 
-    $$for i=0,12 do
+    $$for i=0,15 do
         // Output collisions
         collision_$i$ := ( output_collisions ) ? detect_collision_$i$ : collision_$i$;
 
@@ -177,7 +178,7 @@ algorithm sprite_layer(
         if( pix_vblank ) {
             if( ~output_collisions ) {
                 // RESET collision detection
-                $$for i=0,12 do
+                $$for i=0,15 do
                     detect_collision_$i$ = 0;
                 $$end
             } else {
@@ -185,7 +186,10 @@ algorithm sprite_layer(
             }
         } else {
             if( pix_active ) {
-                pix_red = pix_visible_12 ? sprite_colour[12][4,2] :
+                pix_red = pix_visible_15 ? sprite_colour[15][4,2] :
+                            pix_visible_14 ? sprite_colour[14][4,2] :
+                            pix_visible_13 ? sprite_colour[13][4,2] :
+                            pix_visible_12 ? sprite_colour[12][4,2] :
                             pix_visible_11 ? sprite_colour[11][4,2] :
                             pix_visible_10 ? sprite_colour[10][4,2] :
                             pix_visible_9 ? sprite_colour[9][4,2] :
@@ -199,7 +203,10 @@ algorithm sprite_layer(
                             pix_visible_1 ? sprite_colour[1][4,2] :
                             sprite_colour[0][4,2];
 
-                pix_green= pix_visible_12 ? sprite_colour[12][2,2] :
+                pix_green= pix_visible_15 ? sprite_colour[15][2,2] :
+                            pix_visible_14 ? sprite_colour[14][2,2] :
+                            pix_visible_13 ? sprite_colour[13][2,2] :
+                            pix_visible_12 ? sprite_colour[12][2,2] :
                             pix_visible_11 ? sprite_colour[11][2,2] :
                             pix_visible_10 ? sprite_colour[10][2,2] :
                             pix_visible_9 ? sprite_colour[9][2,2] :
@@ -213,7 +220,10 @@ algorithm sprite_layer(
                             pix_visible_1 ? sprite_colour[1][2,2] :
                             sprite_colour[0][2,2];
 
-                pix_blue = pix_visible_12 ? sprite_colour[12][0,2] :
+                pix_blue = pix_visible_15 ? sprite_colour[15][0,2] :
+                            pix_visible_14 ? sprite_colour[14][0,2] :
+                            pix_visible_13 ? sprite_colour[13][0,2] :
+                            pix_visible_12 ? sprite_colour[12][0,2] :
                             pix_visible_11 ? sprite_colour[11][0,2] :
                             pix_visible_10 ? sprite_colour[10][0,2] :
                             pix_visible_9 ? sprite_colour[9][0,2] :
@@ -230,7 +240,7 @@ algorithm sprite_layer(
                 sprite_layer_display = pix_visible_12 | pix_visible_11 | pix_visible_10 | pix_visible_9 | pix_visible_8 | pix_visible_7 | pix_visible_6 | pix_visible_5 |
                     pix_visible_4 | pix_visible_3 | pix_visible_2 | pix_visible_1 | pix_visible_0;
 
-                $$for i=0,12 do
+                $$for i=0,15 do
                     // UPDATE COLLISION DETECTION FLAGS
                     ( detect_collision_$i$ ) = updatecollision( detect_collision_$i$, pix_visible_$i$,
                                                                 collision_layer_1, collision_layer_2, collision_layer_3, pix_visible_12, pix_visible_11,
@@ -302,11 +312,11 @@ algorithm spritebitmapwriter(
     input   uint16  sprite_writer_bitmap,
     input   uint1   sprite_writer_active,
 
-    $$for i=0,12 do
+    $$for i=0,15 do
         simple_dualport_bram_port1 tiles_$i$,
     $$end
 ) <autorun> {
-    $$for i=0,12 do
+    $$for i=0,15 do
         tiles_$i$.wenable1 := 1;
     $$end
 

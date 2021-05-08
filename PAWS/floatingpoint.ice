@@ -45,9 +45,6 @@ algorithm fpu(
     output uint32  result,
     output uint1   frd
 ) <autorun> {
-    uint2   classE = uninitialised;
-    uint1   classF = uninitialised;
-
     inttofloat FPUfloat( a <: sourceReg1, rs2 <: rs2 );
     floattoint FPUint( f <: sourceReg1 );
     floattouint FPUuint( f <: sourceReg1 );
@@ -56,6 +53,7 @@ algorithm fpu(
     floatdivide FPUdivide( a <: sourceReg1F, b <: sourceReg2F );
     floatfused FPUfused( function7 <: function7, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F, sourceReg3F <: sourceReg3F );
     floatsqrt FPUsqrt( sourceReg1F <: sourceReg1F );
+    floatclassify FPUclass( sourceReg1F <: sourceReg1F );
     floatcomparison FPUcomparison( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
     floatsign FPUsign( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
 
@@ -147,14 +145,7 @@ algorithm fpu(
                         case 5b11100: {
                             // FCLASS.S
                             frd = 0;
-                            classE = { ( floatingpointnumber(sourceReg1F).exponent ) == 8hff, ( floatingpointnumber(sourceReg1F).exponent ) == 8h00 };
-                            classF = ( floatingpointnumber(sourceReg1F).fraction ) == 23h0000;
-                            switch( classE ) {
-                                case 2b00: { result = floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b000000010 } : { 23b0, 9b000100000 }; }
-                                case 2b01: { result = floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b000001000 } : { 23b0, 9b000010000 }; }
-                                case 2b10: { result = classF ? ( floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b000000001 } : { 23b0, 9b001000000 } ) :
-                                                                ( floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b100000000 } : { 23b0, 9b010000000 } ); }
-                            }
+                            result = FPUclass.classification;
                         }
                         case 5b11010: {
                             // FCVT.S.W FCVT.S.WU
@@ -288,6 +279,11 @@ algorithm floataddsub(
 
     output  uint32  result
 ) <autorun> {
+    uint2   classEa = uninitialised;
+    uint1   classFa = uninitialised;
+    uint2   classEb = uninitialised;
+    uint1   classFb = uninitialised;
+
     uint1   sign = uninitialised;
     int16   expA = uninitialised;
     int16   expB = uninitialised;
@@ -305,6 +301,10 @@ algorithm floataddsub(
     while(1) {
         if( start ) {
             busy = 1;
+            classEa = { ( floatingpointnumber(a).exponent ) == 8hff, ( floatingpointnumber(a).exponent ) == 8h00 };
+            classFa = ( floatingpointnumber(a).fraction ) == 23h0000;
+            classEb = { ( floatingpointnumber(b).exponent ) == 8hff, ( floatingpointnumber(b).exponent ) == 8h00 };
+            classFb = ( floatingpointnumber(b).fraction ) == 23h0000;
 
             operation = ( a[31,1] == b[31,1] ) ? addsub : ~addsub;
             bitcount = 31;
@@ -398,6 +398,11 @@ algorithm floatmultiply(
 
     output  uint32  result
 ) <autorun> {
+    uint2   classEa = uninitialised;
+    uint1   classFa = uninitialised;
+    uint2   classEb = uninitialised;
+    uint1   classFb = uninitialised;
+
     uint1   productsign := a[31,1] ^ b[31,1];
     uint64  product := ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
     uint32  product32 := product[16,32];
@@ -417,6 +422,11 @@ algorithm floatmultiply(
     while(1) {
         if( start ) {
             busy = 1;
+
+            classEa = { ( floatingpointnumber(a).exponent ) == 8hff, ( floatingpointnumber(a).exponent ) == 8h00 };
+            classFa = ( floatingpointnumber(a).fraction ) == 23h0000;
+            classEb = { ( floatingpointnumber(b).exponent ) == 8hff, ( floatingpointnumber(b).exponent ) == 8h00 };
+            classFb = ( floatingpointnumber(b).fraction ) == 23h0000;
 
             ++:
             if( ( expA | expB ) == 0 ) {
@@ -443,6 +453,11 @@ algorithm floatdivide(
 
     output  uint32  result
 ) <autorun> {
+    uint2   classEa = uninitialised;
+    uint1   classFa = uninitialised;
+    uint2   classEb = uninitialised;
+    uint1   classFb = uninitialised;
+
     uint1   quotientsign := a[31,1] ^ b[31,1];
     int16   quotientexp = uninitialised;
     uint32  quotient = uninitialised;
@@ -459,6 +474,11 @@ algorithm floatdivide(
     while(1) {
         if( start ) {
             busy = 1;
+
+            classEa = { ( floatingpointnumber(a).exponent ) == 8hff, ( floatingpointnumber(a).exponent ) == 8h00 };
+            classFa = ( floatingpointnumber(a).fraction ) == 23h0000;
+            classEb = { ( floatingpointnumber(b).exponent ) == 8hff, ( floatingpointnumber(b).exponent ) == 8h00 };
+            classFb = ( floatingpointnumber(b).fraction ) == 23h0000;
 
             sigA = { 1b1, a[0,23], 8b0 };
             sigB = { 9b1, b[0,23] };
@@ -594,13 +614,37 @@ algorithm floatsqrt(
     }
 }
 
+algorithm floatclassify(
+    input   uint32  sourceReg1F,
+    output  uint32  classification
+) <autorun> {
+    uint2   classE = uninitialised;
+    uint1   classF = uninitialised;
+
+    while(1) {
+        classE = { ( floatingpointnumber(sourceReg1F).exponent ) == 8hff, ( floatingpointnumber(sourceReg1F).exponent ) == 8h00 };
+        classF = ( floatingpointnumber(sourceReg1F).fraction ) == 23h0000;
+        switch( classE ) {
+            case 2b00: { classification = floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b000000010 } : { 23b0, 9b000100000 }; }
+            case 2b01: { classification = floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b000001000 } : { 23b0, 9b000010000 }; }
+            case 2b10: { classification = classF ? ( floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b000000001 } : { 23b0, 9b001000000 } ) :
+                                            ( floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b100000000 } : { 23b0, 9b010000000 } ); }
+        }
+    }
+}
+
 algorithm floatcomparison(
     input   uint3   function3,
     input   uint32  sourceReg1F,
     input   uint32  sourceReg2F,
     output  uint1   comparison,
 ) <autorun> {
+    uint2   classE = uninitialised;
+    uint1   classF = uninitialised;
+
     while(1) {
+        classE = { ( floatingpointnumber(sourceReg1F).exponent ) == 8hff, ( floatingpointnumber(sourceReg1F).exponent ) == 8h00 };
+        classF = ( floatingpointnumber(sourceReg1F).fraction ) == 23h0000;
         switch( function3 ) {
             case 3b000: {
                 // LESS THAN EQUAL OMPARISON OF 2 FLOATING POINT NUMBERS
@@ -679,19 +723,21 @@ algorithm floattouint(
 ) <autorun> {
     uint$exponant_size$ one_exponent <: {1b1,$exponant_size-1$b0};
     uint$exponant_size$ exponant <: f[$mantissa_size$, $exponant_size$] + 1;
-    result = 0;
+
+    busy = 0;
 
     while(1){
         if(start){
             busy = 1;
 
+            result = 0;
             if(f[$float_size-1$, 1] ){
                 result = 0;
             }
-            else{
+            else {
                 if(exponant[$exponant_size-1$, 1]){
                     if(exponant == one_exponent){
-                        result =1;
+                        result = 1;
                     }else{
                         $$for i=uint_size-1,1,-1 do
                         if($i$ == exponant[0,$exponant_size-1$]){
@@ -724,16 +770,19 @@ algorithm floattoint(
 ) <autorun> {
     uint$exponant_size$ one_exponent <: {1b1,$exponant_size-1$b0};
     uint$exponant_size$ exponant <: f[$mantissa_size$, $exponant_size$] + 1;
-    uint$int_size$  u = 0;
-    uint$int_size$  tmp_res  = 0;
+    uint$int_size$  u = uninitialised;
+    uint$int_size$  tmp_res  = uninitialised;
+
+    busy = 0;
+
     while(1){
         if(start){
             busy = 1;
+            u = 0;
+            tmp_res  = 0;
 
             if(f[$float_size-1$, 1] ){
-                u = 0;
-            }
-            else{
+            } else {
                 if(exponant[$exponant_size-1$, 1]){
                     if(exponant == one_exponent){
                         u =1;

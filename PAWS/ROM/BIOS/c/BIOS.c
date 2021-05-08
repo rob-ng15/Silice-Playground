@@ -514,7 +514,7 @@ void reset_display( void ) {
     screen_mode( 0 );
     tilemap_scrollwrapclear( 0, 9 );
     tilemap_scrollwrapclear( 1, 9 );
-    for( unsigned short i = 0; i < 13; i++ ) {
+    for( unsigned short i = 0; i < 16; i++ ) {
         set_sprite( 0, i, 0, 0, 0, 0, 0, 0 );
         set_sprite( 1, i, 0, 0, 0, 0, 0, 0 );
     }
