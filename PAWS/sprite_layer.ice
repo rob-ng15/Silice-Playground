@@ -1,12 +1,18 @@
 // UPDATE COLLISION DETECTION FLAGS
 circuitry updatecollision(
     output  newcollisionflag,
+    output  newlayerflag,
     input   oldcollisionflag,
+    input   oldlayerflag,
     input   mypixel,
 
     input   collision_layer_1,
     input   collision_layer_2,
     input   collision_layer_3,
+    input   collision_layer_4,
+    input   pix_visible_15,
+    input   pix_visible_14,
+    input   pix_visible_13,
     input   pix_visible_12,
     input   pix_visible_11,
     input   pix_visible_10,
@@ -21,8 +27,9 @@ circuitry updatecollision(
     input   pix_visible_1,
     input   pix_visible_0
 ) {
+    newlayerflag = mypixel ? oldlayerflag | { collision_layer_1, collision_layer_2, collision_layer_3, collision_layer_4 } : oldlayerflag;
     newcollisionflag = mypixel ? oldcollisionflag | {
-                        collision_layer_1, collision_layer_2, collision_layer_3, pix_visible_12, pix_visible_11,
+                         pix_visible_15, pix_visible_14, pix_visible_13, pix_visible_12, pix_visible_11,
                         pix_visible_10, pix_visible_9, pix_visible_8, pix_visible_7,
                         pix_visible_6, pix_visible_5, pix_visible_4, pix_visible_3,
                         pix_visible_2, pix_visible_1, pix_visible_0
@@ -83,6 +90,7 @@ algorithm sprite_layer(
     input   uint1   collision_layer_4,
     $$for i=0,15 do
         output uint16 collision_$i$,
+        output uint4  layer_collision_$i$,
     $$end
 
     // For setting sprite tile bitmaps
@@ -116,6 +124,7 @@ algorithm sprite_layer(
 
         // Collision detection flag
         uint16      detect_collision_$i$ = uninitialised;
+        uint4       detect_layer_$i$ = uninitialised;
     $$end
 
     // UPDATE THE SPRITE TILE BITMAPS
@@ -143,9 +152,6 @@ algorithm sprite_layer(
     uint1   sprite_offscreen_y <:: ( __signed( sprite_y[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_y[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) > __signed(480) );
 
     $$for i=0,15 do
-        // Output collisions
-        collision_$i$ := ( output_collisions ) ? detect_collision_$i$ : collision_$i$;
-
         // Set sprite generator parameters
         SPRITE_$i$.sprite_active := sprite_active[$i$];
         SPRITE_$i$.sprite_double := sprite_double[$i$];
@@ -180,8 +186,14 @@ algorithm sprite_layer(
                 // RESET collision detection
                 $$for i=0,15 do
                     detect_collision_$i$ = 0;
+                    detect_layer_$i$ = 0;
                 $$end
             } else {
+                $$for i=0,15 do
+                    // Output collisions
+                    collision_$i$ = detect_collision_$i$;
+                    layer_collision_$i$ = detect_layer_$i$;
+                $$end
                 output_collisions = 0;
             }
         } else {
@@ -203,7 +215,7 @@ algorithm sprite_layer(
                             pix_visible_1 ? sprite_colour[1][4,2] :
                             sprite_colour[0][4,2];
 
-                pix_green= pix_visible_15 ? sprite_colour[15][2,2] :
+                pix_green = pix_visible_15 ? sprite_colour[15][2,2] :
                             pix_visible_14 ? sprite_colour[14][2,2] :
                             pix_visible_13 ? sprite_colour[13][2,2] :
                             pix_visible_12 ? sprite_colour[12][2,2] :
@@ -237,13 +249,14 @@ algorithm sprite_layer(
                             pix_visible_1 ? sprite_colour[1][0,2] :
                             sprite_colour[0][0,2];
 
-                sprite_layer_display = pix_visible_12 | pix_visible_11 | pix_visible_10 | pix_visible_9 | pix_visible_8 | pix_visible_7 | pix_visible_6 | pix_visible_5 |
-                    pix_visible_4 | pix_visible_3 | pix_visible_2 | pix_visible_1 | pix_visible_0;
+                sprite_layer_display = pix_visible_15 | pix_visible_14 | pix_visible_13 | pix_visible_12 | pix_visible_11 | pix_visible_10 | pix_visible_9 | pix_visible_8 | pix_visible_7
+                                        | pix_visible_6 | pix_visible_5 |pix_visible_4 | pix_visible_3 | pix_visible_2 | pix_visible_1 | pix_visible_0;
 
                 $$for i=0,15 do
                     // UPDATE COLLISION DETECTION FLAGS
-                    ( detect_collision_$i$ ) = updatecollision( detect_collision_$i$, pix_visible_$i$,
-                                                                collision_layer_1, collision_layer_2, collision_layer_3, pix_visible_12, pix_visible_11,
+                    ( detect_collision_$i$, detect_layer_$i$ ) = updatecollision( detect_collision_$i$, detect_layer_$i$, pix_visible_$i$,
+                                                                collision_layer_1, collision_layer_2, collision_layer_3, collision_layer_4,
+                                                                pix_visible_15, pix_visible_14, pix_visible_13, pix_visible_12, pix_visible_11,
                                                                 pix_visible_10, pix_visible_9, pix_visible_8, pix_visible_7,
                                                                 pix_visible_6, pix_visible_5, pix_visible_4, pix_visible_3,
                                                                 pix_visible_2, pix_visible_1, pix_visible_0 );
@@ -324,7 +337,7 @@ algorithm spritebitmapwriter(
         // WRITE BITMAP TO SPRITE TILE
         if( sprite_writer_active ) {
             switch( sprite_writer_sprite ) {
-                $$for i=0,12 do
+                $$for i=0,15 do
                     case $i$: {
                         tiles_$i$.addr1 = sprite_writer_line;
                         tiles_$i$.wdata1 = sprite_writer_bitmap;

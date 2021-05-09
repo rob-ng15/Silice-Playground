@@ -460,6 +460,17 @@ void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned char
     *GPU_WRITE = 8;
 }
 
+// COLOURBLIT A 16 x 16 ( blit_size == 1 doubled to 32 x 32 ) TILE ( from tile 0 to 31 ) to (x1,y1)
+void gpu_colourblit( short x1, short y1, short tile, unsigned char blit_size ) {
+    *GPU_X = x1;
+    *GPU_Y = y1;
+    *GPU_PARAM0 = tile;
+    *GPU_PARAM1 = blit_size;
+
+    wait_gpu();
+    *GPU_WRITE = 9;
+}
+
 // SET THE BLITTER TILE to the 16 x 16 pixel bitmap
 void set_blitter_bitmap( unsigned char tile, unsigned short *bitmap ) {
     *BLIT_WRITER_TILE = tile;
@@ -477,6 +488,19 @@ void set_blitter_chbitmap( unsigned char tile, unsigned char *bitmap ) {
     for( int i = 0; i < 8; i ++ ) {
         *BLIT_CHWRITER_LINE = i;
         *BLIT_CHWRITER_BITMAP = bitmap[i];
+    }
+}
+
+// SET THE COLOURBLITTER TILE to the 16 x 16 pixel bitmap
+void set_colourblitter_bitmap( unsigned char tile, unsigned char *bitmap ) {
+    *COLOURBLIT_WRITER_TILE = tile;
+
+    for( int i = 0; i < 16; i ++ ) {
+        *COLOURBLIT_WRITER_LINE = i;
+        for( int j = 0; j < 16; j ++ ) {
+            *COLOURBLIT_WRITER_PIXEL = j;
+            *COLOURBLIT_WRITER_COLOUR = bitmap[ i * 16 + j ];
+        }
     }
 }
 
@@ -710,10 +734,15 @@ short get_sprite_attribute( unsigned char sprite_layer, unsigned char sprite_num
     }
 }
 
-// RETURN THE COLLISION STATUS for sprite_number in sprite_layer
-//  bit is 1 if sprite is in collision with { bitmap, tilemap, other sprite layer, in layer sprite 12, in layer sprite 11 .. in layer sprite 0 }
+// RETURN THE COLLISION STATUS for sprite_number in sprite_layer to other in layer sprites
+//  bit is 1 if sprite is in collision with { in layer sprite 15, in layer sprite 14 .. in layer sprite 0 }
 unsigned short get_sprite_collision( unsigned char sprite_layer, unsigned char sprite_number ) {
     return( ( sprite_layer == 0 ) ? LOWER_SPRITE_COLLISION_BASE[sprite_number] : UPPER_SPRITE_COLLISION_BASE[sprite_number] );
+}
+// RETURN THE COLLISION STATUS for sprite number in sprite layer to other layers
+// bit is 1 if sprite is in collision with { bitmap, tilemap L, tilemap U, other sprite layer }
+unsigned short get_sprite_layer_collision( unsigned char sprite_layer, unsigned char sprite_number ) {
+    return( ( sprite_layer == 0 ) ? LOWER_SPRITE_LAYER_COLLISION_BASE[sprite_number] : UPPER_SPRITE_LAYER_COLLISION_BASE[sprite_number] );
 }
 
 // UPDATE A SPITE moving by x and y deltas, with optional wrap/kill and optional changing of the tile

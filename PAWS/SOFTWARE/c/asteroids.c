@@ -918,6 +918,7 @@ int main( void ) {
 
                 // CLEAR SCREEN, RESET TILEMAP
                 gpu_cs(); tpu_cs();
+                program_background();
                 set_tilemap();
 
                 counter = 0;
@@ -953,6 +954,7 @@ int main( void ) {
 
                         if( lives == 0 ) {
                             placeAsteroids = 4;
+                            program_background();
                             risc_ice_v_logo();
                         }
                     }

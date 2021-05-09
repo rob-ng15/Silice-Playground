@@ -28,6 +28,12 @@ algorithm gpu(
     input   uint3   character_writer_line,
     input   uint8   character_writer_bitmap,
 
+    // For set colourblit tile bitmaps
+    input   uint5   colourblit_writer_tile,
+    input   uint4   colourblit_writer_line,
+    input   uint4   colourblit_writer_pixel,
+    input   uint7   colourblit_writer_colour,
+
     // VECTOR BLOCK
     input   uint5   vector_block_number,
     input   uint7   vector_block_colour,
@@ -80,7 +86,7 @@ algorithm gpu(
     );
 
     // GPU SUBUNITS
-    uint5   gpu_busy_flags = uninitialised;
+    uint6  gpu_busy_flags = uninitialised;
     rectangle GPUrectangle(
         x <: gpu_x,
         y <: gpu_y,
@@ -116,6 +122,17 @@ algorithm gpu(
         param0 <: gpu_param0,
         param1 <: gpu_param1
     );
+    colourblit GPUcolourblit(
+        colourblit_writer_tile <: colourblit_writer_tile,
+        colourblit_writer_line <: colourblit_writer_line,
+        colourblit_writer_pixel <: colourblit_writer_pixel,
+        colourblit_writer_colour <: colourblit_writer_colour,
+
+        x <: gpu_x,
+        y <: gpu_y,
+        param0 <: gpu_param0,
+        param1 <: gpu_param1
+    );
 
     // CONTROLS FOR BITMAP PIXEL WRITER
     bitmap_write := 0;
@@ -128,6 +145,7 @@ algorithm gpu(
     GPUcircle.start := 0;
     GPUtriangle.start := 0;
     GPUblit.start := 0;
+    GPUcolourblit.start := 0;
 
     while(1) {
         if( v_gpu_write ) {
@@ -201,9 +219,14 @@ algorithm gpu(
                             GPUblit.tilecharacter = 0;
                             GPUblit.start = 1;
                         }
+                        case 9: {
+                            // BLIT 16 x 16 COLOUR TILE PARAM0 TO (X,Y) as 16 x 16
+                            gpu_active_dithermode = 0;
+                            GPUcolourblit.start = 1;
+                        }
                     }
-                    while( GPUline.busy || GPUrectangle.busy ||  GPUcircle.busy || GPUtriangle.busy ||  GPUblit.busy ) {
-                        gpu_busy_flags =  { GPUblit.busy, GPUtriangle.busy, GPUcircle.busy, GPUrectangle.busy, GPUline.busy };
+                    while( GPUline.busy || GPUrectangle.busy ||  GPUcircle.busy || GPUtriangle.busy ||  GPUblit.busy || GPUcolourblit.busy ) {
+                        gpu_busy_flags =  { GPUcolourblit.busy, GPUblit.busy, GPUtriangle.busy, GPUcircle.busy, GPUrectangle.busy, GPUline.busy };
                         onehot( gpu_busy_flags ) {
                             case 0: {
                                 bitmap_x_write = GPUline.bitmap_x_write;
@@ -225,8 +248,13 @@ algorithm gpu(
                                 bitmap_x_write = GPUblit.bitmap_x_write;
                                 bitmap_y_write = GPUblit.bitmap_y_write;
                             }
+                            case 5: {
+                                bitmap_x_write = GPUcolourblit.bitmap_x_write;
+                                bitmap_y_write = GPUcolourblit.bitmap_y_write;
+                                bitmap_colour_write = GPUcolourblit.bitmap_colour_write;
+                            }
                         }
-                        bitmap_write = GPUline.bitmap_write | GPUrectangle.bitmap_write | GPUcircle.bitmap_write | GPUtriangle.bitmap_write | GPUblit.bitmap_write;
+                        bitmap_write = GPUline.bitmap_write | GPUrectangle.bitmap_write | GPUcircle.bitmap_write | GPUtriangle.bitmap_write | GPUblit.bitmap_write | GPUcolourblit.bitmap_write;
                     }
                     gpu_active = 0;
                 }
@@ -706,6 +734,113 @@ algorithm blit (
                     }
                     gpu_active_x = gpu_active_x + 1;
                     gpu_y2 = 0;
+                }
+                gpu_active_x = 0;
+                gpu_active_y = gpu_active_y + 1;
+            }
+            active = 0;
+        }
+    }
+}
+
+// COLOURBLIT - OUTPUT PIXELS TO BLIT A 16 x 16 TILE ( PARAM1 == 0 as 16 x 16, == 1 as 32 x 32, == 2 as 64 x 64, == 3 as 128 x 128 )
+algorithm colourblittilebitmapwriter(
+    // For setting  colourblit tile bitmaps
+    input   uint5   colourblit_writer_tile,
+    input   uint4   colourblit_writer_line,
+    input   uint4   colourblit_writer_pixel,
+    input   uint7   colourblit_writer_colour,
+
+    simple_dualport_bram_port1 colourblittilemap,
+) <autorun> {
+    colourblittilemap.wenable1 := 1;
+
+    while(1) {
+        colourblittilemap.addr1 = { colourblit_writer_tile, colourblit_writer_line, colourblit_writer_pixel };
+        colourblittilemap.wdata1 = colourblit_writer_colour;
+    }
+}
+algorithm colourblit(
+    // For setting blit1 tile bitmaps
+    input   uint5   colourblit_writer_tile,
+    input   uint4   colourblit_writer_line,
+    input   uint4   colourblit_writer_pixel,
+    input   uint7   colourblit_writer_colour,
+    input   int10   x,
+    input   int10   y,
+    input   uint8   param0,
+    input   uint2   param1,
+
+    output  int10   bitmap_x_write,
+    output  int10   bitmap_y_write,
+    output  uint7   bitmap_colour_write,
+    output  uint1   bitmap_write,
+
+    input   uint1   start,
+    output  uint1   busy,
+) <autorun> {
+    // 32 x 16 x 16 7 bit tilemap for colour
+    simple_dualport_bram uint7 colourblittilemap <input!> [ 8192 ] = uninitialized;
+
+    // COLOURBLIT TILE WRITER
+    colourblittilebitmapwriter CBTBM(
+        colourblit_writer_tile <: colourblit_writer_tile,
+        colourblit_writer_line <: colourblit_writer_line,
+        colourblit_writer_pixel <: colourblit_writer_pixel,
+        colourblit_writer_colour <: colourblit_writer_colour,
+
+        colourblittilemap <:> colourblittilemap,
+    );
+
+    // POSITION IN TILE/CHARACTER
+    uint7   gpu_active_x = uninitialized;
+    uint7   gpu_active_y = uninitialized;
+
+    // POSITION ON THE SCREEN
+    int10   gpu_x1 = uninitialized;
+    int10   gpu_y1 = uninitialized;
+    uint5   gpu_x2 = uninitialised;
+    uint5   gpu_y2 = uninitialised;
+
+    // MULTIPLIER FOR THE SIZE
+    uint2   gpu_param1 = uninitialised;
+
+    // TILE/CHARACTER TO BLIT
+    uint5   gpu_tile = uninitialized;
+
+    uint1   active = 0;
+    busy := start ? 1 : active;
+
+    // tile and character bitmap addresses
+    colourblittilemap.addr0 := { gpu_tile, gpu_active_y[0,4], gpu_active_x[0,4] };
+
+    bitmap_x_write := gpu_x1 + ( gpu_active_x << gpu_param1 ) + gpu_x2;
+    bitmap_y_write := gpu_y1 + ( gpu_active_y << gpu_param1 ) + gpu_y2;
+    bitmap_colour_write := colourblittilemap.rdata0;
+    bitmap_write := 0;
+
+    while(1) {
+        if( start ) {
+            active = 1;
+            gpu_active_x = 0;
+            gpu_active_y = 0;
+            ( gpu_x1, gpu_y1 ) = copycoordinates( x, y );
+            gpu_param1 = param1;
+            gpu_tile = param0;
+            ++:
+            while( gpu_active_y < 16 ) {
+                gpu_y2 = 0;
+                while( gpu_y2 < ( 1 << gpu_param1 ) ) {
+                    while( gpu_active_x < 16 ) {
+                        gpu_x2 = 0;
+                        while( gpu_x2 < ( 1 << gpu_param1 ) ) {
+                            // OUTPUT IF NOT TRANSPARENT
+                            bitmap_write = ~colourblittilemap.rdata0[6,1];
+                            gpu_x2 = gpu_x2 + 1;
+                        }
+                        gpu_active_x = gpu_active_x + 1;
+                    }
+                    gpu_y2 = gpu_y2 + 1;
                 }
                 gpu_active_x = 0;
                 gpu_active_y = gpu_active_y + 1;

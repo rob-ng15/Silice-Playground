@@ -103,6 +103,10 @@
 #define SPRITE_X 3
 #define SPRITE_Y 4
 #define SPRITE_DOUBLE 5
+#define SPRITE_TO_BITMAP 8
+#define SPRITE_TO_LOWER_TILEMAP 4
+#define SPRITE_TO_UPPER_TILEMAP 2
+#define SPRITE_TO_OTHER_SPRITES 1
 
 typedef unsigned int size_t;
 typedef unsigned short bool;
@@ -255,6 +259,7 @@ extern void gpu_line( unsigned char, short, short, short, short );
 extern void gpu_circle( unsigned char, short, short, short, unsigned char );
 extern void gpu_blit( unsigned char, short, short, short, unsigned char );
 extern void gpu_character_blit( unsigned char, short, short, unsigned char, unsigned char );
+extern void gpu_colourblit( short, short, short, unsigned char );
 extern void gpu_triangle( unsigned char, short, short, short, short, short, short );
 extern void gpu_quadrilateral( unsigned char, short, short, short, short, short, short, short, short );
 extern void gpu_printf( unsigned char, short, short, unsigned char, const char *,...  );
@@ -264,6 +269,7 @@ extern void set_vector_vertex( unsigned char, unsigned char , unsigned char, cha
 extern void bitmap_scrollwrap( unsigned char );
 extern void set_blitter_bitmap( unsigned char, unsigned short * );
 extern void set_blitter_chbitmap( unsigned char, unsigned char * );
+extern void set_colourblitter_bitmap( unsigned char, unsigned char * );
 
 // SPRITES - MAIN ACCESS
 extern void set_sprite( unsigned char, unsigned char, unsigned char, unsigned char, short, short, unsigned char, unsigned char );
@@ -271,6 +277,7 @@ extern short get_sprite_attribute( unsigned char, unsigned char , unsigned char 
 extern void set_sprite_attribute( unsigned char, unsigned char, unsigned char, short );
 extern void update_sprite( unsigned char, unsigned char, unsigned short );
 extern unsigned short get_sprite_collision( unsigned char, unsigned char );
+extern unsigned short get_sprite_layer_collision( unsigned char, unsigned char );
 extern void set_sprite_bitmaps( unsigned char, unsigned char, unsigned short * );
 
 // SPRITES - SMT ACCESS

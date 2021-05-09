@@ -281,7 +281,8 @@ algorithm tile_map_writer(
                 while( x_cursor < 42 ) {
                     y_cursor = tm_goup ? 0 : 31;
                     y_cursor_addr = tm_goup ? 0 : 1302;
-                    tiles_copy.addr0 = x_cursor;
+                    tiles_copy.addr0 = x_cursor + y_cursor_addr;
+                    colours_copy.addr0 = x_cursor + y_cursor_addr;
                     ++:
                     new_tile = tm_scroll ? 0 : tiles_copy.rdata0;
                     new_colour = tm_scroll ? 13h1000 : colours_copy.rdata0;

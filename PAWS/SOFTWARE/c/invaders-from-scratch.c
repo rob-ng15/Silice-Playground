@@ -733,7 +733,7 @@ char moonscape_front[][42] = {
 
 // HELPER TO REMOVE ALL/SOME SPRITES
 void remove_sprites( short start_sprite ) {
-    for( short i = start_sprite; i < 13; i++ ) {
+    for( short i = start_sprite; i < 16; i++ ) {
         set_sprite_attribute( UPPER_LAYER, i, SPRITE_ACTIVE, 0 );
     }
 }
@@ -845,9 +845,9 @@ void initialise_graphics( void ) {
         set_blitter_bitmap( i + 2, &blitter_bitmaps[ 16 * i ] );
     }
 
-    // SET SPRITES - 1:0 is player, 1:1-12 are bullets
+    // SET SPRITES - 1:0 is player, 1:1-15 are bullets
     set_sprite_bitmaps( UPPER_LAYER, 0, &player_bitmaps[0] );
-    for( short i = 1; i < 13; i++ ) {
+    for( short i = 1; i < 16; i++ ) {
         set_sprite_bitmaps( UPPER_LAYER, i, &bullet_bitmaps[0] );
     }
 
@@ -1154,8 +1154,8 @@ void bomb_actions( void ) {
     short bomb_x, bomb_y;
 
     // CHECK IF HIT AND MOVE BOMBS
-    for( short i = 2; i < 13; i++ ) {
-        if( get_sprite_collision( UPPER_LAYER, i ) & 0x8000 ) {
+    for( short i = 2; i < 16; i++ ) {
+        if( get_sprite_layer_collision( UPPER_LAYER, i ) & SPRITE_TO_BITMAP ) {
             // HIT THE BUNKER
             bomb_x = get_sprite_attribute( UPPER_LAYER, i , 3 ) / 2 - rng(4) + 2;
             bomb_y = get_sprite_attribute( UPPER_LAYER, i , 4 ) / 2 + rng(2) + 1;
@@ -1183,7 +1183,7 @@ void bomb_actions( void ) {
     // CHECK IF FIRING
     AlienSwarm.lastbombtimer -= ( AlienSwarm.lastbombtimer ) > 0 ? 1 : 0;
     if( !AlienSwarm.lastbombtimer && !rng(4) ) {
-        for( short i = 2; ( i < 13 ) && !bombdropped; i++ ) {
+        for( short i = 2; ( i < 16 ) && !bombdropped; i++ ) {
             if( !get_sprite_attribute( UPPER_LAYER, i, 0 ) ) {
                 // BOMB SLOT FOUND
                 // FIND A COLUMN AND BOTTOM ROW ALIEN
@@ -1213,7 +1213,7 @@ short missile_actions( void ) {
     short missile_x, missile_y, alien_hit = 0, points = 0;
 
     // CHECK IF PLAYER MISSILE HAS HIT
-    if( get_sprite_collision( UPPER_LAYER, 1 ) & 0x8000 ) {
+    if( get_sprite_layer_collision( UPPER_LAYER, 1 ) & SPRITE_TO_BITMAP ) {
         missile_x = get_sprite_attribute( UPPER_LAYER, 1, 3 ) / 2;
         missile_y = get_sprite_attribute( UPPER_LAYER, 1, 4 ) / 2;
         for( short y = AlienSwarm.toprow; y <= AlienSwarm.bottomrow && !alien_hit; y++ ) {
@@ -1275,7 +1275,7 @@ short missile_actions( void ) {
 }
 
 void player_actions( void ) {
-    if( ( get_sprite_collision( UPPER_LAYER, 0 ) & 0x8000 ) && ( Ship.state != SHIPEXPLODE2 ) ) {
+    if( ( get_sprite_layer_collision( UPPER_LAYER, 0 ) & SPRITE_TO_BITMAP ) && ( Ship.state != SHIPEXPLODE2 ) ) {
         // ALIEN HAS HIT SHIP
         Ship.state = SHIPEXPLODE2;
         Ship.counter = 100;
@@ -1377,7 +1377,7 @@ void missile_demo( void ) {
     short missile_x, missile_y, alien_hit = 0;
 
     // CHECK IF PLAYER MISSILE HAS HIT
-    if( get_sprite_collision( UPPER_LAYER, 1 ) & 0x8000 ) {
+    if( get_sprite_layer_collision( UPPER_LAYER, 1 ) & SPRITE_TO_BITMAP ) {
         missile_x = get_sprite_attribute( UPPER_LAYER, 1, 3 ) / 2;
         missile_y = get_sprite_attribute( UPPER_LAYER, 1, 4 ) / 2;
         for( short y = AlienSwarm.toprow; y <= AlienSwarm.bottomrow && !alien_hit; y++ ) {
@@ -1425,11 +1425,11 @@ void missile_demo( void ) {
 }
 
 void demo_actions( void ) {
-    if( ( get_sprite_collision( UPPER_LAYER, 0 ) & 0x8000 ) && ( Ship.state != SHIPEXPLODE2 ) ) {
+    if( ( get_sprite_layer_collision( UPPER_LAYER, 0 ) & SPRITE_TO_BITMAP ) && ( Ship.state != SHIPEXPLODE2 ) ) {
         // ALIEN HAS HIT SHIP
         Ship.state = SHIPEXPLODE2;
         Ship.counter = 100;
-        for( short i = 1; i < 13; i++ ) {
+        for( short i = 1; i < 16; i++ ) {
             set_sprite_attribute( UPPER_LAYER, i, SPRITE_ACTIVE, 0 );
         }
     }

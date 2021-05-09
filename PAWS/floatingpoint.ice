@@ -27,8 +27,6 @@ bitfield floatingpointcsr{
 }
 
 algorithm fpu(
-    input   uint1   clock_FPU,
-
     input   uint1   start,
     output  uint1   busy,
 
@@ -488,23 +486,53 @@ algorithm floatdivide(
             bit = 31;
             ++:
             ( sigB ) = alignright( sigB );
-            if( ( expA | expB ) == 0 ) {
-                // DIVIDE BY ZERO
-                result = ( expA == 0 ) ? { quotientsign, 31b0 } : { quotientsign, 8b11111111, 23b0 };
-            } else {
-                while( bit != 63 ) {
-                    if( __unsigned({ remainder[0,31], sigA[bit,1] }) >= __unsigned(sigB) ) {
-                            remainder = __unsigned({ remainder[0,31], sigA[bit,1] }) - __unsigned(sigB);
-                            quotient[bit,1] = 1;
-                    } else {
-                        remainder = { remainder[0,31], sigA[bit,1] };
+            switch( classEa ) {
+                case 2b00: {
+                    switch( classEb ) {
+                        case 2b00: {
+                            while( bit != 63 ) {
+                                if( __unsigned({ remainder[0,31], sigA[bit,1] }) >= __unsigned(sigB) ) {
+                                        remainder = __unsigned({ remainder[0,31], sigA[bit,1] }) - __unsigned(sigB);
+                                        quotient[bit,1] = 1;
+                                } else {
+                                    remainder = { remainder[0,31], sigA[bit,1] };
+                                }
+                                bit = bit - 1;
+                            }
+                            if( quotient == 0 ) {
+                                result = { quotientsign, 31b0 };
+                            } else {
+                                ( result ) = normalise( quotientsign, quotientexp, quotient );
+                            }
+                        }
+                        case 2b01: { result = { quotientsign, 23b0, 8b11111111 }; }
+                        case 2b10: {}
+                        case 2b11: {}
                     }
-                    bit = bit - 1;
                 }
-                if( quotient == 0 ) {
-                    result = { quotientsign, 31b0 };
-                } else {
-                    ( result ) = normalise( quotientsign, quotientexp, quotient );
+                case 2b01: {
+                    switch( classEb ) {
+                        case 2b00: { result = { quotientsign, 31b0 }; }
+                        case 2b01: { result = { quotientsign, 23b0, 8b11111111 }; }
+                        case 2b10: {}
+                        case 2b11: {}
+                    }
+                }
+                case 2b10: {
+                    switch( classEb ) {
+                        case 2b00: {}
+                        case 2b01: {}
+                        case 2b10: {}
+                        case 2b11: {}
+                    }
+                }
+                case 2b11: {
+                    switch( classEb ) {
+                        case 2b00: {}
+                        case 2b01: {}
+                        case 2b10: {}
+                        case 2b11: {}
+                    }
                 }
             }
 

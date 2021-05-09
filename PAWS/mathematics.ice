@@ -230,8 +230,6 @@ algorithm aluIb101(
     }
 }
 algorithm aluI(
-    input   uint1   clock_ALU,
-
     input   uint1   start,
     output! uint1   busy,
 
@@ -660,8 +658,6 @@ algorithm aluR111(
 }
 
 algorithm aluR (
-    input   uint1   clock_ALU,
-
     input   uint1   start,
     output! uint1   busy,
 
@@ -910,8 +906,6 @@ algorithm aluR (
 
 // ALU - ALU for immediate-register operations and register-register operations
 algorithm alu(
-    input   uint1   clock_ALU,
-
     input   uint1   start,
     output  uint1   busy,
 
@@ -986,8 +980,6 @@ algorithm alu(
 
     // BASE REGISTER + IMMEDIATE ALU OPERATIONS + B EXTENSION OPERATIONS
     aluI ALUI(
-        clock_ALU <: clock_ALU,
-
         function3 <: function3,
         function7 <: function7,
         IshiftCount <: IshiftCount,
@@ -1008,8 +1000,6 @@ algorithm alu(
 
     // BASE REGISTER & REGISTER ALU OPERATIONS + B EXTENSION OPERATIONS
     aluR ALUR(
-        clock_ALU <: clock_ALU,
-
         function2 <: function2,
         function3 <: function3,
         function7 <: function7,

@@ -219,7 +219,8 @@ algorithm memmap_io (
         sprite_layer_display :> upper_sprites_display,
         collision_layer_1 <: bitmap_display,
         collision_layer_2 <: lower_tilemap_display,
-        collision_layer_3 <: lower_sprites_display
+        collision_layer_3 <: upper_tilemap_display,
+        collision_layer_4 <: lower_sprites_display
     );
 
     // Character Map Window
@@ -395,6 +396,25 @@ algorithm memmap_io (
                 case 16h8344: { readData = lower_sprites.collision_10; }
                 case 16h8346: { readData = lower_sprites.collision_11; }
                 case 16h8348: { readData = lower_sprites.collision_12; }
+                case 16h834a: { readData = lower_sprites.collision_13; }
+                case 16h834c: { readData = lower_sprites.collision_14; }
+                case 16h834e: { readData = lower_sprites.collision_15; }
+                case 16h8350: { readData = lower_sprites.layer_collision_0; }
+                case 16h8352: { readData = lower_sprites.layer_collision_1; }
+                case 16h8354: { readData = lower_sprites.layer_collision_2; }
+                case 16h8356: { readData = lower_sprites.layer_collision_3; }
+                case 16h8358: { readData = lower_sprites.layer_collision_4; }
+                case 16h835a: { readData = lower_sprites.layer_collision_5; }
+                case 16h835c: { readData = lower_sprites.layer_collision_6; }
+                case 16h835e: { readData = lower_sprites.layer_collision_7; }
+                case 16h8360: { readData = lower_sprites.layer_collision_8; }
+                case 16h8362: { readData = lower_sprites.layer_collision_9; }
+                case 16h8364: { readData = lower_sprites.layer_collision_10; }
+                case 16h8366: { readData = lower_sprites.layer_collision_11; }
+                case 16h8368: { readData = lower_sprites.layer_collision_12; }
+                case 16h836a: { readData = lower_sprites.layer_collision_13; }
+                case 16h836c: { readData = lower_sprites.layer_collision_14; }
+                case 16h836e: { readData = lower_sprites.layer_collision_15; }
 
                 // GPU and BITMAP
                 case 16h841c: { readData = ( gpu_processor.gpu_active || gpu_processor.vector_block_active ) ? 1 : 0; }
@@ -431,6 +451,25 @@ algorithm memmap_io (
                 case 16h8544: { readData = upper_sprites.collision_10; }
                 case 16h8546: { readData = upper_sprites.collision_11; }
                 case 16h8548: { readData = upper_sprites.collision_12; }
+                case 16h854a: { readData = upper_sprites.collision_13; }
+                case 16h854c: { readData = upper_sprites.collision_14; }
+                case 16h854e: { readData = upper_sprites.collision_15; }
+                case 16h8550: { readData = upper_sprites.layer_collision_0; }
+                case 16h8552: { readData = upper_sprites.layer_collision_1; }
+                case 16h8554: { readData = upper_sprites.layer_collision_2; }
+                case 16h8556: { readData = upper_sprites.layer_collision_3; }
+                case 16h8558: { readData = upper_sprites.layer_collision_4; }
+                case 16h855a: { readData = upper_sprites.layer_collision_5; }
+                case 16h855c: { readData = upper_sprites.layer_collision_6; }
+                case 16h855e: { readData = upper_sprites.layer_collision_7; }
+                case 16h8560: { readData = upper_sprites.layer_collision_8; }
+                case 16h8562: { readData = upper_sprites.layer_collision_9; }
+                case 16h8564: { readData = upper_sprites.layer_collision_10; }
+                case 16h8566: { readData = upper_sprites.layer_collision_11; }
+                case 16h8568: { readData = upper_sprites.layer_collision_12; }
+                case 16h856a: { readData = upper_sprites.layer_collision_13; }
+                case 16h856c: { readData = upper_sprites.layer_collision_14; }
+                case 16h856e: { readData = upper_sprites.layer_collision_15; }
 
                 // CHARACTER MAP
                 case 16h8614: { readData = character_map_window.tpu_active; }
@@ -569,6 +608,11 @@ algorithm memmap_io (
                 case 16h8480: { gpu_processor.character_writer_character = writeData; }
                 case 16h8484: { gpu_processor.character_writer_line = writeData; }
                 case 16h8488: { gpu_processor.character_writer_bitmap = writeData; }
+
+                case 16h8490: { gpu_processor.colourblit_writer_tile = writeData; }
+                case 16h8492: { gpu_processor.colourblit_writer_line = writeData; }
+                case 16h8494: { gpu_processor.colourblit_writer_pixel = writeData; }
+                case 16h8496: { gpu_processor.colourblit_writer_colour = writeData; }
 
                 // UPPER SPRITE LAYER - MAIN
                 case 16h8500: { upper_sprites.sprite_set_number = writeData; }

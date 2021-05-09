@@ -77,6 +77,12 @@ unsigned char volatile * BLIT_CHWRITER_TILE = (unsigned char volatile *) 0x8480;
 unsigned char volatile * BLIT_CHWRITER_LINE = (unsigned char volatile *) 0x8484;
 unsigned char volatile * BLIT_CHWRITER_BITMAP = (unsigned char volatile *) 0x8488;
 
+unsigned char volatile * COLOURBLIT_WRITER_TILE = (unsigned char volatile *) 0x8490;
+unsigned char volatile * COLOURBLIT_WRITER_LINE = (unsigned char volatile *) 0x8492;
+unsigned char volatile * COLOURBLIT_WRITER_PIXEL = (unsigned char volatile *) 0x8494;
+unsigned char volatile * COLOURBLIT_WRITER_COLOUR = (unsigned char volatile *) 0x8496;
+
+
 unsigned char volatile * VECTOR_DRAW_BLOCK = (unsigned char volatile *) 0x8420;
 unsigned char volatile * VECTOR_DRAW_COLOUR = (unsigned char volatile *) 0x8424;
 short volatile * VECTOR_DRAW_XC = (short volatile *) 0x8428;
@@ -108,6 +114,7 @@ unsigned char volatile * LOWER_SPRITE_WRITER_NUMBER = ( unsigned char volatile *
 unsigned char volatile * LOWER_SPRITE_WRITER_LINE = ( unsigned char volatile * ) 0x8324;
 unsigned short volatile * LOWER_SPRITE_WRITER_BITMAP = ( unsigned short volatile * ) 0x8328;
 unsigned short volatile * LOWER_SPRITE_COLLISION_BASE = ( unsigned short volatile * ) 0x8330;
+unsigned short volatile * LOWER_SPRITE_LAYER_COLLISION_BASE = ( unsigned short volatile * ) 0x8350;
 unsigned char volatile * LOWER_SPRITE_NUMBER_SMT = ( unsigned char volatile * ) 0x9300;
 unsigned char volatile * LOWER_SPRITE_ACTIVE_SMT = ( unsigned char volatile * ) 0x9304;
 unsigned char volatile * LOWER_SPRITE_TILE_SMT = ( unsigned char volatile * ) 0x9308;
@@ -129,6 +136,7 @@ unsigned char volatile * UPPER_SPRITE_WRITER_NUMBER = ( unsigned char volatile *
 unsigned char volatile * UPPER_SPRITE_WRITER_LINE = ( unsigned char volatile * ) 0x8524;
 unsigned short volatile * UPPER_SPRITE_WRITER_BITMAP = ( unsigned short volatile * ) 0x8528;
 unsigned short volatile * UPPER_SPRITE_COLLISION_BASE = ( unsigned short volatile * ) 0x8530;
+unsigned short volatile * UPPER_SPRITE_LAYER_COLLISION_BASE = ( unsigned short volatile * ) 0x8550;
 unsigned char volatile * UPPER_SPRITE_NUMBER_SMT = ( unsigned char volatile * ) 0x9500;
 unsigned char volatile * UPPER_SPRITE_ACTIVE_SMT = ( unsigned char volatile * ) 0x9504;
 unsigned char volatile * UPPER_SPRITE_TILE_SMT = ( unsigned char volatile * ) 0x9508;

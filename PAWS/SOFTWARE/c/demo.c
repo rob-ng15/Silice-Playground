@@ -20,6 +20,72 @@ unsigned short tilemap_bitmap[] = {
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000
 };
 
+// BLITTER BITMAPS - ALIENS FROM SPACE INVADERS
+unsigned short blitter_bitmaps[] = {
+    0b0000011000000000,
+    0b0000111110000000,
+    0b0001111111000000,
+    0b0011011011000000,
+    0b0011111111000000,
+    0b0001011010000000,
+    0b0010000001000000,
+    0b0001000010000000,
+    0,0,0,0,0,0,0,0,
+
+    0b0000011000000000,
+    0b0000111110000000,
+    0b0001111111000000,
+    0b0011011011000000,
+    0b0011111111000000,
+    0b0000100100000000,
+    0b0001011010000000,
+    0b0010100101000000,
+    0,0,0,0,0,0,0,0,
+
+    0b0010000010000000,
+    0b0001000100000000,
+    0b0011111110000000,
+    0b0110111011000000,
+    0b1111111111100000,
+    0b1011111110100000,
+    0b1010000010100000,
+    0b0001101100000000,
+    0,0,0,0,0,0,0,0,
+
+    0b0010000010000000,
+    0b1001000100100000,
+    0b1011111110100000,
+    0b1110111011100000,
+    0b1111111111100000,
+    0b0111111111000000,
+    0b0010000010000000,
+    0b0100000001000000,
+    0,0,0,0,0,0,0,0,
+
+    0b0000111100000000,
+    0b0111111111100000,
+    0b1111111111110000,
+    0b1110011001110000,
+    0b1111111111110000,
+    0b0011100111000000,
+    0b0110011001100000,
+    0b0011000011000000,
+    0,0,0,0,0,0,0,0,
+
+    0b0000111100000000,
+    0b0111111111100000,
+    0b1111111111110000,
+    0b1110011001110000,
+    0b1111111111110000,
+    0b0001100110000000,
+    0b0011011011000000,
+    0b1100000000110000,
+    0,0,0,0,0,0,0,0
+};
+
+// STORAGE FOR COLOUR BLITTER
+unsigned char colour_blitter_bitmap[ 256 * 8 ];
+
 char *backgroundnames[] = {
     "BKG_SOLID",
     "BKG_5050_V",
@@ -256,12 +322,35 @@ void gpudemo( void ) {
     sleep( 1000, 0 );
 
     // BLITTER
+    // SET BLITTER OBJECTS - ALIENS
+    for( short i = 0; i < 6; i++ ) {
+        set_blitter_bitmap( i, &blitter_bitmaps[ 16 * i ] );
+    }
+    gpu_cs();
+    tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Blitter Test" );
+    for( i = 0; i < 1024; i++ ) {
+        gpu_blit( rng( 64 ), rng( 320 ), rng( 240 ), rng( 6 ), rng( 4 ) );
+    }
+    sleep( 1000, 0 );
 
     // CHARACTER BLITTER
     gpu_cs();
     tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Character Blitter Test" );
     for( i = 0; i < 1024; i++ ) {
         gpu_character_blit( rng( 64 ), rng( 320 ), rng( 240 ), rng( 256 ), rng( 4 ) );
+    }
+    sleep( 1000, 0 );
+
+    // COLOUR BLITTER
+    // SET COLOUR BLITTER BITMAPS TO RANDOM
+    for( i = 0; i < 256 * 8; i++ )
+        colour_blitter_bitmap[i] = rng(65);
+    for( i = 0; i < 8; i++ )
+        set_colourblitter_bitmap( i, &colour_blitter_bitmap[ 256 * i ] );
+    gpu_cs();
+    tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Colour Blitter Test" );
+    for( i = 0; i < 1024; i++ ) {
+        gpu_colourblit( rng( 320 ), rng( 240 ), rng( 8 ), rng( 4 ) );
     }
     sleep( 1000, 0 );
 
