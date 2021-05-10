@@ -62,7 +62,7 @@ void tilemapdemo( void ) {
         await_vblank();
         // LOWER LEFT AND UP
         (void)tilemap_scrollwrapclear( LOWER_LAYER, 5 );
-        //(void)tilemap_scrollwrapclear( LOWER_LAYER, 6 );
+        (void)tilemap_scrollwrapclear( LOWER_LAYER, 6 );
         // UPPER RIGHT AND DOWN
         (void)tilemap_scrollwrapclear( UPPER_LAYER, 7 );
         //(void)tilemap_scrollwrapclear( UPPER_LAYER, 8 );

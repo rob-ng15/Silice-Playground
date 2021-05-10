@@ -841,8 +841,8 @@ algorithm colourblit(
                         gpu_active_x = gpu_active_x + 1;
                     }
                     gpu_y2 = gpu_y2 + 1;
+                    gpu_active_x = 0;
                 }
-                gpu_active_x = 0;
                 gpu_active_y = gpu_active_y + 1;
             }
             active = 0;
