@@ -144,6 +144,62 @@ unsigned short blitter_bitmaps[] = {
     0,0,0,0,0,0,0,0,0
 };
 
+// STORAGE FOR COLOUR BLITTER
+unsigned char colour_blitter_strings[][16] = {
+
+    "....C.C.........",
+    "....C.C.........",
+    "C..CCCCC..C.....",
+    "CCCCYCYCCCC.....",
+    "...CCCCC........",
+    ".BBBCCCBBB......",
+    "BBB.CCC.BBB.....",
+    "BB...C...BB.....",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+
+    "....C.C.........",
+    "C...C.C...C.....",
+    "CCCCCCCCCCC.....",
+    "...CYCYC........",
+    "BBBCCCCCBBB.....",
+    "BB.CCCCC.BB.....",
+    "B...CCC...B.....",
+    ".....C..........",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+
+    "C...C.C...C.....",
+    "C..CCCCC..C.....",
+    ".CCCYCYCCC......",
+    "B..CCCCC..B.....",
+    "BBBBCCCBBBB.....",
+    ".BB.CCC.BB......",
+    ".....C..........",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................"
+};
+unsigned char colour_blitter_bitmap[ 256 ];
+
 // PLAYER IS A SPRITE, 1 DESIGN FOR THE SHIP
 unsigned short player_bitmaps[128] = {
     0b0000010000000000,
@@ -834,6 +890,8 @@ void draw_moonscape( void ) {
 }
 
 void initialise_graphics( void ) {
+    unsigned char colour;
+
     // SET THE BACKGROUND - MULTICOLOURED STARFIELD VIA COPPER
     program_background();
     // CLEAR THE TILEMAPS
@@ -843,6 +901,42 @@ void initialise_graphics( void ) {
     // SET BLITTER OBJECTS - ALIENS, EXPLOSIONS, UFO AND BUNKERS
     for( short i = 0; i < 15; i++ ) {
         set_blitter_bitmap( i + 2, &blitter_bitmaps[ 16 * i ] );
+    }
+
+    // SET COLOUR BLITTER OBJECTS - ALIENS FROM GALAXIAN
+    for( short i = 0; i < 3; i++ ) {
+        for( short j = 0; j < 3; j++ ) {
+            for( short y = 0; y < 16; y++ ) {
+                for( short x = 0; x < 16; x++ ) {
+                    switch( colour_blitter_strings[ j * 16 + y ][x] ) {
+                        case '.':
+                            colour = TRANSPARENT;
+                            break;
+                        case 'B':
+                            colour = DKBLUE;
+                            break;
+                        case 'C':
+                            switch( i ) {
+                                case 0:
+                                    colour = RED;
+                                    break;
+                                case 1:
+                                    colour = DKMAGENTA;
+                                    break;
+                                case 2:
+                                    colour = DKCYAN - 1;
+                                    break;
+                            }
+                            break;
+                        case 'Y':
+                            colour = YELLOW;
+                            break;
+                    }
+                    colour_blitter_bitmap[ y * 16 + x ] = colour;
+                }
+            }
+            set_colourblitter_bitmap( 3 + i * 3 + j, &colour_blitter_bitmap[ 0 ] );
+        }
     }
 
     // SET SPRITES - 1:0 is player, 1:1-15 are bullets
@@ -987,7 +1081,11 @@ void draw_aliens( void ) {
                 case 1:
                 case 2:
                 case 3:
-                    gpu_blit( WHITE, Aliens[ y * 11 + x ].x, Aliens[ y * 11 + x ].y, Aliens[ y * 11 + x ].type * 2 +  Aliens[ y * 11 + x ].animation_count, 0 );
+                    if( Ship.level & 1 ) {
+                        gpu_colourblit( Aliens[ y * 11 + x ].x, Aliens[ y * 11 + x ].y, Aliens[ y * 11 + x ].type * 3 +  Aliens[ y * 11 + x ].animation_count, 0 );
+                    } else {
+                        gpu_blit( WHITE, Aliens[ y * 11 + x ].x, Aliens[ y * 11 + x ].y, Aliens[ y * 11 + x ].type * 2 +  Aliens[ y * 11 + x ].animation_count, 0 );
+                    }
                     break;
                 case 4:
                     break;
@@ -1090,7 +1188,18 @@ void move_aliens( void ) {
         case 1:
             if( ( AlienSwarm.count > 1 ) || ( ( AlienSwarm.count == 1 ) && framebuffer ) ) {
                 Aliens[ AlienSwarm.row * 11 + AlienSwarm.column ].x += ( AlienSwarm.direction == 1 ) ? 8 : -8;
-                Aliens[ AlienSwarm.row * 11 + AlienSwarm.column ].animation_count = !Aliens[ AlienSwarm.row * 11 + AlienSwarm.column ].animation_count;
+                if( Ship.level & 1 ) {
+                    switch( Aliens[ AlienSwarm.row * 11 + AlienSwarm.column ].animation_count ) {
+                        case 2:
+                            Aliens[ AlienSwarm.row * 11 + AlienSwarm.column ].animation_count = 0;
+                            break;
+                        default:
+                            Aliens[ AlienSwarm.row * 11 + AlienSwarm.column ].animation_count++;
+                            break;
+                    }
+                } else {
+                    Aliens[ AlienSwarm.row * 11 + AlienSwarm.column ].animation_count = !Aliens[ AlienSwarm.row * 11 + AlienSwarm.column ].animation_count;
+                }
             }
             break;
 
