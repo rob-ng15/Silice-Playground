@@ -1,55 +1,327 @@
 #include "PAWSlibrary.h"
 
-// ASTEROIDS BITMAP AS AN EXAMPLE
-unsigned short asteroid_bitmap[] = {
-    0x07f0, 0x0ff8, 0x1ffe, 0x1fff, 0x3fff, 0xffff, 0xfffe, 0xfffc,
-    0xffff, 0x7fff, 0x7fff, 0x7ffe, 0x3ffc, 0x3ffc, 0x0ff8, 0x00f0,
-    0x1008, 0x3c1c, 0x7f1e, 0xffff, 0x7ffe, 0x7ffe, 0x3ff8, 0x3ff0,
-    0x1ff8, 0x0ff8, 0x1ffc, 0x7ffe, 0xffff, 0x7ffe, 0x3dfc, 0x1878,
-    0x0787, 0x1f8e, 0x0fde, 0x67fc, 0xfffc, 0xfffe, 0xffff, 0x7fff,
-    0x7ffc, 0x3ff8, 0x3ffc, 0x7ffe, 0xffff, 0xfffe, 0x3ffc, 0x73f8,
-    0x1800, 0x3f98, 0x3ffc, 0x1ffe, 0x1ffe, 0x1ffe, 0x7ffe, 0xffff,
-    0xffff, 0xffff, 0xfffe, 0xfffe, 0x3ffc, 0x1ff0, 0x07c0, 0x0180,
-    0x0ff0, 0x1ffc, 0x1ffe, 0x3ffe, 0x3fff, 0x7fff, 0x7fff, 0xffff,
-    0xffff, 0xfffe, 0xfffc, 0x7ffc, 0x3ffc, 0x3ff0, 0x3ff0, 0x07e0,
-    0x0000, 0x0000, 0x0000, 0x0180, 0x03c0, 0x03e0, 0x07f8, 0x07fc,
-    0x0ffc, 0x1ffc, 0x1ff8, 0x0ff8, 0x01f0, 0x0000, 0x0000, 0x0000,
-    0x0600, 0x0fe0, 0x1ff8, 0x3ffc, 0x7ffe, 0xfffe, 0x0fff, 0x1fff,
-    0x1fff, 0x3fff, 0x7fff, 0x7ffe, 0x3e7c, 0x3c38, 0x3800, 0x3000,
-    0x0020, 0x4206, 0x0006, 0x1820, 0x1800, 0x0081, 0x0400, 0x4010,
-    0x0000, 0x0300, 0x0302, 0x6010, 0x6000, 0x0000, 0x0419, 0x8018
+// PACMAN GHOST GRAPHICS - 3 LAYERS - BODY - EYE WHITES - PUPILS
+// BODY 2 EACH FOR RIGHT, DOWN, LEFT, UP
+unsigned short body_bitmap[] = {
+    0b0000001111000000,
+    0b0000111111110000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0110111001110110,
+    0b0100011001100010,
+    0,
+
+    0b0000001111000000,
+    0b0000111111110000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111101111011110,
+    0b0011000110001100,
+    0,
+
+    0b0000001111000000,
+    0b0000111111110000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0110111001110110,
+    0b0100011001100010,
+    0,
+
+    0b0000001111000000,
+    0b0000111111110000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111101111011110,
+    0b0011000110001100,
+    0,
+
+    0b0000001111000000,
+    0b0000111111110000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0110111001110110,
+    0b0100011001100010,
+    0,
+
+    0b0000001111000000,
+    0b0000111111110000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111101111011110,
+    0b0011000110001100,
+    0,
+
+    0b0000001111000000,
+    0b0000111111110000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0110111001110110,
+    0b0100011001100010,
+    0,
+
+    0b0000001111000000,
+    0b0000111111110000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111101111011110,
+    0b0011000110001100,
+    0
 };
+
+// EYE WHITES 1 EACH FOR RIGHT, DOWN, LEFT, UP PLUS 1 EACH FOR POWER UP STATUS (mouth)
+unsigned short eyewhites_bitmap[] = {
+    0,0,0,0,
+    0b0000011000011000,
+    0b0000111100111100,
+    0b0000111100111100,
+    0b0000111100111100,
+    0b0000011000011000,
+    0,0,0,0,0,0,0,
+
+    0,0,0,0,
+    0b0000110000110000,
+    0b0001111001111000,
+    0b0001111001111000,
+    0b0001111001111000,
+    0b0000110000110000,
+    0,0,0,0,0,0,0,
+
+    0,0,0,0,
+    0b0001100001100000,
+    0b0011110011110000,
+    0b0011110011110000,
+    0b0011110011110000,
+    0b0001100001100000,
+    0,0,0,0,0,0,0,
+
+    0,
+    0b0000110000110000,
+    0b0001111001111000,
+    0b0001111001111000,
+    0b0001111001111000,
+    0b0000110000110000,
+    0,0,0,0,0,0,0,0,0,0,
+
+    0,0,0,0,0,0,0,0,0,0,0,
+    0b0001100110011000,
+    0b0010011001100100,
+    0,0,0,
+
+    0,0,0,0,0,0,0,0,0,0,0,
+    0b0001100110011000,
+    0b0010011001100100,
+    0,0,0,
+
+    0,0,0,0,0,0,0,0,0,0,0,
+    0b0001100110011000,
+    0b0010011001100100,
+    0,0,0,
+
+    0,0,0,0,0,0,0,0,0,0,0,
+    0b0001100110011000,
+    0b0010011001100100,
+    0,0,0
+};
+
+// PUPILS 1 EACH FOR RIGHT, DOWN, LEFT, UP PLUS 1 EACH FOR POWER UP STATUS (PUPILS)
+unsigned short pupils_bitmap[] = {
+    0,0,0,0,0,0,
+    0b0000001100001100,
+    0b0000001100001100,
+    0,0,0,0,0,0,0,0,
+
+    0,0,0,0,0,0,0,
+    0b0000110000110000,
+    0b0000110000110000,
+    0,0,0,0,0,0,0,
+
+    0,0,0,0,0,0,
+    0b0011000011000000,
+    0b0011000011000000,
+    0,0,0,0,0,0,0,0,
+
+    0,
+    0b0000110000110000,
+    0b0000110000110000,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,
+
+    0,0,0,0,0,
+    0b0000011001100000,
+    0b0000011001100000,
+    0,0,0,0,0,0,0,0,0,
+
+    0,0,0,0,0,
+    0b0000011001100000,
+    0b0000011001100000,
+    0,0,0,0,0,0,0,0,0,
+
+    0,0,0,0,0,
+    0b0000011001100000,
+    0b0000011001100000,
+    0,0,0,0,0,0,0,0,0,
+
+    0,0,0,0,0,
+    0b0000011001100000,
+    0b0000011001100000,
+    0,0,0,0,0,0,0,0,0
+};
+
 
 int main( void ) {
     INITIALISEMEMORY();
+    short animation_count = 0, animation_frame = 0, move_count = 0;
 
-    for( short i = 0; i < 16; i++ ) {
-        set_sprite_bitmaps( LOWER_LAYER, i, &asteroid_bitmap[0] );
-        set_sprite( 0, i, 1, i + 1, i * 40, 16, 0, 0 );
-        set_sprite_bitmaps( UPPER_LAYER, i, &asteroid_bitmap[0] );
-        set_sprite( 1, i, 1, i + 1, i * 40, 32, 0, 0 );
+    char ghost_direction[4] = { 0, 1, 2, 3 };
+
+    for( short i = 0; i < 4; i++ ) {
+        set_sprite_bitmaps( LOWER_LAYER, i, &body_bitmap[0] );
+        set_sprite_bitmaps( UPPER_LAYER, i, &eyewhites_bitmap[0] );
+        set_sprite_bitmaps( UPPER_LAYER, i + 4, &pupils_bitmap[0] );
     }
 
-    gpu_rectangle( BLUE, 110, 70, 210, 170 );
+    set_sprite( LOWER_LAYER, 0, 1, RED, 144, 64, 0, 1 );
+    set_sprite( UPPER_LAYER, 0, 1, WHITE, 144, 64, 0, 1 );
+    set_sprite( UPPER_LAYER, 4, 1, BLUE, 144, 64, 0, 1 );
+
+    set_sprite( LOWER_LAYER, 1, 1, PINK, 464, 64, 2, 1 );
+    set_sprite( UPPER_LAYER, 1, 1, WHITE, 464, 64, 1, 1 );
+    set_sprite( UPPER_LAYER, 5, 1, BLUE, 464, 64, 1, 1 );
+
+    set_sprite( LOWER_LAYER, 2, 1, CYAN, 464, 384, 4, 1 );
+    set_sprite( UPPER_LAYER, 2, 1, WHITE, 464, 384, 2, 1 );
+    set_sprite( UPPER_LAYER, 6, 1, BLUE, 464, 384, 2, 1 );
+
+    set_sprite( LOWER_LAYER, 3, 1, LTORANGE, 144, 384, 6, 1 );
+    set_sprite( UPPER_LAYER, 3, 1, WHITE, 144, 384, 3, 1 );
+    set_sprite( UPPER_LAYER, 7, 1, BLUE, 144, 384, 3, 1 );
 
     while(1) {
         await_vblank();
+        animation_frame = ( animation_count & 64 ) ? 1 : 0;
 
-        tpu_set( 1, 29, TRANSPARENT, YELLOW ); tpu_printf( "SPRITES : %04x LAYERS :  %04x ",
-            get_sprite_collision( LOWER_LAYER, 0 ),
-            get_sprite_layer_collision( LOWER_LAYER, 0 ) );
+        // ANIMATE THE GHOSTS
+        for( short i = 0; i < 4; i++ ) {
+            set_sprite_attribute( LOWER_LAYER, i, SPRITE_TILE, ghost_direction[i] * 2 + animation_frame );
+            set_sprite_attribute( UPPER_LAYER, i, SPRITE_TILE, ghost_direction[i] );
+            set_sprite_attribute( UPPER_LAYER, i + 4, SPRITE_TILE, ghost_direction[i] );
+        }
 
-        // LEFT
-        if( ( get_buttons() & 32 ) != 0 )
-            update_sprite( LOWER_LAYER, 0, 0b0000000011111 );
+        // MOVE THE GHOSTS
+        for( short i = 0; i <4; i++ ) {
+            switch( ghost_direction[i] ) {
+                case 0:
+                    update_sprite( LOWER_LAYER, i, 0b0000000000001 );
+                    update_sprite( UPPER_LAYER, i, 0b0000000000001 );
+                    update_sprite( UPPER_LAYER, i + 4, 0b0000000000001 );
+                    break;
+                case 1:
+                    update_sprite( LOWER_LAYER, i, 0b0000000100000 );
+                    update_sprite( UPPER_LAYER, i, 0b0000000100000 );
+                    update_sprite( UPPER_LAYER, i + 4, 0b0000000100000 );
+                    break;
+                case 2:
+                    update_sprite( LOWER_LAYER, i, 0b0000000011111 );
+                    update_sprite( UPPER_LAYER, i, 0b0000000011111 );
+                    update_sprite( UPPER_LAYER, i + 4, 0b0000000011111 );
+                    break;
+                case 3:
+                    update_sprite( LOWER_LAYER, i, 0b0001111100000 );
+                    update_sprite( UPPER_LAYER, i, 0b0001111100000 );
+                    update_sprite( UPPER_LAYER, i + 4, 0b0001111100000 );
+                    break;
+            }
+        }
+
+        // CHECK IF MOVED 160 SPACES
+        move_count++;
+        if( move_count == 320 ) {
+            move_count = 0;
+            for( short i = 0; i < 4; i++ ) {
+                ghost_direction[i] = ( ghost_direction[i] + 1 ) & 3;
+            }
+        }
+
+       // LEFT
+        if( ( get_buttons() & 32 ) != 0 ) {}
         // RIGHT
-        if( ( get_buttons() & 64 ) != 0 )
-            update_sprite( LOWER_LAYER, 0, 0b0000000000001 );
+        if( ( get_buttons() & 64 ) != 0 ) {}
         // UP
-        if( ( get_buttons() & 8 ) != 0 )
-            update_sprite( LOWER_LAYER, 0, 0b0001111100000 );
+        if( ( get_buttons() & 8 ) != 0 ) {}
         // DOWN
-        if( ( get_buttons() & 16 ) != 0 )
-            update_sprite( LOWER_LAYER, 0, 0b0000000100000 );
+        if( ( get_buttons() & 16 ) != 0 ) {}
+
+        animation_count++;
     }
 }

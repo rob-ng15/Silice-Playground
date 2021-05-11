@@ -13,13 +13,16 @@ bitfield colour6 {
     uint2   blue
 }
 
-// Entry in the charactermap
-bitfield charactermapentry {
+bitfield colour13 {
     uint1   alpha,
-    uint6   background,
-    uint6   foreground,
-    uint8   character
+    uint2   backred,
+    uint2   backgreen,
+    uint2   backblue,
+    uint2   forered,
+    uint2   foregreen,
+    uint2   foreblue
 }
+
 
 // Vertex in the vector block
 bitfield vectorentry {

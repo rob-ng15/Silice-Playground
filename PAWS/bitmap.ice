@@ -44,22 +44,11 @@ algorithm bitmap(
 
     while(1) {
         switch( bitmap_write_offset ) {
-            case 1: {
-                x_offset = ( x_offset == 319 ) ? 0 : x_offset + 1;
-            }
-            case 2: {
-                y_offset = ( y_offset == 239 ) ? 0 : y_offset + 1;
-            }
-            case 3: {
-                x_offset = ( x_offset == 0 ) ? 319 : x_offset - 1;
-            }
-            case 4: {
-                y_offset = ( y_offset == 0 ) ? 239 : y_offset - 1;
-            }
-            case 5: {
-                x_offset = 0;
-                y_offset = 0;
-            }
+            case 1: { x_offset = ( x_offset == 319 ) ? 0 : x_offset + 1; }
+            case 2: { y_offset = ( y_offset == 239 ) ? 0 : y_offset + 1; }
+            case 3: { x_offset = ( x_offset == 0 ) ? 319 : x_offset - 1; }
+            case 4: { y_offset = ( y_offset == 0 ) ? 239 : y_offset - 1; }
+            case 5: { x_offset = 0; y_offset = 0; }
         }
    }
 }
