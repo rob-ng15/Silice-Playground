@@ -1,7 +1,6 @@
 ./clang.sh c/ascii-invaders.c PAWS/LLVM-I.PAW
 ./clang.sh c/asteroids.c PAWS/LLVM-A.PAW
 ./clang.sh c/chess.c PAWS/LLVM-C.PAW
-./clang.sh c/copper_test.c PAWS/LLVM-C2.PAW
 ./clang.sh c/demo.c PAWS/LLVM-D.PAW
 ./clang.sh c/fractal.c PAWS/LLVM-F.PAW
 ./clang.sh c/fractal-full.c PAWS/LLVM-F2.PAW

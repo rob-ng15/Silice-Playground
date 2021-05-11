@@ -1,7 +1,6 @@
 ./compile.sh c/ascii-invaders.c PAWS/INVADERS.PAW
 ./compile.sh c/asteroids.c PAWS/ASTROIDS.PAW
 ./compile.sh c/chess.c PAWS/CHESS.PAW
-./compile.sh c/copper_test.c PAWS/COPPER.PAW
 ./compile.sh c/demo.c PAWS/DEMO.PAW
 ./compile.sh c/fractal.c PAWS/FRACTAL.PAW
 ./compile.sh c/fractal-full.c PAWS/FRACTAL2.PAW

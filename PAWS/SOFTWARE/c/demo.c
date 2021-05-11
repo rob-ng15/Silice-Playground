@@ -251,6 +251,10 @@ void displayreset( void ) {
     tilemap_scrollwrapclear( LOWER_LAYER, 9 );
     tilemap_scrollwrapclear( UPPER_LAYER, 9 );
     set_background( BLACK, BLACK, BKG_SOLID );
+    for( short i = 0; i < 16; i++ ) {
+        set_sprite_attribute( LOWER_LAYER, i, SPRITE_ACTIVE, 0 );
+        set_sprite_attribute( UPPER_LAYER, i, SPRITE_ACTIVE, 0 );
+    }
 }
 
 // DISPLAY COLOUR CHART
@@ -279,6 +283,43 @@ void backgrounddemo( void ) {
         tpu_printf_centre( 29, TRANSPARENT, WHITE, backgroundnames[bkg] );
         sleep( 1000, 0 );
     }
+
+    displayreset();
+
+    tpu_printf_centre( 28, TRANSPARENT, WHITE, "COPPER Rainbow Stars Test" );
+    copper_startstop( 0 );
+    copper_program( 0, COPPER_WAIT_Y, 7, 0, BKG_SNOW, BLACK, WHITE );
+    copper_program( 1, COPPER_WAIT_X, 7, 0, BKG_SNOW, BLACK, WHITE );
+    copper_program( 2, COPPER_JUMP, COPPER_JUMP_IF_Y_LESS, 64, 0, 0, 1 );
+    copper_program( 3, COPPER_WAIT_X, 7, 0, BKG_SNOW, BLACK, RED );
+    copper_program( 4, COPPER_JUMP, COPPER_JUMP_IF_Y_LESS, 128, 0, 0, 3 );
+    copper_program( 5, COPPER_WAIT_X, 7, 0, BKG_SNOW, BLACK, ORANGE );
+    copper_program( 6, COPPER_JUMP, COPPER_JUMP_IF_Y_LESS, 160, 0, 0, 5 );
+    copper_program( 7, COPPER_WAIT_X, 7, 0, BKG_SNOW, BLACK, YELLOW );
+    copper_program( 8, COPPER_JUMP, COPPER_JUMP_IF_Y_LESS, 192, 0, 0, 7 );
+    copper_program( 9, COPPER_WAIT_X, 7, 0, BKG_SNOW, BLACK, GREEN );
+    copper_program( 10, COPPER_JUMP, COPPER_JUMP_IF_Y_LESS, 224, 0, 0, 9 );
+    copper_program( 11, COPPER_WAIT_X, 7, 0, BKG_SNOW, BLACK, LTBLUE );
+    copper_program( 12, COPPER_JUMP, COPPER_JUMP_IF_Y_LESS, 256, 0, 0, 11 );
+    copper_program( 13, COPPER_WAIT_X, 7, 0, BKG_SNOW, BLACK, PURPLE );
+    copper_program( 14, COPPER_JUMP, COPPER_JUMP_IF_Y_LESS, 288, 0, 0, 13 );
+    copper_program( 15, COPPER_WAIT_X, 7, 0, BKG_SNOW, BLACK, MAGENTA );
+    copper_program( 16, COPPER_JUMP, COPPER_JUMP_IF_NOT_VBLANK, 0, 0, 0, 15 );
+    copper_program( 17, COPPER_JUMP, COPPER_JUMP_ALWAYS, 0, 0, 0, 1 );
+    copper_startstop( 1 );
+    sleep( 4000, 0 );
+
+    tpu_printf_centre( 28, TRANSPARENT, WHITE, "COPPER Twinkling Stars Test" );
+    copper_startstop( 0 );
+    copper_program( 0, COPPER_VARIABLE, COPPER_SET_VARIABLE, 1, 0, 0, 0 );
+    copper_program( 1, COPPER_WAIT_Y, 6, 0, BKG_SNOW, BLACK, 0 );
+    copper_program( 2, COPPER_SET_FROM_VARIABLE, 1, 0, 0, 0, 0 );
+    copper_program( 3, COPPER_VARIABLE, COPPER_ADD_VARIABLE, 1, 0, 0, 0 );
+    copper_program( 4, COPPER_JUMP, COPPER_JUMP_IF_NOT_VBLANK, 0, 0, 0, 4 );
+    copper_program( 5, COPPER_JUMP, COPPER_JUMP_IF_VARIABLE_LESS, 64, 0, 0, 1 );
+    copper_program( 17, COPPER_JUMP, COPPER_JUMP_ALWAYS, 0, 0, 0, 0 );
+    copper_startstop( 1 );
+    sleep( 4000, 0 );
 }
 
 // PUT SOME OBJECTS ON THE TILEMAP AND WRAP LOWER LAYER UP AND LEFT , UPPER LAYER DOWN AND RIGHT
@@ -458,7 +499,7 @@ void ditherdemo( void ) {
     unsigned char dithermode = 0;
     unsigned short x, y;
 
-    gpu_cs();
+    displayreset();
     tpu_printf_centre( 28, TRANSPARENT, WHITE, "GPU Dither Modes" );
 
     for( y = 0; y < 4; y++ ) {
@@ -470,6 +511,361 @@ void ditherdemo( void ) {
     }
     gpu_dither( DITHEROFF );
     sleep( 2000, 0 );
+}
+
+// PACMAN GHOST GRAPHICS - 3 LAYERS - BODY - EYE WHITES - PUPILS
+// BODY 2 EACH FOR RIGHT, DOWN, LEFT, UP
+unsigned short body_bitmap[] = {
+    0b0000001111000000,
+    0b0000111111110000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0110111001110110,
+    0b0100011001100010,
+    0,
+
+    0b0000001111000000,
+    0b0000111111110000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111101111011110,
+    0b0011000110001100,
+    0,
+
+    0b0000001111000000,
+    0b0000111111110000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0110111001110110,
+    0b0100011001100010,
+    0,
+
+    0b0000001111000000,
+    0b0000111111110000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111101111011110,
+    0b0011000110001100,
+    0,
+
+    0b0000001111000000,
+    0b0000111111110000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0110111001110110,
+    0b0100011001100010,
+    0,
+
+    0b0000001111000000,
+    0b0000111111110000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111101111011110,
+    0b0011000110001100,
+    0,
+
+    0b0000001111000000,
+    0b0000111111110000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0110111001110110,
+    0b0100011001100010,
+    0,
+
+    0b0000001111000000,
+    0b0000111111110000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111101111011110,
+    0b0011000110001100,
+    0
+};
+
+// EYE WHITES 1 EACH FOR RIGHT, DOWN, LEFT, UP PLUS 1 EACH FOR POWER UP STATUS (mouth)
+unsigned short eyewhites_bitmap[] = {
+    0,0,0,0,
+    0b0000011000011000,
+    0b0000111100111100,
+    0b0000111100111100,
+    0b0000111100111100,
+    0b0000011000011000,
+    0,0,0,0,0,0,0,
+
+    0,0,0,0,
+    0b0000110000110000,
+    0b0001111001111000,
+    0b0001111001111000,
+    0b0001111001111000,
+    0b0000110000110000,
+    0,0,0,0,0,0,0,
+
+    0,0,0,0,
+    0b0001100001100000,
+    0b0011110011110000,
+    0b0011110011110000,
+    0b0011110011110000,
+    0b0001100001100000,
+    0,0,0,0,0,0,0,
+
+    0,
+    0b0000110000110000,
+    0b0001111001111000,
+    0b0001111001111000,
+    0b0001111001111000,
+    0b0000110000110000,
+    0,0,0,0,0,0,0,0,0,0,
+
+    0,0,0,0,0,0,0,0,0,0,0,
+    0b0001100110011000,
+    0b0010011001100100,
+    0,0,0,
+
+    0,0,0,0,0,0,0,0,0,0,0,
+    0b0001100110011000,
+    0b0010011001100100,
+    0,0,0,
+
+    0,0,0,0,0,0,0,0,0,0,0,
+    0b0001100110011000,
+    0b0010011001100100,
+    0,0,0,
+
+    0,0,0,0,0,0,0,0,0,0,0,
+    0b0001100110011000,
+    0b0010011001100100,
+    0,0,0
+};
+
+// PUPILS 1 EACH FOR RIGHT, DOWN, LEFT, UP PLUS 1 EACH FOR POWER UP STATUS (PUPILS)
+unsigned short pupils_bitmap[] = {
+    0,0,0,0,0,0,
+    0b0000001100001100,
+    0b0000001100001100,
+    0,0,0,0,0,0,0,0,
+
+    0,0,0,0,0,0,0,
+    0b0000110000110000,
+    0b0000110000110000,
+    0,0,0,0,0,0,0,
+
+    0,0,0,0,0,0,
+    0b0011000011000000,
+    0b0011000011000000,
+    0,0,0,0,0,0,0,0,
+
+    0,
+    0b0000110000110000,
+    0b0000110000110000,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,
+
+    0,0,0,0,0,
+    0b0000011001100000,
+    0b0000011001100000,
+    0,0,0,0,0,0,0,0,0,
+
+    0,0,0,0,0,
+    0b0000011001100000,
+    0b0000011001100000,
+    0,0,0,0,0,0,0,0,0,
+
+    0,0,0,0,0,
+    0b0000011001100000,
+    0b0000011001100000,
+    0,0,0,0,0,0,0,0,0,
+
+    0,0,0,0,0,
+    0b0000011001100000,
+    0b0000011001100000,
+    0,0,0,0,0,0,0,0,0
+};
+
+void spritedemo( void ) {
+    short animation_count = 0, animation_frame = 0, move_count = 0, do_power = 0, power = 0;
+    char ghost_direction[4] = { 0, 1, 2, 3 };
+
+    displayreset();
+    tpu_printf_centre( 28, TRANSPARENT, WHITE, "SPRITE Demo" );
+
+    for( short i = 0; i < 4; i++ ) {
+        set_sprite_bitmaps( LOWER_LAYER, i, &body_bitmap[0] );
+        set_sprite_bitmaps( UPPER_LAYER, i, &eyewhites_bitmap[0] );
+        set_sprite_bitmaps( UPPER_LAYER, i + 4, &pupils_bitmap[0] );
+    }
+
+    set_sprite( LOWER_LAYER, 0, 1, RED, 144, 64, 0, 1 );
+    set_sprite( UPPER_LAYER, 0, 1, WHITE, 144, 64, 0, 1 );
+    set_sprite( UPPER_LAYER, 4, 1, BLUE, 144, 64, 0, 1 );
+
+    set_sprite( LOWER_LAYER, 1, 1, PINK, 464, 64, 2, 1 );
+    set_sprite( UPPER_LAYER, 1, 1, WHITE, 464, 64, 1, 1 );
+    set_sprite( UPPER_LAYER, 5, 1, BLUE, 464, 64, 1, 1 );
+
+    set_sprite( LOWER_LAYER, 2, 1, CYAN, 464, 384, 4, 1 );
+    set_sprite( UPPER_LAYER, 2, 1, WHITE, 464, 384, 2, 1 );
+    set_sprite( UPPER_LAYER, 6, 1, BLUE, 464, 384, 2, 1 );
+
+    set_sprite( LOWER_LAYER, 3, 1, LTORANGE, 144, 384, 6, 1 );
+    set_sprite( UPPER_LAYER, 3, 1, WHITE, 144, 384, 3, 1 );
+    set_sprite( UPPER_LAYER, 7, 1, BLUE, 144, 384, 3, 1 );
+
+    for( short i = 0; i < 2560; i++ ) {
+        await_vblank();
+        animation_frame = ( animation_count & 64 ) ? 1 : 0;
+
+        // ANIMATE THE GHOSTS
+        for( short i = 0; i < 4; i++ ) {
+            set_sprite_attribute( LOWER_LAYER, i, SPRITE_TILE, ghost_direction[i] * 2 + animation_frame );
+            set_sprite_attribute( UPPER_LAYER, i, SPRITE_TILE, ghost_direction[i] + power * 4 );
+            set_sprite_attribute( UPPER_LAYER, i + 4, SPRITE_TILE, ghost_direction[i] + power * 4);
+            if( power ) {
+                if( move_count < 280 ) {
+                    for( short i = 0; i < 4; i++ ) {
+                        set_sprite_attribute( LOWER_LAYER, i, SPRITE_COLOUR, DKBLUE );
+                        set_sprite_attribute( UPPER_LAYER, i, SPRITE_COLOUR, PEACH );
+                        set_sprite_attribute( UPPER_LAYER, i + 4, SPRITE_COLOUR, PEACH );
+                    }
+                } else {
+                    for( short i = 0; i < 4; i++ ) {
+                        set_sprite_attribute( LOWER_LAYER, i, SPRITE_COLOUR, WHITE );
+                        set_sprite_attribute( UPPER_LAYER, i, SPRITE_COLOUR, PEACH );
+                        set_sprite_attribute( UPPER_LAYER, i + 4, SPRITE_COLOUR, PEACH );
+                    }
+                }
+            } else {
+                for( short i = 0; i < 4; i++ ) {
+                    set_sprite_attribute( UPPER_LAYER, i, SPRITE_COLOUR, WHITE );
+                    set_sprite_attribute( UPPER_LAYER, i + 4, SPRITE_COLOUR, BLUE );
+                }
+                set_sprite_attribute( LOWER_LAYER, 0, SPRITE_COLOUR, RED );
+                set_sprite_attribute( LOWER_LAYER, 1, SPRITE_COLOUR, PINK );
+                set_sprite_attribute( LOWER_LAYER, 2, SPRITE_COLOUR, CYAN );
+                set_sprite_attribute( LOWER_LAYER, 3, SPRITE_COLOUR, LTORANGE );
+            }
+        }
+
+        // MOVE THE GHOSTS
+        for( short i = 0; i <4; i++ ) {
+            switch( ghost_direction[i] ) {
+                case 0:
+                    update_sprite( LOWER_LAYER, i, 0b0000000000001 );
+                    update_sprite( UPPER_LAYER, i, 0b0000000000001 );
+                    update_sprite( UPPER_LAYER, i + 4, 0b0000000000001 );
+                    break;
+                case 1:
+                    update_sprite( LOWER_LAYER, i, 0b0000000100000 );
+                    update_sprite( UPPER_LAYER, i, 0b0000000100000 );
+                    update_sprite( UPPER_LAYER, i + 4, 0b0000000100000 );
+                    break;
+                case 2:
+                    update_sprite( LOWER_LAYER, i, 0b0000000011111 );
+                    update_sprite( UPPER_LAYER, i, 0b0000000011111 );
+                    update_sprite( UPPER_LAYER, i + 4, 0b0000000011111 );
+                    break;
+                case 3:
+                    update_sprite( LOWER_LAYER, i, 0b0001111100000 );
+                    update_sprite( UPPER_LAYER, i, 0b0001111100000 );
+                    update_sprite( UPPER_LAYER, i + 4, 0b0001111100000 );
+                    break;
+            }
+        }
+
+        // CHECK IF MOVED 160 SPACES
+        move_count++;
+        if( move_count == 320 ) {
+            move_count = 0;
+            for( short i = 0; i < 4; i++ ) {
+                ghost_direction[i] = ( ghost_direction[i] + 1 ) & 3;
+            }
+            do_power++;
+            if( do_power == 4 ) {
+                power = 1- power;
+                do_power = 0;
+            }
+        }
+
+       // LEFT
+        if( ( get_buttons() & 32 ) != 0 ) {}
+        // RIGHT
+        if( ( get_buttons() & 64 ) != 0 ) {}
+        // UP
+        if( ( get_buttons() & 8 ) != 0 ) {}
+        // DOWN
+        if( ( get_buttons() & 16 ) != 0 ) {}
+
+        animation_count++;
+    }
 }
 
 int main( void ) {
@@ -484,5 +880,7 @@ int main( void ) {
         gpudemo();
 
         ditherdemo();
+
+        spritedemo();
     }
 }

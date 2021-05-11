@@ -201,16 +201,6 @@
 
 // PROGRAM THE BACKGROUND COPPER FOR THE FALLING STARS
 void program_background( void ) {
-    // FALLING STARS ON A BLACK GROUND, STARS CYCLE THROUGH COLOURS EVERY FRAME
-    //copper_startstop( 0 );
-    //copper_program( 0, COPPER_WAIT_Y, 7, 0, BKG_SNOW, BLACK, GREY1 );
-    //copper_program( 1, COPPER_VARIABLE, COPPER_SET_VARIABLE, 1, 0, 0, 0 );
-    //copper_program( 2, COPPER_SET_FROM_VARIABLE, 1, 0, 0, 0, 0 );
-    //copper_program( 3, COPPER_VARIABLE, COPPER_ADD_VARIABLE, 1, 0, 0, 0 );
-    //copper_program( 4, COPPER_JUMP, COPPER_JUMP_IF_NOT_VBLANK, 0, 0, 0, 4 );
-    //copper_program( 5, COPPER_JUMP, COPPER_JUMP_IF_VARIABLE_LESS, 64, 0, 0, 2 );
-    //copper_program( 6, COPPER_JUMP, COPPER_JUMP_ALWAYS, 0, 0, 0, 1 );
-    //copper_startstop( 1 );
     copper_startstop( 0 );
     copper_program( 0, COPPER_WAIT_Y, 7, 0, BKG_SNOW, BLACK, WHITE );
     copper_program( 1, COPPER_WAIT_X, 7, 0, BKG_SNOW, BLACK, WHITE );
