@@ -99,7 +99,6 @@ algorithm PAWSCPU(
     decoder DECODER <@clock_CPUdecoder> (
         instruction <: instruction,
         opCode :> opCode,
-        function2 :> function2,
         function3 :> function3,
         function7 :> function7,
         rs1 :> rs1,
@@ -178,13 +177,11 @@ algorithm PAWSCPU(
     // ALU
     alu ALU(
         opCode <: opCode,
-        function2 <: function2,
         function3 <: function3,
         function7 <: function7,
         rs1 <: rs1,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
-        sourceReg3 <: sourceReg3,
         IshiftCount <: IshiftCount,
         immediateValue <: immediateValue
     );

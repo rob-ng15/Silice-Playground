@@ -296,7 +296,6 @@ void set_tilemap_tile( unsigned char tm_layer, unsigned char x, unsigned char y,
     switch( tm_layer ) {
         case 0:
             while( *LOWER_TM_STATUS );
-
             *LOWER_TM_X = x;
             *LOWER_TM_Y = y;
             *LOWER_TM_TILE = tile;
@@ -306,7 +305,6 @@ void set_tilemap_tile( unsigned char tm_layer, unsigned char x, unsigned char y,
             break;
         case 1:
             while( *UPPER_TM_STATUS );
-
             *UPPER_TM_X = x;
             *UPPER_TM_Y = y;
             *UPPER_TM_TILE = tile;
@@ -322,7 +320,6 @@ void set_tilemap_bitmap( unsigned char tm_layer, unsigned char tile, unsigned sh
     switch( tm_layer ) {
         case 0:
             *LOWER_TM_WRITER_TILE_NUMBER = tile;
-
             for( int i = 0; i < 16; i ++ ) {
                 *LOWER_TM_WRITER_LINE_NUMBER = i;
                 *LOWER_TM_WRITER_BITMAP = bitmap[i];
@@ -330,7 +327,6 @@ void set_tilemap_bitmap( unsigned char tm_layer, unsigned char tile, unsigned sh
             break;
         case 1:
             *UPPER_TM_WRITER_TILE_NUMBER = tile;
-
             for( int i = 0; i < 16; i ++ ) {
                 *UPPER_TM_WRITER_LINE_NUMBER = i;
                 *UPPER_TM_WRITER_BITMAP = bitmap[i];

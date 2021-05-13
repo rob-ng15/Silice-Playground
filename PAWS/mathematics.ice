@@ -323,8 +323,6 @@ algorithm aluR7b0010100 (
 
     output  uint32  result
 ) <autorun> {
-    uint5   RshiftCount := sourceReg2[0,5];
-
     // XPERM
     xperm XPERM(
         function3 <: function3,
@@ -417,8 +415,6 @@ algorithm aluR7b0000100 (
 
     output  uint32  result
 ) <autorun> {
-    uint5   RshiftCount := sourceReg2[0,5];
-
     // START FLAGS FOR ALU SUB BLOCKS
     busy = 0;
 
@@ -456,8 +452,6 @@ algorithm aluR7b0110100 (
 
     output  uint32  result
 ) <autorun> {
-    uint5   RshiftCount := sourceReg2[0,5];
-
     // START FLAGS FOR ALU SUB BLOCKS
     busy = 0;
 
@@ -529,9 +523,7 @@ algorithm aluR000(
     input   uint7   function7,
     output  int32   result
 ) <autorun> {
-    while(1) {
-        result = sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 );
-    }
+    result := sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 );
 }
 algorithm aluR001(
     output! uint1   busy,
@@ -652,9 +644,7 @@ algorithm aluR111(
     input   uint7   function7,
     output  int32   result
 ) <autorun> {
-    while(1) {
-        result = sourceReg1 & ( ( function7[5,1] == 1 ) ? ~sourceReg2 : sourceReg2 );
-    }
+    result := sourceReg1 & ( ( function7[5,1] == 1 ) ? ~sourceReg2 : sourceReg2 );
 }
 
 algorithm aluR (
@@ -864,38 +854,20 @@ algorithm aluR (
                 // BASE + REMAINING B EXTENSION
                 default: {
                     switch( function3 ) {
-                        case 3b000: {
-                            // ADD SUB
-                            result = ALUR000.result;
-                        }
+                        case 3b000: { result = ALUR000.result; }
                         case 3b001: {
                             while( ALUR001.busy ) {}
                             result = ALUR001.result;
                         }
-                        case 3b010: {
-                            // SLT SH1ADD
-                            result = ALUR010.result;
-                        }
-                        case 3b011: {
-                            // SLTU
-                            result = ALUR011.result;
-                        }
-                        case 3b100: {
-                            // SH2ADD XOR XNOR
-                            result = ALUR100.result;
-                        }
+                        case 3b010: { result = ALUR010.result; }
+                        case 3b011: { result = ALUR011.result; }
+                        case 3b100: { result = ALUR100.result; }
                         case 3b101: {
                             while( ALUR101.busy ) {}
                             result = ALUR101.result;
                         }
-                        case 3b110: {
-                            // SH3ADD OR ORN
-                            result = ALUR110.result;
-                        }
-                        case 3b111: {
-                            // AND ANDN
-                            result = ALUR111.result;
-                        }
+                        case 3b110: { result = ALUR110.result; }
+                        case 3b111: { result = ALUR111.result; }
                     }
                 }
             }
@@ -1040,9 +1012,7 @@ algorithm alu(
             busy = 1;
             ALUI.start = ~opCode[5,1];
             ALUR.start = opCode[5,1];
-            if( ALUI.busy || ALUR.busy ) {
-                while( ALUI.busy || ALUR.busy ) {}
-            }
+            while( ALUI.busy || ALUR.busy ) {}
             result = opCode[5,1] ? ALUR.result : ALUI.result;
             busy = 0;
         }
@@ -1070,18 +1040,16 @@ algorithm CSRblock(
     CSRinstretSMT := CSRinstretSMT + ( ( incCSRinstret & SMT ) ? 1 : 0);
 
     while(1) {
-        //if( start && ( CSR(instruction).rs1 == 0 ) && ( CSR(instruction).function3 == 3b010 ) ) {
-            switch( CSR(instruction).csr ) {
-                case 12hc00: { result = SMT ? CSRcycletimeSMT[0,32] : CSRcycletime[0,32]; }
-                case 12hc80: { result = SMT ? CSRcycletimeSMT[32,32] :  CSRcycletime[32,32]; }
-                case 12hc01: { result = CSRtimer[0,32]; }
-                case 12hc81: { result = CSRtimer[32,32]; }
-                case 12hc02: { result = SMT ? CSRinstretSMT[0,32] : CSRinstret[0,32]; }
-                case 12hc82: { result = SMT ? CSRinstretSMT[32,32] : CSRinstret[32,32]; }
-                case 12hf14: { result = SMT; }
-                default: { result = 0; }
-            }
-        //}
+        switch( CSR(instruction).csr ) {
+            case 12hc00: { result = SMT ? CSRcycletimeSMT[0,32] : CSRcycletime[0,32]; }
+            case 12hc80: { result = SMT ? CSRcycletimeSMT[32,32] :  CSRcycletime[32,32]; }
+            case 12hc01: { result = CSRtimer[0,32]; }
+            case 12hc81: { result = CSRtimer[32,32]; }
+            case 12hc02: { result = SMT ? CSRinstretSMT[0,32] : CSRinstret[0,32]; }
+            case 12hc82: { result = SMT ? CSRinstretSMT[32,32] : CSRinstret[32,32]; }
+            case 12hf14: { result = SMT; }
+            default: { result = 0; }
+        }
     }
 }
 

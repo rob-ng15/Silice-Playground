@@ -628,7 +628,7 @@ void beepboop( void )
                     }
                 }
                 (void)tilemap_scrollwrapclear( LOWER_LAYER, 6 );
-                //(void)tilemap_scrollwrapclear( UPPER_LAYER, 8 );
+                (void)tilemap_scrollwrapclear( UPPER_LAYER, 8 );
                 break;
         }
     }

@@ -32,7 +32,7 @@ algorithm tilemap(
     // 42 x 32 tile map, allows for pixel scrolling with border { 7 bits background, 6 bits foreground, 5 bits tile number }
     // Setting background to 40 (ALPHA) allows the bitmap/background to show through
     simple_dualport_bram uint6 tiles[1344] = { 0, pad(0) };
-    simple_dualport_bram uint13 colours[1344] = { 13h10000, pad(13h10000) };
+    simple_dualport_bram uint13 colours[1344] = { 13b1000000000000, pad(13b1000000000000) };
 
     // Scroll position - -15 to 0 to 15
     // -15 or 15 will trigger appropriate scroll when next moved in that direction
@@ -64,7 +64,7 @@ algorithm tilemap(
     // Character position on the screen x 0-41, y 0-31 * 42 ( fetch it two pixels ahead of the actual x pixel, so it is always ready, colours 1 pixel ahead )
     // Adjust for the offsets, effective 0 point margin is ( 1,1 ) to ( 40,30 ) with a 1 tile border
     uint11  xtmpos <:  ( pix_active ? pix_x + ( 11d18 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) : ( 11d16 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) ) >> 4;
-    uint11  ytmpos <: (( pix_vblank ? ( 11d16 + {{6{tm_offset_y[4,1]}}, tm_offset_y} ) : pix_y + ( 11d16 + {{6{tm_offset_y[4,1]}}, tm_offset_y} ) ) >> 4) * 42;
+    uint11  ytmpos <: ( pix_vblank ? 11d16 + {{6{tm_offset_y[4,1]}}, tm_offset_y} : ( 11d16 + pix_y  + {{6{tm_offset_y[4,1]}}, tm_offset_y} ) ) >> 4;
     uint11  xtmposcolour <:  ( pix_active ? pix_x + ( 11d17 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) : ( 11d16 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) ) >> 4;
 
     // Derive the x and y coordinate within the current 16x16 tilemap block x 0-7, y 0-15
@@ -76,8 +76,8 @@ algorithm tilemap(
     uint1   tmpixel <: tiles16x16.rdata0[15 - xintm, 1];
 
     // Set up reading of the tilemap
-    tiles.addr0 := xtmpos + ytmpos;
-    colours.addr0 := xtmposcolour + ytmpos;
+    tiles.addr0 := xtmpos + ytmpos * 42;
+    colours.addr0 := xtmposcolour + ytmpos * 42;
 
     // Setup the reading and writing of the tiles16x16
     tiles16x16.addr0 :=  { tiles.rdata0, yintm };
@@ -111,7 +111,7 @@ algorithm tile_map_writer(
 ) <autorun> {
     // COPY OF TILEMAP FOR SCROLLING
     simple_dualport_bram uint6 tiles_copy[1344] = { 0, pad(0) };
-    simple_dualport_bram uint13 colours_copy[1344] = { 13h10000, pad(13h10000) };
+    simple_dualport_bram uint13 colours_copy[1344] = { 13b1000000000000, pad(13b1000000000000) };
 
     // Scroller/Wrapper storage
     uint1   tm_scroll = uninitialized;

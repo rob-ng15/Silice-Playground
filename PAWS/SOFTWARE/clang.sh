@@ -4,9 +4,6 @@ echo "COMPILING FOR SDCARD LOADING"
 ARCH="riscv64"
 echo "using $ARCH"
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-export PATH=$PATH:$DIR/../../tools/fpga-binutils/mingw32/bin/
-
 AR="riscv64-elf-ar"
 NM="riscv64-elf-nm"
 RANLIB="riscv64-elf-ranlib"

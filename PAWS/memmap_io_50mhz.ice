@@ -535,6 +535,7 @@ algorithm memmap_io (
                 case 16h8224: { lower_tile_map.tile_writer_line = writeData; }
                 case 16h8228: { lower_tile_map.tile_writer_bitmap = writeData; }
                 case 16h8230: { lower_tile_map.tm_scrollwrap = writeData; }
+
                 case 16h8280: { upper_tile_map.tm_x = writeData; }
                 case 16h8284: { upper_tile_map.tm_y = writeData; }
                 case 16h8288: { upper_tile_map.tm_character = writeData; }
