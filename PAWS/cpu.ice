@@ -58,6 +58,8 @@ algorithm PAWSCPU(
     input   uint1   SMTRUNNING,
     input   uint32  SMTSTARTPC
 ) <autorun> {
+    uint7 FSM = 7b0000001;
+
     // SMT FLAG
     // RUNNING ON HART 0 OR HART 1
     // DUPLICATES PROGRAM COUNTER, REGISTER FILE AND LAST INSTRUCTION CACHE
@@ -209,7 +211,7 @@ algorithm PAWSCPU(
     // MANDATORY RISC-V CSR REGISTERS + HARTID == 0 MAIN THREAD == 1 SMT THREAD
     CSRblock CSR(
         instruction <: instruction,
-        SMT <: SMT
+        SMT <:: SMT
     );
 
     // MEMORY ACCESS FLAGS
@@ -226,136 +228,82 @@ algorithm PAWSCPU(
     CSR.incCSRinstret := 0;
 
     while(1) {
-        // RISC-V - RESET FLAGS
-        writeRegister = 1;
-        incPC = 1; takeBranch = 0;
-        frd = 0;
-
-        // FETCH + EXPAND COMPRESSED INSTRUCTIONS
-        ( address, readmemory ) = fetch( PC, memorybusy );
-        compressed = ( readdata[0,2] != 2b11 );
-        switch( readdata[0,2] ) {
-            default: { instruction = COMPRESSED.i32; }
-            case 2b11: {
-                // 32 BIT INSTRUCTION
-                instruction[0,16] = readdata;
-                ( address, readmemory ) = fetch( PCplus2, memorybusy );
-                instruction[16,16] = readdata;
-            }
-        }
-
-        // TIME TO ALLOW DECODE + REGISTER FETCH + ADDRESS GENERATION
-        ++:
-        ++:
-        ++:
-        ++:
-
-        // LOAD FROM MEMORY
-        if( memoryload ) {
-            ( address, readmemory, memoryinput ) = load( accesssize, loadAddress, memorybusy, readdata );
-        }
-
-        // EXECUTE
-        switch( opCode[2,5] ) {
-            case 5b01101: {
-                // LUI
-                result = AUIPCLUI;
-            }
-            case 5b00101: {
-                // AUIPC
-                result = AUIPCLUI;
-            }
-            case 5b11011: {
-                // JAL
-                incPC = 0;
-                result = nextPC;
-            }
-            case 5b11001: {
-                // JALR
-                incPC = 0;
-                result = nextPC;
-            }
-            case 5b11000: {
-                // BRANCH - HAPPENS IN BRANCH COMPARISON UNIT
-                writeRegister = 0;
-                takeBranch = BRANCHUNIT.takeBranch;
-            }
-            case 5b00000: {
-                // LOAD
-                result = memoryinput;
-            }
-            case 5b01000: {
-                // STORE
-                writeRegister = 0;
-                memoryoutput = sourceReg2;
-            }
-            case 5b00001: {
-                // FLOATING POINT LOAD
-                frd = 1;
-                result = memoryinput;
-            }
-            case 5b01001: {
-                // FLOATING POINT STORE
-                writeRegister = 0;
-                memoryoutput = sourceReg2F;
-            }
-            case 5b11100: {
-                // CSR
-                result = CSR.result;
-            }
-            case 5b01011: {
-                // ATOMIC OPERATIONS
-                switch( function7[2,5] ) {
-                    case 5b00010: {
-                        // LR.W
-                        result = memoryinput;
-                    }
-                    case 5b00011: {
-                        // SC.W
-                        memoryoutput = sourceReg2;
-                        result = 0;
-                    }
-                    default: {
-                        // ATOMIC LOAD - MODIFY - STORE
-                        result = memoryinput;
-                        memoryoutput = ALUA.result;
+        onehot( FSM ) {
+            case 0: {                                                                           // RESET FLAGS and FETCH
+                writeRegister = 1;
+                incPC = 1; takeBranch = 0;
+                frd = 0;
+                ( address, readmemory ) = fetch( PC, memorybusy );
+                compressed = ( readdata[0,2] != 2b11 );
+                switch( readdata[0,2] ) {
+                    default: { instruction = COMPRESSED.i32; }
+                    case 2b11: {
+                        // 32 BIT INSTRUCTION
+                        instruction[0,16] = readdata;
+                        ( address, readmemory ) = fetch( PCplus2, memorybusy );
+                        instruction[16,16] = readdata;
                     }
                 }
+                FSM = 7b0000010;
             }
-
-            // FPU, ALUI or ALUR
-            default: {
-                ALU.start = ~opCode[6,1];
-                FPU.start = opCode[6,1];
-                while( ALU.busy || FPU.busy ) {}
-                frd = opCode[6,1] ? FPU.frd : 0;
-                result = opCode[6,1] ? FPU.result : ALU.result;
+            case 1: { ++: FSM = memoryload ? 7b0000100 : 7b0001000; }                           // DECOODE
+            case 2: {                                                                           // LOAD FROM MEMORY
+                ( address, readmemory, memoryinput ) = load( accesssize, loadAddress, memorybusy, readdata );
+                FSM = 7b0001000;
+            }
+            case 3: {                                                                           // EXECUTE
+                switch( opCode[2,5] ) {
+                    case 5b01101: { result = AUIPCLUI; }                                        // LUI
+                    case 5b00101: { result = AUIPCLUI; }                                        // AUIPC
+                    case 5b11011: { incPC = 0; result = nextPC; }                               // JAL
+                    case 5b11001: { incPC = 0; result = nextPC; }                               // JALR
+                    case 5b11000: { writeRegister = 0; takeBranch = BRANCHUNIT.takeBranch; }    // BRANCH
+                    case 5b00000: { result = memoryinput; }                                     // LOAD
+                    case 5b01000: { writeRegister = 0; memoryoutput = sourceReg2; }             // STORE
+                    case 5b00001: { frd = 1; result = memoryinput; }                            // FLOAT LOAD
+                    case 5b01001: { writeRegister = 0; memoryoutput = sourceReg2F; }            // FLOAT STORE
+                    case 5b11100: { result = CSR.result; }                                      // CSR
+                    case 5b01011: {                                                             // ATOMIC OPERATIONS
+                        switch( function7[2,5] ) {
+                            case 5b00010: { result = memoryinput; }                                 // LR.W
+                            case 5b00011: { memoryoutput = sourceReg2; result = 0; }                // SC.W
+                            default: { result = memoryinput; memoryoutput = ALUA.result; }          // ATOMIC LOAD - MODIFY - STORE
+                        }
+                    }
+                    default: {                                                                  // FPU, ALUI or ALUR
+                        ALU.start = ~opCode[6,1];
+                        FPU.start = opCode[6,1];
+                        while( ALU.busy || FPU.busy ) {}
+                        frd = opCode[6,1] ? FPU.frd : 0;
+                        result = opCode[6,1] ? FPU.result : ALU.result;
+                    }
+                }
+                FSM = memorystore ? 7b0010000 : 7b0100000;
+            }
+            case 4: {                                                                           // STORE TO MEMORY
+                ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy );
+                FSM = writeRegister ? 7b0100000 : 7b1000000;
+            }
+            case 5: {                                                                           // REGISTERS WRITE
+                REGISTERS.write = writeRegister ? ~frd : 0;
+                REGISTERSF.write = writeRegister ? frd : 0;
+                FSM = 7b1000000;
+            }
+            case 6: {                                                                           // UPDATE CSR, PC and SMT
+                CSR.incCSRinstret = 1;
+                switch( SMT ) {
+                    case 1b1: {
+                        ( pcSMT ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
+                        SMT = 0;
+                    }
+                    case 1b0: {
+                        ( pc ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
+                        SMT = SMTRUNNING;
+                        pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC;
+                    }
+                }
+                FSM = 7b0000001;
             }
         }
-
-        // REGISTERS WRITE
-        REGISTERS.write = writeRegister ? ~frd : 0;
-        REGISTERSF.write = writeRegister ? frd : 0;
-
-        // Update CSRinstret
-        CSR.incCSRinstret = 1;
-
-        // STORE TO MEMORY
-        if( memorystore ) {
-            ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy );
-        }
-
-        // UPDATE PC + SWITCH THREADS IF SMT ENABLED
-        switch( SMT ) {
-            case 1b1: {
-                ( pcSMT ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
-                SMT = 0;
-            }
-            case 1b0: {
-                ( pc ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
-                SMT = SMTRUNNING;
-                pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC;
-            }
-        }
-   } // RISC-V
+    } // RISC-V
 }

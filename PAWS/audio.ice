@@ -6,7 +6,7 @@ algorithm apu(
     output  uint1   audio_active,
     input   uint1   apu_write,
     output  uint4   audio_output,
-    input uint4    staticGenerator
+    input   uint4   staticGenerator
 ) <autorun> {
     // Calculated as 25MHz / note frequency / 32 to give 32 step points per note
     brom uint16 frequencytable[128] = {

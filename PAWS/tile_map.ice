@@ -164,8 +164,7 @@ algorithm tile_map_writer(
                 // Perform Scrolling/Wrapping
                 switch( tm_scrollwrap ) {
                     // NO ACTION
-                    case 0: {
-                    }
+                    case 0: {}
                     // CLEAR
                     case 9: {
                         tm_active = 3;
@@ -239,7 +238,6 @@ algorithm tile_map_writer(
                     ++:
                     new_tile = tm_scroll ? 0 : tiles_copy.rdata0;
                     new_colour = tm_scroll ? 13h1000 : colours_copy.rdata0;
-                    ++:
                     while( tm_goleft ? ( x_cursor < 42 ) : ( x_cursor > 0 ) ) {
                         temp_1 = tm_goleft ? y_cursor_addr + x_cursor + 1 : y_cursor_addr + x_cursor - 1;
                         tiles_copy.addr0 = temp_1;
@@ -256,7 +254,6 @@ algorithm tile_map_writer(
                         colours_copy.wdata1 = colours_copy.rdata0;
                         x_cursor = tm_goleft ? x_cursor + 1 : x_cursor - 1;
                     }
-                    ++:
                     temp_1 = y_cursor_addr + ( tm_goleft ? 41 : 0 );
                     tiles.addr1 = temp_1;
                     tiles.wdata1 = new_tile;
@@ -286,7 +283,6 @@ algorithm tile_map_writer(
                     ++:
                     new_tile = tm_scroll ? 0 : tiles_copy.rdata0;
                     new_colour = tm_scroll ? 13h1000 : colours_copy.rdata0;
-                    ++:
                     while( tm_goup ? ( y_cursor < 31 ) : ( y_cursor > 0 ) ) {
                         temp_1 = tm_goup ? x_cursor + y_cursor_addr + 42 : x_cursor + y_cursor_addr - 42;
                         tiles_copy.addr0 = temp_1;
@@ -304,7 +300,6 @@ algorithm tile_map_writer(
                         y_cursor = tm_goup ? y_cursor + 1 : y_cursor - 1;
                         y_cursor_addr = tm_goup ? y_cursor_addr + 42 : y_cursor_addr - 42;
                     }
-                    ++:
                     temp_1 = x_cursor + ( tm_goup ? 1302 : 0 );
                     tiles.addr1 = temp_1;
                     tiles.wdata1 = new_tile;
