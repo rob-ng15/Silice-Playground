@@ -606,6 +606,9 @@ algorithm memmap_io (
                 case 16h8506: { character_map_window.tpu_background = writeData; }
                 case 16h8508: { character_map_window.tpu_foreground = writeData; }
                 case 16h850a: { character_map_window.tpu_write = writeData; }
+                case 16h8510: { character_map_window.curses_x = writeData; }
+                case 16h8512: { character_map_window.curses_y = writeData; }
+                case 16h8514: { character_map_window.curses_cursor = writeData; }
 
                 // AUDIO
                 case 16hf200: { apu_processor_L.waveform = writeData; }

@@ -11,11 +11,11 @@ algorithm pulse1hz(
 // Create 1khz (1 milli-second counter)
 algorithm pulse1khz(
     output  uint16  counter1khz,
-    input   uint16  resetCount
+    input   uint16  resetCounter
 ) <autorun> {
     uint16 counter25mhz = 0;
-    counter1khz := ( resetCount != 0 ) ? resetCount : ( counter1khz == 0 ) ? 0 : ( counter25mhz == 25000 ) ? counter1khz - 1 : counter1khz;
-    counter25mhz := ( resetCount != 0 ) ? 0 : ( counter25mhz == 25000 ) ? 0 : counter25mhz + 1;
+    counter1khz := ( resetCounter != 0 ) ? resetCounter : ( counter1khz == 0 ) ? 0 : ( counter25mhz == 25000 ) ? counter1khz - 1 : counter1khz;
+    counter25mhz := ( resetCounter != 0 ) ? 0 : ( counter25mhz == 25000 ) ? 0 : counter25mhz + 1;
 }
 
 // 16 bit random number generator

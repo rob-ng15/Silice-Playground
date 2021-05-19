@@ -1,4 +1,4 @@
-// ALU S- BASE - M EXTENSION - B EXTENSION
+// ALU - BASE - M EXTENSION - B EXTENSION
 
 // UNSIGNED / SIGNED 32 by 32 bit division giving 32 bit remainder and quotient
 algorithm aluMdivideremain(
@@ -11,6 +11,10 @@ algorithm aluMdivideremain(
 
     output  uint32  result
 ) <autorun> {
+    uint2   FSM = uninitialized;
+    uint1   FSM2 = uninitialized;
+
+    uint32  temporary = uninitialized;
     uint32  quotient = uninitialized;
     uint32  remainder = uninitialized;
     uint32  dividend_copy = uninitialized;
@@ -23,30 +27,38 @@ algorithm aluMdivideremain(
     while(1) {
         if( start ) {
             busy = 1;
-
-            dividend_copy = ~dosign[0,1] ? ( dividend[31,1] ? -dividend : dividend ) : dividend;
-            divisor_copy = ~dosign[0,1] ? ( divisor[31,1] ? -divisor : divisor ) : divisor;
-            quotientremaindersign = ~dosign[0,1] ? dividend[31,1] ^ divisor[31,1] : 0;
-            quotient = 0;
-            remainder = 0;
-            bit = 31;
-            ++:
-            switch( divisor ) {
-                case 0: {
-                    result = dosign[1,1] ? dividend : 32hffffffff;
-                }
-                default: {
-                    while( bit != 63 ) {
-                        if( __unsigned({ remainder[0,31], dividend_copy[bit,1] }) >= __unsigned(divisor_copy) ) {
-                            remainder = __unsigned({ remainder[0,31], dividend_copy[bit,1] }) - __unsigned(divisor_copy);
-                            quotient[bit,1] = 1;
-                        } else {
-                            remainder = { remainder[0,31], dividend_copy[bit,1] };
-                        }
-                        bit = bit - 1;
+            FSM = 1;
+            while( FSM != 0 ) {
+                onehot( FSM ) {
+                    case 0: {
+                        dividend_copy = ~dosign[0,1] ? ( dividend[31,1] ? -dividend : dividend ) : dividend;
+                        divisor_copy = ~dosign[0,1] ? ( divisor[31,1] ? -divisor : divisor ) : divisor;
+                        quotientremaindersign = ~dosign[0,1] ? dividend[31,1] ^ divisor[31,1] : 0;
+                        quotient = 0;
+                        remainder = 0;
+                        bit = 31;
                     }
-                    result = dosign[1,1] ? remainder : ( quotientremaindersign ? -quotient : quotient );
+                    case 1: {
+                        switch( divisor ) {
+                            case 0: {
+                                result = dosign[1,1] ? dividend : 32hffffffff;
+                            }
+                            default: {
+                                while( bit != 63 ) {
+                                    temporary = { remainder[0,31], dividend_copy[bit,1] };
+                                    FSM2 = __unsigned(temporary) >= __unsigned(divisor_copy) ? 1 : 0;
+                                    switch( FSM2 ) {
+                                        case 1: { remainder = __unsigned(temporary) - __unsigned(divisor_copy); quotient[bit,1] = 1; }
+                                        case 0: { remainder = temporary; }
+                                    }
+                                   bit = bit - 1;
+                                }
+                                result = dosign[1,1] ? remainder : ( quotientremaindersign ? -quotient : quotient );
+                            }
+                        }
+                    }
                 }
+                FSM = FSM << 1;
             }
             busy = 0;
         }
@@ -64,27 +76,49 @@ algorithm aluMmultiply(
 
     output  uint32  result
 ) <autorun> {
-    uint2   dosigned := dosign[1,1] ? ( dosign[0,1] ? 0 : 2 ) : 1;
-    uint1   productsign := ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
-    uint32  factor_1_copy := ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
-    uint32  factor_2_copy := ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
-    uint64  product := productsign ? -( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } ) : ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
+    uint4   FSM = uninitialized;
+
+    uint2   dosigned = uninitialized;
+    uint1   productsign = uninitialized;
+    uint32  factor_1_copy = uninitialized;
+    uint32  factor_2_copy = uninitialized;
+    uint64  product = uninitialized;
 
     // Calculation is split into 4 18 x 18 multiplications for DSP
-    uint18  A := { 2b0, factor_1_copy[16,16] };
-    uint18  B := { 2b0, factor_1_copy[0,16] };
-    uint18  C := { 2b0, factor_2_copy[16,16] };
-    uint18  D := { 2b0, factor_2_copy[0,16] };
+    uint18  A = uninitialized;
+    uint18  B = uninitialized;
+    uint18  C = uninitialized;
+    uint18  D = uninitialized;
 
     busy = 0;
 
     while(1) {
         if( start ) {
             busy = 1;
-
-            ++:
-            result = ( dosign == 0 ) ? product[0,32] : product[32,32];
-
+            FSM = 1;
+            while( FSM != 0 ) {
+                onehot( FSM ) {
+                    case 0: {
+                        dosigned = dosign[1,1] ? ( dosign[0,1] ? 0 : 2 ) : 1;
+                        productsign = ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
+                        factor_1_copy = ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
+                        factor_2_copy = ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
+                    }
+                    case 1: {
+                        A = { 2b0, factor_1_copy[16,16] };
+                        B = { 2b0, factor_1_copy[0,16] };
+                        C = { 2b0, factor_2_copy[16,16] };
+                        D = { 2b0, factor_2_copy[0,16] };
+                    }
+                    case 2: {
+                        product = productsign ? -( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } ) : ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
+                    }
+                    case 3: {
+                        result = ( dosign == 0 ) ? product[0,32] : product[32,32];
+                    }
+                }
+                FSM = FSM << 1;
+            }
             busy = 0;
         }
     }
@@ -380,15 +414,15 @@ algorithm aluR7b0000101 (
         if( start ) {
             busy = 1;
             switch( function3 ) {
-                case 3b100: { ( result ) = MIN( sourceReg1, sourceReg2 ); }
-                case 3b110: { ( result ) = MINU( sourceReg1, sourceReg2 ); }
-                case 3b101: { ( result ) = MAX( sourceReg1, sourceReg2 ); }
-                case 3b111: { ( result ) = MAXU( sourceReg1, sourceReg2 ); }
+                case 3b100: { ( result ) = min( sourceReg1, sourceReg2 ); }
+                case 3b101: { ( result ) = max( sourceReg1, sourceReg2 ); }
+                case 3b110: { ( result ) = minu( sourceReg1, sourceReg2 ); }
+                case 3b111: { ( result ) = maxu( sourceReg1, sourceReg2 ); }
                 // 0.93+ ENCODINGS
-                //case 3b100: { ( result ) = MIN( sourceReg1, sourceReg2 ); }
-                //case 3b101: { ( result ) = MINU( sourceReg1, sourceReg2 ); }
-                //case 3b110: { ( result ) = MAX( sourceReg1, sourceReg2 ); }
-                //case 3b111: { ( result ) = MAXU( sourceReg1, sourceReg2 ); }
+                //case 3b100: { ( result ) = min( sourceReg1, sourceReg2 ); }
+                //case 3b101: { ( result ) = minu( sourceReg1, sourceReg2 ); }
+                //case 3b110: { ( result ) = max( sourceReg1, sourceReg2 ); }
+                //case 3b111: { ( result ) = maxu( sourceReg1, sourceReg2 ); }
                 default: {
                     CLMUL.start = 1;
                     while( CLMUL.busy ) {}
@@ -1068,10 +1102,532 @@ algorithm aluA (
             case 5b00100: { result = memoryinput ^ sourceReg2; }            // AMOXOR
             case 5b01000: { result = memoryinput | sourceReg2; }            // AMOOR
             case 5b01100: { result = memoryinput & sourceReg2; }            // AMOAND
-            case 5b10000: { ( result ) = MIN( memoryinput, sourceReg2); }   // AMOMIN
-            case 5b10100: { ( result ) = MAX( memoryinput, sourceReg2); }   // AMOMAX
-            case 5b11000: { ( result ) = MINU( memoryinput, sourceReg2); }  // AMOMINU
-            case 5b11100: { ( result ) = MAXU( memoryinput, sourceReg2); }  // AMOMAXU
+            case 5b10000: { ( result ) = min( memoryinput, sourceReg2); }   // AMOMIN
+            case 5b10100: { ( result ) = max( memoryinput, sourceReg2); }   // AMOMAX
+            case 5b11000: { ( result ) = minu( memoryinput, sourceReg2); }  // AMOMINU
+            case 5b11100: { ( result ) = maxu( memoryinput, sourceReg2); }  // AMOMAXU
         }
     }
 }
+
+// BIT MANIPULATION CIRCUITS
+// BARREL SHIFTERS / ROTATORS
+algorithm BSHIFTleft(
+    input   uint32  sourceReg1,
+    input   uint5   shiftcount,
+    input   uint7   function7,
+    output  uint32  result
+) <autorun> {
+    while(1) {
+        switch( function7[4,2] ) {
+            case 2b00: { result = sourceReg1 << shiftcount; }
+            case 2b01: { result = ~( ~sourceReg1 << shiftcount ); }
+            case 2b11: { result = ( sourceReg1 << shiftcount ) | ( sourceReg1 >> ( 32 - shiftcount ) ); }
+        }
+    }
+}
+algorithm BSHIFTright(
+    input   uint32  sourceReg1,
+    input   uint5   shiftcount,
+    input   uint7   function7,
+    output  uint32  result
+) <autorun> {
+    while(1) {
+        switch( function7[4,2] ) {
+            case 2b00: { result = sourceReg1 >> shiftcount; }
+            case 2b01: { result = ~( ~sourceReg1 >> shiftcount ); }
+            case 2b10: { result = __signed(sourceReg1) >>> shiftcount; }
+            case 2b11: { result = ( sourceReg1 >> shiftcount ) | ( sourceReg1 << ( 32 - shiftcount ) ); }
+        }
+    }
+}
+
+// SINGLE BIT OPERATIONS SET CLEAR INVERT
+algorithm singlebitops(
+    input   uint32  sourceReg1,
+    input   uint5   shiftcount,
+    input   uint7   function7,
+    output  uint32  result
+) <autorun> {
+    while(1) {
+        switch( function7[4,2] ) {
+            case 2b01: { result = sourceReg1 | ( 1 << shiftcount ); }
+            case 2b10: { result = sourceReg1 & ~( 1 << shiftcount ); }
+            case 2b11: { result = sourceReg1 ^ ( 1 << shiftcount ); }
+        }
+    }
+}
+// FUNNEL SHIFT LEFT AND RIGHT
+algorithm funnelshift(
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg3,
+    input   uint6   shiftcount,
+    input   uint7   function3,
+    output  uint32  result
+) <autorun> {
+    uint32  A <: ( shiftcount >= 32 ) ? sourceReg3 : sourceReg1;
+    uint32  B <: ( shiftcount >= 32 ) ? sourceReg1 : sourceReg3;
+    uint32  fshiftcount <: ( shiftcount >= 32 ) ? shiftcount - 32 : shiftcount;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+            switch( function3 ) {
+                case 3b001: { result = ( fshiftcount != 0 ) ? ( ( A << fshiftcount ) | ( B >> ( 32 - fshiftcount ) ) ) : A; } // FSL
+                case 3b101: { result = ( fshiftcount != 0 ) ? ( ( A >> fshiftcount ) | ( B << ( 32 - fshiftcount ) ) ) : A; } // FSR
+            }
+            busy = 0;
+        }
+    }
+}
+
+// GENERAL REVERSE / GENERAL OR CONDITIONAL
+algorithm grevgorc(
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint32  sourceReg1,
+    input   uint5   shiftcount,
+    input   uint7   function7,
+    output  uint32  result
+) <autorun> {
+    uint6   FSM = uninitialised;
+
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+            FSM = 1;
+            while( FSM != 0 ) {
+                onehot( FSM ) {
+                    case 0: { result = sourceReg1; }
+                    case 1: { if( shiftcount[0,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h55555555 ) << 1 ) | ( ( result & 32haaaaaaaa ) >> 1 ); } }
+                    case 2: { if( shiftcount[1,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h33333333 ) << 2 ) | ( ( result & 32hcccccccc ) >> 2 ); } }
+                    case 3: { if( shiftcount[2,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h0f0f0f0f ) << 4 ) | ( ( result & 32hf0f0f0f0 ) >> 4 ); } }
+                    case 4: { if( shiftcount[3,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h00ff00ff ) << 8 ) | ( ( result & 32hff00ff00 ) >> 8 ); } }
+                    case 5: { if( shiftcount[4,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h0000ffff ) << 16 ) | ( ( result & 32hffff0000 ) >> 16 ); } }
+                }
+                FSM = FSM << 1;
+            }
+            busy = 0;
+        }
+    }
+}
+
+// SHUFFLE / UNSHUFFLE
+circuitry shuffle32_stage(
+    input   src,
+    input   maskL,
+    input   maskR,
+    input   N,
+    output  x
+) {
+    uint32  A = uninitialised;
+    uint32  B = uninitialised;
+
+    x = src & ~( maskL | maskR );
+    switch( N ) {
+        case 1: { A = { src[0,31] , 1b0 }; B = { 1b0, src[1,31] }; }
+        case 2: { A = { src[0,30] , 2b0 }; B = { 2b0, src[2,30] }; }
+        case 4: { A = { src[0,28] , 4b0 }; B = { 4b0, src[4,28] }; }
+        case 8: { A = { src[0,24] , 8b0 }; B = { 8b0, src[8,24] }; }
+    }
+    ++:
+    x = x | ( A & maskL ) | ( B & maskR );
+}
+algorithm shflunshfl(
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint32  sourceReg1,
+    input   uint5   shiftcount,
+    input   uint3   function3,
+    output  uint32  result
+) <autorun> {
+    uint2   FSM = uninitialised;
+    uint3   count = uninitialized;
+    uint2   i = uninitialized;
+
+    uint4   N8 = 8; uint32 N8A = 32h00ff0000; uint32 N8B = 32h0000ff00;
+    uint4   N4 = 4; uint32 N4A = 32h0f000f00; uint32 N4B = 32h00f000f0;
+    uint4   N2 = 2; uint32 N2A = 32h30303030; uint32 N2B = 32h0c0c0c0c;
+    uint4   N1 = 1; uint32 N1A = 32h44444444; uint32 N1B = 32h22222222;
+
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+            FSM = 1;
+            while( FSM != 0 ) {
+                onehot( FSM ) {
+                    case 0: {
+                        result = sourceReg1;
+                        count = 0;
+                        i = ( function3 == 3b101) ? 0 : 3;
+                    }
+                    case 1: {
+                        while( count < 4 ) {
+                            switch( i ) {
+                                case 0: { if( shiftcount[0,1] ) { ( result ) = shuffle32_stage( result, N1A, N1B, N1 ); } }
+                                case 1: { if( shiftcount[1,1] ) { ( result ) = shuffle32_stage( result, N2A, N2B, N2 ); } }
+                                case 2: { if( shiftcount[2,1] ) { ( result ) = shuffle32_stage( result, N4A, N4B, N4 ); } }
+                                case 3: { if( shiftcount[3,1] ) { ( result ) = shuffle32_stage( result, N8A, N8B, N8 ); } }
+                            }
+                            i = ( function3 == 3b101) ? i + 1 : i - 1;
+                            count = count + 1;
+                        }
+                    }
+                }
+                FSM = FSM << 1;
+            }
+            busy = 0;
+        }
+    }
+}
+
+// CARRYLESS MULTIPLY
+algorithm clmul(
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint3   function3,
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+    output  uint32  result
+) <autorun> {
+    uint2   FSM = uninitialised;
+
+    uint6   i = uninitialised;
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+            FSM = 1;
+            while( FSM != 0 ) {
+                onehot( FSM ) {
+                    case 0: {
+                        i = ( function3 == 3b011 ) ? 1 : 0;
+                        result = 0;
+                    }
+                    case 1: {
+                        while( i < 32 ) {
+                            if( sourceReg2[i,1] ) {
+                                result = result ^ ( sourceReg1 << ( function3 == 3b001 ) ? i : ( ( function3 == 3b001 ) ? ( 32 - i ) : ( 31 - i ) ) );
+                            }
+                            i = i + 1;
+                        }
+                    }
+                }
+                FSM = FSM << 1;
+            }
+            busy = 0;
+        }
+    }
+}
+
+// BITS EXTRACT / DEPOSIT / PLACE
+algorithm bextbdep(
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+    input   uint7   function7,
+    output  uint32  result
+) <autorun> {
+    uint2 FSM = uninitialised;
+
+    uint6   i = uninitialised;
+    uint6   j = uninitialised;
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+            FSM = 1;
+            while( FSM != 0 ) {
+                onehot( FSM ) {
+                    case 0: {
+                        i = 0;
+                        j = 0;
+                        result = 0;
+                    }
+                    case 1: {
+                        while( i < 32 ) {
+                            if( sourceReg2[i,1] ) {
+                                if( sourceReg1[ ( ( function7 == 7b0100100 ) ? j : i ), 1] ) {
+                                    result[ j, 1 ] = 1b1;
+                                }
+                                j = j + 1;
+                            }
+                            i = i + 1;
+                        }
+                    }
+                }
+                FSM = FSM << 1;
+            }
+            busy = 0;
+        }
+    }
+}
+algorithm bfp(
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+    output  uint32  result
+) <autorun> {
+    uint3   FSM = uninitialised;
+    uint5   length = uninitialised;
+    uint6   offset = uninitialised;
+    uint32  mask = uninitialised;
+
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+            FSM = 1;
+            while( FSM != 0 ) {
+                onehot( FSM ) {
+                    case 0: {
+                        length = ( sourceReg2[24,4] == 0 ) ? 16 : sourceReg2[24,4];
+                        offset = sourceReg2[16,5];
+                        mask = 0;
+                    }
+                    case 1: { mask = ~(~mask << length) << offset; }
+                    case 2: { result = ( ( sourceReg2 << offset ) & mask ) | ( sourceReg1 & ~mask ); }
+                }
+                FSM = FSM << 1;
+            }
+            busy = 0;
+        }
+    }
+}
+
+// COUNT LEADING 0s, TRAILING 0s, POPULATION OF 1s
+algorithm clz(
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint32  sourceReg1,
+
+    output  uint32  result
+) <autorun> {
+    uint2   FSM = uninitialised;
+    uint32  bitcount = uninitialized;
+
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+            FSM = 1;
+            while( FSM != 0 ) {
+                onehot( FSM ) {
+                    case 0: {
+                        bitcount = sourceReg1;
+                        result = 0;
+                    }
+                    case 1: {
+                        while( ~bitcount[31,1] ) {
+                            bitcount = { bitcount[0,31], 1b0 };
+                            result = result + 1;
+                        }
+                    }
+                }
+                FSM = FSM << 1;
+            }
+            busy = 0;
+        }
+    }
+}
+algorithm ctz(
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint32  sourceReg1,
+
+    output  uint32  result
+) <autorun> {
+    uint2   FSM = uninitialised;
+    uint32  bitcount = uninitialized;
+
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+            FSM = 1;
+            while( FSM != 0 ) {
+                onehot( FSM ) {
+                    case 0: {
+                        bitcount = sourceReg1;
+                        result = 0;
+                    }
+                    case 1: {
+                        while( ~bitcount[31,1] ) {
+                            result = result + 1;
+                            bitcount = { bitcount[0,31], 1b0 };
+                        }
+                    }
+                }
+                FSM = FSM << 1;
+            }
+            busy = 0;
+        }
+    }
+}
+algorithm cpop(
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint32  sourceReg1,
+
+    output  uint32  result
+) <autorun> {
+    uint2   FSM = uninitialised;
+    uint32  bitcount = uninitialized;
+
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+            FSM = 1;
+            while( FSM != 0 ) {
+                onehot( FSM ) {
+                    case 0: {
+                        bitcount = sourceReg1;
+                        result = 0;
+                    }
+                    case 1: {
+                        while( bitcount != 0 ) {
+                            result = result + ( bitcount[0,1] ? 1 : 0 );
+                            bitcount = { 1b0, bitcount[1,31] };
+                        }
+                    }
+                }
+                FSM = FSM << 1;
+            }
+            busy = 0;
+        }
+    }
+}
+
+// CRC32 and CRC32C for byte, half-word and word
+algorithm crc32(
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint32  sourceReg1,
+    input   uint5   IshiftCount,
+
+    output  uint32  result
+) <autorun> {
+    uint2   FSM = uninitialised;
+    uint6   nbits = uninitialised;
+    uint6   i = uninitialised;
+
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+            FSM = 1;
+            while( FSM != 0 ) {
+                onehot( FSM ) {
+                    case 0: {
+                        result = sourceReg1;
+                        i = 0;
+                        switch( IshiftCount[0,2] ) {
+                            case 2b00: { nbits = 8; }
+                            case 2b01: { nbits = 16; }
+                            case 2b10: { nbits = 32; }
+                        }
+                    }
+                    case 1: {
+                        while( i < nbits ) {
+                            switch( IshiftCount[3,1] ) {
+                                case 1b0: { result = ( result >> 1 ) ^ ( 32hedb88320 & ~( ( result & 1 ) - 1 ) ); }
+                                case 1b1: { result = ( result >> 1 ) ^ ( 32h82f63b78 & ~( ( result & 1 ) - 1 ) ); }
+                            }
+                            i = i + 1;
+                        }
+                    }
+                }
+                FSM = FSM << 1;
+            }
+            busy = 0;
+        }
+    }
+}
+
+// XPERM for nibble, byte and half-word
+algorithm xperm(
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint3   function3,
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+    output  uint32  result
+) <autorun> {
+    uint2   FSM = uninitialised;
+    uint2   FSM2 = uninitialised;
+
+    uint3   sz_log2 = uninitialised;
+    uint6   sz = uninitialised;
+    uint32  mask = uninitialised;
+    uint32  pos = uninitialised;
+    uint6   i = uninitialised;
+
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+            FSM = 1;
+            while( FSM != 0 ) {
+                onehot( FSM ) {
+                    case 0: {
+                        switch( function3 ) {
+                            case 3b010: { sz_log2 = 2; sz = 6b000100; mask = 32h0000000f; }
+                            case 3b100: { sz_log2 = 3; sz = 6b001000; mask = 32h000000ff; }
+                            case 3b110: { sz_log2 = 4; sz = 6b010000; mask = 32h0000ffff; }
+                        }
+                        result = 0;
+                        i = 0;
+                    }
+                    case 1: {
+                        while( i < 32 ) {
+                            FSM2 = 1;
+                            while( FSM2 != 0 ) {
+                                onehot( FSM2 ) {
+                                    case 0: { pos = ( ( sourceReg2 >> i ) & mask ) << sz_log2; }
+                                    case 1: {
+                                        if( pos < 32 ) {
+                                            result = result | (( sourceReg1 >> pos ) & mask ) << i;
+                                        }
+                                        i = i + sz;
+                                    }
+                                }
+                                FSM2 = FSM2 << 1;
+                            }
+                        }
+                    }
+                }
+                FSM = FSM << 1;
+            }
+            busy = 0;
+        }
+    }
+}
+

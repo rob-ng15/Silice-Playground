@@ -278,7 +278,7 @@ algorithm PAWSCPU(
                         result = opCode[6,1] ? FPU.result : ALU.result;
                     }
                 }
-                FSM = memorystore ? 7b0010000 : 7b0100000;
+                FSM = memorystore ? 7b0010000 : ( writeRegister ?  7b0100000 : 7b1000000 );
             }
             case 4: {                                                                           // STORE TO MEMORY
                 ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy );

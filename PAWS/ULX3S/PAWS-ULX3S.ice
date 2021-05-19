@@ -32,7 +32,7 @@ $include('../background.ice')
 $include('../sprite_layer.ice')
 $include('../tile_map.ice')
 $include('../audio.ice')
-$include('../memmap_io_50mhz-working.ice')
+$include('../memmap_io_50mhz.ice')
 
 // CPU
 $include('../cpu_functionblocks.ice')

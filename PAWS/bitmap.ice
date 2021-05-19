@@ -69,8 +69,8 @@ algorithm bitmap(
     output  uint1   gpu_active,
     output  uint1   vector_block_active
 ) <autorun> {
-    simple_dualport_bram uint7 bitmap_0 <input!> [ 76800 ] = uninitialized;
-    simple_dualport_bram uint7 bitmap_1 <input!> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint7 bitmap_0 <@clock,@gpu_clock> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint7 bitmap_1 <@clock,@gpu_clock> [ 76800 ] = uninitialized;
 
     // Pixel x and y fetching ( adjusting for offset )
     uint9  x_plus_one <: ( pix_x[1,9] + x_offset + 1 ) > 319 ? ( pix_x[1,9] + x_offset + 1 ) - 320 : ( pix_x[1,9] + x_offset + 1 );
@@ -89,7 +89,7 @@ algorithm bitmap(
     uint4   gpu_active_dithermode = uninitialized;
     uint1   bitmap_write = uninitialized;
 
-    bitmapwriter pixel_writer(
+    bitmapwriter pixel_writer <@gpu_clock> (
         framebuffer <: writer_framebuffer,
         bitmap_x_write <: bitmap_x_write,
         bitmap_y_write <: bitmap_y_write,
@@ -105,7 +105,7 @@ algorithm bitmap(
         bitmap_1 <:> bitmap_1
     );
 
-    gpu gpu_processor(
+    gpu gpu_processor <@gpu_clock> (
         gpu_x <: gpu_x,
         gpu_y <: gpu_y,
         gpu_colour <: gpu_colour,
@@ -116,6 +116,7 @@ algorithm bitmap(
         gpu_param3 <: gpu_param3,
         gpu_write <: gpu_write,
         gpu_dithermode <: gpu_dithermode,
+
         blit1_writer_tile <: blit1_writer_tile,
         blit1_writer_line <: blit1_writer_line,
         blit1_writer_bitmap <: blit1_writer_bitmap,
@@ -126,6 +127,7 @@ algorithm bitmap(
         colourblit_writer_line <: colourblit_writer_line,
         colourblit_writer_pixel <: colourblit_writer_pixel,
         colourblit_writer_colour <: colourblit_writer_colour,
+
         vector_block_number <: vector_block_number,
         vector_block_colour <: vector_block_colour,
         vector_block_xc <: vector_block_xc,

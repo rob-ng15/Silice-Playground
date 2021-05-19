@@ -1,12 +1,33 @@
 // HELPER CIRCUITS
 
-// MINIMUM OF 2 VALUES
+// MIN[U] MAX[U] curcuits
 circuitry min(
     input   value1,
     input   value2,
-    output  minimum
+    output  result
 ) {
-    minimum = ( value1 < value2 ) ? value1 : value2;
+    result = ( __signed(value1) < __signed(value2) ) ? value1 : value2;
+}
+circuitry minu(
+    input   value1,
+    input   value2,
+    output  result
+) {
+    result = ( __unsigned(value1) < __unsigned(value2) ) ? value1 : value2;
+}
+circuitry max(
+    input   value1,
+    input   value2,
+    output  result
+) {
+    result = ( __signed(value1) > __signed(value2) ) ? value1 : value2;
+}
+circuitry maxu(
+    input   value1,
+    input   value2,
+    output  result
+) {
+    result = ( __unsigned(value1) > __unsigned(value2) ) ? value1 : value2;
 }
 
 // MINIMUM OF 3 VALUES
@@ -17,15 +38,6 @@ circuitry min3(
     output  minimum
 ) {
     minimum = ( value1 < value2 ) ? ( value1 < value3 ? value1 : value3 ) : ( value2 < value3 ? value2 : value3 );
-}
-
-// MAXIMUM OF 2 VALUES
-circuitry max(
-    input   value1,
-    input   value2,
-    output  maximum
-) {
-    maximum = ( value1 > value2 ) ? value1 : value2;
 }
 
 // MAXIMUM OF 3 VALUES
