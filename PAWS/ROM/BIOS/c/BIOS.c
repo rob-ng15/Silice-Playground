@@ -286,23 +286,21 @@ void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2,
 void set_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsigned char active, unsigned char colour, short x, short y, unsigned char tile, unsigned char sprite_size) {
     switch( sprite_layer ) {
         case 0:
-            *LOWER_SPRITE_NUMBER = sprite_number;
-            *LOWER_SPRITE_ACTIVE = active;
-            *LOWER_SPRITE_TILE = tile;
-            *LOWER_SPRITE_COLOUR = colour;
-            *LOWER_SPRITE_X = x;
-            *LOWER_SPRITE_Y = y;
-            *LOWER_SPRITE_DOUBLE = sprite_size;
+            LOWER_SPRITE_ACTIVE[sprite_number] = active;
+            LOWER_SPRITE_TILE[sprite_number] = tile;
+            LOWER_SPRITE_COLOUR[sprite_number] = colour;
+            LOWER_SPRITE_X[sprite_number] = x;
+            LOWER_SPRITE_Y[sprite_number] = y;
+            LOWER_SPRITE_DOUBLE[sprite_number] = sprite_size;
             break;
 
         case 1:
-            *UPPER_SPRITE_NUMBER = sprite_number;
-            *UPPER_SPRITE_ACTIVE = active;
-            *UPPER_SPRITE_TILE = tile;
-            *UPPER_SPRITE_COLOUR = colour;
-            *UPPER_SPRITE_X = x;
-            *UPPER_SPRITE_Y = y;
-            *UPPER_SPRITE_DOUBLE = sprite_size;
+            UPPER_SPRITE_ACTIVE[sprite_number] = active;
+            UPPER_SPRITE_TILE[sprite_number] = tile;
+            UPPER_SPRITE_COLOUR[sprite_number] = colour;
+            UPPER_SPRITE_X[sprite_number] = x;
+            UPPER_SPRITE_Y[sprite_number] = y;
+            UPPER_SPRITE_DOUBLE[sprite_number] = sprite_size;
             break;
     }
 }

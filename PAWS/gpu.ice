@@ -93,8 +93,7 @@ algorithm gpu(
         param0 <: gpu_param0,
         param1 <: gpu_param1
     );
-    line GPUline(
-    );
+    line GPUline( );
     circle GPUcircle(
         x <: gpu_x,
         y <: gpu_y,
@@ -538,11 +537,9 @@ algorithm insideTriangle(
     input   int10   y2,
     output  uint1   inside
 ) <autorun> {
-    while(1) {
-        inside = ( (( x2 - x1 ) * ( sy - y1 ) - ( y2 - y1 ) * ( sx - x1 )) >= 0 ) &&
+     inside := ( (( x2 - x1 ) * ( sy - y1 ) - ( y2 - y1 ) * ( sx - x1 )) >= 0 ) &&
                 ( (( x - x2 ) * ( sy - y2 ) - ( y - y2 ) * ( sx - x2 )) >= 0 ) &&
                 ( (( x1 - x ) * ( sy - y ) - ( y1 - y ) * ( sx - x )) >= 0 );
-    }
 }
 algorithm triangle (
     input   int10   x,
@@ -721,13 +718,10 @@ algorithm blittilebitmapwriter(
 ) <autorun> {
     blit1tilemap.wenable1 := 1;
     characterGenerator8x8.wenable1 := 1;
-
-    while(1) {
-        blit1tilemap.addr1 = { blit1_writer_tile, blit1_writer_line };
-        blit1tilemap.wdata1 = blit1_writer_bitmap;
-        characterGenerator8x8.addr1 = { character_writer_character, character_writer_line };
-        characterGenerator8x8.wdata1 = character_writer_bitmap;
-    }
+    blit1tilemap.addr1 := { blit1_writer_tile, blit1_writer_line };
+    blit1tilemap.wdata1 := blit1_writer_bitmap;
+    characterGenerator8x8.addr1 := { character_writer_character, character_writer_line };
+    characterGenerator8x8.wdata1 := character_writer_bitmap;
 }
 
 algorithm blit (
@@ -854,11 +848,8 @@ algorithm colourblittilebitmapwriter(
     simple_dualport_bram_port1 colourblittilemap,
 ) <autorun> {
     colourblittilemap.wenable1 := 1;
-
-    while(1) {
-        colourblittilemap.addr1 = { colourblit_writer_tile, colourblit_writer_line, colourblit_writer_pixel };
-        colourblittilemap.wdata1 = colourblit_writer_colour;
-    }
+    colourblittilemap.addr1 := { colourblit_writer_tile, colourblit_writer_line, colourblit_writer_pixel };
+    colourblittilemap.wdata1 := colourblit_writer_colour;
 }
 algorithm colourblit(
     // For setting blit1 tile bitmaps
@@ -1017,8 +1008,8 @@ algorithm vectors(
     simple_dualport_bram uint13 vertex <input!> [512] = uninitialised;
 
     // Extract deltax and deltay for the present vertices
-    int10 deltax := { {4{vectorentry(vertex.rdata0).dxsign}}, vectorentry(vertex.rdata0).dx };
-    int10 deltay := { {4{vectorentry(vertex.rdata0).dysign}}, vectorentry(vertex.rdata0).dy };
+    int10 deltax := { {5{vectorentry(vertex.rdata0).dxsign}}, vectorentry(vertex.rdata0).dx };
+    int10 deltay := { {5{vectorentry(vertex.rdata0).dysign}}, vectorentry(vertex.rdata0).dy };
 
     // Vertices being processed, plus first coordinate of each line
     uint5 block_number = 0;

@@ -425,13 +425,13 @@ void move_asteroids( void ) {
 
         for( unsigned char asteroid_number = 0; asteroid_number < MAXASTEROIDS; asteroid_number++ ) {
             if( ( asteroid_active[asteroid_number] != 0 ) && ( asteroid_active[asteroid_number] < 3 ) ) {
-                update_sprite_SMT( ASN( asteroid_number ), asteroid_directions[ asteroid_direction[asteroid_number] ] );
+                update_sprite( ASN( asteroid_number ), asteroid_directions[ asteroid_direction[asteroid_number] ] );
             }
 
             // UFO
             if(  asteroid_active[asteroid_number] == 3 ) {
-                update_sprite_SMT( ASN( asteroid_number ), ufo_directions[ufo_leftright + ( level > 2 ? 2 : 0 )] );
-                if( get_sprite_attribute_SMT( ASN( asteroid_number), 0 ) == 0 ) {
+                update_sprite( ASN( asteroid_number ), ufo_directions[ufo_leftright + ( level > 2 ? 2 : 0 )] );
+                if( get_sprite_attribute( ASN( asteroid_number), 0 ) == 0 ) {
                     // UFO OFF SCREEN
                     set_ufo_sprite( 0 );
                     asteroid_active[asteroid_number] = 0;
@@ -445,7 +445,7 @@ void move_asteroids( void ) {
 
             if( asteroid_active[asteroid_number] == 5 ) {
                 asteroid_active[asteroid_number] = 0;
-                set_sprite_SMT( ASN( asteroid_number ), 0, 0, 0, 0, 0, 0 );
+                set_sprite( ASN( asteroid_number ), 0, 0, 0, 0, 0, 0 );
             }
         }
     wait_timer1khz( 1 );

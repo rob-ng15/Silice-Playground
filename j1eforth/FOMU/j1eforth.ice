@@ -240,6 +240,8 @@ algorithm main(
     // 1hz timer
     input   uint16 timer1hz
 ) {
+    uint16  FSM = 1;
+
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
     uint16  instruction = uninitialized;
     uint16  immediate := ( literal(instruction).literalvalue );
@@ -283,10 +285,11 @@ algorithm main(
 
     // INIT to determine if copying rom to ram or executing
     // INIT 0 SPRAM, INIT 1 ROM to SPRAM, INIT 2 J1 CPU
-    uint2 INIT = 0;
+    uint2   INIT = 0;
+    uint3   INITFSM = uninitialized;
 
     // Address for 0 to SPRAM, copying ROM
-    uint16 copyaddress = 0;
+    uint16  copyaddress = uninitialized;
 
     // UART input FIFO (32 character) as dualport bram (code from @sylefeb)
     simple_dualport_bram uint8 uartInBuffer[512] = uninitialized;
@@ -307,7 +310,6 @@ algorithm main(
     rstack.addr0 := rsp;
     rstack.wenable1 := 1;
 
-    // dual port bram for dtsack and strack
     uartInBuffer.wenable1  := 1;  // always write on port 1
     uartInBuffer.addr0     := uartInBufferNext; // FIFO reads on next
     uartInBuffer.addr1     := uartInBufferTop;  // FIFO writes on top
@@ -320,27 +322,28 @@ algorithm main(
     uartInBuffer.wdata1  := uart_out_data;
     uartInBufferTop      := ( uart_out_valid ) ? uartInBufferTop + 1 : uartInBufferTop;
     uart_out_ready := uart_out_valid ? 1 : uart_out_ready;
-    //always {
-    //    // READ from UART if character available and store
-    //    if( uart_out_valid ) {
-    //        // writes at uartInBufferTop (code from @sylefeb)
-    //        uartInBuffer.wdata1  = uart_out_data;
-    //        uart_out_ready       = 1;
-    //        uartInBufferTop      = uartInBufferTop + 1;
-    //    }
-    //}
 
     // INIT is 0 ZERO SPRAM
     while( INIT == 0 ) {
         copyaddress = 0;
-        ++:
         while( copyaddress < 32768 ) {
-            sram_address = copyaddress;
-            sram_data_write = 0;
-            sram_readwrite = 1;
-            ++:
-            sram_readwrite = 0;
-            copyaddress = copyaddress + 1;
+            INITFSM = 1;
+            while( INITFSM != 0 ) {
+                onehot( INITFSM ) {
+                    case 0: {
+                        sram_address = copyaddress;
+                        sram_data_write = 0;
+                        sram_readwrite = 1;
+                    }
+                    case 1: {
+                        sram_readwrite = 0;
+                    }
+                    case 2: {
+                        copyaddress = copyaddress + 1;
+                    }
+                }
+                INITFSM = INITFSM << 1;
+            }
         }
         INIT = 1;
     }
@@ -348,31 +351,43 @@ algorithm main(
     // INIT is 1 COPY ROM TO SPRAM
     while( INIT == 1) {
         copyaddress = 0;
-        ++:
         while( copyaddress < 4096 ) {
-                rom.addr = copyaddress;
-                ++:
-                sram_address = copyaddress;
-                sram_data_write = rom.rdata;
-                sram_readwrite = 1;
-                ++:
-                copyaddress = copyaddress + 1;
-                sram_readwrite = 0;
+            INITFSM = 1;
+            while( INITFSM != 0 ) {
+                onehot( INITFSM ) {
+                    case 0: {
+                        rom.addr = copyaddress;
+                    }
+                    case 1: {
+                        sram_address = copyaddress;
+                        sram_data_write = rom.rdata;
+                        sram_readwrite = 1;
+                    }
+                    case 2: {
+                        copyaddress = copyaddress + 1;
+                        sram_readwrite = 0;
+                    }
+                }
+                INITFSM = INITFSM << 1;
+            }
         }
         INIT = 3;
     }
 
     // INIT is 3 EXECUTE J1 CPU
     while( INIT == 3 ) {
-        // WRITE to UART if characters in buffer and UART is ready
-        if( ~(uartOutBufferNext == uartOutBufferTop) & ~( uart_in_valid ) ) {
-            // reads at uartOutBufferNext (code from @sylefeb)
-            uart_in_data      = uartOutBuffer.rdata0;
-            uart_in_valid     = 1;
-            uartOutBufferNext = uartOutBufferNext + 1;
-        }
-        uartOutBufferTop = newuartOutBufferTop;
-
+        onehot( FSM ) {
+            case 0: {
+                // WRITE to UART if characters in buffer and UART is ready
+                if( ~(uartOutBufferNext == uartOutBufferTop) & ~( uart_in_valid ) ) {
+                    // reads at uartOutBufferNext (code from @sylefeb)
+                    uart_in_data      = uartOutBuffer.rdata0;
+                    uart_in_valid     = 1;
+                    uartOutBufferNext = uartOutBufferNext + 1;
+                }
+                uartOutBufferTop = newuartOutBufferTop;
+            }
+            case 1: {
                // read dtsack and rstack brams (code from @sylefeb)
                 stackNext = dstack.rdata0;
                 rStackTop = rstack.rdata0;
@@ -380,21 +395,28 @@ algorithm main(
                 // start READ memoryInput = [stackTop] result ready in 2 cycles
                 sram_address = stackTop >> 1;
                 sram_readwrite = 0;
-                ++:
-                ++:
+            }
+            case 2: {}
+            case 3: {}
+            case 4: {
                 // wait then read the data from SPRAM
                 memoryInput = sram_data_read;
-                ++:
+            }
+            case 5: {}
+            case 6: {
                 // start READ instruction = [pc] result ready in 2 cycles
                 sram_address = pc;
                 sram_readwrite = 0;
-                ++:
-                ++:
-                ++:
-                // wait then read the instruction from SPRAM
+            }
+            case 7: {}
+            case 8: {}
+            case 9: {}
+            case 10: {
+               // wait then read the instruction from SPRAM
                 instruction = sram_data_read;
-                ++:
-
+            }
+            case 11: {}
+            case 12: {
                 // J1 CPU Instruction Execute
                 if( is_lit ) {
                     // LITERAL Push value onto stack
@@ -459,28 +481,29 @@ algorithm main(
                         } // ALU
                     }
                 } // J1 CPU Instruction Execute
-
-                ++:
+            }
+            case 13: {
                 // Write to dstack and rstack
                 // Commit to dstack and rstack
                 ( dstack ) = commitDSTACK( dstack, dstackWrite, newDSP, stackTop );
                 ( rstack ) = commitRSTACK( rstack, rstackWrite, newRSP, rstackWData );
-
-                ++:
+            }
+            case 14: {
                 // Update dsp, rsp, pc, stackTop
                 dsp = newDSP;
                 pc = newPC;
                 stackTop = newStackTop;
                 rsp = newRSP;
-
-                ++:
+            }
+            case 15: {
                 // reset sram_readwrite
                 sram_readwrite = 0;
-
-        // Reset UART
-        if(uart_in_ready & uart_in_valid) {
-            uart_in_valid = 0;
+                // Reset UART
+                if(uart_in_ready & uart_in_valid) {
+                    uart_in_valid = 0;
+                }
+            }
         }
-
+        FSM = { FSM[1,15], FSM[15,1] };
     } // (INIT==3 execute J1 CPU)
 }

@@ -1,8 +1,7 @@
 #!/bin/bash
 
-echo "COMPILING FOR SDCARD LOADING"
+echo "GCC compile for SDCARD"
 ARCH="riscv64"
-echo "using $ARCH"
 
 AR="riscv64-elf-ar"
 NM="riscv64-elf-nm"

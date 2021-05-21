@@ -614,23 +614,21 @@ void set_sprite_bitmaps( unsigned char sprite_layer, unsigned char sprite_number
 void set_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsigned char active, unsigned char colour, short x, short y, unsigned char tile, unsigned char sprite_size) {
     switch( sprite_layer ) {
         case 0:
-            *LOWER_SPRITE_NUMBER = sprite_number;
-            *LOWER_SPRITE_ACTIVE = active;
-            *LOWER_SPRITE_TILE = tile;
-            *LOWER_SPRITE_COLOUR = colour;
-            *LOWER_SPRITE_X = x;
-            *LOWER_SPRITE_Y = y;
-            *LOWER_SPRITE_DOUBLE = sprite_size;
+            LOWER_SPRITE_ACTIVE[sprite_number] = active;
+            LOWER_SPRITE_TILE[sprite_number] = tile;
+            LOWER_SPRITE_COLOUR[sprite_number] = colour;
+            LOWER_SPRITE_X[sprite_number] = x;
+            LOWER_SPRITE_Y[sprite_number] = y;
+            LOWER_SPRITE_DOUBLE[sprite_number] = sprite_size;
             break;
 
         case 1:
-            *UPPER_SPRITE_NUMBER = sprite_number;
-            *UPPER_SPRITE_ACTIVE = active;
-            *UPPER_SPRITE_TILE = tile;
-            *UPPER_SPRITE_COLOUR = colour;
-            *UPPER_SPRITE_X = x;
-            *UPPER_SPRITE_Y = y;
-            *UPPER_SPRITE_DOUBLE = sprite_size;
+            UPPER_SPRITE_ACTIVE[sprite_number] = active;
+            UPPER_SPRITE_TILE[sprite_number] = tile;
+            UPPER_SPRITE_COLOUR[sprite_number] = colour;
+            UPPER_SPRITE_X[sprite_number] = x;
+            UPPER_SPRITE_Y[sprite_number] = y;
+            UPPER_SPRITE_DOUBLE[sprite_number] = sprite_size;
             break;
     }
 }
@@ -644,47 +642,45 @@ void set_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsign
 //  attribute == 5 size ( 0 == 16 x 16, 1 == 32 x 32 )
 void set_sprite_attribute( unsigned char sprite_layer, unsigned char sprite_number, unsigned char attribute, short value ) {
     if( sprite_layer == 0 ) {
-        *LOWER_SPRITE_NUMBER = sprite_number;
         switch( attribute ) {
             case 0:
-                *LOWER_SPRITE_ACTIVE = ( unsigned char) value;
+                LOWER_SPRITE_ACTIVE[sprite_number] = ( unsigned char) value;
                 break;
             case 1:
-                *LOWER_SPRITE_TILE = ( unsigned char) value;
+                LOWER_SPRITE_TILE[sprite_number] = ( unsigned char) value;
                 break;
             case 2:
-                *LOWER_SPRITE_COLOUR = ( unsigned char) value;
+                LOWER_SPRITE_COLOUR[sprite_number] = ( unsigned char) value;
                 break;
             case 3:
-                *LOWER_SPRITE_X = value;
+                LOWER_SPRITE_X[sprite_number] = value;
                 break;
             case 4:
-                *LOWER_SPRITE_Y = value;
+                LOWER_SPRITE_Y[sprite_number] = value;
                 break;
             case 5:
-                *LOWER_SPRITE_DOUBLE = ( unsigned char) value;
+                LOWER_SPRITE_DOUBLE[sprite_number] = ( unsigned char) value;
                 break;
         }
     } else {
-        *UPPER_SPRITE_NUMBER = sprite_number;
         switch( attribute ) {
             case 0:
-                *UPPER_SPRITE_ACTIVE = ( unsigned char) value;
+                UPPER_SPRITE_ACTIVE[sprite_number] = ( unsigned char) value;
                 break;
             case 1:
-                *UPPER_SPRITE_TILE = ( unsigned char) value;
+                UPPER_SPRITE_TILE[sprite_number] = ( unsigned char) value;
                 break;
             case 2:
-                *UPPER_SPRITE_COLOUR = ( unsigned char) value;
+                UPPER_SPRITE_COLOUR[sprite_number] = ( unsigned char) value;
                 break;
             case 3:
-                *UPPER_SPRITE_X = value;
+                UPPER_SPRITE_X[sprite_number] = value;
                 break;
             case 4:
-                *UPPER_SPRITE_Y = value;
+                UPPER_SPRITE_Y[sprite_number] = value;
                 break;
             case 5:
-                *UPPER_SPRITE_DOUBLE = ( unsigned char) value;
+                UPPER_SPRITE_DOUBLE[sprite_number] = ( unsigned char) value;
                 break;
         }
     }
@@ -692,38 +688,36 @@ void set_sprite_attribute( unsigned char sprite_layer, unsigned char sprite_numb
 
 short get_sprite_attribute( unsigned char sprite_layer, unsigned char sprite_number, unsigned char attribute ) {
     if( sprite_layer == 0 ) {
-        *LOWER_SPRITE_NUMBER = sprite_number;
         switch( attribute ) {
             case 0:
-                return( (short)*LOWER_SPRITE_ACTIVE );
+                return( (short)LOWER_SPRITE_ACTIVE[sprite_number] );
             case 1:
-                return( (short)*LOWER_SPRITE_TILE );
+                return( (short)LOWER_SPRITE_TILE[sprite_number] );
             case 2:
-                return( (short)*LOWER_SPRITE_COLOUR );
+                return( (short)LOWER_SPRITE_COLOUR[sprite_number] );
             case 3:
-                return( *LOWER_SPRITE_X );
+                return( LOWER_SPRITE_X[sprite_number] );
             case 4:
-                return( *LOWER_SPRITE_Y );
+                return( LOWER_SPRITE_Y[sprite_number] );
             case 5:
-                return( (short)*LOWER_SPRITE_DOUBLE );
+                return( (short)LOWER_SPRITE_DOUBLE[sprite_number] );
             default:
                 return( 0 );
         }
     } else {
-        *UPPER_SPRITE_NUMBER = sprite_number;
         switch( attribute ) {
             case 0:
-                return( (short)*UPPER_SPRITE_ACTIVE );
+                return( (short)UPPER_SPRITE_ACTIVE[sprite_number] );
             case 1:
-                return( (short)*UPPER_SPRITE_TILE );
+                return( (short)UPPER_SPRITE_TILE[sprite_number] );
             case 2:
-                return( (short)*UPPER_SPRITE_COLOUR );
+                return( (short)UPPER_SPRITE_COLOUR[sprite_number] );
             case 3:
-                return( *UPPER_SPRITE_X );
+                return( UPPER_SPRITE_X[sprite_number] );
             case 4:
-                return( *UPPER_SPRITE_Y );
+                return( UPPER_SPRITE_Y[sprite_number] );
             case 5:
-                return( (short)*UPPER_SPRITE_DOUBLE );
+                return( (short)UPPER_SPRITE_DOUBLE[sprite_number] );
             default:
                 return( 0 );
         }
@@ -749,139 +743,10 @@ unsigned short get_sprite_layer_collision( unsigned char sprite_layer, unsigned 
 void update_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsigned short update_flag ) {
     switch( sprite_layer ) {
         case 0:
-            *LOWER_SPRITE_NUMBER = sprite_number;
-            *LOWER_SPRITE_UPDATE = update_flag;
+            LOWER_SPRITE_UPDATE[sprite_number] = update_flag;
             break;
         case 1:
-            *UPPER_SPRITE_NUMBER = sprite_number;
-            *UPPER_SPRITE_UPDATE = update_flag;
-            break;
-    }
-}
-
-// SPRITE LAYERS - SMT ACCESS
-// DUPLICATE TO ALLOW BOTH THREADS TO USE SPRITES - VIA SMT SPRITE REGISTERS
-void set_sprite_SMT( unsigned char sprite_layer, unsigned char sprite_number, unsigned char active, unsigned char colour, short x, short y, unsigned char tile, unsigned char sprite_size) {
-    switch( sprite_layer ) {
-        case 0:
-            *LOWER_SPRITE_NUMBER_SMT = sprite_number;
-            *LOWER_SPRITE_ACTIVE_SMT = active;
-            *LOWER_SPRITE_TILE_SMT = tile;
-            *LOWER_SPRITE_COLOUR_SMT = colour;
-            *LOWER_SPRITE_X_SMT = x;
-            *LOWER_SPRITE_Y_SMT = y;
-            *LOWER_SPRITE_DOUBLE_SMT = sprite_size;
-            break;
-
-        case 1:
-            *UPPER_SPRITE_NUMBER_SMT = sprite_number;
-            *UPPER_SPRITE_ACTIVE_SMT = active;
-            *UPPER_SPRITE_TILE_SMT = tile;
-            *UPPER_SPRITE_COLOUR_SMT = colour;
-            *UPPER_SPRITE_X_SMT = x;
-            *UPPER_SPRITE_Y_SMT = y;
-            *UPPER_SPRITE_DOUBLE_SMT = sprite_size;
-            break;
-    }
-}
-
-void set_sprite_attribute_SMT( unsigned char sprite_layer, unsigned char sprite_number, unsigned char attribute, short value ) {
-    if( sprite_layer == 0 ) {
-        *LOWER_SPRITE_NUMBER_SMT = sprite_number;
-        switch( attribute ) {
-            case 0:
-                *LOWER_SPRITE_ACTIVE_SMT = ( unsigned char) value;
-                break;
-            case 1:
-                *LOWER_SPRITE_TILE_SMT = ( unsigned char) value;
-                break;
-            case 2:
-                *LOWER_SPRITE_COLOUR_SMT = ( unsigned char) value;
-                break;
-            case 3:
-                *LOWER_SPRITE_X_SMT = value;
-                break;
-            case 4:
-                *LOWER_SPRITE_Y_SMT = value;
-                break;
-            case 5:
-                *LOWER_SPRITE_DOUBLE_SMT = ( unsigned char) value;
-                break;
-        }
-    } else {
-        *UPPER_SPRITE_NUMBER_SMT = sprite_number;
-        switch( attribute ) {
-            case 0:
-                *UPPER_SPRITE_ACTIVE_SMT = ( unsigned char) value;
-                break;
-            case 1:
-                *UPPER_SPRITE_TILE_SMT = ( unsigned char) value;
-                break;
-            case 2:
-                *UPPER_SPRITE_COLOUR_SMT = ( unsigned char) value;
-                break;
-            case 3:
-                *UPPER_SPRITE_X_SMT = value;
-                break;
-            case 4:
-                *UPPER_SPRITE_Y_SMT = value;
-                break;
-            case 5:
-                *UPPER_SPRITE_DOUBLE_SMT = ( unsigned char) value;
-                break;
-        }
-    }
-}
-
-short get_sprite_attribute_SMT( unsigned char sprite_layer, unsigned char sprite_number, unsigned char attribute ) {
-    if( sprite_layer == 0 ) {
-        *LOWER_SPRITE_NUMBER_SMT = sprite_number;
-        switch( attribute ) {
-            case 0:
-                return( (short)*LOWER_SPRITE_ACTIVE_SMT );
-            case 1:
-                return( (short)*LOWER_SPRITE_TILE_SMT );
-            case 2:
-                return( (short)*LOWER_SPRITE_COLOUR_SMT );
-            case 3:
-                return( *LOWER_SPRITE_X_SMT );
-            case 4:
-                return( *LOWER_SPRITE_Y_SMT );
-            case 5:
-                return( (short)*LOWER_SPRITE_DOUBLE_SMT );
-            default:
-                return( 0 );
-        }
-    } else {
-        *UPPER_SPRITE_NUMBER_SMT = sprite_number;
-        switch( attribute ) {
-            case 0:
-                return( (short)*UPPER_SPRITE_ACTIVE_SMT );
-            case 1:
-                return( (short)*UPPER_SPRITE_TILE_SMT );
-            case 2:
-                return( (short)*UPPER_SPRITE_COLOUR_SMT );
-            case 3:
-                return( *UPPER_SPRITE_X_SMT );
-            case 4:
-                return( *UPPER_SPRITE_Y_SMT );
-            case 5:
-                return( (short)*UPPER_SPRITE_DOUBLE_SMT );
-            default:
-                return( 0 );
-        }
-    }
-}
-
-void update_sprite_SMT( unsigned char sprite_layer, unsigned char sprite_number, unsigned short update_flag ) {
-    switch( sprite_layer ) {
-        case 0:
-            *LOWER_SPRITE_NUMBER_SMT = sprite_number;
-            *LOWER_SPRITE_UPDATE_SMT = update_flag;
-            break;
-        case 1:
-            *UPPER_SPRITE_NUMBER_SMT = sprite_number;
-            *UPPER_SPRITE_UPDATE_SMT = update_flag;
+            UPPER_SPRITE_UPDATE[sprite_number] = update_flag;
             break;
     }
 }

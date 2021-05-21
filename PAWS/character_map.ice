@@ -90,6 +90,8 @@ algorithm character_map_writer(
     output  uint7   curses_background,
     output  uint6   curses_foreground
 ) <autorun> {
+    uint2   FSM = uninitialized;
+
     // COPY OF CHARCTER MAP FOR THE CURSES BUFFER
     simple_dualport_bram uint21 charactermap_copy[2400] = { 21b100000000000000000000, pad(21b100000000000000000000) };
 
@@ -194,13 +196,20 @@ algorithm character_map_writer(
             // CURSES COPY
             case 3: {
                 while( tpu_cs_addr < 2400 ) {
-                    charactermap_copy.addr0 = tpu_cs_addr;
-                    ++:
-                    charactermap.addr1 = tpu_cs_addr;
-                    charactermap.wdata1 = charactermap_copy.rdata0[0,8];
-                    colourmap.addr1 = tpu_cs_addr;
-                    colourmap.wdata1 = { charactermap_copy.rdata0[14,7], charactermap_copy.rdata0[8,6] };
-                    tpu_cs_addr = tpu_cs_addr + 1;
+                    FSM = 1;
+                    while( FSM !=0 ) {
+                        onehot( FSM ) {
+                            case 0: { charactermap_copy.addr0 = tpu_cs_addr; }
+                            case 1: {
+                                charactermap.addr1 = tpu_cs_addr;
+                                charactermap.wdata1 = charactermap_copy.rdata0[0,8];
+                                colourmap.addr1 = tpu_cs_addr;
+                                colourmap.wdata1 = { charactermap_copy.rdata0[14,7], charactermap_copy.rdata0[8,6] };
+                                tpu_cs_addr = tpu_cs_addr + 1;
+                            }
+                        }
+                        FSM = FSM << 1;
+                    }
                 }
                 tpu_active = 0;
             }

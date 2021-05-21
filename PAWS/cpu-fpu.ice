@@ -86,8 +86,8 @@ algorithm PAWSCPU(
     uint1   writeRegister = uninitialized;
     uint32  memoryinput = uninitialized;
     uint32  memoryoutput = uninitialized;
-    uint1   memoryload := ( ( opCode == 7b0000011 ) || ( ( opCode == 7b0101111 ) && ( function7[2,5] != 5b00011 ) ) ) ? 1 : 0;
-    uint1   memorystore := ( ( opCode == 7b0100011 ) || ( ( opCode == 7b0101111 ) && ( function7[2,5] != 5b00010 ) ) ) ? 1 : 0;
+    uint1   memoryload := ( ( opCode == 7b0000011 ) || ( opCode == 7b0000111 ) || ( ( opCode == 7b0101111 ) && ( function7[2,5] != 5b00011 ) ) ) ? 1 : 0;
+    uint1   memorystore := ( ( opCode == 7b0100011 ) || ( opCode == 7b0100111 ) || ( ( opCode == 7b0101111 ) && ( function7[2,5] != 5b00010 ) ) ) ? 1 : 0;
 
     // RISC-V 32 BIT INSTRUCTION DECODER
     int32   immediateValue = uninitialized;
@@ -128,6 +128,22 @@ algorithm PAWSCPU(
         sourceReg2 :> sourceReg2,
         sourceReg3 :> sourceReg3
     );
+    // RISC-V FLOATING POINT REGISTERS
+    uint32  sourceReg1F = uninitialized;
+    uint32  sourceReg2F = uninitialized;
+    uint32  sourceReg3F = uninitialized;
+    uint1   frd = uninitialized;
+    registers REGISTERSF(
+        SMT <:: SMT,
+        rs1 <: rs1,
+        rs2 <: rs2,
+        rs3 <: rs3,
+        rd <: rd,
+        result <: result,
+        sourceReg1 :> sourceReg1F,
+        sourceReg2 :> sourceReg2F,
+        sourceReg3 :> sourceReg3F
+    );
 
     // RISC-V ADDRESS GENERATOR
     uint32  nextPC = uninitialized;
@@ -159,10 +175,12 @@ algorithm PAWSCPU(
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
+        //takeBranch :> takeBranch
     );
 
     // ALU
     alu ALU(
+        clock_ALUunit <: clock_ALUunit,
         opCode <: opCode,
         function3 <: function3,
         function7 <: function7,
@@ -180,6 +198,19 @@ algorithm PAWSCPU(
         sourceReg2 <: sourceReg2
     );
 
+    // FLOATING POINT OPERATIONS
+    fpu FPU(
+        opCode <: opCode,
+        function3 <: function3,
+        function7 <: function7,
+        rs1 <: rs1,
+        rs2 <: rs2,
+        sourceReg1 <: sourceReg1,
+        sourceReg1F <: sourceReg1F,
+        sourceReg2F <: sourceReg2F,
+        sourceReg3F <: sourceReg3F,
+    );
+
     // MANDATORY RISC-V CSR REGISTERS + HARTID == 0 MAIN THREAD == 1 SMT THREAD
     CSRblock CSR(
         instruction <: instruction,
@@ -187,7 +218,7 @@ algorithm PAWSCPU(
     );
 
     // MEMORY ACCESS FLAGS
-    accesssize := ( opCode == 7b0100111 ) ? 3b010 : function3;
+    accesssize := ( ( opCode == 7b0101111 ) || ( opCode == 7b0000111 ) || ( opCode == 7b0100111 ) ) ? 3b010 : function3;
     readmemory := 0;
     writememory := 0;
 
@@ -196,6 +227,7 @@ algorithm PAWSCPU(
 
     // ALU START FLAGS
     ALU.start := 0;
+    FPU.start := 0;
     CSR.incCSRinstret := 0;
 
     while(1) {
@@ -203,6 +235,7 @@ algorithm PAWSCPU(
             case 0: {                                                                           // RESET FLAGS and FETCH
                 writeRegister = 1;
                 incPC = 1; takeBranch = 0;
+                frd = 0;
                 ( address, readmemory ) = fetch( PC, memorybusy );
                 compressed = ( readdata[0,2] != 2b11 );
                 switch( readdata[0,2] ) {
@@ -230,6 +263,8 @@ algorithm PAWSCPU(
                     case 5b11000: { writeRegister = 0; takeBranch = BRANCHUNIT.takeBranch; }    // BRANCH
                     case 5b00000: { result = memoryinput; }                                     // LOAD
                     case 5b01000: { writeRegister = 0; memoryoutput = sourceReg2; }             // STORE
+                    case 5b00001: { frd = 1; result = memoryinput; }                            // FLOAT LOAD
+                    case 5b01001: { writeRegister = 0; memoryoutput = sourceReg2F; }            // FLOAT STORE
                     case 5b11100: { result = CSR.result; }                                      // CSR
                     case 5b01011: {                                                             // ATOMIC OPERATIONS
                         switch( function7[2,5] ) {
@@ -239,9 +274,11 @@ algorithm PAWSCPU(
                         }
                     }
                     default: {                                                                  // FPU, ALUI or ALUR
-                        ALU.start = 1;
-                        while( ALU.busy ) {}
-                        result = ALU.result;
+                        ALU.start = ~opCode[6,1];
+                        FPU.start = opCode[6,1];
+                        while( ALU.busy || FPU.busy ) {}
+                        frd = opCode[6,1] ? FPU.frd : 0;
+                        result = opCode[6,1] ? FPU.result : ALU.result;
                     }
                 }
                 FSM = memorystore ? 7b0010000 : ( writeRegister ?  7b0100000 : 7b1000000 );
@@ -251,7 +288,8 @@ algorithm PAWSCPU(
                 FSM = writeRegister ? 7b0100000 : 7b1000000;
             }
             case 5: {                                                                           // REGISTERS WRITE
-                REGISTERS.write = 1 ;
+                REGISTERS.write = ~frd;
+                REGISTERSF.write = frd;
                 FSM = 7b1000000;
             }
             case 6: {                                                                           // UPDATE CSR, PC and SMT

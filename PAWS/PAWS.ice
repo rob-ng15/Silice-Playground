@@ -162,6 +162,8 @@ algorithm main(
     uint16  writedata = uninitialized;
     PAWSCPU CPU <@clock_system> (
         clock_CPUdecoder <: clock_100_1,
+        clock_ALUunit <: clock_100_2,
+
         accesssize :> function3,
         address :> address,
         writedata :> writedata,
@@ -199,6 +201,8 @@ algorithm bramcontroller(
     input   uint1   readflag,
     output  uint16  readdata
 ) <autorun> {
+    uint2   FSM = uninitialized;
+
     // RISC-V RAM and BIOS
     bram uint16 ram <input!> [16384] = {
         $include('ROM/BIOS.inc')
@@ -214,11 +218,17 @@ algorithm bramcontroller(
 
     while(1) {
         if( writeflag ) {
-            if( function3[0,2] == 0 ) {
-                ++:
+            FSM = ( function3[0,2] == 0 ) ? 1 : 2;
+            while( FSM != 0 ) {
+                onehot( FSM ) {
+                    case 0: { FSM = 2; }
+                    case 1: {
+                        ram.wdata = ( function3[0,2] == 0 ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
+                        ram.wenable = 1;
+                        FSM = 0;
+                    }
+                }
             }
-            ram.wdata = ( function3[0,2] == 0 ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
-            ram.wenable = 1;
         }
     }
 }
@@ -240,6 +250,8 @@ algorithm sdramcontroller(
 
     output  uint1   busy
 ) <autorun> {
+    uint3   FSM = uninitialized;
+
     // CACHE for SDRAM 32k
     // CACHE LINE IS LOWER 15 bits ( 0 - 32767 ) of address, dropping the BYTE address bit
     // CACHE TAG IS REMAINING 11 bits of the 26 bit address + 1 bit for valid flag
@@ -276,34 +288,36 @@ algorithm sdramcontroller(
 
         if( doread || dowrite ) {
             busy = 1;
-
-            if( doread || ( dowrite && ( function3[0,2] == 0 ) ) ) {
-                // SDRAM - 1 cycle for CACHE TAG ACCESS
-                ++:
-
-                if( ~cachetagmatch ) {
-                    // CACHE MISS
-                    // READ FROM SDRAM
-                    sio.rw = 0;
-                    sio.in_valid = 1;
-                    while( !sio.done ) {}
-                    // WRITE RESULT TO CACHE
-                    CW.writedata = sio.data_out;
-                    CW.update = 1;
+            FSM = ( doread || ( dowrite && ( function3[0,2] == 0 ) ) ) ? 1 : 4;
+            while( FSM != 0 ) {
+                onehot( FSM ) {
+                    case 0: { FSM = 2; }
+                    case 1: {
+                        if( ~cachetagmatch ) {
+                            // CACHE MISS
+                            // READ FROM SDRAM
+                            sio.rw = 0;
+                            sio.in_valid = 1;
+                            while( !sio.done ) {}
+                            // WRITE RESULT TO CACHE
+                            CW.writedata = sio.data_out;
+                            CW.update = 1;
+                        }
+                        FSM = dowrite ? 4 : 0;
+                    }
+                    case 2: {
+                        // WRITE RESULT TO CACHE
+                        CW.writedata = writethrough;
+                        CW.update = 1;
+                        // COMPLETE WRITE TO SDRAM
+                        sio.data_in = writethrough;
+                        sio.rw = 1;
+                        sio.in_valid = 1;
+                        while( !sio.done ) {}
+                        FSM = 0;
+                    }
                 }
             }
-
-            if( dowrite ) {
-                // WRITE RESULT TO CACHE
-                CW.writedata = writethrough;
-                CW.update = 1;
-                // COMPLETE WRITE TO SDRAM
-                sio.data_in = writethrough;
-                sio.rw = 1;
-                sio.in_valid = 1;
-                while( !sio.done ) {}
-            }
-
             busy = 0;
         }
     }

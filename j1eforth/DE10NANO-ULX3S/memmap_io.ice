@@ -337,9 +337,6 @@ $$end
     doubleaddsub2input doperations2 <@clock_50mhz,!reset> ();
     doubleaddsub1input doperations1 <@clock_50mhz,!reset> ();
 
-    // Co-Processor reset counter
-    uint2   coProReset = 0;
-
     // register buttons
     uint$NUM_BTNS$ reg_btns = 0;
     reg_btns ::= btns;
@@ -560,9 +557,7 @@ $$end
 
         // WRITE IO Memory
         if( memoryWrite && ~LATCHmemoryWrite ) {
-            coProReset = 3;
-
-            switch( memoryAddress[12,4] ) {
+             switch( memoryAddress[12,4] ) {
                 case 4hf: {
                     switch( memoryAddress[8,4] ) {
                         case 4h0: {
@@ -723,7 +718,7 @@ $$end
 // UART BUFFER CONTROLLER
 algorithm uart(
     // UART
-    output! uint1   uart_tx,
+    output  uint1   uart_tx,
     input   uint1   uart_rx,
 
     output  uint1   inavailable,
@@ -734,6 +729,8 @@ algorithm uart(
     input   uint8   outchar,
     input   uint1   outwrite
 ) <autorun> {
+    uint1   update = uninitialized;
+
     // UART tx and rx
     // UART written in Silice by https://github.com/sylefeb/Silice
     uart_out uo;
@@ -769,7 +766,6 @@ algorithm uart(
     uartInBuffer.addr1 := uartInBufferTop;  // FIFO writes on top
     uartOutBuffer.wenable1 := 1; // always write on port 1
     uartOutBuffer.addr0 := uartOutBufferNext; // FIFO reads on next
-    uartOutBuffer.addr1 := uartOutBufferTop;  // FIFO writes on top
     uartInBuffer.wdata1 := ui.data_out;
     uartInBufferTop := ui.data_out_ready ? uartInBufferTop + 1 : uartInBufferTop;
     uo.data_in := uartOutBuffer.rdata0;
@@ -777,13 +773,17 @@ algorithm uart(
     uartOutBufferNext := ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) ) ? uartOutBufferNext + 1 : uartOutBufferNext;
 
     while(1) {
-        if( inread ) {
-            uartInBufferNext = uartInBufferNext + 1;
-        }
         if( outwrite ) {
+            uartOutBuffer.addr1 = uartOutBufferTop;
             uartOutBuffer.wdata1 = outchar;
-            uartOutBufferTop = uartOutBufferTop + 1;
+            update = 1;
+        } else {
+            if( update != 0 ) {
+                uartOutBufferTop = uartOutBufferTop + 1;
+                update = 0;
+            }
         }
+        uartInBufferNext = uartInBufferNext + inread;
     }
 }
 
@@ -799,6 +799,8 @@ algorithm ps2buffer(
     output  uint8   inchar,
     input   uint1   inread
 ) <autorun> {
+    uint1   update = uninitialized;
+
     // PS/2 input FIFO (256 character) as dualport bram (code from @sylefeb)
     simple_dualport_bram uint8 ps2Buffer <input!> [256] = uninitialized;
     uint8  ps2BufferNext = 0;
@@ -814,17 +816,22 @@ algorithm ps2buffer(
     // PS2 Buffers
     ps2Buffer.wenable1 := 1;  // always write on port 1
     ps2Buffer.addr0 := ps2BufferNext; // FIFO reads on next
-    ps2Buffer.addr1 := ps2BufferTop;  // FIFO writes on top
-    ps2Buffer.wdata1 := PS2.ascii;
-    ps2BufferTop := PS2.asciivalid ? ps2BufferTop + 1 : ps2BufferTop;
 
     // FLAGS
     inavailable := ( ps2BufferNext != ps2BufferTop ) ? 1 : 0;
     inchar := ps2Buffer.rdata0;
 
     while(1) {
-        if( inread ) {
-            ps2BufferNext = ps2BufferNext + 1;
+        if( PS2.asciivalid ) {
+            ps2Buffer.addr1 = ps2BufferTop;
+            ps2Buffer.wdata1 = PS2.ascii;
+            update = 1;
+        } else {
+            if( update != 0 ) {
+                ps2BufferTop = ps2BufferTop + 1;
+                update = 0;
+            }
         }
+        ps2BufferNext = ps2BufferNext + inread;
     }
 }

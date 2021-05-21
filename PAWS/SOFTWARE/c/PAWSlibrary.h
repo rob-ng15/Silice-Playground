@@ -280,12 +280,6 @@ extern unsigned short get_sprite_collision( unsigned char, unsigned char );
 extern unsigned short get_sprite_layer_collision( unsigned char, unsigned char );
 extern void set_sprite_bitmaps( unsigned char, unsigned char, unsigned short * );
 
-// SPRITES - SMT ACCESS
-extern void set_sprite_SMT( unsigned char, unsigned char, unsigned char, unsigned char, short, short, unsigned char, unsigned char );
-extern short get_sprite_attribute_SMT( unsigned char, unsigned char , unsigned char );
-extern void set_sprite_attribute_SMT( unsigned char, unsigned char, unsigned char, short );
-extern void update_sprite_SMT( unsigned char, unsigned char, unsigned short );
-
 // CHARACTER MAP
 extern void tpu_cs( void );
 extern void tpu_clearline( unsigned char );

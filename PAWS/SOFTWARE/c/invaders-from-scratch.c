@@ -1474,7 +1474,6 @@ void play( void ) {
         draw_aliens();
 
         // SWITCH THE FRAMEBUFFER
-        await_vblank();
         framebuffer = !framebuffer;
         bitmap_display( framebuffer );
 
@@ -1622,7 +1621,6 @@ void attract( void ) {
                     }
 
                     // SWITCH THE FRAMEBUFFER
-                    await_vblank();
                     framebuffer = !framebuffer;
                     bitmap_display( framebuffer );
 
@@ -1670,8 +1668,7 @@ void attract( void ) {
                     }
 
                     // SWITCH THE FRAMEBUFFER
-                    await_vblank();
-                    framebuffer = !framebuffer;
+                   framebuffer = !framebuffer;
                     bitmap_display( framebuffer );
 
                     draw_status();

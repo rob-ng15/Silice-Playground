@@ -9,7 +9,7 @@ void File_Copy(int sourceFile, int destFile, int n){
     while(read(sourceFile , &c, 1) != 0){
         if( c == 0x0a ) c = 0x0d;
         write(destFile , &c, 1);
-        usleep( 100000 );
+        usleep( 12500 );
     }
 }
 

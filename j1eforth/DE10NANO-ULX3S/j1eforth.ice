@@ -151,6 +151,7 @@ $$if ULX3S then
 $$end
 
     // J1+ CPU
+    uint6   FSM = uninitialized;
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
     uint16  instruction = uninitialized;
     uint16  immediate := ( literal(instruction).literalvalue );
@@ -299,74 +300,82 @@ $$end
 
     // EXECUTE J1 CPU
     while( 1 ) {
-        // FETCH INSTRUCTION
-        ram.addr0 = pc;
-        ++:
-        instruction = ram.rdata0;
-        ram.addr0 = {1b0,stackTop[1,15]};
-        ++:
-
-        // J1 CPU Instruction Execute
-        if(is_lit) {
-            // LITERAL Push value onto stack
-            newStackTop = immediate;
-            newPC = pcPlusOne;
-            newDSP = dsp + 1;
-            newRSP = rsp;
-        } else {
-            switch( callbranch(instruction).is_callbranchalu ) { // BRANCH 0BRANCH CALL ALU
-                case 2b11: {
-                    // ALU - fetch from memory or IO if needed
-                    if( ~aluop(instruction).is_j1j1plus && ( aluop(instruction).operation == 4b1100 ) && stackTop[15,1] ) {
-                        IO_Map.memoryRead = 1;
-                    }
-                    newStackTop = ALU.newStackTop;
-
-                    // UPDATE newDSP newRSP
-                    newDSP = dsp + ddelta;
-                    newRSP = rsp + rdelta;
-                    rstackWData = stackTop;
-
-                    // Update PC for next instruction, return from call or next instruction
-                    newPC = ( aluop(instruction).is_r2pc ) ? {1b0,rStackTop[1,15]} : pcPlusOne;
-
-                    // n2memt mem[t] = n
-                    if( is_n2memt && ~stackTop[15,1] ) {
-                        ram.addr1 = {1b0,stackTop[1,15]};
-                        ram.wdata1 = stackNext;
-                    }
-                    IO_Map.memoryWrite = is_n2memt && ( stackTop[15,1] );
-                } // ALU
-
-                default: {
-                    newStackTop = CALLBRANCH.newStackTop;
-                    newPC = CALLBRANCH.newPC;
-                    newDSP = CALLBRANCH.newDSP;
-                    newRSP = CALLBRANCH.newRSP;
-                    rstackWData = {pcPlusOne[0,15],1b0};
-                }
+        onehot( FSM ) {
+            case 0: {
+                // START FETCH INSTRUCTION
+                ram.addr0 = pc;
+                FSM = 6b000010;
             }
-        } // J1 CPU Instruction Execute
+            case 1: {
+                // COMPLETE FETCH INSTRUCTION + PRE-FETCH MEMORY
+                instruction = ram.rdata0;
+                ram.addr0 = {1b0,stackTop[1,15]};
+                FSM = is_lit ? 6b000100 : 6b001000;
+            }
+            case 2: {
+                // LITERAL Push value onto stack
+                newStackTop = immediate;
+                newPC = pcPlusOne;
+                newDSP = dsp + 1;
+                newRSP = rsp;
+                FSM = 6b010000;
+            }
+            case 3: {
+                switch( callbranch(instruction).is_callbranchalu ) { // BRANCH 0BRANCH CALL ALU
+                    case 2b11: {
+                        // ALU - fetch from memory or IO if needed
+                        if( ~aluop(instruction).is_j1j1plus && ( aluop(instruction).operation == 4b1100 ) && stackTop[15,1] ) {
+                            IO_Map.memoryRead = 1;
+                        }
+                        newStackTop = ALU.newStackTop;
 
-        ++:
+                        // UPDATE newDSP newRSP
+                        newDSP = dsp + ddelta;
+                        newRSP = rsp + rdelta;
+                        rstackWData = stackTop;
 
-        // Commit to dstack and rstack
-        if( dstackWrite ) {
-            dstack.addr1 = newDSP;
-            dstack.wdata1 = stackTop;
+                        // Update PC for next instruction, return from call or next instruction
+                        newPC = ( aluop(instruction).is_r2pc ) ? {1b0,rStackTop[1,15]} : pcPlusOne;
+
+                        // n2memt mem[t] = n
+                        if( is_n2memt && ~stackTop[15,1] ) {
+                            ram.addr1 = {1b0,stackTop[1,15]};
+                            ram.wdata1 = stackNext;
+                        }
+                        IO_Map.memoryWrite = is_n2memt && ( stackTop[15,1] );
+                    } // ALU
+
+                    default: {
+                        newStackTop = CALLBRANCH.newStackTop;
+                        newPC = CALLBRANCH.newPC;
+                        newDSP = CALLBRANCH.newDSP;
+                        newRSP = CALLBRANCH.newRSP;
+                        rstackWData = {pcPlusOne[0,15],1b0};
+                    }
+                }
+                FSM = ( dstackWrite || rstackWrite ) ? 6b010000: 6b100000;
+            }
+            case 4: {
+                // Commit to dstack and rstack
+                if( dstackWrite ) {
+                    dstack.addr1 = newDSP;
+                    dstack.wdata1 = stackTop;
+                }
+                if( rstackWrite ) {
+                    rstack.addr1 = newRSP;
+                    rstack.wdata1 = rstackWData;
+                }
+                FSM = 6b100000;
+            }
+            case 5: {
+                // Update dsp, rsp, pc, stackTop
+                dsp = newDSP;
+                pc = newPC;
+                stackTop = newStackTop;
+                rsp = newRSP;
+                FSM = 6b000001;
+            }
         }
-        if( rstackWrite ) {
-            rstack.addr1 = newRSP;
-            rstack.wdata1 = rstackWData;
-        }
-
-        // Update dsp, rsp, pc, stackTop
-        dsp = newDSP;
-        pc = newPC;
-        stackTop = newStackTop;
-        rsp = newRSP;
-
-        ++:
     } // execute J1 CPU
 }
 

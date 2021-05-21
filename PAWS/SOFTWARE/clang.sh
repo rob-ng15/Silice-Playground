@@ -1,8 +1,7 @@
 #!/bin/bash
 
-echo "COMPILING FOR SDCARD LOADING"
+echo "LLVM/CLANG compile for SDCARD (B extension)"
 ARCH="riscv64"
-echo "using $ARCH"
 
 AR="riscv64-elf-ar"
 NM="riscv64-elf-nm"

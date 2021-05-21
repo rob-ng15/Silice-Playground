@@ -37,7 +37,8 @@ $include('../memmap_io_50mhz.ice')
 // CPU
 $include('../cpu_functionblocks.ice')
 $include('../mathematics.ice')
-$include('../cpu.ice')
+$include('../floatingpoint.ice')
+$include('../cpu-fpu.ice')
 
 // MAIN
 $include('../PAWS.ice')

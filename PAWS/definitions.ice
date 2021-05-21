@@ -44,6 +44,34 @@ bitfield spriteupdate {
     uint4   dx
 }
 
+// BITFIELD FOR FLOATING POINT NUMBER
+bitfield floatingpointnumber{
+    uint1   sign,
+    uint8   exponent,
+    uint23  fraction
+}
+
+// BITFIELD FOR FLOATING POINT CSR REGISTER
+bitfield floatingpointcsr{
+    uint24  reserved,
+    uint3   frm,
+    uint5   fflags
+}
+
+// ROUNDING MODES
+$$ RNE = 0
+$$ RTZ = 1
+$$ RDN = 2
+$$ RUP = 3
+$$ RMM = 4
+
+// EXCEPTIONS FLAGS
+$$ NX = 1
+$$ UF = 2
+$$ OF = 4
+$$ DZ = 8
+$$ NV = 16
+
 // RISC-V BASE INSTRUCTION BITFIELDS
 bitfield    Btype {
     uint1   immediate_bits_12,

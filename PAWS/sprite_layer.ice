@@ -54,33 +54,18 @@ algorithm sprite_layer(
     input   int11   sprite_set_x,
     input   int11   sprite_set_y,
     input   uint3   sprite_set_tile,
-    input   uint4   sprite_layer_write,
-    input   uint16  sprite_update,
-    // For reading sprite characteristics for sprite_set_number
-    output uint1   sprite_read_active,
-    output uint1   sprite_read_double,
-    output uint6   sprite_read_colour,
-    output int16   sprite_read_x,
-    output int16   sprite_read_y,
-    output uint3   sprite_read_tile,
+    input   uint3   sprite_layer_write,
+    input   uint13  sprite_update,
 
-    // For setting sprite characteristics - SMT ACCESS
-    input   uint4   sprite_set_number_SMT,
-    input   uint1   sprite_set_active_SMT,
-    input   uint1   sprite_set_double_SMT,
-    input   uint6   sprite_set_colour_SMT,
-    input   int11   sprite_set_x_SMT,
-    input   int11   sprite_set_y_SMT,
-    input   uint3   sprite_set_tile_SMT,
-    input   uint4   sprite_layer_write_SMT,
-    input   uint16  sprite_update_SMT,
-    // For reading sprite characteristics for sprite_set_number
-    output uint1   sprite_read_active_SMT,
-    output uint1   sprite_read_double_SMT,
-    output uint6   sprite_read_colour_SMT,
-    output int16   sprite_read_x_SMT,
-    output int16   sprite_read_y_SMT,
-    output uint3   sprite_read_tile_SMT,
+    // For reading sprite characteristics
+    $$for i=0,15 do
+        output  uint1   sprite_read_active_$i$,
+        output  uint1   sprite_read_double_$i$,
+        output  uint6   sprite_read_colour_$i$,
+        output  int16   sprite_read_x_$i$,
+        output  int16   sprite_read_y_$i$,
+        output  uint3   sprite_read_tile_$i$,
+    $$end
 
     // FULL collision detection
     // (1) Bitmap, (2) Tile Map L, (3) Tile Map U, (4) Other Sprite Layer
@@ -138,18 +123,10 @@ algorithm sprite_layer(
         $$end
     );
 
-    // MAIN OR SMT
-    uint1   MAINSMT <: ( sprite_layer_write != 0 );
-    uint4   SPRITE_NUMBER <: ( sprite_layer_write != 0 ) ? sprite_set_number : sprite_set_number_SMT;
-
-    // Expand Sprite Update Deltas
-    int11   deltax <: MAINSMT ? { {7{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx } : { {7{spriteupdate( sprite_update_SMT ).dxsign}}, spriteupdate( sprite_update_SMT ).dx };
-    int11   deltay <: MAINSMT ? { {7{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy } : { {7{spriteupdate( sprite_update_SMT ).dysign}}, spriteupdate( sprite_update_SMT ).dy };
-    // Sprite update helpers
-    int11   sprite_offscreen_negative <:: sprite_double[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ? -32 : -16;
-    int11   sprite_to_negative <:: sprite_double[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ? -31 : -15;
-    uint1   sprite_offscreen_x <:: ( __signed( sprite_x[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_x[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) > __signed(640) );
-    uint1   sprite_offscreen_y <:: ( __signed( sprite_y[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_y[ ( sprite_layer_write > 0 ) ? sprite_set_number : sprite_set_number_SMT ] ) > __signed(480) );
+    int11   sprite_offscreen_negative = uninitialised;
+    int11   sprite_to_negative = uninitialised;
+    uint1   sprite_offscreen_x = uninitialised;
+    uint1   sprite_offscreen_y = uninitialised;
 
     $$for i=0,15 do
         // Set sprite generator parameters
@@ -158,28 +135,45 @@ algorithm sprite_layer(
         SPRITE_$i$.sprite_x := sprite_x[$i$];
         SPRITE_$i$.sprite_y := sprite_y[$i$];
         SPRITE_$i$.sprite_tile_number := sprite_tile_number[$i$];
+
+        // For setting sprite read paramers
+        sprite_read_active_$i$ := sprite_active[$i$];
+        sprite_read_double_$i$ := sprite_double[$i$];
+        sprite_read_colour_$i$ := sprite_colour[$i$];
+        sprite_read_x_$i$ := sprite_x[$i$];
+        sprite_read_y_$i$ := sprite_y[$i$];
+        sprite_read_tile_$i$ := sprite_tile_number[$i$];
     $$end
 
     // Default to transparent
     sprite_layer_display := 0;
 
-    // Sprite details reader - MAIN ACCESS
-    sprite_read_active := sprite_active[ sprite_set_number ];
-    sprite_read_double := sprite_double[ sprite_set_number ];
-    sprite_read_colour := sprite_colour[ sprite_set_number ];
-    sprite_read_x := { sprite_x[ sprite_set_number ] < 0 ? 5b1111 : 5b0000, __unsigned(sprite_x[ sprite_set_number ]) };
-    sprite_read_y := { sprite_y[ sprite_set_number ] < 0 ? 5b1111 : 5b0000, __unsigned(sprite_y[ sprite_set_number ]) };
-    sprite_read_tile := sprite_tile_number[ sprite_set_number ];
-
-    // Sprite details reader - SMT ACCESS
-    sprite_read_active_SMT := sprite_active[ sprite_set_number_SMT ];
-    sprite_read_double_SMT := sprite_double[ sprite_set_number_SMT ];
-    sprite_read_colour_SMT := sprite_colour[ sprite_set_number_SMT ];
-    sprite_read_x_SMT := { sprite_x[ sprite_set_number_SMT ] < 0 ? 5b1111 : 5b0000, __unsigned(sprite_x[ sprite_set_number_SMT ]) };
-    sprite_read_y_SMT := { sprite_x[ sprite_set_number_SMT ] < 0 ? 5b1111 : 5b0000, __unsigned(sprite_x[ sprite_set_number_SMT ]) };
-    sprite_read_tile_SMT := sprite_tile_number[ sprite_set_number_SMT ];
-
     while(1) {
+        // SET ATTRIBUTES + PERFORM UPDATE
+        switch( sprite_layer_write ) {
+            case 1: { sprite_active[ sprite_set_number ] = sprite_set_active; }
+            case 2: { sprite_double[ sprite_set_number ] = sprite_set_double; }
+            case 3: { sprite_colour[ sprite_set_number ] = sprite_set_colour; }
+            case 4: { sprite_x[ sprite_set_number ] = sprite_set_x; }
+            case 5: { sprite_y[ sprite_set_number ] = sprite_set_y; }
+            case 6: { sprite_tile_number[ sprite_set_number ] = sprite_set_tile; }
+            case 7: {
+                // Sprite update helpers
+                sprite_offscreen_negative = sprite_double[ sprite_set_number ] ? -32 : -16;
+                sprite_to_negative = sprite_double[ sprite_set_number ] ? -31 : -15;
+                sprite_offscreen_x = ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_x[ sprite_set_number  ] ) > __signed(640) ) ? 1 : 0;
+                sprite_offscreen_y = ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_y[ sprite_set_number ] ) > __signed(480) ) ? 1 : 0;
+
+                // Perform sprite update
+                sprite_active[ sprite_set_number ] = ( ( ( sprite_update[12,1] & sprite_offscreen_y ) == 1 ) || ( ( sprite_update[11,1] & sprite_offscreen_x ) == 1 ) ) ? 0 : sprite_active[ sprite_set_number ];
+                sprite_tile_number[ sprite_set_number ] = sprite_tile_number[ sprite_set_number ] + sprite_update[10,1];
+                sprite_x[ sprite_set_number ] = sprite_offscreen_x ? ( ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ?__signed(640) : sprite_to_negative ) :
+                                                sprite_x[ sprite_set_number ] + { {7{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
+                sprite_y[ sprite_set_number ] = sprite_offscreen_y ? ( ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ? __signed(480) : sprite_to_negative ) :
+                                                sprite_y[ sprite_set_number ] + { {7{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
+            }
+        }
+
         // RENDER + COLLISION DETECTION
         if( pix_vblank ) {
             if( ~output_collisions ) {
@@ -264,32 +258,6 @@ algorithm sprite_layer(
 
                 // Output collision detection
                 output_collisions = ( pix_x == 639 ) && ( pix_y == 479 );
-            }
-        }
-
-        // SET ATTRIBUTES + PERFORM UPDATE
-        switch( sprite_layer_write | sprite_layer_write_SMT ) {
-            case 1: { sprite_active[ SPRITE_NUMBER ] = MAINSMT ? sprite_set_active : sprite_set_active_SMT; }
-            case 2: { sprite_tile_number[ SPRITE_NUMBER ] = MAINSMT ? sprite_set_tile : sprite_set_tile_SMT; }
-            case 3: { sprite_colour[ SPRITE_NUMBER ] = MAINSMT ? sprite_set_colour : sprite_set_colour_SMT; }
-            case 4: { sprite_x[ SPRITE_NUMBER ] = MAINSMT ? sprite_set_x : sprite_set_x_SMT; }
-            case 5: { sprite_y[ SPRITE_NUMBER ] = MAINSMT ? sprite_set_y : sprite_set_y_SMT; }
-            case 6: { sprite_double[ SPRITE_NUMBER ] = MAINSMT ? sprite_set_double : sprite_set_double_SMT; }
-            case 10: {
-                // Perform sprite update
-                if( MAINSMT ? sprite_update[10,1] : sprite_update_SMT[10,1] ) {
-                    sprite_tile_number[ SPRITE_NUMBER ] = sprite_tile_number[ SPRITE_NUMBER ] + 1;
-                }
-
-                if( MAINSMT ? sprite_update[11,1] : sprite_update_SMT[11,1] || MAINSMT ? sprite_update[12,1] : sprite_update_SMT[12,1] ) {
-                    sprite_active[ SPRITE_NUMBER ] = ( sprite_offscreen_x || sprite_offscreen_y ) ? 0 : sprite_active[ SPRITE_NUMBER ];
-                }
-
-                sprite_x[ SPRITE_NUMBER ] = sprite_offscreen_x ? ( ( __signed( sprite_x[ SPRITE_NUMBER ] ) < __signed( sprite_offscreen_negative ) ) ?__signed(640) : sprite_to_negative ) :
-                                                sprite_x[ SPRITE_NUMBER ] + deltax;
-
-                sprite_y[ SPRITE_NUMBER ] = sprite_offscreen_y ? ( ( __signed( sprite_y[ SPRITE_NUMBER ] ) < __signed( sprite_offscreen_negative ) ) ? __signed(480) : sprite_to_negative ) :
-                                                sprite_y[ SPRITE_NUMBER ] + deltay;
             }
         }
     }

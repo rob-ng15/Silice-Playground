@@ -67,6 +67,8 @@ algorithm bitmap(
     input   uint1   vertices_writer_active,
 
     output  uint1   gpu_active,
+    output  uint1   gpu_queue_empty,
+    output  uint1   gpu_queue_full,
     output  uint1   vector_block_active
 ) <autorun> {
     simple_dualport_bram uint7 bitmap_0 <@clock,@gpu_clock> [ 76800 ] = uninitialized;

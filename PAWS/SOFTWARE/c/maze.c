@@ -330,41 +330,6 @@ void draw_pill( unsigned short steps ) {
     }
 }
 
-// DRAW THE MAZE FULL SCREEN - USED DURING GENERATION
-void display_maze( unsigned short width, unsigned short height, unsigned short currentx, unsigned short currenty )
-{
-    unsigned short x, y;
-    unsigned char colour;
-
-    unsigned short boxwidth = 320 / width;
-    unsigned short boxheight = 240 / height;
-
-    for( x = 0; x < width; x++ ) {
-        for( y = 0; y < height; y++ ) {
-            if( ( currentx == x ) && ( currenty == y ) ) {
-                colour = GREEN;
-            } else {
-                switch( whatisat( x, y, 0 ) ) {
-                    case '#':
-                        colour = BLUE;
-                        break;
-                    case ' ':
-                        colour = WHITE;
-                        break;
-                case 'E':
-                        colour = MAGENTA;
-                        break;
-                    case 'X':
-                        colour = YELLOW;
-                        break;
-                }
-            }
-            if( colour != BLUE )
-                gpu_rectangle( colour, x * boxwidth, y * boxheight, x * boxwidth + boxwidth - 1, y * boxheight + boxheight - 1 );
-        }
-    }
-}
-
 // ADAPTED FROM https://weblog.jamisbuck.org/2011/2/3/maze-generation-sidewinder-algorithm.html#
 // GENERATE A MAZE OF WIDTH x HEIGHT - DRAW DURING GENERATION
 void generate_maze( unsigned short width, unsigned short height ) {
@@ -426,8 +391,6 @@ void generate_maze( unsigned short width, unsigned short height ) {
                     setat( x + 1, y, ' ', 0 );
                 }
             }
-            await_vblank();
-            display_maze( levelwidths[level], levelheights[level], 1, 1 );
         }
     }
 
@@ -911,14 +874,7 @@ int main( void ) {
         tpu_printf_centre( 27, TRANSPARENT, YELLOW, "" );
 
         // GENERATE THE MAZE
-        gpu_cs();
-        tpu_printf_centre( 29, TRANSPARENT, YELLOW, "Generating Maze" );
         generate_maze( levelwidths[level], levelheights[level] );
-        display_maze( levelwidths[level], levelheights[level], 1, 1 );
-
-        // WAIT TO ENTER THE MAZE
-        tpu_printf_centre( 29, TRANSPARENT, GREEN, "Press FIRE to walk the maze!" ); while( ( get_buttons() & 2 ) == 0 );
-        tpu_printf_centre( 29, TRANSPARENT, PURPLE, "Release FIRE!" ); while( get_buttons() & 2 );
 
         // SET NUMBER OF POWER PILLS
         powerpills = ( level < 4 ) ? level + 1 : 4;

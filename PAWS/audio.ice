@@ -35,34 +35,17 @@ algorithm apu(
     frequencytable.addr := selected_note;
     audio_active := ( selected_duration != 0 );
 
-    always {
-        if( ( selected_duration != 0 ) && ( counter25mhz == 0 ) ) {
-            switch( selected_waveform ) {
-                case 0: {
-                    // SQUARE
-                    audio_output = { {4{~point[4,1]}} };
-                }
-                case 1: {
-                    // SAWTOOTH
-                    audio_output = point[1,4];
-                }
-                case 2: {
-                    // TRIANGLE
-                    audio_output = point[4,1] ? 15 - point[0,4] : point[0,4];
-                }
-                case 3: {
-                    // SINE
-                    audio_output = point[4,1] ? 15 - point[1,3] : point[1,3];
-                }
-                case 4: {
-                    // WHITE NOISE
-                    audio_output = staticGenerator;
-                }
-            }
-        }
-    }
 
     while(1) {
+        if( ( selected_duration != 0 ) && ( counter25mhz == 0 ) ) {
+            switch( selected_waveform ) {
+                case 0: { audio_output = { {4{~point[4,1]}} }; }                        // SQUARE
+                case 1: { audio_output = point[1,4]; }                                  // SAWTOOTH
+                case 2: { audio_output = point[4,1] ? 15 - point[0,4] : point[0,4]; }   // TRIANGLE
+                case 3: { audio_output = point[4,1] ? 15 - point[1,3] : point[1,3]; }   // SINE
+                case 4: { audio_output = staticGenerator; }                             // WHITE NOISE
+            }
+        }
         switch( apu_write ) {
             case 0: {
                 if( selected_duration != 0 ) {

@@ -47,23 +47,12 @@ algorithm memmap_io (
     output  uint1   SMTRUNNING,
     output  uint32  SMTSTARTPC
 ) <autorun> {
-    // 1hz timers (p1hz used for systemClock, timer1hz for user purposes)
-    pulse1hz p1hz <@clock_25mhz> ( );
-    pulse1hz timer1hz0 <@clock_25mhz> ( );
-    pulse1hz timer1hz1 <@clock_25mhz> ( );
-
-    // 1khz timers (sleepTimers used for sleep command, timer1khzs for user purposes)
-    pulse1khz sleepTimer0 <@clock_25mhz> ( );
-    pulse1khz timer1khz0 <@clock_25mhz> ( );
-    pulse1khz sleepTimer1 <@clock_25mhz> ( );
-    pulse1khz timer1khz1 <@clock_25mhz> ( );
-
-    // RNG random number generator
-    uint1   static1bit <: rng.u_noise_out[0,1];
-    uint2   static2bit <: rng.u_noise_out[0,2];
-    uint4   static4bit <: rng.u_noise_out[0,4];
-    uint6   static6bit <: rng.u_noise_out[0,6];
-    random rng <@clock_25mhz> ( );
+    // TIMERS and RNG
+    uint1   static1bit <: timers.u_noise_out[0,1];
+    uint2   static2bit <: timers.u_noise_out[0,2];
+    uint4   static4bit <: timers.u_noise_out[0,4];
+    uint6   static6bit <: timers.u_noise_out[0,6];
+    timers_rng timers <@clock_25mhz> ( );
 
     // HDMI driver
     // Status of the screen, if in range, if in vblank, actual pixel x and y
@@ -370,7 +359,7 @@ algorithm memmap_io (
                 case 16h836e: { readData = lower_sprites.layer_collision_15; }
 
                 // GPU and BITMAP
-                case 16h8612: { readData = bitmap_window.gpu_active | bitmap_window.vector_block_active; }
+                case 16h8612: { readData = ( bitmap_window.gpu_active || bitmap_window.vector_block_active ) ? 1 : 0; }
                 case 16h862a: { readData = bitmap_window.vector_block_active; }
                 case 16h8674: { readData = bitmap_window.bitmap_colour_read; }
 
@@ -435,15 +424,15 @@ algorithm memmap_io (
                 case 16hf214: { readData = apu_processor_R.audio_active; }
 
                 // TIMERS and RNG
-                case 16hf000: { readData = rng.g_noise_out; }
-                case 16hf002: { readData = rng.u_noise_out; }
-                case 16hf010: { readData = timer1hz0.counter1hz; }
-                case 16hf012: { readData = timer1hz1.counter1hz; }
-                case 16hf020: { readData = timer1khz0.counter1khz; }
-                case 16hf022: { readData = timer1khz1.counter1khz; }
-                case 16hf030: { readData = sleepTimer0.counter1khz; }
-                case 16hf032: { readData = sleepTimer1.counter1khz; }
-                case 16hf040: { readData = p1hz.counter1hz; }
+                case 16hf000: { readData = timers.g_noise_out; }
+                case 16hf002: { readData = timers.u_noise_out; }
+                case 16hf010: { readData = timers.timer1hz0; }
+                case 16hf012: { readData = timers.timer1hz1; }
+                case 16hf020: { readData = timers.timer1khz0; }
+                case 16hf022: { readData = timers.timer1khz1; }
+                case 16hf030: { readData = timers.sleepTimer0; }
+                case 16hf032: { readData = timers.sleepTimer1; }
+                case 16hf040: { readData = timers.systemclock; }
 
                 // SDCARD
                 case 16hf140: { readData = SDCARD.ready; }
@@ -606,9 +595,6 @@ algorithm memmap_io (
                 case 16h8506: { character_map_window.tpu_background = writeData; }
                 case 16h8508: { character_map_window.tpu_foreground = writeData; }
                 case 16h850a: { character_map_window.tpu_write = writeData; }
-                case 16h8510: { character_map_window.curses_x = writeData; }
-                case 16h8512: { character_map_window.curses_y = writeData; }
-                case 16h8514: { character_map_window.curses_cursor = writeData; }
 
                 // AUDIO
                 case 16hf200: { apu_processor_L.waveform = writeData; }
@@ -621,12 +607,12 @@ algorithm memmap_io (
                 case 16hf216: { apu_processor_R.apu_write = writeData; }
 
                 // TIMERS and RNG
-                case 16hf010: { timer1hz0.resetCounter = 1; }
-                case 16hf012: { timer1hz1.resetCounter = 1; }
-                case 16hf020: { timer1khz0.resetCount = writeData; }
-                case 16hf022: { timer1khz1.resetCount = writeData; }
-                case 16hf030: { sleepTimer0.resetCount = writeData; }
-                case 16hf032: { sleepTimer1.resetCount = writeData; }
+                case 16hf010: { timers.resetcounter = 1; }
+                case 16hf012: { timers.resetcounter = 2; }
+                case 16hf020: { timers.counter = writeData; timers.resetcounter = 3; }
+                case 16hf022: { timers.counter = writeData; timers.resetcounter = 4; }
+                case 16hf030: { timers.counter = writeData; timers.resetcounter = 5; }
+                case 16hf032: { timers.counter = writeData; timers.resetcounter = 6; }
 
                 // SDCARD
                 case 16hf140: { SDCARD.readsector = 1; }
@@ -667,13 +653,7 @@ algorithm memmap_io (
             character_map_window.tpu_write = 0;
 
             // RESET TIMER and AUDIO Co-Processor Controls
-            p1hz.resetCounter = 0;
-            timer1hz0.resetCounter = 0;
-            sleepTimer0.resetCount = 0;
-            timer1khz0.resetCount = 0;
-            timer1hz1.resetCounter = 0;
-            sleepTimer1.resetCount = 0;
-            timer1khz1.resetCount = 0;
+            timers.resetcounter = 0;
             apu_processor_L.apu_write = 0;
             apu_processor_R.apu_write = 0;
 
@@ -684,6 +664,54 @@ algorithm memmap_io (
         LATCHmemoryRead = memoryRead;
         LATCHmemoryWrite = memoryWrite;
     } // while(1)
+}
+
+// TIMERS and RNG Controllers
+algorithm timers_rng(
+    output  uint16  systemclock,
+    output  uint16  timer1hz0,
+    output  uint16  timer1hz1,
+    output  uint16  timer1khz0,
+    output  uint16  timer1khz1,
+    output  uint16  sleepTimer0,
+    output  uint16  sleepTimer1,
+    output  uint16  u_noise_out,
+    output  uint16  g_noise_out,
+    input   uint16  counter,
+    input   uint3   resetcounter
+) <autorun> {
+    // RNG random number generator
+    random rng( u_noise_out :> u_noise_out,  g_noise_out :> g_noise_out );
+
+    // 1hz timers (p1hz used for systemClock, timer1hz for user purposes)
+    pulse1hz P1( counter1hz :> systemclock );
+    pulse1hz T1hz0( counter1hz :> timer1hz0 );
+    pulse1hz T1hz1( counter1hz :> timer1hz1 );
+
+    // 1khz timers (sleepTimers used for sleep command, timer1khzs for user purposes)
+    pulse1khz T0khz0( counter1khz :> timer1khz0 );
+    pulse1khz T1khz1( counter1khz :> timer1khz1 );
+    pulse1khz STimer0( counter1khz :> sleepTimer0 );
+    pulse1khz STimer1( counter1khz :> sleepTimer1 );
+
+    P1.resetCounter := 0;
+    T1hz0.resetCounter := 0;
+    T1hz1.resetCounter := 0;
+    T0khz0.resetCounter := 0;
+    T1khz1.resetCounter := 0;
+    STimer0.resetCounter := 0;
+    STimer1.resetCounter := 0;
+
+    while(1) {
+        switch( resetcounter ) {
+            case 1: { T1hz0.resetCounter = 1; }
+            case 2: { T1hz1.resetCounter = 1; }
+            case 3: { T0khz0.resetCounter = counter; }
+            case 4: { T1khz1.resetCounter = counter; }
+            case 5: { STimer0.resetCounter = counter; }
+            case 6: { STimer1.resetCounter = counter; }
+        }
+    }
 }
 
 // UART BUFFER CONTROLLER
@@ -700,6 +728,8 @@ algorithm uart(
     input   uint8   outchar,
     input   uint1   outwrite
 ) <autorun> {
+    uint1   update = uninitialized;
+
     // UART tx and rx
     // UART written in Silice by https://github.com/sylefeb/Silice
     uart_out uo;
@@ -735,20 +765,27 @@ algorithm uart(
     uartInBuffer.addr1 := uartInBufferTop;  // FIFO writes on top
     uartOutBuffer.wenable1 := 1; // always write on port 1
     uartOutBuffer.addr0 := uartOutBufferNext; // FIFO reads on next
-    uartOutBuffer.addr1 := uartOutBufferTop;  // FIFO writes on top
     uartInBuffer.wdata1 := ui.data_out;
     uartInBufferTop := ui.data_out_ready ? uartInBufferTop + 1 : uartInBufferTop;
     uo.data_in := uartOutBuffer.rdata0;
     uo.data_in_ready := ( uartOutBufferNext != uartOutBufferTop ) && ( !uo.busy );
     uartOutBufferNext := ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) ) ? uartOutBufferNext + 1 : uartOutBufferNext;
 
+    always {
+        if( outwrite ) {
+            uartOutBuffer.addr1 = uartOutBufferTop;
+            uartOutBuffer.wdata1 = outchar;
+            update = 1;
+        } else {
+            if( update != 0 ) {
+                uartOutBufferTop = uartOutBufferTop + 1;
+                update = 0;
+            }
+        }
+    }
     while(1) {
         if( inread ) {
             uartInBufferNext = uartInBufferNext + 1;
-        }
-        if( outwrite ) {
-            uartOutBuffer.wdata1 = outchar;
-            uartOutBufferTop = uartOutBufferTop + 1;
         }
     }
 }
@@ -765,6 +802,8 @@ algorithm ps2buffer(
     output  uint8   inchar,
     input   uint1   inread
 ) <autorun> {
+    uint1   update = uninitialized;
+
     // PS/2 input FIFO (256 character) as dualport bram (code from @sylefeb)
     simple_dualport_bram uint8 ps2Buffer <input!> [256] = uninitialized;
     uint8  ps2BufferNext = 0;
@@ -780,13 +819,23 @@ algorithm ps2buffer(
     // PS2 Buffers
     ps2Buffer.wenable1 := 1;  // always write on port 1
     ps2Buffer.addr0 := ps2BufferNext; // FIFO reads on next
-    ps2Buffer.addr1 := ps2BufferTop;  // FIFO writes on top
-    ps2Buffer.wdata1 := PS2.ascii;
-    ps2BufferTop := PS2.asciivalid ? ps2BufferTop + 1 : ps2BufferTop;
 
     // FLAGS
     inavailable := ( ps2BufferNext != ps2BufferTop ) ? 1 : 0;
     inchar := ps2Buffer.rdata0;
+
+    always {
+        if( PS2.asciivalid ) {
+            ps2Buffer.addr1 = ps2BufferTop;
+            ps2Buffer.wdata1 = PS2.ascii;
+            update = 1;
+        } else {
+            if( update != 0 ) {
+                ps2BufferTop = ps2BufferTop + 1;
+                update = 0;
+            }
+        }
+    }
 
     while(1) {
         if( inread ) {

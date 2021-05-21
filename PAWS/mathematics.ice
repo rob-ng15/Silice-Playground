@@ -40,9 +40,7 @@ algorithm aluMdivideremain(
                     }
                     case 1: {
                         switch( divisor ) {
-                            case 0: {
-                                result = dosign[1,1] ? dividend : 32hffffffff;
-                            }
+                            case 0: { result = dosign[1,1] ? dividend : 32hffffffff; }
                             default: {
                                 while( bit != 63 ) {
                                     temporary = { remainder[0,31], dividend_copy[bit,1] };
@@ -110,12 +108,8 @@ algorithm aluMmultiply(
                         C = { 2b0, factor_2_copy[16,16] };
                         D = { 2b0, factor_2_copy[0,16] };
                     }
-                    case 2: {
-                        product = productsign ? -( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } ) : ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
-                    }
-                    case 3: {
-                        result = ( dosign == 0 ) ? product[0,32] : product[32,32];
-                    }
+                    case 2: { product = productsign ? -( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } ) : ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } ); }
+                    case 3: { result = ( dosign == 0 ) ? product[0,32] : product[32,32]; }
                 }
                 FSM = FSM << 1;
             }
@@ -265,7 +259,7 @@ algorithm aluIb101(
 }
 algorithm aluI(
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint3   function3,
     input   uint7   function7,
@@ -345,7 +339,7 @@ algorithm aluI(
 // B EXTENSION GORC XPERM + SBSET
 algorithm aluR7b0010100 (
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint3   function3,
     input   uint32  sourceReg1,
@@ -390,7 +384,7 @@ algorithm aluR7b0010100 (
 // B EXTENSION CLMUL + MIN[U] MAX[U]
 algorithm aluR7b0000101 (
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint3   function3,
     input   uint32  sourceReg1,
@@ -436,7 +430,7 @@ algorithm aluR7b0000101 (
 // B EXTENSION SHFL UNSHFL BEXT + PACK PACKH
 algorithm aluR7b0000100 (
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint3   function3,
     input   uint32  sourceReg1,
@@ -474,7 +468,7 @@ algorithm aluR7b0000100 (
 // B EXTENSION GREV + SBINV
 algorithm aluR7b0110100 (
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint3   function3,
     input   uint32  sourceReg1,
@@ -506,7 +500,7 @@ algorithm aluR7b0110100 (
 // B EXTENSION BDEP BFP + PACKU SBCLR SBEXT
 algorithm aluR7b0100100 (
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint3   function3,
     input   uint32  sourceReg1,
@@ -520,7 +514,7 @@ algorithm aluR7b0100100 (
     uint5   RshiftCount := sourceReg2[0,5];
 
     // BFP
-    bfp BFP (
+    bfp BFP(
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2
     );
@@ -560,7 +554,7 @@ algorithm aluR000(
     result := sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 );
 }
 algorithm aluR001(
-    output! uint1   busy,
+    output  uint1   busy,
     input   int32   sourceReg1,
     input   int32   sourceReg2,
     input   int32   sourceReg3,
@@ -628,7 +622,7 @@ algorithm aluR100(
     }
 }
 algorithm aluR101(
-    output! uint1   busy,
+    output  uint1   busy,
     input   int32   sourceReg1,
     input   int32   sourceReg2,
     input   int32   sourceReg3,
@@ -683,7 +677,7 @@ algorithm aluR111(
 
 algorithm aluR (
     input   uint1   start,
-    output! uint1   busy,
+    output  uint1   busy,
 
     input   uint2   function2,
     input   uint3   function3,
@@ -986,7 +980,7 @@ algorithm alu(
 
     // BASE REGISTER + IMMEDIATE ALU OPERATIONS + B EXTENSION OPERATIONS
     aluI ALUI(
-        function3 <: function3,
+       function3 <: function3,
         function7 <: function7,
         IshiftCount <: IshiftCount,
         sourceReg1 <: sourceReg1,

@@ -1,8 +1,7 @@
 #!/bin/bash
 
-echo "COMPILING FOR SDCARD LOADING"
+echo "GCC compile for SDCARD (float)"
 ARCH="riscv64"
-echo "using $ARCH"
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export PATH=$PATH:$DIR/../../tools/fpga-binutils/mingw32/bin/

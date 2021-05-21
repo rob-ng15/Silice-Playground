@@ -24,6 +24,17 @@ algorithm background(
     input   uint6   copper_alt,
     input   uint6   copper_colour
 ) <autorun> {
+    background_display BACKGROUND(
+        pix_x <: pix_x,
+        pix_y <: pix_y,
+        pix_active <: pix_active,
+        pix_vblank <: pix_vblank,
+        pix_red :> pix_red,
+        pix_green :> pix_green,
+        pix_blue :> pix_blue,
+        staticGenerator <: staticGenerator
+    );
+
     // BACKGROUND CO-PROCESSOR PROGRAM STORAGE
     // { 3 bit command, 3 bit mask, 10 bit coordinate, 4 bit mode, 6 bit colour 2, 6 bit colour 1 }
     // COMMANDS - 0 = goto, 1 = wait vblank, 2 = wait hblank, 3 = wait ypos, 4 = wait xpos, 5 = , 6 =, 7 =
@@ -34,11 +45,100 @@ algorithm background(
     uint10  copper_variable = uninitialised;
     uint6   PC = 0;
 
-    // MODE AND COLOUR DEFAULTS
-    uint6   b_colour = 0;
-    uint6   b_alt = 0;
-    uint4   b_mode = 0;
+    // COPPER PROGRAM FLAGS
+    copper.addr0 := PC;
+    copper.wenable1 := 1;
 
+    while(1) {
+        copper_execute = 0;
+        copper_branch = 0;
+
+
+        switch( background_update ) {
+            case 2b00: {
+                // UPDATE THE BACKGROUND GENERATOR FROM THE COPPER
+                switch( copper_status ) {
+                    case 1: {
+                        switch( copper.rdata0[29,3] ) {
+                            case 3b000: {
+                                // JUMP ON CONDITION
+                                switch( copper.rdata0[26,3] ) {
+                                    case 3b000: { copper_branch = 1; }
+                                    case 3b001: { copper_branch = pix_vblank ? 0 : 1; }
+                                    case 3b010: { copper_branch = pix_active ? 0 : 1; }
+                                    case 3b011: { copper_branch = ( pix_y < copper.rdata0[16,10] ) ? 1 : 0; }
+                                    case 3b100: { copper_branch = ( pix_x < copper.rdata0[16,10] ) ? 1 : 0; }
+                                    case 3b101: { copper_branch = ( copper_variable < copper.rdata0[16,10] ) ? 1 : 0; }
+                                }
+                                PC = copper_branch ? copper.rdata0[0,6] : PC + 1;
+                            }
+                            default: {
+                                switch( copper.rdata0[29,3] ) {
+                                    case 3b001: { copper_execute = pix_vblank ? 1 : 0; }
+                                    case 3b010: { copper_execute = pix_active ? 0 : 1; }
+                                    case 3b011: { copper_execute = ( pix_y == copper.rdata0[16,10] ) ? 1 : 0; }
+                                    case 3b100: { copper_execute = ( pix_x == copper.rdata0[16,10] ) ? 1 : 0; }
+                                    case 3b101: { copper_execute = ( copper_variable == ( copper.rdata0[16,1] ? pix_x : pix_y ) ) ? 1 : 0; }
+                                    case 3b110: {
+                                        switch( copper.rdata0[26,3] ) {
+                                            case 3b001: { copper_variable = copper.rdata0[16,10]; }
+                                            case 3b010: { copper_variable = copper_variable + copper.rdata0[16,10]; }
+                                            case 3b100: { copper_variable = copper_variable - copper.rdata0[16,10]; }
+                                        }
+                                        copper_branch = 1;
+                                    }
+                                    case 3b111: {
+                                        switch( copper.rdata0[26,1] ) { case 1: { { BACKGROUND.b_colour = copper_variable; } } }
+                                        switch( copper.rdata0[27,1] ) { case 1: { { BACKGROUND.b_alt = copper_variable; } } }
+                                        switch( copper.rdata0[28,1] ) { case 1: { { BACKGROUND.b_mode = copper_variable; } } }
+                                        copper_branch = 1;
+                                    }
+                                }
+                                switch( copper_execute ) {
+                                    case 1: {
+                                        switch( copper.rdata0[26,1] ) { case 1: { { BACKGROUND.b_colour = copper.rdata0[0,6]; } } }
+                                        switch( copper.rdata0[27,1] ) { case 1: { { BACKGROUND.b_alt = copper.rdata0[6,6]; } } }
+                                        switch( copper.rdata0[28,1] ) { case 1: { { BACKGROUND.b_mode = copper.rdata0[12,4]; } } }
+                                        copper_branch = 1;
+                                    }
+                                }
+                                PC = PC + copper_branch;
+                            }
+                        }
+                    }
+                    case 0: {
+                        // CHANGE A PROGRAM LINE IN THE COPPER MEMORY
+                        if( copper_program ) {
+                            copper.addr1 = copper_address;
+                            copper.wdata1 = { copper_command[0,3], copper_condition[0,3], copper_coordinate[0,10], copper_mode[0,4], copper_alt[0,6], copper_colour[0,6] };
+                        }
+                        PC = 0;
+                    }
+                }
+            }
+            // UPDATE THE BACKGROUND FROM RISC-V
+            case 2b01: { BACKGROUND.b_colour = backgroundcolour; }
+            case 2b10: { BACKGROUND.b_alt = backgroundcolour_alt; }
+            case 2b11: { BACKGROUND.b_mode = backgroundcolour_mode; }
+        }
+    }
+}
+
+algorithm background_display(
+    input   uint10  pix_x,
+    input   uint10  pix_y,
+    input   uint1   pix_active,
+    input   uint1   pix_vblank,
+    output! uint2   pix_red,
+    output! uint2   pix_green,
+    output! uint2   pix_blue,
+
+    input   uint2  staticGenerator,
+
+    input   uint6   b_colour,
+    input   uint6   b_alt,
+    input   uint4   b_mode
+) <autorun> {
     // Variables for SNOW (from @sylefeb)
     int10   dotpos = 0;
     int2    speed = 0;
@@ -49,20 +149,10 @@ algorithm background(
     uint1   tophalf <: ( pix_y < 240 );
     uint1   lefthalf <: ( pix_x < 320 );
 
-    // COPPER PROGRAM FLAGS
-    copper.addr0 := PC;
-    copper.wenable1 := 1;
-
     // Increment frame number for the snow/star field
     frame := ( ( pix_x == 639 ) && ( pix_y == 470 ) ) ? frame + 1 : frame;
 
-    always {
-        // CHANGE A PROGRAM LINE IN THE COPPER MEMORY
-        if( copper_program ) {
-            copper.addr1 = copper_address;
-            copper.wdata1 = { copper_command[0,3], copper_condition[0,3], copper_coordinate[0,10], copper_mode[0,4], copper_alt[0,6], copper_colour[0,6] };
-        }
-
+    while(1) {
         // RENDER
         if( pix_active ) {
             switch( b_mode ) {
@@ -155,72 +245,6 @@ algorithm background(
                     pix_blue = ( pix_x[b_mode-7,1] == pix_y[b_mode-7,1] ) ? colour6(b_colour).blue : colour6(b_alt).blue;
                 }
             }
-        }
-    }
-
-    while(1) {
-        copper_execute = 0;
-        copper_branch = 0;
-
-        switch( background_update ) {
-            case 2b00: {
-                // UPDATE THE BACKGROUND GENERATOR FROM THE COPPER
-                switch( copper_status ) {
-                    case 1: {
-                        switch( copper.rdata0[29,3] ) {
-                            case 3b000: {
-                                // JUMP ON CONDITION
-                                switch( copper.rdata0[26,3] ) {
-                                    case 3b000: { copper_branch = 1; }
-                                    case 3b001: { copper_branch = pix_vblank ? 0 : 1; }
-                                    case 3b010: { copper_branch = pix_active ? 0 : 1; }
-                                    case 3b011: { copper_branch = ( pix_y < copper.rdata0[16,10] ) ? 1 : 0; }
-                                    case 3b100: { copper_branch = ( pix_x < copper.rdata0[16,10] ) ? 1 : 0; }
-                                    case 3b101: { copper_branch = ( copper_variable < copper.rdata0[16,10] ) ? 1 : 0; }
-                                }
-                                PC = copper_branch ? copper.rdata0[0,6] : PC + 1;
-                            }
-                            default: {
-                                switch( copper.rdata0[29,3] ) {
-                                    case 3b001: { copper_execute = pix_vblank ? 1 : 0; }
-                                    case 3b010: { copper_execute = pix_active ? 0 : 1; }
-                                    case 3b011: { copper_execute = ( pix_y == copper.rdata0[16,10] ) ? 1 : 0; }
-                                    case 3b100: { copper_execute = ( pix_x == copper.rdata0[16,10] ) ? 1 : 0; }
-                                    case 3b101: { copper_execute = ( copper_variable == ( copper.rdata0[16,1] ? pix_x : pix_y ) ) ? 1 : 0; }
-                                    case 3b110: {
-                                        switch( copper.rdata0[26,3] ) {
-                                            case 3b001: { copper_variable = copper.rdata0[16,10]; }
-                                            case 3b010: { copper_variable = copper_variable + copper.rdata0[16,10]; }
-                                            case 3b100: { copper_variable = copper_variable - copper.rdata0[16,10]; }
-                                        }
-                                        copper_branch = 1;
-                                    }
-                                    case 3b111: {
-                                        switch( copper.rdata0[26,1] ) { case 1: { { b_colour = copper_variable; } } }
-                                        switch( copper.rdata0[27,1] ) { case 1: { { b_alt = copper_variable; } } }
-                                        switch( copper.rdata0[28,1] ) { case 1: { { b_mode = copper_variable; } } }
-                                        copper_branch = 1;
-                                    }
-                                }
-                                switch( copper_execute ) {
-                                    case 1: {
-                                        switch( copper.rdata0[26,1] ) { case 1: { { b_colour = copper.rdata0[0,6]; } } }
-                                        switch( copper.rdata0[27,1] ) { case 1: { { b_alt = copper.rdata0[6,6]; } } }
-                                        switch( copper.rdata0[28,1] ) { case 1: { { b_mode = copper.rdata0[12,4]; } } }
-                                        copper_branch = 1;
-                                    }
-                                }
-                                PC = PC + copper_branch;
-                            }
-                        }
-                    }
-                    case 0: { PC = 0; }
-                }
-            }
-            // UPDATE THE BACKGROUND FROM RISC-V
-            case 2b01: { b_colour = backgroundcolour; }
-            case 2b10: { b_alt = backgroundcolour_alt; }
-            case 2b11: { b_mode = backgroundcolour_mode; }
         }
     }
 }
