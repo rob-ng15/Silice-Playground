@@ -3,11 +3,8 @@
 #include <stdio.h>
 #include <math.h>
 
-unsigned short volatile * myPS2_AVAILABLE = (unsigned short volatile *) 0x8040;
-unsigned short volatile * myPS2_KEYCODE = (unsigned short volatile *) 0x8044;
-
 int main( void ) {
-    unsigned short lastPS2_KEYCODE = 0;
+    unsigned char lastPS2_KEYCODE = 0;
     int i, j, k;
     float x, y;
 
@@ -60,12 +57,12 @@ int main( void ) {
         mvprintw( 25, 0, "TIME <%u> INSN <%u> CYCLES <%u> CYCLES per INSN <%u>", time, insn, cycles, cycles/insn );
         mvprintw( 27, 0, "MEMORY TOP OLD <%u> BLOCK <%u> TOP NEW <%u>", (int)oldmemorytop, (int)memoryblock, (int)newmemorytop );
 
-        if( *myPS2_AVAILABLE ) {
-            lastPS2_KEYCODE = *myPS2_KEYCODE;
+        if( ps2_character_available() ) {
+            lastPS2_KEYCODE = ps2_inputcharacter();
         }
         set_timer1khz( 1000, 0 );
         while( get_timer1khz( 0 ) ) {
-            mvprintw( 29, 0, "PS2 AVAILABLE <%1x> LAST CHARACTER <%2x>", *myPS2_AVAILABLE, lastPS2_KEYCODE );
+            mvprintw( 29, 0, "LAST CHARACTER <%2x> <%c>", lastPS2_KEYCODE, ( lastPS2_KEYCODE == 0 ) ? '?' : lastPS2_KEYCODE );
             refresh();
         }
     }

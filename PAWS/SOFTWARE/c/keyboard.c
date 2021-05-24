@@ -3,9 +3,6 @@
 #include <stdio.h>
 #include <math.h>
 
-unsigned short volatile * myPS2_AVAILABLE = (unsigned short volatile *) 0x8040;
-unsigned short volatile * myPS2_KEYCODE = (unsigned short volatile *) 0x8044;
-
 int main( void ) {
     INITIALISEMEMORY();
 

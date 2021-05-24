@@ -1105,14 +1105,14 @@ void draw_aliens( void ) {
     switch( UFO.active ) {
         case UFOONSCREEN:
             gpu_blit( MAGENTA, UFO.x, 16, 10 + framebuffer, 0 );
-            if( !get_beep_duration( 1 ) ) {
+            if( !get_beep_active( 1 ) ) {
                 beep( 1, 2, UFO.pitchcount ? 25 : 37, 100 );
                 UFO.pitchcount = !UFO.pitchcount;
             }
             break;
         case UFOEXPLODE:
             gpu_printf_centre( framebuffer ? RED : LTRED, UFO.x + 7, 16, 0, "%d", UFO.score );
-            if( !get_beep_duration( 1 ) ) {
+            if( !get_beep_active( 1 ) ) {
                 beep( 1, 1, UFO.pitchcount ? 37 : 49, 25 );
                 UFO.pitchcount = !UFO.pitchcount;
             }
@@ -1370,7 +1370,7 @@ short missile_actions( void ) {
         // NO MISSILE, CHECK IF FIRE
         if( ( get_buttons() & 2 ) && ( Ship.state == SHIPPLAY ) ) {
             set_sprite( UPPER_LAYER, 1, 1, GREEN, Ship.x + 8, Ship.y - 10, 0, 1 );
-            if( !get_beep_duration( 2 ) ) {
+            if( !get_beep_active( 2 ) ) {
                 beep( 2, 4, 61, 128 );
             }
         }
@@ -1522,7 +1522,7 @@ void missile_demo( void ) {
         // NO MISSILE, CHECK IF FIRE
         if( ( Ship.state == SHIPPLAY ) && !rng(8) ) {
             set_sprite( UPPER_LAYER, 1, 1, GREEN, Ship.x + 8, Ship.y - 10, 0, 1 );
-            if( !get_beep_duration( 2 ) ) {
+            if( !get_beep_active( 2 ) ) {
                 beep( 2, 4, 61, 128 );
             }
         }

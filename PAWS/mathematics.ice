@@ -242,7 +242,7 @@ algorithm aluIb101(
                         while( SHFLUNSHFLbusy ) {}
                         result = SHFLUNSHFLoutput;
                     }
-                    case 7b0100100: { result = sourceReg1[ IshiftCount, 1 ]; }
+                    case 7b0100100: { result = ( sourceReg1[ IshiftCount, 1 ] == 1 ) ? 1 : 0; }
                     default: {
                         if( function7[1,1] ) {
                             while( FUNNELbusy ) {}
@@ -408,15 +408,16 @@ algorithm aluR7b0000101 (
         if( start ) {
             busy = 1;
             switch( function3 ) {
-                case 3b100: { ( result ) = min( sourceReg1, sourceReg2 ); }
-                case 3b101: { ( result ) = max( sourceReg1, sourceReg2 ); }
-                case 3b110: { ( result ) = minu( sourceReg1, sourceReg2 ); }
-                case 3b111: { ( result ) = maxu( sourceReg1, sourceReg2 ); }
-                // 0.93+ ENCODINGS
+                // 0.92 ENCODINGS
                 //case 3b100: { ( result ) = min( sourceReg1, sourceReg2 ); }
-                //case 3b101: { ( result ) = minu( sourceReg1, sourceReg2 ); }
-                //case 3b110: { ( result ) = max( sourceReg1, sourceReg2 ); }
+                //case 3b101: { ( result ) = max( sourceReg1, sourceReg2 ); }
+                //case 3b110: { ( result ) = minu( sourceReg1, sourceReg2 ); }
                 //case 3b111: { ( result ) = maxu( sourceReg1, sourceReg2 ); }
+                // 0.93+ ENCODINGS
+                case 3b100: { ( result ) = min( sourceReg1, sourceReg2 ); }
+                case 3b101: { ( result ) = minu( sourceReg1, sourceReg2 ); }
+                case 3b110: { ( result ) = max( sourceReg1, sourceReg2 ); }
+                case 3b111: { ( result ) = maxu( sourceReg1, sourceReg2 ); }
                 default: {
                     CLMUL.start = 1;
                     while( CLMUL.busy ) {}
@@ -529,7 +530,7 @@ algorithm aluR7b0100100 (
             switch( function3 ) {
                 case 3b001: { result = SBSCIoutput; }
                 case 3b100: { result = { sourceReg2[16,16], sourceReg1[16,16] }; }
-                case 3b101: { result = sourceReg1[ RshiftCount, 1 ]; }
+                case 3b101: { result = ( sourceReg1[ RshiftCount, 1 ] == 1 ) ? 1 : 0; }
                 case 3b110: {
                     while( BEXTBDEPbusy ) {}
                     result = BEXTBDEPoutput;
@@ -594,7 +595,7 @@ algorithm aluR010(
     while(1) {
         switch( function7 ) {
             case 7b0000000: { result = __signed( sourceReg1 ) < __signed(sourceReg2) ? 32b1 : 32b0; }
-            case 7b0010000: { result = { sourceReg1[1,31], 1b0 } + sourceReg2; }
+            case 7b0010000: { result = ( sourceReg1 << 1 ) + sourceReg2; }
         }
     }
 }
@@ -616,7 +617,7 @@ algorithm aluR100(
 ) <autorun> {
     while(1) {
         switch( function7 ) {
-            case 7b0010000: { result = { sourceReg1[2,30], 2b00 } + sourceReg2; }
+            case 7b0010000: { result = ( sourceReg1 <<2 ) + sourceReg2; }
             default: { result = sourceReg1 ^ ( ( function7[5,1] == 1 ) ? ~sourceReg2 : sourceReg2 ); }
         }
     }
@@ -661,7 +662,7 @@ algorithm aluR110(
 ) <autorun> {
     while(1) {
         switch( function7 ) {
-            case 7b0010000: { result = { sourceReg1[3,29], 3b000 } + sourceReg2; }
+            case 7b0010000: { result = ( sourceReg1 << 3 ) + sourceReg2; }
             default: { result = sourceReg1 | ( ( function7[5,1] == 1 ) ? ~sourceReg2 : sourceReg2 ); }
         }
     }

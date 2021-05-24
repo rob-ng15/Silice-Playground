@@ -180,13 +180,13 @@ algorithm PAWSCPU(
 
     // ALU
     alu ALU(
-        clock_ALUunit <: clock_ALUunit,
         opCode <: opCode,
         function3 <: function3,
         function7 <: function7,
         rs1 <: rs1,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
+        sourceReg3 <: sourceReg3,
         IshiftCount <: IshiftCount,
         immediateValue <: immediateValue
     );

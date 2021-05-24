@@ -39,7 +39,7 @@ algorithm ps2ascii(
                     switch( { startmulti, startbreak } ) {
                         case 2b00: {
                             // KEY PRESS - TRANSLATE TO ASCII
-                            if( lctrl | rctrl ) {
+                            if( lctrl || rctrl ) {
                                 // CONTROL KEY PRESSED
                                 switch( ps2keycode ) {
                                     case 8h1e: { newascii = 8h00; }
@@ -84,13 +84,13 @@ algorithm ps2ascii(
                                     case 8h11: { lctrl = 1; }
                                     case 8h58: { rctrl = 1; }
                                     case 8h29: {}
-                                    case 8h66: {}
+                                    case 8h66: { newascii = 8h08; }
                                     case 8h0d: {}
-                                    case 8h5a: {}
+                                    case 8h5a: { newascii = 8h0d; }
                                     case 8h76: {}
                                     default: {
                                         // INTERPRET SHIFT
-                                        switch( lshift | rshift ) {
+                                        switch( lshift || rshift ) {
                                             case 0: {
                                                 switch( ps2keycode ) {
                                                     case 8h1c: { newascii = 8h61; }
@@ -215,6 +215,10 @@ algorithm ps2ascii(
                             if( ps2keycode == 8hf0 ) {
                                 startbreak = 1;
                             } else {
+                                //switch( ps2keycode ) {
+                                //    case 8h5a: { newascii = 8h0d; }
+                                //    case 8h7a: { newascii = 8h08; }
+                                //}
                             }
                         }
                         case 2b11: {

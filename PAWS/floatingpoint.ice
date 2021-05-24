@@ -16,12 +16,12 @@ algorithm fpu(
     output uint1   frd
 ) <autorun> {
     inttofloat FPUfloat( a <: sourceReg1, rs2 <: rs2 );
-    floattoint FPUint( f <: sourceReg1 );
-    floattouint FPUuint( f <: sourceReg1 );
+    floattoint FPUint( sourceReg1F <: sourceReg1F );
+    floattouint FPUuint( sourceReg1F <: sourceReg1F );
     floataddsub FPUaddsub( a <: sourceReg1F, b <: sourceReg2F );
     floatmultiply FPUmultiply( a <: sourceReg1F, b <: sourceReg2F );
     floatdivide FPUdivide( a <: sourceReg1F, b <: sourceReg2F );
-    floatfused FPUfused( function7 <: function7, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F, sourceReg3F <: sourceReg3F );
+    floatfused FPUfused( opCode <: opCode, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F, sourceReg3F <: sourceReg3F );
     floatsqrt FPUsqrt( sourceReg1F <: sourceReg1F );
     floatclassify FPUclass( sourceReg1F <: sourceReg1F );
     floatcomparison FPUcomparison( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
@@ -351,26 +351,40 @@ algorithm floataddsub(
                         }
                     }
                     case 4: {
-                        if( ( classEa == 2b01 ) || ( classEb == 2b01 ) ) {
-                            result = ( classEb == 2b01 ) ? value1 : ( operation == 0 ) ? value2 : { ~value2[31,1], value2[0,31] };
-                        } else {
-                            expA = expA - 127;
-                            switch( operation ) {
-                                case 0: { totaldifference = sigA + sigB; }
-                                case 1: {
-                                    if( ~sign && ( sigB > sigA ) ) {
-                                        sign = ~sign;
-                                        totaldifference = sigB - sigA;
-                                    } else {
-                                        totaldifference = sigA - sigB;
+                        switch( classEa ) {
+                            case 2b00: {
+                                switch( classEb ) {
+                                    case 2b00: {
+                                        expA = expA - 127;
+                                        switch( operation ) {
+                                            case 0: { totaldifference = sigA + sigB; }
+                                            case 1: {
+                                                if( ~sign && ( sigB > sigA ) ) {
+                                                    sign = ~sign;
+                                                    totaldifference = sigB - sigA;
+                                                } else {
+                                                    totaldifference = sigA - sigB;
+                                                }
+                                            }
+                                        }
+                                        if( totaldifference == 0 ) {
+                                            result = { sign, 31b0 };
+                                        } else {
+                                            ( result ) = normaliseexp( sign, expA, totaldifference );
+                                        }
                                     }
+                                    case 2b01: { result = ( operation == 0 ) ? value2 : { ~value2[31,1], value2[0,31] }; }
+                                    default: {  result = { 1b0, 23b0, 8b11111111 }; }
                                 }
                             }
-                            if( totaldifference == 0 ) {
-                                result = { sign, 31b0 };
-                            } else {
-                                ( result ) = normaliseexp( sign, expA, totaldifference );
+                            case 2b01: {
+                                switch( classEb ) {
+                                    case 2b00: { result = value1; }
+                                    case 2b01: { result = value1; }
+                                    default: {  result = { 1b0, 23b0, 8b11111111 }; }
+                                }
                             }
+                            default: {  result = { 1b0, 23b0, 8b11111111 }; }
                         }
                     }
                 }
@@ -397,8 +411,7 @@ algorithm floatmultiply(
     uint2   classEb = uninitialised;
     uint1   classFb = uninitialised;
     uint1   productsign = uninitialised;
-    uint64  product = uninitialised;
-    uint32  product32 = uninitialised;
+    uint48  product = uninitialised;
     int16   productexp = uninitialised;
     int16   expA = uninitialised;
     int16   expB = uninitialised;
@@ -422,7 +435,6 @@ algorithm floatmultiply(
                         classEb = { ( floatingpointnumber(b).exponent ) == 8hff, ( floatingpointnumber(b).exponent ) == 8h00 };
                         classFb = ( floatingpointnumber(b).fraction ) == 23h0000;
                         productsign = a[31,1] ^ b[31,1];
-                        productexp = expA + expB - 254;
                         expA = floatingpointnumber( a ).exponent;
                         expB = floatingpointnumber( b ).exponent;
                     }
@@ -434,17 +446,34 @@ algorithm floatmultiply(
                     }
                     case 2: {
                         product = ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
-                        product32 = product[16,32];
                     }
                     case 3: {
-                        if( ( expA | expB ) == 0 ) {
-                            result = { productsign, 31b0 };
-                        } else {
-                            if( product32 == 0 ) {
-                                result = { productsign, 31b0 };
-                            } else {
-                                ( result ) = normalise( productsign, productexp, product32 );
+                        switch( classEa ) {
+                            case 2b00: {
+                                switch( classEb ) {
+                                    case 2b00: {
+                                        if( product == 0 ) {
+                                            result = { productsign, 31b0 };
+                                        } else {
+                                            productexp = expA + expB - 127 + product[47,1];
+                                            while( product[47,1] == 0 ) {
+                                                product = product << 1;
+                                            }
+                                            result = { productsign, productexp[0,8], product[24,23] };
+                                        }
+                                    }
+                                    case 2b01: { result = { productsign, 31b0 }; }
+                                    default: { result = { productsign, 23b0, 8b11111111 }; }
+                                }
                             }
+                            case 2b01: {
+                                switch( classEb ) {
+                                    case 2b00: { result = { productsign, 31b0 }; }
+                                    case 2b01: { result = { productsign, 31b0 }; }
+                                    default: { result = { productsign, 23b0, 8b11111111 }; }
+                                }
+                            }
+                            default: { result = { productsign, 23b0, 8b11111111 }; }
                         }
                     }
                 }
@@ -496,7 +525,7 @@ algorithm floatdivide(
                         classFb = ( floatingpointnumber(b).fraction ) == 23h0000;
                         sigA = { 1b1, floatingpointnumber(a).fraction, 8b0 };
                         sigB = { 9b1, floatingpointnumber(b).fraction };
-                        quotientexp = expA - expB;
+                        quotientexp = expA - expB + 127;
                         quotient = 0;
                         remainder = 0;
                         bit = 31;
@@ -519,38 +548,23 @@ algorithm floatdivide(
                                         if( quotient == 0 ) {
                                             result = { quotientsign, 31b0 };
                                         } else {
-                                            ( result ) = normalise( quotientsign, quotientexp, quotient );
+                                            while( quotient[31,1] == 0 ) {
+                                                quotient = quotient << 1;
+                                            }
+                                            result = { quotientsign, quotientexp[0,8], quotient[8,23] };
                                         }
                                     }
-                                    case 2b01: { result = { quotientsign, 23b0, 8b11111111 }; }
-                                    case 2b10: {}
-                                    case 2b11: {}
+                                    default: { result = { quotientsign, 23b0, 8b11111111 }; }
                                 }
                             }
                             case 2b01: {
                                 switch( classEb ) {
                                     case 2b00: { result = { quotientsign, 31b0 }; }
-                                    case 2b01: { result = { quotientsign, 23b0, 8b11111111 }; }
-                                    case 2b10: {}
-                                    case 2b11: {}
+                                    default: { result = { quotientsign, 23b0, 8b11111111 }; }
                                 }
                             }
-                            case 2b10: {
-                                switch( classEb ) {
-                                    case 2b00: {}
-                                    case 2b01: {}
-                                    case 2b10: {}
-                                    case 2b11: {}
-                                }
-                            }
-                            case 2b11: {
-                                switch( classEb ) {
-                                    case 2b00: {}
-                                    case 2b01: {}
-                                    case 2b10: {}
-                                    case 2b11: {}
-                                }
-                            }
+                            case 2b10: { result = { quotientsign, 23b0, 8b11111111 }; }
+                            case 2b11: { result = { quotientsign, 23b0, 8b11111111 }; }
                         }
                     }
                 }
@@ -565,7 +579,7 @@ algorithm floatfused(
     input   uint1   start,
     output  uint1   busy,
 
-    input   uint7   function7,
+    input   uint7   opCode,
     input   uint32  sourceReg1F,
     input   uint32  sourceReg2F,
     input   uint32  sourceReg3F,
@@ -575,8 +589,6 @@ algorithm floatfused(
     uint32  workingresult = uninitialised;
     floatmultiply FPUmultiply( b <: sourceReg2F, result :> workingresult );
     floataddsub FPUaddsub( a <: workingresult, b <: sourceReg3F, result :> result );
-    FPUmultiply.a := function7[3,1] ? { ~sourceReg1F[31,1], sourceReg1F[0,31] } : sourceReg1F;
-    FPUaddsub.addsub := ( function7[2,1] == function7[3,1] ) ? 0 : 1;
     FPUmultiply.start := 0;
     FPUaddsub.start := 0;
 
@@ -588,8 +600,14 @@ algorithm floatfused(
             FSM = 1;
             while( FSM != 0 ) {
                 onehot( FSM ) {
-                    case 0: { FPUmultiply.start = 1; while( FPUmultiply.busy ) {} }
-                    case 1: { FPUaddsub.start = 1; while( FPUaddsub.busy ) {} }
+                    case 0: {
+                        FPUmultiply.a = opCode[3,1] ? { ~sourceReg1F[31,1], sourceReg1F[0,31] } : sourceReg1F;
+                        FPUmultiply.start = 1; while( FPUmultiply.busy ) {}
+                    }
+                    case 1: {
+                        FPUaddsub.addsub = ( opCode[2,1] == opCode[3,1] ) ? 0 : 1;
+                        FPUaddsub.start = 1; while( FPUaddsub.busy ) {}
+                    }
                 }
                 FSM = FSM << 1;
             }
@@ -749,129 +767,74 @@ algorithm floatsign(
     }
 }
 
-// FROM https://github.com/ThibaultTricard/Silice-float
-// MIT License
-//
-// Copyright (c) 2021 ThibaultTricard
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
-
-$$exponant_size = 8
-$$mantissa_size = 23
-$$float_size = 32
-$$int_size = 32
-$$uint_size = 32
-
 algorithm floattouint(
-    input uint$float_size$ f,
-    output uint$uint_size$ result,
-    output uint1 busy,
-    input  uint1 start
+    input   uint32  sourceReg1F,
+    output  uint32  result,
+    output  uint1   busy,
+    input   uint1   start
 ) <autorun> {
-    uint$exponant_size$ one_exponent <: {1b1,$exponant_size-1$b0};
-    uint$exponant_size$ exponant <: f[$mantissa_size$, $exponant_size$] + 1;
+    uint2   classE = uninitialised;
+    int16   exp = uninitialised;
+    uint33  sig = uninitialised;
 
     busy = 0;
 
-    while(1){
-        if(start){
+    while(1) {
+        if( start ) {
             busy = 1;
-
-            result = 0;
-            if(f[$float_size-1$, 1] ){
-                result = 0;
-            }
-            else {
-                if(exponant[$exponant_size-1$, 1]){
-                    if(exponant == one_exponent){
-                        result = 1;
-                    }else{
-                        $$for i=uint_size-1,1,-1 do
-                        if($i$ == exponant[0,$exponant_size-1$]){
-                            $$if i == 0 then
-                            result = (1 << $i$);
-                            $$else
-                            $$start = math.max(mantissa_size-i,0)
-                            $$size = math.min(i, mantissa_size)
-                            result = (1 << $i$) +  f[$start$, $size$];
-                            $$end
-                        }else{
-                        $$end
-                        $$for i=uint_size-1,1,-1 do
+            classE = { ( floatingpointnumber(sourceReg1F).exponent ) == 8hff, ( floatingpointnumber(sourceReg1F).exponent ) == 8h00 };
+            switch( classE ) {
+                case 2b00: {
+                    if( sourceReg1F[31,1] ) {
+                        result = 0;
+                    } else {
+                        exp = floatingpointnumber( sourceReg1F ).exponent - 127;
+                        if( exp < 24 ) {
+                            sig = { 9b1, sourceReg1F[0,23], 1b0 } >> ( 23 - exp );
+                        } else {
+                            sig = { 9b1, sourceReg1F[0,23], 1b0 } << ( exp - 24);
                         }
-                        $$end
+                        result = ( exp > 31 ) ? 32hffffffff : ( sig[1,32] + sig[0,1] );
                     }
                 }
+                case 2b01: { result = 0; }
+                case 2b10: { result = sourceReg1F[31,1] ? 0 : 32hffffffff;  }
             }
-
             busy = 0;
         }
     }
 }
 
 algorithm floattoint(
-    input  uint$float_size$ f,
-    output int$int_size$ result,
-    output uint1 busy,
-    input  uint1 start
+    input   uint32  sourceReg1F,
+    output  uint32  result,
+    output  uint1   busy,
+    input   uint1   start
 ) <autorun> {
-    uint$exponant_size$ one_exponent <: {1b1,$exponant_size-1$b0};
-    uint$exponant_size$ exponant <: f[$mantissa_size$, $exponant_size$] + 1;
-    uint$int_size$  u = uninitialised;
-    uint$int_size$  tmp_res  = uninitialised;
+    uint2   classE = uninitialised;
+    int16   exp = uninitialised;
+    uint33  sig = uninitialised;
 
     busy = 0;
 
-    while(1){
-        if(start){
+    while(1) {
+        if( start ) {
             busy = 1;
-            u = 0;
-            tmp_res  = 0;
-
-            if(f[$float_size-1$, 1] ){
-            } else {
-                if(exponant[$exponant_size-1$, 1]){
-                    if(exponant == one_exponent){
-                        u =1;
-                    }else{
-                        $$for i=uint_size-1,1,-1 do
-                        if($i$ == exponant[0,$exponant_size-1$]){
-                            $$if i == 0 then
-                            u = (1 << $i$);
-                            $$else
-                            $$start = math.max(mantissa_size-i,0)
-                            $$size = math.min(i, mantissa_size)
-                            u = (1 << $i$) +  f[$start$, $size$];
-                            $$end
-                        }else{
-                        $$end
-                        $$for i=uint_size-1,1,-1 do
-                        }
-                        $$end
+            classE = { ( floatingpointnumber(sourceReg1F).exponent ) == 8hff, ( floatingpointnumber(sourceReg1F).exponent ) == 8h00 };
+            switch( classE ) {
+                case 2b00: {
+                    exp = floatingpointnumber( sourceReg1F ).exponent - 127;
+                    if( exp < 24 ) {
+                        sig = { 9b1, sourceReg1F[0,23], 1b0 } >> ( 23 - exp );
+                    } else {
+                        sig = { 9b1, sourceReg1F[0,23], 1b0 } << ( exp - 24);
                     }
-                }
+                    result = ( exp > 30 ) ? ( sourceReg1F[31,1] ? 32hffffffff : 32h7fffffff ) : sourceReg1F[31,1] ? -( sig[1,32] + sig[0,1] ) : ( sig[1,32] + sig[0,1] );
+                 }
+                case 2b01: { result = 0; }
+                case 2b10: { result = sourceReg1F[31,1] ? 32hffffffff : 32h7fffffff; }
             }
-            tmp_res = f[$float_size-1$,1] ? (~u)+1 : u;
-            result = tmp_res;
-
             busy = 0;
         }
     }
-
 }

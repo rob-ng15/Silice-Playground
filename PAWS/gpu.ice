@@ -1008,8 +1008,8 @@ algorithm vectors(
     simple_dualport_bram uint13 vertex <input!> [512] = uninitialised;
 
     // Extract deltax and deltay for the present vertices
-    int10 deltax := { {5{vectorentry(vertex.rdata0).dxsign}}, vectorentry(vertex.rdata0).dx };
-    int10 deltay := { {5{vectorentry(vertex.rdata0).dysign}}, vectorentry(vertex.rdata0).dy };
+    int10 deltax := { {4{vectorentry(vertex.rdata0).dxsign}}, vectorentry(vertex.rdata0).dx };
+    int10 deltay := { {4{vectorentry(vertex.rdata0).dysign}}, vectorentry(vertex.rdata0).dy };
 
     // Vertices being processed, plus first coordinate of each line
     uint5 block_number = 0;

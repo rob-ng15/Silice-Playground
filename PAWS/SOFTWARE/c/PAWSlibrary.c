@@ -64,8 +64,7 @@ char ps2_character_available( void ) {
 }
 // RETURN A DECODED ASCII CHARACTER
 char ps2_inputcharacter( void ) {
-    while( !*PS2_AVAILABLE ) {
-    }
+    while( !*PS2_AVAILABLE ) {}
     return *PS2_DATA;
 }
 
@@ -158,29 +157,18 @@ unsigned short systemclock( void ) {
 // OF duration MILLISECONDS TO THE LEFT ( channel_number == 1 ) RIGHT ( channel_number == 2 ) or BOTH ( channel_number == 3 ) AUDIO CHANNEL
 // IN waveform 0 == SQUARE, 1 == SAWTOOTH, 2 == TRIANGLE, 3 == SINE, 4 == WHITE NOISE
 void beep( unsigned char channel_number, unsigned char waveform, unsigned char note, unsigned short duration ) {
-    if( ( channel_number & 1 ) ) {
-        *AUDIO_L_WAVEFORM = waveform;
-        *AUDIO_L_NOTE = note;
-        *AUDIO_L_DURATION = duration;
-        *AUDIO_L_START = 1;
-    }
-    if( ( channel_number & 2 ) ) {
-        *AUDIO_R_WAVEFORM = waveform;
-        *AUDIO_R_NOTE = note;
-        *AUDIO_R_DURATION = duration;
-        *AUDIO_R_START = 1;
-    }
+    *AUDIO_WAVEFORM = waveform;
+    *AUDIO_NOTE = note;
+    *AUDIO_DURATION = duration;
+    *AUDIO_START = channel_number;
 }
 
 void await_beep( unsigned char channel_number ) {
-    if( channel_number & 1 )
-        while( *AUDIO_L_DURATION ) {}
-    if( channel_number & 2 )
-        while( *AUDIO_R_DURATION ) {}
+    while( ( ( channel_number & 1) && *AUDIO_L_ACTIVE ) | ( ( channel_number & 2) && *AUDIO_R_ACTIVE ) ) {}
 }
 
-unsigned short get_beep_duration( unsigned char channel_number ) {
-    return( ( channel_number & 1) ? *AUDIO_L_DURATION : *AUDIO_R_DURATION );
+unsigned short get_beep_active( unsigned char channel_number ) {
+    return( ( ( channel_number & 1) && *AUDIO_L_ACTIVE ) | ( ( channel_number & 2) && *AUDIO_R_ACTIVE ) );
 }
 
 // SDCARD FUNCTIONS

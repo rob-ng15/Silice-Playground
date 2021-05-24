@@ -7,27 +7,44 @@ int main( void ) {
     unsigned short framebuffer = 0;
 
     // SCALE AND DIRECTION
-    short direction = 1;
-    float scale = 0.1;
+    float scale;
+    int value;
 
     while(1) {
-        // DRAW TO HIDDEN FRAME BUFFER
-        bitmap_draw( !framebuffer ); gpu_cs();
-        gpu_rectangle( WHITE, 160 - 80 * scale, 120 - 80 * scale, 160 + 80 * scale, 120 + 80 * scale );
+        scale = 0.1;
+        // MULTIPLIER TEST
+        for( short count = 0; count < 20; count++ ) {
+            // DRAW TO HIDDEN FRAME BUFFER
+            bitmap_draw( !framebuffer ); gpu_cs();
+            value = 80 * scale;
+            gpu_rectangle( GREY1, 160 - value, 120 - value, 160 + value, 120 + value );
+            tpu_printf_centre( 29, TRANSPARENT, LTBLUE, "scale = %f, 80 * scale = %f, integer = %d", scale, 80*scale, value );
 
-        if( direction ) {
             scale = scale + 0.1;
-            if( scale > 2.0 ) direction = 0;
-        } else {
-            scale = scale - 0.1;
-            if( scale < 0.1 ) direction = 1;
+
+            // SWITCH THE FRAMEBUFFER
+            framebuffer = !framebuffer;
+            bitmap_display( framebuffer );
+
+            sleep( 500, 0 );
         }
 
-        // SWITCH THE FRAMEBUFFER
-        await_vblank();
-        framebuffer = !framebuffer;
-        bitmap_display( framebuffer );
+        // DIVIDER TEST
+        scale = 0.5;
+        for( short count = 0; count < 12; count++ ) {
+            // DRAW TO HIDDEN FRAME BUFFER
+            bitmap_draw( !framebuffer ); gpu_cs();
+            value = 80 / scale;
+            gpu_rectangle( GREY2, 160 - value, 120 - value, 160 + value, 120 + value );
+            tpu_printf_centre( 29, TRANSPARENT, LTRED, "scale = %f, 80 / scale = %f, integer = %d", scale, 80 / scale, value );
 
-        sleep( 500, 0 );
+            scale = scale + 0.1;
+
+            // SWITCH THE FRAMEBUFFER
+            framebuffer = !framebuffer;
+            bitmap_display( framebuffer );
+
+            sleep( 1000, 0 );
+        }
     }
 }

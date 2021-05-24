@@ -896,7 +896,7 @@ void spritedemo( void ) {
 
         // PACMAN "TUNE" - SLIGHTLY OUT
         if( tune_treble[ trebleposition ] != 0xff ) {
-            if( !get_beep_duration( 1 ) ) {
+            if( !get_beep_active( 1 ) ) {
                 if( tune_treble[ trebleposition ] != 0xff ) {
                     beep( 1, 0, tune_treble[ trebleposition ], size_treble[ trebleposition ] << 4 );
                     trebleposition++;

@@ -228,7 +228,7 @@ extern void reset_timer1hz( unsigned char );
 // AUDIO
 extern void beep( unsigned char, unsigned char, unsigned char, unsigned short );
 extern void await_beep( unsigned char );
-extern unsigned short get_beep_duration( unsigned char );
+extern unsigned short get_beep_active( unsigned char );
 
 // SDCARD
 extern void sdcard_readsector( unsigned int, unsigned char * );

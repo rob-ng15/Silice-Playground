@@ -74,8 +74,8 @@ algorithm bitmap(
     simple_dualport_bram uint7 bitmap_0 <@clock,@gpu_clock> [ 76800 ] = uninitialized;
     simple_dualport_bram uint7 bitmap_1 <@clock,@gpu_clock> [ 76800 ] = uninitialized;
 
-    // Pixel x and y fetching ( adjusting for offset )
-    uint9  x_plus_one <: ( pix_x[1,9] + x_offset + 1 ) > 319 ? ( pix_x[1,9] + x_offset + 1 ) - 320 : ( pix_x[1,9] + x_offset + 1 );
+    // Pixel x and y fetching ( adjusting for offset ) - fetch x-pixel 1 in advance due to bram latency
+    uint9  x_plus_one <: ( pix_x[1,9] + x_offset + pix_x[0,1] ) > 319 ? ( pix_x[1,9] + x_offset + pix_x[0,1] ) - 320 : ( pix_x[1,9] + x_offset + pix_x[0,1] );
     uint8  y_line <: pix_vblank ? y_offset : ( ( pix_y[1,9] + y_offset ) > 239 ? ( pix_y[1,9] + y_offset ) - 240 : ( pix_y[1,9] + y_offset ) );
     uint9  x_pixel <: pix_active ? x_plus_one : x_offset;
 

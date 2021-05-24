@@ -5,8 +5,8 @@ unsigned char volatile * BUTTONS = (unsigned char volatile *) 0xf120;
 unsigned char volatile * LEDS = (unsigned char volatile *) 0xf130;
 
 // PS/2 KEYBOARD
-unsigned char volatile * PS2_DATA = (unsigned char volatile *) 0xf110;
-unsigned char volatile * PS2_AVAILABLE = (unsigned char volatile *) 0xf112;
+unsigned char volatile * PS2_AVAILABLE = (unsigned char volatile *) 0xf110;
+unsigned char volatile * PS2_DATA = (unsigned char volatile *) 0xf112;
 
 // SDCARD
 unsigned char volatile * SDCARD_READY = (unsigned char volatile *) 0xf140;
@@ -129,14 +129,12 @@ unsigned char volatile * TPU_BACKGROUND = ( unsigned char volatile * ) 0x8506;
 unsigned char volatile * TPU_FOREGROUND = ( unsigned char volatile * ) 0x8508;
 unsigned char volatile * TPU_COMMIT = ( unsigned char volatile * ) 0x850a;
 
-unsigned char volatile * AUDIO_L_WAVEFORM = ( unsigned char volatile * ) 0xf200;
-unsigned char volatile * AUDIO_L_NOTE = ( unsigned char volatile * ) 0xf202;
-unsigned short volatile * AUDIO_L_DURATION = ( unsigned short volatile * ) 0xf204;
-unsigned char volatile * AUDIO_L_START = ( unsigned char volatile * ) 0xf206;
-unsigned char volatile * AUDIO_R_WAVEFORM = ( unsigned char volatile * ) 0xf210;
-unsigned char volatile * AUDIO_R_NOTE = ( unsigned char volatile * ) 0xf212;
-unsigned short volatile * AUDIO_R_DURATION = ( unsigned short volatile * ) 0xf214;
-unsigned char volatile * AUDIO_R_START = ( unsigned char volatile * ) 0xf216;
+unsigned char volatile * AUDIO_WAVEFORM = ( unsigned char volatile * ) 0xf200;
+unsigned char volatile * AUDIO_NOTE = ( unsigned char volatile * ) 0xf202;
+unsigned short volatile * AUDIO_DURATION = ( unsigned short volatile * ) 0xf204;
+unsigned char volatile * AUDIO_START = ( unsigned char volatile * ) 0xf206;
+unsigned char volatile * AUDIO_L_ACTIVE = ( unsigned char volatile * ) 0xf210;
+unsigned char volatile * AUDIO_R_ACTIVE = ( unsigned char volatile * ) 0xf212;
 
 unsigned short volatile * RNG = ( unsigned short volatile * ) 0xf000;
 unsigned short volatile * ALT_RNG = ( unsigned short volatile * ) 0xf002;

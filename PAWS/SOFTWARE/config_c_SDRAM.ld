@@ -38,3 +38,4 @@ SECTIONS {
     KEEP (*(.eh_frame))
     } > ram
 }
+

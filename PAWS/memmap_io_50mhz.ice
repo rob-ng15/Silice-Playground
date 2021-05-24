@@ -240,13 +240,10 @@ algorithm memmap_io (
     );
 
     // Left and Right audio channels
-    apu apu_processor_L <@clock_25mhz> (
+    audio apu_processor <@clock_25mhz> (
         staticGenerator <: static4bit,
-        audio_output :> audio_l
-    );
-    apu apu_processor_R <@clock_25mhz> (
-        staticGenerator <: static4bit,
-        audio_output :> audio_r
+        audio_l :> audio_l,
+        audio_r :> audio_r
     );
 
     // UART CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
@@ -256,7 +253,7 @@ algorithm memmap_io (
     );
 
     // PS2 CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
-    ps2buffer PS2 <@clock_25mhz> (
+    ps2buffer PS2(
         clock_25mhz <: clock_25mhz,
         us2_bd_dp <: us2_bd_dp,
         us2_bd_dn <: us2_bd_dn
@@ -274,15 +271,10 @@ algorithm memmap_io (
     uint1   LATCHmemoryRead = uninitialized;
     uint1   LATCHmemoryWrite = uninitialized;
 
-    // register buttons
-    //uint$NUM_BTNS$ reg_btns = 0;
-    //reg_btns ::= btns;
-
-    // UART FLAGS
+    // I/O FLAGS
     UART.inread := 0;
     UART.outwrite := 0;
-
-    // SDCARD FLAGS
+    PS2.inread := 0;
     SDCARD.readsector := 0;
 
     // DISBLE SMT ON STARTUP
@@ -300,8 +292,14 @@ algorithm memmap_io (
                 case 16hf130: { readData = leds; }
                 // PS2
                 case 16hf110: { readData = PS2.inavailable; }
-                case 16hf112: { readData = PS2.inchar; PS2.inread = 1; }
-
+                case 16hf112: {
+                    if( PS2.inavailable ) {
+                        readData = PS2.inchar;
+                        PS2.inread = 1;
+                    } else {
+                        readData = 0;
+                    }
+                }
                 // TILE MAP
                 case 16h8120: { readData = lower_tile_map.tm_lastaction; }
                 case 16h8122: { readData = lower_tile_map.tm_active; }
@@ -345,8 +343,8 @@ algorithm memmap_io (
                 case 16h850a: { readData = character_map_window.tpu_active; }
 
                 // AUDIO
-                case 16hf204: { readData = apu_processor_L.audio_active; }
-                case 16hf214: { readData = apu_processor_R.audio_active; }
+                case 16hf210: { readData = apu_processor.audio_active_l; }
+                case 16hf212: { readData = apu_processor.audio_active_r; }
 
                 // TIMERS and RNG
                 case 16hf000: { readData = timers.g_noise_out; }
@@ -504,14 +502,10 @@ algorithm memmap_io (
                 case 16h850a: { character_map_window.tpu_write = writeData; }
 
                 // AUDIO
-                case 16hf200: { apu_processor_L.waveform = writeData; }
-                case 16hf202: { apu_processor_L.note = writeData; }
-                case 16hf204: { apu_processor_L.duration = writeData; }
-                case 16hf206: { apu_processor_L.apu_write = writeData; }
-                case 16hf210: { apu_processor_R.waveform = writeData; }
-                case 16hf212: { apu_processor_R.note = writeData; }
-                case 16hf214: { apu_processor_R.duration = writeData; }
-                case 16hf216: { apu_processor_R.apu_write = writeData; }
+                case 16hf200: { apu_processor.waveform = writeData; }
+                case 16hf202: { apu_processor.note = writeData; }
+                case 16hf204: { apu_processor.duration = writeData; }
+                case 16hf206: { apu_processor.apu_write = writeData; }
 
                 // TIMERS and RNG
                 case 16hf010: { timers.resetcounter = 1; }
@@ -559,11 +553,7 @@ algorithm memmap_io (
 
             // RESET TIMER and AUDIO Co-Processor Controls
             timers.resetcounter = 0;
-            apu_processor_L.apu_write = 0;
-            apu_processor_R.apu_write = 0;
-
-            // RESET PS2 Buffer Controls
-            PS2.inread = 0;
+            apu_processor.apu_write = 0;
         }
 
         LATCHmemoryRead = memoryRead;
@@ -619,6 +609,60 @@ algorithm timers_rng(
     }
 }
 
+// AUDIO L&R Controller
+algorithm audio(
+    input   uint4   staticGenerator,
+    input   uint4   waveform,
+    input   uint7   note,
+    input   uint16  duration,
+    input   uint2   apu_write,
+    output  uint4   audio_l,
+    output  uint1   audio_active_l,
+    output  uint4   audio_r,
+    output  uint1   audio_active_r
+) <autorun> {
+    // Left and Right audio channels
+    apu apu_processor_L(
+        staticGenerator <: staticGenerator,
+        audio_output :> audio_l,
+        audio_active :> audio_active_l
+    );
+    apu apu_processor_R(
+        staticGenerator <: staticGenerator,
+        audio_output :> audio_r,
+        audio_active :> audio_active_r
+    );
+
+    apu_processor_L.apu_write := 0;
+    apu_processor_R.apu_write := 0;
+
+    while(1) {
+        switch( apu_write ) {
+            case 1: {
+                apu_processor_L.waveform = waveform;
+                apu_processor_L.note = note;
+                apu_processor_L.duration = duration;
+                apu_processor_L.apu_write = 1;
+            }
+            case 2: {
+                apu_processor_R.waveform = waveform;
+                apu_processor_R.note = note;
+                apu_processor_R.duration = duration;
+                apu_processor_R.apu_write = 1;
+            }
+            case 3: {
+                apu_processor_L.waveform = waveform;
+                apu_processor_L.note = note;
+                apu_processor_L.duration = duration;
+                apu_processor_L.apu_write = 1;
+                apu_processor_R.waveform = waveform;
+                apu_processor_R.note = note;
+                apu_processor_R.duration = duration;
+                apu_processor_R.apu_write = 1;
+            }
+        }
+    }
+}
 // UART BUFFER CONTROLLER
 algorithm uart(
     // UART
