@@ -41,7 +41,6 @@ algorithm main(
     inout   uint16 sdram_dq
 ) <@clock_system> {
     // CLOCK/RESET GENERATION
-
     // CPU + MEMORY
     uint1   pll_lock_CPU = uninitialized;
     uint1   clock_system = uninitialized;
@@ -56,23 +55,6 @@ algorithm main(
         clk100_3  :> clock_100_3,
         locked   :> pll_lock_CPU
     );
-
-    // VIDEO + CLOCKS
-    uint1   pll_lock_VIDEO = uninitialized;
-    uint1   video_clock = uninitialized;
-    uint1   gpu_clock = uninitialized;
-    ulx3s_clk_risc_ice_v_VIDEO clk_gen_VIDEO (
-        clkin    <: clock,
-        clkGPU :> gpu_clock,
-        clkVIDEO :> video_clock,
-        locked   :> pll_lock_VIDEO
-    );
-    // Video Reset
-    uint1   video_reset = uninitialized;
-    clean_reset video_rstcond<@video_clock,!reset> (
-        out :> video_reset
-    );
-
     // SDRAM  CLOCKS + ON CPU CACHE + USB DOMAIN CLOCKS
     uint1   sdram_clock = uninitialized;
     uint1   pll_lock_AUX = uninitialized;
@@ -84,9 +66,7 @@ algorithm main(
     );
     // SDRAM Reset
     uint1   sdram_reset = uninitialized;
-    clean_reset sdram_rstcond<@sdram_clock,!reset> (
-        out :> sdram_reset
-    );
+    clean_reset sdram_rstcond<@sdram_clock,!reset> ( out :> sdram_reset );
 
     // RAM - BRAM and SDRAM
     // SDRAM chip controller by @sylefeb
@@ -128,7 +108,7 @@ algorithm main(
     // MEMORY MAPPED I/O + SMT CONTROLS
     uint1   SMTRUNNING = uninitialized;
     uint32  SMTSTARTPC = uninitialized;
-    memmap_io IO_Map <@clock_system> (
+    io_memmap IO_Map <@clock_system> (
         gn <: gn,
         gp :> gp,
         leds :> leds,
@@ -137,18 +117,12 @@ algorithm main(
         uart_rx <: uart_rx,
         us2_bd_dp <: us2_bd_dp,
         us2_bd_dn <: us2_bd_dn,
-        audio_l :> audio_l,
-        audio_r :> audio_r,
         sd_clk :> sd_clk,
         sd_mosi :> sd_mosi,
         sd_csn :> sd_csn,
         sd_miso <: sd_miso,
-        gpdi_dp :> gpdi_dp,
 
         clock_25mhz <: clock,
-        video_clock <: video_clock,
-        video_reset <: video_reset,
-        gpu_clock <: gpu_clock,
 
         memoryAddress <: address,
         writeData <: writedata,
@@ -156,18 +130,28 @@ algorithm main(
         SMTRUNNING :> SMTRUNNING,
         SMTSTARTPC :> SMTSTARTPC
     );
+    audiotimers_memmap AUDIOTIMERS_Map <@clock_system> (
+        clock_25mhz <: clock,
+        memoryAddress <: address,
+        writeData <: writedata,
+        audio_l :> audio_l,
+        audio_r :> audio_r
+    );
+    video_memmap VIDEO_Map <@clock_system> (
+        clock_25mhz <: clock,
+        memoryAddress <: address,
+        writeData <: writedata,
+        gpdi_dp :> gpdi_dp
+    );
 
     uint3   function3 = uninitialized;
     uint32  address = uninitialized;
     uint16  writedata = uninitialized;
     PAWSCPU CPU <@clock_system> (
         clock_CPUdecoder <: clock_100_1,
-        clock_ALUunit <: clock_100_2,
-
         accesssize :> function3,
         address :> address,
         writedata :> writedata,
-
         SMTRUNNING <: SMTRUNNING,
         SMTSTARTPC <: SMTSTARTPC
     );
@@ -175,17 +159,58 @@ algorithm main(
     // SDRAM -> CPU BUSY STATE
     CPU.memorybusy := sdram.busy || CPU.readmemory || CPU.writememory;
 
-    // I/O and RAM read/write flags - address[28,1] == 0 BRAM or I/O == 1 SDRAM, address[15,1] == 0 BRAM == 1 I/O
-    sdram.writeflag := CPU.writememory && address[28,1];
-    sdram.readflag := CPU.readmemory && address[28,1];
-    ram.writeflag := CPU.writememory && ~address[28,1] && ~address[15,1];
-    ram.readflag := CPU.readmemory && ~address[28,1] && ~address[15,1];
-    IO_Map.memoryWrite := CPU.writememory && ~address[28,1] && address[15,1];
-    IO_Map.memoryRead := CPU.readmemory && ~address[28,1] && address[15,1];
+    // I/O and RAM read/write flags - address[28,1] == 0 BRAM or I/O == 1 SDRAM, address[15,1] == 0 BRAM == 1 I/O ( == 8xxx VIDEO == Fxxx IO )
+    //sdram.writeflag := CPU.writememory && address[28,1];
+    //sdram.readflag := CPU.readmemory && address[28,1];
+    //ram.writeflag := CPU.writememory && ~address[28,1] && ~address[15,1];
+    //ram.readflag := CPU.readmemory && ~address[28,1] && ~address[15,1];
+    //IO_Map.memoryWrite := CPU.writememory && ~address[28,1] && ( address[12,4] == 4hf );
+    //IO_Map.memoryRead := CPU.readmemory && ~address[28,1] && ( address[12,4] == 4hf );
+    //VIDEO_Map.memoryWrite := CPU.writememory && ~address[28,1] && ( address[12,4] == 4h8 );
+    //VIDEO_Map.memoryRead := CPU.readmemory && ~address[28,1] && ( address[12,4] == 4h8 );
+    //AUDIOTIMERS_Map.memoryWrite := CPU.writememory && ~address[28,1] && ( address[12,4] == 4he );
+    //AUDIOTIMERS_Map.memoryRead := CPU.readmemory && ~address[28,1] && ( address[12,4] == 4he );
 
-    CPU.readdata := address[28,1] ? sdram.readdata : ( address[15,1] ? IO_Map.readData : ram.readdata );
+    //CPU.readdata := address[28,1] ? sdram.readdata : ( address[15,1] ? ( ( address[12,4] == 4hf ) ? IO_Map.readData : VIDEO_Map.readData ) : ram.readdata );
 
-    while(1) {}
+    while(1) {
+        switch( address[28,1] ) {
+            case 1: {
+                sdram.writeflag = CPU.writememory;
+                sdram.readflag = CPU.readmemory;
+                CPU.readdata = sdram.readdata;
+            }
+            case 0: {
+                switch( address[15,1] ) {
+                    case 1: {
+                        switch( address[12,4] ) {
+                            case 4h8: {
+                                VIDEO_Map.memoryWrite = CPU.writememory;
+                                VIDEO_Map.memoryRead = CPU.readmemory;
+                                CPU.readdata = VIDEO_Map.readData;
+                            }
+                            case 4he: {
+                                AUDIOTIMERS_Map.memoryWrite = CPU.writememory;
+                                AUDIOTIMERS_Map.memoryRead = CPU.readmemory;
+                                CPU.readdata = AUDIOTIMERS_Map.readData;
+                            }
+                            case 4hf: {
+                                IO_Map.memoryWrite = CPU.writememory;
+                                IO_Map.memoryRead = CPU.readmemory;
+                                CPU.readdata = IO_Map.readData;
+                            }
+                            default: { CPU.readdata = 0; }
+                        }
+                    }
+                    case 0: {
+                        ram.writeflag = CPU.writememory;
+                        ram.readflag = CPU.readmemory;
+                        CPU.readdata = ram.readdata;
+                    }
+                }
+            }
+        }
+    }
 }
 
 // RAM - BRAM controller

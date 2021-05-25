@@ -46,7 +46,6 @@ circuitry store( input accesssize, input location, input value, input memorybusy
 
 algorithm PAWSCPU(
     input   uint1   clock_CPUdecoder,
-    input   uint1   clock_ALUunit,
 
     output  uint3   accesssize,
     output  uint32  address,

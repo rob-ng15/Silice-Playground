@@ -5,8 +5,8 @@ unsigned char volatile * BUTTONS = (unsigned char volatile *) 0xf120;
 unsigned char volatile * LEDS = (unsigned char volatile *) 0xf130;
 
 // PS/2 KEYBOARD
-unsigned char volatile * PS2_DATA = (unsigned char volatile *) 0xf110;
-unsigned char volatile * PS2_AVAILABLE = (unsigned char volatile *) 0xf112;
+unsigned char volatile * PS2_AVAILABLE = (unsigned char volatile *) 0xf110;
+unsigned char volatile * PS2_DATA = (unsigned char volatile *) 0xf112;
 
 // SDCARD
 unsigned char volatile * SDCARD_READY = (unsigned char volatile *) 0xf140;
@@ -17,6 +17,8 @@ unsigned short volatile * SDCARD_ADDRESS = (unsigned short volatile *) 0xf150;
 unsigned char volatile * SDCARD_DATA = (unsigned char volatile *) 0xf150;
 
 // DISPLAY UNITS
+unsigned char volatile * VBLANK = ( unsigned char volatile * ) 0x8f00;
+unsigned char volatile * SCREENMODE = ( unsigned char volatile * ) 0x8f00;
 
 // BACKGROUND AND COPPER - BASE 0x8000
 unsigned char volatile * BACKGROUND_COLOUR = (unsigned char volatile *) 0x8000;
@@ -96,7 +98,6 @@ unsigned char volatile * BITMAP_SCROLLWRAP = (unsigned char volatile *) 0x8680;
 unsigned char volatile * FRAMEBUFFER_DISPLAY = ( unsigned char volatile * ) 0x8690;
 unsigned char volatile * FRAMEBUFFER_DRAW = ( unsigned char volatile * ) 0x8692;
 
-
 unsigned short volatile * LOWER_SPRITE_ACTIVE = ( unsigned short volatile * ) 0x8300;
 unsigned short volatile * LOWER_SPRITE_DOUBLE = ( unsigned short volatile * ) 0x8320;
 unsigned short volatile * LOWER_SPRITE_COLOUR = ( unsigned short volatile * ) 0x8340;
@@ -104,11 +105,11 @@ short volatile * LOWER_SPRITE_X = ( short volatile * ) 0x8360;
 short volatile * LOWER_SPRITE_Y = ( short volatile * ) 0x8380;
 unsigned short volatile * LOWER_SPRITE_TILE = ( unsigned short volatile * ) 0x83a0;
 unsigned short volatile * LOWER_SPRITE_UPDATE = ( unsigned short volatile * ) 0x83c0;
-unsigned short volatile * LOWER_SPRITE_COLLISION_BASE = ( unsigned short volatile * ) 0x9300;
-unsigned short volatile * LOWER_SPRITE_LAYER_COLLISION_BASE = ( unsigned short volatile * ) 0x9320;
-unsigned char volatile * LOWER_SPRITE_WRITER_NUMBER = ( unsigned char volatile * ) 0x83f0;
-unsigned char volatile * LOWER_SPRITE_WRITER_LINE = ( unsigned char volatile * ) 0x83f2;
-unsigned short volatile * LOWER_SPRITE_WRITER_BITMAP = ( unsigned short volatile * ) 0x83f4;
+unsigned short volatile * LOWER_SPRITE_COLLISION_BASE = ( unsigned short volatile * ) 0x83c0;
+unsigned short volatile * LOWER_SPRITE_LAYER_COLLISION_BASE = ( unsigned short volatile * ) 0x83e0;
+unsigned char volatile * LOWER_SPRITE_WRITER_NUMBER = ( unsigned char volatile * ) 0x8800;
+unsigned char volatile * LOWER_SPRITE_WRITER_LINE = ( unsigned char volatile * ) 0x8802;
+unsigned short volatile * LOWER_SPRITE_WRITER_BITMAP = ( unsigned short volatile * ) 0x8804;
 
 unsigned short volatile * UPPER_SPRITE_ACTIVE = ( unsigned short volatile * ) 0x8400;
 unsigned short volatile * UPPER_SPRITE_DOUBLE = ( unsigned short volatile * ) 0x8420;
@@ -117,11 +118,11 @@ short volatile * UPPER_SPRITE_X = ( short volatile * ) 0x8460;
 short volatile * UPPER_SPRITE_Y = ( short volatile * ) 0x8480;
 unsigned short volatile * UPPER_SPRITE_TILE = ( unsigned short volatile * ) 0x84a0;
 unsigned short volatile * UPPER_SPRITE_UPDATE = ( unsigned short volatile * ) 0x84c0;
-unsigned short volatile * UPPER_SPRITE_COLLISION_BASE = ( unsigned short volatile * ) 0x9400;
-unsigned short volatile * UPPER_SPRITE_LAYER_COLLISION_BASE = ( unsigned short volatile * ) 0x9420;
-unsigned char volatile * UPPER_SPRITE_WRITER_NUMBER = ( unsigned char volatile * ) 0x84f0;
-unsigned char volatile * UPPER_SPRITE_WRITER_LINE = ( unsigned char volatile * ) 0x84f2;
-unsigned short volatile * UPPER_SPRITE_WRITER_BITMAP = ( unsigned short volatile * ) 0x84f4;
+unsigned short volatile * UPPER_SPRITE_COLLISION_BASE = ( unsigned short volatile * ) 0x84c0;
+unsigned short volatile * UPPER_SPRITE_LAYER_COLLISION_BASE = ( unsigned short volatile * ) 0x84e0;
+unsigned char volatile * UPPER_SPRITE_WRITER_NUMBER = ( unsigned char volatile * ) 0x8810;
+unsigned char volatile * UPPER_SPRITE_WRITER_LINE = ( unsigned char volatile * ) 0x8812;
+unsigned short volatile * UPPER_SPRITE_WRITER_BITMAP = ( unsigned short volatile * ) 0x8814;
 
 unsigned char volatile * TPU_X = ( unsigned char volatile * ) 0x8500;
 unsigned char volatile * TPU_Y = ( unsigned char volatile * ) 0x8502;
@@ -130,27 +131,22 @@ unsigned char volatile * TPU_BACKGROUND = ( unsigned char volatile * ) 0x8506;
 unsigned char volatile * TPU_FOREGROUND = ( unsigned char volatile * ) 0x8508;
 unsigned char volatile * TPU_COMMIT = ( unsigned char volatile * ) 0x850a;
 
-unsigned char volatile * AUDIO_L_WAVEFORM = ( unsigned char volatile * ) 0xf200;
-unsigned char volatile * AUDIO_L_NOTE = ( unsigned char volatile * ) 0xf202;
-unsigned short volatile * AUDIO_L_DURATION = ( unsigned short volatile * ) 0xf204;
-unsigned char volatile * AUDIO_L_START = ( unsigned char volatile * ) 0xf206;
-unsigned char volatile * AUDIO_R_WAVEFORM = ( unsigned char volatile * ) 0xf210;
-unsigned char volatile * AUDIO_R_NOTE = ( unsigned char volatile * ) 0xf212;
-unsigned short volatile * AUDIO_R_DURATION = ( unsigned short volatile * ) 0xf214;
-unsigned char volatile * AUDIO_R_START = ( unsigned char volatile * ) 0xf216;
+unsigned char volatile * AUDIO_WAVEFORM = ( unsigned char volatile * ) 0xe100;
+unsigned char volatile * AUDIO_NOTE = ( unsigned char volatile * ) 0xe102;
+unsigned short volatile * AUDIO_DURATION = ( unsigned short volatile * ) 0xe104;
+unsigned char volatile * AUDIO_START = ( unsigned char volatile * ) 0xe106;
+unsigned char volatile * AUDIO_L_ACTIVE = ( unsigned char volatile * ) 0xe110;
+unsigned char volatile * AUDIO_R_ACTIVE = ( unsigned char volatile * ) 0xe112;
 
-unsigned short volatile * RNG = ( unsigned short volatile * ) 0xf000;
-unsigned short volatile * ALT_RNG = ( unsigned short volatile * ) 0xf002;
-unsigned short volatile * TIMER1HZ0 = ( unsigned short volatile * ) 0xf010;
-unsigned short volatile * TIMER1HZ1 = ( unsigned short volatile * ) 0xf012;
-unsigned short volatile * TIMER1KHZ0 = ( unsigned short volatile * ) 0xf020;
-unsigned short volatile * TIMER1KHZ1 = ( unsigned short volatile * ) 0xf022;
-unsigned short volatile * SLEEPTIMER0 = ( unsigned short volatile * ) 0xf030;
-unsigned short volatile * SLEEPTIMER1 = ( unsigned short volatile * ) 0xf032;
-unsigned short volatile * SYSTEMCLOCK = (unsigned short volatile *) 0xf040;
-
-unsigned char volatile * VBLANK = ( unsigned char volatile * ) 0xf800;
-unsigned char volatile * SCREENMODE = ( unsigned char volatile * ) 0xf800;
+unsigned short volatile * RNG = ( unsigned short volatile * ) 0xe000;
+unsigned short volatile * ALT_RNG = ( unsigned short volatile * ) 0xe002;
+unsigned short volatile * TIMER1HZ0 = ( unsigned short volatile * ) 0xe010;
+unsigned short volatile * TIMER1HZ1 = ( unsigned short volatile * ) 0xe012;
+unsigned short volatile * TIMER1KHZ0 = ( unsigned short volatile * ) 0xe020;
+unsigned short volatile * TIMER1KHZ1 = ( unsigned short volatile * ) 0xe022;
+unsigned short volatile * SLEEPTIMER0 = ( unsigned short volatile * ) 0xe030;
+unsigned short volatile * SLEEPTIMER1 = ( unsigned short volatile * ) 0xe032;
+unsigned short volatile * SYSTEMCLOCK = (unsigned short volatile *) 0xe040;
 
 // HANDLE SMT - RUNNING STATUS AND POINTER TO CODE TO RUN
 unsigned char volatile * SMTSTATUS = ( unsigned char volatile *) 0xfffe;

@@ -551,7 +551,7 @@ void main( void ) {
     set_sdcard_bitmap();
     draw_sdcard();
     gpu_outputstring( WHITE, 104, 4, "PAWS", 2 );
-    tpu_set( 26, 4, TRANSPARENT, WHITE ); tpu_outputstring( "RISC-V RV32IMCB CPU" );
+    tpu_set( 25, 4, TRANSPARENT, WHITE ); tpu_outputstring( "RISC-V RV32IMCB CPU" );
 
     for( unsigned short i = 0; i < 64; i++ ) {
         gpu_rectangle( i, i * 5, 184, 4 + i * 5, 188 );
