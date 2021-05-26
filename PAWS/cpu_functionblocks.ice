@@ -55,7 +55,6 @@ algorithm decoder(
     input   uint32  instruction,
 
     output  uint7   opCode,
-    output  uint2   function2,
     output  uint3   function3,
     output  uint7   function7,
 
@@ -65,10 +64,9 @@ algorithm decoder(
     output  uint5   rd,
 
     output  int32   immediateValue,
-    output  uint5   IshiftCount
+    //output  uint5   IshiftCount
 ) <autorun> {
     opCode := Utype(instruction).opCode;
-    function2 := R4type(instruction).function2;
     function3 := Rtype(instruction).function3;
     function7 := Rtype(instruction).function7;
     rs1 := Rtype(instruction).sourceReg1;
@@ -76,7 +74,7 @@ algorithm decoder(
     rs3 := R4type(instruction).sourceReg3;
     rd := Rtype(instruction).destReg;
     immediateValue := { {20{instruction[31,1]}}, Itype(instruction).immediate };
-    IshiftCount := ItypeSHIFT( instruction ).shiftCount;
+    //IshiftCount := ItypeSHIFT( instruction ).shiftCount;
 }
 
 // RISC-V ADDRESS BASE/OFFSET GENERATOR

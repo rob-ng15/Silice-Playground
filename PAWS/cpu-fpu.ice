@@ -91,10 +91,9 @@ algorithm PAWSCPU(
     // RISC-V 32 BIT INSTRUCTION DECODER
     int32   immediateValue = uninitialized;
     uint7   opCode = uninitialized;
-    uint2   function2 = uninitialized;
     uint3   function3 = uninitialized;
     uint7   function7 = uninitialized;
-    uint5   IshiftCount = uninitialized;
+    //uint5   IshiftCount = uninitialized;
     uint5   rs1 = uninitialized;
     uint5   rs2 = uninitialized;
     uint5   rs3 = uninitialized;
@@ -109,7 +108,7 @@ algorithm PAWSCPU(
         rs3 :> rs3,
         rd :> rd,
         immediateValue :> immediateValue,
-        IshiftCount :> IshiftCount
+        //IshiftCount :> IshiftCount
     );
 
     // RISC-V REGISTERS
@@ -186,7 +185,7 @@ algorithm PAWSCPU(
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
         sourceReg3 <: sourceReg3,
-        IshiftCount <: IshiftCount,
+        IshiftCount <: rs2,
         immediateValue <: immediateValue
     );
 

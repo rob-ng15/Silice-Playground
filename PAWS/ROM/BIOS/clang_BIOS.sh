@@ -11,7 +11,7 @@ echo "using $ARCH"
 
 # Following based on FemtoRV compile scripts https://github.com/BrunoLevy/learn-fpga/tree/master/FemtoRV
 CFLAGS="--target=riscv32 -ffunction-sections -fdata-sections -Os -fno-builtin -fno-pic -fno-unroll-loops -march=rv32imac -mabi=ilp32"
-LFLAGS="--as-needed --gc-sections -m elf32lriscv -b elf -Tconfig_lld.ld --no-relax"
+LFLAGS="--as-needed --gc-sections -m elf32lriscv -b elf -Tconfig_LLD.ld --no-relax"
 clang $CFLAGS -c -o build/code.o c/BIOS.c
 clang $CFLAGS -c -o build/crt0.o crt0.c
 ld.lld $LFLAGS -o build/code.elf build/crt0.o build/code.o

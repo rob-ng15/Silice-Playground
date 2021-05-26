@@ -192,7 +192,6 @@ algorithm aluIb101(
     input   uint32  RSHIFToutput,
 
     input   uint32  FUNNELoutput,
-    input   uint1   FUNNELbusy,
     input   uint32  SHFLUNSHFLoutput,
     input   uint1   SHFLUNSHFLbusy,
     input   uint32  GREVGORCoutput,
@@ -209,14 +208,7 @@ algorithm aluIb101(
                 case 7b0010100: { while( GREVGORCbusy ) {} result = GREVGORCoutput; }
                 case 7b0110100: { while( GREVGORCbusy ) {} result = GREVGORCoutput; }
                 case 7b0100100: { result = ( sourceReg1[ IshiftCount, 1 ] == 1 ) ? 1 : 0; }
-                default: {
-                    if( function7[1,1] ) {
-                        while( FUNNELbusy ) {}
-                        result = FUNNELoutput;
-                    } else {
-                        result = RSHIFToutput;
-                    }
-                }
+                default: { result = function7[1,1] ? FUNNELoutput : RSHIFToutput; }
             }
             busy = 0;
         }
@@ -237,7 +229,6 @@ algorithm aluI(
     input   uint32  SBSCIoutput,
 
     input   uint32  FUNNELoutput,
-    input   uint1   FUNNELbusy,
     input   uint32  SHFLUNSHFLoutput,
     input   uint1   SHFLUNSHFLbusy,
     input   uint32  GREVGORCoutput,
@@ -262,7 +253,6 @@ algorithm aluI(
         sourceReg1 <: sourceReg1,
         RSHIFToutput <: RSHIFToutput,
         FUNNELoutput <: FUNNELoutput,
-        FUNNELbusy <: FUNNELbusy,
         SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
         SHFLUNSHFLbusy <: SHFLUNSHFLbusy,
         GREVGORCoutput <: GREVGORCoutput,
@@ -310,7 +300,6 @@ algorithm aluR001(
     input   int32   sourceReg1,
     input   int32   sourceReg2,
     input   int32   sourceReg3,
-    input   uint2   function2,
     input   uint7   function7,
     input   int32   LSHIFToutput,
     input   uint32  SBSCIoutput,
@@ -318,7 +307,6 @@ algorithm aluR001(
     input   uint1   CLMULbusy,
     input   uint32  SHFLUNSHFLoutput,
     input   uint1   SHFLUNSHFLbusy,
-    input   uint1   FUNNELbusy,
     input   int32   FUNNELoutput,
     output  int32   result
 ) <autorun> {
@@ -335,12 +323,7 @@ algorithm aluR001(
                 case 7b0110100: { result = SBSCIoutput; }                                                       // SBINV
                 case 7b0000101: { while( CLMULbusy ) {} result = CLMULoutput; }                                 // CLMUL
                 case 7b0000100: { while( SHFLUNSHFLbusy ) {} result = SHFLUNSHFLoutput; }                       // SHFL
-                default: {
-                    switch( function2 ) {
-                        case 2b11: { result = ( sourceReg1 & sourceReg2 ) | ( sourceReg3 & ~sourceReg2 ); }     // CMIX
-                        case 2b10: { while( FUNNELbusy ) {} result = FUNNELoutput; }                            // FSL
-                    }
-                }
+                default: { result = function7[0,1] ? ( sourceReg1 & sourceReg2 ) | ( sourceReg3 & ~sourceReg2 ) : FUNNELoutput; }     // FSL / CMIX
             }
             busy = 0;
         }
@@ -427,10 +410,8 @@ algorithm aluR101(
     input   int32   sourceReg1,
     input   int32   sourceReg2,
     input   int32   sourceReg3,
-    input   uint2   function2,
     input   uint7   function7,
     input   int32   RSHIFToutput,
-    input   uint1   FUNNELbusy,
     input   int32   FUNNELoutput,
     input   uint32  GREVGORCoutput,
     input   uint1   GREVGORCbusy,
@@ -452,12 +433,7 @@ algorithm aluR101(
                 case 7b0010100: { while( GREVGORCbusy ) {} result = GREVGORCoutput; }                           // GORC
                 case 7b0110100: { while( GREVGORCbusy ) {} result = GREVGORCoutput; }                           // GREV
                 case 7b0000100: { while( SHFLUNSHFLbusy ) {} result = SHFLUNSHFLoutput; }                       // UNSHFL
-                default: {
-                    switch( function2 ) {
-                        case 2b11: { result = ( sourceReg2 != 0 ) ? sourceReg1 : sourceReg3; }                  // CMOV
-                        case 2b10: { while( FUNNELbusy ) {} result = FUNNELoutput; }                            // FSR
-                    }
-                }
+                default: { result = function7[0,1] ? ( sourceReg2 != 0 ) ? sourceReg1 : sourceReg3 : FUNNELoutput; }   // FSR CMOV
             }
             busy = 0;
         }
@@ -529,7 +505,6 @@ algorithm aluR (
     input   uint1   start,
     output  uint1   busy,
 
-    input   uint2   function2,
     input   uint3   function3,
     input   uint7   function7,
     input   uint5   rs1,
@@ -542,7 +517,6 @@ algorithm aluR (
     input   uint32  SBSCIoutput,
 
     input   uint32  FUNNELoutput,
-    input   uint1   FUNNELbusy,
     input   uint32  SHFLUNSHFLoutput,
     input   uint1   SHFLUNSHFLbusy,
     input   uint32  GREVGORCoutput,
@@ -594,7 +568,6 @@ algorithm aluR (
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
         sourceReg3 <: sourceReg3,
-        function2 <: function2,
         function7 <: function7,
         LSHIFToutput <: LSHIFToutput,
         SBSCIoutput <: SBSCIoutput,
@@ -602,7 +575,6 @@ algorithm aluR (
         CLMULbusy <: CLMULbusy,
         SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
         SHFLUNSHFLbusy <: SHFLUNSHFLbusy,
-        FUNNELbusy <: FUNNELbusy,
         FUNNELoutput <: FUNNELoutput
     );
     aluR010 ALUR010(
@@ -633,10 +605,8 @@ algorithm aluR (
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
         sourceReg3 <: sourceReg3,
-        function2 <: function2,
         function7 <: function7,
         RSHIFToutput <: RSHIFToutput,
-        FUNNELbusy <: FUNNELbusy,
         FUNNELoutput <: FUNNELoutput,
         GREVGORCoutput <: GREVGORCoutput,
         GREVGORCbusy <: GREVGORCbusy,
@@ -709,7 +679,6 @@ algorithm alu(
     output  uint1   busy,
 
     input   uint7   opCode,
-    input   uint2   function2,
     input   uint3   function3,
     input   uint7   function7,
     input   uint5   rs1,
@@ -747,13 +716,11 @@ algorithm alu(
         result :> SBSCIoutput
     );
     uint32  FUNNELoutput = uninitialized;
-    uint1   FUNNELbusy = uninitialized;
     funnelshift FUNNEL(
         sourceReg1 <: sourceReg1,
         sourceReg3 <: sourceReg3,
         shiftcount <: Fshiftcount,
         function3 <: function3,
-        busy :> FUNNELbusy,
         result :> FUNNELoutput
     );
 
@@ -784,13 +751,10 @@ algorithm alu(
         IshiftCount <: IshiftCount,
         sourceReg1 <: sourceReg1,
         immediateValue <: immediateValue,
-
         LSHIFToutput <: LSHIFToutput,
         RSHIFToutput <: RSHIFToutput,
         SBSCIoutput <: SBSCIoutput,
-
         FUNNELoutput <: FUNNELoutput,
-        FUNNELbusy <: FUNNELbusy,
         SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
         SHFLUNSHFLbusy <: SHFLUNSHFLbusy,
         GREVGORCoutput <: GREVGORCoutput,
@@ -799,7 +763,6 @@ algorithm alu(
 
     // BASE REGISTER & REGISTER ALU OPERATIONS + B EXTENSION OPERATIONS
     aluR ALUR(
-        function2 <: function2,
         function3 <: function3,
         function7 <: function7,
         rs1 <: rs1,
@@ -810,9 +773,7 @@ algorithm alu(
         LSHIFToutput <: LSHIFToutput,
         RSHIFToutput <: RSHIFToutput,
         SBSCIoutput <: SBSCIoutput,
-
         FUNNELoutput <: FUNNELoutput,
-        FUNNELbusy <: FUNNELbusy,
         SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
         SHFLUNSHFLbusy <: SHFLUNSHFLbusy,
         GREVGORCoutput <: GREVGORCoutput,
@@ -822,7 +783,6 @@ algorithm alu(
     // ALU START FLAGS
     ALUI.start := 0;
     ALUR.start := 0;
-    FUNNEL.start := 0;
     SHFLUNSHFL.start := 0;
     GREVGORC.start := 0;
 
@@ -831,7 +791,6 @@ algorithm alu(
     while(1) {
         if( start ) {
             // START SHARED MULTICYCLE BLOCKS - SHFL UNSHFL GORC GREV FUNNEL ( need to correctly specify start of funnel shifts )
-            FUNNEL.start = ( ( function3 == 3b001 ) || ( function3 == 3b101 ) ) && ( function2 != 2b11 ) ? ( function2[1,1] == 1) ? 1 : 0 : 0;
             SHFLUNSHFL.start = ( ( ( function3 == 3b001 ) || ( function3 == 3b101 ) ) && ( function7 == 7b0000100 ) ) ? 1 : 0;
             GREVGORC.start = ( ( function3 == 3b101 ) && ( ( function7 == 7b0110100 ) || ( function7 == 7b0010100 ) ) ) ? 1 : 0;
 
@@ -952,9 +911,6 @@ algorithm singlebitops(
 }
 // FUNNEL SHIFT LEFT AND RIGHT
 algorithm funnelshift(
-    input   uint1   start,
-    output  uint1   busy,
-
     input   uint32  sourceReg1,
     input   uint32  sourceReg3,
     input   uint6   shiftcount,
@@ -963,16 +919,12 @@ algorithm funnelshift(
 ) <autorun> {
     uint32  A <: ( shiftcount >= 32 ) ? sourceReg3 : sourceReg1;
     uint32  B <: ( shiftcount >= 32 ) ? sourceReg1 : sourceReg3;
-    uint32  fshiftcount <: ( shiftcount >= 32 ) ? shiftcount - 32 : shiftcount;
+    uint6  fshiftcount <: ( shiftcount >= 32 ) ? shiftcount - 32 : shiftcount;
 
     while(1) {
-        if( start ) {
-            busy = 1;
-            switch( function3 ) {
-                case 3b001: { result = ( fshiftcount != 0 ) ? ( ( A << fshiftcount ) | ( B >> ( 32 - fshiftcount ) ) ) : A; } // FSL
-                case 3b101: { result = ( fshiftcount != 0 ) ? ( ( A >> fshiftcount ) | ( B << ( 32 - fshiftcount ) ) ) : A; } // FSR
-            }
-            busy = 0;
+        switch( function3 ) {
+            case 3b001: { result = ( fshiftcount != 0 ) ? ( ( A << fshiftcount ) | ( B >> ( 32 - fshiftcount ) ) ) : A; } // FSL
+            case 3b101: { result = ( fshiftcount != 0 ) ? ( ( A >> fshiftcount ) | ( B << ( 32 - fshiftcount ) ) ) : A; } // FSR
         }
     }
 }
@@ -1231,7 +1183,7 @@ algorithm clz(
                     }
                     case 1: {
                         while( ~bitcount[31,1] ) {
-                            bitcount = { bitcount[0,31], 1b0 };
+                            bitcount = bitcount << 1;
                             result = result + 1;
                         }
                     }
@@ -1268,7 +1220,7 @@ algorithm ctz(
                     case 1: {
                         while( ~bitcount[31,1] ) {
                             result = result + 1;
-                            bitcount = { bitcount[0,31], 1b0 };
+                            bitcount = bitcount >> 1;
                         }
                     }
                 }
@@ -1304,7 +1256,7 @@ algorithm cpop(
                     case 1: {
                         while( bitcount != 0 ) {
                             result = result + ( bitcount[0,1] ? 1 : 0 );
-                            bitcount = { 1b0, bitcount[1,31] };
+                            bitcount = bitcount >> 1;
                         }
                     }
                 }
