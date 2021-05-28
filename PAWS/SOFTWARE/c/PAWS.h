@@ -69,6 +69,7 @@ short volatile * GPU_PARAM2 = (short volatile *) 0x860e;
 short volatile * GPU_PARAM3 = (short volatile *) 0x8610;
 unsigned char volatile * GPU_WRITE = (unsigned char volatile *) 0x8612;
 unsigned char volatile * GPU_STATUS = (unsigned char volatile *) 0x8612;
+unsigned char volatile * GPU_FINISHED = (unsigned char volatile *) 0x8614;
 unsigned char volatile * VECTOR_DRAW_BLOCK = (unsigned char volatile *) 0x8620;
 unsigned char volatile * VECTOR_DRAW_COLOUR = (unsigned char volatile *) 0x8622;
 short volatile * VECTOR_DRAW_XC = (short volatile *) 0x8624;

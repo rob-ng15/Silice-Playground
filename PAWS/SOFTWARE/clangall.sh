@@ -18,23 +18,3 @@
 ./clangF.sh c/fractal-full.c PAWS/LF-F2.PAW
 ./clangF.sh c/scale.c PAWS/LF-S2.PAW
 ./clangF.sh c/terminal-test.c PAWS/LF-T.PAW
-
-./clangB.sh c/ascii-invaders.c PAWS/LB-I.PAW
-./clangB.sh c/asteroids.c PAWS/LB-A.PAW
-./clangB.sh c/chess.c PAWS/LB-C.PAW
-./clangB.sh c/demo.c PAWS/LB-D.PAW
-./clangB.sh c/fractal.c PAWS/LB-F.PAW
-./clangB.sh c/fractal-full.c PAWS/LB-F2.PAW
-./clangB.sh c/invaders-from-scratch.c PAWS/LB-IFS.PAW
-./clangB.sh c/jpeg-test.c PAWS/LB-J.PAW
-./clangB.sh c/life.c PAWS/LB-L.PAW
-./clangB.sh c/maze.c PAWS/LB-M.PAW
-./clangB.sh c/scale.c PAWS/LB-S2.PAW
-./clangB.sh c/smttest.c PAWS/LB-S.PAW
-./clangB.sh c/terminal-test.c PAWS/LB-T.PAW
-./clangB.sh c/tune.c PAWS/LB-T2.PAW
-
-./clangBF.sh c/fractal.c PAWS/LBF-F.PAW
-./clangBF.sh c/fractal-full.c PAWS/LBF-F2.PAW
-./clangBF.sh c/scale.c PAWS/LBF-S2.PAW
-./clangBF.sh c/terminal-test.c PAWS/LBF-T.PAW

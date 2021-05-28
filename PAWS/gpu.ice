@@ -1,4 +1,188 @@
+bitfield entry1{
+    uint10  x,
+    uint10  y,
+    uint7   colour,
+    uint7   colour_alt,
+    uint4   command,
+    uint4   dither
+}
+bitfield entry2{
+    uint10  p0,
+    uint10  p1,
+    uint10  p2,
+    uint10  p3
+}
+algorithm gpu_queue(
+    output int10   bitmap_x_write,
+    output int10   bitmap_y_write,
+    output uint7   bitmap_colour_write,
+    output uint7   bitmap_colour_write_alt,
+    output uint1   bitmap_write,
+    output uint4   gpu_active_dithermode,
+
+    input   int10   gpu_x,
+    input   int10   gpu_y,
+    input   uint7   gpu_colour,
+    input   uint7   gpu_colour_alt,
+    input   int10   gpu_param0,
+    input   int10   gpu_param1,
+    input   int10   gpu_param2,
+    input   int10   gpu_param3,
+    input   uint4   gpu_write,
+    input   uint4   gpu_dithermode,
+
+    input   uint5   blit1_writer_tile,
+    input   uint4   blit1_writer_line,
+    input   uint16  blit1_writer_bitmap,
+
+    input   uint8   character_writer_character,
+    input   uint3   character_writer_line,
+    input   uint8   character_writer_bitmap,
+
+    input   uint5   colourblit_writer_tile,
+    input   uint4   colourblit_writer_line,
+    input   uint4   colourblit_writer_pixel,
+    input   uint7   colourblit_writer_colour,
+
+    input   uint5   vector_block_number,
+    input   uint7   vector_block_colour,
+    input   int10   vector_block_xc,
+    input   int10   vector_block_yc,
+    input   uint3   vector_block_scale,
+    input   uint1   draw_vector,
+    input   uint5   vertices_writer_block,
+    input   uint6   vertices_writer_vertex,
+    input   int6    vertices_writer_xdelta,
+    input   int6    vertices_writer_ydelta,
+    input   uint1   vertices_writer_active,
+
+    output  uint1   queue_full,
+    output  uint1   queue_complete,
+    output  uint1   vector_block_active
+) <autorun> {
+    // GPU Command Queue
+    simple_dualport_bram uint42 queue1[ 64 ] = uninitialized;
+    simple_dualport_bram uint40 queue2[ 64 ] = uninitialized;
+
+    // 32 x 16 x 16 1 bit tilemap for blit1tilemap
+    simple_dualport_bram uint16 blit1tilemap[ 512 ] = uninitialized;
+    // Character ROM 8x8 x 256 for character blitter
+    simple_dualport_bram uint8 characterGenerator8x8[] = {
+        $include('ROM/characterROM8x8.inc')
+    };
+    // BLIT TILE WRITER
+    blittilebitmapwriter BTBM(
+        blit1_writer_tile <: blit1_writer_tile,
+        blit1_writer_line <: blit1_writer_line,
+        blit1_writer_bitmap <: blit1_writer_bitmap,
+        character_writer_character <: character_writer_character,
+        character_writer_line <: character_writer_line,
+        character_writer_bitmap <: character_writer_bitmap,
+        blit1tilemap <:> blit1tilemap,
+        characterGenerator8x8 <:> characterGenerator8x8
+    );
+    // 32 x 16 x 16 7 bit tilemap for colour
+    simple_dualport_bram uint7 colourblittilemap[ 8192 ] = uninitialized;
+    // COLOURBLIT TILE WRITER
+    colourblittilebitmapwriter CBTBM(
+        colourblit_writer_tile <: colourblit_writer_tile,
+        colourblit_writer_line <: colourblit_writer_line,
+        colourblit_writer_pixel <: colourblit_writer_pixel,
+        colourblit_writer_colour <: colourblit_writer_colour,
+        colourblittilemap <:> colourblittilemap,
+    );
+    gpu GPU(
+        blit1tilemap <:> blit1tilemap,
+        characterGenerator8x8 <:> characterGenerator8x8,
+        colourblittilemap <:> colourblittilemap,
+        bitmap_x_write :> bitmap_x_write,
+        bitmap_y_write :> bitmap_y_write,
+        bitmap_colour_write :> bitmap_colour_write,
+        bitmap_colour_write_alt :> bitmap_colour_write_alt,
+        bitmap_write :> bitmap_write,
+        gpu_active_dithermode :> gpu_active_dithermode
+    );
+
+    // 32 vector blocks each of 16 vertices
+    simple_dualport_bram uint13 vertex[512] = uninitialised;
+    // VECTOR DRAWER UNIT
+    vectors vector_drawer(
+        vector_block_number <: vector_block_number,
+        vector_block_xc <: vector_block_xc,
+        vector_block_yc <: vector_block_yc,
+        vector_block_scale <: vector_block_scale,
+        draw_vector <: draw_vector,
+        vector_block_active :> vector_block_active,
+        gpu_active <: queue_full,
+        vertex <:> vertex
+    );
+    vertexwriter VW(
+        vertices_writer_block <: vertices_writer_block,
+        vertices_writer_vertex <: vertices_writer_vertex,
+        vertices_writer_xdelta <: vertices_writer_xdelta,
+        vertices_writer_ydelta <: vertices_writer_ydelta,
+        vertices_writer_active <: vertices_writer_active,
+        vertex <:> vertex
+    );
+
+    uint6   queuetop = 0;
+    uint6   queuenext = 0;
+    uint1   queueupdate = 0;
+
+    queue1.addr0 := queuenext;
+    queue1.wenable1 := 1;
+    queue2.addr0 := queuenext;
+    queue2.wenable1 := 1;
+    queue_full := ( ( queuetop + 1 ) == queuenext ) || ( vector_block_active == 1 ) ? 1 : 0;
+    queue_complete := ( ( queuetop == queuenext ) && ( GPU.gpu_active == 0 ) && ( gpu_write == 0 ) && ( draw_vector == 0 ) && ( vector_block_active == 0 ) ) ? 1 : 0;
+
+    while(1) {
+        switch( gpu_write ) {
+            case 0: {
+                switch( vector_drawer.gpu_write ) {
+                    case 1: {
+                        queue1.addr1 = queuetop;
+                        queue1.wdata1 = { vector_drawer.gpu_x, vector_drawer.gpu_y, vector_block_colour, 7b0, 2h2, 4h0 };
+                        queue2.addr1 = queuetop;
+                        queue2.wdata1 = { vector_drawer.gpu_param0, vector_drawer.gpu_param1, 10b0, 10b0 };
+                        queueupdate = 1;
+                    }
+                    case 0: {
+                        queuetop = queuetop + queueupdate;
+                        queueupdate = 0;
+                    }
+                }
+            }
+            default: {
+                queue1.addr1 = queuetop;
+                queue1.wdata1 = { gpu_x, gpu_y, gpu_colour, gpu_colour_alt, gpu_write, gpu_dithermode };
+                queue2.addr1 = queuetop;
+                queue2.wdata1 = { gpu_param0, gpu_param1, gpu_param2, gpu_param3 };
+                queueupdate = 1;
+            }
+        }
+
+        if( ( queuetop != queuenext ) && (GPU.gpu_active == 0 ) ) {
+            GPU.gpu_x = entry1( queue1.rdata0 ).x;
+            GPU.gpu_y = entry1( queue1.rdata0 ).y;
+            GPU.gpu_colour = entry1( queue1.rdata0 ).colour;
+            GPU.gpu_colour_alt = entry1( queue1.rdata0 ).colour_alt;
+            GPU.gpu_param0 = entry2( queue2.rdata0 ).p0;
+            GPU.gpu_param1 = entry2( queue2.rdata0 ).p1;
+            GPU.gpu_param2 = entry2( queue2.rdata0 ).p2;
+            GPU.gpu_param3 = entry2( queue2.rdata0 ).p3;
+            GPU.gpu_write = entry1( queue1.rdata0 ).command;
+            GPU.gpu_dithermode = entry1( queue1.rdata0 ).dither;
+            queuenext = queuenext + 1;
+        }
+    }
+}
+
 algorithm gpu(
+    simple_dualport_bram_port0 blit1tilemap,
+    simple_dualport_bram_port0 characterGenerator8x8,
+    simple_dualport_bram_port0 colourblittilemap,
+
     // GPU to SET and GET pixels
     output int10   bitmap_x_write,
     output int10   bitmap_y_write,
@@ -18,72 +202,11 @@ algorithm gpu(
     input   uint4   gpu_write,
     input   uint4   gpu_dithermode,
 
-    // For setting blit1 tile bitmaps
-    input   uint5   blit1_writer_tile,
-    input   uint4   blit1_writer_line,
-    input   uint16  blit1_writer_bitmap,
-
-    // For setting character generator bitmaps
-    input   uint8   character_writer_character,
-    input   uint3   character_writer_line,
-    input   uint8   character_writer_bitmap,
-
-    // For set colourblit tile bitmaps
-    input   uint5   colourblit_writer_tile,
-    input   uint4   colourblit_writer_line,
-    input   uint4   colourblit_writer_pixel,
-    input   uint7   colourblit_writer_colour,
-
-    // VECTOR BLOCK
-    input   uint5   vector_block_number,
-    input   uint7   vector_block_colour,
-    input   int10   vector_block_xc,
-    input   int10   vector_block_yc,
-    input   uint3   vector_block_scale,
-    input   uint1   draw_vector,
-    // For setting vertices
-    input   uint5   vertices_writer_block,
-    input   uint6   vertices_writer_vertex,
-    input   int6    vertices_writer_xdelta,
-    input   int6    vertices_writer_ydelta,
-    input   uint1   vertices_writer_active,
-
     output  uint1   gpu_active,
-    output  uint1   vector_block_active
 ) <autorun> {
     // GPU COLOUR
     uint7   gpu_active_colour = uninitialized;
     uint7   gpu_active_colour_alt = uninitialized;
-
-    // GPU <-> VECTOR DRAWER Communication
-    int10 v_gpu_x = uninitialised;
-    int10 v_gpu_y = uninitialised;
-    int10 v_gpu_param0 = uninitialised;
-    int10 v_gpu_param1 = uninitialised;
-    uint1 v_gpu_write = uninitialised;
-
-    // VECTOR DRAWER UNIT
-    vectors vector_drawer (
-        vector_block_number <: vector_block_number,
-        vector_block_xc <: vector_block_xc,
-        vector_block_yc <: vector_block_yc,
-        vector_block_scale <: vector_block_scale,
-        draw_vector <: draw_vector,
-        vertices_writer_block <: vertices_writer_block,
-        vertices_writer_vertex <: vertices_writer_vertex,
-        vertices_writer_xdelta <: vertices_writer_xdelta,
-        vertices_writer_ydelta <: vertices_writer_ydelta,
-        vertices_writer_active <: vertices_writer_active,
-
-        vector_block_active :> vector_block_active,
-
-        gpu_x :> v_gpu_x,
-        gpu_y :> v_gpu_y,
-        gpu_param0 :> v_gpu_param0,
-        gpu_param1 :> v_gpu_param1,
-        gpu_write :> v_gpu_write,
-        gpu_active <: gpu_active
-    );
 
     // GPU SUBUNITS
     uint6  gpu_busy_flags = uninitialised;
@@ -93,7 +216,12 @@ algorithm gpu(
         param0 <: gpu_param0,
         param1 <: gpu_param1
     );
-    line GPUline( );
+    line GPUline(
+        x <: gpu_x,
+        y <: gpu_y,
+        param0 <: gpu_param0,
+        param1 <: gpu_param1
+    );
     circle GPUcircle(
         x <: gpu_x,
         y <: gpu_y,
@@ -108,25 +236,15 @@ algorithm gpu(
         param3 <: gpu_param3,
     );
     blit GPUblit(
-        blit1_writer_tile <: blit1_writer_tile,
-        blit1_writer_line <: blit1_writer_line,
-        blit1_writer_bitmap <: blit1_writer_bitmap,
-
-        character_writer_character <: character_writer_character,
-        character_writer_line <: character_writer_line,
-        character_writer_bitmap <: character_writer_bitmap,
-
+        blit1tilemap <:> blit1tilemap,
+        characterGenerator8x8 <:> characterGenerator8x8,
         x <: gpu_x,
         y <: gpu_y,
         param0 <: gpu_param0,
         param1 <: gpu_param1
     );
     colourblit GPUcolourblit(
-        colourblit_writer_tile <: colourblit_writer_tile,
-        colourblit_writer_line <: colourblit_writer_line,
-        colourblit_writer_pixel <: colourblit_writer_pixel,
-        colourblit_writer_colour <: colourblit_writer_colour,
-
+        colourblittilemap <:> colourblittilemap,
         x <: gpu_x,
         y <: gpu_y,
         param0 <: gpu_param0,
@@ -147,116 +265,100 @@ algorithm gpu(
     GPUcolourblit.start := 0;
 
     while(1) {
-        if( v_gpu_write ) {
-            // DRAW LINE FROM (X,Y) to (PARAM0,PARAM1) from VECTOR BLOCK
-            gpu_active_colour = vector_block_colour;
-            gpu_active_dithermode = 0;
-            gpu_active = 1;
-            GPUline.x = v_gpu_x; GPUline.y = v_gpu_y; GPUline.param0 = v_gpu_param0; GPUline.param1 = v_gpu_param1;
-            GPUline.start = 1;
-            while( GPUline.busy ) {
-                bitmap_x_write = GPUline.bitmap_x_write;
-                bitmap_y_write = GPUline.bitmap_y_write;
-                bitmap_write = GPUline.bitmap_write;
+        gpu_active_colour = ( gpu_write != 0 ) ? gpu_colour : gpu_active_colour;
+        gpu_active_colour_alt = ( gpu_write != 0 ) ? gpu_colour_alt : gpu_active_colour_alt;
+        switch( gpu_write ) {
+            case 0: {}
+            case 1: {
+                // SET PIXEL (X,Y)
+                // NO GPU ACTIVATION
+                gpu_active_dithermode = 0;
+                bitmap_x_write = gpu_x;
+                bitmap_y_write = gpu_y;
+                bitmap_write = 1;
             }
-            gpu_active = 0;
-        } else {
-            gpu_active_colour = gpu_colour;
-            gpu_active_colour_alt = gpu_colour_alt;
-            switch( gpu_write ) {
-                case 0: {}
-                case 1: {
-                    // SET PIXEL (X,Y)
-                    // NO GPU ACTIVATION
-                    gpu_active_dithermode = 0;
-                    bitmap_x_write = gpu_x;
-                    bitmap_y_write = gpu_y;
-                    bitmap_write = 1;
-                }
 
-                default: {
-                    // START THE GPU DRAWING UNIT
-                    gpu_active = 1;
-                    switch( gpu_write ) {
+            default: {
+                // START THE GPU DRAWING UNIT
+                gpu_active = 1;
+                switch( gpu_write ) {
+                    case 2: {
+                        // DRAW LINE FROM (X,Y) to (PARAM0,PARAM1)
+                        gpu_active_dithermode = 0;
+                        GPUline.start = 1;
+                    }
+                    case 3: {
+                        // DRAW RECTANGLE FROM (X,Y) to (PARAM0,PARAM1)
+                        gpu_active_dithermode = gpu_dithermode;
+                        GPUrectangle.start = 1;
+                    }
+                    case 4: {
+                        // DRAW CIRCLE CENTRE (X,Y) with RADIUS PARAM0
+                        gpu_active_dithermode = 0;
+                        GPUcircle.filledcircle = 0;
+                        GPUcircle.start = 1;
+                    }
+                    case 5: {
+                        // DRAW FILLED CIRCLE CENTRE (X,Y) with RADIUS PARAM0
+                        gpu_active_dithermode = gpu_dithermode;
+                        GPUcircle.filledcircle = 1;
+                        GPUcircle.start = 1;
+                    }
+                    case 6: {
+                        // DRAW FILLED TRIANGLE WITH VERTICES (X,Y) (PARAM0,PARAM1) (PARAM2,PARAM3)
+                        gpu_active_dithermode = gpu_dithermode;
+                        GPUtriangle.start = 1;
+                    }
+                    case 7: {
+                        // BLIT 16 x 16 TILE PARAM0 TO (X,Y)
+                        gpu_active_dithermode = 0;
+                        GPUblit.tilecharacter = 1;
+                        GPUblit.start = 1;
+                    }
+                    case 8: {
+                        // BLIT 8 x 8 CHARACTER PARAM0 TO (X,Y) as 8 x 8
+                        gpu_active_dithermode = 0;
+                        GPUblit.tilecharacter = 0;
+                        GPUblit.start = 1;
+                    }
+                    case 9: {
+                        // BLIT 16 x 16 COLOUR TILE PARAM0 TO (X,Y) as 16 x 16
+                        gpu_active_dithermode = 0;
+                        GPUcolourblit.start = 1;
+                    }
+                }
+                while( GPUline.busy || GPUrectangle.busy ||  GPUcircle.busy || GPUtriangle.busy ||  GPUblit.busy || GPUcolourblit.busy ) {
+                    gpu_busy_flags =  { GPUcolourblit.busy, GPUblit.busy, GPUtriangle.busy, GPUcircle.busy, GPUrectangle.busy, GPUline.busy };
+                    onehot( gpu_busy_flags ) {
+                        case 0: {
+                            bitmap_x_write = GPUline.bitmap_x_write;
+                            bitmap_y_write = GPUline.bitmap_y_write;
+                        }
+                        case 1: {
+                            bitmap_x_write = GPUrectangle.bitmap_x_write;
+                            bitmap_y_write = GPUrectangle.bitmap_y_write;
+                        }
                         case 2: {
-                            // DRAW LINE FROM (X,Y) to (PARAM0,PARAM1)
-                            gpu_active_dithermode = 0;
-                            GPUline.x = gpu_x; GPUline.y = gpu_y; GPUline.param0 = gpu_param0; GPUline.param1 = gpu_param1;
-                            GPUline.start = 1;
+                            bitmap_x_write = GPUcircle.bitmap_x_write;
+                            bitmap_y_write = GPUcircle.bitmap_y_write;
                         }
                         case 3: {
-                            // DRAW RECTANGLE FROM (X,Y) to (PARAM0,PARAM1)
-                            gpu_active_dithermode = gpu_dithermode;
-                            GPUrectangle.start = 1;
+                            bitmap_x_write = GPUtriangle.bitmap_x_write;
+                            bitmap_y_write = GPUtriangle.bitmap_y_write;
                         }
                         case 4: {
-                            // DRAW CIRCLE CENTRE (X,Y) with RADIUS PARAM0
-                            gpu_active_dithermode = 0;
-                            GPUcircle.filledcircle = 0;
-                            GPUcircle.start = 1;
+                            bitmap_x_write = GPUblit.bitmap_x_write;
+                            bitmap_y_write = GPUblit.bitmap_y_write;
                         }
                         case 5: {
-                            // DRAW FILLED CIRCLE CENTRE (X,Y) with RADIUS PARAM0
-                            gpu_active_dithermode = gpu_dithermode;
-                            GPUcircle.filledcircle = 1;
-                            GPUcircle.start = 1;
-                        }
-                        case 6: {
-                            // DRAW FILLED TRIANGLE WITH VERTICES (X,Y) (PARAM0,PARAM1) (PARAM2,PARAM3)
-                            gpu_active_dithermode = gpu_dithermode;
-                            GPUtriangle.start = 1;
-                        }
-                        case 7: {
-                            // BLIT 16 x 16 TILE PARAM0 TO (X,Y)
-                            gpu_active_dithermode = 0;
-                            GPUblit.tilecharacter = 1;
-                            GPUblit.start = 1;
-                        }
-                        case 8: {
-                            // BLIT 8 x 8 CHARACTER PARAM0 TO (X,Y) as 8 x 8
-                            gpu_active_dithermode = 0;
-                            GPUblit.tilecharacter = 0;
-                            GPUblit.start = 1;
-                        }
-                        case 9: {
-                            // BLIT 16 x 16 COLOUR TILE PARAM0 TO (X,Y) as 16 x 16
-                            gpu_active_dithermode = 0;
-                            GPUcolourblit.start = 1;
+                            bitmap_x_write = GPUcolourblit.bitmap_x_write;
+                            bitmap_y_write = GPUcolourblit.bitmap_y_write;
+                            bitmap_colour_write = GPUcolourblit.bitmap_colour_write;
                         }
                     }
-                    while( GPUline.busy || GPUrectangle.busy ||  GPUcircle.busy || GPUtriangle.busy ||  GPUblit.busy || GPUcolourblit.busy ) {
-                        gpu_busy_flags =  { GPUcolourblit.busy, GPUblit.busy, GPUtriangle.busy, GPUcircle.busy, GPUrectangle.busy, GPUline.busy };
-                        onehot( gpu_busy_flags ) {
-                            case 0: {
-                                bitmap_x_write = GPUline.bitmap_x_write;
-                                bitmap_y_write = GPUline.bitmap_y_write;
-                            }
-                            case 1: {
-                                bitmap_x_write = GPUrectangle.bitmap_x_write;
-                                bitmap_y_write = GPUrectangle.bitmap_y_write;
-                            }
-                            case 2: {
-                                bitmap_x_write = GPUcircle.bitmap_x_write;
-                                bitmap_y_write = GPUcircle.bitmap_y_write;
-                            }
-                            case 3: {
-                                bitmap_x_write = GPUtriangle.bitmap_x_write;
-                                bitmap_y_write = GPUtriangle.bitmap_y_write;
-                            }
-                            case 4: {
-                                bitmap_x_write = GPUblit.bitmap_x_write;
-                                bitmap_y_write = GPUblit.bitmap_y_write;
-                            }
-                            case 5: {
-                                bitmap_x_write = GPUcolourblit.bitmap_x_write;
-                                bitmap_y_write = GPUcolourblit.bitmap_y_write;
-                                bitmap_colour_write = GPUcolourblit.bitmap_colour_write;
-                            }
-                        }
-                        bitmap_write = GPUline.bitmap_write | GPUrectangle.bitmap_write | GPUcircle.bitmap_write | GPUtriangle.bitmap_write | GPUblit.bitmap_write | GPUcolourblit.bitmap_write;
-                    }
-                    gpu_active = 0;
+                    bitmap_write = GPUline.bitmap_write | GPUrectangle.bitmap_write | GPUcircle.bitmap_write | GPUtriangle.bitmap_write | GPUblit.bitmap_write | GPUcolourblit.bitmap_write;
                 }
+                gpu_active = 0;
             }
         }
     }
@@ -725,6 +827,9 @@ algorithm blittilebitmapwriter(
 }
 
 algorithm blit (
+    simple_dualport_bram_port0 blit1tilemap,
+    simple_dualport_bram_port0 characterGenerator8x8,
+
     // For setting blit1 tile bitmaps
     input   uint5   blit1_writer_tile,
     input   uint4   blit1_writer_line,
@@ -749,28 +854,6 @@ algorithm blit (
     output  uint1   busy,
 ) <autorun> {
     uint2   FSM = uninitialised;
-
-    // 32 x 16 x 16 1 bit tilemap for blit1tilemap
-    simple_dualport_bram uint16 blit1tilemap <input!> [ 512 ] = uninitialized;
-
-    // Character ROM 8x8 x 256 for character blitter
-    simple_dualport_bram uint8 characterGenerator8x8 <input!> [] = {
-        $include('ROM/characterROM8x8.inc')
-    };
-
-    // BLIT TILE WRITER
-    blittilebitmapwriter BTBM(
-        blit1_writer_tile <: blit1_writer_tile,
-        blit1_writer_line <: blit1_writer_line,
-        blit1_writer_bitmap <: blit1_writer_bitmap,
-
-        character_writer_character <: character_writer_character,
-        character_writer_line <: character_writer_line,
-        character_writer_bitmap <: character_writer_bitmap,
-
-        blit1tilemap <:> blit1tilemap,
-        characterGenerator8x8 <:> characterGenerator8x8
-    );
 
     // POSITION IN TILE/CHARACTER
     uint7   gpu_active_x = uninitialized;
@@ -852,6 +935,8 @@ algorithm colourblittilebitmapwriter(
     colourblittilemap.wdata1 := colourblit_writer_colour;
 }
 algorithm colourblit(
+    simple_dualport_bram_port0 colourblittilemap,
+
     // For setting blit1 tile bitmaps
     input   uint5   colourblit_writer_tile,
     input   uint4   colourblit_writer_line,
@@ -871,19 +956,6 @@ algorithm colourblit(
     output  uint1   busy,
 ) <autorun> {
     uint2   FSM = uninitialised;
-
-    // 32 x 16 x 16 7 bit tilemap for colour
-    simple_dualport_bram uint7 colourblittilemap <input!> [ 8192 ] = uninitialized;
-
-    // COLOURBLIT TILE WRITER
-    colourblittilebitmapwriter CBTBM(
-        colourblit_writer_tile <: colourblit_writer_tile,
-        colourblit_writer_line <: colourblit_writer_line,
-        colourblit_writer_pixel <: colourblit_writer_pixel,
-        colourblit_writer_colour <: colourblit_writer_colour,
-
-        colourblittilemap <:> colourblittilemap,
-    );
 
     // POSITION IN TILE/CHARACTER
     uint7   gpu_active_x = uninitialized;
@@ -978,6 +1050,7 @@ algorithm vertexwriter(
     vertex.wdata1 := { vertices_writer_active, __unsigned(vertices_writer_xdelta), __unsigned(vertices_writer_ydelta) };
 }
 algorithm vectors(
+    simple_dualport_bram_port0 vertex,
     input   uint5   vector_block_number,
     input   int10   vector_block_xc,
     input   int10   vector_block_yc,
@@ -1004,9 +1077,6 @@ algorithm vectors(
 ) <autorun> {
     uint3   FSM = uninitialised;
 
-    // 32 vector blocks each of 16 vertices
-    simple_dualport_bram uint13 vertex <input!> [512] = uninitialised;
-
     // Extract deltax and deltay for the present vertices
     int10 deltax := { {4{vectorentry(vertex.rdata0).dxsign}}, vectorentry(vertex.rdata0).dx };
     int10 deltay := { {4{vectorentry(vertex.rdata0).dysign}}, vectorentry(vertex.rdata0).dy };
@@ -1016,16 +1086,6 @@ algorithm vectors(
     uint5 vertices_number = 0;
     int10 start_x = uninitialised;
     int10 start_y = uninitialised;
-
-    vertexwriter VW(
-        vertices_writer_block <: vertices_writer_block,
-        vertices_writer_vertex <: vertices_writer_vertex,
-        vertices_writer_xdelta <: vertices_writer_xdelta,
-        vertices_writer_ydelta <: vertices_writer_ydelta,
-        vertices_writer_active <: vertices_writer_active,
-
-        vertex <:> vertex
-    );
 
     // Set read address for the vertices
     vertex.addr0 := { block_number, vertices_number };

@@ -464,7 +464,8 @@ algorithm video_memmap(
                 case 12h50a: { readData = character_map_window.tpu_active; }
 
                 // GPU and BITMAP
-                case 12h612: { readData = ( bitmap_window.gpu_active || bitmap_window.vector_block_active ) ? 1 : 0; }
+                case 12h612: { readData = ( bitmap_window.gpu_queue_full || bitmap_window.vector_block_active ) ? 1 : 0; }
+                case 12h614: { readData = ( bitmap_window.gpu_queue_complete ) ? 1 : 0; }
                 case 12h62a: { readData = bitmap_window.vector_block_active; }
                 case 12h674: { readData = bitmap_window.bitmap_colour_read; }
 

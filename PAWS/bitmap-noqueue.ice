@@ -106,13 +106,7 @@ algorithm bitmap(
         bitmap_1 <:> bitmap_1
     );
 
-    gpu_queue QUEUE <@gpu_clock> (
-        bitmap_x_write :> bitmap_x_write,
-        bitmap_y_write :> bitmap_y_write,
-        bitmap_colour_write :> bitmap_colour_write,
-        bitmap_colour_write_alt :> bitmap_colour_write_alt,
-        bitmap_write :> bitmap_write,
-        gpu_active_dithermode :> gpu_active_dithermode,
+    gpu gpu_processor <@gpu_clock> (
         gpu_x <: gpu_x,
         gpu_y <: gpu_y,
         gpu_colour <: gpu_colour,
@@ -123,6 +117,7 @@ algorithm bitmap(
         gpu_param3 <: gpu_param3,
         gpu_write <: gpu_write,
         gpu_dithermode <: gpu_dithermode,
+
         blit1_writer_tile <: blit1_writer_tile,
         blit1_writer_line <: blit1_writer_line,
         blit1_writer_bitmap <: blit1_writer_bitmap,
@@ -133,6 +128,7 @@ algorithm bitmap(
         colourblit_writer_line <: colourblit_writer_line,
         colourblit_writer_pixel <: colourblit_writer_pixel,
         colourblit_writer_colour <: colourblit_writer_colour,
+
         vector_block_number <: vector_block_number,
         vector_block_colour <: vector_block_colour,
         vector_block_xc <: vector_block_xc,
@@ -144,9 +140,15 @@ algorithm bitmap(
         vertices_writer_xdelta <: vertices_writer_xdelta,
         vertices_writer_ydelta <: vertices_writer_ydelta,
         vertices_writer_active <: vertices_writer_active,
+
         vector_block_active :> vector_block_active,
-        queue_full :> gpu_queue_full,
-        queue_complete :> gpu_queue_complete
+
+        bitmap_x_write :> bitmap_x_write,
+        bitmap_y_write :> bitmap_y_write,
+        bitmap_colour_write :> bitmap_colour_write,
+        bitmap_colour_write_alt :> bitmap_colour_write_alt,
+        bitmap_write :> bitmap_write,
+        gpu_active_dithermode :> gpu_active_dithermode
     );
 
     // Pixel being read?
@@ -163,6 +165,10 @@ algorithm bitmap(
     pix_red := framebuffer ? bitmap_1.rdata0[4,2] : bitmap_0.rdata0[4,2];
     pix_green := framebuffer ? bitmap_1.rdata0[2,2] : bitmap_0.rdata0[2,2];
     pix_blue := framebuffer ? bitmap_1.rdata0[0,2] : bitmap_0.rdata0[0,2];
+
+    // GPU QUEUE FULL / COMPLETE FLAGS
+    gpu_queue_full := gpu_processor.gpu_active;
+    gpu_queue_complete := ~gpu_processor.gpu_active;
 
     while(1) {
         switch( bitmap_write_offset ) {

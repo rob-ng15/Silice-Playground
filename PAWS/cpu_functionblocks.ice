@@ -30,12 +30,12 @@ algorithm registers(
     registers_3.wenable1 := 1;
 
     // SET REGISTER 0 to 0
-    registers_1.addr1 = 0;
-    registers_1.wdata1 = 0;
-    registers_2.addr1 = 0;
-    registers_2.wdata1 = 0;
-    registers_3.addr1 = 0;
-    registers_3.wdata1 = 0;
+    //registers_1.addr1 = 0;
+    //registers_1.wdata1 = 0;
+    //registers_2.addr1 = 0;
+    //registers_2.wdata1 = 0;
+    //registers_3.addr1 = 0;
+    //registers_3.wdata1 = 0;
 
     while(1) {
         // WRITE TO REGISTERS
@@ -64,7 +64,6 @@ algorithm decoder(
     output  uint5   rd,
 
     output  int32   immediateValue,
-    //output  uint5   IshiftCount
 ) <autorun> {
     opCode := Utype(instruction).opCode;
     function3 := Rtype(instruction).function3;
@@ -74,7 +73,6 @@ algorithm decoder(
     rs3 := R4type(instruction).sourceReg3;
     rd := Rtype(instruction).destReg;
     immediateValue := { {20{instruction[31,1]}}, Itype(instruction).immediate };
-    //IshiftCount := ItypeSHIFT( instruction ).shiftCount;
 }
 
 // RISC-V ADDRESS BASE/OFFSET GENERATOR
@@ -101,16 +99,7 @@ algorithm addressgenerator(
 }
 
 // UPDATE PC
-circuitry newPC(
-    input   opCode,
-    input   incPC,
-    input   nextPC,
-    input   takeBranch,
-    input   branchAddress,
-    input   jumpAddress,
-    input   loadAddress,
-    output  pc
-) {
+circuitry newPC( input opCode, input incPC, input nextPC, input takeBranch, input branchAddress, input jumpAddress, input loadAddress, output pc ) {
     pc = ( incPC ) ? ( takeBranch ? branchAddress : nextPC ) : ( opCode[3,1] ? jumpAddress : loadAddress );
 }
 
@@ -315,27 +304,14 @@ algorithm compressed(
 }
 
 // PERFORM OPTIONAL SIGN EXTENSION FOR 8 BIT AND 16 BIT READS
-circuitry signextender8(
-    input   function3,
-    input   address,
-    input   nosign,
-    output  withsign
-) {
+circuitry signextender8( input   function3, input   address, input   nosign, output  withsign ) {
     withsign = ~function3[2,1] ? { {24{nosign[address[0,1] ? 15 : 7, 1]}}, nosign[address[0,1] ? 8 : 0, 8] } : nosign[address[0,1] ? 8 : 0, 8];
 }
-circuitry signextender16(
-    input   function3,
-    input   nosign,
-    output  withsign
-) {
+circuitry signextender16( input   function3, input   nosign, output  withsign ) {
     withsign = ~function3[2,1] ? { {16{nosign[15,1]}}, nosign[0,16] } : nosign[0,16];
 }
 
 // COMBINE TWO 16 BIT HALF WORDS TO 32 BIT WORD
-circuitry halfhalfword(
-    input   HIGH,
-    input   LOW,
-    output  HIGHLOW,
-) {
+circuitry halfhalfword( input   HIGH, input   LOW, output  HIGHLOW, ) {
     HIGHLOW = { HIGH, LOW };
 }

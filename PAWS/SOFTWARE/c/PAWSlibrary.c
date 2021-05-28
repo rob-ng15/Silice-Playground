@@ -224,12 +224,13 @@ void screen_mode( unsigned char screenmode ) {
 
 // SET THE FRAMEBUFFER TO DISPLAY / DRAW
 void bitmap_display( unsigned char framebuffer ) {
+    while( !*GPU_FINISHED );
     await_vblank();
     *FRAMEBUFFER_DISPLAY = framebuffer;
 }
 
 void bitmap_draw( unsigned char framebuffer ) {
-    wait_gpu();
+    while( !*GPU_FINISHED );
     *FRAMEBUFFER_DRAW = framebuffer;
 }
 

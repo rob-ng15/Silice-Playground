@@ -45,54 +45,13 @@ typedef unsigned int size_t;
 #define ORANGE 0x38
 
 // STANDARD C FUNCTIONS ( from @sylefeb mylibc )
-void*  memcpy(void *dest, const void *src, size_t n) {
-  const void *end = src + n;
-  const unsigned char *bsrc = (const unsigned char *)src;
-  while (bsrc != end) {
-    *(unsigned char*)dest = *(++bsrc);
-  }
-  return dest;
-}
-void *memset(void *s, int c,  unsigned int n) {
-    unsigned char* p = s;
-    while( n-- )
-        *p++ = (unsigned char)c;
-    return(0);
-}
-
-int strlen( char *s ) {
-    int i = 0;
+short strlen( char *s ) {
+    short i = 0;
     while( *s ) {
         s++;
         i++;
     }
     return(i);
-}
-
-int strcmp(const char *p1, const char *p2) {
-  while (*p1 && (*p1 == *p2)) {
-    p1++; p2++;
-  }
-  return *(const unsigned char*)p1 - *(const unsigned char*)p2;
-}
-
-// RISC-V CSR FUNCTIONS
-long CSRcycles() {
-   int cycles;
-   asm volatile ("rdcycle %0" : "=r"(cycles));
-   return cycles;
-}
-
-long CSRinstructions() {
-   int insns;
-   asm volatile ("rdinstret %0" : "=r"(insns));
-   return insns;
-}
-
-long CSRtime() {
-  int time;
-  asm volatile ("rdtime %0" : "=r"(time));
-  return time;
 }
 
 // TIMER AND PSEUDO RANDOM NUMBER GENERATOR
@@ -110,34 +69,22 @@ void sdcard_wait( void ) {
 
 // READ A SECTOR FROM THE SDCARD AND COPY TO MEMORY
 void sdcard_readsector( unsigned int sectorAddress, unsigned char *copyAddress ) {
-    unsigned short i;
-
     sdcard_wait();
     *SDCARD_SECTOR_HIGH = ( sectorAddress & 0xffff0000 ) >> 16;
     *SDCARD_SECTOR_LOW = ( sectorAddress & 0x0000ffff );
     *SDCARD_START = 1;
     sdcard_wait();
 
-    for( i = 0; i < 512; i++ ) {
+    for( unsigned short i = 0; i < 512; i++ ) {
         *SDCARD_ADDRESS = i;
         copyAddress[ i ] = *SDCARD_DATA;
     }
 }
 
 // I/O FUNCTIONS
-// SET THE LEDS
-void set_leds( unsigned char value ) {
-    *LEDS = value;
-}
-
 // READ THE ULX3S JOYSTICK BUTTONS
 unsigned char get_buttons( void ) {
     return( *BUTTONS );
-}
-
-// SET THE LAYER ORDER FOR THE DISPLAY
-void screen_mode( unsigned char screenmode ) {
-    *SCREENMODE = screenmode;
 }
 
 // BACKGROUND GENERATOR
@@ -148,26 +95,6 @@ void set_background( unsigned char colour, unsigned char altcolour, unsigned cha
     *BACKGROUND_MODE = backgroundmode;
 }
 
-// SCROLL WRAP or CLEAR the TILEMAP
-//  action == 1 to 4 move the tilemap 1 pixel LEFT, UP, RIGHT, DOWN and SCROLL at limit
-//  action == 5 to 8 move the tilemap 1 pixel LEFT, UP, RIGHT, DOWN and WRAP at limit
-//  action == 9 clear the tilemap
-//  RETURNS 0 if no action taken other than pixel shift, action if SCROLL WRAP or CLEAR was actioned
-unsigned char tilemap_scrollwrapclear( unsigned char tm_layer, unsigned char action ) {
-    switch( tm_layer ) {
-        case 0:
-            while( *LOWER_TM_STATUS != 0 );
-            *LOWER_TM_SCROLLWRAPCLEAR = action;
-            return( *LOWER_TM_SCROLLWRAPCLEAR );
-            break;
-        case 1:
-            while( *UPPER_TM_STATUS != 0 );
-            *UPPER_TM_SCROLLWRAPCLEAR = action;
-            return( *UPPER_TM_SCROLLWRAPCLEAR );
-            break;
-    }
-}
-
 // GPU AND BITMAP
 // The bitmap is 640 x 480 pixels (0,0) is ALWAYS top left even if the bitmap has been offset
 // The bitmap can be moved 1 pixel at a time LEFT, RIGHT, UP, DOWN for scrolling
@@ -176,13 +103,6 @@ unsigned char tilemap_scrollwrapclear( unsigned char tm_layer, unsigned char act
 // INTERNAL FUNCTION - WAIT FOR THE GPU TO FINISH THE LAST COMMAND
 void wait_gpu( void ) {
     while( *GPU_STATUS != 0 );
-}
-
-// SCROLL THE BITMAP by 1 pixel
-//  action == 1 LEFT, == 2 UP, == 3 RIGHT, == 4 DOWN, == 5 RESET
-void bitmap_scrollwrap( unsigned char action ) {
-    wait_gpu();
-    *BITMAP_SCROLLWRAP = action;
 }
 
 // DRAW A FILLED RECTANGLE from (x1,y1) to (x2,y2) in colour
@@ -199,20 +119,9 @@ void gpu_rectangle( unsigned char colour, short x1, short y1, short x2, short y2
 
 // CLEAR THE BITMAP by drawing a transparent rectangle from (0,0) to (639,479) and resetting the bitamp scroll position
 void gpu_cs( void ) {
-    bitmap_scrollwrap( 5 );
-    gpu_rectangle( 64, 0, 0, 319, 239 );
-}
-
-// DRAW A LINE FROM (x1,y1) to (x2,y2) in colour - uses Bresenham's Line Drawing Algorithm
-void gpu_line( unsigned char colour, short x1, short y1, short x2, short y2 ) {
-    *GPU_COLOUR = colour;
-    *GPU_X = x1;
-    *GPU_Y = y1;
-    *GPU_PARAM0 = x2;
-    *GPU_PARAM1 = y2;
-
     wait_gpu();
-    *GPU_WRITE = 2;
+    *BITMAP_SCROLLWRAP = 5;
+    gpu_rectangle( 64, 0, 0, 319, 239 );
 }
 
 // DRAW A (optional filled) CIRCLE at centre (x1,y1) of radius ( FILLED CIRCLES HAVE A MINIMUM RADIUS OF 4 )
@@ -261,7 +170,7 @@ void gpu_outputstring( unsigned char colour, short x, short y, char *s, unsigned
 void set_blitter_bitmap( unsigned char tile, unsigned short *bitmap ) {
     *BLIT_WRITER_TILE = tile;
 
-    for( int i = 0; i < 16; i ++ ) {
+    for( short i = 0; i < 16; i ++ ) {
         *BLIT_WRITER_LINE = i;
         *BLIT_WRITER_BITMAP = bitmap[i];
     }
@@ -282,29 +191,6 @@ void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2,
     *GPU_WRITE = 6;
 }
 
-// SET SPRITE sprite_number in sprite_layer to active status, in colour to (x,y) with bitmap number tile ( 0 - 7 ) in sprite_size == 0 16 x 16 == 1 32 x 32 pixel size
-void set_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsigned char active, unsigned char colour, short x, short y, unsigned char tile, unsigned char sprite_size) {
-    switch( sprite_layer ) {
-        case 0:
-            LOWER_SPRITE_ACTIVE[sprite_number] = active;
-            LOWER_SPRITE_TILE[sprite_number] = tile;
-            LOWER_SPRITE_COLOUR[sprite_number] = colour;
-            LOWER_SPRITE_X[sprite_number] = x;
-            LOWER_SPRITE_Y[sprite_number] = y;
-            LOWER_SPRITE_DOUBLE[sprite_number] = sprite_size;
-            break;
-
-        case 1:
-            UPPER_SPRITE_ACTIVE[sprite_number] = active;
-            UPPER_SPRITE_TILE[sprite_number] = tile;
-            UPPER_SPRITE_COLOUR[sprite_number] = colour;
-            UPPER_SPRITE_X[sprite_number] = x;
-            UPPER_SPRITE_Y[sprite_number] = y;
-            UPPER_SPRITE_DOUBLE[sprite_number] = sprite_size;
-            break;
-    }
-}
-
 // CHARACTER MAP FUNCTIONS
 // The character map is an 80 x 30 character window with a 256 character 8 x 16 pixel character generator ROM )
 // NO SCROLLING, CURSOR WRAPS TO THE TOP OF THE SCREEN
@@ -315,23 +201,10 @@ void tpu_cs( void ) {
     *TPU_COMMIT = 3;
 }
 
-// CLEAR A LINE
-void tpu_clearline( unsigned char y ) {
-    while( *TPU_COMMIT );
-    *TPU_Y = y;
-    *TPU_COMMIT = 4;
-}
-
 // POSITION THE CURSOR to (x,y) and set background and foreground colours
 void tpu_set(  unsigned char x, unsigned char y, unsigned char background, unsigned char foreground ) {
     while( *TPU_COMMIT );
     *TPU_X = x; *TPU_Y = y; *TPU_BACKGROUND = background; *TPU_FOREGROUND = foreground; *TPU_COMMIT = 1;
-}
-
-// OUTPUT A CHARACTER TO THE CHARACTER MAP
-void tpu_output_character( char c ) {
-    while( *TPU_COMMIT );
-    *TPU_CHARACTER = c; *TPU_COMMIT = 2;
 }
 
 // OUTPUT A NULL TERMINATED STRING TO THE CHARACTER MAP
@@ -344,7 +217,9 @@ void tpu_outputstring( char *s ) {
 }
 
 void tpu_outputstringcentre( unsigned char y, unsigned char background, unsigned char foreground, char *s ) {
-    tpu_clearline( y );
+    while( *TPU_COMMIT );
+    *TPU_Y = y;
+    *TPU_COMMIT = 4;
     tpu_set( 40 - ( strlen(s) >> 1 ), y, background, foreground );
     tpu_outputstring( s );
 }
@@ -378,20 +253,9 @@ unsigned short SELECTEDFILE = 0xffff;
 
 // READ SECTOR, FLASHING INDICATOR
 void sd_readSector( unsigned int sectorAddress, unsigned char *copyAddress ) {
-    unsigned short i;
-
     gpu_blit( RED, 256, 2, 2, 2 );
     sdcard_readsector( sectorAddress, copyAddress );
     gpu_blit( GREEN, 256, 2, 2, 2 );
-}
-
-// READ SECTOR 0, THE MASTER BOOT RECORD
-void sd_readMBR( void ) {
-    // FOR COPYING DATA
-    unsigned short i;
-    unsigned char *copyaddress;
-
-    sd_readSector( 0, MBR );
 }
 
 void sd_readSectors( unsigned int start_sector, unsigned int number_of_sectors, unsigned char *copyaddress ) {
@@ -459,10 +323,6 @@ void sd_findFile( unsigned short direction ) {
     }
 }
 
-unsigned int sdcard_findfilesize( unsigned short filenumber ) {
-    return( ROOTDIRECTORY[filenumber].file_size );
-}
-
 // READ A FILE CLUSTER BY CLUSTER INTO MEMORY
 void sd_readFile( unsigned short filenumber, unsigned char * copyAddress ) {
     unsigned short nextCluster = ROOTDIRECTORY[ filenumber ].starting_cluster;
@@ -505,16 +365,16 @@ void draw_sdcard( void  ) {
 
 void reset_display( void ) {
     *GPU_DITHERMODE = 0;
-    *FRAMEBUFFER_DRAW = 1; gpu_cs();
-    *FRAMEBUFFER_DRAW = 0; gpu_cs();
+    *FRAMEBUFFER_DRAW = 1; gpu_cs(); while( !*GPU_FINISHED );
+    *FRAMEBUFFER_DRAW = 0; gpu_cs(); while( !*GPU_FINISHED );
     *FRAMEBUFFER_DISPLAY = 0;
+    *SCREENMODE = 0;
     tpu_cs();
-    screen_mode( 0 );
-    tilemap_scrollwrapclear( 0, 9 );
-    tilemap_scrollwrapclear( 1, 9 );
+    *LOWER_TM_SCROLLWRAPCLEAR = 9;
+    *UPPER_TM_SCROLLWRAPCLEAR = 9;
     for( unsigned short i = 0; i < 16; i++ ) {
-        set_sprite( 0, i, 0, 0, 0, 0, 0, 0 );
-        set_sprite( 1, i, 0, 0, 0, 0, 0, 0 );
+        LOWER_SPRITE_ACTIVE[i] = 0;
+        UPPER_SPRITE_ACTIVE[i] = 0;
     }
 }
 
