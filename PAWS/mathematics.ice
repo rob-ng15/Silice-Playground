@@ -44,7 +44,7 @@ algorithm aluMdivideremain(
                             default: {
                                 while( bit != 63 ) {
                                     temporary = { remainder[0,31], dividend_copy[bit,1] };
-                                    FSM2 = __unsigned(temporary) >= __unsigned(divisor_copy) ? 1 : 0;
+                                    FSM2 = __unsigned(temporary) >= __unsigned(divisor_copy);
                                     switch( FSM2 ) {
                                         case 1: { remainder = __unsigned(temporary) - __unsigned(divisor_copy); quotient[bit,1] = 1; }
                                         case 0: { remainder = temporary; }
@@ -142,7 +142,7 @@ algorithm aluIb001(
     ctz CTZ(
         sourceReg1 <: sourceReg1
     );
-    cpop CPOP(
+    pcnt PCNT(
         sourceReg1 <: sourceReg1
     );
 
@@ -155,7 +155,7 @@ algorithm aluIb001(
     // START FLAGS FOR ALU SUB BLOCKS
     CLZ.start := 0;
     CTZ.start := 0;
-    CPOP.start := 0;
+    PCNT.start := 0;
     CRC32.start := 0;
     busy = 0;
 
@@ -165,16 +165,16 @@ algorithm aluIb001(
             switch( function7 ) {
                 case 7b0110000: {
                     switch( IshiftCount ) {
-                        case 5b00000: { CLZ.start = 1; while( CLZ.busy ) {} result = CLZ.result; } // CLZ
-                        case 5b00001: { CTZ.start = 1; while( CTZ.busy ) {} result = CTZ.result; } // CTZ
-                        case 5b00010: { CPOP.start = 1; while( CPOP.busy ) {} result = CPOP.result; } // CPOP
-                        case 5b00100: { result = { {24{sourceReg1[7,1]}}, sourceReg1[0, 8] }; }     // SEXT.B
-                        case 5b00101: { result = { {16{sourceReg1[15,1]}}, sourceReg1[0, 16] }; }   // SEXT.H
-                        default: { CRC32.start = 1; while( CRC32.busy ) {} result = CRC32.result; } // CRC32 / CRC32C
+                        case 5b00000: { CLZ.start = 1; while( CLZ.busy ) {} result = CLZ.result; }      // CLZ
+                        case 5b00001: { CTZ.start = 1; while( CTZ.busy ) {} result = CTZ.result; }      // CTZ
+                        case 5b00010: { PCNT.start = 1; while( PCNT.busy ) {} result = PCNT.result; }   // PCNT
+                        case 5b00100: { result = { {24{sourceReg1[7,1]}}, sourceReg1[0, 8] }; }         // SEXT.B
+                        case 5b00101: { result = { {16{sourceReg1[15,1]}}, sourceReg1[0, 16] }; }       // SEXT.H
+                        default: { CRC32.start = 1; while( CRC32.busy ) {} result = CRC32.result; }     // CRC32 / CRC32C
                     }
                 }
-                case 7b0000100: { while( SHFLUNSHFLbusy ) {} result = SHFLUNSHFLoutput; }
-                default: { result = ( function7[2,1] == 1 ) ? SBSCIoutput : LSHIFToutput; }
+                case 7b0000100: { while( SHFLUNSHFLbusy ) {} result = SHFLUNSHFLoutput; }               // SHFLI
+                default: { result = ( function7[2,1] == 1 ) ? SBSCIoutput : LSHIFToutput; }             // BSETI BCLRI BINVI SLLI SLOI
             }
             busy = 0;
         }
@@ -203,12 +203,12 @@ algorithm aluIb101(
     while(1) {
         if( start ) {
             busy = 1;
-            switch( function7 ) {
-                case 7b0000100: { while( SHFLUNSHFLbusy ) {} result = SHFLUNSHFLoutput; }
-                case 7b0010100: { while( GREVGORCbusy ) {} result = GREVGORCoutput; }
-                case 7b0110100: { while( GREVGORCbusy ) {} result = GREVGORCoutput; }
-                case 7b0100100: { result = ( sourceReg1[ IshiftCount, 1 ] == 1 ) ? 1 : 0; }
-                default: { result = function7[1,1] ? FUNNELoutput : RSHIFToutput; }
+            switch( function7[2,5] ) {
+                case 5b00001: { while( SHFLUNSHFLbusy ) {} result = SHFLUNSHFLoutput; }                 // UNSHFLI
+                case 5b00101: { while( GREVGORCbusy ) {} result = GREVGORCoutput; }                     // GORCI
+                case 5b01101: { while( GREVGORCbusy ) {} result = GREVGORCoutput; }                     // GREVI
+                case 5b01001: { result = sourceReg1[ IshiftCount, 1 ]; }                                // BEXTI
+                default: { result = function7[1,1] ? FUNNELoutput : RSHIFToutput; }                     // SRLI SRAI RORI FSRI
             }
             busy = 0;
         }
@@ -270,8 +270,10 @@ algorithm aluI(
             switch( function3 ) {
                 case 3b000: { result = sourceReg1 + immediateValue; }
                 case 3b001: { ALUIb001.start = 1; while( ALUIb001.busy ) {} result = ALUIb001.result; }
-                case 3b010: { result = __signed( sourceReg1 ) < __signed(immediateValue) ? 32b1 : 32b0; }
-                case 3b011: { result = ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 32b1 : 32b0 ); }
+                case 3b010: { result = __signed( sourceReg1 ) < __signed(immediateValue); }
+                case 3b011: { result = ( immediateValue == 1 ) ? ( sourceReg1 == 0 ) : ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ); }
+                //case 3b010: { result = __signed( sourceReg1 ) < __signed(immediateValue) ? 32b1 : 32b0; }
+                //case 3b011: { result = ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 32b1 : 32b0 ); }
                 case 3b100: { result = sourceReg1 ^ immediateValue; }
                 case 3b101: { ALUIb101.start = 1; while( ALUIb101.busy ) {} result = ALUIb101.result; }
                 case 3b110: { result = sourceReg1 | immediateValue; }
@@ -314,15 +316,14 @@ algorithm aluR001(
     while(1) {
         if( start ) {
             busy = 1;
-            switch( function7 ) {
-                case 7b0000000: { result = LSHIFToutput; }                                                      // SLL
-                case 7b0010000: { result = LSHIFToutput; }                                                      // SLO
-                case 7b0110000: { result = LSHIFToutput; }                                                      // ROL
-                case 7b0100100: { result = SBSCIoutput; }                                                       // SBCLR
-                case 7b0010100: { result = SBSCIoutput; }                                                       // SBSET
-                case 7b0110100: { result = SBSCIoutput; }                                                       // SBINV
-                case 7b0000101: { while( CLMULbusy ) {} result = CLMULoutput; }                                 // CLMUL
-                case 7b0000100: { while( SHFLUNSHFLbusy ) {} result = SHFLUNSHFLoutput; }                       // SHFL
+            switch( function7[0,2] ) {
+                case 2b00: {
+                    switch( function7 ) {
+                        case 7b0000100: { while( SHFLUNSHFLbusy ) {} result = SHFLUNSHFLoutput; }                       // SHFL
+                        default: { result = function7[2,1] ? SBSCIoutput : LSHIFToutput; }                              // BSET BCLR BINV SLL SLO ROL
+                    }
+                }
+                case 2b01: { while( CLMULbusy ) {} result = CLMULoutput; }                                                              // CLMUL
                 default: { result = function7[0,1] ? ( sourceReg1 & sourceReg2 ) | ( sourceReg3 & ~sourceReg2 ) : FUNNELoutput; }     // FSL / CMIX
             }
             busy = 0;
@@ -345,11 +346,11 @@ algorithm aluR010(
     while(1) {
         if( start ) {
             busy = 1;
-            switch( function7 ) {
-                case 7b0000000: { result = __signed( sourceReg1 ) < __signed(sourceReg2) ? 32b1 : 32b0; }       // SLT
-                case 7b0000101: { while( CLMULbusy ) {} result = CLMULoutput; }                                 // CLMULR
-                case 7b0010100: { while( XPERMbusy ) {} result = XPERMoutput; }                                 // XPERM.N
-                case 7b0010000: { result = ( sourceReg1 << 1 ) + sourceReg2; }                                  // SH1ADD
+            switch( function7[0,5] ) {
+                case 5b00000: { result = __signed( sourceReg1 ) < __signed(sourceReg2); }       // SLT
+                case 5b00101: { while( CLMULbusy ) {} result = CLMULoutput; }                                 // CLMULR
+                case 5b10100: { while( XPERMbusy ) {} result = XPERMoutput; }                                 // XPERM.N
+                case 5b10000: { result = ( { sourceReg1[0,31], 1b0 } ) + sourceReg2; }                        // SH1ADD
             }
             busy = 0;
         }
@@ -370,9 +371,9 @@ algorithm aluR011(
     while(1) {
         if( start ) {
             busy = 1;
-            switch( function7 ) {
-                case 7b0000000: { result = ( rs1 == 0 ) ? ( ( sourceReg2 != 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) ) ? 32b1 : 32b0 ); }  // SLTU
-                case 7b0000101: { while( CLMULbusy ) {} result = CLMULoutput; }                                                                                                 // CLMULH
+            switch( function7[0,1] ) {
+                case 1b0: { result = ( rs1 == 0 ) ? ( sourceReg2 != 0 ) : __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ); }  // SLTU
+                case 1b1: { while( CLMULbusy ) {} result = CLMULoutput; }                                                                                                 // CLMULH
             }
             busy = 0;
         }
@@ -393,7 +394,7 @@ algorithm aluR100(
         if( start ) {
             busy = 1;
             switch( function7 ) {
-                case 7b0010000: { result = ( sourceReg1 << 2 ) + sourceReg2; }                              // SH2ADD
+                case 7b0010000: { result = ( { sourceReg1[0,30], 2b0 } ) + sourceReg2; }                    // SH2ADD
                 case 7b0000101: { ( result ) = min( sourceReg1, sourceReg2 ); }                             // MIN
                 case 7b0000100: { result = { sourceReg2[0,16], sourceReg1[0,16] }; }                        // PACK
                 case 7b0100100: { result = { sourceReg2[16,16], sourceReg1[16,16] }; }                      // PACKU
@@ -423,16 +424,17 @@ algorithm aluR101(
     while(1) {
         if( start ) {
             busy = 1;
-            switch( function7 ) {
-                case 7b0000000: { result = RSHIFToutput; }                                                      // SRL
-                case 7b0100000: { result = RSHIFToutput; }                                                      // SRA
-                case 7b0010000: { result = RSHIFToutput; }                                                      // SRO
-                case 7b0110000: { result = RSHIFToutput; }                                                      // ROR
-                case 7b0100100: { result = ( sourceReg1[ sourceReg2[0,5], 1 ] == 1 ) ? 1 : 0; }                 // SBEXT
-                case 7b0000101: { ( result ) = minu( sourceReg1, sourceReg2 ); }                                // MINU
-                case 7b0010100: { while( GREVGORCbusy ) {} result = GREVGORCoutput; }                           // GORC
-                case 7b0110100: { while( GREVGORCbusy ) {} result = GREVGORCoutput; }                           // GREV
-                case 7b0000100: { while( SHFLUNSHFLbusy ) {} result = SHFLUNSHFLoutput; }                       // UNSHFL
+            switch( function7[0,2] ) {
+                case 2b00: {
+                    switch( function7[2,5] ) {
+                        case 5b00101: { while( GREVGORCbusy ) {} result = GREVGORCoutput; }                           // GORC
+                        case 5b01101: { while( GREVGORCbusy ) {} result = GREVGORCoutput; }                           // GREV
+                        case 5b00001: { while( SHFLUNSHFLbusy ) {} result = SHFLUNSHFLoutput; }                       // UNSHFL
+                        case 5b01001: { result = sourceReg1[ sourceReg2[0,5], 1 ]; }                                    // SBEXT
+                        default: { result = RSHIFToutput; }                                                           // SRL SRA SRO ROR
+                    }
+                }
+                case 2b01: { ( result ) = minu( sourceReg1, sourceReg2 ); }                                // MINU
                 default: { result = function7[0,1] ? ( sourceReg2 != 0 ) ? sourceReg1 : sourceReg3 : FUNNELoutput; }   // FSR CMOV
             }
             busy = 0;
@@ -461,7 +463,7 @@ algorithm aluR110(
         if( start ) {
             busy = 1;
             switch( function7 ) {
-                case 7b0010000: { result = ( sourceReg1 << 3 ) + sourceReg2; }                                  // SH3ADD
+                case 7b0010000: { result = ( { sourceReg1[0,29], 3b0 } ) + sourceReg2; }                        // SH3ADD
                 case 7b0000101: { ( result ) = max( sourceReg1, sourceReg2 ); }                                 // MAX
                 case 7b0100100: { BEXTBDEP.start = 1; while( BEXTBDEP.busy ) {} result = BEXTBDEP.result; }     // BDEP
                 case 7b0000100: { BEXTBDEP.start = 1; while( BEXTBDEP.busy ) {} result = BEXTBDEP.result; }     // BEXT
@@ -654,8 +656,8 @@ algorithm aluR (
                 }
                 // BASE + REMAINING B EXTENSION
                 default: {
-                    CLMUL.start = ( ( function7 == 7b0000101 ) && ( function3[2,1] == 0 ) ) ? 1 : 0;
-                    XPERM.start = ( function7 == 7b0010100 ) && ( ( function3 == 3b010) || ( function3 == 3b100 ) || ( function3 == 3b110 ) ) ? 1 : 0;
+                    CLMUL.start = ( function7 == 7b0000101 ) & ( function3[2,1] == 0 );
+                    XPERM.start = ( function7 == 7b0010100 ) & ( ( function3 == 3b010) | ( function3 == 3b100 ) | ( function3 == 3b110 ) );
                     switch( function3 ) {
                         case 3b000: { result = ALUR000.result; }
                         case 3b001: { ALUR001.start = 1; while( ALUR001.busy ) {} result = ALUR001.result; }
@@ -791,8 +793,8 @@ algorithm alu(
     while(1) {
         if( start ) {
             // START SHARED MULTICYCLE BLOCKS - SHFL UNSHFL GORC GREV FUNNEL ( need to correctly specify start of funnel shifts )
-            SHFLUNSHFL.start = ( ( ( function3 == 3b001 ) || ( function3 == 3b101 ) ) && ( function7 == 7b0000100 ) ) ? 1 : 0;
-            GREVGORC.start = ( ( function3 == 3b101 ) && ( ( function7 == 7b0110100 ) || ( function7 == 7b0010100 ) ) ) ? 1 : 0;
+            SHFLUNSHFL.start = ( ( ( function3 == 3b001 ) | ( function3 == 3b101 ) ) & ( function7 == 7b0000100 ) );
+            GREVGORC.start = ( ( function3 == 3b101 ) & ( ( function7 == 7b0110100 ) | ( function7 == 7b0010100 ) ) );
 
             // START ALUI or ALUR
             busy = 1;
@@ -1057,7 +1059,7 @@ algorithm clmul(
             while( FSM != 0 ) {
                 onehot( FSM ) {
                     case 0: {
-                        i = ( function3 == 3b011 ) ? 1 : 0;
+                        i = ( function3 == 3b011 );
                         result = 0;
                     }
                     case 1: {
@@ -1167,7 +1169,6 @@ algorithm clz(
     output  uint32  result
 ) <autorun> {
     uint2   FSM = uninitialised;
-    uint32  bitcount = uninitialized;
 
     busy = 0;
 
@@ -1178,12 +1179,10 @@ algorithm clz(
             while( FSM != 0 ) {
                 onehot( FSM ) {
                     case 0: {
-                        bitcount = sourceReg1;
                         result = 0;
                     }
                     case 1: {
-                        while( ~bitcount[31,1] ) {
-                            bitcount = bitcount << 1;
+                        while( ~sourceReg1[31-result,1] ) {
                             result = result + 1;
                         }
                     }
@@ -1203,7 +1202,6 @@ algorithm ctz(
     output  uint32  result
 ) <autorun> {
     uint2   FSM = uninitialised;
-    uint32  bitcount = uninitialized;
 
     busy = 0;
 
@@ -1214,13 +1212,11 @@ algorithm ctz(
             while( FSM != 0 ) {
                 onehot( FSM ) {
                     case 0: {
-                        bitcount = sourceReg1;
                         result = 0;
                     }
                     case 1: {
-                        while( ~bitcount[31,1] ) {
+                        while( ~sourceReg1[result,1] ) {
                             result = result + 1;
-                            bitcount = bitcount >> 1;
                         }
                     }
                 }
@@ -1230,7 +1226,7 @@ algorithm ctz(
         }
     }
 }
-algorithm cpop(
+algorithm pcnt(
     input   uint1   start,
     output  uint1   busy,
 
@@ -1239,7 +1235,7 @@ algorithm cpop(
     output  uint32  result
 ) <autorun> {
     uint2   FSM = uninitialised;
-    uint32  bitcount = uninitialized;
+    uint6  position = uninitialized;
 
     busy = 0;
 
@@ -1250,13 +1246,12 @@ algorithm cpop(
             while( FSM != 0 ) {
                 onehot( FSM ) {
                     case 0: {
-                        bitcount = sourceReg1;
+                        position = 0;
                         result = 0;
                     }
                     case 1: {
-                        while( bitcount != 0 ) {
-                            result = result + ( bitcount[0,1] ? 1 : 0 );
-                            bitcount = bitcount >> 1;
+                        while( position != 32 ) {
+                            result = result + sourceReg1[position,1];
                         }
                     }
                 }

@@ -638,7 +638,7 @@ void backgrounddemo( void ) {
     tpu_printf_centre( 28, TRANSPARENT, WHITE, "COPPER Twinkling Stars Test" );
     copper_startstop( 0 );
     copper_program( 0, COPPER_VARIABLE, COPPER_SET_VARIABLE, 1, 0, 0, 0 );
-    copper_program( 1, COPPER_WAIT_Y, 6, 0, BKG_SNOW, BLACK, 0 );
+    copper_program( 1, COPPER_WAIT_Y, 6, 0, BKG_SOLID, BLACK, 0 );
     copper_program( 2, COPPER_SET_FROM_VARIABLE, 1, 0, 0, 0, 0 );
     copper_program( 3, COPPER_VARIABLE, COPPER_ADD_VARIABLE, 1, 0, 0, 0 );
     copper_program( 4, COPPER_JUMP, COPPER_JUMP_IF_NOT_VBLANK, 0, 0, 0, 4 );
@@ -714,7 +714,7 @@ void gpudemo( void ) {
     tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Rectangle Drawing Test - Solid & Dither" );
     for( i = 0; i < 1024; i++ ) {
         gpu_dither( rng(16), rng( 64 ) );
-        gpu_rectangle( rng( 64 ), rng( 320 ), rng( 240 ), rng( 320 ), rng( 240 ) );
+        gpu_rectangle( rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng( 352 ) - 16, rng( 256 ) - 8 );
     }
     gpu_dither( DITHEROFF );
     sleep( 1000, 0 );
@@ -724,7 +724,7 @@ void gpudemo( void ) {
     tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Circle Drawing Test - Solid & Dither" );
     for( i = 0; i < 1024; i++ ) {
         gpu_dither( rng(16), rng( 64 ) );
-        gpu_circle( rng( 64 ), rng( 320 ), rng( 240 ), rng( 32 ), rng( 1 ) );
+        gpu_circle( rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng( 32 ), rng( 1 ) );
     }
     gpu_dither( DITHEROFF );
     sleep( 1000, 0 );
@@ -733,7 +733,7 @@ void gpudemo( void ) {
     gpu_cs();
     tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Triangle Drawing Test - Solid & Dither" );
     for( i = 0; i < 1024; i++ ) {
-        x1 = rng( 320 ); y1 = rng( 240 );
+        x1 = rng( 352 ) - 16; y1 = rng( 256 ) - 8;
         x2 = x1 + rng( 100 ); y2 = y1 + rng( 100 );
         x3 = x2 - rng( 100 ); y3 = y1 + rng( 100 );
         gpu_dither( rng(16), rng( 64 ) );
@@ -750,7 +750,7 @@ void gpudemo( void ) {
     gpu_cs();
     tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Blitter Test" );
     for( i = 0; i < 1024; i++ ) {
-        gpu_blit( rng( 64 ), rng( 320 ), rng( 240 ), rng( 6 ), rng( 4 ) );
+        gpu_blit( rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng( 6 ), rng( 4 ) );
     }
     sleep( 1000, 0 );
 
@@ -758,7 +758,7 @@ void gpudemo( void ) {
     gpu_cs();
     tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Character Blitter Test" );
     for( i = 0; i < 1024; i++ ) {
-        gpu_character_blit( rng( 64 ), rng( 320 ), rng( 240 ), rng( 256 ), rng( 4 ) );
+        gpu_character_blit( rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng( 256 ), rng( 4 ) );
     }
     sleep( 1000, 0 );
 
@@ -801,7 +801,7 @@ void gpudemo( void ) {
     gpu_cs();
     tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Colour Blitter Test" );
     for( i = 0; i < 1024; i++ ) {
-        gpu_colourblit( rng( 320 ), rng( 240 ), rng( 9 ), rng( 4 ) );
+        gpu_colourblit( rng( 352 ) - 16, rng( 256 ) - 8, rng( 9 ), rng( 4 ) );
     }
     sleep( 1000, 0 );
 
@@ -815,7 +815,7 @@ void gpudemo( void ) {
     set_vector_vertex( 0, 4, 1, 0, 0 );
     set_vector_vertex( 0, 5, 0, 0, 0 );
     for( i = 0; i < 1024; i++ ) {
-        draw_vector_block( 0, rng( 64 ), rng( 320 ), rng( 240 ), rng(8) );
+        draw_vector_block( 0, rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng(8) );
     }
     sleep( 1000, 0 );
 

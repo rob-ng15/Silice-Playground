@@ -85,8 +85,8 @@ algorithm PAWSCPU(
     uint1   writeRegister = uninitialized;
     uint32  memoryinput = uninitialized;
     uint32  memoryoutput = uninitialized;
-    uint1   memoryload := ( ( opCode == 7b0000011 ) || ( opCode == 7b0000111 ) || ( ( opCode == 7b0101111 ) && ( function7[2,5] != 5b00011 ) ) ) ? 1 : 0;
-    uint1   memorystore := ( ( opCode == 7b0100011 ) || ( opCode == 7b0100111 ) || ( ( opCode == 7b0101111 ) && ( function7[2,5] != 5b00010 ) ) ) ? 1 : 0;
+    uint1   memoryload := ( ( opCode == 7b0000011 ) | ( opCode == 7b0000111 ) | ( ( opCode == 7b0101111 ) & ( function7[2,5] != 5b00011 ) ) );
+    uint1   memorystore := ( ( opCode == 7b0100011 ) | ( opCode == 7b0100111 ) | ( ( opCode == 7b0101111 ) & ( function7[2,5] != 5b00010 ) ) );
 
     // RISC-V 32 BIT INSTRUCTION DECODER
     int32   immediateValue = uninitialized;
@@ -173,7 +173,6 @@ algorithm PAWSCPU(
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
-        //takeBranch :> takeBranch
     );
 
     // ALU
@@ -275,7 +274,7 @@ algorithm PAWSCPU(
                         ALU.start = ~opCode[6,1];
                         FPU.start = opCode[6,1];
                         while( ALU.busy || FPU.busy ) {}
-                        frd = opCode[6,1] ? FPU.frd : 0;
+                        frd = opCode[6,1] & FPU.frd;
                         result = opCode[6,1] ? FPU.result : ALU.result;
                     }
                 }

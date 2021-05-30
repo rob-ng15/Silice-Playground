@@ -92,7 +92,7 @@ algorithm io_memmap(
                 case 12h150: { readData = SDCARD.bufferdata; }
 
                 // SMT STATUS
-                case 12hffe: { readData = SMTRUNNING ? 1 : 0; }
+                case 12hffe: { readData = SMTRUNNING; }
 
                 // RETURN NULL VALUE
                 default: { readData = 0; }
@@ -438,8 +438,8 @@ algorithm video_memmap(
                     case $0x300 + i*2$: { readData = lower_sprites.sprite_read_active_$i$; }
                     case $0x320 + i*2$: { readData = lower_sprites.sprite_read_double_$i$; }
                     case $0x340 + i*2$: { readData = lower_sprites.sprite_read_colour_$i$; }
-                    case $0x360 + i*2$: { readData = lower_sprites.sprite_read_x_$i$; }
-                    case $0x380 + i*2$: { readData = lower_sprites.sprite_read_y_$i$; }
+                    case $0x360 + i*2$: { readData = {{5{lower_sprites.sprite_read_x_$i$[10,1]}}, lower_sprites.sprite_read_x_$i$}; }
+                    case $0x380 + i*2$: { readData = {{5{lower_sprites.sprite_read_y_$i$[10,1]}}, lower_sprites.sprite_read_y_$i$}; }
                     case $0x3a0 + i*2$: { readData = lower_sprites.sprite_read_tile_$i$; }
                     case $0x3c0 + i*2$: { readData = lower_sprites.collision_$i$; }
                     case $0x3e0 + i*2$: { readData = lower_sprites.layer_collision_$i$; }
@@ -450,8 +450,8 @@ algorithm video_memmap(
                     case $0x400 + i*2$: { readData = upper_sprites.sprite_read_active_$i$; }
                     case $0x420 + i*2$: { readData = upper_sprites.sprite_read_double_$i$; }
                     case $0x440 + i*2$: { readData = upper_sprites.sprite_read_colour_$i$; }
-                    case $0x460 + i*2$: { readData = upper_sprites.sprite_read_x_$i$; }
-                    case $0x480 + i*2$: { readData = upper_sprites.sprite_read_y_$i$; }
+                    case $0x460 + i*2$: { readData = {{5{upper_sprites.sprite_read_x_$i$[10,1]}}, upper_sprites.sprite_read_x_$i$}; }
+                    case $0x480 + i*2$: { readData = {{5{upper_sprites.sprite_read_y_$i$[10,1]}}, upper_sprites.sprite_read_y_$i$}; }
                     case $0x4a0 + i*2$: { readData = upper_sprites.sprite_read_tile_$i$; }
                     case $0x4c0 + i*2$: { readData = upper_sprites.collision_$i$; }
                     case $0x4e0 + i*2$: { readData = upper_sprites.layer_collision_$i$; }
@@ -464,8 +464,8 @@ algorithm video_memmap(
                 case 12h50a: { readData = character_map_window.tpu_active; }
 
                 // GPU and BITMAP
-                case 12h612: { readData = ( bitmap_window.gpu_queue_full || bitmap_window.vector_block_active ) ? 1 : 0; }
-                case 12h614: { readData = ( bitmap_window.gpu_queue_complete ) ? 1 : 0; }
+                case 12h612: { readData = bitmap_window.gpu_queue_full; }
+                case 12h614: { readData = bitmap_window.gpu_queue_complete; }
                 case 12h62a: { readData = bitmap_window.vector_block_active; }
                 case 12h674: { readData = bitmap_window.bitmap_colour_read; }
 
@@ -772,8 +772,8 @@ algorithm uart(
     uint8   newuartOutBufferTop = 0;
 
     // FLAGS
-    inavailable := ( uartInBufferNext != uartInBufferTop ) ? 1b1 : 1b0;
-    outfull := ( uartOutBufferTop + 1 == uartOutBufferNext ) ? 1b1 : 1b0;
+    inavailable := ( uartInBufferNext != uartInBufferTop );
+    outfull := ( uartOutBufferTop + 1 == uartOutBufferNext );
     inchar := uartInBuffer.rdata0;
 
     // UART Buffers ( code from @sylefeb )
@@ -834,7 +834,7 @@ algorithm ps2buffer(
     ps2Buffer.addr0 := ps2BufferNext; // FIFO reads on next
 
     // FLAGS
-    inavailable := ( ps2BufferNext != ps2BufferTop ) ? 1 : 0;
+    inavailable := ( ps2BufferNext != ps2BufferTop );
     inchar := ps2Buffer.rdata0;
 
     while(1) {

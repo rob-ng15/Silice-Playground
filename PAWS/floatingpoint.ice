@@ -42,21 +42,20 @@ algorithm fpu(
             busy = 1;
 
             switch( opCode[2,5] ) {
+                default: {
+                    // FMADD.S FMSUB.S FNMSUB.S FNMADD.S
+                    frd = 1;
+                    FPUfused.start = 1;
+                    while( FPUfused.busy ) {}
+                    result = FPUfused.result;
+                }
                 case 5b10100: {
                     // NON 3 REGISTER FPU OPERATIONS
                     switch( function7[2,5] ) {
-                        case 5b00000: {
+                        default: {
                             // FADD.S
                             frd = 1;
-                            FPUaddsub.addsub = 0;
-                            FPUaddsub.start = 1;
-                            while( FPUaddsub.busy ) {}
-                            result = FPUaddsub.result;
-                        }
-                        case 5b00001: {
-                            // FSUB.S
-                            frd = 1;
-                            FPUaddsub.addsub = 1;
+                            FPUaddsub.addsub = function7[2,1];
                             FPUaddsub.start = 1;
                             while( FPUaddsub.busy ) {}
                             result = FPUaddsub.result;
@@ -75,7 +74,7 @@ algorithm fpu(
                             while( FPUdivide.busy ) {}
                             result = FPUdivide.result;
                         }
-                        case 5b010011: {
+                        case 5b01011: {
                             // FSQRT.S
                             frd = 1;
                             // FIRST APPROXIMATIONS IS 1
@@ -104,20 +103,15 @@ algorithm fpu(
                             while( FPUint.busy || FPUuint.busy ) {}
                             result = rs2[0,1] ? FPUuint.result : FPUint.result;
                         }
-                        case 5b11100: {
-                            // FMV.X.W
-                            frd = 0;
-                            result = sourceReg1F;
-                        }
                         case 5b10100: {
                             // FEQ.S FLT.S FLE.S
                             frd = 0;
                             result = { 31b0, FPUcomparison.comparison };
                         }
                         case 5b11100: {
-                            // FCLASS.S
+                            // FCLASS.S  FMV.X.W
                             frd = 0;
-                            result = FPUclass.classification;
+                            result = function3[0,1] ? FPUclass.classification : sourceReg1F;
                         }
                         case 5b11010: {
                             // FCVT.S.W FCVT.S.WU
@@ -131,13 +125,6 @@ algorithm fpu(
                             frd = 1;
                             result = sourceReg1;
                         }
-                        default: {
-                            // FMADD.S FMSUB.S FNMSUB.S FNMADD.S
-                            frd = 1;
-                            FPUfused.start = 1;
-                            while( FPUfused.busy ) {}
-                            result = FPUfused.result;
-                        }
                     }
                 }
             }
@@ -149,59 +136,25 @@ algorithm fpu(
 
 // COUNT LEADING 0s
 circuitry countleadingzeros( input a, output count ) {
-    uint32  bitstream = uninitialised;
     uint2   CYCLE = uninitialised;
 
     CYCLE = 1;
     while( CYCLE != 0 ) {
         onehot( CYCLE ) {
             case 0: {
+                count = 0;
             }
             case 1: {
-            }
-        }
-        CYCLE = CYCLE << 1;
-    }
-                bitstream = a;
-                count = 0;
-                ++:
-                if( bitstream == 0 ) {
+                if( a == 0 ) {
                     count = 32;
                 } else {
-                    while( ~bitstream[31,1] ) {
-                        bitstream = bitstream << 1;
+                    while( ~a[31-count,1] ) {
                         count = count + 1;
                     }
                 }
-}
-
-// NORMALISE A 32BT MANTISSA with or without adjusting exponent
-circuitry normalise( input sign, input exp, input number, output F32 ) {
-    uint8  zeros = uninitialised;
-    int16  expA = uninitialised;
-    uint32  bitstream = uninitialised;
-
-    if( number == 0 ) {
-        F32 = { sign, 31b0 };
-    } else {
-        ( zeros ) = countleadingzeros( number );
-        bitstream = ( zeros < 8 ) ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
-        expA = exp + 127;
-        F32 = { sign, expA[0,8], bitstream[0,23] };
-    }
-}
-circuitry normaliseexp( input sign, input exp, input number, output F32 ) {
-    uint8  zeros = uninitialised;
-    int16  expA = uninitialised;
-    uint32  bitstream = uninitialised;
-
-    if( number == 0 ) {
-        F32 = { sign, 31b0 };
-    } else {
-        ( zeros ) = countleadingzeros( number );
-        bitstream = ( zeros < 8 ) ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
-        expA = ( zeros == 8 ) ? exp + 127 : exp + 135 - zeros;
-        F32 = { sign, expA[0,8], bitstream[0,23] };
+            }
+        }
+        CYCLE = CYCLE << 1;
     }
 }
 
@@ -332,8 +285,8 @@ algorithm floataddsub(
                     case 2: {
                         expA = floatingpointnumber( value1 ).exponent;
                         expB = floatingpointnumber( value2 ).exponent;
-                        sigA = { 9b1, value1[0,23] };
-                        sigB = { 9b1, value2[0,23] };
+                        sigA = { 2b01, value1[0,23], 7b0 };
+                        sigB = { 2b01, value2[0,23], 7b0 };
                         sign = value1[31,1];
                     }
                     case 3: {
@@ -355,7 +308,6 @@ algorithm floataddsub(
                             case 2b00: {
                                 switch( classEb ) {
                                     case 2b00: {
-                                        expA = expA - 127;
                                         switch( operation ) {
                                             case 0: { totaldifference = sigA + sigB; }
                                             case 1: {
@@ -370,16 +322,25 @@ algorithm floataddsub(
                                         if( totaldifference == 0 ) {
                                             result = { sign, 31b0 };
                                         } else {
-                                            ( result ) = normaliseexp( sign, expA, totaldifference );
+                                            if( totaldifference[31,1] ) {
+                                                expA = expA + 1;
+                                                result = { sign, expA[0,8], totaldifference[8,23] };
+                                            } else {
+                                                while( ~totaldifference[30,1] ) {
+                                                    totaldifference = totaldifference << 1;
+                                                    expA = expA - 1;
+                                                }
+                                                result = { sign, expA[0,8], totaldifference[7,23] };
+                                            }
                                         }
                                     }
-                                    case 2b01: { result = ( operation == 0 ) ? value2 : { ~value2[31,1], value2[0,31] }; }
+                                    case 2b01: { result = operation ? value2 : { ~value2[31,1], value2[0,31] }; }
                                     default: {  result = { 1b0, 23b0, 8b11111111 }; }
                                 }
                             }
                             case 2b01: {
                                 switch( classEb ) {
-                                    case 2b00: { result = value1; }
+                                    case 2b00: { result = operation ? { ~value2[31,1], value2[0,31] } : value2; }
                                     case 2b01: { result = value1; }
                                     default: {  result = { 1b0, 23b0, 8b11111111 }; }
                                 }
@@ -760,9 +721,9 @@ algorithm floatsign(
 ) <autorun> {
     while(1) {
         switch( function3 ) {
-            case 3b000: { result = { sourceReg2F[31,1] ? 1b1 : 1b0, sourceReg1F[0,31] }; } // FSGNJ.S
-            case 3b001: { result = { sourceReg2F[31,1] ? 1b0 : 1b1, sourceReg1F[0,31] }; } // FSGNJN.S
+            case 3b001: { result = { sourceReg2F[31,1], sourceReg1F[0,31] }; } // FSGNJN.S
             case 3b010: { result = { sourceReg1F[31,1] ^ sourceReg2F[31,1], sourceReg1F[0,31] }; } // FSGNJX.S
+            default: { result = { sourceReg2F[31,1], sourceReg1F[0,31] }; } // FSGNJ.S
         }
     }
 }

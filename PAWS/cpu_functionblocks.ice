@@ -29,14 +29,6 @@ algorithm registers(
     registers_2.wenable1 := 1;
     registers_3.wenable1 := 1;
 
-    // SET REGISTER 0 to 0
-    //registers_1.addr1 = 0;
-    //registers_1.wdata1 = 0;
-    //registers_2.addr1 = 0;
-    //registers_2.wdata1 = 0;
-    //registers_3.addr1 = 0;
-    //registers_3.wdata1 = 0;
-
     while(1) {
         // WRITE TO REGISTERS
         if( write && ( rd != 0 ) ) {
@@ -113,12 +105,12 @@ algorithm branchcomparison(
 ) <autorun> {
     while(1) {
         switch( function3 ) {
-            case 3b000: { takeBranch = ( sourceReg1 == sourceReg2 ) ? 1 : 0; }
-            case 3b001: { takeBranch = ( sourceReg1 != sourceReg2 ) ? 1 : 0; }
-            case 3b100: { takeBranch = ( __signed(sourceReg1) < __signed(sourceReg2) ) ? 1 : 0; }
-            case 3b101: { takeBranch = ( __signed(sourceReg1) >= __signed(sourceReg2) )  ? 1 : 0; }
-            case 3b110: { takeBranch = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ) ? 1 : 0; }
-            case 3b111: { takeBranch = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ) ? 1 : 0; }
+            case 3b000: { takeBranch = ( sourceReg1 == sourceReg2 ); }
+            case 3b001: { takeBranch = ( sourceReg1 != sourceReg2 ); }
+            case 3b100: { takeBranch = ( __signed(sourceReg1) < __signed(sourceReg2) ); }
+            case 3b101: { takeBranch = ( __signed(sourceReg1) >= __signed(sourceReg2) ); }
+            case 3b110: { takeBranch = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ); }
+            case 3b111: { takeBranch = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ); }
             default: { takeBranch = 0; }
         }
     }

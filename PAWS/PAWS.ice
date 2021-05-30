@@ -157,21 +157,7 @@ algorithm main(
     );
 
     // SDRAM -> CPU BUSY STATE
-    CPU.memorybusy := sdram.busy || CPU.readmemory || CPU.writememory;
-
-    // I/O and RAM read/write flags - address[28,1] == 0 BRAM or I/O == 1 SDRAM, address[15,1] == 0 BRAM == 1 I/O ( == 8xxx VIDEO == Fxxx IO )
-    //sdram.writeflag := CPU.writememory && address[28,1];
-    //sdram.readflag := CPU.readmemory && address[28,1];
-    //ram.writeflag := CPU.writememory && ~address[28,1] && ~address[15,1];
-    //ram.readflag := CPU.readmemory && ~address[28,1] && ~address[15,1];
-    //IO_Map.memoryWrite := CPU.writememory && ~address[28,1] && ( address[12,4] == 4hf );
-    //IO_Map.memoryRead := CPU.readmemory && ~address[28,1] && ( address[12,4] == 4hf );
-    //VIDEO_Map.memoryWrite := CPU.writememory && ~address[28,1] && ( address[12,4] == 4h8 );
-    //VIDEO_Map.memoryRead := CPU.readmemory && ~address[28,1] && ( address[12,4] == 4h8 );
-    //AUDIOTIMERS_Map.memoryWrite := CPU.writememory && ~address[28,1] && ( address[12,4] == 4he );
-    //AUDIOTIMERS_Map.memoryRead := CPU.readmemory && ~address[28,1] && ( address[12,4] == 4he );
-
-    //CPU.readdata := address[28,1] ? sdram.readdata : ( address[15,1] ? ( ( address[12,4] == 4hf ) ? IO_Map.readData : VIDEO_Map.readData ) : ram.readdata );
+    CPU.memorybusy := sdram.busy | CPU.readmemory | CPU.writememory;
 
     while(1) {
         switch( address[28,1] ) {
@@ -288,7 +274,7 @@ algorithm sdramcontroller(
     );
 
     // CACHE TAG match flag
-    uint1   cachetagmatch <: ( cache.rdata0[16,12] == { 1b1, address[15,11] } ) ? 1 : 0;
+    uint1   cachetagmatch <: ( cache.rdata0[16,12] == { 1b1, address[15,11] } );
 
     // VALUE TO WRITE THROUGH CACHE TO SDRAM
     uint16  writethrough <: ( function3[0,2] == 0 ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cache.rdata0[0,8] : sio.data_out[0,8] } :

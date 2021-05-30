@@ -64,21 +64,21 @@ algorithm background(
                                 // JUMP ON CONDITION
                                 switch( copper.rdata0[26,3] ) {
                                     case 3b000: { copper_branch = 1; }
-                                    case 3b001: { copper_branch = pix_vblank ? 0 : 1; }
-                                    case 3b010: { copper_branch = pix_active ? 0 : 1; }
-                                    case 3b011: { copper_branch = ( pix_y < copper.rdata0[16,10] ) ? 1 : 0; }
-                                    case 3b100: { copper_branch = ( pix_x < copper.rdata0[16,10] ) ? 1 : 0; }
-                                    case 3b101: { copper_branch = ( copper_variable < copper.rdata0[16,10] ) ? 1 : 0; }
+                                    case 3b001: { copper_branch = ~pix_vblank; }
+                                    case 3b010: { copper_branch = ~pix_active; }
+                                    case 3b011: { copper_branch = ( pix_y < copper.rdata0[16,10] ); }
+                                    case 3b100: { copper_branch = ( pix_x < copper.rdata0[16,10] ); }
+                                    case 3b101: { copper_branch = ( copper_variable < copper.rdata0[16,10] ); }
                                 }
                                 PC = copper_branch ? copper.rdata0[0,6] : PC + 1;
                             }
                             default: {
                                 switch( copper.rdata0[29,3] ) {
-                                    case 3b001: { copper_execute = pix_vblank ? 1 : 0; }
-                                    case 3b010: { copper_execute = pix_active ? 0 : 1; }
-                                    case 3b011: { copper_execute = ( pix_y == copper.rdata0[16,10] ) ? 1 : 0; }
-                                    case 3b100: { copper_execute = ( pix_x == copper.rdata0[16,10] ) ? 1 : 0; }
-                                    case 3b101: { copper_execute = ( copper_variable == ( copper.rdata0[16,1] ? pix_x : pix_y ) ) ? 1 : 0; }
+                                    case 3b001: { copper_execute = pix_vblank; }
+                                    case 3b010: { copper_execute = ~pix_active; }
+                                    case 3b011: { copper_execute = ( pix_y == copper.rdata0[16,10] ); }
+                                    case 3b100: { copper_execute = ( pix_x == copper.rdata0[16,10] ); }
+                                    case 3b101: { copper_execute = ( copper_variable == ( copper.rdata0[16,1] ? pix_x : pix_y ) ); }
                                     case 3b110: {
                                         switch( copper.rdata0[26,3] ) {
                                             case 3b001: { copper_variable = copper.rdata0[16,10]; }
@@ -150,7 +150,7 @@ algorithm background_display(
     uint1   lefthalf <: ( pix_x < 320 );
 
     // Increment frame number for the snow/star field
-    frame := ( ( pix_x == 639 ) && ( pix_y == 470 ) ) ? frame + 1 : frame;
+    frame := frame + ( ( pix_x == 639 ) & ( pix_y == 470 ) );
 
     while(1) {
         // RENDER

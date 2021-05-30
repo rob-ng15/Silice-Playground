@@ -1,3 +1,17 @@
+bitfield entry1{
+    uint10  x,
+    uint10  y,
+    uint7   colour,
+    uint7   colour_alt,
+    uint4   command,
+    uint4   dither
+}
+bitfield entry2{
+    uint10  p0,
+    uint10  p1,
+    uint10  p2,
+    uint10  p3
+}
 algorithm gpu_queue(
     output int10   bitmap_x_write,
     output int10   bitmap_y_write,
@@ -46,6 +60,10 @@ algorithm gpu_queue(
     output  uint1   queue_complete,
     output  uint1   vector_block_active
 ) <autorun> {
+    // GPU Command Queue
+    simple_dualport_bram uint42 queue1[ 64 ] = uninitialized;
+    simple_dualport_bram uint40 queue2[ 64 ] = uninitialized;
+
     // 32 x 16 x 16 1 bit tilemap for blit1tilemap
     simple_dualport_bram uint16 blit1tilemap[ 512 ] = uninitialized;
     // Character ROM 8x8 x 256 for character blitter
@@ -105,9 +123,18 @@ algorithm gpu_queue(
         vertices_writer_active <: vertices_writer_active,
         vertex <:> vertex
     );
-    queue_full := GPU.gpu_active | vector_block_active;
-    queue_complete := ~( GPU.gpu_active | vector_block_active );
-    vector_drawer.gpu_active := GPU.gpu_active;
+
+    uint6   queuetop = 0;
+    uint6   queuenext = 0;
+    uint1   queueupdate = 0;
+
+    queue1.addr0 := queuenext;
+    queue1.wenable1 := 1;
+    queue2.addr0 := queuenext;
+    queue2.wenable1 := 1;
+    queue_full := ( ( queuetop + 1 ) == queuenext ) | vector_block_active;
+    queue_complete := ( ( queuetop == queuenext ) & ( ~GPU.gpu_active ) & ( ~vector_block_active ) );
+    vector_drawer.gpu_active := ( ( queuetop + 1 ) == queuenext );
 
     GPU.gpu_write := 0;
 
@@ -116,31 +143,39 @@ algorithm gpu_queue(
             case 0: {
                 switch( vector_drawer.gpu_write ) {
                     case 1: {
-                        GPU.gpu_x = vector_drawer.gpu_x;
-                        GPU.gpu_y = vector_drawer.gpu_y;
-                        GPU.gpu_colour = vector_block_colour;
-                        GPU.gpu_colour_alt = 0;
-                        GPU.gpu_param0 = vector_drawer.gpu_param0;
-                        GPU.gpu_param1 = vector_drawer.gpu_param1;
-                        GPU.gpu_param2 = 0;
-                        GPU.gpu_param3 = 0;
-                        GPU.gpu_write = 2;
-                        GPU.gpu_dithermode = 0;
+                        queue1.addr1 = queuetop;
+                        queue1.wdata1 = { vector_drawer.gpu_x, vector_drawer.gpu_y, vector_block_colour, 7b0, 4h2, 4h0 };
+                        queue2.addr1 = queuetop;
+                        queue2.wdata1 = { vector_drawer.gpu_param0, vector_drawer.gpu_param1, 10b0, 10b0 };
+                        queueupdate = 1;
+                    }
+                    case 0: {
+                        queuetop = queuetop + queueupdate;
+                        queueupdate = 0;
                     }
                 }
             }
             default: {
-                GPU.gpu_x = gpu_x;
-                GPU.gpu_y = gpu_y;
-                GPU.gpu_colour = gpu_colour;
-                GPU.gpu_colour_alt = gpu_colour_alt;
-                GPU.gpu_param0 = gpu_param0;
-                GPU.gpu_param1 = gpu_param1;
-                GPU.gpu_param2 = gpu_param2;
-                GPU.gpu_param3 = gpu_param3;
-                GPU.gpu_write = gpu_write;
-                GPU.gpu_dithermode = gpu_dithermode;
+                queue1.addr1 = queuetop;
+                queue1.wdata1 = { gpu_x, gpu_y, gpu_colour, gpu_colour_alt, gpu_write, gpu_dithermode };
+                queue2.addr1 = queuetop;
+                queue2.wdata1 = { gpu_param0, gpu_param1, gpu_param2, gpu_param3 };
+                queueupdate = 1;
             }
+        }
+
+        if( ( queuetop != queuenext ) && (GPU.gpu_active == 0 ) ) {
+            GPU.gpu_x = entry1( queue1.rdata0 ).x;
+            GPU.gpu_y = entry1( queue1.rdata0 ).y;
+            GPU.gpu_colour = entry1( queue1.rdata0 ).colour;
+            GPU.gpu_colour_alt = entry1( queue1.rdata0 ).colour_alt;
+            GPU.gpu_param0 = entry2( queue2.rdata0 ).p0;
+            GPU.gpu_param1 = entry2( queue2.rdata0 ).p1;
+            GPU.gpu_param2 = entry2( queue2.rdata0 ).p2;
+            GPU.gpu_param3 = entry2( queue2.rdata0 ).p3;
+            GPU.gpu_write = entry1( queue1.rdata0 ).command;
+            GPU.gpu_dithermode = entry1( queue1.rdata0 ).dither;
+            queuenext = queuenext + 1;
         }
     }
 }
@@ -579,8 +614,8 @@ algorithm circle(
                                 gpu_count = filledcircle ? gpu_count - 1 : (-1);
                             }
                             gpu_active_x = gpu_active_x + 1;
-                            gpu_active_y = gpu_active_y - ( gpu_numerator > 0 );
-                            gpu_count = gpu_active_y - ( gpu_numerator > 0 );
+                            gpu_active_y = ( gpu_numerator > 0 ) ? gpu_active_y - 1 : gpu_active_y;
+                            gpu_count = ( gpu_numerator > 0 ) ? gpu_active_y - 1 : gpu_active_y;
                             gpu_numerator = UN.new_numerator;
                         }
                     }
@@ -720,7 +755,7 @@ algorithm triangle (
                             // Edge calculations to determine if inside the triangle - converted to DSP blocks
                             beenInTriangle = inTriangle ? 1 : beenInTriangle;
                             bitmap_write = inTriangle;
-                            FSM2 = ~( beenInTriangle && ~inTriangle );
+                            FSM2 = ( beenInTriangle && ~inTriangle ) ? 0 : 1;
                             switch( FSM2 ) {
                                 case 0: {
                                     // Exited the triangle, move to the next line

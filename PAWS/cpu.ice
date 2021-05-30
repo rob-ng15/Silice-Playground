@@ -85,15 +85,14 @@ algorithm PAWSCPU(
     uint1   writeRegister = uninitialized;
     uint32  memoryinput = uninitialized;
     uint32  memoryoutput = uninitialized;
-    uint1   memoryload := ( ( opCode == 7b0000011 ) || ( ( opCode == 7b0101111 ) && ( function7[2,5] != 5b00011 ) ) ) ? 1 : 0;
-    uint1   memorystore := ( ( opCode == 7b0100011 ) || ( ( opCode == 7b0101111 ) && ( function7[2,5] != 5b00010 ) ) ) ? 1 : 0;
+    uint1   memoryload := ( ( opCode == 7b0000011 ) | ( ( opCode == 7b0101111 ) & ( function7[2,5] != 5b00011 ) ) );
+    uint1   memorystore := ( ( opCode == 7b0100011 ) | ( ( opCode == 7b0101111 ) & ( function7[2,5] != 5b00010 ) ) );
 
     // RISC-V 32 BIT INSTRUCTION DECODER
     int32   immediateValue = uninitialized;
     uint7   opCode = uninitialized;
     uint3   function3 = uninitialized;
     uint7   function7 = uninitialized;
-    //uint5   IshiftCount = uninitialized;
     uint5   rs1 = uninitialized;
     uint5   rs2 = uninitialized;
     uint5   rs3 = uninitialized;
@@ -108,7 +107,6 @@ algorithm PAWSCPU(
         rs3 :> rs3,
         rd :> rd,
         immediateValue :> immediateValue,
-        //IshiftCount :> IshiftCount
     );
 
     // RISC-V REGISTERS

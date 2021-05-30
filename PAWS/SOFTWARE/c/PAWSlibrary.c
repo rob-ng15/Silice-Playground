@@ -73,7 +73,7 @@ char ps2_inputcharacter( void ) {
 // PSEUDO RANDOM NUMBER GENERATOR
 // RETURN PSEUDO RANDOM NUMBER 0 <= RNG < RANGE ( effectively 0 to range - 1 )
 unsigned short rng( unsigned short range ) {
-    unsigned short trial;
+    unsigned short trial, mask;
 
     switch( range ) {
         case 0:
@@ -82,12 +82,25 @@ unsigned short rng( unsigned short range ) {
 
         case 1:
         case 2:
-            trial = *RNG & 1;
+            trial = *ALT_RNG & 1;
+            break;
+        case 8:
+            trial = *ALT_RNG & 7;
+            break;
+        case 32:
+            trial = *ALT_RNG & 31;
+            break;
+        case 64:
+            trial = *ALT_RNG & 63;
             break;
 
         default:
+            if( range < 256 ) { mask = 255; }
+            else if( range < 512 ) { mask = 511; }
+            else if( range < 1024 ) { mask = 1023; }
+            else { mask = 65535; }
             do {
-                trial = (range < 256 ) ? *ALT_RNG & 255 : *RNG;
+                trial = *RNG & mask;
             } while ( trial >= range );
     }
 
@@ -224,7 +237,6 @@ void screen_mode( unsigned char screenmode ) {
 
 // SET THE FRAMEBUFFER TO DISPLAY / DRAW
 void bitmap_display( unsigned char framebuffer ) {
-    while( !*GPU_FINISHED );
     await_vblank();
     *FRAMEBUFFER_DISPLAY = framebuffer;
 }
@@ -373,13 +385,12 @@ void gpu_pixel( unsigned char colour, short x, short y ) {
 
 // DRAW A LINE FROM (x1,y1) to (x2,y2) in colour - uses Bresenham's Line Drawing Algorithm
 void gpu_line( unsigned char colour, short x1, short y1, short x2, short y2 ) {
+    wait_gpu();
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = x2;
     *GPU_PARAM1 = y2;
-
-    wait_gpu();
     *GPU_WRITE = 2;
 }
 
@@ -393,13 +404,12 @@ void gpu_box( unsigned char colour, short x1, short y1, short x2, short y2 ) {
 
 // DRAW AN OUTLINE BOX from (x1,y1) to (x2,y2) in colour
 void gpu_rectangle( unsigned char colour, short x1, short y1, short x2, short y2 ) {
+    wait_gpu();
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = x2;
     *GPU_PARAM1 = y2;
-
-    wait_gpu();
     *GPU_WRITE = 3;
 }
 
@@ -412,47 +422,43 @@ void gpu_cs( void ) {
 
 // DRAW A (optional filled) CIRCLE at centre (x1,y1) of radius ( FILLED CIRCLES HAVE A MINIMUM RADIUS OF 4 )
 void gpu_circle( unsigned char colour, short x1, short y1, short radius, unsigned char filled ) {
+    wait_gpu();
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = radius;
-
-    wait_gpu();
     *GPU_WRITE = filled ? 5 : 4;
 }
 
 // BLIT A 16 x 16 ( blit_size == 1 doubled to 32 x 32 ) TILE ( from tile 0 to 31 ) to (x1,y1) in colour
 void gpu_blit( unsigned char colour, short x1, short y1, short tile, unsigned char blit_size ) {
+    wait_gpu();
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = tile;
     *GPU_PARAM1 = blit_size;
-
-    wait_gpu();
     *GPU_WRITE = 7;
 }
 
 // BLIT AN 8 x8  ( blit_size == 1 doubled to 16 x 16, blit_size == 1 doubled to 32 x 32 ) CHARACTER ( from tile 0 to 255 ) to (x1,y1) in colour
 void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned char tile, unsigned char blit_size ) {
+    wait_gpu();
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = tile;
     *GPU_PARAM1 = blit_size;
-
-    wait_gpu();
     *GPU_WRITE = 8;
 }
 
 // COLOURBLIT A 16 x 16 ( blit_size == 1 doubled to 32 x 32 ) TILE ( from tile 0 to 31 ) to (x1,y1)
 void gpu_colourblit( short x1, short y1, short tile, unsigned char blit_size ) {
+    wait_gpu();
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = tile;
     *GPU_PARAM1 = blit_size;
-
-    wait_gpu();
     *GPU_WRITE = 9;
 }
 
@@ -492,6 +498,7 @@ void set_colourblitter_bitmap( unsigned char tile, unsigned char *bitmap ) {
 // DRAW A FILLED TRIANGLE with vertices (x1,y1) (x2,y2) (x3,y3) in colour
 // VERTICES SHOULD BE PRESENTED CLOCKWISE FROM THE TOP ( minimal adjustments made to the vertices to comply )
 void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2, short x3, short y3 ) {
+    wait_gpu();
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
@@ -499,7 +506,6 @@ void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2,
     *GPU_PARAM1 = y2;
     *GPU_PARAM2 = x3;
     *GPU_PARAM3 = y3;
-
     wait_gpu();
     *GPU_WRITE = 6;
 }
@@ -545,15 +551,9 @@ void gpu_printf_centre( unsigned char colour, short x, short y, unsigned char si
 // 32 VECTOR BLOCKS EACH OF 16 VERTICES ( offsets in the range -15 to 15 from the centre )
 // WHEN ACTIVATED draws lines from a vector block (x0,y0) to (x1,y1), (x1,y1) to (x2,y2), (x2,y2) to (x3,y3) until (x15,y15) or an inactive vertex is encountered
 
-// INTERNAL FUNCTION - WAIT FOR THE VECTOR BLOCK TO FINISH THE LAST COMMAND
-void wait_vector_block( void ) {
-    while( *VECTOR_DRAW_STATUS );
-}
-
 // START DRAWING A VECTOR BLOCK centred at (xc,yc) in colour
 void draw_vector_block( unsigned char block, unsigned char colour, short xc, short yc, unsigned char scale ) {
-    wait_vector_block();
-
+    while( *VECTOR_DRAW_STATUS );
     *VECTOR_DRAW_BLOCK = block;
     *VECTOR_DRAW_COLOUR = colour;
     *VECTOR_DRAW_XC = xc;

@@ -680,14 +680,13 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
     // SET move timers - timer 0 100th second for player, timer 1 1 second for ghosts
     set_timer1khz( 100, 0 ); set_timer1khz( 1000, 0 );
 
-
+    tpu_cs();
     // LOOP UNTIL REACHED THE EXIT OR DEAD
     while( ( ( currentx != width - 2 ) || ( currenty != height - 3 ) ) && ( dead == 0 ) ) {
         // SET CURRENT LOCATION TO VISITED
         setat( currentx, currenty, ' ', 1 );
 
         // SWITCH TO ALTERNATE FRAMEBUFFER FOR DRAWING
-        tpu_cs();
         bitmap_draw( 1 - framebuffer );
         gpu_cs();
 

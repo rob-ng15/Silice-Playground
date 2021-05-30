@@ -161,8 +161,8 @@ algorithm sprite_layer(
                 // Sprite update helpers
                 sprite_offscreen_negative = sprite_double[ sprite_set_number ] ? -32 : -16;
                 sprite_to_negative = sprite_double[ sprite_set_number ] ? -31 : -15;
-                sprite_offscreen_x = ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_x[ sprite_set_number  ] ) > __signed(640) ) ? 1 : 0;
-                sprite_offscreen_y = ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) || ( __signed( sprite_y[ sprite_set_number ] ) > __signed(480) ) ? 1 : 0;
+                sprite_offscreen_x = ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) | ( __signed( sprite_x[ sprite_set_number  ] ) > __signed(640) );
+                sprite_offscreen_y = ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) | ( __signed( sprite_y[ sprite_set_number ] ) > __signed(480) );
 
                 // Perform sprite update
                 sprite_active[ sprite_set_number ] = ( ( ( sprite_update[12,1] & sprite_offscreen_y ) == 1 ) || ( ( sprite_update[11,1] & sprite_offscreen_x ) == 1 ) ) ? 0 : sprite_active[ sprite_set_number ];
@@ -257,7 +257,7 @@ algorithm sprite_layer(
                 $$end
 
                 // Output collision detection
-                output_collisions = ( pix_x == 639 ) && ( pix_y == 479 );
+                output_collisions = ( pix_x == 639 ) & ( pix_y == 479 );
             }
         }
     }

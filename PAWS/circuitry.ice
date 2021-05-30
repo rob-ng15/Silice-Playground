@@ -144,7 +144,7 @@ circuitry incrementifzero(
     input   z,
     output  x1
 ) {
-    x1 = ( z == 0 ) ? x + 1 : x;
+    x1 = x + ( z == 0 );
 }
 
 // DECREASE BY 1 IF SECOND INPUT IS 0
@@ -153,7 +153,7 @@ circuitry decrementifzero(
     input   z,
     output  x1
 ) {
-    x1 = ( z == 0 ) ? x - 1 : x;
+    x1 = x - ( z == 0 );
 }
 
 // IF 0 RESET ELSE DECREASE BY 1

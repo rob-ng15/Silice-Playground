@@ -16,6 +16,8 @@ LIBRARY="/usr/riscv64-elf/lib/rv32imafc/ilp32f/libc.a /usr/riscv64-elf/lib/rv32i
 # Following based on FemtoRV compile scripts https://github.com/BrunoLevy/learn-fpga/tree/master/FemtoRV
 $ARCH-elf-gcc $CFLAGS -c -o build/crt0.o crt0.c
 $ARCH-elf-gcc $INCLUDE $CFLAGS -c -o build/libPAWS.o c/PAWSlibrary.c
+$ARCH-elf-gcc $INCLUDE $CFLAGS -S -o build/libPAWS.s c/PAWSlibrary.c
 $ARCH-elf-gcc $INCLUDE $CFLAGS -c -o build/code.o $1
+$ARCH-elf-gcc $INCLUDE $CFLAGS -S -o build/code.s $1
 $ARCH-elf-ld $LFLAGS $LCONFIG -o build/code.elf build/code.o build/libPAWS.o $LIBRARY
 $ARCH-elf-objcopy -O binary build/code.elf $2

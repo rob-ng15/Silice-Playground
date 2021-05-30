@@ -179,7 +179,7 @@ algorithm tile_map_writer(
                         switch( ( tm_scrollwrap - 1 ) & 3  ) {
                             case 0: {
                                 if( tm_offset_x == 15 ) {
-                                    tm_scroll = ( tm_scrollwrap == 1 ) ? 1 : 0;
+                                    tm_scroll = ( tm_scrollwrap == 1 );
                                     tm_lastaction = tm_scrollwrap;
                                     tm_goleft = 1;
                                     tm_active = 1;
@@ -191,7 +191,7 @@ algorithm tile_map_writer(
                             // UP
                             case 1: {
                                 if( tm_offset_y == 15 ) {
-                                    tm_scroll = ( tm_scrollwrap == 2 ) ? 1 : 0;
+                                    tm_scroll = ( tm_scrollwrap == 2 );
                                     tm_lastaction = tm_scrollwrap;
                                     tm_goup = 1;
                                     tm_active = 2;
@@ -203,7 +203,7 @@ algorithm tile_map_writer(
                             // RIGHT
                             case 2: {
                                 if( tm_offset_x == -15 ) {
-                                    tm_scroll = ( tm_scrollwrap == 3 ) ? 1 : 0;
+                                    tm_scroll = ( tm_scrollwrap == 3 );
                                     tm_lastaction = tm_scrollwrap;
                                     tm_goleft = 0;
                                     tm_active = 1;
@@ -215,7 +215,7 @@ algorithm tile_map_writer(
                             // DOWN
                             case 3: {
                                 if( tm_offset_y == -15 ) {
-                                    tm_scroll = ( tm_scrollwrap == 4 ) ? 1 : 0;
+                                    tm_scroll = ( tm_scrollwrap == 4 );
                                     tm_lastaction = tm_scrollwrap;
                                     tm_goup = 0;
                                     tm_active = 2;

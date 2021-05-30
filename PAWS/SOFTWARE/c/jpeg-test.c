@@ -1,5 +1,5 @@
 #include "PAWSlibrary.h"
-#include "GALAXYJPG.h"
+#include "PAWSJPG.h"
 #include <stdio.h>
 
 int main( void ) {
@@ -13,7 +13,7 @@ int main( void ) {
 
     // JPEG LIBRARY
     njInit(); printf( "    njInit()\n");
-    njDecode( &galaxyjpg[0], 71555 ); printf( "    njDecode()\n" );
+    njDecode( &pawsjpg[0], 71555 ); printf( "    njDecode()\n" );
     width = njGetWidth();
     height = njGetHeight(); printf( "    Image %u x %u()\n", width, height );
     imagebuffer=njGetImage(); printf( "    Buffer %u\n", (unsigned int)imagebuffer );
@@ -22,13 +22,13 @@ int main( void ) {
 
     counter = 0;
     for( short y = 0; y < height; y++ ) {
+        bitmap_scrollwrap( 2 );
         for( short x = 0; x < width; x++ ) {
             colour = ( imagebuffer[ counter++ ] & 0xc0 ) >> 2;
             colour = colour + ( ( imagebuffer[ counter++ ] & 0xc0 ) >> 4 );
             colour = colour + ( ( imagebuffer[ counter++ ] & 0xc0 ) >> 6 );
             gpu_pixel( colour, x, 239 );
         }
-        bitmap_scrollwrap( 2 );
     }
 
     tpu_printf_centre( 0, TRANSPARENT, WHITE, "" );

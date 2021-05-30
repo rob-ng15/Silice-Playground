@@ -28,7 +28,7 @@ int main( void ) {
 
         printw( "\nFloating Point Tests:\n\n" );
         j = rng(32) - 16; x = (float) j;
-        k = rng(32) - 16; y= (float) k;
+        k = rng(32) - 16; y = (float) k;
         printw( "j = %d, k = %d, x = %f, y = %f\n\n", j, k, x, y );
 
         for( i = 0; i < 4; i++ ) {

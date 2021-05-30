@@ -10,11 +10,12 @@
 ./compile.sh c/life.c PAWS/LIFE.PAW
 ./compile.sh c/maze.c PAWS/3DMAZE.PAW
 #./compile.sh c/ppm2bitmap.c PAWS/PPM2BMP.PAW
+./compile.sh c/scale.c PAWS/SCALE.PAW
 ./compile.sh c/smttest.c PAWS/SMT.PAW
 ./compile.sh c/terminal-test.c PAWS/TERMINAL.PAW
 ./compile.sh c/tune.c PAWS/TUNE.PAW
 
 ./compileF.sh c/fractal.c PAWS/GF-F.PAW
 ./compileF.sh c/fractal-full.c PAWS/GF-F2.PAW
-./compileF.sh c/scale.c PAWS/GF-S.PAW
+./compileF.sh c/scale.c PAWS/GF-S2.PAW
 ./compileF.sh c/terminal-test.c PAWS/GF-T.PAW
