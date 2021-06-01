@@ -470,7 +470,7 @@ algorithm video_memmap(
                 case 12h674: { readData = bitmap_window.bitmap_colour_read; }
 
                 // VBLANK
-                case 12hf00: { readData = vblank ? 1 : 0; }
+                case 12hf00: { readData = vblank; }
 
                 default: { readData = 0; }
             }

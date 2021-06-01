@@ -1,70 +1,44 @@
 // HELPER CIRCUITS
 
 // MIN[U] MAX[U] curcuits
-circuitry min(
-    input   value1,
-    input   value2,
-    output  result
-) {
-    result = ( __signed(value1) < __signed(value2) ) ? value1 : value2;
+circuitry min( input value1, input value2, output minimum ) {
+    minimum = ( __signed(value1) < __signed(value2) ) ? value1 : value2;
 }
-circuitry minu(
-    input   value1,
-    input   value2,
-    output  result
+circuitry minu( input value1, input value2, output minimum
 ) {
-    result = ( __unsigned(value1) < __unsigned(value2) ) ? value1 : value2;
+    minimum = ( __unsigned(value1) < __unsigned(value2) ) ? value1 : value2;
 }
-circuitry max(
-    input   value1,
-    input   value2,
-    output  result
+circuitry max( input value1, input value2, output maximum
 ) {
-    result = ( __signed(value1) > __signed(value2) ) ? value1 : value2;
+    maximum = ( __signed(value1) > __signed(value2) ) ? value1 : value2;
 }
-circuitry maxu(
-    input   value1,
-    input   value2,
-    output  result
+circuitry maxu( input value1, input value2, output maximum
 ) {
-    result = ( __unsigned(value1) > __unsigned(value2) ) ? value1 : value2;
+    maximum = ( __unsigned(value1) > __unsigned(value2) ) ? value1 : value2;
 }
 
 // MINIMUM OF 3 VALUES
-circuitry min3(
-    input   value1,
-    input   value2,
-    input   value3,
-    output  minimum
+circuitry min3( input value1, input value2, input value3, output minimum
 ) {
     minimum = ( value1 < value2 ) ? ( value1 < value3 ? value1 : value3 ) : ( value2 < value3 ? value2 : value3 );
 }
 
 // MAXIMUM OF 3 VALUES
-circuitry max3(
-    input   value1,
-    input   value2,
-    input   value3,
-    output  maximum
+circuitry max3( input value1, input value2, input value3, output maximum
 ) {
     maximum = ( value1 > value2 ) ? ( value1 > value3 ? value1 : value3 ) : ( value2 > value3 ? value2 : value3 );
 }
 
 // ABSOLUTE VALUE
-circuitry abs(
-    input   value1,
-    output  absolute
+circuitry abs( input   value1, output  absolute
 ) {
-    absolute = ( value1 < 0 ) ? -value1 : value1;
+    absolute = ( __signed(value1) < __signed(0) ) ? -value1 : value1;
 }
 
 // ABSOLUTE DELTA ( DIFFERENCE )
-circuitry absdelta(
-    input   value1,
-    input   value2,
-    output  delta
+circuitry absdelta( input value1, input value2, output delta
 ) {
-    delta = ( value1 < value2 ) ? value2 - value1 : value1 - value2;
+    delta = ( __signed(value1) < __signed(value2) ) ? value2 - value1 : value1 - value2;
 }
 
 // COPY COORDINATES
@@ -100,13 +74,13 @@ circuitry cropleft(
     input   x,
     output  x1
 ) {
-    x1 = ( x < 0 ) ? 0 : x;
+    x1 = ( __signed(x) < __signed(0) ) ? 0 : x;
 }
 circuitry croptop(
     input   y,
     output  y1
 ) {
-    y1 = ( y < 0 ) ? 0 : y;
+    y1 = ( __signed(y) < __signed(0) ) ? 0 : y;
 }
 circuitry cropright(
     input   x,

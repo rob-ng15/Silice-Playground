@@ -111,7 +111,6 @@ algorithm multiplex_display(
     pix_green := 0;
     pix_blue := 0;
 
-
     while (1) {
         if( pix_active ) {
             pix_red = red8;

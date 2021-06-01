@@ -376,21 +376,21 @@ void gpu_dither( unsigned char mode, unsigned char colour ) {
 
 // SET THE PIXEL at (x,y) to colour
 void gpu_pixel( unsigned char colour, short x, short y ) {
-    wait_gpu();
     *GPU_COLOUR = colour;
     *GPU_X = x;
     *GPU_Y = y;
+    wait_gpu();
     *GPU_WRITE = 1;
 }
 
 // DRAW A LINE FROM (x1,y1) to (x2,y2) in colour - uses Bresenham's Line Drawing Algorithm
 void gpu_line( unsigned char colour, short x1, short y1, short x2, short y2 ) {
-    wait_gpu();
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = x2;
     *GPU_PARAM1 = y2;
+    wait_gpu();
     *GPU_WRITE = 2;
 }
 
@@ -404,12 +404,12 @@ void gpu_box( unsigned char colour, short x1, short y1, short x2, short y2 ) {
 
 // DRAW AN OUTLINE BOX from (x1,y1) to (x2,y2) in colour
 void gpu_rectangle( unsigned char colour, short x1, short y1, short x2, short y2 ) {
-    wait_gpu();
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = x2;
     *GPU_PARAM1 = y2;
+    wait_gpu();
     *GPU_WRITE = 3;
 }
 
@@ -422,43 +422,43 @@ void gpu_cs( void ) {
 
 // DRAW A (optional filled) CIRCLE at centre (x1,y1) of radius ( FILLED CIRCLES HAVE A MINIMUM RADIUS OF 4 )
 void gpu_circle( unsigned char colour, short x1, short y1, short radius, unsigned char filled ) {
-    wait_gpu();
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = radius;
+    wait_gpu();
     *GPU_WRITE = filled ? 5 : 4;
 }
 
 // BLIT A 16 x 16 ( blit_size == 1 doubled to 32 x 32 ) TILE ( from tile 0 to 31 ) to (x1,y1) in colour
 void gpu_blit( unsigned char colour, short x1, short y1, short tile, unsigned char blit_size ) {
-    wait_gpu();
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = tile;
     *GPU_PARAM1 = blit_size;
+    wait_gpu();
     *GPU_WRITE = 7;
 }
 
 // BLIT AN 8 x8  ( blit_size == 1 doubled to 16 x 16, blit_size == 1 doubled to 32 x 32 ) CHARACTER ( from tile 0 to 255 ) to (x1,y1) in colour
 void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned char tile, unsigned char blit_size ) {
-    wait_gpu();
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = tile;
     *GPU_PARAM1 = blit_size;
+    wait_gpu();
     *GPU_WRITE = 8;
 }
 
 // COLOURBLIT A 16 x 16 ( blit_size == 1 doubled to 32 x 32 ) TILE ( from tile 0 to 31 ) to (x1,y1)
 void gpu_colourblit( short x1, short y1, short tile, unsigned char blit_size ) {
-    wait_gpu();
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = tile;
     *GPU_PARAM1 = blit_size;
+    wait_gpu();
     *GPU_WRITE = 9;
 }
 
@@ -498,7 +498,6 @@ void set_colourblitter_bitmap( unsigned char tile, unsigned char *bitmap ) {
 // DRAW A FILLED TRIANGLE with vertices (x1,y1) (x2,y2) (x3,y3) in colour
 // VERTICES SHOULD BE PRESENTED CLOCKWISE FROM THE TOP ( minimal adjustments made to the vertices to comply )
 void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2, short x3, short y3 ) {
-    wait_gpu();
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;

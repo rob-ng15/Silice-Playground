@@ -276,15 +276,15 @@ algorithm sprite_generator(
 ) <autorun> {
     // Calculate position in sprite
     uint6 spritesize <: sprite_double ? 32 : 16;
-    uint1 xinrange <: ( __signed({1b0, pix_x}) >= __signed(sprite_x) ) && ( __signed({1b0, pix_x}) < __signed( sprite_x + spritesize ) );
-    uint1 yinrange <: ( __signed({1b0, pix_y}) >= __signed(sprite_y) ) && ( __signed({1b0, pix_y}) < __signed( sprite_y + spritesize) );
+    uint1 xinrange <: ( __signed({1b0, pix_x}) >= __signed(sprite_x) ) & ( __signed({1b0, pix_x}) < __signed( sprite_x + spritesize ) );
+    uint1 yinrange <: ( __signed({1b0, pix_y}) >= __signed(sprite_y) ) & ( __signed({1b0, pix_y}) < __signed( sprite_y + spritesize) );
     uint4 yinsprite <: ( __signed({1b0, pix_y}) - sprite_y ) >>> sprite_double;
 
     // READ ADDRESS FOR SPRITE
     tiles.addr0 := { sprite_tile_number, yinsprite };
 
     // Determine if pixel is visible
-    pix_visible := sprite_active && xinrange && yinrange && ( tiles.rdata0[ ( 15  - ( ( __signed({1b0, pix_x}) - sprite_x ) >>> sprite_double ) ), 1 ] );
+    pix_visible := sprite_active & xinrange && yinrange & ( tiles.rdata0[ ( 15  - ( ( __signed({1b0, pix_x}) - sprite_x ) >>> sprite_double ) ), 1 ] );
 }
 
 algorithm spritebitmapwriter(

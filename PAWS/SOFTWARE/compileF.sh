@@ -7,7 +7,7 @@ AR="riscv64-elf-ar"
 NM="riscv64-elf-nm"
 RANLIB="riscv64-elf-ranlib"
 
-CFLAGS="-march=rv32imafc -mabi=ilp32f -ffunction-sections -fdata-sections -Os -fno-pic -fno-unroll-loops"
+CFLAGS="-march=rv32imafc -mabi=ilp32f -ffunction-sections -fdata-sections -O2 -fno-pic -fno-unroll-loops"
 LFLAGS=" --as-needed --gc-sections -m elf32lriscv -b elf32-littleriscv --no-relax "
 LCONFIG="-Tconfig_c_SDRAM.ld"
 INCLUDE="-I/usr/riscv32-elf/include/"

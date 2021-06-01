@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg
-   xmlns:dc="http://purl.org/dc/elements/1.1/"
-   xmlns:cc="http://creativecommons.org/ns#"
-   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-   xmlns:svg="http://www.w3.org/2000/svg"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    width="420mm"
    height="297mm"
    viewBox="0 0 420 297"
    version="1.1"
    id="svg1411"
-   inkscape:version="1.0.1 (3bc2e813f5, 2020-09-07, custom)"
-   sodipodi:docname="CPU Diagram.svg">
+   inkscape:version="1.1 (c4e8f9ed74, 2021-05-24)"
+   sodipodi:docname="CPU Diagram.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
   <defs
      id="defs1405">
     <marker
@@ -89,21 +89,6 @@
          style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt;stroke-opacity:1;fill:#000000;fill-opacity:1"
          d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
          id="path3805" />
-    </marker>
-    <marker
-       style="overflow:visible;"
-       id="marker3709"
-       refX="0.0"
-       refY="0.0"
-       orient="auto"
-       inkscape:stockid="Arrow1Lend"
-       inkscape:isstock="true"
-       inkscape:collect="always">
-      <path
-         transform="scale(0.8) rotate(180) translate(12.5,0)"
-         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt;stroke-opacity:1;fill:#000000;fill-opacity:1"
-         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
-         id="path3707" />
     </marker>
     <marker
        style="overflow:visible;"
@@ -209,21 +194,6 @@
     </marker>
     <marker
        style="overflow:visible"
-       id="Arrow1Lend-84"
-       refX="0"
-       refY="0"
-       orient="auto"
-       inkscape:stockid="Arrow1Lend"
-       inkscape:isstock="true"
-       inkscape:collect="always">
-      <path
-         transform="matrix(-0.8,0,0,-0.8,-10,0)"
-         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1pt;stroke-opacity:1"
-         d="M 0,0 5,-5 -12.5,0 5,5 Z"
-         id="path2635-3" />
-    </marker>
-    <marker
-       style="overflow:visible"
        id="Arrow1Lend-4"
        refX="0"
        refY="0"
@@ -252,6 +222,20 @@
          d="M 0,0 5,-5 -12.5,0 5,5 Z"
          id="path2635-68" />
     </marker>
+    <marker
+       style="overflow:visible"
+       id="marker4195-5"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow1Lend"
+       inkscape:isstock="true">
+      <path
+         transform="matrix(-0.8,0,0,-0.8,-10,0)"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1pt;stroke-opacity:1"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         id="path4193-3" />
+    </marker>
   </defs>
   <sodipodi:namedview
      id="base"
@@ -261,17 +245,18 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="0.49497475"
-     inkscape:cx="400"
-     inkscape:cy="295.03937"
+     inkscape:cx="399.01025"
+     inkscape:cy="295.97469"
      inkscape:document-units="mm"
      inkscape:current-layer="g3285"
      inkscape:document-rotation="0"
      showgrid="true"
      inkscape:window-width="1920"
-     inkscape:window-height="1019"
-     inkscape:window-x="0"
+     inkscape:window-height="1051"
+     inkscape:window-x="1920"
      inkscape:window-y="0"
-     inkscape:window-maximized="1">
+     inkscape:window-maximized="1"
+     inkscape:pagecheckerboard="0">
     <inkscape:grid
        type="xygrid"
        id="grid2066" />
@@ -284,7 +269,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -488,35 +473,8 @@
                id="tspan2097">COUNTERS</tspan></text>
         </g>
         <g
-           id="g3193-3-5"
-           transform="translate(-179.82023,-169.33333)">
-          <rect
-             style="fill:#b380ff;stroke-width:0.23665"
-             id="rect164-1-5-74-6-6"
-             width="52.916672"
-             height="31.750002"
-             x="285.75"
-             y="84.666664" />
-          <text
-             xml:space="preserve"
-             style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
-             x="312.01266"
-             y="99.068542"
-             id="text66-9-0-5-7-2"><tspan
-               sodipodi:role="line"
-               x="312.01266"
-               y="99.068542"
-               style="font-size:5.64444px;text-align:center;text-anchor:middle;stroke-width:0.264583"
-               id="tspan2097-1">IINSTRUCTION</tspan><tspan
-               sodipodi:role="line"
-               x="312.01266"
-               y="106.12409"
-               style="font-size:5.64444px;text-align:center;text-anchor:middle;stroke-width:0.264583"
-               id="tspan2128">CACHES</tspan></text>
-        </g>
-        <g
            id="g3193-2"
-           transform="translate(-179.82023,-127)">
+           transform="translate(-179.82023,-169.33333)">
           <rect
              style="fill:#b380ff;stroke-width:0.23665"
              id="rect164-1-5-74-7"
@@ -847,17 +805,13 @@
            d="m 84.763127,-68.791669 h 21.166663 v 0"
            id="path2630" />
         <path
-           style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none;marker-end:url(#marker3198)"
-           d="m 84.763122,-52.916668 21.166668,10.583333"
+           style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker3198)"
+           d="m 158.84646,-52.916669 21.16666,10.583333"
            id="path3194" />
         <path
            style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none;marker-end:url(#marker3270)"
            d="m 158.84645,-68.791668 h 95.25 v 0"
            id="path3266" />
-        <path
-           style="fill:none;stroke:#000000;stroke-width:0.316227;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Lend-84)"
-           d="m 158.84645,-26.458336 h 21.16667 v 0"
-           id="path2630-1" />
         <path
            style="fill:none;stroke:#000000;stroke-width:0.316227;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Lend-4)"
            d="m 307.01312,-68.791669 h 21.16666 v 0"
@@ -870,10 +824,6 @@
            style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none;marker-end:url(#marker3617)"
            d="m 232.92979,-42.333335 21.16666,-10.583333"
            id="path3697" />
-        <path
-           style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none;marker-end:url(#marker3709)"
-           d="M 428.72145,-52.916668 354.63812,10.583331"
-           id="path3705" />
         <path
            style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none;marker-end:url(#marker3807)"
            d="M 254.09645,58.20833 H 232.92979"
@@ -894,6 +844,10 @@
            style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none;marker-end:url(#marker4195)"
            d="M 58.304789,84.666663 V -52.916668"
            id="path3797" />
+        <path
+           style="fill:none;stroke:#000000;stroke-width:0.339683;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker4195-5)"
+           d="m 428.72146,-52.916669 v 63.5"
+           id="path3797-5" />
       </g>
     </g>
   </g>

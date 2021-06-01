@@ -64,8 +64,8 @@ algorithm background(
                                 // JUMP ON CONDITION
                                 switch( copper.rdata0[26,3] ) {
                                     case 3b000: { copper_branch = 1; }
-                                    case 3b001: { copper_branch = ~pix_vblank; }
-                                    case 3b010: { copper_branch = ~pix_active; }
+                                    case 3b001: { copper_branch = ( pix_vblank == copper.rdata0[16,1] ); }
+                                    case 3b010: { copper_branch = ( pix_active == copper.rdata0[16,1] ); }
                                     case 3b011: { copper_branch = ( pix_y < copper.rdata0[16,10] ); }
                                     case 3b100: { copper_branch = ( pix_x < copper.rdata0[16,10] ); }
                                     case 3b101: { copper_branch = ( copper_variable < copper.rdata0[16,10] ); }

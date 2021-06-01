@@ -236,7 +236,7 @@ algorithm tile_map_writer(
                     onehot( FSM ) {
                         case 0: {  y_cursor = 0; y_cursor_addr = 0; }
                         case 1: {
-                            while( y_cursor < 32 ) {
+                            while( y_cursor != 32 ) {
                                 FSM2 = 1;
                                 while( FSM2 != 0 ) {
                                     onehot( FSM2 ) {
@@ -248,7 +248,7 @@ algorithm tile_map_writer(
                                         case 1: {
                                             new_tile = tm_scroll ? 0 : tiles_copy.rdata0;
                                             new_colour = tm_scroll ? 13h1000 : colours_copy.rdata0;
-                                            while( tm_goleft ? ( x_cursor < 42 ) : ( x_cursor > 0 ) ) {
+                                            while( tm_goleft ? ( x_cursor != 42 ) : ( x_cursor != 0 ) ) {
                                                 FSM3 = 1;
                                                 while( FSM3 != 0 ) {
                                                     onehot( FSM3 ) {
@@ -308,7 +308,7 @@ algorithm tile_map_writer(
                     onehot( FSM ) {
                         case 0: { x_cursor = 0; }
                         case 1: {
-                            while( x_cursor < 42 ) {
+                            while( x_cursor != 42 ) {
                                 FSM2 = 1;
                                 while( FSM2 != 0 ) {
                                     onehot( FSM2 ) {
@@ -321,7 +321,7 @@ algorithm tile_map_writer(
                                         case 1: {
                                             new_tile = tm_scroll ? 0 : tiles_copy.rdata0;
                                             new_colour = tm_scroll ? 13h1000 : colours_copy.rdata0;
-                                            while( tm_goup ? ( y_cursor < 31 ) : ( y_cursor > 0 ) ) {
+                                            while( tm_goup ? ( y_cursor != 31 ) : ( y_cursor != 0 ) ) {
                                                 FSM3 = 1;
                                                 while( FSM3 != 0 ) {
                                                     onehot( FSM3 ) {
@@ -376,7 +376,7 @@ algorithm tile_map_writer(
 
             // CLEAR
             case 3: {
-                while( tmcsaddr < 1344 ) {
+                while( tmcsaddr != 1344 ) {
                     tiles.addr1 = tmcsaddr;
                     tiles.wdata1 = 0;
                     tiles_copy.addr1 = tmcsaddr;

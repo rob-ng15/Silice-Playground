@@ -47,9 +47,9 @@ algorithm gpu_queue(
     output  uint1   vector_block_active
 ) <autorun> {
     // 32 x 16 x 16 1 bit tilemap for blit1tilemap
-    simple_dualport_bram uint16 blit1tilemap[ 512 ] = uninitialized;
+    simple_dualport_bram uint16 blit1tilemap <input!> [ 512 ] = uninitialized;
     // Character ROM 8x8 x 256 for character blitter
-    simple_dualport_bram uint8 characterGenerator8x8[] = {
+    simple_dualport_bram uint8 characterGenerator8x8 <input!> [] = {
         $include('ROM/characterROM8x8.inc')
     };
     // BLIT TILE WRITER
@@ -64,7 +64,7 @@ algorithm gpu_queue(
         characterGenerator8x8 <:> characterGenerator8x8
     );
     // 32 x 16 x 16 7 bit tilemap for colour
-    simple_dualport_bram uint7 colourblittilemap[ 8192 ] = uninitialized;
+    simple_dualport_bram uint7 colourblittilemap <input!> [ 8192 ] = uninitialized;
     // COLOURBLIT TILE WRITER
     colourblittilebitmapwriter CBTBM(
         colourblit_writer_tile <: colourblit_writer_tile,
@@ -86,7 +86,7 @@ algorithm gpu_queue(
     );
 
     // 32 vector blocks each of 16 vertices
-    simple_dualport_bram uint13 vertex[512] = uninitialised;
+    simple_dualport_bram uint13 vertex <input!> [512] = uninitialised;
     // VECTOR DRAWER UNIT
     vectors vector_drawer(
         vector_block_number <: vector_block_number,
@@ -1045,8 +1045,8 @@ algorithm vectors(
     uint3   FSM = uninitialised;
 
     // Extract deltax and deltay for the present vertices
-    int10 deltax := { {4{vectorentry(vertex.rdata0).dxsign}}, vectorentry(vertex.rdata0).dx };
-    int10 deltay := { {4{vectorentry(vertex.rdata0).dysign}}, vectorentry(vertex.rdata0).dy };
+    int10 deltax := { {5{vectorentry(vertex.rdata0).dxsign}}, vectorentry(vertex.rdata0).dx };
+    int10 deltay := { {5{vectorentry(vertex.rdata0).dysign}}, vectorentry(vertex.rdata0).dy };
 
     // Vertices being processed, plus first coordinate of each line
     uint5 block_number = 0;
