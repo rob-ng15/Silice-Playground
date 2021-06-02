@@ -42,26 +42,14 @@ circuitry absdelta( input value1, input value2, output delta
 }
 
 // COPY COORDINATES
-circuitry copycoordinates(
-    input   x,
-    input   y,
-    output  x1,
-    output  y1
+circuitry copycoordinates( input x, input y, output x1, output y1
 ) {
     x1 = x;
     y1 = y;
 }
 
 // SWAP COORDINATES
-circuitry swapcoordinates(
-    input   x,
-    input   y,
-    input   x1,
-    input   y1,
-    output  x2,
-    output  y2,
-    output  x3,
-    output  y3
+circuitry swapcoordinates( input x, input y, input x1, input y1, output x2, output y2, output x3, output y3
 ) {
     x2 = x1;
     y2 = y1;
@@ -70,41 +58,25 @@ circuitry swapcoordinates(
 }
 
 // CROP COORDINATES TO SCREEN RANGE
-circuitry cropleft(
-    input   x,
-    output  x1
+circuitry cropleft( input x, output x1
 ) {
     x1 = ( __signed(x) < __signed(0) ) ? 0 : x;
 }
-circuitry croptop(
-    input   y,
-    output  y1
+circuitry croptop( input y, output y1
 ) {
     y1 = ( __signed(y) < __signed(0) ) ? 0 : y;
 }
-circuitry cropright(
-    input   x,
-    output  x1
+circuitry cropright( input x, output x1
 ) {
     x1 = ( x > 319 ) ? 319 : x;
 }
-circuitry cropbottom(
-    input   y,
-    output  y1
+circuitry cropbottom( input y, output y1
 ) {
     y1 = ( y > 239 ) ? 239 : y;
 }
 
 // CROP (x1,y1) to left and top, (x2,y2) to right and bottom
-circuitry cropscreen(
-    input   x1,
-    input   y1,
-    input   x2,
-    input   y2,
-    output  newx1,
-    output  newy1,
-    output  newx2,
-    output  newy2
+circuitry cropscreen( input x1, input y1, input x2, input y2, output newx1, output newy1, output newx2, output newy2
 ) {
     newx1 = ( x1 < 0 ) ? 0 : x1;
     newy1 = ( y1 < 0 ) ? 0 : y1;
@@ -113,28 +85,19 @@ circuitry cropscreen(
 }
 
 // INCREASE BY 1 IF SECOND INPUT IS 0
-circuitry incrementifzero(
-    input   x,
-    input   z,
-    output  x1
+circuitry incrementifzero( input x, input z, output x1
 ) {
     x1 = x + ( z == 0 );
 }
 
 // DECREASE BY 1 IF SECOND INPUT IS 0
-circuitry decrementifzero(
-    input   x,
-    input   z,
-    output  x1
+circuitry decrementifzero( input x, input z, output x1
 ) {
     x1 = x - ( z == 0 );
 }
 
 // IF 0 RESET ELSE DECREASE BY 1
-circuitry decrementorreset(
-    input   x,
-    input   r,
-    output  x1
+circuitry decrementorreset( input x, input r, output x1
 ) {
     x1 = ( x != 0 ) ? x - 1 : r;
 }

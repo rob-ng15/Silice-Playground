@@ -22,8 +22,8 @@ algorithm character_map(
 ) <autorun> {
     // 80 x 30 character buffer
     // Setting background to 40 (ALPHA) allows the bitmap/background to show through
-    simple_dualport_bram uint8 charactermap[2400] = { 0, pad(0) };
-    simple_dualport_bram uint13 colourmap[2400] = { 13b1000000000000, pad(13b1000000000000) };
+    simple_dualport_bram uint8 charactermap[2400] = uninitialized;
+    simple_dualport_bram uint13 colourmap[2400] = uninitialized;
 
     // Character ROM 8x16
     brom uint8 characterGenerator8x16[] = {
@@ -93,7 +93,7 @@ algorithm character_map_writer(
     uint2   FSM = uninitialized;
 
     // COPY OF CHARCTER MAP FOR THE CURSES BUFFER
-    simple_dualport_bram uint21 charactermap_copy[2400] = { 21b100000000000000000000, pad(21b100000000000000000000) };
+    simple_dualport_bram uint21 charactermap_copy <input!> [2400] = uninitialized;
 
     // Counter for clearscreen
     uint12  tpu_write_addr <: tpu_active_x + tpu_active_y * 80;
@@ -175,7 +175,7 @@ algorithm character_map_writer(
 
             // TPU WIPE - WHOLE OR PARTIAL SCREEN
             case 1: {
-                while( tpu_cs_addr < tpu_max_count ) {
+                while( tpu_cs_addr != tpu_max_count ) {
                     charactermap.addr1 = tpu_cs_addr;
                     charactermap.wdata1 = 0;
                     colourmap.addr1 = tpu_cs_addr;
@@ -186,7 +186,7 @@ algorithm character_map_writer(
             }
             // CURSES WIPE
             case 2: {
-                while( tpu_cs_addr < 2400 ) {
+                while( tpu_cs_addr != 2400 ) {
                     charactermap_copy.addr1 = tpu_cs_addr;
                     charactermap_copy.wdata1 = 21b100000000000000000000;
                     tpu_cs_addr = tpu_cs_addr + 1;
@@ -195,9 +195,9 @@ algorithm character_map_writer(
             }
             // CURSES COPY
             case 3: {
-                while( tpu_cs_addr < 2400 ) {
+                while( tpu_cs_addr != 2400 ) {
                     FSM = 1;
-                    while( FSM !=0 ) {
+                    while( FSM != 0 ) {
                         onehot( FSM ) {
                             case 0: { charactermap_copy.addr0 = tpu_cs_addr; }
                             case 1: {
@@ -208,7 +208,7 @@ algorithm character_map_writer(
                                 tpu_cs_addr = tpu_cs_addr + 1;
                             }
                         }
-                        FSM = FSM << 1;
+                        FSM = { FSM[0,1], 1b0 };
                     }
                 }
                 tpu_active = 0;

@@ -69,7 +69,7 @@ void tilemapdemo( void ) {
         // UPPER RIGHT AND DOWN
         (void)tilemap_scrollwrapclear( UPPER_LAYER, 7 );
         (void)tilemap_scrollwrapclear( UPPER_LAYER, 8 );
-        sleep( 1000, 0 );
+        sleep( 20, 0 );
     }
 }
 

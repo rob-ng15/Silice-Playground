@@ -63,9 +63,12 @@ algorithm tilemap(
 
     // Character position on the screen x 0-41, y 0-31 * 42 ( fetch it two pixels ahead of the actual x pixel, so it is always ready, colours 1 pixel ahead )
     // Adjust for the offsets, effective 0 point margin is ( 1,1 ) to ( 40,30 ) with a 1 tile border
-    uint11  xtmpos <:  ( pix_active ? pix_x + ( 11d18 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) : ( 11d16 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) ) >> 4;
-    uint11  ytmpos <: ( pix_vblank ? 11d16 + {{6{tm_offset_y[4,1]}}, tm_offset_y} : ( 11d16 + pix_y  + {{6{tm_offset_y[4,1]}}, tm_offset_y} ) ) >> 4;
-    uint11  xtmposcolour <:  ( pix_active ? pix_x + ( 11d17 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) : ( 11d16 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) ) >> 4;
+    //uint11  xtmpos <:  ( pix_active ? pix_x + ( 11d18 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) : ( 11d16 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) ) >> 4;
+    //uint11  ytmpos <: ( pix_vblank ? 11d16 + {{6{tm_offset_y[4,1]}}, tm_offset_y} : ( 11d16 + pix_y  + {{6{tm_offset_y[4,1]}}, tm_offset_y} ) ) >> 4;
+    //uint11  xtmposcolour <:  ( pix_active ? pix_x + ( 11d17 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) : ( 11d16 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) ) >> 4;
+    uint11  xtmpos <: ( {{6{tm_offset_x[4,1]}}, tm_offset_x} + ( pix_active ? ( pix_x + 11d18 ) : 11d16 ) ) >> 4;
+    uint11  ytmpos <: ( {{6{tm_offset_y[4,1]}}, tm_offset_y} + ( pix_vblank ? 11d16 : 11d16 + pix_y ) ) >> 4;
+    uint11  xtmposcolour <: ( {{6{tm_offset_x[4,1]}}, tm_offset_x} + ( pix_active ? ( pix_x + 11d17 ) : 11d16 ) ) >> 4;
 
     // Derive the x and y coordinate within the current 16x16 tilemap block x 0-7, y 0-15
     // Needs adjusting for the offsets
@@ -122,7 +125,6 @@ algorithm tile_map_writer(
     uint1   tm_goleft = uninitialized;
     uint1   tm_goup = uninitialized;
     uint6   x_cursor = uninitialized;
-    uint6   y_cursor = uninitialized;
     uint11  y_cursor_addr = uninitialized;
     uint6   new_tile = uninitialized;
     uint13  new_colour = uninitialized;
@@ -176,10 +178,10 @@ algorithm tile_map_writer(
 
                     // SCROLL / WRAP
                     default: {
+                        tm_scroll = ( tm_scrollwrap < 5 );
                         switch( ( tm_scrollwrap - 1 ) & 3  ) {
                             case 0: {
                                 if( tm_offset_x == 15 ) {
-                                    tm_scroll = ( tm_scrollwrap == 1 );
                                     tm_lastaction = tm_scrollwrap;
                                     tm_goleft = 1;
                                     tm_active = 1;
@@ -191,7 +193,6 @@ algorithm tile_map_writer(
                             // UP
                             case 1: {
                                 if( tm_offset_y == 15 ) {
-                                    tm_scroll = ( tm_scrollwrap == 2 );
                                     tm_lastaction = tm_scrollwrap;
                                     tm_goup = 1;
                                     tm_active = 2;
@@ -203,7 +204,6 @@ algorithm tile_map_writer(
                             // RIGHT
                             case 2: {
                                 if( tm_offset_x == -15 ) {
-                                    tm_scroll = ( tm_scrollwrap == 3 );
                                     tm_lastaction = tm_scrollwrap;
                                     tm_goleft = 0;
                                     tm_active = 1;
@@ -215,7 +215,6 @@ algorithm tile_map_writer(
                             // DOWN
                             case 3: {
                                 if( tm_offset_y == -15 ) {
-                                    tm_scroll = ( tm_scrollwrap == 4 );
                                     tm_lastaction = tm_scrollwrap;
                                     tm_goup = 0;
                                     tm_active = 2;
@@ -234,9 +233,9 @@ algorithm tile_map_writer(
                 FSM = 1;
                 while( FSM != 0 ) {
                     onehot( FSM ) {
-                        case 0: {  y_cursor = 0; y_cursor_addr = 0; }
+                        case 0: {  y_cursor_addr = 0; }
                         case 1: {
-                            while( y_cursor != 32 ) {
+                            while( y_cursor_addr != 1344 ) {
                                 FSM2 = 1;
                                 while( FSM2 != 0 ) {
                                     onehot( FSM2 ) {
@@ -286,7 +285,6 @@ algorithm tile_map_writer(
                                             colours_copy.wdata1 = new_colour;
                                         }
                                         case 3: {
-                                            y_cursor = y_cursor + 1;
                                             y_cursor_addr = y_cursor_addr + 42;
                                         }
                                     }
@@ -313,7 +311,6 @@ algorithm tile_map_writer(
                                 while( FSM2 != 0 ) {
                                     onehot( FSM2 ) {
                                         case 0: {
-                                            y_cursor = tm_goup ? 0 : 31;
                                             y_cursor_addr = tm_goup ? 0 : 1302;
                                             tiles_copy.addr0 = x_cursor + y_cursor_addr;
                                             colours_copy.addr0 = x_cursor + y_cursor_addr;
@@ -321,7 +318,7 @@ algorithm tile_map_writer(
                                         case 1: {
                                             new_tile = tm_scroll ? 0 : tiles_copy.rdata0;
                                             new_colour = tm_scroll ? 13h1000 : colours_copy.rdata0;
-                                            while( tm_goup ? ( y_cursor != 31 ) : ( y_cursor != 0 ) ) {
+                                            while( tm_goup ? ( y_cursor_addr != 1302 ) : ( y_cursor_addr != 0 ) ) {
                                                 FSM3 = 1;
                                                 while( FSM3 != 0 ) {
                                                     onehot( FSM3 ) {
@@ -340,11 +337,10 @@ algorithm tile_map_writer(
                                                             colours.wdata1 = colours_copy.rdata0;
                                                             colours_copy.addr1 = temp_1;
                                                             colours_copy.wdata1 = colours_copy.rdata0;
-                                                            y_cursor = tm_goup ? y_cursor + 1 : y_cursor - 1;
                                                             y_cursor_addr = tm_goup ? y_cursor_addr + 42 : y_cursor_addr - 42;
                                                         }
                                                     }
-                                                    FSM3 = FSM3 << 1;
+                                                    FSM3 = { FSM3[0,1], 1b0 };
                                                 }
                                             }
                                         }
@@ -363,12 +359,12 @@ algorithm tile_map_writer(
                                             x_cursor = x_cursor + 1;
                                         }
                                     }
-                                    FSM2 = FSM2 << 1;
+                                    FSM2 = { FSM2[0,3], 1b0 };
                                 }
                             }
                         }
                     }
-                    FSM = FSM << 1;
+                    FSM = { FSM[0,1], 1b0 };
                 }
                 tm_offset_y = 0;
                 tm_active = 0;

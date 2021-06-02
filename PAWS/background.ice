@@ -53,7 +53,6 @@ algorithm background(
         copper_execute = 0;
         copper_branch = 0;
 
-
         switch( background_update ) {
             case 2b00: {
                 // UPDATE THE BACKGROUND GENERATOR FROM THE COPPER

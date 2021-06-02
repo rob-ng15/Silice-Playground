@@ -783,10 +783,10 @@ algorithm uart(
     uartOutBuffer.wenable1 := 1; // always write on port 1
     uartOutBuffer.addr0 := uartOutBufferNext; // FIFO reads on next
     uartInBuffer.wdata1 := ui.data_out;
-    uartInBufferTop := ui.data_out_ready ? uartInBufferTop + 1 : uartInBufferTop;
+    uartInBufferTop := uartInBufferTop + ui.data_out_ready;
     uo.data_in := uartOutBuffer.rdata0;
     uo.data_in_ready := ( uartOutBufferNext != uartOutBufferTop ) && ( !uo.busy );
-    uartOutBufferNext := ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) ) ? uartOutBufferNext + 1 : uartOutBufferNext;
+    uartOutBufferNext :=  uartOutBufferNext + ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) );
 
     while(1) {
         if( outwrite ) {

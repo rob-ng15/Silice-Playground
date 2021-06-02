@@ -45,6 +45,13 @@ typedef unsigned int size_t;
 #define ORANGE 0x38
 
 // STANDARD C FUNCTIONS ( from @sylefeb mylibc )
+void * memset(void *dest, int val, size_t len) {
+  unsigned char *ptr = dest;
+  while (len-- > 0)
+    *ptr++ = val;
+  return dest;
+}
+
 short strlen( char *s ) {
     short i = 0;
     while( *s ) {
@@ -393,14 +400,17 @@ void waitbuttonrelease( void ) {
     while( get_buttons() != 1 );
 }
 
+extern int _bss_start, _bss_end;
 void main( void ) {
     unsigned short i,j;
     unsigned char uartData = 0;
     unsigned short selectedfile = 0;
-    //unsigned int *sdramaddress;
 
     // STOP SMT
     *SMTSTATUS = 0;
+
+    // CLEAR MEMORY
+    memset( &_bss_start, 0, &_bss_end - &_bss_end );
 
     // RESET THE DISPLAY
     reset_display();

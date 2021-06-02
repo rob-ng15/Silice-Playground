@@ -9,11 +9,11 @@ int main( void ) {
     INITIALISEMEMORY();
 
     /* Maximum number of iterations, at most 65535. */
-    const uint16_t maxiter = MAXITER;
+    const unsigned short maxiter = MAXITER;
 
     /* Image size */
-    const int xres = 320;
-    const int yres = 240;
+    const short xres = 320;
+    const short yres = 240;
 
     /* The window in the plane. */
     const float xmin = 0.27085;
@@ -29,11 +29,11 @@ int main( void ) {
     float u, v; /* Coordinates of the iterated point. */
     float u2, v2;
 
-    int i,j; /* Pixel counters */
-    int k; /* Iteration counter */
-    int ysize = yres, xsize = xres, ypixel, xpixel;
+    short i,j; /* Pixel counters */
+    short k; /* Iteration counter */
+    short ysize = yres, xsize = xres, ypixel, xpixel, z;
 
-    for( short z = 0; z < 5; z++ ) {
+    for( z = 0; z < 6; z++ ) {
         ysize = ysize >> 1; ypixel = ysize >> 1;
         xsize = xsize >> 1; xpixel = xsize >> 1;
         //tpu_printf_centre( 28, TRANSPARENT, WHITE, "ITERATION %d start ( %3d, %3d ) dx = %f dy = %f", z, xsize, ysize, dx, dy );
