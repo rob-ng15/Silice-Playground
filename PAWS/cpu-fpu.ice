@@ -93,7 +93,6 @@ algorithm PAWSCPU(
     uint7   opCode = uninitialized;
     uint3   function3 = uninitialized;
     uint7   function7 = uninitialized;
-    //uint5   IshiftCount = uninitialized;
     uint5   rs1 = uninitialized;
     uint5   rs2 = uninitialized;
     uint5   rs3 = uninitialized;
@@ -108,7 +107,6 @@ algorithm PAWSCPU(
         rs3 :> rs3,
         rd :> rd,
         immediateValue :> immediateValue,
-        //IshiftCount :> IshiftCount
     );
 
     // RISC-V REGISTERS

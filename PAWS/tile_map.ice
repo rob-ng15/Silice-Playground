@@ -27,11 +27,11 @@ algorithm tilemap(
     output  uint2   tm_active
 ) <autorun> {
     // Tiles 64 x 16 x 16
-    simple_dualport_bram uint16 tiles16x16 <input!> [ 1024 ] = { 0, pad(0) };
+    simple_dualport_bram uint16 tiles16x16 <input!> [ 1024 ] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, pad(uninitialized) };
 
     // 42 x 32 tile map, allows for pixel scrolling with border { 7 bits background, 6 bits foreground, 5 bits tile number }
     // Setting background to 40 (ALPHA) allows the bitmap/background to show through
-    simple_dualport_bram uint6 tiles[1344] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, pad(uninitialized) };
+    simple_dualport_bram uint6 tiles[1344] = uninitialized;
     simple_dualport_bram uint13 colours[1344] = uninitialized;
 
     // Scroll position - -15 to 0 to 15

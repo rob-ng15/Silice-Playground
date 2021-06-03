@@ -159,7 +159,7 @@ algorithm bitmap(
     bitmap_1.addr0 := y_line * 320 + x_pixel;
 
     // RENDER - Default to transparent
-    bitmap_display := pix_active && ~( framebuffer ? bitmap_1.rdata0[6,1] : bitmap_0.rdata0[6,1] );
+    bitmap_display := pix_active & ~( framebuffer ? bitmap_1.rdata0[6,1] : bitmap_0.rdata0[6,1] );
     pix_red := framebuffer ? bitmap_1.rdata0[4,2] : bitmap_0.rdata0[4,2];
     pix_green := framebuffer ? bitmap_1.rdata0[2,2] : bitmap_0.rdata0[2,2];
     pix_blue := framebuffer ? bitmap_1.rdata0[0,2] : bitmap_0.rdata0[0,2];

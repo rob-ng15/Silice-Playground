@@ -106,7 +106,6 @@ algorithm sprite_layer(
             pix_visible :> pix_visible_$i$,
             tiles <:> tiles_$i$
         );
-
         // Collision detection flag
         uint16      detect_collision_$i$ = uninitialised;
         uint4       detect_layer_$i$ = uninitialised;
@@ -284,7 +283,7 @@ algorithm sprite_generator(
     tiles.addr0 := { sprite_tile_number, yinsprite };
 
     // Determine if pixel is visible
-    pix_visible := sprite_active & xinrange && yinrange & ( tiles.rdata0[ ( 15  - ( ( __signed({1b0, pix_x}) - sprite_x ) >>> sprite_double ) ), 1 ] );
+    pix_visible := sprite_active & xinrange & yinrange & ( tiles.rdata0[ ( 15  - ( ( __signed({1b0, pix_x}) - sprite_x ) >>> sprite_double ) ), 1 ] );
 }
 
 algorithm spritebitmapwriter(

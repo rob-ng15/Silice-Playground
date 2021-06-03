@@ -93,13 +93,13 @@ algorithm main(
 
     // SDRAM and BRAM (for BIOS)
     // FUNCTION3 controls byte read/writes
-    sdramcontroller sdram <@clock_system> (
+    sdramcontroller sdram <@clock_system,!reset> (
         sio <:> sio_halfrate,
         function3 <: function3,
         address <: address,
         writedata <: writedata,
     );
-    bramcontroller ram <@clock_system> (
+    bramcontroller ram <@clock_system,!reset> (
         function3 <: function3,
         address <: address,
         writedata <: writedata,
@@ -108,7 +108,7 @@ algorithm main(
     // MEMORY MAPPED I/O + SMT CONTROLS
     uint1   SMTRUNNING = uninitialized;
     uint32  SMTSTARTPC = uninitialized;
-    io_memmap IO_Map <@clock_system> (
+    io_memmap IO_Map <@clock_system,!reset> (
         gn <: gn,
         gp :> gp,
         leds :> leds,
@@ -130,14 +130,14 @@ algorithm main(
         SMTRUNNING :> SMTRUNNING,
         SMTSTARTPC :> SMTSTARTPC
     );
-    audiotimers_memmap AUDIOTIMERS_Map <@clock_system> (
+    audiotimers_memmap AUDIOTIMERS_Map <@clock_system,!reset> (
         clock_25mhz <: clock,
         memoryAddress <: address,
         writeData <: writedata,
         audio_l :> audio_l,
         audio_r :> audio_r
     );
-    video_memmap VIDEO_Map <@clock_system> (
+    video_memmap VIDEO_Map <@clock_system,!reset> (
         clock_25mhz <: clock,
         memoryAddress <: address,
         writeData <: writedata,
@@ -147,7 +147,7 @@ algorithm main(
     uint3   function3 = uninitialized;
     uint32  address = uninitialized;
     uint16  writedata = uninitialized;
-    PAWSCPU CPU <@clock_system> (
+    PAWSCPU CPU <@clock_system,!reset> (
         clock_CPUdecoder <: clock_100_1,
         accesssize :> function3,
         address :> address,
