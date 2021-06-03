@@ -868,7 +868,7 @@ algorithm sdcardbuffer(
     output  uint8   bufferdata
 ) <autorun> {
     // SDCARD - Code for the SDCARD from @sylefeb
-    simple_dualport_bram uint8 sdbuffer[512] = uninitialized;
+    simple_dualport_bram uint8 sdbuffer <input!> [512] = uninitialized;
     sdcardio sdcio;
     sdcard sd(
         // pins

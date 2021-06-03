@@ -56,7 +56,7 @@ algorithm aluMdivideremain(
                         }
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,1], 1b0 };
             }
             busy = 0;
         }
@@ -65,17 +65,12 @@ algorithm aluMdivideremain(
 
 // UNSIGNED / SIGNED 32 by 32 bit multiplication giving 64 bit product using DSP blocks
 algorithm aluMmultiply(
-    input   uint1   start,
-    output  uint1   busy,
-
     input   uint3   dosign,
     input   uint32  factor_1,
     input   uint32  factor_2,
 
     output  uint32  result
 ) <autorun> {
-    uint4   FSM = uninitialized;
-
     uint2   dosigned = uninitialized;
     uint1   productsign = uninitialized;
     uint32  factor_1_copy = uninitialized;
@@ -87,34 +82,17 @@ algorithm aluMmultiply(
     uint18  B = uninitialized;
     uint18  C = uninitialized;
     uint18  D = uninitialized;
-
-    busy = 0;
-
     while(1) {
-        if( start ) {
-            busy = 1;
-            FSM = 1;
-            while( FSM != 0 ) {
-                onehot( FSM ) {
-                    case 0: {
-                        dosigned = dosign[1,1] ? ( dosign[0,1] ? 0 : 2 ) : 1;
-                        productsign = ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
-                        factor_1_copy = ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
-                        factor_2_copy = ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
-                    }
-                    case 1: {
-                        A = { 2b0, factor_1_copy[16,16] };
-                        B = { 2b0, factor_1_copy[0,16] };
-                        C = { 2b0, factor_2_copy[16,16] };
-                        D = { 2b0, factor_2_copy[0,16] };
-                    }
-                    case 2: { product = productsign ? -( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } ) : ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } ); }
-                    case 3: { result = ( dosign == 0 ) ? product[0,32] : product[32,32]; }
-                }
-                FSM = FSM << 1;
-            }
-            busy = 0;
-        }
+        dosigned = dosign[1,1] ? ( dosign[0,1] ? 0 : 2 ) : 1;
+        productsign = ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
+        factor_1_copy = ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
+        factor_2_copy = ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
+        A = { 2b0, factor_1_copy[16,16] };
+        B = { 2b0, factor_1_copy[0,16] };
+        C = { 2b0, factor_2_copy[16,16] };
+        D = { 2b0, factor_2_copy[0,16] };
+        product = productsign ? -( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } ) : ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
+        result = ( dosign == 0 ) ? product[0,32] : product[32,32];
     }
 }
 
@@ -292,9 +270,7 @@ algorithm aluR000(
     input   uint7   function7,
     output  int32   result
 ) <autorun> {
-    while(1) {
-        result = sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 );
-    }
+    result := sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 );
 }
 algorithm aluR001(
     input   uint1   start,
@@ -630,7 +606,6 @@ algorithm aluR (
 
     // START FLAGS FOR ALU SUB BLOCKS
     ALUMD.start := 0;
-    ALUMM.start := 0;
     ALUR001.start := 0;
     ALUR010.start := 0;
     ALUR011.start := 0;
@@ -650,7 +625,7 @@ algorithm aluR (
                 // M EXTENSION MULTIPLICATION AND DIVISION
                 case 7b0000001: {
                     switch( function3[2,1] ) {
-                        case 1b0: { ALUMM.start = 1; while( ALUMM.busy ) {} result = ALUMM.result; }
+                        case 1b0: { result = ALUMM.result; }
                         case 1b1: { ALUMD.start = 1; while( ALUMD.busy ) {} result = ALUMD.result; }
                     }
                 }
