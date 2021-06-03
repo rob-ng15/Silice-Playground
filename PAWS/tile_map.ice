@@ -63,9 +63,6 @@ algorithm tilemap(
 
     // Character position on the screen x 0-41, y 0-31 * 42 ( fetch it two pixels ahead of the actual x pixel, so it is always ready, colours 1 pixel ahead )
     // Adjust for the offsets, effective 0 point margin is ( 1,1 ) to ( 40,30 ) with a 1 tile border
-    //uint11  xtmpos <:  ( pix_active ? pix_x + ( 11d18 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) : ( 11d16 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) ) >> 4;
-    //uint11  ytmpos <: ( pix_vblank ? 11d16 + {{6{tm_offset_y[4,1]}}, tm_offset_y} : ( 11d16 + pix_y  + {{6{tm_offset_y[4,1]}}, tm_offset_y} ) ) >> 4;
-    //uint11  xtmposcolour <:  ( pix_active ? pix_x + ( 11d17 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) : ( 11d16 + {{6{tm_offset_x[4,1]}}, tm_offset_x} ) ) >> 4;
     uint11  xtmpos <: ( {{6{tm_offset_x[4,1]}}, tm_offset_x} + ( pix_active ? ( pix_x + 11d18 ) : 11d16 ) ) >> 4;
     uint11  ytmpos <: ( {{6{tm_offset_y[4,1]}}, tm_offset_y} + ( pix_vblank ? 11d16 : 11d16 + pix_y ) ) >> 4;
     uint11  xtmposcolour <: ( {{6{tm_offset_x[4,1]}}, tm_offset_x} + ( pix_active ? ( pix_x + 11d17 ) : 11d16 ) ) >> 4;
@@ -86,7 +83,7 @@ algorithm tilemap(
     tiles16x16.addr0 :=  { tiles.rdata0, yintm };
 
     // RENDER - Default to transparent
-    tilemap_display := pix_active && ( tmpixel || ~colours.rdata0[12,1] );
+    tilemap_display := pix_active & ( tmpixel | ~colours.rdata0[12,1] );
     pix_red := tmpixel ? colours.rdata0[4,2] : colours.rdata0[10,2];
     pix_green := tmpixel ? colours.rdata0[2,2] : colours.rdata0[8,2];
     pix_blue := tmpixel ?  colours.rdata0[0,2] : colours.rdata0[6,2];

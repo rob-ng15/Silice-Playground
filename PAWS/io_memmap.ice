@@ -288,7 +288,7 @@ algorithm video_memmap(
         pix_red    :> lower_tilemap_r,
         pix_green  :> lower_tilemap_g,
         pix_blue   :> lower_tilemap_b,
-        tilemap_display :> lower_tilemap_display,
+        tilemap_display :> lower_tilemap_display
     );
     tilemap upper_tile_map <@video_clock,!video_reset> (
         pix_x      <: pix_x,
@@ -298,7 +298,7 @@ algorithm video_memmap(
         pix_red    :> upper_tilemap_r,
         pix_green  :> upper_tilemap_g,
         pix_blue   :> upper_tilemap_b,
-        tilemap_display :> upper_tilemap_display,
+        tilemap_display :> upper_tilemap_display
     );
 
     // Bitmap Window with GPU

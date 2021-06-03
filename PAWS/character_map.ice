@@ -22,8 +22,8 @@ algorithm character_map(
 ) <autorun> {
     // 80 x 30 character buffer
     // Setting background to 40 (ALPHA) allows the bitmap/background to show through
-    simple_dualport_bram uint8 charactermap[2400] = uninitialized;
-    simple_dualport_bram uint13 colourmap[2400] = uninitialized;
+    simple_dualport_bram uint8 charactermap <input!> [2400] = uninitialized;
+    simple_dualport_bram uint13 colourmap <input!> [2400] = uninitialized;
 
     // Character ROM 8x16
     brom uint8 characterGenerator8x16[] = {
@@ -67,7 +67,7 @@ algorithm character_map(
     characterGenerator8x16.addr :=  { charactermap.rdata0, yincharacter };
 
     // RENDER - Default to transparent
-    character_map_display := pix_active && ( characterpixel || ~colour13(colourmap.rdata0).alpha );
+    character_map_display := pix_active & ( characterpixel | ~colour13(colourmap.rdata0).alpha );
     pix_red := characterpixel ? colour13(colourmap.rdata0).forered : colour13(colourmap.rdata0).backred;
     pix_green := characterpixel ? colour13(colourmap.rdata0).foregreen : colour13(colourmap.rdata0).backgreen;
     pix_blue := characterpixel ? colour13(colourmap.rdata0).foreblue : colour13(colourmap.rdata0).backblue;

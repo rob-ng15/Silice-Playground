@@ -215,7 +215,7 @@ algorithm PAWSCPU(
     );
 
     // MEMORY ACCESS FLAGS
-    accesssize := ( ( opCode == 7b0101111 ) || ( opCode == 7b0000111 ) || ( opCode == 7b0100111 ) ) ? 3b010 : function3;
+    accesssize := ( ( opCode == 7b0101111 ) | ( opCode == 7b0000111 ) | ( opCode == 7b0100111 ) ) ? 3b010 : function3;
     readmemory := 0;
     writememory := 0;
 
