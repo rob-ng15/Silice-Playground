@@ -789,17 +789,20 @@ algorithm uart(
     uartOutBufferNext :=  uartOutBufferNext + ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) );
 
     while(1) {
-        if( outwrite ) {
-            uartOutBuffer.addr1 = uartOutBufferTop;
-            uartOutBuffer.wdata1 = outchar;
-            update = 1;
-        } else {
-            if( update != 0 ) {
-                uartOutBufferTop = uartOutBufferTop + 1;
-                update = 0;
+        switch( outwrite ) {
+            case 1: {
+                uartOutBuffer.addr1 = uartOutBufferTop;
+                uartOutBuffer.wdata1 = outchar;
+                update = 1;
+            }
+            case 0: {
+                if( update != 0 ) {
+                    uartOutBufferTop = uartOutBufferTop + 1;
+                    update = 0;
+                }
             }
         }
-         uartInBufferNext = uartInBufferNext + inread;
+        uartInBufferNext = uartInBufferNext + inread;
     }
 }
 
@@ -838,14 +841,17 @@ algorithm ps2buffer(
     inchar := ps2Buffer.rdata0;
 
     while(1) {
-        if( PS2.asciivalid ) {
-            ps2Buffer.addr1 = ps2BufferTop;
-            ps2Buffer.wdata1 = PS2.ascii;
-            update = 1;
-        } else {
-            if( update != 0 ) {
-                ps2BufferTop = ps2BufferTop + 1;
-                update = 0;
+        switch( PS2.asciivalid ) {
+            case 1: {
+                ps2Buffer.addr1 = ps2BufferTop;
+                ps2Buffer.wdata1 = PS2.ascii;
+                update = 1;
+            }
+            case 0: {
+                if( update != 0 ) {
+                    ps2BufferTop = ps2BufferTop + 1;
+                    update = 0;
+                }
             }
         }
         ps2BufferNext = ps2BufferNext + inread;

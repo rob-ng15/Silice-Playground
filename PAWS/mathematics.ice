@@ -250,8 +250,6 @@ algorithm aluI(
                 case 3b001: { ALUIb001.start = 1; while( ALUIb001.busy ) {} result = ALUIb001.result; }
                 case 3b010: { result = __signed( sourceReg1 ) < __signed(immediateValue); }
                 case 3b011: { result = ( immediateValue == 1 ) ? ( sourceReg1 == 0 ) : ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ); }
-                //case 3b010: { result = __signed( sourceReg1 ) < __signed(immediateValue) ? 32b1 : 32b0; }
-                //case 3b011: { result = ( immediateValue == 1 ) ? ( ( sourceReg1 == 0 ) ? 32b1 : 32b0 ) : ( ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ) ? 32b1 : 32b0 ); }
                 case 3b100: { result = sourceReg1 ^ immediateValue; }
                 case 3b101: { ALUIb101.start = 1; while( ALUIb101.busy ) {} result = ALUIb101.result; }
                 case 3b110: { result = sourceReg1 | immediateValue; }
@@ -375,7 +373,7 @@ algorithm aluR100(
                 case 7b0000100: { result = { sourceReg2[0,16], sourceReg1[0,16] }; }                        // PACK
                 case 7b0100100: { result = { sourceReg2[16,16], sourceReg1[16,16] }; }                      // PACKU
                 case 7b0010100: { while( XPERMbusy ) {} result = XPERMoutput; }                             // XPERM.B
-                default: { result = sourceReg1 ^ ( ( function7[5,1] == 1 ) ? ~sourceReg2 : sourceReg2 ); }  // XOR XNOR
+                default: { result = sourceReg1 ^ ( function7[5,1] ? ~sourceReg2 : sourceReg2 ); }  // XOR XNOR
             }
             busy = 0;
         }
@@ -444,7 +442,7 @@ algorithm aluR110(
                 case 7b0100100: { BEXTBDEP.start = 1; while( BEXTBDEP.busy ) {} result = BEXTBDEP.result; }     // BDEP
                 case 7b0000100: { BEXTBDEP.start = 1; while( BEXTBDEP.busy ) {} result = BEXTBDEP.result; }     // BEXT
                 case 7b0010100: { while( XPERMbusy ) {} result = XPERMoutput; }                                 // XPERM.H
-                default: { result = sourceReg1 | ( ( function7[5,1] == 1 ) ? ~sourceReg2 : sourceReg2 ); }      // OR ORN
+                default: { result = sourceReg1 | ( function7[5,1] ? ~sourceReg2 : sourceReg2 ); }      // OR ORN
             }
             busy = 0;
         }
@@ -472,7 +470,7 @@ algorithm aluR111(
                 case 7b0000101: { ( result ) = maxu( sourceReg1, sourceReg2 ); }                                // MAXU
                 case 7b0100100: { BFP.start = 1; while( BFP.busy ) {} result = BFP.result; }                    // BFP
                 case 7b0000100: { result = { 16b0, sourceReg2[0,8], sourceReg1[0,8] }; }                        // PACKH
-                default: { result = sourceReg1 & ( ( function7[5,1] == 1 ) ? ~sourceReg2 : sourceReg2 ); }      // AND ANDN
+                default: { result = sourceReg1 & ( function7[5,1] ? ~sourceReg2 : sourceReg2 ); }      // AND ANDN
             }
             busy = 0;
         }
@@ -631,7 +629,7 @@ algorithm aluR (
                 }
                 // BASE + REMAINING B EXTENSION
                 default: {
-                    CLMUL.start = ( function7 == 7b0000101 ) & ( function3[2,1] == 0 );
+                    CLMUL.start = ( function7 == 7b0000101 ) & ~function3[2,1];
                     XPERM.start = ( function7 == 7b0010100 ) & ( ( function3 == 3b010) | ( function3 == 3b100 ) | ( function3 == 3b110 ) );
                     switch( function3 ) {
                         case 3b000: { result = ALUR000.result; }
@@ -667,8 +665,8 @@ algorithm alu(
 
     output  uint32  result
 ) <autorun> {
-    uint5   shiftcount := opCode[5,1] ? sourceReg2[0,5] : IshiftCount;
-    uint6   Fshiftcount := opCode[5,1] ? sourceReg2[0,6] : { function7[0,1], IshiftCount };
+    uint5   shiftcount <: opCode[5,1] ? sourceReg2[0,5] : IshiftCount;
+    uint6   Fshiftcount <: opCode[5,1] ? sourceReg2[0,6] : { function7[0,1], IshiftCount };
 
     // SHIFTERS
     uint32  LSHIFToutput = uninitialized;
@@ -933,7 +931,7 @@ algorithm grevgorc(
                     case 4: { if( shiftcount[3,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h00ff00ff ) << 8 ) | ( ( result & 32hff00ff00 ) >> 8 ); } }
                     case 5: { if( shiftcount[4,1] ) { result = ( ( function7 == 7b0110100 ) ? result : 0 ) | ( ( result & 32h0000ffff ) << 16 ) | ( ( result & 32hffff0000 ) >> 16 ); } }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,5], 1b0 };
             }
             busy = 0;
         }
@@ -950,16 +948,13 @@ circuitry shuffle32_stage(
 ) {
     uint32  A = uninitialised;
     uint32  B = uninitialised;
-
-    x = src & ~( maskL | maskR );
     switch( N ) {
         case 1: { A = { src[0,31] , 1b0 }; B = { 1b0, src[1,31] }; }
         case 2: { A = { src[0,30] , 2b0 }; B = { 2b0, src[2,30] }; }
         case 4: { A = { src[0,28] , 4b0 }; B = { 4b0, src[4,28] }; }
         case 8: { A = { src[0,24] , 8b0 }; B = { 8b0, src[8,24] }; }
     }
-    ++:
-    x = x | ( A & maskL ) | ( B & maskR );
+    x = ( src & ~( maskL | maskR ) ) | ( A & maskL ) | ( B & maskR );
 }
 algorithm shflunshfl(
     input   uint1   start,
@@ -1005,7 +1000,7 @@ algorithm shflunshfl(
                         }
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,1], 1b0 };
             }
             busy = 0;
         }
@@ -1046,7 +1041,7 @@ algorithm clmul(
                         }
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,1], 1b0 };
             }
             busy = 0;
         }
@@ -1092,7 +1087,7 @@ algorithm bextbdep(
                         }
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,1], 1b0 };
             }
             busy = 0;
         }
@@ -1127,7 +1122,7 @@ algorithm bfp(
                     case 1: { mask = ~(~mask << length) << offset; }
                     case 2: { result = ( ( sourceReg2 << offset ) & mask ) | ( sourceReg1 & ~mask ); }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,2], 1b0 };
             }
             busy = 0;
         }
@@ -1162,7 +1157,7 @@ algorithm clz(
                         }
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,1], 1b0 };
             }
             busy = 0;
         }
@@ -1195,7 +1190,7 @@ algorithm ctz(
                         }
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,1], 1b0 };
             }
             busy = 0;
         }
@@ -1230,7 +1225,7 @@ algorithm pcnt(
                         }
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,1], 1b0 };
             }
             busy = 0;
         }
@@ -1278,7 +1273,7 @@ algorithm crc32(
                         }
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,1], 1b0 };
             }
             busy = 0;
         }
@@ -1334,12 +1329,12 @@ algorithm xperm(
                                         i = i + sz;
                                     }
                                 }
-                                FSM2 = FSM2 << 1;
+                                FSM2 = { FSM2[0,1], 1b0 };
                             }
                         }
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,1], 1b0 };
             }
             busy = 0;
         }

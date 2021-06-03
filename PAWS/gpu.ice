@@ -345,7 +345,7 @@ algorithm rectangle (
     input   uint1   start,
     output  uint1   busy
 ) <autorun> {
-    uint3   FSM = uninitialised;
+    uint2   FSM = uninitialised;
 
     int10   gpu_active_x = uninitialized;
     int10   gpu_active_y = uninitialized;
@@ -377,8 +377,6 @@ algorithm rectangle (
                     case 1: {
                         ( gpu_active_x, gpu_active_y, gpu_max_x, gpu_max_y ) = cropscreen( gpu_active_x, gpu_active_y, gpu_max_x, gpu_max_y );
                         ( gpu_x1 ) = cropleft( gpu_active_x );
-                    }
-                    case 2: {
                         while( gpu_active_y <= gpu_max_y ) {
                             while( gpu_active_x <= gpu_max_x ) {
                                 bitmap_write = 1;
@@ -389,7 +387,7 @@ algorithm rectangle (
                         }
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,1], 1b0 };
             }
             active = 0;
         }
@@ -410,7 +408,7 @@ algorithm line (
     input   uint1   start,
     output  uint1   busy
 ) <autorun> {
-    uint3   FSM = uninitialised;
+    uint2   FSM = uninitialised;
     uint3   FSM2 = uninitialised;
 
     int10   gpu_active_x = uninitialized;
@@ -453,8 +451,6 @@ algorithm line (
                     case 1: {
                         gpu_numerator = ( gpu_dx > gpu_dy ) ? ( gpu_dx >> 1 ) : -( gpu_dy >> 1 );
                         ( gpu_max_count ) = max( gpu_dx, gpu_dy );
-                    }
-                    case 2: {
                         while( gpu_count <= gpu_max_count ) {
                             FSM2 = 1;
                             while( FSM2 != 0 ) {
@@ -476,13 +472,13 @@ algorithm line (
                                         }
                                     }
                                 }
-                                FSM2 = FSM2 << 1;
+                                FSM2 = { FSM2[0,2], 1b0 };
                             }
                             gpu_count = gpu_count + 1;
                         }
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,1], 1b0 };
             }
             active = 0;
         }
@@ -519,7 +515,7 @@ algorithm circle(
     output  uint1   busy
 ) <autorun> {
     uint8   PIXELOUTPUT = uninitialised;
-    uint3   FSM = uninitialised;
+    uint2   FSM = uninitialised;
     int10   gpu_active_x = uninitialized;
     int10   gpu_active_y = uninitialized;
     int10   gpu_xc = uninitialized;
@@ -555,8 +551,6 @@ algorithm circle(
                         } else {
                             gpu_count = gpu_active_y;
                         }
-                    }
-                    case 2: {
                         gpu_numerator = 3 - ( { gpu_active_y, 1b0 } );
                         while( gpu_active_y >= gpu_active_x ) {
                             while( gpu_count != (-1) ) {
@@ -574,7 +568,7 @@ algorithm circle(
                                         case 7: { bitmap_y_write = gpu_yc + gpu_active_x; }
                                     }
                                     bitmap_write = 1;
-                                    PIXELOUTPUT = PIXELOUTPUT << 1;
+                                    PIXELOUTPUT = { PIXELOUTPUT[0,7], 1b0 };
                                 }
                                 gpu_count = filledcircle ? gpu_count - 1 : (-1);
                             }
@@ -585,7 +579,7 @@ algorithm circle(
                         }
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,1], 1b0 };
             }
 
             active = 0;
@@ -606,8 +600,8 @@ algorithm insideTriangle(
     input   int10   y2,
     output  uint1   inside
 ) <autorun> {
-     inside := ( (( x2 - x1 ) * ( sy - y1 ) - ( y2 - y1 ) * ( sx - x1 )) >= 0 ) &&
-                ( (( x - x2 ) * ( sy - y2 ) - ( y - y2 ) * ( sx - x2 )) >= 0 ) &&
+     inside := ( (( x2 - x1 ) * ( sy - y1 ) - ( y2 - y1 ) * ( sx - x1 )) >= 0 ) &
+                ( (( x - x2 ) * ( sy - y2 ) - ( y - y2 ) * ( sx - x2 )) >= 0 ) &
                 ( (( x1 - x ) * ( sy - y ) - ( y1 - y ) * ( sx - x )) >= 0 );
 }
 algorithm triangle (
@@ -720,7 +714,7 @@ algorithm triangle (
                             // Edge calculations to determine if inside the triangle - converted to DSP blocks
                             beenInTriangle = inTriangle ? 1 : beenInTriangle;
                             bitmap_write = inTriangle;
-                            FSM2 = ~( beenInTriangle && ~inTriangle );
+                            FSM2 = ~( beenInTriangle & ~inTriangle );
                             switch( FSM2 ) {
                                 case 0: {
                                     // Exited the triangle, move to the next line
@@ -762,7 +756,7 @@ algorithm triangle (
                         }
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,6], 1b0 };
             }
             active = 0;
         }
@@ -866,9 +860,9 @@ algorithm blit (
                         gpu_tile = param0;
                     }
                     case 1: {
-                        while( gpu_active_y < gpu_max_y ) {
-                            while( gpu_active_x < gpu_max_x ) {
-                                while( gpu_y2 < ( 1 << gpu_param1 ) ) {
+                        while( gpu_active_y != gpu_max_y ) {
+                            while( gpu_active_x != gpu_max_x ) {
+                                while( gpu_y2 != ( 1 << gpu_param1 ) ) {
                                     bitmap_write = tilecharacter ? blit1tilemap.rdata0[15 - ( gpu_active_x >> gpu_param1 ),1] : characterGenerator8x8.rdata0[7 - ( gpu_active_x >> gpu_param1 ),1];
                                     gpu_y2 = gpu_y2 + 1;
                                 }
@@ -880,7 +874,7 @@ algorithm blit (
                         }
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,1], 1b0 };
             }
             active = 0;
         }
@@ -964,10 +958,10 @@ algorithm colourblit(
                         ( gpu_tile, gpu_param1 ) = copycoordinates( param0, param1 );
                     }
                     case 1: {
-                        while( gpu_active_y < 16 ) {
+                        while( gpu_active_y != 16 ) {
                                 gpu_y2 = 0;
-                                while( gpu_y2 < ( 1 << gpu_param1 ) ) {
-                                    while( gpu_active_x < 16 ) {
+                                while( gpu_y2 != ( 1 << gpu_param1 ) ) {
+                                    while( gpu_active_x != 16 ) {
                                         gpu_x2 = 0;
                                         while( gpu_x2 < ( 1 << gpu_param1 ) ) {
                                             // OUTPUT IF NOT TRANSPARENT
@@ -983,7 +977,7 @@ algorithm colourblit(
                             }
                       }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,1], 1b0 };
             }
            active = 0;
         }
@@ -1074,7 +1068,7 @@ algorithm vectors(
                         vertices_number = 1;
                     }
                     case 2: {
-                        while( vectorentry(vertex.rdata0).active && ( vertices_number < 16 ) ) {
+                        while( vectorentry(vertex.rdata0).active && ( vertices_number != 16 ) ) {
                             // Dispatch line to GPU
                             ( gpu_x, gpu_y ) = copycoordinates( start_x, start_y );
                             ( gpu_param0, gpu_param1 ) = deltacoordinates( vector_block_xc, deltax, vector_block_yc, deltay, vector_block_scale );
@@ -1086,7 +1080,7 @@ algorithm vectors(
                         }
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,2], 1b0 };
             }
             vector_block_active = 0;
         }

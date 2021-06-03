@@ -145,16 +145,17 @@ circuitry countleadingzeros( input a, output count ) {
                 count = 0;
             }
             case 1: {
-                if( a == 0 ) {
-                    count = 32;
-                } else {
-                    while( ~a[31-count,1] ) {
-                        count = count + 1;
+                switch( a ) {
+                    case 0: { count = 32; }
+                    default: {
+                        while( ~a[31-count,1] ) {
+                            count = count + 1;
+                        }
                     }
                 }
             }
         }
-        CYCLE = CYCLE << 1;
+        CYCLE = { CYCLE[0,1], 1b0 };
     }
 }
 
@@ -194,17 +195,18 @@ algorithm inttofloat(
                         number = rs2[0,1] ? a : ( a[31,1] ? -a : a );
                     }
                     case 1: {
-                        if( number == 0 ) {
-                            result = { sign, 31b0 };
-                        } else {
-                            ( zeros ) = countleadingzeros( number );
-                            number = ( zeros < 8 ) ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
-                            exp = 158 - zeros;
-                            result = { sign, exp[0,8], number[0,23] };
+                        switch( number ) {
+                            case 0: { result = { sign, 31b0 }; }
+                            default: {
+                                ( zeros ) = countleadingzeros( number );
+                                number = ( zeros < 8 ) ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
+                                exp = 158 - zeros;
+                                result = { sign, exp[0,8], number[0,23] };
+                            }
                         }
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,1], 1b0 };
             }
             busy = 0;
         }
@@ -331,7 +333,7 @@ algorithm floataddsub(
                                                 result = { sign, expA[0,8], totaldifference[8,23] };
                                             } else {
                                                 while( ~totaldifference[30,1] ) {
-                                                    totaldifference = totaldifference << 1;
+                                                    totaldifference = { totaldifference[0,31], 1b0 };
                                                     expA = expA - 1;
                                                 }
                                                 result = { sign, expA[0,8], totaldifference[7,23] };
@@ -353,7 +355,7 @@ algorithm floataddsub(
                         }
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,4], 1b0 };
             }
             busy = 0;
         }
@@ -369,7 +371,7 @@ algorithm floatmultiply(
 
     output  uint32  result
 ) <autorun> {
-    uint4   FSM = uninitialised;
+    uint2   FSM = uninitialised;
 
     uint2   classEa = uninitialised;
     uint1   classFa = uninitialised;
@@ -400,17 +402,13 @@ algorithm floatmultiply(
                         productsign = a[31,1] ^ b[31,1];
                         expA = floatingpointnumber( a ).exponent;
                         expB = floatingpointnumber( b ).exponent;
-                    }
-                    case 1: {
                         A = { 10b0, 1b1, a[16,7] };
                         B = { 2b0, a[0,16] };
                         C = { 10b0, 1b1, b[16,7] };
                         D = { 2b0, b[0,16] };
-                    }
-                    case 2: {
                         product = ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
                     }
-                    case 3: {
+                    case 1: {
                         switch( classEa ) {
                             case 2b00: {
                                 switch( classEb ) {
@@ -419,8 +417,8 @@ algorithm floatmultiply(
                                             result = { productsign, 31b0 };
                                         } else {
                                             productexp = expA + expB - 127 + product[47,1];
-                                            while( product[47,1] == 0 ) {
-                                                product = product << 1;
+                                            while( ~product[47,1] ) {
+                                                product = { product[0,47], 1b0 };
                                             }
                                             result = { productsign, productexp[0,8], product[24,23] };
                                         }
@@ -440,7 +438,7 @@ algorithm floatmultiply(
                         }
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,1], 1b0 };
             }
             busy = 0;
         }
@@ -491,7 +489,7 @@ algorithm floatdivide(
                         remainder = 0;
                         bit = 31;
                     }
-                    case 1: { while( ~sigB[0,1] ) { sigB = sigB >> 1; } }
+                    case 1: { while( ~sigB[0,1] ) { sigB = { 1b0, sigB[1,31] }; } }
                     case 2: {
                         switch( classEa ) {
                             case 2b00: {
@@ -499,20 +497,21 @@ algorithm floatdivide(
                                     case 2b00: {
                                         while( bit != 63 ) {
                                             temporary = { remainder[0,31], sigA[bit,1] };
-                                            FSM2 = __unsigned(temporary) >= __unsigned(sigB) ? 1 : 0;
+                                            FSM2 = __unsigned(temporary) >= __unsigned(sigB);
                                             switch( FSM2 ) {
                                                 case 1: { remainder = __unsigned(temporary) - __unsigned(sigB); quotient[bit,1] = 1; }
                                                 case 0: { remainder = temporary; }
                                             }
                                             bit = bit - 1;
                                         }
-                                        if( quotient == 0 ) {
-                                            result = { quotientsign, 31b0 };
-                                        } else {
-                                            while( quotient[31,1] == 0 ) {
-                                                quotient = quotient << 1;
+                                        switch( quotient ) {
+                                            case 0: { result = { quotientsign, 31b0 }; }
+                                            default: {
+                                                while( ~quotient[31,1] ) {
+                                                    quotient = { quotient[0,31], 1b0 };
+                                                }
+                                                result = { quotientsign, quotientexp[0,8], quotient[8,23] };
                                             }
-                                            result = { quotientsign, quotientexp[0,8], quotient[8,23] };
                                         }
                                     }
                                     default: { result = { quotientsign, 23b0, 8b11111111 }; }
@@ -529,7 +528,7 @@ algorithm floatdivide(
                         }
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,2], 1b0 };
             }
             busy = 0;
         }
@@ -566,11 +565,11 @@ algorithm floatfused(
                         FPUmultiply.start = 1; while( FPUmultiply.busy ) {}
                     }
                     case 1: {
-                        FPUaddsub.addsub = ~( opCode[2,1] == opCode[3,1] );
+                        FPUaddsub.addsub = ( opCode[2,1] != opCode[3,1] );
                         FPUaddsub.start = 1; while( FPUaddsub.busy ) {}
                     }
                 }
-                FSM = FSM << 1;
+                FSM = { FSM[0,1], 1b0 };
             }
             busy = 0;
         }
@@ -651,13 +650,13 @@ algorithm floatsqrt(
                                             result = FPUdivide.result;
                                         }
                                     }
-                                    FSM2 = FSM2 << 1;
+                                    FSM2 = { FSM[0,2], 1b0 };
                                 }
                                 count = count - 1;
                             }
                         }
                     }
-                    FSM = FSM << 1;
+                    FSM = { FSM[0,1], 1b0 };
                 }
             }
             busy = 0;
@@ -693,15 +692,15 @@ algorithm floatcomparison(
         switch( function3 ) {
             case 3b000: {
                 // LESS THAN EQUAL OMPARISON OF 2 FLOATING POINT NUMBERS
-                comparison = ( sourceReg1F[31,1] != sourceReg2F[31,1] ) ? sourceReg1F[31,1] || ((( sourceReg1F | sourceReg2F ) << 1) == 0 ) : ( sourceReg1F == sourceReg2F ) || ( sourceReg1F[31,1] ^ ( sourceReg1F < sourceReg2F ));
+                comparison = ( sourceReg1F[31,1] != sourceReg2F[31,1] ) ? sourceReg1F[31,1] | ((( sourceReg1F | sourceReg2F ) << 1) == 0 ) : ( sourceReg1F == sourceReg2F ) | ( sourceReg1F[31,1] ^ ( sourceReg1F < sourceReg2F ));
             }
             case 3b001: {
                 // LESS THAN COMPARISON OF 2 FLOATING POINT NUMBERS
-                comparison = ( sourceReg1F[31,1] != sourceReg2F[31,1] ) ? sourceReg1F[31,1] && ((( sourceReg1F | sourceReg2F ) << 1) != 0 ) : ( sourceReg1F != sourceReg2F ) && ( sourceReg1F[31,1] ^ ( sourceReg1F < sourceReg2F));
+                comparison = ( sourceReg1F[31,1] != sourceReg2F[31,1] ) ? sourceReg1F[31,1] & ((( sourceReg1F | sourceReg2F ) << 1) != 0 ) : ( sourceReg1F != sourceReg2F ) & ( sourceReg1F[31,1] ^ ( sourceReg1F < sourceReg2F));
             }
             case 3b010: {
                 // EQUAL COMPARISON OF 2 FLOATING POINT NUMBERS
-                comparison = ( sourceReg1F == sourceReg2F ) || ((( sourceReg1F | sourceReg2F ) << 1) == 0 );
+                comparison = ( sourceReg1F == sourceReg2F ) | ((( sourceReg1F | sourceReg2F ) << 1) == 0 );
             }
         }
     }
@@ -741,16 +740,17 @@ algorithm floattouint(
             ( classE, classF ) = class( sourceReg1F );
             switch( classE ) {
                 case 2b00: {
-                    if( sourceReg1F[31,1] ) {
-                        result = 0;
-                    } else {
-                        exp = floatingpointnumber( sourceReg1F ).exponent - 127;
-                        if( exp < 24 ) {
-                            sig = { 9b1, sourceReg1F[0,23], 1b0 } >> ( 23 - exp );
-                        } else {
-                            sig = { 9b1, sourceReg1F[0,23], 1b0 } << ( exp - 24);
+                    switch( sourceReg1F[31,1] ) {
+                        case 1: { result = 0; }
+                        default: {
+                            exp = floatingpointnumber( sourceReg1F ).exponent - 127;
+                            if( exp < 24 ) {
+                                sig = { 9b1, sourceReg1F[0,23], 1b0 } >> ( 23 - exp );
+                            } else {
+                                sig = { 9b1, sourceReg1F[0,23], 1b0 } << ( exp - 24);
+                            }
+                            result = ( exp > 31 ) ? 32hffffffff : ( sig[1,32] + sig[0,1] );
                         }
-                        result = ( exp > 31 ) ? 32hffffffff : ( sig[1,32] + sig[0,1] );
                     }
                 }
                 case 2b01: { result = 0; }
