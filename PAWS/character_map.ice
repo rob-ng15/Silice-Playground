@@ -67,7 +67,7 @@ algorithm character_map(
     characterGenerator8x16.addr :=  { charactermap.rdata0, yincharacter };
 
     // RENDER - Default to transparent
-    character_map_display := pix_active && (( characterpixel ) || ( ~colour13(colourmap.rdata0).alpha ));
+    character_map_display := pix_active && ( characterpixel || ~colour13(colourmap.rdata0).alpha );
     pix_red := characterpixel ? colour13(colourmap.rdata0).forered : colour13(colourmap.rdata0).backred;
     pix_green := characterpixel ? colour13(colourmap.rdata0).foregreen : colour13(colourmap.rdata0).backgreen;
     pix_blue := characterpixel ? colour13(colourmap.rdata0).foreblue : colour13(colourmap.rdata0).backblue;
@@ -135,9 +135,10 @@ algorithm character_map_writer(
                         charactermap.wdata1 = tpu_character;
                         colourmap.addr1 = tpu_write_addr;
                         colourmap.wdata1 = { tpu_background, tpu_foreground };
-
-                        tpu_active_y = ( tpu_active_x == 79 ) ? ( tpu_active_y == 29 ) ? 0 : tpu_active_y + 1 : tpu_active_y;
-                        tpu_active_x = ( tpu_active_x == 79 ) ? 0 : tpu_active_x + 1;
+                        switch( tpu_active_x ) {
+                            case 79: { tpu_active_x = 0; tpu_active_y = ( tpu_active_y == 29 ) ? 0 : tpu_active_y + 1; }
+                            default: { tpu_active_x = tpu_active_x + 1; }
+                        }
                     }
                     case 3: {
                         // Start tpucs

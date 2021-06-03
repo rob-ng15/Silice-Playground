@@ -1,4 +1,4 @@
-// RISC-V REGISTERS
+// RISC-V REGISTERS - usable for base and float
 algorithm registers(
     input   uint1   SMT,
     input   uint5   rs1,
@@ -12,9 +12,9 @@ algorithm registers(
     output  int32   sourceReg3
 ) <autorun> {
     // RISC-V REGISTERS
-    simple_dualport_bram int32 registers_1 <input!> [64] = { 0, pad(0) };
-    simple_dualport_bram int32 registers_2 <input!> [64] = { 0, pad(0) };
-    simple_dualport_bram int32 registers_3 <input!> [64] = { 0, pad(0) };
+    simple_dualport_bram int32 registers_1 <input!> [64] = { 0, pad(uninitialized) };
+    simple_dualport_bram int32 registers_2 <input!> [64] = { 0, pad(uninitialized) };
+    simple_dualport_bram int32 registers_3 <input!> [64] = { 0, pad(uninitialized) };
 
     // READ FROM REGISTERS
     registers_1.addr0 := { SMT, rs1 };
@@ -301,9 +301,4 @@ circuitry signextender8( input function3, input address, input nosign, output wi
 }
 circuitry signextender16( input function3, input nosign, output withsign ) {
     withsign = ~function3[2,1] ? { {16{nosign[15,1]}}, nosign[0,16] } : nosign[0,16];
-}
-
-// COMBINE TWO 16 BIT HALF WORDS TO 32 BIT WORD
-circuitry halfhalfword( input HIGH, input LOW, output HIGHLOW, ) {
-    HIGHLOW = { HIGH, LOW };
 }

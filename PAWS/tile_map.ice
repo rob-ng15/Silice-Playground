@@ -31,8 +31,8 @@ algorithm tilemap(
 
     // 42 x 32 tile map, allows for pixel scrolling with border { 7 bits background, 6 bits foreground, 5 bits tile number }
     // Setting background to 40 (ALPHA) allows the bitmap/background to show through
-    simple_dualport_bram uint6 tiles[1344] = { 0, pad(0) };
-    simple_dualport_bram uint13 colours[1344] = { 13b1000000000000, pad(13b1000000000000) };
+    simple_dualport_bram uint6 tiles[1344] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, pad(uninitialized) };
+    simple_dualport_bram uint13 colours[1344] = uninitialized;
 
     // Scroll position - -15 to 0 to 15
     // -15 or 15 will trigger appropriate scroll when next moved in that direction
@@ -117,8 +117,8 @@ algorithm tile_map_writer(
     uint2   FSM3 = uninitialized;
 
     // COPY OF TILEMAP FOR SCROLLING
-    simple_dualport_bram uint6 tiles_copy[1344] = { 0, pad(0) };
-    simple_dualport_bram uint13 colours_copy[1344] = { 13b1000000000000, pad(13b1000000000000) };
+    simple_dualport_bram uint6 tiles_copy[1344] = uninitialized;
+    simple_dualport_bram uint13 colours_copy[1344] = uninitialized;
 
     // Scroller/Wrapper storage
     uint1   tm_scroll = uninitialized;
@@ -182,48 +182,41 @@ algorithm tile_map_writer(
                         switch( ( tm_scrollwrap - 1 ) & 3  ) {
                             case 0: {
                                 if( tm_offset_x == 15 ) {
-                                    tm_lastaction = tm_scrollwrap;
                                     tm_goleft = 1;
                                     tm_active = 1;
                                 } else {
                                     tm_offset_x = tm_offset_x + 1;
-                                    tm_lastaction = 0;
                                 }
                             }
                             // UP
                             case 1: {
                                 if( tm_offset_y == 15 ) {
-                                    tm_lastaction = tm_scrollwrap;
                                     tm_goup = 1;
                                     tm_active = 2;
                                 } else {
                                     tm_offset_y = tm_offset_y + 1;
-                                    tm_lastaction = 0;
                                 }
                             }
                             // RIGHT
                             case 2: {
                                 if( tm_offset_x == -15 ) {
-                                    tm_lastaction = tm_scrollwrap;
                                     tm_goleft = 0;
                                     tm_active = 1;
                                 } else {
                                     tm_offset_x = tm_offset_x - 1;
-                                    tm_lastaction = 0;
                                 }
                             }
                             // DOWN
                             case 3: {
                                 if( tm_offset_y == -15 ) {
-                                    tm_lastaction = tm_scrollwrap;
                                     tm_goup = 0;
                                     tm_active = 2;
                                 } else {
                                     tm_offset_y = tm_offset_y - 1;
-                                    tm_lastaction = 0;
                                 }
                             }
                         }
+                        tm_lastaction = ( tm_active != 0 ) ? tm_scrollwrap : 0;
                     }
                 }
             }
@@ -269,7 +262,7 @@ algorithm tile_map_writer(
                                                             x_cursor = tm_goleft ? x_cursor + 1 : x_cursor - 1;
                                                         }
                                                     }
-                                                    FSM3 = FSM3 << 1;
+                                                    FSM3 = { FSM3[0,1], 1b0 };
                                                 }
                                             }
                                         }
@@ -284,16 +277,14 @@ algorithm tile_map_writer(
                                             colours_copy.addr1 = temp_1;
                                             colours_copy.wdata1 = new_colour;
                                         }
-                                        case 3: {
-                                            y_cursor_addr = y_cursor_addr + 42;
-                                        }
+                                        case 3: { y_cursor_addr = y_cursor_addr + 42; }
                                     }
-                                    FSM2 = FSM2 << 1;
+                                    FSM2 = { FSM2[0,3], 1b0 };
                                 }
                             }
                         }
                     }
-                    FSM = FSM << 1;
+                    FSM = { FSM[0,1], 1b0 };
                 }
                 tm_offset_x = 0;
                 tm_active = 0;
@@ -355,9 +346,7 @@ algorithm tile_map_writer(
                                             colours_copy.addr1 = temp_1;
                                             colours_copy.wdata1 = new_colour;
                                         }
-                                        case 3: {
-                                            x_cursor = x_cursor + 1;
-                                        }
+                                        case 3: { x_cursor = x_cursor + 1; }
                                     }
                                     FSM2 = { FSM2[0,3], 1b0 };
                                 }

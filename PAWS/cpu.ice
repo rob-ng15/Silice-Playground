@@ -59,7 +59,7 @@ algorithm PAWSCPU(
     input   uint1   SMTRUNNING,
     input   uint32  SMTSTARTPC
 ) <autorun> {
-    uint7 FSM = 7b0000001;
+    uint6 FSM = 6b000001;
 
     // SMT FLAG
     // RUNNING ON HART 0 OR HART 1
@@ -211,12 +211,12 @@ algorithm PAWSCPU(
                         instruction[16,16] = readdata;
                     }
                 }
-                FSM = 7b0000010;
+                FSM = 6b000010;
             }
-            case 1: { ++: FSM = memoryload ? 7b0000100 : 7b0001000; }                           // DECOODE
+            case 1: { ++: FSM = memoryload ? 6b000100 : 6b001000; }                           // DECOODE
             case 2: {                                                                           // LOAD FROM MEMORY
                 ( address, readmemory, memoryinput ) = load( accesssize, loadAddress, memorybusy, readdata );
-                FSM = 7b0001000;
+                FSM = 6b001000;
             }
             case 3: {                                                                           // EXECUTE
                 switch( opCode[2,5] ) {
@@ -241,17 +241,14 @@ algorithm PAWSCPU(
                         result = ALU.result;
                     }
                 }
-                FSM = memorystore ? 7b0010000 : ( writeRegister ?  7b0100000 : 7b1000000 );
+                FSM = memorystore ? 6b010000 : 6b100000;
             }
             case 4: {                                                                           // STORE TO MEMORY
                 ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy );
-                FSM = writeRegister ? 7b0100000 : 7b1000000;
+                FSM = 6b100000;
             }
-            case 5: {                                                                           // REGISTERS WRITE
-                REGISTERS.write = 1 ;
-                FSM = 7b1000000;
-            }
-            case 6: {                                                                           // UPDATE CSR, PC and SMT
+            case 5: {                                                                           // REGISTERS WRITE, UPDATE CSR, PC and SMT
+                REGISTERS.write = writeRegister;
                 CSR.incCSRinstret = 1;
                 switch( SMT ) {
                     case 1b1: {
@@ -264,7 +261,7 @@ algorithm PAWSCPU(
                         pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC;
                     }
                 }
-                FSM = 7b0000001;
+                FSM = 6b000001;
             }
         }
     } // RISC-V
