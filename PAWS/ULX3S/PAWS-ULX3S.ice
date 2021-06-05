@@ -34,10 +34,28 @@ $include('../tile_map.ice')
 $include('../audio.ice')
 $include('../io_memmap.ice')
 
-// CPU
+// CPU SPECIFICATION
+$$CPUISA = 0x40001005
+$$cpu_B = 1
+$$cpu_F = 1
+$$if cpu_B then
+$$CPUISA = CPUISA + 2
+$$end
+$$if cpu_F then
+$$CPUISA = CPUISA + 0x20
+$$end
 $include('../cpu_functionblocks.ice')
-$include('../mathematics.ice')
-$include('../cpu.ice')
+$$if cpu_B then
+$include('../ALU-IMB.ice')
+$$else
+$include('../ALU-IM.ice')
+$$end
+$$if cpu_F then
+$include('../FPU.ice')
+$include('../CPU-F.ice')
+$$else
+$include('../CPU-I.ice')
+$$end
 
 // MAIN
 $include('../PAWS.ice')

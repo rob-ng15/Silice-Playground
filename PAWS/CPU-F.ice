@@ -59,7 +59,7 @@ algorithm PAWSCPU(
     input   uint1   SMTRUNNING,
     input   uint32  SMTSTARTPC
 ) <autorun> {
-    uint6 FSM = 6b000001;
+    uint7 FSM = 7b0000001;
 
     // SMT FLAG
     // RUNNING ON HART 0 OR HART 1
@@ -85,8 +85,8 @@ algorithm PAWSCPU(
     uint1   writeRegister = uninitialized;
     uint32  memoryinput = uninitialized;
     uint32  memoryoutput = uninitialized;
-    uint1   memoryload := ( ( opCode == 7b0000011 ) | ( opCode == 7b0000111 ) | ( ( opCode == 7b0101111 ) & ( function7[2,5] != 5b00011 ) ) );
-    uint1   memorystore := ( ( opCode == 7b0100011 ) | ( opCode == 7b0100111 ) | ( ( opCode == 7b0101111 ) & ( function7[2,5] != 5b00010 ) ) );
+    uint1   memoryload := ( opCode == 7b0000011 ) | ( opCode == 7b0000111 ) | ( ( opCode == 7b0101111 ) & ( function7[2,5] != 5b00011 ) );
+    uint1   memorystore := ( opCode == 7b0100011 ) | ( opCode == 7b0100111 ) | ( ( opCode == 7b0101111 ) & ( function7[2,5] != 5b00010 ) );
 
     // RISC-V 32 BIT INSTRUCTION DECODER
     int32   immediateValue = uninitialized;
@@ -213,7 +213,7 @@ algorithm PAWSCPU(
     );
 
     // MEMORY ACCESS FLAGS
-    accesssize := ( ( opCode == 7b0101111 ) | ( opCode == 7b0000111 ) | ( opCode == 7b0100111 ) ) ? 3b010 : function3;
+    accesssize := ( opCode == 7b0101111 ) || ( opCode == 7b0000111 ) || ( opCode == 7b0100111 ) ? 3b010 : function3;
     readmemory := 0;
     writememory := 0;
 
@@ -227,10 +227,7 @@ algorithm PAWSCPU(
 
     while(1) {
         onehot( FSM ) {
-            case 0: {                                                                           // RESET FLAGS and FETCH
-                writeRegister = 1;
-                incPC = 1; takeBranch = 0;
-                frd = 0;
+            case 0: {                                                                           // FETCH
                 ( address, readmemory ) = fetch( PC, memorybusy );
                 compressed = ( readdata[0,2] != 2b11 );
                 switch( readdata[0,2] ) {
@@ -242,14 +239,20 @@ algorithm PAWSCPU(
                         instruction[16,16] = readdata;
                     }
                 }
-                FSM = 6b000010;
+                FSM = 7b0000010;
             }
-            case 1: { ++: FSM = memoryload ? 6b000100 : 6b001000; }                             // DECOODE
-            case 2: {                                                                           // LOAD FROM MEMORY
+            case 1: {                                                                           // RESET FLAGS
+                writeRegister = 1;
+                incPC = 1; takeBranch = 0;
+                frd = 0;
+                FSM = 7b0000100;
+            }
+            case 2: { FSM = memoryload ? 7b0001000 : 7b0010000; }                               // DECOODE
+            case 3: {                                                                           // LOAD FROM MEMORY
                 ( address, readmemory, memoryinput ) = load( accesssize, loadAddress, memorybusy, readdata );
-                FSM = 6b001000;
+                FSM = 7b0010000;
             }
-            case 3: {                                                                           // EXECUTE
+            case 4: {                                                                           // EXECUTE
                 switch( opCode[2,5] ) {
                     case 5b01101: { result = AUIPCLUI; }                                        // LUI
                     case 5b00101: { result = AUIPCLUI; }                                        // AUIPC
@@ -263,9 +266,9 @@ algorithm PAWSCPU(
                     case 5b11100: { result = CSR.result; }                                      // CSR
                     case 5b01011: {                                                             // ATOMIC OPERATIONS
                         switch( function7[2,5] ) {
-                            case 5b00010: { result = memoryinput; }                                 // LR.W
-                            case 5b00011: { memoryoutput = sourceReg2; result = 0; }                // SC.W
-                            default: { result = memoryinput; memoryoutput = ALUA.result; }          // ATOMIC LOAD - MODIFY - STORE
+                            case 5b00010: { result = memoryinput; }                             // LR.W
+                            case 5b00011: { memoryoutput = sourceReg2; result = 0; }            // SC.W
+                            default: { result = memoryinput; memoryoutput = ALUA.result; }      // ATOMIC LOAD - MODIFY - STORE
                         }
                     }
                     default: {                                                                  // FPU, ALUI or ALUR
@@ -276,13 +279,13 @@ algorithm PAWSCPU(
                         result = opCode[6,1] ? FPU.result : ALU.result;
                     }
                 }
-                FSM = memorystore ? 6b010000 : 6b100000;
+                FSM = memorystore ? 7b0100000 : 7b1000000;
             }
-            case 4: {                                                                           // STORE TO MEMORY
+            case 5: {                                                                           // STORE TO MEMORY
                 ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy );
-                FSM = 6b100000;
+                FSM = 7b1000000;
             }
-            case 5: {                                                                           // REGISTERS WRITE, UPDATE CSR, PC and SMT
+            case 6: {                                                                           // REGISTERS WRITE, UPDATE CSR, PC and SMT
                 REGISTERS.write = writeRegister & ~frd;
                 REGISTERSF.write = writeRegister & frd;
                 CSR.incCSRinstret = 1;
@@ -297,7 +300,7 @@ algorithm PAWSCPU(
                         pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC;
                     }
                 }
-                FSM = 6b000001;
+                FSM = 7b0000001;
             }
         }
     } // RISC-V

@@ -20,20 +20,26 @@ unsigned int DATASTARTSECTOR;
 unsigned char *MEMORYTOP;
 
 // RISC-V CSR FUNCTIONS
+unsigned int CSRisa() {
+   unsigned int isa;
+   asm volatile ("csrr %0, 0x301" : "=r"(isa));
+   return isa;
+}
+
 unsigned long CSRcycles() {
-   int cycles;
+   unsigned long cycles;
    asm volatile ("rdcycle %0" : "=r"(cycles));
    return cycles;
 }
 
 unsigned long CSRinstructions() {
-   int insns;
+   unsigned long insns;
    asm volatile ("rdinstret %0" : "=r"(insns));
    return insns;
 }
 
 unsigned long CSRtime() {
-  int time;
+  unsigned long time;
   asm volatile ("rdtime %0" : "=r"(time));
   return time;
 }

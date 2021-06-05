@@ -40,11 +40,11 @@ algorithm fpu(
     while(1) {
         if( start ) {
             busy = 1;
+            frd = 1;
 
             switch( opCode[2,5] ) {
                 default: {
                     // FMADD.S FMSUB.S FNMSUB.S FNMADD.S
-                    frd = 1;
                     FPUfused.start = 1;
                     while( FPUfused.busy ) {}
                     result = FPUfused.result;
@@ -54,7 +54,6 @@ algorithm fpu(
                     switch( function7[2,5] ) {
                         default: {
                             // FADD.S FSUB.S
-                            frd = 1;
                             FPUaddsub.addsub = function7[2,1];
                             FPUaddsub.start = 1;
                             while( FPUaddsub.busy ) {}
@@ -62,21 +61,18 @@ algorithm fpu(
                         }
                         case 5b00010: {
                             // FMUL.S
-                            frd = 1;
                             FPUmultiply.start = 1;
                             while( FPUmultiply.busy ) {}
                             result = FPUmultiply.result;
                         }
                         case 5b00011: {
                             // FDIV.S
-                            frd = 1;
                             FPUdivide.start = 1;
                             while( FPUdivide.busy ) {}
                             result = FPUdivide.result;
                         }
                         case 5b01011: {
                             // FSQRT.S
-                            frd = 1;
                             // FIRST APPROXIMATIONS IS 1
                             FPUsqrt.start = 1;
                             while( FPUsqrt.busy ) {}
@@ -84,12 +80,10 @@ algorithm fpu(
                         }
                         case 5b00100: {
                             // FSGNJ.S FNGNJN.S FSGNJX.S
-                            frd = 1;
                             result = FPUsign.result;
                         }
                         case 5b00101: {
                             // FMIN.S FMAX.S
-                            frd = 1;
                             switch( function3[0,1] ) {
                                 case 0: { result = FPUcomparison.comparison ? sourceReg1F : sourceReg2F; }
                                 case 1: { result = FPUcomparison.comparison ? sourceReg2F : sourceReg1F; }
@@ -115,14 +109,12 @@ algorithm fpu(
                         }
                         case 5b11010: {
                             // FCVT.S.W FCVT.S.WU
-                            frd = 1;
                             FPUfloat.start = 1;
                             while( FPUfloat.busy ) {}
                             result = FPUfloat.result;
                         }
                         case 5b11110: {
                             // FMV.W.X
-                            frd = 1;
                             result = sourceReg1;
                         }
                     }
@@ -362,6 +354,20 @@ algorithm floataddsub(
     }
 }
 
+algorithm floatdomul(
+    input   uint32  a,
+    input   uint32  b,
+    output  uint1   productsign,
+    output  uint48  product
+) <autorun> {
+    // Calculation is split into 4 18 x 18 multiplications for DSP
+    uint18  A <: { 10b0, 1b1, a[16,7] };
+    uint18  B <: { 2b0, a[0,16] };
+    uint18  C <: { 10b0, 1b1, b[16,7] };
+    uint18  D <: { 2b0, b[0,16] };
+    productsign := a[31,1] ^ b[31,1];
+    product := ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
+}
 algorithm floatmultiply(
     input   uint1   start,
     output  uint1   busy,
@@ -383,11 +389,7 @@ algorithm floatmultiply(
     int16   expA = uninitialised;
     int16   expB = uninitialised;
 
-    // Calculation is split into 4 18 x 18 multiplications for DSP
-    uint18  A = uninitialised;
-    uint18  B = uninitialised;
-    uint18  C = uninitialised;
-    uint18  D = uninitialised;
+    floatdomul FPUMUL( a <: a, b <: b, productsign :> productsign, product :> product );
     busy = 0;
 
     while(1) {
@@ -399,14 +401,8 @@ algorithm floatmultiply(
                     case 0: {
                         ( classEa, classFa ) = class( a );
                         ( classEb, classFb ) = class( b );
-                        productsign = a[31,1] ^ b[31,1];
                         expA = floatingpointnumber( a ).exponent;
                         expB = floatingpointnumber( b ).exponent;
-                        A = { 10b0, 1b1, a[16,7] };
-                        B = { 2b0, a[0,16] };
-                        C = { 10b0, 1b1, b[16,7] };
-                        D = { 2b0, b[0,16] };
-                        product = ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
                     }
                     case 1: {
                         switch( classEa ) {
@@ -471,6 +467,7 @@ algorithm floatdivide(
     uint32  sigA = uninitialised;
     uint32  sigB = uninitialised;
 
+    divbit DIVBIT( bit <: bit, dividend_copy <: sigA, divisor_copy <: sigB, remainder <: remainder );
     busy = 0;
 
     while(1) {
@@ -496,12 +493,8 @@ algorithm floatdivide(
                                 switch( classEb ) {
                                     case 2b00: {
                                         while( bit != 63 ) {
-                                            temporary = { remainder[0,31], sigA[bit,1] };
-                                            FSM2 = __unsigned(temporary) >= __unsigned(sigB);
-                                            switch( FSM2 ) {
-                                                case 1: { remainder = __unsigned(temporary) - __unsigned(sigB); quotient[bit,1] = 1; }
-                                                case 0: { remainder = temporary; }
-                                            }
+                                            quotient[bit,1] = DIVBIT.setquotientbit;
+                                            remainder = DIVBIT.newremainder;
                                             bit = bit - 1;
                                         }
                                         switch( quotient ) {

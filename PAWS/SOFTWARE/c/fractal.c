@@ -37,11 +37,11 @@ int main( void ) {
     for( z = 0; z < 6; z++ ) {
         ysize = ysize >> 1; ypixel = ysize >> 1;
         xsize = xsize >> 1; xpixel = xsize >> 1;
-        //tpu_printf_centre( 28, TRANSPARENT, WHITE, "ITERATION %d start ( %3d, %3d ) dx = %f dy = %f", z, xsize, ysize, dx, dy );
+        tpu_printf_centre( 28, TRANSPARENT, WHITE, "ITERATION %d start ( %3d, %3d ) dx = %f dy = %f", z, xsize, ysize, dx, dy );
         for(j = ysize; j < yres; j += ysize ) {
             y = ymax - j * dy;
             for(i = xsize; i < xres; i += xsize ) {
-                //tpu_printf_centre( 29, TRANSPARENT, WHITE, "( %3d, %3d )", i , j );
+                tpu_printf_centre( 29, TRANSPARENT, WHITE, "( %3d, %3d )", i , j );
                 u = 0.0;
                 v = 0.0;
                 u2 = u * u;
@@ -53,9 +53,9 @@ int main( void ) {
                         u = u2 - v2 + x;
                         u2 = u * u;
                         v2 = v * v;
-                        //printf( "( %3d, %3d ) k = %d v = %f u = %f u2 = %f v2 = %f x = %f y = %f\n", i, j, k, v, u, u2, v2, x, y );
+                        printf( "( %3d, %3d ) k = %d u = %f v = %f u2 = %f v2 = %f x = %f y = %f u2 + v2 = %f < = %d\n", i, j, k, u, v, u2, v2, x, y, u2 + v2, (u2 + v2 < 4.0) );
                 };
-                //sleep( 1000, 0 );
+                sleep( 500, 0 );
                 /* compute  pixel color and write it to file */
                 gpu_rectangle( (k >= maxiter) ? BLACK : k>>ITERSHIFT, i - xpixel , j - ypixel, i + xpixel, j + ypixel );
             }
@@ -64,6 +64,7 @@ int main( void ) {
     for (j = 0; j < yres; j++) {
         y = ymax - j * dy;
         for(i = 0; i < xres; i++) {
+            tpu_printf_centre( 29, TRANSPARENT, WHITE, "( %3d, %3d )", i , j );
             u = 0.0;
             v = 0.0;
             u2 = u * u;

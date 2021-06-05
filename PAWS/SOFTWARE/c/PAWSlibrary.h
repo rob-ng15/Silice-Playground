@@ -197,9 +197,10 @@ extern unsigned int sdcard_findfilesize( unsigned short );
 extern void sdcard_readfile( unsigned short, unsigned char * );
 
 // RISC-V CSR FUNCTIONS
-extern long CSRcycles( void );
-extern long CSRinstructions( void );
-extern long CSRtime( void );
+extern unsigned int CSRisa( void );
+extern unsigned long CSRcycles( void );
+extern unsigned long CSRinstructions( void );
+extern unsigned long CSRtime( void );
 
 // UART AND TERMINAL INPUT / OUTPUT
 extern void outputcharacter(char);

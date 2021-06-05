@@ -44,6 +44,12 @@ typedef unsigned int size_t;
 #define GREY2 0x2a
 #define ORANGE 0x38
 
+// RISC-V CSR FUNCTIONS
+unsigned int CSRisa() {
+   unsigned int isa;
+   asm volatile ("csrr %0, 0x301" : "=r"(isa));
+   return isa;
+}
 // STANDARD C FUNCTIONS ( from @sylefeb mylibc )
 void * memset(void *dest, int val, size_t len) {
   unsigned char *ptr = dest;
@@ -402,6 +408,7 @@ void waitbuttonrelease( void ) {
 
 extern int _bss_start, _bss_end;
 void main( void ) {
+    unsigned int isa;
     unsigned short i,j;
     unsigned char uartData = 0;
     unsigned short selectedfile = 0;
@@ -421,7 +428,14 @@ void main( void ) {
     set_sdcard_bitmap();
     draw_sdcard();
     gpu_outputstring( WHITE, 104, 4, "PAWS", 2 );
-    tpu_set( 25, 4, TRANSPARENT, WHITE ); tpu_outputstring( "RISC-V RV32IMCB CPU" );
+    tpu_set( 25, 4, TRANSPARENT, WHITE ); tpu_outputstring( "RISC-V RV32IMC CPU" );
+    isa = CSRisa();
+    if( isa != 0x40001005 ) {
+        tpu_outputstring( " plus " );
+        if( isa & 0b100000 ) tpu_outputstring( "F" );
+        if( isa & 0b10 ) tpu_outputstring( "B" );
+        tpu_outputstring( " extension(s)" );
+    }
 
     for( unsigned short i = 0; i < 64; i++ ) {
         gpu_rectangle( i, i * 5, 184, 4 + i * 5, 188 );
