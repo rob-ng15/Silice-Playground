@@ -552,6 +552,41 @@ void gpu_printf_centre( unsigned char colour, short x, short y, unsigned char si
     }
 }
 
+// COPY A ARRGGBB BITMAP STORED IN MEMORY TO THE BITMAP USING THE PIXEL BLOCK
+void gpu_pixelblock7( short x,  short y, unsigned short w, unsigned short h, unsigned char transparent, unsigned char *buffer ) {
+    unsigned char *maxbufferpos = buffer + ( w * h );
+
+    *GPU_X = x;
+    *GPU_Y = y;
+    *GPU_PARAM0 = w;
+    *GPU_PARAM1 = transparent;
+    wait_gpu();
+    *GPU_WRITE = 10;
+
+    while( buffer < maxbufferpos ) {
+        *PB_COLOUR7 = *buffer++;
+    }
+    *PB_STOP = 3;
+}
+
+// COPY A { RRRRRRRR GGGGGGGG BBBBBBBB } BITMAP STORED IN MEMORY TO THE BITMAP USING THE PIXEL BLOCK
+void gpu_pixelblock24( short x, short y, unsigned short w, unsigned short h, unsigned char *buffer  ) {
+    unsigned char *maxbufferpos = buffer + 3 * ( w * h );
+
+    *GPU_X = x;
+    *GPU_Y = y;
+    *GPU_PARAM0 = w;
+    wait_gpu();
+    *GPU_WRITE = 10;
+
+    while( buffer < maxbufferpos ) {
+        *PB_COLOUR8R = *buffer++;
+        *PB_COLOUR8G= *buffer++;
+        *PB_COLOUR8B = *buffer++;
+    }
+    *PB_STOP = 3;
+}
+
 // GPU VECTOR BLOCK
 // 32 VECTOR BLOCKS EACH OF 16 VERTICES ( offsets in the range -15 to 15 from the centre )
 // WHEN ACTIVATED draws lines from a vector block (x0,y0) to (x1,y1), (x1,y1) to (x2,y2), (x2,y2) to (x3,y3) until (x15,y15) or an inactive vertex is encountered
@@ -835,14 +870,12 @@ unsigned short sdcard_findfilenumber( unsigned char *filename, unsigned char *ex
                 break;
         }
     }
-
     return( filenumber );
 }
 
 unsigned int sdcard_findfilesize( unsigned short filenumber ) {
     return( ROOTDIRECTORY[filenumber].file_size );
 }
-
 
 void sdcard_readcluster( unsigned short cluster ) {
     for( unsigned short i = 0; i < BOOTSECTOR -> sectors_per_cluster; i++ ) {
@@ -968,26 +1001,6 @@ void netppm_decoder( unsigned char *netppmimagefile, unsigned char *buffer ) {
                     buffer[ bufferpos++ ] = colour;
                 }
             }
-        }
-    }
-}
-
-// COPY A BITMAP STORED IN MEMORY TO THE GPU_COLOUR
-// FOR SPEED USES AN OPTIMISED INLINE VERSION OF GPU_PIXEL
-void bitmapblit( unsigned char *buffer, unsigned short width, unsigned short height, short xpos, short ypos, unsigned char transparent ) {
-    unsigned int bufferpos = 0;
-    unsigned short *twocolour = (unsigned short *)buffer;
-    unsigned char colour, colour2;
-
-    wait_gpu();
-    for( unsigned short y = ypos; y < ypos + height; y++ ) {
-        *GPU_Y = y;
-        for( unsigned short x = xpos; x < xpos + width; x = x + 2 ) {
-            colour = twocolour[ bufferpos ] & 0xff;
-            colour2 = twocolour[ bufferpos ] >> 8;
-            *GPU_COLOUR = colour; *GPU_X = x; *GPU_WRITE = ( colour != transparent );
-            *GPU_COLOUR = colour2; *GPU_X = x + 1; *GPU_WRITE = ( colour2 != transparent );
-            bufferpos++;
         }
     }
 }

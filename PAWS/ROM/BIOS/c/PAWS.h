@@ -92,12 +92,18 @@ unsigned char volatile * COLOURBLIT_WRITER_TILE = (unsigned char volatile *) 0x8
 unsigned char volatile * COLOURBLIT_WRITER_LINE = (unsigned char volatile *) 0x8662;
 unsigned char volatile * COLOURBLIT_WRITER_PIXEL = (unsigned char volatile *) 0x8664;
 unsigned char volatile * COLOURBLIT_WRITER_COLOUR = (unsigned char volatile *) 0x8666;
-unsigned char volatile * BITMAP_X_READ = (unsigned char volatile *) 0x8670;
-unsigned short volatile * BITMAP_Y_READ = (unsigned short volatile *) 0x8672;
-unsigned short volatile * BITMAP_PIXEL_READ = (unsigned short volatile *) 0x8674;
-unsigned char volatile * BITMAP_SCROLLWRAP = (unsigned char volatile *) 0x8680;
-unsigned char volatile * FRAMEBUFFER_DISPLAY = ( unsigned char volatile * ) 0x8690;
-unsigned char volatile * FRAMEBUFFER_DRAW = ( unsigned char volatile * ) 0x8692;
+unsigned char volatile * PB_COLOUR7 = (unsigned char volatile *) 0x8670;
+unsigned char volatile * PB_COLOUR8R = (unsigned char volatile *) 0x8672;
+unsigned char volatile * PB_COLOUR8G = (unsigned char volatile *) 0x8674;
+unsigned char volatile * PB_COLOUR8B = (unsigned char volatile *) 0x8676;
+unsigned char volatile * PB_STOP = (unsigned char volatile *) 0x8678;
+
+unsigned char volatile * BITMAP_X_READ = (unsigned char volatile *) 0x86d0;
+unsigned short volatile * BITMAP_Y_READ = (unsigned short volatile *) 0x86d2;
+unsigned short volatile * BITMAP_PIXEL_READ = (unsigned short volatile *) 0x86d4;
+unsigned char volatile * BITMAP_SCROLLWRAP = (unsigned char volatile *) 0x86e0;
+unsigned char volatile * FRAMEBUFFER_DISPLAY = ( unsigned char volatile * ) 0x86f0;
+unsigned char volatile * FRAMEBUFFER_DRAW = ( unsigned char volatile * ) 0x86f2;
 
 unsigned short volatile * LOWER_SPRITE_ACTIVE = ( unsigned short volatile * ) 0x8300;
 unsigned short volatile * LOWER_SPRITE_DOUBLE = ( unsigned short volatile * ) 0x8320;

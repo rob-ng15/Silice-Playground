@@ -52,6 +52,13 @@ algorithm bitmap(
     input   uint4   colourblit_writer_pixel,
     input   uint7   colourblit_writer_colour,
 
+    // Colours for the pixelblock
+    input   uint7   pb_colour7,
+    input   uint8   pb_colour8r,
+    input   uint8   pb_colour8g,
+    input   uint8   pb_colour8b,
+    input   uint2   pb_newpixel,
+
     // VECTOR BLOCK
     input   uint5   vector_block_number,
     input   uint7   vector_block_colour,
@@ -133,6 +140,11 @@ algorithm bitmap(
         colourblit_writer_line <: colourblit_writer_line,
         colourblit_writer_pixel <: colourblit_writer_pixel,
         colourblit_writer_colour <: colourblit_writer_colour,
+        pb_colour7 <: pb_colour7,
+        pb_colour8r <: pb_colour8r,
+        pb_colour8g <: pb_colour8g,
+        pb_colour8b <: pb_colour8b,
+        pb_newpixel <: pb_newpixel,
         vector_block_number <: vector_block_number,
         vector_block_colour <: vector_block_colour,
         vector_block_xc <: vector_block_xc,

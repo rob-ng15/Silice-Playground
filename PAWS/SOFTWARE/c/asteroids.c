@@ -324,7 +324,7 @@ void game_over( void )
 void risc_ice_v_logo( void )
 {
     // DISPLAY GALAXY BITMAP
-    bitmapblit( galaxybitmap, 320, 240, 0, 0, BLACK );
+    gpu_pixelblock7( 0, 0, 320, 240, BLACK, galaxybitmap );
 
     gpu_rectangle( ORANGE, 0, 0, 100, 100 );
     gpu_triangle( WHITE, 100, 33, 100, 100, 50, 100 );

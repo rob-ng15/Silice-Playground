@@ -206,6 +206,8 @@ int main( void ) {
     //signal(SIGALRM, handleTimer);
 
     while(1) {
+        await_vblank();
+
         if( ( get_buttons() & 2 ) != 0 ) {
             if (game.state == STATE_INTRO) {
                 game.lives = 3;

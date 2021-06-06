@@ -271,6 +271,8 @@ extern void bitmap_scrollwrap( unsigned char );
 extern void set_blitter_bitmap( unsigned char, unsigned short * );
 extern void set_blitter_chbitmap( unsigned char, unsigned char * );
 extern void set_colourblitter_bitmap( unsigned char, unsigned char * );
+extern void gpu_pixelblock7( short , short , unsigned short, unsigned short, unsigned char, unsigned char * );
+extern void gpu_pixelblock24( short , short , unsigned short, unsigned short, unsigned char * );
 
 // SPRITES - MAIN ACCESS
 extern void set_sprite( unsigned char, unsigned char, unsigned char, unsigned char, short, short, unsigned char, unsigned char );
@@ -293,8 +295,6 @@ extern void tpu_printf_centre( unsigned char, unsigned char, unsigned char, cons
 // IMAGE DECODERS
 extern void netppm_display( unsigned char *, unsigned char );
 extern void netppm_decoder( unsigned char *, unsigned char * );
-extern void bitmapblit( unsigned char *, unsigned short , unsigned short , short, short, unsigned char  );
-
 // nanojpeg.c from https://keyj.emphy.de/nanojpeg/
 typedef enum _nj_result {
     NJ_OK = 0,        // no error, decoding successful

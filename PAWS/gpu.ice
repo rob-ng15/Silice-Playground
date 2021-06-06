@@ -30,6 +30,12 @@ algorithm gpu_queue(
     input   uint4   colourblit_writer_pixel,
     input   uint7   colourblit_writer_colour,
 
+    input   uint7   pb_colour7,
+    input   uint8   pb_colour8r,
+    input   uint8   pb_colour8g,
+    input   uint8   pb_colour8b,
+    input   uint2   pb_newpixel,
+
     input   uint5   vector_block_number,
     input   uint7   vector_block_colour,
     input   int10   vector_block_xc,
@@ -82,7 +88,12 @@ algorithm gpu_queue(
         bitmap_colour_write :> bitmap_colour_write,
         bitmap_colour_write_alt :> bitmap_colour_write_alt,
         bitmap_write :> bitmap_write,
-        gpu_active_dithermode :> gpu_active_dithermode
+        gpu_active_dithermode :> gpu_active_dithermode,
+        pb_colour7 <: pb_colour7,
+        pb_colour8r <: pb_colour8r,
+        pb_colour8g <: pb_colour8g,
+        pb_colour8b <: pb_colour8b,
+        pb_newpixel <: pb_newpixel
     );
 
     // 32 vector blocks each of 16 vertices
@@ -169,6 +180,12 @@ algorithm gpu(
     input   uint4   gpu_write,
     input   uint4   gpu_dithermode,
 
+    input   uint7   pb_colour7,
+    input   uint8   pb_colour8r,
+    input   uint8   pb_colour8g,
+    input   uint8   pb_colour8b,
+    input   uint2   pb_newpixel,
+
     output  uint1   gpu_active,
 ) <autorun> {
     // GPU COLOUR
@@ -176,7 +193,7 @@ algorithm gpu(
     uint7   gpu_active_colour_alt = uninitialized;
 
     // GPU SUBUNITS
-    uint6  gpu_busy_flags = uninitialised;
+    uint7  gpu_busy_flags = uninitialised;
     rectangle GPUrectangle(
         x <: gpu_x,
         y <: gpu_y,
@@ -217,6 +234,17 @@ algorithm gpu(
         param0 <: gpu_param0,
         param1 <: gpu_param1
     );
+    pixelblock GPUpixelblock(
+        x <: gpu_x,
+        y <: gpu_y,
+        param0 <: gpu_param0,
+        param1 <: gpu_param1,
+        colour7 <: pb_colour7,
+        colour8r <: pb_colour8r,
+        colour8g <: pb_colour8g,
+        colour8b <: pb_colour8b,
+        newpixel <: pb_newpixel
+    );
 
     // CONTROLS FOR BITMAP PIXEL WRITER
     bitmap_write := 0;
@@ -230,6 +258,7 @@ algorithm gpu(
     GPUtriangle.start := 0;
     GPUblit.start := 0;
     GPUcolourblit.start := 0;
+    GPUpixelblock.start := 0;
 
     while(1) {
         gpu_active_colour = ( gpu_write != 0 ) ? gpu_colour : gpu_active_colour;
@@ -293,9 +322,14 @@ algorithm gpu(
                         gpu_active_dithermode = 0;
                         GPUcolourblit.start = 1;
                     }
+                    case 10: {
+                        // START THE PIXELBLOCK WRITER AT (x,y) WITH WIDTH PARAM0, IGNORE COLOUR PARAM1
+                        gpu_active_dithermode = 0;
+                        GPUpixelblock.start = 1;
+                    }
                 }
-                while( GPUline.busy || GPUrectangle.busy ||  GPUcircle.busy || GPUtriangle.busy ||  GPUblit.busy || GPUcolourblit.busy ) {
-                    gpu_busy_flags =  { GPUcolourblit.busy, GPUblit.busy, GPUtriangle.busy, GPUcircle.busy, GPUrectangle.busy, GPUline.busy };
+                while( GPUline.busy || GPUrectangle.busy ||  GPUcircle.busy || GPUtriangle.busy ||  GPUblit.busy || GPUcolourblit.busy || GPUpixelblock.busy ) {
+                    gpu_busy_flags =  { GPUpixelblock.busy, GPUcolourblit.busy, GPUblit.busy, GPUtriangle.busy, GPUcircle.busy, GPUrectangle.busy, GPUline.busy };
                     onehot( gpu_busy_flags ) {
                         case 0: {
                             bitmap_x_write = GPUline.bitmap_x_write;
@@ -322,8 +356,13 @@ algorithm gpu(
                             bitmap_y_write = GPUcolourblit.bitmap_y_write;
                             bitmap_colour_write = GPUcolourblit.bitmap_colour_write;
                         }
+                        case 6: {
+                            bitmap_x_write = GPUpixelblock.bitmap_x_write;
+                            bitmap_y_write = GPUpixelblock.bitmap_y_write;
+                            bitmap_colour_write = GPUpixelblock.bitmap_colour_write;
+                        }
                     }
-                    bitmap_write = GPUline.bitmap_write | GPUrectangle.bitmap_write | GPUcircle.bitmap_write | GPUtriangle.bitmap_write | GPUblit.bitmap_write | GPUcolourblit.bitmap_write;
+                    bitmap_write = GPUline.bitmap_write | GPUrectangle.bitmap_write | GPUcircle.bitmap_write | GPUtriangle.bitmap_write | GPUblit.bitmap_write | GPUcolourblit.bitmap_write | GPUpixelblock.bitmap_write;
                 }
                 gpu_active = 0;
             }
@@ -980,6 +1019,80 @@ algorithm colourblit(
                 FSM = { FSM[0,1], 1b0 };
             }
            active = 0;
+        }
+    }
+}
+
+// PIXELBLOCK - OUTPUT PIXELS TO RECTANGLE START AT X, Y WITH WIDTH PARAM0, PIXELS PROVIDED SEQUENTIALLY BY CPU, MOVE ALONG RECTANGLE UNTIL STOP RECEIVED
+// CAN HANDLE 7bit ( ARRGGBB ) colours, with one defined as transparent or 24bit RGB colours, scaling to the PAWS colour map
+algorithm pixelblock(
+    input   int10   x,
+    input   int10   y,
+    input   int10   param0,
+    input   uint7   param1,
+
+    input   uint7   colour7,
+    input   uint8   colour8r,
+    input   uint8   colour8g,
+    input   uint8   colour8b,
+    input   uint2   newpixel,
+
+    output  int10   bitmap_x_write,
+    output  int10   bitmap_y_write,
+    output  uint7   bitmap_colour_write,
+    output  uint1   bitmap_write,
+
+    input   uint1   start,
+    output  uint1   busy,
+) <autorun> {
+    uint2   FSM = uninitialised;
+
+    // POSITION ON THE SCREEN
+    int10   gpu_max_x = uninitialized;
+    int10   gpu_x1 = uninitialized;
+    int10   gpu_x = uninitialised;
+    int10   gpu_y = uninitialised;
+    uint7   ignorecolour = uninitialised;
+
+    uint1   active = 0;
+    busy := start ? 1 : active;
+
+    bitmap_x_write := gpu_x;
+    bitmap_y_write := gpu_y;
+    bitmap_write := 0;
+
+    while(1) {
+        if( start ) {
+            active = 1;
+
+            gpu_x = x;
+            gpu_x1 = x;
+            gpu_y = y;
+            gpu_max_x = x + param0;
+            ignorecolour = param1;
+            while( active ) {
+                switch( newpixel ) {
+                    case 0: {}
+                    case 3: { active = 0; }
+                    default: {
+                        switch( newpixel ) {
+                            case 1: {
+                                bitmap_colour_write = colour7;
+                                bitmap_write = ( colour7 != ignorecolour );
+                            }
+                            case 2: {
+                                bitmap_colour_write = { 1b0, colour8r[6,2], colour8g[6,2], colour8b[6,2] };
+                                bitmap_write = 1;
+                            }
+                        }
+                        gpu_x = gpu_x + 1;
+                        if( gpu_x == gpu_max_x ) {
+                            gpu_x = gpu_x1;
+                            gpu_y = gpu_y + 1;
+                        }
+                    }
+                }
+            }
         }
     }
 }

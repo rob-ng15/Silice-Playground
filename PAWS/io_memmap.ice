@@ -467,7 +467,7 @@ algorithm video_memmap(
                 case 12h612: { readData = bitmap_window.gpu_queue_full; }
                 case 12h614: { readData = bitmap_window.gpu_queue_complete; }
                 case 12h62a: { readData = bitmap_window.vector_block_active; }
-                case 12h674: { readData = bitmap_window.bitmap_colour_read; }
+                case 12h6d4: { readData = bitmap_window.bitmap_colour_read; }
 
                 // VBLANK
                 case 12hf00: { readData = vblank; }
@@ -594,12 +594,18 @@ algorithm video_memmap(
                 case 12h664: { bitmap_window.colourblit_writer_pixel = writeData; }
                 case 12h666: { bitmap_window.colourblit_writer_colour = writeData; }
 
-                case 12h670: { bitmap_window.bitmap_x_read = writeData; }
-                case 12h672: { bitmap_window.bitmap_y_read = writeData; }
+                case 12h670: { bitmap_window.pb_colour7 = writeData; bitmap_window.pb_newpixel = 1; }
+                case 12h672: { bitmap_window.pb_colour8r = writeData; }
+                case 12h674: { bitmap_window.pb_colour8g = writeData; }
+                case 12h676: { bitmap_window.pb_colour8b = writeData; bitmap_window.pb_newpixel = 2; }
+                case 12h678: { bitmap_window.pb_newpixel = 3; }
 
-                case 12h680: { bitmap_window.bitmap_write_offset = writeData; }
-                case 12h690: { bitmap_window.framebuffer = writeData; }
-                case 12h692: { bitmap_window.writer_framebuffer = writeData; }
+                case 12h6d0: { bitmap_window.bitmap_x_read = writeData; }
+                case 12h6d2: { bitmap_window.bitmap_y_read = writeData; }
+
+                case 12h6e0: { bitmap_window.bitmap_write_offset = writeData; }
+                case 12h6f0: { bitmap_window.framebuffer = writeData; }
+                case 12h6f2: { bitmap_window.writer_framebuffer = writeData; }
 
                // DISPLAY LAYER ORDERING / FRAMEBUFFER SELECTION
                 case 12hf00: { display.display_order = writeData; }
@@ -622,6 +628,7 @@ algorithm video_memmap(
             upper_sprites.sprite_writer_active = 0;
             bitmap_window.bitmap_write_offset = 0;
             bitmap_window.gpu_write = 0;
+            bitmap_window.pb_newpixel = 0;
             bitmap_window.draw_vector = 0;
             character_map_window.tpu_write = 0;
         }
