@@ -1,15 +1,5 @@
 #include "PAWS.h"
 
-// STDDEF.H DEFINITIONS
- #define max(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a > _b ? _a : _b; })
-
-#define min(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a < _b ? _a : _b; })
 
 typedef unsigned int size_t;
 
@@ -76,8 +66,9 @@ void sleep( unsigned short counter ) {
 
 // SDCARD FUNCTIONS
 // INTERNAL FUNCTION - WAIT FOR THE SDCARD TO BE READY
+inline void sdcard_wait( void )  __attribute__((always_inline));
 void sdcard_wait( void ) {
-    while( *SDCARD_READY == 0 ) {}
+    while( !*SDCARD_READY );
 }
 
 // READ A SECTOR FROM THE SDCARD AND COPY TO MEMORY
@@ -96,6 +87,7 @@ void sdcard_readsector( unsigned int sectorAddress, unsigned char *copyAddress )
 
 // I/O FUNCTIONS
 // READ THE ULX3S JOYSTICK BUTTONS
+inline unsigned char get_buttons( void )  __attribute__((always_inline));
 unsigned char get_buttons( void ) {
     return( *BUTTONS );
 }
@@ -114,8 +106,9 @@ void set_background( unsigned char colour, unsigned char altcolour, unsigned cha
 // The GPU can draw pixels, filled rectangles, lines, (filled) circles, filled triangles and has a 16 x 16 pixel blitter from user definable tiles
 
 // INTERNAL FUNCTION - WAIT FOR THE GPU TO FINISH THE LAST COMMAND
+inline void wait_gpu( void )  __attribute__((always_inline));
 void wait_gpu( void ) {
-    while( *GPU_STATUS != 0 );
+    while( *GPU_STATUS );
 }
 
 // DRAW A FILLED RECTANGLE from (x1,y1) to (x2,y2) in colour
@@ -143,6 +136,7 @@ void gpu_circle( unsigned char colour, short x1, short y1, short radius, unsigne
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = radius;
+    *GPU_PARAM1 = 255;
 
     wait_gpu();
     *GPU_WRITE = filled ? 5 : 4;
@@ -236,8 +230,6 @@ void tpu_outputstringcentre( unsigned char y, unsigned char background, unsigned
     tpu_set( 40 - ( strlen(s) >> 1 ), y, background, foreground );
     tpu_outputstring( s );
 }
-
-typedef unsigned int size_t;
 
 // SDCARD BLITTER TILES
 unsigned short sdcardtiles[] = {

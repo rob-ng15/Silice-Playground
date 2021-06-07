@@ -23,7 +23,7 @@
 #define MAXDEPTH 12
 
 // CURRENT FRAMEBUFFER
-unsigned char framebuffer = 0;
+unsigned char framebuffer = 0, drawsector[] = { 0b11111111, 0b11111001, 0b10011001, 0b00001001, 0b00000000 };
 
 // LEVEL - DETERMINES SIZE OF MAZE
 unsigned short level = 0;
@@ -169,100 +169,100 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
     gpu_rectangle( colour, centrex - sizechange, centrey - sizechange, centrex + sizechange, centrey + sizechange );
 
     // HEAD
-    gpu_circle( colour, centrex, centrey - sizechange, sizechange, 1 );
+    gpu_circle( colour, centrex, centrey - sizechange, sizechange, 0x66, 1 );
 
     // FRILLS
-    switch( sizechange ) {
-        case 1:
-        case 2:
-        case 3:
-        case 6:
-            gpu_pixel( colour, centrex - offsetx, centrey + sizechange + 1 );
-            gpu_pixel( colour, centrex, centrey + sizechange + 1 );
-            gpu_pixel( colour, centrex + offsetx, centrey + sizechange + 1 );
-            break;
+    //switch( sizechange ) {
+    //    case 1:
+    //    case 2:
+    //    case 3:
+    //    case 6:
+    //        gpu_pixel( colour, centrex - offsetx, centrey + sizechange + 1 );
+    //        gpu_pixel( colour, centrex, centrey + sizechange + 1 );
+    //        gpu_pixel( colour, centrex + offsetx, centrey + sizechange + 1 );
+    //        break;
 
-        default:
-            gpu_circle( colour, centrex - ( offsetx * 2 ), centrey + sizechange, offsetx, 1 );
-            gpu_circle( colour, centrex, centrey + sizechange, offsetx, 1 );
-            gpu_circle( colour, centrex + ( offsetx * 2 ), centrey + sizechange, offsetx, 1 );
-            break;
-    }
+    //    default:
+            gpu_circle( colour, centrex - ( offsetx * 2 ), centrey + sizechange, offsetx, 0x99, 1 );
+            gpu_circle( colour, centrex, centrey + sizechange, offsetx, 0x99, 1 );
+            gpu_circle( colour, centrex + ( offsetx * 2 ), centrey + sizechange, offsetx, 0x99, 1 );
+    //        break;
+    //}
 
     // EYE WHITES
-    if( eyeoffsetx / 2 >= 4 ) {
+    //if( eyeoffsetx / 2 >= 4 ) {
         switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
             case 0:
                 // SAME DIRECTION, NO EYES
                 break;
             case 1:
                 // GHOST FACING RIGHT
-                gpu_circle( WHITE, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2, 1 );
+                gpu_circle( WHITE, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2, 0xff, 1 );
                 break;
             case 2:
                 // GHOST DIRECTLY FACING
-                gpu_circle( WHITE, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2, 1 );
-                gpu_circle( WHITE, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2, 1 );
+                gpu_circle( WHITE, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2, 0xff, 1 );
+                gpu_circle( WHITE, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2, 0xff, 1 );
                 break;
             case 3:
                 // GHOST FACING LEFT
-                gpu_circle( WHITE, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2, 1 );
+                gpu_circle( WHITE, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2, 0xff, 1 );
                 break;
         }
-    } else {
-        switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
-            case 0:
-                break;
-            case 1:
-                gpu_pixel( WHITE, centrex + eyeoffsetx, centrey - eyeoffsety );
-                break;
-            case 2:
-                gpu_pixel( WHITE, centrex - eyeoffsetx, centrey - eyeoffsety );
-                gpu_pixel( WHITE, centrex + eyeoffsetx, centrey - eyeoffsety );
-                break;
-            case 3:
-                gpu_pixel( WHITE, centrex - eyeoffsetx, centrey - eyeoffsety );
-                break;
-        }
-    }
+    //} else {
+    //    switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
+    //        case 0:
+    //            break;
+    //        case 1:
+    //            gpu_pixel( WHITE, centrex + eyeoffsetx, centrey - eyeoffsety );
+    //            break;
+    //        case 2:
+    //            gpu_pixel( WHITE, centrex - eyeoffsetx, centrey - eyeoffsety );
+    //            gpu_pixel( WHITE, centrex + eyeoffsetx, centrey - eyeoffsety );
+    //            break;
+    //        case 3:
+    //            gpu_pixel( WHITE, centrex - eyeoffsetx, centrey - eyeoffsety );
+    //            break;
+    //    }
+    //}
 
     // EYE PUPILS
     if( !powerstatus ) {
-        if( eyeoffsetx / 4 >= 4 ) {
+        //if( eyeoffsetx / 4 >= 4 ) {
             switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
                 case 0:
                     // SAME DIRECTION, NO EYES
                     break;
                 case 1:
                     // GHOST FACING RIGHT
-                    gpu_circle( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 1 );
+                    gpu_circle( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 0xff, 1 );
                     break;
                 case 2:
                     // GHOST DIRECTLY FACING
-                    gpu_circle( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 1 );
-                    gpu_circle( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 1 );
+                    gpu_circle( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 0xff, 1 );
+                    gpu_circle( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 0xff, 1 );
                     break;
                 case 3:
                     // GHOST FACING LEFT
-                    gpu_circle( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 1 );
+                    gpu_circle( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 0xff, 1 );
                     break;
             }
-        } else {
-            switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
-                case 0:
-                    break;
-                case 1:
-                    gpu_pixel( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety );
-                    break;
-                case 2:
-                    gpu_pixel( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety );
-                    gpu_pixel( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety );
-                    break;
-                case 3:
-                    gpu_pixel( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety );
-                    break;
-            }
-        }
+        //} else {
+        //    switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
+        //        case 0:
+        //            break;
+        //        case 1:
+        //            gpu_pixel( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety );
+        //            break;
+        //        case 2:
+        //            gpu_pixel( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety );
+        //            gpu_pixel( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety );
+        //            break;
+        //        case 3:
+        //            gpu_pixel( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety );
+        //            break;
+        //    }
+        //}
     }
 }
 
@@ -313,21 +313,21 @@ void move_ghost( unsigned short ghostnumber) {
 void draw_pill( unsigned short steps ) {
     unsigned short pillsize = ( 160 - perspectivex[ steps ] ) / 8;
 
-    switch( pillsize ) {
-        case 0:
-            break;
+    //switch( pillsize ) {
+    //    case 0:
+    //        break;
 
-        case 1:
-        case 2:
-        case 3:
-            gpu_pixel( WHITE, 160, 240 - perspectivey[ steps ] );
-            break;
+    //    case 1:
+    //    case 2:
+    //    case 3:
+    //        gpu_pixel( WHITE, 160, 240 - perspectivey[ steps ] );
+    //        break;
 
-        default:
-            gpu_circle( WHITE, 160, 240 - perspectivey[ steps ], pillsize, 1 );
-            gpu_circle( GREY2, 160, 240 - perspectivey[ steps ], pillsize, 0 );
-            break;
-    }
+    //    default:
+            gpu_circle( WHITE, 160, 240 - perspectivey[ steps ], pillsize, 0xff, 1 );
+            gpu_circle( GREY2, 160, 240 - perspectivey[ steps ], pillsize, 0xff, 0 );
+    //        break;
+    //}
 }
 
 // ADAPTED FROM https://weblog.jamisbuck.org/2011/2/3/maze-generation-sidewinder-algorithm.html#
@@ -881,9 +881,21 @@ int main( void ) {
         // ENTER THE MAZE IN 3D
         set_background( DKBLUE, DKGREEN, BKG_5050_V );
         if( walk_maze( levelwidths[level], levelheights[level] ) ) {
+            // PACMAN WILT GRAPHICS
+            for( unsigned char i = 0; i < 5; i++ ) {
+                bitmap_draw( 1 - framebuffer );
+                gpu_cs();
+                gpu_circle( YELLOW, 160, 120, 80, drawsector[i], 1 );
+                framebuffer = 1 - framebuffer;
+                bitmap_display( framebuffer );
+                sleep( 250, 0 );
+            }
             // DISPLAY TOMBSTONE BITMAP AND RESET TO BEGINNING
+            bitmap_draw( 1 - framebuffer );
             gpu_cs();
             gpu_pixelblock7( 0, 0, 320, 298, WHITE, tombstonebitmap );
+            framebuffer = 1 - framebuffer;
+            bitmap_display( framebuffer );
             level = 0;
             firstrun = 1;
         } else {

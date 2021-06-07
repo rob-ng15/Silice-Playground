@@ -209,7 +209,8 @@ algorithm gpu(
     circle GPUcircle(
         x <: gpu_x,
         y <: gpu_y,
-        param0 <: gpu_param0
+        param0 <: gpu_param0,
+        param1 <: gpu_param1
     );
     triangle GPUtriangle(
         x <: gpu_x,
@@ -544,23 +545,27 @@ algorithm circle(
     input   int10   x,
     input   int10   y,
     input   int10   param0,
+    input   uint8   param1,
     input   uint1   filledcircle,
 
     output  int10  bitmap_x_write,
     output  int10  bitmap_y_write,
-    output  uint1   bitmap_write,
+    output  uint1  bitmap_write,
 
     input   uint1   start,
     output  uint1   busy
 ) <autorun> {
     uint8   PIXELOUTPUT = uninitialised;
-    uint2   FSM = uninitialised;
+    uint8   PIXELMASK <:: PIXELOUTPUT;
+    uint3   FSM = uninitialised;
     int10   gpu_active_x = uninitialized;
     int10   gpu_active_y = uninitialized;
     int10   gpu_xc = uninitialized;
     int10   gpu_yc = uninitialized;
     int10   gpu_numerator = uninitialized;
     int10   gpu_count = uninitialised;
+    int10   gpu_min_count = uninitialised;
+    uint8   draw_sectors = uninitialised;
     updatenumerator UN(
         gpu_numerator <: gpu_numerator,
         gpu_active_x <: gpu_active_x,
@@ -581,18 +586,22 @@ algorithm circle(
                         gpu_active_x = 0;
                         ( gpu_active_y ) = abs( param0 );
                         ( gpu_xc, gpu_yc ) = copycoordinates( x, y );
+                        draw_sectors = param1;
                     }
                     case 1: {
                         // Set the radius, for filled circles to a minimum of 4
-                        if( filledcircle ) {
-                            gpu_active_y = ( gpu_active_y < 4 ) ? 4 : gpu_active_y;
-                            gpu_count = ( gpu_active_y < 4 ) ? 4 : gpu_active_y;
-                        } else {
+                        //if( filledcircle ) {
+                        //    gpu_active_y = ( gpu_active_y < 4 ) ? 4 : gpu_active_y;
+                        //    gpu_count = ( gpu_active_y < 4 ) ? 4 : gpu_active_y;
+                        //} else {
                             gpu_count = gpu_active_y;
-                        }
+                        //}
                         gpu_numerator = 3 - ( { gpu_active_y, 1b0 } );
+                        gpu_min_count = (-1);
+                    }
+                    case 2: {
                         while( gpu_active_y >= gpu_active_x ) {
-                            while( gpu_count != (-1) ) {
+                            while( gpu_count != gpu_min_count ) {
                                 PIXELOUTPUT = 8b000000001;
                                 while( PIXELOUTPUT != 0 ) {
                                     // OUTPUT PIXELS IN THE 8 SEGMENTS/ARCS
@@ -606,19 +615,20 @@ algorithm circle(
                                         case 6: { bitmap_x_write = gpu_xc - gpu_count; }
                                         case 7: { bitmap_y_write = gpu_yc + gpu_active_x; }
                                     }
-                                    bitmap_write = 1;
+                                    bitmap_write = ( draw_sectors & PIXELMASK ) != 0;
                                     PIXELOUTPUT = { PIXELOUTPUT[0,7], 1b0 };
                                 }
-                                gpu_count = filledcircle ? gpu_count - 1 : (-1);
+                                gpu_count = filledcircle ? gpu_count - 1 : gpu_min_count;
                             }
                             gpu_active_x = gpu_active_x + 1;
                             gpu_active_y = gpu_active_y - ( gpu_numerator > 0 );
                             gpu_count = gpu_active_y - ( gpu_numerator > 0 );
+                            gpu_min_count = gpu_min_count + 1;
                             gpu_numerator = UN.new_numerator;
                         }
                     }
                 }
-                FSM = { FSM[0,1], 1b0 };
+                FSM = { FSM[0,2], 1b0 };
             }
 
             active = 0;

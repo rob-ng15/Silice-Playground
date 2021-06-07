@@ -426,12 +426,13 @@ void gpu_cs( void ) {
 }
 
 
-// DRAW A (optional filled) CIRCLE at centre (x1,y1) of radius ( FILLED CIRCLES HAVE A MINIMUM RADIUS OF 4 )
-void gpu_circle( unsigned char colour, short x1, short y1, short radius, unsigned char filled ) {
+// DRAW A (optional filled) CIRCLE at centre (x1,y1) of radius
+void gpu_circle( unsigned char colour, short x1, short y1, short radius, unsigned char drawsectors, unsigned char filled ) {
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = radius;
+    *GPU_PARAM1 = drawsectors;
     wait_gpu();
     *GPU_WRITE = filled ? 5 : 4;
 }

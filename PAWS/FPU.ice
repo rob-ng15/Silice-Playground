@@ -223,22 +223,21 @@ algorithm floataddsub(
 
     output  uint32  result
 ) <autorun> {
-    uint5   FSM = uninitialised;
+    uint4   FSM = uninitialised;
     uint2   classEa = uninitialised;
     uint1   classFa = uninitialised;
     uint2   classEb = uninitialised;
     uint1   classFb = uninitialised;
     uint1   sign = uninitialised;
-    int16   expA = uninitialised;
-    int16   expB = uninitialised;
+    uint8   expA = uninitialised;
+    uint8   expB = uninitialised;
     uint32  sigA = uninitialised;
     uint32  sigB = uninitialised;
     uint32  totaldifference = uninitialised;
 
-    // == 0 ADD == 1 SUB
-    uint1   operation = uninitialised;
-    uint32  value1 = uninitialised;
-    uint32  value2 = uninitialised;
+    uint32  A = uninitialised;
+    uint32  B = uninitialised;
+
     busy = 0;
 
     while(1) {
@@ -248,54 +247,21 @@ algorithm floataddsub(
             while( FSM != 0 ) {
                 onehot( FSM ) {
                     case 0: {
-                        ( classEa, classFa ) = class( a );
-                        ( classEb, classFb ) = class( b );
-                        operation = ( a[31,1] == b[31,1] ) ? addsub : ~addsub;
-                    }
-                    case 1: {
                         switch( addsub ) {
-                            case 0: {
-                                switch( { a[31,1], b[31,1] } ) {
-                                    case 2b01: {
-                                        value1 = a;
-                                        value2 = { ~b[31,1], b[0,31] };
-                                    }
-                                    case 2b10: {
-                                        value1 = b;
-                                        value2 = { ~a[31,1], a[0,31] };
-                                    }
-                                    default: {
-                                        value1 = a;
-                                        value2 = b;
-                                    }
-                                }
-                            }
-                            case 1: {
-                                switch( { a[31,1], b[31,1] } ) {
-                                    case 2b00: {
-                                        value1 = a;
-                                        value2 = b;
-                                    }
-                                    case 2b11: {
-                                        value1 = { ~b[31,1], b[0,31] };
-                                        value2 = { ~a[31,1], a[0,31] };
-                                    }
-                                    default: {
-                                        value1 = a;
-                                        value2 = ( { a[31,1], b[31,1] } == 2b10 ) ? b : { ~b[31,1], b[0,31] };
-                                    }
-                                }
-                            }
+                            case 0: { A = a; B = b; }
+                            case 1: { A = a; B = { ~b[31,1], b[0,31] }; }
                         }
                     }
-                    case 2: {
-                        expA = floatingpointnumber( value1 ).exponent;
-                        expB = floatingpointnumber( value2 ).exponent;
-                        sigA = { 2b01, value1[0,23], 7b0 };
-                        sigB = { 2b01, value2[0,23], 7b0 };
-                        sign = value1[31,1];
+                    case 1: {
+                        expA = floatingpointnumber( A ).exponent;
+                        expB = floatingpointnumber( B ).exponent;
+                        sigA = { 2b01, A[0,23], 7b0 };
+                        sigB = { 2b01, B[0,23], 7b0 };
+                        sign = A[31,1];
+                        ( classEa, classFa ) = class( A );
+                        ( classEb, classFb ) = class( B );
                     }
-                    case 3: {
+                    case 2: {
                         // ADJUST TO EQUAL EXPONENTS
                         if( ( classEa == 2b00 ) && ( classEb == 2b00 ) ) {
                             if( expA < expB ) {
@@ -309,21 +275,30 @@ algorithm floataddsub(
                             }
                         }
                     }
-                    case 4: {
+                    case 3: {
                         switch( classEa ) {
                             case 2b00: {
                                 switch( classEb ) {
                                     case 2b00: {
-                                        switch( operation ) {
-                                            case 0: { totaldifference = sigA + sigB; }
-                                            case 1: {
-                                                if( ~sign && ( sigB > sigA ) ) {
+                                        switch( { A[31,1], B[31,1] } ) {
+                                            case 2b00: { totaldifference = sigA + sigB; }
+                                            case 2b01: {
+                                                if( sigB > sigA ) {
                                                     sign = ~sign;
                                                     totaldifference = sigB - sigA;
                                                 } else {
                                                     totaldifference = sigA - sigB;
                                                 }
                                             }
+                                            case 2b10: {
+                                                if(  sigA > sigB ) {
+                                                    totaldifference = sigA - sigB;
+                                                } else {
+                                                    sign = ~sign;
+                                                    totaldifference = sigB - sigA;
+                                                }
+                                            }
+                                            case 2b11: { totaldifference = sigA + sigB; }
                                         }
                                         if( totaldifference == 0 ) {
                                             result = { sign, 31b0 };
@@ -340,22 +315,22 @@ algorithm floataddsub(
                                             }
                                         }
                                     }
-                                    case 2b01: { result = operation ? value2 : { ~value2[31,1], value2[0,31] }; }
-                                    default: {  result = { 1b0, 23b0, 8b11111111 }; }
+                                    case 2b01: { result = A; }
+                                    default: {  result = { 1b0, 8b11111111, 23b0  }; }
                                 }
                             }
                             case 2b01: {
                                 switch( classEb ) {
-                                    case 2b00: { result = operation ? { ~value2[31,1], value2[0,31] } : value2; }
-                                    case 2b01: { result = value1; }
-                                    default: {  result = { 1b0, 23b0, 8b11111111 }; }
+                                    case 2b00: { result = B; }
+                                    case 2b01: { result = 0; }
+                                    default: {  result = { 1b0, 8b11111111, 23b0  }; }
                                 }
                             }
-                            default: {  result = { 1b0, 23b0, 8b11111111 }; }
+                            default: {  result = { 1b0, 8b11111111, 23b0  }; }
                         }
                     }
                 }
-                FSM = { FSM[0,4], 1b0 };
+                FSM = { FSM[0,3], 1b0 };
             }
             busy = 0;
         }
@@ -424,17 +399,17 @@ algorithm floatmultiply(
                                         }
                                     }
                                     case 2b01: { result = { productsign, 31b0 }; }
-                                    default: { result = { productsign, 23b0, 8b11111111 }; }
+                                    default: { result = { productsign, 8b11111111, 23b0 }; }
                                 }
                             }
                             case 2b01: {
                                 switch( classEb ) {
                                     case 2b00: { result = { productsign, 31b0 }; }
                                     case 2b01: { result = { productsign, 31b0 }; }
-                                    default: { result = { productsign, 23b0, 8b11111111 }; }
+                                    default: { result = { productsign, 8b11111111, 23b0 }; }
                                 }
                             }
-                            default: { result = { productsign, 23b0, 8b11111111 }; }
+                            default: { result = { productsign, 8b11111111, 23b0 }; }
                         }
                     }
                 }
@@ -510,21 +485,22 @@ algorithm floatdivide(
                                                 while( ~quotient[31,1] ) {
                                                     quotient = { quotient[0,31], 1b0 };
                                                 }
+                                                if( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction ) { quotientexp = quotientexp - 1; }
                                                 result = { quotientsign, quotientexp[0,8], quotient[8,23] };
                                             }
                                         }
                                     }
-                                    default: { result = { quotientsign, 23b0, 8b11111111 }; }
+                                    default: { result = { quotientsign, 8b11111111, 23b0 }; }
                                 }
                             }
                             case 2b01: {
                                 switch( classEb ) {
                                     case 2b00: { result = { quotientsign, 31b0 }; }
-                                    default: { result = { quotientsign, 23b0, 8b11111111 }; }
+                                    default: { result = { quotientsign, 8b11111111, 23b0 }; }
                                 }
                             }
-                            case 2b10: { result = { quotientsign, 23b0, 8b11111111 }; }
-                            case 2b11: { result = { quotientsign, 23b0, 8b11111111 }; }
+                            case 2b10: { result = { quotientsign, 8b11111111, 23b0 }; }
+                            case 2b11: { result = { quotientsign, 8b11111111, 23b0 }; }
                         }
                     }
                 }

@@ -719,7 +719,7 @@ void gpudemo( void ) {
     tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Circle Drawing Test - Solid & Dither" );
     for( i = 0; i < 1024; i++ ) {
         gpu_dither( rng(16), rng( 64 ) );
-        gpu_circle( rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng( 32 ), rng( 1 ) );
+        gpu_circle( rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng( 32 ), 255, rng( 1 ) );
     }
     gpu_dither( DITHEROFF );
     sleep( 1000, 0 );
