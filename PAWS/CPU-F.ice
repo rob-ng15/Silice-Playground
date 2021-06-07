@@ -219,6 +219,7 @@ algorithm PAWSCPU(
 
     // REGISTERS Write FLAG
     REGISTERS.write := 0;
+    REGISTERSF.write := 0;
 
     // ALU START FLAGS
     ALU.start := 0;
@@ -286,7 +287,7 @@ algorithm PAWSCPU(
                 FSM = 7b1000000;
             }
             case 6: {                                                                           // REGISTERS WRITE, UPDATE CSR, PC and SMT
-                REGISTERS.write = writeRegister & ~frd;
+                REGISTERS.write = writeRegister & ~frd & ( rd != 0 );
                 REGISTERSF.write = writeRegister & frd;
                 CSR.incCSRinstret = 1;
                 switch( SMT ) {

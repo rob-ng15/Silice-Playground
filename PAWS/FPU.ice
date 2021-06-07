@@ -255,9 +255,9 @@ algorithm floataddsub(
                     case 1: {
                         expA = floatingpointnumber( A ).exponent;
                         expB = floatingpointnumber( B ).exponent;
-                        sigA = { 2b01, A[0,23], 7b0 };
-                        sigB = { 2b01, B[0,23], 7b0 };
-                        sign = A[31,1];
+                        sigA = { 2b01, floatingpointnumber(A).fraction, 7b0 };
+                        sigB = { 2b01, floatingpointnumber(B).fraction, 7b0 };
+                        sign = floatingpointnumber(A).sign;
                         ( classEa, classFa ) = class( A );
                         ( classEb, classFb ) = class( B );
                     }
@@ -305,28 +305,28 @@ algorithm floataddsub(
                                         } else {
                                             if( totaldifference[31,1] ) {
                                                 expA = expA + 1;
-                                                result = { sign, expA[0,8], totaldifference[8,23] };
+                                                result = { sign, expA, totaldifference[8,23] };
                                             } else {
                                                 while( ~totaldifference[30,1] ) {
                                                     totaldifference = { totaldifference[0,31], 1b0 };
                                                     expA = expA - 1;
                                                 }
-                                                result = { sign, expA[0,8], totaldifference[7,23] };
+                                                result = { sign, expA, totaldifference[7,23] };
                                             }
                                         }
                                     }
                                     case 2b01: { result = A; }
-                                    default: {  result = { 1b0, 8b11111111, 23b0  }; }
+                                    default: {  result = { 1b0, 8b11111111, 23b0 }; }
                                 }
                             }
                             case 2b01: {
                                 switch( classEb ) {
                                     case 2b00: { result = B; }
                                     case 2b01: { result = 0; }
-                                    default: {  result = { 1b0, 8b11111111, 23b0  }; }
+                                    default: {  result = { 1b0, 8b11111111, 23b0 }; }
                                 }
                             }
-                            default: {  result = { 1b0, 8b11111111, 23b0  }; }
+                            default: {  result = { 1b0, 8b11111111, 23b0 }; }
                         }
                     }
                 }
@@ -354,9 +354,9 @@ algorithm floatmultiply(
     uint1   classFb = uninitialised;
     uint1   productsign = uninitialised;
     uint48  product = uninitialised;
-    int16   productexp = uninitialised;
-    int16   expA = uninitialised;
-    int16   expB = uninitialised;
+    int8    productexp  = uninitialised;
+    int8    expA = uninitialised;
+    int8    expB = uninitialised;
 
     // Calculation is split into 4 18 x 18 multiplications for DSP
     uint18  A = uninitialised;
@@ -374,14 +374,15 @@ algorithm floatmultiply(
                     case 0: {
                         ( classEa, classFa ) = class( a );
                         ( classEb, classFb ) = class( b );
-                        productsign = a[31,1] ^ b[31,1];
-                        expA = floatingpointnumber( a ).exponent;
-                        expB = floatingpointnumber( b ).exponent;
+                        expA = floatingpointnumber( a ).exponent - 127;
+                        expB = floatingpointnumber( b ).exponent - 127;
                         A = { 10b0, 1b1, a[16,7] };
                         B = { 2b0, a[0,16] };
                         C = { 10b0, 1b1, b[16,7] };
                         D = { 2b0, b[0,16] };
                         product = ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
+                        productexp = expA + expB;
+                        productsign = a[31,1] ^ b[31,1];
                     }
                     case 1: {
                         switch( classEa ) {
@@ -391,7 +392,7 @@ algorithm floatmultiply(
                                         if( product == 0 ) {
                                             result = { productsign, 31b0 };
                                         } else {
-                                            productexp = expA + expB - 127 + product[47,1];
+                                            productexp = productexp + 127 + product[47,1];
                                             while( ~product[47,1] ) {
                                                 product = { product[0,47], 1b0 };
                                             }
@@ -436,13 +437,13 @@ algorithm floatdivide(
     uint2   classEb = uninitialised;
     uint1   classFb = uninitialised;
     uint32  temporary = uninitialised;
-    uint1   quotientsign := a[31,1] ^ b[31,1];
+    uint1   quotientsign = uninitialised;
     int16   quotientexp = uninitialised;
     uint32  quotient = uninitialised;
     uint32  remainder = uninitialised;
     uint6   bit = uninitialised;
-    int16   expA := floatingpointnumber( a ).exponent;
-    int16   expB := floatingpointnumber( b ).exponent;
+    int8    expA = uninitialised;
+    int8    expB  = uninitialised;
     uint32  sigA = uninitialised;
     uint32  sigB = uninitialised;
 
@@ -459,7 +460,10 @@ algorithm floatdivide(
                         ( classEb, classFb ) = class( b );
                         sigA = { 1b1, floatingpointnumber(a).fraction, 8b0 };
                         sigB = { 9b1, floatingpointnumber(b).fraction };
-                        quotientexp = expA - expB + 127;
+                        expA = floatingpointnumber( a ).exponent - 127;
+                        expB = floatingpointnumber( b ).exponent - 127;
+                        quotientsign = a[31,1] ^ b[31,1];
+                        quotientexp = expA - expB;
                         quotient = 0;
                         remainder = 0;
                         bit = 31;
@@ -485,7 +489,7 @@ algorithm floatdivide(
                                                 while( ~quotient[31,1] ) {
                                                     quotient = { quotient[0,31], 1b0 };
                                                 }
-                                                if( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction ) { quotientexp = quotientexp - 1; }
+                                                quotientexp = quotientexp + 127 - ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction );
                                                 result = { quotientsign, quotientexp[0,8], quotient[8,23] };
                                             }
                                         }
@@ -649,7 +653,7 @@ algorithm floattouint(
 ) <autorun> {
     uint2   classE = uninitialised;
     uint1   classF = uninitialised;
-    int16   exp = uninitialised;
+    int8    exp = uninitialised;
     uint33  sig = uninitialised;
 
     busy = 0;
@@ -689,7 +693,7 @@ algorithm floattoint(
 ) <autorun> {
     uint2   classE = uninitialised;
     uint1   classF = uninitialised;
-    int16   exp = uninitialised;
+    int8    exp = uninitialised;
     uint33  sig = uninitialised;
 
     busy = 0;

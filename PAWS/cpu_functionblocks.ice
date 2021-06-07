@@ -31,7 +31,7 @@ algorithm registers(
 
     while(1) {
         // WRITE TO REGISTERS
-        if( write && ( rd != 0 ) ) {
+        if( write ) {
             registers_1.addr1 = { SMT, rd };
             registers_1.wdata1 = result;
             registers_2.addr1 = { SMT, rd };

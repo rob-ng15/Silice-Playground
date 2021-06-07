@@ -589,13 +589,8 @@ algorithm circle(
                         draw_sectors = param1;
                     }
                     case 1: {
-                        // Set the radius, for filled circles to a minimum of 4
-                        //if( filledcircle ) {
-                        //    gpu_active_y = ( gpu_active_y < 4 ) ? 4 : gpu_active_y;
-                        //    gpu_count = ( gpu_active_y < 4 ) ? 4 : gpu_active_y;
-                        //} else {
-                            gpu_count = gpu_active_y;
-                        //}
+                        // Set the radius
+                        gpu_count = gpu_active_y;
                         gpu_numerator = 3 - ( { gpu_active_y, 1b0 } );
                         gpu_min_count = (-1);
                     }
