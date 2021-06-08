@@ -287,7 +287,7 @@ algorithm PAWSCPU(
                 FSM = 7b1000000;
             }
             case 6: {                                                                           // REGISTERS WRITE, UPDATE CSR, PC and SMT
-                REGISTERS.write = writeRegister & ~frd & ( rd != 0 );
+                REGISTERS.write = writeRegister & ~frd & ( rd != 0 );                           // BASE DO NOT WRITE TO REGISTER 0
                 REGISTERSF.write = writeRegister & frd;
                 CSR.incCSRinstret = 1;
                 switch( SMT ) {

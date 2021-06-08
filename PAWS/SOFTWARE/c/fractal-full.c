@@ -1,8 +1,8 @@
 #include "PAWSlibrary.h"
 #include <stdint.h>
 
-// NORMAL IS 1023 AND 4, FAST IS 63 AND 0
-#define MAXITER 1023
+// NORMAL IS 1024 AND 4, FAST IS 63 AND 0
+#define MAXITER 1024
 #define ITERSHIFT 4
 
 int main( void ) {
@@ -36,27 +36,21 @@ int main( void ) {
     for( z = 0; z < 6; z++ ) {
         ysize = ysize >> 1; ypixel = ysize >> 1;
         xsize = xsize >> 1; xpixel = xsize >> 1;
-        //tpu_printf_centre( 28, TRANSPARENT, WHITE, "ITERATION %d start ( %3d, %3d ) dx = %f dy = %f", z, xsize, ysize, dx, dy );
         for(j = ysize; j < yres; j += ysize ) {
             y = ymax - j * dy;
             for(i = xsize; i < xres; i += xsize ) {
-                //tpu_printf_centre( 29, TRANSPARENT, WHITE, "( %3d, %3d )", i , j );
                 u = 0.0;
                 v = 0.0;
                 u2 = u * u;
                 v2 = v*v;
                 x = xmin + i * dx;
                 /* iterate the point */
-                //printf( "( %3d, %3d ) v = %f u = %f u2 = %f v2 = %f x = %f y = %f\n", i, j, v, u, u2, v2, x, y );
                 for (k = 1; k < maxiter && (u2 + v2 < 4.0); k++) {
                         v = 2 * u * v + y;
                         u = u2 - v2 + x;
                         u2 = u * u;
                         v2 = v * v;
-                        //printf("    k = %2d, u2 + v2 = %f\n", k, u2 + v2 );
                 };
-                //printf( "\n             k = %2d  u2 + v2 = %f\n", k, u2 + v2 );
-                //sleep( 100, 0 );
                 /* compute  pixel color and write it to file */
                 gpu_rectangle( (k >= maxiter) ? BLACK : k>>ITERSHIFT, i - xpixel , j - ypixel, i + xpixel, j + ypixel );
             }
