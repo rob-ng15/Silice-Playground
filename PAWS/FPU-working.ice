@@ -15,14 +15,20 @@ algorithm fpu(
     output uint32  result,
     output uint1   frd
 ) <autorun> {
+    uint2   FSM = uninitialised;
+
+    inttofloat FPUfloat( a <: sourceReg1, rs2 <: rs2 );
+    floattoint FPUint( sourceReg1F <: sourceReg1F );
+    floattouint FPUuint( sourceReg1F <: sourceReg1F );
     floatclassify FPUclass( sourceReg1F <: sourceReg1F );
     floatcomparison FPUcomparison( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
     floatsign FPUsign( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
     floatcalc FPUcalculator( opCode <: opCode, function7 <: function7, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F, sourceReg3F <: sourceReg3F );
-    floatconvert FPUconvert( function7 <: function7, rs2 <: rs2, sourceReg1 <: sourceReg1, sourceReg1F <: sourceReg1F );
 
+    FPUfloat.start := 0;
+    FPUint.start := 0;
+    FPUuint.start := 0;
     FPUcalculator.start := 0;
-    FPUconvert.start := 0;
 
     busy = 0;
 
@@ -37,6 +43,7 @@ algorithm fpu(
                     FPUcalculator.start = 1; while( FPUcalculator.busy ) {} result = FPUcalculator.result;
                 }
                 case 5b10100: {
+                    // NON 3 REGISTER FPU OPERATIONS
                     switch( function7[2,5] ) {
                         default: {
                             // FADD.S FSUB.S FMUL.S FDIV.S FSQRT.S
@@ -55,12 +62,14 @@ algorithm fpu(
                         }
                         case 5b11000: {
                             // FCVT.W.S FCVT.WU.S
-                            frd = 0; FPUconvert.start = 1; while( FPUconvert.busy ) {} result = FPUconvert.result;
+                            frd = 0;
+                            FPUint.start = ~rs2[0,1]; FPUuint.start = rs2[0,1]; while( FPUint.busy || FPUuint.busy ) {}
+                            result = rs2[0,1] ? FPUuint.result : FPUint.result;
                         }
                         case 5b10100: {
                             // FEQ.S FLT.S FLE.S
                             frd = 0;
-                            result = FPUcomparison.comparison;
+                            result = { 31b0, FPUcomparison.comparison };
                         }
                         case 5b11100: {
                             // FCLASS.S  FMV.X.W
@@ -69,7 +78,8 @@ algorithm fpu(
                         }
                         case 5b11010: {
                             // FCVT.S.W FCVT.S.WU
-                            FPUconvert.start = 1; while( FPUconvert.busy ) {} result = FPUconvert.result;
+                            FPUfloat.start = 1; while( FPUfloat.busy ) {}
+                            result = FPUfloat.result;
                         }
                         case 5b11110: {
                             // FMV.W.X
@@ -118,48 +128,6 @@ circuitry classE( output E, input N ) {
     E = { ( floatingpointnumber(N).exponent ) == 8hff, ( floatingpointnumber(N).exponent ) == 8h00 };
 }
 
-// CONVERSION BETWEEN FLOAT AND SIGNED/UNSIGNED INTEGERS
-algorithm floatconvert(
-    input   uint1   start,
-    output  uint1   busy,
-
-    input   uint7   function7,
-    input   uint5   rs2,
-    input   uint32  sourceReg1,
-    input   uint32  sourceReg1F,
-
-    output uint32  result
-) <autorun> {
-    inttofloat FPUfloat( a <: sourceReg1, rs2 <: rs2 );
-    floattoint FPUint( sourceReg1F <: sourceReg1F );
-    floattouint FPUuint( sourceReg1F <: sourceReg1F );
-
-    FPUfloat.start := 0;
-    FPUint.start := 0;
-    FPUuint.start := 0;
-
-    while(1) {
-        if( start ) {
-            busy = 1;
-
-            switch( function7[2,5] ) {
-                case 5b11000: {
-                    // FCVT.W.S FCVT.WU.S
-                    FPUint.start = ~rs2[0,1]; FPUuint.start = rs2[0,1]; while( FPUint.busy || FPUuint.busy ) {}
-                    result = rs2[0,1] ? FPUuint.result : FPUint.result;
-                }
-                case 5b11010: {
-                    // FCVT.S.W FCVT.S.WU
-                    FPUfloat.start = 1; while( FPUfloat.busy ) {}
-                    result = FPUfloat.result;
-                }
-            }
-
-            busy = 0;
-        }
-    }
-}
-
 // CONVERT SIGNED/UNSIGNED INTEGERS TO FLOAT
 algorithm inttofloat(
     input   uint1   start,
@@ -202,170 +170,6 @@ algorithm inttofloat(
                     }
                 }
                 FSM = { FSM[0,1], 1b0 };
-            }
-            busy = 0;
-        }
-    }
-}
-
-// CONVERT FLOAT TO SIGNED/UNSIGNED INTEGERS
-algorithm floattouint(
-    input   uint32  sourceReg1F,
-    output  uint32  result,
-    output  uint1   busy,
-    input   uint1   start
-) <autorun> {
-    uint2   classEa = uninitialised;
-    int8    exp = uninitialised;
-    uint33  sig = uninitialised;
-
-    busy = 0;
-
-    while(1) {
-        if( start ) {
-            busy = 1;
-            ( classEa ) = classE( sourceReg1F );
-            switch( classEa ) {
-                case 2b00: {
-                    switch( sourceReg1F[31,1] ) {
-                        case 1: { result = 0; }
-                        default: {
-                            exp = floatingpointnumber( sourceReg1F ).exponent - 127;
-                            if( exp < 24 ) {
-                                sig = { 9b1, sourceReg1F[0,23], 1b0 } >> ( 23 - exp );
-                            } else {
-                                sig = { 9b1, sourceReg1F[0,23], 1b0 } << ( exp - 24);
-                            }
-                            result = ( exp > 31 ) ? 32hffffffff : ( sig[1,32] + sig[0,1] );
-                        }
-                    }
-                }
-                case 2b01: { result = 0; }
-                case 2b10: { result = sourceReg1F[31,1] ? 0 : 32hffffffff;  }
-            }
-            busy = 0;
-        }
-    }
-}
-
-algorithm floattoint(
-    input   uint32  sourceReg1F,
-    output  uint32  result,
-    output  uint1   busy,
-    input   uint1   start
-) <autorun> {
-    uint2   classEa = uninitialised;
-    int8    exp = uninitialised;
-    uint33  sig = uninitialised;
-
-    busy = 0;
-
-    while(1) {
-        if( start ) {
-            busy = 1;
-            ( classEa ) = classE( sourceReg1F );
-            switch( classEa ) {
-                case 2b00: {
-                    exp = floatingpointnumber( sourceReg1F ).exponent - 127;
-                    if( exp < 24 ) {
-                        sig = { 9b1, sourceReg1F[0,23], 1b0 } >> ( 23 - exp );
-                    } else {
-                        sig = { 9b1, sourceReg1F[0,23], 1b0 } << ( exp - 24);
-                    }
-                    result = ( exp > 30 ) ? ( sourceReg1F[31,1] ? 32hffffffff : 32h7fffffff ) : sourceReg1F[31,1] ? -( sig[1,32] + sig[0,1] ) : ( sig[1,32] + sig[0,1] );
-                 }
-                case 2b01: { result = 0; }
-                case 2b10: { result = sourceReg1F[31,1] ? 32hffffffff : 32h7fffffff; }
-            }
-            busy = 0;
-        }
-    }
-}
-
-// FPU CALCULATION BLOCKS FUSED ADD SUB MUL DIV SQRT
-algorithm floatcalc(
-    input   uint1   start,
-    output  uint1   busy,
-
-    input   uint7   opCode,
-    input   uint7   function7,
-    input   uint32  sourceReg1F,
-    input   uint32  sourceReg2F,
-    input   uint32  sourceReg3F,
-
-    output uint32  result,
-) <autorun> {
-    uint2   FSM = uninitialised;
-    floataddsub FPUaddsub();
-    floatmultiply FPUmultiply( b <: sourceReg2F );
-    floatdivide FPUdivide();
-    floatsqrt FPUsqrt( sourceReg1F <: sourceReg1F );
-
-    FPUaddsub.start := 0;
-    FPUmultiply.start := 0;
-    FPUdivide.start := 0;
-
-    // SQRT resuses blocks
-    FPUsqrt.start := 0;
-    FPUsqrt.addResult := FPUaddsub.result; FPUsqrt.divResult := FPUdivide.result;
-    FPUsqrt.addBusy := FPUaddsub.busy; FPUsqrt.divBusy := FPUdivide.busy;
-
-    while(1) {
-        if( start ) {
-            busy = 1;
-
-            switch( opCode[2,5] ) {
-                default: {
-                    // FMADD.S FMSUB.S FNMSUB.S FNMADD.S
-                    FSM = 1;
-                    while( FSM != 0 ) {
-                        onehot( FSM ) {
-                            case 0: {
-                                FPUmultiply.a = opCode[3,1] ? { ~sourceReg1F[31,1], sourceReg1F[0,31] } : sourceReg1F;
-                                FPUmultiply.start = 1; while( FPUmultiply.busy ) {}
-                            }
-                            case 1: {
-                                FPUaddsub.a = FPUmultiply.result; FPUaddsub.b = sourceReg3F;
-                                FPUaddsub.addsub = ( opCode[2,1] != opCode[3,1] );
-                                FPUaddsub.start = 1; while( FPUaddsub.busy ) {}
-                            }
-                        }
-                        FSM = { FSM[0,1], 1b0 };
-                    }
-                    result = FPUaddsub.result;
-                }
-                case 5b10100: {
-                    // NON 3 REGISTER FPU OPERATIONS
-                    switch( function7[2,5] ) {
-                        default: {
-                            // FADD.S FSUB.S
-                            FPUaddsub.a = sourceReg1F; FPUaddsub.b = sourceReg2F; FPUaddsub.addsub = function7[2,1]; FPUaddsub.start = 1; while( FPUaddsub.busy ) {}
-                            result = FPUaddsub.result;
-                        }
-                        case 5b00010: {
-                            // FMUL.S
-                            FPUmultiply.a = sourceReg1F; FPUmultiply.start = 1; while( FPUmultiply.busy ) {}
-                            result = FPUmultiply.result;
-                        }
-                        case 5b00011: {
-                            // FDIV.S
-                            FPUdivide.a = sourceReg1F; FPUdivide.b = sourceReg2F; FPUdivide.start = 1; while( FPUdivide.busy ) {}
-                            result = FPUdivide.result;
-                        }
-                        case 5b01011: {
-                            // FSQRT.S
-                            FPUsqrt.start = 1;
-                            FPUaddsub.addsub = 0;
-                            while( FPUsqrt.busy ) {
-                                switch( { FPUsqrt.divStart, FPUsqrt.addStart } ) {
-                                    case 2b10: { FPUdivide.a = FPUsqrt.divA; FPUdivide.b = FPUsqrt.divB; FPUdivide.start = 1; while( FPUdivide.busy ) {} }
-                                    case 2b01: { FPUaddsub.a = FPUsqrt.addA; FPUaddsub.b = FPUsqrt.addB; FPUaddsub.start = 1; while( FPUaddsub.busy ) {} }
-                                }
-                            }
-                            result = FPUsqrt.result;
-                        }
-                    }
-                }
             }
             busy = 0;
         }
@@ -473,7 +277,7 @@ algorithm floataddsub(
                                         totaldifference = { totaldifference[0,47], 1b0 };
                                     }
                                     newfraction = totaldifference[24,23] + totaldifference[23,1];
-                                    //expA = expA + ( ( newfraction == 0 ) & totaldifference[23,1] );
+                                    expA = expA + ( ( newfraction == 0 ) & totaldifference[23,1] );
                                     result = { sign, expA, newfraction };
                                 }
                             }
@@ -548,7 +352,7 @@ algorithm floatmultiply(
                                         product = { product[0,47], 1b0 };
                                     }
                                     newfraction = product[24,23] + product[23,1];
-                                    //productexp = productexp + ( ( newfraction == 0 ) & product[23,1] );
+                                    productexp = productexp + ( ( newfraction == 0 ) & product[23,1] );
                                     result = { productsign, productexp, newfraction };
                                 }
                             }
@@ -638,7 +442,7 @@ algorithm floatdivide(
                                             quotient = { quotient[0,31], 1b0 };
                                         }
                                         newfraction = quotient[8,23] + quotient[7,1];
-                                        quotientexp = quotientexp + 127 - ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction ); // + ( ( newfraction == 0 ) & quotient[7,1] );
+                                        quotientexp = quotientexp + 127 - ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction ) + ( ( newfraction == 0 ) & quotient[7,1] );
                                         result = { quotientsign, quotientexp, newfraction };
                                     }
                                 }
@@ -798,6 +602,79 @@ algorithm floatsign(
             default: { result = { sourceReg2F[31,1], sourceReg1F[0,31] }; }                         // FSGNJ.S
             case 3b001: { result = { sourceReg2F[31,1], sourceReg1F[0,31] }; }                      // FSGNJN.S
             case 3b010: { result = { sourceReg1F[31,1] ^ sourceReg2F[31,1], sourceReg1F[0,31] }; }  // FSGNJX.S
+        }
+    }
+}
+
+algorithm floattouint(
+    input   uint32  sourceReg1F,
+    output  uint32  result,
+    output  uint1   busy,
+    input   uint1   start
+) <autorun> {
+    uint2   classEa = uninitialised;
+    int8    exp = uninitialised;
+    uint33  sig = uninitialised;
+
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+            ( classEa ) = classE( sourceReg1F );
+            switch( classEa ) {
+                case 2b00: {
+                    switch( sourceReg1F[31,1] ) {
+                        case 1: { result = 0; }
+                        default: {
+                            exp = floatingpointnumber( sourceReg1F ).exponent - 127;
+                            if( exp < 24 ) {
+                                sig = { 9b1, sourceReg1F[0,23], 1b0 } >> ( 23 - exp );
+                            } else {
+                                sig = { 9b1, sourceReg1F[0,23], 1b0 } << ( exp - 24);
+                            }
+                            result = ( exp > 31 ) ? 32hffffffff : ( sig[1,32] + sig[0,1] );
+                        }
+                    }
+                }
+                case 2b01: { result = 0; }
+                case 2b10: { result = sourceReg1F[31,1] ? 0 : 32hffffffff;  }
+            }
+            busy = 0;
+        }
+    }
+}
+
+algorithm floattoint(
+    input   uint32  sourceReg1F,
+    output  uint32  result,
+    output  uint1   busy,
+    input   uint1   start
+) <autorun> {
+    uint2   classEa = uninitialised;
+    int8    exp = uninitialised;
+    uint33  sig = uninitialised;
+
+    busy = 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+            ( classEa ) = classE( sourceReg1F );
+            switch( classEa ) {
+                case 2b00: {
+                    exp = floatingpointnumber( sourceReg1F ).exponent - 127;
+                    if( exp < 24 ) {
+                        sig = { 9b1, sourceReg1F[0,23], 1b0 } >> ( 23 - exp );
+                    } else {
+                        sig = { 9b1, sourceReg1F[0,23], 1b0 } << ( exp - 24);
+                    }
+                    result = ( exp > 30 ) ? ( sourceReg1F[31,1] ? 32hffffffff : 32h7fffffff ) : sourceReg1F[31,1] ? -( sig[1,32] + sig[0,1] ) : ( sig[1,32] + sig[0,1] );
+                 }
+                case 2b01: { result = 0; }
+                case 2b10: { result = sourceReg1F[31,1] ? 32hffffffff : 32h7fffffff; }
+            }
+            busy = 0;
         }
     }
 }

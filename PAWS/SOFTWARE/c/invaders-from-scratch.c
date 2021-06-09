@@ -1349,7 +1349,7 @@ short missile_actions( void ) {
             if( missile_y > 24 ) {
                 // HIT A BUNKER
                 missile_x = missile_x - rng(4) + 2;
-                missile_y = missile_y - rng(2) - 1;
+                missile_y = missile_y - rng(4);
                 bitmap_draw( 0 ); gpu_blit( TRANSPARENT, missile_x, missile_y, 14, 0 );
                 bitmap_draw( 1 ); gpu_blit( TRANSPARENT, missile_x, missile_y, 14, 0 );
                 bitmap_draw( !framebuffer );

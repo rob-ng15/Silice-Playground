@@ -1,4 +1,5 @@
 #include "PAWSlibrary.h"
+#include <math.h>
 
 // FOR TILEMAP DEMO
 unsigned short tilemap_bitmap[] = {
@@ -979,6 +980,29 @@ void spritedemo( void ) {
     }
 }
 
+float newX( float x, float y, float xorigin, float yorigin, float angle ) {
+    return( (x-xorigin)*cosf(angle*0.0174533)-(y-yorigin)*sinf(angle*0.0174533)+xorigin );
+}
+float newY( float x, float y, float xorigin, float yorigin, float angle ) {
+    return( (x-xorigin)*sinf(angle*0.0174533)+(y-yorigin)*cosf(angle*0.0174533)+yorigin );
+}
+void floatdemo() {
+    displayreset();
+    tpu_printf_centre( 28, TRANSPARENT, WHITE, "FLOAT DEMO" );
+    if( CSRisa() & 0b100000 ) {
+        tpu_printf_centre( 29, TRANSPARENT, WHITE, "FLOATING POINT UNIT AVAILABLE" );
+    } else {
+        tpu_printf_centre( 29, TRANSPARENT, WHITE, "SOFT FLOAT ONLY" );
+    }
+    for( int i = 0; i < 360; i += 20 ) {
+        gpu_line( WHITE, newX(60, 20, 160, 120, i), newY(60, 20, 160, 120, i), newX( 260, 20, 160, 120, i), newY( 260, 20, 160, 120, i) );
+        gpu_line( WHITE, newX(260, 20, 160, 120, i), newY(260, 20, 160, 120, i), newX( 260, 220, 160, 120, i), newY( 260, 220, 160, 120, i) );
+        gpu_line( WHITE, newX(260, 220, 160, 120, i), newY(260, 220, 160, 120, i), newX( 60, 220, 160, 120, i), newY( 60, 220, 160, 120, i) );
+        gpu_line( WHITE, newX(60, 220, 160, 120, i), newY(60, 220, 160, 120, i), newX( 60, 20, 160, 120, i), newY( 60, 20, 160, 120, i) );
+    }
+    sleep( 2000, 0 );
+}
+
 int main( void ) {
     INITIALISEMEMORY();
 	while(1) {
@@ -993,5 +1017,7 @@ int main( void ) {
         ditherdemo();
 
         spritedemo();
+
+        floatdemo();
     }
 }

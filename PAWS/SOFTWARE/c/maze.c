@@ -151,9 +151,24 @@ unsigned char ghostcolour( unsigned short ghost ) {
     }
 }
 
-void draw_cross( unsigned char colour, short x, short y, short size ) {
-    gpu_line( colour, x - size, y - size, x + size, y + size );
-    gpu_line( colour, x - size, y + size, x + size, y - size );
+void draw_cross( short x, short y, short size ) {
+    gpu_line( PINK, x - size, y - size, x + size, y + size );
+    gpu_line( PINK, x - size, y + size, x + size, y - size );
+}
+
+void draw_eye( short x, short y, short size ) {
+    switch( powerstatus ) {
+        case 0:
+            gpu_circle( WHITE, x, y, size, 0xff, 1 );
+            if( size/2 > 1 ) {
+                gpu_circle( BLACK, x, y, size / 2, 0xff, 1 );
+            } else {
+                gpu_pixel( BLACK, x, y );
+            }
+            break;
+        default:
+            draw_cross( x, y, size / 2 );
+    }
 }
 
 // DRAW GHOST AT CORRECT DISTANCE
@@ -174,69 +189,36 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
     gpu_rectangle( colour, centrex - sizechange, centrey - sizechange, centrex + sizechange, centrey + sizechange );
     gpu_circle( colour, centrex, centrey - sizechange, sizechange, 0x66, 1 );
 
-    gpu_circle( colour, centrex - ( offsetx * 2 ), centrey + sizechange, offsetx, 0x99, 1 );
-    gpu_circle( colour, centrex, centrey + sizechange, offsetx, 0x99, 1 );
-    gpu_circle( colour, centrex + ( offsetx * 2 ), centrey + sizechange, offsetx, 0x99, 1 );
+    // FRILLS
+    for( short i = -2; i < 4; i +=2 ) {
+         gpu_circle( colour, centrex - ( offsetx * i ), centrey + sizechange, offsetx, 0x99, 1 );
+    }
 
-    // EYE WHITES
-    //if( eyeoffsetx / 2 >= 4 ) {
-        switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
-            case 0:
-                // SAME DIRECTION, NO EYES
-                break;
-            case 1:
-                // GHOST FACING RIGHT
-                switch( powerstatus ) {
-                    case 0:
-                        gpu_circle( WHITE, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2, 0xff, 1 );
-                        break;
-                    default:
-                        draw_cross( PINK, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4 );
-                }
-                break;
-            case 2:
-                // GHOST DIRECTLY FACING
-                switch( powerstatus ) {
-                    case 0:
-                        gpu_circle( WHITE, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2, 0xff, 1 );
-                        gpu_circle( WHITE, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2, 0xff, 1 );
-                        break;
-                    default:
-                        draw_cross( PINK, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4 );
-                        draw_cross( PINK, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4 );
-                }
-                break;
-            case 3:
-                // GHOST FACING LEFT
-                switch( powerstatus ) {
-                    case0:
-                        gpu_circle( WHITE, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2, 0xff, 1 );
-                        break;
-                    default:
-                        draw_cross( PINK, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4 );
-                }
-        }
-
-    // EYE PUPILS
-    if( !powerstatus ) {
-        switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
-            case 0:
-                // SAME DIRECTION, NO EYES
-                break;
-            case 1:
-                // GHOST FACING RIGHT
-                gpu_circle( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 0xff, 1 );
-                break;
-            case 2:
-                // GHOST DIRECTLY FACING
-                gpu_circle( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 0xff, 1 );
-                gpu_circle( BLACK, centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 0xff, 1 );
-                break;
-            case 3:
-                // GHOST FACING LEFT
-                gpu_circle( BLACK, centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 4, 0xff, 1 );
-                break;
-        }
+    // EYES - CROSSES IF POWER
+    switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
+        case 0:
+            // SAME DIRECTION, NO EYES
+            break;
+        case 1:
+            // GHOST FACING RIGHT
+            draw_eye( centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2 );
+            break;
+        case 2:
+            // GHOST DIRECTLY FACING
+            draw_eye( centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2 );
+            draw_eye( centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2 );
+            if( powerstatus ) {
+                // DRAW MOUTH
+                gpu_circle( PINK, centrex - eyeoffsetx, centrey + eyeoffsety, eyeoffsetx / 4, 0x66, 0 );
+                gpu_circle( PINK, centrex - eyeoffsetx / 2, centrey + eyeoffsety, eyeoffsetx / 4, 0x99, 0 );
+                gpu_circle( PINK, centrex, centrey + eyeoffsety, eyeoffsetx / 4, 0x66, 0 );
+                gpu_circle( PINK, centrex + eyeoffsetx / 2, centrey + eyeoffsety, eyeoffsetx / 4, 0x99, 0 );
+                gpu_circle( PINK, centrex + eyeoffsetx, centrey + eyeoffsety, eyeoffsetx / 4, 0x66, 0 );
+            }
+            break;
+        case 3:
+            // GHOST FACING LEFT
+            draw_eye( centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2 );
     }
 }
 

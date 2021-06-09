@@ -60,7 +60,7 @@ algorithm fpu(
                         case 5b10100: {
                             // FEQ.S FLT.S FLE.S
                             frd = 0;
-                            result = FPUcomparison.comparison;
+                            result = { 31b0, FPUcomparison.comparison };
                         }
                         case 5b11100: {
                             // FCLASS.S  FMV.X.W
