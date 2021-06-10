@@ -16,7 +16,7 @@ algorithm fpu(
     output uint1   frd
 ) <autorun> {
     floatclassify FPUclass( sourceReg1F <: sourceReg1F );
-    floatcomparison FPUcomparison( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
+    floatcompare FPUcompare( function3 <: function3, function7 <: function7, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
     floatsign FPUsign( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
     floatcalc FPUcalculator( opCode <: opCode, function7 <: function7, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F, sourceReg3F <: sourceReg3F );
     floatconvert FPUconvert( function7 <: function7, rs2 <: rs2, sourceReg1 <: sourceReg1, sourceReg1F <: sourceReg1F );
@@ -48,28 +48,24 @@ algorithm fpu(
                         }
                         case 5b00101: {
                             // FMIN.S FMAX.S
-                            switch( function3[0,1] ) {
-                                case 0: { result = FPUcomparison.comparison ? sourceReg1F : sourceReg2F; }
-                                case 1: { result = FPUcomparison.comparison ? sourceReg2F : sourceReg1F; }
-                            }
+                            result = FPUcompare.result;
+                        }
+                        case 5b10100: {
+                            // FEQ.S FLT.S FLE.S
+                            frd = 0; result = FPUcompare.result;
                         }
                         case 5b11000: {
                             // FCVT.W.S FCVT.WU.S
                             frd = 0; FPUconvert.start = 1; while( FPUconvert.busy ) {} result = FPUconvert.result;
                         }
-                        case 5b10100: {
-                            // FEQ.S FLT.S FLE.S
-                            frd = 0;
-                            result = { 31b0, FPUcomparison.comparison };
-                        }
-                        case 5b11100: {
-                            // FCLASS.S  FMV.X.W
-                            frd = 0;
-                            result = function3[0,1] ? FPUclass.classification : sourceReg1F;
-                        }
                         case 5b11010: {
                             // FCVT.S.W FCVT.S.WU
                             FPUconvert.start = 1; while( FPUconvert.busy ) {} result = FPUconvert.result;
+                        }
+                        case 5b11100: {
+                            // FCLASS.S FMV.X.W
+                            frd = 0;
+                            result = function3[0,1] ? FPUclass.classification : sourceReg1F;
                         }
                         case 5b11110: {
                             // FMV.W.X
@@ -751,6 +747,33 @@ algorithm floatclassify(
     }
 }
 
+// COMPARISONS AND MIN MAX
+algorithm floatcompare(
+    input   uint3   function3,
+    input   uint7   function7,
+    input   uint32  sourceReg1F,
+    input   uint32  sourceReg2F,
+
+    output uint32  result
+) <autorun> {
+    floatcomparison FPUcomparison( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
+
+    while(1) {
+        switch( function7[2,5] ) {
+            case 5b00101: {
+                // FMIN.S FMAX.S
+                switch( function3[0,1] ) {
+                    case 0: { result = FPUcomparison.comparison ? sourceReg1F : sourceReg2F; }
+                    case 1: { result = FPUcomparison.comparison ? sourceReg2F : sourceReg1F; }
+                }
+            }
+            case 5b10100: {
+                // FEQ.S FLT.S FLE.S
+                result = FPUcomparison.comparison;
+            }
+        }
+    }
+}
 algorithm floatcomparison(
     input   uint3   function3,
     input   uint32  sourceReg1F,

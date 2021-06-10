@@ -640,8 +640,8 @@ void set_sprite_bitmaps( unsigned char sprite_layer, unsigned char sprite_number
     }
 }
 
-// SET SPRITE sprite_number in sprite_layer to active status, in colour to (x,y) with bitmap number tile ( 0 - 7 ) in sprite_size == 0 16 x 16 == 1 32 x 32 pixel size
-void set_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsigned char active, unsigned char colour, short x, short y, unsigned char tile, unsigned char sprite_size) {
+// SET SPRITE sprite_number in sprite_layer to active status, in colour to (x,y) with bitmap number tile ( 0 - 7 ) in sprite_attributes bit 0 size == 0 16 x 16 == 1 32 x 32 pixel size, bit 1 x-mirror bit 2 y-mirror
+void set_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsigned char active, unsigned char colour, short x, short y, unsigned char tile, unsigned char sprite_attributes ) {
     switch( sprite_layer ) {
         case 0:
             LOWER_SPRITE_ACTIVE[sprite_number] = active;
@@ -649,7 +649,7 @@ void set_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsign
             LOWER_SPRITE_COLOUR[sprite_number] = colour;
             LOWER_SPRITE_X[sprite_number] = x;
             LOWER_SPRITE_Y[sprite_number] = y;
-            LOWER_SPRITE_DOUBLE[sprite_number] = sprite_size;
+            LOWER_SPRITE_DOUBLE[sprite_number] = sprite_attributes;
             break;
 
         case 1:
@@ -658,7 +658,7 @@ void set_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsign
             UPPER_SPRITE_COLOUR[sprite_number] = colour;
             UPPER_SPRITE_X[sprite_number] = x;
             UPPER_SPRITE_Y[sprite_number] = y;
-            UPPER_SPRITE_DOUBLE[sprite_number] = sprite_size;
+            UPPER_SPRITE_DOUBLE[sprite_number] = sprite_attributes;
             break;
     }
 }
@@ -669,7 +669,7 @@ void set_sprite( unsigned char sprite_layer, unsigned char sprite_number, unsign
 //  attribute == 2 colour
 //  attribute == 3 x coordinate
 //  attribute == 4 y coordinate
-//  attribute == 5 size ( 0 == 16 x 16, 1 == 32 x 32 )
+//  attribute == 5 attributes bit 0 = size == 0 16x16 == 1 32x32. bit 1 = x-mirror bit 2 = y-mirror
 void set_sprite_attribute( unsigned char sprite_layer, unsigned char sprite_number, unsigned char attribute, short value ) {
     if( sprite_layer == 0 ) {
         switch( attribute ) {

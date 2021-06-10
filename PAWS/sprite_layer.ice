@@ -49,7 +49,7 @@ algorithm sprite_layer(
     // For setting sprite characteristics - MAIN ACCESS
     input   uint4   sprite_set_number,
     input   uint1   sprite_set_active,
-    input   uint1   sprite_set_double,
+    input   uint3   sprite_set_double,
     input   uint6   sprite_set_colour,
     input   int11   sprite_set_x,
     input   int11   sprite_set_y,
@@ -60,7 +60,7 @@ algorithm sprite_layer(
     // For reading sprite characteristics
     $$for i=0,15 do
         output  uint1   sprite_read_active_$i$,
-        output  uint1   sprite_read_double_$i$,
+        output  uint3   sprite_read_double_$i$,
         output  uint6   sprite_read_colour_$i$,
         output  int16   sprite_read_x_$i$,
         output  int16   sprite_read_y_$i$,
@@ -88,7 +88,7 @@ algorithm sprite_layer(
     // Storage for the sprites
     // Stored as registers as needed instantly
     uint1   sprite_active[16] = uninitialised;
-    uint1   sprite_double[16] = uninitialised;
+    uint3   sprite_double[16] = uninitialised;
     int11   sprite_x[16] = uninitialised;
     int11   sprite_y[16] = uninitialised;
     uint6   sprite_colour[16] = uninitialised;
@@ -158,8 +158,8 @@ algorithm sprite_layer(
             case 6: { sprite_tile_number[ sprite_set_number ] = sprite_set_tile; }
             case 7: {
                 // Sprite update helpers
-                sprite_offscreen_negative = sprite_double[ sprite_set_number ] ? -32 : -16;
-                sprite_to_negative = sprite_double[ sprite_set_number ] ? -31 : -15;
+                sprite_offscreen_negative = sprite_double[ sprite_set_number ][0,1] ? -32 : -16;
+                sprite_to_negative = sprite_double[ sprite_set_number ][0,1] ? -31 : -15;
                 sprite_offscreen_x = ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) | ( __signed( sprite_x[ sprite_set_number  ] ) > __signed(640) );
                 sprite_offscreen_y = ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) | ( __signed( sprite_y[ sprite_set_number ] ) > __signed(480) );
 
@@ -266,7 +266,7 @@ algorithm sprite_generator(
     input   uint10  pix_x,
     input   uint10  pix_y,
     input   uint1   sprite_active,
-    input   uint1   sprite_double,
+    input   uint3   sprite_double,
     input   int11   sprite_x,
     input   int11   sprite_y,
     input   uint3   sprite_tile_number,
@@ -274,16 +274,17 @@ algorithm sprite_generator(
     output! uint1   pix_visible
 ) <autorun> {
     // Calculate position in sprite
-    uint6 spritesize <: sprite_double ? 32 : 16;
+    uint6 spritesize <: sprite_double[0,1] ? 32 : 16;
     uint1 xinrange <: ( __signed({1b0, pix_x}) >= __signed(sprite_x) ) & ( __signed({1b0, pix_x}) < __signed( sprite_x + spritesize ) );
     uint1 yinrange <: ( __signed({1b0, pix_y}) >= __signed(sprite_y) ) & ( __signed({1b0, pix_y}) < __signed( sprite_y + spritesize) );
-    uint4 yinsprite <: ( __signed({1b0, pix_y}) - sprite_y ) >>> sprite_double;
+    uint4 yinsprite <: sprite_double[2,1] ? 15 - ( ( __signed({1b0, pix_y}) - sprite_y ) >>> sprite_double[0,1] ) : ( __signed({1b0, pix_y}) - sprite_y ) >>> sprite_double[0,1];
+    uint4 xinsprite <: sprite_double[1,1] ? (( ( __signed({1b0, pix_x}) - sprite_x ) >>> sprite_double[0,1] ) ) : ( 15  - ( ( __signed({1b0, pix_x}) - sprite_x ) >>> sprite_double[0,1] ) );
 
     // READ ADDRESS FOR SPRITE
     tiles.addr0 := { sprite_tile_number, yinsprite };
 
     // Determine if pixel is visible
-    pix_visible := sprite_active & xinrange & yinrange & ( tiles.rdata0[ ( 15  - ( ( __signed({1b0, pix_x}) - sprite_x ) >>> sprite_double ) ), 1 ] );
+    pix_visible := sprite_active & xinrange & yinrange & ( tiles.rdata0[ xinsprite, 1 ] );
 }
 
 algorithm spritebitmapwriter(

@@ -16,7 +16,7 @@ algorithm fpu(
     output uint1   frd
 ) <autorun> {
     floatclassify FPUclass( sourceReg1F <: sourceReg1F );
-    floatcomparison FPUcomparison( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
+    floatcompare FPUcompare( function3 <: function3, function7 <: function7, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
     floatsign FPUsign( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
     floatcalc FPUcalculator( opCode <: opCode, function7 <: function7, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F, sourceReg3F <: sourceReg3F );
     floatconvert FPUconvert( function7 <: function7, rs2 <: rs2, sourceReg1 <: sourceReg1, sourceReg1F <: sourceReg1F );
@@ -48,28 +48,24 @@ algorithm fpu(
                         }
                         case 5b00101: {
                             // FMIN.S FMAX.S
-                            switch( function3[0,1] ) {
-                                case 0: { result = FPUcomparison.comparison ? sourceReg1F : sourceReg2F; }
-                                case 1: { result = FPUcomparison.comparison ? sourceReg2F : sourceReg1F; }
-                            }
+                            result = FPUcompare.result;
+                        }
+                        case 5b10100: {
+                            // FEQ.S FLT.S FLE.S
+                            frd = 0; result = FPUcompare.result;
                         }
                         case 5b11000: {
                             // FCVT.W.S FCVT.WU.S
                             frd = 0; FPUconvert.start = 1; while( FPUconvert.busy ) {} result = FPUconvert.result;
                         }
-                        case 5b10100: {
-                            // FEQ.S FLT.S FLE.S
-                            frd = 0;
-                            result = FPUcomparison.comparison;
-                        }
-                        case 5b11100: {
-                            // FCLASS.S  FMV.X.W
-                            frd = 0;
-                            result = function3[0,1] ? FPUclass.classification : sourceReg1F;
-                        }
                         case 5b11010: {
                             // FCVT.S.W FCVT.S.WU
                             FPUconvert.start = 1; while( FPUconvert.busy ) {} result = FPUconvert.result;
+                        }
+                        case 5b11100: {
+                            // FCLASS.S FMV.X.W
+                            frd = 0;
+                            result = function3[0,1] ? FPUclass.classification : sourceReg1F;
                         }
                         case 5b11110: {
                             // FMV.W.X
@@ -440,10 +436,9 @@ algorithm floataddsub(
                             case 2b00: {
                                 switch( { A[31,1], B[31,1] } ) {
                                     // PERFORM + HANDLING SIGNS
-                                    case 2b00: { totaldifference = sigA + sigB; }
                                     case 2b01: {
                                         if( sigB > sigA ) {
-                                            sign = ~sign;
+                                            sign = 1;
                                             totaldifference = sigB - sigA;
                                         } else {
                                             totaldifference = sigA - sigB;
@@ -453,11 +448,11 @@ algorithm floataddsub(
                                         if(  sigA > sigB ) {
                                             totaldifference = sigA - sigB;
                                         } else {
-                                            sign = ~sign;
+                                            sign = 0;
                                             totaldifference = sigB - sigA;
                                         }
                                     }
-                                    case 2b11: { totaldifference = sigA + sigB; }
+                                    default: { totaldifference = sigA + sigB; }
                                 }
                                 if( totaldifference == 0 ) {
                                     result = { sign, 31b0 };
@@ -505,8 +500,6 @@ algorithm floatmultiply(
     uint1   productsign = uninitialised;
     uint48  product = uninitialised;
     int8    productexp  = uninitialised;
-    int8    expA = uninitialised;
-    int8    expB = uninitialised;
     uint23  newfraction = uninitialised;
 
     // Calculation is split into 4 18 x 18 multiplications for DSP
@@ -525,8 +518,6 @@ algorithm floatmultiply(
                     case 0: {
                         ( classEa ) = classE( a );
                         ( classEb ) = classE( b );
-                        expA = floatingpointnumber( a ).exponent - 127;
-                        expB = floatingpointnumber( b ).exponent - 127;
                         A = { 11b1, a[16,7] };
                         B = { 2b0, a[0,16] };
                         C = { 11b1, b[16,7] };
@@ -534,7 +525,7 @@ algorithm floatmultiply(
                     }
                     case 1: {
                         product = ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
-                        productexp = expA + expB;
+                        productexp = (floatingpointnumber( a ).exponent - 127) + (floatingpointnumber( b ).exponent - 127);
                         productsign = a[31,1] ^ b[31,1];
                     }
                     case 2: {
@@ -579,12 +570,10 @@ algorithm floatdivide(
     uint2   classEb = uninitialised;
     uint32  temporary = uninitialised;
     uint1   quotientsign = uninitialised;
-    int8   quotientexp = uninitialised;
+    int8    quotientexp = uninitialised;
     uint32  quotient = uninitialised;
     uint32  remainder = uninitialised;
     uint6   bit = uninitialised;
-    int8    expA = uninitialised;
-    int8    expB  = uninitialised;
     uint32  sigA = uninitialised;
     uint32  sigB = uninitialised;
     uint23  newfraction = uninitialised;
@@ -602,10 +591,8 @@ algorithm floatdivide(
                         ( classEb ) = classE( b );
                         sigA = { 1b1, floatingpointnumber(a).fraction, 8b0 };
                         sigB = { 9b1, floatingpointnumber(b).fraction };
-                        expA = floatingpointnumber( a ).exponent - 127;
-                        expB = floatingpointnumber( b ).exponent - 127;
                         quotientsign = a[31,1] ^ b[31,1];
-                        quotientexp = expA - expB;
+                        quotientexp = (floatingpointnumber( a ).exponent - 127) - (floatingpointnumber( b ).exponent - 127);
                         quotient = 0;
                         remainder = 0;
                         bit = 31;
@@ -751,6 +738,33 @@ algorithm floatclassify(
     }
 }
 
+// COMPARISONS AND MIN MAX
+algorithm floatcompare(
+    input   uint3   function3,
+    input   uint7   function7,
+    input   uint32  sourceReg1F,
+    input   uint32  sourceReg2F,
+
+    output uint32  result
+) <autorun> {
+    floatcomparison FPUcomparison( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
+
+    while(1) {
+        switch( function7[2,5] ) {
+            case 5b00101: {
+                // FMIN.S FMAX.S
+                switch( function3[0,1] ) {
+                    case 0: { result = FPUcomparison.comparison ? sourceReg1F : sourceReg2F; }
+                    case 1: { result = FPUcomparison.comparison ? sourceReg2F : sourceReg1F; }
+                }
+            }
+            case 5b10100: {
+                // FEQ.S FLT.S FLE.S
+                result = FPUcomparison.comparison;
+            }
+        }
+    }
+}
 algorithm floatcomparison(
     input   uint3   function3,
     input   uint32  sourceReg1F,
