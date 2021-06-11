@@ -97,13 +97,55 @@ algorithm aluMmultiply(
 }
 
 // BASE IMMEDIATE WITH B EXTENSIONS
+algorithm aluI000(
+    input   int32   sourceReg1,
+    input   int32   immediateValue,
+    output  int32   result
+) <autorun> {
+    result := sourceReg1 + immediateValue;
+}
+algorithm aluI010(
+    input   int32   sourceReg1,
+    input   int32   immediateValue,
+    output  int32   result
+) <autorun> {
+    result := __signed( sourceReg1 ) < __signed(immediateValue);
+}
+algorithm aluI011(
+    input   int32   sourceReg1,
+    input   int32   immediateValue,
+    output  int32   result
+) <autorun> {
+    result := ( immediateValue == 1 ) ? ( sourceReg1 == 0 ) : ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) );
+}
+algorithm aluI100(
+    input   int32   sourceReg1,
+    input   int32   immediateValue,
+    output  int32   result
+) <autorun> {
+    result := sourceReg1 ^ immediateValue;
+}
+algorithm aluI110(
+    input   int32   sourceReg1,
+    input   int32   immediateValue,
+    output  int32   result
+) <autorun> {
+    result := sourceReg1 | immediateValue;
+}
+algorithm aluI111(
+    input   int32   sourceReg1,
+    input   int32   immediateValue,
+    output  int32   result
+) <autorun> {
+    result := sourceReg1 & immediateValue;
+}
 algorithm aluIb001(
     input   uint1   start,
     output  uint1   busy,
 
     input   uint7   function7,
     input   uint5   IshiftCount,
-    input   uint32  sourceReg1,
+    input   int32   sourceReg1,
 
     input   uint32  LSHIFToutput,
     input   uint32  SBSCIoutput,
@@ -111,7 +153,7 @@ algorithm aluIb001(
     input   uint32  SHFLUNSHFLoutput,
     input   uint1   SHFLUNSHFLbusy,
 
-    output  uint32  result
+    output  int32   result
 ) <autorun> {
     // COUNT LEADINGS 0s, TRAILING 0s, POPULATION
     clz CLZ(
@@ -165,7 +207,7 @@ algorithm aluIb101(
     input   uint7   function7,
     input   uint3   function3,
     input   uint5   IshiftCount,
-    input   uint32  sourceReg1,
+    input   int32   sourceReg1,
 
     input   uint32  RSHIFToutput,
 
@@ -174,7 +216,7 @@ algorithm aluIb101(
     input   uint1   SHFLUNSHFLbusy,
     input   uint32  GREVGORCoutput,
     input   uint1   GREVGORCbusy,
-    output  uint32  result
+    output  int32   result
 ) <autorun> {
     // START FLAGS FOR ALU SUB BLOCKS
     busy = 0;
@@ -199,8 +241,8 @@ algorithm aluI(
     input   uint3   function3,
     input   uint7   function7,
     input   uint5   IshiftCount,
-    input   uint32  sourceReg1,
-    input   uint32  immediateValue,
+    input   int32   sourceReg1,
+    input   int32   immediateValue,
 
     input   uint32  LSHIFToutput,
     input   uint32  RSHIFToutput,
@@ -212,9 +254,9 @@ algorithm aluI(
     input   uint32  GREVGORCoutput,
     input   uint1   GREVGORCbusy,
 
-    output  uint32   result
+    output  int32   result
 ) <autorun> {
-    // FUNCTION3 == 001 block
+    aluI000 ALUI000( sourceReg1 <: sourceReg1, immediateValue <: immediateValue );
     aluIb001 ALUIb001(
         function7 <: function7,
         IshiftCount <: IshiftCount,
@@ -224,6 +266,9 @@ algorithm aluI(
         SHFLUNSHFLoutput <: SHFLUNSHFLoutput,
         SHFLUNSHFLbusy <: SHFLUNSHFLbusy
     );
+    aluI010 ALUI010( sourceReg1 <: sourceReg1, immediateValue <: immediateValue );
+    aluI011 ALUI011( sourceReg1 <: sourceReg1, immediateValue <: immediateValue );
+    aluI100 ALUI100( sourceReg1 <: sourceReg1, immediateValue <: immediateValue );
     aluIb101 ALUIb101(
         function7 <: function7,
         function3 <: function3,
@@ -236,6 +281,8 @@ algorithm aluI(
         GREVGORCoutput <: GREVGORCoutput,
         GREVGORCbusy <: GREVGORCbusy,
     );
+    aluI110 ALUI110( sourceReg1 <: sourceReg1, immediateValue <: immediateValue );
+    aluI111 ALUI111( sourceReg1 <: sourceReg1, immediateValue <: immediateValue );
 
     // START FLAGS FOR ALU SUB BLOCKS
     ALUIb001.start := 0;
@@ -246,14 +293,14 @@ algorithm aluI(
         if( start) {
             busy = 1;
             switch( function3 ) {
-                case 3b000: { result = sourceReg1 + immediateValue; }
+                case 3b000: { result = ALUI000.result; }
                 case 3b001: { ALUIb001.start = 1; while( ALUIb001.busy ) {} result = ALUIb001.result; }
-                case 3b010: { result = __signed( sourceReg1 ) < __signed(immediateValue); }
-                case 3b011: { result = ( immediateValue == 1 ) ? ( sourceReg1 == 0 ) : ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ); }
-                case 3b100: { result = sourceReg1 ^ immediateValue; }
+                case 3b010: { result = ALUI010.result; }
+                case 3b011: { result = ALUI011.result; }
+                case 3b100: { result = ALUI100.result; }
                 case 3b101: { ALUIb101.start = 1; while( ALUIb101.busy ) {} result = ALUIb101.result; }
-                case 3b110: { result = sourceReg1 | immediateValue; }
-                case 3b111: { result = sourceReg1 & immediateValue; }
+                case 3b110: { result = ALUI110.result; }
+                case 3b111: { result = ALUI111.result; }
             }
             busy = 0;
         }
@@ -484,9 +531,9 @@ algorithm aluR (
     input   uint3   function3,
     input   uint7   function7,
     input   uint5   rs1,
-    input   uint32  sourceReg1,
-    input   uint32  sourceReg2,
-    input   uint32  sourceReg3,
+    input   int32   sourceReg1,
+    input   int32   sourceReg2,
+    input   int32   sourceReg3,
 
     input   uint32  LSHIFToutput,
     input   uint32  RSHIFToutput,
@@ -498,7 +545,7 @@ algorithm aluR (
     input   uint32  GREVGORCoutput,
     input   uint1   GREVGORCbusy,
 
-    output  uint32  result
+    output  int32   result
 ) <autorun> {
     // M EXTENSION MULTIPLICATION AND DIVISION
     aluMdivideremain ALUMD(
@@ -657,13 +704,13 @@ algorithm alu(
     input   uint3   function3,
     input   uint7   function7,
     input   uint5   rs1,
-    input   uint32  sourceReg1,
-    input   uint32  sourceReg2,
-    input   uint32  sourceReg3,
+    input   int32   sourceReg1,
+    input   int32   sourceReg2,
+    input   int32   sourceReg3,
     input   uint5   IshiftCount,
-    input   uint32  immediateValue,
+    input   int32   immediateValue,
 
-    output  uint32  result
+    output  int32   result
 ) <autorun> {
     uint5   shiftcount <: opCode[5,1] ? sourceReg2[0,5] : IshiftCount;
     uint6   Fshiftcount <: opCode[5,1] ? sourceReg2[0,6] : { function7[0,1], IshiftCount };

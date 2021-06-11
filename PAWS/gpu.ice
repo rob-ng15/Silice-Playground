@@ -448,7 +448,7 @@ algorithm line (
     input   uint1   start,
     output  uint1   busy
 ) <autorun> {
-    uint2   FSM = uninitialised;
+    uint3   FSM = uninitialised;
     uint3   FSM2 = uninitialised;
 
     int10   gpu_active_x = uninitialized;
@@ -491,6 +491,8 @@ algorithm line (
                     case 1: {
                         gpu_numerator = ( gpu_dx > gpu_dy ) ? ( gpu_dx >> 1 ) : -( gpu_dy >> 1 );
                         ( gpu_max_count ) = max( gpu_dx, gpu_dy );
+                    }
+                    case 2: {
                         while( gpu_count <= gpu_max_count ) {
                             FSM2 = 1;
                             while( FSM2 != 0 ) {
@@ -518,7 +520,7 @@ algorithm line (
                         }
                     }
                 }
-                FSM = { FSM[0,1], 1b0 };
+                FSM = { FSM[0,2], 1b0 };
             }
             active = 0;
         }
@@ -663,7 +665,7 @@ algorithm triangle (
     input   uint1   start,
     output  uint1   busy
 ) <autorun> {
-    uint7   FSM = uninitialised;
+    uint8   FSM = uninitialised;
     uint1   FSM2 = uninitialised;
 
     // VERTEX COORDINATES
@@ -754,6 +756,8 @@ algorithm triangle (
                     case 6: {
                         // Start at the top left
                         ( gpu_sx, gpu_sy ) = copycoordinates( gpu_min_x, gpu_min_y );
+                    }
+                    case 7: {
                         while( gpu_sy <= gpu_max_y ) {
                             // Edge calculations to determine if inside the triangle - converted to DSP blocks
                             beenInTriangle = inTriangle ? 1 : beenInTriangle;
@@ -800,7 +804,7 @@ algorithm triangle (
                         }
                     }
                 }
-                FSM = { FSM[0,6], 1b0 };
+                FSM = { FSM[0,7], 1b0 };
             }
             active = 0;
         }
@@ -1111,8 +1115,10 @@ algorithm pixelblock(
 
 // ADJUST COORDINATES BY DELTAS AND SCALE
 circuitry deltacoordinates( input x, input dx, input y, input dy, input scale, output xdx, output ydy ) {
-    xdx = x + ( scale[2,1] ? ( __signed(dx) >>> scale[0,2] ) : ( dx << scale[0,2] ) );
-    ydy = y + ( scale[2,1] ? ( __signed(dy) >>> scale[0,2] ) : ( dy << scale[0,2] ) );
+    xdx = x + dx;
+    ydy = y + dy;
+    //xdx = x + ( scale[2,1] ? ( __signed(dx) >>> scale[0,2] ) : ( dx << scale[0,2] ) );
+    //ydy = y + ( scale[2,1] ? ( __signed(dy) >>> scale[0,2] ) : ( dy << scale[0,2] ) );
 }
 algorithm vertexwriter(
     // For setting vertices

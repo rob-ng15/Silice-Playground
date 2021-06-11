@@ -322,7 +322,7 @@ algorithm floatcalc(
                             }
                             case 1: {
                                 FPUaddsub.a = FPUmultiply.result; FPUaddsub.b = sourceReg3F;
-                                FPUaddsub.addsub = ( opCode[2,1] != opCode[3,1] );
+                                FPUaddsub.addsub = ( opCode[2,1] ^ opCode[3,1] );
                                 FPUaddsub.start = 1; while( FPUaddsub.busy ) {}
                             }
                         }
@@ -382,15 +382,13 @@ algorithm floataddsub(
     uint2   classEa = uninitialised;
     uint2   classEb = uninitialised;
     uint1   sign = uninitialised;
+    uint1   signA = uninitialised;
+    uint1   signB = uninitialised;
     uint8   expA = uninitialised;
     uint8   expB = uninitialised;
     uint48  sigA = uninitialised;
     uint48  sigB = uninitialised;
-    uint48  totaldifference = uninitialised;
     uint23  newfraction = uninitialised;
-
-    uint32  A = uninitialised;
-    uint32  B = uninitialised;
 
     busy = 0;
 
@@ -401,21 +399,18 @@ algorithm floataddsub(
             while( FSM != 0 ) {
                 onehot( FSM ) {
                     case 0: {
-                        switch( addsub ) {
-                            // FOR SUBTRACTION CHANGE SIGN OF SECOND VALUE
-                            case 0: { A = a; B = b; }
-                            case 1: { A = a; B = { ~b[31,1], b[0,31] }; }
-                        }
+                        // FOR SUBTRACTION CHANGE SIGN OF SECOND VALUE
+                        signA = a[31,1]; signB = addsub ? ~b[31,1] : b[31,1];
                     }
                     case 1: {
                         // EXTRACT COMPONENTS - HOLD TO LEFT TO IMPROVE FRACTIONAL ACCURACY
-                        expA = floatingpointnumber( A ).exponent;
-                        expB = floatingpointnumber( B ).exponent;
-                        sigA = { 2b01, floatingpointnumber(A).fraction, 23b0 };
-                        sigB = { 2b01, floatingpointnumber(B).fraction, 23b0 };
-                        sign = floatingpointnumber(A).sign;
-                        ( classEa ) = classE( A );
-                        ( classEb ) = classE( B );
+                        expA = floatingpointnumber( a ).exponent;
+                        expB = floatingpointnumber( b ).exponent;
+                        sigA = { 2b01, floatingpointnumber(a).fraction, 23b0 };
+                        sigB = { 2b01, floatingpointnumber(b).fraction, 23b0 };
+                        sign = floatingpointnumber(a).sign;
+                        ( classEa ) = classE( a );
+                        ( classEb ) = classE( b );
                     }
                     case 2: {
                         // ADJUST TO EQUAL EXPONENTS
@@ -434,45 +429,47 @@ algorithm floataddsub(
                     case 3: {
                         switch( classEa | classEb ) {
                             case 2b00: {
-                                switch( { A[31,1], B[31,1] } ) {
+                                switch( { signA, signB } ) {
                                     // PERFORM + HANDLING SIGNS
                                     case 2b01: {
                                         if( sigB > sigA ) {
                                             sign = 1;
-                                            totaldifference = sigB - sigA;
+                                            sigA = sigB - sigA;
                                         } else {
-                                            totaldifference = sigA - sigB;
+                                            sign = 0;
+                                            sigA = sigA - sigB;
                                         }
                                     }
                                     case 2b10: {
                                         if(  sigA > sigB ) {
-                                            totaldifference = sigA - sigB;
+                                            sign = 1;
+                                            sigA = sigA - sigB;
                                         } else {
                                             sign = 0;
-                                            totaldifference = sigB - sigA;
+                                            sigA = sigB - sigA;
                                         }
                                     }
-                                    default: { totaldifference = sigA + sigB; }
+                                    default: { sign = signA; sigA = sigA + sigB; }
                                 }
-                                if( totaldifference == 0 ) {
-                                    result = { sign, 31b0 };
+                                if( sigA == 0 ) {
+                                    result = 0;
                                 } else {
                                     // NORMALISE AND ROUND
-                                    if( totaldifference[47,1] ) {
+                                    if( sigA[47,1] ) {
                                         expA = expA + 1;
                                     } else {
-                                        while( ~totaldifference[46,1] ) {
-                                            totaldifference = { totaldifference[0,47], 1b0 };
+                                        while( ~sigA[46,1] ) {
+                                            sigA = { sigA[0,47], 1b0 };
                                             expA = expA - 1;
                                         }
-                                        totaldifference = { totaldifference[0,47], 1b0 };
+                                        sigA = { sigA[0,47], 1b0 };
                                     }
-                                    newfraction = totaldifference[24,23] + totaldifference[23,1];
-                                    //expA = expA + ( ( newfraction == 0 ) & totaldifference[23,1] );
+                                    newfraction = sigA[24,23] + sigA[23,1];
+                                    expA = expA + ( ( newfraction == 0 ) & sigA[23,1] );
                                     result = { sign, expA, newfraction };
                                 }
                             }
-                            case 2b01: { result = ( classEb == 2b01 ) ? A : B; }
+                            case 2b01: { result = ( classEb == 2b01 ) ? a : addsub ? { ~b[31,1], b[0,31] } : b; }
                             default: { result = { 1b0, 8b11111111, 23b0 }; }
                         }
                     }
@@ -539,7 +536,7 @@ algorithm floatmultiply(
                                         product = { product[0,47], 1b0 };
                                     }
                                     newfraction = product[24,23] + product[23,1];
-                                    //productexp = productexp + ( ( newfraction == 0 ) & product[23,1] );
+                                    productexp = productexp + ( ( newfraction == 0 ) & product[23,1] );
                                     result = { productsign, productexp, newfraction };
                                 }
                             }
@@ -625,7 +622,7 @@ algorithm floatdivide(
                                             quotient = { quotient[0,31], 1b0 };
                                         }
                                         newfraction = quotient[8,23] + quotient[7,1];
-                                        quotientexp = quotientexp + 127 - ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction ); // + ( ( newfraction == 0 ) & quotient[7,1] );
+                                        quotientexp = quotientexp + 127 - ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction ) + ( ( newfraction == 0 ) & quotient[7,1] );
                                         result = { quotientsign, quotientexp, newfraction };
                                     }
                                 }

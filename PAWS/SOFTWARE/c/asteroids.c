@@ -37,7 +37,22 @@
 
     // GLOBAL SPRITE UPDATE VALUES
     unsigned short bullet_directions[] = {
-        0x1f40, 0x1f65, 0x1c06, 0x1ca5, 0x1cc0, 0x1cbb, 0x1c1a, 0x1f7b
+        0b1111101000000,
+        0b1111110000010,
+        0b1111110000100,
+        0b1111111000100,
+        0b1110000000110,
+        0b1110001000100,
+        0b1110010000100,
+        0b1110010000010,
+        0b1110011000000,
+        0b1110010011110,
+        0b1110010011100,
+        0b1110001011100,
+        0b1110000011010,
+        0b1111111011100,
+        0b1111110011100,
+        0b1111110011110
     };
 
     unsigned short asteroid_directions[] = {
@@ -107,20 +122,80 @@
     unsigned short ship_bitmap_upper[] = {
         0x0100, 0x0100, 0x0280, 0x0440, 0x0440, 0x0820, 0x0820, 0x0820,
         0x1010, 0x1010, 0x1010, 0x2008, 0x2108, 0x46c4, 0x783c, 0x0000,
+
+        0b0000000000001000,
+        0b0000000000011000,
+        0b0000000001001000,
+        0b0000000001001000,
+        0b0000000100001000,
+        0b0000000100001000,
+        0b0000010000001000,
+        0b0000010000001000,
+        0b0001100000001000,
+        0b0001000000001000,
+        0b0110000000001000,
+        0b1110000000001000,
+        0b0001101010001000,
+        0b0000000010001000,
+        0b0000000001001000,
+        0b0000000000111000,
+
         0x0001, 0x001e, 0x0062, 0x0782, 0x1802, 0xe004, 0x4004, 0x2008,
         0x1808, 0x0608, 0x0208, 0x0110, 0x0110, 0x00a0, 0x0060, 0x0020,
+
+        0,0,0,
+        0b1111111111111111,
+        0b1000000000000010,
+        0b1000000000000100,
+        0b0110000000001100,
+        0b0001000000010000,
+        0b0000100001110000,
+        0b0001000001000000,
+        0b0000100001000000,
+        0b0001000100000000,
+        0b0001000100000000,
+        0b0000110000000000,
+        0b0000110000000000,
+        0b0000100000000000,
+
         0x0000, 0x6000, 0x5800, 0x4700, 0x40e0, 0x2018, 0x2004, 0x1003,
         0x2004, 0x2018, 0x40e0, 0x4700, 0x5800, 0x6000, 0x0000, 0x0000,
+
+        0b0000100000000000,
+        0b0000110000000000,
+        0b0000110000000000,
+        0b0001001100000000,
+        0b0001000100000000,
+        0b0000100011000000,
+        0b0001000001000000,
+        0b0000100000110000,
+        0b0001000000010000,
+        0b0110000000001100,
+        0b1000000000000100,
+        0b1000000000000010,
+        0b1111111111111111,
+        0,0,0,
+
         0x0020, 0x0060, 0x00a0, 0x0110, 0x0110, 0x0208, 0x0608, 0x1808,
         0x2008, 0x4004, 0xe004, 0x1802, 0x0782, 0x0062, 0x001e, 0x0001,
-        0x0000, 0x3c1e, 0x2362, 0x1084, 0x1004, 0x0808, 0x0808, 0x0808,
-        0x0410, 0x0410, 0x0410, 0x0220, 0x0220, 0x0140, 0x0080, 0x0080,
-        0x0400, 0x0600, 0x0500, 0x0880, 0x0880, 0x1040, 0x1060, 0x1018,
-        0x1004, 0x2002, 0x2007, 0x4018, 0x41e0, 0x4600, 0x7800, 0x8000,
-        0x0000, 0x0000, 0x0006, 0x001a, 0x00e2, 0x0702, 0x1804, 0x2004,
-        0xc008, 0x2004, 0x1804, 0x0702, 0x00e2, 0x001a, 0x0006, 0x0000,
-        0x8000, 0x7800, 0x4600, 0x41e0, 0x4018, 0x2007, 0x2002, 0x1004,
-        0x1018, 0x1060, 0x1040, 0x0880, 0x0880, 0x0500, 0x0600, 0x0400,
+
+        0b0000000000111000,
+        0b0000000001001000,
+        0b0000000010001000,
+        0b0001101010001000,
+        0b1110000000001000,
+        0b0110000000001000,
+        0b0001000000001000,
+        0b0001100000001000,
+        0b0000010000001000,
+        0b0000011000001000,
+        0b0000000100001000,
+        0b0000000100001000,
+        0b0000000001001000,
+        0b0000000001101000,
+        0b0000000000011000,
+        0b0000000000001000,
+
         0x0020, 0x4206, 0x0006, 0x1820, 0x1800, 0x0081, 0x0400, 0x4010,
         0x0000, 0x0300, 0x0302, 0x6010, 0x6000, 0x0000, 0x0419, 0x8018,
         0x0000, 0x0300, 0x0302, 0x6010, 0x6000, 0x0000, 0x0419, 0x8018,
@@ -142,20 +217,80 @@
     unsigned short ship_bitmap_lower[] = {
         0x0100, 0x0100, 0x0380, 0x07c0, 0x07c0, 0x0fe0, 0x0fe0, 0x0fe0,
         0x1ff0, 0x1ff0, 0x1ff0, 0x3ff8, 0x3ff8, 0x7efc, 0x783c, 0x0000,
+
+        0b0000000000001000,
+        0b0000000000011000,
+        0b0000000001111000,
+        0b0000000001111000,
+        0b0000000111111000,
+        0b0000000111111000,
+        0b0000011111111000,
+        0b0000011111111000,
+        0b0001111111111000,
+        0b0001111111111000,
+        0b0111111111111000,
+        0b1111111111111000,
+        0b0001101011111000,
+        0b0000000011111000,
+        0b0000000001111000,
+        0b0000000000111000,
+
         0x0001, 0x001e, 0x007e, 0x07fe, 0x1ffe, 0xfffc, 0x7ffc, 0x3ff8,
         0x1ff8, 0x07f8, 0x03f8, 0x01f0, 0x01f0, 0x00e0, 0x0060, 0x0020,
-        0x0000, 0x6000, 0x7800, 0x7f00, 0x7ff0, 0x7ff8, 0x3ff8, 0x1fff,
-        0x3ff8, 0x3ff8, 0x7ff0, 0x7ff0, 0x7800, 0x6000, 0x0000, 0x0000,
+
+        0,0,0,
+        0b1111111111111111,
+        0b1111111111111110,
+        0b1111111111111100,
+        0b0111111111111100,
+        0b0001111111110000,
+        0b0000111111110000,
+        0b0001111111000000,
+        0b0000111111000000,
+        0b0001111100000000,
+        0b0001111100000000,
+        0b0000110000000000,
+        0b0000110000000000,
+        0b0000100000000000,
+
+        0x0000, 0x6000, 0x7800, 0x7f00, 0x7fe0, 0x3ff8, 0x3ffc, 0x1fff,
+        0x3ffc, 0x3ff8, 0x7fe0, 0x7f00, 0x7800, 0x6000, 0x0000, 0x0000,
+
+        0b0000100000000000,
+        0b0000110000000000,
+        0b0000110000000000,
+        0b0001111100000000,
+        0b0001111100000000,
+        0b0000111111000000,
+        0b0001111111000000,
+        0b0000111111110000,
+        0b0001111111110000,
+        0b0111111111111100,
+        0b1111111111111100,
+        0b1111111111111110,
+        0b1111111111111111,
+        0,0,0,
+
         0x0020, 0x0060, 0x00e0, 0x01f0, 0x01f0, 0x03f8, 0x07f8, 0x1ff8,
         0x3ff8, 0x7ffc, 0xfffc, 0x1ffe, 0x07fe, 0x007e, 0x001e, 0x0001,
-        0x0000, 0x3c1e, 0x3f7e, 0x1ffc, 0x1ffc, 0x0ff8, 0x0ff8, 0x0ff8,
-        0x07f0, 0x07f0, 0x07f0, 0x03e0, 0x03e0, 0x01c0, 0x0080, 0x0080,
-        0x0400, 0x0600, 0x0700, 0x0f80, 0x0f80, 0x1fc0, 0x1fe0, 0x1ff8,
-        0x1ffc, 0x3ffe, 0x3fff, 0x7ff8, 0x7fe0, 0x7e00, 0x7800, 0x8000,
-        0x0000, 0x0000, 0x0006, 0x001e, 0x00fe, 0x07fe, 0x1ffc, 0x3ffc,
-        0xfff8, 0x3ffc, 0x1ffc, 0x07fe, 0x00fe, 0x001e, 0x0006, 0x0000,
-        0x8000, 0x7800, 0x7e00, 0x7fe0, 0x7ff8, 0x3fff, 0x3ffe, 0x1ffc,
-        0x1ff8, 0x1fe0, 0x1fc0, 0x0f80, 0x0f80, 0x0700, 0x0600, 0x0400,
+
+        0b0000000000111000,
+        0b0000000001111000,
+        0b0000000011111000,
+        0b0001101011111000,
+        0b1111111111111000,
+        0b0111111111111000,
+        0b0001111111111000,
+        0b0001111111111000,
+        0b0000011111111000,
+        0b0000011111111000,
+        0b0000000111111000,
+        0b0000000111111000,
+        0b0000000001111000,
+        0b0000000001111000,
+        0b0000000000011000,
+        0b0000000000001000,
+
         0x0020, 0x4206, 0x0006, 0x1820, 0x1800, 0x0081, 0x0400, 0x4010,
         0x0000, 0x0300, 0x0302, 0x6010, 0x6000, 0x0000, 0x0419, 0x8018,
         0x0000, 0x0300, 0x0302, 0x6010, 0x6000, 0x0000, 0x0419, 0x8018,
@@ -173,6 +308,7 @@
         0x0000, 0x0300, 0x0302, 0x6010, 0x6000, 0x0000, 0x0419, 0x8018,
         0x0020, 0x4206, 0x0006, 0x1820, 0x1800, 0x0081, 0x0400, 0x4010
     };
+
     unsigned short bullet_bitmap[] = {
         0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0100, 0x0100, 0x07c0,
         0x0100, 0x0100, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -256,8 +392,7 @@ unsigned char random_colour( void ) {
 }
 
 // GENERATE A RANDOM COLOUR WITH AT LEAST ONE OF RED, GREEN, BLUE BEING INTENSITY 1
-unsigned char random_colour_alt( void )
-{
+unsigned char random_colour_alt( void ) {
     unsigned char red, green, blue;
 
     do {
@@ -269,15 +404,13 @@ unsigned char random_colour_alt( void )
     return( red * 16 + green * 4 + blue );
 }
 
-void set_asteroid_sprites( void )
-{
+void set_asteroid_sprites( void ) {
     for( unsigned char asteroid_number = 0; asteroid_number < MAXASTEROIDS; asteroid_number++ ) {
         set_sprite_bitmaps( ASN(asteroid_number), &asteroid_bitmap[0] );
     }
 }
 
-void set_ship_sprites( unsigned char exploding )
-{
+void set_ship_sprites( unsigned char exploding ) {
     set_sprite_bitmaps( 0, SHIPSPRITE, &ship_bitmap_lower[ exploding ? 128 : 0 ] );
     set_sprite_bitmaps( 1, SHIPSPRITE, &ship_bitmap_upper[ exploding ? 128 : 0 ] );
 }
@@ -479,8 +612,8 @@ unsigned short count_asteroids( void ) {
 }
 
 void draw_ship( unsigned char colour ) {
-    set_sprite( 0, SHIPSPRITE, 1, ORANGE, shipx, shipy, shipdirection, 0);
-    set_sprite( 1, SHIPSPRITE, 1, colour, shipx, shipy, shipdirection, 0);
+    set_sprite( 0, SHIPSPRITE, 1, ORANGE, shipx, shipy, shipdirection, shipdirection > 7 ? 6 : 0 );
+    set_sprite( 1, SHIPSPRITE, 1, colour, shipx, shipy, shipdirection, shipdirection > 7 ? 6 : 0 );
 }
 
 void move_ship() {
@@ -489,28 +622,60 @@ void move_ship() {
             shipy = ( shipy > 0 ) ? shipy - 1 : 464;
             break;
         case 1:
-            shipx = ( shipx < 624 ) ? shipx + 1 : 0;
+            shipx = ( shipx < 624 ) ? shipx + ( counter & 1 ) : 0;
             shipy = ( shipy > 0 ) ? shipy - 1 : 464;
             break;
         case 2:
             shipx = ( shipx < 624 ) ? shipx + 1 : 0;
+            shipy = ( shipy > 0 ) ? shipy - 1 : 464;
             break;
         case 3:
             shipx = ( shipx < 624 ) ? shipx + 1 : 0;
-            shipy = ( shipy < 464 ) ? shipy + 1 : 0;
+            shipy = ( shipy > 0 ) ? shipy - ( counter & 1 ) : 464;
             break;
         case 4:
-            shipy = ( shipy < 464 ) ? shipy + 1 : 0;
+            shipx = ( shipx < 624 ) ? shipx + 1 : 0;
             break;
         case 5:
+            shipx = ( shipx < 624 ) ? shipx + 1 : 0;
+            shipy = ( shipy < 464 ) ? shipy + ( counter & 1 ) : 0;
+            break;
+        case 6:
+            shipx = ( shipx < 624 ) ? shipx + 1 : 0;
+            shipy = ( shipy < 464 ) ? shipy + 1 : 0;
+            break;
+        case 7:
+            shipx = ( shipx < 624 ) ? shipx + ( counter & 1 ) : 0;
+            shipy = ( shipy < 464 ) ? shipy + 1 : 0;
+            break;
+        case 8:
+            shipy = ( shipy < 464 ) ? shipy + 1 : 0;
+            break;
+        case 9:
+            shipx = ( shipx > 0 ) ? shipx - ( counter & 1 ) : 624;
+            shipy = ( shipy < 464 ) ? shipy + 1 : 0;
+            break;
+        case 10:
             shipx = ( shipx > 0 ) ? shipx - 1 : 624;
             shipy = ( shipy < 464 ) ? shipy + 1 : 0;
             break;
-        case 6:
+        case 11:
+            shipx = ( shipx > 0 ) ? shipx - 1 : 624;
+            shipy = ( shipy < 464 ) ? shipy + ( counter & 1 ) : 0;
+            break;
+        case 12:
             shipx = ( shipx > 0 ) ? shipx - 1 : 624;
             break;
-        case 7:
+        case 13:
             shipx = ( shipx > 0 ) ? shipx - 1 : 624;
+            shipy = ( shipy > 0 ) ? shipy - ( counter & 1 ) : 464;
+            break;
+        case 14:
+            shipx = ( shipx > 0 ) ? shipx - 1 : 624;
+            shipy = ( shipy > 0 ) ? shipy - 1 : 464;
+            break;
+        case 15:
+            shipx = ( shipx > 0 ) ? shipx - ( counter & 1 ) : 624;
             shipy = ( shipy > 0 ) ? shipy - 1 : 464;
             break;
     }
@@ -537,27 +702,52 @@ void fire_bullet( void ) {
             bulletx = shipx; bullety = shipy - 10;
             break;
         case 1:
-            bulletx = shipx + 8; bullety = shipy - 10;
+            bulletx = shipx + 5; bullety = shipy - 10;
             break;
         case 2:
-            bulletx = shipx + 10; bullety = shipy;
+            bulletx = shipx + 8; bullety = shipy - 10;
             break;
         case 3:
-            bulletx = shipx + 10; bullety = shipy + 10;
+            bulletx = shipx + 8; bullety = shipy - 6;
             break;
         case 4:
-            bulletx = shipx; bullety = shipy + 10;
+            bulletx = shipx + 10; bullety = shipy;
             break;
         case 5:
-            bulletx = shipx - 10; bullety = shipy + 10;
+            bulletx = shipx + 10; bullety = shipy + 6;
             break;
         case 6:
-            bulletx = shipx - 10; bullety = shipy;
+            bulletx = shipx + 10; bullety = shipy + 10;
             break;
         case 7:
+            bulletx = shipx + 5; bullety = shipy + 10;
+            break;
+        case 8:
+            bulletx = shipx; bullety = shipy + 10;
+            break;
+        case 9:
+            bulletx = shipx - 5; bullety = shipy + 10;
+            break;
+        case 10:
+            bulletx = shipx - 10; bullety = shipy + 10;
+            break;
+        case 11:
+            bulletx = shipx - 10; bullety = shipy + 6;
+            break;
+        case 12:
+            bulletx = shipx - 10; bullety = shipy;
+            break;
+        case 13:
+            bulletx = shipx - 10; bullety = shipy - 6;
+            break;
+        case 14:
             bulletx = shipx - 10; bullety = shipy - 10;
             break;
+        case 15:
+            bulletx = shipx - 5; bullety = shipy - 10;
+            break;
     }
+
     switch( bulletnumber ) {
         case 0:
             set_sprite( 0, BULLET1SPRITE, 1, YELLOW, bulletx, bullety, 2, 0);
@@ -902,10 +1092,10 @@ int main( void ) {
             if( ( counter & 3 ) == 0 ) {
                 // TURN LEFT
                 if( ( get_buttons() & 32 ) != 0 )
-                    shipdirection = ( shipdirection == 0 ) ? 7 : shipdirection - 1;
+                    shipdirection = ( shipdirection == 0 ) ? 15 : shipdirection - 1;
                 // TURN RIGHT
                 if( ( get_buttons() & 64 ) != 0 )
-                    shipdirection = ( shipdirection == 7 ) ? 0 : shipdirection + 1;
+                    shipdirection = ( shipdirection == 15 ) ? 0 : shipdirection + 1;
             }
 
             // EVERY CYCLE
