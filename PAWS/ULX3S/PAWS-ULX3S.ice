@@ -38,19 +38,19 @@ $include('../io_memmap.ice')
 $$CPUISA = 0x40001005
 $$cpu_B = 1
 $$cpu_F = 1
-$$if cpu_B then
+$$if cpu_B == 1 then
 $$CPUISA = CPUISA + 2
 $$end
-$$if cpu_F then
+$$if cpu_F == 1 then
 $$CPUISA = CPUISA + 0x20
 $$end
 $include('../cpu_functionblocks.ice')
-$$if cpu_B then
+$$if cpu_B == 1 then
 $include('../ALU-IMB.ice')
 $$else
 $include('../ALU-IM.ice')
 $$end
-$$if cpu_F then
+$$if cpu_F == 1 then
 $include('../FPU.ice')
 $include('../CPU-F.ice')
 $$else

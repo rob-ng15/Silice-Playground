@@ -469,16 +469,36 @@ void set_tilemap( void ) {
     }
 }
 
+// CYCLE THROUGH NONE BLACK COLOURS
+unsigned char swizzle( unsigned char colour ) {
+    colour = ( ( colour & 1 ) << 5 ) +
+                ( ( colour & 2 ) << 2 ) +
+                ( ( colour & 4 ) >> 1 ) +
+                ( ( colour & 8 ) << 1 ) +
+                ( ( colour & 16 ) >> 4 ) +
+                ( ( colour & 32 )  >> 3 );
+    return( colour );
+}
+
+unsigned char next_colour( unsigned char colour_cycle, unsigned char position ) {
+    if( ( colour_cycle + position ) <= 63 ) {
+        return( colour_cycle + position );
+    }
+    return( colour_cycle + position - 62 );
+}
+
 // DRAW GAME OVER IN LARGE MULTICOLOURED LETTERS
+unsigned char last_colour = 0;
 void game_over( void ) {
-    gpu_character_blit( random_colour(), 16, 116, 'G', 2 );
-    gpu_character_blit( random_colour(), 48, 124, 'A', 2 );
-    gpu_character_blit( random_colour(), 80, 116, 'M', 2 );
-    gpu_character_blit( random_colour(), 112, 124, 'E', 2 );
-    gpu_character_blit( random_colour(), 176, 116, 'O', 2 );
-    gpu_character_blit( random_colour(), 208, 124, 'V', 2 );
-    gpu_character_blit( random_colour(), 240, 116, 'E', 2 );
-    gpu_character_blit( random_colour(), 272, 124, 'R', 2 );
+    gpu_character_blit( swizzle(last_colour), 16, 116, 'G', 2 );
+    gpu_character_blit( swizzle(next_colour(last_colour,1)), 48, 124, 'A', 2 );
+    gpu_character_blit( swizzle(next_colour(last_colour,2)), 80, 116, 'M', 2 );
+    gpu_character_blit( swizzle(next_colour(last_colour,3)), 112, 124, 'E', 2 );
+    gpu_character_blit( swizzle(next_colour(last_colour,4)), 176, 116, 'O', 2 );
+    gpu_character_blit( swizzle(next_colour(last_colour,5)), 208, 124, 'V', 2 );
+    gpu_character_blit( swizzle(next_colour(last_colour,6)), 240, 116, 'E', 2 );
+    gpu_character_blit( swizzle(next_colour(last_colour,7)), 272, 124, 'R', 2 );
+    last_colour = ( last_colour == 63 ) ? 1 : last_colour + 1;
 }
 
 // DRAW A RISC-V LOGO AT THE TOP LEFT OF THE SCREEN

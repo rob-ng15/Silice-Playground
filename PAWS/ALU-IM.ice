@@ -97,9 +97,6 @@ algorithm aluMmultiply(
 }
 
 algorithm aluI(
-    input   uint1   start,
-    output  uint1   busy,
-
     input   uint3   function3,
     input   uint7   function7,
     input   uint5   IshiftCount,
@@ -111,23 +108,16 @@ algorithm aluI(
 
     output  uint32   result
 ) <autorun> {
-
-    busy = 0;
-
     while(1) {
-        if( start) {
-            busy = 1;
-            switch( function3 ) {
-                case 3b000: { result = sourceReg1 + immediateValue; }
-                case 3b001: { result = LSHIFToutput; }
-                case 3b010: { result = __signed( sourceReg1 ) < __signed(immediateValue); }
-                case 3b011: { result = ( immediateValue == 1 ) ? ( sourceReg1 == 0 ) : ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ); }
-                case 3b100: { result = sourceReg1 ^ immediateValue; }
-                case 3b101: { result = RSHIFToutput; }
-                case 3b110: { result = sourceReg1 | immediateValue; }
-                case 3b111: { result = sourceReg1 & immediateValue; }
-            }
-            busy = 0;
+        switch( function3 ) {
+            case 3b000: { result = sourceReg1 + immediateValue; }
+            case 3b001: { result = LSHIFToutput; }
+            case 3b010: { result = __signed( sourceReg1 ) < __signed(immediateValue); }
+            case 3b011: { result = ( immediateValue == 1 ) ? ( sourceReg1 == 0 ) : ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ); }
+            case 3b100: { result = sourceReg1 ^ immediateValue; }
+            case 3b101: { result = RSHIFToutput; }
+            case 3b110: { result = sourceReg1 | immediateValue; }
+            case 3b111: { result = sourceReg1 & immediateValue; }
         }
     }
 }
@@ -230,7 +220,7 @@ algorithm alu(
         result :> RSHIFToutput
     );
 
-    // BASE REGISTER + IMMEDIATE ALU OPERATIONS + B EXTENSION OPERATIONS
+    // BASE REGISTER + IMMEDIATE ALU OPERATIONS
     aluI ALUI(
        function3 <: function3,
         function7 <: function7,
@@ -241,7 +231,7 @@ algorithm alu(
         RSHIFToutput <: RSHIFToutput
     );
 
-    // BASE REGISTER & REGISTER ALU OPERATIONS + B EXTENSION OPERATIONS
+    // BASE REGISTER & REGISTER ALU OPERATIONS
     aluR ALUR(
         function3 <: function3,
         function7 <: function7,
@@ -255,7 +245,6 @@ algorithm alu(
     );
 
     // ALU START FLAGS
-    ALUI.start := 0;
     ALUR.start := 0;
 
     busy = 0;
@@ -264,9 +253,8 @@ algorithm alu(
         if( start ) {
             // START ALUI or ALUR
             busy = 1;
-            ALUI.start = ~opCode[5,1];
             ALUR.start = opCode[5,1];
-            while( ALUI.busy || ALUR.busy ) {}
+            while(  ALUR.busy ) {}
             result = opCode[5,1] ? ALUR.result : ALUI.result;
             busy = 0;
         }

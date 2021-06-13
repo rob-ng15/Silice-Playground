@@ -384,11 +384,12 @@ algorithm floataddsub(
     uint1   sign = uninitialised;
     uint1   signA = uninitialised;
     uint1   signB = uninitialised;
-    uint8   expA = uninitialised;
-    uint8   expB = uninitialised;
+    int16   expA = uninitialised;
+    int16   expB = uninitialised;
     uint48  sigA = uninitialised;
     uint48  sigB = uninitialised;
     uint23  newfraction = uninitialised;
+    uint1   round = uninitialised;
 
     busy = 0;
 
@@ -396,6 +397,7 @@ algorithm floataddsub(
         if( start ) {
             busy = 1;
             FSM = 1;
+            round = 1;
             while( FSM != 0 ) {
                 onehot( FSM ) {
                     case 0: {
@@ -404,8 +406,8 @@ algorithm floataddsub(
                     }
                     case 1: {
                         // EXTRACT COMPONENTS - HOLD TO LEFT TO IMPROVE FRACTIONAL ACCURACY
-                        expA = floatingpointnumber( a ).exponent;
-                        expB = floatingpointnumber( b ).exponent;
+                        expA = floatingpointnumber( a ).exponent - 127;
+                        expB = floatingpointnumber( b ).exponent - 127;
                         sigA = { 2b01, floatingpointnumber(a).fraction, 23b0 };
                         sigB = { 2b01, floatingpointnumber(b).fraction, 23b0 };
                         sign = floatingpointnumber(a).sign;
@@ -434,19 +436,23 @@ algorithm floataddsub(
                                     case 2b01: {
                                         if( sigB > sigA ) {
                                             sign = 1;
-                                            sigA = sigB - sigA;
+                                            round = ( sigA != 0 );
+                                            sigA = sigB - ( ~round ? 1 : sigA );
                                         } else {
                                             sign = 0;
-                                            sigA = sigA - sigB;
+                                            round = ( sigB != 0 );
+                                            sigA = sigA - ( ~round ? 1 : sigB );
                                         }
                                     }
                                     case 2b10: {
                                         if(  sigA > sigB ) {
                                             sign = 1;
-                                            sigA = sigA - sigB;
+                                            round = ( sigB != 0 );
+                                            sigA = sigA - ( ~round ? 1 : sigB );
                                         } else {
                                             sign = 0;
-                                            sigA = sigB - sigA;
+                                            round = ( sigA != 0 );
+                                            sigA = sigB - ( ~round ? 1 : sigA );
                                         }
                                     }
                                     default: { sign = signA; sigA = sigA + sigB; }
@@ -464,9 +470,13 @@ algorithm floataddsub(
                                         }
                                         sigA = { sigA[0,47], 1b0 };
                                     }
-                                    newfraction = sigA[24,23] + sigA[23,1];
-                                    expA = expA + ( ( newfraction == 0 ) & sigA[23,1] );
-                                    result = { sign, expA, newfraction };
+                                    newfraction = sigA[24,23] + ( sigA[23,1] & round );
+                                    expA = 127 + expA + ( round & ( newfraction == 0 ) & sigA[23,1] );
+                                    if( ( expA > 254 ) || ( expA < 0 ) ) {
+                                        result = ( expA < 0 ) ? 0 : { sign, 8b01111111, 23h7fffff };
+                                    } else {
+                                        result = { sign, expA[0,8], newfraction };
+                                    }
                                 }
                             }
                             case 2b01: { result = ( classEb == 2b01 ) ? a : addsub ? { ~b[31,1], b[0,31] } : b; }
@@ -496,7 +506,7 @@ algorithm floatmultiply(
     uint2   classEb = uninitialised;
     uint1   productsign = uninitialised;
     uint48  product = uninitialised;
-    int8    productexp  = uninitialised;
+    int16    productexp  = uninitialised;
     uint23  newfraction = uninitialised;
 
     // Calculation is split into 4 18 x 18 multiplications for DSP
@@ -522,22 +532,21 @@ algorithm floatmultiply(
                     }
                     case 1: {
                         product = ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
-                        productexp = (floatingpointnumber( a ).exponent - 127) + (floatingpointnumber( b ).exponent - 127);
+                        productexp = (floatingpointnumber( a ).exponent - 127) + (floatingpointnumber( b ).exponent - 127) + product[47,1];
                         productsign = a[31,1] ^ b[31,1];
                     }
                     case 2: {
                         switch( classEa | classEb ) {
                             case 2b00: {
-                                if( product == 0 ) {
-                                    result = { productsign, 31b0 };
+                                if( ~product[47,1] ) {
+                                    product = { product[0,47], 1b0 };
+                                }
+                                newfraction = product[24,23] + product[23,1];
+                                productexp = 127 + productexp + ( ( newfraction == 0 ) & product[23,1] );
+                                if( ( productexp > 254 ) || ( productexp < 0 ) ) {
+                                    result = ( productexp < 0 ) ? 0 : { productsign, 8b01111111, 23h7fffff };
                                 } else {
-                                    productexp = productexp + 127 + product[47,1];
-                                    while( ~product[47,1] ) {
-                                        product = { product[0,47], 1b0 };
-                                    }
-                                    newfraction = product[24,23] + product[23,1];
-                                    productexp = productexp + ( ( newfraction == 0 ) & product[23,1] );
-                                    result = { productsign, productexp, newfraction };
+                                    result = { productsign, productexp[0,8], newfraction };
                                 }
                             }
                             case 2b01: { result = { productsign, 31b0 }; }
@@ -567,7 +576,7 @@ algorithm floatdivide(
     uint2   classEb = uninitialised;
     uint32  temporary = uninitialised;
     uint1   quotientsign = uninitialised;
-    int8    quotientexp = uninitialised;
+    int16   quotientexp = uninitialised;
     uint32  quotient = uninitialised;
     uint32  remainder = uninitialised;
     uint6   bit = uninitialised;
@@ -622,8 +631,12 @@ algorithm floatdivide(
                                             quotient = { quotient[0,31], 1b0 };
                                         }
                                         newfraction = quotient[8,23] + quotient[7,1];
-                                        quotientexp = quotientexp + 127 - ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction ) + ( ( newfraction == 0 ) & quotient[7,1] );
-                                        result = { quotientsign, quotientexp, newfraction };
+                                        quotientexp = 127 + quotientexp + ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction ) + ( ( newfraction == 0 ) & quotient[7,1] );
+                                        if( ( quotientexp > 254 ) || ( quotientexp < 0 ) ) {
+                                            result = ( quotientexp < 0 ) ? 0 : { quotientsign, 8b01111111, 23h7fffff };
+                                        } else {
+                                            result = { quotientsign, quotientexp[0,8], newfraction };
+                                        }
                                     }
                                 }
                             }

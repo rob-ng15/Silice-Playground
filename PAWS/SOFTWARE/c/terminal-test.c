@@ -29,7 +29,9 @@ int main( void ) {
         printw( "\nFloating Point Tests:\n\n" );
         j = rng(32) - 16; x = (float) j;
         k = rng(32) - 16; y = (float) k;
-        printw( "j = %d, k = %d, x = %f, y = %f\n\n", j, k, x, y );
+        printw( "j = %d, k = %d, x = %f, y = %f, ", j, k, x, y );
+        x = x / rng(8); y = y / rng(8);
+        printw( " new x = %f, y = %f\n\n", x, y );
 
         for( i = 0; i < 4; i++ ) {
             printw("x %f, y %f\n    + = %f, - = %f, * = %f, / = %f\n    =%d <%d <=%d    ", x, y, x+y, x-y, x*y, x/y, x==y, x<y, x<=y );

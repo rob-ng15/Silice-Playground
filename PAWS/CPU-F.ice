@@ -203,7 +203,7 @@ algorithm PAWSCPU(
         sourceReg1 <: sourceReg1,
         sourceReg1F <: sourceReg1F,
         sourceReg2F <: sourceReg2F,
-        sourceReg3F <: sourceReg3F,
+        sourceReg3F <: sourceReg3F
     );
 
     // MANDATORY RISC-V CSR REGISTERS + HARTID == 0 MAIN THREAD == 1 SMT THREAD

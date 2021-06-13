@@ -420,14 +420,14 @@ void main( void ) {
     set_sdcard_bitmap();
     draw_sdcard();
     gpu_outputstring( WHITE, 104, 4, "PAWS", 2 );
-    tpu_set( 25, 4, TRANSPARENT, WHITE ); tpu_outputstring( "RISC-V RV32IMC CPU" );
+    tpu_set( 25, 4, TRANSPARENT, WHITE ); tpu_outputstring( "RISC-V RV32I" );
     isa = CSRisa();
-    if( isa != 0x40001005 ) {
-        tpu_outputstring( " plus " );
-        if( isa & 0b100000 ) tpu_outputstring( "F" );
-        if( isa & 0b10 ) tpu_outputstring( "B" );
-        tpu_outputstring( " extension(s)" );
-    }
+    if( isa & 0b1000000000000 ) tpu_outputstring( "M" );
+    if( isa & 1 ) tpu_outputstring( "A" );
+    if( isa & 0b100000 ) tpu_outputstring( "F" );
+    if( isa & 0b100 ) tpu_outputstring( "C" );
+    if( isa & 0b10 ) tpu_outputstring( "B" );
+    tpu_outputstring( " CPU" );
 
     for( unsigned short i = 0; i < 64; i++ ) {
         gpu_rectangle( i, i * 5, 184, 4 + i * 5, 188 );

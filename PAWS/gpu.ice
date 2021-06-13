@@ -1115,10 +1115,8 @@ algorithm pixelblock(
 
 // ADJUST COORDINATES BY DELTAS AND SCALE
 circuitry deltacoordinates( input x, input dx, input y, input dy, input scale, output xdx, output ydy ) {
-    xdx = x + dx;
-    ydy = y + dy;
-    //xdx = x + ( scale[2,1] ? ( __signed(dx) >>> scale[0,2] ) : ( dx << scale[0,2] ) );
-    //ydy = y + ( scale[2,1] ? ( __signed(dy) >>> scale[0,2] ) : ( dy << scale[0,2] ) );
+    xdx = x + ( scale[2,1] ? ( __signed(dx) >>> scale[0,2] ) : ( dx << scale[0,2] ) );
+    ydy = y + ( scale[2,1] ? ( __signed(dy) >>> scale[0,2] ) : ( dy << scale[0,2] ) );
 }
 algorithm vertexwriter(
     // For setting vertices
@@ -1141,14 +1139,6 @@ algorithm vectors(
     input   int10   vector_block_yc,
     input   uint3   vector_block_scale,
     input   uint1   draw_vector,
-
-    // For setting vertices
-    input   uint5   vertices_writer_block,
-    input   uint6   vertices_writer_vertex,
-    input   int6    vertices_writer_xdelta,
-    input   int6    vertices_writer_ydelta,
-    input   uint1   vertices_writer_active,
-
     output  uint1   vector_block_active,
 
     // Communication with the GPU
@@ -1157,11 +1147,10 @@ algorithm vectors(
     output  int10   gpu_param0,
     output  int10   gpu_param1,
     output  uint1   gpu_write,
-
-    input  uint1 gpu_active
+    input   uint1   gpu_active
 ) <autorun> {
     uint3   FSM = uninitialised;
-
+    uint3   VECTORDRAW = uninitialised;
     // Extract deltax and deltay for the present vertices
     int10 deltax := { {5{vectorentry(vertex.rdata0).dxsign}}, vectorentry(vertex.rdata0).dx };
     int10 deltay := { {5{vectorentry(vertex.rdata0).dysign}}, vectorentry(vertex.rdata0).dy };
@@ -1193,14 +1182,26 @@ algorithm vectors(
                     }
                     case 2: {
                         while( vectorentry(vertex.rdata0).active && ( vertices_number != 16 ) ) {
-                            // Dispatch line to GPU
-                            ( gpu_x, gpu_y ) = copycoordinates( start_x, start_y );
-                            ( gpu_param0, gpu_param1 ) = deltacoordinates( vector_block_xc, deltax, vector_block_yc, deltay, vector_block_scale );
-                            while( gpu_active ) {}
-                            gpu_write = 1;
-                            // Move onto the next of the vertices
-                            ( start_x, start_y ) = copycoordinates( gpu_param0, gpu_param1 );
-                            vertices_number = vertices_number + 1;
+                            VECTORDRAW = 1;
+                            while( VECTORDRAW != 0 ) {
+                                onehot( VECTORDRAW ) {
+                                    case 0: {
+                                        // Dispatch line to GPU
+                                        ( gpu_x, gpu_y ) = copycoordinates( start_x, start_y );
+                                        ( gpu_param0, gpu_param1 ) = deltacoordinates( vector_block_xc, deltax, vector_block_yc, deltay, vector_block_scale );
+                                    }
+                                    case 1: {
+                                        while( gpu_active ) {}
+                                        gpu_write = 1;
+                                    }
+                                    case 2: {
+                                        // Move onto the next of the vertices
+                                        ( start_x, start_y ) = copycoordinates( gpu_param0, gpu_param1 );
+                                        vertices_number = vertices_number + 1;
+                                    }
+                                }
+                                VECTORDRAW = { VECTORDRAW[0,2], 1b0 };
+                            }
                         }
                     }
                 }
