@@ -51,6 +51,7 @@ $$else
 $include('../ALU-IM.ice')
 $$end
 $$if cpu_F == 1 then
+$include('../common/fpu_routines.ice')
 $include('../FPU.ice')
 $include('../CPU-F.ice')
 $$else

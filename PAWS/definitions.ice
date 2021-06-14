@@ -44,13 +44,6 @@ bitfield spriteupdate {
     uint4   dx
 }
 
-// BITFIELD FOR FLOATING POINT NUMBER
-bitfield floatingpointnumber{
-    uint1   sign,
-    uint8   exponent,
-    uint23  fraction
-}
-
 // BITFIELD FOR FLOATING POINT CSR REGISTER
 bitfield floatingpointcsr{
     uint24  reserved,
