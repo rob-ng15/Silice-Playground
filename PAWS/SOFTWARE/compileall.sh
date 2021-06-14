@@ -1,21 +1,15 @@
 ./compile.sh c/ascii-invaders.c PAWS/INVADERS.PAW
 ./compile.sh c/asteroids.c PAWS/ASTROIDS.PAW
 ./compile.sh c/chess.c PAWS/CHESS.PAW
-./compile.sh c/demo.c PAWS/DEMO.PAW
-./compile.sh c/fractal.c PAWS/FRACTAL.PAW
-./compile.sh c/fractal-full.c PAWS/FRACTAL2.PAW
 ./compile.sh c/jpeg-test.c PAWS/JPEG.PAW
 ./compile.sh c/invaders-from-scratch.c PAWS/IFS.PAW
 ./compile.sh c/keyboard.c PAWS/KEYBOARD.PAW
 ./compile.sh c/life.c PAWS/LIFE.PAW
 ./compile.sh c/maze.c PAWS/3DMAZE.PAW
-#./compile.sh c/ppm2bitmap.c PAWS/PPM2BMP.PAW
-./compile.sh c/scale.c PAWS/SCALE.PAW
 ./compile.sh c/smttest.c PAWS/SMT.PAW
-./compile.sh c/terminal-test.c PAWS/TERMINAL.PAW
 ./compile.sh c/tune.c PAWS/TUNE.PAW
 
-./compileF.sh c/fractal.c PAWS/GF-F.PAW
-./compileF.sh c/fractal-full.c PAWS/GF-F2.PAW
-./compileF.sh c/scale.c PAWS/GF-S2.PAW
-./compileF.sh c/terminal-test.c PAWS/GF-T.PAW
+./compile.sh c/demo.c PAWS/DEMO.PAW
+./compileF.sh c/mandelbrot.c PAWS/MANDEL.PAW
+./compileF.sh c/scale.c PAWS/SCALE.PAW
+./compileF.sh c/terminal-test.c PAWS/TERMINAL.PAW
