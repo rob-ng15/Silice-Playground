@@ -354,15 +354,15 @@ algorithm floatcomparison(
                 switch( function3 ) {
                     case 3b000: {
                         // LESS THAN EQUAL OMPARISON OF 2 FLOATING POINT NUMBERS
-                        comparison = ( sourceReg1F[31,1] != sourceReg2F[31,1] ) ? sourceReg1F[31,1] | ((( sourceReg1F | sourceReg2F ) << 1) == 0 ) : ( sourceReg1F == sourceReg2F ) | ( sourceReg1F[31,1] ^ ( sourceReg1F < sourceReg2F ));
+                        ( comparison ) = floatlessequal( sourceReg1F, sourceReg2F );
                     }
                     case 3b001: {
                         // LESS THAN COMPARISON OF 2 FLOATING POINT NUMBERS
-                        comparison = ( sourceReg1F[31,1] != sourceReg2F[31,1] ) ? sourceReg1F[31,1] & ((( sourceReg1F | sourceReg2F ) << 1) != 0 ) : ( sourceReg1F != sourceReg2F ) & ( sourceReg1F[31,1] ^ ( sourceReg1F < sourceReg2F));
+                        ( comparison ) = floatless( sourceReg1F, sourceReg2F );
                     }
                     case 3b010: {
                         // EQUAL COMPARISON OF 2 FLOATING POINT NUMBERS
-                        comparison = ( sourceReg1F == sourceReg2F ) | ((( sourceReg1F | sourceReg2F ) << 1) == 0 );
+                        ( comparison ) = floatequal( sourceReg1F, sourceReg2F );
                     }
                 }
             }
