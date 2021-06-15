@@ -352,18 +352,9 @@ algorithm floatcomparison(
         switch( classEa | classEb ) {
             default: {
                 switch( function3 ) {
-                    case 3b000: {
-                        // LESS THAN EQUAL OMPARISON OF 2 FLOATING POINT NUMBERS
-                        ( comparison ) = floatlessequal( sourceReg1F, sourceReg2F );
-                    }
-                    case 3b001: {
-                        // LESS THAN COMPARISON OF 2 FLOATING POINT NUMBERS
-                        ( comparison ) = floatless( sourceReg1F, sourceReg2F );
-                    }
-                    case 3b010: {
-                        // EQUAL COMPARISON OF 2 FLOATING POINT NUMBERS
-                        ( comparison ) = floatequal( sourceReg1F, sourceReg2F );
-                    }
+                    case 3b000: { ( comparison ) = floatlessequal( sourceReg1F, sourceReg2F ); }
+                    case 3b001: { ( comparison ) = floatless( sourceReg1F, sourceReg2F ); }
+                    case 3b010: { ( comparison ) = floatequal( sourceReg1F, sourceReg2F ); }
                 }
             }
             case 2b10: { comparison = 0; }
