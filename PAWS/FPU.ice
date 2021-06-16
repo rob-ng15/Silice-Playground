@@ -137,17 +137,13 @@ algorithm floatcalc(
     uint2   FSM = uninitialised;
     floataddsub FPUaddsub();
     floatmultiply FPUmultiply( b <: sourceReg2F );
-    floatdivide FPUdivide();
-    floatsqrt FPUsqrt( sourceReg1F <: sourceReg1F );
+    floatdivide FPUdivide( a <: sourceReg1F, b <: sourceReg2F );
+    floatsqrt FPUsqrt( a <: sourceReg1F );
 
     FPUaddsub.start := 0;
     FPUmultiply.start := 0;
     FPUdivide.start := 0;
-
-    // SQRT resuses blocks
     FPUsqrt.start := 0;
-    FPUsqrt.addResult := FPUaddsub.result; FPUsqrt.divResult := FPUdivide.result;
-    FPUsqrt.addBusy := FPUaddsub.busy; FPUsqrt.divBusy := FPUdivide.busy;
 
     while(1) {
         if( start ) {
@@ -188,103 +184,16 @@ algorithm floatcalc(
                         }
                         case 5b00011: {
                             // FDIV.S
-                            FPUdivide.a = sourceReg1F; FPUdivide.b = sourceReg2F; FPUdivide.start = 1; while( FPUdivide.busy ) {}
+                            FPUdivide.start = 1; while( FPUdivide.busy ) {}
                             result = FPUdivide.result;
                         }
                         case 5b01011: {
                             // FSQRT.S
-                            FPUsqrt.start = 1;
-                            FPUaddsub.addsub = 0;
-                            while( FPUsqrt.busy ) {
-                                switch( { FPUsqrt.divStart, FPUsqrt.addStart } ) {
-                                    case 2b10: { FPUdivide.a = FPUsqrt.divA; FPUdivide.b = FPUsqrt.divB; FPUdivide.start = 1; while( FPUdivide.busy ) {} }
-                                    case 2b01: { FPUaddsub.a = FPUsqrt.addA; FPUaddsub.b = FPUsqrt.addB; FPUaddsub.start = 1; while( FPUaddsub.busy ) {} }
-                                }
-                            }
+                            FPUsqrt.start = 1; while( FPUsqrt.busy ) {}
                             result = FPUsqrt.result;
                         }
                     }
                 }
-            }
-            busy = 0;
-        }
-    }
-}
-
-algorithm floatsqrt(
-    input   uint1   start,
-    output  uint1   busy,
-
-    input   uint32  sourceReg1F,
-    output  uint32  result,
-
-    output  uint32  addA,
-    output  uint32  addB,
-    input   uint32  addResult,
-    output  uint1   addStart,
-    input   uint1   addBusy,
-    output  uint32  divA,
-    output  uint32  divB,
-    input   uint32  divResult,
-    output  uint1   divStart,
-    input   uint1   divBusy,
-
-) <autorun> {
-    uint2   FSM = uninitialised;
-    uint3   FSM2 = uninitialised;
-    uint3   count = uninitialised;
-    uint8   exp = uninitialised;
-
-    addStart := 0; addA := result; addB := divResult;
-    divStart := 0; divA := sourceReg1F; divB := result;
-
-    busy = 0;
-
-    while(1) {
-        if( start ) {
-            busy = 1;
-            switch( { floatingpointnumber( sourceReg1F ).exponent == 0, sourceReg1F[31,1] } ) {
-                case 2b00: {
-                    FSM = 1;
-                    while( FSM != 0 ) {
-                        onehot( FSM ) {
-                            case 0: {
-                                // FIRST APPROXIMATIONS IS 1
-                                result = 32h3f800000;
-                            }
-                            case 1: {
-                                // LOOP UNTIL MANTISSAS ACROSS ITERATIONS ARE APPROXIMATELY EQUAL
-                                count = 7;
-                                while( count != 0 ) {
-                                    FSM2 = 1;
-                                    while( FSM2 != 0 ) {
-                                        // x(i+1 ) = ( x(i) + n / x(i) ) / 2;
-                                        onehot( FSM2 ) {
-                                            case 0: {
-                                                // DO n/x(i)
-                                                divStart = 1; while( divBusy ) {}
-                                            }
-                                            case 1: {
-                                                // DO x(i) + n/x(i)
-                                                addStart = 1; while( addBusy ) {}
-                                            }
-                                            case 2: {
-                                                // DO (x(i) + n/x(i))/2
-                                                exp = floatingpointnumber( addResult ).exponent - 1;
-                                                result = { floatingpointnumber( addResult ).sign, exp, floatingpointnumber( addResult ).fraction };
-                                            }
-                                        }
-                                        FSM2 = { FSM[0,2], 1b0 };
-                                    }
-                                    count = count - 1;
-                                }
-                            }
-                        }
-                        FSM = { FSM[0,1], 1b0 };
-                    }
-                }
-                case 2b10: { result = 0; }
-                default: { result = { sourceReg1F[31,1], 8b11111111, 23b0 }; }
             }
             busy = 0;
         }
