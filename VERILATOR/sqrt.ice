@@ -15,7 +15,11 @@ circuitry combinecomponents( input sign, input exp, input fraction, output f32 )
 algorithm main(output int8 leds) {
     uint4   FSM = uninitialised;
 
-    uint32  a = 32h41a00000;
+    // BIT Patterns can be obtained from http://weitz.de/ieee/
+    // 1 = 32h3F800000 -> 32h3F800000
+    // 2 = 32h40000000 -> 32h3fb504f3
+    // 100 = 32h42C80000 -> 32h41200000 ( actual answer returned is 32411cc470 = 9.797958 )
+    uint32  a = 32h42C80000;
     uint32  result = uninitialised;
     uint32  x = uninitialised;
     uint32  q = uninitialised;
@@ -52,7 +56,7 @@ algorithm main(output int8 leds) {
                                 x = { fraction[0,22], 10b0 };
                             }
 
-                            __display("a = %x sign = %x exp = %x fraction = %x ac = %x x = %x",a,sign,exp,fraction,ac,x);
+                            __display("a = %x -> { %b %b %b } ac = %x x = %x",a,sign,exp,fraction,ac,x);
                         }
                         case 1: {
                             while( i != 31 ) {
@@ -66,7 +70,7 @@ algorithm main(output int8 leds) {
                                     x = { x[0,30], 2b00 };
                                     q = q << 1;
                                 }
-                                __display("  i = %x ac = %x x = %x q = %x",i,ac,x,q);
+                                __display("  i = %d ac = %x x = %x q = %x",i,ac,x,q);
                                 i = i + 1;
                             }
                         }
@@ -77,10 +81,10 @@ algorithm main(output int8 leds) {
                             }
                     }
                         case 3: {
-                            exp = ( ( exp - ~exp[0,1] ) >>> 1 ) + 127;
+                            exp = ( exp >>> 1 ) + 127;
                             fraction = q[8,23];
                             ( result ) = combinecomponents( sign, exp, fraction );
-                            __display("root = %x", result);
+                            __display("root = { %b %b %b } -> %x",sign,exp,fraction,result);
                         }
                     }
                     FSM = FSM << 1;

@@ -539,7 +539,7 @@ algorithm floatsqrt(
                             }
                     }
                         case 3: {
-                            exp = ( ( exp - ~exp[0,1] ) >>> 1 ) + 127;
+                            exp = ( exp >>> 1 ) + 127;
                             fraction = q[8,23];
                             ( result ) = combinecomponents( sign, exp, fraction );
                             __display("root = %x", result);
