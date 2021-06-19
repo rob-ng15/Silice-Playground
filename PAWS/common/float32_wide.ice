@@ -552,7 +552,7 @@ algorithm floatsqrt(
                             ( result ) = combinecomponents( sign, exp, fraction );
                         }
                     }
-                    FSM = FSM << 1;
+                    FSM = { FSM[0,3], 1b0 };
                 }
             }
              busy = 0;

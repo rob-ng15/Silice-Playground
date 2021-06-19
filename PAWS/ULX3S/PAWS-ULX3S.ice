@@ -45,13 +45,14 @@ $$if cpu_F == 1 then
 $$CPUISA = CPUISA + 0x20
 $$end
 $include('../cpu_functionblocks.ice')
+$include('../ALU-M.ice')
 $$if cpu_B == 1 then
 $include('../ALU-IMB.ice')
 $$else
 $include('../ALU-IM.ice')
 $$end
 $$if cpu_F == 1 then
-$include('../common/fpu_routines.ice')
+$include('../common/float32_thin.ice')
 $include('../FPU.ice')
 $include('../CPU-F.ice')
 $$else

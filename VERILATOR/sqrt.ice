@@ -77,7 +77,7 @@ algorithm main(output int8 leds) {
                         case 2: {
                             exp = exp - 127;
                             while( ~q[31,1] ) {
-                                q = q << 1;
+                                q = { q[0,31], 1b0 };
                             }
                     }
                         case 3: {
@@ -87,7 +87,7 @@ algorithm main(output int8 leds) {
                             __display("root = { %b %b %b } -> %x",sign,exp,fraction,result);
                         }
                     }
-                    FSM = FSM << 1;
+                    FSM = { FSM[0,3], 1b0 };
                 }
             }
             // busy = 0;

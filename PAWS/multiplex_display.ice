@@ -107,17 +107,9 @@ algorithm multiplex_display(
         pix :> blue8
     );
 
-    pix_red := 0;
-    pix_green := 0;
-    pix_blue := 0;
-
-    while (1) {
-        if( pix_active ) {
-            pix_red = red8;
-            pix_green = green8;
-            pix_blue = blue8;
-        }
-    }
+    pix_red := red8;
+    pix_green := green8;
+    pix_blue := blue8;
 }
 
 // EXPAND FROM 2 bit to 8 bit colour
