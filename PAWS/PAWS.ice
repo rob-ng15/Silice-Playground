@@ -1,10 +1,33 @@
+$$if ICARUS or VERILATOR then
+// PLL for simulation
+algorithm pll(
+  output  uint1 video_clock,
+  output! uint1 sdram_clock,
+  output! uint1 clock_100_1,
+  output! uint1 clock_100_2,
+  output! uint1 clock_100_3,
+  output  uint1 compute_clock
+) <autorun> {
+  uint3 counter = 0;
+  uint8 trigger = 8b11111111; 
+  sdram_clock   := clock;
+  clock_100_1   := clock;
+  clock_100_2   := clock;
+  clock_100_3   := clock;
+  compute_clock := ~counter[0,1]; // x2 slower
+  video_clock   := counter[1,1]; // x4 slower
+  while (1) {	  
+    counter = counter + 1;
+	  trigger = trigger >> 1;
+  }
+}
+$$end
+
 algorithm main(
     // LEDS (8 of)
     output  uint8   leds,
+$$if not SIMULATION then    
     input   uint$NUM_BTNS$ btns,
-
-    // HDMI OUTPUT
-    output  uint4   gpdi_dp,
 
     // UART
     output  uint1   uart_tx,
@@ -27,7 +50,23 @@ algorithm main(
     output  uint1   sd_mosi,
     output  uint1   sd_csn,
     input   uint1   sd_miso,
+$$end
 
+$$if HDMI then
+    // HDMI OUTPUT
+    output  uint4   gpdi_dp,
+$$end
+$$if VGA then
+    // VGA OUTPUT
+    output! uint$color_depth$ video_r,
+    output! uint$color_depth$ video_g,
+    output! uint$color_depth$ video_b,
+    output! uint1 video_hs,
+    output! uint1 video_vs,
+$$end
+$$if VERILATOR then
+    output! uint1 video_clock,
+$$end
     // SDRAM
     output! uint1  sdram_cle,
     output! uint2  sdram_dqm,
@@ -37,18 +76,38 @@ algorithm main(
     output! uint1  sdram_ras,
     output! uint2  sdram_ba,
     output! uint13 sdram_a,
-    output! uint1  sdram_clk,  // sdram chip clock != internal sdram_clock
-    inout   uint16 sdram_dq
+$$if VERILATOR then
+    output uint1  sdram_clock, // sdram controller clock
+    input  uint16 sdram_dq_i,
+    output uint16 sdram_dq_o,
+    output uint1  sdram_dq_en,
+$$else
+    output uint1  sdram_clk,  // sdram chip clock != internal sdram_clock
+    inout  uint16 sdram_dq,
+$$end
 ) <@clock_system> {
-    // CLOCK/RESET GENERATION
-    // CPU + MEMORY
-    uint1   pll_lock_CPU = uninitialized;
     uint1   clock_system = uninitialized;
     uint1   clock_100_1 = uninitialized;
     uint1   clock_100_2 = uninitialized;
     uint1   clock_100_3 = uninitialized;
+$$if VERILATOR then
+    $$clock_25mhz = 'video_clock'
+    // --- PLL
+    pll clockgen<@clock,!reset>(
+      video_clock   :> video_clock,
+      sdram_clock   :> sdram_clock,
+      clock_100_1   :> clock_100_1,
+      clock_100_2   :> clock_100_2,
+      clock_100_3   :> clock_100_3,
+      compute_clock :> clock_system
+    );
+$$else  
+    $$clock_25mhz = 'clock'
+    // CLOCK/RESET GENERATION
+    // CPU + MEMORY
+    uint1   pll_lock_CPU = uninitialized;
     ulx3s_clk_risc_ice_v_CPU clk_gen_CPU (
-        clkin    <: clock,
+        clkin    <: $clock_25mhz$,
         clkSYSTEM  :> clock_system,
         clk100_1  :> clock_100_1,
         clk100_2  :> clock_100_2,
@@ -59,11 +118,13 @@ algorithm main(
     uint1   sdram_clock = uninitialized;
     uint1   pll_lock_AUX = uninitialized;
     ulx3s_clk_risc_ice_v_AUX clk_gen_AUX (
-        clkin   <: clock,
+        clkin   <: $clock_25mhz$,
         clkSDRAM :> sdram_clock,
         clkSDRAMcontrol :> sdram_clk,
         locked :> pll_lock_AUX
     );
+$$end
+
     // SDRAM Reset
     uint1   sdram_reset = uninitialized;
     clean_reset sdram_rstcond<@sdram_clock,!reset> ( out :> sdram_reset );
@@ -88,7 +149,13 @@ algorithm main(
         sdram_ras :>  sdram_ras,
         sdram_ba  :>  sdram_ba,
         sdram_a   :>  sdram_a,
-        sdram_dq  <:> sdram_dq
+  $$if VERILATOR then
+        dq_i       <: sdram_dq_i,
+        dq_o       :> sdram_dq_o,
+        dq_en      :> sdram_dq_en,
+  $$else        
+        sdram_dq  <:> sdram_dq,
+  $$end
     );
 
     // SDRAM and BRAM (for BIOS)
@@ -109,20 +176,21 @@ algorithm main(
     uint1   SMTRUNNING = uninitialized;
     uint32  SMTSTARTPC = uninitialized;
     io_memmap IO_Map <@clock_system,!reset> (
+        leds :> leds,
+$$if not SIMULATION then        
         gn <: gn,
         gp :> gp,
-        leds :> leds,
         btns <: btns,
         uart_tx :> uart_tx,
         uart_rx <: uart_rx,
         us2_bd_dp <: us2_bd_dp,
-        us2_bd_dn <: us2_bd_dn,
+        us2_bd_dn <: us2_bd_dn,        
         sd_clk :> sd_clk,
         sd_mosi :> sd_mosi,
         sd_csn :> sd_csn,
         sd_miso <: sd_miso,
-
-        clock_25mhz <: clock,
+$$end
+        clock_25mhz <: $clock_25mhz$,
 
         memoryAddress <: address,
         writeData <: writedata,
@@ -130,18 +198,31 @@ algorithm main(
         SMTRUNNING :> SMTRUNNING,
         SMTSTARTPC :> SMTSTARTPC
     );
+$$if SIMULATION then        
+    uint4 audio_l(0);
+    uint4 audio_r(0);
+$$end    
     audiotimers_memmap AUDIOTIMERS_Map <@clock_system,!reset> (
-        clock_25mhz <: clock,
+        clock_25mhz <: $clock_25mhz$,
         memoryAddress <: address,
         writeData <: writedata,
         audio_l :> audio_l,
         audio_r :> audio_r
     );
     video_memmap VIDEO_Map <@clock_system,!reset> (
-        clock_25mhz <: clock,
+        clock_25mhz <: $clock_25mhz$,
         memoryAddress <: address,
         writeData <: writedata,
+$$if HDMI then        
         gpdi_dp :> gpdi_dp
+$$end
+$$if VGA then
+        video_r  :> video_r,
+        video_g  :> video_g,
+        video_b  :> video_b,
+        video_hs :> video_hs,
+        video_vs :> video_vs
+$$end        
     );
 
     uint3   function3 = uninitialized;
@@ -159,6 +240,8 @@ algorithm main(
     // SDRAM -> CPU BUSY STATE
     CPU.memorybusy := sdram.busy | CPU.readmemory | CPU.writememory;
 
+//  always_before { __display("video_hs %d video_vs %d",video_hs,video_vs); }
+ 
     while(1) {
         switch( address[28,1] ) {
             case 1: {

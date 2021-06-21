@@ -141,8 +141,8 @@ algorithm tile_map_writer(
     // Default to 0,0 and transparent
     tiles.addr1 = 0; tiles.wdata1 = 0;
     tiles_copy.addr1 = 0; tiles_copy.wdata1 = 0;
-    colours.addr1 = 0; colours.wdata1 = 13h10000;
-    colours_copy.addr1 = 0; colours_copy.wdata1 = 13h10000;
+    colours.addr1 = 0; colours.wdata1 = 17h10000;
+    colours_copy.addr1 = 0; colours_copy.wdata1 = 17h10000;
 
     tm_offset_x = 0;
     tm_offset_y = 0;
@@ -236,7 +236,7 @@ algorithm tile_map_writer(
                                         }
                                         case 1: {
                                             new_tile = tm_scroll ? 0 : tiles_copy.rdata0;
-                                            new_colour = tm_scroll ? 13h1000 : colours_copy.rdata0;
+                                            new_colour = tm_scroll ? 17h1000 : colours_copy.rdata0;
                                             while( tm_goleft ? ( x_cursor != 42 ) : ( x_cursor != 0 ) ) {
                                                 FSM3 = 1;
                                                 while( FSM3 != 0 ) {
@@ -305,7 +305,7 @@ algorithm tile_map_writer(
                                         }
                                         case 1: {
                                             new_tile = tm_scroll ? 0 : tiles_copy.rdata0;
-                                            new_colour = tm_scroll ? 13h1000 : colours_copy.rdata0;
+                                            new_colour = tm_scroll ? 17h1000 : colours_copy.rdata0;
                                             while( tm_goup ? ( y_cursor_addr != 1302 ) : ( y_cursor_addr != 0 ) ) {
                                                 FSM3 = 1;
                                                 while( FSM3 != 0 ) {
@@ -364,9 +364,9 @@ algorithm tile_map_writer(
                     tiles_copy.addr1 = tmcsaddr;
                     tiles_copy.wdata1 = 0;
                     colours.addr1 = tmcsaddr;
-                    colours.wdata1 = 13h1000;
+                    colours.wdata1 = 17h1000;
                     colours_copy.addr1 = tmcsaddr;
-                    colours_copy.wdata1 = 13h1000;
+                    colours_copy.wdata1 = 17h1000;
                     tmcsaddr = tmcsaddr + 1;
                 }
                 tm_offset_x = 0;
