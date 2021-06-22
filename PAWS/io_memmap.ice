@@ -1,6 +1,8 @@
 algorithm io_memmap(
     // LEDS (8 of)
     output  uint8   leds,
+
+$$if not SIMULATION then
     input   uint$NUM_BTNS$ btns,
 
     // GPIO
@@ -20,6 +22,7 @@ algorithm io_memmap(
     output  uint1   sd_mosi,
     output  uint1   sd_csn,
     input   uint1   sd_miso,
+$$end
 
     // CLOCKS
     input   uint1   clock_25mhz,
@@ -36,6 +39,7 @@ algorithm io_memmap(
     output  uint1   SMTRUNNING,
     output  uint32  SMTSTARTPC
 ) <autorun> {
+$$if not SIMULATION then  
     // UART CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
     uart UART(
         uart_tx :> uart_tx,
@@ -62,7 +66,7 @@ algorithm io_memmap(
     UART.outwrite := 0;
     PS2.inread := 0;
     SDCARD.readsector := 0;
-
+$$end
     // DISBLE SMT ON STARTUP
     SMTRUNNING = 0;
     SMTSTARTPC = 0;
@@ -72,10 +76,13 @@ algorithm io_memmap(
         if( memoryRead ) {
             switch( memoryAddress ) {
                 // UART, LEDS, BUTTONS and CLOCK
+$$if not SIMULATION then                
                 case 12h100: { readData = { 8b0, UART.inchar }; UART.inread = 1; }
                 case 12h102: { readData = { 14b0, UART.outfull, UART.inavailable }; }
                 case 12h120: { readData = { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] }; }
+$$end                
                 case 12h130: { readData = leds; }
+$$if not SIMULATION then                
                 // PS2
                 case 12h110: { readData = PS2.inavailable; }
                 case 12h112: {
@@ -90,6 +97,7 @@ algorithm io_memmap(
                 // SDCARD
                 case 12h140: { readData = SDCARD.ready; }
                 case 12h150: { readData = SDCARD.bufferdata; }
+$$end                
 
                 // SMT STATUS
                 case 12hffe: { readData = SMTRUNNING; }
@@ -103,15 +111,16 @@ algorithm io_memmap(
         if( memoryWrite ) {
             switch( memoryAddress ) {
                 // UART, LEDS
-                case 12h100: { UART.outchar = writeData[0,8]; UART.outwrite = 1; }
                 case 12h130: { leds = writeData; }
+$$if not SIMULATION then                
+                case 12h100: { UART.outchar = writeData[0,8]; UART.outwrite = 1; }
 
                 // SDCARD
                 case 12h140: { SDCARD.readsector = 1; }
                 case 12h142: { SDCARD.sectoraddressH = writeData; }
                 case 12h144: { SDCARD.sectoraddressL = writeData; }
                 case 12h150: { SDCARD.bufferaddress = writeData; }
-
+$$end
                 // SMT STATUS
                 case 12hff0: { SMTSTARTPC[16,16] = writeData; }
                 case 12hff2: { SMTSTARTPC[0,16] = writeData; }
@@ -201,6 +210,11 @@ algorithm audiotimers_memmap(
     }
 }
 
+algorithm passthrough(input uint1 i,output! uint1 o)
+{
+  always { o=i; }
+}
+
 algorithm video_memmap(
     // CLOCKS
     input   uint1   clock_25mhz,
@@ -211,20 +225,34 @@ algorithm video_memmap(
     input   uint1   memoryRead,
     input   uint16  writeData,
     output  uint16  readData,
-
+$$if HDMI then
     // HDMI OUTPUT
-    output  uint4   gpdi_dp
+    output! uint4   gpdi_dp
+$$end
+$$if VGA then
+    // VGA OUTPUT
+    output! uint$color_depth$ video_r,
+    output! uint$color_depth$ video_g,
+    output! uint$color_depth$ video_b,
+    output  uint1 video_hs,
+    output  uint1 video_vs,    
+$$end
 ) <autorun> {
     // VIDEO + CLOCKS
     uint1   pll_lock_VIDEO = uninitialized;
     uint1   video_clock = uninitialized;
     uint1   gpu_clock = uninitialized;
+$$if not SIMULATION then
     ulx3s_clk_risc_ice_v_VIDEO clk_gen_VIDEO (
         clkin    <: clock_25mhz,
         clkGPU :> gpu_clock,
         clkVIDEO :> video_clock,
         locked   :> pll_lock_VIDEO
     );
+$$else
+    passthrough p1(i<:clock_25mhz,o:>gpu_clock);
+    passthrough p2(i<:clock_25mhz,o:>video_clock);
+$$end    
     // Video Reset
     uint1   video_reset = uninitialized;
     clean_reset video_rstcond<@video_clock,!reset> ( out :> video_reset );
@@ -241,6 +269,17 @@ algorithm video_memmap(
     uint1   pix_active = uninitialized;
     uint10  pix_x  = uninitialized;
     uint10  pix_y  = uninitialized;
+$$if VGA then
+  vga vga_driver<@clock_25mhz,!reset>(
+    vga_hs :> video_hs,
+    vga_vs :> video_vs,
+    vga_x  :> pix_x,
+    vga_y  :> pix_y,
+    vblank :> vblank,
+    active :> pix_active,
+  );
+$$end
+$$if HDMI then
     uint8   video_r = uninitialized;
     uint8   video_g = uninitialized;
     uint8   video_b = uninitialized;
@@ -254,7 +293,7 @@ algorithm video_memmap(
         green   <: video_g,
         blue    <: video_b
     );
-
+$$end
     // CREATE DISPLAY LAYERS
     // BACKGROUND
     uint2   background_r = uninitialized;
@@ -376,6 +415,7 @@ algorithm video_memmap(
     );
 
     // Combine the display layers for display
+
     multiplex_display display <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,

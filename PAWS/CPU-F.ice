@@ -69,7 +69,7 @@ algorithm PAWSCPU(
     // RISC-V PROGRAM COUNTERS AND STATUS
     uint32  pc = 0;
     uint32  pcSMT = 0;
-    uint32  PC <: SMT ? pcSMT : pc;
+    uint32  PC <:: SMT ? pcSMT : pc;
     uint32  PCplus2 <: PC + 2;
     uint1   incPC = uninitialized;
 
@@ -152,7 +152,7 @@ algorithm PAWSCPU(
     uint32  AUIPCLUI = uninitialized;
     addressgenerator AGU(
         instruction <: instruction,
-        pc <:: PC,
+        pc <: PC,
         compressed <: compressed,
         sourceReg1 <: sourceReg1,
         immediateValue <: immediateValue,

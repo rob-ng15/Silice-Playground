@@ -1,22 +1,30 @@
 $$ uart_in_clock_freq_mhz = 50
 
+$$if not SIMULATION then
 // CLOCKS
 import('../common/ulx3s_clk_risc_ice_v.v')
 import('../common/ulx3s_clk_risc_ice_v_2.v')
 import('../common/ulx3s_clk_risc_ice_v_3.v')
-
+$$end
 
 // HDMI + UART + SDCARD + SDRAM Driver Includes
+$$if HDMI then
 $include('../common/hdmi.ice')
+$$end
+
+$$if VGA then
+$include('vga.ice')
+$$end
+
 $include('../common/uart.ice')
 $include('../common/sdcard.ice')
+// PS2 KEYBOARD
+$include('../common/ps2.ice')
+
 $include('../common/sdram_interfaces.ice')
 $include('../common/sdram_controller_autoprecharge_r16_w16.ice')
 $include('../common/sdram_utils.ice')
 $include('../common/clean_reset.ice')
-
-// PS2 KEYBOARD
-$include('../common/ps2.ice')
 
 // Headers
 $include('../definitions.ice')
