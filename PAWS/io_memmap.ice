@@ -227,7 +227,7 @@ algorithm video_memmap(
     output  uint16  readData,
 $$if HDMI then
     // HDMI OUTPUT
-    output  uint4   gpdi_dp
+    output! uint4   gpdi_dp
 $$end
 $$if VGA then
     // VGA OUTPUT

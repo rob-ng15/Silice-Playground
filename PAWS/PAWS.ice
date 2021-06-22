@@ -54,7 +54,7 @@ $$end
 
 $$if HDMI then
     // HDMI OUTPUT
-    output  uint4   gpdi_dp,
+    output! uint4   gpdi_dp,
 $$end
 $$if VGA then
     // VGA OUTPUT
@@ -239,8 +239,6 @@ $$end
 
     // SDRAM -> CPU BUSY STATE
     CPU.memorybusy := sdram.busy | CPU.readmemory | CPU.writememory;
-
-//  always_before { __display("video_hs %d video_vs %d",video_hs,video_vs); }
  
     while(1) {
         switch( address[28,1] ) {
