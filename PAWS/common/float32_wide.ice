@@ -335,6 +335,22 @@ algorithm floataddsub(
 }
 
 // MULTIPLY TWO FLOATING POINT NUMBERS
+
+$$if not uintmul_algo then
+$$uintmul_algo = 1
+algorithm douintmul(
+    input   uint32  factor_1,
+    input   uint32  factor_2,
+    output  uint64  product
+) <autorun> {
+    uint18    A <: { 2b0, factor_1[16,16] };
+    uint18    B <: { 2b0, factor_1[0,16] };
+    uint18    C <: { 2b0, factor_2[16,16] };
+    uint18    D <: { 2b0, factor_2[0,16] };
+    product := ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
+}
+$$end
+
 algorithm floatmultiply(
     input   uint1   start,
     output  uint1   busy,
@@ -348,16 +364,17 @@ algorithm floatmultiply(
 
     uint2   classEa = uninitialised;
     uint2   classEb = uninitialised;
-    uint1   productsign = uninitialised;
+    uint1   productsign <: a[31,1] ^ b[31,1];
     uint48  product = uninitialised;
     int16   productexp  = uninitialised;
     uint23  newfraction = uninitialised;
 
     // Calculation is split into 4 18 x 18 multiplications for DSP
-    uint18  A = uninitialised;
-    uint18  B = uninitialised;
-    uint18  C = uninitialised;
-    uint18  D = uninitialised;
+    uint18  A <: { 11b1, a[16,7] };
+    uint18  B <: { 2b0, a[0,16] };
+    uint18  C <: { 11b1, b[16,7] };
+    uint18  D <: { 2b0, b[0,16] };
+
     busy = 0;
 
     while(1) {
@@ -369,15 +386,10 @@ algorithm floatmultiply(
                     case 0: {
                         ( classEa ) = classE( a );
                         ( classEb ) = classE( b );
-                        A = { 11b1, a[16,7] };
-                        B = { 2b0, a[0,16] };
-                        C = { 11b1, b[16,7] };
-                        D = { 2b0, b[0,16] };
                     }
                     case 1: {
                         product = ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
                         productexp = (floatingpointnumber( a ).exponent - 127) + (floatingpointnumber( b ).exponent - 127) + product[47,1];
-                        productsign = a[31,1] ^ b[31,1];
                     }
                     case 2: {
                         switch( classEa | classEb ) {
@@ -400,6 +412,21 @@ algorithm floatmultiply(
 }
 
 // DIVIDE TWO FLOATING POINT NUMBERS
+
+$$if not divbit_circuit then
+$$divbit_circuit = 1
+// PERFORM DIVISION AT SPECIFIC BIT, SHARED BETWEEN INTEGER AND  FLOATING POINT DIVISION
+circuitry divbit( inout quo, inout rem, input top, input bottom, input x ) {
+    sameas( rem ) temp = uninitialized;
+    uint1   quobit = uninitialised;
+
+    temp = ( rem << 1 ) + top[x,1];
+    quobit = __unsigned(temp) >= __unsigned(bottom);
+    rem = __unsigned(temp) - ( quobit ? __unsigned(bottom) : 0 );
+    quo[x,1] = quobit;
+}
+$$end
+
 algorithm floatdivide(
     input   uint1   start,
     output  uint1   busy,
@@ -410,11 +437,9 @@ algorithm floatdivide(
     output  uint32  result
 ) <autorun> {
     uint4   FSM = uninitialised;
-    uint1   DIVBIT = uninitialised;
     uint2   classEa = uninitialised;
     uint2   classEb = uninitialised;
-    uint48  temporary = uninitialised;
-    uint1   quotientsign = uninitialised;
+    uint1   quotientsign <: a[31,1] ^ b[31,1];
     int16   quotientexp = uninitialised;
     uint48  quotient = uninitialised;
     uint48  remainder = uninitialised;
@@ -425,7 +450,7 @@ algorithm floatdivide(
 
     while(1) {
         if( start ) {
-            //busy = 1;
+            busy = 1;
             FSM = 1;
             while( FSM != 0 ) {
                 onehot( FSM ) {
@@ -434,7 +459,6 @@ algorithm floatdivide(
                         ( classEb ) = classE( b );
                         sigA = { 1b1, floatingpointnumber(a).fraction, 24b0 };
                         sigB = { 25b1, floatingpointnumber(b).fraction };
-                        quotientsign = a[31,1] ^ b[31,1];
                         quotientexp = (floatingpointnumber( a ).exponent - 127) - (floatingpointnumber( b ).exponent - 127);
                         quotient = 0;
                         remainder = 0;
@@ -445,12 +469,7 @@ algorithm floatdivide(
                         switch( classEa | classEb ) {
                             case 2b00: {
                                 while( bit != 63 ) {
-                                    temporary = { remainder[0,47], sigA[bit,1] };
-                                    DIVBIT = __unsigned(temporary) >= __unsigned(sigB);
-                                    switch( DIVBIT ) {
-                                        case 1: { remainder = __unsigned(temporary) - __unsigned(sigB); quotient[bit,1] = 1; }
-                                        case 0: { remainder = temporary; }
-                                    }
+                                    ( quotient, remainder ) = divbit( quotient, remainder, sigA, sigB, bit );
                                     bit = bit - 1;
                                 }
                             }
@@ -482,7 +501,6 @@ algorithm floatdivide(
 }
 
 // ADAPTED FROM https://projectf.io/posts/square-root-in-verilog/
-
 algorithm floatsqrt(
     input   uint1   start,
     output  uint1   busy,
@@ -499,9 +517,9 @@ algorithm floatsqrt(
     uint6   i = uninitialised;
 
     uint2   classEa = uninitialised;
-    uint1   sign = uninitialised;
+    uint1   sign <: floatingpointnumber( a ).sign;
     uint8   exp  = uninitialised;
-    uint23  fraction = uninitialised;
+    uint23  newfraction = uninitialised;
 
     while(1) {
         if( start ) {
@@ -515,30 +533,16 @@ algorithm floatsqrt(
                         case 0: {
                             i = 0;
                             q = 0;
-                            sign = floatingpointnumber( a ).sign;
                             exp = floatingpointnumber( a ).exponent;
-                            fraction = floatingpointnumber( a ).fraction;
-
-                            if( exp[0,1] ) {
-                                ac = 1;
-                                x = { floatingpointnumber( a ).fraction, 25b0 };
-                            } else {
-                                ac = { 48b0, 1b1, fraction[22,1] };
-                                x = { fraction[0,22], 26b0 };
-                            }
+                            ac = exp[0,1] ? 1 : { 48b0, 1b1, a[22,1] };
+                            x = exp[0,1] ? { a[0,23], 25b0 } : { a[0,22], 26b0 };
                         }
                         case 1: {
                             while( i != 47 ) {
                                 test_res = ac - { q, 2b01 };
-                                if( ~test_res[49,1] ) {
-                                    ac = { test_res[0,47], x[46,2] };
-                                    x = { x[0,46], 2b00 };
-                                    q = { q[0,46], 1b1 };
-                                } else {
-                                    ac = { ac[0,47], x[0,2] };
-                                    x = { x[0,46], 2b00 };
-                                    q = { q[0,47], 1b0 };
-                                }
+                                ac = { test_res[49,1] ? ac[0,47] : test_res[0,47], x[46,2] };
+                                q = { q[0,47], ~test_res[49,1] };
+                                x = { x[0,46], 2b00 };
                                 i = i + 1;
                             }
                         }
@@ -548,14 +552,14 @@ algorithm floatsqrt(
                         }
                         case 3: {
                             exp = ( exp >>> 1 ) + 127;
-                            ( fraction ) = round48( q );
-                            ( result ) = combinecomponents( sign, exp, fraction );
+                            ( newfraction ) = round48( q );
+                            ( result ) = combinecomponents( sign, exp, newfraction );
                         }
                     }
                     FSM = { FSM[0,3], 1b0 };
                 }
             }
-             busy = 0;
+            busy = 0;
         }
     }
 }

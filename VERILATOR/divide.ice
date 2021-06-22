@@ -19,6 +19,16 @@ circuitry classE( output E, input N ) {
     E = { ( floatingpointnumber(N).exponent ) == 8hff, ( floatingpointnumber(N).exponent ) == 8h00 };
 }
 
+circuitry divbit( inout rem, inout quo, input top, input bottom, input x  ) {
+    sameas(rem) temp= uninitialised;
+
+    temp = ( rem << 1 ) + top[bit,1];
+    switch( __unsigned(temp) >= __unsigned(bottom) ) {
+        case 1: { rem = __unsigned(temp) - __unsigned(bottom); quo[bit,1] = 1; }
+        case 0: { rem = temp; }
+    }
+}
+
 algorithm main(output int8 leds) {
     uint4   FSM = uninitialised;
 
@@ -32,10 +42,8 @@ algorithm main(output int8 leds) {
     uint32  b = 32h3eaaaaab;
     uint32  result = uninitialised;
 
-    uint1   DIVBIT = uninitialised;
     uint2   classEa = uninitialised;
     uint2   classEb = uninitialised;
-    uint48  temporary = uninitialised;
     uint1   quotientsign = uninitialised;
     int16   quotientexp = uninitialised;
     uint48  quotient = uninitialised;
@@ -70,12 +78,7 @@ algorithm main(output int8 leds) {
                         switch( classEa | classEb ) {
                             case 2b00: {
                                 while( bit != 63 ) {
-                                    temporary = { remainder[0,47], sigA[bit,1] };
-                                    DIVBIT = __unsigned(temporary) >= __unsigned(sigB);
-                                    switch( DIVBIT ) {
-                                        case 1: { remainder = __unsigned(temporary) - __unsigned(sigB); quotient[bit,1] = 1; }
-                                        case 0: { remainder = temporary; }
-                                    }
+                                    ( remainder, quotient ) = divbit( remainder, quotient, sigA, sigB, bit );
                                     __display("  bit = %d quotient = %b remainder = %b",bit, quotient,remainder);
                                     bit = bit - 1;
                                 }

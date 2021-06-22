@@ -52,7 +52,7 @@ $$else
 $include('../ALU-IM.ice')
 $$end
 $$if cpu_F == 1 then
-$include('../common/float32_thin.ice')
+$include('../common/float32_wide.ice')
 $include('../FPU.ice')
 $include('../CPU-F.ice')
 $$else

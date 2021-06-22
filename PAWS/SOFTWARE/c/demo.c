@@ -382,6 +382,145 @@ unsigned short pupils_bitmap[] = {
     0,0,0,0,0,0,0,0,0
 };
 
+// PACMAN - 4 FOR UP/DOWN 4 FOR RIGHT/LEFT, USE REFLECTION OF UP FOR DOWN AND RIGHT FOR LEFT
+unsigned short pacman_bitmap[] = {
+    0,
+    0b0000010000100000,
+    0b0001110000111000,
+    0b0011111001111100,
+    0b0011111001111100,
+    0b0111111001111110,
+    0b0111111001111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0001111111111000,
+    0b0000011111100000,
+    0,
+
+    0,
+    0,
+    0b0001000000001000,
+    0b0011100000011100,
+    0b0011110000111100,
+    0b0111110000111110,
+    0b0111111001111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0001111111111000,
+    0b0000011111100000,
+    0,
+
+    0,
+    0,
+    0,
+    0b0010000000000100,
+    0b0011000000001100,
+    0b0111100000011110,
+    0b0111110000111110,
+    0b0111111001111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0001111111111000,
+    0b0000011111100000,
+    0,
+
+    0,
+    0,
+    0b0001000000001000,
+    0b0011100000011100,
+    0b0011110000111100,
+    0b0111110000111110,
+    0b0111111001111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0111111111111110,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0001111111111000,
+    0b0000011111100000,
+    0,
+
+    0,
+    0b0000011111100000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b1111111111111110,
+    0b1111111111111000,
+    0b0111111110000000,
+    0b1111111110000000,
+    0b1111111111111000,
+    0b1111111111111110,
+    0b0011111111111100,
+    0b0011111111111100,
+    0b0001111111111000,
+    0b0000011111100000,
+    0,
+
+    0,
+    0b0000011111100000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0011111111111000,
+    0b0111111111110000,
+    0b0111111111000000,
+    0b0111111110000000,
+    0b0111111110000000,
+    0b0111111111000000,
+    0b0111111111110000,
+    0b0011111111111000,
+    0b0011111111111100,
+    0b0001111111111000,
+    0b0000011111100000,
+    0,
+
+    0,
+    0b0000011111100000,
+    0b0001111111111000,
+    0b0011111111110000,
+    0b0011111111100000,
+    0b0111111111000000,
+    0b0111111110000000,
+    0b0111111100000000,
+    0b0111111100000000,
+    0b0111111110000000,
+    0b0111111111000000,
+    0b0011111111100000,
+    0b0011111111110000,
+    0b0001111111111000,
+    0b0000011111100000,
+    0,
+
+    0,
+    0b0000011111100000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0011111111111000,
+    0b0111111111110000,
+    0b0111111111000000,
+    0b0111111110000000,
+    0b0111111110000000,
+    0b0111111111000000,
+    0b0111111111110000,
+    0b0011111111111000,
+    0b0011111111111100,
+    0b0001111111111000,
+    0b0000011111100000,
+    0
+};
+
 unsigned short pacman_maze_bitmaps[] = {
     0,0,0,0,0,0,0,0,
     0b0000000000111111,
@@ -840,7 +979,7 @@ unsigned char tune_treble[] = {  36, 48, 43, 40, 48, 42, 41, 37, 49, 44, 41, 49,
 unsigned short size_treble[] = { 16, 16, 16, 16,  8,  8, 32, 24, 16, 16, 16, 32, 24, 32, 0xff };
 
 void spritedemo( void ) {
-    short animation_count = 0, animation_frame = 0, move_count = 0, do_power = 0, power = 0;
+    short animation_count = 0, ghost_animation_frame = 0, move_count = 0, do_power = 0, power = 0;
     char ghost_direction[4] = { 0, 1, 2, 3 };
     unsigned short trebleposition = 0, updateflag;
 
@@ -886,9 +1025,12 @@ void spritedemo( void ) {
     set_sprite( LOWER_LAYER, 10, 1, WHITE, 144, 384, 3, 1 );
     set_sprite( LOWER_LAYER, 11, 1, BLUE, 144, 384, 3, 1 );
 
+    set_sprite_bitmaps( UPPER_LAYER, 0, &pacman_bitmap[0] );
+    set_sprite( UPPER_LAYER, 0, 1, YELLOW, 304, 415, 0, 1 );
+
     for( short i = 0; i < 1280; i++ ) {
         await_vblank();
-        animation_frame = ( animation_count & 64 ) ? 1 : 0;
+        ghost_animation_frame = ( animation_count & 64 ) ? 1 : 0;
 
         // PACMAN "TUNE" - SLIGHTLY OUT
         if( tune_treble[ trebleposition ] != 0xff ) {
@@ -900,9 +1042,13 @@ void spritedemo( void ) {
             }
         }
 
+        // ANIMATE PACMAN
+        set_sprite_attribute( UPPER_LAYER, 0, SPRITE_TILE, ( ghost_direction[0] & 1 ) * 4 + ( ( animation_count & 96 ) >> 5 ) );
+        set_sprite_attribute( UPPER_LAYER, 0, SPRITE_DOUBLE, ghost_direction[0] > 1 ? 7 : 1 );
+
         // ANIMATE THE GHOSTS
         for( short i = 0; i < 4; i++ ) {
-            set_sprite_attribute( LOWER_LAYER, i * 3, SPRITE_TILE, ghost_direction[i] * 2 + animation_frame );
+            set_sprite_attribute( LOWER_LAYER, i * 3, SPRITE_TILE, ghost_direction[i] * 2 + ghost_animation_frame );
             set_sprite_attribute( LOWER_LAYER, i * 3 + 1, SPRITE_TILE, ghost_direction[i] + power * 4 );
             set_sprite_attribute( LOWER_LAYER, i * 3 + 2, SPRITE_TILE, ghost_direction[i] + power * 4);
             if( power ) {

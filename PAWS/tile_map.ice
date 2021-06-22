@@ -141,8 +141,8 @@ algorithm tile_map_writer(
     // Default to 0,0 and transparent
     tiles.addr1 = 0; tiles.wdata1 = 0;
     tiles_copy.addr1 = 0; tiles_copy.wdata1 = 0;
-    colours.addr1 = 0; colours.wdata1 = 13h10000;
-    colours_copy.addr1 = 0; colours_copy.wdata1 = 13h10000;
+    colours.addr1 = 0; colours.wdata1 = 13h1000;
+    colours_copy.addr1 = 0; colours_copy.wdata1 = 13h1000;
 
     tm_offset_x = 0;
     tm_offset_y = 0;

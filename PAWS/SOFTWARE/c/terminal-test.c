@@ -32,9 +32,10 @@ int main( void ) {
         printw( "j = %d, k = %d, x = %f, y = %f, ", j, k, x, y );
         x = x / rng(8); y = y / rng(8);
         printw( " new x = %f, y = %f\n\n", x, y );
+        refresh();
 
         for( i = 0; i < 4; i++ ) {
-            printw("x %f, y %f\n    + = %f, - = %f, * = %f, / = %f\n    =%d <%d <=%d    ", x, y, x+y, x-y, x*y, x/y, x==y, x<y, x<=y );
+            printw("x %f, y %f\n    + = %f, - = %f, * = %f, / = %f sqrt = %f\n    =%d <%d <=%d    ", x, y, x+y, x-y, x*y, x/y, sqrtf(x), x==y, x<y, x<=y );
             switch( rng(4 ) ) {
                 case 0:
                     printw( "x + 2 , y - 2\n" );
@@ -53,19 +54,9 @@ int main( void ) {
                     x = x / 2; y = y * 2;
                     break;
             }
-        }
-
-        time = CSRtime(); cycles = CSRcycles(); insn = CSRinstructions();
-        mvprintw( 25, 0, "TIME <%u> INSN <%u> CYCLES <%u> CYCLES per INSN <%u>", time, insn, cycles, cycles/insn );
-        mvprintw( 27, 0, "MEMORY TOP OLD <%u> BLOCK <%u> TOP NEW <%u>", (int)oldmemorytop, (int)memoryblock, (int)newmemorytop );
-
-        if( ps2_character_available() ) {
-            lastPS2_KEYCODE = ps2_inputcharacter();
-        }
-        set_timer1khz( 1000, 0 );
-        while( get_timer1khz( 0 ) ) {
-            mvprintw( 29, 0, "LAST CHARACTER <%2x> <%c>", lastPS2_KEYCODE, ( lastPS2_KEYCODE == 0 ) ? '?' : lastPS2_KEYCODE );
             refresh();
         }
+
+        sleep( 1000, 0 );
     }
 }

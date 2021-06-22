@@ -1,6 +1,21 @@
 // ALU - M EXTENSION
 
 // UNSIGNED / SIGNED 32 by 32 bit division giving 32 bit remainder and quotient
+
+$$if not divbit_circuit then
+$$divbit_circuit = 1
+// PERFORM DIVISION AT SPECIFIC BIT, SHARED BETWEEN INTEGER AND  FLOATING POINT DIVISION
+circuitry divbit( inout quo, inout rem, input top, input bottom, input x ) {
+    sameas( rem ) temp = uninitialized;
+    uint1   quobit = uninitialised;
+
+    temp = ( rem << 1 ) + top[x,1];
+    quobit = __unsigned(temp) >= __unsigned(bottom);
+    rem = __unsigned(temp) - ( quobit ? __unsigned(bottom) : 0 );
+    quo[x,1] = quobit;
+}
+$$end
+
 algorithm aluMdivideremain(
     input   uint1   start,
     output  uint1   busy,
@@ -12,9 +27,7 @@ algorithm aluMdivideremain(
     output  uint32  result
 ) <autorun> {
     uint2   FSM = uninitialized;
-    uint1   FSM2 = uninitialized;
 
-    uint32  temporary = uninitialized;
     uint32  quotient = uninitialized;
     uint32  remainder = uninitialized;
     uint32  dividend_copy = uninitialized;
@@ -43,13 +56,8 @@ algorithm aluMdivideremain(
                             case 0: { result = dosign[1,1] ? dividend : 32hffffffff; }
                             default: {
                                 while( bit != 63 ) {
-                                    temporary = { remainder[0,31], dividend_copy[bit,1] };
-                                    FSM2 = __unsigned(temporary) >= __unsigned(divisor_copy);
-                                    switch( FSM2 ) {
-                                        case 1: { remainder = __unsigned(temporary) - __unsigned(divisor_copy); quotient[bit,1] = 1; }
-                                        case 0: { remainder = temporary; }
-                                    }
-                                   bit = bit - 1;
+                                    ( quotient, remainder ) = divbit( quotient, remainder, dividend_copy, divisor_copy, bit );
+                                    bit = bit - 1;
                                 }
                                 result = dosign[1,1] ? remainder : ( quotientremaindersign ? -quotient : quotient );
                             }
@@ -64,6 +72,22 @@ algorithm aluMdivideremain(
 }
 
 // UNSIGNED / SIGNED 32 by 32 bit multiplication giving 64 bit product using DSP blocks
+
+$$if not uintmul_algo then
+$$uintmul_algo = 1
+algorithm douintmul(
+    input   uint32  factor_1,
+    input   uint32  factor_2,
+    output  uint64  product
+) <autorun> {
+    uint18    A <: { 2b0, factor_1[16,16] };
+    uint18    B <: { 2b0, factor_1[0,16] };
+    uint18    C <: { 2b0, factor_2[16,16] };
+    uint18    D <: { 2b0, factor_2[0,16] };
+    product := ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
+}
+$$end
+
 algorithm aluMmultiply(
     input   uint3   dosign,
     input   uint32  factor_1,
@@ -71,27 +95,13 @@ algorithm aluMmultiply(
 
     output  uint32  result
 ) <autorun> {
-    uint2   dosigned = uninitialized;
-    uint1   productsign = uninitialized;
-    uint32  factor_1_copy = uninitialized;
-    uint32  factor_2_copy = uninitialized;
-    uint64  product = uninitialized;
+    uint2   dosigned <: dosign[1,1] ? ( dosign[0,1] ? 0 : 2 ) : 1;
+    uint1   productsign <: ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
+    uint64  product <: productsign ? -UINTMUL.product : UINTMUL.product;
 
-    // Calculation is split into 4 18 x 18 multiplications for DSP
-    uint18  A = uninitialized;
-    uint18  B = uninitialized;
-    uint18  C = uninitialized;
-    uint18  D = uninitialized;
-    while(1) {
-        dosigned = dosign[1,1] ? ( dosign[0,1] ? 0 : 2 ) : 1;
-        productsign = ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
-        factor_1_copy = ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
-        factor_2_copy = ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
-        A = { 2b0, factor_1_copy[16,16] };
-        B = { 2b0, factor_1_copy[0,16] };
-        C = { 2b0, factor_2_copy[16,16] };
-        D = { 2b0, factor_2_copy[0,16] };
-        product = productsign ? -( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } ) : ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
-        result = ( dosign == 0 ) ? product[0,32] : product[32,32];
-    }
+    douintmul UINTMUL();
+    UINTMUL.factor_1 := ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
+    UINTMUL.factor_2 := ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
+
+    result := ( dosign == 0 ) ? product[0,32] : product[32,32];
 }

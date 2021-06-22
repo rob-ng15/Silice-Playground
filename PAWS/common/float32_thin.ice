@@ -418,6 +418,21 @@ algorithm floatmultiply(
 }
 
 // DIVIDE TWO FLOATING POINT NUMBERS
+
+$$if not divbit_circuit then
+$$divbit_circuit = 1
+// PERFORM DIVISION AT SPECIFIC BIT, SHARED BETWEEN INTEGER AND  FLOATING POINT DIVISION
+circuitry divbit( inout quo, inout rem, input top, input bottom, input x ) {
+    sameas( rem ) temp = uninitialized;
+    uint1   quobit = uninitialised;
+
+    temp = ( rem << 1 ) + top[x,1];
+    quobit = __unsigned(temp) >= __unsigned(bottom);
+    rem = __unsigned(temp) - ( quobit : __unsigned(bottom) : 0 );
+    quo[x,1] = quobit;
+}
+$$end
+
 algorithm floatdivide(
     input   uint1   start,
     output  uint1   busy,
@@ -428,10 +443,8 @@ algorithm floatdivide(
     output  uint32  result
 ) <autorun> {
     uint4   FSM = uninitialised;
-    uint1   DIVBIT = uninitialised;
     uint2   classEa = uninitialised;
     uint2   classEb = uninitialised;
-    uint32  temporary = uninitialised;
     uint1   quotientsign = uninitialised;
     int16   quotientexp = uninitialised;
     uint32  quotient = uninitialised;
@@ -443,7 +456,7 @@ algorithm floatdivide(
 
     while(1) {
         if( start ) {
-            //busy = 1;
+            busy = 1;
             FSM = 1;
             while( FSM != 0 ) {
                 onehot( FSM ) {
@@ -463,12 +476,7 @@ algorithm floatdivide(
                         switch( classEa | classEb ) {
                             case 2b00: {
                                 while( bit != 63 ) {
-                                    temporary = { remainder[0,31], sigA[bit,1] };
-                                    DIVBIT = __unsigned(temporary) >= __unsigned(sigB);
-                                    switch( DIVBIT ) {
-                                        case 1: { remainder = __unsigned(temporary) - __unsigned(sigB); quotient[bit,1] = 1; }
-                                        case 0: { remainder = temporary; }
-                                    }
+                                    ( quotient, remainder ) = divbit( quotient, remainder, sigA, sigB, bit );
                                     bit = bit - 1;
                                 }
                             }
@@ -517,9 +525,9 @@ algorithm floatsqrt(
     uint6   i = uninitialised;
 
     uint2   classEa = uninitialised;
-    uint1   sign = uninitialised;
+    uint1   sign <: floatingpointnumber( a ).sign;
     uint8   exp  = uninitialised;
-    uint23  fraction = uninitialised;
+    uint23  newfraction = uninitialised;
 
     while(1) {
         if( start ) {
@@ -533,41 +541,30 @@ algorithm floatsqrt(
                         case 0: {
                             i = 0;
                             q = 0;
-                            sign = floatingpointnumber( a ).sign;
                             exp = floatingpointnumber( a ).exponent;
-                            fraction = floatingpointnumber( a ).fraction;
 
-                            if( exp[0,1] ) {
-                                ac = 1;
-                                x = { floatingpointnumber( a ).fraction, 9b0 };
-                            } else {
-                                ac = { 32b0, 1b1, fraction[22,1] };
-                                x = { fraction[0,22], 10b0 };
-                            }
+                            ac = exp[0,1] ? 1 : { 32b0, 1b1, a[22,1] };
+                            x = exp[0,1] ? { a[0,23], 9b0 } : { a[0,22], 10b0 };
                         }
                         case 1: {
                             while( i != 31 ) {
                                 test_res = ac - { q, 2b01 };
-                                if( test_res[32,1] == 0 ) {
-                                    ac = { test_res[0,31], x[30,2] };
-                                    x = { x[0,30], 2b00 };
-                                    q = { q[0,30], 1b1 };
-                                } else {
-                                    ac = { ac[0,31], x[0,2] };
-                                    x = { x[0,30], 2b00 };
-                                    q = { q[0,31], 1b0 };
-                                }
+                                ac = test_res[33,1] ? { ac[0,31], x[30,2] } : { test_res[0,31], x[30,2] };
+                                q = { q[0,31], ~test_res[32,1] };
+                                x = { x[0,30], 2b00 };
                                 i = i + 1;
                             }
                         }
                         case 2: {
                             exp = exp - 127;
-                            ( q ) = normalise32( q );
-                        }
+                            while( ~q[31,1] ) {
+                                q = { q[0,31], 1b0 };
+                            }
+                    }
                         case 3: {
                             exp = ( exp >>> 1 ) + 127;
-                            ( fraction ) = round32( q );
-                            ( result ) = combinecomponents( sign, exp, fraction );
+                            newfraction = q[8,23];
+                            ( result ) = combinecomponents( sign, exp, newfraction );
                         }
                     }
                     FSM = { FSM[0,3], 1b0 };
