@@ -102,7 +102,7 @@ algorithm inttofloat(
 ) <autorun> {
     uint2   FSM = uninitialised;
     uint1   sign = uninitialised;
-    uint8   exp = uninitialised;
+    int16   exp = uninitialised;
     uint8   zeros = uninitialised;
     uint32  number = uninitialised;
 
@@ -146,7 +146,7 @@ algorithm floattouint(
     input   uint1   start
 ) <autorun> {
     uint2   classEa = uninitialised;
-    int8    exp = uninitialised;
+    int16    exp = uninitialised;
     uint33  sig = uninitialised;
 
     busy = 0;
@@ -171,7 +171,7 @@ algorithm floattouint(
                     }
                 }
                 case 2b01: { result = 0; }
-                case 2b10: { result = a[31,1] ? 0 : 32hffffffff;  }
+                default: { result = a[31,1] ? 0 : 32hffffffff;  }
             }
             busy = 0;
         }
@@ -184,7 +184,7 @@ algorithm floattoint(
     input   uint1   start
 ) <autorun> {
     uint2   classEa = uninitialised;
-    int8    exp = uninitialised;
+    int16   exp = uninitialised;
     uint33  sig = uninitialised;
 
     busy = 0;
@@ -202,9 +202,9 @@ algorithm floattoint(
                         sig = { 9b1, a[0,23], 1b0 } << ( exp - 24);
                     }
                     result = ( exp > 30 ) ? ( a[31,1] ? 32hffffffff : 32h7fffffff ) : a[31,1] ? -( sig[1,32] + sig[0,1] ) : ( sig[1,32] + sig[0,1] );
-                 }
+                }
                 case 2b01: { result = 0; }
-                case 2b10: { result = a[31,1] ? 32hffffffff : 32h7fffffff; }
+                default: { result = a[31,1] ? 32hffffffff : 32h7fffffff; }
             }
             busy = 0;
         }
@@ -224,7 +224,7 @@ algorithm floataddsub(
 
     output  uint32  result
 ) <autorun> {
-    uint4   FSM = uninitialised;
+    uint5   FSM = uninitialised;
     uint2   classEa = uninitialised;
     uint2   classEb = uninitialised;
     uint1   sign = uninitialised;
@@ -303,6 +303,14 @@ algorithm floataddsub(
                                     }
                                     default: { sign = signA; sigA = sigA + sigB; }
                                 }
+                            }
+                            case 2b01: { result = ( classEb == 2b01 ) ? a : addsub ? { ~b[31,1], b[0,31] } : b; }
+                            default: { result = { 1b0, 8b11111111, 23b0 }; }
+                        }
+                    }
+                    case 4: {
+                        switch( classEa | classEb ) {
+                            case 2b00: {
                                 if( sigA == 0 ) {
                                     result = 0;
                                 } else {
@@ -322,12 +330,11 @@ algorithm floataddsub(
                                     ( result ) = combinecomponents( sign, expA, newfraction );
                                 }
                             }
-                            case 2b01: { result = ( classEb == 2b01 ) ? a : addsub ? { ~b[31,1], b[0,31] } : b; }
-                            default: { result = { 1b0, 8b11111111, 23b0 }; }
+                            default: {}
                         }
                     }
                 }
-                FSM = { FSM[0,3], 1b0 };
+                FSM = { FSM[0,5], 1b0 };
             }
             busy = 0;
         }
@@ -490,6 +497,7 @@ algorithm floatdivide(
                                     }
                                 }
                             }
+                            default: {}
                         }
                     }
                 }
@@ -518,7 +526,7 @@ algorithm floatsqrt(
 
     uint2   classEa = uninitialised;
     uint1   sign <: floatingpointnumber( a ).sign;
-    uint8   exp  = uninitialised;
+    int16   exp  = uninitialised;
     uint23  newfraction = uninitialised;
 
     while(1) {

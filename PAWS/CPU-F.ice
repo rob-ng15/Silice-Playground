@@ -28,6 +28,7 @@ circuitry load( input accesssize, input location, input memorybusy, input readda
             while( memorybusy ) {}
             memoryinput[16,16] = readdata;
         }
+        default: {}
     }
 }
 // CPU STORE TO MEMORY

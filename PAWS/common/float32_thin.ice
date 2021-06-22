@@ -120,7 +120,7 @@ algorithm inttofloat(
 ) <autorun> {
     uint2   FSM = uninitialised;
     uint1   sign = uninitialised;
-    uint8   exp = uninitialised;
+    int16   exp = uninitialised;
     uint8   zeros = uninitialised;
     uint32  number = uninitialised;
 
@@ -164,7 +164,7 @@ algorithm floattouint(
     input   uint1   start
 ) <autorun> {
     uint2   classEa = uninitialised;
-    int8    exp = uninitialised;
+    int16   exp = uninitialised;
     uint33  sig = uninitialised;
 
     busy = 0;
@@ -202,7 +202,7 @@ algorithm floattoint(
     input   uint1   start
 ) <autorun> {
     uint2   classEa = uninitialised;
-    int8    exp = uninitialised;
+    int16   exp = uninitialised;
     uint33  sig = uninitialised;
 
     busy = 0;

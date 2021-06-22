@@ -291,6 +291,7 @@ algorithm compressed(
                     default: { i32 = { 25b0, 7b0010011 }; }
                 }
             }
+            default: {}
         }
     }
 }
@@ -357,6 +358,7 @@ algorithm aluA (
             case 5b10100: { ( result ) = max( memoryinput, sourceReg2); }   // AMOMAX
             case 5b11000: { ( result ) = minu( memoryinput, sourceReg2); }  // AMOMINU
             case 5b11100: { ( result ) = maxu( memoryinput, sourceReg2); }  // AMOMAXU
+            default: {}
         }
     }
 }

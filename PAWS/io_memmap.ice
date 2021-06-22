@@ -39,7 +39,7 @@ $$end
     output  uint1   SMTRUNNING,
     output  uint32  SMTSTARTPC
 ) <autorun> {
-$$if not SIMULATION then  
+$$if not SIMULATION then
     // UART CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
     uart UART(
         uart_tx :> uart_tx,
@@ -76,13 +76,13 @@ $$end
         if( memoryRead ) {
             switch( memoryAddress ) {
                 // UART, LEDS, BUTTONS and CLOCK
-$$if not SIMULATION then                
+$$if not SIMULATION then
                 case 12h100: { readData = { 8b0, UART.inchar }; UART.inread = 1; }
                 case 12h102: { readData = { 14b0, UART.outfull, UART.inavailable }; }
                 case 12h120: { readData = { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] }; }
-$$end                
+$$end
                 case 12h130: { readData = leds; }
-$$if not SIMULATION then                
+$$if not SIMULATION then
                 // PS2
                 case 12h110: { readData = PS2.inavailable; }
                 case 12h112: {
@@ -97,7 +97,7 @@ $$if not SIMULATION then
                 // SDCARD
                 case 12h140: { readData = SDCARD.ready; }
                 case 12h150: { readData = SDCARD.bufferdata; }
-$$end                
+$$end
 
                 // SMT STATUS
                 case 12hffe: { readData = SMTRUNNING; }
@@ -112,7 +112,7 @@ $$end
             switch( memoryAddress ) {
                 // UART, LEDS
                 case 12h130: { leds = writeData; }
-$$if not SIMULATION then                
+$$if not SIMULATION then
                 case 12h100: { UART.outchar = writeData[0,8]; UART.outwrite = 1; }
 
                 // SDCARD
@@ -125,6 +125,7 @@ $$end
                 case 12hff0: { SMTSTARTPC[16,16] = writeData; }
                 case 12hff2: { SMTSTARTPC[0,16] = writeData; }
                 case 12hffe: { SMTRUNNING = writeData; }
+                default: {}
             }
         }
     } // while(1)
@@ -198,6 +199,7 @@ algorithm audiotimers_memmap(
                 case 12h102: { apu_processor.note = writeData; }
                 case 12h104: { apu_processor.duration = writeData; }
                 case 12h106: { apu_processor.apu_write = writeData; }
+                default: {}
              }
         }
         // RESET Co-Processor Controls
@@ -235,7 +237,7 @@ $$if VGA then
     output! uint$color_depth$ video_g,
     output! uint$color_depth$ video_b,
     output  uint1 video_hs,
-    output  uint1 video_vs,    
+    output  uint1 video_vs,
 $$end
 ) <autorun> {
     // VIDEO + CLOCKS
@@ -252,7 +254,7 @@ $$if not SIMULATION then
 $$else
     passthrough p1(i<:clock_25mhz,o:>gpu_clock);
     passthrough p2(i<:clock_25mhz,o:>video_clock);
-$$end    
+$$end
     // Video Reset
     uint1   video_reset = uninitialized;
     clean_reset video_rstcond<@video_clock,!reset> ( out :> video_reset );
@@ -647,8 +649,10 @@ $$end
                 case 12h6f0: { bitmap_window.framebuffer = writeData; }
                 case 12h6f2: { bitmap_window.writer_framebuffer = writeData; }
 
-               // DISPLAY LAYER ORDERING / FRAMEBUFFER SELECTION
+                // DISPLAY LAYER ORDERING / FRAMEBUFFER SELECTION
                 case 12hf00: { display.display_order = writeData; }
+
+                default: {}
             }
         }
         // RESET Co-Processor Controls

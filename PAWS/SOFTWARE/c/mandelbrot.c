@@ -7,7 +7,7 @@ int main( void ) {
     INITIALISEMEMORY();
 
     const int graphwidth = 320, graphheight = 240;
-    float kt = 255, m = 4.0;
+    float kt = 63, m = 4.0;
     float xmin = -2.1, xmax = 0.6, ymin = -1.35, ymax = 1.35;
     float dx = (xmax - xmin) / graphwidth, dy = (ymax - ymin) / graphheight;
     float jx, jy, tx, ty, wx, wy, r;
@@ -28,7 +28,7 @@ int main( void ) {
                 k = k + 1;
             } while( ( r < m ) && ( k < kt ) );
 
-            gpu_pixel( ( k > kt ) ? BLACK : ( k >> 2 ) + 1, x, y );
+            gpu_pixel( ( k > kt ) ? BLACK : k + 1, x, y );
         }
     }
 

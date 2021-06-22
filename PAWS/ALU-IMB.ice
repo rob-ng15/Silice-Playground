@@ -274,6 +274,7 @@ algorithm aluR010(
                 case 5b00101: { while( CLMULbusy ) {} result = CLMULoutput; }                                 // CLMULR
                 case 5b10100: { while( XPERMbusy ) {} result = XPERMoutput; }                                 // XPERM.N
                 case 5b10000: { result = ( { sourceReg1[0,31], 1b0 } ) + sourceReg2; }                        // SH1ADD
+                default: {}
             }
             busy = 0;
         }
@@ -742,6 +743,7 @@ algorithm BSHIFTleft(
             case 2b00: { result = sourceReg1 << shiftcount; }
             case 2b01: { result = ~( ~sourceReg1 << shiftcount ); }
             case 2b11: { result = ( sourceReg1 << shiftcount ) | ( sourceReg1 >> ( 32 - shiftcount ) ); }
+            default: {}
         }
     }
 }
@@ -773,6 +775,7 @@ algorithm singlebitops(
             case 2b01: { result = sourceReg1 | ( 1 << shiftcount ); }
             case 2b10: { result = sourceReg1 & ~( 1 << shiftcount ); }
             case 2b11: { result = sourceReg1 ^ ( 1 << shiftcount ); }
+            default: {}
         }
     }
 }
@@ -792,6 +795,7 @@ algorithm funnelshift(
         switch( function3 ) {
             case 3b001: { result = ( fshiftcount != 0 ) ? ( ( A << fshiftcount ) | ( B >> ( 32 - fshiftcount ) ) ) : A; } // FSL
             case 3b101: { result = ( fshiftcount != 0 ) ? ( ( A >> fshiftcount ) | ( B << ( 32 - fshiftcount ) ) ) : A; } // FSR
+            default: {}
         }
     }
 }
@@ -1040,9 +1044,7 @@ algorithm clz(
             FSM = 1;
             while( FSM != 0 ) {
                 onehot( FSM ) {
-                    case 0: {
-                        result = 0;
-                    }
+                    case 0: { result = 0; }
                     case 1: {
                         while( ~sourceReg1[31-result,1] ) {
                             result = result + 1;
@@ -1153,6 +1155,7 @@ algorithm crc32(
                             case 2b00: { nbits = 8; }
                             case 2b01: { nbits = 16; }
                             case 2b10: { nbits = 32; }
+                            default: {}
                         }
                     }
                     case 1: {
@@ -1204,6 +1207,7 @@ algorithm xperm(
                             case 3b010: { sz_log2 = 2; sz = 6b000100; mask = 32h0000000f; }
                             case 3b100: { sz_log2 = 3; sz = 6b001000; mask = 32h000000ff; }
                             case 3b110: { sz_log2 = 4; sz = 6b010000; mask = 32h0000ffff; }
+                            default: {}
                         }
                         result = 0;
                         i = 0;
