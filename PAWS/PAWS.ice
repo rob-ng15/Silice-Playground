@@ -61,11 +61,11 @@ $$if VGA then
     output! uint$color_depth$ video_r,
     output! uint$color_depth$ video_g,
     output! uint$color_depth$ video_b,
-    output! uint1 video_hs,
-    output! uint1 video_vs,
+    output  uint1 video_hs,
+    output  uint1 video_vs,
 $$end
 $$if VERILATOR then
-    output! uint1 video_clock,
+    output  uint1 video_clock,
 $$end
     // SDRAM
     output! uint1  sdram_cle,
@@ -77,10 +77,10 @@ $$end
     output! uint2  sdram_ba,
     output! uint13 sdram_a,
 $$if VERILATOR then
-    output uint1  sdram_clock, // sdram controller clock
-    input  uint16 sdram_dq_i,
-    output uint16 sdram_dq_o,
-    output uint1  sdram_dq_en,
+    output! uint1  sdram_clock, // sdram controller clock
+    input   uint16 sdram_dq_i,
+    output! uint16 sdram_dq_o,
+    output! uint1  sdram_dq_en,
 $$else
     output uint1  sdram_clk,  // sdram chip clock != internal sdram_clock
     inout  uint16 sdram_dq,
