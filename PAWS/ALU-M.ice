@@ -52,15 +52,14 @@ algorithm aluMdivideremain(
                         bit = 31;
                     }
                     case 1: {
-                        switch( divisor ) {
-                            case 0: { result = dosign[1,1] ? dividend : 32hffffffff; }
-                            default: {
-                                while( bit != 63 ) {
-                                    ( quotient, remainder ) = divbit( quotient, remainder, dividend_copy, divisor_copy, bit );
-                                    bit = bit - 1;
-                                }
-                                result = dosign[1,1] ? remainder : ( quotientremaindersign ? -quotient : quotient );
+                        if( divisor == 0 ) {
+                            result = dosign[1,1] ? dividend : 32hffffffff;
+                        } else {
+                            while( bit != 63 ) {
+                                ( quotient, remainder ) = divbit( quotient, remainder, dividend_copy, divisor_copy, bit );
+                                bit = bit - 1;
                             }
+                            result = dosign[1,1] ? remainder : ( quotientremaindersign ? -quotient : quotient );
                         }
                     }
                 }

@@ -183,8 +183,7 @@ algorithm BSHIFTright(
     while(1) {
         switch( function7[4,2] ) {
             case 2b00: { result = sourceReg1 >> shiftcount; }
-            case 2b10: { result = __signed(sourceReg1) >>> shiftcount; }
-            default: {}
+            default: { result = __signed(sourceReg1) >>> shiftcount; }
         }
     }
 }

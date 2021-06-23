@@ -270,11 +270,10 @@ algorithm aluR010(
         if( start ) {
             busy = 1;
             switch( function7[0,5] ) {
-                case 5b00000: { result = __signed( sourceReg1 ) < __signed(sourceReg2); }       // SLT
+                default: { result = __signed( sourceReg1 ) < __signed(sourceReg2); }       // SLT
                 case 5b00101: { while( CLMULbusy ) {} result = CLMULoutput; }                                 // CLMULR
                 case 5b10100: { while( XPERMbusy ) {} result = XPERMoutput; }                                 // XPERM.N
                 case 5b10000: { result = ( { sourceReg1[0,31], 1b0 } ) + sourceReg2; }                        // SH1ADD
-                default: {}
             }
             busy = 0;
         }
@@ -740,10 +739,9 @@ algorithm BSHIFTleft(
 ) <autorun> {
     while(1) {
         switch( function7[4,2] ) {
-            case 2b00: { result = sourceReg1 << shiftcount; }
+            default: { result = sourceReg1 << shiftcount; }
             case 2b01: { result = ~( ~sourceReg1 << shiftcount ); }
             case 2b11: { result = ( sourceReg1 << shiftcount ) | ( sourceReg1 >> ( 32 - shiftcount ) ); }
-            default: {}
         }
     }
 }
@@ -772,10 +770,9 @@ algorithm singlebitops(
 ) <autorun> {
     while(1) {
         switch( function7[4,2] ) {
-            case 2b01: { result = sourceReg1 | ( 1 << shiftcount ); }
+            default: { result = sourceReg1 | ( 1 << shiftcount ); }
             case 2b10: { result = sourceReg1 & ~( 1 << shiftcount ); }
             case 2b11: { result = sourceReg1 ^ ( 1 << shiftcount ); }
-            default: {}
         }
     }
 }
@@ -793,9 +790,8 @@ algorithm funnelshift(
 
     while(1) {
         switch( function3 ) {
-            case 3b001: { result = ( fshiftcount != 0 ) ? ( ( A << fshiftcount ) | ( B >> ( 32 - fshiftcount ) ) ) : A; } // FSL
+            default: { result = ( fshiftcount != 0 ) ? ( ( A << fshiftcount ) | ( B >> ( 32 - fshiftcount ) ) ) : A; } // FSL
             case 3b101: { result = ( fshiftcount != 0 ) ? ( ( A >> fshiftcount ) | ( B << ( 32 - fshiftcount ) ) ) : A; } // FSR
-            default: {}
         }
     }
 }
@@ -848,7 +844,7 @@ circuitry shuffle32_stage(
         case 1: { A = { src[0,31] , 1b0 }; B = { 1b0, src[1,31] }; }
         case 2: { A = { src[0,30] , 2b0 }; B = { 2b0, src[2,30] }; }
         case 4: { A = { src[0,28] , 4b0 }; B = { 4b0, src[4,28] }; }
-        case 8: { A = { src[0,24] , 8b0 }; B = { 8b0, src[8,24] }; }
+        default: { A = { src[0,24] , 8b0 }; B = { 8b0, src[8,24] }; }
     }
     x = ( src & ~( maskL | maskR ) ) | ( A & maskL ) | ( B & maskR );
 }
@@ -889,7 +885,7 @@ algorithm shflunshfl(
                                 case 0: { if( shiftcount[0,1] ) { ( result ) = shuffle32_stage( result, N1A, N1B, N1 ); } }
                                 case 1: { if( shiftcount[1,1] ) { ( result ) = shuffle32_stage( result, N2A, N2B, N2 ); } }
                                 case 2: { if( shiftcount[2,1] ) { ( result ) = shuffle32_stage( result, N4A, N4B, N4 ); } }
-                                case 3: { if( shiftcount[3,1] ) { ( result ) = shuffle32_stage( result, N8A, N8B, N8 ); } }
+                                default: { if( shiftcount[3,1] ) { ( result ) = shuffle32_stage( result, N8A, N8B, N8 ); } }
                             }
                             i = ( function3 == 3b101) ? i + 1 : i - 1;
                             count = count + 1;
@@ -1154,8 +1150,7 @@ algorithm crc32(
                         switch( IshiftCount[0,2] ) {
                             case 2b00: { nbits = 8; }
                             case 2b01: { nbits = 16; }
-                            case 2b10: { nbits = 32; }
-                            default: {}
+                            default: { nbits = 32; }
                         }
                     }
                     case 1: {
@@ -1206,8 +1201,7 @@ algorithm xperm(
                         switch( function3 ) {
                             case 3b010: { sz_log2 = 2; sz = 6b000100; mask = 32h0000000f; }
                             case 3b100: { sz_log2 = 3; sz = 6b001000; mask = 32h000000ff; }
-                            case 3b110: { sz_log2 = 4; sz = 6b010000; mask = 32h0000ffff; }
-                            default: {}
+                            default: { sz_log2 = 4; sz = 6b010000; mask = 32h0000ffff; }
                         }
                         result = 0;
                         i = 0;

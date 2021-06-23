@@ -43,7 +43,7 @@ algorithm apu(
                 case 1: { audio_output = point[1,4]; }                                  // SAWTOOTH
                 case 2: { audio_output = point[4,1] ? 15 - point[0,4] : point[0,4]; }   // TRIANGLE
                 case 3: { audio_output = point[4,1] ? 15 - point[1,3] : point[1,3]; }   // SINE
-                case 4: { audio_output = staticGenerator; }                             // WHITE NOISE
+                default: { audio_output = staticGenerator; }                            // WHITE NOISE
             }
         }
         switch( apu_write ) {

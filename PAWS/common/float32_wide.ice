@@ -74,17 +74,12 @@ circuitry countleadingzeros( input bitstream, output count ) {
     CYCLE = 1;
     while( CYCLE != 0 ) {
         onehot( CYCLE ) {
-            case 0: {
-                count = 0;
-            }
+            case 0: { count = 0; }
             case 1: {
-                switch( bitstream ) {
-                    case 0: { count = 32; }
-                    default: {
-                        while( ~bitstream[31-count,1] ) {
-                            count = count + 1;
-                        }
-                    }
+                if( bitstream == 0 ) {
+                    count = 32;
+                } else {
+                    while( ~bitstream[31-count,1] ) { count = count + 1; }
                 }
             }
         }
@@ -120,14 +115,13 @@ algorithm inttofloat(
                         number = signedunsigned ? a : ( a[31,1] ? -a : a );
                     }
                     case 1: {
-                        switch( number ) {
-                            case 0: { result = 0; }
-                            default: {
-                                ( zeros ) = countleadingzeros( number );
-                                number = ( zeros < 8 ) ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
-                                exp = 158 - zeros;
-                                ( result ) = combinecomponents( sign, exp, number );
-                            }
+                        if( number == 0 ) {
+                            result = 0;
+                        } else {
+                            ( zeros ) = countleadingzeros( number );
+                            number = ( zeros < 8 ) ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
+                            exp = 158 - zeros;
+                            ( result ) = combinecomponents( sign, exp, number );
                         }
                     }
                 }
@@ -157,17 +151,12 @@ algorithm floattouint(
             ( classEa ) = classE( a );
             switch( classEa ) {
                 case 2b00: {
-                    switch( a[31,1] ) {
-                        case 1: { result = 0; }
-                        default: {
-                            exp = floatingpointnumber( a ).exponent - 127;
-                            if( exp < 24 ) {
-                                sig = { 9b1, a[0,23], 1b0 } >> ( 23 - exp );
-                            } else {
-                                sig = { 9b1, a[0,23], 1b0 } << ( exp - 24);
-                            }
-                            result = ( exp > 31 ) ? 32hffffffff : ( sig[1,32] + sig[0,1] );
-                        }
+                    if( a[31,1] ) {
+                        result = 0;
+                    } else {
+                        exp = floatingpointnumber( a ).exponent - 127;
+                        sig = ( exp < 24 ) ? { 9b1, a[0,23], 1b0 } >> ( 23 - exp ) : { 9b1, a[0,23], 1b0 } << ( exp - 24);
+                        result = ( exp > 31 ) ? 32hffffffff : ( sig[1,32] + sig[0,1] );
                     }
                 }
                 case 2b01: { result = 0; }
@@ -196,11 +185,7 @@ algorithm floattoint(
             switch( classEa ) {
                 case 2b00: {
                     exp = floatingpointnumber( a ).exponent - 127;
-                    if( exp < 24 ) {
-                        sig = { 9b1, a[0,23], 1b0 } >> ( 23 - exp );
-                    } else {
-                        sig = { 9b1, a[0,23], 1b0 } << ( exp - 24);
-                    }
+                    sig = ( exp < 24 ) ? { 9b1, a[0,23], 1b0 } >> ( 23 - exp ) : { 9b1, a[0,23], 1b0 } << ( exp - 24);
                     result = ( exp > 30 ) ? ( a[31,1] ? 32hffffffff : 32h7fffffff ) : a[31,1] ? -( sig[1,32] + sig[0,1] ) : ( sig[1,32] + sig[0,1] );
                 }
                 case 2b01: { result = 0; }
@@ -262,15 +247,13 @@ algorithm floataddsub(
                     }
                     case 2: {
                         // ADJUST TO EQUAL EXPONENTS
-                        if( ( classEa | classEb ) == 2b00 ) {
-                            if( expA < expB ) {
-                                sigA = sigA >> ( expB - expA );
-                                expA = expB;
-                            } else {
-                                if( expB < expA ) {
-                                    sigB = sigB >> ( expA - expB );
-                                    expB = expA;
-                                }
+                        if( expA < expB ) {
+                            sigA = sigA >> ( expB - expA );
+                            expA = expB;
+                        } else {
+                            if( expB < expA ) {
+                                sigB = sigB >> ( expA - expB );
+                                expB = expA;
                             }
                         }
                     }
@@ -309,28 +292,25 @@ algorithm floataddsub(
                         }
                     }
                     case 4: {
-                        switch( classEa | classEb ) {
-                            case 2b00: {
-                                if( sigA == 0 ) {
-                                    result = 0;
+                        if( ( classEa | classEb ) == 0 ) {
+                            if( sigA == 0 ) {
+                                result = 0;
+                            } else {
+                                // NORMALISE AND ROUND
+                                if( sigA[47,1] ) {
+                                    expA = expA + 1;
                                 } else {
-                                    // NORMALISE AND ROUND
-                                    if( sigA[47,1] ) {
-                                        expA = expA + 1;
-                                    } else {
-                                        while( ~sigA[46,1] ) {
-                                            sigA = { sigA[0,47], 1b0 };
-                                            expA = expA - 1;
-                                        }
+                                    while( ~sigA[46,1] ) {
                                         sigA = { sigA[0,47], 1b0 };
+                                        expA = expA - 1;
                                     }
-                                    sigA[23,1] = sigA[23,1] & round;
-                                    ( newfraction ) = round48( sigA );
-                                    ( expA ) = adjustexp48( exp, newfraction, sigA );
-                                    ( result ) = combinecomponents( sign, expA, newfraction );
+                                    sigA = { sigA[0,47], 1b0 };
                                 }
+                                sigA[23,1] = sigA[23,1] & round;
+                                ( newfraction ) = round48( sigA );
+                                ( expA ) = adjustexp48( exp, newfraction, sigA );
+                                ( result ) = combinecomponents( sign, expA, newfraction );
                             }
-                            default: {}
                         }
                     }
                 }
@@ -376,11 +356,9 @@ algorithm floatmultiply(
     int16   productexp  = uninitialised;
     uint23  newfraction = uninitialised;
 
-    // Calculation is split into 4 18 x 18 multiplications for DSP
-    uint18  A <: { 11b1, a[16,7] };
-    uint18  B <: { 2b0, a[0,16] };
-    uint18  C <: { 11b1, b[16,7] };
-    uint18  D <: { 2b0, b[0,16] };
+    douintmul UINTMUL();
+    UINTMUL.factor_1 := { 9b1, a[0,23] };
+    UINTMUL.factor_2 := { 9b1, b[0,23] };
 
     busy = 0;
 
@@ -395,7 +373,7 @@ algorithm floatmultiply(
                         ( classEb ) = classE( b );
                     }
                     case 1: {
-                        product = ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
+                        product = UINTMUL.product[0,48];
                         productexp = (floatingpointnumber( a ).exponent - 127) + (floatingpointnumber( b ).exponent - 127) + product[47,1];
                     }
                     case 2: {
@@ -485,19 +463,15 @@ algorithm floatdivide(
                         }
                     }
                     case 3: {
-                        switch( classEa | classEb ) {
-                            case 2b00: {
-                                switch( quotient ) {
-                                    case 0: { result = { quotientsign, 31b0 }; }
-                                    default: {
-                                        ( quotient ) = normalise48( quotient );
-                                        ( newfraction ) = round48( quotient );
-                                        quotientexp = 127 + quotientexp - ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction ) + ( ( newfraction == 0 ) & quotient[23,1] );
-                                        ( result ) = combinecomponents( quotientsign, quotientexp, newfraction );
-                                    }
-                                }
+                        if( ( classEa | classEb ) == 0 ) {
+                            if( quotient == 0 ) {
+                                result = { quotientsign, 31b0 };
+                            } else {
+                                ( quotient ) = normalise48( quotient );
+                                ( newfraction ) = round48( quotient );
+                                quotientexp = 127 + quotientexp - ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction ) + ( ( newfraction == 0 ) & quotient[23,1] );
+                                ( result ) = combinecomponents( quotientsign, quotientexp, newfraction );
                             }
-                            default: {}
                         }
                     }
                 }
@@ -533,38 +507,44 @@ algorithm floatsqrt(
         if( start ) {
             busy = 1;
             FSM = 1;
-            if( ( a == 0 ) || ( a[31,1] ) ) {
-                result = ( a == 0 ) ? 0 : { a[31,1], 8b11111111, 23b0 };
+            ( classEa ) = classE( a );
+            if( a[31,1] ) {
+                result = { a[31,1], 8b11111111, 23h7fffff };
             } else {
-                while( FSM != 0 ) {
-                    onehot( FSM ) {
-                        case 0: {
-                            i = 0;
-                            q = 0;
-                            exp = floatingpointnumber( a ).exponent;
-                            ac = exp[0,1] ? 1 : { 48b0, 1b1, a[22,1] };
-                            x = exp[0,1] ? { a[0,23], 25b0 } : { a[0,22], 26b0 };
-                        }
-                        case 1: {
-                            while( i != 47 ) {
-                                test_res = ac - { q, 2b01 };
-                                ac = { test_res[49,1] ? ac[0,47] : test_res[0,47], x[46,2] };
-                                q = { q[0,47], ~test_res[49,1] };
-                                x = { x[0,46], 2b00 };
-                                i = i + 1;
+                switch( classEa ) {
+                    case 2b00: {
+                        while( FSM != 0 ) {
+                            onehot( FSM ) {
+                                case 0: {
+                                    i = 0;
+                                    q = 0;
+                                    exp = floatingpointnumber( a ).exponent;
+                                    ac = exp[0,1] ? 1 : { 48b0, 1b1, a[22,1] };
+                                    x = exp[0,1] ? { a[0,23], 25b0 } : { a[0,22], 26b0 };
+                                }
+                                case 1: {
+                                    while( i != 47 ) {
+                                        test_res = ac - { q, 2b01 };
+                                        ac = { test_res[49,1] ? ac[0,47] : test_res[0,47], x[46,2] };
+                                        q = { q[0,47], ~test_res[49,1] };
+                                        x = { x[0,46], 2b00 };
+                                        i = i + 1;
+                                    }
+                                }
+                                case 2: {
+                                    exp = exp - 127;
+                                    ( q ) = normalise48( q );
+                                }
+                                case 3: {
+                                    exp = ( exp >>> 1 ) + 127;
+                                    ( newfraction ) = round48( q );
+                                    ( result ) = combinecomponents( sign, exp, newfraction );
+                                }
                             }
-                        }
-                        case 2: {
-                            exp = exp - 127;
-                            ( q ) = normalise48( q );
-                        }
-                        case 3: {
-                            exp = ( exp >>> 1 ) + 127;
-                            ( newfraction ) = round48( q );
-                            ( result ) = combinecomponents( sign, exp, newfraction );
-                        }
-                    }
-                    FSM = { FSM[0,3], 1b0 };
+                            FSM = { FSM[0,3], 1b0 };
+                        }                    }
+                    case 2b01: { result = 0; }
+                    default: { result = a; }
                 }
             }
             busy = 0;

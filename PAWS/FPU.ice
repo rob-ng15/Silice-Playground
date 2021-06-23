@@ -104,7 +104,7 @@ algorithm floatconvert(
             busy = 1;
 
             switch( function7[2,5] ) {
-                case 5b11000: {
+                default: {
                     // FCVT.W.S FCVT.WU.S
                     FPUint.start = ~rs2[0,1]; FPUuint.start = rs2[0,1]; while( FPUint.busy || FPUuint.busy ) {}
                     result = rs2[0,1] ? FPUuint.result : FPUint.result;
@@ -212,9 +212,8 @@ algorithm floatclassify(
         switch( classEa ) {
             case 2b00: { classification = floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b000000010 } : { 23b0, 9b000100000 }; }
             case 2b01: { classification = floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b000001000 } : { 23b0, 9b000010000 }; }
-            case 2b10: { classification = classFa ? ( floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b000000001 } : { 23b0, 9b001000000 } ) :
+            default: { classification = classFa ? ( floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b000000001 } : { 23b0, 9b001000000 } ) :
                                             ( floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b100000000 } : { 23b0, 9b010000000 } ); }
-            default: {}
         }
     }
 }
@@ -239,7 +238,7 @@ algorithm floatcompare(
                     case 1: { result = FPUcomparison.comparison ? sourceReg2F : sourceReg1F; }
                 }
             }
-            case 5b10100: {
+            default: {
                 // FEQ.S FLT.S FLE.S
                 result = FPUcomparison.comparison;
             }
@@ -265,6 +264,7 @@ algorithm floatcomparison(
                     case 3b000: { ( comparison ) = floatlessequal( sourceReg1F, sourceReg2F ); }
                     case 3b001: { ( comparison ) = floatless( sourceReg1F, sourceReg2F ); }
                     case 3b010: { ( comparison ) = floatequal( sourceReg1F, sourceReg2F ); }
+                    default: { comparison = 0; }
                 }
             }
             case 2b10: { comparison = 0; }
