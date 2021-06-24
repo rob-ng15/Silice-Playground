@@ -178,6 +178,7 @@ algorithm bitmap(
 
     while(1) {
         switch( bitmap_write_offset ) {
+            default: {}
             case 1: { x_offset = ( x_offset == 319 ) ? 0 : x_offset + 1; }
             case 2: { y_offset = ( y_offset == 239 ) ? 0 : y_offset + 1; }
             case 3: { x_offset = ( x_offset == 0 ) ? 319 : x_offset - 1; }
@@ -225,7 +226,7 @@ algorithm bitmapwriter(
             // == 8 RIGHT SLOPE == 9 LEFT TRIANGLE == 10 RIGHT TRIANGLE == 11 ENCLOSED
             // == 12 OCTRAGON == 13 BRICK == 14 COLOUR STATIC == 15 STATIC
             switch( gpu_active_dithermode ) {
-                case 0: { pixeltowrite = bitmap_colour_write; }
+                default: { pixeltowrite = bitmap_colour_write; }
                 case 1: { pixeltowrite = ( bitmap_x_write[0,1] == bitmap_y_write[0,1] ) ? bitmap_colour_write : bitmap_colour_write_alt; }
                 case 2: { pixeltowrite = ( bitmap_x_write[1,1] == bitmap_y_write[1,1] ) ? bitmap_colour_write : bitmap_colour_write_alt; }
                 case 3: { pixeltowrite = ( bitmap_x_write[2,1] == bitmap_y_write[2,1] ) ? bitmap_colour_write : bitmap_colour_write_alt; }
@@ -278,7 +279,6 @@ algorithm bitmapwriter(
                 }
                 case 14: { pixeltowrite = static6bit; }
                 case 15: { pixeltowrite = ( static1bit ? bitmap_colour_write : bitmap_colour_write_alt ); }
-                default: { pixeltowrite = bitmap_colour_write; }
             }
 
             // SET PIXEL ADDRESSS y_write_pixel * 320 + x_write_pixel

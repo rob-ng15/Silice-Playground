@@ -1037,18 +1037,23 @@ algorithm clz(
     while(1) {
         if( start ) {
             busy = 1;
-            FSM = 1;
-            while( FSM != 0 ) {
-                onehot( FSM ) {
-                    case 0: { result = 0; }
-                    case 1: {
-                        while( ~sourceReg1[31-result,1] ) {
-                            result = result + 1;
-                        }
-                    }
-                }
-                FSM = { FSM[0,1], 1b0 };
+            //FSM = 1;
+            if( sourceReg1 == 0 ) {
+                result = 32;
+            } else {
+                result = 0; while( ~sourceReg1[31-result,1] ) { result = result + 1; }
             }
+            //while( FSM != 0 ) {
+            //    onehot( FSM ) {
+            //        case 0: { result = 0; }
+            //        case 1: {
+            //            while( ~sourceReg1[31-result,1] ) {
+            //                result = result + 1;
+            //            }
+            //        }
+            //    }
+            //    FSM = { FSM[0,1], 1b0 };
+            //}
             busy = 0;
         }
     }
@@ -1068,20 +1073,25 @@ algorithm ctz(
     while(1) {
         if( start ) {
             busy = 1;
-            FSM = 1;
-            while( FSM != 0 ) {
-                onehot( FSM ) {
-                    case 0: {
-                        result = 0;
-                    }
-                    case 1: {
-                        while( ~sourceReg1[result,1] ) {
-                            result = result + 1;
-                        }
-                    }
-                }
-                FSM = { FSM[0,1], 1b0 };
+            //FSM = 1;
+            if( sourceReg1 == 0 ) {
+                result = 32;
+            } else {
+                result = 0; while( ~sourceReg1[result,1] ) { result = result + 1; }
             }
+            //while( FSM != 0 ) {
+            //    onehot( FSM ) {
+            //        case 0: {
+            //            result = 0;
+            //        }
+            //        case 1: {
+            //            while( ~sourceReg1[result,1] ) {
+            //                result = result + 1;
+            //            }
+            //        }
+            //    }
+            //    FSM = { FSM[0,1], 1b0 };
+            //}
             busy = 0;
         }
     }
@@ -1102,21 +1112,25 @@ algorithm pcnt(
     while(1) {
         if( start ) {
             busy = 1;
-            FSM = 1;
-            while( FSM != 0 ) {
-                onehot( FSM ) {
-                    case 0: {
-                        position = 0;
-                        result = 0;
-                    }
-                    case 1: {
-                        while( position != 32 ) {
-                            result = result + sourceReg1[position,1];
-                        }
-                    }
-                }
-                FSM = { FSM[0,1], 1b0 };
-            }
+            //FSM = 1;
+            position = 0;
+            result = 0;
+            while( position != 32 ) { result = result + sourceReg1[position,1]; }
+
+            //while( FSM != 0 ) {
+            //    onehot( FSM ) {
+            //        case 0: {
+            //            position = 0;
+            //            result = 0;
+            //        }
+            //        case 1: {
+            //            while( position != 32 ) {
+            //                result = result + sourceReg1[position,1];
+            //            }
+            //        }
+            //    }
+            //    FSM = { FSM[0,1], 1b0 };
+            //}
             busy = 0;
         }
     }

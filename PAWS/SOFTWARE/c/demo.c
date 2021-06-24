@@ -457,12 +457,12 @@ unsigned short pacman_bitmap[] = {
     0b0001111111111000,
     0b0011111111111100,
     0b0011111111111100,
-    0b1111111111111110,
-    0b1111111111111000,
+    0b0111111111111110,
+    0b0111111111111000,
     0b0111111110000000,
-    0b1111111110000000,
-    0b1111111111111000,
-    0b1111111111111110,
+    0b0111111110000000,
+    0b0111111111111000,
+    0b0111111111111110,
     0b0011111111111100,
     0b0011111111111100,
     0b0001111111111000,
@@ -1126,13 +1126,25 @@ void spritedemo( void ) {
     }
 }
 
-float newX( float x, float y, float xorigin, float yorigin, float angle ) {
-    return( (x-xorigin)*cosf(angle*0.0174533)-(y-yorigin)*sinf(angle*0.0174533)+xorigin );
+struct Point2D {
+    int dx;
+    int dy;
+};
+
+struct Point2D Rotate2D( struct Point2D point, int xc, int yc, int angle, float scale ) {
+    struct Point2D newpoint;
+    float radians = angle*0.01745329252;
+
+    newpoint.dx = ( (point.dx * scale)*cosf(radians)-(point.dy * scale)*sinf(radians) ) + xc;
+    newpoint.dy = ( (point.dx * scale)*sinf(radians)+(point.dy * scale)*cosf(radians) ) + yc;
+
+    return( newpoint );
 }
-float newY( float x, float y, float xorigin, float yorigin, float angle ) {
-    return( (x-xorigin)*sinf(angle*0.0174533)+(y-yorigin)*cosf(angle*0.0174533)+yorigin );
-}
+
 void floatdemo() {
+    struct Point2D Square[4] = { { -100, -100 }, { 100, -100 }, { 100, 100 }, { -100, 100 } };
+    struct Point2D NewSquare[4];
+
     displayreset();
     tpu_printf_centre( 28, TRANSPARENT, WHITE, "FLOAT DEMO" );
     if( CSRisa() & 0b100000 ) {
@@ -1140,11 +1152,13 @@ void floatdemo() {
     } else {
         tpu_printf_centre( 29, TRANSPARENT, WHITE, "SOFT FLOAT ONLY" );
     }
-    for( int i = 0; i < 360; i += 20 ) {
-        gpu_line( WHITE, newX(60, 20, 160, 120, i), newY(60, 20, 160, 120, i), newX( 260, 20, 160, 120, i), newY( 260, 20, 160, 120, i) );
-        gpu_line( WHITE, newX(260, 20, 160, 120, i), newY(260, 20, 160, 120, i), newX( 260, 220, 160, 120, i), newY( 260, 220, 160, 120, i) );
-        gpu_line( WHITE, newX(260, 220, 160, 120, i), newY(260, 220, 160, 120, i), newX( 60, 220, 160, 120, i), newY( 60, 220, 160, 120, i) );
-        gpu_line( WHITE, newX(60, 220, 160, 120, i), newY(60, 220, 160, 120, i), newX( 60, 20, 160, 120, i), newY( 60, 20, 160, 120, i) );
+    for( int angle = 0; angle < 360; angle += 5 ) {
+            for( int vertex = 0; vertex < 4; vertex++ ) {
+                NewSquare[ vertex ] = Rotate2D( Square[vertex], 160, 120, angle, ( angle < 90 ) ? 1.0 : ( angle < 180 ) ? 0.75 : ( angle < 270 ) ? 0.5 : 0.25 );
+            }
+            for( int vertex = 0; vertex < 4; vertex++ ) {
+                gpu_line( WHITE, NewSquare[ vertex ].dx, NewSquare[ vertex ].dy, NewSquare[ ( vertex == 3 ) ? 0 : vertex + 1 ].dx, NewSquare[ ( vertex == 3 ) ? 0 : vertex + 1 ].dy );
+            }
     }
     sleep( 2000, 0 );
 }

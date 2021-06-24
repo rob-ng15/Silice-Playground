@@ -9,14 +9,14 @@ algorithm pll(
   output  uint1 compute_clock
 ) <autorun> {
   uint3 counter = 0;
-  uint8 trigger = 8b11111111; 
+  uint8 trigger = 8b11111111;
   sdram_clock   := clock;
   clock_100_1   := clock;
   clock_100_2   := clock;
   clock_100_3   := clock;
   compute_clock := ~counter[0,1]; // x2 slower
   video_clock   := counter[1,1]; // x4 slower
-  while (1) {	  
+  while (1) {
     counter = counter + 1;
 	  trigger = trigger >> 1;
   }
@@ -26,7 +26,7 @@ $$end
 algorithm main(
     // LEDS (8 of)
     output  uint8   leds,
-$$if not SIMULATION then    
+$$if not SIMULATION then
     input   uint$NUM_BTNS$ btns,
 
     // UART
@@ -101,7 +101,7 @@ $$if VERILATOR then
       clock_100_3   :> clock_100_3,
       compute_clock :> clock_system
     );
-$$else  
+$$else
     $$clock_25mhz = 'clock'
     // CLOCK/RESET GENERATION
     // CPU + MEMORY
@@ -153,7 +153,7 @@ $$end
         dq_i       <: sdram_dq_i,
         dq_o       :> sdram_dq_o,
         dq_en      :> sdram_dq_en,
-  $$else        
+  $$else
         sdram_dq  <:> sdram_dq,
   $$end
     );
@@ -177,14 +177,14 @@ $$end
     uint32  SMTSTARTPC = uninitialized;
     io_memmap IO_Map <@clock_system,!reset> (
         leds :> leds,
-$$if not SIMULATION then        
+$$if not SIMULATION then
         gn <: gn,
         gp :> gp,
         btns <: btns,
         uart_tx :> uart_tx,
         uart_rx <: uart_rx,
         us2_bd_dp <: us2_bd_dp,
-        us2_bd_dn <: us2_bd_dn,        
+        us2_bd_dn <: us2_bd_dn,
         sd_clk :> sd_clk,
         sd_mosi :> sd_mosi,
         sd_csn :> sd_csn,
@@ -198,10 +198,10 @@ $$end
         SMTRUNNING :> SMTRUNNING,
         SMTSTARTPC :> SMTSTARTPC
     );
-$$if SIMULATION then        
+$$if SIMULATION then
     uint4 audio_l(0);
     uint4 audio_r(0);
-$$end    
+$$end
     audiotimers_memmap AUDIOTIMERS_Map <@clock_system,!reset> (
         clock_25mhz <: $clock_25mhz$,
         memoryAddress <: address,
@@ -213,7 +213,7 @@ $$end
         clock_25mhz <: $clock_25mhz$,
         memoryAddress <: address,
         writeData <: writedata,
-$$if HDMI then        
+$$if HDMI then
         gpdi_dp :> gpdi_dp
 $$end
 $$if VGA then
@@ -222,7 +222,7 @@ $$if VGA then
         video_b  :> video_b,
         video_hs :> video_hs,
         video_vs :> video_vs
-$$end        
+$$end
     );
 
     uint3   function3 = uninitialized;
@@ -239,7 +239,7 @@ $$end
 
     // SDRAM -> CPU BUSY STATE
     CPU.memorybusy := sdram.busy | CPU.readmemory | CPU.writememory;
- 
+
     while(1) {
         switch( address[28,1] ) {
             case 1: {
@@ -295,11 +295,19 @@ algorithm bramcontroller(
 ) <autorun> {
     uint2   FSM = uninitialized;
 
+$$if not SIMULATION then
     // RISC-V RAM and BIOS
     bram uint16 ram <input!> [16384] = {
         $include('ROM/BIOS.inc')
         , pad(uninitialized)
     };
+$$else
+    // RISC-V RAM and BIOS
+    bram uint16 ram <input!> [16384] = {
+        $include('ROM/VBIOS.inc')
+        , pad(uninitialized)
+    };
+$$end
 
     // FLAGS FOR BRAM ACCESS
     ram.wenable := 0;

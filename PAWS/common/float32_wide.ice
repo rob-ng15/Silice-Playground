@@ -9,7 +9,7 @@
 // addsub, multiply and divide a and b ( as floating point numbers ), addsub flag == 0 for add, == 1 for sub
 //
 // Parameters for conversion:
-// intotofloat a as 32 bit integer, signedunsigned == 0 unsigned, ==  signed conversion
+// intotofloat a as 32 bit integer, dounsigned == 1 dounsigned, == 0 signed conversion
 // floattouint and floattoint a as 32 bit float
 //
 // Control:
@@ -42,7 +42,7 @@ circuitry combinecomponents( input sign, input exp, input fraction, output f32 )
 // CLASSIFY EXPONENT AND FRACTION or EXPONENT
 circuitry classEF( output E, output F, input N ) {
     E = { ( floatingpointnumber(N).exponent ) == 8hff, ( floatingpointnumber(N).exponent ) == 8h00 };
-    F = ( floatingpointnumber(N).fraction ) == 23h0000;
+    F = ( floatingpointnumber(N).fraction ) == 0;
 }
 circuitry classE( output E, input N ) {
     E = { ( floatingpointnumber(N).exponent ) == 8hff, ( floatingpointnumber(N).exponent ) == 8h00 };
@@ -66,36 +66,18 @@ circuitry adjustexp48( inout exponent, input nf, input of ) {
 }
 
 // CONVERT SIGNED/UNSIGNED INTEGERS TO FLOAT
-// signedunsigned == 1 for signed conversion (31 bit plus sign), == 0 for unsigned conversion (32 bit)
-
-circuitry countleadingzeros( input bitstream, output count ) {
-    uint2   CYCLE = uninitialised;
-
-    CYCLE = 1;
-    while( CYCLE != 0 ) {
-        onehot( CYCLE ) {
-            case 0: { count = 0; }
-            case 1: {
-                if( bitstream == 0 ) {
-                    count = 32;
-                } else {
-                    while( ~bitstream[31-count,1] ) { count = count + 1; }
-                }
-            }
-        }
-        CYCLE = { CYCLE[0,1], 1b0 };
-    }
-}
+// dounsigned == 1 for signed conversion (31 bit plus sign), == 0 for dounsigned conversion (32 bit)
 algorithm inttofloat(
     input   uint1   start,
     output  uint1   busy,
 
     input   uint32  a,
-    input   uint1   signedunsigned,
+    input   uint1   dounsigned,
 
     output  uint32  result
 ) <autorun> {
     uint2   FSM = uninitialised;
+    uint2   FSM2 = uninitialised;
     uint1   sign = uninitialised;
     int16   exp = uninitialised;
     uint8   zeros = uninitialised;
@@ -111,17 +93,25 @@ algorithm inttofloat(
                 onehot( FSM ) {
                     case 0: {
                         // SIGNED / UNSIGNED
-                        sign = signedunsigned ? 0 : a[31,1];
-                        number = signedunsigned ? a : ( a[31,1] ? -a : a );
+                        sign = dounsigned ? 0 : a[31,1];
+                        number = dounsigned ? a : ( a[31,1] ? -a : a );
                     }
                     case 1: {
                         if( number == 0 ) {
                             result = 0;
                         } else {
-                            ( zeros ) = countleadingzeros( number );
-                            number = ( zeros < 8 ) ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
-                            exp = 158 - zeros;
-                            ( result ) = combinecomponents( sign, exp, number );
+                            FSM2 = 1;
+                            while( FSM2 !=0 ) {
+                                onehot( FSM2 ) {
+                                    case 0: { zeros = 0; while( ~number[31-zeros,1] ) { zeros = zeros + 1; } }
+                                    case 1: {
+                                        number = ( zeros < 8 ) ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
+                                        exp = 158 - zeros;
+                                        ( result ) = combinecomponents( sign, exp, number );
+                                    }
+                                }
+                                FSM2 = { FSM2[0,1], 1b0 };
+                            }
                         }
                     }
                 }
@@ -132,7 +122,7 @@ algorithm inttofloat(
     }
 }
 
-// CONVERT FLOAT TO SIGNED/UNSIGNED INTEGERS
+// CONVERT FLOAT TO UNSIGNED/SIGNED INTEGERS
 algorithm floattouint(
     input   uint32  a,
     output  uint32  result,
@@ -234,6 +224,8 @@ algorithm floataddsub(
                     case 0: {
                         // FOR SUBTRACTION CHANGE SIGN OF SECOND VALUE
                         signA = a[31,1]; signB = addsub ? ~b[31,1] : b[31,1];
+                        ( classEa ) = classE( a );
+                        ( classEb ) = classE( b );
                     }
                     case 1: {
                         // EXTRACT COMPONENTS - HOLD TO LEFT TO IMPROVE FRACTIONAL ACCURACY
@@ -242,8 +234,6 @@ algorithm floataddsub(
                         sigA = { 2b01, floatingpointnumber(a).fraction, 23b0 };
                         sigB = { 2b01, floatingpointnumber(b).fraction, 23b0 };
                         sign = floatingpointnumber(a).sign;
-                        ( classEa ) = classE( a );
-                        ( classEb ) = classE( b );
                     }
                     case 2: {
                         // ADJUST TO EQUAL EXPONENTS
@@ -406,8 +396,8 @@ circuitry divbit( inout quo, inout rem, input top, input bottom, input x ) {
     uint1   quobit = uninitialised;
 
     temp = ( rem << 1 ) + top[x,1];
-    quobit = __unsigned(temp) >= __unsigned(bottom);
-    rem = __unsigned(temp) - ( quobit ? __unsigned(bottom) : 0 );
+    quobit = __dounsigned(temp) >= __dounsigned(bottom);
+    rem = __dounsigned(temp) - ( quobit ? __dounsigned(bottom) : 0 );
     quo[x,1] = quobit;
 }
 $$end
@@ -518,9 +508,9 @@ algorithm floatsqrt(
                                 case 0: {
                                     i = 0;
                                     q = 0;
-                                    exp = floatingpointnumber( a ).exponent;
-                                    ac = exp[0,1] ? 1 : { 48b0, 1b1, a[22,1] };
-                                    x = exp[0,1] ? { a[0,23], 25b0 } : { a[0,22], 26b0 };
+                                    exp = floatingpointnumber( a ).exponent - 127;
+                                    ac = ~exp[0,1] ? 1 : { 48b0, 1b1, a[22,1] };
+                                    x = ~exp[0,1] ? { a[0,23], 25b0 } : { a[0,22], 26b0 };
                                 }
                                 case 1: {
                                     while( i != 47 ) {
@@ -532,7 +522,6 @@ algorithm floatsqrt(
                                     }
                                 }
                                 case 2: {
-                                    exp = exp - 127;
                                     ( q ) = normalise48( q );
                                 }
                                 case 3: {

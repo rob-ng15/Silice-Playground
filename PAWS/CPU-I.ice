@@ -20,7 +20,7 @@ circuitry load( input accesssize, input location, input memorybusy, input readda
     switch( accesssize[0,2] ) {
         case 2b00: { ( memoryinput ) = signextender8( accesssize, location, readdata ); }
         case 2b01: { ( memoryinput ) = signextender16( accesssize, readdata ); }
-        case 2b10: {
+        default: {
             // 32 bit READ as 2 x 16 bit
             memoryinput[0,16] = readdata;
             address = location + 2;
@@ -28,7 +28,6 @@ circuitry load( input accesssize, input location, input memorybusy, input readda
             while( memorybusy ) {}
             memoryinput[16,16] = readdata;
         }
-        default: {}
     }
 }
 // CPU STORE TO MEMORY

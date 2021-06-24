@@ -124,6 +124,7 @@ algorithm character_map_writer(
         switch( tpu_active ) {
             case 0: {
                 switch( tpu_write ) {
+                    default: {}
                     case 1: {
                         // Set cursor position, set read address of the curses buffer
                         ( tpu_active_x, tpu_active_y ) = copycoordinates( tpu_x, tpu_y );

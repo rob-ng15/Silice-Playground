@@ -96,7 +96,7 @@ algorithm floatconvert(
     floattoint FPUint( a <: sourceReg1F );
     floattouint FPUuint( a <: sourceReg1F );
 
-    FPUfloat.signedunsigned := rs2[0,1]; FPUfloat.start := 0;
+    FPUfloat.dounsigned := rs2[0,1]; FPUfloat.start := 0;
     FPUint.start := 0; FPUuint.start := 0;
 
     while(1) {

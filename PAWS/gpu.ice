@@ -274,11 +274,11 @@ algorithm gpu(
                 bitmap_y_write = gpu_y;
                 bitmap_write = 1;
             }
-
             default: {
                 // START THE GPU DRAWING UNIT
                 gpu_active = 1;
                 switch( gpu_write ) {
+                    default: {}
                     case 2: {
                         // DRAW LINE FROM (X,Y) to (PARAM0,PARAM1)
                         gpu_active_dithermode = 0;
@@ -1082,25 +1082,22 @@ algorithm pixelblock(
             while( active ) {
                 switch( newpixel ) {
                     case 0: {}
-                    case 3: { active = 0; }
-                    default: {
-                        switch( newpixel ) {
-                            case 1: {
-                                bitmap_colour_write = colour7;
-                                bitmap_write = ( colour7 != ignorecolour );
-                            }
-                            case 2: {
-                                bitmap_colour_write = { 1b0, colour8r[6,2], colour8g[6,2], colour8b[6,2] };
-                                bitmap_write = 1;
-                            }
-                        }
-                        gpu_x = gpu_x + 1;
-                        if( gpu_x == gpu_max_x ) {
-                            gpu_x = gpu_x1;
-                            gpu_y = gpu_y + 1;
-                        }
+                    case 1: {
+                        bitmap_colour_write = colour7;
+                        bitmap_write = ( colour7 != ignorecolour );
                     }
+                    case 2: {
+                        bitmap_colour_write = { 1b0, colour8r[6,2], colour8g[6,2], colour8b[6,2] };
+                        bitmap_write = 1;
+                    }
+                    case 3: { active = 0; }
                 }
+                gpu_x = gpu_x + ( ( newpixel == 1 ) | ( newpixel == 2 ) );
+                if( gpu_x == gpu_max_x ) {
+                    gpu_x = gpu_x1;
+                    gpu_y = gpu_y + 1;
+                }
+
             }
         }
     }

@@ -349,7 +349,7 @@ algorithm aluA (
 ) <autorun> {
     while(1) {
         switch( function7[2,5] ) {
-            case 5b00000: { result = memoryinput + sourceReg2; }            // AMOADD
+            default: { result = memoryinput + sourceReg2; }            // AMOADD
             case 5b00001: { result = sourceReg2; }                          // AMOSWAP
             case 5b00100: { result = memoryinput ^ sourceReg2; }            // AMOXOR
             case 5b01000: { result = memoryinput | sourceReg2; }            // AMOOR
@@ -358,7 +358,6 @@ algorithm aluA (
             case 5b10100: { ( result ) = max( memoryinput, sourceReg2); }   // AMOMAX
             case 5b11000: { ( result ) = minu( memoryinput, sourceReg2); }  // AMOMINU
             case 5b11100: { ( result ) = maxu( memoryinput, sourceReg2); }  // AMOMAXU
-            default: {}
         }
     }
 }
