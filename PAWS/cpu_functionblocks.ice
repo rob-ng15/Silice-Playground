@@ -291,7 +291,7 @@ algorithm compressed(
                     default: { i32 = { 25b0, 7b0010011 }; }
                 }
             }
-            default: {}
+            default: { i32 = i16; }
         }
     }
 }
@@ -349,7 +349,7 @@ algorithm aluA (
 ) <autorun> {
     while(1) {
         switch( function7[2,5] ) {
-            default: { result = memoryinput + sourceReg2; }            // AMOADD
+            default: { result = memoryinput + sourceReg2; }                 // AMOADD
             case 5b00001: { result = sourceReg2; }                          // AMOSWAP
             case 5b00100: { result = memoryinput ^ sourceReg2; }            // AMOXOR
             case 5b01000: { result = memoryinput | sourceReg2; }            // AMOOR

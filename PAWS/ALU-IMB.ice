@@ -58,21 +58,12 @@ algorithm aluIb001(
     output  int32   result
 ) <autorun> {
     // COUNT LEADINGS 0s, TRAILING 0s, POPULATION
-    clz CLZ(
-        sourceReg1 <: sourceReg1
-    );
-    ctz CTZ(
-        sourceReg1 <: sourceReg1
-    );
-    pcnt PCNT(
-        sourceReg1 <: sourceReg1
-    );
+    clz CLZ( sourceReg1 <: sourceReg1 );
+    ctz CTZ( sourceReg1 <: sourceReg1 );
+    pcnt PCNT( sourceReg1 <: sourceReg1 );
 
     // CRC32 and CRC32C for byte, half-word and word
-    crc32 CRC32(
-       sourceReg1 <: sourceReg1,
-       IshiftCount <: IshiftCount
-    );
+    crc32 CRC32( sourceReg1 <: sourceReg1, IshiftCount <: IshiftCount );
 
     // START FLAGS FOR ALU SUB BLOCKS
     CLZ.start := 0;
@@ -568,6 +559,9 @@ algorithm aluR (
     while(1) {
         if( start ) {
             busy = 1;
+            CLMUL.start = ( function7 == 7b0000101 ) & ~function3[2,1];
+            XPERM.start = ( function7 == 7b0010100 ) & ( ( function3 == 3b010) | ( function3 == 3b100 ) | ( function3 == 3b110 ) );
+
             switch( function7 ) {
                 // M EXTENSION MULTIPLICATION AND DIVISION
                 case 7b0000001: {
@@ -578,8 +572,6 @@ algorithm aluR (
                 }
                 // BASE + REMAINING B EXTENSION
                 default: {
-                    CLMUL.start = ( function7 == 7b0000101 ) & ~function3[2,1];
-                    XPERM.start = ( function7 == 7b0010100 ) & ( ( function3 == 3b010) | ( function3 == 3b100 ) | ( function3 == 3b110 ) );
                     switch( function3 ) {
                         case 3b000: { result = ALUR000.result; }
                         case 3b001: { ALUR001.start = 1; while( ALUR001.busy ) {} result = ALUR001.result; }
@@ -1030,30 +1022,16 @@ algorithm clz(
 
     output  uint32  result
 ) <autorun> {
-    uint2   FSM = uninitialised;
-
     busy = 0;
 
     while(1) {
         if( start ) {
             busy = 1;
-            //FSM = 1;
             if( sourceReg1 == 0 ) {
                 result = 32;
             } else {
                 result = 0; while( ~sourceReg1[31-result,1] ) { result = result + 1; }
             }
-            //while( FSM != 0 ) {
-            //    onehot( FSM ) {
-            //        case 0: { result = 0; }
-            //        case 1: {
-            //            while( ~sourceReg1[31-result,1] ) {
-            //                result = result + 1;
-            //            }
-            //        }
-            //    }
-            //    FSM = { FSM[0,1], 1b0 };
-            //}
             busy = 0;
         }
     }
@@ -1066,32 +1044,16 @@ algorithm ctz(
 
     output  uint32  result
 ) <autorun> {
-    uint2   FSM = uninitialised;
-
     busy = 0;
 
     while(1) {
         if( start ) {
             busy = 1;
-            //FSM = 1;
             if( sourceReg1 == 0 ) {
                 result = 32;
             } else {
                 result = 0; while( ~sourceReg1[result,1] ) { result = result + 1; }
             }
-            //while( FSM != 0 ) {
-            //    onehot( FSM ) {
-            //        case 0: {
-            //            result = 0;
-            //        }
-            //        case 1: {
-            //            while( ~sourceReg1[result,1] ) {
-            //                result = result + 1;
-            //            }
-            //        }
-            //    }
-            //    FSM = { FSM[0,1], 1b0 };
-            //}
             busy = 0;
         }
     }
@@ -1104,7 +1066,6 @@ algorithm pcnt(
 
     output  uint32  result
 ) <autorun> {
-    uint2   FSM = uninitialised;
     uint6  position = uninitialized;
 
     busy = 0;
@@ -1112,25 +1073,11 @@ algorithm pcnt(
     while(1) {
         if( start ) {
             busy = 1;
-            //FSM = 1;
-            position = 0;
-            result = 0;
-            while( position != 32 ) { result = result + sourceReg1[position,1]; }
-
-            //while( FSM != 0 ) {
-            //    onehot( FSM ) {
-            //        case 0: {
-            //            position = 0;
-            //            result = 0;
-            //        }
-            //        case 1: {
-            //            while( position != 32 ) {
-            //                result = result + sourceReg1[position,1];
-            //            }
-            //        }
-            //    }
-            //    FSM = { FSM[0,1], 1b0 };
-            //}
+            if( sourceReg1 == 0 ) {
+                result = 0;
+            } else {
+                position = 0; result = 0; while( position != 32 ) { result = result + sourceReg1[position,1]; }
+            }
             busy = 0;
         }
     }

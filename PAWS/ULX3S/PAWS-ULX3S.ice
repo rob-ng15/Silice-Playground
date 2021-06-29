@@ -31,16 +31,17 @@ $include('../definitions.ice')
 $include('../circuitry.ice')
 
 // Multiplexed Display Includes
-$include('../multiplex_display.ice')
-$include('../timers_random.ice')
-$include('../character_map.ice')
-$include('../bitmap.ice')
-$include('../gpu.ice')
 $include('../background.ice')
+$include('../bitmap.ice')
+$include('../character_map.ice')
+$include('../gpu.ice')
 $include('../sprite_layer.ice')
+$include('../terminal.ice')
 $include('../tile_map.ice')
+$include('../multiplex_display.ice')
 $include('../audio.ice')
 $include('../io_memmap.ice')
+$include('../timers_random.ice')
 
 // CPU SPECIFICATION
 $$CPUISA = 0x40001005

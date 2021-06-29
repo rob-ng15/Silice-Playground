@@ -210,10 +210,10 @@ algorithm floatclassify(
     while(1) {
         ( classEa, classFa ) = classEF( sourceReg1F );
         switch( classEa ) {
-            case 2b00: { classification = floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b000000010 } : { 23b0, 9b000100000 }; }
-            case 2b01: { classification = floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b000001000 } : { 23b0, 9b000010000 }; }
-            default: { classification = classFa ? ( floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b000000001 } : { 23b0, 9b001000000 } ) :
-                                            ( floatingpointnumber(sourceReg1F).sign ? { 23b0, 9b100000000 } : { 23b0, 9b010000000 } ); }
+            case 2b00: { classification = floatingpointnumber(sourceReg1F).sign ? 10b0000000010 : 10b0001000000; }
+            case 2b01: { classification = classFa ? floatingpointnumber(sourceReg1F).sign ? 10b0000001000 : 10b0000010000 : floatingpointnumber(sourceReg1F).sign ? 10b0000000100 : 10b0000100000; }
+            default: { classification = classFa ? ( floatingpointnumber(sourceReg1F).sign ? 10b0000000001 : 10b0010000000 ) :
+                                            ( floatingpointnumber(sourceReg1F).sign ? 10b0100000000 : 10b1000000000 ); }
         }
     }
 }

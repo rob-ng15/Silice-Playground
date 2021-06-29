@@ -151,7 +151,7 @@ $$if ULX3S then
 $$end
 
     // J1+ CPU
-    uint6   FSM = uninitialized;
+    uint6   FSM = 1;
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
     uint16  instruction = uninitialized;
     uint16  immediate := ( literal(instruction).literalvalue );
@@ -167,7 +167,7 @@ $$end
 
     // program counter
     uint13  pc = 0;
-    uint13  pcPlusOne ::= pc + 1;
+    uint13  pcPlusOne = uninitialized;
     uint13  newPC = uninitialized;
     uint13  callBranchAddress := callbranch(instruction).address;
 
@@ -290,16 +290,13 @@ $$end
         clock_50mhz := clock;
     $$end
 
-    // ALU START FLAGS
-    //ALU.start := 0;
-    //ALUplus.start := 0;
-
     // Set initial write to top of memory
     ram.addr1 = 16383;
     ram.wdata1 = 0;
 
     // EXECUTE J1 CPU
     while( 1 ) {
+        pcPlusOne = pc + 1;
         onehot( FSM ) {
             case 0: {
                 // START FETCH INSTRUCTION
@@ -394,35 +391,28 @@ algorithm alu(
     input   uint16  IOmemoryRead,
     input   uint16  RAMmemoryRead,
 
-    output! uint16  newStackTop
+    output!  uint16  newStackTop
 ) <autorun> {
     j1eforthALU ALU(
         instruction <: instruction,
-
         dsp <: dsp,
         rsp <: rsp,
-
         stackTop <: stackTop,
         stackNext <: stackNext,
         rStackTop <: rStackTop,
-
         IOmemoryRead <: IOmemoryRead,
         RAMmemoryRead <: RAMmemoryRead
     );
 
     j1eforthplusALU ALUplus(
         instruction <: instruction,
-
         dsp <: dsp,
         rsp <: rsp,
-
         stackTop <: stackTop,
         stackNext <: stackNext
     );
 
-    while(1) {
-        newStackTop = aluop(instruction).is_j1j1plus ? ALUplus.newStackTop : ALU.newStackTop;
-    }
+    newStackTop := aluop(instruction).is_j1j1plus ? ALUplus.newStackTop : ALU.newStackTop;
 }
 
 algorithm j1eforthALU(
@@ -438,7 +428,7 @@ algorithm j1eforthALU(
     input   uint16  IOmemoryRead,
     input   uint16  RAMmemoryRead,
 
-    output! uint16  newStackTop
+    output!  uint16  newStackTop
 ) <autorun> {
     while(1) {
         switch( aluop(instruction).operation ) {
@@ -461,6 +451,7 @@ algorithm j1eforthALU(
         }
     }
 }
+
 algorithm j1eforthplusALU(
     input   uint16  instruction,
 
@@ -470,7 +461,7 @@ algorithm j1eforthplusALU(
     input   uint16  stackTop,
     input   uint16  stackNext,
 
-    output  uint16  newStackTop
+    output!  uint16  newStackTop
 ) <autorun> {
     while(1) {
         switch( aluop(instruction).operation ) {

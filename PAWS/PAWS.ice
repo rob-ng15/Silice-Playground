@@ -237,47 +237,35 @@ $$end
         SMTSTARTPC <: SMTSTARTPC
     );
 
+    // IDENTIDY ADDRESS BLOCK
+    uint1   SDRAM <: address[28,1];
+    uint1   BRAM <: ~address[28,1] & ~address[15,1];
+    uint1   VIDEO <: ~address[28,1] & address[15,1] & ( address[12,4]==4h8 );
+    uint1   AUDIOTIMERS <: ~address[28,1] & address[15,1] & ( address[12,4]==4he );
+    uint1   IO <: ~address[28,1] & address[15,1] & ( address[12,4]==4hf );
+
     // SDRAM -> CPU BUSY STATE
     CPU.memorybusy := sdram.busy | CPU.readmemory | CPU.writememory;
 
-    while(1) {
-        switch( address[28,1] ) {
-            case 1: {
-                sdram.writeflag = CPU.writememory;
-                sdram.readflag = CPU.readmemory;
-                CPU.readdata = sdram.readdata;
-            }
-            case 0: {
-                switch( address[15,1] ) {
-                    case 1: {
-                        switch( address[12,4] ) {
-                            case 4h8: {
-                                VIDEO_Map.memoryWrite = CPU.writememory;
-                                VIDEO_Map.memoryRead = CPU.readmemory;
-                                CPU.readdata = VIDEO_Map.readData;
-                            }
-                            case 4he: {
-                                AUDIOTIMERS_Map.memoryWrite = CPU.writememory;
-                                AUDIOTIMERS_Map.memoryRead = CPU.readmemory;
-                                CPU.readdata = AUDIOTIMERS_Map.readData;
-                            }
-                            case 4hf: {
-                                IO_Map.memoryWrite = CPU.writememory;
-                                IO_Map.memoryRead = CPU.readmemory;
-                                CPU.readdata = IO_Map.readData;
-                            }
-                            default: { CPU.readdata = 0; }
-                        }
-                    }
-                    case 0: {
-                        ram.writeflag = CPU.writememory;
-                        ram.readflag = CPU.readmemory;
-                        CPU.readdata = ram.readdata;
-                    }
-                }
-            }
-        }
-    }
+    // READ / WRITE FROM SDRAM / BRAM
+    sdram.writeflag := SDRAM & CPU.writememory;
+    sdram.readflag := SDRAM & CPU.readmemory;
+    ram.writeflag := BRAM & CPU.writememory;
+    ram.readflag := BRAM & CPU.readmemory;
+
+    // READ / WRITE FROM I/O
+    VIDEO_Map.memoryWrite := VIDEO & CPU.writememory;
+    VIDEO_Map.memoryRead := VIDEO & CPU.readmemory;
+    AUDIOTIMERS_Map.memoryWrite := AUDIOTIMERS & CPU.writememory;
+    AUDIOTIMERS_Map.memoryRead := AUDIOTIMERS & CPU.readmemory;
+    IO_Map.memoryWrite := IO & CPU.writememory;
+    IO_Map.memoryRead := IO & CPU.readmemory;
+
+    CPU.readdata := SDRAM ? sdram.readdata :
+                    BRAM ? ram.readdata :
+                    VIDEO ? VIDEO_Map.readData :
+                    AUDIOTIMERS ? AUDIOTIMERS_Map.readData :
+                    IO? IO_Map.readData : 0;
 }
 
 // RAM - BRAM controller
@@ -321,13 +309,13 @@ $$end
             FSM = ( function3[0,2] == 0 ) ? 1 : 2;
             while( FSM != 0 ) {
                 onehot( FSM ) {
-                    case 0: { FSM = 2; }
+                    case 0: {}
                     case 1: {
                         ram.wdata = ( function3[0,2] == 0 ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
                         ram.wenable = 1;
-                        FSM = 0;
                     }
                 }
+                FSM = { FSM[0,1], 1b0 };
             }
         }
     }

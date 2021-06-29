@@ -425,10 +425,10 @@ void set_ship_vector( void ) {
 }
 
 void set_bullet_sprites( void ) {
-        set_sprite_bitmaps( 0, BULLET1SPRITE, &bullet_bitmap[0] );
-        set_sprite_bitmaps( 1, BULLET1SPRITE, &bullet_bitmap[0] );
-        set_sprite_bitmaps( 0, BULLET2SPRITE, &bullet_bitmap[0] );
-        set_sprite_bitmaps( 1, BULLET2SPRITE, &bullet_bitmap[0] );
+    set_sprite_bitmaps( 0, BULLET1SPRITE, &bullet_bitmap[0] );
+    set_sprite_bitmaps( 1, BULLET1SPRITE, &bullet_bitmap[0] );
+    set_sprite_bitmaps( 0, BULLET2SPRITE, &bullet_bitmap[0] );
+    set_sprite_bitmaps( 1, BULLET2SPRITE, &bullet_bitmap[0] );
 }
 
 void set_ufo_sprite( unsigned char ufo_asteroid ) {
