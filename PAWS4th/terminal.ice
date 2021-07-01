@@ -14,8 +14,8 @@ algorithm terminal(
     output  uint2   terminal_active
 ) <autorun> {
     // CURSOR CLOCK
-    uint1   timer1hz = uninitialized;
-    pulse1hz P1( counter1hz :> timer1hz );
+    pulse1hz P1();
+    uint1   timer1hz := P1.counter1hz[0,1];
 
     // Character ROM 8x8 x 256
     brom uint8 characterGenerator8x8[] = {
@@ -23,7 +23,7 @@ algorithm terminal(
     };
 
     // 80 x 4 character buffer for the input/output terminal
-    simple_dualport_bram uint8 terminal[640] = { 8h00, 8h4a, 8h31, 8h2b, pad(uninitialized) };
+    simple_dualport_bram uint8 terminal[640] = uninitialized;
 
     uint7 terminal_x = uninitialised;
     uint3 terminal_y = uninitialised;

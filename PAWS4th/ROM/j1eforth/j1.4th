@@ -113,8 +113,8 @@ a: literal
 variable tlast
 variable tuser
 
-0002 constant =ver
-0001 constant =ext
+0003 constant =ver
+0000 constant =ext
 0040 constant =comp
 0080 constant =imed
 7f1f constant =mask
@@ -447,16 +447,16 @@ t: abs ( n -- n ) abs t;
 t: max ( n n -- n ) max t;
 t: min ( n n -- n ) min t;
 t: within ( u ul uh -- t ) over - >r - r> u< t;
-t: m/! ffd2 literal ! ffd0 literal d! t;
-t: m/? ffd3 literal ! begin ffd3 literal @ 0= until ffd1 literal @ ffd0 literal @ t;
+t: m/! 9022 literal ! 9020 literal d! t;
+t: m/? 9023 literal ! begin 9023 literal @ 0= until 9021 literal @ 9020 literal @ t;
 t: um/mod ( udl udh u -- ur uq ) m/! 1 literal m/? t;
 t: m/mod ( d n -- r q ) m/! 2 literal m/? t;
-t: /! ffd5 literal ! ffd4 literal ! 1 literal ffd6 literal ! t;
-t: /mod ( n n -- r q ) /! begin ffd6 literal @ 0= until ffd5 literal @ ffd4 literal @ t;
+t: /! 9025 literal ! 9024 literal ! 1 literal 9026 literal ! t;
+t: /mod ( n n -- r q ) /! begin 9026 literal @ 0= until 9025 literal @ 9024 literal @ t;
 t: mod ( n n -- r ) /mod drop t;
 t: / ( n n -- q ) /mod nip t;
-t: m*! ffd7 literal ! ffd8 literal ! t;
-t: m*?  ffd9 literal ! ffd7 literal d@ t;
+t: m*! 9027 literal ! 9028 literal ! t;
+t: m*?  9029 literal ! 9027 literal d@ t;
 t: um* ( u u -- ud ) m*! 1 literal m*? t;
 t: m* ( n n -- d ) m*! 2 literal m*? t;
 t: * ( n n -- n ) * t;
@@ -530,7 +530,7 @@ t: emit ( c -- ) 'emit @execute t;
 t: key ( -- c )
     begin
      ?key
-	until f000 literal @ t;
+	until f100 literal @ t;
 t: nuf? ( -- t ) ?key dup if drop key =cr literal = then exit t;
 t: space ( -- ) bl emit t;
 t: spaces ( +n -- ) 0 literal max  for aft space then next t;
@@ -902,7 +902,7 @@ t: words
    repeat t;
 t: ver ( -- n ) =ver literal 100 literal * =ext literal + t;
 t: hi ( -- )
-   cr ."| $literal eforth j1 v"
+   cr ."| $literal PAWS eforth J1+CPU v"
 	base @ hex
 	ver <# # # 2e literal hold # #>
 	type base ! cr t;
@@ -914,28 +914,42 @@ t: cold ( -- )
    quit
    cold t;
 
+( Buttons and LEDs )
+t: led@ f130 literal @ t;
+t: led! f130 literal ! t;
+t: buttons@ f120 literal @ t;
+
+( Timers )
+t: clock@ e040 literal @ t;
+t: timer1hz! 1 literal e010 literal ! t;
+t: timer1hz@ e010 literal @ t;
+t: timer1khz! e020 literal ! t;
+t: timer1khz@ e020 literal @ t;
+t: timer1khz? begin e020 literal @ 0= until t;
+t: sleep e030 literal ! begin e030 literal @ 0= until t;
+t: rng e000 literal @ swap /mod drop t;
 
 ( double maths )
 t: 2over >r >r 2dup r> r> rot >r rot r> t;
 t: 2swap rot >r rot r> t;
 t: 2nip rot drop rot drop t;
 t: 2rot 2>r 2swap 2r> 2swap t;
-t: d0= ffa0 literal d! ffbc literal @ t;
-t: d= ffa0 literal d! ffbe literal @ t;
-t: d+ ffa0 literal d! ffa2 literal d! ffa0 literal d@ t;
-t: d- ffa2 literal d! ffa0 literal d! ffa2 literal d@ t;
+t: d0= 9000 literal d! 901c literal @ t;
+t: d= 9000 literal d! 901e literal @ t;
+t: d+ 9000 literal d! 9002 literal d! 9000 literal d@ t;
+t: d- 9002 literal d! 9000 literal d! 9002 literal d@ t;
 t: s>d dup 0< t;
-t: d1+ ffa0 literal d! ffa4 literal d@ t;
-t: d1- ffa0 literal d! ffa6 literal d@ t;
-t: dxor ffa2 literal d! ffa0 literal d! ffb0 literal d@ t;
-t: dand ffa2 literal d! ffa0 literal d! ffb2 literal d@ t;
-t: dor ffa2 literal d! ffa0 literal d! ffb4 literal d@  t;
-t: dinvert ffa0 literal d! ffae literal d@ t;
-t: d2* ffa0 literal d! ffa8 literal d@ t;
-t: d2/ ffa0 literal d! ffaa literal d@ t;
-t: dabs ffa0 literal d! ffb6 literal d@ t;
-t: dmax ffa2 literal d! ffa0 literal d! ffb8 literal d@ t;
-t: dmin ffa2 literal d! ffa0 literal d! ffba literal d@ t;
+t: d1+ 9000 literal d! 9004 literal d@ t;
+t: d1- 9000 literal d! 9006 literal d@ t;
+t: dxor 9002 literal d! 9000 literal d! 9010 literal d@ t;
+t: dand 9002 literal d! 9000 literal d! 9012 literal d@ t;
+t: dor 9002 literal d! 9000 literal d! 9014 literal d@  t;
+t: dinvert 9000 literal d! 900e literal d@ t;
+t: d2* 9000 literal d! 9008 literal d@ t;
+t: d2/ 9000 literal d! 900a literal d@ t;
+t: dabs 9000 literal d! 9016 literal d@ t;
+t: dmax 9002 literal d! 9000 literal d! 9018 literal d@ t;
+t: dmin 9002 literal d! 9000 literal d! 901a literal d@ t;
 
 target.1 -order set-current
 

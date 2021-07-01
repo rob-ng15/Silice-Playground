@@ -43,6 +43,7 @@ $include('../io_memmap.ice')
 $include('../timers_random.ice')
 
 // MAIN
+$include('../mathematics.ice')
 $include('../J1CPU.ice')
 $include('../PAWS.ice')
 

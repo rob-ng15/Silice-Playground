@@ -371,12 +371,10 @@ $$end
                             switch( memoryAddress[0,4] ) {
                                 // f000
                                 case 4h0: {
-                                    if( PS2.inavailable ) {
-                                        readData = { 8b0, PS2.inchar };
-                                        PS2.inread = 1;
-                                    } else {
-                                        readData = { 8b0, UART.inchar };
-                                        UART.inread = 1;
+                                    switch( { PS2.inavailable, UART.inavailable } ) {
+                                        case 2b00: {readData = 0;}
+                                        case 2b01: { readData = { 8b0, UART.inchar }; UART.inread = 1; }
+                                        default: { readData = { 8b0, PS2.inchar }; PS2.inread = 1; }
                                     }
                                 }
                                 case 4h1: { readData = { 14b0, UART.outfull, ( UART.inavailable || PS2.inavailable ) ? 1b1: 1b0 }; }
@@ -756,8 +754,8 @@ algorithm uart(
     uint8   newuartOutBufferTop = 0;
 
     // FLAGS
-    inavailable := ( uartInBufferNext != uartInBufferTop ) ? 1b1 : 1b0;
-    outfull := ( uartOutBufferTop + 1 == uartOutBufferNext ) ? 1b1 : 1b0;
+    inavailable := ( uartInBufferNext != uartInBufferTop );
+    outfull := ( uartOutBufferTop + 1 == uartOutBufferNext );
     inchar := uartInBuffer.rdata0;
 
     // UART Buffers ( code from @sylefeb )
@@ -767,20 +765,23 @@ algorithm uart(
     uartOutBuffer.wenable1 := 1; // always write on port 1
     uartOutBuffer.addr0 := uartOutBufferNext; // FIFO reads on next
     uartInBuffer.wdata1 := ui.data_out;
-    uartInBufferTop := ui.data_out_ready ? uartInBufferTop + 1 : uartInBufferTop;
+    uartInBufferTop := uartInBufferTop + ui.data_out_ready;
     uo.data_in := uartOutBuffer.rdata0;
     uo.data_in_ready := ( uartOutBufferNext != uartOutBufferTop ) && ( !uo.busy );
-    uartOutBufferNext := ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) ) ? uartOutBufferNext + 1 : uartOutBufferNext;
+    uartOutBufferNext :=  uartOutBufferNext + ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) );
 
     while(1) {
-        if( outwrite ) {
-            uartOutBuffer.addr1 = uartOutBufferTop;
-            uartOutBuffer.wdata1 = outchar;
-            update = 1;
-        } else {
-            if( update != 0 ) {
-                uartOutBufferTop = uartOutBufferTop + 1;
-                update = 0;
+        switch( outwrite ) {
+            case 1: {
+                uartOutBuffer.addr1 = uartOutBufferTop;
+                uartOutBuffer.wdata1 = outchar;
+                update = 1;
+            }
+            case 0: {
+                if( update != 0 ) {
+                    uartOutBufferTop = uartOutBufferTop + 1;
+                    update = 0;
+                }
             }
         }
         uartInBufferNext = uartInBufferNext + inread;
@@ -818,18 +819,21 @@ algorithm ps2buffer(
     ps2Buffer.addr0 := ps2BufferNext; // FIFO reads on next
 
     // FLAGS
-    inavailable := ( ps2BufferNext != ps2BufferTop ) ? 1 : 0;
+    inavailable := ( ps2BufferNext != ps2BufferTop );
     inchar := ps2Buffer.rdata0;
 
     while(1) {
-        if( PS2.asciivalid ) {
-            ps2Buffer.addr1 = ps2BufferTop;
-            ps2Buffer.wdata1 = PS2.ascii;
-            update = 1;
-        } else {
-            if( update != 0 ) {
-                ps2BufferTop = ps2BufferTop + 1;
-                update = 0;
+        switch( PS2.asciivalid ) {
+            case 1: {
+                ps2Buffer.addr1 = ps2BufferTop;
+                ps2Buffer.wdata1 = PS2.ascii;
+                update = 1;
+            }
+            case 0: {
+                if( update != 0 ) {
+                    ps2BufferTop = ps2BufferTop + 1;
+                    update = 0;
+                }
             }
         }
         ps2BufferNext = ps2BufferNext + inread;

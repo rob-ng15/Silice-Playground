@@ -487,7 +487,7 @@ $$end
     uint1   LATCHmemoryWrite = uninitialized;
 
     // DISPLAY TERMINAL WINDOW
-    terminal_window.showterminal = 1;
+    terminal_window.showterminal = 0;
 
     while(1) {
         // READ IO Memory

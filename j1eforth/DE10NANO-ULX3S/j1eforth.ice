@@ -154,16 +154,16 @@ $$end
     uint6   FSM = 1;
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
     uint16  instruction = uninitialized;
-    uint16  immediate := ( literal(instruction).literalvalue );
-    uint1   is_alu := ( instruction(instruction).is_litcallbranchalu == 3b011 );
-    uint1   is_call := ( instruction(instruction).is_litcallbranchalu == 3b010 );
-    uint1   is_lit := literal(instruction).is_literal;
-    uint1   is_n2memt := is_alu && aluop(instruction).is_n2memt;
-    uint2   is_callbranchalu := callbranch(instruction).is_callbranchalu;
-    uint1   dstackWrite := ( is_lit | (is_alu & aluop(instruction).is_t2n) );
-    uint1   rstackWrite := ( is_call | (is_alu & aluop(instruction).is_t2r) );
-    uint8   ddelta := { {7{aluop(instruction).ddelta1}}, aluop(instruction).ddelta0 };
-    uint8   rdelta := { {7{aluop(instruction).rdelta1}}, aluop(instruction).rdelta0 };
+    uint16  immediate = uninitialized;
+    uint1   is_alu = uninitialized;
+    uint1   is_call = uninitialized;
+    uint1   is_lit = uninitialized;
+    uint1   is_n2memt = uninitialized;
+    uint2   is_callbranchalu = uninitialized;
+    uint1   dstackWrite = uninitialized;
+    uint1   rstackWrite = uninitialized;
+    uint8   ddelta = uninitialized;
+    uint8   rdelta = uninitialized;
 
     // program counter
     uint13  pc = 0;
@@ -189,24 +189,6 @@ $$end
 
     uint16  IOmemoryRead := IO_Map.readData;
     uint16  RAMmemoryRead := ram.rdata0;
-
-    alu ALU
-    $$if ULX3S then
-        <@clock_50mhz,!reset>
-    $$end
-    (
-        instruction <: instruction,
-
-        dsp <: dsp,
-        rsp <: rsp,
-
-        stackTop <: stackTop,
-        stackNext <: stackNext,
-        rStackTop <: rStackTop,
-
-        IOmemoryRead <: IOmemoryRead,
-        RAMmemoryRead <: RAMmemoryRead
-    );
 
     j1eforthcallbranch CALLBRANCH
     $$if ULX3S then
@@ -306,6 +288,20 @@ $$end
             case 1: {
                 // COMPLETE FETCH INSTRUCTION + PRE-FETCH MEMORY
                 instruction = ram.rdata0;
+
+                // DECODE
+                pcPlusOne = pc + 1;
+                immediate = ( literal(instruction).literalvalue );
+                is_alu = ( instruction(instruction).is_litcallbranchalu == 3b011 );
+                is_call = ( instruction(instruction).is_litcallbranchalu == 3b010 );
+                is_lit = literal(instruction).is_literal;
+                is_n2memt = is_alu && aluop(instruction).is_n2memt;
+                is_callbranchalu = callbranch(instruction).is_callbranchalu;
+                dstackWrite = ( is_lit | (is_alu & aluop(instruction).is_t2n) );
+                rstackWrite = ( is_call | (is_alu & aluop(instruction).is_t2r) );
+                ddelta = { {7{aluop(instruction).ddelta1}}, aluop(instruction).ddelta0 };
+                rdelta = { {7{aluop(instruction).rdelta1}}, aluop(instruction).rdelta0 };
+
                 ram.addr0 = {1b0,stackTop[1,15]};
                 FSM = is_lit ? 6b000100 : 6b001000;
             }
@@ -324,7 +320,48 @@ $$end
                         if( ~aluop(instruction).is_j1j1plus && ( aluop(instruction).operation == 4b1100 ) && stackTop[15,1] ) {
                             IO_Map.memoryRead = 1;
                         }
-                        newStackTop = ALU.newStackTop;
+                        switch( aluop(instruction).is_j1j1plus ) {
+                            case 0: {
+                                switch( aluop(instruction).operation ) {
+                                    case 4b0000: {newStackTop = stackTop;}
+                                    case 4b0001: {newStackTop = stackNext;}
+                                    case 4b0010: {newStackTop = stackTop + stackNext;}
+                                    case 4b0011: {newStackTop = stackTop & stackNext;}
+                                    case 4b0100: {newStackTop = stackTop | stackNext;}
+                                    case 4b0101: {newStackTop = stackTop ^ stackNext;}
+                                    case 4b0110: {newStackTop = ~stackTop;}
+                                    case 4b0111: {newStackTop = {16{(stackNext == stackTop)}};}
+                                    case 4b1000: {newStackTop = {16{(__signed(stackNext) < __signed(stackTop))}};}
+                                    case 4b1001: {newStackTop = __signed(stackNext) >>> nibbles(stackTop).nibble0;}
+                                    case 4b1010: {newStackTop = stackTop - 1;}
+                                    case 4b1011: {newStackTop = rStackTop;}
+                                    case 4b1100: {newStackTop = stackTop[15,1] ? IOmemoryRead : RAMmemoryRead;}
+                                    case 4b1101: {newStackTop = stackNext << nibbles(stackTop).nibble0;}
+                                    case 4b1110: {newStackTop = {rsp, dsp};}
+                                    case 4b1111: {newStackTop = {16{(__unsigned(stackNext) < __unsigned(stackTop))}};}
+                                }
+                            }
+                            case 1: {
+                                switch( aluop(instruction).operation ) {
+                                    case 4b0000: {newStackTop = {16{(stackTop == 0)}};}
+                                    case 4b0001: {newStackTop = {16{(stackTop != 0)}};}
+                                    case 4b0010: {newStackTop = {16{(stackNext != stackTop)}};}
+                                    case 4b0011: {newStackTop = stackTop + 1;}
+                                    case 4b0100: {newStackTop = stackNext * stackTop;}
+                                    case 4b0101: {newStackTop = {stackTop[0,15], 1b0 };}
+                                    case 4b0110: {newStackTop = -stackTop;}
+                                    case 4b0111: {newStackTop = { stackTop[15,1], stackTop[1,15]}; }
+                                    case 4b1000: {newStackTop = stackNext - stackTop;}
+                                    case 4b1001: {newStackTop = {16{(__signed(stackTop) < __signed(0))}};}
+                                    case 4b1010: {newStackTop = {16{(__signed(stackTop) > __signed(0))}};}
+                                    case 4b1011: {newStackTop = {16{(__signed(stackNext) > __signed(stackTop))}};}
+                                    case 4b1100: {newStackTop = {16{(__signed(stackNext) >= __signed(stackTop))}};}
+                                    case 4b1101: {newStackTop = ( __signed(stackTop) < __signed(0) ) ?  -stackTop : stackTop;}
+                                    case 4b1110: {newStackTop = ( __signed(stackNext) > __signed(stackTop) ) ? stackNext : stackTop;}
+                                    case 4b1111: {newStackTop = ( __signed(stackNext) < __signed(stackTop) ) ? stackNext : stackTop;}
+                                }
+                            }
+                        }
 
                         // UPDATE newDSP newRSP
                         newDSP = dsp + ddelta;
@@ -376,115 +413,6 @@ $$end
     } // execute J1 CPU
 }
 
-// ALU for J1 CPU and J1PLUS CPU operations
-algorithm alu(
-    //input   uint1   start,
-    input   uint16  instruction,
-
-    input   uint8   dsp,
-    input   uint8   rsp,
-
-    input   uint16  stackTop,
-    input   uint16  stackNext,
-    input   uint16  rStackTop,
-
-    input   uint16  IOmemoryRead,
-    input   uint16  RAMmemoryRead,
-
-    output!  uint16  newStackTop
-) <autorun> {
-    j1eforthALU ALU(
-        instruction <: instruction,
-        dsp <: dsp,
-        rsp <: rsp,
-        stackTop <: stackTop,
-        stackNext <: stackNext,
-        rStackTop <: rStackTop,
-        IOmemoryRead <: IOmemoryRead,
-        RAMmemoryRead <: RAMmemoryRead
-    );
-
-    j1eforthplusALU ALUplus(
-        instruction <: instruction,
-        dsp <: dsp,
-        rsp <: rsp,
-        stackTop <: stackTop,
-        stackNext <: stackNext
-    );
-
-    newStackTop := aluop(instruction).is_j1j1plus ? ALUplus.newStackTop : ALU.newStackTop;
-}
-
-algorithm j1eforthALU(
-    input   uint16  instruction,
-
-    input   uint8   dsp,
-    input   uint8   rsp,
-
-    input   uint16  stackTop,
-    input   uint16  stackNext,
-    input   uint16  rStackTop,
-
-    input   uint16  IOmemoryRead,
-    input   uint16  RAMmemoryRead,
-
-    output!  uint16  newStackTop
-) <autorun> {
-    while(1) {
-        switch( aluop(instruction).operation ) {
-            case 4b0000: {newStackTop = stackTop;}
-            case 4b0001: {newStackTop = stackNext;}
-            case 4b0010: {newStackTop = stackTop + stackNext;}
-            case 4b0011: {newStackTop = stackTop & stackNext;}
-            case 4b0100: {newStackTop = stackTop | stackNext;}
-            case 4b0101: {newStackTop = stackTop ^ stackNext;}
-            case 4b0110: {newStackTop = ~stackTop;}
-            case 4b0111: {newStackTop = {16{(stackNext == stackTop)}};}
-            case 4b1000: {newStackTop = {16{(__signed(stackNext) < __signed(stackTop))}};}
-            case 4b1001: {newStackTop = __signed(stackNext) >>> nibbles(stackTop).nibble0;}
-            case 4b1010: {newStackTop = stackTop - 1;}
-            case 4b1011: {newStackTop = rStackTop;}
-            case 4b1100: {newStackTop = stackTop[15,1] ? IOmemoryRead : RAMmemoryRead;}
-            case 4b1101: {newStackTop = stackNext << nibbles(stackTop).nibble0;}
-            case 4b1110: {newStackTop = {rsp, dsp};}
-            case 4b1111: {newStackTop = {16{(__unsigned(stackNext) < __unsigned(stackTop))}};}
-        }
-    }
-}
-
-algorithm j1eforthplusALU(
-    input   uint16  instruction,
-
-    input   uint8   dsp,
-    input   uint8   rsp,
-
-    input   uint16  stackTop,
-    input   uint16  stackNext,
-
-    output!  uint16  newStackTop
-) <autorun> {
-    while(1) {
-        switch( aluop(instruction).operation ) {
-            case 4b0000: {newStackTop = {16{(stackTop == 0)}};}
-            case 4b0001: {newStackTop = {16{(stackTop != 0)}};}
-            case 4b0010: {newStackTop = {16{(stackNext != stackTop)}};}
-            case 4b0011: {newStackTop = stackTop + 1;}
-            case 4b0100: {newStackTop = stackNext * stackTop;}
-            case 4b0101: {newStackTop = {stackTop[0,15], 1b0 };}
-            case 4b0110: {newStackTop = -stackTop;}
-            case 4b0111: {newStackTop = { stackTop[15,1], stackTop[1,15]}; }
-            case 4b1000: {newStackTop = stackNext - stackTop;}
-            case 4b1001: {newStackTop = {16{(__signed(stackTop) < __signed(0))}};}
-            case 4b1010: {newStackTop = {16{(__signed(stackTop) > __signed(0))}};}
-            case 4b1011: {newStackTop = {16{(__signed(stackNext) > __signed(stackTop))}};}
-            case 4b1100: {newStackTop = {16{(__signed(stackNext) >= __signed(stackTop))}};}
-            case 4b1101: {newStackTop = ( __signed(stackTop) < __signed(0) ) ?  -stackTop : stackTop;}
-            case 4b1110: {newStackTop = ( __signed(stackNext) > __signed(stackTop) ) ? stackNext : stackTop;}
-            case 4b1111: {newStackTop = ( __signed(stackNext) < __signed(stackTop) ) ? stackNext : stackTop;}
-        }
-    }
-}
-
 algorithm j1eforthcallbranch(
     input   uint2   is_callbranchalu,
     input   uint16  stackTop,
@@ -523,6 +451,7 @@ algorithm j1eforthcallbranch(
                 newDSP = dsp;
                 newRSP = rsp + 1;
             }
+            default: {}
         }
     }
 }

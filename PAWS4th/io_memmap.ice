@@ -33,11 +33,7 @@ $$end
     input   uint1   memoryRead,
 
     input   uint16  writeData,
-    output  uint16  readData,
-
-    // SMT STATUS
-    output  uint1   SMTRUNNING,
-    output  uint32  SMTSTARTPC
+    output  uint16  readData
 ) <autorun> {
 $$if not SIMULATION then
     // UART CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
@@ -53,54 +49,29 @@ $$if not SIMULATION then
         us2_bd_dn <: us2_bd_dn
     );
 
-    // SDCARD AND BUFFER
-    sdcardbuffer SDCARD(
-        sd_clk :> sd_clk,
-        sd_mosi :> sd_mosi,
-        sd_csn :> sd_csn,
-        sd_miso <: sd_miso
-    );
-
     // I/O FLAGS
     UART.inread := 0;
     UART.outwrite := 0;
     PS2.inread := 0;
-    SDCARD.readsector := 0;
 $$end
-    // DISBLE SMT ON STARTUP
-    SMTRUNNING = 0;
-    SMTSTARTPC = 0;
-
     while(1) {
         // READ IO Memory
         if( memoryRead ) {
+            __display("  I/O READ from %x",memoryAddress);
             switch( memoryAddress ) {
-                // UART, LEDS, BUTTONS and CLOCK
+                // UART/PS2, LEDS, BUTTONS and CLOCK
 $$if not SIMULATION then
-                case 12h100: { readData = { 8b0, UART.inchar }; UART.inread = 1; }
-                case 12h102: { readData = { 14b0, UART.outfull, UART.inavailable }; }
+                case 12h100: {
+                    switch( { PS2.inavailable, UART.inavailable } ) {
+                        case 2b00: { readData = 0; }
+                        case 2b01: { readData = { 8b0, UART.inchar }; UART.inread = 1; }
+                        default: { readData = { 8b0, PS2.inchar }; PS2.inread = 1; }
+                    }
+                }
+                case 12h102: { readData = { 14b0, UART.outfull, ( UART.inavailable || PS2.inavailable ) ? 1b1: 1b0 }; }
                 case 12h120: { readData = { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] }; }
 $$end
                 case 12h130: { readData = leds; }
-$$if not SIMULATION then
-                // PS2
-                case 12h110: { readData = PS2.inavailable; }
-                case 12h112: {
-                    if( PS2.inavailable ) {
-                        readData = PS2.inchar;
-                        PS2.inread = 1;
-                    } else {
-                        readData = 0;
-                    }
-                }
-
-                // SDCARD
-                case 12h140: { readData = SDCARD.ready; }
-                case 12h150: { readData = SDCARD.bufferdata; }
-$$end
-
-                // SMT STATUS
-                case 12hffe: { readData = SMTRUNNING; }
 
                 // RETURN NULL VALUE
                 default: { readData = 0; }
@@ -109,22 +80,110 @@ $$end
 
         // WRITE IO Memory
         if( memoryWrite ) {
+            __display("  I/O WRITE to %x <- %x",memoryAddress,writeData);
             switch( memoryAddress ) {
                 // UART, LEDS
                 case 12h130: { leds = writeData; }
 $$if not SIMULATION then
                 case 12h100: { UART.outchar = writeData[0,8]; UART.outwrite = 1; }
-
-                // SDCARD
-                case 12h140: { SDCARD.readsector = 1; }
-                case 12h142: { SDCARD.sectoraddressH = writeData; }
-                case 12h144: { SDCARD.sectoraddressL = writeData; }
-                case 12h150: { SDCARD.bufferaddress = writeData; }
 $$end
-                // SMT STATUS
-                case 12hff0: { SMTSTARTPC[16,16] = writeData; }
-                case 12hff2: { SMTSTARTPC[0,16] = writeData; }
-                case 12hffe: { SMTRUNNING = writeData; }
+                default: {}
+            }
+        }
+    } // while(1)
+}
+
+algorithm copro_memmap(
+    // Memory access
+    input   uint12  memoryAddress,
+    input   uint1   memoryWrite,
+    input   uint1   memoryRead,
+
+    input   uint16  writeData,
+    output  uint16  readData
+) <autorun> {
+    // Mathematics Co-Processors
+    divmod32by16 divmod32by16to16qr();
+    divmod16by16 divmod16by16to16qr();
+    multi16by16to32DSP multiplier16by16to32();
+    doubleaddsub2input doperations2();
+    doubleaddsub1input doperations1();
+
+    // RESET Mathematics Co-Processor Controls
+    divmod32by16to16qr.start := 0;
+    divmod16by16to16qr.start := 0;
+    multiplier16by16to32.start := 0;
+
+    while(1) {
+        // READ IO Memory
+        if( memoryRead ) {
+            __display("  COPRO READ from %x",memoryAddress);
+            switch( memoryAddress ) {
+                case 12h000: { readData = words(doperations2.total).hword; }
+                case 12h001: { readData = words(doperations2.total).lword; }
+                case 12h002: { readData = words(doperations2.difference).hword; }
+                case 12h003: { readData = words(doperations2.difference).lword; }
+                case 12h004: { readData = words(doperations1.increment).hword; }
+                case 12h005: { readData = words(doperations1.increment).lword; }
+                case 12h006: { readData = words(doperations1.decrement).hword; }
+                case 12h007: { readData = words(doperations1.decrement).lword; }
+                case 12h008: { readData = words(doperations1.times2).hword; }
+                case 12h009: { readData = words(doperations1.times2).lword; }
+                case 12h00a: { readData = words(doperations1.divide2).hword; }
+                case 12h00b: { readData = words(doperations1.divide2).lword; }
+                case 12h00c: { readData = words(doperations1.negation).hword; }
+                case 12h00d: { readData = words(doperations1.negation).lword; }
+                case 12h00e: { readData = words(doperations1.binaryinvert).hword; }
+                case 12h00f: { readData = words(doperations1.binaryinvert).lword; }
+                case 12h010: { readData = words(doperations2.binaryxor).hword; }
+                case 12h011: { readData = words(doperations2.binaryxor).lword; }
+                case 12h012: { readData = words(doperations2.binaryand).hword; }
+                case 12h013: { readData = words(doperations2.binaryand).lword; }
+                case 12h014: { readData = words(doperations2.binaryor).hword; }
+                case 12h015: { readData = words(doperations2.binaryor).lword; }
+                case 12h016: { readData = words(doperations1.absolute).hword; }
+                case 12h017: { readData = words(doperations1.absolute).lword; }
+                case 12h018: { readData = words(doperations2.maximum).hword; }
+                case 12h019: { readData = words(doperations2.maximum).lword; }
+                case 12h01a: { readData = words(doperations2.minimum).hword; }
+                case 12h01b: { readData = words(doperations2.minimum).lword; }
+                case 12h01c: { readData = doperations1.zeroequal; }
+                case 12h01d: { readData = doperations1.zeroless; }
+                case 12h01e: { readData = doperations2.equal; }
+                case 12h01f: { readData = doperations2.lessthan; }
+                case 12h020: { readData = divmod32by16to16qr.quotient[0,16]; }
+                case 12h021: { readData = divmod32by16to16qr.remainder[0,16]; }
+                case 12h023: { readData = divmod32by16to16qr.active; }
+                case 12h024: { readData = divmod16by16to16qr.quotient; }
+                case 12h025: { readData = divmod16by16to16qr.remainder; }
+                case 12h026: { readData = divmod16by16to16qr.active; }
+                case 12h027: { readData = multiplier16by16to32.product[16,16]; }
+                case 12h028: { readData = multiplier16by16to32.product[0,16]; }
+
+                // RETURN NULL VALUE
+                default: { readData = 0; }
+            }
+        }
+
+        // WRITE IO Memory
+        if( memoryWrite ) {
+            __display("  COPRO WRITE to %x <- %x",memoryAddress,writeData);
+            switch( memoryAddress ) {
+                case 12h000: { doperations2.operand1h = writeData; doperations1.operand1h = writeData; }
+                case 12h001: { doperations2.operand1l = writeData; doperations1.operand1l = writeData; }
+                case 12h002: { doperations2.operand2h = writeData; }
+                case 12h003: { doperations2.operand2l = writeData; }
+                case 12h020: { divmod32by16to16qr.dividendh = writeData; }
+                case 12h021: { divmod32by16to16qr.dividendl = writeData; }
+                case 12h022: { divmod32by16to16qr.divisor = writeData; }
+                case 12h023: { divmod32by16to16qr.start = writeData; }
+                case 12h024: { divmod16by16to16qr.dividend = writeData; }
+                case 12h025: { divmod16by16to16qr.divisor = writeData; }
+                case 12h026: { divmod16by16to16qr.start = writeData; }
+                case 12h027: { multiplier16by16to32.factor1 = writeData; }
+                case 12h028: { multiplier16by16to32.factor2 = writeData; }
+                case 12h029: { multiplier16by16to32.start = writeData; }
+
                 default: {}
             }
         }
@@ -163,6 +222,7 @@ algorithm audiotimers_memmap(
     while(1) {
         // READ IO Memory
         if( memoryRead ) {
+            __display("  Timers/Audio READ from %x",memoryAddress);
             switch( memoryAddress ) {
                 // TIMERS and RNG
                 case 12h000: { readData = timers.g_noise_out; }
@@ -185,6 +245,7 @@ algorithm audiotimers_memmap(
         }
         // WRITE IO Memory
         if( memoryWrite && ~LATCHmemoryWrite ) {
+            __display("  Timers/Audio WRITE to %x <- %x",memoryAddress,writeData);
             switch( memoryAddress ) {
                // TIMERS and RNG
                 case 12h010: { timers.resetcounter = 1; }
@@ -492,6 +553,7 @@ $$end
     while(1) {
         // READ IO Memory
         if( memoryRead ) {
+            __display("  Video READ from %x",memoryAddress);
             switch( memoryAddress ) {
                 // TILE MAP
                 case 12h120: { readData = lower_tile_map.tm_lastaction; }
@@ -547,6 +609,7 @@ $$end
 
         // WRITE IO Memory
         if( memoryWrite && ~LATCHmemoryWrite ) {
+            __display("  Video WRITE to %x <- %x",memoryAddress,writeData);
             switch( memoryAddress ) {
                 // BACKGROUND
                 case 12h000: { background_generator.backgroundcolour = writeData; background_generator.background_update = 1; }
@@ -939,42 +1002,4 @@ algorithm ps2buffer(
         }
         ps2BufferNext = ps2BufferNext + inread;
     }
-}
-
-// SDCARD AND BUFFER CONTROLLER
-algorithm sdcardbuffer(
-    // SDCARD
-    output  uint1   sd_clk,
-    output  uint1   sd_mosi,
-    output  uint1   sd_csn,
-    input   uint1   sd_miso,
-
-    input   uint1   readsector,
-    input   uint16  sectoraddressH,
-    input   uint16  sectoraddressL,
-    input   uint9   bufferaddress,
-    output  uint1   ready,
-    output  uint8   bufferdata
-) <autorun> {
-    // SDCARD - Code for the SDCARD from @sylefeb
-    simple_dualport_bram uint8 sdbuffer <input!> [512] = uninitialized;
-    sdcardio sdcio;
-    sdcard sd(
-        // pins
-        sd_clk      :> sd_clk,
-        sd_mosi     :> sd_mosi,
-        sd_csn      :> sd_csn,
-        sd_miso     <: sd_miso,
-        // io
-        io          <:> sdcio,
-        // bram port
-        store       <:> sdbuffer
-    );
-
-    // SDCARD Commands
-    sdcio.read_sector := readsector;
-    sdcio.addr_sector := { sectoraddressH, sectoraddressL };
-    sdbuffer.addr0 := bufferaddress;
-    ready := sdcio.ready;
-    bufferdata := sdbuffer.rdata0;
 }
