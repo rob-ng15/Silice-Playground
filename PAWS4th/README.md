@@ -38,11 +38,11 @@ j1eforth ( developed from https://github.com/samawati/j1eforth ) with the J1+ CP
 <br>
 
 Word | Usage ( w single word, d double word )
------ | -----
+:----- | :-----
 led@ | ```led@``` returns the led status to the stack
 led! | ```w led!``` sets the led status to w
 buttons@ | ```buttons@``` returns the buttons status to the stack
- |
+ | |
 clock@ | ```clock@``` returns the system clock (seconds from start) to the stack
 timer1hz! | ```timer1hz!``` resets the user clock to 0
 timer1hz@ | ```timer1hz@``` returns the user clock (seconds from reset) to the stack
@@ -51,12 +51,12 @@ timer1khz@ | ```timer1khz@``` returns the 1khz countdown timer to the stack
 timer1khz? | ```timer1khz?``` waits for the 1khz countdown timer to reach 0
 sleep | ```w sleep``` sleep for w milliseconds
 rng | ```w rng``` returns a pseudo random number (0 to w-1) to the stack
-|
+ | |
 vblank? | ```vblank?``` waits for the display vertical blank
 frambuffer! | ```w1 w2 framebuffer``` sets the display framebuffer to w1 and the drawing framebuffer to w2
 terminal! | ```w terminal!``` w == 0 hide the terminal window, w == 1 display the terminal window
 background! | ```w1 w2 w3 background!``` sets the background generator to colour w1, alt colour w2 and mode w3
- |
+ | |
 colour! | ```w1 w2 w3 colour!``` sets the GPU colour to w1, alt colour to w2 and the dither mode to w3
 pixel | ```w1 w2 pixel``` sets the pixel at (w1,w2)
 line | ```w1 w2 w3 w4 line``` draws a line from (w1,w2) to (w3,w4)
@@ -68,7 +68,7 @@ blit | ```w1 w2 w3 w4 blit``` blits the 16x16 tile w3 at scale w4 to (w1,w2)
 charblit | ```w1 w2 w3 w4 charblit``` blits the 8x8 character w3 at scale w4 to (w1,w2)
 colblit | ```w1 w2 w3 w4 colblit``` blits the 16x16 colour tile w3 at scale w4 to (w1,w2)
 cs | ```cs``` clears the framebuffer
-|
+ | |
 tcolour! | ```w1 w2 tcolour!``` sets the tpu character map foreground colour to w1 and the background colour to w2
 tpuxy! | ```w1 w2 tpuxy!``` sets the tpu character map coordinates to (w1,w2)
 tpuemit | ```w tpu!``` displays character w on the tpu character map
@@ -85,17 +85,17 @@ tpuu.# |
 tpuu.r# |
 tpu.r# |
 tcs | ```tcs``` clears the tpu character map
- |
+ | |
 ram! | ```w d ram!``` sets the sdram at address d to w
 ram@ | ```d ram@``` returns the contents of sdram at address d to the stack
- |
+ | |
 sdreadsector | ```d sdreadsector``` read sector d from the sdcard to the buffer
 sd@ | ```w sd@``` read byte w from the sdcard buffer
 
 <br>
 
 Double Word | Usage
- |
+:----- | :-----
 d! | ```d w d!``` stores d at address w
 d@ | ```w d@``` returns the double word from address w to the stack ( d to stack )
 2constant |
