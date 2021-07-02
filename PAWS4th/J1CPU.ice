@@ -50,7 +50,7 @@ circuitry load( input location, input memorybusy, input readdata, output address
 // CPU STORE TO MEMORY
 circuitry store( input location, input value, input memorybusy, output address, output writedata, output writememory ) {
     address = location[15,1] ? location : { 1b0, location[1,15] };
-    writedata = value[0,16];
+    writedata = value;
     writememory = 1;
     while( memorybusy ) {}
 }
@@ -154,13 +154,13 @@ algorithm J1CPU(
             case 0: {
                 // START FETCH INSTRUCTION
                 ( address, readmemory, instruction ) = fetch( pc, memorybusy, readdata );
+                pcPlusOne = pc + 1;
             }
             case 1: {
                 // LOAD FROM MEMORY
                 if( ~aluop(instruction).is_j1j1plus && ( callbranch(instruction).is_callbranchalu == 2b11 ) && ( aluop(instruction).operation == 4b1100 ) ) {
                     ( address, readmemory, memoryRead ) = load( stackTop, memorybusy, readdata );
                 }
-                pcPlusOne = pc + 1;
             }
             case 2: {
                 switch( is_lit ) {

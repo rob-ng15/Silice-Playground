@@ -911,11 +911,14 @@ t: cold ( -- )
    preset forth-wordlist dup context ! dup current 2! overt
    4000 literal cell+ dup cell- @ $eval
    0 literal 8004 literal ! 0 literal 8002 literal ! 0 literal 8000 literal ! ( background reset )
+   0 literal 8f00 literal ! ( display order reset )
    0 literal 86f2 literal ! 0 literal 86f0 literal ! ( framebuffer reset )
    40 literal 8604 literal ! 0 8606 literal ! literal 0 literal 8608 literal !  ( colour reset )
-   0 literal 0 literal 13f literal ef literal ( coordinates )
+   0 literal 0 literal 13f literal ef literal ( cs )
    860c literal ! 860a literal ! 8602 literal ! 8600 literal !
-   3 literal 8612 literal ! ( cs )
+   3 literal 8612 literal !
+   9 literal 8120 literal ! ( tmlcs )
+   9 literal 8130 literal ! ( tmucs )
    3 literal 850a literal ! ( tcs )
    'boot @execute
    quit
@@ -956,15 +959,19 @@ t: circle coords4! 4 literal gpu! t;
 t: fcircle coords4! 5 literal gpu! t;
 t: triangle coords6! 6 literal gpu! t;
 t: blit coords4! 7 literal gpu! t;
+t: blittile! 8640 literal ! 10 literal begin 1- dup 8642 literal ! swap 8644 literal ! dup 0= until drop t;
 t: charblit coords4! 8 literal gpu! t;
 t: colblit coords4! 9 literal gpu! t;
 t: cs 40 literal 0 literal 0 literal colour! fullscreen! rectangle t;
 
+t: tmlcs 9 literal 8120 literal ! t;
+t: tmucs 9 literal 8220 literal ! t;
+
 t: tpu? begin 850a literal @ 0= until t;
 t: tpu! tpu? 850a literal ! t;
 t: tcolour! 8506 literal ! 8508 literal ! t;
-t: tpuxy! 8502 literal ! 8500 literal ! t;
-t: tpuemit 8504 literal ! 1 literal tpu! t;
+t: tpuxy! 8502 literal ! 8500 literal ! 1 literal tpu! t;
+t: tpuemit 8504 literal ! 2 literal tpu! t;
 t: tpuspace bl tpuemit t;
 t: tpuspaces 0 literal max for aft tpuspace then next t;
 t: tputype for aft count tpuemit then next drop t;
@@ -979,10 +986,25 @@ t: tpuu.r# base @ rot rot decimal >r <# #s #> r> over - tpuspaces tputype base !
 t: tpu.r# base @ rot rot decimal >r str r> over - tpuspaces tputype base ! t;
 t: tcs 3 literal tpu! 0 3f tcolour! t;
 
+u: _pointer
+t: sprite!
+   _pointer @ ! 20 literal _pointer @ + _pointer !
+   _pointer @ ! 20 literal _pointer @ + _pointer !
+   _pointer @ ! 20 literal _pointer @ + _pointer !
+   _pointer @ ! 20 literal _pointer @ + _pointer !
+   _pointer @ ! 20 literal _pointer @ + _pointer !
+   _pointer @ ! 20 literal _pointer @ + _pointer ! t;
+t: lsprite 2* 8300 literal + _pointer ! sprite! t;
+t: usprite 2* 8400 literal + _pointer ! sprite! t;
+t: lspritetile! 8800 literal ! 80 literal begin 1- dup 8802 literal ! swap 8804 literal ! dup 0= until drop t;
+t: uspritetile! 8810 literal ! 80 literal begin 1- dup 8812 literal ! swap 8814 literal ! dup 0= until drop t;
+t: lspriteupdate 2* 83c0 literal + ! t;
+t: uspriteupdate 2* 84c0 literal + ! t;
+
 ( sdram )
 t: ram? begin a002 literal @ 0= until t;
-t: ramaddr! a004 literal d! t;
-t: ram! ramaddr! a000 literal ! 2 literal a002 literal ! ram? t;
+t: ramaddr! ram? a004 literal d! t;
+t: ram! ramaddr! a000 literal ! 2 literal a002 literal ! t;
 t: ram@ ramaddr! 1 literal a002 literal ! ram? a000 literal @ t;
 
 ( sdcard )

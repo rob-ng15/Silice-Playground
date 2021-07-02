@@ -98,8 +98,6 @@ $$if not SIMULATION then
                 case 12h150: { readData = SDCARD.bufferdata; }
 $$end
 
-                // SMT STATUS
-                case 12hffe: { readData = SMTRUNNING; }
 
                 // RETURN NULL VALUE
                 default: { readData = 0; }
@@ -1149,9 +1147,8 @@ algorithm sdramcontroller(
     sio.addr := { address, 1b0 };
     sio.in_valid := 0;
 
-
     // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
-    readdata := sio.data_out[0,16];
+    readdata := sio.data_out;
 
     while(1) {
         switch( { readflag, writeflag } ) {
@@ -1165,7 +1162,7 @@ algorithm sdramcontroller(
             }
             case 2b01: {
                 busy = 1;
-                // CWRITE TO SDRAM
+                // WRITE TO SDRAM
                 sio.data_in = writedata;
                 sio.rw = 1;
                 sio.in_valid = 1;

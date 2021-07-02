@@ -67,7 +67,18 @@ triangle | ```w1 w2 w3 w4 w5 w6 rectangle``` draws a filled triangle with vertic
 blit | ```w1 w2 w3 w4 blit``` blits the 16x16 tile w3 at scale w4 to (w1,w2)
 charblit | ```w1 w2 w3 w4 charblit``` blits the 8x8 character w3 at scale w4 to (w1,w2)
 colblit | ```w1 w2 w3 w4 colblit``` blits the 16x16 colour tile w3 at scale w4 to (w1,w2)
+blittile! | ```w0 w1 .. w15 w16 blittile!``` set tile w16 for the blitter to w0 .. w15
 cs | ```cs``` clears the framebuffer
+ | |
+tmlcs |
+tmucs |
+ | |
+lsprite | ``` w1 w2 w3 w4 w5 w6 w7 lsprite``` set lower sprite w7 to tile w1 at (w3,w2) in colour w4 attribute w5 with active status w6
+usprite | ``` w1 w2 w3 w4 w5 w6 w7 usprite``` set upper sprite w7 to tile w1 at (w3,w2) in colour w4 attribute w5 with active status w6
+lspriteupdate | ```w1 w2 lspriteupdate``` update lower sprite w2 with update flag w1
+uspriteupdate | ```w1 w2 uspriteupdate``` update upper sprite w2 with update flag w1
+lspritetile! | ```w0 w1 .. w127 w128 lspritetile!``` set the tiles for lower sprite w128 to w0 .. w127
+uspritetile! | ```w0 w1 .. w127 w128 uspritetile!``` set the tiles for upper sprite w128 to w0 .. w127
  | |
 tcolour! | ```w1 w2 tcolour!``` sets the tpu character map foreground colour to w1 and the background colour to w2
 tpuxy! | ```w1 w2 tpuxy!``` sets the tpu character map coordinates to (w1,w2)
@@ -96,7 +107,7 @@ sd@ | ```w sd@``` read byte w from the sdcard buffer
 
 Double Word | Usage
 :----- | :-----
-d! | ```d w d!``` stores d at address w
+d! | ```d w d!``` stores the double word d at address w
 d@ | ```w d@``` returns the double word from address w to the stack ( d to stack )
 2constant |
 2variable | ```2variable name``` creates a double width variable name
