@@ -49,17 +49,26 @@ $$if not SIMULATION then
         us2_bd_dn <: us2_bd_dn
     );
 
+    // SDCARD AND BUFFER
+    sdcardbuffer SDCARD(
+        sd_clk :> sd_clk,
+        sd_mosi :> sd_mosi,
+        sd_csn :> sd_csn,
+        sd_miso <: sd_miso
+    );
+
     // I/O FLAGS
     UART.inread := 0;
     UART.outwrite := 0;
     PS2.inread := 0;
+    SDCARD.readsector := 0;
 $$end
+
     while(1) {
         // READ IO Memory
         if( memoryRead ) {
-            __display("  I/O READ from %x",memoryAddress);
             switch( memoryAddress ) {
-                // UART/PS2, LEDS, BUTTONS and CLOCK
+                // UART, LEDS, BUTTONS and CLOCK
 $$if not SIMULATION then
                 case 12h100: {
                     switch( { PS2.inavailable, UART.inavailable } ) {
@@ -72,6 +81,25 @@ $$if not SIMULATION then
                 case 12h120: { readData = { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] }; }
 $$end
                 case 12h130: { readData = leds; }
+$$if not SIMULATION then
+                // PS2
+                case 12h110: { readData = PS2.inavailable; }
+                case 12h112: {
+                    if( PS2.inavailable ) {
+                        readData = PS2.inchar;
+                        PS2.inread = 1;
+                    } else {
+                        readData = 0;
+                    }
+                }
+
+                // SDCARD
+                case 12h140: { readData = SDCARD.ready; }
+                case 12h150: { readData = SDCARD.bufferdata; }
+$$end
+
+                // SMT STATUS
+                case 12hffe: { readData = SMTRUNNING; }
 
                 // RETURN NULL VALUE
                 default: { readData = 0; }
@@ -80,17 +108,77 @@ $$end
 
         // WRITE IO Memory
         if( memoryWrite ) {
-            __display("  I/O WRITE to %x <- %x",memoryAddress,writeData);
             switch( memoryAddress ) {
                 // UART, LEDS
                 case 12h130: { leds = writeData; }
 $$if not SIMULATION then
                 case 12h100: { UART.outchar = writeData[0,8]; UART.outwrite = 1; }
+
+                // SDCARD
+                case 12h140: { SDCARD.readsector = 1; }
+                case 12h142: { SDCARD.sectoraddressH = writeData; }
+                case 12h143: { SDCARD.sectoraddressL = writeData; }
+                case 12h150: { SDCARD.bufferaddress = writeData; }
 $$end
                 default: {}
             }
         }
     } // while(1)
+}
+
+algorithm sdram_memmap(
+    // SDRAM ACCESS
+    sdram_user      sio,
+
+    // Memory access
+    input   uint12  memoryAddress,
+    input   uint1   memoryWrite,
+    input   uint1   memoryRead,
+
+    input   uint16  writeData,
+    output  uint16  readData
+) <autorun> {
+    uint24  sdramaddress = uninitialized;
+    uint16  sdramwritedata = uninitialized;
+    // SDRAM and BRAM (for BIOS)
+    // FUNCTION3 controls byte read/writes
+    sdramcontroller sdram(
+        sio <:> sio,
+        address <: sdramaddress,
+        writedata <: sdramwritedata,
+    );
+    sdram.writeflag := 0;
+    sdram.readflag := 0;
+
+    while(1) {
+        // READ IO Memory
+        if( memoryRead ) {
+            __display("  SDRAMMAP READ from %x",memoryAddress);
+            switch( memoryAddress ) {
+                case 12h000: { readData = sdram.readdata; }
+                case 12h002: { readData = sdram.busy; }
+                default: { readData = 0; }
+            }
+        }
+
+        // WRITE IO Memory
+        if( memoryWrite ) {
+            __display("  SDRAMMAP WRITE to %x <- %x",memoryAddress,writeData);
+            switch( memoryAddress ) {
+                case 12h000: { sdramwritedata = writeData; }
+                case 12h002: {
+                    switch( writeData ) {
+                        case 1: { sdram.readflag = 1; }
+                        case 2: { sdram.writeflag = 1; }
+                        default: {}
+                    }
+                }
+                case 12h004: { sdramaddress[16,8] = writeData; }
+                case 12h005: { sdramaddress[0,16] = writeData; }
+                default: {}
+            }
+        }
+    }
 }
 
 algorithm copro_memmap(
@@ -1001,5 +1089,90 @@ algorithm ps2buffer(
             }
         }
         ps2BufferNext = ps2BufferNext + inread;
+    }
+}
+
+// SDCARD AND BUFFER CONTROLLER
+algorithm sdcardbuffer(
+    // SDCARD
+    output  uint1   sd_clk,
+    output  uint1   sd_mosi,
+    output  uint1   sd_csn,
+    input   uint1   sd_miso,
+
+    input   uint1   readsector,
+    input   uint16  sectoraddressH,
+    input   uint16  sectoraddressL,
+    input   uint9   bufferaddress,
+    output  uint1   ready,
+    output  uint8   bufferdata
+) <autorun> {
+    // SDCARD - Code for the SDCARD from @sylefeb
+    simple_dualport_bram uint8 sdbuffer <input!> [512] = uninitialized;
+    sdcardio sdcio;
+    sdcard sd(
+        // pins
+        sd_clk      :> sd_clk,
+        sd_mosi     :> sd_mosi,
+        sd_csn      :> sd_csn,
+        sd_miso     <: sd_miso,
+        // io
+        io          <:> sdcio,
+        // bram port
+        store       <:> sdbuffer
+    );
+
+    // SDCARD Commands
+    sdcio.read_sector := readsector;
+    sdcio.addr_sector := { sectoraddressH, sectoraddressL };
+    sdbuffer.addr0 := bufferaddress;
+    ready := sdcio.ready;
+    bufferdata := sdbuffer.rdata0;
+}
+
+algorithm sdramcontroller(
+    sdram_user      sio,
+
+    input   uint24  address,
+
+    input   uint1   writeflag,
+    input   uint16  writedata,
+
+    input   uint1   readflag,
+    output  uint16  readdata,
+
+    output  uint1   busy
+) <autorun> {
+    uint3   FSM = uninitialized;
+
+    // MEMORY ACCESS FLAGS
+    sio.addr := { address, 1b0 };
+    sio.in_valid := 0;
+
+
+    // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
+    readdata := sio.data_out[0,16];
+
+    while(1) {
+        switch( { readflag, writeflag } ) {
+            case 2b10: {
+                busy = 1;
+                // READ FROM SDRAM
+                sio.rw = 0;
+                sio.in_valid = 1;
+                while( !sio.done ) {}
+                busy = 0;
+            }
+            case 2b01: {
+                busy = 1;
+                // CWRITE TO SDRAM
+                sio.data_in = writedata;
+                sio.rw = 1;
+                sio.in_valid = 1;
+                while( !sio.done ) {}
+                busy = 0;
+            }
+            default: {}
+        }
     }
 }

@@ -40,8 +40,7 @@ algorithm main(
     input   uint$NUM_BTNS$ btns,
 
 $$if ULX3S then
-    output  uint4   gpdi_dp,
-    output  uint4   gpdi_dn,
+    output!  uint4   gpdi_dp,
     // USB PS/2
     input   uint1   us2_bd_dp,
     input   uint1   us2_bd_dn,
@@ -143,7 +142,6 @@ $$if ULX3S then
         x       :> pix_x,
         y       :> pix_y,
         gpdi_dp :> gpdi_dp,
-        gpdi_dn :> gpdi_dn,
         red     <: video_r,
         green   <: video_g,
         blue    <: video_b

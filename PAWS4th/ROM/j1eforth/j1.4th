@@ -441,7 +441,7 @@ t: rot ( w1 w2 w3 -- w2 w3 w1 ) >r swap r> swap t;
 t: 2drop ( w w -- ) drop drop t;
 t: 2dup ( w1 w2 -- w1 w2 w1 w2 ) over over t;
 t: negate ( n -- -n ) negate t;
-t: dnegate ( d -- -d ) ffa0 literal d! ffac literal d@ t;
+t: dnegate ( d -- -d ) 9000 literal d! 900c literal d@ t;
 t: - ( n1 n2 -- n1-n2 ) subtract t;
 t: abs ( n -- n ) abs t;
 t: max ( n n -- n ) max t;
@@ -910,6 +910,13 @@ t: cold ( -- )
    =uzero literal =up literal =udiff literal cmove
    preset forth-wordlist dup context ! dup current 2! overt
    4000 literal cell+ dup cell- @ $eval
+   0 literal 8004 literal ! 0 literal 8002 literal ! 0 literal 8000 literal ! ( background reset )
+   0 literal 86f2 literal ! 0 literal 86f0 literal ! ( framebuffer reset )
+   40 literal 8604 literal ! 0 8606 literal ! literal 0 literal 8608 literal !  ( colour reset )
+   0 literal 0 literal 13f literal ef literal ( coordinates )
+   860c literal ! 860a literal ! 8602 literal ! 8600 literal !
+   3 literal 8612 literal ! ( cs )
+   3 literal 850a literal ! ( tcs )
    'boot @execute
    quit
    cold t;
@@ -929,13 +936,67 @@ t: timer1khz? begin e020 literal @ 0= until t;
 t: sleep e030 literal ! begin e030 literal @ 0= until t;
 t: rng e000 literal @ swap /mod drop t;
 
+( DISPLAY helper words )
+t: vblank? begin 8f00 literal @ 0<> until t;
+t: framebuffer! begin 8614 literal @ 0= until vblank? 86f2 literal ! 86f0 literal ! t;
+t: terminal! 8702 literal ! t;
+t: background! 8004 literal ! 8002 literal ! 8000 literal ! t;
+
+t: gpu? begin 8612 literal @ 0= until t;
+t: gpu! gpu? 8612 literal ! t;
+t: fullscreen! 0 literal 0 literal 13f literal ef literal t;
+t: coords2! 8602 literal ! 8600 literal ! t;
+t: coords4! 860c literal ! 860a literal ! coords2! t;
+t: coords6! 8610 literal ! 860e literal ! coords4! t;
+t: colour! 8608 literal ! 8606 literal ! 8604 literal ! t;
+t: pixel coords2! 1 literal gpu! t;
+t: line coords4! 2 literal gpu! t;
+t: rectangle coords4! 3 literal gpu! t;
+t: circle coords4! 4 literal gpu! t;
+t: fcircle coords4! 5 literal gpu! t;
+t: triangle coords6! 6 literal gpu! t;
+t: blit coords4! 7 literal gpu! t;
+t: charblit coords4! 8 literal gpu! t;
+t: colblit coords4! 9 literal gpu! t;
+t: cs 40 literal 0 literal 0 literal colour! fullscreen! rectangle t;
+
+t: tpu? begin 850a literal @ 0= until t;
+t: tpu! tpu? 850a literal ! t;
+t: tcolour! 8506 literal ! 8508 literal ! t;
+t: tpuxy! 8502 literal ! 8500 literal ! t;
+t: tpuemit 8504 literal ! 1 literal tpu! t;
+t: tpuspace bl tpuemit t;
+t: tpuspaces 0 literal max for aft tpuspace then next t;
+t: tputype for aft count tpuemit then next drop t;
+t: tpu.$ count tputype t;
+t: tpu.r >r str r> over - tpuspaces tputype t;
+t: tpuu.r >r <# #s #> r> over - tpuspaces tputype t;
+t: tpuu. <# #s #> tpuspace tputype t;
+t: tpu. base @ a literal xor if tpuu. exit then str tpuspace tputype t;
+t: tpu.# base @ swap decimal tpu. base ! t;
+t: tpuu.# base @ swap decimal <# #s #> tpuspace tputype base ! t;
+t: tpuu.r# base @ rot rot decimal >r <# #s #> r> over - tpuspaces tputype base ! t;
+t: tpu.r# base @ rot rot decimal >r str r> over - tpuspaces tputype base ! t;
+t: tcs 3 literal tpu! 0 3f tcolour! t;
+
+( sdram )
+t: ram? begin a002 literal @ 0= until t;
+t: ramaddr! a004 literal d! t;
+t: ram! ramaddr! a000 literal ! 2 literal a002 literal ! ram? t;
+t: ram@ ramaddr! 1 literal a002 literal ! ram? a000 literal @ t;
+
+( sdcard )
+t: sdready? begin f140 literal @ 0<> until t;
+t: sdreadsector sdready? f142 literal d! 1 literal f140 literal ! sdready? t;
+t: sd@ f150 literal ! f150 literal @ t;
+
 ( double maths )
 t: 2over >r >r 2dup r> r> rot >r rot r> t;
 t: 2swap rot >r rot r> t;
 t: 2nip rot drop rot drop t;
 t: 2rot 2>r 2swap 2r> 2swap t;
 t: d0= 9000 literal d! 901c literal @ t;
-t: d= 9000 literal d! 901e literal @ t;
+t: d= 9002 literal d! 9000 literal d! 901e literal @ t;
 t: d+ 9000 literal d! 9002 literal d! 9000 literal d@ t;
 t: d- 9002 literal d! 9000 literal d! 9002 literal d@ t;
 t: s>d dup 0< t;

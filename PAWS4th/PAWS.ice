@@ -189,10 +189,18 @@ $$if SIMULATION then
     uint4 audio_l(0);
     uint4 audio_r(0);
 $$end
+
+    sdram_memmap SDRAM_Map <@clock_system,!reset> (
+        sio <:> sio_halfrate,
+        memoryAddress <: address,
+        writeData <: writedata,
+    );
+
     copro_memmap COPRO_Map <@clock_system,!reset> (
         memoryAddress <: address,
         writeData <: writedata,
     );
+
     audiotimers_memmap AUDIOTIMERS_Map <@clock_system,!reset> (
         clock_25mhz <: $clock_25mhz$,
         memoryAddress <: address,
@@ -200,6 +208,7 @@ $$end
         audio_l :> audio_l,
         audio_r :> audio_r
     );
+
     video_memmap VIDEO_Map <@clock_system,!reset> (
         clock_25mhz <: $clock_25mhz$,
         memoryAddress <: address,
@@ -226,9 +235,10 @@ $$end
     // IDENTIDY ADDRESS BLOCK
     uint1   BRAM <: ~address[15,1];
     uint1   VIDEO <: address[15,1] & ( address[12,4]==4h8 );
+    uint1   COPRO <: address[15,1] & ( address[12,4]==4h9 );
+    uint1   SDRAM <: address[15,1] & ( address[12,4]==4ha );
     uint1   AUDIOTIMERS <: address[15,1] & ( address[12,4]==4he );
     uint1   IO <: address[15,1] & ( address[12,4]==4hf );
-    uint1   COPRO <: address[15,1] & ( address[12,4]==4h9 );
 
     // CPU BUSY STATE
     CPU.memorybusy := CPU.readmemory | CPU.writememory;
@@ -240,17 +250,20 @@ $$end
     // READ / WRITE FROM I/O
     VIDEO_Map.memoryWrite := VIDEO & CPU.writememory;
     VIDEO_Map.memoryRead := VIDEO & CPU.readmemory;
+    COPRO_Map.memoryWrite := COPRO & CPU.writememory;
+    COPRO_Map.memoryRead := COPRO & CPU.readmemory;
+    SDRAM_Map.memoryWrite := SDRAM & CPU.writememory;
+    SDRAM_Map.memoryRead := SDRAM & CPU.readmemory;
     AUDIOTIMERS_Map.memoryWrite := AUDIOTIMERS & CPU.writememory;
     AUDIOTIMERS_Map.memoryRead := AUDIOTIMERS & CPU.readmemory;
     IO_Map.memoryWrite := IO & CPU.writememory;
     IO_Map.memoryRead := IO & CPU.readmemory;
-    COPRO_Map.memoryWrite := COPRO & CPU.writememory;
-    COPRO_Map.memoryRead := COPRO & CPU.readmemory;
 
     CPU.readdata := BRAM ? ram.readdata :
                     VIDEO ? VIDEO_Map.readData :
-                    AUDIOTIMERS ? AUDIOTIMERS_Map.readData :
                     COPRO ? COPRO_Map.readData :
+                    SDRAM ? SDRAM_Map.readData :
+                    AUDIOTIMERS ? AUDIOTIMERS_Map.readData :
                     IO ? IO_Map.readData : 0;
 }
 
