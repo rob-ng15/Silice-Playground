@@ -5,12 +5,12 @@
 //
 // Donated to Silice by @sylefeb
 //
-// Parameters for calculations: ( 32 bit float { sign, exponent, mantissa } format )
+// Parameters for calculations: ( 16 bit float { sign, exponent, mantissa } format )
 // addsub, multiply and divide a and b ( as floating point numbers ), addsub flag == 0 for add, == 1 for sub
 //
-// Parameters for conversion:
-// intotofloat a as 32 bit integer, dounsigned == 1 dounsigned, == 0 signed conversion
-// floattouint and floattoint a as 32 bit float
+// Parameters for conversion (always signed):
+// intotofloat a as 16 bit integer
+// floattoint a as 16 bit float
 //
 // Control:
 // start == 1 to start operation
@@ -19,69 +19,63 @@
 // Output:
 // result gives result of conversion or calculation
 //
-// NB: Error states are those required by Risc-V floating point
 
 // BITFIELD FOR FLOATING POINT NUMBER - IEEE-754 32 bit format
 bitfield floatingpointnumber{
     uint1   sign,
-    uint8   exponent,
-    uint23  fraction
+    uint5   exponent,
+    uint10  fraction
 }
 
 // COMBINE COMPONENTS INTO FLOATING POINT NUMBER
-// NOTE exp from addsub multiply divide is 16 bit biased ( ie, exp + 127 )
+// NOTE exp from addsub multiply divide is 8 bit biased ( ie, exp + 15 )
 // small numbers return 0, bit numbers return max
-circuitry combinecomponents( input sign, input exp, input fraction, output f32 ) {
-    if( ( exp > 254 ) || ( exp < 0 ) ) {
-        f32 = ( exp < 0 ) ? 0 : { sign, 8b01111111, 23h7fffff };
+circuitry combinecomponents( input sign, input exp, input fraction, output f16 ) {
+    if( ( exp > 30 ) || ( exp < 0 ) ) {
+        f16 = ( exp < 0 ) ? 0 : { sign, 5b01111, 10h3ff };
     } else {
-        f32 = { sign, exp[0,8], fraction[0,23] };
+        f16 = { sign, exp[0,5], fraction[0,10] };
     }
 }
 
 // CLASSIFY EXPONENT AND FRACTION or EXPONENT
 circuitry classEF( output E, output F, input N ) {
-    E = { ( floatingpointnumber(N).exponent ) == 8hff, ( floatingpointnumber(N).exponent ) == 8h00 };
+    E = { ( floatingpointnumber(N).exponent ) == 5h1f, ( floatingpointnumber(N).exponent ) == 5h0 };
     F = ( floatingpointnumber(N).fraction ) == 0;
 }
 circuitry classE( output E, input N ) {
-    E = { ( floatingpointnumber(N).exponent ) == 8hff, ( floatingpointnumber(N).exponent ) == 8h00 };
+    E = { ( floatingpointnumber(N).exponent ) == 5h1f, ( floatingpointnumber(N).exponent ) == 5h0 };
 }
 
-// CIRCUITS TO DEAL WITH 48 BIT FRACTIONS TO 23 BIT FRACTIONS
-// REALIGN A 48BIT NUMBER SO MSB IS 1
-circuitry normalise48( inout bitstream ) {
-    while( ~bitstream[47,1] ) {
-        bitstream = { bitstream[0,47], 1b0 };
+// REALIGN A 22BIT NUMBER SO MSB IS 1
+circuitry normalise22( inout bitstream ) {
+    while( ~bitstream[21,1] ) {
+        bitstream = { bitstream[0,21], 1b0 };
     }
 }
-// EXTRACT 23 BIT FRACTION FROM LEFT ALIGNED 48 BIT FRACTION WITH ROUNDING
-circuitry round48( input bitstream, output roundfraction ) {
-    roundfraction = bitstream[24,23] + bitstream[23,1];
+// EXTRACT 10 BIT FRACTION FROM LEFT ALIGNED 22 BIT FRACTION WITH ROUNDING
+circuitry round22( input bitstream, output roundfraction ) {
+    roundfraction = bitstream[12,10] + bitstream[11,1];
 }
 
 // ADJUST EXPONENT IF ROUNDING FORCES, using newfraction and truncated bit from oldfraction
-circuitry adjustexp48( inout exponent, input nf, input of ) {
-    exponent = 127 + exponent + ( ( nf == 0 ) & of[23,1] );
+circuitry adjustexp22( inout exponent, input nf, input of ) {
+    exponent = 15 + exponent + ( ( nf == 0 ) & of[11,1] );
 }
 
-// CONVERT SIGNED/UNSIGNED INTEGERS TO FLOAT
-// dounsigned == 1 for signed conversion (31 bit plus sign), == 0 for dounsigned conversion (32 bit)
+// CONVERT SIGNED INTEGERS TO FLOAT
 algorithm inttofloat(
     input   uint1   start,
     output  uint1   busy,
-
-    input   uint32  a,
-    input   uint1   dounsigned,
-
-    output  uint32  result
+    input   int16   a,
+    output  uint16  result
 ) <autorun> {
     uint2   FSM = uninitialised;
     uint2   FSM2 = uninitialised;
     uint1   sign = uninitialised;
-    int16   exp = uninitialised;
+    int8    exp = uninitialised;
     uint8   zeros = uninitialised;
-    uint32  number = uninitialised;
+    uint16  number = uninitialised;
 
     busy = 0;
 
@@ -93,8 +87,8 @@ algorithm inttofloat(
                 onehot( FSM ) {
                     case 0: {
                         // SIGNED / UNSIGNED
-                        sign = dounsigned ? 0 : a[31,1];
-                        number = dounsigned ? a : ( a[31,1] ? -a : a );
+                        sign = a[15,1];
+                        number = a[15,1] ? -a : a ;
                     }
                     case 1: {
                         if( number == 0 ) {
@@ -103,10 +97,10 @@ algorithm inttofloat(
                             FSM2 = 1;
                             while( FSM2 !=0 ) {
                                 onehot( FSM2 ) {
-                                    case 0: { zeros = 0; while( ~number[31-zeros,1] ) { zeros = zeros + 1; } }
+                                    case 0: { zeros = 0; while( ~number[ 15-zeros, 1 ] ) { zeros = zeros + 1; } }
                                     case 1: {
-                                        number = ( zeros < 8 ) ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
-                                        exp = 158 - zeros;
+                                        number = ( zeros < 5 ) ? number >> ( 5 - zeros ) : ( zeros > 5 ) ? number << ( zeros - 5 ) : number;
+                                        exp = 30 - zeros;
                                         ( result ) = combinecomponents( sign, exp, number );
                                     }
                                 }
@@ -122,49 +116,16 @@ algorithm inttofloat(
     }
 }
 
-// CONVERT FLOAT TO UNSIGNED/SIGNED INTEGERS
-algorithm floattouint(
-    input   uint32  a,
-    output  uint32  result,
-    output  uint1   busy,
-    input   uint1   start
-) <autorun> {
-    uint2   classEa = uninitialised;
-    int16    exp = uninitialised;
-    uint33  sig = uninitialised;
-
-    busy = 0;
-
-    while(1) {
-        if( start ) {
-            busy = 1;
-            ( classEa ) = classE( a );
-            switch( classEa ) {
-                case 2b00: {
-                    if( a[31,1] ) {
-                        result = 0;
-                    } else {
-                        exp = floatingpointnumber( a ).exponent - 127;
-                        sig = ( exp < 24 ) ? { 9b1, a[0,23], 1b0 } >> ( 23 - exp ) : { 9b1, a[0,23], 1b0 } << ( exp - 24);
-                        result = ( exp > 31 ) ? 32hffffffff : ( sig[1,32] + sig[0,1] );
-                    }
-                }
-                case 2b01: { result = 0; }
-                default: { result = a[31,1] ? 0 : 32hffffffff;  }
-            }
-            busy = 0;
-        }
-    }
-}
+// CONVERT FLOAT TO SIGNED INTEGERS
 algorithm floattoint(
-    input   uint32  a,
-    output  uint32  result,
+    input   uint16  a,
+    output  int32   result,
     output  uint1   busy,
     input   uint1   start
 ) <autorun> {
     uint2   classEa = uninitialised;
-    int16   exp = uninitialised;
-    uint33  sig = uninitialised;
+    int8    exp = uninitialised;
+    int17   sig = uninitialised;
 
     busy = 0;
 
@@ -174,12 +135,12 @@ algorithm floattoint(
             ( classEa ) = classE( a );
             switch( classEa ) {
                 case 2b00: {
-                    exp = floatingpointnumber( a ).exponent - 127;
-                    sig = ( exp < 24 ) ? { 9b1, a[0,23], 1b0 } >> ( 23 - exp ) : { 9b1, a[0,23], 1b0 } << ( exp - 24);
-                    result = ( exp > 30 ) ? ( a[31,1] ? 32hffffffff : 32h7fffffff ) : a[31,1] ? -( sig[1,32] + sig[0,1] ) : ( sig[1,32] + sig[0,1] );
+                    exp = floatingpointnumber( a ).exponent - 15;
+                    sig = ( exp < 11 ) ? { 5b1, a[0,10], 1b0 } >> ( 10 - exp ) : { 5b1, a[0,10], 1b0 } << ( exp - 11 );
+                    result = ( exp > 15 ) ? ( a[15,1] ? 16hffff : 16h7fff ) : a[15,1] ? -( sig[1,16] + sig[0,1] ) : ( sig[1,16] + sig[0,1] );
                 }
                 case 2b01: { result = 0; }
-                default: { result = a[31,1] ? 32hffffffff : 32h7fffffff; }
+                default: { result = a[15,1] ? 16hffff : 16h7fff; }
             }
             busy = 0;
         }
@@ -188,7 +149,6 @@ algorithm floattoint(
 
 // ADDSUB
 // ADD/SUBTRACT ( addsub == 0 add, == 1 subtract) TWO FLOATING POINT NUMBERS
-
 algorithm floataddsub(
     input   uint1   start,
     output  uint1   busy,

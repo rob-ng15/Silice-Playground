@@ -174,79 +174,171 @@ algorithm multi16by16to32DSP(
 }
 
 // Basic double arithmetic for j1eforth
-// 2 input operations
-algorithm doubleaddsub2input(
+// Basic double arithmetic for j1eforth
+algorithm doubleops(
     input   uint16  operand1h,
     input   uint16  operand1l,
     input   uint16  operand2h,
     input   uint16  operand2l,
 
-    output  uint32  total,
-    output  uint32  difference,
-
-    output  uint32  binaryxor,
-    output  uint32  binaryor,
-    output  uint32  binaryand,
-
-    output  uint32  maximum,
-    output  uint32  minimum,
-
-    output  uint16  equal,
-    output  uint16  lessthan
+    output  int32   total,
+    output  int32   difference,
+    output  int32   binaryxor,
+    output  int32   binaryor,
+    output  int32   binaryand,
+    output  int32   maximum,
+    output  int32   minimum,
+    output  int16   equal,
+    output  int16   lessthan,
+    output  int32   increment,
+    output  int32   decrement,
+    output  int32   times2,
+    output  int32   divide2,
+    output  int32   negation,
+    output  int32   binaryinvert,
+    output  int32   absolute,
+    output  int16   zeroequal,
+    output  int16   zeroless
 ) <autorun> {
     int32  operand1 := { operand1h, operand1l };
     int32  operand2 := { operand2h, operand2l };
 
+    dadd DADD( operand1 <: operand1, operand2 <: operand2, total :> total );
+    dsub DSUB( operand1 <: operand1, operand2 <: operand2, difference :> difference );
+    dxor DXOR( operand1 <: operand1, operand2 <: operand2, binaryxor :> binaryxor );
+    dor DOR( operand1 <: operand1, operand2 <: operand2, binaryor :> binaryor );
+    dand DAND( operand1 <: operand1, operand2 <: operand2, binaryand :> binaryand );
+    dmax DMAX( operand1 <: operand1, operand2 <: operand2, maximum :> maximum );
+    dmin DMIN( operand1 <: operand1, operand2 <: operand2, minimum :> minimum );
+    dequal DEQUAL( operand1 <: operand1, operand2 <: operand2, equal :> equal );
+    dless DLESS( operand1 <: operand1, operand2 <: operand2, lessthan :> lessthan );
+
+    dinc DINC( operand1 <: operand1, increment :> increment );
+    ddec DDEC( operand1 <: operand1, decrement :> decrement );
+    ddouble DDOUBLE( operand1 <: operand1, times2 :> times2 );
+    dhalf DHALF( operand1 <: operand1, divide2 :> divide2 );
+    dneg DNEG( operand1 <: operand1, negation :> negation );
+    dinv DINV( operand1 <: operand1, binaryinvert :> binaryinvert );
+    dabs DABS( operand1 <: operand1, absolute :> absolute );
+    d0e D0E( operand1 <: operand1, zeroequal :> zeroequal );
+    d0l D0L( operand1 <: operand1, zeroless :> zeroless );
+}
+
+algorithm dadd(
+    input   int32   operand1,
+    input   int32   operand2,
+    output  int32   total
+) <autorun> {
     total := operand1 + operand2;
+}
+algorithm dsub(
+    input   int32   operand1,
+    input   int32   operand2,
+    output  int32   difference
+) <autorun> {
     difference := operand1 - operand2;
-
-
+}
+algorithm dxor(
+    input   int32   operand1,
+    input   int32   operand2,
+    output  int32   binaryxor
+) <autorun> {
     binaryxor := operand1 ^ operand2;
+}
+algorithm dor(
+    input   int32   operand1,
+    input   int32   operand2,
+    output  int32   binaryor
+) <autorun> {
     binaryor := operand1 | operand2;
+}
+algorithm dand(
+    input   int32   operand1,
+    input   int32   operand2,
+    output  int32   binaryand
+) <autorun> {
     binaryand := operand1 & operand2;
-
+}
+algorithm dmax(
+    input   int32   operand1,
+    input   int32   operand2,
+    output  int32   maximum
+) <autorun> {
     maximum := ( operand1 > operand2 ) ? operand1 : operand2;
+}
+algorithm dmin(
+    input   int32   operand1,
+    input   int32   operand2,
+    output  int32   minimum
+) <autorun> {
     minimum := ( operand1 < operand2 ) ? operand1 : operand2;
-
+}
+algorithm dequal(
+    input   int32   operand1,
+    input   int32   operand2,
+    output  int16   equal
+) <autorun> {
     equal := {16{(operand1 == operand2)}};
+}
+algorithm dless(
+    input   int32   operand1,
+    input   int32   operand2,
+    output  int16   lessthan
+) <autorun> {
     lessthan := {16{(operand1 < operand2)}};
 }
-
-// 1 input operations
-
-algorithm doubleaddsub1input(
-    input   uint16  operand1h,
-    input   uint16  operand1l,
-
-    output  uint32  increment,
-    output  uint32  decrement,
-
-    output  uint32  times2,
-    output  uint32  divide2,
-
-    output  uint32  negation,
-
-    output  uint32  binaryinvert,
-
-    output  uint32  absolute,
-
-    output  uint16  zeroequal,
-    output  uint16  zeroless
+algorithm dinc(
+    input   int32   operand1,
+    output  int32   increment
 ) <autorun> {
-    int32  operand1 := { operand1h, operand1l };
-
     increment := operand1 + 1;
+}
+algorithm ddec(
+    input   int32   operand1,
+    output  int32   decrement
+) <autorun> {
     decrement := operand1 - 1;
-
-    times2 := operand1 << 1;
-    divide2 := operand1 >>> 1;
-
+}
+algorithm ddouble(
+    input   int32   operand1,
+    output  int32   times2
+) <autorun> {
+    times2 := { operand1[0,31], 1b0 };
+}
+algorithm dhalf(
+    input   int32   operand1,
+    output  int32   divide2
+) <autorun> {
+    divide2 := { operand1[31,1], operand1[1,31] };
+}
+algorithm dneg(
+    input   int32   operand1,
+    output  int32   negation
+) <autorun> {
     negation := -operand1;
-
+}
+algorithm dinv(
+    input   int32   operand1,
+    output  int32   binaryinvert
+) <autorun> {
     binaryinvert := ~operand1;
-
+}
+algorithm dabs(
+    input   int32   operand1,
+    output  int32   absolute
+) <autorun> {
     absolute := ( operand1[31,1] ) ? -operand1 : operand1;
-
+}
+algorithm d0e(
+    input   int32   operand1,
+    output  int16   zeroequal
+) <autorun> {
     zeroequal := {16{(operand1 == 0)}};
+}
+algorithm d0l(
+    input   int32   operand1,
+    output  int16   zeroless
+) <autorun> {
     zeroless := {16{operand1[31,1]}};
 }
+

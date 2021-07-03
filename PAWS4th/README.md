@@ -4,7 +4,7 @@ j1eforth ( developed from https://github.com/samawati/j1eforth ) with the J1+ CP
 
 * All features from the PAWS SoC, with the Risc-V CPU swapped for the J1+ CPU
     * J1+ CPU
-        * 32k ( 16k x 16bit ) BRAM (contains j1eforth environment)
+        * 48k ( 24k x 16bit ) BRAM (contains j1eforth environment)
         * 32M ( 16M x 16bit ) SDRAM accessed via ```w d ram!``` and ```d ram@```
         * Hardware accelerated multiplication and division ( used by j1eforth base words )
         * Hardware accelerated double word arithmetic and comparisons ( accessed via additional j1eforth words listed below )

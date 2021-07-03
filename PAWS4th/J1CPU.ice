@@ -42,17 +42,17 @@ circuitry fetch( input location, input memorybusy, input readdata, output addres
     memoryinput = readdata;
 }
 circuitry load( input location, input memorybusy, input readdata, output address, output readmemory, output memoryinput ) {
-    address = location[15,1] ? location : { 1b0, location[1,15] };
+    address = ( location[12,4] > 4hb ) ? location : { 1b0, location[1,15] };
     readmemory = 1;
     while( memorybusy ) {}
     memoryinput = readdata;
 }
 // CPU STORE TO MEMORY
 circuitry store( input location, input value, input memorybusy, output address, output writedata, output writememory ) {
-    address = location[15,1] ? location : { 1b0, location[1,15] };
+    address = ( location[12,4] > 4hb ) ? location : { 1b0, location[1,15] };
     writedata = value;
     writememory = 1;
-    while( memorybusy ) {}
+    //while( memorybusy ) {}
 }
 
 algorithm J1CPU(
@@ -65,7 +65,7 @@ algorithm J1CPU(
     input   uint1   memorybusy
 ) <autorun> {
     // J1+ CPU
-    uint5   FSM = 1;
+    uint7   FSM = 7b0000001;
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
     uint16  instruction = uninitialized;
     uint16  immediate = uninitialized;
@@ -155,52 +155,54 @@ algorithm J1CPU(
                 // START FETCH INSTRUCTION
                 ( address, readmemory, instruction ) = fetch( pc, memorybusy, readdata );
                 pcPlusOne = pc + 1;
+                FSM = 7b0000010;
             }
             case 1: {
-                // LOAD FROM MEMORY
-                if( ~aluop(instruction).is_j1j1plus && ( callbranch(instruction).is_callbranchalu == 2b11 ) && ( aluop(instruction).operation == 4b1100 ) ) {
-                    ( address, readmemory, memoryRead ) = load( stackTop, memorybusy, readdata );
+                switch( ~aluop(instruction).is_j1j1plus && ( callbranch(instruction).is_callbranchalu == 2b11 ) && ( aluop(instruction).operation == 4b1100 ) ) {
+                    case 1: {
+                        // LOAD FROM MEMORY
+                        ( address, readmemory, memoryRead ) = load( stackTop, memorybusy, readdata );
+                        FSM = 7b0010000;
+                    }
+                    case 0: { FSM = instruction[15,1] ? 7b0000100 : ( instruction[13,2] == 2b11 ) ? 7b0010000 : 7b0001000; }
                 }
             }
             case 2: {
-                switch( is_lit ) {
-                    case 1: {
-                        newStackTop = immediate;
-                        newPC = pcPlusOne;
-                        newDSP = dsp + 1;
-                        newRSP = rsp;
-                    }
-                    case 0: {
-                        switch( callbranch(instruction).is_callbranchalu ) { // BRANCH 0BRANCH CALL ALU
-                            case 2b11: {
-                                newStackTop = ALU.newStackTop;
-
-                                // UPDATE newDSP newRSP
-                                newDSP = dsp + ddelta;
-                                newRSP = rsp + rdelta;
-                                rstackWData = stackTop;
-
-                                // Update PC for next instruction, return from call or next instruction
-                                newPC = ( aluop(instruction).is_r2pc ) ? {1b0,rStackTop[1,15]} : pcPlusOne;
-
-                                // n2memt mem[t] = n
-                                if( is_n2memt ) {
-                                    ( address, writedata, writememory ) = store( stackTop, stackNext, memorybusy );
-                                }
-                            } // ALU
-
-                            default: {
-                                newStackTop = CALLBRANCH.newStackTop;
-                                newPC = CALLBRANCH.newPC;
-                                newDSP = CALLBRANCH.newDSP;
-                                newRSP = CALLBRANCH.newRSP;
-                                rstackWData = pcPlusOne << 1;
-                            }
-                        }
-                    }
-                }
+                // LITERAL
+                newStackTop = immediate;
+                newPC = pcPlusOne;
+                newDSP = dsp + 1;
+                newRSP = rsp;
+                FSM = 7b0100000;
             }
             case 3: {
+                // CALL BRANCH 0BRANCH
+                newStackTop = CALLBRANCH.newStackTop;
+                newPC = CALLBRANCH.newPC;
+                newDSP = CALLBRANCH.newDSP;
+                newRSP = CALLBRANCH.newRSP;
+                rstackWData = pcPlusOne << 1;
+                FSM = 7b0100000;
+            }
+            case 4: {
+                // ALU
+                newStackTop = ALU.newStackTop;
+
+                // UPDATE newDSP newRSP
+                newDSP = dsp + ddelta;
+                newRSP = rsp + rdelta;
+                rstackWData = stackTop;
+
+                // Update PC for next instruction, return from call or next instruction
+                newPC = ( aluop(instruction).is_r2pc ) ? {1b0,rStackTop[1,15]} : pcPlusOne;
+
+                // n2memt mem[t] = n
+                if( is_n2memt ) {
+                    ( address, writedata, writememory ) = store( stackTop, stackNext, memorybusy );
+                }
+                FSM = 7b0100000;
+            }
+            case 5: {
                 // Commit to dstack and rstack
                 switch( dstackWrite ) {
                     case 1: { dstack.addr1 = newDSP; dstack.wdata1 = stackTop; }
@@ -210,16 +212,17 @@ algorithm J1CPU(
                     case 1: { rstack.addr1 = newRSP; rstack.wdata1 = rstackWData; }
                     case 0: {}
                 }
+                FSM = 7b1000000;
             }
-            case 4: {
+            case 6: {
                 // Update dsp, rsp, pc, stackTop
                 dsp = newDSP;
                 pc = newPC;
                 stackTop = newStackTop;
                 rsp = newRSP;
+                FSM = 7b0000001;
             }
         }
-        FSM = { FSM[0,4], FSM[4,1] };
     }
 }
 

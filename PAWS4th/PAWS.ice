@@ -166,6 +166,7 @@ $$end
 
     // MEMORY MAPPED I/O + SMT CONTROLS
     io_memmap IO_Map <@clock_system,!reset> (
+        sio <:> sio_halfrate,
         leds :> leds,
 $$if not SIMULATION then
         gn <: gn,
@@ -189,12 +190,6 @@ $$if SIMULATION then
     uint4 audio_l(0);
     uint4 audio_r(0);
 $$end
-
-    sdram_memmap SDRAM_Map <@clock_system,!reset> (
-        sio <:> sio_halfrate,
-        memoryAddress <: address,
-        writeData <: writedata,
-    );
 
     copro_memmap COPRO_Map <@clock_system,!reset> (
         memoryAddress <: address,
@@ -233,12 +228,11 @@ $$end
     );
 
     // IDENTIDY ADDRESS BLOCK
-    uint1   BRAM <: ~address[15,1];
-    uint1   VIDEO <: address[15,1] & ( address[12,4]==4h8 );
-    uint1   COPRO <: address[15,1] & ( address[12,4]==4h9 );
-    uint1   SDRAM <: address[15,1] & ( address[12,4]==4ha );
-    uint1   AUDIOTIMERS <: address[15,1] & ( address[12,4]==4he );
-    uint1   IO <: address[15,1] & ( address[12,4]==4hf );
+    uint1   BRAM <: address[12,4] < 4hc;
+    uint1   VIDEO <: address[12,4] == 4hc;
+    uint1   COPRO <: address[12,4] == 4hd;
+    uint1   AUDIOTIMERS <: address[12,4] == 4he;
+    uint1   IO <: address[12,4] == 4hf ;
 
     // CPU BUSY STATE
     CPU.memorybusy := CPU.readmemory | CPU.writememory;
@@ -252,8 +246,6 @@ $$end
     VIDEO_Map.memoryRead := VIDEO & CPU.readmemory;
     COPRO_Map.memoryWrite := COPRO & CPU.writememory;
     COPRO_Map.memoryRead := COPRO & CPU.readmemory;
-    SDRAM_Map.memoryWrite := SDRAM & CPU.writememory;
-    SDRAM_Map.memoryRead := SDRAM & CPU.readmemory;
     AUDIOTIMERS_Map.memoryWrite := AUDIOTIMERS & CPU.writememory;
     AUDIOTIMERS_Map.memoryRead := AUDIOTIMERS & CPU.readmemory;
     IO_Map.memoryWrite := IO & CPU.writememory;
@@ -262,7 +254,6 @@ $$end
     CPU.readdata := BRAM ? ram.readdata :
                     VIDEO ? VIDEO_Map.readData :
                     COPRO ? COPRO_Map.readData :
-                    SDRAM ? SDRAM_Map.readData :
                     AUDIOTIMERS ? AUDIOTIMERS_Map.readData :
                     IO ? IO_Map.readData : 0;
 }
@@ -280,7 +271,7 @@ algorithm bramcontroller(
     output  uint16  readdata
 ) <autorun> {
     // RISC-V RAM and BIOS
-    bram uint16 ram <input!> [16384] = {
+    bram uint16 ram <input!> [24576] = {
         $include('ROM/j1eforthROM.inc')
         , pad(uninitialized)
     };

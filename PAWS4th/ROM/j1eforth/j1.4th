@@ -124,7 +124,7 @@ variable tuser
 000a constant =lf
 000d constant =cr
 
-8000 constant =em
+c000 constant =em
 0000 constant =cold
 
  8 constant =vocs
@@ -441,22 +441,22 @@ t: rot ( w1 w2 w3 -- w2 w3 w1 ) >r swap r> swap t;
 t: 2drop ( w w -- ) drop drop t;
 t: 2dup ( w1 w2 -- w1 w2 w1 w2 ) over over t;
 t: negate ( n -- -n ) negate t;
-t: dnegate ( d -- -d ) 9000 literal d! 900c literal d@ t;
+t: dnegate ( d -- -d ) d000 literal d! d00c literal d@ t;
 t: - ( n1 n2 -- n1-n2 ) subtract t;
 t: abs ( n -- n ) abs t;
 t: max ( n n -- n ) max t;
 t: min ( n n -- n ) min t;
 t: within ( u ul uh -- t ) over - >r - r> u< t;
-t: m/! 9022 literal ! 9020 literal d! t;
-t: m/? 9023 literal ! begin 9023 literal @ 0= until 9021 literal @ 9020 literal @ t;
+t: m/! d022 literal ! d020 literal d! t;
+t: m/? d023 literal ! begin d023 literal @ 0= until d021 literal @ d020 literal @ t;
 t: um/mod ( udl udh u -- ur uq ) m/! 1 literal m/? t;
 t: m/mod ( d n -- r q ) m/! 2 literal m/? t;
-t: /! 9025 literal ! 9024 literal ! 1 literal 9026 literal ! t;
-t: /mod ( n n -- r q ) /! begin 9026 literal @ 0= until 9025 literal @ 9024 literal @ t;
+t: /! d025 literal ! d024 literal ! 1 literal d026 literal ! t;
+t: /mod ( n n -- r q ) /! begin d026 literal @ 0= until d025 literal @ d024 literal @ t;
 t: mod ( n n -- r ) /mod drop t;
 t: / ( n n -- q ) /mod nip t;
-t: m*! 9027 literal ! 9028 literal ! t;
-t: m*?  9029 literal ! 9027 literal d@ t;
+t: m*! d027 literal ! d028 literal ! t;
+t: m*?  d029 literal ! d027 literal d@ t;
 t: um* ( u u -- ud ) m*! 1 literal m*? t;
 t: m* ( n n -- d ) m*! 2 literal m*? t;
 t: * ( n n -- n ) * t;
@@ -522,9 +522,9 @@ t: tx! ( c -- )
    until dup
    f100 literal !
    begin
-     8700 literal @ 0=
+     c700 literal @ 0=
    until
-   8700 literal ! t;
+   c700 literal ! t;
 t: ?key ( -- c ) '?key @execute t;
 t: emit ( c -- ) 'emit @execute t;
 t: key ( -- c )
@@ -910,16 +910,16 @@ t: cold ( -- )
    =uzero literal =up literal =udiff literal cmove
    preset forth-wordlist dup context ! dup current 2! overt
    4000 literal cell+ dup cell- @ $eval
-   0 literal 8004 literal ! 0 literal 8002 literal ! 0 literal 8000 literal ! ( background reset )
-   0 literal 8f00 literal ! ( display order reset )
-   0 literal 86f2 literal ! 0 literal 86f0 literal ! ( framebuffer reset )
-   40 literal 8604 literal ! 0 8606 literal ! literal 0 literal 8608 literal !  ( colour reset )
+   0 literal c004 literal ! 0 literal c002 literal ! 0 literal c000 literal ! ( background reset )
+   0 literal cf00 literal ! ( display order reset )
+   0 literal c6f2 literal ! 0 literal c6f0 literal ! ( framebuffer reset )
+   40 literal c604 literal ! 0 c606 literal ! literal 0 literal c608 literal !  ( colour reset )
    0 literal 0 literal 13f literal ef literal ( cs )
-   860c literal ! 860a literal ! 8602 literal ! 8600 literal !
-   3 literal 8612 literal !
-   9 literal 8120 literal ! ( tmlcs )
-   9 literal 8130 literal ! ( tmucs )
-   3 literal 850a literal ! ( tcs )
+   c60c literal ! c60a literal ! c602 literal ! c600 literal !
+   3 literal c612 literal !
+   9 literal c120 literal ! ( tmlcs )
+   9 literal c130 literal ! ( tmucs )
+   3 literal c50a literal ! ( tcs )
    'boot @execute
    quit
    cold t;
@@ -938,20 +938,21 @@ t: timer1khz@ e020 literal @ t;
 t: timer1khz? begin e020 literal @ 0= until t;
 t: sleep e030 literal ! begin e030 literal @ 0= until t;
 t: rng e000 literal @ swap /mod drop t;
+t: qrng e000 literal @ swap and t;
 
 ( DISPLAY helper words )
-t: vblank? begin 8f00 literal @ 0<> until t;
-t: framebuffer! begin 8614 literal @ 0= until vblank? 86f2 literal ! 86f0 literal ! t;
-t: terminal! 8702 literal ! t;
-t: background! 8004 literal ! 8002 literal ! 8000 literal ! t;
+t: vblank? begin cf00 literal @ 0<> until t;
+t: framebuffer! begin c614 literal @ 0= until vblank? c6f2 literal ! c6f0 literal ! t;
+t: terminal! c702 literal ! t;
+t: background! c8004 literal ! c002 literal ! c000 literal ! t;
 
-t: gpu? begin 8612 literal @ 0= until t;
-t: gpu! gpu? 8612 literal ! t;
+t: gpu? begin c612 literal @ 0= until t;
+t: gpu! gpu? c612 literal ! t;
 t: fullscreen! 0 literal 0 literal 13f literal ef literal t;
-t: coords2! 8602 literal ! 8600 literal ! t;
-t: coords4! 860c literal ! 860a literal ! coords2! t;
-t: coords6! 8610 literal ! 860e literal ! coords4! t;
-t: colour! 8608 literal ! 8606 literal ! 8604 literal ! t;
+t: coords2! c602 literal ! c600 literal ! t;
+t: coords4! c60c literal ! c60a literal ! coords2! t;
+t: coords6! c610 literal ! c60e literal ! coords4! t;
+t: colour! c608 literal ! c606 literal ! c604 literal ! t;
 t: pixel coords2! 1 literal gpu! t;
 t: line coords4! 2 literal gpu! t;
 t: rectangle coords4! 3 literal gpu! t;
@@ -959,19 +960,19 @@ t: circle coords4! 4 literal gpu! t;
 t: fcircle coords4! 5 literal gpu! t;
 t: triangle coords6! 6 literal gpu! t;
 t: blit coords4! 7 literal gpu! t;
-t: blittile! 8640 literal ! 10 literal begin 1- dup 8642 literal ! swap 8644 literal ! dup 0= until drop t;
+t: blittile! c640 literal ! 10 literal begin 1- dup c642 literal ! swap c644 literal ! dup 0= until drop t;
 t: charblit coords4! 8 literal gpu! t;
 t: colblit coords4! 9 literal gpu! t;
 t: cs 40 literal 0 literal 0 literal colour! fullscreen! rectangle t;
 
-t: tmlcs 9 literal 8120 literal ! t;
-t: tmucs 9 literal 8220 literal ! t;
+t: tmlcs 9 literal c120 literal ! t;
+t: tmucs 9 literal c220 literal ! t;
 
-t: tpu? begin 850a literal @ 0= until t;
-t: tpu! tpu? 850a literal ! t;
-t: tcolour! 8506 literal ! 8508 literal ! t;
-t: tpuxy! 8502 literal ! 8500 literal ! 1 literal tpu! t;
-t: tpuemit 8504 literal ! 2 literal tpu! t;
+t: tpu? begin c50a literal @ 0= until t;
+t: tpu! tpu? c50a literal ! t;
+t: tcolour! c506 literal ! c508 literal ! t;
+t: tpuxy! c502 literal ! c500 literal ! 1 literal tpu! t;
+t: tpuemit c504 literal ! 2 literal tpu! t;
 t: tpuspace bl tpuemit t;
 t: tpuspaces 0 literal max for aft tpuspace then next t;
 t: tputype for aft count tpuemit then next drop t;
@@ -994,18 +995,18 @@ t: sprite!
    _pointer @ ! 20 literal _pointer @ + _pointer !
    _pointer @ ! 20 literal _pointer @ + _pointer !
    _pointer @ ! 20 literal _pointer @ + _pointer ! t;
-t: lsprite 2* 8300 literal + _pointer ! sprite! t;
-t: usprite 2* 8400 literal + _pointer ! sprite! t;
-t: lspritetile! 8800 literal ! 80 literal begin 1- dup 8802 literal ! swap 8804 literal ! dup 0= until drop t;
-t: uspritetile! 8810 literal ! 80 literal begin 1- dup 8812 literal ! swap 8814 literal ! dup 0= until drop t;
-t: lspriteupdate 2* 83c0 literal + ! t;
-t: uspriteupdate 2* 84c0 literal + ! t;
+t: lsprite 2* c300 literal + _pointer ! sprite! t;
+t: usprite 2* c400 literal + _pointer ! sprite! t;
+t: lspritetile! c800 literal ! 80 literal begin 1- dup c802 literal ! swap c804 literal ! dup 0= until drop t;
+t: uspritetile! c810 literal ! 80 literal begin 1- dup c812 literal ! swap c814 literal ! dup 0= until drop t;
+t: lspriteupdate 2* c3c0 literal + ! t;
+t: uspriteupdate 2* c4c0 literal + ! t;
 
 ( sdram )
-t: ram? begin a002 literal @ 0= until t;
-t: ramaddr! ram? a004 literal d! t;
-t: ram! ramaddr! a000 literal ! 2 literal a002 literal ! t;
-t: ram@ ramaddr! 1 literal a002 literal ! ram? a000 literal @ t;
+t: ram? begin ff02 literal @ 0= until t;
+t: ramaddr! ram? ff04 literal d! t;
+t: ram! ramaddr! ff00 literal ! 2 literal ff02 literal ! t;
+t: ram@ ramaddr! 1 literal ff02 literal ! ram? ff00 literal @ t;
 
 ( sdcard )
 t: sdready? begin f140 literal @ 0<> until t;
@@ -1017,22 +1018,24 @@ t: 2over >r >r 2dup r> r> rot >r rot r> t;
 t: 2swap rot >r rot r> t;
 t: 2nip rot drop rot drop t;
 t: 2rot 2>r 2swap 2r> 2swap t;
-t: d0= 9000 literal d! 901c literal @ t;
-t: d= 9002 literal d! 9000 literal d! 901e literal @ t;
-t: d+ 9000 literal d! 9002 literal d! 9000 literal d@ t;
-t: d- 9002 literal d! 9000 literal d! 9002 literal d@ t;
+t: d1! d000 literal d! t;
+t: d2! d002 literal d! d1! t;
+t: d0= d1! d01c literal @ t;
+t: d= d2! d01e literal @ t;
+t: d+ d2! d000 literal d@ t;
+t: d- d2! d002 literal d@ t;
 t: s>d dup 0< t;
-t: d1+ 9000 literal d! 9004 literal d@ t;
-t: d1- 9000 literal d! 9006 literal d@ t;
-t: dxor 9002 literal d! 9000 literal d! 9010 literal d@ t;
-t: dand 9002 literal d! 9000 literal d! 9012 literal d@ t;
-t: dor 9002 literal d! 9000 literal d! 9014 literal d@  t;
-t: dinvert 9000 literal d! 900e literal d@ t;
-t: d2* 9000 literal d! 9008 literal d@ t;
-t: d2/ 9000 literal d! 900a literal d@ t;
-t: dabs 9000 literal d! 9016 literal d@ t;
-t: dmax 9002 literal d! 9000 literal d! 9018 literal d@ t;
-t: dmin 9002 literal d! 9000 literal d! 901a literal d@ t;
+t: d1+ d1! d004 literal d@ t;
+t: d1- d1! d006 literal d@ t;
+t: dxor d2! d010 literal d@ t;
+t: dand d2! d012 literal d@ t;
+t: dor d2! d014 literal d@  t;
+t: dinvert d1! d00e literal d@ t;
+t: d2* d1! d008 literal d@ t;
+t: d2/ d1! d00a literal d@ t;
+t: dabs d1! d016 literal d@ t;
+t: dmax d2! d018 literal d@ t;
+t: dmin d2! d01a literal d@ t;
 
 target.1 -order set-current
 

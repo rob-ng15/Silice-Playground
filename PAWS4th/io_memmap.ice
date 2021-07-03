@@ -27,6 +27,9 @@ $$end
     // CLOCKS
     input   uint1   clock_25mhz,
 
+    // SDRAM ACCESS
+    sdram_user      sio,
+
     // Memory access
     input   uint12  memoryAddress,
     input   uint1   memoryWrite,
@@ -35,6 +38,16 @@ $$end
     input   uint16  writeData,
     output  uint16  readData
 ) <autorun> {
+    uint24  sdramaddress = uninitialized;
+    uint16  sdramwritedata = uninitialized;
+    // SDRAM and BRAM (for BIOS)
+    // FUNCTION3 controls byte read/writes
+    sdramcontroller sdram(
+        sio <:> sio,
+        address <: sdramaddress,
+        writedata <: sdramwritedata,
+    );
+
 $$if not SIMULATION then
     // UART CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
     uart UART(
@@ -64,6 +77,9 @@ $$if not SIMULATION then
     SDCARD.readsector := 0;
 $$end
 
+    sdram.writeflag := 0;
+    sdram.readflag := 0;
+
     while(1) {
         // READ IO Memory
         if( memoryRead ) {
@@ -77,7 +93,7 @@ $$if not SIMULATION then
                         default: { readData = { 8b0, PS2.inchar }; PS2.inread = 1; }
                     }
                 }
-                case 12h102: { readData = { 14b0, UART.outfull, ( UART.inavailable || PS2.inavailable ) ? 1b1: 1b0 }; }
+                case 12h102: { readData = { 14b0, UART.outfull ? 1b1 : 1b0, ( UART.inavailable || PS2.inavailable ) ? 1b1: 1b0 }; }
                 case 12h120: { readData = { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] }; }
 $$end
                 case 12h130: { readData = leds; }
@@ -97,7 +113,9 @@ $$if not SIMULATION then
                 case 12h140: { readData = SDCARD.ready; }
                 case 12h150: { readData = SDCARD.bufferdata; }
 $$end
-
+                // SDRAM
+                case 12hf00: { readData = sdram.readdata; }
+                case 12hf02: { readData = sdram.busy; }
 
                 // RETURN NULL VALUE
                 default: { readData = 0; }
@@ -118,65 +136,21 @@ $$if not SIMULATION then
                 case 12h143: { SDCARD.sectoraddressL = writeData; }
                 case 12h150: { SDCARD.bufferaddress = writeData; }
 $$end
-                default: {}
-            }
-        }
-    } // while(1)
-}
-
-algorithm sdram_memmap(
-    // SDRAM ACCESS
-    sdram_user      sio,
-
-    // Memory access
-    input   uint12  memoryAddress,
-    input   uint1   memoryWrite,
-    input   uint1   memoryRead,
-
-    input   uint16  writeData,
-    output  uint16  readData
-) <autorun> {
-    uint24  sdramaddress = uninitialized;
-    uint16  sdramwritedata = uninitialized;
-    // SDRAM and BRAM (for BIOS)
-    // FUNCTION3 controls byte read/writes
-    sdramcontroller sdram(
-        sio <:> sio,
-        address <: sdramaddress,
-        writedata <: sdramwritedata,
-    );
-    sdram.writeflag := 0;
-    sdram.readflag := 0;
-
-    while(1) {
-        // READ IO Memory
-        if( memoryRead ) {
-            __display("  SDRAMMAP READ from %x",memoryAddress);
-            switch( memoryAddress ) {
-                case 12h000: { readData = sdram.readdata; }
-                case 12h002: { readData = sdram.busy; }
-                default: { readData = 0; }
-            }
-        }
-
-        // WRITE IO Memory
-        if( memoryWrite ) {
-            __display("  SDRAMMAP WRITE to %x <- %x",memoryAddress,writeData);
-            switch( memoryAddress ) {
-                case 12h000: { sdramwritedata = writeData; }
-                case 12h002: {
+                // SDRAM
+                case 12hf00: { sdramwritedata = writeData; }
+                case 12hf02: {
                     switch( writeData ) {
                         case 1: { sdram.readflag = 1; }
                         case 2: { sdram.writeflag = 1; }
                         default: {}
                     }
                 }
-                case 12h004: { sdramaddress[16,8] = writeData; }
-                case 12h005: { sdramaddress[0,16] = writeData; }
+                case 12hf04: { sdramaddress[16,8] = writeData; }
+                case 12hf05: { sdramaddress[0,16] = writeData; }
                 default: {}
             }
         }
-    }
+    } // while(1)
 }
 
 algorithm copro_memmap(
@@ -192,8 +166,7 @@ algorithm copro_memmap(
     divmod32by16 divmod32by16to16qr();
     divmod16by16 divmod16by16to16qr();
     multi16by16to32DSP multiplier16by16to32();
-    doubleaddsub2input doperations2();
-    doubleaddsub1input doperations1();
+    doubleops doperations();
 
     // RESET Mathematics Co-Processor Controls
     divmod32by16to16qr.start := 0;
@@ -205,38 +178,38 @@ algorithm copro_memmap(
         if( memoryRead ) {
             __display("  COPRO READ from %x",memoryAddress);
             switch( memoryAddress ) {
-                case 12h000: { readData = words(doperations2.total).hword; }
-                case 12h001: { readData = words(doperations2.total).lword; }
-                case 12h002: { readData = words(doperations2.difference).hword; }
-                case 12h003: { readData = words(doperations2.difference).lword; }
-                case 12h004: { readData = words(doperations1.increment).hword; }
-                case 12h005: { readData = words(doperations1.increment).lword; }
-                case 12h006: { readData = words(doperations1.decrement).hword; }
-                case 12h007: { readData = words(doperations1.decrement).lword; }
-                case 12h008: { readData = words(doperations1.times2).hword; }
-                case 12h009: { readData = words(doperations1.times2).lword; }
-                case 12h00a: { readData = words(doperations1.divide2).hword; }
-                case 12h00b: { readData = words(doperations1.divide2).lword; }
-                case 12h00c: { readData = words(doperations1.negation).hword; }
-                case 12h00d: { readData = words(doperations1.negation).lword; }
-                case 12h00e: { readData = words(doperations1.binaryinvert).hword; }
-                case 12h00f: { readData = words(doperations1.binaryinvert).lword; }
-                case 12h010: { readData = words(doperations2.binaryxor).hword; }
-                case 12h011: { readData = words(doperations2.binaryxor).lword; }
-                case 12h012: { readData = words(doperations2.binaryand).hword; }
-                case 12h013: { readData = words(doperations2.binaryand).lword; }
-                case 12h014: { readData = words(doperations2.binaryor).hword; }
-                case 12h015: { readData = words(doperations2.binaryor).lword; }
-                case 12h016: { readData = words(doperations1.absolute).hword; }
-                case 12h017: { readData = words(doperations1.absolute).lword; }
-                case 12h018: { readData = words(doperations2.maximum).hword; }
-                case 12h019: { readData = words(doperations2.maximum).lword; }
-                case 12h01a: { readData = words(doperations2.minimum).hword; }
-                case 12h01b: { readData = words(doperations2.minimum).lword; }
-                case 12h01c: { readData = doperations1.zeroequal; }
-                case 12h01d: { readData = doperations1.zeroless; }
-                case 12h01e: { readData = doperations2.equal; }
-                case 12h01f: { readData = doperations2.lessthan; }
+                case 12h000: { readData = words(doperations.total).hword; }
+                case 12h001: { readData = words(doperations.total).lword; }
+                case 12h002: { readData = words(doperations.difference).hword; }
+                case 12h003: { readData = words(doperations.difference).lword; }
+                case 12h004: { readData = words(doperations.increment).hword; }
+                case 12h005: { readData = words(doperations.increment).lword; }
+                case 12h006: { readData = words(doperations.decrement).hword; }
+                case 12h007: { readData = words(doperations.decrement).lword; }
+                case 12h008: { readData = words(doperations.times2).hword; }
+                case 12h009: { readData = words(doperations.times2).lword; }
+                case 12h00a: { readData = words(doperations.divide2).hword; }
+                case 12h00b: { readData = words(doperations.divide2).lword; }
+                case 12h00c: { readData = words(doperations.negation).hword; }
+                case 12h00d: { readData = words(doperations.negation).lword; }
+                case 12h00e: { readData = words(doperations.binaryinvert).hword; }
+                case 12h00f: { readData = words(doperations.binaryinvert).lword; }
+                case 12h010: { readData = words(doperations.binaryxor).hword; }
+                case 12h011: { readData = words(doperations.binaryxor).lword; }
+                case 12h012: { readData = words(doperations.binaryand).hword; }
+                case 12h013: { readData = words(doperations.binaryand).lword; }
+                case 12h014: { readData = words(doperations.binaryor).hword; }
+                case 12h015: { readData = words(doperations.binaryor).lword; }
+                case 12h016: { readData = words(doperations.absolute).hword; }
+                case 12h017: { readData = words(doperations.absolute).lword; }
+                case 12h018: { readData = words(doperations.maximum).hword; }
+                case 12h019: { readData = words(doperations.maximum).lword; }
+                case 12h01a: { readData = words(doperations.minimum).hword; }
+                case 12h01b: { readData = words(doperations.minimum).lword; }
+                case 12h01c: { readData = doperations.zeroequal; }
+                case 12h01d: { readData = doperations.zeroless; }
+                case 12h01e: { readData = doperations.equal; }
+                case 12h01f: { readData = doperations.lessthan; }
                 case 12h020: { readData = divmod32by16to16qr.quotient[0,16]; }
                 case 12h021: { readData = divmod32by16to16qr.remainder[0,16]; }
                 case 12h023: { readData = divmod32by16to16qr.active; }
@@ -255,10 +228,10 @@ algorithm copro_memmap(
         if( memoryWrite ) {
             __display("  COPRO WRITE to %x <- %x",memoryAddress,writeData);
             switch( memoryAddress ) {
-                case 12h000: { doperations2.operand1h = writeData; doperations1.operand1h = writeData; }
-                case 12h001: { doperations2.operand1l = writeData; doperations1.operand1l = writeData; }
-                case 12h002: { doperations2.operand2h = writeData; }
-                case 12h003: { doperations2.operand2l = writeData; }
+                case 12h000: { doperations.operand1h = writeData; doperations.operand1h = writeData; }
+                case 12h001: { doperations.operand1l = writeData; doperations.operand1l = writeData; }
+                case 12h002: { doperations.operand2h = writeData; }
+                case 12h003: { doperations.operand2l = writeData; }
                 case 12h020: { divmod32by16to16qr.dividendh = writeData; }
                 case 12h021: { divmod32by16to16qr.dividendl = writeData; }
                 case 12h022: { divmod32by16to16qr.divisor = writeData; }
@@ -992,16 +965,16 @@ algorithm uart(
         uart_rx <:  uart_rx
     );
 
-    // UART input FIFO (256 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartInBuffer <input!> [256] = uninitialized;
-    uint8  uartInBufferNext = 0;
-    uint8  uartInBufferTop = 0;
+    // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
+    simple_dualport_bram uint8 uartInBuffer <input!> [4096] = uninitialized;
+    uint13  uartInBufferNext = 0;
+    uint13  uartInBufferTop = 0;
 
-    // UART output FIFO (256 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartOutBuffer <input!> [256] = uninitialized;
-    uint8   uartOutBufferNext = 0;
-    uint8   uartOutBufferTop = 0;
-    uint8   newuartOutBufferTop = 0;
+    // UART output FIFO (4096 character) as dualport bram (code from @sylefeb)
+    simple_dualport_bram uint8 uartOutBuffer <input!> [4096] = uninitialized;
+    uint13   uartOutBufferNext = 0;
+    uint13   uartOutBufferTop = 0;
+    uint13   newuartOutBufferTop = 0;
 
     // FLAGS
     inavailable := ( uartInBufferNext != uartInBufferTop );
@@ -1055,7 +1028,7 @@ algorithm ps2buffer(
     // PS/2 input FIFO (256 character) as dualport bram (code from @sylefeb)
     simple_dualport_bram uint8 ps2Buffer <input!> [256] = uninitialized;
     uint8  ps2BufferNext = 0;
-    uint7  ps2BufferTop = 0;
+    uint8  ps2BufferTop = 0;
 
     // PS 2 ASCII
     ps2ascii PS2(
