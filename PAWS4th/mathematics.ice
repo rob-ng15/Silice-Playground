@@ -4,6 +4,8 @@
 // INPUT divisor from j1eforth is 16 bit expanded to 32 bit
 // OUTPUT quotient and remainder are 16 bit
 // PERFORM DIVISION AT SPECIFIC BIT, SHARED BETWEEN INTEGER AND  FLOATING POINT DIVISION
+$$if not divbit_circuit then
+$$divbit_circuit = 1
 circuitry divbit( inout quo, inout rem, input top, input bottom, input x ) {
     sameas( rem ) temp = uninitialized;
     uint1   quobit = uninitialised;
@@ -13,6 +15,7 @@ circuitry divbit( inout quo, inout rem, input top, input bottom, input x ) {
     rem = __unsigned(temp) - ( quobit ? __unsigned(bottom) : 0 );
     quo[x,1] = quobit;
 }
+$$end
 algorithm divmod32by16(
     input   uint16  dividendh,
     input   uint16  dividendl,
@@ -342,3 +345,69 @@ algorithm d0l(
     zeroless := {16{operand1[31,1]}};
 }
 
+// FLOAT16 ROUTINES
+algorithm floatops(
+    input   uint16  a,
+    input   uint16  b,
+    output  uint16  itof,
+    output  int16   ftoi,
+    output  uint16  fadd,
+    output  uint16  fsub,
+    output  uint16  fmul,
+    output  uint16  fdiv,
+    output  uint16  fsqrt,
+    output  int16   less,
+    output  int16   equal,
+    output  int16   lessequal,
+    input   uint3   start,
+    output  uint1   busy
+) <autorun> {
+    inttofloat ITOF( a <: a, result :> itof );
+    floattoint FTOI( a <: a, result :> ftoi );
+    floataddsub FADD( a <: a, b <: b, result :> fadd );
+    floataddsub FSUB( a <: a, b <: b, result :> fsub );
+    floatmultiply FMUL( a <: a, b <: b, result :> fmul );
+    floatdivide FDIV( a <: a, b <: b, result :> fdiv );
+    floatsqrt FSQRT( a <: a, result :> fsqrt );
+    floatcompare FCOMPARE( a <: a, b <: b );
+
+    busy := ITOF.busy | FTOI.busy | FADD.busy | FSUB.busy | FMUL.busy | FDIV.busy | FSQRT.busy;
+
+    less := { {16{FCOMPARE.less}} };
+    lessequal := { {16{FCOMPARE.lessequal}} };
+    equal := { {16{FCOMPARE.equal}} };
+
+    ITOF.start := 0; FTOI.start := 0;
+    FADD.start := 0; FSUB.start := 0;
+    FMUL.start := 0; FDIV.start := 0;
+    FSQRT.start := 0;
+
+    FADD.addsub = 0; FSUB.addsub = 1;
+
+    while(1) {
+        switch( start ) {
+            default: {}
+            case 1: { ITOF.start = 1; }
+            case 2: { FTOI.start = 1; }
+            case 3: { FADD.start = 1; }
+            case 4: { FSUB.start = 1; }
+            case 5: { FMUL.start = 1; }
+            case 6: { FDIV.start = 1; }
+            case 7: { FSQRT.start = 1; }
+        }
+    }
+}
+
+algorithm floatcompare(
+    input   uint16  a,
+    input   uint16  b,
+    output  uint1   less,
+    output  uint1   lessequal,
+    output  uint1   equal
+) <autorun> {
+    while(1) {
+        ( less ) = floatless( a, b );
+        ( lessequal ) = floatlessequal( a, b );
+        ( equal ) = floatequal( a, b );
+    }
+}

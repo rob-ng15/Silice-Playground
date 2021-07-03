@@ -167,11 +167,13 @@ algorithm copro_memmap(
     divmod16by16 divmod16by16to16qr();
     multi16by16to32DSP multiplier16by16to32();
     doubleops doperations();
+    floatops fpu();
 
     // RESET Mathematics Co-Processor Controls
     divmod32by16to16qr.start := 0;
     divmod16by16to16qr.start := 0;
     multiplier16by16to32.start := 0;
+    fpu.start := 0;
 
     while(1) {
         // READ IO Memory
@@ -219,6 +221,18 @@ algorithm copro_memmap(
                 case 12h027: { readData = multiplier16by16to32.product[16,16]; }
                 case 12h028: { readData = multiplier16by16to32.product[0,16]; }
 
+                case 12h102: { readData = fpu.busy; }
+                case 12h110: { readData = fpu.itof; }
+                case 12h111: { readData = fpu.ftoi; }
+                case 12h112: { readData = fpu.fadd; }
+                case 12h113: { readData = fpu.fsub; }
+                case 12h114: { readData = fpu.fmul; }
+                case 12h115: { readData = fpu.fdiv; }
+                case 12h116: { readData = fpu.fsqrt; }
+                case 12h117: { readData = fpu.less; }
+                case 12h118: { readData = fpu.equal; }
+                case 12h119: { readData = fpu.lessequal; }
+
                 // RETURN NULL VALUE
                 default: { readData = 0; }
             }
@@ -242,6 +256,10 @@ algorithm copro_memmap(
                 case 12h027: { multiplier16by16to32.factor1 = writeData; }
                 case 12h028: { multiplier16by16to32.factor2 = writeData; }
                 case 12h029: { multiplier16by16to32.start = writeData; }
+
+                case 12h100: { fpu.a = writeData; }
+                case 12h101: { fpu.b = writeData; }
+                case 12h102: { fpu.start = writeData; }
 
                 default: {}
             }

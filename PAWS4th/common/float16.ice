@@ -55,12 +55,12 @@ circuitry normalise22( inout bitstream ) {
 }
 // EXTRACT 10 BIT FRACTION FROM LEFT ALIGNED 22 BIT FRACTION WITH ROUNDING
 circuitry round22( input bitstream, output roundfraction ) {
-    roundfraction = bitstream[12,10] + bitstream[11,1];
+    roundfraction = bitstream[11,10] + bitstream[10,1];
 }
 
 // ADJUST EXPONENT IF ROUNDING FORCES, using newfraction and truncated bit from oldfraction
 circuitry adjustexp22( inout exponent, input nf, input of ) {
-    exponent = 15 + exponent + ( ( nf == 0 ) & of[11,1] );
+    exponent = 15 + exponent + ( ( nf == 0 ) & of[10,1] );
 }
 
 // CONVERT SIGNED INTEGERS TO FLOAT
@@ -153,11 +153,11 @@ algorithm floataddsub(
     input   uint1   start,
     output  uint1   busy,
 
-    input   uint32  a,
-    input   uint32  b,
+    input   uint16  a,
+    input   uint16  b,
     input   uint1   addsub,
 
-    output  uint32  result
+    output  uint16  result
 ) <autorun> {
     uint5   FSM = uninitialised;
     uint2   classEa = uninitialised;
@@ -165,11 +165,11 @@ algorithm floataddsub(
     uint1   sign = uninitialised;
     uint1   signA = uninitialised;
     uint1   signB = uninitialised;
-    int16   expA = uninitialised;
-    int16   expB = uninitialised;
-    uint48  sigA = uninitialised;
-    uint48  sigB = uninitialised;
-    uint23  newfraction = uninitialised;
+    int8    expA = uninitialised;
+    int8    expB = uninitialised;
+    uint22  sigA = uninitialised;
+    uint22  sigB = uninitialised;
+    uint22  newfraction = uninitialised;
     uint1   round = uninitialised;
 
     busy = 0;
@@ -183,16 +183,16 @@ algorithm floataddsub(
                 onehot( FSM ) {
                     case 0: {
                         // FOR SUBTRACTION CHANGE SIGN OF SECOND VALUE
-                        signA = a[31,1]; signB = addsub ? ~b[31,1] : b[31,1];
+                        signA = a[15,1]; signB = addsub ? ~b[15,1] : b[15,1];
                         ( classEa ) = classE( a );
                         ( classEb ) = classE( b );
                     }
                     case 1: {
                         // EXTRACT COMPONENTS - HOLD TO LEFT TO IMPROVE FRACTIONAL ACCURACY
-                        expA = floatingpointnumber( a ).exponent - 127;
-                        expB = floatingpointnumber( b ).exponent - 127;
-                        sigA = { 2b01, floatingpointnumber(a).fraction, 23b0 };
-                        sigB = { 2b01, floatingpointnumber(b).fraction, 23b0 };
+                        expA = floatingpointnumber( a ).exponent - 15;
+                        expB = floatingpointnumber( b ).exponent - 15;
+                        sigA = { 2b01, floatingpointnumber(a).fraction, 10b0 };
+                        sigB = { 2b01, floatingpointnumber(b).fraction, 10b0 };
                         sign = floatingpointnumber(a).sign;
                     }
                     case 2: {
@@ -237,8 +237,8 @@ algorithm floataddsub(
                                     default: { sign = signA; sigA = sigA + sigB; }
                                 }
                             }
-                            case 2b01: { result = ( classEb == 2b01 ) ? a : addsub ? { ~b[31,1], b[0,31] } : b; }
-                            default: { result = { 1b0, 8b11111111, 23b0 }; }
+                            case 2b01: { result = ( classEb == 2b01 ) ? a : addsub ? { ~b[15,1], b[0,15] } : b; }
+                            default: { result = { 1b0, 5b11111, 10b0 }; }
                         }
                     }
                     case 4: {
@@ -247,18 +247,18 @@ algorithm floataddsub(
                                 result = 0;
                             } else {
                                 // NORMALISE AND ROUND
-                                if( sigA[47,1] ) {
+                                if( sigA[21,1] ) {
                                     expA = expA + 1;
                                 } else {
-                                    while( ~sigA[46,1] ) {
-                                        sigA = { sigA[0,47], 1b0 };
+                                    while( ~sigA[20,1] ) {
+                                        sigA = { sigA[0,21], 1b0 };
                                         expA = expA - 1;
                                     }
-                                    sigA = { sigA[0,47], 1b0 };
+                                    sigA = { sigA[0,21], 1b0 };
                                 }
-                                sigA[23,1] = sigA[23,1] & round;
-                                ( newfraction ) = round48( sigA );
-                                ( expA ) = adjustexp48( exp, newfraction, sigA );
+                                sigA[10,1] = sigA[10,1] & round;
+                                ( newfraction ) = round22( sigA );
+                                ( expA ) = adjustexp22( exp, newfraction, sigA );
                                 ( result ) = combinecomponents( sign, expA, newfraction );
                             }
                         }
@@ -276,15 +276,11 @@ algorithm floataddsub(
 $$if not uintmul_algo then
 $$uintmul_algo = 1
 algorithm douintmul(
-    input   uint32  factor_1,
-    input   uint32  factor_2,
-    output  uint64  product
+    input   uint16  factor_1,
+    input   uint16  factor_2,
+    output  uint32  product
 ) <autorun> {
-    uint18    A <: { 2b0, factor_1[16,16] };
-    uint18    B <: { 2b0, factor_1[0,16] };
-    uint18    C <: { 2b0, factor_2[16,16] };
-    uint18    D <: { 2b0, factor_2[0,16] };
-    product := ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
+    product := factor_1 * factor_2;
 }
 $$end
 
@@ -292,23 +288,23 @@ algorithm floatmultiply(
     input   uint1   start,
     output  uint1   busy,
 
-    input   uint32  a,
-    input   uint32  b,
+    input   uint16  a,
+    input   uint16  b,
 
-    output  uint32  result
+    output  uint16  result
 ) <autorun> {
     uint3   FSM = uninitialised;
 
     uint2   classEa = uninitialised;
     uint2   classEb = uninitialised;
-    uint1   productsign <: a[31,1] ^ b[31,1];
-    uint48  product = uninitialised;
-    int16   productexp  = uninitialised;
-    uint23  newfraction = uninitialised;
+    uint1   productsign <: a[15,1] ^ b[15,1];
+    uint32  product = uninitialised;
+    int8    productexp  = uninitialised;
+    uint10  newfraction = uninitialised;
 
     douintmul UINTMUL();
-    UINTMUL.factor_1 := { 9b1, a[0,23] };
-    UINTMUL.factor_2 := { 9b1, b[0,23] };
+    UINTMUL.factor_1 := { 6b1, a[0,10] };
+    UINTMUL.factor_2 := { 6b1, b[0,10] };
 
     busy = 0;
 
@@ -323,19 +319,19 @@ algorithm floatmultiply(
                         ( classEb ) = classE( b );
                     }
                     case 1: {
-                        product = UINTMUL.product[0,48];
-                        productexp = (floatingpointnumber( a ).exponent - 127) + (floatingpointnumber( b ).exponent - 127) + product[47,1];
+                        product = UINTMUL.product;
+                        productexp = (floatingpointnumber( a ).exponent - 15) + (floatingpointnumber( b ).exponent - 15) + product[12,1];
                     }
                     case 2: {
                         switch( classEa | classEb ) {
                             case 2b00: {
-                                ( product ) = normalise48( product );
-                                ( newfraction ) = round48( product );
-                                ( productexp ) = adjustexp48( productexp, newfraction, product );
+                                ( product ) = normalise22( product );
+                                ( newfraction ) = round22( product );
+                                ( productexp ) = adjustexp22( productexp, newfraction, product );
                                 ( result ) = combinecomponents( productsign, productexp, newfraction );
                             }
-                            case 2b01: { result = { productsign, 31b0 }; }
-                            default: { result = { productsign, 8b11111111, 23b0 }; }
+                            case 2b01: { result = { productsign, 15b0 }; }
+                            default: { result = { productsign, 5b11111, 10b0 }; }
                         }
                     }
                 }
@@ -356,8 +352,8 @@ circuitry divbit( inout quo, inout rem, input top, input bottom, input x ) {
     uint1   quobit = uninitialised;
 
     temp = ( rem << 1 ) + top[x,1];
-    quobit = __dounsigned(temp) >= __dounsigned(bottom);
-    rem = __dounsigned(temp) - ( quobit ? __dounsigned(bottom) : 0 );
+    quobit = __unsigned(temp) >= __unsigned(bottom);
+    rem = __unsigned(temp) - ( quobit ? __unsigned(bottom) : 0 );
     quo[x,1] = quobit;
 }
 $$end
@@ -366,22 +362,22 @@ algorithm floatdivide(
     input   uint1   start,
     output  uint1   busy,
 
-    input   uint32  a,
-    input   uint32  b,
+    input   uint16  a,
+    input   uint16  b,
 
-    output  uint32  result
+    output  uint16  result
 ) <autorun> {
     uint4   FSM = uninitialised;
     uint2   classEa = uninitialised;
     uint2   classEb = uninitialised;
-    uint1   quotientsign <: a[31,1] ^ b[31,1];
-    int16   quotientexp = uninitialised;
-    uint48  quotient = uninitialised;
-    uint48  remainder = uninitialised;
-    uint6   bit = uninitialised;
-    uint48  sigA = uninitialised;
-    uint48  sigB = uninitialised;
-    uint23  newfraction = uninitialised;
+    uint1   quotientsign <: a[15,1] ^ b[15,1];
+    int8    quotientexp = uninitialised;
+    uint22  quotient = uninitialised;
+    uint22  remainder = uninitialised;
+    uint5   bit = uninitialised;
+    uint22  sigA = uninitialised;
+    uint22  sigB = uninitialised;
+    uint10  newfraction = uninitialised;
 
     while(1) {
         if( start ) {
@@ -392,35 +388,38 @@ algorithm floatdivide(
                     case 0: {
                         ( classEa ) = classE( a );
                         ( classEb ) = classE( b );
-                        sigA = { 1b1, floatingpointnumber(a).fraction, 24b0 };
-                        sigB = { 25b1, floatingpointnumber(b).fraction };
-                        quotientexp = (floatingpointnumber( a ).exponent - 127) - (floatingpointnumber( b ).exponent - 127);
+                        sigA = { 1b1, floatingpointnumber(a).fraction, 11b0 };
+                        sigB = { 12b1, floatingpointnumber(b).fraction };
+                        quotientexp = (floatingpointnumber( a ).exponent - 15) - (floatingpointnumber( b ).exponent - 15);
                         quotient = 0;
                         remainder = 0;
-                        bit = 47;
+                        bit = 21;
                     }
-                    case 1: { while( ~sigB[0,1] ) { sigB = { 1b0, sigB[1,31] }; } }
+                    case 1: { while( ~sigB[0,1] ) { sigB = { 1b0, sigB[1,21] }; } }
                     case 2: {
+                        __display("  Doing %b / %b",sigA,sigB);
                         switch( classEa | classEb ) {
                             case 2b00: {
-                                while( bit != 63 ) {
+                                while( bit != 31 ) {
                                     ( quotient, remainder ) = divbit( quotient, remainder, sigA, sigB, bit );
+                                    __display("  bit = %d quotient = %b remainder = %b",bit, quotient,remainder);
                                     bit = bit - 1;
                                 }
                             }
-                            case 2b01: { result = ( classEb == 2b01 ) ? { quotientsign, 8b11111111, 23b0 } : { quotientsign, 31b0 }; }
-                            default: { result = { quotientsign, 8b11111111, 23b0 }; }
+                            case 2b01: { result = ( classEb == 2b01 ) ? { quotientsign, 5b11111, 10b0 } : { quotientsign, 15b0 }; }
+                            default: { result = { quotientsign, 5b11111, 10b0 }; }
                         }
                     }
                     case 3: {
                         if( ( classEa | classEb ) == 0 ) {
                             if( quotient == 0 ) {
-                                result = { quotientsign, 31b0 };
+                                result = { quotientsign, 15b0 };
                             } else {
-                                ( quotient ) = normalise48( quotient );
-                                ( newfraction ) = round48( quotient );
-                                quotientexp = 127 + quotientexp - ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction ) + ( ( newfraction == 0 ) & quotient[23,1] );
+                                ( quotient ) = normalise22( quotient );
+                                ( newfraction ) = round22( quotient );
+                                quotientexp = 15 + quotientexp - ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction ) + ( ( newfraction == 0 ) & quotient[12,1] );
                                 ( result ) = combinecomponents( quotientsign, quotientexp, newfraction );
+                                __display("VALID RESULT = %x { %b %b %b }",result,quotientsign,quotientexp,newfraction);
                             }
                         }
                     }
@@ -437,15 +436,15 @@ algorithm floatsqrt(
     input   uint1   start,
     output  uint1   busy,
 
-    input   uint32  a,
-    output  uint32  result
+    input   uint16  a,
+    output  uint16  result
 ) <autorun> {
     uint4   FSM = uninitialised;
 
-    uint48  x = uninitialised;
-    uint48  q = uninitialised;
-    uint50  ac = uninitialised;
-    uint50  test_res = uninitialised;
+    uint22  x = uninitialised;
+    uint22  q = uninitialised;
+    uint24  ac = uninitialised;
+    uint24  test_res = uninitialised;
     uint6   i = uninitialised;
 
     uint2   classEa = uninitialised;
@@ -458,8 +457,8 @@ algorithm floatsqrt(
             busy = 1;
             FSM = 1;
             ( classEa ) = classE( a );
-            if( a[31,1] ) {
-                result = { a[31,1], 8b11111111, 23h7fffff };
+            if( a[15,1] ) {
+                result = { a[15,1], 5b11111, 10h3ff };
             } else {
                 switch( classEa ) {
                     case 2b00: {
@@ -469,24 +468,24 @@ algorithm floatsqrt(
                                     i = 0;
                                     q = 0;
                                     exp = floatingpointnumber( a ).exponent - 127;
-                                    ac = ~exp[0,1] ? 1 : { 48b0, 1b1, a[22,1] };
-                                    x = ~exp[0,1] ? { a[0,23], 25b0 } : { a[0,22], 26b0 };
+                                    ac = ~exp[0,1] ? 1 : { 22b0, 1b1, a[14,1] };
+                                    x = ~exp[0,1] ? { a[0,10], 12b0 } : { a[0,9], 13b0 };
                                 }
                                 case 1: {
                                     while( i != 47 ) {
                                         test_res = ac - { q, 2b01 };
-                                        ac = { test_res[49,1] ? ac[0,47] : test_res[0,47], x[46,2] };
-                                        q = { q[0,47], ~test_res[49,1] };
-                                        x = { x[0,46], 2b00 };
+                                        ac = { test_res[23,1] ? ac[0,21] : test_res[0,21], x[20,2] };
+                                        q = { q[0,21], ~test_res[23,1] };
+                                        x = { x[0,20], 2b00 };
                                         i = i + 1;
                                     }
                                 }
                                 case 2: {
-                                    ( q ) = normalise48( q );
+                                    ( q ) = normalise22( q );
                                 }
                                 case 3: {
-                                    exp = ( exp >>> 1 ) + 127;
-                                    ( newfraction ) = round48( q );
+                                    exp = ( exp >>> 1 ) + 15;
+                                    ( newfraction ) = round22( q );
                                     ( result ) = combinecomponents( sign, exp, newfraction );
                                 }
                             }
@@ -539,11 +538,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 =============================================================================*/
 
 circuitry floatless( input a, input b, output lessthan ) {
-    lessthan = ( a[31,1] != b[31,1] ) ? a[31,1] & ((( a | b ) << 1) != 0 ) : ( a != b ) & ( a[31,1] ^ ( a < b));
+    lessthan = ( a[15,1] != b[15,1] ) ? a[15,1] & ((( a | b ) << 1) != 0 ) : ( a != b ) & ( a[15,1] ^ ( a < b));
 }
 circuitry floatequal( input a, input b, output equalto ) {
     equalto = ( a == b ) | ((( a | b ) << 1) == 0 );
 }
 circuitry floatlessequal( input a, input b, output lessequal, ) {
-    lessequal = ( a[31,1] != b[31,1] ) ? a[31,1] | ((( a | b ) << 1) == 0 ) : ( a == b ) | ( a[31,1] ^ ( a < b ));
+    lessequal = ( a[15,1] != b[15,1] ) ? a[15,1] | ((( a | b ) << 1) == 0 ) : ( a == b ) | ( a[15,1] ^ ( a < b ));
 }

@@ -1037,6 +1037,22 @@ t: dabs d1! d016 literal d@ t;
 t: dmax d2! d018 literal d@ t;
 t: dmin d2! d01a literal d@ t;
 
+( float maths )
+t: fpu1! d100 literal ! t;
+t: fpu2! d101 literal ! fpu1! t;
+t: fpu? begin d102 literal @ 0= until t;
+t: fpu! d102 literal ! t;
+t: s>f fpu1! 1 literal fpu! fpu? d110 literal @ t;
+t: f>s fpu1! 1 literal fpu! fpu? d111 literal @ t;
+t: f+ fpu2! 3 literal fpu! fpu? d112 literal @ t;
+t: f- fpu2! 4 literal fpu! fpu? d113 literal @ t;
+t: f* fpu2! 5 literal fpu! fpu? d114 literal @ t;
+t: f/ fpu2! 6 literal fpu! fpu? d115 literal @ t;
+t: fsqrt fpu1! 7 literal fpu! d116 literal @ t;
+t: f< fpu2! d117 literal @ t;
+t: f= fpu2! d118 literal @ t;
+t: f<= fpu2! d119 literal @ t;
+
 target.1 -order set-current
 
 there 			[u] dp t!
