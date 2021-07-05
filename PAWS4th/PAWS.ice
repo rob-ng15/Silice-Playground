@@ -192,6 +192,7 @@ $$if SIMULATION then
 $$end
 
     copro_memmap COPRO_Map <@clock_system,!reset> (
+        clock100 <: clock_100_2,
         memoryAddress <: address,
         writeData <: writedata,
     );
@@ -223,6 +224,7 @@ $$end
     uint16  address = uninitialized;
     uint16  writedata = uninitialized;
     J1CPU CPU <@clock_system,!reset> (
+        clock100 <: clock_100_1,
         address :> address,
         writedata :> writedata
     );

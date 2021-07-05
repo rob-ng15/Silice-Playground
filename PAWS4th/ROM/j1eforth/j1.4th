@@ -436,12 +436,13 @@ u: 'create
 
 t: d! swap over ! 1+ ! t;
 t: d@ dup 1+ @ swap @ t;
+t: d1! d000 literal d! t;
 t: ?dup ( w -- w w | 0 ) dup if dup then exit t;
 t: rot ( w1 w2 w3 -- w2 w3 w1 ) >r swap r> swap t;
 t: 2drop ( w w -- ) drop drop t;
 t: 2dup ( w1 w2 -- w1 w2 w1 w2 ) over over t;
 t: negate ( n -- -n ) negate t;
-t: dnegate ( d -- -d ) d000 literal d! d00c literal d@ t;
+t: dnegate ( d -- -d ) d1! d00c literal d@ t;
 t: - ( n1 n2 -- n1-n2 ) subtract t;
 t: abs ( n -- n ) abs t;
 t: max ( n n -- n ) max t;
@@ -963,6 +964,9 @@ t: blit coords4! 7 literal gpu! t;
 t: blittile! c640 literal ! 10 literal begin 1- dup c642 literal ! swap c644 literal ! dup 0= until drop t;
 t: charblit coords4! 8 literal gpu! t;
 t: colblit coords4! 9 literal gpu! t;
+t: pbstart! coords4! a literal gpu! t;
+t: pbpixel! c670 literal ! t;
+t: pbstop! 3 literal c678 literal ! t;
 t: cs 40 literal 0 literal 0 literal colour! fullscreen! rectangle t;
 
 t: tmlcs 9 literal c120 literal ! t;
@@ -1018,10 +1022,10 @@ t: 2over >r >r 2dup r> r> rot >r rot r> t;
 t: 2swap rot >r rot r> t;
 t: 2nip rot drop rot drop t;
 t: 2rot 2>r 2swap 2r> 2swap t;
-t: d1! d000 literal d! t;
 t: d2! d002 literal d! d1! t;
 t: d0= d1! d01c literal @ t;
 t: d= d2! d01e literal @ t;
+t: d< d2! d01f literal @ t;
 t: d+ d2! d000 literal d@ t;
 t: d- d2! d002 literal d@ t;
 t: s>d dup 0< t;
@@ -1042,16 +1046,33 @@ t: fpu1! d100 literal ! t;
 t: fpu2! d101 literal ! fpu1! t;
 t: fpu? begin d102 literal @ 0= until t;
 t: fpu! d102 literal ! t;
-t: s>f fpu1! 1 literal fpu! fpu? d110 literal @ t;
-t: f>s fpu1! 1 literal fpu! fpu? d111 literal @ t;
-t: f+ fpu2! 3 literal fpu! fpu? d112 literal @ t;
-t: f- fpu2! 4 literal fpu! fpu? d113 literal @ t;
-t: f* fpu2! 5 literal fpu! fpu? d114 literal @ t;
-t: f/ fpu2! 6 literal fpu! fpu? d115 literal @ t;
-t: fsqrt fpu1! 7 literal fpu! d116 literal @ t;
+t: fpu@ swap fpu! fpu? @ t;
+t: s>f fpu1! 1 literal d110 literal fpu@ t;
+t: f>s fpu1! 2 literal d111 literal fpu@ t;
+t: f+ fpu2! 3 literal d112 literal fpu@ t;
+t: f- fpu2! 4 literal d113 literal fpu@ t;
+t: f* fpu2! 5 literal d114 literal fpu@ t;
+t: f/ fpu2! 6 literal d115 literal fpu@ t;
+t: fsqrt fpu1! 7 literal d116 literal fpu@ t;
 t: f< fpu2! d117 literal @ t;
 t: f= fpu2! d118 literal @ t;
 t: f<= fpu2! d119 literal @ t;
+t: f.# base @ swap decimal
+   bl emit
+   dup f>s dup 0 literal .r 2e literal emit
+   s>f f- 3e8 literal s>f f* f>s
+   dup 64 literal < if 30 literal emit then
+   dup a literal < if 30 literal emit then
+   0 literal .r
+   base ! ;
+t: tpuf.# base @ swap decimal
+   bl tpuemit
+   dup f>s dup 0 literal tpu.r 2e literal tpuemit
+   s>f f- 3e8 literal s>f f* f>s
+   dup 64 literal < if 30 literal tpuemit then
+   dup a literal < if 30 literal tpuemit then
+   0 literal tpu.r
+   base ! ;
 
 target.1 -order set-current
 

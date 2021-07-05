@@ -63,6 +63,13 @@ circuitry adjustexp22( inout exponent, input nf, input of ) {
     exponent = 15 + exponent + ( ( nf == 0 ) & of[10,1] );
 }
 
+// ALIGN FRACTION TO THE RIGHT FOR DIVISION
+circuitry alignright22( inout bitstream ) {
+     while( ~bitstream[0,1] ) {
+         bitstream = { 1b0, bitstream[1,21] };
+    }
+}
+
 // CONVERT SIGNED INTEGERS TO FLOAT
 algorithm inttofloat(
     input   uint1   start,
@@ -119,7 +126,7 @@ algorithm inttofloat(
 // CONVERT FLOAT TO SIGNED INTEGERS
 algorithm floattoint(
     input   uint16  a,
-    output  int32   result,
+    output  int16   result,
     output  uint1   busy,
     input   uint1   start
 ) <autorun> {
@@ -320,7 +327,7 @@ algorithm floatmultiply(
                     }
                     case 1: {
                         product = UINTMUL.product;
-                        productexp = (floatingpointnumber( a ).exponent - 15) + (floatingpointnumber( b ).exponent - 15) + product[12,1];
+                        productexp = (floatingpointnumber( a ).exponent - 15) + (floatingpointnumber( b ).exponent - 15) + product[21,1];
                     }
                     case 2: {
                         switch( classEa | classEb ) {
@@ -395,14 +402,12 @@ algorithm floatdivide(
                         remainder = 0;
                         bit = 21;
                     }
-                    case 1: { while( ~sigB[0,1] ) { sigB = { 1b0, sigB[1,21] }; } }
+                    case 1: { ( sigB ) = alignright22( sigB ); }
                     case 2: {
-                        __display("  Doing %b / %b",sigA,sigB);
                         switch( classEa | classEb ) {
                             case 2b00: {
                                 while( bit != 31 ) {
                                     ( quotient, remainder ) = divbit( quotient, remainder, sigA, sigB, bit );
-                                    __display("  bit = %d quotient = %b remainder = %b",bit, quotient,remainder);
                                     bit = bit - 1;
                                 }
                             }
@@ -419,7 +424,6 @@ algorithm floatdivide(
                                 ( newfraction ) = round22( quotient );
                                 quotientexp = 15 + quotientexp - ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction ) + ( ( newfraction == 0 ) & quotient[12,1] );
                                 ( result ) = combinecomponents( quotientsign, quotientexp, newfraction );
-                                __display("VALID RESULT = %x { %b %b %b }",result,quotientsign,quotientexp,newfraction);
                             }
                         }
                     }
@@ -467,12 +471,12 @@ algorithm floatsqrt(
                                 case 0: {
                                     i = 0;
                                     q = 0;
-                                    exp = floatingpointnumber( a ).exponent - 127;
-                                    ac = ~exp[0,1] ? 1 : { 22b0, 1b1, a[14,1] };
+                                    exp = floatingpointnumber( a ).exponent - 15;
+                                    ac = ~exp[0,1] ? 1 : { 22b0, 1b1, a[9,1] };
                                     x = ~exp[0,1] ? { a[0,10], 12b0 } : { a[0,9], 13b0 };
                                 }
                                 case 1: {
-                                    while( i != 47 ) {
+                                    while( i != 21 ) {
                                         test_res = ac - { q, 2b01 };
                                         ac = { test_res[23,1] ? ac[0,21] : test_res[0,21], x[20,2] };
                                         q = { q[0,21], ~test_res[23,1] };

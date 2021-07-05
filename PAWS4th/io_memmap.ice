@@ -154,6 +154,7 @@ $$end
 }
 
 algorithm copro_memmap(
+    input   uint1   clock100,
     // Memory access
     input   uint12  memoryAddress,
     input   uint1   memoryWrite,
@@ -166,7 +167,7 @@ algorithm copro_memmap(
     divmod32by16 divmod32by16to16qr();
     divmod16by16 divmod16by16to16qr();
     multi16by16to32DSP multiplier16by16to32();
-    doubleops doperations();
+    doubleops doperations <@clock100> ();
     floatops fpu();
 
     // RESET Mathematics Co-Processor Controls
@@ -178,7 +179,6 @@ algorithm copro_memmap(
     while(1) {
         // READ IO Memory
         if( memoryRead ) {
-            __display("  COPRO READ from %x",memoryAddress);
             switch( memoryAddress ) {
                 case 12h000: { readData = words(doperations.total).hword; }
                 case 12h001: { readData = words(doperations.total).lword; }
@@ -240,7 +240,6 @@ algorithm copro_memmap(
 
         // WRITE IO Memory
         if( memoryWrite ) {
-            __display("  COPRO WRITE to %x <- %x",memoryAddress,writeData);
             switch( memoryAddress ) {
                 case 12h000: { doperations.operand1h = writeData; doperations.operand1h = writeData; }
                 case 12h001: { doperations.operand1l = writeData; doperations.operand1l = writeData; }
@@ -299,7 +298,6 @@ algorithm audiotimers_memmap(
     while(1) {
         // READ IO Memory
         if( memoryRead ) {
-            __display("  Timers/Audio READ from %x",memoryAddress);
             switch( memoryAddress ) {
                 // TIMERS and RNG
                 case 12h000: { readData = timers.g_noise_out; }
@@ -322,7 +320,6 @@ algorithm audiotimers_memmap(
         }
         // WRITE IO Memory
         if( memoryWrite && ~LATCHmemoryWrite ) {
-            __display("  Timers/Audio WRITE to %x <- %x",memoryAddress,writeData);
             switch( memoryAddress ) {
                // TIMERS and RNG
                 case 12h010: { timers.resetcounter = 1; }
@@ -630,7 +627,6 @@ $$end
     while(1) {
         // READ IO Memory
         if( memoryRead ) {
-            __display("  Video READ from %x",memoryAddress);
             switch( memoryAddress ) {
                 // TILE MAP
                 case 12h120: { readData = lower_tile_map.tm_lastaction; }
@@ -686,7 +682,6 @@ $$end
 
         // WRITE IO Memory
         if( memoryWrite && ~LATCHmemoryWrite ) {
-            __display("  Video WRITE to %x <- %x",memoryAddress,writeData);
             switch( memoryAddress ) {
                 // BACKGROUND
                 case 12h000: { background_generator.backgroundcolour = writeData; background_generator.background_update = 1; }

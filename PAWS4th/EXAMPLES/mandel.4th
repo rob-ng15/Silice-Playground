@@ -1,42 +1,40 @@
 variable x
+variable dx
 variable wx
 variable jx
 variable tx
 variable y
+variable dy
 variable wy
 variable jy
 variable ty
 variable k
 variable r
+140 constant xres
+f0 constant yres
+c033 constant xmin ( -2.1 )
+38cd constant xmax ( 0.6 )
+bd66 constant ymin ( -1.35 )
+3d66 constant ymax ( 1.35 )
+2 s>f constant ftwo ( 2.0 )
+4 s>f constant ffour ( 4.0 )
 
-c033 constant xmin
-38cd constant xmax
-bd66 constant ymin
-3d66 constant ymax
-
-4000 constant ftwo
-4400 constant ffour
-
-2052 constant dx
-21c3 constant dy
-
-: drawpixel x @ y @ pixel ;
-
-: calcjy y @ s>f dy f* ymin f+ jy ! ;
-: calcjx x @ s>f dx f* xmin f+ jx ! ;
-
+: calcdx xmax xmin f- xres s>f f/ dx ! ;
+: calcdy ymax ymin f- yres s>f f/ dy ! ;
+: calcjy y @ s>f dy @ f* ymin f+ jy ! ;
+: calcjx x @ s>f dx @ f* xmin f+ jx ! ;
 : calctx wx @ dup f* wy @ dup f* f- jx @ f+ tx ! ;
 : calcty wx @ wy @ f* ftwo f* jy @ f+ ty ! ;
-
 : calcr wx @ dup f* wy @ dup f* f+ r ! ;
 
-: newpixel 0 k ! 0 wx ! 0 wy ! ;
 : calculate
-    calctx tx @ wx !
-    calcty ty @ wy !
+    calctx
+    calcty
+    tx @ wx ! ty @ wy !
     calcr
-    k @ 1+ k ! ;
+    1 k +! ;
 
+: newpixel 0 k ! 0 wx ! 0 wy ! ;
 : calculatepixel
     newpixel
     begin
@@ -44,9 +42,13 @@ bd66 constant ymin
         r @ ffour f<
         k @ 3f < and
     0= until
-    k @ 1+ 0 0 colour! drawpixel
-    ;
+    k @ 1+ ;
 
-: yloop f0 0 do i y ! calcjy calculatepixel drawpixel loop ;
-: xloop 140 0 do i x ! calcjx yloop loop ;
-: mandel xloop ;
+: xloop 140 0 do i x ! calcjx calculatepixel pbpixel! loop ;
+: yloop f0 0 do i y ! calcjy xloop loop ;
+: mandel 0 terminal!
+    cs
+    0 0 140 40 pbstart!
+    calcdx calcdy yloop
+    pbstop!
+    fa0 sleep 1 terminal! ;

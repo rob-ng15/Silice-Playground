@@ -37,7 +37,7 @@ j1eforth ( developed from https://github.com/samawati/j1eforth ) with the J1+ CP
 
 <br>
 
-Word | Usage ( w single word, d double word )
+Word | Usage ( w single word, d double word, f float single word )
 :----- | :-----
 led@ | ```led@``` returns the led status to the stack
 led! | ```w led!``` sets the led status to w
@@ -68,6 +68,9 @@ blit | ```w1 w2 w3 w4 blit``` blits the 16x16 tile w3 at scale w4 to (w1,w2)
 charblit | ```w1 w2 w3 w4 charblit``` blits the 8x8 character w3 at scale w4 to (w1,w2)
 colblit | ```w1 w2 w3 w4 colblit``` blits the 16x16 colour tile w3 at scale w4 to (w1,w2)
 blittile! | ```w0 w1 .. w15 w16 blittile!``` set tile w16 for the blitter to w0 .. w15
+pbstart! | ````w0 w1 w2 w3 pbstart!``` sets the GPU to draw a pixel block at (w0,w1) of width w2 with transparency colour w3
+pbpixel! | ```w pbpixel!``` output a pixel of colour w to the pixel block and move to the next pixel
+pbstop! | ```pbstop!``` stops the pixel block
 cs | ```cs``` clears the framebuffer
  | |
 tmlcs |
@@ -95,6 +98,7 @@ tpu.# |
 tpuu.# |
 tpuu.r# |
 tpu.r# |
+tpuf.# |
 tcs | ```tcs``` clears the tpu character map
  | |
 ram! | ```w d ram!``` sets the sdram at address d to w
@@ -109,21 +113,38 @@ Double Word | Usage
 :----- | :-----
 d! | ```d w d!``` stores the double word d at address w
 d@ | ```w d@``` returns the double word from address w to the stack ( d to stack )
-2constant |
-2variable | ```2variable name``` creates a double width variable name
+2constant | ```d 2constant name``` creates a double width constant called name
+2variable | ```2variable name``` creates a double width variable called name
 s>d | ```w s>d``` expands single width word w to double width word ( d to stack )
 d0= | ```d d0=``` returns result of d = 0 ( w to stack )
 d= | ```d1 d2 d=``` returns result of d1 = d2 ( w to stack )
+d< | ```d1 d2 d=``` returns result of d1 < d2 ( w to stack )
 d+ | ```d1 d2 d+``` returns result of d1 + d2 ( d to stack )
 d- | ```d1 d2 d-``` returns result of d1 - d2 ( d to stack )
 d1+ | ```d d1+``` returns result of d + 1 ( d to stack )
 d1- | ```d d1-``` returns result of d - 1 ( d to stack )
-dxor | ```d1 d2 dxor```
-dand | ```d1 d2 dand```
-dor | ```d1 d2 dor```
-dinvert | ```d dinvert```
-d2* | ```d d2*```
-d2/ | ```d dd/```
-dabs | ```d dabs```
-dmax | ```d1 d2 dmax```
-dmin | ```d1 d2 dmin```
+dxor | ```d1 d2 dxor``` returns result of d1 ^ d2 ( d to stack )
+dand | ```d1 d2 dand``` returns result of d1 & d2 ( d to stack )
+dor | ```d1 d2 dor``` returns result of d1 | d2 ( d to stack )
+dinvert | ```d dinvert``` inverts d ( d to stack )
+d2* | ```d d2*``` returns double d ( d to stack )
+d2/ | ```d d2/``` returns half d ( d to stack )
+dabs | ```d dabs``` returns absolute value of d ( d to stack )
+dmax | ```d1 d2 dmax``` returns the largest of d1 and d2 ( d to stack )
+dmin | ```d1 d2 dmin``` returns the smallest of d1 and d2 ( d to stack )
+
+<br>
+
+Float Word | Usage
+:----- | :-----
+s>f | ```w s>f``` converts the integer w to float16 ( f to stack )
+f>s | ```f f>s``` converts the float16 f to integer ( w to stack )
+f+ | ```f1 f2 f+``` returns the result of f1 + f2 to the stack ( f to stack )
+f- | ```f1 f2 f-``` returns the result of f1 - f2 to the stack ( f to stack )
+f* | ```f1 f2 f*``` returns the result of f1 * f2 to the stack ( f to stack )
+f/ | ```f1 f2 f/``` returns the result of f1 / f2 to the stack ( f to stack )
+fsqrt | ```f fsqrt``` returns the result of square root of f to the stack ( f to stack )
+f< | ```f1 f2 f<``` returns the result of f1 < f2 to the stack ( w to stack )
+f= | ```f1 f2 f=``` returns the result of f1 = f2 to the stack ( w to stack )
+f<= | ```f1 f2 f<=``` returns the result of f1 <= f2 to the stack ( w to stack )
+f.# | ```f f.#``` emits the floating point number f to the terminal in decimal
