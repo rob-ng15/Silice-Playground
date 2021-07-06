@@ -204,14 +204,10 @@ algorithm floataddsub(
                     }
                     case 2: {
                         // ADJUST TO EQUAL EXPONENTS
-                        if( expA < expB ) {
-                            sigA = sigA >> ( expB - expA );
-                            expA = expB;
-                        } else {
-                            if( expB < expA ) {
-                                sigB = sigB >> ( expA - expB );
-                                expB = expA;
-                            }
+                        switch( { expA < expB, expB < expA } ) {
+                            case 2b10: { sigA = sigA >> ( expB - expA ); expA = expB; }
+                            case 2b01: { sigB = sigB >> ( expA - expB ); expB = expA; }
+                            default: {}
                         }
                     }
                     case 3: {
@@ -220,25 +216,15 @@ algorithm floataddsub(
                                 switch( { signA, signB } ) {
                                     // PERFORM + HANDLING SIGNS
                                     case 2b01: {
-                                        if( sigB > sigA ) {
-                                            sign = 1;
-                                            round = ( sigA != 0 );
-                                            sigA = sigB - ( ~round ? 1 : sigA );
-                                        } else {
-                                            sign = 0;
-                                            round = ( sigB != 0 );
-                                            sigA = sigA - ( ~round ? 1 : sigB );
+                                        switch( sigB > sigA ) {
+                                            case 1: { sign = 1; round = ( sigA != 0 ); sigA = sigB - ( ~round ? 1 : sigA ); }
+                                            case 0: { sign = 0; round = ( sigB != 0 ); sigA = sigA - ( ~round ? 1 : sigB ); }
                                         }
                                     }
                                     case 2b10: {
-                                        if(  sigA > sigB ) {
-                                            sign = 1;
-                                            round = ( sigB != 0 );
-                                            sigA = sigA - ( ~round ? 1 : sigB );
-                                        } else {
-                                            sign = 0;
-                                            round = ( sigA != 0 );
-                                            sigA = sigB - ( ~round ? 1 : sigA );
+                                        switch(  sigA > sigB ) {
+                                            case 1: { sign = 1; round = ( sigB != 0 ); sigA = sigA - ( ~round ? 1 : sigB ); }
+                                            case 0: { sign = 0; round = ( sigA != 0 ); sigA = sigB - ( ~round ? 1 : sigA ); }
                                         }
                                     }
                                     default: { sign = signA; sigA = sigA + sigB; }
@@ -249,25 +235,27 @@ algorithm floataddsub(
                         }
                     }
                     case 4: {
-                        if( ( classEa | classEb ) == 0 ) {
-                            if( sigA == 0 ) {
-                                result = 0;
-                            } else {
-                                // NORMALISE AND ROUND
-                                if( sigA[21,1] ) {
-                                    expA = expA + 1;
-                                } else {
-                                    while( ~sigA[20,1] ) {
-                                        sigA = { sigA[0,21], 1b0 };
-                                        expA = expA - 1;
+                        switch( classEa | classEb ) {
+                            case 0: {
+                                switch( sigA ) {
+                                    case 0: { result = 0; }
+                                    default: {
+                                        // NORMALISE AND ROUND
+                                        switch( sigA[21,1] ) {
+                                            case 1: { expA = expA + 1; }
+                                            default: {
+                                                while( ~sigA[20,1] ) { sigA = { sigA[0,21], 1b0 }; expA = expA - 1; }
+                                                sigA = { sigA[0,21], 1b0 };
+                                            }
+                                        }
+                                        sigA[10,1] = sigA[10,1] & round;
+                                        ( newfraction ) = round22( sigA );
+                                        ( expA ) = adjustexp22( exp, newfraction, sigA );
+                                        ( result ) = combinecomponents( sign, expA, newfraction );
                                     }
-                                    sigA = { sigA[0,21], 1b0 };
                                 }
-                                sigA[10,1] = sigA[10,1] & round;
-                                ( newfraction ) = round22( sigA );
-                                ( expA ) = adjustexp22( exp, newfraction, sigA );
-                                ( result ) = combinecomponents( sign, expA, newfraction );
                             }
+                            default: {}
                         }
                     }
                 }
@@ -279,18 +267,6 @@ algorithm floataddsub(
 }
 
 // MULTIPLY TWO FLOATING POINT NUMBERS
-
-$$if not uintmul_algo then
-$$uintmul_algo = 1
-algorithm douintmul(
-    input   uint16  factor_1,
-    input   uint16  factor_2,
-    output  uint32  product
-) <autorun> {
-    product := factor_1 * factor_2;
-}
-$$end
-
 algorithm floatmultiply(
     input   uint1   start,
     output  uint1   busy,
@@ -300,7 +276,7 @@ algorithm floatmultiply(
 
     output  uint16  result
 ) <autorun> {
-    uint3   FSM = uninitialised;
+    uint2   FSM = uninitialised;
 
     uint2   classEa = uninitialised;
     uint2   classEb = uninitialised;
@@ -308,10 +284,6 @@ algorithm floatmultiply(
     uint32  product = uninitialised;
     int8    productexp  = uninitialised;
     uint10  newfraction = uninitialised;
-
-    douintmul UINTMUL();
-    UINTMUL.factor_1 := { 6b1, a[0,10] };
-    UINTMUL.factor_2 := { 6b1, b[0,10] };
 
     busy = 0;
 
@@ -324,12 +296,10 @@ algorithm floatmultiply(
                     case 0: {
                         ( classEa ) = classE( a );
                         ( classEb ) = classE( b );
-                    }
-                    case 1: {
-                        product = UINTMUL.product;
+                        product = { 6b1, a[0,10] } * { 6b1, b[0,10] };
                         productexp = (floatingpointnumber( a ).exponent - 15) + (floatingpointnumber( b ).exponent - 15) + product[21,1];
                     }
-                    case 2: {
+                    case 1: {
                         switch( classEa | classEb ) {
                             case 2b00: {
                                 ( product ) = normalise22( product );
@@ -342,7 +312,7 @@ algorithm floatmultiply(
                         }
                     }
                 }
-                FSM = { FSM[0,2], 1b0 };
+                FSM = { FSM[0,1], 1b0 };
             }
             busy = 0;
         }
@@ -350,21 +320,24 @@ algorithm floatmultiply(
 }
 
 // DIVIDE TWO FLOATING POINT NUMBERS
-
-$$if not divbit_circuit then
-$$divbit_circuit = 1
-// PERFORM DIVISION AT SPECIFIC BIT, SHARED BETWEEN INTEGER AND  FLOATING POINT DIVISION
-circuitry divbit( inout quo, inout rem, input top, input bottom, input x ) {
-    sameas( rem ) temp = uninitialized;
+algorithm divbit22(
+    input   uint22  quo,
+    input   uint22  rem,
+    input   uint22  top,
+    input   uint22  bottom,
+    input   uint5   x,
+    output  uint22  newquotient,
+    output  uint22  newremainder
+) <autorun> {
+    uint22  temp = uninitialised;
     uint1   quobit = uninitialised;
-
-    temp = ( rem << 1 ) + top[x,1];
-    quobit = __unsigned(temp) >= __unsigned(bottom);
-    rem = __unsigned(temp) - ( quobit ? __unsigned(bottom) : 0 );
-    quo[x,1] = quobit;
+    while(1) {
+        temp = ( rem << 1 ) + top[x,1];
+        quobit = __unsigned(temp) >= __unsigned(bottom);
+        newremainder = __unsigned(temp) - ( quobit ? __unsigned(bottom) : 0 );
+        newquotient = quo | ( quobit << x );
+    }
 }
-$$end
-
 algorithm floatdivide(
     input   uint1   start,
     output  uint1   busy,
@@ -385,6 +358,8 @@ algorithm floatdivide(
     uint22  sigA = uninitialised;
     uint22  sigB = uninitialised;
     uint10  newfraction = uninitialised;
+
+    divbit22 DIVBIT22( quo <: quotient, rem <: remainder, top <: sigA, bottom <: sigB, x <: bit );
 
     while(1) {
         if( start ) {
@@ -407,7 +382,7 @@ algorithm floatdivide(
                         switch( classEa | classEb ) {
                             case 2b00: {
                                 while( bit != 31 ) {
-                                    ( quotient, remainder ) = divbit( quotient, remainder, sigA, sigB, bit );
+                                    quotient = DIVBIT22.newquotient; remainder = DIVBIT22.newremainder;
                                     bit = bit - 1;
                                 }
                             }

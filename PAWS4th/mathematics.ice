@@ -4,18 +4,24 @@
 // INPUT divisor from j1eforth is 16 bit expanded to 32 bit
 // OUTPUT quotient and remainder are 16 bit
 // PERFORM DIVISION AT SPECIFIC BIT, SHARED BETWEEN INTEGER AND  FLOATING POINT DIVISION
-$$if not divbit_circuit then
-$$divbit_circuit = 1
-circuitry divbit( inout quo, inout rem, input top, input bottom, input x ) {
-    sameas( rem ) temp = uninitialized;
+algorithm divbit32(
+    input   uint32  quo,
+    input   uint32  rem,
+    input   uint32  top,
+    input   uint32  bottom,
+    input   uint6   x,
+    output  uint32  newquotient,
+    output  uint32  newremainder
+) <autorun> {
+    uint32  temp = uninitialised;
     uint1   quobit = uninitialised;
-
-    temp = ( rem << 1 ) + top[x,1];
-    quobit = __unsigned(temp) >= __unsigned(bottom);
-    rem = __unsigned(temp) - ( quobit ? __unsigned(bottom) : 0 );
-    quo[x,1] = quobit;
+    while(1) {
+        temp = ( rem << 1 ) + top[x,1];
+        quobit = __unsigned(temp) >= __unsigned(bottom);
+        newremainder = __unsigned(temp) - ( quobit ? __unsigned(bottom) : 0 );
+        newquotient = quo | ( quobit << x );
+    }
 }
-$$end
 algorithm divmod32by16(
     input   uint16  dividendh,
     input   uint16  dividendl,
@@ -33,6 +39,8 @@ algorithm divmod32by16(
     uint32  remainder_copy = uninitialized;
     uint1   resultsign = uninitialized;
     uint6   bit = uninitialized;
+
+    divbit32 DIVBIT( quo <: quotient_copy, rem <: remainder_copy, top <: dividend_copy, bottom <: divisor_copy, x <: bit );
 
     while (1) {
         if( start != 0 ) {
@@ -58,7 +66,7 @@ algorithm divmod32by16(
                         }
                         case 1: {
                             while( bit != 63 ) {
-                                ( quotient_copy, remainder_copy ) = divbit( quotient_copy, remainder_copy, dividend_copy, divisor_copy, bit );
+                                quotient_copy = DIVBIT.newquotient; remainder_copy = DIVBIT.newremainder;
                                 bit = bit - 1;
                             }
                         }
@@ -78,7 +86,24 @@ algorithm divmod32by16(
 }
 
 // SIGNED 16 by 16 bit division giving 16 bit remainder and quotient
-
+algorithm divbit16(
+    input   uint16  quo,
+    input   uint16  rem,
+    input   uint16  top,
+    input   uint16  bottom,
+    input   uint5   x,
+    output  uint16  newquotient,
+    output  uint16  newremainder
+) <autorun> {
+    uint16  temp = uninitialised;
+    uint1   quobit = uninitialised;
+    while(1) {
+        temp = ( rem << 1 ) + top[x,1];
+        quobit = __unsigned(temp) >= __unsigned(bottom);
+        newremainder = __unsigned(temp) - ( quobit ? __unsigned(bottom) : 0 );
+        newquotient = quo | ( quobit << x );
+    }
+}
 algorithm divmod16by16(
     input   uint16  dividend,
     input   uint16  divisor,
@@ -95,6 +120,8 @@ algorithm divmod16by16(
     uint16  remainder_copy = uninitialized;
     uint1   resultsign = uninitialized;
     uint5   bit = uninitialized;
+
+    divbit16 DIVBIT( quo <: quotient_copy, rem <: remainder_copy, top <: dividend_copy, bottom <: divisor_copy, x <: bit );
 
     while (1) {
         if( start ) {
@@ -117,7 +144,7 @@ algorithm divmod16by16(
                         }
                         case 1: {
                             while( bit != 31 ) {
-                                ( quotient_copy, remainder_copy ) = divbit( quotient_copy, remainder_copy, dividend_copy, divisor_copy, bit );
+                                quotient_copy = DIVBIT.newquotient; remainder_copy = DIVBIT.newremainder;
                                 bit = bit - 1;
                             }
                         }
@@ -153,6 +180,7 @@ algorithm multi16by16to32DSP(
             case 0: {}
             default: {
                 switch( start ) {
+                    default: {}
                     case 1: {
                         // UNSIGNED MULTIPLICATION
                         factor1copy = factor1;

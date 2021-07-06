@@ -41,16 +41,8 @@ circuitry adjustexp22( inout exponent, input nf, input of ) {
     exponent = 15 + exponent + ( ( nf == 0 ) & of[10,1] );
 }
 
-algorithm douintmul(
-    input   uint16  factor_1,
-    input   uint16  factor_2,
-    output  uint32  product
-) <autorun> {
-    product := factor_1 * factor_2;
-}
-
 algorithm main(output int8 leds) {
-    uint3   FSM = uninitialised;
+    uint2   FSM = uninitialised;
 
     // BIT Patterns can be obtained from http://weitz.de/ieee/
     // 1/3 = 16h3555
@@ -69,10 +61,6 @@ algorithm main(output int8 leds) {
     int8    productexp  = uninitialised;
     uint10  newfraction = uninitialised;
 
-    douintmul UINTMUL();
-    UINTMUL.factor_1 := { 6b1, a[0,10] };
-    UINTMUL.factor_2 := { 6b1, b[0,10] };
-
     //while(1) {
         //if( start ) {
             //busy = 1;
@@ -82,12 +70,10 @@ algorithm main(output int8 leds) {
                     case 0: {
                         ( classEa ) = classE( a );
                         ( classEb ) = classE( b );
-                    }
-                    case 1: {
-                        product = UINTMUL.product;
+                        product = { 6b1, a[0,10] } * { 6b1, b[0,10] };
                         productexp = (floatingpointnumber( a ).exponent - 15) + (floatingpointnumber( b ).exponent - 15) + product[21,1];
                     }
-                    case 2: {
+                    case 1: {
                         switch( classEa | classEb ) {
                             case 2b00: {
                                 ( product ) = normalise22( product );
@@ -100,7 +86,7 @@ algorithm main(output int8 leds) {
                         }
                     }
                 }
-                FSM = { FSM[0,2], 1b0 };
+                FSM = { FSM[0,1], 1b0 };
             }
             __display("RESULT = { %b %b %b } -> %x",result[15,1],result[10,5],result[0,10],result);
             //busy = 0;

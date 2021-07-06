@@ -60,8 +60,8 @@ algorithm main(output int8 leds) {
     // 2 = 16h4000
     // 3 = 16h4200
     // 100 = 16h5640
-    uint16  a = 16h3da8;
-    uint16  b = 16h3c00;
+    uint16  a = 16h5640;
+    uint16  b = 16h4200;
     uint1   addsub = 1;
     uint16  result = uninitialised;
 
@@ -100,22 +100,18 @@ algorithm main(output int8 leds) {
                         sigA = { 2b01, floatingpointnumber(a).fraction, 10b0 };
                         sigB = { 2b01, floatingpointnumber(b).fraction, 10b0 };
                         sign = floatingpointnumber(a).sign;
-                        __display("a  %b",sigA);
-                        __display("b  %b",sigB);
+                        __display("(1) a  %b %b  ^ %d",signA,sigA,expA);
+                        __display("    b  %b %b  ^ %d",signB,sigB,expB);
                     }
                     case 2: {
                         // ADJUST TO EQUAL EXPONENTS
-                        if( expA < expB ) {
-                            sigA = sigA >> ( expB - expA );
-                            expA = expB;
-                        } else {
-                            if( expB < expA ) {
-                                sigB = sigB >> ( expA - expB );
-                                expB = expA;
-                            }
+                        switch( { expA < expB, expB < expA } ) {
+                            case 2b10: { sigA = sigA >> ( expB - expA ); expA = expB; }
+                            case 2b01: { sigB = sigB >> ( expA - expB ); expB = expA; }
+                            default: {}
                         }
-                        __display("a  %b",sigA);
-                        __display("b  %b",sigB);
+                        __display("(2) a  %b %b  ^ %d",signA,sigA,expA);
+                        __display("    b  %b %b  ^ %d",signB,sigB,expB);
                     }
                     case 3: {
                         switch( classEa | classEb ) {
@@ -123,25 +119,15 @@ algorithm main(output int8 leds) {
                                 switch( { signA, signB } ) {
                                     // PERFORM + HANDLING SIGNS
                                     case 2b01: {
-                                        if( sigB > sigA ) {
-                                            sign = 1;
-                                            round = ( sigA != 0 );
-                                            sigA = sigB - ( ~round ? 1 : sigA );
-                                        } else {
-                                            sign = 0;
-                                            round = ( sigB != 0 );
-                                            sigA = sigA - ( ~round ? 1 : sigB );
+                                        switch( sigB > sigA ) {
+                                            case 1: { sign = 1; round = ( sigA != 0 ); sigA = sigB - ( ~round ? 1 : sigA ); }
+                                            case 0: { sign = 0; round = ( sigB != 0 ); sigA = sigA - ( ~round ? 1 : sigB ); }
                                         }
                                     }
                                     case 2b10: {
-                                        if(  sigA > sigB ) {
-                                            sign = 1;
-                                            round = ( sigB != 0 );
-                                            sigA = sigA - ( ~round ? 1 : sigB );
-                                        } else {
-                                            sign = 0;
-                                            round = ( sigA != 0 );
-                                            sigA = sigB - ( ~round ? 1 : sigA );
+                                        switch(  sigA > sigB ) {
+                                            case 1: { sign = 1; round = ( sigB != 0 ); sigA = sigA - ( ~round ? 1 : sigB ); }
+                                            case 0: { sign = 0; round = ( sigA != 0 ); sigA = sigB - ( ~round ? 1 : sigA ); }
                                         }
                                     }
                                     default: { sign = signA; sigA = sigA + sigB; }
@@ -152,26 +138,30 @@ algorithm main(output int8 leds) {
                         }
                     }
                     case 4: {
-                        if( ( classEa | classEb ) == 0 ) {
-                            if( sigA == 0 ) {
-                                result = 0;
-                            } else {
-                                // NORMALISE AND ROUND
-                                if( sigA[21,1] ) {
-                                    expA = expA + 1;
-                                } else {
-                                    while( ~sigA[20,1] ) {
-                                        sigA = { sigA[0,21], 1b0 };
-                                        expA = expA - 1;
+                        switch( classEa | classEb ) {
+                            case 0: {
+                                __display("(3) r  %b %b  ^ %d",signA,sigA,expA);
+                                switch( sigA ) {
+                                    case 0: { result = 0; }
+                                    default: {
+                                        // NORMALISE AND ROUND
+                                        switch( sigA[21,1] ) {
+                                            case 1: { expA = expA + 1; }
+                                            default: {
+                                                while( ~sigA[20,1] ) { sigA = { sigA[0,21], 1b0 }; expA = expA - 1; }
+                                                sigA = { sigA[0,21], 1b0 };
+                                            }
+                                        }
+                                        sigA[10,1] = sigA[10,1] & round;
+                                        __display("(4) r  %b %b  ^ %d",signA,sigA,expA);
+                                        ( newfraction ) = round22( sigA );
+                                        ( expA ) = adjustexp22( exp, newfraction, sigA );
+                                        ( result ) = combinecomponents( sign, expA, newfraction );
+                                        __display("RESULT { %b %b %b } -> %x",result[15,1],result[10,5],result[0,10],result);
                                     }
-                                    sigA = { sigA[0,21], 1b0 };
                                 }
-                                sigA[10,1] = sigA[10,1] & round;
-                                ( newfraction ) = round22( sigA );
-                                ( expA ) = adjustexp22( exp, newfraction, sigA );
-                                ( result ) = combinecomponents( sign, expA, newfraction );
-                                __display("RESULT { %b %b %b } -> %x",result[15,1],result[10,5],result[0,10],result);
                             }
+                            default: {}
                         }
                     }
                 }
