@@ -52,7 +52,6 @@ circuitry store( input location, input value, input memorybusy, output address, 
     address = ( location[12,4] > 4hb ) ? location : { 1b0, location[1,15] };
     writedata = value;
     writememory = 1;
-    //while( memorybusy ) {}
 }
 
 algorithm J1CPU(
@@ -66,14 +65,13 @@ algorithm J1CPU(
     input   uint1   memorybusy
 ) <autorun> {
     // J1+ CPU
-    uint7   FSM = 7b0000001;
+    uint5   FSM = 5b00001;
+
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
     uint16  instruction = uninitialized;
-    uint16  immediate = uninitialized;
     uint16  memoryRead = uninitialized;
     uint1   is_alu = uninitialized;
     uint1   is_call = uninitialized;
-    uint1   is_lit = uninitialized;
     uint1   is_n2memt = uninitialized;
     uint2   is_callbranchalu = uninitialized;
     uint1   dstackWrite = uninitialized;
@@ -82,12 +80,8 @@ algorithm J1CPU(
     uint8   rdelta = uninitialized;
     decode DECODE <@clock100> (
         instruction <: instruction,
-        immediate :> immediate,
         is_alu :> is_alu,
-        is_call :> is_call,
-        is_lit :> is_lit,
         is_n2memt :> is_n2memt,
-        is_callbranchalu :> is_callbranchalu,
         dstackWrite :> dstackWrite,
         rstackWrite :> rstackWrite,
         ddelta :> ddelta,
@@ -97,24 +91,24 @@ algorithm J1CPU(
     // program counter
     uint13  pc = 0;
     uint13  pcPlusOne = uninitialized;
-    uint13  newPC = uninitialized;
-    uint13  callBranchAddress := callbranch(instruction).address;
+    uint13  newPC = 0;
 
     // dstack 257x16bit (as 3256 array + stackTop) and pointer, next pointer, write line, delta
-    simple_dualport_bram uint16 dstack[256] = uninitialized; // bram (code from @sylefeb)
+    stack DSTACK( stackWData <: stackTop, sp <: dsp, newSP <: newDSP, stackTop :> stackNext );
+    newsp NEWDSP( sp <: dsp, delta <: ddelta );
     uint16  stackTop = 0;
+    uint16  stackNext = uninitialized;
     uint8   dsp = 0;
-    uint8   newDSP = uninitialized;
-    uint16  newStackTop = uninitialized;
+    uint8   newDSP = 0;
+    uint16  newStackTop <: literal(instruction).is_literal ? literal(instruction).literalvalue : is_alu ? aluop(instruction).is_j1j1plus ? ALU1.newStackTop : ALU0.newStackTop : CALLBRANCH.newStackTop;
 
     // rstack 256x16bit and pointer, next pointer, write line
-    simple_dualport_bram uint16 rstack[256] = uninitialized; // bram (code from @sylefeb)
+    stack RSTACK( stackWData <: rstackWData, sp <: rsp, newSP <: newRSP, stackTop :> rStackTop );
+    newsp NEWRSP( sp <: rsp, delta <: rdelta );
+    uint16  rStackTop = uninitialized;
     uint8   rsp = 0;
-    uint8   newRSP = uninitialized;
-    uint16  rstackWData = uninitialized;
-
-    uint16  stackNext := dstack.rdata0;
-    uint16  rStackTop := rstack.rdata0;
+    uint8   newRSP = 0;
+    uint16  rstackWData <: is_alu ? stackTop : { pcPlusOne, 1b0 };
 
     alu0 ALU0(
         instruction <: instruction,
@@ -132,22 +126,17 @@ algorithm J1CPU(
     );
 
     j1eforthcallbranch CALLBRANCH <@clock100> (
-        is_callbranchalu <: is_callbranchalu,
+        instruction <: instruction,
         stackTop <: stackTop,
         stackNext <: stackNext,
         pc <: pc,
         pcPlusOne <: pcPlusOne,
-        callBranchAddress <: callBranchAddress,
         dsp <: dsp,
-        rsp <: rsp,
+        rsp <: rsp
     );
 
-    // Setup addresses for the dstack and rstack
-    // Read via port 0, write via port 1
-    dstack.addr0 := dsp;
-    dstack.wenable1 := 1;
-    rstack.addr0 := rsp;
-    rstack.wenable1 := 1;
+    DSTACK.stackWrite := 0;
+    RSTACK.stackWrite := 0;
 
     // MEMORY ACCESS FLAGS
     readmemory := 0;
@@ -157,49 +146,58 @@ algorithm J1CPU(
     while( 1 ) {
         onehot( FSM ) {
             case 0: {
+                // Update dsp, rsp, pc, stackTop
+                dsp = newDSP;
+                pc = newPC;
+                stackTop = newStackTop;
+                rsp = newRSP;
+                pcPlusOne = pc + 1;
+
                 // START FETCH INSTRUCTION
                 ( address, readmemory, instruction ) = fetch( pc, memorybusy, readdata );
-                pcPlusOne = pc + 1;
-                FSM = 7b0000010;
+                FSM = 5b00010;
             }
             case 1: {
-                switch( ~aluop(instruction).is_j1j1plus & ( callbranch(instruction).is_callbranchalu == 2b11 ) & ( aluop(instruction).operation == 4b1100 ) ) {
+                switch( ~aluop(instruction).is_j1j1plus & is_alu & ( aluop(instruction).operation == 4b1100 ) ) {
                     case 1: {
                         // LOAD FROM MEMORY
                         ( address, readmemory, memoryRead ) = load( stackTop, memorybusy, readdata );
-                        FSM = 7b0010000;
+                        FSM = 5b10000;
                     }
-                    case 0: { FSM = instruction[15,1] ? 7b0000100 : ( instruction[13,2] == 2b11 ) ? 7b0010000 : 7b0001000; }
+                    case 0: { FSM = literal(instruction).is_literal ? 5b00100 : is_alu ? 5b10000 : 5b01000; }
                 }
             }
             case 2: {
                 // LITERAL
-                newStackTop = immediate;
                 newPC = pcPlusOne;
                 newDSP = dsp + 1;
-                newRSP = rsp;
-                FSM = 7b0100000;
+
+                // Commit to dstack and rstack
+                DSTACK.stackWrite = dstackWrite;
+
+                FSM = 5b00001;
             }
             case 3: {
                 // CALL BRANCH 0BRANCH
-                newStackTop = CALLBRANCH.newStackTop;
                 newPC = CALLBRANCH.newPC;
                 newDSP = CALLBRANCH.newDSP;
                 newRSP = CALLBRANCH.newRSP;
-                rstackWData = { pcPlusOne, 1b0 };
-                FSM = ( dstackWrite || rstackWrite ) ? 7b0100000 : 7b1000000;
+
+                // Commit to dstack and rstack
+                DSTACK.stackWrite = dstackWrite;
+                RSTACK.stackWrite = rstackWrite;
+
+                FSM = 5b00001;
             }
             case 4: {
                 // ALU
-                newStackTop = aluop(instruction).is_j1j1plus ? ALU1.newStackTop : ALU0.newStackTop;
 
                 // UPDATE newDSP newRSP
-                newDSP = dsp + ddelta;
-                newRSP = rsp + rdelta;
-                rstackWData = stackTop;
+                newDSP = NEWDSP.newSP;
+                newRSP = NEWRSP.newSP;
 
                 // Update PC for next instruction, return from call or next instruction
-                newPC = ( aluop(instruction).is_r2pc ) ? {1b0,rStackTop[1,15]} : pcPlusOne;
+                newPC = ( aluop(instruction).is_r2pc ) ? {1b0, rStackTop[1,15] } : pcPlusOne;
 
                 // n2memt mem[t] = n
                 switch( is_n2memt ) {
@@ -207,27 +205,11 @@ algorithm J1CPU(
                     default: {}
                 }
 
-                FSM =  ( dstackWrite || rstackWrite ) ? 7b0100000 : 7b1000000;
-            }
-            case 5: {
                 // Commit to dstack and rstack
-                switch( dstackWrite ) {
-                    case 1: { dstack.addr1 = newDSP; dstack.wdata1 = stackTop; }
-                    case 0: {}
-                }
-                switch( rstackWrite ) {
-                    case 1: { rstack.addr1 = newRSP; rstack.wdata1 = rstackWData; }
-                    case 0: {}
-                }
-                FSM = 7b1000000;
-            }
-            case 6: {
-                // Update dsp, rsp, pc, stackTop
-                dsp = newDSP;
-                pc = newPC;
-                stackTop = newStackTop;
-                rsp = newRSP;
-                FSM = 7b0000001;
+                DSTACK.stackWrite = dstackWrite;
+                RSTACK.stackWrite = rstackWrite;
+
+                FSM =  5b00001;
             }
         }
     }
@@ -417,10 +399,9 @@ algorithm alu1(
 }
 
 algorithm j1eforthcallbranch(
-    input   uint2   is_callbranchalu,
+    input   uint16  instruction,
     input   uint16  stackTop,
     input   uint16  stackNext,
-    input   uint13  callBranchAddress,
     input   uint13  pc,
     input   uint13  pcPlusOne,
     input   uint8   dsp,
@@ -431,33 +412,58 @@ algorithm j1eforthcallbranch(
     output  uint8   newDSP,
     output  uint8   newRSP,
 ) <autorun> {
+    uint2   is_callbranchalu <: callbranch(instruction).is_callbranchalu;
+
     newStackTop := is_callbranchalu[0,1] ? stackNext : stackTop;
     newDSP := dsp - is_callbranchalu[0,1];
     newRSP := rsp + is_callbranchalu[1,1];
-    newPC := is_callbranchalu[0,1] ? ( stackTop == 0 ) ? callBranchAddress : pcPlusOne : callBranchAddress;
+    newPC := is_callbranchalu[0,1] ? ( stackTop == 0 ) ? callbranch(instruction).address : pcPlusOne : callbranch(instruction).address;
 }
 
 algorithm decode(
     input   uint16  instruction,
-    output  uint16  immediate,
     output  uint1   is_alu,
-    output  uint1   is_call,
-    output  uint1   is_lit,
     output  uint1   is_n2memt,
-    output  uint2   is_callbranchalu,
     output  uint1   dstackWrite,
     output  uint1   rstackWrite,
     output  uint8   ddelta,
     output  uint8   rdelta
 ) <autorun> {
-    immediate := ( literal(instruction).literalvalue );
+    uint1   is_lit <: literal(instruction).is_literal;
+    uint1   is_call <: ( instruction(instruction).is_litcallbranchalu == 3b010 );
+
     is_alu := ( instruction(instruction).is_litcallbranchalu == 3b011 );
-    is_call := ( instruction(instruction).is_litcallbranchalu == 3b010 );
-    is_lit := literal(instruction).is_literal;
     is_n2memt := is_alu && aluop(instruction).is_n2memt;
-    is_callbranchalu := callbranch(instruction).is_callbranchalu;
     dstackWrite := ( is_lit | (is_alu & aluop(instruction).is_t2n) );
     rstackWrite := ( is_call | (is_alu & aluop(instruction).is_t2r) );
     ddelta := { {7{aluop(instruction).ddelta1}}, aluop(instruction).ddelta0 };
     rdelta := { {7{aluop(instruction).rdelta1}}, aluop(instruction).rdelta0 };
+}
+
+algorithm stack(
+    input   uint16  stackWData,
+    input   uint1   stackWrite,
+    input   uint8   sp,
+    input   uint8   newSP,
+    output  uint16  stackTop
+) <autorun> {
+    simple_dualport_bram uint16 stack[256] = uninitialized; // bram (code from @sylefeb)
+    stack.addr0 := sp;
+    stack.wenable1 := 1;
+    stackTop := stack.rdata0;
+
+    while(1) {
+        switch( stackWrite ) {
+            case 1: { stack.addr1 = newSP; stack.wdata1 = stackWData; }
+            default: {}
+        }
+    }
+}
+
+algorithm newsp(
+    input   uint8   sp,
+    input   uint8   delta,
+    output  uint8   newSP
+) <autorun> {
+    newSP := sp + delta;
 }
