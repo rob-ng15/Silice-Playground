@@ -943,9 +943,10 @@ t: qrng e000 literal @ swap and t;
 
 ( DISPLAY helper words )
 t: vblank? begin cf00 literal @ 0<> until t;
+t: screen! cf00 literal ! t;
 t: framebuffer! begin c614 literal @ 0= until vblank? c6f2 literal ! c6f0 literal ! t;
 t: terminal! c702 literal ! t;
-t: background! c8004 literal ! c002 literal ! c000 literal ! t;
+t: background! c004 literal ! c002 literal ! c000 literal ! t;
 
 t: gpu? begin c612 literal @ 0= until t;
 t: gpu! gpu? c612 literal ! t;
@@ -969,8 +970,16 @@ t: pbpixel! c670 literal ! t;
 t: pbstop! 3 literal c678 literal ! t;
 t: cs 40 literal 0 literal 0 literal colour! fullscreen! rectangle t;
 
-t: tmlcs 9 literal c120 literal ! t;
-t: tmucs 9 literal c220 literal ! t;
+t: tml? begin c122 literal @ 0= until t;
+t: tmu? begin c222 literal @ 0= until t;
+t: tmlmove! tml? c120 literal ! t;
+t: tmumove! tmu? c220 literal ! t;
+t: tmlcs 9 literal tmlmove! t;
+t: tmucs 9 literal tmumove! t;
+t: tmltile! c110 literal ! 10 literal begin 1- dup c112 literal ! swap c114 literal ! dup 0= until drop t;
+t: tmutile! c210 literal ! 10 literal begin 1- dup c212 literal ! swap c214 literal ! dup 0= until drop t;
+t: tml! c106 literal ! c108 literal ! c104 literal ! c102 literal ! c100 literal ! 1 literal c10a literal ! t;
+t: tmu! c206 literal ! c208 literal ! c204 literal ! c202 literal ! c200 literal ! 1 literal c20a literal ! t;
 
 t: tpu? begin c50a literal @ 0= until t;
 t: tpu! tpu? c50a literal ! t;
@@ -996,7 +1005,7 @@ t: sprite!
    _pointer @ ! 20 literal _pointer @ + _pointer !
    _pointer @ ! 20 literal _pointer @ + _pointer !
    _pointer @ ! 20 literal _pointer @ + _pointer !
-   _pointer @ ! 20 literal _pointer @ + _pointer !
+   swap _pointer @ ! 20 literal _pointer @ + _pointer !
    _pointer @ ! 20 literal _pointer @ + _pointer !
    _pointer @ ! 20 literal _pointer @ + _pointer ! t;
 t: lsprite 2* c300 literal + _pointer ! sprite! t;

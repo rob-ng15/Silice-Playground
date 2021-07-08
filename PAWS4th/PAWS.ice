@@ -237,7 +237,7 @@ $$end
     uint1   IO <: address[12,4] == 4hf ;
 
     // CPU BUSY STATE
-    CPU.memorybusy := CPU.readmemory | CPU.writememory;
+    CPU.memorybusy := ( CPU.readmemory | CPU.writememory ) & BRAM;
 
     // READ / WRITE FROM SDRAM / BRAM
     ram.writeflag := BRAM & CPU.writememory;

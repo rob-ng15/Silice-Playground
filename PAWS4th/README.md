@@ -53,6 +53,7 @@ sleep | ```w sleep``` sleep for w milliseconds
 rng | ```w rng``` returns a pseudo random number (0 to w-1) to the stack
  | |
 vblank? | ```vblank?``` waits for the display vertical blank
+screen! |
 frambuffer! | ```w1 w2 framebuffer``` sets the display framebuffer to w1 and the drawing framebuffer to w2
 terminal! | ```w terminal!``` w == 0 hide the terminal window, w == 1 display the terminal window
 background! | ```w1 w2 w3 background!``` sets the background generator to colour w1, alt colour w2 and mode w3
@@ -73,11 +74,17 @@ pbpixel! | ```w pbpixel!``` output a pixel of colour w to the pixel block and mo
 pbstop! | ```pbstop!``` stops the pixel block
 cs | ```cs``` clears the framebuffer
  | |
+tml! |
+tmu! |
+tmltile! |
+tmutile! |
+tmlmove! |
+tmumove! |
 tmlcs |
 tmucs |
  | |
-lsprite | ``` w1 w2 w3 w4 w5 w6 w7 lsprite``` set lower sprite w7 to tile w1 at (w3,w2) in colour w4 attribute w5 with active status w6
-usprite | ``` w1 w2 w3 w4 w5 w6 w7 usprite``` set upper sprite w7 to tile w1 at (w3,w2) in colour w4 attribute w5 with active status w6
+lsprite | ``` w1 w2 w3 w4 w5 w6 w7 lsprite``` set lower sprite w7 to tile w1 at (w2,w3) in colour w4 attribute w5 with active status w6
+usprite | ``` w1 w2 w3 w4 w5 w6 w7 usprite``` set upper sprite w7 to tile w1 at (w2,w3) in colour w4 attribute w5 with active status w6
 lspriteupdate | ```w1 w2 lspriteupdate``` update lower sprite w2 with update flag w1
 uspriteupdate | ```w1 w2 uspriteupdate``` update upper sprite w2 with update flag w1
 lspritetile! | ```w0 w1 .. w127 w128 lspritetile!``` set the tiles for lower sprite w128 to w0 .. w127
@@ -111,8 +118,8 @@ sd@ | ```w sd@``` read byte w from the sdcard buffer
 
 Double Word | Usage
 :----- | :-----
-d! | ```d w d!``` stores the double word d at address w
-d@ | ```w d@``` returns the double word from address w to the stack ( d to stack )
+2! | ```d w d!``` stores the double word d at address w
+2@ | ```w d@``` returns the double word from address w to the stack ( d to stack )
 2constant | ```d 2constant name``` creates a double width constant called name
 2variable | ```2variable name``` creates a double width variable called name
 s>d | ```w s>d``` expands single width word w to double width word ( d to stack )

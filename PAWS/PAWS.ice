@@ -245,7 +245,7 @@ $$end
     uint1   IO <: ~address[28,1] & address[15,1] & ( address[12,4]==4hf );
 
     // SDRAM -> CPU BUSY STATE
-    CPU.memorybusy := sdram.busy | CPU.readmemory | CPU.writememory;
+    CPU.memorybusy := sdram.busy | ( ( CPU.readmemory | CPU.writememory ) & ( BRAM | SDRAM ) );
 
     // READ / WRITE FROM SDRAM / BRAM
     sdram.writeflag := SDRAM & CPU.writememory;

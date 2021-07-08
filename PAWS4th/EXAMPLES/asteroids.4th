@@ -1,6 +1,54 @@
+hex
+
 : array create cells allot does> cells + ;
 
-hex
+0000 0000 0000 0000
+0000 0000 0000 0000
+001f 003f 00ff 01ff
+03ff 03ff 07ff 07fc
+1 tmltile!
+
+1ff1 37c7 279c 33f1
+1fc7 011f 00ff 003f
+0000 0000 0000 0000
+0000 0000 0000 0000
+2 tmltile!
+
+0000 0000 0000 0000
+0000 0000 0000 0000
+c000 f000 f800 ff00
+f900 e700 0c00 7400
+3 tmltile!
+
+c400 1c00 7c00 f800
+f800 f000 e000 8000
+0000 0000 0000 0000
+0000 0000 0000 0000
+4 tmltile!
+
+0000 0000 0000 0000
+0000 0000 0001 0003
+007e 00c4 0088 0190
+0110 0320 03f1 0003
+5 tmutile!
+
+0006 0005 0022 0008
+0480 0024 0020 0090
+0000 0040 0000 0010
+0000 0000 0000 0000
+6 tmutile!
+
+0000 007e 07e2 1e02
+7006 e604 8f0c 198c
+1998 0f18 0630 0060
+6060 d0c0 a180 4300
+7 tmutile!
+
+8600 0a00 3200 c200
+8200 9c00 f000 c000
+0000 0000 0000 0000
+0000 0000 0000 0000
+8 tmutile!
 
 variable lasttimer
 variable shipdirection
@@ -187,3 +235,53 @@ e  d updatedirections c!
   1800 0081 0400 4010
   0000 0300 0302 6010
   6000 0000 0419 8018 ;
+
+: setasteroidsprites
+  b 0 do
+    asteroidbitmap i lsltile!
+    asteroidbitmap i usltile!
+  loop ;
+
+: setup
+  cs tmlcs tmucs tcs
+  0 0 tpuxy! 3f 40 tcolour!
+  0 terminal!
+  timer1hz! 0 lasttimer !
+  2a 1 7 background!
+  10 0 do
+    0 0 0 0 0 0 i lsprite
+    0 0 0 0 0 0 i usprite
+  loop
+
+    4 4 1 15 40 tml!
+    4 5 2 15 40 tml!
+    5 4 3 15 40 tml!
+    5 5 4 15 40 tml!
+    12 e 1 14 40 tml!
+    12 f 2 14 40 tml!
+    13 e 3 14 40 tml!
+    13 f 4 14 40 tml!
+    22 1c 1 5 40 tml!
+    22 1d 2 5 40 tml!
+    23 1c 3 5 40 tml!
+    23 1d 4 5 40 tml!
+    24 2 5 2a 40 tmu!
+    24 3 6 2a 40 tmu!
+    25 2 7 2a 40 tmu!
+    25 3 8 2a 40 tmu!
+    6 1a 5 10 40 tmu!
+    6 1b 6 10 40 tmu!
+    7 1a 7 10 40 tmu!
+    7 1b 8 10 40 tmu!
+
+  0 score !
+  3 lives !
+  4 counter !
+  0 shipdirection !
+  138 shipx !
+  e8 shipy !
+  setshipsprite
+  setbulletsprite ;
+
+: finish
+ 1 terminal! ;
