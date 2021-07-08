@@ -31,10 +31,9 @@ bitfield floatingpointnumber{
 // NOTE exp from addsub multiply divide is 8 bit biased ( ie, exp + 15 )
 // small numbers return 0, bit numbers return max
 circuitry combinecomponents( input sign, input exp, input fraction, output f16 ) {
-    if( ( exp > 30 ) || ( exp < 0 ) ) {
-        f16 = ( exp < 0 ) ? 0 : { sign, 5b01111, 10h3ff };
-    } else {
-        f16 = { sign, exp[0,5], fraction[0,10] };
+    switch( ( exp > 30 ) || ( exp < 0 ) ) {
+        case 1: { f16 = ( exp < 0 ) ? 0 : { sign, 5b01111, 10h3ff }; }
+        case 0: { f16 = { sign, exp[0,5], fraction[0,10] }; }
     }
 }
 
@@ -98,20 +97,21 @@ algorithm inttofloat(
                         number = a[15,1] ? -a : a ;
                     }
                     case 1: {
-                        if( number == 0 ) {
-                            result = 0;
-                        } else {
-                            FSM2 = 1;
-                            while( FSM2 !=0 ) {
-                                onehot( FSM2 ) {
-                                    case 0: { zeros = 0; while( ~number[ 15-zeros, 1 ] ) { zeros = zeros + 1; } }
-                                    case 1: {
-                                        number = ( zeros < 5 ) ? number >> ( 5 - zeros ) : ( zeros > 5 ) ? number << ( zeros - 5 ) : number;
-                                        exp = 30 - zeros;
-                                        ( result ) = combinecomponents( sign, exp, number );
+                        switch( number == 0 ) {
+                            case 1: { result = 0; }
+                            case 0: {
+                                FSM2 = 1;
+                                while( FSM2 !=0 ) {
+                                    onehot( FSM2 ) {
+                                        case 0: { zeros = 0; while( ~number[ 15-zeros, 1 ] ) { zeros = zeros + 1; } }
+                                        case 1: {
+                                            number = ( zeros < 5 ) ? number >> ( 5 - zeros ) : ( zeros > 5 ) ? number << ( zeros - 5 ) : number;
+                                            exp = 30 - zeros;
+                                            ( result ) = combinecomponents( sign, exp, number );
+                                        }
                                     }
+                                    FSM2 = { FSM2[0,1], 1b0 };
                                 }
-                                FSM2 = { FSM2[0,1], 1b0 };
                             }
                         }
                     }
@@ -391,15 +391,19 @@ algorithm floatdivide(
                         }
                     }
                     case 3: {
-                        if( ( classEa | classEb ) == 0 ) {
-                            if( quotient == 0 ) {
-                                result = { quotientsign, 15b0 };
-                            } else {
-                                ( quotient ) = normalise22( quotient );
-                                ( newfraction ) = round22( quotient );
-                                quotientexp = 15 + quotientexp - ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction ) + ( ( newfraction == 0 ) & quotient[12,1] );
-                                ( result ) = combinecomponents( quotientsign, quotientexp, newfraction );
+                        switch( classEa | classEb ) {
+                            case 0: {
+                                switch( quotient ) {
+                                    case 0: { result = { quotientsign, 15b0 }; }
+                                    default: {
+                                        ( quotient ) = normalise22( quotient );
+                                        ( newfraction ) = round22( quotient );
+                                        quotientexp = 15 + quotientexp - ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction ) + ( ( newfraction == 0 ) & quotient[12,1] );
+                                        ( result ) = combinecomponents( quotientsign, quotientexp, newfraction );
+                                    }
+                                }
                             }
+                            default: {}
                         }
                     }
                 }
@@ -436,42 +440,43 @@ algorithm floatsqrt(
             busy = 1;
             FSM = 1;
             ( classEa ) = classE( a );
-            if( a[15,1] ) {
-                result = { a[15,1], 5b11111, 10h3ff };
-            } else {
-                switch( classEa ) {
-                    case 2b00: {
-                        while( FSM != 0 ) {
-                            onehot( FSM ) {
-                                case 0: {
-                                    i = 0;
-                                    q = 0;
-                                    exp = floatingpointnumber( a ).exponent - 15;
-                                    ac = ~exp[0,1] ? 1 : { 22b0, 1b1, a[9,1] };
-                                    x = ~exp[0,1] ? { a[0,10], 12b0 } : { a[0,9], 13b0 };
-                                }
-                                case 1: {
-                                    while( i != 21 ) {
-                                        test_res = ac - { q, 2b01 };
-                                        ac = { test_res[23,1] ? ac[0,21] : test_res[0,21], x[20,2] };
-                                        q = { q[0,21], ~test_res[23,1] };
-                                        x = { x[0,20], 2b00 };
-                                        i = i + 1;
+            switch( a[15,1] ) {
+                case 1: { result = { a[15,1], 5b11111, 10h3ff }; }
+                default: {
+                    switch( classEa ) {
+                        case 2b00: {
+                            while( FSM != 0 ) {
+                                onehot( FSM ) {
+                                    case 0: {
+                                        i = 0;
+                                        q = 0;
+                                        exp = floatingpointnumber( a ).exponent - 15;
+                                        ac = ~exp[0,1] ? 1 : { 22b0, 1b1, a[9,1] };
+                                        x = ~exp[0,1] ? { a[0,10], 12b0 } : { a[0,9], 13b0 };
+                                    }
+                                    case 1: {
+                                        while( i != 21 ) {
+                                            test_res = ac - { q, 2b01 };
+                                            ac = { test_res[23,1] ? ac[0,21] : test_res[0,21], x[20,2] };
+                                            q = { q[0,21], ~test_res[23,1] };
+                                            x = { x[0,20], 2b00 };
+                                            i = i + 1;
+                                        }
+                                    }
+                                    case 2: {
+                                        ( q ) = normalise22( q );
+                                    }
+                                    case 3: {
+                                        exp = ( exp >>> 1 ) + 15;
+                                        ( newfraction ) = round22( q );
+                                        ( result ) = combinecomponents( sign, exp, newfraction );
                                     }
                                 }
-                                case 2: {
-                                    ( q ) = normalise22( q );
-                                }
-                                case 3: {
-                                    exp = ( exp >>> 1 ) + 15;
-                                    ( newfraction ) = round22( q );
-                                    ( result ) = combinecomponents( sign, exp, newfraction );
-                                }
-                            }
-                            FSM = { FSM[0,3], 1b0 };
-                        }                    }
-                    case 2b01: { result = 0; }
-                    default: { result = a; }
+                                FSM = { FSM[0,3], 1b0 };
+                            }                    }
+                        case 2b01: { result = 0; }
+                        default: { result = a; }
+                    }
                 }
             }
             busy = 0;

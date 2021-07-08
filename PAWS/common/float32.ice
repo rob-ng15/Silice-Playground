@@ -32,10 +32,9 @@ bitfield floatingpointnumber{
 // NOTE exp from addsub multiply divide is 16 bit biased ( ie, exp + 127 )
 // small numbers return 0, bit numbers return max
 circuitry combinecomponents( input sign, input exp, input fraction, output f32 ) {
-    if( ( exp > 254 ) || ( exp < 0 ) ) {
-        f32 = ( exp < 0 ) ? 0 : { sign, 8b01111111, 23h7fffff };
-    } else {
-        f32 = { sign, exp[0,8], fraction[0,23] };
+    switch( ( exp > 254 ) || ( exp < 0 ) ) {
+        case 1: { f32 = ( exp < 0 ) ? 0 : { sign, 8b01111111, 23h7fffff }; }
+        case 0: { f32 = { sign, exp[0,8], fraction[0,23] }; }
     }
 }
 
@@ -97,20 +96,21 @@ algorithm inttofloat(
                         number = dounsigned ? a : ( a[31,1] ? -a : a );
                     }
                     case 1: {
-                        if( number == 0 ) {
-                            result = 0;
-                        } else {
-                            FSM2 = 1;
-                            while( FSM2 !=0 ) {
-                                onehot( FSM2 ) {
-                                    case 0: { zeros = 0; while( ~number[31-zeros,1] ) { zeros = zeros + 1; } }
-                                    case 1: {
-                                        number = ( zeros < 8 ) ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
-                                        exp = 158 - zeros;
-                                        ( result ) = combinecomponents( sign, exp, number );
+                        switch( number == 0 ) {
+                            case 1: { result = 0; }
+                            case 0: {
+                                FSM2 = 1;
+                                while( FSM2 !=0 ) {
+                                    onehot( FSM2 ) {
+                                        case 0: { zeros = 0; while( ~number[31-zeros,1] ) { zeros = zeros + 1; } }
+                                        case 1: {
+                                            number = ( zeros < 8 ) ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
+                                            exp = 158 - zeros;
+                                            ( result ) = combinecomponents( sign, exp, number );
+                                        }
                                     }
+                                    FSM2 = { FSM2[0,1], 1b0 };
                                 }
-                                FSM2 = { FSM2[0,1], 1b0 };
                             }
                         }
                     }
@@ -141,12 +141,13 @@ algorithm floattouint(
             ( classEa ) = classE( a );
             switch( classEa ) {
                 case 2b00: {
-                    if( a[31,1] ) {
-                        result = 0;
-                    } else {
-                        exp = floatingpointnumber( a ).exponent - 127;
-                        sig = ( exp < 24 ) ? { 9b1, a[0,23], 1b0 } >> ( 23 - exp ) : { 9b1, a[0,23], 1b0 } << ( exp - 24);
-                        result = ( exp > 31 ) ? 32hffffffff : ( sig[1,32] + sig[0,1] );
+                    switch( a[31,1] ) {
+                        case 1: { result = 0; }
+                        default: {
+                            exp = floatingpointnumber( a ).exponent - 127;
+                            sig = ( exp < 24 ) ? { 9b1, a[0,23], 1b0 } >> ( 23 - exp ) : { 9b1, a[0,23], 1b0 } << ( exp - 24);
+                            result = ( exp > 31 ) ? 32hffffffff : ( sig[1,32] + sig[0,1] );
+                        }
                     }
                 }
                 case 2b01: { result = 0; }
@@ -237,14 +238,10 @@ algorithm floataddsub(
                     }
                     case 2: {
                         // ADJUST TO EQUAL EXPONENTS
-                        if( expA < expB ) {
-                            sigA = sigA >> ( expB - expA );
-                            expA = expB;
-                        } else {
-                            if( expB < expA ) {
-                                sigB = sigB >> ( expA - expB );
-                                expB = expA;
-                            }
+                        switch( { expA < expB, expB < expA } ) {
+                            case 2b10: { sigA = sigA >> ( expB - expA ); expA = expB; }
+                            case 2b01: { sigB = sigB >> ( expA - expB ); expB = expA; }
+                            default: {}
                         }
                     }
                     case 3: {
@@ -253,25 +250,15 @@ algorithm floataddsub(
                                 switch( { signA, signB } ) {
                                     // PERFORM + HANDLING SIGNS
                                     case 2b01: {
-                                        if( sigB > sigA ) {
-                                            sign = 1;
-                                            round = ( sigA != 0 );
-                                            sigA = sigB - ( ~round ? 1 : sigA );
-                                        } else {
-                                            sign = 0;
-                                            round = ( sigB != 0 );
-                                            sigA = sigA - ( ~round ? 1 : sigB );
+                                        switch( sigB > sigA ) {
+                                            case 1: { sign = 1; round = ( sigA != 0 ); sigA = sigB - ( ~round ? 1 : sigA ); }
+                                            case 0: { sign = 0; round = ( sigB != 0 ); sigA = sigA - ( ~round ? 1 : sigB ); }
                                         }
                                     }
                                     case 2b10: {
-                                        if(  sigA > sigB ) {
-                                            sign = 1;
-                                            round = ( sigB != 0 );
-                                            sigA = sigA - ( ~round ? 1 : sigB );
-                                        } else {
-                                            sign = 0;
-                                            round = ( sigA != 0 );
-                                            sigA = sigB - ( ~round ? 1 : sigA );
+                                        switch(  sigA > sigB ) {
+                                            case 1: { sign = 1; round = ( sigB != 0 ); sigA = sigA - ( ~round ? 1 : sigB ); }
+                                            case 0: { sign = 0; round = ( sigA != 0 ); sigA = sigB - ( ~round ? 1 : sigA ); }
                                         }
                                     }
                                     default: { sign = signA; sigA = sigA + sigB; }
@@ -282,25 +269,27 @@ algorithm floataddsub(
                         }
                     }
                     case 4: {
-                        if( ( classEa | classEb ) == 0 ) {
-                            if( sigA == 0 ) {
-                                result = 0;
-                            } else {
-                                // NORMALISE AND ROUND
-                                if( sigA[47,1] ) {
-                                    expA = expA + 1;
-                                } else {
-                                    while( ~sigA[46,1] ) {
-                                        sigA = { sigA[0,47], 1b0 };
-                                        expA = expA - 1;
+                        switch( classEa | classEb ) {
+                            case 0: {
+                                switch( sigA ) {
+                                    case 0: { result = 0; }
+                                    default: {
+                                        // NORMALISE AND ROUND
+                                        switch( sigA[47,1] ) {
+                                            case 1: { expA = expA + 1; }
+                                            default: {
+                                                while( ~sigA[46,1] ) { sigA = { sigA[0,47], 1b0 }; expA = expA - 1; }
+                                                sigA = { sigA[0,47], 1b0 };
+                                            }
+                                        }
+                                        sigA[23,1] = sigA[23,1] & round;
+                                        ( newfraction ) = round48( sigA );
+                                        ( expA ) = adjustexp48( exp, newfraction, sigA );
+                                        ( result ) = combinecomponents( sign, expA, newfraction );
                                     }
-                                    sigA = { sigA[0,47], 1b0 };
                                 }
-                                sigA[23,1] = sigA[23,1] & round;
-                                ( newfraction ) = round48( sigA );
-                                ( expA ) = adjustexp48( exp, newfraction, sigA );
-                                ( result ) = combinecomponents( sign, expA, newfraction );
                             }
+                            default: {}
                         }
                     }
                 }
@@ -337,7 +326,7 @@ algorithm floatmultiply(
 
     output  uint32  result
 ) <autorun> {
-    uint3   FSM = uninitialised;
+    uint2   FSM = uninitialised;
 
     uint2   classEa = uninitialised;
     uint2   classEb = uninitialised;
@@ -361,12 +350,10 @@ algorithm floatmultiply(
                     case 0: {
                         ( classEa ) = classE( a );
                         ( classEb ) = classE( b );
-                    }
-                    case 1: {
                         product = UINTMUL.product[0,48];
                         productexp = (floatingpointnumber( a ).exponent - 127) + (floatingpointnumber( b ).exponent - 127) + product[47,1];
                     }
-                    case 2: {
+                    case 1: {
                         switch( classEa | classEb ) {
                             case 2b00: {
                                 ( product ) = normalise48( product );
@@ -379,7 +366,7 @@ algorithm floatmultiply(
                         }
                     }
                 }
-                FSM = { FSM[0,2], 1b0 };
+                FSM = { FSM[0,1], 1b0 };
             }
             busy = 0;
         }
@@ -387,20 +374,24 @@ algorithm floatmultiply(
 }
 
 // DIVIDE TWO FLOATING POINT NUMBERS
-
-$$if not divbit_circuit then
-$$divbit_circuit = 1
-// PERFORM DIVISION AT SPECIFIC BIT, SHARED BETWEEN INTEGER AND  FLOATING POINT DIVISION
-circuitry divbit( inout quo, inout rem, input top, input bottom, input x ) {
-    sameas( rem ) temp = uninitialized;
+algorithm divbit48(
+    input   uint48  quo,
+    input   uint48  rem,
+    input   uint48  top,
+    input   uint48  bottom,
+    input   uint6   x,
+    output  uint48  newquotient,
+    output  uint48  newremainder
+) <autorun> {
+    uint48  temp = uninitialised;
     uint1   quobit = uninitialised;
-
-    temp = ( rem << 1 ) + top[x,1];
-    quobit = __dounsigned(temp) >= __dounsigned(bottom);
-    rem = __dounsigned(temp) - ( quobit ? __dounsigned(bottom) : 0 );
-    quo[x,1] = quobit;
+    while(1) {
+        temp = ( rem << 1 ) + top[x,1];
+        quobit = __unsigned(temp) >= __unsigned(bottom);
+        newremainder = __unsigned(temp) - ( quobit ? __unsigned(bottom) : 0 );
+        newquotient = quo | ( quobit << x );
+    }
 }
-$$end
 
 algorithm floatdivide(
     input   uint1   start,
@@ -423,6 +414,8 @@ algorithm floatdivide(
     uint48  sigB = uninitialised;
     uint23  newfraction = uninitialised;
 
+    divbit48 DIVBIT48( quo <: quotient, rem <: remainder, top <: sigA, bottom <: sigB, x <: bit );
+
     while(1) {
         if( start ) {
             busy = 1;
@@ -444,7 +437,7 @@ algorithm floatdivide(
                         switch( classEa | classEb ) {
                             case 2b00: {
                                 while( bit != 63 ) {
-                                    ( quotient, remainder ) = divbit( quotient, remainder, sigA, sigB, bit );
+                                    quotient = DIVBIT48.newquotient; remainder = DIVBIT48.newremainder;
                                     bit = bit - 1;
                                 }
                             }
@@ -453,15 +446,19 @@ algorithm floatdivide(
                         }
                     }
                     case 3: {
-                        if( ( classEa | classEb ) == 0 ) {
-                            if( quotient == 0 ) {
-                                result = { quotientsign, 31b0 };
-                            } else {
-                                ( quotient ) = normalise48( quotient );
-                                ( newfraction ) = round48( quotient );
-                                quotientexp = 127 + quotientexp - ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction ) + ( ( newfraction == 0 ) & quotient[23,1] );
-                                ( result ) = combinecomponents( quotientsign, quotientexp, newfraction );
+                        switch( classEa | classEb ) {
+                            case 0: {
+                                switch( quotient ) {
+                                    case 0: { result = { quotientsign, 31b0 }; }
+                                    default: {
+                                        ( quotient ) = normalise48( quotient );
+                                        ( newfraction ) = round48( quotient );
+                                        quotientexp = 127 + quotientexp - ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction ) + ( ( newfraction == 0 ) & quotient[23,1] );
+                                        ( result ) = combinecomponents( quotientsign, quotientexp, newfraction );
+                                    }
+                                }
                             }
+                            default: {}
                         }
                     }
                 }
@@ -498,42 +495,43 @@ algorithm floatsqrt(
             busy = 1;
             FSM = 1;
             ( classEa ) = classE( a );
-            if( a[31,1] ) {
-                result = { a[31,1], 8b11111111, 23h7fffff };
-            } else {
-                switch( classEa ) {
-                    case 2b00: {
-                        while( FSM != 0 ) {
-                            onehot( FSM ) {
-                                case 0: {
-                                    i = 0;
-                                    q = 0;
-                                    exp = floatingpointnumber( a ).exponent - 127;
-                                    ac = ~exp[0,1] ? 1 : { 48b0, 1b1, a[22,1] };
-                                    x = ~exp[0,1] ? { a[0,23], 25b0 } : { a[0,22], 26b0 };
-                                }
-                                case 1: {
-                                    while( i != 47 ) {
-                                        test_res = ac - { q, 2b01 };
-                                        ac = { test_res[49,1] ? ac[0,47] : test_res[0,47], x[46,2] };
-                                        q = { q[0,47], ~test_res[49,1] };
-                                        x = { x[0,46], 2b00 };
-                                        i = i + 1;
+            switch( a[31,1] ) {
+                case 1: { result = { a[31,1], 8b11111111, 23h7fffff }; }
+                default: {
+                    switch( classEa ) {
+                        case 2b00: {
+                            while( FSM != 0 ) {
+                                onehot( FSM ) {
+                                    case 0: {
+                                        i = 0;
+                                        q = 0;
+                                        exp = floatingpointnumber( a ).exponent - 127;
+                                        ac = ~exp[0,1] ? 1 : { 48b0, 1b1, a[22,1] };
+                                        x = ~exp[0,1] ? { a[0,23], 25b0 } : { a[0,22], 26b0 };
+                                    }
+                                    case 1: {
+                                        while( i != 47 ) {
+                                            test_res = ac - { q, 2b01 };
+                                            ac = { test_res[49,1] ? ac[0,47] : test_res[0,47], x[46,2] };
+                                            q = { q[0,47], ~test_res[49,1] };
+                                            x = { x[0,46], 2b00 };
+                                            i = i + 1;
+                                        }
+                                    }
+                                    case 2: {
+                                        ( q ) = normalise48( q );
+                                    }
+                                    case 3: {
+                                        exp = ( exp >>> 1 ) + 127;
+                                        ( newfraction ) = round48( q );
+                                        ( result ) = combinecomponents( sign, exp, newfraction );
                                     }
                                 }
-                                case 2: {
-                                    ( q ) = normalise48( q );
-                                }
-                                case 3: {
-                                    exp = ( exp >>> 1 ) + 127;
-                                    ( newfraction ) = round48( q );
-                                    ( result ) = combinecomponents( sign, exp, newfraction );
-                                }
-                            }
-                            FSM = { FSM[0,3], 1b0 };
-                        }                    }
-                    case 2b01: { result = 0; }
-                    default: { result = a; }
+                                FSM = { FSM[0,3], 1b0 };
+                            }                    }
+                        case 2b01: { result = 0; }
+                        default: { result = a; }
+                    }
                 }
             }
             busy = 0;
