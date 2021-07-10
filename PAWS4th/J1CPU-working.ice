@@ -103,6 +103,7 @@ algorithm J1CPU(
 
     alu0 ALU0(
         instruction <: instruction,
+        memoryRead <: readdata,
         stackTop <: stackTop,
         stackNext <: stackNext,
         rStackTop <: rStackTop,
@@ -124,11 +125,6 @@ algorithm J1CPU(
         dsp <: dsp,
         rsp <: rsp
     );
-
-    // DATA CACHE
-    dcache DCACHE( stackTop <: stackTop, newdata <: stackNext );
-    DCACHE.update := 0;
-    ALU0.memoryRead := DCACHE.incache ? DCACHE.data : readdata;
 
     // STACK WRITE CONTROLLERS
     DSTACK.stackWrite := 0;
@@ -189,10 +185,7 @@ algorithm J1CPU(
 
                                         // n2memt mem[t] = n
                                         switch( is_n2memt ) {
-                                            case 1: {
-                                                ( address, writedata, writememory ) = store( stackTop, stackNext, memorybusy );
-                                                //DCACHE.update = ( stackTop[12,4] < 4hc );
-                                            }
+                                            case 1: { ( address, writedata, writememory ) = store( stackTop, stackNext, memorybusy ); }
                                             default: {}
                                         }
 
@@ -236,10 +229,7 @@ algorithm J1CPU(
 
                 // n2memt mem[t] = n
                 switch( is_n2memt ) {
-                    case 1: {
-                        ( address, writedata, writememory ) = store( stackTop, stackNext, memorybusy );
-                        //DCACHE.update = ( stackTop[12,4] < 4hc );
-                    }
+                    case 1: { ( address, writedata, writememory ) = store( stackTop, stackNext, memorybusy ); }
                     default: {}
                 }
 
@@ -506,7 +496,7 @@ algorithm deltasp(
     newSP := sp + delta;
 }
 
-algorithm icache(
+algorithm cpucache(
     input   uint13  pc,
     output  uint1   incache,
     output  uint16  instruction,
@@ -557,68 +547,9 @@ algorithm icache(
             case 1: {
                 pccache[ cachepointer ] = { 1b1, pc };
                 inscache[ cachepointer ] = newinstruction;
+                cachepointer = cachepointer + 1;
             }
             default: {}
         }
-        cachepointer = cachepointer + update;
-    }
-}
-
-algorithm dcache(
-    input   uint16  stackTop,
-    output  uint1   incache,
-    output  uint16  data,
-    input   uint1   update,
-    input   uint16  newdata
-) <autorun> {
-    uint17  stackTopcache[16] = { 0, pad(0) };
-    uint16  datacache[16] = uninitialised;
-    uint4   cachepointer = 0;
-
-    incache := ( {1b1,stackTop[1,15],1b0} == stackTopcache[0] ) |
-                ( {1b1,stackTop[1,15],1b0} == stackTopcache[1] ) |
-                ( {1b1,stackTop[1,15],1b0} == stackTopcache[2] ) |
-                ( {1b1,stackTop[1,15],1b0} == stackTopcache[3] ) |
-                ( {1b1,stackTop[1,15],1b0} == stackTopcache[4] ) |
-                ( {1b1,stackTop[1,15],1b0} == stackTopcache[5] ) |
-                ( {1b1,stackTop[1,15],1b0} == stackTopcache[6] ) |
-                ( {1b1,stackTop[1,15],1b0} == stackTopcache[7] ) |
-                ( {1b1,stackTop[1,15],1b0} == stackTopcache[8] ) |
-                ( {1b1,stackTop[1,15],1b0} == stackTopcache[9] ) |
-                ( {1b1,stackTop[1,15],1b0} == stackTopcache[10] ) |
-                ( {1b1,stackTop[1,15],1b0} == stackTopcache[11] ) |
-                ( {1b1,stackTop[1,15],1b0} == stackTopcache[12] ) |
-                ( {1b1,stackTop[1,15],1b0} == stackTopcache[13] ) |
-                ( {1b1,stackTop[1,15],1b0} == stackTopcache[14] ) |
-                ( {1b1,stackTop[1,15],1b0} == stackTopcache[15] );
-
-    data := ( {1b1,stackTop[1,15],1b0} == stackTopcache[0] ) ? datacache[0] :
-                    ( {1b1,stackTop[1,15],1b0} == stackTopcache[1] ) ? datacache[1] :
-                    ( {1b1,stackTop[1,15],1b0} == stackTopcache[2] ) ? datacache[2] :
-                    ( {1b1,stackTop[1,15],1b0} == stackTopcache[3] ) ? datacache[3] :
-                    ( {1b1,stackTop[1,15],1b0} == stackTopcache[4] ) ? datacache[4] :
-                    ( {1b1,stackTop[1,15],1b0} == stackTopcache[5] ) ? datacache[5] :
-                    ( {1b1,stackTop[1,15],1b0} == stackTopcache[6] ) ? datacache[6] :
-                    ( {1b1,stackTop[1,15],1b0} == stackTopcache[7] ) ? datacache[7] :
-                    ( {1b1,stackTop[1,15],1b0} == stackTopcache[8] ) ? datacache[8] :
-                    ( {1b1,stackTop[1,15],1b0} == stackTopcache[9] ) ? datacache[9] :
-                    ( {1b1,stackTop[1,15],1b0} == stackTopcache[10] ) ? datacache[10] :
-                    ( {1b1,stackTop[1,15],1b0} == stackTopcache[11] ) ? datacache[11] :
-                    ( {1b1,stackTop[1,15],1b0} == stackTopcache[12] ) ? datacache[12] :
-                    ( {1b1,stackTop[1,15],1b0} == stackTopcache[13] ) ? datacache[13] :
-                    ( {1b1,stackTop[1,15],1b0} == stackTopcache[14] ) ? datacache[14] :
-                    ( {1b1,stackTop[1,15],1b0} == stackTopcache[15] ) ? datacache[15] : 0;
-
-    while(1) {
-        __display("  stackTop = %x incache = %b",stackTop,incache);
-        switch( update ) {
-            case 1: {
-                __display("DCACHE <- stackTop %x = newdata %x",stackTop,newdata);
-                stackTopcache[ cachepointer ] = {1b1,stackTop[1,15],1b0};
-                datacache[ cachepointer ] = newdata;
-            }
-            default: {}
-        }
-        cachepointer = cachepointer + update;
     }
 }

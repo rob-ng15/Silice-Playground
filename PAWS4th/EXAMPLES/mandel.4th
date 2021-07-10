@@ -40,9 +40,9 @@ bd66 constant ymin ( -1.35 )
     begin
         calculate
         r @ ffour f<
-        k @ 3f < and
+        k @ 40 < and
     0= until
-    k @ 1+ ;
+    k @ ;
 
 : xloop 140 0 do i x ! calcjx calculatepixel pbpixel! loop ;
 : yloop f0 0 do i y ! calcjy xloop loop ;

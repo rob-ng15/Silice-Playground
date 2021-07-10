@@ -247,7 +247,7 @@ e  d updatedirections c!
   0 0 tpuxy! 3f 40 tcolour!
   0 terminal!
   timer1hz! 0 lasttimer !
-  2a 1 7 background!
+  2a 1 5 background!
   10 0 do
     0 0 0 0 0 0 i lsprite
     0 0 0 0 0 0 i usprite
