@@ -75,32 +75,32 @@ c array lasteroiddirection
 c array hasteroiddirection
 
 8 array bulletdirections
-20 0 bulletdirections c!
-32 1 bulletdirections c!
-3 2 bulletdirections c!
-12 3 bulletdirections c!
-18 4 bulletdirections c!
-16 5 bulletdirections c!
-4 6 bulletdirections c!
-36 7 bulletdirections c!
+20 0 bulletdirections !
+32 1 bulletdirections !
+3 2 bulletdirections !
+12 3 bulletdirections !
+18 4 bulletdirections !
+16 5 bulletdirections !
+4 6 bulletdirections !
+36 7 bulletdirections !
 
 10 array updatedirections
-20 0 updatedirections c!
-3  1 updatedirections c!
-18 2 updatedirections c!
-4  3 updatedirections c!
-39 4 updatedirections c!
-9  5 updatedirections c!
-f  6 updatedirections c!
-3f 7 updatedirections c!
-31 8 updatedirections c!
-3a 9 updatedirections c!
-a  a updatedirections c!
-11 b updatedirections c!
-17 c updatedirections c!
-e  d updatedirections c!
-3e e updatedirections c!
-37 f updatedirections c!
+20 0 updatedirections !
+3  1 updatedirections !
+18 2 updatedirections !
+4  3 updatedirections !
+39 4 updatedirections !
+9  5 updatedirections !
+f  6 updatedirections !
+3f 7 updatedirections !
+31 8 updatedirections !
+3a 9 updatedirections !
+a  a updatedirections !
+11 b updatedirections !
+17 c updatedirections !
+e  d updatedirections !
+3e e updatedirections !
+37 f updatedirections !
 
 : shipspritedata
   0100 0100 0380 07c0
@@ -285,3 +285,48 @@ e  d updatedirections c!
 
 : finish
  1 terminal! ;
+
+: newlevel
+  c 0 do
+    0 i lasteroidactive !
+    0 i hasteroidactive !
+    0 0 0 0 0 0 i lsprite
+    0 0 0 0 0 0 i usprite
+  loop
+  0 activelasteroids ! 0 activehasteroids !
+  4 rng 1+ 0 do
+    20 rng 20 + 280 rng a0 rng 7 rng 1 1
+      activelasteroids @ lsprite
+    4 rng 4 + activelasteroids @ lasteroiddirection !
+    1 activelasteroids @ lasteroidtype !
+    1 activelasteroids @ lasteroidactive !
+    1 activelasteroids +!
+  loop
+    20 rng 20 + d5 rng 1e0 rng 7 rng 1 1
+      activelasteroids @ lsprite
+    4 rng 4 + activelasteroids @ lasteroiddirection !
+    1 activelasteroids @ lasteroidtype !
+    1 activelasteroids @ lasteroidactive !
+    1+ activelasteroids +!
+  4 rng 1+ 0 do
+    20 rng 20 + 280 rng a0 rng 140 + 7 rng 1 1
+      activehasteroids @ usprite
+    4 rng 4 + activehasteroids @ hasteroiddirection !
+    1 activehasteroids @ hasteroidtype !
+    1 activehasteroids @ hasteroidactive !
+    1 activehasteroids +!
+  loop
+    20 rng 20 + d5 rng 1aa + 1e0 rng 7 rng 1 1
+      activehasteroids @ usprite
+    4 rng 4 + activehasteroids @ hasteroiddirection !
+    1 activehasteroids @ hasteroidtype !
+    1 activehasteroids @ hasteroidactive !
+    1 activehasteroids +! ;
+
+: moveasteroids
+  b 0 do
+    i lasteroiddirection @ updatedirections @
+    i lspriteupdate
+    i hasteroiddirection @ updatedirections @
+    i uspriteupdate
+  loop ;

@@ -16,7 +16,7 @@ algorithm fpu(
     output uint1   frd
 ) <autorun> {
     floatclassify FPUclass( sourceReg1F <: sourceReg1F );
-    floatcompare FPUcompare( function3 <: function3, function7 <: function7, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
+    floatcomparison FPUcompare( function3 <: function3, function7 <: function7, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
     floatsign FPUsign( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
     floatcalc FPUcalculator( opCode <: opCode, function7 <: function7, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F, sourceReg3F <: sourceReg3F );
     floatconvert FPUconvert( function7 <: function7, rs2 <: rs2, sourceReg1 <: sourceReg1, sourceReg1F <: sourceReg1F );
@@ -219,7 +219,7 @@ algorithm floatclassify(
 }
 
 // COMPARISONS AND MIN MAX
-algorithm floatcompare(
+algorithm floatcomparison(
     input   uint3   function3,
     input   uint7   function7,
     input   uint32  sourceReg1F,
@@ -227,7 +227,7 @@ algorithm floatcompare(
 
     output uint32  result
 ) <autorun> {
-    floatcomparison FPUcomparison( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
+    floatltleeq FPUcomparison( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
 
     while(1) {
         switch( function7[2,5] ) {
@@ -245,7 +245,8 @@ algorithm floatcompare(
         }
     }
 }
-algorithm floatcomparison(
+
+algorithm floatltleeq(
     input   uint3   function3,
     input   uint32  sourceReg1F,
     input   uint32  sourceReg2F,

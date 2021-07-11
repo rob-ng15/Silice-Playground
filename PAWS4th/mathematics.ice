@@ -410,7 +410,7 @@ algorithm floatops(
     FMUL.start := 0; FDIV.start := 0;
     FSQRT.start := 0;
 
-    FADD.addsub = 0; FSUB.addsub = 1;
+    ITOF.dounsigned = 0; FADD.addsub = 0; FSUB.addsub = 1;
 
     while(1) {
         switch( start ) {
@@ -423,19 +423,5 @@ algorithm floatops(
             case 6: { FDIV.start = 1; }
             case 7: { FSQRT.start = 1; }
         }
-    }
-}
-
-algorithm floatcompare(
-    input   uint16  a,
-    input   uint16  b,
-    output  uint1   less,
-    output  uint1   lessequal,
-    output  uint1   equal
-) <autorun> {
-    while(1) {
-        ( less ) = floatless( a, b );
-        ( lessequal ) = floatlessequal( a, b );
-        ( equal ) = floatequal( a, b );
     }
 }
