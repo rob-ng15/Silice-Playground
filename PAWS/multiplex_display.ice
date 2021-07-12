@@ -144,7 +144,6 @@ algorithm expandcolour(
 
     output! uint8   pix
 ) <autorun> {
-
     while(1) {
         switch( display_order ) {
             case 0: {

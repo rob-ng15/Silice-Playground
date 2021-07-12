@@ -46,9 +46,15 @@ bd66 constant ymin ( -1.35 )
 
 : xloop 140 0 do i x ! calcjx calculatepixel pbpixel! loop ;
 : yloop f0 0 do i y ! calcjy xloop loop ;
-: mandel 0 terminal!
+: mandel
+    timer1hz!
+    0 terminal!
     cs
     0 0 140 40 pbstart!
-    calcdx calcdy yloop
+    calcdx calcdy
+    yloop
+    timer1hz@ .
     pbstop!
     fa0 sleep 1 terminal! ;
+
+mandel

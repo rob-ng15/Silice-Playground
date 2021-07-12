@@ -174,16 +174,27 @@ algorithm ps2(
         clk_edge = 0;
         clk_filter = {ps2clk_ext, clk_filter[1,7]};
 
-        if (clk_filter == 8hf0) {
-            ps2_clk_in = 1;
-        } else {
-            if (clk_filter == 8h0f ) {
+        switch( clk_filter ) {
+            case 8hf0: { ps2_clk_in = 1; }
+            case 8h0f: {
                 if (ps2_clk_in) {
                     clk_edge = 1;
                 }
                 ps2_clk_in = 0;
             }
+            default: {}
         }
+
+        //if (clk_filter == 8hf0) {
+        //    ps2_clk_in = 1;
+        //} else {
+        //    if (clk_filter == 8h0f ) {
+        //        if (ps2_clk_in) {
+        //            clk_edge = 1;
+        //        }
+        //        ps2_clk_in = 0;
+        //    }
+        //}
 
         if (clk_edge) {
             if (bit_count == 0) {

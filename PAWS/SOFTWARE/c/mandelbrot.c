@@ -7,17 +7,19 @@ int main( void ) {
     INITIALISEMEMORY();
 
     const int graphwidth = 320, graphheight = 240;
-    float kt = 63, m = 4.0;
+    float m = 4.0;
     float xmin = -2.1, xmax = 0.6, ymin = -1.35, ymax = 1.35;
     float dx = (xmax - xmin) / graphwidth, dy = (ymax - ymin) / graphheight;
     float jx, jy, tx, ty, wx, wy, r;
-    int k;
+    int kt = 64, k;
 
-    for( int x = 0; x < graphwidth; x++ ) {
-        jx = xmin + x * dx;
-        for( int y = 0; y < graphheight; y++ ) {
-            //tpu_printf_centre( 0, TRANSPARENT, WHITE, "( %3d, %3d )", x, y );
-            jy = ymin + y * dy;
+    gpu_pixelblock_start( 0, 0, graphwidth );
+
+    for( int y = 0; y < graphheight; y++ ) {
+        //tpu_printf_centre( 0, TRANSPARENT, WHITE, "( %3d, %3d )", x, y );
+        jy = ymin + y * dy;
+        for( int x = 0; x < graphwidth; x++ ) {
+            jx = xmin + x * dx;
             k = 0; wx = 0.0; wy = 0.0;
             do {
                 tx = wx * wx - wy * wy + jx;
@@ -28,9 +30,10 @@ int main( void ) {
                 k = k + 1;
             } while( ( r < m ) && ( k < kt ) );
 
-            gpu_pixel( ( k > kt ) ? BLACK : k + 1, x, y );
+            gpu_pixelblock_pixel7( ( k > kt ) ? BLACK : k );
         }
     }
 
+    gpu_pixelblock_stop();
     while(1) {}
 }

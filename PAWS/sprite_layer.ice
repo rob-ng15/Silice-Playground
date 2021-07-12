@@ -174,89 +174,98 @@ algorithm sprite_layer(
         }
 
         // RENDER + COLLISION DETECTION
-        if( pix_vblank ) {
-            if( ~output_collisions ) {
-                // RESET collision detection
-                $$for i=0,15 do
-                    detect_collision_$i$ = 0;
-                    detect_layer_$i$ = 0;
-                $$end
-            } else {
-                $$for i=0,15 do
-                    // Output collisions
-                    collision_$i$ = detect_collision_$i$;
-                    layer_collision_$i$ = detect_layer_$i$;
-                $$end
-                output_collisions = 0;
+        switch( pix_vblank ) {
+            case 1: {
+                switch( output_collisions ) {
+                    case 0: {
+                        // RESET collision detection
+                        $$for i=0,15 do
+                            detect_collision_$i$ = 0;
+                            detect_layer_$i$ = 0;
+                        $$end
+                    }
+                    case 1: {
+                        $$for i=0,15 do
+                            // Output collisions
+                            collision_$i$ = detect_collision_$i$;
+                            layer_collision_$i$ = detect_layer_$i$;
+                        $$end
+                        output_collisions = 0;
+                    }
+                }
             }
-        } else {
-            if( pix_active ) {
-                pix_red = pix_visible_15 ? sprite_colour[15][4,2] :
-                            pix_visible_14 ? sprite_colour[14][4,2] :
-                            pix_visible_13 ? sprite_colour[13][4,2] :
-                            pix_visible_12 ? sprite_colour[12][4,2] :
-                            pix_visible_11 ? sprite_colour[11][4,2] :
-                            pix_visible_10 ? sprite_colour[10][4,2] :
-                            pix_visible_9 ? sprite_colour[9][4,2] :
-                            pix_visible_8 ? sprite_colour[8][4,2] :
-                            pix_visible_7 ? sprite_colour[7][4,2] :
-                            pix_visible_6 ? sprite_colour[6][4,2] :
-                            pix_visible_5 ? sprite_colour[5][4,2] :
-                            pix_visible_4 ? sprite_colour[4][4,2] :
-                            pix_visible_3 ? sprite_colour[3][4,2] :
-                            pix_visible_2 ? sprite_colour[2][4,2] :
-                            pix_visible_1 ? sprite_colour[1][4,2] :
-                            sprite_colour[0][4,2];
+            case 0: {
+                switch( pix_active ) {
+                    case 1: {
+                        pix_red = pix_visible_15 ? sprite_colour[15][4,2] :
+                                    pix_visible_14 ? sprite_colour[14][4,2] :
+                                    pix_visible_13 ? sprite_colour[13][4,2] :
+                                    pix_visible_12 ? sprite_colour[12][4,2] :
+                                    pix_visible_11 ? sprite_colour[11][4,2] :
+                                    pix_visible_10 ? sprite_colour[10][4,2] :
+                                    pix_visible_9 ? sprite_colour[9][4,2] :
+                                    pix_visible_8 ? sprite_colour[8][4,2] :
+                                    pix_visible_7 ? sprite_colour[7][4,2] :
+                                    pix_visible_6 ? sprite_colour[6][4,2] :
+                                    pix_visible_5 ? sprite_colour[5][4,2] :
+                                    pix_visible_4 ? sprite_colour[4][4,2] :
+                                    pix_visible_3 ? sprite_colour[3][4,2] :
+                                    pix_visible_2 ? sprite_colour[2][4,2] :
+                                    pix_visible_1 ? sprite_colour[1][4,2] :
+                                    sprite_colour[0][4,2];
 
-                pix_green = pix_visible_15 ? sprite_colour[15][2,2] :
-                            pix_visible_14 ? sprite_colour[14][2,2] :
-                            pix_visible_13 ? sprite_colour[13][2,2] :
-                            pix_visible_12 ? sprite_colour[12][2,2] :
-                            pix_visible_11 ? sprite_colour[11][2,2] :
-                            pix_visible_10 ? sprite_colour[10][2,2] :
-                            pix_visible_9 ? sprite_colour[9][2,2] :
-                            pix_visible_8 ? sprite_colour[8][2,2] :
-                            pix_visible_7 ? sprite_colour[7][2,2] :
-                            pix_visible_6 ? sprite_colour[6][2,2] :
-                            pix_visible_5 ? sprite_colour[5][2,2] :
-                            pix_visible_4 ? sprite_colour[4][2,2] :
-                            pix_visible_3 ? sprite_colour[3][2,2] :
-                            pix_visible_2 ? sprite_colour[2][2,2] :
-                            pix_visible_1 ? sprite_colour[1][2,2] :
-                            sprite_colour[0][2,2];
+                        pix_green = pix_visible_15 ? sprite_colour[15][2,2] :
+                                    pix_visible_14 ? sprite_colour[14][2,2] :
+                                    pix_visible_13 ? sprite_colour[13][2,2] :
+                                    pix_visible_12 ? sprite_colour[12][2,2] :
+                                    pix_visible_11 ? sprite_colour[11][2,2] :
+                                    pix_visible_10 ? sprite_colour[10][2,2] :
+                                    pix_visible_9 ? sprite_colour[9][2,2] :
+                                    pix_visible_8 ? sprite_colour[8][2,2] :
+                                    pix_visible_7 ? sprite_colour[7][2,2] :
+                                    pix_visible_6 ? sprite_colour[6][2,2] :
+                                    pix_visible_5 ? sprite_colour[5][2,2] :
+                                    pix_visible_4 ? sprite_colour[4][2,2] :
+                                    pix_visible_3 ? sprite_colour[3][2,2] :
+                                    pix_visible_2 ? sprite_colour[2][2,2] :
+                                    pix_visible_1 ? sprite_colour[1][2,2] :
+                                    sprite_colour[0][2,2];
 
-                pix_blue = pix_visible_15 ? sprite_colour[15][0,2] :
-                            pix_visible_14 ? sprite_colour[14][0,2] :
-                            pix_visible_13 ? sprite_colour[13][0,2] :
-                            pix_visible_12 ? sprite_colour[12][0,2] :
-                            pix_visible_11 ? sprite_colour[11][0,2] :
-                            pix_visible_10 ? sprite_colour[10][0,2] :
-                            pix_visible_9 ? sprite_colour[9][0,2] :
-                            pix_visible_8 ? sprite_colour[8][0,2] :
-                            pix_visible_7 ? sprite_colour[7][0,2] :
-                            pix_visible_6 ? sprite_colour[6][0,2] :
-                            pix_visible_5 ? sprite_colour[5][0,2] :
-                            pix_visible_4 ? sprite_colour[4][0,2] :
-                            pix_visible_3 ? sprite_colour[3][0,2] :
-                            pix_visible_2 ? sprite_colour[2][0,2] :
-                            pix_visible_1 ? sprite_colour[1][0,2] :
-                            sprite_colour[0][0,2];
+                        pix_blue = pix_visible_15 ? sprite_colour[15][0,2] :
+                                    pix_visible_14 ? sprite_colour[14][0,2] :
+                                    pix_visible_13 ? sprite_colour[13][0,2] :
+                                    pix_visible_12 ? sprite_colour[12][0,2] :
+                                    pix_visible_11 ? sprite_colour[11][0,2] :
+                                    pix_visible_10 ? sprite_colour[10][0,2] :
+                                    pix_visible_9 ? sprite_colour[9][0,2] :
+                                    pix_visible_8 ? sprite_colour[8][0,2] :
+                                    pix_visible_7 ? sprite_colour[7][0,2] :
+                                    pix_visible_6 ? sprite_colour[6][0,2] :
+                                    pix_visible_5 ? sprite_colour[5][0,2] :
+                                    pix_visible_4 ? sprite_colour[4][0,2] :
+                                    pix_visible_3 ? sprite_colour[3][0,2] :
+                                    pix_visible_2 ? sprite_colour[2][0,2] :
+                                    pix_visible_1 ? sprite_colour[1][0,2] :
+                                    sprite_colour[0][0,2];
 
-                sprite_layer_display = pix_visible_15 | pix_visible_14 | pix_visible_13 | pix_visible_12 | pix_visible_11 | pix_visible_10 | pix_visible_9 | pix_visible_8 | pix_visible_7
-                                        | pix_visible_6 | pix_visible_5 |pix_visible_4 | pix_visible_3 | pix_visible_2 | pix_visible_1 | pix_visible_0;
+                        sprite_layer_display = pix_visible_15 | pix_visible_14 | pix_visible_13 | pix_visible_12 | pix_visible_11 | pix_visible_10 | pix_visible_9 | pix_visible_8 | pix_visible_7
+                                                | pix_visible_6 | pix_visible_5 |pix_visible_4 | pix_visible_3 | pix_visible_2 | pix_visible_1 | pix_visible_0;
 
-                $$for i=0,15 do
-                    // UPDATE COLLISION DETECTION FLAGS
-                    ( detect_collision_$i$, detect_layer_$i$ ) = updatecollision( detect_collision_$i$, detect_layer_$i$, pix_visible_$i$,
-                                                                collision_layer_1, collision_layer_2, collision_layer_3, collision_layer_4,
-                                                                pix_visible_15, pix_visible_14, pix_visible_13, pix_visible_12, pix_visible_11,
-                                                                pix_visible_10, pix_visible_9, pix_visible_8, pix_visible_7,
-                                                                pix_visible_6, pix_visible_5, pix_visible_4, pix_visible_3,
-                                                                pix_visible_2, pix_visible_1, pix_visible_0 );
-                $$end
+                        $$for i=0,15 do
+                            // UPDATE COLLISION DETECTION FLAGS
+                            ( detect_collision_$i$, detect_layer_$i$ ) = updatecollision( detect_collision_$i$, detect_layer_$i$, pix_visible_$i$,
+                                                                        collision_layer_1, collision_layer_2, collision_layer_3, collision_layer_4,
+                                                                        pix_visible_15, pix_visible_14, pix_visible_13, pix_visible_12, pix_visible_11,
+                                                                        pix_visible_10, pix_visible_9, pix_visible_8, pix_visible_7,
+                                                                        pix_visible_6, pix_visible_5, pix_visible_4, pix_visible_3,
+                                                                        pix_visible_2, pix_visible_1, pix_visible_0 );
+                        $$end
 
-                // Output collision detection
-                output_collisions = ( pix_x == 639 ) & ( pix_y == 479 );
+                        // Output collision detection
+                        output_collisions = ( pix_x == 639 ) & ( pix_y == 479 );
+                    }
+                    case 0: {}
+                }
             }
         }
     }
@@ -303,14 +312,17 @@ algorithm spritebitmapwriter(
 
     while(1) {
         // WRITE BITMAP TO SPRITE TILE
-        if( sprite_writer_active ) {
-            switch( sprite_writer_sprite ) {
-                $$for i=0,15 do
-                    case $i$: {
-                        tiles_$i$.addr1 = sprite_writer_line;
-                        tiles_$i$.wdata1 = sprite_writer_bitmap;
-                    }
-                $$end
+        switch( sprite_writer_active ) {
+            case 0: {}
+            case 1: {
+                switch( sprite_writer_sprite ) {
+                    $$for i=0,15 do
+                        case $i$: {
+                            tiles_$i$.addr1 = sprite_writer_line;
+                            tiles_$i$.wdata1 = sprite_writer_bitmap;
+                        }
+                    $$end
+                }
             }
         }
     }

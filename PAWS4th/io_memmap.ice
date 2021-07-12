@@ -1014,9 +1014,9 @@ algorithm uart(
                 update = 1;
             }
             case 0: {
-                if( update != 0 ) {
-                    uartOutBufferTop = uartOutBufferTop + 1;
-                    update = 0;
+                switch( update ) {
+                    default: { uartOutBufferTop = uartOutBufferTop + 1; update = 0; }
+                    case 0: {}
                 }
             }
         }
@@ -1066,9 +1066,9 @@ algorithm ps2buffer(
                 update = 1;
             }
             case 0: {
-                if( update != 0 ) {
-                    ps2BufferTop = ps2BufferTop + 1;
-                    update = 0;
+                switch( update ) {
+                    default: { ps2BufferTop = ps2BufferTop + 1; update = 0; }
+                    case 0: {}
                 }
             }
         }

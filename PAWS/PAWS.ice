@@ -305,17 +305,20 @@ $$end
     readdata := ram.rdata;
 
     while(1) {
-        if( writeflag ) {
-            FSM = ( function3[0,2] == 0 ) ? 1 : 2;
-            while( FSM != 0 ) {
-                onehot( FSM ) {
-                    case 0: {}
-                    case 1: {
-                        ram.wdata = ( function3[0,2] == 0 ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
-                        ram.wenable = 1;
+        switch( writeflag ) {
+            case 0: {}
+            case 1: {
+                FSM = ( function3[0,2] == 0 ) ? 1 : 2;
+                while( FSM != 0 ) {
+                    onehot( FSM ) {
+                        case 0: {}
+                        case 1: {
+                            ram.wdata = ( function3[0,2] == 0 ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
+                            ram.wenable = 1;
+                        }
                     }
+                    FSM = { FSM[0,1], 1b0 };
                 }
-                FSM = { FSM[0,1], 1b0 };
             }
         }
     }
@@ -374,39 +377,45 @@ algorithm sdramcontroller(
         doread = readflag;
         dowrite = writeflag;
 
-        if( doread || dowrite ) {
-            busy = 1;
-            FSM = ( doread || ( dowrite && ( function3[0,2] == 0 ) ) ) ? 1 : 4;
-            while( FSM != 0 ) {
-                onehot( FSM ) {
-                    case 0: { FSM = 2; }
-                    case 1: {
-                        if( ~cachetagmatch ) {
-                            // CACHE MISS
-                            // READ FROM SDRAM
-                            sio.rw = 0;
+        switch( doread | dowrite ) {
+            case 0: {}
+            case 1: {
+                busy = 1;
+                FSM = ( doread || ( dowrite && ( function3[0,2] == 0 ) ) ) ? 1 : 4;
+                while( FSM != 0 ) {
+                    onehot( FSM ) {
+                        case 0: { FSM = 2; }
+                        case 1: {
+                            switch( cachetagmatch ) {
+                                case 0: {
+                                    // CACHE MISS
+                                    // READ FROM SDRAM
+                                    sio.rw = 0;
+                                    sio.in_valid = 1;
+                                    while( !sio.done ) {}
+                                    // WRITE RESULT TO CACHE
+                                    CW.writedata = sio.data_out;
+                                    CW.update = 1;
+                                }
+                                case 1: {}
+                            }
+                            FSM = dowrite ? 4 : 0;
+                        }
+                        case 2: {
+                            // WRITE RESULT TO CACHE
+                            CW.writedata = writethrough;
+                            CW.update = 1;
+                            // COMPLETE WRITE TO SDRAM
+                            sio.data_in = writethrough;
+                            sio.rw = 1;
                             sio.in_valid = 1;
                             while( !sio.done ) {}
-                            // WRITE RESULT TO CACHE
-                            CW.writedata = sio.data_out;
-                            CW.update = 1;
+                            FSM = 0;
                         }
-                        FSM = dowrite ? 4 : 0;
-                    }
-                    case 2: {
-                        // WRITE RESULT TO CACHE
-                        CW.writedata = writethrough;
-                        CW.update = 1;
-                        // COMPLETE WRITE TO SDRAM
-                        sio.data_in = writethrough;
-                        sio.rw = 1;
-                        sio.in_valid = 1;
-                        while( !sio.done ) {}
-                        FSM = 0;
                     }
                 }
+                busy = 0;
             }
-            busy = 0;
         }
     }
 }
@@ -420,9 +429,9 @@ algorithm cachewriter(
     cache.wenable1 := 1;
 
     while(1) {
-        if( update ) {
-            cache.addr1 = address[1,14];
-            cache.wdata1 = { 1b1, address[15,11], writedata[0,16] };
+        switch( update ) {
+            case 0: {}
+            case 1: { cache.addr1 = address[1,14]; cache.wdata1 = { 1b1, address[15,11], writedata[0,16] }; }
         }
     }
 }

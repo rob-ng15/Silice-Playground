@@ -97,12 +97,15 @@ algorithm terminal_writer(
                         switch( terminal_character ) {
                             case 8: {
                                 // BACKSPACE, move back one character
-                                if( terminal_x != 0 ) {
-                                    terminal_x = terminal_x - 1;
-                                    terminal.addr1 = terminal_x + terminal_y * 80;
-                                    terminal.wdata1 = 0;
-                                    terminal_copy.addr1 = terminal_x + terminal_y * 80;
-                                    terminal_copy.wdata1 = 0;
+                                switch( terminal_x ) {
+                                    default: {
+                                        terminal_x = terminal_x - 1;
+                                        terminal.addr1 = terminal_x + terminal_y * 80;
+                                        terminal.wdata1 = 0;
+                                        terminal_copy.addr1 = terminal_x + terminal_y * 80;
+                                        terminal_copy.wdata1 = 0;
+                                    }
+                                    case 0: {}
                                 }
                             }
                             case 10: { terminal_active = 1; } // LINE FEED, force scroll

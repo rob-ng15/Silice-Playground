@@ -43,45 +43,45 @@ algorithm divmod32by16(
     divbit32 DIVBIT( quo <: quotient_copy, rem <: remainder_copy, top <: dividend_copy, bottom <: divisor_copy, x <: bit );
 
     while (1) {
-        if( start != 0 ) {
+        switch( start ) {
+            case 0: {}
+            default: {
+                switch( divisor ) {
+                    case 0: { quotient_copy = 32hffff; remainder_copy = divisor; }
+                    default: {
+                        active = 1;
 
-            if( divisor == 0 ) {
-                // DIVIDE BY 0
-                quotient_copy = 32hffff;
-                remainder_copy = divisor;
-            } else {
-                active = 1;
+                        FSM = 1;
+                        while( FSM != 0 ) {
+                            onehot( FSM ) {
+                                case 0: {
+                                    bit = 31;
+                                    quotient_copy = 0;
+                                    remainder_copy = 0;
 
-                FSM = 1;
-                while( FSM != 0 ) {
-                    onehot( FSM ) {
-                        case 0: {
-                            bit = 31;
-                            quotient_copy = 0;
-                            remainder_copy = 0;
-
-                            dividend_copy = ( start == 1 ) ? { dividendh, dividendl } : dividendh[15,1] ? -{ dividendh, dividendl } : { dividendh, dividendl };
-                            divisor_copy = ( start == 1 ) ? { 16b0, divisor } : divisor[15,1] ? { 16b0, -divisor } : { 16b0, divisor };
-                            resultsign = ( start == 1 ) ? 0 : dividendh[15,1] != divisor[15,1];
-                        }
-                        case 1: {
-                            while( bit != 63 ) {
-                                quotient_copy = DIVBIT.newquotient; remainder_copy = DIVBIT.newremainder;
-                                bit = bit - 1;
+                                    dividend_copy = ( start == 1 ) ? { dividendh, dividendl } : dividendh[15,1] ? -{ dividendh, dividendl } : { dividendh, dividendl };
+                                    divisor_copy = ( start == 1 ) ? { 16b0, divisor } : divisor[15,1] ? { 16b0, -divisor } : { 16b0, divisor };
+                                    resultsign = ( start == 1 ) ? 0 : dividendh[15,1] != divisor[15,1];
+                                }
+                                case 1: {
+                                    while( bit != 63 ) {
+                                        quotient_copy = DIVBIT.newquotient; remainder_copy = DIVBIT.newremainder;
+                                        bit = bit - 1;
+                                    }
+                                }
+                                case 2: {
+                                    quotient = resultsign ? -quotient_copy[0,16] : quotient_copy[0,16];
+                                    remainder = remainder_copy[0,16];
+                                }
                             }
+                            FSM = { FSM[0,2], 1b0 };
                         }
-                        case 2: {
-                            quotient = resultsign ? -quotient_copy[0,16] : quotient_copy[0,16];
-                            remainder = remainder_copy[0,16];
-                        }
-                    }
-                    FSM = FSM << 1;
-                }
 
-                active = 0;
+                        active = 0;
+                    }
+                }
             }
         }
-
     }
 }
 
@@ -124,39 +124,42 @@ algorithm divmod16by16(
     divbit16 DIVBIT( quo <: quotient_copy, rem <: remainder_copy, top <: dividend_copy, bottom <: divisor_copy, x <: bit );
 
     while (1) {
-        if( start ) {
-            if( divisor == 0 ) {
-                quotient_copy = 16hffff;
-                remainder_copy = divisor;
-            } else {
-                active = 1;
+        switch( start ) {
+            case 0: {}
+            case 1: {
+                switch( divisor ) {
+                    case 0: { quotient_copy = 16hffff; remainder_copy = divisor; }
+                    default: {
+                        active = 1;
 
-                FSM = 1;
-                while( FSM != 0 ) {
-                    onehot( FSM ) {
-                        case 0: {
-                            bit = 15;
-                            quotient_copy = 0;
-                            remainder_copy = 0;
-                            dividend_copy = dividend[15,1] ? -dividend : dividend;
-                            divisor_copy = divisor[15,1] ? -divisor : divisor;
-                            resultsign = dividend[15,1] != divisor[15,1];
-                        }
-                        case 1: {
-                            while( bit != 31 ) {
-                                quotient_copy = DIVBIT.newquotient; remainder_copy = DIVBIT.newremainder;
-                                bit = bit - 1;
+                        FSM = 1;
+                        while( FSM != 0 ) {
+                            onehot( FSM ) {
+                                case 0: {
+                                    bit = 15;
+                                    quotient_copy = 0;
+                                    remainder_copy = 0;
+                                    dividend_copy = dividend[15,1] ? -dividend : dividend;
+                                    divisor_copy = divisor[15,1] ? -divisor : divisor;
+                                    resultsign = dividend[15,1] != divisor[15,1];
+                                }
+                                case 1: {
+                                    while( bit != 31 ) {
+                                        quotient_copy = DIVBIT.newquotient; remainder_copy = DIVBIT.newremainder;
+                                        bit = bit - 1;
+                                    }
+                                }
+                                case 2: {
+                                    quotient = resultsign ? -quotient_copy : quotient_copy;
+                                    remainder = remainder_copy;
+                                }
                             }
+                            FSM = { FSM[0,2], 1b0 };
                         }
-                        case 2: {
-                            quotient = resultsign ? -quotient_copy : quotient_copy;
-                            remainder = remainder_copy;
-                        }
-                    }
-                    FSM = FSM << 1;
-                }
 
-                active = 0;
+                        active = 0;
+                    }
+                }
             }
         }
     }

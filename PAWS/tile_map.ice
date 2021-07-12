@@ -149,15 +149,18 @@ algorithm tile_map_writer(
 
     while(1) {
         // Write character to the tilemap
-        if( tm_write ) {
-            tiles.addr1 = tm_x + tm_y * 42;
-            tiles.wdata1 = tm_character;
-            tiles_copy.addr1 = tm_x + tm_y * 42;
-            tiles_copy.wdata1 = tm_character;
-            colours.addr1 = tm_x + tm_y * 42;
-            colours.wdata1 = { tm_background, tm_foreground };
-            colours_copy.addr1 = tm_x + tm_y * 42;
-            colours_copy.wdata1 = { tm_background, tm_foreground };
+        switch( tm_write ) {
+            case 0: {}
+            case 1: {
+                tiles.addr1 = tm_x + tm_y * 42;
+                tiles.wdata1 = tm_character;
+                tiles_copy.addr1 = tm_x + tm_y * 42;
+                tiles_copy.wdata1 = tm_character;
+                colours.addr1 = tm_x + tm_y * 42;
+                colours.wdata1 = { tm_background, tm_foreground };
+                colours_copy.addr1 = tm_x + tm_y * 42;
+                colours_copy.wdata1 = { tm_background, tm_foreground };
+            }
         }
 
         switch( tm_active ) {
@@ -178,38 +181,30 @@ algorithm tile_map_writer(
                         tm_scroll = ( tm_scrollwrap < 5 );
                         switch( ( tm_scrollwrap - 1 ) & 3  ) {
                             case 0: {
-                                if( tm_offset_x == 15 ) {
-                                    tm_goleft = 1;
-                                    tm_active = 1;
-                                } else {
-                                    tm_offset_x = tm_offset_x + 1;
+                                switch( tm_offset_x ) {
+                                    case 15: { tm_goleft = 1; tm_active = 1; }
+                                    default: { tm_offset_x = tm_offset_x + 1; }
                                 }
                             }
                             // UP
                             case 1: {
-                                if( tm_offset_y == 15 ) {
-                                    tm_goup = 1;
-                                    tm_active = 2;
-                                } else {
-                                    tm_offset_y = tm_offset_y + 1;
+                                switch( tm_offset_y ) {
+                                    case 15: { tm_goup = 1; tm_active = 2; }
+                                    default: { tm_offset_y = tm_offset_y + 1; }
                                 }
                             }
                             // RIGHT
                             case 2: {
-                                if( tm_offset_x == -15 ) {
-                                    tm_goleft = 0;
-                                    tm_active = 1;
-                                } else {
-                                    tm_offset_x = tm_offset_x - 1;
+                                switch( tm_offset_x ) {
+                                    case -15: { tm_goleft = 0; tm_active = 1; }
+                                    default: { tm_offset_x = tm_offset_x - 1; }
                                 }
                             }
                             // DOWN
                             case 3: {
-                                if( tm_offset_y == -15 ) {
-                                    tm_goup = 0;
-                                    tm_active = 2;
-                                } else {
-                                    tm_offset_y = tm_offset_y - 1;
+                                switch( tm_offset_y ) {
+                                    case -15: { tm_goup = 0; tm_active = 2; }
+                                    default: { tm_offset_y = tm_offset_y - 1; }
                                 }
                             }
                         }

@@ -273,6 +273,10 @@ extern void set_blitter_chbitmap( unsigned char, unsigned char * );
 extern void set_colourblitter_bitmap( unsigned char, unsigned char * );
 extern void gpu_pixelblock7( short , short , unsigned short, unsigned short, unsigned char, unsigned char * );
 extern void gpu_pixelblock24( short , short , unsigned short, unsigned short, unsigned char * );
+extern void gpu_pixelblock_start( short , short , unsigned short );
+extern void gpu_pixelblock_pixel7( unsigned char );
+extern void gpu_pixelblock_pixel24( unsigned char, unsigned char, unsigned char );
+extern void gpu_pixelblock_stop( void );
 
 // SPRITES - MAIN ACCESS
 extern void set_sprite( unsigned char, unsigned char, unsigned char, unsigned char, short, short, unsigned char, unsigned char );

@@ -31,13 +31,16 @@ algorithm registers(
 
     while(1) {
         // WRITE TO REGISTERS
-        if( write ) {
-            registers_1.addr1 = { SMT, rd };
-            registers_1.wdata1 = result;
-            registers_2.addr1 = { SMT, rd };
-            registers_2.wdata1 = result;
-            registers_3.addr1 = { SMT, rd };
-            registers_3.wdata1 = result;
+        switch( write ) {
+            case 1: {
+                registers_1.addr1 = { SMT, rd };
+                registers_1.wdata1 = result;
+                registers_2.addr1 = { SMT, rd };
+                registers_2.wdata1 = result;
+                registers_3.addr1 = { SMT, rd };
+                registers_3.wdata1 = result;
+            }
+            case 0: {}
         }
     }
 }
@@ -169,20 +172,23 @@ algorithm compressed(
                                 i32 = { {3{CI94(i16).ib_9}}, CI94(i16).ib_8_7, CI94(i16).ib_6, CI94(i16).ib_5, CI94(i16).ib_4, 4b0000, 5h2, 3b000, 5h2, 7b0010011 };
                             }
                             default: {
-                                if( CI(i16).rd != 0 ) {
-                                    // LUI -> lui rd, nzuimm[17:12] { 011 nzimm[17] rd!={0,2} nzimm[16:12] 01 } -> { imm[31:12] rd 0110111 }
-                                    i32 = { {15{CIlui(i16).ib_17}}, CIlui(i16).ib_16_12, CIlui(i16).rd, 7b0110111 };
-                                } else {
-                                    switch( i16[10,2] ) {
-                                        case 2b00: {
-                                            // C.NOT -> xori rd, rs, -1 { 011 0 00 rs1'/rd' 00000 01 } -> { 111111111111 rs1 100 rd 0010011 }
-                                            i32 = { 12b111111111111, { 2b01, CBalu50(i16).rd_alt }, 3b100, { 2b01, CBalu50(i16).rd_alt }, 7b0010011 };
+                                switch( CI(i16).rd ) {
+                                    default: {
+                                        // LUI -> lui rd, nzuimm[17:12] { 011 nzimm[17] rd!={0,2} nzimm[16:12] 01 } -> { imm[31:12] rd 0110111 }
+                                        i32 = { {15{CIlui(i16).ib_17}}, CIlui(i16).ib_16_12, CIlui(i16).rd, 7b0110111 };
+                                    }
+                                    case 0: {
+                                        switch( i16[10,2] ) {
+                                            case 2b00: {
+                                                // C.NOT -> xori rd, rs, -1 { 011 0 00 rs1'/rd' 00000 01 } -> { 111111111111 rs1 100 rd 0010011 }
+                                                i32 = { 12b111111111111, { 2b01, CBalu50(i16).rd_alt }, 3b100, { 2b01, CBalu50(i16).rd_alt }, 7b0010011 };
+                                            }
+                                            case 2b01: {
+                                                // C.NEG -> sub rd, x0, rs { 011 0 01 rs1'/rd' 00000 01 } -> { 0100000 rs2 rs1 000 rd 0010011 }
+                                                i32 = { 7b0100000, { 2b01, CBalu50(i16).rd_alt }, 5b00000, 3b000, { 2b01, CBalu50(i16).rd_alt }, 7b0110011 };
+                                            }
+                                            default: { i32 = { 25b0, 7b0010011 }; }
                                         }
-                                        case 2b01: {
-                                            // C.NEG -> sub rd, x0, rs { 011 0 01 rs1'/rd' 00000 01 } -> { 0100000 rs2 rs1 000 rd 0010011 }
-                                            i32 = { 7b0100000, { 2b01, CBalu50(i16).rd_alt }, 5b00000, 3b000, { 2b01, CBalu50(i16).rd_alt }, 7b0110011 };
-                                        }
-                                        default: { i32 = { 25b0, 7b0010011 }; }
                                     }
                                 }
                             }
@@ -260,22 +266,28 @@ algorithm compressed(
                         switch( i16[12,1] ) {
                             case 1b0: {
                                 // JR / MV
-                                if( CR(i16).rs2 == 0 ) {
-                                    // JR -> jalr x0, rs1, 0 { 100 0 rs1 00000 10 } -> { imm[11:0] rs1 000 rd 1100111 }
-                                    i32 = { 12b0, CR(i16).rs1, 3b000, 5h0, 7b1100111 };
-                                } else {
-                                    // MV -> add rd, x0, rs2 { 100 0 rd!=0 rs2!=0 10 } -> { 0000000 rs2 rs1 000 rd 0110011 }
-                                    i32 = { 7b0000000, CR(i16).rs2, 5h0, 3b000, CR(i16).rs1, 7b0110011 };
+                                switch( CR(i16).rs2 ) {
+                                    case 0: {
+                                        // JR -> jalr x0, rs1, 0 { 100 0 rs1 00000 10 } -> { imm[11:0] rs1 000 rd 1100111 }
+                                        i32 = { 12b0, CR(i16).rs1, 3b000, 5h0, 7b1100111 };
+                                    }
+                                    default: {
+                                        // MV -> add rd, x0, rs2 { 100 0 rd!=0 rs2!=0 10 } -> { 0000000 rs2 rs1 000 rd 0110011 }
+                                        i32 = { 7b0000000, CR(i16).rs2, 5h0, 3b000, CR(i16).rs1, 7b0110011 };
+                                    }
                                 }
                             }
                             case 1b1: {
                                 // JALR / ADD
-                                if( CR(i16).rs2 == 0 ) {
-                                    // JALR -> jalr x1, rs1, 0 { 100 1 rs1 00000 10 } -> { imm[11:0] rs1 000 rd 1100111 }
-                                    i32 = { 12b0, CR(i16).rs1, 3b000, 5h1, 7b1100111 };
-                                } else {
-                                    // ADD -> add rd, rd, rs2 { 100 1 rs1/rd!=0 rs2!=0 10 } -> { 0000000 rs2 rs1 000 rd 0110011 }
-                                    i32 = { 7b0000000, CR(i16).rs2, CR(i16).rs1, 3b000, CR(i16).rs1, 7b0110011 };
+                                switch( CR(i16).rs2 ) {
+                                    case 0: {
+                                        // JALR -> jalr x1, rs1, 0 { 100 1 rs1 00000 10 } -> { imm[11:0] rs1 000 rd 1100111 }
+                                        i32 = { 12b0, CR(i16).rs1, 3b000, 5h1, 7b1100111 };
+                                    }
+                                    default: {
+                                        // ADD -> add rd, rd, rs2 { 100 1 rs1/rd!=0 rs2!=0 10 } -> { 0000000 rs2 rs1 000 rd 0110011 }
+                                        i32 = { 7b0000000, CR(i16).rs2, CR(i16).rs1, 3b000, CR(i16).rs1, 7b0110011 };
+                                    }
                                 }
                             }
                         }

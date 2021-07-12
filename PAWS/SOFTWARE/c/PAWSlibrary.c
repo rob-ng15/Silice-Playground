@@ -588,6 +588,30 @@ void gpu_pixelblock24( short x, short y, unsigned short w, unsigned short h, uns
     *PB_STOP = 3;
 }
 
+// SET GPU TO RECEIVE A PIXEL BLOCK, SEND INDIVIDUAL PIXELS, STOP
+void gpu_pixelblock_start( short x,  short y, unsigned short w, unsigned short h ) {
+    *GPU_X = x;
+    *GPU_Y = y;
+    *GPU_PARAM0 = w;
+    *GPU_PARAM1 = TRANSPARENT;
+    wait_gpu();
+    *GPU_WRITE = 10;
+}
+
+void gpu_pixelblock_pixel7( unsigned char pixel ) {
+    *PB_COLOUR7 = pixel;
+}
+
+void gpu_pixelblock_pixel24( unsigned char red, unsigned char green, unsigned char blue ) {
+    *PB_COLOUR8R = red;
+    *PB_COLOUR8G= green;
+    *PB_COLOUR8B = blue;
+}
+
+void gpu_pixelblock_stop( void ) {
+    *PB_STOP = 3;
+}
+
 // GPU VECTOR BLOCK
 // 32 VECTOR BLOCKS EACH OF 16 VERTICES ( offsets in the range -15 to 15 from the centre )
 // WHEN ACTIVATED draws lines from a vector block (x0,y0) to (x1,y1), (x1,y1) to (x2,y2), (x2,y2) to (x3,y3) until (x15,y15) or an inactive vertex is encountered

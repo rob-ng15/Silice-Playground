@@ -1,3 +1,6 @@
+( asteroids game for testing )
+( not ported as of yet )
+
 hex
 
 : array create cells allot does> cells + ;
@@ -30,25 +33,25 @@ f800 f000 e000 8000
 0000 0000 0001 0003
 007e 00c4 0088 0190
 0110 0320 03f1 0003
-5 tmutile!
+1 tmutile!
 
 0006 0005 0022 0008
 0480 0024 0020 0090
 0000 0040 0000 0010
 0000 0000 0000 0000
-6 tmutile!
+2 tmutile!
 
 0000 007e 07e2 1e02
 7006 e604 8f0c 198c
 1998 0f18 0630 0060
 6060 d0c0 a180 4300
-7 tmutile!
+3 tmutile!
 
 8600 0a00 3200 c200
 8200 9c00 f000 c000
 0000 0000 0000 0000
 0000 0000 0000 0000
-8 tmutile!
+4 tmutile!
 
 variable lasttimer
 variable shipdirection
@@ -58,9 +61,11 @@ variable shipy
 variable counter
 variable score
 variable lives
+
 variable activelasteroids
 variable activehasteroids
 variable totalasteroids
+
 variable hitasteroid
 variable workasteroid
 variable spawnasteroid
@@ -75,32 +80,39 @@ c array lasteroiddirection
 c array hasteroiddirection
 
 8 array bulletdirections
-20 0 bulletdirections !
-32 1 bulletdirections !
-3 2 bulletdirections !
-12 3 bulletdirections !
-18 4 bulletdirections !
-16 5 bulletdirections !
-4 6 bulletdirections !
-36 7 bulletdirections !
+20 0 bulletdirections c!
+32 1 bulletdirections c!
+3 2 bulletdirections c!
+12 3 bulletdirections c!
+18 4 bulletdirections c!
+16 5 bulletdirections c!
+4 6 bulletdirections c!
+36 7 bulletdirections c!
 
 10 array updatedirections
-20 0 updatedirections !
-3  1 updatedirections !
-18 2 updatedirections !
-4  3 updatedirections !
-39 4 updatedirections !
-9  5 updatedirections !
-f  6 updatedirections !
-3f 7 updatedirections !
-31 8 updatedirections !
-3a 9 updatedirections !
-a  a updatedirections !
-11 b updatedirections !
-17 c updatedirections !
-e  d updatedirections !
-3e e updatedirections !
-37 f updatedirections !
+20 0 updatedirections c!
+3  1 updatedirections c!
+18 2 updatedirections c!
+4  3 updatedirections c!
+39 4 updatedirections c!
+9  5 updatedirections c!
+f  6 updatedirections c!
+3f 7 updatedirections c!
+31 8 updatedirections c!
+3a 9 updatedirections c!
+a  a updatedirections c!
+11 b updatedirections c!
+17 c updatedirections c!
+e  d updatedirections c!
+3e e updatedirections c!
+37 f updatedirections c!
+
+( set ship vector block )
+( 1 0 0 0 0 vectorvertex! )
+( 1 5 a 0 1 vectorvertex! )
+( 1 0 6 0 2 vectorvertex! )
+( 1 -5 a 0 3 vectorvertex! )
+( 1 0 0 0 4 vectorvertex! )
 
 : shipspritedata
   0100 0100 0380 07c0
@@ -191,16 +203,16 @@ e  d updatedirections !
   loop ;
 
 : setshipsprite
-  shipspritedata f lspritetile!
-  shipspritedata f uspritetile! ;
+  shipspritedata b lspritetile!
+  shipspritedata b uspritetile! ;
 
 : setshipcrashsprite
-  shipcrashdata f lspritetile!
-  shipcrashdata f uspritetile! ;
+  shipcrashdata b lspritetile!
+  shipcrashdata b uspritetile! ;
 
 : setbulletsprite
-  bulletspritedata e lspritetile!
-  bulletspritedata e uspritetile! ;
+  bulletspritedata c lspritetile!
+  bulletspritedata c uspritetile! ;
 
 : asteroidbitmap
   07f0 0ff8 1ffe 1fff
@@ -236,43 +248,74 @@ e  d updatedirections !
   0000 0300 0302 6010
   6000 0000 0419 8018 ;
 
-: setasteroidsprites
-  b 0 do
-    asteroidbitmap i lsltile!
-    asteroidbitmap i usltile!
-  loop ;
+: newlevel
+  c 0 do
+    0 i lasteroidactive c!
+    0 i hasteroidactive c!
+    0 0 0 0 0 0 i lsprite
+    0 0 0 0 0 0 i usprite
+  loop
+  0 activelasteroids ! 0 activehasteroids !
+  4 rng 1+ 0 do
+    20 rng 20 + 280 rng a0 rng 7 rng 1 1
+      activelasteroids @ lsprite
+    4 rng 4 + activelasteroids @ lasteroiddirection c!
+    1 activelasteroids @ lasteroidtype c!
+    1 activelasteroids @ lasteroidactive c!
+    1 activelasteroids +!
+  loop
+    20 rng 20 + d5 rng 1e0 rng 7 rng 1 1
+      activelasteroids @ lsprite
+    4 rng 4 + activelasteroids @ lasteroiddirection c!
+    1 activelasteroids @ lasteroidtype c!
+    1 activelasteroids @ lasteroidactive c!
+    1+ activelasteroids +!
+  4 rng 1+ 0 do
+    20 rng 20 + 280 rng a0 rng 140 + 7 rng 1 1
+      activehasteroids @ usprite
+    4 rng 4 + activehasteroids @ hasteroiddirection c!
+    1 activehasteroids @ hasteroidtype !
+    1 activehasteroids @ hasteroidactive c!
+    1 activehasteroids +!
+  loop
+    20 rng 20 + d5 rng 1aa + 1e0 rng 7 rng 1 1
+      activehasteroids @ usprite
+    4 rng 4 + activehasteroids @ hasteroiddirection c!
+    1 activehasteroids @ hasteroidtype !
+    1 activehasteroids @ hasteroidactive c!
+    1 activehasteroids +! ;
 
 : setup
-  cs tmlcs tmucs tcs
-  0 0 tpuxy! 3f 40 tcolour!
+  cs tmlcs tmucs tcs! 0 0 tpuxy!
+  3f 40 tcolour!
   0 terminal!
   timer1hz! 0 lasttimer !
-  2a 1 5 background!
-  10 0 do
+  2a 1 7 background!
+  f 0 do
     0 0 0 0 0 0 i lsprite
     0 0 0 0 0 0 i usprite
   loop
 
-    4 4 1 15 40 tml!
-    4 5 2 15 40 tml!
-    5 4 3 15 40 tml!
-    5 5 4 15 40 tml!
-    12 e 1 14 40 tml!
-    12 f 2 14 40 tml!
-    13 e 3 14 40 tml!
-    13 f 4 14 40 tml!
-    22 1c 1 5 40 tml!
-    22 1d 2 5 40 tml!
-    23 1c 3 5 40 tml!
-    23 1d 4 5 40 tml!
-    24 2 5 2a 40 tmu!
-    24 3 6 2a 40 tmu!
-    25 2 7 2a 40 tmu!
-    25 3 8 2a 40 tmu!
-    6 1a 5 10 40 tmu!
-    6 1b 6 10 40 tmu!
-    7 1a 7 10 40 tmu!
-    7 1b 8 10 40 tmu!
+    4 4 1 40 15 tml!
+    4 5 2 40 15 tml!
+    5 4 3 40 15 tml!
+    5 5 4 40 15 tml!
+    12 e 1 40 14 tml!
+    12 f 2 40 14 tml!
+    13 e 3 40 14 tml!
+    13 f 4 40 14 tml!
+    22 1c 1 40 5 tml!
+    22 1d 2 40 5 tml!
+    23 1c 3 40 5 tml!
+    23 1d 4 40 5 tml!
+    24 2 1 40 2a tmu!
+    24 3 2 40 2a tmu!
+    25 2 3 40 2a tmu!
+    25 3 4 40 2a tmu!
+    6 1a 1 40 10 tmu!
+    6 1b 2 40 10 tmu!
+    7 1a 3 40 10 tmu!
+    7 1b 4 40 10 tmu!
 
   0 score !
   3 lives !
@@ -283,50 +326,385 @@ e  d updatedirections !
   setshipsprite
   setbulletsprite ;
 
+: setasteroidsprites
+  b 0 do
+    asteroidbitmap i lspritetile!
+    asteroidbitmap i uspritetile!
+  loop ;
+
 : finish
  1 terminal! ;
 
-: newlevel
-  c 0 do
-    0 i lasteroidactive !
-    0 i hasteroidactive !
-    0 0 0 0 0 0 i lsprite
-    0 0 0 0 0 0 i usprite
+( game start here )
+: beepboop
+  timer1hz@ lasttimer @ <> if
+    5 tmlmove!
+    3 tmumove!
+    timer1hz@ lasttimer !
+    lasttimer @ 3 and
+    case
+      1 of
+        ( 1 0 1 1f4 beepL! )
+      endof
+      3 of
+        ( 1 0 2 1f4 beepR! )
+        6 tmumove!
+        5 tmumove!
+      endof
+    endcase
+  then ;
+
+: countasteroids
+  0 totalasteroids !
+  b 0 do
+    i lasteroidactive c@ 0<> if
+      1 totalasteroids +! then
+    i hasteroidactive c@ 0<> if
+      1 totalasteroids +! then
+  loop ;
+
+: lspawnasteroid
+  ff spawnasteroid !
+  b 0 do
+    i lasteroidactive c@ 0= if
+      i spawnasteroid ! then
   loop
-  0 activelasteroids ! 0 activehasteroids !
-  4 rng 1+ 0 do
-    20 rng 20 + 280 rng a0 rng 7 rng 1 1
-      activelasteroids @ lsprite
-    4 rng 4 + activelasteroids @ lasteroiddirection !
-    1 activelasteroids @ lasteroidtype !
-    1 activelasteroids @ lasteroidactive !
-    1 activelasteroids +!
+  spawnasteroid @ ff <> if
+    20 rng 20 +
+    workx @ 20 rng 10 - +
+    worky @ 20 rng 10 - +
+    7 rng
+    1 0 spawnasteroid @ lsprite
+    2 spawnasteroid lasteroidtype c!
+    8 rng 4 + spawnasteroid @ lasteroiddirection c!
+    2 spawnasteroid @ lasteroidtype c!
+    1 spawnasteroid @ lasteroidactive c! then ;
+
+: lkill
+  hitasteroid @ ff30 !
+  ff34 @ workx !
+  ff35 @ worky !
+  ff33 @ workx @ worky @ 7 1 ff36 @
+  hitasteroid @ lsprite
+  ( 2 4 2 1f4 beep! ) 1f4 sleep
+  0 0 0 0 0 0 hitasteroid @ lsprite
+  0 hitasteroid @ lasteroidactive c!
+  hitasteroid @ lasteroidtype c@
+  case
+    1 of
+      lspawnasteroid
+      lspawnasteroid
+    endof
+  endcase ;
+
+: hspawnasteroid
+  ff spawnasteroid !
+  b 0 do
+    i hasteroidactive c@ 0= if
+      i spawnasteroid ! then
   loop
-    20 rng 20 + d5 rng 1e0 rng 7 rng 1 1
-      activelasteroids @ lsprite
-    4 rng 4 + activelasteroids @ lasteroiddirection !
-    1 activelasteroids @ lasteroidtype !
-    1 activelasteroids @ lasteroidactive !
-    1+ activelasteroids +!
-  4 rng 1+ 0 do
-    20 rng 20 + 280 rng a0 rng 140 + 7 rng 1 1
-      activehasteroids @ usprite
-    4 rng 4 + activehasteroids @ hasteroiddirection !
-    1 activehasteroids @ hasteroidtype !
-    1 activehasteroids @ hasteroidactive !
-    1 activehasteroids +!
+  spawnasteroid @ ff <> if
+    20 rng 20 +
+    workx @ 20 rng 10 - +
+    worky @ 20 rng 10 - +
+    7 rng
+    1 0 spawnasteroid @ usprite
+    2 spawnasteroid hasteroidtype c!
+    8 rng 4 + spawnasteroid @ hasteroiddirection c!
+    2 spawnasteroid @ hasteroidtype c!
+    1 spawnasteroid @ hasteroidactive c! then ;
+
+: hkill
+  hitasteroid @ ff40 !
+  ff44 @ workx !
+  ff45 @ worky !
+  ff43 @ workx @ worky @ 7 1 ff46 @
+  hitasteroid @ usprite
+  ( 2 4 2 1f4 beep! ) 1f4 sleep
+  0 0 0 0 0 0 hitasteroid @ usprite
+  0 hitasteroid @ hasteroidactive c!
+  hitasteroid @ hasteroidtype c@
+  case
+    1 of
+      hspawnasteroid
+      hspawnasteroid
+    endof
+  endcase ;
+
+: lhit
+  1 score +!
+  $" LHIT " tpu.$
+  ff hitasteroid !
+  b 0 do
+    i ff50 + @ 1000 and 0<> if
+      i hitasteroid !
+      i tpu. then
   loop
-    20 rng 20 + d5 rng 1aa + 1e0 rng 7 rng 1 1
-      activehasteroids @ usprite
-    4 rng 4 + activehasteroids @ hasteroiddirection !
-    1 activehasteroids @ hasteroidtype !
-    1 activehasteroids @ hasteroidactive !
-    1 activehasteroids +! ;
+  hitasteroid @ ff <> if
+    lkill then
+  0 0 0 0 0 0 c lsprite
+  0 0 0 0 0 0 c usprite
+  countasteroids totalasteroids @
+  0= if
+    newlevel then ;
+
+: hhit
+  1 score +!
+  $" HHIT " tpu.$
+  ff hitasteroid !
+  b 0 do
+    i ff60 + @ 1000 and 0<> if
+      i hitasteroid !
+      i tpu. then
+  loop
+  hitasteroid @ ff <> if
+    hkill then
+  0 0 0 0 0 0 c lsprite
+  0 0 0 0 0 0 c usprite
+  countasteroids totalasteroids @
+  0= if
+    newlevel then ;
+
+: drawlives
+  cs!
+  lives @
+  case
+    1 of
+      3f 220 1d0 0 vector!
+    endof
+    2 of
+      3f 220 1d0 0 vector!
+      3f 240 1d0 0 vector!
+    endof
+    3 of
+      3f 220 1d0 0 vector!
+      3f 240 1d0 0 vector!
+      3f 260 1d0 0 vector!
+    endof
+  endcase ;
+
+
+: hit?
+  0 1d tpuxy!
+  ff5c @ ff6c @ 2 base !
+  18 tpuu.r 18 tpuu.r hex
+  ff5c @ 7ff and 0<> if
+    lhit then
+  ff6c @ 7ff and 0<> if
+    hhit then ;
+
+: fire?
+  ( fire if bullet not active )
+  ( bullet exists in lower and upper layers )
+  ( for collision detection )
+  c ff40 ! ff41 @ 0= if
+    shipdirection @ bulletdirection !
+    shipdirection @
+    case
+      0 of
+        3c shipx @ shipy @ a - 2 1 0 c lsprite
+        30 shipx @ shipy @ a - 0 1 0 c usprite
+      endof
+      1 of
+        3c shipx @ 8 + shipy @ a - 2 1 0 c lsprite
+        30 shipx @ 8 + shipy @ a - 0 1 0 c usprite
+      endof
+      2 of
+        3c shipx @ a + shipy @ 2 1 0 c lsprite
+        30 shipx @ a + shipy @ 0 1 0 c usprite
+      endof
+      3 of
+        3c shipx @ a + shipy @ a + 2 1 0 c lsprite
+        30 shipx @ a + shipy @ a + 0 1 0 c usprite
+      endof
+      4 of
+        3c shipx @ shipy @ a + 2 1 0 c lsprite
+        30 shipx @ shipy @ a + 0 1 0 c usprite
+      endof
+      5 of
+        3c shipx @ a - shipy @ a + 2 1 0 c lsprite
+        30 shipx @ a - shipy @ a + 0 1 0 c usprite
+      endof
+      6 of
+        3c shipx @ a - shipy @ 2 1 0 c lsprite
+        30 shipx @ a - shipy @ 0 1 0 c usprite
+      endof
+      7 of
+        3c shipx @ a - shipy @ a - 2 1 0 c lsprite
+        30 shipx @ a - shipy @ a - 0 1 0 c usprite
+      endof
+    endcase
+    2 4 3d 80 beep! tpucs! then ;
+
+: drawship
+  ( ship exits in lower and upper layers )
+  ( for collision detection )
+  3f shipx @ shipy @ shipdirection @ 1 0 b lsprite
+  3f shipx @ shipy @ shipdirection @ 1 0 b usprite ;
 
 : moveasteroids
   b 0 do
-    i lasteroiddirection @ updatedirections @
-    i lspriteupdate
-    i hasteroiddirection @ updatedirections @
-    i uspriteupdate
+    i lasteroiddirection c@ updatedirections c@
+    i lslupdate!
+    i hasteroiddirection c@ updatedirections c@
+    i uslupdate!
   loop ;
+
+: moveship
+  shipdirection @
+  case
+    0 of
+      shipy @ 0> if
+        -1 shipy +! then
+    endof
+    1 of
+      shipx @ 270 < if
+        1 shipx +! then
+      shipy @ 0> if
+        -1 shipy +! then
+    endof
+    2 of
+      shipx @ 270 < if
+        1 shipx +! then
+    endof
+    3 of
+      shipx @ 270 < if
+        1 shipx +! then
+      shipy @ 1e0 < if
+        1 shipy +! then
+    endof
+    4 of
+      shipy @ 1e0 < if
+        1 shipy +! then
+    endof
+    5 of
+      shipx @ 0> if
+        -1 shipx +! then
+      shipy @ 1e0 < if
+        1 shipy +! then
+    endof
+    6 of
+      shipx @ 0> if
+        -1 shipx +! then
+    endof
+    7 of
+      shipx @ 0> if
+        -1 shipx +! then
+      shipy @ 0> if
+        -1 shipy +! then
+    endof
+  endcase ;
+
+: shipleft
+  shipdirection @ 0= if
+    7 shipdirection !
+    else -1 shipdirection +! then ;
+
+: shipright
+  shipdirection @ 7 = if
+    0 shipdirection !
+    else 1 shipdirection +! then ;
+
+: drawscore
+  countasteroids totalasteroids @ led!
+  40 tpubackground!
+  3f tpuforeground!
+  26 1 tpuxy!
+  score @ 4 tpu.r# ;
+
+: crash?
+  ff5b @ 7ff and
+  ff6b @ 7ff and + 0<> if
+    setshipcrashsprite
+    2 4 1 3e8 beep!
+
+    e000 b uslupdate!
+
+    10 0 do
+      f840 b lslupdate!
+      20 sleep
+      vblank?
+    loop
+
+    0 0 0 0 0 0 b lsprite
+    0 0 0 0 0 0 b usprite
+
+    0 shipdirection !
+    138 shipx !
+    e8 shipy !
+    setshipsprite
+
+    -1 lives +!
+    drawlives
+
+    10 0 do
+    begin
+      15 shipx @ shipy @ shipdirection @ 1 0 b lsprite
+      15 shipx @ shipy @ shipdirection @ 1 0 b usprite
+      moveasteroids 14 sleep
+      ff5b @ 7ff and
+      ff6b @ 7ff and + 0=
+    until
+    loop
+
+    then ;
+
+
+: mainloop
+    counter @
+    case
+      0 of
+        4 counter !
+      endof
+      -1 counter +!
+    endcase
+    a timer1khz!
+    beepboop
+    bulletdirection @ bulletdirections c@ 180 +
+      c lslupdate!
+    bulletdirection @ bulletdirections c@ 180 +
+      c uslupdate!
+    vblank?
+    moveasteroids drawship drawscore
+    timer1khz?
+    crash? hit? ;
+
+: demoULX3S
+  setup
+  setasteroidsprites
+  drawlives
+  newlevel
+  begin
+    mainloop
+    buttons@ 2 and 0<> if
+      fire? then
+    buttons@ 8 and 0<> if
+      moveship then
+    buttons@ 20 and 0<> if
+      counter @ 0= if
+      shipleft then then
+    buttons@ 40 and 0<> if
+      counter @ 0= if
+      shipright then then
+    lives @ 0=
+  until finish ;
+
+: demoDE10NANO
+  setup
+  setasteroidsprites
+  drawlives
+  newlevel
+  begin
+     mainloop
+     buttons@ 2 and 0= if
+      fire? then
+    buttons@ 5 and 0= if
+      moveship then
+    buttons@ 5 and 1 = if
+      counter @ 0= if
+      shipleft then then
+   buttons@ 5 and 4 = if
+      counter @ 0= if
+      shipright then then
+   lives @ 0=
+  until finish ;

@@ -36,11 +36,14 @@ circuitry store( input accesssize, input location, input value, input memorybusy
     writedata = value[0,16];
     writememory = 1;
     while( memorybusy ) {}
-    if( accesssize[0,2] == 2b10 ) {
-        address = location + 2;
-        writedata = value[16,16];
-        writememory = 1;
-        while( memorybusy ) {}
+    switch( accesssize[0,2] ) {
+        case 2b10: {
+            address = location + 2;
+            writedata = value[16,16];
+            writememory = 1;
+            while( memorybusy ) {}
+        }
+        default: {}
     }
 }
 

@@ -35,24 +35,29 @@ algorithm apu(
     frequencytable.addr := selected_note;
     audio_active := ( selected_duration != 0 );
 
-
     while(1) {
-        if( ( selected_duration != 0 ) && ( counter25mhz == 0 ) ) {
-            switch( selected_waveform ) {
-                case 0: { audio_output = { {4{~point[4,1]}} }; }                        // SQUARE
-                case 1: { audio_output = point[1,4]; }                                  // SAWTOOTH
-                case 2: { audio_output = point[4,1] ? 15 - point[0,4] : point[0,4]; }   // TRIANGLE
-                case 3: { audio_output = point[4,1] ? 15 - point[1,3] : point[1,3]; }   // SINE
-                default: { audio_output = staticGenerator; }                            // WHITE NOISE
+        switch( ( selected_duration != 0 ) && ( counter25mhz == 0 ) ) {
+            case 1: {
+                switch( selected_waveform ) {
+                    case 0: { audio_output = { {4{~point[4,1]}} }; }                        // SQUARE
+                    case 1: { audio_output = point[1,4]; }                                  // SAWTOOTH
+                    case 2: { audio_output = point[4,1] ? 15 - point[0,4] : point[0,4]; }   // TRIANGLE
+                    case 3: { audio_output = point[4,1] ? 15 - point[1,3] : point[1,3]; }   // SINE
+                    default: { audio_output = staticGenerator; }                            // WHITE NOISE
+                }
             }
+            default: {}
         }
         switch( apu_write ) {
             case 0: {
-                if( selected_duration != 0 ) {
-                    ( counter25mhz ) = decrementorreset( counter25mhz, notefrequency );
-                    ( point ) = incrementifzero( point, counter25mhz );
-                    ( counter1khz ) = decrementorreset( counter1khz, onesecond );
-                    ( selected_duration ) = decrementifzero( selected_duration, counter1khz );
+                switch( selected_duration != 0 ) {
+                    case 1: {
+                        ( counter25mhz ) = decrementorreset( counter25mhz, notefrequency );
+                        ( point ) = incrementifzero( point, counter25mhz );
+                        ( counter1khz ) = decrementorreset( counter1khz, onesecond );
+                        ( selected_duration ) = decrementifzero( selected_duration, counter1khz );
+                    }
+                    default: {}
                 }
             }
             case 1: {

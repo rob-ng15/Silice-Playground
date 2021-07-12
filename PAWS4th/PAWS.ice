@@ -286,9 +286,9 @@ algorithm bramcontroller(
     readdata := ram.rdata;
 
     while(1) {
-        if( writeflag ) {
-            ram.wdata = writedata;
-            ram.wenable = 1;
+        switch( writeflag ) {
+            case 1: { ram.wdata = writedata; ram.wenable = 1; }
+            case 0: {}
        }
     }
 }
