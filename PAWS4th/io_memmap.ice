@@ -154,7 +154,6 @@ $$end
 }
 
 algorithm copro_memmap(
-    input   uint1   clock100,
     // Memory access
     input   uint12  memoryAddress,
     input   uint1   memoryWrite,
@@ -167,7 +166,7 @@ algorithm copro_memmap(
     divmod32by16 divmod32by16to16qr();
     divmod16by16 divmod16by16to16qr();
     multi16by16to32DSP multiplier16by16to32();
-    doubleops doperations <@clock100> ();
+    doubleops doperations();
     floatops fpu();
 
     // RESET Mathematics Co-Processor Controls

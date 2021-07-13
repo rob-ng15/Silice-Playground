@@ -196,33 +196,72 @@ algorithm ps2(
         //    }
         //}
 
-        if (clk_edge) {
-            if (bit_count == 0) {
-                parity = 0;
-                if (!ps2_dat_in) {
-                    bit_count = bit_count + 1; // Start bit
-                }
-            } else {
-                if (bit_count < 10) {
-                    bit_count = bit_count + 1;
-                    shift_reg = {ps2_dat_in, shift_reg[1,8]};
-                    parity = parity ^ ps2_dat_in;
-                } else {
-                    if (ps2_dat_in) {
-                        bit_count = 0;
-                        if (parity) {
-                            data = shift_reg[0,8];
-                            valid = 1;
-                        } else {
-                            error = 1;
+        switch( clk_edge ) {
+            case 1: {
+                switch( bit_count ) {
+                    case 0: {
+                        parity = 0;
+                        if (!ps2_dat_in) {
+                            bit_count = bit_count + 1; // Start bit
                         }
-                    } else {
-                        error = 1;
-                        bit_count = 0;
+                    }
+                    default: {
+                        bit_count = bit_count + 1;
+                        shift_reg = {ps2_dat_in, shift_reg[1,8]};
+                        parity = parity ^ ps2_dat_in;
+                    }
+                    case 10: {
+                        switch( ps2_dat_in ) {
+                            case 1: {
+                                bit_count = 0;
+                                switch( parity ) {
+                                    case 1: {
+                                        data = shift_reg[0,8];
+                                        valid = 1;
+                                    }
+                                    case 0: {
+                                        error = 1;
+                                    }
+                                }
+                            }
+                            case 0: {
+                                error = 1;
+                                bit_count = 0;
+                            }
+                        }
                     }
                 }
             }
+            default: {}
         }
+
+        //if (clk_edge) {
+        //    if (bit_count == 0) {
+        //        parity = 0;
+        //        if (!ps2_dat_in) {
+        //            bit_count = bit_count + 1; // Start bit
+        //        }
+        //    } else {
+        //        if (bit_count < 10) {
+        //            bit_count = bit_count + 1;
+        //            shift_reg = {ps2_dat_in, shift_reg[1,8]};
+        //            parity = parity ^ ps2_dat_in;
+        //        } else {
+        //            if (ps2_dat_in) {
+        //                bit_count = 0;
+        //                if (parity) {
+        //                    data = shift_reg[0,8];
+        //                    valid = 1;
+        //                } else {
+        //                    error = 1;
+        //                }
+        //            } else {
+        //                error = 1;
+        //                bit_count = 0;
+        //            }
+        //        }
+        //    }
+        //}
     }
 }
 

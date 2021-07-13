@@ -116,7 +116,7 @@ algorithm J1CPU(
         stackNext <: stackNext,
     );
 
-    j1eforthcallbranch CALLBRANCH <@clock100> (
+    j1eforthcallbranch CALLBRANCH(
         instruction <: instruction,
         stackTop <: stackTop,
         stackNext <: stackNext,

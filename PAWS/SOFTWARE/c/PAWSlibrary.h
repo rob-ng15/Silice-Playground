@@ -112,11 +112,11 @@ typedef unsigned int size_t;
 typedef unsigned short bool;
 
 // FOR EASE OF PORTING
-typedef unsigned char   uint8;
-typedef unsigned short  uint16;
+typedef unsigned char   uint8, uint8_t;
+typedef unsigned short  uint16, uint16_t;
 typedef unsigned int    uint32;
-typedef signed char     int8;
-typedef signed short    int16;
+typedef signed char     int8, int8_t;
+typedef signed short    int16, int16_t;
 typedef signed int      int32;
 
 // STRUCTURE OF THE SPRITE UPDATE FLAG

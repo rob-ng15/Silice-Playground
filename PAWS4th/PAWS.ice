@@ -192,9 +192,8 @@ $$if SIMULATION then
 $$end
 
     copro_memmap COPRO_Map <@clock_system,!reset> (
-        clock100 <: clock_100_2,
         memoryAddress <: address,
-        writeData <: writedata,
+        writeData <: writedata
     );
 
     audiotimers_memmap AUDIOTIMERS_Map <@clock_system,!reset> (
