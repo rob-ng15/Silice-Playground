@@ -9,7 +9,7 @@ algorithm apu(
     input   uint4   staticGenerator
 ) <autorun> {
     // Calculated as 25MHz / note frequency / 32 to give 32 step points per note
-    brom uint16 frequencytable[128] = {
+    brom uint16 frequencytable <input!> [128] = {
         0,
         23889, 22548, 21283, 20088, 18961, 17897, 16892, 15944, 15049, 14205, 13407, 12655,     // 1 = C 2 or Deep C
         11945, 11274, 10641, 10044, 9480, 8948, 8446, 7972, 7525, 7102, 6704, 6327,             // 13 = C 3
@@ -36,7 +36,7 @@ algorithm apu(
     audio_active := ( selected_duration != 0 );
 
     while(1) {
-        switch( ( selected_duration != 0 ) && ( counter25mhz == 0 ) ) {
+        switch( audio_active & ( counter25mhz == 0 ) ) {
             case 1: {
                 switch( selected_waveform ) {
                     case 0: { audio_output = { {4{~point[4,1]}} }; }                        // SQUARE
@@ -50,14 +50,14 @@ algorithm apu(
         }
         switch( apu_write ) {
             case 0: {
-                switch( selected_duration != 0 ) {
-                    case 1: {
+                switch( selected_duration ) {
+                    default: {
                         ( counter25mhz ) = decrementorreset( counter25mhz, notefrequency );
                         ( point ) = incrementifzero( point, counter25mhz );
                         ( counter1khz ) = decrementorreset( counter1khz, onesecond );
                         ( selected_duration ) = decrementifzero( selected_duration, counter1khz );
                     }
-                    default: {}
+                    case 0: {}
                 }
             }
             case 1: {

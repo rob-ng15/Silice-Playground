@@ -26,7 +26,7 @@ algorithm character_map(
     simple_dualport_bram uint13 colourmap <input!> [2400] = uninitialized;
 
     // Character ROM 8x16
-    brom uint8 characterGenerator8x16[] = {
+    brom uint8 characterGenerator8x16 <input!> [] = {
         $include('ROM/characterROM8x16.inc')
     };
 

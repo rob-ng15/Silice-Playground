@@ -16,7 +16,7 @@ algorithm divbit32(
     uint32  temp = uninitialised;
     uint1   quobit = uninitialised;
     while(1) {
-        temp = ( rem << 1 ) + top[x,1];
+        temp = ( rem << 1 ) | top[x,1];
         quobit = __unsigned(temp) >= __unsigned(bottom);
         newremainder = __unsigned(temp) - ( quobit ? __unsigned(bottom) : 0 );
         newquotient = quo | ( quobit << x );
@@ -98,7 +98,7 @@ algorithm divbit16(
     uint16  temp = uninitialised;
     uint1   quobit = uninitialised;
     while(1) {
-        temp = ( rem << 1 ) + top[x,1];
+        temp = ( rem << 1 ) | top[x,1];
         quobit = __unsigned(temp) >= __unsigned(bottom);
         newremainder = __unsigned(temp) - ( quobit ? __unsigned(bottom) : 0 );
         newquotient = quo | ( quobit << x );
@@ -373,6 +373,54 @@ algorithm d0l(
     input   int32   operand1,
     output  int16   zeroless
 ) <autorun> {
+    zeroless := {16{operand1[31,1]}};
+}
+
+algorithm doubleops_alt(
+    input   uint16  operand1h,
+    input   uint16  operand1l,
+    input   uint16  operand2h,
+    input   uint16  operand2l,
+
+    output  int32   total,
+    output  int32   difference,
+    output  int32   binaryxor,
+    output  int32   binaryor,
+    output  int32   binaryand,
+    output  int32   maximum,
+    output  int32   minimum,
+    output  int16   equal,
+    output  int16   lessthan,
+    output  int32   increment,
+    output  int32   decrement,
+    output  int32   times2,
+    output  int32   divide2,
+    output  int32   negation,
+    output  int32   binaryinvert,
+    output  int32   absolute,
+    output  int16   zeroequal,
+    output  int16   zeroless
+) <autorun> {
+    int32  operand1 := { operand1h, operand1l };
+    int32  operand2 := { operand2h, operand2l };
+
+    total := operand1 + operand2;
+    difference := operand1 - operand2;
+    binaryxor := operand1 ^ operand2;
+    binaryor := operand1 | operand2;
+    binaryand := operand1 & operand2;
+    maximum := lessthan[0,1] ? operand2 : operand1;
+    minimum := lessthan[0,1] ? operand1 : operand2;
+    equal := {16{(operand1 == operand2)}};
+    lessthan := {16{(operand1 < operand2)}};
+    increment := operand1 + 1;
+    decrement := operand1 - 1;
+    times2 := { operand1[0,31], 1b0 };
+    divide2 := { operand1[31,1], operand1[1,31] };
+    negation := -operand1;
+    binaryinvert := ~operand1;
+    absolute := ( operand1[31,1] ) ? -operand1 : operand1;
+    zeroequal := {16{(operand1 == 0)}};
     zeroless := {16{operand1[31,1]}};
 }
 

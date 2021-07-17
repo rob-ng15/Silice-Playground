@@ -53,9 +53,9 @@ algorithm multiplex_display(
     input uint2 terminal_b,
     input uint1 terminal_display
 ) <autorun> {
-    uint8   red8 = uninitialised;
-    uint8   green8 = uninitialised;
-    uint8   blue8 = uninitialised;
+    uint2   red = uninitialised;
+    uint2   green = uninitialised;
+    uint2   blue = uninitialised;
 
     expandcolour RED(
         display_order <: display_order,
@@ -75,7 +75,7 @@ algorithm multiplex_display(
         upper_tilemap <: upper_tilemap_r,
         background <: background_r,
 
-        pix :> red8
+        pix :> red
     );
     expandcolour GREEN(
         display_order <: display_order,
@@ -95,7 +95,7 @@ algorithm multiplex_display(
         upper_tilemap <: upper_tilemap_g,
         background <: background_g,
 
-        pix :> green8
+        pix :> green
     );
     expandcolour BLUE(
         display_order <: display_order,
@@ -115,12 +115,12 @@ algorithm multiplex_display(
         upper_tilemap <: upper_tilemap_b,
         background <: background_b,
 
-        pix :> blue8
+        pix :> blue
     );
 
-    pix_red   := red8;
-    pix_green := green8;
-    pix_blue  := blue8;
+    pix_red   := { {4{red}} };
+    pix_green := { {4{green}} };
+    pix_blue  := { {4{blue}} };
 }
 
 // EXPAND FROM 2 bit to 8 bit colour
@@ -142,53 +142,54 @@ algorithm expandcolour(
     input   uint2   upper_tilemap,
     input   uint2   background,
 
-    output! uint8   pix
+    output! uint2   pix
 ) <autorun> {
+
     while(1) {
         switch( display_order ) {
             case 0: {
                 // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> BITMAP -> UPPER_SPRITES -> CHARACTER_MAP
-                pix = ( terminal_display ) ? { {4{terminal}} } :
-                            ( character_map_display ) ? { {4{character_map}} } :
-                            ( upper_sprites_display ) ? { {4{upper_sprites}} } :
-                            ( bitmap_display ) ? { {4{bitmap}} } :
-                            ( lower_sprites_display ) ? { {4{lower_sprites}} } :
-                            ( upper_tilemap_display ) ? { {4{upper_tilemap}} } :
-                            ( lower_tilemap_display ) ? { {4{lower_tilemap}} } :
-                            { {4{background}} };
+                pix = ( terminal_display ) ? terminal :
+                            ( character_map_display ) ? character_map :
+                            ( upper_sprites_display ) ? upper_sprites :
+                            ( bitmap_display ) ? bitmap :
+                            ( lower_sprites_display ) ? lower_sprites :
+                            ( upper_tilemap_display ) ? upper_tilemap :
+                            ( lower_tilemap_display ) ? lower_tilemap :
+                            background;
             }
             case 1: {
                 // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> BITMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP
-                pix = ( terminal_display ) ? { {4{terminal}} } :
-                        ( character_map_display ) ? { {4{character_map}} } :
-                        ( upper_sprites_display ) ? { {4{upper_sprites}} } :
-                        ( lower_sprites_display ) ? { {4{lower_sprites}} } :
-                        ( bitmap_display ) ? { {4{bitmap}} } :
-                        ( upper_tilemap_display ) ? { {4{upper_tilemap}} } :
-                        ( lower_tilemap_display ) ? { {4{lower_tilemap}} } :
-                        { {4{background}} };
+                pix = ( terminal_display ) ? terminal :
+                        ( character_map_display ) ? character_map :
+                        ( upper_sprites_display ) ? upper_sprites :
+                        ( lower_sprites_display ) ? lower_sprites :
+                        ( bitmap_display ) ? bitmap :
+                        ( upper_tilemap_display ) ? upper_tilemap :
+                        ( lower_tilemap_display ) ? lower_tilemap :
+                        background;
             }
             case 2: {
                 // BACKGROUND -> BITMAP -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP
-                pix = ( terminal_display ) ? { {4{terminal}} } :
-                        ( character_map_display ) ? { {4{character_map}} } :
-                        ( upper_sprites_display ) ? { {4{upper_sprites}} } :
-                        ( lower_sprites_display ) ? { {4{lower_sprites}} } :
-                        ( upper_tilemap_display ) ? { {4{upper_tilemap}} } :
-                        ( lower_tilemap_display ) ? { {4{lower_tilemap}} } :
-                        ( bitmap_display ) ? { {4{bitmap}} } :
-                        { {4{background}} };
+                pix = ( terminal_display ) ? terminal :
+                        ( character_map_display ) ? character_map :
+                        ( upper_sprites_display ) ? upper_sprites :
+                        ( lower_sprites_display ) ? lower_sprites :
+                        ( upper_tilemap_display ) ? upper_tilemap :
+                        ( lower_tilemap_display ) ? lower_tilemap :
+                        ( bitmap_display ) ? bitmap :
+                        background;
             }
             case 3: {
                 // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> BITMAP -> CHARACTER_MAP
-                pix = ( terminal_display ) ? { {4{terminal}} } :
-                        ( character_map_display ) ? { {4{character_map}} } :
-                        ( bitmap_display ) ? { {4{bitmap}} } :
-                        ( upper_sprites_display ) ? { {4{upper_sprites}} } :
-                        ( lower_sprites_display ) ? { {4{lower_sprites}} } :
-                        ( upper_tilemap_display ) ? { {4{upper_tilemap}} } :
-                        ( lower_tilemap_display ) ? { {4{lower_tilemap}} } :
-                        { {4{background}} };
+                pix = ( terminal_display ) ? terminal :
+                        ( character_map_display ) ? character_map :
+                        ( bitmap_display ) ? bitmap :
+                        ( upper_sprites_display ) ? upper_sprites :
+                        ( lower_sprites_display ) ? lower_sprites :
+                        ( upper_tilemap_display ) ? upper_tilemap :
+                        ( lower_tilemap_display ) ? lower_tilemap :
+                        background;
             }
         }
     }

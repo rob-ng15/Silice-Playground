@@ -117,13 +117,17 @@ vec3 reflect(vec3 I, vec3 N) { return vec3_sub(I, vec3_scale(2.f*vec3_dot(I,N),N
 
 vec3 refract(vec3 I, vec3 N, float eta_t, float eta_i /* =1.f */) { // Snell's law
     float cosi = -max(-1.f, min(1.f, vec3_dot(I,N)));
-    tpu_printf_centre( 28, WHITE, TRANSPARENT, "REFRACT 1a");
-    if (cosi<0) return refract(I, vec3_neg(N), eta_i, eta_t); // if the ray comes from the inside the object, swap the air and the media
+    if(cosi<0.0f) {
+    tpu_printf_centre( 28, WHITE, TRANSPARENT, "REFRACT 1a cosi = %f cosi < 0 ",cosi);
+    } else {
+    tpu_printf_centre( 28, WHITE, TRANSPARENT, "REFRACT 1a cosi = %f cosi >= 0 ",cosi);
+    }
+    if (cosi<0.0f) return refract(I, vec3_neg(N), eta_i, eta_t); // if the ray comes from the inside the object, swap the air and the media
     tpu_printf_centre( 28, WHITE, TRANSPARENT, "REFRACT 1b");
     float eta = eta_i / eta_t;
-    tpu_printf_centre( 28, WHITE, TRANSPARENT, "REFRACT 1c");
+    tpu_printf_centre( 28, WHITE, TRANSPARENT, "REFRACT 1c eta = %f",eta);
     float k = 1 - eta*eta*(1 - cosi*cosi);
-    tpu_printf_centre( 28, WHITE, TRANSPARENT, "REFRACT 1d");
+    tpu_printf_centre( 28, WHITE, TRANSPARENT, "REFRACT 1d k = %f",k);
     return k<0 ? make_vec3(1,0,0) : vec3_add(vec3_scale(eta,I),vec3_scale((eta*cosi - sqrtf(k)),N));
                                         // k<0 = total reflection, no ray to refract. I refract it anyways, this has no physical meaning
 }
@@ -143,7 +147,7 @@ BOOL scene_intersect(vec3 orig, vec3 dir, Sphere* spheres, int nb_spheres, vec3*
   if (fabs(dir.y)>1e-3)  {
     float d = -(orig.y+4)/dir.y; // the checkerboard plane has equation y = -4
     vec3 pt = vec3_add(orig, vec3_scale(d,dir));
-    if (d>0 && fabs(pt.x)<10 && pt.z<-10 && pt.z>-30 && d<spheres_dist) {
+    if (d>0.0f && fabs(pt.x)<10 && pt.z<-10 && pt.z>-30 && d<spheres_dist) {
       checkerboard_dist = d;
       *hit = pt;
       *N = make_vec3(0,1,0);

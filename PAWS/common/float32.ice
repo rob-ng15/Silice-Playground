@@ -219,7 +219,6 @@ algorithm floataddsub(
     uint48  sigA = uninitialised;
     uint48  sigB = uninitialised;
     uint23  newfraction = uninitialised;
-    uint1   round = uninitialised;
 
     busy = 0;
 
@@ -229,7 +228,6 @@ algorithm floataddsub(
             case 1: {
                 busy = 1;
                 FSM = 1;
-                round = 1;
                 while( FSM != 0 ) {
                     onehot( FSM ) {
                         case 0: {
@@ -244,7 +242,6 @@ algorithm floataddsub(
                             expB = floatingpointnumber( b ).exponent - 127;
                             sigA = { 2b01, floatingpointnumber(a).fraction, 23b0 };
                             sigB = { 2b01, floatingpointnumber(b).fraction, 23b0 };
-                            sign = floatingpointnumber(a).sign;
                         }
                         case 2: {
                             // ADJUST TO EQUAL EXPONENTS
@@ -261,14 +258,14 @@ algorithm floataddsub(
                                         // PERFORM + HANDLING SIGNS
                                         case 2b01: {
                                             switch( sigB > sigA ) {
-                                                case 1: { sign = 1; round = ( sigA != 0 ); sigA = sigB - ( ~round ? 1 : sigA ); }
-                                                case 0: { sign = 0; round = ( sigB != 0 ); sigA = sigA - ( ~round ? 1 : sigB ); }
+                                                case 1: { sign = 1; sigA = sigB - sigA; }
+                                                case 0: { sign = 0; sigA = sigA - sigB; }
                                             }
                                         }
                                         case 2b10: {
                                             switch(  sigA > sigB ) {
-                                                case 1: { sign = 1; round = ( sigB != 0 ); sigA = sigA - ( ~round ? 1 : sigB ); }
-                                                case 0: { sign = 0; round = ( sigA != 0 ); sigA = sigB - ( ~round ? 1 : sigA ); }
+                                                case 1: { sign = 1; sigA = sigA - sigB; }
+                                                case 0: { sign = 0; sigA = sigB - sigA; }
                                             }
                                         }
                                         default: { sign = signA; sigA = sigA + sigB; }
@@ -292,7 +289,6 @@ algorithm floataddsub(
                                                     sigA = { sigA[0,47], 1b0 };
                                                 }
                                             }
-                                            sigA[23,1] = sigA[23,1] & round;
                                             ( newfraction ) = round48( sigA );
                                             ( expA ) = adjustexp48( exp, newfraction, sigA );
                                             ( result ) = combinecomponents( sign, expA, newfraction );
@@ -399,7 +395,7 @@ algorithm divbit48(
     uint48  temp = uninitialised;
     uint1   quobit = uninitialised;
     while(1) {
-        temp = ( rem << 1 ) + top[x,1];
+        temp = ( rem << 1 ) | top[x,1];
         quobit = __unsigned(temp) >= __unsigned(bottom);
         newremainder = __unsigned(temp) - ( quobit ? __unsigned(bottom) : 0 );
         newquotient = quo | ( quobit << x );
@@ -601,8 +597,8 @@ circuitry floatless( input a, input b, output lessthan ) {
 circuitry floatequal( input a, input b, output equalto ) {
     equalto = ( a == b ) | ((( a | b ) << 1) == 0 );
 }
-circuitry floatlessequal( input a, input b, output lessequal, ) {
-    lessequal = ( a[31,1] != b[31,1] ) ? a[31,1] | ((( a | b ) << 1) == 0 ) : ( a == b ) | ( a[31,1] ^ ( a < b ));
+circuitry floatlessequal( input a, input b, output lessequalto, ) {
+    lessequalto = ( a[31,1] != b[31,1] ) ? a[31,1] | ((( a | b ) << 1) == 0 ) : ( a == b ) | ( a[31,1] ^ ( a < b ));
 }
 
 algorithm floatcompare(

@@ -73,60 +73,66 @@ $$end
 
     while(1) {
         // READ IO Memory
-        if( memoryRead ) {
-            switch( memoryAddress ) {
-                // UART, LEDS, BUTTONS and CLOCK
-$$if not SIMULATION then
-                case 12h100: { readData = { 8b0, UART.inchar }; UART.inread = 1; }
-                case 12h102: { readData = { 14b0, UART.outfull, UART.inavailable }; }
-                case 12h120: { readData = { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] }; }
-$$end
-                case 12h130: { readData = leds; }
-$$if not SIMULATION then
-                // PS2
-                case 12h110: { readData = PS2.inavailable; }
-                case 12h112: {
-                    if( PS2.inavailable ) {
-                        readData = PS2.inchar;
-                        PS2.inread = 1;
-                    } else {
-                        readData = 0;
+        switch( memoryRead ) {
+            case 1: {
+                switch( memoryAddress ) {
+                    // UART, LEDS, BUTTONS and CLOCK
+    $$if not SIMULATION then
+                    case 12h100: { readData = { 8b0, UART.inchar }; UART.inread = 1; }
+                    case 12h102: { readData = { 14b0, UART.outfull, UART.inavailable }; }
+                    case 12h120: { readData = { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] }; }
+    $$end
+                    case 12h130: { readData = leds; }
+    $$if not SIMULATION then
+                    // PS2
+                    case 12h110: { readData = PS2.inavailable; }
+                    case 12h112: {
+                        if( PS2.inavailable ) {
+                            readData = PS2.inchar;
+                            PS2.inread = 1;
+                        } else {
+                            readData = 0;
+                        }
                     }
+
+                    // SDCARD
+                    case 12h140: { readData = SDCARD.ready; }
+                    case 12h150: { readData = SDCARD.bufferdata; }
+    $$end
+
+                    // SMT STATUS
+                    case 12hffe: { readData = SMTRUNNING; }
+
+                    // RETURN NULL VALUE
+                    default: { readData = 0; }
                 }
-
-                // SDCARD
-                case 12h140: { readData = SDCARD.ready; }
-                case 12h150: { readData = SDCARD.bufferdata; }
-$$end
-
-                // SMT STATUS
-                case 12hffe: { readData = SMTRUNNING; }
-
-                // RETURN NULL VALUE
-                default: { readData = 0; }
             }
+            default: {}
         }
 
         // WRITE IO Memory
-        if( memoryWrite ) {
-            switch( memoryAddress ) {
-                // UART, LEDS
-                case 12h130: { leds = writeData; }
-$$if not SIMULATION then
-                case 12h100: { UART.outchar = writeData[0,8]; UART.outwrite = 1; }
+        switch( memoryWrite ) {
+            case 1: {
+                switch( memoryAddress ) {
+                    // UART, LEDS
+                    case 12h130: { leds = writeData; }
+    $$if not SIMULATION then
+                    case 12h100: { UART.outchar = writeData[0,8]; UART.outwrite = 1; }
 
-                // SDCARD
-                case 12h140: { SDCARD.readsector = 1; }
-                case 12h142: { SDCARD.sectoraddressH = writeData; }
-                case 12h144: { SDCARD.sectoraddressL = writeData; }
-                case 12h150: { SDCARD.bufferaddress = writeData; }
-$$end
-                // SMT STATUS
-                case 12hff0: { SMTSTARTPC[16,16] = writeData; }
-                case 12hff2: { SMTSTARTPC[0,16] = writeData; }
-                case 12hffe: { SMTRUNNING = writeData; }
-                default: {}
+                    // SDCARD
+                    case 12h140: { SDCARD.readsector = 1; }
+                    case 12h142: { SDCARD.sectoraddressH = writeData; }
+                    case 12h144: { SDCARD.sectoraddressL = writeData; }
+                    case 12h150: { SDCARD.bufferaddress = writeData; }
+    $$end
+                    // SMT STATUS
+                    case 12hff0: { SMTSTARTPC[16,16] = writeData; }
+                    case 12hff2: { SMTSTARTPC[0,16] = writeData; }
+                    case 12hffe: { SMTRUNNING = writeData; }
+                    default: {}
+                }
             }
+            default: {}
         }
     } // while(1)
 }
@@ -162,51 +168,56 @@ algorithm audiotimers_memmap(
 
     while(1) {
         // READ IO Memory
-        if( memoryRead ) {
-            switch( memoryAddress ) {
-                // TIMERS and RNG
-                case 12h000: { readData = timers.g_noise_out; }
-                case 12h002: { readData = timers.u_noise_out; }
-                case 12h010: { readData = timers.timer1hz0; }
-                case 12h012: { readData = timers.timer1hz1; }
-                case 12h020: { readData = timers.timer1khz0; }
-                case 12h022: { readData = timers.timer1khz1; }
-                case 12h030: { readData = timers.sleepTimer0; }
-                case 12h032: { readData = timers.sleepTimer1; }
-                case 12h040: { readData = timers.systemclock; }
+        switch( memoryRead ) {
+            case 1: {
+                switch( memoryAddress ) {
+                    // TIMERS and RNG
+                    case 12h000: { readData = timers.g_noise_out; }
+                    case 12h002: { readData = timers.u_noise_out; }
+                    case 12h010: { readData = timers.timer1hz0; }
+                    case 12h012: { readData = timers.timer1hz1; }
+                    case 12h020: { readData = timers.timer1khz0; }
+                    case 12h022: { readData = timers.timer1khz1; }
+                    case 12h030: { readData = timers.sleepTimer0; }
+                    case 12h032: { readData = timers.sleepTimer1; }
+                    case 12h040: { readData = timers.systemclock; }
 
-                // AUDIO
-                case 12h110: { readData = apu_processor.audio_active_l; }
-                case 12h112: { readData = apu_processor.audio_active_r; }
+                    // AUDIO
+                    case 12h110: { readData = apu_processor.audio_active_l; }
+                    case 12h112: { readData = apu_processor.audio_active_r; }
 
-                // RETURN NULL VALUE
-                default: { readData = 0; }
+                    // RETURN NULL VALUE
+                    default: { readData = 0; }
+                }
             }
+            default: {}
         }
         // WRITE IO Memory
-        if( memoryWrite && ~LATCHmemoryWrite ) {
-            switch( memoryAddress ) {
-               // TIMERS and RNG
-                case 12h010: { timers.resetcounter = 1; }
-                case 12h012: { timers.resetcounter = 2; }
-                case 12h020: { timers.counter = writeData; timers.resetcounter = 3; }
-                case 12h022: { timers.counter = writeData; timers.resetcounter = 4; }
-                case 12h030: { timers.counter = writeData; timers.resetcounter = 5; }
-                case 12h032: { timers.counter = writeData; timers.resetcounter = 6; }
+        switch( { memoryWrite, LATCHmemoryWrite } ) {
+            case 2b10: {
+                switch( memoryAddress ) {
+                // TIMERS and RNG
+                    case 12h010: { timers.resetcounter = 1; }
+                    case 12h012: { timers.resetcounter = 2; }
+                    case 12h020: { timers.counter = writeData; timers.resetcounter = 3; }
+                    case 12h022: { timers.counter = writeData; timers.resetcounter = 4; }
+                    case 12h030: { timers.counter = writeData; timers.resetcounter = 5; }
+                    case 12h032: { timers.counter = writeData; timers.resetcounter = 6; }
 
-                // AUDIO
-                case 12h100: { apu_processor.waveform = writeData; }
-                case 12h102: { apu_processor.note = writeData; }
-                case 12h104: { apu_processor.duration = writeData; }
-                case 12h106: { apu_processor.apu_write = writeData; }
-                default: {}
-             }
-        }
-        // RESET Co-Processor Controls
-        if( ~memoryWrite && ~LATCHmemoryWrite ) {
-            // RESET TIMER and AUDIO Co-Processor Controls
-            timers.resetcounter = 0;
-            apu_processor.apu_write = 0;
+                    // AUDIO
+                    case 12h100: { apu_processor.waveform = writeData; }
+                    case 12h102: { apu_processor.note = writeData; }
+                    case 12h104: { apu_processor.duration = writeData; }
+                    case 12h106: { apu_processor.apu_write = writeData; }
+                    default: {}
+                }
+            }
+            case 2b00: {
+                // RESET TIMER and AUDIO Co-Processor Controls
+                timers.resetcounter = 0;
+                apu_processor.apu_write = 0;
+            }
+            default: {}
         }
         LATCHmemoryWrite = memoryWrite;
     }
@@ -491,221 +502,224 @@ $$end
 
     while(1) {
         // READ IO Memory
-        if( memoryRead ) {
-            switch( memoryAddress ) {
-                // TILE MAP
-                case 12h120: { readData = lower_tile_map.tm_lastaction; }
-                case 12h122: { readData = lower_tile_map.tm_active; }
-                case 12h220: { readData = upper_tile_map.tm_lastaction; }
-                case 12h222: { readData = upper_tile_map.tm_active; }
+        switch( memoryRead ) {
+            case 1: {
+                switch( memoryAddress ) {
+                    // TILE MAP
+                    case 12h120: { readData = lower_tile_map.tm_lastaction; }
+                    case 12h122: { readData = lower_tile_map.tm_active; }
+                    case 12h220: { readData = upper_tile_map.tm_lastaction; }
+                    case 12h222: { readData = upper_tile_map.tm_active; }
 
-                // LOWER SPRITE LAYER
-                $$for i=0,15 do
-                    case $0x300 + i*2$: { readData = lower_sprites.sprite_read_active_$i$; }
-                    case $0x320 + i*2$: { readData = lower_sprites.sprite_read_double_$i$; }
-                    case $0x340 + i*2$: { readData = lower_sprites.sprite_read_colour_$i$; }
-                    case $0x360 + i*2$: { readData = {{5{lower_sprites.sprite_read_x_$i$[10,1]}}, lower_sprites.sprite_read_x_$i$}; }
-                    case $0x380 + i*2$: { readData = {{5{lower_sprites.sprite_read_y_$i$[10,1]}}, lower_sprites.sprite_read_y_$i$}; }
-                    case $0x3a0 + i*2$: { readData = lower_sprites.sprite_read_tile_$i$; }
-                    case $0x3c0 + i*2$: { readData = lower_sprites.collision_$i$; }
-                    case $0x3e0 + i*2$: { readData = lower_sprites.layer_collision_$i$; }
-                $$end
+                    // LOWER SPRITE LAYER
+                    $$for i=0,15 do
+                        case $0x300 + i*2$: { readData = lower_sprites.sprite_read_active_$i$; }
+                        case $0x320 + i*2$: { readData = lower_sprites.sprite_read_double_$i$; }
+                        case $0x340 + i*2$: { readData = lower_sprites.sprite_read_colour_$i$; }
+                        case $0x360 + i*2$: { readData = {{5{lower_sprites.sprite_read_x_$i$[10,1]}}, lower_sprites.sprite_read_x_$i$}; }
+                        case $0x380 + i*2$: { readData = {{5{lower_sprites.sprite_read_y_$i$[10,1]}}, lower_sprites.sprite_read_y_$i$}; }
+                        case $0x3a0 + i*2$: { readData = lower_sprites.sprite_read_tile_$i$; }
+                        case $0x3c0 + i*2$: { readData = lower_sprites.collision_$i$; }
+                        case $0x3e0 + i*2$: { readData = lower_sprites.layer_collision_$i$; }
+                    $$end
 
-                // UPPER SPRITE LAYER
-                $$for i=0,15 do
-                    case $0x400 + i*2$: { readData = upper_sprites.sprite_read_active_$i$; }
-                    case $0x420 + i*2$: { readData = upper_sprites.sprite_read_double_$i$; }
-                    case $0x440 + i*2$: { readData = upper_sprites.sprite_read_colour_$i$; }
-                    case $0x460 + i*2$: { readData = {{5{upper_sprites.sprite_read_x_$i$[10,1]}}, upper_sprites.sprite_read_x_$i$}; }
-                    case $0x480 + i*2$: { readData = {{5{upper_sprites.sprite_read_y_$i$[10,1]}}, upper_sprites.sprite_read_y_$i$}; }
-                    case $0x4a0 + i*2$: { readData = upper_sprites.sprite_read_tile_$i$; }
-                    case $0x4c0 + i*2$: { readData = upper_sprites.collision_$i$; }
-                    case $0x4e0 + i*2$: { readData = upper_sprites.layer_collision_$i$; }
-                $$end
+                    // UPPER SPRITE LAYER
+                    $$for i=0,15 do
+                        case $0x400 + i*2$: { readData = upper_sprites.sprite_read_active_$i$; }
+                        case $0x420 + i*2$: { readData = upper_sprites.sprite_read_double_$i$; }
+                        case $0x440 + i*2$: { readData = upper_sprites.sprite_read_colour_$i$; }
+                        case $0x460 + i*2$: { readData = {{5{upper_sprites.sprite_read_x_$i$[10,1]}}, upper_sprites.sprite_read_x_$i$}; }
+                        case $0x480 + i*2$: { readData = {{5{upper_sprites.sprite_read_y_$i$[10,1]}}, upper_sprites.sprite_read_y_$i$}; }
+                        case $0x4a0 + i*2$: { readData = upper_sprites.sprite_read_tile_$i$; }
+                        case $0x4c0 + i*2$: { readData = upper_sprites.collision_$i$; }
+                        case $0x4e0 + i*2$: { readData = upper_sprites.layer_collision_$i$; }
+                    $$end
 
-                // CHARACTER MAP
-                case 12h504: { readData = character_map_window.curses_character; }
-                case 12h506: { readData = character_map_window.curses_background; }
-                case 12h508: { readData = character_map_window.curses_foreground; }
-                case 12h50a: { readData = character_map_window.tpu_active; }
+                    // CHARACTER MAP
+                    case 12h504: { readData = character_map_window.curses_character; }
+                    case 12h506: { readData = character_map_window.curses_background; }
+                    case 12h508: { readData = character_map_window.curses_foreground; }
+                    case 12h50a: { readData = character_map_window.tpu_active; }
 
-                // GPU and BITMAP
-                case 12h612: { readData = bitmap_window.gpu_queue_full; }
-                case 12h614: { readData = bitmap_window.gpu_queue_complete; }
-                case 12h62a: { readData = bitmap_window.vector_block_active; }
-                case 12h6d4: { readData = bitmap_window.bitmap_colour_read; }
+                    // GPU and BITMAP
+                    case 12h612: { readData = bitmap_window.gpu_queue_full; }
+                    case 12h614: { readData = bitmap_window.gpu_queue_complete; }
+                    case 12h62a: { readData = bitmap_window.vector_block_active; }
+                    case 12h6d4: { readData = bitmap_window.bitmap_colour_read; }
 
-                // TERMINAL
-                case 12h700: { readData = terminal_window.terminal_active; }
+                    // TERMINAL
+                    case 12h700: { readData = terminal_window.terminal_active; }
 
-                // VBLANK
-                case 12hf00: { readData = vblank; }
+                    // VBLANK
+                    case 12hf00: { readData = vblank; }
 
-                default: { readData = 0; }
+                    default: { readData = 0; }
+                }
             }
+            default: {}
         }
 
         // WRITE IO Memory
-        if( memoryWrite && ~LATCHmemoryWrite ) {
-            switch( memoryAddress ) {
-                // BACKGROUND
-                case 12h000: { background_generator.backgroundcolour = writeData; background_generator.background_update = 1; }
-                case 12h002: { background_generator.backgroundcolour_alt = writeData; background_generator.background_update = 2; }
-                case 12h004: { background_generator.backgroundcolour_mode = writeData; background_generator.background_update = 3; }
-                case 12h010: { background_generator.copper_program = writeData; }
-                case 12h012: { background_generator.copper_status = writeData; }
-                case 12h020: { background_generator.copper_address = writeData; }
-                case 12h022: { background_generator.copper_command = writeData; }
-                case 12h024: { background_generator.copper_condition = writeData; }
-                case 12h026: { background_generator.copper_coordinate = writeData; }
-                case 12h028: { background_generator.copper_mode = writeData; }
-                case 12h02a: { background_generator.copper_alt = writeData; }
-                case 12h02c: { background_generator.copper_colour = writeData; }
+        switch( { memoryWrite, LATCHmemoryWrite } ) {
+            case 2b10: {
+                switch( memoryAddress ) {
+                    // BACKGROUND
+                    case 12h000: { background_generator.backgroundcolour = writeData; background_generator.background_update = 1; }
+                    case 12h002: { background_generator.backgroundcolour_alt = writeData; background_generator.background_update = 2; }
+                    case 12h004: { background_generator.backgroundcolour_mode = writeData; background_generator.background_update = 3; }
+                    case 12h010: { background_generator.copper_program = writeData; }
+                    case 12h012: { background_generator.copper_status = writeData; }
+                    case 12h020: { background_generator.copper_address = writeData; }
+                    case 12h022: { background_generator.copper_command = writeData; }
+                    case 12h024: { background_generator.copper_condition = writeData; }
+                    case 12h026: { background_generator.copper_coordinate = writeData; }
+                    case 12h028: { background_generator.copper_mode = writeData; }
+                    case 12h02a: { background_generator.copper_alt = writeData; }
+                    case 12h02c: { background_generator.copper_colour = writeData; }
 
-                // TILE MAP
-                case 12h100: { lower_tile_map.tm_x = writeData; }
-                case 12h102: { lower_tile_map.tm_y = writeData; }
-                case 12h104: { lower_tile_map.tm_character = writeData; }
-                case 12h106: { lower_tile_map.tm_background = writeData; }
-                case 12h108: { lower_tile_map.tm_foreground = writeData; }
-                case 12h10a: { lower_tile_map.tm_write = 1; }
-                case 12h110: { lower_tile_map.tile_writer_tile = writeData; }
-                case 12h112: { lower_tile_map.tile_writer_line = writeData; }
-                case 12h114: { lower_tile_map.tile_writer_bitmap = writeData; }
-                case 12h120: { lower_tile_map.tm_scrollwrap = writeData; }
+                    // TILE MAP
+                    case 12h100: { lower_tile_map.tm_x = writeData; }
+                    case 12h102: { lower_tile_map.tm_y = writeData; }
+                    case 12h104: { lower_tile_map.tm_character = writeData; }
+                    case 12h106: { lower_tile_map.tm_background = writeData; }
+                    case 12h108: { lower_tile_map.tm_foreground = writeData; }
+                    case 12h10a: { lower_tile_map.tm_write = 1; }
+                    case 12h110: { lower_tile_map.tile_writer_tile = writeData; }
+                    case 12h112: { lower_tile_map.tile_writer_line = writeData; }
+                    case 12h114: { lower_tile_map.tile_writer_bitmap = writeData; }
+                    case 12h120: { lower_tile_map.tm_scrollwrap = writeData; }
 
-                case 12h200: { upper_tile_map.tm_x = writeData; }
-                case 12h202: { upper_tile_map.tm_y = writeData; }
-                case 12h204: { upper_tile_map.tm_character = writeData; }
-                case 12h206: { upper_tile_map.tm_background = writeData; }
-                case 12h208: { upper_tile_map.tm_foreground = writeData; }
-                case 12h20a: { upper_tile_map.tm_write = 1; }
-                case 12h210: { upper_tile_map.tile_writer_tile = writeData; }
-                case 12h212: { upper_tile_map.tile_writer_line = writeData; }
-                case 12h214: { upper_tile_map.tile_writer_bitmap = writeData; }
-                case 12h220: { upper_tile_map.tm_scrollwrap = writeData; }
+                    case 12h200: { upper_tile_map.tm_x = writeData; }
+                    case 12h202: { upper_tile_map.tm_y = writeData; }
+                    case 12h204: { upper_tile_map.tm_character = writeData; }
+                    case 12h206: { upper_tile_map.tm_background = writeData; }
+                    case 12h208: { upper_tile_map.tm_foreground = writeData; }
+                    case 12h20a: { upper_tile_map.tm_write = 1; }
+                    case 12h210: { upper_tile_map.tile_writer_tile = writeData; }
+                    case 12h212: { upper_tile_map.tile_writer_line = writeData; }
+                    case 12h214: { upper_tile_map.tile_writer_bitmap = writeData; }
+                    case 12h220: { upper_tile_map.tm_scrollwrap = writeData; }
 
-                // LOWER SPRITE LAYER
-                $$for i=0,15 do
-                    case $0x300 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_active = writeData; lower_sprites.sprite_layer_write = 1; }
-                    case $0x320 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_double = writeData; lower_sprites.sprite_layer_write = 2; }
-                    case $0x340 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_colour = writeData; lower_sprites.sprite_layer_write = 3; }
-                    case $0x360 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_x = writeData; lower_sprites.sprite_layer_write = 4; }
-                    case $0x380 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_y = writeData; lower_sprites.sprite_layer_write = 5; }
-                    case $0x3a0 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_tile = writeData; lower_sprites.sprite_layer_write = 6; }
-                    case $0x3c0 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_update = writeData; lower_sprites.sprite_layer_write = 7; }
-                $$end
+                    // LOWER SPRITE LAYER
+                    $$for i=0,15 do
+                        case $0x300 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_active = writeData; lower_sprites.sprite_layer_write = 1; }
+                        case $0x320 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_double = writeData; lower_sprites.sprite_layer_write = 2; }
+                        case $0x340 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_colour = writeData; lower_sprites.sprite_layer_write = 3; }
+                        case $0x360 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_x = writeData; lower_sprites.sprite_layer_write = 4; }
+                        case $0x380 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_y = writeData; lower_sprites.sprite_layer_write = 5; }
+                        case $0x3a0 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_tile = writeData; lower_sprites.sprite_layer_write = 6; }
+                        case $0x3c0 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_update = writeData; lower_sprites.sprite_layer_write = 7; }
+                    $$end
 
-                // UPPER SPRITE LAYER
-                $$for i=0,15 do
-                    case $0x400 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_active = writeData; upper_sprites.sprite_layer_write = 1; }
-                    case $0x420 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_double = writeData; upper_sprites.sprite_layer_write = 2; }
-                    case $0x440 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_colour = writeData; upper_sprites.sprite_layer_write = 3;  }
-                    case $0x460 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_x = writeData; upper_sprites.sprite_layer_write = 4; }
-                    case $0x480 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_y = writeData; upper_sprites.sprite_layer_write = 5; }
-                    case $0x4a0 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_tile = writeData; upper_sprites.sprite_layer_write = 6; }
-                    case $0x4c0 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_update = writeData; upper_sprites.sprite_layer_write = 7; }
-                $$end
+                    // UPPER SPRITE LAYER
+                    $$for i=0,15 do
+                        case $0x400 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_active = writeData; upper_sprites.sprite_layer_write = 1; }
+                        case $0x420 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_double = writeData; upper_sprites.sprite_layer_write = 2; }
+                        case $0x440 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_colour = writeData; upper_sprites.sprite_layer_write = 3;  }
+                        case $0x460 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_x = writeData; upper_sprites.sprite_layer_write = 4; }
+                        case $0x480 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_y = writeData; upper_sprites.sprite_layer_write = 5; }
+                        case $0x4a0 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_tile = writeData; upper_sprites.sprite_layer_write = 6; }
+                        case $0x4c0 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_update = writeData; upper_sprites.sprite_layer_write = 7; }
+                    $$end
 
-                // LOWER SPRITE LAYER BITMAP WRITER
-                case 12h800: { lower_sprites.sprite_writer_sprite = writeData; }
-                case 12h802: { lower_sprites.sprite_writer_line = writeData; }
-                case 12h804: { lower_sprites.sprite_writer_bitmap = writeData; lower_sprites.sprite_writer_active = 1; }
+                    // LOWER SPRITE LAYER BITMAP WRITER
+                    case 12h800: { lower_sprites.sprite_writer_sprite = writeData; }
+                    case 12h802: { lower_sprites.sprite_writer_line = writeData; }
+                    case 12h804: { lower_sprites.sprite_writer_bitmap = writeData; lower_sprites.sprite_writer_active = 1; }
 
-                // UPPER SPRITE LAYER BITMAP WRITER
-                case 12h810: { upper_sprites.sprite_writer_sprite = writeData; }
-                case 12h812: { upper_sprites.sprite_writer_line = writeData; }
-                case 12h814: { upper_sprites.sprite_writer_bitmap = writeData; upper_sprites.sprite_writer_active = 1; }
+                    // UPPER SPRITE LAYER BITMAP WRITER
+                    case 12h810: { upper_sprites.sprite_writer_sprite = writeData; }
+                    case 12h812: { upper_sprites.sprite_writer_line = writeData; }
+                    case 12h814: { upper_sprites.sprite_writer_bitmap = writeData; upper_sprites.sprite_writer_active = 1; }
 
-                // CHARACTER MAP
-                case 12h500: { character_map_window.tpu_x = writeData; }
-                case 12h502: { character_map_window.tpu_y = writeData; }
-                case 12h504: { character_map_window.tpu_character = writeData; }
-                case 12h506: { character_map_window.tpu_background = writeData; }
-                case 12h508: { character_map_window.tpu_foreground = writeData; }
-                case 12h50a: { character_map_window.tpu_write = writeData; }
+                    // CHARACTER MAP
+                    case 12h500: { character_map_window.tpu_x = writeData; }
+                    case 12h502: { character_map_window.tpu_y = writeData; }
+                    case 12h504: { character_map_window.tpu_character = writeData; }
+                    case 12h506: { character_map_window.tpu_background = writeData; }
+                    case 12h508: { character_map_window.tpu_foreground = writeData; }
+                    case 12h50a: { character_map_window.tpu_write = writeData; }
 
-                 // GPU and BITMAP
-                case 12h600: { bitmap_window.gpu_x = writeData; }
-                case 12h602: { bitmap_window.gpu_y = writeData; }
-                case 12h604: { bitmap_window.gpu_colour = writeData; }
-                case 12h606: { bitmap_window.gpu_colour_alt = writeData; }
-                case 12h608: { bitmap_window.gpu_dithermode = writeData; }
-                case 12h60a: { bitmap_window.gpu_param0 = writeData; }
-                case 12h60c: { bitmap_window.gpu_param1 = writeData; }
-                case 12h60e: { bitmap_window.gpu_param2 = writeData; }
-                case 12h610: { bitmap_window.gpu_param3 = writeData; }
-                case 12h612: { bitmap_window.gpu_write = writeData; }
+                    // GPU and BITMAP
+                    case 12h600: { bitmap_window.gpu_x = writeData; }
+                    case 12h602: { bitmap_window.gpu_y = writeData; }
+                    case 12h604: { bitmap_window.gpu_colour = writeData; }
+                    case 12h606: { bitmap_window.gpu_colour_alt = writeData; }
+                    case 12h608: { bitmap_window.gpu_dithermode = writeData; }
+                    case 12h60a: { bitmap_window.gpu_param0 = writeData; }
+                    case 12h60c: { bitmap_window.gpu_param1 = writeData; }
+                    case 12h60e: { bitmap_window.gpu_param2 = writeData; }
+                    case 12h610: { bitmap_window.gpu_param3 = writeData; }
+                    case 12h612: { bitmap_window.gpu_write = writeData; }
 
-                case 12h620: { bitmap_window.vector_block_number = writeData; }
-                case 12h622: { bitmap_window.vector_block_colour = writeData; }
-                case 12h624: { bitmap_window.vector_block_xc = writeData; }
-                case 12h826: { bitmap_window.vector_block_yc = writeData; }
-                case 12h628: { bitmap_window.vector_block_scale = writeData; }
-                case 12h62a: { bitmap_window.draw_vector = 1; }
+                    case 12h620: { bitmap_window.vector_block_number = writeData; }
+                    case 12h622: { bitmap_window.vector_block_colour = writeData; }
+                    case 12h624: { bitmap_window.vector_block_xc = writeData; }
+                    case 12h826: { bitmap_window.vector_block_yc = writeData; }
+                    case 12h628: { bitmap_window.vector_block_scale = writeData; }
+                    case 12h62a: { bitmap_window.draw_vector = 1; }
 
-                case 12h630: { bitmap_window.vertices_writer_block = writeData; }
-                case 12h632: { bitmap_window.vertices_writer_vertex = writeData; }
-                case 12h634: { bitmap_window.vertices_writer_xdelta = writeData; }
-                case 12h636: { bitmap_window.vertices_writer_ydelta = writeData; }
-                case 12h638: { bitmap_window.vertices_writer_active = writeData; }
+                    case 12h630: { bitmap_window.vertices_writer_block = writeData; }
+                    case 12h632: { bitmap_window.vertices_writer_vertex = writeData; }
+                    case 12h634: { bitmap_window.vertices_writer_xdelta = writeData; }
+                    case 12h636: { bitmap_window.vertices_writer_ydelta = writeData; }
+                    case 12h638: { bitmap_window.vertices_writer_active = writeData; }
 
-                case 12h640: { bitmap_window.blit1_writer_tile = writeData; }
-                case 12h642: { bitmap_window.blit1_writer_line = writeData; }
-                case 12h644: { bitmap_window.blit1_writer_bitmap = writeData; }
+                    case 12h640: { bitmap_window.blit1_writer_tile = writeData; }
+                    case 12h642: { bitmap_window.blit1_writer_line = writeData; }
+                    case 12h644: { bitmap_window.blit1_writer_bitmap = writeData; }
 
-                case 12h650: { bitmap_window.character_writer_character = writeData; }
-                case 12h652: { bitmap_window.character_writer_line = writeData; }
-                case 12h654: { bitmap_window.character_writer_bitmap = writeData; }
+                    case 12h650: { bitmap_window.character_writer_character = writeData; }
+                    case 12h652: { bitmap_window.character_writer_line = writeData; }
+                    case 12h654: { bitmap_window.character_writer_bitmap = writeData; }
 
-                case 12h660: { bitmap_window.colourblit_writer_tile = writeData; }
-                case 12h662: { bitmap_window.colourblit_writer_line = writeData; }
-                case 12h664: { bitmap_window.colourblit_writer_pixel = writeData; }
-                case 12h666: { bitmap_window.colourblit_writer_colour = writeData; }
+                    case 12h660: { bitmap_window.colourblit_writer_tile = writeData; }
+                    case 12h662: { bitmap_window.colourblit_writer_line = writeData; }
+                    case 12h664: { bitmap_window.colourblit_writer_pixel = writeData; }
+                    case 12h666: { bitmap_window.colourblit_writer_colour = writeData; }
 
-                case 12h670: { bitmap_window.pb_colour7 = writeData; bitmap_window.pb_newpixel = 1; }
-                case 12h672: { bitmap_window.pb_colour8r = writeData; }
-                case 12h674: { bitmap_window.pb_colour8g = writeData; }
-                case 12h676: { bitmap_window.pb_colour8b = writeData; bitmap_window.pb_newpixel = 2; }
-                case 12h678: { bitmap_window.pb_newpixel = 3; }
+                    case 12h670: { bitmap_window.pb_colour7 = writeData; bitmap_window.pb_newpixel = 1; }
+                    case 12h672: { bitmap_window.pb_colour8r = writeData; }
+                    case 12h674: { bitmap_window.pb_colour8g = writeData; }
+                    case 12h676: { bitmap_window.pb_colour8b = writeData; bitmap_window.pb_newpixel = 2; }
+                    case 12h678: { bitmap_window.pb_newpixel = 3; }
 
-                case 12h6d0: { bitmap_window.bitmap_x_read = writeData; }
-                case 12h6d2: { bitmap_window.bitmap_y_read = writeData; }
+                    case 12h6d0: { bitmap_window.bitmap_x_read = writeData; }
+                    case 12h6d2: { bitmap_window.bitmap_y_read = writeData; }
 
-                case 12h6e0: { bitmap_window.bitmap_write_offset = writeData; }
-                case 12h6f0: { bitmap_window.framebuffer = writeData; }
-                case 12h6f2: { bitmap_window.writer_framebuffer = writeData; }
+                    case 12h6e0: { bitmap_window.bitmap_write_offset = writeData; }
+                    case 12h6f0: { bitmap_window.framebuffer = writeData; }
+                    case 12h6f2: { bitmap_window.writer_framebuffer = writeData; }
 
-                case 12h700: { terminal_window.terminal_character = writeData; terminal_window.terminal_write = 1; }
-                case 12h702: { terminal_window.showterminal = writeData; }
+                    case 12h700: { terminal_window.terminal_character = writeData; terminal_window.terminal_write = 1; }
+                    case 12h702: { terminal_window.showterminal = writeData; }
 
-                // DISPLAY LAYER ORDERING / FRAMEBUFFER SELECTION
-                case 12hf00: { display.display_order = writeData; }
+                    // DISPLAY LAYER ORDERING / FRAMEBUFFER SELECTION
+                    case 12hf00: { display.display_order = writeData; }
 
-                default: {}
+                    default: {}
+                }
             }
-        }
-        // RESET Co-Processor Controls
-        // IO memory map runs at 50MHz, display co-processors at 25MHz
-        // Delay to reset co-processors therefore required
-        if( ~memoryWrite && ~LATCHmemoryWrite ) {
-            // RESET DISPLAY Co-Processor Controls
-            background_generator.background_update = 0;
-            background_generator.copper_program = 0;
-            lower_tile_map.tm_write = 0;
-            lower_tile_map.tm_scrollwrap = 0;
-            upper_tile_map.tm_write = 0;
-            upper_tile_map.tm_scrollwrap = 0;
-            lower_sprites.sprite_layer_write = 0;
-            lower_sprites.sprite_writer_active = 0;
-            upper_sprites.sprite_layer_write = 0;
-            upper_sprites.sprite_writer_active = 0;
-            bitmap_window.bitmap_write_offset = 0;
-            bitmap_window.gpu_write = 0;
-            bitmap_window.pb_newpixel = 0;
-            bitmap_window.draw_vector = 0;
-            character_map_window.tpu_write = 0;
-            terminal_window.terminal_write = 0;
+            case 2b00: {
+                // RESET DISPLAY Co-Processor Controls
+                background_generator.background_update = 0;
+                background_generator.copper_program = 0;
+                lower_tile_map.tm_write = 0;
+                lower_tile_map.tm_scrollwrap = 0;
+                upper_tile_map.tm_write = 0;
+                upper_tile_map.tm_scrollwrap = 0;
+                lower_sprites.sprite_layer_write = 0;
+                lower_sprites.sprite_writer_active = 0;
+                upper_sprites.sprite_layer_write = 0;
+                upper_sprites.sprite_writer_active = 0;
+                bitmap_window.bitmap_write_offset = 0;
+                bitmap_window.gpu_write = 0;
+                bitmap_window.pb_newpixel = 0;
+                bitmap_window.draw_vector = 0;
+                character_map_window.tpu_write = 0;
+                terminal_window.terminal_write = 0;
+            }
+            default: {}
         }
         LATCHmemoryWrite = memoryWrite;
     }

@@ -236,7 +236,7 @@ $$end
     uint1   IO <: address[12,4] == 4hf ;
 
     // CPU BUSY STATE
-    CPU.memorybusy := ( CPU.readmemory | CPU.writememory ) & BRAM;
+    CPU.memorybusy := CPU.readmemory & BRAM;
 
     // READ / WRITE FROM SDRAM / BRAM
     ram.writeflag := BRAM & CPU.writememory;
@@ -278,6 +278,7 @@ algorithm bramcontroller(
     };
 
     // FLAGS FOR BRAM ACCESS
+    ram.wdata := writedata;
     ram.wenable := 0;
     ram.addr := address;
 
@@ -286,7 +287,7 @@ algorithm bramcontroller(
 
     while(1) {
         switch( writeflag ) {
-            case 1: { ram.wdata = writedata; ram.wenable = 1; }
+            case 1: { ram.wenable = 1; }
             case 0: {}
        }
     }

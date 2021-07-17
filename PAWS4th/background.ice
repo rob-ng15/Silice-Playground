@@ -39,7 +39,7 @@ algorithm background(
     // { 3 bit command, 3 bit mask, 10 bit coordinate, 4 bit mode, 6 bit colour 2, 6 bit colour 1 }
     // COMMANDS - 0 = goto, 1 = wait vblank, 2 = wait hblank, 3 = wait ypos, 4 = wait xpos, 5 = , 6 =, 7 =
     // MASK { change mode, change colour  2, change colour 1 }
-    simple_dualport_bram uint32 copper [ 64 ] = { 0, pad(0) };
+    simple_dualport_bram uint32 copper <input!> [ 64 ] = { 0, pad(0) };
     uint1   copper_execute = uninitialised;
     uint1   copper_branch = uninitialised;
     uint10  copper_variable = uninitialised;

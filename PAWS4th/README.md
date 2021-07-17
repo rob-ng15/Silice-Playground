@@ -51,10 +51,15 @@ timer1khz@ | ```timer1khz@``` returns the 1khz countdown timer to the stack
 timer1khz? | ```timer1khz?``` waits for the 1khz countdown timer to reach 0
 sleep | ```w sleep``` sleep for w milliseconds
 rng | ```w rng``` returns a pseudo random number (0 to w-1) to the stack
+qrng | ```w qrng``` returns a pseudo random number generator (0 to w) to the stack (w must be a power of 2 - 1)
+ | |
+beep? | ```w beep?``` waits for the beep on channel w to finish
+beep! | ```w1 w2 w3 w4 beep!``` starts a beep on channel w1 in waveform w2 of note w3 for 24 milliseconds
  | |
 vblank? | ```vblank?``` waits for the display vertical blank
-screen! |
+screen! | ```w screen!``` reorders the screen layers
 frambuffer! | ```w1 w2 framebuffer``` sets the display framebuffer to w1 and the drawing framebuffer to w2
+bmmove! | ```w bmmove!``` moves the bitmap == 1 left == 2 up == 3 right == 4 down == 5 reset
 terminal! | ```w terminal!``` w == 0 hide the terminal window, w == 1 display the terminal window
 background! | ```w1 w2 w3 background!``` sets the background generator to colour w1, alt colour w2 and mode w3
  | |
@@ -80,8 +85,8 @@ tmltile! |
 tmutile! |
 tmlmove! |
 tmumove! |
-tmlcs |
-tmucs |
+tmlcs | ```tmlcs``` clears the lower tilemap
+tmucs | ```tmlcs``` clears the lower tilemap
  | |
 lsprite | ``` w1 w2 w3 w4 w5 w6 w7 lsprite``` set lower sprite w7 to tile w1 at (w2,w3) in colour w4 attribute w5 with active status w6
 usprite | ``` w1 w2 w3 w4 w5 w6 w7 usprite``` set upper sprite w7 to tile w1 at (w2,w3) in colour w4 attribute w5 with active status w6
@@ -89,6 +94,8 @@ lspriteupdate | ```w1 w2 lspriteupdate``` update lower sprite w2 with update fla
 uspriteupdate | ```w1 w2 uspriteupdate``` update upper sprite w2 with update flag w1
 lspritetile! | ```w0 w1 .. w127 w128 lspritetile!``` set the tiles for lower sprite w128 to w0 .. w127
 uspritetile! | ```w0 w1 .. w127 w128 uspritetile!``` set the tiles for upper sprite w128 to w0 .. w127
+lsprite@ | ```w1 w2 lsprite@``` returns attribute w1 of lower sprite w2 to the stack ( w1 == 7 layer collision == 6 collision == 5 tile == 4 x == 3 y == 2 colour == 1 double == 0 active )
+usprite@ | ```w1 w2 usprite@``` returns attribute w1 of upper sprite w2 to the stack ( w1 7 layer collision == 6 collision == 5 tile == 4 x == 3 y == 2 colour == 1 double == 0 active )
  | |
 tcolour! | ```w1 w2 tcolour!``` sets the tpu character map foreground colour to w1 and the background colour to w2
 tpuxy! | ```w1 w2 tpuxy!``` sets the tpu character map coordinates to (w1,w2)

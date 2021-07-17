@@ -100,9 +100,9 @@ algorithm inttofloat(
                             number = dounsigned ? a : a[15,1] ? -a : a ;
                         }
                         case 1: {
-                            switch( number == 0 ) {
-                                case 1: { result = 0; }
-                                case 0: {
+                            switch( number ) {
+                                case 0: { result = 0; }
+                                default: {
                                     FSM2 = 1;
                                     while( FSM2 !=0 ) {
                                         onehot( FSM2 ) {
@@ -218,7 +218,6 @@ algorithm floataddsub(
     uint22  sigA = uninitialised;
     uint22  sigB = uninitialised;
     uint22  newfraction = uninitialised;
-    uint1   round = uninitialised;
 
     busy = 0;
 
@@ -228,7 +227,7 @@ algorithm floataddsub(
             case 1: {
                 busy = 1;
                 FSM = 1;
-                round = 1;
+                //round = 1;
                 while( FSM != 0 ) {
                     onehot( FSM ) {
                         case 0: {
@@ -243,7 +242,6 @@ algorithm floataddsub(
                             expB = floatingpointnumber( b ).exponent - 15;
                             sigA = { 2b01, floatingpointnumber(a).fraction, 10b0 };
                             sigB = { 2b01, floatingpointnumber(b).fraction, 10b0 };
-                            sign = floatingpointnumber(a).sign;
                         }
                         case 2: {
                             // ADJUST TO EQUAL EXPONENTS
@@ -260,14 +258,14 @@ algorithm floataddsub(
                                         // PERFORM + HANDLING SIGNS
                                         case 2b01: {
                                             switch( sigB > sigA ) {
-                                                case 1: { sign = 1; round = ( sigA != 0 ); sigA = sigB - ( ~round ? 1 : sigA ); }
-                                                case 0: { sign = 0; round = ( sigB != 0 ); sigA = sigA - ( ~round ? 1 : sigB ); }
+                                                case 1: { sign = 1; sigA = sigB - sigA; }
+                                                case 0: { sign = 0; sigA = sigA - sigB; }
                                             }
                                         }
                                         case 2b10: {
                                             switch(  sigA > sigB ) {
-                                                case 1: { sign = 1; round = ( sigB != 0 ); sigA = sigA - ( ~round ? 1 : sigB ); }
-                                                case 0: { sign = 0; round = ( sigA != 0 ); sigA = sigB - ( ~round ? 1 : sigA ); }
+                                                case 1: { sign = 1; sigA = sigA - sigB; }
+                                                case 0: { sign = 0; sigA = sigB - sigA; }
                                             }
                                         }
                                         default: { sign = signA; sigA = sigA + sigB; }
@@ -291,7 +289,6 @@ algorithm floataddsub(
                                                     sigA = { sigA[0,21], 1b0 };
                                                 }
                                             }
-                                            sigA[10,1] = sigA[10,1] & round;
                                             ( newfraction ) = round22( sigA );
                                             ( expA ) = adjustexp22( exp, newfraction, sigA );
                                             ( result ) = combinecomponents( sign, expA, newfraction );
@@ -379,7 +376,7 @@ algorithm divbit22(
     uint22  temp = uninitialised;
     uint1   quobit = uninitialised;
     while(1) {
-        temp = ( rem << 1 ) + top[x,1];
+        temp = ( rem << 1 ) | top[x,1];
         quobit = __unsigned(temp) >= __unsigned(bottom);
         newremainder = __unsigned(temp) - ( quobit ? __unsigned(bottom) : 0 );
         newquotient = quo | ( quobit << x );

@@ -14,16 +14,16 @@ algorithm terminal(
     output  uint2   terminal_active
 ) <autorun> {
     // CURSOR CLOCK
-    uint1   timer1hz = uninitialized;
-    pulse1hz P1( counter1hz :> timer1hz );
+    pulse1hz P1();
+    uint1   timer1hz := P1.counter1hz[0,1];
 
     // Character ROM 8x8 x 256
-    brom uint8 characterGenerator8x8[] = {
+    brom uint8 characterGenerator8x8 <input!> [] = {
         $include('ROM/characterROM8x8.inc')
     };
 
     // 80 x 4 character buffer for the input/output terminal
-    simple_dualport_bram uint8 terminal[640] = uninitialized;
+    simple_dualport_bram uint8 terminal <input!> [640] = uninitialized;
 
     uint7 terminal_x = uninitialised;
     uint3 terminal_y = uninitialised;
@@ -75,7 +75,7 @@ algorithm terminal_writer(
     uint3   FSM = uninitialized;
     uint2   FSM2 = uninitialized;
 
-    simple_dualport_bram uint8 terminal_copy[640] = uninitialized;
+    simple_dualport_bram uint8 terminal_copy <input!> [640] = uninitialized;
 
     // Terminal active (scroll) flag and temporary storage for scrolling
     uint10 terminal_scroll = 0;

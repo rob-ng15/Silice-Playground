@@ -914,7 +914,7 @@ t: cold ( -- )
    0 literal c004 literal ! 0 literal c002 literal ! 0 literal c000 literal ! ( background reset )
    0 literal cf00 literal ! ( display order reset )
    0 literal c6f2 literal ! 0 literal c6f0 literal ! ( framebuffer reset )
-   40 literal c604 literal ! 0 c606 literal ! literal 0 literal c608 literal !  ( colour reset )
+   40 literal c604 literal ! 0 literal c606 literal ! 0 literal c608 literal !  ( colour reset )
    0 literal 0 literal 13f literal ef literal ( cs )
    c60c literal ! c60a literal ! c602 literal ! c600 literal !
    3 literal c612 literal !
@@ -941,6 +941,10 @@ t: sleep e030 literal ! begin e030 literal @ 0= until t;
 t: rng e000 literal @ swap /mod drop t;
 t: qrng e000 literal @ swap and t;
 
+( Audio )
+t: beep? 2* e110 literal + begin dup @ 0= until drop t;
+t: beep! e104 literal ! e102 literal ! e100 literal ! e106 literal ! t;
+
 ( DISPLAY helper words )
 t: vblank? begin cf00 literal @ 0<> until t;
 t: screen! cf00 literal ! t;
@@ -948,6 +952,7 @@ t: framebuffer! begin c614 literal @ 0= until vblank? c6f2 literal ! c6f0 litera
 t: terminal! c702 literal ! t;
 t: background! c004 literal ! c002 literal ! c000 literal ! t;
 
+( GPU )
 t: gpu? begin c612 literal @ 0= until t;
 t: gpu! gpu? c612 literal ! t;
 t: fullscreen! 0 literal 0 literal 13f literal ef literal t;
@@ -968,8 +973,10 @@ t: colblit coords4! 9 literal gpu! t;
 t: pbstart! coords4! a literal gpu! t;
 t: pbpixel! c670 literal ! t;
 t: pbstop! 3 literal c678 literal ! t;
-t: cs 40 literal 0 literal 0 literal colour! fullscreen! rectangle t;
+t: bmmove! gpu? c6e0 literal ! t;
+t: cs 40 literal 0 literal 0 literal colour! fullscreen! rectangle 5 literal bmmove! t;
 
+( tile map )
 t: tml? begin c122 literal @ 0= until t;
 t: tmu? begin c222 literal @ 0= until t;
 t: tmlmove! tml? c120 literal ! t;
@@ -981,6 +988,7 @@ t: tmutile! c210 literal ! 10 literal begin 1- dup c212 literal ! swap c214 lite
 t: tml! c106 literal ! c108 literal ! c104 literal ! c102 literal ! c100 literal ! 1 literal c10a literal ! t;
 t: tmu! c206 literal ! c208 literal ! c204 literal ! c202 literal ! c200 literal ! 1 literal c20a literal ! t;
 
+( character map )
 t: tpu? begin c50a literal @ 0= until t;
 t: tpu! tpu? c50a literal ! t;
 t: tcolour! c506 literal ! c508 literal ! t;
@@ -1000,6 +1008,7 @@ t: tpuu.r# base @ rot rot decimal >r <# #s #> r> over - tpuspaces tputype base !
 t: tpu.r# base @ rot rot decimal >r str r> over - tpuspaces tputype base ! t;
 t: tcs 3 literal tpu! 0 3f tcolour! t;
 
+( sprites )
 u: _pointer
 t: sprite!
    _pointer @ ! 20 literal _pointer @ + _pointer !
@@ -1014,6 +1023,8 @@ t: lspritetile! c800 literal ! 80 literal begin 1- dup c802 literal ! swap c804 
 t: uspritetile! c810 literal ! 80 literal begin 1- dup c812 literal ! swap c814 literal ! dup 0= until drop t;
 t: lspriteupdate 2* c3c0 literal + ! t;
 t: uspriteupdate 2* c4c0 literal + ! t;
+t: lsprite@ 2* swap 20 literal * c300 literal + + @ t;
+t: usprite@ 2* swap 20 literal * c400 literal + + @ t;
 
 ( sdram )
 t: ram? begin ff02 literal @ 0= until t;

@@ -45,7 +45,7 @@ $include('../timers_random.ice')
 
 // CPU SPECIFICATION
 $$CPUISA = 0x40001005
-$$cpu_B = 1
+$$cpu_B = 0
 $$cpu_F = 1
 $$if cpu_B == 1 then
 $$CPUISA = CPUISA + 2

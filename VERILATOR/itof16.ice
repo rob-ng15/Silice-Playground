@@ -55,7 +55,7 @@ algorithm main(output int8 leds) {
     uint2   FSM = uninitialised;
     uint2   FSM2 = uninitialised;
 
-    int16  a = -7;
+    int16  a = -876;
     uint16  result = uninitialised;
 
     uint1   sign = uninitialised;
