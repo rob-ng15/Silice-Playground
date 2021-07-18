@@ -196,9 +196,6 @@ algorithm ps2(
                             case 1: {}
                             case 0: { bit_count = bit_count + 1; } // Start bit
                         }
-                        //if (!ps2data_ext) {
-                        //    bit_count = bit_count + 1; // Start bit
-                        //}
                     }
                     default: {
                         bit_count = bit_count + 1;

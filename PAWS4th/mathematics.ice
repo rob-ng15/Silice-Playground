@@ -453,7 +453,7 @@ algorithm floatops(
     busy := ITOF.busy | FTOI.busy | FADD.busy | FSUB.busy | FMUL.busy | FDIV.busy | FSQRT.busy;
 
     less := { {16{FCOMPARE.less}} };
-    lessequal := { {16{FCOMPARE.lessequal}} };
+    lessequal := { {16{FCOMPARE.less | FCOMPARE.equal}} };
     equal := { {16{FCOMPARE.equal}} };
 
     ITOF.start := 0; FTOI.start := 0;

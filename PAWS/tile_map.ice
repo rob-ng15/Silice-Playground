@@ -3,9 +3,7 @@ algorithm tilemap(
     input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
-    output! uint2   pix_red,
-    output! uint2   pix_green,
-    output! uint2   pix_blue,
+    output! uint6   pixel,
     output! uint1   tilemap_display,
 
     // Set TM at x, y, character with foreground and background
@@ -84,9 +82,7 @@ algorithm tilemap(
 
     // RENDER - Default to transparent
     tilemap_display := pix_active & ( tmpixel | ~colours.rdata0[12,1] );
-    pix_red := tmpixel ? colours.rdata0[4,2] : colours.rdata0[10,2];
-    pix_green := tmpixel ? colours.rdata0[2,2] : colours.rdata0[8,2];
-    pix_blue := tmpixel ?  colours.rdata0[0,2] : colours.rdata0[6,2];
+    pixel := tmpixel ? colour13(colours.rdata0).foreground : colour13(colours.rdata0).background;
 }
 
 algorithm tile_map_writer(

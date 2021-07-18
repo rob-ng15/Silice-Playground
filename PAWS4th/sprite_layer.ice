@@ -41,9 +41,7 @@ algorithm sprite_layer(
     input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
-    output! uint2   pix_red,
-    output! uint2   pix_green,
-    output! uint2   pix_blue,
+    output! uint6   pixel,
     output! uint1   sprite_layer_display,
 
     // For setting sprite characteristics - MAIN ACCESS
@@ -197,56 +195,22 @@ algorithm sprite_layer(
             case 0: {
                 switch( pix_active ) {
                     case 1: {
-                        pix_red = pix_visible_15 ? sprite_colour[15][4,2] :
-                                    pix_visible_14 ? sprite_colour[14][4,2] :
-                                    pix_visible_13 ? sprite_colour[13][4,2] :
-                                    pix_visible_12 ? sprite_colour[12][4,2] :
-                                    pix_visible_11 ? sprite_colour[11][4,2] :
-                                    pix_visible_10 ? sprite_colour[10][4,2] :
-                                    pix_visible_9 ? sprite_colour[9][4,2] :
-                                    pix_visible_8 ? sprite_colour[8][4,2] :
-                                    pix_visible_7 ? sprite_colour[7][4,2] :
-                                    pix_visible_6 ? sprite_colour[6][4,2] :
-                                    pix_visible_5 ? sprite_colour[5][4,2] :
-                                    pix_visible_4 ? sprite_colour[4][4,2] :
-                                    pix_visible_3 ? sprite_colour[3][4,2] :
-                                    pix_visible_2 ? sprite_colour[2][4,2] :
-                                    pix_visible_1 ? sprite_colour[1][4,2] :
-                                    sprite_colour[0][4,2];
-
-                        pix_green = pix_visible_15 ? sprite_colour[15][2,2] :
-                                    pix_visible_14 ? sprite_colour[14][2,2] :
-                                    pix_visible_13 ? sprite_colour[13][2,2] :
-                                    pix_visible_12 ? sprite_colour[12][2,2] :
-                                    pix_visible_11 ? sprite_colour[11][2,2] :
-                                    pix_visible_10 ? sprite_colour[10][2,2] :
-                                    pix_visible_9 ? sprite_colour[9][2,2] :
-                                    pix_visible_8 ? sprite_colour[8][2,2] :
-                                    pix_visible_7 ? sprite_colour[7][2,2] :
-                                    pix_visible_6 ? sprite_colour[6][2,2] :
-                                    pix_visible_5 ? sprite_colour[5][2,2] :
-                                    pix_visible_4 ? sprite_colour[4][2,2] :
-                                    pix_visible_3 ? sprite_colour[3][2,2] :
-                                    pix_visible_2 ? sprite_colour[2][2,2] :
-                                    pix_visible_1 ? sprite_colour[1][2,2] :
-                                    sprite_colour[0][2,2];
-
-                        pix_blue = pix_visible_15 ? sprite_colour[15][0,2] :
-                                    pix_visible_14 ? sprite_colour[14][0,2] :
-                                    pix_visible_13 ? sprite_colour[13][0,2] :
-                                    pix_visible_12 ? sprite_colour[12][0,2] :
-                                    pix_visible_11 ? sprite_colour[11][0,2] :
-                                    pix_visible_10 ? sprite_colour[10][0,2] :
-                                    pix_visible_9 ? sprite_colour[9][0,2] :
-                                    pix_visible_8 ? sprite_colour[8][0,2] :
-                                    pix_visible_7 ? sprite_colour[7][0,2] :
-                                    pix_visible_6 ? sprite_colour[6][0,2] :
-                                    pix_visible_5 ? sprite_colour[5][0,2] :
-                                    pix_visible_4 ? sprite_colour[4][0,2] :
-                                    pix_visible_3 ? sprite_colour[3][0,2] :
-                                    pix_visible_2 ? sprite_colour[2][0,2] :
-                                    pix_visible_1 ? sprite_colour[1][0,2] :
-                                    sprite_colour[0][0,2];
+                        pixel = pix_visible_15 ? sprite_colour[15] :
+                                    pix_visible_14 ? sprite_colour[14] :
+                                    pix_visible_13 ? sprite_colour[13] :
+                                    pix_visible_12 ? sprite_colour[12] :
+                                    pix_visible_11 ? sprite_colour[11] :
+                                    pix_visible_10 ? sprite_colour[10] :
+                                    pix_visible_9 ? sprite_colour[9] :
+                                    pix_visible_8 ? sprite_colour[8] :
+                                    pix_visible_7 ? sprite_colour[7] :
+                                    pix_visible_6 ? sprite_colour[6] :
+                                    pix_visible_5 ? sprite_colour[5] :
+                                    pix_visible_4 ? sprite_colour[4] :
+                                    pix_visible_3 ? sprite_colour[3] :
+                                    pix_visible_2 ? sprite_colour[2] :
+                                    pix_visible_1 ? sprite_colour[1] :
+                                    sprite_colour[0];
 
                         sprite_layer_display = pix_visible_15 | pix_visible_14 | pix_visible_13 | pix_visible_12 | pix_visible_11 | pix_visible_10 | pix_visible_9 | pix_visible_8 | pix_visible_7
                                                 | pix_visible_6 | pix_visible_5 |pix_visible_4 | pix_visible_3 | pix_visible_2 | pix_visible_1 | pix_visible_0;

@@ -11,138 +11,79 @@ algorithm multiplex_display(
     input   uint2   display_order,
 
     // BACKGROUND
-    input uint2 background_r,
-    input uint2 background_g,
-    input uint2 background_b,
+    input uint8 background_p,
 
     // TILEMAPS
-    input uint2 lower_tilemap_r,
-    input uint2 lower_tilemap_g,
-    input uint2 lower_tilemap_b,
+    input uint6 lower_tilemap_p,
     input uint1 lower_tilemap_display,
-    input uint2 upper_tilemap_r,
-    input uint2 upper_tilemap_g,
-    input uint2 upper_tilemap_b,
+    input uint6 upper_tilemap_p,
     input uint1 upper_tilemap_display,
 
     // SPRITES
-    input uint2 lower_sprites_r,
-    input uint2 lower_sprites_g,
-    input uint2 lower_sprites_b,
+    input uint6 lower_sprites_p,
     input uint1 lower_sprites_display,
-    input uint2 upper_sprites_r,
-    input uint2 upper_sprites_g,
-    input uint2 upper_sprites_b,
+    input uint6 upper_sprites_p,
     input uint1 upper_sprites_display,
 
     // BITMAP
-    input uint2 bitmap_r,
-    input uint2 bitmap_g,
-    input uint2 bitmap_b,
+    input uint6 bitmap_p,
     input uint1 bitmap_display,
 
     // CHARACTER MAP
-    input uint2 character_map_r,
-    input uint2 character_map_g,
-    input uint2 character_map_b,
+    input uint6 character_map_p,
     input uint1 character_map_display,
 
     // TERMINAL
-    input uint2 terminal_r,
-    input uint2 terminal_g,
-    input uint2 terminal_b,
+    input uint6 terminal_p,
     input uint1 terminal_display
 ) <autorun> {
-    uint2   red = uninitialised;
-    uint2   green = uninitialised;
-    uint2   blue = uninitialised;
-
-    expandcolour RED(
+    uint6    pixel = uninitialised;
+    selectlayer LAYER(
         display_order <: display_order,
         terminal_display <: terminal_display,
-        terminal <: terminal_r,
+        terminal <: terminal_p,
         character_map_display <: character_map_display,
-        character_map <: character_map_r,
+        character_map <: character_map_p,
         upper_sprites_display <: upper_sprites_display,
-        upper_sprites <: upper_sprites_r,
+        upper_sprites <: upper_sprites_p,
         bitmap_display <: bitmap_display,
-        bitmap <: bitmap_r,
+        bitmap <: bitmap_p,
         lower_sprites_display <: lower_sprites_display,
-        lower_sprites <: lower_sprites_r,
+        lower_sprites <: lower_sprites_p,
         lower_tilemap_display <: lower_tilemap_display,
-        lower_tilemap <: lower_tilemap_r,
+        lower_tilemap <: lower_tilemap_p,
         upper_tilemap_display <: upper_tilemap_display,
-        upper_tilemap <: upper_tilemap_r,
-        background <: background_r,
+        upper_tilemap <: upper_tilemap_p,
+        background <: background_p,
 
-        pix :> red
-    );
-    expandcolour GREEN(
-        display_order <: display_order,
-        terminal_display <: terminal_display,
-        terminal <: terminal_g,
-        character_map_display <: character_map_display,
-        character_map <: character_map_g,
-        upper_sprites_display <: upper_sprites_display,
-        upper_sprites <: upper_sprites_g,
-        bitmap_display <: bitmap_display,
-        bitmap <: bitmap_g,
-        lower_sprites_display <: lower_sprites_display,
-        lower_sprites <: lower_sprites_g,
-        lower_tilemap_display <: lower_tilemap_display,
-        lower_tilemap <: lower_tilemap_g,
-        upper_tilemap_display <: upper_tilemap_display,
-        upper_tilemap <: upper_tilemap_g,
-        background <: background_g,
-
-        pix :> green
-    );
-    expandcolour BLUE(
-        display_order <: display_order,
-        terminal_display <: terminal_display,
-        terminal <: terminal_b,
-        character_map_display <: character_map_display,
-        character_map <: character_map_b,
-        upper_sprites_display <: upper_sprites_display,
-        upper_sprites <: upper_sprites_b,
-        bitmap_display <: bitmap_display,
-        bitmap <: bitmap_b,
-        lower_sprites_display <: lower_sprites_display,
-        lower_sprites <: lower_sprites_b,
-        lower_tilemap_display <: lower_tilemap_display,
-        lower_tilemap <: lower_tilemap_b,
-        upper_tilemap_display <: upper_tilemap_display,
-        upper_tilemap <: upper_tilemap_b,
-        background <: background_b,
-
-        pix :> blue
+        pix :> pixel
     );
 
-    pix_red   := { {4{red}} };
-    pix_green := { {4{green}} };
-    pix_blue  := { {4{blue}} };
+    pix_red   := { {4{pixel[4,2]}} };
+    pix_green := { {4{pixel[2,2]}} };
+    pix_blue  := { {4{pixel[0,2]}} };
 }
 
-// EXPAND FROM 2 bit to 8 bit colour
-algorithm expandcolour(
+// CHOOSE LAY TO DISPLAY
+algorithm selectlayer(
     input   uint2   display_order,
     input   uint1   terminal_display,
-    input   uint2   terminal,
+    input   uint6   terminal,
     input   uint1   character_map_display,
-    input   uint2   character_map,
+    input   uint6   character_map,
     input   uint1   upper_sprites_display,
-    input   uint2   upper_sprites,
+    input   uint6   upper_sprites,
     input   uint1   bitmap_display,
-    input   uint2   bitmap,
+    input   uint6   bitmap,
     input   uint1   lower_sprites_display,
-    input   uint2   lower_sprites,
+    input   uint6   lower_sprites,
     input   uint1   lower_tilemap_display,
-    input   uint2   lower_tilemap,
+    input   uint6   lower_tilemap,
     input   uint1   upper_tilemap_display,
-    input   uint2   upper_tilemap,
-    input   uint2   background,
+    input   uint6   upper_tilemap,
+    input   uint6   background,
 
-    output! uint2   pix
+    output! uint6   pix
 ) <autorun> {
 
     while(1) {

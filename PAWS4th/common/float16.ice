@@ -585,12 +585,10 @@ algorithm floatcompare(
     input   uint16  a,
     input   uint16  b,
     output  uint1   less,
-    output  uint1   lessequal,
     output  uint1   equal
 ) <autorun> {
     while(1) {
         ( less ) = floatless( a, b );
-        ( lessequal ) = floatlessequal( a, b );
         ( equal ) = floatequal( a, b );
     }
 }

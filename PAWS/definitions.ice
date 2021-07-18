@@ -15,14 +15,9 @@ bitfield colour6 {
 
 bitfield colour13 {
     uint1   alpha,
-    uint2   backred,
-    uint2   backgreen,
-    uint2   backblue,
-    uint2   forered,
-    uint2   foregreen,
-    uint2   foreblue
+    uint6   background,
+    uint6   foreground,
 }
-
 
 // Vertex in the vector block
 bitfield vectorentry {

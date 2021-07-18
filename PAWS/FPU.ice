@@ -262,13 +262,12 @@ algorithm floatcomparison(
     uint1   classFb = uninitialised;
 
     uint1   less = uninitialised;
-    uint1   lessequal = uninitialised;
     uint1   equal = uninitialised;
-    floatcompare FPUltleeq( a <: sourceReg1F, b <: sourceReg2F, less :> less, lessequal :> lessequal, equal :> equal );
+    floatcompare FPUltleeq( a <: sourceReg1F, b <: sourceReg2F, less :> less, equal :> equal );
 
     while(1) {
         switch( function3 ) {
-            case 3b000: { result = lessequal; }
+            case 3b000: { result = less | equal; }
             case 3b001: { result = less; }
             case 3b010: { result = equal; }
             default: { result = 0; }

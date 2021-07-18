@@ -33,6 +33,12 @@ j1eforth ( developed from https://github.com/samawati/j1eforth ) with the J1+ CP
         *  STEREO AUDIO
         *  SDCARD via SPI
 
+## Loading Programs
+
+In the EXAMPLES directory there is a small program, touart.c, which will send a text file to the UART to allow for the creating of programs.
+
+Compile touart.c with ```gcc touart.c -o touart``` and send a program to PAWS4th with ```./touart mandel.4th /dev/ttyUSB0``` changing ```/dev/ttyUSB0``` as required for your system.
+
 ## Additional j1eforth Words above base from https://github.com/samawati/j1eforth
 
 <br>

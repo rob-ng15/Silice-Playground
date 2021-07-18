@@ -438,37 +438,27 @@ $$if HDMI then
 $$end
     // CREATE DISPLAY LAYERS
     // BACKGROUND
-    uint2   background_r = uninitialized;
-    uint2   background_g = uninitialized;
-    uint2   background_b = uninitialized;
+    uint6   background_p = uninitialized;
     background background_generator <@video_clock,!video_reset>  (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: pix_active,
         pix_vblank <: vblank,
-        pix_red    :> background_r,
-        pix_green  :> background_g,
-        pix_blue   :> background_b,
+        pixel    :> background_p,
         staticGenerator <: static2bit
     );
 
     // Tilemaps - Lower and Upper
-    uint2   lower_tilemap_r = uninitialized;
-    uint2   lower_tilemap_g = uninitialized;
-    uint2   lower_tilemap_b = uninitialized;
+    uint6   lower_tilemap_p = uninitialized;
     uint1   lower_tilemap_display = uninitialized;
-    uint2   upper_tilemap_r = uninitialized;
-    uint2   upper_tilemap_g = uninitialized;
-    uint2   upper_tilemap_b = uninitialized;
+    uint6   upper_tilemap_p = uninitialized;
     uint1   upper_tilemap_display = uninitialized;
     tilemap lower_tile_map <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: pix_active,
         pix_vblank <: vblank,
-        pix_red    :> lower_tilemap_r,
-        pix_green  :> lower_tilemap_g,
-        pix_blue   :> lower_tilemap_b,
+        pixel    :> lower_tilemap_p,
         tilemap_display :> lower_tilemap_display
     );
     tilemap upper_tile_map <@video_clock,!video_reset> (
@@ -476,17 +466,13 @@ $$end
         pix_y      <: pix_y,
         pix_active <: pix_active,
         pix_vblank <: vblank,
-        pix_red    :> upper_tilemap_r,
-        pix_green  :> upper_tilemap_g,
-        pix_blue   :> upper_tilemap_b,
+        pixel    :> upper_tilemap_p,
         tilemap_display :> upper_tilemap_display
     );
 
     // Bitmap Window with GPU
     uint1   bitmap_display = uninitialized;
-    uint2   bitmap_r = uninitialized;
-    uint2   bitmap_g = uninitialized;
-    uint2   bitmap_b = uninitialized;
+    uint6   bitmap_p = uninitialized;
     // 640 x 480 x 7 bit { Arrggbb } colour bitmap
     bitmap bitmap_window <@video_clock,!video_reset> (
         gpu_clock <: gpu_clock,
@@ -494,31 +480,23 @@ $$end
         pix_y      <: pix_y,
         pix_active <: pix_active,
         pix_vblank <: vblank,
-        pix_red    :> bitmap_r,
-        pix_green  :> bitmap_g,
-        pix_blue   :> bitmap_b,
+        pixel    :> bitmap_p,
         bitmap_display :> bitmap_display,
         static1bit <: static1bit,
         static6bit <: static6bit
    );
 
     // Sprite Layers - Lower and Upper
-    uint2   lower_sprites_r = uninitialized;
-    uint2   lower_sprites_g = uninitialized;
-    uint2   lower_sprites_b = uninitialized;
+    uint6   lower_sprites_p = uninitialized;
     uint1   lower_sprites_display = uninitialized;
-    uint2   upper_sprites_r = uninitialized;
-    uint2   upper_sprites_g = uninitialized;
-    uint2   upper_sprites_b = uninitialized;
+    uint6   upper_sprites_p = uninitialized;
     uint1   upper_sprites_display = uninitialized;
     sprite_layer lower_sprites <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: pix_active,
         pix_vblank <: vblank,
-        pix_red    :> lower_sprites_r,
-        pix_green  :> lower_sprites_g,
-        pix_blue   :> lower_sprites_b,
+        pixel    :> lower_sprites_p,
         sprite_layer_display :> lower_sprites_display,
         collision_layer_1 <: bitmap_display,
         collision_layer_2 <: lower_tilemap_display,
@@ -530,9 +508,7 @@ $$end
         pix_y      <: pix_y,
         pix_active <: pix_active,
         pix_vblank <: vblank,
-        pix_red    :> upper_sprites_r,
-        pix_green  :> upper_sprites_g,
-        pix_blue   :> upper_sprites_b,
+        pixel    :> upper_sprites_p,
         sprite_layer_display :> upper_sprites_display,
         collision_layer_1 <: bitmap_display,
         collision_layer_2 <: lower_tilemap_display,
@@ -541,34 +517,26 @@ $$end
     );
 
     // Character Map Window
-    uint2   character_map_r = uninitialized;
-    uint2   character_map_g = uninitialized;
-    uint2   character_map_b = uninitialized;
+    uint6   character_map_p = uninitialized;
     uint1   character_map_display = uninitialized;
     character_map character_map_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: pix_active,
         pix_vblank <: vblank,
-        pix_red    :> character_map_r,
-        pix_green  :> character_map_g,
-        pix_blue   :> character_map_b,
+        pixel    :> character_map_p,
         character_map_display :> character_map_display
     );
 
-    // Character Map Window
-    uint2   terminal_r = uninitialized;
-    uint2   terminal_g = uninitialized;
-    uint2   terminal_b = uninitialized;
+    // Terminal Window
+    uint6   terminal_p = uninitialized;
     uint1   terminal_display = uninitialized;
     terminal terminal_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: pix_active,
         pix_vblank <: vblank,
-        pix_red    :> terminal_r,
-        pix_green  :> terminal_g,
-        pix_blue   :> terminal_b,
+        pixel    :> terminal_p,
         terminal_display :> terminal_display
     );
 
@@ -583,43 +551,27 @@ $$end
         pix_green  :> video_g,
         pix_blue   :> video_b,
 
-        background_r <: background_r,
-        background_g <: background_g,
-        background_b <: background_b,
+        background_p <: background_p,
 
-        lower_tilemap_r <: lower_tilemap_r,
-        lower_tilemap_g <: lower_tilemap_g,
-        lower_tilemap_b <: lower_tilemap_b,
+        lower_tilemap_p <: lower_tilemap_p,
         lower_tilemap_display <: lower_tilemap_display,
 
-        upper_tilemap_r <: upper_tilemap_r,
-        upper_tilemap_g <: upper_tilemap_g,
-        upper_tilemap_b <: upper_tilemap_b,
+        upper_tilemap_p <: upper_tilemap_p,
         upper_tilemap_display <: upper_tilemap_display,
 
-        lower_sprites_r <: lower_sprites_r,
-        lower_sprites_g <: lower_sprites_g,
-        lower_sprites_b <: lower_sprites_b,
+        lower_sprites_p <: lower_sprites_p,
         lower_sprites_display <: lower_sprites_display,
 
-        upper_sprites_r <: upper_sprites_r,
-        upper_sprites_g <: upper_sprites_g,
-        upper_sprites_b <: upper_sprites_b,
+        upper_sprites_p <: upper_sprites_p,
         upper_sprites_display <: upper_sprites_display,
 
-        bitmap_r <: bitmap_r,
-        bitmap_g <: bitmap_g,
-        bitmap_b <: bitmap_b,
+        bitmap_p <: bitmap_p,
         bitmap_display <: bitmap_display,
 
-        character_map_r <: character_map_r,
-        character_map_g <: character_map_g,
-        character_map_b <: character_map_b,
+        character_map_p <: character_map_p,
         character_map_display <: character_map_display,
 
-        terminal_r <: terminal_r,
-        terminal_g <: terminal_g,
-        terminal_b <: terminal_b,
+        terminal_p <: terminal_p,
         terminal_display <: terminal_display
     );
 

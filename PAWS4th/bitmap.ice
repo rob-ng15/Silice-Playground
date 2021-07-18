@@ -7,9 +7,7 @@ algorithm bitmap(
     input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
-    output! uint2   pix_red,
-    output! uint2   pix_green,
-    output! uint2   pix_blue,
+    output! uint6   pixel,
     output! uint1   bitmap_display,
 
     // STATIC GENERATOR
@@ -174,9 +172,7 @@ algorithm bitmap(
 
     // RENDER - Default to transparent
     bitmap_display := pix_active & ~( framebuffer ? bitmap_1.rdata0[6,1] : bitmap_0.rdata0[6,1] );
-    pix_red := framebuffer ? bitmap_1.rdata0[4,2] : bitmap_0.rdata0[4,2];
-    pix_green := framebuffer ? bitmap_1.rdata0[2,2] : bitmap_0.rdata0[2,2];
-    pix_blue := framebuffer ? bitmap_1.rdata0[0,2] : bitmap_0.rdata0[0,2];
+    pixel := framebuffer ? bitmap_1.rdata0 : bitmap_0.rdata0;
 
     while(1) {
         switch( bitmap_write_offset ) {

@@ -3,9 +3,7 @@ algorithm character_map(
     input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
-    output! uint2   pix_red,
-    output! uint2   pix_green,
-    output! uint2   pix_blue,
+    output! uint6   pixel,
     output! uint1   character_map_display,
 
     input   uint7   tpu_x,
@@ -68,9 +66,7 @@ algorithm character_map(
 
     // RENDER - Default to transparent
     character_map_display := pix_active & ( characterpixel | ~colour13(colourmap.rdata0).alpha );
-    pix_red := characterpixel ? colour13(colourmap.rdata0).forered : colour13(colourmap.rdata0).backred;
-    pix_green := characterpixel ? colour13(colourmap.rdata0).foregreen : colour13(colourmap.rdata0).backgreen;
-    pix_blue := characterpixel ? colour13(colourmap.rdata0).foreblue : colour13(colourmap.rdata0).backblue;
+    pixel := characterpixel ? colour13(colourmap.rdata0).foreground : colour13(colourmap.rdata0).background;
 }
 
 algorithm character_map_writer(

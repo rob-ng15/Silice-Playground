@@ -3,9 +3,7 @@ algorithm terminal(
     input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
-    output! uint2   pix_red,
-    output! uint2   pix_green,
-    output! uint2   pix_blue,
+    output! uint6   pixel,
     output! uint1   terminal_display,
 
     input   uint8   terminal_character,
@@ -58,9 +56,7 @@ algorithm terminal(
 
     // Default to transparent and active pixels always blue
     terminal_display := pix_active && showterminal && ( pix_y > 415 );
-    pix_red := ( terminalpixel ) ? ( ( is_cursor && timer1hz ) ? 0 : 3 ) : ( ( is_cursor && timer1hz ) ? 3 : 0 );
-    pix_green := ( terminalpixel ) ? ( ( is_cursor && timer1hz ) ? 0 : 3 ) : ( ( is_cursor && timer1hz ) ? 3 : 0 );
-    pix_blue := 3;
+    pixel := ( terminalpixel ) ? ( ( is_cursor && timer1hz ) ? 6b000011 : 6b111111 ) : ( ( is_cursor && timer1hz ) ? 6b111111 : 6b000011 );
 }
 
 algorithm terminal_writer(

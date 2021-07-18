@@ -428,7 +428,7 @@ algorithm rectangle (
                             }
                         }
                     }
-                    FSM = { FSM[0,1], 1b0 };
+                    FSM = FSM << 1;
                 }
                 active = 0;
             }
@@ -519,13 +519,13 @@ algorithm line (
                                             }
                                         }
                                     }
-                                    FSM2 = { FSM2[0,2], 1b0 };
+                                    FSM2 = FSM2 << 1;
                                 }
                                 gpu_count = gpu_count + 1;
                             }
                         }
                     }
-                    FSM = { FSM[0,2], 1b0 };
+                    FSM = FSM << 1;
                 }
                 active = 0;
             }
@@ -620,7 +620,7 @@ algorithm circle(
                                             case 7: { bitmap_y_write = gpu_yc + gpu_active_x; }
                                         }
                                         bitmap_write = ( draw_sectors & PIXELMASK ) != 0;
-                                        PIXELOUTPUT = { PIXELOUTPUT[0,7], 1b0 };
+                                        PIXELOUTPUT = PIXELOUTPUT << 1;
                                     }
                                     gpu_count = filledcircle ? gpu_count - 1 : gpu_min_count;
                                 }
@@ -632,7 +632,7 @@ algorithm circle(
                             }
                         }
                     }
-                    FSM = { FSM[0,2], 1b0 };
+                    FSM = FSM << 1;
                 }
                 active = 0;
             }
@@ -808,7 +808,7 @@ algorithm triangle (
                             }
                         }
                     }
-                    FSM = { FSM[0,7], 1b0 };
+                    FSM = FSM << 1;
                 }
                 active = 0;
             }
@@ -929,7 +929,7 @@ algorithm blit (
                             }
                         }
                     }
-                    FSM = { FSM[0,1], 1b0 };
+                    FSM = FSM << 1;
                 }
                 active = 0;
             }
@@ -1035,7 +1035,7 @@ algorithm colourblit(
                                 }
                         }
                     }
-                    FSM = { FSM[0,1], 1b0 };
+                    FSM = FSM << 1;
                 }
                 active = 0;
             }
@@ -1211,12 +1211,12 @@ algorithm vectors(
                                             vertices_number = vertices_number + 1;
                                         }
                                     }
-                                    VECTORDRAW = { VECTORDRAW[0,2], 1b0 };
+                                    VECTORDRAW = VECTORDRAW << 1;
                                 }
                             }
                         }
                     }
-                    FSM = { FSM[0,2], 1b0 };
+                    FSM = FSM << 1;
                 }
                 vector_block_active = 0;
             }

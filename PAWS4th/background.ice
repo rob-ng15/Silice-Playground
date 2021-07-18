@@ -3,9 +3,7 @@ algorithm background(
     input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
-    output! uint2   pix_red,
-    output! uint2   pix_green,
-    output! uint2   pix_blue,
+    output! uint6   pixel,
 
     input   uint2  staticGenerator,
 
@@ -29,9 +27,7 @@ algorithm background(
         pix_y <: pix_y,
         pix_active <: pix_active,
         pix_vblank <: pix_vblank,
-        pix_red :> pix_red,
-        pix_green :> pix_green,
-        pix_blue :> pix_blue,
+        pixel :> pixel,
         staticGenerator <: staticGenerator
     );
 
@@ -132,9 +128,7 @@ algorithm background_display(
     input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
-    output! uint2   pix_red,
-    output! uint2   pix_green,
-    output! uint2   pix_blue,
+    output! uint6   pixel,
 
     input   uint2  staticGenerator,
 
@@ -162,39 +156,31 @@ algorithm background_display(
                 switch( b_mode ) {
                     case 0: {
                         // SOLID
-                        pix_red = colour6(b_colour).red;
-                        pix_green = colour6(b_colour).green;
-                        pix_blue = colour6(b_colour).blue;
+                        pixel = b_colour;
                     }
                     case 1: {
                         // 50:50 HORIZONTAL SPLIT
-                        pix_red = ( tophalf ) ? colour6(b_colour).red : colour6(b_alt).red;
-                        pix_green = ( tophalf ) ? colour6(b_colour).green : colour6(b_alt).green;
-                        pix_blue = ( tophalf ) ? colour6(b_colour).blue : colour6(b_alt).blue;
+                        pixel = ( tophalf ) ? b_colour : b_alt;
                     }
                     case 2: {
                     // 50:50 VERTICAL SPLIT
-                        pix_red = ( lefthalf ) ? colour6(b_colour).red : colour6(b_alt).red;
-                        pix_green = ( lefthalf ) ? colour6(b_colour).green : colour6(b_alt).green;
-                        pix_blue = ( lefthalf ) ? colour6(b_colour).blue : colour6(b_alt).blue;
+                        pixel = ( lefthalf ) ? b_colour : b_alt;
                     }
                     case 3: {
                     // QUARTERS
-                        pix_red = ( lefthalf == tophalf ) ? colour6(b_colour).red : colour6(b_alt).red;
-                        pix_green = ( lefthalf == tophalf ) ? colour6(b_colour).green : colour6(b_alt).green;
-                        pix_blue = ( lefthalf == tophalf ) ? colour6(b_colour).blue : colour6(b_alt).blue;
+                        pixel = ( lefthalf == tophalf ) ? b_colour : b_alt;
                     }
                     case 4: {
                         // 8 colour rainbow
                         switch( pix_y[6,3] ) {
-                            case 3b000: { pix_red = 2; pix_green = 0; pix_blue = 0; }
-                            case 3b001: { pix_red = 3; pix_green = 0; pix_blue = 0; }
-                            case 3b010: { pix_red = 3; pix_green = 2; pix_blue = 0; }
-                            case 3b011: { pix_red = 3; pix_green = 3; pix_blue = 0; }
-                            case 3b100: { pix_red = 0; pix_green = 3; pix_blue = 0; }
-                            case 3b101: { pix_red = 0; pix_green = 0; pix_blue = 3; }
-                            case 3b110: { pix_red = 1; pix_green = 0; pix_blue = 2; }
-                            case 3b111: { pix_red = 1; pix_green = 2; pix_blue = 3; }
+                            case 3b000: { pixel = 6b100000; }
+                            case 3b001: { pixel = 6b110000; }
+                            case 3b010: { pixel = 6b111000; }
+                            case 3b011: { pixel = 6b111100; }
+                            case 3b100: { pixel = 6b001100; }
+                            case 3b101: { pixel = 6b000011; }
+                            case 3b110: { pixel = 6b010010; }
+                            case 3b111: { pixel = 6b011011; }
                         }
                     }
                     case 5: {
@@ -202,51 +188,35 @@ algorithm background_display(
                         rand_x = ( pix_x == 0)  ? 1 : rand_x * 31421 + 6927;
                         speed  = rand_x[10,2];
                         dotpos = ( frame >> speed ) + rand_x;
-                        pix_red   = (pix_y == dotpos) ? colour6(b_colour).red : colour6(b_alt).red;
-                        pix_green = (pix_y == dotpos) ? colour6(b_colour).green : colour6(b_alt).green;
-                        pix_blue  = (pix_y == dotpos) ? colour6(b_colour).blue : colour6(b_alt).blue;
+                        pixel   = (pix_y == dotpos) ? b_colour : b_alt;
                     }
                     case 6: {
                         // STATIC
-                        pix_red = staticGenerator;
-                        pix_green = staticGenerator;
-                        pix_blue = staticGenerator;
+                        pixel = { {3{staticGenerator}} };
                     }
                     case 11: {
                         // CROSSHATCH
-                        pix_red   = ( pix_x[0,1] || pix_y[0,1] ) ? colour6(b_colour).red : colour6(b_alt).red;
-                        pix_green = ( pix_x[0,1] || pix_y[0,1] ) ? colour6(b_colour).green : colour6(b_alt).green;
-                        pix_blue  = ( pix_x[0,1] || pix_y[0,1] ) ? colour6(b_colour).blue : colour6(b_alt).blue;
+                        pixel   = ( pix_x[0,1] || pix_y[0,1] ) ? b_colour : b_alt;
                     }
                     case 12: {
                         // LSLOPE
-                        pix_red   = ( pix_x[0,2] == pix_y[0,2] ) ? colour6(b_colour).red : colour6(b_alt).red;
-                        pix_green = ( pix_x[0,2] == pix_y[0,2] ) ? colour6(b_colour).green : colour6(b_alt).green;
-                        pix_blue  = ( pix_x[0,2] == pix_y[0,2] ) ? colour6(b_colour).blue : colour6(b_alt).blue;
+                        pixel   = ( pix_x[0,2] == pix_y[0,2] ) ? b_colour : b_alt;
                     }
                     case 13: {
                         // RSLOPE
-                        pix_red   = ( pix_x[0,2] == ~pix_y[0,2] ) ? colour6(b_colour).red : colour6(b_alt).red;
-                        pix_green = ( pix_x[0,2] == ~pix_y[0,2] ) ? colour6(b_colour).green : colour6(b_alt).green;
-                        pix_blue  = ( pix_x[0,2] == ~pix_y[0,2] ) ? colour6(b_colour).blue : colour6(b_alt).blue;
+                        pixel   = ( pix_x[0,2] == ~pix_y[0,2] ) ? b_colour : b_alt;
                     }
                     case 14: {
                         // VSTRIPES
-                        pix_red   = pix_x[0,1] ? colour6(b_colour).red : colour6(b_alt).red;
-                        pix_green = pix_x[0,1] ? colour6(b_colour).green : colour6(b_alt).green;
-                        pix_blue  = pix_x[0,1] ? colour6(b_colour).blue : colour6(b_alt).blue;
+                        pixel   = pix_x[0,1] ? b_colour : b_alt;
                     }
                     case 15: {
                         // HSTRIPES
-                        pix_red   = pix_y[0,1] ? colour6(b_colour).red : colour6(b_alt).red;
-                        pix_green = pix_y[0,1] ? colour6(b_colour).green : colour6(b_alt).green;
-                        pix_blue  = pix_y[0,1] ? colour6(b_colour).blue : colour6(b_alt).blue;
+                        pixel   = pix_y[0,1] ? b_colour : b_alt;
                     }
                     default: {
                         // CHECKERBOARDS
-                        pix_red = ( pix_x[b_mode-7,1] == pix_y[b_mode-7,1] ) ? colour6(b_colour).red : colour6(b_alt).red;
-                        pix_green = ( pix_x[b_mode-7,1] == pix_y[b_mode-7,1] ) ? colour6(b_colour).green : colour6(b_alt).green;
-                        pix_blue = ( pix_x[b_mode-7,1] == pix_y[b_mode-7,1] ) ? colour6(b_colour).blue : colour6(b_alt).blue;
+                        pixel = ( pix_x[b_mode-7,1] == pix_y[b_mode-7,1] ) ? b_colour : b_alt;
                     }
                 }
             }

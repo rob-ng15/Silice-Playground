@@ -51,7 +51,7 @@ circuitry classE( output E, input N ) {
 // REALIGN A 48BIT NUMBER SO MSB IS 1
 circuitry normalise48( inout bitstream ) {
     while( ~bitstream[47,1] ) {
-        bitstream = { bitstream[0,47], 1b0 };
+        bitstream = bitstream << 1;
     }
 }
 // EXTRACT 23 BIT FRACTION FROM LEFT ALIGNED 48 BIT FRACTION WITH ROUNDING
@@ -111,13 +111,13 @@ algorithm inttofloat(
                                                 ( result ) = combinecomponents( sign, exp, number );
                                             }
                                         }
-                                        FSM2 = { FSM2[0,1], 1b0 };
+                                        FSM2 = FSM2 << 1;
                                     }
                                 }
                             }
                         }
                     }
-                    FSM = { FSM[0,1], 1b0 };
+                    FSM = FSM << 1;
                 }
                 busy = 0;
             }
@@ -285,8 +285,8 @@ algorithm floataddsub(
                                             switch( sigA[47,1] ) {
                                                 case 1: { expA = expA + 1; }
                                                 default: {
-                                                    while( ~sigA[46,1] ) { sigA = { sigA[0,47], 1b0 }; expA = expA - 1; }
-                                                    sigA = { sigA[0,47], 1b0 };
+                                                    while( ~sigA[46,1] ) { sigA = sigA << 1; expA = expA - 1; }
+                                                    sigA = sigA << 1;
                                                 }
                                             }
                                             ( newfraction ) = round48( sigA );
@@ -299,7 +299,7 @@ algorithm floataddsub(
                             }
                         }
                     }
-                    FSM = { FSM[0,5], 1b0 };
+                    FSM = FSM << 1;
                 }
                 busy = 0;
             }
@@ -374,7 +374,7 @@ algorithm floatmultiply(
                             }
                         }
                     }
-                    FSM = { FSM[0,1], 1b0 };
+                    FSM = FSM << 1;
                 }
                 busy = 0;
             }
@@ -473,7 +473,7 @@ algorithm floatdivide(
                             }
                         }
                     }
-                    FSM = { FSM[0,3], 1b0 };
+                    FSM = FSM << 1;
                 }
                 busy = 0;
             }
@@ -541,7 +541,7 @@ algorithm floatsqrt(
                                             ( result ) = combinecomponents( sign, exp, newfraction );
                                         }
                                     }
-                                    FSM = { FSM[0,3], 1b0 };
+                                    FSM = FSM << 1;
                                 }                    }
                             case 2b01: { result = 0; }
                             default: { result = a; }
@@ -605,12 +605,10 @@ algorithm floatcompare(
     input   uint32  a,
     input   uint32  b,
     output  uint1   less,
-    output  uint1   lessequal,
     output  uint1   equal
 ) <autorun> {
     while(1) {
         ( less ) = floatless( a, b );
-        ( lessequal ) = floatlessequal( a, b );
         ( equal ) = floatequal( a, b );
     }
 }
