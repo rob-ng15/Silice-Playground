@@ -930,6 +930,170 @@ t: led@ f130 literal @ t;
 t: led! f130 literal ! t;
 t: buttons@ f120 literal @ t;
 
+( Timers )
+t: clock@ e040 literal @ t;
+t: timer1hz! 1 literal e010 literal ! t;
+t: timer1hz@ e010 literal @ t;
+t: timer1khz! e020 literal ! t;
+t: timer1khz@ e020 literal @ t;
+t: timer1khz? begin e020 literal @ 0= until t;
+t: sleep e030 literal ! begin e030 literal @ 0= until t;
+t: rng e000 literal @ swap /mod drop t;
+t: qrng e000 literal @ swap and t;
+
+( Audio )
+t: beep? 2* e110 literal + begin dup @ 0= until drop t;
+t: beep! e104 literal ! e102 literal ! e100 literal ! e106 literal ! t;
+
+( DISPLAY helper words )
+t: vblank? begin cf00 literal @ 0<> until t;
+t: screen! cf00 literal ! t;
+t: framebuffer! begin c614 literal @ 0= until vblank? c6f2 literal ! c6f0 literal ! t;
+t: terminal! c702 literal ! t;
+t: background! c004 literal ! c002 literal ! c000 literal ! t;
+
+( GPU )
+t: gpu? begin c612 literal @ 0= until t;
+t: gpu! gpu? c612 literal ! t;
+t: fullscreen! 0 literal 0 literal 13f literal ef literal t;
+t: coords2! c602 literal ! c600 literal ! t;
+t: coords4! c60c literal ! c60a literal ! coords2! t;
+t: coords6! c610 literal ! c60e literal ! coords4! t;
+t: colour! c608 literal ! c606 literal ! c604 literal ! t;
+t: pixel coords2! 1 literal gpu! t;
+t: line coords4! 2 literal gpu! t;
+t: rectangle coords4! 3 literal gpu! t;
+t: circle coords4! 4 literal gpu! t;
+t: fcircle coords4! 5 literal gpu! t;
+t: triangle coords6! 6 literal gpu! t;
+t: blit coords4! 7 literal gpu! t;
+t: blittile! c640 literal ! 10 literal begin 1- dup c642 literal ! swap c644 literal ! dup 0= until drop t;
+t: charblit coords4! 8 literal gpu! t;
+t: colblit coords4! 9 literal gpu! t;
+t: pbstart! coords4! a literal gpu! t;
+t: pbpixel! c670 literal ! t;
+t: pbstop! 3 literal c678 literal ! t;
+t: bmmove! gpu? c6e0 literal ! t;
+t: cs 40 literal 0 literal 0 literal colour! fullscreen! rectangle 5 literal bmmove! t;
+
+( tile map )
+t: tml? begin c122 literal @ 0= until t;
+t: tmu? begin c222 literal @ 0= until t;
+t: tmlmove! tml? c120 literal ! t;
+t: tmumove! tmu? c220 literal ! t;
+t: tmlcs 9 literal tmlmove! t;
+t: tmucs 9 literal tmumove! t;
+t: tmltile! c110 literal ! 10 literal begin 1- dup c112 literal ! swap c114 literal ! dup 0= until drop t;
+t: tmutile! c210 literal ! 10 literal begin 1- dup c212 literal ! swap c214 literal ! dup 0= until drop t;
+t: tml! c106 literal ! c108 literal ! c104 literal ! c102 literal ! c100 literal ! 1 literal c10a literal ! t;
+t: tmu! c206 literal ! c208 literal ! c204 literal ! c202 literal ! c200 literal ! 1 literal c20a literal ! t;
+
+( character map )
+t: tpu? begin c50a literal @ 0= until t;
+t: tpu! tpu? c50a literal ! t;
+t: tcolour! c506 literal ! c508 literal ! t;
+t: tpuxy! c502 literal ! c500 literal ! 1 literal tpu! t;
+t: tpuemit c504 literal ! 2 literal tpu! t;
+t: tpuspace bl tpuemit t;
+t: tpuspaces 0 literal max for aft tpuspace then next t;
+t: tputype for aft count tpuemit then next drop t;
+t: tpu.$ count tputype t;
+t: tpu.r >r str r> over - tpuspaces tputype t;
+t: tpuu.r >r <# #s #> r> over - tpuspaces tputype t;
+t: tpuu. <# #s #> tpuspace tputype t;
+t: tpu. base @ a literal xor if tpuu. exit then str tpuspace tputype t;
+t: tpu.# base @ swap decimal tpu. base ! t;
+t: tpuu.# base @ swap decimal <# #s #> tpuspace tputype base ! t;
+t: tpuu.r# base @ rot rot decimal >r <# #s #> r> over - tpuspaces tputype base ! t;
+t: tpu.r# base @ rot rot decimal >r str r> over - tpuspaces tputype base ! t;
+t: tcs 3 literal tpu! 0 3f tcolour! t;
+
+( sprites )
+u: _pointer
+t: sprite!
+   _pointer @ ! 20 literal _pointer @ + _pointer !
+   _pointer @ ! 20 literal _pointer @ + _pointer !
+   _pointer @ ! 20 literal _pointer @ + _pointer !
+   swap _pointer @ ! 20 literal _pointer @ + _pointer !
+   _pointer @ ! 20 literal _pointer @ + _pointer !
+   _pointer @ ! 20 literal _pointer @ + _pointer ! t;
+t: lsprite 2* c300 literal + _pointer ! sprite! t;
+t: usprite 2* c400 literal + _pointer ! sprite! t;
+t: lspritetile! c800 literal ! 80 literal begin 1- dup c802 literal ! swap c804 literal ! dup 0= until drop t;
+t: uspritetile! c810 literal ! 80 literal begin 1- dup c812 literal ! swap c814 literal ! dup 0= until drop t;
+t: lspriteupdate 2* c3c0 literal + ! t;
+t: uspriteupdate 2* c4c0 literal + ! t;
+t: lsprite@ 2* swap 20 literal * c300 literal + + @ t;
+t: usprite@ 2* swap 20 literal * c400 literal + + @ t;
+
+( sdram )
+t: ram? begin ff02 literal @ 0= until t;
+t: ramaddr! ram? ff04 literal d! t;
+t: ram! ramaddr! ff00 literal ! 2 literal ff02 literal ! t;
+t: ram@ ramaddr! 1 literal ff02 literal ! ram? ff00 literal @ t;
+
+( sdcard )
+t: sdready? begin f140 literal @ 0<> until t;
+t: sdreadsector sdready? f142 literal d! 1 literal f140 literal ! sdready? t;
+t: sd@ f150 literal ! f150 literal @ t;
+
+( double maths )
+t: 2over >r >r 2dup r> r> rot >r rot r> t;
+t: 2swap rot >r rot r> t;
+t: 2nip rot drop rot drop t;
+t: 2rot 2>r 2swap 2r> 2swap t;
+t: d2! d002 literal d! d1! t;
+t: d0= d1! d01c literal @ t;
+t: d= d2! d01e literal @ t;
+t: d< d2! d01f literal @ t;
+t: d+ d2! d000 literal d@ t;
+t: d- d2! d002 literal d@ t;
+t: s>d dup 0< t;
+t: d1+ d1! d004 literal d@ t;
+t: d1- d1! d006 literal d@ t;
+t: dxor d2! d010 literal d@ t;
+t: dand d2! d012 literal d@ t;
+t: dor d2! d014 literal d@  t;
+t: dinvert d1! d00e literal d@ t;
+t: d2* d1! d008 literal d@ t;
+t: d2/ d1! d00a literal d@ t;
+t: dabs d1! d016 literal d@ t;
+t: dmax d2! d018 literal d@ t;
+t: dmin d2! d01a literal d@ t;
+
+( float maths )
+t: fpu1! d100 literal ! t;
+t: fpu2! d101 literal ! fpu1! t;
+t: fpu? begin d102 literal @ 0= until t;
+t: fpu! d102 literal ! t;
+t: fpu@ swap fpu! fpu? @ t;
+t: s>f fpu1! 1 literal d110 literal fpu@ t;
+t: f>s fpu1! 2 literal d111 literal fpu@ t;
+t: f+ fpu2! 3 literal d112 literal fpu@ t;
+t: f- fpu2! 4 literal d113 literal fpu@ t;
+t: f* fpu2! 5 literal d114 literal fpu@ t;
+t: f/ fpu2! 6 literal d115 literal fpu@ t;
+t: fsqrt fpu1! 7 literal d116 literal fpu@ t;
+t: f< fpu2! d117 literal @ t;
+t: f= fpu2! d118 literal @ t;
+t: f<= fpu2! d119 literal @ t;
+t: f.# base @ swap decimal
+   bl emit
+   dup f>s dup 0 literal .r 2e literal emit
+   s>f f- 3e8 literal s>f f* f>s
+   dup 64 literal < if 30 literal emit then
+   dup a literal < if 30 literal emit then
+   0 literal .r
+   base ! ;
+t: tpuf.# base @ swap decimal
+   bl tpuemit
+   dup f>s dup 0 literal tpu.r 2e literal tpuemit
+   s>f f- 3e8 literal s>f f* f>s
+   dup 64 literal < if 30 literal tpuemit then
+   dup a literal < if 30 literal tpuemit then
+   0 literal tpu.r
+   base ! ;
+
 target.1 -order set-current
 
 there 			[u] dp t!

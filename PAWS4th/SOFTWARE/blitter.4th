@@ -1,3 +1,9 @@
+#INCLUDE/display.4th
+#INCLUDE/gpu.4th
+#INCLUDE/timers.4th
+
+hex
+
 701c 1830 820 820
 ff8 3938 3938 fffe
 dff6 dff6 9c72 d836

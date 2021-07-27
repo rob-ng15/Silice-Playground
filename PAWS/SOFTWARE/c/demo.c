@@ -1135,8 +1135,8 @@ struct Point2D Rotate2D( struct Point2D point, int xc, int yc, int angle, float 
     struct Point2D newpoint;
     float radians = angle*0.01745329252;
 
-    newpoint.dx = ( (point.dx * scale)*cosf(radians)-(point.dy * scale)*sinf(radians) ) + xc;
-    newpoint.dy = ( (point.dx * scale)*sinf(radians)+(point.dy * scale)*cosf(radians) ) + yc;
+    newpoint.dx = ( (point.dx * scale)*pawscosf(radians)-(point.dy * scale)*pawssinf(radians) ) + xc;
+    newpoint.dy = ( (point.dx * scale)*pawssinf(radians)+(point.dy * scale)*pawscosf(radians) ) + yc;
 
     return( newpoint );
 }
@@ -1144,6 +1144,7 @@ struct Point2D Rotate2D( struct Point2D point, int xc, int yc, int angle, float 
 void floatdemo() {
     struct Point2D Square[4] = { { -100, -100 }, { 100, -100 }, { 100, 100 }, { -100, 100 } };
     struct Point2D NewSquare[4];
+    short colour;
 
     displayreset();
     tpu_printf_centre( 28, TRANSPARENT, WHITE, "FLOAT DEMO" );
@@ -1156,8 +1157,9 @@ void floatdemo() {
             for( int vertex = 0; vertex < 4; vertex++ ) {
                 NewSquare[ vertex ] = Rotate2D( Square[vertex], 160, 120, angle, ( angle < 90 ) ? 1.0 : ( angle < 180 ) ? 0.75 : ( angle < 270 ) ? 0.5 : 0.25 );
             }
+            colour = ( angle < 90 ) ? RED : ( angle < 180 ) ? GREEN : ( angle < 270 ) ? BLUE : WHITE;
             for( int vertex = 0; vertex < 4; vertex++ ) {
-                gpu_line( WHITE, NewSquare[ vertex ].dx, NewSquare[ vertex ].dy, NewSquare[ ( vertex == 3 ) ? 0 : vertex + 1 ].dx, NewSquare[ ( vertex == 3 ) ? 0 : vertex + 1 ].dy );
+                gpu_line( colour, NewSquare[ vertex ].dx, NewSquare[ vertex ].dy, NewSquare[ ( vertex == 3 ) ? 0 : vertex + 1 ].dx, NewSquare[ ( vertex == 3 ) ? 0 : vertex + 1 ].dy );
             }
     }
     sleep( 2000, 0 );

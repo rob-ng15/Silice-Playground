@@ -176,7 +176,7 @@ $$end
     uint1   SMTRUNNING = uninitialized;
     uint32  SMTSTARTPC = uninitialized;
     io_memmap IO_Map <@clock_system,!reset> (
-        leds :> leds,
+        //leds :> leds,
 $$if not SIMULATION then
         gn <: gn,
         gp :> gp,
@@ -229,6 +229,7 @@ $$end
     uint32  address = uninitialized;
     uint16  writedata = uninitialized;
     PAWSCPU CPU <@clock_system,!reset> (
+        leds :> leds,
         clock_CPUdecoder <: clock_100_1,
         accesssize :> function3,
         address :> address,

@@ -75,7 +75,6 @@ algorithm aluMdivideremain(
 }
 
 // UNSIGNED / SIGNED 32 by 32 bit multiplication giving 64 bit product using DSP blocks
-
 $$if not uintmul_algo then
 $$uintmul_algo = 1
 algorithm douintmul(
@@ -83,11 +82,7 @@ algorithm douintmul(
     input   uint32  factor_2,
     output  uint64  product
 ) <autorun> {
-    uint18    A <: { 2b0, factor_1[16,16] };
-    uint18    B <: { 2b0, factor_1[0,16] };
-    uint18    C <: { 2b0, factor_2[16,16] };
-    uint18    D <: { 2b0, factor_2[0,16] };
-    product := ( D*B + { D*A, 16b0 } + { C*B, 16b0 } + { C*A, 32b0 } );
+    product := factor_1 * factor_2;
 }
 $$end
 

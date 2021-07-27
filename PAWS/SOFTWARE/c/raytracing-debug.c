@@ -102,12 +102,15 @@ Sphere make_Sphere(vec3 c, float r, Material M) {
 BOOL Sphere_ray_intersect(Sphere* S, vec3 orig, vec3 dir, float* t0) {
   vec3 L = vec3_sub(S->center, orig);
   float tca = vec3_dot(L,dir);
+  //printf("  SRI dot(L,L) = %f, tca^2 = %f\n",vec3_dot(L,L),tca*tca);
   float d2 = vec3_dot(L,L) - tca*tca;
   float r2 = S->radius*S->radius;
+  //printf("  SRI (1) tca = %f, d2 = %f, r2 = %f\n",tca,d2,r2);
   if (d2 > r2) return 0;
   float thc = sqrtf(r2 - d2);
   *t0       = tca - thc;
   float t1 = tca + thc;
+  //printf("  SRI (2) thc = %f, t0 = %f, t1 = %f\n",thc,*t0,t1);
   if (*t0 < 0) *t0 = t1;
   if (*t0 < 0) return 0;
   return 1;
@@ -117,10 +120,11 @@ vec3 reflect(vec3 I, vec3 N) { return vec3_sub(I, vec3_scale(2.f*vec3_dot(I,N),N
 
 vec3 refract(vec3 I, vec3 N, float eta_t, float eta_i /* =1.f */) { // Snell's law
     float cosi = -max(-1.f, min(1.f, vec3_dot(I,N)));
-    if (cosi<0) return refract(I, vec3_neg(N), eta_i, eta_t); // if the ray comes from the inside the object, swap the air and the media
+    //printf("  refract cosi = %f, <0 = %d\n",cosi,cosi<0.0f);
+    if (cosi<0.0f) return refract(I, vec3_neg(N), eta_i, eta_t); // if the ray comes from the inside the object, swap the air and the media
     float eta = eta_i / eta_t;
     float k = 1 - eta*eta*(1 - cosi*cosi);
-    return k<0 ? make_vec3(1,0,0) : vec3_add(vec3_scale(eta,I),vec3_scale((eta*cosi - sqrtf(k)),N));
+    return k<0.0f ? make_vec3(1,0,0) : vec3_add(vec3_scale(eta,I),vec3_scale((eta*cosi - sqrtf(k)),N));
                                         // k<0 = total reflection, no ray to refract. I refract it anyways, this has no physical meaning
 }
 
@@ -134,6 +138,7 @@ BOOL scene_intersect(vec3 orig, vec3 dir, Sphere* spheres, int nb_spheres, vec3*
       *N = vec3_normalize(vec3_sub(*hit, spheres[i].center));
       *material = spheres[i].material;
     }
+    printf("  SI i = %d dist_i = %f\n",i,dist_i);
   }
   float checkerboard_dist = 1e30;
   if (fabs(dir.y)>1e-3)  {
@@ -171,8 +176,10 @@ float my_pow(float x, float y) {
 vec3 cast_ray(vec3 orig, vec3 dir, Sphere* spheres, int nb_spheres, Light* lights, int nb_lights, int depth /* =0 */) {
   vec3 point,N;
   Material material = make_Material_default();
+  //printf("depth = %d,scene_intersect = %d",depth,scene_intersect(orig, dir, spheres, nb_spheres, &point, &N, &material));
   if (depth>2 || !scene_intersect(orig, dir, spheres, nb_spheres, &point, &N, &material)) {
     float s = 0.5*(dir.y + 1.0);
+    printf("  s = %f\n",s);
     return vec3_add(vec3_scale(s,make_vec3(0.2, 0.7, 0.8)),vec3_scale(s,make_vec3(0.0, 0.0, 0.5)));
   }
   vec3 reflect_dir = vec3_normalize(reflect(dir, N));
@@ -201,7 +208,7 @@ vec3 cast_ray(vec3 orig, vec3 dir, Sphere* spheres, int nb_spheres, Light* light
     float abc = max(0.f, vec3_dot(vec3_neg(reflect(vec3_neg(light_dir), N)),dir));
     float def = material.specular_exponent;
     if(abc > 0.0f && def > 0.0f) {
-       specular_light_intensity += powf(abc,def)*lights[i].intensity;
+       specular_light_intensity += my_pow(abc,def)*lights[i].intensity;
     }
   }
   vec3 result = vec3_scale(diffuse_light_intensity * material.albedo.x, material.diffuse_color);
@@ -222,17 +229,19 @@ void set_pixel(int x, int y, float r, float g, float b) {
    r = max(0.0f, min(1.0f, r));
    g = max(0.0f, min(1.0f, g));
    b = max(0.0f, min(1.0f, b));
+   //printf("  r = %f g = %f b = %f\n",r,g,b);
    gpu_pixelblock_pixel24( 255.0f * r, 255.0f * g, 255.0f * b );
 }
 
 void render(Sphere* spheres, int nb_spheres, Light* lights, int nb_lights) {
-  const float fov  = M_PI/3.;
-   for (int j = 0; j<GL_height; j++) { // actual rendering loop
-      for (int i = 0; i<GL_width; i++) {
+   const float fov  = M_PI/3.;
+   for (int j = 0; j < GL_height; j++) { // actual rendering loop
+      for (int i = 0; i < GL_width; i++) {
 	 float dir_x =  (i + 0.5) - GL_width/2.;
 	 float dir_y = -(j + 0.5) + GL_height/2.;    // this flips the image at the same time
-	 float dir_z = -GL_height/(2.*tanf(fov/2.));
-	 vec3 C = cast_ray(make_vec3(0,0,0), vec3_normalize(make_vec3(dir_x, dir_y, dir_z)), spheres, nb_spheres, lights, nb_lights, 0);
+	 float dir_z = -GL_height/(2.*pawstanf(fov/2.));
+     //printf("(%d,%d) dir_x = %f dir_y = %f dir_z = %f\n",i,j,dir_x,dir_y,dir_z);
+     vec3 C = cast_ray(make_vec3(0,0,0), vec3_normalize(make_vec3(dir_x, dir_y, dir_z)), spheres, nb_spheres, lights, nb_lights, 0);
 	 set_pixel(i,j,C.x,C.y,C.z);
       }
    }
@@ -253,13 +262,12 @@ void init_scene() {
     spheres[0] = make_Sphere(make_vec3(-3,    0,   -16), 2,      ivory);
     spheres[1] = make_Sphere(make_vec3(-1.0, -1.5, -12), 2,      glass);
     spheres[2] = make_Sphere(make_vec3( 1.5, -0.5, -18), 3, red_rubber);
-    //spheres[3] = make_Sphere(make_vec3( 7,    5,   -18), 4,     mirror);
+    spheres[3] = make_Sphere(make_vec3( 7,    5,   -18), 4,     mirror);
 
     lights[0] = make_Light(make_vec3(-20, 20,  20), 1.5);
     lights[1] = make_Light(make_vec3( 30, 50, -25), 1.8);
     lights[2] = make_Light(make_vec3( 30, 20,  30), 1.7);
 }
-
 
 int main() {
     INITIALISEMEMORY();

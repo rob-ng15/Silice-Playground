@@ -48,8 +48,8 @@ circuitry store( input accesssize, input location, input value, input memorybusy
 }
 
 algorithm PAWSCPU(
+    output  uint8   leds,
     input   uint1   clock_CPUdecoder,
-
     output  uint3   accesssize,
     output  uint32  address,
     output  uint16  writedata,
@@ -169,7 +169,7 @@ algorithm PAWSCPU(
 
     // BRANCH COMPARISON UNIT
     uint1   takeBranch = uninitialized;
-    branchcomparison BRANCHUNIT(
+    branchcomparison BRANCHUNIT <@clock_CPUdecoder> (
         opCode <: opCode,
         function3 <: function3,
         sourceReg1 <: sourceReg1,
@@ -197,7 +197,10 @@ algorithm PAWSCPU(
     );
 
     // FLOATING POINT OPERATIONS
+    uint5 FPUnewflags = uninitialized;
     fpu FPU(
+        FPUflags <: FPUflags,
+        FPUnewflags :> FPUnewflags,
         opCode <: opCode,
         function3 <: function3,
         function7 <: function7,
@@ -210,9 +213,16 @@ algorithm PAWSCPU(
     );
 
     // MANDATORY RISC-V CSR REGISTERS + HARTID == 0 MAIN THREAD == 1 SMT THREAD
+    uint5 FPUflags = uninitialized;
     CSRblock CSR(
+        SMT <:: SMT,
         instruction <: instruction,
-        SMT <:: SMT
+        function3 <: function3,
+        rs1 <: rs1,
+        sourceReg1 <: sourceReg1,
+        FPUflags :> FPUflags,
+        FPUflags :> leds,
+        FPUnewflags <: FPUnewflags
     );
 
     // MEMORY ACCESS FLAGS
@@ -227,7 +237,9 @@ algorithm PAWSCPU(
     // ALU START FLAGS
     ALU.start := 0;
     FPU.start := 0;
+    CSR.start := 0;
     CSR.incCSRinstret := 0;
+    CSR.updateFPUflags := 0;
 
     while(1) {
         onehot( FSM ) {
@@ -267,7 +279,12 @@ algorithm PAWSCPU(
                     case 5b01000: { writeRegister = 0; memoryoutput = sourceReg2; }             // STORE
                     case 5b00001: { frd = 1; result = memoryinput; }                            // FLOAT LOAD
                     case 5b01001: { writeRegister = 0; memoryoutput = sourceReg2F; }            // FLOAT STORE
-                    case 5b11100: { result = CSR.result; }                                      // CSR
+                    case 5b11100: {
+                        switch( function3 ) {
+                            default: { CSR.start = 1; while( CSR.busy ) {} result = CSR.result; }                    // CSR
+                            case 3b000: { result = 0; }
+                        }
+                    }
                     case 5b01011: {                                                             // ATOMIC OPERATIONS
                         switch( function7[2,5] ) {
                             case 5b00010: { result = memoryinput; }                             // LR.W
@@ -280,6 +297,7 @@ algorithm PAWSCPU(
                         FPU.start = opCode[6,1];
                         while( ALU.busy || FPU.busy ) {}
                         frd = opCode[6,1] & FPU.frd;
+                        CSR.updateFPUflags = opCode[6,1];
                         result = opCode[6,1] ? FPU.result : ALU.result;
                     }
                 }

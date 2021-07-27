@@ -682,3 +682,389 @@ algorithm floatcompare(
         }
     }
 }
+
+// CONVERSION BETWEEN FLOAT AND SIGNED/UNSIGNED INTEGERS
+algorithm floatconvert(
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint7   function7,
+    input   uint5   rs2,
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg1F,
+
+    output  uint5   flags,
+    output  uint32  result
+) <autorun> {
+    inttofloat FPUfloat( a <: sourceReg1 );
+    floattoint FPUint( a <: sourceReg1F );
+    floattouint FPUuint( a <: sourceReg1F );
+
+    FPUfloat.dounsigned := rs2[0,1]; FPUfloat.start := 0;
+    FPUint.start := 0; FPUuint.start := 0;
+
+    while(1) {
+        switch( start ) {
+            case 1: {
+                busy = 1;
+                flags = 0;
+
+                switch( function7[2,5] ) {
+                    default: {
+                        // FCVT.W.S FCVT.WU.S
+                        FPUint.start = ~rs2[0,1]; FPUuint.start = rs2[0,1]; while( FPUint.busy || FPUuint.busy ) {}
+                        result = rs2[0,1] ? FPUuint.result : FPUint.result; flags = rs2[0,1] ? FPUuint.flags : FPUint.flags;
+                    }
+                    case 5b11010: {
+                        // FCVT.S.W FCVT.S.WU
+                        FPUfloat.start = 1; while( FPUfloat.busy ) {}
+                        result = FPUfloat.result; flags = FPUfloat.flags;
+                    }
+                }
+
+                busy = 0;
+            }
+            default: {}
+        }
+    }
+}
+
+// FPU CALCULATION BLOCKS FUSED ADD SUB MUL DIV SQRT
+algorithm floatcalc(
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint7   opCode,
+    input   uint7   function7,
+    input   uint32  sourceReg1F,
+    input   uint32  sourceReg2F,
+    input   uint32  sourceReg3F,
+
+    output  uint5   flags,
+    output  uint32  result,
+) <autorun> {
+    uint2   FSM = uninitialised;
+    floataddsub FPUaddsub();
+    floatmultiply FPUmultiply( b <: sourceReg2F );
+    floatdivide FPUdivide( a <: sourceReg1F, b <: sourceReg2F );
+    floatsqrt FPUsqrt( a <: sourceReg1F );
+
+    FPUaddsub.start := 0;
+    FPUmultiply.start := 0;
+    FPUdivide.start := 0;
+    FPUsqrt.start := 0;
+
+    while(1) {
+        switch( start ) {
+            case 1: {
+                busy = 1;
+                flags = 0;
+
+                switch( opCode[2,5] ) {
+                    default: {
+                        // FMADD.S FMSUB.S FNMSUB.S FNMADD.S
+                        __display("FUSED OPCODE = %b",opCode);
+                        FSM = 1;
+                        while( FSM != 0 ) {
+                            onehot( FSM ) {
+                                case 0: {
+                                    FPUmultiply.a = { opCode[3,1] ? ~sourceReg1F[31,1] : sourceReg1F[31,1], sourceReg1F[0,31] };
+                                    FPUmultiply.start = 1; while( FPUmultiply.busy ) {} flags = FPUmultiply.flags & 5b10110;
+                                    __display("FUSED MULTIPLY RESULT = %x -> { %b %b %b }",FPUmultiply.result,FPUmultiply.result[31,1],FPUmultiply.result[23,8],FPUmultiply.result[0,23]);
+                                }
+                                case 1: {
+                                    __display("FUSED ADD (==0) SUB (==1) %b",( opCode[2,1] ^ opCode[3,1] ));
+                                    FPUaddsub.a = FPUmultiply.result; FPUaddsub.b = sourceReg3F;
+                                    FPUaddsub.addsub = ( opCode[2,1] ^ opCode[3,1] );
+                                    FPUaddsub.start = 1; while( FPUaddsub.busy ) {} flags = flags | ( FPUaddsub.flags & 5b00110 );
+                                }
+                            }
+                            FSM = { FSM[0,1], 1b0 };
+                        }
+                        result = FPUaddsub.result;
+                    }
+                    case 5b10100: {
+                        // NON 3 REGISTER FPU OPERATIONS
+                        switch( function7[2,5] ) {
+                            default: {
+                                // FADD.S FSUB.S
+                                FPUaddsub.a = sourceReg1F; FPUaddsub.b = sourceReg2F; FPUaddsub.addsub = function7[2,1]; FPUaddsub.start = 1; while( FPUaddsub.busy ) {}
+                                result = FPUaddsub.result; flags = FPUaddsub.flags & 5b00110;
+                            }
+                            case 5b00010: {
+                                // FMUL.S
+                                FPUmultiply.a = sourceReg1F; FPUmultiply.start = 1; while( FPUmultiply.busy ) {}
+                                result = FPUmultiply.result; flags = FPUmultiply.flags & 5b00110;
+                            }
+                            case 5b00011: {
+                                // FDIV.S
+                                FPUdivide.start = 1; while( FPUdivide.busy ) {}
+                                result = FPUdivide.result; flags = FPUdivide.flags & 5b01110;
+                            }
+                            case 5b01011: {
+                                // FSQRT.S
+                                FPUsqrt.start = 1; while( FPUsqrt.busy ) {}
+                                result = FPUsqrt.result; flags = FPUsqrt.flags & 5b00110;
+                            }
+                        }
+                    }
+                }
+                busy = 0;
+            }
+            default: {}
+        }
+    }
+}
+
+algorithm floatclassify(
+    input   uint1   start,
+    output  uint1   busy,
+    input   uint32  sourceReg1F,
+    output  uint10  classification
+) <autorun> {
+    classify A( a <: sourceReg1F );
+
+    while(1) {
+        switch( start ) {
+            case 1: {
+                busy = 1;
+                __display("CLASSIFY %x { %b }",sourceReg1F,{ A.INF, A.sNAN, A.qNAN, A.ZERO });
+                switch( { A.INF, A.sNAN, A.qNAN, A.ZERO } ) {
+                    case 4b1000: { classification = floatingpointnumber( sourceReg1F ).sign ? 10b0000000001 : 10b0010000000; }
+                    case 4b0100: { classification = 10b0100000000; }
+                    case 4b0010: { classification = 10b1000000000; }
+                    case 4b0001: { classification = ( sourceReg1F[0,23] == 0 ) ? floatingpointnumber( sourceReg1F ).sign ? 10b0000001000 : 10b0000010000 :
+                                                                                    floatingpointnumber( sourceReg1F ).sign ? 10b0000000100 : 10b0000100000; }
+                    default: { classification = floatingpointnumber( sourceReg1F ).sign ? 10b0000000010 : 10b0001000000; }
+                }
+                __display("CLASSIFICATION = %b",classification);
+                busy = 0;
+            }
+            case 0: {}
+        }
+    }
+}
+
+algorithm floatminmax(
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint3   function3,
+    input   uint32  sourceReg1F,
+    input   uint32  sourceReg2F,
+
+    output  uint5   flags,
+    output  uint32  result
+) <autorun> {
+    uint1   less = uninitialised;
+
+    classify A( a <: sourceReg1F ); classify B( a <: sourceReg2F );
+    floatcompare FPUlteq( a <: sourceReg1F, b <: sourceReg2F, less :> less );
+
+    while(1) {
+        switch( start ) {
+            case 0: {}
+            case 1: {
+                busy = 1;
+                __display("%x < %x = %b",sourceReg1F,sourceReg2F,less);
+                switch( ( A.sNAN | B.sNAN ) | ( A.qNAN & B.qNAN ) ) {
+                    case 1: { flags = 5b10000; result = 32h7fc00000; } // sNAN or both qNAN
+                    case 0: {
+                        switch( function3[0,1] ) {
+                            case 0: { __display("MIN"); result = A.qNAN ? ( B.qNAN ? 32h7fc00000 : sourceReg2F ) : B.qNAN ? sourceReg1F : ( less ? sourceReg1F : sourceReg2F); }
+                            case 1: { __display("MAX"); result = A.qNAN ? ( B.qNAN ? 32h7fc00000 : sourceReg2F ) : B.qNAN ? sourceReg1F : ( less ? sourceReg2F : sourceReg1F); }
+                        }
+                    }
+                }
+                busy = 0;
+            }
+        }
+    }
+}
+
+// COMPARISONS
+algorithm floatcomparison(
+    input   uint1   start,
+    output  uint1   busy,
+
+    input   uint3   function3,
+    input   uint32  sourceReg1F,
+    input   uint32  sourceReg2F,
+
+    output  uint5   flags,
+    output   uint1  result
+) <autorun> {
+    uint2   FSM = uninitialised;
+
+    uint1   less = uninitialised;
+    uint1   equal = uninitialised;
+
+    classify A( a <: sourceReg1F ); classify B( a <: sourceReg2F );
+    floatcompare FPUlteq( a <: sourceReg1F, b <: sourceReg2F, less :> less, equal :> equal );
+
+    while(1) {
+        switch( start ) {
+            case 0: {}
+            case 1: {
+                busy = 1;
+                switch( function3 ) {
+                    case 3b000: { __display("LESS/EQUAL"); flags = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 5b10000 : 0; result = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 0 : less | equal; }
+                    case 3b001: { __display("LESS"); flags = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 5b10000 : 0; result = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 0 : less; }
+                    case 3b010: { __display("EQUAL"); flags = ( A.sNAN | B.sNAN ) ? 5b10000 : 0; result = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 0 : equal; }
+                    default: { result = 0; }
+                }
+                __display("LE LT EQ = %b",result);
+                busy = 0;
+            }
+        }
+    }
+}
+
+algorithm floatsign(
+    input   uint3   function3,
+    input   uint32  sourceReg1F,
+    input   uint32  sourceReg2F,
+    output  uint32  result,
+) <autorun> {
+    while(1) {
+        switch( function3 ) {
+            default: { result = { sourceReg2F[31,1], sourceReg1F[0,31] }; }                         // FSGNJ.S
+            case 3b001: { result = { ~sourceReg2F[31,1], sourceReg1F[0,31] }; }                     // FSGNJN.S
+            case 3b010: { result = { sourceReg1F[31,1] ^ sourceReg2F[31,1], sourceReg1F[0,31] }; }  // FSGNJX.S
+        }
+    }
+}
+
+algorithm main(output int8 leds) {
+    uint7   opCode = 7b1010011; // ALL OTHER FPU OPERATIONS
+    // uint7   opCode = 7b1000011; // FMADD
+    // uint7   opCode = 7b1000111; // FMSUB
+    // uint7   opCode = 7b1001011; // FNMSUB
+    // uint7   opCode = 7b1001111; // FNMADD
+
+    uint7   function7 = 7b0010101; // OPERATION SWITCH
+    uint3   function3 = 3b000; // ROUNDING MODE OR SWITCH
+    uint5   rs1 = 5b00000; // SOURCEREG1 number
+    uint5   rs2 = 5b00000; // SOURCEREG2 number OR SWITCH
+
+    uint32  sourceReg1 = 32h00000001; // INTEGER SOURCEREG1
+
+    // 0 = 0
+    // 0.85471 = 32h3F5ACE46
+    // 1/3 = 32h3eaaaaab
+    // 1 = 32h3F800000
+    // 2 = 32h40000000
+    // 3 = 32h40400000
+    // 100 = 32h42C80000
+    // 2.658456E38 = 32h7F480000
+    // NaN = 32hffffffff
+    // qNaN = 32h7fc00000
+    // INF = 32h7F800000
+    uint32  sourceReg1F = 32h3F800000;
+    uint32  sourceReg2F = 32h40000000;
+    uint32  sourceReg3F = 32h40400000;
+
+    uint32  result = uninitialised;
+    uint1   frd = uninitialised;
+
+    uint5   FPUflags = 5b00000;
+    uint5   FPUnewflags = uninitialised;
+
+    floatclassify FPUclass( sourceReg1F <: sourceReg1F );
+    floatminmax FPUminmax( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
+    floatcomparison FPUcompare( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
+    floatsign FPUsign( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
+    floatcalc FPUcalculator( opCode <: opCode, function7 <: function7, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F, sourceReg3F <: sourceReg3F );
+    floatconvert FPUconvert( function7 <: function7, rs2 <: rs2, sourceReg1 <: sourceReg1, sourceReg1F <: sourceReg1F );
+
+    FPUclass.start := 0;
+    FPUcalculator.start := 0;
+    FPUconvert.start := 0;
+    FPUminmax.start := 0;
+    FPUcompare.start := 0;
+
+    ++:  // REQUIRED UNDER VERILATOR TO ALLOW SIGNALS TO PROPAGATE
+    ++:
+
+    //while(1) {
+        //switch( start ) {
+            //case 1: {
+                //busy = 1;
+                __display("I1 = %x -> { %b %b %b }",sourceReg1,sourceReg1[31,1],sourceReg1[23,8],sourceReg1[0,23]);
+                __display("F1 = %x -> { %b %b %b }",sourceReg1F,sourceReg1F[31,1],sourceReg1F[23,8],sourceReg1F[0,23]);
+                __display("F2 = %x -> { %b %b %b }",sourceReg2F,sourceReg2F[31,1],sourceReg2F[23,8],sourceReg2F[0,23]);
+                __display("F3 = %x -> { %b %b %b }",sourceReg2F,sourceReg3F[31,1],sourceReg3F[23,8],sourceReg3F[0,23]);
+                __display("OPCODE = %b FUNCTION7 = %b FUNCTION3 = %b RS1 = %b RS2 = %b",opCode, function7, function3, rs1, rs2);
+
+                frd = 1;
+                FPUnewflags = FPUflags;
+
+                switch( opCode[2,5] ) {
+                    default: {
+                        // FMADD.S FMSUB.S FNMSUB.S FNMADD.S
+                        __display("FUSED");
+                        FPUcalculator.start = 1; while( FPUcalculator.busy ) {} result = FPUcalculator.result;
+                        FPUnewflags = FPUflags | FPUcalculator.flags;
+                    }
+                    case 5b10100: {
+                        switch( function7[2,5] ) {
+                            default: {
+                                __display("ADD SUB MUL DIV SQRT");
+                                // FADD.S FSUB.S FMUL.S FDIV.S FSQRT.S
+                                FPUcalculator.start = 1; while( FPUcalculator.busy ) {} result = FPUcalculator.result;
+                                FPUnewflags = FPUflags | FPUcalculator.flags;
+                            }
+                            case 5b00100: {
+                                __display("SIGN");
+                                // FSGNJ.S FNGNJN.S FSGNJX.S
+                                result = FPUsign.result;
+                            }
+                            case 5b00101: {
+                                __display("MIN MAX");
+                                // FMIN.S FMAX.S
+                                FPUminmax.start = 1; while( FPUminmax.busy ) {} result = FPUminmax.result;
+                                FPUnewflags = FPUflags | FPUminmax.flags;
+                            }
+                            case 5b10100: {
+                                __display("LE LT EQ");
+                                // FEQ.S FLT.S FLE.S
+                                frd = 0; FPUcompare.start = 1; while( FPUcompare.busy ) {} result = FPUcompare.result;
+                                FPUnewflags = FPUflags | FPUcompare.flags;
+                            }
+                            case 5b11000: {
+                                __display("FLOAT TO (U)INT");
+                                // FCVT.W.S FCVT.WU.S
+                                frd = 0; FPUconvert.start = 1; while( FPUconvert.busy ) {} result = FPUconvert.result;
+                                FPUnewflags = FPUflags | FPUconvert.flags;
+                            }
+                            case 5b11010: {
+                                __display("(U)INT TO FLOAT");
+                                // FCVT.S.W FCVT.S.WU
+                                FPUconvert.start = 1; while( FPUconvert.busy ) {} result = FPUconvert.result;
+                                FPUnewflags = FPUflags | FPUconvert.flags;
+                            }
+                            case 5b11100: {
+                                // FCLASS.S FMV.X.W
+                                frd = 0;
+                                switch( function3[0,1] ) {
+                                    case 1: { __display("CLASS"); FPUclass.start = 1; while( FPUclass.busy ) {} result = FPUclass.classification; }
+                                    case 0: { __display("TO I-REG"); result = sourceReg1F; }
+                                }
+                            }
+                            case 5b11110: {
+                                __display("MOVE TO F-REG");
+                                // FMV.W.X
+                                result = sourceReg1;
+                            }
+                        }
+                    }
+                }
+                __display("FRD = %b RESULT = %x -> { %b %b %b }",frd,result,result[31,1],result[23,8],result[0,23]);
+                __display("FLAGS = { %b }",FPUnewflags);
+
+                //busy = 0;
+            //}
+            //default: {}
+        //}
+    //}
+}

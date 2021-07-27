@@ -175,7 +175,6 @@ vec3 cast_ray(vec3 orig, vec3 dir, Sphere* spheres, int nb_spheres, Light* light
     float s = 0.5*(dir.y + 1.0);
     return vec3_add(vec3_scale(s,make_vec3(0.2, 0.7, 0.8)),vec3_scale(s,make_vec3(0.0, 0.0, 0.5)));
   }
-
   vec3 reflect_dir = vec3_normalize(reflect(dir, N));
   vec3 refract_dir = vec3_normalize(refract(dir, N, material.refractive_index, 1));
   // offset the original point to avoid occlusion by the object itself
@@ -223,7 +222,6 @@ void set_pixel(int x, int y, float r, float g, float b) {
    r = max(0.0f, min(1.0f, r));
    g = max(0.0f, min(1.0f, g));
    b = max(0.0f, min(1.0f, b));
-   tpu_printf_centre( 29, WHITE, TRANSPARENT, "x = %d, y = %d, r = %f, g = %f, b = %f",x,y,r,g,b);
    gpu_pixelblock_pixel24( 255.0f * r, 255.0f * g, 255.0f * b );
 }
 
@@ -233,8 +231,8 @@ void render(Sphere* spheres, int nb_spheres, Light* lights, int nb_lights) {
       for (int i = 0; i<GL_width; i++) {
 	 float dir_x =  (i + 0.5) - GL_width/2.;
 	 float dir_y = -(j + 0.5) + GL_height/2.;    // this flips the image at the same time
-	 float dir_z = -GL_height/(2.*tan(fov/2.));
-	 vec3 C = cast_ray(make_vec3(0,0,0), vec3_normalize(make_vec3(dir_x, dir_y, dir_z)), spheres, nb_spheres, lights, nb_lights, 0);
+	 float dir_z = -GL_height/(2.*pawstanf(fov/2.));
+     vec3 C = cast_ray(make_vec3(0,0,0), vec3_normalize(make_vec3(dir_x, dir_y, dir_z)), spheres, nb_spheres, lights, nb_lights, 0);
 	 set_pixel(i,j,C.x,C.y,C.z);
       }
    }
@@ -255,7 +253,7 @@ void init_scene() {
     spheres[0] = make_Sphere(make_vec3(-3,    0,   -16), 2,      ivory);
     spheres[1] = make_Sphere(make_vec3(-1.0, -1.5, -12), 2,      glass);
     spheres[2] = make_Sphere(make_vec3( 1.5, -0.5, -18), 3, red_rubber);
-    //spheres[3] = make_Sphere(make_vec3( 7,    5,   -18), 4,     mirror);
+    spheres[3] = make_Sphere(make_vec3( 7,    5,   -18), 4,     mirror);
 
     lights[0] = make_Light(make_vec3(-20, 20,  20), 1.5);
     lights[1] = make_Light(make_vec3( 30, 50, -25), 1.8);

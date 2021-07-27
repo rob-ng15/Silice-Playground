@@ -1,3 +1,10 @@
+#INCLUDE/display.4th
+#INCLUDE/gpu.4th
+#INCLUDE/float.4th
+#INCLUDE/timers.4th
+
+hex
+
 variable x
 variable dx
 variable wx

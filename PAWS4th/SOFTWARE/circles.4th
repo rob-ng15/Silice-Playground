@@ -1,3 +1,9 @@
+#INCLUDE/display.4th
+#INCLUDE/gpu.4th
+#INCLUDE/timers.4th
+
+hex
+
 : drawcircles
   8 0 do
     3f 0 do

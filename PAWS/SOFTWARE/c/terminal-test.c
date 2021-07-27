@@ -3,9 +3,12 @@
 #include <stdio.h>
 #include <math.h>
 
+static inline float maxf(float x, float y) { return x>y?x:y; }
+static inline float minf(float x, float y) { return x<y?x:y; }
+
 int main( void ) {
     unsigned char lastPS2_KEYCODE = 0;
-    int i, j, k;
+    int i, j, k, l, m;
     float x, y;
 
     INITIALISEMEMORY();
@@ -29,13 +32,13 @@ int main( void ) {
         printw( "\nFloating Point Tests:\n\n" );
         j = rng(32) - 16; x = (float) j;
         k = rng(32) - 16; y = (float) k;
-        printw( "j = %d, k = %d, x = %f, y = %f, ", j, k, x, y );
-        x = x / rng(8); y = y / rng(8);
-        printw( " new x = %f, y = %f\n\n", x, y );
+        printw( "j = %d, k = %d, x = %f, y = %f\n", j, k, x, y );
+        l = rng(8) + 1; m = rng(8) + 1; x = x / l; y = y /m;
+        printw( "new x / %d = %f, y / %d  = %f\n\n", l, x, m, y );
         refresh();
 
         for( i = 0; i < 4; i++ ) {
-            printw("x %f, y %f\n    + = %f, - = %f, * = %f, / = %f sqrt = %f\n    =%d <%d <=%d    ", x, y, x+y, x-y, x*y, x/y, sqrtf(x), x==y, x<y, x<=y );
+            printw("x %f, y %f\n    + = %f, - = %f, * = %f, / = %f\n    sqrt = %f, min = %f, max = %f\n    =%d <%d <=%d    ", x, y, x+y, x-y, x*y, x/y, sqrtf(x), minf(x,y), maxf(x,y) ,x==y, x<y, x<=y );
             switch( rng(4 ) ) {
                 case 0:
                     printw( "x + 2 , y - 2\n" );

@@ -1,3 +1,9 @@
+#INCLUDE/display.4th
+#INCLUDE/gpu.4th
+#INCLUDE/timers.4th
+
+hex
+
 : drawrectangles
   40 0 do
     i 40 0 colour!

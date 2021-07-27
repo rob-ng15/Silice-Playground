@@ -1,9 +1,15 @@
 ( asteroids game for testing )
 ( not ported as of yet )
 
-hex
+#INCLUDE/audio.4th
+#INCLUDE/display.4th
+#INCLUDE/gpu.4th
+#INCLUDE/sprites.4th
+#INCLUDE/tiles.4th
+#INCLUDE/timers.4th
+#INCLUDE/tpu.4th
 
-: array create cells allot does> cells + ;
+hex
 
 0000 0000 0000 0000
 0000 0000 0000 0000
@@ -72,36 +78,26 @@ variable spawnasteroid
 variable workx
 variable worky
 
-c array lasteroidactive
-c array hasteroidactive
-c array lasteroidtype
-c array hasteroidtype
-c array lasteroiddirection
-c array hasteroiddirection
+variable (lasteroidactive) c cells allot
+variable (hasteroidactive) c cells allot
+variable (lasteroidtype) c cells allot
+variable (hasteroidtype) c cells allot
+variable (lasteroiddirection) c cells allot
+variable (hasteroiddirection) c cells allot
+: lasteroidactive 2* (lasteroidactive) + ;
+: hasteroidactive 2* (hasteroidactive) + ;
+: lasteroidtype 2* (lasteroidtype) + ;
+: hasteroidtype 2* (hasteroidtype) + ;
+: lasteroiddirection 2* (lasteroiddirection) + ;
+: hasteroiddirection 2* (hasteroiddirection) + ;
 
-8 array bulletdirections
-1f40 0 bulletdirections !
-1f84 1 bulletdirections !
-1c60 2 bulletdirections !
-1c84 3 bulletdirections !
-1cc0 4 bulletdirections !
-1c96 5 bulletdirections !
-1c1a 6 bulletdirections !
-1f96 7 bulletdirections !
+create (bulletdirections)
+1f40 , 1f84 , 1c60 , 1c84 , 1cc0 , 1c96 , 1c1a , 1f96 ,
+: bulletdirections 2* (bulletdirections) + ;
 
-c array updatedirections
-3e1 0 updatedirections !
-21  1 updatedirections !
-3f 2 updatedirections !
-3ff  3 updatedirections !
-3c1 4 updatedirections !
-3e2  5 updatedirections !
-22  6 updatedirections !
-41 7 updatedirections !
-5f 8 updatedirections !
-3e 9 updatedirections !
-3fe  a updatedirections !
-3df b updatedirections !
+create (updatedirections)
+3e1 , 21 , 3f , 3ff , 3c1 , 3e2 , 22 , 41 , 5f , 3e , 3fe , 3df ,
+: updatedirections 2* (updatedirections) + ;
 
 ( set ship vector block )
 ( 1 0 0 0 0 vectorvertex! )
@@ -110,93 +106,146 @@ c array updatedirections
 ( 1 -5 a 0 3 vectorvertex! )
 ( 1 0 0 0 4 vectorvertex! )
 
-: shipspritedata
-  0100 0100 0380 07c0
-  07c0 0fe0 0fe0 0fe0
-  1ff0 1ff0 1ff0 3ff8
-  3ff8 7efc 783c 0000
-  0001 001e 007e 07fe
-  1ffe fffc 7ffc 3ff8
-  1ff8 07f8 03f8 01f0
-  01f0 00e0 0060 0020
-  0000 6000 7800 7f00
-  7ff0 7ff8 3ff8 1fff
-  3ff8 3ff8 7ff0 7ff0
-  7800 6000 0000 0000
-  0020 0060 00e0 01f0
-  01f0 03f8 07f8 1ff8
-  3ff8 7ffc fffc 1ffe
-  07fe 007e 001e 0001
-  0000 3c1e 3f7e 1ffc
-  1ffc 0ff8 0ff8 0ff8
-  07f0 07f0 07f0 03e0
-  03e0 01c0 0080 0080
-  0400 0600 0700 0f80
-  0f80 1fc0 1fe0 1ff8
-  1ffc 3ffe 3fff 7ff8
-  7fe0 7e00 7800 8000
-  0000 0000 0006 001e
-  00fe 07fe 1ffc 3ffc
-  fff8 3ffc 1ffc 07fe
-  00fe 001e 0006 0000
-  8000 7800 7e00 7fe0
-  7ff8 3fff 3ffe 1ffc
-  1ff8 1fe0 1fc0 0f80
-  0f80 0700 0600 0400 ;
+create (shipspritedata)
+  0100 , 0100 , 0380 , 07c0 ,
+  07c0 , 0fe0 , 0fe0 , 0fe0 ,
+  1ff0 , 1ff0 , 1ff0 , 3ff8 ,
+  3ff8 , 7efc , 783c , 0000 ,
+  0001 , 001e , 007e , 07fe ,
+  1ffe , fffc , 7ffc , 3ff8 ,
+  1ff8 , 07f8 , 03f8 , 01f0 ,
+  01f0 , 00e0 , 0060 , 0020 ,
+  0000 , 6000 , 7800 , 7f00 ,
+  7ff0 , 7ff8 , 3ff8 , 1fff ,
+  3ff8 , 3ff8 , 7ff0 , 7ff0 ,
+  7800 , 6000 , 0000 , 0000 ,
+  0020 , 0060 , 00e0 , 01f0 ,
+  01f0 , 03f8 , 07f8 , 1ff8 ,
+  3ff8 , 7ffc , fffc , 1ffe ,
+  07fe , 007e , 001e , 0001 ,
+  0000 , 3c1e , 3f7e , 1ffc ,
+  1ffc , 0ff8 , 0ff8 , 0ff8 ,
+  07f0 , 07f0 , 07f0 , 03e0 ,
+  03e0 , 01c0 , 0080 , 0080 ,
+  0400 , 0600 , 0700 , 0f80 ,
+  0f80 , 1fc0 , 1fe0 , 1ff8 ,
+  1ffc , 3ffe , 3fff , 7ff8 ,
+  7fe0 , 7e00 , 7800 , 8000 ,
+  0000 , 0000 , 0006 , 001e ,
+  00fe , 07fe , 1ffc , 3ffc ,
+  fff8 , 3ffc , 1ffc , 07fe ,
+  00fe , 001e , 0006 , 0000 ,
+  8000 , 7800 , 7e00 , 7fe0 ,
+  7ff8 , 3fff , 3ffe , 1ffc ,
+  1ff8 , 1fe0 , 1fc0 , 0f80 ,
+  0f80 , 0700 , 0600 , 0400 ,
 
-: shipcrashdata
-  0020 4206 0006 1820
-  1800 0081 0400 4010
-  0000 0300 0302 6010
-  6000 0000 0419 8018
-  0000 0300 0302 6010
-  6000 0000 0419 8018
-  0020 4206 0006 1820
-  1800 0081 0400 4010
-  0020 4206 0006 1820
-  1800 0081 0400 4010
-  0000 0300 0302 6010
-  6000 0000 0419 8018
-  0000 0300 0302 6010
-  6000 0000 0419 8018
-  0020 4206 0006 1820
-  1800 0081 0400 4010
-  0020 4206 0006 1820
-  1800 0081 0400 4010
-  0000 0300 0302 6010
-  6000 0000 0419 8018
-  0000 0300 0302 6010
-  6000 0000 0419 8018
-  0020 4206 0006 1820
-  1800 0081 0400 4010
-  0020 4206 0006 1820
-  1800 0081 0400 4010
-  0000 0300 0302 6010
-  6000 0000 0419 8018
-  0000 0300 0302 6010
-  6000 0000 0419 8018
-  0020 4206 0006 1820
-  1800 0081 0400 4010 ;
+create (shipcrashdata)
+    0020 , 4206 , 0006 , 1820 ,
+    1800 , 0081 , 0400 , 4010 ,
+    0000 , 0300 , 0302 , 6010 ,
+    6000 , 0000 , 0419 , 8018 ,
+    0000 , 0300 , 0302 , 6010 ,
+    6000 , 0000 , 0419 , 8018 ,
+    0020 , 4206 , 0006 , 1820 ,
+    1800 , 0081 , 0400 , 4010 ,
+    0020 , 4206 , 0006 , 1820 ,
+    1800 , 0081 , 0400 , 4010 ,
+    0000 , 0300 , 0302 , 6010 ,
+    6000 , 0000 , 0419 , 8018 ,
+    0000 , 0300 , 0302 , 6010 ,
+    6000 , 0000 , 0419 , 8018 ,
+    0020 , 4206 , 0006 , 1820 ,
+    1800 , 0081 , 0400 , 4010 ,
+    0020 , 4206 , 0006 , 1820 ,
+    1800 , 0081 , 0400 , 4010 ,
+    0000 , 0300 , 0302 , 6010 ,
+    6000 , 0000 , 0419 , 8018 ,
+    0000 , 0300 , 0302 , 6010 ,
+    6000 , 0000 , 0419 , 8018 ,
+    0020 , 4206 , 0006 , 1820 ,
+    1800 , 0081 , 0400 , 4010 ,
+    0020 , 4206 , 0006 , 1820 ,
+    1800 , 0081 , 0400 , 4010 ,
+    0000 , 0300 , 0302 , 6010 ,
+    6000 , 0000 , 0419 , 8018 ,
+    0000 , 0300 , 0302 , 6010 ,
+    6000 , 0000 , 0419 , 8018 ,
+    0020 , 4206 , 0006 , 1820 ,
+    1800 , 0081 , 0400 , 4010 ,
 
-: bulletspritedata
-  2 0 do
-    0000 0000 0000 0000
-    0000 0100 0100 07c0
-    0100 0100 0000 0000
-    0000 0000 0000 0000
-    0000 0000 0000 0000
-    0000 0440 0280 0100
-    0280 0440 0000 0000
-    0000 0000 0000 0000
-    0000 0000 0000 0000
-    0000 0100 0380 07c0
-    0380 0100 0000 0000
-    0000 0000 0000 0000
-    0000 0000 0000 0000
-    0000 0540 0380 07c0
-    0380 0540 0000 0000
-    0000 0000 0000 0000
-  loop ;
+create (bulletspritedata)
+    0000 , 0000 , 0000 , 0000 ,
+    0000 , 0100 , 0100 , 07c0 ,
+    0100 , 0100 , 0000 , 0000 ,
+    0000 , 0000 , 0000 , 0000 ,
+    0000 , 0000 , 0000 , 0000 ,
+    0000 , 0440 , 0280 , 0100 ,
+    0280 , 0440 , 0000 , 0000 ,
+    0000 , 0000 , 0000 , 0000 ,
+    0000 , 0000 , 0000 , 0000 ,
+    0000 , 0100 , 0380 , 07c0 ,
+    0380 , 0100 , 0000 , 0000 ,
+    0000 , 0000 , 0000 , 0000 ,
+    0000 , 0000 , 0000 , 0000 ,
+    0000 , 0540 , 0380 , 07c0 ,
+    0380 , 0540 , 0000 , 0000 ,
+    0000 , 0000 , 0000 , 0000 ,
+    0000 , 0000 , 0000 , 0000 ,
+    0000 , 0100 , 0100 , 07c0 ,
+    0100 , 0100 , 0000 , 0000 ,
+    0000 , 0000 , 0000 , 0000 ,
+    0000 , 0000 , 0000 , 0000 ,
+    0000 , 0440 , 0280 , 0100 ,
+    0280 , 0440 , 0000 , 0000 ,
+    0000 , 0000 , 0000 , 0000 ,
+    0000 , 0000 , 0000 , 0000 ,
+    0000 , 0100 , 0380 , 07c0 ,
+    0380 , 0100 , 0000 , 0000 ,
+    0000 , 0000 , 0000 , 0000 ,
+    0000 , 0000 , 0000 , 0000 ,
+    0000 , 0540 , 0380 , 07c0 ,
+    0380 , 0540 , 0000 , 0000 ,
+    0000 , 0000 , 0000 , 0000 ,
+
+create (asteroidbitmap)
+    07f0 , 0ff8 , 1ffe , 1fff ,
+    3fff , ffff , fffe , fffc ,
+    ffff , 7fff , 7fff , 7ffe ,
+    3ffc , 3ffc , 0ff8 , 00f0 ,
+    1008 , 3c1c , 7f1e , ffff ,
+    7ffe , 7ffe , 3ff8 , 3ff0 ,
+    1ff8 , 0ff8 , 1ffc , 7ffe ,
+    ffff , 7ffe , 3dfc , 1878 ,
+    0787 , 1f8e , 0fde , 67fc ,
+    fffc , fffe , ffff , 7fff ,
+    7ffc , 3ff8 , 3ffc , 7ffe ,
+    ffff , fffe , 3ffc , 73f8 ,
+    1800 , 3f98 , 3ffc , 1ffe ,
+    1ffe , 1ffe , 7ffe , ffff ,
+    ffff , ffff , fffe , fffe ,
+    3ffc , 1ff0 , 07c0 , 0180 ,
+    0ff0 , 1ffc , 1ffe , 3ffe ,
+    3fff , 7fff , 7fff , ffff ,
+    ffff , fffe , fffc , 7ffc ,
+    3ffc , 3ff0 , 3ff0 , 07e0 ,
+    0000 , 0000 , 0000 , 0180 ,
+    03c0 , 03e0 , 07f8 , 07fc ,
+    0ffc , 1ffc , 1ff8 , 0ff8 ,
+    01f0 , 0000 , 0000 , 0000 ,
+    0600 , 0fe0 , 1ff8 , 3ffc ,
+    7ffe , fffe , 0fff , 1fff ,
+    1fff , 3fff , 7fff , 7ffe ,
+    3e7c , 3c38 , 3800 , 3000 ,
+    0020 , 4206 , 0006 , 1820 ,
+    1800 , 0081 , 0400 , 4010 ,
+    0000 , 0300 , 0302 , 6010 ,
+    6000 , 0000 , 0419 , 8018 ,
+
+: shipspritedata 80 0 do i 2* (shipspritedata) + @ loop ;
+: shipcrashdata 80 0 do i 2* (shipcrashdata) + @ loop ;
+: bulletspritedata 80 0 do i 2* (bulletspritedata) + @ loop ;
+: asteroidbitmap 80 0 do i 2* (asteroidbitmap) + @ loop ;
 
 : setshipsprite
   shipspritedata b lspritetile!
@@ -210,44 +259,10 @@ c array updatedirections
   bulletspritedata c lspritetile!
   bulletspritedata c uspritetile! ;
 
-: asteroidbitmap
-  07f0 0ff8 1ffe 1fff
-  3fff ffff fffe fffc
-  ffff 7fff 7fff 7ffe
-  3ffc 3ffc 0ff8 00f0
-  1008 3c1c 7f1e ffff
-  7ffe 7ffe 3ff8 3ff0
-  1ff8 0ff8 1ffc 7ffe
-  ffff 7ffe 3dfc 1878
-  0787 1f8e 0fde 67fc
-  fffc fffe ffff 7fff
-  7ffc 3ff8 3ffc 7ffe
-  ffff fffe 3ffc 73f8
-  1800 3f98 3ffc 1ffe
-  1ffe 1ffe 7ffe ffff
-  ffff ffff fffe fffe
-  3ffc 1ff0 07c0 0180
-  0ff0 1ffc 1ffe 3ffe
-  3fff 7fff 7fff ffff
-  ffff fffe fffc 7ffc
-  3ffc 3ff0 3ff0 07e0
-  0000 0000 0000 0180
-  03c0 03e0 07f8 07fc
-  0ffc 1ffc 1ff8 0ff8
-  01f0 0000 0000 0000
-  0600 0fe0 1ff8 3ffc
-  7ffe fffe 0fff 1fff
-  1fff 3fff 7fff 7ffe
-  3e7c 3c38 3800 3000
-  0020 4206 0006 1820
-  1800 0081 0400 4010
-  0000 0300 0302 6010
-  6000 0000 0419 8018 ;
-
 : newlevel
+  (lasteroidactive) c cells erase
+  (hasteroidactive) c cells erase
   c 0 do
-    0 i lasteroidactive !
-    0 i hasteroidactive !
     0 0 0 0 0 0 i lsprite
     0 0 0 0 0 0 i usprite
   loop
@@ -357,7 +372,7 @@ c array updatedirections
       1 totalasteroids +! then
     i hasteroidactive @ 0<> if
       1 totalasteroids +! then
-  loop ;
+  loop totalasteroids @ ;
 
 : lspawnasteroid
   ff spawnasteroid !
