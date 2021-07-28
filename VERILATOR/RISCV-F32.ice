@@ -241,7 +241,7 @@ algorithm floataddsub(
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
-    uint5   FSM = uninitialised;
+    uint6   FSM = uninitialised;
     uint1   sign = uninitialised;
     uint1   signA = uninitialised;
     uint1   signB = uninitialised;
@@ -263,29 +263,55 @@ algorithm floataddsub(
             case 1: {
                 busy = 1;
                 FSM = 1;
-                IF = ( A.INF | B.INF ); NN = ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); OF = 0; UF = 0;
                 while( FSM != 0 ) {
                     onehot( FSM ) {
                         case 0: {
-                            // FOR SUBTRACTION CHANGE SIGN OF SECOND VALUE
-                            signA = floatingpointnumber( a ).sign; signB = addsub ? ~floatingpointnumber( b ).sign : floatingpointnumber( b ).sign;
+                            IF = ( A.INF | B.INF ); NN = ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); OF = 0; UF = 0;
+                            __display("");
+                            __display("ADD (==0) SUB (==1) %b", addsub);
+                            __display("IF = %b NN = %b",IF,NN);
+                            __display("");
                         }
                         case 1: {
-                            // EXTRACT COMPONENTS - HOLD TO LEFT TO IMPROVE FRACTIONAL ACCURACY
-                            expA = floatingpointnumber( a ).exponent - 127;
-                            expB = floatingpointnumber( b ).exponent - 127;
-                            sigA = { 2b01, floatingpointnumber(a).fraction, 23b0 };
-                            sigB = { 2b01, floatingpointnumber(b).fraction, 23b0 };
+                            // FOR SUBTRACTION CHANGE SIGN OF SECOND VALUE
+                            signA = floatingpointnumber( a ).sign; signB = addsub ? ~floatingpointnumber( b ).sign : floatingpointnumber( b ).sign;
+                            __display("a = { %b %b %b } + ",signA,floatingpointnumber( a ).exponent,floatingpointnumber( a ).fraction);
+                            __display("b = { %b %b %b }",signB,floatingpointnumber( b ).exponent,floatingpointnumber( b ).fraction);
+                            __display("");
                         }
                         case 2: {
-                            // ADJUST TO EQUAL EXPONENTS
-                            switch( { expA < expB, expB < expA } ) {
-                                case 2b10: { sigA = sigA >> ( expB - expA ); expA = expB; }
-                                case 2b01: { sigB = sigB >> ( expA - expB ); expB = expA; }
-                                default: {}
+                            // EXTRACT COMPONENTS - HOLD TO LEFT TO IMPROVE FRACTIONAL ACCURACY
+                            switch( IF | NN ) {
+                                case 0: {
+                                    expA = floatingpointnumber( a ).exponent - 127;
+                                    expB = floatingpointnumber( b ).exponent - 127;
+                                    sigA = { 2b01, floatingpointnumber(a).fraction, 23b0 };
+                                    sigB = { 2b01, floatingpointnumber(b).fraction, 23b0 };
+                                    __display("    { %b %b %b } + ",signA,expA,sigA);
+                                    __display("    { %b %b %b }",signB,expB,sigB);
+                                    __display("");
+                                }
+                                case 1: {}
                             }
                         }
                         case 3: {
+                            // ADJUST TO EQUAL EXPONENTS
+                            switch( IF | NN ) {
+                                case 0: {
+                                    __display("Equalising Exponents");
+                                    switch( { expA < expB, expB < expA } ) {
+                                        case 2b10: { sigA = sigA >> ( expB - expA ); expA = expB; }
+                                        case 2b01: { sigB = sigB >> ( expA - expB ); expB = expA; }
+                                        default: {}
+                                    }
+                                    __display("    { %b %b %b } + ",signA,expA,sigA);
+                                    __display("    { %b %b %b }",signB,expB,sigB);
+                                    __display("");
+                                }
+                                case 1: {}
+                            }
+                        }
+                        case 4: {
                             switch( { IF | NN, A.ZERO | B.ZERO } ) {
                                 case 2b00: {
                                     switch( { signA, signB } ) {
@@ -307,14 +333,15 @@ algorithm floataddsub(
                                 }
                                 case 2b01: { result = ( B.ZERO ) ? a : addsub ? { ~floatingpointnumber( b ).sign, b[0,31] } : b; }
                                 default: {
+                                    __display("INF or NaN detected");
                                     switch( { IF, NN } ) {
-                                        case 2b10: { result = ( A.INF & B.INF) ? ( signA == signB ) ? { signA, 8b11111111, 23b0 } : 32h7fc00000 : { signA, 8b11111111, 23b0 }; }
+                                        case 2b10: { result = ( A.INF & B.INF) ? ( signA == signB ) ? { signA, 8b11111111, 23b0 } : 32h7fc00000 : A.INF ? a : { signB, 8b11111111, 23b0 }; }
                                         default: { result = 32h7fc00000; }
                                     }
                                 }
                             }
                         }
-                        case 4: {
+                        case 5: {
                             switch( { IF | NN, A.ZERO | B.ZERO } ) {
                                 case 2b00: {
                                     switch( sigA ) {
@@ -340,6 +367,9 @@ algorithm floataddsub(
                     }
                     FSM = FSM << 1;
                 }
+                __display("R = { %b %b %b }",floatingpointnumber( result ).sign,floatingpointnumber( result ).exponent,floatingpointnumber( result ).fraction);
+                __display("FLAGS = { %b }",flags);
+                __display("");
                 busy = 0;
             }
         }
@@ -367,7 +397,7 @@ algorithm floatmultiply(
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
-    uint2   FSM = uninitialised;
+    uint3   FSM = uninitialised;
 
     uint1   productsign <: floatingpointnumber( a ).sign ^ floatingpointnumber( b ).sign;
     uint48  product = uninitialised;
@@ -389,14 +419,28 @@ algorithm floatmultiply(
             case 1: {
                 busy = 1;
                 FSM = 1;
-                IF = ( A.INF | B.INF ); NN = ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); NV = ( A.INF | B.INF) & ( A.ZERO | B.ZERO ); OF = 0; UF = 0;
                 while( FSM != 0 ) {
                     onehot( FSM ) {
                         case 0: {
-                            product = UINTMUL.product[0,48];
-                            productexp = (floatingpointnumber( a ).exponent - 127) + (floatingpointnumber( b ).exponent - 127) + product[47,1];
+                            IF = ( A.INF | B.INF ); NN = ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); NV = ( A.INF | B.INF) & ( A.ZERO | B.ZERO ); OF = 0; UF = 0;
+                            __display("");
+                            __display("MUL");
+                            __display("IF = %b NN = %b NV = %b",IF,NN,NV);
+                            __display("a = { %b %b %b } x ",floatingpointnumber( a ).sign,floatingpointnumber( a ).exponent,floatingpointnumber( a ).fraction);
+                            __display("b = { %b %b %b }",floatingpointnumber( b ).sign,floatingpointnumber( b ).exponent,floatingpointnumber( b ).fraction);
+                            __display("---");
                         }
                         case 1: {
+                            switch( IF | NN ) {
+                                case 0: {
+                                    product = UINTMUL.product[0,48];
+                                    productexp = (floatingpointnumber( a ).exponent - 127) + (floatingpointnumber( b ).exponent - 127) + product[47,1];
+                                    __display("r = { %b %b %b }",productsign,productexp,product);
+                                }
+                                case 1: {}
+                            }
+                        }
+                        case 2: {
                             switch( { IF | NN, A.ZERO | B.ZERO } ) {
                                 case 2b00: {
                                     ( product ) = normalise48( product );
@@ -404,8 +448,9 @@ algorithm floatmultiply(
                                     ( productexp ) = adjustexp48( productexp, newfraction, product );
                                     ( result, OF, UF ) = combinecomponents( productsign, productexp, newfraction );
                                 }
-                                case 2b01: { result = { productsign, 31b0 }; }
+                                case 2b01: { __display("ZERO detected"); result = { productsign, 31b0 }; }
                                 default: {
+                                    __display("INF or NaN detected");
                                     switch( { IF, A.ZERO | B.ZERO } ) {
                                         case 2b11: { result = 32h7fc00000; }
                                         case 2b10: { result = NN ? 32h7fc00000 : { productsign, 8b11111111, 23b0 }; }
@@ -417,6 +462,9 @@ algorithm floatmultiply(
                     }
                     FSM = FSM << 1;
                 }
+                __display("R = { %b %b %b }",floatingpointnumber( result ).sign,floatingpointnumber( result ).exponent,floatingpointnumber( result ).fraction);
+                __display("FLAGS = { %b }",flags);
+                __display("");
                 busy = 0;
             }
         }
@@ -447,7 +495,7 @@ algorithm floatdivide(
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
-    uint4   FSM = uninitialised;
+    uint5   FSM = uninitialised;
     uint1   quotientsign <: floatingpointnumber( a ).sign ^ floatingpointnumber( b ).sign;
     int16   quotientexp = uninitialised;
     uint50  quotient = uninitialised;
@@ -468,10 +516,12 @@ algorithm floatdivide(
             case 1: {
                 busy = 1;
                 FSM = 1;
-                IF = ( A.INF | B.INF ); NN = ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); DZ = B.ZERO; OF = 0; UF = 0;
                 while( FSM != 0 ) {
                     onehot( FSM ) {
                         case 0: {
+                            IF = ( A.INF | B.INF ); NN = ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); DZ = B.ZERO; OF = 0; UF = 0;
+                        }
+                        case 1: {
                             sigA = { 1b1, floatingpointnumber(a).fraction, 26b0 };
                             sigB = { 27b1, floatingpointnumber(b).fraction };
                             quotientexp = (floatingpointnumber( a ).exponent - 127) - (floatingpointnumber( b ).exponent - 127);
@@ -479,8 +529,8 @@ algorithm floatdivide(
                             remainder = 0;
                             bit = 49;
                         }
-                        case 1: { while( ~sigB[0,1] ) { sigB = sigB >> 1; } }
-                        case 2: {
+                        case 2: { while( ~sigB[0,1] ) { sigB = sigB >> 1; } }
+                        case 3: {
                             switch( { IF | NN, A.ZERO | B.ZERO } ) {
                                 case 2b00: {
                                     while( bit != 63 ) {
@@ -490,16 +540,10 @@ algorithm floatdivide(
                                     while( quotient[48,2] != 0 ) { quotient = quotient >> 1; }
                                 }
                                 case 2b01: { result = ( A.ZERO & B.ZERO ) ? 32h7fc00000 : ( B.ZERO ) ? { quotientsign, 8b11111111, 23b0 } : { quotientsign, 31b0 }; }
-                                default: {
-                                    switch( { A.INF, A.sNAN | A.qNAN } ) {
-                                        case 2b00: { result = ( B.sNAN | B.qNAN ) ? 32h7fc00000 : { quotientsign, 31b0 }; }
-                                        case 2b10: { result = ( B.INF | B.sNAN | B.qNAN ) ? 32h7fc00000 : { quotientsign, 8b11111111, 23b0 }; }
-                                        default: { result = 32h7fc00000; }
-                                    }
-                                }
+                                default: { result = ( A.INF & B.INF ) | NN | B.ZERO ? 32h7fc00000 : A.ZERO | B.INF ? { quotientsign, 31b0 } : { quotientsign, 8b11111111, 23b0 }; }
                             }
                         }
-                        case 3: {
+                        case 4: {
                             switch( { IF | NN, A.ZERO | B.ZERO } ) {
                                 case 2b00: {
                                     switch( quotient ) {
@@ -936,19 +980,20 @@ algorithm floatsign(
 }
 
 algorithm main(output int8 leds) {
-    uint7   opCode = 7b1010011; // ALL OTHER FPU OPERATIONS
+    // uint7   opCode = 7b1010011; // ALL OTHER FPU OPERATIONS
     // uint7   opCode = 7b1000011; // FMADD
     // uint7   opCode = 7b1000111; // FMSUB
     // uint7   opCode = 7b1001011; // FNMSUB
-    // uint7   opCode = 7b1001111; // FNMADD
+    uint7   opCode = 7b1001111; // FNMADD
 
-    uint7   function7 = 7b0010101; // OPERATION SWITCH
+    uint7   function7 = 7b0000000; // OPERATION SWITCH
     uint3   function3 = 3b000; // ROUNDING MODE OR SWITCH
     uint5   rs1 = 5b00000; // SOURCEREG1 number
     uint5   rs2 = 5b00000; // SOURCEREG2 number OR SWITCH
 
     uint32  sourceReg1 = 32h00000001; // INTEGER SOURCEREG1
 
+    // -0 = 32h80000000
     // 0 = 0
     // 0.85471 = 32h3F5ACE46
     // 1/3 = 32h3eaaaaab
@@ -960,9 +1005,10 @@ algorithm main(output int8 leds) {
     // NaN = 32hffffffff
     // qNaN = 32h7fc00000
     // INF = 32h7F800000
-    uint32  sourceReg1F = 32h3F800000;
+    // -INF = 32hFF800000
+    uint32  sourceReg1F = 32h40000000;
     uint32  sourceReg2F = 32h40000000;
-    uint32  sourceReg3F = 32h40400000;
+    uint32  sourceReg3F = 32h40000000;
 
     uint32  result = uninitialised;
     uint1   frd = uninitialised;

@@ -231,7 +231,7 @@ void render(Sphere* spheres, int nb_spheres, Light* lights, int nb_lights) {
       for (int i = 0; i<GL_width; i++) {
 	 float dir_x =  (i + 0.5) - GL_width/2.;
 	 float dir_y = -(j + 0.5) + GL_height/2.;    // this flips the image at the same time
-	 float dir_z = -GL_height/(2.*pawstanf(fov/2.));
+	 float dir_z = -GL_height/(2.*tanf(fov/2.));
      vec3 C = cast_ray(make_vec3(0,0,0), vec3_normalize(make_vec3(dir_x, dir_y, dir_z)), spheres, nb_spheres, lights, nb_lights, 0);
 	 set_pixel(i,j,C.x,C.y,C.z);
       }
