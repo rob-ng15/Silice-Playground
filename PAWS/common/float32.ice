@@ -313,8 +313,8 @@ algorithm floataddsub(
                                 case 2b01: { result = ( B.ZERO ) ? a : addsub ? { ~floatingpointnumber( b ).sign, b[0,31] } : b; }
                                 default: {
                                     switch( { IF, NN } ) {
-                                        case 2b10: { result = ( A.INF & B.INF) ? ( signA == signB ) ? { signA, 8b11111111, 23b0 } : 32h7fc00000 : A.INF ? a : { signB, 8b11111111, 23b0 }; }
-                                        default: { result = 32h7fc00000; }
+                                        case 2b10: { result = ( A.INF & B.INF) ? ( signA == signB ) ? { signA, 8b11111111, 23b0 } : 32hffc00000 : A.INF ? a : { signB, 8b11111111, 23b0 }; }
+                                        default: { result = 32hffc00000; }
                                     }
                                 }
                             }
@@ -422,9 +422,9 @@ algorithm floatmultiply(
                                 case 2b01: { result = { productsign, 31b0 }; }
                                 default: {
                                     switch( { IF, A.ZERO | B.ZERO } ) {
-                                        case 2b11: { result = 32h7fc00000; }
-                                        case 2b10: { result = NN ? 32h7fc00000 : { productsign, 8b11111111, 23b0 }; }
-                                        default: { result = 32h7fc00000; }
+                                        case 2b11: { result = 32hffc00000; }
+                                        case 2b10: { result = NN ? 32hffc00000 : { productsign, 8b11111111, 23b0 }; }
+                                        default: { result = 32hffc00000; }
                                     }
                                 }
                             }
@@ -503,8 +503,8 @@ algorithm floatdivide(
                                     }
                                     while( quotient[48,2] != 0 ) { quotient = quotient >> 1; }
                                 }
-                                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 32h7fc00000 : ( B.ZERO ) ? { quotientsign, 8b11111111, 23b0 } : { quotientsign, 31b0 }; }
-                                default: { result = ( A.INF & B.INF ) | NN | B.ZERO ? 32h7fc00000 : A.ZERO | B.INF ? { quotientsign, 31b0 } : { quotientsign, 8b11111111, 23b0 }; }
+                                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 32hffc00000 : ( B.ZERO ) ? { quotientsign, 8b11111111, 23b0 } : { quotientsign, 31b0 }; }
+                                default: { result = ( A.INF & B.INF ) | NN | B.ZERO ? 32hffc00000 : A.ZERO | B.INF ? { quotientsign, 31b0 } : { quotientsign, 8b11111111, 23b0 }; }
                             }
                         }
                         case 2: {
@@ -566,12 +566,12 @@ algorithm floatsqrt(
                 FSM = 1;
                 IF = A.INF; NN = A.sNAN | A.qNAN; NV = sign; OF = 0; UF = 0;
                 switch( NN ) {
-                    case 1: { result = 32h7fc00000; }
+                    case 1: { result = 32hffc00000; }
                     default: {
                         switch( { IF | NN, A.ZERO } ) {
                             case 2b00: {
                                 switch( sign ) {
-                                    case 1: { result = 32h7fc00000; }
+                                    case 1: { result = 32hffc00000; }
                                     case 0: {
                                         while( FSM != 0 ) {
                                             onehot( FSM ) {
@@ -607,11 +607,11 @@ algorithm floatsqrt(
                             }
                             case 2b10: {
                                 switch( NN ) {
-                                    case 1: { result = 32h7fc00000; }
-                                    case 0: { NV = sign; result = sign ? 32h7fc00000 : a; }
+                                    case 1: { result = 32hffc00000; }
+                                    case 0: { NV = sign; result = sign ? 32hffc00000 : a; }
                                 }
                             }
-                            default: { NV = sign; result = sign ? 32h7fc00000 : a; }
+                            default: { NV = sign; result = sign ? 32hffc00000 : a; }
                         }
                     }
                 }

@@ -335,8 +335,8 @@ algorithm floataddsub(
                                 default: {
                                     __display("INF or NaN detected");
                                     switch( { IF, NN } ) {
-                                        case 2b10: { result = ( A.INF & B.INF) ? ( signA == signB ) ? { signA, 8b11111111, 23b0 } : 32h7fc00000 : A.INF ? a : { signB, 8b11111111, 23b0 }; }
-                                        default: { result = 32h7fc00000; }
+                                        case 2b10: { result = ( A.INF & B.INF) ? ( signA == signB ) ? { signA, 8b11111111, 23b0 } : 32hffc00000 : A.INF ? a : { signB, 8b11111111, 23b0 }; }
+                                        default: { result = 32hffc00000; }
                                     }
                                 }
                             }
@@ -452,9 +452,9 @@ algorithm floatmultiply(
                                 default: {
                                     __display("INF or NaN detected");
                                     switch( { IF, A.ZERO | B.ZERO } ) {
-                                        case 2b11: { result = 32h7fc00000; }
-                                        case 2b10: { result = NN ? 32h7fc00000 : { productsign, 8b11111111, 23b0 }; }
-                                        default: { result = 32h7fc00000; }
+                                        case 2b11: { result = 32hffc00000; }
+                                        case 2b10: { result = NN ? 32hffc00000 : { productsign, 8b11111111, 23b0 }; }
+                                        default: { result = 32hffc00000; }
                                     }
                                 }
                             }
@@ -538,8 +538,8 @@ algorithm floatdivide(
                                     }
                                     while( quotient[48,2] != 0 ) { quotient = quotient >> 1; }
                                 }
-                                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 32h7fc00000 : ( B.ZERO ) ? { quotientsign, 8b11111111, 23b0 } : { quotientsign, 31b0 }; }
-                                default: { result = ( A.INF & B.INF ) | NN | B.ZERO ? 32h7fc00000 : A.ZERO | B.INF ? { quotientsign, 31b0 } : { quotientsign, 8b11111111, 23b0 }; }
+                                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 32hffc00000 : ( B.ZERO ) ? { quotientsign, 8b11111111, 23b0 } : { quotientsign, 31b0 }; }
+                                default: { result = ( A.INF & B.INF ) | NN | B.ZERO ? 32hffc00000 : A.ZERO | B.INF ? { quotientsign, 31b0 } : { quotientsign, 8b11111111, 23b0 }; }
                             }
                         }
                         case 3: {
@@ -601,12 +601,12 @@ algorithm floatsqrt(
                 FSM = 1;
                 IF = A.INF; NN = A.sNAN | A.qNAN; NV = sign; OF = 0; UF = 0;
                 switch( A.sNAN | A.qNAN ) {
-                    case 1: { result = 32h7fc00000; }
+                    case 1: { result = 32hffc00000; }
                     default: {
                         switch( { IF | NN, A.ZERO } ) {
                             case 2b00: {
                                 switch( sign ) {
-                                    case 1: { result = 32h7fc00000; }
+                                    case 1: { result = 32hffc00000; }
                                     case 0: {
                                         while( FSM != 0 ) {
                                             onehot( FSM ) {
@@ -642,11 +642,11 @@ algorithm floatsqrt(
                             }
                             case 2b10: {
                                 switch( NN ) {
-                                    case 1: { result = 32h7fc00000; }
-                                    case 0: { NV = sign; result = sign ? 32h7fc00000 : a; }
+                                    case 1: { result = 32hffc00000; }
+                                    case 0: { NV = sign; result = sign ? 32hffc00000 : a; }
                                 }
                             }
-                            default: { NV = sign; result = sign ? 32h7fc00000 : a; }
+                            default: { NV = sign; result = sign ? 32hffc00000 : a; }
                         }
                     }
                 }
@@ -914,11 +914,11 @@ algorithm floatminmax(
                 busy = 1;
                 __display("%x < %x = %b",sourceReg1F,sourceReg2F,less);
                 switch( ( A.sNAN | B.sNAN ) | ( A.qNAN & B.qNAN ) ) {
-                    case 1: { flags = 5b10000; result = 32h7fc00000; } // sNAN or both qNAN
+                    case 1: { flags = 5b10000; result = 32hffc00000; } // sNAN or both qNAN
                     case 0: {
                         switch( function3[0,1] ) {
-                            case 0: { __display("MIN"); result = A.qNAN ? ( B.qNAN ? 32h7fc00000 : sourceReg2F ) : B.qNAN ? sourceReg1F : ( less ? sourceReg1F : sourceReg2F); }
-                            case 1: { __display("MAX"); result = A.qNAN ? ( B.qNAN ? 32h7fc00000 : sourceReg2F ) : B.qNAN ? sourceReg1F : ( less ? sourceReg2F : sourceReg1F); }
+                            case 0: { __display("MIN"); result = A.qNAN ? ( B.qNAN ? 32hffc00000 : sourceReg2F ) : B.qNAN ? sourceReg1F : ( less ? sourceReg1F : sourceReg2F); }
+                            case 1: { __display("MAX"); result = A.qNAN ? ( B.qNAN ? 32hffc00000 : sourceReg2F ) : B.qNAN ? sourceReg1F : ( less ? sourceReg2F : sourceReg1F); }
                         }
                     }
                 }
@@ -1005,7 +1005,7 @@ algorithm main(output int8 leds) {
     // 100 = 32h42C80000
     // 2.658456E38 = 32h7F480000
     // NaN = 32hffffffff
-    // qNaN = 32h7fc00000
+    // qNaN = 32hffc00000
     // INF = 32h7F800000
     // -INF = 32hFF800000
     uint32  sourceReg1F = 32h3F800000;
