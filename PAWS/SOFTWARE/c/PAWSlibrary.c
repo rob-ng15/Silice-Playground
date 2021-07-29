@@ -1327,45 +1327,6 @@ int clrtoeol( void ) {
     return( true );
 }
 
-// MATH ROUTINES
-float pawssinf( float radians ) {
-    float series = radians, power = radians, square = radians * radians, factorial = 1;
-    int factorialcount = 1, flipflop = 1;
-    for( int n = 1; n < 16; n++ ) {
-        power = power * square;
-        factorial = factorial * ( ++factorialcount ) * ( ++factorialcount );
-        switch( flipflop ) {
-            case 1: series = series - ( power / factorial );
-                break;
-            case 0: series = series + ( power / factorial );
-                break;
-        }
-        flipflop = 1 - flipflop;
-    }
-    return( series );
-}
-
-float pawscosf( float radians ) {
-    float series = 1, power = 1, square = radians * radians, factorial = 1;
-    int factorialcount = 0, flipflop = 1;
-    for( int n = 1; n < 16; n++ ) {
-        power = power * square;
-        factorial = factorial * ( ++factorialcount ) * ( ++factorialcount );
-        switch( flipflop ) {
-            case 1: series = series - ( power / factorial );
-                break;
-            case 0: series = series + ( power / factorial );
-                break;
-        }
-        flipflop = 1 - flipflop;
-    }
-    return( series );
-}
-
-float pawstanf( float radians ) {
-    return( pawssinf( radians ) / pawscosf( radians ) );
-}
-
 // newlib support routines
 #ifndef MALLOC_MEMORY
 #define MALLOC_MEMORY ( 16384 * 1024 )

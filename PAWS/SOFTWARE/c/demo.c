@@ -1135,8 +1135,8 @@ struct Point2D Rotate2D( struct Point2D point, int xc, int yc, int angle, float 
     struct Point2D newpoint;
     float radians = angle*0.01745329252;
 
-    newpoint.dx = ( (point.dx * scale)*pawscosf(radians)-(point.dy * scale)*pawssinf(radians) ) + xc;
-    newpoint.dy = ( (point.dx * scale)*pawssinf(radians)+(point.dy * scale)*pawscosf(radians) ) + yc;
+    newpoint.dx = ( (point.dx * scale)*cosf(radians)-(point.dy * scale)*sinf(radians) ) + xc;
+    newpoint.dy = ( (point.dx * scale)*sinf(radians)+(point.dy * scale)*cosf(radians) ) + yc;
 
     return( newpoint );
 }

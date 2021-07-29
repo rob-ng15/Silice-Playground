@@ -10,8 +10,8 @@
 ./clang.sh c/smttest.c PAWS/L-SMT.PAW
 ./clang.sh c/tune.c PAWS/L-TUNE.PAW
 
-./clangF.sh c/demo.c PAWS/LF-DEMO.PAW
-./clangF.sh c/mandelbrot.c PAWS/LF-MAND.PAW
-./clangF.sh c/raytracing.c PAWS/LF-RAY.PAW
-./clangF.sh c/scale.c PAWS/LF-SCALE.PAW
-./clangF.sh c/terminal-test.c PAWS/LF-TERM.PAW
+./clang.sh c/demo.c PAWS/L-DEMO.PAW
+./clang.sh c/mandelbrot.c PAWS/L-MAND.PAW
+./clang.sh c/raytracing.c PAWS/L-RAY.PAW
+./clang.sh c/scale.c PAWS/L-SCALE.PAW
+./clang.sh c/terminal-test.c PAWS/L-TERM.PAW

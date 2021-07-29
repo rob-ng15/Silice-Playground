@@ -220,7 +220,7 @@ algorithm floattoint(
                         NV = ( exp > 30 );
                     }
                     case 2b01: { result = 0; }
-                    default: { NV = 1; result = NN ? 32hffffffff : floatingpointnumber( a ).sign ? 32hffffffff : 32h7fffffff; }
+                    default: { NV = 1; result = NN ? 32h7fffffff : floatingpointnumber( a ).sign ? 32hffffffff : 32h7fffffff; }
                 }
                 busy = 0;
             }
@@ -727,6 +727,9 @@ algorithm floatcompare(
     }
 }
 
+// Risc-V FPU STARTS HERE
+// Uses float32 for actual floating point routines
+
 // CONVERSION BETWEEN FLOAT AND SIGNED/UNSIGNED INTEGERS
 algorithm floatconvert(
     input   uint1   start,
@@ -819,7 +822,7 @@ algorithm floatcalc(
                                 case 1: {
                                     __display("FUSED ADD (==0) SUB (==1) %b",( opCode[2,1] ^ opCode[3,1] ));
                                     FPUaddsub.a = FPUmultiply.result; FPUaddsub.b = sourceReg3F;
-                                    FPUaddsub.addsub = ( opCode[2,1] ^ opCode[3,1] );
+                                    FPUaddsub.addsub = opCode[2,1];
                                     FPUaddsub.start = 1; while( FPUaddsub.busy ) {} flags = flags | ( FPUaddsub.flags & 5b00110 );
                                 }
                             }

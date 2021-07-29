@@ -325,11 +325,6 @@ extern void SMTSTART( unsigned int );
 extern unsigned char SMTSTATE( void );
 extern void INITIALISEMEMORY( void );
 
-// MATHS ROUTINES
-extern float pawssinf( float );
-extern float pawscosf( float );
-extern float pawstanf( float );
-
 // SIMPLE CURSES
 #define COLORS 64
 #define COLOR_PAIRS 16

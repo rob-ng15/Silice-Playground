@@ -188,7 +188,7 @@ algorithm floatcalc(
                                 }
                                 case 1: {
                                     FPUaddsub.a = FPUmultiply.result; FPUaddsub.b = sourceReg3F;
-                                    FPUaddsub.addsub = ( opCode[2,1] ^ opCode[3,1] );
+                                    FPUaddsub.addsub = opCode[2,1];
                                     FPUaddsub.start = 1; while( FPUaddsub.busy ) {} flags = flags | ( FPUaddsub.flags & 5b00110 );
                                 }
                             }

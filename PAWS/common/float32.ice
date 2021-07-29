@@ -220,7 +220,7 @@ algorithm floattoint(
                         NV = ( exp > 30 );
                     }
                     case 2b01: { result = 0; }
-                    default: { NV = 1; result = NN ? 32hffffffff : floatingpointnumber( a ).sign ? 32hffffffff : 32h7fffffff; }
+                    default: { NV = 1; result = NN ? 32h7fffffff : floatingpointnumber( a ).sign ? 32hffffffff : 32h7fffffff; }
                 }
                 busy = 0;
             }
