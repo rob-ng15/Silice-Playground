@@ -48,7 +48,6 @@ circuitry store( input accesssize, input location, input value, input memorybusy
 }
 
 algorithm PAWSCPU(
-    output  uint8   leds,
     input   uint1   clock_CPUdecoder,
     output  uint3   accesssize,
     output  uint32  address,
@@ -221,7 +220,6 @@ algorithm PAWSCPU(
         rs1 <: rs1,
         sourceReg1 <: sourceReg1,
         FPUflags :> FPUflags,
-        FPUflags :> leds,
         FPUnewflags <: FPUnewflags
     );
 

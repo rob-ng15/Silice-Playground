@@ -66,12 +66,7 @@ algorithm classify(
 // CIRCUITS TO DEAL WITH 48 BIT FRACTIONS TO 23 BIT FRACTIONS
 // REALIGN A 48BIT NUMBER SO MSB IS 1
 circuitry normalise48( inout bitstream ) {
-    while( ~bitstream[47,1] ) {
-        switch( bitstream[46,2] ) {
-            case 2b00: { bitstream = bitstream << 2; }
-            default: { bitstream = bitstream << 1; }
-        }
-    }
+    while( ~bitstream[47,1] ) { bitstream = bitstream << 1; }
 }
 // EXTRACT 23 BIT FRACTION FROM LEFT ALIGNED 48 BIT FRACTION WITH ROUNDING
 circuitry round48( input bitstream, output roundfraction ) {
@@ -337,12 +332,7 @@ algorithm floataddsub(
                                             switch( sigA[47,1] ) {
                                                 case 1: { expA = expA + 1; }
                                                 default: {
-                                                    while( ~sigA[46,1] ) {
-                                                        switch( sigA[45,2] ) {
-                                                            case 2b00: { sigA = sigA << 2; expA = expA - 2; }
-                                                            default: { sigA = sigA << 1; expA = expA - 1; }
-                                                        }
-                                                    }
+                                                    while( ~sigA[46,1] ) { sigA = sigA << 1; expA = expA - 1; }
                                                     sigA = sigA << 1;
                                                 }
                                             }

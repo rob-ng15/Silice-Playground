@@ -24,10 +24,6 @@ algorithm fpu(
     floatcalc FPUcalculator( opCode <: opCode, function7 <: function7, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F, sourceReg3F <: sourceReg3F );
     floatconvert FPUconvert( function7 <: function7, rs2 <: rs2, sourceReg1 <: sourceReg1, sourceReg1F <: sourceReg1F );
 
-    FPUclass.start := 0;
-    FPUminmax.start := 0;
-    FPUcompare.start := 0;
-    FPUsign.start := 0;
     FPUcalculator.start := 0;
     FPUconvert.start := 0;
 
@@ -55,16 +51,16 @@ algorithm fpu(
                             }
                             case 5b00100: {
                                 // FSGNJ.S FNGNJN.S FSGNJX.S
-                                FPUsign.start = 1; while( FPUsign.busy ) {} result = FPUsign.result;
+                                result = FPUsign.result;
                             }
                             case 5b00101: {
                                 // FMIN.S FMAX.S
-                                FPUminmax.start = 1; while( FPUminmax.busy ) {} result = FPUminmax.result;
+                                result = FPUminmax.result;
                                 FPUnewflags = FPUflags | FPUminmax.flags;
                             }
                             case 5b10100: {
                                 // FEQ.S FLT.S FLE.S
-                                frd = 0; FPUcompare.start = 1; while( FPUcompare.busy ) {} result = FPUcompare.result;
+                                frd = 0; result = FPUcompare.result;
                                 FPUnewflags = FPUflags | FPUcompare.flags;
                             }
                             case 5b11000: {
@@ -81,7 +77,7 @@ algorithm fpu(
                                 // FCLASS.S FMV.X.W
                                 frd = 0;
                                 switch( function3[0,1] ) {
-                                    case 1: { FPUclass.start = 1; while( FPUclass.busy ) {} result = FPUclass.classification; }
+                                    case 1: { result = FPUclass.classification; }
                                     case 0: { result = sourceReg1F; }
                                 }
                             }
@@ -230,17 +226,12 @@ algorithm floatcalc(
 }
 
 algorithm floatclassify(
-    input   uint1   start,
-    output  uint1   busy,
     input   uint32  sourceReg1F,
     output  uint10  classification
 ) <autorun> {
     classify A( a <: sourceReg1F );
 
     while(1) {
-        switch( start ) {
-            case 1: {
-                busy = 1;
                 switch( { A.INF, A.sNAN, A.qNAN, A.ZERO } ) {
                     case 4b1000: { classification = floatingpointnumber( sourceReg1F ).sign ? 10b0000000001 : 10b0010000000; }
                     case 4b0100: { classification = 10b0100000000; }
@@ -249,17 +240,10 @@ algorithm floatclassify(
                                                                                     floatingpointnumber( sourceReg1F ).sign ? 10b0000000100 : 10b0000100000; }
                     default: { classification = floatingpointnumber( sourceReg1F ).sign ? 10b0000000010 : 10b0001000000; }
                 }
-                busy = 0;
-            }
-            case 0: {}
-        }
     }
 }
 
 algorithm floatminmax(
-    input   uint1   start,
-    output  uint1   busy,
-
     input   uint3   function3,
     input   uint32  sourceReg1F,
     input   uint32  sourceReg2F,
@@ -268,15 +252,10 @@ algorithm floatminmax(
     output  uint32  result
 ) <autorun> {
     uint1   less = uninitialised;
-
     classify A( a <: sourceReg1F ); classify B( a <: sourceReg2F );
     floatcompare FPUlteq( a <: sourceReg1F, b <: sourceReg2F, less :> less );
 
     while(1) {
-        switch( start ) {
-            case 0: {}
-            case 1: {
-                busy = 1;
                 switch( ( A.sNAN | B.sNAN ) | ( A.qNAN & B.qNAN ) ) {
                     case 1: { flags = 5b10000; result = 32h7fc00000; } // sNAN or both qNAN
                     case 0: {
@@ -286,17 +265,11 @@ algorithm floatminmax(
                         }
                     }
                 }
-                busy = 0;
-            }
-        }
     }
 }
 
 // COMPARISONS
 algorithm floatcomparison(
-    input   uint1   start,
-    output  uint1   busy,
-
     input   uint3   function3,
     input   uint32  sourceReg1F,
     input   uint32  sourceReg2F,
@@ -304,52 +277,32 @@ algorithm floatcomparison(
     output  uint5   flags,
     output   uint1  result
 ) <autorun> {
-    uint2   FSM = uninitialised;
-
     uint1   less = uninitialised;
     uint1   equal = uninitialised;
-
     classify A( a <: sourceReg1F ); classify B( a <: sourceReg2F );
     floatcompare FPUlteq( a <: sourceReg1F, b <: sourceReg2F, less :> less, equal :> equal );
 
     while(1) {
-        switch( start ) {
-            case 0: {}
-            case 1: {
-                busy = 1;
                 switch( function3 ) {
                     case 3b000: { flags = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 5b10000 : 0; result = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 0 : less | equal; }
                     case 3b001: { flags = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 5b10000 : 0; result = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 0 : less; }
                     case 3b010: { flags = ( A.sNAN | B.sNAN ) ? 5b10000 : 0; result = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 0 : equal; }
                     default: { result = 0; }
                 }
-                busy = 0;
-            }
-        }
     }
 }
 
 algorithm floatsign(
-    input   uint1   start,
-    output  uint1   busy,
-
     input   uint3   function3,
     input   uint32  sourceReg1F,
     input   uint32  sourceReg2F,
     output  uint32  result,
 ) <autorun> {
     while(1) {
-        switch( start ) {
-            case 1: {
-                busy = 1;
                 switch( function3 ) {
                     default: { result = { sourceReg2F[31,1], sourceReg1F[0,31] }; }                         // FSGNJ.S
                     case 3b001: { result = { ~sourceReg2F[31,1], sourceReg1F[0,31] }; }                     // FSGNJN.S
                     case 3b010: { result = { sourceReg1F[31,1] ^ sourceReg2F[31,1], sourceReg1F[0,31] }; }  // FSGNJX.S
                 }
-                busy = 0;
-            }
-            case 0: {}
-        }
     }
 }

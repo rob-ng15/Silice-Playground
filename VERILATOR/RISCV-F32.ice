@@ -495,7 +495,7 @@ algorithm floatdivide(
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
-    uint5   FSM = uninitialised;
+    uint4   FSM = uninitialised;
     uint1   quotientsign <: floatingpointnumber( a ).sign ^ floatingpointnumber( b ).sign;
     int16   quotientexp = uninitialised;
     uint50  quotient = uninitialised;
@@ -529,8 +529,7 @@ algorithm floatdivide(
                             remainder = 0;
                             bit = 49;
                         }
-                        case 2: { while( ~sigB[0,1] ) { sigB = sigB >> 1; } }
-                        case 3: {
+                        case 2: {
                             switch( { IF | NN, A.ZERO | B.ZERO } ) {
                                 case 2b00: {
                                     while( bit != 63 ) {
@@ -543,7 +542,7 @@ algorithm floatdivide(
                                 default: { result = ( A.INF & B.INF ) | NN | B.ZERO ? 32h7fc00000 : A.ZERO | B.INF ? { quotientsign, 31b0 } : { quotientsign, 8b11111111, 23b0 }; }
                             }
                         }
-                        case 4: {
+                        case 3: {
                             switch( { IF | NN, A.ZERO | B.ZERO } ) {
                                 case 2b00: {
                                     switch( quotient ) {
@@ -983,13 +982,13 @@ algorithm floatsign(
 }
 
 algorithm main(output int8 leds) {
-    // uint7   opCode = 7b1010011; // ALL OTHER FPU OPERATIONS
+    uint7   opCode = 7b1010011; // ALL OTHER FPU OPERATIONS
     // uint7   opCode = 7b1000011; // FMADD
     // uint7   opCode = 7b1000111; // FMSUB
     // uint7   opCode = 7b1001011; // FNMSUB
-    uint7   opCode = 7b1001111; // FNMADD
+    // uint7   opCode = 7b1001111; // FNMADD
 
-    uint7   function7 = 7b0000000; // OPERATION SWITCH
+    uint7   function7 = 7b0001100; // OPERATION SWITCH
     uint3   function3 = 3b000; // ROUNDING MODE OR SWITCH
     uint5   rs1 = 5b00000; // SOURCEREG1 number
     uint5   rs2 = 5b00000; // SOURCEREG2 number OR SWITCH
@@ -1009,8 +1008,8 @@ algorithm main(output int8 leds) {
     // qNaN = 32h7fc00000
     // INF = 32h7F800000
     // -INF = 32hFF800000
-    uint32  sourceReg1F = 32h40000000;
-    uint32  sourceReg2F = 32h40000000;
+    uint32  sourceReg1F = 32h3F800000;
+    uint32  sourceReg2F = 32h40400000;
     uint32  sourceReg3F = 32h40000000;
 
     uint32  result = uninitialised;

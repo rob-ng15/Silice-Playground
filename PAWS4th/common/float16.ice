@@ -27,12 +27,22 @@ bitfield floatingpointnumber{
     uint10  fraction
 }
 
+bitfield floatingpointflags{
+    uint1   IF,     // infinity as an argument
+    uint1   NN,     // NaN as an argument
+    uint1   NV,     // Result is not valid,
+    uint1   DZ,     // Divide by zero
+    uint1   OF,     // Result overflowed
+    uint1   UF,     // Result underflowed
+    uint1   NX      // Not exact ( integer to float conversion caused bits to be dropped )
+}
+
 // COMBINE COMPONENTS INTO FLOATING POINT NUMBER
 // NOTE exp from addsub multiply divide is 8 bit biased ( ie, exp + 15 )
 // small numbers return 0, bit numbers return max
 circuitry combinecomponents( input sign, input exp, input fraction, output f16 , output OF, output UF ) {
     switch( ( exp > 30 ) | ( exp < 0 ) ) {
-        case 1: { f16 = ( exp < 0 ) ? 0 : { sign, 5b11111, 10h0 }; OF = ( exp > 254 ); UF = ( exp < 0 ); }
+        case 1: { f16 = ( exp < 0 ) ? 0 : { sign, 5b11111, 10h0 }; OF = ( exp > 30 ); UF = ( exp < 0 ); }
         case 0: { f16 = { sign, exp[0,5], fraction[0,10] }; OF = 0; UF = 0; }
     }
 }
@@ -45,9 +55,10 @@ algorithm classify(
     output  uint1   qNAN,
     output  uint1   ZERO
 ) <autorun> {
-    INF := ( floatingpointnumber(a).exponent == 5b11111 ) & ( floatingpointnumber(a).fraction == 0 );
-    sNAN := ( floatingpointnumber(a).exponent == 5b11111 ) & ( floatingpointnumber(a).fraction == 10h3ff );
-    qNAN := ( floatingpointnumber(a).exponent == 5b11111 ) & ( floatingpointnumber(a).fraction == 10h200 );
+    uint1   expFF <: ( floatingpointnumber(a).exponent == 5b11111 );
+    INF := expFF & ~a[9,1];
+    sNAN := expFF & a[9,1] & a[8,1];
+    qNAN := expFF & a[9,1] & ~a[8,1];
     ZERO := ( floatingpointnumber(a).exponent == 0 );
 }
 
