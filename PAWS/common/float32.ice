@@ -88,10 +88,8 @@ circuitry adjustexp48( inout exponent, input nf, input of ) {
 algorithm inttofloat(
     input   uint1   start,
     output  uint1   busy,
-
     input   uint32  a,
     input   uint1   dounsigned,
-
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
@@ -104,7 +102,6 @@ algorithm inttofloat(
 
     uint1 OF = uninitialised; uint1 UF = uninitialised; uint1 NX = uninitialised;
     flags := { 4b0, OF, UF, NX };
-
     busy = 0;
 
     while(1) {
@@ -152,11 +149,11 @@ algorithm inttofloat(
 
 // CONVERT FLOAT TO UNSIGNED/SIGNED INTEGERS
 algorithm floattouint(
+    input   uint1   start,
+    output  uint1   busy,
     input   uint32  a,
     output  uint7   flags,
-    output  uint32  result,
-    output  uint1   busy,
-    input   uint1   start
+    output  uint32  result
 ) <autorun> {
     int16    exp = uninitialised;
     uint33   sig = uninitialised;
@@ -164,7 +161,6 @@ algorithm floattouint(
     uint1 IF = uninitialised; uint1 NN = uninitialised; uint1 NV = uninitialised;
     classify A( a <: a );
     flags := { IF, NN, NV, 4b0000 };
-
     busy = 0;
 
     while(1) {
@@ -194,11 +190,11 @@ algorithm floattouint(
     }
 }
 algorithm floattoint(
+    input   uint1   start,
+    output  uint1   busy,
     input   uint32  a,
     output  uint7   flags,
-    output  uint32  result,
-    output  uint1   busy,
-    input   uint1   start
+    output  uint32  result
 ) <autorun> {
     int16   exp = uninitialised;
     uint33  sig = uninitialised;
@@ -206,7 +202,6 @@ algorithm floattoint(
     uint1 IF = uninitialised; uint1 NN = uninitialised; uint1 NV = uninitialised;
     classify A( a <: a );
     flags := { IF, NN, NV, 4b0000 };
-
     busy = 0;
 
     while(1) {
@@ -236,11 +231,9 @@ algorithm floattoint(
 algorithm floataddsub(
     input   uint1   start,
     output  uint1   busy,
-
     input   uint32  a,
     input   uint32  b,
     input   uint1   addsub,
-
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
@@ -257,7 +250,6 @@ algorithm floataddsub(
     uint1 IF = uninitialised; uint1 NN = uninitialised; uint1 OF = uninitialised; uint1 UF = uninitialised;
     classify A( a <: a ); classify B( a <: b );
     flags := { IF, NN, 1b0, 1b0, OF, UF, 1b0 };
-
     busy = 0;
 
     while(1) {
@@ -573,7 +565,7 @@ algorithm floatsqrt(
                 busy = 1;
                 FSM = 1;
                 IF = A.INF; NN = A.sNAN | A.qNAN; NV = sign; OF = 0; UF = 0;
-                switch( A.sNAN | A.qNAN ) {
+                switch( NN ) {
                     case 1: { result = 32h7fc00000; }
                     default: {
                         switch( { IF | NN, A.ZERO } ) {

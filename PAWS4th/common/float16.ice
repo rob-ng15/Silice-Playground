@@ -76,18 +76,13 @@ circuitry adjustexp22( inout exponent, input nf, input of ) {
     exponent = 15 + exponent + ( ( nf == 0 ) & of[10,1] );
 }
 
-// ALIGN FRACTION TO THE RIGHT FOR DIVISION
-circuitry alignright22( inout bitstream ) {
-     while( ~bitstream[0,1] ) { bitstream = bitstream >> 1; }
-}
-
 // CONVERT SIGNED INTEGERS TO FLOAT
 algorithm inttofloat(
     input   uint1   start,
     output  uint1   busy,
     input   int16   a,
     input   uint1   dounsigned,
-    output  uint5   flags,
+    output  uint7   flags,
     output  uint16  result
 ) <autorun> {
     uint2   FSM = uninitialised;
@@ -98,7 +93,7 @@ algorithm inttofloat(
     uint16  number = uninitialised;
 
     uint1 OF = uninitialised; uint1 UF = uninitialised; uint1 NX = uninitialised;
-    flags := { 1b0, 1b0, OF, UF, NX };
+    flags := { 4b0, OF, UF, NX };
     busy = 0;
 
     while(1) {
@@ -112,8 +107,8 @@ algorithm inttofloat(
                     onehot( FSM ) {
                         case 0: {
                             // SIGNED / UNSIGNED
-                            sign = dounsigned ? 0 : a[15,1];
-                            number = dounsigned ? a : a[15,1] ? -a : a ;
+                            sign = dounsigned ? 0 : floatingpointnumber( a ).sign;
+                            number = dounsigned ? a : floatingpointnumber( a ).sign ? -a : a ;
                         }
                         case 1: {
                             switch( number ) {
@@ -130,13 +125,13 @@ algorithm inttofloat(
                                                 NX = ( zeros < 5 );
                                             }
                                         }
-                                        FSM2 = { FSM2[0,1], 1b0 };
+                                        FSM2 = FSM2 << 1;
                                     }
                                 }
                             }
                         }
                     }
-                    FSM = { FSM[0,1], 1b0 };
+                    FSM = FSM << 1;
                 }
                 busy = 0;
             }
@@ -146,18 +141,18 @@ algorithm inttofloat(
 
 // CONVERT FLOAT TO SIGNED INTEGERS
 algorithm floattoint(
-    input   uint16  a,
-    output  uint5   flags,
-    output  int16   result,
+    input   uint1   start,
     output  uint1   busy,
-    input   uint1   start
+    input   uint16  a,
+    output  uint7   flags,
+    output  int16   result
 ) <autorun> {
     int8    exp = uninitialised;
     int17   sig = uninitialised;
 
-    uint1 NV = uninitialised;
+    uint1 IF = uninitialised; uint1 NN = uninitialised; uint1 NV = uninitialised;
     classify A( a <: a );
-    flags := { NV, 4b0000 };
+    flags := { IF, NN, NV, 4b0000 };
     busy = 0;
 
     while(1) {
@@ -165,16 +160,16 @@ algorithm floattoint(
             case 0: {}
             case 1: {
                 busy = 1;
-                NV = 0;
+                IF = A.INF; NN = A.sNAN | A.qNAN; NV = 0;
                 switch( { A.INF | A.sNAN | A.qNAN, A.ZERO } ) {
                     case 2b00: {
                         exp = floatingpointnumber( a ).exponent - 15;
                         sig = ( exp < 11 ) ? { 5b1, a[0,10], 1b0 } >> ( 10 - exp ) : { 5b1, a[0,10], 1b0 } << ( exp - 11 );
-                        result = ( exp > 14 ) ? ( a[15,1] ? 16hffff : 16h7fff ) : a[15,1] ? -( sig[1,16] + sig[0,1] ) : ( sig[1,16] + sig[0,1] );
+                        result = ( exp > 14 ) ? ( floatingpointnumber( a ).sign ? 16hffff : 16h7fff ) : floatingpointnumber( a ).sign ? -( sig[1,16] + sig[0,1] ) : ( sig[1,16] + sig[0,1] );
                         NV = ( exp > 14 );
                     }
                     case 2b01: { result = 0; }
-                    default: { NV = 1; result = a[15,1] ? 16hffff : 16h7fff; }
+                    default: { NV = 1; result = floatingpointnumber( a ).sign ? 16hffff : 16h7fff; }
                 }
                 busy = 0;
             }
@@ -184,18 +179,18 @@ algorithm floattoint(
 
 // CONVERT FLOAT TO UNSIGNED INTEGERS
 algorithm floattouint(
-    input   uint16  a,
-    output  uint5   flags,
-    output  int16   result,
+    input   uint1   start,
     output  uint1   busy,
-    input   uint1   start
+    input   uint16  a,
+    output  uint7   flags,
+    output  int16   result
 ) <autorun> {
     int8    exp = uninitialised;
     int17   sig = uninitialised;
 
-    uint1 NV = uninitialised;
+    uint1 IF = uninitialised; uint1 NN = uninitialised; uint1 NV = uninitialised;
     classify A( a <: a );
-    flags := { NV, 4b0000 };
+    flags := { IF, NN, NV, 4b0000 };
     busy = 0;
 
     while(1) {
@@ -203,11 +198,12 @@ algorithm floattouint(
             case 0: {}
             case 1: {
                 busy = 1;
+                IF = A.INF; NN = A.sNAN | A.qNAN; NV = 0;
                 switch( { A.INF | A.sNAN | A.qNAN, A.ZERO } ) {
                     case 2b00: {
                         exp = floatingpointnumber( a ).exponent - 15;
                         sig = ( exp < 11 ) ? { 5b1, a[0,10], 1b0 } >> ( 10 - exp ) : { 5b1, a[0,10], 1b0 } << ( exp - 11 );
-                        result = ( exp > 15 ) ? 16hffff : a[15,1] ? 0 : ( sig[1,16] + sig[0,1] );
+                        result = ( exp > 15 ) ? 16hffff : floatingpointnumber( a ).sign ? 0 : ( sig[1,16] + sig[0,1] );
                         NV = ( exp > 15 );
                     }
                     case 2b01: { result = 0; }
@@ -224,12 +220,10 @@ algorithm floattouint(
 algorithm floataddsub(
     input   uint1   start,
     output  uint1   busy,
-
     input   uint16  a,
     input   uint16  b,
     input   uint1   addsub,
-
-    output  uint5   flags,
+    output  uint7   flags,
     output  uint16  result
 ) <autorun> {
     uint5   FSM = uninitialised;
@@ -242,10 +236,9 @@ algorithm floataddsub(
     uint22  sigB = uninitialised;
     uint10  newfraction = uninitialised;
 
-    uint1 NV = uninitialised; uint1 OF = uninitialised; uint1 UF = uninitialised;
+    uint1 IF = uninitialised; uint1 NN = uninitialised; uint1 OF = uninitialised; uint1 UF = uninitialised;
     classify A( a <: a ); classify B( a <: b );
-    flags := { NV, 1b0, OF, UF, 1b0 };
-
+    flags := { IF, NN, 1b0, 1b0, OF, UF, 1b0 };
     busy = 0;
 
     while(1) {
@@ -254,12 +247,12 @@ algorithm floataddsub(
             case 1: {
                 busy = 1;
                 FSM = 1;
-                NV = 0; OF = 0; UF = 0;
+                IF = ( A.INF | B.INF ); NN = ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); OF = 0; UF = 0;
                 while( FSM != 0 ) {
                     onehot( FSM ) {
                         case 0: {
                             // FOR SUBTRACTION CHANGE SIGN OF SECOND VALUE
-                            signA = a[15,1]; signB = addsub ? ~b[15,1] : b[15,1];
+                            signA = floatingpointnumber( a ).sign; signB = addsub ? ~floatingpointnumber( b ).sign : floatingpointnumber( b ).sign;
                         }
                         case 1: {
                             // EXTRACT COMPONENTS - HOLD TO LEFT TO IMPROVE FRACTIONAL ACCURACY
@@ -277,7 +270,7 @@ algorithm floataddsub(
                             }
                         }
                         case 3: {
-                            switch( { A.INF | A.sNAN | A.qNAN | B.INF | B.sNAN | B.qNAN, A.ZERO | B.ZERO } ) {
+                            switch( { IF | NN, A.ZERO | B.ZERO } ) {
                                 case 2b00: {
                                     switch( { signA, signB } ) {
                                         // PERFORM + HANDLING SIGNS
@@ -296,9 +289,9 @@ algorithm floataddsub(
                                         default: { sign = signA; sigA = sigA + sigB; }
                                     }
                                 }
-                                case 2b01: { result = ( B.ZERO ) ? a : addsub ? { ~b[15,1], b[0,15] } : b; }
+                                case 2b01: { result = ( B.ZERO ) ? a : addsub ? { ~floatingpointnumber( b ).sign, b[0,15] } : b; }
                                 default: {
-                                    switch( { A.INF | B.INF, A.qNAN | A.sNAN | B.qNAN | B.sNAN } ) {
+                                    switch( { IF, NN } ) {
                                         case 2b10: { result = ( signA == signB ) ? { signA, 5b11111, 10b0 } : 16hfe00; }
                                         default: { result = 16hfe00; }
                                     }
@@ -306,7 +299,7 @@ algorithm floataddsub(
                             }
                         }
                         case 4: {
-                            switch( { A.INF | A.sNAN | A.qNAN | B.INF | B.sNAN | B.qNAN, A.ZERO | B.ZERO } ) {
+                            switch( { IF | NN, A.ZERO | B.ZERO } ) {
                                 case 2b00: {
                                     switch( sigA ) {
                                         case 0: { result = 0; }
@@ -345,20 +338,19 @@ algorithm floatmultiply(
     input   uint16  a,
     input   uint16  b,
 
-    output  uint5   flags,
+    output  uint7   flags,
     output  uint16  result
 ) <autorun> {
     uint2   FSM = uninitialised;
 
-    uint1   productsign <: a[15,1] ^ b[15,1];
+    uint1   productsign <: floatingpointnumber( a ).sign ^ floatingpointnumber( b ).sign;
     uint32  product = uninitialised;
     int8    productexp  = uninitialised;
     uint10  newfraction = uninitialised;
 
-    uint1 NV = uninitialised; uint1 OF = uninitialised; uint1 UF = uninitialised;
+    uint1 IF = uninitialised; uint1 NN = uninitialised; uint1 NV = uninitialised; uint1 OF = uninitialised; uint1 UF = uninitialised;
     classify A( a <: a ); classify B( a <: b );
-    flags := { NV, 1b0, OF, UF, 1b0 };
-
+    flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
     busy = 0;
 
     while(1) {
@@ -367,7 +359,7 @@ algorithm floatmultiply(
             case 1: {
                 busy = 1;
                 FSM = 1;
-                NV = 0; OF = 0; UF = 0;
+                IF = ( A.INF | B.INF ); NN = ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); NV = ( A.INF | B.INF) & ( A.ZERO | B.ZERO ); OF = 0; UF = 0;
                 while( FSM != 0 ) {
                     onehot( FSM ) {
                         case 0: {
@@ -375,7 +367,7 @@ algorithm floatmultiply(
                             productexp = (floatingpointnumber( a ).exponent - 15) + (floatingpointnumber( b ).exponent - 15) + product[21,1];
                         }
                         case 1: {
-                            switch( { A.INF | A.sNAN | A.qNAN | B.INF | B.sNAN | B.qNAN, A.ZERO | B.ZERO } ) {
+                            switch( { IF | NN, A.ZERO | B.ZERO } ) {
                                 case 2b00: {
                                     ( product ) = normalise22( product );
                                     ( newfraction ) = round22( product );
@@ -384,7 +376,7 @@ algorithm floatmultiply(
                                 }
                                 case 2b01: { result = { productsign, 15b0 }; }
                                 default: {
-                                    switch( { A.INF | B.INF, A.ZERO | B.ZERO } ) {
+                                    switch( { IF, A.ZERO | B.ZERO } ) {
                                         case 2b11: { NV = 1; result = 16hfe00; }
                                         case 2b10: { result = { productsign, 5b11111, 10b0 }; }
                                         default: { result = 16hfe00; }
@@ -422,11 +414,11 @@ algorithm floatdivide(
     input   uint16  a,
     input   uint16  b,
 
-    output  uint5   flags,
+    output  uint7   flags,
     output  uint16  result
 ) <autorun> {
     uint4   FSM = uninitialised;
-    uint1   quotientsign <: a[15,1] ^ b[15,1];
+    uint1   quotientsign <: floatingpointnumber( a ).sign ^ floatingpointnumber( b ).sign;
     int8    quotientexp = uninitialised;
     uint24  quotient = uninitialised;
     uint24  remainder = uninitialised;
@@ -435,9 +427,9 @@ algorithm floatdivide(
     uint24  sigB = uninitialised;
     uint10  newfraction = uninitialised;
 
-    uint1 NV = uninitialised; uint1 DZ = uninitialised; uint1 OF = uninitialised; uint1 UF = uninitialised;
+    uint1 IF = uninitialised; uint1 NN = uninitialised; uint1 DZ = uninitialised; uint1 OF = uninitialised; uint1 UF = uninitialised;
     classify A( a <: a ); classify B( a <: b );
-    flags := { NV, DZ, OF, UF, 1b0};
+    flags := { IF, NN, 1b0, DZ, OF, UF, 1b0};
     busy = 0;
 
     while(1) {
@@ -446,7 +438,7 @@ algorithm floatdivide(
             case 1: {
                 busy = 1;
                 FSM = 1;
-                NV = 0; DZ = 0; OF = 0; UF = 0;
+                IF = ( A.INF | B.INF ); NN = ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); DZ = B.ZERO; OF = 0; UF = 0;
                 while( FSM != 0 ) {
                     onehot( FSM ) {
                         case 0: {
@@ -459,7 +451,7 @@ algorithm floatdivide(
                         }
                         case 1: { while( ~sigB[0,1] ) { sigB = sigB >> 1; } }
                         case 2: {
-                            switch( { A.INF | A.sNAN | A.qNAN | B.INF | B.sNAN | B.qNAN, A.ZERO | B.ZERO } ) {
+                            switch( { IF | NN, A.ZERO | B.ZERO } ) {
                                 case 2b00: {
                                     while( bit != 31 ) {
                                         ( quotient, remainder ) = divbit( quotient, remainder, sigA, sigB, bit );
@@ -467,18 +459,12 @@ algorithm floatdivide(
                                     }
                                     while( quotient[22,2] != 0 ) { quotient = quotient >> 1; }
                                 }
-                                case 2b01: { DZ = B.ZERO; result = B.ZERO ? { quotientsign, 5b11111, 10b0 } : { quotientsign, 15b0 }; }
-                                default: {
-                                    switch( { A.INF, A.sNAN | A.qNAN } ) {
-                                        case 2b00: { result = ( B.sNAN | B.qNAN ) ? 16hfe00 : { quotientsign, 15b0 }; }
-                                        case 2b10: { NV = B.INF; result = ( B.INF | B.sNAN | B.qNAN ) ? 16hfe00 : { quotientsign, 5b11111, 10b0 }; }
-                                        default: { result = 16hfe00; }
-                                    }
-                                }
+                                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 16hfe00 :  B.ZERO ? { quotientsign, 5b11111, 10b0 } : { quotientsign, 15b0 }; }
+                                default: { result = ( A.INF & B.INF ) | NN | B.ZERO ? 16hfe00 : A.ZERO | B.INF ? { quotientsign, 15b0 } : { quotientsign, 5b11111, 10b0 }; }
                             }
                         }
                         case 3: {
-                            switch( { A.INF | A.sNAN | A.qNAN | B.INF | B.sNAN | B.qNAN, A.ZERO | B.ZERO } ) {
+                            switch( { IF | NN, A.ZERO | B.ZERO } ) {
                                 case 2b00: {
                                     switch( quotient ) {
                                         case 0: { result = { quotientsign, 15b0 }; }
@@ -508,7 +494,7 @@ algorithm floatsqrt(
     output  uint1   busy,
 
     input   uint16  a,
-    output  uint5   flags,
+    output  uint7   flags,
     output  uint16  result
 ) <autorun> {
     uint4   FSM = uninitialised;
@@ -523,9 +509,9 @@ algorithm floatsqrt(
     int8    exp  = uninitialised;
     uint10  newfraction = uninitialised;
 
-    uint1 NV = uninitialised; uint1 OF = uninitialised; uint1 UF = uninitialised;
+    uint1 IF = uninitialised; uint1 NN = uninitialised; uint1 NV = uninitialised; uint1 OF = uninitialised; uint1 UF = uninitialised;
     classify A( a <: a );
-    flags := { NV, 1b0, OF, UF, 1b0 };
+    flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
     busy = 0;
 
     while(1) {
@@ -534,14 +520,14 @@ algorithm floatsqrt(
             case 1: {
                 busy = 1;
                 FSM = 1;
-                NV = 0; OF = 0; UF = 0;
+                IF = A.INF; NN = A.sNAN | A.qNAN; NV = sign; OF = 0; UF = 0;
                 switch( A.sNAN | A.qNAN ) {
                     case 1: { result = 16hfe00; }
                     default: {
-                        switch( { A.INF | A.sNAN | A.qNAN, A.ZERO } ) {
+                        switch( { IF | NN, A.ZERO } ) {
                             case 2b00: {
                                 switch( sign ) {
-                                    case 1: { NV = 1; result = a; }
+                                    case 1: { result = 16hfe00; }
                                     case 0: {
                                         while( FSM != 0 ) {
                                             onehot( FSM ) {
@@ -629,29 +615,29 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 =============================================================================*/
 
 circuitry floatless( input a, input b, output lessthan ) {
-    lessthan = ( a[15,1] != b[15,1] ) ? a[15,1] & ((( a | b ) << 1) != 0 ) : ( a != b ) & ( a[15,1] ^ ( a < b));
+    lessthan = ( floatingpointnumber( a ).sign != floatingpointnumber( b ).sign ) ? floatingpointnumber( a ).sign & ((( a | b ) << 1) != 0 ) : ( a != b ) & ( floatingpointnumber( a ).sign ^ ( a < b));
 }
 circuitry floatequal( input a, input b, output equalto ) {
     equalto = ( a == b ) | ((( a | b ) << 1) == 0 );
 }
 circuitry floatlessequal( input a, input b, output lessequalto, ) {
-    lessequalto = ( a[15,1] != b[15,1] ) ? a[15,1] | ((( a | b ) << 1) == 0 ) : ( a == b ) | ( a[15,1] ^ ( a < b ));
+    lessequalto = ( floatingpointnumber( a ).sign != floatingpointnumber( b ).sign ) ? floatingpointnumber( a ).sign | ((( a | b ) << 1) == 0 ) : ( a == b ) | ( floatingpointnumber( a ).sign ^ ( a < b ));
 }
 
 algorithm floatcompare(
     input   uint16  a,
     input   uint16  b,
+    output  uint7   flags,
     output  uint1   less,
-    output  uint5   flags,
     output  uint1   equal
 ) <autorun> {
     classify A( a <: a ); classify B( a <: b );
 
     // IDENTIFY NaN
-    flags := A.sNAN | B.sNAN | A.qNAN | B.qNAN ? { 5b10000} : 0;
+    flags := { A.INF | B.INF, A.sNAN | B.sNAN | A.qNAN | B.qNAN, A.sNAN | B.sNAN | A.qNAN | B.qNAN, 4b0000 };
 
     while(1) {
-        switch( A.sNAN | A.qNAN | B.sNAN | B.qNAN ) {
+        switch( flags[5,1] ) {
             case 1: { less = 0; equal = 0; }
             case 0: {
                 ( less ) = floatless( a, b );
