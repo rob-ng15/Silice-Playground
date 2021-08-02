@@ -15,6 +15,29 @@ circuitry divbit( inout quo, inout rem, input top, input bottom, input x ) {
     quo[x,1] = quobit;
 }
 $$end
+algorithm douintdivide(
+    input   uint1   start,
+    output  uint1   busy,
+    input   uint32  dividend,
+    input   uint32  divisor,
+    output  uint32  quotient,
+    output  uint32  remainder
+) <autorun> {
+    uint6   bit = uninitialised;
+    busy = 0;
+
+    while(1) {
+        switch( start ) {
+            case 0: {}
+            case 1: {
+                busy = 1;
+                bit = 31; quotient = 0; remainder = 0;
+                while( bit != 63 ) { ( quotient, remainder ) = divbit( quotient, remainder, dividend, divisor, bit ); bit = bit - 1; }
+                busy = 0;
+            }
+        }
+    }
+}
 
 algorithm aluMdivideremain(
     input   uint1   start,
@@ -26,46 +49,22 @@ algorithm aluMdivideremain(
 
     output  uint32  result
 ) <autorun> {
-    uint2   FSM = uninitialized;
+    uint1   quotientremaindersign <: ~dosign[0,1] ? dividend[31,1] ^ divisor[31,1] : 0;
 
-    uint32  quotient = uninitialized;
-    uint32  remainder = uninitialized;
-    uint32  dividend_copy = uninitialized;
-    uint32  divisor_copy = uninitialized;
-    uint1   quotientremaindersign = uninitialized;
-    uint6   bit = uninitialized;
-
+    douintdivide DODIVIDE();
+    DODIVIDE.start := 0; DODIVIDE.dividend := ~dosign[0,1] ? ( dividend[31,1] ? -dividend : dividend ) : dividend; DODIVIDE.divisor := ~dosign[0,1] ? ( divisor[31,1] ? -divisor : divisor ) : divisor;
     busy = 0;
 
     while(1) {
         switch( start ) {
             case 1: {
                 busy = 1;
-                FSM = 1;
-                while( FSM != 0 ) {
-                    onehot( FSM ) {
-                        case 0: {
-                            dividend_copy = ~dosign[0,1] ? ( dividend[31,1] ? -dividend : dividend ) : dividend;
-                            divisor_copy = ~dosign[0,1] ? ( divisor[31,1] ? -divisor : divisor ) : divisor;
-                            quotientremaindersign = ~dosign[0,1] ? dividend[31,1] ^ divisor[31,1] : 0;
-                            quotient = 0;
-                            remainder = 0;
-                            bit = 31;
-                        }
-                        case 1: {
-                            switch( divisor ) {
-                                case 0: { result = dosign[1,1] ? dividend : 32hffffffff; }
-                                default: {
-                                    while( bit != 63 ) {
-                                        ( quotient, remainder ) = divbit( quotient, remainder, dividend_copy, divisor_copy, bit );
-                                        bit = bit - 1;
-                                    }
-                                    result = dosign[1,1] ? remainder : ( quotientremaindersign ? -quotient : quotient );
-                                }
-                            }
-                        }
+                switch( divisor ) {
+                    case 0: { result = dosign[1,1] ? dividend : 32hffffffff; }
+                    default: {
+                        DODIVIDE.start = 1; while( DODIVIDE.busy ) {}
+                        result = dosign[1,1] ? DODIVIDE.remainder : ( quotientremaindersign ? -DODIVIDE.quotient : DODIVIDE.quotient );
                     }
-                    FSM = FSM << 1;
                 }
                 busy = 0;
             }
@@ -101,5 +100,5 @@ algorithm aluMmultiply(
     UINTMUL.factor_1 := ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
     UINTMUL.factor_2 := ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
 
-    result := ( dosign == 0 ) ? product[0,32] : product[32,32];
+    result := product[ ( dosign == 0 ) ? 0 : 32, 32 ];
 }

@@ -94,8 +94,7 @@ algorithm inttofloat(
     output  uint32  result
 ) <autorun> {
     uint2   FSM = uninitialised;
-    uint2   FSM2 = uninitialised;
-    uint1   sign = uninitialised;
+    uint1   sign <: dounsigned ? 0 : floatingpointnumber( a ).sign;
     int16   exp = uninitialised;
     uint8   zeros = uninitialised;
     uint32  number = uninitialised;
@@ -109,37 +108,25 @@ algorithm inttofloat(
             case 0: {}
             case 1: {
                 busy = 1;
-                FSM = 1;
                 OF = 0; UF = 0; NX = 0;
-                while( FSM != 0 ) {
-                    onehot( FSM ) {
-                        case 0: {
-                            // SIGNED / UNSIGNED
-                            sign = dounsigned ? 0 : floatingpointnumber( a ).sign;
-                            number = dounsigned ? a : ( floatingpointnumber( a ).sign ? -a : a );
-                        }
-                        case 1: {
-                            switch( number == 0 ) {
-                                case 1: { result = 0; }
-                                case 0: {
-                                    FSM2 = 1;
-                                    while( FSM2 !=0 ) {
-                                        onehot( FSM2 ) {
-                                            case 0: { zeros = 0; while( ~number[31-zeros,1] ) { zeros = zeros + 1; } }
-                                            case 1: {
-                                                number = ( zeros < 8 ) ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
-                                                exp = 158 - zeros;
-                                                ( result, OF, UF ) = combinecomponents( sign, exp, number );
-                                                NX = ( zeros < 8 );
-                                            }
-                                        }
-                                        FSM2 = FSM2 << 1;
-                                    }
+                number = dounsigned ? a : ( floatingpointnumber( a ).sign ? -a : a );
+                switch( number ) {
+                    case 0: { result = 0; }
+                    default: {
+                        FSM = 1;
+                        while( FSM !=0 ) {
+                            onehot( FSM ) {
+                                case 0: { zeros = 0; while( ~number[31-zeros,1] ) { zeros = zeros + 1; } }
+                                case 1: {
+                                    number = ( zeros < 8 ) ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
+                                    exp = 158 - zeros;
+                                    ( result, OF, UF ) = combinecomponents( sign, exp, number );
+                                    NX = ( zeros < 8 );
                                 }
                             }
+                            FSM = FSM << 1;
                         }
                     }
-                    FSM = FSM << 1;
                 }
                 busy = 0;
             }
@@ -147,7 +134,45 @@ algorithm inttofloat(
     }
 }
 
-// CONVERT FLOAT TO UNSIGNED/SIGNED INTEGERS
+// CONVERT FLOAT TO SIGNED INTEGERS
+algorithm floattoint(
+    input   uint1   start,
+    output  uint1   busy,
+    input   uint32  a,
+    output  uint7   flags,
+    output  uint32  result
+) <autorun> {
+    int16   exp = uninitialised;
+    uint33  sig = uninitialised;
+
+    uint1 IF = uninitialised; uint1 NN = uninitialised; uint1 NV = uninitialised;
+    classify A( a <: a );
+    flags := { IF, NN, NV, 4b0000 };
+    busy = 0;
+
+    while(1) {
+        switch( start ) {
+            case 0: {}
+            case 1: {
+                busy = 1;
+                IF = A.INF; NN = A.sNAN | A.qNAN; NV = 0;
+                switch( { IF | NN, A.ZERO } ) {
+                    case 2b00: {
+                        exp = floatingpointnumber( a ).exponent - 127;
+                        sig = ( exp < 24 ) ? { 9b1, floatingpointnumber( a ).fraction, 1b0 } >> ( 23 - exp ) : { 9b1, floatingpointnumber( a ).fraction, 1b0 } << ( exp - 24);
+                        result = ( exp > 30 ) ? ( floatingpointnumber( a ).sign ? 32hffffffff : 32h7fffffff ) : floatingpointnumber( a ).sign ? -( sig[1,32] + sig[0,1] ) : ( sig[1,32] + sig[0,1] );
+                        NV = ( exp > 30 );
+                    }
+                    case 2b01: { result = 0; }
+                    default: { NV = 1; result = NN ? 32h7fffffff : floatingpointnumber( a ).sign ? 32hffffffff : 32h7fffffff; }
+                }
+                busy = 0;
+            }
+        }
+    }
+}
+
+// CONVERT FLOAT TO UNSIGNED INTEGERS
 algorithm floattouint(
     input   uint1   start,
     output  uint1   busy,
@@ -189,19 +214,78 @@ algorithm floattouint(
         }
     }
 }
-algorithm floattoint(
+
+// ADDSUB
+// ADD/SUBTRACT ( addsub == 0 add, == 1 subtract) TWO FLOATING POINT NUMBERS
+algorithm prepaddsub(
+    input   uint32  a,
+    output  uint1   sign,
+    output  uint16  exp,
+    output  uint48  fraction
+) <autorun> {
+    sign := floatingpointnumber( a ).sign;
+    exp := floatingpointnumber( a ).exponent - 127;
+    fraction := { 2b01, floatingpointnumber(a).fraction, 23b0 };
+}
+algorithm equaliseexpaddsub(
+    input   int16   expA,
+    input   uint48  sigA,
+    input   int16   expB,
+    input   uint48  sigB,
+    output  int16   newexpA,
+    output  uint48  newsigA,
+    output  int16   newexpB,
+    output  uint48  newsigB
+) <autorun> {
+    while(1) {
+        switch( { expA < expB, expB < expA } ) {
+            case 2b10: { newsigA = sigA >> ( expB - expA ); newexpA = expB; newsigB = sigB; newexpB = expB; }
+            case 2b01: { newsigB = sigB >> ( expA - expB ); newexpB = expA; newsigA = sigA; newexpA = expA; }
+            default: { newsigA = sigA; newexpA = expA; newsigB = sigB; newexpB = expB; }
+        }
+    }
+}
+algorithm dofloataddsub(
+    input   uint1   signA,
+    input   uint48  sigA,
+    input   uint1   signB,
+    input   uint48  sigB,
+    output  uint1   resultsign,
+    output  uint48  resultfraction
+) <autorun> {
+    while(1) {
+        switch( { signA, signB } ) {
+            // PERFORM + HANDLING SIGNS
+            case 2b01: {
+                switch( sigB > sigA ) {
+                    case 1: { resultsign = 1; resultfraction = sigB - sigA; }
+                    case 0: { resultsign = 0; resultfraction = sigA - sigB; }
+                }
+            }
+            case 2b10: {
+                switch(  sigA > sigB ) {
+                    case 1: { resultsign = 1; resultfraction = sigA - sigB; }
+                    case 0: { resultsign = 0; resultfraction = sigB - sigA; }
+                }
+            }
+            default: { resultsign = signA; resultfraction = sigA + sigB; }
+        }
+    }
+}
+algorithm normaliseaddsub(
     input   uint1   start,
     output  uint1   busy,
-    input   uint32  a,
-    output  uint7   flags,
+    input   uint1   sign,
+    input   int16   expA,
+    input   uint48  sigA,
+    output  uint1   OF,
+    output  uint1   UF,
     output  uint32  result
 ) <autorun> {
-    int16   exp = uninitialised;
-    uint33  sig = uninitialised;
+    int16   newexpA = uninitialised;
+    uint48  newsigA = uninitialised;
 
-    uint1 IF = uninitialised; uint1 NN = uninitialised; uint1 NV = uninitialised;
-    classify A( a <: a );
-    flags := { IF, NN, NV, 4b0000 };
+    uint23  newfraction = uninitialised;
     busy = 0;
 
     while(1) {
@@ -209,25 +293,31 @@ algorithm floattoint(
             case 0: {}
             case 1: {
                 busy = 1;
-                IF = A.INF; NN = A.sNAN | A.qNAN; NV = 0;
-                switch( { IF | NN, A.ZERO } ) {
-                    case 2b00: {
-                        exp = floatingpointnumber( a ).exponent - 127;
-                        sig = ( exp < 24 ) ? { 9b1, floatingpointnumber( a ).fraction, 1b0 } >> ( 23 - exp ) : { 9b1, floatingpointnumber( a ).fraction, 1b0 } << ( exp - 24);
-                        result = ( exp > 30 ) ? ( floatingpointnumber( a ).sign ? 32hffffffff : 32h7fffffff ) : floatingpointnumber( a ).sign ? -( sig[1,32] + sig[0,1] ) : ( sig[1,32] + sig[0,1] );
-                        NV = ( exp > 30 );
+
+                // NORMALISE AND ROUND
+                switch( sigA[47,1] ) {
+                    case 1: { newexpA = expA + 1; newsigA = sigA; }
+                    default: {
+                        newexpA = expA; newsigA = sigA;
+                        while( ~newsigA[46,1] ) {
+                            switch( newsigA[45,2] ) {
+                                case 2b00: { newsigA = newsigA << 2; newexpA = newexpA - 2; }
+                                default: { newsigA = newsigA << 1; newexpA = newexpA - 1; }
+                            }
+                        }
+                        newsigA = newsigA << 1;
                     }
-                    case 2b01: { result = 0; }
-                    default: { NV = 1; result = NN ? 32h7fffffff : floatingpointnumber( a ).sign ? 32hffffffff : 32h7fffffff; }
                 }
+                ( newfraction ) = round48( newsigA );
+                ( newexpA ) = adjustexp48( newexpA, newfraction, newsigA );
+                ( result, OF, UF ) = combinecomponents( sign, newexpA, newfraction );
+
                 busy = 0;
             }
         }
     }
 }
 
-// ADDSUB
-// ADD/SUBTRACT ( addsub == 0 add, == 1 subtract) TWO FLOATING POINT NUMBERS
 algorithm floataddsub(
     input   uint1   start,
     output  uint1   busy,
@@ -237,19 +327,22 @@ algorithm floataddsub(
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
-    uint5   FSM = uninitialised;
-    uint1   sign = uninitialised;
-    uint1   signA = uninitialised;
-    uint1   signB = uninitialised;
-    int16   expA = uninitialised;
-    int16   expB = uninitialised;
-    uint48  sigA = uninitialised;
-    uint48  sigB = uninitialised;
-    uint23  newfraction = uninitialised;
+    uint2   FSM = uninitialised;
+    uint1   signA <: prepA.sign;
+    uint1   signB <: addsub ? ~prepB.sign : prepB.sign;
 
-    uint1 IF = uninitialised; uint1 NN = uninitialised; uint1 OF = uninitialised; uint1 UF = uninitialised;
+    uint1 IF = uninitialised; uint1 NN = uninitialised; uint1 NV = uninitialised; uint1 OF = uninitialised; uint1 UF = uninitialised;
     classify A( a <: a ); classify B( a <: b );
-    flags := { IF, NN, 1b0, 1b0, OF, UF, 1b0 };
+    prepaddsub prepA( a <: a ); prepaddsub prepB( a <: b );
+    equaliseexpaddsub EQUALISEEXP( );
+    dofloataddsub ADDSUB( );
+    normaliseaddsub NORMALISE( );
+
+    EQUALISEEXP.expA := prepA.exp; EQUALISEEXP.sigA := prepA.fraction; EQUALISEEXP.expB := prepB.exp; EQUALISEEXP.sigB := prepB.fraction;
+    ADDSUB.signA := signA; ADDSUB.sigA := EQUALISEEXP.newsigA; ADDSUB.signB := signB; ADDSUB.sigB := EQUALISEEXP.newsigB;
+    NORMALISE.start := 0; NORMALISE.sign := ADDSUB.resultsign; NORMALISE.expA := EQUALISEEXP.newexpA; NORMALISE.sigA := ADDSUB.resultfraction;
+    IF := ( A.INF | B.INF ); NN := ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); NV := ( A.INF & B.INF) & ( signA != signB );
+    flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
     busy = 0;
 
     while(1) {
@@ -258,93 +351,27 @@ algorithm floataddsub(
             case 1: {
                 busy = 1;
                 FSM = 1;
-                IF = ( A.INF | B.INF ); NN = ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); OF = 0; UF = 0;
+                NV = 0; OF = 0; UF = 0;
                 while( FSM != 0 ) {
                     onehot( FSM ) {
                         case 0: {
-                            // FOR SUBTRACTION CHANGE SIGN OF SECOND VALUE
-                            signA = floatingpointnumber( a ).sign; signB = addsub ? ~floatingpointnumber( b ).sign : floatingpointnumber( b ).sign;
+                            // PREP, ADJUST TO EQUAL EXPONENTS, DO ADD / SUB
                         }
                         case 1: {
-                            // EXTRACT COMPONENTS - HOLD TO LEFT TO IMPROVE FRACTIONAL ACCURACY
-                            switch( IF | NN ) {
-                                case 0: {
-                                    expA = floatingpointnumber( a ).exponent - 127;
-                                    expB = floatingpointnumber( b ).exponent - 127;
-                                    sigA = { 2b01, floatingpointnumber(a).fraction, 23b0 };
-                                    sigB = { 2b01, floatingpointnumber(b).fraction, 23b0 };
-                                }
-                                case 1: {}
-                            }
-                        }
-                        case 2: {
-                            // ADJUST TO EQUAL EXPONENTS
-                            switch( IF | NN ) {
-                                case 0: {
-                                    switch( { expA < expB, expB < expA } ) {
-                                        case 2b10: { sigA = sigA >> ( expB - expA ); expA = expB; }
-                                        case 2b01: { sigB = sigB >> ( expA - expB ); expB = expA; }
-                                        default: {}
-                                    }
-                                }
-                                case 1: {}
-                            }
-                        }
-                        case 3: {
                             switch( { IF | NN, A.ZERO | B.ZERO } ) {
                                 case 2b00: {
-                                    switch( { signA, signB } ) {
-                                        // PERFORM + HANDLING SIGNS
-                                        case 2b01: {
-                                            switch( sigB > sigA ) {
-                                                case 1: { sign = 1; sigA = sigB - sigA; }
-                                                case 0: { sign = 0; sigA = sigA - sigB; }
-                                            }
-                                        }
-                                        case 2b10: {
-                                            switch(  sigA > sigB ) {
-                                                case 1: { sign = 1; sigA = sigA - sigB; }
-                                                case 0: { sign = 0; sigA = sigB - sigA; }
-                                            }
-                                        }
-                                        default: { sign = signA; sigA = sigA + sigB; }
+                                    switch( ADDSUB.resultfraction ) {
+                                        case 0: { result = 0; }
+                                        default: { NORMALISE.start = 1; while( NORMALISE.busy ) {} result = NORMALISE.result; OF = NORMALISE.OF; UF = NORMALISE.UF; }
                                     }
-                                }
+                                 }
                                 case 2b01: { result = ( B.ZERO ) ? a : addsub ? { ~floatingpointnumber( b ).sign, b[0,31] } : b; }
                                 default: {
                                     switch( { IF, NN } ) {
-                                        case 2b10: { result = ( A.INF & B.INF) ? ( signA == signB ) ? { signA, 8b11111111, 23b0 } : 32hffc00000 : A.INF ? a : { signB, 8b11111111, 23b0 }; }
+                                        case 2b10: { result = ( A.INF & B.INF) ? ( signA == signB ) ? a : 32hffc00000 : A.INF ? a : b; }
                                         default: { result = 32hffc00000; }
                                     }
                                 }
-                            }
-                        }
-                        case 4: {
-                            switch( { IF | NN, A.ZERO | B.ZERO } ) {
-                                case 2b00: {
-                                    switch( sigA ) {
-                                        case 0: { result = 0; }
-                                        default: {
-                                            // NORMALISE AND ROUND
-                                            switch( sigA[47,1] ) {
-                                                case 1: { expA = expA + 1; }
-                                                default: {
-                                                    while( ~sigA[46,1] ) {
-                                                        switch( sigA[45,2] ) {
-                                                            case 2b00: { sigA = sigA << 2; expA = expA - 2; }
-                                                            default: { sigA = sigA << 1; expA = expA - 1; }
-                                                        }
-                                                    }
-                                                    sigA = sigA << 1;
-                                                }
-                                            }
-                                            ( newfraction ) = round48( sigA );
-                                            ( expA ) = adjustexp48( exp, newfraction, sigA );
-                                            ( result, OF, UF ) = combinecomponents( sign, expA, newfraction );
-                                        }
-                                    }
-                                }
-                                default: {}
                             }
                         }
                     }
@@ -452,6 +479,31 @@ circuitry divbit( inout quo, inout rem, input top, input bottom, input x ) {
     quo[x,1] = quobit;
 }
 $$end
+algorithm dofloatdivide(
+    input   uint1   start,
+    output  uint1   busy,
+    input   uint50  sigA,
+    input   uint50  sigB,
+    output  uint50  quotient
+) <autorun> {
+    uint50  remainder = uninitialised;
+    uint6   bit = uninitialised;
+    busy = 0;
+
+    while(1) {
+        switch( start ) {
+            case 0: {}
+            case 1: {
+                busy = 1;
+                bit = 49; quotient = 0; remainder = 0;
+                while( bit != 63 ) { ( quotient, remainder ) = divbit( quotient, remainder, sigA, sigB, bit ); bit = bit - 1; }
+                while( quotient[48,2] != 0 ) { quotient = quotient >> 1; }
+                busy = 0;
+            }
+        }
+    }
+}
+
 algorithm floatdivide(
     input   uint1   start,
     output  uint1   busy,
@@ -462,18 +514,17 @@ algorithm floatdivide(
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
-    uint3   FSM = uninitialised;
+    uint2   FSM = uninitialised;
     uint1   quotientsign <: floatingpointnumber( a ).sign ^ floatingpointnumber( b ).sign;
     int16   quotientexp = uninitialised;
-    uint50  quotient = uninitialised;
-    uint50  remainder = uninitialised;
-    uint6   bit = uninitialised;
-    uint50  sigA = uninitialised;
-    uint50  sigB = uninitialised;
+    uint48  quotient = uninitialised;
     uint23  newfraction = uninitialised;
 
     uint1 IF = uninitialised; uint1 NN = uninitialised; uint1 DZ = uninitialised; uint1 OF = uninitialised; uint1 UF = uninitialised;
     classify A( a <: a ); classify B( a <: b );
+    dofloatdivide DODIVIDE( );
+    DODIVIDE.start := 0; DODIVIDE.sigA := { 1b1, floatingpointnumber(a).fraction, 26b0 }; DODIVIDE.sigB := { 27b1, floatingpointnumber(b).fraction };
+
     flags := { IF, NN, 1b0, DZ, OF, UF, 1b0};
     busy = 0;
 
@@ -482,49 +533,30 @@ algorithm floatdivide(
             case 0: {}
             case 1: {
                 busy = 1;
-                FSM = 1;
                 IF = ( A.INF | B.INF ); NN = ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); DZ = B.ZERO; OF = 0; UF = 0;
-                while( FSM != 0 ) {
-                    onehot( FSM ) {
-                        case 0: {
-                            sigA = { 1b1, floatingpointnumber(a).fraction, 26b0 };
-                            sigB = { 27b1, floatingpointnumber(b).fraction };
-                            quotientexp = (floatingpointnumber( a ).exponent - 127) - (floatingpointnumber( b ).exponent - 127);
-                            quotient = 0;
-                            remainder = 0;
-                            bit = 49;
-                        }
-                        case 1: {
-                            switch( { IF | NN, A.ZERO | B.ZERO } ) {
-                                case 2b00: {
-                                    while( bit != 63 ) {
-                                        ( quotient, remainder ) = divbit( quotient, remainder, sigA, sigB, bit );
-                                        bit = bit - 1;
-                                    }
-                                    while( quotient[48,2] != 0 ) { quotient = quotient >> 1; }
-                                }
-                                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 32hffc00000 : ( B.ZERO ) ? { quotientsign, 8b11111111, 23b0 } : { quotientsign, 31b0 }; }
-                                default: { result = ( A.INF & B.INF ) | NN | B.ZERO ? 32hffc00000 : A.ZERO | B.INF ? { quotientsign, 31b0 } : { quotientsign, 8b11111111, 23b0 }; }
-                            }
-                        }
-                        case 2: {
-                            switch( { IF | NN, A.ZERO | B.ZERO } ) {
-                                case 2b00: {
+                switch( { IF | NN, A.ZERO | B.ZERO } ) {
+                    case 2b00: {
+                        FSM = 1;
+                        while( FSM != 0 ) {
+                            onehot( FSM ) {
+                                case 0: { DODIVIDE.start = 1; while( DODIVIDE.busy ) {} quotient = DODIVIDE.quotient[0,48]; }
+                                case 1: {
                                     switch( quotient ) {
                                         case 0: { result = { quotientsign, 31b0 }; }
                                         default: {
                                             ( quotient ) = normalise48( quotient );
                                             ( newfraction ) = round48( quotient );
-                                            quotientexp = 127 + quotientexp - ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction ) + ( ( newfraction == 0 ) & quotient[23,1] );
+                                            quotientexp = 127 + ((floatingpointnumber( a ).exponent - 127) - (floatingpointnumber( b ).exponent - 127)) - ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction ) + ( ( newfraction == 0 ) & quotient[23,1] );
                                             ( result, OF, UF ) = combinecomponents( quotientsign, quotientexp, newfraction );
                                         }
                                     }
                                 }
-                                default: {}
                             }
+                            FSM = FSM << 1;
                         }
                     }
-                    FSM = FSM << 1;
+                    case 2b01: { result = ( A.ZERO & B.ZERO ) ? 32hffc00000 : ( B.ZERO ) ? { quotientsign, 8b11111111, 23b0 } : { quotientsign, 31b0 }; }
+                    default: { result = ( A.INF & B.INF ) | NN | B.ZERO ? 32hffc00000 : A.ZERO | B.INF ? { quotientsign, 31b0 } : { quotientsign, 8b11111111, 23b0 }; }
                 }
                 busy = 0;
             }
@@ -533,6 +565,38 @@ algorithm floatdivide(
 }
 
 // ADAPTED FROM https://projectf.io/posts/square-root-in-verilog/
+algorithm dofloatsqrt(
+    input   uint1   start,
+    output  uint1   busy,
+    input   uint50  start_ac,
+    input   uint48  start_x,
+    output  uint48  q
+) <autorun> {
+    uint48  x = uninitialised;
+    uint50  ac = uninitialised;
+    uint50  test_res = uninitialised;
+    uint6   i = uninitialised;
+    busy = 0;
+
+    while(1) {
+        switch( start ) {
+            case 0: {}
+            case 1: {
+                busy = 1;
+                i = 0; q = 0; ac = start_ac; x = start_x;
+                while( i != 47 ) {
+                    test_res = ac - { q, 2b01 };
+                    ac = { test_res[49,1] ? ac[0,47] : test_res[0,47], x[46,2] };
+                    q = { q[0,47], ~test_res[49,1] };
+                    x = { x[0,46], 2b00 };
+                    i = i + 1;
+                }
+                busy = 0;
+            }
+        }
+    }
+}
+
 algorithm floatsqrt(
     input   uint1   start,
     output  uint1   busy,
@@ -541,20 +605,17 @@ algorithm floatsqrt(
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
-    uint4   FSM = uninitialised;
-
-    uint48  x = uninitialised;
+    uint2   FSM = uninitialised;
     uint48  q = uninitialised;
-    uint50  ac = uninitialised;
-    uint50  test_res = uninitialised;
-    uint6   i = uninitialised;
-
     uint1   sign <: floatingpointnumber( a ).sign;
-    int16   exp  = uninitialised;
+    int16   exp  <: floatingpointnumber( a ).exponent - 127;
+    int16   sqrtexp  = uninitialised;
     uint23  newfraction = uninitialised;
 
     uint1 IF = uninitialised; uint1 NN = uninitialised; uint1 NV = uninitialised; uint1 OF = uninitialised; uint1 UF = uninitialised;
     classify A( a <: a );
+    dofloatsqrt DOSQRT( );
+    DOSQRT.start := 0; DOSQRT.start_ac := ~exp[0,1] ? 1 : { 48b0, 1b1, a[22,1] }; DOSQRT.start_x := ~exp[0,1] ? { floatingpointnumber( a ).fraction, 25b0 } : { a[0,22], 26b0 };
     flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
     busy = 0;
 
@@ -563,7 +624,6 @@ algorithm floatsqrt(
             case 0: {}
             case 1: {
                 busy = 1;
-                FSM = 1;
                 IF = A.INF; NN = A.sNAN | A.qNAN; NV = sign; OF = 0; UF = 0;
                 switch( NN ) {
                     case 1: { result = 32hffc00000; }
@@ -573,31 +633,15 @@ algorithm floatsqrt(
                                 switch( sign ) {
                                     case 1: { result = 32hffc00000; }
                                     case 0: {
+                                        FSM = 1;
                                         while( FSM != 0 ) {
                                             onehot( FSM ) {
-                                                case 0: {
-                                                    i = 0;
-                                                    q = 0;
-                                                    exp = floatingpointnumber( a ).exponent - 127;
-                                                    ac = ~exp[0,1] ? 1 : { 48b0, 1b1, a[22,1] };
-                                                    x = ~exp[0,1] ? { floatingpointnumber( a ).fraction, 25b0 } : { a[0,22], 26b0 };
-                                                }
+                                                case 0: { DOSQRT.start = 1; while( DOSQRT.busy ) {} q = DOSQRT.q; }
                                                 case 1: {
-                                                    while( i != 47 ) {
-                                                        test_res = ac - { q, 2b01 };
-                                                        ac = { test_res[49,1] ? ac[0,47] : test_res[0,47], x[46,2] };
-                                                        q = { q[0,47], ~test_res[49,1] };
-                                                        x = { x[0,46], 2b00 };
-                                                        i = i + 1;
-                                                    }
-                                                }
-                                                case 2: {
+                                                    sqrtexp = ( exp >>> 1 ) + 127;
                                                     ( q ) = normalise48( q );
-                                                }
-                                                case 3: {
-                                                    exp = ( exp >>> 1 ) + 127;
                                                     ( newfraction ) = round48( q );
-                                                    ( result, OF, UF ) = combinecomponents( sign, exp, newfraction );
+                                                    ( result, OF, UF ) = combinecomponents( sign, sqrtexp, newfraction );
                                                 }
                                             }
                                             FSM = FSM << 1;
@@ -658,16 +702,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =============================================================================*/
 
-circuitry floatless( input a, input b, output lessthan ) {
-    lessthan = ( floatingpointnumber( a ).sign != floatingpointnumber( b ).sign ) ? floatingpointnumber( a ).sign & ((( a | b ) << 1) != 0 ) : ( a != b ) & ( floatingpointnumber( a ).sign ^ ( a < b));
-}
-circuitry floatequal( input a, input b, output equalto ) {
-    equalto = ( a == b ) | ((( a | b ) << 1) == 0 );
-}
-circuitry floatlessequal( input a, input b, output lessequalto, ) {
-    lessequalto = ( floatingpointnumber( a ).sign != floatingpointnumber( b ).sign ) ? floatingpointnumber( a ).sign | ((( a | b ) << 1) == 0 ) : ( a == b ) | ( floatingpointnumber( a ).sign ^ ( a < b ));
-}
-
 algorithm floatcompare(
     input   uint32  a,
     input   uint32  b,
@@ -679,14 +713,6 @@ algorithm floatcompare(
 
     // IDENTIFY NaN
     flags := { A.INF | B.INF, A.sNAN | B.sNAN | A.qNAN | B.qNAN, A.sNAN | B.sNAN | A.qNAN | B.qNAN, 4b0000 };
-
-    while(1) {
-        switch( flags[5,1] ) {
-            case 1: { less = 0; equal = 0; }
-            case 0: {
-                ( less ) = floatless( a, b );
-                ( equal ) = floatequal( a, b );
-            }
-        }
-    }
+    less := flags[5,1] ? 0 : ( floatingpointnumber( a ).sign != floatingpointnumber( b ).sign ) ? floatingpointnumber( a ).sign & ((( a | b ) << 1) != 0 ) : ( a != b ) & ( floatingpointnumber( a ).sign ^ ( a < b));
+    equal := flags[5,1] ? 0 : ( a == b ) | ((( a | b ) << 1) == 0 );
 }

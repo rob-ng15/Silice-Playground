@@ -1,3 +1,8 @@
+// UPDATE PC
+circuitry newPC( input opCode, input incPC, input nextPC, input takeBranch, input branchAddress, input jumpAddress, input loadAddress, output pc ) {
+    pc = ( incPC ) ? ( takeBranch ? branchAddress : nextPC ) : ( opCode[3,1] ? jumpAddress : loadAddress );
+}
+
 // RISC-V REGISTERS - usable for base and float
 algorithm registers(
     input   uint1   SMT,
@@ -91,11 +96,6 @@ algorithm addressgenerator(
     AUIPCLUI := { Utype(instruction).immediate_bits_31_12, 12b0 } + ( instruction[5,1] ? 0 : pc );
     storeAddress := ( ( instruction[0,7] == 7b0101111 ) ? 0 : { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } ) + sourceReg1;
     loadAddress := ( ( instruction[0,7] == 7b0101111 ) ? 0 : immediateValue ) + sourceReg1;
-}
-
-// UPDATE PC
-circuitry newPC( input opCode, input incPC, input nextPC, input takeBranch, input branchAddress, input jumpAddress, input loadAddress, output pc ) {
-    pc = ( incPC ) ? ( takeBranch ? branchAddress : nextPC ) : ( opCode[3,1] ? jumpAddress : loadAddress );
 }
 
 // BRANCH COMPARISIONS

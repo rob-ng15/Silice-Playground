@@ -83,10 +83,6 @@ algorithm PAWSCPU(
     );
 
     // RISC-V REGISTER WRITER
-    int32   result = uninitialized;
-    uint1   writeRegister = uninitialized;
-    uint32  memoryinput = uninitialized;
-    uint32  memoryoutput = uninitialized;
     uint1   memoryload := ( opCode == 7b0000011 ) | ( opCode == 7b0000111 ) | ( ( opCode == 7b0101111 ) & ( function7[2,5] != 5b00011 ) );
     uint1   memorystore := ( opCode == 7b0100011 ) | ( opCode == 7b0100111 ) | ( ( opCode == 7b0101111 ) & ( function7[2,5] != 5b00010 ) );
 
@@ -130,7 +126,6 @@ algorithm PAWSCPU(
     uint32  sourceReg1F = uninitialized;
     uint32  sourceReg2F = uninitialized;
     uint32  sourceReg3F = uninitialized;
-    uint1   frd = uninitialized;
     registers REGISTERSF(
         SMT <:: SMT,
         rs1 <: rs1,
@@ -166,61 +161,33 @@ algorithm PAWSCPU(
         loadAddress :> loadAddress
     );
 
-    // BRANCH COMPARISON UNIT
+    // CPU EXECUTE BLOCK
     uint1   takeBranch = uninitialized;
-    branchcomparison BRANCHUNIT <@clock_CPUdecoder> (
-        opCode <: opCode,
-        function3 <: function3,
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-    );
-
-    // ALU
-    alu ALU(
-        opCode <: opCode,
-        function3 <: function3,
-        function7 <: function7,
-        rs1 <: rs1,
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-        sourceReg3 <: sourceReg3,
-        IshiftCount <: rs2,
-        immediateValue <: immediateValue
-    );
-
-    // ATOMIC MEMORY OPERATIONS
-    aluA ALUA(
-        function7 <: function7,
-        memoryinput <: memoryinput,
-        sourceReg2 <: sourceReg2
-    );
-
-    // FLOATING POINT OPERATIONS
-    uint5 FPUnewflags = uninitialized;
-    fpu FPU(
-        FPUflags <: FPUflags,
-        FPUnewflags :> FPUnewflags,
+    uint32  memoryinput = uninitialized;
+    int32   result = uninitialized;
+    uint32  memoryoutput = uninitialized;
+    cpuexecute EXECUTE(
+        SMT <: SMT,
+        instruction <: instruction,
         opCode <: opCode,
         function3 <: function3,
         function7 <: function7,
         rs1 <: rs1,
         rs2 <: rs2,
         sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        sourceReg3 <: sourceReg3,
         sourceReg1F <: sourceReg1F,
         sourceReg2F <: sourceReg2F,
-        sourceReg3F <: sourceReg3F
-    );
-
-    // MANDATORY RISC-V CSR REGISTERS + HARTID == 0 MAIN THREAD == 1 SMT THREAD
-    uint5 FPUflags = uninitialized;
-    CSRblock CSR(
-        SMT <:: SMT,
-        instruction <: instruction,
-        function3 <: function3,
-        rs1 <: rs1,
-        sourceReg1 <: sourceReg1,
-        FPUflags :> FPUflags,
-        FPUnewflags <: FPUnewflags
+        sourceReg3F <: sourceReg3F,
+        immediateValue <: immediateValue,
+        memoryinput <: memoryinput,
+        AUIPCLUI <: AUIPCLUI,
+        nextPC <: nextPC,
+        incPC :> incPC,
+        takeBranch :> takeBranch,
+        memoryoutput :> memoryoutput,
+        result :> result
     );
 
     // MEMORY ACCESS FLAGS
@@ -232,12 +199,8 @@ algorithm PAWSCPU(
     REGISTERS.write := 0;
     REGISTERSF.write := 0;
 
-    // ALU START FLAGS
-    ALU.start := 0;
-    FPU.start := 0;
-    CSR.start := 0;
-    CSR.incCSRinstret := 0;
-    CSR.updateFPUflags := 0;
+    // CPU EXECUTE START FLAGS
+    EXECUTE.start := 0;
 
     while(1) {
         onehot( FSM ) {
@@ -255,18 +218,136 @@ algorithm PAWSCPU(
                 }
                 FSM = 7b0000010;
             }
-            case 1: {                                                                           // RESET FLAGS
-                writeRegister = 1;
-                incPC = 1; takeBranch = 0;
-                frd = 0;
-                FSM = 7b0000100;
-            }
-            case 2: { FSM = memoryload ? 7b0001000 : 7b0010000; }                               // DECOODE
+            case 1: { FSM = 7b0000100;  }                                                       // ALLOW DECODE + REGISTER FETCH
+            case 2: { FSM = memoryload ? 7b0001000 : 7b0010000; }                               // ALLOW ADDRESS GENERATION
             case 3: {                                                                           // LOAD FROM MEMORY
                 ( address, readmemory, memoryinput ) = load( accesssize, loadAddress, memorybusy, readdata );
                 FSM = 7b0010000;
             }
             case 4: {                                                                           // EXECUTE
+                EXECUTE.start = 1; while( EXECUTE.busy ) {}
+                FSM = memorystore ? 7b0100000 : 7b1000000;
+            }
+            case 5: {                                                                           // STORE TO MEMORY
+                ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy );
+                FSM = 7b1000000;
+            }
+            case 6: {                                                                           // REGISTERS WRITE, PC and SMT
+                REGISTERS.write = EXECUTE.writeRegister & ~EXECUTE.frd & ( rd != 0 );           // BASE DO NOT WRITE TO REGISTER 0
+                REGISTERSF.write = EXECUTE.writeRegister & EXECUTE.frd;
+                switch( SMT ) {
+                    case 1b1: {
+                        ( pcSMT ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
+                        SMT = 0;
+                    }
+                    case 1b0: {
+                        ( pc ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
+                        SMT = SMTRUNNING;
+                        pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC;
+                    }
+                }
+                FSM = 7b0000001;
+            }
+        }
+    } // RISC-V
+}
+
+algorithm cpuexecute(
+    input   uint1   start,
+    output  uint1   busy,
+
+
+    input   uint1   SMT,
+    input   uint32  instruction,
+    input   uint7   opCode,
+    input   uint3   function3,
+    input   uint7   function7,
+    input   uint5   rs1,
+    input   uint5   rs2,
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+    input   uint32  sourceReg3,
+    input   uint32  sourceReg1F,
+    input   uint32  sourceReg2F,
+    input   uint32  sourceReg3F,
+    input   uint32  immediateValue,
+    input   uint32  memoryinput,
+    input   uint32  AUIPCLUI,
+    input   uint32  nextPC,
+
+    output  uint1   writeRegister,
+    output  uint1   frd,
+    output  uint1   incPC,
+    output  uint1   takeBranch,
+    output  uint32  memoryoutput,
+    output  uint32  result
+) <autorun> {
+    // BRANCH COMPARISON UNIT
+    branchcomparison BRANCHUNIT(
+        opCode <: opCode,
+        function3 <: function3,
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+    );
+
+    // ALU
+    alu ALU(
+        opCode <: opCode,
+        function3 <: function3,
+        function7 <: function7,
+        rs1 <: rs1,
+        IshiftCount <: rs2,
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        sourceReg3 <: sourceReg3,
+        immediateValue <: immediateValue
+    );
+
+    // ATOMIC MEMORY OPERATIONS
+    aluA ALUA(
+        function7 <: function7,
+        memoryinput <: memoryinput,
+        sourceReg2 <: sourceReg2
+    );
+
+    // FLOATING POINT OPERATIONS
+    uint5   FPUflags = 0;
+    uint5   FPUnewflags = uninitialized;
+    fpu FPU(
+        FPUflags <: FPUflags,
+        FPUnewflags :> FPUnewflags,
+        opCode <: opCode,
+        function3 <: function3,
+        function7 <: function7,
+        rs1 <: rs1,
+        rs2 <: rs2,
+        sourceReg1 <: sourceReg1,
+        sourceReg1F <: sourceReg1F,
+        sourceReg2F <: sourceReg2F,
+        sourceReg3F <: sourceReg3F
+    );
+
+    // MANDATORY RISC-V CSR REGISTERS + HARTID == 0 MAIN THREAD == 1 SMT THREAD
+    CSRblock CSR(
+        SMT <: SMT,
+        instruction <: instruction,
+        function3 <: function3,
+        rs1 <: rs1,
+        sourceReg1 <: sourceReg1,
+        FPUflags :> FPUflags,
+        FPUnewflags <: FPUnewflags
+    );
+
+    // ALU START FLAGS
+    ALU.start := 0; FPU.start := 0;
+    CSR.start := 0; CSR.incCSRinstret := 0; CSR.updateFPUflags := 0;
+
+    busy = 0;
+    while(1) {
+        switch( start ) {
+            case 1: {
+                busy = 1;
+                frd = 0; writeRegister = 1; incPC = 1; takeBranch = 0;
                 switch( opCode[2,5] ) {
                     case 5b01101: { result = AUIPCLUI; }                                        // LUI
                     case 5b00101: { result = AUIPCLUI; }                                        // AUIPC
@@ -299,29 +380,10 @@ algorithm PAWSCPU(
                         result = opCode[6,1] ? FPU.result : ALU.result;
                     }
                 }
-                FSM = memorystore ? 7b0100000 : 7b1000000;
-            }
-            case 5: {                                                                           // STORE TO MEMORY
-                ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy );
-                FSM = 7b1000000;
-            }
-            case 6: {                                                                           // REGISTERS WRITE, UPDATE CSR, PC and SMT
-                REGISTERS.write = writeRegister & ~frd & ( rd != 0 );                           // BASE DO NOT WRITE TO REGISTER 0
-                REGISTERSF.write = writeRegister & frd;
+                busy = 0;
                 CSR.incCSRinstret = 1;
-                switch( SMT ) {
-                    case 1b1: {
-                        ( pcSMT ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
-                        SMT = 0;
-                    }
-                    case 1b0: {
-                        ( pc ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
-                        SMT = SMTRUNNING;
-                        pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC;
-                    }
-                }
-                FSM = 7b0000001;
             }
+            case 0: {}
         }
-    } // RISC-V
+    }
 }

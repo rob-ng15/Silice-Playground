@@ -251,9 +251,9 @@ algorithm floataddsub(
     uint48  sigB = uninitialised;
     uint23  newfraction = uninitialised;
 
-    uint1 IF = uninitialised; uint1 NN = uninitialised; uint1 OF = uninitialised; uint1 UF = uninitialised;
+    uint1 IF = uninitialised; uint1 NN = uninitialised; uint1 NV = uninitialised; uint1 OF = uninitialised; uint1 UF = uninitialised;
     classify A( a <: a ); classify B( a <: b );
-    flags := { IF, NN, 1b0, 1b0, OF, UF, 1b0 };
+    flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
 
     busy = 0;
 
@@ -266,7 +266,7 @@ algorithm floataddsub(
                 while( FSM != 0 ) {
                     onehot( FSM ) {
                         case 0: {
-                            IF = ( A.INF | B.INF ); NN = ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); OF = 0; UF = 0;
+                            IF = ( A.INF | B.INF ); NN = ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); NV = 0; OF = 0; UF = 0;
                             __display("");
                             __display("ADD (==0) SUB (==1) %b", addsub);
                             __display("IF = %b NN = %b",IF,NN);
@@ -335,7 +335,7 @@ algorithm floataddsub(
                                 default: {
                                     __display("INF or NaN detected");
                                     switch( { IF, NN } ) {
-                                        case 2b10: { result = ( A.INF & B.INF) ? ( signA == signB ) ? { signA, 8b11111111, 23b0 } : 32hffc00000 : A.INF ? a : { signB, 8b11111111, 23b0 }; }
+                                        case 2b10: { NV = ( A.INF & B.INF) & ( signA != signB ); result = ( A.INF & B.INF) ? ( signA != signB ) ? a : 32hffc00000 : A.INF ? a : b; }
                                         default: { result = 32hffc00000; }
                                     }
                                 }
@@ -988,7 +988,7 @@ algorithm main(output int8 leds) {
     // uint7   opCode = 7b1001011; // FNMSUB
     // uint7   opCode = 7b1001111; // FNMADD
 
-    uint7   function7 = 7b0001100; // OPERATION SWITCH
+    uint7   function7 = 7b0000000; // OPERATION SWITCH
     uint3   function3 = 3b000; // ROUNDING MODE OR SWITCH
     uint5   rs1 = 5b00000; // SOURCEREG1 number
     uint5   rs2 = 5b00000; // SOURCEREG2 number OR SWITCH
@@ -1008,8 +1008,8 @@ algorithm main(output int8 leds) {
     // qNaN = 32hffc00000
     // INF = 32h7F800000
     // -INF = 32hFF800000
-    uint32  sourceReg1F = 32h3F800000;
-    uint32  sourceReg2F = 32h40400000;
+    uint32  sourceReg1F = 32h7F800000;
+    uint32  sourceReg2F = 32hFF800000;
     uint32  sourceReg3F = 32h40000000;
 
     uint32  result = uninitialised;

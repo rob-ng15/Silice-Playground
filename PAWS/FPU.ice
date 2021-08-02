@@ -50,7 +50,7 @@ algorithm fpu(
                                 FPUnewflags = FPUflags | FPUcalculator.flags;
                             }
                             case 5b00100: {
-                                // FSGNJ.S FNGNJN.S FSGNJX.S
+                                // FSGNJ.S FSGNJN.S FSGNJX.S
                                 result = FPUsign.result;
                             }
                             case 5b00101: {
@@ -155,7 +155,6 @@ algorithm floatcalc(
     output  uint5   flags,
     output  uint32  result,
 ) <autorun> {
-    uint2   FSM = uninitialised;
     floataddsub FPUaddsub();
     floatmultiply FPUmultiply( b <: sourceReg2F );
     floatdivide FPUdivide( a <: sourceReg1F, b <: sourceReg2F );
@@ -174,22 +173,10 @@ algorithm floatcalc(
 
                 switch( opCode[2,5] ) {
                     default: {
-                        // FMADD.S FMSUB.S FNMSUB.S FNMADD.S
-                        FSM = 1;
-                        while( FSM != 0 ) {
-                            onehot( FSM ) {
-                                case 0: {
-                                    FPUmultiply.a = { opCode[3,1] ? ~sourceReg1F[31,1] : sourceReg1F[31,1], sourceReg1F[0,31] };
-                                    FPUmultiply.start = 1; while( FPUmultiply.busy ) {} flags = FPUmultiply.flags & 5b10110;
-                                }
-                                case 1: {
-                                    FPUaddsub.a = FPUmultiply.result; FPUaddsub.b = sourceReg3F;
-                                    FPUaddsub.addsub = opCode[2,1];
-                                    FPUaddsub.start = 1; while( FPUaddsub.busy ) {} flags = flags | ( FPUaddsub.flags & 5b00110 );
-                                }
-                            }
-                            FSM = { FSM[0,1], 1b0 };
-                        }
+                        FPUmultiply.a = { opCode[3,1] ? ~sourceReg1F[31,1] : sourceReg1F[31,1], sourceReg1F[0,31] };
+                        FPUmultiply.start = 1; while( FPUmultiply.busy ) {} flags = FPUmultiply.flags & 5b10110;
+                        FPUaddsub.a = FPUmultiply.result; FPUaddsub.b = sourceReg3F; FPUaddsub.addsub = opCode[2,1];
+                        FPUaddsub.start = 1; while( FPUaddsub.busy ) {} flags = flags | ( FPUaddsub.flags & 5b00110 );
                         result = FPUaddsub.result;
                     }
                     case 5b10100: {
@@ -232,14 +219,14 @@ algorithm floatclassify(
     classify A( a <: sourceReg1F );
 
     while(1) {
-                switch( { A.INF, A.sNAN, A.qNAN, A.ZERO } ) {
-                    case 4b1000: { classification = floatingpointnumber( sourceReg1F ).sign ? 10b0000000001 : 10b0010000000; }
-                    case 4b0100: { classification = 10b0100000000; }
-                    case 4b0010: { classification = 10b1000000000; }
-                    case 4b0001: { classification = ( sourceReg1F[0,23] == 0 ) ? floatingpointnumber( sourceReg1F ).sign ? 10b0000001000 : 10b0000010000 :
-                                                                                    floatingpointnumber( sourceReg1F ).sign ? 10b0000000100 : 10b0000100000; }
-                    default: { classification = floatingpointnumber( sourceReg1F ).sign ? 10b0000000010 : 10b0001000000; }
-                }
+        switch( { A.INF, A.sNAN, A.qNAN, A.ZERO } ) {
+            case 4b1000: { classification = floatingpointnumber( sourceReg1F ).sign ? 10b0000000001 : 10b0010000000; }
+            case 4b0100: { classification = 10b0100000000; }
+            case 4b0010: { classification = 10b1000000000; }
+            case 4b0001: { classification = ( sourceReg1F[0,23] == 0 ) ? floatingpointnumber( sourceReg1F ).sign ? 10b0000001000 : 10b0000010000 :
+                                                                            floatingpointnumber( sourceReg1F ).sign ? 10b0000000100 : 10b0000100000; }
+            default: { classification = floatingpointnumber( sourceReg1F ).sign ? 10b0000000010 : 10b0001000000; }
+        }
     }
 }
 
@@ -256,15 +243,15 @@ algorithm floatminmax(
     floatcompare FPUlteq( a <: sourceReg1F, b <: sourceReg2F, less :> less );
 
     while(1) {
-                switch( ( A.sNAN | B.sNAN ) | ( A.qNAN & B.qNAN ) ) {
-                    case 1: { flags = 5b10000; result = 32h7fc00000; } // sNAN or both qNAN
-                    case 0: {
-                        switch( function3[0,1] ) {
-                            case 0: { result = A.qNAN ? ( B.qNAN ? 32h7fc00000 : sourceReg2F ) : B.qNAN ? sourceReg1F : ( less ? sourceReg1F : sourceReg2F); }
-                            case 1: { result = A.qNAN ? ( B.qNAN ? 32h7fc00000 : sourceReg2F ) : B.qNAN ? sourceReg1F : ( less ? sourceReg2F : sourceReg1F); }
-                        }
-                    }
+        switch( ( A.sNAN | B.sNAN ) | ( A.qNAN & B.qNAN ) ) {
+            case 1: { flags = 5b10000; result = 32h7fc00000; } // sNAN or both qNAN
+            case 0: {
+                switch( function3[0,1] ) {
+                    case 0: { result = A.qNAN ? ( B.qNAN ? 32h7fc00000 : sourceReg2F ) : B.qNAN ? sourceReg1F : ( less ? sourceReg1F : sourceReg2F); }
+                    case 1: { result = A.qNAN ? ( B.qNAN ? 32h7fc00000 : sourceReg2F ) : B.qNAN ? sourceReg1F : ( less ? sourceReg2F : sourceReg1F); }
                 }
+            }
+        }
     }
 }
 
@@ -283,12 +270,12 @@ algorithm floatcomparison(
     floatcompare FPUlteq( a <: sourceReg1F, b <: sourceReg2F, less :> less, equal :> equal );
 
     while(1) {
-                switch( function3 ) {
-                    case 3b000: { flags = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 5b10000 : 0; result = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 0 : less | equal; }
-                    case 3b001: { flags = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 5b10000 : 0; result = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 0 : less; }
-                    case 3b010: { flags = ( A.sNAN | B.sNAN ) ? 5b10000 : 0; result = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 0 : equal; }
-                    default: { result = 0; }
-                }
+        switch( function3 ) {
+            case 3b000: { flags = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 5b10000 : 0; result = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 0 : less | equal; }
+            case 3b001: { flags = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 5b10000 : 0; result = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 0 : less; }
+            case 3b010: { flags = ( A.sNAN | B.sNAN ) ? 5b10000 : 0; result = ( A.qNAN | A.sNAN | B.qNAN | B.sNAN ) ? 0 : equal; }
+            default: { result = 0; }
+        }
     }
 }
 
@@ -298,11 +285,5 @@ algorithm floatsign(
     input   uint32  sourceReg2F,
     output  uint32  result,
 ) <autorun> {
-    while(1) {
-                switch( function3 ) {
-                    default: { result = { sourceReg2F[31,1], sourceReg1F[0,31] }; }                         // FSGNJ.S
-                    case 3b001: { result = { ~sourceReg2F[31,1], sourceReg1F[0,31] }; }                     // FSGNJN.S
-                    case 3b010: { result = { sourceReg1F[31,1] ^ sourceReg2F[31,1], sourceReg1F[0,31] }; }  // FSGNJX.S
-                }
-    }
+    result := { function3[1,1] ? sourceReg1F[31,1] ^ sourceReg2F[31,1] : function3[0,1] ? ~sourceReg2F[31,1] : sourceReg2F[31,1], sourceReg1F[0,31] };
 }

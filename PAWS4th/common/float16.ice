@@ -236,9 +236,9 @@ algorithm floataddsub(
     uint22  sigB = uninitialised;
     uint10  newfraction = uninitialised;
 
-    uint1 IF = uninitialised; uint1 NN = uninitialised; uint1 OF = uninitialised; uint1 UF = uninitialised;
+    uint1 IF = uninitialised; uint1 NN = uninitialised; uint1 NV = uninitialised; uint1 OF = uninitialised; uint1 UF = uninitialised;
     classify A( a <: a ); classify B( a <: b );
-    flags := { IF, NN, 1b0, 1b0, OF, UF, 1b0 };
+    flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
     busy = 0;
 
     while(1) {
@@ -292,7 +292,7 @@ algorithm floataddsub(
                                 case 2b01: { result = ( B.ZERO ) ? a : addsub ? { ~floatingpointnumber( b ).sign, b[0,15] } : b; }
                                 default: {
                                     switch( { IF, NN } ) {
-                                        case 2b10: { result = ( signA == signB ) ? { signA, 5b11111, 10b0 } : 16hfe00; }
+                                        case 2b10: {  NV = ( A.INF & B.INF) & ( signA != signB ); result = ( signA == signB ) ? { signA, 5b11111, 10b0 } : 16hfe00; }
                                         default: { result = 16hfe00; }
                                     }
                                 }
@@ -417,7 +417,7 @@ algorithm floatdivide(
     output  uint7   flags,
     output  uint16  result
 ) <autorun> {
-    uint4   FSM = uninitialised;
+    uint3   FSM = uninitialised;
     uint1   quotientsign <: floatingpointnumber( a ).sign ^ floatingpointnumber( b ).sign;
     int8    quotientexp = uninitialised;
     uint24  quotient = uninitialised;
@@ -449,8 +449,7 @@ algorithm floatdivide(
                             remainder = 0;
                             bit = 23;
                         }
-                        case 1: { while( ~sigB[0,1] ) { sigB = sigB >> 1; } }
-                        case 2: {
+                        case 1: {
                             switch( { IF | NN, A.ZERO | B.ZERO } ) {
                                 case 2b00: {
                                     while( bit != 31 ) {
@@ -463,7 +462,7 @@ algorithm floatdivide(
                                 default: { result = ( A.INF & B.INF ) | NN | B.ZERO ? 16hfe00 : A.ZERO | B.INF ? { quotientsign, 15b0 } : { quotientsign, 5b11111, 10b0 }; }
                             }
                         }
-                        case 3: {
+                        case 2: {
                             switch( { IF | NN, A.ZERO | B.ZERO } ) {
                                 case 2b00: {
                                     switch( quotient ) {

@@ -372,6 +372,45 @@ algorithm gpu(
 }
 
 // RECTANGLE - OUTPUT PIXELS TO DRAW A RECTANGLE
+algorithm drawrectangle(
+    input   int10   start_x,
+    input   int10   start_y,
+    input   int10   max_x,
+    input   int10   max_y,
+    output  int10   bitmap_x_write,
+    output  int10   bitmap_y_write,
+    output  uint1   bitmap_write,
+
+    input   uint1   start,
+    output  uint1   busy
+) <autorun> {
+    int10   x = uninitialized;
+    int10   y = uninitialized;
+
+    bitmap_x_write := x;
+    bitmap_y_write := y;
+    bitmap_write := 0;
+
+    busy = 0;
+    while(1) {
+        switch( start ) {
+            case 1: {
+                busy = 1;
+                x = start_x; y = start_y;
+                while( y <= max_y ) {
+                    while( x <= max_x ) {
+                        bitmap_write = 1;
+                        x = x + 1;
+                    }
+                    x = start_x;
+                    y = y + 1;
+                }
+                busy = 0;
+            }
+            case 0: {}
+        }
+    }
+}
 algorithm rectangle (
     input   int10   x,
     input   int10   y,
@@ -385,20 +424,24 @@ algorithm rectangle (
     input   uint1   start,
     output  uint1   busy
 ) <autorun> {
-    uint2   FSM = uninitialised;
+    drawrectangle RECTANGLE(
+        start_x <: gpu_active_x,
+        start_y <: gpu_active_y,
+        max_x <: gpu_max_x,
+        max_y <: gpu_max_y,
+        bitmap_x_write :> bitmap_x_write,
+        bitmap_y_write :> bitmap_y_write,
+        bitmap_write :> bitmap_write
+    );
 
+    uint2   FSM = uninitialised;
     int10   gpu_active_x = uninitialized;
     int10   gpu_active_y = uninitialized;
-    int10   gpu_x1 = uninitialized;
     int10   gpu_max_x = uninitialized;
     int10   gpu_max_y = uninitialized;
-
     uint1   active = 0;
-    busy := start ? 1 : active;
 
-    bitmap_x_write := gpu_active_x;
-    bitmap_y_write := gpu_active_y;
-    bitmap_write := 0;
+    RECTANGLE.start := 0; busy := start ? 1 : active;
 
     while(1) {
         switch( start ) {
@@ -417,15 +460,7 @@ algorithm rectangle (
                         }
                         case 1: {
                             ( gpu_active_x, gpu_active_y, gpu_max_x, gpu_max_y ) = cropscreen( gpu_active_x, gpu_active_y, gpu_max_x, gpu_max_y );
-                            ( gpu_x1 ) = cropleft( gpu_active_x );
-                            while( gpu_active_y <= gpu_max_y ) {
-                                while( gpu_active_x <= gpu_max_x ) {
-                                    bitmap_write = 1;
-                                    gpu_active_x = gpu_active_x + 1;
-                                }
-                                gpu_active_x = gpu_x1;
-                                gpu_active_y = gpu_active_y + 1;
-                            }
+                            RECTANGLE.start = 1; while( RECTANGLE.busy ) {}
                         }
                     }
                     FSM = FSM << 1;
@@ -438,6 +473,58 @@ algorithm rectangle (
 }
 
 // LINE - OUTPUT PIXELS TO DRAW A LINE
+algorithm drawline(
+    input   int10   start_x,
+    input   int10   start_y,
+    input   int10   start_numerator,
+    input   int10   dx,
+    input   int10   dy,
+    input   int10   sy,
+    input   int10   max_count,
+    output  int10   bitmap_x_write,
+    output  int10   bitmap_y_write,
+    output  uint1   bitmap_write,
+
+    input   uint1   start,
+    output  uint1   busy
+) <autorun> {
+    int10   x = uninitialized;
+    int10   y = uninitialized;
+    int10   numerator = uninitialized;
+    int10   numerator2 = uninitialized;
+    int10   count = uninitialized;
+
+    bitmap_x_write := x;
+    bitmap_y_write := y;
+    bitmap_write := 0;
+
+    busy = 0;
+    while(1) {
+        switch( start ) {
+            case 1: {
+                busy = 1;
+                x = start_x; y = start_y; numerator = start_numerator; count = 0;
+                while( count != max_count ) {
+                    bitmap_write = 1;
+                    numerator2 = numerator;
+                    ++:
+                    switch( numerator2 > (-dx) ) {
+                        case 1: { numerator = numerator - dy; x = x + 1; }
+                        default: {}
+                    }
+                    ++:
+                    switch( numerator2 < dy ) {
+                        case 1: { numerator = numerator + dx; y = y + sy; }
+                        default: {}
+                    }
+                    count = count + 1;
+                }
+                busy = 0;
+            }
+            case 0: {}
+        }
+    }
+}
 algorithm line (
     input   int10   x,
     input   int10   y,
@@ -451,33 +538,35 @@ algorithm line (
     input   uint1   start,
     output  uint1   busy
 ) <autorun> {
-    uint3   FSM = uninitialised;
-    uint3   FSM2 = uninitialised;
+    drawline LINE(
+        start_x <: gpu_active_x,
+        start_y <: gpu_active_y,
+        start_numerator <: gpu_numerator,
+        dx <: gpu_dx,
+        dy <: gpu_dy,
+        sy <: gpu_sy,
+        max_count <: gpu_max_count,
+        bitmap_x_write :> bitmap_x_write,
+        bitmap_y_write :> bitmap_y_write,
+        bitmap_write :> bitmap_write
+    );
 
+    uint3   FSM = uninitialised;
     int10   gpu_active_x = uninitialized;
     int10   gpu_active_y = uninitialized;
     int10   gpu_dx = uninitialized;
     int10   gpu_dy = uninitialized;
     int10   gpu_sy = uninitialized;
-    int10   gpu_max_x = uninitialized;
-    int10   gpu_max_y = uninitialized;
     int10   gpu_numerator = uninitialized;
-    int10   gpu_numerator2 = uninitialized;
-    int10   gpu_count = uninitialized;
     int10   gpu_max_count = uninitialized;
-
     uint1   active = 0;
-    busy := start ? 1 : active;
 
-    bitmap_x_write := gpu_active_x;
-    bitmap_y_write := gpu_active_y;
-    bitmap_write := 0;
+    LINE.start := 0; busy := start ? 1 : active;
 
     while(1) {
         switch( start ) {
             case 1: {
                 active = 1;
-                gpu_count = 0;
                 FSM = 1;
                 while( FSM != 0 ) {
                     onehot( FSM ) {
@@ -496,34 +585,7 @@ algorithm line (
                             gpu_numerator = ( gpu_dx > gpu_dy ) ? ( gpu_dx >> 1 ) : -( gpu_dy >> 1 );
                             ( gpu_max_count ) = max( gpu_dx, gpu_dy );
                         }
-                        case 2: {
-                            gpu_max_count = gpu_max_count + 1;
-                            while( gpu_count != gpu_max_count ) {
-                                FSM2 = 1;
-                                while( FSM2 != 0 ) {
-                                    onehot( FSM2 ) {
-                                        case 0: {
-                                            bitmap_write = 1;
-                                            gpu_numerator2 = gpu_numerator;
-                                        }
-                                        case 1: {
-                                            switch( gpu_numerator2 > (-gpu_dx) ) {
-                                                case 1: { gpu_numerator = gpu_numerator - gpu_dy; gpu_active_x = gpu_active_x + 1; }
-                                                default: {}
-                                            }
-                                        }
-                                        case 2: {
-                                            switch( gpu_numerator2 < gpu_dy ) {
-                                                case 1: { gpu_numerator = gpu_numerator + gpu_dx; gpu_active_y = gpu_active_y + gpu_sy; }
-                                                default: {}
-                                            }
-                                        }
-                                    }
-                                    FSM2 = FSM2 << 1;
-                                }
-                                gpu_count = gpu_count + 1;
-                            }
-                        }
+                        case 2: { gpu_max_count = gpu_max_count + 1; LINE.start = 1; while( LINE.busy ) {} }
                     }
                     FSM = FSM << 1;
                 }
@@ -549,6 +611,75 @@ algorithm updatenumerator(
         }
     }
 }
+algorithm drawcircle(
+    input   int10   xc,
+    input   int10   yc,
+    input   int10   radius,
+    input   int10   start_numerator,
+    input   uint8   draw_sectors,
+    input   uint1   filledcircle,
+    output  int10   bitmap_x_write,
+    output  int10   bitmap_y_write,
+    output  uint1   bitmap_write,
+
+    input   uint1   start,
+    output  uint1   busy
+) <autorun> {
+    updatenumerator UN(
+        gpu_numerator <: numerator,
+        gpu_active_x <: active_x,
+        gpu_active_y <: active_y
+    );
+
+    uint8   PIXELOUTPUT = uninitialised;
+    uint8   PIXELMASK <:: PIXELOUTPUT;
+    int10   active_x = uninitialized;
+    int10   active_y = uninitialized;
+    int10   count = uninitialised;
+    int10   min_count = uninitialised;
+    int10   numerator = uninitialised;
+
+    bitmap_write := 0;
+
+    busy = 0;
+    while(1) {
+        switch( start ) {
+            case 1: {
+                busy = 1;
+                active_x = 0; active_y = radius; count = radius; numerator = start_numerator;
+                min_count = (-1);
+                while( active_y >= active_x ) {
+                    while( count != min_count ) {
+                        PIXELOUTPUT = 8b000000001;
+                        while( PIXELOUTPUT != 0 ) {
+                            // OUTPUT PIXELS IN THE 8 SEGMENTS/ARCS
+                            onehot( PIXELOUTPUT ) {
+                                case 0: { bitmap_x_write = xc + active_x; bitmap_y_write = yc + count; }
+                                case 1: { bitmap_y_write = yc - count; }
+                                case 2: { bitmap_x_write = xc - active_x; }
+                                case 3: { bitmap_y_write = yc + count; }
+                                case 4: { bitmap_x_write = xc + count; bitmap_y_write = yc + active_x; }
+                                case 5: { bitmap_y_write = yc - active_x; }
+                                case 6: { bitmap_x_write = xc - count; }
+                                case 7: { bitmap_y_write = yc + active_x; }
+                            }
+                            bitmap_write = ( draw_sectors & PIXELMASK ) != 0;
+                            PIXELOUTPUT = PIXELOUTPUT << 1;
+                        }
+                        count = filledcircle ? count - 1 : min_count;
+                    }
+                    active_x = active_x + 1;
+                    active_y = active_y - ( numerator > 0 );
+                    count = active_y - ( numerator > 0 );
+                    min_count = min_count + 1;
+                    numerator = UN.new_numerator;
+                }
+                busy = 0;
+            }
+            case 0: {}
+        }
+    }
+}
 algorithm circle(
     input   int10   x,
     input   int10   y,
@@ -563,25 +694,26 @@ algorithm circle(
     input   uint1   start,
     output  uint1   busy
 ) <autorun> {
-    uint8   PIXELOUTPUT = uninitialised;
-    uint8   PIXELMASK <:: PIXELOUTPUT;
     uint3   FSM = uninitialised;
-    int10   gpu_active_x = uninitialized;
-    int10   gpu_active_y = uninitialized;
+    drawcircle CIRCLE(
+        xc <: gpu_xc,
+        yc <: gpu_yc,
+        radius <: radius,
+        start_numerator <: gpu_numerator,
+        draw_sectors <: draw_sectors,
+        filledcircle <: filledcircle,
+        bitmap_x_write :> bitmap_x_write,
+        bitmap_y_write :> bitmap_y_write,
+        bitmap_write :> bitmap_write
+    );
+    int10   radius = uninitialized;
     int10   gpu_xc = uninitialized;
     int10   gpu_yc = uninitialized;
     int10   gpu_numerator = uninitialized;
-    int10   gpu_count = uninitialised;
-    int10   gpu_min_count = uninitialised;
     uint8   draw_sectors = uninitialised;
-    updatenumerator UN(
-        gpu_numerator <: gpu_numerator,
-        gpu_active_x <: gpu_active_x,
-        gpu_active_y <: gpu_active_y
-    );
     uint1   active = 0;
-    busy := start ? 1 : active;
-    bitmap_write := 0;
+
+    CIRCLE.start := 0; busy := start ? 1 : active;
 
     while(1) {
         switch( start ) {
@@ -592,45 +724,12 @@ algorithm circle(
                     onehot( FSM ) {
                         case 0: {
                             // Setup drawing a circle centre x,y or radius param0 in colour
-                            gpu_active_x = 0;
-                            ( gpu_active_y ) = abs( param0 );
+                            ( radius ) = abs( param0 );
                             ( gpu_xc, gpu_yc ) = copycoordinates( x, y );
                             draw_sectors = param1;
                         }
-                        case 1: {
-                            // Set the radius
-                            gpu_count = gpu_active_y;
-                            gpu_numerator = 3 - ( { gpu_active_y, 1b0 } );
-                            gpu_min_count = (-1);
-                        }
-                        case 2: {
-                            while( gpu_active_y >= gpu_active_x ) {
-                                while( gpu_count != gpu_min_count ) {
-                                    PIXELOUTPUT = 8b000000001;
-                                    while( PIXELOUTPUT != 0 ) {
-                                        // OUTPUT PIXELS IN THE 8 SEGMENTS/ARCS
-                                        onehot( PIXELOUTPUT ) {
-                                            case 0: { bitmap_x_write = gpu_xc + gpu_active_x; bitmap_y_write = gpu_yc + gpu_count; }
-                                            case 1: { bitmap_y_write = gpu_yc - gpu_count; }
-                                            case 2: { bitmap_x_write = gpu_xc - gpu_active_x; }
-                                            case 3: { bitmap_y_write = gpu_yc + gpu_count; }
-                                            case 4: { bitmap_x_write = gpu_xc + gpu_count; bitmap_y_write = gpu_yc + gpu_active_x; }
-                                            case 5: { bitmap_y_write = gpu_yc - gpu_active_x; }
-                                            case 6: { bitmap_x_write = gpu_xc - gpu_count; }
-                                            case 7: { bitmap_y_write = gpu_yc + gpu_active_x; }
-                                        }
-                                        bitmap_write = ( draw_sectors & PIXELMASK ) != 0;
-                                        PIXELOUTPUT = PIXELOUTPUT << 1;
-                                    }
-                                    gpu_count = filledcircle ? gpu_count - 1 : gpu_min_count;
-                                }
-                                gpu_active_x = gpu_active_x + 1;
-                                gpu_active_y = gpu_active_y - ( gpu_numerator > 0 );
-                                gpu_count = gpu_active_y - ( gpu_numerator > 0 );
-                                gpu_min_count = gpu_min_count + 1;
-                                gpu_numerator = UN.new_numerator;
-                            }
-                        }
+                        case 1: { gpu_numerator = 3 - ( { radius, 1b0 } ); }
+                        case 2: { CIRCLE.start = 1; while( CIRCLE.busy ) {} }
                     }
                     FSM = FSM << 1;
                 }
@@ -658,6 +757,97 @@ algorithm insideTriangle(
                 ( (( x - x2 ) * ( sy - y2 ) - ( y - y2 ) * ( sx - x2 )) >= 0 ) &
                 ( (( x1 - x ) * ( sy - y ) - ( y1 - y ) * ( sx - x )) >= 0 );
 }
+algorithm drawtriangle(
+    input   int10   min_x,
+    input   int10   min_y,
+    input   int10   max_x,
+    input   int10   max_y,
+    input   int10   x0,
+    input   int10   y0,
+    input   int10   x1,
+    input   int10   y1,
+    input   int10   x2,
+    input   int10   y2,
+    output  int10   bitmap_x_write,
+    output  int10   bitmap_y_write,
+    output  uint1   bitmap_write,
+
+    input   uint1   start,
+    output  uint1   busy
+) <autorun> {
+    // Filled triangle calculations
+    // Is the point sx,sy inside the triangle given by active_x,active_y x1,y1 x2,y2?
+    uint1   inTriangle = uninitialized;
+    uint1   beenInTriangle = uninitialized;
+    uint1   EXIT = uninitialised;
+    insideTriangle IN(
+        sx <: sx,
+        sy <: sy,
+        x <: x0,
+        y <: y0,
+        x1 <: x1,
+        y1 <: y1,
+        x2 <: x2,
+        y2 <: y2,
+        inside :> inTriangle
+    );
+    // WORK COORDINATES
+    int10   sx = uninitialized;
+    int10   sy = uninitialized;
+    // WORK DIRECTION ( == 0 left, == 1 right )
+    uint1   dx = uninitialized;
+
+    bitmap_x_write := sx;
+    bitmap_y_write := sy;
+    bitmap_write := 0;
+
+    busy = 0;
+    while(1) {
+        switch( start ) {
+            case 1: {
+                busy = 1;
+                dx = 1; beenInTriangle = 0; sx = min_x; sy = min_y;
+                while( sy != max_y ) {
+                    // Edge calculations to determine if inside the triangle - converted to DSP blocks
+                    beenInTriangle = inTriangle ? 1 : beenInTriangle;
+                    bitmap_write = inTriangle;
+                    EXIT = ( beenInTriangle & ~inTriangle );
+                    switch( EXIT ) {
+                        case 1: {
+                            // Exited the triangle, move to the next line
+                            beenInTriangle = 0;
+                            sy = sy + 1;
+                            switch( ( max_x - sx ) < ( sx - min_x ) ) {
+                                // Closer to the right
+                                case 1: { sx = max_x; dx = 0; }
+                                // Closer to the left
+                                case 0: { sx = min_x; dx = 1; }
+                            }
+                        }
+                        case 0: {
+                            switch( dx ) {
+                                case 0: {
+                                    switch( sx >= min_x ) {
+                                        case 1: { sx = sx - 1; }
+                                        case 0: { dx = 1; beenInTriangle = 0; sy = sy + 1; }
+                                    }
+                                }
+                                case 1: {
+                                    switch( sx <= max_x ) {
+                                        case 1: { sx = sx + 1; }
+                                        case 0: { dx = 0; beenInTriangle = 0; sy = sy + 1; }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                busy = 0;
+            }
+            case 0: {}
+        }
+    }
+}
 algorithm triangle (
     input   int10   x,
     input   int10   y,
@@ -666,16 +856,30 @@ algorithm triangle (
     input   int10   param2,
     input   int10   param3,
 
-    output  int10  bitmap_x_write,
-    output  int10  bitmap_y_write,
+    output  int10   bitmap_x_write,
+    output  int10   bitmap_y_write,
     output  uint1   bitmap_write,
 
     input   uint1   start,
     output  uint1   busy
 ) <autorun> {
-    uint8   FSM = uninitialised;
-    uint1   FSM2 = uninitialised;
+    drawtriangle TRIANGLE(
+        min_x <: gpu_min_x,
+        max_x <: gpu_max_x,
+        min_y <: gpu_min_y,
+        max_y <: gpu_max_y,
+        x0 <: gpu_active_x,
+        y0 <: gpu_active_y,
+        x1 <: gpu_x1,
+        y1 <: gpu_y1,
+        x2 <: gpu_x2,
+        y2 <: gpu_y2,
+        bitmap_x_write :> bitmap_x_write,
+        bitmap_y_write :> bitmap_y_write,
+        bitmap_write :> bitmap_write
+    );
 
+    uint8   FSM = uninitialised;
     // VERTEX COORDINATES
     int10   gpu_active_x = uninitialized;
     int10   gpu_active_y = uninitialized;
@@ -683,42 +887,14 @@ algorithm triangle (
     int10   gpu_y1 = uninitialized;
     int10   gpu_x2 = uninitialized;
     int10   gpu_y2 = uninitialized;
-
     // BOUNDING BOX
     int10   gpu_min_x = uninitialized;
     int10   gpu_max_x = uninitialized;
     int10   gpu_min_y = uninitialized;
     int10   gpu_max_y = uninitialized;
-
-    // WORK COORDINATES
-    int10   gpu_sx = uninitialized;
-    int10   gpu_sy = uninitialized;
-
-    // WORK DIRECTION ( == 0 left, == 1 right )
-    uint1   gpu_dx = 1;
-
-    // Filled triangle calculations
-    // Is the point sx,sy inside the triangle given by active_x,active_y x1,y1 x2,y2?
-    uint1   inTriangle = uninitialized;
-    uint1   beenInTriangle = uninitialized;
-    insideTriangle IN(
-        sx <: gpu_sx,
-        sy <: gpu_sy,
-        x <: gpu_active_x,
-        y <: gpu_active_y,
-        x1 <: gpu_x1,
-        y1 <: gpu_y1,
-        x2 <: gpu_x2,
-        y2 <: gpu_y2,
-        inside :> inTriangle
-    );
     uint1   active = 0;
-    busy := start ? 1 : active;
 
-    // PIXEL TO OUTPUT
-    bitmap_x_write := gpu_sx;
-    bitmap_y_write := gpu_sy;
-    bitmap_write := 0;
+    TRIANGLE.start := 0; busy := start ? 1 : active;
 
     while(1) {
         switch( start ) {
@@ -732,8 +908,6 @@ algorithm triangle (
                             ( gpu_active_x, gpu_active_y ) = copycoordinates( x, y);
                             ( gpu_x1, gpu_y1 ) = copycoordinates( param0, param1 );
                             ( gpu_x2, gpu_y2 ) = copycoordinates( param2, param3 );
-                            gpu_dx = 1;
-                            beenInTriangle = 0;
                         }
                         case 1: {
                             // Find minimum and maximum of x, x1, x2, y, y1 and y2 for the bounding box
@@ -746,67 +920,12 @@ algorithm triangle (
                             // Clip to the screen edge
                             ( gpu_min_x, gpu_min_y, gpu_max_x, gpu_max_y ) = cropscreen( gpu_min_x, gpu_min_y, gpu_max_x, gpu_max_y );
                         }
-                        case 3: {
-                            // Put points in order so that ( gpu_active_x, gpu_active_y ) is at top, then ( gpu_x1, gpu_y1 ) and ( gpu_x2, gpu_y2 ) are clockwise from there
-                            switch( gpu_y1 < gpu_active_y ) {
-                                case 1: { ( gpu_active_x, gpu_active_y, gpu_x1, gpu_y1 ) = swapcoordinates( gpu_active_x, gpu_active_y, gpu_x1, gpu_y1 ); }
-                                default: {}
-                            }
-                        }
-                        case 4: {
-                            switch( gpu_y2 < gpu_active_y ) {
-                                case 1: { ( gpu_active_x, gpu_active_y, gpu_x2, gpu_y2 ) = swapcoordinates( gpu_active_x, gpu_active_y, gpu_x2, gpu_y2 ); }
-                                default: {}
-                            }
-                        }
-                        case 5: {
-                            switch( gpu_x1 < gpu_x2 ) {
-                                case 1: { ( gpu_x1, gpu_y1, gpu_x2, gpu_y2 ) = swapcoordinates( gpu_x1, gpu_y1, gpu_x2, gpu_y2 ); }
-                                default: {}
-                            }
-                        }
-                        case 6: {
-                            // Start at the top left
-                            ( gpu_sx, gpu_sy ) = copycoordinates( gpu_min_x, gpu_min_y );
-                            gpu_max_y = gpu_max_y + 1;
-                        }
-                        case 7: {
-                            while( gpu_sy != gpu_max_y ) {
-                                // Edge calculations to determine if inside the triangle - converted to DSP blocks
-                                beenInTriangle = inTriangle ? 1 : beenInTriangle;
-                                bitmap_write = inTriangle;
-                                FSM2 = ~( beenInTriangle & ~inTriangle );
-                                switch( FSM2 ) {
-                                    case 0: {
-                                        // Exited the triangle, move to the next line
-                                        beenInTriangle = 0;
-                                        gpu_sy = gpu_sy + 1;
-                                        switch( ( gpu_max_x - gpu_sx ) < ( gpu_sx - gpu_min_x ) ) {
-                                            // Closer to the right
-                                            case 1: { gpu_sx = gpu_max_x; gpu_dx = 0; }
-                                            // Closer to the left
-                                            case 0: { gpu_sx = gpu_min_x; gpu_dx = 1; }
-                                        }
-                                    }
-                                    case 1: {
-                                        switch( gpu_dx ) {
-                                            case 0: {
-                                                switch( gpu_sx >= gpu_min_x ) {
-                                                    case 1: { gpu_sx = gpu_sx - 1; }
-                                                    case 0: { gpu_dx = 1; beenInTriangle = 0; gpu_sy = gpu_sy + 1; }
-                                                }
-                                            }
-                                            case 1: {
-                                                switch( gpu_sx <= gpu_max_x ) {
-                                                    case 1: { gpu_sx = gpu_sx + 1; }
-                                                    case 0: { gpu_dx = 0; beenInTriangle = 0; gpu_sy = gpu_sy + 1; }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        // Put points in order so that ( gpu_active_x, gpu_active_y ) is at top, then ( gpu_x1, gpu_y1 ) and ( gpu_x2, gpu_y2 ) are clockwise from there
+                        case 3: { if( gpu_y1 < gpu_active_y ) { ( gpu_active_x, gpu_active_y, gpu_x1, gpu_y1 ) = swapcoordinates( gpu_active_x, gpu_active_y, gpu_x1, gpu_y1 ); } }
+                        case 4: { if( gpu_y2 < gpu_active_y ) { ( gpu_active_x, gpu_active_y, gpu_x2, gpu_y2 ) = swapcoordinates( gpu_active_x, gpu_active_y, gpu_x2, gpu_y2 );  } }
+                        case 5: { if( gpu_x1 < gpu_x2 ) { ( gpu_x1, gpu_y1, gpu_x2, gpu_y2 ) = swapcoordinates( gpu_x1, gpu_y1, gpu_x2, gpu_y2 ); } }
+                        case 6: { gpu_max_y = gpu_max_y + 1; }
+                        case 7: { TRIANGLE.start = 1; while( TRIANGLE.busy ) {} }
                     }
                     FSM = FSM << 1;
                 }

@@ -239,7 +239,7 @@ algorithm PAWSCPU(
                     case 5b01000: { writeRegister = 0; memoryoutput = sourceReg2; }             // STORE
                     case 5b11100: {
                         switch( function3 ) {
-                            default: { CSR.start = 1; while( CSR.busy ) {} result = CSR.result; }                    // CSR
+                            default: { CSR.start = 1; while( CSR.busy ) {} result = CSR.result; }   // CSR
                             case 3b000: { result = 0; }
                         }
                     }
