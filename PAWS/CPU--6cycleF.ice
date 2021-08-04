@@ -61,7 +61,7 @@ algorithm PAWSCPU(
     input   uint1   SMTRUNNING,
     input   uint32  SMTSTARTPC
 ) <autorun> {
-    uint7 FSM = 7b0000001;
+    uint6 FSM = 6b000001;
 
     // SMT FLAG
     // RUNNING ON HART 0 OR HART 1
@@ -190,8 +190,8 @@ algorithm PAWSCPU(
     writememory := 0;
 
     // REGISTERS Write FLAG
-    REGISTERS.write := ( FSM == 7b1000000 ) & EXECUTE.writeRegister & ~EXECUTE.frd & ( rd != 0 ); REGISTERS.result := EXECUTE.result;
-    REGISTERSF.write := ( FSM == 7b1000000 ) & EXECUTE.writeRegister & EXECUTE.frd; REGISTERSF.result := EXECUTE.result;
+    REGISTERS.write := ( FSM == 6b100000 ) & EXECUTE.writeRegister & ~EXECUTE.frd & ( rd != 0 ); REGISTERS.result := EXECUTE.result;    // BASE DO NOT WRITE TO REGISTER 0
+    REGISTERSF.write := ( FSM == 6b100000 ) & EXECUTE.writeRegister & EXECUTE.frd; REGISTERSF.result := EXECUTE.result;
 
     // CPU EXECUTE START FLAGS
     EXECUTE.start := 0; EXECUTE.AUIPCLUI := AGU.AUIPCLUI;
@@ -210,26 +210,23 @@ algorithm PAWSCPU(
                         instruction[16,16] = readdata;
                     }
                 }
-                FSM = 7b0000010;
+                FSM = 6b000010;
             }
-            case 1: { FSM = 7b0000100; }                                                        // ALLOW DECODE, REGISTER FETCHADDRESS GENERATION
-            case 2: { FSM = memoryload ? 7b0001000 : 7b0010000; }
-            case 3: {                                                                           // LOAD FROM MEMORY
+            case 1: { FSM = memoryload ? 6b000100 : 6b001000; }                                 // ALLOW DECODE, REGISTER FETCHADDRESS GENERATION
+            case 2: {                                                                           // LOAD FROM MEMORY
                 ( address, readmemory, memoryinput ) = load( accesssize, loadAddress, memorybusy, readdata );
-                FSM = 7b0010000;
+                FSM = 6b001000;
             }
-            case 4: {                                                                           // EXECUTE
+            case 3: {                                                                           // EXECUTE
                 EXECUTE.start = 1; while( EXECUTE.busy ) {}
-                FSM = memorystore ? 7b0100000 : 7b1000000;
+                FSM = memorystore ? 6b010000 : 6b100000;
             }
-            case 5: {                                                                           // STORE TO MEMORY
+            case 4: {                                                                           // STORE TO MEMORY
                 ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy );
-                FSM = 7b1000000;
+                FSM = 6b100000;
             }
-            case 6: {                                                                           // REGISTERS WRITE
-                //REGISTERS.write = EXECUTE.writeRegister & ~EXECUTE.frd & ( rd != 0 );           // BASE DO NOT WRITE TO REGISTER 0
-                //REGISTERSF.write = EXECUTE.writeRegister & EXECUTE.frd;
-                switch( SMT ) {                                                                 // UPDATE PC AND SMT
+            case 5: {                                                                           // UPDATE PC AND SMT
+                switch( SMT ) {
                     case 1b1: {
                         ( pcSMT ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
                         SMT = 0;
@@ -240,7 +237,7 @@ algorithm PAWSCPU(
                         pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC;
                     }
                 }
-                FSM = 7b0000001;
+                FSM = 6b000001;
             }
         }
     } // RISC-V

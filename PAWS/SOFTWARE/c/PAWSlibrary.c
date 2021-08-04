@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 typedef unsigned int size_t;
 
@@ -634,6 +635,32 @@ void set_vector_vertex( unsigned char block, unsigned char vertex, unsigned char
     *VECTOR_WRITER_ACTIVE = active;
     *VECTOR_WRITER_DELTAX = deltax;
     *VECTOR_WRITER_DELTAY = deltay;
+}
+
+// SOFTWARE VECTORS
+struct Point2D {
+    short dx;
+    short dy;
+};
+
+struct Point2D Rotate2D( struct Point2D point, short xc, short yc, short angle, float scale ) {
+    struct Point2D newpoint;
+    float radians = angle*0.01745329252;
+
+    newpoint.dx = ( (point.dx * scale)*cosf(radians)-(point.dy * scale)*sinf(radians) ) + xc;
+    newpoint.dy = ( (point.dx * scale)*sinf(radians)+(point.dy * scale)*cosf(radians) ) + yc;
+
+    return( newpoint );
+}
+
+void Draw2DVectorShape( unsigned char colour, struct Point2D *points, short numpoints, short xc, short yc, short angle, float scale ) {
+    struct Point2D *NewShape  = (struct Point2D *)0x1400;
+    for( short vertex = 0; vertex < numpoints; vertex++ ) {
+        NewShape[ vertex ] = Rotate2D( points[vertex], xc, yc, angle, scale );
+    }
+    for( short vertex = 0; vertex < numpoints; vertex++ ) {
+        gpu_line( colour, NewShape[ vertex ].dx, NewShape[ vertex ].dy, NewShape[ ( vertex == ( numpoints - 1 ) ) ? 0 : vertex + 1 ].dx, NewShape[ vertex == ( numpoints - 1 ) ? 0 : vertex + 1 ].dy );
+    }
 }
 
 // SPRITE LAYERS - MAIN ACCESS

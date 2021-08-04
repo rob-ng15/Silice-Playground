@@ -129,6 +129,12 @@ struct sprite_update_flag {
     int dx:5;
 };
 
+// FOR 2D SOFTWARE VECTORS
+struct Point2D {
+    short dx;
+    short dy;
+};
+
 // FAT16 FILE SYSTEM
 // https://codeandlife.com/2012/04/02/simple-fat-and-sd-tutorial-part-1/ USED AS REFERENCE
 
@@ -277,6 +283,9 @@ extern void gpu_pixelblock_start( short , short , unsigned short );
 extern void gpu_pixelblock_pixel7( unsigned char );
 extern void gpu_pixelblock_pixel24( unsigned char, unsigned char, unsigned char );
 extern void gpu_pixelblock_stop( void );
+
+// SOFTWARE VECTOR SHAPES
+extern void Draw2DVectorShape( unsigned char, struct Point2D *, short, short, short, short, float );
 
 // SPRITES - MAIN ACCESS
 extern void set_sprite( unsigned char, unsigned char, unsigned char, unsigned char, short, short, unsigned char, unsigned char );

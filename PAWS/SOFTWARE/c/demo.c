@@ -1126,25 +1126,10 @@ void spritedemo( void ) {
     }
 }
 
-struct Point2D {
-    int dx;
-    int dy;
-};
-
-struct Point2D Rotate2D( struct Point2D point, int xc, int yc, int angle, float scale ) {
-    struct Point2D newpoint;
-    float radians = angle*0.01745329252;
-
-    newpoint.dx = ( (point.dx * scale)*cosf(radians)-(point.dy * scale)*sinf(radians) ) + xc;
-    newpoint.dy = ( (point.dx * scale)*sinf(radians)+(point.dy * scale)*cosf(radians) ) + yc;
-
-    return( newpoint );
-}
-
 void floatdemo() {
     struct Point2D Square[4] = { { -100, -100 }, { 100, -100 }, { 100, 100 }, { -100, 100 } };
     struct Point2D NewSquare[4];
-    short colour;
+    unsigned char colour;
 
     displayreset();
     tpu_printf_centre( 28, TRANSPARENT, WHITE, "FLOAT DEMO" );
@@ -1153,14 +1138,9 @@ void floatdemo() {
     } else {
         tpu_printf_centre( 29, TRANSPARENT, WHITE, "SOFT FLOAT ONLY" );
     }
-    for( int angle = 0; angle < 360; angle += 5 ) {
-            for( int vertex = 0; vertex < 4; vertex++ ) {
-                NewSquare[ vertex ] = Rotate2D( Square[vertex], 160, 120, angle, ( angle < 90 ) ? 1.0 : ( angle < 180 ) ? 0.75 : ( angle < 270 ) ? 0.5 : 0.25 );
-            }
-            colour = ( angle < 90 ) ? RED : ( angle < 180 ) ? GREEN : ( angle < 270 ) ? BLUE : WHITE;
-            for( int vertex = 0; vertex < 4; vertex++ ) {
-                gpu_line( colour, NewSquare[ vertex ].dx, NewSquare[ vertex ].dy, NewSquare[ ( vertex == 3 ) ? 0 : vertex + 1 ].dx, NewSquare[ ( vertex == 3 ) ? 0 : vertex + 1 ].dy );
-            }
+    for( short angle = 0; angle < 360; angle += 5 ) {
+        colour = ( angle < 90 ) ? RED : ( angle < 180 ) ? GREEN : ( angle < 270 ) ? BLUE : WHITE;
+        Draw2DVectorShape( colour, Square, 4, 160, 120, angle, ( angle < 90 ) ? 1.0 : ( angle < 180 ) ? 0.75 : ( angle < 270 ) ? 0.5 : 0.25 );
     }
     sleep( 2000, 0 );
 }

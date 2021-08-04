@@ -1,20 +1,24 @@
 // ALU - M EXTENSION
 
 // UNSIGNED / SIGNED 32 by 32 bit division giving 32 bit remainder and quotient
-
-$$if not divbit_circuit then
-$$divbit_circuit = 1
-// PERFORM DIVISION AT SPECIFIC BIT, SHARED BETWEEN INTEGER AND  FLOATING POINT DIVISION
-circuitry divbit( inout quo, inout rem, input top, input bottom, input x ) {
-    sameas( rem ) temp = uninitialized;
-    uint1   quobit = uninitialised;
-
-    temp = ( rem << 1 ) | top[x,1];
-    quobit = __unsigned(temp) >= __unsigned(bottom);
-    rem = __unsigned(temp) - ( quobit ? __unsigned(bottom) : 0 );
-    quo[x,1] = quobit;
+algorithm dointdivbit(
+    input   uint32  quotient,
+    input   uint32  remainder,
+    input   uint32  top,
+    input   uint32  bottom,
+    input   uint6   bit,
+    output  uint32  newquotient,
+    output  uint32  newremainder,
+ ) <autorun> {
+    uint32  temporary = uninitialized;
+    uint1   bitresult = uninitialised;
+    while(1) {
+        temporary = ( remainder << 1 ) | top[bit,1];
+        bitresult = __unsigned(temporary) >= __unsigned(bottom);
+        newremainder = __unsigned(temporary) - ( bitresult ? __unsigned(bottom) : 0 );
+        newquotient = quotient | ( bitresult << bit );
+    }
 }
-$$end
 algorithm douintdivide(
     input   uint1   start,
     output  uint1   busy,
@@ -23,6 +27,13 @@ algorithm douintdivide(
     output  uint32  quotient,
     output  uint32  remainder
 ) <autorun> {
+    dointdivbit DIVBIT(
+        quotient <: quotient,
+        remainder <: remainder,
+        top <: dividend,
+        bottom <: divisor,
+        bit <: bit
+    );
     uint6   bit = uninitialised;
     busy = 0;
 
@@ -32,13 +43,12 @@ algorithm douintdivide(
             case 1: {
                 busy = 1;
                 bit = 31; quotient = 0; remainder = 0;
-                while( bit != 63 ) { ( quotient, remainder ) = divbit( quotient, remainder, dividend, divisor, bit ); bit = bit - 1; }
+                while( bit != 63 ) { quotient = DIVBIT.newquotient; remainder = DIVBIT.newremainder; bit = bit - 1; }
                 busy = 0;
             }
         }
     }
 }
-
 algorithm aluMdivideremain(
     input   uint1   start,
     output  uint1   busy,
