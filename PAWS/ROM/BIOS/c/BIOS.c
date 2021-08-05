@@ -92,6 +92,11 @@ unsigned char get_buttons( void ) {
     return( *BUTTONS );
 }
 
+// WAIT FOR VBLANK TO START
+void await_vblank( void ) {
+    while( !*VBLANK );
+}
+
 // BACKGROUND GENERATOR
 void set_background( unsigned char colour, unsigned char altcolour, unsigned char backgroundmode ) {
     *BACKGROUND_COPPER_STARTSTOP = 0;
@@ -231,6 +236,49 @@ void tpu_outputstringcentre( unsigned char y, unsigned char background, unsigned
     tpu_outputstring( s );
 }
 
+// SET THE TILEMAP TILE at (x,y) to tile with colours background and foreground
+void set_tilemap_tile( unsigned char tm_layer, unsigned char x, unsigned char y, unsigned char tile, unsigned char background, unsigned char foreground) {
+    switch( tm_layer ) {
+        case 0:
+            while( *LOWER_TM_STATUS );
+            *LOWER_TM_X = x;
+            *LOWER_TM_Y = y;
+            *LOWER_TM_TILE = tile;
+            *LOWER_TM_BACKGROUND = background;
+            *LOWER_TM_FOREGROUND = foreground;
+            *LOWER_TM_COMMIT = 1;
+            break;
+        case 1:
+            while( *UPPER_TM_STATUS );
+            *UPPER_TM_X = x;
+            *UPPER_TM_Y = y;
+            *UPPER_TM_TILE = tile;
+            *UPPER_TM_BACKGROUND = background;
+            *UPPER_TM_FOREGROUND = foreground;
+            *UPPER_TM_COMMIT = 1;
+            break;
+    }
+}
+
+// SCROLL WRAP or CLEAR the TILEMAP
+//  action == 1 to 4 move the tilemap 1 pixel LEFT, UP, RIGHT, DOWN and SCROLL at limit
+//  action == 5 to 8 move the tilemap 1 pixel LEFT, UP, RIGHT, DOWN and WRAP at limit
+//  action == 9 clear the tilemap
+//  RETURNS 0 if no action taken other than pixel shift, action if SCROLL WRAP or CLEAR was actioned
+unsigned char tilemap_scrollwrapclear( unsigned char tm_layer, unsigned char action ) {
+    switch( tm_layer ) {
+        case 0:
+            while( *LOWER_TM_STATUS );
+            *LOWER_TM_SCROLLWRAPCLEAR = action;
+            break;
+        case 1:
+            while( *UPPER_TM_STATUS );
+            *UPPER_TM_SCROLLWRAPCLEAR = action;
+            break;
+    }
+    return( tm_layer ? *UPPER_TM_SCROLLWRAPCLEAR : *LOWER_TM_SCROLLWRAPCLEAR );
+}
+
 // SDCARD BLITTER TILES
 unsigned short sdcardtiles[] = {
     // CARD
@@ -243,6 +291,16 @@ unsigned short sdcardtiles[] = {
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0018, 0x0018, 0x0000
 };
+
+// SMT START STOP
+void SMTSTOP( void ) {
+    *SMTSTATUS = 0;
+}
+void SMTSTART( unsigned int code ) {
+    *SMTPCH = ( code & 0xffff0000 ) >> 16;
+    *SMTPCL = ( code & 0x0000ffff );
+    *SMTSTATUS = 1;
+}
 
 // MASTER BOOT RECORD AND PARTITION TABLE, STORED FROM TOP OF MEMORY
 unsigned char *MBR = (unsigned char *) 0x12000000 - 0x200;
@@ -398,15 +456,33 @@ void waitbuttonrelease( void ) {
     while( get_buttons() != 1 );
 }
 
+void scrollbars( void ) {
+    short count = 0;
+    while(1) {
+        await_vblank();count++;
+        if( count == 16 ) {
+            tilemap_scrollwrapclear( 0, 7 );
+            tilemap_scrollwrapclear( 1, 5 );
+            count = 0;
+        }
+    }
+}
+
+void smtthread( void ) {
+    // SETUP STACKPOINTER FOR THE SMT THREAD
+    asm volatile ("li sp ,0x4000");
+    scrollbars();
+    SMTSTOP();
+}
+
 extern int _bss_start, _bss_end;
 void main( void ) {
     unsigned int isa;
-    unsigned short i,j;
-    unsigned char uartData = 0;
+    unsigned short i, j;
     unsigned short selectedfile = 0;
 
     // STOP SMT
-    *SMTSTATUS = 0;
+    SMTSTOP();
 
     // CLEAR MEMORY
     memset( &_bss_start, 0, &_bss_end - &_bss_end );
@@ -429,10 +505,12 @@ void main( void ) {
     if( isa & 0b10 ) tpu_outputstring( "B" );
     tpu_outputstring( " CPU" );
 
-    for( unsigned short i = 0; i < 64; i++ ) {
-        gpu_rectangle( i, i * 5, 184, 4 + i * 5, 188 );
-        gpu_rectangle( i, i * 5, 227, 4 + i * 5, 231 );
+    // COLOUR BARS ON THE TILEMAP - SCROLL WITH SMT THREAD
+    for( i = 0; i < 42; i++ ) {
+        set_tilemap_tile( 0, i, 23, 0, i, 0 );
+        set_tilemap_tile( 1, i, 29, 0, 63 - i, 0 );
     }
+    SMTSTART( (unsigned int )smtthread );
 
     tpu_outputstringcentre( 15, TRANSPARENT, RED, "Waiting for SDCARD" );
     sleep(2000);
@@ -502,6 +580,9 @@ void main( void ) {
     tpu_outputstringcentre( 15, TRANSPARENT, WHITE, "LOADED" );
     tpu_outputstringcentre( 16, TRANSPARENT, WHITE, "LAUNCHING" );
     sleep(500);
+
+    // STOP SMT
+    SMTSTOP();
 
     // RESET THE DISPLAY
     reset_display();

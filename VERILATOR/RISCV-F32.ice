@@ -330,6 +330,8 @@ algorithm floataddsub(
                                         }
                                         default: { sign = signA; sigA = sigA + sigB; }
                                     }
+                                    __display("  = { %b %b %b } + ",sign,expA,sigA);
+                                    __display("");
                                 }
                                 case 2b01: { result = ( B.ZERO ) ? a : addsub ? { ~floatingpointnumber( b ).sign, b[0,31] } : b; }
                                 default: {
@@ -355,6 +357,9 @@ algorithm floataddsub(
                                                     sigA = sigA << 1;
                                                 }
                                             }
+                                            __display("Normalising Result");
+                                            __display("  = { %b %b %b } + ",sign,expA,sigA);
+                                            __display("");
                                             ( newfraction ) = round48( sigA );
                                             ( expA ) = adjustexp48( exp, newfraction, sigA );
                                             ( result, OF, UF ) = combinecomponents( sign, expA, newfraction );
@@ -520,10 +525,19 @@ algorithm floatdivide(
                     onehot( FSM ) {
                         case 0: {
                             IF = ( A.INF | B.INF ); NN = ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); DZ = B.ZERO; OF = 0; UF = 0;
+                           __display("");
+                            __display("DIV");
+                            __display("IF = %b NN = %b DZ = %b",IF,NN,DZ);
+                            __display("a = { %b %b %b } / ",floatingpointnumber( a ).sign,floatingpointnumber( a ).exponent,floatingpointnumber( a ).fraction);
+                            __display("b = { %b %b %b }",floatingpointnumber( b ).sign,floatingpointnumber( b ).exponent,floatingpointnumber( b ).fraction);
+                            __display("---");
                         }
                         case 1: {
                             sigA = { 1b1, floatingpointnumber(a).fraction, 26b0 };
                             sigB = { 27b1, floatingpointnumber(b).fraction };
+                            __display("    { %b %b %b } / ",floatingpointnumber( a ).sign,floatingpointnumber( a ).exponent,sigA);
+                            __display("    { %b %b %b }",floatingpointnumber( b ).sign,floatingpointnumber( b ).exponent,sigB);
+                            __display("");
                             quotientexp = (floatingpointnumber( a ).exponent - 127) - (floatingpointnumber( b ).exponent - 127);
                             quotient = 0;
                             remainder = 0;
@@ -537,6 +551,7 @@ algorithm floatdivide(
                                         bit = bit - 1;
                                     }
                                     while( quotient[48,2] != 0 ) { quotient = quotient >> 1; }
+                                    __display("r = { %b %b %b }",quotientsign,quotientexp,quotient);
                                 }
                                 case 2b01: { result = ( A.ZERO & B.ZERO ) ? 32hffc00000 : ( B.ZERO ) ? { quotientsign, 8b11111111, 23b0 } : { quotientsign, 31b0 }; }
                                 default: { result = ( A.INF & B.INF ) | NN | B.ZERO ? 32hffc00000 : A.ZERO | B.INF ? { quotientsign, 31b0 } : { quotientsign, 8b11111111, 23b0 }; }
@@ -1002,14 +1017,16 @@ algorithm main(output int8 leds) {
     // 1 = 32h3F800000
     // 2 = 32h40000000
     // 3 = 32h40400000
+    // 50 = 32h42480000
+    // 99 = 32h42C60000
     // 100 = 32h42C80000
     // 2.658456E38 = 32h7F480000
     // NaN = 32hffffffff
     // qNaN = 32hffc00000
     // INF = 32h7F800000
     // -INF = 32hFF800000
-    uint32  sourceReg1F = 32h7F800000;
-    uint32  sourceReg2F = 32hFF800000;
+    uint32  sourceReg1F = 32h42480000;
+    uint32  sourceReg2F = 32h3eaaaaab;
     uint32  sourceReg3F = 32h40000000;
 
     uint32  result = uninitialised;

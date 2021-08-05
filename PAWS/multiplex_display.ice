@@ -85,11 +85,9 @@ algorithm selectlayer(
 
     output! uint6   pix
 ) <autorun> {
-
-    while(1) {
+    always {
         switch( display_order ) {
-            case 0: {
-                // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> BITMAP -> UPPER_SPRITES -> CHARACTER_MAP
+            case 0: { // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> BITMAP -> UPPER_SPRITES -> CHARACTER_MAP
                 pix = ( terminal_display ) ? terminal :
                             ( character_map_display ) ? character_map :
                             ( upper_sprites_display ) ? upper_sprites :
@@ -99,8 +97,7 @@ algorithm selectlayer(
                             ( lower_tilemap_display ) ? lower_tilemap :
                             background;
             }
-            case 1: {
-                // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> BITMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP
+            case 1: { // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> BITMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP
                 pix = ( terminal_display ) ? terminal :
                         ( character_map_display ) ? character_map :
                         ( upper_sprites_display ) ? upper_sprites :
@@ -110,8 +107,7 @@ algorithm selectlayer(
                         ( lower_tilemap_display ) ? lower_tilemap :
                         background;
             }
-            case 2: {
-                // BACKGROUND -> BITMAP -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP
+            case 2: { // BACKGROUND -> BITMAP -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP
                 pix = ( terminal_display ) ? terminal :
                         ( character_map_display ) ? character_map :
                         ( upper_sprites_display ) ? upper_sprites :
@@ -121,8 +117,7 @@ algorithm selectlayer(
                         ( bitmap_display ) ? bitmap :
                         background;
             }
-            case 3: {
-                // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> BITMAP -> CHARACTER_MAP
+            case 3: { // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> BITMAP -> CHARACTER_MAP
                 pix = ( terminal_display ) ? terminal :
                         ( character_map_display ) ? character_map :
                         ( bitmap_display ) ? bitmap :

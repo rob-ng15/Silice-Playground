@@ -113,7 +113,6 @@ algorithm floatconvert(
     floattouint FPUuint( a <: sourceReg1F );
 
     FPUfloat.dounsigned := rs2[0,1]; FPUfloat.start := 0;
-    FPUint.start := 0; FPUuint.start := 0;
 
     while(1) {
         switch( start ) {
@@ -124,7 +123,6 @@ algorithm floatconvert(
                 switch( function7[2,5] ) {
                     default: {
                         // FCVT.W.S FCVT.WU.S
-                        FPUint.start = ~rs2[0,1]; FPUuint.start = rs2[0,1]; while( FPUint.busy || FPUuint.busy ) {}
                         result = rs2[0,1] ? FPUuint.result : FPUint.result; flags = rs2[0,1] ? FPUuint.flags : FPUint.flags;
                     }
                     case 5b11010: {

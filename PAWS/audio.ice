@@ -35,7 +35,7 @@ algorithm apu(
     frequencytable.addr := selected_note;
     audio_active := ( selected_duration != 0 );
 
-    while(1) {
+    always {
         switch( audio_active & ( counter25mhz == 0 ) ) {
             case 1: {
                 switch( selected_waveform ) {

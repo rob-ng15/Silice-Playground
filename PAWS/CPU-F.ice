@@ -184,14 +184,25 @@ algorithm PAWSCPU(
         memoryoutput :> memoryoutput
     );
 
+    // PC UPDATE BLOCK
+    updatepc NEWPC(
+        opCode <: opCode,
+        incPC <: incPC,
+        nextPC <: nextPC,
+        takeBranch <: takeBranch,
+        branchAddress <: branchAddress,
+        jumpAddress <: jumpAddress,
+        loadAddress <: loadAddress
+    );
+
     // MEMORY ACCESS FLAGS
     accesssize := ( opCode == 7b0101111 ) || ( opCode == 7b0000111 ) || ( opCode == 7b0100111 ) ? 3b010 : function3;
     readmemory := 0;
     writememory := 0;
 
-    // REGISTERS Write FLAG
-    REGISTERS.write := ( FSM == 7b1000000 ) & EXECUTE.writeRegister & ~EXECUTE.frd & ( rd != 0 ); REGISTERS.result := EXECUTE.result;
-    REGISTERSF.write := ( FSM == 7b1000000 ) & EXECUTE.writeRegister & EXECUTE.frd; REGISTERSF.result := EXECUTE.result;
+    // REGISTERS Write FLAG AT LAST STAGE OF THE FSM
+    REGISTERS.write := FSM[6,1] & EXECUTE.writeRegister & ~EXECUTE.frd & ( rd != 0 ); REGISTERS.result := EXECUTE.result;
+    REGISTERSF.write := FSM[6,1] & EXECUTE.writeRegister & EXECUTE.frd; REGISTERSF.result := EXECUTE.result;
 
     // CPU EXECUTE START FLAGS
     EXECUTE.start := 0; EXECUTE.AUIPCLUI := AGU.AUIPCLUI;
@@ -226,19 +237,10 @@ algorithm PAWSCPU(
                 ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy );
                 FSM = 7b1000000;
             }
-            case 6: {                                                                           // REGISTERS WRITE
-                //REGISTERS.write = EXECUTE.writeRegister & ~EXECUTE.frd & ( rd != 0 );           // BASE DO NOT WRITE TO REGISTER 0
-                //REGISTERSF.write = EXECUTE.writeRegister & EXECUTE.frd;
+            case 6: {
                 switch( SMT ) {                                                                 // UPDATE PC AND SMT
-                    case 1b1: {
-                        ( pcSMT ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
-                        SMT = 0;
-                    }
-                    case 1b0: {
-                        ( pc ) = newPC( opCode, incPC, nextPC, takeBranch, branchAddress, jumpAddress, loadAddress );
-                        SMT = SMTRUNNING;
-                        pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC;
-                    }
+                    case 1b1: { pcSMT = NEWPC.pc; SMT = 0; }
+                    case 1b0: { pc = NEWPC.pc; SMT = SMTRUNNING; pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC; }
                 }
                 FSM = 7b0000001;
             }

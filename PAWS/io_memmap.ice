@@ -36,8 +36,8 @@ $$end
     output  uint16  readData,
 
     // SMT STATUS
-    output  uint1   SMTRUNNING,
-    output  uint32  SMTSTARTPC
+    output  uint1   SMTRUNNING(0),
+    output  uint32  SMTSTARTPC(0)
 ) <autorun> {
 $$if not SIMULATION then
     // UART CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
@@ -67,11 +67,7 @@ $$if not SIMULATION then
     PS2.inread := 0;
     SDCARD.readsector := 0;
 $$end
-    // DISBLE SMT ON STARTUP
-    SMTRUNNING = 0;
-    SMTSTARTPC = 0;
-
-    while(1) {
+     always {
         // READ IO Memory
         switch( memoryRead ) {
             case 1: {
@@ -132,7 +128,11 @@ $$end
             }
             default: {}
         }
-    } // while(1)
+    }
+
+    // DISBLE SMT ON STARTUP
+    SMTRUNNING = 0;
+    SMTSTARTPC = 0;
 }
 
 algorithm audiotimers_memmap(
@@ -164,7 +164,7 @@ algorithm audiotimers_memmap(
     // LATCH MEMORYWRITE
     uint1   LATCHmemoryWrite = uninitialized;
 
-    while(1) {
+    always {
         // READ IO Memory
         switch( memoryRead ) {
             case 1: {
@@ -447,10 +447,7 @@ $$end
     // LATCH MEMORYWRITE
     uint1   LATCHmemoryWrite = uninitialized;
 
-    // DISPLAY TERMINAL WINDOW
-    terminal_window.showterminal = 0;
-
-    while(1) {
+    always {
         // READ IO Memory
         switch( memoryRead ) {
             case 1: {
@@ -673,6 +670,9 @@ $$end
         }
         LATCHmemoryWrite = memoryWrite;
     }
+
+    // HIDE TERMINAL WINDOW
+    terminal_window.showterminal = 0;
 }
 
 // TIMERS and RNG Controllers
@@ -711,8 +711,9 @@ algorithm timers_rng(
     STimer0.resetCounter := 0;
     STimer1.resetCounter := 0;
 
-    while(1) {
+    always {
         switch( resetcounter ) {
+        default: {}
             case 1: { T1hz0.resetCounter = 1; }
             case 2: { T1hz1.resetCounter = 1; }
             case 3: { T0khz0.resetCounter = counter; }
@@ -750,8 +751,9 @@ algorithm audio(
     apu_processor_L.apu_write := 0;
     apu_processor_R.apu_write := 0;
 
-    while(1) {
+    always {
         switch( apu_write ) {
+            default: {}
             case 1: {
                 apu_processor_L.waveform = waveform;
                 apu_processor_L.note = note;
@@ -835,19 +837,13 @@ algorithm uart(
     uo.data_in_ready := ( uartOutBufferNext != uartOutBufferTop ) && ( !uo.busy );
     uartOutBufferNext :=  uartOutBufferNext + ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) );
 
-    while(1) {
-        switch( outwrite ) {
-            case 1: {
+    always {
+        if( outwrite ) {
                 uartOutBuffer.addr1 = uartOutBufferTop;
                 uartOutBuffer.wdata1 = outchar;
                 update = 1;
-            }
-            case 0: {
-                switch( update ) {
-                    default: { uartOutBufferTop = uartOutBufferTop + 1; update = 0; }
-                    case 0: {}
-                }
-            }
+        } else {
+            if( update ) { uartOutBufferTop = uartOutBufferTop + 1; update = 0; }
         }
         uartInBufferNext = uartInBufferNext + inread;
     }
@@ -887,19 +883,13 @@ algorithm ps2buffer(
     inavailable := ( ps2BufferNext != ps2BufferTop );
     inchar := ps2Buffer.rdata0;
 
-    while(1) {
-        switch( PS2.asciivalid ) {
-            case 1: {
-                ps2Buffer.addr1 = ps2BufferTop;
-                ps2Buffer.wdata1 = PS2.ascii;
-                update = 1;
-            }
-            case 0: {
-                switch( update ) {
-                    default: { ps2BufferTop = ps2BufferTop + 1; update = 0; }
-                    case 0: {}
-                }
-            }
+    always {
+        if( PS2.asciivalid ) {
+            ps2Buffer.addr1 = ps2BufferTop;
+            ps2Buffer.wdata1 = PS2.ascii;
+            update = 1;
+        } else {
+            if( update ) { ps2BufferTop = ps2BufferTop + 1; update = 0; }
         }
         ps2BufferNext = ps2BufferNext + inread;
     }

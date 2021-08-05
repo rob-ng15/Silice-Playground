@@ -1,6 +1,14 @@
-// UPDATE PC
-circuitry newPC( input opCode, input incPC, input nextPC, input takeBranch, input branchAddress, input jumpAddress, input loadAddress, output pc ) {
-    pc = ( incPC ) ? ( takeBranch ? branchAddress : nextPC ) : ( opCode[3,1] ? jumpAddress : loadAddress );
+algorithm updatepc(
+    input   uint7   opCode,
+    input   uint1   incPC,
+    input   uint32  nextPC,
+    input   uint1   takeBranch,
+    input   uint32  branchAddress,
+    input   uint32  jumpAddress,
+    input   uint32  loadAddress,
+    output  uint32  pc
+) <autorun> {
+    pc := ( incPC ) ? ( takeBranch ? branchAddress : nextPC ) : ( opCode[3,1] ? jumpAddress : loadAddress );
 }
 
 // RISC-V REGISTERS - usable for base and float
@@ -22,30 +30,19 @@ algorithm registers(
     simple_dualport_bram int32 registers_3 <input!> [64] = { 0, pad(uninitialized) };
 
     // READ FROM REGISTERS
-    registers_1.addr0 := { SMT, rs1 };
-    registers_2.addr0 := { SMT, rs2 };
-    registers_3.addr0 := { SMT, rs3 };
-    sourceReg1 := registers_1.rdata0;
-    sourceReg2 := registers_2.rdata0;
-    sourceReg3 := registers_3.rdata0;
+    registers_1.addr0 := { SMT, rs1 }; sourceReg1 := registers_1.rdata0;
+    registers_2.addr0 := { SMT, rs2 }; sourceReg2 := registers_2.rdata0;
+    registers_3.addr0 := { SMT, rs3 }; sourceReg3 := registers_3.rdata0;
 
     // REGISTERS WRITE FLAG
-    registers_1.wenable1 := 1;
-    registers_2.wenable1 := 1;
-    registers_3.wenable1 := 1;
+    registers_1.wenable1 := 1; registers_2.wenable1 := 1; registers_3.wenable1 := 1;
 
-    while(1) {
+    always {
         // WRITE TO REGISTERS
-        switch( write ) {
-            case 1: {
-                registers_1.addr1 = { SMT, rd };
-                registers_1.wdata1 = result;
-                registers_2.addr1 = { SMT, rd };
-                registers_2.wdata1 = result;
-                registers_3.addr1 = { SMT, rd };
-                registers_3.wdata1 = result;
-            }
-            case 0: {}
+        if( write ) {
+            registers_1.addr1 = { SMT, rd }; registers_1.wdata1 = result;
+            registers_2.addr1 = { SMT, rd }; registers_2.wdata1 = result;
+            registers_3.addr1 = { SMT, rd }; registers_3.wdata1 = result;
         }
     }
 }
@@ -106,7 +103,7 @@ algorithm branchcomparison(
     input   int32   sourceReg2,
     output  uint1   takeBranch
 ) <autorun> {
-    while(1) {
+    always {
         switch( function3 ) {
             case 3b000: { takeBranch = ( sourceReg1 == sourceReg2 ); }
             case 3b001: { takeBranch = ( sourceReg1 != sourceReg2 ); }
@@ -124,7 +121,7 @@ algorithm compressed(
     input   uint16  i16,
     output  uint32  i32
 ) <autorun> {
-    while(1) {
+    always {
         switch( i16[0,2] ) {
             case 2b00: {
                 switch( i16[13,3] ) {
@@ -319,7 +316,7 @@ circuitry signextender16( input function3, input nosign, output withsign ) {
 // RISC-V MANDATORY CSR REGISTERS
 algorithm CSRblock(
     input   uint1   start,
-    output  uint1   busy,
+    output  uint1   busy(0),
     input   uint1   SMT,
     input   uint32  instruction,
     input   uint3   function3,
@@ -347,9 +344,8 @@ algorithm CSRblock(
     CSRinstretSMT := CSRinstretSMT + ( ( incCSRinstret & SMT ) ? 1 : 0);
 
     FPUflags := SMT ? CSRfSMT[0,5] : CSRf[0,5];
-    busy = 0;
 
-    while(1) {
+    always {
         switch( updateFPUflags ) {
             case 1: { switch( SMT ) { case 1: { CSRfSMT[0,5] = FPUnewflags; } case 0: { CSRf[0,5] = FPUnewflags; } }  }
             case 0: {
@@ -431,7 +427,7 @@ algorithm aluA (
 
     output  uint32  result
 ) <autorun> {
-    while(1) {
+    always {
         switch( function7[2,5] ) {
             default: { result = memoryinput + sourceReg2; }                 // AMOADD
             case 5b00001: { result = sourceReg2; }                          // AMOSWAP

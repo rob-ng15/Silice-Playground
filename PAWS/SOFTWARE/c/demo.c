@@ -1129,7 +1129,8 @@ void spritedemo( void ) {
 void floatdemo() {
     struct Point2D Square[4] = { { -100, -100 }, { 100, -100 }, { 100, 100 }, { -100, 100 } };
     struct Point2D NewSquare[4];
-    unsigned char colour;
+    unsigned char colour = 63;
+    float scale = 1;
 
     displayreset();
     tpu_printf_centre( 28, TRANSPARENT, WHITE, "FLOAT DEMO" );
@@ -1139,8 +1140,9 @@ void floatdemo() {
         tpu_printf_centre( 29, TRANSPARENT, WHITE, "SOFT FLOAT ONLY" );
     }
     for( short angle = 0; angle < 360; angle += 5 ) {
-        colour = ( angle < 90 ) ? RED : ( angle < 180 ) ? GREEN : ( angle < 270 ) ? BLUE : WHITE;
-        Draw2DVectorShape( colour, Square, 4, 160, 120, angle, ( angle < 90 ) ? 1.0 : ( angle < 180 ) ? 0.75 : ( angle < 270 ) ? 0.5 : 0.25 );
+        Draw2DVectorShape( colour, Square, 4, 160, 120, angle, scale );
+        colour = ( colour == 1 ) ? 63 : colour - 1;
+        scale = scale - 0.01;
     }
     sleep( 2000, 0 );
 }
