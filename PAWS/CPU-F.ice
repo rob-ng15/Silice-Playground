@@ -4,7 +4,15 @@
 // A simple Risc-V RV32IMC processor ( with partial B extension implementation )
 
 // RISC-V - MAIN CPU LOOP
-//          ALU FUNCTIONALITY LISTED IN mathematics.ice
+//          ALU FUNCTIONALITY LISTED IN ALU-
+
+// PERFORM OPTIONAL SIGN EXTENSION FOR 8 BIT AND 16 BIT READS
+circuitry signextender8( input function3, input address, input nosign, output withsign ) {
+    withsign = ~function3[2,1] ? { {24{nosign[address[0,1] ? 15 : 7, 1]}}, nosign[address[0,1] ? 8 : 0, 8] } : nosign[address[0,1] ? 8 : 0, 8];
+}
+circuitry signextender16( input function3, input nosign, output withsign ) {
+    withsign = ~function3[2,1] ? { {16{nosign[15,1]}}, nosign[0,16] } : nosign[0,16];
+}
 
 // CPU FETCH 16 bit WORD FROM MEMORY FOR INSTRUCTION BUILDING
 circuitry fetch( input location, input memorybusy, output address, output readmemory ) {
@@ -195,8 +203,8 @@ algorithm PAWSCPU(
         loadAddress <: loadAddress
     );
 
-    // MEMORY ACCESS FLAGS
-    accesssize := ( opCode == 7b0101111 ) || ( opCode == 7b0000111 ) || ( opCode == 7b0100111 ) ? 3b010 : function3;
+    // MEMORY ACCESS FLAGS - 32 bit for FLOAT LOAD/STORE AND ATOMIC OPERATIONS
+    accesssize := ( opCode[2,5] == 5b01011 ) || ( opCode[2,5] == 5b00001 ) || ( opCode[2,5] == 5b01001 ) ? 3b010 : function3;
     readmemory := 0;
     writememory := 0;
 
@@ -250,8 +258,7 @@ algorithm PAWSCPU(
 
 algorithm cpuexecute(
     input   uint1   start,
-    output  uint1   busy,
-
+    output  uint1   busy(0),
 
     input   uint1   SMT,
     input   uint32  instruction,
@@ -334,52 +341,47 @@ algorithm cpuexecute(
         FPUnewflags <: FPUnewflags
     );
 
-    // ALU START FLAGS
-    ALU.start := 0; FPU.start := 0;
-    CSR.start := 0; CSR.incCSRinstret := 0; CSR.updateFPUflags := 0;
+    // ALU AND CSR START FLAGS
+    ALU.start := 0; FPU.start := 0; CSR.start := 0; CSR.incCSRinstret := 0; CSR.updateFPUflags := 0;
 
-    busy = 0;
     while(1) {
-        switch( start ) {
-            case 1: {
-                busy = 1;
-                frd = 0; writeRegister = 1; incPC = 1; takeBranch = 0;
-                switch( opCode[2,5] ) {
-                    case 5b01101: { result = AUIPCLUI; }                                        // LUI
-                    case 5b00101: { result = AUIPCLUI; }                                        // AUIPC
-                    case 5b11011: { incPC = 0; result = nextPC; }                               // JAL
-                    case 5b11001: { incPC = 0; result = nextPC; }                               // JALR
-                    case 5b11000: { writeRegister = 0; takeBranch = BRANCHUNIT.takeBranch; }    // BRANCH
-                    case 5b00000: { result = memoryinput; }                                     // LOAD
-                    case 5b01000: { writeRegister = 0; memoryoutput = sourceReg2; }             // STORE
-                    case 5b00001: { frd = 1; result = memoryinput; }                            // FLOAT LOAD
-                    case 5b01001: { writeRegister = 0; memoryoutput = sourceReg2F; }            // FLOAT STORE
-                    case 5b11100: {
-                        switch( function3 ) {
-                            default: { CSR.start = 1; while( CSR.busy ) {} result = CSR.result; }                    // CSR
-                            case 3b000: { result = 0; }
-                        }
-                    }
-                    case 5b01011: {                                                             // ATOMIC OPERATIONS
-                        switch( function7[2,5] ) {
-                            case 5b00010: { result = memoryinput; }                             // LR.W
-                            case 5b00011: { memoryoutput = sourceReg2; result = 0; }            // SC.W
-                            default: { result = memoryinput; memoryoutput = ALUA.result; }      // ATOMIC LOAD - MODIFY - STORE
-                        }
-                    }
-                    default: {                                                                  // FPU, ALUI or ALUR
-                        ALU.start = ~opCode[6,1];
-                        FPU.start = opCode[6,1];
-                        while( ALU.busy || FPU.busy ) {}
-                        frd = opCode[6,1] & FPU.frd;
-                        CSR.updateFPUflags = opCode[6,1];
-                        result = opCode[6,1] ? FPU.result : ALU.result;
+        if( start ) {
+            busy = 1;
+            frd = 0; writeRegister = 1; incPC = 1; takeBranch = 0;
+            switch( opCode[2,5] ) {
+                case 5b01101: { result = AUIPCLUI; }                                        // LUI
+                case 5b00101: { result = AUIPCLUI; }                                        // AUIPC
+                case 5b11011: { incPC = 0; result = nextPC; }                               // JAL
+                case 5b11001: { incPC = 0; result = nextPC; }                               // JALR
+                case 5b11000: { writeRegister = 0; takeBranch = BRANCHUNIT.takeBranch; }    // BRANCH
+                case 5b00000: { result = memoryinput; }                                     // LOAD
+                case 5b01000: { writeRegister = 0; memoryoutput = sourceReg2; }             // STORE
+                case 5b00001: { frd = 1; result = memoryinput; }                            // FLOAT LOAD
+                case 5b01001: { writeRegister = 0; memoryoutput = sourceReg2F; }            // FLOAT STORE
+                case 5b11100: {
+                    switch( function3 ) {
+                        default: { CSR.start = 1; while( CSR.busy ) {} result = CSR.result; }                    // CSR
+                        case 3b000: { result = 0; }
                     }
                 }
-                busy = 0;
-                CSR.incCSRinstret = 1;
+                case 5b01011: {                                                             // ATOMIC OPERATIONS
+                    switch( function7[2,5] ) {
+                        case 5b00010: { result = memoryinput; }                             // LR.W
+                        case 5b00011: { memoryoutput = sourceReg2; result = 0; }            // SC.W
+                        default: { result = memoryinput; memoryoutput = ALUA.result; }      // ATOMIC LOAD - MODIFY - STORE
+                    }
+                }
+                default: {                                                                  // FPU, ALUI or ALUR
+                    ALU.start = ~opCode[6,1];
+                    FPU.start = opCode[6,1];
+                    while( ALU.busy || FPU.busy ) {}
+                    frd = opCode[6,1] & FPU.frd;
+                    CSR.updateFPUflags = opCode[6,1];
+                    result = opCode[6,1] ? FPU.result : ALU.result;
+                }
             }
-            case 0: {}
+            busy = 0;
+            CSR.incCSRinstret = 1;
         }
     }
 }

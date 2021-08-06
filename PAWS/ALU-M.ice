@@ -12,8 +12,8 @@ algorithm dointdivbit(
  ) <autorun> {
     uint32  temporary = uninitialized;
     uint1   bitresult = uninitialised;
-    while(1) {
-        temporary = ( remainder << 1 ) | top[bit,1];
+    always {
+        temporary = { remainder[0,31], top[bit,1] };
         bitresult = __unsigned(temporary) >= __unsigned(bottom);
         newremainder = __unsigned(temporary) - ( bitresult ? __unsigned(bottom) : 0 );
         newquotient = quotient | ( bitresult << bit );
@@ -21,7 +21,7 @@ algorithm dointdivbit(
 }
 algorithm douintdivide(
     input   uint1   start,
-    output  uint1   busy,
+    output  uint1   busy(0),
     input   uint32  dividend,
     input   uint32  divisor,
     output  uint32  quotient,
@@ -35,23 +35,19 @@ algorithm douintdivide(
         bit <: bit
     );
     uint6   bit = uninitialised;
-    busy = 0;
 
     while(1) {
-        switch( start ) {
-            case 0: {}
-            case 1: {
-                busy = 1;
-                bit = 31; quotient = 0; remainder = 0;
-                while( bit != 63 ) { quotient = DIVBIT.newquotient; remainder = DIVBIT.newremainder; bit = bit - 1; }
-                busy = 0;
-            }
+        if( start ) {
+            busy = 1;
+            bit = 31; quotient = 0; remainder = 0;
+            while( bit != 63 ) { quotient = DIVBIT.newquotient; remainder = DIVBIT.newremainder; bit = bit - 1; }
+            busy = 0;
         }
     }
 }
 algorithm aluMdivideremain(
     input   uint1   start,
-    output  uint1   busy,
+    output  uint1   busy(0),
 
     input   uint3   dosign,
     input   uint32  dividend,
@@ -63,22 +59,18 @@ algorithm aluMdivideremain(
 
     douintdivide DODIVIDE();
     DODIVIDE.start := 0; DODIVIDE.dividend := ~dosign[0,1] ? ( dividend[31,1] ? -dividend : dividend ) : dividend; DODIVIDE.divisor := ~dosign[0,1] ? ( divisor[31,1] ? -divisor : divisor ) : divisor;
-    busy = 0;
 
     while(1) {
-        switch( start ) {
-            case 1: {
-                busy = 1;
-                switch( divisor ) {
-                    case 0: { result = dosign[1,1] ? dividend : 32hffffffff; }
-                    default: {
-                        DODIVIDE.start = 1; while( DODIVIDE.busy ) {}
-                        result = dosign[1,1] ? DODIVIDE.remainder : ( quotientremaindersign ? -DODIVIDE.quotient : DODIVIDE.quotient );
-                    }
+        if( start ) {
+            busy = 1;
+            switch( divisor ) {
+                case 0: { result = dosign[1,1] ? dividend : 32hffffffff; }
+                default: {
+                    DODIVIDE.start = 1; while( DODIVIDE.busy ) {}
+                    result = dosign[1,1] ? DODIVIDE.remainder : ( quotientremaindersign ? -DODIVIDE.quotient : DODIVIDE.quotient );
                 }
-                busy = 0;
             }
-            default: {}
+            busy = 0;
         }
     }
 }

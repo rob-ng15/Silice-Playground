@@ -370,7 +370,7 @@ algorithm floatmultiply(
     uint1   productsign <: floatingpointnumber( a ).sign ^ floatingpointnumber( b ).sign;
     uint1 IF <: ( A.INF | B.INF ); uint1 NN <: ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); uint1 NV <: ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); uint1 OF = uninitialised; uint1 UF = uninitialised;
     classify A( a <: a ); classify B( a <: b ); dofloatmul UINTMUL(); donormalise48 NORMALISE( ); doround48 ROUND(); doadjustexp48 ADJUSTEXP(); docombinecomponents32 COMBINE();
-    UINTMUL.factor_1 := { 9b1, floatingpointnumber( a ).fraction }; UINTMUL.factor_2 := { 9b1, floatingpointnumber( b ).fraction };
+    UINTMUL.factor_1 := { 1b1, floatingpointnumber( a ).fraction }; UINTMUL.factor_2 := { 1b1, floatingpointnumber( b ).fraction };
     NORMALISE.start := 0; NORMALISE.bitstream := UINTMUL.product;
     ROUND.bitstream := NORMALISE.normalised;
     ADJUSTEXP.roundbit := NORMALISE.normalised[23,1]; ADJUSTEXP.roundfraction := ROUND.roundfraction; ADJUSTEXP.exponent := (floatingpointnumber( a ).exponent - 127) + (floatingpointnumber( b ).exponent - 127) + UINTMUL.product[47,1];

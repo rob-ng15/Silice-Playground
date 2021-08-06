@@ -145,7 +145,7 @@ algorithm sprite_layer(
     // Default to transparent
     sprite_layer_display := 0;
 
-    while(1) {
+    always {
         // SET ATTRIBUTES + PERFORM UPDATE
         switch( sprite_layer_write ) {
             case 1: { sprite_active[ sprite_set_number ] = sprite_set_active; }
@@ -274,19 +274,16 @@ algorithm spritebitmapwriter(
         tiles_$i$.wenable1 := 1;
     $$end
 
-    while(1) {
+    always {
         // WRITE BITMAP TO SPRITE TILE
-        switch( sprite_writer_active ) {
-            case 0: {}
-            case 1: {
-                switch( sprite_writer_sprite ) {
-                    $$for i=0,15 do
-                        case $i$: {
-                            tiles_$i$.addr1 = sprite_writer_line;
-                            tiles_$i$.wdata1 = sprite_writer_bitmap;
-                        }
-                    $$end
-                }
+        if( sprite_writer_active ) {
+            switch( sprite_writer_sprite ) {
+                $$for i=0,15 do
+                    case $i$: {
+                        tiles_$i$.addr1 = sprite_writer_line;
+                        tiles_$i$.wdata1 = sprite_writer_bitmap;
+                    }
+                $$end
             }
         }
     }

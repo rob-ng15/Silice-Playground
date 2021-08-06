@@ -45,7 +45,7 @@ algorithm background(
     copper.addr0 := PC;
     copper.wenable1 := 1;
 
-    while(1) {
+    always {
         copper_execute = 0;
         copper_branch = 0;
 
@@ -149,78 +149,75 @@ algorithm background_display(
     // Increment frame number for the snow/star field
     frame := frame + ( ( pix_x == 639 ) & ( pix_y == 470 ) );
 
-    while(1) {
+    always {
         // RENDER
-        switch( pix_active ) {
-            case 1: {
-                switch( b_mode ) {
-                    case 0: {
-                        // SOLID
-                        pixel = b_colour;
-                    }
-                    case 1: {
-                        // 50:50 HORIZONTAL SPLIT
-                        pixel = ( tophalf ) ? b_colour : b_alt;
-                    }
-                    case 2: {
-                    // 50:50 VERTICAL SPLIT
-                        pixel = ( lefthalf ) ? b_colour : b_alt;
-                    }
-                    case 3: {
-                    // QUARTERS
-                        pixel = ( lefthalf == tophalf ) ? b_colour : b_alt;
-                    }
-                    case 4: {
-                        // 8 colour rainbow
-                        switch( pix_y[6,3] ) {
-                            case 3b000: { pixel = 6b100000; }
-                            case 3b001: { pixel = 6b110000; }
-                            case 3b010: { pixel = 6b111000; }
-                            case 3b011: { pixel = 6b111100; }
-                            case 3b100: { pixel = 6b001100; }
-                            case 3b101: { pixel = 6b000011; }
-                            case 3b110: { pixel = 6b010010; }
-                            case 3b111: { pixel = 6b011011; }
-                        }
-                    }
-                    case 5: {
-                        // SNOW (from @sylefeb)
-                        rand_x = ( pix_x == 0)  ? 1 : rand_x * 31421 + 6927;
-                        speed  = rand_x[10,2];
-                        dotpos = ( frame >> speed ) + rand_x;
-                        pixel   = (pix_y == dotpos) ? b_colour : b_alt;
-                    }
-                    case 6: {
-                        // STATIC
-                        pixel = { {3{staticGenerator}} };
-                    }
-                    case 11: {
-                        // CROSSHATCH
-                        pixel   = ( pix_x[0,1] || pix_y[0,1] ) ? b_colour : b_alt;
-                    }
-                    case 12: {
-                        // LSLOPE
-                        pixel   = ( pix_x[0,2] == pix_y[0,2] ) ? b_colour : b_alt;
-                    }
-                    case 13: {
-                        // RSLOPE
-                        pixel   = ( pix_x[0,2] == ~pix_y[0,2] ) ? b_colour : b_alt;
-                    }
-                    case 14: {
-                        // VSTRIPES
-                        pixel   = pix_x[0,1] ? b_colour : b_alt;
-                    }
-                    case 15: {
-                        // HSTRIPES
-                        pixel   = pix_y[0,1] ? b_colour : b_alt;
-                    }
-                    default: {
-                        // CHECKERBOARDS
-                        pixel = ( pix_x[b_mode-7,1] == pix_y[b_mode-7,1] ) ? b_colour : b_alt;
+        if( pix_active ) {
+            switch( b_mode ) {
+                case 0: {
+                    // SOLID
+                    pixel = b_colour;
+                }
+                case 1: {
+                    // 50:50 HORIZONTAL SPLIT
+                    pixel = ( tophalf ) ? b_colour : b_alt;
+                }
+                case 2: {
+                // 50:50 VERTICAL SPLIT
+                    pixel = ( lefthalf ) ? b_colour : b_alt;
+                }
+                case 3: {
+                // QUARTERS
+                    pixel = ( lefthalf == tophalf ) ? b_colour : b_alt;
+                }
+                case 4: {
+                    // 8 colour rainbow
+                    switch( pix_y[6,3] ) {
+                        case 3b000: { pixel = 6b100000; }
+                        case 3b001: { pixel = 6b110000; }
+                        case 3b010: { pixel = 6b111000; }
+                        case 3b011: { pixel = 6b111100; }
+                        case 3b100: { pixel = 6b001100; }
+                        case 3b101: { pixel = 6b000011; }
+                        case 3b110: { pixel = 6b010010; }
+                        case 3b111: { pixel = 6b011011; }
                     }
                 }
+                case 5: {
+                    // SNOW (from @sylefeb)
+                    rand_x = ( pix_x == 0)  ? 1 : rand_x * 31421 + 6927;
+                    speed  = rand_x[10,2];
+                    dotpos = ( frame >> speed ) + rand_x;
+                    pixel   = (pix_y == dotpos) ? b_colour : b_alt;
+                }
+                case 6: {
+                    // STATIC
+                    pixel = { {3{staticGenerator}} };
+                }
+                case 11: {
+                    // CROSSHATCH
+                    pixel   = ( pix_x[0,1] || pix_y[0,1] ) ? b_colour : b_alt;
+                }
+                case 12: {
+                    // LSLOPE
+                    pixel   = ( pix_x[0,2] == pix_y[0,2] ) ? b_colour : b_alt;
+                }
+                case 13: {
+                    // RSLOPE
+                    pixel   = ( pix_x[0,2] == ~pix_y[0,2] ) ? b_colour : b_alt;
+                }
+                case 14: {
+                    // VSTRIPES
+                    pixel   = pix_x[0,1] ? b_colour : b_alt;
+                }
+                case 15: {
+                    // HSTRIPES
+                    pixel   = pix_y[0,1] ? b_colour : b_alt;
+                }
+                default: {
+                    // CHECKERBOARDS
+                    pixel = ( pix_x[b_mode-7,1] == pix_y[b_mode-7,1] ) ? b_colour : b_alt;
+                }
             }
-            default: {}
         }
     }
 }

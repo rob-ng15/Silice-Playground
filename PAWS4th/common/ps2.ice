@@ -33,7 +33,7 @@ algorithm ps2ascii(
 
     asciivalid := 0;
 
-    while(1) {
+    always {
         switch( { ps2valid, LATCHvalid } ) {
             case 2b10: {
                 newascii = 8hff;
@@ -160,7 +160,6 @@ algorithm ps2(
 ) < autorun> {
     uint8 clk_filter = 8b11111111;
     uint1 ps2_clk_in = 1;
-    //uint1 ps2data_ext = 1;
     uint1 clk_edge = 0;
 
     uint4 bit_count = 0;
@@ -170,7 +169,7 @@ algorithm ps2(
     valid := 0;
     error := 0;
 
-    while(1) {
+    always {
         // Filter the PS/2 clock
         clk_edge = 0;
         clk_filter = { ps2clk_ext, clk_filter[1,7] };
@@ -196,9 +195,6 @@ algorithm ps2(
                             case 1: {}
                             case 0: { bit_count = bit_count + 1; } // Start bit
                         }
-                        //if (!ps2data_ext) {
-                        //    bit_count = bit_count + 1; // Start bit
-                        //}
                     }
                     default: {
                         bit_count = bit_count + 1;

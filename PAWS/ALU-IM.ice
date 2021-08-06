@@ -10,7 +10,7 @@ algorithm aluI(
 
     output  uint32   result
 ) <autorun> {
-    while(1) {
+    always {
         switch( function3 ) {
             case 3b000: { result = sourceReg1 + immediateValue; }
             case 3b001: { result = LSHIFToutput; }
@@ -26,7 +26,7 @@ algorithm aluI(
 
 algorithm aluR (
     input   uint1   start,
-    output  uint1   busy,
+    output  uint1   busy(0),
 
     input   uint3   function3,
     input   uint7   function7,
@@ -54,8 +54,6 @@ algorithm aluR (
 
     // START FLAGS FOR ALU SUB BLOCKS
     ALUMD.start := 0;
-
-    busy = 0;
 
     while(1) {
         switch( start ) {
@@ -93,7 +91,7 @@ algorithm aluR (
 // ALU - ALU for immediate-register operations and register-register operations
 algorithm alu(
     input   uint1   start,
-    output  uint1   busy,
+    output  uint1   busy(0),
 
     input   uint7   opCode,
     input   uint3   function3,
@@ -152,8 +150,6 @@ algorithm alu(
     // ALU START FLAGS
     ALUR.start := 0;
 
-    busy = 0;
-
     while(1) {
         switch( start ) {
             case 1: {
@@ -176,7 +172,7 @@ algorithm BSHIFTleft(
     input   uint7   function7,
     output  uint32  result
 ) <autorun> {
-    while(1) {
+   always {
         result = sourceReg1 << shiftcount;
     }
 }
@@ -186,7 +182,7 @@ algorithm BSHIFTright(
     input   uint7   function7,
     output  uint32  result
 ) <autorun> {
-    while(1) {
+    always {
         switch( function7[4,2] ) {
             case 2b00: { result = sourceReg1 >> shiftcount; }
             default: { result = __signed(sourceReg1) >>> shiftcount; }

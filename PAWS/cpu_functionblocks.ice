@@ -305,14 +305,6 @@ algorithm compressed(
     }
 }
 
-// PERFORM OPTIONAL SIGN EXTENSION FOR 8 BIT AND 16 BIT READS
-circuitry signextender8( input function3, input address, input nosign, output withsign ) {
-    withsign = ~function3[2,1] ? { {24{nosign[address[0,1] ? 15 : 7, 1]}}, nosign[address[0,1] ? 8 : 0, 8] } : nosign[address[0,1] ? 8 : 0, 8];
-}
-circuitry signextender16( input function3, input nosign, output withsign ) {
-    withsign = ~function3[2,1] ? { {16{nosign[15,1]}}, nosign[0,16] } : nosign[0,16];
-}
-
 // RISC-V MANDATORY CSR REGISTERS
 algorithm CSRblock(
     input   uint1   start,
