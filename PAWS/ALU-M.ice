@@ -34,14 +34,13 @@ algorithm douintdivide(
         bottom <: divisor,
         bit <: bit
     );
-    uint6   bit = uninitialised;
+    uint6   bit(63);
 
+    busy := start | ( bit != 63 );
     while(1) {
         if( start ) {
-            busy = 1;
             bit = 31; quotient = 0; remainder = 0;
             while( bit != 63 ) { quotient = DIVBIT.newquotient; remainder = DIVBIT.newremainder; bit = bit - 1; }
-            busy = 0;
         }
     }
 }

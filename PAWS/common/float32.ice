@@ -62,7 +62,12 @@ algorithm donormalise48(
     output  uint48  normalised
 ) <autorun> {
     while(1) {
-        if( start ) { busy = 1; normalised = bitstream; while( ~normalised[47,1] ) { normalised = normalised << 1; } busy = 0; }
+        if( start ) {
+            busy = 1; normalised = bitstream;
+            // NORMALISE BY SHIFTING 1, 3, 7 OR 15 ZEROS LEFT
+            while( ~normalised[47,1] ) { normalised = normalised << { normalised[33,15] == 0, normalised[41,7] == 0, normalised[45,3] == 0, 1b1 }; }
+            busy = 0;
+        }
     }
 }
 
@@ -129,7 +134,9 @@ algorithm inttofloat(
                     while( FSM !=0 ) {
                         onehot( FSM ) {
                             case 0: {
-                                zeros = 0; while( ~number[31-zeros,1] ) { zeros = zeros + 1; } NX = ( zeros < 8 );
+                                // CHECK FOR 24, 16 OR 8 LEADING ZEROS, CONTINUE COUNTING FROM THERE
+                                zeros = number[8,24] == 0 ? 24 : number[16,16] == 0 ? 16 : number[24,8] == 0 ? 8 : 0;
+                                while( ~number[31-zeros,1] ) { zeros = zeros + 1; } NX = ( zeros < 8 );
                                 COMBINE.fraction = NX ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
                             }
                             case 1: { OF = COMBINE.OF; UF = COMBINE.UF; result = COMBINE.f32; }
@@ -269,6 +276,7 @@ algorithm normaliseaddsub(
     output  int10   newexp,
     output  uint48  normalised
 ) <autorun> {
+    uint2   shiftcount <:: { normalised[44,3] == 0, 1b1 };
     while(1) {
         if( start ) {
             busy = 1;
@@ -276,8 +284,9 @@ algorithm normaliseaddsub(
             switch( fraction[47,1] ) {
                 case 1: { newexp = exp + 1; normalised = fraction; }
                 default: {
-                    newexp = exp; normalised = fraction; while( ~normalised[46,1] ) { normalised = normalised << 1; newexp = newexp - 1; }
-                    normalised = { normalised[0,47], 1b0 };
+                    newexp = exp; normalised = fraction;
+                    while( ~normalised[46,1] ) { normalised = normalised << shiftcount; newexp = newexp - shiftcount; }
+                    normalised = normalised << 1;
                 }
             }
             busy = 0;
@@ -420,7 +429,7 @@ algorithm dofloatdivbit(
     output  uint50  newquotient,
     output  uint50  newremainder,
  ) <autorun> {
-    uint50  temporary = uninitialized;
+    uint50  temporary = uninitialised;
     uint1   bitresult = uninitialised;
     always {
         temporary = { remainder[0,49], top[bit,1] };
@@ -443,16 +452,15 @@ algorithm dofloatdivide(
         bottom <: sigB,
         bit <: bit
     );
-    uint50  remainder = uninitialised;
-    uint6   bit = uninitialised;
+    uint50  remainder <: start ? 0 : DIVBIT.newremainder;
+    uint6   bit(63);
 
+    busy := start | ( bit != 63 ) | ( quotient[48,2] != 0 );
     while(1) {
         if( start ) {
-            busy = 1;
-            bit = 49; quotient = 0; remainder = 0;
-            while( bit != 63 ) { quotient = DIVBIT.newquotient; remainder = DIVBIT.newremainder; bit = bit - 1; }
+            bit = 49; quotient = 0;
+            while( bit != 63 ) { quotient = DIVBIT.newquotient; bit = bit - 1; }
             while( quotient[48,2] != 0 ) { quotient = quotient >> 1; }
-            busy = 0;
         }
     }
 }
@@ -531,16 +539,15 @@ algorithm dofloatsqrt(
         q <: q
     );
 
-    uint48  x = uninitialised;
-    uint50  ac = uninitialised;
-    uint6   i = uninitialised;
+    uint48  x <: start ? start_x : SQRTBIT.newx;
+    uint50  ac <: start ? start_ac : SQRTBIT.newac;
+    uint6   i(47);
 
+    busy := start | ( i != 47 );
     while(1) {
         if( start ) {
-            busy = 1;
-            i = 0; q = 0; ac = start_ac; x = start_x;
-            while( i != 47 ) { ac = SQRTBIT.newac; q = SQRTBIT.newq; x = SQRTBIT.newx; i = i + 1; }
-            busy = 0;
+            i = 0; q = 0;
+            while( i != 47 ) { q = SQRTBIT.newq; i = i + 1; }
         }
     }
 }
@@ -569,30 +576,21 @@ algorithm floatsqrt(
         if( start ) {
             busy = 1;
             OF = 0; UF = 0;
-            switch( NN ) {
-                case 1: { result = 32hffc00000; }
-                default: {
-                    switch( { IF | NN, A.ZERO } ) {
-                        case 2b00: {
-                            switch( sign ) {
-                                case 1: { result = 32hffc00000; }
-                                case 0: {
-                                    // STEPS: SETUP -> DOSQRT -> NORMALISE -> ROUND -> ADJUSTEXP -> COMBINE
-                                    DOSQRT.start = 1; while( DOSQRT.busy ) {}
-                                    NORMALISE.start = 1; while( NORMALISE.busy ) {}
-                                    OF = COMBINE.OF; UF = COMBINE.UF; result = COMBINE.f32;
-                                }
-                            }
+            switch( { IF | NN, A.ZERO } ) {
+                case 2b00: {
+                    switch( sign ) {
+                        // DETECT NEGATIVE -> qNAN
+                        case 1: { result = 32hffc00000; }
+                        case 0: {
+                            // STEPS: SETUP -> DOSQRT -> NORMALISE -> ROUND -> ADJUSTEXP -> COMBINE
+                            DOSQRT.start = 1; while( DOSQRT.busy ) {}
+                            NORMALISE.start = 1; while( NORMALISE.busy ) {}
+                            OF = COMBINE.OF; UF = COMBINE.UF; result = COMBINE.f32;
                         }
-                        case 2b10: {
-                            switch( NN ) {
-                                case 1: { result = 32hffc00000; }
-                                case 0: { result = sign ? 32hffc00000 : a; }
-                            }
-                        }
-                        default: { result = sign ? 32hffc00000 : a; }
                     }
                 }
+                // DETECT sNAN, qNAN, -INF, -0 -> qNAN AND  INF -> INF, 0 -> 0
+                default: { result = sign ? 32hffc00000 : a; }
             }
             busy = 0;
         }

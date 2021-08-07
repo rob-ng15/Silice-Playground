@@ -61,15 +61,18 @@ algorithm donormalise48(
     input   uint48  bitstream,
     output  uint48  normalised
 ) <autorun> {
+    uint4   shiftcount <:: { normalised[33,15] == 0, normalised[41,7] == 0, normalised[45,3] == 0, 1b1 };
+    busy := start | ~normalised[47,1];
     while(1) {
         if( start ) {
-            __display("  NORMALISING THE RESULT MANTISSA");
             busy = 1;
+            __display("  NORMALISING THE RESULT MANTISSA");
             normalised = bitstream;
             __display("  %b",normalised);
+            // NORMALISE BY SHIFT 1, 3, 7 OR 15 ZEROS LEFT
             while( ~normalised[47,1] ) {
-                normalised = normalised << 1;
-                __display("  %b",normalised);
+                normalised = normalised << shiftcount;
+                __display("  %b AFTER SHIFT LEFT %d",normalised,shiftcount);
             }
             busy = 0;
         }
@@ -139,7 +142,11 @@ algorithm inttofloat(
                     while( FSM !=0 ) {
                         onehot( FSM ) {
                             case 0: {
-                                zeros = 0; while( ~number[31-zeros,1] ) { zeros = zeros + 1; } NX = ( zeros < 8 );
+                                zeros = number[8,24] == 0 ? 24 : number[16,16] == 0 ? 16 : number[24,8] == 0 ? 8 : 0; while( ~number[31-zeros,1] ) {
+                                    zeros = zeros + 1;
+                                    __display("  LEADING ZEROS = %x",zeros);
+                                }
+                                NX = ( zeros < 8 );
                                 COMBINE.fraction = NX ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
                             }
                             case 1: { OF = COMBINE.OF; UF = COMBINE.UF; result = COMBINE.f32; }
@@ -279,6 +286,7 @@ algorithm normaliseaddsub(
     output  int10   newexp,
     output  uint48  normalised
 ) <autorun> {
+    uint2   shiftcount <:: { normalised[44,3] == 0, 1b1 };
     while(1) {
         if( start ) {
             busy = 1;
@@ -293,8 +301,8 @@ algorithm normaliseaddsub(
                 default: {
                     newexp = exp; normalised = fraction;
                     while( ~normalised[46,1] ) {
-                        normalised = normalised << 1; newexp = newexp - 1;
-                        __display("  %b %b (DECREASE EXP AS SMALL RESULT)",newexp,normalised);
+                        normalised = normalised << shiftcount; newexp = newexp - shiftcount;
+                        __display("  %b %b (DECREASE EXP AS SMALL RESULT) AFTER SHIFT LEFT %d",newexp,normalised,shiftcount);
                     }
                     normalised = { normalised[0,47], 1b0 };
                     __display("  %b %b (FULLY NORMALISED)",newexp,normalised);
@@ -507,7 +515,7 @@ algorithm dofloatdivbit(
     output  uint50  newquotient,
     output  uint50  newremainder,
  ) <autorun> {
-    uint50  temporary = uninitialized;
+    uint50  temporary = uninitialised;
     uint1   bitresult = uninitialised;
     always {
         temporary = { remainder[0,49], top[bit,1] };
@@ -530,16 +538,15 @@ algorithm dofloatdivide(
         bottom <: sigB,
         bit <: bit
     );
-    uint50  remainder = uninitialised;
-    uint6   bit = uninitialised;
+    uint50  remainder <: start ? 0 : DIVBIT.newremainder;
+    uint6   bit(63);
 
+    busy := start | ( bit != 63 ) | ( quotient[48,2] != 0 );
     while(1) {
         if( start ) {
-            busy = 1;
-            bit = 49; quotient = 0; remainder = 0;
-            while( bit != 63 ) { quotient = DIVBIT.newquotient; remainder = DIVBIT.newremainder; bit = bit - 1; }
+            bit = 49; quotient = 0;
+            while( bit != 63 ) { quotient = DIVBIT.newquotient; bit = bit - 1; }
             while( quotient[48,2] != 0 ) { quotient = quotient >> 1; }
-            busy = 0;
         }
     }
 }
@@ -629,9 +636,8 @@ algorithm dofloatsqrtbitt(
     output  uint48  newq,
     output  uint48  newx
  ) <autorun> {
-    uint50  test_res = uninitialised;
+    uint50  test_res <: ac - { q, 2b01 };
     always {
-        test_res = ac - { q, 2b01 };
         newac = { test_res[49,1] ? ac[0,47] : test_res[0,47], x[46,2] };
         newq = { q[0,47], ~test_res[49,1] };
         newx = { x[0,46], 2b00 };
@@ -650,16 +656,15 @@ algorithm dofloatsqrt(
         q <: q
     );
 
-    uint48  x = uninitialised;
-    uint50  ac = uninitialised;
-    uint6   i = uninitialised;
+    uint48  x <: start ? start_x : SQRTBIT.newx;
+    uint50  ac <: start ? start_ac : SQRTBIT.newac;
+    uint6   i(47);
 
+    busy := start | ( i != 47 );
     while(1) {
         if( start ) {
-            busy = 1;
-            i = 0; q = 0; ac = start_ac; x = start_x;
-            while( i != 47 ) { ac = SQRTBIT.newac; q = SQRTBIT.newq; x = SQRTBIT.newx; i = i + 1; }
-            busy = 0;
+            i = 0; q = 0;
+            while( i != 47 ) { q = SQRTBIT.newq; i = i + 1; }
         }
     }
 }
@@ -692,60 +697,41 @@ algorithm floatsqrt(
             __display("  IF = %b NN = %b NV = %b",IF,NN,NV);
             __display("");
             OF = 0; UF = 0;
-            switch( NN ) {
-                case 1: {
-                    result = 32hffc00000;
-                    __display("");
-                    __display("  NAN AS INPUT");
-                    __display("  SELECT FINAL RESULT");
-                }
-                default: {
-                    switch( { IF | NN, A.ZERO } ) {
-                        case 2b00: {
-                            switch( sign ) {
-                                case 1: {
-                                    result = 32hffc00000;
-                                    __display("");
-                                    __display("  NEGATIVE AS INPUT");
-                                    __display("  SELECT FINAL RESULT");
-                                }
-                                case 0: {
-                                    // STEPS: SETUP -> DOSQRT -> NORMALISE -> ROUND -> ADJUSTEXP -> COMBINE
-                                    __display("  CALCULATING REMOVE BIAS FROM EXPONENT");
-                                    __display("  SQRT OF { %b %b %b } ",a[31,1],(floatingpointnumber( a ).exponent - 127),{ 1b1, floatingpointnumber(a).fraction });
-                                    __display("  AC = { %b }",~exp[0,1] ? 1 : { 48b0, 1b1, a[22,1] });
-                                    __display("  X  = { %b }",~exp[0,1] ? { floatingpointnumber( a ).fraction, 25b0 } : { a[0,22], 26b0 });
-                                    DOSQRT.start = 1; while( DOSQRT.busy ) {}
-                                    __display("  HALVE THE EXPONENT");
-                                    __display(" ={ 0 %b %b }",( exp >>> 1 ),DOSQRT.q);
-                                    __display("");
-                                    NORMALISE.start = 1; while( NORMALISE.busy ) {}
-                                    __display("");
-                                    __display("  ADD BIAS TO EXPONENT, ROUND AND TRUNCATE MANTISSA");
-                                    __display("  %b %b (ROUND BIT = %b)",ADJUSTEXP.newexponent,ROUND.roundfraction,NORMALISE.normalised[23,1]);
-                                    OF = COMBINE.OF; UF = COMBINE.UF; result = COMBINE.f32;
-                                    __display("");
-                                    __display("  TRUNCATE EXP AND COMBINE TO FINAL RESULT");
-                                }
-                            }
-                        }
-                        case 2b10: {
-                            switch( NN ) {
-                                case 1: { result = 32hffc00000; }
-                                case 0: { result = sign ? 32hffc00000 : a; }
-                            }
+            switch( { IF | NN, A.ZERO } ) {
+                case 2b00: {
+                    switch( sign ) {
+                        case 1: {
+                            result = 32hffc00000;
                             __display("");
-                            __display("  INF OR NAN AS INPUT");
+                            __display("  NEGATIVE AS INPUT");
                             __display("  SELECT FINAL RESULT");
                         }
-                        default: {
-                            result = sign ? 32hffc00000 : a;
+                        case 0: {
+                            // STEPS: SETUP -> DOSQRT -> NORMALISE -> ROUND -> ADJUSTEXP -> COMBINE
+                            __display("  CALCULATING REMOVE BIAS FROM EXPONENT");
+                            __display("  SQRT OF { %b %b %b } ",a[31,1],(floatingpointnumber( a ).exponent - 127),{ 1b1, floatingpointnumber(a).fraction });
+                            __display("  AC = { %b }",~exp[0,1] ? 1 : { 48b0, 1b1, a[22,1] });
+                            __display("  X  = { %b }",~exp[0,1] ? { floatingpointnumber( a ).fraction, 25b0 } : { a[0,22], 26b0 });
+                            DOSQRT.start = 1; while( DOSQRT.busy ) {}
+                            __display("  HALVE THE EXPONENT");
+                            __display(" ={ 0 %b %b }",( exp >>> 1 ),DOSQRT.q);
                             __display("");
-                            __display("  INF, NAN OR ZERO AS INPUT");
-                            __display("  SELECT FINAL RESULT");
-
+                            NORMALISE.start = 1; while( NORMALISE.busy ) {}
+                            __display("");
+                            __display("  ADD BIAS TO EXPONENT, ROUND AND TRUNCATE MANTISSA");
+                            __display("  %b %b (ROUND BIT = %b)",ADJUSTEXP.newexponent,ROUND.roundfraction,NORMALISE.normalised[23,1]);
+                            OF = COMBINE.OF; UF = COMBINE.UF; result = COMBINE.f32;
+                            __display("");
+                            __display("  TRUNCATE EXP AND COMBINE TO FINAL RESULT");
                         }
                     }
+                }
+                default: {
+                    result = sign ? 32hffc00000 : a;
+                    __display("");
+                    __display("  INF, NAN OR ZERO AS INPUT");
+                    __display("  SELECT FINAL RESULT");
+
                 }
             }
             __display("  { %b %b %b }",result[31,1],result[23,8],result[0,23]);
@@ -1005,13 +991,19 @@ algorithm floatsign(
 // RISC-V FPU CONTROLLER
 
 algorithm main(output int8 leds) {
-    // uint7   opCode = 7b1010011; // ALL OTHER FPU OPERATIONS
+    uint7   opCode = 7b1010011; // ALL OTHER FPU OPERATIONS
     // uint7   opCode = 7b1000011; // FMADD
-    uint7   opCode = 7b1000111; // FMSUB
+    // uint7   opCode = 7b1000111; // FMSUB
     // uint7   opCode = 7b1001011; // FNMSUB
     // uint7   opCode = 7b1001111; // FNMADD
 
-    uint7   function7 = 7b0101100; // OPERATION SWITCH
+    uint7   function7 = 7b0001100; // OPERATION SWITCH
+    // ADD = 7b0000000 SUB = 7b0000100 MUL = 7b0001000 DIV = 7b0001100 SQRT = 7b0101100
+    // FSGNJ[N][X] = 7b0010000 function3 == 000 FSGNJ == 001 FSGNJN == 010 FSGNJX
+    // MIN MAX = 7b0010100 function3 == 000 MIN == 001 MAX
+    // FCVT.W[U].S floatto[u]int = 7b1100000 rs2 == 00000 FCVT.W.S == 00001 FCVT.WU.S
+    // FCVT.S.W[U] [u]inttofloat = 7b1101000 rs2 == 00000 FCVT.S.W == 00001 FCVT.S.WU
+
     uint3   function3 = 3b000; // ROUNDING MODE OR SWITCH
     uint5   rs1 = 5b00000; // SOURCEREG1 number
     uint5   rs2 = 5b00000; // SOURCEREG2 number OR SWITCH
@@ -1034,8 +1026,8 @@ algorithm main(output int8 leds) {
     // qNaN = 32hffc00000
     // INF = 32h7F800000
     // -INF = 32hFF800000
-    uint32  sourceReg1F = 32h3F5ACE46;
-    uint32  sourceReg2F = 32h42480000;
+    uint32  sourceReg1F = 32h40000000;
+    uint32  sourceReg2F = 32h3F5ACE46;
     uint32  sourceReg3F = 32h3eaaaaab;
 
     uint32  result = uninitialised;

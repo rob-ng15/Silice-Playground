@@ -56,34 +56,31 @@ algorithm aluR (
     ALUMD.start := 0;
 
     while(1) {
-        switch( start ) {
-            case 1: {
-                busy = 1;
-                switch( function7 ) {
-                    // M EXTENSION MULTIPLICATION AND DIVISION
-                    case 7b0000001: {
-                        switch( function3[2,1] ) {
-                            case 1b0: { result = ALUMM.result; }
-                            case 1b1: { ALUMD.start = 1; while( ALUMD.busy ) {} result = ALUMD.result; }
-                        }
-                    }
-                    // BASE + REMAINING B EXTENSION
-                    default: {
-                        switch( function3 ) {
-                            case 3b000: { result = sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ); }
-                            case 3b001: { result = LSHIFToutput; }
-                            case 3b010: { result = __signed( sourceReg1 ) < __signed(sourceReg2); }
-                            case 3b011: { result = ( rs1 == 0 ) ? ( sourceReg2 != 0 ) : __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ); }
-                            case 3b100: { result = sourceReg1 ^ sourceReg2; }
-                            case 3b101: { result = RSHIFToutput; }
-                            case 3b110: { result = sourceReg1 | sourceReg2; }
-                            case 3b111: { result = sourceReg1 & sourceReg2; }
-                        }
+        if( start ) {
+            busy = 1;
+            switch( function7 ) {
+                // M EXTENSION MULTIPLICATION AND DIVISION
+                case 7b0000001: {
+                    switch( function3[2,1] ) {
+                        case 1b0: { result = ALUMM.result; }
+                        case 1b1: { ALUMD.start = 1; while( ALUMD.busy ) {} result = ALUMD.result; }
                     }
                 }
-                busy = 0;
+                // BASE + REMAINING B EXTENSION
+                default: {
+                    switch( function3 ) {
+                        case 3b000: { result = sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ); }
+                        case 3b001: { result = LSHIFToutput; }
+                        case 3b010: { result = __signed( sourceReg1 ) < __signed(sourceReg2); }
+                        case 3b011: { result = ( rs1 == 0 ) ? ( sourceReg2 != 0 ) : __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ); }
+                        case 3b100: { result = sourceReg1 ^ sourceReg2; }
+                        case 3b101: { result = RSHIFToutput; }
+                        case 3b110: { result = sourceReg1 | sourceReg2; }
+                        case 3b111: { result = sourceReg1 & sourceReg2; }
+                    }
+                }
             }
-            default: {}
+            busy = 0;
         }
     }
 }
@@ -151,16 +148,13 @@ algorithm alu(
     ALUR.start := 0;
 
     while(1) {
-        switch( start ) {
-            case 1: {
-                // START ALUI or ALUR
-                busy = 1;
-                ALUR.start = opCode[5,1];
-                while(  ALUR.busy ) {}
-                result = opCode[5,1] ? ALUR.result : ALUI.result;
-                busy = 0;
-            }
-            default: {}
+        if( start ) {
+            // START ALUI or ALUR
+            busy = 1;
+            ALUR.start = opCode[5,1];
+            while(  ALUR.busy ) {}
+            result = opCode[5,1] ? ALUR.result : ALUI.result;
+            busy = 0;
         }
     }
 }
@@ -183,8 +177,8 @@ algorithm BSHIFTright(
     output  uint32  result
 ) <autorun> {
     always {
-        switch( function7[4,2] ) {
-            case 2b00: { result = sourceReg1 >> shiftcount; }
+        switch( function7[5,1] ) {
+            case 1b0: { result = sourceReg1 >> shiftcount; }
             default: { result = __signed(sourceReg1) >>> shiftcount; }
         }
     }

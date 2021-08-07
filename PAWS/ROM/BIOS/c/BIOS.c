@@ -442,7 +442,7 @@ void reset_display( void ) {
 }
 
 void displayfilename( void ) {
-    tpu_outputstringcentre( 18, TRANSPARENT, WHITE, "Current PAW File:" );
+    tpu_outputstringcentre( 20, TRANSPARENT, WHITE, "Current PAW File:" );
     for( unsigned short i = 0; i < 8; i++ ) {
         // DISPLAY FILENAME
         gpu_rectangle( TRANSPARENT, 0, 192, 319, 224 );
@@ -460,7 +460,7 @@ void scrollbars( void ) {
     short count = 0;
     while(1) {
         await_vblank();count++;
-        if( count == 16 ) {
+        if( count == 32 ) {
             tilemap_scrollwrapclear( 0, 7 );
             tilemap_scrollwrapclear( 1, 5 );
             count = 0;
@@ -512,10 +512,10 @@ void main( void ) {
     }
     SMTSTART( (unsigned int )smtthread );
 
-    tpu_outputstringcentre( 15, TRANSPARENT, RED, "Waiting for SDCARD" );
+    tpu_outputstringcentre( 17, TRANSPARENT, RED, "Waiting for SDCARD" );
     sleep(2000);
     sd_readSector( 0, MBR );
-    tpu_outputstringcentre( 15, TRANSPARENT, GREEN, "SDCARD Ready" );
+    tpu_outputstringcentre( 17, TRANSPARENT, GREEN, "SDCARD Ready" );
 
     PARTITION = (PartitionTable *) &MBR[ 0x1BE ];
 
@@ -527,7 +527,7 @@ void main( void ) {
             break;
         default:
             // UNKNOWN PARTITION TYPE
-            tpu_outputstringcentre( 15, TRANSPARENT, RED, "Please Insert A FAT16 SDCARD and Press RESET" );
+            tpu_outputstringcentre( 17, TRANSPARENT, RED, "Please Insert A FAT16 FORMATTED SDCARD and Press RESET" );
             while(1) {}
             break;
     }
@@ -546,9 +546,9 @@ void main( void ) {
     sd_readFAT();
 
     // FILE SELECTOR
-    tpu_outputstringcentre( 15, TRANSPARENT, WHITE, "Select PAW File" );
-    tpu_outputstringcentre( 16, TRANSPARENT, WHITE, "SELECT USING FIRE 1 - SCROLL USING LEFT & RIGHT" );
-    tpu_outputstringcentre( 18, TRANSPARENT, RED, "No PAW Files Found" );
+    tpu_outputstringcentre( 17, TRANSPARENT, WHITE, "Select PAW File" );
+    tpu_outputstringcentre( 18, TRANSPARENT, WHITE, "SELECT USING FIRE 1 - SCROLL USING LEFT & RIGHT" );
+    tpu_outputstringcentre( 20, TRANSPARENT, RED, "No PAW Files Found" );
     SELECTEDFILE = 0xffff;
 
     // FILE SELECTOR, LOOP UNTIL FILE SELECTED (FIRE 1 PRESSED WITH A VALID FILE)
@@ -572,13 +572,13 @@ void main( void ) {
         }
     }
 
-    tpu_outputstringcentre( 15, TRANSPARENT, WHITE, "PAW File" );
-    tpu_outputstringcentre( 16, TRANSPARENT, WHITE, "SELECTED" );
+    tpu_outputstringcentre( 17, TRANSPARENT, WHITE, "PAW File" );
+    tpu_outputstringcentre( 18, TRANSPARENT, WHITE, "SELECTED" );
     sleep( 500 );
-    tpu_outputstringcentre( 16, TRANSPARENT, WHITE, "LOADING" );
+    tpu_outputstringcentre( 18, TRANSPARENT, WHITE, "LOADING" );
     sd_readFile( SELECTEDFILE, (unsigned char *)0x10000000 );
-    tpu_outputstringcentre( 15, TRANSPARENT, WHITE, "LOADED" );
-    tpu_outputstringcentre( 16, TRANSPARENT, WHITE, "LAUNCHING" );
+    tpu_outputstringcentre( 17, TRANSPARENT, WHITE, "LOADED" );
+    tpu_outputstringcentre( 18, TRANSPARENT, WHITE, "LAUNCHING" );
     sleep(500);
 
     // STOP SMT
@@ -590,4 +590,6 @@ void main( void ) {
 
     // CALL SDRAM LOADED PROGRAM
     ((void(*)(void))0x10000000)();
+    // RETURN TO BIOS IF PROGRAM EXITS
+    ((void(*)(void))0x00000000)();
 }
