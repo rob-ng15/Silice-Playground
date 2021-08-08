@@ -215,8 +215,7 @@ algorithm bitmapwriter(
     uint1 write_pixel <: ( ~bitmap_x_write[9,1] ) & ( bitmap_x_write < 320 ) & ( ~bitmap_y_write[9,1] ) & ( bitmap_y_write < 240 ) & bitmap_write;
 
     // Bitmap write access for the GPU
-    bitmap_0.wenable1 := 1;
-    bitmap_1.wenable1 := 1;
+    bitmap_0.wenable1 := 1; bitmap_1.wenable1 := 1;
 
     always {
         if( write_pixel ) {

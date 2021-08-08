@@ -54,39 +54,40 @@ algorithm classify(
 }
 
 // ALGORITHMS TO DEAL WITH 48 BIT FRACTIONS TO 23 BIT FRACTIONS
-// REALIGN A 48 BIT NUMBER SO MSB IS 1
+// NORMALISE A 48 BIT MANTISSA SO THAT THE MSB IS ONE
+// FOR ADDSUB ALSO DECREMENT THE EXPONENT FOR EACH SHIFT LEFT
 algorithm donormalise48(
     input   uint1   start,
     output  uint1   busy(0),
+    input   int10   exp,
     input   uint48  bitstream,
+    output  int10   newexp,
     output  uint48  normalised
 ) <autorun> {
+    uint4   shiftcount <:: { normalised[33,15] == 0, normalised[41,7] == 0, normalised[45,3] == 0, 1b1 };
     while(1) {
         if( start ) {
-            busy = 1; normalised = bitstream;
-            // NORMALISE BY SHIFTING 1, 3, 7 OR 15 ZEROS LEFT
-            while( ~normalised[47,1] ) { normalised = normalised << { normalised[33,15] == 0, normalised[41,7] == 0, normalised[45,3] == 0, 1b1 }; }
+            busy = 1;
+            normalised = bitstream; newexp = exp;
+            // NORMALISE BY SHIFT 1, 3, 7 OR 15 ZEROS LEFT
+            while( ~normalised[47,1] ) { normalised = normalised << shiftcount; newexp = newexp - shiftcount; }
             busy = 0;
         }
     }
 }
 
 // EXTRACT 23 BIT FRACTION FROM LEFT ALIGNED 48 BIT FRACTION WITH ROUNDING
+// ADJUST EXPONENT IF ROUNDING FORCES
 algorithm doround48(
     input   uint48  bitstream,
-    output  uint23  roundfraction
-) <autorun> {
-    roundfraction := bitstream[24,23] + bitstream[23,1];
-}
-
-// ADJUST EXPONENT IF ROUNDING FORCES, using newfraction and truncated bit from oldfraction
-algorithm doadjustexp48(
-    input   uint1   roundbit,
-    input   uint23  roundfraction,
     input   int10   exponent,
+    output  uint23  roundfraction,
     output  int10   newexponent
 ) <autorun> {
-    newexponent := 127 + exponent + ( ( roundfraction == 0 ) & roundbit );
+    always {
+        roundfraction = bitstream[24,23] + bitstream[23,1];
+        newexponent = 127 + exponent + ( ( roundfraction == 0 ) & bitstream[23,1] );
+    }
 }
 
 // COMBINE COMPONENTS INTO FLOATING POINT NUMBER
@@ -113,11 +114,9 @@ algorithm inttofloat(
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
-    uint2   FSM = uninitialised;
     uint1   sign <: dounsigned ? 0 : a[31,1];
     uint8   zeros = uninitialised;
     uint32  number <: dounsigned ? a : ( a[31,1] ? -a : a );
-
     uint1 OF = uninitialised; uint1 UF = uninitialised; uint1 NX = uninitialised;
     docombinecomponents32 COMBINE( sign <: sign );
     COMBINE.exp := 158 - zeros;
@@ -130,19 +129,12 @@ algorithm inttofloat(
             switch( number ) {
                 case 0: { result = 0; }
                 default: {
-                    FSM = 1;
-                    while( FSM !=0 ) {
-                        onehot( FSM ) {
-                            case 0: {
-                                // CHECK FOR 24, 16 OR 8 LEADING ZEROS, CONTINUE COUNTING FROM THERE
-                                zeros = number[8,24] == 0 ? 24 : number[16,16] == 0 ? 16 : number[24,8] == 0 ? 8 : 0;
-                                while( ~number[31-zeros,1] ) { zeros = zeros + 1; } NX = ( zeros < 8 );
-                                COMBINE.fraction = NX ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
-                            }
-                            case 1: { OF = COMBINE.OF; UF = COMBINE.UF; result = COMBINE.f32; }
-                        }
-                        FSM = FSM << 1;
-                    }
+                    // CHECK FOR 24, 16 OR 8 LEADING ZEROS, CONTINUE COUNTING FROM THERE
+                    zeros = number[8,24] == 0 ? 24 : number[16,16] == 0 ? 16 : number[24,8] == 0 ? 8 : 0;
+                    while( ~number[31-zeros,1] ) { zeros = zeros + 1; } NX = ( zeros < 8 );
+                    COMBINE.fraction = NX ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
+                    ++:
+                    OF = COMBINE.OF; UF = COMBINE.UF; result = COMBINE.f32;
                 }
             }
             busy = 0;
@@ -213,16 +205,6 @@ algorithm floattouint(
 
 // ADDSUB
 // ADD/SUBTRACT ( addsub == 0 add, == 1 subtract) TWO FLOATING POINT NUMBERS
-algorithm prepaddsub(
-    input   uint32  a,
-    output  uint1   sign,
-    output  int10   exp,
-    output  uint48  fraction
-) <autorun> {
-    sign := floatingpointnumber( a ).sign;
-    exp := floatingpointnumber( a ).exponent - 127;
-    fraction := { 2b01, floatingpointnumber(a).fraction, 23b0 };
-}
 algorithm equaliseexpaddsub(
     input   int10   expA,
     input   uint48  sigA,
@@ -268,31 +250,6 @@ algorithm dofloataddsub(
         }
     }
 }
-algorithm normaliseaddsub(
-    input   uint1   start,
-    output  uint1   busy(0),
-    input   int10   exp,
-    input   uint48  fraction,
-    output  int10   newexp,
-    output  uint48  normalised
-) <autorun> {
-    uint2   shiftcount <:: { normalised[44,3] == 0, 1b1 };
-    while(1) {
-        if( start ) {
-            busy = 1;
-            // NORMALISE AND ROUND
-            switch( fraction[47,1] ) {
-                case 1: { newexp = exp + 1; normalised = fraction; }
-                default: {
-                    newexp = exp; normalised = fraction;
-                    while( ~normalised[46,1] ) { normalised = normalised << shiftcount; newexp = newexp - shiftcount; }
-                    normalised = normalised << 1;
-                }
-            }
-            busy = 0;
-        }
-    }
-}
 
 algorithm floataddsub(
     input   uint1   start,
@@ -303,53 +260,43 @@ algorithm floataddsub(
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
-    uint2   FSM = uninitialised;
-    uint1   signA <: prepA.sign;
-    uint1   signB <: addsub ? ~prepB.sign : prepB.sign;
-
+    uint1   signA <: a[31,1];
+    uint1   signB <: addsub ? ~b[31,1] : b[31,1];
     uint1 IF <: ( A.INF | B.INF ); uint1 NN <: ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); uint1 NV <: ( A.INF & B.INF) & ( signA != signB ); uint1 OF = uninitialised; uint1 UF = uninitialised;
-    classify A( a <: a ); classify B( a <: b ); prepaddsub prepA( a <: a ); prepaddsub prepB( a <: b ); equaliseexpaddsub EQUALISEEXP( ); dofloataddsub ADDSUB( ); normaliseaddsub NORMALISE( );
-    doround48 ROUND(); doadjustexp48 ADJUSTEXP(); docombinecomponents32 COMBINE();
-    EQUALISEEXP.expA := prepA.exp; EQUALISEEXP.sigA := prepA.fraction; EQUALISEEXP.expB := prepB.exp; EQUALISEEXP.sigB := prepB.fraction;
+    classify A( a <: a ); classify B( a <: b ); equaliseexpaddsub EQUALISEEXP( ); dofloataddsub ADDSUB( ); donormalise48 NORMALISE( ); doround48 ROUND(); docombinecomponents32 COMBINE();
+    EQUALISEEXP.expA := floatingpointnumber( a ).exponent - 127; EQUALISEEXP.sigA := { 2b01, floatingpointnumber(a).fraction, 23b0 };
+    EQUALISEEXP.expB := floatingpointnumber( b ).exponent - 127; EQUALISEEXP.sigB := { 2b01, floatingpointnumber(b).fraction, 23b0 };
     ADDSUB.signA := signA; ADDSUB.sigA := EQUALISEEXP.newsigA; ADDSUB.signB := signB; ADDSUB.sigB := EQUALISEEXP.newsigB;
-    NORMALISE.start := 0;  NORMALISE.exp := EQUALISEEXP.newexpA; NORMALISE.fraction := ADDSUB.resultfraction;
-    ROUND.bitstream := NORMALISE.normalised;
-    ADJUSTEXP.roundbit := NORMALISE.normalised[23,1]; ADJUSTEXP.roundfraction := ROUND.roundfraction; ADJUSTEXP.exponent := NORMALISE.newexp;
-    COMBINE.sign := ADDSUB.resultsign; COMBINE.exp := ADJUSTEXP.newexponent; COMBINE.fraction := ROUND.roundfraction;
+    NORMALISE.start := 0;  NORMALISE.exp := EQUALISEEXP.newexpA + 1; NORMALISE.bitstream := ADDSUB.resultfraction; // NOTE 1 ADDED TO EXPONENT AS NORMALISED AT 46
+    ROUND.bitstream := NORMALISE.normalised; ROUND.exponent := NORMALISE.newexp;
+    COMBINE.sign := ADDSUB.resultsign; COMBINE.exp := ROUND.newexponent; COMBINE.fraction := ROUND.roundfraction;
     flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
 
     while(1) {
         if( start ) {
             busy = 1;
-            FSM = 1;
             OF = 0; UF = 0;
-            while( FSM != 0 ) {
-                onehot( FSM ) {
-                    case 0: {} // ALLOW 1 CYLE TO PREPARE THE ADDITION/SUBTRACTION, EQUALISE EXPONENTS AND PERFORM THE ADDITION/SUBTRACTION
-                    case 1: {
-                        switch( { IF | NN, A.ZERO | B.ZERO } ) {
-                            case 2b00: {
-                                switch( ADDSUB.resultfraction ) {
-                                    case 0: { result = 0; }
-                                    default: {
-                                        // STEPS: SETUP -> DO ADD/SUB -> NORMALISE -> ROUND -> ADJUSTEXP -> COMBINE
-                                        // ADD/SUB REQUIRES NORMALISATION THAT ADJUSTS THE EXP WHEN SHIFTING LEFT
-                                        NORMALISE.start = 1; while( NORMALISE.busy ) {}
-                                        OF = COMBINE.OF; UF = COMBINE.UF; result = COMBINE.f32;
-                                    }
-                                }
-                            }
-                            case 2b01: { result = ( A.ZERO & B.ZERO ) ? 0 : ( B.ZERO ) ? a : addsub ? { ~floatingpointnumber( b ).sign, b[0,31] } : b; }
-                            default: {
-                                switch( { IF, NN } ) {
-                                    case 2b10: { result = ( A.INF & B.INF) ? ( signA == signB ) ? a : 32hffc00000 : A.INF ? a : b; }
-                                    default: { result = 32hffc00000; }
-                                }
-                            }
+            ++: // ALLOW 2 CYCLES TO PREPARE THE ADDITION/SUBTRACTION, EQUALISE EXPONENTS AND PERFORM THE ADDITION/SUBTRACTION
+            ++:
+            switch( { IF | NN, A.ZERO | B.ZERO } ) {
+                case 2b00: {
+                    switch( ADDSUB.resultfraction ) {
+                        case 0: { result = 0; }
+                        default: {
+                            // STEPS: SETUP -> DO ADD/SUB -> NORMALISE -> ROUND -> ADJUSTEXP -> COMBINE
+                            // ADD/SUB REQUIRES NORMALISATION THAT ADJUSTS THE EXP WHEN SHIFTING LEFT
+                            NORMALISE.start = 1; while( NORMALISE.busy ) {}
+                            OF = COMBINE.OF; UF = COMBINE.UF; result = COMBINE.f32;
                         }
                     }
                 }
-                FSM = FSM << 1;
+                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 0 : ( B.ZERO ) ? a : addsub ? { ~floatingpointnumber( b ).sign, b[0,31] } : b; }
+                default: {
+                    switch( { IF, NN } ) {
+                        case 2b10: { result = ( A.INF & B.INF) ? ( signA == signB ) ? a : 32hffc00000 : A.INF ? a : b; }
+                        default: { result = 32hffc00000; }
+                    }
+                }
             }
             busy = 0;
         }
@@ -374,45 +321,34 @@ algorithm floatmultiply(
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
-    uint2   FSM = uninitialised;
-
     uint1   productsign <: floatingpointnumber( a ).sign ^ floatingpointnumber( b ).sign;
     uint1 IF <: ( A.INF | B.INF ); uint1 NN <: ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); uint1 NV <: ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); uint1 OF = uninitialised; uint1 UF = uninitialised;
-    classify A( a <: a ); classify B( a <: b ); dofloatmul UINTMUL(); donormalise48 NORMALISE( ); doround48 ROUND(); doadjustexp48 ADJUSTEXP(); docombinecomponents32 COMBINE();
+    classify A( a <: a ); classify B( a <: b ); dofloatmul UINTMUL(); donormalise48 NORMALISE( ); doround48 ROUND(); docombinecomponents32 COMBINE();
     UINTMUL.factor_1 := { 1b1, floatingpointnumber( a ).fraction }; UINTMUL.factor_2 := { 1b1, floatingpointnumber( b ).fraction };
     NORMALISE.start := 0; NORMALISE.bitstream := UINTMUL.product;
-    ROUND.bitstream := NORMALISE.normalised;
-    ADJUSTEXP.roundbit := NORMALISE.normalised[23,1]; ADJUSTEXP.roundfraction := ROUND.roundfraction; ADJUSTEXP.exponent := (floatingpointnumber( a ).exponent - 127) + (floatingpointnumber( b ).exponent - 127) + UINTMUL.product[47,1];
-    COMBINE.sign := productsign; COMBINE.exp := ADJUSTEXP.newexponent; COMBINE.fraction := ROUND.roundfraction;
+    ROUND.bitstream := NORMALISE.normalised; ROUND.exponent := (floatingpointnumber( a ).exponent - 127) + (floatingpointnumber( b ).exponent - 127) + UINTMUL.product[47,1];
+    COMBINE.sign := productsign; COMBINE.exp := ROUND.newexponent; COMBINE.fraction := ROUND.roundfraction;
     flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
 
     while(1) {
         if( start ) {
             busy = 1;
-            FSM = 1;
             OF = 0; UF = 0;
-            while( FSM != 0 ) {
-                onehot( FSM ) {
-                    case 0: {} // ALLOW 1 CYLE TO PERFORM THE MULTIPLICATION
-                    case 1: {
-                        switch( { IF | NN, A.ZERO | B.ZERO } ) {
-                            case 2b00: {
-                                // STEPS: SETUP -> DOMUL -> NORMALISE -> ROUND -> ADJUSTEXP -> COMBINE
-                                NORMALISE.start = 1; while( NORMALISE.busy ) {}
-                                OF = COMBINE.OF; UF = COMBINE.UF; result = COMBINE.f32;
-                            }
-                            case 2b01: { result = { productsign, 31b0 }; }
-                            default: {
-                                switch( { IF, A.ZERO | B.ZERO } ) {
-                                    case 2b11: { result = 32hffc00000; }
-                                    case 2b10: { result = NN ? 32hffc00000 : { productsign, 8b11111111, 23b0 }; }
-                                    default: { result = 32hffc00000; }
-                                }
-                            }
-                        }
+            ++: // ALLOW 1 CYLE TO PERFORM THE MULTIPLICATION
+            switch( { IF | NN, A.ZERO | B.ZERO } ) {
+                case 2b00: {
+                    // STEPS: SETUP -> DOMUL -> NORMALISE -> ROUND -> ADJUSTEXP -> COMBINE
+                    NORMALISE.start = 1; while( NORMALISE.busy ) {}
+                    OF = COMBINE.OF; UF = COMBINE.UF; result = COMBINE.f32;
+                }
+                case 2b01: { result = { productsign, 31b0 }; }
+                default: {
+                    switch( { IF, A.ZERO | B.ZERO } ) {
+                        case 2b11: { result = 32hffc00000; }
+                        case 2b10: { result = NN ? 32hffc00000 : { productsign, 8b11111111, 23b0 }; }
+                        default: { result = 32hffc00000; }
                     }
                 }
-                FSM = FSM << 1;
             }
             busy = 0;
         }
@@ -447,13 +383,12 @@ algorithm dofloatdivide(
 ) <autorun> {
     dofloatdivbit DIVBIT(
         quotient <: quotient,
-        remainder <: remainder,
         top <: sigA,
         bottom <: sigB,
         bit <: bit
     );
-    uint50  remainder <: start ? 0 : DIVBIT.newremainder;
     uint6   bit(63);
+    DIVBIT.remainder := start ? 0 : DIVBIT.newremainder;
 
     busy := start | ( bit != 63 ) | ( quotient[48,2] != 0 );
     while(1) {
@@ -477,12 +412,11 @@ algorithm floatdivide(
 ) <autorun> {
     uint1   quotientsign <: floatingpointnumber( a ).sign ^ floatingpointnumber( b ).sign;
     uint1 IF <: ( A.INF | B.INF ); uint1 NN <: ( A.sNAN | A.qNAN | B.sNAN | B.qNAN ); uint1 DZ <: B.ZERO; uint1 OF = uninitialised; uint1 UF = uninitialised;
-    classify A( a <: a ); classify B( a <: b ); dofloatdivide DODIVIDE( ); donormalise48 NORMALISE(); doround48 ROUND(); doadjustexp48 ADJUSTEXP(); docombinecomponents32 COMBINE();
+    classify A( a <: a ); classify B( a <: b ); dofloatdivide DODIVIDE( ); donormalise48 NORMALISE(); doround48 ROUND(); docombinecomponents32 COMBINE();
     DODIVIDE.start := 0; DODIVIDE.sigA := { 1b1, floatingpointnumber(a).fraction, 26b0 }; DODIVIDE.sigB := { 27b1, floatingpointnumber(b).fraction };
     NORMALISE.start := 0; NORMALISE.bitstream := DODIVIDE.quotient[0,48];
-    ROUND.bitstream := NORMALISE.normalised;
-    ADJUSTEXP.roundbit := NORMALISE.normalised[23,1]; ADJUSTEXP.roundfraction := ROUND.roundfraction; ADJUSTEXP.exponent := ((floatingpointnumber( a ).exponent - 127) - (floatingpointnumber( b ).exponent - 127)) - ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction );
-    COMBINE.sign := quotientsign; COMBINE.exp := ADJUSTEXP.newexponent; COMBINE.fraction := ROUND.roundfraction;
+    ROUND.bitstream := NORMALISE.normalised; ROUND.exponent := ((floatingpointnumber( a ).exponent - 127) - (floatingpointnumber( b ).exponent - 127)) - ( floatingpointnumber(b).fraction > floatingpointnumber(a).fraction );
+    COMBINE.sign := quotientsign; COMBINE.exp := ROUND.newexponent; COMBINE.fraction := ROUND.roundfraction;
     flags := { IF, NN, 1b0, DZ, OF, UF, 1b0};
 
     while(1) {
@@ -533,15 +467,11 @@ algorithm dofloatsqrt(
     input   uint48  start_x,
     output  uint48  q
 ) <autorun> {
-    dofloatsqrtbitt SQRTBIT(
-        ac <: ac,
-        x <: x,
-        q <: q
-    );
+    dofloatsqrtbitt SQRTBIT( q <: q );
 
-    uint48  x <: start ? start_x : SQRTBIT.newx;
-    uint50  ac <: start ? start_ac : SQRTBIT.newac;
     uint6   i(47);
+    SQRTBIT.x := start ? start_x : SQRTBIT.newx;
+    SQRTBIT.ac := start ? start_ac : SQRTBIT.newac;
 
     busy := start | ( i != 47 );
     while(1) {
@@ -564,12 +494,11 @@ algorithm floatsqrt(
     int10   exp  <: floatingpointnumber( a ).exponent - 127;    // EXPONENT OF INPUT ( used to determine if 1x.xxxxx or 01.xxxxx for fixed point fraction to sqrt )
 
     uint1 IF <: A.INF; uint1 NN <: A.sNAN | A.qNAN; uint1 NV <: IF | NN | sign; uint1 OF = uninitialised; uint1 UF = uninitialised;
-    classify A( a <: a ); dofloatsqrt DOSQRT( ); donormalise48 NORMALISE(); doround48 ROUND(); doadjustexp48 ADJUSTEXP(); docombinecomponents32 COMBINE();
+    classify A( a <: a ); dofloatsqrt DOSQRT( ); donormalise48 NORMALISE(); doround48 ROUND(); docombinecomponents32 COMBINE();
     DOSQRT.start := 0; DOSQRT.start_ac := ~exp[0,1] ? 1 : { 48b0, 1b1, a[22,1] }; DOSQRT.start_x := ~exp[0,1] ? { floatingpointnumber( a ).fraction, 25b0 } : { a[0,22], 26b0 };
     NORMALISE.start := 0; NORMALISE.bitstream := DOSQRT.q;
-    ROUND.bitstream := NORMALISE.normalised;
-    ADJUSTEXP.roundbit := NORMALISE.normalised[23,1]; ADJUSTEXP.roundfraction := ROUND.roundfraction; ADJUSTEXP.exponent := ( exp >>> 1 );
-    COMBINE.sign := 0; COMBINE.exp := ADJUSTEXP.newexponent; COMBINE.fraction := ROUND.roundfraction;
+    ROUND.bitstream := NORMALISE.normalised; ROUND.exponent := ( exp >>> 1 );
+    COMBINE.sign := 0; COMBINE.exp := ROUND.newexponent; COMBINE.fraction := ROUND.roundfraction;
     flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
 
     while(1) {

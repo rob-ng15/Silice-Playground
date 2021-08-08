@@ -54,29 +54,29 @@ int main() {
     float x = -cx, y = -cy + 2, z = -cz + 2;
     float width;
     float cnr = camcnr, seg = camseg;
-    vec3 p;
+    vec3 p, pp;
 
     gpu_cs();
+    pp = project( x, y, z );
 
     for( int i = 1; i < 30; i++ ) {
-
-        p = project( x, y, z );
-        width = 3 * p.z;
-        gpu_line (WHITE, p.x - width, p.y, p.x + width, p.y );
-
         // move forward
         x+=xd; y+=yd; z+=zd;
 
+        p = project( x, y, z );
+
         // turn
-        xd+=road[cnr].tu;
+        xd+=road[(int)cnr].tu;
 
         // advance along road
-        seg+=1;
-        if( seg>road[cnr].ct ) {
+        seg++;
+        if(seg>road[(int)cnr].ct) {
             seg=1;
-            cnr+=1;
+            cnr++;
             if(cnr>MAXSEGMENT)cnr=1;
         }
+
+        pp = p;
     }
 
     while(1) {}

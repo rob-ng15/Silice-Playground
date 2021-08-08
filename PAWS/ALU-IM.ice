@@ -151,8 +151,7 @@ algorithm alu(
         if( start ) {
             // START ALUI or ALUR
             busy = 1;
-            ALUR.start = opCode[5,1];
-            while(  ALUR.busy ) {}
+            ALUR.start = opCode[5,1]; while(  ALUR.busy ) {}
             result = opCode[5,1] ? ALUR.result : ALUI.result;
             busy = 0;
         }

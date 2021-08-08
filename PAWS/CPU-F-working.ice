@@ -16,11 +16,15 @@ circuitry signextender16( input function3, input nosign, output withsign ) {
 
 // CPU FETCH 16 bit WORD FROM MEMORY FOR INSTRUCTION BUILDING
 circuitry fetch( input location, input memorybusy, output address, output readmemory ) {
-    address = location; readmemory = 1; while( memorybusy ) {}
+    address = location;
+    readmemory = 1;
+    while( memorybusy ) {}
 }
 // CPU LOAD FROM MEMORY
 circuitry load( input accesssize, input location, input memorybusy, input readdata, output address, output readmemory, output memoryinput ) {
-    address = location; readmemory = 1; while( memorybusy ) {}
+    address = location;
+    readmemory = 1;
+    while( memorybusy ) {}
     switch( accesssize[0,2] ) {
         case 2b00: { ( memoryinput ) = signextender8( accesssize, location, readdata ); }
         case 2b01: { ( memoryinput ) = signextender16( accesssize, readdata ); }
@@ -65,19 +69,19 @@ algorithm PAWSCPU(
     input   uint1   SMTRUNNING,
     input   uint32  SMTSTARTPC
 ) <autorun> {
-    uint7 FSM = uninitialized;
-
-    // RISC-V PROGRAM COUNTERS AND STATUS
-    uint32  pc = uninitialized;
-    uint32  PC <:: SMT ? pcSMT : pc;
-    uint32  PCplus2 <: PC + 2;
-    uint1   incPC = uninitialized;
+    uint7 FSM = 7b0000001;
 
     // SMT FLAG
     // RUNNING ON HART 0 OR HART 1
     // DUPLICATES PROGRAM COUNTER, REGISTER FILE AND LAST INSTRUCTION CACHE
-    uint1   SMT = uninitialized;
-    uint32  pcSMT = uninitialized;
+    uint1   SMT = 0;
+
+    // RISC-V PROGRAM COUNTERS AND STATUS
+    uint32  pc = 0;
+    uint32  pcSMT = 0;
+    uint32  PC <:: SMT ? pcSMT : pc;
+    uint32  PCplus2 <: PC + 2;
+    uint1   incPC = uninitialized;
 
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
@@ -150,11 +154,11 @@ algorithm PAWSCPU(
     uint32  storeAddressplus2 := storeAddress + 2;
     uint32  AUIPCLUI = uninitialized;
     addressgenerator AGU(
-        compressed <: compressed,
         instruction <: instruction,
         pc <: PC,
-        immediateValue <: immediateValue,
+        compressed <: compressed,
         sourceReg1 <: sourceReg1,
+        immediateValue <: immediateValue,
         nextPC :> nextPC,
         branchAddress :> branchAddress,
         jumpAddress :> jumpAddress,
@@ -200,7 +204,9 @@ algorithm PAWSCPU(
     );
 
     // MEMORY ACCESS FLAGS - 32 bit for FLOAT LOAD/STORE AND ATOMIC OPERATIONS
-    accesssize := ( opCode[2,5] == 5b01011 ) || ( opCode[2,5] == 5b00001 ) || ( opCode[2,5] == 5b01001 ) ? 3b010 : function3; readmemory := 0; writememory := 0;
+    accesssize := ( opCode[2,5] == 5b01011 ) || ( opCode[2,5] == 5b00001 ) || ( opCode[2,5] == 5b01001 ) ? 3b010 : function3;
+    readmemory := 0;
+    writememory := 0;
 
     // REGISTERS Write FLAG AT LAST STAGE OF THE FSM
     REGISTERS.write := FSM[6,1] & EXECUTE.writeRegister & ~EXECUTE.frd & ( rd != 0 ); REGISTERS.result := EXECUTE.result;
@@ -208,9 +214,6 @@ algorithm PAWSCPU(
 
     // CPU EXECUTE START FLAGS
     EXECUTE.start := 0; EXECUTE.AUIPCLUI := AGU.AUIPCLUI;
-
-    // RESET ACTIONS - FSM -> 1, SMT AND PC -> 0, ALLOW SINGALS TO PROPAGATE, WAIT FOR MEMORY TO BE FREE, ALLOW SIGNALS TO PROPAGATE
-    FSM = 1; SMT = 0; pc = 0; while( memorybusy ) {} ++: ++:
 
     while(1) {
         onehot( FSM ) {
