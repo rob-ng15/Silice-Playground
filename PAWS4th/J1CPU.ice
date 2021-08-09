@@ -103,7 +103,7 @@ algorithm J1CPU(
     uint8   newRSP = 0;
     uint16  rstackWData = uninitialized;
 
-    alu_alt ALU(
+    alu ALU(
         instruction <: instruction,
         memoryRead <: readdata,
         stackTop <: stackTop,
@@ -244,60 +244,6 @@ algorithm J1CPU(
     }
 }
 
-algorithm add(
-    input   uint16  stackTop,
-    input   uint16  stackNext,
-    output  uint16  newStackTop
-) <autorun> {
-    newStackTop := stackTop + stackNext;
-}
-algorithm and(
-    input   uint16  stackTop,
-    input   uint16  stackNext,
-    output  uint16  newStackTop
-) <autorun> {
-    newStackTop := stackTop & stackNext;
-}
-algorithm or(
-    input   uint16  stackTop,
-    input   uint16  stackNext,
-    output  uint16  newStackTop
-) <autorun> {
-    newStackTop := stackTop | stackNext;
-}
-algorithm xor(
-    input   uint16  stackTop,
-    input   uint16  stackNext,
-    output  uint16  newStackTop
-) <autorun> {
-    newStackTop := stackTop ^ stackNext;
-}
-algorithm inv(
-    input   uint16  stackTop,
-    output  uint16  newStackTop
-) <autorun> {
-    newStackTop := ~stackTop;
-}
-algorithm dec(
-    input   uint16  stackTop,
-    output  uint16  newStackTop
-) <autorun> {
-    newStackTop := stackTop - 1;
-}
-algorithm lshift(
-    input   uint16  stackTop,
-    input   uint16  stackNext,
-    output  uint16  newStackTop
-) <autorun> {
-    newStackTop := stackNext << nibbles(stackTop).nibble0;
-}
-algorithm rshift(
-    input   uint16  stackTop,
-    input   uint16  stackNext,
-    output  uint16  newStackTop
-) <autorun> {
-    newStackTop := __signed(stackNext) >>> nibbles(stackTop).nibble0;
-}
 algorithm compare(
     input   uint16  stackTop,
     input   uint16  stackNext,
@@ -310,51 +256,6 @@ algorithm compare(
     lessu := __unsigned(stackNext) < __unsigned(stackTop);
     less := __signed(stackNext) < __signed(stackTop);
     equal0 := __signed( stackTop ) == __signed( 0 );
-}
-
-algorithm sub(
-    input   uint16  stackTop,
-    input   uint16  stackNext,
-    output  uint16  newStackTop
-) <autorun> {
-    newStackTop := stackNext - stackTop;
-}
-algorithm mul(
-    input   uint16  stackTop,
-    input   uint16  stackNext,
-    output  uint16  newStackTop
-) <autorun> {
-    newStackTop := stackTop * stackNext;
-}
-algorithm neg(
-    input   uint16  stackTop,
-    output  uint16  newStackTop
-) <autorun> {
-    newStackTop := -stackTop;
-}
-algorithm inc(
-    input   uint16  stackTop,
-    output  uint16  newStackTop
-) <autorun> {
-    newStackTop := stackTop + 1;
-}
-algorithm times2(
-    input   uint16  stackTop,
-    output  uint16  newStackTop
-) <autorun> {
-    newStackTop := { stackTop[0,15], 1b0 };
-}
-algorithm divide2(
-    input   uint16  stackTop,
-    output  uint16  newStackTop
-) <autorun> {
-    newStackTop := { stackTop[15,1], stackTop[1,15] };
-}
-algorithm abs(
-    input   uint16  stackTop,
-    output  uint16  newStackTop
-) <autorun> {
-    newStackTop := stackTop[15,1] ? -stackTop : stackTop;
 }
 algorithm alu(
     input   uint16  instruction,
@@ -370,78 +271,9 @@ algorithm alu(
     uint1   less = uninitialized;
     uint1   lessu = uninitialized;
     uint1   equal0 = uninitialized;
-
-    add ADD( stackTop <: stackTop, stackNext <: stackNext );
-    and AND( stackTop <: stackTop, stackNext <: stackNext );
-    or OR( stackTop <: stackTop, stackNext <: stackNext );
-    xor XOR( stackTop <: stackTop, stackNext <: stackNext );
-    inv INV( stackTop <: stackTop );
-    dec DEC( stackTop <: stackTop );
-    lshift LSHIFT( stackTop <: stackTop, stackNext <: stackNext );
-    rshift RSHIFT( stackTop <: stackTop, stackNext <: stackNext );
-    compare COMPARE( stackTop <: stackTop, stackNext <: stackNext, equal :> equal, less :> less, lessu :> lessu, equal0 :> equal0 );
-    sub SUB( stackTop <: stackTop, stackNext <: stackNext );
-    mul MUL( stackTop <: stackTop, stackNext <: stackNext );
-    neg NEG( stackTop <: stackTop );
-    inc INC( stackTop <: stackTop );
-    times2 TIMES2( stackTop <: stackTop );
-    divide2 DIVIDE2( stackTop <: stackTop );
-    abs ABS( stackTop <: stackTop );
-
-    while(1) {
-        switch( { aluop(instruction).is_j1j1plus, aluop(instruction).operation } ) {
-            case 5b00000: {newStackTop = stackTop;}
-            case 5b00001: {newStackTop = stackNext;}
-            case 5b00010: {newStackTop = ADD.newStackTop;}
-            case 5b00011: {newStackTop = AND.newStackTop;}
-            case 5b00100: {newStackTop = OR.newStackTop;}
-            case 5b00101: {newStackTop = XOR.newStackTop;}
-            case 5b00110: {newStackTop = INV.newStackTop;}
-            case 5b00111: {newStackTop = {16{equal}};}
-            case 5b01000: {newStackTop = {16{less}};}
-            case 5b01001: {newStackTop = RSHIFT.newStackTop;}
-            case 5b01010: {newStackTop = DEC.newStackTop;}
-            case 5b01011: {newStackTop = rStackTop;}
-            case 5b01100: {newStackTop = memoryRead;}
-            case 5b01101: {newStackTop = LSHIFT.newStackTop;}
-            case 5b01110: {newStackTop = {rsp, dsp};}
-            case 5b01111: {newStackTop = {16{lessu}};}
-            case 5b10000: { newStackTop = {16{ equal0 }}; }
-            case 5b10001: { newStackTop = {16{ ~equal0 }}; }
-            case 5b10010: { newStackTop = {16{ ~equal }}; }
-            case 5b10011: { newStackTop = INC.newStackTop; }
-            case 5b10100: { newStackTop = MUL.newStackTop; }
-            case 5b10101: { newStackTop = TIMES2.newStackTop; }
-            case 5b10110: { newStackTop = NEG.newStackTop; }
-            case 5b10111: { newStackTop = DIVIDE2.newStackTop; }
-            case 5b11000: { newStackTop = SUB.newStackTop;}
-            case 5b11001: { newStackTop = {16{ stackTop[15,1] }}; }
-            case 5b11010: { newStackTop = {16{ ~stackTop[15,1] }}; }
-            case 5b11011: { newStackTop = {16{ ~less & ~equal }}; }
-            case 5b11100: { newStackTop = {16{ ~less }}; }
-            case 5b11101: { newStackTop = ABS.newStackTop; }
-            case 5b11110: { newStackTop = ~less ? stackNext : stackTop; }
-            case 5b11111: { newStackTop = less ? stackNext : stackTop; }
-        }
-    }
-}
-algorithm alu_alt(
-    input   uint16  instruction,
-    input   uint16  stackTop,
-    input   uint16  stackNext,
-    input   uint16  rStackTop,
-    input   uint8   dsp,
-    input   uint8   rsp,
-    input   uint16  memoryRead,
-    output  uint16  newStackTop
-) <autorun> {
-    uint1   equal = uninitialized;
-    uint1   less = uninitialized;
-    uint1   lessu = uninitialized;
-    uint1   equal0 = uninitialized;
     compare COMPARE( stackTop <: stackTop, stackNext <: stackNext, equal :> equal, less :> less, lessu :> lessu, equal0 :> equal0 );
 
-    while(1) {
+    always {
         switch( { aluop(instruction).is_j1j1plus, aluop(instruction).operation } ) {
             case 5b00000: {newStackTop = stackTop;}
             case 5b00001: {newStackTop = stackNext;}
@@ -534,11 +366,8 @@ algorithm stack(
     stack.wenable1 := 1;
     stackTop := stack.rdata0;
 
-    while(1) {
-        switch( stackWrite ) {
-            case 1: { stack.addr1 = newSP; stack.wdata1 = stackWData; }
-            default: {}
-        }
+    always {
+        if( stackWrite ) { stack.addr1 = newSP; stack.wdata1 = stackWData; }
     }
 }
 

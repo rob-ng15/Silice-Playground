@@ -68,9 +68,6 @@ algorithm terminal_writer(
     output  uint7   terminal_x,
     output  uint3   terminal_y
 ) <autorun> {
-    uint3   FSM = uninitialized;
-    uint2   FSM2 = uninitialized;
-
     simple_dualport_bram uint8 terminal_copy <input!> [640] = uninitialized;
 
     // Terminal active (scroll) flag and temporary storage for scrolling
@@ -124,29 +121,36 @@ algorithm terminal_writer(
             }
             case 1: {
                 // SCROLL
-                FSM = 1;
-                while( FSM != 0 ) {
-                    onehot( FSM ) {
-                        case 0: { terminal_scroll = 0; }
-                        case 1: {
+                //FSM = 1;
+                //while( FSM != 0 ) {
+                    //onehot( FSM ) {
+                        //case 0: {
+                            terminal_scroll = 0;
+                        //}
+                        //case 1: {
+                            ++:
                             while( terminal_scroll != 560 ) {
-                                FSM2 = 1;
-                                while( FSM2 != 0 ) {
-                                    onehot( FSM2 ) {
-                                        case 0: { terminal_copy.addr0 = terminal_scroll + 80; }
-                                        case 1: {
+                                //FSM2 = 1;
+                                //while( FSM2 != 0 ) {
+                                    //onehot( FSM2 ) {
+                                        //case 0: {
+                                            terminal_copy.addr0 = terminal_scroll + 80;
+                                            ++:
+                                        //}
+                                        //case 1: {
                                             terminal.addr1 = terminal_scroll;
                                             terminal.wdata1 = terminal_copy.rdata0;
                                             terminal_copy.addr1 = terminal_scroll;
                                             terminal_copy.wdata1 = terminal_copy.rdata0;
                                             terminal_scroll = terminal_scroll + 1;
-                                        }
-                                    }
-                                    FSM2 = { FSM2[0,1], 1b0 };
-                                }
+                                        //}
+                                    //}
+                                    //FSM2 = { FSM2[0,1], 1b0 };
+                                //}
                             }
-                        }
-                        case 2: {
+                        //}
+                        //case 2: {
+                            ++:
                             // BLANK LAST LINE
                             while( terminal_scroll != 640 ) {
                                 terminal.addr1 = terminal_scroll;
@@ -155,19 +159,22 @@ algorithm terminal_writer(
                                 terminal_copy.wdata1 = 0;
                                 terminal_scroll = terminal_scroll + 1;
                             }
-                        }
-                    }
-                    FSM = { FSM[0,2], 1b0 };
-                }
+                        //}
+                    //}
+                    //FSM = { FSM[0,2], 1b0 };
+                //}
                 terminal_active = 0;
             }
             case 2: {
                 // RESET
-                FSM2 = 1;
-                while( FSM2 != 0 ) {
-                    onehot( FSM2 ) {
-                        case 0: { terminal_scroll = 0; }
-                        case 1: {
+                //FSM2 = 1;
+                //while( FSM2 != 0 ) {
+                    //onehot( FSM2 ) {
+                        //case 0: {
+                            terminal_scroll = 0;
+                        //}
+                        //case 1: {
+                            ++:
                             while( terminal_scroll != 640 ) {
                                 terminal.addr1 = terminal_scroll;
                                 terminal.wdata1 = 0;
@@ -175,10 +182,10 @@ algorithm terminal_writer(
                                 terminal_copy.wdata1 = 0;
                                 terminal_scroll = terminal_scroll + 1;
                             }
-                        }
-                    }
-                    FSM2 = { FSM2[0,1], 1b0 };
-                }
+                        //}
+                    //}
+                    //FSM2 = { FSM2[0,1], 1b0 };
+                //}
                 terminal_x = 0;
                 terminal_y = 7;
                 terminal_active = 0;

@@ -27,12 +27,16 @@ algorithm douintdivide(
     output  uint32  quotient,
     output  uint32  remainder
 ) <autorun> {
+    uint32  newquotient = uninitialised;
+    uint32  newremainder = uninitialised;
     dointdivbit DIVBIT(
         quotient <: quotient,
         remainder <: remainder,
         top <: dividend,
         bottom <: divisor,
-        bit <: bit
+        bit <: bit,
+        newquotient :> newquotient,
+        newremainder :> newremainder
     );
     uint6   bit(63);
 
@@ -40,24 +44,30 @@ algorithm douintdivide(
     while(1) {
         if( start ) {
             bit = 31; quotient = 0; remainder = 0;
-            while( bit != 63 ) { quotient = DIVBIT.newquotient; remainder = DIVBIT.newremainder; bit = bit - 1; }
+            while( bit != 63 ) { quotient = newquotient; remainder = newremainder; bit = bit - 1; }
         }
     }
 }
 algorithm aluMdivideremain(
     input   uint1   start,
     output  uint1   busy(0),
-
     input   uint3   dosign,
     input   uint32  dividend,
     input   uint32  divisor,
-
     output  uint32  result
 ) <autorun> {
     uint1   quotientremaindersign <: ~dosign[0,1] ? dividend[31,1] ^ divisor[31,1] : 0;
-
-    douintdivide DODIVIDE();
-    DODIVIDE.start := 0; DODIVIDE.dividend := ~dosign[0,1] ? ( dividend[31,1] ? -dividend : dividend ) : dividend; DODIVIDE.divisor := ~dosign[0,1] ? ( divisor[31,1] ? -divisor : divisor ) : divisor;
+    uint32  dividend_unsigned <: ~dosign[0,1] ? ( dividend[31,1] ? -dividend : dividend ) : dividend;
+    uint32  divisor_unsigned <: ~dosign[0,1] ? ( divisor[31,1] ? -divisor : divisor ) : divisor;
+    uint32  result_quotient = uninitialised;
+    uint32  result_remainder = uninitialised;
+    douintdivide DODIVIDE(
+        dividend <: dividend_unsigned,
+        divisor <: divisor_unsigned,
+        quotient :> result_quotient,
+        remainder :> result_remainder
+    );
+    DODIVIDE.start := 0;
 
     while(1) {
         if( start ) {
@@ -66,7 +76,7 @@ algorithm aluMdivideremain(
                 case 0: { result = dosign[1,1] ? dividend : 32hffffffff; }
                 default: {
                     DODIVIDE.start = 1; while( DODIVIDE.busy ) {}
-                    result = dosign[1,1] ? DODIVIDE.remainder : ( quotientremaindersign ? -DODIVIDE.quotient : DODIVIDE.quotient );
+                    result = dosign[1,1] ? result_remainder : ( quotientremaindersign ? -result_quotient : result_quotient );
                 }
             }
             busy = 0;
@@ -82,21 +92,18 @@ algorithm douintmul(
 ) <autorun> {
     product := factor_1 * factor_2;
 }
-
 algorithm aluMmultiply(
     input   uint3   dosign,
     input   uint32  factor_1,
     input   uint32  factor_2,
-
     output  uint32  result
 ) <autorun> {
     uint2   dosigned <: dosign[1,1] ? ( dosign[0,1] ? 0 : 2 ) : 1;
     uint1   productsign <: ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
-    uint64  product <: productsign ? -UINTMUL.product : UINTMUL.product;
-
-    douintmul UINTMUL();
-    UINTMUL.factor_1 := ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
-    UINTMUL.factor_2 := ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
-
+    uint32  factor_1_unsigned <: ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
+    uint32  factor_2_unsigned <: ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
+    uint64  product64 = uninitialised;
+    uint64  product <: productsign ? -product64 : product64;
+    douintmul UINTMUL( factor_1 <: factor_1_unsigned, factor_2 <: factor_2_unsigned, product :> product64 );
     result := product[ ( dosign == 0 ) ? 0 : 32, 32 ];
 }

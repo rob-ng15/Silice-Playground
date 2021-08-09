@@ -535,7 +535,6 @@ algorithm aluR (
     );
 
     // START FLAGS FOR ALU SUB BLOCKS
-    ALUMD.start := 0;
     ALUR001.start := 0;
     ALUR010.start := 0;
     ALUR011.start := 0;
@@ -555,9 +554,9 @@ algorithm aluR (
             switch( function7 ) {
                 // M EXTENSION MULTIPLICATION AND DIVISION
                 case 7b0000001: {
-                    switch( function3[2,1] ) {
+                     switch( function3[2,1] ) {
                         case 1b0: { result = ALUMM.result; }
-                        case 1b1: { ALUMD.start = 1; while( ALUMD.busy ) {} result = ALUMD.result; }
+                        case 1b1: { () <- ALUMD <- (); result = ALUMD.result; }
                     }
                 }
                 // BASE + REMAINING B EXTENSION

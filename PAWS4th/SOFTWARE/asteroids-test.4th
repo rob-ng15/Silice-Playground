@@ -650,7 +650,7 @@ create (asteroidbitmap)
       shipdirection @ shipx @ shipy @ 15 0 1 b usprite
       moveasteroids 14 sleep
       6 b lsprite@ 7ff and
-      6 b usprite@ and + 0=
+      6 b usprite@ 7ff and + 0=
     until
     loop
 

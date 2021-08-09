@@ -105,10 +105,6 @@ algorithm tile_map_writer(
     output  uint4   tm_lastaction,
     output  uint2   tm_active
 ) <autorun> {
-    uint2   FSM = uninitialized;
-    uint4   FSM2 = uninitialized;
-    uint2   FSM3 = uninitialized;
-
     // COPY OF TILEMAP FOR SCROLLING
     simple_dualport_bram uint6 tiles_copy <input!> [1344] = uninitialized;
     simple_dualport_bram uint13 colours_copy <input!> [1344] = uninitialized;
@@ -211,33 +207,38 @@ algorithm tile_map_writer(
 
             // SCROLL/WRAP LEFT/RIGHT
             case 1: {
-                FSM = 1;
-                while( FSM != 0 ) {
-                    onehot( FSM ) {
-                        case 0: {  y_cursor_addr = 0; }
-                        case 1: {
+                //FSM = 1;
+                //while( FSM != 0 ) {
+                    //onehot( FSM ) {
+                        //case 0: {
+                            y_cursor_addr = 0;
+                        //}
+                        //case 1: {
+                        ++:
                             while( y_cursor_addr != 1344 ) {
-                                FSM2 = 1;
-                                while( FSM2 != 0 ) {
-                                    onehot( FSM2 ) {
-                                        case 0: {
+                                //FSM2 = 1;
+                                //while( FSM2 != 0 ) {
+                                    //onehot( FSM2 ) {
+                                        //case 0: {
                                             x_cursor = tm_goleft ? 0 : 41;
                                             tiles_copy.addr0 = y_cursor_addr + x_cursor;
                                             colours_copy.addr0 = y_cursor_addr + x_cursor;
-                                        }
-                                        case 1: {
+                                        //}
+                                        //case 1: {
+                                        ++:
                                             new_tile = tm_scroll ? 0 : tiles_copy.rdata0;
                                             new_colour = tm_scroll ? 13h1000 : colours_copy.rdata0;
                                             while( tm_goleft ? ( x_cursor != 42 ) : ( x_cursor != 0 ) ) {
-                                                FSM3 = 1;
-                                                while( FSM3 != 0 ) {
-                                                    onehot( FSM3 ) {
-                                                        case 0: {
+                                                //FSM3 = 1;
+                                                //while( FSM3 != 0 ) {
+                                                    //onehot( FSM3 ) {
+                                                        //case 0: {
                                                             temp_1 = tm_goleft ? y_cursor_addr + x_cursor + 1 : y_cursor_addr + x_cursor - 1;
                                                             tiles_copy.addr0 = temp_1;
                                                             colours_copy.addr0 = temp_1;
-                                                        }
-                                                        case 1: {
+                                                        //}
+                                                        //case 1: {
+                                                        ++:
                                                             temp_1 = x_cursor + y_cursor_addr;
                                                             tiles.addr1 = temp_1;
                                                             tiles.wdata1 = tiles_copy.rdata0;
@@ -248,13 +249,14 @@ algorithm tile_map_writer(
                                                             colours_copy.addr1 = temp_1;
                                                             colours_copy.wdata1 = colours_copy.rdata0;
                                                             x_cursor = tm_goleft ? x_cursor + 1 : x_cursor - 1;
-                                                        }
-                                                    }
-                                                    FSM3 = { FSM3[0,1], 1b0 };
-                                                }
+                                                        //}
+                                                    //}
+                                                    //FSM3 = { FSM3[0,1], 1b0 };
+                                                //}
                                             }
-                                        }
-                                        case 2: {
+                                        //}
+                                        //case 2: {
+                                        ++:
                                             temp_1 = y_cursor_addr + ( tm_goleft ? 41 : 0 );
                                             tiles.addr1 = temp_1;
                                             tiles.wdata1 = new_tile;
@@ -264,49 +266,57 @@ algorithm tile_map_writer(
                                             colours.wdata1 = new_colour;
                                             colours_copy.addr1 = temp_1;
                                             colours_copy.wdata1 = new_colour;
-                                        }
-                                        case 3: { y_cursor_addr = y_cursor_addr + 42; }
-                                    }
-                                    FSM2 = { FSM2[0,3], 1b0 };
-                                }
+                                        //}
+                                        //case 3: {
+                                        ++:
+                                            y_cursor_addr = y_cursor_addr + 42;
+                                        //}
+                                    //}
+                                    //FSM2 = { FSM2[0,3], 1b0 };
+                                //}
                             }
-                        }
-                    }
-                    FSM = { FSM[0,1], 1b0 };
-                }
+                        //}
+                    //}
+                    //FSM = { FSM[0,1], 1b0 };
+                //}
                 tm_offset_x = 0;
                 tm_active = 0;
             }
 
             // SCROLL/WRAP UP/DOWN
             case 2: {
-                FSM = 1;
-                while( FSM != 0 ) {
-                    onehot( FSM ) {
-                        case 0: { x_cursor = 0; }
-                        case 1: {
+                //FSM = 1;
+                //while( FSM != 0 ) {
+                    //onehot( FSM ) {
+                        //case 0: {
+                            x_cursor = 0;
+                        //}
+                        //case 1: {
+                            ++:
                             while( x_cursor != 42 ) {
-                                FSM2 = 1;
-                                while( FSM2 != 0 ) {
-                                    onehot( FSM2 ) {
-                                        case 0: {
+                                //FSM2 = 1;
+                                //while( FSM2 != 0 ) {
+                                    //onehot( FSM2 ) {
+                                        //case 0: {
                                             y_cursor_addr = tm_goup ? 0 : 1302;
                                             tiles_copy.addr0 = x_cursor + y_cursor_addr;
                                             colours_copy.addr0 = x_cursor + y_cursor_addr;
-                                        }
-                                        case 1: {
+                                        //}
+                                        //case 1: {
+                                        ++:
                                             new_tile = tm_scroll ? 0 : tiles_copy.rdata0;
                                             new_colour = tm_scroll ? 13h1000 : colours_copy.rdata0;
                                             while( tm_goup ? ( y_cursor_addr != 1302 ) : ( y_cursor_addr != 0 ) ) {
-                                                FSM3 = 1;
-                                                while( FSM3 != 0 ) {
-                                                    onehot( FSM3 ) {
-                                                        case 0: {
+                                                //FSM3 = 1;
+                                                //while( FSM3 != 0 ) {
+                                                    //onehot( FSM3 ) {
+                                                        //case 0: {
                                                             temp_1 = tm_goup ? x_cursor + y_cursor_addr + 42 : x_cursor + y_cursor_addr - 42;
                                                             tiles_copy.addr0 = temp_1;
                                                             colours_copy.addr0 = temp_1;
-                                                        }
-                                                        case 1: {
+                                                        //}
+                                                        //case 1: {
+                                                            ++:
                                                             temp_1 = x_cursor + y_cursor_addr;
                                                             tiles.addr1 = temp_1;
                                                             tiles.wdata1 = tiles_copy.rdata0;
@@ -317,13 +327,14 @@ algorithm tile_map_writer(
                                                             colours_copy.addr1 = temp_1;
                                                             colours_copy.wdata1 = colours_copy.rdata0;
                                                             y_cursor_addr = tm_goup ? y_cursor_addr + 42 : y_cursor_addr - 42;
-                                                        }
-                                                    }
-                                                    FSM3 = { FSM3[0,1], 1b0 };
-                                                }
+                                                        //}
+                                                    //}
+                                                    //FSM3 = { FSM3[0,1], 1b0 };
+                                                //}
                                             }
-                                        }
-                                        case 2: {
+                                        //}
+                                        //case 2: {
+                                        ++:
                                             temp_1 = x_cursor + ( tm_goup ? 1302 : 0 );
                                             tiles.addr1 = temp_1;
                                             tiles.wdata1 = new_tile;
@@ -333,16 +344,19 @@ algorithm tile_map_writer(
                                             colours.wdata1 = new_colour;
                                             colours_copy.addr1 = temp_1;
                                             colours_copy.wdata1 = new_colour;
-                                        }
-                                        case 3: { x_cursor = x_cursor + 1; }
-                                    }
-                                    FSM2 = { FSM2[0,3], 1b0 };
-                                }
+                                        //}
+                                        //case 3: {
+                                        ++:
+                                            x_cursor = x_cursor + 1;
+                                        //}
+                                    //}
+                                    //FSM2 = { FSM2[0,3], 1b0 };
+                                //}
                             }
-                        }
-                    }
-                    FSM = { FSM[0,1], 1b0 };
-                }
+                        //}
+                    //}
+                    //FSM = { FSM[0,1], 1b0 };
+                //}
                 tm_offset_y = 0;
                 tm_active = 0;
             }

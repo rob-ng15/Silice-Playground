@@ -160,21 +160,30 @@ $$end
 
     // SDRAM and BRAM (for BIOS)
     // FUNCTION3 controls byte read/writes
+    uint16  sdramreaddata = uninitialized;
     sdramcontroller sdram <@clock_system,!reset> (
         sio <:> sio_halfrate,
         function3 <: function3,
         address <: address,
         writedata <: writedata,
+        writeflag <: sdramwriteflag,
+        readflag <: sdramreadflag,
+        readdata :> sdramreaddata
     );
+    uint16  ramreaddata = uninitialized;
     bramcontroller ram <@clock_system,!reset> (
         function3 <: function3,
         address <: address,
         writedata <: writedata,
+        writeflag <: ramwriteflag,
+        readflag <: ramreadflag,
+        readdata :> ramreaddata
     );
 
     // MEMORY MAPPED I/O + SMT CONTROLS
     uint1   SMTRUNNING = uninitialized;
     uint32  SMTSTARTPC = uninitialized;
+    uint16  IOreadData = uninitialized;
     io_memmap IO_Map <@clock_system,!reset> (
         leds :> leds,
 $$if not SIMULATION then
@@ -193,26 +202,39 @@ $$end
         clock_25mhz <: $clock_25mhz$,
 
         memoryAddress <: address,
+        memoryWrite <: IOmemoryWrite,
         writeData <: writedata,
+        memoryRead <: IOmemoryRead,
+        readData :> IOreadData,
 
         SMTRUNNING :> SMTRUNNING,
         SMTSTARTPC :> SMTSTARTPC
     );
+
 $$if SIMULATION then
     uint4 audio_l(0);
     uint4 audio_r(0);
 $$end
+    uint16  ATreadData = uninitialized;
     audiotimers_memmap AUDIOTIMERS_Map <@clock_system,!reset> (
         clock_25mhz <: $clock_25mhz$,
         memoryAddress <: address,
+        memoryWrite <: ATmemoryWrite,
         writeData <: writedata,
+        memoryRead <: ATmemoryRead,
+        readData :> ATreadData,
         audio_l :> audio_l,
         audio_r :> audio_r
     );
+
+    uint16  VreadData = uninitialized;
     video_memmap VIDEO_Map <@clock_system,!reset> (
         clock_25mhz <: $clock_25mhz$,
         memoryAddress <: address,
+        memoryWrite <: VmemoryWrite,
         writeData <: writedata,
+        memoryRead <: VmemoryRead,
+        readData :> VreadData,
 $$if HDMI then
         gpdi_dp :> gpdi_dp
 $$end
@@ -228,13 +250,19 @@ $$end
     uint3   function3 = uninitialized;
     uint32  address = uninitialized;
     uint16  writedata = uninitialized;
+    uint1   CPUwritememory = uninitialized;
+    uint1   CPUreadmemory = uninitialized;
     PAWSCPU CPU <@clock_system,!reset> (
         clock_CPUdecoder <: clock_100_1,
         accesssize :> function3,
         address :> address,
         writedata :> writedata,
         SMTRUNNING <: SMTRUNNING,
-        SMTSTARTPC <: SMTSTARTPC
+        SMTSTARTPC <: SMTSTARTPC,
+        memorybusy <: memorybusy,
+        readdata <: readdata,
+        writememory :> CPUwritememory,
+        readmemory :> CPUreadmemory
     );
 
     // IDENTIDY ADDRESS BLOCK
@@ -245,27 +273,27 @@ $$end
     uint1   IO <: ~address[28,1] & address[15,1] & ( address[12,4]==4hf );
 
     // SDRAM -> CPU BUSY STATE
-    CPU.memorybusy := sdram.busy | ( ( CPU.readmemory | CPU.writememory ) & ( BRAM | SDRAM ) );
+    uint1   memorybusy <: sdram.busy | ( ( CPUreadmemory | CPUwritememory ) & ( BRAM | SDRAM ) );
+
+    uint16  readdata <: SDRAM ? sdramreaddata :
+                BRAM ? ramreaddata :
+                VIDEO ? VreadData :
+                AUDIOTIMERS ? ATreadData :
+                IO? IOreadData : 0;
 
     // READ / WRITE FROM SDRAM / BRAM
-    sdram.writeflag := SDRAM & CPU.writememory;
-    sdram.readflag := SDRAM & CPU.readmemory;
-    ram.writeflag := BRAM & CPU.writememory;
-    ram.readflag := BRAM & CPU.readmemory;
+    uint1   sdramwriteflag <: SDRAM & CPUwritememory;
+    uint1   sdramreadflag <: SDRAM & CPUreadmemory;
+    uint1   ramwriteflag <: BRAM & CPUwritememory;
+    uint1   ramreadflag <: BRAM & CPUreadmemory;
 
     // READ / WRITE FROM I/O
-    VIDEO_Map.memoryWrite := VIDEO & CPU.writememory;
-    VIDEO_Map.memoryRead := VIDEO & CPU.readmemory;
-    AUDIOTIMERS_Map.memoryWrite := AUDIOTIMERS & CPU.writememory;
-    AUDIOTIMERS_Map.memoryRead := AUDIOTIMERS & CPU.readmemory;
-    IO_Map.memoryWrite := IO & CPU.writememory;
-    IO_Map.memoryRead := IO & CPU.readmemory;
-
-    CPU.readdata := SDRAM ? sdram.readdata :
-                    BRAM ? ram.readdata :
-                    VIDEO ? VIDEO_Map.readData :
-                    AUDIOTIMERS ? AUDIOTIMERS_Map.readData :
-                    IO? IO_Map.readData : 0;
+    uint1   VmemoryWrite <: VIDEO & CPU.writememory;
+    uint1   VmemoryRead <: VIDEO & CPU.readmemory;
+    uint1   ATmemoryWrite <: AUDIOTIMERS & CPU.writememory;
+    uint1   ATmemoryRead <: AUDIOTIMERS & CPU.readmemory;
+    uint1   IOmemoryWrite <: IO & CPU.writememory;
+    uint1   IOmemoryRead <: IO & CPU.readmemory;
 }
 
 // RAM - BRAM controller
@@ -345,8 +373,10 @@ algorithm sdramcontroller(
     // CACHE TAG IS REMAINING 11 bits of the 26 bit address + 1 bit for valid flag
     simple_dualport_bram uint28 cache <input!> [16384] = uninitialized;
 
+    uint16  CWwritedata = uninitialized;
     cachewriter CW(
         address <: address,
+        writedata <: CWwritedata,
         cache <:> cache
     );
 
@@ -385,12 +415,9 @@ algorithm sdramcontroller(
                             case 0: {
                                 // CACHE MISS
                                 // READ FROM SDRAM
-                                sio.rw = 0;
-                                sio.in_valid = 1;
-                                while( !sio.done ) {}
+                                sio.rw = 0; sio.in_valid = 1; while( !sio.done ) {}
                                 // WRITE RESULT TO CACHE
-                                CW.writedata = sio.data_out;
-                                CW.update = 1;
+                                CWwritedata = sio.data_out; CW.update = 1;
                             }
                             case 1: {}
                         }
@@ -398,13 +425,9 @@ algorithm sdramcontroller(
                     }
                     case 2: {
                         // WRITE RESULT TO CACHE
-                        CW.writedata = writethrough;
-                        CW.update = 1;
+                        CWwritedata = writethrough; CW.update = 1;
                         // COMPLETE WRITE TO SDRAM
-                        sio.data_in = writethrough;
-                        sio.rw = 1;
-                        sio.in_valid = 1;
-                        while( !sio.done ) {}
+                        sio.data_in = writethrough; sio.rw = 1; sio.in_valid = 1; while( !sio.done ) {}
                         FSM = 0;
                     }
                 }

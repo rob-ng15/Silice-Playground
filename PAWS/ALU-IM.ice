@@ -4,11 +4,9 @@ algorithm aluI(
     input   uint5   IshiftCount,
     input   uint32  sourceReg1,
     input   uint32  immediateValue,
-
     input   uint32  LSHIFToutput,
     input   uint32  RSHIFToutput,
-
-    output  uint32   result
+    output  uint32  result
 ) <autorun> {
     always {
         switch( function3 ) {
@@ -27,34 +25,33 @@ algorithm aluI(
 algorithm aluR (
     input   uint1   start,
     output  uint1   busy(0),
-
     input   uint3   function3,
     input   uint7   function7,
     input   uint5   rs1,
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
     input   uint32  sourceReg3,
-
     input   uint32  LSHIFToutput,
     input   uint32  RSHIFToutput,
-
     output  uint32  result
 ) <autorun> {
     // M EXTENSION MULTIPLICATION AND DIVISION
+    int32   ALUMDresult = uninitialized;
     aluMdivideremain ALUMD(
         dosign <: function3,
         dividend <: sourceReg1,
-        divisor <: sourceReg2
+        divisor <: sourceReg2,
+        result :> ALUMDresult
     );
+    int32   ALUMMresult = uninitialized;
     aluMmultiply ALUMM(
         dosign <: function3,
         factor_1 <: sourceReg1,
-        factor_2 <: sourceReg2
+        factor_2 <: sourceReg2,
+        result :> ALUMMresult
     );
 
-    // START FLAGS FOR ALU SUB BLOCKS
     ALUMD.start := 0;
-
     while(1) {
         if( start ) {
             busy = 1;
@@ -62,8 +59,8 @@ algorithm aluR (
                 // M EXTENSION MULTIPLICATION AND DIVISION
                 case 7b0000001: {
                     switch( function3[2,1] ) {
-                        case 1b0: { result = ALUMM.result; }
-                        case 1b1: { ALUMD.start = 1; while( ALUMD.busy ) {} result = ALUMD.result; }
+                        case 1b0: { result = ALUMMresult; }
+                        case 1b1: { ALUMD.start = 1; while( ALUMD.busy ) {} result = ALUMDresult; }
                     }
                 }
                 // BASE + REMAINING B EXTENSION
@@ -121,6 +118,7 @@ algorithm alu(
     );
 
     // BASE REGISTER + IMMEDIATE ALU OPERATIONS
+    int32   ALUIresult = uninitialized;
     aluI ALUI(
        function3 <: function3,
         function7 <: function7,
@@ -128,10 +126,12 @@ algorithm alu(
         sourceReg1 <: sourceReg1,
         immediateValue <: immediateValue,
         LSHIFToutput <: LSHIFToutput,
-        RSHIFToutput <: RSHIFToutput
+        RSHIFToutput <: RSHIFToutput,
+        result :> ALUIresult
     );
 
     // BASE REGISTER & REGISTER ALU OPERATIONS
+    int32   ALURresult = uninitialized;
     aluR ALUR(
         function3 <: function3,
         function7 <: function7,
@@ -139,9 +139,9 @@ algorithm alu(
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
         sourceReg3 <: sourceReg3,
-
         LSHIFToutput <: LSHIFToutput,
-        RSHIFToutput <: RSHIFToutput
+        RSHIFToutput <: RSHIFToutput,
+        result :> ALURresult
     );
 
     // ALU START FLAGS
@@ -152,7 +152,7 @@ algorithm alu(
             // START ALUI or ALUR
             busy = 1;
             ALUR.start = opCode[5,1]; while(  ALUR.busy ) {}
-            result = opCode[5,1] ? ALUR.result : ALUI.result;
+            result = opCode[5,1] ? ALURresult : ALUIresult;
             busy = 0;
         }
     }

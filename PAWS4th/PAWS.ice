@@ -285,10 +285,7 @@ algorithm bramcontroller(
     // 16 bit READ
     readdata := ram.rdata;
 
-    while(1) {
-        switch( writeflag ) {
-            case 1: { ram.wenable = 1; }
-            case 0: {}
-       }
+    always {
+        if( writeflag ) { ram.wenable = 1; }
     }
 }

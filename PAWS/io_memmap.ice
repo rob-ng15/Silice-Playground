@@ -839,9 +839,9 @@ algorithm uart(
 
     always {
         if( outwrite ) {
-                uartOutBuffer.addr1 = uartOutBufferTop;
-                uartOutBuffer.wdata1 = outchar;
-                update = 1;
+            uartOutBuffer.addr1 = uartOutBufferTop;
+            uartOutBuffer.wdata1 = outchar;
+            update = 1;
         } else {
             if( update ) { uartOutBufferTop = uartOutBufferTop + 1; update = 0; }
         }

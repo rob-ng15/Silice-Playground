@@ -81,9 +81,11 @@ algorithm PAWSCPU(
 
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
+    uint32  i32 = uninitialized;
     uint1   compressed = uninitialized;
     compressed COMPRESSED <@clock_CPUdecoder> (
-        i16 <: readdata
+        i16 <: readdata,
+        i32 :> i32
     );
 
     // RISC-V REGISTER WRITER
@@ -108,7 +110,7 @@ algorithm PAWSCPU(
         rs2 :> rs2,
         rs3 :> rs3,
         rd :> rd,
-        immediateValue :> immediateValue,
+        immediateValue :> immediateValue
     );
 
     // RISC-V REGISTERS
@@ -120,6 +122,7 @@ algorithm PAWSCPU(
         rs1 <: rs1,
         rs2 <: rs2,
         rs3 <: rs3,
+        result <: EXECUTEresult,
         rd <: rd,
         sourceReg1 :> sourceReg1,
         sourceReg2 :> sourceReg2,
@@ -134,6 +137,7 @@ algorithm PAWSCPU(
         rs1 <: rs1,
         rs2 <: rs2,
         rs3 <: rs3,
+        result <: EXECUTEresult,
         rd <: rd,
         sourceReg1 :> sourceReg1F,
         sourceReg2 :> sourceReg2F,
@@ -159,13 +163,17 @@ algorithm PAWSCPU(
         branchAddress :> branchAddress,
         jumpAddress :> jumpAddress,
         storeAddress :> storeAddress,
-        loadAddress :> loadAddress
+        loadAddress :> loadAddress,
+        AUIPCLUI :> AUIPCLUI
     );
 
     // CPU EXECUTE BLOCK
     uint1   takeBranch = uninitialized;
     uint32  memoryinput = uninitialized;
     uint32  memoryoutput = uninitialized;
+    int32   EXECUTEresult = uninitialized;
+    uint1   EXECUTEfrd = uninitialized;
+    uint1   EXECUTEwriteRegister = uninitialized;
     cpuexecute EXECUTE(
         SMT <: SMT,
         instruction <: instruction,
@@ -183,12 +191,17 @@ algorithm PAWSCPU(
         immediateValue <: immediateValue,
         memoryinput <: memoryinput,
         nextPC <: nextPC,
+        AUIPCLUI <: AUIPCLUI,
         incPC :> incPC,
         takeBranch :> takeBranch,
-        memoryoutput :> memoryoutput
+        memoryoutput :> memoryoutput,
+        result :> EXECUTEresult,
+        frd :> EXECUTEfrd,
+        writeRegister :> EXECUTEwriteRegister
     );
 
     // PC UPDATE BLOCK
+    uint32  newPC = uninitialized;
     updatepc NEWPC(
         opCode <: opCode,
         incPC <: incPC,
@@ -196,18 +209,19 @@ algorithm PAWSCPU(
         takeBranch <: takeBranch,
         branchAddress <: branchAddress,
         jumpAddress <: jumpAddress,
-        loadAddress <: loadAddress
+        loadAddress <: loadAddress,
+        pc :> newPC
     );
 
     // MEMORY ACCESS FLAGS - 32 bit for FLOAT LOAD/STORE AND ATOMIC OPERATIONS
     accesssize := ( opCode[2,5] == 5b01011 ) || ( opCode[2,5] == 5b00001 ) || ( opCode[2,5] == 5b01001 ) ? 3b010 : function3; readmemory := 0; writememory := 0;
 
     // REGISTERS Write FLAG AT LAST STAGE OF THE FSM
-    REGISTERS.write := FSM[6,1] & EXECUTE.writeRegister & ~EXECUTE.frd & ( rd != 0 ); REGISTERS.result := EXECUTE.result;
-    REGISTERSF.write := FSM[6,1] & EXECUTE.writeRegister & EXECUTE.frd; REGISTERSF.result := EXECUTE.result;
+    REGISTERS.write := FSM[6,1] & EXECUTEwriteRegister & ~EXECUTEfrd & ( rd != 0 );
+    REGISTERSF.write := FSM[6,1] & EXECUTEwriteRegister & EXECUTEfrd;
 
     // CPU EXECUTE START FLAGS
-    EXECUTE.start := 0; EXECUTE.AUIPCLUI := AGU.AUIPCLUI;
+    EXECUTE.start := 0;
 
     // RESET ACTIONS - FSM -> 1, SMT AND PC -> 0, ALLOW SINGALS TO PROPAGATE, WAIT FOR MEMORY TO BE FREE, ALLOW SIGNALS TO PROPAGATE
     FSM = 1; SMT = 0; pc = 0; while( memorybusy ) {} ++: ++:
@@ -218,7 +232,7 @@ algorithm PAWSCPU(
                 ( address, readmemory ) = fetch( PC, memorybusy );
                 compressed = ( readdata[0,2] != 2b11 );
                 switch( readdata[0,2] ) {
-                    default: { instruction = COMPRESSED.i32; }
+                    default: { instruction = i32; }
                     case 2b11: {
                         // 32 BIT INSTRUCTION
                         instruction[0,16] = readdata;
@@ -244,8 +258,8 @@ algorithm PAWSCPU(
             }
             case 6: {
                 switch( SMT ) {                                                                 // UPDATE PC AND SMT
-                    case 1b1: { pcSMT = NEWPC.pc; SMT = 0; }
-                    case 1b0: { pc = NEWPC.pc; SMT = SMTRUNNING; pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC; }
+                    case 1b1: { pcSMT = newPC; SMT = 0; }
+                    case 1b0: { pc = newPC; SMT = SMTRUNNING; pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC; }
                 }
                 FSM = 7b0000001;
             }
@@ -283,14 +297,17 @@ algorithm cpuexecute(
     output  uint32  result
 ) <autorun> {
     // BRANCH COMPARISON UNIT
+    uint1   BRANCHtakeBranch = uninitialized;
     branchcomparison BRANCHUNIT(
         opCode <: opCode,
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
+        takeBranch :> BRANCHtakeBranch
     );
 
     // ALU
+    int32   ALUresult = uninitialized;
     alu ALU(
         opCode <: opCode,
         function3 <: function3,
@@ -300,19 +317,24 @@ algorithm cpuexecute(
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
         sourceReg3 <: sourceReg3,
-        immediateValue <: immediateValue
+        immediateValue <: immediateValue,
+        result :> ALUresult
     );
 
     // ATOMIC MEMORY OPERATIONS
+    int32   ALUAresult = uninitialized;
     aluA ALUA(
         function7 <: function7,
         memoryinput <: memoryinput,
-        sourceReg2 <: sourceReg2
+        sourceReg2 <: sourceReg2,
+        result :> ALUAresult
     );
 
     // FLOATING POINT OPERATIONS
     uint5   FPUflags = 0;
     uint5   FPUnewflags = uninitialized;
+    uint1   FPUfrd = uninitialized;
+    uint32  FPUresult = uninitialized;
     fpu FPU(
         FPUflags <: FPUflags,
         FPUnewflags :> FPUnewflags,
@@ -324,10 +346,13 @@ algorithm cpuexecute(
         sourceReg1 <: sourceReg1,
         sourceReg1F <: sourceReg1F,
         sourceReg2F <: sourceReg2F,
-        sourceReg3F <: sourceReg3F
+        sourceReg3F <: sourceReg3F,
+        frd :> FPUfrd,
+        result :> FPUresult
     );
 
     // MANDATORY RISC-V CSR REGISTERS + HARTID == 0 MAIN THREAD == 1 SMT THREAD
+    uint32  CSRresult = uninitialized;
     CSRblock CSR(
         SMT <: SMT,
         instruction <: instruction,
@@ -335,11 +360,12 @@ algorithm cpuexecute(
         rs1 <: rs1,
         sourceReg1 <: sourceReg1,
         FPUflags :> FPUflags,
-        FPUnewflags <: FPUnewflags
+        FPUnewflags <: FPUnewflags,
+        result :> CSRresult
     );
 
     // ALU AND CSR START FLAGS
-    ALU.start := 0; FPU.start := 0; CSR.start := 0; CSR.incCSRinstret := 0; CSR.updateFPUflags := 0;
+    ALU.start := 0; CSR.start := 0; CSR.incCSRinstret := 0; CSR.updateFPUflags := 0;
 
     while(1) {
         if( start ) {
@@ -350,14 +376,14 @@ algorithm cpuexecute(
                 case 5b00101: { result = AUIPCLUI; }                                        // AUIPC
                 case 5b11011: { incPC = 0; result = nextPC; }                               // JAL
                 case 5b11001: { incPC = 0; result = nextPC; }                               // JALR
-                case 5b11000: { writeRegister = 0; takeBranch = BRANCHUNIT.takeBranch; }    // BRANCH
+                case 5b11000: { writeRegister = 0; takeBranch = BRANCHtakeBranch; }         // BRANCH
                 case 5b00000: { result = memoryinput; }                                     // LOAD
                 case 5b01000: { writeRegister = 0; memoryoutput = sourceReg2; }             // STORE
                 case 5b00001: { frd = 1; result = memoryinput; }                            // FLOAT LOAD
                 case 5b01001: { writeRegister = 0; memoryoutput = sourceReg2F; }            // FLOAT STORE
                 case 5b11100: {
                     switch( function3 ) {
-                        default: { CSR.start = 1; while( CSR.busy ) {} result = CSR.result; }                    // CSR
+                        default: { CSR.start = 1; while( CSR.busy ) {} result = CSRresult; }// CSR
                         case 3b000: { result = 0; }
                     }
                 }
@@ -365,16 +391,14 @@ algorithm cpuexecute(
                     switch( function7[2,5] ) {
                         case 5b00010: { result = memoryinput; }                             // LR.W
                         case 5b00011: { memoryoutput = sourceReg2; result = 0; }            // SC.W
-                        default: { result = memoryinput; memoryoutput = ALUA.result; }      // ATOMIC LOAD - MODIFY - STORE
+                        default: { result = memoryinput; memoryoutput = ALUAresult; }      // ATOMIC LOAD - MODIFY - STORE
                     }
                 }
                 default: {                                                                  // FPU, ALUI or ALUR
-                    ALU.start = ~opCode[6,1];
-                    FPU.start = opCode[6,1];
-                    while( ALU.busy || FPU.busy ) {}
-                    frd = opCode[6,1] & FPU.frd;
-                    CSR.updateFPUflags = opCode[6,1];
-                    result = opCode[6,1] ? FPU.result : ALU.result;
+                    switch( opCode[6,1] ) {
+                        case 0: { ALU.start = 1; while( ALU.busy ) {} frd = 0; result = ALUresult; }
+                        case 1: { () <- FPU <- (); CSR.updateFPUflags = 1; frd = FPUfrd; result = FPUresult; }
+                    }
                 }
             }
             busy = 0;
