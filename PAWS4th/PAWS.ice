@@ -159,12 +159,17 @@ $$end
     );
 
     // BRAM (for BIOS)
+    uint16  ramreaddata = uninitialized;
     bramcontroller ram <@clock_system,!reset> (
         address <: address,
         writedata <: writedata,
+        writeflag <: ramwriteflag,
+        readflag <: ramreadflag,
+        readdata :> ramreaddata
     );
 
     // MEMORY MAPPED I/O + SMT CONTROLS
+    uint16  IOreadData = uninitialized;
     io_memmap IO_Map <@clock_system,!reset> (
         sio <:> sio_halfrate,
         leds :> leds,
@@ -184,30 +189,45 @@ $$end
         clock_25mhz <: $clock_25mhz$,
 
         memoryAddress <: address,
-        writeData <: writedata
+        memoryWrite <: IOmemoryWrite,
+        writeData <: writedata,
+        memoryRead <: IOmemoryRead,
+        readData :> IOreadData
     );
 $$if SIMULATION then
     uint4 audio_l(0);
     uint4 audio_r(0);
 $$end
 
+    uint16  COreadData = uninitialized;
     copro_memmap COPRO_Map <@clock_system,!reset> (
         memoryAddress <: address,
-        writeData <: writedata
+        memoryWrite <: COmemoryWrite,
+        writeData <: writedata,
+        memoryRead <: COmemoryRead,
+        readData :> COreadData
     );
 
+    uint16  ATreadData = uninitialized;
     audiotimers_memmap AUDIOTIMERS_Map <@clock_system,!reset> (
         clock_25mhz <: $clock_25mhz$,
         memoryAddress <: address,
+        memoryWrite <: ATmemoryWrite,
         writeData <: writedata,
+        memoryRead <: ATmemoryRead,
+        readData :> ATreadData,
         audio_l :> audio_l,
         audio_r :> audio_r
     );
 
+    uint16  VreadData = uninitialized;
     video_memmap VIDEO_Map <@clock_system,!reset> (
         clock_25mhz <: $clock_25mhz$,
-        memoryAddress <: address,
+       memoryAddress <: address,
+        memoryWrite <: VmemoryWrite,
         writeData <: writedata,
+        memoryRead <: VmemoryRead,
+        readData :> VreadData,
 $$if HDMI then
         gpdi_dp :> gpdi_dp
 $$end
@@ -222,10 +242,16 @@ $$end
 
     uint16  address = uninitialized;
     uint16  writedata = uninitialized;
+    uint1   CPUwritememory = uninitialized;
+    uint1   CPUreadmemory = uninitialized;
     J1CPU CPU <@clock_system,!reset> (
         clock100 <: clock_100_1,
         address :> address,
-        writedata :> writedata
+        writedata :> writedata,
+        memorybusy <: memorybusy,
+        readdata <: readdata,
+        writememory :> CPUwritememory,
+        readmemory :> CPUreadmemory
     );
 
     // IDENTIDY ADDRESS BLOCK
@@ -236,27 +262,28 @@ $$end
     uint1   IO <: address[12,4] == 4hf ;
 
     // CPU BUSY STATE
-    CPU.memorybusy := CPU.readmemory & BRAM;
+    uint1   memorybusy := CPUreadmemory & BRAM;
+
+    uint16  readdata := BRAM ? ramreaddata :
+                    VIDEO ? VreadData :
+                    COPRO ? COreadData :
+                    AUDIOTIMERS ? ATreadData :
+                    IO ? IOreadData : 0;
 
     // READ / WRITE FROM SDRAM / BRAM
-    ram.writeflag := BRAM & CPU.writememory;
-    ram.readflag := BRAM & CPU.readmemory;
+    uint1   ramwriteflag := BRAM & CPUwritememory;
+    uint1   ramreadflag := BRAM & CPUreadmemory;
+
 
     // READ / WRITE FROM I/O
-    VIDEO_Map.memoryWrite := VIDEO & CPU.writememory;
-    VIDEO_Map.memoryRead := VIDEO & CPU.readmemory;
-    COPRO_Map.memoryWrite := COPRO & CPU.writememory;
-    COPRO_Map.memoryRead := COPRO & CPU.readmemory;
-    AUDIOTIMERS_Map.memoryWrite := AUDIOTIMERS & CPU.writememory;
-    AUDIOTIMERS_Map.memoryRead := AUDIOTIMERS & CPU.readmemory;
-    IO_Map.memoryWrite := IO & CPU.writememory;
-    IO_Map.memoryRead := IO & CPU.readmemory;
-
-    CPU.readdata := BRAM ? ram.readdata :
-                    VIDEO ? VIDEO_Map.readData :
-                    COPRO ? COPRO_Map.readData :
-                    AUDIOTIMERS ? AUDIOTIMERS_Map.readData :
-                    IO ? IO_Map.readData : 0;
+    uint1   VmemoryWrite := VIDEO & CPUwritememory;
+    uint1   VmemoryRead := VIDEO & CPUreadmemory;
+    uint1   COmemoryWrite := COPRO & CPUwritememory;
+    uint1   COmemoryRead := COPRO & CPUreadmemory;
+    uint1   ATmemoryWrite := AUDIOTIMERS & CPUwritememory;
+    uint1   ATmemoryRead := AUDIOTIMERS & CPUreadmemory;
+    uint1   IOmemoryWrite := IO & CPUwritememory;
+    uint1   IOmemoryRead := IO & CPUreadmemory;
 }
 
 // RAM - BRAM controller

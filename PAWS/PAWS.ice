@@ -288,12 +288,12 @@ $$end
     uint1   ramreadflag <: BRAM & CPUreadmemory;
 
     // READ / WRITE FROM I/O
-    uint1   VmemoryWrite <: VIDEO & CPU.writememory;
-    uint1   VmemoryRead <: VIDEO & CPU.readmemory;
-    uint1   ATmemoryWrite <: AUDIOTIMERS & CPU.writememory;
-    uint1   ATmemoryRead <: AUDIOTIMERS & CPU.readmemory;
-    uint1   IOmemoryWrite <: IO & CPU.writememory;
-    uint1   IOmemoryRead <: IO & CPU.readmemory;
+    uint1   VmemoryWrite <: VIDEO & CPUwritememory;
+    uint1   VmemoryRead <: VIDEO & CPUreadmemory;
+    uint1   ATmemoryWrite <: AUDIOTIMERS & CPUwritememory;
+    uint1   ATmemoryRead <: AUDIOTIMERS & CPUreadmemory;
+    uint1   IOmemoryWrite <: IO & CPUwritememory;
+    uint1   IOmemoryRead <: IO & CPUreadmemory;
 }
 
 // RAM - BRAM controller

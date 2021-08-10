@@ -331,6 +331,8 @@ algorithm preprectangle(
     ( gpu_active_x, gpu_active_y, gpu_max_x, gpu_max_y ) = cropscreen( gpu_active_x, gpu_active_y, gpu_max_x, gpu_max_y );
 }
 algorithm drawrectangle(
+    input   uint1   start,
+    output  uint1   busy(0),
     input   int10   start_x,
     input   int10   start_y,
     input   int10   max_x,
@@ -338,23 +340,31 @@ algorithm drawrectangle(
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
     output  uint1   bitmap_write
-) {
+) <autorun> {
     int10   x = uninitialized;
     int10   y = uninitialized;
 
     bitmap_x_write := x; bitmap_y_write := y; bitmap_write := 0;
 
-    x = start_x; y = start_y;
-    while( y <= max_y ) {
-        while( x <= max_x ) {
-            bitmap_write = 1;
-            x = x + 1;
+    while(1) {
+        if( start ) {
+            busy = 1;
+            x = start_x; y = start_y;
+            while( y <= max_y ) {
+                while( x <= max_x ) {
+                    bitmap_write = 1;
+                    x = x + 1;
+                }
+                x = start_x;
+                y = y + 1;
+            }
+            busy = 0;
         }
-        x = start_x;
-        y = y + 1;
     }
 }
 algorithm rectangle (
+    input   uint1   start,
+    output  uint1   busy(0),
     input   int10   x,
     input   int10   y,
     input   int10   param0,
@@ -362,10 +372,7 @@ algorithm rectangle (
 
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
-    output  uint1   bitmap_write,
-
-    input   uint1   start,
-    output  uint1   busy(0)
+    output  uint1   bitmap_write
 ) <autorun> {
     int10   gpu_active_x = uninitialized;
     int10   gpu_active_y = uninitialized;
@@ -391,11 +398,12 @@ algorithm rectangle (
         bitmap_write :> bitmap_write
     );
 
+    RECTANGLE.start := 0;
     while(1) {
         if( start ) {
             busy = 1;
             () <- PREP <- ();
-            () <- RECTANGLE <- ();
+            RECTANGLE.start = 1; while( RECTANGLE.busy ) {}
             busy = 0;
         }
     }
@@ -431,6 +439,8 @@ algorithm prepline(
     gpu_max_count = gpu_max_count + 1;
 }
 algorithm drawline(
+    input   uint1   start,
+    output  uint1   busy(0),
     input   int10   start_x,
     input   int10   start_y,
     input   int10   start_numerator,
@@ -441,7 +451,7 @@ algorithm drawline(
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
     output  uint1   bitmap_write
-) {
+) <autorun> {
     int10   x = uninitialized;
     int10   y = uninitialized;
     int10   numerator = uninitialized;
@@ -452,35 +462,39 @@ algorithm drawline(
     bitmap_y_write := y;
     bitmap_write := 0;
 
-    x = start_x; y = start_y; numerator = start_numerator; count = 0;
-    while( count != max_count ) {
-        bitmap_write = 1;
-        numerator2 = numerator;
-        ++:
-        switch( numerator2 > (-dx) ) {
-            case 1: { numerator = numerator - dy; x = x + 1; }
-            default: {}
+    while(1) {
+        if( start ) {
+            busy = 1;
+            x = start_x; y = start_y; numerator = start_numerator; count = 0;
+            while( count != max_count ) {
+                bitmap_write = 1;
+                numerator2 = numerator;
+                ++:
+                switch( numerator2 > (-dx) ) {
+                    case 1: { numerator = numerator - dy; x = x + 1; }
+                    default: {}
+                }
+                ++:
+                switch( numerator2 < dy ) {
+                    case 1: { numerator = numerator + dx; y = y + sy; }
+                    default: {}
+                }
+                count = count + 1;
+            }
+            busy = 0;
         }
-        ++:
-        switch( numerator2 < dy ) {
-            case 1: { numerator = numerator + dx; y = y + sy; }
-            default: {}
-        }
-        count = count + 1;
     }
 }
 algorithm line (
+    input   uint1   start,
+    output  uint1   busy(0),
     input   int10   x,
     input   int10   y,
     input   int10   param0,
     input   int10   param1,
-
-    output int10   bitmap_x_write,
-    output int10   bitmap_y_write,
-    output uint1   bitmap_write,
-
-    input   uint1   start,
-    output  uint1   busy(0)
+    output  int10   bitmap_x_write,
+    output  int10   bitmap_y_write,
+    output  uint1   bitmap_write
 ) <autorun> {
     int10   gpu_active_x = uninitialized;
     int10   gpu_active_y = uninitialized;
@@ -515,11 +529,12 @@ algorithm line (
         bitmap_write :> bitmap_write
     );
 
+    LINE.start := 0;
     while(1) {
         if( start ) {
             busy = 1;
             () <- PREP <- ();
-            () <- LINE <- ();
+            LINE.start = 1; while( LINE.busy ) {}
             busy = 0;
         }
     }
@@ -559,6 +574,8 @@ algorithm updatenumerator(
     }
 }
 algorithm drawcircle(
+    input   uint1   start,
+    output  uint1   busy(0),
     input   int10   xc,
     input   int10   yc,
     input   int10   radius,
@@ -568,7 +585,7 @@ algorithm drawcircle(
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
     output  uint1   bitmap_write
-) {
+) <autorun> {
     updatenumerator UN(
         gpu_numerator <: numerator,
         gpu_active_x <: active_x,
@@ -585,36 +602,44 @@ algorithm drawcircle(
 
     bitmap_write := 0;
 
-    active_x = 0; active_y = radius; count = radius; numerator = start_numerator;
-    min_count = (-1);
-    while( active_y >= active_x ) {
-        while( count != min_count ) {
-            PIXELOUTPUT = 8b000000001;
-            while( PIXELOUTPUT != 0 ) {
-                // OUTPUT PIXELS IN THE 8 SEGMENTS/ARCS
-                onehot( PIXELOUTPUT ) {
-                    case 0: { bitmap_x_write = xc + active_x; bitmap_y_write = yc + count; }
-                    case 1: { bitmap_y_write = yc - count; }
-                    case 2: { bitmap_x_write = xc - active_x; }
-                    case 3: { bitmap_y_write = yc + count; }
-                    case 4: { bitmap_x_write = xc + count; bitmap_y_write = yc + active_x; }
-                    case 5: { bitmap_y_write = yc - active_x; }
-                    case 6: { bitmap_x_write = xc - count; }
-                    case 7: { bitmap_y_write = yc + active_x; }
+    while(1) {
+        if( start ) {
+            busy = 1;
+            active_x = 0; active_y = radius; count = radius; numerator = start_numerator;
+            min_count = (-1);
+            while( active_y >= active_x ) {
+                while( count != min_count ) {
+                    PIXELOUTPUT = 8b000000001;
+                    while( PIXELOUTPUT != 0 ) {
+                        // OUTPUT PIXELS IN THE 8 SEGMENTS/ARCS
+                        onehot( PIXELOUTPUT ) {
+                            case 0: { bitmap_x_write = xc + active_x; bitmap_y_write = yc + count; }
+                            case 1: { bitmap_y_write = yc - count; }
+                            case 2: { bitmap_x_write = xc - active_x; }
+                            case 3: { bitmap_y_write = yc + count; }
+                            case 4: { bitmap_x_write = xc + count; bitmap_y_write = yc + active_x; }
+                            case 5: { bitmap_y_write = yc - active_x; }
+                            case 6: { bitmap_x_write = xc - count; }
+                            case 7: { bitmap_y_write = yc + active_x; }
+                        }
+                        bitmap_write = ( draw_sectors & PIXELMASK ) != 0;
+                        PIXELOUTPUT = PIXELOUTPUT << 1;
+                    }
+                    count = filledcircle ? count - 1 : min_count;
                 }
-                bitmap_write = ( draw_sectors & PIXELMASK ) != 0;
-                PIXELOUTPUT = PIXELOUTPUT << 1;
+                active_x = active_x + 1;
+                active_y = active_y - ( numerator > 0 );
+                count = active_y - ( numerator > 0 );
+                min_count = min_count + 1;
+                numerator = UN.new_numerator;
             }
-            count = filledcircle ? count - 1 : min_count;
+            busy = 0;
         }
-        active_x = active_x + 1;
-        active_y = active_y - ( numerator > 0 );
-        count = active_y - ( numerator > 0 );
-        min_count = min_count + 1;
-        numerator = UN.new_numerator;
     }
 }
 algorithm circle(
+    input   uint1   start,
+    output  uint1   busy(0),
     input   int10   x,
     input   int10   y,
     input   int10   param0,
@@ -623,10 +648,7 @@ algorithm circle(
 
     output  int10  bitmap_x_write,
     output  int10  bitmap_y_write,
-    output  uint1  bitmap_write,
-
-    input   uint1   start,
-    output  uint1   busy(0)
+    output  uint1  bitmap_write
 ) <autorun> {
     int10   radius = uninitialized;
     int10   gpu_xc = uninitialized;
@@ -656,11 +678,12 @@ algorithm circle(
         bitmap_write :> bitmap_write
     );
 
+    CIRCLE.start := 0;
     while(1) {
         if( start ) {
             busy = 1;
             () <- PREP <- ();
-            () <- CIRCLE <- ();
+            CIRCLE.start = 1; while( CIRCLE.busy ) {}
             busy = 0;
         }
     }
@@ -722,6 +745,8 @@ algorithm insideTriangle(
                 ( (( x1 - x ) * ( sy - y ) - ( y1 - y ) * ( sx - x )) >= 0 );
 }
 algorithm drawtriangle(
+    input   uint1   start,
+    output  uint1   busy(0),
     input   int10   min_x,
     input   int10   min_y,
     input   int10   max_x,
@@ -734,10 +759,7 @@ algorithm drawtriangle(
     input   int10   y2,
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
-    output  uint1   bitmap_write,
-
-    input   uint1   start,
-    output  uint1   busy(0)
+    output  uint1   bitmap_write
 ) <autorun> {
     // Filled triangle calculations
     // Is the point sx,sy inside the triangle given by active_x,active_y x1,y1 x2,y2?
@@ -867,7 +889,6 @@ algorithm triangle(
     );
 
     TRIANGLE.start := 0;
-
     while(1) {
         if( start ) {
             busy = 1;
@@ -903,6 +924,8 @@ algorithm blittilebitmapwriter(
 }
 
 algorithm blit (
+    input   uint1   start,
+    output  uint1   busy(0),
     simple_dualport_bram_port0 blit1tilemap,
     simple_dualport_bram_port0 characterGenerator8x8,
 
@@ -925,9 +948,7 @@ algorithm blit (
     output  int10   bitmap_y_write,
     output  uint1   bitmap_write,
 
-    input   uint1   start,
-    input   uint1   tilecharacter,
-    output  uint1   busy(0)
+    input   uint1   tilecharacter
 ) <autorun> {
     // POSITION IN TILE/CHARACTER
     uint7   gpu_active_x = uninitialized;
@@ -997,6 +1018,8 @@ algorithm colourblittilebitmapwriter(
     colourblittilemap.wdata1 := colourblit_writer_colour;
 }
 algorithm colourblit(
+    input   uint1   start,
+    output  uint1   busy(0),
     simple_dualport_bram_port0 colourblittilemap,
 
     // For setting blit1 tile bitmaps
@@ -1012,10 +1035,7 @@ algorithm colourblit(
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
     output  uint7   bitmap_colour_write,
-    output  uint1   bitmap_write,
-
-    input   uint1   start,
-    output  uint1   busy(0)
+    output  uint1   bitmap_write
 ) <autorun> {
     // POSITION IN TILE/CHARACTER
     uint7   gpu_active_x = uninitialized;
@@ -1074,6 +1094,9 @@ algorithm colourblit(
 // PIXELBLOCK - OUTPUT PIXELS TO RECTANGLE START AT X, Y WITH WIDTH PARAM0, PIXELS PROVIDED SEQUENTIALLY BY CPU, MOVE ALONG RECTANGLE UNTIL STOP RECEIVED
 // CAN HANDLE 7bit ( ARRGGBB ) colours, with one defined as transparent or 24bit RGB colours, scaling to the PAWS colour map
 algorithm pixelblock(
+    input   uint1   start,
+    output  uint1   busy(0),
+
     input   int10   x,
     input   int10   y,
     input   int10   param0,
@@ -1088,10 +1111,7 @@ algorithm pixelblock(
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
     output  uint7   bitmap_colour_write,
-    output  uint1   bitmap_write,
-
-    input   uint1   start,
-    output  uint1   busy(0)
+    output  uint1   bitmap_write
 ) <autorun> {
     uint2   FSM = uninitialised;
 

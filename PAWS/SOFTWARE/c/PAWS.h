@@ -127,9 +127,9 @@ unsigned short volatile * UPPER_SPRITE_TILE = ( unsigned short volatile * ) 0x84
 unsigned short volatile * UPPER_SPRITE_UPDATE = ( unsigned short volatile * ) 0x84c0;
 unsigned short volatile * UPPER_SPRITE_COLLISION_BASE = ( unsigned short volatile * ) 0x84c0;
 unsigned short volatile * UPPER_SPRITE_LAYER_COLLISION_BASE = ( unsigned short volatile * ) 0x84e0;
-unsigned char volatile * UPPER_SPRITE_WRITER_NUMBER = ( unsigned char volatile * ) 0x8810;
-unsigned char volatile * UPPER_SPRITE_WRITER_LINE = ( unsigned char volatile * ) 0x8812;
-unsigned short volatile * UPPER_SPRITE_WRITER_BITMAP = ( unsigned short volatile * ) 0x8814;
+unsigned char volatile * UPPER_SPRITE_WRITER_NUMBER = ( unsigned char volatile * ) 0x8900;
+unsigned char volatile * UPPER_SPRITE_WRITER_LINE = ( unsigned char volatile * ) 0x8902;
+unsigned short volatile * UPPER_SPRITE_WRITER_BITMAP = ( unsigned short volatile * ) 0x8904;
 
 unsigned char volatile * TPU_X = ( unsigned char volatile * ) 0x8500;
 unsigned char volatile * TPU_Y = ( unsigned char volatile * ) 0x8502;

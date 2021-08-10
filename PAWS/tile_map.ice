@@ -7,12 +7,12 @@ algorithm tilemap(
     output! uint1   tilemap_display,
 
     // Set TM at x, y, character with foreground and background
-    input uint6 tm_x,
-    input uint6 tm_y,
-    input uint6 tm_character,
-    input uint6 tm_foreground,
-    input uint7 tm_background,
-    input uint1 tm_write,
+    input   uint6   tm_x,
+    input   uint6   tm_y,
+    input   uint6   tm_character,
+    input   uint6   tm_foreground,
+    input   uint7   tm_background,
+    input   uint1   tm_write,
 
     // For setting tile bitmaps
     input   uint6   tile_writer_tile,

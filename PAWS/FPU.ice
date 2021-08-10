@@ -1,4 +1,6 @@
 algorithm fpu(
+    input   uint1   start,
+    output  uint1   busy(0),
     input   uint7   opCode,
     input   uint3   function3,
     input   uint7   function7,
@@ -13,7 +15,7 @@ algorithm fpu(
     output  uint1   frd,
     input   uint5   FPUflags,
     output  uint5   FPUnewflags
-) {
+) <autorun> {
     uint32  calculatorresult = uninitialised;
     uint5   calculatorflags = uninitialised;
     floatcalc FPUcalculator( opCode <: opCode, function7 <: function7, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F, sourceReg3F <: sourceReg3F, result :> calculatorresult, flags :> calculatorflags );
@@ -36,59 +38,69 @@ algorithm fpu(
     uint10  classification = uninitialised;
     floatclassify FPUclass( sourceReg1F <: sourceReg1F, classification :> classification );
 
-    frd = 1;
-    FPUnewflags = FPUflags;
+    FPUcalculator.start := 0; FPUconvert.start := 0;
 
-    switch( opCode[2,5] ) {
-        default: {
-            // FMADD.S FMSUB.S FNMSUB.S FNMADD.S
-            () <- FPUcalculator <- (); result = calculatorresult; FPUnewflags = FPUflags | calculatorflags;
-        }
-        case 5b10100: {
-            switch( function7[2,5] ) {
+    while(1) {
+        if( start ) {
+            busy = 1;
+            frd = 1;
+            FPUnewflags = FPUflags;
+
+            switch( opCode[2,5] ) {
                 default: {
-                    // FADD.S FSUB.S FMUL.S FDIV.S FSQRT.S
-                    () <- FPUcalculator <- (); result = calculatorresult; FPUnewflags = FPUflags | calculatorflags;
-                }
-                case 5b00100: {
-                    // FSGNJ.S FSGNJN.S FSGNJX.S
-                    () <- FPUsign <- (); result = signresult;
-                }
-                case 5b00101: {
-                    // FMIN.S FMAX.S
-                    () <- FPUminmax <- (); result = minmaxresult; FPUnewflags = FPUflags | minmaxflags;
+                    // FMADD.S FMSUB.S FNMSUB.S FNMADD.S
+                    FPUcalculator.start = 1; while( FPUcalculator.busy ) {} result = calculatorresult; FPUnewflags = FPUflags | calculatorflags;
                 }
                 case 5b10100: {
-                    // FEQ.S FLT.S FLE.S
-                    frd = 0; () <- FPUcompare <- (); result = compareresult; FPUnewflags = FPUflags | compareflags;
-                }
-                case 5b11000: {
-                    // FCVT.W.S FCVT.WU.S
-                    frd = 0; () <- FPUconvert <- (); result = convertresult; FPUnewflags = FPUflags | convertflags;
-                }
-                case 5b11010: {
-                    // FCVT.S.W FCVT.S.WU
-                    () <- FPUconvert <- (); result = convertresult; FPUnewflags = FPUflags | convertflags;
-                }
-                case 5b11100: {
-                    // FCLASS.S FMV.X.W
-                    frd = 0;
-                    switch( function3[0,1] ) {
-                        case 1: { () <- FPUclass <- (); result = classification; }
-                        case 0: { result = sourceReg1F; }
+                    switch( function7[2,5] ) {
+                        default: {
+                            // FADD.S FSUB.S FMUL.S FDIV.S FSQRT.S
+                            FPUcalculator.start = 1; while( FPUcalculator.busy ) {} result = calculatorresult; FPUnewflags = FPUflags | calculatorflags;
+                        }
+                        case 5b00100: {
+                            // FSGNJ.S FSGNJN.S FSGNJX.S
+                            result = signresult;
+                        }
+                        case 5b00101: {
+                            // FMIN.S FMAX.S
+                            result = minmaxresult; FPUnewflags = FPUflags | minmaxflags;
+                        }
+                        case 5b10100: {
+                            // FEQ.S FLT.S FLE.S
+                            frd = 0; result = compareresult; FPUnewflags = FPUflags | compareflags;
+                        }
+                        case 5b11000: {
+                            // FCVT.W.S FCVT.WU.S
+                            frd = 0; FPUconvert.start = 1; while( FPUconvert.busy ) {} result = convertresult; FPUnewflags = FPUflags | convertflags;
+                        }
+                        case 5b11010: {
+                            // FCVT.S.W FCVT.S.WU
+                            FPUconvert.start = 1; while( FPUconvert.busy ) {} result = convertresult; FPUnewflags = FPUflags | convertflags;
+                        }
+                        case 5b11100: {
+                            // FCLASS.S FMV.X.W
+                            frd = 0;
+                            switch( function3[0,1] ) {
+                                case 1: { result = classification; }
+                                case 0: { result = sourceReg1F; }
+                            }
+                        }
+                        case 5b11110: {
+                            // FMV.W.X
+                            result = sourceReg1;
+                        }
                     }
                 }
-                case 5b11110: {
-                    // FMV.W.X
-                    result = sourceReg1;
-                }
             }
+            busy = 0;
         }
     }
 }
 
 // CONVERSION BETWEEN FLOAT AND SIGNED/UNSIGNED INTEGERS
 algorithm floatconvert(
+    input   uint1   start,
+    output  uint1   busy(0),
     input   uint7   function7,
     input   uint5   rs2,
     input   uint32  sourceReg1,
@@ -96,7 +108,7 @@ algorithm floatconvert(
 
     output  uint5   flags,
     output  uint32  result
-) {
+) <autorun> {
     uint1   dounsigned <: rs2[0,1];
     uint32  floatresult = uninitialised;
     uint5   floatflags = uninitialised;
@@ -110,25 +122,31 @@ algorithm floatconvert(
     uint5   uintflags = uninitialised;
     floattouint FPUuint( a <: sourceReg1F, result :> uintresult, flags :> uintflags );
 
-    flags = 0;
-    switch( function7[2,5] ) {
-        default: {
-            // FCVT.W.S FCVT.WU.S
-            switch( rs2[0,1] ) {
-                case 0: { () <- FPUint <- (); }
-                case 1: { () <- FPUuint <- (); }
+    FPUfloat.start := 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+            flags = 0;
+            switch( function7[2,5] ) {
+                default: {
+                    // FCVT.W.S FCVT.WU.S
+                    result = rs2[0,1] ? uintresult : intresult; flags = rs2[0,1] ? uintflags : intflags;
+                }
+                case 5b11010: {
+                    // FCVT.S.W FCVT.S.WU
+                    FPUfloat.start = 1; while( FPUfloat.busy ) {} result = floatresult; flags = floatflags;
+                }
             }
-            result = rs2[0,1] ? uintresult : intresult; flags = rs2[0,1] ? uintflags : intflags;
-        }
-        case 5b11010: {
-            // FCVT.S.W FCVT.S.WU
-            () <- FPUfloat <- (); result = floatresult; flags = floatflags;
+            busy = 0;
         }
     }
 }
 
 // FPU CALCULATION BLOCKS FUSED ADD SUB MUL DIV SQRT
 algorithm floatcalc(
+    input   uint1   start,
+    output  uint1   busy(0),
     input   uint7   opCode,
     input   uint7   function7,
     input   uint32  sourceReg1F,
@@ -137,7 +155,7 @@ algorithm floatcalc(
 
     output  uint5   flags,
     output  uint32  result,
-) {
+) <autorun> {
     uint1   addsub = uninitialised;
     uint32  addsourceReg1F = uninitialised;
     uint32  addsourceReg2F = uninitialised;
@@ -158,33 +176,43 @@ algorithm floatcalc(
     uint5   sqrtflags = uninitialised;
     floatsqrt FPUsqrt( a <: sourceReg1F, result :> sqrtresult, flags :> sqrtflags );
 
-    flags = 0;
-    switch( opCode[2,5] ) {
-        default: {
-            // 3 REGISTER FUSED FPU OPERATIONS
-            mulsourceReg1F = { opCode[3,1] ? ~sourceReg1F[31,1] : sourceReg1F[31,1], sourceReg1F[0,31] }; () <- FPUmultiply <- (); flags = multiplyflags & 5b10110;
-            addsourceReg1F = multiplyresult; addsourceReg2F = sourceReg3F; addsub = opCode[2,1]; () <- FPUaddsub <- (); flags = flags | ( addsubflags & 5b00110 ); result = addsubresult;
-        }
-        case 5b10100: {
-            // NON 3 REGISTER FPU OPERATIONS
-            switch( function7[2,5] ) {
+    FPUaddsub.start := 0; FPUmultiply.start := 0; FPUdivide.start := 0; FPUsqrt.start := 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+            flags = 0;
+            switch( opCode[2,5] ) {
                 default: {
-                    // FADD.S FSUB.S
-                    addsourceReg1F = sourceReg1F; addsourceReg2F = sourceReg2F; addsub = function7[2,1]; () <- FPUaddsub <- (); result = addsubresult; flags = addsubflags & 5b00110;
+                    // 3 REGISTER FUSED FPU OPERATIONS
+                    mulsourceReg1F = { opCode[3,1] ? ~sourceReg1F[31,1] : sourceReg1F[31,1], sourceReg1F[0,31] };
+                    FPUmultiply.start = 1; while( FPUmultiply.busy ) {} flags = multiplyflags & 5b10110;
+                    addsourceReg1F = multiplyresult; addsourceReg2F = sourceReg3F; addsub = opCode[2,1];
+                    FPUaddsub.start = 1; while( FPUaddsub.busy ) {} result = addsubresult; flags = flags | ( addsubflags & 5b00110 );
                 }
-                case 5b00010: {
-                    // FMUL.S
-                    mulsourceReg1F = sourceReg1F; () <- FPUmultiply <- (); result = multiplyresult; flags = multiplyflags & 5b00110;
-                }
-                case 5b00011: {
-                    // FDIV.S
-                    () <- FPUdivide <- (); result = divideresult; flags = divideflags & 5b01110;
-                }
-                case 5b01011: {
-                    // FSQRT.S
-                    () <- FPUsqrt <- (); result = sqrtresult; flags = sqrtflags & 5b00110;
+                case 5b10100: {
+                    // NON 3 REGISTER FPU OPERATIONS
+                    switch( function7[2,5] ) {
+                        default: {
+                            // FADD.S FSUB.S
+                            addsourceReg1F = sourceReg1F; addsourceReg2F = sourceReg2F; addsub = function7[2,1];FPUaddsub.start = 1; while( FPUaddsub.busy ) {} result = addsubresult; flags = addsubflags & 5b00110;
+                        }
+                        case 5b00010: {
+                            // FMUL.S
+                            mulsourceReg1F = sourceReg1F; FPUmultiply.start = 1; while( FPUmultiply.busy ) {} result = multiplyresult; flags = multiplyflags & 5b00110;
+                        }
+                        case 5b00011: {
+                            // FDIV.S
+                            FPUdivide.start = 1; while( FPUdivide.busy ) {} result = divideresult; flags = divideflags & 5b01110;
+                        }
+                        case 5b01011: {
+                            // FSQRT.S
+                            FPUsqrt.start = 1; while( FPUsqrt.busy ) {} result = sqrtresult; flags = sqrtflags & 5b00110;
+                        }
+                    }
                 }
             }
+            busy = 0;
         }
     }
 }
@@ -192,7 +220,7 @@ algorithm floatcalc(
 algorithm floatclassify(
     input   uint32  sourceReg1F,
     output  uint10  classification
-) {
+) <autorun> {
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO
     uint1   aINF = uninitialised;
     uint1   asNAN = uninitialised;
@@ -205,7 +233,8 @@ algorithm floatclassify(
         qNAN :> aqNAN,
         ZERO :> aZERO
     );
-    //always {
+
+    always {
         switch( { aINF, asNAN, aqNAN, aZERO } ) {
             case 4b1000: { classification = floatingpointnumber( sourceReg1F ).sign ? 10b0000000001 : 10b0010000000; }
             case 4b0100: { classification = 10b0100000000; }
@@ -214,7 +243,7 @@ algorithm floatclassify(
                                                                             floatingpointnumber( sourceReg1F ).sign ? 10b0000000100 : 10b0000100000; }
             default: { classification = floatingpointnumber( sourceReg1F ).sign ? 10b0000000010 : 10b0001000000; }
         }
-    //}
+    }
 }
 
 algorithm floatminmax(
@@ -224,7 +253,7 @@ algorithm floatminmax(
 
     output  uint5   flags,
     output  uint32  result
-) {
+) <autorun> {
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN
     uint1   aINF = uninitialised;
     uint1   asNAN = uninitialised;
@@ -248,7 +277,7 @@ algorithm floatminmax(
     uint1   less = uninitialised;
     floatcompare FPUlteq( a <: sourceReg1F, b <: sourceReg2F, less :> less );
 
-    //always {
+    always {
         switch( ( asNAN | bsNAN ) | ( aqNAN & bqNAN ) ) {
             case 1: { flags = 5b10000; result = 32h7fc00000; } // sNAN or both qNAN
             case 0: {
@@ -258,7 +287,7 @@ algorithm floatminmax(
                 }
             }
         }
-    //}
+    }
 }
 
 // COMPARISONS
@@ -269,7 +298,7 @@ algorithm floatcomparison(
 
     output  uint5   flags,
     output  uint1  result
-) {
+) <autorun> {
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN
     uint1   aINF = uninitialised;
     uint1   asNAN = uninitialised;
@@ -294,14 +323,14 @@ algorithm floatcomparison(
     uint1   equal = uninitialised;
     floatcompare FPUlteq( a <: sourceReg1F, b <: sourceReg2F, less :> less, equal :> equal );
 
-    //always {
+    always {
         switch( function3 ) {
             case 3b000: { flags = ( aqNAN | asNAN | bqNAN | bsNAN ) ? 5b10000 : 0; result = flags[4,1] ? 0 : less | equal; }
             case 3b001: { flags = ( aqNAN | asNAN | bqNAN | bsNAN ) ? 5b10000 : 0; result = flags[4,1] ? 0 : less; }
             case 3b010: { flags = ( asNAN | bsNAN ) ? 5b10000 : 0; result = ( aqNAN | asNAN | bqNAN | bsNAN ) ? 0 : equal; }
             default: { result = 0; }
         }
-    //}
+    }
 }
 
 algorithm floatsign(
@@ -309,6 +338,6 @@ algorithm floatsign(
     input   uint32  sourceReg1F,
     input   uint32  sourceReg2F,
     output  uint32  result,
-) {
-    result = { function3[1,1] ? sourceReg1F[31,1] ^ sourceReg2F[31,1] : function3[0,1] ? ~sourceReg2F[31,1] : sourceReg2F[31,1], sourceReg1F[0,31] };
+) <autorun> {
+    result := { function3[1,1] ? sourceReg1F[31,1] ^ sourceReg2F[31,1] : function3[0,1] ? ~sourceReg2F[31,1] : sourceReg2F[31,1], sourceReg1F[0,31] };
 }

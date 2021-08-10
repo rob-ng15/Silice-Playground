@@ -79,7 +79,49 @@ algorithm gpu_queue(
         colourblit_writer_colour <: colourblit_writer_colour,
         colourblittilemap <:> colourblittilemap,
     );
+
+    // 32 vector blocks each of 16 vertices
+    simple_dualport_bram uint13 vertex <input!> [512] = uninitialised;
+    // VECTOR DRAWER UNIT
+    vectors vector_drawer(
+        vector_block_number <: vector_block_number,
+        vector_block_xc <: vector_block_xc,
+        vector_block_yc <: vector_block_yc,
+        vector_block_scale <: vector_block_scale,
+        draw_vector <: draw_vector,
+        vector_block_active :> vector_block_active,
+        vertex <:> vertex,
+        gpu_active <: gpu_active
+    );
+    vertexwriter VW(
+        vertices_writer_block <: vertices_writer_block,
+        vertices_writer_vertex <: vertices_writer_vertex,
+        vertices_writer_xdelta <: vertices_writer_xdelta,
+        vertices_writer_ydelta <: vertices_writer_ydelta,
+        vertices_writer_active <: vertices_writer_active,
+        vertex <:> vertex
+    );
+
+    int10   x = uninitialised;
+    int10   y = uninitialised;
+    uint7   colour = uninitialised;
+    uint7   colour_alt = uninitialised;
+    int10   param0 = uninitialised;
+    int10   param1 = uninitialised;
+    int10   param2 = uninitialised;
+    int10   param3 = uninitialised;
+    uint4   dithermode = uninitialised;
+    uint1   gpu_active = uninitialised;
     gpu GPU(
+        gpu_x <: x,
+        gpu_y <: y,
+        gpu_colour <: colour,
+        gpu_colour_alt <: colour_alt,
+        gpu_param0 <: param0,
+        gpu_param1 <: param1,
+        gpu_param2 <: param2,
+        gpu_param3 <: param3,
+        gpu_dithermode <: dithermode,
         blit1tilemap <:> blit1tilemap,
         characterGenerator8x8 <:> characterGenerator8x8,
         colourblittilemap <:> colourblittilemap,
@@ -93,62 +135,38 @@ algorithm gpu_queue(
         pb_colour8r <: pb_colour8r,
         pb_colour8g <: pb_colour8g,
         pb_colour8b <: pb_colour8b,
-        pb_newpixel <: pb_newpixel
+        pb_newpixel <: pb_newpixel,
+        gpu_active :> gpu_active
     );
 
-    // 32 vector blocks each of 16 vertices
-    simple_dualport_bram uint13 vertex <input!> [512] = uninitialised;
-    // VECTOR DRAWER UNIT
-    vectors vector_drawer(
-        vector_block_number <: vector_block_number,
-        vector_block_xc <: vector_block_xc,
-        vector_block_yc <: vector_block_yc,
-        vector_block_scale <: vector_block_scale,
-        draw_vector <: draw_vector,
-        vector_block_active :> vector_block_active,
-        vertex <:> vertex
-    );
-    vertexwriter VW(
-        vertices_writer_block <: vertices_writer_block,
-        vertices_writer_vertex <: vertices_writer_vertex,
-        vertices_writer_xdelta <: vertices_writer_xdelta,
-        vertices_writer_ydelta <: vertices_writer_ydelta,
-        vertices_writer_active <: vertices_writer_active,
-        vertex <:> vertex
-    );
-    queue_full := GPU.gpu_active | vector_block_active;
-    queue_complete := ~( GPU.gpu_active | vector_block_active );
-    vector_drawer.gpu_active := GPU.gpu_active;
-
-    GPU.gpu_write := 0;
+    queue_full := gpu_active | vector_block_active; queue_complete := ~( gpu_active | vector_block_active );
+    GPU.gpu_write := ( gpu_write != 0 ) ? gpu_write : vector_drawer.gpu_write ? 2 : 0;
 
     always {
         switch( gpu_write ) {
             case 0: {
                 if( vector_drawer.gpu_write ) {
-                    GPU.gpu_x = vector_drawer.gpu_x;
-                    GPU.gpu_y = vector_drawer.gpu_y;
-                    GPU.gpu_colour = vector_block_colour;
-                    GPU.gpu_colour_alt = 0;
-                    GPU.gpu_param0 = vector_drawer.gpu_param0;
-                    GPU.gpu_param1 = vector_drawer.gpu_param1;
-                    GPU.gpu_param2 = 0;
-                    GPU.gpu_param3 = 0;
-                    GPU.gpu_write = 2;
-                    GPU.gpu_dithermode = 0;
+                    x = vector_drawer.gpu_x;
+                    y = vector_drawer.gpu_y;
+                    colour = vector_block_colour;
+                    colour_alt = 0;
+                    param0 = vector_drawer.gpu_param0;
+                    param1 = vector_drawer.gpu_param1;
+                    param2 = 0;
+                    param3 = 0;
+                    dithermode = 0;
                 }
             }
             default: {
-                GPU.gpu_x = gpu_x;
-                GPU.gpu_y = gpu_y;
-                GPU.gpu_colour = gpu_colour;
-                GPU.gpu_colour_alt = gpu_colour_alt;
-                GPU.gpu_param0 = gpu_param0;
-                GPU.gpu_param1 = gpu_param1;
-                GPU.gpu_param2 = gpu_param2;
-                GPU.gpu_param3 = gpu_param3;
-                GPU.gpu_write = gpu_write;
-                GPU.gpu_dithermode = gpu_dithermode;
+                x = gpu_x;
+                y = gpu_y;
+                colour = gpu_colour;
+                colour_alt = gpu_colour_alt;
+                param0 = gpu_param0;
+                param1 = gpu_param1;
+                param2 = gpu_param2;
+                param3 = gpu_param3;
+                dithermode = gpu_dithermode;
             }
         }
     }
@@ -246,18 +264,10 @@ algorithm gpu(
     );
 
     // CONTROLS FOR BITMAP PIXEL WRITER
-    bitmap_write := 0;
-    bitmap_colour_write := gpu_active_colour;
-    bitmap_colour_write_alt := gpu_active_colour_alt;
+    bitmap_write := 0; bitmap_colour_write := gpu_active_colour; bitmap_colour_write_alt := gpu_active_colour_alt;
 
     // CONTROLS FOR GPU SUBUNITS
-    GPUrectangle.start := 0;
-    GPUline.start := 0;
-    GPUcircle.start := 0;
-    GPUtriangle.start := 0;
-    GPUblit.start := 0;
-    GPUcolourblit.start := 0;
-    GPUpixelblock.start := 0;
+    GPUrectangle.start := 0; GPUline.start := 0; GPUcircle.start := 0; GPUtriangle.start := 0; GPUblit.start := 0; GPUcolourblit.start := 0; GPUpixelblock.start := 0;
 
     while(1) {
         gpu_active_colour = ( gpu_write != 0 ) ? gpu_colour : gpu_active_colour;
@@ -265,101 +275,34 @@ algorithm gpu(
         switch( gpu_write ) {
             case 0: {}
             case 1: {
-                // SET PIXEL (X,Y)
-                // NO GPU ACTIVATION
-                gpu_active_dithermode = 0;
-                bitmap_x_write = gpu_x;
-                bitmap_y_write = gpu_y;
-                bitmap_write = 1;
+                // SET PIXEL (X,Y) NO GPU ACTIVATION
+                gpu_active_dithermode = 0; bitmap_x_write = gpu_x; bitmap_y_write = gpu_y; bitmap_write = 1;
             }
             default: {
                 // START THE GPU DRAWING UNIT
                 gpu_active = 1;
                 switch( gpu_write ) {
                     default: {}
-                    case 2: {
-                        // DRAW LINE FROM (X,Y) to (PARAM0,PARAM1)
-                        gpu_active_dithermode = 0;
-                        GPUline.start = 1;
-                    }
-                    case 3: {
-                        // DRAW RECTANGLE FROM (X,Y) to (PARAM0,PARAM1)
-                        gpu_active_dithermode = gpu_dithermode;
-                        GPUrectangle.start = 1;
-                    }
-                    case 4: {
-                        // DRAW CIRCLE CENTRE (X,Y) with RADIUS PARAM0
-                        gpu_active_dithermode = 0;
-                        GPUcircle.filledcircle = 0;
-                        GPUcircle.start = 1;
-                    }
-                    case 5: {
-                        // DRAW FILLED CIRCLE CENTRE (X,Y) with RADIUS PARAM0
-                        gpu_active_dithermode = gpu_dithermode;
-                        GPUcircle.filledcircle = 1;
-                        GPUcircle.start = 1;
-                    }
-                    case 6: {
-                        // DRAW FILLED TRIANGLE WITH VERTICES (X,Y) (PARAM0,PARAM1) (PARAM2,PARAM3)
-                        gpu_active_dithermode = gpu_dithermode;
-                        GPUtriangle.start = 1;
-                    }
-                    case 7: {
-                        // BLIT 16 x 16 TILE PARAM0 TO (X,Y)
-                        gpu_active_dithermode = 0;
-                        GPUblit.tilecharacter = 1;
-                        GPUblit.start = 1;
-                    }
-                    case 8: {
-                        // BLIT 8 x 8 CHARACTER PARAM0 TO (X,Y) as 8 x 8
-                        gpu_active_dithermode = 0;
-                        GPUblit.tilecharacter = 0;
-                        GPUblit.start = 1;
-                    }
-                    case 9: {
-                        // BLIT 16 x 16 COLOUR TILE PARAM0 TO (X,Y) as 16 x 16
-                        gpu_active_dithermode = 0;
-                        GPUcolourblit.start = 1;
-                    }
-                    case 10: {
-                        // START THE PIXELBLOCK WRITER AT (x,y) WITH WIDTH PARAM0, IGNORE COLOUR PARAM1
-                        gpu_active_dithermode = 0;
-                        GPUpixelblock.start = 1;
-                    }
+                    case 2: { gpu_active_dithermode = 0; GPUline.start = 1; } // DRAW LINE FROM (X,Y) to (PARAM0,PARAM1)
+                    case 3: { gpu_active_dithermode = gpu_dithermode; GPUrectangle.start = 1; } // DRAW RECTANGLE FROM (X,Y) to (PARAM0,PARAM1)
+                    case 4: { gpu_active_dithermode = 0; GPUcircle.filledcircle = 0; GPUcircle.start = 1; } // DRAW CIRCLE CENTRE (X,Y) with RADIUS PARAM0
+                    case 5: { gpu_active_dithermode = gpu_dithermode; GPUcircle.filledcircle = 1; GPUcircle.start = 1; } // DRAW FILLED CIRCLE CENTRE (X,Y) with RADIUS PARAM0
+                    case 6: { gpu_active_dithermode = gpu_dithermode; GPUtriangle.start = 1; } // DRAW FILLED TRIANGLE WITH VERTICES (X,Y) (PARAM0,PARAM1) (PARAM2,PARAM3)
+                    case 7: { gpu_active_dithermode = 0; GPUblit.tilecharacter = 1; GPUblit.start = 1; } // BLIT 16 x 16 TILE PARAM0 TO (X,Y)
+                    case 8: { gpu_active_dithermode = 0; GPUblit.tilecharacter = 0; GPUblit.start = 1; } // BLIT 8 x 8 CHARACTER PARAM0 TO (X,Y) as 8 x 8
+                    case 9: { gpu_active_dithermode = 0; GPUcolourblit.start = 1; } // BLIT 16 x 16 COLOUR TILE PARAM0 TO (X,Y) as 16 x 16
+                    case 10: { gpu_active_dithermode = 0; GPUpixelblock.start = 1; } // START THE PIXELBLOCK WRITER AT (x,y) WITH WIDTH PARAM0, IGNORE COLOUR PARAM1
                 }
                 while( GPUline.busy || GPUrectangle.busy ||  GPUcircle.busy || GPUtriangle.busy ||  GPUblit.busy || GPUcolourblit.busy || GPUpixelblock.busy ) {
                     gpu_busy_flags =  { GPUpixelblock.busy, GPUcolourblit.busy, GPUblit.busy, GPUtriangle.busy, GPUcircle.busy, GPUrectangle.busy, GPUline.busy };
                     onehot( gpu_busy_flags ) {
-                        case 0: {
-                            bitmap_x_write = GPUline.bitmap_x_write;
-                            bitmap_y_write = GPUline.bitmap_y_write;
-                        }
-                        case 1: {
-                            bitmap_x_write = GPUrectangle.bitmap_x_write;
-                            bitmap_y_write = GPUrectangle.bitmap_y_write;
-                        }
-                        case 2: {
-                            bitmap_x_write = GPUcircle.bitmap_x_write;
-                            bitmap_y_write = GPUcircle.bitmap_y_write;
-                        }
-                        case 3: {
-                            bitmap_x_write = GPUtriangle.bitmap_x_write;
-                            bitmap_y_write = GPUtriangle.bitmap_y_write;
-                        }
-                        case 4: {
-                            bitmap_x_write = GPUblit.bitmap_x_write;
-                            bitmap_y_write = GPUblit.bitmap_y_write;
-                        }
-                        case 5: {
-                            bitmap_x_write = GPUcolourblit.bitmap_x_write;
-                            bitmap_y_write = GPUcolourblit.bitmap_y_write;
-                            bitmap_colour_write = GPUcolourblit.bitmap_colour_write;
-                        }
-                        case 6: {
-                            bitmap_x_write = GPUpixelblock.bitmap_x_write;
-                            bitmap_y_write = GPUpixelblock.bitmap_y_write;
-                            bitmap_colour_write = GPUpixelblock.bitmap_colour_write;
-                        }
+                        case 0: { bitmap_x_write = GPUline.bitmap_x_write; bitmap_y_write = GPUline.bitmap_y_write; }
+                        case 1: { bitmap_x_write = GPUrectangle.bitmap_x_write; bitmap_y_write = GPUrectangle.bitmap_y_write; }
+                        case 2: { bitmap_x_write = GPUcircle.bitmap_x_write; bitmap_y_write = GPUcircle.bitmap_y_write; }
+                        case 3: { bitmap_x_write = GPUtriangle.bitmap_x_write; bitmap_y_write = GPUtriangle.bitmap_y_write; }
+                        case 4: { bitmap_x_write = GPUblit.bitmap_x_write; bitmap_y_write = GPUblit.bitmap_y_write; }
+                        case 5: { bitmap_x_write = GPUcolourblit.bitmap_x_write; bitmap_y_write = GPUcolourblit.bitmap_y_write; bitmap_colour_write = GPUcolourblit.bitmap_colour_write; }
+                        case 6: { bitmap_x_write = GPUpixelblock.bitmap_x_write; bitmap_y_write = GPUpixelblock.bitmap_y_write; bitmap_colour_write = GPUpixelblock.bitmap_colour_write; }
                     }
                     bitmap_write = GPUline.bitmap_write | GPUrectangle.bitmap_write | GPUcircle.bitmap_write | GPUtriangle.bitmap_write | GPUblit.bitmap_write | GPUcolourblit.bitmap_write | GPUpixelblock.bitmap_write;
                 }
@@ -370,24 +313,38 @@ algorithm gpu(
 }
 
 // RECTANGLE - OUTPUT PIXELS TO DRAW A RECTANGLE
+algorithm preprectangle(
+    input   int10   x,
+    input   int10   y,
+    input   int10   param0,
+    input   int10   param1,
+    output  int10   gpu_active_x,
+    output  int10   gpu_active_y,
+    output  int10   gpu_max_x,
+    output  int10   gpu_max_y
+) {
+    ( gpu_active_x ) = min( x, param0 );
+    ( gpu_active_y ) = min( y, param1 );
+    ( gpu_max_x ) = max( x, param0 );
+    ( gpu_max_y ) = max( y, param1 );
+    ++:
+    ( gpu_active_x, gpu_active_y, gpu_max_x, gpu_max_y ) = cropscreen( gpu_active_x, gpu_active_y, gpu_max_x, gpu_max_y );
+}
 algorithm drawrectangle(
+    input   uint1   start,
+    output  uint1   busy(0),
     input   int10   start_x,
     input   int10   start_y,
     input   int10   max_x,
     input   int10   max_y,
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
-    output  uint1   bitmap_write,
-
-    input   uint1   start,
-    output  uint1   busy(0)
+    output  uint1   bitmap_write
 ) <autorun> {
     int10   x = uninitialized;
     int10   y = uninitialized;
 
-    bitmap_x_write := x;
-    bitmap_y_write := y;
-    bitmap_write := 0;
+    bitmap_x_write := x; bitmap_y_write := y; bitmap_write := 0;
 
     while(1) {
         if( start ) {
@@ -406,6 +363,8 @@ algorithm drawrectangle(
     }
 }
 algorithm rectangle (
+    input   uint1   start,
+    output  uint1   busy(0),
     input   int10   x,
     input   int10   y,
     input   int10   param0,
@@ -413,11 +372,22 @@ algorithm rectangle (
 
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
-    output  uint1   bitmap_write,
-
-    input   uint1   start,
-    output  uint1   busy(0)
+    output  uint1   bitmap_write
 ) <autorun> {
+    int10   gpu_active_x = uninitialized;
+    int10   gpu_active_y = uninitialized;
+    int10   gpu_max_x = uninitialized;
+    int10   gpu_max_y = uninitialized;
+    preprectangle PREP(
+        x <: x,
+        y <: y,
+        param0 <: param0,
+        param1 <: param1,
+        gpu_active_x :> gpu_active_x,
+        gpu_active_y :> gpu_active_y,
+        gpu_max_x :> gpu_max_x,
+        gpu_max_y :> gpu_max_y
+    );
     drawrectangle RECTANGLE(
         start_x <: gpu_active_x,
         start_y <: gpu_active_y,
@@ -428,42 +398,49 @@ algorithm rectangle (
         bitmap_write :> bitmap_write
     );
 
-    int10   gpu_active_x = uninitialized;
-    int10   gpu_active_y = uninitialized;
-    int10   gpu_max_x = uninitialized;
-    int10   gpu_max_y = uninitialized;
-
     RECTANGLE.start := 0;
-
     while(1) {
         if( start ) {
             busy = 1;
-            //FSM = 1;
-            //while( FSM != 0 ) {
-                //onehot( FSM ) {
-                    //case 0: {
-                        // Setup drawing a rectangle from x,y to param0,param1 in colour
-                        // Ensures that works left to right, top to bottom, crop to screen edges
-                        ( gpu_active_x ) = min( x, param0 );
-                        ( gpu_active_y ) = min( y, param1 );
-                        ( gpu_max_x ) = max( x, param0 );
-                        ( gpu_max_y ) = max( y, param1 );
-                    //}
-                    //case 1: {
-                    ++:
-                        ( gpu_active_x, gpu_active_y, gpu_max_x, gpu_max_y ) = cropscreen( gpu_active_x, gpu_active_y, gpu_max_x, gpu_max_y );
-                        RECTANGLE.start = 1; while( RECTANGLE.busy ) {}
-                    //}
-                //}
-                //FSM = FSM << 1;
-            //}
+            () <- PREP <- ();
+            RECTANGLE.start = 1; while( RECTANGLE.busy ) {}
             busy = 0;
         }
     }
 }
 
 // LINE - OUTPUT PIXELS TO DRAW A LINE
+algorithm prepline(
+    input   int10   x,
+    input   int10   y,
+    input   int10   param0,
+    input   int10   param1,
+    output  int10   gpu_active_x,
+    output  int10   gpu_active_y,
+    output  int10   gpu_dx,
+    output  int10   gpu_dy,
+    output  int10   gpu_sy,
+    output  int10   gpu_numerator,
+    output  int10   gpu_max_count
+) {
+    // Setup drawing a line from x,y to param0,param1 in colour
+    // Ensure LEFT to RIGHT
+    ( gpu_active_x ) = min( x, param0 );
+    gpu_active_y = ( x < param0 ) ? y : param1;
+    // Determine if moving UP or DOWN
+    gpu_sy = ( x < param0 ) ? ( ( y < param1 ) ? 1 : -1 ) : ( ( y < param1 ) ? -1 : 1 );
+    // Absolute DELTAs
+    ( gpu_dx ) = absdelta( x, param0 );
+    ( gpu_dy ) = absdelta( y, param1 );
+    ++:
+    gpu_numerator = ( gpu_dx > gpu_dy ) ? ( gpu_dx >> 1 ) : -( gpu_dy >> 1 );
+    ( gpu_max_count ) = max( gpu_dx, gpu_dy );
+    ++:
+    gpu_max_count = gpu_max_count + 1;
+}
 algorithm drawline(
+    input   uint1   start,
+    output  uint1   busy(0),
     input   int10   start_x,
     input   int10   start_y,
     input   int10   start_numerator,
@@ -473,10 +450,7 @@ algorithm drawline(
     input   int10   max_count,
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
-    output  uint1   bitmap_write,
-
-    input   uint1   start,
-    output  uint1   busy(0)
+    output  uint1   bitmap_write
 ) <autorun> {
     int10   x = uninitialized;
     int10   y = uninitialized;
@@ -512,18 +486,36 @@ algorithm drawline(
     }
 }
 algorithm line (
+    input   uint1   start,
+    output  uint1   busy(0),
     input   int10   x,
     input   int10   y,
     input   int10   param0,
     input   int10   param1,
-
-    output int10   bitmap_x_write,
-    output int10   bitmap_y_write,
-    output uint1   bitmap_write,
-
-    input   uint1   start,
-    output  uint1   busy(0)
+    output  int10   bitmap_x_write,
+    output  int10   bitmap_y_write,
+    output  uint1   bitmap_write
 ) <autorun> {
+    int10   gpu_active_x = uninitialized;
+    int10   gpu_active_y = uninitialized;
+    int10   gpu_dx = uninitialized;
+    int10   gpu_dy = uninitialized;
+    int10   gpu_sy = uninitialized;
+    int10   gpu_numerator = uninitialized;
+    int10   gpu_max_count = uninitialized;
+    prepline PREP(
+        x <: x,
+        y <: y,
+        param0 <: param0,
+        param1 <: param1,
+        gpu_active_x :> gpu_active_x,
+        gpu_active_y :> gpu_active_y,
+        gpu_dx :> gpu_dx,
+        gpu_dy :> gpu_dy,
+        gpu_sy :> gpu_sy,
+        gpu_numerator :> gpu_numerator,
+        gpu_max_count :> gpu_max_count
+    );
     drawline LINE(
         start_x <: gpu_active_x,
         start_y <: gpu_active_y,
@@ -537,46 +529,12 @@ algorithm line (
         bitmap_write :> bitmap_write
     );
 
-    //uint3   FSM = uninitialised;
-    int10   gpu_active_x = uninitialized;
-    int10   gpu_active_y = uninitialized;
-    int10   gpu_dx = uninitialized;
-    int10   gpu_dy = uninitialized;
-    int10   gpu_sy = uninitialized;
-    int10   gpu_numerator = uninitialized;
-    int10   gpu_max_count = uninitialized;
-
     LINE.start := 0;
-
     while(1) {
         if( start ) {
             busy = 1;
-            //FSM = 1;
-            //while( FSM != 0 ) {
-                //onehot( FSM ) {
-                    //case 0: {
-                        // Setup drawing a line from x,y to param0,param1 in colour
-                        // Ensure LEFT to RIGHT
-                        ( gpu_active_x ) = min( x, param0 );
-                        gpu_active_y = ( x < param0 ) ? y : param1;
-                        // Determine if moving UP or DOWN
-                        gpu_sy = ( x < param0 ) ? ( ( y < param1 ) ? 1 : -1 ) : ( ( y < param1 ) ? -1 : 1 );
-                        // Absolute DELTAs
-                        ( gpu_dx ) = absdelta( x, param0 );
-                        ( gpu_dy ) = absdelta( y, param1 );
-                    //}
-                    //case 1: {
-                    ++:
-                        gpu_numerator = ( gpu_dx > gpu_dy ) ? ( gpu_dx >> 1 ) : -( gpu_dy >> 1 );
-                        ( gpu_max_count ) = max( gpu_dx, gpu_dy );
-                    //}
-                    //case 2: {
-                    ++:
-                        gpu_max_count = gpu_max_count + 1; LINE.start = 1; while( LINE.busy ) {}
-                    //}
-                //}
-                //FSM = FSM << 1;
-            //}
+            () <- PREP <- ();
+            LINE.start = 1; while( LINE.busy ) {}
             busy = 0;
         }
     }
@@ -584,6 +542,24 @@ algorithm line (
 
 //  CIRCLE - OUTPUT PIXELS TO DRAW AN OUTLINE OR FILLED CIRCLE
 // UPDATE THE NUMERATOR FOR THE CIRCLE BEING DRAWN
+algorithm prepcircle(
+    input   int10   x,
+    input   int10   y,
+    input   int10   param0,
+    input   int10   param1,
+    output  int10   gpu_xc,
+    output  int10   gpu_yc,
+    output  int10   radius,
+    output  int10   gpu_numerator,
+    output  uint8   draw_sectors
+) {
+    // Setup drawing a circle centre x,y or radius param0 in colour
+    ( radius ) = abs( param0 );
+    ( gpu_xc, gpu_yc ) = copycoordinates( x, y );
+    draw_sectors = param1;
+    ++:
+    gpu_numerator = 3 - ( { radius, 1b0 } );
+}
 algorithm updatenumerator(
     input   int10   gpu_numerator,
     input   int10   gpu_active_x,
@@ -598,6 +574,8 @@ algorithm updatenumerator(
     }
 }
 algorithm drawcircle(
+    input   uint1   start,
+    output  uint1   busy(0),
     input   int10   xc,
     input   int10   yc,
     input   int10   radius,
@@ -606,10 +584,7 @@ algorithm drawcircle(
     input   uint1   filledcircle,
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
-    output  uint1   bitmap_write,
-
-    input   uint1   start,
-    output  uint1   busy(0)
+    output  uint1   bitmap_write
 ) <autorun> {
     updatenumerator UN(
         gpu_numerator <: numerator,
@@ -663,6 +638,8 @@ algorithm drawcircle(
     }
 }
 algorithm circle(
+    input   uint1   start,
+    output  uint1   busy(0),
     input   int10   x,
     input   int10   y,
     input   int10   param0,
@@ -671,12 +648,24 @@ algorithm circle(
 
     output  int10  bitmap_x_write,
     output  int10  bitmap_y_write,
-    output  uint1  bitmap_write,
-
-    input   uint1   start,
-    output  uint1   busy(0)
+    output  uint1  bitmap_write
 ) <autorun> {
-    //uint3   FSM = uninitialised;
+    int10   radius = uninitialized;
+    int10   gpu_xc = uninitialized;
+    int10   gpu_yc = uninitialized;
+    int10   gpu_numerator = uninitialized;
+    uint8   draw_sectors = uninitialised;
+    prepcircle PREP(
+        x <: x,
+        y <: y,
+        param0 <: param0,
+        param1 <: param1,
+        gpu_xc :> gpu_xc,
+        gpu_yc :> gpu_yc,
+        radius :> radius,
+        gpu_numerator :> gpu_numerator,
+        draw_sectors :> draw_sectors
+    );
     drawcircle CIRCLE(
         xc <: gpu_xc,
         yc <: gpu_yc,
@@ -688,37 +677,13 @@ algorithm circle(
         bitmap_y_write :> bitmap_y_write,
         bitmap_write :> bitmap_write
     );
-    int10   radius = uninitialized;
-    int10   gpu_xc = uninitialized;
-    int10   gpu_yc = uninitialized;
-    int10   gpu_numerator = uninitialized;
-    uint8   draw_sectors = uninitialised;
 
     CIRCLE.start := 0;
-
     while(1) {
         if( start ) {
             busy = 1;
-            //FSM = 1;
-            //while( FSM != 0 ) {
-                //onehot( FSM ) {
-                    //case 0: {
-                        // Setup drawing a circle centre x,y or radius param0 in colour
-                        ( radius ) = abs( param0 );
-                        ( gpu_xc, gpu_yc ) = copycoordinates( x, y );
-                        draw_sectors = param1;
-                    //}
-                    //case 1: {
-                    ++:
-                        gpu_numerator = 3 - ( { radius, 1b0 } );
-                    //}
-                    //case 2: {
-                    ++:
-                        CIRCLE.start = 1; while( CIRCLE.busy ) {}
-                    //}
-                //}
-                //FSM = FSM << 1;
-            //}
+            () <- PREP <- ();
+            CIRCLE.start = 1; while( CIRCLE.busy ) {}
             busy = 0;
         }
     }
@@ -726,6 +691,44 @@ algorithm circle(
 
 // TRIANGLE - OUTPUT PIXELS TO DRAW A FILLED TRIANGLE
 // CALCULATE IF A PIXEL IS INSIDE THE TRIANGLE BEING DRAWN
+algorithm preptriangle(
+    input   int10   x,
+    input   int10   y,
+    input   int10   param0,
+    input   int10   param1,
+    input   int10   param2,
+    input   int10   param3,
+    output  int10   gpu_active_x,
+    output  int10   gpu_active_y,
+    output  int10   gpu_x1,
+    output  int10   gpu_y1,
+    output  int10   gpu_x2,
+    output  int10   gpu_y2,
+    output  int10   gpu_min_x,
+    output  int10   gpu_min_y,
+    output  int10   gpu_max_x,
+    output  int10   gpu_max_y
+) {
+    // Setup drawing a filled triangle x,y param0, param1, param2, param3
+    ( gpu_active_x, gpu_active_y ) = copycoordinates( x, y);
+    ( gpu_x1, gpu_y1 ) = copycoordinates( param0, param1 );
+    ( gpu_x2, gpu_y2 ) = copycoordinates( param2, param3 );
+    ++:
+    // Find minimum and maximum of x, x1, x2, y, y1 and y2 for the bounding box
+    ( gpu_min_x ) = min3( gpu_active_x, gpu_x1, gpu_x2 );
+    ( gpu_min_y ) = min3( gpu_active_y, gpu_y1, gpu_y2 );
+    ( gpu_max_x ) = max3( gpu_active_x, gpu_x1, gpu_x2 );
+    ( gpu_max_y ) = max3( gpu_active_y, gpu_y1, gpu_y2 );
+    ++:
+    // Clip to the screen edge
+    ( gpu_min_x, gpu_min_y, gpu_max_x, gpu_max_y ) = cropscreen( gpu_min_x, gpu_min_y, gpu_max_x, gpu_max_y );
+    // Put points in order so that ( gpu_active_x, gpu_active_y ) is at top, then ( gpu_x1, gpu_y1 ) and ( gpu_x2, gpu_y2 ) are clockwise from there
+    if( gpu_y1 < gpu_active_y ) { ( gpu_active_x, gpu_active_y, gpu_x1, gpu_y1 ) = swapcoordinates( gpu_active_x, gpu_active_y, gpu_x1, gpu_y1 ); ++: }
+    if( gpu_y2 < gpu_active_y ) { ( gpu_active_x, gpu_active_y, gpu_x2, gpu_y2 ) = swapcoordinates( gpu_active_x, gpu_active_y, gpu_x2, gpu_y2 ); ++: }
+    if( gpu_x1 < gpu_x2 ) { ( gpu_x1, gpu_y1, gpu_x2, gpu_y2 ) = swapcoordinates( gpu_x1, gpu_y1, gpu_x2, gpu_y2 ); ++: }
+    ++:
+    gpu_max_y = gpu_max_y + 1;
+}
 algorithm insideTriangle(
     input   int10   sx,
     input   int10   sy,
@@ -742,6 +745,8 @@ algorithm insideTriangle(
                 ( (( x1 - x ) * ( sy - y ) - ( y1 - y ) * ( sx - x )) >= 0 );
 }
 algorithm drawtriangle(
+    input   uint1   start,
+    output  uint1   busy(0),
     input   int10   min_x,
     input   int10   min_y,
     input   int10   max_x,
@@ -754,10 +759,7 @@ algorithm drawtriangle(
     input   int10   y2,
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
-    output  uint1   bitmap_write,
-
-    input   uint1   start,
-    output  uint1   busy(0)
+    output  uint1   bitmap_write
 ) <autorun> {
     // Filled triangle calculations
     // Is the point sx,sy inside the triangle given by active_x,active_y x1,y1 x2,y2?
@@ -828,21 +830,48 @@ algorithm drawtriangle(
         }
     }
 }
-algorithm triangle (
+algorithm triangle(
+    input   uint1   start,
+    output  uint1   busy(0),
     input   int10   x,
     input   int10   y,
     input   int10   param0,
     input   int10   param1,
     input   int10   param2,
     input   int10   param3,
-
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
-    output  uint1   bitmap_write,
-
-    input   uint1   start,
-    output  uint1   busy(0)
+    output  uint1   bitmap_write
 ) <autorun> {
+    // VERTEX COORDINATES AND BOUNDING BOX
+    int10   gpu_active_x = uninitialized;
+    int10   gpu_active_y = uninitialized;
+    int10   gpu_x1 = uninitialized;
+    int10   gpu_y1 = uninitialized;
+    int10   gpu_x2 = uninitialized;
+    int10   gpu_y2 = uninitialized;
+    int10   gpu_min_x = uninitialized;
+    int10   gpu_max_x = uninitialized;
+    int10   gpu_min_y = uninitialized;
+    int10   gpu_max_y = uninitialized;
+    preptriangle PREP(
+        x <: x,
+        y <: y,
+        param0 <: param0,
+        param1 <: param1,
+        param2 <: param2,
+        param3 <: param3,
+        gpu_active_x :> gpu_active_x,
+        gpu_active_y :> gpu_active_y,
+        gpu_x1 :> gpu_x1,
+        gpu_y1 :> gpu_y1,
+        gpu_x2 :> gpu_x2,
+        gpu_y2 :> gpu_y2,
+        gpu_min_x :> gpu_min_x,
+        gpu_min_y :> gpu_min_y,
+        gpu_max_x :> gpu_max_x,
+        gpu_max_y :> gpu_max_y
+    );
     drawtriangle TRIANGLE(
         min_x <: gpu_min_x,
         max_x <: gpu_max_x,
@@ -859,68 +888,12 @@ algorithm triangle (
         bitmap_write :> bitmap_write
     );
 
-    //uint8   FSM = uninitialised;
-    // VERTEX COORDINATES
-    int10   gpu_active_x = uninitialized;
-    int10   gpu_active_y = uninitialized;
-    int10   gpu_x1 = uninitialized;
-    int10   gpu_y1 = uninitialized;
-    int10   gpu_x2 = uninitialized;
-    int10   gpu_y2 = uninitialized;
-    // BOUNDING BOX
-    int10   gpu_min_x = uninitialized;
-    int10   gpu_max_x = uninitialized;
-    int10   gpu_min_y = uninitialized;
-    int10   gpu_max_y = uninitialized;
-
     TRIANGLE.start := 0;
-
     while(1) {
         if( start ) {
             busy = 1;
-            //FSM = 1;
-            //while( FSM != 0 ) {
-                //onehot( FSM ) {
-                    //case 0: {
-                        // Setup drawing a filled triangle x,y param0, param1, param2, param3
-                        ( gpu_active_x, gpu_active_y ) = copycoordinates( x, y);
-                        ( gpu_x1, gpu_y1 ) = copycoordinates( param0, param1 );
-                        ( gpu_x2, gpu_y2 ) = copycoordinates( param2, param3 );
-                    //}
-                    //case 1: {
-                    ++:
-                        // Find minimum and maximum of x, x1, x2, y, y1 and y2 for the bounding box
-                        ( gpu_min_x ) = min3( gpu_active_x, gpu_x1, gpu_x2 );
-                        ( gpu_min_y ) = min3( gpu_active_y, gpu_y1, gpu_y2 );
-                        ( gpu_max_x ) = max3( gpu_active_x, gpu_x1, gpu_x2 );
-                        ( gpu_max_y ) = max3( gpu_active_y, gpu_y1, gpu_y2 );
-                    //}
-                    //case 2: {
-                    ++:
-                        // Clip to the screen edge
-                        ( gpu_min_x, gpu_min_y, gpu_max_x, gpu_max_y ) = cropscreen( gpu_min_x, gpu_min_y, gpu_max_x, gpu_max_y );
-                    //}
-                    // Put points in order so that ( gpu_active_x, gpu_active_y ) is at top, then ( gpu_x1, gpu_y1 ) and ( gpu_x2, gpu_y2 ) are clockwise from there
-                    //case 3: {
-                        if( gpu_y1 < gpu_active_y ) { ( gpu_active_x, gpu_active_y, gpu_x1, gpu_y1 ) = swapcoordinates( gpu_active_x, gpu_active_y, gpu_x1, gpu_y1 ); ++: }
-                    //}
-                    //case 4: {
-                        if( gpu_y2 < gpu_active_y ) { ( gpu_active_x, gpu_active_y, gpu_x2, gpu_y2 ) = swapcoordinates( gpu_active_x, gpu_active_y, gpu_x2, gpu_y2 ); ++: }
-                    //}
-                    //case 5: {
-                        if( gpu_x1 < gpu_x2 ) { ( gpu_x1, gpu_y1, gpu_x2, gpu_y2 ) = swapcoordinates( gpu_x1, gpu_y1, gpu_x2, gpu_y2 ); ++: }
-                    //}
-                    //case 6: {
-                    ++:
-                        gpu_max_y = gpu_max_y + 1;
-                    //}
-                    //case 7: {
-                    ++:
-                        TRIANGLE.start = 1; while( TRIANGLE.busy ) {}
-                    //}
-                //}
-                //FSM = FSM << 1;
-            //}
+            () <- PREP <- ();
+            TRIANGLE.start = 1; while( TRIANGLE.busy ) {}
             busy = 0;
         }
     }
@@ -951,6 +924,8 @@ algorithm blittilebitmapwriter(
 }
 
 algorithm blit (
+    input   uint1   start,
+    output  uint1   busy(0),
     simple_dualport_bram_port0 blit1tilemap,
     simple_dualport_bram_port0 characterGenerator8x8,
 
@@ -973,12 +948,8 @@ algorithm blit (
     output  int10   bitmap_y_write,
     output  uint1   bitmap_write,
 
-    input   uint1   start,
-    input   uint1   tilecharacter,
-    output  uint1   busy(0)
+    input   uint1   tilecharacter
 ) <autorun> {
-    //uint2   FSM = uninitialised;
-
     // POSITION IN TILE/CHARACTER
     uint7   gpu_active_x = uninitialized;
     uint7   gpu_active_y = uninitialized;
@@ -1007,36 +978,26 @@ algorithm blit (
     while(1) {
         if( start ) {
             busy = 1;
-            //FSM = 1;
-            //while( FSM != 0 ) {
-                //onehot( FSM ) {
-                    //case 0: {
-                        gpu_active_x = 0;
-                        gpu_active_y = 0;
-                        ( gpu_x1, gpu_y1 ) = copycoordinates( x, y );
-                        gpu_param1 = param1;
-                        gpu_max_x = ( tilecharacter ? 16 : 8 ) << ( param1 & 3);
-                        gpu_max_y = tilecharacter ? 16 : 8;
-                        gpu_tile = param0;
-                    //}
-                    //case 1: {
-                    ++:
-                        while( gpu_active_y != gpu_max_y ) {
-                            while( gpu_active_x != gpu_max_x ) {
-                                while( gpu_y2 != ( 1 << gpu_param1 ) ) {
-                                    bitmap_write = tilecharacter ? blit1tilemap.rdata0[15 - ( gpu_active_x >> gpu_param1 ),1] : characterGenerator8x8.rdata0[7 - ( gpu_active_x >> gpu_param1 ),1];
-                                    gpu_y2 = gpu_y2 + 1;
-                                }
-                                gpu_active_x = gpu_active_x + 1;
-                                gpu_y2 = 0;
-                            }
-                            gpu_active_x = 0;
-                            gpu_active_y = gpu_active_y + 1;
-                        }
-                    //}
-                //}
-                //FSM = FSM << 1;
-            //}
+            gpu_active_x = 0;
+            gpu_active_y = 0;
+            ( gpu_x1, gpu_y1 ) = copycoordinates( x, y );
+            gpu_param1 = param1;
+            gpu_max_x = ( tilecharacter ? 16 : 8 ) << ( param1 & 3);
+            gpu_max_y = tilecharacter ? 16 : 8;
+            gpu_tile = param0;
+            ++:
+            while( gpu_active_y != gpu_max_y ) {
+                while( gpu_active_x != gpu_max_x ) {
+                    while( gpu_y2 != ( 1 << gpu_param1 ) ) {
+                        bitmap_write = tilecharacter ? blit1tilemap.rdata0[15 - ( gpu_active_x >> gpu_param1 ),1] : characterGenerator8x8.rdata0[7 - ( gpu_active_x >> gpu_param1 ),1];
+                        gpu_y2 = gpu_y2 + 1;
+                    }
+                    gpu_active_x = gpu_active_x + 1;
+                    gpu_y2 = 0;
+                }
+                gpu_active_x = 0;
+                gpu_active_y = gpu_active_y + 1;
+            }
             busy = 0;
         }
     }
@@ -1057,6 +1018,8 @@ algorithm colourblittilebitmapwriter(
     colourblittilemap.wdata1 := colourblit_writer_colour;
 }
 algorithm colourblit(
+    input   uint1   start,
+    output  uint1   busy(0),
     simple_dualport_bram_port0 colourblittilemap,
 
     // For setting blit1 tile bitmaps
@@ -1072,13 +1035,8 @@ algorithm colourblit(
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
     output  uint7   bitmap_colour_write,
-    output  uint1   bitmap_write,
-
-    input   uint1   start,
-    output  uint1   busy(0)
+    output  uint1   bitmap_write
 ) <autorun> {
-    //uint2   FSM = uninitialised;
-
     // POSITION IN TILE/CHARACTER
     uint7   gpu_active_x = uninitialized;
     uint7   gpu_active_y = uninitialized;
@@ -1106,38 +1064,28 @@ algorithm colourblit(
     while(1) {
         if( start ) {
             busy = 1;
-            //FSM = 1;
-            //while( FSM != 0 ) {
-                //onehot( FSM ) {
-                    //case 0: {
-                        gpu_active_x = 0;
-                        gpu_active_y = 0;
-                        ( gpu_x1, gpu_y1 ) = copycoordinates( x, y );
-                        ( gpu_tile, gpu_param1 ) = copycoordinates( param0, param1 );
-                    //}
-                    //case 1: {
-                    ++:
-                        while( gpu_active_y != 16 ) {
-                                gpu_y2 = 0;
-                                while( gpu_y2 != ( 1 << gpu_param1 ) ) {
-                                    while( gpu_active_x != 16 ) {
-                                        gpu_x2 = 0;
-                                        while( gpu_x2 < ( 1 << gpu_param1 ) ) {
-                                            // OUTPUT IF NOT TRANSPARENT
-                                            bitmap_write = ~colourblittilemap.rdata0[6,1];
-                                            gpu_x2 = gpu_x2 + 1;
-                                        }
-                                        gpu_active_x = gpu_active_x + 1;
-                                    }
-                                    gpu_y2 = gpu_y2 + 1;
-                                    gpu_active_x = 0;
-                                }
-                                gpu_active_y = gpu_active_y + 1;
+            gpu_active_x = 0;
+            gpu_active_y = 0;
+            ( gpu_x1, gpu_y1 ) = copycoordinates( x, y );
+            ( gpu_tile, gpu_param1 ) = copycoordinates( param0, param1 );
+            ++:
+            while( gpu_active_y != 16 ) {
+                    gpu_y2 = 0;
+                    while( gpu_y2 != ( 1 << gpu_param1 ) ) {
+                        while( gpu_active_x != 16 ) {
+                            gpu_x2 = 0;
+                            while( gpu_x2 < ( 1 << gpu_param1 ) ) {
+                                // OUTPUT IF NOT TRANSPARENT
+                                bitmap_write = ~colourblittilemap.rdata0[6,1];
+                                gpu_x2 = gpu_x2 + 1;
                             }
-                    //}
-                //}
-                //FSM = FSM << 1;
-            //}
+                            gpu_active_x = gpu_active_x + 1;
+                        }
+                        gpu_y2 = gpu_y2 + 1;
+                        gpu_active_x = 0;
+                    }
+                    gpu_active_y = gpu_active_y + 1;
+                }
             busy = 0;
         }
     }
@@ -1146,6 +1094,9 @@ algorithm colourblit(
 // PIXELBLOCK - OUTPUT PIXELS TO RECTANGLE START AT X, Y WITH WIDTH PARAM0, PIXELS PROVIDED SEQUENTIALLY BY CPU, MOVE ALONG RECTANGLE UNTIL STOP RECEIVED
 // CAN HANDLE 7bit ( ARRGGBB ) colours, with one defined as transparent or 24bit RGB colours, scaling to the PAWS colour map
 algorithm pixelblock(
+    input   uint1   start,
+    output  uint1   busy(0),
+
     input   int10   x,
     input   int10   y,
     input   int10   param0,
@@ -1160,10 +1111,7 @@ algorithm pixelblock(
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
     output  uint7   bitmap_colour_write,
-    output  uint1   bitmap_write,
-
-    input   uint1   start,
-    output  uint1   busy(0)
+    output  uint1   bitmap_write
 ) <autorun> {
     uint2   FSM = uninitialised;
 
@@ -1182,25 +1130,16 @@ algorithm pixelblock(
         if( start ) {
             busy = 1;
 
-            gpu_x = x;
-            gpu_x1 = x;
-            gpu_y = y;
-            gpu_max_x = x + param0;
+            gpu_x = x; gpu_x1 = x; gpu_y = y; gpu_max_x = x + param0;
             ignorecolour = param1;
             while( busy ) {
                 switch( newpixel ) {
                     case 0: {}
-                    case 1: {
-                        bitmap_colour_write = colour7;
-                        bitmap_write = ( colour7 != ignorecolour );
-                    }
-                    case 2: {
-                        bitmap_colour_write = { 1b0, colour8r[6,2], colour8g[6,2], colour8b[6,2] };
-                        bitmap_write = 1;
-                    }
+                    case 1: { bitmap_colour_write = colour7; bitmap_write = ( colour7 != ignorecolour ); }
+                    case 2: { bitmap_colour_write = { 1b0, colour8r[6,2], colour8g[6,2], colour8b[6,2] }; bitmap_write = 1; }
                     case 3: { busy = 0; }
                 }
-                switch( gpu_x < gpu_max_x ) {
+                switch( gpu_x != gpu_max_x ) {
                     case 1: { gpu_x = gpu_x + ( newpixel != 0 ); }
                     case 0: { gpu_x = gpu_x1; gpu_y = gpu_y + 1; }
                 }
@@ -1252,8 +1191,6 @@ algorithm vectors(
     output  uint1   gpu_write,
     input   uint1   gpu_active
 ) <autorun> {
-    //uint3   FSM = uninitialised;
-    //uint3   VECTORDRAW = uninitialised;
     // Extract deltax and deltay for the present vertices
     int10 deltax := { {5{vectorentry(vertex.rdata0).dxsign}}, vectorentry(vertex.rdata0).dx };
     int10 deltay := { {5{vectorentry(vertex.rdata0).dysign}}, vectorentry(vertex.rdata0).dy };
@@ -1272,47 +1209,23 @@ algorithm vectors(
     while(1) {
         if( draw_vector ) {
             vector_block_active = 1;
-            //FSM = 1;
-            //while( FSM != 0 ) {
-                //onehot( FSM ) {
-                    //case 0: {
-                        block_number = vector_block_number;
-                        vertices_number = 0;
-                    //}
-                    //case 1: {
-                    ++:
-                        ( start_x, start_y ) = deltacoordinates( vector_block_xc, deltax, vector_block_yc, deltay, vector_block_scale );
-                        vertices_number = 1;
-                    //}
-                    //case 2: {
-                    ++:
-                        while( vectorentry(vertex.rdata0).active && ( vertices_number != 16 ) ) {
-                            //VECTORDRAW = 1;
-                            //while( VECTORDRAW != 0 ) {
-                                //onehot( VECTORDRAW ) {
-                                    //case 0: {
-                                        // Dispatch line to GPU
-                                        ( gpu_x, gpu_y ) = copycoordinates( start_x, start_y );
-                                        ( gpu_param0, gpu_param1 ) = deltacoordinates( vector_block_xc, deltax, vector_block_yc, deltay, vector_block_scale );
-                                    //}
-                                    //case 1: {
-                                    ++:
-                                        while( gpu_active ) {} gpu_write = 1;
-                                    //}
-                                    //case 2: {
-                                    ++:
-                                        // Move onto the next of the vertices
-                                        ( start_x, start_y ) = copycoordinates( gpu_param0, gpu_param1 );
-                                        vertices_number = vertices_number + 1;
-                                    //}
-                                //}
-                                //VECTORDRAW = VECTORDRAW << 1;
-                            //}
-                        }
-                    //}
-                //}
-                //FSM = FSM << 1;
-            //}
+            block_number = vector_block_number;
+            vertices_number = 0;
+            ++:
+            ( start_x, start_y ) = deltacoordinates( vector_block_xc, deltax, vector_block_yc, deltay, vector_block_scale );
+            vertices_number = 1;
+            ++:
+            while( vectorentry(vertex.rdata0).active && ( vertices_number != 16 ) ) {
+                // Dispatch line to GPU
+                ( gpu_x, gpu_y ) = copycoordinates( start_x, start_y );
+                ( gpu_param0, gpu_param1 ) = deltacoordinates( vector_block_xc, deltax, vector_block_yc, deltay, vector_block_scale );
+                ++:
+                while( gpu_active ) {} gpu_write = 1;
+                ++:
+                // Move onto the next of the vertices
+                ( start_x, start_y ) = copycoordinates( gpu_param0, gpu_param1 );
+                vertices_number = vertices_number + 1;
+            }
             vector_block_active = 0;
         }
     }

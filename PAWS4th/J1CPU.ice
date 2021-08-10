@@ -88,7 +88,8 @@ algorithm J1CPU(
 
     // dstack 257x16bit (as 3256 array + stackTop) and pointer, next pointer, write line, delta
     stack DSTACK( stackWData <: stackTop, sp <: dsp, newSP <: newDSP, stackTop :> stackNext, stackTop :> writedata );
-    deltasp DELTADSP( sp <: dsp, delta <: ddelta );
+    uint8   DELTADSPnewSP = uninitialized;
+    deltasp DELTADSP( sp <: dsp, delta <: ddelta, newSP :> DELTADSPnewSP );
     uint16  stackTop = 0;
     uint16  stackNext = uninitialized;
     uint8   dsp = 0;
@@ -97,12 +98,14 @@ algorithm J1CPU(
 
     // rstack 256x16bit and pointer, next pointer, write line
     stack RSTACK( stackWData <: rstackWData, sp <: rsp, newSP <: newRSP, stackTop :> rStackTop );
-    deltasp DELTARSP( sp <: rsp, delta <: rdelta );
+    uint8   DELTARSPnewSP = uninitialized;
+    deltasp DELTARSP( sp <: rsp, delta <: rdelta, newSP :> DELTARSPnewSP );
     uint16  rStackTop = uninitialized;
     uint8   rsp = 0;
     uint8   newRSP = 0;
     uint16  rstackWData = uninitialized;
 
+    uint16  ALUnewStackTop = uninitialized;
     alu ALU(
         instruction <: instruction,
         memoryRead <: readdata,
@@ -110,9 +113,14 @@ algorithm J1CPU(
         stackNext <: stackNext,
         rStackTop <: rStackTop,
         dsp <: dsp,
-        rsp <: rsp
+        rsp <: rsp,
+        newStackTop :> ALUnewStackTop
     );
 
+    uint16  CALLBRANCHnewStackTop = uninitialized;
+    uint13  CALLBRANCHnewPC = uninitialized;
+    uint8   CALLBRANCHnewDSP = uninitialized;
+    uint8   CALLBRANCHnewRSP = uninitialized;
     j1eforthcallbranch CALLBRANCH(
         instruction <: instruction,
         stackTop <: stackTop,
@@ -120,7 +128,11 @@ algorithm J1CPU(
         pc <: pc,
         pcPlusOne <: pcPlusOne,
         dsp <: dsp,
-        rsp <: rsp
+        rsp <: rsp,
+        newStackTop :> CALLBRANCHnewStackTop,
+        newPC :> CALLBRANCHnewPC,
+        newDSP :> CALLBRANCHnewDSP,
+        newRSP :> CALLBRANCHnewRSP
     );
 
     // STACK WRITE CONTROLLERS
@@ -170,12 +182,12 @@ algorithm J1CPU(
                                 switch( is_alu ) {
                                     case 1: {
                                         // ALU + NO MEMORYREAD
-                                        newStackTop = ALU.newStackTop;
+                                        newStackTop = ALUnewStackTop;
                                         rstackWData = stackTop;
 
                                         // UPDATE newDSP newRSP
-                                        newDSP = DELTADSP.newSP;
-                                        newRSP = DELTARSP.newSP;
+                                        newDSP = DELTADSPnewSP;
+                                        newRSP = DELTARSPnewSP;
 
                                         // Update PC for next instruction, return from call or next instruction
                                         newPC = ( aluop(instruction).is_r2pc ) ? {1b0, rStackTop[1,15] } : pcPlusOne;
@@ -196,10 +208,10 @@ algorithm J1CPU(
                                     }
                                     case 0: {
                                         // CALL BRANCH 0BRANCH
-                                        newStackTop = CALLBRANCH.newStackTop;
-                                        newPC = CALLBRANCH.newPC;
-                                        newDSP = CALLBRANCH.newDSP;
-                                        newRSP = CALLBRANCH.newRSP;
+                                        newStackTop = CALLBRANCHnewStackTop;
+                                        newPC = CALLBRANCHnewPC;
+                                        newDSP = CALLBRANCHnewDSP;
+                                        newRSP = CALLBRANCHnewRSP;
                                         rstackWData = { pcPlusOne, 1b0 };
 
                                         // Commit to dstack and rstack
@@ -216,12 +228,12 @@ algorithm J1CPU(
             }
             case 2: {
                 // ALU + MEMORYREAD
-                newStackTop = ALU.newStackTop;
+                newStackTop = ALUnewStackTop;
                 rstackWData = stackTop;
 
                 // UPDATE newDSP newRSP
-                newDSP = DELTADSP.newSP;
-                newRSP = DELTARSP.newSP;
+                newDSP = DELTADSPnewSP;
+                newRSP = DELTARSPnewSP;
 
                 // Update PC for next instruction, return from call or next instruction
                 newPC = ( aluop(instruction).is_r2pc ) ? {1b0, rStackTop[1,15] } : pcPlusOne;

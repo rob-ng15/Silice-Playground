@@ -733,7 +733,7 @@ $$end
                     case 12h620: { bitmap_window.vector_block_number = writeData; }
                     case 12h622: { bitmap_window.vector_block_colour = writeData; }
                     case 12h624: { bitmap_window.vector_block_xc = writeData; }
-                    case 12h826: { bitmap_window.vector_block_yc = writeData; }
+                    case 12h626: { bitmap_window.vector_block_yc = writeData; }
                     case 12h628: { bitmap_window.vector_block_scale = writeData; }
                     case 12h62a: { bitmap_window.draw_vector = 1; }
 

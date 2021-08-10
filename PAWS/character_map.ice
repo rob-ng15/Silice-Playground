@@ -32,7 +32,6 @@ algorithm character_map(
     character_map_writer CMW(
         charactermap <:> charactermap,
         colourmap <:> colourmap,
-
         tpu_x <: tpu_x,
         tpu_y <: tpu_y,
         tpu_character <: tpu_character,

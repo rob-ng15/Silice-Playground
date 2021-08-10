@@ -81,7 +81,6 @@ algorithm sprite_layer(
     input   uint7   sprite_writer_line,
     input   uint16  sprite_writer_bitmap,
     input   uint1   sprite_writer_active
-
 ) <autorun> {
     // Storage for the sprites
     // Stored as registers as needed instantly
@@ -91,7 +90,6 @@ algorithm sprite_layer(
     int11   sprite_y[16] = uninitialised;
     uint6   sprite_colour[16] = uninitialised;
     uint3   sprite_tile_number[16] = uninitialised;
-
     uint1   output_collisions = 0;
 
     $$for i=0,15 do

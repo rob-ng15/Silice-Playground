@@ -365,7 +365,7 @@ algorithm cpuexecute(
     );
 
     // ALU AND CSR START FLAGS
-    ALU.start := 0; CSR.start := 0; CSR.incCSRinstret := 0; CSR.updateFPUflags := 0;
+    ALU.start := 0; FPU.start := 0; CSR.start := 0; CSR.incCSRinstret := 0; CSR.updateFPUflags := 0;
 
     while(1) {
         if( start ) {
@@ -397,7 +397,7 @@ algorithm cpuexecute(
                 default: {                                                                  // FPU, ALUI or ALUR
                     switch( opCode[6,1] ) {
                         case 0: { ALU.start = 1; while( ALU.busy ) {} frd = 0; result = ALUresult; }
-                        case 1: { () <- FPU <- (); CSR.updateFPUflags = 1; frd = FPUfrd; result = FPUresult; }
+                        case 1: { FPU.start = 1; while( FPU.busy ) {} CSR.updateFPUflags = 1; frd = FPUfrd; result = FPUresult; }
                     }
                 }
             }
