@@ -25,9 +25,9 @@ algorithm registers(
     output  int32   sourceReg3
 ) <autorun> {
     // RISC-V REGISTERS
-    simple_dualport_bram int32 registers_1 <input!> [64] = { 0, pad(uninitialized) };
-    simple_dualport_bram int32 registers_2 <input!> [64] = { 0, pad(uninitialized) };
-    simple_dualport_bram int32 registers_3 <input!> [64] = { 0, pad(uninitialized) };
+    simple_dualport_bram int32 registers_1[64] = { 0, pad(uninitialized) };
+    simple_dualport_bram int32 registers_2[64] = { 0, pad(uninitialized) };
+    simple_dualport_bram int32 registers_3[64] = { 0, pad(uninitialized) };
 
     // READ FROM REGISTERS
     registers_1.addr0 := { SMT, rs1 }; sourceReg1 := registers_1.rdata0;

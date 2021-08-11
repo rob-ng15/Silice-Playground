@@ -313,13 +313,13 @@ algorithm bramcontroller(
 
 $$if not SIMULATION then
     // RISC-V RAM and BIOS
-    bram uint16 ram <input!> [16384] = {
+    bram uint16 ram[16384] = {
         $include('ROM/BIOS.inc')
         , pad(uninitialized)
     };
 $$else
     // RISC-V RAM and BIOS
-    bram uint16 ram <input!> [16384] = {
+    bram uint16 ram[16384] = {
         $include('ROM/VBIOS.inc')
         , pad(uninitialized)
     };
@@ -371,12 +371,14 @@ algorithm sdramcontroller(
     // CACHE for SDRAM 32k
     // CACHE LINE IS LOWER 15 bits ( 0 - 32767 ) of address, dropping the BYTE address bit
     // CACHE TAG IS REMAINING 11 bits of the 26 bit address + 1 bit for valid flag
-    simple_dualport_bram uint28 cache <input!> [16384] = uninitialized;
+    simple_dualport_bram uint28 cache[16384] = uninitialized;
 
-    uint16  CWwritedata = uninitialized;
+    uint16  cacheupdatedata = uninitialized;
+    uint1   cacheupdate = uninitialized;
     cachewriter CW(
         address <: address,
-        writedata <: CWwritedata,
+        writedata <: cacheupdatedata,
+        update <: cacheupdate,
         cache <:> cache
     );
 
@@ -390,12 +392,12 @@ algorithm sdramcontroller(
     // MEMORY ACCESS FLAGS
     uint1   doread = uninitialized;
     uint1   dowrite = uninitialized;
-    sio.addr := { address[1,25], 1b0 };
-    sio.in_valid := 0;
+
+    // SDRAM ACCESS
+    sio.addr := { address[1,25], 1b0 }; sio.in_valid := 0;
 
     // FLAGS FOR CACHE ACCESS
-    cache.addr0 := address[1,14];
-    CW.update := 0;
+    cache.addr0 := address[1,14]; cacheupdate := 0;
 
     // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
     readdata := cachetagmatch ? cache.rdata0[0,16] : sio.data_out[0,16];
@@ -417,7 +419,7 @@ algorithm sdramcontroller(
                                 // READ FROM SDRAM
                                 sio.rw = 0; sio.in_valid = 1; while( !sio.done ) {}
                                 // WRITE RESULT TO CACHE
-                                CWwritedata = sio.data_out; CW.update = 1;
+                                cacheupdatedata = sio.data_out; cacheupdate = 1;
                             }
                             case 1: {}
                         }
@@ -425,7 +427,7 @@ algorithm sdramcontroller(
                     }
                     case 2: {
                         // WRITE RESULT TO CACHE
-                        CWwritedata = writethrough; CW.update = 1;
+                        cacheupdatedata = writethrough; cacheupdate = 1;
                         // COMPLETE WRITE TO SDRAM
                         sio.data_in = writethrough; sio.rw = 1; sio.in_valid = 1; while( !sio.done ) {}
                         FSM = 0;

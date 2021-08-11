@@ -55,7 +55,6 @@ algorithm multiplex_display(
         upper_tilemap_display <: upper_tilemap_display,
         upper_tilemap <: upper_tilemap_p,
         background <: background_p,
-
         pix :> pixel
     );
 

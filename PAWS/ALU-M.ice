@@ -61,13 +61,17 @@ algorithm aluMdivideremain(
     uint32  divisor_unsigned <: ~dosign[0,1] ? ( divisor[31,1] ? -divisor : divisor ) : divisor;
     uint32  result_quotient = uninitialised;
     uint32  result_remainder = uninitialised;
+    uint1   DODIVIDEstart = uninitialised;
+    uint1   DODIVIDEbusy = uninitialised;
     douintdivide DODIVIDE(
         dividend <: dividend_unsigned,
         divisor <: divisor_unsigned,
         quotient :> result_quotient,
-        remainder :> result_remainder
+        remainder :> result_remainder,
+        start <: DODIVIDEstart,
+        busy :> DODIVIDEbusy
     );
-    DODIVIDE.start := 0;
+    DODIVIDEstart := 0;
 
     while(1) {
         if( start ) {
@@ -75,7 +79,7 @@ algorithm aluMdivideremain(
             switch( divisor ) {
                 case 0: { result = dosign[1,1] ? dividend : 32hffffffff; }
                 default: {
-                    DODIVIDE.start = 1; while( DODIVIDE.busy ) {}
+                    DODIVIDEstart = 1; while( DODIVIDEbusy ) {}
                     result = dosign[1,1] ? result_remainder : ( quotientremaindersign ? -result_quotient : result_quotient );
                 }
             }

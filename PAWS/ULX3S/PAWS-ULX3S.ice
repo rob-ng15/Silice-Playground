@@ -40,7 +40,7 @@ $include('../terminal.ice')
 $include('../tile_map.ice')
 $include('../multiplex_display.ice')
 $include('../audio.ice')
-$include('../video_memmap-new.ice')
+$include('../video_memmap.ice')
 $include('../io_memmap.ice')
 $include('../timers_random.ice')
 

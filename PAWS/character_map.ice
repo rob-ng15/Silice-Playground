@@ -20,11 +20,11 @@ algorithm character_map(
 ) <autorun> {
     // 80 x 30 character buffer
     // Setting background to 40 (ALPHA) allows the bitmap/background to show through
-    simple_dualport_bram uint8 charactermap <input!> [2400] = uninitialized;
-    simple_dualport_bram uint13 colourmap <input!> [2400] = uninitialized;
+    simple_dualport_bram uint8 charactermap[2400] = uninitialized;
+    simple_dualport_bram uint13 colourmap[2400] = uninitialized;
 
     // Character ROM 8x16
-    brom uint8 characterGenerator8x16 <input!> [] = {
+    brom uint8 characterGenerator8x16[] = {
         $include('ROM/characterROM8x16.inc')
     };
 
@@ -86,7 +86,7 @@ algorithm character_map_writer(
     output  uint6   curses_foreground
 ) <autorun> {
     // COPY OF CHARCTER MAP FOR THE CURSES BUFFER
-    simple_dualport_bram uint21 charactermap_copy <input!> [2400] = uninitialized;
+    simple_dualport_bram uint21 charactermap_copy[2400] = uninitialized;
 
     // Counter for clearscreen
     uint12  tpu_write_addr <: tpu_active_x + tpu_active_y * 80;

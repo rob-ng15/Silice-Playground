@@ -65,7 +65,8 @@ algorithm PAWSCPU(
     input   uint1   SMTRUNNING,
     input   uint32  SMTSTARTPC
 ) <autorun> {
-    uint7 FSM = uninitialized;
+    uint16  resetcount = 16hffff;
+    uint7   FSM = uninitialized;
 
     // RISC-V PROGRAM COUNTERS AND STATUS
     uint32  pc = uninitialized;
@@ -171,6 +172,7 @@ algorithm PAWSCPU(
     uint1   takeBranch = uninitialized;
     uint32  memoryinput = uninitialized;
     uint32  memoryoutput = uninitialized;
+    uint1   EXECUTEbusy = uninitialized;
     int32   EXECUTEresult = uninitialized;
     uint1   EXECUTEfrd = uninitialized;
     uint1   EXECUTEwriteRegister = uninitialized;
@@ -195,6 +197,7 @@ algorithm PAWSCPU(
         incPC :> incPC,
         takeBranch :> takeBranch,
         memoryoutput :> memoryoutput,
+        busy :> EXECUTEbusy,
         result :> EXECUTEresult,
         frd :> EXECUTEfrd,
         writeRegister :> EXECUTEwriteRegister
@@ -223,8 +226,12 @@ algorithm PAWSCPU(
     // CPU EXECUTE START FLAGS
     EXECUTE.start := 0;
 
-    // RESET ACTIONS - FSM -> 1, SMT AND PC -> 0, ALLOW SINGALS TO PROPAGATE, WAIT FOR MEMORY TO BE FREE, ALLOW SIGNALS TO PROPAGATE
-    FSM = 1; SMT = 0; pc = 0; while( memorybusy ) {} ++: ++:
+    // RESET ACTIONS - FSM -> 1, SMT AND PC -> 0 AND DELAY BEFORE CONTINUING
+    if( ~reset ) {
+        __display("RESET");
+        FSM = 1; SMT = 0; pc = 0;
+        resetcount = 16hffff; while( resetcount != 0 ) { resetcount = resetcount - 1; }
+    }
 
     while(1) {
         onehot( FSM ) {
@@ -249,7 +256,7 @@ algorithm PAWSCPU(
                 FSM = 7b0010000;
             }
             case 4: {                                                                           // EXECUTE
-                EXECUTE.start = 1; while( EXECUTE.busy ) {}
+                EXECUTE.start = 1; while( EXECUTEbusy ) {}
                 FSM = memorystore ? 7b0100000 : 7b1000000;
             }
             case 5: {                                                                           // STORE TO MEMORY
@@ -308,6 +315,8 @@ algorithm cpuexecute(
 
     // ALU
     int32   ALUresult = uninitialized;
+    uint1   ALUstart = uninitialized;
+    uint1   ALUbusy = uninitialized;
     alu ALU(
         opCode <: opCode,
         function3 <: function3,
@@ -318,7 +327,9 @@ algorithm cpuexecute(
         sourceReg2 <: sourceReg2,
         sourceReg3 <: sourceReg3,
         immediateValue <: immediateValue,
-        result :> ALUresult
+        result :> ALUresult,
+        start <: ALUstart,
+        busy :> ALUbusy
     );
 
     // ATOMIC MEMORY OPERATIONS
@@ -335,6 +346,8 @@ algorithm cpuexecute(
     uint5   FPUnewflags = uninitialized;
     uint1   FPUfrd = uninitialized;
     uint32  FPUresult = uninitialized;
+    uint1   FPUstart = uninitialized;
+    uint1   FPUbusy = uninitialized;
     fpu FPU(
         FPUflags <: FPUflags,
         FPUnewflags :> FPUnewflags,
@@ -348,11 +361,17 @@ algorithm cpuexecute(
         sourceReg2F <: sourceReg2F,
         sourceReg3F <: sourceReg3F,
         frd :> FPUfrd,
-        result :> FPUresult
+        result :> FPUresult,
+        start <: FPUstart,
+        busy :> FPUbusy
     );
 
     // MANDATORY RISC-V CSR REGISTERS + HARTID == 0 MAIN THREAD == 1 SMT THREAD
     uint32  CSRresult = uninitialized;
+    uint1   CSRstart = uninitialized;
+    uint1   CSRbusy = uninitialized;
+    uint1   CSRincCSRinstret = uninitialized;
+    uint1   CSRupdateFPUflags = uninitialized;
     CSRblock CSR(
         SMT <: SMT,
         instruction <: instruction,
@@ -361,11 +380,15 @@ algorithm cpuexecute(
         sourceReg1 <: sourceReg1,
         FPUflags :> FPUflags,
         FPUnewflags <: FPUnewflags,
-        result :> CSRresult
+        result :> CSRresult,
+        start <: CSRstart,
+        busy :> CSRbusy,
+        incCSRinstret <: CSRincCSRinstret,
+        updateFPUflags <: CSRupdateFPUflags
     );
 
     // ALU AND CSR START FLAGS
-    ALU.start := 0; FPU.start := 0; CSR.start := 0; CSR.incCSRinstret := 0; CSR.updateFPUflags := 0;
+    ALUstart := 0; FPUstart := 0; CSRstart := 0; CSRincCSRinstret := 0; CSRupdateFPUflags := 0;
 
     while(1) {
         if( start ) {
@@ -383,7 +406,7 @@ algorithm cpuexecute(
                 case 5b01001: { writeRegister = 0; memoryoutput = sourceReg2F; }            // FLOAT STORE
                 case 5b11100: {
                     switch( function3 ) {
-                        default: { CSR.start = 1; while( CSR.busy ) {} result = CSRresult; }// CSR
+                        default: { CSRstart = 1; while( CSRbusy ) {} result = CSRresult; }  // CSR
                         case 3b000: { result = 0; }
                     }
                 }
@@ -396,13 +419,13 @@ algorithm cpuexecute(
                 }
                 default: {                                                                  // FPU, ALUI or ALUR
                     switch( opCode[6,1] ) {
-                        case 0: { ALU.start = 1; while( ALU.busy ) {} frd = 0; result = ALUresult; }
-                        case 1: { FPU.start = 1; while( FPU.busy ) {} CSR.updateFPUflags = 1; frd = FPUfrd; result = FPUresult; }
+                        case 0: { ALUstart = 1; while( ALUbusy ) {} frd = 0; result = ALUresult; }
+                        case 1: { FPUstart = 1; while( FPUbusy ) {} CSRupdateFPUflags = 1; frd = FPUfrd; result = FPUresult; }
                     }
                 }
             }
             busy = 0;
-            CSR.incCSRinstret = 1;
+            CSRincCSRinstret = 1;
         }
     }
 }

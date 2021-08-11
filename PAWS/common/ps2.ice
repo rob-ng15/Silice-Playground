@@ -6,20 +6,18 @@ algorithm ps2ascii(
     output  uint8   ascii,
     output  uint1   asciivalid
 ) <autorun> {
+    uint8   newascii = uninitialised;
     uint1   LATCHvalid = 0;
-    uint8   newascii = 8hff;
     uint1   lctrl = 0;
     uint1   rctrl = 0;
     uint1   lshift = 0;
     uint1   rshift = 0;
     uint1   capslock = 0;
-
     uint1   startbreak = 0;
     uint1   startmulti = 0;
-
-    uint1   CTRL = uninitialised;
-    uint1   SHIFT = uninitialised;
-    uint1   CAPITAL = uninitialised;
+    uint1   CTRL <: lctrl | rctrl;
+    uint1   SHIFT <: lshift | rshift;
+    uint1   CAPITAL <: lshift | rshift | capslock;
 
     // PS2 KEYBOARD CODE READER
     uint8   ps2keycode = uninitialised;
@@ -28,15 +26,14 @@ algorithm ps2ascii(
         ps2clk_ext <: us2_bd_dp,
         ps2data_ext <: us2_bd_dn,
         data :> ps2keycode,
-        valid :> ps2valid,
+        valid :> ps2valid
     );
-
     asciivalid := 0;
 
     always {
+        newascii = 8hff;
         switch( { ps2valid, LATCHvalid } ) {
             case 2b10: {
-                newascii = 8hff;
                 switch( ps2keycode ) {
                     case 8he0: { startmulti = 1; }
                     case 8hf0: { startbreak = 1; }
@@ -44,9 +41,6 @@ algorithm ps2ascii(
                         switch( { startmulti, startbreak } ) {
                             case 2b00: {
                                 // KEY PRESS - TRANSLATE TO ASCII
-                                CTRL = lctrl | rctrl;
-                                SHIFT = lshift | rshift;
-                                CAPITAL = lshift | rshift | capslock;
                                 switch( ps2keycode ) {
                                     case 8h1c: { newascii = CTRL ? 8h01 : CAPITAL ? 8h41 : 8h61; }  // A to Z
                                     case 8h32: { newascii = CTRL ? 8h02 : CAPITAL ? 8h42 : 8h62; }

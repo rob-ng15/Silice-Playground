@@ -75,8 +75,8 @@ algorithm bitmap(
     output  uint1   gpu_queue_complete,
     output  uint1   vector_block_active
 ) <autorun> {
-    simple_dualport_bram uint7 bitmap_0 <@clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
-    simple_dualport_bram uint7 bitmap_1 <@clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint7 bitmap_0 <@clock,@gpu_clock> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint7 bitmap_1 <@clock,@gpu_clock> [ 76800 ] = uninitialized;
 
     // Pixel x and y fetching ( adjusting for offset ) - fetch x-pixel 1 in advance due to bram latency
     uint9   x_plus_offset <: pix_x[1,9] + x_offset + pix_x[0,1];

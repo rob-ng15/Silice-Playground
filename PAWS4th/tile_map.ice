@@ -7,12 +7,12 @@ algorithm tilemap(
     output! uint1   tilemap_display,
 
     // Set TM at x, y, character with foreground and background
-    input uint6 tm_x,
-    input uint6 tm_y,
-    input uint6 tm_character,
-    input uint6 tm_foreground,
-    input uint7 tm_background,
-    input uint1 tm_write,
+    input   uint6   tm_x,
+    input   uint6   tm_y,
+    input   uint6   tm_character,
+    input   uint6   tm_foreground,
+    input   uint7   tm_background,
+    input   uint1   tm_write,
 
     // For setting tile bitmaps
     input   uint6   tile_writer_tile,
@@ -25,12 +25,11 @@ algorithm tilemap(
     output  uint2   tm_active
 ) <autorun> {
     // Tiles 64 x 16 x 16
-    simple_dualport_bram uint16 tiles16x16 <input!> [ 1024 ] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, pad(uninitialized) };
+    simple_dualport_bram uint16 tiles16x16[ 1024 ] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, pad(uninitialized) };
 
     // 42 x 32 tile map, allows for pixel scrolling with border { 7 bits background, 6 bits foreground, 5 bits tile number }
-    // Setting background to 40 (ALPHA) allows the bitmap/background to show through
-    simple_dualport_bram uint6 tiles <input!> [1344] = uninitialized;
-    simple_dualport_bram uint13 colours <input!> [1344] = uninitialized;
+    simple_dualport_bram uint6 tiles[1344] = uninitialized;
+    simple_dualport_bram uint13 colours[1344] = uninitialized;
 
     // Scroll position - -15 to 0 to 15
     // -15 or 15 will trigger appropriate scroll when next moved in that direction
@@ -106,8 +105,8 @@ algorithm tile_map_writer(
     output  uint2   tm_active
 ) <autorun> {
     // COPY OF TILEMAP FOR SCROLLING
-    simple_dualport_bram uint6 tiles_copy <input!> [1344] = uninitialized;
-    simple_dualport_bram uint13 colours_copy <input!> [1344] = uninitialized;
+    simple_dualport_bram uint6 tiles_copy[1344] = uninitialized;
+    simple_dualport_bram uint13 colours_copy[1344] = uninitialized;
 
     // Scroller/Wrapper storage
     uint1   tm_scroll = uninitialized;

@@ -43,20 +43,32 @@ $$if not SIMULATION then
     // UART CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
     uint8   Uinchar = uninitialized;
     uint8   Uoutchar = uninitialized;
+    uint1   UARTinavailable = uninitialized;
+    uint1   UARTinread = uninitialized;
+    uint1   UARToutfull = uninitialized;
+    uint1   UARToutwrite = uninitialized;
     uart UART(
         uart_tx :> uart_tx,
         uart_rx <: uart_rx,
         inchar :> Uinchar,
-        outchar <: Uoutchar
+        outchar <: Uoutchar,
+        inavailable :> UARTinavailable,
+        inread <: UARTinread,
+        outfull :> UARToutfull,
+        outwrite <: UARToutwrite
     );
 
     // PS2 CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
     uint8   Pinchar = uninitialized;
+    uint1   PS2inavailable = uninitialized;
+    uint1   PS2inread = uninitialized;
     ps2buffer PS2(
         clock_25mhz <: clock_25mhz,
         us2_bd_dp <: us2_bd_dp,
         us2_bd_dn <: us2_bd_dn,
-        inchar :> Pinchar
+        inchar :> Pinchar,
+        inavailable :> PS2inavailable,
+        inread <: PS2inread
     );
 
     // SDCARD AND BUFFER
@@ -64,6 +76,8 @@ $$if not SIMULATION then
     uint16  sectoraddressL = uninitialized;
     uint9   bufferaddress = uninitialized;
     uint8   bufferdata = uninitialized;
+    uint1   SDCARDready = uninitialized;
+    uint1   SDCARDreadsector = uninitialized;
     sdcardbuffer SDCARD(
         sd_clk :> sd_clk,
         sd_mosi :> sd_mosi,
@@ -72,13 +86,13 @@ $$if not SIMULATION then
         sectoraddressH <: sectoraddressH,
         sectoraddressL <: sectoraddressL,
         bufferaddress <: bufferaddress,
-        bufferdata :> bufferdata
+        bufferdata :> bufferdata,
+        readsector <: SDCARDreadsector,
+        ready :> SDCARDready
     );
 
     // I/O FLAGS
-    UART.inread := 0; UART.outwrite := 0;
-    PS2.inread := 0;
-    SDCARD.readsector := 0;
+    UARTinread := 0; UARToutwrite := 0; PS2inread := 0; SDCARDreadsector := 0;
 $$end
      always {
         // READ IO Memory
@@ -87,23 +101,23 @@ $$end
                 switch( memoryAddress ) {
                     // UART, LEDS, BUTTONS and CLOCK
     $$if not SIMULATION then
-                    case 12h100: { readData = { 8b0, Uinchar }; UART.inread = 1; }
-                    case 12h102: { readData = { 14b0, UART.outfull, UART.inavailable }; }
+                    case 12h100: { readData = { 8b0, Uinchar }; UARTinread = 1; }
+                    case 12h102: { readData = { 14b0, UARToutfull, UARTinavailable }; }
                     case 12h120: { readData = { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] }; }
     $$end
                     case 12h130: { readData = leds; }
     $$if not SIMULATION then
                     // PS2
-                    case 12h110: { readData = PS2.inavailable; }
+                    case 12h110: { readData = PS2inavailable; }
                     case 12h112: {
-                        switch( PS2.inavailable ) {
-                            case 1: { readData = Pinchar; PS2.inread = 1; }
+                        switch( PS2inavailable ) {
+                            case 1: { readData = Pinchar; PS2inread = 1; }
                             case 0: { readData = 0; }
                         }
                     }
 
                     // SDCARD
-                    case 12h140: { readData = SDCARD.ready; }
+                    case 12h140: { readData = SDCARDready; }
                     case 12h150: { readData = bufferdata; }
     $$end
 
@@ -124,10 +138,10 @@ $$end
                     // UART, LEDS
                     case 12h130: { leds = writeData; }
     $$if not SIMULATION then
-                    case 12h100: { Uoutchar = writeData[0,8]; UART.outwrite = 1; }
+                    case 12h100: { Uoutchar = writeData[0,8]; UARToutwrite = 1; }
 
                     // SDCARD
-                    case 12h140: { SDCARD.readsector = 1; }
+                    case 12h140: { SDCARDreadsector = 1; }
                     case 12h142: { sectoraddressH = writeData; }
                     case 12h144: { sectoraddressL = writeData; }
                     case 12h150: { bufferaddress = writeData; }
@@ -174,6 +188,8 @@ algorithm audiotimers_memmap(
     uint16  u_noise_out = uninitialized;
     uint16  g_noise_out = uninitialized;
     uint4   static4bit <: u_noise_out[0,4];
+    uint16  counter = uninitialized;
+    uint3   resetcounter = uninitialized;
     timers_rng timers <@clock_25mhz> (
         systemclock :> systemclock,
         timer1hz0 :> timer1hz0,
@@ -183,18 +199,28 @@ algorithm audiotimers_memmap(
         sleepTimer0 :> sleepTimer0,
         sleepTimer1 :> sleepTimer1,
         u_noise_out :> u_noise_out,
-        g_noise_out :> g_noise_out
+        g_noise_out :> g_noise_out,
+        counter <: counter,
+        resetcounter <: resetcounter
     );
 
     // Left and Right audio channels
     uint1   audio_active_l = uninitialized;
     uint1   audio_active_r = uninitialized;
+    uint4   waveform = uninitialized;
+    uint7   note = uninitialized;
+    uint16  duration = uninitialized;
+    uint2   apu_write = uninitialized;
     audio apu_processor <@clock_25mhz> (
         staticGenerator <: static4bit,
         audio_l :> audio_l,
         audio_active_l :> audio_active_l,
         audio_r :> audio_r,
-        audio_active_r :> audio_active_r
+        audio_active_r :> audio_active_r,
+        waveform <: waveform,
+        note <: note,
+        duration <: duration,
+        apu_write <: apu_write
     );
 
     // LATCH MEMORYWRITE
@@ -231,25 +257,25 @@ algorithm audiotimers_memmap(
             case 2b10: {
                 switch( memoryAddress ) {
                 // TIMERS and RNG
-                    case 12h010: { timers.resetcounter = 1; }
-                    case 12h012: { timers.resetcounter = 2; }
-                    case 12h020: { timers.counter = writeData; timers.resetcounter = 3; }
-                    case 12h022: { timers.counter = writeData; timers.resetcounter = 4; }
-                    case 12h030: { timers.counter = writeData; timers.resetcounter = 5; }
-                    case 12h032: { timers.counter = writeData; timers.resetcounter = 6; }
+                    case 12h010: { resetcounter = 1; }
+                    case 12h012: { resetcounter = 2; }
+                    case 12h020: { counter = writeData; resetcounter = 3; }
+                    case 12h022: { counter = writeData; resetcounter = 4; }
+                    case 12h030: { counter = writeData; resetcounter = 5; }
+                    case 12h032: { counter = writeData; resetcounter = 6; }
 
                     // AUDIO
-                    case 12h100: { apu_processor.waveform = writeData; }
-                    case 12h102: { apu_processor.note = writeData; }
-                    case 12h104: { apu_processor.duration = writeData; }
-                    case 12h106: { apu_processor.apu_write = writeData; }
+                    case 12h100: { waveform = writeData; }
+                    case 12h102: { note = writeData; }
+                    case 12h104: { duration = writeData; }
+                    case 12h106: { apu_write = writeData; }
                     default: {}
                 }
             }
             case 2b00: {
                 // RESET TIMER and AUDIO Co-Processor Controls
-                timers.resetcounter = 0;
-                apu_processor.apu_write = 0;
+                resetcounter = 0;
+                apu_write = 0;
             }
             default: {}
         }
@@ -275,33 +301,41 @@ algorithm timers_rng(
     random rng( u_noise_out :> u_noise_out,  g_noise_out :> g_noise_out );
 
     // 1hz timers (p1hz used for systemClock, timer1hz for user purposes)
-    pulse1hz P1( counter1hz :> systemclock );
-    pulse1hz T1hz0( counter1hz :> timer1hz0 );
-    pulse1hz T1hz1( counter1hz :> timer1hz1 );
+    uint1   P1resetCounter = uninitialized;
+    pulse1hz P1( counter1hz :> systemclock, resetCounter <: P1resetCounter );
+
+    uint1   T1hz0resetCounter = uninitialized;
+    uint1   T1hz1resetCounter = uninitialized;
+    pulse1hz T1hz0( counter1hz :> timer1hz0, resetCounter <: T1hz0resetCounter );
+    pulse1hz T1hz1( counter1hz :> timer1hz1, resetCounter <: T1hz1resetCounter );
 
     // 1khz timers (sleepTimers used for sleep command, timer1khzs for user purposes)
-    pulse1khz T0khz0( counter1khz :> timer1khz0 );
-    pulse1khz T1khz1( counter1khz :> timer1khz1 );
-    pulse1khz STimer0( counter1khz :> sleepTimer0 );
-    pulse1khz STimer1( counter1khz :> sleepTimer1 );
+    uint16  T0khz0resetCounter = uninitialized;
+    uint16  T1khz1resetCounter = uninitialized;
+    uint16  STimer0resetCounter = uninitialized;
+    uint16  STimer1resetCounter = uninitialized;
+    pulse1khz T0khz0( counter1khz :> timer1khz0, resetCounter <: T0khz0resetCounter );
+    pulse1khz T1khz1( counter1khz :> timer1khz1, resetCounter <: T1khz1resetCounter );
+    pulse1khz STimer0( counter1khz :> sleepTimer0, resetCounter <: STimer0resetCounter );
+    pulse1khz STimer1( counter1khz :> sleepTimer1, resetCounter <: STimer1resetCounter );
 
-    P1.resetCounter := 0;
-    T1hz0.resetCounter := 0;
-    T1hz1.resetCounter := 0;
-    T0khz0.resetCounter := 0;
-    T1khz1.resetCounter := 0;
-    STimer0.resetCounter := 0;
-    STimer1.resetCounter := 0;
+    P1resetCounter := 0;
+    T1hz0resetCounter := 0;
+    T1hz1resetCounter := 0;
+    T0khz0resetCounter := 0;
+    T1khz1resetCounter := 0;
+    STimer0resetCounter := 0;
+    STimer1resetCounter := 0;
 
     always {
         switch( resetcounter ) {
         default: {}
-            case 1: { T1hz0.resetCounter = 1; }
-            case 2: { T1hz1.resetCounter = 1; }
-            case 3: { T0khz0.resetCounter = counter; }
-            case 4: { T1khz1.resetCounter = counter; }
-            case 5: { STimer0.resetCounter = counter; }
-            case 6: { STimer1.resetCounter = counter; }
+            case 1: { T1hz0resetCounter = 1; }
+            case 2: { T1hz1resetCounter = 1; }
+            case 3: { T0khz0resetCounter = counter; }
+            case 4: { T1khz1resetCounter = counter; }
+            case 5: { STimer0resetCounter = counter; }
+            case 6: { STimer1resetCounter = counter; }
         }
     }
 }
@@ -319,44 +353,59 @@ algorithm audio(
     output  uint1   audio_active_r
 ) <autorun> {
     // Left and Right audio channels
+    uint4   Lwaveform = uninitialized;
+    uint7   Lnote = uninitialized;
+    uint16  Lduration = uninitialized;
+    uint1   Lapu_write = uninitialized;
     apu apu_processor_L(
         staticGenerator <: staticGenerator,
         audio_output :> audio_l,
-        audio_active :> audio_active_l
+        audio_active :> audio_active_l,
+        waveform <: Lwaveform,
+        note <: Lnote,
+        duration <: Lduration,
+        apu_write <: Lapu_write
     );
+    uint4   Rwaveform = uninitialized;
+    uint7   Rnote = uninitialized;
+    uint16  Rduration = uninitialized;
+    uint1   Rapu_write = uninitialized;
     apu apu_processor_R(
         staticGenerator <: staticGenerator,
         audio_output :> audio_r,
-        audio_active :> audio_active_r
+        audio_active :> audio_active_r,
+        waveform <: Rwaveform,
+        note <: Rnote,
+        duration <: Rduration,
+        apu_write <: Rapu_write
     );
 
-    apu_processor_L.apu_write := 0;
-    apu_processor_R.apu_write := 0;
+    Lapu_write := 0; Rapu_write := 0;
 
     always {
         switch( apu_write ) {
             default: {}
             case 1: {
-                apu_processor_L.waveform = waveform;
-                apu_processor_L.note = note;
-                apu_processor_L.duration = duration;
-                apu_processor_L.apu_write = 1;
+                Lwaveform = waveform;
+                Lnote = note;
+                Lduration = duration;
+                Lapu_write = 1;
             }
             case 2: {
-                apu_processor_R.waveform = waveform;
-                apu_processor_R.note = note;
-                apu_processor_R.duration = duration;
-                apu_processor_R.apu_write = 1;
+                Rwaveform = waveform;
+                Rnote = note;
+                Rduration = duration;
+                Rapu_write = 1;
             }
             case 3: {
-                apu_processor_L.waveform = waveform;
-                apu_processor_L.note = note;
-                apu_processor_L.duration = duration;
-                apu_processor_L.apu_write = 1;
-                apu_processor_R.waveform = waveform;
-                apu_processor_R.note = note;
-                apu_processor_R.duration = duration;
-                apu_processor_R.apu_write = 1;
+                Lwaveform = waveform;
+                Lnote = note;
+                Lduration = duration;
+                Lapu_write = 1;
+                Rwaveform = waveform;
+                Rnote = note;
+                Rduration = duration;
+                Rapu_write = 1;
             }
         }
     }
@@ -392,12 +441,12 @@ algorithm uart(
     );
 
     // UART input FIFO (256 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartInBuffer <input!> [256] = uninitialized;
+    simple_dualport_bram uint8 uartInBuffer[256] = uninitialized;
     uint8  uartInBufferNext = 0;
     uint8  uartInBufferTop = 0;
 
     // UART output FIFO (256 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartOutBuffer <input!> [256] = uninitialized;
+    simple_dualport_bram uint8 uartOutBuffer[256] = uninitialized;
     uint8   uartOutBufferNext = 0;
     uint8   uartOutBufferTop = 0;
     uint8   newuartOutBufferTop = 0;
@@ -443,21 +492,24 @@ algorithm ps2buffer(
     output  uint8   inchar,
     input   uint1   inread
 ) <autorun> {
-    uint1   update = uninitialized;
-
     // PS/2 input FIFO (256 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 ps2Buffer <input!> [256] = uninitialized;
+    simple_dualport_bram uint8 ps2Buffer[256] = uninitialized;
     uint8  ps2BufferNext = 0;
     uint7  ps2BufferTop = 0;
 
     // PS 2 ASCII
+    uint1   PS2asciivalid = uninitialized;
+    uint8   PS2ascii = uninitialized;
     ps2ascii PS2(
         clock_25mhz <: clock_25mhz,
         us2_bd_dp <: us2_bd_dp,
         us2_bd_dn <: us2_bd_dn,
+        asciivalid :> PS2asciivalid,
+        ascii :> PS2ascii
     );
 
     // PS2 Buffers
+    uint1   update = uninitialized;
     ps2Buffer.wenable1 := 1;  // always write on port 1
     ps2Buffer.addr0 := ps2BufferNext; // FIFO reads on next
 
@@ -466,9 +518,9 @@ algorithm ps2buffer(
     inchar := ps2Buffer.rdata0;
 
     always {
-        if( PS2.asciivalid ) {
+        if( PS2asciivalid ) {
             ps2Buffer.addr1 = ps2BufferTop;
-            ps2Buffer.wdata1 = PS2.ascii;
+            ps2Buffer.wdata1 = PS2ascii;
             update = 1;
         } else {
             if( update ) { ps2BufferTop = ps2BufferTop + 1; update = 0; }
@@ -493,7 +545,7 @@ algorithm sdcardbuffer(
     output  uint8   bufferdata
 ) <autorun> {
     // SDCARD - Code for the SDCARD from @sylefeb
-    simple_dualport_bram uint8 sdbuffer <input!> [512] = uninitialized;
+    simple_dualport_bram uint8 sdbuffer[512] = uninitialized;
     sdcardio sdcio;
     sdcard sd(
         // pins

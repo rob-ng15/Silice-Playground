@@ -1020,7 +1020,7 @@ t: sprite!
 t: lsprite 2* c300 literal + _pointer ! sprite! t;
 t: usprite 2* c400 literal + _pointer ! sprite! t;
 t: lspritetile! c800 literal ! 80 literal begin 1- dup c802 literal ! swap c804 literal ! dup 0= until drop t;
-t: uspritetile! c810 literal ! 80 literal begin 1- dup c812 literal ! swap c814 literal ! dup 0= until drop t;
+t: uspritetile! c900 literal ! 80 literal begin 1- dup c902 literal ! swap c904 literal ! dup 0= until drop t;
 t: lspriteupdate 2* c3c0 literal + ! t;
 t: uspriteupdate 2* c4c0 literal + ! t;
 t: lsprite@ 2* swap 20 literal * c300 literal + + @ t;

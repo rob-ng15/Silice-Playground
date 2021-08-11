@@ -132,6 +132,8 @@ algorithm alu(
 
     // BASE REGISTER & REGISTER ALU OPERATIONS
     int32   ALURresult = uninitialized;
+    uint1   ALURstart = uninitialized;
+    uint1   ALURbusy = uninitialized;
     aluR ALUR(
         function3 <: function3,
         function7 <: function7,
@@ -141,17 +143,19 @@ algorithm alu(
         sourceReg3 <: sourceReg3,
         LSHIFToutput <: LSHIFToutput,
         RSHIFToutput <: RSHIFToutput,
-        result :> ALURresult
+        result :> ALURresult,
+        start <: ALURstart,
+        busy :> ALURbusy
     );
 
     // ALU START FLAGS
-    ALUR.start := 0;
+    ALURstart := 0;
 
     while(1) {
         if( start ) {
             // START ALUI or ALUR
             busy = 1;
-            ALUR.start = opCode[5,1]; while(  ALUR.busy ) {}
+            ALURstart = opCode[5,1]; while(  ALURbusy ) {}
             result = opCode[5,1] ? ALURresult : ALUIresult;
             busy = 0;
         }

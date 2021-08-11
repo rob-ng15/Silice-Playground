@@ -94,7 +94,7 @@ algorithm sprite_layer(
 
     $$for i=0,15 do
         // Sprite Tiles
-        simple_dualport_bram uint16 tiles_$i$ <input!> [128] = uninitialised;
+        simple_dualport_bram uint16 tiles_$i$[128] = uninitialised;
         uint1 pix_visible_$i$ = uninitialised;
         sprite_generator SPRITE_$i$(
             pix_x <: pix_x,

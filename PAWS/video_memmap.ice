@@ -85,109 +85,207 @@ $$end
     // CREATE DISPLAY LAYERS
     // BACKGROUND
     uint6   background_p = uninitialized;
-    background background_generator <@video_clock,!video_reset>  (
+    background_memmap BACKGROUND(
+        video_clock <: video_clock,
+        video_reset <: video_reset,
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: pix_active,
         pix_vblank <: vblank,
         pixel    :> background_p,
-        staticGenerator <: static2bit
-    );
-
-    // Tilemaps - Lower and Upper
-    uint6   lower_tilemap_p = uninitialized;
-    uint1   lower_tilemap_display = uninitialized;
-    uint6   upper_tilemap_p = uninitialized;
-    uint1   upper_tilemap_display = uninitialized;
-    tilemap lower_tile_map <@video_clock,!video_reset> (
-        pix_x      <: pix_x,
-        pix_y      <: pix_y,
-        pix_active <: pix_active,
-        pix_vblank <: vblank,
-        pixel    :> lower_tilemap_p,
-        tilemap_display :> lower_tilemap_display
-    );
-    tilemap upper_tile_map <@video_clock,!video_reset> (
-        pix_x      <: pix_x,
-        pix_y      <: pix_y,
-        pix_active <: pix_active,
-        pix_vblank <: vblank,
-        pixel    :> upper_tilemap_p,
-        tilemap_display :> upper_tilemap_display
+        memoryAddress <: memoryAddress,
+        writeData <: writeData,
+        static2bit <: static2bit
     );
 
     // Bitmap Window with GPU
-    uint1   bitmap_display = uninitialized;
     uint6   bitmap_p = uninitialized;
-    // 640 x 480 x 7 bit { Arrggbb } colour bitmap
-    bitmap bitmap_window <@video_clock,!video_reset> (
+    uint1   bitmap_display = uninitialized;
+    // 320 x 240 x 7 bit { Arrggbb } colour bitmap
+    uint1   gpu_queue_full = uninitialized;
+    uint1   gpu_queue_complete = uninitialized;
+    uint1   vector_block_active = uninitialized;
+    uint7   bitmap_colour_read = uninitialized;
+    bitmap_memmap BITMAP(
+        video_clock <: video_clock,
+        video_reset <: video_reset,
         gpu_clock <: gpu_clock,
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: pix_active,
         pix_vblank <: vblank,
         pixel    :> bitmap_p,
-        bitmap_display :> bitmap_display,
+        pixel_display :> bitmap_display,
+        memoryAddress <: memoryAddress,
+        writeData <: writeData,
         static1bit <: static1bit,
-        static6bit <: static6bit
-   );
-
-    // Sprite Layers - Lower and Upper
-    uint6   lower_sprites_p = uninitialized;
-    uint1   lower_sprites_display = uninitialized;
-    uint6   upper_sprites_p = uninitialized;
-    uint1   upper_sprites_display = uninitialized;
-    sprite_layer lower_sprites <@video_clock,!video_reset> (
-        pix_x      <: pix_x,
-        pix_y      <: pix_y,
-        pix_active <: pix_active,
-        pix_vblank <: vblank,
-        pixel    :> lower_sprites_p,
-        sprite_layer_display :> lower_sprites_display,
-        collision_layer_1 <: bitmap_display,
-        collision_layer_2 <: lower_tilemap_display,
-        collision_layer_3 <: upper_tilemap_display,
-        collision_layer_4 <: upper_sprites_display
-    );
-    sprite_layer upper_sprites <@video_clock,!video_reset> (
-        pix_x      <: pix_x,
-        pix_y      <: pix_y,
-        pix_active <: pix_active,
-        pix_vblank <: vblank,
-        pixel    :> upper_sprites_p,
-        sprite_layer_display :> upper_sprites_display,
-        collision_layer_1 <: bitmap_display,
-        collision_layer_2 <: lower_tilemap_display,
-        collision_layer_3 <: upper_tilemap_display,
-        collision_layer_4 <: lower_sprites_display
+        static6bit <: static6bit,
+        gpu_queue_full :> gpu_queue_full,
+        gpu_queue_complete :> gpu_queue_complete,
+        vector_block_active :> vector_block_active,
+        bitmap_colour_read :> bitmap_colour_read
     );
 
     // Character Map Window
     uint6   character_map_p = uninitialized;
     uint1   character_map_display = uninitialized;
-    character_map character_map_window <@video_clock,!video_reset> (
+    uint2   tpu_active = uninitialized;
+    uint8   curses_character = uninitialized;
+    uint7   curses_background = uninitialized;
+    uint6   curses_foreground = uninitialized;
+    charactermap_memmap CHARACTER_MAP(
+        video_clock <: video_clock,
+        video_reset <: video_reset,
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: pix_active,
         pix_vblank <: vblank,
         pixel    :> character_map_p,
-        character_map_display :> character_map_display
+        pixel_display :> character_map_display,
+        memoryAddress <: memoryAddress,
+        writeData <: writeData,
+        tpu_active :> tpu_active,
+        curses_character :> curses_character,
+        curses_background :> curses_background,
+        curses_foreground :> curses_foreground
+    );
+
+    // Sprite Layers - Lower and Upper
+    uint6   lower_sprites_p = uninitialized;
+    uint1   lower_sprites_display = uninitialized;
+    $$for i=0,15 do
+        uint1   Lsprite_read_active_$i$ = uninitialized;
+        uint3   Lsprite_read_double_$i$ = uninitialized;
+        uint6   Lsprite_read_colour_$i$ = uninitialized;
+        int16   Lsprite_read_x_$i$ = uninitialized;
+        int16   Lsprite_read_y_$i$ = uninitialized;
+        uint3   Lsprite_read_tile_$i$ = uninitialized;
+        uint16  Lcollision_$i$ = uninitialized;
+        uint4   Llayer_collision_$i$ = uninitialized;
+    $$end
+    sprite_memmap LOWER_SPRITE(
+        video_clock <: video_clock,
+        video_reset <: video_reset,
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: pix_active,
+        pix_vblank <: vblank,
+        pixel    :> lower_sprites_p,
+        pixel_display :> lower_sprites_display,
+        memoryAddress <: memoryAddress,
+        writeData <: writeData,
+        collision_layer_1 <: bitmap_display,
+        collision_layer_2 <: lower_tilemap_display,
+        collision_layer_3 <: upper_tilemap_display,
+        collision_layer_4 <: upper_sprites_display,
+        $$for i=0,15 do
+            sprite_read_active_$i$ :> Lsprite_read_active_$i$,
+            sprite_read_double_$i$ :> Lsprite_read_double_$i$,
+            sprite_read_colour_$i$ :> Lsprite_read_colour_$i$,
+            sprite_read_x_$i$ :> Lsprite_read_x_$i$,
+            sprite_read_y_$i$ :> Lsprite_read_y_$i$,
+            sprite_read_tile_$i$ :> Lsprite_read_tile_$i$,
+            collision_$i$ :> Lcollision_$i$,
+            layer_collision_$i$ :> Llayer_collision_$i$,
+        $$end
+    );
+    uint6   upper_sprites_p = uninitialized;
+    uint1   upper_sprites_display = uninitialized;
+    $$for i=0,15 do
+        uint1   Usprite_read_active_$i$ = uninitialized;
+        uint3   Usprite_read_double_$i$ = uninitialized;
+        uint6   Usprite_read_colour_$i$ = uninitialized;
+        int16   Usprite_read_x_$i$ = uninitialized;
+        int16   Usprite_read_y_$i$ = uninitialized;
+        uint3   Usprite_read_tile_$i$ = uninitialized;
+        uint16  Ucollision_$i$ = uninitialized;
+        uint4   Ulayer_collision_$i$ = uninitialized;
+    $$end
+    sprite_memmap UPPER_SPRITE(
+        video_clock <: video_clock,
+        video_reset <: video_reset,
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: pix_active,
+        pix_vblank <: vblank,
+        pixel    :> upper_sprites_p,
+        pixel_display :> upper_sprites_display,
+        memoryAddress <: memoryAddress,
+        writeData <: writeData,
+        collision_layer_1 <: bitmap_display,
+        collision_layer_2 <: lower_tilemap_display,
+        collision_layer_3 <: upper_tilemap_display,
+        collision_layer_4 <: lower_sprites_display,
+        $$for i=0,15 do
+            sprite_read_active_$i$ :> Usprite_read_active_$i$,
+            sprite_read_double_$i$ :> Usprite_read_double_$i$,
+            sprite_read_colour_$i$ :> Usprite_read_colour_$i$,
+            sprite_read_x_$i$ :> Usprite_read_x_$i$,
+            sprite_read_y_$i$ :> Usprite_read_y_$i$,
+            sprite_read_tile_$i$ :> Usprite_read_tile_$i$,
+            collision_$i$ :> Ucollision_$i$,
+            layer_collision_$i$ :> Ulayer_collision_$i$,
+        $$end
     );
 
     // Terminal Window
     uint6   terminal_p = uninitialized;
     uint1   terminal_display = uninitialized;
-    terminal terminal_window <@video_clock,!video_reset> (
+    uint2   terminal_active = uninitialized;
+    terminal_memmap TERMINAL(
+        video_clock <: video_clock,
+        video_reset <: video_reset,
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: pix_active,
         pix_vblank <: vblank,
         pixel    :> terminal_p,
-        terminal_display :> terminal_display
+        pixel_display :> terminal_display,
+        memoryAddress <: memoryAddress,
+        writeData <: writeData,
+        terminal_active :> terminal_active
+    );
+
+    // Tilemaps - Lower and Upper
+    uint6   lower_tilemap_p = uninitialized;
+    uint1   lower_tilemap_display = uninitialized;
+    uint4   Ltm_lastaction = uninitialized;
+    uint2   Ltm_active = uninitialized;
+    tilemap_memmap LOWER_TILE(
+        video_clock <: video_clock,
+        video_reset <: video_reset,
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: pix_active,
+        pix_vblank <: vblank,
+        pixel    :> lower_tilemap_p,
+        pixel_display :> lower_tilemap_display,
+        memoryAddress <: memoryAddress,
+        writeData <: writeData,
+        tm_lastaction :> Ltm_lastaction,
+        tm_active :> Ltm_active
+    );
+    uint6   upper_tilemap_p = uninitialized;
+    uint1   upper_tilemap_display = uninitialized;
+    uint4   Utm_lastaction = uninitialized;
+    uint2   Utm_active = uninitialized;
+    tilemap_memmap UPPER_TILE(
+        video_clock <: video_clock,
+        video_reset <: video_reset,
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: pix_active,
+        pix_vblank <: vblank,
+        pixel    :> upper_tilemap_p,
+        pixel_display :> upper_tilemap_display,
+        memoryAddress <: memoryAddress,
+        writeData <: writeData,
+        tm_lastaction :> Utm_lastaction,
+        tm_active :> Utm_active
     );
 
     // Combine the display layers for display
-
+    uint2   display_order = uninitialized;
     multiplex_display display <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -196,87 +294,102 @@ $$end
         pix_red    :> video_r,
         pix_green  :> video_g,
         pix_blue   :> video_b,
-
         background_p <: background_p,
-
         lower_tilemap_p <: lower_tilemap_p,
         lower_tilemap_display <: lower_tilemap_display,
-
         upper_tilemap_p <: upper_tilemap_p,
         upper_tilemap_display <: upper_tilemap_display,
-
         lower_sprites_p <: lower_sprites_p,
         lower_sprites_display <: lower_sprites_display,
-
         upper_sprites_p <: upper_sprites_p,
         upper_sprites_display <: upper_sprites_display,
-
         bitmap_p <: bitmap_p,
         bitmap_display <: bitmap_display,
-
         character_map_p <: character_map_p,
         character_map_display <: character_map_display,
-
         terminal_p <: terminal_p,
-        terminal_display <: terminal_display
+        terminal_display <: terminal_display,
+        display_order <: display_order
     );
 
-    // LATCH MEMORYWRITE
-    uint1   LATCHmemoryWrite = uninitialized;
+    BACKGROUND.memoryWrite := 0;
+    LOWER_TILE.memoryWrite := 0;
+    UPPER_TILE.memoryWrite := 0;
+    LOWER_SPRITE.memoryWrite := 0;
+    UPPER_SPRITE.memoryWrite := 0;
+    CHARACTER_MAP.memoryWrite := 0;
+    BITMAP.memoryWrite := 0;
+    TERMINAL.memoryWrite := 0;
 
     always {
         // READ IO Memory
         switch( memoryRead ) {
             case 1: {
-                switch( memoryAddress ) {
-                    // TILE MAP
-                    case 12h120: { readData = lower_tile_map.tm_lastaction; }
-                    case 12h122: { readData = lower_tile_map.tm_active; }
-                    case 12h220: { readData = upper_tile_map.tm_lastaction; }
-                    case 12h222: { readData = upper_tile_map.tm_active; }
-
-                    // LOWER SPRITE LAYER
-                    $$for i=0,15 do
-                        case $0x300 + i*2$: { readData = lower_sprites.sprite_read_active_$i$; }
-                        case $0x320 + i*2$: { readData = lower_sprites.sprite_read_double_$i$; }
-                        case $0x340 + i*2$: { readData = lower_sprites.sprite_read_colour_$i$; }
-                        case $0x360 + i*2$: { readData = {{5{lower_sprites.sprite_read_x_$i$[10,1]}}, lower_sprites.sprite_read_x_$i$}; }
-                        case $0x380 + i*2$: { readData = {{5{lower_sprites.sprite_read_y_$i$[10,1]}}, lower_sprites.sprite_read_y_$i$}; }
-                        case $0x3a0 + i*2$: { readData = lower_sprites.sprite_read_tile_$i$; }
-                        case $0x3c0 + i*2$: { readData = lower_sprites.collision_$i$; }
-                        case $0x3e0 + i*2$: { readData = lower_sprites.layer_collision_$i$; }
-                    $$end
-
-                    // UPPER SPRITE LAYER
-                    $$for i=0,15 do
-                        case $0x400 + i*2$: { readData = upper_sprites.sprite_read_active_$i$; }
-                        case $0x420 + i*2$: { readData = upper_sprites.sprite_read_double_$i$; }
-                        case $0x440 + i*2$: { readData = upper_sprites.sprite_read_colour_$i$; }
-                        case $0x460 + i*2$: { readData = {{5{upper_sprites.sprite_read_x_$i$[10,1]}}, upper_sprites.sprite_read_x_$i$}; }
-                        case $0x480 + i*2$: { readData = {{5{upper_sprites.sprite_read_y_$i$[10,1]}}, upper_sprites.sprite_read_y_$i$}; }
-                        case $0x4a0 + i*2$: { readData = upper_sprites.sprite_read_tile_$i$; }
-                        case $0x4c0 + i*2$: { readData = upper_sprites.collision_$i$; }
-                        case $0x4e0 + i*2$: { readData = upper_sprites.layer_collision_$i$; }
-                    $$end
-
-                    // CHARACTER MAP
-                    case 12h504: { readData = character_map_window.curses_character; }
-                    case 12h506: { readData = character_map_window.curses_background; }
-                    case 12h508: { readData = character_map_window.curses_foreground; }
-                    case 12h50a: { readData = character_map_window.tpu_active; }
-
-                    // GPU and BITMAP
-                    case 12h612: { readData = bitmap_window.gpu_queue_full; }
-                    case 12h614: { readData = bitmap_window.gpu_queue_complete; }
-                    case 12h62a: { readData = bitmap_window.vector_block_active; }
-                    case 12h6d4: { readData = bitmap_window.bitmap_colour_read; }
-
-                    // TERMINAL
-                    case 12h700: { readData = terminal_window.terminal_active; }
-
-                    // VBLANK
-                    case 12hf00: { readData = vblank; }
-
+                switch( memoryAddress[8,4] ) {
+                    case 4h1: {
+                        switch( memoryAddress[0,8] ) {
+                            case 8h20: { readData = Ltm_lastaction; }
+                            case 8h22: { readData = Ltm_active; }
+                            default: { readData = 0; }
+                        }
+                    }
+                    case 4h2: {
+                        switch( memoryAddress[0,8] ) {
+                            case 8h20: { readData = Utm_lastaction; }
+                            case 8h22: { readData = Utm_active; }
+                            default: { readData = 0; }
+                        }
+                    }
+                    case 4h3: {
+                        switch( memoryAddress[0,8] ) {
+                            $$for i=0,15 do
+                                case $0x00 + i*2$: { readData = Lsprite_read_active_$i$; }
+                                case $0x20 + i*2$: { readData = Lsprite_read_double_$i$; }
+                                case $0x40 + i*2$: { readData = Lsprite_read_colour_$i$; }
+                                case $0x60 + i*2$: { readData = {{5{Lsprite_read_x_$i$[10,1]}}, Lsprite_read_x_$i$}; }
+                                case $0x80 + i*2$: { readData = {{5{Lsprite_read_y_$i$[10,1]}}, Lsprite_read_y_$i$}; }
+                                case $0xa0 + i*2$: { readData = Lsprite_read_tile_$i$; }
+                                case $0xc0 + i*2$: { readData = Lcollision_$i$; }
+                                case $0xe0 + i*2$: { readData = Llayer_collision_$i$; }
+                            $$end
+                            default: { readData = 0; }
+                        }
+                    }
+                    case 4h4: {
+                        switch( memoryAddress[0,8] ) {
+                            $$for i=0,15 do
+                                case $0x00 + i*2$: { readData = Usprite_read_active_$i$; }
+                                case $0x20 + i*2$: { readData = Usprite_read_double_$i$; }
+                                case $0x40 + i*2$: { readData = Usprite_read_colour_$i$; }
+                                case $0x60 + i*2$: { readData = {{5{Usprite_read_x_$i$[10,1]}}, Usprite_read_x_$i$}; }
+                                case $0x80 + i*2$: { readData = {{5{Usprite_read_y_$i$[10,1]}}, Usprite_read_y_$i$}; }
+                                case $0xa0 + i*2$: { readData = Usprite_read_tile_$i$; }
+                                case $0xc0 + i*2$: { readData = Ucollision_$i$; }
+                                case $0xe0 + i*2$: { readData = Ulayer_collision_$i$; }
+                            $$end
+                            default: { readData = 0; }
+                        }
+                        }
+                    case 4h5: {
+                        switch( memoryAddress[0,8] ) {
+                            case 8h04: { readData = curses_character; }
+                            case 8h06: { readData = curses_background; }
+                            case 8h08: { readData = curses_foreground; }
+                            case 8h0a: { readData = tpu_active; }
+                            default: { readData = 0; }
+                        }
+                    }
+                    case 4h6: {
+                        switch( memoryAddress[0,8] ) {
+                            case 8h12: { readData = gpu_queue_full; }
+                            case 8h14: { readData = gpu_queue_complete; }
+                            case 8h2a: { readData = vector_block_active; }
+                            case 8hd4: { readData = bitmap_colour_read; }
+                            default: { readData = 0; }
+                        }
+                    }
+                    case 4h7: { readData = terminal_active; }
+                    case 4hf: { readData = vblank; }
                     default: { readData = 0; }
                 }
             }
@@ -284,170 +397,651 @@ $$end
         }
 
         // WRITE IO Memory
+        switch( memoryWrite ) {
+            case 1: {
+                switch( memoryAddress[8,4] ) {
+                    case 4h0: { BACKGROUND.memoryWrite = 1; }
+                    case 4h1: { LOWER_TILE.memoryWrite = 1; }
+                    case 4h2: { UPPER_TILE.memoryWrite = 1; }
+                    case 4h3: { LOWER_SPRITE.memoryWrite = 1; LOWER_SPRITE.bitmapwriter = 0;  }
+                    case 4h4: { UPPER_SPRITE.memoryWrite = 1; UPPER_SPRITE.bitmapwriter = 0;  }
+                    case 4h5: { CHARACTER_MAP.memoryWrite = 1; }
+                    case 4h6: { BITMAP.memoryWrite = 1; }
+                    case 4h7: { TERMINAL.memoryWrite = 1; }
+                    case 4h8: { LOWER_SPRITE.memoryWrite = 1; LOWER_SPRITE.bitmapwriter = 1; }
+                    case 4h9: { UPPER_SPRITE.memoryWrite = 1; UPPER_SPRITE.bitmapwriter = 1; }
+                    case 4hf: { display_order = writeData; }
+                    default: {}
+                }
+            }
+            default: {}
+        }
+    }
+}
+
+// ALL DISPLAY GENERATOR UNITS RUN AT 25MHz, 640 x 480 @ 60fps
+// WRITING TO THE DISPLAY GENERATOR UNITS THEREFORE LATCHES THEREFORE
+// LATCHES THE OUTPUT FOR 2 x 50MHz clock cycles
+// AND THEN RESETS ANY CONTROLS
+//
+//         switch( { memoryWrite, LATCHmemoryWrite } ) {
+//             case 2b10: {
+//                  PERFORM THE WRITE
+//             }
+//             case 2b00: {
+//                  RESET
+//             }
+//             default: { HOLD THE OUTPUT }
+//         }
+//
+//         LATCHmemoryWrite = memoryWrite;
+
+algorithm background_memmap(
+    // Clocks
+    input   uint1   video_clock,
+    input   uint1   video_reset,
+
+    // Pixels
+    input   uint10  pix_x,
+    input   uint10  pix_y,
+    input   uint1   pix_active,
+    input   uint1   pix_vblank,
+    output! uint6   pixel,
+
+    // Memory access
+    input   uint8   memoryAddress,
+    input   uint1   memoryWrite,
+    input   uint16  writeData,
+
+    input   uint2   static2bit
+) <autorun> {
+    uint6   backgroundcolour = uninitialized;
+    uint6   backgroundcolour_alt = uninitialized;
+    uint4   backgroundcolour_mode = uninitialized;
+    uint2   background_update = uninitialized;
+    uint1   copper_status = uninitialized;
+    uint1   copper_program = uninitialized;
+    uint6   copper_address = uninitialized;
+    uint3   copper_command = uninitialized;
+    uint3   copper_condition = uninitialized;
+    uint10  copper_coordinate = uninitialized;
+    uint4   copper_mode = uninitialized;
+    uint6   copper_alt = uninitialized;
+    uint6   copper_colour = uninitialized;
+    background background_generator <@video_clock,!video_reset>  (
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: pix_active,
+        pix_vblank <: pix_vblank,
+        pixel    :> pixel,
+        staticGenerator <: static2bit,
+        backgroundcolour <: backgroundcolour,
+        backgroundcolour_alt <: backgroundcolour_alt,
+        backgroundcolour_mode <: backgroundcolour_mode,
+        background_update <: background_update,
+        copper_status <: copper_status,
+        copper_program <: copper_program,
+        copper_address <: copper_address,
+        copper_command <: copper_command,
+        copper_condition <: copper_condition,
+        copper_coordinate <: copper_coordinate,
+        copper_mode <: copper_mode,
+        copper_alt <: copper_alt,
+        copper_colour <: copper_colour
+    );
+
+    // LATCH MEMORYWRITE
+    uint1   LATCHmemoryWrite = uninitialized;
+
+    always {
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
                 switch( memoryAddress ) {
-                    // BACKGROUND
-                    case 12h000: { background_generator.backgroundcolour = writeData; background_generator.background_update = 1; }
-                    case 12h002: { background_generator.backgroundcolour_alt = writeData; background_generator.background_update = 2; }
-                    case 12h004: { background_generator.backgroundcolour_mode = writeData; background_generator.background_update = 3; }
-                    case 12h010: { background_generator.copper_program = writeData; }
-                    case 12h012: { background_generator.copper_status = writeData; }
-                    case 12h020: { background_generator.copper_address = writeData; }
-                    case 12h022: { background_generator.copper_command = writeData; }
-                    case 12h024: { background_generator.copper_condition = writeData; }
-                    case 12h026: { background_generator.copper_coordinate = writeData; }
-                    case 12h028: { background_generator.copper_mode = writeData; }
-                    case 12h02a: { background_generator.copper_alt = writeData; }
-                    case 12h02c: { background_generator.copper_colour = writeData; }
-
-                    // TILE MAP
-                    case 12h100: { lower_tile_map.tm_x = writeData; }
-                    case 12h102: { lower_tile_map.tm_y = writeData; }
-                    case 12h104: { lower_tile_map.tm_character = writeData; }
-                    case 12h106: { lower_tile_map.tm_background = writeData; }
-                    case 12h108: { lower_tile_map.tm_foreground = writeData; }
-                    case 12h10a: { lower_tile_map.tm_write = 1; }
-                    case 12h110: { lower_tile_map.tile_writer_tile = writeData; }
-                    case 12h112: { lower_tile_map.tile_writer_line = writeData; }
-                    case 12h114: { lower_tile_map.tile_writer_bitmap = writeData; }
-                    case 12h120: { lower_tile_map.tm_scrollwrap = writeData; }
-
-                    case 12h200: { upper_tile_map.tm_x = writeData; }
-                    case 12h202: { upper_tile_map.tm_y = writeData; }
-                    case 12h204: { upper_tile_map.tm_character = writeData; }
-                    case 12h206: { upper_tile_map.tm_background = writeData; }
-                    case 12h208: { upper_tile_map.tm_foreground = writeData; }
-                    case 12h20a: { upper_tile_map.tm_write = 1; }
-                    case 12h210: { upper_tile_map.tile_writer_tile = writeData; }
-                    case 12h212: { upper_tile_map.tile_writer_line = writeData; }
-                    case 12h214: { upper_tile_map.tile_writer_bitmap = writeData; }
-                    case 12h220: { upper_tile_map.tm_scrollwrap = writeData; }
-
-                    // LOWER SPRITE LAYER
-                    $$for i=0,15 do
-                        case $0x300 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_active = writeData; lower_sprites.sprite_layer_write = 1; }
-                        case $0x320 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_double = writeData; lower_sprites.sprite_layer_write = 2; }
-                        case $0x340 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_colour = writeData; lower_sprites.sprite_layer_write = 3; }
-                        case $0x360 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_x = writeData; lower_sprites.sprite_layer_write = 4; }
-                        case $0x380 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_y = writeData; lower_sprites.sprite_layer_write = 5; }
-                        case $0x3a0 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_tile = writeData; lower_sprites.sprite_layer_write = 6; }
-                        case $0x3c0 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_update = writeData; lower_sprites.sprite_layer_write = 7; }
-                    $$end
-
-                    // UPPER SPRITE LAYER
-                    $$for i=0,15 do
-                        case $0x400 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_active = writeData; upper_sprites.sprite_layer_write = 1; }
-                        case $0x420 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_double = writeData; upper_sprites.sprite_layer_write = 2; }
-                        case $0x440 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_colour = writeData; upper_sprites.sprite_layer_write = 3;  }
-                        case $0x460 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_x = writeData; upper_sprites.sprite_layer_write = 4; }
-                        case $0x480 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_y = writeData; upper_sprites.sprite_layer_write = 5; }
-                        case $0x4a0 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_tile = writeData; upper_sprites.sprite_layer_write = 6; }
-                        case $0x4c0 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_update = writeData; upper_sprites.sprite_layer_write = 7; }
-                    $$end
-
-                    // LOWER SPRITE LAYER BITMAP WRITER
-                    case 12h800: { lower_sprites.sprite_writer_sprite = writeData; }
-                    case 12h802: { lower_sprites.sprite_writer_line = writeData; }
-                    case 12h804: { lower_sprites.sprite_writer_bitmap = writeData; lower_sprites.sprite_writer_active = 1; }
-
-                    // UPPER SPRITE LAYER BITMAP WRITER
-                    case 12h810: { upper_sprites.sprite_writer_sprite = writeData; }
-                    case 12h812: { upper_sprites.sprite_writer_line = writeData; }
-                    case 12h814: { upper_sprites.sprite_writer_bitmap = writeData; upper_sprites.sprite_writer_active = 1; }
-
-                    // CHARACTER MAP
-                    case 12h500: { character_map_window.tpu_x = writeData; }
-                    case 12h502: { character_map_window.tpu_y = writeData; }
-                    case 12h504: { character_map_window.tpu_character = writeData; }
-                    case 12h506: { character_map_window.tpu_background = writeData; }
-                    case 12h508: { character_map_window.tpu_foreground = writeData; }
-                    case 12h50a: { character_map_window.tpu_write = writeData; }
-
-                    // GPU and BITMAP
-                    case 12h600: { bitmap_window.gpu_x = writeData; }
-                    case 12h602: { bitmap_window.gpu_y = writeData; }
-                    case 12h604: { bitmap_window.gpu_colour = writeData; }
-                    case 12h606: { bitmap_window.gpu_colour_alt = writeData; }
-                    case 12h608: { bitmap_window.gpu_dithermode = writeData; }
-                    case 12h60a: { bitmap_window.gpu_param0 = writeData; }
-                    case 12h60c: { bitmap_window.gpu_param1 = writeData; }
-                    case 12h60e: { bitmap_window.gpu_param2 = writeData; }
-                    case 12h610: { bitmap_window.gpu_param3 = writeData; }
-                    case 12h612: { bitmap_window.gpu_write = writeData; }
-
-                    case 12h620: { bitmap_window.vector_block_number = writeData; }
-                    case 12h622: { bitmap_window.vector_block_colour = writeData; }
-                    case 12h624: { bitmap_window.vector_block_xc = writeData; }
-                    case 12h826: { bitmap_window.vector_block_yc = writeData; }
-                    case 12h628: { bitmap_window.vector_block_scale = writeData; }
-                    case 12h62a: { bitmap_window.draw_vector = 1; }
-
-                    case 12h630: { bitmap_window.vertices_writer_block = writeData; }
-                    case 12h632: { bitmap_window.vertices_writer_vertex = writeData; }
-                    case 12h634: { bitmap_window.vertices_writer_xdelta = writeData; }
-                    case 12h636: { bitmap_window.vertices_writer_ydelta = writeData; }
-                    case 12h638: { bitmap_window.vertices_writer_active = writeData; }
-
-                    case 12h640: { bitmap_window.blit1_writer_tile = writeData; }
-                    case 12h642: { bitmap_window.blit1_writer_line = writeData; }
-                    case 12h644: { bitmap_window.blit1_writer_bitmap = writeData; }
-
-                    case 12h650: { bitmap_window.character_writer_character = writeData; }
-                    case 12h652: { bitmap_window.character_writer_line = writeData; }
-                    case 12h654: { bitmap_window.character_writer_bitmap = writeData; }
-
-                    case 12h660: { bitmap_window.colourblit_writer_tile = writeData; }
-                    case 12h662: { bitmap_window.colourblit_writer_line = writeData; }
-                    case 12h664: { bitmap_window.colourblit_writer_pixel = writeData; }
-                    case 12h666: { bitmap_window.colourblit_writer_colour = writeData; }
-
-                    case 12h670: { bitmap_window.pb_colour7 = writeData; bitmap_window.pb_newpixel = 1; }
-                    case 12h672: { bitmap_window.pb_colour8r = writeData; }
-                    case 12h674: { bitmap_window.pb_colour8g = writeData; }
-                    case 12h676: { bitmap_window.pb_colour8b = writeData; bitmap_window.pb_newpixel = 2; }
-                    case 12h678: { bitmap_window.pb_newpixel = 3; }
-
-                    case 12h6d0: { bitmap_window.bitmap_x_read = writeData; }
-                    case 12h6d2: { bitmap_window.bitmap_y_read = writeData; }
-
-                    case 12h6e0: { bitmap_window.bitmap_write_offset = writeData; }
-                    case 12h6f0: { bitmap_window.framebuffer = writeData; }
-                    case 12h6f2: { bitmap_window.writer_framebuffer = writeData; }
-
-                    case 12h700: { terminal_window.terminal_character = writeData; terminal_window.terminal_write = 1; }
-                    case 12h702: { terminal_window.showterminal = writeData; }
-
-                    // DISPLAY LAYER ORDERING / FRAMEBUFFER SELECTION
-                    case 12hf00: { display.display_order = writeData; }
-
+                    case 8h00: { backgroundcolour = writeData; background_update = 1; }
+                    case 8h02: { backgroundcolour_alt = writeData; background_update = 2; }
+                    case 8h04: { backgroundcolour_mode = writeData; background_update = 3; }
+                    case 8h10: { copper_program = writeData; }
+                    case 8h12: { copper_status = writeData; }
+                    case 8h20: { copper_address = writeData; }
+                    case 8h22: { copper_command = writeData; }
+                    case 8h24: { copper_condition = writeData; }
+                    case 8h26: { copper_coordinate = writeData; }
+                    case 8h28: { copper_mode = writeData; }
+                    case 8h2a: { copper_alt = writeData; }
+                    case 8h2c: { copper_colour = writeData; }
                     default: {}
                 }
             }
             case 2b00: {
-                // RESET DISPLAY Co-Processor Controls
-                background_generator.background_update = 0;
-                background_generator.copper_program = 0;
-                lower_tile_map.tm_write = 0;
-                lower_tile_map.tm_scrollwrap = 0;
-                upper_tile_map.tm_write = 0;
-                upper_tile_map.tm_scrollwrap = 0;
-                lower_sprites.sprite_layer_write = 0;
-                lower_sprites.sprite_writer_active = 0;
-                upper_sprites.sprite_layer_write = 0;
-                upper_sprites.sprite_writer_active = 0;
-                bitmap_window.bitmap_write_offset = 0;
-                bitmap_window.gpu_write = 0;
-                bitmap_window.pb_newpixel = 0;
-                bitmap_window.draw_vector = 0;
-                character_map_window.tpu_write = 0;
-                terminal_window.terminal_write = 0;
+                background_update = 0;
+                copper_program = 0;
             }
             default: {}
         }
         LATCHmemoryWrite = memoryWrite;
     }
+}
 
-    // HIDE TERMINAL WINDOW
-    terminal_window.showterminal = 0;
+algorithm bitmap_memmap(
+    // Clocks
+    input   uint1   video_clock,
+    input   uint1   video_reset,
+    input   uint1   gpu_clock,
+
+    // Pixels
+    input   uint10  pix_x,
+    input   uint10  pix_y,
+    input   uint1   pix_active,
+    input   uint1   pix_vblank,
+    output! uint6   pixel,
+    output! uint1   pixel_display,
+
+    // Memory access
+    input   uint8   memoryAddress,
+    input   uint1   memoryWrite,
+    input   uint16  writeData,
+
+    input   uint1   static1bit,
+    input   uint6   static6bit,
+
+    output  uint1   gpu_queue_full,
+    output  uint1   gpu_queue_complete,
+    output  uint1   vector_block_active,
+    output  uint7   bitmap_colour_read
+) <autorun> {
+    uint1   framebuffer = uninitialized;
+    uint1   writer_framebuffer = uninitialized;
+    uint3   bitmap_write_offset = uninitialized;
+    int10   bitmap_x_read = uninitialized;
+    int10   bitmap_y_read = uninitialized;
+    int10   gpu_x = uninitialized;
+    int10   gpu_y = uninitialized;
+    uint7   gpu_colour = uninitialized;
+    uint7   gpu_colour_alt = uninitialized;
+    int10   gpu_param0 = uninitialized;
+    int10   gpu_param1 = uninitialized;
+    int10   gpu_param2 = uninitialized;
+    int10   gpu_param3 = uninitialized;
+    uint4   gpu_write = uninitialized;
+    uint4   gpu_dithermode = uninitialized;
+    uint5   blit1_writer_tile = uninitialized;
+    uint4   blit1_writer_line = uninitialized;
+    uint16  blit1_writer_bitmap = uninitialized;
+    uint8   character_writer_character = uninitialized;
+    uint3   character_writer_line = uninitialized;
+    uint8   character_writer_bitmap = uninitialized;
+    uint5   colourblit_writer_tile = uninitialized;
+    uint4   colourblit_writer_line = uninitialized;
+    uint4   colourblit_writer_pixel = uninitialized;
+    uint7   colourblit_writer_colour = uninitialized;
+    uint7   pb_colour7 = uninitialized;
+    uint8   pb_colour8r = uninitialized;
+    uint8   pb_colour8g = uninitialized;
+    uint8   pb_colour8b = uninitialized;
+    uint2   pb_newpixel = uninitialized;
+    uint5   vector_block_number = uninitialized;
+    uint7   vector_block_colour = uninitialized;
+    int10   vector_block_xc = uninitialized;
+    int10   vector_block_yc = uninitialized;
+    uint3   vector_block_scale = uninitialized;
+    uint1   draw_vector = uninitialized;
+    uint5   vertices_writer_block = uninitialized;
+    uint6   vertices_writer_vertex = uninitialized;
+    int6    vertices_writer_xdelta = uninitialized;
+    int6    vertices_writer_ydelta = uninitialized;
+    uint1   vertices_writer_active = uninitialized;
+    bitmap bitmap_window <@video_clock,!video_reset> (
+        gpu_clock <: gpu_clock,
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: pix_active,
+        pix_vblank <: pix_vblank,
+        pixel    :> pixel,
+        bitmap_display :> pixel_display,
+        static1bit <: static1bit,
+        static6bit <: static6bit,
+        gpu_queue_full :> gpu_queue_full,
+        gpu_queue_complete :> gpu_queue_complete,
+        vector_block_active :> vector_block_active,
+        bitmap_colour_read :> bitmap_colour_read,
+        bitmap_write_offset <: bitmap_write_offset,
+        bitmap_x_read <: bitmap_x_read,
+        bitmap_y_read <: bitmap_y_read,
+        gpu_x <: gpu_x,
+        gpu_y <: gpu_y,
+        gpu_colour <: gpu_colour,
+        gpu_colour_alt <: gpu_colour_alt,
+        gpu_param0 <: gpu_param0,
+        gpu_param1 <: gpu_param1,
+        gpu_param2 <: gpu_param2,
+        gpu_param3 <: gpu_param3,
+        gpu_write <: gpu_write,
+        gpu_dithermode <: gpu_dithermode,
+        blit1_writer_tile <: blit1_writer_tile,
+        blit1_writer_line <: blit1_writer_line,
+        blit1_writer_bitmap <: blit1_writer_bitmap,
+        character_writer_character <: character_writer_character,
+        character_writer_line <: character_writer_line,
+        character_writer_bitmap <: character_writer_bitmap,
+        colourblit_writer_tile <: colourblit_writer_tile,
+        colourblit_writer_line <: colourblit_writer_line,
+        colourblit_writer_pixel <: colourblit_writer_pixel,
+        colourblit_writer_colour <: colourblit_writer_colour,
+        pb_colour7 <: pb_colour7,
+        pb_colour8r <: pb_colour8r,
+        pb_colour8g <: pb_colour8g,
+        pb_colour8b <: pb_colour8b,
+        pb_newpixel <: pb_newpixel,
+        vector_block_number <: vector_block_number,
+        vector_block_colour <: vector_block_colour,
+        vector_block_xc <: vector_block_xc,
+        vector_block_yc <: vector_block_yc,
+        vector_block_scale <: vector_block_scale,
+        draw_vector <: draw_vector,
+        vertices_writer_block <: vertices_writer_block,
+        vertices_writer_vertex <: vertices_writer_vertex,
+        vertices_writer_xdelta <: vertices_writer_xdelta,
+        vertices_writer_ydelta <: vertices_writer_ydelta,
+        vertices_writer_active <: vertices_writer_active,
+        framebuffer <: framebuffer,
+        writer_framebuffer <: writer_framebuffer
+   );
+
+    // LATCH MEMORYWRITE
+    uint1   LATCHmemoryWrite = uninitialized;
+
+    always {
+        switch( { memoryWrite, LATCHmemoryWrite } ) {
+            case 2b10: {
+                switch( memoryAddress ) {
+                    case 8h00: { gpu_x = writeData; }
+                    case 8h02: { gpu_y = writeData; }
+                    case 8h04: { gpu_colour = writeData; }
+                    case 8h06: { gpu_colour_alt = writeData; }
+                    case 8h08: { gpu_dithermode = writeData; }
+                    case 8h0a: { gpu_param0 = writeData; }
+                    case 8h0c: { gpu_param1 = writeData; }
+                    case 8h0e: { gpu_param2 = writeData; }
+                    case 8h10: { gpu_param3 = writeData; }
+                    case 8h12: { gpu_write = writeData; }
+
+                    case 8h20: { vector_block_number = writeData; }
+                    case 8h22: { vector_block_colour = writeData; }
+                    case 8h24: { vector_block_xc = writeData; }
+                    case 8h26: { vector_block_yc = writeData; }
+                    case 8h28: { vector_block_scale = writeData; }
+                    case 8h2a: { draw_vector = 1; }
+
+                    case 8h30: { vertices_writer_block = writeData; }
+                    case 8h32: { vertices_writer_vertex = writeData; }
+                    case 8h34: { vertices_writer_xdelta = writeData; }
+                    case 8h36: { vertices_writer_ydelta = writeData; }
+                    case 8h38: { vertices_writer_active = writeData; }
+
+                    case 8h40: { blit1_writer_tile = writeData; }
+                    case 8h42: { blit1_writer_line = writeData; }
+                    case 8h44: { blit1_writer_bitmap = writeData; }
+
+                    case 8h50: { character_writer_character = writeData; }
+                    case 8h52: { character_writer_line = writeData; }
+                    case 8h54: { character_writer_bitmap = writeData; }
+
+                    case 8h60: { colourblit_writer_tile = writeData; }
+                    case 8h62: { colourblit_writer_line = writeData; }
+                    case 8h64: { colourblit_writer_pixel = writeData; }
+                    case 8h66: { colourblit_writer_colour = writeData; }
+
+                    case 8h70: { pb_colour7 = writeData; pb_newpixel = 1; }
+                    case 8h72: { pb_colour8r = writeData; }
+                    case 8h74: { pb_colour8g = writeData; }
+                    case 8h76: { pb_colour8b = writeData; pb_newpixel = 2; }
+                    case 8h78: { pb_newpixel = 3; }
+
+                    case 8hd0: { bitmap_x_read = writeData; }
+                    case 8hd2: { bitmap_y_read = writeData; }
+
+                    case 8he0: { bitmap_write_offset = writeData; }
+                    case 8hf0: { framebuffer = writeData; }
+                    case 8hf2: { writer_framebuffer = writeData; }
+                    default: {}
+                }
+            }
+            case 2b00: {
+                bitmap_write_offset = 0;
+                gpu_write = 0;
+                pb_newpixel = 0;
+                draw_vector = 0;
+            }
+            default: {}
+        }
+        LATCHmemoryWrite = memoryWrite;
+   }
+}
+
+algorithm charactermap_memmap(
+    // Clocks
+    input   uint1   video_clock,
+    input   uint1   video_reset,
+
+    // Pixels
+    input   uint10  pix_x,
+    input   uint10  pix_y,
+    input   uint1   pix_active,
+    input   uint1   pix_vblank,
+    output! uint6   pixel,
+    output! uint1   pixel_display,
+
+    // Memory access
+    input   uint8   memoryAddress,
+    input   uint1   memoryWrite,
+    input   uint16  writeData,
+
+    output  uint2   tpu_active,
+    output  uint8   curses_character,
+    output  uint7   curses_background,
+    output  uint6   curses_foreground
+) <autorun> {
+    uint7   tpu_x = uninitialized;
+    uint5   tpu_y = uninitialized;
+    uint8   tpu_character = uninitialized;
+    uint6   tpu_foreground = uninitialized;
+    uint7   tpu_background = uninitialized;
+    uint3   tpu_write = uninitialized;
+    character_map character_map_window <@video_clock,!video_reset> (
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: pix_active,
+        pix_vblank <: pix_vblank,
+        pixel    :> pixel,
+        character_map_display :> pixel_display,
+        tpu_active :> tpu_active,
+        curses_character :> curses_character,
+        curses_background :> curses_background,
+        curses_foreground :> curses_foreground,
+        tpu_x <: tpu_x,
+        tpu_y <: tpu_y,
+        tpu_character <: tpu_character,
+        tpu_foreground <: tpu_foreground,
+        tpu_background <: tpu_background,
+        tpu_write <: tpu_write
+    );
+
+    // LATCH MEMORYWRITE
+    uint1   LATCHmemoryWrite = uninitialized;
+
+    always {
+        switch( { memoryWrite, LATCHmemoryWrite } ) {
+            case 2b10: {
+                switch( memoryAddress ) {
+                    case 8h00: { tpu_x = writeData; }
+                    case 8h02: { tpu_y = writeData; }
+                    case 8h04: { tpu_character = writeData; }
+                    case 8h06: { tpu_background = writeData; }
+                    case 8h08: { tpu_foreground = writeData; }
+                    case 8h0a: { tpu_write = writeData; }
+                    default: {}
+                }
+            }
+            case 2b00: {
+                tpu_write = 0;
+            }
+            default: {}
+        }
+        LATCHmemoryWrite = memoryWrite;
+    }
+}
+
+algorithm sprite_memmap(
+    // Clocks
+    input   uint1   video_clock,
+    input   uint1   video_reset,
+
+    // Pixels
+    input   uint10  pix_x,
+    input   uint10  pix_y,
+    input   uint1   pix_active,
+    input   uint1   pix_vblank,
+    output! uint6   pixel,
+    output! uint1   pixel_display,
+
+    // Memory access
+    input   uint1   bitmapwriter,
+    input   uint8   memoryAddress,
+    input   uint1   memoryWrite,
+    input   uint16  writeData,
+
+    input   uint1   collision_layer_1,
+    input   uint1   collision_layer_2,
+    input   uint1   collision_layer_3,
+    input   uint1   collision_layer_4,
+
+    // For reading sprite characteristics
+    $$for i=0,15 do
+        output  uint1   sprite_read_active_$i$,
+        output  uint3   sprite_read_double_$i$,
+        output  uint6   sprite_read_colour_$i$,
+        output  int16   sprite_read_x_$i$,
+        output  int16   sprite_read_y_$i$,
+        output  uint3   sprite_read_tile_$i$,
+        output uint16   collision_$i$,
+        output uint4    layer_collision_$i$,
+    $$end
+) <autorun> {
+    uint4   sprite_set_number = uninitialized;
+    uint1   sprite_set_active = uninitialized;
+    uint3   sprite_set_double = uninitialized;
+    uint6   sprite_set_colour = uninitialized;
+    int11   sprite_set_x = uninitialized;
+    int11   sprite_set_y = uninitialized;
+    uint3   sprite_set_tile = uninitialized;
+    uint3   sprite_layer_write = uninitialized;
+    uint13  sprite_update = uninitialized;
+    uint4   sprite_writer_sprite = uninitialized;
+    uint7   sprite_writer_line = uninitialized;
+    uint16  sprite_writer_bitmap = uninitialized;
+    uint1   sprite_writer_active = uninitialized;
+    sprite_layer sprites <@video_clock,!video_reset> (
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: pix_active,
+        pix_vblank <: pix_vblank,
+        pixel    :> pixel,
+        sprite_layer_display :> pixel_display,
+        collision_layer_1 <: collision_layer_1,
+        collision_layer_2 <: collision_layer_2,
+        collision_layer_3 <: collision_layer_3,
+        collision_layer_4 <: collision_layer_4,
+        $$for i=0,15 do
+            sprite_read_active_$i$ :> sprite_read_active_$i$,
+            sprite_read_double_$i$ :> sprite_read_double_$i$,
+            sprite_read_colour_$i$ :> sprite_read_colour_$i$,
+            sprite_read_x_$i$ :> sprite_read_x_$i$,
+            sprite_read_y_$i$ :> sprite_read_y_$i$,
+            sprite_read_tile_$i$ :> sprite_read_tile_$i$,
+            collision_$i$ :> collision_$i$,
+            layer_collision_$i$ :> layer_collision_$i$,
+        $$end
+        sprite_set_number  <: sprite_set_number,
+        sprite_set_active  <: sprite_set_active,
+        sprite_set_double  <: sprite_set_double,
+        sprite_set_colour  <: sprite_set_colour,
+        sprite_set_x  <: sprite_set_x,
+        sprite_set_y  <: sprite_set_y,
+        sprite_set_tile  <: sprite_set_tile,
+        sprite_layer_write  <: sprite_layer_write,
+        sprite_update  <: sprite_update,
+        sprite_writer_sprite  <: sprite_writer_sprite,
+        sprite_writer_line  <: sprite_writer_line,
+        sprite_writer_bitmap  <: sprite_writer_bitmap,
+        sprite_writer_active  <: sprite_writer_active
+    );
+
+    // LATCH MEMORYWRITE
+    uint1   LATCHmemoryWrite = uninitialized;
+
+    always {
+        switch( { memoryWrite, LATCHmemoryWrite } ) {
+            case 2b10: {
+                switch( { bitmapwriter, memoryAddress } ) {
+                    $$for i=0,15 do
+                        case $0x00 + i*2$: { sprite_set_number = $i$; sprite_set_active = writeData; sprite_layer_write = 1; }
+                        case $0x20 + i*2$: { sprite_set_number = $i$; sprite_set_double = writeData; sprite_layer_write = 2; }
+                        case $0x40 + i*2$: { sprite_set_number = $i$; sprite_set_colour = writeData; sprite_layer_write = 3; }
+                        case $0x60 + i*2$: { sprite_set_number = $i$; sprite_set_x = writeData; sprite_layer_write = 4; }
+                        case $0x80 + i*2$: { sprite_set_number = $i$; sprite_set_y = writeData; sprite_layer_write = 5; }
+                        case $0xa0 + i*2$: { sprite_set_number = $i$; sprite_set_tile = writeData; sprite_layer_write = 6; }
+                        case $0xc0 + i*2$: { sprite_set_number = $i$; sprite_update = writeData; sprite_layer_write = 7; }
+                    $$end
+                    case 9h100: { sprite_writer_sprite = writeData; }
+                    case 9h102: { sprite_writer_line = writeData; }
+                    case 9h104: { sprite_writer_bitmap = writeData; sprite_writer_active = 1; }
+                    default: {}
+                }
+            }
+            case 2b00: {
+                sprite_layer_write = 0;
+                sprite_writer_active = 0;
+            }
+            default: {}
+        }
+        LATCHmemoryWrite = memoryWrite;
+    }
+}
+
+algorithm terminal_memmap(
+    // Clocks
+    input   uint1   video_clock,
+    input   uint1   video_reset,
+
+    // Pixels
+    input   uint10  pix_x,
+    input   uint10  pix_y,
+    input   uint1   pix_active,
+    input   uint1   pix_vblank,
+    output! uint6   pixel,
+    output! uint1   pixel_display,
+
+    // Memory access
+    input   uint8   memoryAddress,
+    input   uint1   memoryWrite,
+    input   uint16  writeData,
+
+    output  uint2   terminal_active
+) <autorun> {
+    uint8   terminal_character = uninitialized;
+    uint2   terminal_write = uninitialized;
+    uint1   showterminal = 0;
+    terminal terminal_window <@video_clock,!video_reset> (
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: pix_active,
+        pix_vblank <: pix_vblank,
+        pixel    :> pixel,
+        terminal_display :> pixel_display,
+        terminal_active :> terminal_active,
+        terminal_character <: terminal_character,
+        terminal_write <: terminal_write,
+        showterminal <: showterminal
+    );
+
+    // LATCH MEMORYWRITE
+    uint1   LATCHmemoryWrite = uninitialized;
+
+    always {
+        switch( { memoryWrite, LATCHmemoryWrite } ) {
+            case 2b10: {
+                switch( memoryAddress ) {
+                    case 8h00: { terminal_character = writeData; terminal_write = 1; }
+                    case 8h02: { showterminal = writeData; }
+                    default: {}
+                }
+            }
+            case 2b00: {
+                terminal_write = 0;
+            }
+            default: {}
+        }
+        LATCHmemoryWrite = memoryWrite;
+    }
+}
+
+algorithm tilemap_memmap(
+    // Clocks
+    input   uint1   video_clock,
+    input   uint1   video_reset,
+
+    // Pixels
+    input   uint10  pix_x,
+    input   uint10  pix_y,
+    input   uint1   pix_active,
+    input   uint1   pix_vblank,
+    output! uint6   pixel,
+    output! uint1   pixel_display,
+
+    // Memory access
+    input   uint8   memoryAddress,
+    input   uint1   memoryWrite,
+    input   uint16  writeData,
+    output  uint4   tm_lastaction,
+    output  uint2   tm_active
+) <autorun> {
+    uint6   tm_x = uninitialized;
+    uint6   tm_y = uninitialized;
+    uint6   tm_character = uninitialized;
+    uint6   tm_foreground = uninitialized;
+    uint7   tm_background = uninitialized;
+    uint1   tm_write = uninitialized;
+    uint6   tile_writer_tile = uninitialized;
+    uint4   tile_writer_line = uninitialized;
+    uint16  tile_writer_bitmap = uninitialized;
+    uint4   tm_scrollwrap = uninitialized;
+    tilemap tile_map <@video_clock,!video_reset> (
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: pix_active,
+        pix_vblank <: pix_vblank,
+        pixel    :> pixel,
+        tilemap_display :> pixel_display,
+        tm_lastaction :> tm_lastaction,
+        tm_active :> tm_active,
+        tm_x <: tm_x,
+        tm_y <: tm_y,
+        tm_character <: tm_character,
+        tm_foreground <: tm_foreground,
+        tm_background <: tm_background,
+        tm_write <: tm_write,
+        tile_writer_tile <: tile_writer_tile,
+        tile_writer_line <: tile_writer_line,
+        tile_writer_bitmap <: tile_writer_bitmap,
+        tm_scrollwrap <: tm_scrollwrap
+    );
+
+     // LATCH MEMORYWRITE
+    uint1   LATCHmemoryWrite = uninitialized;
+
+    always {
+        switch( { memoryWrite, LATCHmemoryWrite } ) {
+            case 2b10: {
+                switch( memoryAddress ) {
+                    case 8h00: { tm_x = writeData; }
+                    case 8h02: { tm_y = writeData; }
+                    case 8h04: { tm_character = writeData; }
+                    case 8h06: { tm_background = writeData; }
+                    case 8h08: { tm_foreground = writeData; }
+                    case 8h0a: { tm_write = 1; }
+                    case 8h10: { tile_writer_tile = writeData; }
+                    case 8h12: { tile_writer_line = writeData; }
+                    case 8h14: { tile_writer_bitmap = writeData; }
+                    case 8h20: { tm_scrollwrap = writeData; }
+                    default: {}
+                }
+            }
+            case 2b00: {
+                tm_write = 0;
+                tm_scrollwrap = 0;
+            }
+            default: {}
+        }
+        LATCHmemoryWrite = memoryWrite;
+    }
 }

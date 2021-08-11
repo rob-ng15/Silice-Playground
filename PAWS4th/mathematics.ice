@@ -174,10 +174,8 @@ algorithm multi16by16to32DSP(
 
 // Basic double arithmetic for j1eforth
 algorithm doubleops(
-    input   uint16  operand1h,
-    input   uint16  operand1l,
-    input   uint16  operand2h,
-    input   uint16  operand2l,
+    input   int32   operand1,
+    input   int32   operand2,
 
     output  int32   total,
     output  int32   difference,
@@ -198,8 +196,6 @@ algorithm doubleops(
     output  int16   zeroequal,
     output  int16   zeroless
 ) <autorun> {
-    int32  operand1 := { operand1h, operand1l };
-    int32  operand2 := { operand2h, operand2l };
     int32  operand1negative := -operand1;
 
     total := operand1 + operand2;
@@ -239,38 +235,63 @@ algorithm floatops(
     input   uint3   start,
     output  uint1   busy
 ) <autorun> {
-    inttofloat ITOF( a <: a, result :> itof );
-    floattoint FTOI( a <: a, result :> ftoi );
-    floataddsub FADD( a <: a, b <: b, result :> fadd );
-    floataddsub FSUB( a <: a, b <: b, result :> fsub );
-    floatmultiply FMUL( a <: a, b <: b, result :> fmul );
-    floatdivide FDIV( a <: a, b <: b, result :> fdiv );
-    floatsqrt FSQRT( a <: a, result :> fsqrt );
-    floatcompare FCOMPARE( a <: a, b <: b );
+    uint1   ZERO = 0;
+    uint1   ONE = 1;
 
-    busy := ITOF.busy | FTOI.busy | FADD.busy | FSUB.busy | FMUL.busy | FDIV.busy | FSQRT.busy;
+    uint1   ITOFstart = uninitialised;
+    uint1   ITOFbusy = uninitialised;
+    inttofloat ITOF( a <: a, result :> itof, dounsigned <: ZERO, start <: ITOFstart, busy :> ITOFbusy );
 
-    less := { {16{FCOMPARE.less}} };
-    lessequal := { {16{FCOMPARE.less | FCOMPARE.equal}} };
-    equal := { {16{FCOMPARE.equal}} };
+    uint1   FTOIstart = uninitialised;
+    uint1   FTOIbusy = uninitialised;
+    floattoint FTOI( a <: a, result :> ftoi, start <: FTOIstart, busy :> FTOIbusy );
 
-    ITOF.start := 0; FTOI.start := 0;
-    FADD.start := 0; FSUB.start := 0;
-    FMUL.start := 0; FDIV.start := 0;
-    FSQRT.start := 0;
+    uint1   FADDstart = uninitialised;
+    uint1   FADDbusy = uninitialised;
+    floataddsub FADD( a <: a, b <: b, result :> fadd, addsub <: ZERO, start <: FADDstart, busy :> FADDbusy );
+
+
+    uint1   FSUBstart = uninitialised;
+    uint1   FSUBbusy = uninitialised;
+    floataddsub FSUB( a <: a, b <: b, result :> fsub, addsub <: ONE, start <: FSUBstart, busy :> FSUBbusy );
+
+    uint1   FMULstart = uninitialised;
+    uint1   FMULbusy = uninitialised;
+    floatmultiply FMUL( a <: a, b <: b, result :> fmul, start <: FMULstart, busy :> FMULbusy );
+
+    uint1   FDIVstart = uninitialised;
+    uint1   FDIVbusy = uninitialised;
+    floatdivide FDIV( a <: a, b <: b, result :> fdiv, start <: FDIVstart, busy :> FDIVbusy );
+
+    uint1   FSQRTstart = uninitialised;
+    uint1   FSQRTbusy = uninitialised;
+    floatsqrt FSQRT( a <: a, result :> fsqrt, start <: FSQRTstart, busy :> FSQRTbusy );
+
+    uint1   FCOMPAREless = uninitialised;
+    uint1   FCOMPAREequal = uninitialised;
+    floatcompare FCOMPARE( a <: a, b <: b, less :> FCOMPAREless, equal :> FCOMPAREequal );
+
+    busy := ITOFbusy | FTOIbusy | FADDbusy | FSUBbusy | FMULbusy | FDIVbusy | FSQRTbusy;
+
+    less := { {16{FCOMPAREless}} };
+    lessequal := { {16{FCOMPAREless | FCOMPAREequal}} };
+    equal := { {16{FCOMPAREequal}} };
+
+    ITOFstart := 0; FTOIstart := 0;
+    FADDstart := 0; FSUBstart := 0;
+    FMULstart := 0; FDIVstart := 0;
+    FSQRTstart := 0;
 
     always {
         switch( start ) {
             default: {}
-            case 1: { ITOF.start = 1; }
-            case 2: { FTOI.start = 1; }
-            case 3: { FADD.start = 1; }
-            case 4: { FSUB.start = 1; }
-            case 5: { FMUL.start = 1; }
-            case 6: { FDIV.start = 1; }
-            case 7: { FSQRT.start = 1; }
+            case 1: { ITOFstart = 1; }
+            case 2: { FTOIstart = 1; }
+            case 3: { FADDstart = 1; }
+            case 4: { FSUBstart = 1; }
+            case 5: { FMULstart = 1; }
+            case 6: { FDIVstart = 1; }
+            case 7: { FSQRTstart = 1; }
         }
     }
-
-    ITOF.dounsigned = 0; FADD.addsub = 0; FSUB.addsub = 1;
 }

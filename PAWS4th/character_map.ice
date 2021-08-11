@@ -20,11 +20,11 @@ algorithm character_map(
 ) <autorun> {
     // 80 x 30 character buffer
     // Setting background to 40 (ALPHA) allows the bitmap/background to show through
-    simple_dualport_bram uint8 charactermap <input!> [2400] = uninitialized;
-    simple_dualport_bram uint13 colourmap <input!> [2400] = uninitialized;
+    simple_dualport_bram uint8 charactermap[2400] = uninitialized;
+    simple_dualport_bram uint13 colourmap[2400] = uninitialized;
 
     // Character ROM 8x16
-    brom uint8 characterGenerator8x16 <input!> [] = {
+    brom uint8 characterGenerator8x16[] = {
         $include('ROM/characterROM8x16.inc')
     };
 
@@ -32,7 +32,6 @@ algorithm character_map(
     character_map_writer CMW(
         charactermap <:> charactermap,
         colourmap <:> colourmap,
-
         tpu_x <: tpu_x,
         tpu_y <: tpu_y,
         tpu_character <: tpu_character,
@@ -87,7 +86,7 @@ algorithm character_map_writer(
     output  uint6   curses_foreground
 ) <autorun> {
     // COPY OF CHARCTER MAP FOR THE CURSES BUFFER
-    simple_dualport_bram uint21 charactermap_copy <input!> [2400] = uninitialized;
+    simple_dualport_bram uint21 charactermap_copy[2400] = uninitialized;
 
     // Counter for clearscreen
     uint12  tpu_write_addr <: tpu_active_x + tpu_active_y * 80;
@@ -135,47 +134,23 @@ algorithm character_map_writer(
                             default: { tpu_active_x = tpu_active_x + 1; }
                         }
                     }
-                    case 3: {
-                        // Start tpucs
-                        tpu_active_x = 0;
-                        tpu_active_y = 0;
-                        tpu_active = 1;
-                        tpu_cs_addr = 0;
-                        tpu_max_count = 2400;
-                    }
-                    case 4: {
-                        // Start tpu_clearline
-                        tpu_active_x = 0;
-                        tpu_active_y = tpu_y;
-                        tpu_active = 1;
-                        tpu_cs_addr = tpu_y * 80;
-                        tpu_max_count = tpu_y * 80 + 80;
-                    }
+                    case 3: { tpu_active_x = 0; tpu_active_y = 0; tpu_active = 1; tpu_cs_addr = 0; tpu_max_count = 2400; } // Start tpucs
+                    case 4: { tpu_active_x = 0; tpu_active_y = tpu_y; tpu_active = 1; tpu_cs_addr = tpu_y * 80; tpu_max_count = tpu_y * 80 + 80; } // Start tpu_clearline
                     case 5: {
                         // Write character, foreground, background to current cursor position in the curses buffer
                         charactermap_copy.addr1 = tpu_write_addr;
                         charactermap_copy.wdata1 = { tpu_background, tpu_foreground, tpu_character };
                     }
-                    case 6: {
-                        // Start curses wipe
-                        tpu_active = 2;
-                        tpu_cs_addr = 0;
-                    }
-                    case 7: {
-                        // Start curses copy
-                        tpu_active = 3;
-                        tpu_cs_addr = 0;
-                    }
+                    case 6: { tpu_active = 2; tpu_cs_addr = 0; } // Start curses wipe
+                    case 7: { tpu_active = 3; tpu_cs_addr = 0; } // Start curses copy
                 }
             }
 
-            // TPU WIPE - WHOLE OR PARTIAL SCREEN
+            // TPU WIPE - WHOLE OR PARTIAL SCREEN (LINE)
             case 1: {
                 while( tpu_cs_addr != tpu_max_count ) {
-                    charactermap.addr1 = tpu_cs_addr;
-                    charactermap.wdata1 = 0;
-                    colourmap.addr1 = tpu_cs_addr;
-                    colourmap.wdata1 = { 1b1, 6b0, 6b0 };
+                    charactermap.addr1 = tpu_cs_addr; charactermap.wdata1 = 0;
+                    colourmap.addr1 = tpu_cs_addr; colourmap.wdata1 = { 1b1, 6b0, 6b0 };
                     tpu_cs_addr = tpu_cs_addr + 1;
                 }
                 tpu_active = 0;
@@ -183,8 +158,7 @@ algorithm character_map_writer(
             // CURSES WIPE
             case 2: {
                 while( tpu_cs_addr != 2400 ) {
-                    charactermap_copy.addr1 = tpu_cs_addr;
-                    charactermap_copy.wdata1 = 21b100000000000000000000;
+                    charactermap_copy.addr1 = tpu_cs_addr; charactermap_copy.wdata1 = 21b100000000000000000000;
                     tpu_cs_addr = tpu_cs_addr + 1;
                 }
                 tpu_active = 0;
@@ -192,15 +166,11 @@ algorithm character_map_writer(
             // CURSES COPY
             case 3: {
                 while( tpu_cs_addr != 2400 ) {
-                    //while( FSM != 0 ) {
-                        charactermap_copy.addr0 = tpu_cs_addr;
-                        ++:
-                        charactermap.addr1 = tpu_cs_addr;
-                        charactermap.wdata1 = charactermap_copy.rdata0[0,8];
-                        colourmap.addr1 = tpu_cs_addr;
-                        colourmap.wdata1 = { charactermap_copy.rdata0[14,7], charactermap_copy.rdata0[8,6] };
-                        tpu_cs_addr = tpu_cs_addr + 1;
-                    //}
+                    charactermap_copy.addr0 = tpu_cs_addr;
+                    ++:
+                    charactermap.addr1 = tpu_cs_addr; charactermap.wdata1 = charactermap_copy.rdata0[0,8];
+                    colourmap.addr1 = tpu_cs_addr; colourmap.wdata1 = { charactermap_copy.rdata0[14,7], charactermap_copy.rdata0[8,6] };
+                    tpu_cs_addr = tpu_cs_addr + 1;
                 }
                 tpu_active = 0;
             }
