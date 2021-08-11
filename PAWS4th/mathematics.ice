@@ -242,9 +242,7 @@ algorithm floatops(
     uint1   ITOFbusy = uninitialised;
     inttofloat ITOF( a <: a, result :> itof, dounsigned <: ZERO, start <: ITOFstart, busy :> ITOFbusy );
 
-    uint1   FTOIstart = uninitialised;
-    uint1   FTOIbusy = uninitialised;
-    floattoint FTOI( a <: a, result :> ftoi, start <: FTOIstart, busy :> FTOIbusy );
+    floattoint FTOI( a <: a, result :> ftoi );
 
     uint1   FADDstart = uninitialised;
     uint1   FADDbusy = uninitialised;
@@ -271,22 +269,18 @@ algorithm floatops(
     uint1   FCOMPAREequal = uninitialised;
     floatcompare FCOMPARE( a <: a, b <: b, less :> FCOMPAREless, equal :> FCOMPAREequal );
 
-    busy := ITOFbusy | FTOIbusy | FADDbusy | FSUBbusy | FMULbusy | FDIVbusy | FSQRTbusy;
+    busy := ITOFbusy | FADDbusy | FSUBbusy | FMULbusy | FDIVbusy | FSQRTbusy;
 
     less := { {16{FCOMPAREless}} };
     lessequal := { {16{FCOMPAREless | FCOMPAREequal}} };
     equal := { {16{FCOMPAREequal}} };
 
-    ITOFstart := 0; FTOIstart := 0;
-    FADDstart := 0; FSUBstart := 0;
-    FMULstart := 0; FDIVstart := 0;
-    FSQRTstart := 0;
+    ITOFstart := 0; FADDstart := 0; FSUBstart := 0; FMULstart := 0; FDIVstart := 0; FSQRTstart := 0;
 
     always {
         switch( start ) {
             default: {}
             case 1: { ITOFstart = 1; }
-            case 2: { FTOIstart = 1; }
             case 3: { FADDstart = 1; }
             case 4: { FSUBstart = 1; }
             case 5: { FMULstart = 1; }

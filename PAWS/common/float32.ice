@@ -77,7 +77,7 @@ algorithm donormalise48(
 }
 
 // EXTRACT 23 BIT FRACTION FROM LEFT ALIGNED 48 BIT FRACTION WITH ROUNDING
-// ADJUST EXPONENT IF ROUNDING FORCES
+// ADD BIAS TO EXPONENT AND ADJUST EXPONENT IF ROUNDING FORCES
 algorithm doround48(
     input   uint48  bitstream,
     input   int10   exponent,
@@ -447,9 +447,7 @@ algorithm floatmultiply(
     // BREAK DOWN INITIAL float32 INPUTS AND FIND SIGN OF RESULT AND EXPONENT OF PRODUCT ( + 1 IF PRODUCT OVERFLOWS, MSB == 1 )
     uint1   productsign <: floatingpointnumber( a ).sign ^ floatingpointnumber( b ).sign;
     int10   productexp <: (floatingpointnumber( a ).exponent - 127) + (floatingpointnumber( b ).exponent - 127) + product[47,1];
-    int10   expA <: floatingpointnumber( a ).exponent - 127;
     uint24  sigA <: { 1b1, floatingpointnumber( a ).fraction };
-    int10   expB <: floatingpointnumber( b ).exponent - 127;
     uint24  sigB <: { 1b1, floatingpointnumber( b ).fraction };
 
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND INVALID ( INF x ZERO )
@@ -573,7 +571,7 @@ algorithm dofloatdivide(
 ) <autorun> {
     uint50  remainder <: start ? 0 : newremainder;
     uint50  newquotient = uninitialised;
-    uint59  newremainder = uninitialised;
+    uint50  newremainder = uninitialised;
     dofloatdivbit DIVBIT(
         quotient <: quotient,
         remainder <: remainder,
@@ -702,7 +700,7 @@ algorithm floatdivide(
 }
 
 // ADAPTED FROM https://projectf.io/posts/square-root-in-verilog/
-algorithm dofloatsqrtbitt(
+algorithm dofloatsqrtbit(
     input   uint50  ac,
     input   uint48  x,
     input   uint48  q,
@@ -730,7 +728,7 @@ algorithm dofloatsqrt(
     uint50  newac = uninitialised;
     uint48  newq = uninitialised;
     uint48  newx = uninitialised;
-    dofloatsqrtbitt SQRTBIT( ac <: ac, x <: x, q <: q, newac :> newac, newx :> newx, newq :> newq );
+    dofloatsqrtbit SQRTBIT( ac <: ac, x <: x, q <: q, newac :> newac, newx :> newx, newq :> newq );
 
     uint6   i(47);
     busy := start | ( i != 47 );
