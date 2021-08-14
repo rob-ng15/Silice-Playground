@@ -71,15 +71,14 @@ algorithm terminal_writer(
     simple_dualport_bram uint8 terminal_copy[640] = uninitialized;
 
     // Terminal active (scroll) flag and temporary storage for scrolling
-    uint10 terminal_scroll = 0;
+    uint10  terminal_scroll = 0;
+    uint1   scrolling <: ( terminal_scroll < 560 );
 
     // Setup the writing to the terminal memory
-    terminal.wenable1 := 1;
-    terminal_copy.wenable1 := 1;
+    terminal.wenable1 := 1; terminal_copy.wenable1 := 1;
 
     // Initial cursor position in the terminal, bottom left
-    terminal_x = 0;
-    terminal_y = 7;
+    terminal_x = 0; terminal_y = 7;
 
     while(1) {
         switch( terminal_active ) {
@@ -93,10 +92,8 @@ algorithm terminal_writer(
                                 switch( terminal_x ) {
                                     default: {
                                         terminal_x = terminal_x - 1;
-                                        terminal.addr1 = terminal_x + terminal_y * 80;
-                                        terminal.wdata1 = 0;
-                                        terminal_copy.addr1 = terminal_x + terminal_y * 80;
-                                        terminal_copy.wdata1 = 0;
+                                        terminal.addr1 = terminal_x + terminal_y * 80; terminal.wdata1 = 0;
+                                        terminal_copy.addr1 = terminal_x + terminal_y * 80; terminal_copy.wdata1 = 0;
                                     }
                                     case 0: {}
                                 }
@@ -105,10 +102,8 @@ algorithm terminal_writer(
                             case 13: { terminal_x = 0; } // CARRIAGE RETURN, return to left
                             default: {
                                 // Display character
-                                terminal.addr1 = terminal_x + terminal_y * 80;
-                                terminal.wdata1 = terminal_character;
-                                terminal_copy.addr1 = terminal_x + terminal_y * 80;
-                                terminal_copy.wdata1 = terminal_character;
+                                terminal.addr1 = terminal_x + terminal_y * 80; terminal.wdata1 = terminal_character;
+                                terminal_copy.addr1 = terminal_x + terminal_y * 80; terminal_copy.wdata1 = terminal_character;
                                 terminal_active = ( terminal_x == 79 );
                                 terminal_x = ( terminal_x == 79 ) ? 0 : terminal_x + 1;
                             }
@@ -120,72 +115,30 @@ algorithm terminal_writer(
 
             }
             case 1: {
-                // SCROLL
-                //FSM = 1;
-                //while( FSM != 0 ) {
-                    //onehot( FSM ) {
-                        //case 0: {
-                            terminal_scroll = 0;
-                        //}
-                        //case 1: {
-                            ++:
-                            while( terminal_scroll != 560 ) {
-                                //FSM2 = 1;
-                                //while( FSM2 != 0 ) {
-                                    //onehot( FSM2 ) {
-                                        //case 0: {
-                                            terminal_copy.addr0 = terminal_scroll + 80;
-                                            ++:
-                                        //}
-                                        //case 1: {
-                                            terminal.addr1 = terminal_scroll;
-                                            terminal.wdata1 = terminal_copy.rdata0;
-                                            terminal_copy.addr1 = terminal_scroll;
-                                            terminal_copy.wdata1 = terminal_copy.rdata0;
-                                            terminal_scroll = terminal_scroll + 1;
-                                        //}
-                                    //}
-                                    //FSM2 = { FSM2[0,1], 1b0 };
-                                //}
-                            }
-                        //}
-                        //case 2: {
-                            ++:
-                            // BLANK LAST LINE
-                            while( terminal_scroll != 640 ) {
-                                terminal.addr1 = terminal_scroll;
-                                terminal.wdata1 = 0;
-                                terminal_copy.addr1 = terminal_scroll;
-                                terminal_copy.wdata1 = 0;
-                                terminal_scroll = terminal_scroll + 1;
-                            }
-                        //}
-                    //}
-                    //FSM = { FSM[0,2], 1b0 };
-                //}
+                terminal_scroll = 0;
+                ++:
+                // SCROLL AND BLANK LAST LINE
+                while( terminal_scroll != 640 ) {
+                    terminal_copy.addr0 = terminal_scroll + 80;
+                    ++:
+                    terminal.addr1 = terminal_scroll;
+                    terminal.wdata1 = scrolling ? terminal_copy.rdata0 : 0;
+                    terminal_copy.addr1 = terminal_scroll;
+                    terminal_copy.wdata1 = scrolling ? terminal_copy.rdata0 : 0;
+                    terminal_scroll = terminal_scroll + 1;
+                }
                 terminal_active = 0;
             }
             case 2: {
-                // RESET
-                //FSM2 = 1;
-                //while( FSM2 != 0 ) {
-                    //onehot( FSM2 ) {
-                        //case 0: {
-                            terminal_scroll = 0;
-                        //}
-                        //case 1: {
-                            ++:
-                            while( terminal_scroll != 640 ) {
-                                terminal.addr1 = terminal_scroll;
-                                terminal.wdata1 = 0;
-                                terminal_copy.addr1 = terminal_scroll;
-                                terminal_copy.wdata1 = 0;
-                                terminal_scroll = terminal_scroll + 1;
-                            }
-                        //}
-                    //}
-                    //FSM2 = { FSM2[0,1], 1b0 };
-                //}
+                terminal_scroll = 0;
+                ++:
+                while( terminal_scroll != 640 ) {
+                    terminal.addr1 = terminal_scroll;
+                    terminal.wdata1 = 0;
+                    terminal_copy.addr1 = terminal_scroll;
+                    terminal_copy.wdata1 = 0;
+                    terminal_scroll = terminal_scroll + 1;
+                }
                 terminal_x = 0;
                 terminal_y = 7;
                 terminal_active = 0;

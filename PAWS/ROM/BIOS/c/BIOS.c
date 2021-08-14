@@ -203,6 +203,11 @@ void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2,
     *GPU_WRITE = 6;
 }
 
+// STOP PIXEL BLOCK - SENT DURING RESET TO ENSURE GPU RESETS
+void gpu_pixelblock_stop( void ) {
+    *PB_STOP = 3;
+}
+
 // CHARACTER MAP FUNCTIONS
 // The character map is an 80 x 30 character window with a 256 character 8 x 16 pixel character generator ROM )
 // NO SCROLLING, CURSOR WRAPS TO THE TOP OF THE SCREEN
@@ -427,6 +432,7 @@ void draw_sdcard( void  ) {
 }
 
 void reset_display( void ) {
+    gpu_pixelblock_stop();
     *GPU_DITHERMODE = 0;
     *FRAMEBUFFER_DRAW = 1; gpu_cs(); while( !*GPU_FINISHED );
     *FRAMEBUFFER_DRAW = 0; gpu_cs(); while( !*GPU_FINISHED );

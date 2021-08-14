@@ -299,7 +299,7 @@ algorithm bramcontroller(
     output  uint16  readdata
 ) <autorun> {
     // RISC-V RAM and BIOS
-    bram uint16 ram <input!> [24576] = {
+    bram uint16 ram[24576] = {
         $include('ROM/j1eforthROM.inc')
         , pad(uninitialized)
     };

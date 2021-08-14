@@ -911,6 +911,7 @@ t: cold ( -- )
    =uzero literal =up literal =udiff literal cmove
    preset forth-wordlist dup context ! dup current 2! overt
    4000 literal cell+ dup cell- @ $eval
+   3 literal c678 literal ! ( pixel block stop )
    0 literal c004 literal ! 0 literal c002 literal ! 0 literal c000 literal ! ( background reset )
    0 literal cf00 literal ! ( display order reset )
    0 literal c6f2 literal ! 0 literal c6f0 literal ! ( framebuffer reset )
@@ -921,6 +922,7 @@ t: cold ( -- )
    9 literal c120 literal ! ( tmlcs )
    9 literal c130 literal ! ( tmucs )
    3 literal c50a literal ! ( tcs )
+   1 literal c702 literal ! ( show terminal )
    'boot @execute
    quit
    cold t;

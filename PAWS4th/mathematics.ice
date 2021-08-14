@@ -18,9 +18,58 @@ circuitry divbit( inout quo, inout rem, input top, input bottom, input x ) {
 }
 $$end
 
+// PERFORM 32bit/32bit UNSIGNED
+algorithm dointdivbit(
+    input   uint32  quotient,
+    input   uint32  remainder,
+    input   uint32  top,
+    input   uint32  bottom,
+    input   uint6   bit,
+    output  uint32  newquotient,
+    output  uint32  newremainder,
+ ) <autorun> {
+    uint32  temporary = uninitialized;
+    uint1   bitresult = uninitialised;
+    always {
+        temporary = { remainder[0,31], top[bit,1] };
+        bitresult = __unsigned(temporary) >= __unsigned(bottom);
+        newremainder = __unsigned(temporary) - ( bitresult ? __unsigned(bottom) : 0 );
+        newquotient = quotient | ( bitresult << bit );
+    }
+}
+algorithm douintdivide(
+    input   uint1   start,
+    output  uint1   busy(0),
+    input   uint32  dividend,
+    input   uint32  divisor,
+    output  uint32  quotient,
+    output  uint32  remainder
+) <autorun> {
+    uint32  newquotient = uninitialised;
+    uint32  newremainder = uninitialised;
+    dointdivbit DIVBIT(
+        quotient <: quotient,
+        remainder <: remainder,
+        top <: dividend,
+        bottom <: divisor,
+        bit <: bit,
+        newquotient :> newquotient,
+        newremainder :> newremainder
+    );
+    uint6   bit(63);
+
+    busy := start | ( bit != 63 );
+    while(1) {
+        if( start ) {
+            bit = 31; quotient = 0; remainder = 0;
+            while( bit != 63 ) { quotient = newquotient; remainder = newremainder; bit = bit - 1; }
+        }
+    }
+}
+
+// SIGNED/UNSIGNED 32 BIT / 16 BIT TO 16 BIT
 algorithm divmod32by16(
-    input   uint16  dividendh,
-    input   uint16  dividendl,
+    input   uint32  dividend,
     input   uint16  divisor,
     output  uint16  quotient,
     output  uint16  remainder,
@@ -29,46 +78,36 @@ algorithm divmod32by16(
 ) <autorun> {
     uint3   FSM = uninitialized;
 
-    uint32  dividend_copy = uninitialized;
-    uint32  divisor_copy = uninitialized;
-    uint32  quotient_copy = uninitialized;
-    uint32  remainder_copy = uninitialized;
-    uint1   resultsign = uninitialized;
-    uint6   bit = uninitialized;
+    uint32  dividend_unsigned = uninitialized;
+    uint32  divisor_unsigned = uninitialized;
+    uint32  result_quotient = uninitialized;
+    uint16  result_remainder = uninitialized;
+    uint1   result_sign = uninitialized;
+
+    uint1   DODIVIDEstart = uninitialised;
+    uint1   DODIVIDEbusy = uninitialised;
+    douintdivide DODIVIDE(
+        dividend <: dividend_unsigned,
+        divisor <: divisor_unsigned,
+        quotient :> result_quotient,
+        remainder :> result_remainder,
+        start <: DODIVIDEstart,
+        busy :> DODIVIDEbusy
+    );
+    DODIVIDEstart := 0;
 
     while (1) {
         if( start != 0 ) {
             switch( divisor ) {
-                case 0: { quotient_copy = 32hffff; remainder_copy = divisor; }
+                case 0: { quotient = 32hffff; remainder = divisor; }
                 default: {
                     active = 1;
-
-                    FSM = 1;
-                    while( FSM != 0 ) {
-                        onehot( FSM ) {
-                            case 0: {
-                                bit = 31;
-                                quotient_copy = 0;
-                                remainder_copy = 0;
-
-                                dividend_copy = ( start == 1 ) ? { dividendh, dividendl } : dividendh[15,1] ? -{ dividendh, dividendl } : { dividendh, dividendl };
-                                divisor_copy = ( start == 1 ) ? { 16b0, divisor } : divisor[15,1] ? { 16b0, -divisor } : { 16b0, divisor };
-                                resultsign = ( start == 1 ) ? 0 : dividendh[15,1] != divisor[15,1];
-                            }
-                            case 1: {
-                                while( bit != 63 ) {
-                                    ( quotient_copy, remainder_copy ) = divbit( quotient_copy, remainder_copy, dividend_copy, divisor_copy, bit );
-                                    bit = bit - 1;
-                                }
-                            }
-                            case 2: {
-                                quotient = resultsign ? -quotient_copy[0,16] : quotient_copy[0,16];
-                                remainder = remainder_copy[0,16];
-                            }
-                        }
-                        FSM = { FSM[0,2], 1b0 };
-                    }
-
+                    dividend_unsigned = ( start == 2 ) && dividend[31,1] ? -dividend : dividend;
+                    divisor_unsigned = ( start == 2 ) && divisor[15,1] ? -divisor : divisor;
+                    result_sign = ( start == 2 ) & ( dividend[31,1] ^ divisor[15,1] );
+                    DODIVIDEstart = 1; while( DODIVIDEbusy ) {}
+                    quotient = result_sign ? -result_quotient[0,16] : result_quotient[0,16];
+                    remainder = result_remainder;
                     active = 0;
                 }
             }
@@ -78,54 +117,45 @@ algorithm divmod32by16(
 
 // SIGNED 16 by 16 bit division giving 16 bit remainder and quotient
 algorithm divmod16by16(
-    input   uint16  dividend,
-    input   uint16  divisor,
-    output  uint16  quotient,
-    output  uint16  remainder,
+    input   int16   dividend,
+    input   int16   divisor,
+    output  int16   quotient,
+    output  int16   remainder,
     input   uint1   start,
     output  uint1   active(0)
 ) <autorun> {
     uint3   FSM = uninitialized;
 
-    uint16  dividend_copy = uninitialized;
-    uint16  divisor_copy = uninitialized;
-    uint16  quotient_copy = uninitialized;
-    uint16  remainder_copy = uninitialized;
-    uint1   resultsign = uninitialized;
-    uint5   bit = uninitialized;
+    uint32  dividend_unsigned = uninitialized;
+    uint32  divisor_unsigned = uninitialized;
+    uint32  result_quotient = uninitialized;
+    int16   result_remainder = uninitialized;
+    uint1   result_sign = uninitialized;
+
+    uint1   DODIVIDEstart = uninitialised;
+    uint1   DODIVIDEbusy = uninitialised;
+    douintdivide DODIVIDE(
+        dividend <: dividend_unsigned,
+        divisor <: divisor_unsigned,
+        quotient :> result_quotient,
+        remainder :> result_remainder,
+        start <: DODIVIDEstart,
+        busy :> DODIVIDEbusy
+    );
+    DODIVIDEstart := 0;
 
     while (1) {
         if( start ) {
             switch( divisor ) {
-                case 0: { quotient_copy = 16hffff; remainder_copy = divisor; }
+                case 0: { quotient = 16hffff; remainder = divisor; }
                 default: {
                     active = 1;
-
-                    FSM = 1;
-                    while( FSM != 0 ) {
-                        onehot( FSM ) {
-                            case 0: {
-                                bit = 15;
-                                quotient_copy = 0;
-                                remainder_copy = 0;
-                                dividend_copy = dividend[15,1] ? -dividend : dividend;
-                                divisor_copy = divisor[15,1] ? -divisor : divisor;
-                                resultsign = dividend[15,1] != divisor[15,1];
-                            }
-                            case 1: {
-                                while( bit != 31 ) {
-                                    ( quotient_copy, remainder_copy ) = divbit( quotient_copy, remainder_copy, dividend_copy, divisor_copy, bit );
-                                    bit = bit - 1;
-                                }
-                            }
-                            case 2: {
-                                quotient = resultsign ? -quotient_copy : quotient_copy;
-                                remainder = remainder_copy;
-                            }
-                        }
-                        FSM = { FSM[0,2], 1b0 };
-                    }
-
+                    dividend_unsigned = dividend[15,1] ? 0-dividend : dividend;
+                    divisor_unsigned = divisor[15,1] ? 0-divisor : divisor;
+                    result_sign = dividend[15,1] ^ divisor[15,1];
+                    DODIVIDEstart = 1; while( DODIVIDEbusy ) {}
+                    quotient = result_sign ? -result_quotient : result_quotient;
+                    remainder = result_remainder;
                     active = 0;
                 }
             }
@@ -135,39 +165,43 @@ algorithm divmod16by16(
 
 // UNSIGNED / SIGNED 16 by 16 bit multiplication giving 32 bit product
 // DSP INFERENCE
+algorithm douintmul(
+    input   uint16  factor_1,
+    input   uint16  factor_2,
+    output  uint32  product
+) <autorun> {
+    product := factor_1 * factor_2;
+}
+
 algorithm multi16by16to32DSP(
     input   uint16  factor1,
     input   uint16  factor2,
     output  uint32  product,
     input   uint2   start
 ) <autorun> {
-    uint18  factor1copy = uninitialized;
-    uint18  factor2copy = uninitialized;
-    uint32  nosignproduct = uninitialized;
-    uint1   productsign = uninitialized;
-
+    uint16  factor1_unsigned = uninitialised;
+    uint16  factor2_unsigned = uninitialised;
+    uint32  product32 = uninitialised;
+    uint1   productsign = uninitialised;
+    douintmul UINTMUL( factor_1 <: factor1_unsigned, factor_2 <: factor2_unsigned, product :> product32 );
     while(1) {
         if( start != 0 ) {
+            productsign = ( start == 2 ) & ( factor1[15,1] ^ factor2[15,1] );
             switch( start ) {
                 default: {}
                 case 1: {
                     // UNSIGNED MULTIPLICATION
-                    factor1copy = factor1;
-                    factor2copy = factor2;
-                    productsign = 0;
+                    factor1_unsigned = factor1;
+                    factor2_unsigned = factor2;
                 }
                 case 2: {
                     // SIGNED MULTIPLICATION
-                    product = 0;
-                    factor1copy = { 2b0, factor1[15,1] ? -factor1 : factor1 };
-                    factor2copy = { 2b0, factor2[15,1] ? -factor2 : factor2 };
-                    productsign = factor1[15,1] != factor2[15,1];
+                    factor1_unsigned = { 2b0, factor1[15,1] ? -factor1 : factor1 };
+                    factor2_unsigned = { 2b0, factor2[15,1] ? -factor2 : factor2 };
                 }
             }
-            // PERFORM UNSIGNED MULTIPLICATION
-            nosignproduct = factor1copy * factor2copy;
             // SORT OUT SIGNS
-            product = productsign ? -nosignproduct : nosignproduct;
+            product = productsign ? -product32 : product32;
         }
     }
 }
@@ -247,7 +281,6 @@ algorithm floatops(
     uint1   FADDstart = uninitialised;
     uint1   FADDbusy = uninitialised;
     floataddsub FADD( a <: a, b <: b, result :> fadd, addsub <: ZERO, start <: FADDstart, busy :> FADDbusy );
-
 
     uint1   FSUBstart = uninitialised;
     uint1   FSUBbusy = uninitialised;

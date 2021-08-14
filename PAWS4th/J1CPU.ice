@@ -180,32 +180,7 @@ algorithm J1CPU(
                             }
                             case 0: {
                                 switch( is_alu ) {
-                                    case 1: {
-                                        // ALU + NO MEMORYREAD
-                                        newStackTop = ALUnewStackTop;
-                                        rstackWData = stackTop;
-
-                                        // UPDATE newDSP newRSP
-                                        newDSP = DELTADSPnewSP;
-                                        newRSP = DELTARSPnewSP;
-
-                                        // Update PC for next instruction, return from call or next instruction
-                                        newPC = ( aluop(instruction).is_r2pc ) ? {1b0, rStackTop[1,15] } : pcPlusOne;
-
-                                        // n2memt mem[t] = n
-                                        switch( is_n2memt ) {
-                                            case 1: {
-                                                ( address, writememory ) = store( stackTop, memorybusy );
-                                            }
-                                            default: {}
-                                        }
-
-                                        // Commit to dstack and rstack
-                                        DSTACK.stackWrite = dstackWrite;
-                                        RSTACK.stackWrite = rstackWrite;
-
-                                        FSM =  3b001;
-                                    }
+                                    case 1: { FSM = 3b100; }
                                     case 0: {
                                         // CALL BRANCH 0BRANCH
                                         newStackTop = CALLBRANCHnewStackTop;
@@ -227,7 +202,7 @@ algorithm J1CPU(
                 }
             }
             case 2: {
-                // ALU + MEMORYREAD
+                // ALU
                 newStackTop = ALUnewStackTop;
                 rstackWData = stackTop;
 
@@ -373,7 +348,7 @@ algorithm stack(
     input   uint8   newSP,
     output  uint16  stackTop
 ) <autorun> {
-    simple_dualport_bram uint16 stack <input!> [256] = uninitialized; // bram (code from @sylefeb)
+    simple_dualport_bram uint16 stack[256] = uninitialized; // bram (code from @sylefeb)
     stack.addr0 := sp;
     stack.wenable1 := 1;
     stackTop := stack.rdata0;

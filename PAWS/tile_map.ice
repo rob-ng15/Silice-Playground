@@ -143,14 +143,10 @@ algorithm tile_map_writer(
         switch( tm_write ) {
             case 0: {}
             case 1: {
-                tiles.addr1 = tm_x + tm_y * 42;
-                tiles.wdata1 = tm_character;
-                tiles_copy.addr1 = tm_x + tm_y * 42;
-                tiles_copy.wdata1 = tm_character;
-                colours.addr1 = tm_x + tm_y * 42;
-                colours.wdata1 = { tm_background, tm_foreground };
-                colours_copy.addr1 = tm_x + tm_y * 42;
-                colours_copy.wdata1 = { tm_background, tm_foreground };
+                tiles.addr1 = tm_x + tm_y * 42; tiles.wdata1 = tm_character;
+                tiles_copy.addr1 = tm_x + tm_y * 42; tiles_copy.wdata1 = tm_character;
+                colours.addr1 = tm_x + tm_y * 42; colours.wdata1 = { tm_background, tm_foreground };
+                colours_copy.addr1 = tm_x + tm_y * 42; colours_copy.wdata1 = { tm_background, tm_foreground };
             }
         }
 

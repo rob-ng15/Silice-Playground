@@ -161,7 +161,7 @@ $$end
     // SDRAM and BRAM (for BIOS)
     // FUNCTION3 controls byte read/writes
     uint16  sdramreaddata = uninitialized;
-    sdramcontroller sdram <@clock_system,!reset> (
+    cachecontroller_EVICT sdram <@clock_system,!reset> (
         sio <:> sio_halfrate,
         function3 <: function3,
         address <: address,
@@ -298,7 +298,6 @@ $$end
 
 // RAM - BRAM controller
 // MEMORY IS 16 BIT, 8 bit WRITES ARE READ MODIFY WRITE
-
 algorithm bramcontroller(
     input   uint32  address,
     input   uint3   function3,
@@ -351,11 +350,14 @@ $$end
 
 // RAM - SDRAM CONTROLLER
 // MEMORY IS 16 BIT, 8 bit WRITES ARE READ MODIFY WRITE
-// CACHE
-algorithm sdramcontroller(
+
+// WRITETHROUGH CACHE CONTROLLER
+// DIRECTLY MAPPED CACHE - IMMEDIATELY WRITE TO SDRAM
+// SPEEDS UP READING WHEN IN CACHE
+algorithm cachecontroller_WRITETHROUGH(
     sdram_user      sio,
 
-    input   uint32  address,
+    input   uint26  address,
     input   uint3   function3,
 
     input   uint1   writeflag,
@@ -370,37 +372,55 @@ algorithm sdramcontroller(
 
     // CACHE for SDRAM 32k
     // CACHE LINE IS LOWER 15 bits ( 0 - 32767 ) of address, dropping the BYTE address bit
-    // CACHE TAG IS REMAINING 11 bits of the 26 bit address + 1 bit for valid flag
-    simple_dualport_bram uint28 cache[16384] = uninitialized;
+    // CACHE TAG IS REMAINING 11 bits of the 26 bit address + 1 bit for valid flag +1 bit for needwritetosdram flag
+    simple_dualport_bram uint29 cache[16384] = uninitialized;
 
+    // CACHE WRITER
     uint16  cacheupdatedata = uninitialized;
     uint1   cacheupdate = uninitialized;
+    uint1   needwritetosdram = uninitialized;
     cachewriter CW(
         address <: address,
+        needwritetosdram <: needwritetosdram,
         writedata <: cacheupdatedata,
         update <: cacheupdate,
         cache <:> cache
+    );
+
+    // SDRAM CONTROLLER
+    uint16  sdramreaddata = uninitialized;
+    uint1   sdramwrite = uninitialized;
+    uint1   sdramread = uninitialized;
+    uint1   sdrambusy = uninitialized;
+    sdramcontroller SDRAM(
+        sio <:> sio,
+        address <: address,
+        writedata <: writethrough,
+        writeflag <: sdramwrite,
+        readdata :> sdramreaddata,
+        readflag <: sdramread,
+        busy :> sdrambusy
     );
 
     // CACHE TAG match flag
     uint1   cachetagmatch <: ( cache.rdata0[16,12] == { 1b1, address[15,11] } );
 
     // VALUE TO WRITE THROUGH CACHE TO SDRAM
-    uint16  writethrough <: ( function3[0,2] == 0 ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cache.rdata0[0,8] : sio.data_out[0,8] } :
-                                                                        { cachetagmatch ? cache.rdata0[8,8] : sio.data_out[8,8], writedata[0,8] } ) : writedata;
+    uint16  writethrough <: ( function3[0,2] == 0 ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cache.rdata0[0,8] : sdramreaddata[0,8] } :
+                                                                        { cachetagmatch ? cache.rdata0[8,8] : sdramreaddata[8,8], writedata[0,8] } ) : writedata;
 
     // MEMORY ACCESS FLAGS
     uint1   doread = uninitialized;
     uint1   dowrite = uninitialized;
 
     // SDRAM ACCESS
-    sio.addr := { address[1,25], 1b0 }; sio.in_valid := 0;
+    sdramread := 0; sdramwrite := 0;
 
     // FLAGS FOR CACHE ACCESS
     cache.addr0 := address[1,14]; cacheupdate := 0;
 
     // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
-    readdata := cachetagmatch ? cache.rdata0[0,16] : sio.data_out[0,16];
+    readdata := cachetagmatch ? cache.rdata0[0,16] : sdramreaddata[0,16];
 
     while(1) {
         doread = readflag;
@@ -410,6 +430,7 @@ algorithm sdramcontroller(
             busy = 1;
             FSM = ( doread || ( dowrite && ( function3[0,2] == 0 ) ) ) ? 1 : 4;
             while( FSM != 0 ) {
+                // WAIT ONE CYCLE FOR THE CACHE
                 onehot( FSM ) {
                     case 0: { FSM = 2; }
                     case 1: {
@@ -417,9 +438,9 @@ algorithm sdramcontroller(
                             case 0: {
                                 // CACHE MISS
                                 // READ FROM SDRAM
-                                sio.rw = 0; sio.in_valid = 1; while( !sio.done ) {}
+                                while( sdrambusy ) {} sdramread = 1; while( sdrambusy ) {}
                                 // WRITE RESULT TO CACHE
-                                cacheupdatedata = sio.data_out; cacheupdate = 1;
+                                needwritetosdram = 0; cacheupdatedata = sdramreaddata; cacheupdate = 1;
                             }
                             case 1: {}
                         }
@@ -427,9 +448,9 @@ algorithm sdramcontroller(
                     }
                     case 2: {
                         // WRITE RESULT TO CACHE
-                        cacheupdatedata = writethrough; cacheupdate = 1;
-                        // COMPLETE WRITE TO SDRAM
-                        sio.data_in = writethrough; sio.rw = 1; sio.in_valid = 1; while( !sio.done ) {}
+                        needwritetosdram = 1; cacheupdatedata = writethrough; cacheupdate = 1;
+                        // START WRITE TO SDRAM
+                        while( sdrambusy ) {} sdramwrite = 1;
                         FSM = 0;
                     }
                 }
@@ -439,14 +460,138 @@ algorithm sdramcontroller(
     }
 }
 
+// EVICTION CACHE CONTROLLER
+// DIRECTLY MAPPED CACHE - WRITE TO SDRAM ONLY IF EVICTING FROM THE CACHE
+// SPEEDS UP READING WHEN IN CACHE
+algorithm cachecontroller_EVICT(
+    sdram_user      sio,
+
+    input   uint26  address,
+    input   uint3   function3,
+
+    input   uint1   writeflag,
+    input   uint16  writedata,
+
+    input   uint1   readflag,
+    output  uint16  readdata,
+
+    output  uint1   busy(0)
+) <autorun> {
+    // CACHE for SDRAM 32k
+    // CACHE LINE IS LOWER 15 bits ( 0 - 32767 ) of address, dropping the BYTE address bit
+    // CACHE TAG IS REMAINING 11 bits of the 26 bit address + 1 bit for valid flag +1 bit for needwritetosdram flag
+    simple_dualport_bram uint29 cache[16384] = uninitialized;
+
+    // CACHE WRITER
+    uint16  cacheupdatedata = uninitialized;
+    uint1   cacheupdate = uninitialized;
+    uint1   needwritetosdram = uninitialized;
+    cachewriter CW(
+        address <: address,
+        needwritetosdram <: needwritetosdram,
+        writedata <: cacheupdatedata,
+        update <: cacheupdate,
+        cache <:> cache
+    );
+
+    // SDRAM CONTROLLER
+    uint16  sdramwritedata <: cache.rdata0[0,16];
+    uint16  sdramreaddata = uninitialized;
+    uint1   sdramwrite = uninitialized;
+    uint1   sdramread = uninitialized;
+    uint1   sdrambusy = uninitialized;
+    uint32  sdramaddress = uninitialized;
+    sdramcontroller SDRAM(
+        sio <:> sio,
+        address <: sdramaddress,
+        writedata <: sdramwritedata,
+        writeflag <: sdramwrite,
+        readdata :> sdramreaddata,
+        readflag <: sdramread,
+        busy :> sdrambusy
+    );
+
+    // CACHE TAG match flag
+    uint1   cachetagmatch <: ( cache.rdata0[16,12] == { 1b1, address[15,11] } );
+
+    // VALUE TO WRITE TO CACHE ( deals with correctly mapping 8 bit writes and 16 bit writes, using sdram or cache as base )
+    uint16  writethrough <: ( function3[0,2] == 0 ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cache.rdata0[0,8] : sdramreaddata[0,8] } :
+                                                                        { cachetagmatch ? cache.rdata0[8,8] : sdramreaddata[8,8], writedata[0,8] } ) : writedata;
+
+    // MEMORY ACCESS FLAGS
+    uint1   doread = uninitialized;
+    uint1   dowrite = uninitialized;
+
+    // SDRAM ACCESS
+    sdramread := 0; sdramwrite := 0;
+
+    // FLAGS FOR CACHE ACCESS
+    cache.addr0 := address[1,14]; cacheupdate := 0;
+
+    // 16 bit READ
+    readdata := cachetagmatch ? cache.rdata0[0,16] : sdramreaddata[0,16];
+
+    while(1) {
+        doread = readflag;
+        dowrite = writeflag;
+
+        if( doread || dowrite ) {
+            busy = 1;
+            ++:
+            switch( cachetagmatch ) {
+                case 1: { needwritetosdram = 1; cacheupdatedata = writethrough; cacheupdate = dowrite; }
+                case 0: {
+                    if( cache.rdata0[28,1] ) {
+                        // EVICT FROM CACHE
+                        while( sdrambusy ) {} sdramaddress = { cache.rdata0[16,11], address[1,14], 1b0 }; sdramwrite = 1;
+                    }
+                    if( doread || ( dowrite && ( function3[0,2] == 0 ) ) )  {
+                        // READ OR 8 BIT WRITE
+                        while( sdrambusy ) {} sdramaddress = address; sdramread = 1; while( sdrambusy ) {}
+                        needwritetosdram = dowrite; cacheupdatedata = dowrite ? writethrough : sdramreaddata; cacheupdate = 1;
+                    } else {
+                        needwritetosdram = 1; cacheupdatedata = writethrough; cacheupdate = dowrite;
+                    }
+                }
+            }
+            busy = 0;
+        }
+    }
+}
+
 algorithm cachewriter(
-    input   uint32  address,
+    input   uint26  address,
+    input   uint1   needwritetosdram,
     input   uint16  writedata,
     input   uint1   update,
     simple_dualport_bram_port1 cache
 ) <autorun> {
     cache.wenable1 := 1;
     always {
-        if( update ) { cache.addr1 = address[1,14]; cache.wdata1 = { 1b1, address[15,11], writedata[0,16] }; }
+        switch( update ) {
+            case 1: {cache.addr1 = address[1,14]; cache.wdata1 = { needwritetosdram, 1b1, address[15,11], writedata[0,16] }; }
+            default: {}
+        }
+    }
+}
+
+algorithm sdramcontroller(
+    sdram_user      sio,
+    input   uint26  address,
+    input   uint1   writeflag,
+    input   uint16  writedata,
+    input   uint1   readflag,
+    output  uint16  readdata,
+    output  uint1   busy(0)
+) <autorun> {
+    // MEMORY ACCESS FLAGS
+    sio.addr := { address[1,25], 1b0 }; sio.in_valid := 0;
+    readdata := sio.data_out;
+
+    while(1) {
+        switch( readflag | writeflag ) {
+            case 1: { busy = 1; sio.data_in = writedata; sio.rw = writeflag; sio.in_valid = 1; while( !sio.done ) {} busy = 0; }
+            default: {}
+        }
     }
 }

@@ -25,8 +25,8 @@ algorithm ps2ascii(
     ps2 PS2 <@clock_25mhz> (
         ps2clk_ext <: us2_bd_dp,
         ps2data_ext <: us2_bd_dn,
-        data :> ps2keycode,
-        valid :> ps2valid
+        valid :> ps2valid,
+        data :> ps2keycode
     );
     asciivalid := 0;
 

@@ -41,8 +41,8 @@ $$end
 ) <autorun> {
 $$if not SIMULATION then
     // UART CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
-    uint8   Uinchar = uninitialized;
-    uint8   Uoutchar = uninitialized;
+    uint8   UARTinchar = uninitialized;
+    uint8   UARToutchar = uninitialized;
     uint1   UARTinavailable = uninitialized;
     uint1   UARTinread = uninitialized;
     uint1   UARToutfull = uninitialized;
@@ -50,8 +50,8 @@ $$if not SIMULATION then
     uart UART(
         uart_tx :> uart_tx,
         uart_rx <: uart_rx,
-        inchar :> Uinchar,
-        outchar <: Uoutchar,
+        inchar :> UARTinchar,
+        outchar <: UARToutchar,
         inavailable :> UARTinavailable,
         inread <: UARTinread,
         outfull :> UARToutfull,
@@ -59,14 +59,14 @@ $$if not SIMULATION then
     );
 
     // PS2 CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
-    uint8   Pinchar = uninitialized;
+    uint8   PS2inchar = uninitialized;
     uint1   PS2inavailable = uninitialized;
     uint1   PS2inread = uninitialized;
     ps2buffer PS2(
         clock_25mhz <: clock_25mhz,
         us2_bd_dp <: us2_bd_dp,
         us2_bd_dn <: us2_bd_dn,
-        inchar :> Pinchar,
+        inchar :> PS2inchar,
         inavailable :> PS2inavailable,
         inread <: PS2inread
     );
@@ -101,7 +101,7 @@ $$end
                 switch( memoryAddress ) {
                     // UART, LEDS, BUTTONS and CLOCK
     $$if not SIMULATION then
-                    case 12h100: { readData = { 8b0, Uinchar }; UARTinread = 1; }
+                    case 12h100: { readData = { 8b0, UARTinchar }; UARTinread = 1; }
                     case 12h102: { readData = { 14b0, UARToutfull, UARTinavailable }; }
                     case 12h120: { readData = { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] }; }
     $$end
@@ -111,7 +111,7 @@ $$end
                     case 12h110: { readData = PS2inavailable; }
                     case 12h112: {
                         switch( PS2inavailable ) {
-                            case 1: { readData = Pinchar; PS2inread = 1; }
+                            case 1: { readData = PS2inchar; PS2inread = 1; }
                             case 0: { readData = 0; }
                         }
                     }
@@ -138,7 +138,7 @@ $$end
                     // UART, LEDS
                     case 12h130: { leds = writeData; }
     $$if not SIMULATION then
-                    case 12h100: { Uoutchar = writeData[0,8]; UARToutwrite = 1; }
+                    case 12h100: { UARToutchar = writeData[0,8]; UARToutwrite = 1; }
 
                     // SDCARD
                     case 12h140: { SDCARDreadsector = 1; }

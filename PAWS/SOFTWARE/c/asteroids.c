@@ -369,13 +369,6 @@ void program_background( void ) {
     copper_program( 16, COPPER_JUMP, COPPER_JUMP_ON_VBLANK_EQUAL, 0, 0, 0, 15 );
     copper_program( 17, COPPER_JUMP, COPPER_JUMP_ALWAYS, 0, 0, 0, 1 );
     copper_startstop( 1 );
-    //copper_startstop( 0 );
-    //copper_program( 0, COPPER_WAIT_VBLANK, 7, 0, BKG_SNOW, BLACK, WHITE );
-    //copper_program( 1, COPPER_VARIABLE, COPPER_SET_VARIABLE, 1, 0, 0, 0 );
-    //copper_program( 2, COPPER_SET_FROM_VARIABLE, 1, 0, 0, 0, 0 );
-    //copper_program( 3, COPPER_VARIABLE, COPPER_ADD_VARIABLE, 1, 0, 0, 0 );
-    //copper_program( 4, COPPER_JUMP, COPPER_JUMP_ALWAYS, 0, 0, 0, 2 );
-    //copper_startstop( 1 );
 }
 
 // GENERATE A RANDOM COLOUR WITH AT LEAST ONE OF RED, GREEN, BLUE BEING INTENSITY 2
@@ -980,16 +973,16 @@ void check_hit( void ) {
 }
 
 void check_crash( void ) {
-    if( ( ( get_sprite_collision( 0, SHIPSPRITE ) & ASTEROIDCOLLISION ) != 0 ) || ( ( get_sprite_collision( 1, SHIPSPRITE ) & ASTEROIDCOLLISION ) != 0 ) ) {
-        if( ( ( get_sprite_collision( 0, UFOBULLETSPRITE ) &  SHIPCOLLISION ) != 0 ) || ( ( get_sprite_collision( 1, UFOBULLETSPRITE ) & SHIPCOLLISION ) != 0 ) ) {
+    if( ( ( ( get_sprite_collision( 0, SHIPSPRITE ) | get_sprite_collision( 1, SHIPSPRITE ) ) & ( ASTEROIDCOLLISION | UFOBULLETSPRITE ) ) ) ) {
+        if( ( get_sprite_collision( 0, UFOBULLETSPRITE ) | get_sprite_collision( 1, UFOBULLETSPRITE ) ) & SHIPCOLLISION ) {
             // DELETE UFO BULLET
             set_sprite_attribute( 0, UFOBULLETSPRITE, 0, 0 );
             set_sprite_attribute( 1, UFOBULLETSPRITE, 0, 0 );
         }
         beep( 2, 4, 1, 1000 );
         set_ship_sprites( 1 );
-        set_sprite_attribute( 0, UFOBULLETSPRITE, 1, 0 );
-        set_sprite_attribute( 1, UFOBULLETSPRITE, 1, 1 );
+        //set_sprite_attribute( 0, UFOBULLETSPRITE, 1, 0 );
+        //set_sprite_attribute( 1, UFOBULLETSPRITE, 1, 1 );
         resetship = 75;
     }
 }
@@ -1087,15 +1080,15 @@ int main( void ) {
             } else {
                 ufo_y += ( ( level < 2 ) ? 20 : 10 );
             }
-            ufo_bullet_direction = ( ufo_x > shipx ) ? 6 : 2;
+            ufo_bullet_direction = ( ufo_x > shipx ) ? 12 : 4;
 
             switch( ufo_bullet_direction ) {
-                case 2:
-                    ufo_bullet_direction += ( ufo_y > shipy ) ? -1 : 1;
+                case 4:
+                    ufo_bullet_direction += ( ufo_y > shipy ) ? -2 : 2;
                     break;
 
-                case 6:
-                    ufo_bullet_direction += ( ufo_y > shipy ) ? 1 : -1;
+                case 12:
+                    ufo_bullet_direction += ( ufo_y > shipy ) ? 2 : -2;
                     break;
 
                 default:
@@ -1182,7 +1175,7 @@ int main( void ) {
                 // DRAW GREY SHIP
                 draw_ship( GREY1 );
                 if( ( resetship >= 1 ) && ( resetship <= 16 ) ) {
-                    if( ( ( get_sprite_collision( 0, SHIPSPRITE ) & ASTEROIDCOLLISION ) == 0 ) && ( ( get_sprite_collision( 1, SHIPSPRITE ) & ASTEROIDCOLLISION ) == 0 ) ) {
+                    if( !( ( get_sprite_collision( 0, SHIPSPRITE ) | get_sprite_collision( 1, SHIPSPRITE ) ) & ASTEROIDCOLLISION ) ) {
                         resetship--;
                         if( resetship == 0 ) {
                             gpu_cs();

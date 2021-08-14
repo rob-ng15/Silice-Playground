@@ -20,33 +20,18 @@ circuitry fetch( input location, input memorybusy, output address, output readme
 }
 // CPU LOAD FROM MEMORY
 circuitry load( input accesssize, input location, input memorybusy, input readdata, output address, output readmemory, output memoryinput ) {
-    address = location; readmemory = 1; while( memorybusy ) {}
+    address = location; readmemory = 1; while( memorybusy ) {}                                                                                      // READ 1ST 16 BITS
     switch( accesssize[0,2] ) {
-        case 2b00: { ( memoryinput ) = signextender8( accesssize, location, readdata ); }
-        case 2b01: { ( memoryinput ) = signextender16( accesssize, readdata ); }
-        default: {
-            // 32 bit READ as 2 x 16 bit
-            memoryinput[0,16] = readdata;
-            address = location + 2;
-            readmemory = 1;
-            while( memorybusy ) {}
-            memoryinput[16,16] = readdata;
-        }
+        case 2b00: { ( memoryinput ) = signextender8( accesssize, location, readdata ); }                                                           // 8 BIT SIGN EXTEND
+        case 2b01: { ( memoryinput ) = signextender16( accesssize, readdata ); }                                                                    // 16 BIT SIGN EXTEND
+        default: { memoryinput[0,16] = readdata; address = location + 2; readmemory = 1; while( memorybusy ) {} memoryinput[16,16] = readdata; }    // 32 BIT READ 2ND 16 BITS
     }
 }
-// CPU STORE TO MEMORY
+// CPU STORE TO MEMORY - DON'T WAIT FOR WRITE TO FINISH IF 16 OR 8 BIT WRITE
 circuitry store( input accesssize, input location, input value, input memorybusy, output address, output writedata,  output writememory ) {
-    address = location;
-    writedata = value[0,16];
-    writememory = 1;
-    while( memorybusy ) {}
+    address = location; writedata = value[0,16]; writememory = 1; while( memorybusy ) {}                                                            // STORE 8 OR 16 BIT
     switch( accesssize[0,2] ) {
-        case 2b10: {
-            address = location + 2;
-            writedata = value[16,16];
-            writememory = 1;
-            while( memorybusy ) {}
-        }
+        case 2b10: { address = location + 2; writedata = value[16,16]; writememory = 1;  while( memorybusy ) {} }                                   // // 32 BIT WRITE 2ND 16 BITS
         default: {}
     }
 }
@@ -66,7 +51,7 @@ algorithm PAWSCPU(
     input   uint32  SMTSTARTPC
 ) <autorun> {
     uint16  resetcount = 16hffff;
-    uint7   FSM = uninitialized;
+    uint4   FSM = uninitialized;
 
     // RISC-V PROGRAM COUNTERS AND STATUS
     uint32  pc = uninitialized;
@@ -82,16 +67,16 @@ algorithm PAWSCPU(
 
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
-    uint32  i32 = uninitialized;
     uint1   compressed = uninitialized;
+    uint32  i32 = uninitialized;
     compressed COMPRESSED <@clock_CPUdecoder> (
         i16 <: readdata,
         i32 :> i32
     );
 
     // RISC-V REGISTER WRITER
-    uint1   memoryload := ( opCode == 7b0000011 ) | ( opCode == 7b0000111 ) | ( ( opCode == 7b0101111 ) & ( function7[2,5] != 5b00011 ) );
-    uint1   memorystore := ( opCode == 7b0100011 ) | ( opCode == 7b0100111 ) | ( ( opCode == 7b0101111 ) & ( function7[2,5] != 5b00010 ) );
+    uint1   memoryload := ( opCode[2,5] == 5b00000 ) | ( opCode[2,5] == 5b00001 ) | ( ( opCode[2,5] == 5b01011 ) & ( function7[2,5] != 5b00011 ) );
+    uint1   memorystore := ( opCode[2,5] == 5b01000 ) | ( opCode[2,5] == 5b01001 ) | ( ( opCode[2,5] == 5b01011 ) & ( function7[2,5] != 5b00010 ) );
 
     // RISC-V 32 BIT INSTRUCTION DECODER
     int32   immediateValue = uninitialized;
@@ -118,7 +103,7 @@ algorithm PAWSCPU(
     int32   sourceReg1 = uninitialized;
     int32   sourceReg2 = uninitialized;
     int32   sourceReg3 = uninitialized;
-    registers REGISTERS(
+    registers REGISTERS <@clock_CPUdecoder> (
         SMT <:: SMT,
         rs1 <: rs1,
         rs2 <: rs2,
@@ -133,7 +118,7 @@ algorithm PAWSCPU(
     uint32  sourceReg1F = uninitialized;
     uint32  sourceReg2F = uninitialized;
     uint32  sourceReg3F = uninitialized;
-    registers REGISTERSF(
+    registers REGISTERSF <@clock_CPUdecoder> (
         SMT <:: SMT,
         rs1 <: rs1,
         rs2 <: rs2,
@@ -154,7 +139,7 @@ algorithm PAWSCPU(
     uint32  storeAddress = uninitialized;
     uint32  storeAddressplus2 := storeAddress + 2;
     uint32  AUIPCLUI = uninitialized;
-    addressgenerator AGU(
+    addressgenerator AGU <@clock_CPUdecoder> (
         compressed <: compressed,
         instruction <: instruction,
         pc <: PC,
@@ -172,6 +157,7 @@ algorithm PAWSCPU(
     uint1   takeBranch = uninitialized;
     uint32  memoryinput = uninitialized;
     uint32  memoryoutput = uninitialized;
+    uint1   EXECUTEstart = uninitialized;
     uint1   EXECUTEbusy = uninitialized;
     int32   EXECUTEresult = uninitialized;
     uint1   EXECUTEfrd = uninitialized;
@@ -197,6 +183,7 @@ algorithm PAWSCPU(
         incPC :> incPC,
         takeBranch :> takeBranch,
         memoryoutput :> memoryoutput,
+        start <: EXECUTEstart,
         busy :> EXECUTEbusy,
         result :> EXECUTEresult,
         frd :> EXECUTEfrd,
@@ -220,11 +207,10 @@ algorithm PAWSCPU(
     accesssize := ( opCode[2,5] == 5b01011 ) || ( opCode[2,5] == 5b00001 ) || ( opCode[2,5] == 5b01001 ) ? 3b010 : function3; readmemory := 0; writememory := 0;
 
     // REGISTERS Write FLAG AT LAST STAGE OF THE FSM
-    REGISTERS.write := FSM[6,1] & EXECUTEwriteRegister & ~EXECUTEfrd & ( rd != 0 );
-    REGISTERSF.write := FSM[6,1] & EXECUTEwriteRegister & EXECUTEfrd;
+    REGISTERS.write := FSM[3,1] & EXECUTEwriteRegister & ~EXECUTEfrd & ( rd != 0 ); REGISTERSF.write := FSM[3,1] & EXECUTEwriteRegister & EXECUTEfrd;
 
     // CPU EXECUTE START FLAGS
-    EXECUTE.start := 0;
+    EXECUTEstart := 0;
 
     // RESET ACTIONS - FSM -> 1, SMT AND PC -> 0 AND DELAY BEFORE CONTINUING
     if( ~reset ) {
@@ -235,40 +221,28 @@ algorithm PAWSCPU(
 
     while(1) {
         onehot( FSM ) {
-            case 0: {                                                                           // FETCH
-                ( address, readmemory ) = fetch( PC, memorybusy );
+            case 0: {
+                ( address, readmemory ) = fetch( PC, memorybusy );                              // FETCH POTENTIAL COMPRESSED OR 1ST 16 BITS
                 compressed = ( readdata[0,2] != 2b11 );
                 switch( readdata[0,2] ) {
-                    default: { instruction = i32; }
-                    case 2b11: {
-                        // 32 BIT INSTRUCTION
-                        instruction[0,16] = readdata;
-                        ( address, readmemory ) = fetch( PCplus2, memorybusy );
-                        instruction[16,16] = readdata;
+                    default: { instruction = i32; }                                             // EXPAND COMPRESSED INSTRUCTION
+                    case 2b11: {                                                                // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
+                        instruction[0,16] = readdata; ( address, readmemory ) = fetch( PCplus2, memorybusy ); instruction[16,16] = readdata;
                     }
                 }
-                FSM = 7b0000010;
+                FSM = 4b0010;
             }
-            case 1: { FSM = 7b0000100; }                                                        // ALLOW DECODE, REGISTER FETCHADDRESS GENERATION
-            case 2: { FSM = memoryload ? 7b0001000 : 7b0010000; }
-            case 3: {                                                                           // LOAD FROM MEMORY
-                ( address, readmemory, memoryinput ) = load( accesssize, loadAddress, memorybusy, readdata );
-                FSM = 7b0010000;
+            case 1: { FSM = 4b0100; }                                                           // ALLOW DECODE, REGISTER FETCHADDRESS GENERATION
+            case 2: {                                                                           // EXECUTE
+                switch( memoryload ) { case 1: { ( address, readmemory, memoryinput ) = load( accesssize, loadAddress, memorybusy, readdata ); } case 0: {} }
+                EXECUTEstart = 1; while( EXECUTEbusy ) {}
+                switch( memorystore ) { case 1: { ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy ); } case 0: {} }
+                FSM = 4b1000;
             }
-            case 4: {                                                                           // EXECUTE
-                EXECUTE.start = 1; while( EXECUTEbusy ) {}
-                FSM = memorystore ? 7b0100000 : 7b1000000;
-            }
-            case 5: {                                                                           // STORE TO MEMORY
-                ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy );
-                FSM = 7b1000000;
-            }
-            case 6: {
-                switch( SMT ) {                                                                 // UPDATE PC AND SMT
-                    case 1b1: { pcSMT = newPC; SMT = 0; }
-                    case 1b0: { pc = newPC; SMT = SMTRUNNING; pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC; }
-                }
-                FSM = 7b0000001;
+            case 3: {
+                // UPDATE PC AND SMT
+                switch( SMT ) { case 1b1: { pcSMT = newPC; SMT = 0; } case 1b0: { pc = newPC; SMT = SMTRUNNING; pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC; } }
+                FSM = 4b0001;
             }
         }
     } // RISC-V
@@ -404,6 +378,7 @@ algorithm cpuexecute(
                 case 5b01000: { writeRegister = 0; memoryoutput = sourceReg2; }             // STORE
                 case 5b00001: { frd = 1; result = memoryinput; }                            // FLOAT LOAD
                 case 5b01001: { writeRegister = 0; memoryoutput = sourceReg2F; }            // FLOAT STORE
+                case 5b00011: {}                                                            // FENCE[I]
                 case 5b11100: {
                     switch( function3 ) {
                         default: { CSRstart = 1; while( CSRbusy ) {} result = CSRresult; }  // CSR

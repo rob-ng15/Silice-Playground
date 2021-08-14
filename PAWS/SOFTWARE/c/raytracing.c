@@ -14,7 +14,7 @@
 
 /*******************************************************************/
 
-typedef int BOOL;
+typedef short BOOL;
 
 static inline float max(float x, float y) { return x>y?x:y; }
 static inline float min(float x, float y) { return x<y?x:y; }
@@ -124,9 +124,9 @@ vec3 refract(vec3 I, vec3 N, float eta_t, float eta_i /* =1.f */) { // Snell's l
                                         // k<0 = total reflection, no ray to refract. I refract it anyways, this has no physical meaning
 }
 
-BOOL scene_intersect(vec3 orig, vec3 dir, Sphere* spheres, int nb_spheres, vec3* hit, vec3* N, Material* material) {
+BOOL scene_intersect(vec3 orig, vec3 dir, Sphere* spheres, short nb_spheres, vec3* hit, vec3* N, Material* material) {
   float spheres_dist = 1e30;
-  for(int i=0; i<nb_spheres; ++i) {
+  for(register short i=0; i<nb_spheres; ++i) {
     float dist_i;
     if(Sphere_ray_intersect(&spheres[i], orig, dir, &dist_i) && (dist_i < spheres_dist)) {
       spheres_dist = dist_i;
@@ -149,26 +149,7 @@ BOOL scene_intersect(vec3 orig, vec3 dir, Sphere* spheres, int nb_spheres, vec3*
   return min(spheres_dist, checkerboard_dist)<1000;
 }
 
-/* It crashes when I call powf(), because it probably underflows, and I do not know how to disable floating point exceptions. */
-float my_pow(float x, float y) {
-   float result = x;
-   int Y = (int)y;
-   while(Y > 2) {
-      Y /= 2; result *= result;
-      if(result < 1e-100 || result > 1e100) {
-	 return result;
-      }
-   }
-   while(Y > 1) {
-      Y--; result *= x;
-      if(result < 1e-100 || result > 1e100) {
-	 return result;
-      }
-   }
-   return result;
-}
-
-vec3 cast_ray(vec3 orig, vec3 dir, Sphere* spheres, int nb_spheres, Light* lights, int nb_lights, int depth /* =0 */) {
+vec3 cast_ray(vec3 orig, vec3 dir, Sphere* spheres, short nb_spheres, Light* lights, short nb_lights, short depth /* =0 */) {
   vec3 point,N;
   Material material = make_Material_default();
   if (depth>2 || !scene_intersect(orig, dir, spheres, nb_spheres, &point, &N, &material)) {
@@ -184,7 +165,7 @@ vec3 cast_ray(vec3 orig, vec3 dir, Sphere* spheres, int nb_spheres, Light* light
   vec3 refract_color = cast_ray(refract_orig, refract_dir, spheres, nb_spheres, lights, nb_lights, depth + 1);
 
   float diffuse_light_intensity = 0, specular_light_intensity = 0;
-  for (int i=0; i<nb_lights; i++) {
+  for (register short i=0; i<nb_lights; i++) {
     vec3  light_dir = vec3_normalize(vec3_sub(lights[i].position,point));
     float light_distance = vec3_length(vec3_sub(lights[i].position,point));
 
@@ -211,40 +192,29 @@ vec3 cast_ray(vec3 orig, vec3 dir, Sphere* spheres, int nb_spheres, Light* light
   return result;
 }
 
-const uint8_t dither[4][4] = {
-  { 0, 8, 2,10},
-  {12, 4,14, 6},
-  { 3,11, 1, 9},
-  {15, 7,13, 5}
-};
-
-void set_pixel(int x, int y, float r, float g, float b) {
+void set_pixel(float r, float g, float b) {
    r = max(0.0f, min(1.0f, r));
    g = max(0.0f, min(1.0f, g));
    b = max(0.0f, min(1.0f, b));
    gpu_pixelblock_pixel24( 255.0f * r, 255.0f * g, 255.0f * b );
 }
 
-void render(Sphere* spheres, int nb_spheres, Light* lights, int nb_lights) {
+void render(Sphere* spheres, short nb_spheres, Light* lights, short nb_lights) {
    const float fov  = M_PI/3.;
-   for (int j = 0; j<GL_height; j++) { // actual rendering loop
-      for (int i = 0; i<GL_width; i++) {
+   for (register short j = 0; j<GL_height; j++) { // actual rendering loop
+      for (register short i = 0; i<GL_width; i++) {
 	 float dir_x =  (i + 0.5) - GL_width/2.;
 	 float dir_y = -(j + 0.5) + GL_height/2.;    // this flips the image at the same time
 	 float dir_z = -GL_height/(2.*tanf(fov/2.));
      vec3 C = cast_ray(make_vec3(0,0,0), vec3_normalize(make_vec3(dir_x, dir_y, dir_z)), spheres, nb_spheres, lights, nb_lights, 0);
-	 set_pixel(i,j,C.x,C.y,C.z);
+	 set_pixel(C.x,C.y,C.z);
       }
    }
 }
 
-int nb_spheres = 4;
-Sphere spheres[4];
-
-int nb_lights = 3;
-Light lights[3];
-
-void init_scene() {
+#define NB_SPHERES 4
+#define NB_LIGHTS 3
+void init_scene(Sphere* spheres, Light* lights) {
     Material      ivory = make_Material(1.0, make_vec4(0.6,  0.3, 0.1, 0.0), make_vec3(0.4, 0.4, 0.3),   50.);
     Material      glass = make_Material(1.5, make_vec4(0.0,  0.5, 0.1, 0.8), make_vec3(0.6, 0.7, 0.8),  125.);
     Material red_rubber = make_Material(1.0, make_vec4(0.9,  0.1, 0.0, 0.0), make_vec3(0.3, 0.1, 0.1),   10.);
@@ -261,14 +231,17 @@ void init_scene() {
 }
 
 int main() {
+    Sphere spheres[NB_SPHERES];
+    Light lights[NB_LIGHTS];
+
     INITIALISEMEMORY();
 
-    init_scene();
+    init_scene(spheres, lights);
 
     gpu_cs();
     gpu_pixelblock_start( 0, 0, 320 );
 
-    render(spheres, nb_spheres, lights, nb_lights);
+    render(spheres, NB_SPHERES, lights, NB_LIGHTS);
 
     while(1) {}
 }

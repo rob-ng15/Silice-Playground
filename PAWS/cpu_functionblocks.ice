@@ -91,8 +91,8 @@ algorithm addressgenerator(
     branchAddress := { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } + pc;
     jumpAddress := { {12{Jtype(instruction).immediate_bits_20}}, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + pc;
     AUIPCLUI := { Utype(instruction).immediate_bits_31_12, 12b0 } + ( instruction[5,1] ? 0 : pc );
-    storeAddress := ( ( instruction[0,7] == 7b0101111 ) ? 0 : { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } ) + sourceReg1;
-    loadAddress := ( ( instruction[0,7] == 7b0101111 ) ? 0 : immediateValue ) + sourceReg1;
+    storeAddress := ( ( instruction[2,5] == 5b01011 ) ? 0 : { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } ) + sourceReg1;
+    loadAddress := ( ( instruction[2,5] == 5b01011 ) ? 0 : immediateValue ) + sourceReg1;
 }
 
 // BRANCH COMPARISIONS
@@ -287,70 +287,64 @@ algorithm CSRblock(
         switch( updateFPUflags ) {
             case 1: { switch( SMT ) { case 1: { CSRfSMT[0,5] = FPUnewflags; } case 0: { CSRf[0,5] = FPUnewflags; } }  }
             case 0: {
-                switch( start ) {
-                    case 1: {
-                        busy = 1;
-                        switch( CSR(instruction).csr ) {
-                            case 12h001: { result = SMT ? CSRfSMT[0,5] : CSRf[0,5]; }   // frflags
-                            case 12h002: { result = SMT ? CSRfSMT[5,3] : CSRf[5,3]; }   // frrm
-                            case 12h003: { result = SMT ? CSRfSMT : CSRf; }             // frcsr
-                            case 12h301: { result = $CPUISA$; }
-                            case 12hc00: { result = SMT ? CSRcycletimeSMT[0,32] : CSRcycletime[0,32]; }
-                            case 12hc80: { result = SMT ? CSRcycletimeSMT[32,32] :  CSRcycletime[32,32]; }
-                            case 12hc01: { result = CSRtimer[0,32]; }
-                            case 12hc81: { result = CSRtimer[32,32]; }
-                            case 12hc02: { result = SMT ? CSRinstretSMT[0,32] : CSRinstret[0,32]; }
-                            case 12hc82: { result = SMT ? CSRinstretSMT[32,32] : CSRinstret[32,32]; }
-                            case 12hf14: { result = SMT; }
-                            default: { result = 0; }
-                        }
-                        switch( function3[0,2] ) {
-                            default: {}
-                            case 2b01: {
-                                // CSRRW / CSRRWI
-                                switch( { rs1 == 0, function3[2,1] } ) {
-                                    case 2b10: {}
-                                    default: {
-                                        switch( CSR(instruction).csr ) {
-                                            case 12h001: { switch( SMT ) { case 1: { CSRfSMT[0,5] = writevalue[0,5]; } case 0: { CSRf[0,5] = writevalue[0,5]; } } }
-                                            case 12h002: { switch( SMT ) { case 1: { CSRfSMT[5,3] = writevalue[0,3]; } case 0: { CSRf[5,3] = writevalue[0,3]; } } }
-                                            case 12h003: { switch( SMT ) { case 1: { CSRfSMT = writevalue[0,8]; } case 0: { CSRf = writevalue[0,8]; } } }
-                                            default: {}
-                                        }
-                                    }
-                                }
-                            }
-                            case 2b10: {
-                                // CSRRS / CSRRSI
-                                switch( rs1 ) {
-                                    case 0: {}
-                                    default: {
-                                        switch( CSR(instruction).csr ) {
-                                            case 12h001: { switch( SMT ) { case 1: { CSRfSMT[0,5] = CSRfSMT[0,5] | writevalue[0,5]; } case 0: { CSRf[0,5] = CSRf[0,5] | writevalue[0,5]; } } }
-                                            case 12h002: { switch( SMT ) { case 1: { CSRfSMT[5,3] = CSRfSMT[5,3] | writevalue[0,3]; } case 0: { CSRf[5,3] = CSRf[5,3] | writevalue[0,3]; } } }
-                                            case 12h003: { switch( SMT ) { case 1: { CSRfSMT = CSRfSMT | writevalue[0,8]; } case 0: { CSRf = CSRf | writevalue[0,8]; } } }
-                                            default: {}
-                                        }
-                                    }
-                                }
-                            }
-                            case 2b11: {
-                                // CSRRC / CSRRCI
-                                switch( rs1 ) {
-                                    case 0: {}
-                                    default: {
-                                        switch( CSR(instruction).csr ) {
-                                            case 12h001: { switch( SMT ) { case 1: { CSRfSMT[0,5] = CSRfSMT[0,5] & ~writevalue[0,5]; } case 0: { CSRf[0,5] = CSRf[0,5] & ~writevalue[0,5]; } } }
-                                            case 12h002: { switch( SMT ) { case 1: { CSRfSMT[5,3] = CSRfSMT[5,3] & ~writevalue[0,3]; } case 0: { CSRf[5,3] = CSRf[5,3] & ~writevalue[0,3]; } } }
-                                            case 12h003: { switch( SMT ) { case 1: { CSRfSMT = CSRfSMT & ~writevalue[0,8]; } case 0: { CSRf = CSRf & ~writevalue[0,8]; } } }
-                                            default: {}
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        busy = 0;
+                if( start ) {
+                    busy = 1;
+                    switch( CSR(instruction).csr ) {
+                        case 12h001: { result = SMT ? CSRfSMT[0,5] : CSRf[0,5]; }   // frflags
+                        case 12h002: { result = SMT ? CSRfSMT[5,3] : CSRf[5,3]; }   // frrm
+                        case 12h003: { result = SMT ? CSRfSMT : CSRf; }             // frcsr
+                        case 12h301: { result = $CPUISA$; }
+                        case 12hc00: { result = SMT ? CSRcycletimeSMT[0,32] : CSRcycletime[0,32]; }
+                        case 12hc80: { result = SMT ? CSRcycletimeSMT[32,32] :  CSRcycletime[32,32]; }
+                        case 12hc01: { result = CSRtimer[0,32]; }
+                        case 12hc81: { result = CSRtimer[32,32]; }
+                        case 12hc02: { result = SMT ? CSRinstretSMT[0,32] : CSRinstret[0,32]; }
+                        case 12hc82: { result = SMT ? CSRinstretSMT[32,32] : CSRinstret[32,32]; }
+                        case 12hf14: { result = SMT; }
+                        default: { result = 0; }
                     }
+                    switch( function3[0,2] ) {
+                        case 2b00: {
+                            // ECALL / EBBREAK
+                        }
+                        case 2b01: {
+                            // CSRRW / CSRRWI
+                            switch( { rs1 == 0, function3[2,1] } ) {
+                                case 2b10: {}
+                                default: {
+                                    switch( CSR(instruction).csr ) {
+                                        case 12h001: { switch( SMT ) { case 1: { CSRfSMT[0,5] = writevalue[0,5]; } case 0: { CSRf[0,5] = writevalue[0,5]; } } }
+                                        case 12h002: { switch( SMT ) { case 1: { CSRfSMT[5,3] = writevalue[0,3]; } case 0: { CSRf[5,3] = writevalue[0,3]; } } }
+                                        case 12h003: { switch( SMT ) { case 1: { CSRfSMT = writevalue[0,8]; } case 0: { CSRf = writevalue[0,8]; } } }
+                                        default: {}
+                                    }
+                                }
+                            }
+                        }
+                        case 2b10: {
+                            // CSRRS / CSRRSI
+                            if( rs1 != 0 ) {
+                                switch( CSR(instruction).csr ) {
+                                    case 12h001: { switch( SMT ) { case 1: { CSRfSMT[0,5] = CSRfSMT[0,5] | writevalue[0,5]; } case 0: { CSRf[0,5] = CSRf[0,5] | writevalue[0,5]; } } }
+                                    case 12h002: { switch( SMT ) { case 1: { CSRfSMT[5,3] = CSRfSMT[5,3] | writevalue[0,3]; } case 0: { CSRf[5,3] = CSRf[5,3] | writevalue[0,3]; } } }
+                                    case 12h003: { switch( SMT ) { case 1: { CSRfSMT = CSRfSMT | writevalue[0,8]; } case 0: { CSRf = CSRf | writevalue[0,8]; } } }
+                                    default: {}
+                                }
+                            }
+                        }
+                        case 2b11: {
+                            // CSRRC / CSRRCI
+                            if( rs1 != 0 ) {
+                                switch( CSR(instruction).csr ) {
+                                    case 12h001: { switch( SMT ) { case 1: { CSRfSMT[0,5] = CSRfSMT[0,5] & ~writevalue[0,5]; } case 0: { CSRf[0,5] = CSRf[0,5] & ~writevalue[0,5]; } } }
+                                    case 12h002: { switch( SMT ) { case 1: { CSRfSMT[5,3] = CSRfSMT[5,3] & ~writevalue[0,3]; } case 0: { CSRf[5,3] = CSRf[5,3] & ~writevalue[0,3]; } } }
+                                    case 12h003: { switch( SMT ) { case 1: { CSRfSMT = CSRfSMT & ~writevalue[0,8]; } case 0: { CSRf = CSRf & ~writevalue[0,8]; } } }
+                                    default: {}
+                                }
+                            }
+                        }
+                    }
+                    busy = 0;
                 }
             }
         }

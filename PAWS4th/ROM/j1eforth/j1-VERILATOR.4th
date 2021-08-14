@@ -903,34 +903,64 @@ t: words
    repeat t;
 t: ver ( -- n ) =ver literal 100 literal * =ext literal + t;
 t: hi ( -- )
-   cr ."| $literal PAWS eforth J1+CPU v"
+   cr ."| $literal VERILATOR PAWS eforth J1+CPU v"
 	base @ hex
 	ver <# # # 2e literal hold # #>
 	type base ! cr t;
+
+( DISPLAY helper words )
+t: vblank? begin cf00 literal @ 0<> until t;
+t: screen! cf00 literal ! t;
+t: framebuffer! begin c614 literal @ 0= until vblank? c6f2 literal ! c6f0 literal ! t;
+t: terminal! c702 literal ! t;
+t: background! c004 literal ! c002 literal ! c000 literal ! t;
+
+( GPU )
+t: gpu? begin c612 literal @ 0= until t;
+t: gpu! gpu? c612 literal ! t;
+t: fullscreen! 0 literal 0 literal 13f literal ef literal t;
+t: coords2! c602 literal ! c600 literal ! t;
+t: coords4! c60c literal ! c60a literal ! coords2! t;
+t: coords6! c610 literal ! c60e literal ! coords4! t;
+t: colour! c608 literal ! c606 literal ! c604 literal ! t;
+t: pixel coords2! 1 literal gpu! t;
+t: line coords4! 2 literal gpu! t;
+t: rectangle coords4! 3 literal gpu! t;
+t: circle coords4! 4 literal gpu! t;
+t: fcircle coords4! 5 literal gpu! t;
+t: triangle coords6! 6 literal gpu! t;
+t: blit coords4! 7 literal gpu! t;
+t: blittile! c640 literal ! 10 literal begin 1- dup c642 literal ! swap c644 literal ! dup 0= until drop t;
+t: charblit coords4! 8 literal gpu! t;
+t: colblit coords4! 9 literal gpu! t;
+t: pbstart! coords4! a literal gpu! t;
+t: pbpixel! c670 literal ! t;
+t: pbstop! 3 literal c678 literal ! t;
+t: bmmove! gpu? c6e0 literal ! t;
+t: cs 40 literal 0 literal 0 literal colour! fullscreen! rectangle 5 literal bmmove! t;
+
+( tile map )
+t: tml? begin c122 literal @ 0= until t;
+t: tmu? begin c222 literal @ 0= until t;
+t: tmlmove! tml? c120 literal ! t;
+t: tmumove! tmu? c220 literal ! t;
+t: tmlcs 9 literal tmlmove! t;
+t: tmucs 9 literal tmumove! t;
+
+( character map )
+t: tcs 3 literal tpu! 0 3f tcolour! t;
+
 t: cold ( -- )
    =uzero literal =up literal =udiff literal cmove
    preset forth-wordlist dup context ! dup current 2! overt
    4000 literal cell+ dup cell- @ $eval
-   3 literal c678 literal ! ( pixel block stop )
-   0 literal c004 literal ! 0 literal c002 literal ! 0 literal c000 literal ! ( background reset )
-   0 literal cf00 literal ! ( display order reset )
-   0 literal c6f2 literal ! 0 literal c6f0 literal ! ( framebuffer reset )
-   40 literal c604 literal ! 0 literal c606 literal ! 0 literal c608 literal !  ( colour reset )
-   0 literal 0 literal 13f literal ef literal ( cs )
-   c60c literal ! c60a literal ! c602 literal ! c600 literal !
-   3 literal c612 literal !
-   9 literal c120 literal ! ( tmlcs )
-   9 literal c130 literal ! ( tmucs )
-   3 literal c50a literal ! ( tcs )
-   1 literal c702 literal ! ( show terminal )
+   pbstop! 1 literal terminal!
+   0 literal dup dup background!
+   0 literal dup dup screen! framebuffer!
+   cs tmlcs tmucs tcs
    'boot @execute
    quit
    cold t;
-
-( Buttons and LEDs )
-t: led@ f130 literal @ t;
-t: led! f130 literal ! t;
-t: buttons@ f120 literal @ t;
 
 target.1 -order set-current
 

@@ -6,7 +6,7 @@ algorithm ps2ascii(
     output  uint8   ascii,
     output  uint1   asciivalid
 ) <autorun> {
-    uint8   newascii = uninitialised;
+    uint8   newascii = 8hff;
     uint1   LATCHvalid = 0;
     uint1   lctrl = 0;
     uint1   rctrl = 0;
@@ -21,19 +21,17 @@ algorithm ps2ascii(
 
     // PS2 KEYBOARD CODE READER
     uint8   ps2keycode = uninitialised;
-    uint1   ps2valid = uninitialised;
     ps2 PS2 <@clock_25mhz> (
         ps2clk_ext <: us2_bd_dp,
         ps2data_ext <: us2_bd_dn,
-        data :> ps2keycode,
-        valid :> ps2valid
+        data :> ps2keycode
     );
     asciivalid := 0;
 
     always {
-        newascii = 8hff;
-        switch( { ps2valid, LATCHvalid } ) {
+        switch( { PS2.valid, LATCHvalid } ) {
             case 2b10: {
+                newascii = 8hff;
                 switch( ps2keycode ) {
                     case 8he0: { startmulti = 1; }
                     case 8hf0: { startbreak = 1; }
@@ -139,7 +137,7 @@ algorithm ps2ascii(
             }
             default: {}
         }
-        LATCHvalid = ps2valid;
+        LATCHvalid = PS2.valid;
     }
 }
 

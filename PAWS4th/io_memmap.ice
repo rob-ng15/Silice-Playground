@@ -56,8 +56,8 @@ $$end
 
 $$if not SIMULATION then
     // UART CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
-    uint8   Uinchar = uninitialized;
-    uint8   Uoutchar = uninitialized;
+    uint8   UARTinchar = uninitialized;
+    uint8   UARToutchar = uninitialized;
     uint1   UARTinavailable = uninitialized;
     uint1   UARTinread = uninitialized;
     uint1   UARToutfull = uninitialized;
@@ -65,8 +65,8 @@ $$if not SIMULATION then
     uart UART(
         uart_tx :> uart_tx,
         uart_rx <: uart_rx,
-        inchar :> Uinchar,
-        outchar <: Uoutchar,
+        inchar :> UARTinchar,
+        outchar <: UARToutchar,
         inavailable :> UARTinavailable,
         inread <: UARTinread,
         outfull :> UARToutfull,
@@ -74,14 +74,14 @@ $$if not SIMULATION then
     );
 
     // PS2 CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
-    uint8   Pinchar = uninitialized;
+    uint8   PS2inchar = uninitialized;
     uint1   PS2inavailable = uninitialized;
     uint1   PS2inread = uninitialized;
     ps2buffer PS2(
         clock_25mhz <: clock_25mhz,
         us2_bd_dp <: us2_bd_dp,
         us2_bd_dn <: us2_bd_dn,
-        inchar :> Pinchar,
+        inchar :> PS2inchar,
         inavailable :> PS2inavailable,
         inread <: PS2inread
     );
@@ -123,8 +123,8 @@ $$end
                     case 12h100: {
                         switch( { PS2inavailable, UARTinavailable } ) {
                             case 2b00: { readData = 0; }
-                            case 2b01: { readData = { 8b0, Uinchar }; UARTinread = 1; }
-                            default: { readData = { 8b0, Pinchar }; PS2inread = 1; }
+                            case 2b01: { readData = { 8b0, UARTinchar }; UARTinread = 1; }
+                            default: { readData = { 8b0, PS2inchar }; PS2inread = 1; }
                         }
                     }
                     case 12h102: { readData = { 14b0, UARToutfull ? 1b1 : 1b0, ( UARTinavailable || PS2inavailable ) ? 1b1: 1b0 }; }
@@ -152,7 +152,7 @@ $$end
                     // UART, LEDS
                     case 12h130: { leds = writeData; }
                     $$if not SIMULATION then
-                    case 12h100: { Uoutchar = writeData[0,8]; UARToutwrite = 1; }
+                    case 12h100: { UARToutchar = writeData[0,8]; UARToutwrite = 1; }
 
                     // SDCARD
                     case 12h140: { SDCARDreadsector = 1; }
@@ -238,11 +238,31 @@ algorithm copro_memmap(
 
     uint16  fpua = uninitialized;
     uint16  fpub = uninitialized;
+    uint16  fpuitof = uninitialized;
+    uint16  fpuftoi = uninitialized;
+    uint16  fpufadd = uninitialized;
+    uint16  fpufsub = uninitialized;
+    uint16  fpufmul = uninitialized;
+    uint16  fpufdiv = uninitialized;
+    uint16  fpufsqrt = uninitialized;
+    int16   fpuless = uninitialized;
+    int16   fpuequal = uninitialized;
+    int16   fpulessequal = uninitialized;
     uint3   fpustart = uninitialized;
     uint1   fpubusy = uninitialized;
     floatops fpu(
         a <: fpua,
         b <: fpub,
+        itof :> fpuitof,
+        ftoi :> fpuftoi,
+        fadd :> fpufadd,
+        fsub :> fpufsub,
+        fmul :> fpufmul,
+        fdiv :> fpufdiv,
+        fsqrt :> fpufsqrt,
+        less :> fpuless,
+        equal :> fpuequal,
+        lessequal :> fpulessequal,
         start <: fpustart,
         busy :> fpubusy
     );
@@ -300,16 +320,16 @@ algorithm copro_memmap(
                     case 12h028: { readData = multiplier16by16to32.product[0,16]; }
 
                     case 12h102: { readData = fpubusy; }
-                    case 12h110: { readData = fpu.itof; }
-                    case 12h111: { readData = fpu.ftoi; }
-                    case 12h112: { readData = fpu.fadd; }
-                    case 12h113: { readData = fpu.fsub; }
-                    case 12h114: { readData = fpu.fmul; }
-                    case 12h115: { readData = fpu.fdiv; }
-                    case 12h116: { readData = fpu.fsqrt; }
-                    case 12h117: { readData = fpu.less; }
-                    case 12h118: { readData = fpu.equal; }
-                    case 12h119: { readData = fpu.lessequal; }
+                    case 12h110: { readData = fpuitof; }
+                    case 12h111: { readData = fpuftoi; }
+                    case 12h112: { readData = fpufadd; }
+                    case 12h113: { readData = fpufsub; }
+                    case 12h114: { readData = fpufmul; }
+                    case 12h115: { readData = fpufdiv; }
+                    case 12h116: { readData = fpufsqrt; }
+                    case 12h117: { readData = fpuless; }
+                    case 12h118: { readData = fpuequal; }
+                    case 12h119: { readData = fpulessequal; }
 
                     // RETURN NULL VALUE
                     default: { readData = 0; }
@@ -326,8 +346,8 @@ algorithm copro_memmap(
                     case 12h001: { doperand1[0,16] = writeData; }
                     case 12h002: { doperand2[16,16] = writeData; }
                     case 12h003: { doperand2[0,16] = writeData; }
-                    case 12h020: { divmod32by16to16qr.dividendh = writeData; }
-                    case 12h021: { divmod32by16to16qr.dividendl = writeData; }
+                    case 12h020: { divmod32by16to16qr.dividend[16,16] = writeData; }
+                    case 12h021: { divmod32by16to16qr.dividend[0,16] = writeData; }
                     case 12h022: { divmod32by16to16qr.divisor = writeData; }
                     case 12h023: { divmod32by16to16qr.start = writeData; }
                     case 12h024: { divmod16by16to16qr.dividend = writeData; }
@@ -468,460 +488,6 @@ algorithm audiotimers_memmap(
         }
         LATCHmemoryWrite = memoryWrite;
     }
-}
-
-algorithm passthrough(input uint1 i,output! uint1 o)
-{
-  always { o=i; }
-}
-
-algorithm video_memmap(
-    // CLOCKS
-    input   uint1   clock_25mhz,
-
-    // Memory access
-    input   uint12  memoryAddress,
-    input   uint1   memoryWrite,
-    input   uint1   memoryRead,
-    input   uint16  writeData,
-    output  uint16  readData,
-$$if HDMI then
-    // HDMI OUTPUT
-    output! uint4   gpdi_dp
-$$end
-$$if VGA then
-    // VGA OUTPUT
-    output! uint$color_depth$ video_r,
-    output! uint$color_depth$ video_g,
-    output! uint$color_depth$ video_b,
-    output  uint1 video_hs,
-    output  uint1 video_vs,
-$$end
-) <autorun> {
-    // VIDEO + CLOCKS
-    uint1   pll_lock_VIDEO = uninitialized;
-    uint1   video_clock = uninitialized;
-    uint1   gpu_clock = uninitialized;
-$$if not SIMULATION then
-    ulx3s_clk_risc_ice_v_VIDEO clk_gen_VIDEO (
-        clkin    <: clock_25mhz,
-        clkGPU :> gpu_clock,
-        clkVIDEO :> video_clock,
-        locked   :> pll_lock_VIDEO
-    );
-$$else
-    passthrough p1(i<:clock_25mhz,o:>gpu_clock);
-    passthrough p2(i<:clock_25mhz,o:>video_clock);
-$$end
-    // Video Reset
-    uint1   video_reset = uninitialized;
-    clean_reset video_rstcond<@video_clock,!reset> ( out :> video_reset );
-
-    // RNG random number generator
-    uint1   static1bit <: rng.u_noise_out[0,1];
-    uint2   static2bit <: rng.u_noise_out[0,2];
-    uint6   static6bit <: rng.u_noise_out[0,6];
-    random rng <@clock_25mhz> ();
-
-    // HDMI driver
-    // Status of the screen, if in range, if in vblank, actual pixel x and y
-    uint1   vblank = uninitialized;
-    uint1   pix_active = uninitialized;
-    uint10  pix_x  = uninitialized;
-    uint10  pix_y  = uninitialized;
-$$if VGA then
-  vga vga_driver<@clock_25mhz,!reset>(
-    vga_hs :> video_hs,
-    vga_vs :> video_vs,
-    vga_x  :> pix_x,
-    vga_y  :> pix_y,
-    vblank :> vblank,
-    active :> pix_active,
-  );
-$$end
-$$if HDMI then
-    uint8   video_r = uninitialized;
-    uint8   video_g = uninitialized;
-    uint8   video_b = uninitialized;
-    hdmi video<@clock_25mhz,!reset> (
-        vblank  :> vblank,
-        active  :> pix_active,
-        x       :> pix_x,
-        y       :> pix_y,
-        gpdi_dp :> gpdi_dp,
-        red     <: video_r,
-        green   <: video_g,
-        blue    <: video_b
-    );
-$$end
-    // CREATE DISPLAY LAYERS
-    // BACKGROUND
-    uint6   background_p = uninitialized;
-    background background_generator <@video_clock,!video_reset>  (
-        pix_x      <: pix_x,
-        pix_y      <: pix_y,
-        pix_active <: pix_active,
-        pix_vblank <: vblank,
-        pixel    :> background_p,
-        staticGenerator <: static2bit
-    );
-
-    // Tilemaps - Lower and Upper
-    uint6   lower_tilemap_p = uninitialized;
-    uint1   lower_tilemap_display = uninitialized;
-    uint6   upper_tilemap_p = uninitialized;
-    uint1   upper_tilemap_display = uninitialized;
-    tilemap lower_tile_map <@video_clock,!video_reset> (
-        pix_x      <: pix_x,
-        pix_y      <: pix_y,
-        pix_active <: pix_active,
-        pix_vblank <: vblank,
-        pixel    :> lower_tilemap_p,
-        tilemap_display :> lower_tilemap_display
-    );
-    tilemap upper_tile_map <@video_clock,!video_reset> (
-        pix_x      <: pix_x,
-        pix_y      <: pix_y,
-        pix_active <: pix_active,
-        pix_vblank <: vblank,
-        pixel    :> upper_tilemap_p,
-        tilemap_display :> upper_tilemap_display
-    );
-
-    // Bitmap Window with GPU
-    uint1   bitmap_display = uninitialized;
-    uint6   bitmap_p = uninitialized;
-    // 640 x 480 x 7 bit { Arrggbb } colour bitmap
-    bitmap bitmap_window <@video_clock,!video_reset> (
-        gpu_clock <: gpu_clock,
-        pix_x      <: pix_x,
-        pix_y      <: pix_y,
-        pix_active <: pix_active,
-        pix_vblank <: vblank,
-        pixel    :> bitmap_p,
-        bitmap_display :> bitmap_display,
-        static1bit <: static1bit,
-        static6bit <: static6bit
-   );
-
-    // Sprite Layers - Lower and Upper
-    uint6   lower_sprites_p = uninitialized;
-    uint1   lower_sprites_display = uninitialized;
-    uint6   upper_sprites_p = uninitialized;
-    uint1   upper_sprites_display = uninitialized;
-    sprite_layer lower_sprites <@video_clock,!video_reset> (
-        pix_x      <: pix_x,
-        pix_y      <: pix_y,
-        pix_active <: pix_active,
-        pix_vblank <: vblank,
-        pixel    :> lower_sprites_p,
-        sprite_layer_display :> lower_sprites_display,
-        collision_layer_1 <: bitmap_display,
-        collision_layer_2 <: lower_tilemap_display,
-        collision_layer_3 <: upper_tilemap_display,
-        collision_layer_4 <: upper_sprites_display
-    );
-    sprite_layer upper_sprites <@video_clock,!video_reset> (
-        pix_x      <: pix_x,
-        pix_y      <: pix_y,
-        pix_active <: pix_active,
-        pix_vblank <: vblank,
-        pixel    :> upper_sprites_p,
-        sprite_layer_display :> upper_sprites_display,
-        collision_layer_1 <: bitmap_display,
-        collision_layer_2 <: lower_tilemap_display,
-        collision_layer_3 <: upper_tilemap_display,
-        collision_layer_4 <: lower_sprites_display
-    );
-
-    // Character Map Window
-    uint6   character_map_p = uninitialized;
-    uint1   character_map_display = uninitialized;
-    character_map character_map_window <@video_clock,!video_reset> (
-        pix_x      <: pix_x,
-        pix_y      <: pix_y,
-        pix_active <: pix_active,
-        pix_vblank <: vblank,
-        pixel    :> character_map_p,
-        character_map_display :> character_map_display
-    );
-
-    // Terminal Window
-    uint6   terminal_p = uninitialized;
-    uint1   terminal_display = uninitialized;
-    terminal terminal_window <@video_clock,!video_reset> (
-        pix_x      <: pix_x,
-        pix_y      <: pix_y,
-        pix_active <: pix_active,
-        pix_vblank <: vblank,
-        pixel    :> terminal_p,
-        terminal_display :> terminal_display
-    );
-
-    // Combine the display layers for display
-
-    multiplex_display display <@video_clock,!video_reset> (
-        pix_x      <: pix_x,
-        pix_y      <: pix_y,
-        pix_active <: pix_active,
-        pix_vblank <: vblank,
-        pix_red    :> video_r,
-        pix_green  :> video_g,
-        pix_blue   :> video_b,
-
-        background_p <: background_p,
-
-        lower_tilemap_p <: lower_tilemap_p,
-        lower_tilemap_display <: lower_tilemap_display,
-
-        upper_tilemap_p <: upper_tilemap_p,
-        upper_tilemap_display <: upper_tilemap_display,
-
-        lower_sprites_p <: lower_sprites_p,
-        lower_sprites_display <: lower_sprites_display,
-
-        upper_sprites_p <: upper_sprites_p,
-        upper_sprites_display <: upper_sprites_display,
-
-        bitmap_p <: bitmap_p,
-        bitmap_display <: bitmap_display,
-
-        character_map_p <: character_map_p,
-        character_map_display <: character_map_display,
-
-        terminal_p <: terminal_p,
-        terminal_display <: terminal_display
-    );
-
-    // LATCH MEMORYWRITE
-    uint1   LATCHmemoryWrite = uninitialized;
-
-    always {
-        // READ IO Memory
-        switch( memoryRead ) {
-            case 1: {
-                switch( memoryAddress ) {
-                    // TILE MAP
-                    case 12h120: { readData = lower_tile_map.tm_lastaction; }
-                    case 12h122: { readData = lower_tile_map.tm_active; }
-                    case 12h220: { readData = upper_tile_map.tm_lastaction; }
-                    case 12h222: { readData = upper_tile_map.tm_active; }
-
-                    // LOWER SPRITE LAYER
-                    $$for i=0,15 do
-                        case $0x300 + i*2$: { readData = lower_sprites.sprite_read_active_$i$; }
-                        case $0x320 + i*2$: { readData = lower_sprites.sprite_read_double_$i$; }
-                        case $0x340 + i*2$: { readData = lower_sprites.sprite_read_colour_$i$; }
-                        case $0x360 + i*2$: { readData = {{5{lower_sprites.sprite_read_x_$i$[10,1]}}, lower_sprites.sprite_read_x_$i$}; }
-                        case $0x380 + i*2$: { readData = {{5{lower_sprites.sprite_read_y_$i$[10,1]}}, lower_sprites.sprite_read_y_$i$}; }
-                        case $0x3a0 + i*2$: { readData = lower_sprites.sprite_read_tile_$i$; }
-                        case $0x3c0 + i*2$: { readData = lower_sprites.collision_$i$; }
-                        case $0x3e0 + i*2$: { readData = lower_sprites.layer_collision_$i$; }
-                    $$end
-
-                    // UPPER SPRITE LAYER
-                    $$for i=0,15 do
-                        case $0x400 + i*2$: { readData = upper_sprites.sprite_read_active_$i$; }
-                        case $0x420 + i*2$: { readData = upper_sprites.sprite_read_double_$i$; }
-                        case $0x440 + i*2$: { readData = upper_sprites.sprite_read_colour_$i$; }
-                        case $0x460 + i*2$: { readData = {{5{upper_sprites.sprite_read_x_$i$[10,1]}}, upper_sprites.sprite_read_x_$i$}; }
-                        case $0x480 + i*2$: { readData = {{5{upper_sprites.sprite_read_y_$i$[10,1]}}, upper_sprites.sprite_read_y_$i$}; }
-                        case $0x4a0 + i*2$: { readData = upper_sprites.sprite_read_tile_$i$; }
-                        case $0x4c0 + i*2$: { readData = upper_sprites.collision_$i$; }
-                        case $0x4e0 + i*2$: { readData = upper_sprites.layer_collision_$i$; }
-                    $$end
-
-                    // CHARACTER MAP
-                    case 12h504: { readData = character_map_window.curses_character; }
-                    case 12h506: { readData = character_map_window.curses_background; }
-                    case 12h508: { readData = character_map_window.curses_foreground; }
-                    case 12h50a: { readData = character_map_window.tpu_active; }
-
-                    // GPU and BITMAP
-                    case 12h612: { readData = bitmap_window.gpu_queue_full; }
-                    case 12h614: { readData = bitmap_window.gpu_queue_complete; }
-                    case 12h62a: { readData = bitmap_window.vector_block_active; }
-                    case 12h6d4: { readData = bitmap_window.bitmap_colour_read; }
-
-                    // TERMINAL
-                    case 12h700: { readData = terminal_window.terminal_active; }
-
-                    // VBLANK
-                    case 12hf00: { readData = vblank; }
-
-                    default: { readData = 0; }
-                }
-            }
-            default: {}
-        }
-
-        // WRITE IO Memory
-        switch( { memoryWrite, LATCHmemoryWrite } ) {
-            case 2b10: {
-                switch( memoryAddress ) {
-                    // BACKGROUND
-                    case 12h000: { background_generator.backgroundcolour = writeData; background_generator.background_update = 1; }
-                    case 12h002: { background_generator.backgroundcolour_alt = writeData; background_generator.background_update = 2; }
-                    case 12h004: { background_generator.backgroundcolour_mode = writeData; background_generator.background_update = 3; }
-                    case 12h010: { background_generator.copper_program = writeData; }
-                    case 12h012: { background_generator.copper_status = writeData; }
-                    case 12h020: { background_generator.copper_address = writeData; }
-                    case 12h022: { background_generator.copper_command = writeData; }
-                    case 12h024: { background_generator.copper_condition = writeData; }
-                    case 12h026: { background_generator.copper_coordinate = writeData; }
-                    case 12h028: { background_generator.copper_mode = writeData; }
-                    case 12h02a: { background_generator.copper_alt = writeData; }
-                    case 12h02c: { background_generator.copper_colour = writeData; }
-
-                    // TILE MAP
-                    case 12h100: { lower_tile_map.tm_x = writeData; }
-                    case 12h102: { lower_tile_map.tm_y = writeData; }
-                    case 12h104: { lower_tile_map.tm_character = writeData; }
-                    case 12h106: { lower_tile_map.tm_background = writeData; }
-                    case 12h108: { lower_tile_map.tm_foreground = writeData; }
-                    case 12h10a: { lower_tile_map.tm_write = 1; }
-                    case 12h110: { lower_tile_map.tile_writer_tile = writeData; }
-                    case 12h112: { lower_tile_map.tile_writer_line = writeData; }
-                    case 12h114: { lower_tile_map.tile_writer_bitmap = writeData; }
-                    case 12h120: { lower_tile_map.tm_scrollwrap = writeData; }
-
-                    case 12h200: { upper_tile_map.tm_x = writeData; }
-                    case 12h202: { upper_tile_map.tm_y = writeData; }
-                    case 12h204: { upper_tile_map.tm_character = writeData; }
-                    case 12h206: { upper_tile_map.tm_background = writeData; }
-                    case 12h208: { upper_tile_map.tm_foreground = writeData; }
-                    case 12h20a: { upper_tile_map.tm_write = 1; }
-                    case 12h210: { upper_tile_map.tile_writer_tile = writeData; }
-                    case 12h212: { upper_tile_map.tile_writer_line = writeData; }
-                    case 12h214: { upper_tile_map.tile_writer_bitmap = writeData; }
-                    case 12h220: { upper_tile_map.tm_scrollwrap = writeData; }
-
-                    // LOWER SPRITE LAYER
-                    $$for i=0,15 do
-                        case $0x300 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_active = writeData; lower_sprites.sprite_layer_write = 1; }
-                        case $0x320 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_double = writeData; lower_sprites.sprite_layer_write = 2; }
-                        case $0x340 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_colour = writeData; lower_sprites.sprite_layer_write = 3; }
-                        case $0x360 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_x = writeData; lower_sprites.sprite_layer_write = 4; }
-                        case $0x380 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_y = writeData; lower_sprites.sprite_layer_write = 5; }
-                        case $0x3a0 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_set_tile = writeData; lower_sprites.sprite_layer_write = 6; }
-                        case $0x3c0 + i*2$: { lower_sprites.sprite_set_number = $i$; lower_sprites.sprite_update = writeData; lower_sprites.sprite_layer_write = 7; }
-                    $$end
-
-                    // UPPER SPRITE LAYER
-                    $$for i=0,15 do
-                        case $0x400 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_active = writeData; upper_sprites.sprite_layer_write = 1; }
-                        case $0x420 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_double = writeData; upper_sprites.sprite_layer_write = 2; }
-                        case $0x440 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_colour = writeData; upper_sprites.sprite_layer_write = 3;  }
-                        case $0x460 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_x = writeData; upper_sprites.sprite_layer_write = 4; }
-                        case $0x480 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_y = writeData; upper_sprites.sprite_layer_write = 5; }
-                        case $0x4a0 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_set_tile = writeData; upper_sprites.sprite_layer_write = 6; }
-                        case $0x4c0 + i*2$: { upper_sprites.sprite_set_number = $i$; upper_sprites.sprite_update = writeData; upper_sprites.sprite_layer_write = 7; }
-                    $$end
-
-                    // LOWER SPRITE LAYER BITMAP WRITER
-                    case 12h800: { lower_sprites.sprite_writer_sprite = writeData; }
-                    case 12h802: { lower_sprites.sprite_writer_line = writeData; }
-                    case 12h804: { lower_sprites.sprite_writer_bitmap = writeData; lower_sprites.sprite_writer_active = 1; }
-
-                    // UPPER SPRITE LAYER BITMAP WRITER
-                    case 12h900: { upper_sprites.sprite_writer_sprite = writeData; }
-                    case 12h902: { upper_sprites.sprite_writer_line = writeData; }
-                    case 12h904: { upper_sprites.sprite_writer_bitmap = writeData; upper_sprites.sprite_writer_active = 1; }
-
-                    // CHARACTER MAP
-                    case 12h500: { character_map_window.tpu_x = writeData; }
-                    case 12h502: { character_map_window.tpu_y = writeData; }
-                    case 12h504: { character_map_window.tpu_character = writeData; }
-                    case 12h506: { character_map_window.tpu_background = writeData; }
-                    case 12h508: { character_map_window.tpu_foreground = writeData; }
-                    case 12h50a: { character_map_window.tpu_write = writeData; }
-
-                    // GPU and BITMAP
-                    case 12h600: { bitmap_window.gpu_x = writeData; }
-                    case 12h602: { bitmap_window.gpu_y = writeData; }
-                    case 12h604: { bitmap_window.gpu_colour = writeData; }
-                    case 12h606: { bitmap_window.gpu_colour_alt = writeData; }
-                    case 12h608: { bitmap_window.gpu_dithermode = writeData; }
-                    case 12h60a: { bitmap_window.gpu_param0 = writeData; }
-                    case 12h60c: { bitmap_window.gpu_param1 = writeData; }
-                    case 12h60e: { bitmap_window.gpu_param2 = writeData; }
-                    case 12h610: { bitmap_window.gpu_param3 = writeData; }
-                    case 12h612: { bitmap_window.gpu_write = writeData; }
-
-                    case 12h620: { bitmap_window.vector_block_number = writeData; }
-                    case 12h622: { bitmap_window.vector_block_colour = writeData; }
-                    case 12h624: { bitmap_window.vector_block_xc = writeData; }
-                    case 12h626: { bitmap_window.vector_block_yc = writeData; }
-                    case 12h628: { bitmap_window.vector_block_scale = writeData; }
-                    case 12h62a: { bitmap_window.draw_vector = 1; }
-
-                    case 12h630: { bitmap_window.vertices_writer_block = writeData; }
-                    case 12h632: { bitmap_window.vertices_writer_vertex = writeData; }
-                    case 12h634: { bitmap_window.vertices_writer_xdelta = writeData; }
-                    case 12h636: { bitmap_window.vertices_writer_ydelta = writeData; }
-                    case 12h638: { bitmap_window.vertices_writer_active = writeData; }
-
-                    case 12h640: { bitmap_window.blit1_writer_tile = writeData; }
-                    case 12h642: { bitmap_window.blit1_writer_line = writeData; }
-                    case 12h644: { bitmap_window.blit1_writer_bitmap = writeData; }
-
-                    case 12h650: { bitmap_window.character_writer_character = writeData; }
-                    case 12h652: { bitmap_window.character_writer_line = writeData; }
-                    case 12h654: { bitmap_window.character_writer_bitmap = writeData; }
-
-                    case 12h660: { bitmap_window.colourblit_writer_tile = writeData; }
-                    case 12h662: { bitmap_window.colourblit_writer_line = writeData; }
-                    case 12h664: { bitmap_window.colourblit_writer_pixel = writeData; }
-                    case 12h666: { bitmap_window.colourblit_writer_colour = writeData; }
-
-                    case 12h670: { bitmap_window.pb_colour7 = writeData; bitmap_window.pb_newpixel = 1; }
-                    case 12h672: { bitmap_window.pb_colour8r = writeData; }
-                    case 12h674: { bitmap_window.pb_colour8g = writeData; }
-                    case 12h676: { bitmap_window.pb_colour8b = writeData; bitmap_window.pb_newpixel = 2; }
-                    case 12h678: { bitmap_window.pb_newpixel = 3; }
-
-                    case 12h6d0: { bitmap_window.bitmap_x_read = writeData; }
-                    case 12h6d2: { bitmap_window.bitmap_y_read = writeData; }
-
-                    case 12h6e0: { bitmap_window.bitmap_write_offset = writeData; }
-                    case 12h6f0: { bitmap_window.framebuffer = writeData; }
-                    case 12h6f2: { bitmap_window.writer_framebuffer = writeData; }
-
-                    case 12h700: { terminal_window.terminal_character = writeData; terminal_window.terminal_write = 1; }
-                    case 12h702: { terminal_window.showterminal = writeData; }
-
-                    // DISPLAY LAYER ORDERING / FRAMEBUFFER SELECTION
-                    case 12hf00: { display.display_order = writeData; }
-
-                    default: {}
-                }
-            }
-            case 2b00: {
-                // RESET DISPLAY Co-Processor Controls
-                background_generator.background_update = 0;
-                background_generator.copper_program = 0;
-                lower_tile_map.tm_write = 0;
-                lower_tile_map.tm_scrollwrap = 0;
-                upper_tile_map.tm_write = 0;
-                upper_tile_map.tm_scrollwrap = 0;
-                lower_sprites.sprite_layer_write = 0;
-                lower_sprites.sprite_writer_active = 0;
-                upper_sprites.sprite_layer_write = 0;
-                upper_sprites.sprite_writer_active = 0;
-                bitmap_window.bitmap_write_offset = 0;
-                bitmap_window.gpu_write = 0;
-                bitmap_window.pb_newpixel = 0;
-                bitmap_window.draw_vector = 0;
-                character_map_window.tpu_write = 0;
-                terminal_window.terminal_write = 0;
-            }
-            default: {}
-        }
-        LATCHmemoryWrite = memoryWrite;
-    }
-
-    // DISPLAY TERMINAL WINDOW
-    terminal_window.showterminal = 1;
 }
 
 // TIMERS and RNG Controllers
@@ -1139,14 +705,14 @@ algorithm ps2buffer(
     uint7  ps2BufferTop = 0;
 
     // PS 2 ASCII
-    uint1   PS2asciivalid = uninitialized;
-    uint8   PS2ascii = uninitialized;
+    //uint1   PS2asciivalid = uninitialized;
+    //uint8   PS2ascii = uninitialized;
     ps2ascii PS2(
         clock_25mhz <: clock_25mhz,
         us2_bd_dp <: us2_bd_dp,
         us2_bd_dn <: us2_bd_dn,
-        asciivalid :> PS2asciivalid,
-        ascii :> PS2ascii
+        //asciivalid :> PS2asciivalid,
+        //ascii :> PS2ascii
     );
 
     // PS2 Buffers
@@ -1159,9 +725,9 @@ algorithm ps2buffer(
     inchar := ps2Buffer.rdata0;
 
     always {
-        if( PS2asciivalid ) {
+        if( PS2.asciivalid ) {
             ps2Buffer.addr1 = ps2BufferTop;
-            ps2Buffer.wdata1 = PS2ascii;
+            ps2Buffer.wdata1 = PS2.ascii;
             update = 1;
         } else {
             if( update ) { ps2BufferTop = ps2BufferTop + 1; update = 0; }
@@ -1219,15 +785,10 @@ algorithm sdramcontroller(
     input   uint1   readflag,
     output  uint16  readdata,
 
-    output  uint1   busy
+    output  uint1   busy(0)
 ) <autorun> {
-    uint3   FSM = uninitialized;
-
     // MEMORY ACCESS FLAGS
-    sio.addr := { address, 1b0 };
-    sio.in_valid := 0;
-
-    // 16 bit READ NO SIGN EXTENSION - INSTRUCTION / PART 32 BIT ACCESS
+    sio.addr := { address, 1b0 }; sio.in_valid := 0;
     readdata := sio.data_out;
 
     while(1) {

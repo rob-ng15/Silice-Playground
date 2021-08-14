@@ -716,9 +716,6 @@ algorithm bitmap_memmap(
         }
         LATCHmemoryWrite = memoryWrite;
    }
-
-    // ON RESET STOP THE PIXEL BLOCK
-    if( ~reset ) { pb_newpixel = 3; __display("PB STOP"); }
 }
 
 algorithm charactermap_memmap(
@@ -933,7 +930,7 @@ algorithm terminal_memmap(
 ) <autorun> {
     uint8   terminal_character = uninitialized;
     uint2   terminal_write = uninitialized;
-    uint1   showterminal = 0;
+    uint1   showterminal = 1;
     terminal terminal_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
