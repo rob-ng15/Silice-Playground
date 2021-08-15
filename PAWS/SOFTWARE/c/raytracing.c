@@ -243,5 +243,5 @@ int main() {
 
     render(spheres, NB_SPHERES, lights, NB_LIGHTS);
 
-    while(1) {}
+    sleep( 4000, 0 );
 }

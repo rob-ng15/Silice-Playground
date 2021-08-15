@@ -3,7 +3,7 @@
 int main( void ) {
     INITIALISEMEMORY();
 
-    while(1) {
+    for( int loop = 0; loop < 4; loop++ ) {
         copper_startstop( 0 );
         copper_program( 0, COPPER_WAIT_VBLANK, 7, 0, BKG_SNOW, BLACK, WHITE );
         copper_program( 1, COPPER_WAIT_X, 7, 0, BKG_SNOW, BLACK, WHITE );

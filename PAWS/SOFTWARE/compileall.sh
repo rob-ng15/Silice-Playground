@@ -11,6 +11,6 @@
 
 ./compile.sh c/demo.c PAWS/DEMO.PAW
 ./compile.sh c/mandelbrot.c PAWS/MANDEL.PAW
-./compile.sh c/raytracing.c PAWS/RAY-HF.PAW
+./compile.sh c/raytracing.c PAWS/RAYTRACE.PAW
 ./compile.sh c/scale.c PAWS/SCALE.PAW
 ./compile.sh c/terminal-test.c PAWS/TERMINAL.PAW

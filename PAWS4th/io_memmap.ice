@@ -162,13 +162,7 @@ $$end
                     $$end
                     // SDRAM
                     case 12hf00: { sdramwritedata = writeData; }
-                    case 12hf02: {
-                        switch( writeData ) {
-                            case 1: { sdramreadflag = 1; }
-                            case 2: { sdramwriteflag = 1; }
-                            default: {}
-                        }
-                    }
+                    case 12hf02: { sdramreadflag = writeData[0,1]; sdramwriteflag = writeData[1,1]; }
                     case 12hf04: { sdramaddress[16,8] = writeData; }
                     case 12hf05: { sdramaddress[0,16] = writeData; }
                     default: {}
@@ -648,12 +642,12 @@ algorithm uart(
     );
 
     // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartInBuffer <input!> [4096] = uninitialized;
+    simple_dualport_bram uint8 uartInBuffer[4096] = uninitialized;
     uint13  uartInBufferNext = 0;
     uint13  uartInBufferTop = 0;
 
     // UART output FIFO (4096 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartOutBuffer <input!> [4096] = uninitialized;
+    simple_dualport_bram uint8 uartOutBuffer[4096] = uninitialized;
     uint13   uartOutBufferNext = 0;
     uint13   uartOutBufferTop = 0;
     uint13   newuartOutBufferTop = 0;
@@ -695,8 +689,8 @@ algorithm ps2buffer(
     input   uint1   us2_bd_dp,
     input   uint1   us2_bd_dn,
 
-    output  uint1   inavailable,
     output  uint8   inchar,
+    output  uint1   inavailable,
     input   uint1   inread
 ) <autorun> {
     // PS/2 input FIFO (256 character) as dualport bram (code from @sylefeb)
@@ -705,14 +699,14 @@ algorithm ps2buffer(
     uint7  ps2BufferTop = 0;
 
     // PS 2 ASCII
-    //uint1   PS2asciivalid = uninitialized;
-    //uint8   PS2ascii = uninitialized;
-    ps2ascii PS2(
-        clock_25mhz <: clock_25mhz,
+    uint1   PS2asciivalid = uninitialized;
+    uint2   LATCHasciivalid = uninitialized;
+    uint8   PS2ascii = uninitialized;
+    ps2ascii PS2 <@clock_25mhz> (
         us2_bd_dp <: us2_bd_dp,
         us2_bd_dn <: us2_bd_dn,
-        //asciivalid :> PS2asciivalid,
-        //ascii :> PS2ascii
+        asciivalid :> PS2asciivalid,
+        ascii :> PS2ascii
     );
 
     // PS2 Buffers
@@ -725,14 +719,13 @@ algorithm ps2buffer(
     inchar := ps2Buffer.rdata0;
 
     always {
-        if( PS2.asciivalid ) {
-            ps2Buffer.addr1 = ps2BufferTop;
-            ps2Buffer.wdata1 = PS2.ascii;
-            update = 1;
+        if( LATCHasciivalid == 2b11 ) {
+            ps2Buffer.addr1 = ps2BufferTop; ps2Buffer.wdata1 = PS2ascii; update = 1;
         } else {
             if( update ) { ps2BufferTop = ps2BufferTop + 1; update = 0; }
         }
         ps2BufferNext = ps2BufferNext + inread;
+        LATCHasciivalid = { LATCHasciivalid[0,1], PS2asciivalid };
     }
 }
 
@@ -752,7 +745,7 @@ algorithm sdcardbuffer(
     output  uint8   bufferdata
 ) <autorun> {
     // SDCARD - Code for the SDCARD from @sylefeb
-    simple_dualport_bram uint8 sdbuffer <input!> [512] = uninitialized;
+    simple_dualport_bram uint8 sdbuffer[512] = uninitialized;
     sdcardio sdcio;
     sdcard sd(
         // pins
@@ -767,11 +760,13 @@ algorithm sdcardbuffer(
     );
 
     // SDCARD Commands
-    sdcio.read_sector := readsector;
-    sdcio.addr_sector := { sectoraddressH, sectoraddressL };
-    sdbuffer.addr0 := bufferaddress;
-    ready := sdcio.ready;
-    bufferdata := sdbuffer.rdata0;
+    always {
+        sdcio.read_sector = readsector;
+        sdcio.addr_sector = { sectoraddressH, sectoraddressL };
+        sdbuffer.addr0 = bufferaddress;
+        ready = sdcio.ready;
+        bufferdata = sdbuffer.rdata0;
+    }
 }
 
 algorithm sdramcontroller(
@@ -788,28 +783,11 @@ algorithm sdramcontroller(
     output  uint1   busy(0)
 ) <autorun> {
     // MEMORY ACCESS FLAGS
-    sio.addr := { address, 1b0 }; sio.in_valid := 0;
-    readdata := sio.data_out;
+    sio.addr := { address, 1b0 }; sio.in_valid := 0; readdata := sio.data_out;
 
     while(1) {
-        switch( { readflag, writeflag } ) {
-            case 2b10: {
-                busy = 1;
-                // READ FROM SDRAM
-                sio.rw = 0;
-                sio.in_valid = 1;
-                while( !sio.done ) {}
-                busy = 0;
-            }
-            case 2b01: {
-                busy = 1;
-                // WRITE TO SDRAM
-                sio.data_in = writedata;
-                sio.rw = 1;
-                sio.in_valid = 1;
-                while( !sio.done ) {}
-                busy = 0;
-            }
+        switch( readflag | writeflag ) {
+            case 1: { busy = 1; sio.data_in = writedata; sio.rw = writeflag; sio.in_valid = 1; while( !sio.done ) {} busy = 0; }
             default: {}
         }
     }

@@ -26,6 +26,5 @@ int main( void ) {
     tpu_printf_centre( 0, TRANSPARENT, WHITE, "" );
     tpu_printf_centre( 29, TRANSPARENT, WHITE, "FINISHED" );
 
-    while(1) {
-    }
+    sleep( 4000, 0 );
 }

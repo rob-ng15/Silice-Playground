@@ -488,8 +488,8 @@ algorithm ps2buffer(
     input   uint1   us2_bd_dp,
     input   uint1   us2_bd_dn,
 
-    output  uint1   inavailable,
     output  uint8   inchar,
+    output  uint1   inavailable,
     input   uint1   inread
 ) <autorun> {
     // PS/2 input FIFO (256 character) as dualport bram (code from @sylefeb)
@@ -499,9 +499,9 @@ algorithm ps2buffer(
 
     // PS 2 ASCII
     uint1   PS2asciivalid = uninitialized;
+    uint2   LATCHasciivalid = uninitialized;
     uint8   PS2ascii = uninitialized;
-    ps2ascii PS2(
-        clock_25mhz <: clock_25mhz,
+    ps2ascii PS2 <@clock_25mhz> (
         us2_bd_dp <: us2_bd_dp,
         us2_bd_dn <: us2_bd_dn,
         asciivalid :> PS2asciivalid,
@@ -518,14 +518,13 @@ algorithm ps2buffer(
     inchar := ps2Buffer.rdata0;
 
     always {
-        if( PS2asciivalid ) {
-            ps2Buffer.addr1 = ps2BufferTop;
-            ps2Buffer.wdata1 = PS2ascii;
-            update = 1;
+        if( LATCHasciivalid == 2b11 ) {
+            ps2Buffer.addr1 = ps2BufferTop; ps2Buffer.wdata1 = PS2ascii; update = 1;
         } else {
             if( update ) { ps2BufferTop = ps2BufferTop + 1; update = 0; }
         }
         ps2BufferNext = ps2BufferNext + inread;
+        LATCHasciivalid = { LATCHasciivalid[0,1], PS2asciivalid };
     }
 }
 

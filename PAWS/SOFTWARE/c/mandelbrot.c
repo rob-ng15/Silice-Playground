@@ -6,12 +6,12 @@
 int main( void ) {
     INITIALISEMEMORY();
 
-    const int graphwidth = 320, graphheight = 240;
+    const int graphwidth = 320, graphheight = 240, kt = 64;
     float m = 4.0;
     float xmin = -2.1, xmax = 0.6, ymin = -1.35, ymax = 1.35;
     float dx = (xmax - xmin) / graphwidth, dy = (ymax - ymin) / graphheight;
     float jx, jy, tx, ty, wx, wy, r;
-    int kt = 64, k;
+    int k;
 
     gpu_pixelblock_start( 0, 0, graphwidth );
 
@@ -30,10 +30,10 @@ int main( void ) {
                 k = k + 1;
             } while( ( r < m ) && ( k < kt ) );
 
-            gpu_pixelblock_pixel7( ( k > kt ) ? BLACK : k );
+            gpu_pixelblock_pixel7( k );
         }
     }
 
     gpu_pixelblock_stop();
-    while(1) {}
+    sleep( 4000, 0 );
 }

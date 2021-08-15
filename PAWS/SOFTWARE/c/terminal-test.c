@@ -21,7 +21,7 @@ int main( void ) {
     unsigned char *oldmemorytop, *memoryblock, *newmemorytop;
     oldmemorytop = MEMORYTOP; memoryblock = malloc( 320 * 240 ); newmemorytop = MEMORYTOP;
 
-    while(1) {
+    for( int loop = 0; loop < 4; loop++ ) {
         clear();
         move( 0, 0 );
         for( i = 1; i < 8 ; i++ ) {
@@ -60,6 +60,6 @@ int main( void ) {
             refresh();
         }
 
-        sleep( 1000, 0 );
+        sleep( 4000, 0 );
     }
 }

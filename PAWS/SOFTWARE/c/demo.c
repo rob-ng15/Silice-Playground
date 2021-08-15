@@ -1149,7 +1149,7 @@ void floatdemo() {
 
 int main( void ) {
     INITIALISEMEMORY();
-	while(1) {
+	for( int loop = 0; loop < 4; loop++ ) {
         colourtable();
 
         backgrounddemo();

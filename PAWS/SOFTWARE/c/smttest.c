@@ -17,7 +17,7 @@ int main( void ) {
     tpu_printf_centre( 29, TRANSPARENT, BLUE, "The SMT Thread Is Drawing Rectangles!" );
     SMTSTART( (unsigned int )smtthread );
 
-    while(1) {
+    for( int loop = 0; loop < 32; loop++ ) {
         tpu_set( 1, 1, TRANSPARENT, WHITE );
         tpu_printf( "Main Thread Counting Away: %d", systemclock() );
         sleep( 1000, 0 );

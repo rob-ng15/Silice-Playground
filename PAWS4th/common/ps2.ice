@@ -1,143 +1,149 @@
 // TRANSLATE PS/2 KEYCODES TO ASCII FOR BUFFERING
 algorithm ps2ascii(
-    input   uint1   clock_25mhz,
     input   uint1   us2_bd_dp,
     input   uint1   us2_bd_dn,
     output  uint8   ascii,
     output  uint1   asciivalid
 ) <autorun> {
     uint8   newascii = 8hff;
-    uint1   LATCHvalid = 0;
     uint1   lctrl = 0;
     uint1   rctrl = 0;
+    uint1   lalt = 0;
+    uint1   ralt = 0;
     uint1   lshift = 0;
     uint1   rshift = 0;
     uint1   capslock = 0;
+    uint1   numlock = 1;
     uint1   startbreak = 0;
     uint1   startmulti = 0;
     uint1   CTRL <: lctrl | rctrl;
     uint1   SHIFT <: lshift | rshift;
-    uint1   CAPITAL <: lshift | rshift | capslock;
+    uint1   ALT <: lalt | ralt;
+    uint1   CAPITAL <: ( lshift | rshift ) ^ capslock;
 
     // PS2 KEYBOARD CODE READER
     uint8   ps2keycode = uninitialised;
-    ps2 PS2 <@clock_25mhz> (
+    uint1   ps2valid = uninitialised;
+    ps2 PS2(
         ps2clk_ext <: us2_bd_dp,
         ps2data_ext <: us2_bd_dn,
-        data :> ps2keycode
+        data :> ps2keycode,
+        valid :> ps2valid
     );
     asciivalid := 0;
 
     always {
-        switch( { PS2.valid, LATCHvalid } ) {
-            case 2b10: {
-                newascii = 8hff;
-                switch( ps2keycode ) {
-                    case 8he0: { startmulti = 1; }
-                    case 8hf0: { startbreak = 1; }
-                    default: {
-                        switch( { startmulti, startbreak } ) {
-                            case 2b00: {
-                                // KEY PRESS - TRANSLATE TO ASCII
-                                switch( ps2keycode ) {
-                                    case 8h1c: { newascii = CTRL ? 8h01 : CAPITAL ? 8h41 : 8h61; }  // A to Z
-                                    case 8h32: { newascii = CTRL ? 8h02 : CAPITAL ? 8h42 : 8h62; }
-                                    case 8h21: { newascii = CTRL ? 8h03 : CAPITAL ? 8h43 : 8h63; }
-                                    case 8h23: { newascii = CTRL ? 8h04 : CAPITAL ? 8h44 : 8h64; }
-                                    case 8h24: { newascii = CTRL ? 8h05 : CAPITAL ? 8h45 : 8h65; }
-                                    case 8h2b: { newascii = CTRL ? 8h06 : CAPITAL ? 8h46 : 8h66; }
-                                    case 8h34: { newascii = CTRL ? 8h07 : CAPITAL ? 8h47 : 8h67; }
-                                    case 8h33: { newascii = CTRL ? 8h08 : CAPITAL ? 8h48 : 8h68; }
-                                    case 8h43: { newascii = CTRL ? 8h09 : CAPITAL ? 8h49 : 8h69; }
-                                    case 8h3b: { newascii = CTRL ? 8h0a : CAPITAL ? 8h4a : 8h6a; }
-                                    case 8h42: { newascii = CTRL ? 8h0b : CAPITAL ? 8h4b : 8h6b; }
-                                    case 8h4b: { newascii = CTRL ? 8h0c : CAPITAL ? 8h4c : 8h6c; }
-                                    case 8h3a: { newascii = CTRL ? 8h0d : CAPITAL ? 8h4d : 8h6d; }
-                                    case 8h31: { newascii = CTRL ? 8h0e : CAPITAL ? 8h4e : 8h6e; }
-                                    case 8h44: { newascii = CTRL ? 8h0f : CAPITAL ? 8h4f : 8h6f; }
-                                    case 8h4d: { newascii = CTRL ? 8h10 : CAPITAL ? 8h50 : 8h70; }
-                                    case 8h15: { newascii = CTRL ? 8h11 : CAPITAL ? 8h51 : 8h71; }
-                                    case 8h2d: { newascii = CTRL ? 8h12 : CAPITAL ? 8h52 : 8h72; }
-                                    case 8h1b: { newascii = CTRL ? 8h13 : CAPITAL ? 8h53 : 8h73; }
-                                    case 8h2c: { newascii = CTRL ? 8h14 : CAPITAL ? 8h54 : 8h74; }
-                                    case 8h3c: { newascii = CTRL ? 8h15 : CAPITAL ? 8h55 : 8h75; }
-                                    case 8h2a: { newascii = CTRL ? 8h16 : CAPITAL ? 8h56 : 8h76; }
-                                    case 8h1d: { newascii = CTRL ? 8h17 : CAPITAL ? 8h57 : 8h77; }
-                                    case 8h22: { newascii = CTRL ? 8h18 : CAPITAL ? 8h58 : 8h78; }
-                                    case 8h35: { newascii = CTRL ? 8h19 : CAPITAL ? 8h59 : 8h79; }
-                                    case 8h1a: { newascii = CTRL ? 8h1a : CAPITAL ? 8h5a : 8h7a; }
-                                    case 8h54: { newascii = CTRL ? 8h1b : SHIFT ? 8h7b : 8h5b; }    // [ {
-                                    case 8h5d: { newascii = CTRL ? 8h1c : SHIFT ? 8h7e : 8h23; }    // # ~
-                                    case 8h5b: { newascii = CTRL ? 8h1d : SHIFT ? 8h7d : 8h5d; }    // ] }
-                                    case 8h4e: { newascii = SHIFT ? 8h5f : 8h2d; }                  // - _
-                                    case 8h55: { newascii = SHIFT ? 8h2b : 8h3d; }                  // + =
-                                    case 8h4c: { newascii = SHIFT ? 8h3a : 8h3b; }                  // ; :
-                                    case 8h52: { newascii = SHIFT ? 8h40 : 8h27; }                  // ' @
-                                    case 8h41: { newascii = SHIFT ? 8h3c : 8h2c; }                  // , >
-                                    case 8h49: { newascii = SHIFT ? 8h3e : 8h2e; }                  // . >
-                                    case 8h4a: { newascii = SHIFT ? 8h3f : 8h2f; }                  // / ?
-                                    case 8h16: { newascii = SHIFT ? 8h21 : 8h31; }                  // 1 to 0
-                                    case 8h1e: { newascii = SHIFT ? 8h22 : 8h32; }
-                                    case 8h26: { newascii = SHIFT ? 8ha3 : 8h33; }
-                                    case 8h25: { newascii = SHIFT ? 8h24 : 8h34; }
-                                    case 8h2e: { newascii = SHIFT ? 8h25 : 8h35; }
-                                    case 8h36: { newascii = SHIFT ? 8h5e : 8h36; }
-                                    case 8h3d: { newascii = SHIFT ? 8h26 : 8h37; }
-                                    case 8h3e: { newascii = SHIFT ? 8h2a : 8h38; }
-                                    case 8h46: { newascii = SHIFT ? 8h28 : 8h39; }
-                                    case 8h45: { newascii = SHIFT ? 8h29 : 8h30; }
-                                    case 8h58: { capslock = 1; }
-                                    case 8h12: { lshift = 1; }
-                                    case 8h59: { rshift = 1; }
-                                    case 8h14: { lctrl = 1; }
-                                    case 8h29: { newascii = 8h20; }                                 // SPACE
-                                    case 8h66: { newascii = 8h08; }                                 // BACKSPACE
-                                    case 8h5a: { newascii = 8h0d; }                                 // ENTER
-                                    default: {}
-                                }
+        if( ps2valid ) {
+            newascii = 8hff;
+            switch( ps2keycode ) {
+                case 8he0: { startmulti = 1; }
+                case 8hf0: { startbreak = 1; }
+                default: {
+                    switch( { startmulti, startbreak } ) {
+                        case 2b00: {
+                            // KEY PRESS - TRANSLATE TO ASCII
+                            switch( ps2keycode ) {
+                                case 8h1c: { newascii = CTRL ? 8h01 : CAPITAL ? 8h41 : 8h61; }  // A to Z
+                                case 8h32: { newascii = CTRL ? 8h02 : CAPITAL ? 8h42 : 8h62; }
+                                case 8h21: { newascii = CTRL ? 8h03 : CAPITAL ? 8h43 : 8h63; }
+                                case 8h23: { newascii = CTRL ? 8h04 : CAPITAL ? 8h44 : 8h64; }
+                                case 8h24: { newascii = CTRL ? 8h05 : CAPITAL ? 8h45 : 8h65; }
+                                case 8h2b: { newascii = CTRL ? 8h06 : CAPITAL ? 8h46 : 8h66; }
+                                case 8h34: { newascii = CTRL ? 8h07 : CAPITAL ? 8h47 : 8h67; }
+                                case 8h33: { newascii = CTRL ? 8h08 : CAPITAL ? 8h48 : 8h68; }
+                                case 8h43: { newascii = CTRL ? 8h09 : CAPITAL ? 8h49 : 8h69; }
+                                case 8h3b: { newascii = CTRL ? 8h0a : CAPITAL ? 8h4a : 8h6a; }
+                                case 8h42: { newascii = CTRL ? 8h0b : CAPITAL ? 8h4b : 8h6b; }
+                                case 8h4b: { newascii = CTRL ? 8h0c : CAPITAL ? 8h4c : 8h6c; }
+                                case 8h3a: { newascii = CTRL ? 8h0d : CAPITAL ? 8h4d : 8h6d; }
+                                case 8h31: { newascii = CTRL ? 8h0e : CAPITAL ? 8h4e : 8h6e; }
+                                case 8h44: { newascii = CTRL ? 8h0f : CAPITAL ? 8h4f : 8h6f; }
+                                case 8h4d: { newascii = CTRL ? 8h10 : CAPITAL ? 8h50 : 8h70; }
+                                case 8h15: { newascii = CTRL ? 8h11 : CAPITAL ? 8h51 : 8h71; }
+                                case 8h2d: { newascii = CTRL ? 8h12 : CAPITAL ? 8h52 : 8h72; }
+                                case 8h1b: { newascii = CTRL ? 8h13 : CAPITAL ? 8h53 : 8h73; }
+                                case 8h2c: { newascii = CTRL ? 8h14 : CAPITAL ? 8h54 : 8h74; }
+                                case 8h3c: { newascii = CTRL ? 8h15 : CAPITAL ? 8h55 : 8h75; }
+                                case 8h2a: { newascii = CTRL ? 8h16 : CAPITAL ? 8h56 : 8h76; }
+                                case 8h1d: { newascii = CTRL ? 8h17 : CAPITAL ? 8h57 : 8h77; }
+                                case 8h22: { newascii = CTRL ? 8h18 : CAPITAL ? 8h58 : 8h78; }
+                                case 8h35: { newascii = CTRL ? 8h19 : CAPITAL ? 8h59 : 8h79; }
+                                case 8h1a: { newascii = CTRL ? 8h1a : CAPITAL ? 8h5a : 8h7a; }
+                                case 8h54: { newascii = CTRL ? 8h1b : SHIFT ? 8h7b : 8h5b; }    // [ {
+                                case 8h5d: { newascii = CTRL ? 8h1c : SHIFT ? 8h7e : 8h23; }    // # ~
+                                case 8h5b: { newascii = CTRL ? 8h1d : SHIFT ? 8h7d : 8h5d; }    // ] }
+                                case 8h5c: { newascii = SHIFT ? 8h7c : 8h5c; }                  // backslash and vertical line
+                                case 8h4e: { newascii = SHIFT ? 8h5f : 8h2d; }                  // - _
+                                case 8h55: { newascii = SHIFT ? 8h2b : 8h3d; }                  // + =
+                                case 8h4c: { newascii = SHIFT ? 8h3a : 8h3b; }                  // ; :
+                                case 8h52: { newascii = SHIFT ? 8h40 : 8h27; }                  // ' @
+                                case 8h41: { newascii = SHIFT ? 8h3c : 8h2c; }                  // , >
+                                case 8h49: { newascii = SHIFT ? 8h3e : 8h2e; }                  // . >
+                                case 8h4a: { newascii = SHIFT ? 8h3f : 8h2f; }                  // / ?
+                                case 8h0e: { newascii = ralt ? 8h7c : SHIFT ? 8hac : 8h60; }    // top left ` or ¬ or | (with ralt)
+                                case 8h16: { newascii = SHIFT ? 8h21 : 8h31; }                  // 1 to 0
+                                case 8h1e: { newascii = SHIFT ? 8h22 : 8h32; }
+                                case 8h26: { newascii = SHIFT ? 8ha3 : 8h33; }
+                                case 8h25: { newascii = SHIFT ? 8h24 : 8h34; }
+                                case 8h2e: { newascii = SHIFT ? 8h25 : 8h35; }
+                                case 8h36: { newascii = SHIFT ? 8h5e : 8h36; }
+                                case 8h3d: { newascii = SHIFT ? 8h26 : 8h37; }
+                                case 8h3e: { newascii = SHIFT ? 8h2a : 8h38; }
+                                case 8h46: { newascii = SHIFT ? 8h28 : 8h39; }
+                                case 8h45: { newascii = SHIFT ? 8h29 : 8h30; }
+                                case 8h58: { capslock = ~capslock; }                            // CAPSLOCK IS A TOGGLE
+                                case 8h77: { numlock = ~numlock; }                              // NUMLOCK IS A TOGGLE
+                                case 8h12: { lshift = 1; }
+                                case 8h59: { rshift = 1; }
+                                case 8h14: { lctrl = 1; }
+                                case 8h11: { lalt = 1; }
+                                case 8h29: { newascii = 8h20; }                                 // SPACE
+                                case 8h66: { newascii = 8h08; }                                 // BACKSPACE
+                                case 8h5a: { newascii = 8h0d; }                                 // ENTER
+                                default: {}
                             }
-                            case 2b01: {
-                                // KEY RELEASE - SINGLE
-                                switch( ps2keycode ) {
-                                    case 8h58: { capslock = 0; }
-                                    case 8h12: { lshift = 0; }
-                                    case 8h59: { rshift = 0; }
-                                    case 8h11: { lctrl = 0; }
-                                    default: {}
-                                }
-                                startbreak = 0;
+                        }
+                        case 2b01: {
+                            // KEY RELEASE - SINGLE
+                            switch( ps2keycode ) {
+                                // case 8h58: { capslock = 0; }
+                                case 8h12: { lshift = 0; }
+                                case 8h59: { rshift = 0; }
+                                case 8h14: { lctrl = 0; }
+                                default: {}
                             }
-                            case 2b10: {
-                                // MULTICODE KEY PRESS
-                                switch( ps2keycode ) {
-                                    case 8hf0: { startbreak = 1; }
-                                    case 8h5a: { newascii = 8h0d; }
-                                    case 8h7a: { newascii = 8h08; }
-                                    case 8h14: { rctrl = 1; }
-                                    default: {}
-                                }
+                            startbreak = 0;
+                        }
+                        case 2b10: {
+                            // MULTICODE KEY PRESS
+                            switch( ps2keycode ) {
+                                case 8hf0: { startbreak = 1; }
+                                case 8h5a: { newascii = 8h0d; }                                 // KEYPAD ENTER
+                                case 8h71: { newascii = 8h08; }                                 // DELETE
+                                case 8h14: { rctrl = 1; }
+                                case 8h11: { ralt = 1; }
+                                default: {}
                             }
-                            case 2b11: {
-                                // MULTICODE KEY RELEASE
-                                switch( ps2keycode ) {
-                                    case 8h14: { rctrl = 0; }
-                                    default: {}
-                                }
-                                startmulti = 0; startbreak = 0;
+                        }
+                        case 2b11: {
+                            // MULTICODE KEY RELEASE
+                            switch( ps2keycode ) {
+                                case 8h14: { rctrl = 0; }
+                                case 8h11: { ralt = 0; }
+                                default: {}
                             }
+                            startmulti = 0; startbreak = 0;
                         }
                     }
                 }
-
-                // NEW KEYCODE RECEIVED
-                switch( newascii ) {
-                    case 8hff: {}
-                    default: { ascii = newascii; asciivalid = 1; }
-                }
             }
-            default: {}
+
+            // NEW KEYCODE RECEIVED
+            switch( newascii ) {
+                case 8hff: {}
+                default: { ascii = newascii; asciivalid = 1; }
+            }
         }
-        LATCHvalid = PS2.valid;
     }
 }
 
@@ -150,7 +156,7 @@ algorithm ps2(
     output  uint1   error,
     output  uint8   data
 ) < autorun> {
-    uint8 clk_filter = 8b11111111;
+    uint4 clk_filter = 4b1111;
     uint1 ps2_clk_in = 1;
     uint1 clk_edge = 0;
 
@@ -164,11 +170,11 @@ algorithm ps2(
     always {
         // Filter the PS/2 clock
         clk_edge = 0;
-        clk_filter = { ps2clk_ext, clk_filter[1,7] };
+        clk_filter = { ps2clk_ext, clk_filter[1,3] };
 
         switch( clk_filter ) {
-            case 8hf0: { ps2_clk_in = 1; }
-            case 8h0f: {
+            case 4b1100: { ps2_clk_in = 1; }
+            case 4b0011: {
                 if( ps2_clk_in ) {
                     clk_edge = 1;
                 }

@@ -10,7 +10,7 @@ int main( void ) {
     float scale;
     int value;
 
-    while(1) {
+    for( int loop = 0; loop < 4; loop++ ) {
         scale = 0.0;
         // MULTIPLIER TEST
         for( short count = 0; count < 20; count++ ) {
@@ -25,7 +25,7 @@ int main( void ) {
             framebuffer = !framebuffer;
             bitmap_display( framebuffer );
 
-            sleep( 500, 0 );
+            sleep( 250, 0 );
         }
 
         // DIVIDER TEST
@@ -40,7 +40,7 @@ int main( void ) {
             framebuffer = !framebuffer;
             bitmap_display( framebuffer );
 
-            sleep( 1000, 0 );
+            sleep( 250, 0 );
         }
     }
 }

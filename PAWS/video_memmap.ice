@@ -85,6 +85,7 @@ $$end
     // CREATE DISPLAY LAYERS
     // BACKGROUND
     uint6   background_p = uninitialized;
+    uint1   BACKGROUNDmemoryWrite = uninitialized;
     background_memmap BACKGROUND(
         video_clock <: video_clock,
         video_reset <: video_reset,
@@ -95,6 +96,7 @@ $$end
         pixel    :> background_p,
         memoryAddress <: memoryAddress,
         writeData <: writeData,
+        memoryWrite <: BACKGROUNDmemoryWrite,
         static2bit <: static2bit
     );
 
@@ -106,6 +108,7 @@ $$end
     uint1   gpu_queue_complete = uninitialized;
     uint1   vector_block_active = uninitialized;
     uint7   bitmap_colour_read = uninitialized;
+    uint1   BITMAPmemoryWrite = uninitialized;
     bitmap_memmap BITMAP(
         video_clock <: video_clock,
         video_reset <: video_reset,
@@ -118,6 +121,7 @@ $$end
         pixel_display :> bitmap_display,
         memoryAddress <: memoryAddress,
         writeData <: writeData,
+        memoryWrite <: BITMAPmemoryWrite,
         static1bit <: static1bit,
         static6bit <: static6bit,
         gpu_queue_full :> gpu_queue_full,
@@ -133,6 +137,7 @@ $$end
     uint8   curses_character = uninitialized;
     uint7   curses_background = uninitialized;
     uint6   curses_foreground = uninitialized;
+    uint1   CHARACTER_MAPmemoryWrite = uninitialized;
     charactermap_memmap CHARACTER_MAP(
         video_clock <: video_clock,
         video_reset <: video_reset,
@@ -144,6 +149,7 @@ $$end
         pixel_display :> character_map_display,
         memoryAddress <: memoryAddress,
         writeData <: writeData,
+        memoryWrite <: CHARACTER_MAPmemoryWrite,
         tpu_active :> tpu_active,
         curses_character :> curses_character,
         curses_background :> curses_background,
@@ -153,6 +159,8 @@ $$end
     // Sprite Layers - Lower and Upper
     uint6   lower_sprites_p = uninitialized;
     uint1   lower_sprites_display = uninitialized;
+    uint1   LOWER_SPRITEmemoryWrite = uninitialized;
+    uint1   LOWER_SPRITEbitmapwriter = uninitialized;
     $$for i=0,15 do
         uint1   Lsprite_read_active_$i$ = uninitialized;
         uint3   Lsprite_read_double_$i$ = uninitialized;
@@ -174,6 +182,8 @@ $$end
         pixel_display :> lower_sprites_display,
         memoryAddress <: memoryAddress,
         writeData <: writeData,
+        memoryWrite <: LOWER_SPRITEmemoryWrite,
+        bitmapwriter <: LOWER_SPRITEbitmapwriter,
         collision_layer_1 <: bitmap_display,
         collision_layer_2 <: lower_tilemap_display,
         collision_layer_3 <: upper_tilemap_display,
@@ -191,6 +201,8 @@ $$end
     );
     uint6   upper_sprites_p = uninitialized;
     uint1   upper_sprites_display = uninitialized;
+    uint1   UPPER_SPRITEmemoryWrite = uninitialized;
+    uint1   UPPER_SPRITEbitmapwriter = uninitialized;
     $$for i=0,15 do
         uint1   Usprite_read_active_$i$ = uninitialized;
         uint3   Usprite_read_double_$i$ = uninitialized;
@@ -212,6 +224,8 @@ $$end
         pixel_display :> upper_sprites_display,
         memoryAddress <: memoryAddress,
         writeData <: writeData,
+        memoryWrite <: UPPER_SPRITEmemoryWrite,
+        bitmapwriter <: UPPER_SPRITEbitmapwriter,
         collision_layer_1 <: bitmap_display,
         collision_layer_2 <: lower_tilemap_display,
         collision_layer_3 <: upper_tilemap_display,
@@ -232,6 +246,7 @@ $$end
     uint6   terminal_p = uninitialized;
     uint1   terminal_display = uninitialized;
     uint2   terminal_active = uninitialized;
+    uint1   TERMINALmemoryWrite = uninitialized;
     terminal_memmap TERMINAL(
         video_clock <: video_clock,
         video_reset <: video_reset,
@@ -243,6 +258,7 @@ $$end
         pixel_display :> terminal_display,
         memoryAddress <: memoryAddress,
         writeData <: writeData,
+        memoryWrite <: TERMINALmemoryWrite,
         terminal_active :> terminal_active
     );
 
@@ -251,6 +267,7 @@ $$end
     uint1   lower_tilemap_display = uninitialized;
     uint4   Ltm_lastaction = uninitialized;
     uint2   Ltm_active = uninitialized;
+    uint1   LOWER_TILEmemoryWrite = uninitialized;
     tilemap_memmap LOWER_TILE(
         video_clock <: video_clock,
         video_reset <: video_reset,
@@ -262,6 +279,7 @@ $$end
         pixel_display :> lower_tilemap_display,
         memoryAddress <: memoryAddress,
         writeData <: writeData,
+        memoryWrite <: LOWER_TILEmemoryWrite,
         tm_lastaction :> Ltm_lastaction,
         tm_active :> Ltm_active
     );
@@ -269,6 +287,7 @@ $$end
     uint1   upper_tilemap_display = uninitialized;
     uint4   Utm_lastaction = uninitialized;
     uint2   Utm_active = uninitialized;
+    uint1   UPPER_TILEmemoryWrite = uninitialized;
     tilemap_memmap UPPER_TILE(
         video_clock <: video_clock,
         video_reset <: video_reset,
@@ -280,6 +299,7 @@ $$end
         pixel_display :> upper_tilemap_display,
         memoryAddress <: memoryAddress,
         writeData <: writeData,
+        memoryWrite <: UPPER_TILEmemoryWrite,
         tm_lastaction :> Utm_lastaction,
         tm_active :> Utm_active
     );
@@ -312,14 +332,14 @@ $$end
         display_order <: display_order
     );
 
-    BACKGROUND.memoryWrite := 0;
-    LOWER_TILE.memoryWrite := 0;
-    UPPER_TILE.memoryWrite := 0;
-    LOWER_SPRITE.memoryWrite := 0;
-    UPPER_SPRITE.memoryWrite := 0;
-    CHARACTER_MAP.memoryWrite := 0;
-    BITMAP.memoryWrite := 0;
-    TERMINAL.memoryWrite := 0;
+    BACKGROUNDmemoryWrite := 0;
+    BITMAPmemoryWrite := 0;
+    CHARACTER_MAPmemoryWrite := 0;
+    LOWER_SPRITEmemoryWrite := 0;
+    UPPER_SPRITEmemoryWrite := 0;
+    TERMINALmemoryWrite := 0;
+    LOWER_TILEmemoryWrite := 0;
+    UPPER_TILEmemoryWrite := 0;
 
     always {
         // READ IO Memory
@@ -400,16 +420,16 @@ $$end
         switch( memoryWrite ) {
             case 1: {
                 switch( memoryAddress[8,4] ) {
-                    case 4h0: { BACKGROUND.memoryWrite = 1; }
-                    case 4h1: { LOWER_TILE.memoryWrite = 1; }
-                    case 4h2: { UPPER_TILE.memoryWrite = 1; }
-                    case 4h3: { LOWER_SPRITE.memoryWrite = 1; LOWER_SPRITE.bitmapwriter = 0;  }
-                    case 4h4: { UPPER_SPRITE.memoryWrite = 1; UPPER_SPRITE.bitmapwriter = 0;  }
-                    case 4h5: { CHARACTER_MAP.memoryWrite = 1; }
-                    case 4h6: { BITMAP.memoryWrite = 1; }
-                    case 4h7: { TERMINAL.memoryWrite = 1; }
-                    case 4h8: { LOWER_SPRITE.memoryWrite = 1; LOWER_SPRITE.bitmapwriter = 1; }
-                    case 4h9: { UPPER_SPRITE.memoryWrite = 1; UPPER_SPRITE.bitmapwriter = 1; }
+                    case 4h0: { BACKGROUNDmemoryWrite = 1; }
+                    case 4h1: { LOWER_TILEmemoryWrite = 1; }
+                    case 4h2: { UPPER_TILEmemoryWrite = 1; }
+                    case 4h3: { LOWER_SPRITEmemoryWrite = 1; LOWER_SPRITEbitmapwriter = 0;  }
+                    case 4h4: { UPPER_SPRITEmemoryWrite = 1; UPPER_SPRITEbitmapwriter = 0;  }
+                    case 4h5: { CHARACTER_MAPmemoryWrite = 1; }
+                    case 4h6: { BITMAPmemoryWrite = 1; }
+                    case 4h7: { TERMINALmemoryWrite = 1; }
+                    case 4h8: { LOWER_SPRITEmemoryWrite = 1; LOWER_SPRITEbitmapwriter = 1; }
+                    case 4h9: { UPPER_SPRITEmemoryWrite = 1; UPPER_SPRITEbitmapwriter = 1; }
                     case 4hf: { display_order = writeData; }
                     default: {}
                 }

@@ -3,6 +3,7 @@
 int main( void ) {
     INITIALISEMEMORY();
 
-    while(1) {
-    }
+    // CODE GOES HERE
 }
+
+// EXIT WILL RETURN TO BIOS

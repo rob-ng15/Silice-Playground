@@ -8,7 +8,7 @@ int main( void ) {
 
     unsigned short trebleposition = 0;
 
-    while(1) {
+    for( int i = 0; i < 4; i++ ) {
         trebleposition = 0;
 
         while( tune_treble[ trebleposition ] != 0xff ) {
