@@ -99,7 +99,9 @@ $$if not SIMULATION then
 $$end
      always {
         // UPDATE LATCHES
+$$if not SIMULATION then
         UARTinread = UARTinread >> 1; UARToutwrite = UARToutwrite >> 1; PS2inread = PS2inread >> 1;
+$$end
 
         // READ IO Memory
         switch( memoryRead ) {
@@ -168,8 +170,10 @@ $$end
     SMTRUNNING = 0;
     SMTSTARTPC = 0;
 
+$$if not SIMULATION then
     // KEYBOARD DEFAULTS TO JOYSTICK MODE
     PS2outputascii = 0;
+$$end
 }
 
 algorithm audiotimers_memmap(

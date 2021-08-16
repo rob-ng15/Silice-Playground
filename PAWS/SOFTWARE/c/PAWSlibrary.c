@@ -1221,6 +1221,13 @@ void __scroll( void ) {
             __write_curses_cell( x, y, temp );
         }
     }
+    // BLANK THE LAST LINE
+    temp.cell.character = 0;
+    temp.cell.background = __curses_back;
+    temp.cell.foreground = __curses_fore;
+    for( unsigned short x = 0; x < COLS; x++ ) {
+        __write_curses_cell( x, LINES - 1, temp );
+    }
 }
 
 int addch( unsigned char ch ) {

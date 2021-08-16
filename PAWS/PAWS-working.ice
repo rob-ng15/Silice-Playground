@@ -163,7 +163,7 @@ $$end
     uint16  sdramreaddata = uninitialized;
     cachecontroller sdram <@clock_system,!reset> (
         sio <:> sio_halfrate,
-        byteaccess <: byteaccess,
+        function3 <: function3,
         address <: address,
         writedata <: writedata,
         writeflag <: sdramwriteflag,
@@ -172,7 +172,7 @@ $$end
     );
     uint16  ramreaddata = uninitialized;
     bramcontroller ram <@clock_system,!reset> (
-        byteaccess <: byteaccess,
+        function3 <: function3,
         address <: address,
         writedata <: writedata,
         writeflag <: ramwriteflag,
@@ -248,7 +248,6 @@ $$end
     );
 
     uint3   function3 = uninitialized;
-    uint1   byteaccess <: ( function3[0,2] == 2b00 );
     uint32  address = uninitialized;
     uint16  writedata = uninitialized;
     uint1   CPUwritememory = uninitialized;
@@ -301,7 +300,7 @@ $$end
 // MEMORY IS 16 BIT, 8 bit WRITES ARE READ MODIFY WRITE
 algorithm bramcontroller(
     input   uint32  address,
-    input   uint1   byteaccess,
+    input   uint3   function3,
 
     input   uint1   writeflag,
     input   uint16  writedata,
@@ -313,7 +312,7 @@ algorithm bramcontroller(
 
 $$if not SIMULATION then
     // RISC-V RAM and BIOS
-    bram uint16 ram <input!> [16384] = {
+    bram uint16 ram[16384] = {
         $include('ROM/BIOS.inc')
         , pad(uninitialized)
     };
@@ -334,12 +333,12 @@ $$end
 
     while(1) {
         if( writeflag ) {
-            FSM = ( byteaccess ) ? 1 : 2;
+            FSM = ( function3[0,2] == 0 ) ? 1 : 2;
             while( FSM != 0 ) {
                 onehot( FSM ) {
                     case 0: {}
                     case 1: {
-                        ram.wdata = ( byteaccess ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
+                        ram.wdata = ( function3[0,2] == 0 ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
                         ram.wenable = 1;
                     }
                 }
@@ -355,7 +354,7 @@ algorithm cachecontroller(
     sdram_user      sio,
 
     input   uint26  address,
-    input   uint1   byteaccess,
+    input   uint3   function3,
 
     input   uint1   writeflag,
     input   uint16  writedata,
@@ -368,7 +367,7 @@ algorithm cachecontroller(
     // CACHE for SDRAM 32k
     // CACHE LINE IS LOWER 15 bits ( 0 - 32767 ) of address, dropping the BYTE address bit
     // CACHE TAG IS REMAINING 11 bits of the 26 bit address + 1 bit for valid flag +1 bit for needwritetosdram flag
-    simple_dualport_bram uint29 cache <input!> [16384] = uninitialized;
+    simple_dualport_bram uint29 cache[16384] = uninitialized;
 
     // CACHE WRITER
     uint16  cacheupdatedata = uninitialized;
@@ -403,7 +402,7 @@ algorithm cachecontroller(
     uint1   cachetagmatch <: ( cache.rdata0[16,12] == { 1b1, address[15,11] } );
 
     // VALUE TO WRITE TO CACHE ( deals with correctly mapping 8 bit writes and 16 bit writes, using sdram or cache as base )
-    uint16  writethrough <: ( byteaccess ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cache.rdata0[0,8] : sdramreaddata[0,8] } :
+    uint16  writethrough <: ( function3[0,2] == 0 ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cache.rdata0[0,8] : sdramreaddata[0,8] } :
                                                                         { cachetagmatch ? cache.rdata0[8,8] : sdramreaddata[8,8], writedata[0,8] } ) : writedata;
 
     // MEMORY ACCESS FLAGS
@@ -430,7 +429,7 @@ algorithm cachecontroller(
                     if( cache.rdata0[28,1] ) { while( sdrambusy ) {} sdramaddress = { cache.rdata0[16,11], address[1,14], 1b0 }; sdramwrite = 1; }  // EVICT FROM CACHE TO SDRAM
 
                     // READ FROM SDRAM FOR READ AND 8 BIT WRITES (AND MODIFY) AND WRITE TO CACHE, OR WRITE DIRECTLY TO CACHE IF 16 BIT WRITE
-                    if( doread || ( dowrite && byteaccess ) ) {
+                    if( doread || ( dowrite && ( function3[0,2] == 0 ) ) )  {
                         while( sdrambusy ) {} sdramaddress = address; sdramread = 1; while( sdrambusy ) {}
                         needwritetosdram = dowrite; cacheupdatedata = dowrite ? writethrough : sdramreaddata; cacheupdate = 1;
                     } else {
