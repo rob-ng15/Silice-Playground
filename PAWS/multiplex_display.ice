@@ -106,11 +106,11 @@ algorithm selectlayer(
                         ( lower_tilemap_display ) ? lower_tilemap :
                         background;
             }
-            case 2: { // BACKGROUND -> BITMAP -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP
+            case 2: { // BACKGROUND -> BITMAP -> LOWER TILEMAP -> UPPER TILEMAP -> CHARACTER_MAP -> LOWER_SPRITES -> UPPER_SPRITES
                 pix = ( terminal_display ) ? terminal :
-                        ( character_map_display ) ? character_map :
                         ( upper_sprites_display ) ? upper_sprites :
                         ( lower_sprites_display ) ? lower_sprites :
+                        ( character_map_display ) ? character_map :
                         ( upper_tilemap_display ) ? upper_tilemap :
                         ( lower_tilemap_display ) ? lower_tilemap :
                         ( bitmap_display ) ? bitmap :

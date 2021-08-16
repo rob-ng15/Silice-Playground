@@ -1,11 +1,12 @@
 // I/O MEMORY MAPPED REGISTER DEFINITIONS
 unsigned char volatile * UART_DATA = (unsigned char volatile *) 0xf100;
 unsigned char volatile * UART_STATUS = (unsigned char volatile *) 0xf102;
-unsigned char volatile * BUTTONS = (unsigned char volatile *) 0xf120;
+unsigned short volatile * BUTTONS = (unsigned short volatile *) 0xf120;
 unsigned char volatile * LEDS = (unsigned char volatile *) 0xf130;
 
 // PS/2 KEYBOARD
 unsigned char volatile * PS2_AVAILABLE = (unsigned char volatile *) 0xf110;
+unsigned char volatile * PS2_MODE = (unsigned char volatile * ) 0xf110;
 unsigned char volatile * PS2_DATA = (unsigned char volatile *) 0xf112;
 
 // SDCARD

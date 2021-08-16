@@ -108,6 +108,9 @@
 #define SPRITE_TO_UPPER_TILEMAP 2
 #define SPRITE_TO_OTHER_SPRITES 1
 
+#define PS2_KEYBOARD 1
+#define PS2_JOYSTICK 0
+
 typedef unsigned int size_t;
 typedef unsigned short bool;
 
@@ -215,7 +218,8 @@ extern unsigned char character_available( void );
 
 // PS/2
 extern char ps2_character_available( void );
-extern char ps2_inputcharacter( void );
+extern short ps2_inputcharacter( void );
+extern void ps2_keyboardmode( unsigned char );
 
 // BASIC I/O
 extern void set_leds( unsigned char );
@@ -369,6 +373,7 @@ extern bool has_colors( void );
 extern bool can_change_color( void );
 extern int init_pair( short pair, short f, short b );
 extern int move( int y, int x );
+extern void getyx( int *y, int *x );
 extern int addch( unsigned char ch );
 extern int mvaddch( int y, int x, unsigned char ch );
 extern int printw( const char *fmt,... );

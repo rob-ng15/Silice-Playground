@@ -1,4 +1,4 @@
-$$ uart_in_clock_freq_mhz = 50
+$$ uart_in_clock_freq_mhz = 25
 
 $$if not SIMULATION then
 // CLOCKS

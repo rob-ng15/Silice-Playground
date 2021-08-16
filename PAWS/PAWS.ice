@@ -500,7 +500,7 @@ algorithm cachecontroller_EVICT(
     uint1   sdramwrite = uninitialized;
     uint1   sdramread = uninitialized;
     uint1   sdrambusy = uninitialized;
-    uint32  sdramaddress = uninitialized;
+    uint26  sdramaddress = uninitialized;
     sdramcontroller SDRAM(
         sio <:> sio,
         address <: sdramaddress,

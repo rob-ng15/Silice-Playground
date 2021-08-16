@@ -1156,6 +1156,23 @@ algorithm pixelblock(
 // Each vector block has a centre x and y coordinate and a colour { rrggbb } when drawn
 
 // ADJUST COORDINATES BY DELTAS AND SCALE
+algorithm centreplusdelta(
+    input   int10   xc,
+    input   uint6   dx,
+    input   int10   yc,
+    input   uint6   dy,
+    input   uint3   scale,
+    output  int10   xdx,
+    output  int10   ydy
+) <autorun> {
+    int10 deltax <: { {5{dx[5,1]}}, dx };
+    int10 deltay <: { {5{dy[5,1]}}, dy };
+
+    always {
+        xdx = xc + ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
+        ydy = yc + ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
+    }
+}
 circuitry deltacoordinates( input x, input dx, input y, input dy, input scale, output xdx, output ydy ) {
     xdx = x + ( scale[2,1] ? ( __signed(dx) >>> scale[0,2] ) : ( dx << scale[0,2] ) );
     ydy = y + ( scale[2,1] ? ( __signed(dy) >>> scale[0,2] ) : ( dy << scale[0,2] ) );
@@ -1191,9 +1208,20 @@ algorithm vectors(
     output  uint1   gpu_write,
     input   uint1   gpu_active
 ) <autorun> {
-    // Extract deltax and deltay for the present vertices
-    int10 deltax := { {5{vectorentry(vertex.rdata0).dxsign}}, vectorentry(vertex.rdata0).dx };
-    int10 deltay := { {5{vectorentry(vertex.rdata0).dysign}}, vectorentry(vertex.rdata0).dy };
+    // Add present deltas to the centres
+    uint6   deltax <: { vectorentry(vertex.rdata0).dxsign, vectorentry(vertex.rdata0).dx };
+    uint6   deltay <: { vectorentry(vertex.rdata0).dysign, vectorentry(vertex.rdata0).dy };
+    int10   xdx = uninitialised;
+    int10   ydy = uninitialised;
+    centreplusdelta CENTREPLUSDELTA(
+        xc <: vector_block_xc,
+        yc <: vector_block_yc,
+        dx <: deltax,
+        dy <: deltay,
+        scale <: vector_block_scale,
+        xdx :> xdx,
+        ydy :> ydy
+    );
 
     // Vertices being processed, plus first coordinate of each line
     uint5 block_number = 0;
@@ -1212,13 +1240,13 @@ algorithm vectors(
             block_number = vector_block_number;
             vertices_number = 0;
             ++:
-            ( start_x, start_y ) = deltacoordinates( vector_block_xc, deltax, vector_block_yc, deltay, vector_block_scale );
+            ( start_x, start_y ) = copycoordinates( xdx, ydy );
             vertices_number = 1;
             ++:
             while( vectorentry(vertex.rdata0).active && ( vertices_number != 16 ) ) {
                 // Dispatch line to GPU
                 ( gpu_x, gpu_y ) = copycoordinates( start_x, start_y );
-                ( gpu_param0, gpu_param1 ) = deltacoordinates( vector_block_xc, deltax, vector_block_yc, deltay, vector_block_scale );
+                ( gpu_param0, gpu_param1 ) = copycoordinates( xdx, ydy );
                 ++:
                 while( gpu_active ) {} gpu_write = 1;
                 ++:

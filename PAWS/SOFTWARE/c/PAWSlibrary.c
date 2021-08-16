@@ -70,9 +70,18 @@ char ps2_character_available( void ) {
     return *PS2_AVAILABLE;
 }
 // RETURN A DECODED ASCII CHARACTER
-char ps2_inputcharacter( void ) {
+// 0x0xx is an ascii character from the keyboard
+// 0x1xx is an escaped character from the keyboard
+// F1 to F12 map to 0x101 to 0x10c, SHIFT F1 to F12 map to 0x111 to 0x11c
+// CURSOR KEYS UP = 0x141, RIGHT = 0x143, DOWN = 0x142, LEFT = 0x144
+// INSERT = 0x132 HOME = 0x131 PGUP = 0x135 DELETE = 0x133 END = 0x134 PGDN = 0x136
+unsigned short ps2_inputcharacter( void ) {
     while( !*PS2_AVAILABLE ) {}
     return *PS2_DATA;
+}
+// SET KEYBOARD MODE TO == 0 JOYSTICK == 1 KEYBOARD
+void ps2_keyboardmode( unsigned char mode ) {
+    *PS2_MODE = mode;
 }
 
 // TIMER AND PSEUDO RANDOM NUMBER GENERATOR
@@ -219,8 +228,8 @@ void set_leds( unsigned char value ) {
     *LEDS = value;
 }
 
-// READ THE ULX3S JOYSTICK BUTTONS
-unsigned char get_buttons( void ) {
+// READ THE ULX3S JOYSTICK BUTTONS OR KEYBOARD AS JOYSTICK
+unsigned short get_buttons( void ) {
     return( *BUTTONS );
 }
 
@@ -1197,6 +1206,11 @@ int move( int y, int x ) {
     __curses_y = ( unsigned short ) ( y < 0 ) ? 0 : ( y > 29 ) ? 29 : y;
 
     return( true );
+}
+
+int getyx( int *y, int *x ) {
+    *y = (int)__curses_y;
+    *x = (int) __curses_x;
 }
 
 void __scroll( void ) {

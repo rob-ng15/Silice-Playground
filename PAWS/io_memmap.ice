@@ -44,10 +44,10 @@ $$if not SIMULATION then
     uint8   UARTinchar = uninitialized;
     uint8   UARToutchar = uninitialized;
     uint1   UARTinavailable = uninitialized;
-    uint1   UARTinread = uninitialized;
     uint1   UARToutfull = uninitialized;
-    uint1   UARToutwrite = uninitialized;
-    uart UART(
+    uint2   UARTinread = 0;                                 // 2 BIT LATCH ( bit 0 is the signal )
+    uint2   UARToutwrite = 0;                               // 2 BIT LATCH ( bit 0 is the signal )
+    uart UART <@clock_25mhz> (
         uart_tx :> uart_tx,
         uart_rx <: uart_rx,
         inchar :> UARTinchar,
@@ -59,16 +59,19 @@ $$if not SIMULATION then
     );
 
     // PS2 CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
-    uint8   PS2inchar = uninitialized;
+    uint9   PS2inchar = uninitialized;
     uint1   PS2inavailable = uninitialized;
-    uint1   PS2inread = uninitialized;
-    ps2buffer PS2(
-        clock_25mhz <: clock_25mhz,
+    uint2   PS2inread = 0;                                  // 2 BIT LATCH ( bit 0 is the signal )
+    uint1   PS2outputascii = uninitialized;                 // DEFAULT TO JOYSTICK MODE ( AT BASE OF ALGORITHM )
+    uint16  PS2joystick = uninitialized;
+    ps2buffer PS2 <@clock_25mhz> (
         us2_bd_dp <: us2_bd_dp,
         us2_bd_dn <: us2_bd_dn,
         inchar :> PS2inchar,
         inavailable :> PS2inavailable,
-        inread <: PS2inread
+        inread <: PS2inread,
+        joystick :> PS2joystick,
+        outputascii <: PS2outputascii
     );
 
     // SDCARD AND BUFFER
@@ -92,18 +95,21 @@ $$if not SIMULATION then
     );
 
     // I/O FLAGS
-    UARTinread := 0; UARToutwrite := 0; PS2inread := 0; SDCARDreadsector := 0;
+    SDCARDreadsector := 0;
 $$end
      always {
+        // UPDATE LATCHES
+        UARTinread = UARTinread >> 1; UARToutwrite = UARToutwrite >> 1; PS2inread = PS2inread >> 1;
+
         // READ IO Memory
         switch( memoryRead ) {
             case 1: {
                 switch( memoryAddress ) {
                     // UART, LEDS, BUTTONS and CLOCK
     $$if not SIMULATION then
-                    case 12h100: { readData = { 8b0, UARTinchar }; UARTinread = 1; }
+                    case 12h100: { readData = { 8b0, UARTinchar }; UARTinread = 2b11; }
                     case 12h102: { readData = { 14b0, UARToutfull, UARTinavailable }; }
-                    case 12h120: { readData = { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] }; }
+                    case 12h120: { readData = PS2outputascii ? { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] } : { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] } | PS2joystick; } // ULX3S BUTTONS AND/OR KEYBOARD AS A JOYSTICK
     $$end
                     case 12h130: { readData = leds; }
     $$if not SIMULATION then
@@ -111,7 +117,7 @@ $$end
                     case 12h110: { readData = PS2inavailable; }
                     case 12h112: {
                         switch( PS2inavailable ) {
-                            case 1: { readData = PS2inchar; PS2inread = 1; }
+                            case 1: { readData = PS2inchar; PS2inread = 2b11; }
                             case 0: { readData = 0; }
                         }
                     }
@@ -138,7 +144,8 @@ $$end
                     // UART, LEDS
                     case 12h130: { leds = writeData; }
     $$if not SIMULATION then
-                    case 12h100: { UARToutchar = writeData[0,8]; UARToutwrite = 1; }
+                    case 12h100: { UARToutchar = writeData[0,8]; UARToutwrite = 2b11; }
+                    case 12h110: { PS2outputascii = writeData; }
 
                     // SDCARD
                     case 12h140: { SDCARDreadsector = 1; }
@@ -160,6 +167,9 @@ $$end
     // DISBLE SMT ON STARTUP
     SMTRUNNING = 0;
     SMTSTARTPC = 0;
+
+    // KEYBOARD DEFAULTS TO JOYSTICK MODE
+    PS2outputascii = 0;
 }
 
 algorithm audiotimers_memmap(
@@ -429,16 +439,8 @@ algorithm uart(
 
     // UART tx and rx
     // UART written in Silice by https://github.com/sylefeb/Silice
-    uart_out uo;
-    uart_sender usend(
-        io      <:> uo,
-        uart_tx :>  uart_tx
-    );
-    uart_in ui;
-    uart_receiver urecv(
-        io      <:> ui,
-        uart_rx <:  uart_rx
-    );
+    uart_out uo; uart_sender usend( io <:> uo, uart_tx :> uart_tx );
+    uart_in ui; uart_receiver urecv( io <:> ui, uart_rx <: uart_rx );
 
     // UART input FIFO (256 character) as dualport bram (code from @sylefeb)
     simple_dualport_bram uint8 uartInBuffer[256] = uninitialized;
@@ -457,11 +459,11 @@ algorithm uart(
     inchar := uartInBuffer.rdata0;
 
     // UART Buffers ( code from @sylefeb )
-    uartInBuffer.wenable1 := 1;  // always write on port 1
-    uartInBuffer.addr0 := uartInBufferNext; // FIFO reads on next
-    uartInBuffer.addr1 := uartInBufferTop;  // FIFO writes on top
-    uartOutBuffer.wenable1 := 1; // always write on port 1
-    uartOutBuffer.addr0 := uartOutBufferNext; // FIFO reads on next
+    uartInBuffer.wenable1 := 1;                                                                             // always write on port 1
+    uartInBuffer.addr0 := uartInBufferNext;                                                                 // FIFO reads on next
+    uartInBuffer.addr1 := uartInBufferTop;                                                                  // FIFO writes on top
+    uartOutBuffer.wenable1 := 1;                                                                            // always write on port 1
+    uartOutBuffer.addr0 := uartOutBufferNext;                                                               // FIFO reads on next
     uartInBuffer.wdata1 := ui.data_out;
     uartInBufferTop := uartInBufferTop + ui.data_out_ready;
     uo.data_in := uartOutBuffer.rdata0;
@@ -482,30 +484,32 @@ algorithm uart(
 
 // PS2 BUFFER CONTROLLER
 algorithm ps2buffer(
-    input   uint1   clock_25mhz,
-
     // USB for PS/2
     input   uint1   us2_bd_dp,
     input   uint1   us2_bd_dn,
 
-    output  uint8   inchar,
+    output  uint9   inchar,
     output  uint1   inavailable,
-    input   uint1   inread
+    input   uint1   inread,
+
+    input   uint1   outputascii,
+    output  uint16  joystick
 ) <autorun> {
     // PS/2 input FIFO (256 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 ps2Buffer[256] = uninitialized;
+    simple_dualport_bram uint9 ps2Buffer[256] = uninitialized;
     uint8  ps2BufferNext = 0;
     uint7  ps2BufferTop = 0;
 
     // PS 2 ASCII
     uint1   PS2asciivalid = uninitialized;
-    uint2   LATCHasciivalid = uninitialized;
-    uint8   PS2ascii = uninitialized;
-    ps2ascii PS2 <@clock_25mhz> (
+    uint9   PS2ascii = uninitialized;
+    ps2ascii PS2(
         us2_bd_dp <: us2_bd_dp,
         us2_bd_dn <: us2_bd_dn,
         asciivalid :> PS2asciivalid,
-        ascii :> PS2ascii
+        ascii :> PS2ascii,
+        outputascii <: outputascii,
+        joystick :> joystick
     );
 
     // PS2 Buffers
@@ -518,13 +522,12 @@ algorithm ps2buffer(
     inchar := ps2Buffer.rdata0;
 
     always {
-        if( LATCHasciivalid == 2b11 ) {
+        if( PS2asciivalid ) {
             ps2Buffer.addr1 = ps2BufferTop; ps2Buffer.wdata1 = PS2ascii; update = 1;
         } else {
             if( update ) { ps2BufferTop = ps2BufferTop + 1; update = 0; }
         }
         ps2BufferNext = ps2BufferNext + inread;
-        LATCHasciivalid = { LATCHasciivalid[0,1], PS2asciivalid };
     }
 }
 

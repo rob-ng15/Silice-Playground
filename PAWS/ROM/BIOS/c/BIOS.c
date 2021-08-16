@@ -87,8 +87,8 @@ void sdcard_readsector( unsigned int sectorAddress, unsigned char *copyAddress )
 
 // I/O FUNCTIONS
 // READ THE ULX3S JOYSTICK BUTTONS
-inline unsigned char get_buttons( void )  __attribute__((always_inline));
-unsigned char get_buttons( void ) {
+inline unsigned short get_buttons( void )  __attribute__((always_inline));
+unsigned short get_buttons( void ) {
     return( *BUTTONS );
 }
 
@@ -497,6 +497,9 @@ void main( void ) {
     reset_display();
     set_background( DKBLUE - 1, BLACK, BKG_SOLID );
 
+    // KEYBOARD INTO JOYSTICK MODE
+    *PS2_MODE = 0;
+
     // SETUP INITIAL WELCOME MESSAGE
     draw_riscv_logo();
     set_sdcard_bitmap();
@@ -517,6 +520,10 @@ void main( void ) {
         set_tilemap_tile( 1, i, 29, 0, 63 - i, 0 );
     }
     SMTSTART( (unsigned int )smtthread );
+
+    // CLEAR UART AND PS/2 BUFFERS
+    while( *UART_STATUS & 1 ) { char temp = *UART_DATA; }
+    while( *PS2_AVAILABLE ) { short temp = *PS2_DATA; }
 
     tpu_outputstringcentre( 17, TRANSPARENT, RED, "Waiting for SDCARD" );
     sleep(2000);
