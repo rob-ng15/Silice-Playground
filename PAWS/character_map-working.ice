@@ -16,14 +16,8 @@ algorithm character_map(
     output  uint2   tpu_active,
     output  uint8   curses_character,
     output  uint7   curses_background,
-    output  uint6   curses_foreground,
-
-    input   uint1   tpu_showcursor
+    output  uint6   curses_foreground
 ) <autorun> {
-    // CURSOR CLOCK
-    uint1   timer1hz = uninitialized;
-    pulse1hz P1( counter1hz :> timer1hz );
-
     // 80 x 30 character buffer
     // Setting background to 40 (ALPHA) allows the bitmap/background to show through
     simple_dualport_bram uint8 charactermap[2400] = uninitialized;
@@ -35,8 +29,6 @@ algorithm character_map(
     };
 
     // CHARACTER MAP WRITER
-    uint7   cursor_x = uninitialized;
-    uint5   cursor_y = uninitialized;
     character_map_writer CMW(
         charactermap <:> charactermap,
         colourmap <:> colourmap,
@@ -49,16 +41,13 @@ algorithm character_map(
         tpu_active :> tpu_active,
         curses_character :> curses_character,
         curses_background :> curses_background,
-        curses_foreground :> curses_foreground,
-        cursor_x :> cursor_x,
-        cursor_y :> cursor_y
+        curses_foreground :> curses_foreground
     );
 
     // Character position on the screen x 0-79, y 0-29 * 80 ( fetch it two pixels ahead of the actual x pixel, so it is always ready )
-    uint8   xcharacterpos <: ( pix_active ?  pix_x + 2 : 0 ) >> 3;
-    uint8   xcolourpos <: ( pix_active ?  pix_x + 1 : 0 ) >> 3;
-    uint12  ycharacterpos <: (( pix_vblank ? 0 : pix_y ) >> 4) * 80;
-    uint1   is_cursor <: tpu_showcursor & timer1hz & ( cursor_x == ( ( pix_active ? pix_x : 0 ) >> 3 ) ) & ( cursor_y == (( pix_vblank ? 0 : pix_y ) >> 4) );
+    uint8 xcharacterpos <: ( pix_active ?  pix_x + 2 : 0 ) >> 3;
+    uint8 xcolourpos <: ( pix_active ?  pix_x + 1 : 0 ) >> 3;
+    uint12 ycharacterpos <: (( pix_vblank ? 0 : pix_y ) >> 4) * 80;
 
     // Derive the x and y coordinate within the current 8x16 character block x 0-7, y 0-15
     uint3 xincharacter <: pix_x[0,3];
@@ -75,9 +64,8 @@ algorithm character_map(
     characterGenerator8x16.addr :=  { charactermap.rdata0, yincharacter };
 
     // RENDER - Default to transparent
-    character_map_display := pix_active & ( characterpixel | ~colour13(colourmap.rdata0).alpha | is_cursor );
-    pixel := is_cursor ? characterpixel ? tpu_background : tpu_foreground
-                        : characterpixel ? colour13(colourmap.rdata0).foreground : colour13(colourmap.rdata0).background;
+    character_map_display := pix_active & ( characterpixel | ~colour13(colourmap.rdata0).alpha );
+    pixel := characterpixel ? colour13(colourmap.rdata0).foreground : colour13(colourmap.rdata0).background;
 }
 
 algorithm character_map_writer(
@@ -95,10 +83,7 @@ algorithm character_map_writer(
     output  uint2   tpu_active,
     output  uint8   curses_character,
     output  uint7   curses_background,
-    output  uint6   curses_foreground,
-
-    output  uint7   cursor_x,
-    output  uint5   cursor_y
+    output  uint6   curses_foreground
 ) <autorun> {
     // COPY OF CHARCTER MAP FOR THE CURSES BUFFER
     simple_dualport_bram uint21 charactermap_copy[2400] = uninitialized;
@@ -123,14 +108,10 @@ algorithm character_map_writer(
     curses_foreground := charactermap_copy.rdata0[8,6];
     curses_background := charactermap_copy.rdata0[14,7];
 
-    // OUTPUT CURSOR POSITION
-    cursor_x := tpu_active_x; cursor_y := tpu_active_y;
-
     // Default to 0,0 and transparent
     charactermap.addr1 = 0; charactermap.wdata1 = 0;
     colourmap.addr1 = 0; colourmap.wdata1 = { 1b1, 6b0, 6b0 };
     charactermap_copy.addr1 = 0; charactermap_copy.wdata1 = 21b100000000000000000000;
-
 
     while(1) {
         switch( tpu_active ) {

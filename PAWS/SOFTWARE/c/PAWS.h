@@ -138,6 +138,7 @@ unsigned char volatile * TPU_CHARACTER = ( unsigned char volatile * ) 0x8504;
 unsigned char volatile * TPU_BACKGROUND = ( unsigned char volatile * ) 0x8506;
 unsigned char volatile * TPU_FOREGROUND = ( unsigned char volatile * ) 0x8508;
 unsigned char volatile * TPU_COMMIT = ( unsigned char volatile * ) 0x850a;
+unsigned char volatile * TPU_CURSOR = ( unsigned char volatile * ) 0x850c;
 
 unsigned char volatile * AUDIO_WAVEFORM = ( unsigned char volatile * ) 0xe100;
 unsigned char volatile * AUDIO_NOTE = ( unsigned char volatile * ) 0xe102;

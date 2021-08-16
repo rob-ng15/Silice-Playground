@@ -770,6 +770,7 @@ algorithm charactermap_memmap(
     uint6   tpu_foreground = uninitialized;
     uint7   tpu_background = uninitialized;
     uint3   tpu_write = uninitialized;
+    uint1   tpu_showcursor = uninitialized;
     character_map character_map_window <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -786,7 +787,8 @@ algorithm charactermap_memmap(
         tpu_character <: tpu_character,
         tpu_foreground <: tpu_foreground,
         tpu_background <: tpu_background,
-        tpu_write <: tpu_write
+        tpu_write <: tpu_write,
+        tpu_showcursor <: tpu_showcursor
     );
 
     // LATCH MEMORYWRITE
@@ -802,6 +804,7 @@ algorithm charactermap_memmap(
                     case 8h06: { tpu_background = writeData; }
                     case 8h08: { tpu_foreground = writeData; }
                     case 8h0a: { tpu_write = writeData; }
+                    case 8h0c: { tpu_showcursor = writeData; }
                     default: {}
                 }
             }
@@ -812,6 +815,9 @@ algorithm charactermap_memmap(
         }
         LATCHmemoryWrite = memoryWrite;
     }
+
+    // HIDE CURSOR AT STARTUP
+    tpu_showcursor = 0;
 }
 
 algorithm sprite_memmap(

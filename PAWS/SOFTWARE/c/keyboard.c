@@ -3,31 +3,9 @@
 #include <stdio.h>
 #include <math.h>
 
-unsigned short cursor_sprite[128] = {
-    0xff00,
-    0xff00,
-    0xff00,
-    0xff00,
-    0xff00,
-    0xff00,
-    0xff00,
-    0xff00,
-    0xff00,
-    0xff00,
-    0xff00,
-    0xff00,
-    0xff00,
-    0xff00,
-    0xff00,
-    0xff00
-};
-
-// MOVE CHARACTER MAP DOWN BEHIND THE SPRITES
-// USE A SPRITE TO SIMULATE THE CURSOR
 
 int main( void ) {
     INITIALISEMEMORY();
-    screen_mode(2);
     ps2_keyboardmode(PS2_KEYBOARD);
 
     // set up curses library
@@ -41,7 +19,6 @@ int main( void ) {
     }
     printw( "\nPS/2 Keyboard Test PS/2 in WHITE, UART in YELLOW\n\n");
 
-    set_sprite_bitmaps( UPPER_LAYER, 0, cursor_sprite );
     int cursor_x, cursor_y;
     unsigned short thecharacter;
 
@@ -106,9 +83,5 @@ int main( void ) {
         }
 
         refresh();
-
-        // POSITION THE CURSOR, FLASHING EVERY 1 SECOND
-        getyx( &cursor_y, &cursor_x );
-        set_sprite( UPPER_LAYER, 0, 1, WHITE, cursor_x * 8, cursor_y * 16, systemclock() & 1, 0 );
     }
 }

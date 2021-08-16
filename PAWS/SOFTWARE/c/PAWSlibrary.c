@@ -1087,7 +1087,7 @@ unsigned char SMTSTATE( void ) {
 #define COLS 80
 #define LINES 30
 
-unsigned char   __curses_backgroundcolours[16], __curses_foregroundcolours[16], __curses_cursor = 1, __curses_scroll = 1;
+unsigned char   __curses_backgroundcolours[16], __curses_foregroundcolours[16], __curses_scroll = 1;
 unsigned short  __curses_x = 0, __curses_y = 0, __curses_fore = WHITE, __curses_back = BLACK;
 
 typedef union curses_cell {
@@ -1105,13 +1105,18 @@ void __position_curses( unsigned short x, unsigned short y ) {
     *TPU_X = x; *TPU_Y = y; *TPU_COMMIT = 1;
 }
 
+void __update_tpu( void ) {
+    while( *TPU_COMMIT );
+    *TPU_X = __curses_x; *TPU_Y = __curses_y; *TPU_COMMIT = 1;
+    *TPU_BACKGROUND = __curses_back; *TPU_FOREGROUND = __curses_fore;
+}
+
 __curses_cell __read_curses_cell( unsigned short x, unsigned short y ) {
     __curses_cell storage;
     __position_curses( x, y );
     storage.cell.character = *TPU_CHARACTER;
     storage.cell.background = *TPU_BACKGROUND;
     storage.cell.foreground = *TPU_FOREGROUND;
-
     return( storage );
 }
 
@@ -1127,7 +1132,7 @@ void __write_curses_cell( unsigned short x, unsigned short y, __curses_cell writ
 void initscr( void ) {
     while( *TPU_COMMIT );
     *TPU_COMMIT = 6;
-    __curses_x = 0; __curses_y = 0; __curses_fore = WHITE; __curses_back = BLACK; __curses_cursor = 1; __curses_scroll = 1;
+    __curses_x = 0; __curses_y = 0; __curses_fore = WHITE; __curses_back = BLACK; *TPU_CURSOR = 1; __curses_scroll = 1; __update_tpu();
 }
 
 int endwin( void ) {
@@ -1137,14 +1142,13 @@ int endwin( void ) {
 int refresh( void ) {
     while( *TPU_COMMIT );
     *TPU_COMMIT = 7;
-
     return( true );
 }
 
 int clear( void ) {
     while( *TPU_COMMIT );
     *TPU_COMMIT = 6;
-    __curses_x = 0; __curses_y = 0; __curses_fore = WHITE; __curses_back = BLACK;
+    __curses_x = 0; __curses_y = 0; __curses_fore = WHITE; __curses_back = BLACK; __update_tpu();
     return( true );
 }
 
@@ -1166,7 +1170,7 @@ void noscroll( void ) {
 }
 
 void curs_set( int visibility ) {
-    __curses_cursor = visibility;
+    *TPU_CURSOR = visibility;
 }
 
 int start_color( void ) {
@@ -1197,20 +1201,19 @@ bool can_change_color( void ) {
 int init_pair( short pair, short f, short b ) {
     __curses_foregroundcolours[ pair ] = f;
     __curses_backgroundcolours[ pair ] = b;
-
     return( true );
 }
 
 int move( int y, int x ) {
     __curses_x = ( unsigned short ) ( x < 0 ) ? 0 : ( x > 79 ) ? 79 : x;
     __curses_y = ( unsigned short ) ( y < 0 ) ? 0 : ( y > 29 ) ? 29 : y;
-
+    __position_curses( __curses_x, __curses_y );
     return( true );
 }
 
 int getyx( int *y, int *x ) {
     *y = (int)__curses_y;
-    *x = (int) __curses_x;
+    *x = (int)__curses_x;
 }
 
 void __scroll( void ) {
@@ -1270,7 +1273,7 @@ int addch( unsigned char ch ) {
             temp.cell.background = __curses_back;
             temp.cell.foreground = __curses_fore;
             __write_curses_cell( __curses_x, __curses_y, temp );
-           if( __curses_x == 79 ) {
+            if( __curses_x == 79 ) {
                 __curses_x = 0;
                 if( __curses_y == 29 ) {
                     if( __curses_scroll ) {
@@ -1286,7 +1289,7 @@ int addch( unsigned char ch ) {
             }
         }
     }
-
+    __position_curses( __curses_x, __curses_y );
     return( true );
 }
 
@@ -1328,6 +1331,7 @@ int mvprintw( int y, int x, const char *fmt,... ) {
 int attron( int attrs ) {
     __curses_fore = __curses_foregroundcolours[ attrs ];
     __curses_back = __curses_backgroundcolours[ attrs ];
+    __update_tpu();
     return( true );
 }
 
