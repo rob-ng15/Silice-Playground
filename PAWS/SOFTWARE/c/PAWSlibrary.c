@@ -100,8 +100,14 @@ unsigned short rng( unsigned short range ) {
         case 2:
             trial = *ALT_RNG & 1;
             break;
+        case 4:
+            trial = *ALT_RNG & 3;
+            break;
         case 8:
             trial = *ALT_RNG & 7;
+            break;
+        case 16:
+            trial = *ALT_RNG & 15;
             break;
         case 32:
             trial = *ALT_RNG & 31;
@@ -287,7 +293,7 @@ void copper_startstop( unsigned char status ) {
 struct copper_command {
     unsigned int command:3;
     unsigned int condition:3;
-    unsigned int coordinate:10;
+    unsigned int coordinate:11;
     unsigned int mode:4;
     unsigned int altcolour:6;
     unsigned int colour:6;
@@ -302,6 +308,10 @@ void copper_program( unsigned char address, unsigned char command, unsigned char
     *BACKGROUND_COPPER_ALT = altcolour;
     *BACKGROUND_COPPER_COLOUR = colour;
     *BACKGROUND_COPPER_PROGRAM = 1;
+}
+
+void set_copper_cpuinput( unsigned short value ) {
+    *BACKGROUND_COPPER_CPUINPUT = value;
 }
 
 // SCROLLABLE TILEMAP
@@ -448,33 +458,39 @@ void gpu_circle( unsigned char colour, short x1, short y1, short radius, unsigne
 }
 
 // BLIT A 16 x 16 ( blit_size == 1 doubled to 32 x 32 ) TILE ( from tile 0 to 31 ) to (x1,y1) in colour
-void gpu_blit( unsigned char colour, short x1, short y1, short tile, unsigned char blit_size ) {
+// REFLECT { y, x }
+void gpu_blit( unsigned char colour, short x1, short y1, short tile, unsigned char blit_size, unsigned char reflect ) {
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = tile;
     *GPU_PARAM1 = blit_size;
+    *GPU_PARAM2 = reflect;
     wait_gpu();
     *GPU_WRITE = 7;
 }
 
 // BLIT AN 8 x8  ( blit_size == 1 doubled to 16 x 16, blit_size == 1 doubled to 32 x 32 ) CHARACTER ( from tile 0 to 255 ) to (x1,y1) in colour
-void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned char tile, unsigned char blit_size ) {
+// REFLECT { y, x }
+void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned char tile, unsigned char blit_size, unsigned char reflect ) {
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = tile;
     *GPU_PARAM1 = blit_size;
+    *GPU_PARAM2 = reflect;
     wait_gpu();
     *GPU_WRITE = 8;
 }
 
 // COLOURBLIT A 16 x 16 ( blit_size == 1 doubled to 32 x 32 ) TILE ( from tile 0 to 31 ) to (x1,y1)
-void gpu_colourblit( short x1, short y1, short tile, unsigned char blit_size ) {
+// ROTATION == 0 0 == 1 90 == 2 180 == 3 270
+void gpu_colourblit( short x1, short y1, short tile, unsigned char blit_size, unsigned char rotation ) {
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = tile;
     *GPU_PARAM1 = blit_size;
+    *GPU_PARAM2 = rotation;
     wait_gpu();
     *GPU_WRITE = 9;
 }
@@ -543,7 +559,7 @@ void gpu_printf( unsigned char colour, short x, short y, unsigned char size, con
 
     char *s = buffer;
     while( *s ) {
-        gpu_character_blit( colour, x, y, *s++, size );
+        gpu_character_blit( colour, x, y, *s++, size, 0 );
         x = x + ( 8 << size );
     }
 }
@@ -558,7 +574,7 @@ void gpu_printf_centre( unsigned char colour, short x, short y, unsigned char si
     char *s = buffer;
     x = x - ( ( strlen( s ) * ( 8 << size ) ) /2 );
     while( *s ) {
-        gpu_character_blit( colour, x, y, *s++, size );
+        gpu_character_blit( colour, x, y, *s++, size, 0 );
         x = x + ( 8 << size );
     }
 }
@@ -627,13 +643,14 @@ void gpu_pixelblock_stop( void ) {
 // WHEN ACTIVATED draws lines from a vector block (x0,y0) to (x1,y1), (x1,y1) to (x2,y2), (x2,y2) to (x3,y3) until (x15,y15) or an inactive vertex is encountered
 
 // START DRAWING A VECTOR BLOCK centred at (xc,yc) in colour
-void draw_vector_block( unsigned char block, unsigned char colour, short xc, short yc, unsigned char scale ) {
+void draw_vector_block( unsigned char block, unsigned char colour, short xc, short yc, unsigned char scale, unsigned char rotation ) {
     while( *VECTOR_DRAW_STATUS );
     *VECTOR_DRAW_BLOCK = block;
     *VECTOR_DRAW_COLOUR = colour;
     *VECTOR_DRAW_XC = xc;
     *VECTOR_DRAW_YC = yc;
     *VECTOR_DRAW_SCALE = scale;
+    *VECTOR_DRAW_ROTATION = rotation;
     *VECTOR_DRAW_START = 1;
 }
 
@@ -1214,6 +1231,7 @@ int move( int y, int x ) {
 int getyx( int *y, int *x ) {
     *y = (int)__curses_y;
     *x = (int)__curses_x;
+    return( true );
 }
 
 void __scroll( void ) {

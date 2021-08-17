@@ -62,14 +62,16 @@ algorithm decoder(
 
     output  int32   immediateValue,
 ) <autorun> {
-    opCode := Utype(instruction).opCode;
-    function3 := Rtype(instruction).function3;
-    function7 := Rtype(instruction).function7;
-    rs1 := Rtype(instruction).sourceReg1;
-    rs2 := Rtype(instruction).sourceReg2;
-    rs3 := R4type(instruction).sourceReg3;
-    rd := Rtype(instruction).destReg;
-    immediateValue := { {20{instruction[31,1]}}, Itype(instruction).immediate };
+    always {
+        opCode = Utype(instruction).opCode;
+        function3 = Rtype(instruction).function3;
+        function7 = Rtype(instruction).function7;
+        rs1 = Rtype(instruction).sourceReg1;
+        rs2 = Rtype(instruction).sourceReg2;
+        rs3 = R4type(instruction).sourceReg3;
+        rd = Rtype(instruction).destReg;
+        immediateValue = { {20{instruction[31,1]}}, Itype(instruction).immediate };
+    }
 }
 
 // RISC-V ADDRESS BASE/OFFSET GENERATOR
@@ -87,12 +89,14 @@ algorithm addressgenerator(
     output  uint32  storeAddress,
     output  uint32  loadAddress,
 ) <autorun> {
-    nextPC := pc + ( compressed ? 2 : 4 );
-    branchAddress := { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } + pc;
-    jumpAddress := { {12{Jtype(instruction).immediate_bits_20}}, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + pc;
-    AUIPCLUI := { Utype(instruction).immediate_bits_31_12, 12b0 } + ( instruction[5,1] ? 0 : pc );
-    storeAddress := ( ( instruction[2,5] == 5b01011 ) ? 0 : { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } ) + sourceReg1;
-    loadAddress := ( ( instruction[2,5] == 5b01011 ) ? 0 : immediateValue ) + sourceReg1;
+    always {
+        nextPC = pc + ( compressed ? 2 : 4 );
+        branchAddress = { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } + pc;
+        jumpAddress = { {12{Jtype(instruction).immediate_bits_20}}, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + pc;
+        AUIPCLUI = { Utype(instruction).immediate_bits_31_12, 12b0 } + ( instruction[5,1] ? 0 : pc );
+        storeAddress = ( ( instruction[2,5] == 5b01011 ) ? 0 : { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } ) + sourceReg1;
+        loadAddress = ( ( instruction[2,5] == 5b01011 ) ? 0 : immediateValue ) + sourceReg1;
+    }
 }
 
 // BRANCH COMPARISIONS

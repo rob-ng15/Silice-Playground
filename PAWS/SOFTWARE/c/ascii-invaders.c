@@ -206,8 +206,6 @@ int main( void ) {
     //signal(SIGALRM, handleTimer);
 
     while(1) {
-        await_vblank();
-
         if( ( get_buttons() & 2 ) != 0 ) {
             if (game.state == STATE_INTRO) {
                 game.lives = 3;
@@ -232,7 +230,11 @@ int main( void ) {
         if( ( get_buttons() & 64 ) != 0 )
             gun.move = 2;
 
-        handleTimer( 1 );
+        // TRIGGER ONCE EVERY 25 milliseconds
+        if( !get_timer1khz(0) ) {
+            handleTimer( 1 );
+            set_timer1khz( 25, 0 );
+        }
     }
 
     return 0;   // not reached

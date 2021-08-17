@@ -10,11 +10,9 @@ algorithm dointdivbit(
     output  uint32  newquotient,
     output  uint32  newremainder,
  ) <autorun> {
-    uint32  temporary = uninitialized;
-    uint1   bitresult = uninitialised;
+    uint32  temporary <: { remainder[0,31], top[bit,1] };
+    uint1   bitresult <: __unsigned(temporary) >= __unsigned(bottom);
     always {
-        temporary = { remainder[0,31], top[bit,1] };
-        bitresult = __unsigned(temporary) >= __unsigned(bottom);
         newremainder = __unsigned(temporary) - ( bitresult ? __unsigned(bottom) : 0 );
         newquotient = quotient | ( bitresult << bit );
     }
@@ -39,7 +37,6 @@ algorithm douintdivide(
         newremainder :> newremainder
     );
     uint6   bit(63);
-
     busy := start | ( bit != 63 );
     while(1) {
         if( start ) {
@@ -94,7 +91,9 @@ algorithm douintmul(
     input   uint32  factor_2,
     output  uint64  product
 ) <autorun> {
-    product := factor_1 * factor_2;
+    always {
+        product = factor_1 * factor_2;
+    }
 }
 algorithm aluMmultiply(
     input   uint3   dosign,
@@ -109,5 +108,7 @@ algorithm aluMmultiply(
     uint64  product64 = uninitialised;
     uint64  product <: productsign ? -product64 : product64;
     douintmul UINTMUL( factor_1 <: factor_1_unsigned, factor_2 <: factor_2_unsigned, product :> product64 );
-    result := product[ ( dosign == 0 ) ? 0 : 32, 32 ];
+    always {
+        result = product[ ( dosign == 0 ) ? 0 : 32, 32 ];
+    }
 }

@@ -283,12 +283,12 @@ algorithm floatclassify(
 
     always {
         switch( { aINF, asNAN, aqNAN, aZERO } ) {
-            case 4b1000: { classification = floatingpointnumber( sourceReg1F ).sign ? 10b0000000001 : 10b0010000000; }
+            case 4b1000: { classification = fp32( sourceReg1F ).sign ? 10b0000000001 : 10b0010000000; }
             case 4b0100: { classification = 10b0100000000; }
             case 4b0010: { classification = 10b1000000000; }
-            case 4b0001: { classification = ( sourceReg1F[0,23] == 0 ) ? floatingpointnumber( sourceReg1F ).sign ? 10b0000001000 : 10b0000010000 :
-                                                                            floatingpointnumber( sourceReg1F ).sign ? 10b0000000100 : 10b0000100000; }
-            default: { classification = floatingpointnumber( sourceReg1F ).sign ? 10b0000000010 : 10b0001000000; }
+            case 4b0001: { classification = ( sourceReg1F[0,23] == 0 ) ? fp32( sourceReg1F ).sign ? 10b0000001000 : 10b0000010000 :
+                                                                            fp32( sourceReg1F ).sign ? 10b0000000100 : 10b0000100000; }
+            default: { classification = fp32( sourceReg1F ).sign ? 10b0000000010 : 10b0001000000; }
         }
     }
 }
@@ -386,5 +386,7 @@ algorithm floatsign(
     input   uint32  sourceReg2F,
     output  uint32  result,
 ) <autorun> {
-    result := { function3[1,1] ? sourceReg1F[31,1] ^ sourceReg2F[31,1] : function3[0,1] ? ~sourceReg2F[31,1] : sourceReg2F[31,1], sourceReg1F[0,31] };
+    always {
+        result = { function3[1,1] ? sourceReg1F[31,1] ^ sourceReg2F[31,1] : function3[0,1] ? ~sourceReg2F[31,1] : sourceReg2F[31,1], sourceReg1F[0,31] };
+    }
 }

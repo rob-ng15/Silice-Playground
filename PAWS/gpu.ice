@@ -41,6 +41,7 @@ algorithm gpu_queue(
     input   int10   vector_block_xc,
     input   int10   vector_block_yc,
     input   uint3   vector_block_scale,
+    input   uint2   vector_block_rotation,
     input   uint1   draw_vector,
     input   uint5   vertices_writer_block,
     input   uint6   vertices_writer_vertex,
@@ -88,6 +89,7 @@ algorithm gpu_queue(
         vector_block_xc <: vector_block_xc,
         vector_block_yc <: vector_block_yc,
         vector_block_scale <: vector_block_scale,
+        vector_block_rotation <: vector_block_rotation,
         draw_vector <: draw_vector,
         vector_block_active :> vector_block_active,
         vertex <:> vertex,
@@ -112,6 +114,7 @@ algorithm gpu_queue(
     int10   param3 = uninitialised;
     uint4   dithermode = uninitialised;
     uint1   gpu_active = uninitialised;
+    uint4   GPUgpu_write <: ( gpu_write != 0 ) ? gpu_write : vector_drawer.gpu_write ? 2 : 0;
     gpu GPU(
         gpu_x <: x,
         gpu_y <: y,
@@ -122,6 +125,7 @@ algorithm gpu_queue(
         gpu_param2 <: param2,
         gpu_param3 <: param3,
         gpu_dithermode <: dithermode,
+        gpu_write <: GPUgpu_write,
         blit1tilemap <:> blit1tilemap,
         characterGenerator8x8 <:> characterGenerator8x8,
         colourblittilemap <:> colourblittilemap,
@@ -140,7 +144,6 @@ algorithm gpu_queue(
     );
 
     queue_full := gpu_active | vector_block_active; queue_complete := ~( gpu_active | vector_block_active );
-    GPU.gpu_write := ( gpu_write != 0 ) ? gpu_write : vector_drawer.gpu_write ? 2 : 0;
 
     always {
         switch( gpu_write ) {
@@ -242,14 +245,16 @@ algorithm gpu(
         x <: gpu_x,
         y <: gpu_y,
         param0 <: gpu_param0,
-        param1 <: gpu_param1
+        param1 <: gpu_param1,
+        param2 <: gpu_param2
     );
     colourblit GPUcolourblit(
         colourblittilemap <:> colourblittilemap,
         x <: gpu_x,
         y <: gpu_y,
         param0 <: gpu_param0,
-        param1 <: gpu_param1
+        param1 <: gpu_param1,
+        param2 <: gpu_param2
     );
     pixelblock GPUpixelblock(
         x <: gpu_x,
@@ -740,9 +745,11 @@ algorithm insideTriangle(
     input   int10   y2,
     output  uint1   inside
 ) <autorun> {
-    inside := ( (( x2 - x1 ) * ( sy - y1 ) - ( y2 - y1 ) * ( sx - x1 )) >= 0 ) &
-                ( (( x - x2 ) * ( sy - y2 ) - ( y - y2 ) * ( sx - x2 )) >= 0 ) &
-                ( (( x1 - x ) * ( sy - y ) - ( y1 - y ) * ( sx - x )) >= 0 );
+    always {
+        inside = ( (( x2 - x1 ) * ( sy - y1 ) - ( y2 - y1 ) * ( sx - x1 )) >= 0 ) &
+                    ( (( x - x2 ) * ( sy - y2 ) - ( y - y2 ) * ( sx - x2 )) >= 0 ) &
+                    ( (( x1 - x ) * ( sy - y ) - ( y1 - y ) * ( sx - x )) >= 0 );
+    }
 }
 algorithm drawtriangle(
     input   uint1   start,
@@ -923,7 +930,7 @@ algorithm blittilebitmapwriter(
     characterGenerator8x8.wdata1 := character_writer_bitmap;
 }
 
-algorithm blit (
+algorithm blit(
     input   uint1   start,
     output  uint1   busy(0),
     simple_dualport_bram_port0 blit1tilemap,
@@ -943,6 +950,7 @@ algorithm blit (
     input   int10   y,
     input   uint8   param0,
     input   uint2   param1,
+    input   uint2   param2,
 
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
@@ -964,12 +972,15 @@ algorithm blit (
     uint7   gpu_max_x = uninitialized;
     uint7   gpu_max_y = uninitialized;
 
+    // REFLECTION FLAGS - { reflecty, reflectx }
+    uint2   gpu_param2 = uninitialised;
+
     // TILE/CHARACTER TO BLIT
     uint8   gpu_tile = uninitialized;
 
     // tile and character bitmap addresses
-    blit1tilemap.addr0 := { gpu_tile, gpu_active_y[0,4] };
-    characterGenerator8x8.addr0 := { gpu_tile, gpu_active_y[0,3] };
+    blit1tilemap.addr0 := { gpu_tile, gpu_param2[1,1] ? 4b1111 - gpu_active_y[0,4] : gpu_active_y[0,4] };
+    characterGenerator8x8.addr0 := { gpu_tile, gpu_param2[1,1] ? 3b111 - gpu_active_y[0,3] : gpu_active_y[0,3] };
 
     bitmap_x_write := gpu_x1 + gpu_active_x;
     bitmap_y_write := gpu_y1 + ( gpu_active_y << gpu_param1 ) + gpu_y2;
@@ -981,7 +992,7 @@ algorithm blit (
             gpu_active_x = 0;
             gpu_active_y = 0;
             ( gpu_x1, gpu_y1 ) = copycoordinates( x, y );
-            gpu_param1 = param1;
+            ( gpu_param1, gpu_param2 ) = copycoordinates( param1, param2 );
             gpu_max_x = ( tilecharacter ? 16 : 8 ) << ( param1 & 3);
             gpu_max_y = tilecharacter ? 16 : 8;
             gpu_tile = param0;
@@ -989,7 +1000,7 @@ algorithm blit (
             while( gpu_active_y != gpu_max_y ) {
                 while( gpu_active_x != gpu_max_x ) {
                     while( gpu_y2 != ( 1 << gpu_param1 ) ) {
-                        bitmap_write = tilecharacter ? blit1tilemap.rdata0[15 - ( gpu_active_x >> gpu_param1 ),1] : characterGenerator8x8.rdata0[7 - ( gpu_active_x >> gpu_param1 ),1];
+                        bitmap_write = tilecharacter ? blit1tilemap.rdata0[gpu_param2[0,1] ? ( gpu_active_x >> gpu_param1 ) : 15 - ( gpu_active_x >> gpu_param1 ),1] : characterGenerator8x8.rdata0[gpu_param2[0,1] ? ( gpu_active_x >> gpu_param1 ) : 7 - ( gpu_active_x >> gpu_param1 ),1];
                         gpu_y2 = gpu_y2 + 1;
                     }
                     gpu_active_x = gpu_active_x + 1;
@@ -1029,8 +1040,9 @@ algorithm colourblit(
     input   uint7   colourblit_writer_colour,
     input   int10   x,
     input   int10   y,
-    input   uint8   param0,
+    input   uint5   param0,
     input   uint2   param1,
+    input   uint2   param2,
 
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
@@ -1050,11 +1062,17 @@ algorithm colourblit(
     // MULTIPLIER FOR THE SIZE
     uint2   gpu_param1 = uninitialised;
 
+    // ROTATION
+    uint2   gpu_param2 = uninitialised;
+
     // TILE/CHARACTER TO BLIT
     uint5   gpu_tile = uninitialized;
 
-    // tile and character bitmap addresses
-    colourblittilemap.addr0 := { gpu_tile, gpu_active_y[0,4], gpu_active_x[0,4] };
+    // tile and character bitmap addresses - handling rotation
+    colourblittilemap.addr0 := ( gpu_param2 == 2b00 ) ? { gpu_tile, gpu_active_y[0,4], gpu_active_x[0,4] } :
+                                ( gpu_param2 == 2b01 ) ? { gpu_tile, gpu_active_x[0,4], 4b1111 - gpu_active_y[0,4] } :
+                                ( gpu_param2 == 2b10 ) ? { gpu_tile, 4b1111 - gpu_active_y[0,4], 4b1111 - gpu_active_x[0,4] } :
+                                { gpu_tile, 4b1111 - gpu_active_x[0,4], gpu_active_y[0,4] };
 
     bitmap_x_write := gpu_x1 + ( gpu_active_x << gpu_param1 ) + gpu_x2;
     bitmap_y_write := gpu_y1 + ( gpu_active_y << gpu_param1 ) + gpu_y2;
@@ -1068,6 +1086,7 @@ algorithm colourblit(
             gpu_active_y = 0;
             ( gpu_x1, gpu_y1 ) = copycoordinates( x, y );
             ( gpu_tile, gpu_param1 ) = copycoordinates( param0, param1 );
+            gpu_param2 = param2;
             ++:
             while( gpu_active_y != 16 ) {
                     gpu_y2 = 0;
@@ -1162,6 +1181,7 @@ algorithm centreplusdelta(
     input   int10   yc,
     input   uint6   dy,
     input   uint3   scale,
+    input   uint2   rotation,
     output  int10   xdx,
     output  int10   ydy
 ) <autorun> {
@@ -1169,13 +1189,25 @@ algorithm centreplusdelta(
     int10 deltay <: { {5{dy[5,1]}}, dy };
 
     always {
-        xdx = xc + ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
-        ydy = yc + ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
+        switch( rotation ) {
+            case 0: {
+                xdx = xc + ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
+                ydy = yc + ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
+            }
+            case 1: {
+                xdx = xc - ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
+                ydy = yc + ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
+            }
+            case 2: {
+                xdx = xc - ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
+                ydy = yc - ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
+            }
+            case 3: {
+                xdx = xc + ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
+                ydy = yc - ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
+            }
+        }
     }
-}
-circuitry deltacoordinates( input x, input dx, input y, input dy, input scale, output xdx, output ydy ) {
-    xdx = x + ( scale[2,1] ? ( __signed(dx) >>> scale[0,2] ) : ( dx << scale[0,2] ) );
-    ydy = y + ( scale[2,1] ? ( __signed(dy) >>> scale[0,2] ) : ( dy << scale[0,2] ) );
 }
 algorithm vertexwriter(
     // For setting vertices
@@ -1197,6 +1229,7 @@ algorithm vectors(
     input   int10   vector_block_xc,
     input   int10   vector_block_yc,
     input   uint3   vector_block_scale,
+    input   uint2   vector_block_rotation,
     input   uint1   draw_vector,
     output  uint1   vector_block_active(0),
 
@@ -1219,6 +1252,7 @@ algorithm vectors(
         dx <: deltax,
         dy <: deltay,
         scale <: vector_block_scale,
+        rotation <: vector_block_rotation,
         xdx :> xdx,
         ydy :> ydy
     );

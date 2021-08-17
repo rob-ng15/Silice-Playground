@@ -483,14 +483,14 @@ unsigned char next_colour( unsigned char colour_cycle, unsigned char position ) 
 // DRAW GAME OVER IN LARGE MULTICOLOURED LETTERS
 unsigned char last_colour = 0;
 void game_over( void ) {
-    gpu_character_blit( swizzle(last_colour), 16, 116, 'G', 2 );
-    gpu_character_blit( swizzle(next_colour(last_colour,1)), 48, 124, 'A', 2 );
-    gpu_character_blit( swizzle(next_colour(last_colour,2)), 80, 116, 'M', 2 );
-    gpu_character_blit( swizzle(next_colour(last_colour,3)), 112, 124, 'E', 2 );
-    gpu_character_blit( swizzle(next_colour(last_colour,4)), 176, 116, 'O', 2 );
-    gpu_character_blit( swizzle(next_colour(last_colour,5)), 208, 124, 'V', 2 );
-    gpu_character_blit( swizzle(next_colour(last_colour,6)), 240, 116, 'E', 2 );
-    gpu_character_blit( swizzle(next_colour(last_colour,7)), 272, 124, 'R', 2 );
+    gpu_character_blit( swizzle(last_colour), 16, 116, 'G', 2, 0 );
+    gpu_character_blit( swizzle(next_colour(last_colour,1)), 48, 124, 'A', 2, 0 );
+    gpu_character_blit( swizzle(next_colour(last_colour,2)), 80, 116, 'M', 2, 0 );
+    gpu_character_blit( swizzle(next_colour(last_colour,3)), 112, 124, 'E', 2, 0 );
+    gpu_character_blit( swizzle(next_colour(last_colour,4)), 176, 116, 'O', 2, 0 );
+    gpu_character_blit( swizzle(next_colour(last_colour,5)), 208, 124, 'V', 2, 0 );
+    gpu_character_blit( swizzle(next_colour(last_colour,6)), 240, 116, 'E', 2, 0 );
+    gpu_character_blit( swizzle(next_colour(last_colour,7)), 272, 124, 'R', 2, 0 );
     last_colour = ( last_colour == 63 ) ? 1 : last_colour + 1;
 }
 
@@ -503,9 +503,9 @@ void risc_ice_v_logo( void ) {
     gpu_triangle( WHITE, 100, 33, 100, 100, 50, 100 );
     gpu_triangle( DKBLUE, 100, 50, 100, 100, 66, 100 );
     gpu_rectangle( DKBLUE, 0, 0, 33, 50 );
-    gpu_circle( WHITE, 25, 25, 26, 0b00110011, 1 );
+    gpu_circle( WHITE, 25, 25, 26, 0xff, 1 );
     gpu_rectangle( WHITE, 0, 0, 25, 12 );
-    gpu_circle( DKBLUE, 25, 25, 12, 0b00110011, 1 );
+    gpu_circle( DKBLUE, 25, 25, 12, 0xff, 1 );
     gpu_triangle( WHITE, 0, 33, 67, 100, 0, 100 );
     gpu_triangle( DKBLUE, 0, 50, 50, 100, 0, 100 );
     gpu_rectangle( DKBLUE, 0, 12, 25, 37 );
@@ -520,16 +520,16 @@ void drawfuel( unsigned char fullbar ) {
         gpu_rectangle( RED, 62, 216, 319, 223 );
         gpu_printf( RED, 22, 216, 0, "FUEL:" );
     }
-    gpu_character_blit( RED, 63 + ( fuel >> 2 ), 216, 219, 0 );
-    gpu_character_blit( WHITE, 62 + ( fuel >> 2 ), 216, 30, 0 );
+    gpu_character_blit( RED, 63 + ( fuel >> 2 ), 216, 219, 0, 0 );
+    gpu_character_blit( WHITE, 62 + ( fuel >> 2 ), 216, 30, 0, 0 );
 }
 void drawshield( unsigned char fullbar ) {
     if( fullbar ) {
         gpu_rectangle( BLUE, 62, 224, 319, 231 );
         gpu_printf( BLUE, 6, 224, 0, "SHIELD:" );
     }
-    gpu_character_blit( BLUE, 63 + shield, 224, 219, 0 );
-    gpu_character_blit( WHITE, 62 + shield, 224, 30, 0 );
+    gpu_character_blit( BLUE, 63 + shield, 224, 219, 0, 0 );
+    gpu_character_blit( WHITE, 62 + shield, 224, 30, 0, 2 );
 }
 
 void setup_game() {
@@ -700,7 +700,7 @@ void draw_score( void ) {
 
 void draw_lives( void ) {
     for( unsigned short i = 0; i < lives; i++ ) {
-        draw_vector_block( 0, WHITE, 304, 16 + i * 16, 0 );
+        draw_vector_block( 0, WHITE, 304, 16 + i * 16, 0, i );
     }
 }
 

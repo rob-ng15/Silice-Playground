@@ -37,11 +37,15 @@ algorithm aluR (
 ) <autorun> {
     // M EXTENSION MULTIPLICATION AND DIVISION
     int32   ALUMDresult = uninitialized;
+    uint1   ALUMDstart = uninitialized;
+    uint1   ALUMDbusy = uninitialized;
     aluMdivideremain ALUMD(
         dosign <: function3,
         dividend <: sourceReg1,
         divisor <: sourceReg2,
-        result :> ALUMDresult
+        result :> ALUMDresult,
+        start <: ALUMDstart,
+        busy :> ALUMDbusy
     );
     int32   ALUMMresult = uninitialized;
     aluMmultiply ALUMM(
@@ -51,7 +55,7 @@ algorithm aluR (
         result :> ALUMMresult
     );
 
-    ALUMD.start := 0;
+    ALUMDstart := 0;
     while(1) {
         if( start ) {
             busy = 1;
@@ -60,10 +64,10 @@ algorithm aluR (
                 case 7b0000001: {
                     switch( function3[2,1] ) {
                         case 1b0: { result = ALUMMresult; }
-                        case 1b1: { ALUMD.start = 1; while( ALUMD.busy ) {} result = ALUMDresult; }
+                        case 1b1: { ALUMDstart = 1; while( ALUMDbusy ) {} result = ALUMDresult; }
                     }
                 }
-                // BASE + REMAINING B EXTENSION
+                // BASE
                 default: {
                     switch( function3 ) {
                         case 3b000: { result = sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ); }

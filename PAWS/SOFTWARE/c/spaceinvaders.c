@@ -1010,8 +1010,8 @@ void reset_aliens( void ) {
     for( short i = 0; i < 2; i++ ) {
         bitmap_draw( i );
         for( short j = 0; j < 4; j++ ) {
-            gpu_blit( GREEN, 24 + j * 80, 208, 12, 0 );
-            gpu_blit( GREEN, 40 + j * 80, 208, 13, 0 );
+            gpu_blit( GREEN, 24 + j * 80, 208, 12, 0, 0 );
+            gpu_blit( GREEN, 40 + j * 80, 208, 13, 0, 0 );
         }
     }
 
@@ -1082,9 +1082,9 @@ void draw_aliens( void ) {
                 case 2:
                 case 3:
                     if( Ship.level & 1 ) {
-                        gpu_colourblit( Aliens[ y * 11 + x ].x, Aliens[ y * 11 + x ].y, Aliens[ y * 11 + x ].type * 3 +  Aliens[ y * 11 + x ].animation_count, 0 );
+                        gpu_colourblit( Aliens[ y * 11 + x ].x, Aliens[ y * 11 + x ].y, Aliens[ y * 11 + x ].type * 3 +  Aliens[ y * 11 + x ].animation_count, 0, 0 );
                     } else {
-                        gpu_blit( WHITE, Aliens[ y * 11 + x ].x, Aliens[ y * 11 + x ].y, Aliens[ y * 11 + x ].type * 2 +  Aliens[ y * 11 + x ].animation_count, 0 );
+                        gpu_blit( WHITE, Aliens[ y * 11 + x ].x, Aliens[ y * 11 + x ].y, Aliens[ y * 11 + x ].type * 2 +  Aliens[ y * 11 + x ].animation_count, 0, 0 );
                     }
                     break;
                 case 4:
@@ -1094,7 +1094,7 @@ void draw_aliens( void ) {
                     Aliens[ y * 11 + x ].type--;
                     break;
                 default:
-                    gpu_blit( RED, Aliens[ y * 11 + x ].x, Aliens[ y * 11 + x ].y, 8 + framebuffer, 0 );
+                    gpu_blit( RED, Aliens[ y * 11 + x ].x, Aliens[ y * 11 + x ].y, 8 + framebuffer, 0, 0 );
                     Aliens[ y * 11 + x ].type--;
                     break;
             }
@@ -1104,7 +1104,7 @@ void draw_aliens( void ) {
     // DRAW UFO
     switch( UFO.active ) {
         case UFOONSCREEN:
-            gpu_blit( MAGENTA, UFO.x, 16, 10 + framebuffer, 0 );
+            gpu_blit( MAGENTA, UFO.x, 16, 10 + framebuffer, 0, 0 );
             if( !get_beep_active( 1 ) ) {
                 beep( 1, 2, UFO.pitchcount ? 25 : 37, 100 );
                 UFO.pitchcount = !UFO.pitchcount;
@@ -1269,8 +1269,9 @@ void bomb_actions( void ) {
             bomb_x = get_sprite_attribute( UPPER_LAYER, i , 3 ) / 2 - rng(4) + 2;
             bomb_y = get_sprite_attribute( UPPER_LAYER, i , 4 ) / 2 + rng(2) + 1;
             set_sprite_attribute( UPPER_LAYER, i, SPRITE_ACTIVE, 0 );
-            bitmap_draw( 0 ); gpu_blit( TRANSPARENT, bomb_x, bomb_y, 14, 0 );
-            bitmap_draw( 1 ); gpu_blit( TRANSPARENT, bomb_x, bomb_y, 14, 0 );
+            char bomb_reflection = rng(4);
+            bitmap_draw( 0 ); gpu_blit( TRANSPARENT, bomb_x, bomb_y, 14, 0, bomb_reflection );
+            bitmap_draw( 1 ); gpu_blit( TRANSPARENT, bomb_x, bomb_y, 14, 0, bomb_reflection );
             bitmap_draw( !framebuffer );
         } else {
             set_sprite_attribute( UPPER_LAYER, i, SPRITE_COLOUR, framebuffer ? ORANGE : LTRED );
@@ -1350,8 +1351,8 @@ short missile_actions( void ) {
                 // HIT A BUNKER
                 missile_x = missile_x - rng(4) + 2;
                 missile_y = missile_y - rng(4);
-                bitmap_draw( 0 ); gpu_blit( TRANSPARENT, missile_x, missile_y, 14, 0 );
-                bitmap_draw( 1 ); gpu_blit( TRANSPARENT, missile_x, missile_y, 14, 0 );
+                bitmap_draw( 0 ); gpu_blit( TRANSPARENT, missile_x, missile_y, 14, 0, 0 );
+                bitmap_draw( 1 ); gpu_blit( TRANSPARENT, missile_x, missile_y, 14, 0, 0 );
                 bitmap_draw( !framebuffer );
             } else {
                 // HIT UFO
@@ -1511,8 +1512,8 @@ void missile_demo( void ) {
             // HIT A BUNKER
             missile_x = missile_x - rng(4) + 2;
             missile_y = missile_y - rng(2) - 1;
-            bitmap_draw( 0 ); gpu_blit( TRANSPARENT, missile_x, missile_y, 14, 0 );
-            bitmap_draw( 1 ); gpu_blit( TRANSPARENT, missile_x, missile_y, 14, 0 );
+            bitmap_draw( 0 ); gpu_blit( TRANSPARENT, missile_x, missile_y, 14, 0, 0 );
+            bitmap_draw( 1 ); gpu_blit( TRANSPARENT, missile_x, missile_y, 14, 0, 0 );
             bitmap_draw( !framebuffer );
         }
     }
@@ -1604,10 +1605,10 @@ void attract( void ) {
                     // WELCOME SCREEN
                     // DRAW TO HIDDEN FRAME BUFFER
                     bitmap_draw( !framebuffer ); gpu_cs();
-                    gpu_blit( WHITE, 128, 64, 2 + animation, 1 ); gpu_printf_centre( RED, 176, 64, 1, "%d", 30 );
-                    gpu_blit( WHITE, 128, 96, 4 + animation, 1 ); gpu_printf_centre( RED, 176, 96, 1, "%d", 20 );
-                    gpu_blit( WHITE, 128, 128, 6 + animation, 1 ); gpu_printf_centre( RED, 176, 128, 1, "%d", 10 );
-                    gpu_blit( MAGENTA, 126, 160, 10 + animation, 1 ); gpu_printf_centre( RED, 176, 160, 1, "?" );
+                    gpu_blit( WHITE, 128, 64, 2 + animation, 1, 0 ); gpu_printf_centre( RED, 176, 64, 1, "%d", 30, 0 );
+                    gpu_blit( WHITE, 128, 96, 4 + animation, 1, 0 ); gpu_printf_centre( RED, 176, 96, 1, "%d", 20, 0 );
+                    gpu_blit( WHITE, 128, 128, 6 + animation, 1, 0 ); gpu_printf_centre( RED, 176, 128, 1, "%d", 10, 0 );
+                    gpu_blit( MAGENTA, 126, 160, 10 + animation, 1, 0 ); gpu_printf_centre( RED, 176, 160, 1, "?", 0 );
 
                     switch( animation ) {
                         case 0:

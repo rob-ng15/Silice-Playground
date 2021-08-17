@@ -477,26 +477,26 @@ void draw_map( unsigned short width, unsigned short height, unsigned short curre
     // DRAW COMPASS
     switch( direction ) {
         case 0:
-            gpu_character_blit( GREEN, 226, 1, 30, 0 );
+            gpu_character_blit( GREEN, 226, 1, 30, 0, 0 );
             break;
         case 1:
-            gpu_character_blit( GREEN, 226, 1, 16, 0 );
+            gpu_character_blit( GREEN, 226, 1, 16, 0, 0 );
             break;
         case 2:
-            gpu_character_blit( GREEN, 226, 1, 31, 0 );
+            gpu_character_blit( GREEN, 226, 1, 31, 0, 0 );
             break;
         case 3:
-            gpu_character_blit( GREEN, 226, 1, 17, 0 );
+            gpu_character_blit( GREEN, 226, 1, 17, 0, 0 );
             break;
     }
 
     // DRAW MAPPEEKS
     for( unsigned peek = 0; peek < mappeeks; peek++ )
-        gpu_character_blit( GREEN, 226, 53 - ( peek * 6 ), 1, 0 );
+        gpu_character_blit( GREEN, 226, 53 - ( peek * 6 ), 1, 0, 0 );
 
     // DRAW POWER PILLS
     for( unsigned power = 0; power < powerpills; power++ )
-        gpu_character_blit( DKPURPLE, 226, 29 - ( power * 6 ), 4, 0 );
+        gpu_character_blit( DKPURPLE, 226, 29 - ( power * 6 ), 4, 0, 0 );
 }
 
 // CALCULATE NUMBER OF STEPS TO HIT A WALL

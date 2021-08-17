@@ -17,7 +17,8 @@ algorithm background(
     input   uint6   copper_address,
     input   uint3   copper_command,
     input   uint3   copper_condition,
-    input   uint10  copper_coordinate,
+    input   uint11  copper_coordinate,
+    input   uint10  copper_cpu_input,
     input   uint4   copper_mode,
     input   uint6   copper_alt,
     input   uint6   copper_colour
@@ -38,13 +39,13 @@ algorithm background(
     );
 
     // BACKGROUND CO-PROCESSOR PROGRAM STORAGE
-    // { 3 bit command, 3 bit mask, 10 bit coordinate, 4 bit mode, 6 bit colour 2, 6 bit colour 1 }
+    // { 3 bit command, 3 bit mask, { 1 bit for cpuinput flag, 10 bit coordinate }, 4 bit mode, 6 bit colour 2, 6 bit colour 1 }
     // COMMANDS - 0 = goto, 1 = wait vblank, 2 = wait hblank, 3 = wait ypos, 4 = wait xpos, 5 = , 6 =, 7 =
     // MASK { change mode, change colour  2, change colour 1 }
-    simple_dualport_bram uint32 copper[ 64 ] = { 0, pad(0) };
+    simple_dualport_bram uint33 copper[ 64 ] = { 0, pad(0) };
     uint1   copper_execute = uninitialised;
     uint1   copper_branch = uninitialised;
-    uint10  copper_variable = uninitialised;
+    uint11  copper_variable = uninitialised;
     uint6   PC = 0;
 
     // COPPER PROGRAM FLAGS
@@ -60,28 +61,28 @@ algorithm background(
                 // UPDATE THE BACKGROUND GENERATOR FROM THE COPPER
                 switch( copper_status ) {
                     case 1: {
-                        switch( copper.rdata0[29,3] ) {
+                        switch( copper.rdata0[30,3] ) {
                             case 3b000: {
                                 // JUMP ON CONDITION
-                                switch( copper.rdata0[26,3] ) {
+                                switch( copper.rdata0[27,3] ) {
                                     default: { copper_branch = 1; }
                                     case 3b001: { copper_branch = ( pix_vblank == copper.rdata0[16,1] ); }
                                     case 3b010: { copper_branch = ( pix_active == copper.rdata0[16,1] ); }
-                                    case 3b011: { copper_branch = ( pix_y < copper.rdata0[16,10] ); }
-                                    case 3b100: { copper_branch = ( pix_x < copper.rdata0[16,10] ); }
-                                    case 3b101: { copper_branch = ( copper_variable < copper.rdata0[16,10] ); }
+                                    case 3b011: { copper_branch = ( pix_y < copper.rdata0[26,1] ? copper_cpu_input : copper.rdata0[16,10] ); }
+                                    case 3b100: { copper_branch = ( pix_x < copper.rdata0[26,1] ? copper_cpu_input : copper.rdata0[16,10] ); }
+                                    case 3b101: { copper_branch = ( copper_variable < copper.rdata0[26,1] ? copper_cpu_input : copper.rdata0[16,10] ); }
                                 }
                                 PC = copper_branch ? copper.rdata0[0,6] : PC + 1;
                             }
                             default: {
-                                switch( copper.rdata0[29,3] ) {
+                                switch( copper.rdata0[30,3] ) {
                                     case 3b001: { copper_execute = pix_vblank; }
                                     case 3b010: { copper_execute = ~pix_active; }
                                     case 3b011: { copper_execute = ( pix_y == copper.rdata0[16,10] ); }
                                     case 3b100: { copper_execute = ( pix_x == copper.rdata0[16,10] ); }
                                     case 3b101: { copper_execute = ( copper_variable == ( copper.rdata0[16,1] ? pix_x : pix_y ) ); }
                                     case 3b110: {
-                                        switch( copper.rdata0[26,3] ) {
+                                        switch( copper.rdata0[27,3] ) {
                                             case 3b001: { copper_variable = copper.rdata0[16,10]; }
                                             case 3b010: { copper_variable = copper_variable + copper.rdata0[16,10]; }
                                             default: { copper_variable = copper_variable - copper.rdata0[16,10]; }
@@ -89,17 +90,17 @@ algorithm background(
                                         copper_branch = 1;
                                     }
                                     default: {
-                                        switch( copper.rdata0[26,1] ) { case 1: { BACKGROUNDcolour = copper_variable; } case 0: {} }
-                                        switch( copper.rdata0[27,1] ) { case 1: { BACKGROUNDalt = copper_variable; } case 0: {} }
-                                        switch( copper.rdata0[28,1] ) { case 1: { BACKGROUNDmode = copper_variable; } case 0: {} }
+                                        switch( copper.rdata0[27,1] ) { case 1: { BACKGROUNDcolour = copper_variable; } case 0: {} }
+                                        switch( copper.rdata0[28,1] ) { case 1: { BACKGROUNDalt = copper_variable; } case 0: {} }
+                                        switch( copper.rdata0[29,1] ) { case 1: { BACKGROUNDmode = copper_variable; } case 0: {} }
                                         copper_branch = 1;
                                     }
                                 }
                                 switch( copper_execute ) {
                                     case 1: {
-                                        switch( copper.rdata0[26,1] ) { case 1: { BACKGROUNDcolour = copper.rdata0[0,6]; }  case 0: {} }
-                                        switch( copper.rdata0[27,1] ) { case 1: { BACKGROUNDalt = copper.rdata0[6,6]; } case 0: {} }
-                                        switch( copper.rdata0[28,1] ) { case 1: { BACKGROUNDmode = copper.rdata0[12,4]; } case 0: {} }
+                                        switch( copper.rdata0[27,1] ) { case 1: { BACKGROUNDcolour = copper.rdata0[0,6]; }  case 0: {} }
+                                        switch( copper.rdata0[28,1] ) { case 1: { BACKGROUNDalt = copper.rdata0[6,6]; } case 0: {} }
+                                        switch( copper.rdata0[29,1] ) { case 1: { BACKGROUNDmode = copper.rdata0[12,4]; } case 0: {} }
                                         copper_branch = 1;
                                     }
                                     case 0: {}
@@ -110,12 +111,9 @@ algorithm background(
                     }
                     case 0: {
                         // CHANGE A PROGRAM LINE IN THE COPPER MEMORY
-                        switch( copper_program ) {
-                            case 1: {
-                                copper.addr1 = copper_address;
-                                copper.wdata1 = { copper_command[0,3], copper_condition[0,3], copper_coordinate[0,10], copper_mode[0,4], copper_alt[0,6], copper_colour[0,6] };
-                            }
-                            case 0: {}
+                        if( copper_program ) {
+                            copper.addr1 = copper_address;
+                            copper.wdata1 = { copper_command[0,3], copper_condition[0,3], copper_coordinate[0,11], copper_mode[0,4], copper_alt[0,6], copper_colour[0,6] };
                         }
                         PC = 0;
                     }

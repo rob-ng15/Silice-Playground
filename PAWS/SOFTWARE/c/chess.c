@@ -148,7 +148,7 @@ void drawboard( void ) {
 
             // DRAW THE PIECES
             if( board[x][y].type != NONE )
-                gpu_blit( ( board[x][y].colour ) == HOME ? DKBLUE : DKRED, 40 + x * 30, y * 30, board[x][y].type, 1 );
+                gpu_blit( ( board[x][y].colour ) == HOME ? DKBLUE : DKRED, 40 + x * 30, y * 30, board[x][y].type, 1, 0 );
         }
     }
 }

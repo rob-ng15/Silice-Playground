@@ -1,8 +1,8 @@
-./compile.sh c/ascii-invaders.c PAWS/INVADERS.PAW
+./compile.sh c/ascii-invaders.c PAWS/AINVADE.PAW
 ./compile.sh c/asteroids.c PAWS/ASTROIDS.PAW
 ./compile.sh c/chess.c PAWS/CHESS.PAW
 ./compile.sh c/jpeg-test.c PAWS/JPEG.PAW
-./compile.sh c/invaders-from-scratch.c PAWS/IFS.PAW
+./compile.sh c/spaceinvaders.c PAWS/INVADERS.PAW
 ./compile.sh c/keyboard.c PAWS/KEYBOARD.PAW
 ./compile.sh c/life.c PAWS/LIFE.PAW
 ./compile.sh c/maze.c PAWS/3DMAZE.PAW

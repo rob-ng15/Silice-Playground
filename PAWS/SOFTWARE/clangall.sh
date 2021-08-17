@@ -1,7 +1,7 @@
-./clang.sh c/ascii-invaders.c PAWS/L-INV.PAW
+./clang.sh c/ascii-invaders.c PAWS/L-AINV.PAW
 ./clang.sh c/asteroids.c PAWS/L-AST.PAW
 ./clang.sh c/chess.c PAWS/L-CHESS.PAW
-./clang.sh c/invaders-from-scratch.c PAWS/L-IFS.PAW
+./clang.sh c/spaceinvaders.c PAWS/L-INV.PAW
 ./clang.sh c/jpeg-test.c PAWS/L-JPEG.PAW
 ./clang.sh c/keyboard.c PAWS/L-KEY.PAW
 ./clang.sh c/life.c PAWS/L-LIFE.PAW

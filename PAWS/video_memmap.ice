@@ -332,15 +332,7 @@ $$end
         display_order <: display_order
     );
 
-    BACKGROUNDmemoryWrite := 0;
-    BITMAPmemoryWrite := 0;
-    CHARACTER_MAPmemoryWrite := 0;
-    LOWER_SPRITEmemoryWrite := 0;
-    UPPER_SPRITEmemoryWrite := 0;
-    TERMINALmemoryWrite := 0;
-    LOWER_TILEmemoryWrite := 0;
-    UPPER_TILEmemoryWrite := 0;
-
+    BACKGROUNDmemoryWrite := 0; BITMAPmemoryWrite := 0; CHARACTER_MAPmemoryWrite := 0; LOWER_SPRITEmemoryWrite := 0; UPPER_SPRITEmemoryWrite := 0; TERMINALmemoryWrite := 0; LOWER_TILEmemoryWrite := 0; UPPER_TILEmemoryWrite := 0;
     always {
         // READ IO Memory
         switch( memoryRead ) {
@@ -484,7 +476,8 @@ algorithm background_memmap(
     uint6   copper_address = uninitialized;
     uint3   copper_command = uninitialized;
     uint3   copper_condition = uninitialized;
-    uint10  copper_coordinate = uninitialized;
+    uint11  copper_coordinate = uninitialized;
+    uint10  copper_cpu_input = uninitialized;
     uint4   copper_mode = uninitialized;
     uint6   copper_alt = uninitialized;
     uint6   copper_colour = uninitialized;
@@ -505,6 +498,7 @@ algorithm background_memmap(
         copper_command <: copper_command,
         copper_condition <: copper_condition,
         copper_coordinate <: copper_coordinate,
+        copper_cpu_input <: copper_cpu_input,
         copper_mode <: copper_mode,
         copper_alt <: copper_alt,
         copper_colour <: copper_colour
@@ -526,9 +520,10 @@ algorithm background_memmap(
                     case 8h22: { copper_command = writeData; }
                     case 8h24: { copper_condition = writeData; }
                     case 8h26: { copper_coordinate = writeData; }
-                    case 8h28: { copper_mode = writeData; }
-                    case 8h2a: { copper_alt = writeData; }
-                    case 8h2c: { copper_colour = writeData; }
+                    case 8h28: { copper_cpu_input = writeData; }
+                    case 8h2a: { copper_mode = writeData; }
+                    case 8h2c: { copper_alt = writeData; }
+                    case 8h2e: { copper_colour = writeData; }
                     default: {}
                 }
             }
@@ -604,6 +599,7 @@ algorithm bitmap_memmap(
     int10   vector_block_xc = uninitialized;
     int10   vector_block_yc = uninitialized;
     uint3   vector_block_scale = uninitialized;
+    uint2   vector_block_rotation = uninitialized;
     uint1   draw_vector = uninitialized;
     uint5   vertices_writer_block = uninitialized;
     uint6   vertices_writer_vertex = uninitialized;
@@ -657,6 +653,7 @@ algorithm bitmap_memmap(
         vector_block_xc <: vector_block_xc,
         vector_block_yc <: vector_block_yc,
         vector_block_scale <: vector_block_scale,
+        vector_block_rotation <: vector_block_rotation,
         draw_vector <: draw_vector,
         vertices_writer_block <: vertices_writer_block,
         vertices_writer_vertex <: vertices_writer_vertex,
@@ -690,7 +687,8 @@ algorithm bitmap_memmap(
                     case 8h24: { vector_block_xc = writeData; }
                     case 8h26: { vector_block_yc = writeData; }
                     case 8h28: { vector_block_scale = writeData; }
-                    case 8h2a: { draw_vector = 1; }
+                    case 8h2a: { vector_block_rotation = writeData; }
+                    case 8h2c: { draw_vector = 1; }
 
                     case 8h30: { vertices_writer_block = writeData; }
                     case 8h32: { vertices_writer_vertex = writeData; }

@@ -45,6 +45,7 @@
 #define COPPER_ADD_VARIABLE 2
 #define COPPER_SUB_VARIABLE 4
 #define COPPER_SET_FROM_VARIABLE 7
+#define COPPER_USE_CPU_INPUT 0x400
 
 // COLOURS
 #define TRANSPARENT 0x40
@@ -254,6 +255,7 @@ extern void bitmap_draw( unsigned char );
 extern void set_background( unsigned char, unsigned char, unsigned char );
 extern void copper_startstop( unsigned char ) ;
 extern void copper_program( unsigned char, unsigned char, unsigned char, unsigned short, unsigned char, unsigned char, unsigned char );
+extern void set_copper_cpuinput( unsigned short );
 
 // TILEMAP
 extern void set_tilemap_tile( unsigned char, unsigned char, unsigned char, unsigned char, unsigned char, unsigned char );
@@ -268,14 +270,14 @@ extern void gpu_box( unsigned char, short, short, short, short );
 extern void gpu_cs( void );
 extern void gpu_line( unsigned char, short, short, short, short );
 extern void gpu_circle( unsigned char, short, short, short, unsigned char, unsigned char );
-extern void gpu_blit( unsigned char, short, short, short, unsigned char );
-extern void gpu_character_blit( unsigned char, short, short, unsigned char, unsigned char );
-extern void gpu_colourblit( short, short, short, unsigned char );
+extern void gpu_blit( unsigned char, short, short, short, unsigned char, unsigned char );
+extern void gpu_character_blit( unsigned char, short, short, unsigned char, unsigned char, unsigned char );
+extern void gpu_colourblit( short, short, short, unsigned char, unsigned char );
 extern void gpu_triangle( unsigned char, short, short, short, short, short, short );
 extern void gpu_quadrilateral( unsigned char, short, short, short, short, short, short, short, short );
 extern void gpu_printf( unsigned char, short, short, unsigned char, const char *,...  );
 extern void gpu_printf_centre( unsigned char, short, short, unsigned char, const char *,...  );
-extern void draw_vector_block( unsigned char, unsigned char, short, short, unsigned char );
+extern void draw_vector_block( unsigned char, unsigned char, short, short, unsigned char, unsigned char );
 extern void set_vector_vertex( unsigned char, unsigned char , unsigned char, char, char );
 extern void bitmap_scrollwrap( unsigned char );
 extern void set_blitter_bitmap( unsigned char, unsigned short * );

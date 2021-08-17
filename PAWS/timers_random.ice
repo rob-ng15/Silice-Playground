@@ -4,8 +4,10 @@ algorithm pulse1hz(
     input   uint1   resetCounter
 ) <autorun> {
     uint26  counter25mhz = 0;
-    counter1hz := ( resetCounter == 1) ? 0 : counter1hz + ( counter25mhz == 25000000 );
-    counter25mhz := ( resetCounter == 1) ? 0 : ( counter25mhz == 25000000 ) ? 0 : counter25mhz + 1;
+    always {
+        counter1hz = ( resetCounter == 1) ? 0 : counter1hz + ( counter25mhz == 25000000 );
+        counter25mhz = ( resetCounter == 1) ? 0 : ( counter25mhz == 25000000 ) ? 0 : counter25mhz + 1;
+    }
 }
 
 // Create 1khz (1 milli-second counter)
@@ -14,8 +16,10 @@ algorithm pulse1khz(
     input   uint16  resetCounter
 ) <autorun> {
     uint15  counter25mhz = 0;
-    counter1khz := ( resetCounter != 0 ) ? resetCounter : ( counter1khz == 0 ) ? 0 : counter1khz - ( counter25mhz == 25000 );
-    counter25mhz := ( resetCounter != 0 ) ? 0 : ( counter25mhz == 25000 ) ? 0 : counter25mhz + 1;
+    always {
+        counter1khz = ( resetCounter != 0 ) ? resetCounter : ( counter1khz == 0 ) ? 0 : counter1khz - ( counter25mhz == 25000 );
+        counter25mhz = ( resetCounter != 0 ) ? 0 : ( counter25mhz == 25000 ) ? 0 : counter25mhz + 1;
+    }
 }
 
 // 16 bit random number generator
@@ -40,6 +44,6 @@ algorithm random(
         rand_en_ff = { ( rand_en_ff[7,1] ^ rand_en_ff[0,1] ), rand_en_ff[1,17]};
         rand_ff = { ( rand_ff[5,1] ^ rand_ff[3,1] ^ rand_ff[2,1] ^ rand_ff[0,1] ), rand_ff[1,15] };
         rand_out = rand_ff;
-        temp_g_noise_nxt =  __signed(temp_u_noise3) + __signed(temp_u_noise2) + __signed(temp_u_noise1) + __signed(temp_u_noise0) + ( rand_en_ff[9,1] ? __signed(g_noise_out) : 0 );
+        temp_g_noise_nxt = __signed(temp_u_noise3) + __signed(temp_u_noise2) + __signed(temp_u_noise1) + __signed(temp_u_noise0) + ( rand_en_ff[9,1] ? __signed(g_noise_out) : 0 );
     }
 }

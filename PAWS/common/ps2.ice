@@ -126,7 +126,7 @@ algorithm ps2ascii(
                                 case 8h29: { newascii = 8h20; }                                 // SPACE
                                 case 8h66: { newascii = 8h08; }                                 // BACKSPACE
                                 case 8h5a: { newascii = 8h0d; }                                 // ENTER
-                                case 8h70: { newascii = numlock ? 8h30 : 9h132; }               // NUMERIC KEYPAD 0 to 9 AS JOYSTICK OR NUMBER KEYS
+                                case 8h70: { newascii = numlock ? 8h30 : 9h132; }               // NUMERIC KEYPAD 0 to 9 AS JOYSTICK OR NUMBER KEYS (map direction keys as 1xx)
                                 case 8h69: { npleftdown = 1; newascii = numlock ? 8h31 : 9h134; }
                                 case 8h72: { npdown = 1; newascii = numlock ? 8h32 : 9h142; }
                                 case 8h7a: { nprightdown = 1; newascii = numlock ? 8h33 : 9h136; }
@@ -140,7 +140,7 @@ algorithm ps2ascii(
                                 case 8h71: { newascii = numlock ? 8h2e : 9h133; }               // KEYPAD .
                                 case 8h7b: { newascii = 8h2d; }                                 // KEYPAD -
                                 case 8h79: { newascii = 8h2b; }                                 // KEYPAD +
-                                case 8h05: { newascii = { 1b1, 3b0, SHIFT, 4h1 }; }             // F1 + SHIFT F1 to F12 + SHIFT F12
+                                case 8h05: { newascii = { 1b1, 3b0, SHIFT, 4h1 }; }             // F1 + SHIFT F1 to F12 + SHIFT F12 map to 101-10c and 111-11c
                                 case 8h06: { newascii = { 1b1, 3b0, SHIFT, 4h2 }; }
                                 case 8h04: { newascii = { 1b1, 3b0, SHIFT, 4h3 }; }
                                 case 8h0c: { newascii = { 1b1, 3b0, SHIFT, 4h4 }; }
@@ -185,11 +185,11 @@ algorithm ps2ascii(
                                 case 8h27: { rwin = 1; }
                                 case 8h2f: { application = 1; }
                                 case 8h4a: { newascii = 8h2f; }                                 // KEYPAD /
-                                case 8h6b: { left = 1; newascii = 9h144; }                      // CURSOR KEYS
+                                case 8h6b: { left = 1; newascii = 9h144; }                      // CURSOR KEYS (map direction keys as 1xx)
                                 case 8h75: { up = 1; newascii = 9h141; }
                                 case 8h72: { down = 1; newascii = 9h142; }
                                 case 8h74: { right = 1; newascii = 9h143; }
-                                case 8h70: { newascii = 9h132; }                                // INSERT
+                                case 8h70: { newascii = 9h132; }                                // INSERT (map as 1xx)
                                 case 8h71: { newascii = 9h133; }                                // DELETE
                                 case 8h6c: { newascii = 9h131; }                                // HOME
                                 case 8h69: { newascii = 9h134; }                                // END

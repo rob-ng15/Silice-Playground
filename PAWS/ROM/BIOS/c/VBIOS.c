@@ -501,6 +501,7 @@ void gpu_blit( unsigned char colour, short x1, short y1, short tile, unsigned ch
     *GPU_Y = y1;
     *GPU_PARAM0 = tile;
     *GPU_PARAM1 = blit_size;
+    *GPU_PARAM2 = 0; // NO REFLECTION
 
     wait_gpu();
     *GPU_WRITE = 7;
@@ -513,6 +514,7 @@ void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned char
     *GPU_Y = y1;
     *GPU_PARAM0 = tile;
     *GPU_PARAM1 = blit_size;
+    *GPU_PARAM2 = 0; // NO REFLECTION
 
     wait_gpu();
     *GPU_WRITE = 8;
