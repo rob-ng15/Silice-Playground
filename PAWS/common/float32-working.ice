@@ -213,7 +213,7 @@ algorithm floattoint(
     flags := { IF, NN, NV, 4b0000 };
     always {
         switch( { IF | NN, aZERO } ) {
-            case 2b00: { NV = ( exp > 30 ); result = NV ? { fp32( a ).sign, 31h7fffffff } : fp32( a ).sign ? -( sig[1,32] + sig[0,1] ) : ( sig[1,32] + sig[0,1] ); }
+            case 2b00: { NV = ( exp > 30 ); result = ( exp > 30 ) ? { fp32( a ).sign, 31h7fffffff } : fp32( a ).sign ? -( sig[1,32] + sig[0,1] ) : ( sig[1,32] + sig[0,1] ); }
             case 2b01: { NV = 0; result = 0; }
             default: { NV = 1; result = NN ? 32h7fffffff : { fp32( a ).sign, 31h7fffffff }; }
         }
@@ -250,7 +250,7 @@ algorithm floattouint(
             case 2b00: {
                 switch( fp32( a ).sign ) {
                     case 1: { NV = 1; result = 0; }
-                    default: { NV = ( exp > 31 ); result = NV ? 32hffffffff : ( sig[1,32] + sig[0,1] ); }
+                    default: { NV = ( exp > 31 ); result = ( exp > 31 ) ? 32hffffffff : ( sig[1,32] + sig[0,1] ); }
                 }
             }
             case 2b01: { NV = 0; result = 0; }
@@ -272,10 +272,9 @@ algorithm equaliseexpaddsub(
 ) <autorun> {
     always {
         // EQUALISE THE EXPONENTS BY SHIFT SMALLER NUMBER FRACTION PART TO THE RIGHT
-        if( expA < expB ) {
-            newsigA = sigA >> ( expB - expA ); newexpA = expB; newsigB = sigB; newexpB = expB;
-        } else {
-            newsigB = sigB >> ( expA - expB ); newexpB = expA; newsigA = sigA; newexpA = expA;
+        switch( expA < expB ) {
+            case 1b1: { newsigA = sigA >> ( expB - expA ); newexpA = expB; newsigB = sigB; newexpB = expB; }
+            case 1b0: { newsigB = sigB >> ( expA - expB ); newexpB = expA; newsigA = sigA; newexpA = expA; }
         }
     }
 }
@@ -293,8 +292,18 @@ algorithm dofloataddsub(
     always {
         // PERFORM ADDITION HANDLING SIGNS
         switch( { signA, signB } ) {
-            case 2b01: { resultsign = ( sigB > sigA ); resultfraction = resultsign ? sigBminussigA : sigAminussigB; }
-            case 2b10: { resultsign = ( sigA > sigB ); resultfraction = resultsign ? sigAminussigB : sigBminussigA; }
+            case 2b01: {
+                switch( sigB > sigA ) {
+                    case 1: { resultsign = 1; resultfraction = sigBminussigA; }
+                    case 0: { resultsign = 0; resultfraction = sigAminussigB; }
+                }
+            }
+            case 2b10: {
+                switch(  sigA > sigB ) {
+                    case 1: { resultsign = 1; resultfraction = sigAminussigB; }
+                    case 0: { resultsign = 0; resultfraction = sigBminussigA; }
+                }
+            }
             default: { resultsign = signA; resultfraction = sigA + sigB; }
         }
     }
@@ -558,6 +567,22 @@ algorithm floatmultiply(
 }
 
 // DIVIDE TWO FLOATING POINT NUMBERS
+algorithm dofloatdivbit(
+    input   uint50  quotient,
+    input   uint50  remainder,
+    input   uint50  top,
+    input   uint50  bottom,
+    input   uint6   bit,
+    output  uint50  newquotient,
+    output  uint50  newremainder,
+ ) <autorun> {
+    uint50  temporary <: { remainder[0,49], top[bit,1] };
+    uint1   bitresult <: __unsigned(temporary) >= __unsigned(bottom);
+    always {
+        newremainder = __unsigned(temporary) - ( bitresult ? __unsigned(bottom) : 0 );
+        newquotient = quotient | ( bitresult << bit );
+    }
+}
 algorithm dofloatdivide(
     input   uint1   start,
     output  uint1   busy(0),
@@ -565,27 +590,25 @@ algorithm dofloatdivide(
     input   uint50  sigB,
     output  uint50  quotient
 ) <autorun> {
-    uint50  remainder = uninitialised;
-    uint50  temporary <:: { remainder[0,49], sigA[bit,1] };
-    uint1   bitresult <: __unsigned(temporary) >= __unsigned(sigB);
+    uint50  remainder <: start ? 0 : newremainder;
+    uint50  newquotient = uninitialised;
+    uint50  newremainder = uninitialised;
+    dofloatdivbit DIVBIT(
+        quotient <: quotient,
+        remainder <: remainder,
+        top <: sigA,
+        bottom <: sigB,
+        bit <: bit,
+        newquotient :> newquotient,
+        newremainder :> newremainder
+    );
     uint6   bit(63);
 
     busy := start | ( bit != 63 ) | ( quotient[48,2] != 0 );
     while(1) {
         // FIND QUOTIENT AND ENSURE 48 BIT FRACTION ( ie BITS 48 and 49 clear )
         if( start ) {
-            bit = 49; quotient = 0; remainder = 0;
-            while( bit != 63 ) {
-                remainder = __unsigned(temporary) - ( bitresult ? __unsigned(sigB) : 0 );
-                quotient[bit,1] = bitresult;
-                bit = bit - 1;
-            }
-            // ENSURE { 00xxxx } PROBABLY NOT NEEDED
-            //switch( quotient[48,2] ) {
-            //    case 2b00: {}
-            //    case 2b01: { quotient = { 1b0, quotient[1,49] }; }
-            //    default: { quotient = { 2b00, quotient[1,48] }; }
-            //}
+            bit = 49; quotient = 0; while( bit != 63 ) { quotient = newquotient; bit = bit - 1; } while( quotient[48,2] != 0 ) { quotient = quotient >> 1; }
         }
     }
 }

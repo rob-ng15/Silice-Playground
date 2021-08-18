@@ -781,13 +781,14 @@ void backgrounddemo( void ) {
 
     tpu_printf_centre( 28, TRANSPARENT, WHITE, "COPPER Rainbow Stars Test 2 - MAY NOT WORK" );
     copper_startstop( 0 );
-    copper_program( 0, COPPER_WAIT_Y, 7, 0, BKG_SNOW, BLACK, WHITE );
-    copper_program( 1, COPPER_VARIABLE, COPPER_SET_VARIABLE, 1, 0, 0, 0 );
-    copper_program( 2, COPPER_SET_FROM_VARIABLE, 1, 0, 0, 0, 0 );
+    copper_program( 0, COPPER_WAIT_VBLANK, 7, 0, BKG_SNOW, BLACK, WHITE );
+    copper_program( 1, COPPER_WAIT_X, 7, 0, BKG_SNOW, BLACK, WHITE );
+    copper_program( 2, COPPER_VARIABLE, COPPER_SET_VARIABLE, 0, 0, 0, 0 );
     copper_program( 3, COPPER_VARIABLE, COPPER_ADD_VARIABLE, 1, 0, 0, 0 );
-    copper_program( 4, COPPER_JUMP, COPPER_JUMP_ON_VBLANK_EQUAL, 0, 0, 0, 4 );
-    copper_program( 5, COPPER_JUMP, COPPER_JUMP_IF_VARIABLE_LESS, 64, 0, 0, 2 );
-    copper_program( 6, COPPER_JUMP, COPPER_JUMP_ALWAYS, 0, 0, 0, 1 );
+    copper_program( 4, COPPER_SET_FROM_VARIABLE, 1, 0, 0, 0, 0 );
+    copper_program( 5, COPPER_JUMP, COPPER_JUMP_ON_VBLANK_EQUAL, 0, 0, 0, 4 );
+    copper_program( 6, COPPER_JUMP, COPPER_JUMP_IF_VARIABLE_LESS, 64, 0, 0, 3 );
+    copper_program( 7, COPPER_JUMP, COPPER_JUMP_ALWAYS, 0, 0, 0, 2 );
     copper_startstop( 1 );
     sleep( 2000, 0 );
 }
@@ -896,7 +897,7 @@ void gpudemo( void ) {
     }
     gpu_cs();
     tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Blitter Test" );
-    for( i = 0; i < 32; i++ ) {
+    for( i = 0; i < 128; i++ ) {
         gpu_blit( rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng( 6 ), rng( 4 ), rng(4) );
     }
     sleep( 1000, 0 );
@@ -904,7 +905,7 @@ void gpudemo( void ) {
     // CHARACTER BLITTER
     gpu_cs();
     tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Character Blitter Test" );
-    for( i = 0; i < 32; i++ ) {
+    for( i = 0; i < 128; i++ ) {
         gpu_character_blit( rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng( 256 ), rng( 4 ), rng(4) );
     }
     sleep( 1000, 0 );
@@ -947,7 +948,7 @@ void gpudemo( void ) {
     }
     gpu_cs();
     tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Colour Blitter Test" );
-    for( i = 0; i < 32; i++ ) {
+    for( i = 0; i < 128; i++ ) {
         gpu_colourblit( rng( 352 ) - 16, rng( 256 ) - 8, rng( 9 ), rng( 4 ), rng(4) );
     }
     sleep( 1000, 0 );
@@ -961,7 +962,7 @@ void gpudemo( void ) {
     set_vector_vertex( 0, 3, 1, -5, 10 );
     set_vector_vertex( 0, 4, 1, 0, 0 );
     set_vector_vertex( 0, 5, 0, 0, 0 );
-    for( i = 0; i < 32; i++ ) {
+    for( i = 0; i < 128; i++ ) {
         draw_vector_block( 0, rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng(8), rng(4) );
     }
     sleep( 1000, 0 );

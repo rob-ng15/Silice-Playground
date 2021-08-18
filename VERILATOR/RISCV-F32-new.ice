@@ -75,7 +75,13 @@ algorithm donormalise48_adjustexp(
             __display("  { (sign) %b %b } (ALREADY NORMALISED == %b)",newexp,normalised,normalised[47,1]);
             // NORMALISE BY SHIFT 1, 3, 7 OR 15 ZEROS LEFT
             while( ~normalised[47,1] ) {
-                normalised = normalised << shiftcount; newexp = newexp - shiftcount;
+                switch( shiftcount ) {
+                    default: { normalised = { normalised[0,47], 1b0 }; }
+                    case 3: { normalised = { normalised[0,45], 3b0 }; }
+                    case 7: { normalised = { normalised[0,41], 7b0 }; }
+                    case 15: { normalised = { normalised[0,33], 15b0 }; }
+                }
+                newexp = newexp - shiftcount;
                 __display("  { (sign) %b %b } AFTER SHIFT LEFT %d",newexp,normalised,shiftcount);
             }
             busy = 0;
@@ -97,7 +103,12 @@ algorithm donormalise48(
             __display("  { (sign) (exp) %b } (ALREADY NORMALISED == %b)",normalised,normalised[47,1]);
             // NORMALISE BY SHIFT 1, 3, 7 OR 15 ZEROS LEFT
             while( ~normalised[47,1] ) {
-                normalised = normalised << shiftcount;
+                switch( shiftcount ) {
+                    default: { normalised = { normalised[0,47], 1b0 }; }
+                    case 3: { normalised = { normalised[0,45], 3b0 }; }
+                    case 7: { normalised = { normalised[0,41], 7b0 }; }
+                    case 15: { normalised = { normalised[0,33], 15b0 }; }
+                }
                 __display("  { (sign) (exp) %b } AFTER SHIFT LEFT %d",normalised,shiftcount);
             }
             busy = 0;
@@ -286,9 +297,10 @@ algorithm equaliseexpaddsub(
 ) <autorun> {
     always {
         // EQUALISE THE EXPONENTS BY SHIFT SMALLER NUMBER FRACTION PART TO THE RIGHT
-        switch( expA < expB ) {
-            case 1b1: { newsigA = sigA >> ( expB - expA ); newexpA = expB; newsigB = sigB; newexpB = expB; }
-            case 1b0: { newsigB = sigB >> ( expA - expB ); newexpB = expA; newsigA = sigA; newexpA = expA; }
+        if( expA < expB ) {
+            newsigA = sigA >> ( expB - expA ); newexpA = expB; newsigB = sigB; newexpB = expB;
+        } else {
+            newsigB = sigB >> ( expA - expB ); newexpB = expA; newsigA = sigA; newexpA = expA;
         }
     }
 }
@@ -307,16 +319,18 @@ algorithm dofloataddsub(
         // PERFORM ADDITION HANDLING SIGNS
         switch( { signA, signB } ) {
             case 2b01: {
-                switch( sigB > sigA ) {
-                    case 1: { resultsign = 1; resultfraction = sigBminussigA; }
-                    case 0: { resultsign = 0; resultfraction = sigAminussigB; }
-                }
+                resultsign = ( sigB > sigA ); resultfraction = resultsign ? sigBminussigA : sigAminussigB;
+                //switch( sigB > sigA ) {
+                //    case 1: { resultsign = 1; resultfraction = sigBminussigA; }
+                //    case 0: { resultsign = 0; resultfraction = sigAminussigB; }
+                //}
             }
             case 2b10: {
-                switch(  sigA > sigB ) {
-                    case 1: { resultsign = 1; resultfraction = sigAminussigB; }
-                    case 0: { resultsign = 0; resultfraction = sigBminussigA; }
-                }
+                resultsign = ( sigA > sigB ); resultfraction = resultsign ? sigAminussigB : sigBminussigA;
+                //switch( sigA > sigB ) {
+                //    case 1: { resultsign = 1; resultfraction = sigAminussigB; }
+                //    case 0: { resultsign = 0; resultfraction = sigBminussigA; }
+                //}
             }
             default: { resultsign = signA; resultfraction = sigA + sigB; }
         }
@@ -562,11 +576,8 @@ algorithm floatmultiply(
         product :> product
     );
 
-    uint48  normalfraction = uninitialised;
-    donormalise48 NORMALISE(
-        bitstream <: product,
-        normalised :> normalfraction
-    );
+    // FAST NORMALISATION - MULTIPLICATION RESULTS IN 1x.xxx or 01.xxxx
+    uint48  normalfraction <: product[47,1] ? product : { product[0,47], 1b0 };
 
     int10   roundexponent = uninitialised;
     uint48  roundfraction = uninitialised;
@@ -590,7 +601,6 @@ algorithm floatmultiply(
         f32 :> f32
     );
 
-    NORMALISE.start := 0;
     flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
 
     while(1) {
@@ -598,6 +608,8 @@ algorithm floatmultiply(
             busy = 1;
             OF = 0; UF = 0;
             ++: // ALLOW 1 CYLE TO PERFORM THE MULTIPLICATION
+            ++:
+            ++:
             __display("");
             __display("  a = { %b %b %b } INPUT",a[31,1],a[23,8],a[0,23]);
             __display("  b = { %b %b %b } INPUT",b[31,1],b[23,8],b[0,23]);
@@ -608,10 +620,11 @@ algorithm floatmultiply(
             __display("  { %b %b %b }",b[31,1],expB,sigB);
             __display(" ={ %b %b %b }",productsign,productexp,product);
             __display("");
+            __display("  FAST NORMALISING THE RESULT MANTISSA");
+            __display("  { (sign) (exp) %b } (ALREADY NORMALISED == %b",normalfraction,product[47,1]);
             switch( { IF | NN, aZERO | bZERO } ) {
                 case 2b00: {
                     // STEPS: SETUP -> DOMUL -> NORMALISE -> ROUND -> ADJUSTEXP -> COMBINE
-                    NORMALISE.start = 1; while( NORMALISE.busy ) {}
                     __display("");
                     __display("  ADD BIAS TO EXPONENT, ROUND AND TRUNCATE MANTISSA");
                     __display("  %b %b (ROUND BIT = %b) (LARGE RESULT + 1 TO EXPONENT = %b)",roundexponent,roundfraction,normalfraction[23,1],product[47,1]);
@@ -644,24 +657,6 @@ algorithm floatmultiply(
 }
 
 // DIVIDE TWO FLOATING POINT NUMBERS
-algorithm dofloatdivbit(
-    input   uint50  quotient,
-    input   uint50  remainder,
-    input   uint50  top,
-    input   uint50  bottom,
-    input   uint6   bit,
-    output  uint50  newquotient,
-    output  uint50  newremainder,
- ) <autorun> {
-    uint50  temporary = uninitialised;
-    uint1   bitresult = uninitialised;
-    always {
-        temporary = { remainder[0,49], top[bit,1] };
-        bitresult = __unsigned(temporary) >= __unsigned(bottom);
-        newremainder = __unsigned(temporary) - ( bitresult ? __unsigned(bottom) : 0 );
-        newquotient = quotient | ( bitresult << bit );
-    }
-}
 algorithm dofloatdivide(
     input   uint1   start,
     output  uint1   busy(0),
@@ -669,25 +664,27 @@ algorithm dofloatdivide(
     input   uint50  sigB,
     output  uint50  quotient
 ) <autorun> {
-    uint50  remainder <: start ? 0 : newremainder;
-    uint50  newquotient = uninitialised;
-    uint59  newremainder = uninitialised;
-    dofloatdivbit DIVBIT(
-        quotient <: quotient,
-        remainder <: remainder,
-        top <: sigA,
-        bottom <: sigB,
-        bit <: bit,
-        newquotient :> newquotient,
-        newremainder :> newremainder
-    );
+    uint50  remainder = uninitialised;
+    uint50  temporary <:: { remainder[0,49], sigA[bit,1] };
+    uint1   bitresult <: __unsigned(temporary) >= __unsigned(sigB);
     uint6   bit(63);
 
     busy := start | ( bit != 63 ) | ( quotient[48,2] != 0 );
     while(1) {
         // FIND QUOTIENT AND ENSURE 48 BIT FRACTION ( ie BITS 48 and 49 clear )
         if( start ) {
-            bit = 49; quotient = 0; while( bit != 63 ) { quotient = newquotient; bit = bit - 1; } while( quotient[48,2] != 0 ) { quotient = quotient >> 1; }
+            bit = 49; quotient = 0; remainder = 0;
+            while( bit != 63 ) {
+                remainder = __unsigned(temporary) - ( bitresult ? __unsigned(sigB) : 0 );
+                quotient[bit,1] = bitresult;
+                bit = bit - 1;
+            }
+            // ENSURE { 00xxxx } PROBABLY NOT NEEDED
+            //switch( quotient[48,2] ) {
+            //    case 2b00: {}
+            //    case 2b01: { quotient = { 1b0, quotient[1,49] }; }
+            //    default: { quotient = { 2b00, quotient[1,48] }; }
+            //}
         }
     }
 }
@@ -795,21 +792,13 @@ algorithm floatdivide(
                     __display("  { %b %b %b }",b[31,1],fp32( b ).exponent - 127,sigB);
                     __display(" ={ %b %b %b }",quotientsign,quotientexp,quotient);
                     __display("");
-                    switch( quotient ) {
-                        case 0: {
-                            result = { quotientsign, 31b0 };
-                            __display(" ={ 0 }");
-                        }
-                        default: {
-                            NORMALISE.start = 1; while( NORMALISE.busy ) {}
-                            __display("");
-                            __display("  ADD BIAS TO EXPONENT, ROUND AND TRUNCATE MANTISSA");
-                            __display("  %b %b (ROUND BIT = %b) (DIVISOR SMALLER THAN DIVIDEND -1 FROM EXPONENT == %b)",roundexponent,roundfraction,normalfraction[23,1],( fp32(b).fraction > fp32(a).fraction ));
-                            OF = cOF; UF = cUF; result = f32;
-                            __display("");
-                            __display("  TRUNCATE EXP AND COMBINE TO FINAL RESULT");
-                        }
-                    }
+                    NORMALISE.start = 1; while( NORMALISE.busy ) {}
+                    __display("");
+                    __display("  ADD BIAS TO EXPONENT, ROUND AND TRUNCATE MANTISSA");
+                    __display("  %b %b (ROUND BIT = %b) (DIVISOR SMALLER THAN DIVIDEND -1 FROM EXPONENT == %b)",roundexponent,roundfraction,normalfraction[23,1],( fp32(b).fraction > fp32(a).fraction ));
+                    OF = cOF; UF = cUF; result = f32;
+                    __display("");
+                    __display("  TRUNCATE EXP AND COMBINE TO FINAL RESULT");
                 }
                 case 2b01: {
                     result = ( aZERO & bZERO ) ? 32hffc00000 : ( bZERO ) ? { quotientsign, 8b11111111, 23b0 } : { quotientsign, 31b0 };
@@ -911,11 +900,7 @@ algorithm floatsqrt(
         q :> squareroot
     );
 
-    uint48  normalfraction = uninitialised;
-    donormalise48 NORMALISE(
-        bitstream <: squareroot,
-        normalised :> normalfraction
-    );
+    uint48  normalfraction <: squareroot[47,1] ? squareroot : { squareroot[0,47], 1b0 };
 
     int10   roundexponent = uninitialised;
     uint48  roundfraction = uninitialised;
@@ -939,7 +924,7 @@ algorithm floatsqrt(
         f32 :> f32
     );
 
-    DOSQRT.start := 0; NORMALISE.start := 0;
+    DOSQRT.start := 0;
     flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
 
     while(1) {
@@ -971,7 +956,8 @@ algorithm floatsqrt(
                             __display("  HALVE THE EXPONENT");
                             __display(" ={ 0 %b %b }",squarerootexp,squareroot);
                             __display("");
-                            NORMALISE.start = 1; while( NORMALISE.busy ) {}
+                            __display("  FAST NORMALISING THE RESULT MANTISSA");
+                            __display("  { (sign) (exp) %b } (ALREADY NORMALISED == %b)",normalfraction,squareroot[47,1]);
                             __display("");
                             __display("  ADD BIAS TO EXPONENT, ROUND AND TRUNCATE MANTISSA");
                             __display("  %b %b (ROUND BIT = %b)",roundexponent,roundfraction,normalfraction[23,1]);

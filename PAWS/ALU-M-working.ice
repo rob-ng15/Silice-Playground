@@ -1,6 +1,22 @@
 // ALU - M EXTENSION
 
 // UNSIGNED / SIGNED 32 by 32 bit division giving 32 bit remainder and quotient
+algorithm dointdivbit(
+    input   uint32  quotient,
+    input   uint32  remainder,
+    input   uint32  top,
+    input   uint32  bottom,
+    input   uint6   bit,
+    output  uint32  newquotient,
+    output  uint32  newremainder,
+ ) <autorun> {
+    uint32  temporary <: { remainder[0,31], top[bit,1] };
+    uint1   bitresult <: __unsigned(temporary) >= __unsigned(bottom);
+    always {
+        newremainder = __unsigned(temporary) - ( bitresult ? __unsigned(bottom) : 0 );
+        newquotient = quotient | ( bitresult << bit );
+    }
+}
 algorithm douintdivide(
     input   uint1   start,
     output  uint1   busy(0),
@@ -9,19 +25,23 @@ algorithm douintdivide(
     output  uint32  quotient,
     output  uint32  remainder
 ) <autorun> {
-    uint32  temporary <:: { remainder[0,31], dividend[bit,1] };
-    uint1   bitresult <: __unsigned(temporary) >= __unsigned(divisor);
+    uint32  newquotient = uninitialised;
+    uint32  newremainder = uninitialised;
+    dointdivbit DIVBIT(
+        quotient <: quotient,
+        remainder <: remainder,
+        top <: dividend,
+        bottom <: divisor,
+        bit <: bit,
+        newquotient :> newquotient,
+        newremainder :> newremainder
+    );
     uint6   bit(63);
-
     busy := start | ( bit != 63 );
     while(1) {
         if( start ) {
             bit = 31; quotient = 0; remainder = 0;
-            while( bit != 63 ) {
-                quotient[bit,1] = bitresult;
-                remainder = __unsigned(temporary) - ( bitresult ? __unsigned(divisor) : 0 );
-                bit = bit - 1;
-            }
+            while( bit != 63 ) { quotient = newquotient; remainder = newremainder; bit = bit - 1; }
         }
     }
 }
