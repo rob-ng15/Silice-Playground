@@ -433,6 +433,14 @@ void set_ufo_bullet_sprites( void ) {
     set_sprite_bitmaps( 1, UFOBULLETSPRITE, &ufo_bullet_bitmap[0] );
 }
 
+// HELPER FOR PLACING A 4 TILE 32 x 32 TILE TO THE TILEMAPS
+void set_tilemap_32x32tile( unsigned char tm_layer, short x, short y, unsigned char start_tile, unsigned char background, unsigned char foreground ) {
+    set_tilemap_tile( tm_layer, x, y, start_tile, background, foreground, 0 );
+    set_tilemap_tile( tm_layer, x, y + 1, start_tile + 1, background, foreground, 0 );
+    set_tilemap_tile( tm_layer, x + 1, y, start_tile + 2, background, foreground, 0 );
+    set_tilemap_tile( tm_layer, x + 1, y + 1, start_tile + 3, background, foreground, 0 );
+}
+
 void set_tilemap( void ) {
     unsigned char i, x, y, colour;
 
@@ -450,7 +458,7 @@ void set_tilemap( void ) {
         y = rng( 7 ) + i*7 + 1;
         colour = random_colour_alt();
 
-        set_tilemap_tile( LOWER_LAYER, x, y, 1, TRANSPARENT, colour ); set_tilemap_tile( LOWER_LAYER, x, y+1, 2, TRANSPARENT, colour ); set_tilemap_tile( LOWER_LAYER, x+1, y, 3, TRANSPARENT, colour ); set_tilemap_tile( LOWER_LAYER, x+1, y+1, 4, TRANSPARENT, colour );
+        set_tilemap_32x32tile( LOWER_LAYER, x, y, 1, TRANSPARENT, colour );
     }
 
     for( i = 0; i < 4; i++ ) {
@@ -458,7 +466,7 @@ void set_tilemap( void ) {
         y = rng( 7 ) + i*7 + 1;
         colour = random_colour_alt();
 
-        set_tilemap_tile( UPPER_LAYER, x, y, 1, TRANSPARENT, colour ); set_tilemap_tile( UPPER_LAYER, x, y+1, 2, TRANSPARENT, colour ); set_tilemap_tile( UPPER_LAYER, x+1, y, 3, TRANSPARENT, colour ); set_tilemap_tile( UPPER_LAYER, x+1, y+1, 4, TRANSPARENT, colour );
+        set_tilemap_32x32tile( UPPER_LAYER, x, y, 1, TRANSPARENT, colour );
     }
 }
 

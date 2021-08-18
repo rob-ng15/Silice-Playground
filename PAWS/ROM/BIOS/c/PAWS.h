@@ -7,7 +7,7 @@ unsigned char volatile * LEDS = (unsigned char volatile *) 0xf130;
 // PS/2 KEYBOARD
 unsigned char volatile * PS2_AVAILABLE = (unsigned char volatile *) 0xf110;
 unsigned char volatile * PS2_MODE = (unsigned char volatile * ) 0xf110;
-unsigned char volatile * PS2_DATA = (unsigned char volatile *) 0xf112;
+unsigned short volatile * PS2_DATA = (unsigned short volatile *) 0xf112;
 
 // SDCARD
 unsigned char volatile * SDCARD_READY = (unsigned char volatile *) 0xf140;
@@ -31,16 +31,18 @@ unsigned char volatile * BACKGROUND_COPPER_ADDRESS = (unsigned char volatile *) 
 unsigned char volatile * BACKGROUND_COPPER_COMMAND = (unsigned char volatile *) 0x8022;
 unsigned char volatile * BACKGROUND_COPPER_CONDITION = (unsigned char volatile *) 0x8024;
 unsigned short volatile * BACKGROUND_COPPER_COORDINATE = (unsigned short volatile *) 0x8026;
-unsigned char volatile * BACKGROUND_COPPER_MODE = (unsigned char volatile *) 0x8028;
-unsigned char volatile * BACKGROUND_COPPER_ALT = (unsigned char volatile *) 0x802a;
-unsigned char volatile * BACKGROUND_COPPER_COLOUR = (unsigned char volatile *) 0x802c;
+unsigned short volatile * BACKGROUND_COPPER_CPUINPUT = (unsigned short volatile *) 0x8028;
+unsigned char volatile * BACKGROUND_COPPER_MODE = (unsigned char volatile *) 0x802a;
+unsigned char volatile * BACKGROUND_COPPER_ALT = (unsigned char volatile *) 0x802c;
+unsigned char volatile * BACKGROUND_COPPER_COLOUR = (unsigned char volatile *) 0x802e;
 
 unsigned char volatile * LOWER_TM_X = (unsigned char volatile *) 0x8100;
 unsigned char volatile * LOWER_TM_Y = (unsigned char volatile *) 0x8102;
 unsigned char volatile * LOWER_TM_TILE = (unsigned char volatile *) 0x8104;
 unsigned char volatile * LOWER_TM_BACKGROUND = (unsigned char volatile *) 0x8106;
 unsigned char volatile * LOWER_TM_FOREGROUND = (unsigned char volatile *) 0x8108;
-unsigned char volatile * LOWER_TM_COMMIT = (unsigned char volatile *) 0x810a;
+unsigned char volatile * LOWER_TM_ROTATION = (unsigned char volatile *) 0x810a;
+unsigned char volatile * LOWER_TM_COMMIT = (unsigned char volatile *) 0x810c;
 unsigned char volatile * LOWER_TM_WRITER_TILE_NUMBER = (unsigned char volatile *) 0x8110;
 unsigned char volatile * LOWER_TM_WRITER_LINE_NUMBER = (unsigned char volatile *) 0x8112;
 unsigned short volatile * LOWER_TM_WRITER_BITMAP = (unsigned short volatile *) 0x8114;
@@ -52,7 +54,8 @@ unsigned char volatile * UPPER_TM_Y = (unsigned char volatile *) 0x8202;
 unsigned char volatile * UPPER_TM_TILE = (unsigned char volatile *) 0x8204;
 unsigned char volatile * UPPER_TM_BACKGROUND = (unsigned char volatile *) 0x8206;
 unsigned char volatile * UPPER_TM_FOREGROUND = (unsigned char volatile *) 0x8208;
-unsigned char volatile * UPPER_TM_COMMIT = (unsigned char volatile *) 0x820a;
+unsigned char volatile * UPPER_TM_ROTATION = (unsigned char volatile *) 0x820a;
+unsigned char volatile * UPPER_TM_COMMIT = (unsigned char volatile *) 0x820c;
 unsigned char volatile * UPPER_TM_WRITER_TILE_NUMBER = (unsigned char volatile *) 0x8210;
 unsigned char volatile * UPPER_TM_WRITER_LINE_NUMBER = (unsigned char volatile *) 0x8212;
 unsigned short volatile * UPPER_TM_WRITER_BITMAP = (unsigned short volatile *) 0x8214;
@@ -76,7 +79,8 @@ unsigned char volatile * VECTOR_DRAW_COLOUR = (unsigned char volatile *) 0x8622;
 short volatile * VECTOR_DRAW_XC = (short volatile *) 0x8624;
 short volatile * VECTOR_DRAW_YC = (short volatile *) 0x8626;
 unsigned char volatile * VECTOR_DRAW_SCALE = (unsigned char volatile *) 0x8628;
-unsigned char volatile * VECTOR_DRAW_START = (unsigned char volatile *) 0x862a;
+unsigned char volatile * VECTOR_DRAW_ROTATION = (unsigned char volatile *) 0x862a;
+unsigned char volatile * VECTOR_DRAW_START = (unsigned char volatile *) 0x862c;
 unsigned char volatile * VECTOR_DRAW_STATUS = (unsigned char volatile *) 0x862a;
 unsigned char volatile * VECTOR_WRITER_BLOCK = (unsigned char volatile *) 0x8630;
 unsigned char volatile * VECTOR_WRITER_VERTEX = (unsigned char volatile *) 0x8632;
@@ -163,6 +167,16 @@ unsigned int volatile * SMTPCH = ( unsigned int volatile * ) 0xfff0;
 unsigned int volatile * SMTPCL = ( unsigned int volatile * ) 0xfff2;
 
 // TYPES AND STRUCTURES
+typedef unsigned int size_t;
+typedef unsigned short bool;
+
+// FOR EASE OF PORTING
+typedef unsigned char   uint8;
+typedef unsigned short  uint16;
+typedef unsigned int    uint32;
+typedef signed char     int8;
+typedef signed short    int16;
+typedef signed int      int32;
 
 // STRUCTURE OF THE SPRITE UPDATE FLAG
 struct sprite_update_flag {
@@ -223,3 +237,34 @@ typedef struct {
     unsigned int file_size;
 } __attribute((packed)) Fat16Entry;
 
+// COLOURS
+#define TRANSPARENT 0x40
+#define BLACK 0x00
+#define BLUE 0x03
+#define DKBLUE 0x02
+#define GREEN 0x0c
+#define DKGREEN 0x08
+#define CYAN 0x0f
+#define DKCYAN 0x0b
+#define RED 0x30
+#define DKRED 0x20
+#define MAGENTA 0x33
+#define DKMAGENTA 0x22
+#define PURPLE 0x13
+#define YELLOW 0x3c
+#define DKYELLOW 0x28
+#define WHITE 0x3f
+#define GREY1 0x15
+#define GREY2 0x2a
+#define ORANGE 0x38
+
+// STANDARD CONSTANTS
+#define NULL 0
+#define true 1
+#define false 0
+#define TRUE 1
+#define FALSE 0
+
+// LOWER AND UPPER SPRITES/TILEMAPS
+#define LOWER 0
+#define UPPER 1

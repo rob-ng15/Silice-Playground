@@ -12,6 +12,7 @@ algorithm tilemap(
     input   uint6   tm_character,
     input   uint6   tm_foreground,
     input   uint7   tm_background,
+    input   uint2   tm_reflection,
     input   uint1   tm_write,
 
     // For setting tile bitmaps
@@ -27,9 +28,9 @@ algorithm tilemap(
     // Tiles 64 x 16 x 16
     simple_dualport_bram uint16 tiles16x16[ 1024 ] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, pad(uninitialized) };
 
-    // 42 x 32 tile map, allows for pixel scrolling with border { 7 bits background, 6 bits foreground, 5 bits tile number }
+    // 42 x 32 tile map, allows for pixel scrolling with border { 2 bit reflection, 7 bits background, 6 bits foreground, 5 bits tile number }
     simple_dualport_bram uint6 tiles[1344] = uninitialized;
-    simple_dualport_bram uint13 colours[1344] = uninitialized;
+    simple_dualport_bram uint15 colours[1344] = uninitialized;
 
     // Scroll position - -15 to 0 to 15
     // -15 or 15 will trigger appropriate scroll when next moved in that direction
@@ -43,6 +44,7 @@ algorithm tilemap(
         tm_character <: tm_character,
         tm_foreground <: tm_foreground,
         tm_background <: tm_background,
+        tm_reflection <: tm_reflection,
         tm_write <: tm_write,
         tm_offset_x :> tm_offset_x,
         tm_offset_y :> tm_offset_y,
@@ -70,31 +72,32 @@ algorithm tilemap(
     uint4   yintm <: { 1b0, pix_y[0,4] } + tm_offset_y;
 
     // Derive the actual pixel in the current character
-    uint1   tmpixel <: tiles16x16.rdata0[15 - xintm, 1];
+    uint1   tmpixel <: colour15(colours.rdata0).x_reflect ? tiles16x16.rdata0[xintm, 1] :tiles16x16.rdata0[4b1111 - xintm, 1];
 
     // Set up reading of the tilemap
     tiles.addr0 := xtmpos + ytmpos * 42;
     colours.addr0 := xtmposcolour + ytmpos * 42;
 
     // Setup the reading and writing of the tiles16x16
-    tiles16x16.addr0 :=  { tiles.rdata0, yintm };
+    tiles16x16.addr0 := colour15(colours.rdata0).y_reflect ? { tiles.rdata0, 4b1111 - yintm } :{ tiles.rdata0, yintm };
 
     // RENDER - Default to transparent
-    tilemap_display := pix_active & ( tmpixel | ~colours.rdata0[12,1] );
-    pixel := tmpixel ? colour13(colours.rdata0).foreground : colour13(colours.rdata0).background;
+    tilemap_display := pix_active & ( tmpixel | ~colour15(colours.rdata0).alpha );
+    pixel := tmpixel ? colour15(colours.rdata0).foreground : colour15(colours.rdata0).background;
 }
 
 algorithm tile_map_writer(
     simple_dualport_bram_port1 tiles,
     simple_dualport_bram_port1 colours,
 
-    // Set TM at x, y, character with foreground and background
-    input uint6 tm_x,
-    input uint6 tm_y,
-    input uint6 tm_character,
-    input uint6 tm_foreground,
-    input uint7 tm_background,
-    input uint1 tm_write,
+    // Set TM at x, y, character with foreground, background and rotation
+    input   uint6   tm_x,
+    input   uint6   tm_y,
+    input   uint6   tm_character,
+    input   uint6   tm_foreground,
+    input   uint7   tm_background,
+    input   uint2   tm_reflection,
+    input   uint1   tm_write,
 
     // For scrolling/wrapping
     output  int5    tm_offset_x,
@@ -106,7 +109,7 @@ algorithm tile_map_writer(
 ) <autorun> {
     // COPY OF TILEMAP FOR SCROLLING
     simple_dualport_bram uint6 tiles_copy[1344] = uninitialized;
-    simple_dualport_bram uint13 colours_copy[1344] = uninitialized;
+    simple_dualport_bram uint15 colours_copy[1344] = uninitialized;
 
     // Scroller/Wrapper storage
     uint1   tm_scroll = uninitialized;
@@ -115,7 +118,7 @@ algorithm tile_map_writer(
     uint6   x_cursor = uninitialized;
     uint11  y_cursor_addr = uninitialized;
     uint6   new_tile = uninitialized;
-    uint13  new_colour = uninitialized;
+    uint15  new_colour = uninitialized;
 
     uint11  temp_1 = uninitialized;
     uint11  temp_2 = uninitialized;
@@ -132,8 +135,8 @@ algorithm tile_map_writer(
     // Default to 0,0 and transparent
     tiles.addr1 = 0; tiles.wdata1 = 0;
     tiles_copy.addr1 = 0; tiles_copy.wdata1 = 0;
-    colours.addr1 = 0; colours.wdata1 = 13h1000;
-    colours_copy.addr1 = 0; colours_copy.wdata1 = 13h1000;
+    colours.addr1 = 0; colours.wdata1 = 15h1000;
+    colours_copy.addr1 = 0; colours_copy.wdata1 = 15h1000;
 
     tm_offset_x = 0;
     tm_offset_y = 0;
@@ -145,8 +148,8 @@ algorithm tile_map_writer(
             case 1: {
                 tiles.addr1 = tm_x + tm_y * 42; tiles.wdata1 = tm_character;
                 tiles_copy.addr1 = tm_x + tm_y * 42; tiles_copy.wdata1 = tm_character;
-                colours.addr1 = tm_x + tm_y * 42; colours.wdata1 = { tm_background, tm_foreground };
-                colours_copy.addr1 = tm_x + tm_y * 42; colours_copy.wdata1 = { tm_background, tm_foreground };
+                colours.addr1 = tm_x + tm_y * 42; colours.wdata1 = { tm_reflection, tm_background, tm_foreground };
+                colours_copy.addr1 = tm_x + tm_y * 42; colours_copy.wdata1 = { tm_reflection, tm_background, tm_foreground };
             }
         }
 
@@ -222,7 +225,7 @@ algorithm tile_map_writer(
                                         //case 1: {
                                         ++:
                                             new_tile = tm_scroll ? 0 : tiles_copy.rdata0;
-                                            new_colour = tm_scroll ? 13h1000 : colours_copy.rdata0;
+                                            new_colour = tm_scroll ? 15h1000 : colours_copy.rdata0;
                                             while( tm_goleft ? ( x_cursor != 42 ) : ( x_cursor != 0 ) ) {
                                                 //FSM3 = 1;
                                                 //while( FSM3 != 0 ) {
@@ -300,7 +303,7 @@ algorithm tile_map_writer(
                                         //case 1: {
                                         ++:
                                             new_tile = tm_scroll ? 0 : tiles_copy.rdata0;
-                                            new_colour = tm_scroll ? 13h1000 : colours_copy.rdata0;
+                                            new_colour = tm_scroll ? 15h1000 : colours_copy.rdata0;
                                             while( tm_goup ? ( y_cursor_addr != 1302 ) : ( y_cursor_addr != 0 ) ) {
                                                 //FSM3 = 1;
                                                 //while( FSM3 != 0 ) {
@@ -364,9 +367,9 @@ algorithm tile_map_writer(
                     tiles_copy.addr1 = tmcsaddr;
                     tiles_copy.wdata1 = 0;
                     colours.addr1 = tmcsaddr;
-                    colours.wdata1 = 13h1000;
+                    colours.wdata1 = 15h1000;
                     colours_copy.addr1 = tmcsaddr;
-                    colours_copy.wdata1 = 13h1000;
+                    colours_copy.wdata1 = 15h1000;
                     tmcsaddr = tmcsaddr + 1;
                 }
                 tm_offset_x = 0;

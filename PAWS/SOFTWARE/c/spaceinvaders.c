@@ -796,10 +796,10 @@ void remove_sprites( short start_sprite ) {
 
 // HELPER FOR PLACING A 4 TILE 32 x 32 TILE TO THE TILEMAPS
 void set_tilemap_32x32tile( unsigned char tm_layer, short x, short y, unsigned char start_tile, unsigned char background, unsigned char foreground ) {
-    set_tilemap_tile( tm_layer, x, y, start_tile, background, foreground );
-    set_tilemap_tile( tm_layer, x, y + 1, start_tile + 1, background, foreground );
-    set_tilemap_tile( tm_layer, x + 1, y, start_tile + 2, background, foreground );
-    set_tilemap_tile( tm_layer, x + 1, y + 1, start_tile + 3, background, foreground );
+    set_tilemap_tile( tm_layer, x, y, start_tile, background, foreground, 0 );
+    set_tilemap_tile( tm_layer, x, y + 1, start_tile + 1, background, foreground, 0 );
+    set_tilemap_tile( tm_layer, x + 1, y, start_tile + 2, background, foreground, 0 );
+    set_tilemap_tile( tm_layer, x + 1, y + 1, start_tile + 3, background, foreground, 0 );
 }
 
 // PROGRAM THE BACKGROUND COPPER FOR THE FALLING STARS
@@ -833,45 +833,45 @@ void draw_moonscape( void ) {
         for( short x = 0; x < 42; x++ ) {
             switch( moonscape_back[y][x] ) {
                 case '.':
-                    set_tilemap_tile( LOWER_LAYER, x, 18 + y, 0, TRANSPARENT, TRANSPARENT );
+                    set_tilemap_tile( LOWER_LAYER, x, 18 + y, 0, TRANSPARENT, TRANSPARENT, 0 );
                     break;
                 case '1':
-                    set_tilemap_tile( LOWER_LAYER, x, 18 + y, 1, TRANSPARENT, GREY1 );
+                    set_tilemap_tile( LOWER_LAYER, x, 18 + y, 1, TRANSPARENT, GREY1, 0 );
                     break;
                 case '2':
-                    set_tilemap_tile( LOWER_LAYER, x, 18 + y, 2, TRANSPARENT, GREY1 );
+                    set_tilemap_tile( LOWER_LAYER, x, 18 + y, 2, TRANSPARENT, GREY1, 0 );
                     break;
                 case '8':
-                    set_tilemap_tile( LOWER_LAYER, x, 18 + y, 0, GREY1, GREY1 );
+                    set_tilemap_tile( LOWER_LAYER, x, 18 + y, 0, GREY1, GREY1, 0 );
                     break;
             }
             switch( moonscape_front[y][x] ) {
                 case '.':
-                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 0, TRANSPARENT, TRANSPARENT );
+                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 0, TRANSPARENT, TRANSPARENT, 0 );
                     break;
                 case '1':
-                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 24, TRANSPARENT, GREY2 );
+                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 24, TRANSPARENT, GREY2, 0 );
                     break;
                 case '2':
-                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 25, TRANSPARENT, GREY2 );
+                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 25, TRANSPARENT, GREY2, 0 );
                     break;
                 case '3':
-                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 20, GREY2, GREY1 );
+                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 20, GREY2, GREY1, 0 );
                     break;
                 case '4':
-                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 21, GREY2, GREY1 );
+                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 21, GREY2, GREY1, 0 );
                     break;
                 case '5':
-                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 22, GREY2, GREY1 );
+                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 22, GREY2, GREY1, 0 );
                     break;
                 case '6':
-                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 23, GREY2, GREY1 );
+                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 23, GREY2, GREY1, 0 );
                     break;
                 case '7':
-                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 0, GREY2, GREY2 );
+                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 0, GREY2, GREY2, 0 );
                     break;
                 case '8':
-                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 0, GREY1, GREY1 );
+                    set_tilemap_tile( UPPER_LAYER, x, 18 + y, 0, GREY1, GREY1, 0 );
                     break;
             }
         }
@@ -1438,16 +1438,16 @@ void draw_status( void ) {
 
     // PRINT THE SCORE
     for( short i = 0; i < 8; i++ ) {
-        set_tilemap_tile( UPPER_LAYER, 17 + i, 1,  ( scorestring[i] == ' ' ) ? 1 : scorestring[i] - 47, TRANSPARENT, GREY2 );
+        set_tilemap_tile( UPPER_LAYER, 17 + i, 1,  ( scorestring[i] == ' ' ) ? 1 : scorestring[i] - 47, TRANSPARENT, GREY2, 0 );
     }
     // PRINT THE LIVES LEFT
-    set_tilemap_tile( UPPER_LAYER, 35, 1,  Ship.life + 1, TRANSPARENT, GREY2 );
+    set_tilemap_tile( UPPER_LAYER, 35, 1,  Ship.life + 1, TRANSPARENT, GREY2, 0 );
     for( short i = 0; i < 3; i++ ) {
-        set_tilemap_tile( UPPER_LAYER, 37 + i, 1,  ( i < Ship.life ) ? 11 : 0, TRANSPARENT, GREY2 );
+        set_tilemap_tile( UPPER_LAYER, 37 + i, 1,  ( i < Ship.life ) ? 11 : 0, TRANSPARENT, GREY2, 0 );
     }
     // PRINT THE LEVEL ( 2 DIGITS )
-    set_tilemap_tile( UPPER_LAYER, 2, 1,  ( Ship.level / 10 ) + 1, TRANSPARENT, GREY2 );
-    set_tilemap_tile( UPPER_LAYER, 3, 1,  ( Ship.level % 10 ) + 1, TRANSPARENT, GREY2 );
+    set_tilemap_tile( UPPER_LAYER, 2, 1,  ( Ship.level / 10 ) + 1, TRANSPARENT, GREY2, 0 );
+    set_tilemap_tile( UPPER_LAYER, 3, 1,  ( Ship.level % 10 ) + 1, TRANSPARENT, GREY2, 0 );
 }
 
 void play( void ) {

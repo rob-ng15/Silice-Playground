@@ -109,6 +109,20 @@
 #define SPRITE_TO_UPPER_TILEMAP 2
 #define SPRITE_TO_OTHER_SPRITES 1
 
+#define SPRITE_REFLECT_X 2
+#define SPRITE_REFLECT_Y 4
+
+#define BLIT_REFLECT_X 1
+#define BLIT_REFLECT_Y 2
+
+#define TM_REFLECT_X 1
+#define TM_REFLECT_Y 2
+
+#define ROTATE0 0
+#define ROTATE90 1
+#define ROTATE180 2
+#define ROTATE270 3
+
 #define PS2_KEYBOARD 1
 #define PS2_JOYSTICK 0
 
@@ -258,7 +272,7 @@ extern void copper_program( unsigned char, unsigned char, unsigned char, unsigne
 extern void set_copper_cpuinput( unsigned short );
 
 // TILEMAP
-extern void set_tilemap_tile( unsigned char, unsigned char, unsigned char, unsigned char, unsigned char, unsigned char );
+extern void set_tilemap_tile( unsigned char, unsigned char, unsigned char, unsigned char, unsigned char, unsigned char, unsigned char );
 extern void set_tilemap_bitmap( unsigned char, unsigned char, unsigned short * );
 extern unsigned char tilemap_scrollwrapclear( unsigned char, unsigned char );
 

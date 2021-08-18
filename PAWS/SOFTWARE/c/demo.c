@@ -382,7 +382,7 @@ unsigned short pupils_bitmap[] = {
     0,0,0,0,0,0,0,0,0
 };
 
-// PACMAN - 4 FOR UP/DOWN 4 FOR RIGHT/LEFT, USE REFLECTION OF UP FOR DOWN AND RIGHT FOR LEFT
+// PACMAN - 4 FOR UP, USE ROTATION OF UP FOR RIGHT, DOWN AND LEFT
 unsigned short pacman_bitmap[] = {
     0,
     0b0000010000100000,
@@ -521,7 +521,7 @@ unsigned short pacman_bitmap[] = {
     0
 };
 
-unsigned short pacman_maze_bitmaps[] = {
+unsigned short pacman_maze_bitmaps[] = { // 3 corner, v line, h line
     0,0,0,0,0,0,0,0,
     0b0000000000111111,
     0b0000000001000000,
@@ -532,47 +532,11 @@ unsigned short pacman_maze_bitmaps[] = {
     0b0000000010000000,
     0b0000000010000000,
 
-    0,0,0,0,0,0,0,0,
-    0b1111110000000000,
-    0b0000001000000000,
-    0b0000001000000000,
-    0b0000000100000000,
-    0b0000000100000000,
-    0b0000000100000000,
-    0b0000000100000000,
-    0b0000000100000000,
-
-    0b0000000100000000,
-    0b0000000100000000,
-    0b0000000100000000,
-    0b0000000100000000,
-    0b0000000100000000,
-    0b0000001000000000,
-    0b0000001000000000,
-    0b1111110000000000,
-    0,0,0,0,0,0,0,0,
-
-    0b0000000010000000,
-    0b0000000010000000,
-    0b0000000010000000,
-    0b0000000010000000,
-    0b0000000010000000,
-    0b0000000001000000,
-    0b0000000001000000,
-    0b0000000000111111,
-    0,0,0,0,0,0,0,0,
-
     0x0080, 0x0080, 0x0080, 0x0080, 0x0080, 0x0080, 0x0080, 0x0080,
     0x0080, 0x0080, 0x0080, 0x0080, 0x0080, 0x0080, 0x0080, 0x0080,
 
-    0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100,
-    0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100,
-
     0,0,0,0,0,0,0,0,
-    0xffff,0,0,0,0,0,0,
-
-    0,0,0,0,0,0,0,0xffff,
-    0,0,0,0,0,0,0,0,
+    0xffff,0,0,0,0,0,0
 };
 char pacman_maze[][42] = {
     "..........................................",
@@ -812,8 +776,8 @@ void tilemapdemo( void ) {
     x = 0; y = 2; count = 0;
     for( unsigned char i = 0; i < 126; i++ ) {
         colour = rng( 63 ) + 1;
-        set_tilemap_tile( LOWER_LAYER, x, y, count + 1, 63 - colour, colour );
-        set_tilemap_tile( UPPER_LAYER, x, y + 16, count + 1, 63 - colour, colour );
+        set_tilemap_tile( LOWER_LAYER, x, y, count + 1, 63 - colour, colour, i & 3 );
+        set_tilemap_tile( UPPER_LAYER, x, y + 16, count + 1, 63 - colour, colour, i & 3 );
 
         y = ( x == 41 ) ? y + 1 : y;
         x = ( x == 41 ) ? 0 : x + 1;
@@ -999,7 +963,7 @@ void spritedemo( void ) {
     displayreset();
     tpu_printf_centre( 28, TRANSPARENT, WHITE, "SPRITE Demo" );
 
-    for( unsigned char tile_number = 0; tile_number < 8; tile_number++ ) {
+    for( unsigned char tile_number = 0; tile_number < 3; tile_number++ ) {
         set_tilemap_bitmap( LOWER_LAYER, tile_number + 1, &pacman_maze_bitmaps[ tile_number * 16 ] );
     }
 
@@ -1007,10 +971,31 @@ void spritedemo( void ) {
         for( short x = 0; x < 42; x++ ) {
             switch( pacman_maze[y][x] ) {
                 case '.':
-                    set_tilemap_tile( LOWER_LAYER, x, y, 0, TRANSPARENT, TRANSPARENT );
+                    set_tilemap_tile( LOWER_LAYER, x, y, 0, TRANSPARENT, TRANSPARENT, 0 );
                     break;
-                default:
-                    set_tilemap_tile( LOWER_LAYER, x, y, pacman_maze[y][x] - '0', TRANSPARENT, BLUE );
+                case '1':
+                    set_tilemap_tile( LOWER_LAYER, x, y, 1, TRANSPARENT, BLUE, 0 );
+                    break;
+                case '2':
+                    set_tilemap_tile( LOWER_LAYER, x, y, 1, TRANSPARENT, BLUE, TM_REFLECT_X );
+                    break;
+                case '3':
+                    set_tilemap_tile( LOWER_LAYER, x, y, 1, TRANSPARENT, BLUE, TM_REFLECT_X | TM_REFLECT_Y );
+                    break;
+                case '4':
+                    set_tilemap_tile( LOWER_LAYER, x, y, 1, TRANSPARENT, BLUE, TM_REFLECT_Y );
+                    break;
+                case '5':
+                    set_tilemap_tile( LOWER_LAYER, x, y, 2, TRANSPARENT, BLUE, 0 );
+                    break;
+                case '6':
+                    set_tilemap_tile( LOWER_LAYER, x, y, 2, TRANSPARENT, BLUE, TM_REFLECT_X );
+                    break;
+                case '7':
+                    set_tilemap_tile( LOWER_LAYER, x, y, 3, TRANSPARENT, BLUE, 0 );
+                    break;
+                case '8':
+                    set_tilemap_tile( LOWER_LAYER, x, y, 3, TRANSPARENT, BLUE, TM_REFLECT_Y );
                     break;
             }
         }

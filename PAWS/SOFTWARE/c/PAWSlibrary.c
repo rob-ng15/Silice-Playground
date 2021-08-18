@@ -319,7 +319,7 @@ void set_copper_cpuinput( unsigned short value ) {
 // The tilemap can scroll or wrap once x or y is at -15 or 15
 
 // SET THE TILEMAP TILE at (x,y) to tile with colours background and foreground
-void set_tilemap_tile( unsigned char tm_layer, unsigned char x, unsigned char y, unsigned char tile, unsigned char background, unsigned char foreground) {
+void set_tilemap_tile( unsigned char tm_layer, unsigned char x, unsigned char y, unsigned char tile, unsigned char background, unsigned char foreground, unsigned char reflection) {
     switch( tm_layer ) {
         case 0:
             while( *LOWER_TM_STATUS );
@@ -328,6 +328,7 @@ void set_tilemap_tile( unsigned char tm_layer, unsigned char x, unsigned char y,
             *LOWER_TM_TILE = tile;
             *LOWER_TM_BACKGROUND = background;
             *LOWER_TM_FOREGROUND = foreground;
+            *LOWER_TM_REFLECTION = reflection;
             *LOWER_TM_COMMIT = 1;
             break;
         case 1:
@@ -337,6 +338,7 @@ void set_tilemap_tile( unsigned char tm_layer, unsigned char x, unsigned char y,
             *UPPER_TM_TILE = tile;
             *UPPER_TM_BACKGROUND = background;
             *UPPER_TM_FOREGROUND = foreground;
+            *UPPER_TM_REFLECTION = reflection;
             *UPPER_TM_COMMIT = 1;
             break;
     }

@@ -1017,6 +1017,7 @@ algorithm tilemap_memmap(
     uint6   tm_character = uninitialized;
     uint6   tm_foreground = uninitialized;
     uint7   tm_background = uninitialized;
+    uint2   tm_reflection = uninitialized;
     uint1   tm_write = uninitialized;
     uint6   tile_writer_tile = uninitialized;
     uint4   tile_writer_line = uninitialized;
@@ -1036,6 +1037,7 @@ algorithm tilemap_memmap(
         tm_character <: tm_character,
         tm_foreground <: tm_foreground,
         tm_background <: tm_background,
+        tm_reflection <: tm_reflection,
         tm_write <: tm_write,
         tile_writer_tile <: tile_writer_tile,
         tile_writer_line <: tile_writer_line,
@@ -1055,7 +1057,8 @@ algorithm tilemap_memmap(
                     case 8h04: { tm_character = writeData; }
                     case 8h06: { tm_background = writeData; }
                     case 8h08: { tm_foreground = writeData; }
-                    case 8h0a: { tm_write = 1; }
+                    case 8h0a: { tm_reflection = writeData; }
+                    case 8h0c: { tm_write = 1; }
                     case 8h10: { tile_writer_tile = writeData; }
                     case 8h12: { tile_writer_line = writeData; }
                     case 8h14: { tile_writer_bitmap = writeData; }
