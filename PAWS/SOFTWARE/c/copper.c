@@ -27,8 +27,8 @@ int main( void ) {
 
     set_copper_cpuinput( 16 );
     copper_startstop( 0 );
-    copper_program( 0, COPPER_WAIT_VBLANK, 7, 0, BKG_SOLID, BLUE, BLUE );
-    copper_program( 1, COPPER_WAIT_X, 7, 0, BKG_SOLID, BLUE, BLUE );
+    copper_program( 0, COPPER_WAIT_VBLANK, 7, 0, BKG_HATCH, BLUE, BLUE );
+    copper_program( 1, COPPER_WAIT_X, 7, 0, BKG_HATCH, BLUE, BLUE );
     copper_program( 2, COPPER_JUMP, COPPER_JUMP_IF_Y_LESS, COPPER_USE_CPU_INPUT, 0, 0, 1 );
     copper_program( 3, COPPER_WAIT_X, 7, 0, BKG_HATCH, LTGREEN, GREEN );
     copper_program( 4, COPPER_JUMP, COPPER_JUMP_ON_VBLANK_EQUAL, 0, 0, 0, 3 );

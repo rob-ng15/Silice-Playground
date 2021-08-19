@@ -161,6 +161,7 @@ $$end
     // SDRAM and BRAM (for BIOS)
     // FUNCTION3 controls byte read/writes
     uint16  sdramreaddata = uninitialized;
+    uint1   sdrambusy = uninitialized;
     cachecontroller sdram <@clock_system,!reset> (
         sio <:> sio_halfrate,
         byteaccess <: byteaccess,
@@ -168,7 +169,8 @@ $$end
         writedata <: writedata,
         writeflag <: sdramwriteflag,
         readflag <: sdramreadflag,
-        readdata :> sdramreaddata
+        readdata :> sdramreaddata,
+        busy :> sdrambusy
     );
     uint16  ramreaddata = uninitialized;
     bramcontroller ram <@clock_system,!reset> (
@@ -266,15 +268,16 @@ $$end
         readmemory :> CPUreadmemory
     );
 
-    // IDENTIDY ADDRESS BLOCK
+    // IDENTIFY ADDRESS BLOCK
     uint1   SDRAM <: address[28,1];
-    uint1   BRAM <: ~address[28,1] & ~address[15,1];
-    uint1   VIDEO <: ~address[28,1] & address[15,1] & ( address[12,4]==4h8 );
-    uint1   AUDIOTIMERS <: ~address[28,1] & address[15,1] & ( address[12,4]==4he );
-    uint1   IO <: ~address[28,1] & address[15,1] & ( address[12,4]==4hf );
+    uint1   BRAM <: ~SDRAM & ~address[15,1];
+    uint1   IOmem <: ~SDRAM & ~BRAM;
+    uint1   VIDEO <: IOmem & ( address[12,4]==4h8 );
+    uint1   AUDIOTIMERS <: IOmem & ( address[12,4]==4he );
+    uint1   IO <: IOmem & ( address[12,4]==4hf );
 
     // SDRAM -> CPU BUSY STATE
-    uint1   memorybusy <: sdram.busy | ( ( CPUreadmemory | CPUwritememory ) & ( BRAM | SDRAM ) );
+    uint1   memorybusy <: sdrambusy | ( ( CPUreadmemory | CPUwritememory ) & ( BRAM | SDRAM ) );
 
     uint16  readdata <: SDRAM ? sdramreaddata :
                 BRAM ? ramreaddata :
@@ -313,7 +316,7 @@ algorithm bramcontroller(
 
 $$if not SIMULATION then
     // RISC-V RAM and BIOS
-    bram uint16 ram <input!> [16384] = {
+    bram uint16 ram[16384] = {
         $include('ROM/BIOS.inc')
         , pad(uninitialized)
     };
@@ -326,25 +329,17 @@ $$else
 $$end
 
     // FLAGS FOR BRAM ACCESS
-    ram.wenable := 0;
-    ram.addr := address[1,15];
-
-    // 16 bit READ
-    readdata := ram.rdata;
+    ram.wenable := 0; ram.addr := address[1,15]; readdata := ram.rdata;
 
     while(1) {
         if( writeflag ) {
-            FSM = ( byteaccess ) ? 1 : 2;
-            while( FSM != 0 ) {
-                onehot( FSM ) {
-                    case 0: {}
-                    case 1: {
-                        ram.wdata = ( byteaccess ) ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
-                        ram.wenable = 1;
-                    }
-                }
-                FSM = { FSM[0,1], 1b0 };
+            if( byteaccess ) {
+                ++:
+                ram.wdata = ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } );
+            } else {
+                ram.wdata = writedata;
             }
+            ram.wenable = 1;
         }
     }
 }
@@ -353,22 +348,19 @@ $$end
 // EVICTION CACHE CONTROLLER - DIRECTLY MAPPED CACHE - WRITE TO SDRAM ONLY IF EVICTING FROM THE CACHE
 algorithm cachecontroller(
     sdram_user      sio,
-
     input   uint26  address,
     input   uint1   byteaccess,
-
     input   uint1   writeflag,
     input   uint16  writedata,
-
     input   uint1   readflag,
     output  uint16  readdata,
-
     output  uint1   busy(0)
 ) <autorun> {
     // CACHE for SDRAM 32k
-    // CACHE LINE IS LOWER 15 bits ( 0 - 32767 ) of address, dropping the BYTE address bit
-    // CACHE TAG IS REMAINING 11 bits of the 26 bit address + 1 bit for valid flag +1 bit for needwritetosdram flag
-    simple_dualport_bram uint29 cache <input!> [16384] = uninitialized;
+    // CACHE ADDRESS IS LOWER 15 bits ( 0 - 32767 ) of address, dropping the BYTE address bit
+    // CACHE TAG IS REMAINING 11 bits of the 26 bit address + 1 bit for valid flag + 1 bit for needwritetosdram flag
+    simple_dualport_bram uint16 cache[16384] = uninitialized;
+    simple_dualport_bram uint13 tags[16384] = uninitialized;
 
     // CACHE WRITER
     uint16  cacheupdatedata = uninitialized;
@@ -379,11 +371,12 @@ algorithm cachecontroller(
         needwritetosdram <: needwritetosdram,
         writedata <: cacheupdatedata,
         update <: cacheupdate,
-        cache <:> cache
+        cache <:> cache,
+        tags <:> tags
     );
 
     // SDRAM CONTROLLER
-    uint16  sdramwritedata <: cache.rdata0[0,16];
+    uint16  sdramwritedata <: cache.rdata0;
     uint16  sdramreaddata = uninitialized;
     uint1   sdramwrite = uninitialized;
     uint1   sdramread = uninitialized;
@@ -400,7 +393,7 @@ algorithm cachecontroller(
     );
 
     // CACHE TAG match flag
-    uint1   cachetagmatch <: ( cache.rdata0[16,12] == { 1b1, address[15,11] } );
+    uint1   cachetagmatch <: ( tags.rdata0[0,12] == { 1b1, address[15,11] } );
 
     // VALUE TO WRITE TO CACHE ( deals with correctly mapping 8 bit writes and 16 bit writes, using sdram or cache as base )
     uint16  writethrough <: ( byteaccess ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cache.rdata0[0,8] : sdramreaddata[0,8] } :
@@ -414,10 +407,10 @@ algorithm cachecontroller(
     sdramread := 0; sdramwrite := 0;
 
     // FLAGS FOR CACHE ACCESS
-    cache.addr0 := address[1,14]; cacheupdate := 0;
+    cache.addr0 := address[1,14]; tags.addr0 := address[1,14]; cacheupdate := 0;
 
     // 16 bit READ
-    readdata := cachetagmatch ? cache.rdata0[0,16] : sdramreaddata[0,16];
+    readdata := cachetagmatch ? cache.rdata0 : sdramreaddata;
 
     while(1) {
         doread = readflag; dowrite = writeflag;
@@ -427,7 +420,7 @@ algorithm cachecontroller(
             switch( cachetagmatch ) {
                 case 1: { needwritetosdram = 1; cacheupdatedata = writethrough; cacheupdate = dowrite; }
                 case 0: {
-                    if( cache.rdata0[28,1] ) { while( sdrambusy ) {} sdramaddress = { cache.rdata0[16,11], address[1,14], 1b0 }; sdramwrite = 1; }  // EVICT FROM CACHE TO SDRAM
+                    if( tags.rdata0[12,1] ) { while( sdrambusy ) {} sdramaddress = { tags.rdata0[0,11], address[1,14], 1b0 }; sdramwrite = 1; }  // EVICT FROM CACHE TO SDRAM
 
                     // READ FROM SDRAM FOR READ AND 8 BIT WRITES (AND MODIFY) AND WRITE TO CACHE, OR WRITE DIRECTLY TO CACHE IF 16 BIT WRITE
                     if( doread || ( dowrite && byteaccess ) ) {
@@ -448,11 +441,15 @@ algorithm cachewriter(
     input   uint1   needwritetosdram,
     input   uint16  writedata,
     input   uint1   update,
-    simple_dualport_bram_port1 cache
+    simple_dualport_bram_port1 cache,
+    simple_dualport_bram_port1 tags
 ) <autorun> {
-    cache.wenable1 := 1;
+    cache.wenable1 := 1; tags.wenable1 := 1;
     always {
-        if( update ) { cache.addr1 = address[1,14]; cache.wdata1 = { needwritetosdram, 1b1, address[15,11], writedata[0,16] }; }
+        if( update ) {
+            cache.addr1 = address[1,14]; cache.wdata1 = writedata;
+            tags.addr1 = address[1,14]; tags.wdata1 = { needwritetosdram, 1b1, address[15,11] };
+        }
     }
 }
 

@@ -38,10 +38,11 @@ void evolve( void) {
 void game( void ) {
 	for_xy universe[y][x] = rng( 2 );
 
+    // HOLD BUTTON TO REGENERATE STARTING POSITION
 	while( get_buttons() == 1 ) {
 		evolve();
         show();
-        sleep( 50, 0 );
+        sleep( 10, 0 );
 	}
 }
 

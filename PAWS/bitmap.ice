@@ -63,7 +63,7 @@ algorithm bitmap(
     input   int10   vector_block_xc,
     input   int10   vector_block_yc,
     input   uint3   vector_block_scale,
-    input   uint2   vector_block_rotation,
+    input   uint3   vector_block_action,
     input   uint1   draw_vector,
     // For setting vertices
     input   uint5   vertices_writer_block,
@@ -151,7 +151,7 @@ algorithm bitmap(
         vector_block_xc <: vector_block_xc,
         vector_block_yc <: vector_block_yc,
         vector_block_scale <: vector_block_scale,
-        vector_block_rotation <: vector_block_rotation,
+        vector_block_action <: vector_block_action,
         draw_vector <: draw_vector,
         vertices_writer_block <: vertices_writer_block,
         vertices_writer_vertex <: vertices_writer_vertex,

@@ -46,7 +46,7 @@ algorithm classify(
     output  uint1   qNAN,
     output  uint1   ZERO
 ) <autorun> {
-    uint1   expFF <: ( fp32(a).exponent == 8hff );
+    uint1   expFF <:: ( fp32(a).exponent == 8hff );
     always {
         INF = expFF & ~a[22,1];
         sNAN = expFF & a[22,1] & a[21,1];
@@ -140,8 +140,10 @@ algorithm docombinecomponents32(
     output  uint1   UF,
     output  uint32  f32
 ) <autorun> {
-    OF := ( exp > 254 ); UF := exp[9,1];
-    f32 := UF ? 0 : OF ? { sign, 8b11111111, 23h0 } : { sign, exp[0,8], fraction[0,23] };
+    always {
+        OF = ( exp > 254 ); UF = exp[9,1];
+        f32 = UF ? 0 : OF ? { sign, 8b11111111, 23h0 } : { sign, exp[0,8], fraction[0,23] };
+    }
 }
 
 // CONVERT SIGNED/UNSIGNED INTEGERS TO FLOAT
@@ -155,11 +157,11 @@ algorithm inttofloat(
     output  uint32  result
 ) <autorun> {
     uint1   OF = uninitialised; uint1 UF = uninitialised; uint1 NX = uninitialised;
-    uint1   sign <: dounsigned ? 0 : a[31,1];
+    uint1   sign <:: dounsigned ? 0 : a[31,1];
     uint8   zeros = uninitialised;
-    uint32  number <: dounsigned ? a : ( a[31,1] ? -a : a );
-    uint32  fraction <: NX ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
-    int10   exponent <: 158 - zeros;
+    uint32  number <:: dounsigned ? a : ( a[31,1] ? -a : a );
+    uint32  fraction <:: NX ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
+    int10   exponent <:: 158 - zeros;
 
     uint1   cOF = uninitialised;
     uint1   cUF = uninitialised;
@@ -205,10 +207,10 @@ algorithm floattoint(
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
-    int10   exp <: fp32( a ).exponent - 127;
+    int10   exp <:: fp32( a ).exponent - 127;
     uint33  sig = uninitialised;
-    uint1   IF <: aINF;
-    uint1   NN <: asNAN | aqNAN;
+    uint1   IF <:: aINF;
+    uint1   NN <:: asNAN | aqNAN;
     uint1   NV = uninitialised;
 
     uint1   aINF = uninitialised;
@@ -245,10 +247,10 @@ algorithm floattouint(
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
-    int10   exp <: fp32( a ).exponent - 127;
+    int10   exp <:: fp32( a ).exponent - 127;
     uint33  sig = uninitialised;
-    uint1   IF <: aINF;
-    uint1   NN <: asNAN | aqNAN;
+    uint1   IF <:: aINF;
+    uint1   NN <:: asNAN | aqNAN;
     uint1   NV = uninitialised;
 
     uint1   aINF = uninitialised;
@@ -312,8 +314,8 @@ algorithm dofloataddsub(
     output  uint1   resultsign,
     output  uint48  resultfraction
 ) <autorun> {
-    uint48  sigAminussigB <: sigA - sigB;
-    uint48  sigBminussigA <: sigB - sigA;
+    uint48  sigAminussigB <:: sigA - sigB;
+    uint48  sigBminussigA <:: sigB - sigA;
 
     always {
         // PERFORM ADDITION HANDLING SIGNS
@@ -347,17 +349,17 @@ algorithm floataddsub(
     output  uint32  result
 ) <autorun> {
     // BREAK DOWN INITIAL float32 INPUTS - SWITCH SIGN OF B IF SUBTRACTION
-    uint1   signA <: a[31,1];
-    int10   expA <: fp32( a ).exponent - 127;
-    uint48  sigA <: { 2b01, fp32(a).fraction, 23b0 };
-    uint1   signB <: addsub ? ~b[31,1] : b[31,1];
-    int10   expB <: fp32( b ).exponent - 127;
-    uint48  sigB <: { 2b01, fp32(b).fraction, 23b0 };
+    uint1   signA <:: a[31,1];
+    int10   expA <:: fp32( a ).exponent - 127;
+    uint48  sigA <:: { 2b01, fp32(a).fraction, 23b0 };
+    uint1   signB <:: addsub ? ~b[31,1] : b[31,1];
+    int10   expB <:: fp32( b ).exponent - 127;
+    uint48  sigB <:: { 2b01, fp32(b).fraction, 23b0 };
 
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND INVALID ( INF - INF )
-    uint1   IF <: ( aINF | bINF );
-    uint1   NN <: ( asNAN | aqNAN | bsNAN | bqNAN );
-    uint1   NV <: ( aINF & bINF) & ( signA != signB );
+    uint1   IF <:: ( aINF | bINF );
+    uint1   NN <:: ( asNAN | aqNAN | bsNAN | bqNAN );
+    uint1   NV <:: ( aINF & bINF) & ( signA != signB );
     uint1   OF = uninitialised;
     uint1   UF = uninitialised;
 
@@ -532,17 +534,17 @@ algorithm floatmultiply(
     output  uint32  result
 ) <autorun> {
     // BREAK DOWN INITIAL float32 INPUTS AND FIND SIGN OF RESULT AND EXPONENT OF PRODUCT ( + 1 IF PRODUCT OVERFLOWS, MSB == 1 )
-    uint1   productsign <: fp32( a ).sign ^ fp32( b ).sign;
-    int10   productexp <: (fp32( a ).exponent - 127) + (fp32( b ).exponent - 127) + product[47,1];
-    int10   expA <: fp32( a ).exponent - 127;
-    uint24  sigA <: { 1b1, fp32( a ).fraction };
-    int10   expB <: fp32( b ).exponent - 127;
-    uint24  sigB <: { 1b1, fp32( b ).fraction };
+    uint1   productsign <:: fp32( a ).sign ^ fp32( b ).sign;
+    int10   productexp <:: (fp32( a ).exponent - 127) + (fp32( b ).exponent - 127) + product[47,1];
+    int10   expA <:: fp32( a ).exponent - 127;
+    uint24  sigA <:: { 1b1, fp32( a ).fraction };
+    int10   expB <:: fp32( b ).exponent - 127;
+    uint24  sigB <:: { 1b1, fp32( b ).fraction };
 
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND INVALID ( INF x ZERO )
-    uint1   IF <: ( aINF | bINF );
-    uint1   NN <: ( asNAN | aqNAN | bsNAN | bqNAN );
-    uint1   NV <: ( aINF | bINF ) & ( aZERO | bZERO );
+    uint1   IF <:: ( aINF | bINF );
+    uint1   NN <:: ( asNAN | aqNAN | bsNAN | bqNAN );
+    uint1   NV <:: ( aINF | bINF ) & ( aZERO | bZERO );
     uint1   OF = uninitialised;
     uint1   UF = uninitialised;
 
@@ -577,7 +579,7 @@ algorithm floatmultiply(
     );
 
     // FAST NORMALISATION - MULTIPLICATION RESULTS IN 1x.xxx or 01.xxxx
-    uint48  normalfraction <: product[47,1] ? product : { product[0,47], 1b0 };
+    uint48  normalfraction <:: product[47,1] ? product : { product[0,47], 1b0 };
 
     int10   roundexponent = uninitialised;
     uint48  roundfraction = uninitialised;
@@ -699,16 +701,16 @@ algorithm floatdivide(
     output  uint32  result
 ) <autorun> {
     // BREAK DOWN INITIAL float32 INPUTS AND FIND SIGN OF RESULT AND EXPONENT OF QUOTIENT ( -1 IF DIVISOR > DIVIDEND )
-    uint1   quotientsign <: fp32( a ).sign ^ fp32( b ).sign;
-    int10   quotientexp <: ((fp32( a ).exponent - 127) - (fp32( b ).exponent - 127)) - ( fp32(b).fraction > fp32(a).fraction );
-    uint50  sigA <: { 1b1, fp32(a).fraction, 26b0 };
-    uint50  sigB <: { 27b1, fp32(b).fraction };
+    uint1   quotientsign <:: fp32( a ).sign ^ fp32( b ).sign;
+    int10   quotientexp <:: ((fp32( a ).exponent - 127) - (fp32( b ).exponent - 127)) - ( fp32(b).fraction > fp32(a).fraction );
+    uint50  sigA <:: { 1b1, fp32(a).fraction, 26b0 };
+    uint50  sigB <:: { 27b1, fp32(b).fraction };
 
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND DIVIDE ZERO
-    uint1   IF <: ( aINF | bINF );
-    uint1   NN <: ( asNAN | aqNAN | bsNAN | bqNAN );
+    uint1   IF <:: ( aINF | bINF );
+    uint1   NN <:: ( asNAN | aqNAN | bsNAN | bqNAN );
     uint1   NV = uninitialised;
-    uint1   DZ <: bZERO;
+    uint1   DZ <:: bZERO;
     uint1   OF = uninitialised;
     uint1   UF = uninitialised;
 
@@ -821,22 +823,6 @@ algorithm floatdivide(
 }
 
 // ADAPTED FROM https://projectf.io/posts/square-root-in-verilog/
-algorithm dofloatsqrtbitt(
-    input   uint50  ac,
-    input   uint48  x,
-    input   uint48  q,
-    output  uint50  newac,
-    output  uint48  newq,
-    output  uint48  newx
- ) <autorun> {
-    uint50  test_res = uninitialised;
-    always {
-        test_res = ac - { q, 2b01 };
-        newac = { test_res[49,1] ? ac[0,47] : test_res[0,47], x[46,2] };
-        newq = { q[0,47], ~test_res[49,1] };
-        newx = { x[0,46], 2b00 };
-    }
-}
 algorithm dofloatsqrt(
     input   uint1   start,
     output  uint1   busy(0),
@@ -844,18 +830,21 @@ algorithm dofloatsqrt(
     input   uint48  start_x,
     output  uint48  q
 ) <autorun> {
-    uint50  ac <: start ? start_ac : newac;
-    uint48  x <:  start ? start_x : newx;
-    uint50  newac = uninitialised;
-    uint48  newq = uninitialised;
-    uint48  newx = uninitialised;
-    dofloatsqrtbitt SQRTBIT( ac <: ac, x <: x, q <: q, newac :> newac, newx :> newx, newq :> newq );
+    uint50  test_res <:: ac - { q, 2b01 };
+    uint50  ac = uninitialised;
+    uint48  x = uninitialised;
 
     uint6   i(47);
     busy := start | ( i != 47 );
     while(1) {
         if( start ) {
-            i = 0; q = 0; while( i != 47 ) { q = newq; i = i + 1; }
+            i = 0; q = 0; ac = start_ac; x = start_x;
+            while( i != 47 ) {
+                ac = { test_res[49,1] ? ac[0,47] : test_res[0,47], x[46,2] };
+                q = { q[0,47], ~test_res[49,1] };
+                x = { x[0,46], 2b00 };
+                i = i + 1;
+            }
         }
     }
 }
@@ -867,13 +856,13 @@ algorithm floatsqrt(
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
-    uint1   sign <: fp32( a ).sign;              // SIGN OF INPUT
-    int10   exp  <: fp32( a ).exponent - 127;    // EXPONENT OF INPUT ( used to determine if 1x.xxxxx or 01.xxxxx for fixed point fraction to sqrt )
+    uint1   sign <:: fp32( a ).sign;             // SIGN OF INPUT
+    int10   exp  <:: fp32( a ).exponent - 127;   // EXPONENT OF INPUT ( used to determine if 1x.xxxxx or 01.xxxxx for fixed point fraction to sqrt )
 
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND NOT VALID
-    uint1   IF <: aINF;
-    uint1   NN <: asNAN | aqNAN;
-    uint1   NV <: IF | NN | sign;
+    uint1   IF <:: aINF;
+    uint1   NN <:: asNAN | aqNAN;
+    uint1   NV <:: IF | NN | sign;
     uint1   OF = uninitialised;
     uint1   UF = uninitialised;
 
@@ -890,17 +879,17 @@ algorithm floatsqrt(
     );
 
     // SQUARE ROOT EXPONENT IS HALF OF INPUT EXPONENT
-    uint50  start_ac <: ~exp[0,1] ? 1 : { 48b0, 1b1, a[22,1] };
-    uint48  start_x <: ~exp[0,1] ? { fp32( a ).fraction, 25b0 } : { a[0,22], 26b0 };
+    uint50  start_ac <:: ~exp[0,1] ? 1 : { 48b0, 1b1, a[22,1] };
+    uint48  start_x <:: ~exp[0,1] ? { fp32( a ).fraction, 25b0 } : { a[0,22], 26b0 };
     uint48  squareroot = uninitialised;
-    int10   squarerootexp <: ( exp >>> 1 );
+    int10   squarerootexp <:: ( exp >>> 1 );
     dofloatsqrt DOSQRT(
         start_ac <: start_ac,
         start_x <: start_x,
         q :> squareroot
     );
 
-    uint48  normalfraction <: squareroot[47,1] ? squareroot : { squareroot[0,47], 1b0 };
+    uint48  normalfraction <:: squareroot[47,1] ? squareroot : { squareroot[0,47], 1b0 };
 
     int10   roundexponent = uninitialised;
     uint48  roundfraction = uninitialised;
@@ -1327,7 +1316,7 @@ algorithm main(output int8 leds) {
     // uint7   opCode = 7b1001011; // FNMSUB
     // uint7   opCode = 7b1001111; // FNMADD
 
-    uint7   function7 = 7b0000100; // OPERATION SWITCH
+    uint7   function7 = 7b1101000; // OPERATION SWITCH
     // ADD = 7b0000000 SUB = 7b0000100 MUL = 7b0001000 DIV = 7b0001100 SQRT = 7b0101100
     // FSGNJ[N][X] = 7b0010000 function3 == 000 FSGNJ == 001 FSGNJN == 010 FSGNJX
     // MIN MAX = 7b0010100 function3 == 000 MIN == 001 MAX

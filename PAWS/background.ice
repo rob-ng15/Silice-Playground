@@ -96,10 +96,10 @@ algorithm background(
                                     case 3b100: { copper_execute = ( pix_x == value ); }
                                     case 3b101: { copper_execute = ( copper_variable == ( bitvalue ? pix_x : pix_y ) ); }
                                     case 3b110: {
-                                        switch( flag ) {
-                                            case 3b001: { copper_variable = value; }
-                                            case 3b010: { copper_variable = copper_variable + value; }
-                                            default: { copper_variable = copper_variable - value; }
+                                        onehot( flag ) {
+                                            case 0: { copper_variable = value; }
+                                            case 1: { copper_variable = copper_variable + value; }
+                                            case 2: { copper_variable = copper_variable - value; }
                                         }
                                         copper_branch = 1;
                                     }

@@ -913,7 +913,7 @@ void gpudemo( void ) {
     gpu_cs();
     tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Colour Blitter Test" );
     for( i = 0; i < 128; i++ ) {
-        gpu_colourblit( rng( 352 ) - 16, rng( 256 ) - 8, rng( 9 ), rng( 4 ), rng(4) );
+        gpu_colourblit( rng( 352 ) - 16, rng( 256 ) - 8, rng( 9 ), rng( 4 ), rng(8) );
     }
     sleep( 1000, 0 );
 
@@ -927,7 +927,7 @@ void gpudemo( void ) {
     set_vector_vertex( 0, 4, 1, 0, 0 );
     set_vector_vertex( 0, 5, 0, 0, 0 );
     for( i = 0; i < 128; i++ ) {
-        draw_vector_block( 0, rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng(8), rng(4) );
+        draw_vector_block( 0, rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng(8), rng(8) );
     }
     sleep( 1000, 0 );
 
@@ -977,25 +977,25 @@ void spritedemo( void ) {
                     set_tilemap_tile( LOWER_LAYER, x, y, 1, TRANSPARENT, BLUE, 0 );
                     break;
                 case '2':
-                    set_tilemap_tile( LOWER_LAYER, x, y, 1, TRANSPARENT, BLUE, TM_REFLECT_X );
+                    set_tilemap_tile( LOWER_LAYER, x, y, 1, TRANSPARENT, BLUE, REFLECT_X );
                     break;
                 case '3':
-                    set_tilemap_tile( LOWER_LAYER, x, y, 1, TRANSPARENT, BLUE, TM_REFLECT_X | TM_REFLECT_Y );
+                    set_tilemap_tile( LOWER_LAYER, x, y, 1, TRANSPARENT, BLUE, REFLECT_X | REFLECT_Y );
                     break;
                 case '4':
-                    set_tilemap_tile( LOWER_LAYER, x, y, 1, TRANSPARENT, BLUE, TM_REFLECT_Y );
+                    set_tilemap_tile( LOWER_LAYER, x, y, 1, TRANSPARENT, BLUE, REFLECT_Y );
                     break;
                 case '5':
                     set_tilemap_tile( LOWER_LAYER, x, y, 2, TRANSPARENT, BLUE, 0 );
                     break;
                 case '6':
-                    set_tilemap_tile( LOWER_LAYER, x, y, 2, TRANSPARENT, BLUE, TM_REFLECT_X );
+                    set_tilemap_tile( LOWER_LAYER, x, y, 2, TRANSPARENT, BLUE, REFLECT_X );
                     break;
                 case '7':
                     set_tilemap_tile( LOWER_LAYER, x, y, 3, TRANSPARENT, BLUE, 0 );
                     break;
                 case '8':
-                    set_tilemap_tile( LOWER_LAYER, x, y, 3, TRANSPARENT, BLUE, TM_REFLECT_Y );
+                    set_tilemap_tile( LOWER_LAYER, x, y, 3, TRANSPARENT, BLUE, REFLECT_Y );
                     break;
             }
         }

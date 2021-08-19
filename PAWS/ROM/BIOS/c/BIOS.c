@@ -1,6 +1,5 @@
 #include "PAWS.h"
 
-
 typedef unsigned int size_t;
 
 // BACKGROUND PATTERN GENERATOR
@@ -33,6 +32,39 @@ typedef unsigned int size_t;
 #define GREY1 0x15
 #define GREY2 0x2a
 #define ORANGE 0x38
+
+// PAWS LOGO BLITTER TILE
+unsigned short PAWSLOGO[] = {
+    0b0000000001000000,
+    0b0000100011100000,
+    0b0001110011100000,
+    0b0001110011100000,
+    0b0001111011100100,
+    0b0000111001001110,
+    0b0010010000001110,
+    0b0111000000001110,
+    0b0111000111001100,
+    0b0111001111110000,
+    0b0011011111111000,
+    0b0000011111111000,
+    0b0000011111111100,
+    0b0000111111111100,
+    0b0000111100001000,
+    0b0000010000000000
+};
+
+// SDCARD BLITTER TILES
+unsigned short sdcardtiles[] = {
+    // CARD
+    0x0000, 0x0000, 0x0ec0, 0x08a0, 0xea0, 0x02a0, 0x0ec0, 0x0000,
+    0x0a60, 0x0a80, 0x0e80, 0xa80, 0x0a60, 0x0000, 0x0000, 0x0000,
+    // SDHC
+    0x3ff0, 0x3ff8, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ff8, 0x1ffc, 0x1ffc,
+    0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc,
+    // LED INDICATOR
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0018, 0x0018, 0x0000
+};
 
 // RISC-V CSR FUNCTIONS
 unsigned int CSRisa() {
@@ -180,6 +212,11 @@ void gpu_outputstring( unsigned char colour, short x, short y, char *s, unsigned
         x = x + ( 8 << size );
     }
 }
+void gpu_outputstringcentre( unsigned char colour, short y, char *s, unsigned char size ) {
+    gpu_rectangle( TRANSPARENT, 0, y, 319, y + ( 8 << size ) - 1 );
+    gpu_outputstring( colour, 160 - ( ( ( 8 << size ) * strlen(s) ) >> 1) , y, s, size );
+}
+
 // SET THE BLITTER TILE to the 16 x 16 pixel bitmap
 void set_blitter_bitmap( unsigned char tile, unsigned short *bitmap ) {
     *BLIT_WRITER_TILE = tile;
@@ -210,37 +247,10 @@ void gpu_pixelblock_stop( void ) {
     *PB_STOP = 3;
 }
 
-// CHARACTER MAP FUNCTIONS
-// The character map is an 80 x 30 character window with a 256 character 8 x 16 pixel character generator ROM )
-// NO SCROLLING, CURSOR WRAPS TO THE TOP OF THE SCREEN
-
 // CLEAR THE CHARACTER MAP
 void tpu_cs( void ) {
     while( *TPU_COMMIT );
     *TPU_COMMIT = 3;
-}
-
-// POSITION THE CURSOR to (x,y) and set background and foreground colours
-void tpu_set(  unsigned char x, unsigned char y, unsigned char background, unsigned char foreground ) {
-    while( *TPU_COMMIT );
-    *TPU_X = x; *TPU_Y = y; *TPU_BACKGROUND = background; *TPU_FOREGROUND = foreground; *TPU_COMMIT = 1;
-}
-
-// OUTPUT A NULL TERMINATED STRING TO THE CHARACTER MAP
-void tpu_outputstring( char *s ) {
-    while( *s ) {
-        while( *TPU_COMMIT );
-        *TPU_CHARACTER = *s; *TPU_COMMIT = 2;
-        s++;
-    }
-}
-
-void tpu_outputstringcentre( unsigned char y, unsigned char background, unsigned char foreground, char *s ) {
-    while( *TPU_COMMIT );
-    *TPU_Y = y;
-    *TPU_COMMIT = 4;
-    tpu_set( 40 - ( strlen(s) >> 1 ), y, background, foreground );
-    tpu_outputstring( s );
 }
 
 // SET THE TILEMAP TILE at (x,y) to tile with colours background and foreground
@@ -285,19 +295,6 @@ unsigned char tilemap_scrollwrapclear( unsigned char tm_layer, unsigned char act
     }
     return( tm_layer ? *UPPER_TM_SCROLLWRAPCLEAR : *LOWER_TM_SCROLLWRAPCLEAR );
 }
-
-// SDCARD BLITTER TILES
-unsigned short sdcardtiles[] = {
-    // CARD
-    0x0000, 0x0000, 0x0ec0, 0x08a0, 0xea0, 0x02a0, 0x0ec0, 0x0000,
-    0x0a60, 0x0a80, 0x0e80, 0xa80, 0x0a60, 0x0000, 0x0000, 0x0000,
-    // SDHC
-    0x3ff0, 0x3ff8, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ff8, 0x1ffc, 0x1ffc,
-    0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc,
-    // LED INDICATOR
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0018, 0x0018, 0x0000
-};
 
 // SMT START STOP
 void SMTSTOP( void ) {
@@ -408,27 +405,15 @@ void sd_readFile( unsigned short filenumber, unsigned char * copyAddress ) {
     } while( nextCluster != 0xffff );
 }
 
-void draw_riscv_logo( void ) {
-    gpu_rectangle( ORANGE, 0, 0, 100, 100 );
-    gpu_triangle( WHITE, 100, 33, 100, 100, 50, 100 );
-    gpu_triangle( DKBLUE, 100, 50, 100, 100, 66, 100 );
-    gpu_rectangle( DKBLUE, 0, 0, 33, 50 );
-    gpu_circle( WHITE, 25, 25, 26, 1 );
-    gpu_rectangle( WHITE, 0, 0, 25, 12 );
-    gpu_circle( DKBLUE, 25, 25, 12, 1 );
-    gpu_triangle( WHITE, 0, 33, 67, 100, 0, 100 );
-    gpu_triangle( DKBLUE, 0, 50, 50, 100, 0, 100 );
-    gpu_rectangle( DKBLUE, 0, 12, 25, 37 );
-    gpu_rectangle( DKBLUE, 0, 37, 8, 100 );
-}
-
-void set_sdcard_bitmap( void ) {
-    set_blitter_bitmap( 0, &sdcardtiles[0] );
-    set_blitter_bitmap( 1, &sdcardtiles[16] );
-    set_blitter_bitmap( 2, &sdcardtiles[32] );
+void draw_paws_logo( void ) {
+    set_blitter_bitmap( 3, &PAWSLOGO[0] );
+    gpu_blit( BLUE, 2, 2, 3, 2 );
 }
 
 void draw_sdcard( void  ) {
+    set_blitter_bitmap( 0, &sdcardtiles[0] );
+    set_blitter_bitmap( 1, &sdcardtiles[16] );
+    set_blitter_bitmap( 2, &sdcardtiles[32] );
     gpu_blit( BLUE, 256, 2, 1, 2 );
     gpu_blit( WHITE, 256, 2, 0, 2 );
 }
@@ -450,14 +435,18 @@ void reset_display( void ) {
 }
 
 void displayfilename( void ) {
-    tpu_outputstringcentre( 20, TRANSPARENT, WHITE, "Current PAW File:" );
-    for( unsigned short i = 0; i < 8; i++ ) {
-        // DISPLAY FILENAME
-        gpu_rectangle( TRANSPARENT, 0, 192, 319, 224 );
-        for( i = 0; i < 8; i++ ) {
-            gpu_character_blit( WHITE, 32 + i * 32, 192, ROOTDIRECTORY[SELECTEDFILE].filename[i], 2);
+    unsigned char displayname[9], i, j;
+    gpu_outputstringcentre( WHITE, 144, "Current PAW File:", 0 );
+    for( i = 0; i < 9; i++ ) {
+        displayname[i] = 0;
+    }
+    j = 0;
+    for( i = 0; i < 8; i++ ) {
+        if( ROOTDIRECTORY[SELECTEDFILE].filename[i] != ' ' ) {
+            displayname[j++] = ROOTDIRECTORY[SELECTEDFILE].filename[i];
         }
     }
+    gpu_outputstringcentre( WHITE, 176, displayname, 2 );
 }
 
 void waitbuttonrelease( void ) {
@@ -502,35 +491,28 @@ void main( void ) {
     // KEYBOARD INTO JOYSTICK MODE
     *PS2_MODE = 0;
 
-    // SETUP INITIAL WELCOME MESSAGE
-    draw_riscv_logo();
-    set_sdcard_bitmap();
-    draw_sdcard();
-    gpu_outputstring( WHITE, 104, 4, "PAWS", 2 );
-    tpu_set( 25, 4, TRANSPARENT, WHITE ); tpu_outputstring( "RISC-V RV32I" );
-    isa = CSRisa();
-    if( isa & 0b1000000000000 ) tpu_outputstring( "M" );
-    if( isa & 1 ) tpu_outputstring( "A" );
-    if( isa & 0b100000 ) tpu_outputstring( "F" );
-    if( isa & 0b100 ) tpu_outputstring( "C" );
-    if( isa & 0b10 ) tpu_outputstring( "B" );
-    tpu_outputstring( " CPU" );
-
+    // DRAW LOGO AND SDCARD
     // COLOUR BARS ON THE TILEMAP - SCROLL WITH SMT THREAD
+    draw_paws_logo();
+    draw_sdcard();
     for( i = 0; i < 42; i++ ) {
-        set_tilemap_tile( 0, i, 23, 0, i, 0 );
-        set_tilemap_tile( 1, i, 29, 0, 63 - i, 0 );
+        set_tilemap_tile( 0, i, 21, 0, i, 0 );
+        set_tilemap_tile( 1, i, 27, 0, 63 - i, 0 );
     }
     SMTSTART( (unsigned int )smtthread );
+
+    gpu_outputstring( WHITE, 66, 2, "PAWS", 2 );
+    gpu_outputstring( WHITE, 66, 34, "Risc-V RV32IMAFC CPU", 0 );
+    gpu_outputstringcentre( GREY2, 224, "PAWS for ULX3S by Rob S in Silice", 0);
 
     // CLEAR UART AND PS/2 BUFFERS
     while( *UART_STATUS & 1 ) { char temp = *UART_DATA; }
     while( *PS2_AVAILABLE ) { short temp = *PS2_DATA; }
 
-    tpu_outputstringcentre( 17, TRANSPARENT, RED, "Waiting for SDCARD" );
-    sleep(2000);
+    gpu_outputstringcentre( RED, 72, "Waiting for SDCARD", 0 );
+    sleep( 1000 );
     sd_readSector( 0, MBR );
-    tpu_outputstringcentre( 17, TRANSPARENT, GREEN, "SDCARD Ready" );
+    gpu_outputstringcentre( GREEN, 72, "SDCARD Ready", 0 );
 
     PARTITION = (PartitionTable *) &MBR[ 0x1BE ];
 
@@ -542,7 +524,9 @@ void main( void ) {
             break;
         default:
             // UNKNOWN PARTITION TYPE
-            tpu_outputstringcentre( 17, TRANSPARENT, RED, "Please Insert A FAT16 FORMATTED SDCARD and Press RESET" );
+            gpu_outputstringcentre( RED, 72, "ERROR", 2 );
+            gpu_outputstringcentre( RED, 120, "Please Insert A FAT16 FORMATTED SDCARD", 0 );
+            gpu_outputstringcentre( RED, 136, "Press RESET", 0 );
             while(1) {}
             break;
     }
@@ -561,9 +545,10 @@ void main( void ) {
     sd_readFAT();
 
     // FILE SELECTOR
-    tpu_outputstringcentre( 17, TRANSPARENT, WHITE, "Select PAW File" );
-    tpu_outputstringcentre( 18, TRANSPARENT, WHITE, "SELECT USING FIRE 1 - SCROLL USING LEFT & RIGHT" );
-    tpu_outputstringcentre( 20, TRANSPARENT, RED, "No PAW Files Found" );
+    gpu_outputstringcentre( WHITE, 72, "Select PAW File", 0 );
+    gpu_outputstringcentre( WHITE, 88, "SELECT USING FIRE 1", 0 );
+    gpu_outputstringcentre( WHITE, 96, "SCROLL USING LEFT & RIGHT", 0 );
+    gpu_outputstringcentre( RED, 144, "No PAW Files Found", 0 );
     SELECTEDFILE = 0xffff;
 
     // FILE SELECTOR, LOOP UNTIL FILE SELECTED (FIRE 1 PRESSED WITH A VALID FILE)
@@ -587,13 +572,15 @@ void main( void ) {
         }
     }
 
-    tpu_outputstringcentre( 17, TRANSPARENT, WHITE, "PAW File" );
-    tpu_outputstringcentre( 18, TRANSPARENT, WHITE, "SELECTED" );
+    gpu_outputstringcentre( WHITE, 72, "PAW File", 0 );
+    gpu_outputstringcentre( WHITE, 80, "SELECTED", 0 );
+    gpu_outputstringcentre( WHITE, 88, "", 0 );
+    gpu_outputstringcentre( WHITE, 96, "", 0 );
     sleep( 500 );
-    tpu_outputstringcentre( 18, TRANSPARENT, WHITE, "LOADING" );
+    gpu_outputstringcentre( WHITE, 80, "LOADING", 0 );
     sd_readFile( SELECTEDFILE, (unsigned char *)0x10000000 );
-    tpu_outputstringcentre( 17, TRANSPARENT, WHITE, "LOADED" );
-    tpu_outputstringcentre( 18, TRANSPARENT, WHITE, "LAUNCHING" );
+    gpu_outputstringcentre( WHITE, 72, "LOADED", 0 );
+    gpu_outputstringcentre( WHITE, 80, "LAUNCHING", 0 );
     sleep(500);
 
     // STOP SMT

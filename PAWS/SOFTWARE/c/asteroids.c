@@ -708,7 +708,7 @@ void draw_score( void ) {
 
 void draw_lives( void ) {
     for( unsigned short i = 0; i < lives; i++ ) {
-        draw_vector_block( 0, WHITE, 304, 16 + i * 16, 0, i );
+        draw_vector_block( 0, WHITE, 304, 16 + i * 16, 0, ROTATE0 + i );
     }
 }
 

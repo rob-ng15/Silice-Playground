@@ -1378,7 +1378,7 @@ short missile_actions( void ) {
     } else {
         // MOVE MISSILE
         set_sprite_attribute( UPPER_LAYER, 1, SPRITE_COLOUR, framebuffer ? GREEN : LTGREEN );
-        update_sprite( UPPER_LAYER, 1, 0b1111001100000 );
+        update_sprite( UPPER_LAYER, 1, 0b1111100100000 );
     }
 
     return( points );
@@ -1460,11 +1460,12 @@ void play( void ) {
         // ADJUST SIZE OF ALIEN GRID
         trim_aliens();
         if( Ship.state < SHIPEXPLODE ) {
-            // MOVE ALIENS
-            move_aliens();
             // HANDLE MISSILES AND BOMBS
             Ship.score += missile_actions();
             bomb_actions();
+
+            // MOVE ALIENS
+            move_aliens();
         }
 
         player_actions();
@@ -1475,8 +1476,7 @@ void play( void ) {
         draw_aliens();
 
         // SWITCH THE FRAMEBUFFER
-        framebuffer = !framebuffer;
-        bitmap_display( framebuffer );
+        framebuffer = !framebuffer; bitmap_display( framebuffer );
 
         draw_status();
     }
@@ -1529,7 +1529,7 @@ void missile_demo( void ) {
         }
     } else {
         // MOVE MISSILE
-        update_sprite( UPPER_LAYER, 1, 0b1111101000000 );
+        update_sprite( UPPER_LAYER, 1, 0b1111100100000 );
     }
 }
 
@@ -1635,16 +1635,14 @@ void attract( void ) {
                     trim_aliens();
                     // MOVE ALIENS
                     if( Ship.state < SHIPEXPLODE ) {
-                        // MOVE ALIENS
-                        move_aliens();
-                        // HANDLE MISSILES AND BOMBS
+                        // HANDLE BOMBS
                         missile_demo();
                         bomb_actions();
+                        // MOVE ALIENS
+                        move_aliens();
                     }
                     // MOVE THE DEMO SHIP
-                    while( !move_amount ) {
-                        move_amount = rng( 64 ) - 32;
-                    }
+                    while( !move_amount ) { move_amount = rng( 64 ) - 32; }
                     if( move_amount < 0 ) {
                         Ship.x += ( Ship.x > 0 ) ? -2 : 0;
                         move_amount = ( Ship.x > 0 ) ? move_amount + 1 : 0;

@@ -599,7 +599,7 @@ algorithm bitmap_memmap(
     int10   vector_block_xc = uninitialized;
     int10   vector_block_yc = uninitialized;
     uint3   vector_block_scale = uninitialized;
-    uint2   vector_block_rotation = uninitialized;
+    uint3   vector_block_action = uninitialized;
     uint1   draw_vector = uninitialized;
     uint5   vertices_writer_block = uninitialized;
     uint6   vertices_writer_vertex = uninitialized;
@@ -653,7 +653,7 @@ algorithm bitmap_memmap(
         vector_block_xc <: vector_block_xc,
         vector_block_yc <: vector_block_yc,
         vector_block_scale <: vector_block_scale,
-        vector_block_rotation <: vector_block_rotation,
+        vector_block_action <: vector_block_action,
         draw_vector <: draw_vector,
         vertices_writer_block <: vertices_writer_block,
         vertices_writer_vertex <: vertices_writer_vertex,
@@ -687,7 +687,7 @@ algorithm bitmap_memmap(
                     case 8h24: { vector_block_xc = writeData; }
                     case 8h26: { vector_block_yc = writeData; }
                     case 8h28: { vector_block_scale = writeData; }
-                    case 8h2a: { vector_block_rotation = writeData; }
+                    case 8h2a: { vector_block_action = writeData; }
                     case 8h2c: { draw_vector = 1; }
 
                     case 8h30: { vertices_writer_block = writeData; }

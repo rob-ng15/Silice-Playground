@@ -486,13 +486,14 @@ void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned char
 }
 
 // COLOURBLIT A 16 x 16 ( blit_size == 1 doubled to 32 x 32 ) TILE ( from tile 0 to 31 ) to (x1,y1)
-// ROTATION == 0 0 == 1 90 == 2 180 == 3 270
-void gpu_colourblit( short x1, short y1, short tile, unsigned char blit_size, unsigned char rotation ) {
+// { rotate/reflect, ACTION } ROTATION == 4 0 == 5 90 == 6 180 == 7 270
+// == 1 REFLECT X, == 2 REFLECT Y
+void gpu_colourblit( short x1, short y1, short tile, unsigned char blit_size, unsigned char action ) {
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = tile;
     *GPU_PARAM1 = blit_size;
-    *GPU_PARAM2 = rotation;
+    *GPU_PARAM2 = action;
     wait_gpu();
     *GPU_WRITE = 9;
 }
@@ -645,14 +646,16 @@ void gpu_pixelblock_stop( void ) {
 // WHEN ACTIVATED draws lines from a vector block (x0,y0) to (x1,y1), (x1,y1) to (x2,y2), (x2,y2) to (x3,y3) until (x15,y15) or an inactive vertex is encountered
 
 // START DRAWING A VECTOR BLOCK centred at (xc,yc) in colour
-void draw_vector_block( unsigned char block, unsigned char colour, short xc, short yc, unsigned char scale, unsigned char rotation ) {
+// { rotate/reflect, ACTION } ROTATION == 4 0 == 5 90 == 6 180 == 7 270
+// == 1 REFLECT X, == 2 REFLECT Y
+void draw_vector_block( unsigned char block, unsigned char colour, short xc, short yc, unsigned char scale, unsigned char action ) {
     while( *VECTOR_DRAW_STATUS );
     *VECTOR_DRAW_BLOCK = block;
     *VECTOR_DRAW_COLOUR = colour;
     *VECTOR_DRAW_XC = xc;
     *VECTOR_DRAW_YC = yc;
     *VECTOR_DRAW_SCALE = scale;
-    *VECTOR_DRAW_ROTATION = rotation;
+    *VECTOR_DRAW_ACTION = action;
     *VECTOR_DRAW_START = 1;
 }
 

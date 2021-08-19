@@ -12,7 +12,7 @@ typedef unsigned int size_t;
 #define DKBLUE 0x02
 #define GREEN 0x0c
 #define DKGREEN 0x08
-#define CYAN 0x0f
+// #define CYAN 0x0f
 #define RED 0x30
 #define DKRED 0x20
 #define MAGENTA 0x33
@@ -22,6 +22,39 @@ typedef unsigned int size_t;
 #define GREY1 0x15
 #define GREY2 0x2a
 #define ORANGE 0x38
+
+// PAWS LOGO BLITTER TILE
+unsigned short PAWSLOGO[] = {
+    0b0000000001000000,
+    0b0000100011100000,
+    0b0001110011100000,
+    0b0001110011100000,
+    0b0001111011100100,
+    0b0000111001001110,
+    0b0010010000001110,
+    0b0111000000001110,
+    0b0111000111001100,
+    0b0111001111110000,
+    0b0011011111111000,
+    0b0000011111111000,
+    0b0000011111111100,
+    0b0000111111111100,
+    0b0000111100001000,
+    0b0000010000000000
+};
+
+// SDCARD BLITTER TILES
+unsigned short sdcardtiles[] = {
+    // CARD
+    0x0000, 0x0000, 0x0ec0, 0x08a0, 0xea0, 0x02a0, 0x0ec0, 0x0000,
+    0x0a60, 0x0a80, 0x0e80, 0xa80, 0x0a60, 0x0000, 0x0000, 0x0000,
+    // SDHC
+    0x3ff0, 0x3ff8, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ff8, 0x1ffc, 0x1ffc,
+    0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc,
+    // LED INDICATOR
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0018, 0x0018, 0x0000
+};
 
 // PACMAN GHOST GRAPHICS - 3 LAYERS - BODY - EYE WHITES - PUPILS
 // BODY 2 EACH FOR RIGHT, DOWN, LEFT, UP
@@ -527,6 +560,10 @@ void gpu_outputstring( unsigned char colour, short x, short y, char *s, unsigned
         x = x + ( 8 << size );
     }
 }
+void gpu_outputstringcentre( unsigned char colour, short y, char *s, unsigned char size ) {
+    gpu_rectangle( TRANSPARENT, 0, y, 319, y + ( 8 << size ) - 1 );
+    gpu_outputstring( colour, 160 - ( ( ( 8 << size ) * strlen(s) ) >> 1) , y, s, 0 );
+}
 // SET THE BLITTER TILE to the 16 x 16 pixel bitmap
 void set_blitter_bitmap( unsigned char tile, unsigned short *bitmap ) {
     *BLIT_WRITER_TILE = tile;
@@ -560,29 +597,6 @@ void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2,
 void tpu_cs( void ) {
     while( *TPU_COMMIT );
     *TPU_COMMIT = 3;
-}
-
-// POSITION THE CURSOR to (x,y) and set background and foreground colours
-void tpu_set(  unsigned char x, unsigned char y, unsigned char background, unsigned char foreground ) {
-    while( *TPU_COMMIT );
-    *TPU_X = x; *TPU_Y = y; *TPU_BACKGROUND = background; *TPU_FOREGROUND = foreground; *TPU_COMMIT = 1;
-}
-
-// OUTPUT A NULL TERMINATED STRING TO THE CHARACTER MAP
-void tpu_outputstring( char *s ) {
-    while( *s ) {
-        while( *TPU_COMMIT );
-        *TPU_CHARACTER = *s; *TPU_COMMIT = 2;
-        s++;
-    }
-}
-
-void tpu_outputstringcentre( unsigned char y, unsigned char background, unsigned char foreground, char *s ) {
-    while( *TPU_COMMIT );
-    *TPU_Y = y;
-    *TPU_COMMIT = 4;
-    tpu_set( 40 - ( strlen(s) >> 1 ), y, background, foreground );
-    tpu_outputstring( s );
 }
 
 // SET THE TILEMAP TILE at (x,y) to tile with colours background and foreground
@@ -743,31 +757,9 @@ void update_sprite( unsigned char sprite_layer, unsigned char sprite_number, uns
     }
 }
 
-// SDCARD BLITTER TILES
-unsigned short sdcardtiles[] = {
-    // CARD
-    0x0000, 0x0000, 0x0ec0, 0x08a0, 0xea0, 0x02a0, 0x0ec0, 0x0000,
-    0x0a60, 0x0a80, 0x0e80, 0xa80, 0x0a60, 0x0000, 0x0000, 0x0000,
-    // SDHC
-    0x3ff0, 0x3ff8, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ff8, 0x1ffc, 0x1ffc,
-    0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc, 0x3ffc,
-    // LED INDICATOR
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0018, 0x0018, 0x0000
-};
-
-void draw_riscv_logo( void ) {
-    gpu_rectangle( ORANGE, 0, 0, 100, 100 );
-    gpu_triangle( WHITE, 100, 33, 100, 100, 50, 100 );
-    gpu_triangle( DKBLUE, 100, 50, 100, 100, 66, 100 );
-    gpu_rectangle( DKBLUE, 0, 0, 33, 50 );
-    gpu_circle( WHITE, 25, 25, 26, 1 );
-    gpu_rectangle( WHITE, 0, 0, 25, 12 );
-    gpu_circle( DKBLUE, 25, 25, 12, 1 );
-    gpu_triangle( WHITE, 0, 33, 67, 100, 0, 100 );
-    gpu_triangle( DKBLUE, 0, 50, 50, 100, 0, 100 );
-    gpu_rectangle( DKBLUE, 0, 12, 25, 37 );
-    gpu_rectangle( DKBLUE, 0, 37, 8, 100 );
+void draw_paws_logo( void ) {
+    set_blitter_bitmap( 3, &PAWSLOGO[0] );
+    gpu_blit( BLUE, 2, 2, 3, 2 );
 }
 
 void set_sdcard_bitmap( void ) {
@@ -777,6 +769,7 @@ void set_sdcard_bitmap( void ) {
 }
 
 void draw_sdcard( void  ) {
+    set_sdcard_bitmap();
     gpu_blit( BLUE, 256, 2, 1, 2 );
     gpu_blit( WHITE, 256, 2, 0, 2 );
 }
@@ -857,27 +850,19 @@ void main( void ) {
     set_background( DKBLUE - 1, BLACK, BKG_SOLID );
 
     // SETUP INITIAL WELCOME MESSAGE
-    draw_riscv_logo();
-    set_sdcard_bitmap();
+    draw_paws_logo();
     draw_sdcard();
-    gpu_outputstring( WHITE, 104, 4, "PAWS", 2 );
-    tpu_set( 25, 4, TRANSPARENT, WHITE ); tpu_outputstring( "RISC-V RV32I" );
-    isa = CSRisa();
-    if( isa & 0b1000000000000 ) tpu_outputstring( "M" );
-    if( isa & 1 ) tpu_outputstring( "A" );
-    if( isa & 0b100000 ) tpu_outputstring( "F" );
-    if( isa & 0b100 ) tpu_outputstring( "C" );
-    if( isa & 0b10 ) tpu_outputstring( "B" );
-    tpu_outputstring( " CPU" );
+    gpu_outputstring( WHITE, 66, 2, "PAWS", 2 );
+    gpu_outputstring( WHITE, 66, 34, "Risc-V RV32IMAFC CPU", 0 );
 
     for( i = 0; i < 42; i++ ) {
         set_tilemap_tile( 0, i, 15, 0, i, 0 );
         set_tilemap_tile( 1, i, 29, 0, 63 - i, 0 );
     }
 
-    tpu_outputstringcentre( 9, TRANSPARENT, GREEN, "VERILATOR - SMT + FPU TEST" );
-    tpu_outputstringcentre( 10, TRANSPARENT, GREEN, "THREAD 0 - PACMAN SPRITES" );
-    tpu_outputstringcentre( 11, TRANSPARENT, GREEN, "THREAD 1 - FPU MANDELBROT" );
+    gpu_outputstringcentre( GREEN, 72, "VERILATOR - SMT + FPU TEST", 0 );
+    gpu_outputstringcentre( GREEN, 80, "THREAD 0 - PACMAN SPRITES", 0 );
+    gpu_outputstringcentre( GREEN, 88, "THREAD 1 - FPU MANDELBROT", 0 );
 
     SMTSTART( (unsigned int )smtthread );
 

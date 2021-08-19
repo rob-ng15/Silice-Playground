@@ -33,9 +33,9 @@ algorithm aluMdivideremain(
     input   uint32  divisor,
     output  uint32  result
 ) <autorun> {
-    uint1   quotientremaindersign <: ~dosign[0,1] ? dividend[31,1] ^ divisor[31,1] : 0;
-    uint32  dividend_unsigned <: ~dosign[0,1] ? ( dividend[31,1] ? -dividend : dividend ) : dividend;
-    uint32  divisor_unsigned <: ~dosign[0,1] ? ( divisor[31,1] ? -divisor : divisor ) : divisor;
+    uint1   quotientremaindersign <:: ~dosign[0,1] ? dividend[31,1] ^ divisor[31,1] : 0;
+    uint32  dividend_unsigned <:: ~dosign[0,1] ? ( dividend[31,1] ? -dividend : dividend ) : dividend;
+    uint32  divisor_unsigned <:: ~dosign[0,1] ? ( divisor[31,1] ? -divisor : divisor ) : divisor;
     uint32  result_quotient = uninitialised;
     uint32  result_remainder = uninitialised;
     uint1   DODIVIDEstart = uninitialised;
@@ -81,14 +81,56 @@ algorithm aluMmultiply(
     input   uint32  factor_2,
     output  uint32  result
 ) <autorun> {
-    uint2   dosigned <: dosign[1,1] ? ( dosign[0,1] ? 0 : 2 ) : 1;
-    uint1   productsign <: ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
-    uint32  factor_1_unsigned <: ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
-    uint32  factor_2_unsigned <: ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
+    uint2   dosigned <:: dosign[1,1] ? ( dosign[0,1] ? 0 : 2 ) : 1;
+    uint1   productsign <:: ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
+    uint32  factor_1_unsigned <:: ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
+    uint32  factor_2_unsigned <:: ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
     uint64  product64 = uninitialised;
-    uint64  product <: productsign ? -product64 : product64;
+    uint64  product <:: productsign ? -product64 : product64;
     douintmul UINTMUL( factor_1 <: factor_1_unsigned, factor_2 <: factor_2_unsigned, product :> product64 );
     always {
         result = product[ ( dosign == 0 ) ? 0 : 32, 32 ];
+    }
+}
+
+algorithm aluM(
+    input   uint1   start,
+    output  uint1   busy(0),
+    input   uint3   function3,
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+    output  uint32  result
+) <autorun> {
+    // M EXTENSION MULTIPLICATION AND DIVISION
+    int32   ALUMDresult = uninitialized;
+    uint1   ALUMDstart = uninitialized;
+    uint1   ALUMDbusy = uninitialized;
+    aluMdivideremain ALUMD(
+        dosign <: function3,
+        dividend <: sourceReg1,
+        divisor <: sourceReg2,
+        result :> ALUMDresult,
+        start <: ALUMDstart,
+        busy :> ALUMDbusy
+    );
+    int32   ALUMMresult = uninitialized;
+    aluMmultiply ALUMM(
+        dosign <: function3,
+        factor_1 <: sourceReg1,
+        factor_2 <: sourceReg2,
+        result :> ALUMMresult
+    );
+
+    ALUMDstart := 0;
+    while(1) {
+        if( start ) {
+            busy = 1;
+            if( function3[2,1] ) {
+                ALUMDstart = 1; while( ALUMDbusy ) {} result = ALUMDresult;
+            } else {
+                result = ALUMMresult;
+            }
+            busy = 0;
+        }
     }
 }

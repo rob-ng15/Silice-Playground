@@ -41,7 +41,7 @@ algorithm gpu_queue(
     input   int10   vector_block_xc,
     input   int10   vector_block_yc,
     input   uint3   vector_block_scale,
-    input   uint2   vector_block_rotation,
+    input   uint3   vector_block_action,
     input   uint1   draw_vector,
     input   uint5   vertices_writer_block,
     input   uint6   vertices_writer_vertex,
@@ -89,7 +89,7 @@ algorithm gpu_queue(
         vector_block_xc <: vector_block_xc,
         vector_block_yc <: vector_block_yc,
         vector_block_scale <: vector_block_scale,
-        vector_block_rotation <: vector_block_rotation,
+        vector_block_action <: vector_block_action,
         draw_vector <: draw_vector,
         vector_block_active :> vector_block_active,
         vertex <:> vertex,
@@ -1042,7 +1042,7 @@ algorithm colourblit(
     input   int10   y,
     input   uint5   param0,
     input   uint2   param1,
-    input   uint2   param2,
+    input   uint3   param2,
 
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
@@ -1062,17 +1062,18 @@ algorithm colourblit(
     // MULTIPLIER FOR THE SIZE
     uint2   gpu_param1 = uninitialised;
 
-    // ROTATION
-    uint2   gpu_param2 = uninitialised;
+    // ACTION - REFLECTION OR ROTATION
+    uint4   gpu_param2 = uninitialised;
 
     // TILE/CHARACTER TO BLIT
     uint5   gpu_tile = uninitialized;
 
-    // tile and character bitmap addresses - handling rotation
-    colourblittilemap.addr0 := ( gpu_param2 == 2b00 ) ? { gpu_tile, gpu_active_y[0,4], gpu_active_x[0,4] } :
-                                ( gpu_param2 == 2b01 ) ? { gpu_tile, gpu_active_x[0,4], 4b1111 - gpu_active_y[0,4] } :
-                                ( gpu_param2 == 2b10 ) ? { gpu_tile, 4b1111 - gpu_active_y[0,4], 4b1111 - gpu_active_x[0,4] } :
-                                { gpu_tile, 4b1111 - gpu_active_x[0,4], gpu_active_y[0,4] };
+    // tile and character bitmap addresses - handling rotation or reflection
+    colourblittilemap.addr0 := ( gpu_param2[2,1] ) ? ( gpu_param2[0,2] == 2b00 ) ? { gpu_tile, gpu_active_y[0,4], gpu_active_x[0,4] } :
+                                ( gpu_param2[0,2] == 2b01 ) ? { gpu_tile, gpu_active_x[0,4], 4b1111 - gpu_active_y[0,4] } :
+                                ( gpu_param2[0,2] == 2b10 ) ? { gpu_tile, 4b1111 - gpu_active_y[0,4], 4b1111 - gpu_active_x[0,4] } :
+                                { gpu_tile, 4b1111 - gpu_active_x[0,4], gpu_active_y[0,4] } :
+                                { gpu_tile, gpu_param2[1,1] ? 4b1111 - gpu_active_y[0,4] :  gpu_active_y[0,4], gpu_param2[1,1] ? 4b1111 - gpu_active_x[0,4] : gpu_active_x[0,4] };
 
     bitmap_x_write := gpu_x1 + ( gpu_active_x << gpu_param1 ) + gpu_x2;
     bitmap_y_write := gpu_y1 + ( gpu_active_y << gpu_param1 ) + gpu_y2;
@@ -1181,7 +1182,7 @@ algorithm centreplusdelta(
     input   int10   yc,
     input   uint6   dy,
     input   uint3   scale,
-    input   uint2   rotation,
+    input   uint3   action,
     output  int10   xdx,
     output  int10   ydy
 ) <autorun> {
@@ -1189,22 +1190,32 @@ algorithm centreplusdelta(
     int10 deltay <: { {5{dy[5,1]}}, dy };
 
     always {
-        switch( rotation ) {
-            case 0: {
-                xdx = xc + ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
-                ydy = yc + ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
-            }
+        switch( action[2,1] ) {
             case 1: {
-                xdx = xc - ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
-                ydy = yc + ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
+                // ROTATION
+                switch( action[0,2] ) {
+                    case 0: {
+                        xdx = xc + ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
+                        ydy = yc + ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
+                    }
+                    case 1: {
+                        xdx = xc - ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
+                        ydy = yc + ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
+                    }
+                    case 2: {
+                        xdx = xc - ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
+                        ydy = yc - ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
+                    }
+                    case 3: {
+                        xdx = xc + ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
+                        ydy = yc - ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
+                    }
+                }
             }
-            case 2: {
-                xdx = xc - ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
-                ydy = yc - ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
-            }
-            case 3: {
-                xdx = xc + ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
-                ydy = yc - ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
+            // REFLECTION
+            case 0: {
+                xdx = action[0,1] ? xc - ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) ) : xc + ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
+                ydy = action[1,1] ? yc - ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) ) : yc + ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
             }
         }
     }
@@ -1229,7 +1240,7 @@ algorithm vectors(
     input   int10   vector_block_xc,
     input   int10   vector_block_yc,
     input   uint3   vector_block_scale,
-    input   uint2   vector_block_rotation,
+    input   uint3   vector_block_action,
     input   uint1   draw_vector,
     output  uint1   vector_block_active(0),
 
@@ -1252,7 +1263,7 @@ algorithm vectors(
         dx <: deltax,
         dy <: deltay,
         scale <: vector_block_scale,
-        rotation <: vector_block_rotation,
+        action <: vector_block_action,
         xdx :> xdx,
         ydy :> ydy
     );

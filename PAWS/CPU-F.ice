@@ -74,7 +74,7 @@ algorithm PAWSCPU(
         i32 :> i32
     );
 
-    // RISC-V REGISTER WRITER
+    // RISC-V MEMORY ACCESS FLAGS
     uint1   memoryload := ( opCode[2,5] == 5b00000 ) | ( opCode[2,5] == 5b00001 ) | ( ( opCode[2,5] == 5b01011 ) & ( function7[2,5] != 5b00011 ) );
     uint1   memorystore := ( opCode[2,5] == 5b01000 ) | ( opCode[2,5] == 5b01001 ) | ( ( opCode[2,5] == 5b01011 ) & ( function7[2,5] != 5b00010 ) );
 
@@ -220,31 +220,26 @@ algorithm PAWSCPU(
     }
 
     while(1) {
-        onehot( FSM ) {
-            case 0: {
-                ( address, readmemory ) = fetch( PC, memorybusy );                              // FETCH POTENTIAL COMPRESSED OR 1ST 16 BITS
-                compressed = ( readdata[0,2] != 2b11 );
-                switch( readdata[0,2] ) {
-                    default: { instruction = i32; }                                             // EXPAND COMPRESSED INSTRUCTION
-                    case 2b11: {                                                                // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
-                        instruction[0,16] = readdata; ( address, readmemory ) = fetch( PCplus2, memorybusy ); instruction[16,16] = readdata;
-                    }
-                }
-                FSM = 4b0010;
-            }
-            case 1: { FSM = 4b0100; }                                                           // ALLOW DECODE, REGISTER FETCHADDRESS GENERATION
-            case 2: {                                                                           // EXECUTE
-                switch( memoryload ) { case 1: { ( address, readmemory, memoryinput ) = load( accesssize, loadAddress, memorybusy, readdata ); } case 0: {} }
-                EXECUTEstart = 1; while( EXECUTEbusy ) {}
-                switch( memorystore ) { case 1: { ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy ); } case 0: {} }
-                FSM = 4b1000;
-            }
-            case 3: {
-                // UPDATE PC AND SMT
-                switch( SMT ) { case 1b1: { pcSMT = newPC; SMT = 0; } case 1b0: { pc = newPC; SMT = SMTRUNNING; pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC; } }
-                FSM = 4b0001;
+        ( address, readmemory ) = fetch( PC, memorybusy );                              // FETCH POTENTIAL COMPRESSED OR 1ST 16 BITS
+        compressed = ( readdata[0,2] != 2b11 );
+        switch( readdata[0,2] ) {
+            default: { instruction = i32; }                                             // EXPAND COMPRESSED INSTRUCTION
+            case 2b11: {                                                                // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
+                instruction[0,16] = readdata; ( address, readmemory ) = fetch( PCplus2, memorybusy ); instruction[16,16] = readdata;
             }
         }
+        FSM = 4b0010;
+        ++:
+        FSM = 4b0100;
+        ++:
+        if( memoryload ) { ( address, readmemory, memoryinput ) = load( accesssize, loadAddress, memorybusy, readdata ); }
+        EXECUTEstart = 1; while( EXECUTEbusy ) {}
+        if( memorystore ) { ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy ); }
+        FSM = 4b1000;
+        ++:
+        // UPDATE PC AND SMT
+        if( SMT ) { pcSMT = newPC; SMT = 0; } else { pc = newPC; SMT = SMTRUNNING; pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC; }
+        FSM = 4b0001;
     } // RISC-V
 }
 
@@ -393,9 +388,10 @@ algorithm cpuexecute(
                     }
                 }
                 default: {                                                                  // FPU, ALUI or ALUR
-                    switch( opCode[6,1] ) {
-                        case 0: { ALUstart = 1; while( ALUbusy ) {} frd = 0; result = ALUresult; }
-                        case 1: { FPUstart = 1; while( FPUbusy ) {} CSRupdateFPUflags = 1; frd = FPUfrd; result = FPUresult; }
+                    if( opCode[6,1] ) {
+                        FPUstart = 1; while( FPUbusy ) {} CSRupdateFPUflags = 1; frd = FPUfrd; result = FPUresult;
+                    } else {
+                        ALUstart = 1; while( ALUbusy ) {} frd = 0; result = ALUresult;
                     }
                 }
             }
