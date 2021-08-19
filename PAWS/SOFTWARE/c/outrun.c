@@ -6,13 +6,16 @@ typedef struct { int ct; float tu; } roadsegment;
 #define MAXSEGMENT 6
 roadsegment road[]={
     {10,0},
-    {6,-0.25},
+    {6,-1},
     {8,0},
-    {4,.375},
-    {10,0.05},
+    {4,1.5},
+    {10,0.2},
     {4,0},
-    {5,-0.25}
+    {5,-1}
 };
+
+int camcnr = 0, camseg = 0;
+float camx = 0, camy = 0, camz = 0;
 
 static inline float max(float x, float y) { return x>y?x:y; }
 static inline float min(float x, float y) { return x<y?x:y; }
@@ -34,50 +37,60 @@ static inline vec4 make_vec4(float x, float y, float z, float w ) {
 
 vec3 project( float x, float y, float z ) {
     float scale = 64/z;
-    return( make_vec3( x* scale + 64, y * scale + 64, scale ) );
+    return( make_vec3( x* scale + 160, y * scale + 120, scale ) );
 }
 
-vec3 skew( float x, float y, float z, float xd, float yd ) {
-    return( make_vec3(x+z*xd,y+z*yd,z) );
+void advance( int *cnr, int *seg ) {
+    *seg = *seg + 1;
+    if( *seg > road[ *cnr ].ct ) {
+        *seg = 1;
+        *cnr = *cnr + 1;
+        if( *cnr > MAXSEGMENT ) {
+            cnr = 0;
+        }
+    }
 }
 
-float camcnr = 1, camseg = 1;
-float camx = 0, camy = 0, camz = 0;
+void update() {
+    camz += 0.1;
+    if( camz > 1 ) {
+        camz -= 1;
+        advance( &camcnr, &camseg );
+    }
+}
 
-int main() {
-    INITIALISEMEMORY();
-    float camang = camz * road[ (int)camcnr ].tu;
+void draw() {
+    float x = 0, y = 1, z = 1;
+    float camang = camz * road[camcnr].tu;
     float xd = -camang, yd = 0, zd = 1;
-    float cx = skew( camx, camy, camz, xd, yd ).x;;
-    float cy = skew( camx, camy, camz, xd, yd ).y;;
-    float cz = skew( camx, camy, camz, xd, yd ).z;;
-    float x = -cx, y = -cy + 2, z = -cz + 2;
+
+    int cnr = camcnr, seg = camseg;
     float width;
-    float cnr = camcnr, seg = camseg;
-    vec3 p, pp;
+    vec3 p;
 
     gpu_cs();
-    pp = project( x, y, z );
 
     for( int i = 1; i < 30; i++ ) {
-        // move forward
-        x+=xd; y+=yd; z+=zd;
-
         p = project( x, y, z );
+        width = 3 * p.z;
+        gpu_line( WHITE, p.x - width, p.y, p.x + width, p.y );
 
-        // turn
-        xd+=road[(int)cnr].tu;
+        x += xd;
+        y += yd;
+        z += zd;
 
-        // advance along road
-        seg++;
-        if(seg>road[(int)cnr].ct) {
-            seg=1;
-            cnr++;
-            if(cnr>MAXSEGMENT)cnr=1;
-        }
+        xd+=road[cnr].tu;
+        advance( &cnr, &seg );
+    }
+}
 
-        pp = p;
+int main() {
+    INITIALISEMEMORY;
+    while(1) {
+        await_vblank();
+        draw();
+        update();
+        sleep( 10, 0 );
     }
 
-    while(1) {}
 }

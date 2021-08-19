@@ -10,7 +10,7 @@ algorithm douintdivide(
     output  uint32  remainder
 ) <autorun> {
     uint32  temporary <:: { remainder[0,31], dividend[bit,1] };
-    uint1   bitresult <: __unsigned(temporary) >= __unsigned(divisor);
+    uint1   bitresult <:: __unsigned(temporary) >= __unsigned(divisor);
     uint6   bit(63);
 
     busy := start | ( bit != 63 );
@@ -88,6 +88,7 @@ algorithm aluMmultiply(
     uint64  product64 = uninitialised;
     uint64  product <:: productsign ? -product64 : product64;
     douintmul UINTMUL( factor_1 <: factor_1_unsigned, factor_2 <: factor_2_unsigned, product :> product64 );
+
     always {
         result = product[ ( dosign == 0 ) ? 0 : 32, 32 ];
     }

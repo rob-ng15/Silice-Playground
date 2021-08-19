@@ -63,7 +63,7 @@ algorithm alu(
 
     output  uint32  result
 ) <autorun> {
-    uint5   shiftcount <: opCode[5,1] ? sourceReg2[0,5] : IshiftCount;
+    uint5   shiftcount <:: opCode[5,1] ? sourceReg2[0,5] : IshiftCount;
 
     // SHIFTERS
     uint32  LSHIFToutput = uninitialized;
@@ -157,9 +157,10 @@ algorithm BSHIFTright(
     output  uint32  result
 ) <autorun> {
     always {
-        switch( function7[5,1] ) {
-            case 1b0: { result = sourceReg1 >> shiftcount; }
-            default: { result = __signed(sourceReg1) >>> shiftcount; }
+        if( function7[5,1] ) {
+            result = __signed(sourceReg1) >>> shiftcount;
+        } else {
+            result = sourceReg1 >> shiftcount;
         }
     }
 }

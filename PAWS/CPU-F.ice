@@ -56,7 +56,7 @@ algorithm PAWSCPU(
     // RISC-V PROGRAM COUNTERS AND STATUS
     uint32  pc = uninitialized;
     uint32  PC <:: SMT ? pcSMT : pc;
-    uint32  PCplus2 <: PC + 2;
+    uint32  PCplus2 <:: PC + 2;
     uint1   incPC = uninitialized;
 
     // SMT FLAG
@@ -135,9 +135,9 @@ algorithm PAWSCPU(
     uint32  branchAddress = uninitialized;
     uint32  jumpAddress = uninitialized;
     uint32  loadAddress = uninitialized;
-    uint32  loadAddressplus2 := loadAddress + 2;
+    uint32  loadAddressplus2 <:: loadAddress + 2;
     uint32  storeAddress = uninitialized;
-    uint32  storeAddressplus2 := storeAddress + 2;
+    uint32  storeAddressplus2 <:: storeAddress + 2;
     uint32  AUIPCLUI = uninitialized;
     addressgenerator AGU <@clock_CPUdecoder> (
         compressed <: compressed,

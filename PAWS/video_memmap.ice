@@ -46,9 +46,9 @@ $$end
     clean_reset video_rstcond<@video_clock,!reset> ( out :> video_reset );
 
     // RNG random number generator
-    uint1   static1bit <: rng.u_noise_out[0,1];
-    uint2   static2bit <: rng.u_noise_out[0,2];
-    uint6   static6bit <: rng.u_noise_out[0,6];
+    uint1   static1bit <:: rng.u_noise_out[0,1];
+    uint2   static2bit <:: rng.u_noise_out[0,2];
+    uint6   static6bit <:: rng.u_noise_out[0,6];
     random rng <@clock_25mhz> ();
 
     // HDMI driver

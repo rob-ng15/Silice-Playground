@@ -8,7 +8,9 @@ algorithm updatepc(
     input   uint32  loadAddress,
     output  uint32  pc
 ) <autorun> {
-    pc := ( incPC ) ? ( takeBranch ? branchAddress : nextPC ) : ( opCode[3,1] ? jumpAddress : loadAddress );
+    always {
+        pc = ( incPC ) ? ( takeBranch ? branchAddress : nextPC ) : ( opCode[3,1] ? jumpAddress : loadAddress );
+    }
 }
 
 // RISC-V REGISTERS - usable for base and float
@@ -277,7 +279,7 @@ algorithm CSRblock(
     uint64  CSRinstretSMT = 0;
     uint8   CSRf = 0;
     uint8   CSRfSMT = 0;
-    uint32  writevalue <: function3[2,1] ? rs1 : sourceReg1;
+    uint32  writevalue <:: function3[2,1] ? rs1 : sourceReg1;
 
     CSRtimer := CSRtimer + 1;
     CSRcycletime := CSRcycletime + ( SMT ? 0 : 1);

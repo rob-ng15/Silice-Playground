@@ -36,10 +36,10 @@ algorithm ps2ascii(
     uint1   nprightup = 0;
     uint1   nprightdown = 0;
 
-    uint1   CTRL <: lctrl | rctrl;
-    uint1   SHIFT <: lshift | rshift;
-    uint1   ALT <: lalt | ralt;
-    uint1   CAPITAL <: ( lshift | rshift ) ^ capslock;
+    uint1   CTRL <:: lctrl | rctrl;
+    uint1   SHIFT <:: lshift | rshift;
+    uint1   ALT <:: lalt | ralt;
+    uint1   CAPITAL <:: ( lshift | rshift ) ^ capslock;
 
     uint1   startbreak = 0;
     uint1   startmulti = 0;
@@ -263,45 +263,35 @@ algorithm ps2(
             default: {}
         }
 
-        switch( clk_edge ) {
-            case 1: {
-                switch( bit_count ) {
-                    case 0: {
-                        parity = 0;
-                        //bit_count = bit_count + ( ~ps2data_ext );
-                        switch( ps2data_ext ) {
-                            case 1: {}
-                            case 0: { bit_count = bit_count + 1; } // Start bit
-                        }
+        if( clk_edge ) {
+            switch( bit_count ) {
+                case 0: {
+                    parity = 0;
+                    //bit_count = bit_count + ( ~ps2data_ext );
+                    switch( ps2data_ext ) {
+                        case 1: {}
+                        case 0: { bit_count = bit_count + 1; } // Start bit
                     }
-                    default: {
-                        bit_count = bit_count + 1;
-                        shift_reg = { ps2data_ext, shift_reg[1,8] };
-                        parity = parity ^ ps2data_ext;
-                    }
-                    case 10: {
-                        switch( ps2data_ext ) {
-                            case 1: {
-                                bit_count = 0;
-                                switch( parity ) {
-                                    case 1: {
-                                        data = shift_reg[0,8];
-                                        valid = 1;
-                                    }
-                                    case 0: {
-                                        error = 1;
-                                    }
-                                }
-                            }
-                            case 0: {
-                                error = 1;
-                                bit_count = 0;
-                            }
+                }
+                default: {
+                    bit_count = bit_count + 1;
+                    shift_reg = { ps2data_ext, shift_reg[1,8] };
+                    parity = parity ^ ps2data_ext;
+                }
+                case 10: {
+                    if( ps2data_ext ) {
+                        bit_count = 0;
+                        if( parity ) {
+                            data = shift_reg[0,8];
+                            valid = 1;
+                        } else {
+                            error = 1;
                         }
+                        error = 1;
+                        bit_count = 0;
                     }
                 }
             }
-            default: {}
         }
     }
 }

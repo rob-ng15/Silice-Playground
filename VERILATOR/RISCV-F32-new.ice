@@ -404,7 +404,7 @@ algorithm floataddsub(
 
     // PERFORM THE ADDITION/SUBTRACION USING THE EQUALISED FRACTIONS, 1 IS ADDED TO THE EXPONENT IN CASE OF OVERFLOW - NORMALISING WILL ADJUST WHEN SHIFTING
     uint1   resultsign = uninitialised;
-    int10   resultexp <: eqexpA + 1;
+    int10   resultexp <:: eqexpA + 1;
     uint48  resultfraction = uninitialised;
     dofloataddsub ADDSUB(
         signA <: signA,
@@ -668,7 +668,7 @@ algorithm dofloatdivide(
 ) <autorun> {
     uint50  remainder = uninitialised;
     uint50  temporary <:: { remainder[0,49], sigA[bit,1] };
-    uint1   bitresult <: __unsigned(temporary) >= __unsigned(sigB);
+    uint1   bitresult <:: __unsigned(temporary) >= __unsigned(sigB);
     uint6   bit(63);
 
     busy := start | ( bit != 63 ) | ( quotient[48,2] != 0 );
@@ -1062,7 +1062,7 @@ algorithm floatconvert(
     output  uint5   flags,
     output  uint32  result
 ) <autorun> {
-    uint1   dounsigned <: rs2[0,1];
+    uint1   dounsigned <:: rs2[0,1];
     uint32  floatresult = uninitialised;
     uint5   floatflags = uninitialised;
     inttofloat FPUfloat( a <: sourceReg1, dounsigned <: dounsigned, result :> floatresult, flags :> floatflags );
@@ -1316,7 +1316,7 @@ algorithm main(output int8 leds) {
     // uint7   opCode = 7b1001011; // FNMSUB
     // uint7   opCode = 7b1001111; // FNMADD
 
-    uint7   function7 = 7b1101000; // OPERATION SWITCH
+    uint7   function7 = 7b0000100; // OPERATION SWITCH
     // ADD = 7b0000000 SUB = 7b0000100 MUL = 7b0001000 DIV = 7b0001100 SQRT = 7b0101100
     // FSGNJ[N][X] = 7b0010000 function3 == 000 FSGNJ == 001 FSGNJN == 010 FSGNJX
     // MIN MAX = 7b0010100 function3 == 000 MIN == 001 MAX

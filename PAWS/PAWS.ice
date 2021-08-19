@@ -250,7 +250,7 @@ $$end
     );
 
     uint3   function3 = uninitialized;
-    uint1   byteaccess <: ( function3[0,2] == 2b00 );
+    uint1   byteaccess <:: ( function3[0,2] == 2b00 );
     uint32  address = uninitialized;
     uint16  writedata = uninitialized;
     uint1   CPUwritememory = uninitialized;

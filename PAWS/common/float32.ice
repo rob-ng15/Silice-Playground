@@ -150,7 +150,7 @@ algorithm inttofloat(
 ) <autorun> {
     uint1   sign <:: dounsigned ? 0 : a[31,1];
     uint8   zeros = uninitialised;
-    uint32  number <: dounsigned ? a : ( a[31,1] ? -a : a );
+    uint32  number <:: dounsigned ? a : ( a[31,1] ? -a : a );
     uint32  fraction <:: NX ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
     int10   exponent <:: 158 - zeros;
     uint1   OF = uninitialised; uint1 UF = uninitialised; uint1 NX = uninitialised;
@@ -365,7 +365,7 @@ algorithm floataddsub(
 
     // PERFORM THE ADDITION/SUBTRACION USING THE EQUALISED FRACTIONS, 1 IS ADDED TO THE EXPONENT IN CASE OF OVERFLOW - NORMALISING WILL ADJUST WHEN SHIFTING
     uint1   resultsign = uninitialised;
-    int10   resultexp <: eqexpA + 1;
+    int10   resultexp <:: eqexpA + 1;
     uint48  resultfraction = uninitialised;
     dofloataddsub ADDSUB(
         signA <: signA,
@@ -567,7 +567,7 @@ algorithm dofloatdivide(
 ) <autorun> {
     uint50  remainder = uninitialised;
     uint50  temporary <:: { remainder[0,49], sigA[bit,1] };
-    uint1   bitresult <: __unsigned(temporary) >= __unsigned(sigB);
+    uint1   bitresult <:: __unsigned(temporary) >= __unsigned(sigB);
     uint6   bit(63);
 
     busy := start | ( bit != 63 ) | ( quotient[48,2] != 0 );
