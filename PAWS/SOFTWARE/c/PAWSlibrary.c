@@ -1109,7 +1109,7 @@ unsigned char SMTSTATE( void ) {
 #define COLS 80
 #define LINES 30
 
-unsigned char   __curses_backgroundcolours[16], __curses_foregroundcolours[16], __curses_scroll = 1;
+unsigned char   __curses_backgroundcolours[16], __curses_foregroundcolours[16], __curses_scroll = 1, __curses_echo = 0;
 unsigned short  __curses_x = 0, __curses_y = 0, __curses_fore = WHITE, __curses_back = BLACK;
 
 typedef union curses_cell {

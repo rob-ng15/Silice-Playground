@@ -333,100 +333,95 @@ $$end
     );
 
     BACKGROUNDmemoryWrite := 0; BITMAPmemoryWrite := 0; CHARACTER_MAPmemoryWrite := 0; LOWER_SPRITEmemoryWrite := 0; UPPER_SPRITEmemoryWrite := 0; TERMINALmemoryWrite := 0; LOWER_TILEmemoryWrite := 0; UPPER_TILEmemoryWrite := 0;
+
     always {
         // READ IO Memory
-        switch( memoryRead ) {
-            case 1: {
-                switch( memoryAddress[8,4] ) {
-                    case 4h1: {
-                        switch( memoryAddress[0,8] ) {
-                            case 8h20: { readData = Ltm_lastaction; }
-                            case 8h22: { readData = Ltm_active; }
-                            default: { readData = 0; }
-                        }
+        if( memoryRead ) {
+            switch( memoryAddress[8,4] ) {
+                case 4h1: {
+                    switch( memoryAddress[0,8] ) {
+                        case 8h20: { readData = Ltm_lastaction; }
+                        case 8h22: { readData = Ltm_active; }
+                        default: { readData = 0; }
                     }
-                    case 4h2: {
-                        switch( memoryAddress[0,8] ) {
-                            case 8h20: { readData = Utm_lastaction; }
-                            case 8h22: { readData = Utm_active; }
-                            default: { readData = 0; }
-                        }
-                    }
-                    case 4h3: {
-                        switch( memoryAddress[0,8] ) {
-                            $$for i=0,15 do
-                                case $0x00 + i*2$: { readData = Lsprite_read_active_$i$; }
-                                case $0x20 + i*2$: { readData = Lsprite_read_double_$i$; }
-                                case $0x40 + i*2$: { readData = Lsprite_read_colour_$i$; }
-                                case $0x60 + i*2$: { readData = {{5{Lsprite_read_x_$i$[10,1]}}, Lsprite_read_x_$i$}; }
-                                case $0x80 + i*2$: { readData = {{5{Lsprite_read_y_$i$[10,1]}}, Lsprite_read_y_$i$}; }
-                                case $0xa0 + i*2$: { readData = Lsprite_read_tile_$i$; }
-                                case $0xc0 + i*2$: { readData = Lcollision_$i$; }
-                                case $0xe0 + i*2$: { readData = Llayer_collision_$i$; }
-                            $$end
-                            default: { readData = 0; }
-                        }
-                    }
-                    case 4h4: {
-                        switch( memoryAddress[0,8] ) {
-                            $$for i=0,15 do
-                                case $0x00 + i*2$: { readData = Usprite_read_active_$i$; }
-                                case $0x20 + i*2$: { readData = Usprite_read_double_$i$; }
-                                case $0x40 + i*2$: { readData = Usprite_read_colour_$i$; }
-                                case $0x60 + i*2$: { readData = {{5{Usprite_read_x_$i$[10,1]}}, Usprite_read_x_$i$}; }
-                                case $0x80 + i*2$: { readData = {{5{Usprite_read_y_$i$[10,1]}}, Usprite_read_y_$i$}; }
-                                case $0xa0 + i*2$: { readData = Usprite_read_tile_$i$; }
-                                case $0xc0 + i*2$: { readData = Ucollision_$i$; }
-                                case $0xe0 + i*2$: { readData = Ulayer_collision_$i$; }
-                            $$end
-                            default: { readData = 0; }
-                        }
-                        }
-                    case 4h5: {
-                        switch( memoryAddress[0,8] ) {
-                            case 8h04: { readData = curses_character; }
-                            case 8h06: { readData = curses_background; }
-                            case 8h08: { readData = curses_foreground; }
-                            case 8h0a: { readData = tpu_active; }
-                            default: { readData = 0; }
-                        }
-                    }
-                    case 4h6: {
-                        switch( memoryAddress[0,8] ) {
-                            case 8h12: { readData = gpu_queue_full; }
-                            case 8h14: { readData = gpu_queue_complete; }
-                            case 8h2a: { readData = vector_block_active; }
-                            case 8hd4: { readData = bitmap_colour_read; }
-                            default: { readData = 0; }
-                        }
-                    }
-                    case 4h7: { readData = terminal_active; }
-                    case 4hf: { readData = vblank; }
-                    default: { readData = 0; }
                 }
+                case 4h2: {
+                    switch( memoryAddress[0,8] ) {
+                        case 8h20: { readData = Utm_lastaction; }
+                        case 8h22: { readData = Utm_active; }
+                        default: { readData = 0; }
+                    }
+                }
+                case 4h3: {
+                    switch( memoryAddress[0,8] ) {
+                        $$for i=0,15 do
+                            case $0x00 + i*2$: { readData = Lsprite_read_active_$i$; }
+                            case $0x20 + i*2$: { readData = Lsprite_read_double_$i$; }
+                            case $0x40 + i*2$: { readData = Lsprite_read_colour_$i$; }
+                            case $0x60 + i*2$: { readData = {{5{Lsprite_read_x_$i$[10,1]}}, Lsprite_read_x_$i$}; }
+                            case $0x80 + i*2$: { readData = {{5{Lsprite_read_y_$i$[10,1]}}, Lsprite_read_y_$i$}; }
+                            case $0xa0 + i*2$: { readData = Lsprite_read_tile_$i$; }
+                            case $0xc0 + i*2$: { readData = Lcollision_$i$; }
+                            case $0xe0 + i*2$: { readData = Llayer_collision_$i$; }
+                        $$end
+                        default: { readData = 0; }
+                    }
+                }
+                case 4h4: {
+                    switch( memoryAddress[0,8] ) {
+                        $$for i=0,15 do
+                            case $0x00 + i*2$: { readData = Usprite_read_active_$i$; }
+                            case $0x20 + i*2$: { readData = Usprite_read_double_$i$; }
+                            case $0x40 + i*2$: { readData = Usprite_read_colour_$i$; }
+                            case $0x60 + i*2$: { readData = {{5{Usprite_read_x_$i$[10,1]}}, Usprite_read_x_$i$}; }
+                            case $0x80 + i*2$: { readData = {{5{Usprite_read_y_$i$[10,1]}}, Usprite_read_y_$i$}; }
+                            case $0xa0 + i*2$: { readData = Usprite_read_tile_$i$; }
+                            case $0xc0 + i*2$: { readData = Ucollision_$i$; }
+                            case $0xe0 + i*2$: { readData = Ulayer_collision_$i$; }
+                        $$end
+                        default: { readData = 0; }
+                    }
+                    }
+                case 4h5: {
+                    switch( memoryAddress[0,8] ) {
+                        case 8h04: { readData = curses_character; }
+                        case 8h06: { readData = curses_background; }
+                        case 8h08: { readData = curses_foreground; }
+                        case 8h0a: { readData = tpu_active; }
+                        default: { readData = 0; }
+                    }
+                }
+                case 4h6: {
+                    switch( memoryAddress[0,8] ) {
+                        case 8h12: { readData = gpu_queue_full; }
+                        case 8h14: { readData = gpu_queue_complete; }
+                        case 8h2a: { readData = vector_block_active; }
+                        case 8hd4: { readData = bitmap_colour_read; }
+                        default: { readData = 0; }
+                    }
+                }
+                case 4h7: { readData = terminal_active; }
+                case 4hf: { readData = vblank; }
+                default: { readData = 0; }
             }
-            default: {}
         }
 
         // WRITE IO Memory
-        switch( memoryWrite ) {
-            case 1: {
-                switch( memoryAddress[8,4] ) {
-                    case 4h0: { BACKGROUNDmemoryWrite = 1; }
-                    case 4h1: { LOWER_TILEmemoryWrite = 1; }
-                    case 4h2: { UPPER_TILEmemoryWrite = 1; }
-                    case 4h3: { LOWER_SPRITEmemoryWrite = 1; LOWER_SPRITEbitmapwriter = 0;  }
-                    case 4h4: { UPPER_SPRITEmemoryWrite = 1; UPPER_SPRITEbitmapwriter = 0;  }
-                    case 4h5: { CHARACTER_MAPmemoryWrite = 1; }
-                    case 4h6: { BITMAPmemoryWrite = 1; }
-                    case 4h7: { TERMINALmemoryWrite = 1; }
-                    case 4h8: { LOWER_SPRITEmemoryWrite = 1; LOWER_SPRITEbitmapwriter = 1; }
-                    case 4h9: { UPPER_SPRITEmemoryWrite = 1; UPPER_SPRITEbitmapwriter = 1; }
-                    case 4hf: { display_order = writeData; }
-                    default: {}
-                }
+        if( memoryWrite ) {
+            switch( memoryAddress[8,4] ) {
+                case 4h0: { BACKGROUNDmemoryWrite = 1; }
+                case 4h1: { LOWER_TILEmemoryWrite = 1; }
+                case 4h2: { UPPER_TILEmemoryWrite = 1; }
+                case 4h3: { LOWER_SPRITEmemoryWrite = 1; LOWER_SPRITEbitmapwriter = 0;  }
+                case 4h4: { UPPER_SPRITEmemoryWrite = 1; UPPER_SPRITEbitmapwriter = 0;  }
+                case 4h5: { CHARACTER_MAPmemoryWrite = 1; }
+                case 4h6: { BITMAPmemoryWrite = 1; }
+                case 4h7: { TERMINALmemoryWrite = 1; }
+                case 4h8: { LOWER_SPRITEmemoryWrite = 1; LOWER_SPRITEbitmapwriter = 1; }
+                case 4h9: { UPPER_SPRITEmemoryWrite = 1; UPPER_SPRITEbitmapwriter = 1; }
+                case 4hf: { display_order = writeData; }
+                default: {}
             }
-            default: {}
         }
     }
 }

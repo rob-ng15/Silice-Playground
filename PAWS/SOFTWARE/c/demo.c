@@ -860,17 +860,17 @@ void gpudemo( void ) {
         set_blitter_bitmap( i, &blitter_bitmaps[ 16 * i ] );
     }
     gpu_cs();
-    tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Blitter Test" );
+    tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Blitter Test - REFLECT & ROTATE" );
     for( i = 0; i < 128; i++ ) {
-        gpu_blit( rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng( 6 ), rng( 4 ), rng(4) );
+        gpu_blit( rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng( 6 ), rng( 4 ), rng(8) );
     }
     sleep( 1000, 0 );
 
     // CHARACTER BLITTER
     gpu_cs();
-    tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Character Blitter Test" );
+    tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Character Blitter Test - REFLECT & ROTATE" );
     for( i = 0; i < 128; i++ ) {
-        gpu_character_blit( rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng( 256 ), rng( 4 ), rng(4) );
+        gpu_character_blit( rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng( 256 ), rng( 4 ), rng(8) );
     }
     sleep( 1000, 0 );
 
@@ -911,7 +911,7 @@ void gpudemo( void ) {
         }
     }
     gpu_cs();
-    tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Colour Blitter Test" );
+    tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Colour Blitter Test - REFLECT & ROTATE" );
     for( i = 0; i < 128; i++ ) {
         gpu_colourblit( rng( 352 ) - 16, rng( 256 ) - 8, rng( 9 ), rng( 4 ), rng(8) );
     }
@@ -919,7 +919,7 @@ void gpudemo( void ) {
 
     // VECTOR TEST
     gpu_cs();
-    tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Vector Draw Test" );
+    tpu_printf_centre( 29, TRANSPARENT, WHITE, "GPU Vector Draw Test - REFLECT & ROTATE" );
     set_vector_vertex( 0, 0, 1, 0, 0 );
     set_vector_vertex( 0, 1, 1, 5, 10 );
     set_vector_vertex( 0, 2, 1, 0, 6 );

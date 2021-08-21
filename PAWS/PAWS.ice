@@ -316,13 +316,13 @@ algorithm bramcontroller(
 
 $$if not SIMULATION then
     // RISC-V RAM and BIOS
-    bram uint16 ram[16384] = {
+    bram uint16 ram <input!> [16384] = {
         $include('ROM/BIOS.inc')
         , pad(uninitialized)
     };
 $$else
     // RISC-V RAM and BIOS
-    bram uint16 ram[16384] = {
+    bram uint16 ram <input!> [16384] = {
         $include('ROM/VBIOS.inc')
         , pad(uninitialized)
     };
@@ -359,8 +359,8 @@ algorithm cachecontroller(
     // CACHE for SDRAM 32k
     // CACHE ADDRESS IS LOWER 15 bits ( 0 - 32767 ) of address, dropping the BYTE address bit
     // CACHE TAG IS REMAINING 11 bits of the 26 bit address + 1 bit for valid flag + 1 bit for needwritetosdram flag
-    simple_dualport_bram uint16 cache[16384] = uninitialized;
-    simple_dualport_bram uint13 tags[16384] = uninitialized;
+    simple_dualport_bram uint16 cache <input!> [16384] = uninitialized;
+    simple_dualport_bram uint13 tags <input!> [16384] = uninitialized;
 
     // CACHE WRITER
     uint16  cacheupdatedata = uninitialized;
@@ -393,10 +393,10 @@ algorithm cachecontroller(
     );
 
     // CACHE TAG match flag
-    uint1   cachetagmatch <: ( tags.rdata0[0,12] == { 1b1, address[15,11] } );
+    uint1   cachetagmatch <:: ( tags.rdata0[0,12] == { 1b1, address[15,11] } );
 
     // VALUE TO WRITE TO CACHE ( deals with correctly mapping 8 bit writes and 16 bit writes, using sdram or cache as base )
-    uint16  writethrough <: ( byteaccess ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cache.rdata0[0,8] : sdramreaddata[0,8] } :
+    uint16  writethrough <:: ( byteaccess ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cache.rdata0[0,8] : sdramreaddata[0,8] } :
                                                                         { cachetagmatch ? cache.rdata0[8,8] : sdramreaddata[8,8], writedata[0,8] } ) : writedata;
 
     // MEMORY ACCESS FLAGS

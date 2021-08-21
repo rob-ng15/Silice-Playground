@@ -45,29 +45,12 @@ $include('../io_memmap.ice')
 $include('../timers_random.ice')
 
 // CPU SPECIFICATION
-$$CPUISA = 0x40001005
-$$cpu_B = 0
-$$cpu_F = 1
-$$if cpu_B == 1 then
-$$CPUISA = CPUISA + 0x02
-$$end
-$$if cpu_F == 1 then
-$$CPUISA = CPUISA + 0x20
-$$end
+$$CPUISA = 0x40001025
 $include('../cpu_functionblocks.ice')
-$include('../ALU-M.ice')
-$$if cpu_B == 1 then
-$include('../ALU-IMB.ice')
-$$else
 $include('../ALU-IM.ice')
-$$end
-$$if cpu_F == 1 then
 $include('../common/float32.ice')
 $include('../FPU.ice')
 $include('../CPU-F.ice')
-$$else
-$include('../CPU-I.ice')
-$$end
 
 // MAIN
 $include('../PAWS.ice')

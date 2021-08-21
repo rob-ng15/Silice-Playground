@@ -315,8 +315,9 @@ unsigned short *FAT;
 unsigned char *CLUSTERBUFFER;
 unsigned int DATASTARTSECTOR;
 
-// SELECTED FILE ( 0xffff indicates no file selected )
+// SELECTED PARITION ( 0xff indicates no FAT16 partition found ) SELECTED FILE ( 0xffff indicates no file selected )
 unsigned short SELECTEDFILE = 0xffff;
+unsigned char PARTITIONNUMBER = 0xff;
 
 // READ SECTOR, FLASHING INDICATOR
 void sd_readSector( unsigned int sectorAddress, unsigned char *copyAddress ) {
@@ -335,7 +336,7 @@ void sd_readFAT( void ) {
     unsigned short i;
 
     // READ ALL OF THE SECTORS OF THE FAT
-    sd_readSectors( PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors, BOOTSECTOR -> fat_size_sectors, (unsigned char *)FAT );
+    sd_readSectors( PARTITION[PARTITIONNUMBER].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors, BOOTSECTOR -> fat_size_sectors, (unsigned char *)FAT );
 }
 
 // READ ROOT DIRECTORY
@@ -343,7 +344,7 @@ void sd_readRootDirectory ( void ) {
     unsigned short i;
 
     // READ ALL OF THE SECTORS OF THE ROOTDIRECTORY
-    sd_readSectors( PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats, ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512, (unsigned char *)ROOTDIRECTORY );
+    sd_readSectors( PARTITION[PARTITIONNUMBER].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats, ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512, (unsigned char *)ROOTDIRECTORY );
 }
 
 // READ A FILE CLUSTER ( the minimum size of a file in FAT16 )
@@ -516,29 +517,35 @@ void main( void ) {
 
     PARTITION = (PartitionTable *) &MBR[ 0x1BE ];
 
-    // CHECK FOR VALID PARTITION
-    switch( PARTITION[0].partition_type ) {
-        case 4:
-        case 6:
-        case 14:
-            break;
-        default:
-            // UNKNOWN PARTITION TYPE
-            gpu_outputstringcentre( RED, 72, "ERROR", 2 );
-            gpu_outputstringcentre( RED, 120, "Please Insert A FAT16 FORMATTED SDCARD", 0 );
-            gpu_outputstringcentre( RED, 136, "Press RESET", 0 );
-            while(1) {}
-            break;
+    // CHECK FOR VALID PARTITION - USE FIRST FAT16 PARTITION FOUND
+    for( i = 0; i < 4; i++ && ( PARTITIONNUMBER != 0xff ) ) {
+        switch( PARTITION[i].partition_type ) {
+            case 4:
+            case 6:
+            case 14: PARTITIONNUMBER = i;
+                break;
+            default:
+                break;
+        }
+    }
+
+    // NO FAT16 PARTITION FOUND
+    if( PARTITIONNUMBER == 0xff ) {
+        gpu_outputstringcentre( RED, 72, "ERROR", 2 );
+        gpu_outputstringcentre( RED, 120, "Please Insert AN SDCARD", 0 );
+        gpu_outputstringcentre( RED, 128, "WITH A FAT16 PARTITION", 0 );
+        gpu_outputstringcentre( RED, 136, "Press RESET", 0 );
+        while(1) {}
     }
 
     // READ BOOTSECTOR FOR PARTITION 0
-    sd_readSector( PARTITION[0].start_sector, (unsigned char *)BOOTSECTOR );
+    sd_readSector( PARTITION[PARTITIONNUMBER].start_sector, (unsigned char *)BOOTSECTOR );
 
     // PARSE BOOTSECTOR AND ALLOCASTE MEMORY FOR ROOTDIRECTORY, FAT, CLUSTERBUFFER
     ROOTDIRECTORY = (Fat16Entry *)( 0x12000000 - 0x400 - BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) );
     FAT = (unsigned short * ) ROOTDIRECTORY - BOOTSECTOR -> fat_size_sectors * 512;
     CLUSTERBUFFER = (unsigned char * )FAT - BOOTSECTOR -> sectors_per_cluster * 512;
-    DATASTARTSECTOR = PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats + ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512;
+    DATASTARTSECTOR = PARTITION[PARTITIONNUMBER].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats + ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512;
 
     // READ ROOT DIRECTORY AND FAT INTO MEMORY
     sd_readRootDirectory();

@@ -104,65 +104,57 @@ $$if not SIMULATION then
 $$end
 
         // READ IO Memory
-        switch( memoryRead ) {
-            case 1: {
-                switch( memoryAddress ) {
-                    // UART, LEDS, BUTTONS and CLOCK
-    $$if not SIMULATION then
-                    case 12h100: { readData = { 8b0, UARTinchar }; UARTinread = 2b11; }
-                    case 12h102: { readData = { 14b0, UARToutfull, UARTinavailable }; }
-                    case 12h120: { readData = PS2outputascii ? { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] } : { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] } | PS2joystick; } // ULX3S BUTTONS AND/OR KEYBOARD AS A JOYSTICK
-    $$end
-                    case 12h130: { readData = leds; }
-    $$if not SIMULATION then
-                    // PS2
-                    case 12h110: { readData = PS2inavailable; }
-                    case 12h112: {
-                        switch( PS2inavailable ) {
-                            case 1: { readData = PS2inchar; PS2inread = 2b11; }
-                            case 0: { readData = 0; }
-                        }
+        if( memoryRead ) {
+            switch( memoryAddress ) {
+                // UART, LEDS, BUTTONS and CLOCK
+                $$if not SIMULATION then
+                case 12h100: { readData = { 8b0, UARTinchar }; UARTinread = 2b11; }
+                case 12h102: { readData = { 14b0, UARToutfull, UARTinavailable }; }
+                case 12h120: { readData = PS2outputascii ? { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] } : { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] } | PS2joystick; } // ULX3S BUTTONS AND/OR KEYBOARD AS A JOYSTICK
+                // PS2
+                case 12h110: { readData = PS2inavailable; }
+                case 12h112: {
+                    switch( PS2inavailable ) {
+                        case 1: { readData = PS2inchar; PS2inread = 2b11; }
+                        case 0: { readData = 0; }
                     }
-
-                    // SDCARD
-                    case 12h140: { readData = SDCARDready; }
-                    case 12h150: { readData = bufferdata; }
-    $$end
-
-                    // SMT STATUS
-                    case 12hffe: { readData = SMTRUNNING; }
-
-                    // RETURN NULL VALUE
-                    default: { readData = 0; }
                 }
+
+                // SDCARD
+                case 12h140: { readData = SDCARDready; }
+                case 12h150: { readData = bufferdata; }
+$$end
+                case 12h130: { readData = leds; }
+
+                // SMT STATUS
+                case 12hffe: { readData = SMTRUNNING; }
+
+                // RETURN NULL VALUE
+                default: { readData = 0; }
             }
-            default: {}
         }
 
         // WRITE IO Memory
-        switch( memoryWrite ) {
-            case 1: {
-                switch( memoryAddress ) {
-                    // UART, LEDS
-                    case 12h130: { leds = writeData; }
-    $$if not SIMULATION then
-                    case 12h100: { UARToutchar = writeData[0,8]; UARToutwrite = 2b11; }
-                    case 12h110: { PS2outputascii = writeData; }
+        if( memoryWrite ) {
+            switch( memoryAddress ) {
+                // UART, LEDS
+                case 12h130: { leds = writeData; }
+                $$if not SIMULATION then
+                case 12h100: { UARToutchar = writeData[0,8]; UARToutwrite = 2b11; }
+                case 12h110: { PS2outputascii = writeData; }
 
-                    // SDCARD
-                    case 12h140: { SDCARDreadsector = 1; }
-                    case 12h142: { sectoraddressH = writeData; }
-                    case 12h144: { sectoraddressL = writeData; }
-                    case 12h150: { bufferaddress = writeData; }
-    $$end
-                    // SMT STATUS
-                    case 12hff0: { SMTSTARTPC[16,16] = writeData; }
-                    case 12hff2: { SMTSTARTPC[0,16] = writeData; }
-                    case 12hffe: { SMTRUNNING = writeData; }
-                    default: {}
-                }
+                // SDCARD
+                case 12h140: { SDCARDreadsector = 1; }
+                case 12h142: { sectoraddressH = writeData; }
+                case 12h144: { sectoraddressL = writeData; }
+                case 12h150: { bufferaddress = writeData; }
+                $$end
+                // SMT STATUS
+                case 12hff0: { SMTSTARTPC[16,16] = writeData; }
+                case 12hff2: { SMTSTARTPC[0,16] = writeData; }
+                case 12hffe: { SMTRUNNING = writeData; }
+                default: {}
             }
-            default: {}
         }
     }
 
@@ -242,29 +234,26 @@ algorithm audiotimers_memmap(
 
     always {
         // READ IO Memory
-        switch( memoryRead ) {
-            case 1: {
-                switch( memoryAddress ) {
-                    // TIMERS and RNG
-                    case 12h000: { readData = g_noise_out; }
-                    case 12h002: { readData = u_noise_out; }
-                    case 12h010: { readData = timer1hz0; }
-                    case 12h012: { readData = timer1hz1; }
-                    case 12h020: { readData = timer1khz0; }
-                    case 12h022: { readData = timer1khz1; }
-                    case 12h030: { readData = sleepTimer0; }
-                    case 12h032: { readData = sleepTimer1; }
-                    case 12h040: { readData = systemclock; }
+        if( memoryRead ) {
+            switch( memoryAddress ) {
+                // TIMERS and RNG
+                case 12h000: { readData = g_noise_out; }
+                case 12h002: { readData = u_noise_out; }
+                case 12h010: { readData = timer1hz0; }
+                case 12h012: { readData = timer1hz1; }
+                case 12h020: { readData = timer1khz0; }
+                case 12h022: { readData = timer1khz1; }
+                case 12h030: { readData = sleepTimer0; }
+                case 12h032: { readData = sleepTimer1; }
+                case 12h040: { readData = systemclock; }
 
-                    // AUDIO
-                    case 12h110: { readData = audio_active_l; }
-                    case 12h112: { readData = audio_active_r; }
+                // AUDIO
+                case 12h110: { readData = audio_active_l; }
+                case 12h112: { readData = audio_active_r; }
 
-                    // RETURN NULL VALUE
-                    default: { readData = 0; }
-                }
+                // RETURN NULL VALUE
+                default: { readData = 0; }
             }
-            default: {}
         }
         // WRITE IO Memory
         switch( { memoryWrite, LATCHmemoryWrite } ) {
@@ -447,12 +436,12 @@ algorithm uart(
     uart_in ui; uart_receiver urecv( io <:> ui, uart_rx <: uart_rx );
 
     // UART input FIFO (256 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartInBuffer[256] = uninitialized;
+    simple_dualport_bram uint8 uartInBuffer <input!> [256] = uninitialized;
     uint8  uartInBufferNext = 0;
     uint8  uartInBufferTop = 0;
 
     // UART output FIFO (256 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartOutBuffer[256] = uninitialized;
+    simple_dualport_bram uint8 uartOutBuffer <input!> [256] = uninitialized;
     uint8   uartOutBufferNext = 0;
     uint8   uartOutBufferTop = 0;
     uint8   newuartOutBufferTop = 0;
@@ -500,7 +489,7 @@ algorithm ps2buffer(
     output  uint16  joystick
 ) <autorun> {
     // PS/2 input FIFO (256 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint9 ps2Buffer[256] = uninitialized;
+    simple_dualport_bram uint9 ps2Buffer <input!> [256] = uninitialized;
     uint8  ps2BufferNext = 0;
     uint7  ps2BufferTop = 0;
 
@@ -551,7 +540,7 @@ algorithm sdcardbuffer(
     output  uint8   bufferdata
 ) <autorun> {
     // SDCARD - Code for the SDCARD from @sylefeb
-    simple_dualport_bram uint8 sdbuffer[512] = uninitialized;
+    simple_dualport_bram uint8 sdbuffer <input!> [512] = uninitialized;
     sdcardio sdcio;
     sdcard sd(
         // pins
@@ -566,9 +555,11 @@ algorithm sdcardbuffer(
     );
 
     // SDCARD Commands
-    sdcio.read_sector := readsector;
-    sdcio.addr_sector := { sectoraddressH, sectoraddressL };
-    sdbuffer.addr0 := bufferaddress;
-    ready := sdcio.ready;
-    bufferdata := sdbuffer.rdata0;
+    always {
+        sdcio.read_sector = readsector;
+        sdcio.addr_sector = { sectoraddressH, sectoraddressL };
+        sdbuffer.addr0 = bufferaddress;
+        ready = sdcio.ready;
+        bufferdata = sdbuffer.rdata0;
+    }
 }

@@ -301,6 +301,20 @@ algorithm cpuexecute(
         busy :> ALUbusy
     );
 
+
+    // M EXTENSION ALU OPERATIONS
+    int32   ALUMresult = uninitialized;
+    uint1   ALUMstart = uninitialized;
+    uint1   ALUMbusy = uninitialized;
+    aluM ALUM(
+        function3 <: function3,
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        start <: ALUMstart,
+        busy :> ALUMbusy,
+        result :> ALUMresult
+    );
+
     // ATOMIC MEMORY OPERATIONS
     int32   ALUAresult = uninitialized;
     aluA ALUA(
@@ -357,7 +371,7 @@ algorithm cpuexecute(
     );
 
     // ALU AND CSR START FLAGS
-    ALUstart := 0; FPUstart := 0; CSRstart := 0; CSRincCSRinstret := 0; CSRupdateFPUflags := 0;
+    ALUstart := 0; ALUMstart := 0; FPUstart := 0; CSRstart := 0; CSRincCSRinstret := 0; CSRupdateFPUflags := 0;
 
     while(1) {
         if( start ) {
@@ -391,7 +405,11 @@ algorithm cpuexecute(
                     if( opCode[6,1] ) {
                         FPUstart = 1; while( FPUbusy ) {} CSRupdateFPUflags = 1; frd = FPUfrd; result = FPUresult;
                     } else {
-                        ALUstart = 1; while( ALUbusy ) {} frd = 0; result = ALUresult;
+                        if( opCode[5,1] &&function7[0,1] ) {
+                            ALUMstart = 1; while(  ALUMbusy ) {} result = ALUMresult;
+                        } else {
+                            ALUstart = 1; while( ALUbusy ) {} frd = 0; result = ALUresult;
+                        }
                     }
                 }
             }

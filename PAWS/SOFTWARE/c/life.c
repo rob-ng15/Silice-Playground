@@ -5,16 +5,20 @@
 #define for_x for (int x = 0; x < w; x++)
 #define for_y for (int y = 0; y < h; y++)
 #define for_xy for_x for_y
+#define WIDTH 160
+#define HEIGHT 120
+#define SIZE 2
 
-unsigned char universe[60][80];
-unsigned char new[60][80], framebuffer = 0;
-int w = 80, h = 60;
+unsigned char universe[HEIGHT][WIDTH], new[HEIGHT][WIDTH], framebuffer = 0;
+int w = WIDTH, h = HEIGHT;
 
 void show( void ) {
     bitmap_draw( 1 - framebuffer );
+    gpu_cs();
 
     for_y for_x
-        gpu_rectangle( universe[y][x] ? BLACK : TRANSPARENT, x * 4, y * 4, x * 4 + 3, y * 4 + 3 );
+        if( universe[y][x] )
+            gpu_rectangle( BLACK, x * SIZE, y * SIZE, x * SIZE + (SIZE-1), y * SIZE + (SIZE-1) );
 
     // SWITCH THE FRAMEBUFFER
     framebuffer = 1 - framebuffer;
