@@ -118,12 +118,16 @@
 #define REFLECT_X 1
 #define REFLECT_Y 2
 
-// FOR COLOUR BLITTER AND VECTOR BLOCK
+// FOR BLITTERS AND VECTOR BLOCK
 #define ROTATE0 4
 #define ROTATE90 5
 #define ROTATE180 6
 #define ROTATE270 7
 
+// CROP RECTANGLE
+#define CROPFULLSCREEN 0,0,319,239
+
+// KEYBOARD MODE
 #define PS2_KEYBOARD 1
 #define PS2_JOYSTICK 0
 
@@ -278,7 +282,8 @@ extern void set_tilemap_bitmap( unsigned char, unsigned char, unsigned short * )
 extern unsigned char tilemap_scrollwrapclear( unsigned char, unsigned char );
 
 // GPU AND BITMAP
-void gpu_dither( unsigned char , unsigned char );
+extern void gpu_dither( unsigned char , unsigned char );
+extern void gpu_crop( unsigned short, unsigned short, unsigned short, unsigned short );
 extern void gpu_pixel( unsigned char, short, short );
 extern void gpu_rectangle( unsigned char, short, short, short, short );
 extern void gpu_box( unsigned char, short, short, short, short );
@@ -290,8 +295,10 @@ extern void gpu_character_blit( unsigned char, short, short, unsigned char, unsi
 extern void gpu_colourblit( short, short, short, unsigned char, unsigned char );
 extern void gpu_triangle( unsigned char, short, short, short, short, short, short );
 extern void gpu_quadrilateral( unsigned char, short, short, short, short, short, short, short, short );
-extern void gpu_printf( unsigned char, short, short, unsigned char, const char *,...  );
-extern void gpu_printf_centre( unsigned char, short, short, unsigned char, const char *,...  );
+extern void gpu_printf( unsigned char, short, short, unsigned char, unsigned char, const char *,...  );
+extern void gpu_printf_centre( unsigned char, short, short, unsigned char, unsigned char, const char *,...  );
+extern void gpu_printf_vertical( unsigned char, short, short, unsigned char, unsigned char, const char *,...  );
+extern void gpu_printf_centre_vertical( unsigned char, short, short, unsigned char, unsigned char, const char *,...  );
 extern void draw_vector_block( unsigned char, unsigned char, short, short, unsigned char, unsigned char );
 extern void set_vector_vertex( unsigned char, unsigned char , unsigned char, char, char );
 extern void bitmap_scrollwrap( unsigned char );
@@ -329,6 +336,7 @@ extern void tpu_printf_centre( unsigned char, unsigned char, unsigned char, cons
 // IMAGE DECODERS
 extern void netppm_display( unsigned char *, unsigned char );
 extern void netppm_decoder( unsigned char *, unsigned char * );
+
 // nanojpeg.c from https://keyj.emphy.de/nanojpeg/
 typedef enum _nj_result {
     NJ_OK = 0,        // no error, decoding successful
@@ -339,7 +347,6 @@ typedef enum _nj_result {
     NJ_SYNTAX_ERROR,  // syntax error
     __NJ_FINISHED,    // used internally, will never be reported
 } nj_result_t;
-
 extern void njInit(void);
 extern nj_result_t njDecode(const void* jpeg, const int size);
 extern int njGetWidth(void);

@@ -107,6 +107,10 @@ unsigned char volatile * BITMAP_X_READ = (unsigned char volatile *) 0x86d0;
 unsigned short volatile * BITMAP_Y_READ = (unsigned short volatile *) 0x86d2;
 unsigned short volatile * BITMAP_PIXEL_READ = (unsigned short volatile *) 0x86d4;
 unsigned char volatile * BITMAP_SCROLLWRAP = (unsigned char volatile *) 0x86e0;
+unsigned short volatile * CROP_LEFT = (unsigned short volatile *) 0x86e2;
+unsigned short volatile * CROP_RIGHT = (unsigned short volatile *) 0x86e4;
+unsigned short volatile * CROP_TOP = (unsigned short volatile *) 0x86e6;
+unsigned short volatile * CROP_BOTTOM = (unsigned short volatile *) 0x86e8;
 unsigned char volatile * FRAMEBUFFER_DISPLAY = ( unsigned char volatile * ) 0x86f0;
 unsigned char volatile * FRAMEBUFFER_DRAW = ( unsigned char volatile * ) 0x86f2;
 

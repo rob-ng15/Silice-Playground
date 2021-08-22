@@ -23,7 +23,7 @@
 #define MAXDEPTH 12
 
 // CURRENT FRAMEBUFFER
-unsigned char framebuffer = 0, drawsector[] = { 0b11111111, 0b11111001, 0b10011001, 0b00001001, 0b00000000 };
+unsigned char framebuffer = 0, drawsector[] = { 0b11111111, 0b01111110, 0b00111100, 0b00011000, 0b00000000 };
 
 // LEVEL - DETERMINES SIZE OF MAZE
 unsigned short level = 0;
@@ -56,15 +56,15 @@ unsigned short ghosteyes[4][4] = { { 0, 1, 2, 3 }, { 3, 0, 1, 2 }, { 2, 3, 0, 1 
 void drawwelcome( void ) {
     // DISPLAY ULX3 BITMAP
     gpu_pixelblock7( 0, 10, 320, 219, BLUE, ulx3sbitmap );
-    gpu_printf_centre( YELLOW, 160, 8, 1, "3D MONSTER MAZE" );
+    gpu_printf_centre( YELLOW, 160, 8, 1, 0, "3D MONSTER MAZE" );
 
     // DRAW JOYSTICK AND LABEL
-    gpu_printf_centre( YELLOW, 229, 102, 0, "STEP" );
-    gpu_printf_centre( YELLOW, 242, 123, 0, "BACK" );
-    gpu_printf_centre( YELLOW, 211, 135, 0, "LEFT" );
-    gpu_printf_centre( YELLOW, 272, 109, 0, "RIGHT" );
-    gpu_printf_centre( YELLOW, 98, 128, 0, "PEEK" );
-    gpu_printf_centre( YELLOW, 66, 142, 0, "POWER" );
+    gpu_printf_centre( YELLOW, 229, 102, 0, 0,  "STEP" );
+    gpu_printf_centre( YELLOW, 242, 123, 0, 0, "BACK" );
+    gpu_printf_centre( YELLOW, 211, 135, 0, 0, "LEFT" );
+    gpu_printf_centre( YELLOW, 272, 109, 0, 0, "RIGHT" );
+    gpu_printf_centre( YELLOW, 98, 128, 0, 0, "PEEK" );
+    gpu_printf_centre( YELLOW, 66, 142, 0, 0, "POWER" );
 }
 
 // RETURN CONTENTS OF == 0 MAZE == 1 MAP at ( X, Y )
@@ -187,11 +187,11 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
 
     // MAIN BODY and HEAD
     gpu_rectangle( colour, centrex - sizechange, centrey - sizechange, centrex + sizechange, centrey + sizechange );
-    gpu_circle( colour, centrex, centrey - sizechange, sizechange, 0x66, 1 );
+    gpu_circle( colour, centrex, centrey - sizechange, sizechange, 0b11000011, 1 );
 
     // FRILLS
     for( short i = -2; i < 4; i +=2 ) {
-         gpu_circle( colour, centrex - ( offsetx * i ), centrey + sizechange, offsetx, 0x99, 1 );
+         gpu_circle( colour, centrex - ( offsetx * i ), centrey + sizechange, offsetx, 0b00111100, 1 );
     }
 
     // EYES - CROSSES IF POWER
@@ -209,11 +209,11 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
             draw_eye( centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2 );
             if( powerstatus ) {
                 // DRAW MOUTH
-                gpu_circle( PINK, centrex - eyeoffsetx, centrey + eyeoffsety, eyeoffsetx / 4, 0x66, 0 );
-                gpu_circle( PINK, centrex - eyeoffsetx / 2, centrey + eyeoffsety, eyeoffsetx / 4, 0x99, 0 );
-                gpu_circle( PINK, centrex, centrey + eyeoffsety, eyeoffsetx / 4, 0x66, 0 );
-                gpu_circle( PINK, centrex + eyeoffsetx / 2, centrey + eyeoffsety, eyeoffsetx / 4, 0x99, 0 );
-                gpu_circle( PINK, centrex + eyeoffsetx, centrey + eyeoffsety, eyeoffsetx / 4, 0x66, 0 );
+                gpu_circle( PINK, centrex - eyeoffsetx, centrey + eyeoffsety, eyeoffsetx / 4, 0b11000011, 0 );
+                gpu_circle( PINK, centrex - eyeoffsetx / 2, centrey + eyeoffsety, eyeoffsetx / 4, 0b00111100, 0 );
+                gpu_circle( PINK, centrex, centrey + eyeoffsety, eyeoffsetx / 4, 0b11000011, 0 );
+                gpu_circle( PINK, centrex + eyeoffsetx / 2, centrey + eyeoffsety, eyeoffsetx / 4, 0b00111100, 0 );
+                gpu_circle( PINK, centrex + eyeoffsetx, centrey + eyeoffsety, eyeoffsetx / 4, 0b11000011, 0 );
             }
             break;
         case 3:
@@ -641,7 +641,7 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
                 case 'X':
                     gpu_rectangle( YELLOW, perspectivex[ visiblesteps ], perspectivey[ visiblesteps ], 320 - perspectivex[ visiblesteps ], 240 - perspectivey[ visiblesteps ] );
                     if( visiblesteps <= 4 ) {
-                        gpu_printf_centre( DKGREEN, 160, perspectivey[ visiblesteps ] + ( 2 << ( 4 - visiblesteps ) ), 4 - visiblesteps, "EXIT" );
+                        gpu_printf_centre( DKGREEN, 160, perspectivey[ visiblesteps ] + ( 2 << ( 4 - visiblesteps ) ), 4 - visiblesteps, 0, "EXIT" );
                     }
                     break;
                 case 'E':

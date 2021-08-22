@@ -20,6 +20,11 @@ void show( void ) {
         if( universe[y][x] )
             gpu_rectangle( BLACK, x * SIZE, y * SIZE, x * SIZE + (SIZE-1), y * SIZE + (SIZE-1) );
 
+    if( !(systemclock() & 0xf ) ) {
+            gpu_printf_centre( WHITE, 160, 2, 0, 0, "Press FIRE 1 to RESTART" );
+            gpu_printf_centre( WHITE, 160, 230, 0, 0, "Press FIRE 2 to EXIT" );
+    }
+
     // SWITCH THE FRAMEBUFFER
     framebuffer = 1 - framebuffer;
     bitmap_display( framebuffer );
@@ -42,7 +47,7 @@ void evolve( void) {
 void game( void ) {
 	for_xy universe[y][x] = rng( 2 );
 
-    // HOLD BUTTON TO REGENERATE STARTING POSITION
+    // HOLD FIRE 1 TO REGENERATE STARTING POSITION
 	while( get_buttons() == 1 ) {
 		evolve();
         show();
@@ -57,7 +62,8 @@ int main( void ) {
     tpu_cs();
     set_background( BLACK, BLACK, BKG_RAINBOW );
 
-    while(1) {
+    // CONTINUE UNTIL FIRE 2 IS PRESSED
+    while( !( get_buttons() & 4 ) ) {
         game();
     }
 }

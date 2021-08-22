@@ -526,7 +526,7 @@ void drawfuel( unsigned char fullbar ) {
 
     if( fullbar ) {
         gpu_rectangle( RED, 62, 216, 319, 223 );
-        gpu_printf( RED, 22, 216, 0, "FUEL:" );
+        gpu_printf( RED, 22, 216, 0, 0, "FUEL:" );
     }
     gpu_character_blit( RED, 63 + ( fuel >> 2 ), 216, 219, 0, 0 );
     gpu_character_blit( WHITE, 62 + ( fuel >> 2 ), 216, 30, 0, 0 );
@@ -534,7 +534,7 @@ void drawfuel( unsigned char fullbar ) {
 void drawshield( unsigned char fullbar ) {
     if( fullbar ) {
         gpu_rectangle( BLUE, 62, 224, 319, 231 );
-        gpu_printf( BLUE, 6, 224, 0, "SHIELD:" );
+        gpu_printf( BLUE, 6, 224, 0, 0, "SHIELD:" );
     }
     gpu_character_blit( BLUE, 63 + shield, 224, 219, 0, 0 );
     gpu_character_blit( WHITE, 62 + shield, 224, 30, 0, 2 );

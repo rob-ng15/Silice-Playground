@@ -5,12 +5,15 @@ int main( void ) {
 
     // CODE GOES HERE
     set_background( DKBLUE - 1, BLACK, BKG_SOLID );
-    gpu_cs();
 
-    gpu_rectangle( WHITE, 0, 0, 16, 16 );
-    gpu_line( WHITE, 0, 32, 64, 64 );
-
-    sleep( 8000, 0 );
+    unsigned char sectormap = 1;
+    for( int i = 0; i < 8; i++ ) {
+        gpu_cs();
+        gpu_circle( WHITE, 160, 120, 40, sectormap, 1 );
+        gpu_printf( WHITE, 16, 16, 2, "%d", i );
+        sectormap = sectormap << 1;
+        sleep( 2000, 0 );
+    }
 }
 
 // EXIT WILL RETURN TO BIOS

@@ -574,6 +574,10 @@ algorithm bitmap_memmap(
     int10   gpu_param3 = uninitialized;
     uint4   gpu_write = uninitialized;
     uint4   gpu_dithermode = uninitialized;
+    uint10  gpu_crop_left = uninitialized;
+    uint10  gpu_crop_right = uninitialized;
+    uint10  gpu_crop_top = uninitialized;
+    uint10  gpu_crop_bottom = uninitialized;
     uint5   blit1_writer_tile = uninitialized;
     uint4   blit1_writer_line = uninitialized;
     uint16  blit1_writer_bitmap = uninitialized;
@@ -628,6 +632,10 @@ algorithm bitmap_memmap(
         gpu_param3 <: gpu_param3,
         gpu_write <: gpu_write,
         gpu_dithermode <: gpu_dithermode,
+        crop_left <: gpu_crop_left,
+        crop_right <: gpu_crop_right,
+        crop_top <: gpu_crop_top,
+        crop_bottom <: gpu_crop_bottom,
         blit1_writer_tile <: blit1_writer_tile,
         blit1_writer_line <: blit1_writer_line,
         blit1_writer_bitmap <: blit1_writer_bitmap,
@@ -714,6 +722,10 @@ algorithm bitmap_memmap(
                     case 8hd2: { bitmap_y_read = writeData; }
 
                     case 8he0: { bitmap_write_offset = writeData; }
+                    case 8he2: { gpu_crop_left = writeData; }
+                    case 8he4: { gpu_crop_right = writeData; }
+                    case 8he6: { gpu_crop_top = writeData; }
+                    case 8he8: { gpu_crop_bottom = writeData; }
                     case 8hf0: { framebuffer = writeData; }
                     case 8hf2: { writer_framebuffer = writeData; }
                     default: {}
@@ -728,10 +740,13 @@ algorithm bitmap_memmap(
             default: {}
         }
         LATCHmemoryWrite = memoryWrite;
-   }
+    }
 
     // ON RESET STOP THE PIXEL BLOCK
-    if( ~reset ) { pb_newpixel = 3; __display("PB STOP"); }
+    if( ~reset ) { pb_newpixel = 3; }
+
+    // RESET THE CROPPING RECTANGLE
+    gpu_crop_left = 0; gpu_crop_right = 319; gpu_crop_top = 0; gpu_crop_bottom = 239;
 }
 
 algorithm charactermap_memmap(

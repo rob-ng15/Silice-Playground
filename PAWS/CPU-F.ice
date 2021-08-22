@@ -291,7 +291,7 @@ algorithm cpuexecute(
         function3 <: function3,
         function7 <: function7,
         rs1 <: rs1,
-        IshiftCount <: rs2,
+        rs2 <: rs2,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
         sourceReg3 <: sourceReg3,
@@ -302,17 +302,24 @@ algorithm cpuexecute(
     );
 
 
-    // M EXTENSION ALU OPERATIONS
-    int32   ALUMresult = uninitialized;
-    uint1   ALUMstart = uninitialized;
-    uint1   ALUMbusy = uninitialized;
-    aluM ALUM(
+    // M EXTENSION ALU(S) OPERATIONS - MULTIPLICATION AND DIVISION
+    int32   ALUMMresult = uninitialized;
+    aluMM ALUMM(
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
-        start <: ALUMstart,
-        busy :> ALUMbusy,
-        result :> ALUMresult
+        result :> ALUMMresult
+    );
+    int32   ALUMDresult = uninitialized;
+    uint1   ALUMDstart = uninitialized;
+    uint1   ALUMDbusy = uninitialized;
+    aluMD ALUMD(
+        function3 <: function3,
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        start <: ALUMDstart,
+        busy :> ALUMDbusy,
+        result :> ALUMDresult
     );
 
     // ATOMIC MEMORY OPERATIONS
@@ -371,7 +378,7 @@ algorithm cpuexecute(
     );
 
     // ALU AND CSR START FLAGS
-    ALUstart := 0; ALUMstart := 0; FPUstart := 0; CSRstart := 0; CSRincCSRinstret := 0; CSRupdateFPUflags := 0;
+    ALUstart := 0; ALUMDstart := 0; FPUstart := 0; CSRstart := 0; CSRincCSRinstret := 0; CSRupdateFPUflags := 0;
 
     while(1) {
         if( start ) {
@@ -401,14 +408,18 @@ algorithm cpuexecute(
                         default: { result = memoryinput; memoryoutput = ALUAresult; }      // ATOMIC LOAD - MODIFY - STORE
                     }
                 }
-                default: {                                                                  // FPU, ALUI or ALUR
+                default: {                                                                  // FPU, ALU-base or ALU-M extension
                     if( opCode[6,1] ) {
                         FPUstart = 1; while( FPUbusy ) {} CSRupdateFPUflags = 1; frd = FPUfrd; result = FPUresult;
                     } else {
                         if( opCode[5,1] &&function7[0,1] ) {
-                            ALUMstart = 1; while(  ALUMbusy ) {} result = ALUMresult;
+                            if( function3[2,1] ) {
+                                ALUMDstart = 1; while( ALUMDbusy ) {} result = ALUMDresult;
+                            } else {
+                                result = ALUMMresult;
+                            }
                         } else {
-                            ALUstart = 1; while( ALUbusy ) {} frd = 0; result = ALUresult;
+                            frd = 0; result = ALUresult;
                         }
                     }
                 }

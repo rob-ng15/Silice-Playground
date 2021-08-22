@@ -1,51 +1,3 @@
-algorithm aluI(
-    input   uint3   function3,
-    input   uint7   function7,
-    input   uint5   IshiftCount,
-    input   uint32  sourceReg1,
-    input   uint32  immediateValue,
-    input   uint32  LSHIFToutput,
-    input   uint32  RSHIFToutput,
-    output  uint32  result
-) <autorun> {
-    always {
-        switch( function3 ) {
-            case 3b000: { result = sourceReg1 + immediateValue; }
-            case 3b001: { result = LSHIFToutput; }
-            case 3b010: { result = __signed( sourceReg1 ) < __signed(immediateValue); }
-            case 3b011: { result = ( immediateValue == 1 ) ? ( sourceReg1 == 0 ) : ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ); }
-            case 3b100: { result = sourceReg1 ^ immediateValue; }
-            case 3b101: { result = RSHIFToutput; }
-            case 3b110: { result = sourceReg1 | immediateValue; }
-            case 3b111: { result = sourceReg1 & immediateValue; }
-        }
-    }
-}
-
-algorithm aluR(
-    input   uint3   function3,
-    input   uint7   function7,
-    input   uint5   rs1,
-    input   uint32  sourceReg1,
-    input   uint32  sourceReg2,
-    input   uint32  LSHIFToutput,
-    input   uint32  RSHIFToutput,
-    output  uint32  result
-) <autorun> {
-    always {
-        switch( function3 ) {
-            case 3b000: { result = sourceReg1 + ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ); }
-            case 3b001: { result = LSHIFToutput; }
-            case 3b010: { result = __signed( sourceReg1 ) < __signed(sourceReg2); }
-            case 3b011: { result = ( rs1 == 0 ) ? ( sourceReg2 != 0 ) : __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ); }
-            case 3b100: { result = sourceReg1 ^ sourceReg2; }
-            case 3b101: { result = RSHIFToutput; }
-            case 3b110: { result = sourceReg1 | sourceReg2; }
-            case 3b111: { result = sourceReg1 & sourceReg2; }
-        }
-    }
-}
-
 // ALU - ALU for immediate-register operations and register-register operations
 algorithm alu(
     input   uint1   start,
@@ -55,100 +7,38 @@ algorithm alu(
     input   uint3   function3,
     input   uint7   function7,
     input   uint5   rs1,
+    input   uint5   rs2,
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
     input   uint32  sourceReg3,
-    input   uint5   IshiftCount,
     input   uint32  immediateValue,
 
     output  uint32  result
 ) <autorun> {
-    uint5   shiftcount <:: opCode[5,1] ? sourceReg2[0,5] : IshiftCount;
-
-    // SHIFTERS
-    uint32  LSHIFToutput = uninitialized;
-    uint32  RSHIFToutput = uninitialized;
-    BSHIFTleft LEFTSHIFT(
-        sourceReg1 <: sourceReg1,
-        shiftcount <: shiftcount,
-        function7 <: function7,
-        result :> LSHIFToutput
-    );
-    BSHIFTright RIGHTSHIFT(
-        sourceReg1 <: sourceReg1,
-        shiftcount <: shiftcount,
-        function7 <: function7,
-        result :> RSHIFToutput
-    );
-
-    // BASE REGISTER + IMMEDIATE ALU OPERATIONS
-    int32   ALUIresult = uninitialized;
-    aluI ALUI(
-       function3 <: function3,
-        function7 <: function7,
-        IshiftCount <: IshiftCount,
-        sourceReg1 <: sourceReg1,
-        immediateValue <: immediateValue,
-        LSHIFToutput <: LSHIFToutput,
-        RSHIFToutput <: RSHIFToutput,
-        result :> ALUIresult
-    );
-
-    // BASE REGISTER + REGISTER ALU OPERATIONS
-    int32   ALURresult = uninitialized;
-    aluR ALUR(
-        function3 <: function3,
-        function7 <: function7,
-        rs1 <: rs1,
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-        LSHIFToutput <: LSHIFToutput,
-        RSHIFToutput <: RSHIFToutput,
-        result :> ALURresult
-    );
+    uint5   shiftcount <:: opCode[5,1] ? sourceReg2[0,5] : rs2;
 
     always {
-        if( start ) {
-            // SELECT ALUI or ALUR
-            busy = 1;
-            if( opCode[5,1] ) {
-                result = ALURresult;
-            } else {
-                result = ALUIresult;
+        switch( function3 ) {
+            case 3b000: { result = sourceReg1 + ( opCode[5,1] ? ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ) : immediateValue ); }
+            case 3b001: { result = sourceReg1 << shiftcount; }
+            case 3b010: { result = __signed( sourceReg1 ) < __signed(opCode[5,1] ? sourceReg2 : immediateValue); }
+            case 3b011: { result = opCode[5,1] ? ( rs1 == 0 ) ? ( sourceReg2 != 0 ) : __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) :
+                                                ( immediateValue == 1 ) ? ( sourceReg1 == 0 ) : ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ); }
+            case 3b100: { result = sourceReg1 ^ ( opCode[5,1] ? sourceReg2 : immediateValue ); }
+            case 3b101: {
+                if( function7[5,1] ) {
+                    result = __signed(sourceReg1) >>> shiftcount;
+                } else {
+                    result = sourceReg1 >> shiftcount;
+                }
             }
-            busy = 0;
-        }
-    }
-}
-
-// BARREL SHIFTERS
-algorithm BSHIFTleft(
-    input   uint32  sourceReg1,
-    input   uint5   shiftcount,
-    input   uint7   function7,
-    output  uint32  result
-) <autorun> {
-   always {
-        result = sourceReg1 << shiftcount;
-    }
-}
-algorithm BSHIFTright(
-    input   uint32  sourceReg1,
-    input   uint5   shiftcount,
-    input   uint7   function7,
-    output  uint32  result
-) <autorun> {
-    always {
-        if( function7[5,1] ) {
-            result = __signed(sourceReg1) >>> shiftcount;
-        } else {
-            result = sourceReg1 >> shiftcount;
+            case 3b110: { result = sourceReg1 | ( opCode[5,1] ? sourceReg2 : immediateValue ); }
+            case 3b111: { result = sourceReg1 & ( opCode[5,1] ? sourceReg2 : immediateValue ); }
         }
     }
 }
 
 // ALU - M EXTENSION
-
 // UNSIGNED / SIGNED 32 by 32 bit division giving 32 bit remainder and quotient
 algorithm douintdivide(
     input   uint1   start,
@@ -243,6 +133,7 @@ algorithm aluMmultiply(
     }
 }
 
+// COMBINED ALU FOR MULTIPLICATION AND DIVISION
 algorithm aluM(
     input   uint1   start,
     output  uint1   busy(0),
@@ -280,6 +171,56 @@ algorithm aluM(
             } else {
                 result = ALUMMresult;
             }
+            busy = 0;
+        }
+    }
+}
+// ALU FOR MULTIPLICATION
+algorithm aluMM(
+    input   uint3   function3,
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+    output  uint32  result
+) <autorun> {
+    int32   ALUMMresult = uninitialized;
+    aluMmultiply ALUMM(
+        dosign <: function3,
+        factor_1 <: sourceReg1,
+        factor_2 <: sourceReg2,
+        result :> ALUMMresult
+    );
+
+    always {
+        result = ALUMMresult;
+    }
+}
+// ALU FOR DIVISION
+algorithm aluMD(
+    input   uint1   start,
+    output  uint1   busy(0),
+    input   uint3   function3,
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+    output  uint32  result
+) <autorun> {
+    // M EXTENSION MULTIPLICATION AND DIVISION
+    int32   ALUMDresult = uninitialized;
+    uint1   ALUMDstart = uninitialized;
+    uint1   ALUMDbusy = uninitialized;
+    aluMdivideremain ALUMD(
+        dosign <: function3,
+        dividend <: sourceReg1,
+        divisor <: sourceReg2,
+        result :> ALUMDresult,
+        start <: ALUMDstart,
+        busy :> ALUMDbusy
+    );
+    ALUMDstart := 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+            ALUMDstart = 1; while( ALUMDbusy ) {} result = ALUMDresult;
             busy = 0;
         }
     }

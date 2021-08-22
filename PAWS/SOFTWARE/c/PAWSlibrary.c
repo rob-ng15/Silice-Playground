@@ -401,6 +401,14 @@ void gpu_dither( unsigned char mode, unsigned char colour ) {
     *GPU_DITHERMODE = mode;
 }
 
+// SET GPU CROPPING RECTANGLE
+void gpu_crop( unsigned short left, unsigned short right, unsigned short top, unsigned short bottom ) {
+    wait_gpu();
+    *CROP_LEFT = left;
+    *CROP_RIGHT = right;
+    *CROP_TOP = top;
+    *CROP_BOTTOM = bottom;
+}
 
 // SET THE PIXEL at (x,y) to colour
 void gpu_pixel( unsigned char colour, short x, short y ) {
@@ -461,26 +469,26 @@ void gpu_circle( unsigned char colour, short x1, short y1, short radius, unsigne
 
 // BLIT A 16 x 16 ( blit_size == 1 doubled to 32 x 32 ) TILE ( from tile 0 to 31 ) to (x1,y1) in colour
 // REFLECT { y, x }
-void gpu_blit( unsigned char colour, short x1, short y1, short tile, unsigned char blit_size, unsigned char reflect ) {
+void gpu_blit( unsigned char colour, short x1, short y1, short tile, unsigned char blit_size, unsigned char action ) {
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = tile;
     *GPU_PARAM1 = blit_size;
-    *GPU_PARAM2 = reflect;
+    *GPU_PARAM2 = action;
     wait_gpu();
     *GPU_WRITE = 7;
 }
 
 // BLIT AN 8 x8  ( blit_size == 1 doubled to 16 x 16, blit_size == 1 doubled to 32 x 32 ) CHARACTER ( from tile 0 to 255 ) to (x1,y1) in colour
 // REFLECT { y, x }
-void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned char tile, unsigned char blit_size, unsigned char reflect ) {
+void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned char tile, unsigned char blit_size, unsigned char action ) {
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
     *GPU_PARAM0 = tile;
     *GPU_PARAM1 = blit_size;
-    *GPU_PARAM2 = reflect;
+    *GPU_PARAM2 = action;
     wait_gpu();
     *GPU_WRITE = 8;
 }
@@ -553,7 +561,7 @@ void gpu_quadrilateral( unsigned char colour, short x1, short y1, short x2, shor
 }
 
 // OUTPUT A STRING TO THE GPU
-void gpu_printf( unsigned char colour, short x, short y, unsigned char size, const char *fmt,... ) {
+void gpu_printf( unsigned char colour, short x, short y, unsigned char size, unsigned char action, const char *fmt,... ) {
     char *buffer = (char *)0x1000;
     va_list args;
     va_start (args, fmt);
@@ -562,12 +570,26 @@ void gpu_printf( unsigned char colour, short x, short y, unsigned char size, con
 
     char *s = buffer;
     while( *s ) {
-        gpu_character_blit( colour, x, y, *s++, size, 0 );
+        gpu_character_blit( colour, x, y, *s++, size, action );
         x = x + ( 8 << size );
     }
 }
-// OUTPUT A STRING TO THE GPU - CENTRED AT ( x,y )
-void gpu_printf_centre( unsigned char colour, short x, short y, unsigned char size, const char *fmt,... ) {
+void gpu_printf_vertical( unsigned char colour, short x, short y, unsigned char size, unsigned char action, const char *fmt,... ) {
+    char *buffer = (char *)0x1000;
+    va_list args;
+    va_start (args, fmt);
+    vsnprintf( buffer, 80, fmt, args);
+    va_end(args);
+
+    char *s = buffer;
+    while( *s ) {
+        gpu_character_blit( colour, x, y, *s++, size, action );
+        y = y - ( 8 << size );
+    }
+}
+
+// OUTPUT A STRING TO THE GPU - CENTRED AT ( x, y )
+void gpu_printf_centre( unsigned char colour, short x, short y, unsigned char size, unsigned char action, const char *fmt,... ) {
     char *buffer = (char *)0x1000;
     va_list args;
     va_start (args, fmt);
@@ -577,8 +599,21 @@ void gpu_printf_centre( unsigned char colour, short x, short y, unsigned char si
     char *s = buffer;
     x = x - ( ( strlen( s ) * ( 8 << size ) ) /2 );
     while( *s ) {
-        gpu_character_blit( colour, x, y, *s++, size, 0 );
+        gpu_character_blit( colour, x, y, *s++, size, action );
         x = x + ( 8 << size );
+    }
+}void gpu_printf_centre_vertical( unsigned char colour, short x, short y, unsigned char size, unsigned char action, const char *fmt,... ) {
+    char *buffer = (char *)0x1000;
+    va_list args;
+    va_start (args, fmt);
+    vsnprintf( buffer, 80, fmt, args);
+    va_end(args);
+
+    char *s = buffer;
+    y = y - ( ( strlen( s ) * ( 8 << size ) ) /2 );
+    while( *s ) {
+        gpu_character_blit( colour, x, y, *s++, size, action );
+        y = y - ( 8 << size );
     }
 }
 

@@ -34,6 +34,12 @@ algorithm bitmap(
     input   uint4   gpu_write,
     input   uint4   gpu_dithermode,
 
+    // CROP RECTANGLE
+    input   uint10  crop_left,
+    input   uint10  crop_right,
+    input   uint10  crop_top,
+    input   uint10  crop_bottom,
+
     // For setting blit1 tile bitmaps
     input   uint5   blit1_writer_tile,
     input   uint4   blit1_writer_line,
@@ -110,6 +116,10 @@ algorithm bitmap(
         static6bit <: static6bit,
         x_offset <: x_offset,
         y_offset <: y_offset,
+        crop_left <: crop_left,
+        crop_right <: crop_right,
+        crop_top <: crop_top,
+        crop_bottom <: crop_bottom,
         bitmap_0 <:> bitmap_0,
         bitmap_1 <:> bitmap_1
     );
@@ -202,6 +212,12 @@ algorithm bitmapwriter(
     input   uint9   x_offset,
     input   uint8   y_offset,
 
+    // CROP RECTANGLE
+    input   uint10  crop_left,
+    input   uint10  crop_right,
+    input   uint10  crop_top,
+    input   uint10  crop_bottom,
+
     simple_dualport_bram_port1 bitmap_0,
     simple_dualport_bram_port1 bitmap_1
 ) <autorun> {
@@ -214,7 +230,7 @@ algorithm bitmapwriter(
     int10   y_write_pixel <: y_plus_offset - ( ( y_plus_offset > 239 ) ? 240 : 0 );
 
     // Write in range?
-    uint1 write_pixel <: ( ~bitmap_x_write[9,1] ) & ( bitmap_x_write < 320 ) & ( ~bitmap_y_write[9,1] ) & ( bitmap_y_write < 240 ) & bitmap_write;
+    uint1 write_pixel <: ( bitmap_x_write >= crop_left ) & ( bitmap_x_write <= crop_right ) & ( bitmap_y_write >= crop_top ) & ( bitmap_y_write <= crop_bottom ) & bitmap_write;
 
     // Bitmap write access for the GPU
     bitmap_0.wenable1 := 1; bitmap_1.wenable1 := 1;
