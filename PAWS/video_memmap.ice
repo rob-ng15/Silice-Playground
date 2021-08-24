@@ -134,7 +134,7 @@ $$end
     uint6   character_map_p = uninitialized;
     uint1   character_map_display = uninitialized;
     uint2   tpu_active = uninitialized;
-    uint8   curses_character = uninitialized;
+    uint9   curses_character = uninitialized;
     uint7   curses_background = uninitialized;
     uint6   curses_foreground = uninitialized;
     uint1   CHARACTER_MAPmemoryWrite = uninitialized;
@@ -768,13 +768,13 @@ algorithm charactermap_memmap(
     input   uint16  writeData,
 
     output  uint2   tpu_active,
-    output  uint8   curses_character,
+    output  uint9   curses_character,
     output  uint7   curses_background,
     output  uint6   curses_foreground
 ) <autorun> {
     uint7   tpu_x = uninitialized;
-    uint5   tpu_y = uninitialized;
-    uint8   tpu_character = uninitialized;
+    uint6   tpu_y = uninitialized;
+    uint9   tpu_character = uninitialized;
     uint6   tpu_foreground = uninitialized;
     uint7   tpu_background = uninitialized;
     uint3   tpu_write = uninitialized;

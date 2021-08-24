@@ -269,35 +269,37 @@ $$end
     );
 
     // IDENTIFY ADDRESS BLOCK
-    uint1   SDRAM <: address[28,1];
-    uint1   BRAM <: ~SDRAM & ~address[15,1];
-    uint1   IOmem <: ~SDRAM & ~BRAM;
-    uint1   VIDEO <: IOmem & ( address[12,4]==4h8 );
-    uint1   AUDIOTIMERS <: IOmem & ( address[12,4]==4he );
-    uint1   IO <: IOmem & ( address[12,4]==4hf );
+    uint1   SDRAM <:: address[28,1];
+    uint1   BRAM <:: ~SDRAM & ~address[15,1];
+    uint1   IOmem <:: ~SDRAM & ~BRAM;
+    uint1   VIDEO <:: IOmem & ( address[12,4]==4h8 );
+    uint1   AUDIOTIMERS <:: IOmem & ( address[12,4]==4he );
+    uint1   IO <:: IOmem & ( address[12,4]==4hf );
 
     // SDRAM -> CPU BUSY STATE
-    uint1   memorybusy <: sdrambusy | ( ( CPUreadmemory | CPUwritememory ) & ( BRAM | SDRAM ) );
+    uint1   memorybusy <:: sdrambusy | ( ( CPUreadmemory | CPUwritememory ) & ( BRAM | SDRAM ) );
 
+    // READ / WRITE FROM SDRAM / BRAM
+    uint1   sdramwriteflag <:: SDRAM & CPUwritememory;
+    uint1   sdramreadflag <:: SDRAM & CPUreadmemory;
+    uint1   ramwriteflag <:: BRAM & CPUwritememory;
+    uint1   ramreadflag <:: BRAM & CPUreadmemory;
+
+    // READ / WRITE FROM I/O
+    uint1   VmemoryWrite <:: VIDEO & CPUwritememory;
+    uint1   VmemoryRead <:: VIDEO & CPUreadmemory;
+    uint1   ATmemoryWrite <:: AUDIOTIMERS & CPUwritememory;
+    uint1   ATmemoryRead <:: AUDIOTIMERS & CPUreadmemory;
+    uint1   IOmemoryWrite <:: IO & CPUwritememory;
+    uint1   IOmemoryRead <:: IO & CPUreadmemory;
+
+    // DATA READ FROM BRAM / SDRAM or IO BLOCKS
     uint16  readdata <: SDRAM ? sdramreaddata :
                 BRAM ? ramreaddata :
                 VIDEO ? VreadData :
                 AUDIOTIMERS ? ATreadData :
                 IO? IOreadData : 0;
 
-    // READ / WRITE FROM SDRAM / BRAM
-    uint1   sdramwriteflag <: SDRAM & CPUwritememory;
-    uint1   sdramreadflag <: SDRAM & CPUreadmemory;
-    uint1   ramwriteflag <: BRAM & CPUwritememory;
-    uint1   ramreadflag <: BRAM & CPUreadmemory;
-
-    // READ / WRITE FROM I/O
-    uint1   VmemoryWrite <: VIDEO & CPUwritememory;
-    uint1   VmemoryRead <: VIDEO & CPUreadmemory;
-    uint1   ATmemoryWrite <: AUDIOTIMERS & CPUwritememory;
-    uint1   ATmemoryRead <: AUDIOTIMERS & CPUreadmemory;
-    uint1   IOmemoryWrite <: IO & CPUwritememory;
-    uint1   IOmemoryRead <: IO & CPUreadmemory;
 }
 
 // RAM - BRAM controller
@@ -312,8 +314,6 @@ algorithm bramcontroller(
     input   uint1   readflag,
     output  uint16  readdata
 ) <autorun> {
-    uint2   FSM = uninitialized;
-
 $$if not SIMULATION then
     // RISC-V RAM and BIOS
     bram uint16 ram <input!> [16384] = {

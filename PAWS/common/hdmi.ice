@@ -13,8 +13,8 @@
 //
 //      GNU AFFERO GENERAL PUBLIC LICENSE
 //        Version 3, 19 November 2007
-//
-//  A copy of the license full text is included in
+//      
+//  A copy of the license full text is included in 
 //  the distribution, please refer to it for details.
 
 import('hdmi_clock.v')
@@ -37,7 +37,7 @@ algorithm tmds_encoder(
   uint4 num_ones        := data[0,1] + data[1,1] + data[2,1] + data[3,1]
                          + data[4,1] + data[5,1] + data[6,1] + data[7,1];
   // tracks 'numbers of ones minus number of zeros' in internal byte
-  int5  diff_ones_zeros := q_m[0,1] + q_m[1,1] + q_m[2,1] + q_m[3,1]
+  int5  diff_ones_zeros := q_m[0,1] + q_m[1,1] + q_m[2,1] + q_m[3,1] 
                          + q_m[4,1] + q_m[5,1] + q_m[6,1] + q_m[7,1] - 6d4;
 
   // XOR chain on input
@@ -57,13 +57,13 @@ algorithm tmds_encoder(
   int1  xnored5         := ~(data[5,1] ^ xnored4);
   int1  xnored6         := ~(data[6,1] ^ xnored5);
   int1  xnored7         := ~(data[7,1] ^ xnored6);
-
+  
   always {
     // choice of encoding scheme (xor / xnor)
     if ((num_ones > 4) || (num_ones == 4 && data[0,1] == 0)) {
-      q_m = { 1b0 , {xnored7,xnored6,xnored5,xnored4,xnored3,xnored2,xnored1} , data[0,1] };
+      q_m = { 1b0 , {xnored7,xnored6,xnored5,xnored4,xnored3,xnored2,xnored1} , data[0,1] };  
     } else {
-      q_m = { 1b1 , {xored7,xored6,xored5,xored4,xored3,xored2,xored1} , data[0,1] };
+      q_m = { 1b1 , {xored7,xored6,xored5,xored4,xored3,xored2,xored1} , data[0,1] };    
     }
     if (data_or_ctrl) {
       // output data
@@ -134,13 +134,13 @@ algorithm hdmi(
   input   uint8  green,
   input   uint8  blue,
 )  {
-
+    
   uint10 cntx  = 0;
   uint9  cnty  = 0;
-
+  
   uint1 hsync      := (cntx > 655) && (cntx < 752);
   uint1 vsync      := (cnty > 489) && (cnty < 492);
-
+  
   uint2 sync_ctrl   = uninitialized;
   uint2 null_ctrl  := 0;
 
@@ -191,9 +191,9 @@ algorithm hdmi(
     p_outbits :> crgb_pos
   );
 
-  hdmi_ddr_crgb hdmi_out(
+  hdmi_ddr_crgb hdmi_out( 
     clock      <: half_hdmi_clk,
-    crgb_twice <: crgb_pos,
+    crgb_twice <: crgb_pos, 
     out_pin    :> gpdi_dp
   );
 
@@ -208,18 +208,18 @@ algorithm hdmi(
     // synchronization bits
     sync_ctrl      = {vsync,hsync};
     // output active area
-    active         = (cntx < 640) && (cnty < 480);
+    active         = (cntx < 640) && (cnty < 480);    
     // output vblank
     vblank         = (cnty >= 480);
     // output x,y
-    x              = active ? cntx : 0;
-    y              = vblank ? 0 : cnty;
-    // => we will get color result on next cycle
+    x              = cntx;
+    y              = cnty; 
+    // => we will get color result on next cycle   
 
     // update coordinates
     cnty        = (cntx == 799) ? (cnty == 524 ? 0 : (cnty + 1)) : cnty;
     cntx        = (cntx == 799) ? 0 : (cntx + 1);
-
+    
     // latch r,b,g received at this cycle, for previous coord
     // will be fed into HDMI encoders next cycle
     latch_red   = red;

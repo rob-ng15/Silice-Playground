@@ -1,4 +1,5 @@
 #include "PAWS.h"
+#include "PAWSdefinitions.h"
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -451,8 +452,7 @@ void gpu_rectangle( unsigned char colour, short x1, short y1, short x2, short y2
 
 // CLEAR THE BITMAP by drawing a transparent rectangle from (0,0) to (639,479) and resetting the bitamp scroll position
 void gpu_cs( void ) {
-    bitmap_scrollwrap( 5 );
-    gpu_rectangle( 64, 0, 0, 319, 239 );
+    bitmap_scrollwrap( 5 ); gpu_dither( 0, 64 ); gpu_rectangle( 64, 0, 0, 319, 239 );
 }
 
 
@@ -610,7 +610,7 @@ void gpu_printf_centre( unsigned char colour, short x, short y, unsigned char si
     va_end(args);
 
     char *s = buffer;
-    y = y - ( ( strlen( s ) * ( 8 << size ) ) /2 );
+    y = y + ( ( strlen( s ) * ( 8 << size ) ) /2 );
     while( *s ) {
         gpu_character_blit( colour, x, y, *s++, size, action );
         y = y - ( 8 << size );
@@ -703,12 +703,6 @@ void set_vector_vertex( unsigned char block, unsigned char vertex, unsigned char
     *VECTOR_WRITER_DELTAY = deltay;
 }
 
-// SOFTWARE VECTORS
-struct Point2D {
-    short dx;
-    short dy;
-};
-
 struct Point2D Rotate2D( struct Point2D point, short xc, short yc, short angle, float scale ) {
     struct Point2D newpoint;
     float radians = angle*0.01745329252;
@@ -719,7 +713,7 @@ struct Point2D Rotate2D( struct Point2D point, short xc, short yc, short angle, 
     return( newpoint );
 }
 
-void Draw2DVectorShape( unsigned char colour, struct Point2D *points, short numpoints, short xc, short yc, short angle, float scale ) {
+void DrawVectorShape2D( unsigned char colour, struct Point2D *points, short numpoints, short xc, short yc, short angle, float scale ) {
     struct Point2D *NewShape  = (struct Point2D *)0x1400;
     for( short vertex = 0; vertex < numpoints; vertex++ ) {
         NewShape[ vertex ] = Rotate2D( points[vertex], xc, yc, angle, scale );
@@ -728,6 +722,47 @@ void Draw2DVectorShape( unsigned char colour, struct Point2D *points, short nump
         gpu_line( colour, NewShape[ vertex ].dx, NewShape[ vertex ].dy, NewShape[ ( vertex == ( numpoints - 1 ) ) ? 0 : vertex + 1 ].dx, NewShape[ vertex == ( numpoints - 1 ) ? 0 : vertex + 1 ].dy );
     }
 }
+
+// SCALE A POINT AND MOVE TO CENTRE POINT
+struct Point2D Scale2D( struct Point2D point, short xc, short yc, float scale ) {
+    struct Point2D newpoint;
+    newpoint.dx = point.dx * scale + xc;
+    newpoint.dy = point.dy * scale + yc;
+    return( newpoint );
+}
+
+// PROCESS A DRAWLIST DRAWING SHAPES AFTER SCALING AND MOVING TO CENTRE POINT
+void DoDrawList2D( struct DrawList2D *list, short numentries, short xc, short yc, float scale ) {
+    struct Point2D XY1, XY2, XY3, XY4;
+    for( int i = 0; i < numentries; i++ ) {
+        gpu_dither( list[i].dithermode, list[i].alt_colour );
+        // ALWAYS SCALE FIRST TWO VERTICES
+        XY1 = Scale2D( list[i].xy1, xc, yc, scale );
+        XY2 = Scale2D( list[i].xy2, xc, yc, scale );
+        switch( list[i].shape ) {
+            case DLRECT:
+                // SCALE RECTANLGE VERICES, THEN DRAW
+                gpu_rectangle( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy );
+                break;
+            case DLCIRC:
+                // SCALE CIRCLE CENTRE, SCALE RADIUS, THEN DRAW
+                gpu_circle( list[i].colour, XY1.dx, XY1.dy, list[i].xy2.dx * scale, list[i].xy2.dy, 1 );
+                break;
+            case DLTRI:
+                // SCALE RECTANLGE VERICES, THEN DRAW
+                XY3 = Scale2D( list[i].xy3, xc, yc, scale );
+                gpu_triangle( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, XY3.dx, XY3.dy );
+                break;
+            case DLQUAD:
+                // SCALE RECTANLGE VERICES, THEN DRAW
+                XY3 = Scale2D( list[i].xy3, xc, yc, scale );
+                XY4 = Scale2D( list[i].xy4, xc, yc, scale );
+                gpu_quadrilateral( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, XY3.dx, XY3.dy, XY4.dx, XY4.dy );
+                break;
+        }
+    }
+}
+
 
 // SPRITE LAYERS - MAIN ACCESS
 // TWO SPRITE LAYERS ( 0 == lower above background and tilemap, below bitmap, 1 == upper above bitmap, below character map )
@@ -922,27 +957,27 @@ void tpu_set(  unsigned char x, unsigned char y, unsigned char background, unsig
 }
 
 // OUTPUT CHARACTER, STRING, and PRINTF EQUIVALENT FOR THE TPU
-void tpu_output_character( char c ) {
+void tpu_output_character( short c ) {
     while( *TPU_COMMIT );
     *TPU_CHARACTER = c; *TPU_COMMIT = 2;
 }
-void tpu_outputstring( char *s ) {
+void tpu_outputstring( char attribute, char *s ) {
     while( *s ) {
         while( *TPU_COMMIT );
-        *TPU_CHARACTER = *s; *TPU_COMMIT = 2;
+        *TPU_CHARACTER = ( attribute ? 256 : 0 ) + *s; *TPU_COMMIT = 2;
         s++;
     }
 }
-void tpu_printf( const char *fmt,... ) {
+void tpu_printf( char attribute, const char *fmt,... ) {
     char *buffer = (char *)0x1000;
     va_list args;
     va_start (args, fmt);
     vsnprintf( buffer, 1023, fmt, args);
     va_end(args);
 
-    tpu_outputstring( buffer );
+    tpu_outputstring( attribute, buffer );
 }
-void tpu_printf_centre( unsigned char y, unsigned char background, unsigned char foreground,  const char *fmt,...  ) {
+void tpu_printf_centre( unsigned char y, unsigned char background, unsigned char foreground,  char attribute, const char *fmt,...  ) {
     char *buffer = (char *)0x1000;
     va_list args;
     va_start (args, fmt);
@@ -951,7 +986,7 @@ void tpu_printf_centre( unsigned char y, unsigned char background, unsigned char
 
     tpu_clearline( y );
     tpu_set( 40 - ( strlen(buffer) >> 1 ), y, background, foreground );
-    tpu_outputstring( buffer );
+    tpu_outputstring( attribute, buffer );
 }
 
 // SIMPLE FILE SYSTEM
@@ -1138,20 +1173,18 @@ unsigned char SMTSTATE( void ) {
     return( *SMTSTATUS );
 }
 
-
 // SIMPLE CURSES LIBRARY
 // USES THE CURSES BUFFER IN THE CHARACTER MAP
-#define COLS 80
-#define LINES 30
 
-unsigned char   __curses_backgroundcolours[16], __curses_foregroundcolours[16], __curses_scroll = 1, __curses_echo = 0;
+unsigned char   __curses_backgroundcolours[COLOR_PAIRS], __curses_foregroundcolours[COLOR_PAIRS],
+                __curses_scroll = 1, __curses_echo = 0, __curses_bold = 0, __curses_reverse = 0;
 unsigned short  __curses_x = 0, __curses_y = 0, __curses_fore = WHITE, __curses_back = BLACK;
 
 typedef union curses_cell {
     unsigned int bitfield;
     struct {
-        unsigned int pad : 11;
-        unsigned int character : 8;
+        unsigned int pad : 10;
+        unsigned int character : 9;
         unsigned int background : 7;
         unsigned int foreground : 6;
     } cell;
@@ -1189,7 +1222,7 @@ void __write_curses_cell( unsigned short x, unsigned short y, __curses_cell writ
 void initscr( void ) {
     while( *TPU_COMMIT );
     *TPU_COMMIT = 6;
-    __curses_x = 0; __curses_y = 0; __curses_fore = WHITE; __curses_back = BLACK; *TPU_CURSOR = 1; __curses_scroll = 1; __update_tpu();
+    __curses_x = 0; __curses_y = 0; __curses_fore = WHITE; __curses_back = BLACK; *TPU_CURSOR = 1; __curses_scroll = 1; __curses_bold = 0; __update_tpu();
 }
 
 int endwin( void ) {
@@ -1205,7 +1238,7 @@ int refresh( void ) {
 int clear( void ) {
     while( *TPU_COMMIT );
     *TPU_COMMIT = 6;
-    __curses_x = 0; __curses_y = 0; __curses_fore = WHITE; __curses_back = BLACK; __update_tpu();
+    __curses_x = 0; __curses_y = 0; __curses_fore = WHITE; __curses_back = BLACK; __curses_bold = 0; __update_tpu();
     return( true );
 }
 
@@ -1262,8 +1295,8 @@ int init_pair( short pair, short f, short b ) {
 }
 
 int move( int y, int x ) {
-    __curses_x = ( unsigned short ) ( x < 0 ) ? 0 : ( x > 79 ) ? 79 : x;
-    __curses_y = ( unsigned short ) ( y < 0 ) ? 0 : ( y > 29 ) ? 29 : y;
+    __curses_x = ( unsigned short ) ( x < 0 ) ? 0 : ( x > COLS-1 ) ? COLS-1 : x;
+    __curses_y = ( unsigned short ) ( y < 0 ) ? 0 : ( y > LINES-1 ) ? LINES-1 : y;
     __position_curses( __curses_x, __curses_y );
     return( true );
 }
@@ -1302,7 +1335,7 @@ int addch( unsigned char ch ) {
             } else {
                 if( __curses_y ) {
                     __curses_y--;
-                    __curses_x = 79;
+                    __curses_x = COLS-1;
                 }
             }
             break;
@@ -1327,13 +1360,13 @@ int addch( unsigned char ch ) {
             break;
         }
         default: {
-            temp.cell.character = ch;
+            temp.cell.character = ( __curses_bold ? 256 : 0 ) + ch;
             temp.cell.background = __curses_back;
             temp.cell.foreground = __curses_fore;
             __write_curses_cell( __curses_x, __curses_y, temp );
-            if( __curses_x == 79 ) {
+            if( __curses_x == COLS-1 ) {
                 __curses_x = 0;
-                if( __curses_y == 29 ) {
+                if( __curses_y == LINES-1 ) {
                     if( __curses_scroll ) {
                         __scroll();
                     } else {
@@ -1387,28 +1420,43 @@ int mvprintw( int y, int x, const char *fmt,... ) {
 }
 
 int attron( int attrs ) {
-    __curses_fore = __curses_foregroundcolours[ attrs ];
-    __curses_back = __curses_backgroundcolours[ attrs ];
-    __update_tpu();
+    printf("attrs = 0x%x\n",attrs);
+    if( attrs & COLORS ) {
+        __curses_fore = __curses_foregroundcolours[ attrs & 0x3f ];
+        __curses_back = __curses_backgroundcolours[ attrs & 0x3f ];
+        __update_tpu();
+    }
+    if( attrs & A_NORMAL ) {
+        __curses_bold = 0;
+        __curses_reverse = 0;
+    }
+
+    if( attrs & A_BOLD ) {
+        __curses_bold = 1;
+    }
+
+    if( attrs & A_REVERSE )
+        __curses_reverse = 1;
+
     return( true );
 }
 
 int deleteln( void ) {
     __curses_cell temp;
 
-    if( __curses_y == 29 ) {
+    if( __curses_y == LINES-1 ) {
         // BLANK LAST LINE
         temp.cell.character = 0;
         temp.cell.background = __curses_back;
         temp.cell.foreground = __curses_fore;
 
-        for( unsigned char x = 0; x < 80; x++ ) {
-            __write_curses_cell( x, 29, temp );
+        for( unsigned char x = 0; x < COLS; x++ ) {
+            __write_curses_cell( x, LINES-1, temp );
          }
     } else {
         // MOVE LINES UP
-        for( unsigned char y = __curses_y; y < 29; y++ ) {
-            for( unsigned char x = 0; x < 80; x++ ) {
+        for( unsigned char y = __curses_y; y < LINES-1; y++ ) {
+            for( unsigned char x = 0; x < COLS; x++ ) {
                 temp = __read_curses_cell( x, y + 1 );
                 __write_curses_cell( x, y, temp );
             }
@@ -1418,8 +1466,8 @@ int deleteln( void ) {
         temp.cell.character = 0;
         temp.cell.background = __curses_back;
         temp.cell.foreground = __curses_fore;
-        for( unsigned char x = 0; x < 80; x++ ) {
-            __write_curses_cell( x, 29, temp );
+        for( unsigned char x = 0; x < COLS; x++ ) {
+            __write_curses_cell( x, LINES-1, temp );
         }
     }
 
@@ -1431,7 +1479,7 @@ int clrtoeol( void ) {
     temp.cell.character = 0;
     temp.cell.background = __curses_back;
     temp.cell.foreground = __curses_fore;
-    for( int x = __curses_x; x < 80; x++ ) {
+    for( int x = __curses_x; x < COLS; x++ ) {
         __write_curses_cell( x, __curses_y, temp );
     }
     return( true );

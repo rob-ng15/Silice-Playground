@@ -25,7 +25,7 @@ int main( void ) {
         clear();
         move( 0, 0 );
         for( i = 1; i < 8 ; i++ ) {
-            attron( i );
+            attron( COLOR_PAIR(i) );
             printw( "Terminal Test: Colour <%d>\n", i );
         }
 
@@ -53,7 +53,7 @@ int main( void ) {
                     x = x * 2; y = y / 2;
                     break;
                 case 3:
-                    printw( "x / 2 , y * 2\n" );
+                    printw( "x / 2 , y * 2\n\n" );
                     x = x / 2; y = y * 2;
                     break;
             }

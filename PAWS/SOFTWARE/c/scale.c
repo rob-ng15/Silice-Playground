@@ -19,7 +19,7 @@ int main( void ) {
             bitmap_draw( !framebuffer ); gpu_cs();
             value = 80 * scale;
             gpu_rectangle( GREY1, 160 - value, 120 - value, 160 + value, 120 + value );
-            tpu_printf_centre( 29, TRANSPARENT, LTBLUE, "scale = %f, 80 * scale = %f, integer = %d", scale, (float)(80*scale), value );
+            tpu_printf_centre( 59, TRANSPARENT, LTBLUE, 0, "scale = %f, 80 * scale = %f, integer = %d", scale, (float)(80*scale), value );
 
             // SWITCH THE FRAMEBUFFER
             framebuffer = !framebuffer;
@@ -34,7 +34,7 @@ int main( void ) {
             bitmap_draw( !framebuffer ); gpu_cs();
             value = 80 / count;
             gpu_rectangle( GREY2, 160 - value, 120 - value, 160 + value, 120 + value );
-            tpu_printf_centre( 29, TRANSPARENT, LTRED, "count = %d, 80 / count = %f, integer = %d", count, (float)(80 / count), value );
+            tpu_printf_centre( 29, TRANSPARENT, LTRED, 0, "count = %d, 80 / count = %f, integer = %d", count, (float)(80 / count), value );
 
             // SWITCH THE FRAMEBUFFER
             framebuffer = !framebuffer;

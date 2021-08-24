@@ -44,13 +44,11 @@ algorithm PAWSCPU(
     output  uint1   writememory,
     input   uint16  readdata,
     output  uint1   readmemory,
-
     input   uint1   memorybusy,
-
     input   uint1   SMTRUNNING,
     input   uint32  SMTSTARTPC
 ) <autorun> {
-    uint16  resetcount = 16hffff;
+    uint16  resetcount = uninitialized;
     uint4   FSM = uninitialized;
 
     // RISC-V PROGRAM COUNTERS AND STATUS
@@ -75,8 +73,8 @@ algorithm PAWSCPU(
     );
 
     // RISC-V MEMORY ACCESS FLAGS
-    uint1   memoryload := ( opCode[2,5] == 5b00000 ) | ( opCode[2,5] == 5b00001 ) | ( ( opCode[2,5] == 5b01011 ) & ( function7[2,5] != 5b00011 ) );
-    uint1   memorystore := ( opCode[2,5] == 5b01000 ) | ( opCode[2,5] == 5b01001 ) | ( ( opCode[2,5] == 5b01011 ) & ( function7[2,5] != 5b00010 ) );
+    uint1   memoryload <::( opCode[2,5] == 5b00000 ) | ( opCode[2,5] == 5b00001 ) | ( ( opCode[2,5] == 5b01011 ) & ( function7[2,5] != 5b00011 ) );
+    uint1   memorystore <:: ( opCode[2,5] == 5b01000 ) | ( opCode[2,5] == 5b01001 ) | ( ( opCode[2,5] == 5b01011 ) & ( function7[2,5] != 5b00010 ) );
 
     // RISC-V 32 BIT INSTRUCTION DECODER
     int32   immediateValue = uninitialized;
@@ -246,7 +244,6 @@ algorithm PAWSCPU(
 algorithm cpuexecute(
     input   uint1   start,
     output  uint1   busy(0),
-
     input   uint1   SMT,
     input   uint32  instruction,
     input   uint7   opCode,
@@ -264,7 +261,6 @@ algorithm cpuexecute(
     input   uint32  memoryinput,
     input   uint32  AUIPCLUI,
     input   uint32  nextPC,
-
     output  uint1   writeRegister,
     output  uint1   frd,
     output  uint1   incPC,
@@ -300,7 +296,6 @@ algorithm cpuexecute(
         start <: ALUstart,
         busy :> ALUbusy
     );
-
 
     // M EXTENSION ALU(S) OPERATIONS - MULTIPLICATION AND DIVISION
     int32   ALUMMresult = uninitialized;

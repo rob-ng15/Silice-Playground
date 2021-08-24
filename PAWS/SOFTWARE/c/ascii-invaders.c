@@ -230,12 +230,8 @@ int main( void ) {
         if( ( get_buttons() & 64 ) != 0 )
             gun.move = 2;
 
-        // TRIGGER ONCE EVERY 25 milliseconds
-        if( !get_timer1khz(0) ) {
-            handleTimer( 1 );
-            set_timer1khz( 25, 0 );
-        }
-    }
+        handleTimer( 1 );
+     }
 
     return 0;   // not reached
 }
@@ -244,7 +240,7 @@ void paintShelters() {
     int n, y, x;
 
 #ifdef USE_COLORS
-    if (has_colors()) attron(COLOR_PAIR(1));
+    if (has_colors()) attron(COLOR_PAIR(1) | A_BOLD );
 #endif
     n = 0;
     for (y = 0; y < SHELTER_HEIGHT; y++) {
@@ -254,6 +250,7 @@ void paintShelters() {
         }
     }
     refresh();
+    attron( A_NORMAL );
 }
 
 /**
@@ -337,7 +334,7 @@ void handleTimer(int signal) {
         int i;
 
 #ifdef USE_COLORS
-        if (has_colors()) attron(COLOR_PAIR(2));
+        if (has_colors()) attron(COLOR_PAIR(2) | A_BOLD);
 #endif
         if (ma.pointsTimer != 0) {
             // ma has been shot and is now just showing points
@@ -358,6 +355,7 @@ void handleTimer(int signal) {
                     mvprintw(2 + i, ma.x, "%s ", alienBlank);
             }
         }
+        attron( A_NORMAL );
     }
 
     // drop bombs
@@ -788,7 +786,7 @@ void initGame() {
     //memset(&ma,0,sizeof(ma));
 
     aliens.cols = (COLS / ALIEN_WIDTH) - 4;
-    aliens.rows = (LINES / ALIEN_HEIGHT) - 4;
+    aliens.rows = ((LINES/2) / ALIEN_HEIGHT) - 4;
     aliens.table = malloc(aliens.cols * aliens.rows * sizeof(int));
     gun.shields = malloc(game.screenCols * SHELTER_HEIGHT);
 }
@@ -807,12 +805,12 @@ void paintIntro() {
 
 
 #ifdef USE_COLORS
-    if (has_colors()) attron(COLOR_PAIR(2));
+    if (has_colors()) attron(COLOR_PAIR(2) | A_BOLD );
 #endif
     mvprintw( 9, (COLS / 2) - 8, alienMa[0]);
     mvprintw(10, (COLS / 2) - 8, alienMa[1]);
 #ifdef USE_COLORS
-    if (has_colors()) attron(COLOR_PAIR(4));
+    if (has_colors()) attron(COLOR_PAIR(4) | A_NORMAL );
 #endif
     mvprintw( 9, (COLS / 2), "= ?  points");
 

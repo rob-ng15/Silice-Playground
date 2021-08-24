@@ -27,9 +27,9 @@ algorithm registers(
     output  int32   sourceReg3
 ) <autorun> {
     // RISC-V REGISTERS
-    simple_dualport_bram int32 registers_1[64] = { 0, pad(uninitialized) };
-    simple_dualport_bram int32 registers_2[64] = { 0, pad(uninitialized) };
-    simple_dualport_bram int32 registers_3[64] = { 0, pad(uninitialized) };
+    simple_dualport_bram int32 registers_1 <input!> [64] = { 0, pad(uninitialized) };
+    simple_dualport_bram int32 registers_2 <input!> [64] = { 0, pad(uninitialized) };
+    simple_dualport_bram int32 registers_3 <input!> [64] = { 0, pad(uninitialized) };
 
     // READ FROM REGISTERS
     registers_1.addr0 := { SMT, rs1 }; sourceReg1 := registers_1.rdata0;
@@ -52,16 +52,13 @@ algorithm registers(
 // RISC-V INSTRUCTION DECODER
 algorithm decoder(
     input   uint32  instruction,
-
     output  uint7   opCode,
     output  uint3   function3,
     output  uint7   function7,
-
     output  uint5   rs1,
     output  uint5   rs2,
     output  uint5   rs3,
     output  uint5   rd,
-
     output  int32   immediateValue,
 ) <autorun> {
     always {
@@ -83,7 +80,6 @@ algorithm addressgenerator(
     input   uint1   compressed,
     input   int32   sourceReg1,
     input   int32   immediateValue,
-
     output  uint32  nextPC,
     output  uint32  branchAddress,
     output  uint32  jumpAddress,
@@ -281,12 +277,6 @@ algorithm CSRblock(
     uint8   CSRfSMT = 0;
     uint32  writevalue <:: function3[2,1] ? rs1 : sourceReg1;
 
-    CSRtimer := CSRtimer + 1;
-    CSRcycletime := CSRcycletime + ( SMT ? 0 : 1);
-    CSRinstret := CSRinstret + ( ( incCSRinstret & (~SMT) ) ? 1 : 0 );
-    CSRcycletimeSMT := CSRcycletimeSMT + ( SMT ? 1 : 0);
-    CSRinstretSMT := CSRinstretSMT + ( ( incCSRinstret & SMT ) ? 1 : 0);
-
     FPUflags := SMT ? CSRfSMT[0,5] : CSRf[0,5];
 
     always {
@@ -354,6 +344,12 @@ algorithm CSRblock(
                 }
             }
         }
+        // UPDATE TIMERS AND COUNTERS
+        CSRtimer = CSRtimer + 1;
+        CSRcycletime = CSRcycletime + ( SMT ? 0 : 1);
+        CSRinstret = CSRinstret + ( ( incCSRinstret & (~SMT) ) ? 1 : 0 );
+        CSRcycletimeSMT = CSRcycletimeSMT + ( SMT ? 1 : 0);
+        CSRinstretSMT = CSRinstretSMT + ( ( incCSRinstret & SMT ) ? 1 : 0);
     }
 }
 

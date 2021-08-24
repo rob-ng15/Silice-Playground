@@ -56,7 +56,7 @@ algorithm gpu_queue(
     // 32 x 16 x 16 1 bit tilemap for blit1tilemap
     simple_dualport_bram uint16 blit1tilemap <input!> [ 512 ] = uninitialized;
     // Character ROM 8x8 x 256 for character blitter
-    simple_dualport_bram uint8 characterGenerator8x8 <input!> [2048] = {
+    simple_dualport_bram uint8 characterGenerator8x8 <input!> [] = {
         $include('ROM/characterROM8x8.inc')
     };
     // BLIT TILE WRITER
@@ -518,7 +518,6 @@ algorithm prepline(
     // Absolute DELTAs
     ( gpu_dx ) = absdelta( x, param0 );
     ( gpu_dy ) = absdelta( y, param1 );
-    //++:
     gpu_numerator = ( gpu_dx > gpu_dy ) ? ( gpu_dx >> 1 ) : -( gpu_dy >> 1 );
     ( gpu_max_count ) = max( gpu_dx, gpu_dy );
     ++:
@@ -644,7 +643,6 @@ algorithm prepcircle(
     ( gpu_xc, gpu_yc ) = copycoordinates( x, y );
     // SHUFFLE SECTOR MAP TO LOGICALLY GO CLOCKWISE AROUND THE CIRCLE
     draw_sectors = { param1[5,1], param1[6,1], param1[1,1], param1[2,1], param1[4,1], param1[7,1], param1[0,1], param1[3,1] };
-    //++:
     gpu_numerator = 3 - ( { radius, 1b0 } );
 }
 algorithm updatenumerator(
@@ -807,7 +805,6 @@ algorithm preptriangle(
     ( gpu_active_x, gpu_active_y ) = copycoordinates( x, y);
     ( gpu_x1, gpu_y1 ) = copycoordinates( param0, param1 );
     ( gpu_x2, gpu_y2 ) = copycoordinates( param2, param3 );
-    ///++:
     // Find minimum and maximum of x, x1, x2, y, y1 and y2 for the bounding box
     ( gpu_min_x ) = min3( gpu_active_x, gpu_x1, gpu_x2 );
     ( gpu_min_y ) = min3( gpu_active_y, gpu_y1, gpu_y2 );
@@ -816,6 +813,7 @@ algorithm preptriangle(
     ++:
     // Clip to the screen edge
     ( gpu_min_x, gpu_min_y, gpu_max_x, gpu_max_y ) = cropscreen( gpu_min_x, gpu_min_y, gpu_max_x, gpu_max_y );
+
     // Put points in order so that ( gpu_active_x, gpu_active_y ) is at top, then ( gpu_x1, gpu_y1 ) and ( gpu_x2, gpu_y2 ) are clockwise from there
     if( gpu_y1 < gpu_active_y ) { ( gpu_active_x, gpu_active_y, gpu_x1, gpu_y1 ) = swapcoordinates( gpu_active_x, gpu_active_y, gpu_x1, gpu_y1 ); ++: }
     if( gpu_y2 < gpu_active_y ) { ( gpu_active_x, gpu_active_y, gpu_x2, gpu_y2 ) = swapcoordinates( gpu_active_x, gpu_active_y, gpu_x2, gpu_y2 ); ++: }
@@ -1104,7 +1102,6 @@ algorithm blit(
             gpu_max_x = tilecharacter ? 16 : 8;
             gpu_max_y = tilecharacter ? 16 : 8;
             gpu_tile = param0;
-            //++:
             while( gpu_active_y != gpu_max_y ) {
                 while( gpu_active_x != gpu_max_x ) {
                     gpu_y2 = 0;
@@ -1206,7 +1203,6 @@ algorithm colourblit(
             ( gpu_x1, gpu_y1 ) = copycoordinates( x, y );
             ( gpu_tile, gpu_param1 ) = copycoordinates( param0, param1 );
             gpu_param2 = param2;
-            //++:
             while( gpu_active_y != 16 ) {
                     gpu_y2 = 0;
                     while( gpu_y2 != ( 1 << gpu_param1 ) ) {

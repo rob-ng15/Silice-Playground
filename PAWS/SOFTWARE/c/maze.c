@@ -791,10 +791,10 @@ int main( void ) {
 
         levelselected = 0;
         do {
-            tpu_printf_centre( 26, TRANSPARENT, YELLOW, "Select Level" );
-            tpu_printf_centre( 27, TRANSPARENT, YELLOW, "Increase/Decrease by LEFT/RIGHT - Select by FIRE" );
-            tpu_set( 1, 29, TRANSPARENT, BLACK ); tpu_printf( "Level: %3d", level );
-            tpu_set( 60, 29, TRANSPARENT, BLACK ); tpu_printf( "Size: %5d x %5d", levelwidths[level], levelheights[level] );
+            tpu_printf_centre( 57, TRANSPARENT, YELLOW, 1, "Select Level" );
+            tpu_printf_centre( 58, TRANSPARENT, YELLOW, 0, "Increase/Decrease by LEFT/RIGHT - Select by FIRE" );
+            tpu_set( 0, 59, TRANSPARENT, BLACK ); tpu_printf( 1, "Level: %3d", level );
+            tpu_set( 60, 59, TRANSPARENT, BLACK ); tpu_printf( 1, "Size: %5d x %5d", levelwidths[level], levelheights[level] );
 
             while( get_buttons() == 1 );
             // LEFT / RIGHT to change level, FIRE to select
@@ -811,9 +811,6 @@ int main( void ) {
                 levelselected = 1;
             }
         } while( levelselected == 0 );
-
-        tpu_printf_centre( 26, TRANSPARENT, YELLOW, "" );
-        tpu_printf_centre( 27, TRANSPARENT, YELLOW, "" );
 
         // GENERATE THE MAZE
         generate_maze( levelwidths[level], levelheights[level] );
@@ -849,7 +846,7 @@ int main( void ) {
             level = ( level < MAXLEVEL ) ? level + 1 : MAXLEVEL;
         }
 
-        tpu_printf_centre( 29, TRANSPARENT, GREEN, "Press FIRE to restart!" ); while( ( get_buttons() & 2 ) == 0 );
-        tpu_printf_centre( 29, TRANSPARENT, PURPLE, "Release FIRE!" ); while( get_buttons() & 2  );
+        tpu_printf_centre( 58, TRANSPARENT, GREEN, 1, "Press FIRE to restart!" ); while( ( get_buttons() & 2 ) == 0 );
+        tpu_printf_centre( 58, TRANSPARENT, PURPLE, 0, "Release FIRE!" ); while( get_buttons() & 2  );
     }
 }

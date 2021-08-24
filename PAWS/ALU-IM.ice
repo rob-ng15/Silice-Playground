@@ -16,15 +16,16 @@ algorithm alu(
     output  uint32  result
 ) <autorun> {
     uint5   shiftcount <:: opCode[5,1] ? sourceReg2[0,5] : rs2;
+    uint32  operand2 <:: opCode[5,1] ? sourceReg2 : immediateValue;
 
     always {
         switch( function3 ) {
-            case 3b000: { result = sourceReg1 + ( opCode[5,1] ? ( function7[5,1] ? -( sourceReg2 ) : sourceReg2 ) : immediateValue ); }
+            case 3b000: { result = sourceReg1 + ( opCode[5,1] && function7[5,1] ? -( sourceReg2 ) : operand2 ); }
             case 3b001: { result = sourceReg1 << shiftcount; }
-            case 3b010: { result = __signed( sourceReg1 ) < __signed(opCode[5,1] ? sourceReg2 : immediateValue); }
+            case 3b010: { result = __signed( sourceReg1 ) < __signed(operand2); }
             case 3b011: { result = opCode[5,1] ? ( rs1 == 0 ) ? ( sourceReg2 != 0 ) : __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) :
                                                 ( immediateValue == 1 ) ? ( sourceReg1 == 0 ) : ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ); }
-            case 3b100: { result = sourceReg1 ^ ( opCode[5,1] ? sourceReg2 : immediateValue ); }
+            case 3b100: { result = sourceReg1 ^ operand2; }
             case 3b101: {
                 if( function7[5,1] ) {
                     result = __signed(sourceReg1) >>> shiftcount;
@@ -32,8 +33,8 @@ algorithm alu(
                     result = sourceReg1 >> shiftcount;
                 }
             }
-            case 3b110: { result = sourceReg1 | ( opCode[5,1] ? sourceReg2 : immediateValue ); }
-            case 3b111: { result = sourceReg1 & ( opCode[5,1] ? sourceReg2 : immediateValue ); }
+            case 3b110: { result = sourceReg1 | operand2; }
+            case 3b111: { result = sourceReg1 & operand2; }
         }
     }
 }

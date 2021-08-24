@@ -142,7 +142,7 @@ unsigned short volatile * UPPER_SPRITE_WRITER_BITMAP = ( unsigned short volatile
 
 unsigned char volatile * TPU_X = ( unsigned char volatile * ) 0x8500;
 unsigned char volatile * TPU_Y = ( unsigned char volatile * ) 0x8502;
-unsigned char volatile * TPU_CHARACTER = ( unsigned char volatile * ) 0x8504;
+unsigned short volatile * TPU_CHARACTER = ( unsigned short volatile * ) 0x8504;
 unsigned char volatile * TPU_BACKGROUND = ( unsigned char volatile * ) 0x8506;
 unsigned char volatile * TPU_FOREGROUND = ( unsigned char volatile * ) 0x8508;
 unsigned char volatile * TPU_COMMIT = ( unsigned char volatile * ) 0x850a;
@@ -169,106 +169,3 @@ unsigned short volatile * SYSTEMCLOCK = (unsigned short volatile *) 0xe040;
 unsigned char volatile * SMTSTATUS = ( unsigned char volatile *) 0xfffe;
 unsigned int volatile * SMTPCH = ( unsigned int volatile * ) 0xfff0;
 unsigned int volatile * SMTPCL = ( unsigned int volatile * ) 0xfff2;
-
-// TYPES AND STRUCTURES
-typedef unsigned int size_t;
-typedef unsigned short bool;
-
-// FOR EASE OF PORTING
-typedef unsigned char   uint8;
-typedef unsigned short  uint16;
-typedef unsigned int    uint32;
-typedef signed char     int8;
-typedef signed short    int16;
-typedef signed int      int32;
-
-// STRUCTURE OF THE SPRITE UPDATE FLAG
-struct sprite_update_flag {
-    unsigned int padding:3;
-    unsigned int y_act:1;
-    unsigned int x_act:1;
-    unsigned int tile_act:1;
-    int dy:5;
-    int dx:5;
-};
-
-// FAT16 FILE SYSTEM
-// https://codeandlife.com/2012/04/02/simple-fat-and-sd-tutorial-part-1/ USED AS REFERENCE
-
-typedef struct {
-    unsigned char first_byte;
-    unsigned char start_chs[3];
-    unsigned char partition_type;
-    unsigned char end_chs[3];
-    unsigned int start_sector;
-    unsigned int length_sectors;
-} __attribute((packed)) PartitionTable;
-
-typedef struct {
-    unsigned char jmp[3];
-    char oem[8];
-    unsigned short sector_size;
-    unsigned char sectors_per_cluster;
-    unsigned short reserved_sectors;
-    unsigned char number_of_fats;
-    unsigned short root_dir_entries;
-    unsigned short total_sectors_short; // if zero, later field is used
-    unsigned char media_descriptor;
-    unsigned short fat_size_sectors;
-    unsigned short sectors_per_track;
-    unsigned short number_of_heads;
-    unsigned int hidden_sectors;
-    unsigned int total_sectors_long;
-
-    unsigned char drive_number;
-    unsigned char current_head;
-    unsigned char boot_signature;
-    unsigned int volume_id;
-    char volume_label[11];
-    char fs_type[8];
-    char boot_code[448];
-    unsigned short boot_sector_signature;
-} __attribute((packed)) Fat16BootSector;
-
-typedef struct {
-    unsigned char filename[8];
-    unsigned char ext[3];
-    unsigned char attributes;
-    unsigned char reserved[10];
-    unsigned short modify_time;
-    unsigned short modify_date;
-    unsigned short starting_cluster;
-    unsigned int file_size;
-} __attribute((packed)) Fat16Entry;
-
-// COLOURS
-#define TRANSPARENT 0x40
-#define BLACK 0x00
-#define BLUE 0x03
-#define DKBLUE 0x02
-#define GREEN 0x0c
-#define DKGREEN 0x08
-#define CYAN 0x0f
-#define DKCYAN 0x0b
-#define RED 0x30
-#define DKRED 0x20
-#define MAGENTA 0x33
-#define DKMAGENTA 0x22
-#define PURPLE 0x13
-#define YELLOW 0x3c
-#define DKYELLOW 0x28
-#define WHITE 0x3f
-#define GREY1 0x15
-#define GREY2 0x2a
-#define ORANGE 0x38
-
-// STANDARD CONSTANTS
-#define NULL 0
-#define true 1
-#define false 0
-#define TRUE 1
-#define FALSE 0
-
-// LOWER AND UPPER SPRITES/TILEMAPS
-#define LOWER 0
-#define UPPER 1
