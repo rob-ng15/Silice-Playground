@@ -1,0 +1,262 @@
+https://www.lexaloffle.com/bbs/?tid=35824
+
+-- background types
+bg_tree={
+    img={8,0,16,32},    -- sprite image
+    pos={1.5,0},     -- position rel 2 side of road
+    siz={1.5,3},     -- size
+    spc=3            -- spacing
+}
+bg_sign={
+ img={80,0,32,32},
+ pos={.5,0},
+ siz={1.5,1.5},
+ spc=1,
+ flpr=true              -- flip when on right hand side
+}
+bg_house={
+ mp={0,0,8,5},             -- map image (x,y,w,h in tiles)
+ pos={3.5,0},
+ siz={6,3.5},
+ spc=4
+}
+
+road={
+ {ct=10,tu=0,bgl=bg_tree,bgr=bg_tree},
+ {ct=6,tu=-.25,bgl=bg_tree,bgr=bg_sign},
+ {ct=8,tu=0,bgl=bg_tree,bgr=bg_tree},
+ {ct=4,tu=.375,bgl=bg_sign,bgr=bg_tree},
+ {ct=10,tu=0.05,bgl=bg_tree},
+ {ct=4,tu=0,bgl=bg_tree,bgr=bg_tree},
+ {ct=5,tu=-.25,bgl=bg_tree,bgr=bg_sign},
+ {ct=12,tu=0,bgl=bg_house,bgr=bg_house},
+ {ct=8,tu=-.5,bgl=bg_house,bgr=bg_sign},
+ {ct=8,tu=.5,bgl=bg_sign,bgr=bg_house},
+}
+
+camcnr,camseg=1,1
+camx,camy,camz=0,0,0
+
+function _init()
+ -- calculate the # of segments
+ -- in the road before each corner.
+ -- this is useful for spacing things
+ -- out evenly along the road
+ local sumct=0
+ for corner in all(road) do
+  corner.sumct=sumct
+  sumct+=corner.ct
+ end
+end
+
+function _draw()
+    cls(12)
+
+ -- direction
+ local camang=camz*road[camcnr].tu
+ local xd,yd,zd=-camang,0,1
+
+ -- skew camera to account for direction
+ local cx,cy,cz=skew(camx,camy,camz,xd,yd)
+
+ -- cursor, relative to skewed camera
+ local x,y,z=-cx,-cy+2,-cz+2
+
+ -- road position
+ local cnr,seg=camcnr,camseg
+
+ -- previous projected position
+    local ppx,ppy,pscale=project(x,y,z)
+
+ -- array of sprites to draw
+ local sp={}
+
+ -- draw forward
+ for i=1,30 do
+
+     -- move forward
+     x+=xd
+     y+=yd
+     z+=zd
+
+        -- project
+        local px,py,scale=project(x,y,z)
+
+        -- draw road
+        local sumct=getsumct(cnr,seg)
+        drawroad(px,py,scale,ppx,ppy,pscale,sumct)
+
+     -- add background sprites
+     addbgsprite(sp,sumct,road[cnr].bgl,-1,px,py,scale)
+     addbgsprite(sp,sumct,road[cnr].bgr, 1,px,py,scale)
+
+     -- turn
+     xd+=road[cnr].tu
+
+     -- advance along road
+     cnr,seg=advance(cnr,seg)
+
+     -- track previous projected position
+     ppx,ppy,pscale=px,py,scale
+ end
+
+ -- draw background sprites in reverse order
+    for i=#sp,1,-1 do
+     drawbgsprite(sp[i])
+    end
+
+ print("cpu:"..flr(stat(1)*100),0,0,7)
+end
+
+function _update()
+ camz+=0.3
+ if camz>1 then
+  camz-=1
+     camcnr,camseg=advance(camcnr,camseg)
+    end
+end
+
+function project(x,y,z)
+ local scale=64/z
+ return x*scale+64,y*scale+64,scale
+end
+
+function advance(cnr,seg)
+    seg+=1
+    if seg>road[cnr].ct then
+        seg=1
+        cnr+=1
+        if(cnr>#road)cnr=1
+    end
+    return cnr,seg
+end
+
+function skew(x,y,z,xd,yd)
+ return x+z*xd,y+z*yd,z
+end
+
+function drawroad(x1,y1,scale1,x2,y2,scale2,sumct)
+
+ if(flr(y2)<ceil(y1))return
+
+ -- draw ground
+ local gndcol=3
+ if((sumct%6)>=3)gndcol=11
+ rectfill(0,ceil(y1),128,flr(y2),gndcol)
+
+ -- main road
+    local w1,w2=3*scale1,3*scale2            -- start and end widths
+    drawtrapezium(x1,y1,w1,x2,y2,w2,5)
+
+    -- center line markings
+ if (sumct%4)==0 then
+  local mw1,mw2=.1*scale1,.1*scale2
+        drawtrapezium(x1,y1,mw1,x2,y2,mw2,7)
+ end
+
+ -- shoulders
+ local scol=6
+ if((sumct%2)==0)scol=8
+ local sw1,sw2=.2*scale1,.2*scale2
+    drawtrapezium(x1-w1,y1,sw1,x2-w2,y2,sw2,scol)
+    drawtrapezium(x1+w1,y1,sw1,x2+w2,y2,sw2,scol)
+end
+
+function getsumct(cnr,seg)
+ return road[cnr].sumct+seg-1
+end
+
+function drawtrapezium(x1,y1,w1,x2,y2,w2,col)
+ -- draw a trapezium by stacking
+ -- horizontal lines
+    local h=y2-y1                                                                         -- height
+    local xd,wd=(x2-x1)/h,(w2-w1)/h -- width and x deltas
+    local x,y,w=x1,y1,w1                                                -- current position
+ local yadj=ceil(y)-y
+ x+=yadj*xd
+ y+=yadj
+ w+=yadj*wd
+ while y<y2 do
+  -- draw horizontal line.
+  -- line() would also work, but
+  -- rectfill() is slightly faster
+  rectfill(x-w,y,x+w,y,col)
+        x+=xd
+        y+=1
+        w+=wd
+    end
+end
+
+function addbgsprite(sp,sumct,bg,side,px,py,scale)
+ if(not bg)return
+ if((sumct%bg.spc)~=0)return
+
+ -- find position
+ px+=3*scale*side
+ if bg.pos then
+     px+=bg.pos[1]*scale*side
+     py+=bg.pos[2]*scale
+ end
+
+ -- calculate size
+ local w,h=bg.siz[1]*scale,bg.siz[2]*scale
+
+ -- flip horizontally?
+ local flp=side>0 and bg.flpr
+
+ -- add to sprite array
+ add(sp,{
+  x=px,y=py,w=w,h=h,
+  img=bg.img,
+  mp=bg.mp,
+  flp=flp
+ })
+end
+
+function drawbgsprite(s)
+ if s.mp then
+  smap(s.mp[1],s.mp[2],s.mp[3],s.mp[4],
+            s.x-s.w/2,s.y-s.h,s.w,s.h)
+ else
+  local x1=ceil(s.x-s.w/2)
+  local x2=ceil(s.x+s.w/2)
+  local y1=ceil(s.y-s.h)
+  local y2=ceil(s.y)
+     sspr(s.img[1],s.img[2],s.img[3],s.img[4],
+             x1,y1,x2-x1,y2-y1,
+             s.flp)
+ end
+end
+
+function smap(mx,my,mw,mh,dx,dy,dw,dh)
+ -- tile size on screen
+ local tw,th=dw/mw,dh/mh
+
+ -- loop over map tiles
+ for y=0,mh-1 do
+     for x=0,mw-1 do
+
+      -- lookup sprite
+      local s=mget(mx+x,my+y)
+
+      -- don't draw sprite 0
+      if s~=0 then
+
+       -- sprite row and column index
+       -- use to get sprite image coords
+       local sc,sr=s%16,flr(s/16)        -- 16 sprites per row
+             local sx,sy=sc*8,sr*8          -- 8x8 pixels per sprite
+
+       -- sprite position on screen
+       local x1=ceil(dx+x*tw)
+       local y1=ceil(dy+y*th)
+       local x2=ceil(dx+x*tw+tw)
+       local y2=ceil(dy+y*th+th)
+
+       -- scale sprite
+       sspr(sx,sy,8,8,
+            x1,y1,x2-x1,y2-y1)
+      end
+  end
+ end
+end

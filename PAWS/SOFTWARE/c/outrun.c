@@ -1,7 +1,37 @@
 // https://www.lexaloffle.com/bbs/?tid=35767
 #include "PAWSlibrary.h"
 #include <math.h>
+#include <stdio.h>
 
+// DELAY BETWEEN FRAMES
+#define DELAY 2000
+
+// ROADSIDE ITEMS - AS DRAWLISTS FOR EASIER PLACEMENT AND SCALING
+#define NONE 0
+#define TREE 1
+#define SIGN 2
+#define HOUSE 3
+#define BEAMS 4
+struct DrawList2D LEFTCHEVRON[] = {
+    { DLRECT, GREY2, GREY2, DITHERSOLID, { -4, 0 }, { 4, -32 }, },
+    { DLRECT, BLACK, BLACK, DITHERSOLID, { -32, -32 }, { 32, -64 }, },
+    { DLLINE, WHITE, WHITE, DITHERSOLID, { 0, -32 }, { -16, -48 }, { 17, 0 } },
+    { DLLINE, WHITE, WHITE, DITHERSOLID, { -16, -48 }, { 0, -64 }, { 17, 0 } },
+};
+struct DrawList2D RIGHTCHEVRON[] = {
+    { DLRECT, GREY2, GREY2, DITHERSOLID, { -4, 0 }, { 4, -32 }, },
+    { DLRECT, BLACK, BLACK, DITHERSOLID, { -32, -32 }, { 32, -64 }, },
+    { DLLINE, WHITE, WHITE, DITHERSOLID, { 0, -32 }, { 16, -48 }, { 17, 0 } },
+    { DLLINE, WHITE, WHITE, DITHERSOLID, { 16, -48 }, { 0, -64 }, { 17, 0 } },
+};
+
+struct DrawList2D PINETREE[] = {
+    { DLRECT, BROWN, DKBROWN, DITHERCHECK1, { -8, 0 }, { 8, -32 }, },
+    { DLTRI, VDKGREEN, VDKGREEN, DITHERSOLID, { 0, -96 }, { 32, -32 }, { -32, -32 } },
+};
+
+// ROAD SEGMENTS, DEFINING NUMBER OF SECTIONS BEFORE NEXT TURN, TURN ANGLE, AND SIDE OBJECTS
+#define MAXSEGMENT 10
 typedef struct {
     int     ct;
     float   tu;
@@ -9,21 +39,12 @@ typedef struct {
     int     bgr;
 } roadsegment;
 
-// DELAY BETWEEN FRAMES
-#define DELAY 500
-
-#define MAXSEGMENT 10
-#define NONE 0
-#define TREE 1
-#define SIGN 2
-#define HOUSE 3
-#define BEAMS 4
 roadsegment road[]={
     {10,0,TREE,TREE},
     {6,-.25,TREE,SIGN},
     {8,0,TREE,TREE},
     {4,.375,SIGN,TREE},
-    {10,0.05,TREE},
+    {10,0.05,TREE,NONE},
     {4,0,TREE,TREE},
     {5,-.25,TREE,SIGN},
     {15,0,BEAMS,BEAMS},
@@ -33,10 +54,7 @@ roadsegment road[]={
 };
 int corner[MAXSEGMENT];
 
-int iterations = 0;
-int camcnr = 0, camseg = 0;
-float camx = 0, camy = 0, camz = 0;
-
+// VECTOR HELPERS FOR 2D to 3D PROJECTION
 static inline float max(float x, float y) { return x>y?x:y; }
 static inline float min(float x, float y) { return x<y?x:y; }
 
@@ -55,10 +73,19 @@ static inline vec4 make_vec4(float x, float y, float z, float w ) {
   return V;
 }
 
+// PROJECT - TO HORIZONTAL CENTRE OF THE SCREEN, MOVE SLIGHTLY DOWN FOR VERTICAL CENTRE
 vec3 project( float x, float y, float z ) {
-    float scale = 64/z;
+    float scale = 120/z;
     return( make_vec3( x * scale + 160, y * scale + 120, scale ) );
 }
+
+vec3 skew( float x, float y, float z, float xd, float yd ) {
+    return( make_vec3( x+z*xd, y+z*yd, z ) );
+}
+
+int iterations = 0;
+int camcnr = 0, camseg = 0;
+float camx = 0, camy = 0, camz = 0;
 
 void init( void ) {
     int sumct = 0;
@@ -88,58 +115,105 @@ void update() {
 }
 
 // NUMBER OF SEGMENTS TO DRAW EACH ITERATION
-#define DRAWSEGMENTS 16
-// SEGMENTS TO DRAW - IN FAST BRAM ABOVE SOFTWARE VECTOR BUFFER
-vec3 *DRAWBUFFER = (vec3 *)0x1500;
+#define DRAWSEGMENTS 32
+void drawtrapezium( unsigned char colour, float x1, float y1, float w1, float x2, float y2, float w2 ) {
+    gpu_triangle( colour, x1 - w1, y1, x1 + w1, y1, x2 - w2, y2 );
+    gpu_triangle( colour, x1 + w1, y1, x2 + w2, y2, x2 - w2, y2 );
+}
+
+void drawroad( float x1, float y1, float scale1, float x2, float y2, float scale2, int sumct ) {
+    float w1 = 3 * scale1, w2 = 3 * scale2;
+    drawtrapezium( GREY1, x1, y1, w1, x2, y2, w2 );
+
+    // CENTRE LINE MARKINGS
+    if( !(sumct % 4 ) ) {
+        float mw1 = .1 * scale1, mw2 = .1 * scale2;
+        drawtrapezium( WHITE, x1, y1, mw1, x2, y2, mw2 );
+    }
+
+    // SHOULDER MARKINGS
+    float sw1 = .2 * scale1, sw2 = .2 * scale2;
+    drawtrapezium( (sumct%2) ? WHITE : RED, x1-w1, y1, sw1 ,x2-w2 , y2, sw2 );
+    drawtrapezium( (sumct%2) ? WHITE : RED, x1+w1, y1, sw1, x2+w2, y2, sw2 );
+}
 
 void draw() {
+    float camang = camz * road[camcnr].tu;
+    float xd = -camang, yd = 0, zd = 1;
+    float x, y, z;
+
+    int cnr = camcnr, seg = camseg, sumct;
+    vec3 c, p, pp;
+
+    // SPRIATES TO DRAW, ALONG WITH
+    int lsprites[ DRAWSEGMENTS ], rsprites[ DRAWSEGMENTS ];
+    vec3 lspritesxyz[DRAWSEGMENTS], rspritesxyz[DRAWSEGMENTS];
+
+    // SKEY CAMERA TO ACCOUNT FOR DIRECTION
+    c = skew( camx, camy, camz, xd, yd );
+    x = -c.x; y =-c.y+2; z = -c.z + 2;
+
+    pp = project( x, y, z );
+
     gpu_cs();
 
-    for( int i = 0; i < DRAWSEGMENTS - 1; i++ ) {
-        float width1 = 2 * DRAWBUFFER[ i + 1 ].z, width0 = 2 * DRAWBUFFER[ i ].z;
+    for( int i = 0; i < DRAWSEGMENTS; i++ ) {
+        x += xd; y += yd; z += zd;
+        p = project( x, y, z );
+        sumct = corner[cnr] + seg - 1;
+        drawroad( p.x, p.y, p.z, pp.x, pp.y, pp.z, sumct );
 
-        gpu_triangle( i & 1 ? GREY1 : GREY2,
-                           DRAWBUFFER[ i + 1 ].x - width1, DRAWBUFFER[ i + 1].y, DRAWBUFFER[ i + 1 ].x + width1, DRAWBUFFER[ i + 1].y,
-                           DRAWBUFFER[ i ].x - width0, DRAWBUFFER[i].y );
-        gpu_triangle( i & 1 ? GREY1 : GREY2,
-                           DRAWBUFFER[ i + 1 ].x + width1, DRAWBUFFER[ i + 1].y,
-                           DRAWBUFFER[ i ].x + width0, DRAWBUFFER[i].y, DRAWBUFFER[ i ].x - width0, DRAWBUFFER[i].y );
+        lsprites[ i ] = road[cnr].bgl; lspritesxyz[i] = p;
+        rsprites[ i ] = road[cnr].bgr; rspritesxyz[i] = p;
+
+        xd += road[cnr].tu;
+        advance( &cnr, &seg );
+        pp = p;
+    }
+
+    for( int i = DRAWSEGMENTS -1; i >= 0; i-- ) {
+        // DRAW SPRITES IN REVERSE ORDER
+        float scale = lspritesxyz[i].z / 36, offset = 3 * lspritesxyz[i].z + ( 32 * scale );
+        switch( lsprites[i] ) {
+            case TREE:
+                DoDrawList2D( PINETREE, 2, lspritesxyz[i].x - offset, lspritesxyz[i].y, scale );
+                break;
+            case SIGN:
+                DoDrawList2D( RIGHTCHEVRON, 4, lspritesxyz[i].x - offset, lspritesxyz[i].y, scale );
+                break;
+        }
+        switch( rsprites[i] ) {
+            case TREE:
+                DoDrawList2D( PINETREE, 2, lspritesxyz[i].x + offset, lspritesxyz[i].y, scale );
+                break;
+            case SIGN:
+                DoDrawList2D( LEFTCHEVRON, 4, lspritesxyz[i].x + offset, lspritesxyz[i].y, scale );
+                break;
+        }
     }
 }
 
-void calculate() {
-    float x = 0, y = 1, z = 1;
-    float camang = camz * road[camcnr].tu;
-    float xd = -camang, yd = 0, zd = 1;
-
-    int cnr = camcnr, seg = camseg;
-    float width;
-    vec3 p;
-
-    for( int i = 0; i < DRAWSEGMENTS; i++ ) {
-        p = project( x, y, z );
-        width = 2 * p.z;
-        DRAWBUFFER[i] = p;
-
-        x += xd;
-        y += yd;
-        z += zd;
-
-        xd+=road[cnr].tu;
-        advance( &cnr, &seg );
-    }
+void set_background_generator( void ) {
+    set_background( DKBLUE, DKGREEN, BKG_5050_V );
 }
 
 int main() {
     INITIALISEMEMORY;
+
+    bitmap_draw( 0 ); gpu_cs();
+    bitmap_draw( 1 ); gpu_cs();
+    bitmap_display(0);
+    set_background_generator();
+
     init();
 
-    while(1) {
-        await_vblank();
-        calculate(); draw();
+    unsigned char framebuffer = 0;
+    while( !( get_buttons() & 4 ) ) {
+        bitmap_draw( !framebuffer );
+        draw();
         update();
-        sleep( DELAY, 0 );
-        iterations++;
+        framebuffer = !framebuffer;
+        bitmap_display( framebuffer );
     }
 
 }

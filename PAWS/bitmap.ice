@@ -1,6 +1,4 @@
 algorithm bitmap(
-    input   uint1   gpu_clock,
-
     input   uint1   framebuffer,
     input   uint1   writer_framebuffer,
     input   uint10  pix_x,
@@ -82,8 +80,8 @@ algorithm bitmap(
     output  uint1   gpu_queue_complete,
     output  uint1   vector_block_active
 ) <autorun> {
-    simple_dualport_bram uint7 bitmap_0 <@clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
-    simple_dualport_bram uint7 bitmap_1 <@clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint7 bitmap_0 <input!> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint7 bitmap_1 <input!> [ 76800 ] = uninitialized;
 
     // Pixel x and y fetching ( adjusting for offset ) - fetch x-pixel 1 in advance due to bram latency
     uint9   x_plus_offset <: pix_x[1,9] + x_offset + pix_x[0,1];
@@ -104,7 +102,7 @@ algorithm bitmap(
     uint4   gpu_active_dithermode = uninitialized;
     uint1   bitmap_write = uninitialized;
 
-    bitmapwriter pixel_writer <@gpu_clock> (
+    bitmapwriter pixel_writer(
         framebuffer <: writer_framebuffer,
         bitmap_x_write <: bitmap_x_write,
         bitmap_y_write <: bitmap_y_write,
@@ -124,7 +122,7 @@ algorithm bitmap(
         bitmap_1 <:> bitmap_1
     );
 
-    gpu_queue QUEUE <@gpu_clock> (
+    gpu_queue QUEUE(
         bitmap_x_write :> bitmap_x_write,
         bitmap_y_write :> bitmap_y_write,
         bitmap_colour_write :> bitmap_colour_write,

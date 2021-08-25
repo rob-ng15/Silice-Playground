@@ -1138,7 +1138,7 @@ void floatdemo() {
     float scale = 1;
 
     displayreset();
-    tpu_printf_centre( 58, TRANSPARENT, WHITE, 1, "FLOAT DEMO" );
+    tpu_printf_centre( 58, TRANSPARENT, WHITE, 1, "SOFTWARE VECTOR TEST" );
     if( CSRisa() & 0b100000 ) {
         tpu_printf_centre( 59, TRANSPARENT, WHITE, 0, "FLOATING POINT UNIT AVAILABLE" );
     } else {

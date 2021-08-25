@@ -434,14 +434,16 @@ void gpu_line( unsigned char colour, short x1, short y1, short x2, short y2 ) {
 
 // DRAW A LINE FROM (x1,y1) to (x2,y2) in colour - uses Bresenham's Line Drawing Algorithm - pixel width
 void gpu_wideline( unsigned char colour, short x1, short y1, short x2, short y2, unsigned short width ) {
-    *GPU_COLOUR = colour;
-    *GPU_X = x1;
-    *GPU_Y = y1;
-    *GPU_PARAM0 = x2;
-    *GPU_PARAM1 = y2;
-    *GPU_PARAM2 = width;
-    wait_gpu();
-    *GPU_WRITE = 2;
+    if( width != 0 ) {
+        *GPU_COLOUR = colour;
+        *GPU_X = x1;
+        *GPU_Y = y1;
+        *GPU_PARAM0 = x2;
+        *GPU_PARAM1 = y2;
+        *GPU_PARAM2 = width;
+        wait_gpu();
+        *GPU_WRITE = 2;
+    }
 }
 
 // DRAW AN OUTLINE RECTANGLE from (x1,y1) to (x2,y2) in colour
@@ -471,13 +473,15 @@ void gpu_cs( void ) {
 
 // DRAW A (optional filled) CIRCLE at centre (x1,y1) of radius
 void gpu_circle( unsigned char colour, short x1, short y1, short radius, unsigned char drawsectors, unsigned char filled ) {
-    *GPU_COLOUR = colour;
-    *GPU_X = x1;
-    *GPU_Y = y1;
-    *GPU_PARAM0 = radius;
-    *GPU_PARAM1 = drawsectors;
-    wait_gpu();
-    *GPU_WRITE = filled ? 5 : 4;
+    if( radius != 0 ) {
+        *GPU_COLOUR = colour;
+        *GPU_X = x1;
+        *GPU_Y = y1;
+        *GPU_PARAM0 = radius;
+        *GPU_PARAM1 = drawsectors;
+        wait_gpu();
+        *GPU_WRITE = filled ? 5 : 4;
+    }
 }
 
 // BLIT A 16 x 16 ( blit_size == 1 doubled to 32 x 32 ) TILE ( from tile 0 to 31 ) to (x1,y1) in colour

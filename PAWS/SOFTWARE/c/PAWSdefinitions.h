@@ -52,15 +52,18 @@
 // COLOURS
 #define TRANSPARENT 0x40
 #define BLACK 0x00
+#define VDKBLUE 0x01
 #define DKBLUE 0x02
 #define BLUE 0x03
 #define LTBLUE 0x07
+#define VDKGREEN 0x04
 #define DKGREEN 0x08
 #define GREEN 0x0c
 #define LTGREEN 0x1d
 #define DKCYAN 0x0b
 #define CYAN 0x0f
 #define LTCYAN 0x1f
+#define VDKRED 0x10
 #define DKRED 0x20
 #define RED 0x30
 #define LTRED 0x35
@@ -76,6 +79,7 @@
 #define DKORANGE 0x34
 #define ORANGE 0x38
 #define LTORANGE 0x39
+#define DKBROWN 0x14
 #define BROWN 0x24
 #define PEACH 0x3a
 #define PINK 0x3b

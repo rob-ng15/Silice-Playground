@@ -1401,7 +1401,7 @@ void attract( void ) {
                     }
 
                     // SWITCH THE FRAMEBUFFER
-                   framebuffer = !framebuffer;
+                    framebuffer = !framebuffer;
                     bitmap_display( framebuffer );
 
                     draw_status();

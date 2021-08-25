@@ -6,7 +6,6 @@ module ulx3s_clk_risc_ice_v_VIDEO
 (
     input clkin,         // 25 MHz, 0 deg
     output  clkVIDEO,    // 25 MHz, 0 deg       // VIDEO
-    output  clkGPU,      // 25 MHz, 0 deg       // GPU
     output  clk50 ,      // 50 MHz, 0 deg       // GPU
     output  locked
 );
@@ -34,10 +33,6 @@ EHXPLLL #(
         .CLKOS_DIV(24),
         .CLKOS_CPHASE(5),
         .CLKOS_FPHASE(0),
-        .CLKOS2_ENABLE("ENABLED"),
-        .CLKOS2_DIV(24),
-        .CLKOS2_CPHASE(5),
-        .CLKOS2_FPHASE(0),
         .FEEDBK_PATH("CLKOP"),
         .CLKFB_DIV(2)
     ) pll_i (
@@ -46,7 +41,6 @@ EHXPLLL #(
         .CLKI(clkin),
         .CLKOP(clk50),
         .CLKOS(clkVIDEO),
-        .CLKOS2(clkGPU),
         .CLKFB(clk50),
         .CLKINTFB(),
         .PHASESEL0(1'b0),

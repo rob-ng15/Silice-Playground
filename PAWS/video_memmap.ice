@@ -29,16 +29,13 @@ $$end
     // VIDEO + CLOCKS
     uint1   pll_lock_VIDEO = uninitialized;
     uint1   video_clock = uninitialized;
-    uint1   gpu_clock = uninitialized;
 $$if not SIMULATION then
     ulx3s_clk_risc_ice_v_VIDEO clk_gen_VIDEO (
         clkin    <: clock_25mhz,
-        clkGPU :> gpu_clock,
         clkVIDEO :> video_clock,
         locked   :> pll_lock_VIDEO
     );
 $$else
-    passthrough p1(i<:clock_25mhz,o:>gpu_clock);
     passthrough p2(i<:clock_25mhz,o:>video_clock);
 $$end
     // Video Reset
@@ -112,7 +109,6 @@ $$end
     bitmap_memmap BITMAP(
         video_clock <: video_clock,
         video_reset <: video_reset,
-        gpu_clock <: gpu_clock,
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: pix_active,
@@ -606,7 +602,6 @@ algorithm bitmap_memmap(
     int6    vertices_writer_ydelta = uninitialized;
     uint1   vertices_writer_active = uninitialized;
     bitmap bitmap_window <@video_clock,!video_reset> (
-        gpu_clock <: gpu_clock,
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: pix_active,

@@ -174,7 +174,7 @@ algorithm sprite_layer(
             case 1: {
                 switch( output_collisions ) {
                     case 0: {
-                        // RESET collision detection
+                        // RESET COLLISION FLAGS FOR NEW FRAME
                         $$for i=0,15 do
                             detect_collision_$i$ = 0;
                             detect_layer_$i$ = 0;
@@ -182,7 +182,7 @@ algorithm sprite_layer(
                     }
                     case 1: {
                         $$for i=0,15 do
-                            // Output collisions
+                            // UPDATE CPU READABLE FLAGS TO THE FRAME FLAGS
                             collision_$i$ = detect_collision_$i$;
                             layer_collision_$i$ = detect_layer_$i$;
                         $$end
@@ -214,13 +214,16 @@ algorithm sprite_layer(
                                                 | pix_visible_6 | pix_visible_5 |pix_visible_4 | pix_visible_3 | pix_visible_2 | pix_visible_1 | pix_visible_0;
 
                         $$for i=0,15 do
-                            // UPDATE COLLISION DETECTION FLAGS
+                            // UPDATE COLLISION DETECTION FRAME FLAGS
                             ( detect_collision_$i$, detect_layer_$i$ ) = updatecollision( detect_collision_$i$, detect_layer_$i$, pix_visible_$i$,
                                                                         collision_layer_1, collision_layer_2, collision_layer_3, collision_layer_4,
                                                                         pix_visible_15, pix_visible_14, pix_visible_13, pix_visible_12, pix_visible_11,
                                                                         pix_visible_10, pix_visible_9, pix_visible_8, pix_visible_7,
                                                                         pix_visible_6, pix_visible_5, pix_visible_4, pix_visible_3,
                                                                         pix_visible_2, pix_visible_1, pix_visible_0 );
+                            // UPDATE CPU READABLE FLAGS DURING THE FRAME
+                            //collision_$i$ = collision_$i$ | detect_collision_$i$;
+                            //layer_collision_$i$ = layer_collision_$i$ | detect_layer_$i$;
                         $$end
 
                         // Output collision detection
