@@ -67,14 +67,12 @@ algorithm background(
     copper.addr0 := PC; copper.wenable1 := 1;
 
     always {
-        copper_execute = 0;
-        copper_branch = 0;
-
         switch( background_update ) {
             case 2b00: {
                 // UPDATE THE BACKGROUND GENERATOR FROM THE COPPER
                 switch( copper_status ) {
                     case 1: {
+                        copper_execute = 0; copper_branch = 0;
                         switch( command ) {
                             case 3b000: {
                                 // JUMP ON CONDITION
@@ -110,14 +108,11 @@ algorithm background(
                                         copper_branch = 1;
                                     }
                                 }
-                                switch( copper_execute ) {
-                                    case 1: {
-                                        if( flag[0,1] ) { BACKGROUNDcolour = CU(copper.rdata0).colour; }
-                                        if( flag[1,1] ) { BACKGROUNDalt = CU(copper.rdata0).colour_alt; }
-                                        if( flag[2,1] ) { BACKGROUNDmode = CU(copper.rdata0).mode; }
-                                        copper_branch = 1;
-                                    }
-                                    case 0: {}
+                                if( copper_execute ) {
+                                    if( flag[0,1] ) { BACKGROUNDcolour = CU(copper.rdata0).colour; }
+                                    if( flag[1,1] ) { BACKGROUNDalt = CU(copper.rdata0).colour_alt; }
+                                    if( flag[2,1] ) { BACKGROUNDmode = CU(copper.rdata0).mode; }
+                                    copper_branch = 1;
                                 }
                                 PC = PC + copper_branch;
                             }
@@ -232,7 +227,7 @@ algorithm background_display(
                     pixel   = pix_y[0,1] ? b_colour : b_alt;
                 }
                 default: {
-                    // CHECKERBOARDS
+                    // CHECKERBOARDS (7,8,9,10)
                     pixel = ( pix_x[b_mode-7,1] == pix_y[b_mode-7,1] ) ? b_colour : b_alt;
                 }
             }

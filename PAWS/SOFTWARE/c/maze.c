@@ -135,64 +135,58 @@ unsigned char whatisright( unsigned short currentx, unsigned short currenty, uns
     return( whatisat( currentx + directionx[ direction ] * steps + rightdirectionx[ direction ], currenty + directiony[ direction ] * steps + rightdirectiony[ direction ], 0 ) );
 }
 
-// GHOST COLOUR SELECTOR
-unsigned char ghostcolour( unsigned short ghost ) {
-    switch( ghost ) {
-        case 0:
-            return( CYAN );
-        case 1:
-            return( MAGENTA );
-        case 2:
-            return( ORANGE );
-        case 3:
-            return( RED );
-        default:
-            return( BLACK );
-    }
-}
+// PACMAN GHOSTS AS DRAWLISTS
+struct DrawList2D GHOSTBODY[] = {
+    { DLRECT, CYAN, CYAN, DITHERSOLID, { -60, -60 }, { 60, 60 }, },
+    { DLCIRC, CYAN, CYAN, DITHERSOLID, { 0, -60 }, { 60, 0b11000011 }, },
+    { DLCIRC, CYAN, CYAN, DITHERSOLID, { -40, 60 }, { 20, 0b00111100 }, },
+    { DLCIRC, CYAN, CYAN, DITHERSOLID, { 0, 60 }, { 20, 0b00111100 }, },
+    { DLCIRC, CYAN, CYAN, DITHERSOLID, { 40, 60 }, { 20, 0b00111100 }, },
+};
 
-void draw_cross( short x, short y, short size ) {
-    gpu_line( PINK, x - size, y - size, x + size, y + size );
-    gpu_line( PINK, x - size, y + size, x + size, y - size );
-}
+struct DrawList2D GHOSTLEYE[] = {
+    { DLCIRC, WHITE, WHITE, DITHERSOLID, { -30, -30 }, { 25, 0xff }, },
+    { DLCIRC, BLACK, BLACK, DITHERSOLID, { -30, -30 }, { 12, 0xff }, },
+};
 
-void draw_eye( short x, short y, short size ) {
-    switch( powerstatus ) {
-        case 0:
-            gpu_circle( WHITE, x, y, size, 0xff, 1 );
-            if( size/2 > 1 ) {
-                gpu_circle( BLACK, x, y, size / 2, 0xff, 1 );
-            } else {
-                gpu_pixel( BLACK, x, y );
-            }
-            break;
-        default:
-            draw_cross( x, y, size / 2 );
+struct DrawList2D GHOSTREYE[] = {
+    { DLCIRC, WHITE, WHITE, DITHERSOLID, { 30, -30 }, { 25, 0xff }, },
+    { DLCIRC, BLACK, BLACK, DITHERSOLID, { 30, -30 }, { 12, 0xff }, },
+};
+
+struct DrawList2D POWERGHOSTLEYE[] = {
+    { DLLINE, PINK, PINK, DITHERSOLID, { -28, -28 }, { -12, -12 }, { 2, 0 }, },
+    { DLLINE, PINK, PINK, DITHERSOLID, { -12, -28 }, { -28, -12 }, { 2, 0 }, }
+};
+
+struct DrawList2D POWERGHOSTREYE[] = {
+    { DLLINE, PINK, PINK, DITHERSOLID, { 12, -28 }, { 28, -12 }, { 2, 0 }, },
+    { DLLINE, PINK, PINK, DITHERSOLID, { 28, -28 }, { 12, -12 }, { 2, 0 }, }
+};
+
+struct DrawList2D POWERGHOSTMOUTH[] = {
+    { DLARC, PINK, PINK, DITHERSOLID, { -40, 20 }, { 10, 0b11000011 }, },
+    { DLARC, PINK, PINK, DITHERSOLID, { -20, 20 }, { 10, 0b00111100 }, },
+    { DLARC, PINK, PINK, DITHERSOLID, { 0, 20 }, { 10, 0b11000011 }, },
+    { DLARC, PINK, PINK, DITHERSOLID, { 20, 20 }, { 10, 0b00111100 }, },
+    { DLARC, PINK, PINK, DITHERSOLID, { 40, 20 }, { 10, 0b11000011 }, },
+};
+
+// SET GHOST BODY COLOUR
+void setghostcolour( unsigned short ghost ) {
+    unsigned char colour[] = { CYAN, MAGENTA, ORANGE, RED };
+    for( int i = 0; i < 5; i++ ) {
+        GHOSTBODY[i].colour = powerstatus ? ( powerstatus > 40 ) ? DKPURPLE : WHITE : colour[ ghost];
     }
 }
 
 // DRAW GHOST AT CORRECT DISTANCE
 void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned short playerdirection ) {
-    unsigned short sizechange = ( 160 - perspectivex[ steps ] ) * 3 / 8;
-
-    unsigned short centrex = 160;
-    unsigned short centrey = 120;
-    unsigned short offsetx = ( sizechange * 2 ) / 6;
-    unsigned short eyeoffsetx = ( sizechange + offsetx ) / 2;
-    unsigned short eyeoffsety = sizechange / 2;
-    unsigned char colour = powerstatus ? ( powerstatus > 40 ) ? DKPURPLE : WHITE : ghostcolour( ghostnumber );
-
-    // SOLID
-    gpu_dither( DITHEROFF );
+    float scale = (float)( 160 - perspectivex[ steps ] ) / 160.0;
 
     // MAIN BODY and HEAD
-    gpu_rectangle( colour, centrex - sizechange, centrey - sizechange, centrex + sizechange, centrey + sizechange );
-    gpu_circle( colour, centrex, centrey - sizechange, sizechange, 0b11000011, 1 );
-
-    // FRILLS
-    for( short i = -2; i < 4; i +=2 ) {
-         gpu_circle( colour, centrex - ( offsetx * i ), centrey + sizechange, offsetx, 0b00111100, 1 );
-    }
+    setghostcolour( ghostnumber );
+    DoDrawList2D( GHOSTBODY, 5, 160, 120, scale );
 
     // EYES - CROSSES IF POWER
     switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
@@ -201,25 +195,40 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
             break;
         case 1:
             // GHOST FACING RIGHT
-            draw_eye( centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2 );
+            switch( powerstatus ) {
+                case 0:
+                    DoDrawList2D( GHOSTREYE, 2, 160, 120, scale );
+                    break;
+                default:
+                    DoDrawList2D( POWERGHOSTREYE, 2, 160, 120, scale );
+            }
             break;
         case 2:
             // GHOST DIRECTLY FACING
-            draw_eye( centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2 );
-            draw_eye( centrex + eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2 );
-            if( powerstatus ) {
-                // DRAW MOUTH
-                gpu_circle( PINK, centrex - eyeoffsetx, centrey + eyeoffsety, eyeoffsetx / 4, 0b11000011, 0 );
-                gpu_circle( PINK, centrex - eyeoffsetx / 2, centrey + eyeoffsety, eyeoffsetx / 4, 0b00111100, 0 );
-                gpu_circle( PINK, centrex, centrey + eyeoffsety, eyeoffsetx / 4, 0b11000011, 0 );
-                gpu_circle( PINK, centrex + eyeoffsetx / 2, centrey + eyeoffsety, eyeoffsetx / 4, 0b00111100, 0 );
-                gpu_circle( PINK, centrex + eyeoffsetx, centrey + eyeoffsety, eyeoffsetx / 4, 0b11000011, 0 );
+            switch( powerstatus ) {
+                case 0:
+                    DoDrawList2D( GHOSTREYE, 2, 160, 120, scale );
+                    DoDrawList2D( GHOSTLEYE, 2, 160, 120, scale );
+                    break;
+                default:
+                    DoDrawList2D( POWERGHOSTREYE, 2, 160, 120, scale );
+                    DoDrawList2D( POWERGHOSTLEYE, 2, 160, 120, scale );
+                    DoDrawList2D( POWERGHOSTMOUTH, 5, 160, 120, scale );
             }
             break;
         case 3:
             // GHOST FACING LEFT
-            draw_eye( centrex - eyeoffsetx, centrey - eyeoffsety, eyeoffsetx / 2 );
+            switch( powerstatus ) {
+                case 0:
+                    DoDrawList2D( GHOSTLEYE, 2, 160, 120, scale );
+                    break;
+                default:
+                    DoDrawList2D( POWERGHOSTLEYE, 2, 160, 120, scale );
+            }
+            break;
     }
+    // SOLID
+    gpu_dither( DITHEROFF );
 }
 
 // MOVE A GHOST RANDOMLY IN THE MAZE
@@ -376,6 +385,21 @@ void generate_maze( unsigned short width, unsigned short height ) {
 }
 
 // DRAW THE MAP IN RIGHT CORNER WITH COMPASS
+// GHOST COLOUR SELECTOR
+unsigned char ghostcolour( unsigned short ghost ) {
+    switch( ghost ) {
+        case 0:
+            return( CYAN );
+        case 1:
+            return( MAGENTA );
+        case 2:
+            return( ORANGE );
+        case 3:
+            return( RED );
+        default:
+            return( BLACK );
+    }
+}
 void draw_map( unsigned short width, unsigned short height, unsigned short currentx, unsigned short currenty, unsigned short direction, unsigned char mapmaze, unsigned short mappeeks )
 {
     short x, y, dox, doy;

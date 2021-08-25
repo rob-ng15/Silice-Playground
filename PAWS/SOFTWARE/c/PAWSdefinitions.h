@@ -160,10 +160,11 @@ struct Point2D {
 };
 
 // FOR SOFTWARE DRAWLISTS
-#define DLRECT  0
-#define DLCIRC  1
-#define DLTRI   2
-#define DLQUAD  3
+#define DLLINE  0
+#define DLRECT  1
+#define DLCIRC  2
+#define DLARC   3
+#define DLTRI   4
 
 struct DrawList2D {
     unsigned char   shape;              // DLRECT, DLCIRC, DLTRI, DLQUAD are defined
@@ -172,8 +173,7 @@ struct DrawList2D {
     unsigned char   dithermode;         // PAWS dithermode
     struct Point2D  xy1;                // Vertex 1 or centre of circle
     struct Point2D  xy2;                // Vertex 2 or circle radius and sector mask
-    struct Point2D  xy3;                // Vertex 3
-    struct Point2D  xy4;                // Vertex 4
+    struct Point2D  xy3;                // Vertex 3 or line width
 };
 
 // FAT16 FILE SYSTEM

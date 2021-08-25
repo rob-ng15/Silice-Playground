@@ -821,6 +821,14 @@ void gpudemo( void ) {
     }
     sleep( 1000, 0 );
 
+    // WIDE LINES
+    gpu_cs();
+    tpu_printf_centre( 59, TRANSPARENT, WHITE, 1, "GPU Wide Line Drawing Test" );
+    for( i = 0; i < 1024; i++ ) {
+        gpu_wideline( rng( 64 ), rng( 320 ), rng( 240 ), rng( 320 ), rng( 240 ), rng(8) + 1 );
+    }
+    sleep( 1000, 0 );
+
     // RECTANGLES
     gpu_cs();
     tpu_printf_centre( 59, TRANSPARENT, WHITE, 1, "GPU Rectangle Drawing Test - Solid & Dither" );

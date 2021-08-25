@@ -153,7 +153,7 @@ algorithm gpu_queue(
                     colour_alt = 0;
                     param0 = vector_drawer.gpu_param0;
                     param1 = vector_drawer.gpu_param1;
-                    param2 = 0;
+                    param2 = 1;
                     param3 = 0;
                     dithermode = 0;
                 }
@@ -239,6 +239,7 @@ algorithm gpu(
         y <: gpu_y,
         param0 <: gpu_param0,
         param1 <: gpu_param1,
+        param2 <: gpu_param2,
         start <: GPUlinestart,
         busy :> GPUlinebusy,
         bitmap_x_write :> GPUlinebitmap_x_write,
@@ -501,23 +502,30 @@ algorithm prepline(
     input   int10   y,
     input   int10   param0,
     input   int10   param1,
+    input   int10   param2,
     output  int10   gpu_active_x,
     output  int10   gpu_active_y,
     output  int10   gpu_dx,
     output  int10   gpu_dy,
     output  int10   gpu_sy,
     output  int10   gpu_numerator,
-    output  int10   gpu_max_count
+    output  int10   gpu_max_count,
+    output  uint10  gpu_width
 ) {
-    // Setup drawing a line from x,y to param0,param1 in colour
+    // Setup drawing a line from x,y to param0,param1 of width param2 in colour
     // Ensure LEFT to RIGHT
     ( gpu_active_x ) = min( x, param0 );
     gpu_active_y = ( x < param0 ) ? y : param1;
+
     // Determine if moving UP or DOWN
     gpu_sy = ( x < param0 ) ? ( ( y < param1 ) ? 1 : -1 ) : ( ( y < param1 ) ? -1 : 1 );
+
     // Absolute DELTAs
     ( gpu_dx ) = absdelta( x, param0 );
     ( gpu_dy ) = absdelta( y, param1 );
+    ( gpu_width ) = abs( param2 );
+
+    // Numerator
     gpu_numerator = ( gpu_dx > gpu_dy ) ? ( gpu_dx >> 1 ) : -( gpu_dy >> 1 );
     ( gpu_max_count ) = max( gpu_dx, gpu_dy );
     ++:
@@ -533,6 +541,7 @@ algorithm drawline(
     input   int10   dy,
     input   int10   sy,
     input   int10   max_count,
+    input   uint10  width,
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
     output  uint1   bitmap_write
@@ -542,15 +551,43 @@ algorithm drawline(
     int10   numerator = uninitialized;
     int10   numerator2 = uninitialized;
     int10   count = uninitialized;
+    int10   offset_x = uninitialised;
+    int10   offset_y = uninitialised;
+    uint10  pixel_count = uninitialised;
 
-    bitmap_x_write := x; bitmap_y_write := y; bitmap_write := 0;
+    bitmap_x_write := x + offset_x; bitmap_y_write := y + offset_y; bitmap_write := 0;
 
     while(1) {
         if( start ) {
             busy = 1;
             x = start_x; y = start_y; numerator = start_numerator; count = 0;
+            offset_x = 0; offset_y = 0;
             while( count != max_count ) {
-                bitmap_write = 1;
+                // OUTPUT PIXELS
+                if( width == 1 ) {
+                    // SINGLE PIXEL
+                    bitmap_write = 1;
+                } else {
+                    // MULTIPLE WIDTH PIXELS - FIND OFFSETS, HALF OF WIDTH
+                    if( dx > dy ) {
+                        // WIDTH VERRTICAL
+                        offset_y = -( width >> 1 );
+                    } else {
+                        // WIDTH HORIZONTAL
+                        offset_x = -( width >> 1 );
+                    }
+                    // DRAW WIDTH PIXELS
+                    pixel_count = 0;
+                    while( pixel_count != width ) {
+                        bitmap_write = 1;
+                        if( dx > dy ) {
+                            offset_y = offset_y + 1;
+                        } else {
+                            offset_x = offset_x + 1;
+                        }
+                        pixel_count = pixel_count + 1;
+                    }
+                }
                 numerator2 = numerator;
                 ++:
                 if( numerator2 > (-dx) ) {
@@ -573,6 +610,7 @@ algorithm line (
     input   int10   y,
     input   int10   param0,
     input   int10   param1,
+    input   int10   param2,
     output  int10   bitmap_x_write,
     output  int10   bitmap_y_write,
     output  uint1   bitmap_write
@@ -584,18 +622,21 @@ algorithm line (
     int10   gpu_sy = uninitialized;
     int10   gpu_numerator = uninitialized;
     int10   gpu_max_count = uninitialized;
+    uint10  gpu_width = uninitialised;
     prepline PREP(
         x <: x,
         y <: y,
         param0 <: param0,
         param1 <: param1,
+        param2 <: param2,
         gpu_active_x :> gpu_active_x,
         gpu_active_y :> gpu_active_y,
         gpu_dx :> gpu_dx,
         gpu_dy :> gpu_dy,
         gpu_sy :> gpu_sy,
         gpu_numerator :> gpu_numerator,
-        gpu_max_count :> gpu_max_count
+        gpu_max_count :> gpu_max_count,
+        gpu_width :> gpu_width
     );
     uint1   LINEstart = uninitialised;
     uint1   LINEbusy = uninitialised;
@@ -607,6 +648,7 @@ algorithm line (
         dy <: gpu_dy,
         sy <: gpu_sy,
         max_count <: gpu_max_count,
+        width <: gpu_width,
         bitmap_x_write :> bitmap_x_write,
         bitmap_y_write :> bitmap_y_write,
         bitmap_write :> bitmap_write,
