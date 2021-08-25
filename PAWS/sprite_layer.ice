@@ -222,8 +222,8 @@ algorithm sprite_layer(
                                                                         pix_visible_6, pix_visible_5, pix_visible_4, pix_visible_3,
                                                                         pix_visible_2, pix_visible_1, pix_visible_0 );
                             // UPDATE CPU READABLE FLAGS DURING THE FRAME
-                            //collision_$i$ = collision_$i$ | detect_collision_$i$;
-                            //layer_collision_$i$ = layer_collision_$i$ | detect_layer_$i$;
+                            collision_$i$ = collision_$i$ | detect_collision_$i$;
+                            layer_collision_$i$ = layer_collision_$i$ | detect_layer_$i$;
                         $$end
 
                         // Output collision detection

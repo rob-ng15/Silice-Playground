@@ -30,6 +30,29 @@ struct DrawList2D PINETREE[] = {
     { DLTRI, VDKGREEN, VDKGREEN, DITHERSOLID, { 0, -96 }, { 32, -32 }, { -32, -32 } },
 };
 
+struct DrawList2D LEFTBEAM[] = {
+    { DLLINE, DKRED, DKRED, DITHERSOLID, { 0, 0 }, { 0, -128 }, { 9, 0 } },
+    { DLLINE, DKRED, DKRED, DITHERSOLID, { -32, 0 }, { -32, -128 }, { 9, 0 } },
+    { DLLINE, DKRED, DKRED, DITHERSOLID, { -32, -128 }, { 160, -128 }, { 9, 0 } },
+    { DLLINE, DKRED, DKRED, DITHERSOLID, { -32, -96 }, { 160, -96 }, { 9, 0 } },
+    { DLLINE, VDKRED, DKRED, DITHERSOLID, { 0, -128 }, { -32, -96 }, { 5, 0 } },
+    { DLLINE, VDKRED, DKRED, DITHERSOLID, { -32, -128 }, { 0, -96 }, { 5, 0 } },
+    { DLLINE, VDKRED, DKRED, DITHERSOLID, { 0, -64 }, { -32, -32 }, { 5, 0 } },
+    { DLLINE, VDKRED, DKRED, DITHERSOLID, { -32, -64 }, { 0, -32 }, { 5, 0 } },
+
+};
+
+struct DrawList2D RIGHTBEAM[] = {
+    { DLLINE, DKRED, DKRED, DITHERSOLID, { 0, 0 }, { 0, -128 }, { 9, 0 } },
+    { DLLINE, DKRED, DKRED, DITHERSOLID, { 32, 0 }, { 32, -128 }, { 9, 0 } },
+    { DLLINE, DKRED, DKRED, DITHERSOLID, { 32, -128 }, { -160, -128 }, { 9, 0 } },
+    { DLLINE, DKRED, DKRED, DITHERSOLID, { 32, -96 }, { -160, -96 }, { 9, 0 } },
+    { DLLINE, VDKRED, DKRED, DITHERSOLID, { 0, -128 }, { 32, -96 }, { 5, 0 } },
+    { DLLINE, VDKRED, DKRED, DITHERSOLID, { 32, -128 }, { 0, -96 }, { 5, 0 } },
+    { DLLINE, VDKRED, DKRED, DITHERSOLID, { 0, -64 }, { 32, -32 }, { 5, 0 } },
+    { DLLINE, VDKRED, DKRED, DITHERSOLID, { 32, -64 }, { 0, -32 }, { 5, 0 } },
+};
+
 // ROAD SEGMENTS, DEFINING NUMBER OF SECTIONS BEFORE NEXT TURN, TURN ANGLE, AND SIDE OBJECTS
 #define MAXSEGMENT 10
 typedef struct {
@@ -117,6 +140,7 @@ void update() {
 // NUMBER OF SEGMENTS TO DRAW EACH ITERATION
 #define DRAWSEGMENTS 32
 void drawtrapezium( unsigned char colour, float x1, float y1, float w1, float x2, float y2, float w2 ) {
+    //gpu_quadrilateral( colour, x1-w1, y1, x1+w1, y1, x2-w2, y2, x2+w2, y2 );
     gpu_triangle( colour, x1 - w1, y1, x1 + w1, y1, x2 - w2, y2 );
     gpu_triangle( colour, x1 + w1, y1, x2 + w2, y2, x2 - w2, y2 );
 }
@@ -181,6 +205,9 @@ void draw() {
             case SIGN:
                 DoDrawList2D( RIGHTCHEVRON, 4, lspritesxyz[i].x - offset, lspritesxyz[i].y, scale );
                 break;
+            case BEAMS:
+                DoDrawList2D( LEFTBEAM, 8, lspritesxyz[i].x - offset, lspritesxyz[i].y, scale );
+                break;
         }
         switch( rsprites[i] ) {
             case TREE:
@@ -188,6 +215,9 @@ void draw() {
                 break;
             case SIGN:
                 DoDrawList2D( LEFTCHEVRON, 4, lspritesxyz[i].x + offset, lspritesxyz[i].y, scale );
+                break;
+            case BEAMS:
+                DoDrawList2D( RIGHTBEAM, 8, lspritesxyz[i].x + offset, lspritesxyz[i].y, scale );
                 break;
         }
     }
