@@ -186,7 +186,7 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
 
     // MAIN BODY and HEAD
     setghostcolour( ghostnumber );
-    DoDrawList2D( GHOSTBODY, 5, 160, 120, scale );
+    DoDrawList2Dscale( GHOSTBODY, 5, 160, 120, scale );
 
     // EYES - CROSSES IF POWER
     switch( ghosteyes[playerdirection][ghostdirection[ ghostnumber ]] ) {
@@ -197,33 +197,33 @@ void draw_ghost( unsigned short steps, unsigned short ghostnumber, unsigned shor
             // GHOST FACING RIGHT
             switch( powerstatus ) {
                 case 0:
-                    DoDrawList2D( GHOSTREYE, 2, 160, 120, scale );
+                    DoDrawList2Dscale( GHOSTREYE, 2, 160, 120, scale );
                     break;
                 default:
-                    DoDrawList2D( POWERGHOSTREYE, 2, 160, 120, scale );
+                    DoDrawList2Dscale( POWERGHOSTREYE, 2, 160, 120, scale );
             }
             break;
         case 2:
             // GHOST DIRECTLY FACING
             switch( powerstatus ) {
                 case 0:
-                    DoDrawList2D( GHOSTREYE, 2, 160, 120, scale );
-                    DoDrawList2D( GHOSTLEYE, 2, 160, 120, scale );
+                    DoDrawList2Dscale( GHOSTREYE, 2, 160, 120, scale );
+                    DoDrawList2Dscale( GHOSTLEYE, 2, 160, 120, scale );
                     break;
                 default:
-                    DoDrawList2D( POWERGHOSTREYE, 2, 160, 120, scale );
-                    DoDrawList2D( POWERGHOSTLEYE, 2, 160, 120, scale );
-                    DoDrawList2D( POWERGHOSTMOUTH, 5, 160, 120, scale );
+                    DoDrawList2Dscale( POWERGHOSTREYE, 2, 160, 120, scale );
+                    DoDrawList2Dscale( POWERGHOSTLEYE, 2, 160, 120, scale );
+                    DoDrawList2Dscale( POWERGHOSTMOUTH, 5, 160, 120, scale );
             }
             break;
         case 3:
             // GHOST FACING LEFT
             switch( powerstatus ) {
                 case 0:
-                    DoDrawList2D( GHOSTLEYE, 2, 160, 120, scale );
+                    DoDrawList2Dscale( GHOSTLEYE, 2, 160, 120, scale );
                     break;
                 default:
-                    DoDrawList2D( POWERGHOSTLEYE, 2, 160, 120, scale );
+                    DoDrawList2Dscale( POWERGHOSTLEYE, 2, 160, 120, scale );
             }
             break;
     }

@@ -14,6 +14,8 @@ algorithm gpu_queue(
     input   int10   gpu_param1,
     input   int10   gpu_param2,
     input   int10   gpu_param3,
+    input   int10   gpu_param4,
+    input   int10   gpu_param5,
     input   uint4   gpu_write,
     input   uint4   gpu_dithermode,
 
@@ -112,6 +114,8 @@ algorithm gpu_queue(
     int10   param1 = uninitialised;
     int10   param2 = uninitialised;
     int10   param3 = uninitialised;
+    int10   param4 = uninitialised;
+    int10   param5 = uninitialised;
     uint4   dithermode = uninitialised;
     uint1   gpu_active = uninitialised;
     uint4   GPUgpu_write <:: ( gpu_write != 0 ) ? gpu_write : vector_drawer.gpu_write ? 2 : 0;
@@ -124,6 +128,8 @@ algorithm gpu_queue(
         gpu_param1 <: param1,
         gpu_param2 <: param2,
         gpu_param3 <: param3,
+        gpu_param4 <: param4,
+        gpu_param5 <: param5,
         gpu_dithermode <: dithermode,
         gpu_write <: GPUgpu_write,
         blit1tilemap <:> blit1tilemap,
@@ -155,6 +161,8 @@ algorithm gpu_queue(
                     param1 = vector_drawer.gpu_param1;
                     param2 = 1;
                     param3 = 0;
+                    param4 = 0;
+                    param5 = 0;
                     dithermode = 0;
                 }
             }
@@ -167,6 +175,8 @@ algorithm gpu_queue(
                 param1 = gpu_param1;
                 param2 = gpu_param2;
                 param3 = gpu_param3;
+                param4 = gpu_param4;
+                param5 = gpu_param5;
                 dithermode = gpu_dithermode;
             }
         }
@@ -195,6 +205,8 @@ algorithm gpu(
     input   int10   gpu_param1,
     input   int10   gpu_param2,
     input   int10   gpu_param3,
+    input   int10   gpu_param4,
+    input   int10   gpu_param5,
     input   uint4   gpu_write,
     input   uint4   gpu_dithermode,
 
@@ -211,7 +223,7 @@ algorithm gpu(
     uint7   gpu_active_colour_alt = uninitialized;
 
     // GPU SUBUNITS
-    uint7   gpu_busy_flags <:: { GPUpixelblockbusy, GPUcolourblitbusy, GPUblitbusy, GPUtrianglebusy, GPUcirclebusy, GPUrectanglebusy, GPUlinebusy };
+    uint8   gpu_busy_flags <:: { GPUquadrilateralbusy, GPUpixelblockbusy, GPUcolourblitbusy, GPUblitbusy, GPUtrianglebusy, GPUcirclebusy, GPUrectanglebusy, GPUlinebusy };
 
     uint1   GPUrectanglestart = uninitialised;
     uint1   GPUrectanglebusy = uninitialised;
@@ -346,12 +358,32 @@ algorithm gpu(
         bitmap_write :> GPUpixelblockbitmap_write,
         bitmap_colour_write :> GPUpixelblockbitmap_colour_write
     );
+    uint1   GPUquadrilateralstart = uninitialised;
+    uint1   GPUquadrilateralbusy = uninitialised;
+    int10   GPUquadrilateralbitmap_x_write = uninitialised;
+    int10   GPUquadrilateralbitmap_y_write = uninitialised;
+    uint1   GPUquadrilateralbitmap_write = uninitialised;
+    quadrilateral GPUquadrilateral(
+        x <: gpu_x,
+        y <: gpu_y,
+        param0 <: gpu_param0,
+        param1 <: gpu_param1,
+        param2 <: gpu_param2,
+        param3 <: gpu_param3,
+        param4 <: gpu_param4,
+        param5 <: gpu_param5,
+        start <: GPUquadrilateralstart,
+        busy :> GPUquadrilateralbusy,
+        bitmap_x_write :> GPUquadrilateralbitmap_x_write,
+        bitmap_y_write :> GPUquadrilateralbitmap_y_write,
+        bitmap_write :> GPUquadrilateralbitmap_write
+    );
 
     // CONTROLS FOR BITMAP PIXEL WRITER
     bitmap_write := 0; bitmap_colour_write := gpu_active_colour; bitmap_colour_write_alt := gpu_active_colour_alt;
 
     // CONTROLS FOR GPU SUBUNITS
-    GPUrectanglestart := 0; GPUlinestart := 0; GPUcirclestart := 0; GPUtrianglestart := 0; GPUblitstart := 0; GPUcolourblitstart := 0; GPUpixelblockstart := 0;
+    GPUrectanglestart := 0; GPUlinestart := 0; GPUcirclestart := 0; GPUtrianglestart := 0; GPUblitstart := 0; GPUcolourblitstart := 0; GPUpixelblockstart := 0; GPUquadrilateralstart := 0;
 
     while(1) {
         gpu_active_colour = ( gpu_write != 0 ) ? gpu_colour : gpu_active_colour;
@@ -376,6 +408,7 @@ algorithm gpu(
                     case 8: { gpu_active_dithermode = 0; GPUblittilecharacter = 0; GPUblitstart = 1; } // BLIT 8 x 8 CHARACTER PARAM0 TO (X,Y) as 8 x 8
                     case 9: { gpu_active_dithermode = 0; GPUcolourblitstart = 1; } // BLIT 16 x 16 COLOUR TILE PARAM0 TO (X,Y) as 16 x 16
                     case 10: { gpu_active_dithermode = 0; GPUpixelblockstart = 1; } // START THE PIXELBLOCK WRITER AT (x,y) WITH WIDTH PARAM0, IGNORE COLOUR PARAM1
+                    case 11: { gpu_active_dithermode = gpu_dithermode; GPUquadrilateralstart = 1; } // DRAW FILLED QUADRILATERAL WITH VERTICES (X,Y) (PARAM0,PARAM1) (PARAM2,PARAM3) (PARAM4,PARAM5)
                 }
                 while( gpu_busy_flags != 0 ) {
                     onehot( gpu_busy_flags ) {
@@ -386,8 +419,10 @@ algorithm gpu(
                         case 4: { bitmap_x_write = GPUblitbitmap_x_write; bitmap_y_write = GPUblitbitmap_y_write; }
                         case 5: { bitmap_x_write = GPUcolourblitbitmap_x_write; bitmap_y_write = GPUcolourblitbitmap_y_write; bitmap_colour_write = GPUcolourblitbitmap_colour_write; }
                         case 6: { bitmap_x_write = GPUpixelblockbitmap_x_write; bitmap_y_write = GPUpixelblockbitmap_y_write; bitmap_colour_write = GPUpixelblockbitmap_colour_write; }
+                        case 7: { bitmap_x_write = GPUquadrilateralbitmap_x_write; bitmap_y_write = GPUquadrilateralbitmap_y_write; }
                     }
-                    bitmap_write = GPUlinebitmap_write | GPUrectanglebitmap_write | GPUcirclebitmap_write | GPUtrianglebitmap_write | GPUblitbitmap_write | GPUcolourblitbitmap_write | GPUpixelblockbitmap_write;
+                    bitmap_write = GPUlinebitmap_write | GPUrectanglebitmap_write | GPUcirclebitmap_write |
+                                    GPUtrianglebitmap_write | GPUblitbitmap_write | GPUcolourblitbitmap_write | GPUpixelblockbitmap_write | GPUquadrilateralbitmap_write;
                 }
                 gpu_active = 0;
             }
@@ -1031,6 +1066,69 @@ algorithm triangle(
             busy = 1;
             () <- PREP <- ();
             TRIANGLEstart = 1; while( TRIANGLEbusy ) {}
+            busy = 0;
+        }
+    }
+}
+
+// QUADRILATERAL - OUTPUT PIXELS TO DRAW A FILLED QUADRILATERAL
+// USE THE TRIANGLE ROUTINE TO DRAW TWO TRIANGLES
+// TRIANGLE 1 ( x1, y1 ) to ( x3, y3 ) and ( x2, y2 )
+// TRIANGLE 2 ( x1, y1 ) to ( x3, y3 ) and ( x4, y4 )
+// ONLY WORKS FOR CONVEX QUADRILATERALS
+algorithm quadrilateral(
+    input   uint1   start,
+    output  uint1   busy(0),
+    input   int10   x,
+    input   int10   y,
+    input   int10   param0,
+    input   int10   param1,
+    input   int10   param2,
+    input   int10   param3,
+    input   int10   param4,
+    input   int10   param5,
+    output  int10   bitmap_x_write,
+    output  int10   bitmap_y_write,
+    output  uint1   bitmap_write
+) <autorun> {
+    int10   tri_param0 = uninitialized;
+    int10   tri_param1 = uninitialized;
+    int10   tri_param2 = uninitialized;
+    int10   tri_param3 = uninitialized;
+    int10   tri_param4 = uninitialized;
+    int10   tri_param5 = uninitialized;
+    uint1   GPUtrianglestart = uninitialised;
+    uint1   GPUtrianglebusy = uninitialised;
+    triangle GPUtriangle(
+        x <: tri_param0,
+        y <: tri_param1,
+        param0 <: tri_param2,
+        param1 <: tri_param3,
+        param2 <: tri_param4,
+        param3 <: tri_param5,
+        start <: GPUtrianglestart,
+        busy :> GPUtrianglebusy,
+        bitmap_x_write :> bitmap_x_write,
+        bitmap_y_write :> bitmap_y_write,
+        bitmap_write :> bitmap_write
+    );
+    GPUtrianglestart := 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+
+            // SEND QUADRILATERAL AS TWO TRIANGLES
+            ( tri_param0, tri_param1 ) = copycoordinates( x, y );
+            ( tri_param2, tri_param3 ) = copycoordinates( param0, param1 );
+            ( tri_param4, tri_param5 ) = copycoordinates( param2, param3 );
+            GPUtrianglestart = 1; while( GPUtrianglebusy ) {}
+
+            ( tri_param0, tri_param1 ) = copycoordinates( x, y );
+            ( tri_param2, tri_param3 ) = copycoordinates( param2, param3 );
+            ( tri_param4, tri_param5 ) = copycoordinates( param4, param5 );
+            GPUtrianglestart = 1; while( GPUtrianglebusy ) {}
+
             busy = 0;
         }
     }

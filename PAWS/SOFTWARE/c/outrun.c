@@ -142,8 +142,6 @@ void update() {
 #define DRAWSEGMENTS 16
 void drawtrapezium( unsigned char colour, float x1, float y1, float w1, float x2, float y2, float w2 ) {
     gpu_quadrilateral( colour, x1-w1, y1, x1+w1, y1, x2+w2, y2, x2-w2, y2 );
-    //gpu_triangle( colour, x1 - w1, y1, x1 + w1, y1, x2 - w2, y2 );
-    //gpu_triangle( colour, x1 + w1, y1, x2 + w2, y2, x2 - w2, y2 );
 }
 
 void drawroad( float x1, float y1, float scale1, float x2, float y2, float scale2, int sumct ) {
@@ -188,8 +186,29 @@ void draw() {
         sumct = corner[cnr] + seg - 1;
         drawroad( p.x, p.y, p.z, pp.x, pp.y, pp.z, sumct );
 
-        lsprites[ i ] = road[cnr].bgl; lspritesxyz[i] = p;
-        rsprites[ i ] = road[cnr].bgr; rspritesxyz[i] = p;
+        // ATTEMPT TO LIMIT THE NUMBER OF BEAMS DRAWN, SINGLE BEAM AT THE START OF THE SECTION
+        switch( road[cnr].bgl ) {
+            case BEAMS:
+                if( !seg ) {
+                    lsprites[ i ] = road[cnr].bgl; lspritesxyz[i] = p;
+                } else {
+                    lsprites[ i ] = NONE;
+                }
+                break;
+            default:
+                lsprites[ i ] = road[cnr].bgl; lspritesxyz[i] = p;
+        }
+        switch( road[cnr].bgr ) {
+            case BEAMS:
+                if( !seg ) {
+                    rsprites[ i ] = road[cnr].bgr; rspritesxyz[i] = p;
+                } else {
+                    rsprites[ i ] = NONE;
+                }
+                break;
+            default:
+                rsprites[ i ] = road[cnr].bgr; rspritesxyz[i] = p;
+        }
 
         xd += road[cnr].tu;
         advance( &cnr, &seg );
@@ -209,6 +228,7 @@ void draw() {
             case BEAMS:
                 DoDrawList2Dscale( LEFTBEAM, 10, lspritesxyz[i].x - offset, lspritesxyz[i].y, scale );
                 break;
+            default:
         }
         switch( rsprites[i] ) {
             case TREE:
@@ -220,12 +240,22 @@ void draw() {
             case BEAMS:
                 DoDrawList2Dscale( RIGHTBEAM, 8, lspritesxyz[i].x + offset, lspritesxyz[i].y, scale );
                 break;
+            default:
         }
     }
 }
 
 void set_background_generator( void ) {
-    set_background( DKBLUE, DKGREEN, BKG_5050_V );
+    set_copper_cpuinput( 16 );
+    copper_startstop( 0 );
+    copper_program( 0, COPPER_WAIT_VBLANK, 7, 0, BKG_HATCH, DKBLUE, BLUE );
+    copper_program( 1, COPPER_WAIT_X, 7, 0, BKG_HATCH, DKBLUE, BLUE );
+    copper_program( 2, COPPER_JUMP, COPPER_JUMP_IF_Y_LESS, COPPER_USE_CPU_INPUT, 0, 0, 1 );
+    copper_program( 3, COPPER_WAIT_X, 7, 0, BKG_HATCH, DKGREEN, GREEN );
+    copper_program( 4, COPPER_JUMP, COPPER_JUMP_ON_VBLANK_EQUAL, 0, 0, 0, 3 );
+    copper_program( 5, COPPER_JUMP, COPPER_JUMP_ALWAYS, 0, 0, 0, 1 );
+    copper_startstop( 1 );
+    set_copper_cpuinput( 266 );
 }
 
 int main() {

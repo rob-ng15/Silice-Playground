@@ -389,8 +389,8 @@ $$end
                 }
                 case 4h6: {
                     switch( memoryAddress[0,8] ) {
-                        case 8h12: { readData = gpu_queue_full; }
-                        case 8h14: { readData = gpu_queue_complete; }
+                        case 8h16: { readData = gpu_queue_full; }
+                        case 8h18: { readData = gpu_queue_complete; }
                         case 8h2a: { readData = vector_block_active; }
                         case 8hd4: { readData = bitmap_colour_read; }
                         default: { readData = 0; }
@@ -568,6 +568,8 @@ algorithm bitmap_memmap(
     int10   gpu_param1 = uninitialized;
     int10   gpu_param2 = uninitialized;
     int10   gpu_param3 = uninitialized;
+    int10   gpu_param4 = uninitialized;
+    int10   gpu_param5 = uninitialized;
     uint4   gpu_write = uninitialized;
     uint4   gpu_dithermode = uninitialized;
     uint10  gpu_crop_left = uninitialized;
@@ -625,6 +627,8 @@ algorithm bitmap_memmap(
         gpu_param1 <: gpu_param1,
         gpu_param2 <: gpu_param2,
         gpu_param3 <: gpu_param3,
+        gpu_param4 <: gpu_param4,
+        gpu_param5 <: gpu_param5,
         gpu_write <: gpu_write,
         gpu_dithermode <: gpu_dithermode,
         crop_left <: gpu_crop_left,
@@ -678,7 +682,9 @@ algorithm bitmap_memmap(
                     case 8h0c: { gpu_param1 = writeData; }
                     case 8h0e: { gpu_param2 = writeData; }
                     case 8h10: { gpu_param3 = writeData; }
-                    case 8h12: { gpu_write = writeData; }
+                    case 8h12: { gpu_param4 = writeData; }
+                    case 8h14: { gpu_param5 = writeData; }
+                    case 8h16: { gpu_write = writeData; }
 
                     case 8h20: { vector_block_number = writeData; }
                     case 8h22: { vector_block_colour = writeData; }

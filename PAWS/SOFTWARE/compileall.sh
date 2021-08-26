@@ -14,3 +14,8 @@
 ./compile.sh c/raytracing.c PAWS/RAYTRACE.PAW
 ./compile.sh c/scale.c PAWS/SCALE.PAW
 ./compile.sh c/terminal-test.c PAWS/TERMINAL.PAW
+
+./compile.sh c/outrun.c PAWS/OUTRUN.PAW
+./compile.sh c/drawlist.c PAWS/DRAWLIST.PAW
+./compile.sh c/copper.c PAWS/COPPER.PAW
+

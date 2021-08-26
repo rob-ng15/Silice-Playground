@@ -573,8 +573,17 @@ void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2,
 // DRAW A FILLED QUADRILATERAL with vertices (x1,y1) (x2,y2) (x3,y3) (x4,y4) in colour BY DRAWING TWO FILLED TRIANGLES
 // VERTICES SHOULD BE PRESENTED CLOCKWISE FROM THE TOP ( minimal adjustments made to the vertices to comply )
 void gpu_quadrilateral( unsigned char colour, short x1, short y1, short x2, short y2, short x3, short y3, short x4, short y4 ) {
-    gpu_triangle( colour, x1, y1, x2, y2, x3, y3 );
-    gpu_triangle( colour, x1, y1, x3, y3, x4, y4 );
+     *GPU_COLOUR = colour;
+    *GPU_X = x1;
+    *GPU_Y = y1;
+    *GPU_PARAM0 = x2;
+    *GPU_PARAM1 = y2;
+    *GPU_PARAM2 = x3;
+    *GPU_PARAM3 = y3;
+    *GPU_PARAM4 = x4;
+    *GPU_PARAM5 = y4;
+    wait_gpu();
+    *GPU_WRITE = 11;
 }
 
 // OUTPUT A STRING TO THE GPU
@@ -739,6 +748,12 @@ struct Point2D Rotate2D( struct Point2D point, short xc, short yc, short angle, 
     return( newpoint );
 }
 
+struct Point2D MakePoint2D( short x, short y ) {
+    struct Point2D newpoint;
+    newpoint.dx = x; newpoint.dy = y;
+    return( newpoint );
+}
+
 // PROCESS A SOFTWARE VECTOR BLOCK AFTER SCALING AND ROTATION
 void DrawVectorShape2D( unsigned char colour, struct Point2D *points, short numpoints, short xc, short yc, short angle, float scale ) {
     struct Point2D *NewShape  = (struct Point2D *)0x1400;
@@ -752,33 +767,45 @@ void DrawVectorShape2D( unsigned char colour, struct Point2D *points, short nump
 
 // PROCESS A DRAWLIST DRAWING SHAPES AFTER SCALING, ROTATING AND MOVING TO CENTRE POINT
 void DoDrawList2D( struct DrawList2D *list, short numentries, short xc, short yc, short angle, float scale ) {
-    struct Point2D XY1, XY2, XY3;
+    struct Point2D XY1, XY2, XY3, XY4;
     for( int i = 0; i < numentries; i++ ) {
         gpu_dither( list[i].dithermode, list[i].alt_colour );
-        // ALWAYS SCALE FIRST TWO VERTICES
-        XY1 = Rotate2D( list[i].xy1, xc, yc, angle, scale );
-        XY2 = Rotate2D( list[i].xy2, xc, yc, angle, scale );
         switch( list[i].shape ) {
             case DLLINE:
-                // SCALE LINE VERICES, SCALE WIDTH, THEN DRAW
+                XY1 = Rotate2D( list[i].xy1, xc, yc, angle, scale );
+                XY2 = Rotate2D( list[i].xy2, xc, yc, angle, scale );
                 gpu_wideline( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, list[i].xy3.dx * scale );
                 break;
             case DLRECT:
-                // SCALE RECTANLGE VERICES, THEN DRAW
-                gpu_rectangle( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy );
+                // CONVERT TO QUADRILATERAL
+                XY1 = Rotate2D( list[i].xy1, xc, yc, angle, scale );
+                XY2 = Rotate2D( MakePoint2D( list[i].xy2.dx, list[i].xy1.dy ), xc, yc, angle, scale );
+                XY3 = Rotate2D( list[i].xy2, xc, yc, angle, scale );
+                XY4 = Rotate2D( MakePoint2D( list[i].xy1.dx, list[i].xy2.dy ), xc, yc, angle, scale );
+                gpu_quadrilateral( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, XY3.dx, XY3.dy, XY4.dx, XY4.dy );
                 break;
             case DLCIRC:
-                // SCALE CIRCLE CENTRE, SCALE RADIUS, THEN DRAW (filled)
-                gpu_circle( list[i].colour, XY1.dx, XY1.dy, list[i].xy2.dx * scale, list[i].xy2.dy, 1 );
+                // NO SECTOR MASK, FULL CIRCLE ONLY
+                XY1 = Rotate2D( list[i].xy1, xc, yc, angle, scale );
+                gpu_circle( list[i].colour, XY1.dx, XY1.dy, list[i].xy2.dx * scale, 0xff, 1 );
                 break;
             case DLARC:
-                // SCALE CIRCLE CENTRE, SCALE RADIUS, THEN DRAW (unfilled)
-                gpu_circle( list[i].colour, XY1.dx, XY1.dy, list[i].xy2.dx * scale, list[i].xy2.dy, 0 );
+                // NO SECTOR MASK, CIRCLE OUTLINE ONLY
+                XY1 = Rotate2D( list[i].xy1, xc, yc, angle, scale );
+                gpu_circle( list[i].colour, XY1.dx, XY1.dy, list[i].xy2.dx * scale, 0xff, 0 );
                 break;
             case DLTRI:
-                // SCALE TRIANGLE VERICES, THEN DRAW
+                XY1 = Rotate2D( list[i].xy1, xc, yc, angle, scale );
+                XY2 = Rotate2D( list[i].xy2, xc, yc, angle, scale );
                 XY3 = Rotate2D( list[i].xy3, xc, yc, angle, scale );
                 gpu_triangle( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, XY3.dx, XY3.dy );
+                break;
+            case DLQUAD:
+                XY1 = Rotate2D( list[i].xy1, xc, yc, angle, scale );
+                XY2 = Rotate2D( list[i].xy2, xc, yc, angle, scale );
+                XY3 = Rotate2D( list[i].xy3, xc, yc, angle, scale );
+                XY4 = Rotate2D( list[i].xy3, xc, yc, angle, scale );
+                gpu_quadrilateral( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, XY3.dx, XY3.dy, XY4.dx, XY4.dy );
                 break;
         }
     }
@@ -786,7 +813,7 @@ void DoDrawList2D( struct DrawList2D *list, short numentries, short xc, short yc
 
 // PROCESS A DRAWLIST DRAWING SHAPES AFTER SCALING AND MOVING TO CENTRE POINT
 void DoDrawList2Dscale( struct DrawList2D *list, short numentries, short xc, short yc, float scale ) {
-    struct Point2D XY1, XY2, XY3;
+    struct Point2D XY1, XY2, XY3, XY4;
     for( int i = 0; i < numentries; i++ ) {
         gpu_dither( list[i].dithermode, list[i].alt_colour );
         // ALWAYS SCALE FIRST TWO VERTICES
@@ -794,25 +821,25 @@ void DoDrawList2Dscale( struct DrawList2D *list, short numentries, short xc, sho
         XY2 = Scale2D( list[i].xy2, xc, yc, scale );
         switch( list[i].shape ) {
             case DLLINE:
-                // SCALE LINE VERICES, SCALE WIDTH, THEN DRAW
                 gpu_wideline( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, list[i].xy3.dx * scale );
                 break;
             case DLRECT:
-                // SCALE RECTANLGE VERICES, THEN DRAW
                 gpu_rectangle( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy );
                 break;
             case DLCIRC:
-                // SCALE CIRCLE CENTRE, SCALE RADIUS, THEN DRAW (filled)
                 gpu_circle( list[i].colour, XY1.dx, XY1.dy, list[i].xy2.dx * scale, list[i].xy2.dy, 1 );
                 break;
             case DLARC:
-                // SCALE CIRCLE CENTRE, SCALE RADIUS, THEN DRAW (unfilled)
                 gpu_circle( list[i].colour, XY1.dx, XY1.dy, list[i].xy2.dx * scale, list[i].xy2.dy, 0 );
                 break;
             case DLTRI:
-                // SCALE TRIANGLE VERICES, THEN DRAW
                 XY3 = Scale2D( list[i].xy3, xc, yc, scale );
                 gpu_triangle( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, XY3.dx, XY3.dy );
+                break;
+            case DLQUAD:
+                XY3 = Scale2D( list[i].xy3, xc, yc, scale );
+                XY4 = Scale2D( list[i].xy4, xc, yc, scale );
+                gpu_quadrilateral( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, XY3.dx, XY3.dy, XY4.dx, XY4.dy );
                 break;
         }
     }

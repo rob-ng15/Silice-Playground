@@ -169,7 +169,7 @@ struct Point2D {
 #define DLCIRC  2
 #define DLARC   3
 #define DLTRI   4
-
+#define DLQUAD  5
 struct DrawList2D {
     unsigned char   shape;              // DLRECT, DLCIRC, DLTRI, DLQUAD are defined
     unsigned char   colour;             // PAWS colour code
@@ -178,6 +178,7 @@ struct DrawList2D {
     struct Point2D  xy1;                // Vertex 1 or centre of circle
     struct Point2D  xy2;                // Vertex 2 or circle radius and sector mask
     struct Point2D  xy3;                // Vertex 3 or line width
+    struct Point2D  xy4;                // Vertex 4
 };
 
 // FAT16 FILE SYSTEM

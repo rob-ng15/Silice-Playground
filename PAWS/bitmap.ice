@@ -29,6 +29,8 @@ algorithm bitmap(
     input   int10   gpu_param1,
     input   int10   gpu_param2,
     input   int10   gpu_param3,
+    input   int10   gpu_param4,
+    input   int10   gpu_param5,
     input   uint4   gpu_write,
     input   uint4   gpu_dithermode,
 
@@ -137,6 +139,8 @@ algorithm bitmap(
         gpu_param1 <: gpu_param1,
         gpu_param2 <: gpu_param2,
         gpu_param3 <: gpu_param3,
+        gpu_param4 <: gpu_param4,
+        gpu_param5 <: gpu_param5,
         gpu_write <: gpu_write,
         gpu_dithermode <: gpu_dithermode,
         blit1_writer_tile <: blit1_writer_tile,
