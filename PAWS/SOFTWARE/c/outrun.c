@@ -34,19 +34,20 @@ struct DrawList2D LEFTBEAM[] = {
     { DLLINE, DKRED, DKRED, DITHERSOLID, { 0, 0 }, { 0, -128 }, { 9, 0 } },
     { DLLINE, DKRED, DKRED, DITHERSOLID, { -32, 0 }, { -32, -128 }, { 9, 0 } },
     { DLLINE, DKRED, DKRED, DITHERSOLID, { -32, -128 }, { 160, -128 }, { 9, 0 } },
-    { DLLINE, DKRED, DKRED, DITHERSOLID, { -32, -96 }, { 160, -96 }, { 9, 0 } },
     { DLLINE, VDKRED, DKRED, DITHERSOLID, { 0, -128 }, { -32, -96 }, { 5, 0 } },
     { DLLINE, VDKRED, DKRED, DITHERSOLID, { -32, -128 }, { 0, -96 }, { 5, 0 } },
     { DLLINE, VDKRED, DKRED, DITHERSOLID, { 0, -64 }, { -32, -32 }, { 5, 0 } },
     { DLLINE, VDKRED, DKRED, DITHERSOLID, { -32, -64 }, { 0, -32 }, { 5, 0 } },
-
+    { DLRECT, BLACK, BLACK, DITHERSOLID, { 112, -136}, { 96, -120 }, },
+    { DLTRI, GREEN, GREEN, DITHERSOLID, { 97, -121 }, { 97, -128 }, { 104, -121 } },
+    { DLLINE, GREEN, GREEN, DITHERSOLID, { 97, -121 }, { 111, -135 }, { 3, 0 } }
 };
 
 struct DrawList2D RIGHTBEAM[] = {
+    { DLRECT, BLACK, BLACK, DITHERSOLID, { -112, -136 }, { -96, -120 }, },
     { DLLINE, DKRED, DKRED, DITHERSOLID, { 0, 0 }, { 0, -128 }, { 9, 0 } },
     { DLLINE, DKRED, DKRED, DITHERSOLID, { 32, 0 }, { 32, -128 }, { 9, 0 } },
     { DLLINE, DKRED, DKRED, DITHERSOLID, { 32, -128 }, { -160, -128 }, { 9, 0 } },
-    { DLLINE, DKRED, DKRED, DITHERSOLID, { 32, -96 }, { -160, -96 }, { 9, 0 } },
     { DLLINE, VDKRED, DKRED, DITHERSOLID, { 0, -128 }, { 32, -96 }, { 5, 0 } },
     { DLLINE, VDKRED, DKRED, DITHERSOLID, { 32, -128 }, { 0, -96 }, { 5, 0 } },
     { DLLINE, VDKRED, DKRED, DITHERSOLID, { 0, -64 }, { 32, -32 }, { 5, 0 } },
@@ -138,11 +139,11 @@ void update() {
 }
 
 // NUMBER OF SEGMENTS TO DRAW EACH ITERATION
-#define DRAWSEGMENTS 32
+#define DRAWSEGMENTS 16
 void drawtrapezium( unsigned char colour, float x1, float y1, float w1, float x2, float y2, float w2 ) {
-    //gpu_quadrilateral( colour, x1-w1, y1, x1+w1, y1, x2-w2, y2, x2+w2, y2 );
-    gpu_triangle( colour, x1 - w1, y1, x1 + w1, y1, x2 - w2, y2 );
-    gpu_triangle( colour, x1 + w1, y1, x2 + w2, y2, x2 - w2, y2 );
+    gpu_quadrilateral( colour, x1-w1, y1, x1+w1, y1, x2+w2, y2, x2-w2, y2 );
+    //gpu_triangle( colour, x1 - w1, y1, x1 + w1, y1, x2 - w2, y2 );
+    //gpu_triangle( colour, x1 + w1, y1, x2 + w2, y2, x2 - w2, y2 );
 }
 
 void drawroad( float x1, float y1, float scale1, float x2, float y2, float scale2, int sumct ) {
@@ -200,24 +201,24 @@ void draw() {
         float scale = lspritesxyz[i].z / 36, offset = 3 * lspritesxyz[i].z + ( 32 * scale );
         switch( lsprites[i] ) {
             case TREE:
-                DoDrawList2D( PINETREE, 2, lspritesxyz[i].x - offset, lspritesxyz[i].y, scale );
+                DoDrawList2Dscale( PINETREE, 2, lspritesxyz[i].x - offset, lspritesxyz[i].y, scale );
                 break;
             case SIGN:
-                DoDrawList2D( RIGHTCHEVRON, 4, lspritesxyz[i].x - offset, lspritesxyz[i].y, scale );
+                DoDrawList2Dscale( RIGHTCHEVRON, 4, lspritesxyz[i].x - offset, lspritesxyz[i].y, scale );
                 break;
             case BEAMS:
-                DoDrawList2D( LEFTBEAM, 8, lspritesxyz[i].x - offset, lspritesxyz[i].y, scale );
+                DoDrawList2Dscale( LEFTBEAM, 10, lspritesxyz[i].x - offset, lspritesxyz[i].y, scale );
                 break;
         }
         switch( rsprites[i] ) {
             case TREE:
-                DoDrawList2D( PINETREE, 2, lspritesxyz[i].x + offset, lspritesxyz[i].y, scale );
+                DoDrawList2Dscale( PINETREE, 2, lspritesxyz[i].x + offset, lspritesxyz[i].y, scale );
                 break;
             case SIGN:
-                DoDrawList2D( LEFTCHEVRON, 4, lspritesxyz[i].x + offset, lspritesxyz[i].y, scale );
+                DoDrawList2Dscale( LEFTCHEVRON, 4, lspritesxyz[i].x + offset, lspritesxyz[i].y, scale );
                 break;
             case BEAMS:
-                DoDrawList2D( RIGHTBEAM, 8, lspritesxyz[i].x + offset, lspritesxyz[i].y, scale );
+                DoDrawList2Dscale( RIGHTBEAM, 8, lspritesxyz[i].x + offset, lspritesxyz[i].y, scale );
                 break;
         }
     }

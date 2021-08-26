@@ -9,7 +9,7 @@ algorithm apu(
     input   uint4   staticGenerator
 ) <autorun> {
     // Calculated as 25MHz / note frequency / 32 to give 32 step points per note
-    brom uint16 frequencytable[128] = {
+    brom uint16 frequencytable <input!> [128] = {
         0,
         23889, 22548, 21283, 20088, 18961, 17897, 16892, 15944, 15049, 14205, 13407, 12655,     // 1 = C 2 or Deep C
         11945, 11274, 10641, 10044, 9480, 8948, 8446, 7972, 7525, 7102, 6704, 6327,             // 13 = C 3

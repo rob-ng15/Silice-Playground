@@ -21,7 +21,7 @@ algorithm terminal(
     };
 
     // 80 x 4 character buffer for the input/output terminal
-    simple_dualport_bram uint8 terminal[640] = uninitialized;
+    simple_dualport_bram uint8 terminal <input!> [640] = uninitialized;
 
     uint7 terminal_x = uninitialised;
     uint3 terminal_y = uninitialised;
@@ -68,7 +68,7 @@ algorithm terminal_writer(
     output  uint7   terminal_x,
     output  uint3   terminal_y
 ) <autorun> {
-    simple_dualport_bram uint8 terminal_copy[640] = uninitialized;
+    simple_dualport_bram uint8 terminal_copy <input!> [640] = uninitialized;
 
     // Terminal active (scroll) flag and temporary storage for scrolling
     uint10  terminal_scroll = 0;

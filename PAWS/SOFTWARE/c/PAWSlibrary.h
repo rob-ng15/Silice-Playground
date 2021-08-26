@@ -110,7 +110,8 @@ extern void gpu_pixelblock_stop( void );
 extern void DrawVectorShape2D( unsigned char, struct Point2D *, short, short, short, short, float );
 
 // SOFTWARE DRAW LISTS
-extern void DoDrawList2D(  struct DrawList2D *, short, short, short, float );
+extern void DoDrawList2D( struct DrawList2D *, short, short, short, short, float );
+extern void DoDrawList2Dscale( struct DrawList2D *, short, short, short, float );
 
 // SPRITES - MAIN ACCESS
 extern void set_sprite( unsigned char, unsigned char, unsigned char, unsigned char, short, short, unsigned char, unsigned char );

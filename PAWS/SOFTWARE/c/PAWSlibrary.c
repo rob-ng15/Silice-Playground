@@ -720,6 +720,15 @@ void set_vector_vertex( unsigned char block, unsigned char vertex, unsigned char
     *VECTOR_WRITER_DELTAY = deltay;
 }
 
+// SOFTWARE VECTORS AND DRAWLISTS
+
+// SCALE A POINT AND MOVE TO CENTRE POINT
+struct Point2D Scale2D( struct Point2D point, short xc, short yc, float scale ) {
+    struct Point2D newpoint;
+    newpoint.dx = point.dx * scale + xc;
+    newpoint.dy = point.dy * scale + yc;
+    return( newpoint );
+}
 struct Point2D Rotate2D( struct Point2D point, short xc, short yc, short angle, float scale ) {
     struct Point2D newpoint;
     float radians = angle*0.01745329252;
@@ -730,6 +739,7 @@ struct Point2D Rotate2D( struct Point2D point, short xc, short yc, short angle, 
     return( newpoint );
 }
 
+// PROCESS A SOFTWARE VECTOR BLOCK AFTER SCALING AND ROTATION
 void DrawVectorShape2D( unsigned char colour, struct Point2D *points, short numpoints, short xc, short yc, short angle, float scale ) {
     struct Point2D *NewShape  = (struct Point2D *)0x1400;
     for( short vertex = 0; vertex < numpoints; vertex++ ) {
@@ -740,16 +750,42 @@ void DrawVectorShape2D( unsigned char colour, struct Point2D *points, short nump
     }
 }
 
-// SCALE A POINT AND MOVE TO CENTRE POINT
-struct Point2D Scale2D( struct Point2D point, short xc, short yc, float scale ) {
-    struct Point2D newpoint;
-    newpoint.dx = point.dx * scale + xc;
-    newpoint.dy = point.dy * scale + yc;
-    return( newpoint );
+// PROCESS A DRAWLIST DRAWING SHAPES AFTER SCALING, ROTATING AND MOVING TO CENTRE POINT
+void DoDrawList2D( struct DrawList2D *list, short numentries, short xc, short yc, short angle, float scale ) {
+    struct Point2D XY1, XY2, XY3;
+    for( int i = 0; i < numentries; i++ ) {
+        gpu_dither( list[i].dithermode, list[i].alt_colour );
+        // ALWAYS SCALE FIRST TWO VERTICES
+        XY1 = Rotate2D( list[i].xy1, xc, yc, angle, scale );
+        XY2 = Rotate2D( list[i].xy2, xc, yc, angle, scale );
+        switch( list[i].shape ) {
+            case DLLINE:
+                // SCALE LINE VERICES, SCALE WIDTH, THEN DRAW
+                gpu_wideline( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, list[i].xy3.dx * scale );
+                break;
+            case DLRECT:
+                // SCALE RECTANLGE VERICES, THEN DRAW
+                gpu_rectangle( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy );
+                break;
+            case DLCIRC:
+                // SCALE CIRCLE CENTRE, SCALE RADIUS, THEN DRAW (filled)
+                gpu_circle( list[i].colour, XY1.dx, XY1.dy, list[i].xy2.dx * scale, list[i].xy2.dy, 1 );
+                break;
+            case DLARC:
+                // SCALE CIRCLE CENTRE, SCALE RADIUS, THEN DRAW (unfilled)
+                gpu_circle( list[i].colour, XY1.dx, XY1.dy, list[i].xy2.dx * scale, list[i].xy2.dy, 0 );
+                break;
+            case DLTRI:
+                // SCALE TRIANGLE VERICES, THEN DRAW
+                XY3 = Rotate2D( list[i].xy3, xc, yc, angle, scale );
+                gpu_triangle( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, XY3.dx, XY3.dy );
+                break;
+        }
+    }
 }
 
 // PROCESS A DRAWLIST DRAWING SHAPES AFTER SCALING AND MOVING TO CENTRE POINT
-void DoDrawList2D( struct DrawList2D *list, short numentries, short xc, short yc, float scale ) {
+void DoDrawList2Dscale( struct DrawList2D *list, short numentries, short xc, short yc, float scale ) {
     struct Point2D XY1, XY2, XY3;
     for( int i = 0; i < numentries; i++ ) {
         gpu_dither( list[i].dithermode, list[i].alt_colour );
@@ -781,7 +817,6 @@ void DoDrawList2D( struct DrawList2D *list, short numentries, short xc, short yc
         }
     }
 }
-
 
 // SPRITE LAYERS - MAIN ACCESS
 // TWO SPRITE LAYERS ( 0 == lower above background and tilemap, below bitmap, 1 == upper above bitmap, below character map )
