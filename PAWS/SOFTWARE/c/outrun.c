@@ -159,9 +159,7 @@ void drawroad( float x1, float y1, float scale1, float x2, float y2, float scale
     // SHOULDER MARKINGS AND GRASS
     float sw1 = .2 * scale1, sw2 = .2 * scale2;
     drawtrapezium( (sumct%2) ? WHITE : RED, x1-w1, y1, sw1 ,x2-w2 , y2, sw2 );
-    gpu_quadrilateral( sumct % 6 >= 3 ? DKGREEN : GREEN, 0, y1, x1-w1, y1, x2-w2 , y2, 0, y2 );
     drawtrapezium( (sumct%2) ? WHITE : RED, x1+w1, y1, sw1, x2+w2, y2, sw2 );
-    gpu_quadrilateral( sumct % 6 >= 3 ? DKGREEN : GREEN, x1+w1, y1, 319, y1, 319, y2, x2+w2, y2 );
 }
 
 void setcrop( float *crop ) {
@@ -258,10 +256,19 @@ void draw() {
             default:
         }
     }
+
+    set_copper_cpuinput( 2 * crop[3] );
 }
 
 void set_background_generator( void ) {
-    set_background( BLUE, DKBLUE, BKG_HATCH );
+    copper_startstop( 0 );
+    copper_program( 0, COPPER_WAIT_VBLANK, 7, 0, BKG_HATCH, DKBLUE, BLUE );
+    copper_program( 1, COPPER_WAIT_X, 7, 0, BKG_HATCH, DKBLUE, BLUE );
+    copper_program( 2, COPPER_JUMP, COPPER_JUMP_IF_Y_LESS, COPPER_USE_CPU_INPUT, 0, 0, 1 );
+    copper_program( 3, COPPER_WAIT_X, 7, 0, BKG_HATCH, DKGREEN, GREEN );
+    copper_program( 4, COPPER_JUMP, COPPER_JUMP_ON_VBLANK_EQUAL, 0, 0, 0, 3 );
+    copper_program( 5, COPPER_JUMP, COPPER_JUMP_ALWAYS, 0, 0, 0, 1 );
+    copper_startstop( 1 );
 }
 
 int main() {
