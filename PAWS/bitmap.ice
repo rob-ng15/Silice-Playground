@@ -35,10 +35,10 @@ algorithm bitmap(
     input   uint4   gpu_dithermode,
 
     // CROP RECTANGLE
-    input   uint10  crop_left,
-    input   uint10  crop_right,
-    input   uint10  crop_top,
-    input   uint10  crop_bottom,
+    input   int10   crop_left,
+    input   int10   crop_right,
+    input   int10   crop_top,
+    input   int10   crop_bottom,
 
     // For setting blit1 tile bitmaps
     input   uint5   blit1_writer_tile,
@@ -130,6 +130,10 @@ algorithm bitmap(
         bitmap_colour_write :> bitmap_colour_write,
         bitmap_colour_write_alt :> bitmap_colour_write_alt,
         bitmap_write :> bitmap_write,
+        crop_left <: crop_left,
+        crop_right <: crop_right,
+        crop_top <: crop_top,
+        crop_bottom <: crop_bottom,
         gpu_active_dithermode :> gpu_active_dithermode,
         gpu_x <: gpu_x,
         gpu_y <: gpu_y,
@@ -215,10 +219,10 @@ algorithm bitmapwriter(
     input   uint8   y_offset,
 
     // CROP RECTANGLE
-    input   uint10  crop_left,
-    input   uint10  crop_right,
-    input   uint10  crop_top,
-    input   uint10  crop_bottom,
+    input   int10   crop_left,
+    input   int10   crop_right,
+    input   int10   crop_top,
+    input   int10   crop_bottom,
 
     simple_dualport_bram_port1 bitmap_0,
     simple_dualport_bram_port1 bitmap_1

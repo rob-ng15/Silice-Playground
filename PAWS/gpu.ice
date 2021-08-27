@@ -6,6 +6,11 @@ algorithm gpu_queue(
     output uint1   bitmap_write,
     output uint4   gpu_active_dithermode,
 
+    input   int10   crop_left,
+    input   int10   crop_right,
+    input   int10   crop_top,
+    input   int10   crop_bottom,
+
     input   int10   gpu_x,
     input   int10   gpu_y,
     input   uint7   gpu_colour,
@@ -120,6 +125,10 @@ algorithm gpu_queue(
     uint1   gpu_active = uninitialised;
     uint4   GPUgpu_write <:: ( gpu_write != 0 ) ? gpu_write : vector_drawer.gpu_write ? 2 : 0;
     gpu GPU(
+        crop_left <: crop_left,
+        crop_right <: crop_right,
+        crop_top <: crop_top,
+        crop_bottom <: crop_bottom,
         gpu_x <: x,
         gpu_y <: y,
         gpu_colour <: colour,
@@ -197,6 +206,11 @@ algorithm gpu(
     output uint1   bitmap_write,
     output uint4   gpu_active_dithermode,
 
+    input   int10   crop_left,
+    input   int10   crop_right,
+    input   int10   crop_top,
+    input   int10   crop_bottom,
+
     input   int10   gpu_x,
     input   int10   gpu_y,
     input   uint7   gpu_colour,
@@ -231,6 +245,10 @@ algorithm gpu(
     int10   GPUrectanglebitmap_y_write = uninitialised;
     uint1   GPUrectanglebitmap_write = uninitialised;
     rectangle GPUrectangle(
+        crop_left <: crop_left,
+        crop_right <: crop_right,
+        crop_top <: crop_top,
+        crop_bottom <: crop_bottom,
         x <: gpu_x,
         y <: gpu_y,
         param0 <: gpu_param0,
@@ -431,58 +449,13 @@ algorithm gpu(
 }
 
 // RECTANGLE - OUTPUT PIXELS TO DRAW A RECTANGLE
-algorithm preprectangle(
-    input   int10   x,
-    input   int10   y,
-    input   int10   param0,
-    input   int10   param1,
-    output  int10   gpu_active_x,
-    output  int10   gpu_active_y,
-    output  int10   gpu_max_x,
-    output  int10   gpu_max_y
-) {
-    ( gpu_active_x ) = min( x, param0 );
-    ( gpu_active_y ) = min( y, param1 );
-    ( gpu_max_x ) = max( x, param0 );
-    ( gpu_max_y ) = max( y, param1 );
-    ++:
-    ( gpu_active_x, gpu_active_y, gpu_max_x, gpu_max_y ) = cropscreen( gpu_active_x, gpu_active_y, gpu_max_x, gpu_max_y );
-}
-algorithm drawrectangle(
-    input   uint1   start,
-    output  uint1   busy(0),
-    input   int10   start_x,
-    input   int10   start_y,
-    input   int10   max_x,
-    input   int10   max_y,
-    output  int10   bitmap_x_write,
-    output  int10   bitmap_y_write,
-    output  uint1   bitmap_write
-) <autorun> {
-    int10   x = uninitialized;
-    int10   y = uninitialized;
-
-    bitmap_x_write := x; bitmap_y_write := y; bitmap_write := 0;
-
-    while(1) {
-        if( start ) {
-            busy = 1;
-            x = start_x; y = start_y;
-            while( y <= max_y ) {
-                while( x <= max_x ) {
-                    bitmap_write = 1;
-                    x = x + 1;
-                }
-                x = start_x;
-                y = y + 1;
-            }
-            busy = 0;
-        }
-    }
-}
 algorithm rectangle (
     input   uint1   start,
     output  uint1   busy(0),
+    input   int10   crop_left,
+    input   int10   crop_right,
+    input   int10   crop_top,
+    input   int10   crop_bottom,
     input   int10   x,
     input   int10   y,
     input   int10   param0,
@@ -492,40 +465,39 @@ algorithm rectangle (
     output  int10   bitmap_y_write,
     output  uint1   bitmap_write
 ) <autorun> {
-    int10   gpu_active_x = uninitialized;
-    int10   gpu_active_y = uninitialized;
-    int10   gpu_max_x = uninitialized;
-    int10   gpu_max_y = uninitialized;
-    preprectangle PREP(
-        x <: x,
-        y <: y,
-        param0 <: param0,
-        param1 <: param1,
-        gpu_active_x :> gpu_active_x,
-        gpu_active_y :> gpu_active_y,
-        gpu_max_x :> gpu_max_x,
-        gpu_max_y :> gpu_max_y
-    );
-    uint1   RECTANGLEstart = uninitialised;
-    uint1   RECTANGLEbusy = uninitialised;
-    drawrectangle RECTANGLE(
-        start_x <: gpu_active_x,
-        start_y <: gpu_active_y,
-        max_x <: gpu_max_x,
-        max_y <: gpu_max_y,
-        bitmap_x_write :> bitmap_x_write,
-        bitmap_y_write :> bitmap_y_write,
-        bitmap_write :> bitmap_write,
-        start <: RECTANGLEstart,
-        busy :> RECTANGLEbusy
-    );
-    RECTANGLEstart := 0;
+    int10   start_x = uninitialized;
+    int10   start_y = uninitialized;
+    int10   max_x = uninitialized;
+    int10   max_y = uninitialized;
+    int10   px = uninitialized;
+    int10   py = uninitialized;
+
+    bitmap_x_write := px; bitmap_y_write := py; bitmap_write := 0;
 
     while(1) {
         if( start ) {
             busy = 1;
-            () <- PREP <- ();
-            RECTANGLEstart = 1; while( RECTANGLEbusy ) {}
+
+            ( start_x ) = min( x, param0 );
+            ( start_y ) = min( y, param1 );
+            ( max_x ) = max( x, param0 );
+            ( max_y ) = max( y, param1 );
+            ++:
+            ( start_x ) = max( start_x, crop_left );
+            ( start_y ) = max( start_y, crop_top );
+            ( max_x ) = min( max_x, crop_right );
+            ( max_y ) = min( max_y, crop_bottom );
+
+            px = start_x; py = start_y;
+            while( py <= max_y ) {
+                while( px <= max_x ) {
+                    bitmap_write = 1;
+                    px = px + 1;
+                }
+                px = start_x;
+                py = py + 1;
+            }
+
             busy = 0;
         }
     }

@@ -4,23 +4,14 @@ int main( void ) {
     INITIALISEMEMORY();
 
     // CODE GOES HERE
-    set_background( DKBLUE - 1, BLACK, BKG_SOLID );
+    set_background( VDKBLUE, BLACK, BKG_SOLID );
 
-    unsigned char sectormap = 1;
-    for( int i = 0; i < 8; i++ ) {
-        gpu_cs();
-        gpu_circle( WHITE, 160, 120, 40, sectormap, 1 );
-        gpu_printf( WHITE, 16, 16, 2, 0, "%d", i );
-        sectormap = sectormap << 1;
-        sleep( 2000, 0 );
+    gpu_crop( 0, 0, 100, 100 );
+    for( int i = 0; i < 32; i++ ) {
+        gpu_rectangle( rng(64), rng(320), rng(240), rng(320), rng(240) );
     }
 
-    for( int i = 0; i < 8; i++ ) {
-        gpu_cs();
-        gpu_character_blit( WHITE, 160, 120, 64, 3, i );
-        gpu_printf( WHITE, 16, 16, 2, 0, "%d", i );
-        sleep( 2000, 0 );
-    }
+    sleep( 4000, 0 );
 }
 
 // EXIT WILL RETURN TO BIOS

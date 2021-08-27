@@ -572,10 +572,10 @@ algorithm bitmap_memmap(
     int10   gpu_param5 = uninitialized;
     uint4   gpu_write = uninitialized;
     uint4   gpu_dithermode = uninitialized;
-    uint10  gpu_crop_left = uninitialized;
-    uint10  gpu_crop_right = uninitialized;
-    uint10  gpu_crop_top = uninitialized;
-    uint10  gpu_crop_bottom = uninitialized;
+    int10   gpu_crop_left = uninitialized;
+    int10   gpu_crop_right = uninitialized;
+    int10   gpu_crop_top = uninitialized;
+    int10   gpu_crop_bottom = uninitialized;
     uint5   blit1_writer_tile = uninitialized;
     uint4   blit1_writer_line = uninitialized;
     uint16  blit1_writer_bitmap = uninitialized;

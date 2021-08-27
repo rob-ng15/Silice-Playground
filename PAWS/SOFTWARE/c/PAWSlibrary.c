@@ -288,6 +288,7 @@ void set_background( unsigned char colour, unsigned char altcolour, unsigned cha
 
 // BACKGROUND COPPER
 void copper_startstop( unsigned char status ) {
+    await_vblank();
     *BACKGROUND_COPPER_STARTSTOP = status;
 }
 
@@ -403,7 +404,7 @@ void gpu_dither( unsigned char mode, unsigned char colour ) {
 }
 
 // SET GPU CROPPING RECTANGLE
-void gpu_crop( unsigned short left, unsigned short right, unsigned short top, unsigned short bottom ) {
+void gpu_crop( unsigned short left, unsigned short top, unsigned short right, unsigned short bottom ) {
     wait_gpu();
     *CROP_LEFT = left;
     *CROP_RIGHT = right;
@@ -777,12 +778,9 @@ void DoDrawList2D( struct DrawList2D *list, short numentries, short xc, short yc
                 gpu_wideline( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, list[i].xy3.dx * scale );
                 break;
             case DLRECT:
-                // CONVERT TO QUADRILATERAL
                 XY1 = Rotate2D( list[i].xy1, xc, yc, angle, scale );
-                XY2 = Rotate2D( MakePoint2D( list[i].xy2.dx, list[i].xy1.dy ), xc, yc, angle, scale );
-                XY3 = Rotate2D( list[i].xy2, xc, yc, angle, scale );
-                XY4 = Rotate2D( MakePoint2D( list[i].xy1.dx, list[i].xy2.dy ), xc, yc, angle, scale );
-                gpu_quadrilateral( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, XY3.dx, XY3.dy, XY4.dx, XY4.dy );
+                XY2 = Rotate2D( list[i].xy2, xc, yc, angle, scale );
+                gpu_rectangle( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy );
                 break;
             case DLCIRC:
                 // NO SECTOR MASK, FULL CIRCLE ONLY
@@ -816,27 +814,37 @@ void DoDrawList2Dscale( struct DrawList2D *list, short numentries, short xc, sho
     struct Point2D XY1, XY2, XY3, XY4;
     for( int i = 0; i < numentries; i++ ) {
         gpu_dither( list[i].dithermode, list[i].alt_colour );
-        // ALWAYS SCALE FIRST TWO VERTICES
-        XY1 = Scale2D( list[i].xy1, xc, yc, scale );
-        XY2 = Scale2D( list[i].xy2, xc, yc, scale );
         switch( list[i].shape ) {
             case DLLINE:
+                XY1 = Scale2D( list[i].xy1, xc, yc, scale );
+                XY2 = Scale2D( list[i].xy2, xc, yc, scale );
                 gpu_wideline( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, list[i].xy3.dx * scale );
                 break;
             case DLRECT:
-                gpu_rectangle( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy );
+                // CONVERT TO QUADRILATERAL
+                XY1 = Scale2D( list[i].xy1, xc, yc, scale );
+                XY2 = Scale2D( MakePoint2D( list[i].xy2.dx, list[i].xy1.dy ), xc, yc, scale );
+                XY3 = Scale2D( list[i].xy2, xc, yc, scale );
+                XY4 = Scale2D( MakePoint2D( list[i].xy1.dx, list[i].xy2.dy ), xc, yc, scale );
+                gpu_quadrilateral( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, XY3.dx, XY3.dy, XY4.dx, XY4.dy );
                 break;
             case DLCIRC:
+                XY1 = Scale2D( list[i].xy1, xc, yc, scale );
                 gpu_circle( list[i].colour, XY1.dx, XY1.dy, list[i].xy2.dx * scale, list[i].xy2.dy, 1 );
                 break;
             case DLARC:
+                XY1 = Scale2D( list[i].xy1, xc, yc, scale );
                 gpu_circle( list[i].colour, XY1.dx, XY1.dy, list[i].xy2.dx * scale, list[i].xy2.dy, 0 );
                 break;
             case DLTRI:
+                XY1 = Scale2D( list[i].xy1, xc, yc, scale );
+                XY2 = Scale2D( list[i].xy2, xc, yc, scale );
                 XY3 = Scale2D( list[i].xy3, xc, yc, scale );
                 gpu_triangle( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, XY3.dx, XY3.dy );
                 break;
             case DLQUAD:
+                XY1 = Scale2D( list[i].xy1, xc, yc, scale );
+                XY2 = Scale2D( list[i].xy2, xc, yc, scale );
                 XY3 = Scale2D( list[i].xy3, xc, yc, scale );
                 XY4 = Scale2D( list[i].xy4, xc, yc, scale );
                 gpu_quadrilateral( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, XY3.dx, XY3.dy, XY4.dx, XY4.dy );
