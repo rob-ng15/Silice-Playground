@@ -52,8 +52,8 @@ $$end
     // Status of the screen, if in range, if in vblank, actual pixel x and y
     uint1   vblank = uninitialized;
     uint1   pix_active = uninitialized;
-    uint10  pix_x  = uninitialized;
-    uint10  pix_y  = uninitialized;
+    uint16  pix_x  = uninitialized;
+    uint16  pix_y  = uninitialized;
 $$if VGA then
   vga vga_driver<@clock_25mhz,!reset>(
     vga_hs :> video_hs,
@@ -445,8 +445,8 @@ algorithm background_memmap(
     input   uint1   video_reset,
 
     // Pixels
-    input   uint10  pix_x,
-    input   uint10  pix_y,
+    input   uint16  pix_x,
+    input   uint16  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
     output! uint6   pixel,
@@ -468,7 +468,7 @@ algorithm background_memmap(
     uint3   copper_command = uninitialized;
     uint3   copper_condition = uninitialized;
     uint11  copper_coordinate = uninitialized;
-    uint10  copper_cpu_input = uninitialized;
+    uint16  copper_cpu_input = uninitialized;
     uint4   copper_mode = uninitialized;
     uint6   copper_alt = uninitialized;
     uint6   copper_colour = uninitialized;
@@ -535,8 +535,8 @@ algorithm bitmap_memmap(
     input   uint1   gpu_clock,
 
     // Pixels
-    input   uint10  pix_x,
-    input   uint10  pix_y,
+    input   uint16  pix_x,
+    input   uint16  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
     output! uint6   pixel,
@@ -558,24 +558,24 @@ algorithm bitmap_memmap(
     uint1   framebuffer = uninitialized;
     uint1   writer_framebuffer = uninitialized;
     uint3   bitmap_write_offset = uninitialized;
-    int10   bitmap_x_read = uninitialized;
-    int10   bitmap_y_read = uninitialized;
-    int10   gpu_x = uninitialized;
-    int10   gpu_y = uninitialized;
+    int16   bitmap_x_read = uninitialized;
+    int16   bitmap_y_read = uninitialized;
+    int16   gpu_x = uninitialized;
+    int16   gpu_y = uninitialized;
     uint7   gpu_colour = uninitialized;
     uint7   gpu_colour_alt = uninitialized;
-    int10   gpu_param0 = uninitialized;
-    int10   gpu_param1 = uninitialized;
-    int10   gpu_param2 = uninitialized;
-    int10   gpu_param3 = uninitialized;
-    int10   gpu_param4 = uninitialized;
-    int10   gpu_param5 = uninitialized;
+    int16   gpu_param0 = uninitialized;
+    int16   gpu_param1 = uninitialized;
+    int16   gpu_param2 = uninitialized;
+    int16   gpu_param3 = uninitialized;
+    int16   gpu_param4 = uninitialized;
+    int16   gpu_param5 = uninitialized;
     uint4   gpu_write = uninitialized;
     uint4   gpu_dithermode = uninitialized;
-    int10   gpu_crop_left = uninitialized;
-    int10   gpu_crop_right = uninitialized;
-    int10   gpu_crop_top = uninitialized;
-    int10   gpu_crop_bottom = uninitialized;
+    int16   gpu_crop_left = uninitialized;
+    int16   gpu_crop_right = uninitialized;
+    int16   gpu_crop_top = uninitialized;
+    int16   gpu_crop_bottom = uninitialized;
     uint5   blit1_writer_tile = uninitialized;
     uint4   blit1_writer_line = uninitialized;
     uint16  blit1_writer_bitmap = uninitialized;
@@ -593,8 +593,8 @@ algorithm bitmap_memmap(
     uint2   pb_newpixel = uninitialized;
     uint5   vector_block_number = uninitialized;
     uint7   vector_block_colour = uninitialized;
-    int10   vector_block_xc = uninitialized;
-    int10   vector_block_yc = uninitialized;
+    int16   vector_block_xc = uninitialized;
+    int16   vector_block_yc = uninitialized;
     uint3   vector_block_scale = uninitialized;
     uint3   vector_block_action = uninitialized;
     uint1   draw_vector = uninitialized;
@@ -723,10 +723,10 @@ algorithm bitmap_memmap(
                     case 8hd2: { bitmap_y_read = writeData; }
 
                     case 8he0: { bitmap_write_offset = writeData; }
-                    case 8he2: { gpu_crop_left = writeData; }
-                    case 8he4: { gpu_crop_right = writeData; }
-                    case 8he6: { gpu_crop_top = writeData; }
-                    case 8he8: { gpu_crop_bottom = writeData; }
+                    case 8he2: { gpu_crop_left = writeData < 0 ? 0 : writeData; }
+                    case 8he4: { gpu_crop_right = writeData > 319 ? 319 : writeData; }
+                    case 8he6: { gpu_crop_top = writeData < 0 ? 0 : writeData; }
+                    case 8he8: { gpu_crop_bottom = writeData > 239 ? 239 : writeData; }
                     case 8hf0: { framebuffer = writeData; }
                     case 8hf2: { writer_framebuffer = writeData; }
                     default: {}
@@ -756,8 +756,8 @@ algorithm charactermap_memmap(
     input   uint1   video_reset,
 
     // Pixels
-    input   uint10  pix_x,
-    input   uint10  pix_y,
+    input   uint16  pix_x,
+    input   uint16  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
     output! uint6   pixel,
@@ -835,8 +835,8 @@ algorithm sprite_memmap(
     input   uint1   video_reset,
 
     // Pixels
-    input   uint10  pix_x,
-    input   uint10  pix_y,
+    input   uint16  pix_x,
+    input   uint16  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
     output! uint6   pixel,
@@ -952,8 +952,8 @@ algorithm terminal_memmap(
     input   uint1   video_reset,
 
     // Pixels
-    input   uint10  pix_x,
-    input   uint10  pix_y,
+    input   uint16  pix_x,
+    input   uint16  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
     output! uint6   pixel,
@@ -1009,8 +1009,8 @@ algorithm tilemap_memmap(
     input   uint1   video_reset,
 
     // Pixels
-    input   uint10  pix_x,
-    input   uint10  pix_y,
+    input   uint16  pix_x,
+    input   uint16  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
     output! uint6   pixel,

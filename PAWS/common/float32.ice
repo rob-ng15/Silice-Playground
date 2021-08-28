@@ -268,9 +268,10 @@ algorithm floattouint(
     always {
         switch( { IF | NN, aZERO } ) {
             case 2b00: {
-                switch( fp32( a ).sign ) {
-                    case 1: { NV = 1; result = 0; }
-                    default: { NV = ( exp > 31 ); result = NV ? 32hffffffff : ( sig[1,32] + sig[0,1] ); }
+                if( fp32( a ).sign ) {
+                    NV = 1; result = 0;
+                } else {
+                    NV = ( exp > 31 ); result = NV ? 32hffffffff : ( sig[1,32] + sig[0,1] );
                 }
             }
             case 2b01: { NV = 0; result = 0; }
@@ -330,10 +331,10 @@ algorithm floataddsub(
     output  uint32  result
 ) <autorun> {
     // BREAK DOWN INITIAL float32 INPUTS - SWITCH SIGN OF B IF SUBTRACTION
-    uint1   signA <:: a[31,1];
+    uint1   signA <:: fp32( a ).sign;
     int10   expA <:: fp32( a ).exponent - 127;
     uint48  sigA <:: { 2b01, fp32(a).fraction, 23b0 };
-    uint1   signB <:: addsub ? ~b[31,1] : b[31,1];
+    uint1   signB <:: addsub ? ~fp32( b ).sign : fp32( b ).sign;
     int10   expB <:: fp32( b ).exponent - 127;
     uint48  sigB <:: { 2b01, fp32(b).fraction, 23b0 };
 
@@ -600,12 +601,6 @@ algorithm dofloatdivide(
                 quotient[bit,1] = bitresult;
                 bit = bit - 1;
             }
-            // ENSURE { 00xxxx } PROBABLY NOT NEEDED
-            //switch( quotient[48,2] ) {
-            //    case 2b00: {}
-            //    case 2b01: { quotient = { 1b0, quotient[1,49] }; }
-            //    default: { quotient = { 2b00, quotient[1,48] }; }
-            //}
         }
     }
 }
@@ -707,13 +702,8 @@ algorithm floatdivide(
             switch( { IF | NN, aZERO | bZERO } ) {
                 case 2b00: {
                     DODIVIDEstart = 1; while( DODIVIDEbusy ) {}
-                    switch( quotient ) {
-                        case 0: { result = { quotientsign, 31b0 }; }
-                        default: {
-                            NORMALISEstart = 1; while( NORMALISEbusy ) {}
-                            OF = cOF; UF = cUF; result = f32;
-                        }
-                    }
+                    NORMALISEstart = 1; while( NORMALISEbusy ) {}
+                    OF = cOF; UF = cUF; result = f32;
                 }
                 case 2b01: { result = ( aZERO & bZERO ) ? 32hffc00000 : ( bZERO ) ? { quotientsign, 8b11111111, 23b0 } : { quotientsign, 31b0 }; }
                 default: { result = ( aINF &bINF ) | NN | bZERO ? 32hffc00000 : aZERO | bINF ? { quotientsign, 31b0 } : { quotientsign, 8b11111111, 23b0 }; }
@@ -849,14 +839,13 @@ algorithm floatsqrt(
             OF = 0; UF = 0;
             switch( { IF | NN, aZERO } ) {
                 case 2b00: {
-                    switch( sign ) {
+                    if( sign ) {
                         // DETECT NEGATIVE -> qNAN
-                        case 1: { result = 32hffc00000; }
-                        case 0: {
-                            // STEPS: SETUP -> DOSQRT -> NORMALISE -> ROUND -> ADJUSTEXP -> COMBINE
-                            DOSQRTstart = 1; while( DOSQRTbusy ) {}
-                            OF = cOF; UF = cUF; result = f32;
-                        }
+                        result = 32hffc00000;
+                    } else {
+                        // STEPS: SETUP -> DOSQRT -> NORMALISE -> ROUND -> ADJUSTEXP -> COMBINE
+                        DOSQRTstart = 1; while( DOSQRTbusy ) {}
+                        OF = cOF; UF = cUF; result = f32;
                     }
                 }
                 // DETECT sNAN, qNAN, -INF, -0 -> qNAN AND  INF -> INF, 0 -> 0

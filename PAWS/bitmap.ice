@@ -1,8 +1,8 @@
 algorithm bitmap(
     input   uint1   framebuffer,
     input   uint1   writer_framebuffer,
-    input   uint10  pix_x,
-    input   uint10  pix_y,
+    input   uint16  pix_x,
+    input   uint16  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
     output! uint6   pixel,
@@ -16,29 +16,29 @@ algorithm bitmap(
     input   uint3   bitmap_write_offset,
 
     // Pixel reader
-    input   int10   bitmap_x_read,
-    input   int10   bitmap_y_read,
+    input   int16   bitmap_x_read,
+    input   int16   bitmap_y_read,
     output  uint7   bitmap_colour_read,
 
     // GPU Parameters
-    input   int10   gpu_x,
-    input   int10   gpu_y,
+    input   int16   gpu_x,
+    input   int16   gpu_y,
     input   uint7   gpu_colour,
     input   uint7   gpu_colour_alt,
-    input   int10   gpu_param0,
-    input   int10   gpu_param1,
-    input   int10   gpu_param2,
-    input   int10   gpu_param3,
-    input   int10   gpu_param4,
-    input   int10   gpu_param5,
+    input   int16   gpu_param0,
+    input   int16   gpu_param1,
+    input   int16   gpu_param2,
+    input   int16   gpu_param3,
+    input   int16   gpu_param4,
+    input   int16   gpu_param5,
     input   uint4   gpu_write,
     input   uint4   gpu_dithermode,
 
     // CROP RECTANGLE
-    input   int10   crop_left,
-    input   int10   crop_right,
-    input   int10   crop_top,
-    input   int10   crop_bottom,
+    input   int16   crop_left,
+    input   int16   crop_right,
+    input   int16   crop_top,
+    input   int16   crop_bottom,
 
     // For setting blit1 tile bitmaps
     input   uint5   blit1_writer_tile,
@@ -66,8 +66,8 @@ algorithm bitmap(
     // VECTOR BLOCK
     input   uint5   vector_block_number,
     input   uint7   vector_block_colour,
-    input   int10   vector_block_xc,
-    input   int10   vector_block_yc,
+    input   int16   vector_block_xc,
+    input   int16   vector_block_yc,
     input   uint3   vector_block_scale,
     input   uint3   vector_block_action,
     input   uint1   draw_vector,
@@ -97,8 +97,8 @@ algorithm bitmap(
     uint8   y_offset = uninitialized;
 
     // From GPU to set a pixel
-    int10   bitmap_x_write = uninitialized;
-    int10   bitmap_y_write = uninitialized;
+    int16   bitmap_x_write = uninitialized;
+    int16   bitmap_y_write = uninitialized;
     uint7   bitmap_colour_write = uninitialized;
     uint7   bitmap_colour_write_alt = uninitialized;
     uint4   gpu_active_dithermode = uninitialized;
@@ -207,8 +207,8 @@ algorithm bitmap(
 algorithm bitmapwriter(
     // SET pixels
     input   uint1   framebuffer,
-    input   int10   bitmap_x_write,
-    input   int10   bitmap_y_write,
+    input   int16   bitmap_x_write,
+    input   int16   bitmap_y_write,
     input   uint7   bitmap_colour_write,
     input   uint7   bitmap_colour_write_alt,
     input   uint1   bitmap_write,
@@ -219,10 +219,10 @@ algorithm bitmapwriter(
     input   uint8   y_offset,
 
     // CROP RECTANGLE
-    input   int10   crop_left,
-    input   int10   crop_right,
-    input   int10   crop_top,
-    input   int10   crop_bottom,
+    input   int16   crop_left,
+    input   int16   crop_right,
+    input   int16   crop_top,
+    input   int16   crop_bottom,
 
     simple_dualport_bram_port1 bitmap_0,
     simple_dualport_bram_port1 bitmap_1
@@ -230,10 +230,10 @@ algorithm bitmapwriter(
     uint7   pixeltowrite = uninitialised;
 
     // Pixel x and y for writing ( adjusting for offset )
-    int10   x_plus_offset <: bitmap_x_write + x_offset;
-    int10   y_plus_offset <: bitmap_y_write + y_offset;
-    int10   x_write_pixel <: x_plus_offset - ( ( x_plus_offset > 319 ) ? 320 : 0 );
-    int10   y_write_pixel <: y_plus_offset - ( ( y_plus_offset > 239 ) ? 240 : 0 );
+    int16   x_plus_offset <: bitmap_x_write + x_offset;
+    int16   y_plus_offset <: bitmap_y_write + y_offset;
+    int16   x_write_pixel <: x_plus_offset - ( ( x_plus_offset > 319 ) ? 320 : 0 );
+    int16   y_write_pixel <: y_plus_offset - ( ( y_plus_offset > 239 ) ? 240 : 0 );
 
     // Write in range?
     uint1 write_pixel <: ( bitmap_x_write >= crop_left ) & ( bitmap_x_write <= crop_right ) & ( bitmap_y_write >= crop_top ) & ( bitmap_y_write <= crop_bottom ) & bitmap_write;
