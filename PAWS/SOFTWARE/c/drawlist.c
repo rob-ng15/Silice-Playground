@@ -4,16 +4,16 @@ int main( void ) {
     INITIALISEMEMORY();
 
     struct DrawList2D LEFTCHEVRON[] = {
-        { DLRECT, GREY2, GREY2, DITHERSOLID, { -4, 0 }, { 4, -32 }, },
-        { DLRECT, GREY1, GREY1, DITHERSOLID, { -32, -32 }, { 32, -64 }, },
-        { DLLINE, WHITE, WHITE, DITHERSOLID, { 0, -32 }, { -16, -48 }, { 17, 0 } },
-        { DLLINE, WHITE, WHITE, DITHERSOLID, { -16, -48 }, { 0, -64 }, { 17, 0 } },
+        { DLRECT, GREY2, DITHERSOLID, { -4, 0 }, { 4, -32 }, },
+        { DLRECT, GREY1, DITHERSOLID, { -32, -32 }, { 32, -64 }, },
+        { DLLINE, WHITE, DITHERSOLID, { 0, -32 }, { -16, -48 }, { 17, 0 } },
+        { DLLINE, WHITE, DITHERSOLID, { -16, -48 }, { 0, -64 }, { 17, 0 } },
     };
     struct DrawList2D RIGHTCHEVRON[] = {
-        { DLRECT, GREY2, GREY2, DITHERSOLID, { -4, 0 }, { 4, -32 }, },
-        { DLRECT, GREY1, GREY1, DITHERSOLID, { -32, -32 }, { 32, -64 }, },
-        { DLLINE, WHITE, WHITE, DITHERSOLID, { 0, -32 }, { 16, -48 }, { 17, 0 } },
-        { DLLINE, WHITE, WHITE, DITHERSOLID, { 16, -48 }, { 0, -64 }, { 17, 0 } },
+        { DLRECT, GREY2, DITHERSOLID, { -4, 0 }, { 4, -32 }, },
+        { DLRECT, GREY1, DITHERSOLID, { -32, -32 }, { 32, -64 }, },
+        { DLLINE, WHITE, DITHERSOLID, { 0, -32 }, { 16, -48 }, { 17, 0 } },
+        { DLLINE, WHITE, DITHERSOLID, { 16, -48 }, { 0, -64 }, { 17, 0 } },
     };
 
     struct DrawList2D PINETREE[] = {

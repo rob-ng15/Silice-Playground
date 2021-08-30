@@ -44,34 +44,12 @@ circuitry copycoordinates( input x, input y, output x1, output y1 ) {
 }
 
 // SWAP COORDINATES
-circuitry swapcoordinates( input x, input y, input x1, input y1, output x2, output y2, output x3, output y3 ) {
-    sameas(x) tx = uninitialised; sameas(y) ty = uninitialised;
-    sameas(x1) tx1 = uninitialised; sameas(y1) ty1 = uninitialised;
-    tx = x; ty = y; tx1 = x1; ty1 = y1;
-    x2 = tx1; y2 = ty1; x3 = tx; y3 = ty;
+circuitry swapcoordinates( input ix, input iy, input ix1, input iy1, output ox, output oy, output ox1, output oy1 ) {
+    sameas(ix) tx = uninitialised; sameas(iy) ty = uninitialised;
+    sameas(ix1) tx1 = uninitialised; sameas(iy1) ty1 = uninitialised;
+    tx = ix; ty = iy; tx1 = ix1; ty1 = iy1;
+    ox = tx1; oy = ty1; ox1 = tx; oy1 = ty;
     ++:
-}
-
-// CROP COORDINATES TO SCREEN RANGE
-circuitry cropleft( input x, output x1 ) {
-    x1 = ( __signed(x) < __signed(0) ) ? 0 : x;
-}
-circuitry croptop( input y, output y1 ) {
-    y1 = ( __signed(y) < __signed(0) ) ? 0 : y;
-}
-circuitry cropright( input x, output x1 ) {
-    x1 = ( x > 319 ) ? 319 : x;
-}
-circuitry cropbottom( input y, output y1 ) {
-    y1 = ( y > 239 ) ? 239 : y;
-}
-
-// CROP (x1,y1) to left and top, (x2,y2) to right and bottom
-circuitry cropscreen( input x1, input y1, input x2, input y2, output newx1, output newy1, output newx2, output newy2 ) {
-    newx1 = ( x1 < 0 ) ? 0 : x1;
-    newy1 = ( y1 < 0 ) ? 0 : y1;
-    newx2 = ( x2 > 319 ) ? 319 : x2;
-    newy2 = ( y1 > 239 ) ? 239 : y2;
 }
 
 // INCREASE BY 1 IF SECOND INPUT IS 0

@@ -243,9 +243,13 @@ unsigned short get_buttons( void ) {
 // DISPLAY FUNCTIONS
 // FUNCTIONS ARE IN LAYER ORDER: BACKGROUND, TILEMAP, SPRITES (for LOWER ), BITMAP & GPU, ( UPPER SPRITES ), CHARACTERMAP & TPU
 // colour is in the form { Arrggbb } { ALPHA - show layer below, RED, GREEN, BLUE } or { rrggbb } { RED, GREEN, BLUE } giving 64 colours + transparent
-// INTERNAL FUNCTION - WAIT FOR THE GPU TO FINISH THE LAST COMMAND
+// INTERNAL FUNCTION - WAIT FOR THE GPU TO BE ABLE TO RECEIVE A NEW COMMAND
 void wait_gpu( void ) {
     while( *GPU_STATUS );
+}
+// INTERNAL FUNCTION - WAIT FOR THE GPU TO FINISH THE ALL COMMANDS
+void wait_gpu_finished( void ) {
+    while( !*GPU_FINISHED );
 }
 
 // WAIT FOR VBLANK TO START
@@ -393,19 +397,24 @@ unsigned char tilemap_scrollwrapclear( unsigned char tm_layer, unsigned char act
 // SCROLL THE BITMAP by 1 pixel
 //  action == 1 LEFT, == 2 UP, == 3 RIGHT, == 4 DOWN, == 5 RESET
 void bitmap_scrollwrap( unsigned char action ) {
-    wait_gpu();
+    wait_gpu_finished();
     *BITMAP_SCROLLWRAP = action;
 }
 
 // SET GPU DITHER MODE AND ALTERNATIVE COLOUR
+unsigned char __last_mode = 0xff, __last_colour = 0xff;
 void gpu_dither( unsigned char mode, unsigned char colour ) {
-    *GPU_COLOUR_ALT = colour;
-    *GPU_DITHERMODE = mode;
+    if( ~( ( mode == __last_mode ) && ( colour == __last_colour ) ) ) {
+        wait_gpu_finished();
+        *GPU_COLOUR_ALT = colour;
+        *GPU_DITHERMODE = mode;
+        __last_mode = mode; __last_colour = colour;
+    }
 }
 
 // SET GPU CROPPING RECTANGLE
 void gpu_crop( unsigned short left, unsigned short top, unsigned short right, unsigned short bottom ) {
-    wait_gpu();
+    wait_gpu_finished();
     *CROP_LEFT = left;
     *CROP_RIGHT = right;
     *CROP_TOP = top;
@@ -584,7 +593,7 @@ void gpu_quadrilateral( unsigned char colour, short x1, short y1, short x2, shor
     *GPU_PARAM4 = x4;
     *GPU_PARAM5 = y4;
     wait_gpu();
-    *GPU_WRITE = 11;
+    *GPU_WRITE = 15;
 }
 
 // OUTPUT A STRING TO THE GPU
@@ -647,12 +656,12 @@ void gpu_printf_centre( unsigned char colour, short x, short y, unsigned char si
 // COPY A ARRGGBB BITMAP STORED IN MEMORY TO THE BITMAP USING THE PIXEL BLOCK
 void gpu_pixelblock7( short x,  short y, unsigned short w, unsigned short h, unsigned char transparent, unsigned char *buffer ) {
     unsigned char *maxbufferpos = buffer + ( w * h );
-
+    wait_gpu_finished();
     *GPU_X = x;
     *GPU_Y = y;
     *GPU_PARAM0 = w;
     *GPU_PARAM1 = transparent;
-    wait_gpu();
+
     *GPU_WRITE = 10;
 
     while( buffer < maxbufferpos ) {
@@ -664,11 +673,10 @@ void gpu_pixelblock7( short x,  short y, unsigned short w, unsigned short h, uns
 // COPY A { RRRRRRRR GGGGGGGG BBBBBBBB } BITMAP STORED IN MEMORY TO THE BITMAP USING THE PIXEL BLOCK
 void gpu_pixelblock24( short x, short y, unsigned short w, unsigned short h, unsigned char *buffer  ) {
     unsigned char *maxbufferpos = buffer + 3 * ( w * h );
-
+    wait_gpu_finished();
     *GPU_X = x;
     *GPU_Y = y;
     *GPU_PARAM0 = w;
-    wait_gpu();
     *GPU_WRITE = 10;
 
     while( buffer < maxbufferpos ) {
@@ -681,11 +689,11 @@ void gpu_pixelblock24( short x, short y, unsigned short w, unsigned short h, uns
 
 // SET GPU TO RECEIVE A PIXEL BLOCK, SEND INDIVIDUAL PIXELS, STOP
 void gpu_pixelblock_start( short x,  short y, unsigned short w, unsigned short h ) {
+    wait_gpu_finished();
     *GPU_X = x;
     *GPU_Y = y;
     *GPU_PARAM0 = w;
     *GPU_PARAM1 = TRANSPARENT;
-    wait_gpu();
     *GPU_WRITE = 10;
 }
 
@@ -778,9 +786,12 @@ void DoDrawList2D( struct DrawList2D *list, short numentries, short xc, short yc
                 gpu_wideline( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, list[i].xy3.dx * scale );
                 break;
             case DLRECT:
+                // CONVERT TO QUADRILATERAL
                 XY1 = Rotate2D( list[i].xy1, xc, yc, angle, scale );
-                XY2 = Rotate2D( list[i].xy2, xc, yc, angle, scale );
-                gpu_rectangle( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy );
+                XY2 = Rotate2D( MakePoint2D( list[i].xy2.dx, list[i].xy1.dy ), xc, yc, angle, scale );
+                XY3 = Rotate2D( list[i].xy2, xc, yc, angle, scale );
+                XY4 = Rotate2D( MakePoint2D( list[i].xy1.dx, list[i].xy2.dy ), xc, yc, angle, scale );
+                gpu_quadrilateral( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, XY3.dx, XY3.dy, XY4.dx, XY4.dy );
                 break;
             case DLCIRC:
                 // NO SECTOR MASK, FULL CIRCLE ONLY
@@ -821,12 +832,9 @@ void DoDrawList2Dscale( struct DrawList2D *list, short numentries, short xc, sho
                 gpu_wideline( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, list[i].xy3.dx * scale );
                 break;
             case DLRECT:
-                // CONVERT TO QUADRILATERAL
                 XY1 = Scale2D( list[i].xy1, xc, yc, scale );
-                XY2 = Scale2D( MakePoint2D( list[i].xy2.dx, list[i].xy1.dy ), xc, yc, scale );
-                XY3 = Scale2D( list[i].xy2, xc, yc, scale );
-                XY4 = Scale2D( MakePoint2D( list[i].xy1.dx, list[i].xy2.dy ), xc, yc, scale );
-                gpu_quadrilateral( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy, XY3.dx, XY3.dy, XY4.dx, XY4.dy );
+                XY2 = Scale2D( list[i].xy2, xc, yc, scale );
+                gpu_rectangle( list[i].colour, XY1.dx, XY1.dy, XY2.dx, XY2.dy );
                 break;
             case DLCIRC:
                 XY1 = Scale2D( list[i].xy1, xc, yc, scale );

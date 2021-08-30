@@ -111,26 +111,14 @@ circuitry SLL(
     input   shiftcount,
     output  result
 ) {
-    switch( shiftcount[0,4] ) {
-        case 0: { result = sourceReg1; }
-        $$for i = 1, 15 do
-            $$ remain = 16 - i
-            case $i$: { result = { sourceReg1[ 0, $remain$ ], {$i${ 1b0 }} }; }
-        $$end
-    }
-}
+    result = sourceReg1 << shiftcount[0,4];
+ }
 circuitry SRL(
     input   sourceReg1,
     input   shiftcount,
     output  result
 ) {
-    switch( shiftcount[0,4] ) {
-        case 0: { result = sourceReg1; }
-        $$for i = 1, 15 do
-            $$ remain = 16 - i
-            case $i$: { result = { {$i${ 1b0 }}, sourceReg1[ $i$, $remain$ ] }; }
-        $$end
-    }
+    result = sourceReg1 >> shiftcount[0,4];
 }
 
 // J1 / J1+ CPU ALU OPERATIONS
@@ -244,32 +232,32 @@ algorithm main(
 
     // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
     uint16  instruction = uninitialized;
-    uint16  immediate := ( literal(instruction).literalvalue );
-    uint1   is_alu := ( instruction(instruction).is_litcallbranchalu == 3b011 );
-    uint1   is_call := ( instruction(instruction).is_litcallbranchalu == 3b010 );
-    uint1   is_lit := literal(instruction).is_literal;
-    uint1   is_n2memt := is_alu && aluop(instruction).is_n2memt;
-    uint2   is_callbranchalu := callbranch(instruction).is_callbranchalu;
-    uint1   dstackWrite := ( is_lit | (is_alu & aluop(instruction).is_t2n) );
-    uint1   rstackWrite := ( is_call | (is_alu & aluop(instruction).is_t2r) );
-    uint8   ddelta := { {7{aluop(instruction).ddelta1}}, aluop(instruction).ddelta0 };
-    uint8   rdelta := { {7{aluop(instruction).rdelta1}}, aluop(instruction).rdelta0 };
+    uint16  immediate <:: ( literal(instruction).literalvalue );
+    uint1   is_alu <:: ( instruction(instruction).is_litcallbranchalu == 3b011 );
+    uint1   is_call <:: ( instruction(instruction).is_litcallbranchalu == 3b010 );
+    uint1   is_lit <:: literal(instruction).is_literal;
+    uint1   is_n2memt <:: is_alu && aluop(instruction).is_n2memt;
+    uint2   is_callbranchalu <:: callbranch(instruction).is_callbranchalu;
+    uint1   dstackWrite <:: ( is_lit | (is_alu & aluop(instruction).is_t2n) );
+    uint1   rstackWrite <:: ( is_call | (is_alu & aluop(instruction).is_t2r) );
+    uint8   ddelta <:: { {7{aluop(instruction).ddelta1}}, aluop(instruction).ddelta0 };
+    uint8   rdelta <:: { {7{aluop(instruction).rdelta1}}, aluop(instruction).rdelta0 };
 
     // program counter
     uint13  pc = 0;
-    uint13  pcPlusOne := pc + 1;
+    uint13  pcPlusOne <:: pc + 1;
     uint13  newPC = uninitialized;
-    uint13  callBranchAddress := callbranch(instruction).address;
+    uint13  callBranchAddress <:: callbranch(instruction).address;
 
     // dstack 257x16bit (as 3256 array + stackTop) and pointer, next pointer, write line, delta
-    simple_dualport_bram uint16 dstack[256] = uninitialized; // bram (code from @sylefeb)
+    simple_dualport_bram uint16 dstack <input!> [256] = uninitialized; // bram (code from @sylefeb)
     uint16  stackTop = 0;
     uint8   dsp = 0;
     uint8   newDSP = 0;
     uint16  newStackTop = uninitialized;
 
     // rstack 256x16bit and pointer, next pointer, write line
-    simple_dualport_bram uint16 rstack[256] = uninitialized; // bram (code from @sylefeb)
+    simple_dualport_bram uint16 rstack <input!> [256] = uninitialized; // bram (code from @sylefeb)
     uint8   rsp = 0;
     uint8   newRSP = 0;
     uint16  rstackWData = uninitialized;
@@ -279,25 +267,24 @@ algorithm main(
     uint16  memoryInput = uninitialized;
 
     // 16bit ROM with included compiled j1eForth from https://github.com/samawati/j1eforth
-    brom uint16 rom[] = {
+    brom uint16 rom <input!> [] = {
         $include('j1eforthROM.inc')
     };
 
     // INIT to determine if copying rom to ram or executing
     // INIT 0 SPRAM, INIT 1 ROM to SPRAM, INIT 2 J1 CPU
     uint2   INIT = 0;
-    uint3   INITFSM = uninitialized;
 
     // Address for 0 to SPRAM, copying ROM
     uint16  copyaddress = uninitialized;
 
     // UART input FIFO (32 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartInBuffer[512] = uninitialized;
+    simple_dualport_bram uint8 uartInBuffer <input!> [512] = uninitialized;
     uint9 uartInBufferNext = 0;
     uint9 uartInBufferTop = 0;
 
     // UART output FIFO (32 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartOutBuffer[512] = uninitialized;
+    simple_dualport_bram uint8 uartOutBuffer <input!> [512] = uninitialized;
     uint9 uartOutBufferNext = 0;
     uint9 uartOutBufferTop = 0;
     uint9 newuartOutBufferTop = 0;
@@ -327,23 +314,13 @@ algorithm main(
     while( INIT == 0 ) {
         copyaddress = 0;
         while( copyaddress < 32768 ) {
-            INITFSM = 1;
-            while( INITFSM != 0 ) {
-                onehot( INITFSM ) {
-                    case 0: {
-                        sram_address = copyaddress;
-                        sram_data_write = 0;
-                        sram_readwrite = 1;
-                    }
-                    case 1: {
-                        sram_readwrite = 0;
-                    }
-                    case 2: {
-                        copyaddress = copyaddress + 1;
-                    }
-                }
-                INITFSM = INITFSM << 1;
-            }
+            sram_address = copyaddress;
+            sram_data_write = 0;
+            sram_readwrite = 1;
+            ++:
+            sram_readwrite = 0;
+            ++:
+            copyaddress = copyaddress + 1;
         }
         INIT = 1;
     }
@@ -352,24 +329,15 @@ algorithm main(
     while( INIT == 1) {
         copyaddress = 0;
         while( copyaddress < 4096 ) {
-            INITFSM = 1;
-            while( INITFSM != 0 ) {
-                onehot( INITFSM ) {
-                    case 0: {
-                        rom.addr = copyaddress;
-                    }
-                    case 1: {
-                        sram_address = copyaddress;
-                        sram_data_write = rom.rdata;
-                        sram_readwrite = 1;
-                    }
-                    case 2: {
-                        copyaddress = copyaddress + 1;
-                        sram_readwrite = 0;
-                    }
-                }
-                INITFSM = INITFSM << 1;
-            }
+            rom.addr = copyaddress;
+            ++:
+            sram_address = copyaddress;
+            sram_data_write = rom.rdata;
+            sram_readwrite = 1;
+            ++:
+            copyaddress = copyaddress + 1;
+            sram_readwrite = 0;
+            ++:
         }
         INIT = 3;
     }

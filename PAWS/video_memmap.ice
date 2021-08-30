@@ -29,13 +29,16 @@ $$end
     // VIDEO + CLOCKS
     uint1   pll_lock_VIDEO = uninitialized;
     uint1   video_clock = uninitialized;
+    uint1   gpu_clock = uninitialized;
 $$if not SIMULATION then
     ulx3s_clk_risc_ice_v_VIDEO clk_gen_VIDEO (
         clkin    <: clock_25mhz,
         clkVIDEO :> video_clock,
+        clkGPU :> gpu_clock,
         locked   :> pll_lock_VIDEO
     );
 $$else
+    passthrough p1(i<:clock_25mhz,o:>gpu_clock);
     passthrough p2(i<:clock_25mhz,o:>video_clock);
 $$end
     // Video Reset
@@ -108,6 +111,7 @@ $$end
     uint1   BITMAPmemoryWrite = uninitialized;
     bitmap_memmap BITMAP(
         video_clock <: video_clock,
+        gpu_clock <: gpu_clock,
         video_reset <: video_reset,
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -572,10 +576,10 @@ algorithm bitmap_memmap(
     int16   gpu_param5 = uninitialized;
     uint4   gpu_write = uninitialized;
     uint4   gpu_dithermode = uninitialized;
-    int16   gpu_crop_left = uninitialized;
-    int16   gpu_crop_right = uninitialized;
-    int16   gpu_crop_top = uninitialized;
-    int16   gpu_crop_bottom = uninitialized;
+    uint9   gpu_crop_left = uninitialized;
+    uint9   gpu_crop_right = uninitialized;
+    uint8   gpu_crop_top = uninitialized;
+    uint8   gpu_crop_bottom = uninitialized;
     uint5   blit1_writer_tile = uninitialized;
     uint4   blit1_writer_line = uninitialized;
     uint16  blit1_writer_bitmap = uninitialized;
@@ -604,6 +608,7 @@ algorithm bitmap_memmap(
     int6    vertices_writer_ydelta = uninitialized;
     uint1   vertices_writer_active = uninitialized;
     bitmap bitmap_window <@video_clock,!video_reset> (
+        gpu_clock <: gpu_clock,
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: pix_active,
@@ -723,10 +728,10 @@ algorithm bitmap_memmap(
                     case 8hd2: { bitmap_y_read = writeData; }
 
                     case 8he0: { bitmap_write_offset = writeData; }
-                    case 8he2: { gpu_crop_left = writeData < 0 ? 0 : writeData; }
-                    case 8he4: { gpu_crop_right = writeData > 319 ? 319 : writeData; }
-                    case 8he6: { gpu_crop_top = writeData < 0 ? 0 : writeData; }
-                    case 8he8: { gpu_crop_bottom = writeData > 239 ? 239 : writeData; }
+                    case 8he2: { gpu_crop_left = writeData[15,1] ? 0 : writeData; }
+                    case 8he4: { gpu_crop_right = __signed(writeData) > 319 ? 319 : writeData; }
+                    case 8he6: { gpu_crop_top = writeData[15,1] ? 0 : writeData; }
+                    case 8he8: { gpu_crop_bottom = __signed(writeData) > 239 ? 239 : writeData; }
                     case 8hf0: { framebuffer = writeData; }
                     case 8hf2: { writer_framebuffer = writeData; }
                     default: {}

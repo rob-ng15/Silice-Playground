@@ -14,20 +14,12 @@ circuitry copycoordinates( input x, input y, output x1, output y1 ) {
 }
 
 // SWAP COORDINATES
-circuitry swapcoordinates( input x, input y, input x1, input y1, output x2, output y2, output x3, output y3 ) {
-    sameas(x) tx = uninitialised; sameas(y) ty = uninitialised;
-    sameas(x1) tx1 = uninitialised; sameas(y1) ty1 = uninitialised;
-    tx = x; ty = y; tx1 = x1; ty1 = y1;
-    x2 = tx1; y2 = ty1; x3 = tx; y3 = ty;
+circuitry swapcoordinates( input ix, input iy, input ix1, input iy1, output ox, output oy, output ox1, output oy1 ) {
+    sameas(ix) tx = uninitialised; sameas(iy) ty = uninitialised;
+    sameas(ix1) tx1 = uninitialised; sameas(iy1) ty1 = uninitialised;
+    tx = ix; ty = iy; tx1 = ix1; ty1 = iy1;
+    ox = tx1; oy = ty1; ox1 = tx; oy1 = ty;
     ++:
-}
-
-// CROP (x1,y1) to left and top, (x2,y2) to right and bottom
-circuitry cropscreen( input x1, input y1, input x2, input y2, output newx1, output newy1, output newx2, output newy2 ) {
-    newx1 = ( x1 < 0 ) ? 0 : x1;
-    newy1 = ( y1 < 0 ) ? 0 : y1;
-    newx2 = ( x2 > 319 ) ? 319 : x2;
-    newy2 = ( y1 > 239 ) ? 239 : y2;
 }
 
 algorithm pulse(
@@ -41,23 +33,29 @@ algorithm main(output int8 leds) {
     uint32  startcycle = uninitialised;
     pulse PULSE();
 
-    int10   x = 80;
-    int10   y = 100;
-    int10   param0 = 80;
-    int10   param1 = 120;
-    int10   param2 = 60;
-    int10   param3 = 100;
+    int16   x = 40;
+    int16   y = 100;
+    int16   param0 = 80;
+    int16   param1 = 100;
+    int16   param2 = 100;
+    int16   param3 = 120;
 
-    int10   gpu_active_x = uninitialised;
-    int10   gpu_active_y = uninitialised;
-    int10   gpu_x1 = uninitialised;
-    int10   gpu_y1 = uninitialised;
-    int10   gpu_x2 = uninitialised;
-    int10   gpu_y2 = uninitialised;
-    int10   gpu_min_x = uninitialised;
-    int10   gpu_min_y = uninitialised;
-    int10   gpu_max_x = uninitialised;
-    int10   gpu_max_y = uninitialised;
+    int16   x1 = uninitialised;
+    int16   y1 = uninitialised;
+    int16   x2 = uninitialised;
+    int16   y2 = uninitialised;
+    int16   x3 = uninitialised;
+    int16   y3 = uninitialised;
+    int16   min_x = uninitialised;
+    int16   min_y = uninitialised;
+    int16   max_x = uninitialised;
+    int16   max_y = uninitialised;
+
+    int16   crop_left = 0;
+    int16   crop_right = 319;
+    int16   crop_top = 0;
+    int16   crop_bottom = 239;
+    uint1   todraw = uninitialised;
 
     // CLOCK CYCLES TO ALLOW SIGNALS TO PROPOGATE - REQUIRED FOR VERILATOR
     ++: ++:
@@ -66,38 +64,40 @@ algorithm main(output int8 leds) {
     __display("INPUT (%0d,%0d), (%0d,%0d), (%0d,%0d)",x,y,param0,param1,param2,param3);
 
     // Setup drawing a filled triangle x,y param0, param1, param2, param3
-    ( gpu_active_x, gpu_active_y ) = copycoordinates( x, y);
-    ( gpu_x1, gpu_y1 ) = copycoordinates( param0, param1 );
-    ( gpu_x2, gpu_y2 ) = copycoordinates( param2, param3 );
-    // Find minimum and maximum of x, x1, x2, y, y1 and y2 for the bounding box
-    ( gpu_min_x ) = min3( gpu_active_x, gpu_x1, gpu_x2 );
-    ( gpu_min_y ) = min3( gpu_active_y, gpu_y1, gpu_y2 );
-    ( gpu_max_x ) = max3( gpu_active_x, gpu_x1, gpu_x2 );
-    ( gpu_max_y ) = max3( gpu_active_y, gpu_y1, gpu_y2 );
-    ++:
-    // Clip to the screen edge
-    ( gpu_min_x, gpu_min_y, gpu_max_x, gpu_max_y ) = cropscreen( gpu_min_x, gpu_min_y, gpu_max_x, gpu_max_y );
+    ( x1, y1 ) = copycoordinates( x, y);
+    ( x2, y2 ) = copycoordinates( param0, param1 );
+    ( x3, y3 ) = copycoordinates( param2, param3 );
+    __display("COORDINATES (x1,y1)=(%0d,%0d), (x2,y2)=(%0d,%0d), (x3,y3)=(%0d,%0d)",x1,y1,x2,y2,x3,y3);
 
-    // Put points in order so that ( gpu_active_x, gpu_active_y ) is at top, then ( gpu_x1, gpu_y1 ) and ( gpu_x2, gpu_y2 ) are clockwise from there
-    __display("gpu_y2 < gpu_y1 = %b y2 = %0d, y1 = %0d",gpu_y2 < gpu_y1, gpu_y2, gpu_y1 );
-    if( gpu_y2 < gpu_y1 ) {
-        ( gpu_x1, gpu_y1, gpu_x2, gpu_y2 ) = swapcoordinates( gpu_x1, gpu_y1, gpu_x2, gpu_y2 );
-        __display("SWAPPED x1 = %0d y1 = %0d x2 = %0d y2 = %0d",gpu_x1,gpu_y1,gpu_x2,gpu_y2);
+    // Find minimum and maximum of x, x1, x2, y, y1 and y2 for the bounding box
+    ( min_x ) = min3( x1, x2, x3 );
+    ( min_y ) = min3( y1, y2, y3 );
+    ( max_x ) = max3( x1, x2, x3 );
+    ( max_y ) = max3( y1, y2, y3 );
+    __display("BOUNDING BOX (%0d,%0d) to (%0d,%0d)",min_x,min_y,max_x,max_y);
+    //++:
+    if( ( max_x < crop_left ) || ( max_y < crop_top ) || ( min_x > crop_right ) || ( min_y > crop_bottom ) ) {
+        todraw = 0;
+    } else {
+        todraw = 1;
+        if( min_x < crop_left ) { min_x = crop_left; }
+        if( min_y < crop_top ) { min_y = crop_top; }
+        if( max_x > crop_right ) { max_x = crop_right; }
+        if( max_y > crop_bottom ) { max_y = crop_bottom; }
+
+        // Put points in order so that ( x1, y1 ) is at top, then ( x2, y2 ) and ( x3, y3 ) are clockwise from there
+        if( y3 < y2 ) { ( x2, y2, x3, y3 ) = swapcoordinates( x2, y2, x3, y3 ); __display("SWAP 2&3 1"); }
+        if( y2 < y1 ) { ( x1, y1, x2, y2 ) = swapcoordinates( x1, y1, x2, y2 ); __display("SWAP 1&2 1"); }
+        if( y3 < y1 ) { ( x1, y1, x3, y3 ) = swapcoordinates( x1, y1, x3, y3 ); __display("SWAP 3&1"); }
+        if( y3 < y2 ) { ( x2, y2, x3, y3 ) = swapcoordinates( x2, y2, x3, y3 ); __display("SWAP 2&3 2"); }
+        if( ( y2 == y1 ) && ( x2 < x1 ) ) { ( x1, y1, x2, y2 ) = swapcoordinates( x1, y1, x2, y2 ); __display("SWAP 1&2 2"); }
+        if( ( y2 != y1 ) && ( y3 >= y2 ) && ( x2 < x3 ) ) { ( x2, y2, x3, y3 ) = swapcoordinates( x2, y2, x3, y3 ); __display("SWAP 2&3 3"); }
     }
 
-    __display("gpu_y1 < gpu_active_y = %b y1 = %0d, active_y = %0d",gpu_y1 < gpu_active_y, gpu_y1, gpu_active_y);
-    if( gpu_y1 < gpu_active_y ) { ( gpu_active_x, gpu_active_y, gpu_x1, gpu_y1 ) = swapcoordinates( gpu_active_x, gpu_active_y, gpu_x1, gpu_y1 ); __display("SWAPPED"); }
+    __display("SORTED CLOCKWISE FROM TOP (x1,y1)=(%0d,%0d), (x2,y2)=(%0d,%0d), (x3,y3)=(%0d,%0d)",x1,y1,x2,y2,x3,y3);
+    __display("BOUNDING BOX (%0d,%0d) to (%0d,%0d)",min_x,min_y,max_x,max_y);
+    __display("todraw = %b",todraw);
 
-    __display("gpu_y2 < gpu_active_y = %b y1 = %0d, active_y = %0d",gpu_y2 < gpu_active_y, gpu_y2, gpu_active_y);
-    if( gpu_y2 < gpu_active_y ) { ( gpu_active_x, gpu_active_y, gpu_x2, gpu_y2 ) = swapcoordinates( gpu_active_x, gpu_active_y, gpu_x2, gpu_y2 ); __display("SWAPPED"); }
-
-    __display("( gpu_y1 == gpu_y2 ) && ( gpu_x1 < gpu_x2 ) = %b x1 = %0d, x2 = %0d",( gpu_y1 == gpu_y2 ) && ( gpu_x1 < gpu_x2 ), gpu_x1, gpu_x2);
-    if( ( gpu_y1 == gpu_y2 ) && ( gpu_x1 < gpu_x2 ) ) { ( gpu_x1, gpu_y1, gpu_x2, gpu_y2 ) = swapcoordinates( gpu_x1, gpu_y1, gpu_x2, gpu_y2 ); __display("SWAPPED"); }
-
-    __display("( gpu_y1 == gpu_active_y ) && ( gpu_x1 < gpu_active_x ) = %b x1 = %0d, x = %0d",( gpu_y1 == gpu_active_y ) && ( gpu_x1 < gpu_active_x ), gpu_x1, gpu_active_x);
-    if( ( gpu_y1 == gpu_active_y ) && ( gpu_x1 < gpu_active_x ) ) { ( gpu_active_x, gpu_active_y, gpu_x1, gpu_y1 ) = swapcoordinates( gpu_active_x, gpu_active_y, gpu_x1, gpu_y1 ); __display("SWAPPED"); }
-
-    ++:
-    gpu_max_y = gpu_max_y + 1;
-    __display("SORTED CLOCKWISE FROM TOP (%0d,%0d), (%0d,%0d), (%0d,%0d)",gpu_active_x,gpu_active_y,gpu_x1,gpu_y1,gpu_x2,gpu_y2);
+    __display("");
+    __display("CYCLES = %0d",PULSE.cycles - startcycle);
 }

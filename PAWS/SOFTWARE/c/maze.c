@@ -137,39 +137,39 @@ unsigned char whatisright( unsigned short currentx, unsigned short currenty, uns
 
 // PACMAN GHOSTS AS DRAWLISTS
 struct DrawList2D GHOSTBODY[] = {
-    { DLRECT, CYAN, CYAN, DITHERSOLID, { -60, -60 }, { 60, 60 }, },
-    { DLCIRC, CYAN, CYAN, DITHERSOLID, { 0, -60 }, { 60, 0b11000011 }, },
-    { DLCIRC, CYAN, CYAN, DITHERSOLID, { -40, 60 }, { 20, 0b00111100 }, },
-    { DLCIRC, CYAN, CYAN, DITHERSOLID, { 0, 60 }, { 20, 0b00111100 }, },
-    { DLCIRC, CYAN, CYAN, DITHERSOLID, { 40, 60 }, { 20, 0b00111100 }, },
+    { DLRECT, CYAN, DITHERSOLID, { -60, -60 }, { 60, 60 }, },
+    { DLCIRC, CYAN, DITHERSOLID, { 0, -60 }, { 60, 0b11000011 }, },
+    { DLCIRC, CYAN, DITHERSOLID, { -40, 60 }, { 20, 0b00111100 }, },
+    { DLCIRC, CYAN, DITHERSOLID, { 0, 60 }, { 20, 0b00111100 }, },
+    { DLCIRC, CYAN, DITHERSOLID, { 40, 60 }, { 20, 0b00111100 }, },
 };
 
 struct DrawList2D GHOSTLEYE[] = {
-    { DLCIRC, WHITE, WHITE, DITHERSOLID, { -30, -30 }, { 25, 0xff }, },
-    { DLCIRC, BLACK, BLACK, DITHERSOLID, { -30, -30 }, { 12, 0xff }, },
+    { DLCIRC, WHITE, DITHERSOLID, { -30, -30 }, { 25, 0xff }, },
+    { DLCIRC, BLACK, DITHERSOLID, { -30, -30 }, { 12, 0xff }, },
 };
 
 struct DrawList2D GHOSTREYE[] = {
-    { DLCIRC, WHITE, WHITE, DITHERSOLID, { 30, -30 }, { 25, 0xff }, },
-    { DLCIRC, BLACK, BLACK, DITHERSOLID, { 30, -30 }, { 12, 0xff }, },
+    { DLCIRC, WHITE, DITHERSOLID, { 30, -30 }, { 25, 0xff }, },
+    { DLCIRC, BLACK, DITHERSOLID, { 30, -30 }, { 12, 0xff }, },
 };
 
 struct DrawList2D POWERGHOSTLEYE[] = {
-    { DLLINE, PINK, PINK, DITHERSOLID, { -28, -28 }, { -12, -12 }, { 2, 0 }, },
-    { DLLINE, PINK, PINK, DITHERSOLID, { -12, -28 }, { -28, -12 }, { 2, 0 }, }
+    { DLLINE, PINK, DITHERSOLID, { -28, -28 }, { -12, -12 }, { 2, 0 }, },
+    { DLLINE, PINK, DITHERSOLID, { -12, -28 }, { -28, -12 }, { 2, 0 }, }
 };
 
 struct DrawList2D POWERGHOSTREYE[] = {
-    { DLLINE, PINK, PINK, DITHERSOLID, { 12, -28 }, { 28, -12 }, { 2, 0 }, },
-    { DLLINE, PINK, PINK, DITHERSOLID, { 28, -28 }, { 12, -12 }, { 2, 0 }, }
+    { DLLINE, PINK, DITHERSOLID, { 12, -28 }, { 28, -12 }, { 2, 0 }, },
+    { DLLINE, PINK, DITHERSOLID, { 28, -28 }, { 12, -12 }, { 2, 0 }, }
 };
 
 struct DrawList2D POWERGHOSTMOUTH[] = {
-    { DLARC, PINK, PINK, DITHERSOLID, { -40, 20 }, { 10, 0b11000011 }, },
-    { DLARC, PINK, PINK, DITHERSOLID, { -20, 20 }, { 10, 0b00111100 }, },
-    { DLARC, PINK, PINK, DITHERSOLID, { 0, 20 }, { 10, 0b11000011 }, },
-    { DLARC, PINK, PINK, DITHERSOLID, { 20, 20 }, { 10, 0b00111100 }, },
-    { DLARC, PINK, PINK, DITHERSOLID, { 40, 20 }, { 10, 0b11000011 }, },
+    { DLARC, PINK, DITHERSOLID, { -40, 20 }, { 10, 0b11000011 }, },
+    { DLARC, PINK, DITHERSOLID, { -20, 20 }, { 10, 0b00111100 }, },
+    { DLARC, PINK, DITHERSOLID, { 0, 20 }, { 10, 0b11000011 }, },
+    { DLARC, PINK, DITHERSOLID, { 20, 20 }, { 10, 0b00111100 }, },
+    { DLARC, PINK, DITHERSOLID, { 40, 20 }, { 10, 0b11000011 }, },
 };
 
 // SET GHOST BODY COLOUR
@@ -558,15 +558,11 @@ void left_wall( unsigned char colour, unsigned char colour_alt, short steps )
             gpu_dither( DITHERCHECK1, colour_alt);
             break;
     }
-    // USE RECTANGLE + TWO TRIANGLES AS FASTER THAN TWO TRIANGLES FOR LARGE AREAS
-    gpu_triangle( colour, perspectivex[ steps ], perspectivey[ steps ], perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], perspectivex[ steps ], perspectivey[ steps + 1 ] );
-    gpu_rectangle( colour, perspectivex[ steps ], perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 240 - perspectivey[ steps + 1 ] );
-    gpu_triangle( colour, perspectivex[ steps + 1 ], 240 - perspectivey[ steps + 1 ], perspectivex[ steps ], 240 - perspectivey[ steps ], perspectivex[ steps ], 240 - perspectivey[ steps + 1 ] );
+    gpu_quadrilateral( colour, perspectivex[ steps ], perspectivey[ steps ], perspectivex[ steps + 1 ], perspectivey[ steps + 1 ],
+                                perspectivex[ steps + 1 ], 240 - perspectivey[ steps + 1 ], perspectivex[ steps ], 240 - perspectivey[ steps ] );
     gpu_dither( DITHEROFF );
     gpu_line( colour, perspectivex[ steps ], perspectivey[ steps ], perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
-    //gpu_line( colour, perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], perspectivex[ steps + 1 ], 240 - perspectivey[ steps + 1 ] );
     gpu_line( colour, perspectivex[ steps + 1 ], 240 - perspectivey[ steps + 1 ], perspectivex[ steps ], 240 - perspectivey[ steps ] );
-    //gpu_line( colour, perspectivex[ steps ], 240 - perspectivey[ steps ], perspectivex[ steps ], perspectivey[ steps ] );
 }
 void right_wall( unsigned char colour, unsigned char colour_alt, unsigned short steps )
 {
@@ -582,13 +578,12 @@ void right_wall( unsigned char colour, unsigned char colour_alt, unsigned short 
             break;
     }
     // USE RECTANGLE + TWO TRIANGLES AS FASTER THAN TWO TRIANGLES FOR LARGE AREAS
-    gpu_triangle( colour, 320 - perspectivex[ steps ], perspectivey[ steps ], 320 - perspectivex[ steps ], perspectivey[ steps + 1 ], 320 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
-    gpu_rectangle( colour, 320 - perspectivex[ steps ], perspectivey[ steps + 1 ], 320 - perspectivex[ steps + 1 ], 240 - perspectivey[ steps + 1 ] );
-    gpu_triangle( colour, 320 - perspectivex[ steps ], 240 - perspectivey[ steps + 1 ], 320 - perspectivex[ steps  ], 240 - perspectivey[ steps ], 320 - perspectivex[ steps + 1 ], 240 - perspectivey[ steps + 1 ]);
+    gpu_quadrilateral( colour, 320 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], 320 - perspectivex[ steps ], perspectivey[ steps ], 320 - perspectivex[ steps  ], 240 - perspectivey[ steps ], 320 - perspectivex[ steps + 1 ], 240 - perspectivey[ steps + 1 ] );
+    //gpu_triangle( colour, 320 - perspectivex[ steps ], perspectivey[ steps ], 320 - perspectivex[ steps ], perspectivey[ steps + 1 ], 320 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
+    //gpu_rectangle( colour, 320 - perspectivex[ steps ], perspectivey[ steps + 1 ], 320 - perspectivex[ steps + 1 ], 240 - perspectivey[ steps + 1 ] );
+    //gpu_triangle( colour, 320 - perspectivex[ steps + 1 ], 240 - perspectivey[ steps + 1 ], 320 - perspectivex[ steps ], 240 - perspectivey[ steps + 1 ], 320 - perspectivex[ steps  ], 240 - perspectivey[ steps ],  );
     gpu_dither( DITHEROFF );
-    //gpu_line( colour, 320 - perspectivex[ steps ], perspectivey[ steps ], 320 - perspectivex[ steps  ], 240 - perspectivey[ steps ] );
     gpu_line( colour, 320 - perspectivex[ steps  ], 240 - perspectivey[ steps ], 320 - perspectivex[ steps + 1 ], 240 - perspectivey[ steps + 1 ] );
-    //gpu_line( colour, 320 - perspectivex[ steps + 1 ], 240 - perspectivey[ steps + 1 ], 320 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ] );
     gpu_line( colour, 320 - perspectivex[ steps + 1 ], perspectivey[ steps + 1 ], 320 - perspectivex[ steps ], perspectivey[ steps ] );
 }
 

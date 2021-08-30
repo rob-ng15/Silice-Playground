@@ -63,7 +63,6 @@
 #define DKCYAN 0x0b
 #define CYAN 0x0f
 #define LTCYAN 0x1f
-#define VDKRED 0x10
 #define DKRED 0x20
 #define RED 0x30
 #define LTRED 0x35
@@ -79,7 +78,7 @@
 #define DKORANGE 0x34
 #define ORANGE 0x38
 #define LTORANGE 0x39
-#define DKBROWN 0x14
+#define DKBROWN 0x10
 #define BROWN 0x24
 #define PEACH 0x3a
 #define PINK 0x3b
@@ -88,7 +87,7 @@
 #define WHITE 0x3f
 
 #define DITHEROFF 0, BLACK
-#define DITHERSOLID 0
+#define DITHERSOLID BLACK, 0
 #define DITHERCHECK1 1
 #define DITHERCHECK2 2
 #define DITHERCHECK3 3
