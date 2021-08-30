@@ -72,6 +72,8 @@ algorithm J1CPU(
     uint8   rdelta = uninitialized;
     decode DECODE <@clock100> (
         instruction <: instruction,
+        is_lit :> is_lit,
+        is_call :> is_call,
         is_alu :> is_alu,
         is_n2memt :> is_n2memt,
         is_memtr :> is_memtr,
@@ -301,18 +303,18 @@ algorithm alu(
             case 5b10001: { newStackTop = {16{ ~equal0 }}; }
             case 5b10010: { newStackTop = {16{ ~equal }}; }
             case 5b10011: { newStackTop = stackTop + 1; }
-            case 5b10100: { newStackTop = stackTop * stackNext; }
-            case 5b10101: { newStackTop = { stackTop[0,15], 1b0 }; }
-            case 5b10110: { newStackTop = -stackTop; }
-            case 5b10111: { newStackTop = { stackTop[15,1], stackTop[1,15] }; }
-            case 5b11000: { newStackTop = stackNext - stackTop;}
-            case 5b11001: { newStackTop = {16{ stackTop[15,1] }}; }
-            case 5b11010: { newStackTop = {16{ ~stackTop[15,1] }}; }
-            case 5b11011: { newStackTop = {16{ ~less & ~equal }}; }
-            case 5b11100: { newStackTop = {16{ ~less }}; }
-            case 5b11101: { newStackTop = stackTop[15,1] ? -stackTop : stackTop; }
-            case 5b11110: { newStackTop = ~less ? stackNext : stackTop; }
-            case 5b11111: { newStackTop = less ? stackNext : stackTop; }
+            case 5b10100: { newStackTop = { stackTop[0,15], 1b0 }; }
+            case 5b10101: { newStackTop = { 1b0, stackTop[1,15]}; }
+            case 5b10110: { newStackTop = {16{(__signed(stackNext) > __signed(stackTop))}}; }
+            case 5b10111: { newStackTop = {16{(__unsigned(stackNext) > __unsigned(stackTop))}}; }
+            case 5b11000: { newStackTop = {16{(__signed(stackTop) < __signed(0))}};}
+            case 5b11001: { newStackTop = {16{(__signed(stackTop) > __signed(0))}}; }
+            case 5b11010: { newStackTop = ( __signed(stackTop) < __signed(0) ) ?  -stackTop : stackTop; }
+            case 5b11011: { newStackTop = ( __signed(stackNext) > __signed(stackTop) ) ? stackNext : stackTop; }
+            case 5b11100: { newStackTop = ( __signed(stackNext) < __signed(stackTop) ) ? stackNext : stackTop; }
+            case 5b11101: { newStackTop = -stackTop; }
+            case 5b11110: { newStackTop = stackNext - stackTop; }
+            case 5b11111: { newStackTop = {16{(__signed(stackNext) >= __signed(stackTop))}}; }
         }
     }
 }
@@ -342,6 +344,8 @@ algorithm j1eforthcallbranch(
 
 algorithm decode(
     input   uint16  instruction,
+    output  uint1   is_lit,
+    output  uint1   is_call,
     output  uint1   is_alu,
     output  uint1   is_n2memt,
     output  uint1   is_memtr,
@@ -350,10 +354,9 @@ algorithm decode(
     output  uint8   ddelta,
     output  uint8   rdelta
 ) <autorun> {
-    uint1   is_lit <: literal(instruction).is_literal;
-    uint1   is_call <: ( instruction(instruction).is_litcallbranchalu == 3b010 );
-
     always {
+        is_lit = literal(instruction).is_literal;
+        is_call = ( instruction(instruction).is_litcallbranchalu == 3b010 );
         is_alu = ( instruction(instruction).is_litcallbranchalu == 3b011 );
         is_n2memt = is_alu & aluop(instruction).is_n2memt;
         is_memtr = { is_alu, aluop(instruction).operation, aluop(instruction).is_j1j1plus } == 6b111000;

@@ -379,9 +379,9 @@ algorithm gpu(
         characterGenerator8x8 <:> characterGenerator8x8,
         x <: gpu_x,
         y <: gpu_y,
-        param0 <: gpu_param0,
-        param1 <: gpu_param1,
-        param2 <: gpu_param2,
+        tile <: gpu_param0,
+        scale <: gpu_param1,
+        action <: gpu_param2,
         start <: GPUblitstart,
         busy :> GPUblitbusy,
         bitmap_x_write :> GPUblitbitmap_x_write,
@@ -399,9 +399,9 @@ algorithm gpu(
         colourblittilemap <:> colourblittilemap,
         x <: gpu_x,
         y <: gpu_y,
-        param0 <: gpu_param0,
-        param1 <: gpu_param1,
-        param2 <: gpu_param2,
+        tile <: gpu_param0,
+        scale <: gpu_param1,
+        action <: gpu_param2,
         start <: GPUcolourblitstart,
         busy :> GPUcolourblitbusy,
         bitmap_x_write :> GPUcolourblitbitmap_x_write,
@@ -540,7 +540,11 @@ algorithm preprectangle(
     output  uint8   max_y,
     output  uint1   todraw
 ) {
-    int16   x1 = uninitialized; int16   y1 = uninitialized; int16   x2 = uninitialized; int16   y2 = uninitialized;
+    int16   x1 <:: ( x < param0 ) ? x : param0;
+    int16   y1 <:: ( y < param1 ) ? y : param1;
+    int16   x2 <:: ( x > param0 ) ? x : param0;
+    int16   y2 <:: ( y > param1 ) ? y : param1;
+
     performcrop CROP(
         crop_left <: crop_left,
         crop_right <: crop_right,
@@ -566,7 +570,6 @@ algorithm preprectangle(
         y2 <: y2,
         todraw :> todraw
     );
-    ( x1 ) = min( x, param0 ); ( y1 ) = min( y, param1 ); ( x2 ) = max( x, param0 ); ( y2 ) = max( y, param1 );
     ++:
 }
 algorithm drawrectangle(
@@ -671,18 +674,16 @@ algorithm prepline(
     output  uint8   width
 ) {
     // Setup drawing a line from x,y to param0,param1 of width param2 in colour
-    // Ensure LEFT to RIGHT
+    // Ensure LEFT to RIGHT AND if moving UP or DOWN
     ( x1 ) = min( x, param0 );
     y1 = ( x < param0 ) ? y : param1;
-
-    // Determine if moving UP or DOWN
     dv = ( x < param0 ) ? ( y < param1 ) : ~( y < param1 );
-
+    ++:
     // Absolute DELTAs
     ( dx ) = absdelta( x, param0 );
     ( dy ) = absdelta( y, param1 );
     ( width ) = abs( param2 );
-
+    ++:
     // Numerator
     numerator = ( dx > dy ) ? ( dx >> 1 ) : -( dy >> 1 );
     ( max_count ) = max( dx, dy );
@@ -827,7 +828,7 @@ algorithm prepcircle(
     ( radius ) = abs( param0 );
     ( gpu_xc, gpu_yc ) = copycoordinates( x, y );
     gpu_numerator = 3 - ( { radius, 1b0 } );
-
+    ++:
     // SHUFFLE SECTOR MAP TO LOGICALLY GO CLOCKWISE AROUND THE CIRCLE
     draw_sectors = { param1[5,1], param1[6,1], param1[1,1], param1[2,1], param1[4,1], param1[7,1], param1[0,1], param1[3,1] };
 }
@@ -1022,6 +1023,7 @@ algorithm preptriangle(
     ( x1, y1 ) = copycoordinates( x, y);
     ( x2, y2 ) = copycoordinates( param0, param1 );
     ( x3, y3 ) = copycoordinates( param2, param3 );
+    ++:
     // Find minimum and maximum of x, x1, x2, y, y1 and y2 for the bounding box
     ( mx1 ) = min3( x1, x2, x3 );
     ( my1 ) = min3( y1, y2, y3 );
@@ -1029,12 +1031,12 @@ algorithm preptriangle(
     ( my2 ) = max3( y1, y2, y3 );
     ++:
     // Put points in order so that ( x1, y1 ) is at top, then ( x2, y2 ) and ( x3, y3 ) are clockwise from there
-    if( y3 < y2 ) { ( x2, y2, x3, y3 ) = swapcoordinates( x2, y2, x3, y3 ); }
-    if( y2 < y1 ) { ( x1, y1, x2, y2 ) = swapcoordinates( x1, y1, x2, y2 ); }
-    if( y3 < y1 ) { ( x1, y1, x3, y3 ) = swapcoordinates( x1, y1, x3, y3 ); }
-    if( y3 < y2 ) { ( x2, y2, x3, y3 ) = swapcoordinates( x2, y2, x3, y3 ); }
-    if( ( y2 == y1 ) && ( x2 < x1 ) ) { ( x1, y1, x2, y2 ) = swapcoordinates( x1, y1, x2, y2 ); }
-    if( ( y2 != y1 ) && ( y3 >= y2 ) && ( x2 < x3 ) ) { ( x2, y2, x3, y3 ) = swapcoordinates( x2, y2, x3, y3 ); }
+    if( y3 < y2 ) { ( x2, y2, x3, y3 ) = swapcoordinates( x2, y2, x3, y3 ); ++: } else {}
+    if( y2 < y1 ) { ( x1, y1, x2, y2 ) = swapcoordinates( x1, y1, x2, y2 ); ++: } else {}
+    if( y3 < y1 ) { ( x1, y1, x3, y3 ) = swapcoordinates( x1, y1, x3, y3 ); ++: } else {}
+    if( y3 < y2 ) { ( x2, y2, x3, y3 ) = swapcoordinates( x2, y2, x3, y3 ); ++: } else {}
+    if( ( y2 == y1 ) && ( x2 < x1 ) ) { ( x1, y1, x2, y2 ) = swapcoordinates( x1, y1, x2, y2 ); ++: } else {}
+    if( ( y2 != y1 ) && ( y3 >= y2 ) && ( x2 < x3 ) ) { ( x2, y2, x3, y3 ) = swapcoordinates( x2, y2, x3, y3 ); ++: } else {}
 }
 algorithm insideTriangle(
     input   int16   px,
@@ -1087,10 +1089,9 @@ algorithm drawtriangle(
         y2 <: y2,
         inside :> inTriangle
     );
-    // WORK COORDINATES
+    // WORK COORDINATES AND DIRECTION
     int16   px = uninitialized;
     int16   py = uninitialized;
-    // WORK DIRECTION ( == 0 left, == 1 right )
     uint1   dx = uninitialized;
 
     bitmap_x_write := px; bitmap_y_write := py; bitmap_write := 0;
@@ -1218,8 +1219,6 @@ algorithm triangle(
         }
     }
 }
-
-// BLIT - ( tilecharacter == 1 ) OUTPUT PIXELS TO BLIT A 16 x 16 TILE ( PARAM1 == 0 as 16 x 16, == 1 as 32 x 32, == 2 as 64 x 64, == 3 as 128 x 128 )
 // BLIT - ( tilecharacter == 0 ) OUTPUT PIXELS TO BLIT AN 8 x 8 CHARACTER ( PARAM1 == 0 as 8 x 8, == 1 as 16 x 16, == 2 as 32 x 32, == 3 as 64 x 64 )
 algorithm blittilebitmapwriter(
     // For setting blit1 tile bitmaps
@@ -1261,9 +1260,9 @@ algorithm blit(
 
     input   int16   x,
     input   int16   y,
-    input   uint8   param0,
-    input   uint2   param1,
-    input   uint3   param2,
+    input   uint8   tile,
+    input   uint2   scale,
+    input   uint3   action,
 
     output  int16   bitmap_x_write,
     output  int16   bitmap_y_write,
@@ -1272,78 +1271,67 @@ algorithm blit(
     input   uint1   tilecharacter
 ) <autorun> {
     // POSITION IN TILE/CHARACTER
-    uint5   gpu_active_x = uninitialized;
-    uint5   gpu_active_y = uninitialized;
+    uint5   px = uninitialized;
+    uint5   py = uninitialized;
 
     // POSITION ON THE SCREEN
-    int16   gpu_x1 = uninitialized;
-    uint5   gpu_x2 = uninitialised;
-    int16   gpu_y1 = uninitialized;
-    uint5   gpu_y2 = uninitialised;
+    int16   x1 = uninitialized;
+    uint5   x2 = uninitialised;
+    int16   y1 = uninitialized;
+    uint5   y2 = uninitialised;
+    uint5   maxcount <:: ( 1 << scale );
 
     // MULTIPLIER FOR THE SIZE
-    uint2   gpu_param1 = uninitialised;
-    uint5   gpu_max_x = uninitialized;
-    uint5   gpu_max_y = uninitialized;
-
-    // REFLECTION FLAGS - { reflecty, reflectx }
-    uint3   gpu_param2 = uninitialised;
-
-    // TILE/CHARACTER TO BLIT
-    uint8   gpu_tile = uninitialized;
+    uint5   max_pixels <:: tilecharacter ? 16 : 8;
 
     // tile and character bitmap addresses
     // tile bitmap and charactermap addresses - handling rotation or reflection - find y and x positions, then concert to address
-    uint4   yinblittile <: gpu_param2[2,1] ? ( gpu_param2[0,2] == 2b00 ) ? gpu_active_y[0,4] :
-                                        ( gpu_param2[0,2] == 2b01 ) ? gpu_active_x[0,4] :
-                                        ( gpu_param2[0,2] == 2b10 ) ? 4b1111 - gpu_active_y[0,4] :
-                                        4b1111 - gpu_active_x[0,4] :
-                                        gpu_param2[1,1] ? 4b1111 - gpu_active_y[0,4] :  gpu_active_y[0,4];
-    uint4   xinblittile <: gpu_param2[2,1] ?  ( gpu_param2[0,2] == 2b00 ) ? gpu_active_x[0,4] :
-                                        ( gpu_param2[0,2] == 2b01 ) ? 4b1111 - gpu_active_y[0,4] :
-                                        ( gpu_param2[0,2] == 2b10 ) ? 4b1111 - gpu_active_x[0,4] :
-                                        gpu_active_y[0,4] :
-                                        gpu_param2[0,1] ? 4b1111 - gpu_active_x[0,4] :  gpu_active_x[0,4];
-    uint3   yinchartile <: gpu_param2[2,1] ? ( gpu_param2[0,2] == 2b00 ) ? gpu_active_y[0,3] :
-                                        ( gpu_param2[0,2] == 2b01 ) ? gpu_active_x[0,3] :
-                                        ( gpu_param2[0,2] == 2b10 ) ? 3b111 - gpu_active_y[0,3] :
-                                        3b111 - gpu_active_x[0,3] :
-                                        gpu_param2[1,1] ? 3b111 - gpu_active_y[0,3] :  gpu_active_y[0,3];
-    uint3   xinchartile <: gpu_param2[2,1] ?  ( gpu_param2[0,2] == 2b00 ) ? gpu_active_x[0,3] :
-                                        ( gpu_param2[0,2] == 2b01 ) ? 3b111 - gpu_active_y[0,3] :
-                                        ( gpu_param2[0,2] == 2b10 ) ? 3b111 - gpu_active_x[0,3] :
-                                        gpu_active_y[0,3] :
-                                        gpu_param2[0,1] ? 3b111 - gpu_active_x[0,3] :  gpu_active_x[0,3];
-    blit1tilemap.addr0 := { gpu_tile, yinblittile };
-    characterGenerator8x8.addr0 := { gpu_tile, yinchartile };
+    uint4   yinblittile <:: action[2,1] ? ( action[0,2] == 2b00 ) ? py[0,4] :
+                                        ( action[0,2] == 2b01 ) ? px[0,4] :
+                                        ( action[0,2] == 2b10 ) ? 4b1111 - py[0,4] :
+                                        4b1111 - px[0,4] :
+                                        action[1,1] ? 4b1111 - py[0,4] :  py[0,4];
+    uint4   xinblittile <:: action[2,1] ?  ( action[0,2] == 2b00 ) ? px[0,4] :
+                                        ( action[0,2] == 2b01 ) ? 4b1111 - py[0,4] :
+                                        ( action[0,2] == 2b10 ) ? 4b1111 - px[0,4] :
+                                        py[0,4] :
+                                        action[0,1] ? 4b1111 - px[0,4] :  px[0,4];
+    uint3   yinchartile <:: action[2,1] ? ( action[0,2] == 2b00 ) ? py[0,3] :
+                                        ( action[0,2] == 2b01 ) ? px[0,3] :
+                                        ( action[0,2] == 2b10 ) ? 3b111 - py[0,3] :
+                                        3b111 - px[0,3] :
+                                        action[1,1] ? 3b111 - py[0,3] :  py[0,3];
+    uint3   xinchartile <:: action[2,1] ?  ( action[0,2] == 2b00 ) ? px[0,3] :
+                                        ( action[0,2] == 2b01 ) ? 3b111 - py[0,3] :
+                                        ( action[0,2] == 2b10 ) ? 3b111 - px[0,3] :
+                                        py[0,3] :
+                                        action[0,1] ? 3b111 - px[0,3] :  px[0,3];
+    blit1tilemap.addr0 := { tile, yinblittile };
+    characterGenerator8x8.addr0 := { tile, yinchartile };
 
-    bitmap_x_write := gpu_x1 + ( gpu_active_x << gpu_param1 ) + gpu_x2; bitmap_y_write := gpu_y1 + ( gpu_active_y << gpu_param1 ) + gpu_y2; bitmap_write := 0;
+    bitmap_x_write := x1 + ( px << scale ) + x2; bitmap_y_write := y1 + ( py << scale ) + y2; bitmap_write := 0;
 
     while(1) {
         if( start ) {
             busy = 1;
-            gpu_active_x = 0;
-            gpu_active_y = 0;
-            ( gpu_x1, gpu_y1 ) = copycoordinates( x, y );
-            ( gpu_param1, gpu_param2 ) = copycoordinates( param1, param2 );
-            gpu_max_x = tilecharacter ? 16 : 8;
-            gpu_max_y = tilecharacter ? 16 : 8;
-            gpu_tile = param0;
-            while( gpu_active_y != gpu_max_y ) {
-                while( gpu_active_x != gpu_max_x ) {
-                    gpu_y2 = 0;
-                    while( gpu_y2 != ( 1 << gpu_param1 ) ) {
-                        gpu_x2 = 0;
-                        while( gpu_x2 != ( 1 << gpu_param1 ) ) {
+            px = 0;
+            py = 0;
+            ( x1, y1 ) = copycoordinates( x, y );
+            while( py != max_pixels ) {
+                while( px != max_pixels ) {
+                    y2 = 0;
+                    while( y2 != maxcount ) {
+                        x2 = 0;
+                        while( x2 != maxcount ) {
                             bitmap_write = tilecharacter ? blit1tilemap.rdata0[4b1111 - xinblittile, 1] : characterGenerator8x8.rdata0[7 - xinchartile, 1];
-                            gpu_x2 = gpu_x2 + 1;
+                            x2 = x2 + 1;
                         }
-                        gpu_y2 = gpu_y2 + 1;
+                        y2 = y2 + 1;
                     }
-                    gpu_active_x = gpu_active_x + 1;
+                    px = px + 1;
                 }
-                gpu_active_x = 0;
-                gpu_active_y = gpu_active_y + 1;
+                px = 0;
+                py = py + 1;
             }
             busy = 0;
         }
@@ -1376,9 +1364,9 @@ algorithm colourblit(
     input   uint7   colourblit_writer_colour,
     input   int16   x,
     input   int16   y,
-    input   uint5   param0,
-    input   uint2   param1,
-    input   uint3   param2,
+    input   uint5   tile,
+    input   uint2   scale,
+    input   uint3   action,
 
     output  int16   bitmap_x_write,
     output  int16   bitmap_y_write,
@@ -1386,66 +1374,56 @@ algorithm colourblit(
     output  uint1   bitmap_write
 ) <autorun> {
     // POSITION IN TILE/CHARACTER
-    uint7   gpu_active_x = uninitialized;
-    uint7   gpu_active_y = uninitialized;
+    uint7   px = uninitialized;
+    uint7   py = uninitialized;
 
     // POSITION ON THE SCREEN
-    int16   gpu_x1 = uninitialized;
-    int16   gpu_y1 = uninitialized;
-    uint5   gpu_x2 = uninitialised;
-    uint5   gpu_y2 = uninitialised;
-
-    // MULTIPLIER FOR THE SIZE
-    uint2   gpu_param1 = uninitialised;
-
-    // ACTION - REFLECTION OR ROTATION
-    uint4   gpu_param2 = uninitialised;
-
-    // TILE/CHARACTER TO BLIT
-    uint5   gpu_tile = uninitialized;
+    int16   x1 = uninitialized;
+    int16   y1 = uninitialized;
+    uint5   x2 = uninitialised;
+    uint5   y2 = uninitialised;
+    uint5   maxcount <:: ( 1 << scale );
 
     // tile bitmap addresses - handling rotation or reflection - find y and x positions, then concert to address
-    uint4   yintile <: gpu_param2[2,1] ? ( gpu_param2[0,2] == 2b00 ) ? gpu_active_y[0,4] :
-                                        ( gpu_param2[0,2] == 2b01 ) ? gpu_active_x[0,4] :
-                                        ( gpu_param2[0,2] == 2b10 ) ? 4b1111 - gpu_active_y[0,4] :
-                                        4b1111 - gpu_active_x[0,4] :
-                                        gpu_param2[1,1] ? 4b1111 - gpu_active_y[0,4] :  gpu_active_y[0,4];
-    uint4   xintile <: gpu_param2[2,1] ?  ( gpu_param2[0,2] == 2b00 ) ? gpu_active_x[0,4] :
-                                        ( gpu_param2[0,2] == 2b01 ) ? 4b1111 - gpu_active_y[0,4] :
-                                        ( gpu_param2[0,2] == 2b10 ) ? 4b1111 - gpu_active_x[0,4] :
-                                        gpu_active_y[0,4] :
-                                        gpu_param2[0,1] ? 4b1111 - gpu_active_x[0,4] :  gpu_active_x[0,4];
-    colourblittilemap.addr0 := { gpu_tile, yintile, xintile };
+    uint4   yintile <:: action[2,1] ? ( action[0,2] == 2b00 ) ? py[0,4] :
+                                        ( action[0,2] == 2b01 ) ? px[0,4] :
+                                        ( action[0,2] == 2b10 ) ? 4b1111 - py[0,4] :
+                                        4b1111 - px[0,4] :
+                                        action[1,1] ? 4b1111 - py[0,4] :  py[0,4];
+    uint4   xintile <:: action[2,1] ?  ( action[0,2] == 2b00 ) ? px[0,4] :
+                                        ( action[0,2] == 2b01 ) ? 4b1111 - py[0,4] :
+                                        ( action[0,2] == 2b10 ) ? 4b1111 - px[0,4] :
+                                        py[0,4] :
+                                        action[0,1] ? 4b1111 - px[0,4] :  px[0,4];
+    colourblittilemap.addr0 := { tile, yintile, xintile };
 
-    bitmap_x_write := gpu_x1 + ( gpu_active_x << gpu_param1 ) + gpu_x2;
-    bitmap_y_write := gpu_y1 + ( gpu_active_y << gpu_param1 ) + gpu_y2;
+    bitmap_x_write := x1 + ( px << scale ) + x2;
+    bitmap_y_write := y1 + ( py << scale ) + y2;
     bitmap_colour_write := colourblittilemap.rdata0;
     bitmap_write := 0;
 
     while(1) {
         if( start ) {
             busy = 1;
-            gpu_active_x = 0;
-            gpu_active_y = 0;
-            ( gpu_x1, gpu_y1 ) = copycoordinates( x, y );
-            ( gpu_tile, gpu_param1 ) = copycoordinates( param0, param1 );
-            gpu_param2 = param2;
-            while( gpu_active_y != 16 ) {
-                    gpu_y2 = 0;
-                    while( gpu_y2 != ( 1 << gpu_param1 ) ) {
-                        while( gpu_active_x != 16 ) {
-                            gpu_x2 = 0;
-                            while( gpu_x2 < ( 1 << gpu_param1 ) ) {
+            px = 0;
+            py = 0;
+            ( x1, y1 ) = copycoordinates( x, y );
+            while( py != 16 ) {
+                    y2 = 0;
+                    while( y2 != maxcount ) {
+                        while( px != 16 ) {
+                            x2 = 0;
+                            while( x2 != maxcount ) {
                                 // OUTPUT IF NOT TRANSPARENT
                                 bitmap_write = ~colourblittilemap.rdata0[6,1];
-                                gpu_x2 = gpu_x2 + 1;
+                                x2 = x2 + 1;
                             }
-                            gpu_active_x = gpu_active_x + 1;
+                            px = px + 1;
                         }
-                        gpu_y2 = gpu_y2 + 1;
-                        gpu_active_x = 0;
+                        y2 = y2 + 1;
+                        px = 0;
                     }
-                    gpu_active_y = gpu_active_y + 1;
+                    py = py + 1;
                 }
             busy = 0;
         }
@@ -1475,11 +1453,10 @@ algorithm pixelblock(
     output  uint1   bitmap_write
 ) <autorun> {
     // POSITION ON THE SCREEN
-    int16   min_x = uninitialized;
-    int16   max_x = uninitialized;
     int16   x1 = uninitialised;
     int16   y1 = uninitialised;
-    uint7   ignorecolour = uninitialised;
+    int16   max_x <:: x + param0;
+    uint7   ignorecolour <:: param1;
 
     bitmap_x_write := x1;
     bitmap_y_write := y1;
@@ -1488,7 +1465,7 @@ algorithm pixelblock(
     while(1) {
         if( start ) {
             busy = 1;
-            x1 = x; y1 = y; max_x = x + param0; ignorecolour = param1;
+            x1 = x; y1 = y;
             while( busy ) {
                 switch( newpixel ) {
                     case 0: {}

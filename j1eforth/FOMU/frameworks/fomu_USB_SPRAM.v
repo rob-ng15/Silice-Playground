@@ -50,9 +50,6 @@ module top(
         .GLOBAL_BUFFER_OUTPUT(clk)
     );
 
-    wire clk_usb, locked;
-    pll usbpll( .clock_in( clk ), .clock_usb( clk_usb ), .locked( locked ) );
-
     // Create 1hz (1 second counter)
     reg [31:0] counter12mhz;
     reg [15:0] counter1hz;
@@ -183,7 +180,7 @@ module top(
     // Generate reset signal
     reg [5:0] reset_cnt = 0;
     wire reset = ~reset_cnt[5];
-    always @(posedge clk_usb)
+    always @(posedge clk)
             reset_cnt <= reset_cnt + reset;
 
     // uart pipeline in
@@ -196,7 +193,7 @@ module top(
 
     // usb uart - this instanciates the entire USB device.
     usb_uart uart (
-        .clk_48mhz  (clk_usb),
+        .clk_48mhz  (clk),
         .reset      (reset),
 
         // pins

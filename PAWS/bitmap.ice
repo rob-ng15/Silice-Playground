@@ -231,13 +231,13 @@ algorithm bitmapwriter(
     uint7   pixeltowrite = uninitialised;
 
     // Pixel x and y for writing ( adjusting for offset )
-    int16   x_plus_offset <: bitmap_x_write + x_offset;
-    int16   y_plus_offset <: bitmap_y_write + y_offset;
-    int16   x_write_pixel <: x_plus_offset - ( ( x_plus_offset > 319 ) ? 320 : 0 );
-    int16   y_write_pixel <: y_plus_offset - ( ( y_plus_offset > 239 ) ? 240 : 0 );
+    int16   x_plus_offset <:: bitmap_x_write + x_offset;
+    int16   y_plus_offset <:: bitmap_y_write + y_offset;
+    int16   x_write_pixel <:: x_plus_offset - ( ( x_plus_offset > 319 ) ? 320 : 0 );
+    int16   y_write_pixel <:: y_plus_offset - ( ( y_plus_offset > 239 ) ? 240 : 0 );
 
     // Write in range?
-    uint1 write_pixel <: ( bitmap_x_write >= crop_left ) & ( bitmap_x_write <= crop_right ) & ( bitmap_y_write >= crop_top ) & ( bitmap_y_write <= crop_bottom ) & bitmap_write;
+    uint1 write_pixel <:: ( bitmap_x_write >= crop_left ) & ( bitmap_x_write <= crop_right ) & ( bitmap_y_write >= crop_top ) & ( bitmap_y_write <= crop_bottom ) & bitmap_write;
 
     // Bitmap write access for the GPU
     bitmap_0.wenable1 := 1; bitmap_1.wenable1 := 1;

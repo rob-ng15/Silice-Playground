@@ -49,7 +49,6 @@ circuitry swapcoordinates( input ix, input iy, input ix1, input iy1, output ox, 
     sameas(ix1) tx1 = uninitialised; sameas(iy1) ty1 = uninitialised;
     tx = ix; ty = iy; tx1 = ix1; ty1 = iy1;
     ox = tx1; oy = ty1; ox1 = tx; oy1 = ty;
-    ++:
 }
 
 // INCREASE BY 1 IF SECOND INPUT IS 0
