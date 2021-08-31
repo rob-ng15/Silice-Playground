@@ -229,16 +229,6 @@ algorithm bitmapwriter(
     simple_dualport_bram_port1 bitmap_1
 ) <autorun> {
     uint7   pixeltowrite = uninitialised;
-    ditherpatterns DITHER(
-        x <: bitmap_x_write,
-        y <: bitmap_y_write,
-        colour <: bitmap_colour_write,
-        colour_alt <: bitmap_colour_write_alt,
-        dithermode <: gpu_active_dithermode,
-        static1bit <: static1bit,
-        static6bit <: static6bit,
-        pixeltowrite :> pixeltowrite
-    );
 
     // Pixel x and y for writing ( adjusting for offset )
     int16   x_plus_offset <:: bitmap_x_write + x_offset;
@@ -254,80 +244,71 @@ algorithm bitmapwriter(
 
     always {
         if( write_pixel ) {
+            // DITHER PATTERNS
+            // == 0 SOLID == 1 SMALL CHECKERBOARD == 2 MED CHECKERBOARD == 3 LARGE CHECKERBOARD
+            // == 4 VERTICAL STRIPES == 5 HORIZONTAL STRIPES == 6 CROSSHATCH == 7 LEFT SLOPE
+            // == 8 RIGHT SLOPE == 9 LEFT TRIANGLE == 10 RIGHT TRIANGLE == 11 ENCLOSED
+            // == 12 OCTRAGON == 13 BRICK == 14 COLOUR STATIC == 15 STATIC
+            switch( gpu_active_dithermode ) {
+                case 0: { pixeltowrite = bitmap_colour_write; }                                                                                             // SOLID
+                // SMALL CHECKERBOARD == 1, MED CHECKERBOARD == 2, LARGE CHECKERBOARD == 3
+                default: { pixeltowrite = ( bitmap_x_write[gpu_active_dithermode - 1,1] == bitmap_y_write[gpu_active_dithermode - 1,1] ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                case 4: { pixeltowrite = bitmap_x_write[0,1] ? bitmap_colour_write : bitmap_colour_write_alt; }                                             // VERTICAL STRIPES
+                case 5: { pixeltowrite = bitmap_y_write[0,1] ? bitmap_colour_write : bitmap_colour_write_alt; }                                             // HORIZONTAL STRIPES
+                case 6: { pixeltowrite = ( bitmap_x_write[0,1] || bitmap_y_write[0,1] ) ? bitmap_colour_write : bitmap_colour_write_alt; }                  // CROSSHATCH
+                case 7: { pixeltowrite = ( bitmap_x_write[0,2] == bitmap_y_write[0,2] ) ? bitmap_colour_write : bitmap_colour_write_alt; }                  // LEFT SLOPE
+                case 8: { pixeltowrite = ( bitmap_x_write[0,2] == ~bitmap_y_write[0,2] ) ? bitmap_colour_write : bitmap_colour_write_alt; }                 // RIGHT SLOPE
+                case 9: {                                                                                                                                   // LEFT TRIANGLE
+                    switch( bitmap_y_write[0,2] ) {
+                        case 2b00: { pixeltowrite = ( bitmap_x_write[0,2] == 2b00 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 2b01: { pixeltowrite = ( bitmap_x_write[0,2] < 2b10 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 2b10: { pixeltowrite = ( bitmap_x_write[0,2] != 2b11 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 2b11: { pixeltowrite = bitmap_colour_write; }
+                    }
+                }
+                case 10: {                                                                                                                                  // RIGHT TRIANGLE
+                    switch( bitmap_y_write[0,2] ) {
+                        case 2b00: { pixeltowrite = ( bitmap_x_write[0,2] == 2b11 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 2b01: { pixeltowrite = ( bitmap_x_write[0,2] > 2b01 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 2b10: { pixeltowrite = ( bitmap_x_write[0,2] != 2b00 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 2b11: { pixeltowrite = bitmap_colour_write; }
+                    }
+                }
+                case 11: {                                                                                                                                  // ENCLOSED
+                    switch( bitmap_y_write[0,2] ) {
+                        case 2b01: { pixeltowrite = ( bitmap_x_write[0,1] == bitmap_x_write[1,1] ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 2b10: { pixeltowrite = ( bitmap_x_write[0,1] == bitmap_x_write[1,1] ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        default: { pixeltowrite = bitmap_colour_write; }
+                    }
+                }
+                case 12: {                                                                                                                                  // OCTRAGON
+                    switch( bitmap_y_write[0,2] ) {
+                        case 2b00: { pixeltowrite = ( bitmap_x_write[0,1] == bitmap_x_write[1,1] ) ? bitmap_colour_write_alt : bitmap_colour_write; }
+                        case 2b11: { pixeltowrite = ( bitmap_x_write[0,1] == bitmap_x_write[1,1] ) ? bitmap_colour_write_alt : bitmap_colour_write; }
+                        default: { pixeltowrite = bitmap_colour_write; }
+                    }
+                }
+                case 13: {                                                                                                                                  // BRICK
+                    switch( bitmap_y_write[0,3] ) {
+                        case 3b000: { pixeltowrite = bitmap_colour_write; }
+                        case 3b001: { pixeltowrite = ( bitmap_x_write[0,2] == 2b00 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 3b010: { pixeltowrite = ( bitmap_x_write[0,2] == 2b00 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 3b011: { pixeltowrite = ( bitmap_x_write[0,2] == 2b00 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 3b100: { pixeltowrite = bitmap_colour_write; }
+                        case 3b101: { pixeltowrite = ( bitmap_x_write[0,2] == 2b10 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 3b110: { pixeltowrite = ( bitmap_x_write[0,2] == 2b10 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                        case 3b111: { pixeltowrite = ( bitmap_x_write[0,2] == 2b10 ) ? bitmap_colour_write : bitmap_colour_write_alt; }
+                    }
+                }
+                case 14: { pixeltowrite = static6bit; }                                                                                                     // COLOUR STATIC
+                case 15: { pixeltowrite = ( static1bit ? bitmap_colour_write : bitmap_colour_write_alt ); }                                                 // STATIC
+            }
+
             // SET PIXEL ADDRESSS y_write_pixel * 320 + x_write_pixel
             switch( framebuffer ) {
                 case 0: { bitmap_0.addr1 = y_write_pixel * 320 + x_write_pixel; bitmap_0.wdata1 = pixeltowrite; }
                 case 1: { bitmap_1.addr1 = y_write_pixel * 320 + x_write_pixel; bitmap_1.wdata1 = pixeltowrite; }
             }
-        }
-    }
-}
-
-algorithm ditherpatterns(
-    input   int16   x,
-    input   int16   y,
-    input   uint7   colour,
-    input   uint7   colour_alt,
-    input   uint4   dithermode,
-    input   uint1   static1bit,
-    input   uint6   static6bit,
-    output! uint7   pixeltowrite
-) <autorun> {
-    uint1   condition = uninitialised;
-    always {
-        // DITHER PATTERNS
-        // == 0 SOLID == 1 SMALL CHECKERBOARD == 2 MED CHECKERBOARD == 3 LARGE CHECKERBOARD
-        // == 4 VERTICAL STRIPES == 5 HORIZONTAL STRIPES == 6 CROSSHATCH == 7 LEFT SLOPE
-        // == 8 RIGHT SLOPE == 9 LEFT TRIANGLE == 10 RIGHT TRIANGLE == 11 ENCLOSED
-        // == 12 OCTRAGON == 13 BRICK == 14 COLOUR STATIC == 15 STATIC
-        switch( dithermode ) {
-            case 0: { condition = 1; }                                                      // SOLID
-            default: { condition = ( x[dithermode - 1,1] == y[dithermode - 1,1] ); }        // CHECKERBOARDS 1 2 AND 3
-            case 4: { condition = x[0,1]; }                                                 // VERTICAL STRIPES
-            case 5: { condition = y[0,1]; }                                                 // HORIZONTAL STRIPES
-            case 6: { condition = ( x[0,1] || y[0,1] ); }                                   // CROSSHATCH
-            case 7: { condition = ( x[0,2] == y[0,2] ); }                                   // LEFT SLOPE
-            case 8: { condition = ( x[0,2] == ~y[0,2] ); }                                  // RIGHT SLOPE
-            case 9: {                                                                       // LEFT TRIANGLE
-                switch( y[0,2] ) {
-                    case 2b00: { condition = ( x[0,2] == 2b00 ); }
-                    case 2b01: { condition = ( ~x[1,1] ); }
-                    case 2b10: { condition = ( x[0,2] != 2b11 ); }
-                    case 2b11: { condition = 1; }
-                }
-            }
-            case 10: {                                                                      // RIGHT TRIANGLE
-                switch( y[0,2] ) {
-                    case 2b00: { condition = ( x[0,2] == 2b11 ); }
-                    case 2b01: { condition = ( x[1,1] ); }
-                    case 2b10: { condition = ( x[0,2] != 2b00 ); }
-                    case 2b11: { condition = 1; }
-                }
-            }
-            case 11: {                                                                      // ENCLOSED
-                switch( y[0,1] ^ y[1,1] ) {
-                    case 1: { condition = ( x[0,1] == x[1,1] ); }
-                    case 0: { condition = 1; }
-                }
-            }
-            case 12: {                                                                      // OCTAGON
-                switch( y[0,1] ^ y[1,1] ) {
-                    case 1: { condition = ( x[0,1] == x[1,1] ); }
-                    case 0: { condition = 1; }
-                }
-            }
-            case 13: {                                                                      // BRICK
-                switch( y[0,2] ) {
-                    case 2b00: { condition = 1; }
-                    default: { condition = ( x[0,2] == { y[2,1], 1b0 } ); }
-                }
-            }
-            case 14: { condition = 1; }                                                     // COLOUR STATIC
-            case 15: { condition = static1bit; }                                            // STATIC
-        }
-        switch( dithermode ) {
-            case 14: { pixeltowrite = static6bit; }
-            default: { pixeltowrite = condition ? colour : colour_alt; }
         }
     }
 }

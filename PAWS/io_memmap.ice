@@ -259,7 +259,7 @@ algorithm audiotimers_memmap(
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
                 switch( memoryAddress ) {
-                // TIMERS and RNG
+                    // TIMERS and RNG
                     case 12h010: { resetcounter = 1; }
                     case 12h012: { resetcounter = 2; }
                     case 12h020: { counter = writeData; resetcounter = 3; }

@@ -28,7 +28,7 @@ circuitry max3( input value1, input value2, input value3, output maximum ) {
 }
 
 // ABSOLUTE VALUE
-circuitry abs( input   value1, output  absolute ) {
+circuitry abs( input value1, output  absolute ) {
     absolute = ( __signed(value1) < __signed(0) ) ? -value1 : value1;
 }
 

@@ -282,7 +282,7 @@ a: up e for up1 next noop exit ;
 =pick org
 
     ]asm down up asm[
-	
+
 there constant =pickbody
 
 	copy ]asm return asm[
@@ -764,7 +764,7 @@ t: endcase
    begin
     dup 31 literal =
    while
-    drop			
+    drop
     [t] then ]asm call asm[
    repeat
    30 literal <> <?abort"> $literal bad case construct."
@@ -825,8 +825,8 @@ t: does> ( -- ) compile (does>) noop t; immediate
 t: char ( <char> -- char ) ( -- c ) bl word 1+ c@ t;
 t: [char] char [t] literal ]asm call asm[ t; immediate
 t: constant create , (does>) @ t;
-t: defer create 0 literal , 
-   (does>) 
+t: defer create 0 literal ,
+   (does>)
     @ ?dup 0 literal =
    <?abort"> $literal uninitialized" execute t;
 t: is ' >body ! t; immediate

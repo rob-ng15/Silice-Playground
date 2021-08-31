@@ -591,7 +591,7 @@ algorithm dofloatdivide(
     uint1   bitresult <:: __unsigned(temporary) >= __unsigned(sigB);
     uint6   bit(63);
 
-    busy := start | ( bit != 63 ) | ( quotient[48,2] != 0 );
+    busy := start | ( bit != 63 ); // | ( quotient[48,2] != 0 );
     while(1) {
         // FIND QUOTIENT AND ENSURE 48 BIT FRACTION ( ie BITS 48 and 49 clear )
         if( start ) {

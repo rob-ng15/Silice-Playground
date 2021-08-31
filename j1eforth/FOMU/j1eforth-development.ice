@@ -1,4 +1,5 @@
 // BITFIELDS to help with bit/field access
+
 // Instruction is 3 bits 1xx = literal value, 000 = branch, 001 = 0branch, 010 = call, 011 = alu, followed by 13 bits of instruction specific data
 bitfield instruction {
     uint3 is_litcallbranchalu,
@@ -70,12 +71,210 @@ algorithm main(
 
     // 1hz timer
     input   uint16 timer1hz
-) {
+) <autorun> {
+    // CPU
+    uint16  address = uninitialized;
+    uint16  writedata = uninitialized;
+    uint1   CPUwritememory = uninitialized;
+    uint1   CPUreadmemory = uninitialized;
+    j1cpu CPU(
+        address :> address,
+        writedata :> writedata,
+        memorybusy <: memorybusy,
+        readdata <: readdata,
+        writememory :> CPUwritememory,
+        readmemory :> CPUreadmemory
+    );
+
+    // READ / WRITE FROM I/O
+    uint1   IO <: address[15,1];
+    uint1   IOwriteflag <:: IO & CPUwritememory;
+    uint1   IOreadflag <: IO & CPUreadmemory;
+    uint16  IOreaddata = uninitialized;
+    io_memmap IO_Map(
+        rgbLED :> rgbLED,
+        buttons <: buttons,
+        uart_in_data :> uart_in_data,
+        uart_in_valid :> uart_in_valid,
+        uart_in_ready <: uart_in_ready,
+        uart_out_data <: uart_out_data,
+        uart_out_valid <: uart_out_valid,
+        uart_out_ready :> uart_out_ready,
+        address <: address,
+        writeflag <: IOwriteflag,
+        writedata <: writedata,
+        readflag <: IOreadflag,
+        readdata :> IOreaddata
+     );
+
+    // READ / WRITE FROM SPRAM
+    uint1   SPRAMwriteflag <:: ~IO & CPUwritememory;
+    uint1   SPRAMreadflag <: ~IO & CPUreadmemory;
+    uint16  SPRAMreaddata = uninitialized;
+    uint1   SPRAMbusy = uninitialized;
+    spramcontroller SPRAM(
+        sram_address :> sram_address,
+        sram_data_write :> sram_data_write,
+        sram_readwrite :> sram_readwrite,
+        sram_data_read <: sram_data_read,
+        address <: address,
+        writeflag <: SPRAMwriteflag,
+        writedata <: writedata,
+        readflag <: SPRAMreadflag,
+        readdata :> SPRAMreaddata
+    );
+
+    // CPU BUSY STATE
+    uint1   memorybusy <: CPUreadmemory | CPUwritememory | SPRAMbusy;
+
+    // RETURN READ VALUE TO CPU
+    uint16  readdata <: ~IO ? SPRAMreaddata :
+                    IOreaddata;
+}
+
+algorithm spramcontroller(
+    output  uint1   busy(0),
+    // SPRAM Interface
+    output uint16   sram_address,
+    output uint16   sram_data_write,
+    input  uint16   sram_data_read,
+    output uint1    sram_readwrite,
+
+    input   uint16  address,
+    input   uint1   writeflag,
+    input   uint16  writedata,
+    input   uint1   readflag,
+    output  uint16  readdata
+) <autorun> {
+    while(1) {
+        if( writeflag ) {
+            busy = 1;
+            sram_address = address;
+            sram_data_write = writedata;
+            sram_readwrite = 1;
+            ++:
+            ++:
+            sram_readwrite = 0;
+            busy = 0;
+        }
+        if( readflag ) {
+            busy = 1;
+            sram_address = address;
+            sram_readwrite = 0;
+            ++:
+            ++:
+            ++:
+            // wait then read the data from SPRAM
+            readdata = sram_data_read;
+            ++:
+            busy = 0;
+        }
+    }
+}
+
+algorithm io_memmap(
+    // RGB LED
+    output  uint3   rgbLED,
+
+    // USER buttons
+   input   uint4   buttons,
+
+    // UART Interface
+    output   uint8  uart_in_data,
+    output   uint1  uart_in_valid,
+    input    uint1  uart_in_ready,
+    input    uint8  uart_out_data,
+    input    uint1  uart_out_valid,
+    output   uint1  uart_out_ready,
+
+    // 1hz timer
+    input   uint16 timer1hz,
+
+    input   uint16  address,
+    input   uint1   writeflag,
+    input   uint16  writedata,
+    input   uint1   readflag,
+    output  uint16  readdata
+) <autorun> {
+    // UART input FIFO (32 character) as dualport bram (code from @sylefeb)
+    simple_dualport_bram uint8 uartInBuffer <input!> [512] = uninitialized;
+    uint9 uartInBufferNext = 0;
+    uint9 uartInBufferTop = 0;
+
+    // UART output FIFO (32 character) as dualport bram (code from @sylefeb)
+    simple_dualport_bram uint8 uartOutBuffer <input!> [512] = uninitialized;
+    uint9 uartOutBufferNext = 0;
+    uint9 uartOutBufferTop = 0;
+    uint9 newuartOutBufferTop = 0;
+
+    uartInBuffer.wenable1  := 1;  // always write on port 1
+    uartInBuffer.addr0     := uartInBufferNext; // FIFO reads on next
+    uartInBuffer.addr1     := uartInBufferTop;  // FIFO writes on top
+
+    uartOutBuffer.wenable1 := 1; // always write on port 1
+    uartOutBuffer.addr0    := uartOutBufferNext; // FIFO reads on next
+    uartOutBuffer.addr1    := uartOutBufferTop;  // FIFO writes on top
+
+    // UART input and output buffering
+    uartInBuffer.wdata1  := uart_out_data;
+    uartInBufferTop      := ( uart_out_valid ) ? uartInBufferTop + 1 : uartInBufferTop;
+    uart_out_ready := uart_out_valid ? 1 : uart_out_ready;
+
+    uart_in_valid := (uart_in_ready && uart_in_valid) ? 0 : uart_in_valid;
+
+    always {
+        if( writeflag ) {
+            switch( address ) {
+                case 16hf000: {
+                    // OUTPUT to UART (dualport blockram code from @sylefeb)
+                    uartOutBuffer.wdata1 = writedata;
+                    uartOutBufferTop = uartOutBufferTop + 1;
+                }
+                case 16hf002: {
+                    // OUTPUT to rgbLED
+                    rgbLED = writedata;
+                }
+            }
+        }
+        if( readflag ) {
+            switch( address ) {
+                case 16hf000: { readdata = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1; }
+                case 16hf001: { readdata = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ) ? 1b1 : 1b0, (uartInBufferNext != uartInBufferTop) ? 1b1 : 1b0 }; }
+                case 16hf002: { readdata = rgbLED; }
+                case 16hf003: { readdata = { 12b0, buttons }; }
+                case 16hf004: { readdata = timer1hz; }
+                default: {readdata = 0;}
+            }
+        }
+    }
+}
+
+// CPU FETCH 16 bit WORD FROM MEMORY
+circuitry fetch( input location, input memorybusy, input readdata, output address, output readmemory, output frommemory ) {
+    address = location; readmemory = 1; while( memorybusy ) {} frommemory = readdata;
+}
+circuitry load( input location, input memorybusy, input readdata, output address, output readmemory ) {
+    address = location[15,1] ? location : { 1b0, location[1,15] }; readmemory = 1; while( memorybusy ) {}
+}
+// CPU STORE TO MEMORY
+circuitry store( input location, input memorybusy, output address, output writememory ) {
+    address = location[15,1] ? location : { 1b0, location[1,15] }; writememory = 1; while( memorybusy ) {}
+}
+
+algorithm j1cpu(
+    output  uint16  address,
+    output  uint16  writedata,
+    output  uint1   writememory,
+    input   uint16  readdata,
+    output  uint1   readmemory,
+    input   uint1   memorybusy
+) <autorun> {
     uint16  FSM = 1;
 
     // 16bit ROM with included compiled j1eForth from https://github.com/samawati/j1eforth
-    brom uint16 rom <input!> [] = {
+    brom uint16 rom <input!> [4096] = {
         $include('j1eforthROM.inc')
+        ,pad(uninitialized)
     };
 
     // INIT to determine if copying rom to ram or executing
@@ -137,10 +336,9 @@ algorithm main(
     uint1   RSTACKstackWrite = uninitialized;
 
     uint16  ALUnewStackTop = uninitialized;
-    uint16  memoryinput = uninitialized;
     alu ALU(
         instruction <: instruction,
-        memoryRead <: memoryinput,
+        memoryRead <: readdata,
         stackTop <: stackTop,
         stackNext <: stackNext,
         rStackTop <: rStackTop,
@@ -167,42 +365,14 @@ algorithm main(
         newRSP :> CALLBRANCHnewRSP
     );
 
-    // UART input FIFO (32 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartInBuffer <input!> [512] = uninitialized;
-    uint9 uartInBufferNext = 0;
-    uint9 uartInBufferTop = 0;
-
-    // UART output FIFO (32 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartOutBuffer <input!> [512] = uninitialized;
-    uint9 uartOutBufferNext = 0;
-    uint9 uartOutBufferTop = 0;
-    uint9 newuartOutBufferTop = 0;
-
     // STACK WRITE CONTROLLERS
-    DSTACKstackWrite := 0; RSTACKstackWrite := 0;
-
-    // UART input and output buffering
-    uartInBuffer.wenable1  := 1;  // always write on port 1
-    uartInBuffer.addr0     := uartInBufferNext; // FIFO reads on next
-    uartInBuffer.addr1     := uartInBufferTop;  // FIFO writes on top
-    uartOutBuffer.wenable1 := 1; // always write on port 1
-    uartOutBuffer.addr0    := uartOutBufferNext; // FIFO reads on next
-    uartOutBuffer.addr1    := uartOutBufferTop;  // FIFO writes on top
-    uartInBuffer.wdata1  := uart_out_data;
-    uartInBufferTop      := ( uart_out_valid ) ? uartInBufferTop + 1 : uartInBufferTop;
-    uart_out_ready := uart_out_valid ? 1 : uart_out_ready;
-    uart_in_valid := (uart_in_ready && uart_in_valid) ? 0 : uart_in_valid;
-
-    sram_data_write := ( INIT == 0 ) ? 0 : ( INIT == 1 ) ? rom.rdata : stackNext;
+    DSTACKstackWrite := 0; RSTACKstackWrite := 0; writedata := ( INIT == 3 ) ? stackNext : ( INIT == 0 ) ? 0 : rom.rdata;
 
     // INIT is 0 ZERO SPRAM
     while( INIT == 0 ) {
         copyaddress = 0;
         while( copyaddress < 32768 ) {
-            sram_address = copyaddress;
-            sram_readwrite = 1;
-            ++:
-            sram_readwrite = 0;
+            ( address, writememory ) = store( copyaddress, memorybusy );
             copyaddress = copyaddress + 1;
         }
         INIT = 1;
@@ -214,26 +384,14 @@ algorithm main(
         while( copyaddress < 4096 ) {
             rom.addr = copyaddress;
             ++:
-            sram_address = copyaddress;
-            sram_readwrite = 1;
-            ++:
-            sram_readwrite = 0;
+            ( address, writememory ) = store( copyaddress, memorybusy );
             copyaddress = copyaddress + 1;
-            ++:
         }
         INIT = 3;
     }
 
     // INIT is 3 EXECUTE J1 CPU
     while( INIT == 3 ) {
-        // WRITE to UART if characters in buffer and UART is ready
-        if( ~(uartOutBufferNext == uartOutBufferTop) && ~( uart_in_valid ) ) {
-            // reads at uartOutBufferNext (code from @sylefeb)
-            uart_in_data      = uartOutBuffer.rdata0;
-            uart_in_valid     = 1;
-            uartOutBufferNext = uartOutBufferNext + 1;
-        }
-
         // Update dsp, rsp, pc, stackTop
         dsp = newDSP;
         pc = newPC;
@@ -241,27 +399,14 @@ algorithm main(
         rsp = newRSP;
         pcPlusOne = pc + 1;
 
-        // start READ instruction = [pc] result ready in 2 cycles
-        sram_address = pc;
-        sram_readwrite = 0;
+        // FETCH INSTRUCTION + DECODE
+        ( address, readmemory, instruction ) = fetch( pc, memorybusy, readdata );
         ++:
-        ++:
-        ++:
-        // wait then read the instruction from SPRAM and DECODE
-        instruction = sram_data_read;
-        ++:
-
-        // start READ memoryInput = [stackTop]
-        if( is_memtr && ~stackTop[15,1] ) {
-            sram_address = stackTop >> 1;
-            sram_readwrite = 0;
-            ++:
-            ++:
-            ++:
-            // wait then read the data from SPRAM
-            memoryinput = sram_data_read;
+        if( is_memtr ) {
+            ( address, readmemory ) = load( stackTop, memorybusy, readdata );
             ++:
         }
+
         // J1 CPU Instruction Execute
         if( is_lit ) {
             // LITERAL
@@ -273,19 +418,8 @@ algorithm main(
             DSTACKstackWrite = dstackWrite;
         } else {
             if( is_alu ) {
-                if( ( { aluop(instruction).is_j1j1plus, aluop(instruction).operation } == 5b01100 ) && stackTop[15,1] ) {
-                    switch( stackTop ) {
-                        case 16hf000: { newStackTop = { 8b0, uartInBuffer.rdata0 }; uartInBufferNext = uartInBufferNext + 1; }
-                        case 16hf001: { newStackTop = { 14b0, ( uartOutBufferTop + 1 == uartOutBufferNext ), (uartInBufferNext != uartInBufferTop) }; }
-                        case 16hf002: { newStackTop = rgbLED; }
-                        case 16hf003: { newStackTop = { 12b0, buttons }; }
-                        case 16hf004: { newStackTop = timer1hz; }
-                        default: {newStackTop = 0;}
-                    }
-                } else {
-                    newStackTop = ALUnewStackTop;
-                    rstackWData = stackTop;
-                }
+                newStackTop = ALUnewStackTop;
+                rstackWData = stackTop;
 
                 // UPDATE newDSP newRSP
                 newDSP = DELTADSPnewSP;
@@ -296,24 +430,7 @@ algorithm main(
 
                 // n2memt mem[t] = n
                 if( is_n2memt ) {
-                    switch( stackTop ) {
-                        default: {
-                            // WRITE to SPRAM
-                            sram_address = stackTop >> 1;
-                            sram_readwrite = 1;
-                            ++:
-                            sram_readwrite = 0;
-                        }
-                        case 16hf000: {
-                            // OUTPUT to UART (dualport blockram code from @sylefeb)
-                            uartOutBuffer.wdata1 = bytes(stackNext).byte0;
-                            uartOutBufferTop = uartOutBufferTop + 1;
-                        }
-                        case 16hf002: {
-                            // OUTPUT to rgbLED
-                            rgbLED = stackNext;
-                        }
-                    }
+                    ( address, writememory ) = store( stackTop, memorybusy );
                 }
 
                 // Commit to dstack and rstack
@@ -331,7 +448,7 @@ algorithm main(
                 DSTACKstackWrite = dstackWrite;
                 RSTACKstackWrite = rstackWrite;
             }
-        } // J1 CPU Instruction Execute
+        }
     } // (INIT==3 execute J1 CPU)}
 }
 
@@ -376,16 +493,16 @@ algorithm alu(
             case 5b10011: { newStackTop = stackTop + 1; }
             case 5b10100: { newStackTop = { stackTop[0,15], 1b0 }; }
             case 5b10101: { newStackTop = { stackTop[15,1], stackTop[1,15]}; }
-            case 5b10110: { newStackTop = {16{~less & ~equal}}; }
-            case 5b10111: { newStackTop = {16{~lessu & ~equal}}; }
+            case 5b10110: { newStackTop = {16{(__signed(stackNext) > __signed(stackTop))}}; }
+            case 5b10111: { newStackTop = {16{(__unsigned(stackNext) > __unsigned(stackTop))}}; }
             case 5b11000: { newStackTop = {16{stackTop[15,1]}}; }
             case 5b11001: { newStackTop = {16{~stackTop[15,1]}}; }
             case 5b11010: { newStackTop = stackTop[15,1] ?  -stackTop : stackTop; }
-            case 5b11011: { newStackTop = ~less ? stackNext : stackTop; }
-            case 5b11100: { newStackTop = less ? stackNext : stackTop; }
+            case 5b11011: { newStackTop = ( __signed(stackNext) > __signed(stackTop) ) ? stackNext : stackTop; }
+            case 5b11100: { newStackTop = ( __signed(stackNext) < __signed(stackTop) ) ? stackNext : stackTop; }
             case 5b11101: { newStackTop = -stackTop; }
             case 5b11110: { newStackTop = stackNext - stackTop; }
-            case 5b11111: { newStackTop = {16{~less}}; }
+            case 5b11111: { newStackTop = {16{(__signed(stackNext) >= __signed(stackTop))}}; }
         }
     }
 }
@@ -420,7 +537,8 @@ algorithm j1eforthcallbranch(
     output  uint8   newDSP,
     output  uint8   newRSP,
 ) <autorun> {
-    uint2   is_callbranchalu <:: callbranch(instruction).is_callbranchalu;
+    uint2   is_callbranchalu <: callbranch(instruction).is_callbranchalu;
+
     always {
         newStackTop = is_callbranchalu[0,1] ? stackNext : stackTop;
         newDSP = dsp - is_callbranchalu[0,1];
