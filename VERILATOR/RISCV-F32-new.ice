@@ -391,29 +391,34 @@ algorithm floataddsub(
     uint48  eqsigA = uninitialised;
     int10   eqexpB = uninitialised;
     uint48  eqsigB = uninitialised;
-    equaliseexpaddsub EQUALISEEXP(
-        expA <: expA,
-        sigA <: sigA,
-        expB <: expB,
-        sigB <: sigB,
-        newexpA :> eqexpA,
-        newsigA :> eqsigA,
-        newexpB :> eqexpB,
-        newsigB :> eqsigB
-    );
+    //equaliseexpaddsub EQUALISEEXP(
+    //    expA <: expA,
+    //    sigA <: sigA,
+    //    expB <: expB,
+    //    sigB <: sigB,
+    //    newexpA :> eqexpA,
+    //    newsigA :> eqsigA,
+    //    newexpB :> eqexpB,
+    //    newsigB :> eqsigB
+    //);
+
+    uint48  sigAminussigB <:: sigA - sigB;
+    uint48  sigBminussigA <:: sigB - sigA;
+    //uint48  sigAminussigB = uninitialised;
+    //uint48  sigBminussigA = uninitialised;
 
     // PERFORM THE ADDITION/SUBTRACION USING THE EQUALISED FRACTIONS, 1 IS ADDED TO THE EXPONENT IN CASE OF OVERFLOW - NORMALISING WILL ADJUST WHEN SHIFTING
     uint1   resultsign = uninitialised;
     int10   resultexp <:: eqexpA + 1;
     uint48  resultfraction = uninitialised;
-    dofloataddsub ADDSUB(
-        signA <: signA,
-        sigA <: eqsigA,
-        signB <: signB,
-        sigB <: eqsigB,
-        resultsign :> resultsign,
-        resultfraction :> resultfraction
-    );
+    //dofloataddsub ADDSUB(
+    //    signA <: signA,
+    //    sigA <: eqsigA,
+    //    signB <: signB,
+    //    sigB <: eqsigB,
+    //    resultsign :> resultsign,
+    //    resultfraction :> resultfraction
+    //);
 
     // NORMALISE THE RESULTING FRACTION AND ADJUST THE EXPONENT IF SMALLER ( ie, MSB is not 1 )
     int10   normalexp = uninitialised;
@@ -455,8 +460,6 @@ algorithm floataddsub(
         if( start ) {
             busy = 1;
             OF = 0; UF = 0;
-            ++: // ALLOW 2 CYCLES FOR EQUALISING EXPONENTS AND TO PERFORM THE ADDITION/SUBTRACTION
-            ++:
             __display("");
             __display("  a = { %b %b %b } INPUT",fp32( a ).sign,fp32( a ).exponent,fp32( a ).fraction);
             __display("  b = { %b %b %b } INPUT",fp32( b ).sign,fp32( b ).exponent,fp32( b ).fraction);
@@ -467,18 +470,34 @@ algorithm floataddsub(
             __display("  a = { %b %10b %48b }",signA,expA,sigA);
             __display("  b = { %b %10b %48b }",signB,expB,sigB);
             __display("");
-            __display("  EQUALISE EXPONENTS (SHIFTING MANTISSA)");
-            __display("  a = { %b %b %b }",signA,eqexpA,eqsigA);
-            __display("  b = { %b %b %b }",signB,eqexpB,eqsigB);
-            __display("");
-            __display("  CALCULATING");
-            __display("  { %b %b %b } +",signA,eqexpA,eqsigA);
-            __display("  { %b %b %b }",signB,eqexpB,eqsigB);
-            __display(" ={ %b %b %b }",resultsign,resultexp,resultfraction);
-            __display("");
+             {
+                // EQUALISE THE EXPONENTS BY SHIFT SMALLER NUMBER FRACTION PART TO THE RIGHT
+                if( expA < expB ) {
+                    eqsigA = sigA >> ( expB - expA ); eqexpA = expB; eqsigB = sigB; eqexpB = expB;
+                } else {
+                    eqsigB = sigB >> ( expA - expB ); eqexpB = expA; eqsigA = sigA; eqexpA = expA;
+                }
+                __display("  EQUALISE EXPONENTS (SHIFTING MANTISSA)");
+                __display("  a = { %b %b %b }",signA,eqexpA,eqsigA);
+                __display("  b = { %b %b %b }",signB,eqexpB,eqsigB);
+                __display("");
+            } -> {
+                // PERFORM ADDITION HANDLING SIGNS
+                switch( { signA, signB } ) {
+                    case 2b01: { resultsign = ( eqsigB > eqsigA ); resultfraction = resultsign ? sigBminussigA : sigAminussigB; }
+                    case 2b10: { resultsign = ( eqsigA > eqsigB ); resultfraction = resultsign ? sigAminussigB : sigBminussigA; }
+                    default: { resultsign = signA; resultfraction = eqsigA + eqsigB; }
+                }
+                __display("  CALCULATING");
+                __display("  { %b %b %b } +",signA,eqexpA,eqsigA);
+                __display("  { %b %b %b }",signB,eqexpB,eqsigB);
+                __display(" ={ %b %b %b }",resultsign,resultexp,resultfraction);
+                __display("");
+            }
+            ++:
             switch( { IF | NN, aZERO | bZERO } ) {
                 case 2b00: {
-                    switch( ADDSUB.resultfraction ) {
+                    switch( resultfraction ) {
                         case 0: { result = 0; }
                         default: {
                             NORMALISE.start = 1; while( NORMALISE.busy ) {}
@@ -494,7 +513,7 @@ algorithm floataddsub(
                 case 2b01: {
                     result = ( aZERO & bZERO ) ? 0 : ( bZERO ) ? a : addsub ? { ~fp32( b ).sign, b[0,31] } : b;
                     __display("");
-                    __display("  ZERO AS INPUT");
+                    __display("  ZERO AS INPUT ( a == 0 ) = %b, ( b == 0 ) = %b",aZERO,bZERO);
                     __display("  SELECT FINAL RESULT");
                 }
                 default: {
@@ -681,12 +700,12 @@ algorithm dofloatdivide(
                 quotient[bit,1] = bitresult;
                 bit = bit - 1;
             }
-            // ENSURE { 00xxxx } PROBABLY NOT NEEDED
-            //switch( quotient[48,2] ) {
-            //    case 2b00: {}
-            //    case 2b01: { quotient = { 1b0, quotient[1,49] }; }
-            //    default: { quotient = { 2b00, quotient[1,48] }; }
-            //}
+            // ENSURE { 00xxxx }
+            switch( quotient[48,2] ) {
+                case 2b00: {}
+                case 2b01: { quotient = { 1b0, quotient[1,49] }; }
+                default: { quotient = { 2b00, quotient[1,48] }; }
+            }
         }
     }
 }
@@ -1316,7 +1335,7 @@ algorithm main(output int8 leds) {
     // uint7   opCode = 7b1001011; // FNMSUB
     // uint7   opCode = 7b1001111; // FNMADD
 
-    uint7   function7 = 7b0000100; // OPERATION SWITCH
+    uint7   function7 = 7b0000000; // OPERATION SWITCH
     // ADD = 7b0000000 SUB = 7b0000100 MUL = 7b0001000 DIV = 7b0001100 SQRT = 7b0101100
     // FSGNJ[N][X] = 7b0010000 function3 == 000 FSGNJ == 001 FSGNJN == 010 FSGNJX
     // MIN MAX = 7b0010100 function3 == 000 MIN == 001 MAX

@@ -515,18 +515,6 @@ void gpu_cs( void ) {
     gpu_rectangle( 64, 0, 0, 319, 239 );
 }
 
-// DRAW A (optional filled) CIRCLE at centre (x1,y1) of radius ( FILLED CIRCLES HAVE A MINIMUM RADIUS OF 4 )
-void gpu_circle( unsigned char colour, short x1, short y1, short radius, unsigned char filled ) {
-    *GPU_COLOUR = colour;
-    *GPU_X = x1;
-    *GPU_Y = y1;
-    *GPU_PARAM0 = radius;
-    *GPU_PARAM1 = 255;
-
-    wait_gpu();
-    *GPU_WRITE = filled ? 5 : 4;
-}
-
 // BLIT A 16 x 16 ( blit_size == 1 doubled to 32 x 32 ) TILE ( from tile 0 to 31 ) to (x1,y1) in colour
 void gpu_blit( unsigned char colour, short x1, short y1, short tile, unsigned char blit_size ) {
     *GPU_COLOUR = colour;
@@ -572,21 +560,6 @@ void set_blitter_bitmap( unsigned char tile, unsigned short *bitmap ) {
         *BLIT_WRITER_LINE = i;
         *BLIT_WRITER_BITMAP = bitmap[i];
     }
-}
-
-// DRAW A FILLED TRIANGLE with vertices (x1,y1) (x2,y2) (x3,y3) in colour
-// VERTICES SHOULD BE PRESENTED CLOCKWISE FROM THE TOP ( minimal adjustments made to the vertices to comply )
-void gpu_triangle( unsigned char colour, short x1, short y1, short x2, short y2, short x3, short y3 ) {
-    *GPU_COLOUR = colour;
-    *GPU_X = x1;
-    *GPU_Y = y1;
-    *GPU_PARAM0 = x2;
-    *GPU_PARAM1 = y2;
-    *GPU_PARAM2 = x3;
-    *GPU_PARAM3 = y3;
-
-    wait_gpu();
-    *GPU_WRITE = 6;
 }
 
 // CHARACTER MAP FUNCTIONS

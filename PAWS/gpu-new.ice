@@ -1241,22 +1241,26 @@ algorithm blit(
     while(1) {
         if( start ) {
             busy = 1;
-            px = 0; py = 0; ( x1, y1 ) = copycoordinates( x, y );
+            px = 0; py = 0; y2 = 0; x2 = 0;
+            ( x1, y1 ) = copycoordinates( x, y );
             while( py != max_pixels ) {
-                y2 = 0;
-                while( y2 != maxcount ) {
-                    px = 0;
-                    while( px != max_pixels ) {
-                        x2 = 0;
-                        while( x2 != maxcount ) {
+                if( px != max_pixels ) {
+                    if( y2 != maxcount ) {
+                        if( x2 != maxcount ) {
                             bitmap_write = tilecharacter ? blit1tilemap.rdata0[4b1111 - xinblittile, 1] : characterGenerator8x8.rdata0[7 - xinchartile, 1];
                             x2 = x2 + 1;
+                        } else {
+                            y2 = y2 + 1;
+                            x2 = 0;
                         }
+                    } else {
                         px = px + 1;
+                        y2 = 0;
                     }
-                    y2 = y2 + 1;
+                } else {
+                    px = 0;
+                    py = py + 1;
                 }
-                py = py + 1;
             }
             busy = 0;
         }
@@ -1330,26 +1334,28 @@ algorithm colourblit(
     while(1) {
         if( start ) {
             busy = 1;
-            px = 0;
-            py = 0;
+            px = 0; py = 0; y2 = 0; x2 = 0;
             ( x1, y1 ) = copycoordinates( x, y );
             while( py != 16 ) {
-                    y2 = 0;
-                    while( y2 != maxcount ) {
-                        while( px != 16 ) {
+                if( px != 16 ) {
+                    if( y2 != maxcount ) {
+                        if( x2 != maxcount ) {
+                            // OUTPUT IF NOT TRANSPARENT
+                            bitmap_write = ~colourblittilemap.rdata0[6,1];
+                            x2 = x2 + 1;
+                        } else {
+                            y2 = y2 + 1;
                             x2 = 0;
-                            while( x2 != maxcount ) {
-                                // OUTPUT IF NOT TRANSPARENT
-                                bitmap_write = ~colourblittilemap.rdata0[6,1];
-                                x2 = x2 + 1;
-                            }
-                            px = px + 1;
                         }
-                        y2 = y2 + 1;
-                        px = 0;
+                    } else {
+                        px = px + 1;
+                        y2 = 0;
                     }
+                } else {
+                    px = 0;
                     py = py + 1;
                 }
+            }
             busy = 0;
         }
     }

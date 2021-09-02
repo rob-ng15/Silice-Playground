@@ -1,7 +1,7 @@
 // RISC-ICE-V
 // inspired by https://github.com/sylefeb/Silice/blob/master/projects/ice-v/ice-v.ice
 //
-// A simple Risc-V RV32IMC processor ( with partial B extension implementation )
+// A simple Risc-V RV32IMAFC processor
 
 // RISC-V - MAIN CPU LOOP
 //          ALU FUNCTIONALITY LISTED IN ALU-

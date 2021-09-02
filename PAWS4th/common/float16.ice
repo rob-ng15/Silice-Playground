@@ -591,6 +591,7 @@ algorithm dofloatdivide(
                 quotient[bit,1] = bitresult;
                 bit = bit - 1;
             }
+            while( quotient[22,2] != 0 ) { quotient = quotient >> 1; }
         }
     }
 }

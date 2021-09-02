@@ -24,6 +24,7 @@
 // SOFTWARE.
 //
 // Donated to Silice by @sylefeb
+// MIT license, see LICENSE_MIT in Silice repo root
 //
 // Parameters for calculations: ( 32 bit float { sign, exponent, mantissa } format )
 // addsub, multiply and divide a and b ( as floating point numbers ), addsub flag == 0 for add, == 1 for sub
@@ -591,7 +592,7 @@ algorithm dofloatdivide(
     uint1   bitresult <:: __unsigned(temporary) >= __unsigned(sigB);
     uint6   bit(63);
 
-    busy := start | ( bit != 63 ); // | ( quotient[48,2] != 0 );
+    busy := start | ( bit != 63 ) | ( quotient[48,2] != 0 );
     while(1) {
         // FIND QUOTIENT AND ENSURE 48 BIT FRACTION ( ie BITS 48 and 49 clear )
         if( start ) {
@@ -601,6 +602,7 @@ algorithm dofloatdivide(
                 quotient[bit,1] = bitresult;
                 bit = bit - 1;
             }
+            while( quotient[48,2] != 00 ) { quotient = quotient >> 1; }
         }
     }
 }

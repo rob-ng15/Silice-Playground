@@ -405,7 +405,8 @@ void bitmap_scrollwrap( unsigned char action ) {
 unsigned char __last_mode = 0xff, __last_colour = 0xff;
 void gpu_dither( unsigned char mode, unsigned char colour ) {
     if( ~( ( mode == __last_mode ) && ( colour == __last_colour ) ) ) {
-        wait_gpu_finished();
+        wait_gpu();
+        //wait_gpu_finished();
         *GPU_COLOUR_ALT = colour;
         *GPU_DITHERMODE = mode;
         __last_mode = mode; __last_colour = colour;
@@ -414,7 +415,8 @@ void gpu_dither( unsigned char mode, unsigned char colour ) {
 
 // SET GPU CROPPING RECTANGLE
 void gpu_crop( unsigned short left, unsigned short top, unsigned short right, unsigned short bottom ) {
-    wait_gpu_finished();
+    //wait_gpu_finished();
+    wait_gpu();
     *CROP_LEFT = left;
     *CROP_RIGHT = right;
     *CROP_TOP = top;
@@ -443,7 +445,7 @@ void gpu_line( unsigned char colour, short x1, short y1, short x2, short y2 ) {
 }
 
 // DRAW A LINE FROM (x1,y1) to (x2,y2) in colour - uses Bresenham's Line Drawing Algorithm - pixel width
-void gpu_wideline( unsigned char colour, short x1, short y1, short x2, short y2, unsigned short width ) {
+void gpu_wideline( unsigned char colour, short x1, short y1, short x2, short y2, unsigned char width ) {
     if( width != 0 ) {
         *GPU_COLOUR = colour;
         *GPU_X = x1;

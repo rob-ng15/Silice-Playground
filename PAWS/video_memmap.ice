@@ -674,6 +674,9 @@ algorithm bitmap_memmap(
     // LATCH MEMORYWRITE
     uint1   LATCHmemoryWrite = uninitialized;
 
+    // 50MHz GPU OPERATION
+    gpu_write := 0;  pb_newpixel := 0; draw_vector := 0;
+
     always {
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
@@ -739,9 +742,9 @@ algorithm bitmap_memmap(
             }
             case 2b00: {
                 bitmap_write_offset = 0;
-                gpu_write = 0;
-                pb_newpixel = 0;
-                draw_vector = 0;
+                // 25MHz GPU OPERATION
+                //gpu_write = 0;  pb_newpixel = 0; draw_vector = 0;
+
             }
             default: {}
         }
