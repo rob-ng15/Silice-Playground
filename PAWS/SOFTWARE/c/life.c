@@ -21,8 +21,8 @@ void show( void ) {
             gpu_rectangle( BLACK, x * SIZE, y * SIZE, x * SIZE + (SIZE-1), y * SIZE + (SIZE-1) );
 
     if( !(systemclock() & 0xf ) ) {
-            gpu_printf_centre( WHITE, 160, 2, 0, 0, "Press FIRE 1 to RESTART" );
-            gpu_printf_centre( WHITE, 160, 230, 0, 0, "Press FIRE 2 to EXIT" );
+            gpu_print_centre( WHITE, 160, 2, 0, 0, "Press FIRE 1 to RESTART" );
+            gpu_print_centre( WHITE, 160, 230, 0, 0, "Press FIRE 2 to EXIT" );
     }
 
     // SWITCH THE FRAMEBUFFER

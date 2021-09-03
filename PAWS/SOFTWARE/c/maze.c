@@ -810,8 +810,8 @@ int main( void ) {
 
         levelselected = 0;
         do {
-            tpu_printf_centre( 57, TRANSPARENT, YELLOW, 1, "Select Level" );
-            tpu_printf_centre( 58, TRANSPARENT, YELLOW, 0, "Increase/Decrease by LEFT/RIGHT - Select by FIRE" );
+            tpu_print_centre( 57, TRANSPARENT, YELLOW, 1, "Select Level" );
+            tpu_print_centre( 58, TRANSPARENT, YELLOW, 0, "Increase/Decrease by LEFT/RIGHT - Select by FIRE" );
             tpu_set( 0, 59, TRANSPARENT, BLACK ); tpu_printf( 1, "Level: %3d", level );
             tpu_set( 60, 59, TRANSPARENT, BLACK ); tpu_printf( 1, "Size: %5d x %5d", levelwidths[level], levelheights[level] );
 
@@ -865,7 +865,7 @@ int main( void ) {
             level = ( level < MAXLEVEL ) ? level + 1 : MAXLEVEL;
         }
 
-        tpu_printf_centre( 58, TRANSPARENT, GREEN, 1, "Press FIRE to restart!" ); while( ( get_buttons() & 2 ) == 0 );
-        tpu_printf_centre( 58, TRANSPARENT, PURPLE, 0, "Release FIRE!" ); while( get_buttons() & 2  );
+        tpu_print_centre( 58, TRANSPARENT, GREEN, 1, "Press FIRE to restart!" ); while( ( get_buttons() & 2 ) == 0 );
+        tpu_print_centre( 58, TRANSPARENT, PURPLE, 0, "Release FIRE!" ); while( get_buttons() & 2  );
     }
 }

@@ -102,6 +102,9 @@ module top(
         endcase
     end
 
+    wire clk_usb;
+    pll USBCLK ( .clock_in( clk ), .clock_usb( clk_usb ) );
+
     SB_SPRAM256KA spram00 (
         .ADDRESS(sram_addr),
         .DATAIN(sram_data_in),
@@ -175,7 +178,6 @@ module top(
     wire run_main;
     assign run_main = 1'b1;
 
-
     // USB_ACM UART CODE
     // Generate reset signal
     reg [5:0] reset_cnt = 0;
@@ -215,7 +217,7 @@ module top(
 
 
     M_main __main(
-    .clock        (clk),
+    .clock        (clk_usb),
     .reset        (RST_q[0]),
     .out_rgbLED   ({rgbR, rgbG, rgbB}),
     .in_buttons   ({user_4, user_3, user_2, user_1}),

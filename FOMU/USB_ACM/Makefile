@@ -15,7 +15,8 @@ SOURCES = \
 	$(RTL_USB_DIR)/usb_serial_ctrl_ep.v \
 	$(RTL_USB_DIR)/usb_uart_bridge_ep.v \
 	$(RTL_USB_DIR)/usb_uart_core.v \
-	$(RTL_USB_DIR)/usb_uart_i40.v
+	$(RTL_USB_DIR)/usb_uart_i40.v \
+	pll.v
 
 PIN_DEF = fomu-hacker.pcf
 

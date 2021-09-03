@@ -93,6 +93,10 @@ extern void gpu_printf( unsigned char, short, short, unsigned char, unsigned cha
 extern void gpu_printf_centre( unsigned char, short, short, unsigned char, unsigned char, const char *,...  );
 extern void gpu_printf_vertical( unsigned char, short, short, unsigned char, unsigned char, const char *,...  );
 extern void gpu_printf_centre_vertical( unsigned char, short, short, unsigned char, unsigned char, const char *,...  );
+extern void gpu_print( unsigned char, short, short, unsigned char, unsigned char, char * );
+extern void gpu_print_centre( unsigned char, short, short, unsigned char, unsigned char, char * );
+extern void gpu_print_vertical( unsigned char, short, short, unsigned char, unsigned char, char * );
+extern void gpu_print_centre_vertical( unsigned char, short, short, unsigned char, unsigned char, char * );
 extern void draw_vector_block( unsigned char, unsigned char, short, short, unsigned char, unsigned char );
 extern void set_vector_vertex( unsigned char, unsigned char , unsigned char, char, char );
 extern void bitmap_scrollwrap( unsigned char );
@@ -130,6 +134,8 @@ extern void tpu_output_character( short );
 extern void tpu_outputstring( char, char * );
 extern void tpu_printf( char, const char *,... );
 extern void tpu_printf_centre( unsigned char, unsigned char, unsigned char, char, const char *,... );
+extern void tpu_print( char, char * );
+extern void tpu_print_centre( unsigned char, unsigned char, unsigned char, char, char * );
 
 // IMAGE DECODERS
 extern void netppm_display( unsigned char *, unsigned char );

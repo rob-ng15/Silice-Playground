@@ -599,6 +599,18 @@ void gpu_quadrilateral( unsigned char colour, short x1, short y1, short x2, shor
 }
 
 // OUTPUT A STRING TO THE GPU
+void gpu_print( unsigned char colour, short x, short y, unsigned char size, unsigned char action, char *s ) {
+    while( *s ) {
+        gpu_character_blit( colour, x, y, *s++, size, action );
+        x = x + ( 8 << size );
+    }
+}
+void gpu_print_vertical( unsigned char colour, short x, short y, unsigned char size, unsigned char action, char *s ) {
+    while( *s ) {
+        gpu_character_blit( colour, x, y, *s++, size, action );
+        y = y - ( 8 << size );
+    }
+}
 void gpu_printf( unsigned char colour, short x, short y, unsigned char size, unsigned char action, const char *fmt,... ) {
     char *buffer = (char *)0x1000;
     va_list args;
@@ -654,7 +666,19 @@ void gpu_printf_centre( unsigned char colour, short x, short y, unsigned char si
         y = y - ( 8 << size );
     }
 }
-
+void gpu_print_centre( unsigned char colour, short x, short y, unsigned char size, unsigned char action, char *s ) {
+    x = x - ( ( strlen( s ) * ( 8 << size ) ) /2 );
+    while( *s ) {
+        gpu_character_blit( colour, x, y, *s++, size, action );
+        x = x + ( 8 << size );
+    }
+}void gpu_print_centre_vertical( unsigned char colour, short x, short y, unsigned char size, unsigned char action, char *s ) {
+    y = y + ( ( strlen( s ) * ( 8 << size ) ) /2 );
+    while( *s ) {
+        gpu_character_blit( colour, x, y, *s++, size, action );
+        y = y - ( 8 << size );
+    }
+}
 // COPY A ARRGGBB BITMAP STORED IN MEMORY TO THE BITMAP USING THE PIXEL BLOCK
 void gpu_pixelblock7( short x,  short y, unsigned short w, unsigned short h, unsigned char transparent, unsigned char *buffer ) {
     unsigned char *maxbufferpos = buffer + ( w * h );
@@ -1067,6 +1091,9 @@ void tpu_outputstring( char attribute, char *s ) {
         s++;
     }
 }
+void tpu_print( char attribute, char *buffer ) {
+    tpu_outputstring( attribute, buffer );
+}
 void tpu_printf( char attribute, const char *fmt,... ) {
     char *buffer = (char *)0x1000;
     va_list args;
@@ -1074,6 +1101,11 @@ void tpu_printf( char attribute, const char *fmt,... ) {
     vsnprintf( buffer, 1023, fmt, args);
     va_end(args);
 
+    tpu_outputstring( attribute, buffer );
+}
+void tpu_print_centre( unsigned char y, unsigned char background, unsigned char foreground,  char attribute, char *buffer  ) {
+    tpu_clearline( y );
+    tpu_set( 40 - ( strlen(buffer) >> 1 ), y, background, foreground );
     tpu_outputstring( attribute, buffer );
 }
 void tpu_printf_centre( unsigned char y, unsigned char background, unsigned char foreground,  char attribute, const char *fmt,...  ) {

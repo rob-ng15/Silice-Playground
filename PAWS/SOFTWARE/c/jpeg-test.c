@@ -9,7 +9,7 @@ int main( void ) {
     unsigned char *imagebuffer, colour;
 
     printf( "JPEG DECODER:\n" );
-    tpu_printf_centre( 0, TRANSPARENT, WHITE, 1, "DECODING JPEG" );
+    tpu_print_centre( 0, TRANSPARENT, WHITE, 1, "DECODING JPEG" );
 
     // JPEG LIBRARY
     njInit(); printf( "    njInit()\n");
@@ -23,8 +23,8 @@ int main( void ) {
     counter = 0;
     gpu_pixelblock24( 0, 0, width, height, imagebuffer );
 
-    tpu_printf_centre( 0, TRANSPARENT, WHITE, 0, "" );
-    tpu_printf_centre( 29, TRANSPARENT, WHITE, 1, "FINISHED" );
+    tpu_print_centre( 0, TRANSPARENT, WHITE, 0, "" );
+    tpu_print_centre( 29, TRANSPARENT, WHITE, 1, "FINISHED" );
 
     sleep( 4000, 0 );
 }

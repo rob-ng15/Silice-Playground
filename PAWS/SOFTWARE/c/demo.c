@@ -694,7 +694,7 @@ void displayreset( void ) {
 // DISPLAY COLOUR CHART
 void colourtable( void ) {
     displayreset();
-    tpu_printf_centre( 59, TRANSPARENT, WHITE, 1, "Colour Test" );
+    tpu_print_centre( 59, TRANSPARENT, WHITE, 1, "Colour Test" );
 
     uint8 colour = 0;
     for( uint16 y = 0; y < 8; y++ ) {
@@ -710,17 +710,17 @@ void colourtable( void ) {
 // DISPLAY THE BACKGROUNDS
 void backgrounddemo( void ) {
     displayreset();
-    tpu_printf_centre( 58, TRANSPARENT, WHITE, 1, "Background Generator Test" );
+    tpu_print_centre( 58, TRANSPARENT, WHITE, 1, "Background Generator Test" );
 
     for( uint8 bkg = 0; bkg < 16; bkg++ ) {
         set_background( PURPLE, ORANGE, bkg );
-        tpu_printf_centre( 59, TRANSPARENT, WHITE, 0, backgroundnames[bkg] );
+        tpu_print_centre( 59, TRANSPARENT, WHITE, 0, backgroundnames[bkg] );
         sleep( 1000, 0 );
     }
 
     displayreset();
 
-    tpu_printf_centre( 59, TRANSPARENT, WHITE, 1, "COPPER Rainbow Stars Test" );
+    tpu_print_centre( 59, TRANSPARENT, WHITE, 1, "COPPER Rainbow Stars Test" );
     copper_startstop( 0 );
     copper_program( 0, COPPER_WAIT_VBLANK, 7, 0, BKG_SNOW, BLACK, WHITE );
     copper_program( 1, COPPER_WAIT_X, 7, 0, BKG_SNOW, BLACK, WHITE );
@@ -743,7 +743,7 @@ void backgrounddemo( void ) {
     copper_startstop( 1 );
     sleep( 2000, 0 );
 
-    tpu_printf_centre( 59, TRANSPARENT, WHITE, 1, "COPPER Rainbow Stars Test 2 - MAY NOT WORK" );
+    tpu_print_centre( 59, TRANSPARENT, WHITE, 1, "COPPER Rainbow Stars Test 2 - MAY NOT WORK" );
     copper_startstop( 0 );
     copper_program( 0, COPPER_WAIT_VBLANK, 7, 0, BKG_SNOW, BLACK, WHITE );
     copper_program( 1, COPPER_WAIT_X, 7, 0, BKG_SNOW, BLACK, WHITE );
@@ -761,7 +761,7 @@ void backgrounddemo( void ) {
 void tilemapdemo( void ) {
     displayreset();
     set_background( WHITE, DKBLUE, BKG_SNOW );
-    tpu_printf_centre( 59, TRANSPARENT, WHITE, 1, "Tilemap Scroll With Wrap Test" );
+    tpu_print_centre( 59, TRANSPARENT, WHITE, 1, "Tilemap Scroll With Wrap Test" );
 
     unsigned char x, y, count, colour;
     (void)tilemap_scrollwrapclear( LOWER_LAYER, 9 );
@@ -807,7 +807,7 @@ void gpudemo( void ) {
 
     // POINTS
     gpu_cs();
-    tpu_printf_centre( 59, TRANSPARENT, WHITE, 1, "GPU Plot Pixels Test" );
+    tpu_print_centre( 59, TRANSPARENT, WHITE, 1, "GPU Plot Pixels Test" );
     for( i = 0; i < 2048; i++ ) {
         gpu_pixel( rng( 64 ), rng( 320 ), rng( 240 ) );
     }
@@ -815,7 +815,7 @@ void gpudemo( void ) {
 
     // LINES
     gpu_cs();
-    tpu_printf_centre( 59, TRANSPARENT, WHITE, 1, "GPU Line Drawing Test" );
+    tpu_print_centre( 59, TRANSPARENT, WHITE, 1, "GPU Line Drawing Test" );
     for( i = 0; i < 1024; i++ ) {
         gpu_line( rng( 64 ), rng( 320 ), rng( 240 ), rng( 320 ), rng( 240 ) );
     }
@@ -823,7 +823,7 @@ void gpudemo( void ) {
 
     // WIDE LINES
     gpu_cs();
-    tpu_printf_centre( 59, TRANSPARENT, WHITE, 1, "GPU Wide Line Drawing Test" );
+    tpu_print_centre( 59, TRANSPARENT, WHITE, 1, "GPU Wide Line Drawing Test" );
     for( i = 0; i < 1024; i++ ) {
         gpu_wideline( rng( 64 ), rng( 320 ), rng( 240 ), rng( 320 ), rng( 240 ), rng(8) + 1 );
     }
@@ -831,7 +831,7 @@ void gpudemo( void ) {
 
     // RECTANGLES
     gpu_cs();
-    tpu_printf_centre( 59, TRANSPARENT, WHITE, 1, "GPU Rectangle Drawing Test - Solid & Dither" );
+    tpu_print_centre( 59, TRANSPARENT, WHITE, 1, "GPU Rectangle Drawing Test - Solid & Dither" );
     for( i = 0; i < 1024; i++ ) {
         gpu_dither( rng(16), rng( 64 ) );
         gpu_rectangle( rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng( 352 ) - 16, rng( 256 ) - 8 );
@@ -841,7 +841,7 @@ void gpudemo( void ) {
 
     // CIRCLES
     gpu_cs();
-    tpu_printf_centre( 59, TRANSPARENT, WHITE, 1, "GPU Circle Drawing Test - Solid & Dither" );
+    tpu_print_centre( 59, TRANSPARENT, WHITE, 1, "GPU Circle Drawing Test - Solid & Dither" );
     for( i = 0; i < 1024; i++ ) {
         gpu_dither( rng(16), rng( 64 ) );
         gpu_circle( rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng( 32 ), 255, rng( 1 ) );
@@ -851,7 +851,7 @@ void gpudemo( void ) {
 
     // TRIANGLES
     gpu_cs();
-    tpu_printf_centre( 59, TRANSPARENT, WHITE, 1, "GPU Triangle Drawing Test - Solid & Dither" );
+    tpu_print_centre( 59, TRANSPARENT, WHITE, 1, "GPU Triangle Drawing Test - Solid & Dither" );
     for( i = 0; i < 1024; i++ ) {
         x1 = rng( 352 ) - 16; y1 = rng( 256 ) - 8;
         x2 = x1 + rng( 100 ); y2 = y1 + rng( 100 );
@@ -868,7 +868,7 @@ void gpudemo( void ) {
         set_blitter_bitmap( i, &blitter_bitmaps[ 16 * i ] );
     }
     gpu_cs();
-    tpu_printf_centre( 59, TRANSPARENT, WHITE, 1, "GPU Blitter Test - REFLECT & ROTATE" );
+    tpu_print_centre( 59, TRANSPARENT, WHITE, 1, "GPU Blitter Test - REFLECT & ROTATE" );
     for( i = 0; i < 128; i++ ) {
         gpu_blit( rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng( 6 ), rng( 4 ), rng(8) );
     }
@@ -876,7 +876,7 @@ void gpudemo( void ) {
 
     // CHARACTER BLITTER
     gpu_cs();
-    tpu_printf_centre( 59, TRANSPARENT, WHITE, 1, "GPU Character Blitter Test - REFLECT & ROTATE" );
+    tpu_print_centre( 59, TRANSPARENT, WHITE, 1, "GPU Character Blitter Test - REFLECT & ROTATE" );
     for( i = 0; i < 128; i++ ) {
         gpu_character_blit( rng( 64 ), rng( 352 ) - 16, rng( 256 ) - 8, rng( 256 ), rng( 4 ), rng(8) );
     }
@@ -919,7 +919,7 @@ void gpudemo( void ) {
         }
     }
     gpu_cs();
-    tpu_printf_centre( 59, TRANSPARENT, WHITE, 1, "GPU Colour Blitter Test - REFLECT & ROTATE" );
+    tpu_print_centre( 59, TRANSPARENT, WHITE, 1, "GPU Colour Blitter Test - REFLECT & ROTATE" );
     for( i = 0; i < 128; i++ ) {
         gpu_colourblit( rng( 352 ) - 16, rng( 256 ) - 8, rng( 9 ), rng( 4 ), rng(8) );
     }
@@ -927,7 +927,7 @@ void gpudemo( void ) {
 
     // VECTOR TEST
     gpu_cs();
-    tpu_printf_centre( 59, TRANSPARENT, WHITE, 1, "GPU Vector Draw Test - REFLECT & ROTATE" );
+    tpu_print_centre( 59, TRANSPARENT, WHITE, 1, "GPU Vector Draw Test - REFLECT & ROTATE" );
     set_vector_vertex( 0, 0, 1, 0, 0 );
     set_vector_vertex( 0, 1, 1, 5, 10 );
     set_vector_vertex( 0, 2, 1, 0, 6 );
@@ -946,7 +946,7 @@ void ditherdemo( void ) {
     unsigned short x, y;
 
     displayreset();
-    tpu_printf_centre( 59, TRANSPARENT, WHITE, 1, "GPU Dither Modes" );
+    tpu_print_centre( 59, TRANSPARENT, WHITE, 1, "GPU Dither Modes" );
 
     for( y = 0; y < 4; y++ ) {
         for( x = 0; x < 4; x++ ) {
@@ -969,7 +969,7 @@ void spritedemo( void ) {
     unsigned short trebleposition = 0, updateflag;
 
     displayreset();
-    tpu_printf_centre( 59, TRANSPARENT, WHITE, 1, "SPRITE Demo" );
+    tpu_print_centre( 59, TRANSPARENT, WHITE, 1, "SPRITE Demo" );
 
     for( unsigned char tile_number = 0; tile_number < 3; tile_number++ ) {
         set_tilemap_bitmap( LOWER_LAYER, tile_number + 1, &pacman_maze_bitmaps[ tile_number * 16 ] );
@@ -1138,11 +1138,11 @@ void floatdemo() {
     float scale = 1;
 
     displayreset();
-    tpu_printf_centre( 58, TRANSPARENT, WHITE, 1, "SOFTWARE VECTOR TEST" );
+    tpu_print_centre( 58, TRANSPARENT, WHITE, 1, "SOFTWARE VECTOR TEST" );
     if( CSRisa() & 0b100000 ) {
-        tpu_printf_centre( 59, TRANSPARENT, WHITE, 0, "FLOATING POINT UNIT AVAILABLE" );
+        tpu_print_centre( 59, TRANSPARENT, WHITE, 0, "FLOATING POINT UNIT AVAILABLE" );
     } else {
-        tpu_printf_centre( 59, TRANSPARENT, WHITE, 0, "SOFT FLOAT ONLY" );
+        tpu_print_centre( 59, TRANSPARENT, WHITE, 0, "SOFT FLOAT ONLY" );
     }
     for( short angle = 0; angle < 360; angle += 5 ) {
         DrawVectorShape2D( colour, Square, 4, 160, 120, angle, scale );

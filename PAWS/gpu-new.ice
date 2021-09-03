@@ -847,7 +847,7 @@ algorithm drawcircle(
         if( start ) {
             busy = 1;
             active_x = 0; active_y = radius; count = radius; numerator = start_numerator;
-            min_count = (-1); PIXELOUTPUT = 8b000000001;
+            min_count = -1; PIXELOUTPUT = 8b000000001;
             while( active_y >= active_x ) {
                 if( count != min_count ) {
                     if( PIXELOUTPUT != 0 ) {
@@ -1021,7 +1021,7 @@ algorithm drawtriangle(
     int16   py = uninitialized;
     uint1   dx = uninitialized;
 
-    bitmap_x_write := px; bitmap_y_write := py; bitmap_write := busy & inTriangle;
+    bitmap_x_write := px; bitmap_y_write := py; bitmap_write := 0;
 
     while(1) {
         if( start ) {
@@ -1029,7 +1029,7 @@ algorithm drawtriangle(
             dx = 1; beenInTriangle = 0; px = min_x; py = min_y;
             while( py <= max_y ) {
                 beenInTriangle = inTriangle | beenInTriangle;
-                //bitmap_write = inTriangle;
+                bitmap_write = inTriangle;
                 EXIT = ( beenInTriangle & ~inTriangle );
                 if( EXIT ) {
                     // Exited the triangle, move to the next line
@@ -1175,16 +1175,6 @@ algorithm blit(
     simple_dualport_bram_port0 blit1tilemap,
     simple_dualport_bram_port0 characterGenerator8x8,
 
-    // For setting blit1 tile bitmaps
-    input   uint5   blit1_writer_tile,
-    input   uint4   blit1_writer_line,
-    input   uint16  blit1_writer_bitmap,
-
-    // For setting character generator bitmaps
-    input   uint8   character_writer_character,
-    input   uint3   character_writer_line,
-    input   uint8   character_writer_bitmap,
-
     input   int16   x,
     input   int16   y,
     input   uint8   tile,
@@ -1213,22 +1203,22 @@ algorithm blit(
 
     // tile and character bitmap addresses
     // tile bitmap and charactermap addresses - handling rotation or reflection - find y and x positions, then concert to address
-    uint4   yinblittile <:: action[2,1] ? ( action[0,2] == 2b00 ) ? py[0,4] :
+    uint4   yinblittile <: action[2,1] ? ( action[0,2] == 2b00 ) ? py[0,4] :
                                         ( action[0,2] == 2b01 ) ? px[0,4] :
                                         ( action[0,2] == 2b10 ) ? 4b1111 - py[0,4] :
                                         4b1111 - px[0,4] :
                                         action[1,1] ? 4b1111 - py[0,4] :  py[0,4];
-    uint4   xinblittile <:: action[2,1] ?  ( action[0,2] == 2b00 ) ? px[0,4] :
+    uint4   xinblittile <: action[2,1] ?  ( action[0,2] == 2b00 ) ? px[0,4] :
                                         ( action[0,2] == 2b01 ) ? 4b1111 - py[0,4] :
                                         ( action[0,2] == 2b10 ) ? 4b1111 - px[0,4] :
                                         py[0,4] :
                                         action[0,1] ? 4b1111 - px[0,4] :  px[0,4];
-    uint3   yinchartile <:: action[2,1] ? ( action[0,2] == 2b00 ) ? py[0,3] :
+    uint3   yinchartile <: action[2,1] ? ( action[0,2] == 2b00 ) ? py[0,3] :
                                         ( action[0,2] == 2b01 ) ? px[0,3] :
                                         ( action[0,2] == 2b10 ) ? 3b111 - py[0,3] :
                                         3b111 - px[0,3] :
                                         action[1,1] ? 3b111 - py[0,3] :  py[0,3];
-    uint3   xinchartile <:: action[2,1] ?  ( action[0,2] == 2b00 ) ? px[0,3] :
+    uint3   xinchartile <: action[2,1] ?  ( action[0,2] == 2b00 ) ? px[0,3] :
                                         ( action[0,2] == 2b01 ) ? 3b111 - py[0,3] :
                                         ( action[0,2] == 2b10 ) ? 3b111 - px[0,3] :
                                         py[0,3] :
@@ -1241,25 +1231,35 @@ algorithm blit(
     while(1) {
         if( start ) {
             busy = 1;
-            px = 0; py = 0; y2 = 0; x2 = 0;
-            ( x1, y1 ) = copycoordinates( x, y );
-            while( py != max_pixels ) {
-                if( px != max_pixels ) {
-                    if( y2 != maxcount ) {
-                        if( x2 != maxcount ) {
+            px = 0; py = 0; ( x1, y1 ) = copycoordinates( x, y );
+            switch( scale ) {
+                case 0: {
+                    while( py != max_pixels ) {
+                        px = 0;
+                        while( px != max_pixels ) {
                             bitmap_write = tilecharacter ? blit1tilemap.rdata0[4b1111 - xinblittile, 1] : characterGenerator8x8.rdata0[7 - xinchartile, 1];
-                            x2 = x2 + 1;
-                        } else {
-                            y2 = y2 + 1;
-                            x2 = 0;
+                            px = px + 1;
                         }
-                    } else {
-                        px = px + 1;
-                        y2 = 0;
+                        py = py + 1;
                     }
-                } else {
-                    px = 0;
-                    py = py + 1;
+                }
+                default: {
+                    while( py != max_pixels ) {
+                        y2 = 0;
+                        while( y2 != maxcount ) {
+                            px = 0;
+                            while( px != max_pixels ) {
+                                x2 = 0;
+                                while( x2 != maxcount ) {
+                                    bitmap_write = tilecharacter ? blit1tilemap.rdata0[4b1111 - xinblittile, 1] : characterGenerator8x8.rdata0[7 - xinchartile, 1];
+                                    x2 = x2 + 1;
+                                }
+                                px = px + 1;
+                            }
+                            y2 = y2 + 1;
+                        }
+                        py = py + 1;
+                    }
                 }
             }
             busy = 0;
@@ -1314,12 +1314,12 @@ algorithm colourblit(
     uint5   maxcount <:: ( 1 << scale );
 
     // tile bitmap addresses - handling rotation or reflection - find y and x positions, then concert to address
-    uint4   yintile <:: action[2,1] ? ( action[0,2] == 2b00 ) ? py[0,4] :
+    uint4   yintile <: action[2,1] ? ( action[0,2] == 2b00 ) ? py[0,4] :
                                         ( action[0,2] == 2b01 ) ? px[0,4] :
                                         ( action[0,2] == 2b10 ) ? 4b1111 - py[0,4] :
                                         4b1111 - px[0,4] :
                                         action[1,1] ? 4b1111 - py[0,4] :  py[0,4];
-    uint4   xintile <:: action[2,1] ?  ( action[0,2] == 2b00 ) ? px[0,4] :
+    uint4   xintile <: action[2,1] ?  ( action[0,2] == 2b00 ) ? px[0,4] :
                                         ( action[0,2] == 2b01 ) ? 4b1111 - py[0,4] :
                                         ( action[0,2] == 2b10 ) ? 4b1111 - px[0,4] :
                                         py[0,4] :
@@ -1334,26 +1334,38 @@ algorithm colourblit(
     while(1) {
         if( start ) {
             busy = 1;
-            px = 0; py = 0; y2 = 0; x2 = 0;
+            px = 0;
+            py = 0;
             ( x1, y1 ) = copycoordinates( x, y );
-            while( py != 16 ) {
-                if( px != 16 ) {
-                    if( y2 != maxcount ) {
-                        if( x2 != maxcount ) {
+            switch( scale ) {
+                case 0: {
+                    while( py != 16 ) {
+                        while( px != 16 ) {
                             // OUTPUT IF NOT TRANSPARENT
                             bitmap_write = ~colourblittilemap.rdata0[6,1];
-                            x2 = x2 + 1;
-                        } else {
-                            y2 = y2 + 1;
-                            x2 = 0;
+                            px = px + 1;
                         }
-                    } else {
-                        px = px + 1;
-                        y2 = 0;
+                        py = py + 1;
                     }
-                } else {
-                    px = 0;
-                    py = py + 1;
+                }
+                case 1: {
+                    while( py != 16 ) {
+                        y2 = 0;
+                        while( y2 != maxcount ) {
+                            while( px != 16 ) {
+                                x2 = 0;
+                                while( x2 != maxcount ) {
+                                    // OUTPUT IF NOT TRANSPARENT
+                                    bitmap_write = ~colourblittilemap.rdata0[6,1];
+                                    x2 = x2 + 1;
+                                }
+                                px = px + 1;
+                            }
+                            y2 = y2 + 1;
+                            px = 0;
+                        }
+                        py = py + 1;
+                    }
                 }
             }
             busy = 0;

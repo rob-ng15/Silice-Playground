@@ -1021,7 +1021,7 @@ algorithm drawtriangle(
     int16   py = uninitialized;
     uint1   dx = uninitialized;
 
-    bitmap_x_write := px; bitmap_y_write := py; bitmap_write := busy & inTriangle;
+    bitmap_x_write := px; bitmap_y_write := py; bitmap_write := 0;
 
     while(1) {
         if( start ) {
@@ -1029,7 +1029,7 @@ algorithm drawtriangle(
             dx = 1; beenInTriangle = 0; px = min_x; py = min_y;
             while( py <= max_y ) {
                 beenInTriangle = inTriangle | beenInTriangle;
-                //bitmap_write = inTriangle;
+                bitmap_write = inTriangle;
                 EXIT = ( beenInTriangle & ~inTriangle );
                 if( EXIT ) {
                     // Exited the triangle, move to the next line
@@ -1249,6 +1249,7 @@ algorithm blit(
                     while( px != max_pixels ) {
                         x2 = 0;
                         while( x2 != maxcount ) {
+                            ++:
                             bitmap_write = tilecharacter ? blit1tilemap.rdata0[4b1111 - xinblittile, 1] : characterGenerator8x8.rdata0[7 - xinchartile, 1];
                             x2 = x2 + 1;
                         }
@@ -1340,6 +1341,7 @@ algorithm colourblit(
                             x2 = 0;
                             while( x2 != maxcount ) {
                                 // OUTPUT IF NOT TRANSPARENT
+                                ++:
                                 bitmap_write = ~colourblittilemap.rdata0[6,1];
                                 x2 = x2 + 1;
                             }

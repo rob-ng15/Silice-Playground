@@ -12,9 +12,9 @@ void smtthread( void ) {
 int main( void ) {
     INITIALISEMEMORY();
 
-    tpu_printf_centre( 57, TRANSPARENT, GREEN, 1, "SMT Test" );
-    tpu_printf_centre( 58, TRANSPARENT, YELLOW, 0, "I'm Just Sitting Here Doing Nothing" );
-    tpu_printf_centre( 59, TRANSPARENT, BLUE, 0, "The SMT Thread Is Drawing Rectangles!" );
+    tpu_print_centre( 57, TRANSPARENT, GREEN, 1, "SMT Test" );
+    tpu_print_centre( 58, TRANSPARENT, YELLOW, 0, "I'm Just Sitting Here Doing Nothing" );
+    tpu_print_centre( 59, TRANSPARENT, BLUE, 0, "The SMT Thread Is Drawing Rectangles!" );
     SMTSTART( (unsigned int )smtthread );
 
     for( int loop = 0; loop < 32; loop++ ) {

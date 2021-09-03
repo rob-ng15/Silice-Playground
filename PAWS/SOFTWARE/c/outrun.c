@@ -522,8 +522,8 @@ int main() {
         draw();
         update();
         if( !(systemclock()&15) ) {
-            tpu_printf_centre( 1, TRANSPARENT, WHITE, 1, "Based upon https://www.lexaloffle.com/bbs/?tid=35767" );
-            tpu_printf_centre( 2, TRANSPARENT, WHITE, 1, "Written by @tommulgrew" );
+            tpu_print_centre( 1, TRANSPARENT, WHITE, 1, "Based upon https://www.lexaloffle.com/bbs/?tid=35767" );
+            tpu_print_centre( 2, TRANSPARENT, WHITE, 1, "Written by @tommulgrew" );
         } else {
             if( systemclock()&3 ) tpu_cs();
         }
