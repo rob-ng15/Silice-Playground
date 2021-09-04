@@ -273,56 +273,6 @@ algorithm floattouint(
     }
 }
 
-// ADDSUB ADD/SUBTRACT ( addsub == 0 add, == 1 subtract) TWO FLOATING POINT NUMBERS
-algorithm equaliseexpaddsub(
-    input   int10   expA,
-    input   uint48  sigA,
-    input   int10   expB,
-    input   uint48  sigB,
-    output  int10   newexpA,
-    output  uint48  newsigA,
-    output  int10   newexpB,
-    output  uint48  newsigB
-) <autorun> {
-    always {
-        // EQUALISE THE EXPONENTS BY SHIFT SMALLER NUMBER FRACTION PART TO THE RIGHT
-        switch( expA < expB ) {
-            case 1b1: { newsigA = sigA >> ( expB - expA ); newexpA = expB; newsigB = sigB; newexpB = expB; }
-            case 1b0: { newsigB = sigB >> ( expA - expB ); newexpB = expA; newsigA = sigA; newexpA = expA; }
-        }
-    }
-}
-algorithm dofloataddsub(
-    input   uint1   signA,
-    input   uint48  sigA,
-    input   uint1   signB,
-    input   uint48  sigB,
-    output  uint1   resultsign,
-    output  uint48  resultfraction
-) <autorun> {
-    uint48  sigAminussigB <: sigA - sigB;
-    uint48  sigBminussigA <: sigB - sigA;
-
-    always {
-        // PERFORM ADDITION HANDLING SIGNS
-        switch( { signA, signB } ) {
-            case 2b01: {
-                switch( sigB > sigA ) {
-                    case 1: { resultsign = 1; resultfraction = sigBminussigA; }
-                    case 0: { resultsign = 0; resultfraction = sigAminussigB; }
-                }
-            }
-            case 2b10: {
-                switch(  sigA > sigB ) {
-                    case 1: { resultsign = 1; resultfraction = sigAminussigB; }
-                    case 0: { resultsign = 0; resultfraction = sigBminussigA; }
-                }
-            }
-            default: { resultsign = signA; resultfraction = sigA + sigB; }
-        }
-    }
-}
-
 algorithm floataddsub(
     input   uint1   start,
     output  uint1   busy(0),
@@ -339,6 +289,10 @@ algorithm floataddsub(
     uint1   signB <: addsub ? ~b[31,1] : b[31,1];
     int10   expB <: fp32( b ).exponent - 127;
     uint48  sigB <: { 2b01, fp32(b).fraction, 23b0 };
+
+    // RESULTS FOR SUBTRACTIONS
+    uint48  sigAminussigB = uninitialised;
+    uint48  sigBminussigA = uninitialised;
 
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND INVALID ( INF - INF )
     uint1   IF <: ( aINF | bINF );
@@ -370,34 +324,16 @@ algorithm floataddsub(
         ZERO :> bZERO
     );
 
-    // EQUALISE THE EXPONENTS
+    // FRACTION AND EXPONENTS ONCE EQUALISED
     int10   eqexpA = uninitialised;
     uint48  eqsigA = uninitialised;
     int10   eqexpB = uninitialised;
     uint48  eqsigB = uninitialised;
-    equaliseexpaddsub EQUALISEEXP(
-        expA <: expA,
-        sigA <: sigA,
-        expB <: expB,
-        sigB <: sigB,
-        newexpA :> eqexpA,
-        newsigA :> eqsigA,
-        newexpB :> eqexpB,
-        newsigB :> eqsigB
-    );
 
-    // PERFORM THE ADDITION/SUBTRACION USING THE EQUALISED FRACTIONS, 1 IS ADDED TO THE EXPONENT IN CASE OF OVERFLOW - NORMALISING WILL ADJUST WHEN SHIFTING
+    // RESULT OF ADDITION/SUBTRACION USING THE EQUALISED FRACTIONS, 1 IS ADDED TO THE EXPONENT IN CASE OF OVERFLOW - NORMALISING WILL ADJUST WHEN SHIFTING
     uint1   resultsign = uninitialised;
-    int10   resultexp <: eqexpA + 1;
+    int10   resultexp = uninitialised;
     uint48  resultfraction = uninitialised;
-    dofloataddsub ADDSUB(
-        signA <: signA,
-        sigA <: eqsigA,
-        signB <: signB,
-        sigB <: eqsigB,
-        resultsign :> resultsign,
-        resultfraction :> resultfraction
-    );
 
     // NORMALISE THE RESULTING FRACTION AND ADJUST THE EXPONENT IF SMALLER ( ie, MSB is not 1 )
     int10   normalexp = uninitialised;
@@ -439,30 +375,51 @@ algorithm floataddsub(
         if( start ) {
             busy = 1;
             OF = 0; UF = 0;
-            ++: // ALLOW 2 CYCLES FOR EQUALISING EXPONENTS AND TO PERFORM THE ADDITION/SUBTRACTION
-            ++:
-            __display("");
-            __display("  a = { %b %b %b } INPUT",fp32( a ).sign,fp32( a ).exponent,fp32( a ).fraction);
-            __display("  b = { %b %b %b } INPUT",fp32( b ).sign,fp32( b ).exponent,fp32( b ).fraction);
-            __display("  IF = %b NN = %b",IF,NN);
-            __display("");
-            __display("  IF SUBTRACTION SWITCH SIGN OF B FROM %b TO %b",b[31,1],signB);
-            __display("  ADD HIDDEN 1 TO MANTISSA AND EXPAND TO 48 BITS, ALIGNED AT BIT 46, REMOVE BIAS FROM EXPONENT AND EXTEND TO 10 BITS");
-            __display("  a = { %b %10b %48b }",signA,expA,sigA);
-            __display("  b = { %b %10b %48b }",signB,expB,sigB);
-            __display("");
-            __display("  EQUALISE EXPONENTS (SHIFTING MANTISSA)");
-            __display("  a = { %b %b %b }",signA,eqexpA,eqsigA);
-            __display("  b = { %b %b %b }",signB,eqexpB,eqsigB);
-            __display("");
-            __display("  CALCULATING");
-            __display("  { %b %b %b } +",signA,eqexpA,eqsigA);
-            __display("  { %b %b %b }",signB,eqexpB,eqsigB);
-            __display(" ={ %b %b %b }",resultsign,resultexp,resultfraction);
-            __display("");
+            ++: // ALLOW 1 CYCLES FOR SETUP AND CLASSIFICATION
             switch( { IF | NN, aZERO | bZERO } ) {
                 case 2b00: {
-                    switch( ADDSUB.resultfraction ) {
+                    __display("");
+                    __display("  a = { %b %b %b } INPUT",fp32( a ).sign,fp32( a ).exponent,fp32( a ).fraction);
+                    __display("  b = { %b %b %b } INPUT",fp32( b ).sign,fp32( b ).exponent,fp32( b ).fraction);
+                    __display("  IF = %b NN = %b",IF,NN);
+                    __display("");
+                        __display("  IF SUBTRACTION SWITCH SIGN OF B FROM %b TO %b",b[31,1],signB);
+                    __display("  ADD HIDDEN 1 TO MANTISSA AND EXPAND TO 48 BITS, ALIGNED AT BIT 46, REMOVE BIAS FROM EXPONENT AND EXTEND TO 10 BITS");
+                    __display("  a = { %b %10b %48b }",signA,expA,sigA);
+                    __display("  b = { %b %10b %48b }",signB,expB,sigB);
+                    __display("");
+                    if( expA < expB ) {
+                        eqsigA = sigA >> ( expB - expA ); eqexpA = expB; eqsigB = sigB; eqexpB = expB;
+                    } else {
+                        eqsigB = sigB >> ( expA - expB ); eqexpB = expA; eqsigA = sigA; eqexpA = expA;
+                    }
+                    resultexp = eqexpA + 1;
+                    __display("  EQUALISE EXPONENTS (SHIFTING MANTISSA)");
+                    __display("  a = { %b %b %b }",signA,eqexpA,eqsigA);
+                    __display("  b = { %b %b %b }",signB,eqexpB,eqsigB);
+                    __display("");
+                    __display("  CALCULATING");
+                    __display("  { %b %b %b } +",signA,eqexpA,eqsigA);
+                    __display("  { %b %b %b }",signB,eqexpB,eqsigB);
+                    __display(" ={ %b %b %b }",resultsign,resultexp,resultfraction);
+                    __display("");
+                    if( signA || signB ) {
+                        sigAminussigB = eqsigA - eqsigB;
+                        sigBminussigA = eqsigB - eqsigA;
+                        if( signA ) {
+                            resultsign = ( eqsigA > eqsigB ); resultfraction = resultsign ? sigAminussigB : sigBminussigA;
+                        } else {
+                            resultsign = ( eqsigB > eqsigA ); resultfraction = resultsign ? sigBminussigA : sigAminussigB;
+                        }
+                    } else {
+                        resultsign = signA; resultfraction = eqsigA + eqsigB;
+                    }
+                    switch( { signA, signB } ) {
+                        case 2b01: { resultsign = ( eqsigB > eqsigA ); resultfraction = resultsign ? sigBminussigA : sigAminussigB; }
+                        case 2b10: { resultsign = ( eqsigA > eqsigB ); resultfraction = resultsign ? sigAminussigB : sigBminussigA; }
+                        default: { resultsign = signA; resultfraction = eqsigA + eqsigB; }
+                    }
+                    switch( resultfraction ) {
                         case 0: { result = 0; }
                         default: {
                             NORMALISE.start = 1; while( NORMALISE.busy ) {}
@@ -555,18 +512,15 @@ algorithm floatmultiply(
         ZERO :> bZERO
     );
 
-    uint48  product = uninitialised;
-    dofloatmul UINTMUL(
-        factor_1 <: sigA,
-        factor_2 <: sigB,
-        product :> product
-    );
+    uint48  product <: sigA * sigB;
+    //dofloatmul UINTMUL(
+    //    factor_1 <: sigA,
+    //    factor_2 <: sigB,
+    //    product :> product
+    //);
 
-    uint48  normalfraction = uninitialised;
-    donormalise48 NORMALISE(
-        bitstream <: product,
-        normalised :> normalfraction
-    );
+    // FAST NORMALISATION - MULTIPLICATION RESULTS IN 1x.xxx or 01.xxxx
+    uint48  normalfraction <: product[47,1] ? product : { product[0,47], 1b0 };
 
     int10   roundexponent = uninitialised;
     uint48  roundfraction = uninitialised;
@@ -590,28 +544,27 @@ algorithm floatmultiply(
         f32 :> f32
     );
 
-    NORMALISE.start := 0;
     flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
 
     while(1) {
         if( start ) {
             busy = 1;
             OF = 0; UF = 0;
-            ++: // ALLOW 1 CYLE TO PERFORM THE MULTIPLICATION
             __display("");
             __display("  a = { %b %b %b } INPUT",a[31,1],a[23,8],a[0,23]);
             __display("  b = { %b %b %b } INPUT",b[31,1],b[23,8],b[0,23]);
             __display("  IF = %b NN = %b NV = %b",IF,NN,NV);
             __display("");
-            __display("  CALCULATING, ADDING EXPONENTS AFTER REMOVING BIAS");
-            __display("  { %b %b %b } x",a[31,1],expA,sigA);
-            __display("  { %b %b %b }",b[31,1],expB,sigB);
-            __display(" ={ %b %b %b }",productsign,productexp,product);
-            __display("");
+            ++:
+            ++:
             switch( { IF | NN, aZERO | bZERO } ) {
                 case 2b00: {
+                     __display("  CALCULATING, ADDING EXPONENTS AFTER REMOVING BIAS");
+                    __display("  { %b %b %b } x",a[31,1],expA,sigA);
+                    __display("  { %b %b %b }",b[31,1],expB,sigB);
+                    __display(" ={ %b %b %b }",productsign,productexp,product);
+                    __display("");
                     // STEPS: SETUP -> DOMUL -> NORMALISE -> ROUND -> ADJUSTEXP -> COMBINE
-                    NORMALISE.start = 1; while( NORMALISE.busy ) {}
                     __display("");
                     __display("  ADD BIAS TO EXPONENT, ROUND AND TRUNCATE MANTISSA");
                     __display("  %b %b (ROUND BIT = %b) (LARGE RESULT + 1 TO EXPONENT = %b)",roundexponent,roundfraction,normalfraction[23,1],product[47,1]);
@@ -644,24 +597,6 @@ algorithm floatmultiply(
 }
 
 // DIVIDE TWO FLOATING POINT NUMBERS
-algorithm dofloatdivbit(
-    input   uint50  quotient,
-    input   uint50  remainder,
-    input   uint50  top,
-    input   uint50  bottom,
-    input   uint6   bit,
-    output  uint50  newquotient,
-    output  uint50  newremainder,
- ) <autorun> {
-    uint50  temporary = uninitialised;
-    uint1   bitresult = uninitialised;
-    always {
-        temporary = { remainder[0,49], top[bit,1] };
-        bitresult = __unsigned(temporary) >= __unsigned(bottom);
-        newremainder = __unsigned(temporary) - ( bitresult ? __unsigned(bottom) : 0 );
-        newquotient = quotient | ( bitresult << bit );
-    }
-}
 algorithm dofloatdivide(
     input   uint1   start,
     output  uint1   busy(0),
@@ -669,25 +604,22 @@ algorithm dofloatdivide(
     input   uint50  sigB,
     output  uint50  quotient
 ) <autorun> {
-    uint50  remainder <: start ? 0 : newremainder;
-    uint50  newquotient = uninitialised;
-    uint59  newremainder = uninitialised;
-    dofloatdivbit DIVBIT(
-        quotient <: quotient,
-        remainder <: remainder,
-        top <: sigA,
-        bottom <: sigB,
-        bit <: bit,
-        newquotient :> newquotient,
-        newremainder :> newremainder
-    );
+    uint50  remainder = uninitialised;
+    uint50  temporary <:: { remainder[0,49], sigA[bit,1] };
+    uint1   bitresult <:: __unsigned(temporary) >= __unsigned(sigB);
     uint6   bit(63);
 
     busy := start | ( bit != 63 ) | ( quotient[48,2] != 0 );
     while(1) {
         // FIND QUOTIENT AND ENSURE 48 BIT FRACTION ( ie BITS 48 and 49 clear )
         if( start ) {
-            bit = 49; quotient = 0; while( bit != 63 ) { quotient = newquotient; bit = bit - 1; } while( quotient[48,2] != 0 ) { quotient = quotient >> 1; }
+            bit = 49; quotient = 0; remainder = 0;
+            while( bit != 63 ) {
+                remainder = __unsigned(temporary) - ( bitresult ? __unsigned(sigB) : 0 );
+                quotient[bit,1] = bitresult;
+                bit = bit - 1;
+            }
+            while( quotient[48,2] != 00 ) { quotient = quotient >> 1; }
         }
     }
 }
@@ -832,22 +764,6 @@ algorithm floatdivide(
 }
 
 // ADAPTED FROM https://projectf.io/posts/square-root-in-verilog/
-algorithm dofloatsqrtbitt(
-    input   uint50  ac,
-    input   uint48  x,
-    input   uint48  q,
-    output  uint50  newac,
-    output  uint48  newq,
-    output  uint48  newx
- ) <autorun> {
-    uint50  test_res = uninitialised;
-    always {
-        test_res = ac - { q, 2b01 };
-        newac = { test_res[49,1] ? ac[0,47] : test_res[0,47], x[46,2] };
-        newq = { q[0,47], ~test_res[49,1] };
-        newx = { x[0,46], 2b00 };
-    }
-}
 algorithm dofloatsqrt(
     input   uint1   start,
     output  uint1   busy(0),
@@ -855,18 +771,21 @@ algorithm dofloatsqrt(
     input   uint48  start_x,
     output  uint48  q
 ) <autorun> {
-    uint50  ac <: start ? start_ac : newac;
-    uint48  x <:  start ? start_x : newx;
-    uint50  newac = uninitialised;
-    uint48  newq = uninitialised;
-    uint48  newx = uninitialised;
-    dofloatsqrtbitt SQRTBIT( ac <: ac, x <: x, q <: q, newac :> newac, newx :> newx, newq :> newq );
-
+    uint50  test_res <:: ac - { q, 2b01 };
+    uint50  ac = uninitialised;
+    uint48  x = uninitialised;
     uint6   i(47);
+
     busy := start | ( i != 47 );
     while(1) {
         if( start ) {
-            i = 0; q = 0; while( i != 47 ) { q = newq; i = i + 1; }
+            i = 0; q = 0; ac = start_ac; x = start_x;
+            while( i != 47 ) {
+                ac = { test_res[49,1] ? ac[0,47] : test_res[0,47], x[46,2] };
+                q = { q[0,47], ~test_res[49,1] };
+                x = { x[0,46], 2b00 };
+                i = i + 1;
+            }
         }
     }
 }

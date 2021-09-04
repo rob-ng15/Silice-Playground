@@ -6,39 +6,9 @@
 // RISC-V - MAIN CPU LOOP
 //          ALU FUNCTIONALITY LISTED IN ALU-
 
-// PERFORM OPTIONAL SIGN EXTENSION FOR 8 BIT AND 16 BIT READS
-circuitry signextender8( input function3, input address, input nosign, output withsign ) {
-    withsign = ~function3[2,1] ? { {24{nosign[address[0,1] ? 15 : 7, 1]}}, nosign[address[0,1] ? 8 : 0, 8] } : nosign[address[0,1] ? 8 : 0, 8];
-}
-circuitry signextender16( input function3, input nosign, output withsign ) {
-    withsign = ~function3[2,1] ? { {16{nosign[15,1]}}, nosign[0,16] } : nosign[0,16];
-}
-
-// CPU FETCH 16 bit WORD FROM MEMORY FOR INSTRUCTION BUILDING
-circuitry fetch( input location, input memorybusy, output address, output readmemory ) {
-    address = location; readmemory = 1; while( memorybusy ) {}
-}
-// CPU LOAD FROM MEMORY
-circuitry load( input accesssize, input location, input memorybusy, input readdata, output address, output readmemory, output memoryinput ) {
-    address = location; readmemory = 1; while( memorybusy ) {}                                                                                      // READ 1ST 16 BITS
-    switch( accesssize[0,2] ) {
-        case 2b00: { ( memoryinput ) = signextender8( accesssize, location, readdata ); }                                                           // 8 BIT SIGN EXTEND
-        case 2b01: { ( memoryinput ) = signextender16( accesssize, readdata ); }                                                                    // 16 BIT SIGN EXTEND
-        default: { memoryinput[0,16] = readdata; address = location + 2; readmemory = 1; while( memorybusy ) {} memoryinput[16,16] = readdata; }    // 32 BIT READ 2ND 16 BITS
-    }
-}
-// CPU STORE TO MEMORY - DON'T WAIT FOR WRITE TO FINISH IF 16 OR 8 BIT WRITE
-circuitry store( input accesssize, input location, input value, input memorybusy, output address, output writedata,  output writememory ) {
-    address = location; writedata = value[0,16]; writememory = 1; while( memorybusy ) {}                                                            // STORE 8 OR 16 BIT
-    switch( accesssize[0,2] ) {
-        case 2b10: { address = location + 2; writedata = value[16,16]; writememory = 1;  while( memorybusy ) {} }                                   // // 32 BIT WRITE 2ND 16 BITS
-        default: {}
-    }
-}
-
 algorithm PAWSCPU(
     input   uint1   clock_CPUdecoder,
-    output  uint3   accesssize,
+    output  uint2   accesssize,
     output  uint32  address,
     output  uint16  writedata,
     output  uint1   writememory,
@@ -75,6 +45,9 @@ algorithm PAWSCPU(
     // RISC-V MEMORY ACCESS FLAGS
     uint1   memoryload <::( opCode[2,5] == 5b00000 ) | ( opCode[2,5] == 5b00001 ) | ( ( opCode[2,5] == 5b01011 ) & ( function7[2,5] != 5b00011 ) );
     uint1   memorystore <:: ( opCode[2,5] == 5b01000 ) | ( opCode[2,5] == 5b01001 ) | ( ( opCode[2,5] == 5b01011 ) & ( function7[2,5] != 5b00010 ) );
+    uint1   signedload <:: ~function3[2,1];
+    uint4   byteoffset <:: loadAddress[0,1] ? 8 : 0;
+    uint4   bytesignoffset <:: byteoffset + 7;
 
     // RISC-V 32 BIT INSTRUCTION DECODER
     int32   immediateValue = uninitialized;
@@ -218,21 +191,33 @@ algorithm PAWSCPU(
     }
 
     while(1) {
-        ( address, readmemory ) = fetch( PC, memorybusy );                              // FETCH POTENTIAL COMPRESSED OR 1ST 16 BITS
+        address = PC; readmemory = 1; while( memorybusy ) {}                                                                                                    // FETCH POTENTIAL COMPRESSED OR 1ST 16 BITS
         compressed = ( readdata[0,2] != 2b11 );
         switch( readdata[0,2] ) {
-            default: { instruction = i32; }                                             // EXPAND COMPRESSED INSTRUCTION
-            case 2b11: {                                                                // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
-                instruction[0,16] = readdata; ( address, readmemory ) = fetch( PCplus2, memorybusy ); instruction[16,16] = readdata;
+            default: { instruction = i32; }                                                                                                                     // EXPAND COMPRESSED INSTRUCTION
+            case 2b11: {                                                                                                                                        // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
+                instruction[0,16] = readdata; address = PCplus2; readmemory = 1; while( memorybusy ) {} instruction[16,16] = readdata;
             }
         }
         FSM = 4b0010;
         ++:
         FSM = 4b0100;
         ++:
-        if( memoryload ) { ( address, readmemory, memoryinput ) = load( accesssize, loadAddress, memorybusy, readdata ); }
+        if( memoryload ) {
+            address = loadAddress; readmemory = 1; while( memorybusy ) {}                                                                                       // READ 1ST 16 BITS
+            switch( accesssize[0,2] ) {
+                case 2b00: { memoryinput = signedload ? { {24{readdata[bytesignoffset, 1]}}, readdata[byteoffset, 8] } : readdata[byteoffset, 8]; }             // 8 BIT SIGN EXTEND
+                case 2b01: { memoryinput  = signedload ? { {16{readdata[15,1]}}, readdata[0,16] } : readdata[0,16]; }                                           // 16 BIT SIGN EXTEND
+                default: { memoryinput[0,16] = readdata; address = loadAddressplus2; readmemory = 1; while( memorybusy ) {} memoryinput[16,16] = readdata; }    // 32 BIT READ 2ND 16 BITS
+            }
+        }
         EXECUTEstart = 1; while( EXECUTEbusy ) {}
-        if( memorystore ) { ( address, writedata, writememory ) = store( accesssize, storeAddress, memoryoutput, memorybusy ); }
+        if( memorystore ) {
+            address = storeAddress; writedata = memoryoutput[0,16]; writememory = 1; while( memorybusy ) {}                                                     // STORE 8 OR 16 BIT
+            if( accesssize[1,1] ) {
+                address = storeAddressplus2; writedata = memoryoutput[16,16]; writememory = 1;  while( memorybusy ) {}                                          // 32 BIT WRITE 2ND 16 BITS
+            }
+        }
         FSM = 4b1000;
         ++:
         // UPDATE PC AND SMT

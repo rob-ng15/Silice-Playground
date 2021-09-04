@@ -177,6 +177,7 @@ extern void noecho( void );
 extern void scroll( void );
 extern void noscroll( void );
 extern void curs_set( int );
+extern void autorefresh( int );
 extern int start_color( void );
 extern bool has_colors( void );
 extern bool can_change_color( void );

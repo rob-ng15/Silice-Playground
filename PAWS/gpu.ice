@@ -1223,20 +1223,40 @@ algorithm blit(
         if( start ) {
             busy = 1;
             px = 0; py = 0; x2 = 0; y2 = 0; ( x1, y1 ) = copycoordinates( x, y );
-            while( py != max_pixels ) {
-                while( px != max_pixels ) {
-                    bitmap_write = tilecharacter ? blit1tilemap.rdata0[4b1111 - xinblittile, 1] : characterGenerator8x8.rdata0[7 - xinchartile, 1];
-                    x2 = x2 + 1;
-                    if( x2 == maxcount ) {
-                        x2 = 0;
-                        y2 = y2 + 1;
-                        if( y2 == maxcount ) {
-                            px = px + 1;
-                            y2 = 0;
+            if( action[2,1] ) {
+                // ROTATION
+                while( py != max_pixels ) {
+                    while( px != max_pixels ) {
+                        y2 = 0;
+                        while( y2 != maxcount ) {
+                            x2 = 0;
+                            while( x2 != maxcount ) {
+                                bitmap_write = tilecharacter ? blit1tilemap.rdata0[4b1111 - xinblittile, 1] : characterGenerator8x8.rdata0[7 - xinchartile, 1];
+                                x2 = x2 + 1;
+                            }
+                            y2 = y2 + 1;
+                        }
+                        px = px + 1;
+                    }
+                    px = 0;
+                    py = py + 1;
+                }
+            } else {
+                while( py != max_pixels ) {
+                    while( px != max_pixels ) {
+                        bitmap_write = tilecharacter ? blit1tilemap.rdata0[4b1111 - xinblittile, 1] : characterGenerator8x8.rdata0[7 - xinchartile, 1];
+                        x2 = x2 + 1;
+                        if( x2 == maxcount ) {
+                            x2 = 0;
+                            y2 = y2 + 1;
+                            if( y2 == maxcount ) {
+                                px = px + 1;
+                                y2 = 0;
+                            }
                         }
                     }
+                    px = 0; py = py + 1;
                 }
-                px = 0; py = py + 1;
             }
             busy = 0;
         }

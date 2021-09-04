@@ -1308,7 +1308,7 @@ unsigned char SMTSTATE( void ) {
 // USES THE CURSES BUFFER IN THE CHARACTER MAP
 
 unsigned char   __curses_backgroundcolours[COLOR_PAIRS], __curses_foregroundcolours[COLOR_PAIRS],
-                __curses_scroll = 1, __curses_echo = 0, __curses_bold = 0, __curses_reverse = 0;
+                __curses_scroll = 1, __curses_echo = 0, __curses_bold = 0, __curses_reverse = 0, __curses_autorefresh = 0;
 unsigned short  __curses_x = 0, __curses_y = 0, __curses_fore = WHITE, __curses_back = BLACK;
 
 typedef union curses_cell {
@@ -1392,6 +1392,10 @@ void noscroll( void ) {
 
 void curs_set( int visibility ) {
     *TPU_CURSOR = visibility;
+}
+
+void autorefresh( int flag ) {
+    __curses_autorefresh = flag;
 }
 
 int start_color( void ) {
@@ -1512,6 +1516,8 @@ int addch( unsigned char ch ) {
         }
     }
     __position_curses( __curses_x, __curses_y );
+    if( __curses_autorefresh )
+        refresh();
     return( true );
 }
 
