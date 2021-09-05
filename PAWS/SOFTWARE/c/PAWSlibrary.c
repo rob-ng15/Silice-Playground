@@ -1478,7 +1478,7 @@ int addch( unsigned char ch ) {
         case '\n': {
             // LINE FEED
             __curses_x = 0;
-            if( __curses_y == 29 ) {
+            if( __curses_y == LINES-1 ) {
                 if( __curses_scroll ) {
                     __scroll();
                 } else {

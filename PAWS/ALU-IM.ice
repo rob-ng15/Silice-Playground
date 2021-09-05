@@ -10,7 +10,6 @@ algorithm alu(
     input   uint5   rs2,
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
-    input   uint32  sourceReg3,
     input   uint32  immediateValue,
 
     output  uint32  result

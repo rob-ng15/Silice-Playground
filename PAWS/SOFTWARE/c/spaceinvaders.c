@@ -1000,7 +1000,7 @@ void bomb_actions( void ) {
     for( short i = 2; i < 16; i++ ) {
         if( get_sprite_layer_collision( UPPER_LAYER, i ) & SPRITE_TO_BITMAP ) {
             // HIT THE BUNKER
-            bomb_x = get_sprite_attribute( UPPER_LAYER, i , 3 ) / 2 - rng(4) + 2;
+            bomb_x = get_sprite_attribute( UPPER_LAYER, i , 3 ) / 2;
             bomb_y = get_sprite_attribute( UPPER_LAYER, i , 4 ) / 2 + rng(2) + 1;
             set_sprite_attribute( UPPER_LAYER, i, SPRITE_ACTIVE, 0 );
             char bomb_reflection = rng(4);

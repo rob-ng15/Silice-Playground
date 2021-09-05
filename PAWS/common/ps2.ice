@@ -307,9 +307,9 @@ algorithm ps2(
                 case 0: {
                     parity = 0;
                     //bit_count = bit_count + ( ~ps2data_ext );
-                    switch( ps2data_ext ) {
-                        case 1: {}
-                        case 0: { bit_count = bit_count + 1; } // Start bit
+                    if( ~ps2data_ext ) {
+                        // Start bit
+                        bit_count = bit_count + 1;
                     }
                 }
                 default: {

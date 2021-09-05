@@ -933,7 +933,13 @@ algorithm floatcompare(
     // IDENTIFY NaN, RETURN 0 IF NAN, OTHERWISE RESULT OF COMPARISONS
     always {
         flags = { aINF | bINF, asNAN | bsNAN | aqNAN | bqNAN, asNAN | bsNAN | aqNAN | bqNAN, 4b0000 };
-        less = flags[5,1] ? 0 : ( fp32( a ).sign != fp32( b ).sign ) ? fp32( a ).sign & ((( a | b ) << 1) != 0 ) : ( a != b ) & ( fp32( a ).sign ^ ( a < b));
-        equal = flags[5,1] ? 0 : ( a == b ) | ((( a | b ) << 1) == 0 );
+        if( flags[5,1] ) {
+            // NAN
+            less = 0;
+            equal = 0;
+        } else {
+            less = ( fp32( a ).sign != fp32( b ).sign ) ? fp32( a ).sign & ((( a | b ) << 1) != 0 ) : ( a != b ) & ( fp32( a ).sign ^ ( a < b));
+            equal = ( a == b ) | ((( a | b ) << 1) == 0 );
+        }
     }
 }

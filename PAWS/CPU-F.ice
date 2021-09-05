@@ -73,29 +73,30 @@ algorithm PAWSCPU(
     // RISC-V REGISTERS
     int32   sourceReg1 = uninitialized;
     int32   sourceReg2 = uninitialized;
-    int32   sourceReg3 = uninitialized;
-    registers REGISTERS <@clock_CPUdecoder> (
+    uint1   REGISTERSwrite <:: FSM[3,1] & EXECUTEwriteRegister & ~EXECUTEfrd & ( rd != 0 );
+    registersI REGISTERS <@clock_CPUdecoder> (
         SMT <:: SMT,
         rs1 <: rs1,
         rs2 <: rs2,
-        rs3 <: rs3,
         result <: EXECUTEresult,
         rd <: rd,
+        write <: REGISTERSwrite,
         sourceReg1 :> sourceReg1,
-        sourceReg2 :> sourceReg2,
-        sourceReg3 :> sourceReg3
+        sourceReg2 :> sourceReg2
     );
     // RISC-V FLOATING POINT REGISTERS
     uint32  sourceReg1F = uninitialized;
     uint32  sourceReg2F = uninitialized;
     uint32  sourceReg3F = uninitialized;
-    registers REGISTERSF <@clock_CPUdecoder> (
+    uint1   REGISTERSFwrite <:: FSM[3,1] & EXECUTEwriteRegister & EXECUTEfrd;
+    registersF REGISTERSF <@clock_CPUdecoder> (
         SMT <:: SMT,
         rs1 <: rs1,
         rs2 <: rs2,
         rs3 <: rs3,
         result <: EXECUTEresult,
         rd <: rd,
+        write <: REGISTERSFwrite,
         sourceReg1 :> sourceReg1F,
         sourceReg2 :> sourceReg2F,
         sourceReg3 :> sourceReg3F
@@ -143,7 +144,6 @@ algorithm PAWSCPU(
         rs2 <: rs2,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
-        sourceReg3 <: sourceReg3,
         sourceReg1F <: sourceReg1F,
         sourceReg2F <: sourceReg2F,
         sourceReg3F <: sourceReg3F,
@@ -177,9 +177,6 @@ algorithm PAWSCPU(
     // MEMORY ACCESS FLAGS - 32 bit for FLOAT LOAD/STORE AND ATOMIC OPERATIONS
     accesssize := ( opCode[2,5] == 5b01011 ) || ( opCode[2,5] == 5b00001 ) || ( opCode[2,5] == 5b01001 ) ? 3b010 : function3; readmemory := 0; writememory := 0;
 
-    // REGISTERS Write FLAG AT LAST STAGE OF THE FSM
-    REGISTERS.write := FSM[3,1] & EXECUTEwriteRegister & ~EXECUTEfrd & ( rd != 0 ); REGISTERSF.write := FSM[3,1] & EXECUTEwriteRegister & EXECUTEfrd;
-
     // CPU EXECUTE START FLAGS
     EXECUTEstart := 0;
 
@@ -191,38 +188,45 @@ algorithm PAWSCPU(
     }
 
     while(1) {
-        address = PC; readmemory = 1; while( memorybusy ) {}                                                                                                    // FETCH POTENTIAL COMPRESSED OR 1ST 16 BITS
-        compressed = ( readdata[0,2] != 2b11 );
-        switch( readdata[0,2] ) {
-            default: { instruction = i32; }                                                                                                                     // EXPAND COMPRESSED INSTRUCTION
-            case 2b11: {                                                                                                                                        // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
-                instruction[0,16] = readdata; address = PCplus2; readmemory = 1; while( memorybusy ) {} instruction[16,16] = readdata;
+        onehot( FSM ) {
+            case 0: {
+                address = PC; readmemory = 1; while( memorybusy ) {}                                                                                                    // FETCH POTENTIAL COMPRESSED OR 1ST 16 BITS
+                compressed = ( readdata[0,2] != 2b11 );
+                switch( readdata[0,2] ) {
+                    default: { instruction = i32; }                                                                                                                     // EXPAND COMPRESSED INSTRUCTION
+                    case 2b11: {                                                                                                                                        // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
+                        instruction[0,16] = readdata; address = PCplus2; readmemory = 1; while( memorybusy ) {} instruction[16,16] = readdata;
+                    }
+                }
+                FSM = 2;
+            }
+            case 1: {
+                FSM = 4;
+            }
+            case 2: {
+                if( memoryload ) {
+                    address = loadAddress; readmemory = 1; while( memorybusy ) {}                                                                                       // READ 1ST 16 BITS
+                    switch( accesssize[0,2] ) {
+                        case 2b00: { memoryinput = signedload ? { {24{readdata[bytesignoffset, 1]}}, readdata[byteoffset, 8] } : readdata[byteoffset, 8]; }             // 8 BIT SIGN EXTEND
+                        case 2b01: { memoryinput  = signedload ? { {16{readdata[15,1]}}, readdata[0,16] } : readdata[0,16]; }                                           // 16 BIT SIGN EXTEND
+                        default: { memoryinput[0,16] = readdata; address = loadAddressplus2; readmemory = 1; while( memorybusy ) {} memoryinput[16,16] = readdata; }    // 32 BIT READ 2ND 16 BITS
+                    }
+                }
+                EXECUTEstart = 1; while( EXECUTEbusy ) {}
+                if( memorystore ) {
+                    address = storeAddress; writedata = memoryoutput[0,16]; writememory = 1; while( memorybusy ) {}                                                     // STORE 8 OR 16 BIT
+                    if( accesssize[1,1] ) {
+                        address = storeAddressplus2; writedata = memoryoutput[16,16]; writememory = 1;  while( memorybusy ) {}                                          // 32 BIT WRITE 2ND 16 BITS
+                    }
+                }
+                FSM = 8;
+            }
+            case 3: {
+                // UPDATE PC AND SMT
+                if( SMT ) { pcSMT = newPC; SMT = 0; } else { pc = newPC; SMT = SMTRUNNING; pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC; }
+                FSM = 1;
             }
         }
-        FSM = 4b0010;
-        ++:
-        FSM = 4b0100;
-        ++:
-        if( memoryload ) {
-            address = loadAddress; readmemory = 1; while( memorybusy ) {}                                                                                       // READ 1ST 16 BITS
-            switch( accesssize[0,2] ) {
-                case 2b00: { memoryinput = signedload ? { {24{readdata[bytesignoffset, 1]}}, readdata[byteoffset, 8] } : readdata[byteoffset, 8]; }             // 8 BIT SIGN EXTEND
-                case 2b01: { memoryinput  = signedload ? { {16{readdata[15,1]}}, readdata[0,16] } : readdata[0,16]; }                                           // 16 BIT SIGN EXTEND
-                default: { memoryinput[0,16] = readdata; address = loadAddressplus2; readmemory = 1; while( memorybusy ) {} memoryinput[16,16] = readdata; }    // 32 BIT READ 2ND 16 BITS
-            }
-        }
-        EXECUTEstart = 1; while( EXECUTEbusy ) {}
-        if( memorystore ) {
-            address = storeAddress; writedata = memoryoutput[0,16]; writememory = 1; while( memorybusy ) {}                                                     // STORE 8 OR 16 BIT
-            if( accesssize[1,1] ) {
-                address = storeAddressplus2; writedata = memoryoutput[16,16]; writememory = 1;  while( memorybusy ) {}                                          // 32 BIT WRITE 2ND 16 BITS
-            }
-        }
-        FSM = 4b1000;
-        ++:
-        // UPDATE PC AND SMT
-        if( SMT ) { pcSMT = newPC; SMT = 0; } else { pc = newPC; SMT = SMTRUNNING; pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC; }
-        FSM = 4b0001;
     } // RISC-V
 }
 
@@ -238,7 +242,6 @@ algorithm cpuexecute(
     input   uint5   rs2,
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
-    input   uint32  sourceReg3,
     input   uint32  sourceReg1F,
     input   uint32  sourceReg2F,
     input   uint32  sourceReg3F,
@@ -275,7 +278,6 @@ algorithm cpuexecute(
         rs2 <: rs2,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
-        sourceReg3 <: sourceReg3,
         immediateValue <: immediateValue,
         result :> ALUresult,
         start <: ALUstart,
@@ -392,7 +394,7 @@ algorithm cpuexecute(
                     if( opCode[6,1] ) {
                         FPUstart = 1; while( FPUbusy ) {} CSRupdateFPUflags = 1; frd = FPUfrd; result = FPUresult;
                     } else {
-                        if( opCode[5,1] &&function7[0,1] ) {
+                        if( opCode[5,1] && function7[0,1] ) {
                             if( function3[2,1] ) {
                                 ALUMDstart = 1; while( ALUMDbusy ) {} result = ALUMDresult;
                             } else {

@@ -325,13 +325,13 @@ algorithm floatminmax(
     floatcompare FPUlteq( a <: sourceReg1F, b <: sourceReg2F, less :> less );
 
     always {
-        switch( ( asNAN | bsNAN ) | ( aqNAN & bqNAN ) ) {
-            case 1: { flags = 5b10000; result = 32h7fc00000; } // sNAN or both qNAN
-            case 0: {
-                switch( function3[0,1] ) {
-                    case 0: { result = aqNAN ? ( bqNAN ? 32h7fc00000 : sourceReg2F ) : bqNAN ? sourceReg1F : ( less ? sourceReg1F : sourceReg2F); }
-                    case 1: { result = aqNAN ? ( bqNAN ? 32h7fc00000 : sourceReg2F ) : bqNAN ? sourceReg1F : ( less ? sourceReg2F : sourceReg1F); }
-                }
+        if( ( asNAN | bsNAN ) | ( aqNAN & bqNAN ) ) {
+            // sNAN or both qNAN
+            flags = 5b10000; result = 32h7fc00000;
+        } else {
+            switch( function3[0,1] ) {
+                case 0: { result = aqNAN ? ( bqNAN ? 32h7fc00000 : sourceReg2F ) : bqNAN ? sourceReg1F : ( less ? sourceReg1F : sourceReg2F); }
+                case 1: { result = aqNAN ? ( bqNAN ? 32h7fc00000 : sourceReg2F ) : bqNAN ? sourceReg1F : ( less ? sourceReg2F : sourceReg1F); }
             }
         }
     }
