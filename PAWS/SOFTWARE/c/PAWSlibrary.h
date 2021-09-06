@@ -13,7 +13,7 @@ extern unsigned char *CLUSTERBUFFER;
 extern unsigned int CLUSTERSIZE;
 extern unsigned int DATASTARTSECTOR;
 
-// SIMPLE FILE SYSTEM
+// SIMPLE FILE BROWSER
 extern unsigned short sdcard_findfilenumber( unsigned char *, unsigned char * );
 extern unsigned int sdcard_findfilesize( unsigned short );
 extern void sdcard_readfile( unsigned short, unsigned char * );

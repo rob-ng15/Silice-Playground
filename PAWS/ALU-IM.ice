@@ -92,12 +92,11 @@ algorithm aluMdivideremain(
     while(1) {
         if( start ) {
             busy = 1;
-            switch( divisor ) {
-                case 0: { result = dosign[1,1] ? dividend : 32hffffffff; }
-                default: {
-                    DODIVIDEstart = 1; while( DODIVIDEbusy ) {}
-                    result = dosign[1,1] ? result_remainder : ( quotientremaindersign ? -result_quotient : result_quotient );
-                }
+            if( divisor == 0 ) {
+                result = dosign[1,1] ? dividend : 32hffffffff;
+            } else {
+                DODIVIDEstart = 1; while( DODIVIDEbusy ) {}
+                result = dosign[1,1] ? result_remainder : ( quotientremaindersign ? -result_quotient : result_quotient );
             }
             busy = 0;
         }

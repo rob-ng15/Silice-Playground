@@ -163,17 +163,14 @@ algorithm compressed(
                         i32 = { 2b0, CIu94(i16).ib_9_6, CIu94(i16).ib_5_4, CIu94(i16).ib_3, CIu94(i16).ib_2, 2b00, 5h2, 3b000, {2b01,CIu94(i16).rd_alt}, 7b0010011 };
                     }
                     default: {
-                        switch( i16[15,1] ) {
-                            case 0: {
-                                // LW -> lw rd', offset[6:2](rs1') { 010 uimm[5:3] rs1' uimm[2][6] rd' 00 } -> { imm[11:0] rs1 010 rd 0000011 }
-                                // FLW -> flw rd', offset[6:2](rs1') { 010 uimm[5:3] rs1' uimm[2][6] rd' 00 } -> { imm[11:0] rs1 010 rd 0000111 }
-                                i32 = { 5b0, CL(i16).ib_6, CL(i16).ib_5_3, CL(i16).ib_2, 2b00, {2b01,CL(i16).rs1_alt}, 3b010, {2b01,CL(i16).rd_alt}, { 4b0000, i16[13,1],2b11 } };
-                            }
-                            case 1: {
-                                // SW -> sw rs2', offset[6:2](rs1') { 110 uimm[5:3] rs1' uimm[2][6] rs2' 00 } -> { imm[11:5] rs2 rs1 010 imm[4:0] 0100011 }
-                                // FSW -> fsw rs2', offset[6:2](rs1') { 110 uimm[5:3] rs1' uimm[2][6] rs2' 00 } -> { imm[11:5] rs2 rs1 010 imm[4:0] 0100111 }
-                                i32 = { 5b0, CS(i16).ib_6, CS(i16).ib_5, {2b01,CS(i16).rs2_alt}, {2b01,CS(i16).rs1_alt}, 3b010, CS(i16).ib_4_3, CS(i16).ib_2, 2b0, { 4b0100, i16[13,1],2b11 } };
-                            }
+                        if( i16[15,1] ) {
+                            // SW -> sw rs2', offset[6:2](rs1') { 110 uimm[5:3] rs1' uimm[2][6] rs2' 00 } -> { imm[11:5] rs2 rs1 010 imm[4:0] 0100011 }
+                            // FSW -> fsw rs2', offset[6:2](rs1') { 110 uimm[5:3] rs1' uimm[2][6] rs2' 00 } -> { imm[11:5] rs2 rs1 010 imm[4:0] 0100111 }
+                            i32 = { 5b0, CS(i16).ib_6, CS(i16).ib_5, {2b01,CS(i16).rs2_alt}, {2b01,CS(i16).rs1_alt}, 3b010, CS(i16).ib_4_3, CS(i16).ib_2, 2b0, { 4b0100, i16[13,1],2b11 } };
+                        } else {
+                            // LW -> lw rd', offset[6:2](rs1') { 010 uimm[5:3] rs1' uimm[2][6] rd' 00 } -> { imm[11:0] rs1 010 rd 0000011 }
+                            // FLW -> flw rd', offset[6:2](rs1') { 010 uimm[5:3] rs1' uimm[2][6] rd' 00 } -> { imm[11:0] rs1 010 rd 0000111 }
+                            i32 = { 5b0, CL(i16).ib_6, CL(i16).ib_5_3, CL(i16).ib_2, 2b00, {2b01,CL(i16).rs1_alt}, 3b010, {2b01,CL(i16).rd_alt}, { 4b0000, i16[13,1],2b11 } };
                         }
                     }
                 }
@@ -263,17 +260,14 @@ algorithm compressed(
                         }
                     }
                     default: {
-                        switch( i16[15,1] ) {
-                            case 0: {
-                                // LWSP -> lw rd, offset[7:2](x2) { 011 uimm[5] rd uimm[4:2|7:6] 10 } -> { imm[11:0] rs1 010 rd 0000011 }
-                                // FLWSP -> flw rd, offset[7:2](x2) { 011 uimm[5] rd uimm[4:2|7:6] 10 } -> { imm[11:0] rs1 010 rd 0000111 }
-                                i32 = { 4b0, CI(i16).ib_7_6, CI(i16).ib_5, CI(i16).ib_4_2, 2b0, 5h2 ,3b010, CI(i16).rd,  { 4b0000, i16[13,1],2b11 } };
-                            }
-                            case 1: {
-                                // SWSP -> sw rs2, offset[7:2](x2) { 110 uimm[5][4:2][7:6] rs2 10 } -> { imm[11:5] rs2 rs1 010 imm[4:0] 0100011 }
-                                // FSWSP -> fsw rs2, offset[7:2](x2) { 110 uimm[5][4:2][7:6] rs2 10 } -> { imm[11:5] rs2 rs1 010 imm[4:0] 0100111 }
-                                i32 = { 4b0, CSS(i16).ib_7_6, CSS(i16).ib_5, CSS(i16).rs2, 5h2, 3b010, CSS(i16).ib_4_2, 2b00, { 4b0100, i16[13,1],2b11 } };
-                            }
+                        if( i16[15,1] ) {
+                            // SWSP -> sw rs2, offset[7:2](x2) { 110 uimm[5][4:2][7:6] rs2 10 } -> { imm[11:5] rs2 rs1 010 imm[4:0] 0100011 }
+                            // FSWSP -> fsw rs2, offset[7:2](x2) { 110 uimm[5][4:2][7:6] rs2 10 } -> { imm[11:5] rs2 rs1 010 imm[4:0] 0100111 }
+                            i32 = { 4b0, CSS(i16).ib_7_6, CSS(i16).ib_5, CSS(i16).rs2, 5h2, 3b010, CSS(i16).ib_4_2, 2b00, { 4b0100, i16[13,1],2b11 } };
+                        } else {
+                            // LWSP -> lw rd, offset[7:2](x2) { 011 uimm[5] rd uimm[4:2|7:6] 10 } -> { imm[11:0] rs1 010 rd 0000011 }
+                            // FLWSP -> flw rd, offset[7:2](x2) { 011 uimm[5] rd uimm[4:2|7:6] 10 } -> { imm[11:0] rs1 010 rd 0000111 }
+                            i32 = { 4b0, CI(i16).ib_7_6, CI(i16).ib_5, CI(i16).ib_4_2, 2b0, 5h2 ,3b010, CI(i16).rd,  { 4b0000, i16[13,1],2b11 } };
                         }
                     }
                 }
@@ -299,7 +293,6 @@ algorithm CSRblock(
     output  uint32  result
 ) <autorun> {
     uint64  CSRtimer = 0;
-    uint64  CSRcycletime = 0;
     uint64  CSRinstret = 0;
     uint8   CSRf[2] = { 0, 0 };
     uint32  writevalue <:: function3[2,1] ? rs1 : sourceReg1;
@@ -315,10 +308,10 @@ algorithm CSRblock(
                 switch( CSR(instruction).csr ) {
                     case 12h001: { result = CSRf[SMT][0,5]; }   // frflags
                     case 12h002: { result = CSRf[SMT][5,3]; }   // frrm
-                    case 12h003: { result = CSRf[SMT]; }             // frcsr
+                    case 12h003: { result = CSRf[SMT]; }        // frcsr
                     case 12h301: { result = $CPUISA$; }
-                    case 12hc00: { result = CSRcycletime[0,32]; }
-                    case 12hc80: { result = CSRcycletime[32,32]; }
+                    case 12hc00: { result = CSRtimer[0,32]; }
+                    case 12hc80: { result = CSRtimer[32,32]; }
                     case 12hc01: { result = CSRtimer[0,32]; }
                     case 12hc81: { result = CSRtimer[32,32]; }
                     case 12hc02: { result = CSRinstret[0,32]; }
@@ -372,7 +365,6 @@ algorithm CSRblock(
         }
         // UPDATE TIMERS AND COUNTERS
         CSRtimer = CSRtimer + 1;
-        CSRcycletime = CSRcycletime + 1;
         CSRinstret = CSRinstret + 1;
     }
 }

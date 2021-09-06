@@ -192,11 +192,10 @@ algorithm PAWSCPU(
             case 0: {
                 address = PC; readmemory = 1; while( memorybusy ) {}                                                                                                    // FETCH POTENTIAL COMPRESSED OR 1ST 16 BITS
                 compressed = ( readdata[0,2] != 2b11 );
-                switch( readdata[0,2] ) {
-                    default: { instruction = i32; }                                                                                                                     // EXPAND COMPRESSED INSTRUCTION
-                    case 2b11: {                                                                                                                                        // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
-                        instruction[0,16] = readdata; address = PCplus2; readmemory = 1; while( memorybusy ) {} instruction[16,16] = readdata;
-                    }
+                if( readdata[0,2] == 2b11 ) {
+                    instruction[0,16] = readdata; address = PCplus2; readmemory = 1; while( memorybusy ) {} instruction[16,16] = readdata;                              // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
+                } else {
+                    instruction = i32;                                                                                                                                  // EXPAND COMPRESSED INSTRUCTION
                 }
                 FSM = 2;
             }
