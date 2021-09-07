@@ -306,6 +306,7 @@ $$end
 
     // Combine the display layers for display
     uint2   display_order = uninitialized;
+    uint1   colour = uninitialized;
     multiplex_display display <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -329,7 +330,8 @@ $$end
         character_map_display <: character_map_display,
         terminal_p <: terminal_p,
         terminal_display <: terminal_display,
-        display_order <: display_order
+        display_order <: display_order,
+        colour <: colour
     );
 
     BACKGROUNDmemoryWrite := 0; BITMAPmemoryWrite := 0; CHARACTER_MAPmemoryWrite := 0; LOWER_SPRITEmemoryWrite := 0; UPPER_SPRITEmemoryWrite := 0; TERMINALmemoryWrite := 0; LOWER_TILEmemoryWrite := 0; UPPER_TILEmemoryWrite := 0;
@@ -419,11 +421,19 @@ $$end
                 case 4h7: { TERMINALmemoryWrite = 1; }
                 case 4h8: { LOWER_SPRITEmemoryWrite = 1; LOWER_SPRITEbitmapwriter = 1; }
                 case 4h9: { UPPER_SPRITEmemoryWrite = 1; UPPER_SPRITEbitmapwriter = 1; }
-                case 4hf: { display_order = writeData; }
+                case 4hf: {
+                    if( memoryAddress[0,1] ) {
+                        colour = writeData;
+                    } else {
+                        display_order = writeData;
+                    }
+                }
                 default: {}
             }
         }
     }
+
+    display_order = 0; colour = 1;
 }
 
 // ALL DISPLAY GENERATOR UNITS RUN AT 25MHz, 640 x 480 @ 60fps

@@ -180,6 +180,16 @@ struct DrawList2D {
     struct Point2D  xy4;                // Vertex 4
 };
 
+// FAT32 File System
+typedef struct {
+    unsigned char first_byte;
+    unsigned char start_chs[3];
+    unsigned char partition_type;
+    unsigned char end_chs[3];
+    unsigned int start_sector;
+    unsigned int length_sectors;
+} __attribute((packed)) PartitionTable;
+
 typedef struct {
     unsigned char   jmp[3];
     unsigned char   oem[8];
@@ -206,7 +216,7 @@ typedef struct {
     unsigned char   unused;
     unsigned char   extended_signature;
     unsigned int    volume_id;
-    char volume_    label[11];
+    char            volume_label[11];
     char            fs_type[8];
     char            boot_code[420];
     unsigned short  boot_sector_signature;
@@ -231,7 +241,6 @@ typedef struct {
     unsigned int    starting_cluster;
     unsigned int    file_size;
 } __attribute((packed)) DirectoryEntry;
-DirectoryEntry directorynames[256];
 
 // SIMPLE CURSES
 #define COLORS 64

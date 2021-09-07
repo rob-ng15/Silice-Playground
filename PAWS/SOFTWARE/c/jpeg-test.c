@@ -1,30 +1,26 @@
 #include "PAWSlibrary.h"
-#include "PAWSJPG.h"
-#include <stdio.h>
+#include <stdlib.h>
 
 int main( void ) {
     INITIALISEMEMORY();
 
-    int width, height,counter;
-    unsigned char *imagebuffer, colour;
+    int width, height; unsigned int filesize;
+    unsigned char *imagebuffer, colour, *filebuffer;
 
-    printf( "JPEG DECODER:\n" );
-    tpu_print_centre( 0, TRANSPARENT, WHITE, 1, "DECODING JPEG" );
+    filebuffer = sdcard_selectfile( "Please select a JPEG", "JPG", &filesize );
 
     // JPEG LIBRARY
-    njInit(); printf( "    njInit()\n");
-    njDecode( &pawsjpg[0], 71555 ); printf( "    njDecode()\n" );
-    width = njGetWidth();
-    height = njGetHeight(); printf( "    Image %u x %u()\n", width, height );
-    imagebuffer=njGetImage(); printf( "    Buffer %u\n", (unsigned int)imagebuffer );
-
-    tpu_printf_centre( 0, TRANSPARENT, WHITE, 0, "DISPLAYING JPEG %d x %d", width, height );
-
-    counter = 0;
-    gpu_pixelblock24( 0, 0, width, height, imagebuffer );
-
-    tpu_print_centre( 0, TRANSPARENT, WHITE, 0, "" );
-    tpu_print_centre( 29, TRANSPARENT, WHITE, 1, "FINISHED" );
+    if( filebuffer ) {
+        njInit();
+        njDecode( filebuffer, filesize );
+        width = njGetWidth();
+        height = njGetHeight();
+        imagebuffer=njGetImage();
+        gpu_pixelblock24( 0, 0, width, height, imagebuffer );
+        free( filebuffer );
+    } else {
+        gpu_print_centre( WHITE, 160, 120, 0, 0, "NO FILE FOUND!" );
+    }
 
     sleep( 4000, 0 );
 }

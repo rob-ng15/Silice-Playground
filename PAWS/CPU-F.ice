@@ -43,7 +43,7 @@ algorithm PAWSCPU(
     );
 
     // RISC-V MEMORY ACCESS FLAGS
-    uint1   memoryload <::( opCode[2,5] == 5b00000 ) | ( opCode[2,5] == 5b00001 ) | ( ( opCode[2,5] == 5b01011 ) & ( function7[2,5] != 5b00011 ) );
+    uint1   memoryload <:: ( opCode[2,5] == 5b00000 ) | ( opCode[2,5] == 5b00001 ) | ( ( opCode[2,5] == 5b01011 ) & ( function7[2,5] != 5b00011 ) );
     uint1   memorystore <:: ( opCode[2,5] == 5b01000 ) | ( opCode[2,5] == 5b01001 ) | ( ( opCode[2,5] == 5b01011 ) & ( function7[2,5] != 5b00010 ) );
     uint1   signedload <:: ~function3[2,1];
     uint4   byteoffset <:: loadAddress[0,1] ? 8 : 0;
@@ -199,7 +199,7 @@ algorithm PAWSCPU(
                 }
                 FSM = 2;
             }
-            case 1: {
+            case 1: {                                                                                                                                                   // DECODE, REGISTER FETCH, ADDRESS GENERATION
                 FSM = 4;
             }
             case 2: {
@@ -211,7 +211,9 @@ algorithm PAWSCPU(
                         default: { memoryinput[0,16] = readdata; address = loadAddressplus2; readmemory = 1; while( memorybusy ) {} memoryinput[16,16] = readdata; }    // 32 BIT READ 2ND 16 BITS
                     }
                 }
+
                 EXECUTEstart = 1; while( EXECUTEbusy ) {}
+
                 if( memorystore ) {
                     address = storeAddress; writedata = memoryoutput[0,16]; writememory = 1; while( memorybusy ) {}                                                     // STORE 8 OR 16 BIT
                     if( accesssize[1,1] ) {

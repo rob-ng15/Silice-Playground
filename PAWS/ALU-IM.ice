@@ -181,17 +181,12 @@ algorithm aluMM(
     input   uint32  sourceReg2,
     output  uint32  result
 ) <autorun> {
-    int32   ALUMMresult = uninitialized;
     aluMmultiply ALUMM(
         dosign <: function3,
         factor_1 <: sourceReg1,
         factor_2 <: sourceReg2,
-        result :> ALUMMresult
+        result :> result
     );
-
-    always {
-        result = ALUMMresult;
-    }
 }
 // ALU FOR DIVISION
 algorithm aluMD(
@@ -203,14 +198,13 @@ algorithm aluMD(
     output  uint32  result
 ) <autorun> {
     // M EXTENSION MULTIPLICATION AND DIVISION
-    int32   ALUMDresult = uninitialized;
     uint1   ALUMDstart = uninitialized;
     uint1   ALUMDbusy = uninitialized;
     aluMdivideremain ALUMD(
         dosign <: function3,
         dividend <: sourceReg1,
         divisor <: sourceReg2,
-        result :> ALUMDresult,
+        result :> result,
         start <: ALUMDstart,
         busy :> ALUMDbusy
     );
@@ -219,7 +213,7 @@ algorithm aluMD(
     while(1) {
         if( start ) {
             busy = 1;
-            ALUMDstart = 1; while( ALUMDbusy ) {} result = ALUMDresult;
+            ALUMDstart = 1; while( ALUMDbusy ) {}
             busy = 0;
         }
     }

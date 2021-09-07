@@ -285,7 +285,7 @@ void reset_display( void ) {
     *FRAMEBUFFER_DRAW = 1; gpu_cs(); while( !*GPU_FINISHED );
     *FRAMEBUFFER_DRAW = 0; gpu_cs(); while( !*GPU_FINISHED );
     *FRAMEBUFFER_DISPLAY = 0;
-    *SCREENMODE = 0;
+    *SCREENMODE = 0; *COLOUR = 1;
     *TPU_CURSOR = 0; tpu_cs();
     *LOWER_TM_SCROLLWRAPCLEAR = 9;
     *UPPER_TM_SCROLLWRAPCLEAR = 9;
@@ -400,6 +400,36 @@ void sdcard_readfile( unsigned int starting_cluster, unsigned char * copyAddress
     } while( nextCluster < 0xffffff8 );
 }
 
+// SORT DIRECTORY ENTRIES BY TYPE AND FIRST CHARACTER
+void swapentries( short i, short j ) {
+    // SIMPLE BUBBLE SORT, PUT DIRECTORIES FIRST, THEN FILES, IN ALPHABETICAL ORDER
+    DirectoryEntry temporary;
+
+    memcpy( &temporary, &directorynames[i], sizeof( DirectoryEntry ) );
+    memcpy( &directorynames[i], &directorynames[j], sizeof( DirectoryEntry ) );
+    memcpy( &directorynames[j], &temporary, sizeof( DirectoryEntry ) );
+}
+void sortdirectoryentries( unsigned short entries ) {
+    if( entries < 1 )
+        return;
+
+    short changes;
+    do {
+        changes = 0;
+
+        for( int i = 0; i < entries - 1; i++ ) {
+            if( directorynames[i].type < directorynames[i+1].type ) {
+                swapentries(i,i+1);
+                changes++;
+            }
+            if( ( directorynames[i].type == directorynames[i+1].type ) && ( directorynames[i].filename[0] > directorynames[i+1].filename[0] ) ) {
+                swapentries(i,i+1);
+                changes++;
+            }
+        }
+    } while( changes );
+}
+
 // WAIT FOR USER TO SELECT A VALID PAW FILE, BROWSING SUBDIRECTORIES
 unsigned int filebrowser( int startdirectorycluster, int rootdirectorycluster ) {
     unsigned int thisdirectorycluster = startdirectorycluster;
@@ -464,12 +494,14 @@ unsigned int filebrowser( int startdirectorycluster, int rootdirectorycluster ) 
             return(0);
         }
 
+        sortdirectoryentries( entries );
+
         while( !rereaddirectory ) {
             displayfilename( directorynames[present_entry].filename, directorynames[present_entry].type );
 
             unsigned short buttons = get_buttons();
             while( buttons == 1 ) { buttons = get_buttons(); }
-            while( get_buttons() != 1 ) {}
+            while( get_buttons() != 1 ) {} sleep( 250 );
             if( buttons & 64 ) {
                 // MOVE RIGHT
                 if( present_entry == entries ) { present_entry = 0; } else { present_entry++; }

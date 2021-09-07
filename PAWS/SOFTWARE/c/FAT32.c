@@ -206,8 +206,6 @@ unsigned int filebrowser( int startdirectorycluster, int rootdirectorycluster ) 
 }
 
 int main( void ) {
-    unsigned int FAT32directoryclusterstart;
-
     INITIALISEMEMORY();
     // set up curses library
     initscr();
@@ -226,10 +224,9 @@ int main( void ) {
         FAT32clusters = PARTITIONS[1].start_sector + VolumeID.reserved_sectors + ( VolumeID.number_of_fats * VolumeID.fat32_size_sectors );
         FAT32clustersize = VolumeID.sectors_per_cluster;
 
-        FAT32directoryclusterstart = VolumeID.startof_root;
         directorycluster = malloc( FAT32clustersize * 512 );
 
-        unsigned int starting_cluster = filebrowser( FAT32directoryclusterstart, FAT32directoryclusterstart );
+        unsigned int starting_cluster = filebrowser( VolumeID.startof_root, VolumeID.startof_root );
         if( starting_cluster ) {
             printw("LOAD CLUSTERS: ");
             while( starting_cluster < 0xffffff8 ) {

@@ -551,7 +551,7 @@ void setup_game() {
     }
 
     // DROP THE BITMAP TO JUST ABOVE THE BACKGROUND
-    screen_mode( 2 );
+    screen_mode( 2, 1 );
 
     // CLEAR and SET THE BACKGROUND
     gpu_cs();

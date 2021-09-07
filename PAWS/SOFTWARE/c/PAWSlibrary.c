@@ -8,16 +8,6 @@
 
 typedef unsigned int size_t;
 
-// MASTER BOOT RECORD AND PARTITION TABLE
-unsigned char *MBR;
-Fat16BootSector *BOOTSECTOR;
-PartitionTable *PARTITION;
-Fat16Entry *ROOTDIRECTORY;
-unsigned short *FAT;
-unsigned char *CLUSTERBUFFER;
-unsigned int CLUSTERSIZE;
-unsigned int DATASTARTSECTOR;
-
 // MEMORY
 unsigned char *MEMORYTOP;
 
@@ -258,8 +248,9 @@ void await_vblank( void ) {
 }
 
 // SET THE LAYER ORDER FOR THE DISPLAY
-void screen_mode( unsigned char screenmode ) {
+void screen_mode( unsigned char screenmode, unsigned char colour ) {
     *SCREENMODE = screenmode;
+    *COLOUR = colour;
 }
 
 // SET THE FRAMEBUFFER TO DISPLAY / DRAW
@@ -1120,65 +1111,240 @@ void tpu_printf_centre( unsigned char y, unsigned char background, unsigned char
     tpu_outputstring( attribute, buffer );
 }
 
-// SIMPLE FILE SYSTEM
-// FILES ARE REFERENCED BY FILENUMBER, 0xffff INDICATES FILE NOT FOUND
-// FILE SIZE CAN BE RETRIEVE
-// FILE CAN BE LOADED INTO MEMORY
-unsigned short sdcard_findfilenumber( unsigned char *filename, unsigned char *ext ) {
-    unsigned short filenumber = 0xffff;
-    unsigned short filenamematch;
 
-    for( unsigned short i = 0; ( i < BOOTSECTOR -> root_dir_entries ) && ( filenumber == 0xffff ); i++ ) {
-        switch( ROOTDIRECTORY[i].filename[0] ) {
-            // NOT TRUE FILES ( deleted, directory pointer )
-            case 0x00:
-            case 0xe5:
-            case 0x05:
-            case 0x2e:
-                break;
+// READ A FILE USING THE SIMPLE FILE BROWSER OR DIRECTLY FROM FILENAME
+// WILL ALLOW SELECTION OF A FILE FROM THE SDCARD, INCLUDING SUB-DIRECTORIES
+// ALLOCATES MEMORY FOR THE FILE, AND LOADS INTO MEMORY
+unsigned char *BOOTRECORD = NULL;
+PartitionTable *PARTITIONS = NULL;
+Fat32VolumeID *VolumeID = NULL;
+FAT32DirectoryEntry *directorycluster = NULL;
+unsigned int FAT32startsector, FAT32clustersize, FAT32clusters, *FAT32table = NULL;
+DirectoryEntry *directorynames;
 
-            default:
-                filenamematch = 1;
-                for( unsigned short c = 0; ( c < 8 ) || ( filename[c] == 0 ); c++ ) {
-                    if( ( filename[c] != ROOTDIRECTORY[i].filename[c] ) && ( ROOTDIRECTORY[i].filename[c] != ' ' ) ) {
-                        filenamematch = 0;
-                    }
-                }
-                for( unsigned short c = 0; ( c < 3 ) || ( ext[c] == 0 ); c++ ) {
-                    if( ( ext[c] != ROOTDIRECTORY[i].ext[c] ) && ( ROOTDIRECTORY[i].ext[c] != ' ' ) ) {
-                        filenamematch = 0;
-                    }
-                }
-                if( filenamematch )
-                    filenumber = i;
-                break;
+// DISPLAY A FILENAME CLEARING THE AREA BEHIND IT
+void gpu_outputstring( unsigned char colour, short x, short y, char *s, unsigned char size ) {
+    while( *s ) {
+        gpu_character_blit( colour, x, y, *s++, size, 0 );
+        x = x + ( 8 << size );
+    }
+}
+void gpu_outputstringcentre( unsigned char colour, short y, char *s, unsigned char size ) {
+    gpu_rectangle( TRANSPARENT, 0, y, 319, y + ( 8 << size ) - 1 );
+    gpu_outputstring( colour, 160 - ( ( ( 8 << size ) * strlen(s) ) >> 1) , y, s, size );
+}
+
+void displayfilename( unsigned char *filename, unsigned char type ) {
+    unsigned char displayname[10], i, j;
+    gpu_outputstringcentre( WHITE, 144, "Current File:", 0 );
+    for( i = 0; i < 10; i++ ) {
+        displayname[i] = 0;
+    }
+    j = type - 1;
+    if( j == 1 ) {
+        displayname[0] = 16;
+    }
+    for( i = 0; i < 8; i++ ) {
+        if( filename[i] != ' ' ) {
+            displayname[j++] = filename[i];
         }
     }
-    return( filenumber );
+    gpu_outputstringcentre( type == 1 ? WHITE : GREY2, 176, displayname, 2 );
 }
 
-unsigned int sdcard_findfilesize( unsigned short filenumber ) {
-    return( ROOTDIRECTORY[filenumber].file_size );
+unsigned int __basecluster = 0xffffff8;
+unsigned int getnextcluster( unsigned int thiscluster ) {
+    unsigned int readsector = thiscluster/128;
+    if( ( __basecluster == 0xffffff8 ) || ( thiscluster < __basecluster ) || ( thiscluster > __basecluster + 127 ) ) {
+        sdcard_readsector( FAT32startsector + readsector, (unsigned char *)FAT32table );
+        __basecluster = readsector * 128;
+    }
+    return( FAT32table[ thiscluster - __basecluster ] );
 }
 
-void sdcard_readcluster( unsigned short cluster ) {
-    for( unsigned short i = 0; i < BOOTSECTOR -> sectors_per_cluster; i++ ) {
-        sdcard_readsector( DATASTARTSECTOR + ( cluster - 2 ) * BOOTSECTOR -> sectors_per_cluster + i, CLUSTERBUFFER + i * 512 );
+void readcluster( unsigned int cluster, unsigned char *buffer ) {
+     for( unsigned char i = 0; i < FAT32clustersize; i++ ) {
+        sdcard_readsector( FAT32clusters + ( cluster - 2 ) * FAT32clustersize + i, buffer + i * 512 );
     }
 }
 
-void sdcard_readfile( unsigned short filenumber, unsigned char * copyAddress ) {
-    unsigned short nextCluster = ROOTDIRECTORY[ filenumber ].starting_cluster;
+void readfile( unsigned int starting_cluster, unsigned char *copyAddress ) {
+    unsigned int nextCluster = starting_cluster;
+    unsigned char *CLUSTERBUFFER = (unsigned char *)directorycluster;
     int i;
 
     do {
-        sdcard_readcluster( nextCluster );
-        for( i = 0; i < BOOTSECTOR -> sectors_per_cluster * 512; i++ ) {
+        readcluster( nextCluster, CLUSTERBUFFER );
+        for( i = 0; i < FAT32clustersize * 512; i++ ) {
             *copyAddress = CLUSTERBUFFER[i];
             copyAddress++;
         }
-        nextCluster = FAT[ nextCluster ];
-    } while( nextCluster != 0xffff );
+        nextCluster = getnextcluster( nextCluster);
+    } while( nextCluster < 0xffffff8 );
+}
+
+void swapentries( short i, short j ) {
+    // SIMPLE BUBBLE SORT, PUT DIRECTORIES FIRST, THEN FILES, IN ALPHABETICAL ORDER
+    DirectoryEntry temporary;
+
+    memcpy( &temporary, &directorynames[i], sizeof( DirectoryEntry ) );
+    memcpy( &directorynames[i], &directorynames[j], sizeof( DirectoryEntry ) );
+    memcpy( &directorynames[j], &temporary, sizeof( DirectoryEntry ) );
+}
+
+void sortdirectoryentries( unsigned short entries ) {
+    if( entries < 1 )
+        return;
+
+    short changes;
+    do {
+        changes = 0;
+
+        for( int i = 0; i < entries - 1; i++ ) {
+            if( directorynames[i].type < directorynames[i+1].type ) {
+                swapentries(i,i+1);
+                changes++;
+            }
+            if( ( directorynames[i].type == directorynames[i+1].type ) && ( directorynames[i].filename[0] > directorynames[i+1].filename[0] ) ) {
+                swapentries(i,i+1);
+                changes++;
+            }
+        }
+    } while( changes );
+}
+
+unsigned int filebrowser( char *message, char *extension, int startdirectorycluster, int rootdirectorycluster, int *filesize ) {
+    unsigned int thisdirectorycluster = startdirectorycluster;
+    FAT32DirectoryEntry *fileentry;
+
+    unsigned char rereaddirectory = 1;
+    unsigned short entries, present_entry;
+
+    while( 1 ) {
+        if( rereaddirectory ) {
+            entries = 0xffff; present_entry = 0;
+            fileentry = (FAT32DirectoryEntry *) directorycluster;
+            memset( &directorynames[0], 0, sizeof( DirectoryEntry ) * 256 );
+        }
+
+        while( rereaddirectory ) {
+            readcluster( thisdirectorycluster, (unsigned char *)directorycluster );
+
+            for( int i = 0; i < 16 * FAT32clustersize; i++ ) {
+                if( ( fileentry[i].filename[0] != 0x00 ) && ( fileentry[i].filename[0] != 0xe5 ) ) {
+                    // LOG ITEM INTO directorynames, if appropriate
+                    if( fileentry[i].attributes &  0x10 ) {
+                        // DIRECTORY, IGNORING "." and ".."
+                        if( fileentry[i].filename[0] != '.' ) {
+                            entries++;
+                            memcpy( &directorynames[entries], &fileentry[i].filename[0], 11 );
+                            directorynames[entries].type = 2;
+                            directorynames[entries].starting_cluster = ( fileentry[i].starting_cluster_high << 16 )+ fileentry[i].starting_cluster_low;
+                        }
+                    } else {
+                        if( fileentry[i].attributes & 0x08 ) {
+                            // VOLUMEID
+                        } else {
+                            if( fileentry[i].attributes != 0x0f ) {
+                                // SHORT FILE NAME ENTRY
+                                if( ( fileentry[i].ext[0] == extension[0] ) && ( fileentry[i].ext[1] == extension[1] ) && ( fileentry[i].ext[2] == extension[2] ) ) {
+                                    entries++;
+                                    memcpy( &directorynames[entries], &fileentry[i].filename[0], 11 );
+                                    directorynames[entries].type = 1;
+                                    directorynames[entries].starting_cluster = ( fileentry[i].starting_cluster_high << 16 )+ fileentry[i].starting_cluster_low;
+                                    directorynames[entries].file_size = fileentry[i].file_size;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // MOVE TO THE NEXT CLUSTER OF THE DIRECTORY
+            if( getnextcluster( thisdirectorycluster ) >= 0xffffff8 ) {
+                rereaddirectory = 0;
+            } else {
+                thisdirectorycluster = getnextcluster( thisdirectorycluster );
+            }
+        }
+
+        if( entries == 0xffff ) {
+            // NO ENTRIES FOUND
+            return(0);
+        } else {
+            sortdirectoryentries( entries );
+            gpu_outputstringcentre( WHITE, 128, message, 0 );
+        }
+
+        while( !rereaddirectory ) {
+            displayfilename( directorynames[present_entry].filename, directorynames[present_entry].type );
+
+            unsigned short buttons = get_buttons();
+            while( buttons == 1 ) { buttons = get_buttons(); }
+            while( get_buttons() != 1 ) {}
+            if( buttons & 64 ) {
+                // MOVE RIGHT
+                if( present_entry == entries ) { present_entry = 0; } else { present_entry++; }
+            }
+            if( buttons & 32 ) {
+                // MOVE LEFT
+                if( present_entry == 0 ) { present_entry = entries; } else { present_entry--; }
+           }
+            if( buttons & 8 ) {
+                // MOVE UP
+                if( startdirectorycluster != rootdirectorycluster ) { return(0); }
+           }
+            if( buttons & 2 ) {
+                // SELECTED
+                switch( directorynames[present_entry].type ) {
+                    case 1:
+                        return( directorynames[present_entry].starting_cluster );
+                        break;
+                    case 2:
+                        int temp = filebrowser( message, extension, directorynames[present_entry].starting_cluster, rootdirectorycluster, filesize );
+                        if( temp ) {
+                            if( !(*filesize) ) *filesize = directorynames[present_entry].file_size;
+                            return( temp );
+                        } else {
+                            rereaddirectory = 1;
+                        }
+                }
+            }
+        }
+    }
+}
+
+unsigned char *sdcard_selectfile( char *message, char *extension, unsigned int *filesize ) {
+    unsigned int starting_cluster;
+
+    *filesize = 0;
+
+    if( VolumeID == NULL ) {
+        // MEMORY SPACE NOT ALLOCATED FOR FAT32 STRUCTURES
+        BOOTRECORD = malloc( 512 );
+        PARTITIONS = (PartitionTable *)&BOOTRECORD[446];
+        VolumeID = malloc( 512 );
+        FAT32table = malloc( 512 );
+        directorynames = (DirectoryEntry *)malloc( sizeof( DirectoryEntry ) * 256 );
+        sdcard_readsector( 0, BOOTRECORD );
+        sdcard_readsector( PARTITIONS[0].start_sector, (unsigned char *)VolumeID );
+
+        FAT32startsector = PARTITIONS[0].start_sector + VolumeID -> reserved_sectors;
+        FAT32clusters = PARTITIONS[0].start_sector + VolumeID -> reserved_sectors + ( VolumeID -> number_of_fats * VolumeID -> fat32_size_sectors );
+        FAT32clustersize = VolumeID -> sectors_per_cluster;
+
+        directorycluster = malloc( FAT32clustersize * 512 );
+    }
+
+    starting_cluster = filebrowser( message, extension, VolumeID -> startof_root, VolumeID -> startof_root, filesize );
+    if( starting_cluster ) {
+        // ALLOCATE ENOUGH MEMORY TO READ CLUSTERS
+        unsigned char *copyaddress = malloc( ( ( *filesize / ( FAT32clustersize * 512 )  ) + 1 ) * ( FAT32clustersize * 512 ) );
+        readfile( starting_cluster, copyaddress );
+        return( copyaddress );
+    } else {
+        return(0);
+    }
 }
 
 // NETPBM DECODER
@@ -1697,34 +1863,14 @@ void  __attribute__ ((noreturn)) _exit( int status ){
     while(1);
 }
 
-// ALLOCATE MEMORY FOR FILES, IN UNITS OF CLUSTERSIZE ( allows extra for reading in files )
-unsigned char *filemalloc( unsigned int size ) {
-    unsigned int numberofclusters = size / CLUSTERSIZE;
-
-    if( size % CLUSTERSIZE != 0 )
-        numberofclusters++;
-
-    return( malloc( numberofclusters * CLUSTERSIZE ) );
-}
-
 // SETUP MEMORY POINTERS FOR THE SDCARD - ALREADY PRE-LOADED BY THE BIOS
 extern int _bss_start, _bss_end;
 void INITIALISEMEMORY( void ) {
-    // SDCARD FILE SYSTEM
-    MBR = (unsigned char *) 0x12000000 - 0x200;
-    BOOTSECTOR = (Fat16BootSector *)0x12000000 - 0x400;
-    PARTITION = (PartitionTable *) &MBR[ 0x1BE ];
-    ROOTDIRECTORY = (Fat16Entry *)( 0x12000000 - 0x400 - BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) );
-    FAT = (unsigned short * ) ROOTDIRECTORY - BOOTSECTOR -> fat_size_sectors * 512;
-    CLUSTERBUFFER = (unsigned char * )FAT - BOOTSECTOR -> sectors_per_cluster * 512;
-    CLUSTERSIZE = BOOTSECTOR -> sectors_per_cluster * 512;
-    DATASTARTSECTOR = PARTITION[0].start_sector + BOOTSECTOR -> reserved_sectors + BOOTSECTOR -> fat_size_sectors * BOOTSECTOR -> number_of_fats + ( BOOTSECTOR -> root_dir_entries * sizeof( Fat16Entry ) ) / 512;;
-
     // CLEAR BSS
     memset( &_bss_start, 0, &_bss_end - &_bss_end );
 
     // MEMORY
-    MEMORYTOP = CLUSTERBUFFER;
+    MEMORYTOP = (unsigned char *)0x12000000;
     _heap = NULL;
 }
 

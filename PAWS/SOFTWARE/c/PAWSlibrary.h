@@ -3,21 +3,6 @@
 // MEMORY
 extern unsigned char *MEMORYTOP;
 
-// MASTER BOOT RECORD AND PARTITION TABLE
-extern unsigned char *MBR;
-extern Fat16BootSector *BOOTSECTOR;
-extern PartitionTable *PARTITION;
-extern Fat16Entry *ROOTDIRECTORY;
-extern unsigned short *FAT;
-extern unsigned char *CLUSTERBUFFER;
-extern unsigned int CLUSTERSIZE;
-extern unsigned int DATASTARTSECTOR;
-
-// SIMPLE FILE BROWSER
-extern unsigned short sdcard_findfilenumber( unsigned char *, unsigned char * );
-extern unsigned int sdcard_findfilesize( unsigned short );
-extern void sdcard_readfile( unsigned short, unsigned char * );
-
 // RISC-V CSR FUNCTIONS
 extern unsigned int CSRisa( void );
 extern unsigned long CSRcycles( void );
@@ -55,11 +40,11 @@ extern void await_beep( unsigned char );
 extern unsigned short get_beep_active( unsigned char );
 
 // SDCARD
-extern void sdcard_readsector( unsigned int, unsigned char * );
+extern unsigned char * sdcard_selectfile( char *, char *, unsigned int * );
 
 // DISPLAY
 extern void await_vblank( void );
-extern void screen_mode( unsigned char );
+extern void screen_mode( unsigned char, unsigned char );
 extern void bitmap_display( unsigned char );
 extern void bitmap_draw( unsigned char );
 
@@ -191,6 +176,3 @@ extern int mvprintw( int y, int x, const char *fmt,... );
 extern int attron( int attrs );
 extern int deleteln( void );
 extern int clrtoeol( void );
-
-// FILEMALLOC TO ALLOCATE SPACE FOR FILES
-extern unsigned char *filemalloc( unsigned int );

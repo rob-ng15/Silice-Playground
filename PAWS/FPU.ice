@@ -147,7 +147,7 @@ algorithm floatconvert(
     output  uint5   flags,
     output  uint32  result
 ) <autorun> {
-    uint1   dounsigned <: rs2[0,1];
+    uint1   dounsigned <:: rs2[0,1];
     uint32  floatresult = uninitialised;
     uint5   floatflags = uninitialised;
     uint1   FPUfloatstart = uninitialised;

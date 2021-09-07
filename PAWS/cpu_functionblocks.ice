@@ -292,8 +292,9 @@ algorithm CSRblock(
     output  uint5   FPUflags,
     output  uint32  result
 ) <autorun> {
-    uint64  CSRtimer = 0;
-    uint64  CSRinstret = 0;
+    uint48  CSRtimer = 0;
+    uint48  CSRcycletimer[2] = { 0, 0 };
+    uint48  CSRinstret[2] = { 0, 0 };
     uint8   CSRf[2] = { 0, 0 };
     uint32  writevalue <:: function3[2,1] ? rs1 : sourceReg1;
 
@@ -310,12 +311,12 @@ algorithm CSRblock(
                     case 12h002: { result = CSRf[SMT][5,3]; }   // frrm
                     case 12h003: { result = CSRf[SMT]; }        // frcsr
                     case 12h301: { result = $CPUISA$; }
-                    case 12hc00: { result = CSRtimer[0,32]; }
-                    case 12hc80: { result = CSRtimer[32,32]; }
+                    case 12hc00: { result = CSRcycletimer[SMT][0,32]; }
+                    case 12hc80: { result = CSRcycletimer[SMT][32,16]; }
                     case 12hc01: { result = CSRtimer[0,32]; }
-                    case 12hc81: { result = CSRtimer[32,32]; }
-                    case 12hc02: { result = CSRinstret[0,32]; }
-                    case 12hc82: { result = CSRinstret[32,32]; }
+                    case 12hc81: { result = CSRtimer[32,16]; }
+                    case 12hc02: { result = CSRinstret[SMT][0,32]; }
+                    case 12hc82: { result = CSRinstret[SMT][32,16]; }
                     case 12hf14: { result = SMT; }
                     default: { result = 0; }
                 }
@@ -365,7 +366,8 @@ algorithm CSRblock(
         }
         // UPDATE TIMERS AND COUNTERS
         CSRtimer = CSRtimer + 1;
-        CSRinstret = CSRinstret + 1;
+        CSRcycletimer[SMT] = CSRcycletimer[SMT] + 1;
+        CSRinstret[SMT] = CSRinstret[SMT] + 1;
     }
 }
 

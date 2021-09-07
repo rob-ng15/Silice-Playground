@@ -7,8 +7,9 @@ algorithm multiplex_display(
     output! uint8 pix_green,
     output! uint8 pix_blue,
 
-    // DISPLAY ORDER
+    // DISPLAY ORDER AND COLOUR/BW MODE
     input   uint2   display_order,
+    input   uint1   colour,
 
     // BACKGROUND
     input uint8 background_p,
@@ -58,9 +59,18 @@ algorithm multiplex_display(
         pix :> pixel
     );
 
-    pix_red   := { {4{pixel[4,2]}} };
-    pix_green := { {4{pixel[2,2]}} };
-    pix_blue  := { {4{pixel[0,2]}} };
+    // SELECT COLOUR OR BLACK AND WHITE
+    always {
+        if( colour ) {
+            pix_red   = { {4{pixel[4,2]}} };
+            pix_green = { {4{pixel[2,2]}} };
+            pix_blue  = { {4{pixel[0,2]}} };
+        } else {
+            pix_red   = { pixel[4,2], pixel[0,6] };
+            pix_green = { pixel[4,2], pixel[0,6] };
+            pix_blue  = { pixel[4,2], pixel[0,6] };
+        }
+    }
 }
 
 // CHOOSE LAY TO DISPLAY

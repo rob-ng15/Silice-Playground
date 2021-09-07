@@ -20,6 +20,7 @@ unsigned char volatile * SDCARD_DATA = (unsigned char volatile *) 0xf150;
 // DISPLAY UNITS
 unsigned char volatile * VBLANK = ( unsigned char volatile * ) 0x8f00;
 unsigned char volatile * SCREENMODE = ( unsigned char volatile * ) 0x8f00;
+unsigned char volatile * COLOUR = ( unsigned char volatile * ) 0x8f01;
 
 // BACKGROUND AND COPPER - BASE 0x8000
 unsigned char volatile * BACKGROUND_COLOUR = (unsigned char volatile *) 0x8000;

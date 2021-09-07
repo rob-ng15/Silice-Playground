@@ -415,19 +415,19 @@ algorithm cachecontroller(
         if( doread || dowrite ) {
             busy = 1;
             ++:
-            switch( cachetagmatch ) {
-                case 1: { needwritetosdram = 1; cacheupdatedata = writethrough; cacheupdate = dowrite; }
-                case 0: {
-                    if( tags.rdata0[12,1] ) { while( sdrambusy ) {} sdramaddress = { tags.rdata0[0,11], address[1,14], 1b0 }; sdramwrite = 1; }  // EVICT FROM CACHE TO SDRAM
+            if( cachetagmatch ) {
+                needwritetosdram = 1; cacheupdatedata = writethrough; cacheupdate = dowrite;
+            } else {
+                if( tags.rdata0[12,1] ) { while( sdrambusy ) {} sdramaddress = { tags.rdata0[0,11], address[1,14], 1b0 }; sdramwrite = 1; }   // EVICT FROM CACHE TO SDRAM
 
-                    // READ FROM SDRAM FOR READ AND 8 BIT WRITES (AND MODIFY) AND WRITE TO CACHE, OR WRITE DIRECTLY TO CACHE IF 16 BIT WRITE
-                    if( doread || ( dowrite && byteaccess ) ) {
-                        while( sdrambusy ) {} sdramaddress = address; sdramread = 1; while( sdrambusy ) {}
-                        needwritetosdram = dowrite; cacheupdatedata = dowrite ? writethrough : sdramreaddata; cacheupdate = 1;
-                    } else {
-                        needwritetosdram = 1; cacheupdatedata = writethrough; cacheupdate = dowrite;
-                    }
+                // READ FROM SDRAM FOR READ AND 8 BIT WRITES (AND MODIFY) AND WRITE TO CACHE, OR WRITE DIRECTLY TO CACHE IF 16 BIT WRITE
+                if( doread || ( dowrite && byteaccess ) ) {
+                    while( sdrambusy ) {} sdramaddress = address; sdramread = 1; while( sdrambusy ) {}
+                    needwritetosdram = dowrite; cacheupdatedata = dowrite ? writethrough : sdramreaddata; cacheupdate = 1;
+                } else {
+                    needwritetosdram = 1; cacheupdatedata = writethrough; cacheupdate = dowrite;
                 }
+
             }
             busy = 0;
         }

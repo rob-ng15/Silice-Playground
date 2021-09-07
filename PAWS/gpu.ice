@@ -975,12 +975,12 @@ algorithm preptriangle(
     ( my2 ) = max3( y1, y2, y3 );
     ++:
     // Put points in order so that ( x1, y1 ) is at top, then ( x2, y2 ) and ( x3, y3 ) are clockwise from there
-    if( y3 < y2 ) { ( x2, y2, x3, y3 ) = swapcoordinates( x2, y2, x3, y3 ); ++: } else {}
-    if( y2 < y1 ) { ( x1, y1, x2, y2 ) = swapcoordinates( x1, y1, x2, y2 ); ++: } else {}
-    if( y3 < y1 ) { ( x1, y1, x3, y3 ) = swapcoordinates( x1, y1, x3, y3 ); ++: } else {}
-    if( y3 < y2 ) { ( x2, y2, x3, y3 ) = swapcoordinates( x2, y2, x3, y3 ); ++: } else {}
-    if( ( y2 == y1 ) && ( x2 < x1 ) ) { ( x1, y1, x2, y2 ) = swapcoordinates( x1, y1, x2, y2 ); ++: } else {}
-    if( ( y2 != y1 ) && ( y3 >= y2 ) && ( x2 < x3 ) ) { ( x2, y2, x3, y3 ) = swapcoordinates( x2, y2, x3, y3 ); ++: } else {}
+    if( y3 < y2 ) { ( x2, y2, x3, y3 ) = swapcoordinates( x2, y2, x3, y3 ); ++: }
+    if( y2 < y1 ) { ( x1, y1, x2, y2 ) = swapcoordinates( x1, y1, x2, y2 ); ++: }
+    if( y3 < y1 ) { ( x1, y1, x3, y3 ) = swapcoordinates( x1, y1, x3, y3 ); ++: }
+    if( y3 < y2 ) { ( x2, y2, x3, y3 ) = swapcoordinates( x2, y2, x3, y3 ); ++: }
+    if( ( y2 == y1 ) && ( x2 < x1 ) ) { ( x1, y1, x2, y2 ) = swapcoordinates( x1, y1, x2, y2 ); ++: }
+    if( ( y2 != y1 ) && ( y3 >= y2 ) && ( x2 < x3 ) ) { ( x2, y2, x3, y3 ) = swapcoordinates( x2, y2, x3, y3 ); ++: }
 }
 algorithm drawtriangle(
     input   uint1   start,
