@@ -1298,12 +1298,12 @@ unsigned int filebrowser( char *message, char *extension, int startdirectoryclus
                 // SELECTED
                 switch( directorynames[present_entry].type ) {
                     case 1:
+                        if( !(*filesize) ) *filesize = directorynames[present_entry].file_size;
                         return( directorynames[present_entry].starting_cluster );
                         break;
                     case 2:
                         int temp = filebrowser( message, extension, directorynames[present_entry].starting_cluster, rootdirectorycluster, filesize );
                         if( temp ) {
-                            if( !(*filesize) ) *filesize = directorynames[present_entry].file_size;
                             return( temp );
                         } else {
                             rereaddirectory = 1;

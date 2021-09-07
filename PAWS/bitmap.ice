@@ -263,12 +263,12 @@ algorithm bitmapwriter(
             switch( dithermode ) {
                 case 0: { condition = 1; }                                                      // SOLID
                 default: { condition = ( x_write_pixel[dithermode - 1,1] == y_write_pixel[dithermode - 1,1] ); }        // CHECKERBOARDS 1 2 AND 3
-                case 4: { condition = x_write_pixel[0,1]; }                                                 // VERTICAL STRIPES
-                case 5: { condition = y_write_pixel[0,1]; }                                                 // HORIZONTAL STRIPES
+                case 4: { condition = x_write_pixel[0,1]; }                                                             // VERTICAL STRIPES
+                case 5: { condition = y_write_pixel[0,1]; }                                                             // HORIZONTAL STRIPES
                 case 6: { condition = ( x_write_pixel[0,1] || y_write_pixel[0,1] ); }                                   // CROSSHATCH
                 case 7: { condition = ( x_write_pixel[0,2] == y_write_pixel[0,2] ); }                                   // LEFT SLOPE
                 case 8: { condition = ( x_write_pixel[0,2] == ~y_write_pixel[0,2] ); }                                  // RIGHT SLOPE
-                case 9: {                                                                       // LEFT TRIANGLE
+                case 9: {                                                                                               // LEFT TRIANGLE
                     switch( y_write_pixel[0,2] ) {
                         case 2b00: { condition = ( x_write_pixel[0,2] == 2b00 ); }
                         case 2b01: { condition = ( ~x_write_pixel[1,1] ); }
@@ -276,7 +276,7 @@ algorithm bitmapwriter(
                         case 2b11: { condition = 1; }
                     }
                 }
-                case 10: {                                                                      // RIGHT TRIANGLE
+                case 10: {                                                                                              // RIGHT TRIANGLE
                     switch( y_write_pixel[0,2] ) {
                         case 2b00: { condition = ( x_write_pixel[0,2] == 2b11 ); }
                         case 2b01: { condition = ( x_write_pixel[1,1] ); }
@@ -284,26 +284,26 @@ algorithm bitmapwriter(
                         case 2b11: { condition = 1; }
                     }
                 }
-                case 11: {                                                                      // ENCLOSED
+                case 11: {                                                                                              // ENCLOSED
                     switch( y_write_pixel[0,1] ^ y_write_pixel[1,1] ) {
                         case 1: { condition = ( x_write_pixel[0,1] == x_write_pixel[1,1] ); }
                         case 0: { condition = 1; }
                     }
                 }
-                case 12: {                                                                      // OCTAGON
+                case 12: {                                                                                              // OCTAGON
                     switch( y_write_pixel[0,1] ^ y_write_pixel[1,1] ) {
                         case 1: { condition = ( x_write_pixel[0,1] == x_write_pixel[1,1] ); }
                         case 0: { condition = 1; }
                     }
                 }
-                case 13: {                                                                      // BRICK
+                case 13: {                                                                                              // BRICK
                     switch( y_write_pixel[0,2] ) {
                         case 2b00: { condition = 1; }
                         default: { condition = ( x_write_pixel[0,2] == { y_write_pixel[2,1], 1b0 } ); }
                     }
                 }
-                case 14: { condition = 1; }                                                     // COLOUR STATIC
-                case 15: { condition = static1bit; }                                            // STATIC
+                case 14: { condition = 1; }                                                                             // COLOUR STATIC
+                case 15: { condition = static1bit; }                                                                    // STATIC
             }
             switch( dithermode ) {
                 case 14: { pixeltowrite = static6bit; }

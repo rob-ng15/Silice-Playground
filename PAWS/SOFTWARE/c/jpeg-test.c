@@ -1,5 +1,6 @@
 #include "PAWSlibrary.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 int main( void ) {
     INITIALISEMEMORY();
