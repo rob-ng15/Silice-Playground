@@ -1,6 +1,6 @@
 algorithm gpu_queue(
-    output  int16   bitmap_x_write,
-    output  int16   bitmap_y_write,
+    output  int11   bitmap_x_write,
+    output  int11   bitmap_y_write,
     output  uint7   bitmap_colour_write,
     output  uint7   bitmap_colour_write_alt,
     output  uint1   bitmap_write,
@@ -15,16 +15,16 @@ algorithm gpu_queue(
     input   uint8   crop_top,
     input   uint8   crop_bottom,
 
-    input   int16   gpu_x,
-    input   int16   gpu_y,
+    input   int11   gpu_x,
+    input   int11   gpu_y,
     input   uint7   gpu_colour,
     input   uint7   gpu_colour_alt,
-    input   int16   gpu_param0,
-    input   int16   gpu_param1,
-    input   int16   gpu_param2,
-    input   int16   gpu_param3,
-    input   int16   gpu_param4,
-    input   int16   gpu_param5,
+    input   int11   gpu_param0,
+    input   int11   gpu_param1,
+    input   int11   gpu_param2,
+    input   int11   gpu_param3,
+    input   int11   gpu_param4,
+    input   int11   gpu_param5,
     input   uint4   gpu_write,
     input   uint4   gpu_dithermode,
 
@@ -49,8 +49,8 @@ algorithm gpu_queue(
 
     input   uint5   vector_block_number,
     input   uint7   vector_block_colour,
-    input   int16   vector_block_xc,
-    input   int16   vector_block_yc,
+    input   int11   vector_block_xc,
+    input   int11   vector_block_yc,
     input   uint3   vector_block_scale,
     input   uint3   vector_block_action,
     input   uint1   draw_vector,
@@ -95,10 +95,10 @@ algorithm gpu_queue(
     // 32 vector blocks each of 16 vertices
     simple_dualport_bram uint13 vertex <input!> [512] = uninitialised;
     // VECTOR DRAWER UNIT
-    int16   vector_drawer_gpu_x = uninitialised;
-    int16   vector_drawer_gpu_y = uninitialised;
-    int16   vector_drawer_gpu_param0 = uninitialised;
-    int16   vector_drawer_gpu_param1 = uninitialised;
+    int11   vector_drawer_gpu_x = uninitialised;
+    int11   vector_drawer_gpu_y = uninitialised;
+    int11   vector_drawer_gpu_param0 = uninitialised;
+    int11   vector_drawer_gpu_param1 = uninitialised;
     uint1   vector_drawer_gpu_write = uninitialised;
     vectors vector_drawer(
         gpu_x :> vector_drawer_gpu_x,
@@ -125,16 +125,16 @@ algorithm gpu_queue(
         vertex <:> vertex
     );
 
-    int16   x = uninitialised;
-    int16   y = uninitialised;
+    int11   x = uninitialised;
+    int11   y = uninitialised;
     uint7   colour = uninitialised;
     uint7   colour_alt = uninitialised;
-    int16   param0 = uninitialised;
-    int16   param1 = uninitialised;
-    int16   param2 = uninitialised;
-    int16   param3 = uninitialised;
-    int16   param4 = uninitialised;
-    int16   param5 = uninitialised;
+    int11   param0 = uninitialised;
+    int11   param1 = uninitialised;
+    int11   param2 = uninitialised;
+    int11   param3 = uninitialised;
+    int11   param4 = uninitialised;
+    int11   param5 = uninitialised;
     uint4   dithermode = uninitialised;
     uint1   gpu_active = uninitialised;
     uint4   write = uninitialised;
@@ -176,16 +176,16 @@ algorithm gpu_queue(
 
     // QUEUE GPU PARAMETERS, INCLUDING DITHERMODE AND CROP
     uint1   queue_busy = 0;
-    int16   queue_x = uninitialised;
-    int16   queue_y = uninitialised;
+    int11   queue_x = uninitialised;
+    int11   queue_y = uninitialised;
     uint7   queue_colour = uninitialised;
     uint7   queue_colour_alt = uninitialised;
-    int16   queue_param0 = uninitialised;
-    int16   queue_param1 = uninitialised;
-    int16   queue_param2 = uninitialised;
-    int16   queue_param3 = uninitialised;
-    int16   queue_param4 = uninitialised;
-    int16   queue_param5 = uninitialised;
+    int11   queue_param0 = uninitialised;
+    int11   queue_param1 = uninitialised;
+    int11   queue_param2 = uninitialised;
+    int11   queue_param3 = uninitialised;
+    int11   queue_param4 = uninitialised;
+    int11   queue_param5 = uninitialised;
     uint4   queue_dithermode = uninitialised;
     uint4   queue_write = uninitialised;
     uint9   queue_cropL = uninitialised;
@@ -199,40 +199,29 @@ algorithm gpu_queue(
         switch( gpu_write ) {
             case 0: {
                 if( vector_drawer_gpu_write ) {
-                    x = vector_drawer_gpu_x;
-                    y = vector_drawer_gpu_y;
-                    dithermode = 0;
-                    colour = vector_block_colour;
-                    colour_alt = 0;
+                    dithermode = 0; colour = vector_block_colour; colour_alt = 0;
+                    x = vector_drawer_gpu_x; y = vector_drawer_gpu_y;
                     param0 = vector_drawer_gpu_param0; param1 = vector_drawer_gpu_param1;
                     param2 = 1; param3 = 0;
-                    cropL = crop_left; cropR = crop_right;
-                    cropT = crop_top; cropB = crop_bottom;
+                    cropL = crop_left; cropR = crop_right; cropT = crop_top; cropB = crop_bottom;
                     write = 2;
                 }
             }
             default: {
                 // COMMAND QUEUE, LATCH AND WAIT FOR GPU THEN DISPATCH
                 queue_busy = 1;
-                queue_x = gpu_x;
-                queue_y = gpu_y;
-                queue_dithermode = gpu_dithermode;
-                queue_colour = gpu_colour;
-                queue_colour_alt = gpu_colour_alt;
-                queue_param0 = gpu_param0;
-                queue_param1 = gpu_param1;
-                queue_param2 = gpu_param2;
-                queue_param3 = gpu_param3;
+                queue_dithermode = gpu_dithermode; queue_colour = gpu_colour; queue_colour_alt = gpu_colour_alt;
+                queue_x = gpu_x; queue_y = gpu_y;
+                queue_param0 = gpu_param0; queue_param1 = gpu_param1;
+                queue_param2 = gpu_param2; queue_param3 = gpu_param3;
                 queue_write = gpu_write;
-                queue_cropL = crop_left; queue_cropR = crop_right;
-                queue_cropT = crop_top; queue_cropB = crop_bottom;
+                queue_cropL = crop_left; queue_cropR = crop_right; queue_cropT = crop_top; queue_cropB = crop_bottom;
                 while( gpu_active ) {}
                 colour = queue_colour; colour_alt = queue_colour_alt; dithermode = queue_dithermode;
                 x = queue_x; y = queue_y;
                 param0 = queue_param0; param1 = queue_param1;
                 param2 = queue_param2; param3 = queue_param3;
-                cropL = queue_cropL; cropR = queue_cropR;
-                cropT = queue_cropT; cropB = queue_cropB;
+                cropL = queue_cropL; cropR = queue_cropR; cropT = queue_cropT; cropB = queue_cropB;
                 write = queue_write;
                 queue_busy = 0;
             }
@@ -270,8 +259,8 @@ algorithm gpu(
     simple_dualport_bram_port0 colourblittilemap,
 
     // GPU to SET and GET pixels
-    output int16   bitmap_x_write,
-    output int16   bitmap_y_write,
+    output int11   bitmap_x_write,
+    output int11   bitmap_y_write,
     output uint7   bitmap_colour_write,
     output uint7   bitmap_colour_write_alt,
     output uint1   bitmap_write,
@@ -282,16 +271,16 @@ algorithm gpu(
     input   uint8   crop_top,
     input   uint8   crop_bottom,
 
-    input   int16   gpu_x,
-    input   int16   gpu_y,
+    input   int11   gpu_x,
+    input   int11   gpu_y,
     input   uint7   gpu_colour,
     input   uint7   gpu_colour_alt,
-    input   int16   gpu_param0,
-    input   int16   gpu_param1,
-    input   int16   gpu_param2,
-    input   int16   gpu_param3,
-    input   int16   gpu_param4,
-    input   int16   gpu_param5,
+    input   int11   gpu_param0,
+    input   int11   gpu_param1,
+    input   int11   gpu_param2,
+    input   int11   gpu_param3,
+    input   int11   gpu_param4,
+    input   int11   gpu_param5,
     input   uint4   gpu_write,
     input   uint4   gpu_dithermode,
 
@@ -304,12 +293,11 @@ algorithm gpu(
     output  uint1   gpu_active(0),
 ) <autorun> {
     // GPU SUBUNITS
-    uint7   gpu_busy_flags <:: { GPUpixelblockbusy, GPUcolourblitbusy, GPUblitbusy, GPUtrianglebusy, GPUcirclebusy, GPUrectanglebusy, GPUlinebusy };
 
     uint1   GPUrectanglestart = uninitialised;
     uint1   GPUrectanglebusy = uninitialised;
-    int16   GPUrectanglebitmap_x_write = uninitialised;
-    int16   GPUrectanglebitmap_y_write = uninitialised;
+    int11   GPUrectanglebitmap_x_write = uninitialised;
+    int11   GPUrectanglebitmap_y_write = uninitialised;
     uint1   GPUrectanglebitmap_write = uninitialised;
     rectangle GPUrectangle(
         crop_left <: crop_left,
@@ -328,8 +316,8 @@ algorithm gpu(
     );
     uint1   GPUlinestart = uninitialised;
     uint1   GPUlinebusy = uninitialised;
-    int16   GPUlinebitmap_x_write = uninitialised;
-    int16   GPUlinebitmap_y_write = uninitialised;
+    int11   GPUlinebitmap_x_write = uninitialised;
+    int11   GPUlinebitmap_y_write = uninitialised;
     uint1   GPUlinebitmap_write = uninitialised;
     line GPUline(
         x <: gpu_x,
@@ -345,8 +333,8 @@ algorithm gpu(
     );
     uint1   GPUcirclestart = uninitialised;
     uint1   GPUcirclebusy = uninitialised;
-    int16   GPUcirclebitmap_x_write = uninitialised;
-    int16   GPUcirclebitmap_y_write = uninitialised;
+    int11   GPUcirclebitmap_x_write = uninitialised;
+    int11   GPUcirclebitmap_y_write = uninitialised;
     uint1   GPUcirclebitmap_write = uninitialised;
     uint1   GPUcirclefilledcircle = uninitialised;
     circle GPUcircle(
@@ -363,8 +351,8 @@ algorithm gpu(
     );
     uint1   GPUtrianglestart = uninitialised;
     uint1   GPUtrianglebusy = uninitialised;
-    int16   GPUtrianglebitmap_x_write = uninitialised;
-    int16   GPUtrianglebitmap_y_write = uninitialised;
+    int11   GPUtrianglebitmap_x_write = uninitialised;
+    int11   GPUtrianglebitmap_y_write = uninitialised;
     uint1   GPUtrianglebitmap_write = uninitialised;
     triangle GPUtriangle(
         crop_left <: crop_left,
@@ -385,8 +373,8 @@ algorithm gpu(
     );
     uint1   GPUblitstart = uninitialised;
     uint1   GPUblitbusy = uninitialised;
-    int16   GPUblitbitmap_x_write = uninitialised;
-    int16   GPUblitbitmap_y_write = uninitialised;
+    int11   GPUblitbitmap_x_write = uninitialised;
+    int11   GPUblitbitmap_y_write = uninitialised;
     uint1   GPUblitbitmap_write = uninitialised;
     uint1   GPUblittilecharacter = uninitialised;
     blit GPUblit(
@@ -406,8 +394,8 @@ algorithm gpu(
     );
     uint1   GPUcolourblitstart = uninitialised;
     uint1   GPUcolourblitbusy = uninitialised;
-    int16   GPUcolourblitbitmap_x_write = uninitialised;
-    int16   GPUcolourblitbitmap_y_write = uninitialised;
+    int11   GPUcolourblitbitmap_x_write = uninitialised;
+    int11   GPUcolourblitbitmap_y_write = uninitialised;
     uint1   GPUcolourblitbitmap_write = uninitialised;
     uint7   GPUcolourblitbitmap_colour_write = uninitialised;
     colourblit GPUcolourblit(
@@ -426,8 +414,8 @@ algorithm gpu(
     );
     uint1   GPUpixelblockstart = uninitialised;
     uint1   GPUpixelblockbusy = uninitialised;
-    int16   GPUpixelblockbitmap_x_write = uninitialised;
-    int16   GPUpixelblockbitmap_y_write = uninitialised;
+    int11   GPUpixelblockbitmap_x_write = uninitialised;
+    int11   GPUpixelblockbitmap_y_write = uninitialised;
     uint1   GPUpixelblockbitmap_write = uninitialised;
     uint7   GPUpixelblockbitmap_colour_write = uninitialised;
     pixelblock GPUpixelblock(
@@ -447,6 +435,9 @@ algorithm gpu(
         bitmap_write :> GPUpixelblockbitmap_write,
         bitmap_colour_write :> GPUpixelblockbitmap_colour_write
     );
+
+    // GPU UNIT BUSY FLAGS
+    uint7   gpu_busy_flags <:: { GPUpixelblockbusy, GPUcolourblitbusy, GPUblitbusy, GPUtrianglebusy, GPUcirclebusy, GPUrectanglebusy, GPUlinebusy };
 
     // CONTROLS FOR BITMAP PIXEL WRITER AND GPU SUBUNITS
     bitmap_write := GPUlinebitmap_write | GPUrectanglebitmap_write | GPUcirclebitmap_write |
@@ -498,68 +489,26 @@ algorithm gpu(
     }
 }
 
-// CROP TO CROPPING RECTANGLE
-// ASSUMES POINTS ARE TOPLEFT (x1,y1) AND BOTTOMRIGHT (x2,y2)
-algorithm performcrop(
-    input   int16   crop_left,
-    input   int16   crop_right,
-    input   int16   crop_top,
-    input   int16   crop_bottom,
-    input   int16   x1,
-    input   int16   y1,
-    input   int16   x2,
-    input   int16   y2,
-    output  uint9   min_x,
-    output  uint8   min_y,
-    output  uint9   max_x,
-    output  uint8   max_y,
-) <autorun> {
-    always {
-        min_x = ( x1 < crop_left ) ? crop_left : x1;
-        min_y = ( y1 < crop_top ) ? crop_top : y1;
-        max_x = ( x2 > crop_right ) ? crop_right : x2;
-        max_y = ( y2 > crop_bottom ) ? crop_bottom : y2;
-    }
-}
-
-// DETERMINE IF ANYTHING TO DRAW
-// ASSUMES POINTS ARE TOPLEFT (x1,y1) AND BOTTOMRIGHT (x2,y2)
-algorithm   isinrange(
-    input   int16   crop_left,
-    input   int16   crop_right,
-    input   int16   crop_top,
-    input   int16   crop_bottom,
-    input   int16   x1,
-    input   int16   y1,
-    input   int16   x2,
-    input   int16   y2,
-    output  uint1   todraw
-) <autorun> {
-    always {
-        todraw = ~( ( x2 < crop_left ) || ( y2 < crop_top ) || ( x1 > crop_right ) || ( y1 > crop_bottom ) );
-    }
-}
-
 // RECTANGLE - OUTPUT PIXELS TO DRAW A RECTANGLE
 algorithm preprectangle(
-    input   int16   crop_left,
-    input   int16   crop_right,
-    input   int16   crop_top,
-    input   int16   crop_bottom,
-    input   int16   x,
-    input   int16   y,
-    input   int16   param0,
-    input   int16   param1,
-    output  int16   min_x,
-    output  int16   min_y,
-    output  int16   max_x,
-    output  int16   max_y,
+    input   int11   crop_left,
+    input   int11   crop_right,
+    input   int11   crop_top,
+    input   int11   crop_bottom,
+    input   int11   x,
+    input   int11   y,
+    input   int11   param0,
+    input   int11   param1,
+    output  int11   min_x,
+    output  int11   min_y,
+    output  int11   max_x,
+    output  int11   max_y,
     output  uint1   todraw
 ) {
-    int16   x1 <:: ( x < param0 ) ? x : param0;
-    int16   y1 <:: ( y < param1 ) ? y : param1;
-    int16   x2 <:: ( x > param0 ) ? x : param0;
-    int16   y2 <:: ( y > param1 ) ? y : param1;
+    int11   x1 <:: ( x < param0 ) ? x : param0;
+    int11   y1 <:: ( y < param1 ) ? y : param1;
+    int11   x2 <:: ( x > param0 ) ? x : param0;
+    int11   y2 <:: ( y > param1 ) ? y : param1;
 
     min_x = ( x1 < crop_left ) ? crop_left : x1;
     min_y = ( y1 < crop_top ) ? crop_top : y1;
@@ -575,8 +524,8 @@ algorithm drawrectangle(
     input   uint8   min_y,
     input   uint9   max_x,
     input   uint8   max_y,
-    output  int16   bitmap_x_write,
-    output  int16   bitmap_y_write,
+    output  int11   bitmap_x_write,
+    output  int11   bitmap_y_write,
     output  uint1   bitmap_write
 ) <autorun> {
     uint9   x = uninitialized; uint8   y = uninitialized;
@@ -600,17 +549,17 @@ algorithm drawrectangle(
 algorithm rectangle (
     input   uint1   start,
     output  uint1   busy(0),
-    input   int16   crop_left,
-    input   int16   crop_right,
-    input   int16   crop_top,
-    input   int16   crop_bottom,
-    input   int16   x,
-    input   int16   y,
-    input   int16   param0,
-    input   int16   param1,
+    input   int11   crop_left,
+    input   int11   crop_right,
+    input   int11   crop_top,
+    input   int11   crop_bottom,
+    input   int11   x,
+    input   int11   y,
+    input   int11   param0,
+    input   int11   param1,
 
-    output  int16   bitmap_x_write,
-    output  int16   bitmap_y_write,
+    output  int11   bitmap_x_write,
+    output  int11   bitmap_y_write,
     output  uint1   bitmap_write
 ) <autorun> {
     uint9   min_x = uninitialised;
@@ -661,18 +610,18 @@ algorithm rectangle (
 
 // LINE - OUTPUT PIXELS TO DRAW A LINE
 algorithm prepline(
-    input   int16   x,
-    input   int16   y,
-    input   int16   param0,
-    input   int16   param1,
-    input   int16   param2,
-    output  int16   x1,
-    output  int16   y1,
-    output  int16   dx,
-    output  int16   dy,
+    input   int11   x,
+    input   int11   y,
+    input   int11   param0,
+    input   int11   param1,
+    input   int11   param2,
+    output  int11   x1,
+    output  int11   y1,
+    output  int11   dx,
+    output  int11   dy,
     output  uint1   dv,
-    output  int16   numerator,
-    output  int16   max_count
+    output  int11   numerator,
+    output  int11   max_count
 ) {
     // Setup drawing a line from x,y to param0,param1 of width param2 in colour
     // Ensure LEFT to RIGHT AND if moving UP or DOWN
@@ -700,30 +649,30 @@ algorithm prepline(
 algorithm drawline(
     input   uint1   start,
     output  uint1   busy(0),
-    input   int16   start_x,
-    input   int16   start_y,
-    input   int16   start_numerator,
-    input   int16   dx,
-    input   int16   dy,
+    input   int11   start_x,
+    input   int11   start_y,
+    input   int11   start_numerator,
+    input   int11   dx,
+    input   int11   dy,
     input   uint1   dv,
-    input   int16   max_count,
+    input   int11   max_count,
     input   uint8   width,
-    output  int16   bitmap_x_write,
-    output  int16   bitmap_y_write,
+    output  int11   bitmap_x_write,
+    output  int11   bitmap_y_write,
     output  uint1   bitmap_write
 ) <autorun> {
-    int16   x = uninitialized;
-    int16   y = uninitialized;
-    int16   numerator = uninitialized;
-    int16   numerator2 <:: numerator;
-    int16   newnumerator <:: numerator - ( n2dx ? dy : 0 ) + ( n2dy ? dx : 0 );
+    int11   x = uninitialized;
+    int11   y = uninitialized;
+    int11   numerator = uninitialized;
+    int11   numerator2 <:: numerator;
+    int11   newnumerator <:: numerator - ( n2dx ? dy : 0 ) + ( n2dy ? dx : 0 );
     uint1   n2dx <:: numerator2 > (-dx);
     uint1   n2dy <:: numerator2 < dy;
     uint1   dxdy <:: dx > dy;
-    int16   count = uninitialized;
-    int16   offset_x = uninitialised;
-    int16   offset_y = uninitialised;
-    int16   offset_start <:: -( width >> 1 );
+    int11   count = uninitialized;
+    int11   offset_x = uninitialised;
+    int11   offset_y = uninitialised;
+    int11   offset_start <:: -( width >> 1 );
     uint8   pixel_count = uninitialised;
 
     bitmap_x_write := x + offset_x; bitmap_y_write := y + offset_y; bitmap_write := 0;
@@ -759,22 +708,22 @@ algorithm drawline(
 algorithm line (
     input   uint1   start,
     output  uint1   busy(0),
-    input   int16   x,
-    input   int16   y,
-    input   int16   param0,
-    input   int16   param1,
-    input   int16   param2,
-    output  int16   bitmap_x_write,
-    output  int16   bitmap_y_write,
+    input   int11   x,
+    input   int11   y,
+    input   int11   param0,
+    input   int11   param1,
+    input   int11   param2,
+    output  int11   bitmap_x_write,
+    output  int11   bitmap_y_write,
     output  uint1   bitmap_write
 ) <autorun> {
-    int16   x1 = uninitialized;
-    int16   y1 = uninitialized;
-    int16   dx = uninitialized;
-    int16   dy = uninitialized;
+    int11   x1 = uninitialized;
+    int11   y1 = uninitialized;
+    int11   dx = uninitialized;
+    int11   dy = uninitialized;
     uint1   dv = uninitialized;
-    int16   numerator = uninitialized;
-    int16   max_count = uninitialized;
+    int11   numerator = uninitialized;
+    int11   max_count = uninitialized;
     uint8   width <:: param2;
     prepline PREP(
         x <: x,
@@ -823,23 +772,23 @@ algorithm line (
 algorithm drawcircle(
     input   uint1   start,
     output  uint1   busy(0),
-    input   int16   xc,
-    input   int16   yc,
-    input   int16   radius,
-    input   int16   start_numerator,
+    input   int11   xc,
+    input   int11   yc,
+    input   int11   radius,
+    input   int11   start_numerator,
     input   uint8   draw_sectors,
     input   uint1   filledcircle,
-    output  int16   bitmap_x_write,
-    output  int16   bitmap_y_write,
+    output  int11   bitmap_x_write,
+    output  int11   bitmap_y_write,
     output  uint1   bitmap_write
 ) <autorun> {
-    int16   new_numerator <:: numerator[9,1] ? numerator + { active_x, 2b00 } + 6 : numerator + { (active_x - active_y), 2b00 } + 10;
-    int16   active_x = uninitialized;
-    int16   active_y = uninitialized;
-    int16   count = uninitialised;
-    int16   min_count = uninitialised;
-    int16   numerator = uninitialised;
-    uint1   positivenumerator <:: ~numerator[15,1] & ( numerator != 0 );
+    int11   numerator = uninitialised;
+    int11   new_numerator <:: numerator[10,1] ? numerator + { active_x, 2b00 } + 6 : numerator + { (active_x - active_y), 2b00 } + 10;
+    uint1   positivenumerator <:: ~numerator[10,1] & ( numerator != 0 );
+    int11   active_x = uninitialized;
+    int11   active_y = uninitialized;
+    int11   count = uninitialised;
+    int11   min_count = uninitialised;
     bitmap_write := 0;
 
     while(1) {
@@ -848,7 +797,7 @@ algorithm drawcircle(
             active_x = 0; active_y = radius; count = radius; numerator = start_numerator;
             min_count = (-1);
             while( active_y >= active_x ) {
-                while( count != min_count ) {
+                if( count != min_count ) {
                     // OUTPUT PIXELS IN THE 8 SEGMENTS/ARCS
                     bitmap_write = draw_sectors[0,1]; bitmap_x_write = xc + active_x; bitmap_y_write = yc + count; ++:
                     bitmap_write = draw_sectors[1,1]; bitmap_y_write = yc - count; ++:
@@ -859,12 +808,13 @@ algorithm drawcircle(
                     bitmap_write = draw_sectors[6,1]; bitmap_x_write = xc - count; ++:
                     bitmap_write = draw_sectors[7,1]; bitmap_y_write = yc + active_x;
                     count = filledcircle ? count - 1 : min_count;
+                } else {
+                    active_x = active_x + 1;
+                    active_y = active_y - positivenumerator;
+                    count = active_y - positivenumerator;
+                    min_count = min_count + 1;
+                    numerator = new_numerator;
                 }
-                active_x = active_x + 1;
-                active_y = active_y - positivenumerator;
-                count = active_y - positivenumerator;
-                min_count = min_count + 1;
-                numerator = new_numerator;
             }
             busy = 0;
         }
@@ -873,18 +823,18 @@ algorithm drawcircle(
 algorithm circle(
     input   uint1   start,
     output  uint1   busy(0),
-    input   int16   x,
-    input   int16   y,
-    input   int16   param0,
+    input   int11   x,
+    input   int11   y,
+    input   int11   param0,
     input   uint8   param1,
     input   uint1   filledcircle,
 
-    output  int16  bitmap_x_write,
-    output  int16  bitmap_y_write,
+    output  int11  bitmap_x_write,
+    output  int11  bitmap_y_write,
     output  uint1  bitmap_write
 ) <autorun> {
-    int16   radius <:: param0[15,1] ? -param0 : param0;
-    int16   gpu_numerator <:: 3 - ( { radius, 1b0 } );
+    int11   radius <:: param0[10,1] ? -param0 : param0;
+    int11   gpu_numerator <:: 3 - ( { radius, 1b0 } );
     uint8   draw_sectors <:: { param1[5,1], param1[6,1], param1[1,1], param1[2,1], param1[4,1], param1[7,1], param1[0,1], param1[3,1] };
 
     uint1   CIRCLEstart = uninitialised;
@@ -915,88 +865,72 @@ algorithm circle(
 
 // TRIANGLE - OUTPUT PIXELS TO DRAW A FILLED TRIANGLE
 algorithm preptriangle(
-    input   int16   crop_left,
-    input   int16   crop_right,
-    input   int16   crop_top,
-    input   int16   crop_bottom,
-    input   int16   x,
-    input   int16   y,
-    input   int16   param0,
-    input   int16   param1,
-    input   int16   param2,
-    input   int16   param3,
-    output  int16   x1,
-    output  int16   y1,
-    output  int16   x2,
-    output  int16   y2,
-    output  int16   x3,
-    output  int16   y3,
-    output  int16   min_x,
-    output  int16   min_y,
-    output  int16   max_x,
-    output  int16   max_y,
+    input   int11   crop_left,
+    input   int11   crop_right,
+    input   int11   crop_top,
+    input   int11   crop_bottom,
+    input   int11   x,
+    input   int11   y,
+    input   int11   param0,
+    input   int11   param1,
+    input   int11   param2,
+    input   int11   param3,
+    output  int11   x1,
+    output  int11   y1,
+    output  int11   x2,
+    output  int11   y2,
+    output  int11   x3,
+    output  int11   y3,
+    output  int11   min_x,
+    output  int11   min_y,
+    output  int11   max_x,
+    output  int11   max_y,
     output  uint1   todraw
 ) {
-    int16   mx1 = uninitialized; int16   my1 = uninitialized; int16   mx2 = uninitialized; int16   my2 = uninitialized;
-    performcrop CROP(
-        crop_left <: crop_left,
-        crop_right <: crop_right,
-        crop_top <: crop_top,
-        crop_bottom <: crop_bottom,
-        x1 <: mx1,
-        y1 <: my1,
-        x2 <: mx2,
-        y2 <: my2,
-        min_x :> min_x,
-        min_y :> min_y,
-        max_x :> max_x,
-        max_y :> max_y
-    );
-    isinrange TODRAW(
-        crop_left <: crop_left,
-        crop_right <: crop_right,
-        crop_top <: crop_top,
-        crop_bottom <: crop_bottom,
-        x1 <: mx1,
-        y1 <: my1,
-        x2 <: mx2,
-        y2 <: my2,
-        todraw :> todraw
-    );
+    int16 tx = uninitialised; int16 ty = uninitialised;
+
     // Setup drawing a filled triangle x,y param0, param1, param2, param3
-    ( x1, y1 ) = copycoordinates( x, y);
-    ( x2, y2 ) = copycoordinates( param0, param1 );
-    ( x3, y3 ) = copycoordinates( param2, param3 );
+    x1 = x; y1 = y;
+    x2 = param0; y2 = param1;
+    x3 = param2; y3 = param3;
     ++:
-    // Find minimum and maximum of x, x1, x2, y, y1 and y2 for the bounding box
-    ( mx1 ) = min3( x1, x2, x3 );
-    ( my1 ) = min3( y1, y2, y3 );
-    ( mx2 ) = max3( x1, x2, x3 );
-    ( my2 ) = max3( y1, y2, y3 );
-    ++:
+
     // Put points in order so that ( x1, y1 ) is at top, then ( x2, y2 ) and ( x3, y3 ) are clockwise from there
-    if( y3 < y2 ) { ( x2, y2, x3, y3 ) = swapcoordinates( x2, y2, x3, y3 ); ++: }
-    if( y2 < y1 ) { ( x1, y1, x2, y2 ) = swapcoordinates( x1, y1, x2, y2 ); ++: }
-    if( y3 < y1 ) { ( x1, y1, x3, y3 ) = swapcoordinates( x1, y1, x3, y3 ); ++: }
-    if( y3 < y2 ) { ( x2, y2, x3, y3 ) = swapcoordinates( x2, y2, x3, y3 ); ++: }
-    if( ( y2 == y1 ) && ( x2 < x1 ) ) { ( x1, y1, x2, y2 ) = swapcoordinates( x1, y1, x2, y2 ); ++: }
-    if( ( y2 != y1 ) && ( y3 >= y2 ) && ( x2 < x3 ) ) { ( x2, y2, x3, y3 ) = swapcoordinates( x2, y2, x3, y3 ); ++: }
+    if( y3 < y2 ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++: }
+    if( y2 < y1 ) { tx = x1; ty = y1; x1 = x2; y1 = y2; x2 = tx; y2 = ty; ++: }
+    if( y3 < y1 ) { tx = x1; ty = y1; x1 = x3; y1 = y3; x3 = tx; y3 = ty; ++: }
+    if( y3 < y2 ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++: }
+    if( ( y2 == y1 ) && ( x2 < x1 ) ) { tx = x1; ty = y1; x1 = x2; y1 = y2; x2 = tx; y2 = ty; ++: }
+    if( ( y2 != y1 ) && ( y3 >= y2 ) && ( x2 < x3 ) ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty;}
+
+    // Find minimum and maximum of x, x1, x2, y, y1 and y2 for the bounding box
+    min_x = ( x1 < x2 ) ? ( x1 < x3 ? x1 : x3 ) : ( x2 < x3 ? x2 : x3 );
+    max_x = ( x1 > x2 ) ? ( x1 > x3 ? x1 : x3 ) : ( x2 > x3 ? x2 : x3 );
+    min_y = ( y1 < y2 ) ? ( y1 < y3 ? y1 : y3 ) : ( y2 < y3 ? y2 : y3 );
+    max_y = ( y1 > y2 ) ? ( y1 > y3 ? y1 : y3 ) : ( y2 > y3 ? y2 : y3 );
+    ++:
+    // Apply cropping rectangle
+    min_x = ( min_x < crop_left ) ? crop_left : min_x;
+    min_y = ( min_y < crop_top ) ? crop_top : min_y;
+    max_x = ( max_x > crop_right ) ? crop_right : max_x;
+    max_y = 1 + ( ( max_y > crop_bottom ) ? crop_bottom : max_y );
+    todraw = ~( ( max_x < crop_left ) || ( max_y < crop_top ) || ( min_x > crop_right ) || ( min_y > crop_bottom ) );
 }
 algorithm drawtriangle(
     input   uint1   start,
     output  uint1   busy(0),
-    input   int16   min_x,
-    input   int16   min_y,
-    input   int16   max_x,
-    input   int16   max_y,
-    input   int16   x0,
-    input   int16   y0,
-    input   int16   x1,
-    input   int16   y1,
-    input   int16   x2,
-    input   int16   y2,
-    output  int16   bitmap_x_write,
-    output  int16   bitmap_y_write,
+    input   int11   min_x,
+    input   int11   min_y,
+    input   int11   max_x,
+    input   int11   max_y,
+    input   int11   x0,
+    input   int11   y0,
+    input   int11   x1,
+    input   int11   y1,
+    input   int11   x2,
+    input   int11   y2,
+    output  int11   bitmap_x_write,
+    output  int11   bitmap_y_write,
     output  uint1   bitmap_write
 ) <autorun> {
     // Filled triangle calculations
@@ -1008,8 +942,8 @@ algorithm drawtriangle(
     uint1   EXIT = uninitialised;
     uint1   rightleft <:: ( max_x - px ) < ( px - min_x );
     // WORK COORDINATES AND DIRECTION
-    int16   px = uninitialized;
-    int16   py = uninitialized;
+    int11   px = uninitialized;
+    int11   py = uninitialized;
     uint1   dx = uninitialized;
 
     bitmap_x_write := px; bitmap_y_write := py; bitmap_write := 0;
@@ -1018,7 +952,7 @@ algorithm drawtriangle(
         if( start ) {
             busy = 1;
             dx = 1; beenInTriangle = 0; px = min_x; py = min_y;
-            while( py <= max_y ) {
+            while( py != max_y ) {
                 beenInTriangle = inTriangle | beenInTriangle;
                 bitmap_write = inTriangle;
                 EXIT = ( beenInTriangle & ~inTriangle );
@@ -1034,6 +968,7 @@ algorithm drawtriangle(
                         px = min_x; dx = 1;
                     }
                 } else {
+                    // MOVE TO THE NEXT PIXEL ON THE LINE LEFT/RIGHT OR DOWN IF AT END
                     if( dx ) {
                         if( px <= max_x ) {
                             px = px + 1;
@@ -1056,31 +991,31 @@ algorithm drawtriangle(
 algorithm triangle(
     input   uint1   start,
     output  uint1   busy(0),
-    input   int16   crop_left,
-    input   int16   crop_right,
-    input   int16   crop_top,
-    input   int16   crop_bottom,
-    input   int16   x,
-    input   int16   y,
-    input   int16   param0,
-    input   int16   param1,
-    input   int16   param2,
-    input   int16   param3,
-    output  int16   bitmap_x_write,
-    output  int16   bitmap_y_write,
+    input   int11   crop_left,
+    input   int11   crop_right,
+    input   int11   crop_top,
+    input   int11   crop_bottom,
+    input   int11   x,
+    input   int11   y,
+    input   int11   param0,
+    input   int11   param1,
+    input   int11   param2,
+    input   int11   param3,
+    output  int11   bitmap_x_write,
+    output  int11   bitmap_y_write,
     output  uint1   bitmap_write
 ) <autorun> {
     // VERTEX COORDINATES AND BOUNDING BOX
-    int16   x1 = uninitialized;
-    int16   y1 = uninitialized;
-    int16   x2 = uninitialized;
-    int16   y2 = uninitialized;
-    int16   x3 = uninitialized;
-    int16   y3 = uninitialized;
-    int16   min_x = uninitialized;
-    int16   max_x = uninitialized;
-    int16   min_y = uninitialized;
-    int16   max_y = uninitialized;
+    int11   x1 = uninitialized;
+    int11   y1 = uninitialized;
+    int11   x2 = uninitialized;
+    int11   y2 = uninitialized;
+    int11   x3 = uninitialized;
+    int11   y3 = uninitialized;
+    int11   min_x = uninitialized;
+    int11   max_x = uninitialized;
+    int11   min_y = uninitialized;
+    int11   max_y = uninitialized;
     uint1   todraw = uninitialised;
     preptriangle PREP(
         crop_left <: crop_left,
@@ -1166,14 +1101,14 @@ algorithm blit(
     simple_dualport_bram_port0 blit1tilemap,
     simple_dualport_bram_port0 characterGenerator8x8,
 
-    input   int16   x,
-    input   int16   y,
+    input   int11   x,
+    input   int11   y,
     input   uint8   tile,
     input   uint2   scale,
     input   uint3   action,
 
-    output  int16   bitmap_x_write,
-    output  int16   bitmap_y_write,
+    output  int11   bitmap_x_write,
+    output  int11   bitmap_y_write,
     output  uint1   bitmap_write,
 
     input   uint1   tilecharacter
@@ -1183,9 +1118,9 @@ algorithm blit(
     uint5   py = uninitialized;
 
     // POSITION ON THE SCREEN AND WITHIN THE PIXEL COUNT FOR SCALING
-    int16   x1 = uninitialized;
+    int11   x1 = uninitialized;
     uint5   x2 = uninitialised;
-    int16   y1 = uninitialized;
+    int11   y1 = uninitialized;
     uint5   y2 = uninitialised;
     uint5   maxcount <:: ( 1 << scale );
 
@@ -1194,26 +1129,31 @@ algorithm blit(
 
     // tile and character bitmap addresses
     // tile bitmap and charactermap addresses - handling rotation or reflection - find y and x positions, then concert to address
+    uint4   revx4 <:: 4b1111 - px[0,4];
+    uint4   revy4 <:: 4b1111 - py[0,4];
+    uint3   revx3 <:: 3b111 - px[0,3];
+    uint3   revy3 <:: 3b111 - py[0,3];
+
     uint4   yinblittile <:: action[2,1] ? ( action[0,2] == 2b00 ) ? py[0,4] :
                                         ( action[0,2] == 2b01 ) ? px[0,4] :
-                                        ( action[0,2] == 2b10 ) ? 4b1111 - py[0,4] :
-                                        4b1111 - px[0,4] :
-                                        action[1,1] ? 4b1111 - py[0,4] :  py[0,4];
+                                        ( action[0,2] == 2b10 ) ? revy4 :
+                                        revx4 :
+                                        action[1,1] ? revy4 :  py[0,4];
     uint4   xinblittile <:: action[2,1] ?  ( action[0,2] == 2b00 ) ? px[0,4] :
-                                        ( action[0,2] == 2b01 ) ? 4b1111 - py[0,4] :
-                                        ( action[0,2] == 2b10 ) ? 4b1111 - px[0,4] :
+                                        ( action[0,2] == 2b01 ) ? revy4 :
+                                        ( action[0,2] == 2b10 ) ? revx4 :
                                         py[0,4] :
-                                        action[0,1] ? 4b1111 - px[0,4] :  px[0,4];
+                                        action[0,1] ? revx4 :  px[0,4];
     uint3   yinchartile <:: action[2,1] ? ( action[0,2] == 2b00 ) ? py[0,3] :
                                         ( action[0,2] == 2b01 ) ? px[0,3] :
-                                        ( action[0,2] == 2b10 ) ? 3b111 - py[0,3] :
-                                        3b111 - px[0,3] :
-                                        action[1,1] ? 3b111 - py[0,3] :  py[0,3];
+                                        ( action[0,2] == 2b10 ) ? revy3 :
+                                        revx3 :
+                                        action[1,1] ? revy3 :  py[0,3];
     uint3   xinchartile <:: action[2,1] ?  ( action[0,2] == 2b00 ) ? px[0,3] :
-                                        ( action[0,2] == 2b01 ) ? 3b111 - py[0,3] :
-                                        ( action[0,2] == 2b10 ) ? 3b111 - px[0,3] :
+                                        ( action[0,2] == 2b01 ) ? revy3 :
+                                        ( action[0,2] == 2b10 ) ? revx3 :
                                         py[0,3] :
-                                        action[0,1] ? 3b111 - px[0,3] :  px[0,3];
+                                        action[0,1] ? revx3 :  px[0,3];
     blit1tilemap.addr0 := { tile, yinblittile };
     characterGenerator8x8.addr0 := { tile, yinchartile };
 
@@ -1289,14 +1229,14 @@ algorithm colourblit(
     input   uint4   colourblit_writer_line,
     input   uint4   colourblit_writer_pixel,
     input   uint7   colourblit_writer_colour,
-    input   int16   x,
-    input   int16   y,
+    input   int11   x,
+    input   int11   y,
     input   uint5   tile,
     input   uint2   scale,
     input   uint3   action,
 
-    output  int16   bitmap_x_write,
-    output  int16   bitmap_y_write,
+    output  int11   bitmap_x_write,
+    output  int11   bitmap_y_write,
     output  uint7   bitmap_colour_write,
     output  uint1   bitmap_write
 ) <autorun> {
@@ -1305,23 +1245,26 @@ algorithm colourblit(
     uint7   py = uninitialized;
 
     // POSITION ON THE SCREEN AND WITHIN THE PIXEL COUNT FOR SCALING
-    int16   x1 = uninitialized;
-    int16   y1 = uninitialized;
+    int11   x1 = uninitialized;
+    int11   y1 = uninitialized;
     uint5   x2 = uninitialised;
     uint5   y2 = uninitialised;
     uint5   maxcount <:: ( 1 << scale );
 
+    uint4   revx <:: 4b1111 - px[0,4];
+    uint4   revy <:: 4b1111 - py[0,4];
+
     // tile bitmap addresses - handling rotation or reflection - find y and x positions, then concert to address
     uint4   yintile <:: action[2,1] ? ( action[0,2] == 2b00 ) ? py[0,4] :
                                         ( action[0,2] == 2b01 ) ? px[0,4] :
-                                        ( action[0,2] == 2b10 ) ? 4b1111 - py[0,4] :
-                                        4b1111 - px[0,4] :
-                                        action[1,1] ? 4b1111 - py[0,4] :  py[0,4];
+                                        ( action[0,2] == 2b10 ) ? revy :
+                                        revx :
+                                        action[1,1] ? revy :  py[0,4];
     uint4   xintile <:: action[2,1] ?  ( action[0,2] == 2b00 ) ? px[0,4] :
-                                        ( action[0,2] == 2b01 ) ? 4b1111 - py[0,4] :
-                                        ( action[0,2] == 2b10 ) ? 4b1111 - px[0,4] :
+                                        ( action[0,2] == 2b01 ) ? revy :
+                                        ( action[0,2] == 2b10 ) ? revx :
                                         py[0,4] :
-                                        action[0,1] ? 4b1111 - px[0,4] :  px[0,4];
+                                        action[0,1] ? revx :  px[0,4];
     colourblittilemap.addr0 := { tile, yintile, xintile };
 
     bitmap_x_write := x1 + ( px << scale ) + x2;
@@ -1359,9 +1302,9 @@ algorithm pixelblock(
     input   uint1   start,
     output  uint1   busy(0),
 
-    input   int16   x,
-    input   int16   y,
-    input   int16   param0,
+    input   int11   x,
+    input   int11   y,
+    input   int11   param0,
     input   uint7   param1,
 
     input   uint7   colour7,
@@ -1370,15 +1313,15 @@ algorithm pixelblock(
     input   uint8   colour8b,
     input   uint2   newpixel,
 
-    output  int16   bitmap_x_write,
-    output  int16   bitmap_y_write,
+    output  int11   bitmap_x_write,
+    output  int11   bitmap_y_write,
     output  uint7   bitmap_colour_write,
     output  uint1   bitmap_write
 ) <autorun> {
     // POSITION ON THE SCREEN
-    int16   x1 = uninitialised;
-    int16   y1 = uninitialised;
-    int16   max_x <:: x + param0;
+    int11   x1 = uninitialised;
+    int11   y1 = uninitialised;
+    int11   max_x <:: x + param0;
     uint7   ignorecolour <:: param1;
 
     bitmap_x_write := x1;
@@ -1413,43 +1356,47 @@ algorithm pixelblock(
 
 // ADJUST COORDINATES BY DELTAS AND SCALE
 algorithm centreplusdelta(
-    input   int16   xc,
+    input   int11   xc,
     input   uint6   dx,
-    input   int16   yc,
+    input   int11   yc,
     input   uint6   dy,
     input   uint3   scale,
     input   uint3   action,
-    output  int16   xdx,
-    output  int16   ydy
+    output  int11   xdx,
+    output  int11   ydy
 ) <autorun> {
-    int16 deltax <:: { {11{dx[5,1]}}, dx };
-    int16 deltay <:: { {11{dy[5,1]}}, dy };
+    int11   deltax <:: { {11{dx[5,1]}}, dx };
+    int11   deltay <:: { {11{dy[5,1]}}, dy };
+
+    // SELECT SCALE
+    int11   dodeltax <:: ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
+    int11   dodeltay <:: ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
 
     always {
         if( action[2,1] ) {
             // ROTATION
             switch( action[0,2] ) {
                 case 0: {
-                    xdx = xc + ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
-                    ydy = yc + ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
+                    xdx = xc + dodeltax;
+                    ydy = yc + dodeltay;
                 }
                 case 1: {
-                    xdx = xc - ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
-                    ydy = yc + ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
+                    xdx = xc - dodeltay;
+                    ydy = yc + dodeltax;
                 }
                 case 2: {
-                    xdx = xc - ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
-                    ydy = yc - ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
+                    xdx = xc - dodeltax;
+                    ydy = yc - dodeltay;
                 }
                 case 3: {
-                    xdx = xc + ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
-                    ydy = yc - ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
+                    xdx = xc + dodeltay;
+                    ydy = yc - dodeltax;
                 }
             }
         } else {
             // REFLECTION
-            xdx = action[0,1] ? xc - ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) ) : xc + ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
-            ydy = action[1,1] ? yc - ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) ) : yc + ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
+            xdx = action[0,1] ? xc - dodeltax : xc + dodeltax;
+            ydy = action[1,1] ? yc - dodeltay : yc + dodeltay;
         }
     }
 }
@@ -1470,18 +1417,18 @@ algorithm vertexwriter(
 algorithm vectors(
     simple_dualport_bram_port0 vertex,
     input   uint5   vector_block_number,
-    input   int16   vector_block_xc,
-    input   int16   vector_block_yc,
+    input   int11   vector_block_xc,
+    input   int11   vector_block_yc,
     input   uint3   vector_block_scale,
     input   uint3   vector_block_action,
     input   uint1   draw_vector,
     output  uint1   vector_block_active(0),
 
     // Communication with the GPU
-    output  int16   gpu_x,
-    output  int16   gpu_y,
-    output  int16   gpu_param0,
-    output  int16   gpu_param1,
+    output  int11   gpu_x,
+    output  int11   gpu_y,
+    output  int11   gpu_param0,
+    output  int11   gpu_param1,
     output  uint1   gpu_write,
     input   uint1   gpu_active
 ) <autorun> {
@@ -1501,8 +1448,8 @@ algorithm vectors(
 
     // Vertices being processed, plus first coordinate of each line
     uint5 vertices_number = uninitialised;
-    int16 start_x = uninitialised;
-    int16 start_y = uninitialised;
+    int11 start_x = uninitialised;
+    int11 start_y = uninitialised;
 
     // Set read address for the vertices
     vertex.addr0 := { vector_block_number, vertices_number };

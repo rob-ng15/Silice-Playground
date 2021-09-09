@@ -60,8 +60,8 @@ algorithm sprite_layer(
         output  uint1   sprite_read_active_$i$,
         output  uint3   sprite_read_double_$i$,
         output  uint6   sprite_read_colour_$i$,
-        output  int16   sprite_read_x_$i$,
-        output  int16   sprite_read_y_$i$,
+        output  int11   sprite_read_x_$i$,
+        output  int11   sprite_read_y_$i$,
         output  uint3   sprite_read_tile_$i$,
     $$end
 

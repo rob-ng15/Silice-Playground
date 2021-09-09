@@ -165,8 +165,8 @@ $$end
         uint1   Lsprite_read_active_$i$ = uninitialized;
         uint3   Lsprite_read_double_$i$ = uninitialized;
         uint6   Lsprite_read_colour_$i$ = uninitialized;
-        int16   Lsprite_read_x_$i$ = uninitialized;
-        int16   Lsprite_read_y_$i$ = uninitialized;
+        int11   Lsprite_read_x_$i$ = uninitialized;
+        int11   Lsprite_read_y_$i$ = uninitialized;
         uint3   Lsprite_read_tile_$i$ = uninitialized;
         uint16  Lcollision_$i$ = uninitialized;
         uint4   Llayer_collision_$i$ = uninitialized;
@@ -207,8 +207,8 @@ $$end
         uint1   Usprite_read_active_$i$ = uninitialized;
         uint3   Usprite_read_double_$i$ = uninitialized;
         uint6   Usprite_read_colour_$i$ = uninitialized;
-        int16   Usprite_read_x_$i$ = uninitialized;
-        int16   Usprite_read_y_$i$ = uninitialized;
+        int11   Usprite_read_x_$i$ = uninitialized;
+        int11   Usprite_read_y_$i$ = uninitialized;
         uint3   Usprite_read_tile_$i$ = uninitialized;
         uint16  Ucollision_$i$ = uninitialized;
         uint4   Ulayer_collision_$i$ = uninitialized;
@@ -571,19 +571,18 @@ algorithm bitmap_memmap(
 ) <autorun> {
     uint1   framebuffer = uninitialized;
     uint1   writer_framebuffer = uninitialized;
-    uint3   bitmap_write_offset = uninitialized;
-    int16   bitmap_x_read = uninitialized;
-    int16   bitmap_y_read = uninitialized;
-    int16   gpu_x = uninitialized;
-    int16   gpu_y = uninitialized;
+    int11   bitmap_x_read = uninitialized;
+    int11   bitmap_y_read = uninitialized;
+    int11   gpu_x = uninitialized;
+    int11   gpu_y = uninitialized;
     uint7   gpu_colour = uninitialized;
     uint7   gpu_colour_alt = uninitialized;
-    int16   gpu_param0 = uninitialized;
-    int16   gpu_param1 = uninitialized;
-    int16   gpu_param2 = uninitialized;
-    int16   gpu_param3 = uninitialized;
-    int16   gpu_param4 = uninitialized;
-    int16   gpu_param5 = uninitialized;
+    int11   gpu_param0 = uninitialized;
+    int11   gpu_param1 = uninitialized;
+    int11   gpu_param2 = uninitialized;
+    int11   gpu_param3 = uninitialized;
+    int11   gpu_param4 = uninitialized;
+    int11   gpu_param5 = uninitialized;
     uint4   gpu_write = uninitialized;
     uint4   gpu_dithermode = uninitialized;
     uint9   gpu_crop_left = uninitialized;
@@ -607,8 +606,8 @@ algorithm bitmap_memmap(
     uint2   pb_newpixel = uninitialized;
     uint5   vector_block_number = uninitialized;
     uint7   vector_block_colour = uninitialized;
-    int16   vector_block_xc = uninitialized;
-    int16   vector_block_yc = uninitialized;
+    int11   vector_block_xc = uninitialized;
+    int11   vector_block_yc = uninitialized;
     uint3   vector_block_scale = uninitialized;
     uint3   vector_block_action = uninitialized;
     uint1   draw_vector = uninitialized;
@@ -631,7 +630,6 @@ algorithm bitmap_memmap(
         gpu_queue_complete :> gpu_queue_complete,
         vector_block_active :> vector_block_active,
         bitmap_colour_read :> bitmap_colour_read,
-        bitmap_write_offset <: bitmap_write_offset,
         bitmap_x_read <: bitmap_x_read,
         bitmap_y_read <: bitmap_y_read,
         gpu_x <: gpu_x,
@@ -682,14 +680,15 @@ algorithm bitmap_memmap(
    );
 
     // LATCH MEMORYWRITE
-    uint1   LATCHmemoryWrite = uninitialized;
+    //uint1   LATCHmemoryWrite = uninitialized;
 
     // 50MHz GPU OPERATION
-    //gpu_write := 0;  pb_newpixel := 0; draw_vector := 0;
+    gpu_write := 0;  pb_newpixel := 0; draw_vector := 0;
 
     always {
-        switch( { memoryWrite, LATCHmemoryWrite } ) {
-            case 2b10: {
+        if( memoryWrite ) {
+        //switch( { memoryWrite, LATCHmemoryWrite } ) {
+            //case 2b10: {
                 switch( memoryAddress ) {
                     case 8h00: { gpu_x = writeData; }
                     case 8h02: { gpu_y = writeData; }
@@ -740,7 +739,6 @@ algorithm bitmap_memmap(
                     case 8hd0: { bitmap_x_read = writeData; }
                     case 8hd2: { bitmap_y_read = writeData; }
 
-                    case 8he0: { bitmap_write_offset = writeData; }
                     case 8he2: { gpu_crop_left = writeData[15,1] ? 0 : writeData; }
                     case 8he4: { gpu_crop_right = __signed(writeData) > 319 ? 319 : writeData; }
                     case 8he6: { gpu_crop_top = writeData[15,1] ? 0 : writeData; }
@@ -749,16 +747,15 @@ algorithm bitmap_memmap(
                     case 8hf2: { writer_framebuffer = writeData; }
                     default: {}
                 }
-            }
-            case 2b00: {
-                bitmap_write_offset = 0;
-                // 25MHz GPU OPERATION
-                gpu_write = 0;  pb_newpixel = 0; draw_vector = 0;
-
-            }
-            default: {}
+            //}
+            //case 2b00: {
+            //    // 25MHz GPU OPERATION
+            //    gpu_write = 0;  pb_newpixel = 0; draw_vector = 0;
+            //
+            //}
+            //default: {}
         }
-        LATCHmemoryWrite = memoryWrite;
+        //LATCHmemoryWrite = memoryWrite;
     }
 
     // ON RESET STOP THE PIXEL BLOCK
@@ -876,8 +873,8 @@ algorithm sprite_memmap(
         output  uint1   sprite_read_active_$i$,
         output  uint3   sprite_read_double_$i$,
         output  uint6   sprite_read_colour_$i$,
-        output  int16   sprite_read_x_$i$,
-        output  int16   sprite_read_y_$i$,
+        output  int11   sprite_read_x_$i$,
+        output  int11   sprite_read_y_$i$,
         output  uint3   sprite_read_tile_$i$,
         output uint16   collision_$i$,
         output uint4    layer_collision_$i$,

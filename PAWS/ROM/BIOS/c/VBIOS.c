@@ -511,7 +511,6 @@ void gpu_rectangle( unsigned char colour, short x1, short y1, short x2, short y2
 // CLEAR THE BITMAP by drawing a transparent rectangle from (0,0) to (639,479) and resetting the bitamp scroll position
 void gpu_cs( void ) {
     wait_gpu();
-    *BITMAP_SCROLLWRAP = 5;
     gpu_rectangle( 64, 0, 0, 319, 239 );
 }
 

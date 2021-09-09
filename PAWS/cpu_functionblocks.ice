@@ -278,6 +278,14 @@ algorithm compressed(
 }
 
 // RISC-V MANDATORY CSR REGISTERS
+algorithm counter48(
+    input   uint1   update,
+    output  uint48  counter(0)
+) <autorun> {
+    always {
+        counter = counter + update;
+    }
+}
 algorithm CSRblock(
     input   uint1   start,
     output  uint1   busy(0),
@@ -292,10 +300,31 @@ algorithm CSRblock(
     output  uint5   FPUflags,
     output  uint32  result
 ) <autorun> {
-    uint48  CSRtimer = 0;
-    uint48  CSRcycletimer[2] = { 0, 0 };
-    uint48  CSRinstret[2] = { 0, 0 };
+    // MAIN SYSTEM TIMER
+    uint48  CSRtimer = uninitialized;
+    uint1   ALWAYS <: 1;
+    counter48 TIMER( update <: ALWAYS, counter :> CSRtimer );
+
+    // CPU HART CYCLE TIMERS
+    uint48  CSRcycletimer = uninitialized;
+    uint48  CSRcycletimerSMT = uninitialized;
+    uint1   UPDATEcycletimer <:: ~SMT;
+    uint1   UPDATEcycletimerSMT <:: SMT;
+    counter48 CYCLE( update <: UPDATEcycletimer, counter :> CSRcycletimer );
+    counter48 CYCLESMT( update <: UPDATEcycletimerSMT, counter :> CSRcycletimerSMT);
+
+    // CPU HART INSTRUCTION RETIRED COUNTERS
+    uint48  CSRinstret = uninitialized;
+    uint48  CSRinstretSMT = uninitialized;
+    uint1   UPDATEinstret <:: incCSRinstret & ~SMT;
+    uint1   UPDATEinstretSMT <:: incCSRinstret & SMT;
+    counter48 INSTRET( update <: UPDATEinstret, counter :> CSRinstret );
+    counter48 INSTRETSMT( update <: UPDATEinstretSMT, counter :> CSRinstretSMT );
+
+    // FLOATING-POINT CSR FOR BOTH THREADS
     uint8   CSRf[2] = { 0, 0 };
+
+    // SWITCH BETWEEN IMMEDIATE OR REGISTER VALUE TO WRITE TO CSR
     uint32  writevalue <:: function3[2,1] ? rs1 : sourceReg1;
 
     FPUflags := CSRf[SMT][0,5];
@@ -311,12 +340,12 @@ algorithm CSRblock(
                     case 12h002: { result = CSRf[SMT][5,3]; }   // frrm
                     case 12h003: { result = CSRf[SMT]; }        // frcsr
                     case 12h301: { result = $CPUISA$; }
-                    case 12hc00: { result = CSRcycletimer[SMT][0,32]; }
-                    case 12hc80: { result = CSRcycletimer[SMT][32,16]; }
+                    case 12hc00: { result = SMT ? CSRcycletimerSMT[0,32] : CSRcycletimer[0,32]; }
+                    case 12hc80: { result = SMT ? CSRcycletimerSMT[32,16] : CSRcycletimer[32,16]; }
                     case 12hc01: { result = CSRtimer[0,32]; }
                     case 12hc81: { result = CSRtimer[32,16]; }
-                    case 12hc02: { result = CSRinstret[SMT][0,32]; }
-                    case 12hc82: { result = CSRinstret[SMT][32,16]; }
+                    case 12hc02: { result = SMT ? CSRinstretSMT[0,32] : CSRinstret[0,32]; }
+                    case 12hc82: { result = SMT ? CSRinstretSMT[32,16] : CSRinstret[32,16]; }
                     case 12hf14: { result = SMT; }
                     default: { result = 0; }
                 }
@@ -364,10 +393,6 @@ algorithm CSRblock(
                 busy = 0;
             }
         }
-        // UPDATE TIMERS AND COUNTERS
-        CSRtimer = CSRtimer + 1;
-        CSRcycletimer[SMT] = CSRcycletimer[SMT] + 1;
-        CSRinstret[SMT] = CSRinstret[SMT] + 1;
     }
 }
 

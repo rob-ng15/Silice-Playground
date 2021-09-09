@@ -17,7 +17,8 @@ int main( void ) {
         width = njGetWidth();
         height = njGetHeight();
         imagebuffer=njGetImage();
-        gpu_pixelblock24( 0, 0, width, height, imagebuffer );
+        screen_mode( 0, 0 );
+        gpu_pixelblock24bw( 0, 0, width, height, imagebuffer );
         free( filebuffer );
     } else {
         gpu_print_centre( WHITE, 160, 120, 0, 0, "NO FILE FOUND!" );

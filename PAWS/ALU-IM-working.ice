@@ -1,87 +1,4 @@
 // ALU - ALU for immediate-register operations and register-register operations
-algorithm op000(
-    input   uint32  sourceReg1,
-    input   uint32  sourceReg2,
-    input   uint32  operand2,
-    input   uint1   addsub,
-    output  uint32  result
-) <autorun> {
-    always {
-        result = sourceReg1 + ( addsub ? -( sourceReg2 ) : operand2 );
-    }
-}
-algorithm op001(
-    input   uint32  sourceReg1,
-    input   uint5   shiftcount,
-    output  uint32  result
-) <autorun> {
-    always {
-        result = sourceReg1 << shiftcount;
-    }
-}
-algorithm op010(
-    input   uint32  sourceReg1,
-    input   uint32  operand2,
-    output  uint32  result
-) <autorun> {
-    always {
-        result =  __signed( sourceReg1 ) < __signed(operand2);
-    }
-}
-algorithm op011(
-    input   uint32  sourceReg1,
-    input   uint32  operand2,
-    input   uint5   rs1,
-    input   uint1   regimm,
-    output  uint32  result
-) <autorun> {
-    always {
-        result = regimm ? ( rs1 == 0 ) ? ( operand2 != 0 ) : __unsigned( sourceReg1 ) < __unsigned( operand2 ) :
-                    ( operand2 == 1 ) ? ( sourceReg1 == 0 ) : ( __unsigned( sourceReg1 ) < __unsigned( operand2 ) );
-    }
-}
-algorithm op100(
-    input   uint32  sourceReg1,
-    input   uint32  operand2,
-    output  uint32  result
-) <autorun> {
-    always {
-        result = sourceReg1 ^ operand2;
-    }
-}
-algorithm op101(
-    input   uint32  sourceReg1,
-    input   uint5   shiftcount,
-    input   uint1   srlsra,
-    output  uint32  result
-) <autorun> {
-    always {
-        if( srlsra ) {
-            result = __signed(sourceReg1) >>> shiftcount;
-        } else {
-            result = sourceReg1 >> shiftcount;
-        }
-    }
-}
-algorithm op110(
-    input   uint32  sourceReg1,
-    input   uint32  operand2,
-    output  uint32  result
-) <autorun> {
-    always {
-        result = sourceReg1 | operand2;
-    }
-}
-algorithm op111(
-    input   uint32  sourceReg1,
-    input   uint32  operand2,
-    output  uint32  result
-) <autorun> {
-    always {
-        result = sourceReg1 & operand2;
-    }
-}
-
 algorithm alu(
     input   uint1   start,
     output  uint1   busy(0),
@@ -97,46 +14,26 @@ algorithm alu(
 
     output  uint32  result
 ) <autorun> {
-    uint1   regimm <:: opCode[5,1];
-    uint1   function75 <:: function7[5,1];
-    uint1   addsub <:: regimm & function75;
-    uint5   shiftcount <:: regimm ? sourceReg2[0,5] : rs2;
-    uint32  operand2 <:: regimm ? sourceReg2 : immediateValue;
-
-    uint32  result000 = uninitialised;
-    op000 OP000( sourceReg1 <: sourceReg1, sourceReg2 <: sourceReg2, operand2 <: operand2, addsub <: addsub, result :> result000 );
-
-    uint32  result001 = uninitialised;
-    op001 OP001( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, result :> result001 );
-
-    uint32  result010 = uninitialised;
-    op010 OP010( sourceReg1 <: sourceReg1, operand2 <: operand2, result :> result010 );
-
-    uint32  result011 = uninitialised;
-    op011 OP011( sourceReg1 <: sourceReg1, operand2 <: operand2, rs1 <: rs1, regimm <: regimm, result :> result011 );
-
-    uint32  result100 = uninitialised;
-    op100 OP100( sourceReg1 <: sourceReg1, operand2 <: operand2, result :> result100 );
-
-    uint32  result101 = uninitialised;
-    op101 OP101( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, srlsra <: function75, result :> result101 );
-
-    uint32  result110 = uninitialised;
-    op110 OP110( sourceReg1 <: sourceReg1, operand2 <: operand2, result :> result110 );
-
-    uint32  result111 = uninitialised;
-    op111 OP111( sourceReg1 <: sourceReg1, operand2 <: operand2, result :> result111 );
+    uint5   shiftcount <:: opCode[5,1] ? sourceReg2[0,5] : rs2;
+    uint32  operand2 <:: opCode[5,1] ? sourceReg2 : immediateValue;
 
     always {
         switch( function3 ) {
-            case 3b000: { result = result000; }
-            case 3b001: { result = result001; }
-            case 3b010: { result = result010; }
-            case 3b011: { result = result011; }
-            case 3b100: { result = result100; }
-            case 3b101: { result = result101; }
-            case 3b110: { result = result110; }
-            case 3b111: { result = result111; }
+            case 3b000: { result = sourceReg1 + ( opCode[5,1] && function7[5,1] ? -( sourceReg2 ) : operand2 ); }
+            case 3b001: { result = sourceReg1 << shiftcount; }
+            case 3b010: { result = __signed( sourceReg1 ) < __signed(operand2); }
+            case 3b011: { result = opCode[5,1] ? ( rs1 == 0 ) ? ( sourceReg2 != 0 ) : __unsigned( sourceReg1 ) < __unsigned( sourceReg2 ) :
+                                                ( immediateValue == 1 ) ? ( sourceReg1 == 0 ) : ( __unsigned( sourceReg1 ) < __unsigned( immediateValue ) ); }
+            case 3b100: { result = sourceReg1 ^ operand2; }
+            case 3b101: {
+                if( function7[5,1] ) {
+                    result = __signed(sourceReg1) >>> shiftcount;
+                } else {
+                    result = sourceReg1 >> shiftcount;
+                }
+            }
+            case 3b110: { result = sourceReg1 | operand2; }
+            case 3b111: { result = sourceReg1 & operand2; }
         }
     }
 }

@@ -5,7 +5,8 @@
 
 ./compile.sh c/chess.c PAWS/DEMO/CHESS.PAW
 ./compile.sh c/demo.c PAWS/DEMO/DEMO.PAW
-./compile.sh c/jpeg-test.c PAWS/DEMO/JPEG.PAW
+./compile.sh c/jpeg-colour.c PAWS/DEMO/JPEG.PAW
+./compile.sh c/jpeg-grey.c PAWS/DEMO/JPEG-BW.PAW
 ./compile.sh c/life.c PAWS/DEMO/LIFE.PAW
 ./compile.sh c/mandelbrot.c PAWS/DEMO/MANDEL.PAW
 ./compile.sh c/outrun.c PAWS/DEMO/OUTRUN.PAW

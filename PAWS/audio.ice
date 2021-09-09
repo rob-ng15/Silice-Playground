@@ -30,7 +30,7 @@ algorithm apu(
     uint16  counter1khz = uninitialised;
 
     // WIRES FOR DECREMENT OR RESET
-    uint16  onesecond <: 25000;
+    uint15  onesecond <: 25000;
     uint16  notefrequency <: frequencytable.rdata;
     frequencytable.addr := selected_note;
     audio_active := ( selected_duration != 0 );

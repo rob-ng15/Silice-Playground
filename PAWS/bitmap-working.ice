@@ -13,22 +13,25 @@ algorithm bitmap(
     input   uint1   static1bit,
     input   uint6   static6bit,
 
+    // Hardware scrolling
+    input   uint3   bitmap_write_offset,
+
     // Pixel reader
-    input   int11   bitmap_x_read,
-    input   int11   bitmap_y_read,
+    input   int16   bitmap_x_read,
+    input   int16   bitmap_y_read,
     output  uint7   bitmap_colour_read,
 
     // GPU Parameters
-    input   int11   gpu_x,
-    input   int11   gpu_y,
+    input   int16   gpu_x,
+    input   int16   gpu_y,
     input   uint7   gpu_colour,
     input   uint7   gpu_colour_alt,
-    input   int11   gpu_param0,
-    input   int11   gpu_param1,
-    input   int11   gpu_param2,
-    input   int11   gpu_param3,
-    input   int11   gpu_param4,
-    input   int11   gpu_param5,
+    input   int16   gpu_param0,
+    input   int16   gpu_param1,
+    input   int16   gpu_param2,
+    input   int16   gpu_param3,
+    input   int16   gpu_param4,
+    input   int16   gpu_param5,
     input   uint4   gpu_write,
     input   uint4   gpu_dithermode,
 
@@ -64,8 +67,8 @@ algorithm bitmap(
     // VECTOR BLOCK
     input   uint5   vector_block_number,
     input   uint7   vector_block_colour,
-    input   int11   vector_block_xc,
-    input   int11   vector_block_yc,
+    input   int16   vector_block_xc,
+    input   int16   vector_block_yc,
     input   uint3   vector_block_scale,
     input   uint3   vector_block_action,
     input   uint1   draw_vector,
@@ -83,14 +86,20 @@ algorithm bitmap(
     simple_dualport_bram uint7 bitmap_0 <@clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
     simple_dualport_bram uint7 bitmap_1 <@clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
 
-    // Pixel x and y fetching 1 in advance due to bram latency
-    uint9   x_plus_one <: pix_x[1,9] + pix_x[0,1];
-    uint8   y_line <: pix_vblank ? 0 : pix_y[1,9];
-    uint9   x_pixel <: pix_active ? x_plus_one : 0;
+    // Pixel x and y fetching ( adjusting for offset ) - fetch x-pixel 1 in advance due to bram latency
+    uint9   x_plus_offset <: pix_x[1,9] + x_offset + pix_x[0,1];
+    uint8   y_plus_offset <: pix_y[1,9] + y_offset;
+    uint9   x_plus_one <: x_plus_offset - ( ( x_plus_offset > 319 ) ? 320 : 0 );
+    uint8   y_line <: pix_vblank ? y_offset : y_plus_offset - ( ( y_plus_offset > 239 ) ? 240 : 0 );
+    uint9   x_pixel <: pix_active ? x_plus_one : x_offset;
+
+    // BITMAP HARDWARE SCROLLING
+    uint9   x_offset = uninitialized;
+    uint8   y_offset = uninitialized;
 
     // From GPU to set a pixel
-    int11   bitmap_x_write = uninitialized;
-    int11   bitmap_y_write = uninitialized;
+    int16   bitmap_x_write = uninitialized;
+    int16   bitmap_y_write = uninitialized;
     uint9   bitmap_crop_left = uninitialised;
     uint9   bitmap_crop_right = uninitialised;
     uint8   bitmap_crop_top = uninitialised;
@@ -110,6 +119,8 @@ algorithm bitmap(
         dithermode <: gpu_active_dithermode,
         static1bit <: static1bit,
         static6bit <: static6bit,
+        x_offset <: x_offset,
+        y_offset <: y_offset,
         crop_left <: bitmap_crop_left,
         crop_right <: bitmap_crop_right,
         crop_top <: bitmap_crop_top,
@@ -190,25 +201,38 @@ algorithm bitmap(
     // RENDER - Default to transparent
     bitmap_display := pix_active & ~( framebuffer ? bitmap_1.rdata0[6,1] : bitmap_0.rdata0[6,1] );
     pixel := framebuffer ? bitmap_1.rdata0 : bitmap_0.rdata0;
+
+    always {
+        switch( bitmap_write_offset ) {
+            default: {}
+            case 1: { x_offset = ( x_offset == 319 ) ? 0 : x_offset + 1; }
+            case 2: { y_offset = ( y_offset == 239 ) ? 0 : y_offset + 1; }
+            case 3: { x_offset = ( x_offset == 0 ) ? 319 : x_offset - 1; }
+            case 4: { y_offset = ( y_offset == 0 ) ? 239 : y_offset - 1; }
+            case 5: { x_offset = 0; y_offset = 0; }
+        }
+   }
 }
 
 algorithm bitmapwriter(
     // SET pixels
     input   uint1   framebuffer,
-    input   int11   bitmap_x_write,
-    input   int11   bitmap_y_write,
+    input   int16   bitmap_x_write,
+    input   int16   bitmap_y_write,
     input   uint7   colour,
     input   uint7   colour_alt,
     input   uint1   bitmap_write,
     input   uint4   dithermode,
     input   uint1   static1bit,
     input   uint6   static6bit,
+    input   uint9   x_offset,
+    input   uint8   y_offset,
 
     // CROP RECTANGLE
-    input   int11   crop_left,
-    input   int11   crop_right,
-    input   int11   crop_top,
-    input   int11   crop_bottom,
+    input   int16   crop_left,
+    input   int16   crop_right,
+    input   int16   crop_top,
+    input   int16   crop_bottom,
 
     simple_dualport_bram_port1 bitmap_0,
     simple_dualport_bram_port1 bitmap_1
@@ -216,11 +240,17 @@ algorithm bitmapwriter(
     uint1   condition = uninitialised;
     uint7   pixeltowrite = uninitialised;
 
+    // Pixel x and y for writing ( adjusting for offset )
+    int16   x_plus_offset <:: bitmap_x_write + x_offset;
+    int16   y_plus_offset <:: bitmap_y_write + y_offset;
+    int16   x_write_pixel <:: x_plus_offset - ( ( x_plus_offset > 319 ) ? 320 : 0 );
+    int16   y_write_pixel <:: y_plus_offset - ( ( y_plus_offset > 239 ) ? 240 : 0 );
+
     // Write in range?
     uint1 write_pixel <:: ( bitmap_x_write >= crop_left ) & ( bitmap_x_write <= crop_right ) & ( bitmap_y_write >= crop_top ) & ( bitmap_y_write <= crop_bottom ) & bitmap_write;
 
     // Bitmap write access for the GPU
-    uint17  address <:: bitmap_y_write * 320 + bitmap_x_write;
+    uint17  address <:: y_write_pixel * 320 + x_write_pixel;
     bitmap_0.wenable1 := 1; bitmap_1.wenable1 := 1;
 
     always {
@@ -232,44 +262,44 @@ algorithm bitmapwriter(
             // == 12 OCTRAGON == 13 BRICK == 14 COLOUR STATIC == 15 STATIC
             switch( dithermode ) {
                 case 0: { condition = 1; }                                                      // SOLID
-                default: { condition = ( bitmap_x_write[dithermode - 1,1] == bitmap_y_write[dithermode - 1,1] ); }        // CHECKERBOARDS 1 2 AND 3
-                case 4: { condition = bitmap_x_write[0,1]; }                                                             // VERTICAL STRIPES
-                case 5: { condition = bitmap_y_write[0,1]; }                                                             // HORIZONTAL STRIPES
-                case 6: { condition = ( bitmap_x_write[0,1] || bitmap_y_write[0,1] ); }                                   // CROSSHATCH
-                case 7: { condition = ( bitmap_x_write[0,2] == bitmap_y_write[0,2] ); }                                   // LEFT SLOPE
-                case 8: { condition = ( bitmap_x_write[0,2] == ~bitmap_y_write[0,2] ); }                                  // RIGHT SLOPE
+                default: { condition = ( x_write_pixel[dithermode - 1,1] == y_write_pixel[dithermode - 1,1] ); }        // CHECKERBOARDS 1 2 AND 3
+                case 4: { condition = x_write_pixel[0,1]; }                                                             // VERTICAL STRIPES
+                case 5: { condition = y_write_pixel[0,1]; }                                                             // HORIZONTAL STRIPES
+                case 6: { condition = ( x_write_pixel[0,1] || y_write_pixel[0,1] ); }                                   // CROSSHATCH
+                case 7: { condition = ( x_write_pixel[0,2] == y_write_pixel[0,2] ); }                                   // LEFT SLOPE
+                case 8: { condition = ( x_write_pixel[0,2] == ~y_write_pixel[0,2] ); }                                  // RIGHT SLOPE
                 case 9: {                                                                                               // LEFT TRIANGLE
-                    switch( bitmap_y_write[0,2] ) {
-                        case 2b00: { condition = ( bitmap_x_write[0,2] == 2b00 ); }
-                        case 2b01: { condition = ( ~bitmap_x_write[1,1] ); }
-                        case 2b10: { condition = ( bitmap_x_write[0,2] != 2b11 ); }
+                    switch( y_write_pixel[0,2] ) {
+                        case 2b00: { condition = ( x_write_pixel[0,2] == 2b00 ); }
+                        case 2b01: { condition = ( ~x_write_pixel[1,1] ); }
+                        case 2b10: { condition = ( x_write_pixel[0,2] != 2b11 ); }
                         case 2b11: { condition = 1; }
                     }
                 }
                 case 10: {                                                                                              // RIGHT TRIANGLE
-                    switch( bitmap_y_write[0,2] ) {
-                        case 2b00: { condition = ( bitmap_x_write[0,2] == 2b11 ); }
-                        case 2b01: { condition = ( bitmap_x_write[1,1] ); }
-                        case 2b10: { condition = ( bitmap_x_write[0,2] != 2b00 ); }
+                    switch( y_write_pixel[0,2] ) {
+                        case 2b00: { condition = ( x_write_pixel[0,2] == 2b11 ); }
+                        case 2b01: { condition = ( x_write_pixel[1,1] ); }
+                        case 2b10: { condition = ( x_write_pixel[0,2] != 2b00 ); }
                         case 2b11: { condition = 1; }
                     }
                 }
                 case 11: {                                                                                              // ENCLOSED
-                    switch( bitmap_y_write[0,1] ^ bitmap_y_write[1,1] ) {
-                        case 1: { condition = ( bitmap_x_write[0,1] == bitmap_x_write[1,1] ); }
+                    switch( y_write_pixel[0,1] ^ y_write_pixel[1,1] ) {
+                        case 1: { condition = ( x_write_pixel[0,1] == x_write_pixel[1,1] ); }
                         case 0: { condition = 1; }
                     }
                 }
                 case 12: {                                                                                              // OCTAGON
-                    switch( bitmap_y_write[0,1] ^ bitmap_y_write[1,1] ) {
-                        case 1: { condition = ( bitmap_x_write[0,1] == bitmap_x_write[1,1] ); }
+                    switch( y_write_pixel[0,1] ^ y_write_pixel[1,1] ) {
+                        case 1: { condition = ( x_write_pixel[0,1] == x_write_pixel[1,1] ); }
                         case 0: { condition = 1; }
                     }
                 }
                 case 13: {                                                                                              // BRICK
-                    switch( bitmap_y_write[0,2] ) {
+                    switch( y_write_pixel[0,2] ) {
                         case 2b00: { condition = 1; }
-                        default: { condition = ( bitmap_x_write[0,2] == { bitmap_y_write[2,1], 1b0 } ); }
+                        default: { condition = ( x_write_pixel[0,2] == { y_write_pixel[2,1], 1b0 } ); }
                     }
                 }
                 case 14: { condition = 1; }                                                                             // COLOUR STATIC
@@ -279,7 +309,7 @@ algorithm bitmapwriter(
                 case 14: { pixeltowrite = static6bit; }
                 default: { pixeltowrite = condition ? colour : colour_alt; }
             }
-            // SET PIXEL ADDRESSS bitmap_y_write * 320 + bitmap_x_write
+            // SET PIXEL ADDRESSS y_write_pixel * 320 + x_write_pixel
             switch( framebuffer ) {
                 case 0: { bitmap_0.addr1 = address; bitmap_0.wdata1 = pixeltowrite; }
                 case 1: { bitmap_1.addr1 = address; bitmap_1.wdata1 = pixeltowrite; }

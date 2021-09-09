@@ -149,7 +149,6 @@ void gpu_rectangle( unsigned char colour, short x1, short y1, short x2, short y2
 // CLEAR THE BITMAP by drawing a transparent rectangle from (0,0) to (639,479) and resetting the bitamp scroll position
 void gpu_cs( void ) {
     wait_gpu();
-    *BITMAP_SCROLLWRAP = 5;
     gpu_rectangle( 64, 0, 0, 319, 239 );
 }
 
@@ -499,9 +498,10 @@ unsigned int filebrowser( int startdirectorycluster, int rootdirectorycluster ) 
         while( !rereaddirectory ) {
             displayfilename( directorynames[present_entry].filename, directorynames[present_entry].type );
 
+            // WAIT FOR BUTTON, AND WAIT FOR RELEASE TO STOP ACCIDENTAL DOUBLE PRESSES
             unsigned short buttons = get_buttons();
             while( buttons == 1 ) { buttons = get_buttons(); }
-            while( get_buttons() != 1 ) {} sleep( 250 );
+            while( get_buttons() != 1 ) {} sleep( 100 );
             if( buttons & 64 ) {
                 // MOVE RIGHT
                 if( present_entry == entries ) { present_entry = 0; } else { present_entry++; }

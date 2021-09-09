@@ -219,9 +219,8 @@ algorithm ps2ascii(
             }
 
             // NEW KEYCODE RECEIVED
-            switch( newascii ) {
-                case 8hff: {}
-                default: { ascii = newascii; asciivalid = outputascii; }
+            if( newascii != 8hff ) {
+                ascii = newascii; asciivalid = outputascii;
             }
         }
     }

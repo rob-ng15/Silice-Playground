@@ -385,19 +385,11 @@ unsigned char tilemap_scrollwrapclear( unsigned char tm_layer, unsigned char act
 // The bitmap can be moved 1 pixel at a time LEFT, RIGHT, UP, DOWN for scrolling
 // The GPU can draw pixels, filled rectangles, lines, (filled) circles, filled triangles and has a 16 x 16 pixel blitter from user definable tiles
 
-// SCROLL THE BITMAP by 1 pixel
-//  action == 1 LEFT, == 2 UP, == 3 RIGHT, == 4 DOWN, == 5 RESET
-void bitmap_scrollwrap( unsigned char action ) {
-    wait_gpu_finished();
-    *BITMAP_SCROLLWRAP = action;
-}
-
 // SET GPU DITHER MODE AND ALTERNATIVE COLOUR
 unsigned char __last_mode = 0xff, __last_colour = 0xff;
 void gpu_dither( unsigned char mode, unsigned char colour ) {
     if( ~( ( mode == __last_mode ) && ( colour == __last_colour ) ) ) {
         wait_gpu();
-        //wait_gpu_finished();
         *GPU_COLOUR_ALT = colour;
         *GPU_DITHERMODE = mode;
         __last_mode = mode; __last_colour = colour;
@@ -470,7 +462,7 @@ void gpu_rectangle( unsigned char colour, short x1, short y1, short x2, short y2
 
 // CLEAR THE BITMAP by drawing a transparent rectangle from (0,0) to (639,479) and resetting the bitamp scroll position
 void gpu_cs( void ) {
-    bitmap_scrollwrap( 5 ); gpu_dither( 0, 64 ); gpu_rectangle( 64, 0, 0, 319, 239 );
+    gpu_dither( 0, 64 ); gpu_rectangle( 64, 0, 0, 319, 239 );
 }
 
 
@@ -703,6 +695,20 @@ void gpu_pixelblock24( short x, short y, unsigned short w, unsigned short h, uns
     }
     *PB_STOP = 3;
 }
+// COPY A { RRRRRRRR GGGGGGGG BBBBBBBB } BITMAP STORED IN MEMORY TO THE BITMAP USING THE PIXEL BLOCK AS A 64 GREY SCALE
+void gpu_pixelblock24bw( short x, short y, unsigned short w, unsigned short h, unsigned char *buffer  ) {
+    unsigned char *maxbufferpos = buffer + 3 * ( w * h );
+    wait_gpu_finished();
+    *GPU_X = x;
+    *GPU_Y = y;
+    *GPU_PARAM0 = w;
+    *GPU_WRITE = 10;
+
+    while( buffer < maxbufferpos ) {
+        *PB_COLOUR7 = ( ( *buffer++ + *buffer++ + *buffer++ ) / 3 ) >> 2;
+    }
+    *PB_STOP = 3;
+}
 
 // SET GPU TO RECEIVE A PIXEL BLOCK, SEND INDIVIDUAL PIXELS, STOP
 void gpu_pixelblock_start( short x,  short y, unsigned short w, unsigned short h ) {
@@ -722,6 +728,9 @@ void gpu_pixelblock_pixel24( unsigned char red, unsigned char green, unsigned ch
     *PB_COLOUR8R = red;
     *PB_COLOUR8G= green;
     *PB_COLOUR8B = blue;
+}
+void gpu_pixelblock_pixel24bw( unsigned char red, unsigned char green, unsigned char blue ) {
+    *PB_COLOUR7 = ( ( red + blue + green ) / 3 ) >> 2;
 }
 
 void gpu_pixelblock_stop( void ) {
@@ -1281,7 +1290,7 @@ unsigned int filebrowser( char *message, char *extension, int startdirectoryclus
 
             unsigned short buttons = get_buttons();
             while( buttons == 1 ) { buttons = get_buttons(); }
-            while( get_buttons() != 1 ) {}
+            while( get_buttons() != 1 ) {} sleep( 100, 0 );
             if( buttons & 64 ) {
                 // MOVE RIGHT
                 if( present_entry == entries ) { present_entry = 0; } else { present_entry++; }

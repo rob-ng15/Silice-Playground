@@ -182,7 +182,6 @@ algorithm PAWSCPU(
 
     // RESET ACTIONS - FSM -> 1, SMT AND PC -> 0 AND DELAY BEFORE CONTINUING
     if( ~reset ) {
-        __display("RESET");
         FSM = 1; SMT = 0; pc = 0;
         resetcount = 16hffff; while( resetcount != 0 ) { resetcount = resetcount - 1; }
     }

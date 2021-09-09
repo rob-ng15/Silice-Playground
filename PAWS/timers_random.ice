@@ -3,7 +3,7 @@ algorithm pulse1hz(
     output  uint16  counter1hz,
     input   uint1   resetCounter
 ) <autorun> {
-    uint26  counter25mhz = 0;
+    uint25  counter25mhz = 0;
     always {
         counter1hz = ( resetCounter == 1) ? 0 : counter1hz + ( counter25mhz == 25000000 );
         counter25mhz = ( resetCounter == 1) ? 0 : ( counter25mhz == 25000000 ) ? 0 : counter25mhz + 1;
