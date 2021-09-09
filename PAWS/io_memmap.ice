@@ -214,7 +214,7 @@ algorithm audiotimers_memmap(
     uint1   audio_active_l = uninitialized;
     uint1   audio_active_r = uninitialized;
     uint4   waveform = uninitialized;
-    uint7   note = uninitialized;
+    uint16  frequency = uninitialized;
     uint16  duration = uninitialized;
     uint2   apu_write = uninitialized;
     audio apu_processor <@clock_25mhz> (
@@ -224,7 +224,7 @@ algorithm audiotimers_memmap(
         audio_r :> audio_r,
         audio_active_r :> audio_active_r,
         waveform <: waveform,
-        note <: note,
+        frequency <: frequency,
         duration <: duration,
         apu_write <: apu_write
     );
@@ -269,7 +269,7 @@ algorithm audiotimers_memmap(
 
                     // AUDIO
                     case 12h100: { waveform = writeData; }
-                    case 12h102: { note = writeData; }
+                    case 12h102: { frequency = writeData; }
                     case 12h104: { duration = writeData; }
                     case 12h106: { apu_write = writeData; }
                     default: {}
@@ -347,7 +347,7 @@ algorithm timers_rng(
 algorithm audio(
     input   uint4   staticGenerator,
     input   uint4   waveform,
-    input   uint7   note,
+    input   uint16  frequency,
     input   uint16  duration,
     input   uint2   apu_write,
     output  uint4   audio_l,
@@ -357,7 +357,7 @@ algorithm audio(
 ) <autorun> {
     // Left and Right audio channels
     uint4   Lwaveform = uninitialized;
-    uint7   Lnote = uninitialized;
+    uint16  Lfrequency = uninitialized;
     uint16  Lduration = uninitialized;
     uint1   Lapu_write = uninitialized;
     apu apu_processor_L(
@@ -365,12 +365,12 @@ algorithm audio(
         audio_output :> audio_l,
         audio_active :> audio_active_l,
         waveform <: Lwaveform,
-        note <: Lnote,
+        frequency <: Lfrequency,
         duration <: Lduration,
         apu_write <: Lapu_write
     );
     uint4   Rwaveform = uninitialized;
-    uint7   Rnote = uninitialized;
+    uint16  Rfrequency = uninitialized;
     uint16  Rduration = uninitialized;
     uint1   Rapu_write = uninitialized;
     apu apu_processor_R(
@@ -378,7 +378,7 @@ algorithm audio(
         audio_output :> audio_r,
         audio_active :> audio_active_r,
         waveform <: Rwaveform,
-        note <: Rnote,
+        frequency <: Rfrequency,
         duration <: Rduration,
         apu_write <: Rapu_write
     );
@@ -390,23 +390,23 @@ algorithm audio(
             default: {}
             case 1: {
                 Lwaveform = waveform;
-                Lnote = note;
+                Lfrequency = frequency;
                 Lduration = duration;
                 Lapu_write = 1;
             }
             case 2: {
                 Rwaveform = waveform;
-                Rnote = note;
+                Rfrequency = frequency;
                 Rduration = duration;
                 Rapu_write = 1;
             }
             case 3: {
                 Lwaveform = waveform;
-                Lnote = note;
+                Lfrequency = frequency;
                 Lduration = duration;
                 Lapu_write = 1;
                 Rwaveform = waveform;
-                Rnote = note;
+                Rfrequency = frequency;
                 Rduration = duration;
                 Rapu_write = 1;
             }

@@ -151,7 +151,7 @@ unsigned char volatile * TPU_COMMIT = ( unsigned char volatile * ) 0x850a;
 unsigned char volatile * TPU_CURSOR = ( unsigned char volatile * ) 0x850c;
 
 unsigned char volatile * AUDIO_WAVEFORM = ( unsigned char volatile * ) 0xe100;
-unsigned char volatile * AUDIO_NOTE = ( unsigned char volatile * ) 0xe102;
+unsigned short volatile * AUDIO_FREQUENCY = ( unsigned short volatile * ) 0xe102;
 unsigned short volatile * AUDIO_DURATION = ( unsigned short volatile * ) 0xe104;
 unsigned char volatile * AUDIO_START = ( unsigned char volatile * ) 0xe106;
 unsigned char volatile * AUDIO_L_ACTIVE = ( unsigned char volatile * ) 0xe110;

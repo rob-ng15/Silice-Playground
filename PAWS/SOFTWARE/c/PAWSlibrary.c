@@ -182,9 +182,18 @@ unsigned short systemclock( void ) {
 // START A note (1 == DEEP C, 25 == MIDDLE C )
 // OF duration MILLISECONDS TO THE LEFT ( channel_number == 1 ) RIGHT ( channel_number == 2 ) or BOTH ( channel_number == 3 ) AUDIO CHANNEL
 // IN waveform 0 == SQUARE, 1 == SAWTOOTH, 2 == TRIANGLE, 3 == SINE, 4 == WHITE NOISE
+unsigned short frequencytable[] = {
+    0,
+    23889, 22548, 21283, 20088, 18961, 17897, 16892, 15944, 15049, 14205, 13407, 12655,     // 1 = C 2 or Deep C
+    11945, 11274, 10641, 10044, 9480, 8948, 8446, 7972, 7525, 7102, 6704, 6327,             // 13 = C 3
+    5972, 5637, 5321, 5022, 4740, 4474, 4223, 3986, 3762, 3551, 3352, 3164,                 // 25 = C 4 or Middle C
+    2896, 2819, 2660, 2511, 2370, 2237, 2112, 1993, 1881, 1776, 1676, 1582,                 // 37 = C 5 or Tenor C
+    1493, 1409, 1330, 1256, 1185, 1119, 1056, 997, 941, 888, 838, 791,                      // 49 = C 6 or Soprano C
+    747, 705, 665                                                                           // 61 = C 7 or Double High C
+};
 void beep( unsigned char channel_number, unsigned char waveform, unsigned char note, unsigned short duration ) {
     *AUDIO_WAVEFORM = waveform;
-    *AUDIO_NOTE = note;
+    *AUDIO_FREQUENCY = frequencytable[note];
     *AUDIO_DURATION = duration;
     *AUDIO_START = channel_number;
 }
@@ -1349,8 +1358,14 @@ unsigned char *sdcard_selectfile( char *message, char *extension, unsigned int *
     if( starting_cluster ) {
         // ALLOCATE ENOUGH MEMORY TO READ CLUSTERS
         unsigned char *copyaddress = malloc( ( ( *filesize / ( FAT32clustersize * 512 )  ) + 1 ) * ( FAT32clustersize * 512 ) );
-        readfile( starting_cluster, copyaddress );
-        return( copyaddress );
+        if( copyaddress ) {
+            gpu_outputstringcentre( WHITE, 224, "Loading File", 0 );
+            readfile( starting_cluster, copyaddress );
+            return( copyaddress );
+        } else {
+            gpu_outputstringcentre( WHITE, 224, "Insufficient Memory", 0 );
+            return(0);
+        }
     } else {
         return(0);
     }

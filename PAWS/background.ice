@@ -159,31 +159,40 @@ algorithm background_display(
     uint1   tophalf <: ( pix_y < 240 );
     uint1   lefthalf <: ( pix_x < 320 );
 
+    // TRUE FOR COLOUR, FALSE FOR ALT
+    uint1   selection = uninitialised;
+
     // Increment frame number for the snow/star field
     frame := frame + ( ( pix_x == 639 ) & ( pix_y == 470 ) );
 
     always {
         // RENDER
         if( pix_active ) {
+            // SELECT COLOUR OR ALT
             switch( b_mode ) {
-                case 0: {
-                    // SOLID
-                    pixel = b_colour;
+                case 0: { selection = 1; }                                              // SOLID
+                case 1: { selection = tophalf; }                                        // 50:50 HORIZONTAL SPLIT
+                case 2: { selection = ( lefthalf ); }                                   // 50:50 VERTICAL SPLIT
+                case 3: { selection = ( lefthalf == tophalf ); }                        // QUARTERS
+                case 4: { selection = 1; }                                              // RAINBOW (placeholder, done below)
+                case 5: {                                                               // SNOW (from @sylefeb)
+                    rand_x = ( pix_x == 0)  ? 1 : rand_x * 31421 + 6927;
+                    speed  = rand_x[10,2];
+                    dotpos = ( frame >> speed ) + rand_x;
+                    selection   = (pix_y == dotpos);
                 }
-                case 1: {
-                    // 50:50 HORIZONTAL SPLIT
-                    pixel = ( tophalf ) ? b_colour : b_alt;
-                }
-                case 2: {
-                // 50:50 VERTICAL SPLIT
-                    pixel = ( lefthalf ) ? b_colour : b_alt;
-                }
-                case 3: {
-                // QUARTERS
-                    pixel = ( lefthalf == tophalf ) ? b_colour : b_alt;
-                }
-                case 4: {
-                    // 8 colour rainbow
+                case 6: { selection = 1; }                                              // STATIC (placeholder, done below)
+                default: { selection = ( pix_x[b_mode-7,1] == pix_y[b_mode-7,1] ); }    // CHECKERBOARDS (7,8,9,10)
+                case 11: { selection = ( pix_x[0,1] || pix_y[0,1] ); }                  // CROSSHATCH
+                case 12: { selection = ( pix_x[0,2] == pix_y[0,2] ); }                  // LSLOPE
+                case 13: { selection = ( pix_x[0,2] == ~pix_y[0,2] ); }                 // RSLOPE
+                case 14: { selection = pix_x[0,1]; }                                    // VSTRIPES
+                case 15: { selection = pix_y[0,1]; }                                    // HSTRIPES
+            }
+
+            // SELECT ACTUAL COLOUR
+            switch( b_mode ) {
+                case 4: {                                                               // RAINBOW
                     switch( pix_y[6,3] ) {
                         case 3b000: { pixel = 6b100000; }
                         case 3b001: { pixel = 6b110000; }
@@ -195,41 +204,8 @@ algorithm background_display(
                         case 3b111: { pixel = 6b011011; }
                     }
                 }
-                case 5: {
-                    // SNOW (from @sylefeb)
-                    rand_x = ( pix_x == 0)  ? 1 : rand_x * 31421 + 6927;
-                    speed  = rand_x[10,2];
-                    dotpos = ( frame >> speed ) + rand_x;
-                    pixel   = (pix_y == dotpos) ? b_colour : b_alt;
-                }
-                case 6: {
-                    // STATIC
-                    pixel = { {3{staticGenerator}} };
-                }
-                case 11: {
-                    // CROSSHATCH
-                    pixel   = ( pix_x[0,1] || pix_y[0,1] ) ? b_colour : b_alt;
-                }
-                case 12: {
-                    // LSLOPE
-                    pixel   = ( pix_x[0,2] == pix_y[0,2] ) ? b_colour : b_alt;
-                }
-                case 13: {
-                    // RSLOPE
-                    pixel   = ( pix_x[0,2] == ~pix_y[0,2] ) ? b_colour : b_alt;
-                }
-                case 14: {
-                    // VSTRIPES
-                    pixel   = pix_x[0,1] ? b_colour : b_alt;
-                }
-                case 15: {
-                    // HSTRIPES
-                    pixel   = pix_y[0,1] ? b_colour : b_alt;
-                }
-                default: {
-                    // CHECKERBOARDS (7,8,9,10)
-                    pixel = ( pix_x[b_mode-7,1] == pix_y[b_mode-7,1] ) ? b_colour : b_alt;
-                }
+                case 6: { pixel = {3{staticGenerator}}; }                               // STATIC
+                default: {  pixel = selection ? b_colour : b_alt; }                     // EVERYTHING ELSE
             }
         }
     }

@@ -231,14 +231,14 @@ algorithm bitmapwriter(
             // == 8 RIGHT SLOPE == 9 LEFT TRIANGLE == 10 RIGHT TRIANGLE == 11 ENCLOSED
             // == 12 OCTRAGON == 13 BRICK == 14 COLOUR STATIC == 15 STATIC
             switch( dithermode ) {
-                case 0: { condition = 1; }                                                      // SOLID
-                default: { condition = ( bitmap_x_write[dithermode - 1,1] == bitmap_y_write[dithermode - 1,1] ); }        // CHECKERBOARDS 1 2 AND 3
-                case 4: { condition = bitmap_x_write[0,1]; }                                                             // VERTICAL STRIPES
-                case 5: { condition = bitmap_y_write[0,1]; }                                                             // HORIZONTAL STRIPES
-                case 6: { condition = ( bitmap_x_write[0,1] || bitmap_y_write[0,1] ); }                                   // CROSSHATCH
-                case 7: { condition = ( bitmap_x_write[0,2] == bitmap_y_write[0,2] ); }                                   // LEFT SLOPE
-                case 8: { condition = ( bitmap_x_write[0,2] == ~bitmap_y_write[0,2] ); }                                  // RIGHT SLOPE
-                case 9: {                                                                                               // LEFT TRIANGLE
+                case 0: { condition = 1; }                                                                          // SOLID
+                default: { condition = ( bitmap_x_write[dithermode - 1,1] == bitmap_y_write[dithermode - 1,1] ); }  // CHECKERBOARDS 1 2 AND 3
+                case 4: { condition = bitmap_x_write[0,1]; }                                                        // VERTICAL STRIPES
+                case 5: { condition = bitmap_y_write[0,1]; }                                                        // HORIZONTAL STRIPES
+                case 6: { condition = ( bitmap_x_write[0,1] || bitmap_y_write[0,1] ); }                             // CROSSHATCH
+                case 7: { condition = ( bitmap_x_write[0,2] == bitmap_y_write[0,2] ); }                             // LEFT SLOPE
+                case 8: { condition = ( bitmap_x_write[0,2] == ~bitmap_y_write[0,2] ); }                            // RIGHT SLOPE
+                case 9: {                                                                                           // LEFT TRIANGLE
                     switch( bitmap_y_write[0,2] ) {
                         case 2b00: { condition = ( bitmap_x_write[0,2] == 2b00 ); }
                         case 2b01: { condition = ( ~bitmap_x_write[1,1] ); }
@@ -246,7 +246,7 @@ algorithm bitmapwriter(
                         case 2b11: { condition = 1; }
                     }
                 }
-                case 10: {                                                                                              // RIGHT TRIANGLE
+                case 10: {                                                                                          // RIGHT TRIANGLE
                     switch( bitmap_y_write[0,2] ) {
                         case 2b00: { condition = ( bitmap_x_write[0,2] == 2b11 ); }
                         case 2b01: { condition = ( bitmap_x_write[1,1] ); }
@@ -254,35 +254,42 @@ algorithm bitmapwriter(
                         case 2b11: { condition = 1; }
                     }
                 }
-                case 11: {                                                                                              // ENCLOSED
-                    switch( bitmap_y_write[0,1] ^ bitmap_y_write[1,1] ) {
-                        case 1: { condition = ( bitmap_x_write[0,1] == bitmap_x_write[1,1] ); }
-                        case 0: { condition = 1; }
+                case 11: {                                                                                          // ENCLOSED
+                    if( bitmap_y_write[0,1] ^ bitmap_y_write[1,1] ) {
+                        condition = ( bitmap_x_write[0,1] == bitmap_x_write[1,1] );
+                    } else {
+                        condition = 1;
                     }
                 }
-                case 12: {                                                                                              // OCTAGON
-                    switch( bitmap_y_write[0,1] ^ bitmap_y_write[1,1] ) {
-                        case 1: { condition = ( bitmap_x_write[0,1] == bitmap_x_write[1,1] ); }
-                        case 0: { condition = 1; }
+                case 12: {                                                                                          // OCTAGON
+                    if( bitmap_y_write[0,1] ^ bitmap_y_write[1,1] ) {
+                        condition = ( bitmap_x_write[0,1] == bitmap_x_write[1,1] );
+                    } else {
+                        condition = 1;
                     }
                 }
-                case 13: {                                                                                              // BRICK
-                    switch( bitmap_y_write[0,2] ) {
-                        case 2b00: { condition = 1; }
-                        default: { condition = ( bitmap_x_write[0,2] == { bitmap_y_write[2,1], 1b0 } ); }
+                case 13: {                                                                                          // BRICK
+                    if( bitmap_y_write[0,2] == 2b00) {
+                        condition = 1;
+                    } else {
+                        condition = ( bitmap_x_write[0,2] == { bitmap_y_write[2,1], 1b0 } );
                     }
                 }
-                case 14: { condition = 1; }                                                                             // COLOUR STATIC
-                case 15: { condition = static1bit; }                                                                    // STATIC
+                case 14: { condition = 1; }                                                                         // COLOUR STATIC
+                case 15: { condition = static1bit; }                                                                // STATIC
             }
+
+            // SELECT ACTUAL COLOUR
             switch( dithermode ) {
                 case 14: { pixeltowrite = static6bit; }
                 default: { pixeltowrite = condition ? colour : colour_alt; }
             }
+
             // SET PIXEL ADDRESSS bitmap_y_write * 320 + bitmap_x_write
-            switch( framebuffer ) {
-                case 0: { bitmap_0.addr1 = address; bitmap_0.wdata1 = pixeltowrite; }
-                case 1: { bitmap_1.addr1 = address; bitmap_1.wdata1 = pixeltowrite; }
+            if( framebuffer ) {
+                bitmap_1.addr1 = address; bitmap_1.wdata1 = pixeltowrite;
+            } else {
+                bitmap_0.addr1 = address; bitmap_0.wdata1 = pixeltowrite;
             }
         }
     }
