@@ -150,6 +150,11 @@ unsigned char volatile * TPU_FOREGROUND = ( unsigned char volatile * ) 0x8508;
 unsigned char volatile * TPU_COMMIT = ( unsigned char volatile * ) 0x850a;
 unsigned char volatile * TPU_CURSOR = ( unsigned char volatile * ) 0x850c;
 
+unsigned char volatile * TERMINAL_COMMIT = ( unsigned char volatile * ) 0x8700;
+unsigned char volatile * TERMINAL_STATUS = ( unsigned char volatile * ) 0x8700;
+unsigned char volatile * TERMINAL_SHOW = ( unsigned char volatile * ) 0x8702;
+unsigned char volatile * TERMINAL_RESET = ( unsigned char volatile * ) 0x8704;
+
 unsigned char volatile * AUDIO_WAVEFORM = ( unsigned char volatile * ) 0xe100;
 unsigned short volatile * AUDIO_FREQUENCY = ( unsigned short volatile * ) 0xe102;
 unsigned short volatile * AUDIO_DURATION = ( unsigned short volatile * ) 0xe104;

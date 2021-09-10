@@ -118,11 +118,17 @@ extern void tpu_cs( void );
 extern void tpu_clearline( unsigned char );
 extern void tpu_set(  unsigned char, unsigned char, unsigned char, unsigned char );
 extern void tpu_output_character( short );
-extern void tpu_outputstring( char, char * );
 extern void tpu_printf( char, const char *,... );
 extern void tpu_printf_centre( unsigned char, unsigned char, unsigned char, char, const char *,... );
 extern void tpu_print( char, char * );
 extern void tpu_print_centre( unsigned char, unsigned char, unsigned char, char, char * );
+
+// TERMINAL WINDOW
+extern void terminal_cs( void );
+extern void terminal_showhide( unsigned char );
+extern void terminal_output_character( char );
+extern void terminal_print( char * );
+extern void terminal_printf( const char *,... );
 
 // IMAGE DECODERS
 extern void netppm_display( unsigned char *, unsigned char );

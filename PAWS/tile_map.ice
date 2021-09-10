@@ -100,8 +100,8 @@ algorithm tile_map_writer(
     input   uint1   tm_write,
 
     // For scrolling/wrapping
-    output  int5    tm_offset_x,
-    output  int5    tm_offset_y,
+    output  int5    tm_offset_x(0),
+    output  int5    tm_offset_y(0),
 
     input   uint4   tm_scrollwrap,
     output  uint4   tm_lastaction,
@@ -129,24 +129,21 @@ algorithm tile_map_writer(
     // TILEMAP WRITE FLAGS
     tiles.wenable1 := 1; tiles_copy.wenable1 := 1; colours.wenable1 := 1; colours_copy.wenable1 := 1;
 
+    always {
+        if( tm_write ) {
+            // Write character to the tilemap
+            tiles.addr1 = tm_x + tm_y * 42; tiles.wdata1 = tm_character;
+            tiles_copy.addr1 = tm_x + tm_y * 42; tiles_copy.wdata1 = tm_character;
+            colours.addr1 = tm_x + tm_y * 42; colours.wdata1 = { tm_reflection, tm_background, tm_foreground };
+            colours_copy.addr1 = tm_x + tm_y * 42; colours_copy.wdata1 = { tm_reflection, tm_background, tm_foreground };
+        }
+    }
+
     // Default to 0,0, transparent and no reflection
     tiles.addr1 = 0; tiles.wdata1 = 0; tiles_copy.addr1 = 0; tiles_copy.wdata1 = 0;
     colours.addr1 = 0; colours.wdata1 = 15h1000; colours_copy.addr1 = 0; colours_copy.wdata1 = 15h1000;
 
-    tm_offset_x = 0; tm_offset_y = 0;
-
     while(1) {
-        // Write character to the tilemap
-        switch( tm_write ) {
-            case 0: {}
-            case 1: {
-                tiles.addr1 = tm_x + tm_y * 42; tiles.wdata1 = tm_character;
-                tiles_copy.addr1 = tm_x + tm_y * 42; tiles_copy.wdata1 = tm_character;
-                colours.addr1 = tm_x + tm_y * 42; colours.wdata1 = { tm_reflection, tm_background, tm_foreground };
-                colours_copy.addr1 = tm_x + tm_y * 42; colours_copy.wdata1 = { tm_reflection, tm_background, tm_foreground };
-            }
-        }
-
         switch( tm_active ) {
             case 0: {
                 // Perform Scrolling/Wrapping

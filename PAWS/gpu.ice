@@ -444,7 +444,9 @@ algorithm gpu(
                                     GPUtrianglebitmap_write | GPUblitbitmap_write | GPUcolourblitbitmap_write | GPUpixelblockbitmap_write;
     GPUrectanglestart := 0; GPUlinestart := 0; GPUcirclestart := 0; GPUtrianglestart := 0; GPUblitstart := 0; GPUcolourblitstart := 0; GPUpixelblockstart := 0;
 
-    while(1) {
+    gpu_active := ( gpu_write[1,3] != 0 ) | ( gpu_busy_flags != 0 );
+
+    always {
         switch( gpu_write ) {
             case 0: {}
             case 1: {
@@ -453,7 +455,6 @@ algorithm gpu(
             }
             default: {
                 // START THE GPU DRAWING UNIT - RESET DITHERMODE TO 0 (most common)
-                gpu_active = 1;
                 gpu_active_dithermode = 0; bitmap_colour_write = gpu_colour; bitmap_colour_write_alt = gpu_colour_alt;
                 switch( gpu_write ) {
                     default: {}
@@ -472,18 +473,18 @@ algorithm gpu(
                     // 14
                     // 15 is quadrilateral, handled by the queue
                 }
-                while( gpu_busy_flags != 0 ) {
-                    onehot( gpu_busy_flags ) {
-                        case 0: { bitmap_x_write = GPUlinebitmap_x_write; bitmap_y_write = GPUlinebitmap_y_write; }
-                        case 1: { bitmap_x_write = GPUrectanglebitmap_x_write; bitmap_y_write = GPUrectanglebitmap_y_write; }
-                        case 2: { bitmap_x_write = GPUcirclebitmap_x_write; bitmap_y_write = GPUcirclebitmap_y_write; }
-                        case 3: { bitmap_x_write = GPUtrianglebitmap_x_write; bitmap_y_write = GPUtrianglebitmap_y_write; }
-                        case 4: { bitmap_x_write = GPUblitbitmap_x_write; bitmap_y_write = GPUblitbitmap_y_write; }
-                        case 5: { bitmap_x_write = GPUcolourblitbitmap_x_write; bitmap_y_write = GPUcolourblitbitmap_y_write; bitmap_colour_write = GPUcolourblitbitmap_colour_write; }
-                        case 6: { bitmap_x_write = GPUpixelblockbitmap_x_write; bitmap_y_write = GPUpixelblockbitmap_y_write; bitmap_colour_write = GPUpixelblockbitmap_colour_write; }
-                    }
-                }
-                gpu_active = 0;
+            }
+        }
+        if( gpu_busy_flags != 0 ) {
+            // COPY OUTPUT TO THE BITMAP WRITER
+            onehot( gpu_busy_flags ) {
+                case 0: { bitmap_x_write = GPUlinebitmap_x_write; bitmap_y_write = GPUlinebitmap_y_write; }
+                case 1: { bitmap_x_write = GPUrectanglebitmap_x_write; bitmap_y_write = GPUrectanglebitmap_y_write; }
+                case 2: { bitmap_x_write = GPUcirclebitmap_x_write; bitmap_y_write = GPUcirclebitmap_y_write; }
+                case 3: { bitmap_x_write = GPUtrianglebitmap_x_write; bitmap_y_write = GPUtrianglebitmap_y_write; }
+                case 4: { bitmap_x_write = GPUblitbitmap_x_write; bitmap_y_write = GPUblitbitmap_y_write; }
+                case 5: { bitmap_x_write = GPUcolourblitbitmap_x_write; bitmap_y_write = GPUcolourblitbitmap_y_write; bitmap_colour_write = GPUcolourblitbitmap_colour_write; }
+                case 6: { bitmap_x_write = GPUpixelblockbitmap_x_write; bitmap_y_write = GPUpixelblockbitmap_y_write; bitmap_colour_write = GPUpixelblockbitmap_colour_write; }
             }
         }
     }
@@ -516,7 +517,6 @@ algorithm preprectangle(
     max_y = 1 + ( ( y2 > crop_bottom ) ? crop_bottom : y2 );
     todraw = ~( ( max_x < crop_left ) || ( max_y < crop_top ) || ( min_x > crop_right ) || ( min_y > crop_bottom ) );
 }
-
 algorithm drawrectangle(
     input   uint1   start,
     output  uint1   busy(0),
@@ -531,18 +531,22 @@ algorithm drawrectangle(
     uint9   x = uninitialized; uint8   y = uninitialized;
     bitmap_x_write := x; bitmap_y_write := y; bitmap_write := 0;
 
-    while(1) {
+    always {
         if( start ) {
             busy = 1;
             x = min_x; y = min_y;
-            while( y != max_y ) {
-                if( x != max_x ) {
-                    bitmap_write = 1; x = x + 1;
+        } else {
+            if( busy ) {
+                if( y != max_y ) {
+                    if( x != max_x ) {
+                        bitmap_write = 1; x = x + 1;
+                    } else {
+                        x = min_x; y = y + 1;
+                    }
                 } else {
-                    x = min_x; y = y + 1;
+                    busy = 0;
                 }
             }
-            busy = 0;
         }
     }
 }
@@ -677,31 +681,35 @@ algorithm drawline(
 
     bitmap_x_write := x + offset_x; bitmap_y_write := y + offset_y; bitmap_write := 0;
 
-    while(1) {
+    always {
         if( start ) {
             busy = 1;
-            x = start_x; y = start_y; numerator = start_numerator; count = 0; offset_x = 0; offset_y = 0;
-            while( count != max_count ) {
-                // OUTPUT PIXELS
-                if( width == 1 ) {
-                    // SINGLE PIXEL
-                    bitmap_write = 1;
-                } else {
-                    // MULTIPLE WIDTH PIXELS
-                    offset_y = dxdy ? offset_start : 0; offset_x = dxdy ? 0 : offset_start;
-                    // DRAW WIDTH PIXELS
-                    pixel_count = 0;
-                    while( pixel_count != width ) {
-                        bitmap_write = 1;
-                        offset_y = offset_y + dxdy; offset_x = offset_x + ~dxdy;
-                        pixel_count = pixel_count + 1;
+            x = start_x; y = start_y; numerator = start_numerator; count = 0;
+            pixel_count = 0; offset_x = dxdy ? 0 : offset_start; offset_y = dxdy ? offset_start : 0;
+        } else {
+            if( busy ) {
+                if( count != max_count ) {
+                    switch( width ) {
+                        case 1: { bitmap_write = 1; }
+                        default: {
+                            // DRAW WIDTH PIXELS
+                            if( pixel_count != width ) {
+                                bitmap_write = 1;
+                                offset_y = offset_y + dxdy; offset_x = offset_x + ~dxdy;
+                                pixel_count = pixel_count + 1;
+                            }
+                        }
                     }
+                    if( ( width == 1 ) || ( pixel_count == width ) ) {
+                        numerator = newnumerator;
+                        x = x + n2dx; y = n2dy ? (y + ( dv ? 1 : -1 )) : y;
+                        count = count + 1;
+                        pixel_count = 0; offset_x = dxdy ? 0 : offset_start; offset_y = dxdy ? offset_start : 0;
+                    }
+                } else {
+                    busy = 0;
                 }
-                numerator = newnumerator;
-                x = x + n2dx; y = n2dy ? (y + ( dv ? 1 : -1 )) : y;
-                count = count + 1;
             }
-            busy = 0;
         }
     }
 }
@@ -952,39 +960,43 @@ algorithm drawtriangle(
         if( start ) {
             busy = 1;
             dx = 1; beenInTriangle = 0; px = min_x; py = min_y;
-            while( py != max_y ) {
-                beenInTriangle = inTriangle | beenInTriangle;
-                bitmap_write = inTriangle;
-                EXIT = ( beenInTriangle & ~inTriangle );
-                if( EXIT ) {
-                    // Exited the triangle, move to the next line
-                    beenInTriangle = 0;
-                    py = py + 1;
-                    if( rightleft ) {
-                        // Closer to the right
-                        px = max_x; dx = 0;
+        } else {
+            if( busy ) {
+                if( py != max_y ) {
+                    beenInTriangle = inTriangle | beenInTriangle;
+                    bitmap_write = inTriangle;
+                    EXIT = ( beenInTriangle & ~inTriangle );
+                    if( EXIT ) {
+                        // Exited the triangle, move to the next line
+                        beenInTriangle = 0;
+                        py = py + 1;
+                        if( rightleft ) {
+                            // Closer to the right
+                            px = max_x; dx = 0;
+                        } else {
+                            // Closer to the left
+                            px = min_x; dx = 1;
+                        }
                     } else {
-                        // Closer to the left
-                        px = min_x; dx = 1;
+                        // MOVE TO THE NEXT PIXEL ON THE LINE LEFT/RIGHT OR DOWN IF AT END
+                        if( dx ) {
+                            if( px <= max_x ) {
+                                px = px + 1;
+                            } else {
+                                dx = 0; beenInTriangle = 0; py = py + 1;
+                            }
+                        } else {
+                            if( px >= min_x ) {
+                                px = px - 1;
+                            } else {
+                                dx = 1; beenInTriangle = 0; py = py + 1;
+                            }
+                        }
                     }
                 } else {
-                    // MOVE TO THE NEXT PIXEL ON THE LINE LEFT/RIGHT OR DOWN IF AT END
-                    if( dx ) {
-                        if( px <= max_x ) {
-                            px = px + 1;
-                        } else {
-                            dx = 0; beenInTriangle = 0; py = py + 1;
-                        }
-                    } else {
-                        if( px >= min_x ) {
-                            px = px - 1;
-                        } else {
-                            dx = 1; beenInTriangle = 0; py = py + 1;
-                        }
-                    }
+                    busy = 0;
                 }
             }
-            busy = 0;
         }
     }
 }
@@ -1162,41 +1174,23 @@ algorithm blit(
     while(1) {
         if( start ) {
             busy = 1;
-            px = 0; py = 0; x2 = 0; y2 = 0; ( x1, y1 ) = copycoordinates( x, y );
-            if( action[2,1] ) {
-                // ROTATION
-                while( py != max_pixels ) {
-                    while( px != max_pixels ) {
-                        y2 = 0;
-                        while( y2 != maxcount ) {
-                            x2 = 0;
-                            while( x2 != maxcount ) {
-                                bitmap_write = tilecharacter ? blit1tilemap.rdata0[4b1111 - xinblittile, 1] : characterGenerator8x8.rdata0[7 - xinchartile, 1];
-                                x2 = x2 + 1;
-                            }
-                            y2 = y2 + 1;
+            py = 0; ( x1, y1 ) = copycoordinates( x, y );
+            while( py != max_pixels ) {
+                px = 0;
+                while( px != max_pixels ) {
+                    y2 = 0;
+                    while( y2 != maxcount ) {
+                        x2 = 0;
+                        while( x2 != maxcount ) {
+                            bitmap_write = tilecharacter ? blit1tilemap.rdata0[4b1111 - xinblittile, 1] : characterGenerator8x8.rdata0[7 - xinchartile, 1];
+                            x2 = x2 + 1;
                         }
-                        px = px + 1;
+                        y2 = y2 + 1;
                     }
-                    px = 0;
-                    py = py + 1;
+                    px = px + 1;
                 }
-            } else {
-                while( py != max_pixels ) {
-                    while( px != max_pixels ) {
-                        bitmap_write = tilecharacter ? blit1tilemap.rdata0[4b1111 - xinblittile, 1] : characterGenerator8x8.rdata0[7 - xinchartile, 1];
-                        x2 = x2 + 1;
-                        if( x2 == maxcount ) {
-                            x2 = 0;
-                            y2 = y2 + 1;
-                            if( y2 == maxcount ) {
-                                px = px + 1;
-                                y2 = 0;
-                            }
-                        }
-                    }
-                    px = 0; py = py + 1;
-                }
+
+                py = py + 1;
             }
             busy = 0;
         }
@@ -1276,20 +1270,21 @@ algorithm colourblit(
         if( start ) {
             busy = 1;
             px = 0; py = 0; x2 = 0; y2 = 0; ( x1, y1 ) = copycoordinates( x, y );
-            while( py != 16 ) {
-                while( px != 16 ) {
-                    bitmap_write = ~colourblittilemap.rdata0[6,1];
-                    x2 = x2 + 1;
-                    if( x2 == maxcount ) {
-                        x2 = 0;
-                        y2 = y2 + 1;
-                        if( y2 == maxcount ) {
-                            px = px + 1;
-                            y2 = 0;
+            while( ~py[4,1] ) {
+                px = 0;
+                while( ~px[4,1] ) {
+                    x2 = 0;
+                    while( x2 != maxcount ) {
+                        y2 = 0;
+                        while( y2 != maxcount ) {
+                            bitmap_write = ~colourblittilemap.rdata0[6,1];
+                            y2 = y2 + 1;
                         }
+                        x2 = x2 + 1;
                     }
+                    px = px + 1;
                 }
-                px = 0; py = py + 1;
+                py = py + 1;
             }
             busy = 0;
         }
@@ -1329,11 +1324,12 @@ algorithm pixelblock(
     bitmap_write := ( ( newpixel == 1 ) & ( colour7 != ignorecolour ) ) | ( newpixel == 2 );
     bitmap_colour_write := ( newpixel == 1 ) ? colour7 : { 1b0, colour8r[6,2], colour8g[6,2], colour8b[6,2] };
 
-    while(1) {
+    always {
         if( start ) {
             busy = 1;
             x1 = x; y1 = y;
-            while( busy ) {
+        } else {
+            if( busy ) {
                 if( newpixel == 3 ) {
                     busy = 0;
                 }

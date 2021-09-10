@@ -1006,6 +1006,7 @@ algorithm terminal_memmap(
                 switch( memoryAddress ) {
                     case 8h00: { terminal_character = writeData; terminal_write = 1; }
                     case 8h02: { showterminal = writeData; }
+                    case 8h04: { terminal_write = 2; }
                     default: {}
                 }
             }

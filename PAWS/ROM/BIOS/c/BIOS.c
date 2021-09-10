@@ -286,6 +286,7 @@ void reset_display( void ) {
     *FRAMEBUFFER_DISPLAY = 0;
     *SCREENMODE = 0; *COLOUR = 1;
     *TPU_CURSOR = 0; tpu_cs();
+    *TERMINAL_SHOW = 0; *TERMINAL_RESET = 1;
     *LOWER_TM_SCROLLWRAPCLEAR = 9;
     *UPPER_TM_SCROLLWRAPCLEAR = 9;
     for( unsigned short i = 0; i < 16; i++ ) {
@@ -409,14 +410,14 @@ void swapentries( short i, short j ) {
     memcpy( &directorynames[j], &temporary, sizeof( DirectoryEntry ) );
 }
 void sortdirectoryentries( unsigned short entries ) {
-    if( entries < 1 )
+    if( !entries )
         return;
 
     short changes;
     do {
         changes = 0;
 
-        for( int i = 0; i < entries - 1; i++ ) {
+        for( int i = 0; i < entries; i++ ) {
             if( directorynames[i].type < directorynames[i+1].type ) {
                 swapentries(i,i+1);
                 changes++;

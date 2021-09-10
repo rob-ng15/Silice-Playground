@@ -1066,8 +1066,9 @@ void update_sprite( unsigned char sprite_layer, unsigned char sprite_number, uns
 }
 
 // CHARACTER MAP FUNCTIONS
-// The character map is an 80 x 30 character window with a 256 character 8 x 16 pixel character generator ROM )
+// The character map is an 80 x 30 character window with a 512 character 8 x 8 pixel character generator ROM ) normal/bold
 // NO SCROLLING, CURSOR WRAPS TO THE TOP OF THE SCREEN
+// CURSES LIBRARY PROVIDES MORE CAPABILITIES, SEE BELOW
 
 // CLEAR THE CHARACTER MAP
 void tpu_cs( void ) {
@@ -1129,6 +1130,46 @@ void tpu_printf_centre( unsigned char y, unsigned char background, unsigned char
     tpu_outputstring( attribute, buffer );
 }
 
+// SIMPLE TERMINAL WINDOW FUNCTIONS
+// The terminal is an 80 x 8 character window with a 256 character 8 x 8 pixel character generator ROM )
+// Outputs characters, understands backspace, newline, linefeed and clear
+
+// CLEAR THE TERMINAL
+void terminal_cs( void ) {
+    while( *TERMINAL_STATUS );
+    *TERMINAL_RESET = 1;
+}
+
+// SHOW/HIDE THE TERMINAL WINDOW
+void terminal_showhide( unsigned char flag ) {
+    *TERMINAL_SHOW = flag;
+}
+
+void terminal_output_character( char c ) {
+    while( *TERMINAL_STATUS );
+    *TERMINAL_COMMIT = c;
+    if( c == '\n' ) {
+        while( *TERMINAL_STATUS );
+        *TERMINAL_COMMIT = 13;
+    }
+}
+void terminal_outputstring( char *s ) {
+    while( *s ) {
+        terminal_output_character( *s++ );
+    }
+}
+void terminal_print( char *buffer ) {
+    terminal_outputstring(buffer );
+}
+void terminal_printf( const char *fmt,... ) {
+    char *buffer = (char *)0x1000;
+    va_list args;
+    va_start (args, fmt);
+    vsnprintf( buffer, 1023, fmt, args);
+    va_end(args);
+
+    terminal_outputstring( buffer );
+}
 
 // READ A FILE USING THE SIMPLE FILE BROWSER OR DIRECTLY FROM FILENAME
 // WILL ALLOW SELECTION OF A FILE FROM THE SDCARD, INCLUDING SUB-DIRECTORIES
@@ -1202,7 +1243,6 @@ void readfile( unsigned int starting_cluster, unsigned char *copyAddress ) {
 }
 
 void swapentries( short i, short j ) {
-    // SIMPLE BUBBLE SORT, PUT DIRECTORIES FIRST, THEN FILES, IN ALPHABETICAL ORDER
     DirectoryEntry temporary;
 
     memcpy( &temporary, &directorynames[i], sizeof( DirectoryEntry ) );
@@ -1211,14 +1251,15 @@ void swapentries( short i, short j ) {
 }
 
 void sortdirectoryentries( unsigned short entries ) {
-    if( entries < 1 )
+    // SIMPLE BUBBLE SORT, PUT DIRECTORIES FIRST, THEN FILES, IN ALPHABETICAL ORDER
+    if( !entries )
         return;
 
     short changes;
     do {
         changes = 0;
 
-        for( int i = 0; i < entries - 1; i++ ) {
+        for( int i = 0; i < entries; i++ ) {
             if( directorynames[i].type < directorynames[i+1].type ) {
                 swapentries(i,i+1);
                 changes++;

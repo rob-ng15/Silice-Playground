@@ -66,18 +66,17 @@ algorithm donormalise48_adjustexp(
     output  int10   newexp,
     output  uint48  normalised
 ) <autorun> {
-    uint4   shiftcount <:: { normalised[33,15] == 0, normalised[41,7] == 0, normalised[45,3] == 0, 1b1 };
+    uint6   shiftcount = uninitialised;
     while(1) {
         if( start ) {
             __display("  NORMALISING THE RESULT MANTISSA, ADJUSTING EXPONENT FOR ADDSUB");
             busy = 1;
-            normalised = bitstream; newexp = exp;
-            __display("  { (sign) %b %b } (ALREADY NORMALISED == %b)",newexp,normalised,normalised[47,1]);
-            // NORMALISE BY SHIFT 1, 3, 7 OR 15 ZEROS LEFT
-            while( ~normalised[47,1] ) {
-                normalised = normalised << shiftcount; newexp = newexp - shiftcount;
-                __display("  { (sign) %b %b } AFTER SHIFT LEFT %d",newexp,normalised,shiftcount);
+            shiftcount = { bitstream[33,15] == 0, bitstream[41,7] == 0, bitstream[45,3] == 0, bitstream[47,1] == 0 };
+            while( ~bitstream[47 - shiftcount,1] ) {
+                shiftcount = shiftcount + 1;
             }
+            normalised = bitstream << shiftcount; newexp = exp - shiftcount;
+            __display("  { (sign) %b %b } AFTER SHIFT LEFT %d",newexp,normalised,shiftcount);
             busy = 0;
         }
     }
@@ -1260,7 +1259,7 @@ algorithm main(output int8 leds) {
     // uint7   opCode = 7b1001011; // FNMSUB
     // uint7   opCode = 7b1001111; // FNMADD
 
-    uint7   function7 = 7b0001100; // OPERATION SWITCH
+    uint7   function7 = 7b0000100; // OPERATION SWITCH
     // ADD = 7b0000000 SUB = 7b0000100 MUL = 7b0001000 DIV = 7b0001100 SQRT = 7b0101100
     // FSGNJ[N][X] = 7b0010000 function3 == 000 FSGNJ == 001 FSGNJN == 010 FSGNJX
     // MIN MAX = 7b0010100 function3 == 000 MIN == 001 MAX

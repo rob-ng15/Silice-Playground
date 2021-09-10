@@ -198,9 +198,7 @@ algorithm PAWSCPU(
                 }
                 FSM = 2;
             }
-            case 1: {                                                                                                                                                   // DECODE, REGISTER FETCH, ADDRESS GENERATION
-                FSM = 4;
-            }
+            case 1: { FSM = 4; }                                                                                                                                        // DECODE, REGISTER FETCH, ADDRESS GENERATION
             case 2: {
                 if( memoryload ) {
                     address = loadAddress; readmemory = 1; while( memorybusy ) {}                                                                                       // READ 1ST 16 BITS
