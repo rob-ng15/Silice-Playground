@@ -70,18 +70,10 @@ extern void gpu_line( unsigned char, short, short, short, short );
 extern void gpu_wideline( unsigned char, short, short, short, short, unsigned short );
 extern void gpu_circle( unsigned char, short, short, short, unsigned char, unsigned char );
 extern void gpu_blit( unsigned char, short, short, short, unsigned char, unsigned char );
-extern void gpu_character_blit( unsigned char, short, short, unsigned char, unsigned char, unsigned char );
+extern void gpu_character_blit( unsigned char, short, short, unsigned short, unsigned char, unsigned char );
 extern void gpu_colourblit( short, short, short, unsigned char, unsigned char );
 extern void gpu_triangle( unsigned char, short, short, short, short, short, short );
 extern void gpu_quadrilateral( unsigned char, short, short, short, short, short, short, short, short );
-extern void gpu_printf( unsigned char, short, short, unsigned char, unsigned char, const char *,...  );
-extern void gpu_printf_centre( unsigned char, short, short, unsigned char, unsigned char, const char *,...  );
-extern void gpu_printf_vertical( unsigned char, short, short, unsigned char, unsigned char, const char *,...  );
-extern void gpu_printf_centre_vertical( unsigned char, short, short, unsigned char, unsigned char, const char *,...  );
-extern void gpu_print( unsigned char, short, short, unsigned char, unsigned char, char * );
-extern void gpu_print_centre( unsigned char, short, short, unsigned char, unsigned char, char * );
-extern void gpu_print_vertical( unsigned char, short, short, unsigned char, unsigned char, char * );
-extern void gpu_print_centre_vertical( unsigned char, short, short, unsigned char, unsigned char, char * );
 extern void draw_vector_block( unsigned char, unsigned char, short, short, unsigned char, unsigned char );
 extern void set_vector_vertex( unsigned char, unsigned char , unsigned char, char, char );
 extern void bitmap_scrollwrap( unsigned char );
@@ -96,6 +88,15 @@ extern void gpu_pixelblock_pixel7( unsigned char );
 extern void gpu_pixelblock_pixel24( unsigned char, unsigned char, unsigned char );
 extern void gpu_pixelblock_pixel24bw( unsigned char, unsigned char, unsigned char );
 extern void gpu_pixelblock_stop( void );
+
+extern void gpu_printf( unsigned char, short, short, unsigned char, unsigned char, unsigned char, const char *,...  );
+extern void gpu_printf_centre( unsigned char, short, short, unsigned char, unsigned char, unsigned char, const char *,...  );
+extern void gpu_printf_vertical( unsigned char, short, short, unsigned char, unsigned char, unsigned char, const char *,...  );
+extern void gpu_printf_centre_vertical( unsigned char, short, short, unsigned char, unsigned char, unsigned char, const char *,...  );
+extern void gpu_print( unsigned char, short, short, unsigned char, unsigned char, unsigned char, char * );
+extern void gpu_print_centre( unsigned char, short, short, unsigned char, unsigned char, unsigned char, char * );
+extern void gpu_print_vertical( unsigned char, short, short, unsigned char, unsigned char, unsigned char, char * );
+extern void gpu_print_centre_vertical( unsigned char, short, short, unsigned char, unsigned char, unsigned char, char * );
 
 // SOFTWARE VECTOR SHAPES
 extern void DrawVectorShape2D( unsigned char, struct Point2D *, short, short, short, short, float );

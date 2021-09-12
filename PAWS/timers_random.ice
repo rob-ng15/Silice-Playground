@@ -31,12 +31,11 @@ algorithm random(
     uint16  rand_out = 0;
     uint16  rand_ff = 24b011000110111011010011101;
     uint18  rand_en_ff = 24b001100010011011101100101;
-    uint16  temp_u_noise3 <: { rand_out[15,1], rand_out[15,1], rand_out[2,13] };
-    uint16  temp_u_noise2 <: temp_u_noise3;
-    uint16  temp_u_noise1 <: temp_u_noise2;
-    uint16  temp_u_noise0 <: temp_u_noise1;
+    uint16  temp_u_noise3 <:: { rand_out[15,1], rand_out[15,1], rand_out[2,13] };
+    uint16  temp_u_noise2 <:: temp_u_noise3;
+    uint16  temp_u_noise1 <:: temp_u_noise2;
+    uint16  temp_u_noise0 <:: temp_u_noise1;
     uint16  temp_g_noise_nxt = uninitialized;
-
 
     always {
         g_noise_out = ( rand_en_ff[17,1] ) ? temp_g_noise_nxt : ( rand_en_ff[10,1] ) ? rand_out : g_noise_out;

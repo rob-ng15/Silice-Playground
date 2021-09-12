@@ -17,8 +17,8 @@
 // ALIENS ARE BLITTER OBJECTS, 2 DESIGNS PER ALIEN TYPE FOR ANIMATION, 2 FOR EXPLOSION, 2 FOR UFO, 2 FOR BUNKERS
 unsigned short blitter_bitmaps[] = {
     0b0000011000000000,
-    0b0000111110000000,
-    0b0001111111000000,
+    0b0000111100000000,
+    0b0001111110000000,
     0b0011011011000000,
     0b0011111111000000,
     0b0001011010000000,
@@ -27,8 +27,8 @@ unsigned short blitter_bitmaps[] = {
     0,0,0,0,0,0,0,0,
 
     0b0000011000000000,
-    0b0000111110000000,
-    0b0001111111000000,
+    0b0000111100000000,
+    0b0001111110000000,
     0b0011011011000000,
     0b0011111111000000,
     0b0000100100000000,
@@ -845,7 +845,7 @@ void draw_aliens( void ) {
             }
             break;
         case UFOEXPLODE:
-            gpu_printf_centre( framebuffer ? RED : LTRED, UFO.x + 7, 16, 0, 0, "%d", UFO.score );
+            gpu_printf_centre( framebuffer ? RED : LTRED, UFO.x + 7, 16, BOLD, 0, 0, "%d", UFO.score );
             if( !get_beep_active( 1 ) ) {
                 beep( 1, 1, UFO.pitchcount ? 37 : 49, 25 );
                 UFO.pitchcount = !UFO.pitchcount;
@@ -1339,19 +1339,19 @@ void attract( void ) {
                     // WELCOME SCREEN
                     // DRAW TO HIDDEN FRAME BUFFER
                     bitmap_draw( !framebuffer ); gpu_cs();
-                    gpu_blit( WHITE, 128, 64, 2 + animation, 1, 0 ); gpu_printf_centre( RED, 176, 64, 1, 0, "%d", 30, 0 );
-                    gpu_blit( WHITE, 128, 96, 4 + animation, 1, 0 ); gpu_printf_centre( RED, 176, 96, 1, 0, "%d", 20, 0 );
-                    gpu_blit( WHITE, 128, 128, 6 + animation, 1, 0 ); gpu_printf_centre( RED, 176, 128, 1, 0, "%d", 10, 0 );
-                    gpu_blit( MAGENTA, 126, 160, 10 + animation, 1, 0 ); gpu_printf_centre( RED, 176, 160, 1, ROTATE0 + ( systemclock() & 3 ), "?", 0 );
+                    gpu_blit( WHITE, 128, 64, 2 + animation, 1, 0 ); gpu_printf_centre( RED, 176, 64, BOLD, 1, 0, "%d", 30, 0 );
+                    gpu_blit( WHITE, 128, 96, 4 + animation, 1, 0 ); gpu_printf_centre( RED, 176, 96, BOLD, 1, 0, "%d", 20, 0 );
+                    gpu_blit( WHITE, 128, 128, 6 + animation, 1, 0 ); gpu_printf_centre( RED, 176, 128, BOLD, 1, 0, "%d", 10, 0 );
+                    gpu_blit( MAGENTA, 126, 160, 10 + animation, 1, 0 ); gpu_printf_centre( RED, 176, 160, BOLD, 1, ROTATE0 + ( systemclock() & 3 ), "?", 0 );
 
                     switch( animation ) {
                         case 0:
-                            gpu_printf_centre( WHITE, 160, 32, 1, 0, "PAWS" );
-                            gpu_printf_centre( WHITE, 160, 208, 0, 0, "BY @ROBNG15 WHITEBRIDGE, SCOTLAND" );
+                            gpu_printf_centre( WHITE, 160, 32, NORMAL, 1, 0, "PAWS" );
+                            gpu_printf_centre( WHITE, 160, 208, NORMAL, 0, 0, "BY @ROBNG15 WHITEBRIDGE, SCOTLAND" );
                             break;
                         case 1:
-                            gpu_printf_centre( WHITE, 160, 32, 1, 0, "SPACE INVADERS" );
-                            gpu_printf_centre( WHITE, 160, 208, 0, 0, "PRESS UP TO START" );
+                            gpu_printf_centre( WHITE, 160, 32, NORMAL, 1, 0, "SPACE INVADERS" );
+                            gpu_printf_centre( WHITE, 160, 208, NORMAL, 0, 0, "PRESS UP TO START" );
                             break;
                     }
 
@@ -1393,10 +1393,10 @@ void attract( void ) {
                     gpu_rectangle( TRANSPARENT, 0, 120, 319, 128 );
                     switch( animation ) {
                         case 0:
-                            gpu_printf_centre( WHITE, 160, 120, 0, 0, "PAWS SPACE INVADERS" );
+                            gpu_printf_centre( WHITE, 160, 120, NORMAL, 0, 0, "PAWS SPACE INVADERS" );
                             break;
                         case 1:
-                            gpu_printf_centre( WHITE, 160, 120, 0, 0, "PRESS UP TO START" );
+                            gpu_printf_centre( WHITE, 160, 120, NORMAL, 0, 0, "PRESS UP TO START" );
                             break;
                     }
 

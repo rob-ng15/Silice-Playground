@@ -28,15 +28,15 @@ algorithm gpu_queue(
     input   uint4   gpu_write,
     input   uint4   gpu_dithermode,
 
-    input   uint5   blit1_writer_tile,
+    input   uint6   blit1_writer_tile,
     input   uint4   blit1_writer_line,
     input   uint16  blit1_writer_bitmap,
 
-    input   uint8   character_writer_character,
+    input   uint9   character_writer_character,
     input   uint3   character_writer_line,
     input   uint8   character_writer_bitmap,
 
-    input   uint5   colourblit_writer_tile,
+    input   uint6   colourblit_writer_tile,
     input   uint4   colourblit_writer_line,
     input   uint4   colourblit_writer_pixel,
     input   uint7   colourblit_writer_colour,
@@ -47,14 +47,14 @@ algorithm gpu_queue(
     input   uint8   pb_colour8b,
     input   uint2   pb_newpixel,
 
-    input   uint5   vector_block_number,
+    input   uint6   vector_block_number,
     input   uint7   vector_block_colour,
     input   int11   vector_block_xc,
     input   int11   vector_block_yc,
     input   uint3   vector_block_scale,
     input   uint3   vector_block_action,
     input   uint1   draw_vector,
-    input   uint5   vertices_writer_block,
+    input   uint6   vertices_writer_block,
     input   uint6   vertices_writer_vertex,
     input   int6    vertices_writer_xdelta,
     input   int6    vertices_writer_ydelta,
@@ -65,7 +65,7 @@ algorithm gpu_queue(
     output  uint1   vector_block_active(0)
 ) <autorun> {
     // 32 x 16 x 16 1 bit tilemap for blit1tilemap
-    simple_dualport_bram uint16 blit1tilemap <input!> [ 512 ] = uninitialized;
+    simple_dualport_bram uint16 blit1tilemap <input!> [ 1024 ] = uninitialized;
     // Character ROM 8x8 x 256 for character blitter
     simple_dualport_bram uint8 characterGenerator8x8 <input!> [] = {
         $include('ROM/characterROM8x8.inc')
@@ -82,7 +82,7 @@ algorithm gpu_queue(
         characterGenerator8x8 <:> characterGenerator8x8
     );
     // 32 x 16 x 16 7 bit tilemap for colour
-    simple_dualport_bram uint7 colourblittilemap <input!> [ 8192 ] = uninitialized;
+    simple_dualport_bram uint7 colourblittilemap <input!> [ 16384 ] = uninitialized;
     // COLOURBLIT TILE WRITER
     colourblittilebitmapwriter CBTBM(
         colourblit_writer_tile <: colourblit_writer_tile,
@@ -93,7 +93,7 @@ algorithm gpu_queue(
     );
 
     // 32 vector blocks each of 16 vertices
-    simple_dualport_bram uint13 vertex <input!> [512] = uninitialised;
+    simple_dualport_bram uint13 vertex <input!> [1024] = uninitialised;
     // VECTOR DRAWER UNIT
     int11   vector_drawer_gpu_x = uninitialised;
     int11   vector_drawer_gpu_y = uninitialised;
@@ -1087,12 +1087,12 @@ algorithm triangle(
 // BLIT - ( tilecharacter == 0 ) OUTPUT PIXELS TO BLIT AN 8 x 8 CHARACTER ( PARAM1 == 0 as 8 x 8, == 1 as 16 x 16, == 2 as 32 x 32, == 3 as 64 x 64 )
 algorithm blittilebitmapwriter(
     // For setting blit1 tile bitmaps
-    input   uint5   blit1_writer_tile,
+    input   uint6   blit1_writer_tile,
     input   uint4   blit1_writer_line,
     input   uint16  blit1_writer_bitmap,
 
     // For setting character generator bitmaps
-    input   uint8   character_writer_character,
+    input   uint9   character_writer_character,
     input   uint3   character_writer_line,
     input   uint8   character_writer_bitmap,
 
@@ -1115,7 +1115,7 @@ algorithm blit(
 
     input   int11   x,
     input   int11   y,
-    input   uint8   tile,
+    input   uint9   tile,
     input   uint2   scale,
     input   uint3   action,
 
@@ -1202,7 +1202,7 @@ algorithm blit(
 // COLOURBLIT - OUTPUT PIXELS TO BLIT A 16 x 16 TILE ( PARAM1 == 0 as 16 x 16, == 1 as 32 x 32, == 2 as 64 x 64, == 3 as 128 x 128 )
 algorithm colourblittilebitmapwriter(
     // For setting  colourblit tile bitmaps
-    input   uint5   colourblit_writer_tile,
+    input   uint6   colourblit_writer_tile,
     input   uint4   colourblit_writer_line,
     input   uint4   colourblit_writer_pixel,
     input   uint7   colourblit_writer_colour,
@@ -1218,14 +1218,9 @@ algorithm colourblit(
     output  uint1   busy(0),
     simple_dualport_bram_port0 colourblittilemap,
 
-    // For setting blit1 tile bitmaps
-    input   uint5   colourblit_writer_tile,
-    input   uint4   colourblit_writer_line,
-    input   uint4   colourblit_writer_pixel,
-    input   uint7   colourblit_writer_colour,
     input   int11   x,
     input   int11   y,
-    input   uint5   tile,
+    input   uint6   tile,
     input   uint2   scale,
     input   uint3   action,
 
@@ -1398,8 +1393,8 @@ algorithm centreplusdelta(
 }
 algorithm vertexwriter(
     // For setting vertices
-    input   uint5   vertices_writer_block,
-    input   uint6   vertices_writer_vertex,
+    input   uint6   vertices_writer_block,
+    input   uint4   vertices_writer_vertex,
     input   int6    vertices_writer_xdelta,
     input   int6    vertices_writer_ydelta,
     input   uint1   vertices_writer_active,
@@ -1412,7 +1407,7 @@ algorithm vertexwriter(
 }
 algorithm vectors(
     simple_dualport_bram_port0 vertex,
-    input   uint5   vector_block_number,
+    input   uint6   vector_block_number,
     input   int11   vector_block_xc,
     input   int11   vector_block_yc,
     input   uint3   vector_block_scale,

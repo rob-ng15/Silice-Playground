@@ -306,6 +306,7 @@ $$end
 
     // Combine the display layers for display
     uint2   display_order = uninitialized;
+    uint1   colour = uninitialized;
     multiplex_display display <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -329,7 +330,8 @@ $$end
         character_map_display <: character_map_display,
         terminal_p <: terminal_p,
         terminal_display <: terminal_display,
-        display_order <: display_order
+        display_order <: display_order,
+        colour <: colour
     );
 
     BACKGROUNDmemoryWrite := 0;
@@ -430,13 +432,20 @@ $$end
                     case 4h7: { TERMINALmemoryWrite = 1; }
                     case 4h8: { LOWER_SPRITEmemoryWrite = 1; LOWER_SPRITEbitmapwriter = 1; }
                     case 4h9: { UPPER_SPRITEmemoryWrite = 1; UPPER_SPRITEbitmapwriter = 1; }
-                    case 4hf: { display_order = writeData; }
+                    case 4hf: {
+                        if( memoryAddress[0,1] ) {
+                            colour = writeData;
+                        } else {
+                            display_order = writeData;
+                        }
+                    }
                     default: {}
                 }
             }
             default: {}
         }
     }
+    display_order = 0; colour = 1;
 }
 
 // ALL DISPLAY GENERATOR UNITS RUN AT 25MHz, 640 x 480 @ 60fps
@@ -571,7 +580,6 @@ algorithm bitmap_memmap(
 ) <autorun> {
     uint1   framebuffer = uninitialized;
     uint1   writer_framebuffer = uninitialized;
-    uint3   bitmap_write_offset = uninitialized;
     int10   bitmap_x_read = uninitialized;
     int10   bitmap_y_read = uninitialized;
     int10   gpu_x = uninitialized;
@@ -584,6 +592,10 @@ algorithm bitmap_memmap(
     int10   gpu_param3 = uninitialized;
     uint4   gpu_write = uninitialized;
     uint4   gpu_dithermode = uninitialized;
+    uint9   gpu_crop_left = uninitialized;
+    uint9   gpu_crop_right = uninitialized;
+    uint8   gpu_crop_top = uninitialized;
+    uint8   gpu_crop_bottom = uninitialized;
     uint5   blit1_writer_tile = uninitialized;
     uint4   blit1_writer_line = uninitialized;
     uint16  blit1_writer_bitmap = uninitialized;
@@ -624,7 +636,6 @@ algorithm bitmap_memmap(
         gpu_queue_complete :> gpu_queue_complete,
         vector_block_active :> vector_block_active,
         bitmap_colour_read :> bitmap_colour_read,
-        bitmap_write_offset <: bitmap_write_offset,
         bitmap_x_read <: bitmap_x_read,
         bitmap_y_read <: bitmap_y_read,
         gpu_x <: gpu_x,
@@ -637,6 +648,10 @@ algorithm bitmap_memmap(
         gpu_param3 <: gpu_param3,
         gpu_write <: gpu_write,
         gpu_dithermode <: gpu_dithermode,
+        crop_left <: gpu_crop_left,
+        crop_right <: gpu_crop_right,
+        crop_top <: gpu_crop_top,
+        crop_bottom <: gpu_crop_bottom,
         blit1_writer_tile <: blit1_writer_tile,
         blit1_writer_line <: blit1_writer_line,
         blit1_writer_bitmap <: blit1_writer_bitmap,
@@ -720,14 +735,12 @@ algorithm bitmap_memmap(
                     case 8hd0: { bitmap_x_read = writeData; }
                     case 8hd2: { bitmap_y_read = writeData; }
 
-                    case 8he0: { bitmap_write_offset = writeData; }
                     case 8hf0: { framebuffer = writeData; }
                     case 8hf2: { writer_framebuffer = writeData; }
                     default: {}
                 }
             }
             case 2b00: {
-                bitmap_write_offset = 0;
                 gpu_write = 0;
                 pb_newpixel = 0;
                 draw_vector = 0;
@@ -735,7 +748,9 @@ algorithm bitmap_memmap(
             default: {}
         }
         LATCHmemoryWrite = memoryWrite;
-   }
+    }
+    // RESET THE CROPPING RECTANGLE
+    gpu_crop_left = 0; gpu_crop_right = 319; gpu_crop_top = 0; gpu_crop_bottom = 239;
 }
 
 algorithm charactermap_memmap(

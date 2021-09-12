@@ -55,8 +55,8 @@ $$end
     // Status of the screen, if in range, if in vblank, actual pixel x and y
     uint1   vblank = uninitialized;
     uint1   pix_active = uninitialized;
-    uint16  pix_x  = uninitialized;
-    uint16  pix_y  = uninitialized;
+    uint10  pix_x  = uninitialized;
+    uint10  pix_y  = uninitialized;
 $$if VGA then
   vga vga_driver<@clock_25mhz,!reset>(
     vga_hs :> video_hs,
@@ -432,7 +432,6 @@ $$end
             }
         }
     }
-
     display_order = 0; colour = 1;
 }
 
@@ -459,8 +458,8 @@ algorithm background_memmap(
     input   uint1   video_reset,
 
     // Pixels
-    input   uint16  pix_x,
-    input   uint16  pix_y,
+    input   uint10  pix_x,
+    input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
     output! uint6   pixel,
@@ -549,8 +548,8 @@ algorithm bitmap_memmap(
     input   uint1   gpu_clock,
 
     // Pixels
-    input   uint16  pix_x,
-    input   uint16  pix_y,
+    input   uint10  pix_x,
+    input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
     output! uint6   pixel,
@@ -589,13 +588,13 @@ algorithm bitmap_memmap(
     uint9   gpu_crop_right = uninitialized;
     uint8   gpu_crop_top = uninitialized;
     uint8   gpu_crop_bottom = uninitialized;
-    uint5   blit1_writer_tile = uninitialized;
+    uint6   blit1_writer_tile = uninitialized;
     uint4   blit1_writer_line = uninitialized;
     uint16  blit1_writer_bitmap = uninitialized;
-    uint8   character_writer_character = uninitialized;
+    uint9   character_writer_character = uninitialized;
     uint3   character_writer_line = uninitialized;
     uint8   character_writer_bitmap = uninitialized;
-    uint5   colourblit_writer_tile = uninitialized;
+    uint6   colourblit_writer_tile = uninitialized;
     uint4   colourblit_writer_line = uninitialized;
     uint4   colourblit_writer_pixel = uninitialized;
     uint7   colourblit_writer_colour = uninitialized;
@@ -604,14 +603,14 @@ algorithm bitmap_memmap(
     uint8   pb_colour8g = uninitialized;
     uint8   pb_colour8b = uninitialized;
     uint2   pb_newpixel = uninitialized;
-    uint5   vector_block_number = uninitialized;
+    uint6   vector_block_number = uninitialized;
     uint7   vector_block_colour = uninitialized;
     int11   vector_block_xc = uninitialized;
     int11   vector_block_yc = uninitialized;
     uint3   vector_block_scale = uninitialized;
     uint3   vector_block_action = uninitialized;
     uint1   draw_vector = uninitialized;
-    uint5   vertices_writer_block = uninitialized;
+    uint6   vertices_writer_block = uninitialized;
     uint6   vertices_writer_vertex = uninitialized;
     int6    vertices_writer_xdelta = uninitialized;
     int6    vertices_writer_ydelta = uninitialized;
@@ -680,15 +679,15 @@ algorithm bitmap_memmap(
    );
 
     // LATCH MEMORYWRITE
-    //uint1   LATCHmemoryWrite = uninitialized;
+    uint1   LATCHmemoryWrite = uninitialized;
 
     // 50MHz GPU OPERATION
-    gpu_write := 0;  pb_newpixel := 0; draw_vector := 0;
+    //gpu_write := 0;  pb_newpixel := 0; draw_vector := 0;
 
     always {
-        if( memoryWrite ) {
-        //switch( { memoryWrite, LATCHmemoryWrite } ) {
-            //case 2b10: {
+        //if( memoryWrite ) {
+        switch( { memoryWrite, LATCHmemoryWrite } ) {
+            case 2b10: {
                 switch( memoryAddress ) {
                     case 8h00: { gpu_x = writeData; }
                     case 8h02: { gpu_y = writeData; }
@@ -747,15 +746,16 @@ algorithm bitmap_memmap(
                     case 8hf2: { writer_framebuffer = writeData; }
                     default: {}
                 }
-            //}
-            //case 2b00: {
-            //    // 25MHz GPU OPERATION
-            //    gpu_write = 0;  pb_newpixel = 0; draw_vector = 0;
-            //
-            //}
-            //default: {}
+            }
+            case 2b00: {
+                // 25MHz GPU OPERATION
+                gpu_write = 0;  pb_newpixel = 0; draw_vector = 0;
+
+            }
+            default: {}
         }
-        //LATCHmemoryWrite = memoryWrite;
+        //}
+        LATCHmemoryWrite = memoryWrite;
     }
 
     // ON RESET STOP THE PIXEL BLOCK
@@ -771,8 +771,8 @@ algorithm charactermap_memmap(
     input   uint1   video_reset,
 
     // Pixels
-    input   uint16  pix_x,
-    input   uint16  pix_y,
+    input   uint10  pix_x,
+    input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
     output! uint6   pixel,
@@ -850,8 +850,8 @@ algorithm sprite_memmap(
     input   uint1   video_reset,
 
     // Pixels
-    input   uint16  pix_x,
-    input   uint16  pix_y,
+    input   uint10  pix_x,
+    input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
     output! uint6   pixel,
@@ -967,8 +967,8 @@ algorithm terminal_memmap(
     input   uint1   video_reset,
 
     // Pixels
-    input   uint16  pix_x,
-    input   uint16  pix_y,
+    input   uint10  pix_x,
+    input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
     output! uint6   pixel,
@@ -1025,8 +1025,8 @@ algorithm tilemap_memmap(
     input   uint1   video_reset,
 
     // Pixels
-    input   uint16  pix_x,
-    input   uint16  pix_y,
+    input   uint10  pix_x,
+    input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
     output! uint6   pixel,

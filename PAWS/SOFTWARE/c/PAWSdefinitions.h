@@ -135,6 +135,9 @@
 #define PS2_KEYBOARD 1
 #define PS2_JOYSTICK 0
 
+#define BOLD 1
+#define NORMAL 0
+
 // FOR EASE OF PORTING
 typedef unsigned int size_t;
 typedef unsigned short bool;

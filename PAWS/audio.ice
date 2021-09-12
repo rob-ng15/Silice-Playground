@@ -19,7 +19,7 @@ algorithm apu(
     uint16  counter1khz = uninitialised;
 
     // WIRES FOR DECREMENT OR RESET
-    uint15  onesecond <: 25000;
+   // uint15  onesecond <: 25000;
     audio_active := ( selected_duration != 0 );
 
     always {
@@ -41,10 +41,17 @@ algorithm apu(
             counter1khz = 25000;
         } else {
             if( selected_duration != 0 ) {
-                ( counter25mhz ) = decrementorreset( counter25mhz, selected_frequency );
-                ( point ) = incrementifzero( point, counter25mhz );
-                ( counter1khz ) = decrementorreset( counter1khz, onesecond );
-                ( selected_duration ) = decrementifzero( selected_duration, counter1khz );
+                counter25mhz = ( counter25mhz != 0 ) ? counter25mhz - 1 : selected_frequency;
+                //( counter25mhz ) = decrementorreset( counter25mhz, selected_frequency );
+
+                point = point + ( counter25mhz == 0 );
+                //( point ) = incrementifzero( point, counter25mhz );
+
+                counter1khz = ( counter1khz != 0 ) ? counter1khz - 1 : 25000;
+                //( counter1khz ) = decrementorreset( counter1khz, onesecond );
+
+                selected_duration = selected_duration - ( counter1khz == 0 );
+                //( selected_duration ) = decrementifzero( selected_duration, counter1khz );
             }
         }
     }

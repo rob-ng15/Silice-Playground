@@ -491,14 +491,14 @@ unsigned char next_colour( unsigned char colour_cycle, unsigned char position ) 
 // DRAW GAME OVER IN LARGE MULTICOLOURED LETTERS
 unsigned char last_colour = 0;
 void game_over( void ) {
-    gpu_character_blit( swizzle(last_colour), 16, 116, 'G', 2, 0 );
-    gpu_character_blit( swizzle(next_colour(last_colour,1)), 48, 124, 'A', 2, 0 );
-    gpu_character_blit( swizzle(next_colour(last_colour,2)), 80, 116, 'M', 2, 0 );
-    gpu_character_blit( swizzle(next_colour(last_colour,3)), 112, 124, 'E', 2, 0 );
-    gpu_character_blit( swizzle(next_colour(last_colour,4)), 176, 116, 'O', 2, 0 );
-    gpu_character_blit( swizzle(next_colour(last_colour,5)), 208, 124, 'V', 2, 0 );
-    gpu_character_blit( swizzle(next_colour(last_colour,6)), 240, 116, 'E', 2, 0 );
-    gpu_character_blit( swizzle(next_colour(last_colour,7)), 272, 124, 'R', 2, 0 );
+    gpu_character_blit( swizzle(last_colour), 16, 116, 'G' + 256, 2, 0 );
+    gpu_character_blit( swizzle(next_colour(last_colour,1)), 48, 124, 'A' + 256, 2, 0 );
+    gpu_character_blit( swizzle(next_colour(last_colour,2)), 80, 116, 'M' + 256, 2, 0 );
+    gpu_character_blit( swizzle(next_colour(last_colour,3)), 112, 124, 'E' + 256, 2, 0 );
+    gpu_character_blit( swizzle(next_colour(last_colour,4)), 176, 116, 'O' + 256, 2, 0 );
+    gpu_character_blit( swizzle(next_colour(last_colour,5)), 208, 124, 'V' + 256, 2, 0 );
+    gpu_character_blit( swizzle(next_colour(last_colour,6)), 240, 116, 'E' + 256, 2, 0 );
+    gpu_character_blit( swizzle(next_colour(last_colour,7)), 272, 124, 'R' + 256, 2, 0 );
     last_colour = ( last_colour == 63 ) ? 1 : last_colour + 1;
 }
 
@@ -526,7 +526,7 @@ void drawfuel( unsigned char fullbar ) {
 
     if( fullbar ) {
         gpu_rectangle( RED, 62, 216, 319, 223 );
-        gpu_printf( RED, 22, 216, 0, 0, "FUEL:" );
+        gpu_printf( RED, 22, 216, NORMAL, 0, 0, "FUEL:" );
     }
     gpu_character_blit( RED, 63 + ( fuel >> 2 ), 216, 219, 0, 0 );
     gpu_character_blit( WHITE, 62 + ( fuel >> 2 ), 216, 30, 0, 0 );
@@ -534,7 +534,7 @@ void drawfuel( unsigned char fullbar ) {
 void drawshield( unsigned char fullbar ) {
     if( fullbar ) {
         gpu_rectangle( BLUE, 62, 224, 319, 231 );
-        gpu_printf( BLUE, 6, 224, 0, 0, "SHIELD:" );
+        gpu_printf( BLUE, 6, 224, NORMAL, 0, 0, "SHIELD:" );
     }
     gpu_character_blit( BLUE, 63 + shield, 224, 219, 0, 0 );
     gpu_character_blit( WHITE, 62 + shield, 224, 30, 0, 2 );

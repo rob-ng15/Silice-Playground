@@ -19,7 +19,7 @@ int main( void ) {
         gpu_pixelblock24( 0, 0, width, height, imagebuffer );
         free( filebuffer );
     } else {
-        gpu_print_centre( WHITE, 160, 120, 0, 0, "NO FILE FOUND!" );
+        gpu_print_centre( WHITE, 160, 120, BOLD, 0, 0, "NO FILE FOUND!" );
     }
 
     sleep( 4000, 0 );

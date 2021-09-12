@@ -56,15 +56,15 @@ unsigned short ghosteyes[4][4] = { { 0, 1, 2, 3 }, { 3, 0, 1, 2 }, { 2, 3, 0, 1 
 void drawwelcome( void ) {
     // DISPLAY ULX3 BITMAP
     gpu_pixelblock7( 0, 10, 320, 219, BLUE, ulx3sbitmap );
-    gpu_printf_centre( YELLOW, 160, 8, 1, 0, "3D MONSTER MAZE" );
+    gpu_printf_centre( YELLOW, 160, 8, BOLD, 1, 0, "3D MONSTER MAZE" );
 
     // DRAW JOYSTICK AND LABEL
-    gpu_printf_centre( YELLOW, 229, 102, 0, 0,  "STEP" );
-    gpu_printf_centre( YELLOW, 242, 123, 0, 0, "BACK" );
-    gpu_printf_centre( YELLOW, 211, 135, 0, 0, "LEFT" );
-    gpu_printf_centre( YELLOW, 272, 109, 0, 0, "RIGHT" );
-    gpu_printf_centre( YELLOW, 98, 128, 0, 0, "PEEK" );
-    gpu_printf_centre( YELLOW, 66, 142, 0, 0, "POWER" );
+    gpu_printf_centre( YELLOW, 229, 102, BOLD, 0, 0,  "STEP" );
+    gpu_printf_centre( YELLOW, 242, 123, BOLD, 0, 0, "BACK" );
+    gpu_printf_centre( YELLOW, 211, 135, BOLD, 0, 0, "LEFT" );
+    gpu_printf_centre( YELLOW, 272, 109, BOLD, 0, 0, "RIGHT" );
+    gpu_printf_centre( YELLOW, 98, 128, BOLD, 0, 0, "PEEK" );
+    gpu_printf_centre( YELLOW, 66, 142, BOLD, 0, 0, "POWER" );
 }
 
 // RETURN CONTENTS OF == 0 MAZE == 1 MAP at ( X, Y )
@@ -660,7 +660,7 @@ unsigned short walk_maze( unsigned short width, unsigned short height )
                 case 'X':
                     gpu_rectangle( YELLOW, perspectivex[ visiblesteps ], perspectivey[ visiblesteps ], 320 - perspectivex[ visiblesteps ], 240 - perspectivey[ visiblesteps ] );
                     if( visiblesteps <= 4 ) {
-                        gpu_printf_centre( DKGREEN, 160, perspectivey[ visiblesteps ] + ( 2 << ( 4 - visiblesteps ) ), 4 - visiblesteps, 0, "EXIT" );
+                        gpu_printf_centre( DKGREEN, 160, perspectivey[ visiblesteps ] + ( 2 << ( 4 - visiblesteps ) ), BOLD, 4 - visiblesteps, 0, "EXIT" );
                     }
                     break;
                 case 'E':

@@ -700,7 +700,7 @@ void colourtable( void ) {
     for( uint16 y = 0; y < 8; y++ ) {
         for( uint16 x = 0; x < 8; x++ ) {
             gpu_rectangle( colour, x * 40, y * 30, 39 + x * 40, 29 + y * 30 );
-            gpu_printf_centre( 63 - colour, x * 40 + 20, y * 30 + 15, 0, 0, colournames[colour] );
+            gpu_printf_centre( 63 - colour, x * 40 + 20, y * 30 + 15, NORMAL, 0, 0, colournames[colour] );
             colour++;
         }
     }
@@ -952,7 +952,7 @@ void ditherdemo( void ) {
         for( x = 0; x < 4; x++ ) {
             gpu_dither( dithermode, PURPLE );
             gpu_rectangle( ORANGE, x * 80, y * 60, x * 80 + 79, y * 60 + 59 );
-            gpu_printf_centre( BLACK, x * 80 + 40, y * 60 + 4, 0, 0, dithernames[dithermode++] );
+            gpu_printf_centre( BLACK, x * 80 + 40, y * 60 + 4, NORMAL, 0, 0, dithernames[dithermode++] );
         }
     }
     gpu_dither( DITHEROFF );

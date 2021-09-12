@@ -72,12 +72,15 @@ algorithm terminal_writer(
 
     // Terminal active (scroll) flag and temporary storage for scrolling
     uint10  terminal_scroll = uninitialised;
-    uint1   scrolling <: ( terminal_scroll < 560 );
+    uint1   scrolling <:: ( terminal_scroll < 560 );
     uint1   endofline <:: ( terminal_x == 79 );
 
     // Setup the writing to the terminal memory
     uint10  terminal_address <:: terminal_x + terminal_y * 80;
     terminal.wenable1 := 1; terminal_copy.wenable1 := 1;
+
+    // READ CHARACTER ON THE NEXT LINE FOR SCROLLING
+    terminal_copy.addr0 := terminal_scroll + 80;
 
     always {
         switch( terminal_write ) {
@@ -113,36 +116,33 @@ algorithm terminal_writer(
 
     while(1) {
         switch( terminal_active ) {
+            default: { terminal_scroll = 0; }
             case 1: {
-                terminal_scroll = 0;
-                ++:
                 // SCROLL AND BLANK LAST LINE
-                while( terminal_scroll != 640 ) {
-                    terminal_copy.addr0 = terminal_scroll + 80;
+                if( terminal_scroll != 640 ) {
                     ++:
                     terminal.addr1 = terminal_scroll;
                     terminal.wdata1 = scrolling ? terminal_copy.rdata0 : 0;
                     terminal_copy.addr1 = terminal_scroll;
                     terminal_copy.wdata1 = scrolling ? terminal_copy.rdata0 : 0;
                     terminal_scroll = terminal_scroll + 1;
+                } else {
+                    terminal_active = 0;
                 }
-                terminal_active = 0;
             }
             case 2: {
-                terminal_scroll = 0;
-                ++:
-                while( terminal_scroll != 640 ) {
+                if( terminal_scroll != 640 ) {
                     terminal.addr1 = terminal_scroll;
                     terminal.wdata1 = 0;
                     terminal_copy.addr1 = terminal_scroll;
                     terminal_copy.wdata1 = 0;
                     terminal_scroll = terminal_scroll + 1;
+                } else {
+                    terminal_x = 0;
+                    terminal_y = 7;
+                    terminal_active = 0;
                 }
-                terminal_x = 0;
-                terminal_y = 7;
-                terminal_active = 0;
             }
-            default: {}
         }
     }
 }

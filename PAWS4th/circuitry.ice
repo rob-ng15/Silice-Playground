@@ -19,6 +19,15 @@ bitfield colour13 {
     uint6   foreground,
 }
 
+// USED FOR TILEMAP COLOUR ENTRY TO INCLUDE THE REFLECTION FLAGS
+bitfield colour15 {
+    uint1   y_reflect,
+    uint1   x_reflect,
+    uint1   alpha,
+    uint6   background,
+    uint6   foreground,
+}
+
 // Vertex in the vector block
 bitfield vectorentry {
     uint1   active,

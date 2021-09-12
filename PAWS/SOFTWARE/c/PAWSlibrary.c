@@ -503,7 +503,7 @@ void gpu_blit( unsigned char colour, short x1, short y1, short tile, unsigned ch
 
 // BLIT AN 8 x8  ( blit_size == 1 doubled to 16 x 16, blit_size == 1 doubled to 32 x 32 ) CHARACTER ( from tile 0 to 255 ) to (x1,y1) in colour
 // REFLECT { y, x }
-void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned char tile, unsigned char blit_size, unsigned char action ) {
+void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned short tile, unsigned char blit_size, unsigned char action ) {
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
@@ -591,19 +591,19 @@ void gpu_quadrilateral( unsigned char colour, short x1, short y1, short x2, shor
 }
 
 // OUTPUT A STRING TO THE GPU
-void gpu_print( unsigned char colour, short x, short y, unsigned char size, unsigned char action, char *s ) {
+void gpu_print( unsigned char colour, short x, short y, unsigned char bold, unsigned char size, unsigned char action, char *s ) {
     while( *s ) {
-        gpu_character_blit( colour, x, y, *s++, size, action );
+        gpu_character_blit( colour, x, y, ( bold ? 256:0 ) + *s++, size, action );
         x = x + ( 8 << size );
     }
 }
-void gpu_print_vertical( unsigned char colour, short x, short y, unsigned char size, unsigned char action, char *s ) {
+void gpu_print_vertical( unsigned char colour, short x, short y, unsigned char bold, unsigned char size, unsigned char action, char *s ) {
     while( *s ) {
-        gpu_character_blit( colour, x, y, *s++, size, action );
+        gpu_character_blit( colour, x, y, ( bold ? 256:0 ) + *s++, size, action );
         y = y - ( 8 << size );
     }
 }
-void gpu_printf( unsigned char colour, short x, short y, unsigned char size, unsigned char action, const char *fmt,... ) {
+void gpu_printf( unsigned char colour, short x, short y, unsigned char bold, unsigned char size, unsigned char action, const char *fmt,... ) {
     char *buffer = (char *)0x1000;
     va_list args;
     va_start (args, fmt);
@@ -612,11 +612,11 @@ void gpu_printf( unsigned char colour, short x, short y, unsigned char size, uns
 
     char *s = buffer;
     while( *s ) {
-        gpu_character_blit( colour, x, y, *s++, size, action );
+        gpu_character_blit( colour, x, y, ( bold ? 256:0 ) + *s++, size, action );
         x = x + ( 8 << size );
     }
 }
-void gpu_printf_vertical( unsigned char colour, short x, short y, unsigned char size, unsigned char action, const char *fmt,... ) {
+void gpu_printf_vertical( unsigned char colour, short x, short y, unsigned char bold, unsigned char size, unsigned char action, const char *fmt,... ) {
     char *buffer = (char *)0x1000;
     va_list args;
     va_start (args, fmt);
@@ -625,13 +625,13 @@ void gpu_printf_vertical( unsigned char colour, short x, short y, unsigned char 
 
     char *s = buffer;
     while( *s ) {
-        gpu_character_blit( colour, x, y, *s++, size, action );
+        gpu_character_blit( colour, x, y, ( bold ? 256:0 ) + *s++, size, action );
         y = y - ( 8 << size );
     }
 }
 
 // OUTPUT A STRING TO THE GPU - CENTRED AT ( x, y )
-void gpu_printf_centre( unsigned char colour, short x, short y, unsigned char size, unsigned char action, const char *fmt,... ) {
+void gpu_printf_centre( unsigned char colour, short x, short y, unsigned char bold, unsigned char size, unsigned char action, const char *fmt,... ) {
     char *buffer = (char *)0x1000;
     va_list args;
     va_start (args, fmt);
@@ -641,10 +641,10 @@ void gpu_printf_centre( unsigned char colour, short x, short y, unsigned char si
     char *s = buffer;
     x = x - ( ( strlen( s ) * ( 8 << size ) ) /2 );
     while( *s ) {
-        gpu_character_blit( colour, x, y, *s++, size, action );
+        gpu_character_blit( colour, x, y, ( bold ? 256:0 ) + *s++, size, action );
         x = x + ( 8 << size );
     }
-}void gpu_printf_centre_vertical( unsigned char colour, short x, short y, unsigned char size, unsigned char action, const char *fmt,... ) {
+}void gpu_printf_centre_vertical( unsigned char colour, short x, short y, unsigned char bold, unsigned char size, unsigned char action, const char *fmt,... ) {
     char *buffer = (char *)0x1000;
     va_list args;
     va_start (args, fmt);
@@ -654,20 +654,20 @@ void gpu_printf_centre( unsigned char colour, short x, short y, unsigned char si
     char *s = buffer;
     y = y + ( ( strlen( s ) * ( 8 << size ) ) /2 );
     while( *s ) {
-        gpu_character_blit( colour, x, y, *s++, size, action );
+        gpu_character_blit( colour, x, y, ( bold ? 256:0 ) + *s++, size, action );
         y = y - ( 8 << size );
     }
 }
-void gpu_print_centre( unsigned char colour, short x, short y, unsigned char size, unsigned char action, char *s ) {
+void gpu_print_centre( unsigned char colour, short x, short y, unsigned char bold, unsigned char size, unsigned char action, char *s ) {
     x = x - ( ( strlen( s ) * ( 8 << size ) ) /2 );
     while( *s ) {
-        gpu_character_blit( colour, x, y, *s++, size, action );
+        gpu_character_blit( colour, x, y, ( bold ? 256:0 ) + *s++, size, action );
         x = x + ( 8 << size );
     }
-}void gpu_print_centre_vertical( unsigned char colour, short x, short y, unsigned char size, unsigned char action, char *s ) {
+}void gpu_print_centre_vertical( unsigned char colour, short x, short y, unsigned char bold, unsigned char size, unsigned char action, char *s ) {
     y = y + ( ( strlen( s ) * ( 8 << size ) ) /2 );
     while( *s ) {
-        gpu_character_blit( colour, x, y, *s++, size, action );
+        gpu_character_blit( colour, x, y, ( bold ? 256:0 ) + *s++, size, action );
         y = y - ( 8 << size );
     }
 }
@@ -1182,20 +1182,20 @@ unsigned int FAT32startsector, FAT32clustersize, FAT32clusters, *FAT32table = NU
 DirectoryEntry *directorynames;
 
 // DISPLAY A FILENAME CLEARING THE AREA BEHIND IT
-void gpu_outputstring( unsigned char colour, short x, short y, char *s, unsigned char size ) {
+void gpu_outputstring( unsigned char colour, short x, short y, unsigned char bold, char *s, unsigned char size ) {
     while( *s ) {
-        gpu_character_blit( colour, x, y, *s++, size, 0 );
+        gpu_character_blit( colour, x, y, ( bold ? 256 : 0 ) + *s++, size, 0 );
         x = x + ( 8 << size );
     }
 }
-void gpu_outputstringcentre( unsigned char colour, short y, char *s, unsigned char size ) {
+void gpu_outputstringcentre( unsigned char colour, short y, unsigned char bold, char *s, unsigned char size ) {
     gpu_rectangle( TRANSPARENT, 0, y, 319, y + ( 8 << size ) - 1 );
-    gpu_outputstring( colour, 160 - ( ( ( 8 << size ) * strlen(s) ) >> 1) , y, s, size );
+    gpu_outputstring( colour, 160 - ( ( ( 8 << size ) * strlen(s) ) >> 1) , y, bold, s, size );
 }
 
 void displayfilename( unsigned char *filename, unsigned char type ) {
     unsigned char displayname[10], i, j;
-    gpu_outputstringcentre( WHITE, 144, "Current File:", 0 );
+    gpu_outputstringcentre( WHITE, 144, 0, "Current File:", 0 );
     for( i = 0; i < 10; i++ ) {
         displayname[i] = 0;
     }
@@ -1208,7 +1208,7 @@ void displayfilename( unsigned char *filename, unsigned char type ) {
             displayname[j++] = filename[i];
         }
     }
-    gpu_outputstringcentre( type == 1 ? WHITE : GREY2, 176, displayname, 2 );
+    gpu_outputstringcentre( type == 1 ? WHITE : GREY2, 176, 0, displayname, 2 );
 }
 
 unsigned int __basecluster = 0xffffff8;
@@ -1332,7 +1332,7 @@ unsigned int filebrowser( char *message, char *extension, int startdirectoryclus
             return(0);
         } else {
             sortdirectoryentries( entries );
-            gpu_outputstringcentre( WHITE, 128, message, 0 );
+            gpu_outputstringcentre( WHITE, 128, 1, message, 0 );
         }
 
         while( !rereaddirectory ) {
@@ -1400,11 +1400,11 @@ unsigned char *sdcard_selectfile( char *message, char *extension, unsigned int *
         // ALLOCATE ENOUGH MEMORY TO READ CLUSTERS
         unsigned char *copyaddress = malloc( ( ( *filesize / ( FAT32clustersize * 512 )  ) + 1 ) * ( FAT32clustersize * 512 ) );
         if( copyaddress ) {
-            gpu_outputstringcentre( WHITE, 224, "Loading File", 0 );
+            gpu_outputstringcentre( WHITE, 224, 0, "Loading File", 0 );
             readfile( starting_cluster, copyaddress );
             return( copyaddress );
         } else {
-            gpu_outputstringcentre( WHITE, 224, "Insufficient Memory", 0 );
+            gpu_outputstringcentre( WHITE, 224, 1, "Insufficient Memory", 0 );
             return(0);
         }
     } else {

@@ -166,7 +166,7 @@ void gpu_blit( unsigned char colour, short x1, short y1, short tile, unsigned ch
 }
 
 // BLIT AN 8 x8  ( blit_size == 1 doubled to 16 x 16, blit_size == 1 doubled to 32 x 32 ) CHARACTER ( from tile 0 to 255 ) to (x1,y1) in colour
-void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned char tile, unsigned char blit_size ) {
+void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned short tile, unsigned char blit_size ) {
     *GPU_COLOUR = colour;
     *GPU_X = x1;
     *GPU_Y = y1;
@@ -179,15 +179,15 @@ void gpu_character_blit( unsigned char colour, short x1, short y1, unsigned char
 }
 
 // OUTPUT A STRING TO THE GPU
-void gpu_outputstring( unsigned char colour, short x, short y, char *s, unsigned char size ) {
+void gpu_outputstring( unsigned char colour, short x, short y, char bold, char *s, unsigned char size ) {
     while( *s ) {
-        gpu_character_blit( colour, x, y, *s++, size );
+        gpu_character_blit( colour, x, y, ( bold ? 256 : 0 ) + *s++, size );
         x = x + ( 8 << size );
     }
 }
-void gpu_outputstringcentre( unsigned char colour, short y, char *s, unsigned char size ) {
+void gpu_outputstringcentre( unsigned char colour, short y, char bold, char *s, unsigned char size ) {
     gpu_rectangle( TRANSPARENT, 0, y, 319, y + ( 8 << size ) - 1 );
-    gpu_outputstring( colour, 160 - ( ( ( 8 << size ) * strlen(s) ) >> 1) , y, s, size );
+    gpu_outputstring( colour, 160 - ( ( ( 8 << size ) * strlen(s) ) >> 1) , y, bold, s, size );
 }
 
 // SET THE BLITTER TILE to the 16 x 16 pixel bitmap
@@ -317,7 +317,7 @@ void smtthread( void ) {
 // DISPLAY FILENAME, ADD AN ARROW IN FRONT OF DIRECTORIES
 void displayfilename( unsigned char *filename, unsigned char type ) {
     unsigned char displayname[10], i, j;
-    gpu_outputstringcentre( WHITE, 144, "Current PAW File:", 0 );
+    gpu_outputstringcentre( WHITE, 144, 0, "Current PAW File:", 0 );
     for( i = 0; i < 10; i++ ) {
         displayname[i] = 0;
     }
@@ -330,7 +330,7 @@ void displayfilename( unsigned char *filename, unsigned char type ) {
             displayname[j++] = filename[i];
         }
     }
-    gpu_outputstringcentre( type == 1 ? WHITE : GREY2, 176, displayname, 2 );
+    gpu_outputstringcentre( type == 1 ? WHITE : GREY2, 176, 0, displayname, 2 );
 }
 
 // FAT32 FILE BROWSER FOR DIRECTORIES AND .PAW FILES
@@ -563,29 +563,29 @@ void main( void ) {
     }
     SMTSTART( (unsigned int )smtthread );
 
-    gpu_outputstring( WHITE, 66, 2, "PAWS", 2 );
-    gpu_outputstring( WHITE, 66, 34, "Risc-V RV32IMAFC CPU", 0 );
-    gpu_outputstringcentre( GREY2, 224, "PAWS for ULX3S by Rob S in Silice", 0);
+    gpu_outputstring( WHITE, 66, 2, 1, "PAWS", 2 );
+    gpu_outputstring( WHITE, 66, 34, 0, "Risc-V RV32IMAFC CPU", 0 );
+    gpu_outputstringcentre( GREY2, 224, 0, "PAWS for ULX3S by Rob S in Silice", 0);
 
     // CLEAR UART AND PS/2 BUFFERS
     while( *UART_STATUS & 1 ) { char temp = *UART_DATA; }
     while( *PS2_AVAILABLE ) { short temp = *PS2_DATA; }
 
-    gpu_outputstringcentre( RED, 72, "Waiting for SDCARD", 0 );
-    gpu_outputstringcentre( RED, 80, "Press RESET if not detected", 0 );
+    gpu_outputstringcentre( RED, 72, 0, "Waiting for SDCARD", 0 );
+    gpu_outputstringcentre( RED, 80, 0, "Press RESET if not detected", 0 );
     sleep( 1000 );
     sdcard_readsector( 0, BOOTRECORD );
     PARTITIONS = (PartitionTable *) &BOOTRECORD[ 0x1BE ];
 
-    gpu_outputstringcentre( GREEN, 72, "SDCARD Ready", 0 );
-    gpu_outputstringcentre( RED, 80, "", 0 );
+    gpu_outputstringcentre( GREEN, 72, 0, "SDCARD Ready", 0 );
+    gpu_outputstringcentre( RED, 80, 0, "", 0 );
 
     // NO FAT16 PARTITION FOUND
     if( ( PARTITIONS[0].partition_type != 0x0b ) && ( PARTITIONS[0].partition_type != 0x0c ) ) {
-        gpu_outputstringcentre( RED, 72, "ERROR", 2 );
-        gpu_outputstringcentre( RED, 120, "Please Insert AN SDCARD", 0 );
-        gpu_outputstringcentre( RED, 128, "WITH A FAT32 PARTITION", 0 );
-        gpu_outputstringcentre( RED, 136, "Press RESET", 0 );
+        gpu_outputstringcentre( RED, 72, 1, "ERROR", 2 );
+        gpu_outputstringcentre( RED, 120, 1, "Please Insert AN SDCARD", 0 );
+        gpu_outputstringcentre( RED, 128, 1, "WITH A FAT32 PARTITION", 0 );
+        gpu_outputstringcentre( RED, 136, 1, "Press RESET", 0 );
         while(1) {}
     }
 
@@ -596,11 +596,11 @@ void main( void ) {
     FAT32clustersize = VOLUMEID -> sectors_per_cluster;
 
     // FILE SELECTOR
-    gpu_outputstringcentre( WHITE, 72, "Select PAW File", 0 );
-    gpu_outputstringcentre( WHITE, 88, "SELECT USING FIRE 1", 0 );
-    gpu_outputstringcentre( WHITE, 96, "SCROLL USING LEFT & RIGHT", 0 );
-    gpu_outputstringcentre( WHITE, 104, "RETURN FROM SUBDIRECTORY USING UP", 0 );
-    gpu_outputstringcentre( RED, 144, "No PAW Files Found", 0 );
+    gpu_outputstringcentre( WHITE, 72, 1, "Select PAW File", 0 );
+    gpu_outputstringcentre( WHITE, 88, 0, "SELECT USING FIRE 1", 0 );
+    gpu_outputstringcentre( WHITE, 96, 0, "SCROLL USING LEFT & RIGHT", 0 );
+    gpu_outputstringcentre( WHITE, 104, 0, "RETURN FROM SUBDIRECTORY USING UP", 0 );
+    gpu_outputstringcentre( RED, 144, 1, "No PAW Files Found", 0 );
 
     // CALL FILEBROWSER
     unsigned int starting_cluster = filebrowser( VOLUMEID -> startof_root, VOLUMEID -> startof_root );
@@ -608,16 +608,16 @@ void main( void ) {
         while(1) {}
     }
 
-    gpu_outputstringcentre( WHITE, 72, "PAW File", 0 );
-    gpu_outputstringcentre( WHITE, 80, "SELECTED", 0 );
-    gpu_outputstringcentre( WHITE, 88, "", 0 );
-    gpu_outputstringcentre( WHITE, 96, "", 0 );
-    gpu_outputstringcentre( WHITE, 104, "", 0 );
+    gpu_outputstringcentre( WHITE, 72, 1, "PAW File", 0 );
+    gpu_outputstringcentre( WHITE, 80, 1, "SELECTED", 0 );
+    gpu_outputstringcentre( WHITE, 88, 0, "", 0 );
+    gpu_outputstringcentre( WHITE, 96, 0, "", 0 );
+    gpu_outputstringcentre( WHITE, 104, 0, "", 0 );
     sleep( 500 );
-    gpu_outputstringcentre( WHITE, 80, "LOADING", 0 );
+    gpu_outputstringcentre( WHITE, 80, 1, "LOADING", 0 );
     sdcard_readfile( starting_cluster, (unsigned char *)0x10000000 );
-    gpu_outputstringcentre( WHITE, 72, "LOADED", 0 );
-    gpu_outputstringcentre( WHITE, 80, "LAUNCHING", 0 );
+    gpu_outputstringcentre( WHITE, 72, 1, "LOADED", 0 );
+    gpu_outputstringcentre( WHITE, 80, 1, "LAUNCHING", 0 );
     sleep(500);
 
     // STOP SMT

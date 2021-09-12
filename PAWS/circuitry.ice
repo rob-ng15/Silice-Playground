@@ -1,5 +1,3 @@
-// HELPER CIRCUITS
-
 // MIN[U] MAX[U] curcuits
 circuitry min( input value1, input value2, output minimum ) {
     minimum = ( __signed(value1) < __signed(value2) ) ? value1 : value2;
