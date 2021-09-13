@@ -195,7 +195,7 @@ algorithm tile_map_writer(
             }
             // SCROLL/WRAP LEFT/RIGHT
             case 1: {
-                if( y_cursor_addr != 1344 ) {
+                while( y_cursor_addr != 1344 ) {
                     x_cursor = tm_goleft ? 0 : 41;
                     temp_1 = y_cursor_addr + x_cursor;
                     tiles_copy.addr0 = temp_1; colours_copy.addr0 = temp_1;
@@ -219,15 +219,14 @@ algorithm tile_map_writer(
                     colours_copy.addr1 = temp_1; colours_copy.wdata1 = new_colour;
                     ++:
                     y_cursor_addr = y_cursor_addr + 42;
-                } else {
-                    tm_offset_x = 0;
-                    tm_active = 0;
                 }
+                tm_offset_x = 0;
+                tm_active = 0;
             }
 
             // SCROLL/WRAP UP/DOWN
             case 2: {
-                if( x_cursor != 42 ) {
+                while( x_cursor != 42 ) {
                     y_cursor_addr = tm_goup ? 0 : 1302;
                     temp_1 = x_cursor + y_cursor_addr;
                     tiles_copy.addr0 = temp_1; colours_copy.addr0 = temp_1;
@@ -251,25 +250,23 @@ algorithm tile_map_writer(
                     colours_copy.addr1 = temp_1; colours_copy.wdata1 = new_colour;
                     ++:
                     x_cursor = x_cursor + 1;
-                } else {
-                    tm_offset_y = 0;
-                    tm_active = 0;
                 }
+                tm_offset_y = 0;
+                tm_active = 0;
             }
 
             // CLEAR
             case 3: {
-                if( tmcsaddr != 1344 ) {
+                while( tmcsaddr != 1344 ) {
                     tiles.addr1 = tmcsaddr; tiles.wdata1 = 0;
                     tiles_copy.addr1 = tmcsaddr; tiles_copy.wdata1 = 0;
                     colours.addr1 = tmcsaddr; colours.wdata1 = 15h1000;
                     colours_copy.addr1 = tmcsaddr; colours_copy.wdata1 = 15h1000;
                     tmcsaddr = tmcsaddr + 1;
-                } else {
-                    tm_offset_x = 0;
-                    tm_offset_y = 0;
-                    tm_active = 0;
                 }
+                tm_offset_x = 0;
+                tm_offset_y = 0;
+                tm_active = 0;
             }
         }
     }

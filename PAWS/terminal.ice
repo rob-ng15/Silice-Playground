@@ -119,29 +119,27 @@ algorithm terminal_writer(
             default: { terminal_scroll = 0; }
             case 1: {
                 // SCROLL AND BLANK LAST LINE
-                if( terminal_scroll != 640 ) {
+                while( terminal_scroll != 640 ) {
                     ++:
                     terminal.addr1 = terminal_scroll;
                     terminal.wdata1 = scrolling ? terminal_copy.rdata0 : 0;
                     terminal_copy.addr1 = terminal_scroll;
                     terminal_copy.wdata1 = scrolling ? terminal_copy.rdata0 : 0;
                     terminal_scroll = terminal_scroll + 1;
-                } else {
-                    terminal_active = 0;
                 }
+                terminal_active = 0;
             }
             case 2: {
-                if( terminal_scroll != 640 ) {
+                while( terminal_scroll != 640 ) {
                     terminal.addr1 = terminal_scroll;
                     terminal.wdata1 = 0;
                     terminal_copy.addr1 = terminal_scroll;
                     terminal_copy.wdata1 = 0;
                     terminal_scroll = terminal_scroll + 1;
-                } else {
-                    terminal_x = 0;
-                    terminal_y = 7;
-                    terminal_active = 0;
                 }
+                terminal_x = 0;
+                terminal_y = 7;
+                terminal_active = 0;
             }
         }
     }

@@ -46,7 +46,7 @@ struct DrawList2D LEFTBEAM[] = {
     { DLLINE, DKRED, DITHERSOLID, { -32, -64 }, { 0, -32 }, { 5, 0 } },
     { DLRECT, BLACK, DITHERSOLID, { 112, -136}, { 96, -120 }, },
     { DLTRI, GREEN, DITHERSOLID, { 95, -128 }, { 111, -128 }, { 103, -121 } },
-    { DLLINE, GREEN, DITHERSOLID, { 103, -128 }, { 103, -135 }, { 3, 0 } }
+    { DLRECT, GREEN, DITHERSOLID, { 101, -128 }, { 105, -135 } }
 };
 
 struct DrawList2D LEFTBEAMSMALL[] = {

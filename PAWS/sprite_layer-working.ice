@@ -1,6 +1,6 @@
 algorithm sprite_layer(
-    input   uint10  pix_x,
-    input   uint10  pix_y,
+    input   int11   pix_x,
+    input   int11   pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
     output! uint6   pixel,
@@ -204,8 +204,8 @@ algorithm sprite_layer(
 }
 
 algorithm sprite_generator(
-    input   uint10  pix_x,
-    input   uint10  pix_y,
+    input   int11  pix_x,
+    input   int11  pix_y,
     input   uint1   sprite_active,
     input   uint3   sprite_double,
     input   int11   sprite_x,
@@ -214,14 +214,12 @@ algorithm sprite_generator(
     simple_dualport_bram_port0 tiles,
     output! uint1   pix_visible
 ) <autorun> {
-    int11   x <: { 1b0, pix_x };
-    int11   y <: { 1b0, pix_y };
     // Calculate position in sprite
     uint6 spritesize <: sprite_double[0,1] ? 32 : 16;
-    uint1 xinrange <: ( x >= __signed(sprite_x) ) & ( x < __signed( sprite_x + spritesize ) );
-    uint1 yinrange <: ( y >= __signed(sprite_y) ) & ( y < __signed( sprite_y + spritesize) );
-    uint4 yinsprite <: sprite_double[2,1] ? 15 - ( ( y - sprite_y ) >>> sprite_double[0,1] ) : ( y - sprite_y ) >>> sprite_double[0,1];
-    uint4 xinsprite <: sprite_double[1,1] ? (( ( x - sprite_x ) >>> sprite_double[0,1] ) ) : ( 15  - ( ( x - sprite_x ) >>> sprite_double[0,1] ) );
+    uint1 xinrange <: ( __signed({1b0, pix_x}) >= __signed(sprite_x) ) & ( __signed({1b0, pix_x}) < __signed( sprite_x + spritesize ) );
+    uint1 yinrange <: ( __signed({1b0, pix_y}) >= __signed(sprite_y) ) & ( __signed({1b0, pix_y}) < __signed( sprite_y + spritesize) );
+    uint4 yinsprite <: sprite_double[2,1] ? 15 - ( ( __signed({1b0, pix_y}) - sprite_y ) >>> sprite_double[0,1] ) : ( __signed({1b0, pix_y}) - sprite_y ) >>> sprite_double[0,1];
+    uint4 xinsprite <: sprite_double[1,1] ? (( ( __signed({1b0, pix_x}) - sprite_x ) >>> sprite_double[0,1] ) ) : ( 15  - ( ( __signed({1b0, pix_x}) - sprite_x ) >>> sprite_double[0,1] ) );
 
     // READ ADDRESS FOR SPRITE
     tiles.addr0 := { sprite_tile_number, yinsprite };

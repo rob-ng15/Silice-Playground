@@ -13,25 +13,15 @@ algorithm apu(
     uint4   selected_waveform = uninitialised;
     uint16  selected_duration = uninitialised;
 
-    // POSITION IN THE WAVEFORM
+    // POSITION IN THE WAVEFORM AND TIMERS FOR FREQUENCY AND DURATION
     uint5   point = uninitialised;
+    uint16  counter25mhz = uninitialised;
+    uint16  counter1khz = uninitialised;
 
-    uint1   start = uninitialised;
-    uint1   updatepoint = uninitialised;
-    uint1   updateduration = uninitialised;
-    audiocounter COUNTER(
-        start <: start,
-        active <: audio_active,
-        selected_frequency <: selected_frequency,
-        updatepoint :> updatepoint,
-        updateduration :> updateduration
-    );
-
-    start := 0;
     audio_active := ( selected_duration != 0 );
 
     always {
-        if( audio_active && updatepoint ) {
+        if( audio_active && ( counter25mhz == 0 ) ) {
             switch( selected_waveform ) {
                 case 0: { audio_output = { {4{~point[4,1]}} }; }                        // SQUARE
                 case 1: { audio_output = point[1,4]; }                                  // SAWTOOTH
@@ -45,37 +35,14 @@ algorithm apu(
             selected_frequency = frequency;
             selected_duration = duration;
             point = 0;
-            start = 1;
-        } else {
-            if( audio_active ) {
-                point = point + updatepoint;
-                selected_duration = selected_duration - updateduration;
-            }
-        }
-    }
-}
-
-algorithm audiocounter(
-    input   uint1   start,
-    input   uint1   active,
-    input   uint16  selected_frequency,
-    output  uint1   updatepoint,
-    output  uint1   updateduration
-) <autorun> {
-    uint16  counter25mhz = 0;
-    uint16  counter1khz = 0;
-
-    updatepoint := active & ( counter25mhz == 0 );
-    updateduration := active & ( counter1khz == 0 );
-
-    always {
-        if( start ) {
             counter25mhz = 0;
             counter1khz = 25000;
         } else {
-            if( active ) {
+            if( selected_duration != 0 ) {
                 counter25mhz = ( counter25mhz != 0 ) ? counter25mhz - 1 : selected_frequency;
+                point = point + ( counter25mhz == 0 );
                 counter1khz = ( counter1khz != 0 ) ? counter1khz - 1 : 25000;
+                selected_duration = selected_duration - ( counter1khz == 0 );
             }
         }
     }

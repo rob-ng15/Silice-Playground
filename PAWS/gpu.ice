@@ -196,6 +196,16 @@ algorithm gpu_queue(
     bitmap_crop_left := cropL; bitmap_crop_right := cropR; bitmap_crop_top := cropT; bitmap_crop_bottom := cropB;
 
     while(1) {
+        if( gpu_write != 0 ) {
+            queue_dithermode = gpu_dithermode; queue_colour = gpu_colour; queue_colour_alt = gpu_colour_alt;
+            queue_x = gpu_x; queue_y = gpu_y;
+            queue_param0 = gpu_param0; queue_param1 = gpu_param1;
+            queue_param2 = gpu_param2; queue_param3 = gpu_param3;
+            queue_param4 = gpu_param4; queue_param5 = gpu_param5;
+            queue_write = gpu_write;
+            queue_cropL = crop_left; queue_cropR = crop_right;
+            queue_cropT = crop_top; queue_cropB = crop_bottom;
+        }
         switch( gpu_write ) {
             case 0: {
                 if( vector_drawer_gpu_write ) {
@@ -210,12 +220,6 @@ algorithm gpu_queue(
             default: {
                 // COMMAND QUEUE, LATCH AND WAIT FOR GPU THEN DISPATCH
                 queue_busy = 1;
-                queue_dithermode = gpu_dithermode; queue_colour = gpu_colour; queue_colour_alt = gpu_colour_alt;
-                queue_x = gpu_x; queue_y = gpu_y;
-                queue_param0 = gpu_param0; queue_param1 = gpu_param1;
-                queue_param2 = gpu_param2; queue_param3 = gpu_param3;
-                queue_write = gpu_write;
-                queue_cropL = crop_left; queue_cropR = crop_right; queue_cropT = crop_top; queue_cropB = crop_bottom;
                 while( gpu_active ) {}
                 colour = queue_colour; colour_alt = queue_colour_alt; dithermode = queue_dithermode;
                 x = queue_x; y = queue_y;
@@ -228,13 +232,6 @@ algorithm gpu_queue(
             case 15: {
                 // COMMAND QUEUE FOR QUADRILATERALS, SPLIT INTO TWO TRIANGLES THEN DISPATCH
                 queue_busy = 1;
-                queue_dithermode = gpu_dithermode; queue_colour = gpu_colour; queue_colour_alt = gpu_colour_alt;
-                queue_x = gpu_x; queue_y = gpu_y;
-                queue_param0 = gpu_param0; queue_param1 = gpu_param1;
-                queue_param2 = gpu_param2; queue_param3 = gpu_param3;
-                queue_param4 = gpu_param4; queue_param5 = gpu_param5;
-                queue_cropL = crop_left; queue_cropR = crop_right;
-                queue_cropT = crop_top; queue_cropB = crop_bottom;
                 // QUADRILATERAL BY SPLITTING INTO 2 TRIANGLES
                 while( gpu_active ) {}
                 dithermode = queue_dithermode;colour = queue_colour; colour_alt = queue_colour_alt;
@@ -917,6 +914,7 @@ algorithm preptriangle(
     min_y = ( y1 < y2 ) ? ( y1 < y3 ? y1 : y3 ) : ( y2 < y3 ? y2 : y3 );
     max_y = ( y1 > y2 ) ? ( y1 > y3 ? y1 : y3 ) : ( y2 > y3 ? y2 : y3 );
     ++:
+
     // Apply cropping rectangle
     min_x = ( min_x < crop_left ) ? crop_left : min_x;
     min_y = ( min_y < crop_top ) ? crop_top : min_y;
