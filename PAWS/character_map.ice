@@ -72,7 +72,7 @@ algorithm character_map(
     colourmap.addr0 := xcolourpos + ycharacterpos;
 
     // Setup the reading of the characterGenerator8x16 ROM
-    characterGenerator8x8.addr :=  { charactermap.rdata0, yincharacter };
+    characterGenerator8x8.addr := { charactermap.rdata0, yincharacter };
 
     // RENDER - Default to transparent
     character_map_display := pix_active & ( characterpixel | ~colour13(colourmap.rdata0).alpha | is_cursor );

@@ -71,10 +71,7 @@ algorithm fpu(
     );
 
     uint10  classification = uninitialised;
-    floatclassify FPUclass(
-        sourceReg1F <: sourceReg1F,
-        classification :> classification
-    );
+    floatclassify FPUclass( sourceReg1F <: sourceReg1F, classification :> classification );
 
     FPUcalculatorstart := 0; FPUconvertstart := 0;
 
@@ -329,9 +326,10 @@ algorithm floatminmax(
             // sNAN or both qNAN
             flags = 5b10000; result = 32h7fc00000;
         } else {
-            switch( function3[0,1] ) {
-                case 0: { result = aqNAN ? ( bqNAN ? 32h7fc00000 : sourceReg2F ) : bqNAN ? sourceReg1F : ( less ? sourceReg1F : sourceReg2F); }
-                case 1: { result = aqNAN ? ( bqNAN ? 32h7fc00000 : sourceReg2F ) : bqNAN ? sourceReg1F : ( less ? sourceReg2F : sourceReg1F); }
+            if( function3[0,1] ) {
+                result = aqNAN ? ( bqNAN ? 32h7fc00000 : sourceReg2F ) : bqNAN ? sourceReg1F : ( less ? sourceReg2F : sourceReg1F);
+            } else {
+                result = aqNAN ? ( bqNAN ? 32h7fc00000 : sourceReg2F ) : bqNAN ? sourceReg1F : ( less ? sourceReg1F : sourceReg2F);
             }
         }
     }

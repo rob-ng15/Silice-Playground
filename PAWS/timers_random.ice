@@ -4,9 +4,11 @@ algorithm pulse1hz(
     input   uint1   resetCounter
 ) <autorun> {
     uint25  counter25mhz = 0;
+    uint1   MAX <:: ( counter25mhz == 25000000 );
+
     always {
-        counter1hz = ( resetCounter == 1) ? 0 : counter1hz + ( counter25mhz == 25000000 );
-        counter25mhz = ( resetCounter == 1) ? 0 : ( counter25mhz == 25000000 ) ? 0 : counter25mhz + 1;
+        counter1hz = resetCounter ? 0 : counter1hz + MAX;
+        counter25mhz = resetCounter | MAX ? 0 : counter25mhz + 1;
     }
 }
 
@@ -16,9 +18,12 @@ algorithm pulse1khz(
     input   uint16  resetCounter
 ) <autorun> {
     uint15  counter25mhz = 0;
+    uint1   MAX <:: ( counter25mhz == 25000 );
+    uint1   RESET <: ( resetCounter != 0 );
+
     always {
-        counter1khz = ( resetCounter != 0 ) ? resetCounter : ( counter1khz == 0 ) ? 0 : counter1khz - ( counter25mhz == 25000 );
-        counter25mhz = ( resetCounter != 0 ) ? 0 : ( counter25mhz == 25000 ) ? 0 : counter25mhz + 1;
+        counter1khz = RESET ? resetCounter : ( counter1khz == 0 ) ? 0 : counter1khz - MAX;
+        counter25mhz = RESET | MAX ? 0 : counter25mhz + 1;
     }
 }
 

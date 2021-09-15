@@ -54,7 +54,7 @@ algorithm ps2ascii(
         valid :> ps2valid
     );
 
-    asciivalid := 0; joystick := { application, nprightup, nprightdown, npleftdown, npleftup, rctrl, rwin, ralt, lalt, npright | right, npleft | left, npdown | down, npup | up, lwin, lctrl, 1b0 };
+    asciivalid := 0; joystick ::= { application, nprightup, nprightdown, npleftdown, npleftup, rctrl, rwin, ralt, lalt, npright | right, npleft | left, npdown | down, npup | up, lwin, lctrl, 1b0 };
 
     always {
         if( ps2valid ) {

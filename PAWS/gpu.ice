@@ -195,7 +195,7 @@ algorithm gpu_queue(
     write := 0; queue_full := vector_block_active | queue_busy ; queue_complete := ~( gpu_active | queue_full );
     bitmap_crop_left := cropL; bitmap_crop_right := cropR; bitmap_crop_top := cropT; bitmap_crop_bottom := cropB;
 
-    while(1) {
+    always {
         if( gpu_write != 0 ) {
             queue_dithermode = gpu_dithermode; queue_colour = gpu_colour; queue_colour_alt = gpu_colour_alt;
             queue_x = gpu_x; queue_y = gpu_y;
@@ -206,17 +206,20 @@ algorithm gpu_queue(
             queue_cropL = crop_left; queue_cropR = crop_right;
             queue_cropT = crop_top; queue_cropB = crop_bottom;
         }
+
+        if( vector_drawer_gpu_write ) {
+            dithermode = 0; colour = vector_block_colour; colour_alt = 0;
+            x = vector_drawer_gpu_x; y = vector_drawer_gpu_y;
+            param0 = vector_drawer_gpu_param0; param1 = vector_drawer_gpu_param1;
+            param2 = 1; param3 = 0;
+            cropL = crop_left; cropR = crop_right; cropT = crop_top; cropB = crop_bottom;
+            write = 2;
+        }
+    }
+
+    while(1) {
         switch( gpu_write ) {
-            case 0: {
-                if( vector_drawer_gpu_write ) {
-                    dithermode = 0; colour = vector_block_colour; colour_alt = 0;
-                    x = vector_drawer_gpu_x; y = vector_drawer_gpu_y;
-                    param0 = vector_drawer_gpu_param0; param1 = vector_drawer_gpu_param1;
-                    param2 = 1; param3 = 0;
-                    cropL = crop_left; cropR = crop_right; cropT = crop_top; cropB = crop_bottom;
-                    write = 2;
-                }
-            }
+            case 0: {}
             default: {
                 // COMMAND QUEUE, LATCH AND WAIT FOR GPU THEN DISPATCH
                 queue_busy = 1;

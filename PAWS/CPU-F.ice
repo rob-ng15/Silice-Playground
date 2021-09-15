@@ -22,32 +22,38 @@ algorithm PAWSCPU(
     uint4   FSM = uninitialized;
 
     // RISC-V PROGRAM COUNTERS AND STATUS
+    // SMT - RUNNING ON HART 1 WITH DUPLICATE PROGRAM COUNTER AND REGISTER FILE
+    uint1   SMT = uninitialized;
     uint32  pc = uninitialized;
+    uint32  pcSMT = uninitialized;
     uint32  PC <:: SMT ? pcSMT : pc;
     uint32  PCplus2 <:: PC + 2;
-    uint1   incPC = uninitialized;
-
-    // SMT FLAG
-    // RUNNING ON HART 0 OR HART 1
-    // DUPLICATES PROGRAM COUNTER, REGISTER FILE AND LAST INSTRUCTION CACHE
-    uint1   SMT = uninitialized;
-    uint32  pcSMT = uninitialized;
+    uint32  nextPC <:: PC + ( compressed ? 2 : 4 );
 
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
     uint1   compressed = uninitialized;
-    uint32  i32 = uninitialized;
-    compressed COMPRESSED <@clock_CPUdecoder> (
-        i16 <: readdata,
-        i32 :> i32
-    );
+    uint32  i3200 = uninitialized;
+    uint32  i3201 = uninitialized;
+    uint32  i3210 = uninitialized;
+    compressed00 COMPRESSED00 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3200 );
+    compressed01 COMPRESSED01 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3201 );
+    compressed10 COMPRESSED10 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3210 );
 
-    // RISC-V MEMORY ACCESS FLAGS
-    uint1   memoryload <:: ( opCode[2,5] == 5b00000 ) | ( opCode[2,5] == 5b00001 ) | ( ( opCode[2,5] == 5b01011 ) & ( function7[2,5] != 5b00011 ) );
-    uint1   memorystore <:: ( opCode[2,5] == 5b01000 ) | ( opCode[2,5] == 5b01001 ) | ( ( opCode[2,5] == 5b01011 ) & ( function7[2,5] != 5b00010 ) );
+    // RISC-V MEMORY ACCESS FLAGS - SET SIZE 32 BIT FOR FLOAT AND ATOMIC
+    uint1   memoryload = uninitialized;
+    uint1   memorystore = uninitialized;
     uint1   signedload <:: ~function3[2,1];
     uint4   byteoffset <:: loadAddress[0,1] ? 8 : 0;
     uint4   bytesignoffset <:: byteoffset + 7;
+    memoryaccess ACCESS(
+        opCode <: opCode,
+        function3 <: function3,
+        function7 <: function7,
+        accesssize :> accesssize,
+        memoryload :> memoryload,
+        memorystore :> memorystore
+    );
 
     // RISC-V 32 BIT INSTRUCTION DECODER
     int32   immediateValue = uninitialized;
@@ -103,7 +109,6 @@ algorithm PAWSCPU(
     );
 
     // RISC-V ADDRESS GENERATOR
-    uint32  nextPC = uninitialized;
     uint32  branchAddress = uninitialized;
     uint32  jumpAddress = uninitialized;
     uint32  loadAddress = uninitialized;
@@ -111,21 +116,23 @@ algorithm PAWSCPU(
     uint32  storeAddress = uninitialized;
     uint32  storeAddressplus2 <:: storeAddress + 2;
     uint32  AUIPCLUI = uninitialized;
-    addressgenerator AGU <@clock_CPUdecoder> (
-        compressed <: compressed,
+    addressgenerator1 AGU1 <@clock_CPUdecoder> (
         instruction <: instruction,
         pc <: PC,
-        immediateValue <: immediateValue,
-        sourceReg1 <: sourceReg1,
-        nextPC :> nextPC,
         branchAddress :> branchAddress,
         jumpAddress :> jumpAddress,
-        storeAddress :> storeAddress,
-        loadAddress :> loadAddress,
         AUIPCLUI :> AUIPCLUI
+    );
+    addressgenerator2 AGU2 <@clock_CPUdecoder> (
+        instruction <: instruction,
+        immediateValue <: immediateValue,
+        sourceReg1 <: sourceReg1,
+        storeAddress :> storeAddress,
+        loadAddress :> loadAddress
     );
 
     // CPU EXECUTE BLOCK
+    uint1   incPC = uninitialized;
     uint1   takeBranch = uninitialized;
     uint32  memoryinput = uninitialized;
     uint32  memoryoutput = uninitialized;
@@ -174,8 +181,7 @@ algorithm PAWSCPU(
         pc :> newPC
     );
 
-    // MEMORY ACCESS FLAGS - 32 bit for FLOAT LOAD/STORE AND ATOMIC OPERATIONS
-    accesssize := ( opCode[2,5] == 5b01011 ) || ( opCode[2,5] == 5b00001 ) || ( opCode[2,5] == 5b01001 ) ? 3b010 : function3; readmemory := 0; writememory := 0;
+    readmemory := 0; writememory := 0;
 
     // CPU EXECUTE START FLAGS
     EXECUTEstart := 0;
@@ -194,7 +200,12 @@ algorithm PAWSCPU(
                 if( readdata[0,2] == 2b11 ) {
                     instruction[0,16] = readdata; address = PCplus2; readmemory = 1; while( memorybusy ) {} instruction[16,16] = readdata;                              // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
                 } else {
-                    instruction = i32;                                                                                                                                  // EXPAND COMPRESSED INSTRUCTION
+                    switch( readdata[0,2] ) {                                                                                                                           // EXPAND COMPRESSED INSTRUCTION
+                        case 2b00: { instruction = i3200; }
+                        case 2b01: { instruction = i3201; }
+                        case 2b10: { instruction = i3210; }
+                        default: {}
+                    }
                 }
                 FSM = 2;
             }

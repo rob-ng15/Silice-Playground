@@ -68,12 +68,10 @@ algorithm classify(
     output  uint1   ZERO
 ) <autorun> {
     uint1   expFF <:: ( fp32(a).exponent == 8hff );
-    always {
-        INF = expFF & ~a[22,1];
-        sNAN = expFF & a[22,1] & a[21,1];
-        qNAN = expFF & a[22,1] & ~a[21,1];
-        ZERO = ( fp32(a).exponent == 0 );
-    }
+    INF ::= expFF & ~a[22,1];
+    sNAN ::= expFF & a[22,1] & a[21,1];
+    qNAN ::= expFF & a[22,1] & ~a[21,1];
+    ZERO ::= ( fp32(a).exponent == 0 );
 }
 
 // ALGORITHMS TO DEAL WITH 48 BIT FRACTIONS TO 23 BIT FRACTIONS
@@ -93,12 +91,13 @@ algorithm donormalise48_adjustexp(
             busy = 1;
             normalised = bitstream; newexp = exp;
             while( ~normalised[47,1] ) {
-                switch( shiftcount ) {
-                    default: { normalised = { normalised[0,47], 1b0 }; }
-                    case 3: { normalised = { normalised[0,45], 3b0 }; }
-                    case 7: { normalised = { normalised[0,41], 7b0 }; }
-                    case 15: { normalised = { normalised[0,33], 15b0 }; }
-                }
+                normalised = normalised << shiftcount;
+                //switch( shiftcount ) {
+                //    default: { normalised = { normalised[0,47], 1b0 }; }
+                //    case 3: { normalised = { normalised[0,45], 3b0 }; }
+                //    case 7: { normalised = { normalised[0,41], 7b0 }; }
+                //    case 15: { normalised = { normalised[0,33], 15b0 }; }
+                //}
                 newexp = newexp - shiftcount;
             }
             busy = 0;
@@ -117,12 +116,13 @@ algorithm donormalise48(
             busy = 1;
             normalised = bitstream;
             while( ~normalised[47,1] ) {
-                switch( shiftcount ) {
-                    default: { normalised = { normalised[0,47], 1b0 }; }
-                    case 3: { normalised = { normalised[0,45], 3b0 }; }
-                    case 7: { normalised = { normalised[0,41], 7b0 }; }
-                    case 15: { normalised = { normalised[0,33], 15b0 }; }
-                }
+                normalised = normalised << shiftcount;
+                //switch( shiftcount ) {
+                //    default: { normalised = { normalised[0,47], 1b0 }; }
+                //    case 3: { normalised = { normalised[0,45], 3b0 }; }
+                //    case 7: { normalised = { normalised[0,41], 7b0 }; }
+                //    case 15: { normalised = { normalised[0,33], 15b0 }; }
+                //}
             }
             busy = 0;
         }
@@ -187,7 +187,7 @@ algorithm inttofloat(
         UF :> cUF,
         f32 :> f32
     );
-    flags := { 4b0, OF, UF, NX };
+    flags ::= { 4b0, OF, UF, NX };
 
     while(1) {
         if( start ) {
@@ -231,7 +231,7 @@ algorithm floattoint(
         ZERO :> aZERO
     );
 
-    flags := { IF, NN, NV, 4b0000 };
+    flags ::= { IF, NN, NV, 4b0000 };
     always {
         switch( { IF | NN, aZERO } ) {
             case 2b00: { NV = ( exp > 30 ); result = NV ? { fp32( a ).sign, 31h7fffffff } : fp32( a ).sign ? -( sig[1,32] + sig[0,1] ) : ( sig[1,32] + sig[0,1] ); }
@@ -435,7 +435,7 @@ algorithm floataddsub(
         f32 :> f32
     );
 
-    NORMALISEstart := 0; flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
+    NORMALISEstart := 0; flags ::= { IF, NN, NV, 1b0, OF, UF, 1b0 };
     while(1) {
         if( start ) {
             busy = 1;
@@ -552,7 +552,7 @@ algorithm floatmultiply(
         f32 :> f32
     );
 
-    flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
+    flags ::= { IF, NN, NV, 1b0, OF, UF, 1b0 };
     while(1) {
         if( start ) {
             busy = 1;
@@ -696,7 +696,7 @@ algorithm floatdivide(
         f32 :> f32
     );
 
-    DODIVIDEstart := 0; NORMALISEstart := 0; flags := { IF, NN, 1b0, DZ, OF, UF, 1b0};
+    DODIVIDEstart := 0; NORMALISEstart := 0; flags ::= { IF, NN, 1b0, DZ, OF, UF, 1b0};
     while(1) {
         if( start ) {
             busy = 1;
@@ -834,7 +834,7 @@ algorithm floatsqrt(
         f32 :> f32
     );
 
-    DOSQRTstart := 0; flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
+    DOSQRTstart := 0; flags ::= { IF, NN, NV, 1b0, OF, UF, 1b0 };
     while(1) {
         if( start ) {
             busy = 1;
@@ -931,8 +931,9 @@ algorithm floatcompare(
     );
 
     // IDENTIFY NaN, RETURN 0 IF NAN, OTHERWISE RESULT OF COMPARISONS
+    flags ::= { aINF | bINF, asNAN | bsNAN | aqNAN | bqNAN, asNAN | bsNAN | aqNAN | bqNAN, 4b0000 };
     always {
-        flags = { aINF | bINF, asNAN | bsNAN | aqNAN | bqNAN, asNAN | bsNAN | aqNAN | bqNAN, 4b0000 };
+        //flags = { aINF | bINF, asNAN | bsNAN | aqNAN | bqNAN, asNAN | bsNAN | aqNAN | bqNAN, 4b0000 };
         if( flags[5,1] ) {
             // NAN
             less = 0;

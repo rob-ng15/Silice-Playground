@@ -158,7 +158,6 @@ algorithm background_display(
     always {
         // RENDER
         if( pix_active ) {
-
             // SELECT ACTUAL COLOUR
             switch( b_mode ) {
                 case 4: {                                                               // RAINBOW
@@ -174,7 +173,7 @@ algorithm background_display(
                     }
                 }
                 case 6: { pixel = {3{staticGenerator}}; }                               // STATIC
-                default: {  pixel = condition ? b_colour : b_alt; }                     // EVERYTHING ELSE
+                default: { pixel = condition ? b_colour : b_alt; }                     // EVERYTHING ELSE
             }
         }
     }
@@ -197,7 +196,7 @@ algorithm pattern(
     int32   frame = 0;
 
     // Increment frame number for the snow/star field
-    frame := frame + ( ( pix_x == 639 ) & ( pix_y == 470 ) );
+    frame ::= frame + ( ( pix_x == 639 ) & ( pix_y == 470 ) );
 
     always {
         // SELECT COLOUR OR ALT
