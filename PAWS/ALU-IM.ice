@@ -167,7 +167,7 @@ algorithm douintdivide(
 algorithm aluMdivideremain(
     input   uint1   start,
     output  uint1   busy(0),
-    input   uint2   dosign,
+    input   uint3   dosign,
     input   uint32  dividend,
     input   uint32  divisor,
     output  uint32  result
@@ -216,17 +216,15 @@ algorithm douintmul(
     }
 }
 algorithm aluMmultiply(
-    input   uint2   dosign,
+    input   uint3   dosign,
     input   uint32  factor_1,
     input   uint32  factor_2,
     output  uint32  result
 ) <autorun> {
-    uint1   S1 <:: ( dosign == 2b00 ) | ( dosign == 2b01 ) | ( dosign == 2b11 );
-    uint1   S2 <:: ( dosign == 2b00 ) | ( dosign == 2b01 );
-    uint1   productsign <:: S1 & S2 ? ( factor_1[31,1] ^ factor_2[31,1] ) : S1 ? factor_1[31,1] : 0;
-    uint32  factor_1_unsigned <:: S1 ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
-    uint32  factor_2_unsigned <:: S2 ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
-    uint64  product = uninitialised;
+    uint2   dosigned <:: dosign[1,1] ? ( dosign[0,1] ? 0 : 2 ) : 1;
+    uint1   productsign <:: ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
+    uint32  factor_1_unsigned <:: ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
+    uint32  factor_2_unsigned <:: ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );    uint64  product = uninitialised;
     douintmul UINTMUL( factor_1 <: factor_1_unsigned, factor_2 <: factor_2_unsigned, productsign <: productsign, product64 :> product);
 
     always {
