@@ -83,9 +83,6 @@ algorithm op111(
 }
 
 algorithm alu(
-    input   uint1   start,
-    output  uint1   busy(0),
-
     input   uint7   opCode,
     input   uint3   function3,
     input   uint7   function7,

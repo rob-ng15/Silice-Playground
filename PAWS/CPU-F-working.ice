@@ -143,7 +143,6 @@ algorithm PAWSCPU(
     uint1   CLASSfrd = uninitialized;
     Iclass IFASTSLOW(
         opCode <: opCode,
-        function3 <: function3,
         function7 <: function7,
         frd :> CLASSfrd,
         writeRegister :> writeRegister,
@@ -283,7 +282,6 @@ algorithm PAWSCPU(
 
 algorithm Iclass(
     input   uint7   opCode,
-    input   uint3   function3,
     input   uint7   function7,
     output  uint1   frd,
     output  uint1   writeRegister,
@@ -305,8 +303,8 @@ algorithm Iclass(
             case 5b00011: {}                        // FENCE[I]
             case 5b11100: { FASTPATH = 0; }         // CSR
             case 5b01011: { FASTPATH = 0; }         // LR.W SC.WATOMIC LOAD - MODIFY - STORE
-            default: {                              // FPU INTEGER DIVIDE -> SLOWPATH
-                if( opCode[6,1] || ( opCode[5,1] && function7[0,1] && function3[2,1]) ) {
+            default: {                              // FPU ALU-M extension use SLOWPATH
+                if( opCode[6,1] || ( opCode[5,1] && function7[0,1] ) ) {
                     FASTPATH = 0;
                 }
             }
@@ -334,7 +332,14 @@ algorithm cpuexecuteSLOWPATH(
     output  uint32  result,
     input   uint1   CSRincCSRinstret
 ) <autorun> {
-    // M EXTENSION - DIVISION
+    // M EXTENSION ALU(S) OPERATIONS - MULTIPLICATION AND DIVISION
+    int32   ALUMMresult = uninitialized;
+    aluMM ALUMM(
+        function3 <: function3,
+        sourceReg1 <: sourceReg1,
+        sourceReg2 <: sourceReg2,
+        result :> ALUMMresult
+    );
     int32   ALUMDresult = uninitialized;
     uint1   ALUMDstart = uninitialized;
     uint1   ALUMDbusy = uninitialized;
@@ -420,11 +425,17 @@ algorithm cpuexecuteSLOWPATH(
                         default: { result = memoryinput; memoryoutput = ALUAresult; }       // ATOMIC LOAD - MODIFY - STORE
                     }
                 }
-                default: {                                                                  // FPU AND INTEGER DIVISION
+                default: {                                                                  // FPU, ALU-base or ALU-M extension
                     if( opCode[6,1] ) {
                         FPUstart = 1; while( FPUbusy ) {} CSRupdateFPUflags = 1; frd = FPUfrd; result = FPUresult;
                     } else {
-                        ALUMDstart = 1; while( ALUMDbusy ) {} result = ALUMDresult;
+                        if( opCode[5,1] && function7[0,1] ) {
+                            if( function3[2,1] ) {
+                                ALUMDstart = 1; while( ALUMDbusy ) {} result = ALUMDresult;
+                            } else {
+                                result = ALUMMresult;
+                            }
+                        }
                     }
                 }
             }
@@ -473,35 +484,20 @@ algorithm cpuexecuteFASTPATH(
         result :> ALUresult
     );
 
-    // M EXTENSION - MULTIPLICATION
-    int32   ALUMMresult = uninitialized;
-    aluMM ALUMM(
-        function3 <: function3,
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-        result :> ALUMMresult
-    );
-
     always {
         takeBranch = 0;
         switch( opCode[2,5] ) {
-            case 5b01101: { result = AUIPCLUI; }                    // LUI
-            case 5b00101: { result = AUIPCLUI; }                    // AUIPC
-            case 5b11011: { result = nextPC; }                      // JAL
-            case 5b11001: { result = nextPC; }                      // JALR
-            case 5b11000: { takeBranch = BRANCHtakeBranch; }        // BRANCH
-            case 5b00000: { result = memoryinput; }                 // LOAD
-            case 5b01000: { memoryoutput = sourceReg2; }            // STORE
-            case 5b00001: { result = memoryinput; }                 // FLOAT LOAD
-            case 5b01001: { memoryoutput = sourceReg2F; }           // FLOAT STORE
-            case 5b00011: {}                                        // FENCE[I]
-            default: {
-                if( opCode[5,1] && function7[0,1] ) {               // INTEGER ALU AND MULTIPLICATION
-                    result = ALUMMresult;
-                } else {
-                    result = ALUresult;
-                }
-            }
+            case 5b01101: { result = AUIPCLUI; }                                        // LUI
+            case 5b00101: { result = AUIPCLUI; }                                        // AUIPC
+            case 5b11011: { result = nextPC; }                               // JAL
+            case 5b11001: { result = nextPC; }                               // JALR
+            case 5b11000: { takeBranch = BRANCHtakeBranch; }         // BRANCH
+            case 5b00000: { result = memoryinput; }                                     // LOAD
+            case 5b01000: { memoryoutput = sourceReg2; }             // STORE
+            case 5b00001: { result = memoryinput; }                            // FLOAT LOAD
+            case 5b01001: { memoryoutput = sourceReg2F; }            // FLOAT STORE
+            case 5b00011: {}                                                            // FENCE[I]
+            default: { result = ALUresult; }
         }
     }
 }
