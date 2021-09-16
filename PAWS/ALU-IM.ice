@@ -101,27 +101,20 @@ algorithm alu(
     uint32  operand2 <:: regimm ? sourceReg2 : immediateValue;
 
     uint32  result000 = uninitialised;
-    op000 OP000( sourceReg1 <: sourceReg1, sourceReg2 <: sourceReg2, operand2 <: operand2, addsub <: addsub, result :> result000 );
-
     uint32  result001 = uninitialised;
-    op001 OP001( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, result :> result001 );
-
     uint32  result010 = uninitialised;
-    op010 OP010( sourceReg1 <: sourceReg1, operand2 <: operand2, result :> result010 );
-
     uint32  result011 = uninitialised;
-    op011 OP011( sourceReg1 <: sourceReg1, operand2 <: operand2, rs1 <: rs1, regimm <: regimm, result :> result011 );
-
     uint32  result100 = uninitialised;
-    op100 OP100( sourceReg1 <: sourceReg1, operand2 <: operand2, result :> result100 );
-
     uint32  result101 = uninitialised;
-    op101 OP101( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, srlsra <: function75, result :> result101 );
-
     uint32  result110 = uninitialised;
-    op110 OP110( sourceReg1 <: sourceReg1, operand2 <: operand2, result :> result110 );
-
     uint32  result111 = uninitialised;
+    op000 OP000( sourceReg1 <: sourceReg1, sourceReg2 <: sourceReg2, operand2 <: operand2, addsub <: addsub, result :> result000 );
+    op001 OP001( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, result :> result001 );
+    op010 OP010( sourceReg1 <: sourceReg1, operand2 <: operand2, result :> result010 );
+    op011 OP011( sourceReg1 <: sourceReg1, operand2 <: operand2, rs1 <: rs1, regimm <: regimm, result :> result011 );
+    op100 OP100( sourceReg1 <: sourceReg1, operand2 <: operand2, result :> result100 );
+    op101 OP101( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, srlsra <: function75, result :> result101 );
+    op110 OP110( sourceReg1 <: sourceReg1, operand2 <: operand2, result :> result110 );
     op111 OP111( sourceReg1 <: sourceReg1, operand2 <: operand2, result :> result111 );
 
     always {
@@ -202,6 +195,36 @@ algorithm aluMdivideremain(
         }
     }
 }
+// ALU FOR DIVISION
+algorithm aluMD(
+    input   uint1   start,
+    output  uint1   busy(0),
+    input   uint3   function3,
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg2,
+    output  uint32  result
+) <autorun> {
+    // M EXTENSION MULTIPLICATION AND DIVISION
+    uint1   ALUMDstart = uninitialized;
+    uint1   ALUMDbusy = uninitialized;
+    aluMdivideremain ALUMD(
+        dosign <: function3,
+        dividend <: sourceReg1,
+        divisor <: sourceReg2,
+        result :> result,
+        start <: ALUMDstart,
+        busy :> ALUMDbusy
+    );
+    ALUMDstart := 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+            ALUMDstart = 1; while( ALUMDbusy ) {}
+            busy = 0;
+        }
+    }
+}
 
 // UNSIGNED / SIGNED 32 by 32 bit multiplication giving 64 bit product using DSP blocks
 algorithm douintmul(
@@ -232,48 +255,6 @@ algorithm aluMmultiply(
     }
 }
 
-// COMBINED ALU FOR MULTIPLICATION AND DIVISION
-algorithm aluM(
-    input   uint1   start,
-    output  uint1   busy(0),
-    input   uint3   function3,
-    input   uint32  sourceReg1,
-    input   uint32  sourceReg2,
-    output  uint32  result
-) <autorun> {
-    // M EXTENSION MULTIPLICATION AND DIVISION
-    int32   ALUMDresult = uninitialized;
-    uint1   ALUMDstart = uninitialized;
-    uint1   ALUMDbusy = uninitialized;
-    aluMdivideremain ALUMD(
-        dosign <: function3,
-        dividend <: sourceReg1,
-        divisor <: sourceReg2,
-        result :> ALUMDresult,
-        start <: ALUMDstart,
-        busy :> ALUMDbusy
-    );
-    int32   ALUMMresult = uninitialized;
-    aluMmultiply ALUMM(
-        dosign <: function3,
-        factor_1 <: sourceReg1,
-        factor_2 <: sourceReg2,
-        result :> ALUMMresult
-    );
-
-    ALUMDstart := 0;
-    while(1) {
-        if( start ) {
-            busy = 1;
-            if( function3[2,1] ) {
-                ALUMDstart = 1; while( ALUMDbusy ) {} result = ALUMDresult;
-            } else {
-                result = ALUMMresult;
-            }
-            busy = 0;
-        }
-    }
-}
 // ALU FOR MULTIPLICATION
 algorithm aluMM(
     input   uint3   function3,
@@ -287,34 +268,4 @@ algorithm aluMM(
         factor_2 <: sourceReg2,
         result :> result
     );
-}
-// ALU FOR DIVISION
-algorithm aluMD(
-    input   uint1   start,
-    output  uint1   busy(0),
-    input   uint3   function3,
-    input   uint32  sourceReg1,
-    input   uint32  sourceReg2,
-    output  uint32  result
-) <autorun> {
-    // M EXTENSION MULTIPLICATION AND DIVISION
-    uint1   ALUMDstart = uninitialized;
-    uint1   ALUMDbusy = uninitialized;
-    aluMdivideremain ALUMD(
-        dosign <: function3,
-        dividend <: sourceReg1,
-        divisor <: sourceReg2,
-        result :> result,
-        start <: ALUMDstart,
-        busy :> ALUMDbusy
-    );
-    ALUMDstart := 0;
-
-    while(1) {
-        if( start ) {
-            busy = 1;
-            ALUMDstart = 1; while( ALUMDbusy ) {}
-            busy = 0;
-        }
-    }
 }

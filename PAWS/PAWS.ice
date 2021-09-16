@@ -313,7 +313,7 @@ algorithm bramcontroller(
     output  uint16  readdata
 ) <autorun> {
 $$if not SIMULATION then
-    // RISC-V RAM and BIOS
+    // RISC-V FAST BRAM and BIOS
     bram uint16 ram <input!> [16384] = {
         $include('ROM/BIOS.inc')
         , pad(uninitialized)

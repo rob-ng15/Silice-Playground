@@ -281,6 +281,8 @@ algorithm PAWSCPU(
     } // RISC-V
 }
 
+// DETERMINE IF FAST OR SLOW INSTRUCTION
+// SET CPU CONTROLS DEPENDING UPON INSTRUCTION TYPE
 algorithm Iclass(
     input   uint7   opCode,
     input   uint3   function3,
@@ -305,7 +307,7 @@ algorithm Iclass(
             case 5b00011: {}                        // FENCE[I]
             case 5b11100: { FASTPATH = 0; }         // CSR
             case 5b01011: { FASTPATH = 0; }         // LR.W SC.WATOMIC LOAD - MODIFY - STORE
-            default: {                              // FPU INTEGER DIVIDE -> SLOWPATH
+            default: {                              // FPU OR INTEGER DIVIDE -> SLOWPATH
                 if( opCode[6,1] || ( opCode[5,1] && function7[0,1] && function3[2,1]) ) {
                     FASTPATH = 0;
                 }

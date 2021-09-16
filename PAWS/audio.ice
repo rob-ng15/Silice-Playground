@@ -47,8 +47,8 @@ algorithm apu(
             point = 0;
             start = 1;
         } else {
-            point = point + ( updatepoint & audio_active );
-            selected_duration = selected_duration - ( updateduration & audio_active );
+            point = point + updatepoint;
+            selected_duration = selected_duration - updateduration;
         }
     }
 }

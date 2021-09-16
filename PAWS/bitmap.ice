@@ -94,6 +94,162 @@ algorithm bitmap(
     uint8   y_line <: pix_vblank ? 0 : pix_y[1,9];
     uint9   x_pixel <: pix_active ? x_plus_one : 0;
 
+    // BITMAP WRITER AND GPU
+    bitmapwriter pixel_writer <@gpu_clock> (
+        crop_left <: crop_left,
+        crop_right <: crop_right,
+        crop_top <: crop_top,
+        crop_bottom <: crop_bottom,
+        gpu_x <: gpu_x,
+        gpu_y <: gpu_y,
+        gpu_colour <: gpu_colour,
+        gpu_colour_alt <: gpu_colour_alt,
+        gpu_param0 <: gpu_param0,
+        gpu_param1 <: gpu_param1,
+        gpu_param2 <: gpu_param2,
+        gpu_param3 <: gpu_param3,
+        gpu_param4 <: gpu_param4,
+        gpu_param5 <: gpu_param5,
+        gpu_write <: gpu_write,
+        gpu_dithermode <: gpu_dithermode,
+        blit1_writer_tile <: blit1_writer_tile,
+        blit1_writer_line <: blit1_writer_line,
+        blit1_writer_bitmap <: blit1_writer_bitmap,
+        character_writer_character <: character_writer_character,
+        character_writer_line <: character_writer_line,
+        character_writer_bitmap <: character_writer_bitmap,
+        colourblit_writer_tile <: colourblit_writer_tile,
+        colourblit_writer_line <: colourblit_writer_line,
+        colourblit_writer_pixel <: colourblit_writer_pixel,
+        colourblit_writer_colour <: colourblit_writer_colour,
+        pb_colour7 <: pb_colour7,
+        pb_colour8r <: pb_colour8r,
+        pb_colour8g <: pb_colour8g,
+        pb_colour8b <: pb_colour8b,
+        pb_newpixel <: pb_newpixel,
+        vector_block_number <: vector_block_number,
+        vector_block_colour <: vector_block_colour,
+        vector_block_xc <: vector_block_xc,
+        vector_block_yc <: vector_block_yc,
+        vector_block_scale <: vector_block_scale,
+        vector_block_action <: vector_block_action,
+        draw_vector <: draw_vector,
+        vertices_writer_block <: vertices_writer_block,
+        vertices_writer_vertex <: vertices_writer_vertex,
+        vertices_writer_xdelta <: vertices_writer_xdelta,
+        vertices_writer_ydelta <: vertices_writer_ydelta,
+        vertices_writer_active <: vertices_writer_active,
+        framebuffer <: writer_framebuffer,
+        static1bit <: static1bit,
+        static6bit <: static6bit,
+        bitmap_0A <:> bitmap_0A,
+        bitmap_1A <:> bitmap_1A,
+        bitmap_0R <:> bitmap_0R,
+        bitmap_1R <:> bitmap_1R,
+        bitmap_0G <:> bitmap_0G,
+        bitmap_1G <:> bitmap_1G,
+        bitmap_0B <:> bitmap_0B,
+        bitmap_1B <:> bitmap_1B,
+        vector_block_active :> vector_block_active,
+        gpu_queue_full :> gpu_queue_full,
+        gpu_queue_complete :> gpu_queue_complete
+    );
+
+    uint17  address <: y_line * 320 + x_pixel;
+
+    // Pixel being read?
+    bitmap_colour_read := ( pix_x[1,9] == bitmap_x_read ) && ( pix_y[1,9] == bitmap_y_read ) ?
+                            ( framebuffer ? { bitmap_1A.rdata0, bitmap_1R.rdata0, bitmap_1G.rdata0, bitmap_1B.rdata0 } : { bitmap_0A.rdata0, bitmap_0R.rdata0, bitmap_0G.rdata0, bitmap_0B.rdata0 } )
+                            : bitmap_colour_read;
+
+    // Setup the address in the bitmap for the pixel being rendered
+    // Use pre-fetching of the next pixel ready for the next cycle
+    // y_line * 320 + x_pixel
+    bitmap_0A.addr0 := address; bitmap_0R.addr0 := address; bitmap_0G.addr0 := address; bitmap_0B.addr0 := address;
+    bitmap_1A.addr0 := address; bitmap_1R.addr0 := address; bitmap_1G.addr0 := address; bitmap_1B.addr0 := address;
+
+    // RENDER - Default to transparent
+    bitmap_display := pix_active & ~( framebuffer ? bitmap_1A.rdata0 : bitmap_0A.rdata0 );
+    pixel := framebuffer ? { bitmap_1R.rdata0, bitmap_1G.rdata0, bitmap_1B.rdata0 } : { bitmap_0R.rdata0, bitmap_0G.rdata0, bitmap_0B.rdata0 };
+}
+
+algorithm bitmapwriter(
+    // GPU Parameters
+    input   int11   gpu_x,
+    input   int11   gpu_y,
+    input   uint7   gpu_colour,
+    input   uint7   gpu_colour_alt,
+    input   int11   gpu_param0,
+    input   int11   gpu_param1,
+    input   int11   gpu_param2,
+    input   int11   gpu_param3,
+    input   int11   gpu_param4,
+    input   int11   gpu_param5,
+    input   uint4   gpu_write,
+    input   uint4   gpu_dithermode,
+
+    // CROP RECTANGLE
+    input   uint9   crop_left,
+    input   uint9   crop_right,
+    input   uint8   crop_top,
+    input   uint8   crop_bottom,
+
+    // For setting blit1 tile bitmaps
+    input   uint5   blit1_writer_tile,
+    input   uint4   blit1_writer_line,
+    input   uint16  blit1_writer_bitmap,
+
+    // For setting character generator bitmaps
+    input   uint8   character_writer_character,
+    input   uint3   character_writer_line,
+    input   uint8   character_writer_bitmap,
+
+    // For set colourblit tile bitmaps
+    input   uint5   colourblit_writer_tile,
+    input   uint4   colourblit_writer_line,
+    input   uint4   colourblit_writer_pixel,
+    input   uint7   colourblit_writer_colour,
+
+    // Colours for the pixelblock
+    input   uint7   pb_colour7,
+    input   uint8   pb_colour8r,
+    input   uint8   pb_colour8g,
+    input   uint8   pb_colour8b,
+    input   uint2   pb_newpixel,
+
+    // VECTOR BLOCK
+    input   uint5   vector_block_number,
+    input   uint7   vector_block_colour,
+    input   int11   vector_block_xc,
+    input   int11   vector_block_yc,
+    input   uint3   vector_block_scale,
+    input   uint3   vector_block_action,
+    input   uint1   draw_vector,
+    // For setting vertices
+    input   uint5   vertices_writer_block,
+    input   uint6   vertices_writer_vertex,
+    input   int6    vertices_writer_xdelta,
+    input   int6    vertices_writer_ydelta,
+    input   uint1   vertices_writer_active,
+
+    output  uint1   gpu_queue_full,
+    output  uint1   gpu_queue_complete,
+    output  uint1   vector_block_active,
+
+    input   uint1   static1bit,
+    input   uint6   static6bit,
+
+    // BITMAP TO WRITE
+    input   uint1   framebuffer,
+    simple_dualport_bram_port1 bitmap_0A,
+    simple_dualport_bram_port1 bitmap_1A,
+    simple_dualport_bram_port1 bitmap_0R,
+    simple_dualport_bram_port1 bitmap_1R,
+    simple_dualport_bram_port1 bitmap_0G,
+    simple_dualport_bram_port1 bitmap_1G,
+    simple_dualport_bram_port1 bitmap_0B,
+    simple_dualport_bram_port1 bitmap_1B,
+) <autorun> {
     // From GPU to set a pixel
     int11   bitmap_x_write = uninitialized;
     int11   bitmap_y_write = uninitialized;
@@ -103,34 +259,9 @@ algorithm bitmap(
     uint8   bitmap_crop_bottom = uninitialised;
     uint7   bitmap_colour_write = uninitialized;
     uint7   bitmap_colour_write_alt = uninitialized;
-    uint4   gpu_active_dithermode = uninitialized;
+    uint4   dithermode = uninitialized;
     uint1   bitmap_write = uninitialized;
-
-    bitmapwriter pixel_writer <@gpu_clock> (
-        framebuffer <: writer_framebuffer,
-        bitmap_x_write <: bitmap_x_write,
-        bitmap_y_write <: bitmap_y_write,
-        colour <: bitmap_colour_write,
-        colour_alt <: bitmap_colour_write_alt,
-        bitmap_write <: bitmap_write,
-        dithermode <: gpu_active_dithermode,
-        static1bit <: static1bit,
-        static6bit <: static6bit,
-        crop_left <: bitmap_crop_left,
-        crop_right <: bitmap_crop_right,
-        crop_top <: bitmap_crop_top,
-        crop_bottom <: bitmap_crop_bottom,
-        bitmap_0A <:> bitmap_0A,
-        bitmap_1A <:> bitmap_1A,
-        bitmap_0R <:> bitmap_0R,
-        bitmap_1R <:> bitmap_1R,
-        bitmap_0G <:> bitmap_0G,
-        bitmap_1G <:> bitmap_1G,
-        bitmap_0B <:> bitmap_0B,
-        bitmap_1B <:> bitmap_1B
-    );
-
-    gpu_queue QUEUE <@gpu_clock> (
+    gpu_queue QUEUE(
         bitmap_x_write :> bitmap_x_write,
         bitmap_y_write :> bitmap_y_write,
         bitmap_crop_left :> bitmap_crop_left,
@@ -140,11 +271,11 @@ algorithm bitmap(
         bitmap_colour_write :> bitmap_colour_write,
         bitmap_colour_write_alt :> bitmap_colour_write_alt,
         bitmap_write :> bitmap_write,
+        gpu_active_dithermode :> dithermode,
         crop_left <: crop_left,
         crop_right <: crop_right,
         crop_top <: crop_top,
         crop_bottom <: crop_bottom,
-        gpu_active_dithermode :> gpu_active_dithermode,
         gpu_x <: gpu_x,
         gpu_y <: gpu_y,
         gpu_colour <: gpu_colour,
@@ -188,51 +319,7 @@ algorithm bitmap(
         queue_full :> gpu_queue_full,
         queue_complete :> gpu_queue_complete
     );
-    uint17  address <: y_line * 320 + x_pixel;
 
-    // Pixel being read?
-    bitmap_colour_read := ( pix_x[1,9] == bitmap_x_read ) && ( pix_y[1,9] == bitmap_y_read ) ?
-                            ( framebuffer ? { bitmap_1A.rdata0, bitmap_1R.rdata0, bitmap_1G.rdata0, bitmap_1B.rdata0 } : { bitmap_0A.rdata0, bitmap_0R.rdata0, bitmap_0G.rdata0, bitmap_0B.rdata0 } )
-                            : bitmap_colour_read;
-
-    // Setup the address in the bitmap for the pixel being rendered
-    // Use pre-fetching of the next pixel ready for the next cycle
-    // y_line * 320 + x_pixel
-    bitmap_0A.addr0 := address; bitmap_0R.addr0 := address; bitmap_0G.addr0 := address; bitmap_0B.addr0 := address;
-    bitmap_1A.addr0 := address; bitmap_1R.addr0 := address; bitmap_1G.addr0 := address; bitmap_1B.addr0 := address;
-
-    // RENDER - Default to transparent
-    bitmap_display := pix_active & ~( framebuffer ? bitmap_1A.rdata0 : bitmap_0A.rdata0 );
-    pixel := framebuffer ? { bitmap_1R.rdata0, bitmap_1G.rdata0, bitmap_1B.rdata0 } : { bitmap_0R.rdata0, bitmap_0G.rdata0, bitmap_0B.rdata0 };
-}
-
-algorithm bitmapwriter(
-    // SET pixels
-    input   uint1   framebuffer,
-    input   int11   bitmap_x_write,
-    input   int11   bitmap_y_write,
-    input   uint7   colour,
-    input   uint7   colour_alt,
-    input   uint1   bitmap_write,
-    input   uint4   dithermode,
-    input   uint1   static1bit,
-    input   uint6   static6bit,
-
-    // CROP RECTANGLE
-    input   int11   crop_left,
-    input   int11   crop_right,
-    input   int11   crop_top,
-    input   int11   crop_bottom,
-
-    simple_dualport_bram_port1 bitmap_0A,
-    simple_dualport_bram_port1 bitmap_1A,
-    simple_dualport_bram_port1 bitmap_0R,
-    simple_dualport_bram_port1 bitmap_1R,
-    simple_dualport_bram_port1 bitmap_0G,
-    simple_dualport_bram_port1 bitmap_1G,
-    simple_dualport_bram_port1 bitmap_0B,
-    simple_dualport_bram_port1 bitmap_1B,
-) <autorun> {
     uint1   condition = uninitialised;
     uint7   pixeltowrite = uninitialised;
     dither DODITHER(
@@ -244,7 +331,7 @@ algorithm bitmapwriter(
     );
 
     // Write in range?
-    uint1 write_pixel <:: ( bitmap_x_write >= crop_left ) & ( bitmap_x_write <= crop_right ) & ( bitmap_y_write >= crop_top ) & ( bitmap_y_write <= crop_bottom ) & bitmap_write;
+    uint1 write_pixel <:: ( bitmap_x_write >= bitmap_crop_left ) & ( bitmap_x_write <= bitmap_crop_right ) & ( bitmap_y_write >= bitmap_crop_top ) & ( bitmap_y_write <= bitmap_crop_bottom ) & bitmap_write;
 
     // Bitmap write access for the GPU
     uint17  address <:: bitmap_y_write[0,8] * 320 + bitmap_x_write[0,9];
@@ -256,7 +343,7 @@ algorithm bitmapwriter(
             // SELECT ACTUAL COLOUR
             switch( dithermode ) {
                 case 14: { pixeltowrite = static6bit; }
-                default: { pixeltowrite = condition ? colour : colour_alt; }
+                default: { pixeltowrite = condition ? bitmap_colour_write : bitmap_colour_write_alt; }
             }
             // SET PIXEL ADDRESSS bitmap_y_write * 320 + bitmap_x_write
             if( framebuffer ) {

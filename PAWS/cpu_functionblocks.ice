@@ -457,27 +457,20 @@ algorithm aluA (
     output  uint32  result
 ) <autorun> {
     uint32  result5b00000 = uninitialized;
-    aluA5b00000 ALUA5b00000( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b00000 );
-
     uint32  result5b00100 = uninitialized;
-    aluA5b00100 ALUA5b00100( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b00100 );
-
     uint32  result5b01000 = uninitialized;
-    aluA5b01000 ALUA5b01000( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b01000 );
-
     uint32  result5b01100 = uninitialized;
-    aluA5b01100 ALUA5b01100( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b01100 );
-
     uint32  result5b10000 = uninitialized;
-    aluA5b10000 ALUA5b10000( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b10000 );
-
     uint32  result5b10100 = uninitialized;
-    aluA5b10100 ALUA5b10100( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b10100 );
-
     uint32  result5b11000 = uninitialized;
-    aluA5b11000 ALUA5b11000( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b11000 );
-
     uint32  result5b11100 = uninitialized;
+    aluA5b00000 ALUA5b00000( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b00000 );
+    aluA5b00100 ALUA5b00100( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b00100 );
+    aluA5b01000 ALUA5b01000( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b01000 );
+    aluA5b01100 ALUA5b01100( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b01100 );
+    aluA5b10000 ALUA5b10000( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b10000 );
+    aluA5b10100 ALUA5b10100( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b10100 );
+    aluA5b11000 ALUA5b11000( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b11000 );
     aluA5b11100 ALUA5b11100( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b11100 );
 
     always {
