@@ -1,4 +1,8 @@
 algorithm tilemap(
+    simple_dualport_bram_port0 tiles16x16,
+    simple_dualport_bram_port0 tiles,
+    simple_dualport_bram_port0 colours,
+
     input   uint10  pix_x,
     input   uint10  pix_y,
     input   uint1   pix_active,
@@ -15,51 +19,10 @@ algorithm tilemap(
     input   uint2   tm_reflection,
     input   uint1   tm_write,
 
-    // For setting tile bitmaps
-    input   uint6   tile_writer_tile,
-    input   uint4   tile_writer_line,
-    input   uint16  tile_writer_bitmap,
-
     // For scrolling/wrapping
-    input   uint4   tm_scrollwrap,
-    output  uint4   tm_lastaction,
-    output  uint2   tm_active
+    input   int5    tm_offset_x,
+    input   int5    tm_offset_y
 ) <autorun> {
-    // Tiles 64 x 16 x 16
-    simple_dualport_bram uint16 tiles16x16 <input!> [ 1024 ] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, pad(uninitialized) };
-
-    // 42 x 32 tile map, allows for pixel scrolling with border { 2 bit reflection, 7 bits background, 6 bits foreground, 5 bits tile number }
-    simple_dualport_bram uint6 tiles <input!> [1344] = uninitialized;
-    simple_dualport_bram uint15 colours <input!> [1344] = uninitialized;
-
-    // Scroll position - -15 to 0 to 15
-    // -15 or 15 will trigger appropriate scroll when next moved in that direction
-    int5    tm_offset_x = uninitialized;
-    int5    tm_offset_y = uninitialized;
-    tile_map_writer TMW(
-        tiles <:> tiles,
-        colours <:> colours,
-        tm_x <: tm_x,
-        tm_y <: tm_y,
-        tm_character <: tm_character,
-        tm_foreground <: tm_foreground,
-        tm_background <: tm_background,
-        tm_reflection <: tm_reflection,
-        tm_write <: tm_write,
-        tm_offset_x :> tm_offset_x,
-        tm_offset_y :> tm_offset_y,
-        tm_scrollwrap <: tm_scrollwrap,
-        tm_lastaction :> tm_lastaction,
-        tm_active :> tm_active
-    );
-
-    tilebitmapwriter TBMW(
-        tile_writer_tile <: tile_writer_tile,
-        tile_writer_line <: tile_writer_line,
-        tile_writer_bitmap <: tile_writer_bitmap,
-        tiles16x16 <:> tiles16x16
-    );
-
     // Character position on the screen x 0-41, y 0-31 * 42 ( fetch it two pixels ahead of the actual x pixel, so it is always ready, colours 1 pixel ahead )
     // Adjust for the offsets, effective 0 point margin is ( 1,1 ) to ( 40,30 ) with a 1 tile border
     uint11  xtmpos <: ( {{6{tm_offset_x[4,1]}}, tm_offset_x} + ( pix_active ? ( pix_x + 11d18 ) : 11d16 ) ) >> 4;

@@ -6,7 +6,8 @@ algorithm pll(
   output! uint1 clock_100_1,
   output! uint1 clock_100_2,
   output! uint1 clock_100_3,
-  output  uint1 compute_clock
+  output  uint1 compute_clock,
+  output  uint1 io_clock
 ) <autorun> {
   uint3 counter = 0;
   uint8 trigger = 8b11111111;
@@ -15,6 +16,7 @@ algorithm pll(
   clock_100_2   := clock;
   clock_100_3   := clock;
   compute_clock := ~counter[0,1]; // x2 slower
+  io_clock      := ~counter[0,1]; // x2 slower
   video_clock   := counter[1,1]; // x4 slower
   while (1) {
     counter = counter + 1;
@@ -87,6 +89,7 @@ $$else
 $$end
 ) <@clock_system> {
     uint1   clock_system = uninitialized;
+    uint1   clock_io = uninitialized;
     uint1   clock_100_1 = uninitialized;
     uint1   clock_100_2 = uninitialized;
     uint1   clock_100_3 = uninitialized;
@@ -99,7 +102,8 @@ $$if VERILATOR then
       clock_100_1   :> clock_100_1,
       clock_100_2   :> clock_100_2,
       clock_100_3   :> clock_100_3,
-      compute_clock :> clock_system
+      compute_clock :> clock_system,
+      io_clock      :> clock_io
     );
 $$else
     $$clock_25mhz = 'clock'
@@ -114,11 +118,12 @@ $$else
         clk100_3  :> clock_100_3,
         locked   :> pll_lock_CPU
     );
-    // SDRAM  CLOCKS + ON CPU CACHE + USB DOMAIN CLOCKS
+    // SDRAM CLOCKS + IO CLOCK
     uint1   sdram_clock = uninitialized;
     uint1   pll_lock_AUX = uninitialized;
     ulx3s_clk_risc_ice_v_AUX clk_gen_AUX (
         clkin   <: $clock_25mhz$,
+        clkIO :> clock_io,
         clkSDRAM :> sdram_clock,
         clkSDRAMcontrol :> sdram_clk,
         locked :> pll_lock_AUX
@@ -186,7 +191,7 @@ $$end
     uint1   SMTRUNNING = uninitialized;
     uint32  SMTSTARTPC = uninitialized;
     uint16  IOreadData = uninitialized;
-    io_memmap IO_Map <@clock_system,!reset> (
+    io_memmap IO_Map <@clock_io,!reset> (
         leds :> leds,
 $$if not SIMULATION then
         gn <: gn,
@@ -218,7 +223,7 @@ $$if SIMULATION then
     uint4 audio_r(0);
 $$end
     uint16  ATreadData = uninitialized;
-    audiotimers_memmap AUDIOTIMERS_Map <@clock_system,!reset> (
+    audiotimers_memmap AUDIOTIMERS_Map <@clock_io,!reset> (
         clock_25mhz <: $clock_25mhz$,
         memoryAddress <: address,
         memoryWrite <: ATmemoryWrite,
@@ -230,7 +235,7 @@ $$end
     );
 
     uint16  VreadData = uninitialized;
-    video_memmap VIDEO_Map <@clock_system,!reset> (
+    video_memmap VIDEO_Map <@clock_io,!reset> (
         clock_25mhz <: $clock_25mhz$,
         memoryAddress <: address,
         memoryWrite <: VmemoryWrite,

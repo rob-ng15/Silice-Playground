@@ -9,14 +9,11 @@ bitfield CU{
     uint6   colour
 }
 
-algorithm background(
+algorithm background_writer(
     input   uint10  pix_x,
     input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
-    output! uint6   pixel,
-
-    input   uint2  staticGenerator,
 
     input   uint6   backgroundcolour,
     input   uint6   backgroundcolour_alt,
@@ -32,23 +29,12 @@ algorithm background(
     input   uint10  copper_cpu_input,
     input   uint4   copper_mode,
     input   uint6   copper_alt,
-    input   uint6   copper_colour
-) <autorun> {
-    uint6   BACKGROUNDcolour = uninitialised;
-    uint6   BACKGROUNDalt = uninitialised;
-    uint4   BACKGROUNDmode = uninitialised;
-    background_display BACKGROUND(
-        pix_x <: pix_x,
-        pix_y <: pix_y,
-        pix_active <: pix_active,
-        pix_vblank <: pix_vblank,
-        pixel :> pixel,
-        staticGenerator <: staticGenerator,
-        b_colour <: BACKGROUNDcolour,
-        b_alt <: BACKGROUNDalt,
-        b_mode <: BACKGROUNDmode
-    );
+    input   uint6   copper_colour,
 
+    output  uint6   BACKGROUNDcolour,
+    output  uint6   BACKGROUNDalt,
+    output  uint4   BACKGROUNDmode
+) <autorun> {
     // BACKGROUND CO-PROCESSOR PROGRAM STORAGE
     // { 3 bit command, 3 bit mask, { 1 bit for cpuinput flag, 10 bit coordinate }, 4 bit mode, 6 bit colour 2, 6 bit colour 1 }
     simple_dualport_bram uint33 copper <input!> [ 64 ] = uninitialised;

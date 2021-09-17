@@ -471,6 +471,22 @@ algorithm background_memmap(
 
     input   uint2   static2bit
 ) <autorun> {
+    // BACKGROUND GENERATOR
+    uint6   BACKGROUNDcolour = uninitialised;
+    uint6   BACKGROUNDalt = uninitialised;
+    uint4   BACKGROUNDmode = uninitialised;
+    background_display BACKGROUND <@video_clock,!video_reset> (
+        pix_x <: pix_x,
+        pix_y <: pix_y,
+        pix_active <: pix_active,
+        pix_vblank <: pix_vblank,
+        pixel :> pixel,
+        staticGenerator <: static2bit,
+        b_colour <: BACKGROUNDcolour,
+        b_alt <: BACKGROUNDalt,
+        b_mode <: BACKGROUNDmode
+    );
+
     uint6   backgroundcolour = uninitialized;
     uint6   backgroundcolour_alt = uninitialized;
     uint4   backgroundcolour_mode = uninitialized;
@@ -485,13 +501,11 @@ algorithm background_memmap(
     uint4   copper_mode = uninitialized;
     uint6   copper_alt = uninitialized;
     uint6   copper_colour = uninitialized;
-    background background_generator <@video_clock,!video_reset>  (
+    background_writer BACKGROUND_WRITER <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: pix_active,
         pix_vblank <: pix_vblank,
-        pixel    :> pixel,
-        staticGenerator <: static2bit,
         backgroundcolour <: backgroundcolour,
         backgroundcolour_alt <: backgroundcolour_alt,
         backgroundcolour_mode <: backgroundcolour_mode,
@@ -505,7 +519,10 @@ algorithm background_memmap(
         copper_cpu_input <: copper_cpu_input,
         copper_mode <: copper_mode,
         copper_alt <: copper_alt,
-        copper_colour <: copper_colour
+        copper_colour <: copper_colour,
+        BACKGROUNDcolour :> BACKGROUNDcolour,
+        BACKGROUNDalt :> BACKGROUNDalt,
+        BACKGROUNDmode :> BACKGROUNDmode
     );
 
     // LATCH MEMORYWRITE
@@ -568,7 +585,38 @@ algorithm bitmap_memmap(
     output  uint1   vector_block_active,
     output  uint7   bitmap_colour_read
 ) <autorun> {
+    simple_dualport_bram uint1 bitmap_0A <@video_clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint1 bitmap_1A <@video_clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint2 bitmap_0R <@video_clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint2 bitmap_1R <@video_clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint2 bitmap_0G <@video_clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint2 bitmap_1G <@video_clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint2 bitmap_0B <@video_clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint2 bitmap_1B <@video_clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
+
+    // BITMAP DISPLAY
     uint1   framebuffer = uninitialized;
+    bitmap bitmap_window <@video_clock,!video_reset> (
+        bitmap_0A <:> bitmap_0A,
+        bitmap_1A <:> bitmap_1A,
+        bitmap_0R <:> bitmap_0R,
+        bitmap_1R <:> bitmap_1R,
+        bitmap_0G <:> bitmap_0G,
+        bitmap_1G <:> bitmap_1G,
+        bitmap_0B <:> bitmap_0B,
+        bitmap_1B <:> bitmap_1B,
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: pix_active,
+        pix_vblank <: pix_vblank,
+        pixel    :> pixel,
+        bitmap_display :> pixel_display,
+        bitmap_x_read <: bitmap_x_read,
+        bitmap_y_read <: bitmap_y_read,
+        framebuffer <: framebuffer
+   );
+
+    // BITMAP WRITER AND GPU
     uint1   writer_framebuffer = uninitialized;
     int11   bitmap_x_read = uninitialized;
     int11   bitmap_y_read = uninitialized;
@@ -615,22 +663,11 @@ algorithm bitmap_memmap(
     int6    vertices_writer_xdelta = uninitialized;
     int6    vertices_writer_ydelta = uninitialized;
     uint1   vertices_writer_active = uninitialized;
-    bitmap bitmap_window <@video_clock,!video_reset> (
-        gpu_clock <: gpu_clock,
-        pix_x      <: pix_x,
-        pix_y      <: pix_y,
-        pix_active <: pix_active,
-        pix_vblank <: pix_vblank,
-        pixel    :> pixel,
-        bitmap_display :> pixel_display,
-        static1bit <: static1bit,
-        static6bit <: static6bit,
-        gpu_queue_full :> gpu_queue_full,
-        gpu_queue_complete :> gpu_queue_complete,
-        vector_block_active :> vector_block_active,
-        bitmap_colour_read :> bitmap_colour_read,
-        bitmap_x_read <: bitmap_x_read,
-        bitmap_y_read <: bitmap_y_read,
+    bitmapwriter pixel_writer <@gpu_clock,!video_reset> (
+        crop_left <: gpu_crop_left,
+        crop_right <: gpu_crop_right,
+        crop_top <: gpu_crop_top,
+        crop_bottom <: gpu_crop_bottom,
         gpu_x <: gpu_x,
         gpu_y <: gpu_y,
         gpu_colour <: gpu_colour,
@@ -643,10 +680,6 @@ algorithm bitmap_memmap(
         gpu_param5 <: gpu_param5,
         gpu_write <: gpu_write,
         gpu_dithermode <: gpu_dithermode,
-        crop_left <: gpu_crop_left,
-        crop_right <: gpu_crop_right,
-        crop_top <: gpu_crop_top,
-        crop_bottom <: gpu_crop_bottom,
         blit1_writer_tile <: blit1_writer_tile,
         blit1_writer_line <: blit1_writer_line,
         blit1_writer_bitmap <: blit1_writer_bitmap,
@@ -674,9 +707,22 @@ algorithm bitmap_memmap(
         vertices_writer_xdelta <: vertices_writer_xdelta,
         vertices_writer_ydelta <: vertices_writer_ydelta,
         vertices_writer_active <: vertices_writer_active,
-        framebuffer <: framebuffer,
-        writer_framebuffer <: writer_framebuffer
-   );
+        framebuffer <: writer_framebuffer,
+        static1bit <: static1bit,
+        static6bit <: static6bit,
+        bitmap_0A <:> bitmap_0A,
+        bitmap_1A <:> bitmap_1A,
+        bitmap_0R <:> bitmap_0R,
+        bitmap_1R <:> bitmap_1R,
+        bitmap_0G <:> bitmap_0G,
+        bitmap_1G <:> bitmap_1G,
+        bitmap_0B <:> bitmap_0B,
+        bitmap_1B <:> bitmap_1B,
+        vector_block_active :> vector_block_active,
+        gpu_queue_full :> gpu_queue_full,
+        gpu_queue_complete :> gpu_queue_complete
+    );
+
 
     // LATCH MEMORYWRITE
     uint1   LATCHmemoryWrite = uninitialized;
@@ -788,31 +834,53 @@ algorithm charactermap_memmap(
     output  uint7   curses_background,
     output  uint6   curses_foreground
 ) <autorun> {
-    uint7   tpu_x = uninitialized;
+    // 80 x 30 character buffer
+    // Setting background to 40 (ALPHA) allows the bitmap/background to show through, charactermap { BOLD, character }
+    simple_dualport_bram uint9 charactermap <@video_clock,@video_clock,input!> [4800] = uninitialized;
+    simple_dualport_bram uint13 colourmap <@video_clock,@video_clock,input!> [4800] = uninitialized;
+
+    // CHARACTER MAP WRITER
+    int7    tpu_x = uninitialized;
     uint6   tpu_y = uninitialized;
     uint9   tpu_character = uninitialized;
     uint6   tpu_foreground = uninitialized;
     uint7   tpu_background = uninitialized;
     uint3   tpu_write = uninitialized;
-    uint1   tpu_showcursor = uninitialized;
-    character_map character_map_window <@video_clock,!video_reset> (
-        pix_x      <: pix_x,
-        pix_y      <: pix_y,
-        pix_active <: pix_active,
-        pix_vblank <: pix_vblank,
-        pixel    :> pixel,
-        character_map_display :> pixel_display,
-        tpu_active :> tpu_active,
-        curses_character :> curses_character,
-        curses_background :> curses_background,
-        curses_foreground :> curses_foreground,
+    uint7   cursor_x = uninitialized;
+    uint6   cursor_y = uninitialized;
+    character_map_writer CMW <@video_clock,!video_reset> (
+        charactermap <:> charactermap,
+        colourmap <:> colourmap,
         tpu_x <: tpu_x,
         tpu_y <: tpu_y,
         tpu_character <: tpu_character,
         tpu_foreground <: tpu_foreground,
         tpu_background <: tpu_background,
         tpu_write <: tpu_write,
-        tpu_showcursor <: tpu_showcursor
+        tpu_active :> tpu_active,
+        curses_character :> curses_character,
+        curses_background :> curses_background,
+        curses_foreground :> curses_foreground,
+        cursor_x :> cursor_x,
+        cursor_y :> cursor_y
+    );
+
+    // CHARACTER MAP DISPLAY
+    uint1   tpu_showcursor = uninitialized;
+    character_map character_map_window <@video_clock,!video_reset> (
+        charactermap <:> charactermap,
+        colourmap <:> colourmap,
+        pix_x      <: pix_x,
+        pix_y      <: pix_y,
+        pix_active <: pix_active,
+        pix_vblank <: pix_vblank,
+        pixel    :> pixel,
+        character_map_display :> pixel_display,
+        tpu_foreground <: tpu_foreground,
+        tpu_background <: tpu_background,
+        tpu_showcursor <: tpu_showcursor,
+        cursor_x <: cursor_x,
+        cursor_y <: cursor_y
     );
 
     // LATCH MEMORYWRITE
@@ -880,6 +948,11 @@ algorithm sprite_memmap(
         output uint4    layer_collision_$i$,
     $$end
 ) <autorun> {
+    $$for i=0,15 do
+        // Sprite Tiles
+        simple_dualport_bram uint16 tiles_$i$ <@video_clock,@video_clock,input!> [128] = uninitialised;
+    $$end
+
     uint4   sprite_set_number = uninitialized;
     uint1   sprite_set_active = uninitialized;
     uint3   sprite_set_double = uninitialized;
@@ -905,14 +978,27 @@ algorithm sprite_memmap(
         collision_layer_3 <: collision_layer_3,
         collision_layer_4 <: collision_layer_4,
         $$for i=0,15 do
+            sprite_read_active_$i$ <: sprite_read_active_$i$,
+            sprite_read_double_$i$ <: sprite_read_double_$i$,
+            sprite_read_colour_$i$ <: sprite_read_colour_$i$,
+            sprite_read_x_$i$ <: sprite_read_x_$i$,
+            sprite_read_y_$i$ <: sprite_read_y_$i$,
+            sprite_read_tile_$i$ <: sprite_read_tile_$i$,
+            collision_$i$ :> collision_$i$,
+            layer_collision_$i$ :> layer_collision_$i$,
+        $$end
+        $$for i=0,15 do
+            tiles_$i$ <:> tiles_$i$,
+        $$end
+    );
+    sprite_layer_writer SLW <@video_clock,!video_reset> (
+        $$for i=0,15 do
             sprite_read_active_$i$ :> sprite_read_active_$i$,
             sprite_read_double_$i$ :> sprite_read_double_$i$,
             sprite_read_colour_$i$ :> sprite_read_colour_$i$,
             sprite_read_x_$i$ :> sprite_read_x_$i$,
             sprite_read_y_$i$ :> sprite_read_y_$i$,
             sprite_read_tile_$i$ :> sprite_read_tile_$i$,
-            collision_$i$ :> collision_$i$,
-            layer_collision_$i$ :> layer_collision_$i$,
         $$end
         sprite_set_number  <: sprite_set_number,
         sprite_set_active  <: sprite_set_active,
@@ -922,11 +1008,18 @@ algorithm sprite_memmap(
         sprite_set_y  <: sprite_set_y,
         sprite_set_tile  <: sprite_set_tile,
         sprite_layer_write  <: sprite_layer_write,
-        sprite_update  <: sprite_update,
-        sprite_writer_sprite  <: sprite_writer_sprite,
-        sprite_writer_line  <: sprite_writer_line,
-        sprite_writer_bitmap  <: sprite_writer_bitmap,
-        sprite_writer_active  <: sprite_writer_active
+        sprite_update  <: sprite_update
+    );
+
+    // UPDATE THE SPRITE TILE BITMAPS
+    spritebitmapwriter SBMW <@video_clock,!video_reset> (
+        sprite_writer_sprite <: sprite_writer_sprite,
+        sprite_writer_line <: sprite_writer_line,
+        sprite_writer_bitmap <: sprite_writer_bitmap,
+        sprite_writer_active <: sprite_writer_active,
+        $$for i=0,15 do
+            tiles_$i$ <:> tiles_$i$,
+        $$end
     );
 
     // LATCH MEMORYWRITE
@@ -981,20 +1074,34 @@ algorithm terminal_memmap(
 
     output  uint2   terminal_active
 ) <autorun> {
+    // 80 x 4 character buffer for the input/output terminal
+    simple_dualport_bram uint8 terminal <@video_clock,@video_clock,input!> [640] = uninitialized;
+
     uint8   terminal_character = uninitialized;
     uint2   terminal_write = uninitialized;
     uint1   showterminal = 0;
     terminal terminal_window <@video_clock,!video_reset> (
+        terminal <:> terminal,
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: pix_active,
         pix_vblank <: pix_vblank,
         pixel    :> pixel,
         terminal_display :> pixel_display,
-        terminal_active :> terminal_active,
+        showterminal <: showterminal,
+        terminal_x <: terminal_x,
+        terminal_y <: terminal_y
+    );
+
+    uint7 terminal_x = uninitialised;
+    uint3 terminal_y = uninitialised;
+    terminal_writer TW <@video_clock,!video_reset> (
+        terminal <:> terminal,
         terminal_character <: terminal_character,
         terminal_write <: terminal_write,
-        showterminal <: showterminal
+        terminal_active :> terminal_active,
+        terminal_x :> terminal_x,
+        terminal_y :> terminal_y
     );
 
     // LATCH MEMORYWRITE
@@ -1039,6 +1146,13 @@ algorithm tilemap_memmap(
     output  uint4   tm_lastaction,
     output  uint2   tm_active
 ) <autorun> {
+    // Tiles 64 x 16 x 16
+    simple_dualport_bram uint16 tiles16x16 <@video_clock,@video_clock,input!> [ 1024 ] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, pad(uninitialized) };
+
+    // 42 x 32 tile map, allows for pixel scrolling with border { 2 bit reflection, 7 bits background, 6 bits foreground, 5 bits tile number }
+    simple_dualport_bram uint6 tiles <@video_clock,@video_clock,input!> [1344] = uninitialized;
+    simple_dualport_bram uint15 colours <@video_clock,@video_clock,input!> [1344] = uninitialized;
+
     uint6   tm_x = uninitialized;
     uint6   tm_y = uninitialized;
     uint6   tm_character = uninitialized;
@@ -1051,14 +1165,26 @@ algorithm tilemap_memmap(
     uint16  tile_writer_bitmap = uninitialized;
     uint4   tm_scrollwrap = uninitialized;
     tilemap tile_map <@video_clock,!video_reset> (
+        tiles16x16 <:> tiles16x16,
+        tiles <:> tiles,
+        colours <:> colours,
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: pix_active,
         pix_vblank <: pix_vblank,
         pixel    :> pixel,
+        tm_offset_x <: tm_offset_x,
+        tm_offset_y <: tm_offset_y,
         tilemap_display :> pixel_display,
-        tm_lastaction :> tm_lastaction,
-        tm_active :> tm_active,
+    );
+
+    // Scroll position - -15 to 0 to 15
+    // -15 or 15 will trigger appropriate scroll when next moved in that direction
+    int5    tm_offset_x = uninitialized;
+    int5    tm_offset_y = uninitialized;
+    tile_map_writer TMW <@video_clock,!video_reset> (
+        tiles <:> tiles,
+        colours <:> colours,
         tm_x <: tm_x,
         tm_y <: tm_y,
         tm_character <: tm_character,
@@ -1066,10 +1192,18 @@ algorithm tilemap_memmap(
         tm_background <: tm_background,
         tm_reflection <: tm_reflection,
         tm_write <: tm_write,
+        tm_offset_x :> tm_offset_x,
+        tm_offset_y :> tm_offset_y,
+        tm_scrollwrap <: tm_scrollwrap,
+        tm_lastaction :> tm_lastaction,
+        tm_active :> tm_active
+    );
+
+    tilebitmapwriter TBMW <@video_clock,!video_reset> (
         tile_writer_tile <: tile_writer_tile,
         tile_writer_line <: tile_writer_line,
         tile_writer_bitmap <: tile_writer_bitmap,
-        tm_scrollwrap <: tm_scrollwrap
+        tiles16x16 <:> tiles16x16
     );
 
      // LATCH MEMORYWRITE

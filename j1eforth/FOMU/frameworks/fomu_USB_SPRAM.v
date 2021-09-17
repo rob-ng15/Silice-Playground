@@ -217,7 +217,7 @@ module top(
 
 
     M_main __main(
-    .clock        (clk_usb),
+    .clock        (clk),
     .reset        (RST_q[0]),
     .out_rgbLED   ({rgbR, rgbG, rgbB}),
     .in_buttons   ({user_4, user_3, user_2, user_1}),

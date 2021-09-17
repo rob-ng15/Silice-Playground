@@ -3,7 +3,7 @@ rm build*
 
 silice -f frameworks/fomu_USB_SPRAM.v $1 -o build.v
 
-yosys -D HACKER=1 -p 'synth_ice40 -top top -json build.json' \
+yosys -D HACKER=1 -p 'synth_ice40 -abc2 -retime -relut -dsp -top top -json build.json' \
                         tinyfpga_bx_usbserial/usb/edge_detect.v \
                         tinyfpga_bx_usbserial/usb/serial.v \
                         tinyfpga_bx_usbserial/usb/usb_fs_in_arb.v \

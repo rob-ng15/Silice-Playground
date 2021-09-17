@@ -6,25 +6,14 @@ algorithm sprite_layer(
     output! uint6   pixel,
     output! uint1   sprite_layer_display,
 
-    // For setting sprite characteristics - MAIN ACCESS
-    input   uint4   sprite_set_number,
-    input   uint1   sprite_set_active,
-    input   uint3   sprite_set_double,
-    input   uint6   sprite_set_colour,
-    input   int11   sprite_set_x,
-    input   int11   sprite_set_y,
-    input   uint3   sprite_set_tile,
-    input   uint3   sprite_layer_write,
-    input   uint13  sprite_update,
-
     // For reading sprite characteristics
     $$for i=0,15 do
-        output  uint1   sprite_read_active_$i$,
-        output  uint3   sprite_read_double_$i$,
-        output  uint6   sprite_read_colour_$i$,
-        output  int11   sprite_read_x_$i$,
-        output  int11   sprite_read_y_$i$,
-        output  uint3   sprite_read_tile_$i$,
+        input   uint1   sprite_read_active_$i$,
+        input   uint3   sprite_read_double_$i$,
+        input   uint6   sprite_read_colour_$i$,
+        input   int11   sprite_read_x_$i$,
+        input   int11   sprite_read_y_$i$,
+        input   uint3   sprite_read_tile_$i$,
     $$end
 
     // FULL collision detection
@@ -38,68 +27,29 @@ algorithm sprite_layer(
         output uint4  layer_collision_$i$,
     $$end
 
-    // For setting sprite tile bitmaps
-    input   uint4   sprite_writer_sprite,
-    input   uint7   sprite_writer_line,
-    input   uint16  sprite_writer_bitmap,
-    input   uint1   sprite_writer_active
+    $$for i=0,15 do
+        simple_dualport_bram_port0 tiles_$i$,
+    $$end
 ) <autorun> {
-    // Storage for the sprites
-    // Stored as registers as needed instantly
-    uint1   sprite_active[16] = uninitialised;
-    uint3   sprite_double[16] = uninitialised;
-    int11   sprite_x[16] = uninitialised;
-    int11   sprite_y[16] = uninitialised;
-    uint6   sprite_colour[16] = uninitialised;
-    uint3   sprite_tile_number[16] = uninitialised;
     uint1   output_collisions = 0;
 
     $$for i=0,15 do
-        // Sprite Tiles
-        simple_dualport_bram uint16 tiles_$i$ <input!> [128] = uninitialised;
         uint1 pix_visible_$i$ = uninitialised;
+        // Set sprite generator parameters
         sprite_generator SPRITE_$i$(
             pix_x <: pix_x,
             pix_y <: pix_y,
             pix_visible :> pix_visible_$i$,
+            sprite_active <: sprite_read_active_$i$,
+            sprite_double <: sprite_read_double_$i$,
+            sprite_x <: sprite_read_x_$i$,
+            sprite_y <: sprite_read_y_$i$,
+            sprite_tile_number <: sprite_read_tile_$i$,
             tiles <:> tiles_$i$
         );
         // Collision detection flag
         uint16      detect_collision_$i$ = uninitialised;
         uint4       detect_layer_$i$ = uninitialised;
-    $$end
-
-    // UPDATE THE SPRITE TILE BITMAPS
-    spritebitmapwriter SBMW(
-        sprite_writer_sprite <: sprite_writer_sprite,
-        sprite_writer_line <: sprite_writer_line,
-        sprite_writer_bitmap <: sprite_writer_bitmap,
-        sprite_writer_active <: sprite_writer_active,
-        $$for i=0,15 do
-            tiles_$i$ <:> tiles_$i$,
-        $$end
-    );
-
-    int11   sprite_offscreen_negative = uninitialised;
-    int11   sprite_to_negative = uninitialised;
-    uint1   sprite_offscreen_x = uninitialised;
-    uint1   sprite_offscreen_y = uninitialised;
-
-    $$for i=0,15 do
-        // Set sprite generator parameters
-        SPRITE_$i$.sprite_active := sprite_active[$i$];
-        SPRITE_$i$.sprite_double := sprite_double[$i$];
-        SPRITE_$i$.sprite_x := sprite_x[$i$];
-        SPRITE_$i$.sprite_y := sprite_y[$i$];
-        SPRITE_$i$.sprite_tile_number := sprite_tile_number[$i$];
-
-        // For setting sprite read paramers
-        sprite_read_active_$i$ := sprite_active[$i$];
-        sprite_read_double_$i$ := sprite_double[$i$];
-        sprite_read_colour_$i$ := sprite_colour[$i$];
-        sprite_read_x_$i$ := sprite_x[$i$];
-        sprite_read_y_$i$ := sprite_y[$i$];
-        sprite_read_tile_$i$ := sprite_tile_number[$i$];
     $$end
 
     // Default to transparent
@@ -131,22 +81,22 @@ algorithm sprite_layer(
             case 0: {
                 switch( pix_active ) {
                     case 1: {
-                        pixel = pix_visible_15 ? sprite_colour[15] :
-                                    pix_visible_14 ? sprite_colour[14] :
-                                    pix_visible_13 ? sprite_colour[13] :
-                                    pix_visible_12 ? sprite_colour[12] :
-                                    pix_visible_11 ? sprite_colour[11] :
-                                    pix_visible_10 ? sprite_colour[10] :
-                                    pix_visible_9 ? sprite_colour[9] :
-                                    pix_visible_8 ? sprite_colour[8] :
-                                    pix_visible_7 ? sprite_colour[7] :
-                                    pix_visible_6 ? sprite_colour[6] :
-                                    pix_visible_5 ? sprite_colour[5] :
-                                    pix_visible_4 ? sprite_colour[4] :
-                                    pix_visible_3 ? sprite_colour[3] :
-                                    pix_visible_2 ? sprite_colour[2] :
-                                    pix_visible_1 ? sprite_colour[1] :
-                                    sprite_colour[0];
+                        pixel = pix_visible_15 ? sprite_read_colour_15 :
+                                    pix_visible_14 ? sprite_read_colour_14 :
+                                    pix_visible_13 ? sprite_read_colour_13 :
+                                    pix_visible_12 ? sprite_read_colour_12 :
+                                    pix_visible_11 ? sprite_read_colour_11 :
+                                    pix_visible_10 ? sprite_read_colour_10 :
+                                    pix_visible_9 ? sprite_read_colour_9 :
+                                    pix_visible_8 ? sprite_read_colour_8 :
+                                    pix_visible_7 ? sprite_read_colour_7 :
+                                    pix_visible_6 ? sprite_read_colour_6 :
+                                    pix_visible_5 ? sprite_read_colour_5 :
+                                    pix_visible_4 ? sprite_read_colour_4 :
+                                    pix_visible_3 ? sprite_read_colour_3 :
+                                    pix_visible_2 ? sprite_read_colour_2 :
+                                    pix_visible_1 ? sprite_read_colour_1 :
+                                    sprite_read_colour_0;
 
                         sprite_layer_display = pix_visible_15 | pix_visible_14 | pix_visible_13 | pix_visible_12 | pix_visible_11 | pix_visible_10 | pix_visible_9 | pix_visible_8 | pix_visible_7
                                                 | pix_visible_6 | pix_visible_5 |pix_visible_4 | pix_visible_3 | pix_visible_2 | pix_visible_1 | pix_visible_0;
@@ -175,6 +125,57 @@ algorithm sprite_layer(
                 }
             }
         }
+    }
+}
+
+algorithm sprite_layer_writer(
+    // For setting sprite characteristics
+    input   uint4   sprite_set_number,
+    input   uint1   sprite_set_active,
+    input   uint3   sprite_set_double,
+    input   uint6   sprite_set_colour,
+    input   int11   sprite_set_x,
+    input   int11   sprite_set_y,
+    input   uint3   sprite_set_tile,
+    input   uint3   sprite_layer_write,
+    input   uint13  sprite_update,
+
+    // For reading sprite characteristics
+    $$for i=0,15 do
+        output  uint1   sprite_read_active_$i$,
+        output  uint3   sprite_read_double_$i$,
+        output  uint6   sprite_read_colour_$i$,
+        output  int11   sprite_read_x_$i$,
+        output  int11   sprite_read_y_$i$,
+        output  uint3   sprite_read_tile_$i$,
+    $$end
+) <autorun> {
+    // Storage for the sprites
+    // Stored as registers as needed instantly
+    uint1   sprite_active[16] = uninitialised;
+    uint3   sprite_double[16] = uninitialised;
+    uint6   sprite_colour[16] = uninitialised;
+    int11   sprite_x[16] = uninitialised;
+    int11   sprite_y[16] = uninitialised;
+    uint3   sprite_tile_number[16] = uninitialised;
+    uint1   output_collisions = 0;
+
+    int11   sprite_offscreen_negative = uninitialised;
+    int11   sprite_to_negative = uninitialised;
+    uint1   sprite_offscreen_x = uninitialised;
+    uint1   sprite_offscreen_y = uninitialised;
+
+    $$for i=0,15 do
+        // For setting sprite read paramers
+        sprite_read_active_$i$ := sprite_active[$i$];
+        sprite_read_double_$i$ := sprite_double[$i$];
+        sprite_read_colour_$i$ := sprite_colour[$i$];
+        sprite_read_x_$i$ := sprite_x[$i$];
+        sprite_read_y_$i$ := sprite_y[$i$];
+        sprite_read_tile_$i$ := sprite_tile_number[$i$];
+    $$end
+
+    always {
         // SET ATTRIBUTES + PERFORM UPDATE
         switch( sprite_layer_write ) {
             default: {}

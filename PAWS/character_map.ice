@@ -1,4 +1,7 @@
 algorithm character_map(
+    simple_dualport_bram_port0 charactermap,
+    simple_dualport_bram_port0 colourmap,
+
     input   uint10  pix_x,
     input   uint10  pix_y,
     input   uint1   pix_active,
@@ -6,53 +9,20 @@ algorithm character_map(
     output! uint6   pixel,
     output! uint1   character_map_display,
 
-    input   uint7   tpu_x,
-    input   uint6   tpu_y,
-    input   uint9   tpu_character,
+    input   uint7   cursor_x,
+    input   uint6   cursor_y,
     input   uint6   tpu_foreground,
     input   uint7   tpu_background,
-    input   uint3   tpu_write,
-
-    output  uint2   tpu_active,
-    output  uint9   curses_character,
-    output  uint7   curses_background,
-    output  uint6   curses_foreground,
-
     input   uint1   tpu_showcursor
 ) <autorun> {
     // CURSOR CLOCK
     uint1   timer1hz = uninitialized;
     pulse1hz P1( counter1hz :> timer1hz );
 
-    // 80 x 30 character buffer
-    // Setting background to 40 (ALPHA) allows the bitmap/background to show through, charactermap { BOLD, character }
-    simple_dualport_bram uint9 charactermap <input!> [4800] = uninitialized;
-    simple_dualport_bram uint13 colourmap <input!> [4800] = uninitialized;
-
     // Character ROM 8x8
     brom uint8 characterGenerator8x8 <input!> [] = {
         $include('ROM/characterROM8x8.inc')
     };
-
-    // CHARACTER MAP WRITER
-    uint7   cursor_x = uninitialized;
-    uint6   cursor_y = uninitialized;
-    character_map_writer CMW(
-        charactermap <:> charactermap,
-        colourmap <:> colourmap,
-        tpu_x <: tpu_x,
-        tpu_y <: tpu_y,
-        tpu_character <: tpu_character,
-        tpu_foreground <: tpu_foreground,
-        tpu_background <: tpu_background,
-        tpu_write <: tpu_write,
-        tpu_active :> tpu_active,
-        curses_character :> curses_character,
-        curses_background :> curses_background,
-        curses_foreground :> curses_foreground,
-        cursor_x :> cursor_x,
-        cursor_y :> cursor_y
-    );
 
     // Character position on the screen x 0-79, y 0-59 * 80 ( fetch it two pixels ahead of the actual x pixel, so it is always ready )
     uint7   xcharacterpos <: ( pix_active ?  pix_x + 2 : 0 ) >> 3;

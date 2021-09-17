@@ -1,4 +1,6 @@
 algorithm terminal(
+    simple_dualport_bram_port0 terminal,
+
     input   uint10  pix_x,
     input   uint10  pix_y,
     input   uint1   pix_active,
@@ -6,10 +8,9 @@ algorithm terminal(
     output! uint6   pixel,
     output! uint1   terminal_display,
 
-    input   uint8   terminal_character,
-    input   uint2   terminal_write,
     input   uint1   showterminal,
-    output  uint2   terminal_active
+    input   uint7   terminal_x,
+    input   uint3   terminal_y
 ) <autorun> {
     // CURSOR CLOCK
     pulse1hz P1();
@@ -19,20 +20,6 @@ algorithm terminal(
     brom uint8 characterGenerator8x8[] = {
         $include('ROM/characterROM8x8nobold.inc')
     };
-
-    // 80 x 4 character buffer for the input/output terminal
-    simple_dualport_bram uint8 terminal <input!> [640] = uninitialized;
-
-    uint7 terminal_x = uninitialised;
-    uint3 terminal_y = uninitialised;
-    terminal_writer TW(
-        terminal <:> terminal,
-        terminal_character <: terminal_character,
-        terminal_write <: terminal_write,
-        terminal_active :> terminal_active,
-        terminal_x :> terminal_x,
-        terminal_y :> terminal_y
-    );
 
     // Character position on the terminal x 0-79, y 0-7 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
     uint7 xterminalpos <: ( pix_active ? pix_x + 2 : 0 ) >> 3;

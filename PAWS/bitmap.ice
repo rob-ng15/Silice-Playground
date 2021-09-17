@@ -1,7 +1,13 @@
 algorithm bitmap(
-    input   uint1   gpu_clock,
+    simple_dualport_bram_port0 bitmap_0A,
+    simple_dualport_bram_port0 bitmap_1A,
+    simple_dualport_bram_port0 bitmap_0R,
+    simple_dualport_bram_port0 bitmap_1R,
+    simple_dualport_bram_port0 bitmap_0G,
+    simple_dualport_bram_port0 bitmap_1G,
+    simple_dualport_bram_port0 bitmap_0B,
+    simple_dualport_bram_port0 bitmap_1B,
     input   uint1   framebuffer,
-    input   uint1   writer_framebuffer,
     input   uint10  pix_x,
     input   uint10  pix_y,
     input   uint1   pix_active,
@@ -9,151 +15,15 @@ algorithm bitmap(
     output! uint6   pixel,
     output! uint1   bitmap_display,
 
-    // STATIC GENERATOR
-    input   uint1   static1bit,
-    input   uint6   static6bit,
-
     // Pixel reader
     input   int11   bitmap_x_read,
     input   int11   bitmap_y_read,
-    output  uint7   bitmap_colour_read,
-
-    // GPU Parameters
-    input   int11   gpu_x,
-    input   int11   gpu_y,
-    input   uint7   gpu_colour,
-    input   uint7   gpu_colour_alt,
-    input   int11   gpu_param0,
-    input   int11   gpu_param1,
-    input   int11   gpu_param2,
-    input   int11   gpu_param3,
-    input   int11   gpu_param4,
-    input   int11   gpu_param5,
-    input   uint4   gpu_write,
-    input   uint4   gpu_dithermode,
-
-    // CROP RECTANGLE
-    input   uint9   crop_left,
-    input   uint9   crop_right,
-    input   uint8   crop_top,
-    input   uint8   crop_bottom,
-
-    // For setting blit1 tile bitmaps
-    input   uint5   blit1_writer_tile,
-    input   uint4   blit1_writer_line,
-    input   uint16  blit1_writer_bitmap,
-
-    // For setting character generator bitmaps
-    input   uint8   character_writer_character,
-    input   uint3   character_writer_line,
-    input   uint8   character_writer_bitmap,
-
-    // For set colourblit tile bitmaps
-    input   uint5   colourblit_writer_tile,
-    input   uint4   colourblit_writer_line,
-    input   uint4   colourblit_writer_pixel,
-    input   uint7   colourblit_writer_colour,
-
-    // Colours for the pixelblock
-    input   uint7   pb_colour7,
-    input   uint8   pb_colour8r,
-    input   uint8   pb_colour8g,
-    input   uint8   pb_colour8b,
-    input   uint2   pb_newpixel,
-
-    // VECTOR BLOCK
-    input   uint5   vector_block_number,
-    input   uint7   vector_block_colour,
-    input   int11   vector_block_xc,
-    input   int11   vector_block_yc,
-    input   uint3   vector_block_scale,
-    input   uint3   vector_block_action,
-    input   uint1   draw_vector,
-    // For setting vertices
-    input   uint5   vertices_writer_block,
-    input   uint6   vertices_writer_vertex,
-    input   int6    vertices_writer_xdelta,
-    input   int6    vertices_writer_ydelta,
-    input   uint1   vertices_writer_active,
-
-    output  uint1   gpu_queue_full,
-    output  uint1   gpu_queue_complete,
-    output  uint1   vector_block_active
+    output  uint7   bitmap_colour_read
 ) <autorun> {
-    simple_dualport_bram uint1 bitmap_0A <@clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
-    simple_dualport_bram uint1 bitmap_1A <@clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
-    simple_dualport_bram uint2 bitmap_0R <@clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
-    simple_dualport_bram uint2 bitmap_1R <@clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
-    simple_dualport_bram uint2 bitmap_0G <@clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
-    simple_dualport_bram uint2 bitmap_1G <@clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
-    simple_dualport_bram uint2 bitmap_0B <@clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
-    simple_dualport_bram uint2 bitmap_1B <@clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
-
     // Pixel x and y fetching 1 in advance due to bram latency
     uint9   x_plus_one <: pix_x[1,9] + pix_x[0,1];
     uint8   y_line <: pix_vblank ? 0 : pix_y[1,9];
     uint9   x_pixel <: pix_active ? x_plus_one : 0;
-
-    // BITMAP WRITER AND GPU
-    bitmapwriter pixel_writer <@gpu_clock> (
-        crop_left <: crop_left,
-        crop_right <: crop_right,
-        crop_top <: crop_top,
-        crop_bottom <: crop_bottom,
-        gpu_x <: gpu_x,
-        gpu_y <: gpu_y,
-        gpu_colour <: gpu_colour,
-        gpu_colour_alt <: gpu_colour_alt,
-        gpu_param0 <: gpu_param0,
-        gpu_param1 <: gpu_param1,
-        gpu_param2 <: gpu_param2,
-        gpu_param3 <: gpu_param3,
-        gpu_param4 <: gpu_param4,
-        gpu_param5 <: gpu_param5,
-        gpu_write <: gpu_write,
-        gpu_dithermode <: gpu_dithermode,
-        blit1_writer_tile <: blit1_writer_tile,
-        blit1_writer_line <: blit1_writer_line,
-        blit1_writer_bitmap <: blit1_writer_bitmap,
-        character_writer_character <: character_writer_character,
-        character_writer_line <: character_writer_line,
-        character_writer_bitmap <: character_writer_bitmap,
-        colourblit_writer_tile <: colourblit_writer_tile,
-        colourblit_writer_line <: colourblit_writer_line,
-        colourblit_writer_pixel <: colourblit_writer_pixel,
-        colourblit_writer_colour <: colourblit_writer_colour,
-        pb_colour7 <: pb_colour7,
-        pb_colour8r <: pb_colour8r,
-        pb_colour8g <: pb_colour8g,
-        pb_colour8b <: pb_colour8b,
-        pb_newpixel <: pb_newpixel,
-        vector_block_number <: vector_block_number,
-        vector_block_colour <: vector_block_colour,
-        vector_block_xc <: vector_block_xc,
-        vector_block_yc <: vector_block_yc,
-        vector_block_scale <: vector_block_scale,
-        vector_block_action <: vector_block_action,
-        draw_vector <: draw_vector,
-        vertices_writer_block <: vertices_writer_block,
-        vertices_writer_vertex <: vertices_writer_vertex,
-        vertices_writer_xdelta <: vertices_writer_xdelta,
-        vertices_writer_ydelta <: vertices_writer_ydelta,
-        vertices_writer_active <: vertices_writer_active,
-        framebuffer <: writer_framebuffer,
-        static1bit <: static1bit,
-        static6bit <: static6bit,
-        bitmap_0A <:> bitmap_0A,
-        bitmap_1A <:> bitmap_1A,
-        bitmap_0R <:> bitmap_0R,
-        bitmap_1R <:> bitmap_1R,
-        bitmap_0G <:> bitmap_0G,
-        bitmap_1G <:> bitmap_1G,
-        bitmap_0B <:> bitmap_0B,
-        bitmap_1B <:> bitmap_1B,
-        vector_block_active :> vector_block_active,
-        gpu_queue_full :> gpu_queue_full,
-        gpu_queue_complete :> gpu_queue_complete
-    );
 
     uint17  address <: y_line * 320 + x_pixel;
 
