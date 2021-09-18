@@ -68,10 +68,10 @@ algorithm classify(
     output  uint1   ZERO
 ) <autorun> {
     uint1   expFF <:: ( fp32(a).exponent == 8hff );
-    INF ::= expFF & ~a[22,1];
-    sNAN ::= expFF & a[22,1] & a[21,1];
-    qNAN ::= expFF & a[22,1] & ~a[21,1];
-    ZERO ::= ( fp32(a).exponent == 0 );
+    INF := expFF & ~a[22,1];
+    sNAN := expFF & a[22,1] & a[21,1];
+    qNAN := expFF & a[22,1] & ~a[21,1];
+    ZERO := ( fp32(a).exponent == 0 );
 }
 
 // ALGORITHMS TO DEAL WITH 48 BIT FRACTIONS TO 23 BIT FRACTIONS
@@ -137,10 +137,10 @@ algorithm doround48(
     output  uint23  roundfraction,
     output  int10   newexponent
 ) <autorun> {
-    always {
-        roundfraction = bitstream[24,23] + bitstream[23,1];
-        newexponent = 127 + exponent + ( ( roundfraction == 0 ) & bitstream[23,1] );
-    }
+    //always {
+        roundfraction := bitstream[24,23] + bitstream[23,1];
+        newexponent := 127 + exponent + ( ( roundfraction == 0 ) & bitstream[23,1] );
+    //}
 }
 
 // COMBINE COMPONENTS INTO FLOATING POINT NUMBER
@@ -153,10 +153,10 @@ algorithm docombinecomponents32(
     output  uint1   UF,
     output  uint32  f32
 ) <autorun> {
-    always {
-        OF = ( exp > 254 ); UF = exp[9,1];
-        f32 = UF ? 0 : OF ? { sign, 8b11111111, 23h0 } : { sign, exp[0,8], fraction[0,23] };
-    }
+    //always {
+        OF := ( exp > 254 ); UF := exp[9,1];
+        f32 := UF ? 0 : OF ? { sign, 8b11111111, 23h0 } : { sign, exp[0,8], fraction[0,23] };
+    //}
 }
 
 // CONVERT SIGNED/UNSIGNED INTEGERS TO FLOAT
@@ -187,7 +187,7 @@ algorithm inttofloat(
         UF :> cUF,
         f32 :> f32
     );
-    flags ::= { 4b0, OF, UF, NX };
+    flags := { 4b0, OF, UF, NX };
 
     while(1) {
         if( start ) {
@@ -231,7 +231,7 @@ algorithm floattoint(
         ZERO :> aZERO
     );
 
-    flags ::= { IF, NN, NV, 4b0000 };
+    flags := { IF, NN, NV, 4b0000 };
     always {
         switch( { IF | NN, aZERO } ) {
             case 2b00: { NV = ( exp > 30 ); result = NV ? { fp32( a ).sign, 31h7fffffff } : fp32( a ).sign ? -( sig[1,32] + sig[0,1] ) : ( sig[1,32] + sig[0,1] ); }
@@ -435,7 +435,7 @@ algorithm floataddsub(
         f32 :> f32
     );
 
-    NORMALISEstart := 0; flags ::= { IF, NN, NV, 1b0, OF, UF, 1b0 };
+    NORMALISEstart := 0; flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
     while(1) {
         if( start ) {
             busy = 1;
@@ -471,9 +471,9 @@ algorithm dofloatmul(
     input   uint24  factor_2,
     output  uint48  product
 ) <autorun> {
-    always {
-        product = factor_1 * factor_2;
-    }
+    //always {
+        product := factor_1 * factor_2;
+    //}
 }
 algorithm floatmultiply(
     input   uint1   start,
@@ -552,7 +552,7 @@ algorithm floatmultiply(
         f32 :> f32
     );
 
-    flags ::= { IF, NN, NV, 1b0, OF, UF, 1b0 };
+    flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
     while(1) {
         if( start ) {
             busy = 1;
@@ -696,7 +696,7 @@ algorithm floatdivide(
         f32 :> f32
     );
 
-    DODIVIDEstart := 0; NORMALISEstart := 0; flags ::= { IF, NN, 1b0, DZ, OF, UF, 1b0};
+    DODIVIDEstart := 0; NORMALISEstart := 0; flags := { IF, NN, 1b0, DZ, OF, UF, 1b0};
     while(1) {
         if( start ) {
             busy = 1;
@@ -834,7 +834,7 @@ algorithm floatsqrt(
         f32 :> f32
     );
 
-    DOSQRTstart := 0; flags ::= { IF, NN, NV, 1b0, OF, UF, 1b0 };
+    DOSQRTstart := 0; flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
     while(1) {
         if( start ) {
             busy = 1;
@@ -931,16 +931,16 @@ algorithm floatcompare(
     );
 
     // IDENTIFY NaN, RETURN 0 IF NAN, OTHERWISE RESULT OF COMPARISONS
-    flags ::= { aINF | bINF, asNAN | bsNAN | aqNAN | bqNAN, asNAN | bsNAN | aqNAN | bqNAN, 4b0000 };
-    always {
+    flags := { aINF | bINF, asNAN | bsNAN | aqNAN | bqNAN, asNAN | bsNAN | aqNAN | bqNAN, 4b0000 };
+    //always {
         //flags = { aINF | bINF, asNAN | bsNAN | aqNAN | bqNAN, asNAN | bsNAN | aqNAN | bqNAN, 4b0000 };
-        if( flags[5,1] ) {
+        //if( flags[5,1] ) {
             // NAN
-            less = 0;
-            equal = 0;
-        } else {
-            less = ( fp32( a ).sign != fp32( b ).sign ) ? fp32( a ).sign & ((( a | b ) << 1) != 0 ) : ( a != b ) & ( fp32( a ).sign ^ ( a < b));
-            equal = ( a == b ) | ((( a | b ) << 1) == 0 );
-        }
-    }
+            //less = 0;
+            //equal = 0;
+        //} else {
+            less := flags[5,1] ? 0 : ( fp32( a ).sign != fp32( b ).sign ) ? fp32( a ).sign & ((( a | b ) << 1) != 0 ) : ( a != b ) & ( fp32( a ).sign ^ ( a < b));
+            equal := flags[5,1] ? 0 : ( a == b ) | ((( a | b ) << 1) == 0 );
+        //}
+    //}
 }

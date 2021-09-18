@@ -66,9 +66,9 @@ algorithm multiplex_display(
             pix_green = { {4{pixel[2,2]}} };
             pix_blue  = { {4{pixel[0,2]}} };
         } else {
-            pix_red   = { pixel[4,2], pixel[0,6] };
-            pix_green = { pixel[4,2], pixel[0,6] };
-            pix_blue  = { pixel[4,2], pixel[0,6] };
+            pix_red   = { pixel[0,6], pixel[0,2] };
+            pix_green = { pixel[0,6], pixel[0,2] };
+            pix_blue  = { pixel[0,6], pixel[0,2] };
         }
     }
 }
@@ -91,7 +91,6 @@ algorithm selectlayer(
     input   uint1   upper_tilemap_display,
     input   uint6   upper_tilemap,
     input   uint6   background,
-
     output! uint6   pix
 ) <autorun> {
     always {

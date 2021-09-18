@@ -52,6 +52,14 @@ algorithm sprite_layer(
         uint4       detect_layer_$i$ = uninitialised;
     $$end
 
+    // Collisions in frame
+    uint4   layer_collision_frame := { collision_layer_1, collision_layer_2, collision_layer_3, collision_layer_4 };
+    uint16  sprite_collision_frame := { pix_visible_15, pix_visible_14, pix_visible_13, pix_visible_12, pix_visible_11,
+                                        pix_visible_10, pix_visible_9, pix_visible_8, pix_visible_7,
+                                        pix_visible_6, pix_visible_5, pix_visible_4, pix_visible_3,
+                                        pix_visible_2, pix_visible_1, pix_visible_0
+                                      };
+
     // Default to transparent
     sprite_layer_display := pix_active & ( pix_visible_15 | pix_visible_14 | pix_visible_13 | pix_visible_12 | pix_visible_11 | pix_visible_10 | pix_visible_9 | pix_visible_8 | pix_visible_7
                                         | pix_visible_6 | pix_visible_5 |pix_visible_4 | pix_visible_3 | pix_visible_2 | pix_visible_1 | pix_visible_0 );
@@ -104,13 +112,8 @@ algorithm sprite_layer(
                         $$for i=0,15 do
                             // UPDATE COLLISION DETECTION FLAGS
                             if( pix_visible_$i$ ) {
-                                detect_layer_$i$ = detect_layer_$i$ | { collision_layer_1, collision_layer_2, collision_layer_3, collision_layer_4 };
-                                detect_collision_$i$ = detect_collision_$i$ | {
-                                                    pix_visible_15, pix_visible_14, pix_visible_13, pix_visible_12, pix_visible_11,
-                                                    pix_visible_10, pix_visible_9, pix_visible_8, pix_visible_7,
-                                                    pix_visible_6, pix_visible_5, pix_visible_4, pix_visible_3,
-                                                    pix_visible_2, pix_visible_1, pix_visible_0
-                                                };
+                                detect_layer_$i$ = detect_layer_$i$ | layer_collision_frame;
+                                detect_collision_$i$ = detect_collision_$i$ | sprite_collision_frame;
 
                                 // UPDATE CPU READABLE FLAGS DURING THE FRAME
                                 collision_$i$ = collision_$i$ | detect_collision_$i$;
@@ -126,6 +129,34 @@ algorithm sprite_layer(
             }
         }
     }
+}
+
+algorithm sprite_generator(
+    input   uint10  pix_x,
+    input   uint10  pix_y,
+    input   uint1   sprite_active,
+    input   uint3   sprite_double,
+    input   int11   sprite_x,
+    input   int11   sprite_y,
+    input   uint3   sprite_tile_number,
+    simple_dualport_bram_port0 tiles,
+    output! uint1   pix_visible
+) <autorun> {
+    int11   x <: { 1b0, pix_x };
+    int11   y <: { 1b0, pix_y };
+
+    // Calculate position in sprite, handling reflection and doubling
+    uint6 spritesize <: sprite_double[0,1] ? 32 : 16;
+    uint1 xinrange <: ( x >= __signed(sprite_x) ) & ( x < __signed( sprite_x + spritesize ) );
+    uint1 yinrange <: ( y >= __signed(sprite_y) ) & ( y < __signed( sprite_y + spritesize) );
+    uint4 yinsprite <: sprite_double[2,1] ? 15 - ( ( y - sprite_y ) >>> sprite_double[0,1] ) : ( y - sprite_y ) >>> sprite_double[0,1];
+    uint4 xinsprite <: sprite_double[1,1] ? (( ( x - sprite_x ) >>> sprite_double[0,1] ) ) : ( 15  - ( ( x - sprite_x ) >>> sprite_double[0,1] ) );
+
+    // READ ADDRESS FOR SPRITE
+    tiles.addr0 := { sprite_tile_number, yinsprite };
+
+    // Determine if pixel is visible
+    pix_visible := sprite_active & xinrange & yinrange & ( tiles.rdata0[ xinsprite, 1 ] );
 }
 
 algorithm sprite_layer_writer(
@@ -202,33 +233,6 @@ algorithm sprite_layer_writer(
             }
         }
     }
-}
-
-algorithm sprite_generator(
-    input   uint10  pix_x,
-    input   uint10  pix_y,
-    input   uint1   sprite_active,
-    input   uint3   sprite_double,
-    input   int11   sprite_x,
-    input   int11   sprite_y,
-    input   uint3   sprite_tile_number,
-    simple_dualport_bram_port0 tiles,
-    output! uint1   pix_visible
-) <autorun> {
-    int11   x <: { 1b0, pix_x };
-    int11   y <: { 1b0, pix_y };
-    // Calculate position in sprite
-    uint6 spritesize <: sprite_double[0,1] ? 32 : 16;
-    uint1 xinrange <: ( x >= __signed(sprite_x) ) & ( x < __signed( sprite_x + spritesize ) );
-    uint1 yinrange <: ( y >= __signed(sprite_y) ) & ( y < __signed( sprite_y + spritesize) );
-    uint4 yinsprite <: sprite_double[2,1] ? 15 - ( ( y - sprite_y ) >>> sprite_double[0,1] ) : ( y - sprite_y ) >>> sprite_double[0,1];
-    uint4 xinsprite <: sprite_double[1,1] ? (( ( x - sprite_x ) >>> sprite_double[0,1] ) ) : ( 15  - ( ( x - sprite_x ) >>> sprite_double[0,1] ) );
-
-    // READ ADDRESS FOR SPRITE
-    tiles.addr0 := { sprite_tile_number, yinsprite };
-
-    // Determine if pixel is visible
-    pix_visible := sprite_active & xinrange & yinrange & ( tiles.rdata0[ xinsprite, 1 ] );
 }
 
 algorithm spritebitmapwriter(

@@ -159,8 +159,10 @@ $$end
     }
 
     // DISBLE SMT ON STARTUP
-    SMTRUNNING = 0;
-    SMTSTARTPC = 0;
+    if( ~reset ) {
+        SMTRUNNING = 0;
+        SMTSTARTPC = 0;
+    }
 
 $$if not SIMULATION then
     // KEYBOARD DEFAULTS TO JOYSTICK MODE
@@ -555,11 +557,11 @@ algorithm sdcardbuffer(
     );
 
     // SDCARD Commands
-    always {
-        sdcio.read_sector = readsector;
-        sdcio.addr_sector = { sectoraddressH, sectoraddressL };
-        sdbuffer.addr0 = bufferaddress;
-        ready = sdcio.ready;
-        bufferdata = sdbuffer.rdata0;
-    }
+    //always {
+        sdcio.read_sector := readsector;
+        sdcio.addr_sector := { sectoraddressH, sectoraddressL };
+        sdbuffer.addr0 := bufferaddress;
+        ready := sdcio.ready;
+        bufferdata := sdbuffer.rdata0;
+    //}
 }

@@ -191,7 +191,7 @@ $$end
     uint1   SMTRUNNING = uninitialized;
     uint32  SMTSTARTPC = uninitialized;
     uint16  IOreadData = uninitialized;
-    io_memmap IO_Map <@clock_io,!reset> (
+    io_memmap IO_Map <@clock_system,!reset> (
         leds :> leds,
 $$if not SIMULATION then
         gn <: gn,
@@ -223,7 +223,7 @@ $$if SIMULATION then
     uint4 audio_r(0);
 $$end
     uint16  ATreadData = uninitialized;
-    audiotimers_memmap AUDIOTIMERS_Map <@clock_io,!reset> (
+    audiotimers_memmap AUDIOTIMERS_Map <@clock_system,!reset> (
         clock_25mhz <: $clock_25mhz$,
         memoryAddress <: address,
         memoryWrite <: ATmemoryWrite,
@@ -235,7 +235,7 @@ $$end
     );
 
     uint16  VreadData = uninitialized;
-    video_memmap VIDEO_Map <@clock_io,!reset> (
+    video_memmap VIDEO_Map <@clock_system,!reset> (
         clock_25mhz <: $clock_25mhz$,
         memoryAddress <: address,
         memoryWrite <: VmemoryWrite,
