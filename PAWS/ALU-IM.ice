@@ -1,87 +1,4 @@
 // ALU - ALU for immediate-register operations and register-register operations
-algorithm op000(
-    input   uint32  sourceReg1,
-    input   uint32  sourceReg2,
-    input   uint32  operand2,
-    input   uint1   addsub,
-    output  uint32  result
-) <autorun> {
-    always {
-        result = sourceReg1 + ( addsub ? -( sourceReg2 ) : operand2 );
-    }
-}
-algorithm op001(
-    input   uint32  sourceReg1,
-    input   uint5   shiftcount,
-    output  uint32  result
-) <autorun> {
-    always {
-        result = sourceReg1 << shiftcount;
-    }
-}
-algorithm op010(
-    input   uint32  sourceReg1,
-    input   uint32  operand2,
-    output  uint32  result
-) <autorun> {
-    always {
-        result =  __signed( sourceReg1 ) < __signed(operand2);
-    }
-}
-algorithm op011(
-    input   uint32  sourceReg1,
-    input   uint32  operand2,
-    input   uint5   rs1,
-    input   uint1   regimm,
-    output  uint32  result
-) <autorun> {
-    always {
-        result = regimm ? ( rs1 == 0 ) ? ( operand2 != 0 ) : __unsigned( sourceReg1 ) < __unsigned( operand2 ) :
-                    ( operand2 == 1 ) ? ( sourceReg1 == 0 ) : ( __unsigned( sourceReg1 ) < __unsigned( operand2 ) );
-    }
-}
-algorithm op100(
-    input   uint32  sourceReg1,
-    input   uint32  operand2,
-    output  uint32  result
-) <autorun> {
-    always {
-        result = sourceReg1 ^ operand2;
-    }
-}
-algorithm op101(
-    input   uint32  sourceReg1,
-    input   uint5   shiftcount,
-    input   uint1   srlsra,
-    output  uint32  result
-) <autorun> {
-    always {
-        if( srlsra ) {
-            result = __signed(sourceReg1) >>> shiftcount;
-        } else {
-            result = sourceReg1 >> shiftcount;
-        }
-    }
-}
-algorithm op110(
-    input   uint32  sourceReg1,
-    input   uint32  operand2,
-    output  uint32  result
-) <autorun> {
-    always {
-        result = sourceReg1 | operand2;
-    }
-}
-algorithm op111(
-    input   uint32  sourceReg1,
-    input   uint32  operand2,
-    output  uint32  result
-) <autorun> {
-    always {
-        result = sourceReg1 & operand2;
-    }
-}
-
 algorithm alu(
     input   uint7   opCode,
     input   uint3   function3,
@@ -99,34 +16,25 @@ algorithm alu(
     uint1   addsub <:: regimm & function75;
     uint5   shiftcount <:: regimm ? sourceReg2[0,5] : rs2;
     uint32  operand2 <:: regimm ? sourceReg2 : immediateValue;
-
-    uint32  result000 = uninitialised;
-    uint32  result001 = uninitialised;
-    uint32  result010 = uninitialised;
-    uint32  result011 = uninitialised;
-    uint32  result100 = uninitialised;
-    uint32  result101 = uninitialised;
-    uint32  result110 = uninitialised;
-    uint32  result111 = uninitialised;
-    op000 OP000( sourceReg1 <: sourceReg1, sourceReg2 <: sourceReg2, operand2 <: operand2, addsub <: addsub, result :> result000 );
-    op001 OP001( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, result :> result001 );
-    op010 OP010( sourceReg1 <: sourceReg1, operand2 <: operand2, result :> result010 );
-    op011 OP011( sourceReg1 <: sourceReg1, operand2 <: operand2, rs1 <: rs1, regimm <: regimm, result :> result011 );
-    op100 OP100( sourceReg1 <: sourceReg1, operand2 <: operand2, result :> result100 );
-    op101 OP101( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, srlsra <: function75, result :> result101 );
-    op110 OP110( sourceReg1 <: sourceReg1, operand2 <: operand2, result :> result110 );
-    op111 OP111( sourceReg1 <: sourceReg1, operand2 <: operand2, result :> result111 );
-
+    uint32  negsourceReg2 <:: -sourceReg2;
+    uint1   unsignedcompare <:: __unsigned( sourceReg1 ) < __unsigned( operand2 );
     always {
         switch( function3 ) {
-            case 3b000: { result = result000; }
-            case 3b001: { result = result001; }
-            case 3b010: { result = result010; }
-            case 3b011: { result = result011; }
-            case 3b100: { result = result100; }
-            case 3b101: { result = result101; }
-            case 3b110: { result = result110; }
-            case 3b111: { result = result111; }
+            case 3b000: { result = sourceReg1 + ( addsub ? negsourceReg2 : operand2 ); }
+            case 3b001: { result = sourceReg1 << shiftcount; }
+            case 3b010: { result =  __signed( sourceReg1 ) < __signed(operand2); }
+            case 3b011: { result = regimm ? ( rs1 == 0 ) ? ( operand2 != 0 ) : unsignedcompare :
+                            ( operand2 == 1 ) ? ( sourceReg1 == 0 ) : unsignedcompare; }
+            case 3b100: { result = sourceReg1 ^ operand2; }
+            case 3b101: {
+                if( function75 ) {
+                    result = __signed(sourceReg1) >>> shiftcount;
+                } else {
+                    result = sourceReg1 >> shiftcount;
+                }
+            }
+            case 3b110: { result = sourceReg1 | operand2; }
+            case 3b111: { result = sourceReg1 & operand2; }
         }
     }
 }
@@ -149,7 +57,7 @@ algorithm douintdivide(
     while(1) {
         if( start ) {
             bit = 31; quotient = 0; remainder = 0;
-            while( bit != 63 ) {
+            while( busy ) {
                 quotient[bit,1] = bitresult;
                 remainder = __unsigned(temporary) - ( bitresult ? __unsigned(divisor) : 0 );
                 bit = bit - 1;

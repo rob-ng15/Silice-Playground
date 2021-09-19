@@ -41,7 +41,7 @@ algorithm ps2ascii(
     uint1   ALT <:: lalt | ralt;
     uint1   CAPITAL <:: ( lshift | rshift ) ^ capslock;
 
-    uint8   LETTERMOD <:: CTRL ? 8h00 : CAPITAL ? 8h40 : 8h60;
+    uint8   LETTERMOD <:: CTRL ? 8h00 : CAPTIAL ? 8h40 : 8h60;
 
     uint1   startbreak = 0;
     uint1   startmulti = 0;
@@ -69,32 +69,32 @@ algorithm ps2ascii(
                         case 2b00: {
                             // KEY PRESS - TRANSLATE TO ASCII
                             switch( ps2keycode ) {
-                                case 8h1c: { newascii = LETTERMOD | 8h01; }                     // A to Z
-                                case 8h32: { newascii = LETTERMOD | 8h02; }
-                                case 8h21: { newascii = LETTERMOD | 8h03; }
-                                case 8h23: { newascii = LETTERMOD | 8h04; }
-                                case 8h24: { newascii = LETTERMOD | 8h05; }
-                                case 8h2b: { newascii = LETTERMOD | 8h06; }
-                                case 8h34: { newascii = LETTERMOD | 8h07; }
-                                case 8h33: { newascii = LETTERMOD | 8h08; }
-                                case 8h43: { newascii = LETTERMOD | 8h09; }
-                                case 8h3b: { newascii = LETTERMOD | 8h0a; }
-                                case 8h42: { newascii = LETTERMOD | 8h0b; }
-                                case 8h4b: { newascii = LETTERMOD | 8h0c; }
-                                case 8h3a: { newascii = LETTERMOD | 8h0d; }
-                                case 8h31: { newascii = LETTERMOD | 8h0e; }
-                                case 8h44: { newascii = LETTERMOD | 8h0f; }
-                                case 8h4d: { newascii = LETTERMOD | 8h10; }
-                                case 8h15: { newascii = LETTERMOD | 8h11; }
-                                case 8h2d: { newascii = LETTERMOD | 8h12; }
-                                case 8h1b: { newascii = LETTERMOD | 8h13; }
-                                case 8h2c: { newascii = LETTERMOD | 8h14; }
-                                case 8h3c: { newascii = LETTERMOD | 8h15; }
-                                case 8h2a: { newascii = LETTERMOD | 8h16; }
-                                case 8h1d: { newascii = LETTERMOD | 8h17; }
-                                case 8h22: { newascii = LETTERMOD | 8h18; }
-                                case 8h35: { newascii = LETTERMOD | 8h19; }
-                                case 8h1a: { newascii = LETTERMOD | 8h1a; }
+                                case 8h1c: { newascii = CTRL ? 8h01 : CAPITAL ? 8h41 : 8h61; }  // A to Z
+                                case 8h32: { newascii = CTRL ? 8h02 : CAPITAL ? 8h42 : 8h62; }
+                                case 8h21: { newascii = CTRL ? 8h03 : CAPITAL ? 8h43 : 8h63; }
+                                case 8h23: { newascii = CTRL ? 8h04 : CAPITAL ? 8h44 : 8h64; }
+                                case 8h24: { newascii = CTRL ? 8h05 : CAPITAL ? 8h45 : 8h65; }
+                                case 8h2b: { newascii = CTRL ? 8h06 : CAPITAL ? 8h46 : 8h66; }
+                                case 8h34: { newascii = CTRL ? 8h07 : CAPITAL ? 8h47 : 8h67; }
+                                case 8h33: { newascii = CTRL ? 8h08 : CAPITAL ? 8h48 : 8h68; }
+                                case 8h43: { newascii = CTRL ? 8h09 : CAPITAL ? 8h49 : 8h69; }
+                                case 8h3b: { newascii = CTRL ? 8h0a : CAPITAL ? 8h4a : 8h6a; }
+                                case 8h42: { newascii = CTRL ? 8h0b : CAPITAL ? 8h4b : 8h6b; }
+                                case 8h4b: { newascii = CTRL ? 8h0c : CAPITAL ? 8h4c : 8h6c; }
+                                case 8h3a: { newascii = CTRL ? 8h0d : CAPITAL ? 8h4d : 8h6d; }
+                                case 8h31: { newascii = CTRL ? 8h0e : CAPITAL ? 8h4e : 8h6e; }
+                                case 8h44: { newascii = CTRL ? 8h0f : CAPITAL ? 8h4f : 8h6f; }
+                                case 8h4d: { newascii = CTRL ? 8h10 : CAPITAL ? 8h50 : 8h70; }
+                                case 8h15: { newascii = CTRL ? 8h11 : CAPITAL ? 8h51 : 8h71; }
+                                case 8h2d: { newascii = CTRL ? 8h12 : CAPITAL ? 8h52 : 8h72; }
+                                case 8h1b: { newascii = CTRL ? 8h13 : CAPITAL ? 8h53 : 8h73; }
+                                case 8h2c: { newascii = CTRL ? 8h14 : CAPITAL ? 8h54 : 8h74; }
+                                case 8h3c: { newascii = CTRL ? 8h15 : CAPITAL ? 8h55 : 8h75; }
+                                case 8h2a: { newascii = CTRL ? 8h16 : CAPITAL ? 8h56 : 8h76; }
+                                case 8h1d: { newascii = CTRL ? 8h17 : CAPITAL ? 8h57 : 8h77; }
+                                case 8h22: { newascii = CTRL ? 8h18 : CAPITAL ? 8h58 : 8h78; }
+                                case 8h35: { newascii = CTRL ? 8h19 : CAPITAL ? 8h59 : 8h79; }
+                                case 8h1a: { newascii = CTRL ? 8h1a : CAPITAL ? 8h5a : 8h7a; }
                                 case 8h54: { newascii = CTRL ? 8h1b : SHIFT ? 8h7b : 8h5b; }    // [ {
                                 case 8h5d: { newascii = CTRL ? 8h1c : SHIFT ? 8h7e : 8h23; }    // # ~
                                 case 8h5b: { newascii = CTRL ? 8h1d : SHIFT ? 8h7d : 8h5d; }    // ] }

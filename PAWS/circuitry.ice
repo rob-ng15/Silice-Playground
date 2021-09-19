@@ -1,20 +1,3 @@
-// MIN[U] MAX[U] curcuits
-circuitry min( input value1, input value2, output minimum ) {
-    minimum = ( __signed(value1) < __signed(value2) ) ? value1 : value2;
-}
-circuitry minu( input value1, input value2, output minimum
-) {
-    minimum = ( __unsigned(value1) < __unsigned(value2) ) ? value1 : value2;
-}
-circuitry max( input value1, input value2, output maximum
-) {
-    maximum = ( __signed(value1) > __signed(value2) ) ? value1 : value2;
-}
-circuitry maxu( input value1, input value2, output maximum
-) {
-    maximum = ( __unsigned(value1) > __unsigned(value2) ) ? value1 : value2;
-}
-
 // ABSOLUTE DELTA ( DIFFERENCE )
 circuitry absdelta( input value1, input value2, output delta ) {
     delta = ( __signed(value1) < __signed(value2) ) ? value2 - value1 : value1 - value2;

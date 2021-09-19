@@ -1373,7 +1373,7 @@ unsigned int filebrowser( char *message, char *extension, int startdirectoryclus
     }
 }
 
-unsigned char *sdcard_selectfile( char *message, char *extension, unsigned int *filesize ) {
+unsigned char *sdcard_selectfile( char *message, char *extension, unsigned int *filesize, char *afterloading ) {
     unsigned int starting_cluster;
 
     *filesize = 0;
@@ -1402,6 +1402,7 @@ unsigned char *sdcard_selectfile( char *message, char *extension, unsigned int *
         if( copyaddress ) {
             gpu_outputstringcentre( WHITE, 224, 0, "Loading File", 0 );
             readfile( starting_cluster, copyaddress );
+            gpu_outputstringcentre( WHITE, 224, 0, afterloading, 0 );
             return( copyaddress );
         } else {
             gpu_outputstringcentre( WHITE, 224, 1, "Insufficient Memory", 0 );

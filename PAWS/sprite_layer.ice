@@ -12,7 +12,7 @@ algorithm sprite_layer(
         input   uint3   sprite_read_double_$i$,
         input   uint6   sprite_read_colour_$i$,
         input   int11   sprite_read_x_$i$,
-        input   int11   sprite_read_y_$i$,
+        input   int10   sprite_read_y_$i$,
         input   uint3   sprite_read_tile_$i$,
     $$end
 
@@ -61,71 +61,61 @@ algorithm sprite_layer(
                                       };
 
     // Default to transparent
-    sprite_layer_display := pix_active & ( pix_visible_15 | pix_visible_14 | pix_visible_13 | pix_visible_12 | pix_visible_11 | pix_visible_10 | pix_visible_9 | pix_visible_8 | pix_visible_7
-                                        | pix_visible_6 | pix_visible_5 |pix_visible_4 | pix_visible_3 | pix_visible_2 | pix_visible_1 | pix_visible_0 );
+    sprite_layer_display := pix_active & ( sprite_collision_frame != 0 );
 
     always {
         // RENDER + COLLISION DETECTION
-        switch( pix_vblank ) {
-            case 1: {
-                switch( output_collisions ) {
-                    case 0: {
-                        // RESET collision detection
-                        $$for i=0,15 do
-                            detect_collision_$i$ = 0;
-                            detect_layer_$i$ = 0;
-                        $$end
-                    }
-                    case 1: {
-                        $$for i=0,15 do
-                            // Output collisions
-                            collision_$i$ = detect_collision_$i$;
-                            layer_collision_$i$ = detect_layer_$i$;
-                        $$end
-                        output_collisions = 0;
-                    }
+        if( pix_vblank ) {
+            switch( output_collisions ) {
+                case 0: {
+                    // RESET collision detection
+                    $$for i=0,15 do
+                        detect_collision_$i$ = 0;
+                        detect_layer_$i$ = 0;
+                    $$end
+                }
+                case 1: {
+                    $$for i=0,15 do
+                        // Output collisions
+                        collision_$i$ = detect_collision_$i$;
+                        layer_collision_$i$ = detect_layer_$i$;
+                    $$end
+                    output_collisions = 0;
                 }
             }
-            case 0: {
-                switch( pix_active ) {
-                    case 1: {
-                        pixel = pix_visible_15 ? sprite_read_colour_15 :
-                                    pix_visible_14 ? sprite_read_colour_14 :
-                                    pix_visible_13 ? sprite_read_colour_13 :
-                                    pix_visible_12 ? sprite_read_colour_12 :
-                                    pix_visible_11 ? sprite_read_colour_11 :
-                                    pix_visible_10 ? sprite_read_colour_10 :
-                                    pix_visible_9 ? sprite_read_colour_9 :
-                                    pix_visible_8 ? sprite_read_colour_8 :
-                                    pix_visible_7 ? sprite_read_colour_7 :
-                                    pix_visible_6 ? sprite_read_colour_6 :
-                                    pix_visible_5 ? sprite_read_colour_5 :
-                                    pix_visible_4 ? sprite_read_colour_4 :
-                                    pix_visible_3 ? sprite_read_colour_3 :
-                                    pix_visible_2 ? sprite_read_colour_2 :
-                                    pix_visible_1 ? sprite_read_colour_1 :
-                                    sprite_read_colour_0;
+        } else {
+            if( pix_active ) {
+                pixel = pix_visible_15 ? sprite_read_colour_15 :
+                            pix_visible_14 ? sprite_read_colour_14 :
+                            pix_visible_13 ? sprite_read_colour_13 :
+                            pix_visible_12 ? sprite_read_colour_12 :
+                            pix_visible_11 ? sprite_read_colour_11 :
+                            pix_visible_10 ? sprite_read_colour_10 :
+                            pix_visible_9 ? sprite_read_colour_9 :
+                            pix_visible_8 ? sprite_read_colour_8 :
+                            pix_visible_7 ? sprite_read_colour_7 :
+                            pix_visible_6 ? sprite_read_colour_6 :
+                            pix_visible_5 ? sprite_read_colour_5 :
+                            pix_visible_4 ? sprite_read_colour_4 :
+                            pix_visible_3 ? sprite_read_colour_3 :
+                            pix_visible_2 ? sprite_read_colour_2 :
+                            pix_visible_1 ? sprite_read_colour_1 :
+                            sprite_read_colour_0;
 
-                        sprite_layer_display = pix_visible_15 | pix_visible_14 | pix_visible_13 | pix_visible_12 | pix_visible_11 | pix_visible_10 | pix_visible_9 | pix_visible_8 | pix_visible_7
-                                                | pix_visible_6 | pix_visible_5 |pix_visible_4 | pix_visible_3 | pix_visible_2 | pix_visible_1 | pix_visible_0;
+                $$for i=0,15 do
+                    // UPDATE COLLISION DETECTION FLAGS
+                    if( pix_visible_$i$ ) {
+                        detect_layer_$i$ = detect_layer_$i$ | layer_collision_frame;
+                        detect_collision_$i$ = detect_collision_$i$ | sprite_collision_frame;
 
-                        $$for i=0,15 do
-                            // UPDATE COLLISION DETECTION FLAGS
-                            if( pix_visible_$i$ ) {
-                                detect_layer_$i$ = detect_layer_$i$ | layer_collision_frame;
-                                detect_collision_$i$ = detect_collision_$i$ | sprite_collision_frame;
-
-                                // UPDATE CPU READABLE FLAGS DURING THE FRAME
-                                collision_$i$ = collision_$i$ | detect_collision_$i$;
-                                layer_collision_$i$ = layer_collision_$i$ | detect_layer_$i$;
-                            }
-                        $$end
-
-                        // Output collision detection
-                        output_collisions = ( pix_x == 639 ) & ( pix_y == 479 );
+                        // UPDATE CPU READABLE FLAGS DURING THE FRAME
+                        collision_$i$ = collision_$i$ | detect_collision_$i$;
+                        layer_collision_$i$ = layer_collision_$i$ | detect_layer_$i$;
                     }
-                    case 0: {}
-                }
+                $$end
+
+                // Output collision detection
+                output_collisions = ( pix_x == 639 ) & ( pix_y == 479 );
             }
         }
     }
@@ -137,13 +127,13 @@ algorithm sprite_generator(
     input   uint1   sprite_active,
     input   uint3   sprite_double,
     input   int11   sprite_x,
-    input   int11   sprite_y,
+    input   int10   sprite_y,
     input   uint3   sprite_tile_number,
     simple_dualport_bram_port0 tiles,
     output! uint1   pix_visible
 ) <autorun> {
     int11   x <: { 1b0, pix_x };
-    int11   y <: { 1b0, pix_y };
+    int10   y <: pix_y;
 
     // Calculate position in sprite, handling reflection and doubling
     uint6 spritesize <: sprite_double[0,1] ? 32 : 16;
@@ -166,7 +156,7 @@ algorithm sprite_layer_writer(
     input   uint3   sprite_set_double,
     input   uint6   sprite_set_colour,
     input   int11   sprite_set_x,
-    input   int11   sprite_set_y,
+    input   int10   sprite_set_y,
     input   uint3   sprite_set_tile,
     input   uint3   sprite_layer_write,
     input   uint13  sprite_update,
@@ -177,7 +167,7 @@ algorithm sprite_layer_writer(
         output  uint3   sprite_read_double_$i$,
         output  uint6   sprite_read_colour_$i$,
         output  int11   sprite_read_x_$i$,
-        output  int11   sprite_read_y_$i$,
+        output  int10   sprite_read_y_$i$,
         output  uint3   sprite_read_tile_$i$,
     $$end
 ) <autorun> {
@@ -187,7 +177,7 @@ algorithm sprite_layer_writer(
     uint3   sprite_double[16] = uninitialised;
     uint6   sprite_colour[16] = uninitialised;
     int11   sprite_x[16] = uninitialised;
-    int11   sprite_y[16] = uninitialised;
+    int10   sprite_y[16] = uninitialised;
     uint3   sprite_tile_number[16] = uninitialised;
     uint1   output_collisions = 0;
 
@@ -229,7 +219,7 @@ algorithm sprite_layer_writer(
                 sprite_x[ sprite_set_number ] = sprite_offscreen_x ? ( ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ?__signed(640) : sprite_to_negative ) :
                                                 sprite_x[ sprite_set_number ] + { {7{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
                 sprite_y[ sprite_set_number ] = sprite_offscreen_y ? ( ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ? __signed(480) : sprite_to_negative ) :
-                                                sprite_y[ sprite_set_number ] + { {7{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
+                                                sprite_y[ sprite_set_number ] + { {6{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
             }
         }
     }

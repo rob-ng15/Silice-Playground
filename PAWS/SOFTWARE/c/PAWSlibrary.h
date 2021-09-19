@@ -40,7 +40,7 @@ extern void await_beep( unsigned char );
 extern unsigned short get_beep_active( unsigned char );
 
 // SDCARD
-extern unsigned char * sdcard_selectfile( char *, char *, unsigned int * );
+extern unsigned char * sdcard_selectfile( char *, char *, unsigned int *, char * );
 
 // DISPLAY
 extern void await_vblank( void );

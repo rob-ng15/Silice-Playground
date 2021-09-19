@@ -438,13 +438,14 @@ algorithm gpu(
 
     // GPU UNIT BUSY FLAGS
     uint7   gpu_busy_flags <:: { GPUpixelblockbusy, GPUcolourblitbusy, GPUblitbusy, GPUtrianglebusy, GPUcirclebusy, GPUrectanglebusy, GPUlinebusy };
+    uint1   gpu_busy <: ( gpu_busy_flags != 0 );
 
     // CONTROLS FOR BITMAP PIXEL WRITER AND GPU SUBUNITS
     bitmap_write := GPUlinebitmap_write | GPUrectanglebitmap_write | GPUcirclebitmap_write |
                                     GPUtrianglebitmap_write | GPUblitbitmap_write | GPUcolourblitbitmap_write | GPUpixelblockbitmap_write;
-    GPUrectanglestart := 0; GPUlinestart := 0; GPUcirclestart := 0; GPUtrianglestart := 0; GPUblitstart := 0; GPUcolourblitstart := 0; GPUpixelblockstart := 0;
 
-    gpu_active := ( gpu_write[1,3] != 0 ) | ( gpu_busy_flags != 0 );
+    GPUrectanglestart := 0; GPUlinestart := 0; GPUcirclestart := 0; GPUtrianglestart := 0; GPUblitstart := 0; GPUcolourblitstart := 0; GPUpixelblockstart := 0;
+    gpu_active := ( gpu_write[1,3] != 0 ) | gpu_busy;
 
     always {
         switch( gpu_write ) {
@@ -475,7 +476,7 @@ algorithm gpu(
                 }
             }
         }
-        if( gpu_busy_flags != 0 ) {
+        if( gpu_busy ) {
             // COPY OUTPUT TO THE BITMAP WRITER
             onehot( gpu_busy_flags ) {
                 case 0: { bitmap_x_write = GPUlinebitmap_x_write; bitmap_y_write = GPUlinebitmap_y_write; }
@@ -627,15 +628,18 @@ algorithm prepline(
     output  int11   numerator,
     output  int11   max_count
 ) {
+    uint1 ylessparam1 <:: ( y < param1 );
+
     // Setup drawing a line from x,y to param0,param1 of width param2 in colour
     // Ensure LEFT to RIGHT AND if moving UP or DOWN
-    ( x1 ) = min( x, param0 );
     if( x < param0 ) {
+        x1 = x;
         y1 = y;
-        dv = ( y < param1 );
+        dv = ylessparam1;
     } else {
+        x1 = param0;
         y1 = param1;
-        dv = ~( y < param1 );
+        dv = ~ylessparam1;
     }
 
     // Absolute DELTAs
@@ -953,6 +957,7 @@ algorithm drawtriangle(
     // WORK COORDINATES AND DIRECTION
     int11   px = uninitialized;
     int11   py = uninitialized;
+    int11   nextpy <:: py + 1;
     uint1   dx = uninitialized;
 
     bitmap_x_write := px; bitmap_y_write := py; bitmap_write := 0;
@@ -970,7 +975,7 @@ algorithm drawtriangle(
                     if( EXIT ) {
                         // Exited the triangle, move to the next line
                         beenInTriangle = 0;
-                        py = py + 1;
+                        py = nextpy;
                         if( rightleft ) {
                             // Closer to the right
                             px = max_x; dx = 0;
@@ -984,13 +989,13 @@ algorithm drawtriangle(
                             if( px <= max_x ) {
                                 px = px + 1;
                             } else {
-                                dx = 0; beenInTriangle = 0; py = py + 1;
+                                dx = 0; beenInTriangle = 0; py = nextpy;
                             }
                         } else {
                             if( px >= min_x ) {
                                 px = px - 1;
                             } else {
-                                dx = 1; beenInTriangle = 0; py = py + 1;
+                                dx = 1; beenInTriangle = 0; py = nextpy;
                             }
                         }
                     }
@@ -1364,21 +1369,27 @@ algorithm centreplusdelta(
     int11   dodeltax <:: ( scale[2,1] ? ( __signed(deltax) >>> scale[0,2] ) : ( deltax << scale[0,2] ) );
     int11   dodeltay <:: ( scale[2,1] ? ( __signed(deltay) >>> scale[0,2] ) : ( deltay << scale[0,2] ) );
 
+    // ADD PLUS
+    int11   xcpdx <: xc + dodeltax;
+    int11   xcndx <: xc - dodeltax;
+    int11   ycpdy <: yc + dodeltay;
+    int11   ycndy <: yc - dodeltay;
+
     always {
         if( action[2,1] ) {
             // ROTATION
             switch( action[0,2] ) {
                 case 0: {
-                    xdx = xc + dodeltax;
-                    ydy = yc + dodeltay;
+                    xdx = xcpdx;
+                    ydy = ycpdy;
                 }
                 case 1: {
                     xdx = xc - dodeltay;
                     ydy = yc + dodeltax;
                 }
                 case 2: {
-                    xdx = xc - dodeltax;
-                    ydy = yc - dodeltay;
+                    xdx = xcndx;
+                    ydy = ycndy;
                 }
                 case 3: {
                     xdx = xc + dodeltay;
@@ -1387,8 +1398,8 @@ algorithm centreplusdelta(
             }
         } else {
             // REFLECTION
-            xdx = action[0,1] ? xc - dodeltax : xc + dodeltax;
-            ydy = action[1,1] ? yc - dodeltay : yc + dodeltay;
+            xdx = action[0,1] ? xcndx : xcpdx;
+            ydy = action[1,1] ? ycndy : ycpdy;
         }
     }
 }

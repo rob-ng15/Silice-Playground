@@ -166,7 +166,7 @@ $$end
         uint3   Lsprite_read_double_$i$ = uninitialized;
         uint6   Lsprite_read_colour_$i$ = uninitialized;
         int11   Lsprite_read_x_$i$ = uninitialized;
-        int11   Lsprite_read_y_$i$ = uninitialized;
+        int10   Lsprite_read_y_$i$ = uninitialized;
         uint3   Lsprite_read_tile_$i$ = uninitialized;
         uint16  Lcollision_$i$ = uninitialized;
         uint4   Llayer_collision_$i$ = uninitialized;
@@ -208,7 +208,7 @@ $$end
         uint3   Usprite_read_double_$i$ = uninitialized;
         uint6   Usprite_read_colour_$i$ = uninitialized;
         int11   Usprite_read_x_$i$ = uninitialized;
-        int11   Usprite_read_y_$i$ = uninitialized;
+        int10   Usprite_read_y_$i$ = uninitialized;
         uint3   Usprite_read_tile_$i$ = uninitialized;
         uint16  Ucollision_$i$ = uninitialized;
         uint4   Ulayer_collision_$i$ = uninitialized;
@@ -361,7 +361,7 @@ $$end
                             case $0x20 + i*2$: { readData = Lsprite_read_double_$i$; }
                             case $0x40 + i*2$: { readData = Lsprite_read_colour_$i$; }
                             case $0x60 + i*2$: { readData = {{5{Lsprite_read_x_$i$[10,1]}}, Lsprite_read_x_$i$}; }
-                            case $0x80 + i*2$: { readData = {{5{Lsprite_read_y_$i$[10,1]}}, Lsprite_read_y_$i$}; }
+                            case $0x80 + i*2$: { readData = {{6{Lsprite_read_y_$i$[9,1]}}, Lsprite_read_y_$i$}; }
                             case $0xa0 + i*2$: { readData = Lsprite_read_tile_$i$; }
                             case $0xc0 + i*2$: { readData = Lcollision_$i$; }
                             case $0xe0 + i*2$: { readData = Llayer_collision_$i$; }
@@ -376,7 +376,7 @@ $$end
                             case $0x20 + i*2$: { readData = Usprite_read_double_$i$; }
                             case $0x40 + i*2$: { readData = Usprite_read_colour_$i$; }
                             case $0x60 + i*2$: { readData = {{5{Usprite_read_x_$i$[10,1]}}, Usprite_read_x_$i$}; }
-                            case $0x80 + i*2$: { readData = {{5{Usprite_read_y_$i$[10,1]}}, Usprite_read_y_$i$}; }
+                            case $0x80 + i*2$: { readData = {{6{Usprite_read_y_$i$[9,1]}}, Usprite_read_y_$i$}; }
                             case $0xa0 + i*2$: { readData = Usprite_read_tile_$i$; }
                             case $0xc0 + i*2$: { readData = Ucollision_$i$; }
                             case $0xe0 + i*2$: { readData = Ulayer_collision_$i$; }
@@ -942,7 +942,7 @@ algorithm sprite_memmap(
         output  uint3   sprite_read_double_$i$,
         output  uint6   sprite_read_colour_$i$,
         output  int11   sprite_read_x_$i$,
-        output  int11   sprite_read_y_$i$,
+        output  int10   sprite_read_y_$i$,
         output  uint3   sprite_read_tile_$i$,
         output uint16   collision_$i$,
         output uint4    layer_collision_$i$,
@@ -958,7 +958,7 @@ algorithm sprite_memmap(
     uint3   sprite_set_double = uninitialized;
     uint6   sprite_set_colour = uninitialized;
     int11   sprite_set_x = uninitialized;
-    int11   sprite_set_y = uninitialized;
+    int10   sprite_set_y = uninitialized;
     uint3   sprite_set_tile = uninitialized;
     uint3   sprite_layer_write = uninitialized;
     uint13  sprite_update = uninitialized;

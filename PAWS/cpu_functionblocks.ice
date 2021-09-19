@@ -425,30 +425,6 @@ algorithm CSRblock(
 }
 
 // ATOMIC A EXTENSION ALU
-algorithm aluA5b00000( input uint32 memoryinput, input uint32 sourceReg2, output uint32 result ) <autorun> {
-    always { result = memoryinput + sourceReg2; }
-}
-algorithm aluA5b00100( input uint32 memoryinput, input uint32 sourceReg2, output uint32 result ) <autorun> {
-    always { result = memoryinput ^ sourceReg2; }
-}
-algorithm aluA5b01000( input uint32 memoryinput, input uint32 sourceReg2, output uint32 result ) <autorun> {
-    always { result = memoryinput | sourceReg2; }
-}
-algorithm aluA5b01100( input uint32 memoryinput, input uint32 sourceReg2, output uint32 result ) <autorun> {
-    always { result = memoryinput & sourceReg2; }
-}
-algorithm aluA5b10000( input uint32 memoryinput, input uint32 sourceReg2, output uint32 result ) <autorun> {
-    always { ( result ) = min( memoryinput, sourceReg2); }
-}
-algorithm aluA5b10100( input uint32 memoryinput, input uint32 sourceReg2, output uint32 result ) <autorun> {
-    always { ( result ) = max( memoryinput, sourceReg2); }
-}
-algorithm aluA5b11000( input uint32 memoryinput, input uint32 sourceReg2, output uint32 result ) <autorun> {
-    always { ( result ) = minu( memoryinput, sourceReg2); }
-}
-algorithm aluA5b11100( input uint32 memoryinput, input uint32 sourceReg2, output uint32 result ) <autorun> {
-    always { ( result ) = maxu( memoryinput, sourceReg2); }
-}
 
 algorithm aluA (
     input   uint7   function7,
@@ -456,34 +432,20 @@ algorithm aluA (
     input   uint32  sourceReg2,
     output  uint32  result
 ) <autorun> {
-    uint32  result5b00000 = uninitialized;
-    uint32  result5b00100 = uninitialized;
-    uint32  result5b01000 = uninitialized;
-    uint32  result5b01100 = uninitialized;
-    uint32  result5b10000 = uninitialized;
-    uint32  result5b10100 = uninitialized;
-    uint32  result5b11000 = uninitialized;
-    uint32  result5b11100 = uninitialized;
-    aluA5b00000 ALUA5b00000( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b00000 );
-    aluA5b00100 ALUA5b00100( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b00100 );
-    aluA5b01000 ALUA5b01000( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b01000 );
-    aluA5b01100 ALUA5b01100( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b01100 );
-    aluA5b10000 ALUA5b10000( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b10000 );
-    aluA5b10100 ALUA5b10100( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b10100 );
-    aluA5b11000 ALUA5b11000( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b11000 );
-    aluA5b11100 ALUA5b11100( memoryinput <: memoryinput, sourceReg2 <: sourceReg2, result :> result5b11100 );
+    uint1   unsignedcompare <:: ( __unsigned(memoryinput) < __unsigned(sourceReg2) );
+    uint1   signedcompare <:: ( __signed(memoryinput) < __signed(sourceReg2) );
 
     always {
         switch( function7[2,5] ) {
-            default: { result = result5b00000; }        // AMOADD
-            case 5b00001: { result = sourceReg2; }      // AMOSWAP
-            case 5b00100: { result = result5b00100; }   // AMOXOR
-            case 5b01000: { result = result5b01000; }   // AMOOR
-            case 5b01100: { result = result5b01100; }   // AMOAND
-            case 5b10000: { result = result5b10000; }   // AMOMIN
-            case 5b10100: { result = result5b10100; }   // AMOMAX
-            case 5b11000: { result = result5b11000; }   // AMOMINU
-            case 5b11100: { result = result5b11100; }   // AMOMAXU
+            default: { result = memoryinput + sourceReg2; }                         // AMOADD
+            case 5b00001: { result = sourceReg2; }                                  // AMOSWAP
+            case 5b00100: { result = memoryinput ^ sourceReg2; }                    // AMOXOR
+            case 5b01000: { result = memoryinput | sourceReg2; }                    // AMOOR
+            case 5b01100: { result = memoryinput & sourceReg2; }                    // AMOAND
+            case 5b10000: { result = signedcompare ? memoryinput : sourceReg2; }    // AMOMIN
+            case 5b10100: { result = signedcompare ? sourceReg2 : memoryinput; }    // AMOMAX
+            case 5b11000: { result = unsignedcompare ? memoryinput : sourceReg2; }  // AMOMINU
+            case 5b11100: { result = unsignedcompare ? sourceReg2 : memoryinput; }  // AMOMAXU
         }
     }
 }
