@@ -20,7 +20,7 @@ algorithm character_map(
     pulse1hz P1( counter1hz :> timer1hz );
 
     // Character ROM 8x8
-    brom uint8 characterGenerator8x8 <input!> [] = {
+    brom uint8 characterGenerator8x8[] = {
         $include('ROM/characterROM8x8.inc')
     };
 
@@ -71,7 +71,7 @@ algorithm character_map_writer(
     output  uint6   cursor_y
 ) <autorun> {
     // COPY OF CHARCTER MAP FOR THE CURSES BUFFER
-    simple_dualport_bram uint22 charactermap_copy <input!> [4800] = uninitialized;
+    simple_dualport_bram uint22 charactermap_copy[4800] = uninitialized;
 
     // Counter for clearscreen
     uint13  tpu_write_addr <:: tpu_active_x + tpu_active_y * 80;

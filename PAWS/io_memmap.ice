@@ -417,83 +417,125 @@ algorithm audio(
 }
 
 // UART BUFFER CONTROLLER
+// 256 entry FIFO queue
+algorithm fifo8(
+    output  uint1   available,
+    output  uint1   full,
+    input   uint1   read,
+    input   uint1   write,
+    output  uint8   first,
+    input   uint8   last
+) <autorun> {
+    simple_dualport_bram uint8 queue[256] = uninitialized;
+    uint1   update = uninitialized;
+    uint8   top = 0;
+    uint8   next = 0;
+
+    available := ( top != next ); full := ( top + 1 == next );
+    queue.addr0 := next; first := queue.rdata0;
+    queue.wenable1 := 1;
+
+    always {
+        if( write ) {
+            queue.addr1 = top; queue.wdata1 = last;
+            update = 1;
+        } else {
+            if( update ) {
+                top = top + 1;
+                update = 0;
+            }
+        }
+        next = next + read;
+    }
+}
 algorithm uart(
     // UART
     output  uint1   uart_tx,
     input   uint1   uart_rx,
-
     output  uint1   inavailable,
     output  uint1   outfull,
-
     output  uint8   inchar,
     input   uint1   inread,
     input   uint8   outchar,
     input   uint1   outwrite
 ) <autorun> {
-    uint1   update = uninitialized;
-
-    // UART tx and rx
-    // UART written in Silice by https://github.com/sylefeb/Silice
-    uart_out uo; uart_sender usend( io <:> uo, uart_tx :> uart_tx );
     uart_in ui; uart_receiver urecv( io <:> ui, uart_rx <: uart_rx );
+    uint8   uidata_out <: ui.data_out;
+    uint1   uidata_out_ready <: ui.data_out_ready;
+    fifo8 IN(
+        available :> inavailable,
+        first :> inchar,
+        read <: inread,
+        last <: uidata_out,
+        write <: uidata_out_ready
+    );
 
-    // UART input FIFO (256 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartInBuffer <input!> [256] = uninitialized;
-    uint8  uartInBufferNext = 0;
-    uint8  uartInBufferTop = 0;
-
-    // UART output FIFO (256 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartOutBuffer <input!> [256] = uninitialized;
-    uint8   uartOutBufferNext = 0;
-    uint8   uartOutBufferTop = 0;
-    uint8   newuartOutBufferTop = 0;
-
-    // FLAGS
-    inavailable := ( uartInBufferNext != uartInBufferTop );
-    outfull := ( uartOutBufferTop + 1 == uartOutBufferNext );
-    inchar := uartInBuffer.rdata0;
-
-    // UART Buffers ( code from @sylefeb )
-    uartInBuffer.wenable1 := 1;                                                                             // always write on port 1
-    uartInBuffer.addr0 := uartInBufferNext;                                                                 // FIFO reads on next
-    uartInBuffer.addr1 := uartInBufferTop;                                                                  // FIFO writes on top
-    uartOutBuffer.wenable1 := 1;                                                                            // always write on port 1
-    uartOutBuffer.addr0 := uartOutBufferNext;                                                               // FIFO reads on next
-    uartInBuffer.wdata1 := ui.data_out;
-    uartInBufferTop := uartInBufferTop + ui.data_out_ready;
-    uo.data_in := uartOutBuffer.rdata0;
-    uo.data_in_ready := ( uartOutBufferNext != uartOutBufferTop ) && ( !uo.busy );
-    uartOutBufferNext :=  uartOutBufferNext + ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) );
-
-    always {
-        if( outwrite ) {
-            uartOutBuffer.addr1 = uartOutBufferTop;
-            uartOutBuffer.wdata1 = outchar;
-            update = 1;
-        } else {
-            if( update ) { uartOutBufferTop = uartOutBufferTop + 1; update = 0; }
-        }
-        uartInBufferNext = uartInBufferNext + inread;
-    }
+    uart_out uo; uart_sender usend( io <:> uo, uart_tx :> uart_tx );
+    uint8   uodata_in = uninitialized;
+    uint1   OUTavailable = uninitialized;
+    uint1   OUTread <: OUTavailable & !uo.busy;
+    fifo8 OUT(
+        available :> OUTavailable,
+        full :> outfull,
+        last <: outchar,
+        write <: outwrite,
+        first :> uodata_in,
+        read <: OUTread
+    );
+    uo.data_in := uodata_in;
+    uo.data_in_ready := OUTavailable & ( !uo.busy );
 }
 
 // PS2 BUFFER CONTROLLER
+// 9 bit 256 entry FIFO buffer
+algorithm fifo9(
+    output  uint1   available,
+    output  uint1   full,
+    input   uint1   read,
+    input   uint1   write,
+    output  uint9   first,
+    input   uint9   last
+) <autorun> {
+    simple_dualport_bram uint9 queue[256] = uninitialized;
+    uint1   update = uninitialized;
+    uint8   top = 0;
+    uint8   next = 0;
+
+    available := ( top != next ); full := ( top + 1 == next );
+    queue.addr0 := next; first := queue.rdata0;
+    queue.wenable1 := 1;
+
+    always {
+        if( write ) {
+            queue.addr1 = top; queue.wdata1 = last;
+            update = 1;
+        } else {
+            if( update ) {
+                top = top + 1;
+                update = 0;
+            }
+        }
+        next = next + read;
+    }
+}
 algorithm ps2buffer(
     // USB for PS/2
     input   uint1   us2_bd_dp,
     input   uint1   us2_bd_dn,
-
     output  uint9   inchar,
     output  uint1   inavailable,
     input   uint1   inread,
-
     input   uint1   outputascii,
     output  uint16  joystick
 ) <autorun> {
-    // PS/2 input FIFO (256 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint9 ps2Buffer <input!> [256] = uninitialized;
-    uint8  ps2BufferNext = 0;
-    uint7  ps2BufferTop = 0;
+    // PS/2 input FIFO (256 character)
+    fifo9 FIFO(
+        available :> inavailable,
+        read <: inread,
+        write <: PS2asciivalid,
+        first :> inchar,
+        last <: PS2ascii
+    );
 
     // PS 2 ASCII
     uint1   PS2asciivalid = uninitialized;
@@ -506,24 +548,6 @@ algorithm ps2buffer(
         outputascii <: outputascii,
         joystick :> joystick
     );
-
-    // PS2 Buffers
-    uint1   update = uninitialized;
-    ps2Buffer.wenable1 := 1;  // always write on port 1
-    ps2Buffer.addr0 := ps2BufferNext; // FIFO reads on next
-
-    // FLAGS
-    inavailable := ( ps2BufferNext != ps2BufferTop );
-    inchar := ps2Buffer.rdata0;
-
-    always {
-        if( PS2asciivalid ) {
-            ps2Buffer.addr1 = ps2BufferTop; ps2Buffer.wdata1 = PS2ascii; update = 1;
-        } else {
-            if( update ) { ps2BufferTop = ps2BufferTop + 1; update = 0; }
-        }
-        ps2BufferNext = ps2BufferNext + inread;
-    }
 }
 
 // SDCARD AND BUFFER CONTROLLER
@@ -542,7 +566,7 @@ algorithm sdcardbuffer(
     output  uint8   bufferdata
 ) <autorun> {
     // SDCARD - Code for the SDCARD from @sylefeb
-    simple_dualport_bram uint8 sdbuffer <input!> [512] = uninitialized;
+    simple_dualport_bram uint8 sdbuffer[512] = uninitialized;
     sdcardio sdcio;
     sdcard sd(
         // pins
@@ -557,11 +581,9 @@ algorithm sdcardbuffer(
     );
 
     // SDCARD Commands
-    //always {
-        sdcio.read_sector := readsector;
-        sdcio.addr_sector := { sectoraddressH, sectoraddressL };
-        sdbuffer.addr0 := bufferaddress;
-        ready := sdcio.ready;
-        bufferdata := sdbuffer.rdata0;
-    //}
+    sdcio.read_sector := readsector;
+    sdcio.addr_sector := { sectoraddressH, sectoraddressL };
+    sdbuffer.addr0 := bufferaddress;
+    ready := sdcio.ready;
+    bufferdata := sdbuffer.rdata0;
 }

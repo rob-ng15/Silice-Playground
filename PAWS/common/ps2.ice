@@ -41,7 +41,7 @@ algorithm ps2ascii(
     uint1   ALT <:: lalt | ralt;
     uint1   CAPITAL <:: ( lshift | rshift ) ^ capslock;
 
-    uint8   LETTERMOD <:: CTRL ? 8h00 : CAPITAL ? 8h40 : 8h60;
+    uint2   LETTERMOD <:: CTRL ? 2b00 : CAPITAL ? 2b10 : 2b11;
 
     uint1   startbreak = 0;
     uint1   startmulti = 0;
@@ -69,32 +69,32 @@ algorithm ps2ascii(
                         case 2b00: {
                             // KEY PRESS - TRANSLATE TO ASCII
                             switch( ps2keycode ) {
-                                case 8h1c: { newascii = LETTERMOD | 8h01; }                     // A to Z
-                                case 8h32: { newascii = LETTERMOD | 8h02; }
-                                case 8h21: { newascii = LETTERMOD | 8h03; }
-                                case 8h23: { newascii = LETTERMOD | 8h04; }
-                                case 8h24: { newascii = LETTERMOD | 8h05; }
-                                case 8h2b: { newascii = LETTERMOD | 8h06; }
-                                case 8h34: { newascii = LETTERMOD | 8h07; }
-                                case 8h33: { newascii = LETTERMOD | 8h08; }
-                                case 8h43: { newascii = LETTERMOD | 8h09; }
-                                case 8h3b: { newascii = LETTERMOD | 8h0a; }
-                                case 8h42: { newascii = LETTERMOD | 8h0b; }
-                                case 8h4b: { newascii = LETTERMOD | 8h0c; }
-                                case 8h3a: { newascii = LETTERMOD | 8h0d; }
-                                case 8h31: { newascii = LETTERMOD | 8h0e; }
-                                case 8h44: { newascii = LETTERMOD | 8h0f; }
-                                case 8h4d: { newascii = LETTERMOD | 8h10; }
-                                case 8h15: { newascii = LETTERMOD | 8h11; }
-                                case 8h2d: { newascii = LETTERMOD | 8h12; }
-                                case 8h1b: { newascii = LETTERMOD | 8h13; }
-                                case 8h2c: { newascii = LETTERMOD | 8h14; }
-                                case 8h3c: { newascii = LETTERMOD | 8h15; }
-                                case 8h2a: { newascii = LETTERMOD | 8h16; }
-                                case 8h1d: { newascii = LETTERMOD | 8h17; }
-                                case 8h22: { newascii = LETTERMOD | 8h18; }
-                                case 8h35: { newascii = LETTERMOD | 8h19; }
-                                case 8h1a: { newascii = LETTERMOD | 8h1a; }
+                                case 8h1c: { newascii = { LETTERMOD, 5h01 }; }                     // A to Z
+                                case 8h32: { newascii = { LETTERMOD, 5h02 }; }
+                                case 8h21: { newascii = { LETTERMOD, 5h03 }; }
+                                case 8h23: { newascii = { LETTERMOD, 5h04 }; }
+                                case 8h24: { newascii = { LETTERMOD, 5h05 }; }
+                                case 8h2b: { newascii = { LETTERMOD, 5h06 }; }
+                                case 8h34: { newascii = { LETTERMOD, 5h07 }; }
+                                case 8h33: { newascii = { LETTERMOD, 5h08 }; }
+                                case 8h43: { newascii = { LETTERMOD, 5h09 }; }
+                                case 8h3b: { newascii = { LETTERMOD, 5h0a }; }
+                                case 8h42: { newascii = { LETTERMOD, 5h0b }; }
+                                case 8h4b: { newascii = { LETTERMOD, 5h0c }; }
+                                case 8h3a: { newascii = { LETTERMOD, 5h0d }; }
+                                case 8h31: { newascii = { LETTERMOD, 5h0e }; }
+                                case 8h44: { newascii = { LETTERMOD, 5h0f }; }
+                                case 8h4d: { newascii = { LETTERMOD, 5h10 }; }
+                                case 8h15: { newascii = { LETTERMOD, 5h11 }; }
+                                case 8h2d: { newascii = { LETTERMOD, 5h12 }; }
+                                case 8h1b: { newascii = { LETTERMOD, 5h13 }; }
+                                case 8h2c: { newascii = { LETTERMOD, 5h14 }; }
+                                case 8h3c: { newascii = { LETTERMOD, 5h15 }; }
+                                case 8h2a: { newascii = { LETTERMOD, 5h16 }; }
+                                case 8h1d: { newascii = { LETTERMOD, 5h17 }; }
+                                case 8h22: { newascii = { LETTERMOD, 5h18 }; }
+                                case 8h35: { newascii = { LETTERMOD, 5h19 }; }
+                                case 8h1a: { newascii = { LETTERMOD, 5h1a }; }
                                 case 8h54: { newascii = CTRL ? 8h1b : SHIFT ? 8h7b : 8h5b; }    // [ {
                                 case 8h5d: { newascii = CTRL ? 8h1c : SHIFT ? 8h7e : 8h23; }    // # ~
                                 case 8h5b: { newascii = CTRL ? 8h1d : SHIFT ? 8h7d : 8h5d; }    // ] }

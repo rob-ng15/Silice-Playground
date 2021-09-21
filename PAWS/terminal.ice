@@ -55,7 +55,7 @@ algorithm terminal_writer(
     output  uint7   terminal_x(0),
     output  uint3   terminal_y(7)
 ) <autorun> {
-    simple_dualport_bram uint8 terminal_copy <input!> [640] = uninitialized;
+    simple_dualport_bram uint8 terminal_copy[640] = uninitialized;
 
     // Terminal active (scroll) flag and temporary storage for scrolling
     uint10  terminal_scroll = uninitialised;

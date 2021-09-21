@@ -37,7 +37,7 @@ algorithm background_writer(
 ) <autorun> {
     // BACKGROUND CO-PROCESSOR PROGRAM STORAGE
     // { 3 bit command, 3 bit mask, { 1 bit for cpuinput flag, 10 bit coordinate }, 4 bit mode, 6 bit colour 2, 6 bit colour 1 }
-    simple_dualport_bram uint33 copper <input!> [ 64 ] = uninitialised;
+    simple_dualport_bram uint33 copper[ 64 ] = uninitialised;
     uint1   copper_execute = uninitialised;
     uint1   copper_branch = uninitialised;
     uint11  copper_variable = uninitialised;

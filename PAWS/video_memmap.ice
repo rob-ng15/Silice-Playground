@@ -585,14 +585,14 @@ algorithm bitmap_memmap(
     output  uint1   vector_block_active,
     output  uint7   bitmap_colour_read
 ) <autorun> {
-    simple_dualport_bram uint1 bitmap_0A <@video_clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
-    simple_dualport_bram uint1 bitmap_1A <@video_clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
-    simple_dualport_bram uint2 bitmap_0R <@video_clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
-    simple_dualport_bram uint2 bitmap_1R <@video_clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
-    simple_dualport_bram uint2 bitmap_0G <@video_clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
-    simple_dualport_bram uint2 bitmap_1G <@video_clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
-    simple_dualport_bram uint2 bitmap_0B <@video_clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
-    simple_dualport_bram uint2 bitmap_1B <@video_clock,@gpu_clock,input!> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint1 bitmap_0A <@video_clock,@video_clock> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint1 bitmap_1A <@video_clock,@video_clock> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint2 bitmap_0R <@video_clock,@video_clock> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint2 bitmap_1R <@video_clock,@video_clock> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint2 bitmap_0G <@video_clock,@video_clock> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint2 bitmap_1G <@video_clock,@video_clock> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint2 bitmap_0B <@video_clock,@video_clock> [ 76800 ] = uninitialized;
+    simple_dualport_bram uint2 bitmap_1B <@video_clock,@video_clock> [ 76800 ] = uninitialized;
 
     // BITMAP DISPLAY
     uint1   framebuffer = uninitialized;
@@ -663,7 +663,7 @@ algorithm bitmap_memmap(
     int6    vertices_writer_xdelta = uninitialized;
     int6    vertices_writer_ydelta = uninitialized;
     uint1   vertices_writer_active = uninitialized;
-    bitmapwriter pixel_writer <@gpu_clock,!video_reset> (
+    bitmapwriter pixel_writer <@video_clock,!video_reset> (
         crop_left <: gpu_crop_left,
         crop_right <: gpu_crop_right,
         crop_top <: gpu_crop_top,
@@ -836,8 +836,8 @@ algorithm charactermap_memmap(
 ) <autorun> {
     // 80 x 30 character buffer
     // Setting background to 40 (ALPHA) allows the bitmap/background to show through, charactermap { BOLD, character }
-    simple_dualport_bram uint9 charactermap <@video_clock,@video_clock,input!> [4800] = uninitialized;
-    simple_dualport_bram uint13 colourmap <@video_clock,@video_clock,input!> [4800] = uninitialized;
+    simple_dualport_bram uint9 charactermap <@video_clock,@video_clock> [4800] = uninitialized;
+    simple_dualport_bram uint13 colourmap <@video_clock,@video_clock> [4800] = uninitialized;
 
     // CHARACTER MAP WRITER
     int7    tpu_x = uninitialized;
@@ -950,7 +950,7 @@ algorithm sprite_memmap(
 ) <autorun> {
     $$for i=0,15 do
         // Sprite Tiles
-        simple_dualport_bram uint16 tiles_$i$ <@video_clock,@video_clock,input!> [128] = uninitialised;
+        simple_dualport_bram uint16 tiles_$i$ <@video_clock,@video_clock> [128] = uninitialised;
     $$end
 
     uint4   sprite_set_number = uninitialized;
@@ -1075,7 +1075,7 @@ algorithm terminal_memmap(
     output  uint2   terminal_active
 ) <autorun> {
     // 80 x 4 character buffer for the input/output terminal
-    simple_dualport_bram uint8 terminal <@video_clock,@video_clock,input!> [640] = uninitialized;
+    simple_dualport_bram uint8 terminal <@video_clock,@video_clock> [640] = uninitialized;
 
     uint8   terminal_character = uninitialized;
     uint2   terminal_write = uninitialized;
@@ -1147,11 +1147,11 @@ algorithm tilemap_memmap(
     output  uint2   tm_active
 ) <autorun> {
     // Tiles 64 x 16 x 16
-    simple_dualport_bram uint16 tiles16x16 <@video_clock,@video_clock,input!> [ 1024 ] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, pad(uninitialized) };
+    simple_dualport_bram uint16 tiles16x16 <@video_clock,@video_clock> [ 1024 ] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, pad(uninitialized) };
 
     // 42 x 32 tile map, allows for pixel scrolling with border { 2 bit reflection, 7 bits background, 6 bits foreground, 5 bits tile number }
-    simple_dualport_bram uint6 tiles <@video_clock,@video_clock,input!> [1344] = uninitialized;
-    simple_dualport_bram uint15 colours <@video_clock,@video_clock,input!> [1344] = uninitialized;
+    simple_dualport_bram uint6 tiles <@video_clock,@video_clock> [1344] = uninitialized;
+    simple_dualport_bram uint15 colours <@video_clock,@video_clock> [1344] = uninitialized;
 
     uint6   tm_x = uninitialized;
     uint6   tm_y = uninitialized;

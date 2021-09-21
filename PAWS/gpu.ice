@@ -65,9 +65,9 @@ algorithm gpu_queue(
     output  uint1   vector_block_active(0)
 ) <autorun> {
     // 32 x 16 x 16 1 bit tilemap for blit1tilemap
-    simple_dualport_bram uint16 blit1tilemap <input!> [ 1024 ] = uninitialized;
+    simple_dualport_bram uint16 blit1tilemap[ 1024 ] = uninitialized;
     // Character ROM 8x8 x 256 for character blitter
-    simple_dualport_bram uint8 characterGenerator8x8 <input!> [] = {
+    simple_dualport_bram uint8 characterGenerator8x8[] = {
         $include('ROM/characterROM8x8.inc')
     };
     // BLIT TILE WRITER
@@ -82,7 +82,7 @@ algorithm gpu_queue(
         characterGenerator8x8 <:> characterGenerator8x8
     );
     // 32 x 16 x 16 7 bit tilemap for colour
-    simple_dualport_bram uint7 colourblittilemap <input!> [ 16384 ] = uninitialized;
+    simple_dualport_bram uint7 colourblittilemap[ 16384 ] = uninitialized;
     // COLOURBLIT TILE WRITER
     colourblittilebitmapwriter CBTBM(
         colourblit_writer_tile <: colourblit_writer_tile,
@@ -93,7 +93,7 @@ algorithm gpu_queue(
     );
 
     // 32 vector blocks each of 16 vertices
-    simple_dualport_bram uint13 vertex <input!> [1024] = uninitialised;
+    simple_dualport_bram uint13 vertex[1024] = uninitialised;
     // VECTOR DRAWER UNIT
     int11   vector_drawer_gpu_x = uninitialised;
     int11   vector_drawer_gpu_y = uninitialised;
@@ -206,7 +206,6 @@ algorithm gpu_queue(
             queue_cropL = crop_left; queue_cropR = crop_right;
             queue_cropT = crop_top; queue_cropB = crop_bottom;
         }
-
         if( vector_drawer_gpu_write ) {
             dithermode = 0; colour = vector_block_colour; colour_alt = 0;
             x = vector_drawer_gpu_x; y = vector_drawer_gpu_y;
@@ -507,16 +506,19 @@ algorithm preprectangle(
     output  int11   max_y,
     output  uint1   todraw
 ) {
-    int11   x1 <:: ( x < param0 ) ? x : param0;
-    int11   y1 <:: ( y < param1 ) ? y : param1;
-    int11   x2 <:: ( x > param0 ) ? x : param0;
-    int11   y2 <:: ( y > param1 ) ? y : param1;
+    uint1   xcompareparam0 <:: ( x < param0 );
+    uint1   ycompareparam1 <:: ( y < param1 );
+
+    int11   x1 <:: xcompareparam0 ? x : param0;
+    int11   y1 <:: ycompareparam1 ? y : param1;
+    int11   x2 <:: xcompareparam0 ? param0 : x;
+    int11   y2 <:: ycompareparam1 ? param1 : y;
 
     min_x = ( x1 < crop_left ) ? crop_left : x1;
     min_y = ( y1 < crop_top ) ? crop_top : y1;
     max_x = 1 + ( ( x2 > crop_right ) ? crop_right : x2 );
     max_y = 1 + ( ( y2 > crop_bottom ) ? crop_bottom : y2 );
-    todraw = ~( ( max_x < crop_left ) || ( max_y < crop_top ) || ( min_x > crop_right ) || ( min_y > crop_bottom ) );
+    todraw = ~( ( max_x < crop_left ) | ( max_y < crop_top ) | ( min_x > crop_right ) | ( min_y > crop_bottom ) );
 }
 algorithm drawrectangle(
     input   uint1   start,
@@ -823,7 +825,7 @@ algorithm drawcircle(
                 } else {
                     active_x = active_x + 1;
                     active_y = active_y - positivenumerator;
-                    count = active_y - positivenumerator;
+                    count = active_y;
                     min_count = min_count + 1;
                     numerator = new_numerator;
                 }
@@ -900,6 +902,12 @@ algorithm preptriangle(
     output  uint1   todraw
 ) {
     int16 tx = uninitialised; int16 ty = uninitialised;
+    uint1   x1x2 <: ( x1 < x2 );
+    uint1   y1y2 <: ( y1 < y2 );
+    uint1   x1x3 <: ( x1 < x3 );
+    uint1   y1y3 <: ( y1 < y3 );
+    uint1   x2x3 <: ( x2 < x3 );
+    uint1   y2y3 <: ( y2 < y3 );
 
     // Setup drawing a filled triangle x,y param0, param1, param2, param3
     x1 = x; y1 = y;
@@ -916,10 +924,10 @@ algorithm preptriangle(
     if( ( y2 != y1 ) && ( y3 >= y2 ) && ( x2 < x3 ) ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty;}
 
     // Find minimum and maximum of x, x1, x2, y, y1 and y2 for the bounding box
-    min_x = ( x1 < x2 ) ? ( x1 < x3 ? x1 : x3 ) : ( x2 < x3 ? x2 : x3 );
-    max_x = ( x1 > x2 ) ? ( x1 > x3 ? x1 : x3 ) : ( x2 > x3 ? x2 : x3 );
-    min_y = ( y1 < y2 ) ? ( y1 < y3 ? y1 : y3 ) : ( y2 < y3 ? y2 : y3 );
-    max_y = ( y1 > y2 ) ? ( y1 > y3 ? y1 : y3 ) : ( y2 > y3 ? y2 : y3 );
+    min_x = x1x2 ? ( x1x3 ? x1 : x3 ) : ( x2x3 ? x2 : x3 );
+    max_x = x1x2 ? ( x2x3 ? x3 : x2 ) : ( x1x3 ? x3 : x1 );
+    min_y = y1y2 ? ( y1y3 ? y1 : y3 ) : ( y2y3 ? y2 : y3 );
+    max_y = y1y2 ? ( y2y3 ? y3 : y2 ) : ( y1y3 ? y3 : y1 );
     ++:
 
     // Apply cropping rectangle
@@ -927,7 +935,7 @@ algorithm preptriangle(
     min_y = ( min_y < crop_top ) ? crop_top : min_y;
     max_x = ( max_x > crop_right ) ? crop_right : max_x;
     max_y = 1 + ( ( max_y > crop_bottom ) ? crop_bottom : max_y );
-    todraw = ~( ( max_x < crop_left ) || ( max_y < crop_top ) || ( min_x > crop_right ) || ( min_y > crop_bottom ) );
+    todraw = ~( ( max_x < crop_left ) | ( max_y < crop_top ) | ( min_x > crop_right ) | ( min_y > crop_bottom ) );
 }
 algorithm drawtriangle(
     input   uint1   start,

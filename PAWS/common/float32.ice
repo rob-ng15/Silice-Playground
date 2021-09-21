@@ -612,6 +612,7 @@ algorithm floatdivide(
     output  uint32  result
 ) <autorun> {
     // BREAK DOWN INITIAL float32 INPUTS AND FIND SIGN OF RESULT AND EXPONENT OF QUOTIENT ( -1 IF DIVISOR > DIVIDEND )
+    // ALIGN DIVIDEND TO THE LEFT, DIVISOR TO THE RIGHT
     uint1   quotientsign <:: fp32( a ).sign ^ fp32( b ).sign;
     int10   quotientexp <:: ((fp32( a ).exponent - 127) - (fp32( b ).exponent - 127)) - ( fp32(b).fraction > fp32(a).fraction );
     uint50  sigA <:: { 1b1, fp32(a).fraction, 26b0 };

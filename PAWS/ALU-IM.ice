@@ -155,7 +155,8 @@ algorithm aluMmultiply(
     uint2   dosigned <:: dosign[1,1] ? ( dosign[0,1] ? 0 : 2 ) : 1;
     uint1   productsign <:: ( dosigned == 0 ) ? 0 : ( ( dosigned == 1 ) ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
     uint32  factor_1_unsigned <:: ( dosigned == 0 ) ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
-    uint32  factor_2_unsigned <:: ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );    uint64  product = uninitialised;
+    uint32  factor_2_unsigned <:: ( dosigned != 1 ) ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
+    uint64  product = uninitialised;
     douintmul UINTMUL( factor_1 <: factor_1_unsigned, factor_2 <: factor_2_unsigned, productsign <: productsign, product64 :> product);
 
     always {

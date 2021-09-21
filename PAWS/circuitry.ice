@@ -23,3 +23,4 @@ circuitry decrementifzero( input x, input z, output x1 ) {
 circuitry decrementorreset( input x, input r, output x1 ) {
     x1 = ( x != 0 ) ? x - 1 : r;
 }
+

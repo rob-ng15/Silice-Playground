@@ -71,8 +71,8 @@ algorithm tile_map_writer(
     output  uint2   tm_active
 ) <autorun> {
     // COPY OF TILEMAP FOR SCROLLING
-    simple_dualport_bram uint6 tiles_copy <input!> [1344] = uninitialized;
-    simple_dualport_bram uint15 colours_copy <input!> [1344] = uninitialized;
+    simple_dualport_bram uint6 tiles_copy[1344] = uninitialized;
+    simple_dualport_bram uint15 colours_copy[1344] = uninitialized;
 
     // Scroller/Wrapper storage
     uint1   tm_scroll = uninitialized;

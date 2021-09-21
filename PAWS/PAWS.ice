@@ -91,8 +91,6 @@ $$end
     uint1   clock_system = uninitialized;
     uint1   clock_io = uninitialized;
     uint1   clock_100_1 = uninitialized;
-    uint1   clock_100_2 = uninitialized;
-    uint1   clock_100_3 = uninitialized;
 $$if VERILATOR then
     $$clock_25mhz = 'video_clock'
     // --- PLL
@@ -100,8 +98,6 @@ $$if VERILATOR then
       video_clock   :> video_clock,
       sdram_clock   :> sdram_clock,
       clock_100_1   :> clock_100_1,
-      clock_100_2   :> clock_100_2,
-      clock_100_3   :> clock_100_3,
       compute_clock :> clock_system,
       io_clock      :> clock_io
     );
@@ -114,8 +110,6 @@ $$else
         clkin    <: $clock_25mhz$,
         clkSYSTEM  :> clock_system,
         clk100_1  :> clock_100_1,
-        clk100_2  :> clock_100_2,
-        clk100_3  :> clock_100_3,
         locked   :> pll_lock_CPU
     );
     // SDRAM CLOCKS + IO CLOCK
@@ -302,7 +296,6 @@ $$end
                 VIDEO ? VreadData :
                 AUDIOTIMERS ? ATreadData :
                 IO? IOreadData : 0;
-
 }
 
 // RAM - BRAM controller
@@ -319,13 +312,13 @@ algorithm bramcontroller(
 ) <autorun> {
 $$if not SIMULATION then
     // RISC-V FAST BRAM and BIOS
-    bram uint16 ram <input!> [16384] = {
+    bram uint16 ram[16384] = {
         $include('ROM/BIOS.inc')
         , pad(uninitialized)
     };
 $$else
     // RISC-V RAM and BIOS
-    bram uint16 ram <input!> [16384] = {
+    bram uint16 ram[16384] = {
         $include('ROM/VBIOS.inc')
         , pad(uninitialized)
     };
@@ -367,8 +360,8 @@ algorithm cachecontroller(
     // CACHE for SDRAM 16k
     // CACHE ADDRESS IS LOWER 14 bits ( 0 - 8191 ) of address, dropping the BYTE address bit
     // CACHE TAG IS REMAINING 12 bits of the 26 bit address + 1 bit for valid flag + 1 bit for needwritetosdram flag
-    simple_dualport_bram uint16 cache <input!> [8192] = uninitialized;
-    simple_dualport_bram uint14 tags <input!> [8192] = uninitialized;
+    simple_dualport_bram uint16 cache[8192] = uninitialized;
+    simple_dualport_bram uint14 tags[8192] = uninitialized;
 
     // CACHE WRITER
     uint16  cacheupdatedata = uninitialized;

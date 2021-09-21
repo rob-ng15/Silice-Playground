@@ -1789,7 +1789,6 @@ int mvprintw( int y, int x, const char *fmt,... ) {
 }
 
 int attron( int attrs ) {
-    printf("attrs = 0x%x\n",attrs);
     if( attrs & COLORS ) {
         __curses_fore = __curses_foregroundcolours[ attrs & 0x3f ];
         __curses_back = __curses_backgroundcolours[ attrs & 0x3f ];
