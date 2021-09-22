@@ -1,4 +1,16 @@
-// Create 1hz (1 second counter, also can output the baseline 25MHz counter)
+algorithm pulsecursor(
+    output  uint1   show
+) <autorun> {
+    uint25  counter25mhz = 0;
+    uint1   MAX <:: ( counter25mhz == 25000000 );
+
+    show := MAX ? ~show : show;
+    always {
+        counter25mhz = MAX ? 0 : counter25mhz + 1;
+    }
+}
+
+// Create 1hz (1 second counter)
 algorithm pulse1hz(
     output  uint16  counter1hz,
     input   uint1   resetCounter

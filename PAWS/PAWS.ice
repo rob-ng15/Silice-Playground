@@ -4,19 +4,13 @@ algorithm pll(
   output  uint1 video_clock,
   output! uint1 sdram_clock,
   output! uint1 clock_100_1,
-  output! uint1 clock_100_2,
-  output! uint1 clock_100_3,
-  output  uint1 compute_clock,
-  output  uint1 io_clock
+  output  uint1 compute_clock
 ) <autorun> {
   uint3 counter = 0;
   uint8 trigger = 8b11111111;
   sdram_clock   := clock;
   clock_100_1   := clock;
-  clock_100_2   := clock;
-  clock_100_3   := clock;
   compute_clock := ~counter[0,1]; // x2 slower
-  io_clock      := ~counter[0,1]; // x2 slower
   video_clock   := counter[1,1]; // x4 slower
   while (1) {
     counter = counter + 1;
@@ -89,7 +83,6 @@ $$else
 $$end
 ) <@clock_system> {
     uint1   clock_system = uninitialized;
-    uint1   clock_io = uninitialized;
     uint1   clock_100_1 = uninitialized;
 $$if VERILATOR then
     $$clock_25mhz = 'video_clock'
@@ -98,8 +91,7 @@ $$if VERILATOR then
       video_clock   :> video_clock,
       sdram_clock   :> sdram_clock,
       clock_100_1   :> clock_100_1,
-      compute_clock :> clock_system,
-      io_clock      :> clock_io
+      compute_clock :> clock_system
     );
 $$else
     $$clock_25mhz = 'clock'
@@ -117,7 +109,6 @@ $$else
     uint1   pll_lock_AUX = uninitialized;
     ulx3s_clk_risc_ice_v_AUX clk_gen_AUX (
         clkin   <: $clock_25mhz$,
-        clkIO :> clock_io,
         clkSDRAM :> sdram_clock,
         clkSDRAMcontrol :> sdram_clk,
         locked :> pll_lock_AUX

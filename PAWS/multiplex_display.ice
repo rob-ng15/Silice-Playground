@@ -35,7 +35,7 @@ algorithm multiplex_display(
     input uint1 character_map_display,
 
     // TERMINAL
-    input uint6 terminal_p,
+    input uint1 terminal_p,
     input uint1 terminal_display
 ) <autorun> {
     uint6    pixel = uninitialised;
@@ -77,7 +77,7 @@ algorithm multiplex_display(
 algorithm selectlayer(
     input   uint2   display_order,
     input   uint1   terminal_display,
-    input   uint6   terminal,
+    input   uint1   terminal,
     input   uint1   character_map_display,
     input   uint6   character_map,
     input   uint1   upper_sprites_display,
@@ -96,7 +96,7 @@ algorithm selectlayer(
     always {
         switch( display_order ) {
             case 0: { // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> BITMAP -> UPPER_SPRITES -> CHARACTER_MAP
-                pix = ( terminal_display ) ? terminal :
+                pix = ( terminal_display ) ? { {4{terminal}}, 2b11 } :
                             ( character_map_display ) ? character_map :
                             ( upper_sprites_display ) ? upper_sprites :
                             ( bitmap_display ) ? bitmap :
@@ -106,7 +106,7 @@ algorithm selectlayer(
                             background;
             }
             case 1: { // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> BITMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP
-                pix = ( terminal_display ) ? terminal :
+                pix = ( terminal_display ) ? { {4{terminal}}, 2b11 } :
                         ( character_map_display ) ? character_map :
                         ( upper_sprites_display ) ? upper_sprites :
                         ( lower_sprites_display ) ? lower_sprites :
@@ -116,7 +116,7 @@ algorithm selectlayer(
                         background;
             }
             case 2: { // BACKGROUND -> BITMAP -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP
-                pix = ( terminal_display ) ? terminal :
+                pix = ( terminal_display ) ? { {4{terminal}}, 2b11 } :
                         ( character_map_display ) ? character_map :
                         ( upper_sprites_display ) ? upper_sprites :
                         ( lower_sprites_display ) ? lower_sprites :
@@ -126,7 +126,7 @@ algorithm selectlayer(
                         background;
             }
             case 3: { // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> BITMAP -> CHARACTER_MAP
-                pix = ( terminal_display ) ? terminal :
+                pix = ( terminal_display ) ? { {4{terminal}}, 2b11 } :
                         ( character_map_display ) ? character_map :
                         ( bitmap_display ) ? bitmap :
                         ( upper_sprites_display ) ? upper_sprites :

@@ -5,7 +5,7 @@ algorithm terminal(
     input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
-    output! uint6   pixel,
+    output! uint1   pixel,
     output! uint1   terminal_display,
 
     input   uint1   showterminal,
@@ -13,8 +13,8 @@ algorithm terminal(
     input   uint3   terminal_y
 ) <autorun> {
     // CURSOR CLOCK
-    pulse1hz P1();
-    uint1   timer1hz := P1.counter1hz[0,1];
+    uint1   timer1hz = uninitialised;
+    pulsecursor P1( show :> timer1hz );
 
     // Character ROM 8x8 x 256
     brom uint8 characterGenerator8x8[] = {
@@ -26,7 +26,7 @@ algorithm terminal(
     uint10 yterminalpos <: (( pix_vblank ? 0 : pix_y - 416 ) >> 3) * 80;
 
     // Determine if cursor, and if cursor is flashing
-    uint1 is_cursor <: ( xterminalpos == terminal_x ) && ( ( ( pix_y - 416) >> 3 ) == terminal_y );
+    uint1 is_cursor <: timer1hz & ( ( xterminalpos == terminal_x ) & ( ( ( pix_y - 416 ) >> 3 ) == terminal_y ) );
 
     // Derive the x and y coordinate within the current 8x8 terminal character block x 0-7, y 0-7
     uint3 xinterminal <: pix_x[0,3];
@@ -43,7 +43,7 @@ algorithm terminal(
 
     // Default to transparent and active pixels always blue
     terminal_display := pix_active & showterminal & ( pix_y > 415 );
-    pixel := ( terminalpixel ) ? ( ( is_cursor && timer1hz ) ? 6b000011 : 6b111111 ) : ( ( is_cursor && timer1hz ) ? 6b111111 : 6b000011 );
+    pixel := ( terminalpixel ) ? ~is_cursor : is_cursor;
 }
 
 algorithm terminal_writer(

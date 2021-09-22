@@ -17,7 +17,7 @@ algorithm character_map(
 ) <autorun> {
     // CURSOR CLOCK
     uint1   timer1hz = uninitialized;
-    pulse1hz P1( counter1hz :> timer1hz );
+    pulsecursor P1( show :> timer1hz );
 
     // Character ROM 8x8
     brom uint8 characterGenerator8x8[] = {

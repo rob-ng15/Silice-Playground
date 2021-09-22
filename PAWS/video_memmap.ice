@@ -28,22 +28,14 @@ $$end
 ) <autorun> {
     // VIDEO + CLOCKS
     uint1   pll_lock_VIDEO = uninitialized;
-    uint1   video_clock = uninitialized;
-    uint1   gpu_clock = uninitialized;
 $$if not SIMULATION then
     ulx3s_clk_risc_ice_v_VIDEO clk_gen_VIDEO (
         clkin    <: clock_25mhz,
-        clkVIDEO :> video_clock,
-        clkGPU :> gpu_clock,
         locked   :> pll_lock_VIDEO
     );
-$$else
-    passthrough p1(i<:clock_25mhz,o:>gpu_clock);
-    passthrough p2(i<:clock_25mhz,o:>video_clock);
 $$end
     // Video Reset
-    uint1   video_reset = uninitialized;
-    clean_reset video_rstcond<@video_clock,!reset> ( out :> video_reset );
+    uint1   video_reset := reset;
 
     // RNG random number generator
     uint1   static1bit <:: rng.u_noise_out[0,1];
@@ -87,7 +79,7 @@ $$end
     uint6   background_p = uninitialized;
     uint1   BACKGROUNDmemoryWrite = uninitialized;
     background_memmap BACKGROUND(
-        video_clock <: video_clock,
+        video_clock <: clock_25mhz,
         video_reset <: video_reset,
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -110,8 +102,7 @@ $$end
     uint7   bitmap_colour_read = uninitialized;
     uint1   BITMAPmemoryWrite = uninitialized;
     bitmap_memmap BITMAP(
-        video_clock <: video_clock,
-        gpu_clock <: gpu_clock,
+        video_clock <: clock_25mhz,
         video_reset <: video_reset,
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -139,7 +130,7 @@ $$end
     uint6   curses_foreground = uninitialized;
     uint1   CHARACTER_MAPmemoryWrite = uninitialized;
     charactermap_memmap CHARACTER_MAP(
-        video_clock <: video_clock,
+        video_clock <: clock_25mhz,
         video_reset <: video_reset,
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -172,7 +163,7 @@ $$end
         uint4   Llayer_collision_$i$ = uninitialized;
     $$end
     sprite_memmap LOWER_SPRITE(
-        video_clock <: video_clock,
+        video_clock <: clock_25mhz,
         video_reset <: video_reset,
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -214,7 +205,7 @@ $$end
         uint4   Ulayer_collision_$i$ = uninitialized;
     $$end
     sprite_memmap UPPER_SPRITE(
-        video_clock <: video_clock,
+        video_clock <: clock_25mhz,
         video_reset <: video_reset,
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -243,12 +234,12 @@ $$end
     );
 
     // Terminal Window
-    uint6   terminal_p = uninitialized;
+    uint1   terminal_p = uninitialized;
     uint1   terminal_display = uninitialized;
     uint2   terminal_active = uninitialized;
     uint1   TERMINALmemoryWrite = uninitialized;
     terminal_memmap TERMINAL(
-        video_clock <: video_clock,
+        video_clock <: clock_25mhz,
         video_reset <: video_reset,
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -269,7 +260,7 @@ $$end
     uint2   Ltm_active = uninitialized;
     uint1   LOWER_TILEmemoryWrite = uninitialized;
     tilemap_memmap LOWER_TILE(
-        video_clock <: video_clock,
+        video_clock <: clock_25mhz,
         video_reset <: video_reset,
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -289,7 +280,7 @@ $$end
     uint2   Utm_active = uninitialized;
     uint1   UPPER_TILEmemoryWrite = uninitialized;
     tilemap_memmap UPPER_TILE(
-        video_clock <: video_clock,
+        video_clock <: clock_25mhz,
         video_reset <: video_reset,
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -307,7 +298,7 @@ $$end
     // Combine the display layers for display
     uint2   display_order = uninitialized;
     uint1   colour = uninitialized;
-    multiplex_display display <@video_clock,!video_reset> (
+    multiplex_display display <@clock_25mhz,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
         pix_active <: pix_active,
@@ -562,7 +553,6 @@ algorithm bitmap_memmap(
     // Clocks
     input   uint1   video_clock,
     input   uint1   video_reset,
-    input   uint1   gpu_clock,
 
     // Pixels
     input   uint10  pix_x,
