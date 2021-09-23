@@ -8,14 +8,11 @@ algorithm terminal(
     output! uint1   pixel,
     output! uint1   terminal_display,
 
+    input   uint1   blink,
     input   uint1   showterminal,
     input   uint7   terminal_x,
     input   uint3   terminal_y
 ) <autorun> {
-    // CURSOR CLOCK
-    uint1   timer1hz = uninitialised;
-    pulsecursor P1( show :> timer1hz );
-
     // Character ROM 8x8 x 256
     brom uint8 characterGenerator8x8[] = {
         $include('ROM/characterROM8x8nobold.inc')
@@ -26,7 +23,7 @@ algorithm terminal(
     uint10 yterminalpos <: (( pix_vblank ? 0 : pix_y - 416 ) >> 3) * 80;
 
     // Determine if cursor, and if cursor is flashing
-    uint1 is_cursor <: timer1hz & ( ( xterminalpos == terminal_x ) & ( ( ( pix_y - 416 ) >> 3 ) == terminal_y ) );
+    uint1 is_cursor <: blink & ( ( xterminalpos == terminal_x ) & ( ( ( pix_y - 416 ) >> 3 ) == terminal_y ) );
 
     // Derive the x and y coordinate within the current 8x8 terminal character block x 0-7, y 0-7
     uint3 xinterminal <: pix_x[0,3];

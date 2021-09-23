@@ -26,14 +26,10 @@ $$if VGA then
     output  uint1 video_vs,
 $$end
 ) <autorun> {
-    // VIDEO + CLOCKS
-    uint1   pll_lock_VIDEO = uninitialized;
-$$if not SIMULATION then
-    ulx3s_clk_risc_ice_v_VIDEO clk_gen_VIDEO (
-        clkin    <: clock_25mhz,
-        locked   :> pll_lock_VIDEO
-    );
-$$end
+    // CURSOR CLOCK
+    uint1   blink = uninitialised;
+    pulsecursor CURSOR <@clock_25mhz> ( show :> blink );
+
     // Video Reset
     uint1   video_reset := reset;
 
@@ -138,6 +134,7 @@ $$end
         pix_vblank <: vblank,
         pixel    :> character_map_p,
         pixel_display :> character_map_display,
+        blink <: blink,
         memoryAddress <: memoryAddress,
         writeData <: writeData,
         memoryWrite <: CHARACTER_MAPmemoryWrite,
@@ -247,6 +244,7 @@ $$end
         pix_vblank <: vblank,
         pixel    :> terminal_p,
         pixel_display :> terminal_display,
+        blink <: blink,
         memoryAddress <: memoryAddress,
         writeData <: writeData,
         memoryWrite <: TERMINALmemoryWrite,
@@ -813,6 +811,7 @@ algorithm charactermap_memmap(
     input   uint1   pix_vblank,
     output! uint6   pixel,
     output! uint1   pixel_display,
+    input   uint1   blink,
 
     // Memory access
     input   uint8   memoryAddress,
@@ -866,6 +865,7 @@ algorithm charactermap_memmap(
         pix_vblank <: pix_vblank,
         pixel    :> pixel,
         character_map_display :> pixel_display,
+        blink <: blink,
         tpu_foreground <: tpu_foreground,
         tpu_background <: tpu_background,
         tpu_showcursor <: tpu_showcursor,
@@ -1056,6 +1056,7 @@ algorithm terminal_memmap(
     input   uint1   pix_vblank,
     output! uint6   pixel,
     output! uint1   pixel_display,
+    input   uint1   blink,
 
     // Memory access
     input   uint8   memoryAddress,
@@ -1078,6 +1079,7 @@ algorithm terminal_memmap(
         pix_vblank <: pix_vblank,
         pixel    :> pixel,
         terminal_display :> pixel_display,
+        blink <: blink,
         showterminal <: showterminal,
         terminal_x <: terminal_x,
         terminal_y <: terminal_y

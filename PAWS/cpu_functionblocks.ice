@@ -131,6 +131,25 @@ algorithm addressgenerator2(
     }
 }
 
+algorithm addressplus2(
+    input   uint32  base,
+    output  uint32  baseplus2
+) <autorun> {
+    always {
+        baseplus2 = base + 2;
+    }
+}
+
+algorithm addressplus24(
+    input   uint32  base,
+    input   uint1   flag,
+    output  uint32  baseplus24
+) <autorun> {
+    always {
+        baseplus24 = base + ( flag ? 2 : 4 );
+    }
+}
+
 // BRANCH COMPARISIONS
 algorithm branchcomparison(
     input   uint7   opCode,
@@ -139,14 +158,18 @@ algorithm branchcomparison(
     input   int32   sourceReg2,
     output  uint1   takeBranch
 ) <autorun> {
+    uint1   isequal <:: sourceReg1 == sourceReg2;
+    uint1   unsignedcompare <:: __unsigned(sourceReg1) < __unsigned(sourceReg2);
+    uint1   signedcompare <:: __signed(sourceReg1) < __signed(sourceReg2);
+
     always {
         switch( function3 ) {
-            case 3b000: { takeBranch = ( sourceReg1 == sourceReg2 ); }
-            case 3b001: { takeBranch = ( sourceReg1 != sourceReg2 ); }
-            case 3b100: { takeBranch = ( __signed(sourceReg1) < __signed(sourceReg2) ); }
-            case 3b101: { takeBranch = ( __signed(sourceReg1) >= __signed(sourceReg2) ); }
-            case 3b110: { takeBranch = ( __unsigned(sourceReg1) < __unsigned(sourceReg2) ); }
-            case 3b111: { takeBranch = ( __unsigned(sourceReg1) >= __unsigned(sourceReg2) ); }
+            case 3b000: { takeBranch = isequal; }
+            case 3b001: { takeBranch = ~isequal; }
+            case 3b100: { takeBranch = signedcompare; }
+            case 3b101: { takeBranch = ~signedcompare; }
+            case 3b110: { takeBranch = unsignedcompare; }
+            case 3b111: { takeBranch = ~unsignedcompare; }
             default: { takeBranch = 0; }
         }
     }

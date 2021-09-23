@@ -5,6 +5,158 @@
 #include <math.h>
 #include <stdio.h>
 
+// BACKGROUND TILEMAPS
+unsigned short mountainslopes[] = {
+    0b0000000000000001,
+    0b0000000000000011,
+    0b0000000000000111,
+    0b0000000000001111,
+    0b0000000000011111,
+    0b0000000000111111,
+    0b0000000001111111,
+    0b0000000011111111,
+    0b0000000111111111,
+    0b0000001111111111,
+    0b0000011111111111,
+    0b0000111111111111,
+    0b0001111111111111,
+    0b0011111111111111,
+    0b0111111111111111,
+    0b1111111111111111,
+
+    0,0,0,0,0,0,0,0,
+    0b0000000110000000,
+    0b0000001111000000,
+    0b0000011111100000,
+    0b0000111111110000,
+    0b0001111111111000,
+    0b0011111111111100,
+    0b0111111111111110,
+    0b1111111111111111
+};
+
+unsigned char* mountains[]={
+    "                                          ",   // OFFSCREEN TOP
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                      3                   ",
+    "                     142                  ",
+    "                    14442                 ",
+    "                   1444442                ",
+    "3           7     144444442               ",
+    "42         586   14444444442       7     1",
+    "442       58886 1444444444442     586   14",
+    "4442     588888644444744444442   58886 144",
+    "44442   58888888644458644444442 5888881444",
+    "444442 58888888886458886444444458888814444",
+    "444444288888888888688888644444588888144444",
+    "444444428888888888888888864445888881444444",
+    "444444442888888888888888886458888814444444",   // BASELINE
+    "444444444288888888888888888688888144444444",
+    "444444444428888888888888888888881444444444",
+    "444444444442888888888888888888814444444444",
+    "444444444444288888888888888888144444444444",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          "    // OFFSCREEN BOTTOM
+};
+unsigned char *cityscape[]={
+    "                                          ",   // OFFSCREEN TOP
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "       22                     22          ",
+    "      2222   3     3         2222  4      ",
+    "11    2222  333   333        2222 444   11",
+    "11    2222  333  33333   4   2222 444   11",
+    "1111  2222 33333 33333  444  2222 444 1111",
+    "1111  2222 33333 33333 44444 2222 444 1111",   // BASELINE
+    "1111  2222 33333333333 44444 2222 444 1111",
+    "1111  2222 33333 33333 44444 2222 444 1111",
+    "1111  2222 33333 33333 44444 2222 444 1111",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          ",
+    "                                          "    // OFFSCREEN BOTTOM
+};
+
+void set_tilemaps( void ) {
+    tilemap_scrollwrapclear( LOWER_LAYER, 9 );
+    tilemap_scrollwrapclear( UPPER_LAYER, 9 );
+
+    set_tilemap_bitmap( LOWER_LAYER, 1, &mountainslopes[ 0 ] );
+    set_tilemap_bitmap( LOWER_LAYER, 2, &mountainslopes[ 16 ] );
+
+    for( int y = 0; y < 32; y++ ) {
+        for( int x = 0; x < 42; x++ ) {
+            switch( mountains[y][x] ) {
+                case '1':
+                    set_tilemap_tile( LOWER_LAYER, x, y, 1, TRANSPARENT, GREY1, 0 );
+                    break;
+                case '2':
+                    set_tilemap_tile( LOWER_LAYER, x, y, 1, TRANSPARENT, GREY1, REFLECT_X );
+                    break;
+                case '3':
+                    set_tilemap_tile( LOWER_LAYER, x, y, 2, TRANSPARENT, GREY1, 0 );
+                    break;
+                case '4':
+                    set_tilemap_tile( LOWER_LAYER, x, y, 0, GREY1, GREY1, 0 );
+                    break;
+                case '5':
+                    set_tilemap_tile( LOWER_LAYER, x, y, 1, TRANSPARENT, GREY2, 0 );
+                    break;
+                case '6':
+                    set_tilemap_tile( LOWER_LAYER, x, y, 1, TRANSPARENT, GREY2, REFLECT_X );
+                    break;
+                case '7':
+                    set_tilemap_tile( LOWER_LAYER, x, y, 2, TRANSPARENT, GREY2, 0 );
+                    break;
+                case '8':
+                    set_tilemap_tile( LOWER_LAYER, x, y, 0, GREY2, GREY2, 0 );
+                    break;
+            }
+            switch( cityscape[y][x] ) {
+                case '1':
+                    set_tilemap_tile( UPPER_LAYER, x, y, 0, DKBLUE, GREY1, 0 );
+                    break;
+                case '2':
+                    set_tilemap_tile( UPPER_LAYER, x, y, 0, DKRED, GREY1, 0 );
+                    break;
+                case '3':
+                    set_tilemap_tile( UPPER_LAYER, x, y, 0, DKMAGENTA, GREY1, 0 );
+                    break;
+                case '4':
+                    set_tilemap_tile( UPPER_LAYER, x, y, 0, DKORANGE, GREY1, 0 );
+                    break;
+            }
+        }
+    }
+}
+
 // ROADSIDE ITEMS - AS DRAWLISTS FOR EASIER PLACEMENT AND SCALING
 #define NONE 0
 #define TREE 1
@@ -118,10 +270,8 @@ struct DrawList2D LEFTBILLBOARD4[] = {
     { DLARC, PINK, DITHERSOLID, { -64, -39 }, { 4, 0b11000011 }, },
     { DLARC, PINK, DITHERSOLID, { -56, -39 }, { 4, 0b00111100 }, },
     { DLARC, PINK, DITHERSOLID, { -48, -39 }, { 4, 0b11000011 }, },
-    { DLLINE, PINK, DITHERSOLID, { -84, -52 }, { -76, -60 }, { 1, 0 }, },
-    { DLLINE, PINK, DITHERSOLID, { -84, -60 }, { -76, -52 }, { 1, 0 }, },
-    { DLLINE, PINK, DITHERSOLID, { -52, -52 }, { -44, -60 }, { 1, 0 }, },
-    { DLLINE, PINK, DITHERSOLID, { -52, -60 }, { -44, -52 }, { 1, 0 }, },
+    { DLRECT, PINK, DITHERSOLID, { -84, -52 }, { -76, -60 }, },
+    { DLRECT, PINK, DITHERSOLID, { -52, -52 }, { -44, -60 }, },
 };
 
 struct DrawList2D RIGHTBILLBOARD1[] = {
@@ -173,10 +323,8 @@ struct DrawList2D RIGHTBILLBOARD4[] = {
     { DLARC, PINK, DITHERSOLID, { 64, -39 }, { 4, 0b11000011 }, },
     { DLARC, PINK, DITHERSOLID, { 56, -39 }, { 4, 0b00111100 }, },
     { DLARC, PINK, DITHERSOLID, { 48, -39 }, { 4, 0b11000011 }, },
-    { DLLINE, PINK, DITHERSOLID, { 84, -52 }, { 76, -60 }, { 1, 0 }, },
-    { DLLINE, PINK, DITHERSOLID, { 84, -60 }, { 76, -52 }, { 1, 0 }, },
-    { DLLINE, PINK, DITHERSOLID, { 52, -52 }, { 44, -60 }, { 1, 0 }, },
-    { DLLINE, PINK, DITHERSOLID, { 52, -60 }, { 44, -52 }, { 1, 0 }, },
+    { DLRECT, PINK, DITHERSOLID, { 84, -52 }, { 76, -60 }, },
+    { DLRECT, PINK, DITHERSOLID, { 52, -52 }, { 44, -60 }, },
 };
 
 // ROAD SEGMENTS, DEFINING NUMBER OF SECTIONS BEFORE NEXT TURN, TURN ANGLE, AND SIDE OBJECTS
@@ -308,7 +456,10 @@ void drawtunnelface( float px, float py, float scale ) {
     gpu_dither( DITHEROFF );
 }
 
-void drawroad( float x1, float y1, float scale1, float x2, float y2, float scale2, int sumct ) {
+void drawroad( float x1, float y1, float scale1, float x2, float y2, float scale2, int sumct, int tnl ) {
+    // DRAW GRASS
+    if( !tnl ) gpu_rectangle( (sumct%2) ? GREEN : DKGREEN, 0, y1, 319, y2 );
+
     short w1 = 3 * scale1, w2 = 3 * scale2;
     drawtrapezium( GREY1, x1, y1, w1, x2, y2, w2 );
 
@@ -318,7 +469,7 @@ void drawroad( float x1, float y1, float scale1, float x2, float y2, float scale
         drawtrapezium( WHITE, x1, y1, mw1, x2, y2, mw2 );
     }
 
-    // SHOULDER MARKINGS AND GRASS
+    // SHOULDER MARKINGS
     short sw1 = .2 * scale1, sw2 = .2 * scale2;
     drawtrapezium( (sumct%2) ? WHITE : RED, x1-w1, y1, sw1 ,x2-w2 , y2, sw2 );
     drawtrapezium( (sumct%2) ? WHITE : RED, x1+w1, y1, sw1, x2+w2, y2, sw2 );
@@ -347,7 +498,19 @@ void draw() {
 
     pp = project( x, y, z );
 
-    int ptnl = road[cnr ].tnl, tnl;
+    int ptnl = road[cnr].tnl, tnl;
+
+    // MOVE THE TILEMAPS
+    if( road[cnr].tu < 0 ) {
+        tilemap_scrollwrapclear( LOWER_LAYER, 5 );
+        tilemap_scrollwrapclear( UPPER_LAYER, 5 );
+        if( road[cnr].tu <= -0.5 ) tilemap_scrollwrapclear( LOWER_LAYER, 5 );
+    }
+    if( road[cnr].tu > 0 ) {
+        tilemap_scrollwrapclear( LOWER_LAYER, 7 );
+        tilemap_scrollwrapclear( UPPER_LAYER, 7 );
+        if( road[cnr].tu >= 0.5 ) tilemap_scrollwrapclear( LOWER_LAYER, 7 );
+    }
 
     for( int i = 0; i < DRAWSEGMENTS; i++ ) {
         x += xd; y += yd; z += zd;
@@ -373,7 +536,7 @@ void draw() {
             if( x1 > px1 ) gpu_rectangle( wallcol, px1, y1,x1-1,py2-1 );
             if( x2 < px2 ) gpu_rectangle( wallcol, x2, y1, px2-1,py2-1 );
         }
-        drawroad( p.x, p.y, p.z, pp.x, pp.y, pp.z, sumct );
+        drawroad( p.x, p.y, p.z, pp.x, pp.y, pp.z, sumct, tnl );
 
         // ADD BACKGROUND GRAPHICS, BEAMS ONLY AT START OF SECTION, SIGNS EVERY OTHER GAP, BILLBOARDS EVERY 4th GAP
         spriteclip[i][0] = crop[0]; spriteclip[i][1] = crop[1]; spriteclip[i][2] = crop[2]; spriteclip[i][3] = crop[3]; spritesxyz[i] = p;
@@ -457,7 +620,7 @@ void draw() {
                 DoDrawList2Dscale( LEFTBILLBOARD3, 6, spritesxyz[i].x - offset, spritesxyz[i].y, scale );
                 break;
             case BILLBOARD4:
-                DoDrawList2Dscale( LEFTBILLBOARD4, 19, spritesxyz[i].x - offset, spritesxyz[i].y, scale );
+                DoDrawList2Dscale( LEFTBILLBOARD4, 17, spritesxyz[i].x - offset, spritesxyz[i].y, scale );
                 break;
             default:
         }
@@ -484,24 +647,15 @@ void draw() {
                 DoDrawList2Dscale( RIGHTBILLBOARD3, 6, spritesxyz[i].x + offset, spritesxyz[i].y, scale );
                 break;
             case BILLBOARD4:
-                DoDrawList2Dscale( RIGHTBILLBOARD4, 19, spritesxyz[i].x + offset, spritesxyz[i].y, scale );
+                DoDrawList2Dscale( RIGHTBILLBOARD4, 17, spritesxyz[i].x + offset, spritesxyz[i].y, scale );
                 break;
             default:
         }
     }
-
-    set_copper_cpuinput( 2 * crop[3] );
 }
 
 void set_background_generator( void ) {
-    copper_startstop( 0 );
-    copper_program( 0, COPPER_WAIT_VBLANK, 7, 0, BKG_HATCH, DKBLUE, BLUE );
-    copper_program( 1, COPPER_WAIT_X, 7, 0, BKG_HATCH, DKBLUE, BLUE );
-    copper_program( 2, COPPER_JUMP, COPPER_JUMP_IF_Y_LESS, COPPER_USE_CPU_INPUT, 0, 0, 1 );
-    copper_program( 3, COPPER_WAIT_X, 7, 0, BKG_HATCH, DKGREEN, GREEN );
-    copper_program( 4, COPPER_JUMP, COPPER_JUMP_ON_VBLANK_EQUAL, 0, 0, 0, 3 );
-    copper_program( 5, COPPER_JUMP, COPPER_JUMP_ALWAYS, 0, 0, 0, 1 );
-    copper_startstop( 1 );
+    set_background( DKBLUE, BLUE, BKG_HATCH );
 }
 
 int main() {
@@ -512,6 +666,7 @@ int main() {
     bitmap_draw( 1 ); gpu_cs();
     bitmap_display(0);
     set_background_generator();
+    set_tilemaps();
 
     // PREPARE ROAD
     init();

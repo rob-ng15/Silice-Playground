@@ -3,13 +3,13 @@ $$if ICARUS or VERILATOR then
 algorithm pll(
   output  uint1 video_clock,
   output! uint1 sdram_clock,
-  output! uint1 clock_100_1,
+  output! uint1 clock_decode,
   output  uint1 compute_clock
 ) <autorun> {
   uint3 counter = 0;
   uint8 trigger = 8b11111111;
   sdram_clock   := clock;
-  clock_100_1   := clock;
+  clock_decode   := clock;
   compute_clock := ~counter[0,1]; // x2 slower
   video_clock   := counter[1,1]; // x4 slower
   while (1) {
@@ -83,35 +83,29 @@ $$else
 $$end
 ) <@clock_system> {
     uint1   clock_system = uninitialized;
-    uint1   clock_100_1 = uninitialized;
+    uint1   clock_decode = uninitialized;
 $$if VERILATOR then
     $$clock_25mhz = 'video_clock'
     // --- PLL
     pll clockgen<@clock,!reset>(
       video_clock   :> video_clock,
       sdram_clock   :> sdram_clock,
-      clock_100_1   :> clock_100_1,
+      clock_decode   :> clock_decode,
       compute_clock :> clock_system
     );
 $$else
     $$clock_25mhz = 'clock'
     // CLOCK/RESET GENERATION
     // CPU + MEMORY
+    uint1   sdram_clock = uninitialized;
     uint1   pll_lock_CPU = uninitialized;
     ulx3s_clk_risc_ice_v_CPU clk_gen_CPU (
         clkin    <: $clock_25mhz$,
         clkSYSTEM  :> clock_system,
-        clk100_1  :> clock_100_1,
-        locked   :> pll_lock_CPU
-    );
-    // SDRAM CLOCKS + IO CLOCK
-    uint1   sdram_clock = uninitialized;
-    uint1   pll_lock_AUX = uninitialized;
-    ulx3s_clk_risc_ice_v_AUX clk_gen_AUX (
-        clkin   <: $clock_25mhz$,
+        clkDECODE  :> clock_decode,
         clkSDRAM :> sdram_clock,
         clkSDRAMcontrol :> sdram_clk,
-        locked :> pll_lock_AUX
+        locked   :> pll_lock_CPU
     );
 $$end
 
@@ -246,7 +240,7 @@ $$end
     uint1   CPUwritememory = uninitialized;
     uint1   CPUreadmemory = uninitialized;
     PAWSCPU CPU <@clock_system,!reset> (
-        clock_CPUdecoder <: clock_100_1,
+        clock_CPUdecoder <: clock_decode,
         accesssize :> accesssize,
         address :> address,
         writedata :> writedata,

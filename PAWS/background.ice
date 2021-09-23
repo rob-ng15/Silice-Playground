@@ -200,7 +200,7 @@ algorithm pattern(
             }
             case 6: { condition = 1; }                                              // STATIC (placeholder, done below)
             default: { condition = ( pix_x[b_mode-7,1] == pix_y[b_mode-7,1] ); }    // CHECKERBOARDS (7,8,9,10)
-            case 11: { condition = ( pix_x[0,1] | pix_y[0,1] ); }                  // CROSSHATCH
+            case 11: { condition = ( pix_x[0,1] | pix_y[0,1] ); }                   // CROSSHATCH
             case 12: { condition = ( pix_x[0,2] == pix_y[0,2] ); }                  // LSLOPE
             case 13: { condition = ( pix_x[0,2] == ~pix_y[0,2] ); }                 // RSLOPE
             case 14: { condition = pix_x[0,1]; }                                    // VSTRIPES

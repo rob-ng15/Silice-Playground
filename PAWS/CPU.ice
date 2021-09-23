@@ -29,6 +29,8 @@ algorithm PAWSCPU(
     uint32  PC <:: SMT ? pcSMT : pc;
     uint32  PCplus2 <:: PC + 2;
     uint32  nextPC <:: PC + ( compressed ? 2 : 4 );
+    //uint32  PCplus2 = uninitialized; addressplus2 pcplus2 <@clock_CPUdecoder> ( base <: PC, baseplus2 :> PCplus2 );
+    //uint32  nextPC = uninitialized; addressplus24 nextpc <@clock_CPUdecoder> ( base <: PC, flag <: compressed, baseplus24 :> nextPC );
 
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
@@ -44,8 +46,8 @@ algorithm PAWSCPU(
     uint1   memoryload = uninitialized;
     uint1   memorystore = uninitialized;
     uint1   signedload <:: ~function3[2,1];
-    uint4   byteoffset <:: loadAddress[0,1] ? 8 : 0;
-    uint4   bytesignoffset <:: byteoffset + 7;
+    uint4   byteoffset <:: { loadAddress[0,1], 3b000 };
+    uint4   bytesignoffset <:: { loadAddress[0,1], 3b111 };
     memoryaccess ACCESS(
         opCode <: opCode,
         function3 <: function3,
@@ -113,9 +115,7 @@ algorithm PAWSCPU(
     uint32  branchAddress = uninitialized;
     uint32  jumpAddress = uninitialized;
     uint32  loadAddress = uninitialized;
-    uint32  loadAddressplus2 <:: loadAddress + 2;
     uint32  storeAddress = uninitialized;
-    uint32  storeAddressplus2 <:: storeAddress + 2;
     uint32  AUIPCLUI = uninitialized;
     addressgenerator1 AGU1 <@clock_CPUdecoder> (
         instruction <: instruction,
@@ -131,6 +131,10 @@ algorithm PAWSCPU(
         storeAddress :> storeAddress,
         loadAddress :> loadAddress
     );
+    uint32  loadAddressplus2  = uninitialized; addressplus2 lap2 <@clock_CPUdecoder> ( base <: loadAddress, baseplus2 :> loadAddressplus2 );
+    uint32  storeAddressplus2  = uninitialized; addressplus2 sap2 <@clock_CPUdecoder> ( base <: storeAddress, baseplus2 :> storeAddressplus2 );
+    uint16  storeLOW <:: FASTPATH ? EXECUTEFASTmemoryoutput[0,16] : EXECUTESLOWmemoryoutput[0,16];
+    uint16  storeHIGH <:: FASTPATH ? EXECUTEFASTmemoryoutput[16,16] : EXECUTESLOWmemoryoutput[16,16];
 
     // CPU EXECUTE BLOCK
     uint32  memoryinput = uninitialized;
@@ -263,10 +267,10 @@ algorithm PAWSCPU(
                 }
 
                 if( memorystore ) {
-                    address = storeAddress; writedata = FASTPATH ? EXECUTEFASTmemoryoutput[0,16] : EXECUTESLOWmemoryoutput[0,16];                                       // STORE 8 OR 16 BIT
+                    address = storeAddress; writedata = storeLOW;                                                                                                       // STORE 8 OR 16 BIT
                     writememory = 1; while( memorybusy ) {}
                     if( accesssize[1,1] ) {
-                        address = storeAddressplus2; writedata = FASTPATH ? EXECUTEFASTmemoryoutput[16,16] : EXECUTESLOWmemoryoutput[16,16];                            // 32 BIT WRITE 2ND 16 BITS
+                        address = storeAddressplus2; writedata = storeHIGH;                                                                                             // 32 BIT WRITE 2ND 16 BITS
                         writememory = 1;  while( memorybusy ) {}
                     }
                 }

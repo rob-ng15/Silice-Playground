@@ -9,16 +9,13 @@ algorithm character_map(
     output! uint6   pixel,
     output! uint1   character_map_display,
 
+    input   uint1   blink,
     input   uint7   cursor_x,
     input   uint6   cursor_y,
     input   uint6   tpu_foreground,
     input   uint7   tpu_background,
     input   uint1   tpu_showcursor
 ) <autorun> {
-    // CURSOR CLOCK
-    uint1   timer1hz = uninitialized;
-    pulsecursor P1( show :> timer1hz );
-
     // Character ROM 8x8
     brom uint8 characterGenerator8x8[] = {
         $include('ROM/characterROM8x8.inc')
@@ -27,8 +24,8 @@ algorithm character_map(
     // Character position on the screen x 0-79, y 0-59 * 80 ( fetch it two pixels ahead of the actual x pixel, so it is always ready )
     uint7   xcharacterpos <: ( pix_active ?  pix_x + 2 : 0 ) >> 3;
     uint7   xcolourpos <: ( pix_active ?  pix_x + 1 : 0 ) >> 3;
-    uint13  ycharacterpos <: (( pix_vblank ? 0 : pix_y ) >> 3 ) * 80;
-    uint1   is_cursor <: tpu_showcursor & timer1hz & ( cursor_x == ( ( pix_active ? pix_x : 0 ) >> 3 ) ) & ( cursor_y == (( pix_vblank ? 0 : pix_y ) >> 3) );
+    uint13  ycharacterpos <: 80 * ( ( pix_vblank ? 0 : pix_y ) >> 3 );
+    uint1   is_cursor <: tpu_showcursor & blink & ( cursor_x == ( ( pix_active ? pix_x : 0 ) >> 3 ) ) & ( cursor_y == ycharacterpos );
 
     // Derive the x and y coordinate within the current 8x8 character block x 0-7, y 0-7
     uint3 xincharacter <: pix_x[0,3];
