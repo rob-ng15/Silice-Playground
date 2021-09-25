@@ -31,10 +31,10 @@ algorithm pulse1khz(
 ) <autorun> {
     uint15  counter25mhz = 0;
     uint1   MAX <:: ( counter25mhz == 25000 );
-    uint1   RESET <: ( resetCounter != 0 );
-
+    uint1   RESET <:: ( resetCounter != 0 );
+    uint1   FINISHED <:: ( counter1khz == 0 );
     always {
-        counter1khz = RESET ? resetCounter : ( counter1khz == 0 ) ? 0 : counter1khz - MAX;
+        counter1khz = RESET ? resetCounter : FINISHED ? 0 : counter1khz - MAX;
         counter25mhz = RESET | MAX ? 0 : counter25mhz + 1;
     }
 }

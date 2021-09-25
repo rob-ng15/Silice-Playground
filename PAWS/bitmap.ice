@@ -249,7 +249,7 @@ algorithm dither(
             default: { condition = ( bitmap_x_write[dithermode - 1,1] == bitmap_y_write[dithermode - 1,1] ); }  // CHECKERBOARDS 1 2 AND 3
             case 4: { condition = bitmap_x_write[0,1]; }                                                        // VERTICAL STRIPES
             case 5: { condition = bitmap_y_write[0,1]; }                                                        // HORIZONTAL STRIPES
-            case 6: { condition = ( bitmap_x_write[0,1] || bitmap_y_write[0,1] ); }                             // CROSSHATCH
+            case 6: { condition = ( bitmap_x_write[0,1] | bitmap_y_write[0,1] ); }                              // CROSSHATCH
             case 7: { condition = ( bitmap_x_write[0,2] == bitmap_y_write[0,2] ); }                             // LEFT SLOPE
             case 8: { condition = ( bitmap_x_write[0,2] == ~bitmap_y_write[0,2] ); }                            // RIGHT SLOPE
             case 9: {                                                                                           // LEFT TRIANGLE

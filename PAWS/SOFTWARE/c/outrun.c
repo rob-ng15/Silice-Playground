@@ -129,17 +129,17 @@ unsigned char *cityscape[]={
     "                                          ",
     "       EE                     EE          ",
     "      EEEE   1     1         EEEE  I      ",
-    "AA    EEEE  354   354        EEEE III   AA",
-    "AA    EEEE  555  35554   I   EEEE III   AA",
-    "AAAA  EEEE 35554 15551  III  EEEE III AAAA",
-    "AAAA  EEEE 15552225551 IIIII EEEE III AAAA",   // BASELINE
-    "AAAA  EEEE 15551 15551 IIIII EEEE III AAAA",
-    "AAAA  EEEE 15552225551 IIIII EEEE III AAAA",
-    "AAAA  EEEE 15551 15551 IIIII EEEE III AAAA",
-    "AAAA  EEEE 15551 15551 IIIII EEEE III AAAA",
-    "AAAA  EEEE 11111 11111 IIIII EEEE III AAAA",
-    "                                          ",
-    "                                          ",
+    "BC    EEEE  354   354        EEEE III   BC",
+    "DA    EEEE  555  35554   I   EEEE III   AD",
+    "DDDC  EEEE 35554 15551  III  EEEE III BDDD",
+    "DDDA  EEEE 15552225551 IIIII EEEE III ADDD",   // BASELINE
+    "DDDA  EEEE 15551 15551 IIIII EEEE III ADDD",
+    "DDDA  EEEE 15552225551 IIIII EEEE III ADDD",
+    "DDDA  EEEE 15551 15551 IIIII EEEE III ADDD",
+    "DDDA  EEEE 15551 15551 IIIII EEEE III ADDD",
+    "ADDA  EEEE 11111 11111 IIIII EEEE III ADDA",
+    "AADA  EEEE 11111 11111 IIIII EEEE III ADAA",
+    "ddDA  EEEE 11111 11111 IIIII EEEE III ADdA",
     "                                          ",
     "                                          ",
     "                                          ",
@@ -192,6 +192,7 @@ void set_tilemaps( void ) {
                     break;
             }
             switch( cityscape[y][x] ) {
+                // DKMAGENTA BUILDING
                 case '1':
                     set_tilemap_tile( UPPER_LAYER, x, y, 0, DKMAGENTA, GREY1, 0 );
                     break;
@@ -207,8 +208,21 @@ void set_tilemaps( void ) {
                 case '5':
                     set_tilemap_tile( UPPER_LAYER, x, y, 3, DKMAGENTA, YELLOW, 0 );
                     break;
+                // DKBLUE BUILDING
                 case 'A':
                     set_tilemap_tile( UPPER_LAYER, x, y, 0, DKBLUE, GREY1, 0 );
+                    break;
+                case 'B':
+                    set_tilemap_tile( UPPER_LAYER, x, y, 2, TRANSPARENT, DKBLUE, 0 );
+                    break;
+                case 'C':
+                    set_tilemap_tile( UPPER_LAYER, x, y, 2, TRANSPARENT, DKBLUE, REFLECT_X );
+                    break;
+                case 'D':
+                    set_tilemap_tile( UPPER_LAYER, x, y, 1, DKBLUE, DKCYAN, 0 );
+                    break;
+                case 'd':
+                    set_tilemap_tile( UPPER_LAYER, x, y, 3, DKBLUE, BLACK, 0 );
                     break;
                 case 'E':
                     set_tilemap_tile( UPPER_LAYER, x, y, 0, DKRED, GREY1, 0 );

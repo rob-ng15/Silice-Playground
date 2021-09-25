@@ -51,6 +51,9 @@ algorithm apu(
             selected_duration = selected_duration - updateduration;
         }
     }
+
+    // STOP AUDIO ON RESET
+    if( ~reset ) { selected_duration = 0; }
 }
 
 algorithm waveform(
