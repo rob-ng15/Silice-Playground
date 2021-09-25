@@ -25,9 +25,9 @@ algorithm tilemap(
 ) <autorun> {
     // Character position on the screen x 0-41, y 0-31 * 42 ( fetch it two pixels ahead of the actual x pixel, so it is always ready, colours 1 pixel ahead )
     // Adjust for the offsets, effective 0 point margin is ( 1,1 ) to ( 40,30 ) with a 1 tile border
-    uint11  xtmpos <: ( {{6{tm_offset_x[4,1]}}, tm_offset_x} + ( pix_active ? ( pix_x + 11d18 ) : 11d16 ) ) >> 4;
-    uint11  ytmpos <: ( ( {{6{tm_offset_y[4,1]}}, tm_offset_y} + ( pix_vblank ? 11d16 : 11d16 + pix_y ) ) >> 4 ) * 42;
-    uint11  xtmposcolour <: ( {{6{tm_offset_x[4,1]}}, tm_offset_x} + ( pix_active ? ( pix_x + 11d17 ) : 11d16 ) ) >> 4;
+    uint6   xtmpos <: ( {{6{tm_offset_x[4,1]}}, tm_offset_x} + ( pix_active ? ( pix_x + 11d18 ) : 11d16 ) ) >> 4;
+    uint6   xtmposcolour <: ( {{6{tm_offset_x[4,1]}}, tm_offset_x} + ( pix_active ? ( pix_x + 11d17 ) : 11d16 ) ) >> 4;
+    uint11  ytmpos <: ( {{6{tm_offset_y[4,1]}}, tm_offset_y} + ( pix_vblank ? 11d16 : 11d16 + pix_y ) ) >> 4;
 
     // Derive the x and y coordinate within the current 16x16 tilemap block x 0-7, y 0-15
     // Needs adjusting for the offsets
@@ -38,8 +38,8 @@ algorithm tilemap(
     uint1   tmpixel <: colour15(colours.rdata0).x_reflect ? tiles16x16.rdata0[xintm, 1] :tiles16x16.rdata0[4b1111 - xintm, 1];
 
     // Set up reading of the tilemap
-    tiles.addr0 := xtmpos + ytmpos;
-    colours.addr0 := xtmposcolour + ytmpos;
+    tiles.addr0 := xtmpos + ytmpos * 42;
+    colours.addr0 := xtmposcolour + ytmpos * 42;
 
     // Setup the reading and writing of the tiles16x16
     tiles16x16.addr0 := colour15(colours.rdata0).y_reflect ? { tiles.rdata0, 4b1111 - yintm } :{ tiles.rdata0, yintm };

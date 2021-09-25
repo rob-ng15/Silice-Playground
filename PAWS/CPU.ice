@@ -29,8 +29,6 @@ algorithm PAWSCPU(
     uint32  PC <:: SMT ? pcSMT : pc;
     uint32  PCplus2 <:: PC + 2;
     uint32  nextPC <:: PC + ( compressed ? 2 : 4 );
-    //uint32  PCplus2 = uninitialized; addressplus2 pcplus2 <@clock_CPUdecoder> ( base <: PC, baseplus2 :> PCplus2 );
-    //uint32  nextPC = uninitialized; addressplus24 nextpc <@clock_CPUdecoder> ( base <: PC, flag <: compressed, baseplus24 :> nextPC );
 
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
@@ -43,7 +41,8 @@ algorithm PAWSCPU(
     compressed10 COMPRESSED10 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3210 );
 
     // RISC-V MEMORY ACCESS FLAGS - SET SIZE 32 BIT FOR FLOAT AND ATOMIC
-    uint1   memoryload = uninitialized;
+    uint32  memory8bit <:: signedload ? { {24{readdata[bytesignoffset, 1]}}, readdata[byteoffset, 8] } : readdata[byteoffset, 8];
+    uint32  memory16bit <:: signedload ? { {16{readdata[15,1]}}, readdata[0,16] } : readdata[0,16];    uint1   memoryload = uninitialized;
     uint1   memorystore = uninitialized;
     uint1   signedload <:: ~function3[2,1];
     uint4   byteoffset <:: { loadAddress[0,1], 3b000 };
@@ -114,8 +113,6 @@ algorithm PAWSCPU(
     // RISC-V ADDRESS GENERATOR
     uint32  branchAddress = uninitialized;
     uint32  jumpAddress = uninitialized;
-    uint32  loadAddress = uninitialized;
-    uint32  storeAddress = uninitialized;
     uint32  AUIPCLUI = uninitialized;
     addressgenerator1 AGU1 <@clock_CPUdecoder> (
         instruction <: instruction,
@@ -124,6 +121,10 @@ algorithm PAWSCPU(
         jumpAddress :> jumpAddress,
         AUIPCLUI :> AUIPCLUI
     );
+    uint32  loadAddress = uninitialized;
+    uint32  storeAddress = uninitialized;
+    uint32  loadAddressplus2 <:: loadAddress + 2;
+    uint32  storeAddressplus2 <:: storeAddress + 2;
     addressgenerator2 AGU2 <@clock_CPUdecoder> (
         instruction <: instruction,
         immediateValue <: immediateValue,
@@ -131,14 +132,12 @@ algorithm PAWSCPU(
         storeAddress :> storeAddress,
         loadAddress :> loadAddress
     );
-    uint32  loadAddressplus2  = uninitialized; addressplus2 lap2 <@clock_CPUdecoder> ( base <: loadAddress, baseplus2 :> loadAddressplus2 );
-    uint32  storeAddressplus2  = uninitialized; addressplus2 sap2 <@clock_CPUdecoder> ( base <: storeAddress, baseplus2 :> storeAddressplus2 );
-    uint16  storeLOW <:: FASTPATH ? EXECUTEFASTmemoryoutput[0,16] : EXECUTESLOWmemoryoutput[0,16];
-    uint16  storeHIGH <:: FASTPATH ? EXECUTEFASTmemoryoutput[16,16] : EXECUTESLOWmemoryoutput[16,16];
 
     // CPU EXECUTE BLOCK
     uint32  memoryinput = uninitialized;
     uint32  result <:: FASTPATH ? EXECUTEFASTresult : EXECUTESLOWresult;
+    uint16  storeLOW <:: FASTPATH ? EXECUTEFASTmemoryoutput[0,16] : EXECUTESLOWmemoryoutput[0,16];
+    uint16  storeHIGH <:: FASTPATH ? EXECUTEFASTmemoryoutput[16,16] : EXECUTESLOWmemoryoutput[16,16];
 
     // CLASSIFY THE INSTRUCTION TO FAST/SLOW
     uint1   FASTPATH = uninitialized;
@@ -234,36 +233,36 @@ algorithm PAWSCPU(
             case 0: {
                 address = PC; readmemory = 1; while( memorybusy ) {}                                                                                                    // FETCH POTENTIAL COMPRESSED OR 1ST 16 BITS
                 compressed = ( readdata[0,2] != 2b11 );
-                if( readdata[0,2] == 2b11 ) {
-                    instruction[0,16] = readdata; address = PCplus2; readmemory = 1; while( memorybusy ) {} instruction[16,16] = readdata;                              // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
-                } else {
+                if( compressed ) {
                     switch( readdata[0,2] ) {                                                                                                                           // EXPAND COMPRESSED INSTRUCTION
                         case 2b00: { instruction = i3200; }
                         case 2b01: { instruction = i3201; }
                         case 2b10: { instruction = i3210; }
                         default: {}
                     }
+                } else {
+                    instruction[0,16] = readdata; address = PCplus2; readmemory = 1; while( memorybusy ) {} instruction[16,16] = readdata;                              // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
                 }
                 FSM = 2;
             }
             case 1: { FSM = 4; }                                                                                                                                        // DECODE, REGISTER FETCH, ADDRESS GENERATION
             case 2: {
                 if( memoryload ) {
-                    address = loadAddress; readmemory = 1; while( memorybusy ) {}                                                                                       // READ 1ST 16 BITS
+                    address = loadAddress; readmemory = 1; while( memorybusy ) {}                                                                                       // READ 1ST 8 or 16 BITS
                     switch( accesssize[0,2] ) {
-                        case 2b00: { memoryinput = signedload ? { {24{readdata[bytesignoffset, 1]}}, readdata[byteoffset, 8] } : readdata[byteoffset, 8]; }             // 8 BIT SIGN EXTEND
-                        case 2b01: { memoryinput  = signedload ? { {16{readdata[15,1]}}, readdata[0,16] } : readdata[0,16]; }                                           // 16 BIT SIGN EXTEND
+                        case 2b00: { memoryinput = memory8bit; }                                                                                                        // 8 BIT SIGN EXTEND
+                        case 2b01: { memoryinput  = memory16bit; }                                                                                                      // 16 BIT SIGN EXTEND
                         default: { memoryinput[0,16] = readdata; address = loadAddressplus2; readmemory = 1; while( memorybusy ) {} memoryinput[16,16] = readdata; }    // 32 BIT READ 2ND 16 BITS
                     }
                 }
 
-                if( ~FASTPATH ) {
+                if( FASTPATH ) {
+                    // ALL OTHER OPERATIONS
+                    takeBranch = EXECUTEFASTtakebranch;
+                } else {
                     // FPU ALU AND CSR OPERATIONS
                     EXECUTESLOWstart = 1; while( EXECUTESLOWbusy ) {}
                     takeBranch = 0;
-                } else {
-                    // ALL OTHER OPERATIONS
-                    takeBranch = EXECUTEFASTtakebranch;
                 }
 
                 if( memorystore ) {
@@ -311,14 +310,11 @@ algorithm Iclass(
             case 5b00011: {}                        // FENCE[I]
             case 5b11100: { FASTPATH = 0; }         // CSR
             case 5b01011: { FASTPATH = 0; }         // LR.W SC.WATOMIC LOAD - MODIFY - STORE
-            default: {                              // FPU OR INTEGER DIVIDE -> SLOWPATH
-                if( opCode[6,1] || ( opCode[5,1] && function7[0,1] && function3[2,1]) ) {
-                    FASTPATH = 0;
-                }
-            }
+            default: { FASTPATH = ~( opCode[6,1] | ( opCode[5,1] & function7[0,1] & function3[2,1]) ); }    // FPU OR INTEGER DIVIDE -> SLOWPATH
         }
     }
 }
+
 algorithm cpuexecuteSLOWPATH(
     input   uint1   start,
     output  uint1   busy(0),

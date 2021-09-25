@@ -220,12 +220,13 @@ algorithm floatcalc(
     uint1   FPUsqrtstart = uninitialised;
     uint1   FPUsqrtbusy = uninitialised;
     floatsqrt FPUsqrt( a <: sourceReg1F, result :> sqrtresult, flags :> sqrtflags, start <: FPUsqrtstart, busy :> FPUsqrtbusy );
+
     FPUaddsubstart := 0; FPUmultiplystart := 0; FPUdividestart := 0; FPUsqrtstart := 0;
 
     while(1) {
         if( start ) {
             busy = 1;
-            flags = 0;
+            //flags = 0;
             switch( opCode[2,5] ) {
                 default: {
                     // 3 REGISTER FUSED FPU OPERATIONS
@@ -321,10 +322,11 @@ algorithm floatminmax(
     uint1   less = uninitialised;
     floatcompare FPUlteq( a <: sourceReg1F, b <: sourceReg2F, less :> less );
 
+    flags ::= { ( asNAN | bsNAN ) | ( aqNAN & bqNAN ), 4b0000 };
     always {
         if( ( asNAN | bsNAN ) | ( aqNAN & bqNAN ) ) {
             // sNAN or both qNAN
-            flags = 5b10000; result = 32h7fc00000;
+            result = 32h7fc00000;
         } else {
             if( function3[0,1] ) {
                 result = aqNAN ? ( bqNAN ? 32h7fc00000 : sourceReg2F ) : bqNAN ? sourceReg1F : ( less ? sourceReg2F : sourceReg1F);
@@ -345,24 +347,21 @@ algorithm floatcomparison(
     output  uint1  result
 ) <autorun> {
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN
-    uint1   aINF = uninitialised;
     uint1   asNAN = uninitialised;
     uint1   aqNAN = uninitialised;
     classify A(
         a <: sourceReg1F,
-        INF :> aINF,
         sNAN :> asNAN,
         qNAN :> aqNAN
     );
-    uint1   bINF = uninitialised;
     uint1   bsNAN = uninitialised;
     uint1   bqNAN = uninitialised;
     classify B(
         a <: sourceReg2F,
-        INF :> bINF,
         sNAN :> bsNAN,
         qNAN :> bqNAN
     );
+    uint1   NAN <:: ( aqNAN | asNAN | bqNAN | bsNAN );
 
     uint1   less = uninitialised;
     uint1   equal = uninitialised;
@@ -370,9 +369,9 @@ algorithm floatcomparison(
 
     always {
         switch( function3 ) {
-            case 3b000: { flags = ( aqNAN | asNAN | bqNAN | bsNAN ) ? 5b10000 : 0; result = flags[4,1] ? 0 : less | equal; }
-            case 3b001: { flags = ( aqNAN | asNAN | bqNAN | bsNAN ) ? 5b10000 : 0; result = flags[4,1] ? 0 : less; }
-            case 3b010: { flags = ( asNAN | bsNAN ) ? 5b10000 : 0; result = ( aqNAN | asNAN | bqNAN | bsNAN ) ? 0 : equal; }
+            case 3b000: { flags = NAN ? 5b10000 : 0; result = NAN ? 0 : less | equal; }
+            case 3b001: { flags = NAN ? 5b10000 : 0; result = NAN ? 0 : less; }
+            case 3b010: { flags = ( asNAN | bsNAN ) ? 5b10000 : 0; result = NAN ? 0 : equal; }
             default: { result = 0; }
         }
     }

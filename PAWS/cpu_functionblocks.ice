@@ -131,25 +131,6 @@ algorithm addressgenerator2(
     }
 }
 
-algorithm addressplus2(
-    input   uint32  base,
-    output  uint32  baseplus2
-) <autorun> {
-    always {
-        baseplus2 = base + 2;
-    }
-}
-
-algorithm addressplus24(
-    input   uint32  base,
-    input   uint1   flag,
-    output  uint32  baseplus24
-) <autorun> {
-    always {
-        baseplus24 = base + ( flag ? 2 : 4 );
-    }
-}
-
 // BRANCH COMPARISIONS
 algorithm branchcomparison(
     input   uint7   opCode,

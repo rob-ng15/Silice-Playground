@@ -18,6 +18,7 @@ algorithm alu(
     uint32  operand2 <:: regimm ? sourceReg2 : immediateValue;
     uint32  negsourceReg2 <:: -sourceReg2;
     uint1   unsignedcompare <:: __unsigned( sourceReg1 ) < __unsigned( operand2 );
+
     always {
         switch( function3 ) {
             case 3b000: { result = sourceReg1 + ( addsub ? negsourceReg2 : operand2 ); }

@@ -791,8 +791,8 @@ algorithm floatsqrt(
     );
 
     // SQUARE ROOT EXPONENT IS HALF OF INPUT EXPONENT
-    uint50  start_ac <:: ~exp[0,1] ? 1 : { 48b0, 1b1, a[22,1] };
-    uint48  start_x <:: ~exp[0,1] ? { fp32( a ).fraction, 25b0 } : { a[0,22], 26b0 };
+    uint50  start_ac <:: exp[0,1] ? { 48b0, 1b1, a[22,1] } : 1;
+    uint48  start_x <:: exp[0,1] ? { a[0,22], 26b0 } : { fp32( a ).fraction, 25b0 };
     uint48  squareroot = uninitialised;
     int10   squarerootexp <:: ( exp >>> 1 );
     uint1   DOSQRTstart = uninitialised;

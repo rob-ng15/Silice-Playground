@@ -142,18 +142,18 @@ algorithm ps2ascii(
                                 case 8h71: { newascii = numlock ? 8h2e : 9h133; }               // KEYPAD .
                                 case 8h7b: { newascii = 8h2d; }                                 // KEYPAD -
                                 case 8h79: { newascii = 8h2b; }                                 // KEYPAD +
-                                case 8h05: { newascii = { 1b1, 3b0, SHIFT, 4h1 }; }             // F1 + SHIFT F1 to F12 + SHIFT F12 map to 101-10c and 111-11c
-                                case 8h06: { newascii = { 1b1, 3b0, SHIFT, 4h2 }; }
-                                case 8h04: { newascii = { 1b1, 3b0, SHIFT, 4h3 }; }
-                                case 8h0c: { newascii = { 1b1, 3b0, SHIFT, 4h4 }; }
-                                case 8h03: { newascii = { 1b1, 3b0, SHIFT, 4h5 }; }
-                                case 8h0b: { newascii = { 1b1, 3b0, SHIFT, 4h6 }; }
-                                case 8h83: { newascii = { 1b1, 3b0, SHIFT, 4h7 }; }
-                                case 8h0a: { newascii = { 1b1, 3b0, SHIFT, 4h8 }; }
-                                case 8h01: { newascii = { 1b1, 3b0, SHIFT, 4h9 }; }
-                                case 8h09: { newascii = { 1b1, 3b0, SHIFT, 4ha }; }
-                                case 8h78: { newascii = { 1b1, 3b0, SHIFT, 4hb }; }
-                                case 8h07: { newascii = { 1b1, 3b0, SHIFT, 4hc }; }
+                                case 8h05: { newascii = { 4b1000, SHIFT, 4h1 }; }             // F1 + SHIFT F1 to F12 + SHIFT F12 map to 101-10c and 111-11c
+                                case 8h06: { newascii = { 4b1000, SHIFT, 4h2 }; }
+                                case 8h04: { newascii = { 4b1000, SHIFT, 4h3 }; }
+                                case 8h0c: { newascii = { 4b1000, SHIFT, 4h4 }; }
+                                case 8h03: { newascii = { 4b1000, SHIFT, 4h5 }; }
+                                case 8h0b: { newascii = { 4b1000, SHIFT, 4h6 }; }
+                                case 8h83: { newascii = { 4b1000, SHIFT, 4h7 }; }
+                                case 8h0a: { newascii = { 4b1000, SHIFT, 4h8 }; }
+                                case 8h01: { newascii = { 4b1000, SHIFT, 4h9 }; }
+                                case 8h09: { newascii = { 4b1000, SHIFT, 4ha }; }
+                                case 8h78: { newascii = { 4b1000, SHIFT, 4hb }; }
+                                case 8h07: { newascii = { 4b1000, SHIFT, 4hc }; }
                                 default: {}
                             }
                         }

@@ -38,28 +38,28 @@ unsigned short mountainslopes[] = {
 unsigned char* mountains[]={
     "                                          ",   // OFFSCREEN TOP
     "                                          ",
-    "                                          ",
-    "                                          ",
-    "                      3                   ",
-    "                     142                  ",
-    "                    14442                 ",
-    "                   1444442                ",
-    "3           7     144444442               ",
-    "42         586   14444444442       7     1",
-    "442       58886 1444444444442     586   14",
-    "4442     588888644444744444442   58886 144",
-    "44442   58888888644458644444442 5888881444",
-    "444442 58888888886458886444444458888814444",
-    "444444288888888888688888644444588888144444",
-    "444444428888888888888888864445888881444444",
-    "444444442888888888888888886458888814444444",   // BASELINE
-    "444444444288888888888888888688888144444444",
-    "444444444428888888888888888888881444444444",
-    "444444444442888888888888888888814444444444",
-    "444444444444288888888888888888144444444444",
-    "                                          ",
-    "                                          ",
-    "                                          ",
+    "                     3                    ",
+    "                    142                   ",
+    "   3               14442                  ",
+    "  142             1444442              3  ",
+    " 14442           144444442     3      142 ",
+    "4444442      14444444444442   142    14444",
+    "44444442    1444444444444442 1444444444444",
+    "444444442  1444444444444444444444444444444",
+    "444444444444444444444444444444444444444444",
+    "444444444444444444444444444444444444444444",
+    "444444444444444444444444744444444444444444",
+    "444444444474444444444445864444444444444444",
+    "444444444586444474444458886444444444444444",
+    "444444445888644586444588888886444474444444",
+    "444444458888888888645888888888644586444444",   // BASELINE
+    "444444588888888888888888888888888888644444",
+    "888888888888888888888888888888888888888888",
+    "888888888888888888888888888888888888888888",
+    "888888888888888888888888888888888888888888",
+    "888888888888888888888888888888888888888888",
+    "888888888888888888888888888888888888888888",
+    "888888888888888888888888888888888888888888",
     "                                          ",
     "                                          ",
     "                                          ",
@@ -69,6 +69,54 @@ unsigned char* mountains[]={
     "                                          ",
     "                                          "    // OFFSCREEN BOTTOM
 };
+
+unsigned short cityblocks[] = {
+    // DKMAGENTA BUILDING WITH WALKWAY
+    0,0,0,
+    0b0011000110001100,
+    0b0111101111011110,
+    0b0111101111011110,
+    0b0111101111011110,
+    0,0,0,
+    0b0011000110001100,
+    0b0111101111011110,
+    0b0111101111011110,
+    0b0111101111011110,
+    0,0,
+
+    0b0000000000000001,
+    0b0000000000000001,
+    0b0000000000000111,
+    0b0000000000001111,
+    0b0000000000001111,
+    0b0000000000111111,
+    0b0000000001111111,
+    0b0000000001111111,
+    0b0000000111111111,
+    0b0000001111111111,
+    0b0000001111111111,
+    0b0000111111111111,
+    0b0001111111111111,
+    0b0001111111111111,
+    0b0111111111111111,
+    0b1111111111111111,
+
+    0,0,
+    0b0000000110000000,
+    0b0000011111100000,
+    0b0000111111110000,
+    0b0000111111110000,
+    0b0000111111110000,
+    0b0000111111110000,
+    0b0000111111110000,
+    0b0000111111110000,
+    0b0000111111110000,
+    0b0000111111110000,
+    0b0000111111110000,
+    0b0000111111110000,
+    0,0,
+};
+
 unsigned char *cityscape[]={
     "                                          ",   // OFFSCREEN TOP
     "                                          ",
@@ -79,17 +127,17 @@ unsigned char *cityscape[]={
     "                                          ",
     "                                          ",
     "                                          ",
-    "                                          ",
-    "                                          ",
-    "       22                     22          ",
-    "      2222   3     3         2222  4      ",
-    "11    2222  333   333        2222 444   11",
-    "11    2222  333  33333   4   2222 444   11",
-    "1111  2222 33333 33333  444  2222 444 1111",
-    "1111  2222 33333 33333 44444 2222 444 1111",   // BASELINE
-    "1111  2222 33333333333 44444 2222 444 1111",
-    "1111  2222 33333 33333 44444 2222 444 1111",
-    "1111  2222 33333 33333 44444 2222 444 1111",
+    "       EE                     EE          ",
+    "      EEEE   1     1         EEEE  I      ",
+    "AA    EEEE  354   354        EEEE III   AA",
+    "AA    EEEE  555  35554   I   EEEE III   AA",
+    "AAAA  EEEE 35554 15551  III  EEEE III AAAA",
+    "AAAA  EEEE 15552225551 IIIII EEEE III AAAA",   // BASELINE
+    "AAAA  EEEE 15551 15551 IIIII EEEE III AAAA",
+    "AAAA  EEEE 15552225551 IIIII EEEE III AAAA",
+    "AAAA  EEEE 15551 15551 IIIII EEEE III AAAA",
+    "AAAA  EEEE 15551 15551 IIIII EEEE III AAAA",
+    "AAAA  EEEE 11111 11111 IIIII EEEE III AAAA",
     "                                          ",
     "                                          ",
     "                                          ",
@@ -108,8 +156,12 @@ void set_tilemaps( void ) {
     tilemap_scrollwrapclear( LOWER_LAYER, 9 );
     tilemap_scrollwrapclear( UPPER_LAYER, 9 );
 
-    set_tilemap_bitmap( LOWER_LAYER, 1, &mountainslopes[ 0 ] );
-    set_tilemap_bitmap( LOWER_LAYER, 2, &mountainslopes[ 16 ] );
+    for( int i = 0; i < 2; i++ ) {
+        set_tilemap_bitmap( LOWER_LAYER, 1 + i, &mountainslopes[ i * 16 ] );
+    }
+    for( int i = 0; i < 3; i++ ) {
+        set_tilemap_bitmap( UPPER_LAYER, 1 + i, &cityblocks[ i * 16 ] );
+    }
 
     for( int y = 0; y < 32; y++ ) {
         for( int x = 0; x < 42; x++ ) {
@@ -127,13 +179,13 @@ void set_tilemaps( void ) {
                     set_tilemap_tile( LOWER_LAYER, x, y, 0, GREY1, GREY1, 0 );
                     break;
                 case '5':
-                    set_tilemap_tile( LOWER_LAYER, x, y, 1, TRANSPARENT, GREY2, 0 );
+                    set_tilemap_tile( LOWER_LAYER, x, y, 1, GREY1, GREY2, 0 );
                     break;
                 case '6':
-                    set_tilemap_tile( LOWER_LAYER, x, y, 1, TRANSPARENT, GREY2, REFLECT_X );
+                    set_tilemap_tile( LOWER_LAYER, x, y, 1, GREY1, GREY2, REFLECT_X );
                     break;
                 case '7':
-                    set_tilemap_tile( LOWER_LAYER, x, y, 2, TRANSPARENT, GREY2, 0 );
+                    set_tilemap_tile( LOWER_LAYER, x, y, 2, GREY1, GREY2, 0 );
                     break;
                 case '8':
                     set_tilemap_tile( LOWER_LAYER, x, y, 0, GREY2, GREY2, 0 );
@@ -141,15 +193,27 @@ void set_tilemaps( void ) {
             }
             switch( cityscape[y][x] ) {
                 case '1':
-                    set_tilemap_tile( UPPER_LAYER, x, y, 0, DKBLUE, GREY1, 0 );
-                    break;
-                case '2':
-                    set_tilemap_tile( UPPER_LAYER, x, y, 0, DKRED, GREY1, 0 );
-                    break;
-                case '3':
                     set_tilemap_tile( UPPER_LAYER, x, y, 0, DKMAGENTA, GREY1, 0 );
                     break;
+                case '2':
+                    set_tilemap_tile( UPPER_LAYER, x, y, 1, DKMAGENTA, YELLOW, 0 );
+                    break;
+                case '3':
+                    set_tilemap_tile( UPPER_LAYER, x, y, 2, TRANSPARENT, DKMAGENTA, 0 );
+                    break;
                 case '4':
+                    set_tilemap_tile( UPPER_LAYER, x, y, 2, TRANSPARENT, DKMAGENTA, REFLECT_X );
+                    break;
+                case '5':
+                    set_tilemap_tile( UPPER_LAYER, x, y, 3, DKMAGENTA, YELLOW, 0 );
+                    break;
+                case 'A':
+                    set_tilemap_tile( UPPER_LAYER, x, y, 0, DKBLUE, GREY1, 0 );
+                    break;
+                case 'E':
+                    set_tilemap_tile( UPPER_LAYER, x, y, 0, DKRED, GREY1, 0 );
+                    break;
+                case 'I':
                     set_tilemap_tile( UPPER_LAYER, x, y, 0, DKORANGE, GREY1, 0 );
                     break;
             }
