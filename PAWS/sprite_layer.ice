@@ -185,6 +185,8 @@ algorithm sprite_layer_writer(
     int11   sprite_to_negative = uninitialised;
     uint1   sprite_offscreen_x = uninitialised;
     uint1   sprite_offscreen_y = uninitialised;
+    uint1   sprite_off_left = uninitialised;
+    uint1   sprite_off_top = uninitialised;
 
     $$for i=0,15 do
         // For setting sprite read paramers
@@ -210,15 +212,17 @@ algorithm sprite_layer_writer(
                 // Sprite update helpers
                 sprite_offscreen_negative = sprite_double[ sprite_set_number ][0,1] ? -32 : -16;
                 sprite_to_negative = sprite_double[ sprite_set_number ][0,1] ? -31 : -15;
-                sprite_offscreen_x = ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) | ( __signed( sprite_x[ sprite_set_number  ] ) > __signed(640) );
-                sprite_offscreen_y = ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) | ( __signed( sprite_y[ sprite_set_number ] ) > __signed(480) );
+                sprite_off_left = ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) );
+                sprite_off_top = ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) );
+                sprite_offscreen_x = sprite_off_left | ( __signed( sprite_x[ sprite_set_number  ] ) > __signed(640) );
+                sprite_offscreen_y = sprite_off_top | ( __signed( sprite_y[ sprite_set_number ] ) > __signed(480) );
 
                 // Perform sprite update
-                sprite_active[ sprite_set_number ] = ( ( sprite_update[12,1] & sprite_offscreen_y ) || ( sprite_update[11,1] & sprite_offscreen_x  ) ) ? 0 : sprite_active[ sprite_set_number ];
+                sprite_active[ sprite_set_number ] = ( ( sprite_update[12,1] & sprite_offscreen_y ) | ( sprite_update[11,1] & sprite_offscreen_x  ) ) ? 0 : sprite_active[ sprite_set_number ];
                 sprite_tile_number[ sprite_set_number ] = sprite_tile_number[ sprite_set_number ] + sprite_update[10,1];
-                sprite_x[ sprite_set_number ] = sprite_offscreen_x ? ( ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ?__signed(640) : sprite_to_negative ) :
+                sprite_x[ sprite_set_number ] = sprite_offscreen_x ? ( sprite_off_left ?__signed(640) : sprite_to_negative ) :
                                                 sprite_x[ sprite_set_number ] + { {7{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
-                sprite_y[ sprite_set_number ] = sprite_offscreen_y ? ( ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) ) ? __signed(480) : sprite_to_negative ) :
+                sprite_y[ sprite_set_number ] = sprite_offscreen_y ? ( sprite_off_top ? __signed(480) : sprite_to_negative ) :
                                                 sprite_y[ sprite_set_number ] + { {6{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
             }
         }

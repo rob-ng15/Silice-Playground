@@ -24,8 +24,9 @@ algorithm character_map(
     // Character position on the screen x 0-79, y 0-59 * 80 ( fetch it two pixels ahead of the actual x pixel, so it is always ready )
     uint7   xcharacterpos <: ( pix_active ?  pix_x + 2 : 0 ) >> 3;
     uint7   xcolourpos <: ( pix_active ?  pix_x + 1 : 0 ) >> 3;
-    uint13  ycharacterpos <: 80 * ( ( pix_vblank ? 0 : pix_y ) >> 3 );
-    uint1   is_cursor <: tpu_showcursor & blink & ( cursor_x == ( ( pix_active ? pix_x : 0 ) >> 3 ) ) & ( cursor_y == ycharacterpos );
+    uint6   ycharacterpos <: ( ( pix_vblank ? 0 : pix_y ) >> 3 );
+    uint13  ycharacteraddress <: 80 * ycharacterpos;
+    uint1   is_cursor <: tpu_showcursor & blink & ( cursor_x == ( pix_x >> 3 ) ) & ( cursor_y == ycharacterpos );
 
     // Derive the x and y coordinate within the current 8x8 character block x 0-7, y 0-7
     uint3 xincharacter <: pix_x[0,3];
@@ -35,8 +36,8 @@ algorithm character_map(
     uint1 characterpixel <: characterGenerator8x8.rdata[7 - xincharacter,1];
 
     // Set up reading of the charactermap
-    charactermap.addr0 := xcharacterpos + ycharacterpos;
-    colourmap.addr0 := xcolourpos + ycharacterpos;
+    charactermap.addr0 := xcharacterpos + ycharacteraddress;
+    colourmap.addr0 := xcolourpos + ycharacteraddress;
 
     // Setup the reading of the characterGenerator8x16 ROM
     characterGenerator8x8.addr := { charactermap.rdata0, yincharacter };

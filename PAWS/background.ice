@@ -40,7 +40,7 @@ algorithm background_writer(
     simple_dualport_bram uint33 copper[ 64 ] = uninitialised;
     uint1   copper_execute = uninitialised;
     uint1   copper_branch = uninitialised;
-    uint11  copper_variable = uninitialised;
+    uint10  copper_variable = uninitialised;
     uint6   PC = 0;
 
     // COPPER PROGRAM ENTRY

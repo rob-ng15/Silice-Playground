@@ -406,8 +406,7 @@ void gpu_dither( unsigned char mode, unsigned char colour ) {
 }
 
 // SET GPU CROPPING RECTANGLE
-void gpu_crop( unsigned short left, unsigned short top, unsigned short right, unsigned short bottom ) {
-    //wait_gpu_finished();
+void gpu_crop( short left, short top, short right, short bottom ) {
     wait_gpu();
     *CROP_LEFT = left;
     *CROP_RIGHT = right;

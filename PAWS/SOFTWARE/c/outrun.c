@@ -440,7 +440,6 @@ roadsegment road[]={
 };
 int corner[MAXSEGMENT]; float pitch[MAXSEGMENT], slope[MAXSEGMENT];
 
-// VECTOR HELPERS FOR 2D to 3D PROJECTION
 #define min(a,b) \
    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
@@ -450,6 +449,7 @@ int corner[MAXSEGMENT]; float pitch[MAXSEGMENT], slope[MAXSEGMENT];
        __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
 
+// VECTOR HELPERS FOR 2D to 3D PROJECTION
 typedef struct { float x,y,z; }   vec3;
 typedef struct { short x,y,z; }   ivec3;
 typedef struct { float x,y,z,w; } vec4;

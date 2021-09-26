@@ -19,11 +19,11 @@ algorithm terminal(
     };
 
     // Character position on the terminal x 0-79, y 0-7 * 80 ( fetch it one pixel ahead of the actual x pixel, so it is always ready )
-    uint7 xterminalpos <: ( pix_active ? pix_x + 2 : 0 ) >> 3;
-    uint10 yterminalpos <: (( pix_vblank ? 0 : pix_y - 416 ) >> 3) * 80;
+    uint7   xterminalpos <: ( pix_active ? pix_x + 2 : 0 ) >> 3;
+    uint3   yterminalpos <: ( pix_vblank ? 0 : pix_y - 416 ) >> 3;
 
     // Determine if cursor, and if cursor is flashing
-    uint1 is_cursor <: blink & ( ( xterminalpos == terminal_x ) & ( ( ( pix_y - 416 ) >> 3 ) == terminal_y ) );
+    uint1 is_cursor <: blink & ( xterminalpos == terminal_x ) & ( yterminalpos == terminal_y );
 
     // Derive the x and y coordinate within the current 8x8 terminal character block x 0-7, y 0-7
     uint3 xinterminal <: pix_x[0,3];
@@ -33,7 +33,7 @@ algorithm terminal(
     uint1 terminalpixel <: characterGenerator8x8.rdata[ 7 - xinterminal, 1 ];
 
     // Setup the reading of the terminal memory
-    terminal.addr0 := xterminalpos + yterminalpos;
+    terminal.addr0 := xterminalpos + yterminalpos * 80;
 
     // Setup the reading of the characterGenerator8x8 ROM
     characterGenerator8x8.addr :=  { terminal.rdata0, yinterminal };

@@ -209,7 +209,7 @@ algorithm floattoint(
 ) <autorun> {
     int10   exp <:: fp32( a ).exponent - 127;
     uint33  sig <:: ( exp < 24 ) ? { 9b1, fp32( a ).fraction, 1b0 } >> ( 23 - exp ) : { 9b1, fp32( a ).fraction, 1b0 } << ( exp - 24);
-    uint1   IF <:: aINF;
+    uint32  unsignedfraction <:: ( sig[1,32] + sig[0,1] );
     uint1   NN <:: asNAN | aqNAN;
     uint1   NV = uninitialised;
 
@@ -225,10 +225,10 @@ algorithm floattoint(
         ZERO :> aZERO
     );
 
-    flags ::= { IF, NN, NV, 4b0000 };
+    flags ::= { aINF, NN, NV, 4b0000 };
     always {
-        switch( { IF | NN, aZERO } ) {
-            case 2b00: { NV = ( exp > 30 ); result = NV ? { fp32( a ).sign, 31h7fffffff } : fp32( a ).sign ? -( sig[1,32] + sig[0,1] ) : ( sig[1,32] + sig[0,1] ); }
+        switch( { aINF | NN, aZERO } ) {
+            case 2b00: { NV = ( exp > 30 ); result = NV ? { fp32( a ).sign, 31h7fffffff } : fp32( a ).sign ? -unsignedfraction : unsignedfraction; }
             case 2b01: { NV = 0; result = 0; }
             default: { NV = 1; result = NN ? 32h7fffffff : { fp32( a ).sign, 31h7fffffff }; }
         }
@@ -243,7 +243,6 @@ algorithm floattouint(
 ) <autorun> {
     int10   exp <:: fp32( a ).exponent - 127;
     uint33  sig <:: ( exp < 24 ) ? { 9b1, fp32( a ).fraction, 1b0 } >> ( 23 - exp ) : { 9b1, fp32( a ).fraction, 1b0 } << ( exp - 24);
-    uint1   IF <:: aINF;
     uint1   NN <:: asNAN | aqNAN;
     uint1   NV = uninitialised;
 
@@ -259,9 +258,9 @@ algorithm floattouint(
         ZERO :> aZERO
     );
 
-    flags ::= { IF, NN, NV, 4b0000 };
+    flags ::= { aINF, NN, NV, 4b0000 };
     always {
-        switch( { IF | NN, aZERO } ) {
+        switch( { aINF | NN, aZERO } ) {
             case 2b00: {
                 if( fp32( a ).sign ) {
                     NV = 1; result = 0;
@@ -337,7 +336,7 @@ algorithm floataddsub(
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND INVALID ( INF - INF )
     uint1   IF <:: ( aINF | bINF );
     uint1   NN <:: ( asNAN | aqNAN | bsNAN | bqNAN );
-    uint1   NV <:: ( aINF & bINF) & ( signA != signB );
+    uint1   NV <:: ( aINF & bINF) & ( signA ^ signB );
     uint1   OF = uninitialised;
     uint1   UF = uninitialised;
 
@@ -622,7 +621,6 @@ algorithm floatdivide(
     uint1   IF <:: ( aINF | bINF );
     uint1   NN <:: ( asNAN | aqNAN | bsNAN | bqNAN );
     uint1   NV = uninitialised;
-    uint1   DZ <:: bZERO;
     uint1   OF = uninitialised;
     uint1   UF = uninitialised;
 
@@ -692,7 +690,7 @@ algorithm floatdivide(
         f32 :> f32
     );
 
-    DODIVIDEstart := 0; NORMALISEstart := 0; flags ::= { IF, NN, 1b0, DZ, OF, UF, 1b0};
+    DODIVIDEstart := 0; NORMALISEstart := 0; flags ::= { IF, NN, 1b0, bZERO, OF, UF, 1b0};
     while(1) {
         if( start ) {
             busy = 1;
@@ -772,9 +770,8 @@ algorithm floatsqrt(
     int10   exp  <:: fp32( a ).exponent - 127;   // EXPONENT OF INPUT ( used to determine if 1x.xxxxx or 01.xxxxx for fixed point fraction to sqrt )
 
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND NOT VALID
-    uint1   IF <:: aINF;
     uint1   NN <:: asNAN | aqNAN;
-    uint1   NV <:: IF | NN | sign;
+    uint1   NV <:: aINF | NN | sign;
     uint1   OF = uninitialised;
     uint1   UF = uninitialised;
 
@@ -830,12 +827,12 @@ algorithm floatsqrt(
         f32 :> f32
     );
 
-    DOSQRTstart := 0; flags ::= { IF, NN, NV, 1b0, OF, UF, 1b0 };
+    DOSQRTstart := 0; flags ::= { aINF, NN, NV, 1b0, OF, UF, 1b0 };
     while(1) {
         if( start ) {
             busy = 1;
             OF = 0; UF = 0;
-            switch( { IF | NN, aZERO } ) {
+            switch( { aINF | NN, aZERO } ) {
                 case 2b00: {
                     if( sign ) {
                         // DETECT NEGATIVE -> qNAN
