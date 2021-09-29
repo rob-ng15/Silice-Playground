@@ -9,7 +9,7 @@
 algorithm PAWSCPU(
     input   uint1   clock_CPUdecoder,
     output  uint2   accesssize,
-    output  uint32  address,
+    output  uint29  address,
     output  uint16  writedata,
     output  uint1   writememory,
     input   uint16  readdata,

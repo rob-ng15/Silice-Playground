@@ -180,7 +180,6 @@ algorithm tile_map_writer(
                     tiles_copy.addr1 = temp_1; tiles_copy.wdata1 = new_tile;
                     colours.addr1 = temp_1; colours.wdata1 = new_colour;
                     colours_copy.addr1 = temp_1; colours_copy.wdata1 = new_colour;
-                    ++:
                     y_cursor_addr = y_cursor_addr + 42;
                 }
                 tm_offset_x = 0;
@@ -211,7 +210,6 @@ algorithm tile_map_writer(
                     tiles_copy.addr1 = temp_1; tiles_copy.wdata1 = new_tile;
                     colours.addr1 = temp_1; colours.wdata1 = new_colour;
                     colours_copy.addr1 = temp_1; colours_copy.wdata1 = new_colour;
-                    ++:
                     x_cursor = x_cursor + 1;
                 }
                 tm_offset_y = 0;

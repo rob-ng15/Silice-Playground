@@ -235,7 +235,7 @@ $$end
 
     uint2   accesssize = uninitialized;
     uint1   byteaccess <:: ( accesssize[0,2] == 2b00 );
-    uint32  address = uninitialized;
+    uint29  address = uninitialized;
     uint16  writedata = uninitialized;
     uint1   CPUwritememory = uninitialized;
     uint1   CPUreadmemory = uninitialized;
@@ -286,7 +286,7 @@ $$end
 // RAM - BRAM controller
 // MEMORY IS 16 BIT, 8 bit WRITES ARE READ MODIFY WRITE
 algorithm bramcontroller(
-    input   uint32  address,
+    input   uint15  address,
     input   uint1   byteaccess,
 
     input   uint1   writeflag,
@@ -310,7 +310,7 @@ $$else
 $$end
 
     // FLAGS FOR BRAM ACCESS
-    ram.wenable := 0; ram.addr := address[1,15]; readdata := ram.rdata;
+    ram.wenable := 0; ram.addr := address[1,14]; readdata := ram.rdata;
 
     while(1) {
         if( writeflag ) {

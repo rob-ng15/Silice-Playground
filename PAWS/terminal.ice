@@ -56,6 +56,7 @@ algorithm terminal_writer(
 
     // Terminal active (scroll) flag and temporary storage for scrolling
     uint10  terminal_scroll = uninitialised;
+    uint10  terminal_scroll_next <:: terminal_scroll + 1;
     uint1   scrolling <:: ( terminal_scroll < 560 );
     uint1   endofline <:: ( terminal_x == 79 );
 
@@ -109,7 +110,7 @@ algorithm terminal_writer(
                     terminal.wdata1 = scrolling ? terminal_copy.rdata0 : 0;
                     terminal_copy.addr1 = terminal_scroll;
                     terminal_copy.wdata1 = scrolling ? terminal_copy.rdata0 : 0;
-                    terminal_scroll = terminal_scroll + 1;
+                    terminal_scroll = terminal_scroll_next;
                 }
                 terminal_active = 0;
             }
@@ -119,7 +120,7 @@ algorithm terminal_writer(
                     terminal.wdata1 = 0;
                     terminal_copy.addr1 = terminal_scroll;
                     terminal_copy.wdata1 = 0;
-                    terminal_scroll = terminal_scroll + 1;
+                    terminal_scroll = terminal_scroll_next;
                 }
                 terminal_x = 0;
                 terminal_y = 7;
