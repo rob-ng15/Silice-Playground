@@ -64,11 +64,11 @@ algorithm waveform(
 ) <autorun> {
     always {
         switch( selected_waveform ) {
-            case 0: { audio_output = { {4{~point[4,1]}} }; }                        // SQUARE
-            case 1: { audio_output = point[1,4]; }                                  // SAWTOOTH
-            case 2: { audio_output = point[4,1] ? 15 - point[0,4] : point[0,4]; }   // TRIANGLE
-            case 3: { audio_output = point[4,1] ? 15 - point[1,3] : point[1,3]; }   // SINE
-            default: { audio_output = staticGenerator; }                            // WHITE NOISE
+            case 0: { audio_output = { {4{~point[4,1]}} }; }                                // SQUARE
+            case 1: { audio_output = point[1,4]; }                                          // SAWTOOTH
+            case 2: { audio_output = point[4,1] ? 15 - point[0,4] : point[0,4]; }           // TRIANGLE
+            case 3: { audio_output = point[4,1] ? 15 - point[1,3] : { point[1,3], 1b0 }; }  // SINE
+            default: { audio_output = staticGenerator; }                                    // WHITE NOISE
         }
     }
 }

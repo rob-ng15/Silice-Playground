@@ -66,41 +66,38 @@ algorithm sprite_layer(
     always {
         // RENDER + COLLISION DETECTION
         if( pix_vblank ) {
-            switch( output_collisions ) {
-                case 0: {
-                    // RESET collision detection
-                    $$for i=0,15 do
-                        detect_collision_$i$ = 0;
-                        detect_layer_$i$ = 0;
-                    $$end
-                }
-                case 1: {
-                    $$for i=0,15 do
-                        // Output collisions
-                        collision_$i$ = detect_collision_$i$;
-                        layer_collision_$i$ = detect_layer_$i$;
-                    $$end
-                    output_collisions = 0;
-                }
+            if( output_collisions ) {
+                $$for i=0,15 do
+                    // Output collisions
+                    collision_$i$ = detect_collision_$i$;
+                    layer_collision_$i$ = detect_layer_$i$;
+                $$end
+                output_collisions = 0;
+            } else {
+                // RESET collision detection
+                $$for i=0,15 do
+                    detect_collision_$i$ = 0;
+                    detect_layer_$i$ = 0;
+                $$end
             }
         } else {
             if( pix_active ) {
                 pixel = pix_visible_15 ? sprite_read_colour_15 :
-                            pix_visible_14 ? sprite_read_colour_14 :
-                            pix_visible_13 ? sprite_read_colour_13 :
-                            pix_visible_12 ? sprite_read_colour_12 :
-                            pix_visible_11 ? sprite_read_colour_11 :
-                            pix_visible_10 ? sprite_read_colour_10 :
-                            pix_visible_9 ? sprite_read_colour_9 :
-                            pix_visible_8 ? sprite_read_colour_8 :
-                            pix_visible_7 ? sprite_read_colour_7 :
-                            pix_visible_6 ? sprite_read_colour_6 :
-                            pix_visible_5 ? sprite_read_colour_5 :
-                            pix_visible_4 ? sprite_read_colour_4 :
-                            pix_visible_3 ? sprite_read_colour_3 :
-                            pix_visible_2 ? sprite_read_colour_2 :
-                            pix_visible_1 ? sprite_read_colour_1 :
-                            sprite_read_colour_0;
+                        pix_visible_14 ? sprite_read_colour_14 :
+                        pix_visible_13 ? sprite_read_colour_13 :
+                        pix_visible_12 ? sprite_read_colour_12 :
+                        pix_visible_11 ? sprite_read_colour_11 :
+                        pix_visible_10 ? sprite_read_colour_10 :
+                        pix_visible_9 ? sprite_read_colour_9 :
+                        pix_visible_8 ? sprite_read_colour_8 :
+                        pix_visible_7 ? sprite_read_colour_7 :
+                        pix_visible_6 ? sprite_read_colour_6 :
+                        pix_visible_5 ? sprite_read_colour_5 :
+                        pix_visible_4 ? sprite_read_colour_4 :
+                        pix_visible_3 ? sprite_read_colour_3 :
+                        pix_visible_2 ? sprite_read_colour_2 :
+                        pix_visible_1 ? sprite_read_colour_1 :
+                        sprite_read_colour_0;
 
                 $$for i=0,15 do
                     // UPDATE COLLISION DETECTION FLAGS
@@ -133,14 +130,16 @@ algorithm sprite_generator(
     output! uint1   pix_visible
 ) <autorun> {
     int11   x <: { 1b0, pix_x };
+    int11   xspritex <: ( x - sprite_x );
     int10   y <: pix_y;
+    int10   yspritey <: ( y - sprite_y );
 
     // Calculate position in sprite, handling reflection and doubling
     uint6 spritesize <: sprite_double[0,1] ? 32 : 16;
     uint1 xinrange <: ( x >= __signed(sprite_x) ) & ( x < __signed( sprite_x + spritesize ) );
     uint1 yinrange <: ( y >= __signed(sprite_y) ) & ( y < __signed( sprite_y + spritesize) );
-    uint4 yinsprite <: sprite_double[2,1] ? 15 - ( ( y - sprite_y ) >>> sprite_double[0,1] ) : ( y - sprite_y ) >>> sprite_double[0,1];
-    uint4 xinsprite <: sprite_double[1,1] ? (( ( x - sprite_x ) >>> sprite_double[0,1] ) ) : ( 15  - ( ( x - sprite_x ) >>> sprite_double[0,1] ) );
+    uint4 yinsprite <: sprite_double[2,1] ? 15 - ( yspritey >>> sprite_double[0,1] ) : yspritey >>> sprite_double[0,1];
+    uint4 xinsprite <: sprite_double[1,1] ? (( xspritex >>> sprite_double[0,1] ) ) : ( 15  - ( xspritex >>> sprite_double[0,1] ) );
 
     // READ ADDRESS FOR SPRITE
     tiles.addr0 := { sprite_tile_number, yinsprite };

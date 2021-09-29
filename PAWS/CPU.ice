@@ -498,7 +498,7 @@ algorithm cpuexecuteFASTPATH(
             case 5b01001: { memoryoutput = sourceReg2F; }           // FLOAT STORE
             case 5b00011: {}                                        // FENCE[I]
             default: {
-                if( opCode[5,1] && function7[0,1] ) {               // INTEGER ALU AND MULTIPLICATION
+                if( opCode[5,1] & function7[0,1] ) {               // INTEGER ALU AND MULTIPLICATION
                     result = ALUMMresult;
                 } else {
                     result = ALUresult;

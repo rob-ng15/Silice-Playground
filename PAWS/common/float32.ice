@@ -147,7 +147,7 @@ algorithm docombinecomponents32(
 ) <autorun> {
     always {
         OF = ( exp > 254 ); UF = exp[9,1];
-        f32 = UF ? 0 : OF ? { sign, 8b11111111, 23h0 } : { sign, exp[0,8], fraction[0,23] };
+        f32 = UF ? 0 : OF ? { sign, 31h7f800000 } : { sign, exp[0,8], fraction[0,23] };
     }
 }
 
@@ -280,17 +280,16 @@ algorithm equaliseexpaddsub(
     input   uint48  sigA,
     input   int10   expB,
     input   uint48  sigB,
-    output  int10   newexpA,
     output  uint48  newsigA,
-    output  int10   newexpB,
-    output  uint48  newsigB
+    output  uint48  newsigB,
+    output  int10   resultexp,
 ) <autorun> {
     always {
         // EQUALISE THE EXPONENTS BY SHIFT SMALLER NUMBER FRACTION PART TO THE RIGHT
         if( expA < expB ) {
-            newsigA = sigA >> ( expB - expA ); newexpA = expB; newsigB = sigB; newexpB = expB;
+            newsigA = sigA >> ( expB - expA ); resultexp = expB + 1; newsigB = sigB;
         } else {
-            newsigB = sigB >> ( expA - expB ); newexpB = expA; newsigA = sigA; newexpA = expA;
+            newsigB = sigB >> ( expA - expB ); resultexp = expA + 1; newsigA = sigA;
         }
     }
 }
@@ -364,24 +363,21 @@ algorithm floataddsub(
     );
 
     // EQUALISE THE EXPONENTS
-    int10   eqexpA = uninitialised;
     uint48  eqsigA = uninitialised;
-    int10   eqexpB = uninitialised;
     uint48  eqsigB = uninitialised;
+    int10   resultexp = uninitialised;
     equaliseexpaddsub EQUALISEEXP(
         expA <: expA,
         sigA <: sigA,
         expB <: expB,
         sigB <: sigB,
-        newexpA :> eqexpA,
         newsigA :> eqsigA,
-        newexpB :> eqexpB,
-        newsigB :> eqsigB
+        newsigB :> eqsigB,
+        resultexp :> resultexp
     );
 
     // PERFORM THE ADDITION/SUBTRACION USING THE EQUALISED FRACTIONS, 1 IS ADDED TO THE EXPONENT IN CASE OF OVERFLOW - NORMALISING WILL ADJUST WHEN SHIFTING
     uint1   resultsign = uninitialised;
-    int10   resultexp <:: eqexpA + 1;
     uint48  resultfraction = uninitialised;
     dofloataddsub ADDSUB(
         signA <: signA,
@@ -563,7 +559,7 @@ algorithm floatmultiply(
                 default: {
                     switch( { IF, aZERO | bZERO } ) {
                         case 2b11: { result = 32hffc00000; }
-                        case 2b10: { result = NN ? 32hffc00000 : { productsign, 8b11111111, 23b0 }; }
+                        case 2b10: { result = NN ? 32hffc00000 : { productsign, 31h7f800000 }; }
                         default: { result = 32hffc00000; }
                     }
                 }
@@ -701,8 +697,8 @@ algorithm floatdivide(
                     NORMALISEstart = 1; while( NORMALISEbusy ) {}
                     OF = cOF; UF = cUF; result = f32;
                 }
-                case 2b01: { result = ( aZERO & bZERO ) ? 32hffc00000 : ( bZERO ) ? { quotientsign, 8b11111111, 23b0 } : { quotientsign, 31b0 }; }
-                default: { result = ( aINF &bINF ) | NN | bZERO ? 32hffc00000 : aZERO | bINF ? { quotientsign, 31b0 } : { quotientsign, 8b11111111, 23b0 }; }
+                case 2b01: { result = ( aZERO & bZERO ) ? 32hffc00000 : ( bZERO ) ? { quotientsign, 31h7f800000 } : { quotientsign, 31b0 }; }
+                default: { result = ( aINF &bINF ) | NN | bZERO ? 32hffc00000 : aZERO | bINF ? { quotientsign, 31b0 } : { quotientsign, 31h7f800000 }; }
             }
             busy = 0;
         }

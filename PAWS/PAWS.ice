@@ -409,7 +409,7 @@ algorithm cachecontroller(
                 if( tags.rdata0[13,1] ) { while( sdrambusy ) {} sdramaddress = { tags.rdata0[0,12], address[1,13], 1b0 }; sdramwrite = 1; }   // EVICT FROM CACHE TO SDRAM
 
                 // READ FROM SDRAM FOR READ AND 8 BIT WRITES (AND MODIFY) AND WRITE TO CACHE, OR WRITE DIRECTLY TO CACHE IF 16 BIT WRITE
-                if( doread || ( dowrite && byteaccess ) ) {
+                if( doread | ( dowrite & byteaccess ) ) {
                     while( sdrambusy ) {} sdramaddress = address; sdramread = 1; while( sdrambusy ) {}
                     needwritetosdram = dowrite; cacheupdatedata = dowrite ? writethrough : sdramreaddata; cacheupdate = 1;
                 } else {
