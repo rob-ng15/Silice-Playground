@@ -160,7 +160,6 @@ algorithm ps2ascii(
                         case 2b01: {
                             // KEY RELEASE - SINGLE
                             switch( ps2keycode ) {
-                                // case 8h58: { capslock = 0; }
                                 case 8h12: { lshift = 0; }                                      // SHIFT AND CTRL
                                 case 8h59: { rshift = 0; }
                                 case 8h14: { lctrl = 0; }

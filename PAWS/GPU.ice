@@ -531,7 +531,8 @@ algorithm drawrectangle(
     output  int11   bitmap_y_write,
     output  uint1   bitmap_write
 ) <autorun> {
-    uint9   x = uninitialized; uint8   y = uninitialized;
+    uint9   x = uninitialized;
+    uint8   y = uninitialized;
     bitmap_x_write := x; bitmap_y_write := y; bitmap_write := 0;
 
     always {
@@ -706,7 +707,7 @@ algorithm drawline(
                             }
                         }
                     }
-                    if( ( width == 1 ) || ( pixel_count == width ) ) {
+                    if( ( width == 1 ) | ( pixel_count == width ) ) {
                         numerator = newnumerator;
                         x = x + n2dx; y = n2dy ? (y + ( dv ? 1 : -1 )) : y;
                         count = count + 1;
@@ -920,8 +921,8 @@ algorithm preptriangle(
     if( y2 < y1 ) { tx = x1; ty = y1; x1 = x2; y1 = y2; x2 = tx; y2 = ty; ++: }
     if( y3 < y1 ) { tx = x1; ty = y1; x1 = x3; y1 = y3; x3 = tx; y3 = ty; ++: }
     if( y3 < y2 ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++: }
-    if( ( y2 == y1 ) && ( x2 < x1 ) ) { tx = x1; ty = y1; x1 = x2; y1 = y2; x2 = tx; y2 = ty; ++: }
-    if( ( y2 != y1 ) && ( y3 >= y2 ) && ( x2 < x3 ) ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty;}
+    if( ( y2 == y1 ) & ( x2 < x1 ) ) { tx = x1; ty = y1; x1 = x2; y1 = y2; x2 = tx; y2 = ty; ++: }
+    if( ( y2 != y1 ) & ( y3 >= y2 ) & ( x2 < x3 ) ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty;}
 
     // Find minimum and maximum of x, x1, x2, y, y1 and y2 for the bounding box
     min_x = x1x2 ? ( x1x3 ? x1 : x3 ) : ( x2x3 ? x2 : x3 );
@@ -1477,7 +1478,7 @@ algorithm vectors(
             vertices_number = 1;
             ++:
             // Continue until an inactive or last vertex
-            while( vectorentry(vertex.rdata0).active && ( vertices_number != 16 ) ) {
+            while( vectorentry(vertex.rdata0).active & ( vertices_number != 16 ) ) {
                 // Move to the next vertex
                 ++:
                 // Dispatch line to GPU

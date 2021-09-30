@@ -75,6 +75,7 @@ algorithm character_map_writer(
     uint13  tpu_write_addr <:: tpu_active_x + tpu_active_y * 80;
     uint13  tpu_start_cs_addr = uninitialized;
     uint13  tpu_cs_addr = uninitialized;
+    uint13  tpu_cs_addr_next <:: tpu_cs_addr + 1;
     uint13  tpu_count = uninitialized;
     uint13  tpu_max_count = uninitialized;
 
@@ -86,14 +87,10 @@ algorithm character_map_writer(
     uint13  tpu_y_end_address <:: tpu_y_address + 80;
 
     // BRAM write access for the TPU
-    charactermap.wenable1 := 1;
-    colourmap.wenable1 := 1;
-    charactermap_copy.wenable1 := 1;
+    charactermap.wenable1 := 1; colourmap.wenable1 := 1; charactermap_copy.wenable1 := 1;
 
     // OUTPUT FROM CURSES BUFFER
-    curses_character := charactermap_copy.rdata0[0,9];
-    curses_foreground := charactermap_copy.rdata0[9,6];
-    curses_background := charactermap_copy.rdata0[15,7];
+    curses_character := charactermap_copy.rdata0[0,9]; curses_foreground := charactermap_copy.rdata0[9,6]; curses_background := charactermap_copy.rdata0[15,7];
 
     // OUTPUT CURSOR POSITION
     cursor_x := tpu_active_x; cursor_y := tpu_active_y;
@@ -135,7 +132,7 @@ algorithm character_map_writer(
                 while( tpu_cs_addr != tpu_max_count ) {
                     charactermap.addr1 = tpu_cs_addr; charactermap.wdata1 = 0;
                     colourmap.addr1 = tpu_cs_addr; colourmap.wdata1 = 13b1000000000000;
-                    tpu_cs_addr = tpu_cs_addr + 1;
+                    tpu_cs_addr = tpu_cs_addr_next;
                 }
                 tpu_active = 0;
             }
@@ -144,7 +141,7 @@ algorithm character_map_writer(
                 tpu_cs_addr = tpu_start_cs_addr;
                 while( tpu_cs_addr != 4800 ) {
                     charactermap_copy.addr1 = tpu_cs_addr; charactermap_copy.wdata1 = 22b1000000000000000000000;
-                    tpu_cs_addr = tpu_cs_addr + 1;
+                    tpu_cs_addr = tpu_cs_addr_next;
                 }
                 tpu_active = 0;
             }
@@ -155,7 +152,7 @@ algorithm character_map_writer(
                     ++:
                     charactermap.addr1 = tpu_cs_addr; charactermap.wdata1 = charactermap_copy.rdata0[0,9];
                     colourmap.addr1 = tpu_cs_addr; colourmap.wdata1 = { charactermap_copy.rdata0[15,7], charactermap_copy.rdata0[9,6] };
-                    tpu_cs_addr = tpu_cs_addr + 1;
+                    tpu_cs_addr = tpu_cs_addr_next;
                 }
                 tpu_active = 0;
             }

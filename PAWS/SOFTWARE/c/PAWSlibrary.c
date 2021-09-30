@@ -1934,9 +1934,8 @@ void INITIALISEMEMORY( void ) {
     memset( &_bss_start, 0, &_bss_end - &_bss_end );
 
     // MEMORY
-    MEMORYTOP = (unsigned char *)0x12000000;
+    MEMORYTOP = (unsigned char *)0x8000000;
     _heap = NULL;
 }
-
 
 #include "nanojpeg.c"

@@ -9,7 +9,7 @@
 algorithm PAWSCPU(
     input   uint1   clock_CPUdecoder,
     output  uint2   accesssize,
-    output  uint29  address,
+    output  uint27  address,
     output  uint16  writedata,
     output  uint1   writememory,
     input   uint16  readdata,
@@ -121,10 +121,10 @@ algorithm PAWSCPU(
         jumpAddress :> jumpAddress,
         AUIPCLUI :> AUIPCLUI
     );
-    uint32  loadAddress = uninitialized;
-    uint32  storeAddress = uninitialized;
-    uint32  loadAddressplus2 <:: loadAddress + 2;
-    uint32  storeAddressplus2 <:: storeAddress + 2;
+    uint27  loadAddress = uninitialized;
+    uint27  storeAddress = uninitialized;
+    uint27  loadAddressplus2 <:: loadAddress + 2;
+    uint27  storeAddressplus2 <:: storeAddress + 2;
     addressgenerator2 AGU2 <@clock_CPUdecoder> (
         instruction <: instruction,
         immediateValue <: immediateValue,

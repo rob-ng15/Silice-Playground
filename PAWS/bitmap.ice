@@ -28,7 +28,7 @@ algorithm bitmap(
     uint17  address <: y_line * 320 + x_pixel;
 
     // Pixel being read?
-    bitmap_colour_read := ( pix_x[1,9] == bitmap_x_read ) && ( pix_y[1,9] == bitmap_y_read ) ?
+    bitmap_colour_read := ( pix_x[1,9] == bitmap_x_read ) & ( pix_y[1,9] == bitmap_y_read ) ?
                             ( framebuffer ? { bitmap_1A.rdata0, bitmap_1R.rdata0, bitmap_1G.rdata0, bitmap_1B.rdata0 } : { bitmap_0A.rdata0, bitmap_0R.rdata0, bitmap_0G.rdata0, bitmap_0B.rdata0 } )
                             : bitmap_colour_read;
 

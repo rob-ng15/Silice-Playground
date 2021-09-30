@@ -334,12 +334,12 @@ void displayfilename( unsigned char *filename, unsigned char type ) {
 }
 
 // FAT32 FILE BROWSER FOR DIRECTORIES AND .PAW FILES
-unsigned char *BOOTRECORD = (unsigned char *) 0x12000000 - 0x200;
+unsigned char *BOOTRECORD = (unsigned char *) 0x8000000 - 0x200;
 PartitionTable *PARTITIONS;
 
-Fat32VolumeID *VOLUMEID = (Fat32VolumeID *)0x12000000 - 0x400;
-unsigned int *FAT32table = (unsigned int *)0x12000000 - 0x600;
-DirectoryEntry *directorynames = (DirectoryEntry *) ( 0x12000000 - 0x600 - ( sizeof( DirectoryEntry) * 256 ) );
+Fat32VolumeID *VOLUMEID = (Fat32VolumeID *)0x8000000 - 0x400;
+unsigned int *FAT32table = (unsigned int *)0x8000000 - 0x600;
+DirectoryEntry *directorynames = (DirectoryEntry *) ( 0x8000000 - 0x600 - ( sizeof( DirectoryEntry) * 256 ) );
 
 FAT32DirectoryEntry *directorycluster;
 unsigned int FAT32startsector, FAT32clustersize, FAT32clusters;
@@ -615,7 +615,7 @@ void main( void ) {
     gpu_outputstringcentre( WHITE, 104, 0, "", 0 );
     sleep( 500 );
     gpu_outputstringcentre( WHITE, 80, 1, "LOADING", 0 );
-    sdcard_readfile( starting_cluster, (unsigned char *)0x10000000 );
+    sdcard_readfile( starting_cluster, (unsigned char *)0x4000000 );
     gpu_outputstringcentre( WHITE, 72, 1, "LOADED", 0 );
     gpu_outputstringcentre( WHITE, 80, 1, "LAUNCHING", 0 );
     sleep(500);
@@ -628,7 +628,7 @@ void main( void ) {
     set_background( BLACK, BLACK, BKG_SOLID );
 
     // CALL SDRAM LOADED PROGRAM
-    ((void(*)(void))0x10000000)();
+    ((void(*)(void))0x4000000)();
     // RETURN TO BIOS IF PROGRAM EXITS
-    ((void(*)(void))0x00000000)();
+    ((void(*)(void))0x0)();
 }

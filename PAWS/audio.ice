@@ -34,7 +34,7 @@ algorithm apu(
         updateduration :> updateduration
     );
 
-    start := 0; audio_active ::= ( selected_duration != 0 );
+    start := 0; audio_active := ( selected_duration != 0 );
 
     always {
         if( updatepoint ) {

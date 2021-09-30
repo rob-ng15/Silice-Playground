@@ -182,7 +182,7 @@ algorithm pattern(
     int32   frame = 0;
 
     // Increment frame number for the snow/star field
-    frame ::= frame + ( ( pix_x == 639 ) & ( pix_y == 470 ) );
+    frame ::= frame + ( ( pix_x == 639 ) & ( pix_y == 479 ) );
 
     always {
         // SELECT COLOUR OR ALT

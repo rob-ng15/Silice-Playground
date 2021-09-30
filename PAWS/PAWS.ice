@@ -235,7 +235,7 @@ $$end
 
     uint2   accesssize = uninitialized;
     uint1   byteaccess <:: ( accesssize[0,2] == 2b00 );
-    uint29  address = uninitialized;
+    uint27  address = uninitialized;
     uint16  writedata = uninitialized;
     uint1   CPUwritememory = uninitialized;
     uint1   CPUreadmemory = uninitialized;
@@ -253,7 +253,7 @@ $$end
     );
 
     // IDENTIFY ADDRESS BLOCK
-    uint1   SDRAM <: address[28,1];
+    uint1   SDRAM <: address[26,1];
     uint1   BRAM <: ~SDRAM & ~address[15,1];
     uint1   IOmem <: ~SDRAM & ~BRAM;
     uint1   VIDEO <: IOmem & ( address[12,4]==4h8 );
@@ -400,7 +400,7 @@ algorithm cachecontroller(
 
     while(1) {
         doread = readflag; dowrite = writeflag;
-        if( doread || dowrite ) {
+        if( doread | dowrite ) {
             busy = 1;
             ++: // WAIT FOR CACHE
             if( cachetagmatch ) {
@@ -415,7 +415,6 @@ algorithm cachecontroller(
                 } else {
                     needwritetosdram = 1; cacheupdatedata = writethrough; cacheupdate = dowrite;
                 }
-
             }
             busy = 0;
         }
@@ -453,6 +452,6 @@ algorithm sdramcontroller(
     readdata := sio.data_out;
 
     while(1) {
-        if( readflag || writeflag ) { busy = 1; sio.data_in = writedata; sio.rw = writeflag; sio.in_valid = 1; while( !sio.done ) {} busy = 0; }
+        if( readflag | writeflag ) { busy = 1; sio.data_in = writedata; sio.rw = writeflag; sio.in_valid = 1; while( !sio.done ) {} busy = 0; }
     }
 }

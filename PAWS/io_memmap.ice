@@ -358,60 +358,33 @@ algorithm audio(
     output  uint1   audio_active_r
 ) <autorun> {
     // Left and Right audio channels
-    uint4   Lwaveform = uninitialized;
-    uint16  Lfrequency = uninitialized;
-    uint16  Lduration = uninitialized;
     uint1   Lapu_write = uninitialized;
     apu apu_processor_L(
         staticGenerator <: staticGenerator,
         audio_output :> audio_l,
         audio_active :> audio_active_l,
-        waveform <: Lwaveform,
-        frequency <: Lfrequency,
-        duration <: Lduration,
+        waveform <: waveform,
+        frequency <: frequency,
+        duration <: duration,
         apu_write <: Lapu_write
     );
-    uint4   Rwaveform = uninitialized;
-    uint16  Rfrequency = uninitialized;
-    uint16  Rduration = uninitialized;
     uint1   Rapu_write = uninitialized;
     apu apu_processor_R(
         staticGenerator <: staticGenerator,
         audio_output :> audio_r,
         audio_active :> audio_active_r,
-        waveform <: Rwaveform,
-        frequency <: Rfrequency,
-        duration <: Rduration,
+        waveform <: waveform,
+        frequency <: frequency,
+        duration <: duration,
         apu_write <: Rapu_write
     );
 
     Lapu_write := 0; Rapu_write := 0;
 
     always {
-        switch( apu_write ) {
-            default: {}
-            case 1: {
-                Lwaveform = waveform;
-                Lfrequency = frequency;
-                Lduration = duration;
-                Lapu_write = 1;
-            }
-            case 2: {
-                Rwaveform = waveform;
-                Rfrequency = frequency;
-                Rduration = duration;
-                Rapu_write = 1;
-            }
-            case 3: {
-                Lwaveform = waveform;
-                Lfrequency = frequency;
-                Lduration = duration;
-                Lapu_write = 1;
-                Rwaveform = waveform;
-                Rfrequency = frequency;
-                Rduration = duration;
-                Rapu_write = 1;
-            }
+        if( apu_write != 0 ) {
+            Lapu_write = apu_write[0,1];
+            Rapu_write = apu_write[1,1];
         }
     }
 }
