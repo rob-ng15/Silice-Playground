@@ -11,6 +11,7 @@
 ./compile.sh c/mandelbrot.c PAWS/DEMO/MANDEL.PAW
 ./compile.sh c/outrun.c PAWS/DEMO/OUTRUN.PAW
 ./compile.sh c/raytracing.c PAWS/DEMO/RAYTRACE.PAW
+./compile.sh c/raytracing-grey.c PAWS/DEMO/RAY-BW.PAW
 
 ./compile.sh c/copper.c PAWS/TEST/COPPER.PAW
 ./compile.sh c/drawlist.c PAWS/TEST/DRAWLIST.PAW

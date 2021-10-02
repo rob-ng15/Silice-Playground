@@ -1,7 +1,7 @@
 algorithm fpu(
     input   uint1   start,
     output  uint1   busy(0),
-    input   uint7   opCode,
+    input   uint5   opCode,
     input   uint3   function3,
     input   uint7   function7,
     input   uint5   rs1,
@@ -81,7 +81,7 @@ algorithm fpu(
             frd = 1;
             FPUnewflags = FPUflags;
 
-            switch( opCode[2,5] ) {
+            switch( opCode ) {
                 default: {
                     // FMADD.S FMSUB.S FNMSUB.S FNMADD.S
                     FPUcalculatorstart = 1; while( FPUcalculatorbusy ) {} result = calculatorresult; FPUnewflags = FPUflags | calculatorflags;
@@ -184,7 +184,7 @@ algorithm floatconvert(
 algorithm floatcalc(
     input   uint1   start,
     output  uint1   busy(0),
-    input   uint7   opCode,
+    input   uint5   opCode,
     input   uint7   function7,
     input   uint32  sourceReg1F,
     input   uint32  sourceReg2F,
@@ -227,12 +227,12 @@ algorithm floatcalc(
         if( start ) {
             busy = 1;
             //flags = 0;
-            switch( opCode[2,5] ) {
+            switch( opCode ) {
                 default: {
                     // 3 REGISTER FUSED FPU OPERATIONS
-                    mulsourceReg1F = { opCode[3,1] ? ~sourceReg1F[31,1] : sourceReg1F[31,1], sourceReg1F[0,31] };
+                    mulsourceReg1F = { opCode[1,1] ? ~sourceReg1F[31,1] : sourceReg1F[31,1], sourceReg1F[0,31] };
                     FPUmultiplystart = 1; while( FPUmultiplybusy ) {} flags = multiplyflags & 5b10110;
-                    addsourceReg1F = multiplyresult; addsourceReg2F = sourceReg3F; addsub = opCode[2,1];
+                    addsourceReg1F = multiplyresult; addsourceReg2F = sourceReg3F; addsub = opCode[0,1];
                     FPUaddsubstart = 1; while( FPUaddsubbusy ) {} result = addsubresult; flags = flags | ( addsubflags & 5b00110 );
                 }
                 case 5b10100: {
@@ -383,7 +383,8 @@ algorithm floatsign(
     input   uint32  sourceReg2F,
     output  uint32  result,
 ) <autorun> {
+    uint1   sign <:: function3[1,1] ? sourceReg1F[31,1] ^ sourceReg2F[31,1] : function3[0,1] ? ~sourceReg2F[31,1] : sourceReg2F[31,1];
     always {
-        result = { function3[1,1] ? sourceReg1F[31,1] ^ sourceReg2F[31,1] : function3[0,1] ? ~sourceReg2F[31,1] : sourceReg2F[31,1], sourceReg1F[0,31] };
+        result = { sign, sourceReg1F[0,31] };
     }
 }

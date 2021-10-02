@@ -242,8 +242,8 @@ algorithm dither(
         // DITHER PATTERNS
         // == 0 SOLID == 1 SMALL CHECKERBOARD == 2 MED CHECKERBOARD == 3 LARGE CHECKERBOARD
         // == 4 VERTICAL STRIPES == 5 HORIZONTAL STRIPES == 6 CROSSHATCH == 7 LEFT SLOPE
-        // == 8 RIGHT SLOPE == 9 LEFT TRIANGLE == 10 RIGHT TRIANGLE == 11 ENCLOSED
-        // == 12 OCTRAGON == 13 BRICK == 14 COLOUR STATIC == 15 STATIC
+        // == 8 RIGHT SLOPE == 9 LEFT TRIANGLE == 10 RIGHT TRIANGLE == 11 X
+        // == 12 + == 13 BRICK == 14 COLOUR STATIC == 15 STATIC
         switch( dithermode ) {
             case 0: { condition = 1; }                                                                          // SOLID
             default: { condition = ( bitmap_x_write[dithermode - 1,1] == bitmap_y_write[dithermode - 1,1] ); }  // CHECKERBOARDS 1 2 AND 3
@@ -253,41 +253,19 @@ algorithm dither(
             case 7: { condition = ( bitmap_x_write[0,2] == bitmap_y_write[0,2] ); }                             // LEFT SLOPE
             case 8: { condition = ( bitmap_x_write[0,2] == ~bitmap_y_write[0,2] ); }                            // RIGHT SLOPE
             case 9: {                                                                                           // LEFT TRIANGLE
-                switch( bitmap_y_write[0,2] ) {
-                    case 2b00: { condition = ( bitmap_x_write[0,2] == 2b00 ); }
-                    case 2b01: { condition = ( ~bitmap_x_write[1,1] ); }
-                    case 2b10: { condition = ( bitmap_x_write[0,2] != 2b11 ); }
-                    case 2b11: { condition = 1; }
-                }
+                condition = ( bitmap_x_write[0,3] <= bitmap_y_write[0,3] );
             }
             case 10: {                                                                                          // RIGHT TRIANGLE
-                switch( bitmap_y_write[0,2] ) {
-                    case 2b00: { condition = ( bitmap_x_write[0,2] == 2b11 ); }
-                    case 2b01: { condition = ( bitmap_x_write[1,1] ); }
-                    case 2b10: { condition = ( bitmap_x_write[0,2] != 2b00 ); }
-                    case 2b11: { condition = 1; }
-                }
+                condition = ( ( 3b111 - bitmap_x_write[0,3] ) <= bitmap_y_write[0,3] );
             }
-            case 11: {                                                                                          // ENCLOSED
-                if( bitmap_y_write[0,1] ^ bitmap_y_write[1,1] ) {
-                    condition = ( bitmap_x_write[0,1] == bitmap_x_write[1,1] );
-                } else {
-                    condition = 1;
-                }
+            case 11: {                                                                                          // X
+                condition = ( bitmap_x_write[0,3] == bitmap_y_write[0,3] ) | ( ( 3b111 - bitmap_x_write[0,3] ) == bitmap_y_write[0,3] );
             }
-            case 12: {                                                                                          // OCTAGON
-                if( bitmap_y_write[0,1] ^ bitmap_y_write[1,1] ) {
-                    condition = ( bitmap_x_write[0,1] == bitmap_x_write[1,1] );
-                } else {
-                    condition = 1;
-                }
+            case 12: {                                                                                          // +
+                condition = ( bitmap_x_write[1,2] == 2b10 ) | ( bitmap_y_write[1,2] == 2b10 );
             }
             case 13: {                                                                                          // BRICK
-                if( bitmap_y_write[0,2] == 2b00) {
-                    condition = 1;
-                } else {
-                    condition = ( bitmap_x_write[0,2] == { bitmap_y_write[2,1], 1b0 } );
-                }
+                condition = ( bitmap_y_write[0,2] == 2b00 ) ? 1 : ( bitmap_x_write[0,2] == { bitmap_y_write[2,1], 1b0 } );
             }
             case 14: { condition = 1; }                                                                         // COLOUR STATIC
             case 15: { condition = static1bit; }                                                                // STATIC

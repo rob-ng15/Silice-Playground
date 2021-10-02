@@ -1,18 +1,3 @@
-algorithm updatepc(
-    input   uint7   opCode,
-    input   uint1   incPC,
-    input   uint32  nextPC,
-    input   uint1   takeBranch,
-    input   uint32  branchAddress,
-    input   uint32  jumpAddress,
-    input   uint32  loadAddress,
-    output  uint32  pc
-) <autorun> {
-    always {
-        pc = ( incPC ) ? ( takeBranch ? branchAddress : nextPC ) : ( opCode[3,1] ? jumpAddress : loadAddress );
-    }
-}
-
 // RISC-V REGISTERS - INTEGERS
 algorithm registersI(
     input   uint1   SMT,
@@ -79,61 +64,8 @@ algorithm registersF(
     }
 }
 
-// RISC-V INSTRUCTION DECODER
-algorithm decoder(
-    input   uint32  instruction,
-    output  uint7   opCode,
-    output  uint3   function3,
-    output  uint7   function7,
-    output  uint5   rs1,
-    output  uint5   rs2,
-    output  uint5   rs3,
-    output  uint5   rd,
-    output  int32   immediateValue,
-) <autorun> {
-    always {
-        opCode = Utype(instruction).opCode;
-        function3 = Rtype(instruction).function3;
-        function7 = Rtype(instruction).function7;
-        rs1 = Rtype(instruction).sourceReg1;
-        rs2 = Rtype(instruction).sourceReg2;
-        rs3 = R4type(instruction).sourceReg3;
-        rd = Rtype(instruction).destReg;
-        immediateValue = { {20{instruction[31,1]}}, Itype(instruction).immediate };
-    }
-}
-
-// RISC-V ADDRESS BASE/OFFSET GENERATOR
-algorithm addressgenerator1(
-    input   uint32  instruction,
-    input   uint32  pc,
-    output  uint32  branchAddress,
-    output  uint32  jumpAddress,
-    output  uint32  AUIPCLUI
-) <autorun> {
-    always {
-        branchAddress = { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } + pc;
-        jumpAddress = { {12{Jtype(instruction).immediate_bits_20}}, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + pc;
-        AUIPCLUI = { Utype(instruction).immediate_bits_31_12, 12b0 } + ( instruction[5,1] ? 0 : pc );
-    }
-}
-algorithm addressgenerator2(
-    input   uint32  instruction,
-    input   int32   sourceReg1,
-    input   int32   immediateValue,
-    output  uint32  storeAddress,
-    output  uint32  loadAddress,
-) <autorun> {
-    uint1   AMO <:: ( instruction[2,5] == 5b01011 );
-    always {
-        storeAddress = ( AMO ? 0 : { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } ) + sourceReg1;
-        loadAddress = ( AMO ? 0 : immediateValue ) + sourceReg1;
-    }
-}
-
 // BRANCH COMPARISIONS
 algorithm branchcomparison(
-    input   uint7   opCode,
     input   uint3   function3,
     input   int32   sourceReg1,
     input   int32   sourceReg2,
@@ -153,28 +85,6 @@ algorithm branchcomparison(
             case 3b111: { takeBranch = ~unsignedcompare; }
             default: { takeBranch = 0; }
         }
-    }
-}
-
-// MEMORY ACCESS, SIZE AND FLAGS
-algorithm memoryaccess(
-    input   uint7   opCode,
-    input   uint2   function3,
-    input   uint7   function7,
-    output  uint2   accesssize,
-    output  uint1   memoryload,
-    output  uint1   memorystore
-) <autorun> {
-    uint1   AMO <:: opCode[2,5] == 5b01011;
-    uint1   L <:: opCode[2,5] == 5b00000;
-    uint1   S <:: opCode[2,5] == 5b01000;
-    uint1   FL <:: opCode[2,5] == 5b00001;
-    uint1   FS <:: opCode[2,5] == 5b01001;
-
-    always {
-        accesssize = AMO | FL | FS ? 2b10 : function3;
-        memoryload = L | FL | ( AMO & ( function7[2,5] != 5b00011 ) );
-        memorystore = S | FS | ( AMO & ( function7[2,5] != 5b00010 ) );
     }
 }
 
@@ -254,7 +164,12 @@ algorithm compressed01(
                         //        // 2b01 -> XOR -> xor rd', rd', rs2' { 100 0 11 rs1'/rd' 01 rs2' 01 } -> { 0000000 rs2 rs1 100 rd 0110011 }
                         //        // 2b10 -> OR  -> or  rd', rd', rd2' { 100 0 11 rs1'/rd' 10 rs2' 01 } -> { 0000000 rs2 rs1 110 rd 0110011 }
                         //        // 2b11 -> AND -> and rd', rd', rs2' { 100 0 11 rs1'/rd' 11 rs2' 01 } -> { 0000000 rs2 rs1 111 rd 0110011 }
-                        switch( CBalu(i16).logical2 ) { case 2b00: { opbits = 3b000; } case 2b01: { opbits = 3b100; } case 2b10: { opbits = 3b110; } case 2b11: { opbits = 3b111; } }
+                        switch( CBalu(i16).logical2 ) {
+                            case 2b00: { opbits = 3b000; }
+                            case 2b01: { opbits = 3b100; }
+                            case 2b10: { opbits = 3b110; }
+                            case 2b11: { opbits = 3b111; }
+                        }
                         i32 = { { 1b0, CBalu(i16).logical2 == 2b00 ? 1b1 : 1b0, 5b00000 }, { 2b01, CBalu(i16).rs2_alt }, { 2b01, CBalu(i16).rd_alt }, opbits, { 2b01, CBalu(i16).rd_alt }, 7b0110011 };
                     }
                 }
@@ -429,7 +344,6 @@ algorithm CSRblock(
 }
 
 // ATOMIC A EXTENSION ALU
-
 algorithm aluA (
     input   uint7   function7,
     input   uint32  memoryinput,

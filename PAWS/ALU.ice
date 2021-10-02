@@ -1,6 +1,6 @@
 // ALU - ALU for immediate-register operations and register-register operations
 algorithm alu(
-    input   uint7   opCode,
+    input   uint5   opCode,
     input   uint3   function3,
     input   uint7   function7,
     input   uint5   rs1,
@@ -11,7 +11,7 @@ algorithm alu(
 
     output  uint32  result
 ) <autorun> {
-    uint1   regimm <:: opCode[5,1];
+    uint1   regimm <:: opCode[3,1];
     uint1   function75 <:: function7[5,1];
     uint1   addsub <:: regimm & function75;
     uint5   shiftcount <:: regimm ? sourceReg2[0,5] : rs2;
@@ -19,19 +19,23 @@ algorithm alu(
     uint32  negsourceReg2 <:: -sourceReg2;
     uint1   unsignedcompare <:: __unsigned( sourceReg1 ) < __unsigned( operand2 );
 
+    uint32  SLL <:: sourceReg1 << shiftcount;
+    uint32  SRL <:: sourceReg1 >> shiftcount;
+    uint32  SRA <:: __signed(sourceReg1) >>> shiftcount;
+
     always {
         switch( function3 ) {
             case 3b000: { result = sourceReg1 + ( addsub ? negsourceReg2 : operand2 ); }
-            case 3b001: { result = sourceReg1 << shiftcount; }
+            case 3b001: { result = SLL; }
             case 3b010: { result =  __signed( sourceReg1 ) < __signed(operand2); }
             case 3b011: { result = regimm ? ( rs1 == 0 ) ? ( operand2 != 0 ) : unsignedcompare :
                             ( operand2 == 1 ) ? ( sourceReg1 == 0 ) : unsignedcompare; }
             case 3b100: { result = sourceReg1 ^ operand2; }
             case 3b101: {
                 if( function75 ) {
-                    result = __signed(sourceReg1) >>> shiftcount;
+                    result = SRA;
                 } else {
-                    result = sourceReg1 >> shiftcount;
+                    result = SRL;
                 }
             }
             case 3b110: { result = sourceReg1 | operand2; }
@@ -74,9 +78,9 @@ algorithm aluMdivideremain(
     input   uint32  divisor,
     output  uint32  result
 ) <autorun> {
-    uint1   quotientremaindersign <:: ~dosign[0,1] ? dividend[31,1] ^ divisor[31,1] : 0;
-    uint32  dividend_unsigned <:: ~dosign[0,1] ? ( dividend[31,1] ? -dividend : dividend ) : dividend;
-    uint32  divisor_unsigned <:: ~dosign[0,1] ? ( divisor[31,1] ? -divisor : divisor ) : divisor;
+    uint1   quotientremaindersign <:: dosign[0,1] ? 0 : dividend[31,1] ^ divisor[31,1];
+    uint32  dividend_unsigned <:: dosign[0,1] ? dividend : ( dividend[31,1] ? -dividend : dividend );
+    uint32  divisor_unsigned <:: dosign[0,1] ? divisor : ( divisor[31,1] ? -divisor : divisor );
     uint32  result_quotient = uninitialised;
     uint32  result_remainder = uninitialised;
     uint1   DODIVIDEstart = uninitialised;
@@ -158,7 +162,7 @@ algorithm aluMmultiply(
     uint1   dosigned1 <:: ( dosigned == 1 );
     uint1   productsign <:: dosigned0 ? 0 : ( dosigned1 ? ( factor_1[31,1] ^ factor_2[31,1] ) : factor_1[31,1] );
     uint32  factor_1_unsigned <:: dosigned0 ? factor_1 : ( ( factor_1[31,1] ) ? -factor_1 : factor_1 );
-    uint32  factor_2_unsigned <:: ~dosigned1 ? factor_2 : ( ( factor_2[31,1] ) ? -factor_2 : factor_2 );
+    uint32  factor_2_unsigned <:: dosigned1 ? ( ( factor_2[31,1] ) ? -factor_2 : factor_2 ) : factor_2;
     uint64  product = uninitialised;
     douintmul UINTMUL( factor_1 <: factor_1_unsigned, factor_2 <: factor_2_unsigned, productsign <: productsign, product64 :> product);
 

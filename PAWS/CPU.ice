@@ -29,6 +29,7 @@ algorithm PAWSCPU(
     uint32  PC <:: SMT ? pcSMT : pc;
     uint32  PCplus2 <:: PC + 2;
     uint32  nextPC <:: PC + ( compressed ? 2 : 4 );
+    uint32  newPC <:: ( incPC ) ? ( takeBranch ? branchAddress : nextPC ) : ( opCode[1,1] ? jumpAddress : loadAddress );
 
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
@@ -40,42 +41,38 @@ algorithm PAWSCPU(
     compressed01 COMPRESSED01 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3201 );
     compressed10 COMPRESSED10 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3210 );
 
+    // RISC-V 32 BIT INSTRUCTION DECODER
+    uint5   opCode <:: instruction[2,5];
+    uint3   function3 <:: Rtype(instruction).function3;
+    uint7   function7 <:: Rtype(instruction).function7;
+    uint5   rs1 <:: Rtype(instruction).sourceReg1;
+    uint5   rs2 <:: Rtype(instruction).sourceReg2;
+    uint5   rs3 <:: R4type(instruction).sourceReg3;
+    uint5   rd <:: Rtype(instruction).destReg;
+    int32   immediateValue <:: { {20{instruction[31,1]}}, Itype(instruction).immediate };
+
+    // RISC-V ADDRESS GENERATOR
+    uint32  branchAddress <:: { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } + PC;
+    uint32  jumpAddress <:: { {12{Jtype(instruction).immediate_bits_20}}, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + PC;
+    uint32  AUIPCLUI <:: { Utype(instruction).immediate_bits_31_12, 12b0 } + ( instruction[5,1] ? 0 : PC );
+    uint27  loadAddress <:: ( AMO ? 0 : immediateValue ) + sourceReg1;
+    uint27  storeAddress <:: ( AMO ? 0 : { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } ) + sourceReg1;
+    uint27  loadAddressplus2 <:: loadAddress + 2;
+    uint27  storeAddressplus2 <:: storeAddress + 2;
+
     // RISC-V MEMORY ACCESS FLAGS - SET SIZE 32 BIT FOR FLOAT AND ATOMIC
+    uint1   AMO <:: ( opCode == 5b01011 );
+    uint1   ILOAD <:: opCode == 5b00000;
+    uint1   ISTORE <:: opCode == 5b01000;
+    uint1   FLOAD <:: opCode == 5b00001;
+    uint1   FSTORE <:: opCode == 5b01001;
+    uint1   memoryload <:: ILOAD | FLOAD | ( AMO & ( function7[2,5] != 5b00011 ) );
+    uint1   memorystore <::ISTORE | FSTORE | ( AMO & ( function7[2,5] != 5b00010 ) );
     uint32  memory8bit <:: signedload ? { {24{readdata[bytesignoffset, 1]}}, readdata[byteoffset, 8] } : readdata[byteoffset, 8];
-    uint32  memory16bit <:: signedload ? { {16{readdata[15,1]}}, readdata[0,16] } : readdata[0,16];    uint1   memoryload = uninitialized;
-    uint1   memorystore = uninitialized;
+    uint32  memory16bit <:: signedload ? { {16{readdata[15,1]}}, readdata[0,16] } : readdata[0,16];
     uint1   signedload <:: ~function3[2,1];
     uint4   byteoffset <:: { loadAddress[0,1], 3b000 };
     uint4   bytesignoffset <:: { loadAddress[0,1], 3b111 };
-    memoryaccess ACCESS(
-        opCode <: opCode,
-        function3 <: function3,
-        function7 <: function7,
-        accesssize :> accesssize,
-        memoryload :> memoryload,
-        memorystore :> memorystore
-    );
-
-    // RISC-V 32 BIT INSTRUCTION DECODER
-    int32   immediateValue = uninitialized;
-    uint7   opCode = uninitialized;
-    uint3   function3 = uninitialized;
-    uint7   function7 = uninitialized;
-    uint5   rs1 = uninitialized;
-    uint5   rs2 = uninitialized;
-    uint5   rs3 = uninitialized;
-    uint5   rd = uninitialized;
-    decoder DECODER <@clock_CPUdecoder> (
-        instruction <: instruction,
-        opCode :> opCode,
-        function3 :> function3,
-        function7 :> function7,
-        rs1 :> rs1,
-        rs2 :> rs2,
-        rs3 :> rs3,
-        rd :> rd,
-        immediateValue :> immediateValue
-    );
 
     // RISC-V REGISTERS
     uint1   frd <:: FASTPATH ? CLASSfrd : EXECUTESLOWfrd;
@@ -108,29 +105,6 @@ algorithm PAWSCPU(
         sourceReg1 :> sourceReg1F,
         sourceReg2 :> sourceReg2F,
         sourceReg3 :> sourceReg3F
-    );
-
-    // RISC-V ADDRESS GENERATOR
-    uint32  branchAddress = uninitialized;
-    uint32  jumpAddress = uninitialized;
-    uint32  AUIPCLUI = uninitialized;
-    addressgenerator1 AGU1 <@clock_CPUdecoder> (
-        instruction <: instruction,
-        pc <: PC,
-        branchAddress :> branchAddress,
-        jumpAddress :> jumpAddress,
-        AUIPCLUI :> AUIPCLUI
-    );
-    uint27  loadAddress = uninitialized;
-    uint27  storeAddress = uninitialized;
-    uint27  loadAddressplus2 <:: loadAddress + 2;
-    uint27  storeAddressplus2 <:: storeAddress + 2;
-    addressgenerator2 AGU2 <@clock_CPUdecoder> (
-        instruction <: instruction,
-        immediateValue <: immediateValue,
-        sourceReg1 <: sourceReg1,
-        storeAddress :> storeAddress,
-        loadAddress :> loadAddress
     );
 
     // CPU EXECUTE BLOCK
@@ -204,20 +178,8 @@ algorithm PAWSCPU(
         result :> EXECUTEFASTresult
     );
 
-    // PC UPDATE BLOCK
-    uint32  newPC = uninitialized;
-    updatepc NEWPC(
-        opCode <: opCode,
-        incPC <: incPC,
-        nextPC <: nextPC,
-        takeBranch <: takeBranch,
-        branchAddress <: branchAddress,
-        jumpAddress <: jumpAddress,
-        loadAddress <: loadAddress,
-        pc :> newPC
-    );
-
     readmemory := 0; writememory := 0;
+    accesssize := AMO | FLOAD | FSTORE ? 2b10 : function3[0,2];
 
     // CPU EXECUTE START FLAGS
     EXECUTESLOWstart := 0;
@@ -287,7 +249,7 @@ algorithm PAWSCPU(
 // DETERMINE IF FAST OR SLOW INSTRUCTION
 // SET CPU CONTROLS DEPENDING UPON INSTRUCTION TYPE
 algorithm Iclass(
-    input   uint7   opCode,
+    input   uint5   opCode,
     input   uint3   function3,
     input   uint7   function7,
     output  uint1   frd,
@@ -297,7 +259,7 @@ algorithm Iclass(
 ) <autorun> {
     always {
         frd = 0; writeRegister = 1; incPC = 1; FASTPATH = 1;
-        switch( opCode[2,5] ) {
+        switch( opCode ) {
             case 5b01101: {}                        // LUI
             case 5b00101: {}                        // AUIPC
             case 5b11011: { incPC = 0; }            // JAL
@@ -310,7 +272,7 @@ algorithm Iclass(
             case 5b00011: {}                        // FENCE[I]
             case 5b11100: { FASTPATH = 0; }         // CSR
             case 5b01011: { FASTPATH = 0; }         // LR.W SC.WATOMIC LOAD - MODIFY - STORE
-            default: { FASTPATH = ~( opCode[6,1] | ( opCode[5,1] & function7[0,1] & function3[2,1]) ); }    // FPU OR INTEGER DIVIDE -> SLOWPATH
+            default: { FASTPATH = ~( opCode[4,1] | ( opCode[3,1] & function7[0,1] & function3[2,1]) ); }    // FPU OR INTEGER DIVIDE -> SLOWPATH
         }
     }
 }
@@ -320,7 +282,7 @@ algorithm cpuexecuteSLOWPATH(
     output  uint1   busy(0),
     input   uint1   SMT,
     input   uint32  instruction,
-    input   uint7   opCode,
+    input   uint5   opCode,
     input   uint3   function3,
     input   uint7   function7,
     input   uint5   rs1,
@@ -408,7 +370,7 @@ algorithm cpuexecuteSLOWPATH(
         if( start ) {
             busy = 1;
             frd = 0;
-            switch( opCode[2,5] ) {
+            switch( opCode ) {
                 case 5b11100: {
                     switch( function3 ) {
                         default: { CSRstart = 1; ++: result = CSRresult; }  // CSR
@@ -423,7 +385,7 @@ algorithm cpuexecuteSLOWPATH(
                     }
                 }
                 default: {                                                                  // FPU AND INTEGER DIVISION
-                    if( opCode[6,1] ) {
+                    if( opCode[4,1] ) {
                         FPUstart = 1; while( FPUbusy ) {} CSRupdateFPUflags = 1; frd = FPUfrd; result = FPUresult;
                     } else {
                         ALUMDstart = 1; while( ALUMDbusy ) {} result = ALUMDresult;
@@ -435,7 +397,7 @@ algorithm cpuexecuteSLOWPATH(
     }
 }
 algorithm cpuexecuteFASTPATH(
-    input   uint7   opCode,
+    input   uint5   opCode,
     input   uint3   function3,
     input   uint7   function7,
     input   uint5   rs1,
@@ -454,7 +416,6 @@ algorithm cpuexecuteFASTPATH(
     // BRANCH COMPARISON UNIT
     uint1   BRANCHtakeBranch = uninitialized;
     branchcomparison BRANCHUNIT(
-        opCode <: opCode,
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
@@ -486,7 +447,7 @@ algorithm cpuexecuteFASTPATH(
 
     always {
         takeBranch = 0;
-        switch( opCode[2,5] ) {
+        switch( opCode ) {
             case 5b01101: { result = AUIPCLUI; }                    // LUI
             case 5b00101: { result = AUIPCLUI; }                    // AUIPC
             case 5b11011: { result = nextPC; }                      // JAL
@@ -498,7 +459,7 @@ algorithm cpuexecuteFASTPATH(
             case 5b01001: { memoryoutput = sourceReg2F; }           // FLOAT STORE
             case 5b00011: {}                                        // FENCE[I]
             default: {
-                if( opCode[5,1] & function7[0,1] ) {               // INTEGER ALU AND MULTIPLICATION
+                if( opCode[3,1] & function7[0,1] ) {               // INTEGER ALU AND MULTIPLICATION
                     result = ALUMMresult;
                 } else {
                     result = ALUresult;
