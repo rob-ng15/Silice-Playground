@@ -24,55 +24,87 @@ algorithm PAWSCPU(
     // RISC-V PROGRAM COUNTERS AND STATUS
     // SMT - RUNNING ON HART 1 WITH DUPLICATE PROGRAM COUNTER AND REGISTER FILE
     uint1   SMT = uninitialized;
-    uint32  pc = uninitialized;
-    uint32  pcSMT = uninitialized;
-    uint32  PC <:: SMT ? pcSMT : pc;
-    uint32  PCplus2 <:: PC + 2;
-    uint32  nextPC <:: PC + ( compressed ? 2 : 4 );
-    uint32  newPC <:: ( incPC ) ? ( takeBranch ? branchAddress : nextPC ) : ( opCode[1,1] ? jumpAddress : loadAddress );
+    uint27  pc = uninitialized;
+    uint27  pcSMT = uninitialized;
+    uint27  PC <:: SMT ? pcSMT : pc;
+    uint27  PCplus2 = uninitialized; addrplus2 PC2 <@clock_CPUdecoder> ( address <: PC, addressplus2 :> PCplus2 );
+    uint27  nextPC = uninitialized;
+    uint27  newPC = uninitialized;
+    pcadjust PCADJUST <@clock_CPUdecoder> (
+        opCode <: opCode,
+        PC <: PC,
+        compressed <: compressed,
+        incPC <: incPC,
+        takeBranch <: takeBranch,
+        branchAddress <: branchAddress,
+        jumpAddress <: jumpAddress,
+        loadAddress <: loadAddress,
+        nextPC :> nextPC,
+        newPC :> newPC
+    );
 
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
     uint1   compressed = uninitialized;
-    uint32  i3200 = uninitialized;
-    uint32  i3201 = uninitialized;
-    uint32  i3210 = uninitialized;
-    compressed00 COMPRESSED00 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3200 );
-    compressed01 COMPRESSED01 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3201 );
-    compressed10 COMPRESSED10 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3210 );
+    uint32  i3200 = uninitialized; compressed00 COMPRESSED00 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3200 );
+    uint32  i3201 = uninitialized; compressed01 COMPRESSED01 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3201 );
+    uint32  i3210 = uninitialized; compressed10 COMPRESSED10 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3210 );
 
     // RISC-V 32 BIT INSTRUCTION DECODER
-    uint5   opCode <:: instruction[2,5];
-    uint3   function3 <:: Rtype(instruction).function3;
-    uint7   function7 <:: Rtype(instruction).function7;
-    uint5   rs1 <:: Rtype(instruction).sourceReg1;
-    uint5   rs2 <:: Rtype(instruction).sourceReg2;
-    uint5   rs3 <:: R4type(instruction).sourceReg3;
-    uint5   rd <:: Rtype(instruction).destReg;
-    int32   immediateValue <:: { {20{instruction[31,1]}}, Itype(instruction).immediate };
+    uint5   opCode = uninitialized;
+    uint3   function3 = uninitialized;
+    uint7   function7 = uninitialized;
+    uint5   rs1 = uninitialized;
+    uint5   rs2 = uninitialized;
+    uint5   rs3 = uninitialized;
+    uint5   rd = uninitialized;
+    int32   immediateValue = uninitialized;
+    uint1   memoryload = uninitialized;
+    uint1   memorystore = uninitialized;
+    decode RV32DECODER <@clock_CPUdecoder> (
+        instruction <: instruction,
+        opCode :> opCode,
+        function3 :> function3,
+        function7 :> function7,
+        rs1 :> rs1,
+        rs2 :> rs2,
+        rs3 :> rs3,
+        rd :> rd,
+        immediateValue :> immediateValue,
+        memoryload :> memoryload,
+        memorystore :> memorystore,
+        accesssize :> accesssize
+    );
 
     // RISC-V ADDRESS GENERATOR
-    uint32  branchAddress <:: { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } + PC;
-    uint32  jumpAddress <:: { {12{Jtype(instruction).immediate_bits_20}}, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + PC;
-    uint32  AUIPCLUI <:: { Utype(instruction).immediate_bits_31_12, 12b0 } + ( instruction[5,1] ? 0 : PC );
-    uint27  loadAddress <:: ( AMO ? 0 : immediateValue ) + sourceReg1;
-    uint27  storeAddress <:: ( AMO ? 0 : { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } ) + sourceReg1;
-    uint27  loadAddressplus2 <:: loadAddress + 2;
-    uint27  storeAddressplus2 <:: storeAddress + 2;
+    uint32  AUIPCLUI = uninitialized;
+    uint27  branchAddress = uninitialized;
+    uint27  jumpAddress = uninitialized;
+    uint27  loadAddress = uninitialized;
+    uint27  storeAddress = uninitialized;
+    addressgenerator AGU <@clock_CPUdecoder> (
+        instruction <: instruction,
+        PC <: PC,
+        sourceReg1 <: sourceReg1,
+        AUIPCLUI :> AUIPCLUI,
+        branchAddress :> branchAddress,
+        jumpAddress :> jumpAddress,
+        loadAddress :> loadAddress,
+        storeAddress :> storeAddress
+    );
+    uint27  loadAddressplus2 = uninitialized; addrplus2 LA2 <@clock_CPUdecoder> ( address <: loadAddress, addressplus2 :> loadAddressplus2 );
+    uint27  storeAddressplus2 = uninitialized; addrplus2 SA2 <@clock_CPUdecoder> ( address <: storeAddress, addressplus2 :> storeAddressplus2 );
 
     // RISC-V MEMORY ACCESS FLAGS - SET SIZE 32 BIT FOR FLOAT AND ATOMIC
-    uint1   AMO <:: ( opCode == 5b01011 );
-    uint1   ILOAD <:: opCode == 5b00000;
-    uint1   ISTORE <:: opCode == 5b01000;
-    uint1   FLOAD <:: opCode == 5b00001;
-    uint1   FSTORE <:: opCode == 5b01001;
-    uint1   memoryload <:: ILOAD | FLOAD | ( AMO & ( function7[2,5] != 5b00011 ) );
-    uint1   memorystore <::ISTORE | FSTORE | ( AMO & ( function7[2,5] != 5b00010 ) );
-    uint32  memory8bit <:: signedload ? { {24{readdata[bytesignoffset, 1]}}, readdata[byteoffset, 8] } : readdata[byteoffset, 8];
-    uint32  memory16bit <:: signedload ? { {16{readdata[15,1]}}, readdata[0,16] } : readdata[0,16];
-    uint1   signedload <:: ~function3[2,1];
-    uint4   byteoffset <:: { loadAddress[0,1], 3b000 };
-    uint4   bytesignoffset <:: { loadAddress[0,1], 3b111 };
+    uint32  memory8bit = uninitialized;
+    uint32  memory16bit = uninitialized;
+    signextend SIGNEXTEND <@clock_CPUdecoder> (
+        readdata <: readdata,
+        byteaccess <: loadAddress,
+        function3 <: function3,
+        memory8bit :> memory8bit,
+        memory16bit :> memory16bit
+    );
 
     // RISC-V REGISTERS
     uint1   frd <:: FASTPATH ? CLASSfrd : EXECUTESLOWfrd;
@@ -179,7 +211,6 @@ algorithm PAWSCPU(
     );
 
     readmemory := 0; writememory := 0;
-    accesssize := AMO | FLOAD | FSTORE ? 2b10 : function3[0,2];
 
     // CPU EXECUTE START FLAGS
     EXECUTESLOWstart := 0;
@@ -195,15 +226,11 @@ algorithm PAWSCPU(
             case 0: {
                 address = PC; readmemory = 1; while( memorybusy ) {}                                                                                                    // FETCH POTENTIAL COMPRESSED OR 1ST 16 BITS
                 compressed = ( readdata[0,2] != 2b11 );
-                if( compressed ) {
-                    switch( readdata[0,2] ) {                                                                                                                           // EXPAND COMPRESSED INSTRUCTION
-                        case 2b00: { instruction = i3200; }
-                        case 2b01: { instruction = i3201; }
-                        case 2b10: { instruction = i3210; }
-                        default: {}
-                    }
-                } else {
-                    instruction[0,16] = readdata; address = PCplus2; readmemory = 1; while( memorybusy ) {} instruction[16,16] = readdata;                              // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
+                switch( readdata[0,2] ) {                                                                                                                               // EXPAND COMPRESSED INSTRUCTION
+                    case 2b00: { instruction = i3200; }
+                    case 2b01: { instruction = i3201; }
+                    case 2b10: { instruction = i3210; }
+                    default: {instruction[0,16] = readdata; address = PCplus2; readmemory = 1; while( memorybusy ) {} instruction[16,16] = readdata; }                  // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
                 }
                 FSM = 2;
             }

@@ -1,3 +1,105 @@
+// RISC V INSTRUCTION DECODER
+algorithm decode(
+    input   uint32  instruction,
+    output  uint5   opCode,
+    output  uint3   function3,
+    output  uint7   function7,
+    output  uint5   rs1,
+    output  uint5   rs2,
+    output  uint5   rs3,
+    output  uint5   rd,
+    output  int32   immediateValue,
+    output  uint1   memoryload,
+    output  uint1   memorystore,
+    output  uint2   accesssize
+) <autorun> {
+    uint1   AMO <:: ( opCode == 5b01011 );
+    uint1   ILOAD <:: opCode == 5b00000;
+    uint1   ISTORE <:: opCode == 5b01000;
+    uint1   FLOAD <:: opCode == 5b00001;
+    uint1   FSTORE <:: opCode == 5b01001;
+
+    always {
+        opCode = instruction[2,5];
+        function3 = Rtype(instruction).function3;
+        function7 = Rtype(instruction).function7;
+        rs1 = Rtype(instruction).sourceReg1;
+        rs2 = Rtype(instruction).sourceReg2;
+        rs3 = R4type(instruction).sourceReg3;
+        rd = Rtype(instruction).destReg;
+        immediateValue = { {20{instruction[31,1]}}, Itype(instruction).immediate };
+        memoryload = ILOAD | FLOAD | ( AMO & ( function7[2,5] != 5b00011 ) );
+        memorystore = ISTORE | FSTORE | ( AMO & ( function7[2,5] != 5b00010 ) );
+        accesssize = AMO | FLOAD | FSTORE ? 2b10 : function3[0,2];
+    }
+}
+
+algorithm signextend(
+    input   uint16  readdata,
+    input   uint1   byteaccess,
+    input   uint3   function3,
+    output  uint32  memory8bit,
+    output  uint32  memory16bit
+) <autorun> {
+    uint1   signedload <:: ~function3[2,1];
+    uint4   byteoffset <:: { byteaccess, 3b000 };
+    uint4   bytesignoffset <:: { byteaccess, 3b111 };
+
+    always {
+        memory8bit = signedload ? { {24{readdata[bytesignoffset, 1]}}, readdata[byteoffset, 8] } : readdata[byteoffset, 8];
+        memory16bit = signedload ? { {16{readdata[15,1]}}, readdata[0,16] } : readdata[0,16];
+    }
+}
+
+algorithm addressgenerator(
+    input   uint32  instruction,
+    input   uint27  PC,
+    input   int32   sourceReg1,
+    output  uint32  AUIPCLUI,
+    output  uint27  branchAddress,
+    output  uint27  jumpAddress,
+    output  uint27  loadAddress,
+    output  uint27  storeAddress
+) <autorun> {
+    int32   immediateValue <:: { {20{instruction[31,1]}}, Itype(instruction).immediate };
+    uint1   AMO <:: ( instruction[2,5] == 5b01011 );
+
+    always {
+        AUIPCLUI = { Utype(instruction).immediate_bits_31_12, 12b0 } + ( instruction[5,1] ? 0 : PC );
+        branchAddress = { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } + PC;
+        jumpAddress = { {12{Jtype(instruction).immediate_bits_20}}, Jtype(instruction).immediate_bits_19_12, Jtype(instruction).immediate_bits_11, Jtype(instruction).immediate_bits_10_1, 1b0 } + PC;
+        loadAddress = ( AMO ? 0 : immediateValue ) + sourceReg1;
+        storeAddress = ( AMO ? 0 : { {20{instruction[31,1]}}, Stype(instruction).immediate_bits_11_5, Stype(instruction).immediate_bits_4_0 } ) + sourceReg1;
+    }
+}
+
+algorithm pcadjust(
+    input   uint5   opCode,
+    input   uint27  PC,
+    input   uint1   compressed,
+    input   uint1   incPC,
+    input   uint1   takeBranch,
+    input   uint27  branchAddress,
+    input   uint27  jumpAddress,
+    input   uint27  loadAddress,
+    output  uint27  nextPC,
+    output  uint27  newPC
+) <autorun> {
+    always {
+        nextPC = PC + ( compressed ? 2 : 4 );
+        newPC = ( incPC ) ? ( takeBranch ? branchAddress : nextPC ) : ( opCode[1,1] ? jumpAddress : loadAddress );
+    }
+}
+
+algorithm addrplus2(
+    input   uint27  address,
+    output  uint27  addressplus2
+) <autorun> {
+    always {
+        addressplus2 = address + 2;
+    }
+}
+
 // RISC-V REGISTERS - INTEGERS
 algorithm registersI(
     input   uint1   SMT,

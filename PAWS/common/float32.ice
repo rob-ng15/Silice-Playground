@@ -597,6 +597,24 @@ algorithm dofloatdivide(
     }
 }
 
+algorithm prepdivide(
+    input   uint32  a,
+    input   uint32  b,
+    output  uint1   quotientsign,
+    output  int10   quotientexp,
+    output  uint50  sigA,
+    output  uint50  sigB
+) <autorun> {
+    // BREAK DOWN INITIAL float32 INPUTS AND FIND SIGN OF RESULT AND EXPONENT OF QUOTIENT ( -1 IF DIVISOR > DIVIDEND )
+    // ALIGN DIVIDEND TO THE LEFT, DIVISOR TO THE RIGHT
+    always {
+        quotientsign = fp32( a ).sign ^ fp32( b ).sign;
+        quotientexp = ((fp32( a ).exponent - 127) - (fp32( b ).exponent - 127)) - ( fp32(b).fraction > fp32(a).fraction );
+        sigA = { 1b1, fp32(a).fraction, 26b0 };
+        sigB = { 27b1, fp32(b).fraction };
+    }
+}
+
 algorithm floatdivide(
     input   uint1   start,
     output  uint1   busy(0),
@@ -606,12 +624,18 @@ algorithm floatdivide(
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
-    // BREAK DOWN INITIAL float32 INPUTS AND FIND SIGN OF RESULT AND EXPONENT OF QUOTIENT ( -1 IF DIVISOR > DIVIDEND )
-    // ALIGN DIVIDEND TO THE LEFT, DIVISOR TO THE RIGHT
-    uint1   quotientsign <:: fp32( a ).sign ^ fp32( b ).sign;
-    int10   quotientexp <:: ((fp32( a ).exponent - 127) - (fp32( b ).exponent - 127)) - ( fp32(b).fraction > fp32(a).fraction );
-    uint50  sigA <:: { 1b1, fp32(a).fraction, 26b0 };
-    uint50  sigB <:: { 27b1, fp32(b).fraction };
+    uint1   quotientsign = uninitialised;
+    int10   quotientexp = uninitialised;
+    uint50  sigA = uninitialised;
+    uint50  sigB = uninitialised;
+    prepdivide PREP(
+        a <: a,
+        b <: b,
+        quotientsign :> quotientsign,
+        quotientexp :> quotientexp,
+        sigA :> sigA,
+        sigB :> sigB
+    );
 
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND DIVIDE ZERO
     uint1   IF <:: ( aINF | bINF );
@@ -755,6 +779,23 @@ algorithm dofloatsqrt(
     }
 }
 
+algorithm prepsqrt(
+    input   uint32  a,
+    output  uint1   sign,
+    output  uint50  start_ac,
+    output  uint48  start_x,
+    output  int10   squarerootexp
+) <autorun> {
+    // EXPONENT OF INPUT ( used to determine if 1x.xxxxx or 01.xxxxx for fixed point fraction to sqrt )
+    int10   exp  <:: fp32( a ).exponent - 127;
+    always {
+        sign = fp32( a ).sign;             // SIGN OF INPUT
+        start_ac = exp[0,1] ? { 48b0, 1b1, a[22,1] } : 1;
+        start_x = exp[0,1] ? { a[0,22], 26b0 } : { fp32( a ).fraction, 25b0 };
+        squarerootexp = ( exp >>> 1 );
+    }
+}
+
 algorithm floatsqrt(
     input   uint1   start,
     output  uint1   busy(0),
@@ -762,8 +803,18 @@ algorithm floatsqrt(
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
-    uint1   sign <:: fp32( a ).sign;             // SIGN OF INPUT
-    int10   exp  <:: fp32( a ).exponent - 127;   // EXPONENT OF INPUT ( used to determine if 1x.xxxxx or 01.xxxxx for fixed point fraction to sqrt )
+    // SQUARE ROOT EXPONENT IS HALF OF INPUT EXPONENT
+    uint1   sign = uninitialised;
+    uint50  start_ac = uninitialised;
+    uint48  start_x = uninitialised;
+    int10   squarerootexp = uninitialised;
+    prepsqrt PREP(
+        a <: a,
+        sign :> sign,
+        start_ac :> start_ac,
+        start_x :> start_x,
+        squarerootexp :> squarerootexp
+    );
 
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND NOT VALID
     uint1   NN <:: asNAN | aqNAN;
@@ -783,11 +834,7 @@ algorithm floatsqrt(
         ZERO :> aZERO
     );
 
-    // SQUARE ROOT EXPONENT IS HALF OF INPUT EXPONENT
-    uint50  start_ac <:: exp[0,1] ? { 48b0, 1b1, a[22,1] } : 1;
-    uint48  start_x <:: exp[0,1] ? { a[0,22], 26b0 } : { fp32( a ).fraction, 25b0 };
     uint48  squareroot = uninitialised;
-    int10   squarerootexp <:: ( exp >>> 1 );
     uint1   DOSQRTstart = uninitialised;
     uint1   DOSQRTbusy = uninitialised;
     dofloatsqrt DOSQRT(
@@ -892,31 +939,27 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 algorithm floatcompare(
     input   uint32  a,
     input   uint32  b,
-    output  uint1   less,
     output  uint7   flags,
+    output  uint1   less,
     output  uint1   equal
 ) <autorun> {
     uint1   aINF = uninitialised;
     uint1   asNAN = uninitialised;
     uint1   aqNAN = uninitialised;
-    uint1   aZERO = uninitialised;
     classify A(
         a <: a,
         INF :> aINF,
         sNAN :> asNAN,
-        qNAN :> aqNAN,
-        ZERO :> aZERO
+        qNAN :> aqNAN
     );
     uint1   bINF = uninitialised;
     uint1   bsNAN = uninitialised;
     uint1   bqNAN = uninitialised;
-    uint1   bZERO = uninitialised;
     classify B(
         a <: b,
         INF :> bINF,
         sNAN :> bsNAN,
-        qNAN :> bqNAN,
-        ZERO :> bZERO
+        qNAN :> bqNAN
     );
 
     uint1   aequalb <:: ( a == b );
