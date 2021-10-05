@@ -1,4 +1,42 @@
 // ALU - ALU for immediate-register operations and register-register operations
+algorithm iaddsub(
+    input   uint32  sourceReg1,
+    input   uint32  operand2,
+    input   uint1   addsub,
+    output  uint32  result
+) <autorun> {
+    always {
+        result = addsub ? ( sourceReg1 - operand2 ) : ( sourceReg1 + operand2 );
+    }
+}
+algorithm sll(
+    input   uint32  sourceReg1,
+    input   uint5   shiftcount,
+    output  uint32  result
+) <autorun> {
+    always {
+        result = sourceReg1 << shiftcount;
+    }
+}
+algorithm srl(
+    input   uint32  sourceReg1,
+    input   uint5   shiftcount,
+    output  uint32  result
+) <autorun> {
+    always {
+        result = sourceReg1 >> shiftcount;
+    }
+}
+algorithm sra(
+    input   uint32  sourceReg1,
+    input   uint5   shiftcount,
+    output  uint32  result
+) <autorun> {
+    always {
+        result = __signed(sourceReg1) >>> shiftcount;
+    }
+}
+
 algorithm alu(
     input   uint5   opCode,
     input   uint3   function3,
@@ -16,28 +54,22 @@ algorithm alu(
     uint1   addsub <:: regimm & function75;
     uint5   shiftcount <:: regimm ? sourceReg2[0,5] : rs2;
     uint32  operand2 <:: regimm ? sourceReg2 : immediateValue;
-    uint32  negsourceReg2 <:: -sourceReg2;
     uint1   unsignedcompare <:: __unsigned( sourceReg1 ) < __unsigned( operand2 );
 
-    uint32  SLL <:: sourceReg1 << shiftcount;
-    uint32  SRL <:: sourceReg1 >> shiftcount;
-    uint32  SRA <:: __signed(sourceReg1) >>> shiftcount;
+    uint32  AS = uninitialised; iaddsub ALUaddsub( sourceReg1 <: sourceReg1, operand2 <: operand2, addsub <: addsub, result :> AS );
+    uint32  SLL = uninitialised; sll ALUsll( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, result :> SLL );
+    uint32  SRL = uninitialised; srl ALUsrl( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, result :> SRL );
+    uint32  SRA = uninitialised; sra ALUsra( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, result :> SRA );
 
     always {
         switch( function3 ) {
-            case 3b000: { result = sourceReg1 + ( addsub ? negsourceReg2 : operand2 ); }
+            case 3b000: { result = AS; }
             case 3b001: { result = SLL; }
             case 3b010: { result =  __signed( sourceReg1 ) < __signed(operand2); }
             case 3b011: { result = regimm ? ( rs1 == 0 ) ? ( operand2 != 0 ) : unsignedcompare :
                             ( operand2 == 1 ) ? ( sourceReg1 == 0 ) : unsignedcompare; }
             case 3b100: { result = sourceReg1 ^ operand2; }
-            case 3b101: {
-                if( function75 ) {
-                    result = SRA;
-                } else {
-                    result = SRL;
-                }
-            }
+            case 3b101: { result = function75 ? SRA : SRL; }
             case 3b110: { result = sourceReg1 | operand2; }
             case 3b111: { result = sourceReg1 & operand2; }
         }
@@ -70,6 +102,15 @@ algorithm douintdivide(
         }
     }
 }
+algorithm prepsign(
+    input   uint32  number,
+    input   uint1   dosign,
+    output  uint32  number_unsigned
+) <autorun> {
+    always {
+        number_unsigned = dosign ? number : ( number[31,1] ? -number : number );
+    }
+}
 algorithm aluMdivideremain(
     input   uint1   start,
     output  uint1   busy(0),
@@ -79,8 +120,8 @@ algorithm aluMdivideremain(
     output  uint32  result
 ) <autorun> {
     uint1   quotientremaindersign <:: dosign[0,1] ? 0 : dividend[31,1] ^ divisor[31,1];
-    uint32  dividend_unsigned <:: dosign[0,1] ? dividend : ( dividend[31,1] ? -dividend : dividend );
-    uint32  divisor_unsigned <:: dosign[0,1] ? divisor : ( divisor[31,1] ? -divisor : divisor );
+    uint32  dividend_unsigned = uninitialised; prepsign PREPTOP( number <: dividend, dosign <: dosign, number_unsigned :> dividend_unsigned );
+    uint32  divisor_unsigned = uninitialised; prepsign PREPBOTTOM( number <: divisor, dosign <: dosign, number_unsigned :> divisor_unsigned );
     uint32  result_quotient = uninitialised;
     uint32  result_remainder = uninitialised;
     uint1   DODIVIDEstart = uninitialised;

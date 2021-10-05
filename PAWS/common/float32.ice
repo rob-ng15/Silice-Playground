@@ -81,6 +81,14 @@ algorithm classify(
 // ALGORITHMS TO DEAL WITH 48 BIT FRACTIONS TO 23 BIT FRACTIONS
 // NORMALISE A 48 BIT MANTISSA SO THAT THE MSB IS ONE
 // FOR ADDSUB ALSO DECREMENT THE EXPONENT FOR EACH SHIFT LEFT
+algorithm countzeros(
+    input   uint48  bitstream,
+    output  uint4   shiftcount
+) <autorun> {
+    always {
+        shiftcount = { bitstream[33,15] == 0, bitstream[41,7] == 0, bitstream[45,3] == 0, 1b1 };
+    }
+}
 algorithm donormalise48_adjustexp(
     input   uint1   start,
     output  uint1   busy(0),
@@ -89,7 +97,7 @@ algorithm donormalise48_adjustexp(
     output  int10   newexp,
     output  uint48  normalised
 ) <autorun> {
-    uint4   shiftcount <:: { normalised[33,15] == 0, normalised[41,7] == 0, normalised[45,3] == 0, 1b1 };
+    uint4   shiftcount = uninitialised; countzeros CZ( bitstream <: normalised, shiftcount :> shiftcount );
     while(1) {
         if( start ) {
             busy = 1;
@@ -108,7 +116,7 @@ algorithm donormalise48(
     input   uint48  bitstream,
     output  uint48  normalised
 ) <autorun> {
-    uint4   shiftcount <:: { normalised[33,15] == 0, normalised[41,7] == 0, normalised[45,3] == 0, 1b1 };
+    uint4   shiftcount = uninitialised; countzeros CZ( bitstream <: normalised, shiftcount :> shiftcount );
     while(1) {
         if( start ) {
             busy = 1;
@@ -153,6 +161,14 @@ algorithm docombinecomponents32(
 
 // CONVERT SIGNED/UNSIGNED INTEGERS TO FLOAT
 // dounsigned == 1 for signed conversion (31 bit plus sign), == 0 for dounsigned conversion (32 bit)
+algorithm startzeros(
+    input   uint32  number,
+    output  uint5   startingzeros
+) <autorun> {
+    always {
+        startingzeros = number[8,24] == 0 ? 24 : number[16,16] == 0 ? 16 : number[24,8] == 0 ? 8 : 0;
+    }
+}
 algorithm inttofloat(
     input   uint1   start,
     output  uint1   busy(0),
@@ -162,7 +178,7 @@ algorithm inttofloat(
     output  uint32  result
 ) <autorun> {
     // CHECK FOR 24, 16 OR 8 LEADING ZEROS, CONTINUE COUNTING FROM THERE
-    uint5   startingzeros <:: number[8,24] == 0 ? 24 : number[16,16] == 0 ? 16 : number[24,8] == 0 ? 8 : 0;
+    uint5   startingzeros = uninitialised; startzeros SZ( number <: number, startingzeros :> startingzeros );
     uint5   zeros = uninitialised;
 
     uint1   sign <:: dounsigned ? 0 : a[31,1];
@@ -201,15 +217,33 @@ algorithm inttofloat(
     }
 }
 
+// BREAK DOWN FLOAT READY FOR CONVERSION TO INTEGER
+algorithm prepftoi(
+    input   uint32  a,
+    output  int10   exp,
+    output  uint32  unsignedfraction
+) <autorun> {
+    uint33  sig <:: ( exp < 24 ) ? { 9b1, fp32( a ).fraction, 1b0 } >> ( 23 - exp ) : { 9b1, fp32( a ).fraction, 1b0 } << ( exp - 24);
+    always {
+        exp = fp32( a ).exponent - 127;
+        unsignedfraction = ( sig[1,32] + sig[0,1] );
+    }
+}
+
 // CONVERT FLOAT TO SIGNED INTEGERS
 algorithm floattoint(
     input   uint32  a,
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
-    int10   exp <:: fp32( a ).exponent - 127;
-    uint33  sig <:: ( exp < 24 ) ? { 9b1, fp32( a ).fraction, 1b0 } >> ( 23 - exp ) : { 9b1, fp32( a ).fraction, 1b0 } << ( exp - 24);
-    uint32  unsignedfraction <:: ( sig[1,32] + sig[0,1] );
+    int10   exp = uninitialised;
+    uint32  unsignedfraction = uninitialised;
+    prepftoi PREP(
+        a <: a,
+        exp :> exp,
+        unsignedfraction :> unsignedfraction
+    );
+
     uint1   NN <:: asNAN | aqNAN;
     uint1   NV = uninitialised;
 
@@ -241,8 +275,13 @@ algorithm floattouint(
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
-    int10   exp <:: fp32( a ).exponent - 127;
-    uint33  sig <:: ( exp < 24 ) ? { 9b1, fp32( a ).fraction, 1b0 } >> ( 23 - exp ) : { 9b1, fp32( a ).fraction, 1b0 } << ( exp - 24);
+    int10   exp = uninitialised;
+    uint32  unsignedfraction = uninitialised;
+    prepftoi PREP(
+        a <: a,
+        exp :> exp,
+        unsignedfraction :> unsignedfraction
+    );
     uint1   NN <:: asNAN | aqNAN;
     uint1   NV = uninitialised;
 
@@ -265,7 +304,7 @@ algorithm floattouint(
                 if( fp32( a ).sign ) {
                     NV = 1; result = 0;
                 } else {
-                    NV = ( exp > 31 ); result = NV ? 32hffffffff : ( sig[1,32] + sig[0,1] );
+                    NV = ( exp > 31 ); result = NV ? 32hffffffff : unsignedfraction;
                 }
             }
             case 2b01: { NV = 0; result = 0; }
@@ -479,6 +518,15 @@ algorithm floatmultiply(
     int10   productexp <:: (fp32( a ).exponent - 127) + (fp32( b ).exponent - 127) + product[47,1];
     uint24  sigA <:: { 1b1, fp32( a ).fraction };
     uint24  sigB <:: { 1b1, fp32( b ).fraction };
+    uint48  product = uninitialised;
+    dofloatmul UINTMUL(
+        factor_1 <: sigA,
+        factor_2 <: sigB,
+        product :> product
+    );
+
+    // FAST NORMALISATION - MULTIPLICATION RESULTS IN 1x.xxx or 01.xxxx
+    uint48  normalfraction <:: product[47,1] ? product : { product[0,47], 1b0 };
 
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND INVALID ( INF x ZERO )
     uint1   IF <:: ( aINF | bINF );
@@ -509,16 +557,6 @@ algorithm floatmultiply(
         qNAN :> bqNAN,
         ZERO :> bZERO
     );
-
-    uint48  product = uninitialised;
-    dofloatmul UINTMUL(
-        factor_1 <: sigA,
-        factor_2 <: sigB,
-        product :> product
-    );
-
-    // FAST NORMALISATION - MULTIPLICATION RESULTS IN 1x.xxx or 01.xxxx
-    uint48  normalfraction <:: product[47,1] ? product : { product[0,47], 1b0 };
 
     int10   roundexponent = uninitialised;
     uint48  roundfraction = uninitialised;
