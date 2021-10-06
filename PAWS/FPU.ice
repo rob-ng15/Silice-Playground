@@ -115,10 +115,7 @@ algorithm fpu(
                         case 5b11100: {
                             // FCLASS.S FMV.X.W
                             frd = 0;
-                            switch( function3[0,1] ) {
-                                case 1: { result = classification; }
-                                case 0: { result = sourceReg1F; }
-                            }
+                            result = function3[0,1] ? classification : sourceReg1F;
                         }
                         case 5b11110: {
                             // FMV.W.X
@@ -281,12 +278,12 @@ algorithm floatclassify(
 
     always {
         switch( { aINF, asNAN, aqNAN, aZERO } ) {
-            case 4b1000: { classification = fp32( sourceReg1F ).sign ? 10b0000000001 : 10b0010000000; }
+            case 4b1000: { classification = { 2b00, ~fp32( sourceReg1F ).sign, 6b000000, fp32( sourceReg1F ).sign }; }
             case 4b0100: { classification = 10b0100000000; }
             case 4b0010: { classification = 10b1000000000; }
-            case 4b0001: { classification = ( sourceReg1F[0,23] == 0 ) ? fp32( sourceReg1F ).sign ? 10b0000001000 : 10b0000010000 :
-                                                                            fp32( sourceReg1F ).sign ? 10b0000000100 : 10b0000100000; }
-            default: { classification = fp32( sourceReg1F ).sign ? 10b0000000010 : 10b0001000000; }
+            case 4b0001: { classification = ( sourceReg1F[0,23] == 0 ) ? { 5b00000, ~fp32( sourceReg1F ).sign, fp32( sourceReg1F ).sign, 3b000 } :
+                                                                            { 4b0000, ~fp32( sourceReg1F ).sign, 2b00, fp32( sourceReg1F ).sign, 2b00 }; }
+            default: { classification = { 3b000, ~fp32( sourceReg1F ).sign, 4b0000, fp32( sourceReg1F ).sign, 1b0 }; }
         }
     }
 }
@@ -325,9 +322,9 @@ algorithm floatminmax(
             result = 32h7fc00000;
         } else {
             if( function3[0,1] ) {
-                result = aqNAN ? ( bqNAN ? 32h7fc00000 : sourceReg2F ) : bqNAN ? sourceReg1F : ( less ? sourceReg2F : sourceReg1F);
+                result = aqNAN ? ( bqNAN ? 32h7fc00000 : sourceReg2F ) : bqNAN ? sourceReg1F : ( less ? sourceReg2F : sourceReg1F );
             } else {
-                result = aqNAN ? ( bqNAN ? 32h7fc00000 : sourceReg2F ) : bqNAN ? sourceReg1F : ( less ? sourceReg1F : sourceReg2F);
+                result = aqNAN ? ( bqNAN ? 32h7fc00000 : sourceReg2F ) : bqNAN ? sourceReg1F : ( less ? sourceReg1F : sourceReg2F );
             }
         }
     }
