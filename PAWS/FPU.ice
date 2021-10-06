@@ -300,21 +300,17 @@ algorithm floatminmax(
     output  uint32  result
 ) <autorun> {
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN
-    uint1   aINF = uninitialised;
     uint1   asNAN = uninitialised;
     uint1   aqNAN = uninitialised;
     classify A(
         a <: sourceReg1F,
-        INF :> aINF,
         sNAN :> asNAN,
         qNAN :> aqNAN
     );
-    uint1   bINF = uninitialised;
     uint1   bsNAN = uninitialised;
     uint1   bqNAN = uninitialised;
     classify B(
         a <: sourceReg2F,
-        INF :> bINF,
         sNAN :> bsNAN,
         qNAN :> bqNAN
     );
