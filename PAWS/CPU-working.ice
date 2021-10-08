@@ -19,7 +19,7 @@ algorithm PAWSCPU(
     input   uint32  SMTSTARTPC
 ) <autorun> {
     uint16  resetcount = uninitialized;
-    uint3   FSM = uninitialized;
+    uint4   FSM = uninitialized;
 
     // RISC-V PROGRAM COUNTERS AND STATUS
     // SMT - RUNNING ON HART 1 WITH DUPLICATE PROGRAM COUNTER AND REGISTER FILE
@@ -110,7 +110,7 @@ algorithm PAWSCPU(
     uint1   frd <:: FASTPATH ? CLASSfrd : EXECUTESLOWfrd;
     int32   sourceReg1 = uninitialized;
     int32   sourceReg2 = uninitialized;
-    uint1   REGISTERSwrite <:: FSM[2,1] & writeRegister & ~frd & ( rd != 0 );
+    uint1   REGISTERSwrite <:: FSM[3,1] & writeRegister & ~frd & ( rd != 0 );
     registersI REGISTERS <@clock_CPUdecoder> (
         SMT <:: SMT,
         rs1 <: rs1,
@@ -125,7 +125,7 @@ algorithm PAWSCPU(
     uint32  sourceReg1F = uninitialized;
     uint32  sourceReg2F = uninitialized;
     uint32  sourceReg3F = uninitialized;
-    uint1   REGISTERSFwrite <:: FSM[2,1] & writeRegister & frd;
+    uint1   REGISTERSFwrite <:: FSM[3,1] & writeRegister & frd;
     registersF REGISTERSF <@clock_CPUdecoder> (
         SMT <:: SMT,
         rs1 <: rs1,
@@ -222,47 +222,54 @@ algorithm PAWSCPU(
     }
 
     while(1) {
-        address = PC; readmemory = 1; while( memorybusy ) {}                                                                                                    // FETCH POTENTIAL COMPRESSED OR 1ST 16 BITS
-        compressed = ( readdata[0,2] != 2b11 );
-        switch( readdata[0,2] ) {                                                                                                                               // EXPAND COMPRESSED INSTRUCTION
-            case 2b00: { instruction = i3200; }
-            case 2b01: { instruction = i3201; }
-            case 2b10: { instruction = i3210; }
-            default: {instruction[0,16] = readdata; address = PCplus2; readmemory = 1; while( memorybusy ) {} instruction[16,16] = readdata; }                  // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
-        }
-        FSM = 2; ++: ++:                                                                                                                                        // DECODE, REGISTER FETCH, ADDRESS GENERATION
+        onehot( FSM ) {
+            case 0: {
+                address = PC; readmemory = 1; while( memorybusy ) {}                                                                                                    // FETCH POTENTIAL COMPRESSED OR 1ST 16 BITS
+                compressed = ( readdata[0,2] != 2b11 );
+                switch( readdata[0,2] ) {                                                                                                                               // EXPAND COMPRESSED INSTRUCTION
+                    case 2b00: { instruction = i3200; }
+                    case 2b01: { instruction = i3201; }
+                    case 2b10: { instruction = i3210; }
+                    default: {instruction[0,16] = readdata; address = PCplus2; readmemory = 1; while( memorybusy ) {} instruction[16,16] = readdata; }                  // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
+                }
+                FSM = 2;
+            }
+            case 1: { FSM = 4; }                                                                                                                                        // DECODE, REGISTER FETCH, ADDRESS GENERATION
+            case 2: {
+                if( memoryload ) {
+                    address = loadAddress; readmemory = 1; while( memorybusy ) {}                                                                                       // READ 1ST 8 or 16 BITS
+                    switch( accesssize[0,2] ) {
+                        case 2b00: { memoryinput = memory8bit; }                                                                                                        // 8 BIT SIGN EXTEND
+                        case 2b01: { memoryinput  = memory16bit; }                                                                                                      // 16 BIT SIGN EXTEND
+                        default: { memoryinput[0,16] = readdata; address = loadAddressplus2; readmemory = 1; while( memorybusy ) {} memoryinput[16,16] = readdata; }    // 32 BIT READ 2ND 16 BITS
+                    }
+                }
 
-        if( memoryload ) {
-            address = loadAddress; readmemory = 1; while( memorybusy ) {}                                                                                       // READ 1ST 8 or 16 BITS
-            switch( accesssize[0,2] ) {
-                case 2b00: { memoryinput = memory8bit; }                                                                                                        // 8 BIT SIGN EXTEND
-                case 2b01: { memoryinput  = memory16bit; }                                                                                                      // 16 BIT SIGN EXTEND
-                default: { memoryinput[0,16] = readdata; address = loadAddressplus2; readmemory = 1; while( memorybusy ) {} memoryinput[16,16] = readdata; }    // 32 BIT READ 2ND 16 BITS
+                if( FASTPATH ) {
+                    // ALL OTHER OPERATIONS
+                    takeBranch = EXECUTEFASTtakebranch;
+                } else {
+                    // FPU ALU AND CSR OPERATIONS
+                    EXECUTESLOWstart = 1; while( EXECUTESLOWbusy ) {}
+                    takeBranch = 0;
+                }
+
+                if( memorystore ) {
+                    address = storeAddress; writedata = storeLOW;                                                                                                       // STORE 8 OR 16 BIT
+                    writememory = 1; while( memorybusy ) {}
+                    if( accesssize[1,1] ) {
+                        address = storeAddressplus2; writedata = storeHIGH;                                                                                             // 32 BIT WRITE 2ND 16 BITS
+                        writememory = 1;  while( memorybusy ) {}
+                    }
+                }
+                FSM = 8;
+            }
+            case 3: {
+                // UPDATE PC AND SMT
+                if( SMT ) { pcSMT = newPC; SMT = 0; } else { pc = newPC; SMT = SMTRUNNING; pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC; }
+                FSM = 1;
             }
         }
-
-        if( FASTPATH ) {
-            // ALL OTHER OPERATIONS
-            takeBranch = EXECUTEFASTtakebranch;
-        } else {
-            // FPU ALU AND CSR OPERATIONS
-            EXECUTESLOWstart = 1; while( EXECUTESLOWbusy ) {}
-            takeBranch = 0;
-        }
-
-        if( memorystore ) {
-            address = storeAddress; writedata = storeLOW;                                                                                                       // STORE 8 OR 16 BIT
-            writememory = 1; while( memorybusy ) {}
-            if( accesssize[1,1] ) {
-                address = storeAddressplus2; writedata = storeHIGH;                                                                                             // 32 BIT WRITE 2ND 16 BITS
-                writememory = 1;  while( memorybusy ) {}
-            }
-        }
-        FSM = 4; ++:
-
-        // UPDATE PC AND SMT
-        if( SMT ) { pcSMT = newPC; SMT = 0; } else { pc = newPC; SMT = SMTRUNNING; pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC; }
-        FSM = 1;
     } // RISC-V
 }
 
@@ -393,7 +400,7 @@ algorithm cpuexecuteSLOWPATH(
             switch( opCode ) {
                 case 5b11100: {
                     switch( function3 ) {
-                        default: { CSRstart = 1; ++: result = CSRresult; }                  // CSR
+                        default: { CSRstart = 1; ++: result = CSRresult; }  // CSR
                         case 3b000: { result = 0; }
                     }
                 }

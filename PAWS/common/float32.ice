@@ -161,6 +161,15 @@ algorithm docombinecomponents32(
 
 // CONVERT SIGNED/UNSIGNED INTEGERS TO FLOAT
 // dounsigned == 1 for signed conversion (31 bit plus sign), == 0 for dounsigned conversion (32 bit)
+algorithm prepitof(
+    input   uint32  number,
+    input   uint1   dounsigned,
+    output  uint32  number_unsigned
+) <autorun> {
+    always {
+        number_unsigned = dounsigned ? number : ( number[31,1] ? -number : number );
+    }
+}
 algorithm startzeros(
     input   uint32  number,
     output  uint5   startingzeros
@@ -182,7 +191,7 @@ algorithm inttofloat(
     uint5   zeros = uninitialised;
 
     uint1   sign <:: dounsigned ? 0 : a[31,1];
-    uint32  number <:: dounsigned ? a : ( a[31,1] ? -a : a );
+    uint32  number = uninitialised; prepitof PREP( number <: a, dounsigned <: dounsigned, number_unsigned :> number );
     uint32  fraction <:: NX ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
     int10   exponent <:: 158 - zeros;
     uint1   OF = uninitialised; uint1 UF = uninitialised; uint1 NX = uninitialised;

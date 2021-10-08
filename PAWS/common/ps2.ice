@@ -40,7 +40,6 @@ algorithm ps2ascii(
     uint1   SHIFT <:: lshift | rshift;
     uint1   ALT <:: lalt | ralt;
     uint1   CAPITAL <:: ( lshift | rshift ) ^ capslock;
-
     uint2   LETTERMOD <:: CTRL ? 2b00 : CAPITAL ? 2b10 : 2b11;
 
     uint1   startbreak = 0;
