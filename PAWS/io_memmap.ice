@@ -183,7 +183,10 @@ algorithm audiotimers_memmap(
 
     // AUDIO
     output  uint4   audio_l,
-    output  uint4   audio_r
+    output  uint4   audio_r,
+
+    // RNG
+    output  uint16  static16bit
 ) <autorun> {
     // TIMERS and RNG
     uint16  systemclock = uninitialized;
@@ -208,6 +211,7 @@ algorithm audiotimers_memmap(
         sleepTimer1 :> sleepTimer1,
         u_noise_out :> u_noise_out,
         g_noise_out :> g_noise_out,
+        g_noise_out :> static16bit,
         counter <: counter,
         resetcounter <: resetcounter
     );

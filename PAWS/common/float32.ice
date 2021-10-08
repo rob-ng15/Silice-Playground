@@ -504,13 +504,20 @@ algorithm floataddsub(
 }
 
 // UNSIGNED / SIGNED 24 by 24 bit multiplication giving 48 bit product using DSP blocks
-algorithm dofloatmul(
-    input   uint24  factor_1,
-    input   uint24  factor_2,
+algorithm prepmul(
+    input   uint32  a,
+    input   uint32  b,
+    output  uint1   productsign,
+    output  int10   productexp,
     output  uint48  product
 ) <autorun> {
+    uint24  sigA <:: { 1b1, fp32( a ).fraction };
+    uint24  sigB <:: { 1b1, fp32( b ).fraction };
+
     always {
-        product = factor_1 * factor_2;
+        productsign = fp32( a ).sign ^ fp32( b ).sign;
+        product = sigA * sigB;
+        productexp = (fp32( a ).exponent - 127) + (fp32( b ).exponent - 127) + product[47,1];
     }
 }
 algorithm floatmultiply(
@@ -523,14 +530,14 @@ algorithm floatmultiply(
     output  uint32  result
 ) <autorun> {
     // BREAK DOWN INITIAL float32 INPUTS AND FIND SIGN OF RESULT AND EXPONENT OF PRODUCT ( + 1 IF PRODUCT OVERFLOWS, MSB == 1 )
-    uint1   productsign <:: fp32( a ).sign ^ fp32( b ).sign;
-    int10   productexp <:: (fp32( a ).exponent - 127) + (fp32( b ).exponent - 127) + product[47,1];
-    uint24  sigA <:: { 1b1, fp32( a ).fraction };
-    uint24  sigB <:: { 1b1, fp32( b ).fraction };
+    uint1   productsign = uninitialised;
+    int10   productexp = uninitialised;
     uint48  product = uninitialised;
-    dofloatmul UINTMUL(
-        factor_1 <: sigA,
-        factor_2 <: sigB,
+    prepmul PREP(
+        a <: a,
+        b <: b,
+        productsign :> productsign,
+        productexp :> productexp,
         product :> product
     );
 

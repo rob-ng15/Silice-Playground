@@ -191,14 +191,14 @@ algorithm pattern(
             case 1: { condition = tophalf; }                                        // 50:50 HORIZONTAL SPLIT
             case 2: { condition = ( lefthalf ); }                                   // 50:50 VERTICAL SPLIT
             case 3: { condition = ( lefthalf == tophalf ); }                        // QUARTERS
-            case 4: { condition = 1; }                                              // RAINBOW (placeholder, done below)
+            case 4: { condition = 1; }                                              // RAINBOW (placeholder, done in main)
             case 5: {                                                               // SNOW (from @sylefeb)
                 rand_x = ( pix_x == 0 )  ? 1 : rand_x * 31421 + 6927;
                 speed  = rand_x[10,2];
                 dotpos = ( frame >> speed ) + rand_x;
                 condition   = ( pix_y == dotpos );
             }
-            case 6: { condition = 1; }                                              // STATIC (placeholder, done below)
+            case 6: { condition = 1; }                                              // STATIC (placeholder, done in main)
             default: { condition = ( pix_x[b_mode-7,1] == pix_y[b_mode-7,1] ); }    // CHECKERBOARDS (7,8,9,10)
             case 11: { condition = ( pix_x[0,1] | pix_y[0,1] ); }                   // CROSSHATCH
             case 12: { condition = ( pix_x[0,2] == pix_y[0,2] ); }                  // LSLOPE

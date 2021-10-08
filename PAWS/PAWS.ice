@@ -202,6 +202,7 @@ $$if SIMULATION then
     uint4 audio_r(0);
 $$end
     uint16  ATreadData = uninitialized;
+    uint16  static16bit = uninitialized;
     audiotimers_memmap AUDIOTIMERS_Map <@clock_system,!reset> (
         clock_25mhz <: $clock_25mhz$,
         memoryAddress <: address,
@@ -210,7 +211,8 @@ $$end
         memoryRead <: ATmemoryRead,
         readData :> ATreadData,
         audio_l :> audio_l,
-        audio_r :> audio_r
+        audio_r :> audio_r,
+        static16bit :> static16bit
     );
 
     uint16  VreadData = uninitialized;
@@ -222,15 +224,16 @@ $$end
         memoryRead <: VmemoryRead,
         readData :> VreadData,
 $$if HDMI then
-        gpdi_dp :> gpdi_dp
+        gpdi_dp :> gpdi_dp,
 $$end
 $$if VGA then
         video_r  :> video_r,
         video_g  :> video_g,
         video_b  :> video_b,
         video_hs :> video_hs,
-        video_vs :> video_vs
+        video_vs :> video_vs,
 $$end
+        static16bit <: static16bit
     );
 
     uint2   accesssize = uninitialized;

@@ -330,9 +330,9 @@ algorithm compressed10(
 }
 
 // RISC-V MANDATORY CSR REGISTERS
-algorithm counter48(
+algorithm counter40(
     input   uint1   update,
-    output  uint48  counter(0)
+    output  uint40  counter(0)
 ) <autorun> {
     always {
         counter = counter + update;
@@ -354,23 +354,23 @@ algorithm CSRblock(
     // MAIN SYSTEM TIMER
     uint48  CSRtimer = uninitialized;
     uint1   ALWAYS <: 1;
-    counter48 TIMER( update <: ALWAYS, counter :> CSRtimer );
+    counter40 TIMER( update <: ALWAYS, counter :> CSRtimer );
 
     // CPU HART CYCLE TIMERS
     uint48  CSRcycletimer = uninitialized;
     uint48  CSRcycletimerSMT = uninitialized;
     uint1   UPDATEcycletimer <:: ~SMT;
     uint1   UPDATEcycletimerSMT <:: SMT;
-    counter48 CYCLE( update <: UPDATEcycletimer, counter :> CSRcycletimer );
-    counter48 CYCLESMT( update <: UPDATEcycletimerSMT, counter :> CSRcycletimerSMT);
+    counter40 CYCLE( update <: UPDATEcycletimer, counter :> CSRcycletimer );
+    counter40 CYCLESMT( update <: UPDATEcycletimerSMT, counter :> CSRcycletimerSMT);
 
     // CPU HART INSTRUCTION RETIRED COUNTERS
     uint48  CSRinstret = uninitialized;
     uint48  CSRinstretSMT = uninitialized;
     uint1   UPDATEinstret <:: incCSRinstret & ~SMT;
     uint1   UPDATEinstretSMT <:: incCSRinstret & SMT;
-    counter48 INSTRET( update <: UPDATEinstret, counter :> CSRinstret );
-    counter48 INSTRETSMT( update <: UPDATEinstretSMT, counter :> CSRinstretSMT );
+    counter40 INSTRET( update <: UPDATEinstret, counter :> CSRinstret );
+    counter40 INSTRETSMT( update <: UPDATEinstretSMT, counter :> CSRinstretSMT );
 
     // FLOATING-POINT CSR FOR BOTH THREADS
     uint8   CSRf[2] = { 0, 0 };
@@ -391,11 +391,11 @@ algorithm CSRblock(
                     case 12h003: { result = CSRf[SMT]; }        // frcsr
                     case 12h301: { result = $CPUISA$; }
                     case 12hc00: { result = SMT ? CSRcycletimerSMT[0,32] : CSRcycletimer[0,32]; }
-                    case 12hc80: { result = SMT ? CSRcycletimerSMT[32,16] : CSRcycletimer[32,16]; }
+                    case 12hc80: { result = SMT ? CSRcycletimerSMT[32,8] : CSRcycletimer[32,8]; }
                     case 12hc01: { result = CSRtimer[0,32]; }
-                    case 12hc81: { result = CSRtimer[32,16]; }
+                    case 12hc81: { result = CSRtimer[32,8]; }
                     case 12hc02: { result = SMT ? CSRinstretSMT[0,32] : CSRinstret[0,32]; }
-                    case 12hc82: { result = SMT ? CSRinstretSMT[32,16] : CSRinstret[32,16]; }
+                    case 12hc82: { result = SMT ? CSRinstretSMT[32,8] : CSRinstret[32,8]; }
                     case 12hf14: { result = SMT; }
                     default: { result = 0; }
                 }

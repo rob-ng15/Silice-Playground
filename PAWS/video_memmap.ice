@@ -15,7 +15,7 @@ algorithm video_memmap(
     output  uint16  readData,
 $$if HDMI then
     // HDMI OUTPUT
-    output! uint4   gpdi_dp
+    output! uint4   gpdi_dp,
 $$end
 $$if VGA then
     // VGA OUTPUT
@@ -25,6 +25,9 @@ $$if VGA then
     output  uint1 video_hs,
     output  uint1 video_vs,
 $$end
+
+    // RNG
+    input   uint16  static16bit
 ) <autorun> {
     // CURSOR CLOCK
     uint1   blink = uninitialised;
@@ -34,10 +37,9 @@ $$end
     uint1   video_reset := reset;
 
     // RNG random number generator
-    uint1   static1bit <:: rng.u_noise_out[0,1];
-    uint2   static2bit <:: rng.u_noise_out[0,2];
-    uint6   static6bit <:: rng.u_noise_out[0,6];
-    random rng <@clock_25mhz> ();
+    uint1   static1bit <:: static16bit[0,1];
+    uint2   static2bit <:: static16bit[0,2];
+    uint6   static6bit <:: static16bit[0,6];
 
     // HDMI driver
     // Status of the screen, if in range, if in vblank, actual pixel x and y

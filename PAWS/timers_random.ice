@@ -1,8 +1,8 @@
 algorithm pulsecursor(
     output  uint1   show
 ) <autorun> {
-    uint25  counter25mhz = 0;
-    uint1   MAX <:: ( counter25mhz == 25000000 );
+    uint24  counter25mhz = 0;
+    uint1   MAX <:: ( counter25mhz == 12500000 );
 
     show := MAX ? ~show : show;
     always {
