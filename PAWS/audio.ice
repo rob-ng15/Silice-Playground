@@ -64,10 +64,10 @@ algorithm waveform(
 ) <autorun> {
     always {
         switch( selected_waveform ) {
-            case 0: { audio_output = { {4{point[4,1]}} }; }                                // SQUARE
+            case 0: { audio_output = { {4{point[4,1]}} }; }                                 // SQUARE
             case 1: { audio_output = point[1,4]; }                                          // SAWTOOTH
             case 2: { audio_output = point[4,1] ? 15 - point[0,4] : point[0,4]; }           // TRIANGLE
-            case 3: { audio_output = point[4,1] ? 15 - point[1,3] : { point[1,3], 1b0 }; }  // SINE
+            case 3: { audio_output = point[4,1] ? 15 - point[1,4] : point[1,4]; }           // SINE
             default: { audio_output = staticGenerator; }                                    // WHITE NOISE
         }
     }
@@ -91,10 +91,8 @@ algorithm audiocounter(
             counter25mhz = 0;
             counter1khz = 25000;
         } else {
-            if( active ) {
-                counter25mhz = ( counter25mhz != 0 ) ? counter25mhz - 1 : selected_frequency;
-                counter1khz = ( counter1khz != 0 ) ? counter1khz - 1 : 25000;
-            }
+            counter25mhz = updatepoint ? selected_frequency : counter25mhz - 1;
+            counter1khz = updateduration ? 25000 : counter1khz - 1;
         }
     }
 }

@@ -121,10 +121,21 @@ algorithm aluMD(
     output  uint32  result
 ) <autorun> {
     uint1   quotientremaindersign <:: function3[0,1] ? 0 : sourceReg1[31,1] ^ sourceReg2[31,1];
-    uint32  sourceReg1_unsigned = uninitialised; prepsign PREPTOP( number <: sourceReg1, dosign <: function3, number_unsigned :> sourceReg1_unsigned );
-    uint32  sourceReg2_unsigned = uninitialised; prepsign PREPBOTTOM( number <: sourceReg2, dosign <: function3, number_unsigned :> sourceReg2_unsigned );
     uint32  result_quotient = uninitialised;
     uint32  result_remainder = uninitialised;
+    uint32  sourceReg1_unsigned = uninitialised;
+    prepsign PREPTOP(
+        number <: sourceReg1,
+        dosign <: function3,
+        number_unsigned :> sourceReg1_unsigned
+    );
+    uint32  sourceReg2_unsigned = uninitialised;
+    prepsign PREPBOTTOM(
+        number <: sourceReg2,
+        dosign <: function3,
+        number_unsigned :> sourceReg2_unsigned
+    );
+
     uint1   DODIVIDEstart = uninitialised;
     uint1   DODIVIDEbusy = uninitialised;
     douintdivide DODIVIDE(
@@ -177,8 +188,14 @@ algorithm aluMM(
     uint1   productsign <:: dosigned0 ? 0 : ( dosigned1 ? ( sourceReg1[31,1] ^ sourceReg2[31,1] ) : sourceReg1[31,1] );
     uint32  sourceReg1_unsigned <:: dosigned0 ? sourceReg1 : ( ( sourceReg1[31,1] ) ? -sourceReg1 : sourceReg1 );
     uint32  sourceReg2_unsigned <:: dosigned1 ? ( ( sourceReg2[31,1] ) ? -sourceReg2 : sourceReg2 ) : sourceReg2;
+
     uint64  product = uninitialised;
-    douintmul UINTMUL( factor_1 <: sourceReg1_unsigned, factor_2 <: sourceReg2_unsigned, productsign <: productsign, product64 :> product);
+    douintmul UINTMUL(
+        factor_1 <: sourceReg1_unsigned,
+        factor_2 <: sourceReg2_unsigned,
+        productsign <: productsign,
+        product64 :> product
+    );
 
     always {
         result = product[ ( function3 == 0 ) ? 0 : 32, 32 ];

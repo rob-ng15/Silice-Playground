@@ -13,6 +13,7 @@
 ./compile.sh c/raytracing.c PAWS/DEMO/RAYTRACE.PAW
 ./compile.sh c/raytracing-grey.c PAWS/DEMO/RAY-BW.PAW
 
+./compile.sh c/bluewindow.c PAWS/TEST/BLUE.PAW
 ./compile.sh c/copper.c PAWS/TEST/COPPER.PAW
 ./compile.sh c/drawlist.c PAWS/TEST/DRAWLIST.PAW
 ./compile.sh c/keyboard.c PAWS/TEST/KEYBOARD.PAW
