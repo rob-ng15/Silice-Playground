@@ -71,6 +71,7 @@ extern void gpu_wideline( unsigned char, short, short, short, short, unsigned sh
 extern void gpu_circle( unsigned char, short, short, short, unsigned char, unsigned char );
 extern void gpu_blit( unsigned char, short, short, short, unsigned char, unsigned char );
 extern void gpu_character_blit( unsigned char, short, short, unsigned short, unsigned char, unsigned char );
+extern void gpu_character_blit_shadow( unsigned char, unsigned char, short, short, unsigned char, unsigned char, unsigned char );
 extern void gpu_colourblit( short, short, short, unsigned char, unsigned char );
 extern void gpu_triangle( unsigned char, short, short, short, short, short, short );
 extern void gpu_quadrilateral( unsigned char, short, short, short, short, short, short, short, short );

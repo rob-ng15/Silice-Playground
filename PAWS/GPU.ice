@@ -292,7 +292,6 @@ algorithm gpu(
     output  uint1   gpu_active(0),
 ) <autorun> {
     // GPU SUBUNITS
-
     uint1   GPUrectanglestart = uninitialised;
     uint1   GPUrectanglebusy = uninitialised;
     int11   GPUrectanglebitmap_x_write = uninitialised;
@@ -458,15 +457,15 @@ algorithm gpu(
                 gpu_active_dithermode = 0; bitmap_colour_write = gpu_colour; bitmap_colour_write_alt = gpu_colour_alt;
                 switch( gpu_write ) {
                     default: {}
-                    case 2: { GPUlinestart = 1; } // DRAW LINE FROM (X,Y) to (PARAM0,PARAM1)
-                    case 3: { gpu_active_dithermode = gpu_dithermode; GPUrectanglestart = 1; } // DRAW RECTANGLE FROM (X,Y) to (PARAM0,PARAM1)
-                    case 4: { GPUcirclefilledcircle = 0; GPUcirclestart = 1; } // DRAW CIRCLE CENTRE (X,Y) with RADIUS PARAM0
-                    case 5: { gpu_active_dithermode = gpu_dithermode; GPUcirclefilledcircle = 1; GPUcirclestart = 1; } // DRAW FILLED CIRCLE CENTRE (X,Y) with RADIUS PARAM0
-                    case 6: { gpu_active_dithermode = gpu_dithermode; GPUtrianglestart = 1; } // DRAW FILLED TRIANGLE WITH VERTICES (X,Y) (PARAM0,PARAM1) (PARAM2,PARAM3)
-                    case 7: { GPUblittilecharacter = 1; GPUblitstart = 1; } // BLIT 16 x 16 TILE PARAM0 TO (X,Y)
-                    case 8: { GPUblittilecharacter = 0; GPUblitstart = 1; } // BLIT 8 x 8 CHARACTER PARAM0 TO (X,Y) as 8 x 8
-                    case 9: { GPUcolourblitstart = 1; } // BLIT 16 x 16 COLOUR TILE PARAM0 TO (X,Y) as 16 x 16
-                    case 10: { GPUpixelblockstart = 1; } // START THE PIXELBLOCK WRITER AT (x,y) WITH WIDTH PARAM0, IGNORE COLOUR PARAM1
+                    case 2: { GPUlinestart = 1; }                                                                       // DRAW LINE FROM (X,Y) to (PARAM0,PARAM1)
+                    case 3: { gpu_active_dithermode = gpu_dithermode; GPUrectanglestart = 1; }                          // DRAW RECTANGLE FROM (X,Y) to (PARAM0,PARAM1)
+                    case 4: { GPUcirclefilledcircle = 0; GPUcirclestart = 1; }                                          // DRAW CIRCLE CENTRE (X,Y) with RADIUS PARAM0
+                    case 5: { gpu_active_dithermode = gpu_dithermode; GPUcirclefilledcircle = 1; GPUcirclestart = 1; }  // DRAW FILLED CIRCLE CENTRE (X,Y) with RADIUS PARAM0
+                    case 6: { gpu_active_dithermode = gpu_dithermode; GPUtrianglestart = 1; }                           // DRAW FILLED TRIANGLE WITH VERTICES (X,Y) (PARAM0,PARAM1) (PARAM2,PARAM3)
+                    case 7: { GPUblittilecharacter = 1; GPUblitstart = 1; }                                             // BLIT 16 x 16 TILE PARAM0 TO (X,Y)
+                    case 8: { GPUblittilecharacter = 0; GPUblitstart = 1; }                                             // BLIT 8 x 8 CHARACTER PARAM0 TO (X,Y) as 8 x 8
+                    case 9: { GPUcolourblitstart = 1; }                                                                 // BLIT 16 x 16 COLOUR TILE PARAM0 TO (X,Y) as 16 x 16
+                    case 10: { GPUpixelblockstart = 1; }                                                                // START THE PIXELBLOCK WRITER AT (x,y) WITH WIDTH PARAM0, IGNORE COLOUR PARAM1
                     // 11
                     // 12
                     // 13
@@ -475,6 +474,8 @@ algorithm gpu(
                 }
             }
         }
+    }
+    while(1) {
         if( gpu_busy ) {
             // COPY OUTPUT TO THE BITMAP WRITER
             onehot( gpu_busy_flags ) {
@@ -492,6 +493,7 @@ algorithm gpu(
 
 // RECTANGLE - OUTPUT PIXELS TO DRAW A RECTANGLE
 algorithm preprectangle(
+    input   uint1   start,
     input   int11   crop_left,
     input   int11   crop_right,
     input   int11   crop_top,
@@ -505,7 +507,7 @@ algorithm preprectangle(
     output  int11   max_x,
     output  int11   max_y,
     output  uint1   todraw
-) {
+) <autorun> {
     uint1   xcompareparam0 <:: ( x < param0 );
     uint1   ycompareparam1 <:: ( y < param1 );
 
@@ -514,11 +516,17 @@ algorithm preprectangle(
     int11   x2 <:: xcompareparam0 ? param0 : x;
     int11   y2 <:: ycompareparam1 ? param1 : y;
 
-    min_x = ( x1 < crop_left ) ? crop_left : x1;
-    min_y = ( y1 < crop_top ) ? crop_top : y1;
-    max_x = 1 + ( ( x2 > crop_right ) ? crop_right : x2 );
-    max_y = 1 + ( ( y2 > crop_bottom ) ? crop_bottom : y2 );
-    todraw = ~( ( max_x < crop_left ) | ( max_y < crop_top ) | ( min_x > crop_right ) | ( min_y > crop_bottom ) );
+    todraw := 0;
+
+    always {
+        if( start ) {
+            min_x = ( x1 < crop_left ) ? crop_left : x1;
+            min_y = ( y1 < crop_top ) ? crop_top : y1;
+            max_x = 1 + ( ( x2 > crop_right ) ? crop_right : x2 );
+            max_y = 1 + ( ( y2 > crop_bottom ) ? crop_bottom : y2 );
+            todraw = ~( ( max_x < crop_left ) | ( max_y < crop_top ) | ( min_x > crop_right ) | ( min_y > crop_bottom ) );
+        }
+    }
 }
 algorithm drawrectangle(
     input   uint1   start,
@@ -535,22 +543,18 @@ algorithm drawrectangle(
     uint8   y = uninitialized;
     bitmap_x_write := x; bitmap_y_write := y; bitmap_write := 0;
 
-    always {
+    while(1) {
         if( start ) {
             busy = 1;
-            x = min_x; y = min_y;
-        } else {
-            if( busy ) {
-                if( y != max_y ) {
-                    if( x != max_x ) {
-                        bitmap_write = 1; x = x + 1;
-                    } else {
-                        x = min_x; y = y + 1;
-                    }
-                } else {
-                    busy = 0;
+            y = min_y;
+            while( y != max_y ) {
+                x = min_x;
+                while( x != max_x ) {
+                    bitmap_write = 1; x = x + 1;
                 }
+                y = y + 1;
             }
+            busy = 0;
         }
     }
 }
@@ -576,6 +580,7 @@ algorithm rectangle (
     uint8   max_y = uninitialised;
     uint1   todraw = uninitialised;
     preprectangle PREP(
+        start <: start,
         crop_left <: crop_left,
         crop_right <: crop_right,
         crop_top <: crop_top,
@@ -601,23 +606,17 @@ algorithm rectangle (
         bitmap_x_write :> bitmap_x_write,
         bitmap_y_write :> bitmap_y_write,
         bitmap_write :> bitmap_write,
-        start <: RECTANGLEstart,
+        start <: todraw,
         busy :> RECTANGLEbusy
     );
 
-    RECTANGLEstart := 0;
-    while(1) {
-        if( start ) {
-            busy = 1;
-            () <- PREP <- ();
-            RECTANGLEstart = todraw; while( RECTANGLEbusy ) {}
-            busy = 0;
-        }
-    }
+    busy := start | todraw | RECTANGLEbusy;
 }
 
 // LINE - OUTPUT PIXELS TO DRAW A LINE
 algorithm prepline(
+    input   uint1   start,
+    output  uint1   todraw,
     input   int11   x,
     input   int11   y,
     input   int11   param0,
@@ -630,31 +629,37 @@ algorithm prepline(
     output  uint1   dv,
     output  int11   numerator,
     output  int11   max_count
-) {
+) <autorun> {
     uint1 ylessparam1 <:: ( y < param1 );
+    todraw := 0;
 
-    // Setup drawing a line from x,y to param0,param1 of width param2 in colour
-    // Ensure LEFT to RIGHT AND if moving UP or DOWN
-    if( x < param0 ) {
-        x1 = x;
-        y1 = y;
-        dv = ylessparam1;
-    } else {
-        x1 = param0;
-        y1 = param1;
-        dv = ~ylessparam1;
-    }
+    always {
+        if( start ) {
+            // Setup drawing a line from x,y to param0,param1 of width param2 in colour
+            // Ensure LEFT to RIGHT AND if moving UP or DOWN
+            if( x < param0 ) {
+                x1 = x;
+                y1 = y;
+                dv = ylessparam1;
+            } else {
+                x1 = param0;
+                y1 = param1;
+                dv = ~ylessparam1;
+            }
 
-    // Absolute DELTAs
-    ( dx ) = absdelta( x, param0 ); ( dy ) = absdelta( y, param1 );
+            // Absolute DELTAs
+            ( dx ) = absdelta( x, param0 ); ( dy ) = absdelta( y, param1 );
 
-    // Numerator
-    if( dx > dy ) {
-        numerator = ( dx >> 1 );
-        max_count = dx + 1;
-    } else {
-        numerator = -( dy >> 1 );
-        max_count = dy + 1;
+            // Numerator
+            if( dx > dy ) {
+                numerator = ( dx >> 1 );
+                max_count = dx + 1;
+            } else {
+                numerator = -( dy >> 1 );
+                max_count = dy + 1;
+            }
+            todraw = 1;
+        }
     }
 }
 algorithm drawline(
@@ -688,35 +693,22 @@ algorithm drawline(
 
     bitmap_x_write := x + offset_x; bitmap_y_write := y + offset_y; bitmap_write := 0;
 
-    always {
+    while(1) {
         if( start ) {
             busy = 1;
             x = start_x; y = start_y; numerator = start_numerator; count = 0;
-            pixel_count = 0; offset_x = dxdy ? 0 : offset_start; offset_y = dxdy ? offset_start : 0;
-        } else {
-            if( busy ) {
-                if( count != max_count ) {
-                    switch( width ) {
-                        case 1: { bitmap_write = 1; }
-                        default: {
-                            // DRAW WIDTH PIXELS
-                            if( pixel_count != width ) {
-                                bitmap_write = 1;
-                                offset_y = offset_y + dxdy; offset_x = offset_x + ~dxdy;
-                                pixel_count = pixel_count + 1;
-                            }
-                        }
-                    }
-                    if( ( width == 1 ) | ( pixel_count == width ) ) {
-                        numerator = newnumerator;
-                        x = x + n2dx; y = n2dy ? (y + ( dv ? 1 : -1 )) : y;
-                        count = count + 1;
-                        pixel_count = 0; offset_x = dxdy ? 0 : offset_start; offset_y = dxdy ? offset_start : 0;
-                    }
-                } else {
-                    busy = 0;
+            while( count != max_count ) {
+                pixel_count = 0; offset_x = dxdy ? 0 : offset_start; offset_y = dxdy ? offset_start : 0;
+                while( pixel_count != width ) {
+                    bitmap_write = 1;
+                    offset_y = offset_y + dxdy; offset_x = offset_x + ~dxdy;
+                    pixel_count = pixel_count + 1;
                 }
+                numerator = newnumerator;
+                x = x + n2dx; y = n2dy ? (y + ( dv ? 1 : -1 )) : y;
+                count = count + 1;
             }
+            busy = 0;
         }
     }
 }
@@ -740,7 +732,10 @@ algorithm line (
     int11   numerator = uninitialized;
     int11   max_count = uninitialized;
     uint8   width <:: param2;
+    uint1   todraw = uninitialised;
     prepline PREP(
+        start <: start,
+        todraw :> todraw,
         x <: x,
         y <: y,
         param0 <: param0,
@@ -754,7 +749,6 @@ algorithm line (
         numerator :> numerator,
         max_count :> max_count,
     );
-    uint1   LINEstart = uninitialised;
     uint1   LINEbusy = uninitialised;
     drawline LINE(
         start_x <: x1,
@@ -768,19 +762,10 @@ algorithm line (
         bitmap_x_write :> bitmap_x_write,
         bitmap_y_write :> bitmap_y_write,
         bitmap_write :> bitmap_write,
-        start <: LINEstart,
+        start <: todraw,
         busy :> LINEbusy
     );
-    LINEstart := 0;
-
-    while(1) {
-        if( start ) {
-            busy = 1;
-            () <- PREP <- ();
-            LINEstart = 1; while( LINEbusy ) {}
-            busy = 0;
-        }
-    }
+    busy := start | todraw | LINEbusy;
 }
 
 //  CIRCLE - OUTPUT PIXELS TO DRAW AN OUTLINE OR FILLED CIRCLE
@@ -804,6 +789,8 @@ algorithm drawcircle(
     int11   active_y = uninitialized;
     int11   count = uninitialised;
     int11   min_count = uninitialised;
+    uint1   drawingcircle <:: ( active_y >= active_x );
+    uint1   drawingsegment <:: ( count != min_count );
     bitmap_write := 0;
 
     while(1) {
@@ -811,8 +798,8 @@ algorithm drawcircle(
             busy = 1;
             active_x = 0; active_y = radius; count = radius; numerator = start_numerator;
             min_count = (-1);
-            while( active_y >= active_x ) {
-                if( count != min_count ) {
+            while( drawingcircle ) {
+                while( drawingsegment ) {
                     // OUTPUT PIXELS IN THE 8 SEGMENTS/ARCS
                     bitmap_write = draw_sectors[0,1]; bitmap_x_write = xc + active_x; bitmap_y_write = yc + count; ++:
                     bitmap_write = draw_sectors[1,1]; bitmap_y_write = yc - count; ++:
@@ -823,13 +810,12 @@ algorithm drawcircle(
                     bitmap_write = draw_sectors[6,1]; bitmap_x_write = xc - count; ++:
                     bitmap_write = draw_sectors[7,1]; bitmap_y_write = yc + active_x;
                     count = filledcircle ? count - 1 : min_count;
-                } else {
-                    active_x = active_x + 1;
-                    active_y = active_y - positivenumerator;
-                    count = active_y;
-                    min_count = min_count + 1;
-                    numerator = new_numerator;
                 }
+                active_x = active_x + 1;
+                active_y = active_y - positivenumerator;
+                count = active_y;
+                min_count = min_count + 1;
+                numerator = new_numerator;
             }
             busy = 0;
         }
@@ -852,7 +838,6 @@ algorithm circle(
     int11   gpu_numerator <:: 3 - ( { radius, 1b0 } );
     uint8   draw_sectors <:: { param1[5,1], param1[6,1], param1[1,1], param1[2,1], param1[4,1], param1[7,1], param1[0,1], param1[3,1] };
 
-    uint1   CIRCLEstart = uninitialised;
     uint1   CIRCLEbusy = uninitialised;
     drawcircle CIRCLE(
         xc <: x,
@@ -864,22 +849,16 @@ algorithm circle(
         bitmap_x_write :> bitmap_x_write,
         bitmap_y_write :> bitmap_y_write,
         bitmap_write :> bitmap_write,
-        start <: CIRCLEstart,
+        start <: start,
         busy :> CIRCLEbusy
     );
-    CIRCLEstart := 0;
-
-    while(1) {
-        if( start ) {
-            busy = 1;
-            CIRCLEstart = 1; while( CIRCLEbusy ) {}
-            busy = 0;
-        }
-    }
+    busy := start | CIRCLEbusy;
 }
 
 // TRIANGLE - OUTPUT PIXELS TO DRAW A FILLED TRIANGLE
 algorithm preptriangle(
+    input   uint1   start,
+    output  uint1   busy(0),
     input   int11   crop_left,
     input   int11   crop_right,
     input   int11   crop_top,
@@ -901,7 +880,7 @@ algorithm preptriangle(
     output  int11   max_x,
     output  int11   max_y,
     output  uint1   todraw
-) {
+) <autorun> {
     int16 tx = uninitialised; int16 ty = uninitialised;
     uint1   x1x2 <: ( x1 < x2 );
     uint1   y1y2 <: ( y1 < y2 );
@@ -910,33 +889,39 @@ algorithm preptriangle(
     uint1   x2x3 <: ( x2 < x3 );
     uint1   y2y3 <: ( y2 < y3 );
 
-    // Setup drawing a filled triangle x,y param0, param1, param2, param3
-    x1 = x; y1 = y;
-    x2 = param0; y2 = param1;
-    x3 = param2; y3 = param3;
-    ++:
+    todraw := 0;
 
-    // Put points in order so that ( x1, y1 ) is at top, then ( x2, y2 ) and ( x3, y3 ) are clockwise from there
-    if( y3 < y2 ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++: }
-    if( y2 < y1 ) { tx = x1; ty = y1; x1 = x2; y1 = y2; x2 = tx; y2 = ty; ++: }
-    if( y3 < y1 ) { tx = x1; ty = y1; x1 = x3; y1 = y3; x3 = tx; y3 = ty; ++: }
-    if( y3 < y2 ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++: }
-    if( ( y2 == y1 ) & ( x2 < x1 ) ) { tx = x1; ty = y1; x1 = x2; y1 = y2; x2 = tx; y2 = ty; ++: }
-    if( ( y2 != y1 ) & ( y3 >= y2 ) & ( x2 < x3 ) ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty;}
-
-    // Find minimum and maximum of x, x1, x2, y, y1 and y2 for the bounding box
-    min_x = x1x2 ? ( x1x3 ? x1 : x3 ) : ( x2x3 ? x2 : x3 );
-    max_x = x1x2 ? ( x2x3 ? x3 : x2 ) : ( x1x3 ? x3 : x1 );
-    min_y = y1y2 ? ( y1y3 ? y1 : y3 ) : ( y2y3 ? y2 : y3 );
-    max_y = y1y2 ? ( y2y3 ? y3 : y2 ) : ( y1y3 ? y3 : y1 );
-    ++:
-
-    // Apply cropping rectangle
-    min_x = ( min_x < crop_left ) ? crop_left : min_x;
-    min_y = ( min_y < crop_top ) ? crop_top : min_y;
-    max_x = ( max_x > crop_right ) ? crop_right : max_x;
-    max_y = 1 + ( ( max_y > crop_bottom ) ? crop_bottom : max_y );
-    todraw = ~( ( max_x < crop_left ) | ( max_y < crop_top ) | ( min_x > crop_right ) | ( min_y > crop_bottom ) );
+    while(1) {
+        if( start ) {
+            busy = 1;
+            // Setup drawing a filled triangle x,y param0, param1, param2, param3
+            x1 = x; y1 = y;
+            x2 = param0; y2 = param1;
+            x3 = param2; y3 = param3;
+            ++:
+            // Put points in order so that ( x1, y1 ) is at top, then ( x2, y2 ) and ( x3, y3 ) are clockwise from there
+            if( y3 < y2 ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++: }
+            if( y2 < y1 ) { tx = x1; ty = y1; x1 = x2; y1 = y2; x2 = tx; y2 = ty; ++: }
+            if( y3 < y1 ) { tx = x1; ty = y1; x1 = x3; y1 = y3; x3 = tx; y3 = ty; ++: }
+            if( y3 < y2 ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++: }
+            if( ( y2 == y1 ) & ( x2 < x1 ) ) { tx = x1; ty = y1; x1 = x2; y1 = y2; x2 = tx; y2 = ty; ++: }
+            if( ( y2 != y1 ) & ( y3 >= y2 ) & ( x2 < x3 ) ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty;}
+            // Find minimum and maximum of x, x1, x2, y, y1 and y2 for the bounding box
+            min_x = x1x2 ? ( x1x3 ? x1 : x3 ) : ( x2x3 ? x2 : x3 );
+            max_x = x1x2 ? ( x2x3 ? x3 : x2 ) : ( x1x3 ? x3 : x1 );
+            min_y = y1y2 ? ( y1y3 ? y1 : y3 ) : ( y2y3 ? y2 : y3 );
+            max_y = y1y2 ? ( y2y3 ? y3 : y2 ) : ( y1y3 ? y3 : y1 );
+            ++:
+            // Apply cropping rectangle
+            min_x = ( min_x < crop_left ) ? crop_left : min_x;
+            min_y = ( min_y < crop_top ) ? crop_top : min_y;
+            max_x = ( max_x > crop_right ) ? crop_right : max_x;
+            max_y = 1 + ( ( max_y > crop_bottom ) ? crop_bottom : max_y );
+            ++:
+            todraw = ~( ( max_x < crop_left ) | ( max_y < crop_top ) | ( min_x > crop_right ) | ( min_y > crop_bottom ) );
+            busy = 0;
+        }
+    }
 }
 algorithm drawtriangle(
     input   uint1   start,
@@ -963,55 +948,42 @@ algorithm drawtriangle(
     uint1   beenInTriangle = uninitialized;
     uint1   EXIT = uninitialised;
     uint1   rightleft <:: ( max_x - px ) < ( px - min_x );
+
     // WORK COORDINATES AND DIRECTION
     int11   px = uninitialized;
     int11   py = uninitialized;
     int11   nextpy <:: py + 1;
     uint1   dx = uninitialized;
+    int11   nextpx <:: px + ( dx ? 1 : (-1) );
+    uint1   stillinline <:: ( dx & ( px != max_x ) ) | ( ~dx & ( px != min_x ));
+    uint1   working <:: ( py != max_y );
 
     bitmap_x_write := px; bitmap_y_write := py; bitmap_write := 0;
 
     while(1) {
         if( start ) {
             busy = 1;
-            dx = 1; beenInTriangle = 0; px = min_x; py = min_y;
-        } else {
-            if( busy ) {
-                if( py != max_y ) {
-                    beenInTriangle = inTriangle | beenInTriangle;
-                    bitmap_write = inTriangle;
-                    EXIT = ( beenInTriangle & ~inTriangle );
-                    if( EXIT ) {
-                        // Exited the triangle, move to the next line
-                        beenInTriangle = 0;
-                        py = nextpy;
-                        if( rightleft ) {
-                            // Closer to the right
-                            px = max_x; dx = 0;
-                        } else {
-                            // Closer to the left
-                            px = min_x; dx = 1;
-                        }
-                    } else {
-                        // MOVE TO THE NEXT PIXEL ON THE LINE LEFT/RIGHT OR DOWN IF AT END
-                        if( dx ) {
-                            if( px <= max_x ) {
-                                px = px + 1;
-                            } else {
-                                dx = 0; beenInTriangle = 0; py = nextpy;
-                            }
-                        } else {
-                            if( px >= min_x ) {
-                                px = px - 1;
-                            } else {
-                                dx = 1; beenInTriangle = 0; py = nextpy;
-                            }
-                        }
-                    }
+            dx = 1; px = min_x; py = min_y;
+            while( working ) {
+                beenInTriangle = inTriangle | beenInTriangle;
+                bitmap_write = inTriangle;
+                EXIT = ( beenInTriangle & ~inTriangle );
+                if( EXIT ) {
+                    // Exited the triangle, move to the next line
+                    beenInTriangle = 0;
+                    py = nextpy;
+                    px = rightleft ? max_x : min_x;
+                    dx = ~rightleft;
                 } else {
-                    busy = 0;
+                    // MOVE TO THE NEXT PIXEL ON THE LINE LEFT/RIGHT OR DOWN IF AT END
+                    if( stillinline ) {
+                        px = nextpx;
+                    } else {
+                        dx = ~dx; beenInTriangle = 0; py = nextpy;
+                    }
                 }
             }
+            busy = 0;
         }
     }
 }
@@ -1033,6 +1005,7 @@ algorithm triangle(
     output  uint1   bitmap_write
 ) <autorun> {
     // VERTEX COORDINATES AND BOUNDING BOX
+    uint1   PREPbusy = uninitialised;
     int11   x1 = uninitialized;
     int11   y1 = uninitialized;
     int11   x2 = uninitialized;
@@ -1045,6 +1018,8 @@ algorithm triangle(
     int11   max_y = uninitialized;
     uint1   todraw = uninitialised;
     preptriangle PREP(
+        start <: start,
+        busy :> PREPbusy,
         crop_left <: crop_left,
         crop_right <: crop_right,
         crop_top <: crop_top,
@@ -1068,7 +1043,6 @@ algorithm triangle(
         todraw :> todraw
     );
 
-    uint1   TRIANGLEstart = uninitialised;
     uint1   TRIANGLEbusy = uninitialised;
     drawtriangle TRIANGLE(
         min_x <: min_x,
@@ -1084,19 +1058,10 @@ algorithm triangle(
         bitmap_x_write :> bitmap_x_write,
         bitmap_y_write :> bitmap_y_write,
         bitmap_write :> bitmap_write,
-        start <: TRIANGLEstart,
+        start <: todraw,
         busy :> TRIANGLEbusy
     );
-    TRIANGLEstart := 0;
-
-    while(1) {
-        if( start ) {
-            busy = 1;
-            () <- PREP <- ();
-            TRIANGLEstart = todraw; while( TRIANGLEbusy ) {}
-            busy = 0;
-        }
-    }
+    busy := start | PREPbusy | todraw | TRIANGLEbusy;
 }
 
 // BLIT - ( tilecharacter == 0 ) OUTPUT PIXELS TO BLIT AN 8 x 8 CHARACTER ( PARAM1 == 0 as 8 x 8, == 1 as 16 x 16, == 2 as 32 x 32, == 3 as 64 x 64 )
@@ -1204,7 +1169,6 @@ algorithm blit(
                     }
                     px = px + 1;
                 }
-
                 py = py + 1;
             }
             busy = 0;
@@ -1334,12 +1298,11 @@ algorithm pixelblock(
     bitmap_write := ( ( newpixel == 1 ) & ( colour7 != ignorecolour ) ) | ( newpixel == 2 );
     bitmap_colour_write := ( newpixel == 1 ) ? colour7 : { 1b0, colour8r[6,2], colour8g[6,2], colour8b[6,2] };
 
-    always {
+    while(1) {
         if( start ) {
             busy = 1;
             x1 = x; y1 = y;
-        } else {
-            if( busy ) {
+            while( busy ) {
                 if( newpixel == 3 ) {
                     busy = 0;
                 }

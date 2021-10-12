@@ -2,10 +2,12 @@ algorithm cz2(
     input   uint2   bitstream,
     output  uint2   cz2
 ) <autorun> {
-    switch( bitstream ) {
-        case 2b00: { cz2 = 2; }
-        case 2b01: { cz2 = 1; }
-        default: { cz2 = 0; }
+    always {
+        switch( bitstream ) {
+            case 2b00: { cz2 = 2; }
+            case 2b01: { cz2 = 1; }
+            default: { cz2 = 0; }
+        }
     }
 }
 algorithm cz4(
@@ -18,7 +20,7 @@ algorithm cz4(
     uint2   czl = uninitialised; cz2 CZ2L( bitstream <: bitstreaml, cz2 :> czl );
 
     always {
-        if( czh == 2 ) {
+        if( czh[1,1] ) {
             cz4 = czh + czl;
         } else {
             cz4 = czh;
@@ -35,7 +37,7 @@ algorithm cz8(
     uint3   czl = uninitialised; cz4 CZ4L( bitstream <: bitstreaml, cz4 :> czl );
 
     always {
-        if( czh == 4 ) {
+        if( czh[2,1] ) {
             cz8 = czh + czl;
         } else {
             cz8 = czh;
@@ -52,7 +54,7 @@ algorithm cz16(
     uint4   czl = uninitialised; cz8 CZ8L( bitstream <: bitstreaml, cz8 :> czl );
 
     always {
-        if( czh == 8 ) {
+        if( czh[3,1] ) {
             cz16 = czh + czl;
         } else {
             cz16 = czh;
@@ -69,7 +71,7 @@ algorithm cz32(
     uint5   czl = uninitialised; cz16 CZ16L( bitstream <: bitstreaml, cz16 :> czl );
 
     always {
-        if( czh == 16) {
+        if( czh[4,1]) {
             cz32 = czh + czl;
         } else {
             cz32 = czh;
@@ -83,10 +85,10 @@ algorithm cz48(
     uint16  bitstreamh <:: bitstream[32,16];
     uint32  bitstreaml <:: bitstream[0,32];
     uint5   czh = uninitialised; cz16 CZ16H( bitstream <: bitstreamh, cz16 :> czh );
-    uint7   czl = uninitialised; cz32 CZ32L( bitstream <: bitstreaml, cz32 :> czl );
+    uint6   czl = uninitialised; cz32 CZ32L( bitstream <: bitstreaml, cz32 :> czl );
 
     always {
-        if( czh == 16 ) {
+        if( czh[4,1] ) {
             cz48 = czh + czl;
         } else {
             cz48 = czh;
@@ -99,12 +101,14 @@ algorithm main(output int8 leds) {
     uint32  startcycle = uninitialised;
     pulse PULSE();
 
-    uint48  bitstream = 32768;
+    uint48  bitstream = 0;
+    uint48  normalised = uninitialised;
     uint7   cz = uninitialised;
     cz48 CZ48( bitstream <: bitstream, cz48 :> cz );
 
-    ++: ++: ++: ++: ++: ++:
+    normalised = bitstream << cz;
     __display("Input = %b, CLZ = %d", bitstream, cz);
+    __display("Output = %b", normalised);
 }
 
 algorithm pulse(

@@ -589,6 +589,26 @@ void gpu_quadrilateral( unsigned char colour, short x1, short y1, short x2, shor
     *GPU_WRITE = 15;
 }
 
+// OUTPUT A CHARACTER TO THE GPU WITH BOLD BELOW AND OVERWRITE NORMAL ON TOP
+void gpu_character_blit_shadow( unsigned char colour, unsigned char colour_alt, short x1, short y1, unsigned char tile, unsigned char blit_size, unsigned char action ) {
+    *GPU_COLOUR = colour_alt;
+    *GPU_X = x1;
+    *GPU_Y = y1;
+    *GPU_PARAM0 = tile + 256;
+    *GPU_PARAM1 = blit_size;
+    *GPU_PARAM2 = action;
+    wait_gpu();
+    *GPU_WRITE = 8;
+    *GPU_COLOUR = colour;
+    *GPU_X = x1;
+    *GPU_Y = y1;
+    *GPU_PARAM0 = tile;
+    *GPU_PARAM1 = blit_size;
+    *GPU_PARAM2 = action;
+    wait_gpu();
+    *GPU_WRITE = 8;
+}
+
 // OUTPUT A STRING TO THE GPU
 void gpu_print( unsigned char colour, short x, short y, unsigned char bold, unsigned char size, unsigned char action, char *s ) {
     while( *s ) {

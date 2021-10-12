@@ -85,8 +85,12 @@ algorithm countzeros(
     input   uint48  bitstream,
     output  uint4   shiftcount
 ) <autorun> {
+    uint1   zero15 <:: ( bitstream[33,15] == 0 );
+    uint1   zero7 <:: ( bitstream[41,7] == 0 );
+    uint1   zero3 <:: ( bitstream[45,3] == 0 );
+
     always {
-        shiftcount = { bitstream[33,15] == 0, bitstream[41,7] == 0, bitstream[45,3] == 0, 1b1 };
+        shiftcount = { zero15, zero7, zero3, 1b1 };
     }
 }
 algorithm donormalise48_adjustexp(
@@ -174,8 +178,11 @@ algorithm startzeros(
     input   uint32  number,
     output  uint5   startingzeros
 ) <autorun> {
+    uint1   zero24 <:: ( number[8,24] == 0 );
+    uint1   zero16 <:: ( number[16,16] == 0 );
+    uint1   zero8 <:: ( number[24,8] == 0 );
     always {
-        startingzeros = number[8,24] == 0 ? 24 : number[16,16] == 0 ? 16 : number[24,8] == 0 ? 8 : 0;
+        startingzeros = zero24 ? 24 : zero16 ? 16 : zero8 ? 8 : 0;
     }
 }
 algorithm inttofloat(
@@ -207,7 +214,7 @@ algorithm inttofloat(
         UF :> cUF,
         f32 :> f32
     );
-    flags ::= { 4b0, OF, UF, NX };
+    flags := { 4b0, OF, UF, NX };
 
     while(1) {
         if( start ) {
@@ -268,7 +275,7 @@ algorithm floattoint(
         ZERO :> aZERO
     );
 
-    flags ::= { aINF, NN, NV, 4b0000 };
+    flags := { aINF, NN, NV, 4b0000 };
     always {
         switch( { aINF | NN, aZERO } ) {
             case 2b00: { NV = ( exp > 30 ); result = NV ? { fp32( a ).sign, 31h7fffffff } : fp32( a ).sign ? -unsignedfraction : unsignedfraction; }
@@ -306,7 +313,7 @@ algorithm floattouint(
         ZERO :> aZERO
     );
 
-    flags ::= { aINF, NN, NV, 4b0000 };
+    flags := { aINF, NN, NV, 4b0000 };
     always {
         switch( { aINF | NN, aZERO } ) {
             case 2b00: {
@@ -473,7 +480,7 @@ algorithm floataddsub(
         f32 :> f32
     );
 
-    NORMALISEstart := 0; flags ::= { IF, NN, NV, 1b0, OF, UF, 1b0 };
+    NORMALISEstart := 0; flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
     while(1) {
         if( start ) {
             busy = 1;
@@ -596,7 +603,7 @@ algorithm floatmultiply(
         f32 :> f32
     );
 
-    flags ::= { IF, NN, NV, 1b0, OF, UF, 1b0 };
+    flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
     while(1) {
         if( start ) {
             busy = 1;
@@ -764,7 +771,7 @@ algorithm floatdivide(
         f32 :> f32
     );
 
-    DODIVIDEstart := 0; NORMALISEstart := 0; flags ::= { IF, NN, 1b0, bZERO, OF, UF, 1b0};
+    DODIVIDEstart := 0; NORMALISEstart := 0; flags := { IF, NN, 1b0, bZERO, OF, UF, 1b0};
     while(1) {
         if( start ) {
             busy = 1;
@@ -924,7 +931,7 @@ algorithm floatsqrt(
         f32 :> f32
     );
 
-    DOSQRTstart := 0; flags ::= { aINF, NN, NV, 1b0, OF, UF, 1b0 };
+    DOSQRTstart := 0; flags := { aINF, NN, NV, 1b0, OF, UF, 1b0 };
     while(1) {
         if( start ) {
             busy = 1;
@@ -1018,9 +1025,11 @@ algorithm floatcompare(
 
     uint1   aequalb <:: ( a == b );
     uint1   aorbleft1equal0 <:: ( ( a | b ) << 1 ) == 0;
+    uint1   INF <:: aINF | bINF;
+    uint1   NAN <:: asNAN | bsNAN | aqNAN | bqNAN;
 
     // IDENTIFY NaN, RETURN 0 IF NAN, OTHERWISE RESULT OF COMPARISONS
-    flags ::= { aINF | bINF, asNAN | bsNAN | aqNAN | bqNAN, asNAN | bsNAN | aqNAN | bqNAN, 4b0000 };
-    less := flags[5,1] ? 0 : ( fp32( a ).sign ^ fp32( b ).sign ) ? fp32( a ).sign & ~aorbleft1equal0 : ~aequalb & ( fp32( a ).sign ^ ( a < b ));
-    equal := flags[5,1] ? 0 : aequalb | aorbleft1equal0;
+    flags := { INF, {2{NAN}}, 4b0000 };
+    less := ~NAN & ( ( fp32( a ).sign ^ fp32( b ).sign ) ? fp32( a ).sign & ~aorbleft1equal0 : ~aequalb & ( fp32( a ).sign ^ ( a < b )) );
+    equal := ~NAN & ( aequalb | aorbleft1equal0 );
 }

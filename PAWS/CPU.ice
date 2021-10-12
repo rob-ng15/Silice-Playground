@@ -160,7 +160,7 @@ algorithm PAWSCPU(
         FASTPATH :> FASTPATH
     );
 
-    uint1   CSRincCSRinstret <:: FSM[3,1];
+    uint1   CSRincCSRinstret <:: FSM[2,1];
     uint32  EXECUTESLOWmemoryoutput = uninitialized;
     int32   EXECUTESLOWresult = uninitialized;
     uint1   EXECUTESLOWfrd = uninitialized;

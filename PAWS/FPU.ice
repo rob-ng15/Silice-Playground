@@ -311,13 +311,14 @@ algorithm floatminmax(
         sNAN :> bsNAN,
         qNAN :> bqNAN
     );
+    uint1   NAN <:: ( asNAN | bsNAN ) | ( aqNAN & bqNAN );
 
     uint1   less = uninitialised;
     floatcompare FPUlteq( a <: sourceReg1F, b <: sourceReg2F, less :> less );
 
-    flags ::= { ( asNAN | bsNAN ) | ( aqNAN & bqNAN ), 4b0000 };
+    flags := { NAN, 4b0000 };
     always {
-        if( ( asNAN | bsNAN ) | ( aqNAN & bqNAN ) ) {
+        if( NAN ) {
             // sNAN or both qNAN
             result = 32h7fc00000;
         } else {
@@ -362,9 +363,9 @@ algorithm floatcomparison(
 
     always {
         switch( function3 ) {
-            case 3b000: { flags = NAN ? 5b10000 : 0; result = NAN ? 0 : less | equal; }
-            case 3b001: { flags = NAN ? 5b10000 : 0; result = NAN ? 0 : less; }
-            case 3b010: { flags = ( asNAN | bsNAN ) ? 5b10000 : 0; result = NAN ? 0 : equal; }
+            case 3b000: { flags = { NAN, 4b0000 }; result = ~NAN & ( less | equal ); }
+            case 3b001: { flags = { NAN, 4b0000 }; result = ~NAN & less; }
+            case 3b010: { flags = { ( asNAN | bsNAN ), 4b0000 }; result = ~NAN & equal; }
             default: { result = 0; }
         }
     }
