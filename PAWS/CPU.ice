@@ -277,6 +277,7 @@ algorithm Iclass(
     output  uint1   incPC,
     output  uint1   FASTPATH
 ) <autorun> {
+    uint1   ALUfastslow <:: ~( opCode[4,1] | ( opCode[3,1] & function7[0,1] & function3[2,1]) );
     always {
         frd = 0; writeRegister = 1; incPC = 1; FASTPATH = 1;
         switch( opCode ) {
@@ -292,7 +293,7 @@ algorithm Iclass(
             case 5b00011: {}                        // FENCE[I]
             case 5b11100: { FASTPATH = 0; }         // CSR
             case 5b01011: { FASTPATH = 0; }         // LR.W SC.WATOMIC LOAD - MODIFY - STORE
-            default: { FASTPATH = ~( opCode[4,1] | ( opCode[3,1] & function7[0,1] & function3[2,1]) ); }    // FPU OR INTEGER DIVIDE -> SLOWPATH
+            default: { FASTPATH = ALUfastslow; }    // FPU OR INTEGER DIVIDE -> SLOWPATH
         }
     }
 }
@@ -464,6 +465,7 @@ algorithm cpuexecuteFASTPATH(
         sourceReg2 <: sourceReg2,
         result :> ALUMMresult
     );
+    uint1   isALUMM <:: ( opCode[3,1] & function7[0,1] );
 
     always {
         takeBranch = 0;
@@ -479,7 +481,7 @@ algorithm cpuexecuteFASTPATH(
             case 5b01001: { memoryoutput = sourceReg2F; }           // FLOAT STORE
             case 5b00011: {}                                        // FENCE[I]
             default: {
-                if( opCode[3,1] & function7[0,1] ) {               // INTEGER ALU AND MULTIPLICATION
+                if( isALUMM ) {                                     // INTEGER ALU AND MULTIPLICATION
                     result = ALUMMresult;
                 } else {
                     result = ALUresult;

@@ -179,8 +179,8 @@ algorithm pattern(
     int2    speed = 0;
     int2    inv_speed = 0;
     int12   rand_x = 0;
+    int12   new_rand_x <:: rand_x * 31421 + 6927;
     int32   frame = 0;
-
     // Increment frame number for the snow/star field
     frame ::= frame + ( ( pix_x == 639 ) & ( pix_y == 479 ) );
 
@@ -193,7 +193,7 @@ algorithm pattern(
             case 3: { condition = ( lefthalf == tophalf ); }                        // QUARTERS
             case 4: { condition = 1; }                                              // RAINBOW (placeholder, done in main)
             case 5: {                                                               // SNOW (from @sylefeb)
-                rand_x = ( pix_x == 0 )  ? 1 : rand_x * 31421 + 6927;
+                rand_x = ( pix_x == 0 )  ? 1 : new_rand_x;
                 speed  = rand_x[10,2];
                 dotpos = ( frame >> speed ) + rand_x;
                 condition   = ( pix_y == dotpos );

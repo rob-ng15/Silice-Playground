@@ -653,7 +653,7 @@ algorithm dofloatdivide(
                 quotient[bit,1] = bitresult;
                 bit = bit - 1;
             }
-            while( quotient[48,2] != 00 ) { quotient = quotient >> 1; }
+            while( quotient[48,2] != 0 ) { quotient = quotient >> 1; }
         }
     }
 }
@@ -1030,6 +1030,6 @@ algorithm floatcompare(
 
     // IDENTIFY NaN, RETURN 0 IF NAN, OTHERWISE RESULT OF COMPARISONS
     flags := { INF, {2{NAN}}, 4b0000 };
-    less := ~NAN & ( ( fp32( a ).sign ^ fp32( b ).sign ) ? fp32( a ).sign & ~aorbleft1equal0 : ~aequalb & ( fp32( a ).sign ^ ( a < b )) );
-    equal := ~NAN & ( aequalb | aorbleft1equal0 );
+    less := NAN ? 0 : ( ( fp32( a ).sign ^ fp32( b ).sign ) ? fp32( a ).sign & ~aorbleft1equal0 : ~aequalb & ( fp32( a ).sign ^ ( a < b )) );
+    equal := NAN ? 0 : ( aequalb | aorbleft1equal0 );
 }

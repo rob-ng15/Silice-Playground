@@ -55,19 +55,20 @@ algorithm alu(
     uint5   shiftcount <:: regimm ? sourceReg2[0,5] : rs2;
     uint32  operand2 <:: regimm ? sourceReg2 : immediateValue;
     uint1   unsignedcompare <:: __unsigned( sourceReg1 ) < __unsigned( operand2 );
+    uint1   signedcompare <:: __signed( sourceReg1 ) < __signed(operand2);
 
     uint32  AS = uninitialised; iaddsub ALUaddsub( sourceReg1 <: sourceReg1, operand2 <: operand2, addsub <: addsub, result :> AS );
     uint32  SLL = uninitialised; sll ALUsll( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, result :> SLL );
     uint32  SRL = uninitialised; srl ALUsrl( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, result :> SRL );
     uint32  SRA = uninitialised; sra ALUsra( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, result :> SRA );
+    uint1   SLTU <:: regimm ? ( rs1 == 0 ) ? ( operand2 != 0 ) : unsignedcompare : ( operand2 == 1 ) ? ( sourceReg1 == 0 ) : unsignedcompare;
 
     always {
         switch( function3 ) {
             case 3b000: { result = AS; }
             case 3b001: { result = SLL; }
-            case 3b010: { result =  __signed( sourceReg1 ) < __signed(operand2); }
-            case 3b011: { result = regimm ? ( rs1 == 0 ) ? ( operand2 != 0 ) : unsignedcompare :
-                            ( operand2 == 1 ) ? ( sourceReg1 == 0 ) : unsignedcompare; }
+            case 3b010: { result = signedcompare; }
+            case 3b011: { result = SLTU; }
             case 3b100: { result = sourceReg1 ^ operand2; }
             case 3b101: { result = function75 ? SRA : SRL; }
             case 3b110: { result = sourceReg1 | operand2; }
@@ -77,6 +78,17 @@ algorithm alu(
 }
 
 // ALU - M EXTENSION
+algorithm prepsign(
+    input   uint32  number,
+    input   uint1   dosign,
+    output  uint32  number_unsigned
+) <autorun> {
+    always {
+        number_unsigned = dosign ? number : ( number[31,1] ? -number : number );
+    }
+}
+
+// ALU FOR DIVISION
 // UNSIGNED / SIGNED 32 by 32 bit division giving 32 bit remainder and quotient
 algorithm douintdivide(
     input   uint1   start,
@@ -102,16 +114,7 @@ algorithm douintdivide(
         }
     }
 }
-algorithm prepsign(
-    input   uint32  number,
-    input   uint1   dosign,
-    output  uint32  number_unsigned
-) <autorun> {
-    always {
-        number_unsigned = dosign ? number : ( number[31,1] ? -number : number );
-    }
-}
-// ALU FOR DIVISION
+
 algorithm aluMD(
     input   uint1   start,
     output  uint1   busy(0),
@@ -162,6 +165,7 @@ algorithm aluMD(
     }
 }
 
+// ALU FOR MULTIPLICATION
 // UNSIGNED / SIGNED 32 by 32 bit multiplication giving 64 bit product using DSP blocks
 algorithm douintmul(
     input   uint32  factor_1,
@@ -175,20 +179,28 @@ algorithm douintmul(
     }
 }
 
-// ALU FOR MULTIPLICATION
 algorithm aluMM(
     input   uint3   function3,
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
     output  uint32  result
 ) <autorun> {
-    uint2   dosigned <:: function3[1,1] ? ( function3[0,1] ? 0 : 2 ) : 1;
+    uint2   dosigned <:: { ~function3[0,1], ~function3[1,1] };
     uint1   dosigned0 <:: ( dosigned == 0 );
-    uint1   dosigned1 <:: ( dosigned == 1 );
-    uint1   productsign <:: dosigned0 ? 0 : ( dosigned1 ? ( sourceReg1[31,1] ^ sourceReg2[31,1] ) : sourceReg1[31,1] );
-    uint32  sourceReg1_unsigned <:: dosigned0 ? sourceReg1 : ( ( sourceReg1[31,1] ) ? -sourceReg1 : sourceReg1 );
-    uint32  sourceReg2_unsigned <:: dosigned1 ? ( ( sourceReg2[31,1] ) ? -sourceReg2 : sourceReg2 ) : sourceReg2;
-
+    uint1   dosigned1 <:: ( dosigned != 1 );
+    uint1   productsign <:: dosigned0 ? 0 : ( dosigned1 ? sourceReg1[31,1] : ( sourceReg1[31,1] ^ sourceReg2[31,1] ) );
+    uint32  sourceReg1_unsigned = uninitialised;
+    prepsign PREPLEFT(
+        number <: sourceReg1,
+        dosign <: dosigned0,
+        number_unsigned :> sourceReg1_unsigned
+    );
+    uint32  sourceReg2_unsigned = uninitialised;
+    prepsign PREPRIGHT(
+        number <: sourceReg2,
+        dosign <: dosigned1,
+        number_unsigned :> sourceReg2_unsigned
+    );
     uint64  product = uninitialised;
     douintmul UINTMUL(
         factor_1 <: sourceReg1_unsigned,

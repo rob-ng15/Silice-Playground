@@ -475,6 +475,7 @@ algorithm gpu(
             }
         }
     }
+
     while(1) {
         if( gpu_busy ) {
             // COPY OUTPUT TO THE BITMAP WRITER
