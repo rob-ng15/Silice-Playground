@@ -196,7 +196,6 @@ algorithm inttofloat(
     // CHECK FOR 24, 16 OR 8 LEADING ZEROS, CONTINUE COUNTING FROM THERE
     uint5   startingzeros = uninitialised; startzeros SZ( number <: number, startingzeros :> startingzeros );
     uint5   zeros = uninitialised;
-
     uint1   sign <:: dounsigned ? 0 : a[31,1];
     uint32  number = uninitialised; prepitof PREP( number <: a, dounsigned <: dounsigned, number_unsigned :> number );
     uint32  fraction <:: NX ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
@@ -549,7 +548,7 @@ algorithm floatmultiply(
     );
 
     // FAST NORMALISATION - MULTIPLICATION RESULTS IN 1x.xxx or 01.xxxx
-    uint48  normalfraction <:: product[47,1] ? product : { product[0,47], 1b0 };
+    uint48  normalfraction <:: product << ( ~product[47,1] );
 
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND INVALID ( INF x ZERO )
     uint1   IF <:: ( aINF | bINF );
@@ -642,6 +641,7 @@ algorithm dofloatdivide(
     uint50  temporary <:: { remainder[0,49], sigA[bit,1] };
     uint1   bitresult <:: __unsigned(temporary) >= __unsigned(sigB);
     uint6   bit(63);
+    uint2   normalshift = uninitialised;
 
     busy := start | ( bit != 63 ) | ( quotient[48,2] != 0 );
     while(1) {
@@ -653,7 +653,12 @@ algorithm dofloatdivide(
                 quotient[bit,1] = bitresult;
                 bit = bit - 1;
             }
-            while( quotient[48,2] != 0 ) { quotient = quotient >> 1; }
+            switch( quotient[48,2] ) {
+                case 2b00: { normalshift = 0; }
+                case 2b01: { normalshift = 1; }
+                default: { normalshift = 2; }
+            }
+            quotient = quotient >> normalshift;
         }
     }
 }
@@ -907,7 +912,7 @@ algorithm floatsqrt(
     );
 
     // FAST NORMALISATION - SQUARE ROOT RESULTS IN 1x.xxx or 01.xxxx
-    uint48  normalfraction <:: squareroot[47,1] ? squareroot : { squareroot[0,47], 1b0 };
+    uint48  normalfraction <:: squareroot << ( ~squareroot[47,1] );
 
     int10   roundexponent = uninitialised;
     uint48  roundfraction = uninitialised;

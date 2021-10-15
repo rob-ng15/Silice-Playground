@@ -181,6 +181,7 @@ algorithm pattern(
     int12   rand_x = 0;
     int12   new_rand_x <:: rand_x * 31421 + 6927;
     int32   frame = 0;
+
     // Increment frame number for the snow/star field
     frame ::= frame + ( ( pix_x == 639 ) & ( pix_y == 479 ) );
 

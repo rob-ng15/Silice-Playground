@@ -46,9 +46,9 @@ algorithm PAWSCPU(
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
     uint1   compressed = uninitialized;
-    uint32  i3200 = uninitialized; compressed00 COMPRESSED00 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3200 );
-    uint32  i3201 = uninitialized; compressed01 COMPRESSED01 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3201 );
-    uint32  i3210 = uninitialized; compressed10 COMPRESSED10 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3210 );
+    uint30  i3200 = uninitialized; compressed00 COMPRESSED00 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3200 );
+    uint30  i3201 = uninitialized; compressed01 COMPRESSED01 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3201 );
+    uint30  i3210 = uninitialized; compressed10 COMPRESSED10 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3210 );
 
     // RISC-V 32 BIT INSTRUCTION DECODER
     uint5   opCode = uninitialized;
@@ -121,6 +121,10 @@ algorithm PAWSCPU(
         sourceReg1 :> sourceReg1,
         sourceReg2 :> sourceReg2
     );
+    // EXTRACT SIGN AND ABSOLUTE VALUE FOR MULTIPLICATION AND DIVISION
+    uint32  absRS1 <:: sourceReg1[31,1] ? -sourceReg1 : sourceReg1;
+    uint32  absRS2 <:: sourceReg2[31,1] ? -sourceReg2 : sourceReg2;
+
     // RISC-V FLOATING POINT REGISTERS
     uint32  sourceReg1F = uninitialized;
     uint32  sourceReg2F = uninitialized;
@@ -178,6 +182,8 @@ algorithm PAWSCPU(
         rs2 <: rs2,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
+        absRS1 <: absRS1,
+        absRS2 <: absRS2,
         sourceReg1F <: sourceReg1F,
         sourceReg2F <: sourceReg2F,
         sourceReg3F <: sourceReg3F,
@@ -200,6 +206,8 @@ algorithm PAWSCPU(
         rs2 <: rs2,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
+        absRS1 <: absRS1,
+        absRS2 <: absRS2,
         sourceReg2F <: sourceReg2F,
         immediateValue <: immediateValue,
         memoryinput <: memoryinput,
@@ -225,9 +233,9 @@ algorithm PAWSCPU(
         address = PC; readmemory = 1; while( memorybusy ) {}                                                                                                    // FETCH POTENTIAL COMPRESSED OR 1ST 16 BITS
         compressed = ( readdata[0,2] != 2b11 );
         switch( readdata[0,2] ) {                                                                                                                               // EXPAND COMPRESSED INSTRUCTION
-            case 2b00: { instruction = i3200; }
-            case 2b01: { instruction = i3201; }
-            case 2b10: { instruction = i3210; }
+            case 2b00: { instruction = { i3200, 2b11 }; }
+            case 2b01: { instruction = { i3201, 2b11 }; }
+            case 2b10: { instruction = { i3210, 2b11 }; }
             default: {instruction[0,16] = readdata; address = PCplus2; readmemory = 1; while( memorybusy ) {} instruction[16,16] = readdata; }                  // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
         }
         FSM = 2; ++: ++:                                                                                                                                        // DECODE, REGISTER FETCH, ADDRESS GENERATION
@@ -310,6 +318,8 @@ algorithm cpuexecuteSLOWPATH(
     input   uint5   rs2,
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
+    input   uint32  absRS1,
+    input   uint32  absRS2,
     input   uint32  sourceReg1F,
     input   uint32  sourceReg2F,
     input   uint32  sourceReg3F,
@@ -327,6 +337,8 @@ algorithm cpuexecuteSLOWPATH(
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
+        absRS1 <: absRS1,
+        absRS2 <: absRS2,
         start <: ALUMDstart,
         busy :> ALUMDbusy,
         result :> ALUMDresult
@@ -425,6 +437,8 @@ algorithm cpuexecuteFASTPATH(
     input   uint5   rs2,
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
+    input   uint32  absRS1,
+    input   uint32  absRS2,
     input   uint32  sourceReg2F,
     input   uint32  immediateValue,
     input   uint32  memoryinput,
@@ -463,6 +477,8 @@ algorithm cpuexecuteFASTPATH(
         function3 <: function3,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
+        absRS1 <: absRS1,
+        absRS2 <: absRS2,
         result :> ALUMMresult
     );
     uint1   isALUMM <:: ( opCode[3,1] & function7[0,1] );
