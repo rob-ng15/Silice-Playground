@@ -146,6 +146,7 @@ algorithm background_display(
         if( pix_active ) {
             // SELECT ACTUAL COLOUR
             switch( b_mode ) {
+                default: { pixel = condition ? b_colour : b_alt; }                      // EVERYTHING ELSE
                 case 4: {                                                               // RAINBOW
                     switch( pix_y[6,3] ) {
                         case 3b000: { pixel = 6b100000; }
@@ -159,7 +160,6 @@ algorithm background_display(
                     }
                 }
                 case 6: { pixel = {3{staticGenerator}}; }                               // STATIC
-                default: { pixel = condition ? b_colour : b_alt; }                     // EVERYTHING ELSE
             }
         }
     }

@@ -362,7 +362,7 @@ algorithm audio(
     output  uint1   audio_active_r
 ) <autorun> {
     // Left and Right audio channels
-    uint1   Lapu_write = uninitialized;
+    uint1   Lapu_write <: apu_write[0,1];
     apu apu_processor_L(
         staticGenerator <: staticGenerator,
         audio_output :> audio_l,
@@ -372,7 +372,7 @@ algorithm audio(
         duration <: duration,
         apu_write <: Lapu_write
     );
-    uint1   Rapu_write = uninitialized;
+    uint1   Rapu_write <: apu_write[1,1];
     apu apu_processor_R(
         staticGenerator <: staticGenerator,
         audio_output :> audio_r,
@@ -382,15 +382,6 @@ algorithm audio(
         duration <: duration,
         apu_write <: Rapu_write
     );
-
-    Lapu_write := 0; Rapu_write := 0;
-
-    always {
-        if( apu_write != 0 ) {
-            Lapu_write = apu_write[0,1];
-            Rapu_write = apu_write[1,1];
-        }
-    }
 }
 
 // UART BUFFER CONTROLLER
@@ -485,13 +476,8 @@ algorithm fifo9(
     always {
         if( write ) {
             queue.addr1 = top; queue.wdata1 = last;
-            update = 1;
-        } else {
-            if( update ) {
-                top = top + 1;
-                update = 0;
-            }
         }
+        top = top + write;
         next = next + read;
     }
 }

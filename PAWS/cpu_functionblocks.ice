@@ -262,15 +262,11 @@ algorithm compressed01(
                     }
                     case 2b11: {
                         // CBalu(i16).logical2 -> SUB XOR OR AND
-                        //        // 2b00 -> SUB -> sub rd', rd', rs2' { 100 0 11 rs1'/rd' 00 rs2' 01 } -> { 0100000 rs2 rs1 000 rd 0110011 }
-                        //        // 2b01 -> XOR -> xor rd', rd', rs2' { 100 0 11 rs1'/rd' 01 rs2' 01 } -> { 0000000 rs2 rs1 100 rd 0110011 }
-                        //        // 2b10 -> OR  -> or  rd', rd', rd2' { 100 0 11 rs1'/rd' 10 rs2' 01 } -> { 0000000 rs2 rs1 110 rd 0110011 }
-                        //        // 2b11 -> AND -> and rd', rd', rs2' { 100 0 11 rs1'/rd' 11 rs2' 01 } -> { 0000000 rs2 rs1 111 rd 0110011 }
                         switch( CBalu(i16).logical2 ) {
-                            case 2b00: { opbits = 3b000; }
-                            case 2b01: { opbits = 3b100; }
-                            case 2b10: { opbits = 3b110; }
-                            case 2b11: { opbits = 3b111; }
+                            case 2b00: { opbits = 3b000; } // 2b00 -> SUB -> sub rd', rd', rs2' { 100 0 11 rs1'/rd' 00 rs2' 01 } -> { 0100000 rs2 rs1 000 rd 0110011 }
+                            case 2b01: { opbits = 3b100; } // 2b01 -> XOR -> xor rd', rd', rs2' { 100 0 11 rs1'/rd' 01 rs2' 01 } -> { 0000000 rs2 rs1 100 rd 0110011 }
+                            case 2b10: { opbits = 3b110; } // 2b10 -> OR  -> or  rd', rd', rd2' { 100 0 11 rs1'/rd' 10 rs2' 01 } -> { 0000000 rs2 rs1 110 rd 0110011 }
+                            case 2b11: { opbits = 3b111; } // 2b11 -> AND -> and rd', rd', rs2' { 100 0 11 rs1'/rd' 11 rs2' 01 } -> { 0000000 rs2 rs1 111 rd 0110011 }
                         }
                         i32 = { { 1b0, CBalu(i16).logical2 == 2b00 ? 1b1 : 1b0, 5b00000 }, { 2b01, CBalu(i16).rs2_alt }, { 2b01, CBalu(i16).rd_alt }, opbits, { 2b01, CBalu(i16).rd_alt }, 5b01100 };
                     }
@@ -455,6 +451,7 @@ algorithm aluA (
     uint1   unsignedcompare <:: ( __unsigned(memoryinput) < __unsigned(sourceReg2) );
     uint1   signedcompare <:: ( __signed(memoryinput) < __signed(sourceReg2) );
     uint32  add <:: memoryinput + sourceReg2;
+
     always {
         switch( function7[2,5] ) {
             default: { result = add; }                                              // AMOADD

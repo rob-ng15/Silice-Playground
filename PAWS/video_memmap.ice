@@ -713,15 +713,10 @@ algorithm bitmap_memmap(
         gpu_queue_complete :> gpu_queue_complete
     );
 
-
     // LATCH MEMORYWRITE
     uint1   LATCHmemoryWrite = uninitialized;
 
-    // 50MHz GPU OPERATION
-    //gpu_write := 0;  pb_newpixel := 0; draw_vector := 0;
-
     always {
-        //if( memoryWrite ) {
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
                 switch( memoryAddress ) {
@@ -790,7 +785,6 @@ algorithm bitmap_memmap(
             }
             default: {}
         }
-        //}
         LATCHmemoryWrite = memoryWrite;
     }
 
@@ -1021,19 +1015,22 @@ algorithm sprite_memmap(
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
                 switch( { bitmapwriter, memoryAddress } ) {
-                    $$for i=0,15 do
-                        case $0x00 + i*2$: { sprite_set_number = $i$; sprite_set_active = writeData; sprite_layer_write = 1; }
-                        case $0x20 + i*2$: { sprite_set_number = $i$; sprite_set_double = writeData; sprite_layer_write = 2; }
-                        case $0x40 + i*2$: { sprite_set_number = $i$; sprite_set_colour = writeData; sprite_layer_write = 3; }
-                        case $0x60 + i*2$: { sprite_set_number = $i$; sprite_set_x = writeData; sprite_layer_write = 4; }
-                        case $0x80 + i*2$: { sprite_set_number = $i$; sprite_set_y = writeData; sprite_layer_write = 5; }
-                        case $0xa0 + i*2$: { sprite_set_number = $i$; sprite_set_tile = writeData; sprite_layer_write = 6; }
-                        case $0xc0 + i*2$: { sprite_set_number = $i$; sprite_update = writeData; sprite_layer_write = 7; }
-                    $$end
                     case 9h100: { sprite_writer_sprite = writeData; }
                     case 9h102: { sprite_writer_line = writeData; }
                     case 9h104: { sprite_writer_bitmap = writeData; sprite_writer_active = 1; }
-                    default: {}
+                    default: {
+                        switch( memoryAddress[5,3] ) {
+                            // Handle memory mapping of the sprite write registers
+                            case 3b000: { sprite_set_number = memoryAddress[1,4]; sprite_set_active = writeData; sprite_layer_write = 1; }
+                            case 3b001: { sprite_set_number = memoryAddress[1,4]; sprite_set_double = writeData; sprite_layer_write = 2; }
+                            case 3b010: { sprite_set_number = memoryAddress[1,4]; sprite_set_colour = writeData; sprite_layer_write = 3; }
+                            case 3b011: { sprite_set_number = memoryAddress[1,4]; sprite_set_x = writeData; sprite_layer_write = 4; }
+                            case 3b100: { sprite_set_number = memoryAddress[1,4]; sprite_set_y = writeData; sprite_layer_write = 5; }
+                            case 3b101: { sprite_set_number = memoryAddress[1,4]; sprite_set_tile = writeData; sprite_layer_write = 6; }
+                            case 3b110: { sprite_set_number = memoryAddress[1,4]; sprite_update = writeData; sprite_layer_write = 7; }
+                            default: {}
+                        }
+                    }
                 }
             }
             case 2b00: {

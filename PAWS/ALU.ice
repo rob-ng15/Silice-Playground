@@ -5,8 +5,9 @@ algorithm iaddsub(
     input   uint1   addsub,
     output  uint32  result
 ) <autorun> {
+    uint32  negative <:: -operand2;
     always {
-        result = addsub ? ( sourceReg1 - operand2 ) : ( sourceReg1 + operand2 );
+        result = sourceReg1 + ( addsub ? negative : operand2 );
     }
 }
 algorithm sll(
