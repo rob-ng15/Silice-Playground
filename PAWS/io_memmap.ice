@@ -250,17 +250,17 @@ algorithm audiotimers_memmap(
                     default: { readData = 0; }
                 }
             } else {
-                switch( memoryAddress[0,7] ) {
+                switch( memoryAddress[0,5] ) {
                     // TIMERS and RNG
-                    case 7h00: { readData = g_noise_out; }
-                    case 7h02: { readData = u_noise_out; }
-                    case 7h10: { readData = timer1hz0; }
-                    case 7h12: { readData = timer1hz1; }
-                    case 7h20: { readData = timer1khz0; }
-                    case 7h22: { readData = timer1khz1; }
-                    case 7h30: { readData = sleepTimer0; }
-                    case 7h32: { readData = sleepTimer1; }
-                    case 7h40: { readData = systemclock; }
+                    case 5h00: { readData = g_noise_out; }
+                    case 5h02: { readData = u_noise_out; }
+                    case 5h10: { readData = timer1hz0; }
+                    case 5h12: { readData = timer1hz1; }
+                    case 5h14: { readData = timer1khz0; }
+                    case 5h16: { readData = timer1khz1; }
+                    case 5h18: { readData = sleepTimer0; }
+                    case 5h1a: { readData = sleepTimer1; }
+                    case 5h1c: { readData = systemclock; }
                     // RETURN NULL VALUE
                     default: { readData = 0; }
                 }
@@ -279,17 +279,9 @@ algorithm audiotimers_memmap(
                         default: {}
                     }
                 } else {
+                    // TIMERS
                     counter = writeData;
-                    switch( memoryAddress[0,6] ) {
-                        // TIMERS and RNG
-                        case 6h10: { resetcounter = 1; }
-                        case 6h12: { resetcounter = 2; }
-                        case 6h20: { resetcounter = 3; }
-                        case 6h22: { resetcounter = 4; }
-                        case 6h30: { resetcounter = 5; }
-                        case 6h32: { resetcounter = 6; }
-                        default: {}
-                    }
+                    resetcounter = memoryAddress[1,3] + 1;
                 }
             }
             case 2b00: {

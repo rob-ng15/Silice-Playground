@@ -166,10 +166,10 @@ unsigned short volatile * RNG = ( unsigned short volatile * ) 0xe000;
 unsigned short volatile * ALT_RNG = ( unsigned short volatile * ) 0xe002;
 unsigned short volatile * TIMER1HZ0 = ( unsigned short volatile * ) 0xe010;
 unsigned short volatile * TIMER1HZ1 = ( unsigned short volatile * ) 0xe012;
-unsigned short volatile * TIMER1KHZ0 = ( unsigned short volatile * ) 0xe020;
-unsigned short volatile * TIMER1KHZ1 = ( unsigned short volatile * ) 0xe022;
-unsigned short volatile * SLEEPTIMER0 = ( unsigned short volatile * ) 0xe030;
-unsigned short volatile * SLEEPTIMER1 = ( unsigned short volatile * ) 0xe032;
+unsigned short volatile * TIMER1KHZ0 = ( unsigned short volatile * ) 0xe014;
+unsigned short volatile * TIMER1KHZ1 = ( unsigned short volatile * ) 0xe016;
+unsigned short volatile * SLEEPTIMER0 = ( unsigned short volatile * ) 0xe018;
+unsigned short volatile * SLEEPTIMER1 = ( unsigned short volatile * ) 0xe01a;
 unsigned short volatile * SYSTEMCLOCK = (unsigned short volatile *) 0xe040;
 
 // HANDLE SMT - RUNNING STATUS AND POINTER TO CODE TO RUN
