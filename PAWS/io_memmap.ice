@@ -110,7 +110,6 @@ $$end
                 $$if not SIMULATION then
                 case 12h100: { readData = { 8b0, UARTinchar }; UARTinread = 2b11; }
                 case 12h102: { readData = { 14b0, UARToutfull, UARTinavailable }; }
-                case 12h120: { readData = PS2outputascii ? { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] } : { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] } | PS2joystick; } // ULX3S BUTTONS AND/OR KEYBOARD AS A JOYSTICK
                 // PS2
                 case 12h110: { readData = PS2inavailable; }
                 case 12h112: {
@@ -119,6 +118,7 @@ $$end
                         case 0: { readData = 0; }
                     }
                 }
+                case 12h120: { readData = PS2outputascii ? { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] } : { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] } | PS2joystick; } // ULX3S BUTTONS AND/OR KEYBOARD AS A JOYSTICK
 
                 // SDCARD
                 case 12h140: { readData = SDCARDready; }
@@ -175,7 +175,7 @@ algorithm audiotimers_memmap(
     input   uint1   clock_25mhz,
 
     // Memory access
-    input   uint12  memoryAddress,
+    input   uint9  memoryAddress,
     input   uint1   memoryWrite,
     input   uint1   memoryRead,
     input   uint16  writeData,
@@ -241,44 +241,55 @@ algorithm audiotimers_memmap(
     always {
         // READ IO Memory
         if( memoryRead ) {
-            switch( memoryAddress ) {
-                // TIMERS and RNG
-                case 12h000: { readData = g_noise_out; }
-                case 12h002: { readData = u_noise_out; }
-                case 12h010: { readData = timer1hz0; }
-                case 12h012: { readData = timer1hz1; }
-                case 12h020: { readData = timer1khz0; }
-                case 12h022: { readData = timer1khz1; }
-                case 12h030: { readData = sleepTimer0; }
-                case 12h032: { readData = sleepTimer1; }
-                case 12h040: { readData = systemclock; }
-
-                // AUDIO
-                case 12h110: { readData = audio_active_l; }
-                case 12h112: { readData = audio_active_r; }
-
-                // RETURN NULL VALUE
-                default: { readData = 0; }
+            if( memoryAddress[8,1] ) {
+                switch( memoryAddress[0,5] ) {
+                    // AUDIO
+                    case 5h10: { readData = audio_active_l; }
+                    case 5h12: { readData = audio_active_r; }
+                    // RETURN NULL VALUE
+                    default: { readData = 0; }
+                }
+            } else {
+                switch( memoryAddress[0,7] ) {
+                    // TIMERS and RNG
+                    case 7h00: { readData = g_noise_out; }
+                    case 7h02: { readData = u_noise_out; }
+                    case 7h10: { readData = timer1hz0; }
+                    case 7h12: { readData = timer1hz1; }
+                    case 7h20: { readData = timer1khz0; }
+                    case 7h22: { readData = timer1khz1; }
+                    case 7h30: { readData = sleepTimer0; }
+                    case 7h32: { readData = sleepTimer1; }
+                    case 7h40: { readData = systemclock; }
+                    // RETURN NULL VALUE
+                    default: { readData = 0; }
+                }
             }
         }
         // WRITE IO Memory
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
-                switch( memoryAddress ) {
-                    // TIMERS and RNG
-                    case 12h010: { resetcounter = 1; }
-                    case 12h012: { resetcounter = 2; }
-                    case 12h020: { counter = writeData; resetcounter = 3; }
-                    case 12h022: { counter = writeData; resetcounter = 4; }
-                    case 12h030: { counter = writeData; resetcounter = 5; }
-                    case 12h032: { counter = writeData; resetcounter = 6; }
-
-                    // AUDIO
-                    case 12h100: { waveform = writeData; }
-                    case 12h102: { frequency = writeData; }
-                    case 12h104: { duration = writeData; }
-                    case 12h106: { apu_write = writeData; }
-                    default: {}
+                if( memoryAddress[8,1] ) {
+                    switch( memoryAddress[0,3] ) {
+                        // AUDIO
+                        case 3h0: { waveform = writeData; }
+                        case 3h2: { frequency = writeData; }
+                        case 3h4: { duration = writeData; }
+                        case 3h6: { apu_write = writeData; }
+                        default: {}
+                    }
+                } else {
+                    counter = writeData;
+                    switch( memoryAddress[0,6] ) {
+                        // TIMERS and RNG
+                        case 6h10: { resetcounter = 1; }
+                        case 6h12: { resetcounter = 2; }
+                        case 6h20: { resetcounter = 3; }
+                        case 6h22: { resetcounter = 4; }
+                        case 6h30: { resetcounter = 5; }
+                        case 6h32: { resetcounter = 6; }
+                        default: {}
+                    }
                 }
             }
             case 2b00: {

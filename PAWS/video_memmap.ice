@@ -332,16 +332,16 @@ $$end
         if( memoryRead ) {
             switch( memoryAddress[8,4] ) {
                 case 4h1: {
-                    switch( memoryAddress[0,8] ) {
-                        case 8h20: { readData = Ltm_lastaction; }
-                        case 8h22: { readData = Ltm_active; }
+                    switch( memoryAddress[0,6] ) {
+                        case 6h20: { readData = Ltm_lastaction; }
+                        case 6h22: { readData = Ltm_active; }
                         default: { readData = 0; }
                     }
                 }
                 case 4h2: {
-                    switch( memoryAddress[0,8] ) {
-                        case 8h20: { readData = Utm_lastaction; }
-                        case 8h22: { readData = Utm_active; }
+                    switch( memoryAddress[0,6] ) {
+                        case 6h20: { readData = Utm_lastaction; }
+                        case 6h22: { readData = Utm_active; }
                         default: { readData = 0; }
                     }
                 }
@@ -376,11 +376,11 @@ $$end
                     }
                     }
                 case 4h5: {
-                    switch( memoryAddress[0,8] ) {
-                        case 8h04: { readData = curses_character; }
-                        case 8h06: { readData = curses_background; }
-                        case 8h08: { readData = curses_foreground; }
-                        case 8h0a: { readData = tpu_active; }
+                    switch( memoryAddress[0,4] ) {
+                        case 4h4: { readData = curses_character; }
+                        case 4h6: { readData = curses_background; }
+                        case 4h8: { readData = curses_foreground; }
+                        case 4ha: { readData = tpu_active; }
                         default: { readData = 0; }
                     }
                 }
@@ -456,7 +456,7 @@ algorithm background_memmap(
     output! uint6   pixel,
 
     // Memory access
-    input   uint8   memoryAddress,
+    input   uint6   memoryAddress,
     input   uint1   memoryWrite,
     input   uint16  writeData,
 
@@ -523,19 +523,19 @@ algorithm background_memmap(
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
                 switch( memoryAddress ) {
-                    case 8h00: { backgroundcolour = writeData; background_update = 1; }
-                    case 8h02: { backgroundcolour_alt = writeData; background_update = 2; }
-                    case 8h04: { backgroundcolour_mode = writeData; background_update = 3; }
-                    case 8h10: { copper_program = writeData; }
-                    case 8h12: { copper_status = writeData; }
-                    case 8h20: { copper_address = writeData; }
-                    case 8h22: { copper_command = writeData; }
-                    case 8h24: { copper_condition = writeData; }
-                    case 8h26: { copper_coordinate = writeData; }
-                    case 8h28: { copper_cpu_input = writeData; }
-                    case 8h2a: { copper_mode = writeData; }
-                    case 8h2c: { copper_alt = writeData; }
-                    case 8h2e: { copper_colour = writeData; }
+                    case 6h00: { backgroundcolour = writeData; background_update = 1; }
+                    case 6h02: { backgroundcolour_alt = writeData; background_update = 2; }
+                    case 6h04: { backgroundcolour_mode = writeData; background_update = 3; }
+                    case 6h10: { copper_program = writeData; }
+                    case 6h12: { copper_status = writeData; }
+                    case 6h20: { copper_address = writeData; }
+                    case 6h22: { copper_command = writeData; }
+                    case 6h24: { copper_condition = writeData; }
+                    case 6h26: { copper_coordinate = writeData; }
+                    case 6h28: { copper_cpu_input = writeData; }
+                    case 6h2a: { copper_mode = writeData; }
+                    case 6h2c: { copper_alt = writeData; }
+                    case 6h2e: { copper_colour = writeData; }
                     default: {}
                 }
             }
@@ -810,7 +810,7 @@ algorithm charactermap_memmap(
     input   uint1   blink,
 
     // Memory access
-    input   uint8   memoryAddress,
+    input   uint4   memoryAddress,
     input   uint1   memoryWrite,
     input   uint16  writeData,
 
@@ -876,19 +876,17 @@ algorithm charactermap_memmap(
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
                 switch( memoryAddress ) {
-                    case 8h00: { tpu_x = writeData; }
-                    case 8h02: { tpu_y = writeData; }
-                    case 8h04: { tpu_character = writeData; }
-                    case 8h06: { tpu_background = writeData; }
-                    case 8h08: { tpu_foreground = writeData; }
-                    case 8h0a: { tpu_write = writeData; }
-                    case 8h0c: { tpu_showcursor = writeData; }
+                    case 4h0: { tpu_x = writeData; }
+                    case 4h2: { tpu_y = writeData; }
+                    case 4h4: { tpu_character = writeData; }
+                    case 4h6: { tpu_background = writeData; }
+                    case 4h8: { tpu_foreground = writeData; }
+                    case 4ha: { tpu_write = writeData; }
+                    case 4hc: { tpu_showcursor = writeData; }
                     default: {}
                 }
             }
-            case 2b00: {
-                tpu_write = 0;
-            }
+            case 2b00: { tpu_write = 0; }
             default: {}
         }
         LATCHmemoryWrite = memoryWrite;
@@ -1035,7 +1033,7 @@ algorithm terminal_memmap(
     input   uint1   blink,
 
     // Memory access
-    input   uint8   memoryAddress,
+    input   uint3   memoryAddress,
     input   uint1   memoryWrite,
     input   uint16  writeData,
 
@@ -1079,9 +1077,9 @@ algorithm terminal_memmap(
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
                 switch( memoryAddress ) {
-                    case 8h00: { terminal_character = writeData; terminal_write = 1; }
-                    case 8h02: { showterminal = writeData; }
-                    case 8h04: { terminal_write = 2; }
+                    case 3h0: { terminal_character = writeData; terminal_write = 1; }
+                    case 3h2: { showterminal = writeData; }
+                    case 3h4: { terminal_write = 2; }
                     default: {}
                 }
             }
@@ -1108,7 +1106,7 @@ algorithm tilemap_memmap(
     output! uint1   pixel_display,
 
     // Memory access
-    input   uint8   memoryAddress,
+    input   uint6   memoryAddress,
     input   uint1   memoryWrite,
     input   uint16  writeData,
     output  uint4   tm_lastaction,
@@ -1181,17 +1179,17 @@ algorithm tilemap_memmap(
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
                 switch( memoryAddress ) {
-                    case 8h00: { tm_x = writeData; }
-                    case 8h02: { tm_y = writeData; }
-                    case 8h04: { tm_character = writeData; }
-                    case 8h06: { tm_background = writeData; }
-                    case 8h08: { tm_foreground = writeData; }
-                    case 8h0a: { tm_reflection = writeData; }
-                    case 8h0c: { tm_write = 1; }
-                    case 8h10: { tile_writer_tile = writeData; }
-                    case 8h12: { tile_writer_line = writeData; }
-                    case 8h14: { tile_writer_bitmap = writeData; }
-                    case 8h20: { tm_scrollwrap = writeData; }
+                    case 6h00: { tm_x = writeData; }
+                    case 6h02: { tm_y = writeData; }
+                    case 6h04: { tm_character = writeData; }
+                    case 6h06: { tm_background = writeData; }
+                    case 6h08: { tm_foreground = writeData; }
+                    case 6h0a: { tm_reflection = writeData; }
+                    case 6h0c: { tm_write = 1; }
+                    case 6h10: { tile_writer_tile = writeData; }
+                    case 6h12: { tile_writer_line = writeData; }
+                    case 6h14: { tile_writer_bitmap = writeData; }
+                    case 6h20: { tm_scrollwrap = writeData; }
                     default: {}
                 }
             }

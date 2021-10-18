@@ -212,10 +212,11 @@ int main( void ) {
 
     setupscreen();
 
-	while(1) {
+	// CONTINUE UNTIL FIRE 2 IS PRESSED
+    while( !( get_buttons() & 4 ) ) {
         setupboard();
         drawboard();
 
-        (void)inputcharacter();
+        while( get_buttons() == 1 ) {}
     }
 }
