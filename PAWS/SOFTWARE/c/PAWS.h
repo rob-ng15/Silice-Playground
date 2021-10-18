@@ -170,7 +170,7 @@ unsigned short volatile * TIMER1KHZ0 = ( unsigned short volatile * ) 0xe014;
 unsigned short volatile * TIMER1KHZ1 = ( unsigned short volatile * ) 0xe016;
 unsigned short volatile * SLEEPTIMER0 = ( unsigned short volatile * ) 0xe018;
 unsigned short volatile * SLEEPTIMER1 = ( unsigned short volatile * ) 0xe01a;
-unsigned short volatile * SYSTEMCLOCK = (unsigned short volatile *) 0xe040;
+unsigned short volatile * SYSTEMCLOCK = (unsigned short volatile *) 0xe01c;
 
 // HANDLE SMT - RUNNING STATUS AND POINTER TO CODE TO RUN
 unsigned char volatile * SMTSTATUS = ( unsigned char volatile *) 0xfffe;
