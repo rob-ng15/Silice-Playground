@@ -151,14 +151,8 @@ algorithm sprite_generator(
 algorithm sprite_layer_writer(
     // For setting sprite characteristics
     input   uint4   sprite_set_number,
-    input   uint1   sprite_set_active,
-    input   uint3   sprite_set_double,
-    input   uint6   sprite_set_colour,
-    input   int11   sprite_set_x,
-    input   int10   sprite_set_y,
-    input   uint3   sprite_set_tile,
+    input   uint13  sprite_write_value,
     input   uint3   sprite_layer_write,
-    input   uint13  sprite_update,
 
     // For reading sprite characteristics
     $$for i=0,15 do
@@ -201,12 +195,12 @@ algorithm sprite_layer_writer(
         // SET ATTRIBUTES + PERFORM UPDATE
         switch( sprite_layer_write ) {
             default: {}
-            case 1: { sprite_active[ sprite_set_number ] = sprite_set_active; }
-            case 2: { sprite_double[ sprite_set_number ] = sprite_set_double; }
-            case 3: { sprite_colour[ sprite_set_number ] = sprite_set_colour; }
-            case 4: { sprite_x[ sprite_set_number ] = sprite_set_x; }
-            case 5: { sprite_y[ sprite_set_number ] = sprite_set_y; }
-            case 6: { sprite_tile_number[ sprite_set_number ] = sprite_set_tile; }
+            case 1: { sprite_active[ sprite_set_number ] = sprite_write_value[0,1]; }
+            case 2: { sprite_double[ sprite_set_number ] = sprite_write_value[0,3]; }
+            case 3: { sprite_colour[ sprite_set_number ] = sprite_write_value[0,6]; }
+            case 4: { sprite_x[ sprite_set_number ] = sprite_write_value[0,11]; }
+            case 5: { sprite_y[ sprite_set_number ] = sprite_write_value[0,10]; }
+            case 6: { sprite_tile_number[ sprite_set_number ] = sprite_write_value[0,3]; }
             case 7: {
                 // Sprite update helpers
                 sprite_offscreen_negative = sprite_double[ sprite_set_number ][0,1] ? -32 : -16;
@@ -217,26 +211,24 @@ algorithm sprite_layer_writer(
                 sprite_offscreen_y = sprite_off_top | ( __signed( sprite_y[ sprite_set_number ] ) > __signed(480) );
 
                 // Perform sprite update
-                sprite_active[ sprite_set_number ] = ( ( sprite_update[12,1] & sprite_offscreen_y ) | ( sprite_update[11,1] & sprite_offscreen_x  ) ) ? 0 : sprite_active[ sprite_set_number ];
-                sprite_tile_number[ sprite_set_number ] = sprite_tile_number[ sprite_set_number ] + sprite_update[10,1];
+                sprite_active[ sprite_set_number ] = ( ( sprite_write_value[12,1] & sprite_offscreen_y ) | ( sprite_write_value[11,1] & sprite_offscreen_x  ) ) ? 0 : sprite_active[ sprite_set_number ];
+                sprite_tile_number[ sprite_set_number ] = sprite_tile_number[ sprite_set_number ] + sprite_write_value[10,1];
                 sprite_x[ sprite_set_number ] = sprite_offscreen_x ? ( sprite_off_left ?__signed(640) : sprite_to_negative ) :
-                                                sprite_x[ sprite_set_number ] + { {7{spriteupdate( sprite_update ).dxsign}}, spriteupdate( sprite_update ).dx };
+                                                sprite_x[ sprite_set_number ] + { {7{spriteupdate( sprite_write_value ).dxsign}}, spriteupdate( sprite_write_value ).dx };
                 sprite_y[ sprite_set_number ] = sprite_offscreen_y ? ( sprite_off_top ? __signed(480) : sprite_to_negative ) :
-                                                sprite_y[ sprite_set_number ] + { {6{spriteupdate( sprite_update ).dysign}}, spriteupdate( sprite_update ).dy };
+                                                sprite_y[ sprite_set_number ] + { {6{spriteupdate( sprite_write_value ).dysign}}, spriteupdate( sprite_write_value ).dy };
             }
         }
     }
 }
 
 algorithm spritebitmapwriter(
-    input   uint4   sprite_writer_sprite,
-    input   uint7   sprite_writer_line,
-    input   uint16  sprite_writer_bitmap,
-    input   uint1   sprite_writer_active,
-
     $$for i=0,15 do
         simple_dualport_bram_port1 tiles_$i$,
     $$end
+    input   uint4   sprite_writer_sprite,
+    input   uint7   sprite_writer_line,
+    input   uint16  sprite_writer_bitmap,
 ) <autorun> {
     $$for i=0,15 do
         tiles_$i$.wenable1 := 1;
@@ -244,15 +236,10 @@ algorithm spritebitmapwriter(
 
     always {
         // WRITE BITMAP TO SPRITE TILE
-        if( sprite_writer_active ) {
-            switch( sprite_writer_sprite ) {
-                $$for i=0,15 do
-                    case $i$: {
-                        tiles_$i$.addr1 = sprite_writer_line;
-                        tiles_$i$.wdata1 = sprite_writer_bitmap;
-                    }
-                $$end
-            }
+        switch( sprite_writer_sprite ) {
+            $$for i=0,15 do
+                case $i$: { tiles_$i$.addr1 = sprite_writer_line; tiles_$i$.wdata1 = sprite_writer_bitmap; }
+            $$end
         }
     }
 }

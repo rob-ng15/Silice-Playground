@@ -940,18 +940,11 @@ algorithm sprite_memmap(
     $$end
 
     uint4   sprite_set_number = uninitialized;
-    uint1   sprite_set_active = uninitialized;
-    uint3   sprite_set_double = uninitialized;
-    uint6   sprite_set_colour = uninitialized;
-    int11   sprite_set_x = uninitialized;
-    int10   sprite_set_y = uninitialized;
-    uint3   sprite_set_tile = uninitialized;
+    uint13  sprite_write_value = uninitialized;
     uint3   sprite_layer_write = uninitialized;
-    uint13  sprite_update = uninitialized;
     uint4   sprite_writer_sprite = uninitialized;
     uint7   sprite_writer_line = uninitialized;
     uint16  sprite_writer_bitmap = uninitialized;
-    uint1   sprite_writer_active = uninitialized;
     sprite_layer sprites <@video_clock,!video_reset> (
         pix_x      <: pix_x,
         pix_y      <: pix_y,
@@ -987,14 +980,8 @@ algorithm sprite_memmap(
             sprite_read_tile_$i$ :> sprite_read_tile_$i$,
         $$end
         sprite_set_number  <: sprite_set_number,
-        sprite_set_active  <: sprite_set_active,
-        sprite_set_double  <: sprite_set_double,
-        sprite_set_colour  <: sprite_set_colour,
-        sprite_set_x  <: sprite_set_x,
-        sprite_set_y  <: sprite_set_y,
-        sprite_set_tile  <: sprite_set_tile,
-        sprite_layer_write  <: sprite_layer_write,
-        sprite_update  <: sprite_update
+        sprite_write_value  <: sprite_write_value,
+        sprite_layer_write  <: sprite_layer_write
     );
 
     // UPDATE THE SPRITE TILE BITMAPS
@@ -1002,7 +989,6 @@ algorithm sprite_memmap(
         sprite_writer_sprite <: sprite_writer_sprite,
         sprite_writer_line <: sprite_writer_line,
         sprite_writer_bitmap <: sprite_writer_bitmap,
-        sprite_writer_active <: sprite_writer_active,
         $$for i=0,15 do
             tiles_$i$ <:> tiles_$i$,
         $$end
@@ -1014,29 +1000,20 @@ algorithm sprite_memmap(
     always {
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
-                switch( { bitmapwriter, memoryAddress } ) {
-                    case 9h100: { sprite_writer_sprite = writeData; }
-                    case 9h102: { sprite_writer_line = writeData; }
-                    case 9h104: { sprite_writer_bitmap = writeData; sprite_writer_active = 1; }
-                    default: {
-                        switch( memoryAddress[5,3] ) {
-                            // Handle memory mapping of the sprite write registers
-                            case 3b000: { sprite_set_number = memoryAddress[1,4]; sprite_set_active = writeData; sprite_layer_write = 1; }
-                            case 3b001: { sprite_set_number = memoryAddress[1,4]; sprite_set_double = writeData; sprite_layer_write = 2; }
-                            case 3b010: { sprite_set_number = memoryAddress[1,4]; sprite_set_colour = writeData; sprite_layer_write = 3; }
-                            case 3b011: { sprite_set_number = memoryAddress[1,4]; sprite_set_x = writeData; sprite_layer_write = 4; }
-                            case 3b100: { sprite_set_number = memoryAddress[1,4]; sprite_set_y = writeData; sprite_layer_write = 5; }
-                            case 3b101: { sprite_set_number = memoryAddress[1,4]; sprite_set_tile = writeData; sprite_layer_write = 6; }
-                            case 3b110: { sprite_set_number = memoryAddress[1,4]; sprite_update = writeData; sprite_layer_write = 7; }
-                            default: {}
-                        }
+                if( bitmapwriter ) {
+                    switch( memoryAddress[0,3] ) {
+                        case 3h0: { sprite_writer_sprite = writeData; }
+                        case 3h2: { sprite_writer_line = writeData; }
+                        case 3h4: { sprite_writer_bitmap = writeData; }
+                        default: {}
                     }
+                } else {
+                    sprite_set_number = memoryAddress[1,4];
+                    sprite_write_value = writeData;
+                    sprite_layer_write = memoryAddress[5,3] + 1;
                 }
             }
-            case 2b00: {
-                sprite_layer_write = 0;
-                sprite_writer_active = 0;
-            }
+            case 2b00: { sprite_layer_write = 0; }
             default: {}
         }
         LATCHmemoryWrite = memoryWrite;

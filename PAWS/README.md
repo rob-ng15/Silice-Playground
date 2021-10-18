@@ -7,6 +7,8 @@ A simple (no interrupts or exceptions/traps), Risc-V RV32IMAFC CPU, with a pseud
 
 I set about creating this project as I wanted an easier way to write programs to test my design. I'm old enough that C was my main programming language, so a CPU that had gcc support was the obvious way forward, and Risc-V is a nice elegant design that wasn't too hard for a beginner at FPGA programming to implement.
 
+The display hardware does as much as possible to compensate for the slow CPU speed.
+
 ## Overview
 
 * CPU

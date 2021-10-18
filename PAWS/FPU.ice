@@ -79,7 +79,6 @@ algorithm fpu(
         if( start ) {
             busy = 1;
             frd = 1;
-            FPUnewflags = FPUflags;
 
             switch( opCode ) {
                 default: {
@@ -94,7 +93,7 @@ algorithm fpu(
                         }
                         case 5b00100: {
                             // FSGNJ.S FSGNJN.S FSGNJX.S
-                            result = signresult;
+                            result = signresult; FPUnewflags = FPUflags;
                         }
                         case 5b00101: {
                             // FMIN.S FMAX.S
@@ -114,12 +113,11 @@ algorithm fpu(
                         }
                         case 5b11100: {
                             // FCLASS.S FMV.X.W
-                            frd = 0;
-                            result = function3[0,1] ? classification : sourceReg1F;
+                            frd = 0; result = function3[0,1] ? classification : sourceReg1F; FPUnewflags = FPUflags;
                         }
                         case 5b11110: {
                             // FMV.W.X
-                            result = sourceReg1;
+                            result = sourceReg1; FPUnewflags = FPUflags;
                         }
                     }
                 }
