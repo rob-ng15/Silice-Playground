@@ -27,7 +27,7 @@ $$if VGA then
 $$end
 
     // RNG
-    input   uint16  static16bit
+    input   uint6   static16bit
 ) <autorun> {
     // CURSOR CLOCK
     uint1   blink = uninitialised;
@@ -39,7 +39,7 @@ $$end
     // RNG random number generator
     uint1   static1bit <:: static16bit[0,1];
     uint2   static2bit <:: static16bit[0,2];
-    uint6   static6bit <:: static16bit[0,6];
+    uint6   static6bit <:: static16bit;
 
     // HDMI driver
     // Status of the screen, if in range, if in vblank, actual pixel x and y
@@ -345,7 +345,6 @@ $$end
                             case $0x60 + i$: { readData = Lcollision_$i$; }
                             case $0x70 + i$: { readData = Llayer_collision_$i$; }
                         $$end
-                        default: { readData = 0; }
                     }
                 }
                 case 4h4: {
@@ -360,7 +359,6 @@ $$end
                             case $0x60 + i$: { readData = Ucollision_$i$; }
                             case $0x70 + i$: { readData = Ulayer_collision_$i$; }
                         $$end
-                        default: { readData = 0; }
                     }
                     }
                 case 4h5: {
@@ -412,8 +410,10 @@ $$end
         }
     }
 
-    // SET DEFAULT DISPLAY ORDER AND COLOUR MODE
-    display_order = 0; colour = 1;
+    if( ~reset ) {
+        // SET DEFAULT DISPLAY ORDER AND COLOUR MODE
+        display_order = 0; colour = 1;
+    }
 }
 
 // ALL DISPLAY GENERATOR UNITS RUN AT 25MHz, 640 x 480 @ 60fps

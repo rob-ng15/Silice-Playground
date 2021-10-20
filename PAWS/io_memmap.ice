@@ -153,11 +153,9 @@ $$end
                 $$end
                 case 4h3: { leds = writeData; }
                 case 4hf: {
-                    switch( memoryAddress[1,2] ) {
-                        case 2h0: { SMTSTARTPC[16,16] = writeData; }
-                        case 2h1: { SMTSTARTPC[0,16] = writeData; }
-                        case 2h3: { SMTRUNNING = writeData; }
-                        default: {}
+                    switch( memoryAddress[2,1] ) {
+                        case 1b0: { SMTSTARTPC[ memoryAddress[1,1] ? 0 : 16, 16] = writeData; }
+                        case 1b1: { SMTRUNNING = writeData; }
                     }
                 }
                 default: {}

@@ -259,9 +259,9 @@ $$end
     uint1   SDRAM <: address[26,1];
     uint1   BRAM <: ~SDRAM & ~address[15,1];
     uint1   IOmem <: ~SDRAM & ~BRAM;
-    uint1   VIDEO <: IOmem & ( address[12,4]==4h8 );
-    uint1   AUDIOTIMERS <: IOmem & ( address[12,4]==4he );
-    uint1   IO <: IOmem & ( address[12,4]==4hf );
+    uint1   VIDEO <: IOmem & ( address[12,2]==2h1 );
+    uint1   AUDIOTIMERS <: IOmem & ( address[12,2]==2h2 );
+    uint1   IO <: IOmem & ( address[12,2]==2h3 );
 
     // SDRAM -> CPU BUSY STATE
     uint1   memorybusy <:: sdrambusy | ( ( CPUreadmemory | CPUwritememory ) & ( BRAM | SDRAM ) );
