@@ -331,65 +331,53 @@ $$end
         // READ IO Memory
         if( memoryRead ) {
             switch( memoryAddress[8,4] ) {
-                case 4h1: {
-                    switch( memoryAddress[0,6] ) {
-                        case 6h20: { readData = Ltm_lastaction; }
-                        case 6h22: { readData = Ltm_active; }
-                        default: { readData = 0; }
-                    }
-                }
-                case 4h2: {
-                    switch( memoryAddress[0,6] ) {
-                        case 6h20: { readData = Utm_lastaction; }
-                        case 6h22: { readData = Utm_active; }
-                        default: { readData = 0; }
-                    }
-                }
+                case 4h1: { readData = memoryAddress[1,1] ? Ltm_active : Ltm_lastaction; }
+                case 4h2: { readData = memoryAddress[1,1] ? Utm_active : Utm_lastaction; }
                 case 4h3: {
-                    switch( memoryAddress[0,8] ) {
+                    switch( memoryAddress[1,7] ) {
                         $$for i=0,15 do
-                            case $0x00 + i*2$: { readData = Lsprite_read_active_$i$; }
-                            case $0x20 + i*2$: { readData = Lsprite_read_double_$i$; }
-                            case $0x40 + i*2$: { readData = Lsprite_read_colour_$i$; }
-                            case $0x60 + i*2$: { readData = {{5{Lsprite_read_x_$i$[10,1]}}, Lsprite_read_x_$i$}; }
-                            case $0x80 + i*2$: { readData = {{6{Lsprite_read_y_$i$[9,1]}}, Lsprite_read_y_$i$}; }
-                            case $0xa0 + i*2$: { readData = Lsprite_read_tile_$i$; }
-                            case $0xc0 + i*2$: { readData = Lcollision_$i$; }
-                            case $0xe0 + i*2$: { readData = Llayer_collision_$i$; }
+                            case $0x00 + i$: { readData = Lsprite_read_active_$i$; }
+                            case $0x10 + i$: { readData = Lsprite_read_double_$i$; }
+                            case $0x20 + i$: { readData = Lsprite_read_colour_$i$; }
+                            case $0x30 + i$: { readData = {{5{Lsprite_read_x_$i$[10,1]}}, Lsprite_read_x_$i$}; }
+                            case $0x40 + i$: { readData = {{6{Lsprite_read_y_$i$[9,1]}}, Lsprite_read_y_$i$}; }
+                            case $0x50 + i$: { readData = Lsprite_read_tile_$i$; }
+                            case $0x60 + i$: { readData = Lcollision_$i$; }
+                            case $0x70 + i$: { readData = Llayer_collision_$i$; }
                         $$end
                         default: { readData = 0; }
                     }
                 }
                 case 4h4: {
-                    switch( memoryAddress[0,8] ) {
+                    switch( memoryAddress[1,7] ) {
                         $$for i=0,15 do
-                            case $0x00 + i*2$: { readData = Usprite_read_active_$i$; }
-                            case $0x20 + i*2$: { readData = Usprite_read_double_$i$; }
-                            case $0x40 + i*2$: { readData = Usprite_read_colour_$i$; }
-                            case $0x60 + i*2$: { readData = {{5{Usprite_read_x_$i$[10,1]}}, Usprite_read_x_$i$}; }
-                            case $0x80 + i*2$: { readData = {{6{Usprite_read_y_$i$[9,1]}}, Usprite_read_y_$i$}; }
-                            case $0xa0 + i*2$: { readData = Usprite_read_tile_$i$; }
-                            case $0xc0 + i*2$: { readData = Ucollision_$i$; }
-                            case $0xe0 + i*2$: { readData = Ulayer_collision_$i$; }
+                            case $0x00 + i$: { readData = Usprite_read_active_$i$; }
+                            case $0x10 + i$: { readData = Usprite_read_double_$i$; }
+                            case $0x20 + i$: { readData = Usprite_read_colour_$i$; }
+                            case $0x30 + i$: { readData = {{5{Usprite_read_x_$i$[10,1]}}, Usprite_read_x_$i$}; }
+                            case $0x40 + i$: { readData = {{6{Usprite_read_y_$i$[9,1]}}, Usprite_read_y_$i$}; }
+                            case $0x50 + i$: { readData = Usprite_read_tile_$i$; }
+                            case $0x60 + i$: { readData = Ucollision_$i$; }
+                            case $0x70 + i$: { readData = Ulayer_collision_$i$; }
                         $$end
                         default: { readData = 0; }
                     }
                     }
                 case 4h5: {
-                    switch( memoryAddress[0,4] ) {
-                        case 4h4: { readData = curses_character; }
-                        case 4h6: { readData = curses_background; }
-                        case 4h8: { readData = curses_foreground; }
-                        case 4ha: { readData = tpu_active; }
+                    switch( memoryAddress[1,3] ) {
+                        case 3h2: { readData = curses_character; }
+                        case 3h3: { readData = curses_background; }
+                        case 3h4: { readData = curses_foreground; }
+                        case 3h5: { readData = tpu_active; }
                         default: { readData = 0; }
                     }
                 }
                 case 4h6: {
-                    switch( memoryAddress[0,8] ) {
-                        case 8h16: { readData = gpu_queue_full; }
-                        case 8h18: { readData = gpu_queue_complete; }
-                        case 8h2a: { readData = vector_block_active; }
-                        case 8hd4: { readData = bitmap_colour_read; }
+                    switch( memoryAddress[1,7] ) {
+                        case 7h0b: { readData = gpu_queue_full; }
+                        case 7h0c: { readData = gpu_queue_complete; }
+                        case 7h15: { readData = vector_block_active; }
+                        case 7h6a: { readData = bitmap_colour_read; }
                         default: { readData = 0; }
                     }
                 }
@@ -423,6 +411,8 @@ $$end
             }
         }
     }
+
+    // SET DEFAULT DISPLAY ORDER AND COLOUR MODE
     display_order = 0; colour = 1;
 }
 
@@ -432,12 +422,8 @@ $$end
 // AND THEN RESETS ANY CONTROLS
 //
 //         switch( { memoryWrite, LATCHmemoryWrite } ) {
-//             case 2b10: {
-//                  PERFORM THE WRITE
-//             }
-//             case 2b00: {
-//                  RESET
-//             }
+//             case 2b10: { PERFORM THE WRITE }
+//             case 2b00: { RESET }
 //             default: { HOLD THE OUTPUT }
 //         }
 //
@@ -539,10 +525,7 @@ algorithm background_memmap(
                     default: {}
                 }
             }
-            case 2b00: {
-                background_update = 0;
-                copper_program = 0;
-            }
+            case 2b00: { background_update = 0; copper_program = 0; }
             default: {}
         }
         LATCHmemoryWrite = memoryWrite;
@@ -719,80 +702,123 @@ algorithm bitmap_memmap(
     always {
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
-                switch( memoryAddress ) {
-                    case 8h00: { gpu_x = writeData; }
-                    case 8h02: { gpu_y = writeData; }
-                    case 8h04: { gpu_colour = writeData; }
-                    case 8h06: { gpu_colour_alt = writeData; }
-                    case 8h08: { gpu_dithermode = writeData; }
-                    case 8h0a: { gpu_param0 = writeData; }
-                    case 8h0c: { gpu_param1 = writeData; }
-                    case 8h0e: { gpu_param2 = writeData; }
-                    case 8h10: { gpu_param3 = writeData; }
-                    case 8h12: { gpu_param4 = writeData; }
-                    case 8h14: { gpu_param5 = writeData; }
-                    case 8h16: { gpu_write = writeData; }
-
-                    case 8h20: { vector_block_number = writeData; }
-                    case 8h22: { vector_block_colour = writeData; }
-                    case 8h24: { vector_block_xc = writeData; }
-                    case 8h26: { vector_block_yc = writeData; }
-                    case 8h28: { vector_block_scale = writeData; }
-                    case 8h2a: { vector_block_action = writeData; }
-                    case 8h2c: { draw_vector = 1; }
-
-                    case 8h30: { vertices_writer_block = writeData; }
-                    case 8h32: { vertices_writer_vertex = writeData; }
-                    case 8h34: { vertices_writer_xdelta = writeData; }
-                    case 8h36: { vertices_writer_ydelta = writeData; }
-                    case 8h38: { vertices_writer_active = writeData; }
-
-                    case 8h40: { blit1_writer_tile = writeData; }
-                    case 8h42: { blit1_writer_line = writeData; }
-                    case 8h44: { blit1_writer_bitmap = writeData; }
-
-                    case 8h50: { character_writer_character = writeData; }
-                    case 8h52: { character_writer_line = writeData; }
-                    case 8h54: { character_writer_bitmap = writeData; }
-
-                    case 8h60: { colourblit_writer_tile = writeData; }
-                    case 8h62: { colourblit_writer_line = writeData; }
-                    case 8h64: { colourblit_writer_pixel = writeData; }
-                    case 8h66: { colourblit_writer_colour = writeData; }
-
-                    case 8h70: { pb_colour7 = writeData; pb_newpixel = 1; }
-                    case 8h72: { pb_colour8r = writeData; }
-                    case 8h74: { pb_colour8g = writeData; }
-                    case 8h76: { pb_colour8b = writeData; pb_newpixel = 2; }
-                    case 8h78: { pb_newpixel = 3; }
-
-                    case 8hd0: { bitmap_x_read = writeData; }
-                    case 8hd2: { bitmap_y_read = writeData; }
-
-                    case 8he2: { gpu_crop_left = writeData[15,1] ? 0 : writeData; }
-                    case 8he4: { gpu_crop_right = __signed(writeData) > 319 ? 319 : writeData; }
-                    case 8he6: { gpu_crop_top = writeData[15,1] ? 0 : writeData; }
-                    case 8he8: { gpu_crop_bottom = __signed(writeData) > 239 ? 239 : writeData; }
-                    case 8hf0: { framebuffer = writeData; }
-                    case 8hf2: { writer_framebuffer = writeData; }
+                switch( memoryAddress[4,4] ) {
+                    case 4h0: {
+                        switch( memoryAddress[1,3] ) {
+                            case 3h0: { gpu_x = writeData; }
+                            case 3h1: { gpu_y = writeData; }
+                            case 3h2: { gpu_colour = writeData; }
+                            case 3h3: { gpu_colour_alt = writeData; }
+                            case 3h4: { gpu_dithermode = writeData; }
+                            case 3h5: { gpu_param0 = writeData; }
+                            case 3h6: { gpu_param1 = writeData; }
+                            case 3h7: { gpu_param2 = writeData; }
+                        }
+                    }
+                    case 4h1: {
+                        switch( memoryAddress[1,2] ) {
+                            case 2h0: { gpu_param3 = writeData; }
+                            case 2h1: { gpu_param4 = writeData; }
+                            case 2h2: { gpu_param5 = writeData; }
+                            case 2h3: { gpu_write = writeData; }
+                        }
+                    }
+                    case 4h2: {
+                        switch( memoryAddress[1,3] ) {
+                            case 3h0: { vector_block_number = writeData; }
+                            case 3h1: { vector_block_colour = writeData; }
+                            case 3h2: { vector_block_xc = writeData; }
+                            case 3h3: { vector_block_yc = writeData; }
+                            case 3h4: { vector_block_scale = writeData; }
+                            case 3h5: { vector_block_action = writeData; }
+                            case 3h6: { draw_vector = 1; }
+                            default: {}
+                        }
+                    }
+                    case 4h3: {
+                        switch( memoryAddress[1,3] ) {
+                            case 3h0: { vertices_writer_block = writeData; }
+                            case 3h1: { vertices_writer_vertex = writeData; }
+                            case 3h2: { vertices_writer_xdelta = writeData; }
+                            case 3h3: { vertices_writer_ydelta = writeData; }
+                            case 3h4: { vertices_writer_active = writeData; }
+                            default: {}
+                        }
+                    }
+                    case 4h4: {
+                        switch( memoryAddress[1,3] ) {
+                            case 3h0: { blit1_writer_tile = writeData; }
+                            case 3h1: { blit1_writer_line = writeData; }
+                            case 3h2: { blit1_writer_bitmap = writeData; }
+                            default: {}
+                        }
+                    }
+                    case 4h5: {
+                        switch( memoryAddress[1,2] ) {
+                            case 2h0: { character_writer_character = writeData; }
+                            case 2h1: { character_writer_line = writeData; }
+                            case 2h2: { character_writer_bitmap = writeData; }
+                            default: {}
+                        }
+                    }
+                    case 4h6: {
+                        switch( memoryAddress[1,2] ) {
+                            case 2h0: { colourblit_writer_tile = writeData; }
+                            case 2h1: { colourblit_writer_line = writeData; }
+                            case 2h2: { colourblit_writer_pixel = writeData; }
+                            case 2h3: { colourblit_writer_colour = writeData; }
+                        }
+                    }
+                    case 4h7: {
+                        switch( memoryAddress[1,3] ) {
+                            case 3h0: { pb_colour7 = writeData; pb_newpixel = 1; }
+                            case 3h1: { pb_colour8r = writeData; }
+                            case 3h2: { pb_colour8g = writeData; }
+                            case 3h3: { pb_colour8b = writeData; pb_newpixel = 2; }
+                            case 3h4: { pb_newpixel = 3; }
+                            default: {}
+                        }
+                    }
+                    case 4hd: {
+                        if( memoryAddress[1,1] ) {
+                             bitmap_y_read = writeData;
+                        } else {
+                             bitmap_x_read = writeData;
+                        }
+                    }
+                    case 4he: {
+                        switch( memoryAddress[1,3] ) {
+                            case 3h1: { gpu_crop_left = writeData[15,1] ? 0 : writeData; }
+                            case 3h2: { gpu_crop_right = __signed(writeData) > 319 ? 319 : writeData; }
+                            case 3h3: { gpu_crop_top = writeData[15,1] ? 0 : writeData; }
+                            case 3h4: { gpu_crop_bottom = __signed(writeData) > 239 ? 239 : writeData; }
+                            default: {}
+                        }
+                    }
+                    case 4hf: {
+                        if( memoryAddress[1,1] ) {
+                            framebuffer = writeData;
+                        } else {
+                            writer_framebuffer = writeData;
+                        }
+                    }
                     default: {}
+
                 }
             }
-            case 2b00: {
-                // 25MHz GPU OPERATION
-                gpu_write = 0;  pb_newpixel = 0; draw_vector = 0;
-
-            }
+            case 2b00: { gpu_write = 0;  pb_newpixel = 0; draw_vector = 0; }
             default: {}
         }
         LATCHmemoryWrite = memoryWrite;
     }
 
-    // ON RESET STOP THE PIXEL BLOCK
-    if( ~reset ) { pb_newpixel = 3; }
+    if( ~reset ) {
+        // ON RESET STOP THE PIXEL BLOCK
+        pb_newpixel = 3;
 
-    // RESET THE CROPPING RECTANGLE
-    gpu_crop_left = 0; gpu_crop_right = 319; gpu_crop_top = 0; gpu_crop_bottom = 239;
+        // RESET THE CROPPING RECTANGLE
+        gpu_crop_left = 0; gpu_crop_right = 319; gpu_crop_top = 0; gpu_crop_bottom = 239;
+    }
 }
 
 algorithm charactermap_memmap(
@@ -875,14 +901,14 @@ algorithm charactermap_memmap(
     always {
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
-                switch( memoryAddress ) {
-                    case 4h0: { tpu_x = writeData; }
-                    case 4h2: { tpu_y = writeData; }
-                    case 4h4: { tpu_character = writeData; }
-                    case 4h6: { tpu_background = writeData; }
-                    case 4h8: { tpu_foreground = writeData; }
-                    case 4ha: { tpu_write = writeData; }
-                    case 4hc: { tpu_showcursor = writeData; }
+                switch( memoryAddress[1,3] ) {
+                    case 3h0: { tpu_x = writeData; }
+                    case 3h1: { tpu_y = writeData; }
+                    case 3h2: { tpu_character = writeData; }
+                    case 3h3: { tpu_background = writeData; }
+                    case 3h4: { tpu_foreground = writeData; }
+                    case 3h5: { tpu_write = writeData; }
+                    case 3h6: { tpu_showcursor = writeData; }
                     default: {}
                 }
             }
@@ -999,13 +1025,14 @@ algorithm sprite_memmap(
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
                 if( bitmapwriter ) {
-                    switch( memoryAddress[0,3] ) {
-                        case 3h0: { sprite_writer_sprite = writeData; }
-                        case 3h2: { sprite_writer_line = writeData; }
-                        case 3h4: { sprite_writer_bitmap = writeData; }
+                    switch( memoryAddress[1,2] ) {
+                        case 2h0: { sprite_writer_sprite = writeData; }
+                        case 2h1: { sprite_writer_line = writeData; }
+                        case 2h2: { sprite_writer_bitmap = writeData; }
                         default: {}
                     }
                 } else {
+                    // SET SPRITE ATTRIBUTE
                     sprite_set_number = memoryAddress[1,4];
                     sprite_write_value = writeData;
                     sprite_layer_write = memoryAddress[5,3] + 1;
@@ -1076,16 +1103,14 @@ algorithm terminal_memmap(
     always {
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
-                switch( memoryAddress ) {
-                    case 3h0: { terminal_character = writeData; terminal_write = 1; }
-                    case 3h2: { showterminal = writeData; }
-                    case 3h4: { terminal_write = 2; }
+                switch( memoryAddress[1,2] ) {
+                    case 2h0: { terminal_character = writeData; terminal_write = 1; }
+                    case 2h1: { showterminal = writeData; }
+                    case 2h2: { terminal_write = 2; }
                     default: {}
                 }
             }
-            case 2b00: {
-                terminal_write = 0;
-            }
+            case 2b00: { terminal_write = 0; }
             default: {}
         }
         LATCHmemoryWrite = memoryWrite;
@@ -1178,25 +1203,22 @@ algorithm tilemap_memmap(
     always {
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
-                switch( memoryAddress ) {
-                    case 6h00: { tm_x = writeData; }
-                    case 6h02: { tm_y = writeData; }
-                    case 6h04: { tm_character = writeData; }
-                    case 6h06: { tm_background = writeData; }
-                    case 6h08: { tm_foreground = writeData; }
-                    case 6h0a: { tm_reflection = writeData; }
-                    case 6h0c: { tm_write = 1; }
-                    case 6h10: { tile_writer_tile = writeData; }
-                    case 6h12: { tile_writer_line = writeData; }
-                    case 6h14: { tile_writer_bitmap = writeData; }
-                    case 6h20: { tm_scrollwrap = writeData; }
+                switch( memoryAddress[1,5] ) {
+                    case 5h00: { tm_x = writeData; }
+                    case 5h01: { tm_y = writeData; }
+                    case 5h02: { tm_character = writeData; }
+                    case 5h03: { tm_background = writeData; }
+                    case 5h04: { tm_foreground = writeData; }
+                    case 5h05: { tm_reflection = writeData; }
+                    case 5h06: { tm_write = 1; }
+                    case 5h08: { tile_writer_tile = writeData; }
+                    case 5h09: { tile_writer_line = writeData; }
+                    case 5h0a: { tile_writer_bitmap = writeData; }
+                    case 5h10: { tm_scrollwrap = writeData; }
                     default: {}
                 }
             }
-            case 2b00: {
-                tm_write = 0;
-                tm_scrollwrap = 0;
-            }
+            case 2b00: { tm_write = 0; tm_scrollwrap = 0; }
             default: {}
         }
         LATCHmemoryWrite = memoryWrite;

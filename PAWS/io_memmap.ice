@@ -105,69 +105,76 @@ $$end
 
         // READ IO Memory
         if( memoryRead ) {
-            switch( memoryAddress ) {
-                // UART, LEDS, BUTTONS and CLOCK
+            switch( memoryAddress[4,4] ) {
                 $$if not SIMULATION then
-                case 12h100: { readData = { 8b0, UARTinchar }; UARTinread = 2b11; }
-                case 12h102: { readData = { 14b0, UARToutfull, UARTinavailable }; }
-                // PS2
-                case 12h110: { readData = PS2inavailable; }
-                case 12h112: {
-                    switch( PS2inavailable ) {
-                        case 1: { readData = PS2inchar; PS2inread = 2b11; }
-                        case 0: { readData = 0; }
+                case 4h0: {
+                    if( memoryAddress[1,1] ) {
+                        readData = { 14b0, UARToutfull, UARTinavailable };
+                    } else {
+                        readData = { 8b0, UARTinchar }; UARTinread = 2b11;
                     }
                 }
-                case 12h120: { readData = PS2outputascii ? { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] } : { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] } | PS2joystick; } // ULX3S BUTTONS AND/OR KEYBOARD AS A JOYSTICK
-
-                // SDCARD
-                case 12h140: { readData = SDCARDready; }
-                case 12h150: { readData = bufferdata; }
-$$end
-                case 12h130: { readData = leds; }
-
-                // SMT STATUS
-                case 12hffe: { readData = SMTRUNNING; }
-
-                // RETURN NULL VALUE
-                default: { readData = 0; }
+                case 4h1: {
+                    if( memoryAddress[1,1] ) {
+                        if( PS2inavailable ) {
+                            readData = PS2inchar; PS2inread = 2b11;
+                        } else {
+                            readData = 0;
+                        }
+                    } else {
+                        readData = PS2inavailable;
+                    }
+                }
+                case 4h2: { readData = PS2outputascii ? { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] } : { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] } | PS2joystick; }
+                case 4h4: { readData = SDCARDready; }
+                case 4h5: { readData = bufferdata; }
+                $$end
+                case 4h3: { readData = leds; }
+                case 4hf: { readData = SMTRUNNING; }
+                default: { readData = 0;}
             }
         }
 
         // WRITE IO Memory
         if( memoryWrite ) {
-            switch( memoryAddress ) {
-                // UART, LEDS
-                case 12h130: { leds = writeData; }
+            switch( memoryAddress[4,4] ) {
                 $$if not SIMULATION then
-                case 12h100: { UARToutchar = writeData[0,8]; UARToutwrite = 2b11; }
-                case 12h110: { PS2outputascii = writeData; }
-
-                // SDCARD
-                case 12h140: { SDCARDreadsector = 1; }
-                case 12h142: { sectoraddressH = writeData; }
-                case 12h144: { sectoraddressL = writeData; }
-                case 12h150: { bufferaddress = writeData; }
+                case 4h0: { UARToutchar = writeData[0,8]; UARToutwrite = 2b11; }
+                case 4h1: { PS2outputascii = writeData; }
+                case 4h4: {
+                    switch( memoryAddress[1,2] ) {
+                        case 2h0: { SDCARDreadsector = 1; }
+                        case 2h1: { sectoraddressH = writeData; }
+                        case 2h2: { sectoraddressL = writeData; }
+                        default: {}
+                    }
+                }
+                case 4h5: { bufferaddress = writeData; }
                 $$end
-                // SMT STATUS
-                case 12hff0: { SMTSTARTPC[16,16] = writeData; }
-                case 12hff2: { SMTSTARTPC[0,16] = writeData; }
-                case 12hffe: { SMTRUNNING = writeData; }
+                case 4h3: { leds = writeData; }
+                case 4hf: {
+                    switch( memoryAddress[1,2] ) {
+                        case 2h0: { SMTSTARTPC[16,16] = writeData; }
+                        case 2h1: { SMTSTARTPC[0,16] = writeData; }
+                        case 2h3: { SMTRUNNING = writeData; }
+                        default: {}
+                    }
+                }
                 default: {}
             }
         }
     }
 
-    // DISBLE SMT ON STARTUP
+    // DISBLE SMT ON STARTUP, KEYBOARD DEFAULTS TO JOYSTICK MODE
     if( ~reset ) {
         SMTRUNNING = 0;
         SMTSTARTPC = 0;
+
+        $$if not SIMULATION then
+        PS2outputascii = 0;
+        $$end
     }
 
-$$if not SIMULATION then
-    // KEYBOARD DEFAULTS TO JOYSTICK MODE
-    PS2outputascii = 0;
-$$end
 }
 
 algorithm audiotimers_memmap(
@@ -242,13 +249,8 @@ algorithm audiotimers_memmap(
         // READ IO Memory
         if( memoryRead ) {
             if( memoryAddress[8,1] ) {
-                switch( memoryAddress[0,5] ) {
-                    // AUDIO
-                    case 5h10: { readData = audio_active_l; }
-                    case 5h12: { readData = audio_active_r; }
-                    // RETURN NULL VALUE
-                    default: { readData = 0; }
-                }
+                // AUDIO
+                readData = memoryAddress[1,1] ? audio_active_r : audio_active_l;
             } else {
                 switch( memoryAddress[0,5] ) {
                     // TIMERS and RNG
@@ -270,18 +272,16 @@ algorithm audiotimers_memmap(
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
                 if( memoryAddress[8,1] ) {
-                    switch( memoryAddress[0,3] ) {
+                    switch( memoryAddress[1,2] ) {
                         // AUDIO
-                        case 3h0: { waveform = writeData; }
-                        case 3h2: { frequency = writeData; }
-                        case 3h4: { duration = writeData; }
-                        case 3h6: { apu_write = writeData; }
-                        default: {}
+                        case 2h0: { waveform = writeData; }
+                        case 2h1: { frequency = writeData; }
+                        case 2h2: { duration = writeData; }
+                        case 2h3: { apu_write = writeData; }
                     }
                 } else {
                     // TIMERS
-                    counter = writeData;
-                    resetcounter = memoryAddress[1,3] + 1;
+                    counter = writeData; resetcounter = memoryAddress[1,3] + 1;
                 }
             }
             case 2b00: {
@@ -341,7 +341,7 @@ algorithm timers_rng(
 
     always {
         switch( resetcounter ) {
-        default: {}
+            default: {}
             case 1: { T1hz0resetCounter = 1; }
             case 2: { T1hz1resetCounter = 1; }
             case 3: { T0khz0resetCounter = counter; }
