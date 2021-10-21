@@ -62,7 +62,7 @@ $$if not SIMULATION then
     uint9   PS2inchar = uninitialized;
     uint1   PS2inavailable = uninitialized;
     uint2   PS2inread = 0;                                  // 2 BIT LATCH ( bit 0 is the signal )
-    uint1   PS2outputascii = uninitialized;                 // DEFAULT TO JOYSTICK MODE ( AT BASE OF ALGORITHM )
+    uint1   PS2outputascii = uninitialized;                 // DEFAULT TO JOYSTICK MODE ( IN RESET )
     uint16  PS2joystick = uninitialized;
     ps2buffer PS2 <@clock_25mhz> (
         us2_bd_dp <: us2_bd_dp,
@@ -175,20 +175,16 @@ $$end
 
 }
 
-algorithm audiotimers_memmap(
+algorithm timers_memmap(
     // CLOCKS
     input   uint1   clock_25mhz,
 
     // Memory access
-    input   uint9  memoryAddress,
+    input   uint9   memoryAddress,
     input   uint1   memoryWrite,
     input   uint1   memoryRead,
     input   uint16  writeData,
     output  uint16  readData,
-
-    // AUDIO
-    output  uint4   audio_l,
-    output  uint4   audio_r,
 
     // RNG
     output  uint16  static16bit
@@ -221,6 +217,61 @@ algorithm audiotimers_memmap(
         resetcounter <: resetcounter
     );
 
+    // LATCH MEMORYWRITE
+    uint1   LATCHmemoryWrite = uninitialized;
+
+    always {
+        // READ IO Memory
+        if( memoryRead ) {
+            switch( memoryAddress[1,4] ) {
+                // TIMERS and RNG
+                case 4h0: { readData = g_noise_out; }
+                case 4h1: { readData = u_noise_out; }
+                case 4h8: { readData = timer1hz0; }
+                case 4h9: { readData = timer1hz1; }
+                case 4ha: { readData = timer1khz0; }
+                case 4hb: { readData = timer1khz1; }
+                case 4hc: { readData = sleepTimer0; }
+                case 4hd: { readData = sleepTimer1; }
+                case 4he: { readData = systemclock; }
+                // RETURN NULL VALUE
+                default: { readData = 0; }
+            }
+        }
+        // WRITE IO Memory
+        switch( { memoryWrite, LATCHmemoryWrite } ) {
+            case 2b10: {
+                // TIMERS
+                counter = writeData; resetcounter = memoryAddress[1,3] + 1;
+            }
+            case 2b00: {
+                // RESET TIMER and AUDIO Co-Processor Controls
+                resetcounter = 0;
+            }
+            default: {}
+        }
+        LATCHmemoryWrite = memoryWrite;
+    }
+}
+
+algorithm audio_memmap(
+    // CLOCKS
+    input   uint1   clock_25mhz,
+
+    // Memory access
+    input   uint9   memoryAddress,
+    input   uint1   memoryWrite,
+    input   uint1   memoryRead,
+    input   uint16  writeData,
+    output  uint16  readData,
+
+    // AUDIO
+    output  uint4   audio_l,
+    output  uint4   audio_r,
+
+    // RNG
+    input  uint4   static4bit
+) <autorun> {
     // Left and Right audio channels
     uint1   audio_active_l = uninitialized;
     uint1   audio_active_r = uninitialized;
@@ -246,45 +297,21 @@ algorithm audiotimers_memmap(
     always {
         // READ IO Memory
         if( memoryRead ) {
-            if( memoryAddress[8,1] ) {
-                // AUDIO
-                readData = memoryAddress[1,1] ? audio_active_r : audio_active_l;
-            } else {
-                switch( memoryAddress[0,5] ) {
-                    // TIMERS and RNG
-                    case 5h00: { readData = g_noise_out; }
-                    case 5h02: { readData = u_noise_out; }
-                    case 5h10: { readData = timer1hz0; }
-                    case 5h12: { readData = timer1hz1; }
-                    case 5h14: { readData = timer1khz0; }
-                    case 5h16: { readData = timer1khz1; }
-                    case 5h18: { readData = sleepTimer0; }
-                    case 5h1a: { readData = sleepTimer1; }
-                    case 5h1c: { readData = systemclock; }
-                    // RETURN NULL VALUE
-                    default: { readData = 0; }
-                }
-            }
+            readData = memoryAddress[1,1] ? audio_active_r : audio_active_l;
         }
         // WRITE IO Memory
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
-                if( memoryAddress[8,1] ) {
-                    switch( memoryAddress[1,2] ) {
-                        // AUDIO
-                        case 2h0: { waveform = writeData; }
-                        case 2h1: { frequency = writeData; }
-                        case 2h2: { duration = writeData; }
-                        case 2h3: { apu_write = writeData; }
-                    }
-                } else {
-                    // TIMERS
-                    counter = writeData; resetcounter = memoryAddress[1,3] + 1;
+                switch( memoryAddress[1,2] ) {
+                    // AUDIO
+                    case 2h0: { waveform = writeData; }
+                    case 2h1: { frequency = writeData; }
+                    case 2h2: { duration = writeData; }
+                    case 2h3: { apu_write = writeData; }
                 }
             }
             case 2b00: {
                 // RESET TIMER and AUDIO Co-Processor Controls
-                resetcounter = 0;
                 apu_write = 0;
             }
             default: {}

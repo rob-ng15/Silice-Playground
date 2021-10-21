@@ -155,22 +155,22 @@ unsigned char volatile * TERMINAL_STATUS = ( unsigned char volatile * ) 0xd700;
 unsigned char volatile * TERMINAL_SHOW = ( unsigned char volatile * ) 0xd702;
 unsigned char volatile * TERMINAL_RESET = ( unsigned char volatile * ) 0xd704;
 
-unsigned char volatile * AUDIO_WAVEFORM = ( unsigned char volatile * ) 0xe100;
-unsigned short volatile * AUDIO_FREQUENCY = ( unsigned short volatile * ) 0xe102;
-unsigned short volatile * AUDIO_DURATION = ( unsigned short volatile * ) 0xe104;
-unsigned char volatile * AUDIO_START = ( unsigned char volatile * ) 0xe106;
-unsigned char volatile * AUDIO_L_ACTIVE = ( unsigned char volatile * ) 0xe110;
-unsigned char volatile * AUDIO_R_ACTIVE = ( unsigned char volatile * ) 0xe112;
+unsigned char volatile * AUDIO_WAVEFORM = ( unsigned char volatile * ) 0xe000;
+unsigned short volatile * AUDIO_FREQUENCY = ( unsigned short volatile * ) 0xe002;
+unsigned short volatile * AUDIO_DURATION = ( unsigned short volatile * ) 0xe004;
+unsigned char volatile * AUDIO_START = ( unsigned char volatile * ) 0xe006;
+unsigned char volatile * AUDIO_L_ACTIVE = ( unsigned char volatile * ) 0xe010;
+unsigned char volatile * AUDIO_R_ACTIVE = ( unsigned char volatile * ) 0xe012;
 
-unsigned short volatile * RNG = ( unsigned short volatile * ) 0xe000;
-unsigned short volatile * ALT_RNG = ( unsigned short volatile * ) 0xe002;
-unsigned short volatile * TIMER1HZ0 = ( unsigned short volatile * ) 0xe010;
-unsigned short volatile * TIMER1HZ1 = ( unsigned short volatile * ) 0xe012;
-unsigned short volatile * TIMER1KHZ0 = ( unsigned short volatile * ) 0xe014;
-unsigned short volatile * TIMER1KHZ1 = ( unsigned short volatile * ) 0xe016;
-unsigned short volatile * SLEEPTIMER0 = ( unsigned short volatile * ) 0xe018;
-unsigned short volatile * SLEEPTIMER1 = ( unsigned short volatile * ) 0xe01a;
-unsigned short volatile * SYSTEMCLOCK = (unsigned short volatile *) 0xe01c;
+unsigned short volatile * RNG = ( unsigned short volatile * ) 0xc000;
+unsigned short volatile * ALT_RNG = ( unsigned short volatile * ) 0xc002;
+unsigned short volatile * TIMER1HZ0 = ( unsigned short volatile * ) 0xc010;
+unsigned short volatile * TIMER1HZ1 = ( unsigned short volatile * ) 0xc012;
+unsigned short volatile * TIMER1KHZ0 = ( unsigned short volatile * ) 0xc014;
+unsigned short volatile * TIMER1KHZ1 = ( unsigned short volatile * ) 0xc016;
+unsigned short volatile * SLEEPTIMER0 = ( unsigned short volatile * ) 0xc018;
+unsigned short volatile * SLEEPTIMER1 = ( unsigned short volatile * ) 0xc01a;
+unsigned short volatile * SYSTEMCLOCK = (unsigned short volatile *) 0xc01c;
 
 // HANDLE SMT - RUNNING STATUS AND POINTER TO CODE TO RUN
 unsigned char volatile * SMTSTATUS = ( unsigned char volatile *) 0xfffe;

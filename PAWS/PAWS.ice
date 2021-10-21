@@ -201,18 +201,29 @@ $$if SIMULATION then
     uint4 audio_l(0);
     uint4 audio_r(0);
 $$end
-    uint16  ATreadData = uninitialized;
+    uint16  TreadData = uninitialized;
     uint16  static16bit = uninitialized;
-    audiotimers_memmap AUDIOTIMERS_Map <@clock_system,!reset> (
+    timers_memmap TIMERS_Map <@clock_system,!reset> (
         clock_25mhz <: $clock_25mhz$,
         memoryAddress <: address,
-        memoryWrite <: ATmemoryWrite,
+        memoryWrite <: TmemoryWrite,
         writeData <: writedata,
-        memoryRead <: ATmemoryRead,
-        readData :> ATreadData,
+        memoryRead <: TmemoryRead,
+        readData :> TreadData,
+        static16bit :> static16bit
+    );
+
+    uint16  AreadData = uninitialized;
+    audio_memmap AUDIO_Map <@clock_system,!reset> (
+        clock_25mhz <: $clock_25mhz$,
+        memoryAddress <: address,
+        memoryWrite <: AmemoryWrite,
+        writeData <: writedata,
+        memoryRead <: AmemoryRead,
+        readData :> AreadData,
         audio_l :> audio_l,
         audio_r :> audio_r,
-        static16bit :> static16bit
+        static4bit <: static16bit
     );
 
     uint16  VreadData = uninitialized;
@@ -259,9 +270,10 @@ $$end
     uint1   SDRAM <: address[26,1];
     uint1   BRAM <: ~SDRAM & ~address[15,1];
     uint1   IOmem <: ~SDRAM & ~BRAM;
-    uint1   VIDEO <: IOmem & ( address[12,2]==2h1 );
-    uint1   AUDIOTIMERS <: IOmem & ( address[12,2]==2h2 );
-    uint1   IO <: IOmem & ( address[12,2]==2h3 );
+    uint1   TIMERS <: IOmem & ( address[12,2] == 2h0 );
+    uint1   VIDEO <: IOmem & ( address[12,2] == 2h1 );
+    uint1   AUDIO <: IOmem & ( address[12,2] == 2h2 );
+    uint1   IO <: IOmem & ( address[12,2] == 2h3 );
 
     // SDRAM -> CPU BUSY STATE
     uint1   memorybusy <:: sdrambusy | ( ( CPUreadmemory | CPUwritememory ) & ( BRAM | SDRAM ) );
@@ -269,20 +281,23 @@ $$end
     // WRITE TO SDRAM / BRAM / IO REGISTERS
     uint1   sdramwriteflag <:: SDRAM & CPUwritememory;
     uint1   ramwriteflag <:: BRAM & CPUwritememory;
+    uint1   TmemoryWrite <:: TIMERS & CPUwritememory;
     uint1   VmemoryWrite <:: VIDEO & CPUwritememory;
-    uint1   ATmemoryWrite <:: AUDIOTIMERS & CPUwritememory;
+    uint1   AmemoryWrite <:: AUDIO & CPUwritememory;
     uint1   IOmemoryWrite <:: IO & CPUwritememory;
 
     // READ FROM SDRAM / BRAM / IO REGISTERS
     uint1   sdramreadflag <: SDRAM & CPUreadmemory;
     uint1   ramreadflag <: BRAM & CPUreadmemory;
+    uint1   TmemoryRead <: TIMERS & CPUreadmemory;
     uint1   VmemoryRead <: VIDEO & CPUreadmemory;
-    uint1   ATmemoryRead <: AUDIOTIMERS & CPUreadmemory;
+    uint1   AmemoryRead <: AUDIO & CPUreadmemory;
     uint1   IOmemoryRead <: IO & CPUreadmemory;
     uint16  readdata <: SDRAM ? sdramreaddata :
                 BRAM ? ramreaddata :
+                TIMERS ? TreadData :
                 VIDEO ? VreadData :
-                AUDIOTIMERS ? ATreadData :
+                AUDIO ? AreadData :
                 IO? IOreadData : 0;
 }
 

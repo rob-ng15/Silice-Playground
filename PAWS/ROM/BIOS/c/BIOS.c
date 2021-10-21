@@ -278,7 +278,10 @@ void draw_sdcard( void  ) {
 }
 
 void reset_display( void ) {
+    // WAIT FOR THE GPU TO FINISH
     gpu_pixelblock_stop();
+    while( !*GPU_FINISHED );
+
     *GPU_DITHERMODE = 0;
     *CROP_LEFT = 0; *CROP_RIGHT = 319; *CROP_TOP = 0; *CROP_BOTTOM = 239;
     *FRAMEBUFFER_DRAW = 1; gpu_cs(); while( !*GPU_FINISHED );

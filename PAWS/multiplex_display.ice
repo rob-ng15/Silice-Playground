@@ -94,10 +94,12 @@ algorithm selectlayer(
     input   uint6   background,
     output! uint6   pix
 ) <autorun> {
+    // CONVERT TERMINAL COLOUR TO BLUE OR WHITE
     uint6   terminalcolour <: { {4{terminal}}, 2b11 };
+
     always {
         switch( display_order ) {
-            case 0: { // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> BITMAP -> UPPER_SPRITES -> CHARACTER_MAP
+            case 0: { // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> BITMAP -> UPPER_SPRITES -> CHARACTER_MAP -> TERMINAL
                 pix = ( terminal_display ) ? terminalcolour :
                             ( character_map_display ) ? character_map :
                             ( upper_sprites_display ) ? upper_sprites :
@@ -107,7 +109,7 @@ algorithm selectlayer(
                             ( lower_tilemap_display ) ? lower_tilemap :
                             background;
             }
-            case 1: { // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> BITMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP
+            case 1: { // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> BITMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP -> TERMINAL
                 pix = ( terminal_display ) ? terminalcolour :
                         ( character_map_display ) ? character_map :
                         ( upper_sprites_display ) ? upper_sprites :
@@ -117,7 +119,7 @@ algorithm selectlayer(
                         ( lower_tilemap_display ) ? lower_tilemap :
                         background;
             }
-            case 2: { // BACKGROUND -> BITMAP -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP
+            case 2: { // BACKGROUND -> BITMAP -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP -> TERMINAL
                 pix = ( terminal_display ) ? terminalcolour :
                         ( character_map_display ) ? character_map :
                         ( upper_sprites_display ) ? upper_sprites :
@@ -127,7 +129,7 @@ algorithm selectlayer(
                         ( bitmap_display ) ? bitmap :
                         background;
             }
-            case 3: { // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> BITMAP -> CHARACTER_MAP
+            case 3: { // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> BITMAP -> CHARACTER_MAP -> TERMINAL
                 pix = ( terminal_display ) ? terminalcolour :
                         ( character_map_display ) ? character_map :
                         ( bitmap_display ) ? bitmap :
