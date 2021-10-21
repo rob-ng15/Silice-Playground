@@ -746,10 +746,10 @@ algorithm bitmap_memmap(
                         }
                     }
                     case 4h4: {
-                        switch( memoryAddress[1,3] ) {
-                            case 3h0: { blit1_writer_tile = writeData; }
-                            case 3h1: { blit1_writer_line = writeData; }
-                            case 3h2: { blit1_writer_bitmap = writeData; }
+                        switch( memoryAddress[1,2] ) {
+                            case 2h0: { blit1_writer_tile = writeData; }
+                            case 2h1: { blit1_writer_line = writeData; }
+                            case 2h2: { blit1_writer_bitmap = writeData; }
                             default: {}
                         }
                     }
@@ -787,19 +787,18 @@ algorithm bitmap_memmap(
                         }
                     }
                     case 4he: {
-                        switch( memoryAddress[1,3] ) {
-                            case 3h1: { gpu_crop_left = writeData[15,1] ? 0 : writeData; }
-                            case 3h2: { gpu_crop_right = __signed(writeData) > 319 ? 319 : writeData; }
-                            case 3h3: { gpu_crop_top = writeData[15,1] ? 0 : writeData; }
-                            case 3h4: { gpu_crop_bottom = __signed(writeData) > 239 ? 239 : writeData; }
-                            default: {}
+                        switch( memoryAddress[1,2] ) {
+                            case 2h1: { gpu_crop_left = writeData[15,1] ? 0 : writeData; }
+                            case 2h2: { gpu_crop_right = __signed(writeData) > 319 ? 319 : writeData; }
+                            case 2h3: { gpu_crop_top = writeData[15,1] ? 0 : writeData; }
+                            case 2h0: { gpu_crop_bottom = __signed(writeData) > 239 ? 239 : writeData; }
                         }
                     }
                     case 4hf: {
                         if( memoryAddress[1,1] ) {
-                            framebuffer = writeData;
-                        } else {
                             writer_framebuffer = writeData;
+                        } else {
+                            framebuffer = writeData;
                         }
                     }
                     default: {}
