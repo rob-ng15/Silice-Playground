@@ -27,7 +27,6 @@ algorithm PAWSCPU(
     uint27  pc = uninitialized;
     uint27  pcSMT = uninitialized;
     uint27  PC <:: SMT ? pcSMT : pc;
-    uint27  PCplus2 = uninitialized; addrplus2 PC2 <@clock_CPUdecoder> ( address <: PC, addressplus2 :> PCplus2 );
     uint27  nextPC = uninitialized;
     uint27  newPC = uninitialized;
     pcadjust PCADJUST <@clock_CPUdecoder> (
@@ -92,8 +91,6 @@ algorithm PAWSCPU(
         loadAddress :> loadAddress,
         storeAddress :> storeAddress
     );
-    uint27  loadAddressplus2 = uninitialized; addrplus2 LA2 <@clock_CPUdecoder> ( address <: loadAddress, addressplus2 :> loadAddressplus2 );
-    uint27  storeAddressplus2 = uninitialized; addrplus2 SA2 <@clock_CPUdecoder> ( address <: storeAddress, addressplus2 :> storeAddressplus2 );
 
     // RISC-V MEMORY ACCESS FLAGS - SET SIZE 32 BIT FOR FLOAT AND ATOMIC
     uint32  memory8bit = uninitialized;
@@ -218,10 +215,15 @@ algorithm PAWSCPU(
         result :> EXECUTEFASTresult
     );
 
-    readmemory := 0; writememory := 0;
+    // GENERATE PLUS 2 ADDRESSES FOR 32 BIT MEMORY OPERATIONS
+    //uint27  PCplus2 = uninitialized; addrplus2 PC2 <@clock_CPUdecoder> ( address <: PC, addressplus2 :> PCplus2 );
+    //uint27  loadAddressplus2 = uninitialized; addrplus2 LA2 <@clock_CPUdecoder> ( address <: loadAddress, addressplus2 :> loadAddressplus2 );
+    //uint27  storeAddressplus2 = uninitialized; addrplus2 SA2 <@clock_CPUdecoder> ( address <: storeAddress, addressplus2 :> storeAddressplus2 );
+    uint27  PCplus2 <:: PC + 2;
+    uint27  loadAddressplus2 <:: loadAddress + 2;
+    uint27  storeAddressplus2 <:: storeAddress + 2;
 
-    // CPU EXECUTE START FLAGS
-    EXECUTESLOWstart := 0;
+    readmemory := 0; writememory := 0; EXECUTESLOWstart := 0;
 
     // RESET ACTIONS - FSM -> 1, SMT AND PC -> 0 AND DELAY BEFORE CONTINUING
     if( ~reset ) {
@@ -496,13 +498,7 @@ algorithm cpuexecuteFASTPATH(
             case 5b00001: { result = memoryinput; }                 // FLOAT LOAD
             case 5b01001: { memoryoutput = sourceReg2F; }           // FLOAT STORE
             case 5b00011: {}                                        // FENCE[I]
-            default: {
-                if( isALUMM ) {                                     // INTEGER ALU AND MULTIPLICATION
-                    result = ALUMMresult;
-                } else {
-                    result = ALUresult;
-                }
-            }
+            default: { result = isALUMM ? ALUMMresult : ALUresult; }// INTEGER ALU AND MULTIPLICATION
         }
     }
 }

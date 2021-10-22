@@ -58,10 +58,14 @@ algorithm alu(
     uint1   unsignedcompare <:: __unsigned( sourceReg1 ) < __unsigned( operand2 );
     uint1   signedcompare <:: __signed( sourceReg1 ) < __signed(operand2);
 
-    uint32  AS = uninitialised; iaddsub ALUaddsub( sourceReg1 <: sourceReg1, operand2 <: operand2, addsub <: addsub, result :> AS );
-    uint32  SLL = uninitialised; sll ALUsll( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, result :> SLL );
-    uint32  SRL = uninitialised; srl ALUsrl( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, result :> SRL );
-    uint32  SRA = uninitialised; sra ALUsra( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, result :> SRA );
+    //uint32  AS = uninitialised; iaddsub ALUaddsub( sourceReg1 <: sourceReg1, operand2 <: operand2, addsub <: addsub, result :> AS );
+    //uint32  SLL = uninitialised; sll ALUsll( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, result :> SLL );
+    //uint32  SRL = uninitialised; srl ALUsrl( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, result :> SRL );
+    //uint32  SRA = uninitialised; sra ALUsra( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, result :> SRA );
+    uint32  AS <:: addsub ? ( sourceReg1 - operand2 ) : ( sourceReg1 + operand2 );
+    uint32  SLL <:: sourceReg1 << shiftcount;
+    uint32  SRL <:: sourceReg1 >> shiftcount;
+    uint32  SRA <:: __signed(sourceReg1) >>> shiftcount;
     uint1   SLTU <:: regimm ? ( rs1 == 0 ) ? ( operand2 != 0 ) : unsignedcompare : ( operand2 == 1 ) ? ( sourceReg1 == 0 ) : unsignedcompare;
 
     always {

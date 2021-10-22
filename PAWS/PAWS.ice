@@ -447,13 +447,9 @@ algorithm cachewriter(
     simple_dualport_bram_port1 cache,
     simple_dualport_bram_port1 tags
 ) <autorun> {
-    cache.wenable1 := 1; tags.wenable1 := 1;
-    always {
-        if( update ) {
-            cache.addr1 = address[1,13]; cache.wdata1 = writedata;
-            tags.addr1 = address[1,13]; tags.wdata1 = { needwritetosdram, 1b1, address[14,12] };
-        }
-    }
+    cache.wenable1 := update; tags.wenable1 := update;
+    cache.addr1 := address[1,13]; cache.wdata1 := writedata;
+    tags.addr1 := address[1,13]; tags.wdata1 := { needwritetosdram, 1b1, address[14,12] };
 }
 
 algorithm sdramcontroller(
@@ -466,10 +462,11 @@ algorithm sdramcontroller(
     output  uint1   busy(0)
 ) <autorun> {
     // MEMORY ACCESS FLAGS
-    sio.addr := { address[1,25], 1b0 }; sio.in_valid := 0;
+    sio.addr := { address[1,25], 1b0 }; sio.in_valid := ( readflag | writeflag );
+    sio.data_in := writedata; sio.rw := writeflag;
     readdata := sio.data_out;
 
     while(1) {
-        if( readflag | writeflag ) { busy = 1; sio.data_in = writedata; sio.rw = writeflag; sio.in_valid = 1; while( !sio.done ) {} busy = 0; }
+        if( readflag | writeflag ) { busy = 1; while( !sio.done ) {} busy = 0; }
     }
 }

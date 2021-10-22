@@ -100,21 +100,6 @@ algorithm addrplus2(
     }
 }
 
-// RISC-V REGISTERS
-algorithm registers(
-    input   uint1   SMT,
-    input   uint5   rs,
-    input   uint5   rd,
-    input   uint1   write,
-    input   uint32  result,
-    output  uint32  contents
-) <autorun> {
-    simple_dualport_bram int32 registers[64] = { 0, pad(uninitialized) };
-    registers.addr0 := { SMT, rs }; contents := registers.rdata0;
-    registers.addr1 := { SMT, rd }; registers.wdata1 := result;
-    registers.wenable1 := write;
-}
-
 // RISC-V REGISTERS - INTEGERS
 algorithm registersI(
     input   uint1   SMT,
@@ -127,8 +112,23 @@ algorithm registersI(
     output  int32   sourceReg2
 ) <autorun> {
     // RISC-V REGISTERS
-    registers RS1( SMT <: SMT, rs <: rs1, rd <: rd, write <: write, result <: result, contents :> sourceReg1 );
-    registers RS2( SMT <: SMT, rs <: rs2, rd <: rd, write <: write, result <: result, contents :> sourceReg2 );
+    simple_dualport_bram int32 registers_1[64] = { 0, pad(uninitialized) };
+    simple_dualport_bram int32 registers_2[64] = { 0, pad(uninitialized) };
+
+    // READ FROM REGISTERS
+    registers_1.addr0 := { SMT, rs1 }; sourceReg1 := registers_1.rdata0;
+    registers_2.addr0 := { SMT, rs2 }; sourceReg2 := registers_2.rdata0;
+
+    // REGISTERS WRITE FLAG
+    registers_1.wenable1 := 1; registers_2.wenable1 := 1;
+
+    always {
+        // WRITE TO REGISTERS
+        if( write ) {
+            registers_1.addr1 = { SMT, rd }; registers_1.wdata1 = result;
+            registers_2.addr1 = { SMT, rd }; registers_2.wdata1 = result;
+        }
+    }
 }
 // RISC-V REGISTERS - FLOATING POINT
 algorithm registersF(
@@ -144,9 +144,26 @@ algorithm registersF(
     output  int32   sourceReg3
 ) <autorun> {
     // RISC-V REGISTERS
-    registers RS1F( SMT <: SMT, rs <: rs1, rd <: rd, write <: write, result <: result, contents :> sourceReg1 );
-    registers RS2F( SMT <: SMT, rs <: rs2, rd <: rd, write <: write, result <: result, contents :> sourceReg2 );
-    registers RS3F( SMT <: SMT, rs <: rs3, rd <: rd, write <: write, result <: result, contents :> sourceReg3 );
+    simple_dualport_bram int32 registers_1[64] = { 0, pad(uninitialized) };
+    simple_dualport_bram int32 registers_2[64] = { 0, pad(uninitialized) };
+    simple_dualport_bram int32 registers_3[64] = { 0, pad(uninitialized) };
+
+    // READ FROM REGISTERS
+    registers_1.addr0 := { SMT, rs1 }; sourceReg1 := registers_1.rdata0;
+    registers_2.addr0 := { SMT, rs2 }; sourceReg2 := registers_2.rdata0;
+    registers_3.addr0 := { SMT, rs3 }; sourceReg3 := registers_3.rdata0;
+
+    // REGISTERS WRITE FLAG
+    registers_1.wenable1 := 1; registers_2.wenable1 := 1; registers_3.wenable1 := 1;
+
+    always {
+        // WRITE TO REGISTERS
+        if( write ) {
+            registers_1.addr1 = { SMT, rd }; registers_1.wdata1 = result;
+            registers_2.addr1 = { SMT, rd }; registers_2.wdata1 = result;
+            registers_3.addr1 = { SMT, rd }; registers_3.wdata1 = result;
+        }
+    }
 }
 
 // BRANCH COMPARISIONS
