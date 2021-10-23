@@ -466,7 +466,8 @@ algorithm sdramcontroller(
     sio.data_in := writedata; sio.rw := writeflag;
     readdata := sio.data_out;
 
-    while(1) {
-        if( readflag | writeflag ) { busy = 1; while( !sio.done ) {} busy = 0; }
+    always {
+        if( readflag | writeflag ) { busy = 1; }
+        if( sio.done ) { busy = 0; }
     }
 }
