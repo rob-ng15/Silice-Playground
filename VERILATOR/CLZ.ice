@@ -80,7 +80,7 @@ algorithm cz32(
 }
 algorithm cz48(
     input   uint48  bitstream,
-    output  uint7   cz48
+    output  uint6   cz48
 ) <autorun> {
     uint16  bitstreamh <:: bitstream[32,16];
     uint32  bitstreaml <:: bitstream[0,32];
@@ -101,14 +101,14 @@ algorithm main(output int8 leds) {
     uint32  startcycle = uninitialised;
     pulse PULSE();
 
-    uint48  bitstream = 0;
+    uint48  bitstream = 12345678;
     uint48  normalised = uninitialised;
-    uint7   cz = uninitialised;
+    uint6   cz = uninitialised;
     cz48 CZ48( bitstream <: bitstream, cz48 :> cz );
 
     normalised = bitstream << cz;
     __display("Input = %b, CLZ = %d", bitstream, cz);
-    __display("Output = %b", normalised);
+    __display("Output = %b after normalisation", normalised);
 }
 
 algorithm pulse(

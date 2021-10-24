@@ -308,6 +308,28 @@ algorithm Iclass(
     }
 }
 
+// DETERMINE IN FAST OR SLOW FPU INSTRUCTION
+algorithm Fclass(
+    input   uint5   opCode,
+    input   uint7   function7,
+    output  uint1   FASTPATHFPU
+) <autorun> {
+    always {
+        switch( opCode ) {
+            default: { FASTPATHFPU = 0; }               // FUSED MULTIPLY ADD
+            case 5b10100: {
+                switch( function7[2,5] ) {              // ARITHMETIC AND CONVERSIONS
+                    default: { FASTPATHFPU = 0; }
+                    case 5b00100: { FASTPATHFPU = 1; }  // FSGNJ[N][X]
+                    case 5b00101: { FASTPATHFPU = 1; }  // FMIN FMAX
+                    case 5b10100: { FASTPATHFPU = 1; }  // FEQ FLT FLE
+                    case 5b11100: { FASTPATHFPU = 1; }  // FCLASS FMV.X.W
+                    case 5b11110: { FASTPATHFPU = 1; }  // FMV.W.X
+                }
+            }
+        }
+    }
+}
 algorithm cpuexecuteSLOWPATH(
     input   uint1   start,
     output  uint1   busy(0),
@@ -355,16 +377,24 @@ algorithm cpuexecuteSLOWPATH(
         result :> ALUAresult
     );
 
-    // FLOATING POINT OPERATIONS
+    // FLOATING POINT CLASSIFICATION
+    uint1   FASTPATHFPU = uninitialized;
+    Fclass FCLASS(
+        opCode <: opCode,
+        function7 <: function7,
+        FASTPATHFPU :> FASTPATHFPU
+    );
+
+    // FLOATING POINT SLOW OPERATIONS
     uint5   FPUflags = 0;
-    uint5   FPUnewflags = uninitialized;
+    uint5   FPUSLOWnewflags = uninitialized;
     uint1   FPUfrd = uninitialized;
     uint32  FPUresult = uninitialized;
     uint1   FPUstart = uninitialized;
     uint1   FPUbusy = uninitialized;
-    fpu FPU(
+    fpuslow FPUSLOW(
         FPUflags <: FPUflags,
-        FPUnewflags :> FPUnewflags,
+        FPUnewflags :> FPUSLOWnewflags,
         opCode <: opCode,
         function3 <: function3,
         function7 <: function7,
@@ -379,6 +409,23 @@ algorithm cpuexecuteSLOWPATH(
         start <: FPUstart,
         busy :> FPUbusy
     );
+    // FLOATING POINT FAST OPERATIONS
+    uint5   FPUFASTnewflags = uninitialized;
+    uint1   FPUFASTfrd = uninitialized;
+    uint32  FPUFASTresult = uninitialized;
+    fpufast FPUFAST(
+        FPUflags <: FPUflags,
+        FPUnewflags :> FPUFASTnewflags,
+        function3 <: function3,
+        function7 <: function7,
+        rs2 <: rs2,
+        sourceReg1 <: sourceReg1,
+        sourceReg1F <: sourceReg1F,
+        sourceReg2F <: sourceReg2F,
+        frd :> FPUFASTfrd,
+        result :> FPUFASTresult
+    );
+    uint5   FPUnewflags <:: FASTPATHFPU ? FPUFASTnewflags : FPUSLOWnewflags;
 
     // MANDATORY RISC-V CSR REGISTERS + HARTID == 0 MAIN THREAD == 1 SMT THREAD
     uint32  CSRresult = uninitialized;
@@ -421,7 +468,14 @@ algorithm cpuexecuteSLOWPATH(
                 }
                 default: {                                                                  // FPU AND INTEGER DIVISION
                     if( opCode[4,1] ) {
-                        FPUstart = 1; while( FPUbusy ) {} CSRupdateFPUflags = 1; frd = FPUfrd; result = FPUresult;
+                        if( FASTPATHFPU ) {
+                            // COMPARISONS, MIN/MAX, SIGN MANIPULATION, CLASSIFICTIONS AND MOVE F-> and I->F
+                            frd = FPUFASTfrd; result = FPUFASTresult;
+                        } else {
+                            // CONVERSIONS AND CALCULATIONSD
+                            FPUstart = 1; while( FPUbusy ) {} frd = FPUfrd; result = FPUresult;
+                        }
+                        CSRupdateFPUflags = 1;
                     } else {
                         ALUMDstart = 1; while( ALUMDbusy ) {} result = ALUMDresult;
                     }

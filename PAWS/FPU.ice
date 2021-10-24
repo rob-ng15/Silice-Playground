@@ -1,4 +1,77 @@
-algorithm fpu(
+algorithm fpufast(
+    input   uint3   function3,
+    input   uint7   function7,
+    input   uint5   rs2,
+    input   uint32  sourceReg1,
+    input   uint32  sourceReg1F,
+    input   uint32  sourceReg2F,
+
+    output  uint32  result,
+    output  uint1   frd,
+    input   uint5   FPUflags,
+    output  uint5   FPUnewflags
+) <autorun> {
+    uint32  signresult = uninitialised;
+    floatsign FPUsign( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F, result :> signresult );
+
+    uint32  minmaxresult = uninitialised;
+    uint5   minmaxflags = uninitialised;
+    floatminmax FPUminmax(
+        less <: less,
+        function3 <: function3,
+        sourceReg1F <: sourceReg1F,
+        sourceReg2F <: sourceReg2F,
+        result :> minmaxresult,
+        flags :> minmaxflags
+    );
+
+    uint1   less = uninitialised;
+    uint1   equal = uninitialised;
+    floatcompare FPUlteq( a <: sourceReg1F, b <: sourceReg2F, less :> less, equal :> equal );
+
+    uint32  compareresult = uninitialised;
+    uint5   compareflags = uninitialised;
+    floatcomparison FPUcompare(
+        less <: less,
+        equal <: equal,
+        function3 <: function3,
+        sourceReg1F <: sourceReg1F,
+        sourceReg2F <: sourceReg2F,
+        result :> compareresult,
+        flags :> compareflags
+    );
+
+    uint10  classification = uninitialised;
+    floatclassify FPUclass( sourceReg1F <: sourceReg1F, classification :> classification );
+
+    always {
+        frd = 1;
+        switch( function7[2,5] ) {
+            default: {
+                // FSGNJ.S FSGNJN.S FSGNJX.S
+                result = signresult; FPUnewflags = FPUflags;
+            }
+            case 5b00101: {
+                // FMIN.S FMAX.S
+                result = minmaxresult; FPUnewflags = FPUflags | minmaxflags;
+            }
+            case 5b10100: {
+                // FEQ.S FLT.S FLE.S
+                frd = 0; result = compareresult; FPUnewflags = FPUflags | compareflags;
+            }
+            case 5b11100: {
+                // FCLASS.S FMV.X.W
+                frd = 0; result = function3[0,1] ? classification : sourceReg1F; FPUnewflags = FPUflags;
+            }
+            case 5b11110: {
+                // FMV.W.X
+                result = sourceReg1; FPUnewflags = FPUflags;
+            }
+        }
+    }
+}
+
+algorithm fpuslow(
     input   uint1   start,
     output  uint1   busy(0),
     input   uint5   opCode,
@@ -32,29 +105,6 @@ algorithm fpu(
         busy :> FPUcalculatorbusy
     );
 
-    uint32  signresult = uninitialised;
-    floatsign FPUsign( function3 <: function3, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F, result :> signresult );
-
-    uint32  minmaxresult = uninitialised;
-    uint5   minmaxflags = uninitialised;
-    floatminmax FPUminmax(
-        function3 <: function3,
-        sourceReg1F <: sourceReg1F,
-        sourceReg2F <: sourceReg2F,
-        result :> minmaxresult,
-        flags :> minmaxflags
-    );
-
-    uint32  compareresult = uninitialised;
-    uint5   compareflags = uninitialised;
-    floatcomparison FPUcompare(
-        function3 <: function3,
-        sourceReg1F <: sourceReg1F,
-        sourceReg2F <: sourceReg2F,
-        result :> compareresult,
-        flags :> compareflags
-    );
-
     uint32  convertresult = uninitialised;
     uint5   convertflags = uninitialised;
     uint1   FPUconvertstart = uninitialised;
@@ -69,9 +119,6 @@ algorithm fpu(
         start <: FPUconvertstart,
         busy :> FPUconvertbusy
     );
-
-    uint10  classification = uninitialised;
-    floatclassify FPUclass( sourceReg1F <: sourceReg1F, classification :> classification );
 
     FPUcalculatorstart := 0; FPUconvertstart := 0;
 
@@ -91,18 +138,6 @@ algorithm fpu(
                             // FADD.S FSUB.S FMUL.S FDIV.S FSQRT.S
                             FPUcalculatorstart = 1; while( FPUcalculatorbusy ) {} result = calculatorresult; FPUnewflags = FPUflags | calculatorflags;
                         }
-                        case 5b00100: {
-                            // FSGNJ.S FSGNJN.S FSGNJX.S
-                            result = signresult; FPUnewflags = FPUflags;
-                        }
-                        case 5b00101: {
-                            // FMIN.S FMAX.S
-                            result = minmaxresult; FPUnewflags = FPUflags | minmaxflags;
-                        }
-                        case 5b10100: {
-                            // FEQ.S FLT.S FLE.S
-                            frd = 0; result = compareresult; FPUnewflags = FPUflags | compareflags;
-                        }
                         case 5b11000: {
                             // FCVT.W.S FCVT.WU.S
                             frd = 0; FPUconvertstart = 1; while( FPUconvertbusy ) {} result = convertresult; FPUnewflags = FPUflags | convertflags;
@@ -110,14 +145,6 @@ algorithm fpu(
                         case 5b11010: {
                             // FCVT.S.W FCVT.S.WU
                             FPUconvertstart = 1; while( FPUconvertbusy ) {} result = convertresult; FPUnewflags = FPUflags | convertflags;
-                        }
-                        case 5b11100: {
-                            // FCLASS.S FMV.X.W
-                            frd = 0; result = function3[0,1] ? classification : sourceReg1F; FPUnewflags = FPUflags;
-                        }
-                        case 5b11110: {
-                            // FMV.W.X
-                            result = sourceReg1; FPUnewflags = FPUflags;
                         }
                     }
                 }
@@ -159,7 +186,6 @@ algorithm floatconvert(
     while(1) {
         if( start ) {
             busy = 1;
-            flags = 0;
             switch( function7[2,5] ) {
                 default: {
                     // FCVT.W.S FCVT.WU.S
@@ -287,6 +313,7 @@ algorithm floatclassify(
 }
 
 algorithm floatminmax(
+    input   uint1   less,
     input   uint3   function3,
     input   uint32  sourceReg1F,
     input   uint32  sourceReg2F,
@@ -311,9 +338,6 @@ algorithm floatminmax(
     );
     uint1   NAN <:: ( asNAN | bsNAN ) | ( aqNAN & bqNAN );
 
-    uint1   less = uninitialised;
-    floatcompare FPUlteq( a <: sourceReg1F, b <: sourceReg2F, less :> less );
-
     flags := { NAN, 4b0000 };
     always {
         if( NAN ) {
@@ -331,6 +355,8 @@ algorithm floatminmax(
 
 // COMPARISONS
 algorithm floatcomparison(
+    input   uint1   less,
+    input   uint1   equal,
     input   uint3   function3,
     input   uint32  sourceReg1F,
     input   uint32  sourceReg2F,
@@ -354,10 +380,6 @@ algorithm floatcomparison(
         qNAN :> bqNAN
     );
     uint1   NAN <:: ( aqNAN | asNAN | bqNAN | bsNAN );
-
-    uint1   less = uninitialised;
-    uint1   equal = uninitialised;
-    floatcompare FPUlteq( a <: sourceReg1F, b <: sourceReg2F, less :> less, equal :> equal );
 
     always {
         switch( function3 ) {
