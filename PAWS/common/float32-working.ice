@@ -42,38 +42,6 @@
 //
 // NB: Error states are those required by Risc-V floating point
 
-// CLZ CIRCUITS - TRANSLATED BY @sylefeb
-// From recursive Verilog module
-// https://electronics.stackexchange.com/questions/196914/verilog-synthesize-high-speed-leading-zero-count
-
-// Create a LUA pre-processor function that recursively writes
-// circuitries counting the number of leading zeros in variables
-// of decreasing width.
-// Note: this could also be made in-place without wrapping in a
-// circuitry, directly outputting a hierarchical set of trackers (<:)
-$$function generate_clz(name,w_in,recurse)
-$$ local w_out = clog2(w_in)
-$$ local w_h   = w_in//2
-$$ if w_in > 2 then generate_clz(name,w_in//2,1) end
-circuitry $name$_$w_in$ (input in,output out)
-{
-$$ if w_in == 2 then
-   out = ~in[1,1];
-$$ else
-   uint$clog2(w_in)-1$ half_count = uninitialized;
-   uint$w_h$           lhs        <: in[$w_h$,$w_h$];
-   uint$w_h$           rhs        <: in[    0,$w_h$];
-   uint$w_h$           select     <: left_empty ? rhs : lhs;
-   uint1               left_empty <: ~|lhs;
-   (half_count) = $name$_$w_h$(select);
-   out          = {left_empty,half_count};
-$$ end
-}
-$$end
-
-// Produce a circuit for 32 bits numbers ( and 16, 8, 4, 2 )
-$$generate_clz('clz_silice',32)
-
 // BITFIELD FOR FLOATING POINT NUMBER - IEEE-754 32 bit format
 bitfield fp32{
     uint1   sign,
@@ -113,6 +81,18 @@ algorithm classify(
 // ALGORITHMS TO DEAL WITH 48 BIT FRACTIONS TO 23 BIT FRACTIONS
 // NORMALISE A 48 BIT MANTISSA SO THAT THE MSB IS ONE
 // FOR ADDSUB ALSO DECREMENT THE EXPONENT FOR EACH SHIFT LEFT
+algorithm countzeros(
+    input   uint48  bitstream,
+    output  uint4   shiftcount
+) <autorun> {
+    uint1   zero15 <:: ( bitstream[33,15] == 0 );
+    uint1   zero7 <:: ( bitstream[41,7] == 0 );
+    uint1   zero3 <:: ( bitstream[45,3] == 0 );
+
+    always {
+        shiftcount = { zero15, zero7, zero3, 1b1 };
+    }
+}
 algorithm donormalise48_adjustexp(
     input   uint1   start,
     output  uint1   busy(0),
@@ -121,21 +101,15 @@ algorithm donormalise48_adjustexp(
     output  int10   newexp,
     output  uint48  normalised
 ) <autorun> {
-    uint16  bitstreamh <:: bitstream[32,16];
-    uint32  bitstreaml <:: bitstream[0,32];
-    uint6   clz = uninitialised;
-    uint6   shiftcount = uninitialised;
+    uint4   shiftcount = uninitialised; countzeros CZ( bitstream <: normalised, shiftcount :> shiftcount );
     while(1) {
         if( start ) {
             busy = 1;
-            if( bitstreamh == 0 ) {
-                ( clz ) = clz_silice_32( bitstreaml );
-                shiftcount = 16 + clz;
-            } else {
-                ( shiftcount ) = clz_silice_16( bitstreamh );
+            normalised = bitstream; newexp = exp;
+            while( ~normalised[47,1] ) {
+                normalised = normalised << shiftcount;
+                newexp = newexp - shiftcount;
             }
-            normalised = bitstream << shiftcount;
-            newexp = exp - shiftcount;
             busy = 0;
         }
     }
@@ -146,20 +120,14 @@ algorithm donormalise48(
     input   uint48  bitstream,
     output  uint48  normalised
 ) <autorun> {
-    uint16  bitstreamh <:: bitstream[32,16];
-    uint32  bitstreaml <:: bitstream[0,32];
-    uint6   clz = uninitialised;
-    uint6   shiftcount = uninitialised;
+    uint4   shiftcount = uninitialised; countzeros CZ( bitstream <: normalised, shiftcount :> shiftcount );
     while(1) {
         if( start ) {
             busy = 1;
-            if( bitstreamh == 0 ) {
-                ( clz ) = clz_silice_32( bitstreaml );
-                shiftcount = 16 + clz;
-            } else {
-                ( shiftcount ) = clz_silice_16( bitstreamh );
+            normalised = bitstream;
+            while( ~normalised[47,1] ) {
+                normalised = normalised << shiftcount;
             }
-            normalised = bitstream << shiftcount;
             busy = 0;
         }
     }
@@ -206,7 +174,17 @@ algorithm prepitof(
         number_unsigned = dounsigned ? number : ( number[31,1] ? -number : number );
     }
 }
-
+algorithm startzeros(
+    input   uint32  number,
+    output  uint5   startingzeros
+) <autorun> {
+    uint1   zero24 <:: ( number[8,24] == 0 );
+    uint1   zero16 <:: ( number[16,16] == 0 );
+    uint1   zero8 <:: ( number[24,8] == 0 );
+    always {
+        startingzeros = zero24 ? 24 : zero16 ? 16 : zero8 ? 8 : 0;
+    }
+}
 algorithm inttofloat(
     input   uint1   start,
     output  uint1   busy(0),
@@ -216,7 +194,8 @@ algorithm inttofloat(
     output  uint32  result
 ) <autorun> {
     // CHECK FOR 24, 16 OR 8 LEADING ZEROS, CONTINUE COUNTING FROM THERE
-    uint6   zeros = uninitialised;
+    uint5   startingzeros = uninitialised; startzeros SZ( number <: number, startingzeros :> startingzeros );
+    uint5   zeros = uninitialised;
     uint1   sign <:: dounsigned ? 0 : a[31,1];
     uint32  number = uninitialised; prepitof PREP( number <: a, dounsigned <: dounsigned, number_unsigned :> number );
     uint32  fraction <:: NX ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
@@ -243,9 +222,8 @@ algorithm inttofloat(
             switch( number ) {
                 case 0: { result = 0; }
                 default: {
-                    ( zeros ) = clz_silice_32( number );
-                    NX = ( zeros < 8 );
-                    ++: ++:
+                    zeros = startingzeros; while( ~number[31-zeros,1] ) { zeros = zeros + 1; } NX = ( zeros < 8 );
+                    ++:
                     OF = cOF; UF = cUF; result = f32;
                 }
             }
@@ -513,7 +491,7 @@ algorithm floataddsub(
                     switch( resultfraction ) {
                         case 0: { result = 0; }
                         default: {
-                            NORMALISEstart = 1; while( NORMALISEbusy ) {} ++:
+                            NORMALISEstart = 1; while( NORMALISEbusy ) {}
                             OF = cOF; UF = cUF; result = f32;
                         }
                     }
@@ -806,7 +784,7 @@ algorithm floatdivide(
             switch( { IF | NN, aZERO | bZERO } ) {
                 case 2b00: {
                     DODIVIDEstart = 1; while( DODIVIDEbusy ) {}
-                    NORMALISEstart = 1; while( NORMALISEbusy ) {} ++:
+                    NORMALISEstart = 1; while( NORMALISEbusy ) {}
                     OF = cOF; UF = cUF; result = f32;
                 }
                 case 2b01: { result = ( aZERO & bZERO ) ? 32hffc00000 : ( bZERO ) ? { quotientsign, 31h7f800000 } : { quotientsign, 31b0 }; }

@@ -234,11 +234,16 @@ algorithm PAWSCPU(
     while(1) {
         address = PC; readmemory = 1; while( memorybusy ) {}                                                                                                    // FETCH POTENTIAL COMPRESSED OR 1ST 16 BITS
         compressed = ( readdata[0,2] != 2b11 );
-        switch( readdata[0,2] ) {                                                                                                                               // EXPAND COMPRESSED INSTRUCTION
-            case 2b00: { instruction = { i3200, 2b11 }; }
-            case 2b01: { instruction = { i3201, 2b11 }; }
-            case 2b10: { instruction = { i3210, 2b11 }; }
-            default: {instruction[0,16] = readdata; address = PCplus2; readmemory = 1; while( memorybusy ) {} instruction[16,16] = readdata; }                  // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
+        if( compressed ) {
+            switch( readdata[0,2] ) {                                                                                                                           // EXPAND COMPRESSED INSTRUCTION
+                case 2b00: { instruction = { i3200, 2b11 }; }
+                case 2b01: { instruction = { i3201, 2b11 }; }
+                case 2b10: { instruction = { i3210, 2b11 }; }
+                default: {}
+            }
+        } else {
+            // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
+            instruction[0,16] = readdata; address = PCplus2; readmemory = 1; while( memorybusy ) {} instruction[16,16] = readdata;
         }
         FSM = 2; ++: ++:                                                                                                                                        // DECODE, REGISTER FETCH, ADDRESS GENERATION
 
@@ -249,7 +254,7 @@ algorithm PAWSCPU(
                 case 2b01: { memoryinput  = memory16bit; }                                                                                                      // 16 BIT SIGN EXTEND
                 default: { memoryinput[0,16] = readdata; address = loadAddressplus2; readmemory = 1; while( memorybusy ) {} memoryinput[16,16] = readdata; }    // 32 BIT READ 2ND 16 BITS
             }
-        }
+        } else {}
 
         if( FASTPATH ) {
             // ALL OTHER OPERATIONS
@@ -266,8 +271,8 @@ algorithm PAWSCPU(
             if( accesssize[1,1] ) {
                 address = storeAddressplus2; writedata = storeHIGH;                                                                                             // 32 BIT WRITE 2ND 16 BITS
                 writememory = 1;  while( memorybusy ) {}
-            }
-        }
+            } else {}
+        }  else {}
         FSM = 4; ++:
 
         // UPDATE PC AND SMT
@@ -467,18 +472,26 @@ algorithm cpuexecuteSLOWPATH(
                     }
                 }
                 default: {                                                                  // FPU AND INTEGER DIVISION
-                    if( opCode[4,1] ) {
-                        if( FASTPATHFPU ) {
-                            // COMPARISONS, MIN/MAX, SIGN MANIPULATION, CLASSIFICTIONS AND MOVE F-> and I->F
-                            frd = FPUFASTfrd; result = FPUFASTresult;
-                        } else {
-                            // CONVERSIONS AND CALCULATIONSD
-                            FPUstart = 1; while( FPUbusy ) {} frd = FPUfrd; result = FPUresult;
-                        }
-                        CSRupdateFPUflags = 1;
+                    if( opCode[4,1] & FASTPATHFPU ) {
+                        // COMPARISONS, MIN/MAX, SIGN MANIPULATION, CLASSIFICTIONS AND MOVE F-> and I->F
+                        frd = FPUFASTfrd; result = FPUFASTresult;
                     } else {
-                        ALUMDstart = 1; while( ALUMDbusy ) {} result = ALUMDresult;
+                        FPUstart = opCode[4,1]; ALUMDstart = ~opCode[4,1];
+                        while( FPUbusy | ALUMDbusy ) {}
+                        frd = opCode[4,1] & FPUfrd;
+                        result = opCode[4,1] ? FPUresult : ALUMDresult;
+                        //switch( opCode[4,1] ) {
+                        //    case 1: {
+                        //        // FLOATING POINT CONVERSIONS AND CALCULATIONS
+                        //        FPUstart = 1; while( FPUbusy ) {} frd = FPUfrd; result = FPUresult;
+                        //    }
+                        //    case 0: {
+                        //        // INTEGER DIVISION
+                        //        ALUMDstart = 1; while( ALUMDbusy ) {} result = ALUMDresult;
+                        //    }
+                        //}
                     }
+                    CSRupdateFPUflags = opCode[4,1];
                 }
             }
             busy = 0;

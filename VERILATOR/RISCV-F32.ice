@@ -21,6 +21,38 @@
 //
 // NB: Error states are those required by Risc-V floating point
 
+// CLZ CIRCUITS - TRANSLATED BY @sylefeb
+// From recursive Verilog module
+// https://electronics.stackexchange.com/questions/196914/verilog-synthesize-high-speed-leading-zero-count
+
+// Create a LUA pre-processor function that recursively writes
+// circuitries counting the number of leading zeros in variables
+// of decreasing width.
+// Note: this could also be made in-place without wrapping in a
+// circuitry, directly outputting a hierarchical set of trackers (<:)
+$$function generate_clz(name,w_in,recurse)
+$$ local w_out = clog2(w_in)
+$$ local w_h   = w_in//2
+$$ if w_in > 2 then generate_clz(name,w_in//2,1) end
+circuitry $name$_$w_in$ (input in,output out)
+{
+$$ if w_in == 2 then
+   out = ~in[1,1];
+$$ else
+   uint$clog2(w_in)-1$ half_count = uninitialized;
+   uint$w_h$           lhs        <: in[$w_h$,$w_h$];
+   uint$w_h$           rhs        <: in[    0,$w_h$];
+   uint$w_h$           select     <: left_empty ? rhs : lhs;
+   uint1               left_empty <: ~|lhs;
+   (half_count) = $name$_$w_h$(select);
+   out          = {left_empty,half_count};
+$$ end
+}
+$$end
+
+// Produce a circuit for 32 bits numbers ( and 16, 8, 4, 2 )
+$$generate_clz('clz_silice',32)
+
 // BITFIELD FOR FLOATING POINT NUMBER - IEEE-754 32 bit format
 bitfield fp32{
     uint1   sign,
@@ -66,18 +98,25 @@ algorithm donormalise48_adjustexp(
     output  int10   newexp,
     output  uint48  normalised
 ) <autorun> {
-    uint4   shiftcount <:: { normalised[33,15] == 0, normalised[41,7] == 0, normalised[45,3] == 0, 1b1 };
+    uint16  bitstreamh <:: bitstream[32,16];
+    uint32  bitstreaml <:: bitstream[0,32];
+    uint6   clz = uninitialised;
+    uint6   shiftcount = uninitialised;
     while(1) {
         if( start ) {
             __display("  NORMALISING THE RESULT MANTISSA, ADJUSTING EXPONENT FOR ADDSUB");
             busy = 1;
-            normalised = bitstream; newexp = exp;
-            __display("  { (sign) %b %b } (ALREADY NORMALISED == %b)",newexp,normalised,normalised[47,1]);
+            __display("  { (sign) %b %b } (ALREADY NORMALISED == %b)",exp,bitstream,bitstream[47,1]);
             // NORMALISE BY SHIFT 1, 3, 7 OR 15 ZEROS LEFT
-            while( ~normalised[47,1] ) {
-                normalised = normalised << shiftcount; newexp = newexp - shiftcount;
-                __display("  { (sign) %b %b } AFTER SHIFT LEFT %d",newexp,normalised,shiftcount);
+            if( bitstreamh == 0 ) {
+                ( clz ) = clz_silice_32( bitstreaml );
+                shiftcount = 16 + clz;
+            } else {
+                ( shiftcount ) = clz_silice_16( bitstreamh );
             }
+            normalised = bitstream << shiftcount;
+            newexp = exp - shiftcount;
+            __display("  { (sign) %b %b } AFTER SHIFT LEFT %d",newexp,normalised,shiftcount);
             busy = 0;
         }
     }
@@ -88,18 +127,23 @@ algorithm donormalise48(
     input   uint48  bitstream,
     output  uint48  normalised
 ) <autorun> {
-    uint4   shiftcount <:: { normalised[33,15] == 0, normalised[41,7] == 0, normalised[45,3] == 0, 1b1 };
+    uint16  bitstreamh <:: bitstream[32,16];
+    uint32  bitstreaml <:: bitstream[0,32];
+    uint6   clz = uninitialised;
+    uint6   shiftcount = uninitialised;
     while(1) {
         if( start ) {
             __display("  NORMALISING THE RESULT MANTISSA");
             busy = 1;
-            normalised = bitstream;
-            __display("  { (sign) (exp) %b } (ALREADY NORMALISED == %b)",normalised,normalised[47,1]);
-            // NORMALISE BY SHIFT 1, 3, 7 OR 15 ZEROS LEFT
-            while( ~normalised[47,1] ) {
-                normalised = normalised << shiftcount;
-                __display("  { (sign) (exp) %b } AFTER SHIFT LEFT %d",normalised,shiftcount);
+            __display("  { (sign) (exp) %b } (ALREADY NORMALISED == %b)",bitstream,bitstream[47,1]);
+            if( bitstreamh == 0 ) {
+                ( clz ) = clz_silice_32( bitstreaml );
+                shiftcount = 16 + clz;
+            } else {
+                ( shiftcount ) = clz_silice_16( bitstreamh );
             }
+            normalised = bitstream << shiftcount;
+            __display("  { (sign) (exp) %b } AFTER SHIFT LEFT %d",normalised,shiftcount);
             busy = 0;
         }
     }
@@ -135,6 +179,17 @@ algorithm docombinecomponents32(
 
 // CONVERT SIGNED/UNSIGNED INTEGERS TO FLOAT
 // dounsigned == 1 for signed conversion (31 bit plus sign), == 0 for dounsigned conversion (32 bit)
+// CONVERT SIGNED/UNSIGNED INTEGERS TO FLOAT
+// dounsigned == 1 for signed conversion (31 bit plus sign), == 0 for dounsigned conversion (32 bit)
+algorithm prepitof(
+    input   uint32  number,
+    input   uint1   dounsigned,
+    output  uint32  number_unsigned
+) <autorun> {
+    always {
+        number_unsigned = dounsigned ? number : ( number[31,1] ? -number : number );
+    }
+}
 algorithm inttofloat(
     input   uint1   start,
     output  uint1   busy(0),
@@ -143,12 +198,13 @@ algorithm inttofloat(
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
+    // CHECK FOR 24, 16 OR 8 LEADING ZEROS, CONTINUE COUNTING FROM THERE
+    uint6   zeros = uninitialised;
+    uint1   sign <:: dounsigned ? 0 : a[31,1];
+    uint32  number = uninitialised; prepitof PREP( number <: a, dounsigned <: dounsigned, number_unsigned :> number );
+    uint32  fraction <:: NX ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
+    int10   exponent <:: 158 - zeros;
     uint1   OF = uninitialised; uint1 UF = uninitialised; uint1 NX = uninitialised;
-    uint1   sign <: dounsigned ? 0 : a[31,1];
-    uint8   zeros = uninitialised;
-    uint32  number <: dounsigned ? a : ( a[31,1] ? -a : a );
-    uint32  fraction <: NX ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
-    int10   exponent <: 158 - zeros;
 
     uint1   cOF = uninitialised;
     uint1   cUF = uninitialised;
@@ -172,12 +228,12 @@ algorithm inttofloat(
                 default: {
                     // CHECK FOR 24, 16 OR 8 LEADING ZEROS, CONTINUE COUNTING FROM THERE
                     __display("  i = { %b %b } = %d",sign,number,number);
-                    zeros = number[8,24] == 0 ? 24 : number[16,16] == 0 ? 16 : number[24,8] == 0 ? 8 : 0;
+                    ( zeros ) = clz_silice_32( number );
                     __display("  STARTING AT %d LEADING ZEROS",zeros);
-                    while( ~number[31-zeros,1] ) { zeros = zeros + 1; } NX = ( zeros < 8 );
+                    NX = ( zeros < 8 );
                     __display("  LEADING ZEROS = %d",zeros);
                     __display("");
-                    ++:
+                    ++: ++:
                     OF = cOF; UF = cUF; result = f32;
                 }
             }
@@ -440,7 +496,6 @@ algorithm floataddsub(
             busy = 1;
             OF = 0; UF = 0;
             ++: // ALLOW 2 CYCLES FOR EQUALISING EXPONENTS AND TO PERFORM THE ADDITION/SUBTRACTION
-            ++:
             __display("");
             __display("  a = { %b %b %b } INPUT",fp32( a ).sign,fp32( a ).exponent,fp32( a ).fraction);
             __display("  b = { %b %b %b } INPUT",fp32( b ).sign,fp32( b ).exponent,fp32( b ).fraction);
@@ -455,17 +510,18 @@ algorithm floataddsub(
             __display("  a = { %b %b %b }",signA,eqexpA,eqsigA);
             __display("  b = { %b %b %b }",signB,eqexpB,eqsigB);
             __display("");
-            __display("  CALCULATING");
-            __display("  { %b %b %b } +",signA,eqexpA,eqsigA);
-            __display("  { %b %b %b }",signB,eqexpB,eqsigB);
-            __display(" ={ %b %b %b }",resultsign,resultexp,resultfraction);
-            __display("");
             switch( { IF | NN, aZERO | bZERO } ) {
                 case 2b00: {
+                    ++:
+                    __display("  CALCULATING");
+                    __display("  { %b %b %b } +",signA,eqexpA,eqsigA);
+                    __display("  { %b %b %b }",signB,eqexpB,eqsigB);
+                    __display(" ={ %b %b %b }",resultsign,resultexp,resultfraction);
+                    __display("");
                     switch( ADDSUB.resultfraction ) {
                         case 0: { result = 0; }
                         default: {
-                            NORMALISE.start = 1; while( NORMALISE.busy ) {}
+                            NORMALISE.start = 1; while( ~normalfraction[47,1] ) {} ++:
                             __display("");
                             __display("  ADD BIAS TO EXPONENT, ROUND AND TRUNCATE MANTISSA");
                             __display("  { %b %b %b } (ROUND BIT = %b)",resultsign,roundexponent,roundfraction,normalfraction[23,1]);
@@ -499,13 +555,20 @@ algorithm floataddsub(
 }
 
 // UNSIGNED / SIGNED 24 by 24 bit multiplication giving 48 bit product using DSP blocks
-algorithm dofloatmul(
-    input   uint24  factor_1,
-    input   uint24  factor_2,
+algorithm prepmul(
+    input   uint32  a,
+    input   uint32  b,
+    output  uint1   productsign,
+    output  int10   productexp,
     output  uint48  product
 ) <autorun> {
+    uint24  sigA <:: { 1b1, fp32( a ).fraction };
+    uint24  sigB <:: { 1b1, fp32( b ).fraction };
+
     always {
-        product = factor_1 * factor_2;
+        productsign = fp32( a ).sign ^ fp32( b ).sign;
+        product = sigA * sigB;
+        productexp = (fp32( a ).exponent - 127) + (fp32( b ).exponent - 127) + product[47,1];
     }
 }
 algorithm floatmultiply(
@@ -518,17 +581,24 @@ algorithm floatmultiply(
     output  uint32  result
 ) <autorun> {
     // BREAK DOWN INITIAL float32 INPUTS AND FIND SIGN OF RESULT AND EXPONENT OF PRODUCT ( + 1 IF PRODUCT OVERFLOWS, MSB == 1 )
-    uint1   productsign <: fp32( a ).sign ^ fp32( b ).sign;
-    int10   productexp <: (fp32( a ).exponent - 127) + (fp32( b ).exponent - 127) + product[47,1];
-    int10   expA <: fp32( a ).exponent - 127;
-    uint24  sigA <: { 1b1, fp32( a ).fraction };
-    int10   expB <: fp32( b ).exponent - 127;
-    uint24  sigB <: { 1b1, fp32( b ).fraction };
+    uint1   productsign = uninitialised;
+    int10   productexp = uninitialised;
+    uint48  product = uninitialised;
+    prepmul PREP(
+        a <: a,
+        b <: b,
+        productsign :> productsign,
+        productexp :> productexp,
+        product :> product
+    );
+
+    // FAST NORMALISATION - MULTIPLICATION RESULTS IN 1x.xxx or 01.xxxx
+    uint48  normalfraction <:: product << ( ~product[47,1] );
 
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND INVALID ( INF x ZERO )
-    uint1   IF <: ( aINF | bINF );
-    uint1   NN <: ( asNAN | aqNAN | bsNAN | bqNAN );
-    uint1   NV <: ( aINF | bINF ) & ( aZERO | bZERO );
+    uint1   IF <:: ( aINF | bINF );
+    uint1   NN <:: ( asNAN | aqNAN | bsNAN | bqNAN );
+    uint1   NV <:: ( aINF | bINF ) & ( aZERO | bZERO );
     uint1   OF = uninitialised;
     uint1   UF = uninitialised;
 
@@ -555,19 +625,6 @@ algorithm floatmultiply(
         ZERO :> bZERO
     );
 
-    uint48  product = uninitialised;
-    dofloatmul UINTMUL(
-        factor_1 <: sigA,
-        factor_2 <: sigB,
-        product :> product
-    );
-
-    uint48  normalfraction = uninitialised;
-    donormalise48 NORMALISE(
-        bitstream <: product,
-        normalised :> normalfraction
-    );
-
     int10   roundexponent = uninitialised;
     uint48  roundfraction = uninitialised;
     doround48 ROUND(
@@ -590,28 +647,26 @@ algorithm floatmultiply(
         f32 :> f32
     );
 
-    NORMALISE.start := 0;
     flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
 
     while(1) {
         if( start ) {
             busy = 1;
             OF = 0; UF = 0;
-            ++: // ALLOW 1 CYLE TO PERFORM THE MULTIPLICATION
+            ++: // ALLOW 1 CYCLE TO PERFORM CALSSIFICATIONS
             __display("");
             __display("  a = { %b %b %b } INPUT",a[31,1],a[23,8],a[0,23]);
             __display("  b = { %b %b %b } INPUT",b[31,1],b[23,8],b[0,23]);
             __display("  IF = %b NN = %b NV = %b",IF,NN,NV);
             __display("");
             __display("  CALCULATING, ADDING EXPONENTS AFTER REMOVING BIAS");
-            __display("  { %b %b %b } x",a[31,1],expA,sigA);
-            __display("  { %b %b %b }",b[31,1],expB,sigB);
             __display(" ={ %b %b %b }",productsign,productexp,product);
             __display("");
             switch( { IF | NN, aZERO | bZERO } ) {
                 case 2b00: {
                     // STEPS: SETUP -> DOMUL -> NORMALISE -> ROUND -> ADJUSTEXP -> COMBINE
-                    NORMALISE.start = 1; while( NORMALISE.busy ) {}
+                    ++: // ALLOW 2 CYCLES TO PERFORM THE MULTIPLICATION, NORMALISATION AND ROUNDING
+                    ++:
                     __display("");
                     __display("  ADD BIAS TO EXPONENT, ROUND AND TRUNCATE MANTISSA");
                     __display("  %b %b (ROUND BIT = %b) (LARGE RESULT + 1 TO EXPONENT = %b)",roundexponent,roundfraction,normalfraction[23,1],product[47,1]);
@@ -801,7 +856,7 @@ algorithm floatdivide(
                             __display(" ={ 0 }");
                         }
                         default: {
-                            NORMALISE.start = 1; while( NORMALISE.busy ) {}
+                            NORMALISE.start = 1; while( ~normalfraction[47,1] ) {} ++:
                             __display("");
                             __display("  ADD BIAS TO EXPONENT, ROUND AND TRUNCATE MANTISSA");
                             __display("  %b %b (ROUND BIT = %b) (DIVISOR SMALLER THAN DIVIDEND -1 FROM EXPONENT == %b)",roundexponent,roundfraction,normalfraction[23,1],( fp32(b).fraction > fp32(a).fraction ));
@@ -1341,7 +1396,7 @@ algorithm main(output int8 leds) {
     // uint7   opCode = 7b1001011; // FNMSUB
     // uint7   opCode = 7b1001111; // FNMADD
 
-    uint7   function7 = 7b0001100; // OPERATION SWITCH
+    uint7   function7 = 7b0000000; // OPERATION SWITCH
     // ADD = 7b0000000 SUB = 7b0000100 MUL = 7b0001000 DIV = 7b0001100 SQRT = 7b0101100
     // FSGNJ[N][X] = 7b0010000 function3 == 000 FSGNJ == 001 FSGNJN == 010 FSGNJX
     // MIN MAX = 7b0010100 function3 == 000 MIN == 001 MAX
@@ -1371,7 +1426,7 @@ algorithm main(output int8 leds) {
     // qNaN = 32hffc00000
     // INF = 32h7F800000
     // -INF = 32hFF800000
-    uint32  sourceReg1F = 32h42C80000;
+    uint32  sourceReg1F = 32h3F5ACE46;
     uint32  sourceReg2F = 32h42C60000;
     uint32  sourceReg3F = 32h3eaaaaab;
 

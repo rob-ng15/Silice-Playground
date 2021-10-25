@@ -123,14 +123,14 @@ algorithm donormalise48_adjustexp(
     uint6   shiftcount = uninitialised;
     cz48 CZ(
         bitstream <: bitstream,
-        cz :> shiftcount
+        cz48 :> shiftcount
     );
     while(1) {
         if( start ) {
             __display("  NORMALISING THE RESULT MANTISSA, ADJUSTING EXPONENT FOR ADDSUB");
             __display("  { (sign) %b %b } (ALREADY NORMALISED == %b)",exp,bitstream,bitstream[47,1]);
             busy = 1;
-            ++: ++: ++:
+            ++: ++: ++: ++:
             normalised = bitstream << shiftcount;
             newexp = exp - shiftcount;
             __display("  { (sign) %b %b } AFTER SHIFT LEFT %d",newexp,normalised,shiftcount);
@@ -147,7 +147,7 @@ algorithm donormalise48(
     uint6   shiftcount = uninitialised;
     cz48 CZ(
         bitstream <: bitstream,
-        cz :> shiftcount
+        cz48 :> shiftcount
     );
     while(1) {
         if( start ) {
@@ -215,7 +215,7 @@ algorithm inttofloat(
     uint5   zeros = uninitialised;
     cz32 CZ(
         bitstream <: number,
-        cz :> zeros
+        cz32 :> zeros
     );
 
     uint1   sign <:: dounsigned ? 0 : a[31,1];
@@ -1083,117 +1083,100 @@ algorithm floatcompare(
 }
 
 // FAST COUNT LEADING ZEROS FOR NORMALISATION AND INT TO FLOAT
-algorithm cz8(
-    input   uint8   bitstream,
-    output  uint4   cz
+algorithm cz2(
+    input   uint2   bitstream,
+    output  uint2   cz2
 ) <autorun> {
     always {
-        if( bitstream == 0 ) {
-            cz = 8;
+        switch( bitstream ) {
+            case 2b00: { cz2 = 2; }
+            case 2b01: { cz2 = 1; }
+            default: { cz2 = 0; }
+        }
+    }
+}
+algorithm cz4(
+    input   uint4   bitstream,
+    output  uint3   cz4
+) <autorun> {
+    uint2   bitstreamh <:: bitstream[2,2];
+    uint2   bitstreaml <:: bitstream[0,2];
+    uint2   czh = uninitialised; cz2 CZ2H( bitstream <: bitstreamh, cz2 :> czh );
+    uint2   czl = uninitialised; cz2 CZ2L( bitstream <: bitstreaml, cz2 :> czl );
+
+    always {
+        if( bitstreamh == 0) {
+            cz4 = 2 + czl;
         } else {
-            if( bitstream[1,7] == 0 ) {
-                cz = 7;
-            } else {
-                if( bitstream[2,6] == 0 ) {
-                    cz = 6;
-                } else {
-                    if( bitstream[3,5] == 0 ) {
-                        cz = 5;
-                    } else {
-                        if( bitstream[4,4] == 0 ) {
-                            cz = 4;
-                        } else {
-                            if( bitstream[5,3] == 0 ) {
-                                cz = 3;
-                            } else {
-                                if( bitstream[6,2] == 0 ) {
-                                    cz = 2;
-                                } else {
-                                    cz = bitstream[7,1] ? 0 : 1;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            cz4 = czh;
+        }
+    }
+}
+algorithm cz8(
+    input   uint8   bitstream,
+    output  uint4   cz8
+) <autorun> {
+    uint4   bitstreamh <:: bitstream[4,4];
+    uint4   bitstreaml <:: bitstream[0,4];
+    uint3   czh = uninitialised; cz4 CZ4H( bitstream <: bitstreamh, cz4 :> czh );
+    uint3   czl = uninitialised; cz4 CZ4L( bitstream <: bitstreaml, cz4 :> czl );
+
+    always {
+        if( bitstreamh == 0) {
+            cz8 = 4 + czl;
+        } else {
+            cz8 = czh;
+        }
+    }
+}
+algorithm cz16(
+    input   uint16  bitstream,
+    output  uint5   cz16
+) <autorun> {
+    uint8   bitstreamh <:: bitstream[8,8];
+    uint8   bitstreaml <:: bitstream[0,8];
+    uint4   czh = uninitialised; cz8 CZ8H( bitstream <: bitstreamh, cz8 :> czh );
+    uint4   czl = uninitialised; cz8 CZ8L( bitstream <: bitstreaml, cz8 :> czl );
+
+    always {
+        if( bitstreamh == 0) {
+            cz16 = 8 + czl;
+        } else {
+            cz16 = czh;
         }
     }
 }
 algorithm cz32(
     input   uint32  bitstream,
-    output  uint6   cz
+    output  uint6   cz32
 ) <autorun> {
-    uint8   block0 <:: bitstream[24,8];
-    uint8   block1 <:: bitstream[16,8];
-    uint8   block2 <:: bitstream[8,8];
-    uint8   block3 <:: bitstream[0,8];
-    uint4   cz0 = uninitialised; cz8 CZ80( bitstream <: block0, cz :> cz0 );
-    uint4   cz1 = uninitialised; cz8 CZ81( bitstream <: block1, cz :> cz1 );
-    uint4   cz2 = uninitialised; cz8 CZ82( bitstream <: block2, cz :> cz2 );
-    uint4   cz3 = uninitialised; cz8 CZ83( bitstream <: block3, cz :> cz3 );
+    uint16  bitstreamh <:: bitstream[16,16];
+    uint16  bitstreaml <:: bitstream[0,16];
+    uint5   czh = uninitialised; cz16 CZ16H( bitstream <: bitstreamh, cz16 :> czh );
+    uint5   czl = uninitialised; cz16 CZ16L( bitstream <: bitstreaml, cz16 :> czl );
 
     always {
-        if( cz0[3,1] ) {
-            if( cz1[3,1] ) {
-                if( cz2[3,1] ) {
-                    if( cz3[3,1] ) {
-                        cz = 32;
-                    } else {
-                        cz = 24 + cz3;
-                    }
-                } else {
-                    cz = 16 + cz2;
-                }
-            } else {
-                cz = 8 + cz1;
-            }
+        if( bitstreamh == 0 ) {
+            cz32 = 16 + czl;
         } else {
-            cz = cz0;
+            cz32 = czh;
         }
     }
 }
 algorithm cz48(
     input   uint48  bitstream,
-    output  uint6   cz
+    output  uint6   cz48
 ) <autorun> {
-    uint8   block0 <:: bitstream[40,8];
-    uint8   block1 <:: bitstream[32,8];
-    uint8   block2 <:: bitstream[24,8];
-    uint8   block3 <:: bitstream[16,8];
-    uint8   block4 <:: bitstream[8,8];
-    uint8   block5 <:: bitstream[0,8];
-    uint4   cz0 = uninitialised; cz8 CZ80( bitstream <: block0, cz :> cz0 );
-    uint4   cz1 = uninitialised; cz8 CZ81( bitstream <: block1, cz :> cz1 );
-    uint4   cz2 = uninitialised; cz8 CZ82( bitstream <: block2, cz :> cz2 );
-    uint4   cz3 = uninitialised; cz8 CZ83( bitstream <: block3, cz :> cz3 );
-    uint4   cz4 = uninitialised; cz8 CZ84( bitstream <: block4, cz :> cz4 );
-    uint4   cz5 = uninitialised; cz8 CZ85( bitstream <: block5, cz :> cz5 );
+    uint16  bitstreamh <:: bitstream[32,16];
+    uint32  bitstreaml <:: bitstream[0,32];
+    uint5   czh = uninitialised; cz16 CZ16H( bitstream <: bitstreamh, cz16 :> czh );
+    uint6   czl = uninitialised; cz32 CZ32L( bitstream <: bitstreaml, cz32 :> czl );
 
     always {
-        if( cz0[3,1] ) {
-            if( cz1[3,1] ) {
-                if( cz2[3,1] ) {
-                    if( cz3[3,1] ) {
-                        if( cz4[3,1] ) {
-                            if( cz[5,1] ) {
-                                cz = 48;
-                            } else {
-                                cz = 40 + cz5;
-                            }
-                        } else {
-                            cz = 32 + cz4;
-                        }
-                    } else {
-                        cz = 24 + cz3;
-                    }
-                } else {
-                    cz = 16 + cz2;
-                }
-            } else {
-                cz = 8 + cz1;
-            }
+        if( bitstreamh == 0 ) {
+            cz48 = 16 + czl;
         } else {
-            cz = cz0;
+            cz48 = czh;
         }
     }
 }
@@ -1467,7 +1450,7 @@ algorithm main(output int8 leds) {
     // uint7   opCode = 7b1001011; // FNMSUB
     // uint7   opCode = 7b1001111; // FNMADD
 
-    uint7   function7 = 7b0001100; // OPERATION SWITCH
+    uint7   function7 = 7b0000000; // OPERATION SWITCH
     // ADD = 7b0000000 SUB = 7b0000100 MUL = 7b0001000 DIV = 7b0001100 SQRT = 7b0101100
     // FSGNJ[N][X] = 7b0010000 function3 == 000 FSGNJ == 001 FSGNJN == 010 FSGNJX
     // MIN MAX = 7b0010100 function3 == 000 MIN == 001 MAX
@@ -1497,7 +1480,7 @@ algorithm main(output int8 leds) {
     // qNaN = 32hffc00000
     // INF = 32h7F800000
     // -INF = 32hFF800000
-    uint32  sourceReg1F = 32h42C80000;
+    uint32  sourceReg1F = 32h3F5ACE46;
     uint32  sourceReg2F = 32h42C60000;
     uint32  sourceReg3F = 32h3eaaaaab;
 
