@@ -27,7 +27,7 @@ $$if VGA then
 $$end
 
     // RNG
-    input   uint6   static16bit
+    input   uint6   static6bit
 ) <autorun> {
     // CURSOR CLOCK
     uint1   blink = uninitialised;
@@ -35,11 +35,6 @@ $$end
 
     // Video Reset
     uint1   video_reset := reset;
-
-    // RNG random number generator
-    uint1   static1bit <:: static16bit[0,1];
-    uint2   static2bit <:: static16bit[0,2];
-    uint6   static6bit <:: static16bit;
 
     // HDMI driver
     // Status of the screen, if in range, if in vblank, actual pixel x and y
@@ -87,7 +82,7 @@ $$end
         memoryAddress <: memoryAddress,
         writeData <: writeData,
         memoryWrite <: BACKGROUNDmemoryWrite,
-        static2bit <: static2bit
+        static2bit <: static6bit[0,2]
     );
 
     // Bitmap Window with GPU
@@ -111,7 +106,6 @@ $$end
         memoryAddress <: memoryAddress,
         writeData <: writeData,
         memoryWrite <: BITMAPmemoryWrite,
-        static1bit <: static1bit,
         static6bit <: static6bit,
         gpu_queue_full :> gpu_queue_full,
         gpu_queue_complete :> gpu_queue_complete,
@@ -550,7 +544,6 @@ algorithm bitmap_memmap(
     input   uint1   memoryWrite,
     input   uint16  writeData,
 
-    input   uint1   static1bit,
     input   uint6   static6bit,
 
     output  uint1   gpu_queue_full,
@@ -681,7 +674,6 @@ algorithm bitmap_memmap(
         vertices_writer_ydelta <: vertices_writer_ydelta,
         vertices_writer_active <: vertices_writer_active,
         framebuffer <: writer_framebuffer,
-        static1bit <: static1bit,
         static6bit <: static6bit,
         bitmap_0A <:> bitmap_0A,
         bitmap_1A <:> bitmap_1A,

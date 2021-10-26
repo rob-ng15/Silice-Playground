@@ -21,7 +21,7 @@
 //
 // NB: Error states are those required by Risc-V floating point
 
-// CLZ CIRCUITS - TRANSLATED BY @sylefeb
+// CLZ ALGORITHM - TRANSLATED BY @sylefeb
 // From recursive Verilog module
 // https://electronics.stackexchange.com/questions/196914/verilog-synthesize-high-speed-leading-zero-count
 
@@ -34,23 +34,26 @@ $$function generate_clz(name,w_in,recurse)
 $$ local w_out = clog2(w_in)
 $$ local w_h   = w_in//2
 $$ if w_in > 2 then generate_clz(name,w_in//2,1) end
-circuitry $name$_$w_in$ (input in,output out)
+algorithm $name$_$w_in$ (
+    input   uint$w_in$ in,
+    output! uint$clog2(w_in)$ out) <autorun>
 {
 $$ if w_in == 2 then
    out = ~in[1,1];
 $$ else
-   uint$clog2(w_in)-1$ half_count = uninitialized;
+   uint$clog2(w_in)$   half_count = uninitialized;
    uint$w_h$           lhs        <: in[$w_h$,$w_h$];
    uint$w_h$           rhs        <: in[    0,$w_h$];
    uint$w_h$           select     <: left_empty ? rhs : lhs;
    uint1               left_empty <: ~|lhs;
-   (half_count) = $name$_$w_h$(select);
-   out          = {left_empty,half_count};
+   clz_silice_$w_h$ cz_half( in <: select, out :> half_count );
+   out          := {left_empty,half_count};
 $$ end
 }
 $$end
 
-// Produce a circuit for 32 bits numbers ( and 16, 8, 4, 2 )
+
+// Produce a algorithm for 32 bits numbers ( and 16, 8, 4, 2 )
 $$generate_clz('clz_silice',32)
 
 // BITFIELD FOR FLOATING POINT NUMBER - IEEE-754 32 bit format
@@ -78,36 +81,18 @@ algorithm classify(
     output  uint1   qNAN,
     output  uint1   ZERO
 ) <autorun> {
-    // CHECK FOR 8hff
-    uint1   expFF <:: ~|( ~fp32(a).exponent );
-    uint1   NAN <:: expFF & a[22,1];
-
+    uint1   expFF <: ( fp32(a).exponent == 8hff );
     always {
         INF = expFF & ~a[22,1];
-        sNAN = NAN & a[21,1];
-        qNAN = NAN & ~a[21,1];
-        ZERO = ~|( fp32(a).exponent );
+        sNAN = expFF & a[22,1] & a[21,1];
+        qNAN = expFF & a[22,1] & ~a[21,1];
+        ZERO = ( fp32(a).exponent == 0 );
     }
 }
 
+// ALGORITHMS TO DEAL WITH 48 BIT FRACTIONS TO 23 BIT FRACTIONS
 // NORMALISE A 48 BIT MANTISSA SO THAT THE MSB IS ONE
 // FOR ADDSUB ALSO DECREMENT THE EXPONENT FOR EACH SHIFT LEFT
-algorithm clz48(
-    input   uint48  bitstream,
-    output! uint6   count
-) <autorun> {
-    uint16  bitstreamh <:: bitstream[32,16];
-    uint32  bitstreaml <:: bitstream[0,32];
-    uint6   clz = uninitialised;
-    always {
-        if( ~|bitstreamh ) {
-            ( clz ) = clz_silice_32( bitstreaml );
-            count = 16 + clz;
-        } else {
-            ( count ) = clz_silice_16( bitstreamh );
-        }
-    }
-}
 algorithm donormalise48_adjustexp(
     input   uint1   start,
     output  uint1   busy(0),
@@ -116,13 +101,24 @@ algorithm donormalise48_adjustexp(
     output  int10   newexp,
     output  uint48  normalised
 ) <autorun> {
-    uint6   shiftcount = uninitialised;  clz48 CLZ48( bitstream <: bitstream, count :> shiftcount );
+    uint16  bitstreamh <: bitstream[32,16];
+    uint32  bitstreaml <: bitstream[0,32];
+    uint5   clzh = uninitialised; clz_silice_16 CZ16( in <: bitstreamh, out :> clzh );
+    uint6   clzl = uninitialised; clz_silice_32 CZ32( in <: bitstreaml, out :> clzl );
+    uint6   shiftcount = uninitialised;
     while(1) {
         if( start ) {
             __display("  NORMALISING THE RESULT MANTISSA, ADJUSTING EXPONENT FOR ADDSUB");
             busy = 1;
             __display("  { (sign) %b %b } (ALREADY NORMALISED == %b)",exp,bitstream,bitstream[47,1]);
             // NORMALISE BY SHIFT 1, 3, 7 OR 15 ZEROS LEFT
+            ++: ++: ++:
+            __display("  { %b, %d } { %b, %d }", bitstreamh, clzh, bitstreaml, clzl );
+            if( bitstreamh == 0 ) {
+                shiftcount = 16 + clzl;
+            } else {
+                shiftcount = clzh;
+            }
             normalised = bitstream << shiftcount;
             newexp = exp - shiftcount;
             __display("  { (sign) %b %b } AFTER SHIFT LEFT %d",newexp,normalised,shiftcount);
@@ -136,9 +132,10 @@ algorithm donormalise48(
     input   uint48  bitstream,
     output  uint48  normalised
 ) <autorun> {
-    uint16  bitstreamh <:: bitstream[32,16];
-    uint32  bitstreaml <:: bitstream[0,32];
-    uint6   clz = uninitialised;
+    uint16  bitstreamh <: bitstream[32,16];
+    uint32  bitstreaml <: bitstream[0,32];
+    uint5   clzh = uninitialised; clz_silice_16 CZ16( in <: bitstreamh, out :> clzh );
+    uint6   clzl = uninitialised; clz_silice_32 CZ32( in <: bitstreaml, out :> clzl );
     uint6   shiftcount = uninitialised;
     while(1) {
         if( start ) {
@@ -146,10 +143,9 @@ algorithm donormalise48(
             busy = 1;
             __display("  { (sign) (exp) %b } (ALREADY NORMALISED == %b)",bitstream,bitstream[47,1]);
             if( bitstreamh == 0 ) {
-                ( clz ) = clz_silice_32( bitstreaml );
-                shiftcount = 16 + clz;
+                shiftcount = 16 + clzl;
             } else {
-                ( shiftcount ) = clz_silice_16( bitstreamh );
+                shiftcount = clzh;
             }
             normalised = bitstream << shiftcount;
             __display("  { (sign) (exp) %b } AFTER SHIFT LEFT %d",normalised,shiftcount);
@@ -190,12 +186,13 @@ algorithm docombinecomponents32(
 // dounsigned == 1 for signed conversion (31 bit plus sign), == 0 for dounsigned conversion (32 bit)
 // CONVERT SIGNED/UNSIGNED INTEGERS TO FLOAT
 // dounsigned == 1 for signed conversion (31 bit plus sign), == 0 for dounsigned conversion (32 bit)
-algorithm clz32(
-    input   uint32  bitstream,
-    output! uint6   count
+algorithm prepitof(
+    input   uint32  number,
+    input   uint1   dounsigned,
+    output  uint32  number_unsigned
 ) <autorun> {
     always {
-        ( count ) = clz_silice_32( bitstream );
+        number_unsigned = dounsigned ? number : ( number[31,1] ? -number : number );
     }
 }
 algorithm inttofloat(
@@ -207,9 +204,9 @@ algorithm inttofloat(
     output  uint32  result
 ) <autorun> {
     // CHECK FOR 24, 16 OR 8 LEADING ZEROS, CONTINUE COUNTING FROM THERE
-    uint6   zeros = uninitialised; clz32 CZ32( bitstream <: number, count :> zeros );
+    uint6   zeros = uninitialised; clz_silice_32 CLZ32( in <: number, out :> zeros );
     uint1   sign <:: dounsigned ? 0 : a[31,1];
-    uint32  number <:: dounsigned ? a : ( a[31,1] ? -a : a );
+    uint32  number = uninitialised; prepitof PREP( number <: a, dounsigned <: dounsigned, number_unsigned :> number );
     uint32  fraction <:: NX ? number >> ( 8 - zeros ) : ( zeros > 8 ) ? number << ( zeros - 8 ) : number;
     int10   exponent <:: 158 - zeros;
     uint1   OF = uninitialised; uint1 UF = uninitialised; uint1 NX = uninitialised;
@@ -227,19 +224,22 @@ algorithm inttofloat(
     );
     flags := { 4b0, OF, UF, NX };
 
-    always {
+    while(1) {
         if( start ) {
             busy = 1;
             OF = 0; UF = 0; NX = 0;
-            if( ~|number ) {
-                result = 0;
-            } else {
-                __display("  i = { %b %b } = %d",sign,number,number);
-                __display("  STARTING AT %d LEADING ZEROS",zeros);
-                __display("  LEADING ZEROS = %d",zeros);
-                __display("");
-                NX = ( zeros < 8 );
-                OF = cOF; UF = cUF; result = f32;
+            switch( number ) {
+                case 0: { result = 0; }
+                default: {
+                    // CHECK FOR 24, 16 OR 8 LEADING ZEROS, CONTINUE COUNTING FROM THERE
+                    __display("  i = { %b %b } = %d",sign,number,number);
+                    __display("  STARTING AT %d LEADING ZEROS",zeros);
+                    NX = ( zeros < 8 );
+                    __display("  LEADING ZEROS = %d",zeros);
+                    __display("");
+                    ++: ++:
+                    OF = cOF; UF = cUF; result = f32;
+                }
             }
             __display("  { %b %b %b }",result[31,1],result[23,8],result[0,23]);
             __display("  { IF NN NV DZ OF UF NX = %b }",flags);
@@ -703,6 +703,24 @@ algorithm floatmultiply(
 }
 
 // DIVIDE TWO FLOATING POINT NUMBERS
+algorithm dofloatdivbit(
+    input   uint50  quotient,
+    input   uint50  remainder,
+    input   uint50  top,
+    input   uint50  bottom,
+    input   uint6   bit,
+    output  uint50  newquotient,
+    output  uint50  newremainder,
+ ) <autorun> {
+    uint50  temporary = uninitialised;
+    uint1   bitresult = uninitialised;
+    always {
+        temporary = { remainder[0,49], top[bit,1] };
+        bitresult = __unsigned(temporary) >= __unsigned(bottom);
+        newremainder = __unsigned(temporary) - ( bitresult ? __unsigned(bottom) : 0 );
+        newquotient = quotient | ( bitresult << bit );
+    }
+}
 algorithm dofloatdivide(
     input   uint1   start,
     output  uint1   busy(0),
@@ -710,45 +728,26 @@ algorithm dofloatdivide(
     input   uint50  sigB,
     output  uint50  quotient
 ) <autorun> {
-    uint50  remainder = uninitialised;
-    uint50  temporary <:: { remainder[0,49], sigA[bit,1] };
-    uint1   bitresult <:: __unsigned(temporary) >= __unsigned(sigB);
+    uint50  remainder <: start ? 0 : newremainder;
+    uint50  newquotient = uninitialised;
+    uint59  newremainder = uninitialised;
+    dofloatdivbit DIVBIT(
+        quotient <: quotient,
+        remainder <: remainder,
+        top <: sigA,
+        bottom <: sigB,
+        bit <: bit,
+        newquotient :> newquotient,
+        newremainder :> newremainder
+    );
     uint6   bit(63);
-    uint2   normalshift <:: ( quotient[48,1] + quotient[49,1] );
 
     busy := start | ( bit != 63 ) | ( quotient[48,2] != 0 );
     while(1) {
         // FIND QUOTIENT AND ENSURE 48 BIT FRACTION ( ie BITS 48 and 49 clear )
         if( start ) {
-            bit = 49; quotient = 0; remainder = 0;
-            while( bit != 63 ) {
-                remainder = __unsigned(temporary) - ( bitresult ? __unsigned(sigB) : 0 );
-                quotient[bit,1] = bitresult;
-                bit = bit - 1;
-            }
-            quotient = quotient >> normalshift;
+            bit = 49; quotient = 0; while( bit != 63 ) { quotient = newquotient; bit = bit - 1; } while( quotient[48,2] != 0 ) { quotient = quotient >> 1; }
         }
-    }
-}
-
-algorithm prepdivide(
-    input   uint32  a,
-    input   uint32  b,
-    output  uint1   quotientsign,
-    output  int10   quotientexp,
-    output  uint50  sigA,
-    output  uint50  sigB
-) <autorun> {
-    // BREAK DOWN INITIAL float32 INPUTS AND FIND SIGN OF RESULT AND EXPONENT OF QUOTIENT ( -1 IF DIVISOR > DIVIDEND )
-    // ALIGN DIVIDEND TO THE LEFT, DIVISOR TO THE RIGHT
-    int10   expA <:: fp32( a ).exponent - 127;
-    int10   expB <:: fp32( b ).exponent - 127;
-    uint1   AvB <:: ( fp32(b).fraction > fp32(a).fraction );
-    always {
-        quotientsign = fp32( a ).sign ^ fp32( b ).sign;
-        quotientexp = expA - expB - AvB;
-        sigA = { 1b1, fp32(a).fraction, 26b0 };
-        sigB = { 27b1, fp32(b).fraction };
     }
 }
 
@@ -761,23 +760,17 @@ algorithm floatdivide(
     output  uint7   flags,
     output  uint32  result
 ) <autorun> {
-    uint1   quotientsign = uninitialised;
-    int10   quotientexp = uninitialised;
-    uint50  sigA = uninitialised;
-    uint50  sigB = uninitialised;
-    prepdivide PREP(
-        a <: a,
-        b <: b,
-        quotientsign :> quotientsign,
-        quotientexp :> quotientexp,
-        sigA :> sigA,
-        sigB :> sigB
-    );
+    // BREAK DOWN INITIAL float32 INPUTS AND FIND SIGN OF RESULT AND EXPONENT OF QUOTIENT ( -1 IF DIVISOR > DIVIDEND )
+    uint1   quotientsign <: fp32( a ).sign ^ fp32( b ).sign;
+    int10   quotientexp <: ((fp32( a ).exponent - 127) - (fp32( b ).exponent - 127)) - ( fp32(b).fraction > fp32(a).fraction );
+    uint50  sigA <: { 1b1, fp32(a).fraction, 26b0 };
+    uint50  sigB <: { 27b1, fp32(b).fraction };
 
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND DIVIDE ZERO
-    uint1   IF <:: ( aINF | bINF );
-    uint1   NN <:: ( asNAN | aqNAN | bsNAN | bqNAN );
+    uint1   IF <: ( aINF | bINF );
+    uint1   NN <: ( asNAN | aqNAN | bsNAN | bqNAN );
     uint1   NV = uninitialised;
+    uint1   DZ <: bZERO;
     uint1   OF = uninitialised;
     uint1   UF = uninitialised;
 
@@ -805,24 +798,16 @@ algorithm floatdivide(
     );
 
     uint48  quotient = uninitialised;
-    uint1   DODIVIDEstart = uninitialised;
-    uint1   DODIVIDEbusy = uninitialised;
     dofloatdivide DODIVIDE(
         sigA <: sigA,
         sigB <: sigB,
-        quotient :> quotient,
-        start <: DODIVIDEstart,
-        busy :> DODIVIDEbusy
+        quotient :> quotient
     );
 
     uint48  normalfraction = uninitialised;
-    uint1   NORMALISEstart = uninitialised;
-    uint1   NORMALISEbusy = uninitialised;
     donormalise48 NORMALISE(
         bitstream <: quotient,
-        normalised :> normalfraction,
-        start <: NORMALISEstart,
-        busy :> NORMALISEbusy
+        normalised :> normalfraction
     );
 
     int10   roundexponent = uninitialised;
@@ -847,8 +832,8 @@ algorithm floatdivide(
         f32 :> f32
     );
 
-    DODIVIDEstart := 0; NORMALISEstart := 0;
-    flags := { IF, NN, 1b0, bZERO, OF, UF, 1b0};
+    DODIVIDE.start := 0; NORMALISE.start := 0;
+    flags := { IF, NN, 1b0, DZ, OF, UF, 1b0};
 
     while(1) {
         if( start ) {
@@ -857,11 +842,11 @@ algorithm floatdivide(
             __display("");
             __display("  a = { %b %b %b } INPUT",a[31,1],a[23,8],a[0,23]);
             __display("  b = { %b %b %b } INPUT",b[31,1],b[23,8],b[0,23]);
-            __display("  IF = %b NN = %b DZ = %b",IF,NN,bZERO);
+            __display("  IF = %b NN = %b DZ = %b",IF,NN,DZ);
             __display("");
             switch( { IF | NN, aZERO | bZERO } ) {
                 case 2b00: {
-                    DODIVIDEstart = 1; while( DODIVIDEbusy ) {}
+                    DODIVIDE.start = 1; while( DODIVIDE.busy ) {}
                     __display("  CALCULATING");
                     __display("  ALIGN DIVIDEND TO LEFT, DIVISOR TO THE RIGHT");
                     __display("  SUBTRACTING EXPONENTS AFTER REMOVING BIAS");
@@ -875,7 +860,7 @@ algorithm floatdivide(
                             __display(" ={ 0 }");
                         }
                         default: {
-                            NORMALISEstart = 1; while( NORMALISEbusy ) {} ++:
+                            NORMALISE.start = 1; while( ~normalfraction[47,1] ) {} ++:
                             __display("");
                             __display("  ADD BIAS TO EXPONENT, ROUND AND TRUNCATE MANTISSA");
                             __display("  %b %b (ROUND BIT = %b) (DIVISOR SMALLER THAN DIVIDEND -1 FROM EXPONENT == %b)",roundexponent,roundfraction,normalfraction[23,1],( fp32(b).fraction > fp32(a).fraction ));
@@ -1415,7 +1400,7 @@ algorithm main(output int8 leds) {
     // uint7   opCode = 7b1001011; // FNMSUB
     // uint7   opCode = 7b1001111; // FNMADD
 
-    uint7   function7 = 7b0001100; // OPERATION SWITCH
+    uint7   function7 = 7b0000000; // OPERATION SWITCH
     // ADD = 7b0000000 SUB = 7b0000100 MUL = 7b0001000 DIV = 7b0001100 SQRT = 7b0101100
     // FSGNJ[N][X] = 7b0010000 function3 == 000 FSGNJ == 001 FSGNJN == 010 FSGNJX
     // MIN MAX = 7b0010100 function3 == 000 MIN == 001 MAX
@@ -1445,7 +1430,7 @@ algorithm main(output int8 leds) {
     // qNaN = 32hffc00000
     // INF = 32h7F800000
     // -INF = 32hFF800000
-    uint32  sourceReg1F = 32h42C80000;
+    uint32  sourceReg1F = 32h3F5ACE46;
     uint32  sourceReg2F = 32h42C60000;
     uint32  sourceReg3F = 32h3eaaaaab;
 

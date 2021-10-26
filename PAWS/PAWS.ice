@@ -223,7 +223,7 @@ $$end
         readData :> AreadData,
         audio_l :> audio_l,
         audio_r :> audio_r,
-        static4bit <: static16bit
+        static4bit <: static16bit[0,4]
     );
 
     uint16  VreadData = uninitialized;
@@ -244,7 +244,7 @@ $$if VGA then
         video_hs :> video_hs,
         video_vs :> video_vs,
 $$end
-        static16bit <: static16bit
+        static6bit <: static16bit[0,6]
     );
 
     uint2   accesssize = uninitialized;
@@ -424,7 +424,7 @@ algorithm cachecontroller(
             if( cachetagmatch ) {
                 needwritetosdram = 1; cacheupdatedata = writethrough; cacheupdate = dowrite;
             } else {
-                if( tags.rdata0[13,1] ) { while( sdrambusy ) {} sdramaddress = { tags.rdata0[0,12], address[1,13], 1b0 }; sdramwrite = 1; }   // EVICT FROM CACHE TO SDRAM
+                if( tags.rdata0[13,1] ) { while( sdrambusy ) {} sdramaddress = { tags.rdata0[0,12], address[1,13], 1b0 }; sdramwrite = 1; } else {}   // EVICT FROM CACHE TO SDRAM
 
                 // READ FROM SDRAM FOR READ AND 8 BIT WRITES (AND MODIFY) AND WRITE TO CACHE, OR WRITE DIRECTLY TO CACHE IF 16 BIT WRITE
                 if( doread | ( dowrite & byteaccess ) ) {

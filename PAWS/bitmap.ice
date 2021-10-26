@@ -106,7 +106,6 @@ algorithm bitmapwriter(
     output  uint1   gpu_queue_complete,
     output  uint1   vector_block_active,
 
-    input   uint1   static1bit,
     input   uint6   static6bit,
 
     // BITMAP TO WRITE
@@ -196,7 +195,7 @@ algorithm bitmapwriter(
         bitmap_x_write <: bitmap_x_write,
         bitmap_y_write <: bitmap_y_write,
         dithermode <: dithermode,
-        static1bit <: static1bit,
+        static1bit <: static6bit[0,1],
         condition :> condition
     );
 

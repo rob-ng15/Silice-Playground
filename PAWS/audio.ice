@@ -34,7 +34,7 @@ algorithm apu(
         updateduration :> updateduration
     );
 
-    start := 0; audio_active := ( selected_duration != 0 );
+    start := 0; audio_active := ( |selected_duration );
 
     always {
         if( updatepoint ) {
@@ -83,8 +83,8 @@ algorithm audiocounter(
     uint16  counter25mhz = 0;
     uint16  counter1khz = 0;
 
-    updatepoint := active & ( counter25mhz == 0 );
-    updateduration := active & ( counter1khz == 0 );
+    updatepoint := active & ( ~|counter25mhz );
+    updateduration := active & ( ~|counter1khz );
 
     always {
         if( start ) {

@@ -107,7 +107,7 @@ algorithm PAWSCPU(
     uint1   frd <:: FASTPATH ? CLASSfrd : EXECUTESLOWfrd;
     int32   sourceReg1 = uninitialized;
     int32   sourceReg2 = uninitialized;
-    uint1   REGISTERSwrite <:: FSM[2,1] & writeRegister & ~frd & ( rd != 0 );
+    uint1   REGISTERSwrite <:: FSM[2,1] & writeRegister & ~frd & ( |rd );
     registersI REGISTERS <@clock_CPUdecoder> (
         SMT <:: SMT,
         rs1 <: rs1,
@@ -161,7 +161,7 @@ algorithm PAWSCPU(
         FASTPATH :> FASTPATH
     );
 
-    uint1   CSRincCSRinstret <:: FSM[2,1];
+    //uint1   CSRincCSRinstret <:: FSM[2,1];
     uint32  EXECUTESLOWmemoryoutput = uninitialized;
     int32   EXECUTESLOWresult = uninitialized;
     uint1   EXECUTESLOWfrd = uninitialized;
@@ -188,7 +188,7 @@ algorithm PAWSCPU(
         frd :> EXECUTESLOWfrd,
         memoryoutput :> EXECUTESLOWmemoryoutput,
         result :> EXECUTESLOWresult,
-        CSRincCSRinstret <: CSRincCSRinstret
+        CSRincCSRinstret <: FSM[2,1]
     );
 
     uint1   takeBranch = uninitialized;
@@ -216,9 +216,6 @@ algorithm PAWSCPU(
     );
 
     // GENERATE PLUS 2 ADDRESSES FOR 32 BIT MEMORY OPERATIONS
-    //uint27  PCplus2 = uninitialized; addrplus2 PC2 <@clock_CPUdecoder> ( address <: PC, addressplus2 :> PCplus2 );
-    //uint27  loadAddressplus2 = uninitialized; addrplus2 LA2 <@clock_CPUdecoder> ( address <: loadAddress, addressplus2 :> loadAddressplus2 );
-    //uint27  storeAddressplus2 = uninitialized; addrplus2 SA2 <@clock_CPUdecoder> ( address <: storeAddress, addressplus2 :> storeAddressplus2 );
     uint27  PCplus2 <:: PC + 2;
     uint27  loadAddressplus2 <:: loadAddress + 2;
     uint27  storeAddressplus2 <:: storeAddress + 2;
@@ -228,7 +225,7 @@ algorithm PAWSCPU(
     // RESET ACTIONS - FSM -> 1, SMT AND PC -> 0 AND DELAY BEFORE CONTINUING
     if( ~reset ) {
         FSM = 1; SMT = 0; pc = 0;
-        resetcount = 16hffff; while( resetcount != 0 ) { resetcount = resetcount - 1; }
+        resetcount = 16hffff; while( |resetcount ) { resetcount = resetcount - 1; }
     }
 
     while(1) {
@@ -249,10 +246,13 @@ algorithm PAWSCPU(
 
         if( memoryload ) {
             address = loadAddress; readmemory = 1; while( memorybusy ) {}                                                                                       // READ 1ST 8 or 16 BITS
-            switch( accesssize[0,2] ) {
-                case 2b00: { memoryinput = memory8bit; }                                                                                                        // 8 BIT SIGN EXTEND
-                case 2b01: { memoryinput  = memory16bit; }                                                                                                      // 16 BIT SIGN EXTEND
-                default: { memoryinput[0,16] = readdata; address = loadAddressplus2; readmemory = 1; while( memorybusy ) {} memoryinput[16,16] = readdata; }    // 32 BIT READ 2ND 16 BITS
+            if( accesssize[1,1] ) {
+                memoryinput[0,16] = readdata; address = loadAddressplus2; readmemory = 1; while( memorybusy ) {} memoryinput[16,16] = readdata;                 // READ 2ND 16 BITS
+            } else {
+                switch( accesssize[0,1] ) {
+                    case 0: { memoryinput = memory8bit; }                                                                                                           // 8 BIT SIGN EXTEND
+                    case 1: { memoryinput  = memory16bit; }                                                                                                         // 16 BIT SIGN EXTEND
+                }
             }
         } else {}
 
@@ -363,7 +363,7 @@ algorithm cpuexecuteSLOWPATH(
     uint1   ALUMDstart = uninitialized;
     uint1   ALUMDbusy = uninitialized;
     aluMD ALUMD(
-        function3 <: function3,
+        function3 <: function3[0,2],
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
         absRS1 <: absRS1,
@@ -480,16 +480,6 @@ algorithm cpuexecuteSLOWPATH(
                         while( FPUbusy | ALUMDbusy ) {}
                         frd = opCode[4,1] & FPUfrd;
                         result = opCode[4,1] ? FPUresult : ALUMDresult;
-                        //switch( opCode[4,1] ) {
-                        //    case 1: {
-                        //        // FLOATING POINT CONVERSIONS AND CALCULATIONS
-                        //        FPUstart = 1; while( FPUbusy ) {} frd = FPUfrd; result = FPUresult;
-                        //    }
-                        //    case 0: {
-                        //        // INTEGER DIVISION
-                        //        ALUMDstart = 1; while( ALUMDbusy ) {} result = ALUMDresult;
-                        //    }
-                        //}
                     }
                     CSRupdateFPUflags = opCode[4,1];
                 }
@@ -543,7 +533,7 @@ algorithm cpuexecuteFASTPATH(
     // M EXTENSION - MULTIPLICATION
     int32   ALUMMresult = uninitialized;
     aluMM ALUMM(
-        function3 <: function3,
+        function3 <: function3[0,2],
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
         absRS1 <: absRS1,

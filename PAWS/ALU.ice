@@ -1,43 +1,4 @@
 // ALU - ALU for immediate-register operations and register-register operations
-algorithm iaddsub(
-    input   uint32  sourceReg1,
-    input   uint32  operand2,
-    input   uint1   addsub,
-    output  uint32  result
-) <autorun> {
-    uint32  negative <:: -operand2;
-    always {
-        result = sourceReg1 + ( addsub ? negative : operand2 );
-    }
-}
-algorithm sll(
-    input   uint32  sourceReg1,
-    input   uint5   shiftcount,
-    output  uint32  result
-) <autorun> {
-    always {
-        result = sourceReg1 << shiftcount;
-    }
-}
-algorithm srl(
-    input   uint32  sourceReg1,
-    input   uint5   shiftcount,
-    output  uint32  result
-) <autorun> {
-    always {
-        result = sourceReg1 >> shiftcount;
-    }
-}
-algorithm sra(
-    input   uint32  sourceReg1,
-    input   uint5   shiftcount,
-    output  uint32  result
-) <autorun> {
-    always {
-        result = __signed(sourceReg1) >>> shiftcount;
-    }
-}
-
 algorithm alu(
     input   uint5   opCode,
     input   uint3   function3,
@@ -58,15 +19,11 @@ algorithm alu(
     uint1   unsignedcompare <:: __unsigned( sourceReg1 ) < __unsigned( operand2 );
     uint1   signedcompare <:: __signed( sourceReg1 ) < __signed(operand2);
 
-    //uint32  AS = uninitialised; iaddsub ALUaddsub( sourceReg1 <: sourceReg1, operand2 <: operand2, addsub <: addsub, result :> AS );
-    //uint32  SLL = uninitialised; sll ALUsll( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, result :> SLL );
-    //uint32  SRL = uninitialised; srl ALUsrl( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, result :> SRL );
-    //uint32  SRA = uninitialised; sra ALUsra( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, result :> SRA );
     uint32  AS <:: addsub ? ( sourceReg1 - operand2 ) : ( sourceReg1 + operand2 );
     uint32  SLL <:: sourceReg1 << shiftcount;
     uint32  SRL <:: sourceReg1 >> shiftcount;
     uint32  SRA <:: __signed(sourceReg1) >>> shiftcount;
-    uint1   SLTU <:: regimm ? ( rs1 == 0 ) ? ( operand2 != 0 ) : unsignedcompare : ( operand2 == 1 ) ? ( sourceReg1 == 0 ) : unsignedcompare;
+    uint1   SLTU <:: regimm ? ( ~|rs1 ) ? ( |operand2 ) : unsignedcompare : ( operand2 == 1 ) ? ( ~|sourceReg1 ) : unsignedcompare;
 
     always {
         switch( function3 ) {
@@ -113,7 +70,7 @@ algorithm douintdivide(
 algorithm aluMD(
     input   uint1   start,
     output  uint1   busy(0),
-    input   uint3   function3,
+    input   uint2   function3,
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
     input   uint32  absRS1,
@@ -141,7 +98,7 @@ algorithm aluMD(
     while(1) {
         if( start ) {
             busy = 1;
-            if( sourceReg2 == 0 ) {
+            if( ~|sourceReg2 ) {
                 result = function3[1,1] ? sourceReg1 : 32hffffffff;
             } else {
                 DODIVIDEstart = 1; while( DODIVIDEbusy ) {}
@@ -167,7 +124,7 @@ algorithm douintmul(
 }
 
 algorithm aluMM(
-    input   uint3   function3,
+    input   uint2   function3,
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
     input   uint32  absRS1,
@@ -175,7 +132,7 @@ algorithm aluMM(
     output  uint32  result
 ) <autorun> {
     uint2   dosigned <:: ~{ function3[0,1], function3[1,1] };
-    uint1   dosigned0 <:: ( dosigned == 0 );
+    uint1   dosigned0 <:: ( ~|dosigned );
     uint1   dosigned1 <:: ( dosigned != 1 );
     uint1   productsign <:: dosigned0 ? 0 : ( dosigned1 ? sourceReg1[31,1] : ( sourceReg1[31,1] ^ sourceReg2[31,1] ) );
     uint32  sourceReg1_unsigned <:: dosigned0 ? sourceReg1 : absRS1;
@@ -190,6 +147,7 @@ algorithm aluMM(
     );
 
     always {
-        result = product[ ( function3 == 0 ) ? 0 : 32, 32 ];
+        // SELECT HIGH OR LOW PART
+        result = product[ { |function3, 5b0 }, 32 ];
     }
 }

@@ -44,10 +44,9 @@ algorithm background_writer(
     uint6   PC = 0;
 
     // COPPER PROGRAM ENTRY
-    uint3   command <: CU(copper.rdata0).command;
     uint3   flag <: CU(copper.rdata0).flag;
     uint10  value <: CU(copper.rdata0).valueflag ? copper_cpu_input : CU(copper.rdata0).value;
-    uint1   bitvalue <: CU(copper.rdata0).value;
+    uint10  negvalue <: -value;
 
     // COPPER PROGRAM FLAGS
     copper.addr0 := PC; copper.wenable1 := 1;
@@ -58,13 +57,13 @@ algorithm background_writer(
                 // UPDATE THE BACKGROUND GENERATOR FROM THE COPPER
                 if( copper_status ) {
                     copper_execute = 0; copper_branch = 0;
-                    switch( command ) {
+                    switch( CU(copper.rdata0).command ) {
                         case 3b000: {
                             // JUMP ON CONDITION
                             switch( flag ) {
                                 default: { copper_branch = 1; }
-                                case 3b001: { copper_branch = ( pix_vblank == bitvalue ); }
-                                case 3b010: { copper_branch = ( pix_active == bitvalue ); }
+                                case 3b001: { copper_branch = ( pix_vblank == value[0,1] ); }
+                                case 3b010: { copper_branch = ( pix_active == value[0,1] ); }
                                 case 3b011: { copper_branch = ( pix_y < value ); }
                                 case 3b100: { copper_branch = ( pix_x < value ); }
                                 case 3b101: { copper_branch = ( copper_variable < value ); }
@@ -72,18 +71,14 @@ algorithm background_writer(
                             PC = copper_branch ? CU(copper.rdata0).colour : PC + 1;
                         }
                         default: {
-                            switch( command ) {
+                            switch( CU(copper.rdata0).command ) {
                                 case 3b001: { copper_execute = pix_vblank; }
                                 case 3b010: { copper_execute = ~pix_active; }
                                 case 3b011: { copper_execute = ( pix_y == value ); }
                                 case 3b100: { copper_execute = ( pix_x == value ); }
-                                case 3b101: { copper_execute = ( copper_variable == ( bitvalue ? pix_x : pix_y ) ); }
+                                case 3b101: { copper_execute = ( copper_variable == ( value[0,1] ? pix_x : pix_y ) ); }
                                 case 3b110: {
-                                    onehot( flag ) {
-                                        case 0: { copper_variable = value; }
-                                        case 1: { copper_variable = copper_variable + value; }
-                                        case 2: { copper_variable = copper_variable - value; }
-                                    }
+                                    copper_variable = flag[0,1] ? value : copper_variable + ( flag[2,1] ? negvalue : value );
                                     copper_branch = 1;
                                 }
                                 default: {
@@ -194,7 +189,7 @@ algorithm pattern(
             case 3: { condition = ( lefthalf == tophalf ); }                        // QUARTERS
             case 4: { condition = 1; }                                              // RAINBOW (placeholder, done in main)
             case 5: {                                                               // SNOW (from @sylefeb)
-                rand_x = ( pix_x == 0 )  ? 1 : new_rand_x;
+                rand_x = ( ~|pix_x )  ? 1 : new_rand_x;
                 speed  = rand_x[10,2];
                 dotpos = ( frame >> speed ) + rand_x;
                 condition   = ( pix_y == dotpos );

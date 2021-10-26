@@ -166,12 +166,11 @@ algorithm floatconvert(
     output  uint5   flags,
     output  uint32  result
 ) <autorun> {
-    uint1   dounsigned <:: rs2[0,1];
     uint32  floatresult = uninitialised;
     uint5   floatflags = uninitialised;
     uint1   FPUfloatstart = uninitialised;
     uint1   FPUfloatbusy = uninitialised;
-    inttofloat FPUfloat( a <: sourceReg1, dounsigned <: dounsigned, result :> floatresult, flags :> floatflags, start <: FPUfloatstart, busy :> FPUfloatbusy );
+    inttofloat FPUfloat( a <: sourceReg1, dounsigned <: rs2[0,1], result :> floatresult, flags :> floatflags );
 
     int32   intresult = uninitialised;
     uint5   intflags = uninitialised;
@@ -181,9 +180,7 @@ algorithm floatconvert(
     uint5   uintflags = uninitialised;
     floattouint FPUuint( a <: sourceReg1F, result :> uintresult, flags :> uintflags );
 
-    FPUfloatstart := 0;
-
-    while(1) {
+    always {
         if( start ) {
             busy = 1;
             switch( function7[2,5] ) {
@@ -193,7 +190,7 @@ algorithm floatconvert(
                 }
                 case 5b11010: {
                     // FCVT.S.W FCVT.S.WU
-                    FPUfloatstart = 1; while( FPUfloatbusy ) {} result = floatresult; flags = floatflags;
+                    result = floatresult; flags = floatflags;
                 }
             }
             busy = 0;
@@ -305,8 +302,8 @@ algorithm floatclassify(
             case 4b1000: { classification = { 2b00, ~fp32( sourceReg1F ).sign, 6b000000, fp32( sourceReg1F ).sign }; }
             case 4b0100: { classification = 10b0100000000; }
             case 4b0010: { classification = 10b1000000000; }
-            case 4b0001: { classification = ( sourceReg1F[0,23] == 0 ) ? { 5b00000, ~fp32( sourceReg1F ).sign, fp32( sourceReg1F ).sign, 3b000 } :
-                                                                            { 4b0000, ~fp32( sourceReg1F ).sign, 2b00, fp32( sourceReg1F ).sign, 2b00 }; }
+            case 4b0001: { classification = ( ~|sourceReg1F[0,23] ) ? { 5b00000, ~fp32( sourceReg1F ).sign, fp32( sourceReg1F ).sign, 3b000 } :
+                                                                        { 4b0000, ~fp32( sourceReg1F ).sign, 2b00, fp32( sourceReg1F ).sign, 2b00 }; }
             default: { classification = { 3b000, ~fp32( sourceReg1F ).sign, 4b0000, fp32( sourceReg1F ).sign, 1b0 }; }
         }
     }

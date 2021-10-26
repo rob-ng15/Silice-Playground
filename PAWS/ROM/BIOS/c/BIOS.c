@@ -613,8 +613,6 @@ void main( void ) {
 
     // STOP SMT TO ALLOW FASTER LOADING
     SMTSTOP();
-    *LOWER_TM_SCROLLWRAPCLEAR = 9;
-    *UPPER_TM_SCROLLWRAPCLEAR = 9;
 
     gpu_outputstringcentre( WHITE, 72, 1, "PAW File", 0 );
     gpu_outputstringcentre( WHITE, 80, 1, "SELECTED", 0 );

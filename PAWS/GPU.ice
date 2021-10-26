@@ -196,7 +196,7 @@ algorithm gpu_queue(
     bitmap_crop_left := cropL; bitmap_crop_right := cropR; bitmap_crop_top := cropT; bitmap_crop_bottom := cropB;
 
     always {
-        if( gpu_write != 0 ) {
+        if( |gpu_write ) {
             queue_dithermode = gpu_dithermode; queue_colour = gpu_colour; queue_colour_alt = gpu_colour_alt;
             queue_x = gpu_x; queue_y = gpu_y;
             queue_param0 = gpu_param0; queue_param1 = gpu_param1;
@@ -436,14 +436,14 @@ algorithm gpu(
 
     // GPU UNIT BUSY FLAGS
     uint7   gpu_busy_flags <:: { GPUpixelblockbusy, GPUcolourblitbusy, GPUblitbusy, GPUtrianglebusy, GPUcirclebusy, GPUrectanglebusy, GPUlinebusy };
-    uint1   gpu_busy <: ( gpu_busy_flags != 0 );
+    uint1   gpu_busy <: ( |gpu_busy_flags );
 
     // CONTROLS FOR BITMAP PIXEL WRITER AND GPU SUBUNITS
     bitmap_write := GPUlinebitmap_write | GPUrectanglebitmap_write | GPUcirclebitmap_write |
                                     GPUtrianglebitmap_write | GPUblitbitmap_write | GPUcolourblitbitmap_write | GPUpixelblockbitmap_write;
 
     GPUrectanglestart := 0; GPUlinestart := 0; GPUcirclestart := 0; GPUtrianglestart := 0; GPUblitstart := 0; GPUcolourblitstart := 0; GPUpixelblockstart := 0;
-    gpu_active := ( gpu_write[1,3] != 0 ) | gpu_busy;
+    gpu_active := ( |gpu_write[1,3] ) | gpu_busy;
 
     always {
         switch( gpu_write ) {
@@ -785,7 +785,7 @@ algorithm drawcircle(
 ) <autorun> {
     int11   numerator = uninitialised;
     int11   new_numerator <:: numerator[10,1] ? numerator + { active_x, 2b00 } + 6 : numerator + { (active_x - active_y), 2b00 } + 10;
-    uint1   positivenumerator <:: ~numerator[10,1] & ( numerator != 0 );
+    uint1   positivenumerator <:: ~numerator[10,1] & ( |numerator );
     int11   active_x = uninitialized;
     int11   active_y = uninitialized;
     int11   count = uninitialised;
@@ -1308,7 +1308,7 @@ algorithm pixelblock(
                     busy = 0;
                 }
                 if( x1 != max_x ) {
-                    x1 = x1 + ( newpixel != 0 );
+                    x1 = x1 + ( |newpixel );
                 } else {
                     x1 = x; y1 = y1 + 1;
                 }

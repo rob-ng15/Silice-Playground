@@ -199,7 +199,6 @@ algorithm timers_memmap(
     uint16  sleepTimer1 = uninitialized;
     uint16  u_noise_out = uninitialized;
     uint16  g_noise_out = uninitialized;
-    uint4   static4bit <: u_noise_out[0,4];
     uint16  counter = uninitialized;
     uint3   resetcounter = uninitialized;
     timers_rng timers <@clock_25mhz> (

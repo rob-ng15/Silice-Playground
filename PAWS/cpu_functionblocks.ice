@@ -384,7 +384,7 @@ algorithm CSRblock(
                     }
                     case 2b01: {
                         // CSRRW / CSRRWI
-                        switch( { rs1 == 0, function3[2,1] } ) {
+                        switch( { ~|rs1, function3[2,1] } ) {
                             case 2b10: {}
                             default: {
                                 switch( CSR(instruction).csr ) {
@@ -398,7 +398,7 @@ algorithm CSRblock(
                     }
                     case 2b10: {
                         // CSRRS / CSRRSI
-                        if( rs1 != 0 ) {
+                        if( |rs1 ) {
                             switch( CSR(instruction).csr ) {
                                 case 12h001: { CSRf[SMT][0,5] = CSRf[SMT][0,5] | writevalue[0,5]; }
                                 case 12h002: { CSRf[SMT][5,3] = CSRf[SMT][5,3] | writevalue[0,3]; }
@@ -409,7 +409,7 @@ algorithm CSRblock(
                     }
                     case 2b11: {
                         // CSRRC / CSRRCI
-                        if( rs1 != 0 ) {
+                        if( |rs1 ) {
                             switch( CSR(instruction).csr ) {
                                 case 12h001: { CSRf[SMT][0,5] = CSRf[SMT][0,5] & ~writevalue[0,5]; }
                                 case 12h002: { CSRf[SMT][5,3] = CSRf[SMT][5,3] & ~writevalue[0,3]; }
