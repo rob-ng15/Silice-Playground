@@ -7,7 +7,7 @@ algorithm ps2ascii(
     input   uint1   outputascii,
     output  uint16  joystick
 ) <autorun> {
-    uint9   newascii = 8hff;
+    uint9   newascii = 0;
 
     // MODIFIER KEYS + JOYSTICK MODE
     uint1   lctrl = 0;
@@ -47,28 +47,21 @@ algorithm ps2ascii(
     uint1   startmulti = 0;
 
     // PS2 KEYBOARD CODE READER
-    uint8   ps2keycode = uninitialised;
-    uint1   ps2valid = uninitialised;
-    ps2 PS2(
-        ps2clk_ext <: us2_bd_dp,
-        ps2data_ext <: us2_bd_dn,
-        data :> ps2keycode,
-        valid :> ps2valid
-    );
+    ps2 PS2( ps2clk_ext <: us2_bd_dp, ps2data_ext <: us2_bd_dn );
 
     asciivalid := 0; joystick ::= { application, nprightup, nprightdown, npleftdown, npleftup, rctrl, rwin, ralt, lalt, npright | right, npleft | left, npdown | down, npup | up, lwin, lctrl, 1b0 };
 
     always {
-        if( ps2valid ) {
-            newascii = 8hff;
-            switch( ps2keycode ) {
+        if( PS2.valid ) {
+            newascii = 0;
+            switch( PS2.data ) {
                 case 8he0: { startmulti = 1; }
                 case 8hf0: { startbreak = 1; }
                 default: {
                     switch( { startmulti, startbreak } ) {
                         case 2b00: {
                             // KEY PRESS - TRANSLATE TO ASCII
-                            switch( ps2keycode ) {
+                            switch( PS2.data ) {
                                 case 8h1c: { newascii = { LETTERMOD, 5h01 }; }                     // A to Z
                                 case 8h32: { newascii = { LETTERMOD, 5h02 }; }
                                 case 8h21: { newascii = { LETTERMOD, 5h03 }; }
@@ -159,7 +152,7 @@ algorithm ps2ascii(
                         }
                         case 2b01: {
                             // KEY RELEASE - SINGLE
-                            switch( ps2keycode ) {
+                            switch( PS2.data ) {
                                 case 8h12: { lshift = 0; }                                      // SHIFT AND CTRL
                                 case 8h59: { rshift = 0; }
                                 case 8h14: { lctrl = 0; }
@@ -177,7 +170,7 @@ algorithm ps2ascii(
                         }
                         case 2b10: {
                             // MULTICODE KEY PRESS
-                            switch( ps2keycode ) {
+                            switch( PS2.data ) {
                                 case 8hf0: { startbreak = 1; }
                                 case 8h5a: { newascii = 8h0d; }                                 // KEYPAD ENTER
                                 case 8h14: { rctrl = 1; }                                       // RIGHT CTRL AND ALT
@@ -201,7 +194,7 @@ algorithm ps2ascii(
                         }
                         case 2b11: {
                             // MULTICODE KEY RELEASE
-                            switch( ps2keycode ) {
+                            switch( PS2.data ) {
                                 case 8h6b: { left = 0; }                                        // CURSOR KEYS
                                 case 8h75: { up = 0; }
                                 case 8h72: { down = 0; }
@@ -220,7 +213,7 @@ algorithm ps2ascii(
             }
 
             // NEW KEYCODE RECEIVED
-            if( newascii != 8hff ) {
+            if( |newascii ) {
                 ascii = newascii; asciivalid = outputascii;
             }
         }

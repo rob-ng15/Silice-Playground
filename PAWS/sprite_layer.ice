@@ -30,7 +30,7 @@ algorithm sprite_layer(
     $$for i=0,15 do
         simple_dualport_bram_port0 tiles_$i$,
     $$end
-) <autorun> {
+) <autorun,reginputs> {
     uint1   output_collisions = 0;
 
     $$for i=0,15 do
@@ -61,7 +61,7 @@ algorithm sprite_layer(
                                       };
 
     // Default to transparent
-    sprite_layer_display := pix_active & ( sprite_collision_frame != 0 );
+    sprite_layer_display := pix_active & ( |sprite_collision_frame );
 
     always {
         // RENDER + COLLISION DETECTION
@@ -163,7 +163,7 @@ algorithm sprite_layer_writer(
         output  int10   sprite_read_y_$i$,
         output  uint3   sprite_read_tile_$i$,
     $$end
-) <autorun> {
+) <autorun,reginputs> {
     // Storage for the sprites
     // Stored as registers as needed instantly
     uint1   sprite_active[16] = uninitialised;
@@ -229,7 +229,7 @@ algorithm spritebitmapwriter(
     input   uint4   sprite_writer_sprite,
     input   uint7   sprite_writer_line,
     input   uint16  sprite_writer_bitmap,
-) <autorun> {
+) <autorun,reginputs> {
     $$for i=0,15 do
         tiles_$i$.wenable1 := 1;
     $$end

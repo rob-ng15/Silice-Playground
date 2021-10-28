@@ -12,7 +12,7 @@ algorithm terminal(
     input   uint1   showterminal,
     input   uint7   terminal_x,
     input   uint3   terminal_y
-) <autorun> {
+) <autorun,reginputs> {
     // Character ROM 8x8 x 256
     brom uint8 characterGenerator8x8[] = {
         $include('ROM/characterROM8x8nobold.inc')
@@ -51,7 +51,7 @@ algorithm terminal_writer(
     output  uint2   terminal_active(0),
     output  uint7   terminal_x(0),
     output  uint3   terminal_y(7)
-) <autorun> {
+) <autorun,reginputs> {
     simple_dualport_bram uint8 terminal_copy[640] = uninitialized;
 
     // Terminal active (scroll) flag and temporary storage for scrolling
@@ -59,6 +59,7 @@ algorithm terminal_writer(
     uint10  terminal_scroll_next <:: terminal_scroll + 1;
     uint1   scrolling <:: ( terminal_scroll < 560 );
     uint1   endofline <:: ( terminal_x == 79 );
+    uint1   working <:: ( terminal_scroll != 640 );
 
     // Setup the writing to the terminal memory
     uint10  terminal_address <:: terminal_x + terminal_y * 80;
@@ -104,7 +105,7 @@ algorithm terminal_writer(
             default: { terminal_scroll = 0; }
             case 1: {
                 // SCROLL AND BLANK LAST LINE
-                while( terminal_scroll != 640 ) {
+                while( working ) {
                     ++:
                     terminal.addr1 = terminal_scroll;
                     terminal.wdata1 = scrolling ? terminal_copy.rdata0 : 0;
@@ -115,7 +116,7 @@ algorithm terminal_writer(
                 terminal_active = 0;
             }
             case 2: {
-                while( terminal_scroll != 640 ) {
+                while( working ) {
                     terminal.addr1 = terminal_scroll;
                     terminal.wdata1 = 0;
                     terminal_copy.addr1 = terminal_scroll;

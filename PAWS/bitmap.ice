@@ -19,7 +19,7 @@ algorithm bitmap(
     input   int11   bitmap_x_read,
     input   int11   bitmap_y_read,
     output  uint7   bitmap_colour_read
-) <autorun> {
+) <autorun,reginputs> {
     // Pixel x and y fetching 1 in advance due to bram latency
     uint9   x_plus_one <: pix_x[1,9] + pix_x[0,1];
     uint8   y_line <: pix_vblank ? 0 : pix_y[1,9];
@@ -64,22 +64,6 @@ algorithm bitmapwriter(
     input   uint8   crop_top,
     input   uint8   crop_bottom,
 
-    // For setting blit1 tile bitmaps
-    input   uint5   blit1_writer_tile,
-    input   uint4   blit1_writer_line,
-    input   uint16  blit1_writer_bitmap,
-
-    // For setting character generator bitmaps
-    input   uint8   character_writer_character,
-    input   uint3   character_writer_line,
-    input   uint8   character_writer_bitmap,
-
-    // For set colourblit tile bitmaps
-    input   uint5   colourblit_writer_tile,
-    input   uint4   colourblit_writer_line,
-    input   uint4   colourblit_writer_pixel,
-    input   uint7   colourblit_writer_colour,
-
     // Colours for the pixelblock
     input   uint7   pb_colour7,
     input   uint8   pb_colour8r,
@@ -95,17 +79,10 @@ algorithm bitmapwriter(
     input   uint3   vector_block_scale,
     input   uint3   vector_block_action,
     input   uint1   draw_vector,
-    // For setting vertices
-    input   uint5   vertices_writer_block,
-    input   uint6   vertices_writer_vertex,
-    input   int6    vertices_writer_xdelta,
-    input   int6    vertices_writer_ydelta,
-    input   uint1   vertices_writer_active,
 
     output  uint1   gpu_queue_full,
     output  uint1   gpu_queue_complete,
     output  uint1   vector_block_active,
-
     input   uint6   static6bit,
 
     // BITMAP TO WRITE
@@ -118,7 +95,25 @@ algorithm bitmapwriter(
     simple_dualport_bram_port1 bitmap_1G,
     simple_dualport_bram_port1 bitmap_0B,
     simple_dualport_bram_port1 bitmap_1B,
-) <autorun> {
+
+    simple_dualport_bram_port0 blit1tilemap,
+    simple_dualport_bram_port0 characterGenerator8x8,
+    simple_dualport_bram_port0 colourblittilemap,
+    simple_dualport_bram_port0 vertex
+) <autorun,reginputs> {
+    // VECTOR DRAWER UNIT
+    vectors vector_drawer(
+        vector_block_number <: vector_block_number,
+        vector_block_xc <: vector_block_xc,
+        vector_block_yc <: vector_block_yc,
+        vector_block_scale <: vector_block_scale,
+        vector_block_action <: vector_block_action,
+        draw_vector <: draw_vector,
+        vector_block_active :> vector_block_active,
+        vertex <:> vertex,
+        gpu_active <: QUEUE.gpu_active
+    );
+
     // From GPU to set a pixel
     int11   bitmap_x_write = uninitialized;
     int11   bitmap_y_write = uninitialized;
@@ -157,34 +152,21 @@ algorithm bitmapwriter(
         gpu_param5 <: gpu_param5,
         gpu_write <: gpu_write,
         gpu_dithermode <: gpu_dithermode,
-        blit1_writer_tile <: blit1_writer_tile,
-        blit1_writer_line <: blit1_writer_line,
-        blit1_writer_bitmap <: blit1_writer_bitmap,
-        character_writer_character <: character_writer_character,
-        character_writer_line <: character_writer_line,
-        character_writer_bitmap <: character_writer_bitmap,
-        colourblit_writer_tile <: colourblit_writer_tile,
-        colourblit_writer_line <: colourblit_writer_line,
-        colourblit_writer_pixel <: colourblit_writer_pixel,
-        colourblit_writer_colour <: colourblit_writer_colour,
+        blit1tilemap <:> blit1tilemap,
+        characterGenerator8x8 <:> characterGenerator8x8,
+        colourblittilemap <:> colourblittilemap,
         pb_colour7 <: pb_colour7,
         pb_colour8r <: pb_colour8r,
         pb_colour8g <: pb_colour8g,
         pb_colour8b <: pb_colour8b,
         pb_newpixel <: pb_newpixel,
-        vector_block_number <: vector_block_number,
         vector_block_colour <: vector_block_colour,
-        vector_block_xc <: vector_block_xc,
-        vector_block_yc <: vector_block_yc,
-        vector_block_scale <: vector_block_scale,
-        vector_block_action <: vector_block_action,
-        draw_vector <: draw_vector,
-        vertices_writer_block <: vertices_writer_block,
-        vertices_writer_vertex <: vertices_writer_vertex,
-        vertices_writer_xdelta <: vertices_writer_xdelta,
-        vertices_writer_ydelta <: vertices_writer_ydelta,
-        vertices_writer_active <: vertices_writer_active,
-        vector_block_active :> vector_block_active,
+        vector_drawer_gpu_x <: vector_drawer.gpu_x,
+        vector_drawer_gpu_y <: vector_drawer.gpu_y,
+        vector_drawer_gpu_param0 <: vector_drawer.gpu_param0,
+        vector_drawer_gpu_param1 <: vector_drawer.gpu_param1,
+        vector_drawer_gpu_write <: vector_drawer.gpu_write,
+        vector_block_active <: vector_block_active,
         queue_full :> gpu_queue_full,
         queue_complete :> gpu_queue_complete
     );

@@ -49,7 +49,7 @@ algorithm douintdivide(
     input   uint32  divisor,
     output  uint32  quotient,
     output  uint32  remainder
-) <autorun> {
+) <autorun,reginputs> {
     uint32  temporary <:: { remainder[0,31], dividend[bit,1] };
     uint1   bitresult <:: __unsigned(temporary) >= __unsigned(divisor);
     uint6   bit(63);
@@ -83,17 +83,13 @@ algorithm aluMD(
     uint32  sourceReg1_unsigned <:: function3[0,1] ? sourceReg1 : absRS1;
     uint32  sourceReg2_unsigned <:: function3[0,1] ? sourceReg2 : absRS2;
 
-    uint1   DODIVIDEstart = uninitialised;
-    uint1   DODIVIDEbusy = uninitialised;
     douintdivide DODIVIDE(
         dividend <: sourceReg1_unsigned,
         divisor <: sourceReg2_unsigned,
         quotient :> result_quotient,
-        remainder :> result_remainder,
-        start <: DODIVIDEstart,
-        busy :> DODIVIDEbusy
+        remainder :> result_remainder
     );
-    DODIVIDEstart := 0;
+    DODIVIDE.start := 0;
 
     while(1) {
         if( start ) {
@@ -101,7 +97,7 @@ algorithm aluMD(
             if( ~|sourceReg2 ) {
                 result = function3[1,1] ? sourceReg1 : 32hffffffff;
             } else {
-                DODIVIDEstart = 1; while( DODIVIDEbusy ) {}
+                DODIVIDE.start = 1; while( DODIVIDE.busy ) {}
                 result = function3[1,1] ? result_remainder : ( quotientremaindersign ? -result_quotient : result_quotient );
             }
             busy = 0;
@@ -142,12 +138,11 @@ algorithm aluMM(
     douintmul UINTMUL(
         factor_1 <: sourceReg1_unsigned,
         factor_2 <: sourceReg2_unsigned,
-        productsign <: productsign,
-        product64 :> product
+        productsign <: productsign
     );
 
     always {
         // SELECT HIGH OR LOW PART
-        result = product[ { |function3, 5b0 }, 32 ];
+        result = UINTMUL.product64[ { |function3, 5b0 }, 32 ];
     }
 }

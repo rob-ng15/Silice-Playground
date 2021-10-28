@@ -28,18 +28,9 @@ algorithm gpu_queue(
     input   uint4   gpu_write,
     input   uint4   gpu_dithermode,
 
-    input   uint6   blit1_writer_tile,
-    input   uint4   blit1_writer_line,
-    input   uint16  blit1_writer_bitmap,
-
-    input   uint9   character_writer_character,
-    input   uint3   character_writer_line,
-    input   uint8   character_writer_bitmap,
-
-    input   uint6   colourblit_writer_tile,
-    input   uint4   colourblit_writer_line,
-    input   uint4   colourblit_writer_pixel,
-    input   uint7   colourblit_writer_colour,
+    simple_dualport_bram_port0 blit1tilemap,
+    simple_dualport_bram_port0 characterGenerator8x8,
+    simple_dualport_bram_port0 colourblittilemap,
 
     input   uint7   pb_colour7,
     input   uint8   pb_colour8r,
@@ -47,84 +38,18 @@ algorithm gpu_queue(
     input   uint8   pb_colour8b,
     input   uint2   pb_newpixel,
 
-    input   uint6   vector_block_number,
     input   uint7   vector_block_colour,
-    input   int11   vector_block_xc,
-    input   int11   vector_block_yc,
-    input   uint3   vector_block_scale,
-    input   uint3   vector_block_action,
-    input   uint1   draw_vector,
-    input   uint6   vertices_writer_block,
-    input   uint6   vertices_writer_vertex,
-    input   int6    vertices_writer_xdelta,
-    input   int6    vertices_writer_ydelta,
-    input   uint1   vertices_writer_active,
+    input   int11   vector_drawer_gpu_x,
+    input   int11   vector_drawer_gpu_y,
+    input   int11   vector_drawer_gpu_param0,
+    input   int11   vector_drawer_gpu_param1,
+    input   uint1   vector_drawer_gpu_write,
+    input   uint1   vector_block_active,
 
     output  uint1   queue_full(0),
     output  uint1   queue_complete(1),
-    output  uint1   vector_block_active(0)
-) <autorun> {
-    // 32 x 16 x 16 1 bit tilemap for blit1tilemap
-    simple_dualport_bram uint16 blit1tilemap[ 1024 ] = uninitialized;
-    // Character ROM 8x8 x 256 for character blitter
-    simple_dualport_bram uint8 characterGenerator8x8[] = {
-        $include('ROM/characterROM8x8.inc')
-    };
-    // BLIT TILE WRITER
-    blittilebitmapwriter BTBM(
-        blit1_writer_tile <: blit1_writer_tile,
-        blit1_writer_line <: blit1_writer_line,
-        blit1_writer_bitmap <: blit1_writer_bitmap,
-        character_writer_character <: character_writer_character,
-        character_writer_line <: character_writer_line,
-        character_writer_bitmap <: character_writer_bitmap,
-        blit1tilemap <:> blit1tilemap,
-        characterGenerator8x8 <:> characterGenerator8x8
-    );
-    // 32 x 16 x 16 7 bit tilemap for colour
-    simple_dualport_bram uint7 colourblittilemap[ 16384 ] = uninitialized;
-    // COLOURBLIT TILE WRITER
-    colourblittilebitmapwriter CBTBM(
-        colourblit_writer_tile <: colourblit_writer_tile,
-        colourblit_writer_line <: colourblit_writer_line,
-        colourblit_writer_pixel <: colourblit_writer_pixel,
-        colourblit_writer_colour <: colourblit_writer_colour,
-        colourblittilemap <:> colourblittilemap,
-    );
-
-    // 32 vector blocks each of 16 vertices
-    simple_dualport_bram uint13 vertex[1024] = uninitialised;
-    // VECTOR DRAWER UNIT
-    int11   vector_drawer_gpu_x = uninitialised;
-    int11   vector_drawer_gpu_y = uninitialised;
-    int11   vector_drawer_gpu_param0 = uninitialised;
-    int11   vector_drawer_gpu_param1 = uninitialised;
-    uint1   vector_drawer_gpu_write = uninitialised;
-    vectors vector_drawer(
-        gpu_x :> vector_drawer_gpu_x,
-        gpu_y :> vector_drawer_gpu_y,
-        gpu_param0 :> vector_drawer_gpu_param0,
-        gpu_param1 :> vector_drawer_gpu_param1,
-        gpu_write :> vector_drawer_gpu_write,
-        vector_block_number <: vector_block_number,
-        vector_block_xc <: vector_block_xc,
-        vector_block_yc <: vector_block_yc,
-        vector_block_scale <: vector_block_scale,
-        vector_block_action <: vector_block_action,
-        draw_vector <: draw_vector,
-        vector_block_active :> vector_block_active,
-        vertex <:> vertex,
-        gpu_active <: gpu_active
-    );
-    vertexwriter VW(
-        vertices_writer_block <: vertices_writer_block,
-        vertices_writer_vertex <: vertices_writer_vertex,
-        vertices_writer_xdelta <: vertices_writer_xdelta,
-        vertices_writer_ydelta <: vertices_writer_ydelta,
-        vertices_writer_active <: vertices_writer_active,
-        vertex <:> vertex
-    );
-
+    output  uint1   gpu_active
+) <autorun,reginputs> {
     int11   x = uninitialised;
     int11   y = uninitialised;
     uint7   colour = uninitialised;
@@ -136,7 +61,6 @@ algorithm gpu_queue(
     int11   param4 = uninitialised;
     int11   param5 = uninitialised;
     uint4   dithermode = uninitialised;
-    uint1   gpu_active = uninitialised;
     uint4   write = uninitialised;
     uint9   cropL = uninitialised;
     uint8   cropT = uninitialised;
@@ -290,7 +214,7 @@ algorithm gpu(
     input   uint2   pb_newpixel,
 
     output  uint1   gpu_active(0),
-) <autorun> {
+) <autorun,reginputs> {
     // GPU SUBUNITS
     uint1   GPUrectanglestart = uninitialised;
     uint1   GPUrectanglebusy = uninitialised;
@@ -906,7 +830,8 @@ algorithm preptriangle(
             if( y3 < y1 ) { tx = x1; ty = y1; x1 = x3; y1 = y3; x3 = tx; y3 = ty; ++: }
             if( y3 < y2 ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++: }
             if( ( y2 == y1 ) & ( x2 < x1 ) ) { tx = x1; ty = y1; x1 = x2; y1 = y2; x2 = tx; y2 = ty; ++: }
-            if( ( y2 != y1 ) & ( y3 >= y2 ) & ( x2 < x3 ) ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty;}
+            if( ( y2 != y1 ) & ( y3 >= y2 ) & ( x2 < x3 ) ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++:}
+
             // Find minimum and maximum of x, x1, x2, y, y1 and y2 for the bounding box
             min_x = x1x2 ? ( x1x3 ? x1 : x3 ) : ( x2x3 ? x2 : x3 );
             max_x = x1x2 ? ( x2x3 ? x3 : x2 ) : ( x1x3 ? x3 : x1 );
@@ -1079,7 +1004,7 @@ algorithm blittilebitmapwriter(
 
     simple_dualport_bram_port1 blit1tilemap,
     simple_dualport_bram_port1 characterGenerator8x8
-) <autorun> {
+) <autorun,reginputs> {
     blit1tilemap.wenable1 := 1;
     characterGenerator8x8.wenable1 := 1;
     blit1tilemap.addr1 := { blit1_writer_tile, blit1_writer_line };
@@ -1127,25 +1052,25 @@ algorithm blit(
     uint3   revx3 <:: 3b111 - px[0,3];
     uint3   revy3 <:: 3b111 - py[0,3];
 
-    uint4   yinblittile <:: action[2,1] ? ( action[0,2] == 2b00 ) ? py[0,4] :
-                                        ( action[0,2] == 2b01 ) ? px[0,4] :
-                                        ( action[0,2] == 2b10 ) ? revy4 :
-                                        revx4 :
+    uint1   action00 <:: ( action[0,2] == 2b00 );
+    uint1   action01 <:: ( action[0,2] == 2b01 );
+    uint1   action10 <:: ( action[0,2] == 2b10 );
+
+    uint4   yinblittile <:: action[2,1] ? action00 ? py[0,4] :
+                                        action01 ? px[0,4] :
+                                        action10 ? revy4 : revx4 :
                                         action[1,1] ? revy4 :  py[0,4];
-    uint4   xinblittile <:: action[2,1] ?  ( action[0,2] == 2b00 ) ? px[0,4] :
-                                        ( action[0,2] == 2b01 ) ? revy4 :
-                                        ( action[0,2] == 2b10 ) ? revx4 :
-                                        py[0,4] :
+    uint4   xinblittile <:: action[2,1] ?  action00 ? px[0,4] :
+                                        action01 ? revy4 :
+                                        action10 ? revx4 : py[0,4] :
                                         action[0,1] ? revx4 :  px[0,4];
-    uint3   yinchartile <:: action[2,1] ? ( action[0,2] == 2b00 ) ? py[0,3] :
-                                        ( action[0,2] == 2b01 ) ? px[0,3] :
-                                        ( action[0,2] == 2b10 ) ? revy3 :
-                                        revx3 :
+    uint3   yinchartile <:: action[2,1] ? action00 ? py[0,3] :
+                                        action01 ? px[0,3] :
+                                        action10 ? revy3 : revx3 :
                                         action[1,1] ? revy3 :  py[0,3];
-    uint3   xinchartile <:: action[2,1] ?  ( action[0,2] == 2b00 ) ? px[0,3] :
-                                        ( action[0,2] == 2b01 ) ? revy3 :
-                                        ( action[0,2] == 2b10 ) ? revx3 :
-                                        py[0,3] :
+    uint3   xinchartile <:: action[2,1] ?  action00 ? px[0,3] :
+                                        action01 ? revy3 :
+                                        action10 ? revx3 : py[0,3] :
                                         action[0,1] ? revx3 :  px[0,3];
     blit1tilemap.addr0 := { tile, yinblittile };
     characterGenerator8x8.addr0 := { tile, yinchartile };
@@ -1188,7 +1113,7 @@ algorithm colourblittilebitmapwriter(
     input   uint7   colourblit_writer_colour,
 
     simple_dualport_bram_port1 colourblittilemap,
-) <autorun> {
+) <autorun,reginputs> {
     colourblittilemap.wenable1 := 1;
     colourblittilemap.addr1 := { colourblit_writer_tile, colourblit_writer_line, colourblit_writer_pixel };
     colourblittilemap.wdata1 := colourblit_writer_colour;
@@ -1223,16 +1148,18 @@ algorithm colourblit(
     uint4   revx <:: 4b1111 - px[0,4];
     uint4   revy <:: 4b1111 - py[0,4];
 
+    uint1   action00 <:: ( action[0,2] == 2b00 );
+    uint1   action01 <:: ( action[0,2] == 2b01 );
+    uint1   action10 <:: ( action[0,2] == 2b10 );
+
     // tile bitmap addresses - handling rotation or reflection - find y and x positions, then concert to address
-    uint4   yintile <:: action[2,1] ? ( action[0,2] == 2b00 ) ? py[0,4] :
-                                        ( action[0,2] == 2b01 ) ? px[0,4] :
-                                        ( action[0,2] == 2b10 ) ? revy :
-                                        revx :
+    uint4   yintile <:: action[2,1] ? action00 ? py[0,4] :
+                                        action01 ? px[0,4] :
+                                        action10 ? revy : revx :
                                         action[1,1] ? revy :  py[0,4];
-    uint4   xintile <:: action[2,1] ?  ( action[0,2] == 2b00 ) ? px[0,4] :
-                                        ( action[0,2] == 2b01 ) ? revy :
-                                        ( action[0,2] == 2b10 ) ? revx :
-                                        py[0,4] :
+    uint4   xintile <:: action[2,1] ?  action00 ? px[0,4] :
+                                        action01 ? revy :
+                                        action10 ? revx : py[0,4] :
                                         action[0,1] ? revx :  px[0,4];
     colourblittilemap.addr0 := { tile, yintile, xintile };
 
@@ -1385,7 +1312,7 @@ algorithm vertexwriter(
     input   uint1   vertices_writer_active,
 
     simple_dualport_bram_port1 vertex
-) <autorun> {
+) <autorun,reginputs> {
     vertex.wenable1 := 1;
     vertex.addr1 := { vertices_writer_block, vertices_writer_vertex };
     vertex.wdata1 := { vertices_writer_active, __unsigned(vertices_writer_xdelta), __unsigned(vertices_writer_ydelta) };
@@ -1407,7 +1334,7 @@ algorithm vectors(
     output  int11   gpu_param1,
     output  uint1   gpu_write,
     input   uint1   gpu_active
-) <autorun> {
+) <autorun,reginputs> {
     // Add present deltas to the centres
     uint6   deltax <:: { vectorentry(vertex.rdata0).dxsign, vectorentry(vertex.rdata0).dx };
     uint6   deltay <:: { vectorentry(vertex.rdata0).dysign, vectorentry(vertex.rdata0).dy };
@@ -1424,13 +1351,11 @@ algorithm vectors(
 
     // Vertices being processed, plus first coordinate of each line
     uint5 vertices_number = uninitialised;
-    int11 start_x = uninitialised;
-    int11 start_y = uninitialised;
 
     // Set read address for the vertices
     vertex.addr0 := { vector_block_number, vertices_number };
 
-    gpu_write := 0; gpu_x := start_x; gpu_y := start_y;
+    gpu_write := 0;
 
     while(1) {
         if( draw_vector ) {
@@ -1438,18 +1363,18 @@ algorithm vectors(
             vertices_number = 0;
             ++:
             // Start with the first vertex
-            ( start_x, start_y ) = copycoordinates( gpu_param0, gpu_param1 );
+            ( gpu_x, gpu_y ) = copycoordinates( gpu_param0, gpu_param1 );
             vertices_number = 1;
             ++:
             // Continue until an inactive or last vertex
-            while( vectorentry(vertex.rdata0).active & ( vertices_number != 16 ) ) {
+            while( vectorentry(vertex.rdata0).active & ( ~vertices_number[4,1] ) ) {
                 // Move to the next vertex
                 ++:
                 // Dispatch line to GPU
                 while( gpu_active ) {} gpu_write = 1;
                 ++:
                 // Move onto the next vertex
-                ( start_x, start_y ) = copycoordinates( gpu_param0, gpu_param1 );
+                ( gpu_x, gpu_y ) = copycoordinates( gpu_param0, gpu_param1 );
                 vertices_number = vertices_number + 1;
             }
             vector_block_active = 0;

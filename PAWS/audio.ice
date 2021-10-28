@@ -7,61 +7,35 @@ algorithm apu(
     input   uint4   staticGenerator,
     output  uint1   audio_active,
     output  uint4   audio_output
-) <autorun> {
-    // LATCH SELECTED FREQUENCY, WAVEFORM AND DURATION ON APU_WRITE
-    uint16  selected_frequency = uninitialised;
-    uint4   selected_waveform = uninitialised;
-    uint16  selected_duration = uninitialised;
-
-    // POSITION IN THE WAVEFORM
+) <autorun,reginputs> {
     uint5   point = uninitialised;
     uint4   level = uninitialised;
-    waveform WAVEFORM(
-        selected_waveform <: selected_waveform,
-        point <: point,
-        staticGenerator <: staticGenerator,
-        audio_output :> level
-    );
-
-    uint1   start = uninitialised;
     uint1   updatepoint = uninitialised;
-    uint1   updateduration = uninitialised;
-    audiocounter COUNTER(
-        start <: start,
-        active <: audio_active,
-        selected_frequency <: selected_frequency,
-        updatepoint :> updatepoint,
-        updateduration :> updateduration
-    );
+    waveform WAVEFORM( point <: point, staticGenerator <: staticGenerator, audio_output :> level );
+    audiocounter COUNTER( active :> audio_active, updatepoint :> updatepoint );
 
-    start := 0; audio_active := ( |selected_duration );
+    COUNTER.start := 0;
 
     always {
-        if( updatepoint ) {
-            audio_output = level;
-        }
+        if( updatepoint ) { audio_output = level; }
         if( apu_write ) {
-            selected_waveform = waveform;
-            selected_frequency = frequency;
-            selected_duration = duration;
             point = 0;
-            start = 1;
+            WAVEFORM.selected_waveform = waveform;
+            COUNTER.selected_frequency = frequency;
+            COUNTER.selected_duration = duration;
+            COUNTER.start = 1;
         } else {
             point = point + updatepoint;
-            selected_duration = selected_duration - updateduration;
         }
     }
-
-    // STOP AUDIO ON RESET
-    if( ~reset ) { selected_duration = 0; }
 }
 
 algorithm waveform(
-    input   uint4   selected_waveform,
     input   uint5   point,
+    input   uint4   selected_waveform,
     input   uint4   staticGenerator,
     output  uint4   audio_output
-) <autorun> {
+) <autorun,reginputs> {
     always {
         switch( selected_waveform ) {
             case 0: { audio_output = { {4{point[4,1]}} }; }                                 // SQUARE
@@ -75,24 +49,30 @@ algorithm waveform(
 
 algorithm audiocounter(
     input   uint1   start,
-    input   uint1   active,
     input   uint16  selected_frequency,
+    input   uint16  selected_duration,
     output  uint1   updatepoint,
-    output  uint1   updateduration
-) <autorun> {
-    uint16  counter25mhz = 0;
-    uint16  counter1khz = 0;
+    output  uint1   active
+) <autorun,reginputs> {
+    uint16  counter25mhz = uninitialised;
+    uint16  counter1khz = uninitialised;
+    uint16  duration = uninitialised;
+    uint1   updateduration <:: active & ( ~|counter1khz );
 
-    updatepoint := active & ( ~|counter25mhz );
-    updateduration := active & ( ~|counter1khz );
+    active := ( |duration ); updatepoint := active & ( ~|counter25mhz );
 
     always {
         if( start ) {
             counter25mhz = 0;
             counter1khz = 25000;
+            duration = selected_duration;
         } else {
             counter25mhz = updatepoint ? selected_frequency : counter25mhz - 1;
             counter1khz = updateduration ? 25000 : counter1khz - 1;
+            duration = duration - updateduration;
         }
     }
+
+    // STOP AUDIO ON RESET
+    if( ~reset ) { duration = 0; }
 }

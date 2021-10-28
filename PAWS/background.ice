@@ -34,7 +34,7 @@ algorithm background_writer(
     output  uint6   BACKGROUNDcolour,
     output  uint6   BACKGROUNDalt,
     output  uint4   BACKGROUNDmode
-) <autorun> {
+) <autorun,reginputs> {
     // BACKGROUND CO-PROCESSOR PROGRAM STORAGE
     // { 3 bit command, 3 bit mask, { 1 bit for cpuinput flag, 10 bit coordinate }, 4 bit mode, 6 bit colour 2, 6 bit colour 1 }
     simple_dualport_bram uint33 copper[ 64 ] = uninitialised;
@@ -42,9 +42,9 @@ algorithm background_writer(
     uint1   copper_branch = uninitialised;
     uint10  copper_variable = uninitialised;
     uint6   PC = 0;
+    uint6   PCplus1 <:: PC + 1;
 
     // COPPER PROGRAM ENTRY
-    uint3   flag <: CU(copper.rdata0).flag;
     uint10  value <: CU(copper.rdata0).valueflag ? copper_cpu_input : CU(copper.rdata0).value;
     uint10  negvalue <: -value;
 
@@ -60,7 +60,7 @@ algorithm background_writer(
                     switch( CU(copper.rdata0).command ) {
                         case 3b000: {
                             // JUMP ON CONDITION
-                            switch( flag ) {
+                            switch( CU(copper.rdata0).flag ) {
                                 default: { copper_branch = 1; }
                                 case 3b001: { copper_branch = ( pix_vblank == value[0,1] ); }
                                 case 3b010: { copper_branch = ( pix_active == value[0,1] ); }
@@ -68,7 +68,7 @@ algorithm background_writer(
                                 case 3b100: { copper_branch = ( pix_x < value ); }
                                 case 3b101: { copper_branch = ( copper_variable < value ); }
                             }
-                            PC = copper_branch ? CU(copper.rdata0).colour : PC + 1;
+                            PC = copper_branch ? CU(copper.rdata0).colour : PCplus1;
                         }
                         default: {
                             switch( CU(copper.rdata0).command ) {
@@ -78,23 +78,23 @@ algorithm background_writer(
                                 case 3b100: { copper_execute = ( pix_x == value ); }
                                 case 3b101: { copper_execute = ( copper_variable == ( value[0,1] ? pix_x : pix_y ) ); }
                                 case 3b110: {
-                                    copper_variable = flag[0,1] ? value : copper_variable + ( flag[2,1] ? negvalue : value );
+                                    copper_variable = CU(copper.rdata0).flag[0,1] ? value : copper_variable + ( CU(copper.rdata0).flag[2,1] ? negvalue : value );
                                     copper_branch = 1;
                                 }
                                 default: {
-                                    if( flag[0,1] ) { BACKGROUNDcolour = copper_variable; }
-                                    if( flag[1,1] ) { BACKGROUNDalt = copper_variable; }
-                                    if( flag[2,1] ) { BACKGROUNDmode = copper_variable;}
+                                    if( CU(copper.rdata0).flag[0,1] ) { BACKGROUNDcolour = copper_variable; }
+                                    if( CU(copper.rdata0).flag[1,1] ) { BACKGROUNDalt = copper_variable; }
+                                    if( CU(copper.rdata0).flag[2,1] ) { BACKGROUNDmode = copper_variable;}
                                     copper_branch = 1;
                                 }
                             }
                             if( copper_execute ) {
-                                if( flag[0,1] ) { BACKGROUNDcolour = CU(copper.rdata0).colour; }
-                                if( flag[1,1] ) { BACKGROUNDalt = CU(copper.rdata0).colour_alt; }
-                                if( flag[2,1] ) { BACKGROUNDmode = CU(copper.rdata0).mode; }
+                                if( CU(copper.rdata0).flag[0,1] ) { BACKGROUNDcolour = CU(copper.rdata0).colour; }
+                                if( CU(copper.rdata0).flag[1,1] ) { BACKGROUNDalt = CU(copper.rdata0).colour_alt; }
+                                if( CU(copper.rdata0).flag[2,1] ) { BACKGROUNDmode = CU(copper.rdata0).mode; }
                                 copper_branch = 1;
                             }
-                            PC = PC + copper_branch;
+                            if( copper_branch ) { PC = PCplus1; }
                         }
                     }
                 } else{
@@ -126,7 +126,7 @@ algorithm background_display(
     input   uint6   b_colour,
     input   uint6   b_alt,
     input   uint4   b_mode
-) <autorun> {
+) <autorun,reginputs> {
     // TRUE FOR COLOUR, FALSE FOR ALT
     uint1   condition = uninitialised;
     pattern PATTERN(
