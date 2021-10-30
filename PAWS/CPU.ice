@@ -191,7 +191,7 @@ algorithm PAWSCPU(
         CSRincCSRinstret <: FSM[2,1]
     );
 
-    uint1   takeBranch = uninitialized;
+    uint1   takeBranch <:: FASTPATH & EXECUTEFASTtakebranch;
     uint1   EXECUTEFASTtakebranch = uninitialized;
     uint32  EXECUTEFASTmemoryoutput = uninitialized;
     int32   EXECUTEFASTresult = uninitialized;
@@ -249,21 +249,14 @@ algorithm PAWSCPU(
             if( accesssize[1,1] ) {
                 memoryinput[0,16] = readdata; address = loadAddressplus2; readmemory = 1; while( memorybusy ) {} memoryinput[16,16] = readdata;                 // READ 2ND 16 BITS
             } else {
-                switch( accesssize[0,1] ) {
-                    case 0: { memoryinput = memory8bit; }                                                                                                           // 8 BIT SIGN EXTEND
-                    case 1: { memoryinput  = memory16bit; }                                                                                                         // 16 BIT SIGN EXTEND
-                }
+                memoryinput = accesssize[0,1] ? memory16bit : memory8bit;                                                                                       // 8 or 16 BIT SIGN EXTENDED
             }
         } else {}
 
-        if( FASTPATH ) {
-            // ALL OTHER OPERATIONS
-            takeBranch = EXECUTEFASTtakebranch;
-        } else {
+        if( ~FASTPATH ) {
             // FPU ALU AND CSR OPERATIONS
             EXECUTESLOWstart = 1; while( EXECUTESLOWbusy ) {}
-            takeBranch = 0;
-        }
+        } else {}
 
         if( memorystore ) {
             address = storeAddress; writedata = storeLOW;                                                                                                       // STORE 8 OR 16 BIT
@@ -292,6 +285,7 @@ algorithm Iclass(
     output  uint1   incPC,
     output  uint1   FASTPATH
 ) <autorun> {
+    // CHECK FOR FLOATING POINT, OR INTEGER DIVIDE
     uint1   ALUfastslow <:: ~( opCode[4,1] | ( opCode[3,1] & function7[0,1] & function3[2,1]) );
     always {
         frd = 0; writeRegister = 1; incPC = 1; FASTPATH = 1;
@@ -316,23 +310,13 @@ algorithm Iclass(
 // DETERMINE IN FAST OR SLOW FPU INSTRUCTION
 algorithm Fclass(
     input   uint5   opCode,
-    input   uint7   function7,
+    input   uint5   function7,
     output  uint1   FASTPATHFPU
 ) <autorun> {
+    // FUSED OPERATIONS + CALCULATIONS & CONVERSIONS GO VIA SLOW PATH
+    // SIGN MANIPULATION, COMPARISONS + MIN/MAX, MOVE AND CLASSIFICATION GO VIA FAST PATH
     always {
-        switch( opCode ) {
-            default: { FASTPATHFPU = 0; }               // FUSED MULTIPLY ADD
-            case 5b10100: {
-                switch( function7[2,5] ) {              // ARITHMETIC AND CONVERSIONS
-                    default: { FASTPATHFPU = 0; }
-                    case 5b00100: { FASTPATHFPU = 1; }  // FSGNJ[N][X]
-                    case 5b00101: { FASTPATHFPU = 1; }  // FMIN FMAX
-                    case 5b10100: { FASTPATHFPU = 1; }  // FEQ FLT FLE
-                    case 5b11100: { FASTPATHFPU = 1; }  // FCLASS FMV.X.W
-                    case 5b11110: { FASTPATHFPU = 1; }  // FMV.W.X
-                }
-            }
-        }
+        FASTPATHFPU = opCode[2,1] ? function7[2,1] : 0;     // OPCODE[2,1] DETERMINES IF NORMAL OR FUSED, THEN FUNCTION7[2,1] DETERMINES IF FAST OR SLOW
     }
 }
 algorithm cpuexecuteSLOWPATH(
@@ -386,7 +370,7 @@ algorithm cpuexecuteSLOWPATH(
     uint1   FASTPATHFPU = uninitialized;
     Fclass FCLASS(
         opCode <: opCode,
-        function7 <: function7,
+        function7 <: function7[2,5],
         FASTPATHFPU :> FASTPATHFPU
     );
 
