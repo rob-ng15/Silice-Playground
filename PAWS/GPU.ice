@@ -725,15 +725,15 @@ algorithm drawcircle(
             min_count = (-1);
             while( drawingcircle ) {
                 while( drawingsegment ) {
-                    // OUTPUT PIXELS IN THE 8 SEGMENTS/ARCS
-                    bitmap_write = draw_sectors[0,1]; bitmap_x_write = xc + active_x; bitmap_y_write = yc + count; ++:
-                    bitmap_write = draw_sectors[1,1]; bitmap_y_write = yc - count; ++:
-                    bitmap_write = draw_sectors[2,1]; bitmap_x_write = xc - active_x; ++:
-                    bitmap_write = draw_sectors[3,1]; bitmap_y_write = yc + count; ++:
-                    bitmap_write = draw_sectors[4,1]; bitmap_x_write = xc + count; bitmap_y_write = yc + active_x; ++:
-                    bitmap_write = draw_sectors[5,1]; bitmap_y_write = yc - active_x; ++:
-                    bitmap_write = draw_sectors[6,1]; bitmap_x_write = xc - count; ++:
-                    bitmap_write = draw_sectors[7,1]; bitmap_y_write = yc + active_x;
+                    // OUTPUT PIXELS IN THE 8 SEGMENTS/ARCS AS PER MASK
+                    bitmap_x_write = xc + active_x; bitmap_y_write = yc + count;    if( draw_sectors[0,1] ) { bitmap_write = 1; ++: } else {}
+                    bitmap_y_write = yc - count;                                    if( draw_sectors[1,1] ) { bitmap_write = 1; ++: } else {}
+                    bitmap_x_write = xc - active_x;                                 if( draw_sectors[2,1] ) { bitmap_write = 1; ++: } else {}
+                    bitmap_y_write = yc + count;                                    if( draw_sectors[3,1] ) { bitmap_write = 1; ++: } else {}
+                    bitmap_x_write = xc + count; bitmap_y_write = yc + active_x;    if( draw_sectors[4,1] ) { bitmap_write = 1; ++: } else {}
+                    bitmap_y_write = yc - active_x;                                 if( draw_sectors[5,1] ) { bitmap_write = 1; ++: } else {}
+                    bitmap_x_write = xc - count;                                    if( draw_sectors[6,1] ) { bitmap_write = 1; ++: } else {}
+                    bitmap_y_write = yc + active_x;                                 if( draw_sectors[7,1] ) { bitmap_write = 1; }
                     count = filledcircle ? count - 1 : min_count;
                 }
                 active_x = active_x + 1;

@@ -38,22 +38,25 @@ $$end
     // SMT STATUS
     output  uint1   SMTRUNNING(0),
     output  uint32  SMTSTARTPC(0)
-) <autorun> {
+) <autorun>{
 $$if not SIMULATION then
     // UART CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
-    uint2   UARTinread = 0;                                 // 2 BIT LATCH ( bit 0 is the signal )
-    uint2   UARToutwrite = 0;                               // 2 BIT LATCH ( bit 0 is the signal )
+    uint2   UARTinread = 0;                                                                                                         // 2 BIT LATCH ( bit 0 is the signal ) due to clock boundary change
+    uint2   UARToutwrite = 0;                                                                                                       // 2 BIT LATCH ( bit 0 is the signal )
     uart UART <@clock_25mhz> ( uart_tx :> uart_tx, uart_rx <: uart_rx, inread <: UARTinread[0,1], outwrite <: UARToutwrite[0,1] );
 
     // PS2 CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
-    uint2   PS2inread = 0;                                  // 2 BIT LATCH ( bit 0 is the signal )
+    uint2   PS2inread = 0;                                                                                                          // 2 BIT LATCH ( bit 0 is the signal )
     ps2buffer PS2 <@clock_25mhz> ( us2_bd_dp <: us2_bd_dp, us2_bd_dn <: us2_bd_dn, inread <: PS2inread[0,1] );
 
     // SDCARD AND BUFFER
-    sdcardbuffer SDCARD( sd_clk :> sd_clk, sd_mosi :> sd_mosi, sd_csn :> sd_csn, sd_miso <: sd_miso );
+    uint1   SDCARDreadsector = uninitialized;
+    uint32  SDCARDsectoraddress = uninitialized;
+    uint9   SDCARDbufferaddress = uninitialized;
+    sdcardbuffer SDCARD( sd_clk :> sd_clk, sd_mosi :> sd_mosi, sd_csn :> sd_csn, sd_miso <: sd_miso , readsector <: SDCARDreadsector, sectoraddress <: SDCARDsectoraddress, bufferaddress <: SDCARDbufferaddress );
 
     // I/O FLAGS
-    SDCARD.readsector := 0;
+    SDCARDreadsector := 0;
 $$end
      always {
 $$if not SIMULATION then
@@ -101,11 +104,11 @@ $$end
                 case 4h1: { PS2.outputascii = writeData; }
                 case 4h4: {
                     switch( memoryAddress[1,2] ) {
-                        case 2h0: { SDCARD.readsector = 1; }
-                        default: { SDCARD.sectoraddress[ { memoryAddress[1,1], 4b0000 }, 16 ] = writeData; }
+                        case 2h0: { SDCARDreadsector = 1; }
+                        default: { SDCARDsectoraddress[ { memoryAddress[1,1], 4b0000 }, 16 ] = writeData; }
                     }
                 }
-                case 4h5: { SDCARD.bufferaddress = writeData; }
+                case 4h5: { SDCARDbufferaddress = writeData; }
                 $$end
                 case 4h3: { leds = writeData; }
                 case 4hf: {
@@ -146,27 +149,7 @@ algorithm timers_memmap(
     output  uint16  static16bit
 ) <autorun,reginputs> {
     // TIMERS and RNG
-    uint16  systemclock = uninitialized;
-    uint16  timer1hz0 = uninitialized;
-    uint16  timer1hz1 = uninitialized;
-    uint16  timer1khz0 = uninitialized;
-    uint16  timer1khz1 = uninitialized;
-    uint16  sleepTimer0 = uninitialized;
-    uint16  sleepTimer1 = uninitialized;
-    uint16  u_noise_out = uninitialized;
-    uint16  g_noise_out = uninitialized;
-    timers_rng timers <@clock_25mhz> (
-        systemclock :> systemclock,
-        timer1hz0 :> timer1hz0,
-        timer1hz1 :> timer1hz1,
-        timer1khz0 :> timer1khz0,
-        timer1khz1 :> timer1khz1,
-        sleepTimer0 :> sleepTimer0,
-        sleepTimer1 :> sleepTimer1,
-        u_noise_out :> u_noise_out,
-        g_noise_out :> g_noise_out,
-        g_noise_out :> static16bit
-    );
+    timers_rng timers <@clock_25mhz> ( g_noise_out :> static16bit );
 
     // LATCH MEMORYWRITE
     uint1   LATCHmemoryWrite = uninitialized;
@@ -176,29 +159,23 @@ algorithm timers_memmap(
         if( memoryRead ) {
             switch( memoryAddress[1,4] ) {
                 // TIMERS and RNG
-                case 4h0: { readData = g_noise_out; }
-                case 4h1: { readData = u_noise_out; }
-                case 4h8: { readData = timer1hz0; }
-                case 4h9: { readData = timer1hz1; }
-                case 4ha: { readData = timer1khz0; }
-                case 4hb: { readData = timer1khz1; }
-                case 4hc: { readData = sleepTimer0; }
-                case 4hd: { readData = sleepTimer1; }
-                case 4he: { readData = systemclock; }
+                case 4h0: { readData = timers.g_noise_out; }
+                case 4h1: { readData = timers.u_noise_out; }
+                case 4h8: { readData = timers.timer1hz0; }
+                case 4h9: { readData = timers.timer1hz1; }
+                case 4ha: { readData = timers.timer1khz0; }
+                case 4hb: { readData = timers.timer1khz1; }
+                case 4hc: { readData = timers.sleepTimer0; }
+                case 4hd: { readData = timers.sleepTimer1; }
+                case 4he: { readData = timers.systemclock; }
                 // RETURN NULL VALUE
                 default: { readData = 0; }
             }
         }
         // WRITE IO Memory
         switch( { memoryWrite, LATCHmemoryWrite } ) {
-            case 2b10: {
-                // TIMERS
-                timers.counter = writeData; timers.resetcounter = memoryAddress[1,3] + 1;
-            }
-            case 2b00: {
-                // RESET TIMER Controls
-                timers.resetcounter = 0;
-            }
+            case 2b10: { timers.counter = writeData; timers.resetcounter = memoryAddress[1,3] + 1; }
+            case 2b00: { timers.resetcounter = 0; }
             default: {}
         }
         LATCHmemoryWrite = memoryWrite;
@@ -224,39 +201,26 @@ algorithm audio_memmap(
     input  uint4   static4bit
 ) <autorun,reginputs> {
     // Left and Right audio channels
-    uint1   audio_active_l = uninitialized;
-    uint1   audio_active_r = uninitialized;
-    audio apu_processor <@clock_25mhz> (
-        staticGenerator <: static4bit,
-        audio_l :> audio_l,
-        audio_active_l :> audio_active_l,
-        audio_r :> audio_r,
-        audio_active_r :> audio_active_r
-    );
+    audio apu_processor <@clock_25mhz> ( staticGenerator <: static4bit, audio_l :> audio_l, audio_r :> audio_r );
 
     // LATCH MEMORYWRITE
     uint1   LATCHmemoryWrite = uninitialized;
 
     always {
         // READ IO Memory
-        if( memoryRead ) {
-            readData = memoryAddress[1,1] ? audio_active_r : audio_active_l;
-        }
+        if( memoryRead ) { readData = memoryAddress[1,1] ? apu_processor.audio_active_r : apu_processor.audio_active_l; }
+
         // WRITE IO Memory
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
                 switch( memoryAddress[1,2] ) {
-                    // AUDIO
                     case 2h0: { apu_processor.waveform = writeData; }
                     case 2h1: { apu_processor.frequency = writeData; }
                     case 2h2: { apu_processor.duration = writeData; }
                     case 2h3: { apu_processor.apu_write = writeData; }
                 }
             }
-            case 2b00: {
-                // RESET AUDIO Co-Processor Controls
-                apu_processor.apu_write = 0;
-            }
+            case 2b00: { apu_processor.apu_write = 0; }
             default: {}
         }
         LATCHmemoryWrite = memoryWrite;
@@ -385,7 +349,7 @@ algorithm uart(
     input   uint1   inread,
     input   uint8   outchar,
     input   uint1   outwrite
-) <autorun,reginputs> {
+) <autorun> {
     uart_in ui; uart_receiver urecv( io <:> ui, uart_rx <: uart_rx );
     uint8   uidata_out <: ui.data_out;
     uint1   uidata_out_ready <: ui.data_out_ready;
@@ -433,9 +397,7 @@ algorithm fifo9(
     queue.wenable1 := 1;
 
     always {
-        if( write ) {
-            queue.addr1 = top; queue.wdata1 = last;
-        }
+        if( write ) { queue.addr1 = top; queue.wdata1 = last; }
         top = top + write;
         next = next + read;
     }
@@ -449,23 +411,12 @@ algorithm ps2buffer(
     input   uint1   inread,
     input   uint1   outputascii,
     output  uint16  joystick
-) <autorun,reginputs> {
-    // PS/2 input FIFO (256 character)
-    fifo9 FIFO(
-        available :> inavailable,
-        read <: inread,
-        write <: PS2.asciivalid,
-        first :> inchar,
-        last <: PS2.ascii
-    );
+) <autorun> {
+    // PS/2 input FIFO (256 character) - 9 bit to deal with special characters
+    fifo9 FIFO( available :> inavailable, read <: inread, write <: PS2.asciivalid, first :> inchar, last <: PS2.ascii );
 
-    // PS 2 ASCII
-    ps2ascii PS2(
-        us2_bd_dp <: us2_bd_dp,
-        us2_bd_dn <: us2_bd_dn,
-        outputascii <: outputascii,
-        joystick :> joystick
-    );
+    // PS 2 KEYCODE TO ASCII CONVERTER AND JOYSTICK EMULATION MAPPER
+    ps2ascii PS2( us2_bd_dp <: us2_bd_dp, us2_bd_dn <: us2_bd_dn, outputascii <: outputascii, joystick :> joystick );
 }
 
 // SDCARD AND BUFFER CONTROLLER
@@ -481,21 +432,11 @@ algorithm sdcardbuffer(
     input   uint9   bufferaddress,
     output  uint1   ready,
     output  uint8   bufferdata
-) <autorun,reginputs> {
+) <autorun> {
     // SDCARD - Code for the SDCARD from @sylefeb
     simple_dualport_bram uint8 sdbuffer[512] = uninitialized;
     sdcardio sdcio;
-    sdcard sd(
-        // pins
-        sd_clk      :> sd_clk,
-        sd_mosi     :> sd_mosi,
-        sd_csn      :> sd_csn,
-        sd_miso     <: sd_miso,
-        // io
-        io          <:> sdcio,
-        // bram port
-        store       <:> sdbuffer
-    );
+    sdcard sd( sd_clk :> sd_clk, sd_mosi :> sd_mosi, sd_csn :> sd_csn, sd_miso <: sd_miso, io <:> sdcio, store <:> sdbuffer );
 
     // SDCARD Commands
     sdcio.read_sector := readsector;

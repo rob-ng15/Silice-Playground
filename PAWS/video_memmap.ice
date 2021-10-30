@@ -28,7 +28,7 @@ $$end
 
     // RNG
     input   uint6   static6bit
-) <autorun> {
+) <autorun,reginputs> {
     // CURSOR CLOCK
     uint1   blink = uninitialised;
     pulsecursor CURSOR <@clock_25mhz> ( show :> blink );

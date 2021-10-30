@@ -99,7 +99,7 @@ algorithm classify(
     output  uint1   sNAN,
     output  uint1   qNAN,
     output  uint1   ZERO
-) <autorun> {
+) <autorun,reginputs> {
     // CHECK FOR 8hff
     uint1   expFF <:: ~|( ~fp32(a).exponent );
     uint1   NAN <:: expFF & a[22,1];
@@ -112,12 +112,13 @@ algorithm classify(
     }
 }
 
-// NORMALISE A 48 BIT MANTISSA SO THAT THE MSB IS ONE
-// FOR ADDSUB ALSO DECREMENT THE EXPONENT FOR EACH SHIFT LEFT
+// NORMALISE A 48 BIT MANTISSA SO THAT THE MSB IS ONE, FOR ADDSUB ALSO DECREMENT THE EXPONENT FOR EACH SHIFT LEFT
+// EXTRACT THE 24 BITS FOLLOWING THE MSB (1.xxxx) FOR ROUNDING
 algorithm clz48(
     input   uint48  bitstream,
+    output  uint48  normalised,
     output! uint6   count
-) <autorun> {
+) <autorun,reginputs> {
     uint16  bitstreamh <:: bitstream[32,16];
     uint32  bitstreaml <:: bitstream[0,32];
     uint1   zerohigh <:: ( ~|bitstreamh );
@@ -131,52 +132,54 @@ algorithm clz48(
         }
     }
 }
-algorithm donormalise48_adjustexp(
+algorithm donormalise24_adjustexp(
     input   uint1   start,
     output  uint1   busy(0),
     input   int10   exp,
     input   uint48  bitstream,
     output  int10   newexp,
-    output  uint48  normalised
+    output  uint24  normalised
 ) <autorun,reginputs> {
     // COUNT LEADING ZEROS
     clz48 CLZ48( bitstream <: bitstream );
+    uint48  temporary <:: bitstream << CLZ48.count;
     always {
         if( start ) {
             busy = 1;
-            normalised = bitstream << CLZ48.count;
+            normalised = temporary[23,24];
             newexp = exp - CLZ48.count;
             busy = 0;
         }
     }
 }
-algorithm donormalise48(
+algorithm donormalise24(
     input   uint1   start,
     output  uint1   busy(0),
     input   uint48  bitstream,
-    output  uint48  normalised
+    output  uint24  normalised
 ) <autorun,reginputs> {
     // COUNT LEADING ZEROS
     clz48 CLZ48( bitstream <: bitstream );
+    uint48  temporary <:: bitstream << CLZ48.count;
     always {
         if( start ) {
             busy = 1;
-            normalised = bitstream << CLZ48.count;
+            normalised = temporary[23,24];
             busy = 0;
         }
     }
 }
 
-// EXTRACT 23 BIT FRACTION FROM LEFT ALIGNED 48 BIT FRACTION WITH ROUNDING
+// ROUND 23 BIT FRACTION FROM NORMALISED FRACTION USING NEXT TRAILING BIT
 // ADD BIAS TO EXPONENT AND ADJUST EXPONENT IF ROUNDING FORCES
-algorithm doround48(
-    input   uint48  bitstream,
+algorithm doround24(
+    input   uint24  bitstream,
     input   int10   exponent,
     output  uint23  roundfraction,
     output  int10   newexponent
 ) <autorun,reginputs> {
     always {
-        roundfraction = bitstream[24,23] + bitstream[23,1];
+        roundfraction = bitstream[1,23] + bitstream[0,1];
         newexponent = 127 + exponent + ( ( ~|roundfraction ) & bitstream[23,1] );
     }
 }
@@ -202,7 +205,7 @@ algorithm docombinecomponents32(
 algorithm clz32(
     input   uint32  bitstream,
     output! uint6   zeros
-) <autorun> {
+) <autorun,reginputs> {
     always {
         ( zeros ) = clz_silice_32( bitstream );
     }
@@ -212,7 +215,7 @@ algorithm inttofloat(
     input   uint1   dounsigned,
     output  uint7   flags,
     output  uint32  result
-) <autorun> {
+) <autorun,reginputs> {
     // CHECK FOR 24, 16 OR 8 LEADING ZEROS, CONTINUE COUNTING FROM THERE
     clz32 CLZ32( bitstream <: number );
     uint1   sign <:: dounsigned ? 0 : a[31,1];
@@ -241,7 +244,7 @@ algorithm prepftoi(
     input   uint32  a,
     output  int10   exp,
     output  uint32  unsignedfraction
-) <autorun> {
+) <autorun,reginputs> {
     uint33  sig <:: ( exp < 24 ) ? { 9b1, fp32( a ).fraction, 1b0 } >> ( 23 - exp ) : { 9b1, fp32( a ).fraction, 1b0 } << ( exp - 24);
     always {
         exp = fp32( a ).exponent - 127;
@@ -254,7 +257,7 @@ algorithm floattoint(
     input   uint32  a,
     output  uint7   flags,
     output  uint32  result
-) <autorun> {
+) <autorun,reginputs> {
     // CLASSIFY THE INPUT
     uint1   NN <:: A.sNAN | A.qNAN;
     uint1   NV = uninitialised;
@@ -278,7 +281,7 @@ algorithm floattouint(
     input   uint32  a,
     output  uint7   flags,
     output  uint32  result
-) <autorun> {
+) <autorun,reginputs> {
     // CLASSIFY THE INPUT
     uint1   NN <:: A.sNAN | A.qNAN;
     uint1   NV = uninitialised;
@@ -349,7 +352,7 @@ algorithm floataddsub(
     input   uint1   addsub,
     output  uint7   flags,
     output  uint32  result
-) <autorun> {
+) <autorun,reginputs> {
     // BREAK DOWN INITIAL float32 INPUTS - SWITCH SIGN OF B IF SUBTRACTION
     uint48  sigA <:: { 2b01, fp32(a).fraction, 23b0 };
     uint1   signB <:: addsub ? ~fp32( b ).sign : fp32( b ).sign;
@@ -371,10 +374,10 @@ algorithm floataddsub(
     dofloataddsub ADDSUB( signA <: fp32( a ).sign, sigA <: EQUALISEEXP.newsigA, signB <: signB, sigB <: EQUALISEEXP.newsigB );
 
     // NORMALISE THE RESULTING FRACTION AND ADJUST THE EXPONENT IF SMALLER ( ie, MSB is not 1 )
-    donormalise48_adjustexp NORMALISE( exp <: EQUALISEEXP.resultexp, bitstream <: ADDSUB.resultfraction );
+    donormalise24_adjustexp NORMALISE( exp <: EQUALISEEXP.resultexp, bitstream <: ADDSUB.resultfraction );
 
     // ROUND THE NORMALISED FRACTION AND ADJUST EXPONENT IF OVERFLOW
-    doround48 ROUND( exponent <: NORMALISE.newexp, bitstream <: NORMALISE.normalised );
+    doround24 ROUND( exponent <: NORMALISE.newexp, bitstream <: NORMALISE.normalised );
 
     // COMBINE TO FINAL float32
     docombinecomponents32 COMBINE( sign <: ADDSUB.resultsign, exp <: ROUND.newexponent, fraction <: ROUND.roundfraction );
@@ -410,12 +413,13 @@ algorithm floataddsub(
 }
 
 // UNSIGNED / SIGNED 24 by 24 bit multiplication giving 48 bit product using DSP blocks
+// NORMALISE AND EXTRACT THE NORMALISED FRACTION FOR ROUNDING
 algorithm prepmul(
     input   uint32  a,
     input   uint32  b,
     output  uint1   productsign,
     output  int10   productexp,
-    output  uint48  normalfraction
+    output  uint24  normalfraction
 ) <autorun,reginputs> {
     uint24  sigA <:: { 1b1, fp32( a ).fraction };
     uint24  sigB <:: { 1b1, fp32( b ).fraction };
@@ -423,7 +427,7 @@ algorithm prepmul(
     always {
         productsign = fp32( a ).sign ^ fp32( b ).sign;
         productexp = fp32( a ).exponent + fp32( b ).exponent - 254 + product[47,1];
-        normalfraction = product << ( ~product[47,1] );
+        normalfraction = product[47,1] ? product[23,24] : product[22,24];
     }
 }
 algorithm floatmultiply(
@@ -434,9 +438,9 @@ algorithm floatmultiply(
 
     output  uint7   flags,
     output  uint32  result
-) <autorun> {
+) <autorun,reginputs> {
     // BREAK DOWN INITIAL float32 INPUTS AND FIND SIGN OF RESULT AND EXPONENT OF PRODUCT ( + 1 IF PRODUCT OVERFLOWS, MSB == 1 )
-    // NORMALISE THE RESULTING PRODUCT
+    // NORMALISE THE RESULTING PRODUCT AND EXTRACT THE 24 BITS AFTER THE LEADING 1.xxxx
     prepmul PREP( a <: a, b <: b );
 
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND INVALID ( INF x ZERO )
@@ -450,7 +454,7 @@ algorithm floatmultiply(
     classify B( a <: b  );
 
     // ROUND THE NORMALISED FRACTION AND ADJUST EXPONENT IF OVERFLOW
-    doround48 ROUND( exponent <: PREP.productexp, bitstream <: PREP.normalfraction );
+    doround24 ROUND( exponent <: PREP.productexp, bitstream <: PREP.normalfraction );
 
     // COMBINE TO FINAL float32
     docombinecomponents32 COMBINE( sign <: PREP.productsign, exp <: ROUND.newexponent, fraction <: ROUND.roundfraction );
@@ -538,7 +542,7 @@ algorithm floatdivide(
     input   uint32  b,
     output  uint7   flags,
     output  uint32  result
-) <autorun> {
+) <autorun,reginputs> {
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND DIVIDE ZERO
     uint1   IF <:: ( A.INF | B.INF );
     uint1   NN <:: ( A.sNAN | A.qNAN | B.sNAN | B.qNAN );
@@ -551,10 +555,10 @@ algorithm floatdivide(
     // PREPARE THE DIVISION, DO THE DIVISION, NORMALISE THE RESULT
     prepdivide PREP( a <: a, b <: b );
     dofloatdivide DODIVIDE( sigA <: PREP.sigA, sigB <: PREP.sigB );
-    donormalise48 NORMALISE( bitstream <: DODIVIDE.quotient );
+    donormalise24 NORMALISE( bitstream <: DODIVIDE.quotient );
 
     // ROUND THE NORMALISED FRACTION AND ADJUST EXPONENT IF OVERFLOW
-    doround48 ROUND( exponent <: PREP.quotientexp, bitstream <: NORMALISE.normalised );
+    doround24 ROUND( exponent <: PREP.quotientexp, bitstream <: NORMALISE.normalised );
 
     // COMBINE TO FINAL float32
     docombinecomponents32 COMBINE( sign <: PREP.quotientsign, exp <: ROUND.newexponent, fraction <: ROUND.roundfraction );
@@ -651,7 +655,7 @@ algorithm floatsqrt(
     input   uint32  a,
     output  uint7   flags,
     output  uint32  result
-) <autorun> {
+) <autorun,reginputs> {
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND NOT VALID
     uint1   NN <:: A.sNAN | A.qNAN;
     uint1   NV <:: A.INF | NN | fp32( a ).sign;
@@ -664,8 +668,9 @@ algorithm floatsqrt(
     dofloatsqrt DOSQRT( start_ac <: PREP.start_ac, start_x <: PREP.start_x );
 
     // FAST NORMALISATION - SQUARE ROOT RESULTS IN 1x.xxx or 01.xxxx
-    uint48  normalfraction <:: DOSQRT.squareroot << ( ~DOSQRT.squareroot[47,1] );
-    doround48 ROUND( exponent <: PREP.squarerootexp, bitstream <: normalfraction );
+    // EXTRACT 24 BITS FOR ROUNDING FOLLOWING THE NORMALISED 1.xxxx
+    uint24  normalfraction <::DOSQRT.squareroot[47,1] ? DOSQRT.squareroot[23,24] : DOSQRT.squareroot[22,24];
+    doround24 ROUND( exponent <: PREP.squarerootexp, bitstream <: normalfraction );
 
     // COMBINE TO FINAL float32
     docombinecomponents32 COMBINE( sign <: fp32( a ).sign, exp <: ROUND.newexponent, fraction <: ROUND.roundfraction );
@@ -742,7 +747,7 @@ algorithm floatcompare(
     output  uint7   flags,
     output  uint1   less,
     output  uint1   equal
-) <autorun> {
+) <autorun,reginputs> {
     // CLASSIFY THE INPUTS AND DETECT INFINITY OR NAN
     classify A( a <: a );
     classify B( a <: b );
