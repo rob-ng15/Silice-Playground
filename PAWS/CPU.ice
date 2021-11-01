@@ -17,7 +17,7 @@ algorithm PAWSCPU(
     input   uint1   memorybusy,
     input   uint1   SMTRUNNING,
     input   uint32  SMTSTARTPC
-) <autorun> {
+) <autorun,reginputs> {
     uint16  resetcount = uninitialized;
     uint3   FSM = uninitialized;
 
@@ -92,6 +92,11 @@ algorithm PAWSCPU(
         storeAddress :> storeAddress
     );
 
+    // GENERATE PLUS 2 ADDRESSES FOR 32 BIT MEMORY OPERATIONS
+    uint27  PCplus2 = uninitialized; addrplus2 PC2 <@clock_CPUdecoder> ( address <: PC, addressplus2 :> PCplus2 );
+    uint27  loadAddressplus2 = uninitialized; addrplus2 LA2 <@clock_CPUdecoder> ( address <: loadAddress, addressplus2 :> loadAddressplus2 );
+    uint27  storeAddressplus2 = uninitialized; addrplus2 SA2 <@clock_CPUdecoder> ( address <: storeAddress, addressplus2 :> storeAddressplus2 );
+
     // RISC-V MEMORY ACCESS FLAGS - SET SIZE 32 BIT FOR FLOAT AND ATOMIC
     uint32  memory8bit = uninitialized;
     uint32  memory16bit = uninitialized;
@@ -118,9 +123,9 @@ algorithm PAWSCPU(
         sourceReg1 :> sourceReg1,
         sourceReg2 :> sourceReg2
     );
-    // EXTRACT SIGN AND ABSOLUTE VALUE FOR MULTIPLICATION AND DIVISION
-    uint32  absRS1 <:: sourceReg1[31,1] ? -sourceReg1 : sourceReg1;
-    uint32  absRS2 <:: sourceReg2[31,1] ? -sourceReg2 : sourceReg2;
+    // EXTRACT ABSOLUTE VALUE FOR MULTIPLICATION AND DIVISION
+    uint32  absRS1 = uninitialized; absolute ARS1 <@clock_CPUdecoder> ( number <: sourceReg1, value :> absRS1 );
+    uint32  absRS2 = uninitialized; absolute ARS2 <@clock_CPUdecoder> ( number <: sourceReg2, value :> absRS2 );
 
     // RISC-V FLOATING POINT REGISTERS
     uint32  sourceReg1F = uninitialized;
@@ -188,7 +193,7 @@ algorithm PAWSCPU(
         frd :> EXECUTESLOWfrd,
         memoryoutput :> EXECUTESLOWmemoryoutput,
         result :> EXECUTESLOWresult,
-        CSRincCSRinstret <: FSM[2,1]
+        incCSRinstret <: FSM[2,1]
     );
 
     uint1   takeBranch <:: FASTPATH & EXECUTEFASTtakebranch;
@@ -214,11 +219,6 @@ algorithm PAWSCPU(
         memoryoutput :> EXECUTEFASTmemoryoutput,
         result :> EXECUTEFASTresult
     );
-
-    // GENERATE PLUS 2 ADDRESSES FOR 32 BIT MEMORY OPERATIONS
-    uint27  PCplus2 <:: PC + 2;
-    uint27  loadAddressplus2 <:: loadAddress + 2;
-    uint27  storeAddressplus2 <:: storeAddress + 2;
 
     readmemory := 0; writememory := 0; EXECUTESLOWstart := 0;
 
@@ -274,51 +274,6 @@ algorithm PAWSCPU(
     } // RISC-V
 }
 
-// DETERMINE IF FAST OR SLOW INSTRUCTION
-// SET CPU CONTROLS DEPENDING UPON INSTRUCTION TYPE
-algorithm Iclass(
-    input   uint5   opCode,
-    input   uint3   function3,
-    input   uint7   function7,
-    output  uint1   frd,
-    output  uint1   writeRegister,
-    output  uint1   incPC,
-    output  uint1   FASTPATH
-) <autorun> {
-    // CHECK FOR FLOATING POINT, OR INTEGER DIVIDE
-    uint1   ALUfastslow <:: ~( opCode[4,1] | ( opCode[3,1] & function7[0,1] & function3[2,1]) );
-    always {
-        frd = 0; writeRegister = 1; incPC = 1; FASTPATH = 1;
-        switch( opCode ) {
-            case 5b01101: {}                        // LUI
-            case 5b00101: {}                        // AUIPC
-            case 5b11011: { incPC = 0; }            // JAL
-            case 5b11001: { incPC = 0; }            // JALR
-            case 5b11000: { writeRegister = 0; }    // BRANCH
-            case 5b00000: {}                        // LOAD
-            case 5b01000: { writeRegister = 0; }    // STORE
-            case 5b00001: { frd = 1; }              // FLOAT LOAD
-            case 5b01001: { writeRegister = 0; }    // FLOAT STORE
-            case 5b00011: {}                        // FENCE[I]
-            case 5b11100: { FASTPATH = 0; }         // CSR
-            case 5b01011: { FASTPATH = 0; }         // LR.W SC.WATOMIC LOAD - MODIFY - STORE
-            default: { FASTPATH = ALUfastslow; }    // FPU OR INTEGER DIVIDE -> SLOWPATH
-        }
-    }
-}
-
-// DETERMINE IN FAST OR SLOW FPU INSTRUCTION
-algorithm Fclass(
-    input   uint5   opCode,
-    input   uint5   function7,
-    output  uint1   FASTPATHFPU
-) <autorun> {
-    // FUSED OPERATIONS + CALCULATIONS & CONVERSIONS GO VIA SLOW PATH
-    // SIGN MANIPULATION, COMPARISONS + MIN/MAX, MOVE AND CLASSIFICATION GO VIA FAST PATH
-    always {
-        FASTPATHFPU = opCode[2,1] ? function7[2,1] : 0;     // OPCODE[2,1] DETERMINES IF NORMAL OR FUSED, THEN FUNCTION7[2,1] DETERMINES IF FAST OR SLOW
-    }
-}
 algorithm cpuexecuteSLOWPATH(
     input   uint1   start,
     output  uint1   busy(0),
@@ -340,8 +295,8 @@ algorithm cpuexecuteSLOWPATH(
     output  uint1   frd,
     output  uint32  memoryoutput,
     output  uint32  result,
-    input   uint1   CSRincCSRinstret
-) <autorun> {
+    input   uint1   incCSRinstret
+) <autorun,reginputs> {
     // M EXTENSION - DIVISION
     int32   ALUMDresult = uninitialized;
     uint1   ALUMDstart = uninitialized;
@@ -374,7 +329,7 @@ algorithm cpuexecuteSLOWPATH(
         FASTPATHFPU :> FASTPATHFPU
     );
 
-    // FLOATING POINT SLOW OPERATIONS
+    // FLOATING POINT SLOW OPERATIONS - CALCULATIONS AND CONVERSIONS
     uint5   FPUflags = 0;
     uint5   FPUSLOWnewflags = uninitialized;
     uint1   FPUfrd = uninitialized;
@@ -396,6 +351,7 @@ algorithm cpuexecuteSLOWPATH(
         start <: FPUstart,
         busy :> FPUbusy
     );
+
     // FLOATING POINT FAST OPERATIONS
     uint5   FPUFASTnewflags = uninitialized;
     uint1   FPUFASTfrd = uninitialized;
@@ -416,7 +372,7 @@ algorithm cpuexecuteSLOWPATH(
     // MANDATORY RISC-V CSR REGISTERS + HARTID == 0 MAIN THREAD == 1 SMT THREAD
     uint32  CSRresult = uninitialized;
     uint1   CSRstart = uninitialized;
-    uint1   CSRupdateFPUflags = uninitialized;
+    uint1   updateFPUflags = uninitialized;
     CSRblock CSR(
         SMT <: SMT,
         instruction <: instruction,
@@ -427,12 +383,12 @@ algorithm cpuexecuteSLOWPATH(
         FPUnewflags <: FPUnewflags,
         result :> CSRresult,
         start <: CSRstart,
-        incCSRinstret <: CSRincCSRinstret,
-        updateFPUflags <: CSRupdateFPUflags
+        incCSRinstret <: incCSRinstret,
+        updateFPUflags <: updateFPUflags
     );
 
     // START FLAGS
-    ALUMDstart := 0; FPUstart := 0; CSRstart := 0; CSRupdateFPUflags := 0;
+    ALUMDstart := 0; FPUstart := 0; CSRstart := 0; updateFPUflags := 0;
 
     while(1) {
         if( start ) {
@@ -446,9 +402,9 @@ algorithm cpuexecuteSLOWPATH(
                     }
                 }
                 case 5b01011: {                                                             // ATOMIC OPERATIONS
-                    switch( function7[2,5] ) {
-                        case 5b00010: { result = memoryinput; }                             // LR.W
-                        case 5b00011: { memoryoutput = sourceReg2; result = 0; }            // SC.W
+                    switch( function7[2,2] ) {
+                        case 2b10: { result = memoryinput; }                             // LR.W
+                        case 2b11: { memoryoutput = sourceReg2; result = 0; }            // SC.W
                         default: { result = memoryinput; memoryoutput = ALUAresult; }       // ATOMIC LOAD - MODIFY - STORE
                     }
                 }
@@ -462,7 +418,7 @@ algorithm cpuexecuteSLOWPATH(
                         frd = opCode[4,1] & FPUfrd;
                         result = opCode[4,1] ? FPUresult : ALUMDresult;
                     }
-                    CSRupdateFPUflags = opCode[4,1];
+                    updateFPUflags = opCode[4,1];
                 }
             }
             busy = 0;
@@ -487,7 +443,7 @@ algorithm cpuexecuteFASTPATH(
     output  uint1   takeBranch,
     output  uint32  memoryoutput,
     output  uint32  result
-) <autorun> {
+) <autorun,reginputs> {
     // BRANCH COMPARISON UNIT
     uint1   BRANCHtakeBranch = uninitialized;
     branchcomparison BRANCHUNIT(
@@ -521,22 +477,23 @@ algorithm cpuexecuteFASTPATH(
         absRS2 <: absRS2,
         result :> ALUMMresult
     );
-    uint1   isALUMM <:: ( opCode[3,1] & function7[0,1] );
 
+    // CLASSIFY THE TYPE FOR INSTRUCTIONS THAT WRITE TO REGISTER
+    uint1   isALUMM <:: ( opCode[3,1] & function7[0,1] );
+    uint1   isAUIPCLUI <:: ( opCode[0,3] == 3b101 );
+    uint1   isJAL <:: ( opCode[2,3] == 3b110 ) & opCode[0,1];
+    uint1   isLOAD <:: ~|opCode[1,4];
     always {
         takeBranch = 0;
         switch( opCode ) {
-            case 5b01101: { result = AUIPCLUI; }                    // LUI
-            case 5b00101: { result = AUIPCLUI; }                    // AUIPC
-            case 5b11011: { result = nextPC; }                      // JAL
-            case 5b11001: { result = nextPC; }                      // JALR
-            case 5b11000: { takeBranch = BRANCHtakeBranch; }        // BRANCH
-            case 5b00000: { result = memoryinput; }                 // LOAD
-            case 5b01000: { memoryoutput = sourceReg2; }            // STORE
-            case 5b00001: { result = memoryinput; }                 // FLOAT LOAD
-            case 5b01001: { memoryoutput = sourceReg2F; }           // FLOAT STORE
-            case 5b00011: {}                                        // FENCE[I]
-            default: { result = isALUMM ? ALUMMresult : ALUresult; }// INTEGER ALU AND MULTIPLICATION
+            case 5b11000: { takeBranch = BRANCHtakeBranch; }            // BRANCH
+            case 5b01000: { memoryoutput = sourceReg2; }                // STORE
+            case 5b01001: { memoryoutput = sourceReg2F; }               // FLOAT STORE
+            case 5b00011: {}                                            // FENCE[I]
+            default: { result = isAUIPCLUI ? AUIPCLUI :                 // LUI AUIPC
+                                isJAL ? nextPC :                        // JAL[R]
+                                isLOAD ? memoryinput :                  // [FLOAT]LOAD
+                                isALUMM ? ALUMMresult : ALUresult; }    // INTEGER ALU AND MULTIPLICATION
         }
     }
 }

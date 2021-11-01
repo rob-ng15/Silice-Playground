@@ -205,11 +205,7 @@ algorithm floatminmax(
             // sNAN or both qNAN
             result = 32h7fc00000;
         } else {
-            if( function3 ) {
-                result = A.qNAN ? ( B.qNAN ? 32h7fc00000 : sourceReg2F ) : B.qNAN ? sourceReg1F : ( less ? sourceReg2F : sourceReg1F );
-            } else {
-                result = A.qNAN ? ( B.qNAN ? 32h7fc00000 : sourceReg2F ) : B.qNAN ? sourceReg1F : ( less ? sourceReg1F : sourceReg2F );
-            }
+            result = A.qNAN ? ( B.qNAN ? 32h7fc00000 : sourceReg2F ) : B.qNAN ? sourceReg1F : ( function3 ^ less ? sourceReg1F : sourceReg2F );
         }
     }
 }
