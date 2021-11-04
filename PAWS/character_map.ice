@@ -94,7 +94,7 @@ algorithm character_map_writer(
 
     // OUTPUT CURSOR POSITION
     cursor_x := tpu_active_x; cursor_y := tpu_active_y;
-    charactermap_copy.addr0 := ( tpu_active == 3 ) ? tpu_cs_addr : tpu_write_addr;
+    charactermap_copy.addr0 := ( &tpu_active ) ? tpu_cs_addr : tpu_write_addr;
 
     always {
         switch( tpu_write ) {

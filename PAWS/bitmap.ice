@@ -246,7 +246,7 @@ algorithm dither(
                 condition = ( bitmap_x_write[1,2] == 2b10 ) | ( bitmap_y_write[1,2] == 2b10 );
             }
             case 13: {                                                                                          // BRICK
-                condition = ( bitmap_y_write[0,2] == 2b00 ) ? 1 : ( bitmap_x_write[0,2] == { bitmap_y_write[2,1], 1b0 } );
+                condition = ( ~|bitmap_y_write[0,2] ) ? 1 : ( bitmap_x_write[0,2] == { bitmap_y_write[2,1], 1b0 } );
             }
             case 14: { condition = 1; }                                                                         // COLOUR STATIC
             case 15: { condition = static1bit; }                                                                // STATIC

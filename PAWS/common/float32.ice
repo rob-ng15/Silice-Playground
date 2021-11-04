@@ -101,7 +101,7 @@ algorithm classify(
     output  uint1   ZERO
 ) <autorun,reginputs> {
     // CHECK FOR 8hff
-    uint1   expFF <:: ~|( ~fp32(a).exponent );
+    uint1   expFF <:: &fp32(a).exponent;
     uint1   NAN <:: expFF & a[22,1];
 
     always {
@@ -500,12 +500,12 @@ algorithm dofloatdivide(
     uint6   bit(63);
     uint2   normalshift <:: ( quotient[48,1] + quotient[49,1] );
 
-    busy := start | ( bit != 63 ) | ( quotient[48,2] != 0 );
+    busy := start | ( ~&bit ) | ( |quotient[48,2] );
     while(1) {
         // FIND QUOTIENT AND ENSURE 48 BIT FRACTION ( ie BITS 48 and 49 clear )
         if( start ) {
             bit = 49; quotient = 0; remainder = 0;
-            while( bit != 63 ) {
+            while( busy ) {
                 remainder = __unsigned(temporary) - ( bitresult ? __unsigned(sigB) : 0 );
                 quotient[bit,1] = bitresult;
                 bit = bit - 1;

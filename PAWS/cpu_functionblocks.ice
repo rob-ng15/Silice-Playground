@@ -14,6 +14,8 @@ algorithm decode(
     output  uint2   accesssize
 ) <autorun,reginputs> {
     uint1   AMO <:: ( opCode == 5b01011 );
+    uint1   AMOLR <:: ( function7[2,5] == 5b00010 );
+    uint1   AMOSC <:: ( function7[2,5] == 5b00011 );
     uint1   ILOAD <:: opCode == 5b00000;
     uint1   ISTORE <:: opCode == 5b01000;
     uint1   FLOAD <:: opCode == 5b00001;
@@ -28,8 +30,8 @@ algorithm decode(
         rs3 = R4type(instruction).sourceReg3;
         rd = Rtype(instruction).destReg;
         immediateValue = { {20{instruction[31,1]}}, Itype(instruction).immediate };
-        memoryload = ILOAD | FLOAD | ( AMO & ( function7[2,5] != 5b00011 ) );
-        memorystore = ISTORE | FSTORE | ( AMO & ( function7[2,5] != 5b00010 ) );
+        memoryload = ILOAD | FLOAD | ( AMO & ~AMOSC );
+        memorystore = ISTORE | FSTORE | ( AMO & ~AMOLR );
         accesssize = AMO | FLOAD | FSTORE ? 2b10 : function3[0,2];
     }
 }
@@ -39,14 +41,14 @@ algorithm decode(
 algorithm Iclass(
     input   uint5   opCode,
     input   uint3   function3,
-    input   uint7   function7,
+    input   uint1   isALUM,
     output  uint1   frd,
     output  uint1   writeRegister,
     output  uint1   incPC,
     output  uint1   FASTPATH
 ) <autorun,reginputs> {
     // CHECK FOR FLOATING POINT, OR INTEGER DIVIDE
-    uint1   ALUfastslow <:: ~( opCode[4,1] | ( opCode[3,1] & function7[0,1] & function3[2,1]) );
+    uint1   ALUfastslow <:: ~( opCode[4,1] | ( opCode[3,1] & isALUM & function3[2,1]) );
     always {
         frd = 0; writeRegister = 1; incPC = 1; FASTPATH = 1;
         switch( opCode ) {
@@ -69,32 +71,31 @@ algorithm Iclass(
 
 // DETERMINE IN FAST OR SLOW FPU INSTRUCTION
 algorithm Fclass(
-    input   uint5   opCode,
-    input   uint5   function7,
+    input   uint1   is2FPU,
+    input   uint1   isFPUFAST,
     output  uint1   FASTPATHFPU
 ) <autorun,reginputs> {
     // FUSED OPERATIONS + CALCULATIONS & CONVERSIONS GO VIA SLOW PATH
     // SIGN MANIPULATION, COMPARISONS + MIN/MAX, MOVE AND CLASSIFICATION GO VIA FAST PATH
     always {
-        FASTPATHFPU = opCode[2,1] ? function7[2,1] : 0;     // OPCODE[2,1] DETERMINES IF NORMAL OR FUSED, THEN FUNCTION7[2,1] DETERMINES IF FAST OR SLOW
+        FASTPATHFPU = is2FPU & isFPUFAST;           // is2FPU DETERMINES IF NORMAL OR FUSED, THEN isFPUFAST DETERMINES IF FAST OR SLOW
     }
 }
 
 // PERFORM SIGN EXTENSION FOR 8 AND 16 BIT LOADS
 algorithm signextend(
     input   uint16  readdata,
+    input   uint1   is16or8,
     input   uint1   byteaccess,
-    input   uint3   function3,
-    output  uint32  memory8bit,
-    output  uint32  memory16bit
+    input   uint1   dounsigned,
+    output  uint32  memory168
 ) <autorun,reginputs> {
-    uint1   signedload <:: ~function3[2,1];
     uint4   byteoffset <:: { byteaccess, 3b000 };
     uint4   bytesignoffset <:: { byteaccess, 3b111 };
 
     always {
-        memory8bit = signedload ? { {24{readdata[bytesignoffset, 1]}}, readdata[byteoffset, 8] } : readdata[byteoffset, 8];
-        memory16bit = signedload ? { {16{readdata[15,1]}}, readdata[0,16] } : readdata[0,16];
+        memory168 = is16or8 ? dounsigned ? readdata[0,16] : { {16{readdata[15,1]}}, readdata[0,16] } :
+                                dounsigned ? readdata[byteoffset, 8] : { {24{readdata[bytesignoffset, 1]}}, readdata[byteoffset, 8] };
     }
 }
 
@@ -142,7 +143,7 @@ algorithm addressgenerator(
 }
 
 // RISC-V SELECT THE NEXT INSTRUCTION BASED ON CPU STATE FLAGS
-algorithm pcadjust(
+algorithm newpc(
     input   uint5   opCode,
     input   uint27  PC,
     input   uint1   compressed,
@@ -373,6 +374,13 @@ algorithm counter40(
         counter = counter + update;
     }
 }
+algorithm counter40always(
+    output  uint40  counter(0)
+) <autorun,reginputs> {
+    always {
+        counter = counter + 1;
+    }
+}
 algorithm CSRblock(
     input   uint1   start,
     input   uint1   SMT,
@@ -387,25 +395,15 @@ algorithm CSRblock(
     output  uint32  result
 ) <autorun,reginputs> {
     // MAIN SYSTEM TIMER
-    uint48  CSRtimer = uninitialized;
-    uint1   ALWAYS <: 1;
-    counter40 TIMER( update <: ALWAYS, counter :> CSRtimer );
+    uint48  CSRtimer = uninitialized;                                                               counter40always TIMER( counter :> CSRtimer );
 
     // CPU HART CYCLE TIMERS
-    uint48  CSRcycletimer = uninitialized;
-    uint48  CSRcycletimerSMT = uninitialized;
-    uint1   UPDATEcycletimer <:: ~SMT;
-    uint1   UPDATEcycletimerSMT <:: SMT;
-    counter40 CYCLE( update <: UPDATEcycletimer, counter :> CSRcycletimer );
-    counter40 CYCLESMT( update <: UPDATEcycletimerSMT, counter :> CSRcycletimerSMT);
+    uint48  CSRcycletimer = uninitialized;      uint1   UPDATEcycletimer <:: ~SMT;                  counter40 CYCLE( update <: UPDATEcycletimer, counter :> CSRcycletimer );
+    uint48  CSRcycletimerSMT = uninitialized;   uint1   UPDATEcycletimerSMT <:: SMT;                counter40 CYCLESMT( update <: UPDATEcycletimerSMT, counter :> CSRcycletimerSMT);
 
     // CPU HART INSTRUCTION RETIRED COUNTERS
-    uint48  CSRinstret = uninitialized;
-    uint48  CSRinstretSMT = uninitialized;
-    uint1   UPDATEinstret <:: incCSRinstret & ~SMT;
-    uint1   UPDATEinstretSMT <:: incCSRinstret & SMT;
-    counter40 INSTRET( update <: UPDATEinstret, counter :> CSRinstret );
-    counter40 INSTRETSMT( update <: UPDATEinstretSMT, counter :> CSRinstretSMT );
+    uint48  CSRinstret = uninitialized;         uint1   UPDATEinstret <:: incCSRinstret & ~SMT;     counter40 INSTRET( update <: UPDATEinstret, counter :> CSRinstret );
+    uint48  CSRinstretSMT = uninitialized;      uint1   UPDATEinstretSMT <:: incCSRinstret & SMT;   counter40 INSTRETSMT( update <: UPDATEinstretSMT, counter :> CSRinstretSMT );
 
     // FLOATING-POINT CSR FOR BOTH THREADS
     uint8   CSRf[2] = { 0, 0 };
@@ -413,6 +411,7 @@ algorithm CSRblock(
     // SWITCH BETWEEN IMMEDIATE OR REGISTER VALUE TO WRITE TO CSR
     uint32  writevalue <:: function3[2,1] ? rs1 : sourceReg1;
 
+    // PASS PRESENT FPU FLAGS TO THE FPU
     FPUflags ::= CSRf[SMT][0,5];
 
     always {
@@ -420,57 +419,69 @@ algorithm CSRblock(
             CSRf[SMT][0,5] = FPUnewflags;
         } else {
             if( start ) {
-                switch( CSR(instruction).csr ) {
-                    case 12h001: { result = CSRf[SMT][0,5]; }   // frflags
-                    case 12h002: { result = CSRf[SMT][5,3]; }   // frrm
-                    case 12h003: { result = CSRf[SMT]; }        // frcsr
-                    case 12h301: { result = $CPUISA$; }
-                    case 12hc00: { result = SMT ? CSRcycletimerSMT[0,32] : CSRcycletimer[0,32]; }
-                    case 12hc80: { result = SMT ? CSRcycletimerSMT[32,8] : CSRcycletimer[32,8]; }
-                    case 12hc01: { result = CSRtimer[0,32]; }
-                    case 12hc81: { result = CSRtimer[32,8]; }
-                    case 12hc02: { result = SMT ? CSRinstretSMT[0,32] : CSRinstret[0,32]; }
-                    case 12hc82: { result = SMT ? CSRinstretSMT[32,8] : CSRinstret[32,8]; }
-                    case 12hf14: { result = SMT; }
+                switch( CSR(instruction).csr[8,4] ) {
+                    case 4h0: {
+                        switch( CSR(instruction).csr[0,2] ) {
+                            case 2h1: { result = CSRf[SMT][0,5]; }   // frflags
+                            case 2h2: { result = CSRf[SMT][5,3]; }   // frrm
+                            case 2h3: { result = CSRf[SMT]; }        // frcsr
+                            default: { result = 0; }
+                        }
+                    }
+                    case 4h3: { result = $CPUISA$; }
+                    case 4hc: {
+                        switch( { CSR(instruction).csr[7,1], CSR(instruction).csr[0,2] } ) {
+                            case 5h00: { result = SMT ? CSRcycletimerSMT[0,32] : CSRcycletimer[0,32]; }
+                            case 5h10: { result = SMT ? CSRcycletimerSMT[32,8] : CSRcycletimer[32,8]; }
+                            case 5h01: { result = CSRtimer[0,32]; }
+                            case 5h11: { result = CSRtimer[32,8]; }
+                            case 5h02: { result = SMT ? CSRinstretSMT[0,32] : CSRinstret[0,32]; }
+                            case 5h12: { result = SMT ? CSRinstretSMT[32,8] : CSRinstret[32,8]; }
+                            default: { result = 0; }
+                        }
+                     }
+                    case 4hf: { result = SMT; }                     // HART ID
                     default: { result = 0; }
                 }
-                switch( function3[0,2] ) {
-                    case 2b00: {
-                        // ECALL / EBBREAK
-                    }
-                    case 2b01: {
-                        // CSRRW / CSRRWI
-                        switch( { ~|rs1, function3[2,1] } ) {
-                            case 2b10: {}
-                            default: {
-                                switch( CSR(instruction).csr ) {
-                                    case 12h001: { CSRf[SMT][0,5] = writevalue[0,5]; }
-                                    case 12h002: { CSRf[SMT][5,3] = writevalue[0,3]; }
-                                    case 12h003: { CSRf[SMT] = writevalue[0,8]; }
+                if( ~|CSR(instruction).csr[4,8] ) {
+                    switch( function3[0,2] ) {
+                        case 2b00: {
+                            // ECALL / EBBREAK
+                        }
+                        case 2b01: {
+                            // CSRRW / CSRRWI
+                            switch( { ~|rs1, function3[2,1] } ) {
+                                case 2b10: {}
+                                default: {
+                                    switch( CSR(instruction).csr[0,4] ) {
+                                        case 4h1: { CSRf[SMT][0,5] = writevalue[0,5]; }
+                                        case 4h2: { CSRf[SMT][5,3] = writevalue[0,3]; }
+                                        case 4h3: { CSRf[SMT] = writevalue[0,8]; }
+                                        default: {}
+                                    }
+                                }
+                            }
+                        }
+                        case 2b10: {
+                            // CSRRS / CSRRSI
+                            if( |rs1 ) {
+                                switch( CSR(instruction).csr[0,4] ) {
+                                    case 4h1: { CSRf[SMT][0,5] = CSRf[SMT][0,5] | writevalue[0,5]; }
+                                    case 4h2: { CSRf[SMT][5,3] = CSRf[SMT][5,3] | writevalue[0,3]; }
+                                    case 4h3: { CSRf[SMT] = CSRf[SMT] | writevalue[0,8]; }
                                     default: {}
                                 }
                             }
                         }
-                    }
-                    case 2b10: {
-                        // CSRRS / CSRRSI
-                        if( |rs1 ) {
-                            switch( CSR(instruction).csr ) {
-                                case 12h001: { CSRf[SMT][0,5] = CSRf[SMT][0,5] | writevalue[0,5]; }
-                                case 12h002: { CSRf[SMT][5,3] = CSRf[SMT][5,3] | writevalue[0,3]; }
-                                case 12h003: { CSRf[SMT] = CSRf[SMT] | writevalue[0,8]; }
-                                default: {}
-                            }
-                        }
-                    }
-                    case 2b11: {
-                        // CSRRC / CSRRCI
-                        if( |rs1 ) {
-                            switch( CSR(instruction).csr ) {
-                                case 12h001: { CSRf[SMT][0,5] = CSRf[SMT][0,5] & ~writevalue[0,5]; }
-                                case 12h002: { CSRf[SMT][5,3] = CSRf[SMT][5,3] & ~writevalue[0,3]; }
-                                case 12h003: { CSRf[SMT] = CSRf[SMT] & ~writevalue[0,8]; }
-                                default: {}
+                        case 2b11: {
+                            // CSRRC / CSRRCI
+                            if( |rs1 ) {
+                                switch( CSR(instruction).csr[0,4] ) {
+                                    case 4h1: { CSRf[SMT][0,5] = CSRf[SMT][0,5] & ~writevalue[0,5]; }
+                                    case 4h2: { CSRf[SMT][5,3] = CSRf[SMT][5,3] & ~writevalue[0,3]; }
+                                    case 4h3: { CSRf[SMT] = CSRf[SMT] & ~writevalue[0,8]; }
+                                    default: {}
+                                }
                             }
                         }
                     }

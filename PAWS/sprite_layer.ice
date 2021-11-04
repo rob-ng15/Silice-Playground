@@ -194,7 +194,7 @@ algorithm sprite_layer_writer(
     always {
         // SET ATTRIBUTES + PERFORM UPDATE
         switch( sprite_layer_write ) {
-            default: {}
+            case 0: {}
             case 1: { sprite_active[ sprite_set_number ] = sprite_write_value[0,1]; }
             case 2: { sprite_double[ sprite_set_number ] = sprite_write_value[0,3]; }
             case 3: { sprite_colour[ sprite_set_number ] = sprite_write_value[0,6]; }

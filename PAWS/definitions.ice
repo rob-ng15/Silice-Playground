@@ -31,10 +31,8 @@ bitfield colour15 {
 // Vertex in the vector block
 bitfield vectorentry {
     uint1   active,
-    uint1   dxsign,
-    uint5   dx,
-    uint1   dysign,
-    uint5   dy
+    uint6   dx,                 // 1 sign bit + 5 bits for the offset
+    uint6   dy                  // 1 sign bit + 5 bits for the offset
 }
 
 // Sprite update flag

@@ -248,7 +248,7 @@ $$end
     );
 
     uint2   accesssize = uninitialized;
-    uint1   byteaccess <:: ( accesssize[0,2] == 2b00 );
+    uint1   byteaccess <:: ( ~|accesssize[0,2] );
     uint27  address = uninitialized;
     uint16  writedata = uninitialized;
     uint1   CPUwritememory = uninitialized;
@@ -270,10 +270,10 @@ $$end
     uint1   SDRAM <: address[26,1];
     uint1   BRAM <: ~SDRAM & ~address[15,1];
     uint1   IOmem <: ~SDRAM & ~BRAM;
-    uint1   TIMERS <: IOmem & ( address[12,2] == 2h0 );
+    uint1   TIMERS <: IOmem & ( ~|address[12,2] );
     uint1   VIDEO <: IOmem & ( address[12,2] == 2h1 );
     uint1   AUDIO <: IOmem & ( address[12,2] == 2h2 );
-    uint1   IO <: IOmem & ( address[12,2] == 2h3 );
+    uint1   IO <: IOmem & ( &address[12,2] );
 
     // SDRAM -> CPU BUSY STATE
     uint1   memorybusy <:: sdrambusy | ( ( CPUreadmemory | CPUwritememory ) & ( BRAM | SDRAM ) );

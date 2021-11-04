@@ -10,7 +10,7 @@ algorithm alu(
     input   uint32  immediateValue,
 
     output  uint32  result
-) <autorun> {
+) <autorun,reginputs> {
     uint1   regimm <:: opCode[3,1];
     uint1   function75 <:: function7[5,1];
     uint1   addsub <:: regimm & function75;
@@ -54,7 +54,7 @@ algorithm douintdivide(
     uint1   bitresult <:: __unsigned(temporary) >= __unsigned(divisor);
     uint6   bit(63);
 
-    busy := start | ( bit != 63 );
+    busy := start | ( ~&bit );
     while(1) {
         if( start ) {
             bit = 31; quotient = 0; remainder = 0;
@@ -76,7 +76,7 @@ algorithm aluMD(
     input   uint32  absRS1,
     input   uint32  absRS2,
     output  uint32  result
-) <autorun> {
+) <autorun,reginputs> {
     uint1   quotientremaindersign <:: function3[0,1] ? 0 : sourceReg1[31,1] ^ sourceReg2[31,1];
     uint32  result_quotient = uninitialised;
     uint32  result_remainder = uninitialised;
@@ -112,7 +112,7 @@ algorithm douintmul(
     input   uint32  factor_2,
     input   uint1   productsign,
     output  uint64  product64,
-) <autorun> {
+) <autorun,reginputs> {
     uint64  product <:: factor_1 * factor_2;
     always {
         product64 = productsign ? -product : product;
@@ -126,7 +126,7 @@ algorithm aluMM(
     input   uint32  absRS1,
     input   uint32  absRS2,
     output  uint32  result
-) <autorun> {
+) <autorun,reginputs> {
     uint2   dosigned <:: ~{ function3[0,1], function3[1,1] };
     uint1   dosigned0 <:: ( ~|dosigned );
     uint1   dosigned1 <:: ( dosigned != 1 );
