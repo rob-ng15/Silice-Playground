@@ -164,6 +164,7 @@ unsigned char volatile * AUDIO_R_ACTIVE = ( unsigned char volatile * ) 0xe012;
 
 unsigned short volatile * RNG = ( unsigned short volatile * ) 0xc000;
 unsigned short volatile * ALT_RNG = ( unsigned short volatile * ) 0xc002;
+float volatile * FRNG = ( float volatile * ) 0xc004;
 unsigned short volatile * TIMER1HZ0 = ( unsigned short volatile * ) 0xc010;
 unsigned short volatile * TIMER1HZ1 = ( unsigned short volatile * ) 0xc012;
 unsigned short volatile * TIMER1KHZ0 = ( unsigned short volatile * ) 0xc014;

@@ -415,8 +415,9 @@ algorithm cpuexecuteFASTPATH(
     uint1   isJAL <:: ( opCode[2,3] == 3b110 ) & opCode[0,1];
     uint1   isLOAD <:: ~|opCode[1,4];
 
+    takeBranch := 0;
+
     always {
-        takeBranch = 0;
         switch( opCode ) {
             case 5b11000: { takeBranch = BRANCHUNIT.takeBranch; }       // BRANCH
             case 5b01000: { memoryoutput = sourceReg2; }                // STORE

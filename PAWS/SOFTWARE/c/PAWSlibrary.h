@@ -26,6 +26,7 @@ extern unsigned char get_buttons( void );
 // TIMERS AND PSEUDO RANDOM NUMBER GENERATOR
 extern unsigned short systemclock( void );
 extern unsigned short secondssincestart( int );
+extern float frng( void );
 extern unsigned short rng( unsigned short );
 extern void sleep( unsigned short, unsigned char );
 extern void set_timer1khz( unsigned short, unsigned char );

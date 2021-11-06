@@ -1,4 +1,41 @@
 // ALU - ALU for immediate-register operations and register-register operations
+algorithm alushift(
+    input   uint32  sourceReg1,
+    input   uint5   shiftcount,
+    output  uint32  SLL,
+    output  uint32  SRL,
+    output  uint32  SRA
+) <autorun,reginputs> {
+    always {
+        SLL = sourceReg1 << shiftcount;
+        SRL = sourceReg1 >> shiftcount;
+        SRA = __signed(sourceReg1) >>> shiftcount;
+    }
+}
+algorithm aluaddsub(
+    input   uint1   addsub,
+    input   uint32  sourceReg1,
+    input   uint32  operand2,
+    output  uint32  AS
+) <autorun,reginputs> {
+    always {
+        AS = addsub ? ( sourceReg1 - operand2 ) : ( sourceReg1 + operand2 );
+    }
+}
+algorithm alulogic(
+    input   uint1   addsub,
+    input   uint32  sourceReg1,
+    input   uint32  operand2,
+    output  uint32  AND,
+    output  uint32  OR,
+    output  uint32  XOR
+) <autorun,reginputs> {
+    always {
+        AND = sourceReg1 & operand2;
+        OR = sourceReg1 | operand2;
+        XOR = sourceReg1 ^ operand2;
+    }
+}
 algorithm alu(
     input   uint5   opCode,
     input   uint3   function3,
@@ -17,24 +54,24 @@ algorithm alu(
     uint5   shiftcount <:: regimm ? sourceReg2[0,5] : rs2;
     uint32  operand2 <:: regimm ? sourceReg2 : immediateValue;
     uint1   unsignedcompare <:: __unsigned( sourceReg1 ) < __unsigned( operand2 );
-    uint1   signedcompare <:: __signed( sourceReg1 ) < __signed(operand2);
 
-    uint32  AS <:: addsub ? ( sourceReg1 - operand2 ) : ( sourceReg1 + operand2 );
-    uint32  SLL <:: sourceReg1 << shiftcount;
-    uint32  SRL <:: sourceReg1 >> shiftcount;
-    uint32  SRA <:: __signed(sourceReg1) >>> shiftcount;
+    uint1   SLT <:: __signed( sourceReg1 ) < __signed(operand2);
     uint1   SLTU <:: regimm ? ( ~|rs1 ) ? ( |operand2 ) : unsignedcompare : ( operand2 == 1 ) ? ( ~|sourceReg1 ) : unsignedcompare;
+
+    aluaddsub ADDSUB( addsub <: addsub, sourceReg1 <: sourceReg1, operand2 <: operand2 );
+    alushift SHIFTS( sourceReg1 <: sourceReg1, shiftcount <: shiftcount );
+    alulogic LOGIC( sourceReg1 <: sourceReg1, operand2 <: operand2 );
 
     always {
         switch( function3 ) {
-            case 3b000: { result = AS; }
-            case 3b001: { result = SLL; }
-            case 3b010: { result = signedcompare; }
+            case 3b000: { result = ADDSUB.AS; }
+            case 3b001: { result = SHIFTS.SLL; }
+            case 3b010: { result = SLT; }
             case 3b011: { result = SLTU; }
-            case 3b100: { result = sourceReg1 ^ operand2; }
-            case 3b101: { result = function75 ? SRA : SRL; }
-            case 3b110: { result = sourceReg1 | operand2; }
-            case 3b111: { result = sourceReg1 & operand2; }
+            case 3b100: { result = LOGIC.XOR; }
+            case 3b101: { result = function75 ? SHIFTS.SRA : SHIFTS.SRL; }
+            case 3b110: { result = LOGIC.OR; }
+            case 3b111: { result = LOGIC.AND; }
         }
     }
 }
@@ -55,16 +92,21 @@ algorithm douintdivide(
     uint6   bit(63);
 
     busy := start | ( ~&bit );
+    always {
+        if( ~&bit ) {
+            quotient[bit,1] = bitresult;
+            remainder = __unsigned(temporary) - ( bitresult ? __unsigned(divisor) : 0 );
+            bit = bit - 1;
+        }
+    }
+
     while(1) {
         if( start ) {
             bit = 31; quotient = 0; remainder = 0;
-            while( busy ) {
-                quotient[bit,1] = bitresult;
-                remainder = __unsigned(temporary) - ( bitresult ? __unsigned(divisor) : 0 );
-                bit = bit - 1;
-            }
         }
     }
+
+    if( ~reset ) { bit = 63; }
 }
 
 algorithm aluMD(
@@ -89,18 +131,21 @@ algorithm aluMD(
         quotient :> result_quotient,
         remainder :> result_remainder
     );
-    DODIVIDE.start := 0;
+    DODIVIDE.start := 0; busy := start | DODIVIDE.busy;
+
+    always {
+        if( ~DODIVIDE.busy ) {
+            result = function3[1,1] ? result_remainder : ( quotientremaindersign ? -result_quotient : result_quotient );
+        }
+    }
 
     while(1) {
         if( start ) {
-            busy = 1;
             if( ~|sourceReg2 ) {
                 result = function3[1,1] ? sourceReg1 : 32hffffffff;
             } else {
-                DODIVIDE.start = 1; while( DODIVIDE.busy ) {}
-                result = function3[1,1] ? result_remainder : ( quotientremaindersign ? -result_quotient : result_quotient );
+                DODIVIDE.start = 1;
             }
-            busy = 0;
         }
     }
 }

@@ -158,9 +158,11 @@ algorithm timers_memmap(
         // READ IO Memory
         if( memoryRead ) {
             switch( memoryAddress[1,4] ) {
-                // TIMERS and RNG
+                // RNG ( 2 interger, 1 float 0 <= fng < 1 ) and TIMERS
                 case 4h0: { readData = timers.g_noise_out; }
                 case 4h1: { readData = timers.u_noise_out; }
+                case 4h2: { readData = { timers.g_noise_out[7,9], timers.u_noise_out[3,7] }; }
+                case 4h3: { readData = { 1b0, 5b01111, &timers.u_noise_out[0,3] ? 3b110 : timers.u_noise_out[0,3], timers.g_noise_out[0,7] }; }
                 case 4h8: { readData = timers.timer1hz0; }
                 case 4h9: { readData = timers.timer1hz1; }
                 case 4ha: { readData = timers.timer1khz0; }

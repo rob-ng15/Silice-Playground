@@ -329,14 +329,13 @@ $$end
 
     // FLAGS FOR BRAM ACCESS
     ram.wenable := 0; ram.addr := address[1,14]; readdata := ram.rdata;
+    ram.wdata := byteaccess ? ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } ) : writedata;
 
     while(1) {
         if( writeflag ) {
             if( byteaccess ) {
                 ++:
-                ram.wdata = ( address[0,1] ? { writedata[0,8], ram.rdata[0,8] } : { ram.rdata[8,8], writedata[0,8] } );
             } else {
-                ram.wdata = writedata;
             }
             ram.wenable = 1;
         }

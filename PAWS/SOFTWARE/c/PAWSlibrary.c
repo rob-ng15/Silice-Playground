@@ -78,6 +78,11 @@ void ps2_keyboardmode( unsigned char mode ) {
 // TIMER AND PSEUDO RANDOM NUMBER GENERATOR
 
 // PSEUDO RANDOM NUMBER GENERATOR
+// RETURN FLOAT IN RANGE 0 <= frng < 1.0
+float frng( void ) {
+    return( *FRNG );
+}
+
 // RETURN PSEUDO RANDOM NUMBER 0 <= RNG < RANGE ( effectively 0 to range - 1 )
 unsigned short rng( unsigned short range ) {
     unsigned short trial, mask;

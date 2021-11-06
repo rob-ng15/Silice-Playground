@@ -49,8 +49,8 @@ algorithm Iclass(
 ) <autorun,reginputs> {
     // CHECK FOR FLOATING POINT, OR INTEGER DIVIDE
     uint1   ALUfastslow <:: ~( opCode[4,1] | ( opCode[3,1] & isALUM & function3[2,1]) );
+    frd := 0; writeRegister := 1; incPC := 1; FASTPATH := 1;
     always {
-        frd = 0; writeRegister = 1; incPC = 1; FASTPATH = 1;
         switch( opCode ) {
             case 5b01101: {}                        // LUI
             case 5b00101: {}                        // AUIPC
@@ -220,12 +220,13 @@ algorithm branchcomparison(
     uint1   isequal <:: sourceReg1 == sourceReg2;
     uint1   unsignedcompare <:: __unsigned(sourceReg1) < __unsigned(sourceReg2);
     uint1   signedcompare <:: __signed(sourceReg1) < __signed(sourceReg2);
+    takeBranch := 0;
     always {
         switch( function3[1,2] ) {
             case 2b00: { takeBranch = function3[0,1] ^ isequal; }
             case 2b10: { takeBranch = function3[0,1] ^ signedcompare; }
             case 2b11: { takeBranch = function3[0,1] ^ unsignedcompare; }
-            default: { takeBranch = 0; }
+            default: {}
         }
     }
 }
@@ -419,13 +420,14 @@ algorithm CSRblock(
             CSRf[SMT][0,5] = FPUnewflags;
         } else {
             if( start ) {
+                result = 0;
                 switch( CSR(instruction).csr[8,4] ) {
                     case 4h0: {
                         switch( CSR(instruction).csr[0,2] ) {
                             case 2h1: { result = CSRf[SMT][0,5]; }   // frflags
                             case 2h2: { result = CSRf[SMT][5,3]; }   // frrm
                             case 2h3: { result = CSRf[SMT]; }        // frcsr
-                            default: { result = 0; }
+                            default: {}
                         }
                     }
                     case 4h3: { result = $CPUISA$; }
@@ -437,7 +439,7 @@ algorithm CSRblock(
                             case 5h11: { result = CSRtimer[32,8]; }
                             case 5h02: { result = SMT ? CSRinstretSMT[0,32] : CSRinstret[0,32]; }
                             case 5h12: { result = SMT ? CSRinstretSMT[32,8] : CSRinstret[32,8]; }
-                            default: { result = 0; }
+                            default: {}
                         }
                      }
                     case 4hf: { result = SMT; }                     // HART ID

@@ -389,9 +389,9 @@ unsigned char random_colour_alt( void ) {
     unsigned char red, green, blue;
 
     do {
-        red = rng( 1 );
-        green = rng( 1 );
-        blue = rng( 1 );
+        red = rng( 2 );
+        green = rng( 2 );
+        blue = rng( 2 );
     } while( ( red + green + blue ) == 0 );
 
     return( red * 16 + green * 4 + blue );

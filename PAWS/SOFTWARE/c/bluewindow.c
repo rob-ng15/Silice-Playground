@@ -10,7 +10,7 @@ int main( void ) {
     terminal_print("Hello, I'm the little blue terminal window!\n");
     sleep( 4000, 0 );
     for( int i = 0; i < 16; i++ ) {
-        terminal_printf("Counting %d\n",i);
+        terminal_printf("Counting %d, Floating Point Random Number %f\n",i,frng());
         sleep( 500, 0 );
     }
     terminal_printf("\nBye!");

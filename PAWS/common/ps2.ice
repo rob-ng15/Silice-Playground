@@ -7,7 +7,7 @@ algorithm ps2ascii(
     input   uint1   outputascii,
     output  uint16  joystick
 ) <autorun> {
-    uint9   newascii = 0;
+    uint9   newascii = uninitialised;
 
     // MODIFIER KEYS + JOYSTICK MODE
     uint1   lctrl = 0;
@@ -49,11 +49,10 @@ algorithm ps2ascii(
     // PS2 KEYBOARD CODE READER
     ps2 PS2( ps2clk_ext <: us2_bd_dp, ps2data_ext <: us2_bd_dn );
 
-    asciivalid := 0; joystick ::= { application, nprightup, nprightdown, npleftdown, npleftup, rctrl, rwin, ralt, lalt, npright | right, npleft | left, npdown | down, npup | up, lwin, lctrl, 1b0 };
+    newascii := 0; asciivalid := 0; joystick := { application, nprightup, nprightdown, npleftdown, npleftup, rctrl, rwin, ralt, lalt, npright | right, npleft | left, npdown | down, npup | up, lwin, lctrl, 1b0 };
 
     always {
         if( PS2.valid ) {
-            newascii = 0;
             switch( PS2.data ) {
                 case 8he0: { startmulti = 1; }
                 case 8hf0: { startbreak = 1; }
@@ -171,7 +170,6 @@ algorithm ps2ascii(
                         case 2b10: {
                             // MULTICODE KEY PRESS
                             switch( PS2.data ) {
-                                case 8hf0: { startbreak = 1; }
                                 case 8h5a: { newascii = 8h0d; }                                 // KEYPAD ENTER
                                 case 8h14: { rctrl = 1; }                                       // RIGHT CTRL AND ALT
                                 case 8h11: { ralt = 1; }
@@ -211,11 +209,13 @@ algorithm ps2ascii(
                     }
                 }
             }
+        }
+    }
 
-            // NEW KEYCODE RECEIVED
-            if( |newascii ) {
-                ascii = newascii; asciivalid = outputascii;
-            }
+    // NEW KEYCODE RECEIVED
+    while(1) {
+        if( |newascii ) {
+            ascii = newascii; asciivalid = outputascii;
         }
     }
 }
@@ -278,10 +278,10 @@ algorithm ps2(
 
     valid := 0;
     error := 0;
+    clk_edge := 0;
 
+    // Filter the PS/2 clock
     always {
-        // Filter the PS/2 clock
-        clk_edge = 0;
         clk_filter = { ps2clk_ext, clk_filter[1,3] };
 
         switch( clk_filter ) {
@@ -294,7 +294,10 @@ algorithm ps2(
             }
             default: {}
         }
+    }
 
+    // Process the PS/2 data bit
+    while(1) {
         if( clk_edge ) {
             switch( bit_count ) {
                 case 0: {
@@ -312,14 +315,12 @@ algorithm ps2(
                 }
                 case 10: {
                     if( ps2data_ext ) {
-                        bit_count = 0;
                         if( parity ) {
                             data = shift_reg[0,8];
                             valid = 1;
                         } else {
                             error = 1;
                         }
-                        error = 1;
                         bit_count = 0;
                     }
                 }
