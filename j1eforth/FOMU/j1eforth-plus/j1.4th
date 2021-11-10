@@ -959,18 +959,18 @@ t: cold ( -- )
 t: fpu1! f005 literal ! t;
 t: fpu2! f006 literal ! fpu1! t;
 t: fpu? begin f007 literal @ 0= until t;
-t: fpu! f007 literal ! 0 literal f007 literal ! t;
+t: fpu! f007 literal ! t;
 t: fpu@ swap fpu! fpu? @ t;
-t: s>f fpu1! 1 literal f008 literal fpu@ t;
-t: f>s fpu1! 2 literal f009 literal fpu@ t;
+t: s>f fpu1! f008 literal @ t;
+t: f>s fpu1! f009 literal @ t;
 t: f+ fpu2! 3 literal f00a literal fpu@ t;
 t: f- fpu2! 4 literal f00a literal fpu@ t;
 t: f* fpu2! 5 literal f00b literal fpu@ t;
 t: f/ fpu2! 6 literal f00c literal fpu@ t;
 t: fsqrt fpu1! 7 literal f00d literal fpu@ t;
-t: f< fpu2! f00e literal @ t;
-t: f= fpu2! f00f literal @ t;
-t: f<= fpu2! f00e literal @ f00f literal @ or  t;
+t: f< fpu2! f00e literal @ negate t;
+t: f= fpu2! f00f literal @ negate t;
+t: f<= fpu2! f00e literal @ f00f literal @ or negate t;
 t: f.# base @ swap decimal
    bl emit
    dup f>s dup 0 literal .r 2e literal emit

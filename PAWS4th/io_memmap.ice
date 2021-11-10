@@ -59,31 +59,30 @@ $$if not SIMULATION then
     uint8   UARTinchar = uninitialized;
     uint8   UARToutchar = uninitialized;
     uint1   UARTinavailable = uninitialized;
-    uint1   UARTinread = uninitialized;
+    uint2   UARTinread = 0;
     uint1   UARToutfull = uninitialized;
-    uint1   UARToutwrite = uninitialized;
-    uart UART(
+    uint2   UARToutwrite = 0;
+    uart UART <@clock_25mhz> (
         uart_tx :> uart_tx,
         uart_rx <: uart_rx,
         inchar :> UARTinchar,
         outchar <: UARToutchar,
         inavailable :> UARTinavailable,
-        inread <: UARTinread,
+        inread <: UARTinread[0,1],
         outfull :> UARToutfull,
-        outwrite <: UARToutwrite
+        outwrite <: UARToutwrite[0,1]
     );
 
     // PS2 CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
     uint8   PS2inchar = uninitialized;
     uint1   PS2inavailable = uninitialized;
-    uint1   PS2inread = uninitialized;
-    ps2buffer PS2(
-        clock_25mhz <: clock_25mhz,
+    uint2   PS2inread = 0;
+    ps2buffer PS2 <@clock_25mhz> (
         us2_bd_dp <: us2_bd_dp,
         us2_bd_dn <: us2_bd_dn,
         inchar :> PS2inchar,
         inavailable :> PS2inavailable,
-        inread <: PS2inread
+        inread <: PS2inread[0,1]
     );
 
     // SDCARD AND BUFFER
@@ -105,71 +104,71 @@ $$if not SIMULATION then
         readsector <: SDCARDreadsector,
         ready :> SDCARDready
     );
-
-    // I/O FLAGS
-    UARTinread := 0; UARToutwrite := 0; PS2inread := 0; SDCARDreadsector := 0;
 $$end
 
     sdramwriteflag := 0; sdramreadflag := 0;
 
     always {
+$$if not SIMULATION then
+        // UPDATE LATCHES
+        UARTinread = UARTinread[1,1]; UARToutwrite = UARToutwrite[1,1]; PS2inread = PS2inread[1,1];
+$$end
         // READ IO Memory
-        switch( memoryRead ) {
-            case 1: {
-                switch( memoryAddress ) {
-                    // UART, LEDS, BUTTONS and CLOCK
-                    case 12h130: { readData = leds; }
-                    $$if not SIMULATION then
-                    case 12h100: {
-                        switch( { PS2inavailable, UARTinavailable } ) {
-                            case 2b00: { readData = 0; }
-                            case 2b01: { readData = { 8b0, UARTinchar }; UARTinread = 1; }
-                            default: { readData = { 8b0, PS2inchar }; PS2inread = 1; }
-                        }
+        if( memoryRead ) {
+            switch( memoryAddress ) {
+                // UART, LEDS, BUTTONS and CLOCK
+                case 12h130: { readData = leds; }
+                $$if not SIMULATION then
+                case 12h100: {
+                    switch( { PS2inavailable, UARTinavailable } ) {
+                        case 2b00: { readData = 0; }
+                        case 2b01: { readData = { 8b0, UARTinchar }; UARTinread = 2b11; }
+                        default: { readData = { 8b0, PS2inchar }; PS2inread = 2b11; }
                     }
-                    case 12h102: { readData = { 14b0, UARToutfull ? 1b1 : 1b0, ( UARTinavailable || PS2inavailable ) ? 1b1: 1b0 }; }
-                    case 12h120: { readData = { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] }; }
-
-                    // SDCARD
-                    case 12h140: { readData = SDCARDready; }
-                    case 12h150: { readData = bufferdata; }
-                    $$end
-                    // SDRAM
-                    case 12hf00: { readData = sdramreaddata; }
-                    case 12hf02: { readData = sdram.busy; }
-
-                    // RETURN NULL VALUE
-                    default: { readData = 0; }
                 }
+                case 12h102: { readData = { 14b0, UARToutfull ? 1b1 : 1b0, ( UARTinavailable || PS2inavailable ) ? 1b1: 1b0 }; }
+                case 12h120: { readData = { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] }; }
+
+                // SDCARD
+                case 12h140: { readData = SDCARDready; }
+                case 12h150: { readData = bufferdata; }
+                $$end
+                // SDRAM
+                case 12hf00: { readData = sdramreaddata; }
+                case 12hf02: { readData = sdram.busy; }
+
+                // RETURN NULL VALUE
+                default: { readData = 0; }
             }
-            default: {}
         }
 
         // WRITE IO Memory
-        switch( memoryWrite ) {
-            case 1: {
-                switch( memoryAddress ) {
-                    // UART, LEDS
-                    case 12h130: { leds = writeData; }
-                    $$if not SIMULATION then
-                    case 12h100: { UARToutchar = writeData[0,8]; UARToutwrite = 1; }
+        if( memoryWrite ) {
+            switch( memoryAddress ) {
+                // UART, LEDS
+                case 12h130: { leds = writeData; }
+                $$if not SIMULATION then
+                case 12h100: { UARToutchar = writeData[0,8]; UARToutwrite = 2b11; }
 
-                    // SDCARD
-                    case 12h140: { SDCARDreadsector = 1; }
-                    case 12h142: { sectoraddressH = writeData; }
-                    case 12h144: { sectoraddressL = writeData; }
-                    case 12h150: { bufferaddress = writeData; }
-                    $$end
-                    // SDRAM
-                    case 12hf00: { sdramwritedata = writeData; }
-                    case 12hf02: { sdramreadflag = writeData[0,1]; sdramwriteflag = writeData[1,1]; }
-                    case 12hf04: { sdramaddress[16,8] = writeData; }
-                    case 12hf05: { sdramaddress[0,16] = writeData; }
-                    default: {}
-                }
+                // SDCARD
+                case 12h140: { SDCARDreadsector = 1; }
+                case 12h142: { sectoraddressH = writeData; }
+                case 12h144: { sectoraddressL = writeData; }
+                case 12h150: { bufferaddress = writeData; }
+                $$end
+                // SDRAM
+                case 12hf00: { sdramwritedata = writeData; }
+                case 12hf02: { sdramreadflag = writeData[0,1]; sdramwriteflag = writeData[1,1]; }
+                case 12hf04: { sdramaddress[16,8] = writeData; }
+                case 12hf05: { sdramaddress[0,16] = writeData; }
+                default: {}
             }
-            default: {}
         }
+    }
+    if( ~reset ) {
+        $$if not SIMULATION then
+        PS2.outputascii = 1;
+        $$end
     }
 }
 
@@ -613,120 +612,116 @@ algorithm audio(
 }
 
 // UART BUFFER CONTROLLER
+// 256 entry FIFO queue
+algorithm fifo8(
+    output  uint1   available,
+    output  uint1   full,
+    input   uint1   read,
+    input   uint1   write,
+    output  uint8   first,
+    input   uint8   last
+) <autorun,reginputs> {
+    simple_dualport_bram uint8 queue[256] = uninitialized;
+    uint1   update = uninitialized;
+    uint8   top = 0;
+    uint8   next = 0;
+
+    available := ( top != next ); full := ( top + 1 == next );
+    queue.addr0 := next; first := queue.rdata0;
+    queue.wenable1 := 1;
+
+    always {
+        if( write ) {
+            queue.addr1 = top; queue.wdata1 = last;
+            update = 1;
+        } else {
+            if( update ) {
+                top = top + 1;
+                update = 0;
+            }
+        }
+        next = next + read;
+    }
+}
 algorithm uart(
     // UART
     output  uint1   uart_tx,
     input   uint1   uart_rx,
-
     output  uint1   inavailable,
     output  uint1   outfull,
-
     output  uint8   inchar,
     input   uint1   inread,
     input   uint8   outchar,
     input   uint1   outwrite
 ) <autorun> {
-    uint1   update = uninitialized;
-
-    // UART tx and rx
-    // UART written in Silice by https://github.com/sylefeb/Silice
-    uart_out uo;
-    uart_sender usend(
-        io      <:> uo,
-        uart_tx :>  uart_tx
-    );
-    uart_in ui;
-    uart_receiver urecv(
-        io      <:> ui,
-        uart_rx <:  uart_rx
+    uart_in ui; uart_receiver urecv( io <:> ui, uart_rx <: uart_rx );
+    uint8   uidata_out <: ui.data_out;
+    uint1   uidata_out_ready <: ui.data_out_ready;
+    fifo8 IN(
+        available :> inavailable,
+        first :> inchar,
+        read <: inread,
+        last <: uidata_out,
+        write <: uidata_out_ready
     );
 
-    // UART input FIFO (4096 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartInBuffer[4096] = uninitialized;
-    uint13  uartInBufferNext = 0;
-    uint13  uartInBufferTop = 0;
-
-    // UART output FIFO (4096 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 uartOutBuffer[4096] = uninitialized;
-    uint13   uartOutBufferNext = 0;
-    uint13   uartOutBufferTop = 0;
-    uint13   newuartOutBufferTop = 0;
-
-    // FLAGS
-    inavailable := ( uartInBufferNext != uartInBufferTop );
-    outfull := ( uartOutBufferTop + 1 == uartOutBufferNext );
-    inchar := uartInBuffer.rdata0;
-
-    // UART Buffers ( code from @sylefeb )
-    uartInBuffer.wenable1 := 1;  // always write on port 1
-    uartInBuffer.addr0 := uartInBufferNext; // FIFO reads on next
-    uartInBuffer.addr1 := uartInBufferTop;  // FIFO writes on top
-    uartOutBuffer.wenable1 := 1; // always write on port 1
-    uartOutBuffer.addr0 := uartOutBufferNext; // FIFO reads on next
-    uartInBuffer.wdata1 := ui.data_out;
-    uartInBufferTop := uartInBufferTop + ui.data_out_ready;
-    uo.data_in := uartOutBuffer.rdata0;
-    uo.data_in_ready := ( uartOutBufferNext != uartOutBufferTop ) && ( !uo.busy );
-    uartOutBufferNext :=  uartOutBufferNext + ( (uartOutBufferNext != uartOutBufferTop) && ( !uo.busy ) );
-
-    always {
-        if( outwrite ) {
-                uartOutBuffer.addr1 = uartOutBufferTop;
-                uartOutBuffer.wdata1 = outchar;
-                update = 1;
-        } else {
-            if( update ) { uartOutBufferTop = uartOutBufferTop + 1; update = 0; }
-        }
-        uartInBufferNext = uartInBufferNext + inread;
-    }
+    uart_out uo; uart_sender usend( io <:> uo, uart_tx :> uart_tx );
+    uint8   uodata_in = uninitialized;
+    uint1   OUTavailable = uninitialized;
+    uint1   OUTread <: OUTavailable & !uo.busy;
+    fifo8 OUT(
+        available :> OUTavailable,
+        full :> outfull,
+        last <: outchar,
+        write <: outwrite,
+        first :> uodata_in,
+        read <: OUTread
+    );
+    uo.data_in := uodata_in;
+    uo.data_in_ready := OUTavailable & ( !uo.busy );
 }
 
-// PS2 BUFFER CONTROLLER
-algorithm ps2buffer(
-    input   uint1   clock_25mhz,
 
+// PS2 BUFFER CONTROLLER
+// 9 bit 256 entry FIFO buffer
+algorithm fifo9(
+    output  uint1   available,
+    output  uint1   full,
+    input   uint1   read,
+    input   uint1   write,
+    output  uint9   first,
+    input   uint9   last
+) <autorun,reginputs> {
+    simple_dualport_bram uint9 queue[256] = uninitialized;
+    uint1   update = uninitialized;
+    uint8   top = 0;
+    uint8   next = 0;
+
+    available := ( top != next ); full := ( top + 1 == next );
+    queue.addr0 := next; first := queue.rdata0;
+    queue.wenable1 := 1;
+
+    always {
+        if( write ) { queue.addr1 = top; queue.wdata1 = last; }
+        top = top + write;
+        next = next + read;
+    }
+}
+algorithm ps2buffer(
     // USB for PS/2
     input   uint1   us2_bd_dp,
     input   uint1   us2_bd_dn,
-
-    output  uint8   inchar,
+    output  uint9   inchar,
     output  uint1   inavailable,
-    input   uint1   inread
+    input   uint1   inread,
+    input   uint1   outputascii,
+    output  uint16  joystick
 ) <autorun> {
-    // PS/2 input FIFO (256 character) as dualport bram (code from @sylefeb)
-    simple_dualport_bram uint8 ps2Buffer[256] = uninitialized;
-    uint8  ps2BufferNext = 0;
-    uint7  ps2BufferTop = 0;
+    // PS/2 input FIFO (256 character) - 9 bit to deal with special characters
+    fifo9 FIFO( available :> inavailable, read <: inread, write <: PS2.asciivalid, first :> inchar, last <: PS2.ascii );
 
-    // PS 2 ASCII
-    uint1   PS2asciivalid = uninitialized;
-    uint2   LATCHasciivalid = uninitialized;
-    uint8   PS2ascii = uninitialized;
-    ps2ascii PS2 <@clock_25mhz> (
-        us2_bd_dp <: us2_bd_dp,
-        us2_bd_dn <: us2_bd_dn,
-        asciivalid :> PS2asciivalid,
-        ascii :> PS2ascii
-    );
-
-    // PS2 Buffers
-    uint1   update = uninitialized;
-    ps2Buffer.wenable1 := 1;  // always write on port 1
-    ps2Buffer.addr0 := ps2BufferNext; // FIFO reads on next
-
-    // FLAGS
-    inavailable := ( ps2BufferNext != ps2BufferTop );
-    inchar := ps2Buffer.rdata0;
-
-    always {
-        if( LATCHasciivalid == 2b11 ) {
-            ps2Buffer.addr1 = ps2BufferTop; ps2Buffer.wdata1 = PS2ascii; update = 1;
-        } else {
-            if( update ) { ps2BufferTop = ps2BufferTop + 1; update = 0; }
-        }
-        ps2BufferNext = ps2BufferNext + inread;
-        LATCHasciivalid = { LATCHasciivalid[0,1], PS2asciivalid };
-    }
+    // PS 2 KEYCODE TO ASCII CONVERTER AND JOYSTICK EMULATION MAPPER
+    ps2ascii PS2( us2_bd_dp <: us2_bd_dp, us2_bd_dn <: us2_bd_dn, outputascii <: outputascii, joystick :> joystick );
 }
 
 // SDCARD AND BUFFER CONTROLLER
@@ -771,24 +766,20 @@ algorithm sdcardbuffer(
 
 algorithm sdramcontroller(
     sdram_user      sio,
-
     input   uint24  address,
-
     input   uint1   writeflag,
     input   uint16  writedata,
-
     input   uint1   readflag,
     output  uint16  readdata,
-
     output  uint1   busy(0)
 ) <autorun> {
     // MEMORY ACCESS FLAGS
-    sio.addr := { address, 1b0 }; sio.in_valid := 0; readdata := sio.data_out;
+    sio.addr := { address, 1b0 }; sio.in_valid := ( readflag | writeflag );
+    sio.data_in := writedata; sio.rw := writeflag;
+    readdata := sio.data_out;
 
-    while(1) {
-        switch( readflag | writeflag ) {
-            case 1: { busy = 1; sio.data_in = writedata; sio.rw = writeflag; sio.in_valid = 1; while( !sio.done ) {} busy = 0; }
-            default: {}
-        }
+    always {
+        if( readflag | writeflag ) { busy = 1; }
+        if( sio.done ) { busy = 0; }
     }
 }

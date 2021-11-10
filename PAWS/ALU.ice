@@ -100,13 +100,13 @@ algorithm douintdivide(
         }
     }
 
+    if( ~reset ) { bit = 63; }
+
     while(1) {
         if( start ) {
             bit = 31; quotient = 0; remainder = 0;
         }
     }
-
-    if( ~reset ) { bit = 63; }
 }
 
 algorithm aluMD(

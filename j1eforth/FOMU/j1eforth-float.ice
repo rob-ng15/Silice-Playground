@@ -1,3 +1,6 @@
+// INCLUDE FLOATING POINT CO-PROCESSOR - USING 16 bit FLOATS TO FIT WITHIN WORD SIZE
+$include('float16.ice')
+
 // BITFIELDS to help with bit/field access
 // Instruction is 3 bits 1xx = literal value, 000 = branch, 001 = 0branch, 010 = call, 011 = alu, followed by 13 bits of instruction specific data
 bitfield instruction {
@@ -45,6 +48,39 @@ bitfield nibbles {
     uint4   nibble2,
     uint4   nibble1,
     uint4   nibble0
+}
+
+// UART BUFFER CONTROLLER
+// 256 entry FIFO queue
+algorithm fifo(
+    output  uint1   available,
+    output  uint1   full,
+    input   uint1   read,
+    input   uint1   write,
+    output  uint8   first,
+    input   uint8   last
+) <autorun,reginputs> {
+    simple_dualport_bram uint8 queue[256] = uninitialized;
+    uint1   update = uninitialized;
+    uint8   top = 0;
+    uint8   next = 0;
+
+    available := ( top != next ); full := ( top + 1 == next );
+    queue.addr0 := next; first := queue.rdata0;
+    queue.wenable1 := 1;
+
+    always {
+        if( write ) {
+            queue.addr1 = top; queue.wdata1 = last;
+            update = 1;
+        } else {
+            if( update ) {
+                top = top + 1;
+                update = 0;
+            }
+        }
+        next = next + read;
+    }
 }
 
 algorithm main(
@@ -152,6 +188,8 @@ algorithm main(
         rsp <: rsp
     );
 
+    float16 FPU();
+
     uart UART(
         uart_in_data :> uart_in_data,
         uart_in_valid :> uart_in_valid,
@@ -162,11 +200,10 @@ algorithm main(
         outchar <: bytes(stackNext).byte0
     );
 
-    // STACK WRITE CONTROLLERS
-    DSTACK.stackWrite := 0; RSTACK.stackWrite := 0;
-
     sram_data_write := ( ~|INIT ) ? 0 : ( INIT == 1 ) ? rom.rdata : stackNext;
     sram_readwrite := 0;
+
+    FPU.start := 0;
 
     // UART
     UART.read := 0; UART.write := 0;
@@ -234,13 +271,22 @@ algorithm main(
         } else {
             if( is_alu ) {
                 if( is_memtr & stackTop[15,1] ) {
-                    switch( stackTop[0,3] ) {
-                        case 3h0: { newStackTop = { 8b0, UART.inchar }; UART.read = 1; }
-                        case 3h1: { newStackTop = { 14b0, UART.full, UART.available }; }
-                        case 3h2: { newStackTop = rgbLED; }
-                        case 3h3: { newStackTop = { 12b0, buttons }; }
-                        case 3h4: { newStackTop = timer1hz; }
-                        default: { newStackTop = 0; }
+                    switch( stackTop[0,4] ) {
+                        case 4h0: { newStackTop = { 8b0, UART.inchar }; UART.read = 1; }
+                        case 4h1: { newStackTop = { 14b0, UART.full, UART.available }; }
+                        case 4h2: { newStackTop = rgbLED; }
+                        case 4h3: { newStackTop = { 12b0, buttons }; }
+                        case 4h4: { newStackTop = timer1hz; }
+                        case 4h7: { newStackTop = FPU.busy; }
+                        case 4h8: { newStackTop = FPU.itof; }
+                        case 4h9: { newStackTop = FPU.ftoi; }
+                        case 4ha: { newStackTop = FPU.fadd; }
+                        case 4hb: { newStackTop = FPU.fmul; }
+                        case 4hc: { newStackTop = FPU.fdiv; }
+                        case 4hd: { newStackTop = FPU.fsqrt; }
+                        case 4he: { newStackTop = FPU.less; }
+                        case 4hf: { newStackTop = FPU.equal; }
+                        default: {}
                     }
                 } else {
                     newStackTop = ALU.newStackTop;
@@ -257,15 +303,13 @@ algorithm main(
                 // n2memt mem[t] = n
                 if( is_n2memt ) {
                     if( stackTop[15,1] ) {
-                        switch( stackTop[0,3] ) {
-                            case 3h0: {
-                                // OUTPUT to UART (dualport blockram code from @sylefeb)
-                                UART.write = 1;
-                            }
-                            case 3h2: {
-                                // OUTPUT to rgbLED
-                                rgbLED = stackNext;
-                            }
+                        switch( stackTop[0,4] ) {
+                            case 4h0: { UART.write = 1; }
+                            case 4h2: { rgbLED = stackNext;  }
+                            case 4h5: { FPU.a = stackNext; }
+                            case 4h6: { FPU.b = stackNext; }
+                            case 4h7: { FPU.start = stackNext; }
+                            default: {}
                         }
                     } else {
                         // WRITE to SPRAM
@@ -367,7 +411,7 @@ algorithm alu(
                 case 4b0000: { newStackTop = stackTop; }
                 case 4b0001: { newStackTop = stackNext; }
                 case 4b0010: { newStackTop = ADD.c; }
-               case 4b0011: { newStackTop = LOGIC.AND; }
+                case 4b0011: { newStackTop = LOGIC.AND; }
                 case 4b0100: { newStackTop = LOGIC.OR; }
                 case 4b0101: { newStackTop = LOGIC.XOR; }
                 case 4b0110: { newStackTop = ~stackTop; }
@@ -475,6 +519,44 @@ algorithm deltasp(
     always {
         newSP = sp + delta;
     }
+}
+
+algorithm float16(
+    input   uint16  a,
+    input   uint16  b,
+    output  uint16  itof,
+    output  int16   ftoi,
+    output  uint16  fadd,
+    output  uint16  fmul,
+    output  uint16  fdiv,
+    output  uint16  fsqrt,
+    output  uint1   less,
+    output  uint1   equal,
+    input   uint3   start,
+    output  uint1   busy(0)
+) <autorun,reginputs> {
+    inttofloat ITOF( a <: a, result :> itof );
+    floattoint FTOI( a <: a, result :> ftoi );
+    floataddsub FADD( a <: a, b <: b, result :> fadd );
+    floatmultiply FMUL( a <: a, b <: b, result :> fmul );
+    floatdivide FDIV( a <: a, b <: b, result :> fdiv );
+    floatsqrt FSQRT( a <: a, result :> fsqrt );
+    floatcompare FCOMPARE( a <: a, b <: b, less :> less, equal :> equal );
+
+    busy := FADD.busy | FMUL.busy | FDIV.busy | FSQRT.busy;
+    FADD.start := 0; FMUL.start := 0; FDIV.start := 0; FSQRT.start := 0;
+
+    always {
+        switch( start ) {
+            default: {}
+            case 3: { FADD.addsub = 0; FADD.start = 1; }
+            case 4: { FADD.addsub = 1; FADD.start = 1; }
+            case 5: { FMUL.start = 1; }
+            case 6: { FDIV.start = 1; }
+            case 7: { FSQRT.start = 1; }
+        }
+    }
+    ITOF.dounsigned = 0;
 }
 
 algorithm uart(

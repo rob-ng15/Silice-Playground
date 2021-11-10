@@ -918,9 +918,9 @@ t: cold ( -- )
    40 literal c604 literal ! 0 literal c606 literal ! 0 literal c608 literal !  ( colour reset )
    0 literal 0 literal 13f literal ef literal ( cs )
    c60c literal ! c60a literal ! c602 literal ! c600 literal !
-   3 literal c612 literal !
+   3 literal c616 literal !
    9 literal c120 literal ! ( tmlcs )
-   9 literal c130 literal ! ( tmucs )
+   9 literal c220 literal ! ( tmucs )
    3 literal c50a literal ! ( tcs )
    1 literal c702 literal ! ( show terminal )
    'boot @execute

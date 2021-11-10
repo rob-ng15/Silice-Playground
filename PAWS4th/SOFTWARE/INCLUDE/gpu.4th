@@ -1,7 +1,7 @@
 ( GPU )
 hex
-: gpu? begin c612 @ 0= until ;
-: gpu! gpu? c612 ! ;
+: gpu? begin c616 @ 0= until ;
+: gpu! gpu? c616 ! ;
 : fullscreen! 0 0 13f ef ;
 : coords2! c602 ! c600 ! ;
 : coords4! c60c ! c60a ! coords2! ;
@@ -20,6 +20,4 @@ hex
 : pbstart! coords4! a gpu! ;
 : pbpixel! c670 ! ;
 : pbstop! 3 c678 ! ;
-: bmmove! gpu? c6e0 ! ;
-: cs 40 0 0 colour! fullscreen! rectangle 5 bmmove! ;
-
+: cs 40 0 0 colour! fullscreen! rectangle ;

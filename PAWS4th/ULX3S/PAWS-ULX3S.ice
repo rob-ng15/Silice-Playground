@@ -1,4 +1,4 @@
-$$ uart_in_clock_freq_mhz = 50
+$$ uart_in_clock_freq_mhz = 25
 
 $$if not SIMULATION then
 // CLOCKS
@@ -33,7 +33,7 @@ $include('../circuitry.ice')
 $include('../background.ice')
 $include('../bitmap.ice')
 $include('../character_map.ice')
-$include('../gpu.ice')
+$include('../GPU.ice')
 $include('../sprite_layer.ice')
 $include('../terminal.ice')
 $include('../tile_map.ice')

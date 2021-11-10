@@ -35,7 +35,7 @@ algorithm multiplex_display(
     input uint1 character_map_display,
 
     // TERMINAL
-    input uint6 terminal_p,
+    input uint1 terminal_p,
     input uint1 terminal_display
 ) <autorun> {
     uint6    pixel = uninitialised;
@@ -60,15 +60,16 @@ algorithm multiplex_display(
     );
 
     // SELECT COLOUR OR BLACK AND WHITE
+    uint8   grey <: { pixel[0,6], pixel[0,2] };
     always {
         if( colour ) {
             pix_red   = { {4{pixel[4,2]}} };
             pix_green = { {4{pixel[2,2]}} };
             pix_blue  = { {4{pixel[0,2]}} };
         } else {
-            pix_red   = { pixel[4,2], pixel[0,6] };
-            pix_green = { pixel[4,2], pixel[0,6] };
-            pix_blue  = { pixel[4,2], pixel[0,6] };
+            pix_red   = grey;
+            pix_green = grey;
+            pix_blue  = grey;
         }
     }
 }
@@ -77,7 +78,7 @@ algorithm multiplex_display(
 algorithm selectlayer(
     input   uint2   display_order,
     input   uint1   terminal_display,
-    input   uint6   terminal,
+    input   uint1   terminal,
     input   uint1   character_map_display,
     input   uint6   character_map,
     input   uint1   upper_sprites_display,
@@ -91,13 +92,15 @@ algorithm selectlayer(
     input   uint1   upper_tilemap_display,
     input   uint6   upper_tilemap,
     input   uint6   background,
-
     output! uint6   pix
 ) <autorun> {
+    // CONVERT TERMINAL COLOUR TO BLUE OR WHITE
+    uint6   terminalcolour <: { {4{terminal}}, 2b11 };
+
     always {
         switch( display_order ) {
-            case 0: { // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> BITMAP -> UPPER_SPRITES -> CHARACTER_MAP
-                pix = ( terminal_display ) ? terminal :
+            case 0: { // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> BITMAP -> UPPER_SPRITES -> CHARACTER_MAP -> TERMINAL
+                pix = ( terminal_display ) ? terminalcolour :
                             ( character_map_display ) ? character_map :
                             ( upper_sprites_display ) ? upper_sprites :
                             ( bitmap_display ) ? bitmap :
@@ -106,8 +109,8 @@ algorithm selectlayer(
                             ( lower_tilemap_display ) ? lower_tilemap :
                             background;
             }
-            case 1: { // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> BITMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP
-                pix = ( terminal_display ) ? terminal :
+            case 1: { // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> BITMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP -> TERMINAL
+                pix = ( terminal_display ) ? terminalcolour :
                         ( character_map_display ) ? character_map :
                         ( upper_sprites_display ) ? upper_sprites :
                         ( lower_sprites_display ) ? lower_sprites :
@@ -116,8 +119,8 @@ algorithm selectlayer(
                         ( lower_tilemap_display ) ? lower_tilemap :
                         background;
             }
-            case 2: { // BACKGROUND -> BITMAP -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP
-                pix = ( terminal_display ) ? terminal :
+            case 2: { // BACKGROUND -> BITMAP -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> CHARACTER_MAP -> TERMINAL
+                pix = ( terminal_display ) ? terminalcolour :
                         ( character_map_display ) ? character_map :
                         ( upper_sprites_display ) ? upper_sprites :
                         ( lower_sprites_display ) ? lower_sprites :
@@ -126,8 +129,8 @@ algorithm selectlayer(
                         ( bitmap_display ) ? bitmap :
                         background;
             }
-            case 3: { // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> BITMAP -> CHARACTER_MAP
-                pix = ( terminal_display ) ? terminal :
+            case 3: { // BACKGROUND -> LOWER TILEMAP -> UPPER TILEMAP -> LOWER_SPRITES -> UPPER_SPRITES -> BITMAP -> CHARACTER_MAP -> TERMINAL
+                pix = ( terminal_display ) ? terminalcolour :
                         ( character_map_display ) ? character_map :
                         ( bitmap_display ) ? bitmap :
                         ( upper_sprites_display ) ? upper_sprites :

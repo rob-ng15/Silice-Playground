@@ -1,5 +1,5 @@
 // STRUCTURE OF A COPPER PROGRAM ENTRY
-bitfield    CU {
+bitfield CU{
     uint3   command,
     uint3   flag,
     uint1   valueflag,
@@ -9,14 +9,11 @@ bitfield    CU {
     uint6   colour
 }
 
-algorithm background(
+algorithm background_writer(
     input   uint10  pix_x,
     input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
-    output! uint6   pixel,
-
-    input   uint2  staticGenerator,
 
     input   uint6   backgroundcolour,
     input   uint6   backgroundcolour_alt,
@@ -32,36 +29,24 @@ algorithm background(
     input   uint10  copper_cpu_input,
     input   uint4   copper_mode,
     input   uint6   copper_alt,
-    input   uint6   copper_colour
-) <autorun> {
-    uint6   BACKGROUNDcolour = uninitialised;
-    uint6   BACKGROUNDalt = uninitialised;
-    uint4   BACKGROUNDmode = uninitialised;
-    background_display BACKGROUND(
-        pix_x <: pix_x,
-        pix_y <: pix_y,
-        pix_active <: pix_active,
-        pix_vblank <: pix_vblank,
-        pixel :> pixel,
-        staticGenerator <: staticGenerator,
-        b_colour <: BACKGROUNDcolour,
-        b_alt <: BACKGROUNDalt,
-        b_mode <: BACKGROUNDmode
-    );
+    input   uint6   copper_colour,
 
+    output  uint6   BACKGROUNDcolour,
+    output  uint6   BACKGROUNDalt,
+    output  uint4   BACKGROUNDmode
+) <autorun,reginputs> {
     // BACKGROUND CO-PROCESSOR PROGRAM STORAGE
     // { 3 bit command, 3 bit mask, { 1 bit for cpuinput flag, 10 bit coordinate }, 4 bit mode, 6 bit colour 2, 6 bit colour 1 }
-    simple_dualport_bram uint33 copper <input!> [ 64 ] = { 0, pad(0) };
+    simple_dualport_bram uint33 copper[ 64 ] = uninitialised;
     uint1   copper_execute = uninitialised;
     uint1   copper_branch = uninitialised;
-    uint11  copper_variable = uninitialised;
+    uint10  copper_variable = uninitialised;
     uint6   PC = 0;
+    uint6   PCplus1 <:: PC + 1;
 
     // COPPER PROGRAM ENTRY
-    uint3   command <: CU(copper.rdata0).command;
-    uint3   flag <: CU(copper.rdata0).flag;
     uint10  value <: CU(copper.rdata0).valueflag ? copper_cpu_input : CU(copper.rdata0).value;
-    uint1   bitvalue <: CU(copper.rdata0).value;
+    uint10  negvalue <: -value;
 
     // COPPER PROGRAM FLAGS
     copper.addr0 := PC; copper.wenable1 := 1;
@@ -72,48 +57,44 @@ algorithm background(
                 // UPDATE THE BACKGROUND GENERATOR FROM THE COPPER
                 if( copper_status ) {
                     copper_execute = 0; copper_branch = 0;
-                    switch( command ) {
+                    switch( CU(copper.rdata0).command ) {
                         case 3b000: {
                             // JUMP ON CONDITION
-                            switch( flag ) {
+                            switch( CU(copper.rdata0).flag ) {
                                 default: { copper_branch = 1; }
-                                case 3b001: { copper_branch = ( pix_vblank == bitvalue ); }
-                                case 3b010: { copper_branch = ( pix_active == bitvalue ); }
+                                case 3b001: { copper_branch = ( pix_vblank == value[0,1] ); }
+                                case 3b010: { copper_branch = ( pix_active == value[0,1] ); }
                                 case 3b011: { copper_branch = ( pix_y < value ); }
                                 case 3b100: { copper_branch = ( pix_x < value ); }
                                 case 3b101: { copper_branch = ( copper_variable < value ); }
                             }
-                            PC = copper_branch ? CU(copper.rdata0).colour : PC + 1;
+                            PC = copper_branch ? CU(copper.rdata0).colour : PCplus1;
                         }
                         default: {
-                            switch( command ) {
+                            switch( CU(copper.rdata0).command ) {
                                 case 3b001: { copper_execute = pix_vblank; }
                                 case 3b010: { copper_execute = ~pix_active; }
                                 case 3b011: { copper_execute = ( pix_y == value ); }
                                 case 3b100: { copper_execute = ( pix_x == value ); }
-                                case 3b101: { copper_execute = ( copper_variable == ( bitvalue ? pix_x : pix_y ) ); }
+                                case 3b101: { copper_execute = ( copper_variable == ( value[0,1] ? pix_x : pix_y ) ); }
                                 case 3b110: {
-                                    onehot( flag ) {
-                                        case 0: { copper_variable = value; }
-                                        case 1: { copper_variable = copper_variable + value; }
-                                        case 2: { copper_variable = copper_variable - value; }
-                                    }
+                                    copper_variable = CU(copper.rdata0).flag[0,1] ? value : copper_variable + ( CU(copper.rdata0).flag[2,1] ? negvalue : value );
                                     copper_branch = 1;
                                 }
                                 default: {
-                                    if( flag[0,1] ) { BACKGROUNDcolour = copper_variable; }
-                                    if( flag[1,1] ) { BACKGROUNDalt = copper_variable; }
-                                    if( flag[2,1] ) { BACKGROUNDmode = copper_variable;}
+                                    if( CU(copper.rdata0).flag[0,1] ) { BACKGROUNDcolour = copper_variable; }
+                                    if( CU(copper.rdata0).flag[1,1] ) { BACKGROUNDalt = copper_variable; }
+                                    if( CU(copper.rdata0).flag[2,1] ) { BACKGROUNDmode = copper_variable;}
                                     copper_branch = 1;
                                 }
                             }
                             if( copper_execute ) {
-                                if( flag[0,1] ) { BACKGROUNDcolour = CU(copper.rdata0).colour; }
-                                if( flag[1,1] ) { BACKGROUNDalt = CU(copper.rdata0).colour_alt; }
-                                if( flag[2,1] ) { BACKGROUNDmode = CU(copper.rdata0).mode; }
+                                if( CU(copper.rdata0).flag[0,1] ) { BACKGROUNDcolour = CU(copper.rdata0).colour; }
+                                if( CU(copper.rdata0).flag[1,1] ) { BACKGROUNDalt = CU(copper.rdata0).colour_alt; }
+                                if( CU(copper.rdata0).flag[2,1] ) { BACKGROUNDmode = CU(copper.rdata0).mode; }
                                 copper_branch = 1;
                             }
-                            PC = PC + copper_branch;
+                            if( copper_branch ) { PC = PCplus1; }
                         }
                     }
                 } else{
@@ -145,50 +126,22 @@ algorithm background_display(
     input   uint6   b_colour,
     input   uint6   b_alt,
     input   uint4   b_mode
-) <autorun> {
-    // Variables for SNOW (from @sylefeb)
-    int10   dotpos = 0;
-    int2    speed = 0;
-    int2    inv_speed = 0;
-    int12   rand_x = 0;
-    int32   frame = 0;
-
-    uint1   tophalf <: ( pix_y < 240 );
-    uint1   lefthalf <: ( pix_x < 320 );
-
+) <autorun,reginputs> {
     // TRUE FOR COLOUR, FALSE FOR ALT
-    uint1   selection = uninitialised;
-
-    // Increment frame number for the snow/star field
-    frame := frame + ( ( pix_x == 639 ) & ( pix_y == 470 ) );
+    uint1   condition = uninitialised;
+    pattern PATTERN(
+        pix_x <: pix_x,
+        pix_y <: pix_y,
+        b_mode <: b_mode,
+        condition :> condition
+    );
 
     always {
         // RENDER
         if( pix_active ) {
-            // SELECT COLOUR OR ALT
-            switch( b_mode ) {
-                case 0: { selection = 1; }                                              // SOLID
-                case 1: { selection = tophalf; }                                        // 50:50 HORIZONTAL SPLIT
-                case 2: { selection = ( lefthalf ); }                                   // 50:50 VERTICAL SPLIT
-                case 3: { selection = ( lefthalf == tophalf ); }                        // QUARTERS
-                case 4: { selection = 1; }                                              // RAINBOW (placeholder, done below)
-                case 5: {                                                               // SNOW (from @sylefeb)
-                    rand_x = ( pix_x == 0)  ? 1 : rand_x * 31421 + 6927;
-                    speed  = rand_x[10,2];
-                    dotpos = ( frame >> speed ) + rand_x;
-                    selection   = (pix_y == dotpos);
-                }
-                case 6: { selection = 1; }                                              // STATIC (placeholder, done below)
-                default: { selection = ( pix_x[b_mode-7,1] == pix_y[b_mode-7,1] ); }    // CHECKERBOARDS (7,8,9,10)
-                case 11: { selection = ( pix_x[0,1] || pix_y[0,1] ); }                  // CROSSHATCH
-                case 12: { selection = ( pix_x[0,2] == pix_y[0,2] ); }                  // LSLOPE
-                case 13: { selection = ( pix_x[0,2] == ~pix_y[0,2] ); }                 // RSLOPE
-                case 14: { selection = pix_x[0,1]; }                                    // VSTRIPES
-                case 15: { selection = pix_y[0,1]; }                                    // HSTRIPES
-            }
-
             // SELECT ACTUAL COLOUR
             switch( b_mode ) {
+                default: { pixel = condition ? b_colour : b_alt; }                      // EVERYTHING ELSE
                 case 4: {                                                               // RAINBOW
                     switch( pix_y[6,3] ) {
                         case 3b000: { pixel = 6b100000; }
@@ -202,8 +155,52 @@ algorithm background_display(
                     }
                 }
                 case 6: { pixel = {3{staticGenerator}}; }                               // STATIC
-                default: {  pixel = selection ? b_colour : b_alt; }                     // EVERYTHING ELSE
             }
+        }
+    }
+}
+
+algorithm pattern(
+    input   uint10  pix_x,
+    input   uint10  pix_y,
+    input   uint4   b_mode,
+    output! uint1   condition
+) <autorun> {
+    uint1   tophalf <: ( pix_y < 240 );
+    uint1   lefthalf <: ( pix_x < 320 );
+
+    // Variables for SNOW (from @sylefeb)
+    int10   dotpos = 0;
+    int2    speed = 0;
+    int2    inv_speed = 0;
+    int12   rand_x = 0;
+    int12   new_rand_x <:: rand_x * 31421 + 6927;
+    int32   frame = 0;
+
+    // Increment frame number for the snow/star field
+    frame ::= frame + ( ( pix_x == 639 ) & ( pix_y == 479 ) );
+
+    always {
+        // SELECT COLOUR OR ALT
+        switch( b_mode ) {
+            case 0: { condition = 1; }                                              // SOLID
+            case 1: { condition = tophalf; }                                        // 50:50 HORIZONTAL SPLIT
+            case 2: { condition = ( lefthalf ); }                                   // 50:50 VERTICAL SPLIT
+            case 3: { condition = ( lefthalf == tophalf ); }                        // QUARTERS
+            case 4: { condition = 1; }                                              // RAINBOW (placeholder, done in main)
+            case 5: {                                                               // SNOW (from @sylefeb)
+                rand_x = ( ~|pix_x )  ? 1 : new_rand_x;
+                speed  = rand_x[10,2];
+                dotpos = ( frame >> speed ) + rand_x;
+                condition   = ( pix_y == dotpos );
+            }
+            case 6: { condition = 1; }                                              // STATIC (placeholder, done in main)
+            default: { condition = ( pix_x[b_mode-7,1] == pix_y[b_mode-7,1] ); }    // CHECKERBOARDS (7,8,9,10)
+            case 11: { condition = ( pix_x[0,1] | pix_y[0,1] ); }                   // CROSSHATCH
+            case 12: { condition = ( pix_x[0,2] == pix_y[0,2] ); }                  // LSLOPE
+            case 13: { condition = ( pix_x[0,2] == ~pix_y[0,2] ); }                 // RSLOPE
+            case 14: { condition = pix_x[0,1]; }                                    // VSTRIPES
+            case 15: { condition = pix_y[0,1]; }                                    // HSTRIPES
         }
     }
 }

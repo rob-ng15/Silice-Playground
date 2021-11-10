@@ -271,18 +271,18 @@ $$end
                     IO ? IOreadData : 0;
 
     // READ / WRITE FROM SDRAM / BRAM
-    uint1   ramwriteflag := BRAM & CPUwritememory;
+    uint1   ramwriteflag <:: BRAM & CPUwritememory;
     uint1   ramreadflag := BRAM & CPUreadmemory;
 
 
     // READ / WRITE FROM I/O
-    uint1   VmemoryWrite := VIDEO & CPUwritememory;
+    uint1   VmemoryWrite <:: VIDEO & CPUwritememory;
     uint1   VmemoryRead := VIDEO & CPUreadmemory;
-    uint1   COmemoryWrite := COPRO & CPUwritememory;
+    uint1   COmemoryWrite <:: COPRO & CPUwritememory;
     uint1   COmemoryRead := COPRO & CPUreadmemory;
-    uint1   ATmemoryWrite := AUDIOTIMERS & CPUwritememory;
+    uint1   ATmemoryWrite <:: AUDIOTIMERS & CPUwritememory;
     uint1   ATmemoryRead := AUDIOTIMERS & CPUreadmemory;
-    uint1   IOmemoryWrite := IO & CPUwritememory;
+    uint1   IOmemoryWrite <:: IO & CPUwritememory;
     uint1   IOmemoryRead := IO & CPUreadmemory;
 }
 
@@ -306,13 +306,9 @@ algorithm bramcontroller(
 
     // FLAGS FOR BRAM ACCESS
     ram.wdata := writedata;
-    ram.wenable := 0;
+    ram.wenable := writeflag;
     ram.addr := address;
 
     // 16 bit READ
     readdata := ram.rdata;
-
-    always {
-        if( writeflag ) { ram.wenable = 1; }
-    }
 }
