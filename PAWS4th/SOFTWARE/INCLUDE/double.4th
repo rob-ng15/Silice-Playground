@@ -5,9 +5,10 @@ hex
 : 2nip rot drop rot drop ;
 : 2rot 2>r 2swap 2r> 2swap ;
 : d2! d002 d! d1! ;
-: d0= d1! d01c @ ;
-: d= d2! d01e @ ;
-: d< d2! d01f @ ;
+: d0= d1! d01c @ negate ;
+: d0< d1! d10d @ negate ;
+: d= d2! d01e @ negate ;
+: d< d2! d01f @ negate ;
 : d+ d2! d000 d@ ;
 : d- d2! d002 d@ ;
 : s>d dup 0< ;

@@ -200,7 +200,7 @@ algorithm main(
         outchar <: bytes(stackNext).byte0
     );
 
-    sram_data_write := ( ~|INIT ) ? 0 : ( INIT == 1 ) ? rom.rdata : stackNext;
+    sram_data_write := ( ~|INIT ) ? 0 : ( ^INIT ) ? rom.rdata : stackNext;
     sram_readwrite := 0;
 
     FPU.start := 0;
@@ -303,12 +303,12 @@ algorithm main(
                 // n2memt mem[t] = n
                 if( is_n2memt ) {
                     if( stackTop[15,1] ) {
-                        switch( stackTop[0,4] ) {
-                            case 4h0: { UART.write = 1; }
-                            case 4h2: { rgbLED = stackNext;  }
-                            case 4h5: { FPU.a = stackNext; }
-                            case 4h6: { FPU.b = stackNext; }
-                            case 4h7: { FPU.start = stackNext; }
+                        switch( stackTop[0,3] ) {
+                            case 3h0: { UART.write = 1; }
+                            case 3h2: { rgbLED = stackNext;  }
+                            case 3h5: { FPU.a = stackNext; }
+                            case 3h6: { FPU.b = stackNext; }
+                            case 3h7: { FPU.start = stackNext; }
                             default: {}
                         }
                     } else {

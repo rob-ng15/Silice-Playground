@@ -58,7 +58,7 @@ $$ if w_in > 2 then generate_clz(name,w_in//2,1) end
 circuitry $name$_$w_in$ (input in,output out)
 {
 $$ if w_in == 2 then
-   out = ~in[1,1];
+   out = !in[1,1];
 $$ else
    uint$clog2(w_in)-1$ half_count = uninitialized;
    uint$w_h$           lhs        <: in[$w_h$,$w_h$];
@@ -166,7 +166,7 @@ algorithm doround24(
 ) <autorun,reginputs> {
     always {
         roundfraction = bitstream[1,23] + bitstream[0,1];
-        newexponent = 127 + exponent + ( ( ~|roundfraction ) & bitstream[0,1] );
+        newexponent = ( ( ~|roundfraction  & bitstream[0,1] ) ? 128 : 127 ) + exponent;
     }
 }
 
@@ -182,7 +182,7 @@ algorithm docombinecomponents32(
 ) <autorun,reginputs> {
     always {
         OF = ( exp > 254 ); UF = exp[9,1];
-        f32 = UF ? 0 : OF ? { sign, 31h7f800000 } : { sign, exp[0,8], fraction };
+        f32 = UF ? 0 : { sign, OF ? 31h7f800000 : { exp[0,8], fraction } };
     }
 }
 
@@ -208,9 +208,9 @@ algorithm prepitof(
     // COUNT LEADING ZEROS
     clz32 CLZ32( bitstream <: number );
     always {
-        NX = ( CLZ32.zeros < 8 );
-        sign = dounsigned ? 0 : a[31,1];
-        number = dounsigned ? a : ( a[31,1] ? -a : a );
+        NX = ( ~|CLZ32.zeros[3,3] ); // CLZ32.zeros < 8, top 3 bits clear
+        sign = ~dounsigned & a[31,1];
+        number = sign ? -a : a;
         fraction= NX ? number >> ( 8 - CLZ32.zeros ) : ( CLZ32.zeros == 8 ) ? number : number << ( CLZ32.zeros - 8 );
         exponent = 158 - CLZ32.zeros;
     }
@@ -268,7 +268,7 @@ algorithm floattoint(
         switch( { A.INF | NN, A.ZERO } ) {
             case 2b00: { NV = ( PREP.exp > 30 ); result = NV ? { fp32( a ).sign, 31h7fffffff } : fp32( a ).sign ? -PREP.unsignedfraction : PREP.unsignedfraction; }
             case 2b01: { result = 0; }
-            default: { NV = 1; result = NN ? 32h7fffffff : { fp32( a ).sign, 31h7fffffff }; }
+            default: { NV = 1; result = { ~NN & fp32( a ).sign, 31h7fffffff }; }
         }
     }
 }
@@ -330,12 +330,13 @@ algorithm dofloataddsub(
     uint48  sigAminussigB <:: sigA - sigB;
     uint48  sigBminussigA <:: sigB - sigA;
     uint48  sigAplussigB <:: sigA + sigB;
+    uint1   AvB <:: ( sigA > sigB );
 
     always {
         // PERFORM ADDITION HANDLING SIGNS
         switch( { signA, signB } ) {
-            case 2b01: { resultsign = ( sigB > sigA ); resultfraction = resultsign ? sigBminussigA : sigAminussigB; }
-            case 2b10: { resultsign = ( sigA > sigB ); resultfraction = resultsign ? sigAminussigB : sigBminussigA; }
+            case 2b01: { resultsign = ( ~AvB ); resultfraction = resultsign ? sigBminussigA : sigAminussigB; }
+            case 2b10: { resultsign = ( AvB ); resultfraction = resultsign ? sigAminussigB : sigBminussigA; }
             default: { resultsign = signA; resultfraction = sigAplussigB; }
         }
     }
@@ -352,7 +353,7 @@ algorithm floataddsub(
 ) <autorun,reginputs> {
     // BREAK DOWN INITIAL float32 INPUTS - SWITCH SIGN OF B IF SUBTRACTION
     uint48  sigA <:: { 2b01, fp32(a).fraction, 23b0 };
-    uint1   signB <:: addsub ? ~fp32( b ).sign : fp32( b ).sign;
+    uint1   signB <:: addsub ^ fp32( b ).sign;
     uint48  sigB <:: { 2b01, fp32(b).fraction, 23b0 };
 
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND INVALID ( INF - INF )
@@ -395,10 +396,10 @@ algorithm floataddsub(
                         result = 0;
                     }
                 }
-                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 0 : ( B.ZERO ) ? a : addsub ? { ~fp32( b ).sign, b[0,31] } : b; }
+                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 0 : ( B.ZERO ) ? a : { addsub ^ fp32( b ).sign, b[0,31] }; }
                 default: {
                     switch( { IF, NN } ) {
-                        case 2b10: { result = ( A.INF & B.INF) ? ( fp32( a ).sign ~^ signB ) ? a : 32hffc00000 : A.INF ? a : b; }
+                        case 2b10: { result = ( A.INF & B.INF) ? ( fp32( a ).sign ^ signB ) ? 32hffc00000 : a : A.INF ? a : b; }
                         default: { result = 32hffc00000; }
                     }
                 }
@@ -421,8 +422,8 @@ algorithm prepmul(
     uint48  product <:: sigA * sigB;
     always {
         productsign = fp32( a ).sign ^ fp32( b ).sign;
-        productexp = fp32( a ).exponent + fp32( b ).exponent - 254 + product[47,1];
-        normalfraction = product[47,1] ? product[23,24] : product[22,24];
+        productexp = fp32( a ).exponent + fp32( b ).exponent - ( product[47,1] ? 253 : 254 );
+        normalfraction = product[ product[47,1] ? 23 : 22, 24 ];
     }
 }
 algorithm floatmultiply(
@@ -493,7 +494,7 @@ algorithm dofloatdivide(
     uint50  temporary <:: { remainder[0,49], sigA[bit,1] };
     uint1   bitresult <:: __unsigned(temporary) >= __unsigned(sigB);
     uint6   bit(63);
-    uint2   normalshift <:: ( quotient[48,1] + quotient[49,1] );
+    uint2   normalshift <:: quotient[49,1] ? 2 : quotient[48,1];
 
     busy := start | ( ~&bit ) | ( quotient[48,2] != 0 );
 
@@ -526,12 +527,10 @@ algorithm prepdivide(
 ) <autorun,reginputs> {
     // BREAK DOWN INITIAL float32 INPUTS AND FIND SIGN OF RESULT AND EXPONENT OF QUOTIENT ( -1 IF DIVISOR > DIVIDEND )
     // ALIGN DIVIDEND TO THE LEFT, DIVISOR TO THE RIGHT
-    int10   expA <:: fp32( a ).exponent - 127;
-    int10   expB <:: fp32( b ).exponent - 127;
     uint1   AvB <:: ( fp32(b).fraction > fp32(a).fraction );
     always {
         quotientsign = fp32( a ).sign ^ fp32( b ).sign;
-        quotientexp = expA - expB - AvB;
+        quotientexp = fp32( a ).exponent - fp32( b ).exponent - AvB;
         sigA = { 1b1, fp32(a).fraction, 26b0 };
         sigB = { 27b1, fp32(b).fraction };
     }
@@ -575,8 +574,8 @@ algorithm floatdivide(
                     DODIVIDE.start = 1; while( DODIVIDE.busy ) {}
                     OF = COMBINE.OF; UF = COMBINE.UF; result = COMBINE.f32;
                 }
-                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 32hffc00000 : ( B.ZERO ) ? { PREP.quotientsign, 31h7f800000 } : { PREP.quotientsign, 31b0 }; }
-                default: { result = ( A.INF & B.INF ) | NN | B.ZERO ? 32hffc00000 : A.ZERO | B.INF ? { PREP.quotientsign, 31b0 } : { PREP.quotientsign, 31h7f800000 }; }
+                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 32hffc00000 : { PREP.quotientsign, B.ZERO ? 31h7f800000 : 31h0 }; }
+                default: { result = ( A.INF & B.INF ) | NN | B.ZERO ? 32hffc00000 : { PREP.quotientsign, ( A.ZERO | B.INF ) ? 31b0 : 31h7f800000 }; }
             }
             busy = 0;
         }
@@ -630,7 +629,7 @@ algorithm dofloatsqrt(
         }
     }
 
-    if( ~reset ) { i = 0; }
+    if( ~reset ) { i = 47; }
 
     while(1) {
         if( start ) {
@@ -674,7 +673,7 @@ algorithm floatsqrt(
 
     // FAST NORMALISATION - SQUARE ROOT RESULTS IN 1x.xxx or 01.xxxx
     // EXTRACT 24 BITS FOR ROUNDING FOLLOWING THE NORMALISED 1.xxxx
-    uint24  normalfraction <::DOSQRT.squareroot[47,1] ? DOSQRT.squareroot[23,24] : DOSQRT.squareroot[22,24];
+    uint24  normalfraction <:: DOSQRT.squareroot[ DOSQRT.squareroot[47,1] ? 23 : 22,24 ];
     doround24 ROUND( exponent <: PREP.squarerootexp, bitstream <: normalfraction );
 
     // COMBINE TO FINAL float32

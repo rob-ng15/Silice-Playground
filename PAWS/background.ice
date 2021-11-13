@@ -168,6 +168,7 @@ algorithm pattern(
 ) <autorun> {
     uint1   tophalf <: ( pix_y < 240 );
     uint1   lefthalf <: ( pix_x < 320 );
+    uint4   checkmode <: b_mode - 7;
 
     // Variables for SNOW (from @sylefeb)
     int10   dotpos = 0;
@@ -186,21 +187,21 @@ algorithm pattern(
             case 0: { condition = 1; }                                              // SOLID
             case 1: { condition = tophalf; }                                        // 50:50 HORIZONTAL SPLIT
             case 2: { condition = ( lefthalf ); }                                   // 50:50 VERTICAL SPLIT
-            case 3: { condition = ( lefthalf == tophalf ); }                        // QUARTERS
-            case 4: { condition = 1; }                                              // RAINBOW (placeholder, done in main)
-            case 5: {                                                               // SNOW (from @sylefeb)
-                rand_x = ( ~|pix_x )  ? 1 : new_rand_x;
-                speed  = rand_x[10,2];
-                dotpos = ( frame >> speed ) + rand_x;
-                condition   = ( pix_y == dotpos );
-            }
-            case 6: { condition = 1; }                                              // STATIC (placeholder, done in main)
-            default: { condition = ( pix_x[b_mode-7,1] == pix_y[b_mode-7,1] ); }    // CHECKERBOARDS (7,8,9,10)
+            case 3: { condition = ( lefthalf ^ tophalf ); }                         // QUARTERS
+            case 5: { condition  = ( pix_y == dotpos ); }                           // SNOW (from @sylefeb)
             case 11: { condition = ( pix_x[0,1] | pix_y[0,1] ); }                   // CROSSHATCH
             case 12: { condition = ( pix_x[0,2] == pix_y[0,2] ); }                  // LSLOPE
             case 13: { condition = ( pix_x[0,2] == ~pix_y[0,2] ); }                 // RSLOPE
             case 14: { condition = pix_x[0,1]; }                                    // VSTRIPES
             case 15: { condition = pix_y[0,1]; }                                    // HSTRIPES
+            case 4: {} case 6: {}                                                   // STATIC AND RAINBOW (placeholder, done in main)
+            default: { condition = ( pix_x[checkmode,1] ^ pix_y[checkmode,1] ); }   // CHECKERBOARDS (7,8,9,10)
         }
+    }
+
+    while(1) {
+        rand_x = ( ~|pix_x )  ? 1 : new_rand_x;
+        speed  = rand_x[10,2];
+        dotpos = ( frame >> speed ) + rand_x;
     }
 }

@@ -173,6 +173,7 @@ algorithm floatclassify(
 
     always {
         if( |class ) {
+            // INFINITY, NAN OR ZERO
             onehot( class ) {
                 case 0: { classification = ( ~|sourceReg1F[0,23] ) ? { 5b00000, ~fp32( sourceReg1F ).sign, fp32( sourceReg1F ).sign, 3b000 } :
                                                                     { 4b0000, ~fp32( sourceReg1F ).sign, 2b00, fp32( sourceReg1F ).sign, 2b00 }; }
@@ -181,6 +182,7 @@ algorithm floatclassify(
                 case 3: { classification = { 2b00, ~fp32( sourceReg1F ).sign, 6b000000, fp32( sourceReg1F ).sign }; }
             }
         } else {
+            // NUMBER
             classification = { 3b000, ~fp32( sourceReg1F ).sign, 4b0000, fp32( sourceReg1F ).sign, 1b0 };
         }
     }
@@ -205,7 +207,8 @@ algorithm floatminmax(
             // sNAN or both qNAN
             result = 32h7fc00000;
         } else {
-            result = A.qNAN ? ( B.qNAN ? 32h7fc00000 : sourceReg2F ) : B.qNAN ? sourceReg1F : ( function3 ^ less ? sourceReg1F : sourceReg2F );
+//            result = A.qNAN ? ( B.qNAN ? 32h7fc00000 : sourceReg2F ) : B.qNAN ? sourceReg1F : ( function3 ^ less ? sourceReg1F : sourceReg2F );
+            result = A.qNAN ? ( B.qNAN ? 32h7fc00000 : sourceReg2F ) : B.qNAN | ( function3 ^ less ) ? sourceReg1F : sourceReg2F;
         }
     }
 }
@@ -225,12 +228,15 @@ algorithm floatcomparison(
     classify B( a <: sourceReg2F );
     uint1   NAN <:: ( A.qNAN | A.sNAN | B.qNAN | B.sNAN );
 
+    flags := { function3[1,1] ? ( A.sNAN | B.sNAN ) : NAN, 4b0000 }; result := 0;
     always {
-        switch( function3 ) {
-            case 2b00: { flags = { NAN, 4b0000 }; result = ~NAN & ( less | equal ); }
-            case 2b01: { flags = { NAN, 4b0000 }; result = ~NAN & less; }
-            case 2b10: { flags = { ( A.sNAN | B.sNAN ), 4b0000 }; result = ~NAN & equal; }
-            default: { result = 0; }
+        if( ~NAN ) {
+            switch( function3 ) {
+                case 2b00: { result = ( less | equal ); }
+                case 2b01: { result = less; }
+                case 2b10: { result = equal; }
+                default: {}
+            }
         }
     }
 }
@@ -241,7 +247,8 @@ algorithm floatsign(
     input   uint32  sourceReg2F,
     output  uint32  result,
 ) <autorun,reginputs> {
-    uint1   sign <:: function3[1,1] ? sourceReg1F[31,1] ^ sourceReg2F[31,1] : function3[0,1] ? ~sourceReg2F[31,1] : sourceReg2F[31,1];
+//    uint1   sign <:: function3[1,1] ? sourceReg1F[31,1] ^ sourceReg2F[31,1] : function3[0,1] ? ~sourceReg2F[31,1] : sourceReg2F[31,1];
+    uint1   sign <:: function3[1,1] ? sourceReg1F[31,1] ^ sourceReg2F[31,1] : function3[0,1] ^ sourceReg2F[31,1];
     always {
         result = { sign, sourceReg1F[0,31] };
     }

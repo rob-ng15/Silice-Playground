@@ -2,10 +2,11 @@ algorithm pulsecursor(
     output  uint1   show
 ) <autorun,reginputs> {
     uint24  counter25mhz = uninitialised;
+    uint24  nextcounter25mhz <:: counter25mhz - 1;
     uint1   MIN <:: ( ~|counter25mhz );
     show := MIN ? ~show : show;
     always {
-        counter25mhz = MIN ? 12500000 : counter25mhz - 1;
+        counter25mhz = MIN ? 12500000 : nextcounter25mhz;
     }
 }
 
@@ -15,10 +16,11 @@ algorithm pulse1hz(
     input   uint1   resetCounter
 ) <autorun,reginputs> {
     uint25  counter25mhz = uninitialised;
+    uint25  nextcounter25mhz <:: counter25mhz - 1;
     uint1   MIN <:: ( ~|counter25mhz );
     always {
         counter1hz = resetCounter ? 0 : counter1hz + MIN;
-        counter25mhz = resetCounter | MIN ? 25000000 : counter25mhz - 1;
+        counter25mhz = resetCounter | MIN ? 25000000 : nextcounter25mhz;
     }
 }
 
@@ -28,12 +30,13 @@ algorithm pulse1khz(
     input   uint16  resetCounter
 ) <autorun,reginputs> {
     uint15  counter25mhz = uninitialised;
+    uint15  nextcounter25mhz <:: counter25mhz - 1;
     uint1   MIN <:: ( ~|counter25mhz );
     uint1   RESET <:: ( |resetCounter );
     uint1   FINISHED <:: ( ~|counter1khz );
     always {
         counter1khz = RESET ? resetCounter : FINISHED ? 0 : counter1khz - MIN;
-        counter25mhz = RESET | MIN ? 25000 : counter25mhz - 1;
+        counter25mhz = RESET | MIN ? 25000 : nextcounter25mhz;
     }
 }
 

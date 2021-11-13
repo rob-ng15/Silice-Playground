@@ -59,6 +59,7 @@ algorithm PAWSCPU(
     int32   immediateValue = uninitialized;
     uint1   memoryload = uninitialized;
     uint1   memorystore = uninitialized;
+    uint1   AMO = uninitialized;
     decode RV32DECODER <@clock_CPUdecoder> (
         instruction <: instruction,
         opCode :> opCode,
@@ -71,7 +72,8 @@ algorithm PAWSCPU(
         immediateValue :> immediateValue,
         memoryload :> memoryload,
         memorystore :> memorystore,
-        accesssize :> accesssize
+        accesssize :> accesssize,
+        AMO :> AMO
     );
 
     // RISC-V ADDRESS GENERATOR
@@ -82,13 +84,15 @@ algorithm PAWSCPU(
     uint27  storeAddress = uninitialized;
     addressgenerator AGU <@clock_CPUdecoder> (
         instruction <: instruction,
+        immediateValue <: immediateValue,
         PC <: PC,
         sourceReg1 <: sourceReg1,
         AUIPCLUI :> AUIPCLUI,
         branchAddress :> branchAddress,
         jumpAddress :> jumpAddress,
         loadAddress :> loadAddress,
-        storeAddress :> storeAddress
+        storeAddress :> storeAddress,
+        AMO <: AMO
     );
 
     // GENERATE PLUS 2 ADDRESSES FOR 32 BIT MEMORY OPERATIONS

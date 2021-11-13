@@ -28,10 +28,8 @@ bitfield aluop {
     uint1   is_t2r,                 // top to return stack
     uint1   is_n2memt,              // write to memory
     uint1   is_j1j1plus,            // Original J1 or extra J1+ alu operations
-    uint1   rdelta1,                // two's complement adjustment for rsp
-    uint1   rdelta0,
-    uint1   ddelta1,                // two's complement adjustment for dsp
-    uint1   ddelta0
+    uint2   rdelta,                 // two's complement adjustment for rsp
+    uint2   ddelta,                 // two's complement adjustment for dsp
 }
 
 // CPU FETCH 16 bit WORD FROM MEMORY
@@ -55,11 +53,11 @@ algorithm J1CPU(
     output  uint1   readmemory,
 
     input   uint1   memorybusy
-) <autorun> {
-    // J1+ CPU
+) <autorun,reginputs> {
+    // J1+ CPU FINITE STATE MACHINE
     uint3   FSM = 3b001;
 
-    // instruction being executed, plus decoding, including 5bit deltas for dsp and rsp expanded from 2bit encoded in the alu instruction
+    // instruction being executed, plus decoding
     uint16  instruction = uninitialized;
     uint1   is_alu = uninitialized;
     uint1   is_n2memt = uninitialized;
@@ -67,80 +65,36 @@ algorithm J1CPU(
     uint2   is_callbranchalu = uninitialized;
     uint1   dstackWrite = uninitialized;
     uint1   rstackWrite = uninitialized;
-    uint8   ddelta = uninitialized;
-    uint8   rdelta = uninitialized;
-    decode DECODE <@clock100> (
-        instruction <: instruction,
-        is_alu :> is_alu,
-        is_n2memt :> is_n2memt,
-        is_memtr :> is_memtr,
-        dstackWrite :> dstackWrite,
-        rstackWrite :> rstackWrite,
-        ddelta :> ddelta,
-        rdelta :> rdelta
-    );
+    decode DECODE <@clock100> ( instruction <: instruction, is_alu :> is_alu, is_n2memt :> is_n2memt, is_memtr :> is_memtr, dstackWrite :> dstackWrite, rstackWrite :> rstackWrite );
 
     // program counter
     uint13  pc = uninitialized;
     uint13  pcPlusOne <:: pc + 1;
     uint13  newPC = 0;
 
-    // dstack 257x16bit (as 3256 array + stackTop) and pointer, next pointer, write line, delta
-    stack DSTACK( stackWData <: stackTop, sp <: dsp, newSP <: newDSP, stackTop :> stackNext, stackTop :> writedata, stackWrite <: DSTACKstackWrite );
-    uint8   DELTADSPnewSP = uninitialized;
-    deltasp DELTADSP( sp <: dsp, delta <: ddelta, newSP :> DELTADSPnewSP );
-    uint16  stackTop = uninitialized;
+    // dstack 257x16bit (as 256 array + stackTop) and pointer, next pointer
+    uint16  stackTop = 0;
     uint16  stackNext = uninitialized;
     uint8   dsp = uninitialized;
     uint8   newDSP = 0;
     uint16  newStackTop = 0;
-    uint1   DSTACKstackWrite = uninitialized;
+    stack DSTACK( stackWData <: stackTop, sp <: dsp, newSP <: newDSP, stackTop :> stackNext, stackTop :> writedata );
+    deltasp DELTADSP( sp <: dsp, delta <: DECODE.ddelta );
 
-    // rstack 256x16bit and pointer, next pointer, write line
-    stack RSTACK( stackWData <: rstackWData, sp <: rsp, newSP <: newRSP, stackTop :> rStackTop, stackWrite <: RSTACKstackWrite );
-    uint8   DELTARSPnewSP = uninitialized;
-    deltasp DELTARSP( sp <: rsp, delta <: rdelta, newSP :> DELTARSPnewSP );
+    // rstack 256x16bit and pointer, next pointer
     uint16  rStackTop = uninitialized;
     uint8   rsp = uninitialized;
     uint8   newRSP = 0;
     uint16  rstackWData = uninitialized;
-    uint1   RSTACKstackWrite = uninitialized;
+    stack RSTACK( stackWData <: rstackWData, sp <: rsp, newSP <: newRSP, stackTop :> rStackTop );
+    deltasp DELTARSP( sp <: rsp, delta <: DECODE.rdelta );
 
-    uint16  ALUnewStackTop = uninitialized;
-    alu ALU(
-        instruction <: instruction,
-        memoryRead <: readdata,
-        stackTop <: stackTop,
-        stackNext <: stackNext,
-        rStackTop <: rStackTop,
-        dsp <: dsp,
-        rsp <: rsp,
-        newStackTop :> ALUnewStackTop
-    );
+    // J1+ CPU EXECUTION BLOCKS
+    alu ALU( instruction <: instruction, memoryRead <: readdata, stackTop <: stackTop, stackNext <: stackNext, rStackTop <: rStackTop, dsp <: dsp, rsp <: rsp );
+    j1eforthcallbranch CALLBRANCH( instruction <: instruction, stackTop <: stackTop, stackNext <: stackNext, pc <: pc, pcPlusOne <: pcPlusOne, dsp <: dsp, rsp <: rsp );
 
-    uint16  CALLBRANCHnewStackTop = uninitialized;
-    uint13  CALLBRANCHnewPC = uninitialized;
-    uint8   CALLBRANCHnewDSP = uninitialized;
-    uint8   CALLBRANCHnewRSP = uninitialized;
-    j1eforthcallbranch CALLBRANCH(
-        instruction <: instruction,
-        stackTop <: stackTop,
-        stackNext <: stackNext,
-        pc <: pc,
-        pcPlusOne <: pcPlusOne,
-        dsp <: dsp,
-        rsp <: rsp,
-        newStackTop :> CALLBRANCHnewStackTop,
-        newPC :> CALLBRANCHnewPC,
-        newDSP :> CALLBRANCHnewDSP,
-        newRSP :> CALLBRANCHnewRSP
-    );
-
-    // STACK WRITE CONTROLLERS
-    DSTACKstackWrite := 0; RSTACKstackWrite := 0;
-
-    // MEMORY ACCESS FLAGS
-    readmemory := 0; writememory := 0;
+    // STACK WRITE CONTROLLERS AND MEMORY ACCESS FLAGS
+    DSTACK.stackWrite := 0; RSTACK.stackWrite := 0; readmemory := 0; writememory := 0;
 
     // EXECUTE J1 CPU
     while( 1 ) {
@@ -155,6 +109,7 @@ algorithm J1CPU(
                 // START FETCH INSTRUCTION
                 ( address, readmemory, instruction ) = fetch( pc, memorybusy, readdata );
 
+                // DETECT IF ALU WITH MEMORY READ FOR FAST ALU
                 FSM = is_alu & ~is_memtr ? 3b100 : 3b010;
             }
             case 1: {
@@ -163,10 +118,6 @@ algorithm J1CPU(
                     newStackTop = literal(instruction).literalvalue;
                     newPC = pcPlusOne;
                     newDSP = dsp + 1;
-
-                    // Commit to dstack
-                    DSTACKstackWrite = dstackWrite;
-
                     FSM = 3b001;
                 } else {
                     if( is_alu ) {
@@ -174,40 +125,37 @@ algorithm J1CPU(
                         FSM = 3b100;
                     } else {
                         // CALL BRANCH 0BRANCH
-                        newStackTop = CALLBRANCHnewStackTop;
-                        newPC = CALLBRANCHnewPC;
-                        newDSP = CALLBRANCHnewDSP;
-                        newRSP = CALLBRANCHnewRSP;
+                        newStackTop = CALLBRANCH.newStackTop;
+                        newPC = CALLBRANCH.newPC;
+                        newDSP = CALLBRANCH.newDSP;
+                        newRSP = CALLBRANCH.newRSP;
                         rstackWData = { pcPlusOne, 1b0 };
-
-                        // Commit to dstack and rstack
-                        DSTACKstackWrite = dstackWrite;
-                        RSTACKstackWrite = rstackWrite;
-
                         FSM = 3b001;
                     }
                 }
+                // Commit to dstack and rstack
+                DSTACK.stackWrite = dstackWrite;
+                RSTACK.stackWrite = rstackWrite;
+
             }
             case 2: {
-                // ALU WITH MEMORY READ
-                newStackTop = ALUnewStackTop;
+                // ALU WITHOUT MEMORY READ (FAST) OR WITH MEMORY READ (SLOW, AS LOADED IN PREVIOUS FSM STATE)
+                newStackTop = ALU.newStackTop;
                 rstackWData = stackTop;
 
                 // UPDATE newDSP newRSP
-                newDSP = DELTADSPnewSP;
-                newRSP = DELTARSPnewSP;
+                newDSP = DELTADSP.newSP;
+                newRSP = DELTARSP.newSP;
 
                 // Update PC for next instruction, return from call or next instruction
                 newPC = ( aluop(instruction).is_r2pc ) ? {1b0, rStackTop[1,15] } : pcPlusOne;
 
                 // n2memt mem[t] = n
-                if( is_n2memt ) {
-                    ( address, writememory ) = store( stackTop, memorybusy );
-                } else {}
+                if( is_n2memt ) { ( address, writememory ) = store( stackTop, memorybusy ); } else {}
 
                 // Commit to dstack and rstack
-                DSTACKstackWrite = dstackWrite;
-                RSTACKstackWrite = rstackWrite;
+                DSTACK.stackWrite = dstackWrite;
+                RSTACK.stackWrite = rstackWrite;
 
                 FSM = 3b001;
             }
@@ -283,39 +231,44 @@ algorithm alu(
     logic16 LOGIC( a <: stackTop, b <: stackNext );
     shift16 SHIFT( a <: stackNext, count <: nibbles(stackTop).nibble0 );
     always {
-        switch( { aluop(instruction).is_j1j1plus, aluop(instruction).operation } ) {
-            case 5b00000: { newStackTop = stackTop; }
-            case 5b00001: { newStackTop = stackNext; }
-            case 5b00010: { newStackTop = ADD.c; }
-            case 5b00011: { newStackTop = LOGIC.AND; }
-            case 5b00100: { newStackTop = LOGIC.OR; }
-            case 5b00101: { newStackTop = LOGIC.XOR; }
-            case 5b00110: { newStackTop = ~stackTop; }
-            case 5b00111: { newStackTop = {16{COMPARE.equal}}; }
-            case 5b01000: { newStackTop = {16{COMPARE.less}}; }
-            case 5b01001: { newStackTop = SHIFT.SRA; }
-            case 5b01010: { newStackTop = DEC.c; }
-            case 5b01011: { newStackTop = rStackTop; }
-            case 5b01100: { newStackTop = memoryRead; }
-            case 5b01101: { newStackTop = SHIFT.SLL; }
-            case 5b01110: { newStackTop = {rsp, dsp}; }
-            case 5b01111: { newStackTop = {16{COMPARE.lessu}}; }
-            case 5b10000: { newStackTop = {16{ COMPARE.equal0 }}; }
-            case 5b10001: { newStackTop = {16{ ~COMPARE.equal0 }}; }
-            case 5b10010: { newStackTop = {16{ ~COMPARE.equal }}; }
-            case 5b10011: { newStackTop = INC.c; }
-            case 5b10100: { newStackTop = product; }
-            case 5b10101: { newStackTop = { stackTop[0,15], 1b0 }; }
-            case 5b10110: { newStackTop = negStackTop; }
-            case 5b10111: { newStackTop = { stackTop[15,1], stackTop[1,15] }; }
-            case 5b11000: { newStackTop = SUB.c;}
-            case 5b11001: { newStackTop = {16{ stackTop[15,1] }}; }
-            case 5b11010: { newStackTop = {16{ ~stackTop[15,1] }}; }
-            case 5b11011: { newStackTop = {16{ ~COMPARE.less & ~COMPARE.equal }}; }
-            case 5b11100: { newStackTop = {16{ ~COMPARE.less }}; }
-            case 5b11101: { newStackTop = stackTop[15,1] ? negStackTop : stackTop; }
-            case 5b11110: { newStackTop = COMPARE.less ? stackTop : stackNext; }
-            case 5b11111: { newStackTop = COMPARE.less ? stackNext : stackTop; }
+        if( aluop(instruction).is_j1j1plus ) {
+            switch( aluop(instruction).operation ) {
+                case 4b0000: { newStackTop = {16{ COMPARE.equal0 }}; }
+                case 4b0001: { newStackTop = {16{ ~COMPARE.equal0 }}; }
+                case 4b0010: { newStackTop = {16{ ~COMPARE.equal }}; }
+                case 4b0011: { newStackTop = INC.c; }
+                case 4b0100: { newStackTop = product; }
+                case 4b0101: { newStackTop = { stackTop[0,15], 1b0 }; }
+                case 4b0110: { newStackTop = negStackTop; }
+                case 4b0111: { newStackTop = { stackTop[15,1], stackTop[1,15] }; }
+                case 4b1000: { newStackTop = SUB.c;}
+                case 4b1001: { newStackTop = {16{ stackTop[15,1] }}; }
+                case 4b1010: { newStackTop = {16{ ~stackTop[15,1] }}; }
+                case 4b1011: { newStackTop = {16{ ~COMPARE.less & ~COMPARE.equal }}; }
+                case 4b1100: { newStackTop = {16{ ~COMPARE.less }}; }
+                case 4b1101: { newStackTop = stackTop[15,1] ? negStackTop : stackTop; }
+                case 4b1110: { newStackTop = COMPARE.less ? stackTop : stackNext; }
+                case 4b1111: { newStackTop = COMPARE.less ? stackNext : stackTop; }
+            }
+        } else {
+            switch( aluop(instruction).operation ) {
+                case 4b0000: { newStackTop = stackTop; }
+                case 4b0001: { newStackTop = stackNext; }
+                case 4b0010: { newStackTop = ADD.c; }
+                case 4b0011: { newStackTop = LOGIC.AND; }
+                case 4b0100: { newStackTop = LOGIC.OR; }
+                case 4b0101: { newStackTop = LOGIC.XOR; }
+                case 4b0110: { newStackTop = ~stackTop; }
+                case 4b0111: { newStackTop = {16{COMPARE.equal}}; }
+                case 4b1000: { newStackTop = {16{COMPARE.less}}; }
+                case 4b1001: { newStackTop = SHIFT.SRA; }
+                case 4b1010: { newStackTop = DEC.c; }
+                case 4b1011: { newStackTop = rStackTop; }
+                case 4b1100: { newStackTop = memoryRead; }
+                case 4b1101: { newStackTop = SHIFT.SLL; }
+                case 4b1110: { newStackTop = {rsp, dsp}; }
+                case 4b1111: { newStackTop = {16{COMPARE.lessu}}; }
+            }
         }
     }
     INC.b = 1; DEC.b = -1;
@@ -349,8 +302,8 @@ algorithm decode(
     output  uint1   is_memtr,
     output  uint1   dstackWrite,
     output  uint1   rstackWrite,
-    output  uint8   ddelta,
-    output  uint8   rdelta
+    output  uint2   ddelta,
+    output  uint2   rdelta
 ) <autorun,reginputs> {
     uint1   is_lit <:: literal(instruction).is_literal;
     uint1   is_call <:: ~is_lit & ( callbranch(instruction).is_callbranchalu == 2b10 );
@@ -360,8 +313,8 @@ algorithm decode(
         is_memtr = is_alu & ~aluop(instruction).is_j1j1plus & ( aluop(instruction).operation == 4b1100 );
         dstackWrite = ( is_lit | ( is_alu & aluop(instruction).is_t2n ) );
         rstackWrite = ( is_call | ( is_alu & aluop(instruction).is_t2r ) );
-        ddelta = { {7{aluop(instruction).ddelta1}}, aluop(instruction).ddelta0 };
-        rdelta = { {7{aluop(instruction).rdelta1}}, aluop(instruction).rdelta0 };
+        ddelta = aluop(instruction).ddelta;
+        rdelta = aluop(instruction).rdelta;
     }
 }
 
@@ -373,9 +326,9 @@ algorithm stack(
     output  uint16  stackTop
 ) <autorun,reginputs> {
     simple_dualport_bram uint16 stack[256] = uninitialized; // bram (code from @sylefeb)
-    stack.addr0 := sp;
+    stack.addr0 := sp; stackTop := stack.rdata0;
     stack.wenable1 := 1;
-    stackTop := stack.rdata0;
+
     always {
         if( stackWrite ) { stack.addr1 = newSP; stack.wdata1 = stackWData; }
     }
@@ -383,10 +336,11 @@ algorithm stack(
 
 algorithm deltasp(
     input   uint8   sp,
-    input   uint8   delta,
+    input   uint2   delta,
     output  uint8   newSP
 ) <autorun,reginputs> {
+    uint8   delta8 <:: { {7{delta[1,1]}}, delta[0,1] };
     always {
-        newSP = sp + delta;
+        newSP = sp + delta8;
     }
 }

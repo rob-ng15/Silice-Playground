@@ -56,7 +56,7 @@ $$ if w_in > 2 then generate_clz(name,w_in//2,1) end
 circuitry $name$_$w_in$ (input in,output out)
 {
 $$ if w_in == 2 then
-   out = ~in[1,1];
+   out = !in[1,1];
 $$ else
    uint$clog2(w_in)-1$ half_count = uninitialized;
    uint$w_h$           lhs        <: in[$w_h$,$w_h$];
@@ -129,7 +129,7 @@ algorithm clz22(
                  count = 2 + clz;
             }
             default: {
-                count = bitstream2[1,1] ? 0 : 1;
+                ( count ) = clz_silice_2( bitstream2 );
             }
         }
     }
@@ -168,7 +168,7 @@ algorithm doround11(
 ) <autorun,reginputs> {
     always {
         roundfraction = bitstream[1,10] + bitstream[0,1];
-        newexponent = 15 + exponent + ( ~|roundfraction & bitstream[0,1] );
+        newexponent = ( ( ~|roundfraction & bitstream[0,1] ) ? 16 : 15 ) + exponent;
     }
 }
 // COMBINE COMPONENTS INTO FLOATING POINT NUMBER
@@ -183,7 +183,7 @@ algorithm docombinecomponents16(
 ) <autorun,reginputs> {
     always {
         OF = ( exp > 30 ); UF = exp[6,1];
-        f16 = UF ? 0 : OF ? { sign, 5b11111, 10h0 } : { sign, exp[0,5], fraction[0,10] };
+        f16 = UF ? 0 : OF ? { sign, 15h7c00 } : { sign, exp[0,5], fraction[0,10] };
     }
 }
 
@@ -211,8 +211,8 @@ algorithm prepitof(
 
     always {
         NX =( CLZ16.zeros < 5 );
-        sign = dounsigned ? 0 : fp16( a ).sign;
-        number = dounsigned ? a : ( fp16( a ).sign ? -a : a );
+        sign = ~dounsigned & fp16( a ).sign;
+        number = sign ? -a : a;
         fraction= NX ? number >> ( 5 - CLZ16.zeros ) : ( CLZ16.zeros == 5 ) ? number : number << ( CLZ16.zeros - 5 );
         exponent = 30 - CLZ16.zeros;
     }
@@ -243,7 +243,7 @@ algorithm prepftoi(
     output  int7    exp,
     output  uint16  unsignedfraction
 ) <autorun,reginputs> {
-    uint33  sig <:: ( exp < 11 ) ? { 5b1, fp16( a ).fraction, 1b0 } >> ( 10 - exp ) : { 5b1, fp16( a ).fraction, 1b0 } << ( exp - 11);
+    uint17  sig <:: ( exp < 11 ) ? { 5b1, fp16( a ).fraction, 1b0 } >> ( 10 - exp ) : { 5b1, fp16( a ).fraction, 1b0 } << ( exp - 11 );
     exp := fp16( a ).exponent - 15;
     unsignedfraction := ( sig[1,16] + sig[0,1] );
 }
@@ -268,7 +268,7 @@ algorithm floattoint(
         switch( { A.INF | NN, A.ZERO } ) {
             case 2b00: { NV = ( PREP.exp > 14 ); result = NV ? { fp16( a ).sign, 15h7fff } : fp16( a ).sign ? -PREP.unsignedfraction : PREP.unsignedfraction; }
             case 2b01: { result = 0; }
-            default: { NV = 1; result = NN ? 16h7fff : { fp16( a ).sign, 15h7fff }; }
+            default: { NV = 1; result = { ~NN & fp16( a ).sign, 15h7fff }; }
         }
     }
 }
@@ -330,12 +330,12 @@ algorithm dofloataddsub(
     uint22  sigAminussigB <:: sigA - sigB;
     uint22  sigBminussigA <:: sigB - sigA;
     uint22  sigAplussigB <:: sigA + sigB;
-
+    uint1   AvB <:: ( sigA > sigB );
     always {
         // PERFORM ADDITION HANDLING SIGNS
         switch( { signA, signB } ) {
-            case 2b01: { resultsign = ( sigB > sigA ); resultfraction = resultsign ? sigBminussigA : sigAminussigB; }
-            case 2b10: { resultsign = ( sigA > sigB ); resultfraction = resultsign ? sigAminussigB : sigBminussigA; }
+            case 2b01: { resultsign = ( ~AvB ); resultfraction = resultsign ? sigBminussigA : sigAminussigB; }
+            case 2b10: { resultsign = ( AvB ); resultfraction = resultsign ? sigAminussigB : sigBminussigA; }
             default: { resultsign = signA; resultfraction = sigAplussigB; }
         }
     }
@@ -352,7 +352,7 @@ algorithm floataddsub(
 ) <autorun,reginputs> {
     // BREAK DOWN INITIAL float32 INPUTS - SWITCH SIGN OF B IF SUBTRACTION
     uint22  sigA <:: { 2b01, fp16(a).fraction, 10b0 };
-    uint1   signB <:: addsub ? ~fp16( b ).sign : fp16( b ).sign;
+    uint1   signB <:: addsub ^ fp16( b ).sign;
     uint22  sigB <:: { 2b01, fp16(b).fraction, 10b0 };
 
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND INVALID ( INF - INF )
@@ -396,10 +396,10 @@ algorithm floataddsub(
                         result = 0;
                     }
                 }
-                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 0 : ( B.ZERO ) ? a : addsub ? { ~fp16( b ).sign, b[0,15] } : b; }
+                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 0 : ( B.ZERO ) ? a : { addsub ^ fp16( b ).sign, b[0,15] }; }
                 default: {
                     switch( { IF, NN } ) {
-                        case 2b10: { result = ( A.INF & B.INF) ? ( fp16( a ).sign ~^ signB ) ? a : 16hfe00 : A.INF ? a : b; }
+                        case 2b10: { result = ( A.INF & B.INF) ? ( fp16( a ).sign ^ signB ) ? 16hfe00 : a : A.INF ? a : b; }
                         default: { result = 16hfe00; }
                     }
                 }
@@ -422,8 +422,8 @@ algorithm prepmul(
     uint22  product <:: sigA * sigB;
     always {
         productsign = fp16( a ).sign ^ fp16( b ).sign;
-        productexp = fp16( a ).exponent + fp16( b ).exponent - 30 + product[21,1];
-        normalfraction = product[21,1] ? product[10,11] : product[9,11];
+        productexp = fp16( a ).exponent + fp16( b ).exponent - ( product[21,1] ? 29 : 30 );
+        normalfraction = product[ product[21,1] ? 10 : 9, 11 ];
     }
 }
 algorithm floatmultiply(
@@ -494,7 +494,7 @@ algorithm dofloatdivide(
     uint24  temporary <:: { remainder[0,23], sigA[bit,1] };
     uint1   bitresult <:: __unsigned(temporary) >= __unsigned(sigB);
     uint5   bit(31);
-    uint2   normalshift <:: ( quotient[22,1] + quotient[23,1] );
+    uint2   normalshift <:: quotient[23,1] ? 2 : quotient[22,1];
 
     busy := start | ( ~&bit ) | ( quotient[22,2] != 0 );
     always {
@@ -526,12 +526,10 @@ algorithm prepdivide(
 ) <autorun,reginputs> {
     // BREAK DOWN INITIAL float32 INPUTS AND FIND SIGN OF RESULT AND EXPONENT OF QUOTIENT ( -1 IF DIVISOR > DIVIDEND )
     // ALIGN DIVIDEND TO THE LEFT, DIVISOR TO THE RIGHT
-    int7    expA <:: fp16( a ).exponent - 15;
-    int7    expB <:: fp16( b ).exponent - 15;
     uint1   AvB <:: ( fp16(b).fraction > fp16(a).fraction );
     always {
         quotientsign = fp16( a ).sign ^ fp16( b ).sign;
-        quotientexp = expA - expB - AvB;
+        quotientexp = fp16( a ).exponent - fp16( b ).exponent - AvB;
         sigA = { 1b1, fp16(a).fraction, 13b0 };
         sigB = { 14b1, fp16(b).fraction };
     }
@@ -575,8 +573,8 @@ algorithm floatdivide(
                     DODIVIDE.start = 1; while( DODIVIDE.busy ) {}
                     OF = COMBINE.OF; UF = COMBINE.UF; result = COMBINE.f16;
                 }
-                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 16hfe00 : ( B.ZERO ) ? { PREP.quotientsign, 5b11111, 10b0 } : { PREP.quotientsign, 15b0 }; }
-                default: { result = ( A.INF & B.INF ) | NN | B.ZERO ? 16hfe00 : A.ZERO | B.INF ? { PREP.quotientsign, 15b0 } : { PREP.quotientsign, 5b11111, 10b0 }; }
+                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 16hfe00 : { PREP.quotientsign, B.ZERO ? 15h7c00 : 15h0 }; }
+                default: { result = ( A.INF & B.INF ) | NN | B.ZERO ? 16hfe00 : { PREP.quotientsign, ( A.ZERO | B.INF ) ? 15b0 : 15h7c00 }; }
             }
             busy = 0;
         }
@@ -675,7 +673,7 @@ algorithm floatsqrt(
 
     // FAST NORMALISATION - SQUARE ROOT RESULTS IN 1x.xxx or 01.xxxx
     // EXTRACT 11 BITS FOR ROUNDING FOLLOWING THE NORMALISED 1.xxxx
-    uint11  normalfraction <::DOSQRT.squareroot[21,1] ? DOSQRT.squareroot[10,11] : DOSQRT.squareroot[9,11];
+    uint11  normalfraction <:: DOSQRT.squareroot[ DOSQRT.squareroot[21,1] ? 10 : 9,11 ];
     doround11 ROUND( exponent <: PREP.squarerootexp, bitstream <: normalfraction );
 
     // COMBINE TO FINAL float16
@@ -771,6 +769,9 @@ algorithm main(output int8 leds) {
     uint16  F5 = 16h4500;
     uint16  F2 = 16h4000;
     int16  I100 = 100;
+//     uint16  F5 = 16h4500; // 5
+//     uint16  F2 = 16h4000; // 2
+//     int16  I100 = 100;
 
     uint1   TRUE = 1;
     uint1   FALSE = 0;

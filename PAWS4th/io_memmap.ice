@@ -40,7 +40,6 @@ $$end
 ) <autorun> {
     uint24  sdramaddress = uninitialized;
     uint16  sdramwritedata = uninitialized;
-    uint16  sdramreaddata = uninitialized;
     uint1   sdramwriteflag = uninitialized;
     uint1   sdramreadflag = uninitialized;
     // SDRAM and BRAM (for BIOS)
@@ -50,38 +49,27 @@ $$end
         address <: sdramaddress,
         writedata <: sdramwritedata,
         writeflag <: sdramwriteflag,
-        readdata :> sdramreaddata,
         readflag <: sdramreadflag
     );
 
 $$if not SIMULATION then
     // UART CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
-    uint8   UARTinchar = uninitialized;
     uint8   UARToutchar = uninitialized;
-    uint1   UARTinavailable = uninitialized;
     uint2   UARTinread = 0;
-    uint1   UARToutfull = uninitialized;
     uint2   UARToutwrite = 0;
     uart UART <@clock_25mhz> (
         uart_tx :> uart_tx,
         uart_rx <: uart_rx,
-        inchar :> UARTinchar,
         outchar <: UARToutchar,
-        inavailable :> UARTinavailable,
         inread <: UARTinread[0,1],
-        outfull :> UARToutfull,
         outwrite <: UARToutwrite[0,1]
     );
 
     // PS2 CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
-    uint8   PS2inchar = uninitialized;
-    uint1   PS2inavailable = uninitialized;
     uint2   PS2inread = 0;
     ps2buffer PS2 <@clock_25mhz> (
         us2_bd_dp <: us2_bd_dp,
         us2_bd_dn <: us2_bd_dn,
-        inchar :> PS2inchar,
-        inavailable :> PS2inavailable,
         inread <: PS2inread[0,1]
     );
 
@@ -89,8 +77,6 @@ $$if not SIMULATION then
     uint16  sectoraddressH = uninitialized;
     uint16  sectoraddressL = uninitialized;
     uint9   bufferaddress = uninitialized;
-    uint8   bufferdata = uninitialized;
-    uint1   SDCARDready = uninitialized;
     uint1   SDCARDreadsector = uninitialized;
     sdcardbuffer SDCARD(
         sd_clk :> sd_clk,
@@ -100,9 +86,7 @@ $$if not SIMULATION then
         sectoraddressH <: sectoraddressH,
         sectoraddressL <: sectoraddressL,
         bufferaddress <: bufferaddress,
-        bufferdata :> bufferdata,
-        readsector <: SDCARDreadsector,
-        ready :> SDCARDready
+        readsector <: SDCARDreadsector
     );
 $$end
 
@@ -116,25 +100,25 @@ $$end
         // READ IO Memory
         if( memoryRead ) {
             switch( memoryAddress ) {
-                // UART, LEDS, BUTTONS and CLOCK
-                case 12h130: { readData = leds; }
+                // UART/PS2, LEDS, BUTTONS
                 $$if not SIMULATION then
                 case 12h100: {
-                    switch( { PS2inavailable, UARTinavailable } ) {
+                    switch( { PS2.inavailable, UART.inavailable } ) {
                         case 2b00: { readData = 0; }
-                        case 2b01: { readData = { 8b0, UARTinchar }; UARTinread = 2b11; }
-                        default: { readData = { 8b0, PS2inchar }; PS2inread = 2b11; }
+                        case 2b01: { readData = { 8b0, UART.inchar }; UARTinread = 2b11; }
+                        default: { readData = { 8b0, PS2.inchar }; PS2inread = 2b11; }
                     }
                 }
-                case 12h102: { readData = { 14b0, UARToutfull ? 1b1 : 1b0, ( UARTinavailable || PS2inavailable ) ? 1b1: 1b0 }; }
+                case 12h102: { readData = { 14b0, UART.outfull, ( UART.inavailable | PS2.inavailable ) }; }
                 case 12h120: { readData = { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] }; }
 
                 // SDCARD
-                case 12h140: { readData = SDCARDready; }
-                case 12h150: { readData = bufferdata; }
+                case 12h140: { readData = SDCARD.ready; }
+                case 12h150: { readData = SDCARD.bufferdata; }
                 $$end
+                case 12h130: { readData = leds; }
                 // SDRAM
-                case 12hf00: { readData = sdramreaddata; }
+                case 12hf00: { readData = sdram.readdata; }
                 case 12hf02: { readData = sdram.busy; }
 
                 // RETURN NULL VALUE
@@ -180,184 +164,114 @@ algorithm copro_memmap(
 
     input   uint16  writeData,
     output  uint16  readData
-) <autorun> {
+) <autorun,reginputs> {
     // Mathematics Co-Processors
-    divmod32by16 divmod32by16to16qr();
-    divmod16by16 divmod16by16to16qr();
-    multi16by16to32DSP multiplier16by16to32();
-
-    int32   doperand1 = uninitialized;
-    int32   doperand2 = uninitialized;
-    int32   dtotal = uninitialized;
-    int32   ddifference = uninitialized;
-    int32   dincrement = uninitialized;
-    int32   ddecrememt = uninitialized;
-    int32   dtimes2 = uninitialized;
-    int32   ddivide2 = uninitialized;
-    int32   dnegation = uninitialized;
-    int32   dinvert = uninitialized;
-    int32   dxor = uninitialized;
-    int32   dand = uninitialized;
-    int32   dor = uninitialized;
-    int32   dabsolute = uninitialized;
-    int32   dmaximum = uninitialized;
-    int32   dminimum = uninitialized;
-    int16   dzeroequal = uninitialized;
-    int16   dzeroless = uninitialized;
-    int16   dequal = uninitialized;
-    int16   dlessthan = uninitialized;
-    doubleops doperations(
-        operand1 <: doperand1,
-        operand2 <: doperand2,
-        total :> dtotal,
-        difference :> ddifference,
-        increment :> dincrement,
-        decrement :> ddecrememt,
-        times2 :> dtimes2,
-        divide2 :> ddivide2,
-        negation :> dnegation,
-        binaryinvert :> dinvert,
-        binaryxor :> dxor,
-        binaryand :> dand,
-        binaryor :> dor,
-        absolute :> dabsolute,
-        maximum :> dmaximum,
-        minimum :> dminimum,
-        zeroequal :> dzeroequal,
-        zeroless :> dzeroless,
-        equal :> dequal,
-        lessthan :> dlessthan
-    );
-
-    uint16  fpua = uninitialized;
-    uint16  fpub = uninitialized;
-    uint16  fpuitof = uninitialized;
-    uint16  fpuftoi = uninitialized;
-    uint16  fpufadd = uninitialized;
-    uint16  fpufsub = uninitialized;
-    uint16  fpufmul = uninitialized;
-    uint16  fpufdiv = uninitialized;
-    uint16  fpufsqrt = uninitialized;
-    int16   fpuless = uninitialized;
-    int16   fpuequal = uninitialized;
-    int16   fpulessequal = uninitialized;
-    uint3   fpustart = uninitialized;
-    uint1   fpubusy = uninitialized;
-    floatops fpu(
-        a <: fpua,
-        b <: fpub,
-        itof :> fpuitof,
-        ftoi :> fpuftoi,
-        fadd :> fpufadd,
-        fsub :> fpufsub,
-        fmul :> fpufmul,
-        fdiv :> fpufdiv,
-        fsqrt :> fpufsqrt,
-        less :> fpuless,
-        equal :> fpuequal,
-        lessequal :> fpulessequal,
-        start <: fpustart,
-        busy :> fpubusy
-    );
+    divmod32by16 divmod32by16to16qr(); divmod16by16 divmod16by16to16qr(); multi16by16to32DSP multiplier16by16to32(); doubleops doperations(); floatops fpu();
 
     // RESET Mathematics Co-Processor Controls
-    divmod32by16to16qr.start := 0;
-    divmod16by16to16qr.start := 0;
-    multiplier16by16to32.start := 0;
-    fpustart := 0;
+    divmod32by16to16qr.start := 0; divmod16by16to16qr.start := 0; multiplier16by16to32.start := 0; fpu.start := 0;
 
     always {
         // READ IO Memory
-        switch( memoryRead ) {
-            case 1: {
-                switch( memoryAddress ) {
-                    case 12h000: { readData = words(dtotal).hword; }
-                    case 12h001: { readData = words(dtotal).lword; }
-                    case 12h002: { readData = words(ddifference).hword; }
-                    case 12h003: { readData = words(ddifference).lword; }
-                    case 12h004: { readData = words(dincrement).hword; }
-                    case 12h005: { readData = words(dincrement).lword; }
-                    case 12h006: { readData = words(ddecrememt).hword; }
-                    case 12h007: { readData = words(ddecrememt).lword; }
-                    case 12h008: { readData = words(dtimes2).hword; }
-                    case 12h009: { readData = words(dtimes2).lword; }
-                    case 12h00a: { readData = words(ddivide2).hword; }
-                    case 12h00b: { readData = words(ddivide2).lword; }
-                    case 12h00c: { readData = words(dnegation).hword; }
-                    case 12h00d: { readData = words(dnegation).lword; }
-                    case 12h00e: { readData = words(dinvert).hword; }
-                    case 12h00f: { readData = words(dinvert).lword; }
-                    case 12h010: { readData = words(dxor).hword; }
-                    case 12h011: { readData = words(dxor).lword; }
-                    case 12h012: { readData = words(dand).hword; }
-                    case 12h013: { readData = words(dand).lword; }
-                    case 12h014: { readData = words(dor).hword; }
-                    case 12h015: { readData = words(dor).lword; }
-                    case 12h016: { readData = words(dabsolute).hword; }
-                    case 12h017: { readData = words(dabsolute).lword; }
-                    case 12h018: { readData = words(dmaximum).hword; }
-                    case 12h019: { readData = words(dmaximum).lword; }
-                    case 12h01a: { readData = words(dminimum).hword; }
-                    case 12h01b: { readData = words(dminimum).lword; }
-                    case 12h01c: { readData = dzeroequal; }
-                    case 12h01d: { readData = dzeroless; }
-                    case 12h01e: { readData = dequal; }
-                    case 12h01f: { readData = dlessthan; }
-                    case 12h020: { readData = divmod32by16to16qr.quotient[0,16]; }
-                    case 12h021: { readData = divmod32by16to16qr.remainder[0,16]; }
-                    case 12h023: { readData = divmod32by16to16qr.active; }
-                    case 12h024: { readData = divmod16by16to16qr.quotient; }
-                    case 12h025: { readData = divmod16by16to16qr.remainder; }
-                    case 12h026: { readData = divmod16by16to16qr.active; }
-                    case 12h027: { readData = multiplier16by16to32.product[16,16]; }
-                    case 12h028: { readData = multiplier16by16to32.product[0,16]; }
-
-                    case 12h102: { readData = fpubusy; }
-                    case 12h110: { readData = fpuitof; }
-                    case 12h111: { readData = fpuftoi; }
-                    case 12h112: { readData = fpufadd; }
-                    case 12h113: { readData = fpufsub; }
-                    case 12h114: { readData = fpufmul; }
-                    case 12h115: { readData = fpufdiv; }
-                    case 12h116: { readData = fpufsqrt; }
-                    case 12h117: { readData = fpuless; }
-                    case 12h118: { readData = fpuequal; }
-                    case 12h119: { readData = fpulessequal; }
-
-                    // RETURN NULL VALUE
+        if( memoryRead ) {
+            if( memoryAddress[8,1] ) {
+                switch( memoryAddress[0,5] ) {
+                    case 5h02: { readData = fpu.busy; }
+                    case 5h10: { readData = fpu.itof; }
+                    case 5h11: { readData = fpu.ftoi; }
+                    case 5h12: { readData = fpu.fadd; }
+                    case 5h13: { readData = fpu.fsub; }
+                    case 5h14: { readData = fpu.fmul; }
+                    case 5h15: { readData = fpu.fdiv; }
+                    case 5h16: { readData = fpu.fsqrt; }
+                    case 5h17: { readData = fpu.less; }
+                    case 5h18: { readData = fpu.equal; }
+                    case 5h19: { readData = fpu.lessequal; }
                     default: { readData = 0; }
                 }
+            } else {
+                switch( memoryAddress[4,3] ) {
+                    case 3h0: {
+                        switch( memoryAddress[1,3] ) {
+                            case 3h0: { readData = doperations.total[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
+                            case 3h1: { readData = doperations.difference[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
+                            case 3h2: { readData = doperations.increment[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
+                            case 3h3: { readData = doperations.decrement[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
+                            case 3h4: { readData = doperations.times2[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
+                            case 3h5: { readData = doperations.divide2[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
+                            case 3h6: { readData = doperations.negation[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
+                            case 3h7: { readData = doperations.binaryinvert[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
+                        }
+                    }
+                    case 3h1: {
+                        switch( memoryAddress[1,3] ) {
+                            case 3h0: { readData = doperations.binaryxor[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
+                            case 3h1: { readData = doperations.binaryand[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
+                            case 3h2: { readData = doperations.binaryor[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
+                            case 3h3: { readData = doperations.absolute[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
+                            case 3h4: { readData = doperations.maximum[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
+                            case 3h5: { readData = doperations.minimum[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
+                            case 3h6: { readData = memoryAddress[0,1] ? doperations.zeroless : doperations.zeroequal; }
+                            case 3h7: { readData = memoryAddress[0,1] ? doperations.lessthan : doperations.equal; }
+                        }
+                    }
+                    case 3h2: {
+                        switch( memoryAddress[0,3] ) {
+                            case 3h0: { readData = divmod32by16to16qr.quotient[0,16]; }
+                            case 3h1: { readData = divmod32by16to16qr.remainder[0,16]; }
+                            case 3h3: { readData = divmod32by16to16qr.active; }
+                            case 3h4: { readData = divmod16by16to16qr.quotient; }
+                            case 3h5: { readData = divmod16by16to16qr.remainder; }
+                            case 3h6: { readData = divmod16by16to16qr.active; }
+                            default: { readData = 0; }
+                        }
+                    }
+                    case 3h3: { readData = multiplier16by16to32.product[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
+                }
             }
-            default: {}
         }
 
         // WRITE IO Memory
-        switch( memoryWrite ) {
-            case 1: {
-                switch( memoryAddress ) {
-                    case 12h000: { doperand1[16,16] = writeData; }
-                    case 12h001: { doperand1[0,16] = writeData; }
-                    case 12h002: { doperand2[16,16] = writeData; }
-                    case 12h003: { doperand2[0,16] = writeData; }
-                    case 12h020: { divmod32by16to16qr.dividend[16,16] = writeData; }
-                    case 12h021: { divmod32by16to16qr.dividend[0,16] = writeData; }
-                    case 12h022: { divmod32by16to16qr.divisor = writeData; }
-                    case 12h023: { divmod32by16to16qr.start = writeData; }
-                    case 12h024: { divmod16by16to16qr.dividend = writeData; }
-                    case 12h025: { divmod16by16to16qr.divisor = writeData; }
-                    case 12h026: { divmod16by16to16qr.start = writeData; }
-                    case 12h027: { multiplier16by16to32.factor1 = writeData; }
-                    case 12h028: { multiplier16by16to32.factor2 = writeData; }
-                    case 12h029: { multiplier16by16to32.start = writeData; }
-
-                    case 12h100: { fpua = writeData; }
-                    case 12h101: { fpub = writeData; }
-                    case 12h102: { fpustart = writeData; }
-
+        if( memoryWrite ) {
+            if( memoryAddress[8,1] ) {
+                switch( memoryAddress[0,2] ) {
+                    case 2h0: { fpu.a = writeData; }
+                    case 2h1: { fpu.b = writeData; }
+                    case 2h2: { fpu.start = writeData; }
                     default: {}
                 }
+            } else {
+                switch( memoryAddress[4,2] ) {
+                    case 2h0: {
+                        if( memoryAddress[1,1] ) {
+                            doperations.operand2[ { ~memoryAddress[0,1], 4b0000 },16 ] = writeData;
+                        } else {
+                            doperations.operand1[ { ~memoryAddress[0,1], 4b0000 },16 ] = writeData;
+                        }
+                    }
+                    case 2h1: {}
+                    case 2h2: {
+                        switch( memoryAddress[0,3] ) {
+                            case 3h0: { divmod32by16to16qr.dividend[16,16] = writeData; }
+                            case 3h1: { divmod32by16to16qr.dividend[0,16] = writeData; }
+                            case 3h2: { divmod32by16to16qr.divisor = writeData; }
+                            case 3h3: { divmod32by16to16qr.start = writeData; }
+                            case 3h4: { divmod16by16to16qr.dividend = writeData; }
+                            case 3h5: { divmod16by16to16qr.divisor = writeData; }
+                            case 3h6: { divmod16by16to16qr.start = writeData; }
+                            default: {}
+                        }
+                    }
+                    case 2h3: {
+                        switch( memoryAddress[0,2] ) {
+                            case 2h0: { multiplier16by16to32.factor1 = writeData; }
+                            case 2h1: { multiplier16by16to32.factor2 = writeData; }
+                            case 2h2: { multiplier16by16to32.start = writeData; }
+                            default: {}
+                        }
+                    }
+                }
             }
-            default: {}
         }
     } // while(1)
 }
@@ -376,106 +290,59 @@ algorithm audiotimers_memmap(
     // AUDIO
     output  uint4   audio_l,
     output  uint4   audio_r
-) <autorun> {
+) <autorun,reginputs> {
     // TIMERS and RNG
-    uint16  systemclock = uninitialized;
-    uint16  timer1hz0 = uninitialized;
-    uint16  timer1hz1 = uninitialized;
-    uint16  timer1khz0 = uninitialized;
-    uint16  timer1khz1 = uninitialized;
-    uint16  sleepTimer0 = uninitialized;
-    uint16  sleepTimer1 = uninitialized;
-    uint16  u_noise_out = uninitialized;
-    uint16  g_noise_out = uninitialized;
-    uint4   static4bit <: u_noise_out[0,4];
-    uint16  counter = uninitialized;
-    uint3   resetcounter = uninitialized;
-    timers_rng timers <@clock_25mhz> (
-        systemclock :> systemclock,
-        timer1hz0 :> timer1hz0,
-        timer1hz1 :> timer1hz1,
-        timer1khz0 :> timer1khz0,
-        timer1khz1 :> timer1khz1,
-        sleepTimer0 :> sleepTimer0,
-        sleepTimer1 :> sleepTimer1,
-        u_noise_out :> u_noise_out,
-        g_noise_out :> g_noise_out,
-        counter <: counter,
-        resetcounter <: resetcounter
-    );
+    timers_rng timers <@clock_25mhz> ();
 
     // Left and Right audio channels
-    uint1   audio_active_l = uninitialized;
-    uint1   audio_active_r = uninitialized;
-    uint4   waveform = uninitialized;
-    uint7   note = uninitialized;
-    uint16  duration = uninitialized;
-    uint2   apu_write = uninitialized;
-    audio apu_processor <@clock_25mhz> (
-        staticGenerator <: static4bit,
-        audio_l :> audio_l,
-        audio_active_l :> audio_active_l,
-        audio_r :> audio_r,
-        audio_active_r :> audio_active_r,
-        waveform <: waveform,
-        note <: note,
-        duration <: duration,
-        apu_write <: apu_write
-    );
+    audio apu_processor <@clock_25mhz> ( staticGenerator <: timers.u_noise_out[0,4], audio_l :> audio_l, audio_r :> audio_r );
 
     // LATCH MEMORYWRITE
     uint1   LATCHmemoryWrite = uninitialized;
 
     always {
         // READ IO Memory
-        switch( memoryRead ) {
-            case 1: {
-                switch( memoryAddress ) {
-                    // TIMERS and RNG
-                    case 12h000: { readData = g_noise_out; }
-                    case 12h002: { readData = u_noise_out; }
-                    case 12h010: { readData = timer1hz0; }
-                    case 12h012: { readData = timer1hz1; }
-                    case 12h020: { readData = timer1khz0; }
-                    case 12h022: { readData = timer1khz1; }
-                    case 12h030: { readData = sleepTimer0; }
-                    case 12h032: { readData = sleepTimer1; }
-                    case 12h040: { readData = systemclock; }
-
-                    // AUDIO
-                    case 12h110: { readData = audio_active_l; }
-                    case 12h112: { readData = audio_active_r; }
-
+        if( memoryRead ) {
+            if( memoryAddress[8,1] ) {
+                readData = memoryAddress[1,1] ? apu_processor.audio_active_r : apu_processor.audio_active_l;
+            } else {
+                switch( memoryAddress[1,4] ) {
+                    // RNG ( 2 interger ) and TIMERS
+                    case 4h0: { readData = timers.g_noise_out; }
+                    case 4h1: { readData = timers.u_noise_out; }
+                    case 4h8: { readData = timers.timer1hz0; }
+                    case 4h9: { readData = timers.timer1hz1; }
+                    case 4ha: { readData = timers.timer1khz0; }
+                    case 4hb: { readData = timers.timer1khz1; }
+                    case 4hc: { readData = timers.sleepTimer0; }
+                    case 4hd: { readData = timers.sleepTimer1; }
+                    case 4he: { readData = timers.systemclock; }
                     // RETURN NULL VALUE
                     default: { readData = 0; }
                 }
             }
-            default: {}
         }
+
         // WRITE IO Memory
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
-                switch( memoryAddress ) {
-                // TIMERS and RNG
-                    case 12h010: { resetcounter = 1; }
-                    case 12h012: { resetcounter = 2; }
-                    case 12h020: { counter = writeData; resetcounter = 3; }
-                    case 12h022: { counter = writeData; resetcounter = 4; }
-                    case 12h030: { counter = writeData; resetcounter = 5; }
-                    case 12h032: { counter = writeData; resetcounter = 6; }
-
+                if( memoryAddress[8,1] ) {
                     // AUDIO
-                    case 12h100: { waveform = writeData; }
-                    case 12h102: { note = writeData; }
-                    case 12h104: { duration = writeData; }
-                    case 12h106: { apu_write = writeData; }
-                    default: {}
+                    switch( memoryAddress[1,2] ) {
+                        case 2h0: { apu_processor.waveform = writeData; }
+                        case 2h1: { apu_processor.note = writeData; }
+                        case 2h2: { apu_processor.duration = writeData; }
+                        case 2h3: { apu_processor.apu_write = writeData; }
+                    }
+                } else {
+                    // TIMERS and RNG
+                     timers.counter = writeData; timers.resetcounter = memoryAddress[1,3] + 1;
                 }
             }
             case 2b00: {
                 // RESET TIMER and AUDIO Co-Processor Controls
-                resetcounter = 0;
-                apu_write = 0;
+                timers.resetcounter = 0;
+                apu_processor.apu_write = 0;
             }
             default: {}
         }
@@ -496,48 +363,38 @@ algorithm timers_rng(
     output  uint16  g_noise_out,
     input   uint16  counter,
     input   uint3   resetcounter
-) <autorun> {
+) <autorun,reginputs> {
     // RNG random number generator
     random rng( u_noise_out :> u_noise_out,  g_noise_out :> g_noise_out );
 
-    // 1hz timers (p1hz used for systemClock, timer1hz for user purposes)
-    uint1   P1resetCounter = uninitialized;
-    pulse1hz P1( counter1hz :> systemclock, resetCounter <: P1resetCounter );
-
-    uint1   T1hz0resetCounter = uninitialized;
-    uint1   T1hz1resetCounter = uninitialized;
-    pulse1hz T1hz0( counter1hz :> timer1hz0, resetCounter <: T1hz0resetCounter );
-    pulse1hz T1hz1( counter1hz :> timer1hz1, resetCounter <: T1hz1resetCounter );
+    // 1hz timers (P1 used for systemClock, T1hz0 and T1hz1 for user purposes)
+    pulse1hz P1( counter1hz :> systemclock );
+    pulse1hz T1hz0( counter1hz :> timer1hz0 );
+    pulse1hz T1hz1( counter1hz :> timer1hz1 );
 
     // 1khz timers (sleepTimers used for sleep command, timer1khzs for user purposes)
-    uint16  T0khz0resetCounter = uninitialized;
-    uint16  T1khz1resetCounter = uninitialized;
-    uint16  STimer0resetCounter = uninitialized;
-    uint16  STimer1resetCounter = uninitialized;
-    pulse1khz T0khz0( counter1khz :> timer1khz0, resetCounter <: T0khz0resetCounter );
-    pulse1khz T1khz1( counter1khz :> timer1khz1, resetCounter <: T1khz1resetCounter );
-    pulse1khz STimer0( counter1khz :> sleepTimer0, resetCounter <: STimer0resetCounter );
-    pulse1khz STimer1( counter1khz :> sleepTimer1, resetCounter <: STimer1resetCounter );
+    pulse1khz T0khz0( counter1khz :> timer1khz0 );
+    pulse1khz T1khz1( counter1khz :> timer1khz1 );
+    pulse1khz STimer0( counter1khz :> sleepTimer0 );
+    pulse1khz STimer1( counter1khz :> sleepTimer1 );
 
-    P1resetCounter := 0;
-    T1hz0resetCounter := 0;
-    T1hz1resetCounter := 0;
-    T0khz0resetCounter := 0;
-    T1khz1resetCounter := 0;
-    STimer0resetCounter := 0;
-    STimer1resetCounter := 0;
+    T1hz0.resetCounter := 0; T1hz1.resetCounter := 0;
+    T0khz0.resetCounter := 0; T1khz1.resetCounter := 0;
+    STimer0.resetCounter := 0; STimer1.resetCounter := 0;
 
     always {
         switch( resetcounter ) {
-        default: {}
-            case 1: { T1hz0resetCounter = 1; }
-            case 2: { T1hz1resetCounter = 1; }
-            case 3: { T0khz0resetCounter = counter; }
-            case 4: { T1khz1resetCounter = counter; }
-            case 5: { STimer0resetCounter = counter; }
-            case 6: { STimer1resetCounter = counter; }
+            default: {}
+            case 1: { T1hz0.resetCounter = 1; }
+            case 2: { T1hz1.resetCounter = 1; }
+            case 3: { T0khz0.resetCounter = counter; }
+            case 4: { T1khz1.resetCounter = counter; }
+            case 5: { STimer0.resetCounter = counter; }
+            case 6: { STimer1.resetCounter = counter; }
         }
     }
+
+    P1.resetCounter = 0;
 }
 
 // AUDIO L&R Controller
@@ -551,64 +408,26 @@ algorithm audio(
     output  uint1   audio_active_l,
     output  uint4   audio_r,
     output  uint1   audio_active_r
-) <autorun> {
+) <autorun,reginputs> {
     // Left and Right audio channels
-    uint4   Lwaveform = uninitialized;
-    uint7   Lnote = uninitialized;
-    uint16  Lduration = uninitialized;
-    uint1   Lapu_write = uninitialized;
     apu apu_processor_L(
         staticGenerator <: staticGenerator,
         audio_output :> audio_l,
         audio_active :> audio_active_l,
-        waveform <: Lwaveform,
-        note <: Lnote,
-        duration <: Lduration,
-        apu_write <: Lapu_write
+        waveform <: waveform,
+        note <: note,
+        duration <: duration,
+        apu_write <: apu_write[0,1]
     );
-    uint4   Rwaveform = uninitialized;
-    uint7   Rnote = uninitialized;
-    uint16  Rduration = uninitialized;
-    uint1   Rapu_write = uninitialized;
     apu apu_processor_R(
         staticGenerator <: staticGenerator,
         audio_output :> audio_r,
         audio_active :> audio_active_r,
-        waveform <: Rwaveform,
-        note <: Rnote,
-        duration <: Rduration,
-        apu_write <: Rapu_write
+        waveform <: waveform,
+        note <: note,
+        duration <: duration,
+        apu_write <: apu_write[1,1]
     );
-
-    Lapu_write := 0; Rapu_write := 0;
-
-    always {
-        switch( apu_write ) {
-            default: {}
-            case 1: {
-                Lwaveform = waveform;
-                Lnote = note;
-                Lduration = duration;
-                Lapu_write = 1;
-            }
-            case 2: {
-                Rwaveform = waveform;
-                Rnote = note;
-                Rduration = duration;
-                Rapu_write = 1;
-            }
-            case 3: {
-                Lwaveform = waveform;
-                Lnote = note;
-                Lduration = duration;
-                Lapu_write = 1;
-                Rwaveform = waveform;
-                Rnote = note;
-                Rduration = duration;
-                Rapu_write = 1;
-            }
-        }
-    }
 }
 
 // UART BUFFER CONTROLLER
@@ -667,10 +486,8 @@ algorithm uart(
 
     uart_out uo; uart_sender usend( io <:> uo, uart_tx :> uart_tx );
     uint8   uodata_in = uninitialized;
-    uint1   OUTavailable = uninitialized;
-    uint1   OUTread <: OUTavailable & !uo.busy;
+    uint1   OUTread <: OUT.available & !uo.busy;
     fifo8 OUT(
-        available :> OUTavailable,
         full :> outfull,
         last <: outchar,
         write <: outwrite,
@@ -678,7 +495,7 @@ algorithm uart(
         read <: OUTread
     );
     uo.data_in := uodata_in;
-    uo.data_in_ready := OUTavailable & ( !uo.busy );
+    uo.data_in_ready := OUT.available & ( !uo.busy );
 }
 
 

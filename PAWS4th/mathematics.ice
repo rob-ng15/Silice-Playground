@@ -154,8 +154,6 @@ algorithm doubleops(
     output  int32   binaryand,
     output  int32   maximum,
     output  int32   minimum,
-    output  int16   equal,
-    output  int16   lessthan,
     output  int32   increment,
     output  int32   decrement,
     output  int32   times2,
@@ -163,8 +161,10 @@ algorithm doubleops(
     output  int32   negation,
     output  int32   binaryinvert,
     output  int32   absolute,
-    output  int16   zeroequal,
-    output  int16   zeroless
+    output  uint1   equal,
+    output  uint1   lessthan,
+    output  uint1   zeroequal,
+    output  uint1   zeroless
 ) <autorun,reginputs> {
     int32   operand1negative <:: -operand1;
     int32   operand2negative <:: -operand2;
@@ -178,15 +178,15 @@ algorithm doubleops(
     always {
         maximum = operand1voperand2 ? operand2 : operand1;
         minimum = operand1voperand2 ? operand1 : operand2;
-        equal = {16{(operand1 == operand2)}};
-        lessthan = {16{operand1voperand2}};
         times2 = { operand1[0,31], 1b0 };
         divide2 = { operand1[31,1], operand1[1,31] };
         negation = operand1negative;
         binaryinvert = ~operand1;
         absolute = ( operand1[31,1] ) ? operand1negative : operand1;
-        zeroequal = {16{~|operand1}};
-        zeroless = {16{operand1[31,1]}};
+        equal = operand1 == operand2;
+        lessthan = operand1voperand2;
+        zeroequal = ~|operand1;
+        zeroless = operand1[31,1];
     }
     DINC.b = 1; DDEC.b = -1;
 }
@@ -202,10 +202,10 @@ algorithm floatops(
     output  uint16  fmul,
     output  uint16  fdiv,
     output  uint16  fsqrt,
-    output  uint16  less,
-    output  uint16  equal,
-    output  uint16  lessequal,
-    input   uint3   start,
+    output  uint1   less,
+    output  uint1   equal,
+    output  uint1   lessequal,
+    input   uint5   start,
     output  uint1   busy
 ) <autorun,reginputs> {
     inttofloat ITOF( a <: a, result :> itof );
@@ -216,22 +216,15 @@ algorithm floatops(
     floatsqrt FSQRT( a <: a, result :> fsqrt );
     floatcompare FCOMPARE( a <: a, b <: b );
 
-    less := { {16{FCOMPARE.less}} };
-    lessequal := { {16{FCOMPARE.less | FCOMPARE.equal}} };
-    equal := { {16{FCOMPARE.equal}} };
+    less := FCOMPARE.less;
+    lessequal := FCOMPARE.less | FCOMPARE.equal;
+    equal := FCOMPARE.equal;
 
     busy := FADD.busy | FMUL.busy | FDIV.busy | FSQRT.busy;
-    FADD.start := 0; FMUL.start := 0; FDIV.start := 0; FSQRT.start := 0;
+    FADD.start := |start[0,2]; FMUL.start := start[2,1]; FDIV.start := start[3,1]; FSQRT.start := start[4,1];
 
     always {
-        switch( start ) {
-            default: {}
-            case 3: { FADD.addsub = 0; FADD.start = 1; } // FADD
-            case 4: { FADD.addsub = 1; FADD.start = 1; } // FSUB
-            case 5: { FMUL.start = 1; }
-            case 6: { FDIV.start = 1; }
-            case 7: { FSQRT.start = 1; }
-        }
+        if( |start ) { FADD.addsub = start[1,1]; }
     }
 
     ITOF.dounsigned = 0;

@@ -219,6 +219,8 @@ algorithm dither(
     input   uint1   static1bit,
     output! uint1   condition
 ) <autorun> {
+    uint4   checkmode <: dithermode - 1;
+    uint3   revbitmapx <: 3b111 - bitmap_x_write[0,3];
     always {
         // DITHER PATTERNS
         // == 0 SOLID == 1 SMALL CHECKERBOARD == 2 MED CHECKERBOARD == 3 LARGE CHECKERBOARD
@@ -226,30 +228,20 @@ algorithm dither(
         // == 8 RIGHT SLOPE == 9 LEFT TRIANGLE == 10 RIGHT TRIANGLE == 11 X
         // == 12 + == 13 BRICK == 14 COLOUR STATIC == 15 STATIC
         switch( dithermode ) {
-            case 0: { condition = 1; }                                                                          // SOLID
-            default: { condition = ( bitmap_x_write[dithermode - 1,1] == bitmap_y_write[dithermode - 1,1] ); }  // CHECKERBOARDS 1 2 AND 3
-            case 4: { condition = bitmap_x_write[0,1]; }                                                        // VERTICAL STRIPES
-            case 5: { condition = bitmap_y_write[0,1]; }                                                        // HORIZONTAL STRIPES
-            case 6: { condition = ( bitmap_x_write[0,1] | bitmap_y_write[0,1] ); }                              // CROSSHATCH
-            case 7: { condition = ( bitmap_x_write[0,2] == bitmap_y_write[0,2] ); }                             // LEFT SLOPE
-            case 8: { condition = ( bitmap_x_write[0,2] == ~bitmap_y_write[0,2] ); }                            // RIGHT SLOPE
-            case 9: {                                                                                           // LEFT TRIANGLE
-                condition = ( bitmap_x_write[0,3] <= bitmap_y_write[0,3] );
-            }
-            case 10: {                                                                                          // RIGHT TRIANGLE
-                condition = ( ( 3b111 - bitmap_x_write[0,3] ) <= bitmap_y_write[0,3] );
-            }
-            case 11: {                                                                                          // X
-                condition = ( bitmap_x_write[0,3] == bitmap_y_write[0,3] ) | ( ( 3b111 - bitmap_x_write[0,3] ) == bitmap_y_write[0,3] );
-            }
-            case 12: {                                                                                          // +
-                condition = ( bitmap_x_write[1,2] == 2b10 ) | ( bitmap_y_write[1,2] == 2b10 );
-            }
-            case 13: {                                                                                          // BRICK
-                condition = ( ~|bitmap_y_write[0,2] ) ? 1 : ( bitmap_x_write[0,2] == { bitmap_y_write[2,1], 1b0 } );
-            }
-            case 14: { condition = 1; }                                                                         // COLOUR STATIC
-            case 15: { condition = static1bit; }                                                                // STATIC
+            case 0: { condition = 1; }                                                                                          // SOLID
+            default: { condition = ( bitmap_x_write[checkmode,1] ^ bitmap_y_write[checkmode,1] ); }                             // CHECKERBOARDS 1 2 AND 3
+            case 4: { condition = bitmap_x_write[0,1]; }                                                                        // VERTICAL STRIPES
+            case 5: { condition = bitmap_y_write[0,1]; }                                                                        // HORIZONTAL STRIPES
+            case 6: { condition = ( bitmap_x_write[0,1] | bitmap_y_write[0,1] ); }                                              // CROSSHATCH
+            case 7: { condition = ( bitmap_x_write[0,2] == bitmap_y_write[0,2] ); }                                             // LEFT SLOPE
+            case 8: { condition = ( bitmap_x_write[0,2] == ~bitmap_y_write[0,2] ); }                                            // RIGHT SLOPE
+            case 9: { condition = ( bitmap_x_write[0,3] <= bitmap_y_write[0,3] ); }                                             // LEFT TRIANGLE
+            case 10: { condition = ( revbitmapx <= bitmap_y_write[0,3] ); }                                                     // RIGHT TRIANGLE
+            case 11: { condition = ( bitmap_x_write[0,3] == bitmap_y_write[0,3] ) | ( revbitmapx == bitmap_y_write[0,3] ); }    // X
+            case 12: { condition = ( bitmap_x_write[1,2] == 2b10 ) | ( bitmap_y_write[1,2] == 2b10 ); }                         // +
+            case 13: { condition = ( ~|bitmap_y_write[0,2] ) | ( bitmap_x_write[0,2] == { bitmap_y_write[2,1], 1b0 } ); }       // BRICK
+            case 14: {}                                                                                                         // COLOUR STATIC (placeholder, done in main)
+            case 15: { condition = static1bit; }                                                                                // STATIC
         }
     }
 }

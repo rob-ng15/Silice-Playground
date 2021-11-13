@@ -13,7 +13,7 @@ $$ if w_in > 2 then generate_clz(name,w_in//2,1) end
 circuitry $name$_$w_in$ (input in,output out)
 {
 $$ if w_in == 2 then
-   out = ~in[1,1];
+   out = !in[1,1];
 $$ else
    uint$clog2(w_in)-1$ half_count = uninitialized;
    uint$w_h$           lhs        <: in[$w_h$,$w_h$];
@@ -33,10 +33,13 @@ $$generate_clz('clz_silice',32)
 algorithm main(output uint8 leds)
 {
   uint32 test(32b00000001000000011110000001001101);
+  uint2  test2(2b01);
   uint5  cnt = uninitialized;
 
   (cnt)      = clz_silice_32(test);
-  __display("%d",cnt);
+  __display("%b -> %d",test,cnt);
+  (cnt)      = clz_silice_2(test2);
+  __display("%b -> %d",test2,cnt);
 }
 
 algorithm pulse(

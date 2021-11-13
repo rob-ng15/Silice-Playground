@@ -13,17 +13,17 @@ algorithm alushift(
     }
 }
 algorithm aluaddsub(
-    input   uint1   addsub,
+    input   uint1   dosub,
     input   uint32  sourceReg1,
     input   uint32  operand2,
     output  uint32  AS
 ) <autorun,reginputs> {
+    int32   negoperand2 <:: -operand2;
     always {
-        AS = addsub ? ( sourceReg1 - operand2 ) : ( sourceReg1 + operand2 );
+        AS = sourceReg1 + ( dosub ? negoperand2 : operand2 );
     }
 }
 algorithm alulogic(
-    input   uint1   addsub,
     input   uint32  sourceReg1,
     input   uint32  operand2,
     output  uint32  AND,
@@ -48,17 +48,15 @@ algorithm alu(
 
     output  uint32  result
 ) <autorun,reginputs> {
-    uint1   regimm <:: opCode[3,1];
-    uint1   function75 <:: function7[5,1];
-    uint1   addsub <:: regimm & function75;
-    uint5   shiftcount <:: regimm ? sourceReg2[0,5] : rs2;
-    uint32  operand2 <:: regimm ? sourceReg2 : immediateValue;
+    uint1   dosub <:: opCode[3,1] & function7[5,1];
+    uint5   shiftcount <:: opCode[3,1] ? sourceReg2[0,5] : rs2;
+    uint32  operand2 <:: opCode[3,1] ? sourceReg2 : immediateValue;
     uint1   unsignedcompare <:: __unsigned( sourceReg1 ) < __unsigned( operand2 );
 
     uint1   SLT <:: __signed( sourceReg1 ) < __signed(operand2);
-    uint1   SLTU <:: regimm ? ( ~|rs1 ) ? ( |operand2 ) : unsignedcompare : ( operand2 == 1 ) ? ( ~|sourceReg1 ) : unsignedcompare;
+    uint1   SLTU <:: opCode[3,1] ? ( ~|rs1 ) ? ( |operand2 ) : unsignedcompare : ( operand2 == 1 ) ? ( ~|sourceReg1 ) : unsignedcompare;
 
-    aluaddsub ADDSUB( addsub <: addsub, sourceReg1 <: sourceReg1, operand2 <: operand2 );
+    aluaddsub ADDSUB( dosub <: dosub, sourceReg1 <: sourceReg1, operand2 <: operand2 );
     alushift SHIFTS( sourceReg1 <: sourceReg1, shiftcount <: shiftcount );
     alulogic LOGIC( sourceReg1 <: sourceReg1, operand2 <: operand2 );
 
@@ -69,7 +67,7 @@ algorithm alu(
             case 3b010: { result = SLT; }
             case 3b011: { result = SLTU; }
             case 3b100: { result = LOGIC.XOR; }
-            case 3b101: { result = function75 ? SHIFTS.SRA : SHIFTS.SRL; }
+            case 3b101: { result = function7[5,1] ? SHIFTS.SRA : SHIFTS.SRL; }
             case 3b110: { result = LOGIC.OR; }
             case 3b111: { result = LOGIC.AND; }
         }
@@ -119,7 +117,7 @@ algorithm aluMD(
     input   uint32  absRS2,
     output  uint32  result
 ) <autorun,reginputs> {
-    uint1   quotientremaindersign <:: function3[0,1] ? 0 : sourceReg1[31,1] ^ sourceReg2[31,1];
+    uint1   quotientremaindersign <:: ~function3[0,1] & ( sourceReg1[31,1] ^ sourceReg2[31,1] );
     uint32  result_quotient = uninitialised;
     uint32  result_remainder = uninitialised;
     uint32  sourceReg1_unsigned <:: function3[0,1] ? sourceReg1 : absRS1;

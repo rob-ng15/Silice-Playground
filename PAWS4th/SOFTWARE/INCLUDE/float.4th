@@ -7,14 +7,14 @@ hex
 : fpu@ swap fpu! fpu? @ ;
 : s>f fpu1! d110 @ ;
 : f>s fpu1! d111 @ ;
-: f+ fpu2! 3 d112 fpu@ ;
-: f- fpu2! 4 d113 fpu@ ;
-: f* fpu2! 5 d114 fpu@ ;
-: f/ fpu2! 6 d115 fpu@ ;
-: fsqrt fpu1! 7 d116 fpu@ ;
-: f< fpu2! d117 @ ;
-: f= fpu2! d118 @ ;
-: f<= fpu2! d119 @ ;
+: f+ fpu2! 1 d112 fpu@ ;
+: f- fpu2! 2 d113 fpu@ ;
+: f* fpu2! 4 d114 fpu@ ;
+: f/ fpu2! 8 d115 fpu@ ;
+: fsqrt fpu1! 10 d116 fpu@ ;
+: f< fpu2! d117 @ negate ;
+: f= fpu2! d118 @ negate ;
+: f<= fpu2! d119 @ negate ;
 : f.# base @ swap decimal
    bl emit
    dup a s>f f* f>s a /

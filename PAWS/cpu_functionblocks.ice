@@ -11,9 +11,9 @@ algorithm decode(
     output  int32   immediateValue,
     output  uint1   memoryload,
     output  uint1   memorystore,
-    output  uint2   accesssize
+    output  uint2   accesssize,
+    output  uint1   AMO
 ) <autorun,reginputs> {
-    uint1   AMO <:: ( opCode == 5b01011 );
     uint1   AMOLR <:: ( function7[2,5] == 5b00010 );
     uint1   AMOSC <:: ( function7[2,5] == 5b00011 );
     uint1   ILOAD <:: opCode == 5b00000;
@@ -23,6 +23,7 @@ algorithm decode(
 
     always {
         opCode = instruction[2,5];
+        AMO = ( opCode == 5b01011 );
         function3 = Rtype(instruction).function3;
         function7 = Rtype(instruction).function7;
         rs1 = Rtype(instruction).sourceReg1;
@@ -122,17 +123,16 @@ algorithm addrplus2(
 // RISC-V ADDRESS GENERATOR
 algorithm addressgenerator(
     input   uint32  instruction,
+    input   int32   immediateValue,
     input   uint27  PC,
     input   int32   sourceReg1,
     output  uint32  AUIPCLUI,
     output  uint27  branchAddress,
     output  uint27  jumpAddress,
     output  uint27  loadAddress,
-    output  uint27  storeAddress
+    output  uint27  storeAddress,
+    input   uint1   AMO
 ) <autorun,reginputs> {
-    int32   immediateValue <:: { {20{instruction[31,1]}}, Itype(instruction).immediate };
-    uint1   AMO <:: ( instruction[2,5] == 5b01011 );
-
     always {
         AUIPCLUI = { Utype(instruction).immediate_bits_31_12, 12b0 } + ( instruction[5,1] ? 0 : PC );
         branchAddress = { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } + PC;
@@ -303,13 +303,15 @@ algorithm compressed01(
                     }
                     case 2b11: {
                         // CBalu(i16).logical2 -> SUB XOR OR AND
-                        switch( CBalu(i16).logical2 ) {
-                            case 2b00: { opbits = 3b000; } // 2b00 -> SUB -> sub rd', rd', rs2' { 100 0 11 rs1'/rd' 00 rs2' 01 } -> { 0100000 rs2 rs1 000 rd 0110011 }
-                            case 2b01: { opbits = 3b100; } // 2b01 -> XOR -> xor rd', rd', rs2' { 100 0 11 rs1'/rd' 01 rs2' 01 } -> { 0000000 rs2 rs1 100 rd 0110011 }
-                            case 2b10: { opbits = 3b110; } // 2b10 -> OR  -> or  rd', rd', rd2' { 100 0 11 rs1'/rd' 10 rs2' 01 } -> { 0000000 rs2 rs1 110 rd 0110011 }
-                            case 2b11: { opbits = 3b111; } // 2b11 -> AND -> and rd', rd', rs2' { 100 0 11 rs1'/rd' 11 rs2' 01 } -> { 0000000 rs2 rs1 111 rd 0110011 }
+                        // 2b00 -> SUB -> sub rd', rd', rs2' { 100 0 11 rs1'/rd' 00 rs2' 01 } -> { 0100000 rs2 rs1 000 rd 0110011 }
+                        // 2b01 -> XOR -> xor rd', rd', rs2' { 100 0 11 rs1'/rd' 01 rs2' 01 } -> { 0000000 rs2 rs1 100 rd 0110011 }
+                        // 2b10 -> OR  -> or  rd', rd', rd2' { 100 0 11 rs1'/rd' 10 rs2' 01 } -> { 0000000 rs2 rs1 110 rd 0110011 }
+                        // 2b11 -> AND -> and rd', rd', rs2' { 100 0 11 rs1'/rd' 11 rs2' 01 } -> { 0000000 rs2 rs1 111 rd 0110011 }
+                        switch( ^CBalu(i16).logical2 ) {
+                            case 0: { opbits = {3{CBalu(i16).logical2[0,1]}}; }
+                            case 1: { opbits = { 1b1, CBalu(i16).logical2[1,1], 1b0 }; }
                         }
-                        i32 = { { 1b0, CBalu(i16).logical2 == 2b00 ? 1b1 : 1b0, 5b00000 }, { 2b01, CBalu(i16).rs2_alt }, { 2b01, CBalu(i16).rd_alt }, opbits, { 2b01, CBalu(i16).rd_alt }, 5b01100 };
+                        i32 = { { 1b0, ~|CBalu(i16).logical2, 5b00000 }, { 2b01, CBalu(i16).rs2_alt }, { 2b01, CBalu(i16).rd_alt }, opbits, { 2b01, CBalu(i16).rd_alt }, 5b01100 };
                     }
                 }
             }
@@ -320,8 +322,7 @@ algorithm compressed01(
             default: {
                 // 3b110 -> BEQZ -> beq rs1', x0, offset[8:1] { 110, imm[8|4:3] rs1' imm[7:6|2:1|5] 01 } -> { imm[12|10:5] rs2 rs1 000 imm[4:1|11] 1100011 }
                 // 3b111 -> BNEZ -> bne rs1', x0, offset[8:1] { 111, imm[8|4:3] rs1' imm[7:6|2:1|5] 01 } -> { imm[12|10:5] rs2 rs1 001 imm[4:1|11] 1100011 }
-                opbits = { 2b00, i16[13,1] };
-                i32 = { {4{CB(i16).offset_8}}, CB(i16).offset_7_6, CB(i16).offset_5, 5h0, {2b01,CB(i16).rs1_alt}, opbits, CB(i16).offset_4_3, CB(i16).offset_2_1, CB(i16).offset_8, 5b11000 };
+                i32 = { {4{CB(i16).offset_8}}, CB(i16).offset_7_6, CB(i16).offset_5, 5h0, {2b01,CB(i16).rs1_alt}, { 2b00, i16[13,1] }, CB(i16).offset_4_3, CB(i16).offset_2_1, CB(i16).offset_8, 5b11000 };
             }
         }
     }
@@ -347,7 +348,7 @@ algorithm compressed10(
                     default: {
                         // MV  -> add rd, x0, rs2 { 100 0 rd!=0 rs2!=0 10 }     -> { 0000000 rs2 rs1 000 rd 0110011 }
                         // ADD -> add rd, rd, rs2 { 100 1 rs1/rd!=0 rs2!=0 10 } -> { 0000000 rs2 rs1 000 rd 0110011 }
-                        i32 = { 7b0000000, CR(i16).rs2, i16[12,1] ? CR(i16).rs1: 5h0, 3b000, CR(i16).rs1, 5b01100 };
+                        i32 = { 7b0000000, CR(i16).rs2, i16[12,1] ? CR(i16).rs1 : 5h0, 3b000, CR(i16).rs1, 5b01100 };
                     }
                 }
             }
@@ -359,7 +360,7 @@ algorithm compressed10(
                 } else {
                     // LWSP -> lw rd, offset[7:2](x2) { 011 uimm[5] rd uimm[4:2|7:6] 10 } -> { imm[11:0] rs1 010 rd 0000011 }
                     // FLWSP -> flw rd, offset[7:2](x2) { 011 uimm[5] rd uimm[4:2|7:6] 10 } -> { imm[11:0] rs1 010 rd 0000111 }
-                    i32 = { 4b0, CI(i16).ib_7_6, CI(i16).ib_5, CI(i16).ib_4_2, 2b0, 5h2 ,3b010, CI(i16).rd,  { 4b0000, i16[13,1] } };
+                    i32 = { 4b0, CI(i16).ib_7_6, CI(i16).ib_5, CI(i16).ib_4_2, 2b0, 5h2 ,3b010, CI(i16).rd, { 4b0000, i16[13,1] } };
                 }
             }
         }
@@ -382,6 +383,51 @@ algorithm counter40always(
         counter = counter + 1;
     }
 }
+algorithm csrf(
+    output  uint8   CSRf(0),
+    input   uint2   csr,
+    input   uint8   writevalue,
+    input   uint2   writetype,
+    input   uint1   update,
+    input   uint5   newflags
+) <autorun,reginputs> {
+    always {
+        if( update ) {
+            CSRf = newflags;
+        } else {
+            switch( csr ) {
+                case 1: {
+                    // CSRRW / CSRRWI
+                    switch( writetype ) {
+                        case 1: { CSRf[0,5] = writevalue[0,5]; }
+                        case 2: { CSRf[5,3] = writevalue[0,3]; }
+                        case 3: { CSRf = writevalue[0,8]; }
+                        default: {}
+                    }
+                }
+                case 2: {
+                    // CSRRS / CSRRSI
+                    switch( writetype ) {
+                        case 1: { CSRf[0,5] = CSRf[0,5] | writevalue[0,5]; }
+                        case 2: { CSRf[5,3] = CSRf[5,3] | writevalue[0,3]; }
+                        case 3: { CSRf = CSRf | writevalue[0,8]; }
+                        default: {}
+                    }
+                }
+                case 3: {
+                    // CSRRC / CSRRCI
+                    switch( writetype ) {
+                        case 1: { CSRf[0,5] = CSRf[0,5] & ~writevalue[0,5]; }
+                        case 2: { CSRf[5,3] = CSRf[5,3] & ~writevalue[0,3]; }
+                        case 3: { CSRf = CSRf & ~writevalue[0,8]; }
+                        default: {}
+                    }
+                }
+                default: {}
+            }
+        }
+    }
+}
 algorithm CSRblock(
     input   uint1   start,
     input   uint1   SMT,
@@ -396,95 +442,80 @@ algorithm CSRblock(
     output  uint32  result
 ) <autorun,reginputs> {
     // MAIN SYSTEM TIMER
-    uint48  CSRtimer = uninitialized;                                                               counter40always TIMER( counter :> CSRtimer );
+    counter40always TIMER();
 
     // CPU HART CYCLE TIMERS
-    uint48  CSRcycletimer = uninitialized;      uint1   UPDATEcycletimer <:: ~SMT;                  counter40 CYCLE( update <: UPDATEcycletimer, counter :> CSRcycletimer );
-    uint48  CSRcycletimerSMT = uninitialized;   uint1   UPDATEcycletimerSMT <:: SMT;                counter40 CYCLESMT( update <: UPDATEcycletimerSMT, counter :> CSRcycletimerSMT);
+    uint1   UPDATEcycletimer <:: ~SMT;                  counter40 CYCLE( update <: UPDATEcycletimer );
+    uint1   UPDATEcycletimerSMT <:: SMT;                counter40 CYCLESMT( update <: UPDATEcycletimerSMT );
 
     // CPU HART INSTRUCTION RETIRED COUNTERS
-    uint48  CSRinstret = uninitialized;         uint1   UPDATEinstret <:: incCSRinstret & ~SMT;     counter40 INSTRET( update <: UPDATEinstret, counter :> CSRinstret );
-    uint48  CSRinstretSMT = uninitialized;      uint1   UPDATEinstretSMT <:: incCSRinstret & SMT;   counter40 INSTRETSMT( update <: UPDATEinstretSMT, counter :> CSRinstretSMT );
-
-    // FLOATING-POINT CSR FOR BOTH THREADS
-    uint8   CSRf[2] = { 0, 0 };
+    uint1   UPDATEinstret <:: incCSRinstret & ~SMT;     counter40 INSTRET( update <: UPDATEinstret );
+    uint1   UPDATEinstretSMT <:: incCSRinstret & SMT;   counter40 INSTRETSMT( update <: UPDATEinstretSMT);
 
     // SWITCH BETWEEN IMMEDIATE OR REGISTER VALUE TO WRITE TO CSR
     uint32  writevalue <:: function3[2,1] ? rs1 : sourceReg1;
 
+    // FLOATING-POINT CSR FOR BOTH THREADS
+    uint2   csrregister <:: CSR(instruction).csr[0,2];
+    csrf CSRF0( csr <: csrregister, writevalue <: writevalue );                                                     // MAIN CSRf
+    csrf CSRF1( csr <: csrregister, writevalue <: writevalue );                                                     // SMT CSRf
+    CSRF0.writetype := 0; CSRF1.writetype := 0;
+    CSRF0.update := updateFPUflags & ~SMT;  CSRF1.update := updateFPUflags & SMT;
+
     // PASS PRESENT FPU FLAGS TO THE FPU
-    FPUflags ::= CSRf[SMT][0,5];
+    FPUflags ::= SMT ? CSRF1.CSRf[0,5] : CSRF0.CSRf[0,5];
 
     always {
-        if( updateFPUflags ) {
-            CSRf[SMT][0,5] = FPUnewflags;
-        } else {
-            if( start ) {
-                result = 0;
-                switch( CSR(instruction).csr[8,4] ) {
-                    case 4h0: {
-                        switch( CSR(instruction).csr[0,2] ) {
-                            case 2h1: { result = CSRf[SMT][0,5]; }   // frflags
-                            case 2h2: { result = CSRf[SMT][5,3]; }   // frrm
-                            case 2h3: { result = CSRf[SMT]; }        // frcsr
-                            default: {}
+        if( start ) {
+            result = 0;
+            switch( CSR(instruction).csr[8,4] ) {
+                case 4h0: {
+                    switch( CSR(instruction).csr[0,2] ) {
+                        case 2h1: { result = SMT ? CSRF1.CSRf[0,5] : CSRF0.CSRf[0,5];  }                        // frflags
+                        case 2h2: { result = SMT ? CSRF1.CSRf[5,3] : CSRF0.CSRf[5,3]; }                         // frrm
+                        case 2h3: { result = SMT ? CSRF1.CSRf : CSRF0.CSRf; }                                   // frcsr
+                        default: {}
+                    }
+                }
+                case 4h3: { result = $CPUISA$; }
+                case 4hc: {
+                    switch( { CSR(instruction).csr[7,1], CSR(instruction).csr[0,2] } ) {
+                        case 5h00: { result = SMT ? CYCLESMT.counter[0,32] : CYCLE.counter[0,32]; }
+                        case 5h10: { result = SMT ? CYCLESMT.counter[32,8] : CYCLE.counter[32,8]; }
+                        case 5h01: { result = TIMER.counter[0,32]; }
+                        case 5h11: { result = TIMER.counter[32,8]; }
+                        case 5h02: { result = SMT ? INSTRETSMT.counter[0,32] : INSTRET.counter[0,32]; }
+                        case 5h12: { result = SMT ? INSTRETSMT.counter[32,8] : INSTRET.counter[32,8]; }
+                        default: {}
+                    }
+                    }
+                case 4hf: { result = SMT; }                                                                     // HART ID
+                default: { result = 0; }
+            }
+            if( ~|CSR(instruction).csr[4,8] ) {
+                switch( function3[0,2] ) {
+                    case 2b00: {
+                        // ECALL / EBBREAK
+                    }
+                    case 2b01: {
+                        // CSRRW / CSRRWI
+                        switch( { ~|rs1, function3[2,1] } ) {
+                            case 2b10: {}
+                            default: {
+                                if( SMT ) { CSRF1.writetype = 1; } else { CSRF0.writetype = 1; }
+                            }
                         }
                     }
-                    case 4h3: { result = $CPUISA$; }
-                    case 4hc: {
-                        switch( { CSR(instruction).csr[7,1], CSR(instruction).csr[0,2] } ) {
-                            case 5h00: { result = SMT ? CSRcycletimerSMT[0,32] : CSRcycletimer[0,32]; }
-                            case 5h10: { result = SMT ? CSRcycletimerSMT[32,8] : CSRcycletimer[32,8]; }
-                            case 5h01: { result = CSRtimer[0,32]; }
-                            case 5h11: { result = CSRtimer[32,8]; }
-                            case 5h02: { result = SMT ? CSRinstretSMT[0,32] : CSRinstret[0,32]; }
-                            case 5h12: { result = SMT ? CSRinstretSMT[32,8] : CSRinstret[32,8]; }
-                            default: {}
+                    case 2b10: {
+                        // CSRRS / CSRRSI
+                        if( |rs1 ) {
+                            if( SMT ) { CSRF1.writetype = 2; } else { CSRF0.writetype = 2; }
                         }
-                     }
-                    case 4hf: { result = SMT; }                     // HART ID
-                    default: { result = 0; }
-                }
-                if( ~|CSR(instruction).csr[4,8] ) {
-                    switch( function3[0,2] ) {
-                        case 2b00: {
-                            // ECALL / EBBREAK
-                        }
-                        case 2b01: {
-                            // CSRRW / CSRRWI
-                            switch( { ~|rs1, function3[2,1] } ) {
-                                case 2b10: {}
-                                default: {
-                                    switch( CSR(instruction).csr[0,4] ) {
-                                        case 4h1: { CSRf[SMT][0,5] = writevalue[0,5]; }
-                                        case 4h2: { CSRf[SMT][5,3] = writevalue[0,3]; }
-                                        case 4h3: { CSRf[SMT] = writevalue[0,8]; }
-                                        default: {}
-                                    }
-                                }
-                            }
-                        }
-                        case 2b10: {
-                            // CSRRS / CSRRSI
-                            if( |rs1 ) {
-                                switch( CSR(instruction).csr[0,4] ) {
-                                    case 4h1: { CSRf[SMT][0,5] = CSRf[SMT][0,5] | writevalue[0,5]; }
-                                    case 4h2: { CSRf[SMT][5,3] = CSRf[SMT][5,3] | writevalue[0,3]; }
-                                    case 4h3: { CSRf[SMT] = CSRf[SMT] | writevalue[0,8]; }
-                                    default: {}
-                                }
-                            }
-                        }
-                        case 2b11: {
-                            // CSRRC / CSRRCI
-                            if( |rs1 ) {
-                                switch( CSR(instruction).csr[0,4] ) {
-                                    case 4h1: { CSRf[SMT][0,5] = CSRf[SMT][0,5] & ~writevalue[0,5]; }
-                                    case 4h2: { CSRf[SMT][5,3] = CSRf[SMT][5,3] & ~writevalue[0,3]; }
-                                    case 4h3: { CSRf[SMT] = CSRf[SMT] & ~writevalue[0,8]; }
-                                    default: {}
-                                }
-                            }
+                    }
+                    case 2b11: {
+                        // CSRRC / CSRRCI
+                        if( |rs1 ) {
+                            if( SMT ) { CSRF1.writetype = 3; } else { CSRF0.writetype = 3; }
                         }
                     }
                 }
@@ -504,6 +535,7 @@ algorithm aluA (
     uint1   signedcompare <:: ( __signed(memoryinput) < __signed(sourceReg2) );
     uint1   comparison <:: function7[3,1] ? unsignedcompare : signedcompare;
     uint32  add <:: memoryinput + sourceReg2;
+    alulogic LOGIC( sourceReg1 <: memoryinput, operand2 <: sourceReg2 );
 
     always {
         if( function7[4,1] ) {
@@ -512,9 +544,9 @@ algorithm aluA (
             switch( function7[0,4] ) {
                 default: { result = add; }                                          // AMOADD
                 case 4b0001: { result = sourceReg2; }                               // AMOSWAP
-                case 4b0100: { result = memoryinput ^ sourceReg2; }                 // AMOXOR
-                case 4b1000: { result = memoryinput | sourceReg2; }                 // AMOOR
-                case 4b1100: { result = memoryinput & sourceReg2; }                 // AMOAND.
+                case 4b0100: { result = LOGIC.XOR; }                                // AMOXOR
+                case 4b1000: { result = LOGIC.OR; }                                 // AMOOR
+                case 4b1100: { result = LOGIC.AND; }                                // AMOAND
             }
         }
     }

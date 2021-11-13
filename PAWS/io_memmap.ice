@@ -150,6 +150,8 @@ algorithm timers_memmap(
 ) <autorun,reginputs> {
     // TIMERS and RNG
     timers_rng timers <@clock_25mhz> ( g_noise_out :> static16bit );
+    uint3   timerreset <:: memoryAddress[1,3] + 1;
+    uint32  floatrng <:: { 1b0, 5b01111, &timers.u_noise_out[0,3] ? 3b110 : timers.u_noise_out[0,3], timers.g_noise_out[0,16], timers.u_noise_out[3,7] };
 
     // LATCH MEMORYWRITE
     uint1   LATCHmemoryWrite = uninitialized;
@@ -161,8 +163,8 @@ algorithm timers_memmap(
                 // RNG ( 2 interger, 1 float 0 <= fng < 1 ) and TIMERS
                 case 4h0: { readData = timers.g_noise_out; }
                 case 4h1: { readData = timers.u_noise_out; }
-                case 4h2: { readData = { timers.g_noise_out[7,9], timers.u_noise_out[3,7] }; }
-                case 4h3: { readData = { 1b0, 5b01111, &timers.u_noise_out[0,3] ? 3b110 : timers.u_noise_out[0,3], timers.g_noise_out[0,7] }; }
+                case 4h2: { readData = floatrng[0,16]; }
+                case 4h3: { readData = floatrng[16,16]; }
                 case 4h8: { readData = timers.timer1hz0; }
                 case 4h9: { readData = timers.timer1hz1; }
                 case 4ha: { readData = timers.timer1khz0; }
@@ -176,7 +178,7 @@ algorithm timers_memmap(
         }
         // WRITE IO Memory
         switch( { memoryWrite, LATCHmemoryWrite } ) {
-            case 2b10: { timers.counter = writeData; timers.resetcounter = memoryAddress[1,3] + 1; }
+            case 2b10: { timers.counter = writeData; timers.resetcounter = timerreset; }
             case 2b00: { timers.resetcounter = 0; }
             default: {}
         }
@@ -365,10 +367,8 @@ algorithm uart(
 
     uart_out uo; uart_sender usend( io <:> uo, uart_tx :> uart_tx );
     uint8   uodata_in = uninitialized;
-    uint1   OUTavailable = uninitialized;
-    uint1   OUTread <: OUTavailable & !uo.busy;
+    uint1   OUTread <: OUT.available & !uo.busy;
     fifo8 OUT(
-        available :> OUTavailable,
         full :> outfull,
         last <: outchar,
         write <: outwrite,
@@ -376,25 +376,23 @@ algorithm uart(
         read <: OUTread
     );
     uo.data_in := uodata_in;
-    uo.data_in_ready := OUTavailable & ( !uo.busy );
+    uo.data_in_ready := OUT.available & ( !uo.busy );
 }
 
 // PS2 BUFFER CONTROLLER
 // 9 bit 256 entry FIFO buffer
 algorithm fifo9(
     output  uint1   available,
-    output  uint1   full,
     input   uint1   read,
     input   uint1   write,
     output  uint9   first,
     input   uint9   last
 ) <autorun,reginputs> {
     simple_dualport_bram uint9 queue[256] = uninitialized;
-    uint1   update = uninitialized;
     uint8   top = 0;
     uint8   next = 0;
 
-    available := ( top != next ); full := ( top + 1 == next );
+    available := ( top != next );
     queue.addr0 := next; first := queue.rdata0;
     queue.wenable1 := 1;
 

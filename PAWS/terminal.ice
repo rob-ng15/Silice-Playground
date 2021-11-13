@@ -40,7 +40,7 @@ algorithm terminal(
 
     // Default to transparent and active pixels always blue
     terminal_display := pix_active & showterminal & ( pix_y > 415 );
-    pixel := ( terminalpixel ) ? ~is_cursor : is_cursor;
+    pixel := terminalpixel ^ is_cursor;
 }
 
 algorithm terminal_writer(

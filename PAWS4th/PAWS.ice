@@ -242,48 +242,44 @@ $$end
 
     uint16  address = uninitialized;
     uint16  writedata = uninitialized;
-    uint1   CPUwritememory = uninitialized;
-    uint1   CPUreadmemory = uninitialized;
     J1CPU CPU <@clock_system,!reset> (
         clock100 <: clock_100_1,
         address :> address,
         writedata :> writedata,
         memorybusy <: memorybusy,
-        readdata <: readdata,
-        writememory :> CPUwritememory,
-        readmemory :> CPUreadmemory
+        readdata <: readdata
     );
 
     // IDENTIDY ADDRESS BLOCK
-    uint1   BRAM <: address[12,4] < 4hc;
-    uint1   VIDEO <: address[12,4] == 4hc;
-    uint1   COPRO <: address[12,4] == 4hd;
-    uint1   AUDIOTIMERS <: address[12,4] == 4he;
-    uint1   IO <: address[12,4] == 4hf ;
+    uint1   BRAM <: ~&address[14,2];
+    uint1   VIDEO <: ~BRAM & ( ~|address[12,2] );
+    uint1   COPRO <: ~BRAM & ( address[12,2] == 2b01 );
+    uint1   AUDIOTIMERS <: ~BRAM & ( address[12,2] == 2b10 );
+    uint1   IO <: ~BRAM & ( &address[12,2] );
 
     // CPU BUSY STATE
-    uint1   memorybusy := CPUreadmemory & BRAM;
+    uint1   memorybusy <:: CPU.readmemory & BRAM;
 
-    uint16  readdata := BRAM ? ramreaddata :
+    uint16  readdata <: BRAM ? ramreaddata :
                     VIDEO ? VreadData :
                     COPRO ? COreadData :
                     AUDIOTIMERS ? ATreadData :
                     IO ? IOreadData : 0;
 
     // READ / WRITE FROM SDRAM / BRAM
-    uint1   ramwriteflag <:: BRAM & CPUwritememory;
-    uint1   ramreadflag := BRAM & CPUreadmemory;
+    uint1   ramwriteflag <:: BRAM & CPU.writememory;
+    uint1   ramreadflag <: BRAM & CPU.readmemory;
 
 
     // READ / WRITE FROM I/O
-    uint1   VmemoryWrite <:: VIDEO & CPUwritememory;
-    uint1   VmemoryRead := VIDEO & CPUreadmemory;
-    uint1   COmemoryWrite <:: COPRO & CPUwritememory;
-    uint1   COmemoryRead := COPRO & CPUreadmemory;
-    uint1   ATmemoryWrite <:: AUDIOTIMERS & CPUwritememory;
-    uint1   ATmemoryRead := AUDIOTIMERS & CPUreadmemory;
-    uint1   IOmemoryWrite <:: IO & CPUwritememory;
-    uint1   IOmemoryRead := IO & CPUreadmemory;
+    uint1   VmemoryWrite <:: VIDEO & CPU.writememory;
+    uint1   VmemoryRead <: VIDEO & CPU.readmemory;
+    uint1   COmemoryWrite <:: COPRO & CPU.writememory;
+    uint1   COmemoryRead <: COPRO & CPU.readmemory;
+    uint1   ATmemoryWrite <:: AUDIOTIMERS & CPU.writememory;
+    uint1   ATmemoryRead <: AUDIOTIMERS & CPU.readmemory;
+    uint1   IOmemoryWrite <:: IO & CPU.writememory;
+    uint1   IOmemoryRead <: IO & CPU.readmemory;
 }
 
 // RAM - BRAM controller

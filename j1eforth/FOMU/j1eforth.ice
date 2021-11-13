@@ -165,7 +165,7 @@ algorithm main(
     // STACK WRITE CONTROLLERS
     DSTACK.stackWrite := 0; RSTACK.stackWrite := 0;
 
-    sram_data_write := ( ~|INIT ) ? 0 : ( INIT == 1 ) ? rom.rdata : stackNext;
+    sram_data_write := ( ~|INIT ) ? 0 : ( ^INIT ) ? rom.rdata : stackNext;
     sram_readwrite := 0;
 
     // UART
@@ -252,17 +252,17 @@ algorithm main(
                 newRSP = DELTARSP.newSP;
 
                 // Update PC for next instruction, return from call or next instruction
-                newPC = ( aluop(instruction).is_r2pc ) ? {1b0, rStackTop[1,15] } : pcPlusOne;
+                newPC = ( aluop(instruction).is_r2pc ) ? { 1b0, rStackTop[1,15] } : pcPlusOne;
 
                 // n2memt mem[t] = n
                 if( is_n2memt ) {
                     if( stackTop[15,1] ) {
-                        switch( stackTop[0,3] ) {
-                            case 3h0: {
+                        switch( stackTop[1,1] ) {
+                            case 0: {
                                 // OUTPUT to UART (dualport blockram code from @sylefeb)
                                 UART.write = 1;
                             }
-                            case 3h2: {
+                            case 1: {
                                 // OUTPUT to rgbLED
                                 rgbLED = stackNext;
                             }
@@ -367,7 +367,7 @@ algorithm alu(
                 case 4b0000: { newStackTop = stackTop; }
                 case 4b0001: { newStackTop = stackNext; }
                 case 4b0010: { newStackTop = ADD.c; }
-               case 4b0011: { newStackTop = LOGIC.AND; }
+                case 4b0011: { newStackTop = LOGIC.AND; }
                 case 4b0100: { newStackTop = LOGIC.OR; }
                 case 4b0101: { newStackTop = LOGIC.XOR; }
                 case 4b0110: { newStackTop = ~stackTop; }
