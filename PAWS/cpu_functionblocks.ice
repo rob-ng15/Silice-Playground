@@ -220,15 +220,8 @@ algorithm branchcomparison(
     uint1   isequal <:: sourceReg1 == sourceReg2;
     uint1   unsignedcompare <:: __unsigned(sourceReg1) < __unsigned(sourceReg2);
     uint1   signedcompare <:: __signed(sourceReg1) < __signed(sourceReg2);
-    takeBranch := 0;
-    always {
-        switch( function3[1,2] ) {
-            case 2b00: { takeBranch = function3[0,1] ^ isequal; }
-            case 2b10: { takeBranch = function3[0,1] ^ signedcompare; }
-            case 2b11: { takeBranch = function3[0,1] ^ unsignedcompare; }
-            default: {}
-        }
-    }
+    uint4   flags <:: { unsignedcompare, signedcompare, 1b0, isequal };
+    takeBranch := function3[0,1] ^ flags[ function3[1,2], 1 ];
 }
 
 // COMPRESSED INSTRUCTION EXPANSION
