@@ -237,22 +237,19 @@ algorithm compressed00(
     output  uint30  i32
 ) <autorun,reginputs> {
     always {
-        switch( i16[13,3] ) {
-            case 3b000: {
-                // ADDI4SPN -> addi rd', x2, nzuimm[9:2] { 000, nzuimm[5:4|9:6|2|3] rd' 00 } -> { imm[11:0] rs1 000 rd 0010011 }
-                i32 = { 2b0, CIu94(i16).ib_9_6, CIu94(i16).ib_5_4, CIu94(i16).ib_3, CIu94(i16).ib_2, 2b00, 5h2, 3b000, {2b01,CIu94(i16).rd_alt}, 5b00100 };
+        if( |i16[13,3] ) {
+            if( i16[15,1] ) {
+                // SW -> sw rs2', offset[6:2](rs1') { 110 uimm[5:3] rs1' uimm[2][6] rs2' 00 } -> { imm[11:5] rs2 rs1 010 imm[4:0] 0100011 }
+                // FSW -> fsw rs2', offset[6:2](rs1') { 110 uimm[5:3] rs1' uimm[2][6] rs2' 00 } -> { imm[11:5] rs2 rs1 010 imm[4:0] 0100111 }
+                i32 = { 5b0, CS(i16).ib_6, CS(i16).ib_5, {2b01,CS(i16).rs2_alt}, {2b01,CS(i16).rs1_alt}, 3b010, CS(i16).ib_4_3, CS(i16).ib_2, 2b0, { 4b0100, i16[13,1] } };
+            } else {
+                // LW -> lw rd', offset[6:2](rs1') { 010 uimm[5:3] rs1' uimm[2][6] rd' 00 } -> { imm[11:0] rs1 010 rd 0000011 }
+                // FLW -> flw rd', offset[6:2](rs1') { 010 uimm[5:3] rs1' uimm[2][6] rd' 00 } -> { imm[11:0] rs1 010 rd 0000111 }
+                i32 = { 5b0, CL(i16).ib_6, CL(i16).ib_5_3, CL(i16).ib_2, 2b00, {2b01,CL(i16).rs1_alt}, 3b010, {2b01,CL(i16).rd_alt}, { 4b0000, i16[13,1] } };
             }
-            default: {
-                if( i16[15,1] ) {
-                    // SW -> sw rs2', offset[6:2](rs1') { 110 uimm[5:3] rs1' uimm[2][6] rs2' 00 } -> { imm[11:5] rs2 rs1 010 imm[4:0] 0100011 }
-                    // FSW -> fsw rs2', offset[6:2](rs1') { 110 uimm[5:3] rs1' uimm[2][6] rs2' 00 } -> { imm[11:5] rs2 rs1 010 imm[4:0] 0100111 }
-                    i32 = { 5b0, CS(i16).ib_6, CS(i16).ib_5, {2b01,CS(i16).rs2_alt}, {2b01,CS(i16).rs1_alt}, 3b010, CS(i16).ib_4_3, CS(i16).ib_2, 2b0, { 4b0100, i16[13,1] } };
-                } else {
-                    // LW -> lw rd', offset[6:2](rs1') { 010 uimm[5:3] rs1' uimm[2][6] rd' 00 } -> { imm[11:0] rs1 010 rd 0000011 }
-                    // FLW -> flw rd', offset[6:2](rs1') { 010 uimm[5:3] rs1' uimm[2][6] rd' 00 } -> { imm[11:0] rs1 010 rd 0000111 }
-                    i32 = { 5b0, CL(i16).ib_6, CL(i16).ib_5_3, CL(i16).ib_2, 2b00, {2b01,CL(i16).rs1_alt}, 3b010, {2b01,CL(i16).rd_alt}, { 4b0000, i16[13,1] } };
-                }
-            }
+        } else {
+            // ADDI4SPN -> addi rd', x2, nzuimm[9:2] { 000, nzuimm[5:4|9:6|2|3] rd' 00 } -> { imm[11:0] rs1 000 rd 0010011 }
+            i32 = { 2b0, CIu94(i16).ib_9_6, CIu94(i16).ib_5_4, CIu94(i16).ib_3, CIu94(i16).ib_2, 2b00, 5h2, 3b000, {2b01,CIu94(i16).rd_alt}, 5b00100 };
         }
     }
 }
@@ -277,42 +274,38 @@ algorithm compressed01(
                 i32 = { {7{CI50(i16).ib_5}}, CI50(i16).ib_4_0, 5h0, 3b000, CI(i16).rd, 5b00100 };
             }
             case 3b011: {
-                switch( CI(i16).rd ) {
-                    case 2: {
-                        // ADDI16SP -> addi x2, x2, nzimm[9:4] { 011 nzimm[9] 00010 nzimm[4|6|8:7|5] 01 } -> { imm[11:0] rs1 000 rd 0010011 }
-                        i32 = { {3{CI94(i16).ib_9}}, CI94(i16).ib_8_7, CI94(i16).ib_6, CI94(i16).ib_5, CI94(i16).ib_4, 4b0000, 5h2, 3b000, 5h2, 5b00100 };
-                    }
-                    default: {
-                        // LUI -> lui rd, nzuimm[17:12] { 011 nzimm[17] rd!={0,2} nzimm[16:12] 01 } -> { imm[31:12] rd 0110111 }
-                        i32 = { {15{CIlui(i16).ib_17}}, CIlui(i16).ib_16_12, CIlui(i16).rd, 5b01101 };
-                    }
+                if( CI(i16).rd == 2 ) {
+                    // ADDI16SP -> addi x2, x2, nzimm[9:4] { 011 nzimm[9] 00010 nzimm[4|6|8:7|5] 01 } -> { imm[11:0] rs1 000 rd 0010011 }
+                    i32 = { {3{CI94(i16).ib_9}}, CI94(i16).ib_8_7, CI94(i16).ib_6, CI94(i16).ib_5, CI94(i16).ib_4, 4b0000, 5h2, 3b000, 5h2, 5b00100 };
+                } else {
+                    // LUI -> lui rd, nzuimm[17:12] { 011 nzimm[17] rd!={0,2} nzimm[16:12] 01 } -> { imm[31:12] rd 0110111 }
+                    i32 = { {15{CIlui(i16).ib_17}}, CIlui(i16).ib_16_12, CIlui(i16).rd, 5b01101 };
                 }
             }
             case 3b100: {
                 // MISC-ALU
-                switch( CBalu(i16).function2 ) {
-                    default: {
-                        // i16[10,1] -> SRLI SRAI
-                        // 1b0 -> SRLI -> srli rd', rd', shamt[5:0] { 100 nzuimm[5] 00 rs1'/rd' nzuimm[4:0] 01 } -> { 0000000 shamt rs1 101 rd 0010011 }
-                        // 1b1 -> SRAI -> srai rd', rd', shamt[5:0] { 100 nzuimm[5] 01 rs1'/rd' nzuimm[4:0] 01 } -> { 0100000 shamt rs1 101 rd 0010011 }
-                        i32 = { { 1b0, i16[10,1], 5b00000 }, CBalu50(i16).ib_4_0, { 2b01, CBalu50(i16).rd_alt }, 3b101, { 2b01, CBalu50(i16).rd_alt }, 5b00100 };
-                    }
-                    case 2b10: {
-                        // ANDI -> andi rd', rd', imm[5:0] { 100 imm[5], 10 rs1'/rd' imm[4:0] 01 } -> { imm[11:0] rs1 111 rd 0010011 }
-                        i32 = { {7{CBalu50(i16).ib_5}}, CBalu50(i16).ib_4_0, { 2b01, CBalu50(i16).rd_alt }, 3b111, { 2b01, CBalu50(i16).rd_alt }, 5b00100 };
-                    }
-                    case 2b11: {
+                if( CBalu(i16).function2[1,1] ) {
+                    if( CBalu(i16).function2[0,1] ) {
                         // CBalu(i16).logical2 -> SUB XOR OR AND
                         // 2b00 -> SUB -> sub rd', rd', rs2' { 100 0 11 rs1'/rd' 00 rs2' 01 } -> { 0100000 rs2 rs1 000 rd 0110011 }
                         // 2b01 -> XOR -> xor rd', rd', rs2' { 100 0 11 rs1'/rd' 01 rs2' 01 } -> { 0000000 rs2 rs1 100 rd 0110011 }
                         // 2b10 -> OR  -> or  rd', rd', rd2' { 100 0 11 rs1'/rd' 10 rs2' 01 } -> { 0000000 rs2 rs1 110 rd 0110011 }
                         // 2b11 -> AND -> and rd', rd', rs2' { 100 0 11 rs1'/rd' 11 rs2' 01 } -> { 0000000 rs2 rs1 111 rd 0110011 }
-                        switch( ^CBalu(i16).logical2 ) {
-                            case 0: { opbits = {3{CBalu(i16).logical2[0,1]}}; }
-                            case 1: { opbits = { 1b1, CBalu(i16).logical2[1,1], 1b0 }; }
+                        if( ^CBalu(i16).logical2 ) {
+                            opbits = { 1b1, CBalu(i16).logical2[1,1], 1b0 };
+                        } else {
+                            opbits = {3{CBalu(i16).logical2[0,1]}};
                         }
                         i32 = { { 1b0, ~|CBalu(i16).logical2, 5b00000 }, { 2b01, CBalu(i16).rs2_alt }, { 2b01, CBalu(i16).rd_alt }, opbits, { 2b01, CBalu(i16).rd_alt }, 5b01100 };
+                    } else {
+                        // ANDI -> andi rd', rd', imm[5:0] { 100 imm[5], 10 rs1'/rd' imm[4:0] 01 } -> { imm[11:0] rs1 111 rd 0010011 }
+                        i32 = { {7{CBalu50(i16).ib_5}}, CBalu50(i16).ib_4_0, { 2b01, CBalu50(i16).rd_alt }, 3b111, { 2b01, CBalu50(i16).rd_alt }, 5b00100 };
                     }
+                } else {
+                    // i16[10,1] -> SRLI SRAI
+                    // 1b0 -> SRLI -> srli rd', rd', shamt[5:0] { 100 nzuimm[5] 00 rs1'/rd' nzuimm[4:0] 01 } -> { 0000000 shamt rs1 101 rd 0010011 }
+                    // 1b1 -> SRAI -> srai rd', rd', shamt[5:0] { 100 nzuimm[5] 01 rs1'/rd' nzuimm[4:0] 01 } -> { 0100000 shamt rs1 101 rd 0010011 }
+                    i32 = { { 1b0, i16[10,1], 5b00000 }, CBalu50(i16).ib_4_0, { 2b01, CBalu50(i16).rd_alt }, 3b101, { 2b01, CBalu50(i16).rd_alt }, 5b00100 };
                 }
             }
             case 3b101: {
@@ -339,17 +332,14 @@ algorithm compressed10(
             }
             case 3b100: {
                 // J[AL]R / MV / ADD
-                switch( CR(i16).rs2 ) {
-                    case 0: {
-                        // JR   -> jalr x0, rs1, 0 { 100 0 rs1 00000 10 } -> { imm[11:0] rs1 000 rd 1100111 }
-                        // JALR -> jalr x1, rs1, 0 { 100 1 rs1 00000 10 } -> { imm[11:0] rs1 000 rd 1100111 }
-                        i32 = { 12b0, CR(i16).rs1, 3b000, { 4b0000, i16[12,1]}, 5b11001 };
-                    }
-                    default: {
-                        // MV  -> add rd, x0, rs2 { 100 0 rd!=0 rs2!=0 10 }     -> { 0000000 rs2 rs1 000 rd 0110011 }
-                        // ADD -> add rd, rd, rs2 { 100 1 rs1/rd!=0 rs2!=0 10 } -> { 0000000 rs2 rs1 000 rd 0110011 }
-                        i32 = { 7b0000000, CR(i16).rs2, i16[12,1] ? CR(i16).rs1 : 5h0, 3b000, CR(i16).rs1, 5b01100 };
-                    }
+                if( ~|CR(i16).rs2 ) {
+                    // JR   -> jalr x0, rs1, 0 { 100 0 rs1 00000 10 } -> { imm[11:0] rs1 000 rd 1100111 }
+                    // JALR -> jalr x1, rs1, 0 { 100 1 rs1 00000 10 } -> { imm[11:0] rs1 000 rd 1100111 }
+                    i32 = { 12b0, CR(i16).rs1, 3b000, { 4b0000, i16[12,1]}, 5b11001 };
+                } else {
+                    // MV  -> add rd, x0, rs2 { 100 0 rd!=0 rs2!=0 10 }     -> { 0000000 rs2 rs1 000 rd 0110011 }
+                    // ADD -> add rd, rd, rs2 { 100 1 rs1/rd!=0 rs2!=0 10 } -> { 0000000 rs2 rs1 000 rd 0110011 }
+                    i32 = { 7b0000000, CR(i16).rs2, i16[12,1] ? CR(i16).rs1 : 5h0, 3b000, CR(i16).rs1, 5b01100 };
                 }
             }
             default: {
@@ -445,12 +435,10 @@ algorithm CSRblock(
     counter40always TIMER();
 
     // CPU HART CYCLE TIMERS
-    uint1   UPDATEcycletimer <:: ~SMT;                  counter40 CYCLE( update <: UPDATEcycletimer );
-    uint1   UPDATEcycletimerSMT <:: SMT;                counter40 CYCLESMT( update <: UPDATEcycletimerSMT );
+    counter40 CYCLE(); counter40 CYCLESMT();
 
     // CPU HART INSTRUCTION RETIRED COUNTERS
-    uint1   UPDATEinstret <:: incCSRinstret & ~SMT;     counter40 INSTRET( update <: UPDATEinstret );
-    uint1   UPDATEinstretSMT <:: incCSRinstret & SMT;   counter40 INSTRETSMT( update <: UPDATEinstretSMT);
+    counter40 INSTRET(); counter40 INSTRETSMT();
 
     // SWITCH BETWEEN IMMEDIATE OR REGISTER VALUE TO WRITE TO CSR
     uint32  writevalue <:: function3[2,1] ? rs1 : sourceReg1;
@@ -459,8 +447,11 @@ algorithm CSRblock(
     uint2   csrregister <:: CSR(instruction).csr[0,2];
     csrf CSRF0( csr <: csrregister, writevalue <: writevalue );                                                     // MAIN CSRf
     csrf CSRF1( csr <: csrregister, writevalue <: writevalue );                                                     // SMT CSRf
-    CSRF0.writetype := 0; CSRF1.writetype := 0;
-    CSRF0.update := updateFPUflags & ~SMT;  CSRF1.update := updateFPUflags & SMT;
+
+    // UPDATE FLAGS FOR TIMERS, COUNTERS AND FPU-FLAGS
+    CYCLE.update := ~SMT; CYCLESMT.update := SMT;
+    INSTRET.update := incCSRinstret & ~SMT; INSTRETSMT.update := incCSRinstret & SMT;
+    CSRF0.writetype := 0; CSRF1.writetype := 0; CSRF0.update := updateFPUflags & ~SMT;  CSRF1.update := updateFPUflags & SMT;
 
     // PASS PRESENT FPU FLAGS TO THE FPU
     FPUflags ::= SMT ? CSRF1.CSRf[0,5] : CSRF0.CSRf[0,5];
