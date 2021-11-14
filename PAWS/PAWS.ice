@@ -259,7 +259,7 @@ $$end
         address :> address,
         writedata :> writedata,
         SMTRUNNING <: SMTRUNNING,
-        SMTSTARTPC <: SMTSTARTPC,
+        SMTSTARTPC <: SMTSTARTPC[0,27],
         memorybusy <: memorybusy,
         readdata <: readdata,
         writememory :> CPUwritememory,

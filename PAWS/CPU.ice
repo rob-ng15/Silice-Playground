@@ -16,37 +16,14 @@ algorithm PAWSCPU(
     output  uint1   readmemory,
     input   uint1   memorybusy,
     input   uint1   SMTRUNNING,
-    input   uint32  SMTSTARTPC
+    input   uint27  SMTSTARTPC
 ) <autorun,reginputs> {
-    uint3   FSM = uninitialized;
-
-    // RISC-V PROGRAM COUNTERS AND STATUS
-    // SMT - RUNNING ON HART 1 WITH DUPLICATE PROGRAM COUNTER AND REGISTER FILE
-    uint1   SMT = uninitialized;
-    uint27  pc = uninitialized;
-    uint27  pcSMT = uninitialized;
-    uint27  PC <:: SMT ? pcSMT : pc;
-    uint27  nextPC = uninitialized;
-    uint27  newPC = uninitialized;
-    newpc NEWPC <@clock_CPUdecoder> (
-        opCode <: opCode,
-        PC <: PC,
-        compressed <: compressed,
-        incPC <: incPC,
-        takeBranch <: takeBranch,
-        branchAddress <: branchAddress,
-        jumpAddress <: jumpAddress,
-        loadAddress <: loadAddress,
-        nextPC :> nextPC,
-        newPC :> newPC
-    );
+    uint1   COMMIT = uninitialized;
 
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
     uint1   compressed = uninitialized;
-    uint30  i3200 = uninitialized; compressed00 COMPRESSED00 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3200 );
-    uint30  i3201 = uninitialized; compressed01 COMPRESSED01 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3201 );
-    uint30  i3210 = uninitialized; compressed10 COMPRESSED10 <@clock_CPUdecoder> ( i16 <: readdata, i32 :> i3210 );
+    compressed00 COMPRESSED00 <@clock_CPUdecoder> ( i16 <: readdata ); compressed01 COMPRESSED01 <@clock_CPUdecoder> ( i16 <: readdata ); compressed10 COMPRESSED10 <@clock_CPUdecoder> ( i16 <: readdata );
 
     // RISC-V 32 BIT INSTRUCTION DECODER
     uint5   opCode = uninitialized;
@@ -56,10 +33,6 @@ algorithm PAWSCPU(
     uint5   rs2 = uninitialized;
     uint5   rs3 = uninitialized;
     uint5   rd = uninitialized;
-    int32   immediateValue = uninitialized;
-    uint1   memoryload = uninitialized;
-    uint1   memorystore = uninitialized;
-    uint1   AMO = uninitialized;
     decode RV32DECODER <@clock_CPUdecoder> (
         instruction <: instruction,
         opCode :> opCode,
@@ -69,52 +42,49 @@ algorithm PAWSCPU(
         rs2 :> rs2,
         rs3 :> rs3,
         rd :> rd,
-        immediateValue :> immediateValue,
-        memoryload :> memoryload,
-        memorystore :> memorystore,
-        accesssize :> accesssize,
-        AMO :> AMO
+        accesssize :> accesssize
     );
+
+    // RISC-V PROGRAM COUNTERS AND STATUS
+    // SMT - RUNNING ON HART 1 WITH DUPLICATE PROGRAM COUNTER AND REGISTER FILE
+    uint1   SMT = uninitialized;
+    uint27  pc = uninitialized; uint27  pc_next <:: SMT ? pc :  NEWPC.newPC;
+    uint27  pcSMT = uninitialized; uint27  pcSMT_next <:: SMT ? NEWPC.newPC : SMTRUNNING ? pcSMT : SMTSTARTPC;
+    uint27  PC <:: SMT ? pcSMT : pc;
 
     // RISC-V ADDRESS GENERATOR
-    uint32  AUIPCLUI = uninitialized;
-    uint27  branchAddress = uninitialized;
-    uint27  jumpAddress = uninitialized;
-    uint27  loadAddress = uninitialized;
-    uint27  storeAddress = uninitialized;
     addressgenerator AGU <@clock_CPUdecoder> (
         instruction <: instruction,
-        immediateValue <: immediateValue,
+        immediateValue <: RV32DECODER.immediateValue,
         PC <: PC,
         sourceReg1 <: sourceReg1,
-        AUIPCLUI :> AUIPCLUI,
-        branchAddress :> branchAddress,
-        jumpAddress :> jumpAddress,
-        loadAddress :> loadAddress,
-        storeAddress :> storeAddress,
-        AMO <: AMO
+        AMO <: RV32DECODER.AMO
     );
+
+    // SELECT NEXT PC
+    newpc NEWPC <@clock_CPUdecoder> (
+        opCode <: opCode,
+        PC <: PC,
+        compressed <: compressed,
+        incPC <: IFASTSLOW.incPC,
+        takeBranch <: takeBranch,
+        branchAddress <: AGU.branchAddress,
+        jumpAddress <: AGU.jumpAddress,
+        loadAddress <: AGU.loadAddress
+    );
+
 
     // GENERATE PLUS 2 ADDRESSES FOR 32 BIT MEMORY OPERATIONS
-    uint27  PCplus2 = uninitialized; addrplus2 PC2 <@clock_CPUdecoder> ( address <: PC, addressplus2 :> PCplus2 );
-    uint27  loadAddressplus2 = uninitialized; addrplus2 LA2 <@clock_CPUdecoder> ( address <: loadAddress, addressplus2 :> loadAddressplus2 );
-    uint27  storeAddressplus2 = uninitialized; addrplus2 SA2 <@clock_CPUdecoder> ( address <: storeAddress, addressplus2 :> storeAddressplus2 );
+    addrplus2 PC2 <@clock_CPUdecoder> ( address <: PC ); addrplus2 LA2 <@clock_CPUdecoder> ( address <: AGU.loadAddress ); addrplus2 SA2 <@clock_CPUdecoder> ( address <: AGU.storeAddress );
 
-    // RISC-V MEMORY ACCESS FLAGS - SET SIZE 32 BIT FOR FLOAT AND ATOMIC
-    uint32  memory16or8bit = uninitialized;
-    signextend SIGNEXTEND <@clock_CPUdecoder> (
-        readdata <: readdata,
-        is16or8 <: accesssize[0,1],
-        byteaccess <: loadAddress[0,1],
-        dounsigned <: function3[2,1],
-        memory168 :> memory16or8bit
-    );
+    // SIGN EXTENDER FOR 8 AND 16 BIT LOADS
+    signextend SIGNEXTEND <@clock_CPUdecoder> ( readdata <: readdata, is16or8 <: accesssize[0,1], byteaccess <: AGU.loadAddress[0,1], dounsigned <: function3[2,1] );
 
     // RISC-V REGISTERS
-    uint1   frd <:: FASTPATH ? CLASSfrd : EXECUTESLOWfrd;
+    uint1   frd <:: IFASTSLOW.FASTPATH ? IFASTSLOW.frd : EXECUTESLOW.frd;
     int32   sourceReg1 = uninitialized;
     int32   sourceReg2 = uninitialized;
-    uint1   REGISTERSwrite <:: FSM[2,1] & writeRegister & ~frd & ( |rd );
+    uint1   REGISTERSwrite <:: COMMIT & IFASTSLOW.writeRegister & ~frd & ( |rd );
     registersI REGISTERS <@clock_CPUdecoder> (
         SMT <:: SMT,
         rs1 <: rs1,
@@ -126,14 +96,13 @@ algorithm PAWSCPU(
         sourceReg2 :> sourceReg2
     );
     // EXTRACT ABSOLUTE VALUE FOR MULTIPLICATION AND DIVISION
-    uint32  absRS1 = uninitialized; absolute ARS1 <@clock_CPUdecoder> ( number <: sourceReg1, value :> absRS1 );
-    uint32  absRS2 = uninitialized; absolute ARS2 <@clock_CPUdecoder> ( number <: sourceReg2, value :> absRS2 );
+    absolute ARS1 <@clock_CPUdecoder> ( number <: sourceReg1 ); absolute ARS2 <@clock_CPUdecoder> ( number <: sourceReg2 );
 
     // RISC-V FLOATING POINT REGISTERS
     uint32  sourceReg1F = uninitialized;
     uint32  sourceReg2F = uninitialized;
     uint32  sourceReg3F = uninitialized;
-    uint1   REGISTERSFwrite <:: FSM[2,1] & writeRegister & frd;
+    uint1   REGISTERSFwrite <:: COMMIT & IFASTSLOW.writeRegister & frd;
     registersF REGISTERSF <@clock_CPUdecoder> (
         SMT <:: SMT,
         rs1 <: rs1,
@@ -149,34 +118,18 @@ algorithm PAWSCPU(
 
     // CPU EXECUTE BLOCK
     uint32  memoryinput = uninitialized;
-    uint32  result <:: FASTPATH ? EXECUTEFASTresult : EXECUTESLOWresult;
-    uint16  storeLOW <:: FASTPATH ? EXECUTEFASTmemoryoutput[0,16] : EXECUTESLOWmemoryoutput[0,16];
-    uint16  storeHIGH <:: FASTPATH ? EXECUTEFASTmemoryoutput[16,16] : EXECUTESLOWmemoryoutput[16,16];
+    uint32  result <:: IFASTSLOW.FASTPATH ? EXECUTEFAST.result : EXECUTESLOW.result;
+    uint16  storeLOW <:: IFASTSLOW.FASTPATH ? EXECUTEFAST.memoryoutput[0,16] : EXECUTESLOW.memoryoutput[0,16];
+    uint16  storeHIGH <:: IFASTSLOW.FASTPATH ? EXECUTEFAST.memoryoutput[16,16] : EXECUTESLOW.memoryoutput[16,16];
 
     // CLASSIFY THE INSTRUCTION TO FAST/SLOW
-    uint1   FASTPATH = uninitialized;
-    uint1   incPC = uninitialized;
-    uint1   writeRegister = uninitialized;
-    uint1   CLASSfrd = uninitialized;
     Iclass IFASTSLOW <@clock_CPUdecoder> (
         opCode <: opCode,
         function3 <: function3,
-        isALUM <: function7[0,1],
-        frd :> CLASSfrd,
-        writeRegister :> writeRegister,
-        incPC :> incPC,
-        FASTPATH :> FASTPATH
+        isALUM <: function7[0,1]
     );
 
-    //uint1   CSRincCSRinstret <:: FSM[2,1];
-    uint32  EXECUTESLOWmemoryoutput = uninitialized;
-    int32   EXECUTESLOWresult = uninitialized;
-    uint1   EXECUTESLOWfrd = uninitialized;
-    uint1   EXECUTESLOWstart = uninitialized;
-    uint1   EXECUTESLOWbusy = uninitialized;
-    cpuexecuteSLOWPATH EXECUTESLOWPATH(
-        start <: EXECUTESLOWstart,
-        busy :> EXECUTESLOWbusy,
+    cpuexecuteSLOWPATH EXECUTESLOW(
         SMT <: SMT,
         instruction <: instruction,
         opCode <: opCode,
@@ -186,23 +139,17 @@ algorithm PAWSCPU(
         rs2 <: rs2,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
-        absRS1 <: absRS1,
-        absRS2 <: absRS2,
+        absRS1 <: ARS1.value,
+        absRS2 <: ARS2.value,
         sourceReg1F <: sourceReg1F,
         sourceReg2F <: sourceReg2F,
         sourceReg3F <: sourceReg3F,
         memoryinput <: memoryinput,
-        frd :> EXECUTESLOWfrd,
-        memoryoutput :> EXECUTESLOWmemoryoutput,
-        result :> EXECUTESLOWresult,
-        incCSRinstret <: FSM[2,1]
+        incCSRinstret <: COMMIT
     );
 
-    uint1   takeBranch <:: FASTPATH & EXECUTEFASTtakebranch;
-    uint1   EXECUTEFASTtakebranch = uninitialized;
-    uint32  EXECUTEFASTmemoryoutput = uninitialized;
-    int32   EXECUTEFASTresult = uninitialized;
-    cpuexecuteFASTPATH EXECUTEFASTPATH(
+    uint1   takeBranch <:: IFASTSLOW.FASTPATH & EXECUTEFAST.takeBranch;
+    cpuexecuteFASTPATH EXECUTEFAST(
         opCode <: opCode,
         function3 <: function3,
         function7 <: function7,
@@ -210,68 +157,54 @@ algorithm PAWSCPU(
         rs2 <: rs2,
         sourceReg1 <: sourceReg1,
         sourceReg2 <: sourceReg2,
-        absRS1 <: absRS1,
-        absRS2 <: absRS2,
+        absRS1 <: ARS1.value,
+        absRS2 <: ARS2.value,
         sourceReg2F <: sourceReg2F,
-        immediateValue <: immediateValue,
+        immediateValue <: RV32DECODER.immediateValue,
         memoryinput <: memoryinput,
-        AUIPCLUI <: AUIPCLUI,
-        nextPC <: nextPC,
-        takeBranch :> EXECUTEFASTtakebranch,
-        memoryoutput :> EXECUTEFASTmemoryoutput,
-        result :> EXECUTEFASTresult
+        AUIPCLUI <: AGU.AUIPCLUI,
+        nextPC <: NEWPC.nextPC
     );
 
-    readmemory := 0; writememory := 0; EXECUTESLOWstart := 0;
+    readmemory := 0; writememory := 0; EXECUTESLOW.start := 0; COMMIT := 0;
 
-    // RESET ACTIONS - FSM -> 1, SMT AND PC -> 0
-    if( ~reset ) {
-        FSM = 1; SMT = 0; pc = 0;
-    }
+    if( ~reset ) { SMT = 0; pc = 0; }
 
     while(1) {
-        address = PC; readmemory = 1; while( memorybusy ) {}                                                                                                    // FETCH POTENTIAL COMPRESSED OR 1ST 16 BITS
+        address = PC; readmemory = 1; while( memorybusy ) {}                                                                                        // FETCH POTENTIAL COMPRESSED OR 1ST 16 BITS
         compressed = ( ~&readdata[0,2] );
         if( compressed ) {
-            switch( readdata[0,2] ) {                                                                                                                           // EXPAND COMPRESSED INSTRUCTION
-                case 2b00: { instruction = { i3200, 2b11 }; }
-                case 2b01: { instruction = { i3201, 2b11 }; }
-                case 2b10: { instruction = { i3210, 2b11 }; }
+            switch( readdata[0,2] ) {                                                                                                               // EXPAND COMPRESSED INSTRUCTION
+                case 2b00: { instruction = { COMPRESSED00.i32, 2b11 }; }
+                case 2b01: { instruction = { COMPRESSED01.i32, 2b11 }; }
+                case 2b10: { instruction = { COMPRESSED10.i32, 2b11 }; }
                 default: {}
             }
         } else {
-            // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
-            instruction[0,16] = readdata; address = PCplus2; readmemory = 1; while( memorybusy ) {} instruction[16,16] = readdata;
+            instruction[0,16] = readdata; address = PC2.addressplus2; readmemory = 1; while( memorybusy ) {} instruction[16,16] = readdata;         // 32 BIT INSTRUCTION FETCH 2ND 16 BITS
         }
-        FSM = 2; ++: ++:                                                                                                                                        // DECODE, REGISTER FETCH, ADDRESS GENERATION
+        ++: ++:                                                                                                                                     // DECODE, REGISTER FETCH, ADDRESS GENERATION
 
-        if( memoryload ) {
-            address = loadAddress; readmemory = 1; while( memorybusy ) {}                                                                                       // READ 1ST 8 or 16 BITS
+        if( RV32DECODER.memoryload ) {
+            address = AGU.loadAddress; readmemory = 1; while( memorybusy ) {}                                                                       // READ 1ST 8 or 16 BITS
             if( accesssize[1,1] ) {
-                memoryinput[0,16] = readdata; address = loadAddressplus2; readmemory = 1; while( memorybusy ) {} memoryinput[16,16] = readdata;                 // READ 2ND 16 BITS
+                memoryinput[0,16] = readdata; address = LA2.addressplus2; readmemory = 1; while( memorybusy ) {} memoryinput[16,16] = readdata;     // READ 2ND 16 BITS
             } else {
-                memoryinput = memory16or8bit;                                                                                                                   // 8 or 16 BIT SIGN EXTENDED
+                memoryinput = SIGNEXTEND.memory168;                                                                                                 // 8 or 16 BIT SIGN EXTENDED
             }
         } else {}
 
-        if( ~FASTPATH ) {
-            // FPU ALU AND CSR OPERATIONS
-            EXECUTESLOWstart = 1; while( EXECUTESLOWbusy ) {}
+        if( ~IFASTSLOW.FASTPATH ) { EXECUTESLOW.start = 1; while( EXECUTESLOW.busy ) {} }                                                           // FPU ALU AND CSR OPERATIONS, FASTPATH HANDLED AUTOMATICALLY
+        COMMIT = 1;                                                                                                                                 // COMMIT REGISTERS
+
+        if( RV32DECODER.memorystore ) {
+            address = AGU.storeAddress; writedata = storeLOW; writememory = 1; while( memorybusy ) {}                                               // STORE 8 OR 16 BIT
+            if( accesssize[1,1] ) {
+                address = SA2.addressplus2; writedata = storeHIGH; writememory = 1;  while( memorybusy ) {}                                         // 32 BIT WRITE 2ND 16 BITS
+            } else {}
         } else {}
 
-        if( memorystore ) {
-            address = storeAddress; writedata = storeLOW;                                                                                                       // STORE 8 OR 16 BIT
-            writememory = 1; while( memorybusy ) {}
-            if( accesssize[1,1] ) {
-                address = storeAddressplus2; writedata = storeHIGH;                                                                                             // 32 BIT WRITE 2ND 16 BITS
-                writememory = 1;  while( memorybusy ) {}
-            } else {}
-        }  else {}
-        FSM = 4; ++:
-
-        // UPDATE PC AND SMT
-        if( SMT ) { pcSMT = newPC; SMT = 0; } else { pc = newPC; SMT = SMTRUNNING; pcSMT = SMTRUNNING ? pcSMT : SMTSTARTPC; }
-        FSM = 1;
+        pc = pc_next; pcSMT = pcSMT_next; SMT = ~SMT & SMTRUNNING;                                                                                  // UPDATE PC AND SMT
     } // RISC-V
 }
 
@@ -346,17 +279,19 @@ algorithm cpuexecuteSLOWPATH(
             busy = 1;
             frd = 0;
             switch( opCode ) {
-                case 5b11100: {
-                    switch( function3 ) {
-                        default: { CSR.start = 1; ++: result = CSR.result; }                  // CSR
-                        case 3b000: { result = 0; }
+                case 5b11100: {                                                             // CSR
+                    if( |function3 ) {
+                        CSR.start = 1; ++: result = CSR.result;
+                    } else {
+                        result = 0;
                     }
                 }
                 case 5b01011: {                                                             // ATOMIC OPERATIONS
-                    switch( function7[2,2] ) {
-                        case 2b10: { result = memoryinput; }                                // LR.W
-                        case 2b11: { memoryoutput = sourceReg2; result = 0; }               // SC.W
-                        default: { result = memoryinput; memoryoutput = ALUA.result; }       // ATOMIC LOAD - MODIFY - STORE
+                    if( function7[3,1] ) {
+                        result = memoryinput; memoryoutput = ALUA.result;                   // ATOMIC LOAD - MODIFY - STORE
+                    } else {
+                        result = function7[2,1] ? 0 : memoryinput;                          // LR.W SC.W
+                        memoryoutput = sourceReg2;
                     }
                 }
                 default: {                                                                  // FPU AND INTEGER DIVISION
