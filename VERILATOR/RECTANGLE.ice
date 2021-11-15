@@ -29,7 +29,7 @@ algorithm preprectangle(
         if( start ) {
             min_x = ( x1 < crop_left ) ? crop_left : x1;
             min_y = ( y1 < crop_top ) ? crop_top : y1;
-            max_x = 1 + ( ( x2 > crop_right ) ? crop_right : x2 );
+            max_x = ( ( x2 > crop_right ) ? crop_right : x2 );
             max_y = 1 + ( ( y2 > crop_bottom ) ? crop_bottom : y2 );
             todraw = ~( ( max_x < crop_left ) | ( max_y < crop_top ) | ( min_x > crop_right ) | ( min_y > crop_bottom ) );
         }
@@ -51,19 +51,21 @@ algorithm drawrectangle(
     bitmap_x_write := x; bitmap_y_write := y; bitmap_write := 0;
 
     always {
-        if( busy ) {
-            bitmap_write = 1; x = x + 1;
-            if( x == max_x ) {
-                x = min_x; y = y + 1;
-                if( y == max_y ) { busy = 0; }
-            }
-        }
-    }
-
-    while(1) {
         if( start ) {
-            busy = 1;
-            x = min_x; y = min_y;
+            busy = 1; x = min_x; y = min_y;
+        } else {
+            if( busy ) {
+                if( y != max_y ) {
+                    bitmap_write = 1;
+                    if( x != max_x ) {
+                        x = x + 1;
+                    } else {
+                        x = min_x; y = y + 1;
+                    }
+                } else {
+                    busy = 0;
+                }
+            }
         }
     }
 }

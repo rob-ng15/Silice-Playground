@@ -332,19 +332,18 @@ algorithm drawrectangle(
     uint8   y = uninitialized;
     bitmap_x_write := x; bitmap_y_write := y; bitmap_write := 0;
 
-    always {
-        if( busy ) {
-            bitmap_write = 1; x = x + 1;
-            if( x == max_x ) {
-                x = min_x; y = y + 1;
-                if( y == max_y ) { busy = 0; }
-            }
-        }
-    }
-
     while(1) {
         if( start ) {
-            busy = 1; x = min_x; y = min_y;
+            busy = 1;
+            y = min_y;
+            while( y != max_y ) {
+                x = min_x;
+                while( x != max_x ) {
+                    bitmap_write = 1; x = x + 1;
+                }
+                y = y + 1;
+            }
+            busy = 0;
         }
     }
 }
