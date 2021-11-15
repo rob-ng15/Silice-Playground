@@ -139,7 +139,7 @@ algorithm timers_memmap(
     input   uint1   clock_25mhz,
 
     // Memory access
-    input   uint9   memoryAddress,
+    input   uint5   memoryAddress,
     input   uint1   memoryWrite,
     input   uint1   memoryRead,
     input   uint16  writeData,
@@ -191,7 +191,7 @@ algorithm audio_memmap(
     input   uint1   clock_25mhz,
 
     // Memory access
-    input   uint9   memoryAddress,
+    input   uint3   memoryAddress,
     input   uint1   memoryWrite,
     input   uint1   memoryRead,
     input   uint16  writeData,

@@ -18,7 +18,9 @@ algorithm PAWSCPU(
     input   uint1   SMTRUNNING,
     input   uint27  SMTSTARTPC
 ) <autorun,reginputs> {
+    // COMMIT TO REGISTERS FLAG AND HART (0/1) SELECT
     uint1   COMMIT = uninitialized;
+    uint1   SMT = uninitialized;
 
     // COMPRESSED INSTRUCTION EXPANDER
     uint32  instruction = uninitialized;
@@ -26,44 +28,111 @@ algorithm PAWSCPU(
     compressed00 COMPRESSED00 <@clock_CPUdecoder> ( i16 <: readdata ); compressed01 COMPRESSED01 <@clock_CPUdecoder> ( i16 <: readdata ); compressed10 COMPRESSED10 <@clock_CPUdecoder> ( i16 <: readdata );
 
     // RISC-V 32 BIT INSTRUCTION DECODER
-    uint5   opCode = uninitialized;
-    uint3   function3 = uninitialized;
-    uint7   function7 = uninitialized;
-    uint5   rs1 = uninitialized;
-    uint5   rs2 = uninitialized;
-    uint5   rs3 = uninitialized;
-    uint5   rd = uninitialized;
-    decode RV32DECODER <@clock_CPUdecoder> (
-        instruction <: instruction,
-        opCode :> opCode,
-        function3 :> function3,
-        function7 :> function7,
-        rs1 :> rs1,
-        rs2 :> rs2,
-        rs3 :> rs3,
-        rd :> rd,
-        accesssize :> accesssize
+    decode RV32DECODER <@clock_CPUdecoder> ( instruction <: instruction, accesssize :> accesssize );
+
+    // RISC-V REGISTERS
+    uint1   frd <:: IFASTSLOW.FASTPATH ? IFASTSLOW.frd : EXECUTESLOW.frd;
+    int32   sourceReg1 = uninitialized;
+    int32   sourceReg2 = uninitialized;
+    uint1   REGISTERSwrite <:: COMMIT & IFASTSLOW.writeRegister & ~frd & ( |RV32DECODER.rd );
+    registersI REGISTERS <@clock_CPUdecoder> (
+        SMT <:: SMT,
+        rs1 <: RV32DECODER.rs1,
+        rs2 <: RV32DECODER.rs2,
+        result <: result,
+        rd <: RV32DECODER.rd,
+        write <: REGISTERSwrite
+    );
+    // EXTRACT ABSOLUTE VALUE FOR MULTIPLICATION AND DIVISION
+    absolute ARS1 <@clock_CPUdecoder> ( number <: REGISTERS.sourceReg1 ); absolute ARS2 <@clock_CPUdecoder> ( number <: REGISTERS.sourceReg2 );
+
+    // RISC-V FLOATING POINT REGISTERS
+    uint1   REGISTERSFwrite <:: COMMIT & IFASTSLOW.writeRegister & frd;
+    registersF REGISTERSF <@clock_CPUdecoder> (
+        SMT <:: SMT,
+        rs1 <: RV32DECODER.rs1,
+        rs2 <: RV32DECODER.rs2,
+        rs3 <: RV32DECODER.rs3,
+        result <: result,
+        rd <: RV32DECODER.rd,
+        write <: REGISTERSFwrite
     );
 
-    // RISC-V PROGRAM COUNTERS AND STATUS
-    // SMT - RUNNING ON HART 1 WITH DUPLICATE PROGRAM COUNTER AND REGISTER FILE
-    uint1   SMT = uninitialized;
-    uint27  pc = uninitialized; uint27  pc_next <:: SMT ? pc :  NEWPC.newPC;
-    uint27  pcSMT = uninitialized; uint27  pcSMT_next <:: SMT ? NEWPC.newPC : SMTRUNNING ? pcSMT : SMTSTARTPC;
-    uint27  PC <:: SMT ? pcSMT : pc;
+    // RISC-V PROGRAM COUNTERS AND STATUS - SMT -> RUNNING ON HART 1 WITH DUPLICATE PROGRAM COUNTER AND REGISTER FILE
+    uint27  pc = uninitialized;         uint27  pc_next <:: SMT ? pc :  NEWPC.newPC;                                    // HART 0 pc + UPDATE
+    uint27  pcSMT = uninitialized;      uint27  pcSMT_next <:: SMT ? NEWPC.newPC : SMTRUNNING ? pcSMT : SMTSTARTPC;     // HART 1 pc + update
+    uint27  PC <:: SMT ? pcSMT : pc;                                                                                    // SELECT PC FOR THIS CYCLE
 
     // RISC-V ADDRESS GENERATOR
     addressgenerator AGU <@clock_CPUdecoder> (
         instruction <: instruction,
         immediateValue <: RV32DECODER.immediateValue,
         PC <: PC,
-        sourceReg1 <: sourceReg1,
+        sourceReg1 <: REGISTERS.sourceReg1,
         AMO <: RV32DECODER.AMO
+    );
+
+    // GENERATE PLUS 2 ADDRESSES FOR 32 BIT MEMORY OPERATIONS
+    addrplus2 PC2 <@clock_CPUdecoder> ( address <: PC ); addrplus2 LA2 <@clock_CPUdecoder> ( address <: AGU.loadAddress ); addrplus2 SA2 <@clock_CPUdecoder> ( address <: AGU.storeAddress );
+
+    // SIGN EXTENDER FOR 8 AND 16 BIT LOADS
+    signextend SIGNEXTEND <@clock_CPUdecoder> ( readdata <: readdata, is16or8 <: accesssize[0,1], byteaccess <: AGU.loadAddress[0,1], dounsigned <: RV32DECODER.function3[2,1] );
+
+    // CPU EXECUTE BLOCKS
+    uint32  memoryinput = uninitialized;
+    uint32  result <:: IFASTSLOW.FASTPATH ? EXECUTEFAST.result : EXECUTESLOW.result;
+    uint16  storeLOW <:: IFASTSLOW.FASTPATH ? EXECUTEFAST.memoryoutput[0,16] : EXECUTESLOW.memoryoutput[0,16];
+    uint16  storeHIGH <:: IFASTSLOW.FASTPATH ? EXECUTEFAST.memoryoutput[16,16] : EXECUTESLOW.memoryoutput[16,16];
+
+    // CLASSIFY THE INSTRUCTION TO FAST/SLOW
+    Iclass IFASTSLOW <@clock_CPUdecoder> (
+        opCode <: RV32DECODER.opCode,
+        function3 <: RV32DECODER.function3,
+        isALUM <: RV32DECODER.function7[0,1]
+    );
+
+    // EXECUTE MULTICYCLE INSTRUCTIONS, INTEGER DIVIDE, FPU, CSR AND ALU-A
+    cpuexecuteSLOWPATH EXECUTESLOW(
+        SMT <: SMT,
+        instruction <: instruction,
+        opCode <: RV32DECODER.opCode,
+        function3 <: RV32DECODER.function3,
+        function7 <: RV32DECODER.function7,
+        rs1 <: RV32DECODER.rs1,
+        rs2 <: RV32DECODER.rs2,
+        sourceReg1 <: REGISTERS.sourceReg1,
+        sourceReg2 <: REGISTERS.sourceReg2,
+        absRS1 <: ARS1.value,
+        absRS2 <: ARS2.value,
+        sourceReg1F <: REGISTERSF.sourceReg1,
+        sourceReg2F <: REGISTERSF.sourceReg2,
+        sourceReg3F <: REGISTERSF.sourceReg3,
+        memoryinput <: memoryinput,
+        incCSRinstret <: COMMIT
+    );
+
+    // EXECUTE SINGLE CYLE INSTRUCTIONS, MOST OF BASE PLUS INTEGER MULTIPLICATION
+    uint1   takeBranch <:: IFASTSLOW.FASTPATH & EXECUTEFAST.takeBranch;
+    cpuexecuteFASTPATH EXECUTEFAST(
+        opCode <: RV32DECODER.opCode,
+        function3 <: RV32DECODER.function3,
+        function7 <: RV32DECODER.function7,
+        rs1 <: RV32DECODER.rs1,
+        rs2 <: RV32DECODER.rs2,
+        sourceReg1 <: REGISTERS.sourceReg1,
+        sourceReg2 <: REGISTERS.sourceReg2,
+        absRS1 <: ARS1.value,
+        absRS2 <: ARS2.value,
+        sourceReg2F <: REGISTERSF.sourceReg2,
+        immediateValue <: RV32DECODER.immediateValue,
+        memoryinput <: memoryinput,
+        AUIPCLUI <: AGU.AUIPCLUI,
+        nextPC <: NEWPC.nextPC
     );
 
     // SELECT NEXT PC
     newpc NEWPC <@clock_CPUdecoder> (
-        opCode <: opCode,
+        opCode <: RV32DECODER.opCode,
         PC <: PC,
         compressed <: compressed,
         incPC <: IFASTSLOW.incPC,
@@ -73,102 +142,9 @@ algorithm PAWSCPU(
         loadAddress <: AGU.loadAddress
     );
 
-
-    // GENERATE PLUS 2 ADDRESSES FOR 32 BIT MEMORY OPERATIONS
-    addrplus2 PC2 <@clock_CPUdecoder> ( address <: PC ); addrplus2 LA2 <@clock_CPUdecoder> ( address <: AGU.loadAddress ); addrplus2 SA2 <@clock_CPUdecoder> ( address <: AGU.storeAddress );
-
-    // SIGN EXTENDER FOR 8 AND 16 BIT LOADS
-    signextend SIGNEXTEND <@clock_CPUdecoder> ( readdata <: readdata, is16or8 <: accesssize[0,1], byteaccess <: AGU.loadAddress[0,1], dounsigned <: function3[2,1] );
-
-    // RISC-V REGISTERS
-    uint1   frd <:: IFASTSLOW.FASTPATH ? IFASTSLOW.frd : EXECUTESLOW.frd;
-    int32   sourceReg1 = uninitialized;
-    int32   sourceReg2 = uninitialized;
-    uint1   REGISTERSwrite <:: COMMIT & IFASTSLOW.writeRegister & ~frd & ( |rd );
-    registersI REGISTERS <@clock_CPUdecoder> (
-        SMT <:: SMT,
-        rs1 <: rs1,
-        rs2 <: rs2,
-        result <: result,
-        rd <: rd,
-        write <: REGISTERSwrite,
-        sourceReg1 :> sourceReg1,
-        sourceReg2 :> sourceReg2
-    );
-    // EXTRACT ABSOLUTE VALUE FOR MULTIPLICATION AND DIVISION
-    absolute ARS1 <@clock_CPUdecoder> ( number <: sourceReg1 ); absolute ARS2 <@clock_CPUdecoder> ( number <: sourceReg2 );
-
-    // RISC-V FLOATING POINT REGISTERS
-    uint32  sourceReg1F = uninitialized;
-    uint32  sourceReg2F = uninitialized;
-    uint32  sourceReg3F = uninitialized;
-    uint1   REGISTERSFwrite <:: COMMIT & IFASTSLOW.writeRegister & frd;
-    registersF REGISTERSF <@clock_CPUdecoder> (
-        SMT <:: SMT,
-        rs1 <: rs1,
-        rs2 <: rs2,
-        rs3 <: rs3,
-        result <: result,
-        rd <: rd,
-        write <: REGISTERSFwrite,
-        sourceReg1 :> sourceReg1F,
-        sourceReg2 :> sourceReg2F,
-        sourceReg3 :> sourceReg3F
-    );
-
-    // CPU EXECUTE BLOCK
-    uint32  memoryinput = uninitialized;
-    uint32  result <:: IFASTSLOW.FASTPATH ? EXECUTEFAST.result : EXECUTESLOW.result;
-    uint16  storeLOW <:: IFASTSLOW.FASTPATH ? EXECUTEFAST.memoryoutput[0,16] : EXECUTESLOW.memoryoutput[0,16];
-    uint16  storeHIGH <:: IFASTSLOW.FASTPATH ? EXECUTEFAST.memoryoutput[16,16] : EXECUTESLOW.memoryoutput[16,16];
-
-    // CLASSIFY THE INSTRUCTION TO FAST/SLOW
-    Iclass IFASTSLOW <@clock_CPUdecoder> (
-        opCode <: opCode,
-        function3 <: function3,
-        isALUM <: function7[0,1]
-    );
-
-    cpuexecuteSLOWPATH EXECUTESLOW(
-        SMT <: SMT,
-        instruction <: instruction,
-        opCode <: opCode,
-        function3 <: function3,
-        function7 <: function7,
-        rs1 <: rs1,
-        rs2 <: rs2,
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-        absRS1 <: ARS1.value,
-        absRS2 <: ARS2.value,
-        sourceReg1F <: sourceReg1F,
-        sourceReg2F <: sourceReg2F,
-        sourceReg3F <: sourceReg3F,
-        memoryinput <: memoryinput,
-        incCSRinstret <: COMMIT
-    );
-
-    uint1   takeBranch <:: IFASTSLOW.FASTPATH & EXECUTEFAST.takeBranch;
-    cpuexecuteFASTPATH EXECUTEFAST(
-        opCode <: opCode,
-        function3 <: function3,
-        function7 <: function7,
-        rs1 <: rs1,
-        rs2 <: rs2,
-        sourceReg1 <: sourceReg1,
-        sourceReg2 <: sourceReg2,
-        absRS1 <: ARS1.value,
-        absRS2 <: ARS2.value,
-        sourceReg2F <: sourceReg2F,
-        immediateValue <: RV32DECODER.immediateValue,
-        memoryinput <: memoryinput,
-        AUIPCLUI <: AGU.AUIPCLUI,
-        nextPC <: NEWPC.nextPC
-    );
-
     readmemory := 0; writememory := 0; EXECUTESLOW.start := 0; COMMIT := 0;
 
-    if( ~reset ) { SMT = 0; pc = 0; }
+    if( ~reset ) { SMT = 0; pc = 0; }                                                                                                               // ON RESET SET PC AND SMT TO 0
 
     while(1) {
         address = PC; readmemory = 1; while( memorybusy ) {}                                                                                        // FETCH POTENTIAL COMPRESSED OR 1ST 16 BITS
@@ -192,7 +168,7 @@ algorithm PAWSCPU(
             } else {
                 memoryinput = SIGNEXTEND.memory168;                                                                                                 // 8 or 16 BIT SIGN EXTENDED
             }
-        } else {}
+        }
 
         if( ~IFASTSLOW.FASTPATH ) { EXECUTESLOW.start = 1; while( EXECUTESLOW.busy ) {} }                                                           // FPU ALU AND CSR OPERATIONS, FASTPATH HANDLED AUTOMATICALLY
         COMMIT = 1;                                                                                                                                 // COMMIT REGISTERS
@@ -201,8 +177,8 @@ algorithm PAWSCPU(
             address = AGU.storeAddress; writedata = storeLOW; writememory = 1; while( memorybusy ) {}                                               // STORE 8 OR 16 BIT
             if( accesssize[1,1] ) {
                 address = SA2.addressplus2; writedata = storeHIGH; writememory = 1;  while( memorybusy ) {}                                         // 32 BIT WRITE 2ND 16 BITS
-            } else {}
-        } else {}
+            }
+        }
 
         pc = pc_next; pcSMT = pcSMT_next; SMT = ~SMT & SMTRUNNING;                                                                                  // UPDATE PC AND SMT
     } // RISC-V

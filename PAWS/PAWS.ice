@@ -13,8 +13,8 @@ algorithm pll(
   compute_clock := ~counter[0,1]; // x2 slower
   video_clock   := counter[1,1]; // x4 slower
   while (1) {
-    counter = counter + 1;
-	  trigger = trigger >> 1;
+        counter = counter + 1;
+        trigger = trigger >> 1;
   }
 }
 $$end
@@ -110,19 +110,11 @@ $$else
 $$end
 
     // SDRAM Reset
-    uint1   sdram_reset = uninitialized;
-    clean_reset sdram_rstcond<@sdram_clock,!reset> ( out :> sdram_reset );
+    uint1   sdram_reset = uninitialized; clean_reset sdram_rstcond<@sdram_clock,!reset> ( out :> sdram_reset );
 
-    // RAM - BRAM and SDRAM
     // SDRAM chip controller by @sylefeb
-    // interface
-    sdram_r16w16_io sio_fullrate;
-    sdram_r16w16_io sio_halfrate;
-    sdram_half_speed_access sdaccess <@sdram_clock,!sdram_reset> (
-            sd      <:> sio_fullrate,
-            sdh     <:> sio_halfrate,
-    );
-    // algorithm
+    sdram_r16w16_io sio_fullrate; sdram_r16w16_io sio_halfrate;
+    sdram_half_speed_access sdaccess <@sdram_clock,!sdram_reset> ( sd <:> sio_fullrate, sdh <:> sio_halfrate );
     sdram_controller_autoprecharge_r16_w16 sdram32MB <@sdram_clock,!sdram_reset> (
         sd        <:> sio_fullrate,
         sdram_cle :>  sdram_cle,
@@ -142,34 +134,26 @@ $$end
   $$end
     );
 
-    // SDRAM and BRAM (for BIOS)
-    // FUNCTION3 controls byte read/writes
-    uint16  sdramreaddata = uninitialized;
-    uint1   sdrambusy = uninitialized;
-    cachecontroller sdram <@clock_system,!reset> (
+    // SDRAM ( via CACHE ) and BRAM (for BIOS AND FAST BRAM )
+    // byteaccess controls byte read/writes
+    uint1   byteaccess <:: ( ~|CPU.accesssize[0,2] );
+    cachecontroller DRAM <@clock_system,!reset> (
         sio <:> sio_halfrate,
         byteaccess <: byteaccess,
-        address <: address,
-        writedata <: writedata,
+        address <: CPU.address[0,26],
+        writedata <: CPU.writedata,
         writeflag <: sdramwriteflag,
-        readflag <: sdramreadflag,
-        readdata :> sdramreaddata,
-        busy :> sdrambusy
+        readflag <: sdramreadflag
     );
-    uint16  ramreaddata = uninitialized;
-    bramcontroller ram <@clock_system,!reset> (
+    bramcontroller RAM <@clock_system,!reset> (
         byteaccess <: byteaccess,
-        address <: address,
-        writedata <: writedata,
+        address <: CPU.address[0,15],
+        writedata <: CPU.writedata,
         writeflag <: ramwriteflag,
-        readflag <: ramreadflag,
-        readdata :> ramreaddata
+        readflag <: ramreadflag
     );
 
     // MEMORY MAPPED I/O + SMT CONTROLS
-    uint1   SMTRUNNING = uninitialized;
-    uint32  SMTSTARTPC = uninitialized;
-    uint16  IOreadData = uninitialized;
     io_memmap IO_Map <@clock_system,!reset> (
         leds :> leds,
 $$if not SIMULATION then
@@ -187,53 +171,41 @@ $$if not SIMULATION then
 $$end
         clock_25mhz <: $clock_25mhz$,
 
-        memoryAddress <: address,
+        memoryAddress <: CPU.address[0,12],
         memoryWrite <: IOmemoryWrite,
-        writeData <: writedata,
-        memoryRead <: IOmemoryRead,
-        readData :> IOreadData,
-
-        SMTRUNNING :> SMTRUNNING,
-        SMTSTARTPC :> SMTSTARTPC
+        writeData <: CPU.writedata,
+        memoryRead <: IOmemoryRead
     );
 
 $$if SIMULATION then
     uint4 audio_l(0);
     uint4 audio_r(0);
 $$end
-    uint16  TreadData = uninitialized;
-    uint16  static16bit = uninitialized;
     timers_memmap TIMERS_Map <@clock_system,!reset> (
         clock_25mhz <: $clock_25mhz$,
-        memoryAddress <: address,
+        memoryAddress <: CPU.address[0,5],
         memoryWrite <: TmemoryWrite,
-        writeData <: writedata,
-        memoryRead <: TmemoryRead,
-        readData :> TreadData,
-        static16bit :> static16bit
+        writeData <: CPU.writedata,
+        memoryRead <: TmemoryRead
     );
 
-    uint16  AreadData = uninitialized;
     audio_memmap AUDIO_Map <@clock_system,!reset> (
         clock_25mhz <: $clock_25mhz$,
-        memoryAddress <: address,
+        memoryAddress <: CPU.address[0,3],
         memoryWrite <: AmemoryWrite,
-        writeData <: writedata,
+        writeData <: CPU.writedata,
         memoryRead <: AmemoryRead,
-        readData :> AreadData,
         audio_l :> audio_l,
         audio_r :> audio_r,
-        static4bit <: static16bit[0,4]
+        static4bit <: TIMERS_Map.static16bit[0,4]
     );
 
-    uint16  VreadData = uninitialized;
     video_memmap VIDEO_Map <@clock_system,!reset> (
         clock_25mhz <: $clock_25mhz$,
-        memoryAddress <: address,
+        memoryAddress <: CPU.address[0,12],
         memoryWrite <: VmemoryWrite,
-        writeData <: writedata,
+        writeData <: CPU.writedata,
         memoryRead <: VmemoryRead,
-        readData :> VreadData,
 $$if HDMI then
         gpdi_dp :> gpdi_dp,
 $$end
@@ -244,61 +216,50 @@ $$if VGA then
         video_hs :> video_hs,
         video_vs :> video_vs,
 $$end
-        static6bit <: static16bit[0,6]
+        static6bit <: TIMERS_Map.static16bit[0,6]
     );
 
-    uint2   accesssize = uninitialized;
-    uint1   byteaccess <:: ( ~|accesssize[0,2] );
-    uint27  address = uninitialized;
-    uint16  writedata = uninitialized;
-    uint1   CPUwritememory = uninitialized;
-    uint1   CPUreadmemory = uninitialized;
     PAWSCPU CPU <@clock_system,!reset> (
         clock_CPUdecoder <: clock_decode,
-        accesssize :> accesssize,
-        address :> address,
-        writedata :> writedata,
-        SMTRUNNING <: SMTRUNNING,
-        SMTSTARTPC <: SMTSTARTPC[0,27],
+        SMTRUNNING <: IO_Map.SMTRUNNING,
+        SMTSTARTPC <: IO_Map.SMTSTARTPC[0,27],
         memorybusy <: memorybusy,
-        readdata <: readdata,
-        writememory :> CPUwritememory,
-        readmemory :> CPUreadmemory
+        readdata <: readdata
     );
 
     // IDENTIFY ADDRESS BLOCK
-    uint1   SDRAM <: address[26,1];
-    uint1   BRAM <: ~SDRAM & ~address[15,1];
+    uint1   SDRAM <: CPU.address[26,1];
+    uint1   BRAM <: ~SDRAM & ~CPU.address[15,1];
     uint1   IOmem <: ~SDRAM & ~BRAM;
-    uint1   TIMERS <: IOmem & ( ~|address[12,2] );
-    uint1   VIDEO <: IOmem & ( address[12,2] == 2h1 );
-    uint1   AUDIO <: IOmem & ( address[12,2] == 2h2 );
-    uint1   IO <: IOmem & ( &address[12,2] );
+    uint1   TIMERS <: IOmem & ( ~|CPU.address[12,2] );
+    uint1   VIDEO <: IOmem & ( CPU.address[12,2] == 2h1 );
+    uint1   AUDIO <: IOmem & ( CPU.address[12,2] == 2h2 );
+    uint1   IO <: IOmem & ( &CPU.address[12,2] );
 
     // SDRAM -> CPU BUSY STATE
-    uint1   memorybusy <:: sdrambusy | ( ( CPUreadmemory | CPUwritememory ) & ( BRAM | SDRAM ) );
+    uint1   memorybusy <:: DRAM.busy | ( ( CPU.readmemory | CPU.writememory ) & ( BRAM | SDRAM ) );
 
     // WRITE TO SDRAM / BRAM / IO REGISTERS
-    uint1   sdramwriteflag <:: SDRAM & CPUwritememory;
-    uint1   ramwriteflag <:: BRAM & CPUwritememory;
-    uint1   TmemoryWrite <:: TIMERS & CPUwritememory;
-    uint1   VmemoryWrite <:: VIDEO & CPUwritememory;
-    uint1   AmemoryWrite <:: AUDIO & CPUwritememory;
-    uint1   IOmemoryWrite <:: IO & CPUwritememory;
+    uint1   sdramwriteflag <:: SDRAM & CPU.writememory;
+    uint1   ramwriteflag <:: BRAM & CPU.writememory;
+    uint1   TmemoryWrite <:: TIMERS & CPU.writememory;
+    uint1   VmemoryWrite <:: VIDEO & CPU.writememory;
+    uint1   AmemoryWrite <:: AUDIO & CPU.writememory;
+    uint1   IOmemoryWrite <:: IO & CPU.writememory;
 
     // READ FROM SDRAM / BRAM / IO REGISTERS
-    uint1   sdramreadflag <: SDRAM & CPUreadmemory;
-    uint1   ramreadflag <: BRAM & CPUreadmemory;
-    uint1   TmemoryRead <: TIMERS & CPUreadmemory;
-    uint1   VmemoryRead <: VIDEO & CPUreadmemory;
-    uint1   AmemoryRead <: AUDIO & CPUreadmemory;
-    uint1   IOmemoryRead <: IO & CPUreadmemory;
-    uint16  readdata <: SDRAM ? sdramreaddata :
-                BRAM ? ramreaddata :
-                TIMERS ? TreadData :
-                VIDEO ? VreadData :
-                AUDIO ? AreadData :
-                IO? IOreadData : 0;
+    uint1   sdramreadflag <: SDRAM & CPU.readmemory;
+    uint1   ramreadflag <: BRAM & CPU.readmemory;
+    uint1   TmemoryRead <: TIMERS & CPU.readmemory;
+    uint1   VmemoryRead <: VIDEO & CPU.readmemory;
+    uint1   AmemoryRead <: AUDIO & CPU.readmemory;
+    uint1   IOmemoryRead <: IO & CPU.readmemory;
+    uint16  readdata <: SDRAM ? DRAM.readdata :
+                BRAM ? RAM.readdata :
+                TIMERS ? TIMERS_Map.readData :
+                VIDEO ? VIDEO_Map.readData :
+                AUDIO ? AUDIO_Map.readData :
+                IO? IO_Map.readData : 0;
 }
 
 // RAM - BRAM controller
@@ -320,7 +281,7 @@ $$if not SIMULATION then
         , pad(uninitialized)
     };
 $$else
-    // RISC-V RAM and BIOS
+    // RISC-V FAST BRAM and BIOS FOR VERILATOR - TEST FOR SMT AND FPU
     bram uint16 ram[16384] = {
         $include('ROM/VBIOS.inc')
         , pad(uninitialized)
@@ -335,7 +296,6 @@ $$end
         if( writeflag ) {
             if( byteaccess ) {
                 ++:
-            } else {
             }
             ram.wenable = 1;
         }
@@ -366,41 +326,26 @@ algorithm cachecontroller(
     simple_dualport_bram uint14 tags[8192] = uninitialized;
 
     // CACHE WRITER
-    uint16  cacheupdatedata = uninitialized;
-    uint1   cacheupdate = uninitialized;
-    uint1   needwritetosdram = uninitialized;
-    cachewriter CW(
-        address <: address,
-        needwritetosdram <: needwritetosdram,
-        writedata <: cacheupdatedata,
-        update <: cacheupdate,
-        cache <:> cache,
-        tags <:> tags
-    );
+    cachewriter CW( cache <:> cache, tags <:> tags, address <: address);
 
     // SDRAM CONTROLLER
-    uint16  sdramwritedata <: cache.rdata0;
-    uint16  sdramreaddata = uninitialized;
     uint1   sdramwrite = uninitialized;
     uint1   sdramread = uninitialized;
-    uint1   sdrambusy = uninitialized;
     uint26  sdramaddress = uninitialized;
     sdramcontroller SDRAM(
         sio <:> sio,
         address <: sdramaddress,
-        writedata <: sdramwritedata,
+        writedata <: cache.rdata0,
         writeflag <: sdramwrite,
-        readdata :> sdramreaddata,
         readflag <: sdramread,
-        busy :> sdrambusy
     );
 
     // CACHE TAG match flag
     uint1   cachetagmatch <:: ( { cachetag(tags.rdata0).valid, cachetag(tags.rdata0).partaddress } == { 1b1, address[14,12] } );
 
     // VALUE TO WRITE TO CACHE ( deals with correctly mapping 8 bit writes and 16 bit writes, using sdram or cache as base )
-    uint16  writethrough <:: ( byteaccess ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cache.rdata0[0,8] : sdramreaddata[0,8] } :
-                                                                        { cachetagmatch ? cache.rdata0[8,8] : sdramreaddata[8,8], writedata[0,8] } ) : writedata;
+    uint16  writethrough <:: ( byteaccess ) ? ( address[0,1] ? { writedata[0,8], cachetagmatch ? cache.rdata0[0,8] : SDRAM.readdata[0,8] } :
+                                                                        { cachetagmatch ? cache.rdata0[8,8] : SDRAM.readdata[8,8], writedata[0,8] } ) : writedata;
 
     // MEMORY ACCESS FLAGS
     uint1   doread = uninitialized;
@@ -410,10 +355,10 @@ algorithm cachecontroller(
     sdramread := 0; sdramwrite := 0;
 
     // FLAGS FOR CACHE ACCESS
-    cache.addr0 := address[1,13]; tags.addr0 := address[1,13]; cacheupdate := 0;
+    cache.addr0 := address[1,13]; tags.addr0 := address[1,13]; CW.update := 0;
 
     // 16 bit READ
-    readdata := cachetagmatch ? cache.rdata0 : sdramreaddata;
+    readdata := cachetagmatch ? cache.rdata0 : SDRAM.readdata;
 
     while(1) {
         doread = readflag; dowrite = writeflag;
@@ -421,16 +366,16 @@ algorithm cachecontroller(
             busy = 1;
             ++: // WAIT FOR CACHE
             if( cachetagmatch ) {
-                needwritetosdram = 1; cacheupdatedata = writethrough; cacheupdate = dowrite;
+                CW.needwritetosdram = 1; CW.writedata = writethrough; CW.update = dowrite;
             } else {
-                if( tags.rdata0[13,1] ) { while( sdrambusy ) {} sdramaddress = { tags.rdata0[0,12], address[1,13], 1b0 }; sdramwrite = 1; } else {}   // EVICT FROM CACHE TO SDRAM
+                if( tags.rdata0[13,1] ) { while( SDRAM.busy ) {} sdramaddress = { tags.rdata0[0,12], address[1,13], 1b0 }; sdramwrite = 1; } else {}   // EVICT FROM CACHE TO SDRAM
 
                 // READ FROM SDRAM FOR READ AND 8 BIT WRITES (AND MODIFY) AND WRITE TO CACHE, OR WRITE DIRECTLY TO CACHE IF 16 BIT WRITE
                 if( doread | ( dowrite & byteaccess ) ) {
-                    while( sdrambusy ) {} sdramaddress = address; sdramread = 1; while( sdrambusy ) {}
-                    needwritetosdram = dowrite; cacheupdatedata = dowrite ? writethrough : sdramreaddata; cacheupdate = 1;
+                    while( SDRAM.busy ) {} sdramaddress = address; sdramread = 1; while( SDRAM.busy ) {}
+                    CW.needwritetosdram = dowrite; CW.writedata = dowrite ? writethrough : SDRAM.readdata; CW.update = 1;
                 } else {
-                    needwritetosdram = 1; cacheupdatedata = writethrough; cacheupdate = dowrite;
+                    CW.needwritetosdram = 1; CW.writedata = writethrough; CW.update = dowrite;
                 }
             }
             busy = 0;
@@ -445,7 +390,7 @@ algorithm cachewriter(
     input   uint1   update,
     simple_dualport_bram_port1 cache,
     simple_dualport_bram_port1 tags
-) <autorun> {
+) <autorun,reginputs> {
     cache.wenable1 := update; tags.wenable1 := update;
     cache.addr1 := address[1,13]; cache.wdata1 := writedata;
     tags.addr1 := address[1,13]; tags.wdata1 := { needwritetosdram, 1b1, address[14,12] };
