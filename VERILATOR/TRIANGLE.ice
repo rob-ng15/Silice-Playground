@@ -187,5 +187,8 @@ algorithm main(output uint8 leds)
 algorithm pulse(
     output  uint32  cycles(0)
 ) <autorun> {
-    cycles := cycles + 1;
+    uint32  plus1 <:: cycles + 1;
+    always {
+        cycles = plus1;
+    }
 }

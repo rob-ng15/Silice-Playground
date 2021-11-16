@@ -93,7 +93,6 @@ algorithm signextend(
 ) <autorun,reginputs> {
     uint4   byteoffset <:: { byteaccess, 3b000 };
     uint4   bytesignoffset <:: { byteaccess, 3b111 };
-
     always {
         memory168 = is16or8 ? dounsigned ? readdata[0,16] : { {16{readdata[15,1]}}, readdata[0,16] } :
                                 dounsigned ? readdata[byteoffset, 8] : { {24{readdata[bytesignoffset, 1]}}, readdata[byteoffset, 8] };
@@ -115,8 +114,9 @@ algorithm addrplus2(
     input   uint27  address,
     output  uint27  addressplus2
 ) <autorun,reginputs> {
+    uint27  plus2 <:: address + 2;
     always {
-        addressplus2 = address + 2;
+        addressplus2 = plus2;
     }
 }
 
@@ -355,15 +355,17 @@ algorithm counter40(
     input   uint1   update,
     output  uint40  counter(0)
 ) <autorun,reginputs> {
+    uint40  plus1 <:: counter + 1;
     always {
-        counter = counter + update;
+        if( update ) { counter = plus1; }
     }
 }
 algorithm counter40always(
     output  uint40  counter(0)
 ) <autorun,reginputs> {
+    uint40  plus1 <:: counter + 1;
     always {
-        counter = counter + 1;
+        counter = plus1;
     }
 }
 algorithm csrf(
