@@ -399,7 +399,7 @@ algorithm floataddsub(
                 case 2b01: { result = ( A.ZERO & B.ZERO ) ? 0 : ( B.ZERO ) ? a : { addsub ^ fp32( b ).sign, b[0,31] }; }
                 default: {
                     switch( { IF, NN } ) {
-                        case 2b10: { result = ( A.INF & B.INF) ? ( fp32( a ).sign ^ signB ) ? 32hffc00000 : a : A.INF ? a : b; }
+                        case 2b10: { result = NV ? 32hffc00000 : A.INF ? a : b; }
                         default: { result = 32hffc00000; }
                     }
                 }
@@ -1029,13 +1029,13 @@ algorithm main(output int8 leds) {
     uint32  startcycle = uninitialised;
     pulse PULSE();
 
-    uint7   opCode = 7b1010011; // ALL OTHER FPU OPERATIONS
+    uint7   opCode = 7b0000000; // ALL OTHER FPU OPERATIONS
     // uint7   opCode = 7b1000011; // FMADD
     // uint7   opCode = 7b1000111; // FMSUB
     // uint7   opCode = 7b1001011; // FNMSUB
     // uint7   opCode = 7b1001111; // FNMADD
 
-    uint7   function7 = 7b1101000; // OPERATION SWITCH
+    uint7   function7 = 7b0000000; // OPERATION SWITCH
     // ADD = 7b0000000 SUB = 7b0000100 MUL = 7b0001000 DIV = 7b0001100 SQRT = 7b0101100
     // FSGNJ[N][X] = 7b0010000 function3 == 000 FSGNJ == 001 FSGNJN == 010 FSGNJX
     // MIN MAX = 7b0010100 function3 == 000 MIN == 001 MAX
@@ -1065,8 +1065,8 @@ algorithm main(output int8 leds) {
     // qNaN = 32hffc00000
     // INF = 32h7F800000
     // -INF = 32hFF800000
-    uint32  sourceReg1F = 32h3F800000;
-    uint32  sourceReg2F = 32h42C80000;
+    uint32  sourceReg1F = 32h7F800000;
+    uint32  sourceReg2F = 32hFF800000;
     uint32  sourceReg3F = 32h3eaaaaab;
 
     uint32  result = uninitialised;

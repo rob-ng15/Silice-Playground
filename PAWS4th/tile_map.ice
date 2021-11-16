@@ -38,8 +38,7 @@ algorithm tilemap(
     uint1   tmpixel <: colour15(colours.rdata0).x_reflect ? tiles16x16.rdata0[xintm, 1] :tiles16x16.rdata0[4b1111 - xintm, 1];
 
     // Set up reading of the tilemap
-    tiles.addr0 := xtmpos + ytmpos * 42;
-    colours.addr0 := xtmposcolour + ytmpos * 42;
+    tiles.addr0 := xtmpos + ytmpos * 42; colours.addr0 := xtmposcolour + ytmpos * 42;
 
     // Setup the reading and writing of the tiles16x16
     tiles16x16.addr0 := colour15(colours.rdata0).y_reflect ? { tiles.rdata0, 4b1111 - yintm } :{ tiles.rdata0, yintm };

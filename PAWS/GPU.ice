@@ -324,9 +324,7 @@ algorithm drawrectangle(
             y = min_y;
             while( y != max_y ) {
                 x = min_x;
-                while( x != max_x ) {
-                    bitmap_write = 1; x = xNEXT;
-                }
+                while( x != max_x ) { bitmap_write = 1; x = xNEXT; }
                 y = yNEXT;
             }
             busy = 0;
@@ -388,21 +386,14 @@ algorithm prepline(
         if( start ) {
             // Setup drawing a line from x,y to param0,param1 of width param2 in colour
             // Ensure LEFT to RIGHT AND if moving UP or DOWN
-            if( x < param0 ) {
-                x1 = x; y1 = y; dv = ylessparam1;
-            } else {
-                x1 = param0; y1 = param1; dv = ~ylessparam1;
-            }
+            if( x < param0 ) { x1 = x; y1 = y; dv = ylessparam1; } else { x1 = param0; y1 = param1; dv = ~ylessparam1; }
 
             // Absolute DELTAs
             ( dx ) = absdelta( x, param0 ); ( dy ) = absdelta( y, param1 );
 
             // Numerator
-            if( dx > dy ) {
-                numerator = ( dx >> 1 ); max_count = dx + 1;
-            } else {
-                numerator = -( dy >> 1 ); max_count = dy + 1;
-            }
+            if( dx > dy ) { numerator = ( dx >> 1 ); max_count = dx + 1; } else { numerator = -( dy >> 1 ); max_count = dy + 1; }
+
             todraw = 1;
         }
     }
@@ -781,25 +772,12 @@ algorithm blit(
     uint1   action01 <:: ( action[0,2] == 2b01 );
     uint1   action10 <:: ( action[0,2] == 2b10 );
 
-    uint4   yinblittile <:: action[2,1] ? action00 ? py[0,4] :
-                                        action01 ? px[0,4] :
-                                        action10 ? revy4 : revx4 :
-                                        action[1,1] ? revy4 :  py[0,4];
-    uint4   xinblittile <:: 15 - ( action[2,1] ?  action00 ? px[0,4] :
-                                        action01 ? revy4 :
-                                        action10 ? revx4 : py[0,4] :
-                                        action[0,1] ? revx4 :  px[0,4] );
-    uint3   yinchartile <:: action[2,1] ? action00 ? py[0,3] :
-                                        action01 ? px[0,3] :
-                                        action10 ? revy3 : revx3 :
-                                        action[1,1] ? revy3 :  py[0,3];
-    uint3   xinchartile <:: 7 - ( action[2,1] ?  action00 ? px[0,3] :
-                                        action01 ? revy3 :
-                                        action10 ? revx3 : py[0,3] :
-                                        action[0,1] ? revx3 :  px[0,3] );
-    blit1tilemap.addr0 := { tile, yinblittile };
-    characterGenerator8x8.addr0 := { tile, yinchartile };
+    uint4   yinblittile <:: action[2,1] ? action00 ? py[0,4] : action01 ? px[0,4] : action10 ? revy4 : revx4 : action[1,1] ? revy4 :  py[0,4];
+    uint4   xinblittile <:: 15 - ( action[2,1] ?  action00 ? px[0,4] : action01 ? revy4 : action10 ? revx4 : py[0,4] : action[0,1] ? revx4 :  px[0,4] );
+    uint3   yinchartile <:: action[2,1] ? action00 ? py[0,3] : action01 ? px[0,3] : action10 ? revy3 : revx3 : action[1,1] ? revy3 :  py[0,3];
+    uint3   xinchartile <:: 7 - ( action[2,1] ?  action00 ? px[0,3] : action01 ? revy3 : action10 ? revx3 : py[0,3] : action[0,1] ? revx3 :  px[0,3] );
 
+    blit1tilemap.addr0 := { tile, yinblittile }; characterGenerator8x8.addr0 := { tile, yinchartile };
     bitmap_x_write := x1 + ( px << scale ) + x2; bitmap_y_write := y1 + ( py << scale ) + y2; bitmap_write := 0;
 
     while(1) {
@@ -876,16 +854,10 @@ algorithm colourblit(
     uint1   action10 <:: ( action[0,2] == 2b10 );
 
     // tile bitmap addresses - handling rotation or reflection - find y and x positions, then concert to address
-    uint4   yintile <:: action[2,1] ? action00 ? py[0,4] :
-                                        action01 ? px[0,4] :
-                                        action10 ? revy : revx :
-                                        action[1,1] ? revy :  py[0,4];
-    uint4   xintile <:: action[2,1] ?  action00 ? px[0,4] :
-                                        action01 ? revy :
-                                        action10 ? revx : py[0,4] :
-                                        action[0,1] ? revx :  px[0,4];
-    colourblittilemap.addr0 := { tile, yintile, xintile };
+    uint4   yintile <:: action[2,1] ? action00 ? py[0,4] : action01 ? px[0,4] : action10 ? revy : revx : action[1,1] ? revy :  py[0,4];
+    uint4   xintile <:: action[2,1] ?  action00 ? px[0,4] : action01 ? revy : action10 ? revx : py[0,4] : action[0,1] ? revx :  px[0,4];
 
+    colourblittilemap.addr0 := { tile, yintile, xintile };
     bitmap_x_write := x1 + ( px << scale ) + x2; bitmap_y_write := y1 + ( py << scale ) + y2; bitmap_colour_write := colourblittilemap.rdata0;  bitmap_write := 0;
 
     while(1) {

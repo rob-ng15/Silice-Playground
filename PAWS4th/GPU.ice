@@ -106,24 +106,10 @@ algorithm gpu_queue(
     }
 
     while(1) {
-        switch( gpu_write ) {
-            case 0: {}
-            default: {
-                // COMMAND QUEUE, LATCH AND WAIT FOR GPU THEN DISPATCH
-                queue_busy = 1;
-                while( gpu_active ) {}
-                GPU.gpu_colour = queue_colour; GPU.gpu_colour_alt = queue_colour_alt; GPU.gpu_dithermode = queue_dithermode;
-                GPU.gpu_x = queue_x; GPU.gpu_y = queue_y;
-                GPU.gpu_param0 = queue_param0; GPU.gpu_param1 = queue_param1;
-                GPU.gpu_param2 = queue_param2; GPU.gpu_param3 = queue_param3;
-                GPU.crop_left = queue_cropL; GPU.crop_right = queue_cropR; GPU.crop_top = queue_cropT; GPU.crop_bottom = queue_cropB;
-                GPU.gpu_write = queue_write;
-                queue_busy = 0;
-            }
-            case 15: {
+        if( |gpu_write ) {
+            if( &gpu_write ) {
                 // COMMAND QUEUE FOR QUADRILATERALS, SPLIT INTO TWO TRIANGLES THEN DISPATCH
                 queue_busy = 1;
-                // QUADRILATERAL BY SPLITTING INTO 2 TRIANGLES
                 while( gpu_active ) {}
                 GPU.gpu_dithermode = queue_dithermode; GPU.gpu_colour = queue_colour; GPU.gpu_colour_alt = queue_colour_alt;
                 GPU.gpu_x = queue_x; GPU.gpu_y = queue_y;
@@ -135,6 +121,17 @@ algorithm gpu_queue(
                 // SECOND TRIANGLE
                 GPU.gpu_param0 = queue_param4; GPU.gpu_param1 = queue_param5;
                 GPU.gpu_write = 6;
+                queue_busy = 0;
+            } else {
+                // COMMAND QUEUE, LATCH AND WAIT FOR GPU THEN DISPATCH
+                queue_busy = 1;
+                while( gpu_active ) {}
+                GPU.gpu_colour = queue_colour; GPU.gpu_colour_alt = queue_colour_alt; GPU.gpu_dithermode = queue_dithermode;
+                GPU.gpu_x = queue_x; GPU.gpu_y = queue_y;
+                GPU.gpu_param0 = queue_param0; GPU.gpu_param1 = queue_param1;
+                GPU.gpu_param2 = queue_param2; GPU.gpu_param3 = queue_param3;
+                GPU.crop_left = queue_cropL; GPU.crop_right = queue_cropR; GPU.crop_top = queue_cropT; GPU.crop_bottom = queue_cropB;
+                GPU.gpu_write = queue_write;
                 queue_busy = 0;
             }
         }
@@ -183,41 +180,33 @@ algorithm gpu(
     // GPU SUBUNITS
     rectangle GPUrectangle(
         crop_left <: crop_left, crop_right <: crop_right, crop_top <: crop_top, crop_bottom <: crop_bottom,
-        x <: gpu_x, y <: gpu_y,
-        x1 <: gpu_param0, y1 <: gpu_param1
+        x <: gpu_x, y <: gpu_y, x1 <: gpu_param0, y1 <: gpu_param1
     );
     line GPUline(
-        x <: gpu_x, y <: gpu_y,
-        x1 <: gpu_param0, y1 <: gpu_param1,
+        x <: gpu_x, y <: gpu_y, x1 <: gpu_param0, y1 <: gpu_param1,
         width <: gpu_param2[0,8]
     );
     circle GPUcircle(
-        x <: gpu_x, y <: gpu_y,
-        radius <: gpu_param0, sectormask <: gpu_param1
+        x <: gpu_x, y <: gpu_y, radius <: gpu_param0, sectormask <: gpu_param1
     );
     triangle GPUtriangle(
         crop_left <: crop_left, crop_right <: crop_right, crop_top <: crop_top, crop_bottom <: crop_bottom,
-        x <: gpu_x, y <: gpu_y,
-        x1 <: gpu_param0, y1 <: gpu_param1,
-        x2 <: gpu_param2, y2 <: gpu_param3
+        x <: gpu_x, y <: gpu_y, x1 <: gpu_param0, y1 <: gpu_param1, x2 <: gpu_param2, y2 <: gpu_param3
     );
     blit GPUblit(
         blit1tilemap <:> blit1tilemap,
         characterGenerator8x8 <:> characterGenerator8x8,
         x <: gpu_x, y <: gpu_y,
-        tile <: gpu_param0[0,9], scale <: gpu_param1[0,2],
-        action <: gpu_param2[0,3]
+        tile <: gpu_param0[0,9], scale <: gpu_param1[0,2], action <: gpu_param2[0,3]
     );
     colourblit GPUcolourblit(
         colourblittilemap <:> colourblittilemap,
         x <: gpu_x, y <: gpu_y,
-        tile <: gpu_param0[0,6], scale <: gpu_param1[0,2],
-        action <: gpu_param2[0,3]
+        tile <: gpu_param0[0,6], scale <: gpu_param1[0,2],  action <: gpu_param2[0,3]
     );
     pixelblock GPUpixelblock(
-        x <: gpu_x, y <: gpu_y,
-        width <: gpu_param0, ignorecolour <: gpu_param1,
-        colour7 <: pb_colour7,
+        x <: gpu_x, y <: gpu_y, width <: gpu_param0,
+        ignorecolour <: gpu_param1, colour7 <: pb_colour7,
         colour8r <: pb_colour8r, colour8g <: pb_colour8g, colour8b <: pb_colour8b,
         newpixel <: pb_newpixel
     );
@@ -297,13 +286,9 @@ algorithm preprectangle(
     output  int11   max_y,
     output  uint1   todraw
 ) <autorun> {
-    uint1   xcompareparam0 <:: ( x < param0 );
-    uint1   ycompareparam1 <:: ( y < param1 );
-
-    int11   x1 <:: xcompareparam0 ? x : param0;
-    int11   y1 <:: ycompareparam1 ? y : param1;
-    int11   x2 <:: xcompareparam0 ? param0 : x;
-    int11   y2 <:: ycompareparam1 ? param1 : y;
+    uint1   xcompareparam0 <:: ( x < param0 );          uint1   ycompareparam1 <:: ( y < param1 );
+    int11   x1 <:: xcompareparam0 ? x : param0;         int11   y1 <:: ycompareparam1 ? y : param1;
+    int11   x2 <:: xcompareparam0 ? param0 : x;         int11   y2 <:: ycompareparam1 ? param1 : y;
 
     todraw := 0;
 
@@ -328,8 +313,9 @@ algorithm drawrectangle(
     output  int11   bitmap_y_write,
     output  uint1   bitmap_write
 ) <autorun> {
-    uint9   x = uninitialized;
-    uint8   y = uninitialized;
+    uint9   x = uninitialized;                          uint9 xNEXT <:: x + 1;
+    uint8   y = uninitialized;                          uint8 yNEXT <:: y + 1;
+
     bitmap_x_write := x; bitmap_y_write := y; bitmap_write := 0;
 
     while(1) {
@@ -338,10 +324,8 @@ algorithm drawrectangle(
             y = min_y;
             while( y != max_y ) {
                 x = min_x;
-                while( x != max_x ) {
-                    bitmap_write = 1; x = x + 1;
-                }
-                y = y + 1;
+                while( x != max_x ) { bitmap_write = 1; x = xNEXT; }
+                y = yNEXT;
             }
             busy = 0;
         }
@@ -362,18 +346,16 @@ algorithm rectangle (
     output  int11   bitmap_x_write,
     output  int11   bitmap_y_write,
     output  uint1   bitmap_write
-) <autorun> {
+) <autorun,reginputs> {
     preprectangle PREP(
         start <: start,
         crop_left <: crop_left, crop_right <: crop_right, crop_top <: crop_top, crop_bottom <: crop_bottom,
-        x <: x, y <: y,
-        param0 <: x1, param1 <: y1
+        x <: x, y <: y, param0 <: x1, param1 <: y1
     );
 
     drawrectangle RECTANGLE(
         min_x <: PREP.min_x, min_y <: PREP.min_y, max_x <: PREP.max_x, max_y <: PREP.max_y,
-        bitmap_x_write :> bitmap_x_write, bitmap_y_write :> bitmap_y_write,
-        bitmap_write :> bitmap_write,
+        bitmap_x_write :> bitmap_x_write, bitmap_y_write :> bitmap_y_write, bitmap_write :> bitmap_write,
         start <: PREP.todraw
     );
 
@@ -397,33 +379,21 @@ algorithm prepline(
     output  int11   max_count
 ) <autorun> {
     uint1 ylessparam1 <:: ( y < param1 );
+
     todraw := 0;
 
     always {
         if( start ) {
             // Setup drawing a line from x,y to param0,param1 of width param2 in colour
             // Ensure LEFT to RIGHT AND if moving UP or DOWN
-            if( x < param0 ) {
-                x1 = x;
-                y1 = y;
-                dv = ylessparam1;
-            } else {
-                x1 = param0;
-                y1 = param1;
-                dv = ~ylessparam1;
-            }
+            if( x < param0 ) { x1 = x; y1 = y; dv = ylessparam1; } else { x1 = param0; y1 = param1; dv = ~ylessparam1; }
 
             // Absolute DELTAs
             ( dx ) = absdelta( x, param0 ); ( dy ) = absdelta( y, param1 );
 
             // Numerator
-            if( dx > dy ) {
-                numerator = ( dx >> 1 );
-                max_count = dx + 1;
-            } else {
-                numerator = -( dy >> 1 );
-                max_count = dy + 1;
-            }
+            if( dx > dy ) { numerator = ( dx >> 1 ); max_count = dx + 1; } else { numerator = -( dy >> 1 ); max_count = dy + 1; }
+
             todraw = 1;
         }
     }
@@ -443,36 +413,29 @@ algorithm drawline(
     output  int11   bitmap_y_write,
     output  uint1   bitmap_write
 ) <autorun> {
-    int11   x = uninitialized;
-    int11   y = uninitialized;
+    int11   x = uninitialized;                          int11   xNEXT <:: x + n2dx;
+    int11   y = uninitialized;                          int11   yNEXT <:: n2dy ? (y + ( dv ? 1 : -1 )) : y;
     int11   numerator = uninitialized;
-    int11   numerator2 <:: numerator;
-    int11   newnumerator <:: numerator - ( n2dx ? dy : 0 ) + ( n2dy ? dx : 0 );
-    uint1   n2dx <:: numerator2 > (-dx);
-    uint1   n2dy <:: numerator2 < dy;
+    int11   numerator2 <:: numerator;                   int11   newnumerator <:: numerator - ( n2dx ? dy : 0 ) + ( n2dy ? dx : 0 );
+    uint1   n2dx <:: numerator2 > (-dx);                uint1   n2dy <:: numerator2 < dy;
     uint1   dxdy <:: dx > dy;
-    int11   count = uninitialized;
-    int11   offset_x = uninitialised;
-    int11   offset_y = uninitialised;
+    int11   count = uninitialized;                      int11   countNEXT <:: count + 1;
+    int11   offset_x = uninitialised;                   int11   offset_xNEXT <:: offset_y + dxdy;
+    int11   offset_y = uninitialised;                   int11   offset_yNEXT <:: offset_x + ~dxdy;
     int11   offset_start <:: -( width >> 1 );
-    uint8   pixel_count = uninitialised;
+    uint8   pixel_count = uninitialised;                uint8   pixel_countNEXT <:: pixel_count + 1;
 
     bitmap_x_write := x + offset_x; bitmap_y_write := y + offset_y; bitmap_write := 0;
 
     while(1) {
         if( start ) {
-            busy = 1;
-            x = start_x; y = start_y; numerator = start_numerator; count = 0;
+            busy = 1;  x = start_x; y = start_y; numerator = start_numerator; count = 0;
             while( count != max_count ) {
                 pixel_count = 0; offset_x = dxdy ? 0 : offset_start; offset_y = dxdy ? offset_start : 0;
                 while( pixel_count != width ) {
-                    bitmap_write = 1;
-                    offset_y = offset_y + dxdy; offset_x = offset_x + ~dxdy;
-                    pixel_count = pixel_count + 1;
+                    bitmap_write = 1; offset_y = offset_xNEXT; offset_x = offset_yNEXT; pixel_count = pixel_countNEXT;
                 }
-                numerator = newnumerator;
-                x = x + n2dx; y = n2dy ? (y + ( dv ? 1 : -1 )) : y;
-                count = count + 1;
+                numerator = newnumerator; x = xNEXT; y = yNEXT; count = countNEXT;
             }
             busy = 0;
         }
@@ -489,11 +452,10 @@ algorithm line (
     output  int11   bitmap_x_write,
     output  int11   bitmap_y_write,
     output  uint1   bitmap_write
-) <autorun> {
+) <autorun,reginputs> {
     prepline PREP(
         start <: start,
-        x <: x, y <: y,
-        param0 <: x1, param1 <: y1
+        x <: x, y <: y, param0 <: x1, param1 <: y1
     );
     drawline LINE(
         start_x <: PREP.x1, start_y <: PREP.y1,
@@ -521,40 +483,40 @@ algorithm drawcircle(
     output  int11   bitmap_y_write,
     output  uint1   bitmap_write
 ) <autorun> {
-    int11   numerator = uninitialised;
-    int11   new_numerator <:: numerator[10,1] ? numerator + { active_x, 2b00 } + 6 : numerator + { (active_x - active_y), 2b00 } + 10;
+    int11   numerator = uninitialised;                  int11   new_numerator <:: numerator[10,1] ? numerator + { active_x, 2b00 } + 6 : numerator + { (active_x - active_y), 2b00 } + 10;
     uint1   positivenumerator <:: ~numerator[10,1] & ( |numerator );
-    int11   active_x = uninitialized;
-    int11   active_y = uninitialized;
-    int11   count = uninitialised;
-    int11   min_count = uninitialised;
-    uint1   drawingcircle <:: ( active_y >= active_x );
-    uint1   drawingsegment <:: ( count != min_count );
+    int11   active_x = uninitialized;                   int11   active_xNEXT <:: active_x + 1;
+    int11   active_y = uninitialized;                   int11   active_yNEXT <:: active_y - positivenumerator;
+    int11   count = uninitialised;                      int11   countNEXT <:: filledcircle ? count - 1 : min_count;
+    int11   min_count = uninitialised;                  int11   min_countNEXT <:: min_count + 1;
+    uint1   drawingcircle <:: ( active_y >= active_x ); uint1   drawingsegment <:: ( count != min_count );
+
+    // PLUS OR MINUS OFFSETS
+    int11   xcpax <:: xc + active_x;                    int11   xcnax <:: xc - active_x;
+    int11   xcpc <:: xc + count;                        int11   xcnc <:: xc - count;
+    int11   ycpax <:: yc + active_x;                    int11   ycnax <:: yc - active_x;
+    int11   ycpc <:: yc + count;                        int11   ycnc <:: yc - count;
+
     bitmap_write := 0;
 
     while(1) {
         if( start ) {
             busy = 1;
-            active_x = 0; active_y = radius; count = radius; numerator = start_numerator;
-            min_count = (-1);
+            active_x = 0; active_y = radius; count = radius; min_count = (-1); numerator = start_numerator;
             while( drawingcircle ) {
                 while( drawingsegment ) {
                     // OUTPUT PIXELS IN THE 8 SEGMENTS/ARCS AS PER MASK
-                    bitmap_x_write = xc + active_x; bitmap_y_write = yc + count;    if( draw_sectors[0,1] ) { bitmap_write = 1; ++: } else {}
-                    bitmap_y_write = yc - count;                                    if( draw_sectors[1,1] ) { bitmap_write = 1; ++: } else {}
-                    bitmap_x_write = xc - active_x;                                 if( draw_sectors[2,1] ) { bitmap_write = 1; ++: } else {}
-                    bitmap_y_write = yc + count;                                    if( draw_sectors[3,1] ) { bitmap_write = 1; ++: } else {}
-                    bitmap_x_write = xc + count; bitmap_y_write = yc + active_x;    if( draw_sectors[4,1] ) { bitmap_write = 1; ++: } else {}
-                    bitmap_y_write = yc - active_x;                                 if( draw_sectors[5,1] ) { bitmap_write = 1; ++: } else {}
-                    bitmap_x_write = xc - count;                                    if( draw_sectors[6,1] ) { bitmap_write = 1; ++: } else {}
-                    bitmap_y_write = yc + active_x;                                 if( draw_sectors[7,1] ) { bitmap_write = 1; }
-                    count = filledcircle ? count - 1 : min_count;
+                    bitmap_x_write = xcpax; bitmap_y_write = ycpc;      if( draw_sectors[0,1] ) { bitmap_write = 1; ++: }
+                    bitmap_y_write = ycnc;                              if( draw_sectors[1,1] ) { bitmap_write = 1; ++: }
+                    bitmap_x_write = xcnax;                             if( draw_sectors[2,1] ) { bitmap_write = 1; ++: }
+                    bitmap_y_write = ycpc;                              if( draw_sectors[3,1] ) { bitmap_write = 1; ++: }
+                    bitmap_x_write = xcpc; bitmap_y_write = ycpax;      if( draw_sectors[4,1] ) { bitmap_write = 1; ++: }
+                    bitmap_y_write = ycnax;                             if( draw_sectors[5,1] ) { bitmap_write = 1; ++: }
+                    bitmap_x_write = xcnc;                              if( draw_sectors[6,1] ) { bitmap_write = 1; ++: }
+                    bitmap_y_write = ycpax;                             if( draw_sectors[7,1] ) { bitmap_write = 1; }
+                    count = countNEXT;
                 }
-                active_x = active_x + 1;
-                active_y = active_y - positivenumerator;
-                count = active_y;
-                min_count = min_count + 1;
-                numerator = new_numerator;
+                active_x = active_xNEXT; active_y = active_yNEXT; count = active_y; min_count = min_countNEXT; numerator = new_numerator;
             }
             busy = 0;
         }
@@ -572,7 +534,7 @@ algorithm circle(
     output  int11  bitmap_x_write,
     output  int11  bitmap_y_write,
     output  uint1  bitmap_write
-) <autorun> {
+) <autorun,reginputs> {
     int11   absradius <:: radius[10,1] ? -radius : radius;
     int11   gpu_numerator <:: 3 - ( { absradius, 1b0 } );
     uint8   draw_sectors <:: { sectormask[5,1], sectormask[6,1], sectormask[1,1], sectormask[2,1], sectormask[4,1], sectormask[7,1], sectormask[0,1], sectormask[3,1] };
@@ -583,8 +545,7 @@ algorithm circle(
         start_numerator <: gpu_numerator,
         draw_sectors <: draw_sectors,
         filledcircle <: filledcircle,
-        bitmap_x_write :> bitmap_x_write, bitmap_y_write :> bitmap_y_write,
-        bitmap_write :> bitmap_write,
+        bitmap_x_write :> bitmap_x_write, bitmap_y_write :> bitmap_y_write, bitmap_write :> bitmap_write,
         start <: start
     );
     busy := start | CIRCLE.busy;
@@ -682,15 +643,12 @@ algorithm drawtriangle(
                             ( (( x0 - x2 ) * ( py - y2 ) - ( y0 - y2 ) * ( px - x2 )) >= 0 ) &
                             ( (( x1 - x0 ) * ( py - y0 ) - ( y1 - y0 ) * ( px - x0 )) >= 0 );
     uint1   beenInTriangle = uninitialized;
-    uint1   EXIT = uninitialised;
     uint1   rightleft <:: ( max_x - px ) < ( px - min_x );
 
     // WORK COORDINATES AND DIRECTION
-    int11   px = uninitialized;
-    int11   py = uninitialized;
-    int11   nextpy <:: py + 1;
+    int11   px = uninitialized;                         int11   pxNEXT <:: px + ( dx ? 1 : (-1) );
+    int11   py = uninitialized;                         int11   pyNEXT <:: py + 1;
     uint1   dx = uninitialized;
-    int11   nextpx <:: px + ( dx ? 1 : (-1) );
     uint1   stillinline <:: ( dx & ( px != max_x ) ) | ( ~dx & ( px != min_x ));
     uint1   working <:: ( py != max_y );
 
@@ -703,20 +661,12 @@ algorithm drawtriangle(
             while( working ) {
                 beenInTriangle = inTriangle | beenInTriangle;
                 bitmap_write = inTriangle;
-                EXIT = ( beenInTriangle & ~inTriangle );
-                if( EXIT ) {
+                if( beenInTriangle ^ inTriangle ) {
                     // Exited the triangle, move to the next line
-                    beenInTriangle = 0;
-                    py = nextpy;
-                    px = rightleft ? max_x : min_x;
-                    dx = ~rightleft;
+                    beenInTriangle = 0; py = pyNEXT; px = rightleft ? max_x : min_x; dx = ~rightleft;
                 } else {
-                    // MOVE TO THE NEXT PIXEL ON THE LINE LEFT/RIGHT OR DOWN IF AT END
-                    if( stillinline ) {
-                        px = nextpx;
-                    } else {
-                        dx = ~dx; beenInTriangle = 0; py = nextpy;
-                    }
+                    // MOVE TO THE NEXT PIXEL ON THE LINE LEFT/RIGHT OR DOWN AND SWITCH DIRECTION IF AT END
+                    if( stillinline ) { px = pxNEXT; } else { dx = ~dx; beenInTriangle = 0; py = pyNEXT; }
                 }
             }
             busy = 0;
@@ -739,26 +689,22 @@ algorithm triangle(
     output  int11   bitmap_x_write,
     output  int11   bitmap_y_write,
     output  uint1   bitmap_write
-) <autorun> {
+) <autorun,reginputs> {
     // VERTEX COORDINATES AND BOUNDING BOX
     preptriangle PREP(
         start <: start,
         crop_left <: crop_left, crop_right <: crop_right, crop_top <: crop_top, crop_bottom <: crop_bottom,
-        x <: x, y <: y,
-        param0 <: x1, param1 <: y1,
-        param2 <: x2, param3 <: y2
+        x <: x, y <: y, param0 <: x1, param1 <: y1, param2 <: x2, param3 <: y2
     );
 
     uint1   TRIANGLEbusy = uninitialised;
     drawtriangle TRIANGLE(
         min_x <: PREP.min_x, max_x <: PREP.max_x, min_y <: PREP.min_y, max_y <: PREP.max_y,
-        x0 <: PREP.x1, y0 <: PREP.y1,
-        x1 <: PREP.x2, y1 <: PREP.y2,
-        x2 <: PREP.x3, y2 <: PREP.y3,
-        bitmap_x_write :> bitmap_x_write, bitmap_y_write :> bitmap_y_write,
-        bitmap_write :> bitmap_write,
+        x0 <: PREP.x1, y0 <: PREP.y1, x1 <: PREP.x2, y1 <: PREP.y2, x2 <: PREP.x3, y2 <: PREP.y3,
+        bitmap_x_write :> bitmap_x_write, bitmap_y_write :> bitmap_y_write, bitmap_write :> bitmap_write,
         start <: PREP.todraw
     );
+
     busy := start | PREP.busy | PREP.todraw | TRIANGLE.busy;
 }
 
@@ -802,16 +748,14 @@ algorithm blit(
     output  uint1   bitmap_write,
 
     input   uint1   tilecharacter
-) <autorun> {
-    // POSITION IN TILE/CHARACTER
-    uint5   px = uninitialized;
-    uint5   py = uninitialized;
-
-    // POSITION ON THE SCREEN AND WITHIN THE PIXEL COUNT FOR SCALING
+) <autorun,reginputs> {
+    // START POSITION ON THE SCREEN, POSITION IN TILE/CHARACTER AND PIXEL COUNT FOR SCALING
     int11   x1 = uninitialized;
-    uint5   x2 = uninitialised;
     int11   y1 = uninitialized;
-    uint5   y2 = uninitialised;
+    uint7   px = uninitialized;                         uint7   pxNEXT <:: px + 1;
+    uint7   py = uninitialized;                         uint7   pyNEXT <:: py + 1;
+    uint5   x2 = uninitialised;                         uint5   x2NEXT <:: x2 + 1;
+    uint5   y2 = uninitialised;                         uint5   y2NEXT <:: y2 + 1;
     uint5   maxcount <:: ( 1 << scale );
 
     // MULTIPLIER FOR THE SIZE
@@ -828,25 +772,12 @@ algorithm blit(
     uint1   action01 <:: ( action[0,2] == 2b01 );
     uint1   action10 <:: ( action[0,2] == 2b10 );
 
-    uint4   yinblittile <:: action[2,1] ? action00 ? py[0,4] :
-                                        action01 ? px[0,4] :
-                                        action10 ? revy4 : revx4 :
-                                        action[1,1] ? revy4 :  py[0,4];
-    uint4   xinblittile <:: action[2,1] ?  action00 ? px[0,4] :
-                                        action01 ? revy4 :
-                                        action10 ? revx4 : py[0,4] :
-                                        action[0,1] ? revx4 :  px[0,4];
-    uint3   yinchartile <:: action[2,1] ? action00 ? py[0,3] :
-                                        action01 ? px[0,3] :
-                                        action10 ? revy3 : revx3 :
-                                        action[1,1] ? revy3 :  py[0,3];
-    uint3   xinchartile <:: action[2,1] ?  action00 ? px[0,3] :
-                                        action01 ? revy3 :
-                                        action10 ? revx3 : py[0,3] :
-                                        action[0,1] ? revx3 :  px[0,3];
-    blit1tilemap.addr0 := { tile, yinblittile };
-    characterGenerator8x8.addr0 := { tile, yinchartile };
+    uint4   yinblittile <:: action[2,1] ? action00 ? py[0,4] : action01 ? px[0,4] : action10 ? revy4 : revx4 : action[1,1] ? revy4 :  py[0,4];
+    uint4   xinblittile <:: 15 - ( action[2,1] ?  action00 ? px[0,4] : action01 ? revy4 : action10 ? revx4 : py[0,4] : action[0,1] ? revx4 :  px[0,4] );
+    uint3   yinchartile <:: action[2,1] ? action00 ? py[0,3] : action01 ? px[0,3] : action10 ? revy3 : revx3 : action[1,1] ? revy3 :  py[0,3];
+    uint3   xinchartile <:: 7 - ( action[2,1] ?  action00 ? px[0,3] : action01 ? revy3 : action10 ? revx3 : py[0,3] : action[0,1] ? revx3 :  px[0,3] );
 
+    blit1tilemap.addr0 := { tile, yinblittile }; characterGenerator8x8.addr0 := { tile, yinchartile };
     bitmap_x_write := x1 + ( px << scale ) + x2; bitmap_y_write := y1 + ( py << scale ) + y2; bitmap_write := 0;
 
     while(1) {
@@ -860,14 +791,14 @@ algorithm blit(
                     while( y2 != maxcount ) {
                         x2 = 0;
                         while( x2 != maxcount ) {
-                            bitmap_write = tilecharacter ? blit1tilemap.rdata0[4b1111 - xinblittile, 1] : characterGenerator8x8.rdata0[7 - xinchartile, 1];
-                            x2 = x2 + 1;
+                            bitmap_write = tilecharacter ? blit1tilemap.rdata0[xinblittile, 1] : characterGenerator8x8.rdata0[xinchartile, 1];
+                            x2 = x2NEXT;
                         }
-                        y2 = y2 + 1;
+                        y2 = y2NEXT;
                     }
-                    px = px + 1;
+                    px = pxNEXT;
                 }
-                py = py + 1;
+                py = pyNEXT;
             }
             busy = 0;
         }
@@ -905,16 +836,14 @@ algorithm colourblit(
     output  int11   bitmap_y_write,
     output  uint7   bitmap_colour_write,
     output  uint1   bitmap_write
-) <autorun> {
-    // POSITION IN TILE/CHARACTER
-    uint7   px = uninitialized;
-    uint7   py = uninitialized;
-
-    // POSITION ON THE SCREEN AND WITHIN THE PIXEL COUNT FOR SCALING
+) <autorun,reginputs> {
+    // START POSITION ON THE SCREEN, POSITION IN TILE/CHARACTER AND PIXEL COUNT FOR SCALING
     int11   x1 = uninitialized;
     int11   y1 = uninitialized;
-    uint5   x2 = uninitialised;
-    uint5   y2 = uninitialised;
+    uint7   px = uninitialized;                         uint7   pxNEXT <:: px + 1;
+    uint7   py = uninitialized;                         uint7   pyNEXT <:: py + 1;
+    uint5   x2 = uninitialised;                         uint5   x2NEXT <:: x2 + 1;
+    uint5   y2 = uninitialised;                         uint5   y2NEXT <:: y2 + 1;
     uint5   maxcount <:: ( 1 << scale );
 
     uint4   revx <:: 4b1111 - px[0,4];
@@ -925,20 +854,11 @@ algorithm colourblit(
     uint1   action10 <:: ( action[0,2] == 2b10 );
 
     // tile bitmap addresses - handling rotation or reflection - find y and x positions, then concert to address
-    uint4   yintile <:: action[2,1] ? action00 ? py[0,4] :
-                                        action01 ? px[0,4] :
-                                        action10 ? revy : revx :
-                                        action[1,1] ? revy :  py[0,4];
-    uint4   xintile <:: action[2,1] ?  action00 ? px[0,4] :
-                                        action01 ? revy :
-                                        action10 ? revx : py[0,4] :
-                                        action[0,1] ? revx :  px[0,4];
-    colourblittilemap.addr0 := { tile, yintile, xintile };
+    uint4   yintile <:: action[2,1] ? action00 ? py[0,4] : action01 ? px[0,4] : action10 ? revy : revx : action[1,1] ? revy :  py[0,4];
+    uint4   xintile <:: action[2,1] ?  action00 ? px[0,4] : action01 ? revy : action10 ? revx : py[0,4] : action[0,1] ? revx :  px[0,4];
 
-    bitmap_x_write := x1 + ( px << scale ) + x2;
-    bitmap_y_write := y1 + ( py << scale ) + y2;
-    bitmap_colour_write := colourblittilemap.rdata0;
-    bitmap_write := 0;
+    colourblittilemap.addr0 := { tile, yintile, xintile };
+    bitmap_x_write := x1 + ( px << scale ) + x2; bitmap_y_write := y1 + ( py << scale ) + y2; bitmap_colour_write := colourblittilemap.rdata0;  bitmap_write := 0;
 
     while(1) {
         if( start ) {
@@ -950,15 +870,12 @@ algorithm colourblit(
                     x2 = 0;
                     while( x2 != maxcount ) {
                         y2 = 0;
-                        while( y2 != maxcount ) {
-                            bitmap_write = ~colourblittilemap.rdata0[6,1];
-                            y2 = y2 + 1;
-                        }
-                        x2 = x2 + 1;
+                        while( y2 != maxcount ) { bitmap_write = ~colourblittilemap.rdata0[6,1]; y2 = y2NEXT; }
+                        x2 = x2NEXT;
                     }
-                    px = px + 1;
+                    px = pxNEXT;
                 }
-                py = py + 1;
+                py = pyNEXT;
             }
             busy = 0;
         }
@@ -986,15 +903,13 @@ algorithm pixelblock(
     output  int11   bitmap_y_write,
     output  uint7   bitmap_colour_write,
     output  uint1   bitmap_write
-) <autorun> {
+) <autorun,reginputs> {
     // POSITION ON THE SCREEN
-    int11   x1 = uninitialised;
-    int11   y1 = uninitialised;
+    int11   x1 = uninitialised;                         int11   x1NEXT <:: x1 + 1;
+    int11   y1 = uninitialised;                         int11   y1NEXT <:: y1 + 1;
     int11   max_x <:: x + width;
 
-    bitmap_x_write := x1;
-    bitmap_y_write := y1;
-    bitmap_write := ( ( newpixel == 1 ) & ( colour7 != ignorecolour ) ) | ( newpixel == 2 );
+    bitmap_x_write := x1; bitmap_y_write := y1; bitmap_write := ( ( newpixel == 1 ) & ( colour7 != ignorecolour ) ) | ( newpixel == 2 );
     bitmap_colour_write := ( newpixel == 1 ) ? colour7 : { 1b0, colour8r[6,2], colour8g[6,2], colour8b[6,2] };
 
     while(1) {
@@ -1002,13 +917,11 @@ algorithm pixelblock(
             busy = 1;
             x1 = x; y1 = y;
             while( busy ) {
-                if( &newpixel ) {
-                    busy = 0;
-                }
+                if( &newpixel ) { busy = 0; }
                 if( x1 != max_x ) {
-                    x1 = x1 + ( |newpixel );
+                    if( |newpixel ) { x1 = x1NEXT; }
                 } else {
-                    x1 = x; y1 = y1 + 1;
+                    x1 = x; y1 = y1NEXT;
                 }
             }
         }
@@ -1052,28 +965,24 @@ algorithm centreplusdelta(
     output  int11   xdx,
     output  int11   ydy
 ) <autorun> {
-    // SIGN EXTEND DELTAS
-    int11   deltax = uninitialised; vdeltasignextend DX( d <: dx, delta :> deltax );
-    int11   deltay = uninitialised; vdeltasignextend DY( d <: dy, delta :> deltay );
+    // SIGN EXTEND DELTAS AND APPLY SCALE
+    vdeltasignextend DX( d <: dx ); vdeltasignextend DY( d <: dy );
+    scaledetla SDX( scale <: scale, delta <: DX.delta ); scaledetla SDY( scale <: scale, delta <: DY.delta );
 
-    // SELECT SCALE
-    int11   dodeltax = uninitialised; scaledetla SDX( scale <: scale, delta <: deltax, scaled :> dodeltax );
-    int11   dodeltay = uninitialised; scaledetla SDY( scale <: scale, delta <: deltay, scaled :> dodeltay );
-
-    // ADD PLUS
-    int11   xcpdx <:: xc + dodeltax;
-    int11   xcndx <:: xc - dodeltax;
-    int11   ycpdy <:: yc + dodeltay;
-    int11   ycndy <:: yc - dodeltay;
+    // PLUS OR MINUS SCALE
+    int11   xcpdx <:: xc + SDX.scaled;                  int11   xcndx <:: xc - SDX.scaled;
+    int11   ycpdy <:: yc + SDY.scaled;                  int11   ycndy <:: yc - SDY.scaled;
+    int11   xcpdy <:: xc + SDY.scaled;                  int11   xcndy <:: xc - SDY.scaled;
+    int11   ycpdx <:: yc + SDX.scaled;                  int11   ycndx <:: yc - SDX.scaled;
 
     always {
         if( action[2,1] ) {
             // ROTATION
             switch( action[0,2] ) {
                 case 0: { xdx = xcpdx; ydy = ycpdy; }
-                case 1: { xdx = xc - dodeltay; ydy = yc + dodeltax; }
+                case 1: { xdx = xcndy; ydy = ycpdx; }
                 case 2: { xdx = xcndx; ydy = ycndy; }
-                case 3: { xdx = xc + dodeltay; ydy = yc - dodeltax; }
+                case 3: { xdx = xcpdy; ydy = ycndx; }
             }
         } else {
             // REFLECTION
@@ -1122,22 +1031,22 @@ algorithm vectors(
     );
 
     // Vertices being processed, plus first coordinate of each line
-    uint5   vertices_number = uninitialised;
-    uint1   working <:: vectorentry(vertex.rdata0).active & ( ~vertices_number[4,1] );
+    uint5   vertex = uninitialised;                     uint5   vertexNEXT <:: vertex + 1;
+    uint1   working <:: vectorentry(vertex.rdata0).active & ( ~vertex[4,1] );
 
     // Set read address for the vertices
-    vertex.addr0 := { vector_block_number, vertices_number };
+    vertex.addr0 := { vector_block_number, vertex };
 
     gpu_write := 0;
 
     while(1) {
         if( draw_vector ) {
             vector_block_active = 1;
-            vertices_number = 0;
+            vertex = 0;
             ++:
             // Start with the first vertex
             ( gpu_x, gpu_y ) = copycoordinates( gpu_param0, gpu_param1 );
-            vertices_number = 1;
+            vertex = 1;
             ++:
             // Continue until an inactive or last vertex
             while( working ) {
@@ -1148,7 +1057,7 @@ algorithm vectors(
                 ++:
                 // Move onto the next vertex
                 ( gpu_x, gpu_y ) = copycoordinates( gpu_param0, gpu_param1 );
-                vertices_number = vertices_number + 1;
+                vertex = vertexNEXT;
             }
             vector_block_active = 0;
         }

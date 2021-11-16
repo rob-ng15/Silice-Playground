@@ -256,19 +256,23 @@ algorithm floattoint(
 ) <autorun,reginputs> {
     // CLASSIFY THE INPUT
     uint1   NN <:: A.sNAN | A.qNAN;
-    uint1   NV = uninitialised;
+    uint1   NV <:: ( PREP.exp > 14 ) | A.INF | NN;
     classify A( a <: a );
 
     // PREPARE THE CONVERSION
     prepftoi PREP( a <: a );
 
-    flags := { A.INF, NN, NV, 4b0000 }; NV := 0;
+    flags := { A.INF, NN, NV, 4b0000 };
 
     always {
-        switch( { A.INF | NN, A.ZERO } ) {
-            case 2b00: { NV = ( PREP.exp > 14 ); result = NV ? { fp16( a ).sign, 15h7fff } : fp16( a ).sign ? -PREP.unsignedfraction : PREP.unsignedfraction; }
-            case 2b01: { result = 0; }
-            default: { NV = 1; result = { ~NN & fp16( a ).sign, 15h7fff }; }
+        if( A.ZERO ) {
+            result = 0;
+        } else {
+           if( A.INF | NN ) {
+               result = { ~NN & fp16( a ).sign, 15h7fff };
+           } else {
+               result = NV ? { fp16( a ).sign, 15h7fff } : fp16( a ).sign ? -PREP.unsignedfraction : PREP.unsignedfraction;
+           }
         }
     }
 }
@@ -281,21 +285,22 @@ algorithm floattouint(
 ) <autorun,reginputs> {
     // CLASSIFY THE INPUT
     uint1   NN <:: A.sNAN | A.qNAN;
-    uint1   NV = uninitialised;
+    uint1   NV <:: ( fp16( a ).sign ) | ( PREP.exp > 15 ) | A.INF | NN;
     classify A( a <: a );
 
     // PREPARE THE CONVERSION
     prepftoi PREP( a <: a );
 
-    flags := { A.INF, NN, NV, 4b0000 }; NV := 0;
+    flags := { A.INF, NN, NV, 4b0000 };
     always {
-        switch( { A.INF | NN, A.ZERO } ) {
-            case 2b00: {
-                NV = ( fp16( a ).sign ) | ( PREP.exp > 15 );
+        if( A.ZERO ) {
+            result = 0;
+        } else {
+            if( A.INF | NN ) {
+                result = NN ? 16hffff : { {16{~fp16( a ).sign}} };
+            } else {
                 result = ( fp16( a ).sign ) ? 0 : NV ? 16hffff : PREP.unsignedfraction;
             }
-            case 2b01: { result = 0; }
-            default: { NV = 1; result = NN ? 16hffff : { {16{~fp16( a ).sign}} };  }
         }
     }
 }
@@ -397,10 +402,10 @@ algorithm floataddsub(
                         result = 0;
                     }
                 }
-                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 0 : ( B.ZERO ) ? a : { addsub ^ fp16( b ).sign, b[0,15] }; }
+                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 0 : ( B.ZERO ) ? a : { signB, b[0,15] }; }
                 default: {
                     switch( { IF, NN } ) {
-                        case 2b10: { result = ( A.INF & B.INF) ? ( fp16( a ).sign ^ signB ) ? 16hfe00 : a : A.INF ? a : b; }
+                        case 2b10: { result = NV ? 16hfe00 : A.INF ? a : b; }
                         default: { result = 16hfe00; }
                     }
                 }
@@ -494,8 +499,9 @@ algorithm dofloatdivide(
     uint24  remainder = uninitialised;
     uint24  temporary <:: { remainder[0,23], sigA[bit,1] };
     uint1   bitresult <:: __unsigned(temporary) >= __unsigned(sigB);
-    uint5   bit(31);
     uint2   normalshift <:: quotient[23,1] ? 2 : quotient[22,1];
+    uint5   bit(31);
+    uint5   bitNEXT <:: bit - 1;
 
     busy := start | ( ~&bit ) | ( quotient[22,2] != 0 );
     always {
@@ -503,7 +509,7 @@ algorithm dofloatdivide(
         if( ~&bit ) {
             remainder = __unsigned(temporary) - ( bitresult ? __unsigned(sigB) : 0 );
             quotient[bit,1] = bitresult;
-            bit = bit - 1;
+            bit = bitNEXT;
         } else {
             quotient = quotient >> normalshift;
         }
@@ -618,6 +624,7 @@ algorithm dofloatsqrt(
     uint24  ac = uninitialised;
     uint22  x = uninitialised;
     uint5   i(21);
+    uint5   iNEXT <:: i + 1;
 
     busy := start | ( i != 21 );
 
@@ -626,7 +633,7 @@ algorithm dofloatsqrt(
             ac = { test_res[23,1] ? ac[0,21] : test_res[0,21], x[20,2] };
             squareroot = { squareroot[0,21], ~test_res[23,1] };
             x = { x[0,20], 2b00 };
-            i = i + 1;
+            i = iNEXT;
         }
     }
 

@@ -14,14 +14,14 @@ algorithm douintdivide(
 ) <autorun,reginputs> {
     uint32  temporary <:: { remainder[0,31], dividend[bit,1] };
     uint1   bitresult <:: __unsigned(temporary) >= __unsigned(divisor);
-    uint6   bit(63);
+    uint6   bit(63);                                    uint6   bitNEXT <:: bit - 1;
 
     busy := start | ( ~&bit );
     always {
         if( ~&bit ) {
             quotient[bit,1] = bitresult;
             remainder = __unsigned(temporary) - ( bitresult ? __unsigned(divisor) : 0 );
-            bit = bit - 1;
+            bit = bitNEXT;
         }
     }
 
@@ -112,8 +112,10 @@ algorithm multi16by16to32DSP(
     output  uint32  product,
     input   uint2   start
 ) <autorun,reginputs> {
-    uint16  factor1_unsigned <:: start[1,1] ? ( factor1[15,1] ? -factor1 : factor1 ) : factor1;
-    uint16  factor2_unsigned <:: start[1,1] ? ( factor2[15,1] ? -factor2 : factor2 ) : factor2;
+    uint16  neg1 <:: -factor1;
+    uint16  neg2 <:: -factor2;
+    uint16  factor1_unsigned <:: start[1,1] ? ( factor1[15,1] ? neg1 : factor1 ) : factor1;
+    uint16  factor2_unsigned <:: start[1,1] ? ( factor2[15,1] ? neg2 : factor2 ) : factor2;
     uint1   productsign <:: start[1,1] & ( factor1[15,1] ^ factor2[15,1] );
     douintmul UINTMUL( factor_1 <: factor1_unsigned, factor_2 <: factor2_unsigned );
     always {

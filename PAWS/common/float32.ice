@@ -257,18 +257,22 @@ algorithm floattoint(
 ) <autorun,reginputs> {
     // CLASSIFY THE INPUT
     uint1   NN <:: A.sNAN | A.qNAN;
-    uint1   NV = uninitialised;
+    uint1   NV <:: ( PREP.exp > 30 ) | A.INF | NN;
     classify A( a <: a );
 
     // PREPARE THE CONVERSION
     prepftoi PREP( a <: a );
 
-    flags := { A.INF, NN, NV, 4b0000 }; NV := 0;
+    flags := { A.INF, NN, NV, 4b0000 };
     always {
-        switch( { A.INF | NN, A.ZERO } ) {
-            case 2b00: { NV = ( PREP.exp > 30 ); result = NV ? { fp32( a ).sign, 31h7fffffff } : fp32( a ).sign ? -PREP.unsignedfraction : PREP.unsignedfraction; }
-            case 2b01: { result = 0; }
-            default: { NV = 1; result = { ~NN & fp32( a ).sign, 31h7fffffff }; }
+        if (A.ZERO ) {
+            result = 0;
+        } else {
+            if( A.INF | NN ) {
+                result = { ~NN & fp32( a ).sign, 31h7fffffff };
+            } else {
+                result = { fp32( a ).sign, NV ? 31h7fffffff : fp32( a ).sign ? -PREP.unsignedfraction : PREP.unsignedfraction };
+            }
         }
     }
 }
@@ -281,21 +285,22 @@ algorithm floattouint(
 ) <autorun,reginputs> {
     // CLASSIFY THE INPUT
     uint1   NN <:: A.sNAN | A.qNAN;
-    uint1   NV = uninitialised;
+    uint1   NV <:: ( PREP.exp > 31 ) | fp32( a ).sign | A.INF | NN;
     classify A( a <: a );
 
     // PREPARE THE CONVERSION
     prepftoi PREP( a <: a );
 
-    flags := { A.INF, NN, NV, 4b0000 }; NV := 0;
+    flags := { A.INF, NN, NV, 4b0000 };
     always {
-        switch( { A.INF | NN, A.ZERO } ) {
-            case 2b00: {
-                NV = ( fp32( a ).sign ) | ( PREP.exp > 31 );
+        if( A.ZERO ) {
+            result = 0;
+        } else {
+            if( A.INF | NN ) {
+                result = NN ? 32hffffffff : { {32{~fp32( a ).sign}} };
+            } else {
                 result = ( fp32( a ).sign ) ? 0 : NV ? 32hffffffff : PREP.unsignedfraction;
             }
-            case 2b01: { result = 0; }
-            default: { NV = 1; result = NN ? 32hffffffff : { {32{~fp32( a ).sign}} };  }
         }
     }
 }
@@ -311,7 +316,6 @@ algorithm equaliseexpaddsub(
     output  int10   resultexp,
 ) <autorun,reginputs> {
     always {
-
         if( expA < expB ) {
             newsigA = sigA >> ( expB - expA ); resultexp = expB - 126; newsigB = sigB;
         } else {
@@ -396,10 +400,10 @@ algorithm floataddsub(
                         result = 0;
                     }
                 }
-                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 0 : ( B.ZERO ) ? a : { addsub ^ fp32( b ).sign, b[0,31] }; }
+                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 0 : ( B.ZERO ) ? a : { signB, b[0,31] }; }
                 default: {
                     switch( { IF, NN } ) {
-                        case 2b10: { result = ( A.INF & B.INF) ? ( fp32( a ).sign ^ signB ) ? 32hffc00000 : a : A.INF ? a : b; }
+                        case 2b10: { result = NV ? 32hffc00000 : A.INF ? a : b; }
                         default: { result = 32hffc00000; }
                     }
                 }
@@ -493,8 +497,9 @@ algorithm dofloatdivide(
     uint50  remainder = uninitialised;
     uint50  temporary <:: { remainder[0,49], sigA[bit,1] };
     uint1   bitresult <:: __unsigned(temporary) >= __unsigned(sigB);
-    uint6   bit(63);
     uint2   normalshift <:: quotient[49,1] ? 2 : quotient[48,1];
+    uint6   bit(63);
+    uint6   bitNEXT <:: bit - 1;
 
     busy := start | ( ~&bit ) | ( quotient[48,2] != 0 );
 
@@ -503,7 +508,7 @@ algorithm dofloatdivide(
         if( ~&bit ) {
             remainder = __unsigned(temporary) - ( bitresult ? __unsigned(sigB) : 0 );
             quotient[bit,1] = bitresult;
-            bit = bit - 1;
+            bit = bitNEXT;
         } else {
             quotient = quotient >> normalshift;
         }
@@ -617,6 +622,7 @@ algorithm dofloatsqrt(
     uint50  ac = uninitialised;
     uint48  x = uninitialised;
     uint6   i(47);
+    uint6   iNEXT <:: i + 1;
 
     busy := start | ( i != 47 );
 
@@ -625,7 +631,7 @@ algorithm dofloatsqrt(
             ac = { test_res[49,1] ? ac[0,47] : test_res[0,47], x[46,2] };
             squareroot = { squareroot[0,47], ~test_res[49,1] };
             x = { x[0,46], 2b00 };
-            i = i + 1;
+            i = iNEXT;
         }
     }
 
