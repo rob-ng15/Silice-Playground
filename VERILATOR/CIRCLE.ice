@@ -26,10 +26,10 @@ algorithm drawcircle(
 
     while(1) {
         if( start ) {
-            busy = 1; active_x = 0; active_y = radius; count = radius; numerator = start_numerator;
+            busy = 1;
+            active_x = 0; active_y = radius; count = radius; numerator = start_numerator;
             min_count = (-1);
-        } else {
-            if( drawingcircle ) {
+            while( drawingcircle ) {
                 if( drawingsegment ) {
                     // OUTPUT PIXELS IN THE 8 SEGMENTS/ARCS AS PER MASK
                     bitmap_x_write = xc + active_x; bitmap_y_write = yc + count;    if( draw_sectors[0,1] ) { bitmap_write = 1; ++: }
@@ -48,9 +48,8 @@ algorithm drawcircle(
                     min_count = min_count + 1;
                     numerator = new_numerator;
                 }
-            } else {
-                busy = 0;
             }
+            busy = 0;
         }
     }
 }
@@ -90,7 +89,7 @@ algorithm main(output uint8 leds)
     pulse PULSE();
 
     circle CIRCLE(); CIRCLE.start := 0;
-    CIRCLE.x = 20; CIRCLE.y = 20; CIRCLE.radius = 5; CIRCLE.sectormask = 8h55; CIRCLE.filledcircle = 0;
+    CIRCLE.x = 20; CIRCLE.y = 20; CIRCLE.radius = 5; CIRCLE.sectormask = 8hff; CIRCLE.filledcircle = 1;
 
     ++:
 

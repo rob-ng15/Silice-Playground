@@ -81,27 +81,24 @@ algorithm drawline(
 
     bitmap_x_write := x + offset_x; bitmap_y_write := y + offset_y; bitmap_write := 0;
 
-    always {
+    while(1) {
         if( start ) {
-            busy = 1; x = start_x; y = start_y; numerator = start_numerator; count = 0;
-            pixel_count = 0; offset_x = dxdy ? 0 : offset_start; offset_y = dxdy ? offset_start : 0;
-        } else {
-            if( busy ) {
-                if( count != max_count ) {
-                    if( pixel_count != width ) {
-                        bitmap_write = 1;
-                        offset_y = offset_y + dxdy; offset_x = offset_x + ~dxdy;
-                        pixel_count = pixel_count + 1;
-                    } else {
-                        numerator = newnumerator;
-                        x = x + n2dx; y = n2dy ? (y + ( dv ? 1 : -1 )) : y;
-                        count = count + 1;
-                        pixel_count = 0; offset_x = dxdy ? 0 : offset_start; offset_y = dxdy ? offset_start : 0;
-                    }
+            busy = 1;
+            x = start_x; y = start_y; numerator = start_numerator; count = 0;
+
+            while( count != max_count ) {
+                if( pixel_count != width ) {
+                    bitmap_write = 1;
+                    offset_y = offset_y + dxdy; offset_x = offset_x + ~dxdy;
+                    pixel_count = pixel_count + 1;
                 } else {
-                    busy = 0;
+                    numerator = newnumerator;
+                    x = x + n2dx; y = n2dy ? (y + ( dv ? 1 : -1 )) : y;
+                    count = count + 1;
+                    pixel_count = 0; offset_x = dxdy ? 0 : offset_start; offset_y = dxdy ? offset_start : 0;
                 }
             }
+            busy = 0;
         }
     }
 }

@@ -90,7 +90,6 @@ algorithm drawtriangle(
                             ( (( x0 - x2 ) * ( py - y2 ) - ( y0 - y2 ) * ( px - x2 )) >= 0 ) &
                             ( (( x1 - x0 ) * ( py - y0 ) - ( y1 - y0 ) * ( px - x0 )) >= 0 );
     uint1   beenInTriangle = uninitialized;
-    uint1   EXIT = uninitialised;
     uint1   rightleft <:: ( max_x - px ) < ( px - min_x );
 
     // WORK COORDINATES AND DIRECTION
@@ -104,15 +103,14 @@ algorithm drawtriangle(
 
     bitmap_x_write := px; bitmap_y_write := py; bitmap_write := 0;
 
-    always {
+    while(1) {
         if( start ) {
-            busy = 1; dx = 1; px = min_x; py = min_y;
-        } else {
-            if( working ) {
-                beenInTriangle = inTriangle | beenInTriangle;
+            busy = 1;
+            dx = 1; px = min_x; py = min_y;
+            while( working ) {
+                beenInTriangle = beenInTriangle | inTriangle;
                 bitmap_write = inTriangle;
-                EXIT = ( beenInTriangle & ~inTriangle );
-                if( EXIT ) {
+                if( beenInTriangle ^ inTriangle ) {
                     // Exited the triangle, move to the next line
                     beenInTriangle = 0;
                     py = nextpy;
@@ -126,9 +124,8 @@ algorithm drawtriangle(
                         dx = ~dx; beenInTriangle = 0; py = nextpy;
                     }
                 }
-            } else {
-                busy = 0;
             }
+            busy = 0;
         }
     }
 }
@@ -177,7 +174,7 @@ algorithm main(output uint8 leds)
 
     triangle TRIANGLE(); TRIANGLE.start := 0;
     TRIANGLE.crop_left = 0; TRIANGLE.crop_right = 319; TRIANGLE.crop_top = 0; TRIANGLE.crop_bottom = 239;
-    TRIANGLE.x = 20; TRIANGLE.y = 10; TRIANGLE.x1 = 10; TRIANGLE.y1 = 20; TRIANGLE.x2 = 30; TRIANGLE.y2 = 20;
+    TRIANGLE.x = 20; TRIANGLE.y = 30; TRIANGLE.x1 = 10; TRIANGLE.y1 = 20; TRIANGLE.x2 = 30; TRIANGLE.y2 = 20;
 
     ++:
 

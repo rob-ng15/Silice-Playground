@@ -682,7 +682,6 @@ algorithm drawtriangle(
                             ( (( x0 - x2 ) * ( py - y2 ) - ( y0 - y2 ) * ( px - x2 )) >= 0 ) &
                             ( (( x1 - x0 ) * ( py - y0 ) - ( y1 - y0 ) * ( px - x0 )) >= 0 );
     uint1   beenInTriangle = uninitialized;
-    uint1   EXIT = uninitialised;
     uint1   rightleft <:: ( max_x - px ) < ( px - min_x );
 
     // WORK COORDINATES AND DIRECTION
@@ -703,8 +702,7 @@ algorithm drawtriangle(
             while( working ) {
                 beenInTriangle = inTriangle | beenInTriangle;
                 bitmap_write = inTriangle;
-                EXIT = ( beenInTriangle & ~inTriangle );
-                if( EXIT ) {
+                if( beenInTriangle ^ inTriangle ) {
                     // Exited the triangle, move to the next line
                     beenInTriangle = 0;
                     py = nextpy;
