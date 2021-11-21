@@ -114,6 +114,23 @@ algorithm background_writer(
     }
 }
 
+algorithm rainbow(
+    input   uint3   y,
+    output  uint6   colour
+) <autorun> {
+    always {
+        switch( y ) {
+            case 3b000: { colour = 6b100000; }
+            case 3b001: { colour = 6b110000; }
+            case 3b010: { colour = 6b111000; }
+            case 3b011: { colour = 6b111100; }
+            case 3b100: { colour = 6b001100; }
+            case 3b101: { colour = 6b000011; }
+            case 3b110: { colour = 6b010010; }
+            case 3b111: { colour = 6b011011; }
+        }
+    }
+}
 algorithm background_display(
     input   uint10  pix_x,
     input   uint10  pix_y,
@@ -128,48 +145,27 @@ algorithm background_display(
     input   uint4   b_mode
 ) <autorun,reginputs> {
     // TRUE FOR COLOUR, FALSE FOR ALT
-    uint1   condition = uninitialised;
-    pattern PATTERN(
-        pix_x <: pix_x,
-        pix_y <: pix_y,
-        b_mode <: b_mode,
-        condition :> condition
-    );
+    pattern PATTERN( pix_x <: pix_x, pix_y <: pix_y, b_mode <: b_mode );
+    rainbow RAINBOW( y <: pix_y[6,3] );
 
     always {
         // RENDER
         if( pix_active ) {
             // SELECT ACTUAL COLOUR
             switch( b_mode ) {
-                default: { pixel = condition ? b_colour : b_alt; }                      // EVERYTHING ELSE
-                case 4: {                                                               // RAINBOW
-                    switch( pix_y[6,3] ) {
-                        case 3b000: { pixel = 6b100000; }
-                        case 3b001: { pixel = 6b110000; }
-                        case 3b010: { pixel = 6b111000; }
-                        case 3b011: { pixel = 6b111100; }
-                        case 3b100: { pixel = 6b001100; }
-                        case 3b101: { pixel = 6b000011; }
-                        case 3b110: { pixel = 6b010010; }
-                        case 3b111: { pixel = 6b011011; }
-                    }
-                }
+                default: { pixel = PATTERN.condition ? b_colour : b_alt; }              // EVERYTHING ELSE
+                case 4: { pixel = RAINBOW.colour; }                                     // RAINBOW
                 case 6: { pixel = {3{staticGenerator}}; }                               // STATIC
             }
         }
     }
 }
 
-algorithm pattern(
+algorithm starfield(
     input   uint10  pix_x,
     input   uint10  pix_y,
-    input   uint4   b_mode,
-    output! uint1   condition
+    output  uint1   star
 ) <autorun> {
-    uint1   tophalf <: ( pix_y < 240 );
-    uint1   lefthalf <: ( pix_x < 320 );
-    uint4   checkmode <: b_mode - 7;
-
     // Variables for SNOW (from @sylefeb)
     int10   dotpos = 0;
     int2    speed = 0;
@@ -182,13 +178,31 @@ algorithm pattern(
     frame ::= frame + ( ( pix_x == 639 ) & ( pix_y == 479 ) );
 
     always {
+        rand_x = ( ~|pix_x )  ? 1 : new_rand_x;
+        speed  = rand_x[10,2];
+        dotpos = ( frame >> speed ) + rand_x;
+        star = ( pix_y == dotpos );
+    }
+}
+
+algorithm pattern(
+    input   uint10  pix_x,
+    input   uint10  pix_y,
+    input   uint4   b_mode,
+    output! uint1   condition
+) <autorun> {
+    uint1   tophalf <: ( pix_y < 240 );
+    uint1   lefthalf <: ( pix_x < 320 );
+    uint4   checkmode <: b_mode - 7;
+    starfield STARS( pix_x <: pix_x, pix_y <: pix_y );
+    always {
         // SELECT COLOUR OR ALT
         switch( b_mode ) {
             case 0: { condition = 1; }                                              // SOLID
             case 1: { condition = tophalf; }                                        // 50:50 HORIZONTAL SPLIT
             case 2: { condition = ( lefthalf ); }                                   // 50:50 VERTICAL SPLIT
-            case 3: { condition = ( lefthalf == tophalf ); }                        // QUARTERS
-            case 5: { condition  = ( pix_y == dotpos ); }                           // SNOW (from @sylefeb)
+            case 3: { condition = ( lefthalf ^ tophalf ); }                         // QUARTERS
+            case 5: { condition  = STARS.star; }                                    // SNOW (from @sylefeb)
             case 11: { condition = ( pix_x[0,1] | pix_y[0,1] ); }                   // CROSSHATCH
             case 12: { condition = ( pix_x[0,2] == pix_y[0,2] ); }                  // LSLOPE
             case 13: { condition = ( pix_x[0,2] == ~pix_y[0,2] ); }                 // RSLOPE
@@ -197,11 +211,5 @@ algorithm pattern(
             case 4: {} case 6: {}                                                   // STATIC AND RAINBOW (placeholder, done in main)
             default: { condition = ( pix_x[checkmode,1] ^ pix_y[checkmode,1] ); }   // CHECKERBOARDS (7,8,9,10)
         }
-    }
-
-    while(1) {
-        rand_x = ( ~|pix_x )  ? 1 : new_rand_x;
-        speed  = rand_x[10,2];
-        dotpos = ( frame >> speed ) + rand_x;
     }
 }

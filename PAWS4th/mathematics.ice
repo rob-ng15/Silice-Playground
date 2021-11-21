@@ -100,7 +100,7 @@ algorithm douintmul(
     input   uint16  factor_1,
     input   uint16  factor_2,
     output  uint32  product
-) <autorun,reginputs> {
+) <autorun> {
     always {
         product = factor_1 * factor_2;
     }
@@ -111,7 +111,7 @@ algorithm multi16by16to32DSP(
     input   uint16  factor2,
     output  uint32  product,
     input   uint2   start
-) <autorun,reginputs> {
+) <autorun> {
     uint16  neg1 <:: -factor1;
     uint16  neg2 <:: -factor2;
     uint16  factor1_unsigned <:: start[1,1] ? ( factor1[15,1] ? neg1 : factor1 ) : factor1;
@@ -128,7 +128,7 @@ algorithm add32(
     input   int32   a,
     input   int32   b,
     output  int32   c
-) <autorun,reginputs> {
+) <autorun> {
     always {
         c = a + b;
     }
@@ -139,7 +139,7 @@ algorithm logic32(
     output  uint32  AND,
     output  uint32  OR,
     output  uint32  XOR
-) <autorun,reginputs> {
+) <autorun> {
     always {
         AND = a & b;
         OR = a | b;

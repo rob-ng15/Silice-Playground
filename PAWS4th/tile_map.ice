@@ -10,15 +10,6 @@ algorithm tilemap(
     output! uint6   pixel,
     output! uint1   tilemap_display,
 
-    // Set TM at x, y, character with foreground and background
-    input   uint6   tm_x,
-    input   uint6   tm_y,
-    input   uint6   tm_character,
-    input   uint6   tm_foreground,
-    input   uint7   tm_background,
-    input   uint2   tm_reflection,
-    input   uint1   tm_write,
-
     // For scrolling/wrapping
     input   int5    tm_offset_x,
     input   int5    tm_offset_y
@@ -29,7 +20,7 @@ algorithm tilemap(
     uint6   xtmposcolour <: ( {{6{tm_offset_x[4,1]}}, tm_offset_x} + ( pix_active ? ( pix_x + 11d17 ) : 11d16 ) ) >> 4;
     uint11  ytmpos <: ( {{6{tm_offset_y[4,1]}}, tm_offset_y} + ( pix_vblank ? 11d16 : 11d16 + pix_y ) ) >> 4;
 
-    // Derive the x and y coordinate within the current 16x16 tilemap block x 0-7, y 0-15
+    // Derive the x and y coordinate within the current 16x16 tilemap block x 0-15, y 0-15
     // Needs adjusting for the offsets
     uint4   xintm <: { 1b0, pix_x[0,4] } + tm_offset_x;
     uint4   yintm <: { 1b0, pix_y[0,4] } + tm_offset_y;
@@ -46,6 +37,19 @@ algorithm tilemap(
     // RENDER - Default to transparent
     tilemap_display := pix_active & ( tmpixel | ~colour15(colours.rdata0).alpha );
     pixel := tmpixel ? colour15(colours.rdata0).foreground : colour15(colours.rdata0).background;
+}
+
+algorithm   calcoffset(
+    input   int5    offset,
+    output  uint1   MIN,
+    output  int5    PREV,
+    output  uint1   MAX,
+    output  int5    NEXT
+) <autorun> {
+    always {
+        MIN = ( offset == -15 );                    PREV = ( offset - 1 );
+        MAX = ( offset == 15 );                     NEXT = ( offset + 1 );
+    }
 }
 
 algorithm tile_map_writer(
@@ -67,27 +71,34 @@ algorithm tile_map_writer(
 
     input   uint4   tm_scrollwrap,
     output  uint4   tm_lastaction,
-    output  uint2   tm_active
-) <autorun> {
+    output  uint3   tm_active
+) <autorun,reginputs> {
     // COPY OF TILEMAP FOR SCROLLING
     simple_dualport_bram uint6 tiles_copy[1344] = uninitialized;
     simple_dualport_bram uint15 colours_copy[1344] = uninitialized;
 
-    // Scroller/Wrapper storage
-    uint1   tm_scroll = uninitialized;
-    uint1   tm_goleft = uninitialized;
-    uint1   tm_goup = uninitialized;
-    uint6   x_cursor = uninitialized;
-    uint11  y_cursor_addr = uninitialized;
-    uint6   new_tile = uninitialized;
-    uint15  new_colour = uninitialized;
+    // OFFSET CALCULATIONS
+    calcoffset TMOX( offset <: tm_offset_x );       calcoffset TMOY( offset <: tm_offset_y );
 
+    // Scroller/Wrapper FLAGS
+    uint1   tm_scroll = uninitialized;              uint1   tm_sw <:: ( tm_scrollwrap < 5 );                uint2   tm_action <:: ( tm_scrollwrap - 1 ) & 3;
+    uint1   tm_dodir = uninitialized;
+
+    // CURSORS AND ADDRESSES FOR SCROLLING WRAPPING
+    uint6   x_cursor = uninitialized;               uint6   xNEXT <:: x_cursor + 1;                         uint6   xPREV <:: x_cursor - 1;
+                                                    uint11  xSAVED <:: x_cursor + ( tm_dodir ? 1302 : 0 );
+    uint11  y_cursor_addr = uninitialized;          uint11  yNEXT <:: y_cursor_addr + 42;                   uint11  yPREV <:: y_cursor_addr - 42;
+                                                    uint11  ySAVED <:: y_cursor_addr + ( tm_dodir ? 41 : 0 );
     uint11  temp_1 = uninitialized;
-    uint11  temp_2 <:: x_cursor + y_cursor_addr;
+    uint11  temp_2 <:: x_cursor + y_cursor_addr;    uint11  temp_2NEXT1 <:: temp_2 + 1;                     uint11  temp_2PREV1 <:: temp_2 - 1;
+                                                    uint11  temp_2NEXT42 <:: temp_2 + 42;                   uint11  temp_2PREV42 <:: temp_2 - 42;
     uint11  write_address <:: tm_x + tm_y * 42;
 
+    // STORAGE FOR SAVED CHARACTER WHEN WRAPPING
+    uint6   new_tile = uninitialized; uint15  new_colour = uninitialized;
+
     // CLEARSCROLL address
-    uint11  tmcsaddr = uninitialized;
+    uint11  tmcsaddr = uninitialized;               uint11  tmcsNEXT <:: tmcsaddr + 1;
 
     // TILEMAP WRITE FLAGS
     tiles.wenable1 := 1; tiles_copy.wenable1 := 1; colours.wenable1 := 1; colours_copy.wenable1 := 1;
@@ -101,133 +112,93 @@ algorithm tile_map_writer(
             colours_copy.addr1 = write_address; colours_copy.wdata1 = { tm_reflection, tm_background, tm_foreground };
         }
 
-        // Perform Scrolling/Wrapping
-        switch( tm_scrollwrap ) {
-            // NO ACTION
-            case 0: {}
-            // CLEAR
-            case 9: {
-                tm_active = 3;
-                tm_lastaction = 9;
-            }
-
-            // SCROLL / WRAP
-            default: {
-                tm_scroll = ( tm_scrollwrap < 5 );
-                switch( ( tm_scrollwrap - 1 ) & 3  ) {
-                    case 0: {
-                        switch( tm_offset_x ) {
-                            case 15: { tm_goleft = 1; tm_active = 1; }
-                            default: { tm_offset_x = tm_offset_x + 1; }
-                        }
-                    }
-                    // UP
-                    case 1: {
-                        switch( tm_offset_y ) {
-                            case 15: { tm_goup = 1; tm_active = 2; }
-                            default: { tm_offset_y = tm_offset_y + 1; }
-                        }
-                    }
-                    // RIGHT
-                    case 2: {
-                        switch( tm_offset_x ) {
-                            case -15: { tm_goleft = 0; tm_active = 1; }
-                            default: { tm_offset_x = tm_offset_x - 1; }
-                        }
-                    }
-                    // DOWN
-                    case 3: {
-                        switch( tm_offset_y ) {
-                            case -15: { tm_goup = 0; tm_active = 2; }
-                            default: { tm_offset_y = tm_offset_y - 1; }
-                        }
-                    }
+        switch( tm_scrollwrap ) {                                                                                           // ACT AS PER tm_scrollwrap
+            case 0: {}                                                                                                      // NO ACTION
+            case 9: { tm_active = 4; tm_lastaction = 9; }                                                                   // CLEAR
+            default: {                                                                                                      // SCROLL / WRAP
+                tm_scroll = tm_sw;
+                switch( tm_action ) {
+                    case 0: { if( TMOX.MAX ) { tm_dodir = 1; tm_active = 1; } else { tm_offset_x = TMOX.NEXT; } }           // LEFT
+                    case 1: { if( TMOY.MAX ) { tm_dodir = 1; tm_active = 2; } else { tm_offset_y = TMOY.NEXT; } }           // UP
+                    case 2: { if( TMOX.MIN ) { tm_dodir = 0; tm_active = 1; } else { tm_offset_x = TMOX.PREV; } }           // RIGHT
+                    case 3: { if( TMOY.MIN ) { tm_dodir = 0; tm_active = 2; } else { tm_offset_y = TMOY.PREV; } }           // DOWN
                 }
-                tm_lastaction = ( tm_active != 0 ) ? tm_scrollwrap : 0;
+                tm_lastaction = ( |tm_active ) ? tm_scrollwrap : 0;
             }
         }
     }
 
     while(1) {
-        switch( tm_active ) {
-            default:  {
-                tmcsaddr = 0;
-                y_cursor_addr = 0;
-                x_cursor = 0;
-            }
-            // SCROLL/WRAP LEFT/RIGHT
-            case 1: {
-                while( y_cursor_addr != 1344 ) {
-                    x_cursor = tm_goleft ? 0 : 41;
-                    temp_1 = y_cursor_addr + x_cursor;
-                    tiles_copy.addr0 = temp_1; colours_copy.addr0 = temp_1;
-                    ++:
-                    new_tile = tm_scroll ? 0 : tiles_copy.rdata0;
-                    new_colour = tm_scroll ? 15h1000 : colours_copy.rdata0;
-                    while( tm_goleft ? ( x_cursor != 42 ) : ( x_cursor != 0 ) ) {
-                        temp_1 = tm_goleft ? temp_2 + 1 : temp_2 - 1;
+        if( |tm_active ) {
+            onehot( tm_active ) {
+                case 0: {                                                                                                   // SCROLL/WRAP LEFT/RIGHT
+                    while( y_cursor_addr != 1344 ) {                                                                            // REPEAT UNTIL AT BOTTOM OF THE SCREEN
+                        x_cursor = tm_dodir ? 0 : 41;                                                                           // SAVE CHARACTER AT START/END OF LINE FOR WRAPPING
+                        temp_1 = y_cursor_addr + x_cursor;
                         tiles_copy.addr0 = temp_1; colours_copy.addr0 = temp_1;
                         ++:
-                        tiles.addr1 = temp_2; tiles.wdata1 = tiles_copy.rdata0;
-                        tiles_copy.addr1 = temp_2; tiles_copy.wdata1 = tiles_copy.rdata0;
-                        colours.addr1 = temp_2; colours.wdata1 = colours_copy.rdata0;
-                        colours_copy.addr1 = temp_2; colours_copy.wdata1 = colours_copy.rdata0;
-                        x_cursor = tm_goleft ? x_cursor + 1 : x_cursor - 1;
+                        new_tile = tm_scroll ? 0 : tiles_copy.rdata0;
+                        new_colour = tm_scroll ? 15h1000 : colours_copy.rdata0;
+                        while( tm_dodir ? ( x_cursor != 42 ) : ( |x_cursor ) ) {                                                // START AT THE LEFT/RIGHT OF THE LINE
+                            temp_1 = tm_dodir ? temp_2NEXT1 : temp_2PREV1;                                                      // SAVE THE ADJACENT CHARACTER
+                            tiles_copy.addr0 = temp_1; colours_copy.addr0 = temp_1;
+                            ++:
+                            tiles.addr1 = temp_2; tiles.wdata1 = tiles_copy.rdata0;                                             // COPY INTO NEW LOCATION
+                            tiles_copy.addr1 = temp_2; tiles_copy.wdata1 = tiles_copy.rdata0;
+                            colours.addr1 = temp_2; colours.wdata1 = colours_copy.rdata0;
+                            colours_copy.addr1 = temp_2; colours_copy.wdata1 = colours_copy.rdata0;
+                            x_cursor = tm_dodir ? xNEXT : xPREV;                                                                // MOVE TO NEXT CHARACTER ON THE LINE
+                        }
+                        tiles.addr1 = ySAVED; tiles.wdata1 = new_tile;                                                          // WRITE BLANK OR THE WRAPPED CHARACTER
+                        tiles_copy.addr1 = ySAVED; tiles_copy.wdata1 = new_tile;
+                        colours.addr1 = ySAVED; colours.wdata1 = new_colour;
+                        colours_copy.addr1 = ySAVED; colours_copy.wdata1 = new_colour;
+                        y_cursor_addr = yNEXT;
                     }
-                    temp_1 = y_cursor_addr + ( tm_goleft ? 41 : 0 );
-                    tiles.addr1 = temp_1; tiles.wdata1 = new_tile;
-                    tiles_copy.addr1 = temp_1; tiles_copy.wdata1 = new_tile;
-                    colours.addr1 = temp_1; colours.wdata1 = new_colour;
-                    colours_copy.addr1 = temp_1; colours_copy.wdata1 = new_colour;
-                    y_cursor_addr = y_cursor_addr + 42;
+                    tm_offset_x = 0;
+                    tm_active = 0;
                 }
-                tm_offset_x = 0;
-                tm_active = 0;
-            }
-
-            // SCROLL/WRAP UP/DOWN
-            case 2: {
-                while( x_cursor != 42 ) {
-                    y_cursor_addr = tm_goup ? 0 : 1302;
-                    temp_1 = x_cursor + y_cursor_addr;
-                    tiles_copy.addr0 = temp_1; colours_copy.addr0 = temp_1;
-                    ++:
-                    new_tile = tm_scroll ? 0 : tiles_copy.rdata0;
-                    new_colour = tm_scroll ? 15h1000 : colours_copy.rdata0;
-                    while( tm_goup ? ( y_cursor_addr != 1302 ) : ( y_cursor_addr != 0 ) ) {
-                        temp_1 = tm_goup ? temp_2 + 42 : temp_2 - 42;
+                case 1: {                                                                                                   // SCROLL/WRAP UP/DOWN
+                    while( x_cursor != 42 ) {                                                                                   // REPEAT UNTIL AT RIGHT OF THE SCREEN
+                        y_cursor_addr = tm_dodir ? 0 : 1302;                                                                    // SAVE CHARACTER AT TOP/BOTTOM OF THE SCREEN FOR WRAPPING
+                        temp_1 = x_cursor + y_cursor_addr;
                         tiles_copy.addr0 = temp_1; colours_copy.addr0 = temp_1;
                         ++:
-                        tiles.addr1 = temp_2; tiles.wdata1 = tiles_copy.rdata0;
-                        tiles_copy.addr1 = temp_2; tiles_copy.wdata1 = tiles_copy.rdata0;
-                        colours.addr1 = temp_2; colours.wdata1 = colours_copy.rdata0;
-                        colours_copy.addr1 = temp_2; colours_copy.wdata1 = colours_copy.rdata0;
-                        y_cursor_addr = tm_goup ? y_cursor_addr + 42 : y_cursor_addr - 42;
+                        new_tile = tm_scroll ? 0 : tiles_copy.rdata0;
+                        new_colour = tm_scroll ? 15h1000 : colours_copy.rdata0;
+                        while( tm_dodir ? ( y_cursor_addr != 1302 ) : ( |y_cursor_addr ) ) {                                    // START AT TOP/BOTTOM OF THE SCREEN
+                            temp_1 = tm_dodir ? temp_2NEXT42 : temp_2PREV42;                                                    // SAVE THE ADJACENT CHARACTER
+                            tiles_copy.addr0 = temp_1; colours_copy.addr0 = temp_1;
+                            ++:
+                            tiles.addr1 = temp_2; tiles.wdata1 = tiles_copy.rdata0;                                             // COPY TO NEW LOCATION
+                            tiles_copy.addr1 = temp_2; tiles_copy.wdata1 = tiles_copy.rdata0;
+                            colours.addr1 = temp_2; colours.wdata1 = colours_copy.rdata0;
+                            colours_copy.addr1 = temp_2; colours_copy.wdata1 = colours_copy.rdata0;
+                            y_cursor_addr = tm_dodir ? yNEXT : yPREV;                                                           // MOVE TO THE NEXT CHARACTER IN THE COLUMN
+                        }
+                        tiles.addr1 = xSAVED; tiles.wdata1 = new_tile;                                                          // WRITE BLANK OR WRAPPED CHARACTER
+                        tiles_copy.addr1 = xSAVED; tiles_copy.wdata1 = new_tile;
+                        colours.addr1 = xSAVED; colours.wdata1 = new_colour;
+                        colours_copy.addr1 = xSAVED; colours_copy.wdata1 = new_colour;
+                        x_cursor = xNEXT;
                     }
-                    temp_1 = x_cursor + ( tm_goup ? 1302 : 0 );
-                    tiles.addr1 = temp_1; tiles.wdata1 = new_tile;
-                    tiles_copy.addr1 = temp_1; tiles_copy.wdata1 = new_tile;
-                    colours.addr1 = temp_1; colours.wdata1 = new_colour;
-                    colours_copy.addr1 = temp_1; colours_copy.wdata1 = new_colour;
-                    x_cursor = x_cursor + 1;
+                    tm_offset_y = 0;
+                    tm_active = 0;
                 }
-                tm_offset_y = 0;
-                tm_active = 0;
-            }
-
-            // CLEAR
-            case 3: {
-                while( tmcsaddr != 1344 ) {
-                    tiles.addr1 = tmcsaddr; tiles.wdata1 = 0;
-                    tiles_copy.addr1 = tmcsaddr; tiles_copy.wdata1 = 0;
-                    colours.addr1 = tmcsaddr; colours.wdata1 = 15h1000;
-                    colours_copy.addr1 = tmcsaddr; colours_copy.wdata1 = 15h1000;
-                    tmcsaddr = tmcsaddr + 1;
+                case 2: {                                                                                                   // CLEAR
+                    tiles.wdata1 = 0; tiles_copy.wdata1 = 0; colours.wdata1 = 15h1000; colours_copy.wdata1 = 15h1000;
+                    while( tmcsaddr != 1344 ) {
+                        tiles.addr1 = tmcsaddr; tiles_copy.addr1 = tmcsaddr;
+                        colours.addr1 = tmcsaddr; colours_copy.addr1 = tmcsaddr;
+                        tmcsaddr = tmcsNEXT;
+                    }
+                    tm_offset_x = 0;
+                    tm_offset_y = 0;
+                    tm_active = 0;
                 }
-                tm_offset_x = 0;
-                tm_offset_y = 0;
-                tm_active = 0;
             }
+        } else {
+            tmcsaddr = 0; y_cursor_addr = 0; x_cursor = 0;                                                                  // RESET SCROLL/WRAP
         }
     }
 }
@@ -238,7 +209,7 @@ algorithm tilebitmapwriter(
     input   uint16  tile_writer_bitmap,
 
     simple_dualport_bram_port1 tiles16x16
-) <autorun> {
+) <autorun,reginputs> {
     tiles16x16.wenable1 := 1;
     tiles16x16.addr1 := { tile_writer_tile, tile_writer_line };
     tiles16x16.wdata1 := tile_writer_bitmap;

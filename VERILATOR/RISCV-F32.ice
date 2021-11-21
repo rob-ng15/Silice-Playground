@@ -99,7 +99,7 @@ algorithm classify(
     output  uint1   sNAN,
     output  uint1   qNAN,
     output  uint1   ZERO
-) <autorun,reginputs> {
+) <autorun> {
     // CHECK FOR 8hff ( signals INF/NAN )
     uint1   expFF <:: &fp32(a).exponent;
     uint1   NAN <:: expFF & a[22,1];
@@ -116,7 +116,7 @@ algorithm classify(
 algorithm clz48(
     input   uint48  bitstream,
     output! uint6   count
-) <autorun,reginputs> {
+) <autorun> {
     uint16  bitstreamh <:: bitstream[32,16];
     uint32  bitstreaml <:: bitstream[0,32];
     uint1   zerohigh <:: ( ~|bitstreamh );
@@ -135,7 +135,7 @@ algorithm donormalise24_adjustexp(
     input   uint48  bitstream,
     output  int10   newexp,
     output  uint24  normalised
-) <autorun,reginputs> {
+) <autorun> {
     // COUNT LEADING ZEROS
     clz48 CLZ48( bitstream <: bitstream );
     uint48  temporary <:: bitstream << CLZ48.count;
@@ -147,7 +147,7 @@ algorithm donormalise24_adjustexp(
 algorithm donormalise24(
     input   uint48  bitstream,
     output  uint24  normalised
-) <autorun,reginputs> {
+) <autorun> {
     // COUNT LEADING ZEROS
     clz48 CLZ48( bitstream <: bitstream );
     uint48  temporary <:: bitstream << CLZ48.count;
@@ -163,7 +163,7 @@ algorithm doround24(
     input   int10   exponent,
     output  uint23  roundfraction,
     output  int10   newexponent
-) <autorun,reginputs> {
+) <autorun> {
     always {
         roundfraction = bitstream[1,23] + bitstream[0,1];
         newexponent = ( ( ~|roundfraction  & bitstream[0,1] ) ? 128 : 127 ) + exponent;
@@ -179,7 +179,7 @@ algorithm docombinecomponents32(
     output  uint1   OF,
     output  uint1   UF,
     output  uint32  f32
-) <autorun,reginputs> {
+) <autorun> {
     always {
         OF = ( exp > 254 ); UF = exp[9,1];
         f32 = UF ? 0 : { sign, OF ? 31h7f800000 : { exp[0,8], fraction } };
@@ -191,7 +191,7 @@ algorithm docombinecomponents32(
 algorithm clz32(
     input   uint32  bitstream,
     output! uint6   zeros
-) <autorun,reginputs> {
+) <autorun> {
     always {
         ( zeros ) = clz_silice_32( bitstream );
     }
@@ -199,19 +199,20 @@ algorithm clz32(
 algorithm prepitof(
     input   uint32  a,
     input   uint1   dounsigned,
+    output  uint1   iszero,
     output  uint1   sign,
-    output  uint32  number,
     output  uint23  fraction,
     output  int10   exponent,
     output  uint1   NX
 ) <autorun> {
     // COUNT LEADING ZEROS
     clz32 CLZ32( bitstream <: number );
+    uint32  number <:: sign ? -a : a;
     always {
-        NX = ( ~|CLZ32.zeros[3,3] ); // CLZ32.zeros < 8
+        NX = ( ~|CLZ32.zeros[3,3] ); // CLZ32.zeros < 8, top 3 bits clear
+        iszero = ~|number;
         sign = ~dounsigned & a[31,1];
-        number = sign ? -a : a;
-        fraction= NX ? number >> ( 8 - CLZ32.zeros ) : ( CLZ32.zeros == 8 ) ? number : number << ( CLZ32.zeros - 8 );
+        fraction = NX ? number >> ( 8 - CLZ32.zeros ) : ( CLZ32.zeros == 8 ) ? number : number << ( CLZ32.zeros - 8 );
         exponent = 158 - CLZ32.zeros;
     }
 }
@@ -228,10 +229,10 @@ algorithm inttofloat(
     flags := { 4b0, OF, UF, PREP.NX }; OF := 0; UF := 0;
 
     always {
-        if( |PREP.number ) {
-            OF = COMBINE.OF; UF = COMBINE.UF; result = COMBINE.f32;
-        } else {
+        if( PREP.iszero ) {
             result = 0;
+        } else {
+            OF = COMBINE.OF; UF = COMBINE.UF; result = COMBINE.f32;
         }
     }
 }
@@ -241,7 +242,7 @@ algorithm prepftoi(
     input   uint32  a,
     output  int10   exp,
     output  uint32  unsignedfraction
-) <autorun,reginputs> {
+) <autorun> {
     uint33  sig <:: ( exp < 24 ) ? { 9b1, fp32( a ).fraction, 1b0 } >> ( 23 - exp ) : { 9b1, fp32( a ).fraction, 1b0 } << ( exp - 24);
     always {
         exp = fp32( a ).exponent - 127;
@@ -255,20 +256,24 @@ algorithm floattoint(
     output  uint7   flags,
     output  uint32  result
 ) <autorun,reginputs> {
-    // CLASSIFY THE INPUT
-    uint1   NN <:: A.sNAN | A.qNAN;
-    uint1   NV = uninitialised;
-    classify A( a <: a );
-
     // PREPARE THE CONVERSION
     prepftoi PREP( a <: a );
 
-    flags := { A.INF, NN, NV, 4b0000 }; NV := 0;
+    // CLASSIFY THE INPUT
+    uint1   NN <:: A.sNAN | A.qNAN;
+    uint1   NV <:: ( PREP.exp > 30 ) | A.INF | NN;
+    classify A( a <: a );
+
+    flags := { A.INF, NN, NV, 4b0000 };
     always {
-        switch( { A.INF | NN, A.ZERO } ) {
-            case 2b00: { NV = ( PREP.exp > 30 ); result = NV ? { fp32( a ).sign, 31h7fffffff } : fp32( a ).sign ? -PREP.unsignedfraction : PREP.unsignedfraction; }
-            case 2b01: { result = 0; }
-            default: { NV = 1; result = { ~NN & fp32( a ).sign, 31h7fffffff }; }
+        if( A.ZERO ) {
+            result = 0;
+        } else {
+            if( A.INF | NN ) {
+                result = { ~NN & fp32( a ).sign, 31h7fffffff };
+            } else {
+                result = { fp32( a ).sign, NV ? 31h7fffffff : fp32( a ).sign ? -PREP.unsignedfraction : PREP.unsignedfraction };
+            }
         }
     }
 }
@@ -279,23 +284,24 @@ algorithm floattouint(
     output  uint7   flags,
     output  uint32  result
 ) <autorun,reginputs> {
-    // CLASSIFY THE INPUT
-    uint1   NN <:: A.sNAN | A.qNAN;
-    uint1   NV = uninitialised;
-    classify A( a <: a );
-
     // PREPARE THE CONVERSION
     prepftoi PREP( a <: a );
 
-    flags := { A.INF, NN, NV, 4b0000 }; NV := 0;
+    // CLASSIFY THE INPUT
+    uint1   NN <:: A.sNAN | A.qNAN;
+    uint1   NV <:: ( PREP.exp > 31 ) | fp32( a ).sign | A.INF | NN;
+    classify A( a <: a );
+
+    flags := { A.INF, NN, NV, 4b0000 };
     always {
-        switch( { A.INF | NN, A.ZERO } ) {
-            case 2b00: {
-                NV = ( fp32( a ).sign ) | ( PREP.exp > 31 );
+        if( A.ZERO ) {
+            result = 0;
+        } else {
+            if( A.INF | NN ) {
+                result = NN ? 32hffffffff : { {32{~fp32( a ).sign}} };
+            } else {
                 result = ( fp32( a ).sign ) ? 0 : NV ? 32hffffffff : PREP.unsignedfraction;
             }
-            case 2b01: { result = 0; }
-            default: { NV = 1; result = NN ? 32hffffffff : { {32{~fp32( a ).sign}} };  }
         }
     }
 }
@@ -309,13 +315,14 @@ algorithm equaliseexpaddsub(
     output  uint48  newsigA,
     output  uint48  newsigB,
     output  int10   resultexp,
-) <autorun,reginputs> {
+) <autorun> {
+    uint48  shiftA <:: sigA >> ( expB - expA );
+    uint48  shiftB <:: sigB >> ( expA - expB );
     always {
-
         if( expA < expB ) {
-            newsigA = sigA >> ( expB - expA ); resultexp = expB - 126; newsigB = sigB;
+            newsigA = shiftA; resultexp = expB - 126; newsigB = sigB;
         } else {
-            newsigB = sigB >> ( expA - expB ); resultexp = expA - 126; newsigA = sigA;
+            newsigB = shiftB; resultexp = expA - 126; newsigA = sigA;
         }
     }
 }
@@ -326,7 +333,7 @@ algorithm dofloataddsub(
     input   uint48  sigB,
     output  uint1   resultsign,
     output  uint48  resultfraction
-) <autorun,reginputs> {
+) <autorun> {
     uint48  sigAminussigB <:: sigA - sigB;
     uint48  sigBminussigA <:: sigB - sigA;
     uint48  sigAplussigB <:: sigA + sigB;
@@ -396,7 +403,7 @@ algorithm floataddsub(
                         result = 0;
                     }
                 }
-                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 0 : ( B.ZERO ) ? a : { addsub ^ fp32( b ).sign, b[0,31] }; }
+                case 2b01: { result = ( A.ZERO & B.ZERO ) ? 0 : ( B.ZERO ) ? a : { signB, b[0,31] }; }
                 default: {
                     switch( { IF, NN } ) {
                         case 2b10: { result = NV ? 32hffc00000 : A.INF ? a : b; }
@@ -416,7 +423,7 @@ algorithm prepmul(
     output  uint1   productsign,
     output  int10   productexp,
     output  uint24  normalfraction
-) <autorun,reginputs> {
+) <autorun> {
     uint24  sigA <:: { 1b1, fp32( a ).fraction };
     uint24  sigB <:: { 1b1, fp32( b ).fraction };
     uint48  product <:: sigA * sigB;
@@ -489,12 +496,13 @@ algorithm dofloatdivide(
     input   uint50  sigA,
     input   uint50  sigB,
     output  uint50  quotient
-) <autorun,reginputs> {
+) <autorun> {
     uint50  remainder = uninitialised;
     uint50  temporary <:: { remainder[0,49], sigA[bit,1] };
     uint1   bitresult <:: __unsigned(temporary) >= __unsigned(sigB);
-    uint6   bit(63);
     uint2   normalshift <:: quotient[49,1] ? 2 : quotient[48,1];
+    uint6   bit(63);
+    uint6   bitNEXT <:: bit - 1;
 
     busy := start | ( ~&bit ) | ( quotient[48,2] != 0 );
 
@@ -503,7 +511,7 @@ algorithm dofloatdivide(
         if( ~&bit ) {
             remainder = __unsigned(temporary) - ( bitresult ? __unsigned(sigB) : 0 );
             quotient[bit,1] = bitresult;
-            bit = bit - 1;
+            bit = bitNEXT;
         } else {
             quotient = quotient >> normalshift;
         }
@@ -524,7 +532,7 @@ algorithm prepdivide(
     output  int10   quotientexp,
     output  uint50  sigA,
     output  uint50  sigB
-) <autorun,reginputs> {
+) <autorun> {
     // BREAK DOWN INITIAL float32 INPUTS AND FIND SIGN OF RESULT AND EXPONENT OF QUOTIENT ( -1 IF DIVISOR > DIVIDEND )
     // ALIGN DIVIDEND TO THE LEFT, DIVISOR TO THE RIGHT
     uint1   AvB <:: ( fp32(b).fraction > fp32(a).fraction );
@@ -612,11 +620,12 @@ algorithm dofloatsqrt(
     input   uint50  start_ac,
     input   uint48  start_x,
     output  uint48  squareroot
-) <autorun,reginputs> {
+) <autorun> {
     uint50  test_res <:: ac - { squareroot, 2b01 };
     uint50  ac = uninitialised;
     uint48  x = uninitialised;
     uint6   i(47);
+    uint6   iNEXT <:: i + 1;
 
     busy := start | ( i != 47 );
 
@@ -625,7 +634,7 @@ algorithm dofloatsqrt(
             ac = { test_res[49,1] ? ac[0,47] : test_res[0,47], x[46,2] };
             squareroot = { squareroot[0,47], ~test_res[49,1] };
             x = { x[0,46], 2b00 };
-            i = i + 1;
+            i = iNEXT;
         }
     }
 
@@ -642,7 +651,7 @@ algorithm prepsqrt(
     output  uint50  start_ac,
     output  uint48  start_x,
     output  int10   squarerootexp
-) <autorun,reginputs> {
+) <autorun> {
     // EXPONENT OF INPUT ( used to determine if 1x.xxxxx or 01.xxxxx for fixed point fraction to sqrt )
     // SQUARE ROOT EXPONENT IS HALF OF INPUT EXPONENT
     int10   exp  <:: fp32( a ).exponent - 127;
@@ -762,6 +771,9 @@ algorithm floatcompare(
     less := NAN ? 0 : ( ( fp32( a ).sign ^ fp32( b ).sign ) ? fp32( a ).sign & ~aorbleft1equal0 : ~aequalb & ( fp32( a ).sign ^ avb ) );
     equal := NAN ? 0 : ( aequalb | aorbleft1equal0 );
 }
+
+
+
 
 // Risc-V FPU STARTS HERE
 // Uses float32 for actual floating point routines
@@ -1029,7 +1041,7 @@ algorithm main(output int8 leds) {
     uint32  startcycle = uninitialised;
     pulse PULSE();
 
-    uint7   opCode = 7b0000000; // ALL OTHER FPU OPERATIONS
+    uint7   opCode = 7b1010011; // ALL OTHER FPU OPERATIONS
     // uint7   opCode = 7b1000011; // FMADD
     // uint7   opCode = 7b1000111; // FMSUB
     // uint7   opCode = 7b1001011; // FNMSUB
@@ -1065,9 +1077,9 @@ algorithm main(output int8 leds) {
     // qNaN = 32hffc00000
     // INF = 32h7F800000
     // -INF = 32hFF800000
-    uint32  sourceReg1F = 32h7F800000;
-    uint32  sourceReg2F = 32hFF800000;
-    uint32  sourceReg3F = 32h3eaaaaab;
+    uint32  sourceReg1F = 32h3F800000;
+    uint32  sourceReg2F = 32h40000000;
+    uint32  sourceReg3F = 32h40400000;
 
     uint32  result = uninitialised;
     uint1   frd = uninitialised;

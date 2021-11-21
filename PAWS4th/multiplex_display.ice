@@ -37,7 +37,7 @@ algorithm multiplex_display(
     // TERMINAL
     input uint1 terminal_p,
     input uint1 terminal_display
-) <autorun> {
+) <autorun,reginputs> {
     uint6    pixel = uninitialised;
     selectlayer LAYER(
         display_order <: display_order,

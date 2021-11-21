@@ -167,7 +167,7 @@ algorithm add16(
     input   uint16  a,
     input   uint16  b,
     output  uint16  c
-) <autorun,reginputs> {
+) <autorun> {
     always {
         c = a + b;
     }
@@ -178,7 +178,7 @@ algorithm logic16(
     output  uint16  AND,
     output  uint16  OR,
     output  uint16  XOR
-) <autorun,reginputs> {
+) <autorun> {
     always {
         AND = a & b;
         OR = a | b;
@@ -192,7 +192,7 @@ algorithm compare(
     output  uint1   lessu,
     output  uint1   less,
     output  uint1   equal0,
-) <autorun,reginputs> {
+) <autorun> {
     always {
         equal = stackNext == stackTop;
         lessu = __unsigned(stackNext) < __unsigned(stackTop);
@@ -205,7 +205,7 @@ algorithm shift16(
     input   uint4   count,
     output  uint16  SLL,
     output  uint16  SRA
-) <autorun,reginputs> {
+) <autorun> {
     always {
         SLL = a << count;
         SRA = __signed(a) >> count;

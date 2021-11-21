@@ -96,7 +96,7 @@ algorithm classify(
     output  uint1   sNAN,
     output  uint1   qNAN,
     output  uint1   ZERO
-) <autorun,reginputs> {
+) <autorun> {
     uint1   expFF <:: ( &fp16(a).exponent );
     uint1   NAN <:: expFF & a[9,1];
     always {
@@ -112,7 +112,7 @@ algorithm classify(
 algorithm clz22(
     input   uint22  bitstream,
     output! uint5   count
-) <autorun,reginputs> {
+) <autorun> {
     uint2   bitstream2 <:: bitstream[20,2];
     uint4   bitstream4 <:: bitstream[16,4];
     uint16  bitstream16 <:: bitstream[0,16];
@@ -139,7 +139,7 @@ algorithm donormalise22_adjustexp(
     input   uint22  bitstream,
     output  int7    newexp,
     output  uint11  normalised
-) <autorun,reginputs> {
+) <autorun> {
     clz22 CLZ22( bitstream <: bitstream );
     uint22  temporary <:: bitstream << CLZ22.count;
     always {
@@ -165,7 +165,7 @@ algorithm doround11(
     input   int7    exponent,
     output  uint10  roundfraction,
     output  int7    newexponent
-) <autorun,reginputs> {
+) <autorun> {
     always {
         roundfraction = bitstream[1,10] + bitstream[0,1];
         newexponent = ( ( ~|roundfraction & bitstream[0,1] ) ? 16 : 15 ) + exponent;
@@ -180,7 +180,7 @@ algorithm docombinecomponents16(
     output  uint1   OF,
     output  uint1   UF,
     output  uint16  f16
-) <autorun,reginputs> {
+) <autorun> {
     always {
         OF = ( exp > 30 ); UF = exp[6,1];
         f16 = UF ? 0 : OF ? { sign, 15h7c00 } : { sign, exp[0,5], fraction[0,10] };
@@ -192,7 +192,7 @@ algorithm docombinecomponents16(
 algorithm clz16(
     input   uint16  bitstream,
     output! uint5   zeros
-) <autorun,reginputs> {
+) <autorun> {
     always {
         ( zeros ) = clz_silice_16( bitstream );
     }
@@ -242,7 +242,7 @@ algorithm prepftoi(
     input   uint16  a,
     output  int7    exp,
     output  uint16  unsignedfraction
-) <autorun,reginputs> {
+) <autorun> {
     uint17  sig <:: ( exp < 11 ) ? { 5b1, fp16( a ).fraction, 1b0 } >> ( 10 - exp ) : { 5b1, fp16( a ).fraction, 1b0 } << ( exp - 11);
     exp := fp16( a ).exponent - 15;
     unsignedfraction := ( sig[1,16] + sig[0,1] );
@@ -314,7 +314,7 @@ algorithm equaliseexpaddsub(
     output  uint22  newsigA,
     output  uint22  newsigB,
     output  int7    resultexp
-) <autorun,reginputs> {
+) <autorun> {
     always {
         // EQUALISE THE EXPONENTS BY SHIFT SMALLER NUMBER FRACTION PART TO THE RIGHT - REMOVE BIAS ( AND +1 TO ACCOUNT FOR POTENTIAL OVERFLOW )
         if( expA < expB ) {
@@ -331,7 +331,7 @@ algorithm dofloataddsub(
     input   uint22  sigB,
     output  uint1   resultsign,
     output  uint22  resultfraction
-) <autorun,reginputs> {
+) <autorun> {
     uint22  sigAminussigB <:: sigA - sigB;
     uint22  sigBminussigA <:: sigB - sigA;
     uint22  sigAplussigB <:: sigA + sigB;
@@ -422,7 +422,7 @@ algorithm prepmul(
     output  uint1   productsign,
     output  int7    productexp,
     output  uint11  normalfraction
-) <autorun,reginputs> {
+) <autorun> {
     uint11  sigA <:: { 1b1, fp16( a ).fraction };
     uint11  sigB <:: { 1b1, fp16( b ).fraction };
     uint22  product <:: sigA * sigB;
@@ -495,7 +495,7 @@ algorithm dofloatdivide(
     input   uint24  sigA,
     input   uint24  sigB,
     output  uint24  quotient
-) <autorun,reginputs> {
+) <autorun> {
     uint24  remainder = uninitialised;
     uint24  temporary <:: { remainder[0,23], sigA[bit,1] };
     uint1   bitresult <:: __unsigned(temporary) >= __unsigned(sigB);
@@ -530,7 +530,7 @@ algorithm prepdivide(
     output  int7    quotientexp,
     output  uint24  sigA,
     output  uint24  sigB
-) <autorun,reginputs> {
+) <autorun> {
     // BREAK DOWN INITIAL float32 INPUTS AND FIND SIGN OF RESULT AND EXPONENT OF QUOTIENT ( -1 IF DIVISOR > DIVIDEND )
     // ALIGN DIVIDEND TO THE LEFT, DIVISOR TO THE RIGHT
     uint1   AvB <:: ( fp16(b).fraction > fp16(a).fraction );
@@ -619,7 +619,7 @@ algorithm dofloatsqrt(
     input   uint24  start_ac,
     input   uint22  start_x,
     output  uint22  squareroot
-) <autorun,reginputs> {
+) <autorun> {
     uint24  test_res <:: ac - { squareroot, 2b01 };
     uint24  ac = uninitialised;
     uint22  x = uninitialised;
@@ -650,7 +650,7 @@ algorithm prepsqrt(
     output  uint24  start_ac,
     output  uint22  start_x,
     output  int7    squarerootexp
-) <autorun,reginputs> {
+) <autorun> {
     // EXPONENT OF INPUT ( used to determine if 1x.xxxxx or 01.xxxxx for fixed point fraction to sqrt )
     // SQUARE ROOT EXPONENT IS HALF OF INPUT EXPONENT
     int7    exp  <:: fp16( a ).exponent - 15;

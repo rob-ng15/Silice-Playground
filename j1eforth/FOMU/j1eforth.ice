@@ -81,59 +81,32 @@ algorithm main(
     uint2   INIT = 0;
 
     // Address for 0 to SPRAM, copying ROM
-    uint16  copyaddress = uninitialized;
-    uint16  nextcopyaddress <:: copyaddress + 1;
+    uint16  copyaddress = uninitialized;            uint16  nextcopyaddress <:: copyaddress + 1;
 
     // J1 CPU
-    uint16  instruction = uninitialized;
-    uint1   is_lit = uninitialized;
-    uint1   is_alu = uninitialized;
-    uint1   is_call = uninitialized;
-    uint1   is_n2memt = uninitialized;
-    uint1   is_memtr = uninitialized;
-    uint2   is_callbranchalu = uninitialized;
-    uint1   dstackWrite = uninitialized;
-    uint1   rstackWrite = uninitialized;
-    uint8   ddelta = uninitialized;
-    uint8   rdelta = uninitialized;
-    decode DECODE(
-        instruction <: instruction,
-        is_lit :> is_lit,
-        is_call :> is_call,
-        is_alu :> is_alu,
-        is_n2memt :> is_n2memt,
-        is_memtr :> is_memtr,
-        dstackWrite :> dstackWrite,
-        rstackWrite :> rstackWrite,
-        ddelta :> ddelta,
-        rdelta :> rdelta
-    );
+    uint16  instruction = uninitialized;            decode DECODE( instruction <: instruction, );
 
     // program counter
-    uint13  pc = uninitialized;
-    uint13  pcPlusOne <:: pc + 1;
+    uint13  pc = uninitialized;                     uint13  pcPlusOne <:: pc + 1;
     uint13  newPC = 0;
 
     // dstack 257x16bit (as 3256 array + stackTop) and pointer, next pointer, write line, delta
-    uint16  stackTop = uninitialized;
-    uint16  stackNext = uninitialized;
-    uint8   dsp = uninitialized;
-    uint8   newDSP = 0;
-    uint16  newStackTop = 0;
+    uint16  stackTop = uninitialized;               uint16  newStackTop = 0;                                uint16  stackNext = uninitialized;
+    uint8   dsp = uninitialized;                    uint8   newDSP = 0;
     stack DSTACK( stackWData <: stackTop, sp <: dsp, newSP <: newDSP, stackTop :> stackNext );
-    deltasp DELTADSP( sp <: dsp, delta <: ddelta );
+    deltasp DELTADSP( sp <: dsp, delta <: DECODE.ddelta );
 
     // rstack 256x16bit and pointer, next pointer, write line
     uint16  rStackTop = uninitialized;
-    uint8   rsp = uninitialized;
-    uint8   newRSP = 0;
+    uint8   rsp = uninitialized;                    uint8   newRSP = 0;
     uint16  rstackWData = uninitialized;
     stack RSTACK( stackWData <: rstackWData, sp <: rsp, newSP <: newRSP, stackTop :> rStackTop );
-    deltasp DELTARSP( sp <: rsp, delta <: rdelta );
+    deltasp DELTARSP( sp <: rsp, delta <: DECODE.rdelta );
 
     uint16  memoryinput = uninitialized;
+    uint5   ALUOP <:: { aluop(instruction).is_j1j1plus, aluop(instruction).operation };
     alu ALU(
-        instruction <: instruction,
+        ALUOP <: ALUOP,
         memoryRead <: memoryinput,
         stackTop <: stackTop,
         stackNext <: stackNext,
@@ -212,7 +185,7 @@ algorithm main(
         ++:
 
         // start READ memoryInput = [stackTop]
-        if( is_memtr & ~stackTop[15,1] ) {
+        if( DECODE.is_memtr & ~stackTop[15,1] ) {
             sram_address = stackTop >> 1;
             ++:
             ++:
@@ -223,17 +196,17 @@ algorithm main(
         } else {}
 
         // J1 CPU Instruction Execute
-        if( is_lit ) {
+        if( DECODE.is_lit ) {
             // LITERAL
             newStackTop = literal(instruction).literalvalue;
             newPC = pcPlusOne;
             newDSP = dsp + 1;
 
             // Commit to dstack and rstack
-            DSTACK.stackWrite = dstackWrite;
+            DSTACK.stackWrite = DECODE.dstackWrite;
         } else {
-            if( is_alu ) {
-                if( is_memtr & stackTop[15,1] ) {
+            if( DECODE.is_alu ) {
+                if( DECODE.is_memtr & stackTop[15,1] ) {
                     switch( stackTop[0,3] ) {
                         case 3h0: { newStackTop = { 8b0, UART.inchar }; UART.read = 1; }
                         case 3h1: { newStackTop = { 14b0, UART.full, UART.available }; }
@@ -255,7 +228,7 @@ algorithm main(
                 newPC = ( aluop(instruction).is_r2pc ) ? { 1b0, rStackTop[1,15] } : pcPlusOne;
 
                 // n2memt mem[t] = n
-                if( is_n2memt ) {
+                if( DECODE.is_n2memt ) {
                     if( stackTop[15,1] ) {
                         switch( stackTop[1,1] ) {
                             case 0: {
@@ -284,8 +257,8 @@ algorithm main(
                 rstackWData = { pcPlusOne, 1b0 };
             }
             // Commit to dstack and rstack
-            DSTACK.stackWrite = dstackWrite;
-            RSTACK.stackWrite = rstackWrite;
+            DSTACK.stackWrite = DECODE.dstackWrite;
+            RSTACK.stackWrite = DECODE.rstackWrite;
         } // J1 CPU Instruction Execute
     } // (INIT==3 execute J1 CPU)}
 }
@@ -294,7 +267,7 @@ algorithm add16(
     input   uint16  a,
     input   uint16  b,
     output  uint16  c
-) <autorun,reginputs> {
+) <autorun> {
     always {
         c = a + b;
     }
@@ -305,7 +278,7 @@ algorithm logic16(
     output  uint16  AND,
     output  uint16  OR,
     output  uint16  XOR
-) <autorun,reginputs> {
+) <autorun> {
     always {
         AND = a & b;
         OR = a | b;
@@ -317,14 +290,14 @@ algorithm shift16(
     input   uint4   count,
     output  uint16  SLL,
     output  uint16  SRA
-) <autorun,reginputs> {
+) <autorun> {
     always {
         SLL = a << count;
         SRA = __signed(a) >>> count;
     }
 }
 algorithm alu(
-    input   uint16  instruction,
+    input   uint5   ALUOP,
     input   uint16  stackTop,
     input   uint16  stackNext,
     input   uint16  rStackTop,
@@ -332,7 +305,7 @@ algorithm alu(
     input   uint8   rsp,
     input   uint16  memoryRead,
     output  uint16  newStackTop
-) <autorun,reginputs> {
+) <autorun> {
     int16   negTop <:: -stackTop;
     compare COMPARE( stackTop <: stackTop, stackNext <: stackNext );
     add16 ADD( a <: stackTop, b <: stackNext );
@@ -343,8 +316,8 @@ algorithm alu(
     shift16 SHIFT( a <: stackNext, count <: nibbles(stackTop).nibble0 );
 
     always {
-        if( aluop(instruction).is_j1j1plus ) {
-            switch( aluop(instruction).operation ) {
+        if( ALUOP[4,1] ) {
+            switch( ALUOP[0,4] ) {
                 case 4b0000: { newStackTop = {16{ COMPARE.equal0 }}; }
                 case 4b0001: { newStackTop = {16{ ~COMPARE.equal0 }}; }
                 case 4b0010: { newStackTop = {16{ ~COMPARE.equal }}; }
@@ -363,7 +336,7 @@ algorithm alu(
                 case 4b1111: { newStackTop = {16{~COMPARE.less}}; }
             }
         } else {
-            switch( aluop(instruction).operation ) {
+            switch( ALUOP[0,4] ) {
                 case 4b0000: { newStackTop = stackTop; }
                 case 4b0001: { newStackTop = stackNext; }
                 case 4b0010: { newStackTop = ADD.c; }
@@ -394,7 +367,7 @@ algorithm compare(
     output  uint1   lessu,
     output  uint1   less,
     output  uint1   equal0,
-) <autorun,reginputs> {
+) <autorun> {
     always {
         equal = stackNext == stackTop;
         lessu = __unsigned(stackNext) < __unsigned(stackTop);
@@ -416,7 +389,7 @@ algorithm j1eforthcallbranch(
     output  uint13  newPC,
     output  uint8   newDSP,
     output  uint8   newRSP,
-) <autorun,reginputs> {
+) <autorun> {
     always {
         newStackTop = callbranch(instruction).is_callbranchalu[0,1] ? stackNext : stackTop;
         newDSP = dsp - callbranch(instruction).is_callbranchalu[0,1];
@@ -436,7 +409,7 @@ algorithm decode(
     output  uint1   rstackWrite,
     output  uint8   ddelta,
     output  uint8   rdelta
-) <autorun,reginputs> {
+) <autorun> {
     always {
         is_lit = literal(instruction).is_literal;
         is_call = ~is_lit & ( callbranch(instruction).is_callbranchalu == 2b10 );
@@ -471,7 +444,7 @@ algorithm deltasp(
     input   uint8   sp,
     input   uint8   delta,
     output  uint8   newSP
-) <autorun,reginputs> {
+) <autorun> {
     always {
         newSP = sp + delta;
     }
@@ -495,10 +468,8 @@ algorithm uart(
     input   uint8   outchar,
     input   uint1   write
 ) <autorun> {
-    uint9   OUTtop1 <:: uartOutBufferTop + 1;
-    uint9   OUTnext1 <:: uartOutBufferNext + 1;
-    uint9   INtop1 <:: uartInBufferTop + 1;
-    uint9   INnext1 <:: uartInBufferNext + 1;
+    uint9   OUTtop1 <:: uartOutBufferTop + 1;       uint9   OUTnext1 <:: uartOutBufferNext + 1;
+    uint9   INtop1 <:: uartInBufferTop + 1;         uint9   INnext1 <:: uartInBufferNext + 1;
 
     // UART input FIFO (512 character) as dualport bram (code from @sylefeb)
     simple_dualport_bram uint8 uartInBuffer[512] = uninitialized;

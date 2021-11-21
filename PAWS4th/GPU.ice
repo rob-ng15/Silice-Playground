@@ -709,6 +709,36 @@ algorithm triangle(
 }
 
 // BLIT - ( tilecharacter == 0 ) OUTPUT PIXELS TO BLIT AN 8 x 8 CHARACTER ( PARAM1 == 0 as 8 x 8, == 1 as 16 x 16, == 2 as 32 x 32, == 3 as 64 x 64 )
+algorithm blitscale(
+    input   uint7   offset,
+    input   uint2   scale,
+    output  int11   scaled
+) <autorun> {
+    always {
+        scaled = offset << scale;
+    }
+}
+algorithm   blittilexy(
+    input   uint7   px,
+    input   uint7   py,
+    input   uint3   action,
+    output  uint4   xinblittile,
+    output  uint3   xinchartile,
+    output  uint4   yinblittile,
+    output  uint3   yinchartile
+) <autorun> {
+    uint4   revx4 <:: 4b1111 - px[0,4];             uint4   revy4 <:: 4b1111 - py[0,4];
+    uint3   revx3 <:: 3b111 - px[0,3];              uint3   revy3 <:: 3b111 - py[0,3];
+    uint1   action00 <:: ( ~|action[0,2] );         uint1   action01 <:: ( action[0,2] == 2b01 );           uint1   action10 <:: ( action[0,2] == 2b10 );
+
+    // find y and x positions within the tile/character bitmap handling rotation or reflection
+    always {
+        xinblittile = ( action[2,1] ?  action00 ? revx4 : action01 ? py[0,4] : action10 ? px[0,4] : revy4 : action[0,1] ? px[0,4] : revx4 );
+        yinblittile = action[2,1] ? action00 ? py[0,4] : action01 ? px[0,4] : action10 ? revy4 : revx4 : action[1,1] ? revy4 :  py[0,4];
+        xinchartile = ( action[2,1] ?  action00 ? revx3 : action01 ? py[0,3] : action10 ? px[0,3] : revy3 : action[0,1] ?  px[0,3] : revx3 );
+        yinchartile = action[2,1] ? action00 ? py[0,3] : action01 ? px[0,3] : action10 ? revy3 : revx3 : action[1,1] ? revy3 :  py[0,3];
+    }
+}
 algorithm blittilebitmapwriter(
     // For setting blit1 tile bitmaps
     input   uint6   blit1_writer_tile,
@@ -750,10 +780,9 @@ algorithm blit(
     input   uint1   tilecharacter
 ) <autorun,reginputs> {
     // START POSITION ON THE SCREEN, POSITION IN TILE/CHARACTER AND PIXEL COUNT FOR SCALING
-    int11   x1 = uninitialized;
-    int11   y1 = uninitialized;
-    uint7   px = uninitialized;                         uint7   pxNEXT <:: px + 1;
-    uint7   py = uninitialized;                         uint7   pyNEXT <:: py + 1;
+    int11   x1 = uninitialized;                         int11   y1 = uninitialized;
+    uint7   px = uninitialized;                         uint7   pxNEXT <:: px + 1;                          blitscale PXS( offset <: px, scale <: scale );
+    uint7   py = uninitialized;                         uint7   pyNEXT <:: py + 1;                          blitscale PYS( offset <: py, scale <: scale );
     uint5   x2 = uninitialised;                         uint5   x2NEXT <:: x2 + 1;
     uint5   y2 = uninitialised;                         uint5   y2NEXT <:: y2 + 1;
     uint5   maxcount <:: ( 1 << scale );
@@ -761,24 +790,11 @@ algorithm blit(
     // MULTIPLIER FOR THE SIZE
     uint5   max_pixels <:: tilecharacter ? 16 : 8;
 
-    // tile and character bitmap addresses
-    // tile bitmap and charactermap addresses - handling rotation or reflection - find y and x positions, then concert to address
-    uint4   revx4 <:: 4b1111 - px[0,4];
-    uint4   revy4 <:: 4b1111 - py[0,4];
-    uint3   revx3 <:: 3b111 - px[0,3];
-    uint3   revy3 <:: 3b111 - py[0,3];
+    // FIND X AND Y WITHIN THE TILE/CHARACTER BITMAP
+    blittilexy BTXY( px <: px, py <: py, action <: action );
 
-    uint1   action00 <:: ( ~|action[0,2] );
-    uint1   action01 <:: ( action[0,2] == 2b01 );
-    uint1   action10 <:: ( action[0,2] == 2b10 );
-
-    uint4   yinblittile <:: action[2,1] ? action00 ? py[0,4] : action01 ? px[0,4] : action10 ? revy4 : revx4 : action[1,1] ? revy4 :  py[0,4];
-    uint4   xinblittile <:: 15 - ( action[2,1] ?  action00 ? px[0,4] : action01 ? revy4 : action10 ? revx4 : py[0,4] : action[0,1] ? revx4 :  px[0,4] );
-    uint3   yinchartile <:: action[2,1] ? action00 ? py[0,3] : action01 ? px[0,3] : action10 ? revy3 : revx3 : action[1,1] ? revy3 :  py[0,3];
-    uint3   xinchartile <:: 7 - ( action[2,1] ?  action00 ? px[0,3] : action01 ? revy3 : action10 ? revx3 : py[0,3] : action[0,1] ? revx3 :  px[0,3] );
-
-    blit1tilemap.addr0 := { tile, yinblittile }; characterGenerator8x8.addr0 := { tile, yinchartile };
-    bitmap_x_write := x1 + ( px << scale ) + x2; bitmap_y_write := y1 + ( py << scale ) + y2; bitmap_write := 0;
+    blit1tilemap.addr0 := { tile, BTXY.yinblittile }; characterGenerator8x8.addr0 := { tile, BTXY.yinchartile };
+    bitmap_x_write := x1 + PXS.scaled + x2; bitmap_y_write := y1 + PYS.scaled + y2; bitmap_write := 0;
 
     while(1) {
         if( start ) {
@@ -791,7 +807,7 @@ algorithm blit(
                     while( y2 != maxcount ) {
                         x2 = 0;
                         while( x2 != maxcount ) {
-                            bitmap_write = tilecharacter ? blit1tilemap.rdata0[xinblittile, 1] : characterGenerator8x8.rdata0[xinchartile, 1];
+                            bitmap_write = tilecharacter ? blit1tilemap.rdata0[BTXY.xinblittile, 1] : characterGenerator8x8.rdata0[BTXY.xinchartile, 1];
                             x2 = x2NEXT;
                         }
                         y2 = y2NEXT;
@@ -808,6 +824,22 @@ algorithm blit(
 
 
 // COLOURBLIT - OUTPUT PIXELS TO BLIT A 16 x 16 TILE ( PARAM1 == 0 as 16 x 16, == 1 as 32 x 32, == 2 as 64 x 64, == 3 as 128 x 128 )
+algorithm cololurblittilexy(
+    input   uint7   px,
+    input   uint7   py,
+    input   uint3   action,
+    output  uint4   xintile,
+    output  uint4   yintile
+) <autorun> {
+    uint4   revx <:: 4b1111 - px[0,4];              uint4   revy <:: 4b1111 - py[0,4];
+    uint1   action00 <:: ( ~|action[0,2] );         uint1   action01 <:: ( action[0,2] == 2b01 );           uint1   action10 <:: ( action[0,2] == 2b10 );
+
+    // find y and x positions within the tile bitmap handling rotation or reflection
+    always {
+        xintile = action[2,1] ?  action00 ? px[0,4] : action01 ? revy : action10 ? revx : py[0,4] : action[0,1] ? revx :  px[0,4];
+        yintile = action[2,1] ? action00 ? py[0,4] : action01 ? px[0,4] : action10 ? revy : revx : action[1,1] ? revy :  py[0,4];
+    }
+}
 algorithm colourblittilebitmapwriter(
     // For setting  colourblit tile bitmaps
     input   uint6   colourblit_writer_tile,
@@ -840,25 +872,17 @@ algorithm colourblit(
     // START POSITION ON THE SCREEN, POSITION IN TILE/CHARACTER AND PIXEL COUNT FOR SCALING
     int11   x1 = uninitialized;
     int11   y1 = uninitialized;
-    uint7   px = uninitialized;                         uint7   pxNEXT <:: px + 1;
-    uint7   py = uninitialized;                         uint7   pyNEXT <:: py + 1;
+    uint7   px = uninitialized;                         uint7   pxNEXT <:: px + 1;                          blitscale PXS( offset <: px, scale <: scale );
+    uint7   py = uninitialized;                         uint7   pyNEXT <:: py + 1;                          blitscale PYS( offset <: py, scale <: scale );
     uint5   x2 = uninitialised;                         uint5   x2NEXT <:: x2 + 1;
     uint5   y2 = uninitialised;                         uint5   y2NEXT <:: y2 + 1;
     uint5   maxcount <:: ( 1 << scale );
 
-    uint4   revx <:: 4b1111 - px[0,4];
-    uint4   revy <:: 4b1111 - py[0,4];
+    // FIND X AND Y WITHIN THE TILE BITMAP
+    cololurblittilexy CBTXY( px <: px, py <: py, action <: action );
 
-    uint1   action00 <:: ( ~|action[0,2] );
-    uint1   action01 <:: ( action[0,2] == 2b01 );
-    uint1   action10 <:: ( action[0,2] == 2b10 );
-
-    // tile bitmap addresses - handling rotation or reflection - find y and x positions, then concert to address
-    uint4   yintile <:: action[2,1] ? action00 ? py[0,4] : action01 ? px[0,4] : action10 ? revy : revx : action[1,1] ? revy :  py[0,4];
-    uint4   xintile <:: action[2,1] ?  action00 ? px[0,4] : action01 ? revy : action10 ? revx : py[0,4] : action[0,1] ? revx :  px[0,4];
-
-    colourblittilemap.addr0 := { tile, yintile, xintile };
-    bitmap_x_write := x1 + ( px << scale ) + x2; bitmap_y_write := y1 + ( py << scale ) + y2; bitmap_colour_write := colourblittilemap.rdata0;  bitmap_write := 0;
+    colourblittilemap.addr0 := { tile, CBTXY.yintile, CBTXY.xintile };
+    bitmap_x_write := x1 + PXS.scaled + x2; bitmap_y_write := y1 + PYS.scaled + y2; bitmap_colour_write := colourblittilemap.rdata0;  bitmap_write := 0;
 
     while(1) {
         if( start ) {
@@ -870,7 +894,7 @@ algorithm colourblit(
                     x2 = 0;
                     while( x2 != maxcount ) {
                         y2 = 0;
-                        while( y2 != maxcount ) { bitmap_write = ~colourblittilemap.rdata0[6,1]; y2 = y2NEXT; }
+                        while( y2 != maxcount ) { bitmap_write = ~colour7(colourblittilemap.rdata0).alpha; y2 = y2NEXT; }
                         x2 = x2NEXT;
                     }
                     px = pxNEXT;
@@ -1021,7 +1045,7 @@ algorithm vectors(
     output  int11   gpu_param1,
     output  uint1   gpu_write,
     input   uint1   gpu_active
-) <autorun,reginputs> {
+) <autorun> {
     // Add deltas to the centres
     centreplusdelta CENTREPLUSDELTA(
         xc <: vector_block_xc, yc <: vector_block_yc,
