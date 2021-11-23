@@ -1,3 +1,16 @@
+// DETERMINE IN FAST OR SLOW FPU INSTRUCTION
+algorithm Fclass(
+    input   uint1   is2FPU,
+    input   uint1   isFPUFAST,
+    output  uint1   FASTPATHFPU
+) <autorun> {
+    // FUSED OPERATIONS + CALCULATIONS & CONVERSIONS GO VIA SLOW PATH
+    // SIGN MANIPULATION, COMPARISONS + MIN/MAX, MOVE AND CLASSIFICATION GO VIA FAST PATH
+    always {
+        FASTPATHFPU = is2FPU & isFPUFAST;           // is2FPU DETERMINES IF NORMAL OR FUSED, THEN isFPUFAST DETERMINES IF FAST OR SLOW
+    }
+}
+
 algorithm fpufast(
     input   uint2   function3,
     input   uint5   function7,
@@ -65,11 +78,14 @@ algorithm fpuslow(
 
     while(1) {
         if( start ) {
+            __display("FPU SLOW START");
             busy = 1;
             if( opCode[2,1] && function7[4,1] ) {
                 // FCVT.W.S FCVT.WU.S  FCVT.S.W FCVT.S.WU
+                __display("  CONVERSION");
                 frd = function7[1,1]; FPUconvert.start = 1; while( FPUconvert.busy ) {} result = FPUconvert.result; FPUnewflags = FPUflags | FPUconvert.flags;
             } else {
+                __display("  CALCULATION");
                 // FMADD.S FMSUB.S FNMSUB.S FNMADD.S FADD.S FSUB.S FMUL.S FDIV.S FSQRT.S
                 frd = 1; FPUcalculator.start = 1; while( FPUcalculator.busy ) {} result = FPUcalculator.result; FPUnewflags = FPUflags | FPUcalculator.flags;
             }
@@ -121,7 +137,7 @@ algorithm floatcalc(
     output  uint5   flags,
     output  uint32  result,
 ) <autorun,reginputs> {
-    // CLASSIFY THE RESULT OF MULTIPLICATION
+     // CLASSIFY THE RESULT OF MULTIPLICATION
     classifyF classM( a <: FPUmultiply.result );
 
     // ADD/SUB/MULT have changeable inputs due to 2 input and 3 input fused operations
@@ -140,12 +156,17 @@ algorithm floatcalc(
     FPUaddsub.start := 0; FPUmultiply.start := 0; FPUdivide.start := 0; FPUsqrt.start := 0;
 
     // PREPARE INPUTS FOR ADDITION/SUBTRACTION AND MULTIPLICATION
-    FPUaddsub.a := opCode[2,1] ? sourceReg1F : FPUmultiply.result; FPUaddsub.b := opCode[2,1] ? sourceReg2F : sourceReg3F;
-    FPUaddsub.classA := opCode[2,1] ? classA : classM.class; FPUaddsub.classB := opCode[2,1] ? classB : classC; FPUaddsub.addsub := opCode[2,1] ? function7[0,1] : opCode[0,1];
-    FPUmultiply.a := opCode[2,1] ? sourceReg1F : { opCode[1,1] ^ sourceReg1F[31,1], sourceReg1F[0,31] };
-
-    // CONTROL INPUTS TO ROUNDING AND COMBINING FOR 2 REGISTER OPERATIONS
+    // CONTROL INPUTS TO ROUNDING AND COMBINING
     always {
+        if( opCode[2,1] ) {
+            FPUaddsub.a = sourceReg1F; FPUaddsub.b = sourceReg2F;
+            FPUaddsub.classA = classA; FPUaddsub.classB = classB; FPUaddsub.addsub = function7[0,1];
+            FPUmultiply.a = sourceReg1F;
+        } else {
+            FPUaddsub.a = FPUmultiply.result; FPUaddsub.b = sourceReg3F;
+            FPUaddsub.classA = classM.class; FPUaddsub.classB = classC; FPUaddsub.addsub = opCode[0,1];
+            FPUmultiply.a = { opCode[1,1] ^ sourceReg1F[31,1], sourceReg1F[0,31] };
+        }
         if( FPUaddsub.busy ) { DOROUND.exponent = DONORMAL.newexponent; DOROUND.bitstream = DONORMAL.normalfraction; DOCOMBINE.sign = FPUaddsub.resultsign; }
         if( FPUmultiply.busy ) { DOROUND.exponent = FPUmultiply.productexp; DOROUND.bitstream = FPUmultiply.normalfraction; DOCOMBINE.sign = FPUmultiply.productsign; }
         if( FPUdivide.busy ) { DOROUND.exponent = FPUdivide.quotientexp; DOROUND.bitstream = DONORMAL.normalfraction; DOCOMBINE.sign = FPUdivide.quotientsign; }
@@ -160,25 +181,31 @@ algorithm floatcalc(
                 switch( function7[0,2] ) {
                     default: {
                         // FADD.S FSUB.S
+                        __display("    ADD / SUB");
                         FPUaddsub.start = 1; while( FPUaddsub.busy ) {} result = FPUaddsub.result; flags = FPUaddsub.flags & 5b00110;
                     }
                     case 2b10: {
                         // FMUL.S
+                        __display("    MUL");
                         FPUmultiply.start = 1; while( FPUmultiply.busy ) {} result = FPUmultiply.result; flags = FPUmultiply.flags & 5b00110;
                     }
                     case 2b11: {
                         if( function7[3,1] ) {
                             // FSQRT.S
+                        __display("    SQRT");
                             FPUsqrt.start = 1; while( FPUsqrt.busy ) {} result = FPUsqrt.result; flags = FPUsqrt.flags & 5b00110;
                         } else {
                             // FDIV.S
+                        __display("    DIV");
                             FPUdivide.start = 1; while( FPUdivide.busy ) {} result = FPUdivide.result; flags = FPUdivide.flags & 5b01110;
                         }
                     }
                 }
             } else {
                 // 3 REGISTER FUSED FPU OPERATIONS - MULTIPLY then ADD/SUB
-                FPUmultiply.start = 1; while( FPUmultiply.busy ) {} FPUaddsub.start = 1; while( FPUaddsub.busy ) {} result = FPUaddsub.result;
+                __display("      FUSED");
+                FPUmultiply.start = 1; while( FPUmultiply.busy ) {} __display("      MUL RESULT = %x (%b)",FPUmultiply.result,FPUmultiply.result);
+                FPUaddsub.start = 1; while( FPUaddsub.busy ) {} result = FPUaddsub.result; __display("      A/S RESULT = %x (%b)",FPUaddsub.result,FPUaddsub.result);
                 flags = ( FPUmultiply.flags & 5b10110 ) | ( FPUaddsub.flags & 5b00110 );
             }
             busy = 0;
@@ -643,6 +670,7 @@ algorithm floataddsub(
     flags := { IF, NN, NV, 1b0, OF, UF, 1b0 };
     while(1) {
         if( start ) {
+            __display("      ADD INPUTS a = %x, b = %x, +/- = %b",a,b,addsub);
             busy = 1;
             OF = 0; UF = 0;
             //++: // ALLOW 1 CYCLES FOR CLASSIFICATION AND EQUALISING EXPONENTS
@@ -944,7 +972,7 @@ algorithm floatsqrt(
         if( start ) {
             busy = 1;
             OF = 0; UF = 0;
-            switch( { classA[3,1] | NN,classA[0,1] | fp32( a ).sign } ) {
+            switch( { classA[3,1] | NN, classA[0,1] | fp32( a ).sign } ) {
                 case 2b00: {
                     // STEPS: SETUP -> DOSQRT -> NORMALISE -> ROUND -> ADJUSTEXP -> COMBINE
                     DOSQRT.start = 1; while( DOSQRT.busy ) {} ++:
@@ -1020,4 +1048,102 @@ algorithm floatcompare(
     flags := { INF, {2{NAN}}, 4b0000 };
     less := NAN ? 0 : ( ( fp32( a ).sign ^ fp32( b ).sign ) ? fp32( a ).sign & ~aorbleft1equal0 : ~aequalb & ( fp32( a ).sign ^ avb ) );
     equal := NAN ? 0 : ( aequalb | aorbleft1equal0 );
+}
+
+
+// VERILATOR TEST FRAMEWORK
+algorithm pulse(
+    output  uint32  cycles(0)
+) <autorun> {
+    cycles := cycles + 1;
+}
+
+
+algorithm main(output int8 leds) {
+    // CYCLE COUNTER
+    uint32  startcycle = uninitialised;
+    pulse PULSE();
+
+    //uint5   opCode = 5b10100; // ALL OTHER FPU OPERATIONS
+    uint5   opCode = 5b10000; // FMADD
+    // uint5   opCode = 5b10001; // FMSUB
+    // uint5   opCode = 5b10010; // FNMSUB
+    // uint6   opCode = 5b10011; // FNMADD
+
+    uint7   function7 = 7b0001000; // OPERATION SWITCH
+    // ADD = 7b0000000 SUB = 7b0000100 MUL = 7b0001000 DIV = 7b0001100 SQRT = 7b0101100
+    // FSGNJ[N][X] = 7b0010000 function3 == 000 FSGNJ == 001 FSGNJN == 010 FSGNJX
+    // MIN MAX = 7b0010100 function3 == 000 MIN == 001 MAX
+    // FCVT.W[U].S floatto[u]int = 7b1100000 rs2 == 00000 FCVT.W.S == 00001 FCVT.WU.S
+    // FCVT.S.W[U] [u]inttofloat = 7b1101000 rs2 == 00000 FCVT.S.W == 00001 FCVT.S.WU
+
+    uint3   function3 = 3b000; // ROUNDING MODE OR SWITCH
+    uint5   rs1 = 5b00000; // SOURCEREG1 number
+    uint5   rs2 = 5b00000; // SOURCEREG2 number OR SWITCH
+
+    uint32  sourceReg1 = 1000000000; // INTEGER SOURCEREG1
+
+    // -5 = 32hC0A00000
+    // -0 = 32h80000000
+    // 0 = 0
+    // 0.85471 = 32h3F5ACE46
+    // 1/3 = 32h3eaaaaab
+    // 1 = 32h3F800000
+    // 2 = 32h40000000      SQRT -> 32h3FB504F3
+    // 3 = 32h40400000
+    // 10 = 32h41200000
+    // 50 = 32h42480000
+    // 99 = 32h42C60000
+    // 100 = 32h42C80000
+    // 2.658456E38 = 32h7F480000
+    // NaN = 32hffffffff
+    // qNaN = 32hffc00000
+    // INF = 32h7F800000
+    // -INF = 32hFF800000
+    uint32  sourceReg1F = 32h3F800000;
+    uint32  sourceReg2F = 32h40000000;
+    uint32  sourceReg3F = 32h42480000;
+
+    uint32  result = uninitialised;
+    uint1   frd = uninitialised;
+
+    uint5   FPUflags = 5b00000;
+    uint5   FPUnewflags = uninitialised;
+
+    // FLOATING POINT INSTRUCTION CLASSIFICATION
+    Fclass FCLASS( is2FPU <: opCode[2,1], isFPUFAST <: function7[4,1] );
+
+    // FLOATING POINT REGISTERS CLASSIFICATION
+    classifyF class1F( a <: sourceReg1F ); classifyF class2F( a <: sourceReg2F ); classifyF class3F( a <: sourceReg3F );
+
+    // FLOATING POINT SLOW OPERATIONS - CALCULATIONS AND CONVERSIONS
+    fpuslow FPUSLOW(
+        FPUflags <: FPUflags,
+        opCode <: opCode, function7 <: function7[2,5],
+        rs2 <: rs2[0,1],
+        sourceReg1 <: sourceReg1, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F, sourceReg3F <: sourceReg3F,
+        classA <: class1F.class, classB <: class2F.class, classC <: class3F.class
+    );
+
+    // FLOATING POINT FAST OPERATIONS
+    fpufast FPUFAST(
+        FPUflags <: FPUflags,
+        function3 <: function3[0,2], function7 <: function7[2,5],
+        sourceReg1 <: sourceReg1, sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F,
+         classA <: class1F.class, classB <: class2F.class
+    );
+
+    FPUSLOW.start := 0;
+
+    ++: ++: ++: ++: ++:
+
+    if( opCode[4,1] & FCLASS.FASTPATHFPU ) {
+        // COMPARISONS, MIN/MAX, SIGN MANIPULATION, CLASSIFICTIONS AND MOVE F-> and I->F
+        frd = FPUFAST.frd; result = FPUFAST.result; FPUnewflags = FPUFAST.FPUnewflags;
+    } else {
+        FPUSLOW.start = 1; while( FPUSLOW.busy ) {}
+        frd = FPUSLOW.frd; result = FPUSLOW.result; FPUnewflags = FPUSLOW.FPUnewflags;
+    }
+
+    __display("RESULT = %x (%b -> %b %b %b)",result,result,fp32(result).sign,fp32(result).exponent,fp32(result).fraction);
 }

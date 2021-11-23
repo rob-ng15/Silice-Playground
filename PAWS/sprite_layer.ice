@@ -31,7 +31,7 @@ algorithm sprite_layer(
         simple_dualport_bram_port0 tiles_$i$,
     $$end
 ) <autorun,reginputs> {
-    uint1   output_collisions = 0;
+    uint1   output_collisions = uninitialised;
 
     $$for i=0,15 do
         uint1 pix_visible_$i$ = uninitialised;
@@ -53,8 +53,8 @@ algorithm sprite_layer(
     $$end
 
     // Collisions in frame
-    uint4   layer_collision_frame := { collision_layer_1, collision_layer_2, collision_layer_3, collision_layer_4 };
-    uint16  sprite_collision_frame := { pix_visible_15, pix_visible_14, pix_visible_13, pix_visible_12, pix_visible_11,
+    uint4   layer_collision_frame <: { collision_layer_1, collision_layer_2, collision_layer_3, collision_layer_4 };
+    uint16  sprite_collision_frame <: { pix_visible_15, pix_visible_14, pix_visible_13, pix_visible_12, pix_visible_11,
                                         pix_visible_10, pix_visible_9, pix_visible_8, pix_visible_7,
                                         pix_visible_6, pix_visible_5, pix_visible_4, pix_visible_3,
                                         pix_visible_2, pix_visible_1, pix_visible_0
@@ -62,6 +62,11 @@ algorithm sprite_layer(
 
     // Default to transparent
     sprite_layer_display := pix_active & ( |sprite_collision_frame );
+    pixel :=
+        $$for i=0,14 do
+                pix_visible_$15-i$ ? sprite_read_colour_$15-i$ :
+        $$end
+        sprite_read_colour_0;
 
     always {
         // RENDER + COLLISION DETECTION
@@ -82,23 +87,6 @@ algorithm sprite_layer(
             }
         } else {
             if( pix_active ) {
-                pixel = pix_visible_15 ? sprite_read_colour_15 :
-                        pix_visible_14 ? sprite_read_colour_14 :
-                        pix_visible_13 ? sprite_read_colour_13 :
-                        pix_visible_12 ? sprite_read_colour_12 :
-                        pix_visible_11 ? sprite_read_colour_11 :
-                        pix_visible_10 ? sprite_read_colour_10 :
-                        pix_visible_9 ? sprite_read_colour_9 :
-                        pix_visible_8 ? sprite_read_colour_8 :
-                        pix_visible_7 ? sprite_read_colour_7 :
-                        pix_visible_6 ? sprite_read_colour_6 :
-                        pix_visible_5 ? sprite_read_colour_5 :
-                        pix_visible_4 ? sprite_read_colour_4 :
-                        pix_visible_3 ? sprite_read_colour_3 :
-                        pix_visible_2 ? sprite_read_colour_2 :
-                        pix_visible_1 ? sprite_read_colour_1 :
-                        sprite_read_colour_0;
-
                 $$for i=0,15 do
                     // UPDATE COLLISION DETECTION FLAGS
                     if( pix_visible_$i$ ) {
@@ -129,17 +117,16 @@ algorithm sprite_generator(
     simple_dualport_bram_port0 tiles,
     output! uint1   pix_visible
 ) <autorun> {
-    int11   x <: { 1b0, pix_x };
-    int11   xspritex <: ( x - sprite_x );
-    int10   y <: pix_y;
-    int10   yspritey <: ( y - sprite_y );
+    int11   x <: { 1b0, pix_x };                    int10   y <: pix_y;
+    int11   xspritex <: ( x - sprite_x );           int11   xspriteshift <: xspritex >>> sprite_double[0,1];
+    int10   yspritey <: ( y - sprite_y );           int10   yspriteshift <: yspritey >>> sprite_double[0,1];
 
     // Calculate position in sprite, handling reflection and doubling
     uint6 spritesize <: sprite_double[0,1] ? 32 : 16;
     uint1 xinrange <: ( x >= __signed(sprite_x) ) & ( x < __signed( sprite_x + spritesize ) );
     uint1 yinrange <: ( y >= __signed(sprite_y) ) & ( y < __signed( sprite_y + spritesize) );
-    uint4 yinsprite <: sprite_double[2,1] ? 15 - ( yspritey >>> sprite_double[0,1] ) : yspritey >>> sprite_double[0,1];
-    uint4 xinsprite <: sprite_double[1,1] ? (( xspritex >>> sprite_double[0,1] ) ) : ( 15  - ( xspritex >>> sprite_double[0,1] ) );
+    uint4 yinsprite <: sprite_double[2,1] ? 15 - yspriteshift : yspriteshift;
+    uint4 xinsprite <: sprite_double[1,1] ? xspriteshift : 15  - xspriteshift;
 
     // READ ADDRESS FOR SPRITE
     tiles.addr0 := { sprite_tile_number, yinsprite };
@@ -174,12 +161,14 @@ algorithm sprite_layer_writer(
     uint3   sprite_tile_number[16] = uninitialised;
     uint1   output_collisions = 0;
 
-    int11   sprite_offscreen_negative = uninitialised;
-    int11   sprite_to_negative = uninitialised;
+    int11   sprite_offscreen_negative <: sprite_double[ sprite_set_number ][0,1] ? -32 : -16;
+    int11   sprite_to_negative <: sprite_double[ sprite_set_number ][0,1] ? -31 : -15;
     uint1   sprite_offscreen_x = uninitialised;
     uint1   sprite_offscreen_y = uninitialised;
     uint1   sprite_off_left = uninitialised;
     uint1   sprite_off_top = uninitialised;
+    int11   sprite_update_x <:: { {7{spriteupdate( sprite_write_value ).dxsign}}, spriteupdate( sprite_write_value ).dx };
+    int10   sprite_update_y <:: { {6{spriteupdate( sprite_write_value ).dysign}}, spriteupdate( sprite_write_value ).dy };
 
     $$for i=0,15 do
         // For setting sprite read paramers
@@ -203,20 +192,18 @@ algorithm sprite_layer_writer(
             case 6: { sprite_tile_number[ sprite_set_number ] = sprite_write_value[0,3]; }
             case 7: {
                 // Sprite update helpers
-                sprite_offscreen_negative = sprite_double[ sprite_set_number ][0,1] ? -32 : -16;
-                sprite_to_negative = sprite_double[ sprite_set_number ][0,1] ? -31 : -15;
                 sprite_off_left = ( __signed( sprite_x[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) );
                 sprite_off_top = ( __signed( sprite_y[ sprite_set_number ] ) < __signed( sprite_offscreen_negative ) );
                 sprite_offscreen_x = sprite_off_left | ( __signed( sprite_x[ sprite_set_number  ] ) > __signed(640) );
                 sprite_offscreen_y = sprite_off_top | ( __signed( sprite_y[ sprite_set_number ] ) > __signed(480) );
 
                 // Perform sprite update
-                sprite_active[ sprite_set_number ] = ( ( sprite_write_value[12,1] & sprite_offscreen_y ) | ( sprite_write_value[11,1] & sprite_offscreen_x  ) ) ? 0 : sprite_active[ sprite_set_number ];
+                sprite_active[ sprite_set_number ] = ( ( sprite_write_value[12,1] & sprite_offscreen_y ) | ( sprite_write_value[11,1] & sprite_offscreen_x ) ) ? 0 : sprite_active[ sprite_set_number ];
                 sprite_tile_number[ sprite_set_number ] = sprite_tile_number[ sprite_set_number ] + sprite_write_value[10,1];
                 sprite_x[ sprite_set_number ] = sprite_offscreen_x ? ( sprite_off_left ?__signed(640) : sprite_to_negative ) :
-                                                sprite_x[ sprite_set_number ] + { {7{spriteupdate( sprite_write_value ).dxsign}}, spriteupdate( sprite_write_value ).dx };
+                                                sprite_x[ sprite_set_number ] + sprite_update_x;
                 sprite_y[ sprite_set_number ] = sprite_offscreen_y ? ( sprite_off_top ? __signed(480) : sprite_to_negative ) :
-                                                sprite_y[ sprite_set_number ] + { {6{spriteupdate( sprite_write_value ).dysign}}, spriteupdate( sprite_write_value ).dy };
+                                                sprite_y[ sprite_set_number ] + sprite_update_y;
             }
         }
     }

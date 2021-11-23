@@ -1000,12 +1000,11 @@ void bomb_actions( void ) {
     for( short i = 2; i < 16; i++ ) {
         if( get_sprite_layer_collision( UPPER_LAYER, i ) & SPRITE_TO_BITMAP ) {
             // HIT THE BUNKER
-            bomb_x = get_sprite_attribute( UPPER_LAYER, i , 3 ) / 2;
-            bomb_y = get_sprite_attribute( UPPER_LAYER, i , 4 ) / 2 + rng(2) + 1;
+            bomb_x = get_sprite_attribute( UPPER_LAYER, i , 3 ) / 2 - 2;
+            bomb_y = get_sprite_attribute( UPPER_LAYER, i , 4 ) / 2;
             set_sprite_attribute( UPPER_LAYER, i, SPRITE_ACTIVE, 0 );
-            char bomb_reflection = rng(4);
-            bitmap_draw( 0 ); gpu_blit( TRANSPARENT, bomb_x, bomb_y, 14, 0, bomb_reflection );
-            bitmap_draw( 1 ); gpu_blit( TRANSPARENT, bomb_x, bomb_y, 14, 0, bomb_reflection );
+            bitmap_draw( 0 ); gpu_blit( TRANSPARENT, bomb_x, bomb_y, 14, 0, 0 );
+            bitmap_draw( 1 ); gpu_blit( TRANSPARENT, bomb_x, bomb_y, 14, 0, 0 );
             bitmap_draw( !framebuffer );
         } else {
             set_sprite_attribute( UPPER_LAYER, i, SPRITE_COLOUR, framebuffer ? ORANGE : LTRED );
@@ -1038,7 +1037,7 @@ void bomb_actions( void ) {
                             case 1:
                             case 2:
                             case 3:
-                                set_sprite( UPPER_LAYER, i, 1, LTRED, 2 * Aliens[ bombrow * 11 + bombcolumn ].x + 4, 2 * Aliens[ bombrow * 11 + bombcolumn ].y + 12, 0, 1 );
+                                set_sprite( UPPER_LAYER, i, 1, LTRED, 2 * Aliens[ bombrow * 11 + bombcolumn ].x + 4 + ( rng(5) - 2 ), 2 * Aliens[ bombrow * 11 + bombcolumn ].y + 12, 0, 1 );
                                 AlienSwarm.lastbombtimer = ( Ship.level == 0 ) ? 32 : ( Ship.level > 2 ) ? 8 : 16;
                                 bombdropped = 1;
                                 break;
@@ -1083,8 +1082,8 @@ short missile_actions( void ) {
             set_sprite_attribute( UPPER_LAYER, 1, SPRITE_ACTIVE, 0 );
             if( missile_y > 24 ) {
                 // HIT A BUNKER
-                missile_x = missile_x - rng(4) + 2;
-                missile_y = missile_y - rng(4);
+                missile_x = missile_x - 2;
+                missile_y = missile_y - 2;
                 bitmap_draw( 0 ); gpu_blit( TRANSPARENT, missile_x, missile_y, 14, 0, 0 );
                 bitmap_draw( 1 ); gpu_blit( TRANSPARENT, missile_x, missile_y, 14, 0, 0 );
                 bitmap_draw( !framebuffer );
@@ -1244,8 +1243,8 @@ void missile_demo( void ) {
         if( !alien_hit && ( missile_y >= 208 ) ) {
             set_sprite_attribute( UPPER_LAYER, 1, SPRITE_ACTIVE, 0 );
             // HIT A BUNKER
-            missile_x = missile_x - rng(4) + 2;
-            missile_y = missile_y - rng(2) - 1;
+            missile_x = missile_x - 2;
+            missile_y = missile_y - 2;
             bitmap_draw( 0 ); gpu_blit( TRANSPARENT, missile_x, missile_y, 14, 0, 0 );
             bitmap_draw( 1 ); gpu_blit( TRANSPARENT, missile_x, missile_y, 14, 0, 0 );
             bitmap_draw( !framebuffer );

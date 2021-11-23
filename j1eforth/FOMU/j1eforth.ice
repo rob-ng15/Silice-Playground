@@ -104,15 +104,19 @@ algorithm main(
     deltasp DELTARSP( sp <: rsp, delta <: DECODE.rdelta );
 
     uint16  memoryinput = uninitialized;
-    uint5   ALUOP <:: { aluop(instruction).is_j1j1plus, aluop(instruction).operation };
-    alu ALU(
-        ALUOP <: ALUOP,
+    alu0 ALU0(
+        ALUOP <: aluop(instruction).operation,
         memoryRead <: memoryinput,
         stackTop <: stackTop,
         stackNext <: stackNext,
         rStackTop <: rStackTop,
         dsp <: dsp,
         rsp <: rsp
+    );
+    alu1 ALU1(
+        ALUOP <: aluop(instruction).operation,
+        stackTop <: stackTop,
+        stackNext <: stackNext,
     );
 
     j1eforthcallbranch CALLBRANCH(
@@ -216,7 +220,7 @@ algorithm main(
                         default: { newStackTop = 0; }
                     }
                 } else {
-                    newStackTop = ALU.newStackTop;
+                    newStackTop = aluop(instruction).is_j1j1plus ? ALU1.newStackTop : ALU0.newStackTop;
                     rstackWData = stackTop;
                 }
 
@@ -296,8 +300,8 @@ algorithm shift16(
         SRA = __signed(a) >>> count;
     }
 }
-algorithm alu(
-    input   uint5   ALUOP,
+algorithm alu0(
+    input   uint4   ALUOP,
     input   uint16  stackTop,
     input   uint16  stackNext,
     input   uint16  rStackTop,
@@ -306,60 +310,68 @@ algorithm alu(
     input   uint16  memoryRead,
     output  uint16  newStackTop
 ) <autorun> {
-    int16   negTop <:: -stackTop;
     compare COMPARE( stackTop <: stackTop, stackNext <: stackNext );
     add16 ADD( a <: stackTop, b <: stackNext );
-    add16 SUB( a <: stackNext, b <: negTop );
-    add16 INC( a <: stackTop );
     add16 DEC( a <: stackTop );
     logic16 LOGIC( a <: stackTop, b <: stackNext );
     shift16 SHIFT( a <: stackNext, count <: nibbles(stackTop).nibble0 );
 
     always {
-        if( ALUOP[4,1] ) {
-            switch( ALUOP[0,4] ) {
-                case 4b0000: { newStackTop = {16{ COMPARE.equal0 }}; }
-                case 4b0001: { newStackTop = {16{ ~COMPARE.equal0 }}; }
-                case 4b0010: { newStackTop = {16{ ~COMPARE.equal }}; }
-                case 4b0011: { newStackTop = INC.c; }
-                case 4b0100: { newStackTop = { stackTop[0,15], 1b0 }; }
-                case 4b0101: { newStackTop = { stackTop[15,1], stackTop[1,15]}; }
-                case 4b0110: { newStackTop = {16{~COMPARE.less & ~COMPARE.equal}}; }
-                case 4b0111: { newStackTop = {16{~COMPARE.lessu & ~COMPARE.equal}}; }
-                case 4b1000: { newStackTop = {16{stackTop[15,1]}}; }
-                case 4b1001: { newStackTop = {16{~stackTop[15,1]}}; }
-                case 4b1010: { newStackTop = stackTop[15,1] ? negTop : stackTop; }
-                case 4b1011: { newStackTop = COMPARE.less ? stackTop : stackNext; }
-                case 4b1100: { newStackTop = COMPARE.less ? stackNext : stackTop; }
-                case 4b1101: { newStackTop = negTop; }
-                case 4b1110: { newStackTop = SUB.c; }
-                case 4b1111: { newStackTop = {16{~COMPARE.less}}; }
-            }
-        } else {
-            switch( ALUOP[0,4] ) {
-                case 4b0000: { newStackTop = stackTop; }
-                case 4b0001: { newStackTop = stackNext; }
-                case 4b0010: { newStackTop = ADD.c; }
-                case 4b0011: { newStackTop = LOGIC.AND; }
-                case 4b0100: { newStackTop = LOGIC.OR; }
-                case 4b0101: { newStackTop = LOGIC.XOR; }
-                case 4b0110: { newStackTop = ~stackTop; }
-                case 4b0111: { newStackTop = {16{COMPARE.equal}}; }
-                case 4b1000: { newStackTop = {16{COMPARE.less}}; }
-                case 4b1001: { newStackTop = SHIFT.SRA; }
-                case 4b1010: { newStackTop = DEC.c; }
-                case 4b1011: { newStackTop = rStackTop; }
-                case 4b1100: { newStackTop = memoryRead; }
-                case 4b1101: { newStackTop = SHIFT.SLL; }
-                case 4b1110: { newStackTop = {rsp, dsp}; }
-                case 4b1111: { newStackTop = {16{COMPARE.lessu}}; }
-            }
+        switch( ALUOP ) {
+            case 4b0000: { newStackTop = stackTop; }
+            case 4b0001: { newStackTop = stackNext; }
+            case 4b0010: { newStackTop = ADD.c; }
+            case 4b0011: { newStackTop = LOGIC.AND; }
+            case 4b0100: { newStackTop = LOGIC.OR; }
+            case 4b0101: { newStackTop = LOGIC.XOR; }
+            case 4b0110: { newStackTop = ~stackTop; }
+            case 4b0111: { newStackTop = {16{COMPARE.equal}}; }
+            case 4b1000: { newStackTop = {16{COMPARE.less}}; }
+            case 4b1001: { newStackTop = SHIFT.SRA; }
+            case 4b1010: { newStackTop = DEC.c; }
+            case 4b1011: { newStackTop = rStackTop; }
+            case 4b1100: { newStackTop = memoryRead; }
+            case 4b1101: { newStackTop = SHIFT.SLL; }
+            case 4b1110: { newStackTop = {rsp, dsp}; }
+            case 4b1111: { newStackTop = {16{COMPARE.lessu}}; }
+        }
+    }
+    DEC.b = -1;
+}
+algorithm alu1(
+    input   uint4   ALUOP,
+    input   uint16  stackTop,
+    input   uint16  stackNext,
+    output  uint16  newStackTop
+) <autorun> {
+    int16   negTop <:: -stackTop;
+    compare COMPARE( stackTop <: stackTop, stackNext <: stackNext );
+    add16 SUB( a <: stackNext, b <: negTop );
+    add16 INC( a <: stackTop );
+
+    always {
+        switch( ALUOP[0,4] ) {
+            case 4b0000: { newStackTop = {16{ COMPARE.equal0 }}; }
+            case 4b0001: { newStackTop = {16{ ~COMPARE.equal0 }}; }
+            case 4b0010: { newStackTop = {16{ ~COMPARE.equal }}; }
+            case 4b0011: { newStackTop = INC.c; }
+            case 4b0100: { newStackTop = { stackTop[0,15], 1b0 }; }
+            case 4b0101: { newStackTop = { stackTop[15,1], stackTop[1,15]}; }
+            case 4b0110: { newStackTop = {16{~COMPARE.less & ~COMPARE.equal}}; }
+            case 4b0111: { newStackTop = {16{~COMPARE.lessu & ~COMPARE.equal}}; }
+            case 4b1000: { newStackTop = {16{stackTop[15,1]}}; }
+            case 4b1001: { newStackTop = {16{~stackTop[15,1]}}; }
+            case 4b1010: { newStackTop = stackTop[15,1] ? negTop : stackTop; }
+            case 4b1011: { newStackTop = COMPARE.less ? stackTop : stackNext; }
+            case 4b1100: { newStackTop = COMPARE.less ? stackNext : stackTop; }
+            case 4b1101: { newStackTop = negTop; }
+            case 4b1110: { newStackTop = SUB.c; }
+            case 4b1111: { newStackTop = {16{~COMPARE.less}}; }
         }
     }
 
-    INC.b = 1; DEC.b = -1;
+    INC.b = 1;
 }
-
 algorithm compare(
     input   uint16  stackTop,
     input   uint16  stackNext,

@@ -9,6 +9,25 @@ I set about creating this project as I wanted an easier way to write programs to
 
 The display hardware does as much as possible to compensate for the slow CPU speed.
 
+## Quick Instructions
+
+Copy the files from the directory "SOFTWARE/PAWS" to an SDCARD and insert into the ULX3S. Flash the bitstream from "ULX3S/BUILD_ulx3s/PAWS.bit" to the ULX3S
+
+```
+fujproj PAWS.bit
+```
+
+This will initialise the BIOS and allow the selection of a PAW file to load and run.
+
+## BIOS
+
+![BIOS](documentation/Screenshots/BIOS.jpg)
+
+* BIOS
+    * Initialises the screen and CPU
+    * Loads compiled PAW files from the SDCARD to SDRAM and executes
+        * FAT32 on SDCARD read via SPI
+
 ## Overview
 
 * CPU
@@ -75,6 +94,21 @@ The display hardware does as much as possible to compensate for the slow CPU spe
         * Terminal
             * 80 x 8
 
+![BIOS](documentation/Screenshots/COLOURS.jpg)
+<br>64 Colour Display
+
+![BIOS](documentation/Screenshots/3DMAZE.jpg)
+<br>Demonstration game for the GPU and the hardware accelerated drawing of 2D Shapes
+
+![BIOS](documentation/Screenshots/ASTEROIDS.jpg)
+<br>Demonstration game for the sprites
+
+![BIOS](documentation/Screenshots/INVADERS.jpg)
+<br>Demonstration game for the blitter and sprites
+
+![BIOS](documentation/Screenshots/OUTRUN.jpg)
+<br>Test for the floating point unit and the GPU
+
 * PERIPHERALS
     * UART ( via US1 on the ULX3S )
         * 115200 baud
@@ -85,10 +119,4 @@ The display hardware does as much as possible to compensate for the slow CPU spe
     * STEREO AUDIO
     * SDCARD via SPI
         * FAT32 read only support
-
-* BIOS
-    * Initialises the screen and CPU
-    * Loads compiled PAW files from the SDCARD to SDRAM and executes
-        * FAT32 on SDCARD read via SPI
-
 

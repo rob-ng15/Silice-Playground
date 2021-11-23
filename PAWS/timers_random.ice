@@ -1,6 +1,6 @@
 algorithm pulsecursor(
     output  uint1   show
-) <autorun,reginputs> {
+) <autorun> {
     uint24  counter25mhz = uninitialised;
     uint24  nextcounter25mhz <:: counter25mhz - 1;
     uint1   MIN <:: ( ~|counter25mhz );
@@ -45,7 +45,7 @@ algorithm pulse1khz(
 algorithm random(
     output  uint16  g_noise_out,
     output  uint16  u_noise_out,
-) <autorun,reginputs> {
+) <autorun> {
     uint16  rand_out <:: rand_ff;
     uint16  rand_ff = 24b011000110111011010011101;
     uint18  rand_en_ff = 24b001100010011011101100101;

@@ -13,7 +13,7 @@ algorithm decode(
     output  uint1   memorystore,
     output  uint2   accesssize,
     output  uint1   AMO
-) <autorun,reginputs> {
+) <autorun> {
     uint1   AMOLR <:: ( function7[2,5] == 5b00010 );
     uint1   AMOSC <:: ( function7[2,5] == 5b00011 );
     uint1   ILOAD <:: opCode == 5b00000;
@@ -47,7 +47,7 @@ algorithm Iclass(
     output  uint1   writeRegister,
     output  uint1   incPC,
     output  uint1   FASTPATH
-) <autorun,reginputs> {
+) <autorun> {
     // CHECK FOR FLOATING POINT, OR INTEGER DIVIDE
     uint1   ALUfastslow <:: ~( opCode[4,1] | ( opCode[3,1] & isALUM & function3[2,1]) );
     frd := 0; writeRegister := 1; incPC := 1; FASTPATH := 1;
@@ -75,7 +75,7 @@ algorithm Fclass(
     input   uint1   is2FPU,
     input   uint1   isFPUFAST,
     output  uint1   FASTPATHFPU
-) <autorun,reginputs> {
+) <autorun> {
     // FUSED OPERATIONS + CALCULATIONS & CONVERSIONS GO VIA SLOW PATH
     // SIGN MANIPULATION, COMPARISONS + MIN/MAX, MOVE AND CLASSIFICATION GO VIA FAST PATH
     always {
@@ -90,12 +90,11 @@ algorithm signextend(
     input   uint1   byteaccess,
     input   uint1   dounsigned,
     output  uint32  memory168
-) <autorun,reginputs> {
-    uint4   byteoffset <:: { byteaccess, 3b000 };
-    uint4   bytesignoffset <:: { byteaccess, 3b111 };
+) <autorun> {
+    uint4   byteoffset <:: { byteaccess, 3b000 };   uint4   bytesignoffset <:: { byteaccess, 3b111 };
+    uint1   sign <:: ~dounsigned & ( is16or8 ? readdata[15,1] : readdata[bytesignoffset, 1] );
     always {
-        memory168 = is16or8 ? dounsigned ? readdata[0,16] : { {16{readdata[15,1]}}, readdata[0,16] } :
-                                dounsigned ? readdata[byteoffset, 8] : { {24{readdata[bytesignoffset, 1]}}, readdata[byteoffset, 8] };
+        memory168 = is16or8 ? { {16{sign}}, readdata[0,16] } : { {24{sign}}, readdata[byteoffset, 8] };
     }
 }
 
@@ -103,7 +102,7 @@ algorithm signextend(
 algorithm absolute(
     input   int32   number,
     output  uint32  value
-) <autorun,reginputs> {
+) <autorun> {
     always {
         value = number[31,1] ? -number : number;
     }
@@ -113,7 +112,7 @@ algorithm absolute(
 algorithm addrplus2(
     input   uint27  address,
     output  uint27  addressplus2
-) <autorun,reginputs> {
+) <autorun> {
     uint27  plus2 <:: address + 2;
     always {
         addressplus2 = plus2;
@@ -132,7 +131,7 @@ algorithm addressgenerator(
     output  uint27  loadAddress,
     output  uint27  storeAddress,
     input   uint1   AMO
-) <autorun,reginputs> {
+) <autorun> {
     always {
         AUIPCLUI = { Utype(instruction).immediate_bits_31_12, 12b0 } + ( instruction[5,1] ? 0 : PC );
         branchAddress = { {20{Btype(instruction).immediate_bits_12}}, Btype(instruction).immediate_bits_11, Btype(instruction).immediate_bits_10_5, Btype(instruction).immediate_bits_4_1, 1b0 } + PC;
@@ -154,7 +153,7 @@ algorithm newpc(
     input   uint27  loadAddress,
     output  uint27  nextPC,
     output  uint27  newPC
-) <autorun,reginputs> {
+) <autorun> {
     always {
         nextPC = PC + ( compressed ? 2 : 4 );
         newPC = ( incPC ) ? ( takeBranch ? branchAddress : nextPC ) : ( opCode[1,1] ? jumpAddress : loadAddress );
@@ -169,7 +168,7 @@ algorithm registers(
     input   uint1   write,
     input   uint32  result,
     output  uint32  contents
-) <autorun,reginputs> {
+) <autorun> {
     simple_dualport_bram int32 registers[64] = { 0, pad(uninitialized) };
     registers.addr0 := { SMT, rs }; contents := registers.rdata0;
     registers.addr1 := { SMT, rd }; registers.wdata1 := result;
@@ -186,7 +185,7 @@ algorithm registersI(
     input   int32   result,
     output  int32   sourceReg1,
     output  int32   sourceReg2
-) <autorun,reginputs> {
+) <autorun> {
     // RISC-V REGISTERS
     registers RS1( SMT <: SMT, rs <: rs1, rd <: rd, write <: write, result <: result, contents :> sourceReg1 );
     registers RS2( SMT <: SMT, rs <: rs2, rd <: rd, write <: write, result <: result, contents :> sourceReg2 );
@@ -203,7 +202,7 @@ algorithm registersF(
     output  int32   sourceReg1,
     output  int32   sourceReg2,
     output  int32   sourceReg3
-) <autorun,reginputs> {
+) <autorun> {
     // RISC-V REGISTERS
     registers RS1F( SMT <: SMT, rs <: rs1, rd <: rd, write <: write, result <: result, contents :> sourceReg1 );
     registers RS2F( SMT <: SMT, rs <: rs2, rd <: rd, write <: write, result <: result, contents :> sourceReg2 );
@@ -216,7 +215,7 @@ algorithm branchcomparison(
     input   int32   sourceReg1,
     input   int32   sourceReg2,
     output  uint1   takeBranch
-) <autorun,reginputs> {
+) <autorun> {
     uint1   isequal <:: sourceReg1 == sourceReg2;
     uint1   unsignedcompare <:: __unsigned(sourceReg1) < __unsigned(sourceReg2);
     uint1   signedcompare <:: __signed(sourceReg1) < __signed(sourceReg2);
@@ -228,7 +227,7 @@ algorithm branchcomparison(
 algorithm compressed00(
     input   uint16  i16,
     output  uint30  i32
-) <autorun,reginputs> {
+) <autorun> {
     always {
         if( |i16[13,3] ) {
             if( i16[15,1] ) {
@@ -249,7 +248,7 @@ algorithm compressed00(
 algorithm compressed01(
     input   uint16  i16,
     output  uint30  i32
-) <autorun,reginputs> {
+) <autorun> {
     uint3   opbits = uninitialized;
     always {
         switch( i16[13,3] ) {
@@ -316,7 +315,7 @@ algorithm compressed01(
 algorithm compressed10(
     input   uint16  i16,
     output  uint30  i32
-) <autorun,reginputs> {
+) <autorun> {
     always {
         switch( i16[13,3] ) {
             case 3b000: {
@@ -516,7 +515,7 @@ algorithm aluA (
     input   uint32  memoryinput,
     input   uint32  sourceReg2,
     output  uint32  result
-) <autorun,reginputs> {
+) <autorun> {
     uint1   unsignedcompare <:: ( __unsigned(memoryinput) < __unsigned(sourceReg2) );
     uint1   signedcompare <:: ( __signed(memoryinput) < __signed(sourceReg2) );
     uint1   comparison <:: function7[3,1] ? unsignedcompare : signedcompare;

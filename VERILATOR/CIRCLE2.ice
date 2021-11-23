@@ -18,7 +18,7 @@ algorithm drawcircle(
     int11   active_y = uninitialized;                   int11   active_yNEXT <:: active_y - positivenumerator;
     int11   count = uninitialised;                      int11   countNEXT <:: filledcircle ? count - 1 : min_count;
     int11   min_count = uninitialised;                  int11   min_countNEXT <:: min_count + 1;
-    uint1   drawingcircle <:: ( active_y >= active_x ); uint1   drawingsegment <:: ( count != min_count );
+    uint1   drawingcircle <:: ( active_y >= active_x ); uint1   drawingsegment <:: ( count == min_count + 1 );
 
     // PLUS OR MINUS OFFSETS
     int11   xcpax <:: xc + active_x;                    int11   xcnax <:: xc - active_x;
@@ -30,24 +30,29 @@ algorithm drawcircle(
 
     while(1) {
         if( start ) {
-            busy = 1;
-            active_x = 0; active_y = radius; count = radius; min_count = (-1); numerator = start_numerator;
-            while( drawingcircle ) {
-                while( drawingsegment ) {
-                    // OUTPUT PIXELS IN THE 8 SEGMENTS/ARCS AS PER MASK
-                    bitmap_x_write = xcpax; bitmap_y_write = ycpc;      if( draw_sectors[0,1] ) { bitmap_write = 1; ++: }
-                    bitmap_y_write = ycnc;                              if( draw_sectors[1,1] ) { bitmap_write = 1; ++: }
-                    bitmap_x_write = xcnax;                             if( draw_sectors[2,1] ) { bitmap_write = 1; ++: }
-                    bitmap_y_write = ycpc;                              if( draw_sectors[3,1] ) { bitmap_write = 1; ++: }
-                    bitmap_x_write = xcpc; bitmap_y_write = ycpax;      if( draw_sectors[4,1] ) { bitmap_write = 1; ++: }
-                    bitmap_y_write = ycnax;                             if( draw_sectors[5,1] ) { bitmap_write = 1; ++: }
-                    bitmap_x_write = xcnc;                              if( draw_sectors[6,1] ) { bitmap_write = 1; ++: }
-                    bitmap_y_write = ycpax;                             if( draw_sectors[7,1] ) { bitmap_write = 1; }
-                    count = countNEXT;
+             busy = 1; active_x = 0; active_y = radius; count = radius; min_count = (-1); numerator = start_numerator;
+        } else {
+            if( drawingcircle ) {
+                // OUTPUT PIXELS IN THE 8 SEGMENTS/ARCS AS PER MASK
+                bitmap_x_write = xcpax; bitmap_y_write = ycpc;      if( draw_sectors[0,1] ) { bitmap_write = 1; ++: }
+                bitmap_y_write = ycnc;                              if( draw_sectors[1,1] ) { bitmap_write = 1; ++: }
+                bitmap_x_write = xcnax;                             if( draw_sectors[2,1] ) { bitmap_write = 1; ++: }
+                bitmap_y_write = ycpc;                              if( draw_sectors[3,1] ) { bitmap_write = 1; ++: }
+                bitmap_x_write = xcpc; bitmap_y_write = ycpax;      if( draw_sectors[4,1] ) { bitmap_write = 1; ++: }
+                bitmap_y_write = ycnax;                             if( draw_sectors[5,1] ) { bitmap_write = 1; ++: }
+                bitmap_x_write = xcnc;                              if( draw_sectors[6,1] ) { bitmap_write = 1; ++: }
+                bitmap_y_write = ycpax;                             if( draw_sectors[7,1] ) { bitmap_write = 1; }
+                count = countNEXT;
+                if( drawingsegment ) {
+                    active_x = active_xNEXT;
+                    active_y = active_yNEXT;
+                    count = active_y;
+                    min_count = min_countNEXT;
+                    numerator = new_numerator;
                 }
-                active_x = active_xNEXT; active_y = active_yNEXT; count = active_y; min_count = min_countNEXT; numerator = new_numerator;
+            } else {
+                busy = 0;
             }
-            busy = 0;
         }
     }
 }
@@ -63,7 +68,7 @@ algorithm circle(
     output  int11  bitmap_x_write,
     output  int11  bitmap_y_write,
     output  uint1  bitmap_write
-) <autorun,reginputs> {
+) <autorun> {
     int11   absradius <:: radius[10,1] ? -radius : radius;
     int11   gpu_numerator <:: 3 - ( { absradius, 1b0 } );
     uint8   draw_sectors <:: { sectormask[5,1], sectormask[6,1], sectormask[1,1], sectormask[2,1], sectormask[4,1], sectormask[7,1], sectormask[0,1], sectormask[3,1] };
@@ -74,7 +79,8 @@ algorithm circle(
         start_numerator <: gpu_numerator,
         draw_sectors <: draw_sectors,
         filledcircle <: filledcircle,
-        bitmap_x_write :> bitmap_x_write, bitmap_y_write :> bitmap_y_write, bitmap_write :> bitmap_write,
+        bitmap_x_write :> bitmap_x_write, bitmap_y_write :> bitmap_y_write,
+        bitmap_write :> bitmap_write,
         start <: start
     );
     busy := start | CIRCLE.busy;
@@ -95,7 +101,7 @@ algorithm main(output uint8 leds)
     while( CIRCLE.busy ) {
         if( CIRCLE.bitmap_write ) {
             pixels = pixels + 1;
-            __display(" %d @ %d, ( %d, %d )",pixels,PULSE.cycles,CIRCLE.bitmap_x_write,CIRCLE.bitmap_y_write);
+            __display("pixel %d cycle %d @ ( %d, %d )",pixels,PULSE.cycles,CIRCLE.bitmap_x_write,CIRCLE.bitmap_y_write);
         }
     }
 }

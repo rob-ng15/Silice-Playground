@@ -320,7 +320,7 @@ algorithm fifo8(
     input   uint1   write,
     output  uint8   first,
     input   uint8   last
-) <autorun,reginputs> {
+) <autorun> {
     simple_dualport_bram uint8 queue[256] = uninitialized;
     uint1   update = uninitialized;
     uint8   top = 0;
@@ -387,7 +387,7 @@ algorithm fifo9(
     input   uint1   write,
     output  uint9   first,
     input   uint9   last
-) <autorun,reginputs> {
+) <autorun> {
     simple_dualport_bram uint9 queue[256] = uninitialized;
     uint8   top = 0;
     uint8   next = 0;
