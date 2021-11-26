@@ -46,6 +46,7 @@ $include('../timers_random.ice')
 // CPU SPECIFICATION
 $$CPUISA = 0x40001025
 $include('../cpu_functionblocks.ice')
+$include('../common/float32.ice')
 $include('../ALU.ice')
 $include('../FPU.ice')
 $include('../CPU.ice')

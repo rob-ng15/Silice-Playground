@@ -171,8 +171,15 @@ algorithm bitmapwriter(
         queue_complete :> gpu_queue_complete
     );
 
+    uint1   condition = uninitialised;
     uint7   pixeltowrite = uninitialised;
-    dither DODITHER(bitmap_x_write <: bitmap_x_write,bitmap_y_write <: bitmap_y_write,dithermode <: dithermode,static1bit <: static6bit[0,1]);
+    dither DODITHER(
+        bitmap_x_write <: bitmap_x_write,
+        bitmap_y_write <: bitmap_y_write,
+        dithermode <: dithermode,
+        static1bit <: static6bit[0,1],
+        condition :> condition
+    );
 
     // Write in range?
     uint1 write_pixel <:: ( bitmap_x_write >= bitmap_crop_left ) & ( bitmap_x_write <= bitmap_crop_right ) & ( bitmap_y_write >= bitmap_crop_top ) & ( bitmap_y_write <= bitmap_crop_bottom ) & bitmap_write;
@@ -187,7 +194,7 @@ algorithm bitmapwriter(
             // SELECT ACTUAL COLOUR
             switch( dithermode ) {
                 case 14: { pixeltowrite = static6bit; }
-                default: { pixeltowrite = DODITHER.condition ? bitmap_colour_write : bitmap_colour_write_alt; }
+                default: { pixeltowrite = condition ? bitmap_colour_write : bitmap_colour_write_alt; }
             }
             // SET PIXEL ADDRESSS bitmap_y_write * 320 + bitmap_x_write
             if( framebuffer ) {

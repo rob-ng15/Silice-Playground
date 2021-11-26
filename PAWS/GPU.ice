@@ -577,11 +577,13 @@ algorithm preptriangle(
     output  int11   max_y,
     output  uint1   todraw
 ) <autorun> {
-    int16   tx = uninitialised;                     int16   ty = uninitialised;
-    uint1   x1x2 <:: ( x1 < x2 );                   uint1   y1y2 <:: ( y1 < y2 );
-    uint1   x2x1 <:: ( x2 < x1 );                   uint1   y2y1 <:: ( y2 < y1 );
-    uint1   x1x3 <:: ( x1 < x3 );                   uint1   y1y3 <:: ( y1 < y3 );                       uint1   y3y1 <:: ( y3 < y1 );
-    uint1   x2x3 <:: ( x2 < x3 );                   uint1   y2y3 <:: ( y2 < y3 );                       uint1   y3y2 <:: ( y3 < y2 );
+    int16 tx = uninitialised; int16 ty = uninitialised;
+    uint1   x1x2 <: ( x1 < x2 );
+    uint1   y1y2 <: ( y1 < y2 );
+    uint1   x1x3 <: ( x1 < x3 );
+    uint1   y1y3 <: ( y1 < y3 );
+    uint1   x2x3 <: ( x2 < x3 );
+    uint1   y2y3 <: ( y2 < y3 );
 
     todraw := 0;
 
@@ -594,12 +596,12 @@ algorithm preptriangle(
             x3 = param2; y3 = param3;
             ++:
             // Put points in order so that ( x1, y1 ) is at top, then ( x2, y2 ) and ( x3, y3 ) are clockwise from there
-            if( y3y2 ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++: }
-            if( y2y1 ) { tx = x1; ty = y1; x1 = x2; y1 = y2; x2 = tx; y2 = ty; ++: }
-            if( y3y1 ) { tx = x1; ty = y1; x1 = x3; y1 = y3; x3 = tx; y3 = ty; ++: }
-            if( y3y2 ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++: }
-            if( ( y2 == y1 ) & ( x2x1 ) ) { tx = x1; ty = y1; x1 = x2; y1 = y2; x2 = tx; y2 = ty; ++: }
-            if( ( y2 != y1 ) & ( ~y2y3 ) & ( x2x3 ) ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++:}
+            if( y3 < y2 ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++: }
+            if( y2 < y1 ) { tx = x1; ty = y1; x1 = x2; y1 = y2; x2 = tx; y2 = ty; ++: }
+            if( y3 < y1 ) { tx = x1; ty = y1; x1 = x3; y1 = y3; x3 = tx; y3 = ty; ++: }
+            if( y3 < y2 ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++: }
+            if( ( y2 == y1 ) & ( x2 < x1 ) ) { tx = x1; ty = y1; x1 = x2; y1 = y2; x2 = tx; y2 = ty; ++: }
+            if( ( y2 != y1 ) & ( y3 >= y2 ) & ( x2 < x3 ) ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++:}
 
             // Find minimum and maximum of x, x1, x2, y, y1 and y2 for the bounding box
             min_x = x1x2 ? ( x1x3 ? x1 : x3 ) : ( x2x3 ? x2 : x3 );
@@ -781,9 +783,9 @@ algorithm blit(
     int11   x1 = uninitialized;                         int11   y1 = uninitialized;
     uint7   px = uninitialized;                         uint7   pxNEXT <:: px + 1;                          blitscale PXS( offset <: px, scale <: scale );
     uint7   py = uninitialized;                         uint7   pyNEXT <:: py + 1;                          blitscale PYS( offset <: py, scale <: scale );
-    uint5   x2 = uninitialised;                         uint5   x2NEXT <:: x2 + 1;
-    uint5   y2 = uninitialised;                         uint5   y2NEXT <:: y2 + 1;
-    uint5   maxcount <:: ( 1 << scale );
+    uint4   x2 = uninitialised;                         uint4   x2NEXT <:: x2 + 1;
+    uint4   y2 = uninitialised;                         uint4   y2NEXT <:: y2 + 1;
+    uint4   maxcount <:: ( 1 << scale );
 
     // MULTIPLIER FOR THE SIZE
     uint5   max_pixels <:: tilecharacter ? 16 : 8;
@@ -872,9 +874,9 @@ algorithm colourblit(
     int11   y1 = uninitialized;
     uint7   px = uninitialized;                         uint7   pxNEXT <:: px + 1;                          blitscale PXS( offset <: px, scale <: scale );
     uint7   py = uninitialized;                         uint7   pyNEXT <:: py + 1;                          blitscale PYS( offset <: py, scale <: scale );
-    uint5   x2 = uninitialised;                         uint5   x2NEXT <:: x2 + 1;
-    uint5   y2 = uninitialised;                         uint5   y2NEXT <:: y2 + 1;
-    uint5   maxcount <:: ( 1 << scale );
+    uint4   x2 = uninitialised;                         uint4   x2NEXT <:: x2 + 1;
+    uint4   y2 = uninitialised;                         uint4   y2NEXT <:: y2 + 1;
+    uint4   maxcount <:: ( 1 << scale );
 
     // FIND X AND Y WITHIN THE TILE BITMAP
     cololurblittilexy CBTXY( px <: px, py <: py, action <: action );

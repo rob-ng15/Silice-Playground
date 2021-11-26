@@ -97,9 +97,9 @@ algorithm drawtriangle(
 
     while(1) {
         if( start ) {
-            busy = 1;
-            dx = 1; px = min_x; py = min_y;
-            while( working ) {
+            busy = 1; dx = 1; px = min_x; py = min_y;
+        } else {
+            if( working ) {
                 beenInTriangle = inTriangle | beenInTriangle;
                 bitmap_write = inTriangle;
                 if( beenInTriangle ^ inTriangle ) {
@@ -109,8 +109,9 @@ algorithm drawtriangle(
                     // MOVE TO THE NEXT PIXEL ON THE LINE LEFT/RIGHT OR DOWN AND SWITCH DIRECTION IF AT END
                     if( stillinline ) { px = pxNEXT; } else { dx = ~dx; beenInTriangle = 0; py = pyNEXT; }
                 }
+            } else {
+                busy = 0;
             }
-            busy = 0;
         }
     }
 }

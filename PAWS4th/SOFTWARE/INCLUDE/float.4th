@@ -15,6 +15,8 @@ hex
 : f< fpu2! d117 @ negate ;
 : f= fpu2! d118 @ negate ;
 : f<= fpu2! d119 @ negate ;
+: fneg 8000 xor ;
+: fabs 7fff and ;
 : f.# base @ swap decimal
    bl emit
    dup a s>f f* f>s a /

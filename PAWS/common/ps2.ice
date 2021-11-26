@@ -10,46 +10,31 @@ algorithm ps2ascii(
     uint9   newascii = uninitialised;
 
     // MODIFIER KEYS + JOYSTICK MODE
-    uint1   lctrl = 0;
-    uint1   rctrl = 0;
-    uint1   lalt = 0;
-    uint1   ralt = 0;
-    uint1   lshift = 0;
-    uint1   rshift = 0;
-    uint1   lwin = 0;
-    uint1   rwin = 0;
+    uint1   lctrl = 0;                              uint1   rctrl = 0;
+    uint1   lalt = 0;                               uint1   ralt = 0;
+    uint1   lshift = 0;                             uint1   rshift = 0;
+    uint1   lwin = 0;                               uint1   rwin = 0;
+    uint1   capslock = 0;                           uint1   numlock = 1;
     uint1   application = 0;
-    uint1   capslock = 0;
-    uint1   numlock = 1;
 
     // DIRECTIONS KEYS
-    uint1   left = 0;
-    uint1   right = 0;
-    uint1   up = 0;
-    uint1   down = 0;
-    uint1   npleft = 0;
-    uint1   npright = 0;
-    uint1   npup = 0;
-    uint1   npdown = 0;
-    uint1   npleftup = 0;
-    uint1   npleftdown = 0;
-    uint1   nprightup = 0;
-    uint1   nprightdown = 0;
+    uint1   left = 0;                               uint1   right = 0;
+    uint1   up = 0;                                 uint1   down = 0;
+    uint1   npleft = 0;                             uint1   npright = 0;
+    uint1   npup = 0;                               uint1   npdown = 0;
+    uint1   npleftup = 0;                           uint1   npleftdown = 0;
+    uint1   nprightup = 0;                          uint1   nprightdown = 0;
 
-    uint1   CTRL <:: lctrl | rctrl;
-    uint1   SHIFT <:: lshift | rshift;
-    uint1   ALT <:: lalt | ralt;
-    uint1   CAPITAL <:: ( lshift | rshift ) ^ capslock;
+    uint1   CTRL <:: lctrl | rctrl;                 uint1   SHIFT <:: lshift | rshift;                  uint1   CAPITAL <:: ( lshift | rshift ) ^ capslock;
+    uint1   ALT <:: lalt | ralt;                    uint2   LETTERMOD <:: CTRL ? 2b00 : CAPITAL ? 2b10 : 2b11;
 
-    uint2   LETTERMOD <:: CTRL ? 2b00 : CAPITAL ? 2b10 : 2b11;
-
-    uint1   startbreak = 0;
-    uint1   startmulti = 0;
+    uint1   startbreak = 0;                         uint1   startmulti = 0;
 
     // PS2 KEYBOARD CODE READER
     ps2 PS2( ps2clk_ext <: us2_bd_dp, ps2data_ext <: us2_bd_dn );
 
-    newascii := 0; asciivalid := 0; joystick := { application, nprightup, nprightdown, npleftdown, npleftup, rctrl, rwin, ralt, lalt, npright | right, npleft | left, npdown | down, npup | up, lwin, lctrl, 1b0 };
+    newascii := 0; asciivalid := 0;
+    joystick := { application, nprightup, nprightdown, npleftdown, npleftup, rctrl, rwin, ralt, lalt, npright | right, npleft | left, npdown | down, npup | up, lwin, lctrl, 1b0 };
 
     always {
         if( PS2.valid ) {
@@ -210,10 +195,7 @@ algorithm ps2ascii(
                 }
             }
         }
-    }
-
-    // NEW KEYCODE RECEIVED
-    while(1) {
+        // NEW KEYCODE RECEIVED
         if( |newascii ) {
             ascii = newascii; asciivalid = outputascii;
         }
@@ -276,14 +258,11 @@ algorithm ps2(
     uint9 shift_reg = 0;
     uint1 parity = 0;
 
-    valid := 0;
-    error := 0;
-    clk_edge := 0;
+    valid := 0;                                     error := 0;                                         clk_edge := 0;
 
     // Filter the PS/2 clock
     always {
         clk_filter = { ps2clk_ext, clk_filter[1,3] };
-
         switch( clk_filter ) {
             case 4b1100: { ps2_clk_in = 1; }
             case 4b0011: {
@@ -294,10 +273,7 @@ algorithm ps2(
             }
             default: {}
         }
-    }
-
-    // Process the PS/2 data bit
-    while(1) {
+        // Process the PS/2 data bit
         if( clk_edge ) {
             switch( bit_count ) {
                 case 0: {

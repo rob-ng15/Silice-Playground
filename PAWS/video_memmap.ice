@@ -885,7 +885,8 @@ algorithm terminal_memmap(
         pixel    :> pixel,
         terminal_display :> pixel_display,
         blink <: blink,
-        terminal_x <: TW.terminal_x
+        terminal_x <: TW.terminal_x,
+        terminal_y <: TW.terminal_y
     );
 
     terminal_writer TW <@video_clock,!video_reset> (

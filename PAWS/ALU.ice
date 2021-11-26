@@ -126,18 +126,13 @@ algorithm aluMD(
     douintdivide DODIVIDE( dividend <: sourceReg1_unsigned, divisor <: sourceReg2_unsigned, quotient :> result_quotient, remainder :> result_remainder );
     DODIVIDE.start := 0; busy := start | DODIVIDE.busy;
 
-    always {
-        if( ~DODIVIDE.busy ) {
-            result = function3[1,1] ? result_remainder : ( quotientremaindersign ? -result_quotient : result_quotient );
-        }
-    }
-
     while(1) {
         if( start ) {
             if( ~|sourceReg2 ) {
                 result = function3[1,1] ? sourceReg1 : 32hffffffff;
             } else {
-                DODIVIDE.start = 1;
+                DODIVIDE.start = 1; while( DODIVIDE.busy ) {}
+                result = function3[1,1] ? result_remainder : ( quotientremaindersign ? -result_quotient : result_quotient );
             }
         }
     }
