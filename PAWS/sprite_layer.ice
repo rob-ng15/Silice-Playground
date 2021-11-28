@@ -71,7 +71,7 @@ algorithm sprite_layer(
     always_before {
         if( pix_active ) {
             $$for i=0,15 do
-                // UPDATE COLLISION DETECTION FLAGS
+                // UPDATE IN FRAME COLLISION DETECTION FLAGS
                 if( pix_visible_$i$ ) {
                     detect_collision_$i$ = detect_collision_$i$ | sprite_collision_frame;
                     detect_layer_$i$ = detect_layer_$i$ | layer_collision_frame;
@@ -80,7 +80,7 @@ algorithm sprite_layer(
         }
         if( output_collisions ) {
             $$for i=0,15 do
-                // UPDATE CPU READABLE FLAGS DURING THE FRAME
+                // UPDATE CPU READABLE COLLISION FLAGS
                 collision_$i$ = detect_collision_$i$;
                 layer_collision_$i$ = detect_layer_$i$;
             $$end
@@ -88,7 +88,7 @@ algorithm sprite_layer(
     }
     always_after {
         if( output_collisions ) {
-            // RESET collision detection
+            // RESET IN FRAME COLLISION DETECTION FLAGS
             $$for i=0,15 do
                 detect_collision_$i$ = 0;
                 detect_layer_$i$ = 0;
@@ -98,8 +98,8 @@ algorithm sprite_layer(
 }
 
 algorithm sprite_generator(
-    input   uint10  pix_x,
-    input   uint10  pix_y,
+    input   int11   pix_x,
+    input   int10   pix_y,
     input   uint1   sprite_active,
     input   uint3   sprite_double,
     input   int11   sprite_x,
@@ -108,14 +108,13 @@ algorithm sprite_generator(
     simple_dualport_bram_port0 tiles,
     output! uint1   pix_visible
 ) <autorun> {
-    int11   x <: { 1b0, pix_x };                    int10   y <: pix_y;
-    int11   xspritex <: ( x - sprite_x );           int11   xspriteshift <: xspritex >>> sprite_double[0,1];
-    int10   yspritey <: ( y - sprite_y );           int10   yspriteshift <: yspritey >>> sprite_double[0,1];
+    int11   xspritex <: ( pix_x - sprite_x );       int11   xspriteshift <: xspritex >>> sprite_double[0,1];
+    int10   yspritey <: ( pix_y - sprite_y );       int10   yspriteshift <: yspritey >>> sprite_double[0,1];
 
     // Calculate position in sprite, handling reflection and doubling
     uint6 spritesize <: sprite_double[0,1] ? 32 : 16;
-    uint1 xinrange <: ( x >= __signed(sprite_x) ) & ( x < __signed( sprite_x + spritesize ) );
-    uint1 yinrange <: ( y >= __signed(sprite_y) ) & ( y < __signed( sprite_y + spritesize ) );
+    uint1 xinrange <: ( pix_x >= __signed(sprite_x) ) & ( pix_x < __signed( sprite_x + spritesize ) );
+    uint1 yinrange <: ( pix_y >= __signed(sprite_y) ) & ( pix_y < __signed( sprite_y + spritesize ) );
     uint4 yinsprite <: sprite_double[2,1] ? 15 - yspriteshift : yspriteshift;
     uint4 xinsprite <: sprite_double[1,1] ? xspriteshift : 15  - xspriteshift;
 
@@ -152,14 +151,15 @@ algorithm sprite_layer_writer(
     uint3   sprite_tile_number[16] = uninitialised;
     uint1   output_collisions = 0;
 
+    // SPRITE UPDATE HELPERS
     int11   sprite_offscreen_negative <: sprite_double[ sprite_set_number ][0,1] ? -32 : -16;
     int11   sprite_to_negative <: sprite_double[ sprite_set_number ][0,1] ? -31 : -15;
-    uint1   sprite_offscreen_x = uninitialised;
-    uint1   sprite_offscreen_y = uninitialised;
     uint1   sprite_off_left = uninitialised;
     uint1   sprite_off_top = uninitialised;
-    int11   sprite_update_x <:: { {7{spriteupdate( sprite_write_value ).dxsign}}, spriteupdate( sprite_write_value ).dx };
-    int10   sprite_update_y <:: { {6{spriteupdate( sprite_write_value ).dysign}}, spriteupdate( sprite_write_value ).dy };
+    uint1   sprite_offscreen_x = uninitialised;
+    uint1   sprite_offscreen_y = uninitialised;
+    int11   sprite_update_x <:: { {7{spriteupdate( sprite_write_value ).dxsign} }, spriteupdate( sprite_write_value ).dx };
+    int10   sprite_update_y <:: { {6{spriteupdate( sprite_write_value ).dysign} }, spriteupdate( sprite_write_value ).dy };
 
     $$for i=0,15 do
         // For setting sprite read paramers

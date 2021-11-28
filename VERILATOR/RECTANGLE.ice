@@ -15,13 +15,9 @@ algorithm preprectangle(
     output  int11   max_y,
     output  uint1   todraw
 ) <autorun> {
-    uint1   xcompareparam0 <:: ( x < param0 );
-    uint1   ycompareparam1 <:: ( y < param1 );
-
-    int11   x1 <:: xcompareparam0 ? x : param0;
-    int11   y1 <:: ycompareparam1 ? y : param1;
-    int11   x2 <:: xcompareparam0 ? param0 : x;
-    int11   y2 <:: ycompareparam1 ? param1 : y;
+    uint1   xcompareparam0 <:: ( x < param0 );          uint1   ycompareparam1 <:: ( y < param1 );
+    int11   x1 <:: xcompareparam0 ? x : param0;         int11   y1 <:: ycompareparam1 ? y : param1;
+    int11   x2 <:: xcompareparam0 ? param0 : x;         int11   y2 <:: ycompareparam1 ? param1 : y;
 
     todraw := 0;
 
@@ -46,16 +42,19 @@ algorithm drawrectangle(
     output  int11   bitmap_y_write,
     output  uint1   bitmap_write
 ) <autorun> {
-    uint9   x = uninitialized;
-    uint8   y = uninitialized;
+    uint9   x = uninitialized;                          uint9 xNEXT <:: x + 1;
+    uint8   y = uninitialized;                          uint8 yNEXT <:: y + 1;
+
     bitmap_x_write := x; bitmap_y_write := y; bitmap_write := 0;
 
     while(1) {
         if( start ) {
             busy = 1;
-            y = min_y; x = min_x;
+            y = min_y;
             while( y != max_y ) {
-                if( x != max_x ) { bitmap_write = 1; x = x + 1; } else { x = min_x; y = y + 1; }
+                x = min_x;
+                while( x != max_x ) { bitmap_write = 1; x = xNEXT; }
+                y = yNEXT;
             }
             busy = 0;
         }
@@ -76,18 +75,16 @@ algorithm rectangle (
     output  int11   bitmap_x_write,
     output  int11   bitmap_y_write,
     output  uint1   bitmap_write
-) <autorun> {
+) <autorun,reginputs> {
     preprectangle PREP(
         start <: start,
         crop_left <: crop_left, crop_right <: crop_right, crop_top <: crop_top, crop_bottom <: crop_bottom,
-        x <: x, y <: y,
-        param0 <: x1, param1 <: y1
+        x <: x, y <: y, param0 <: x1, param1 <: y1
     );
 
     drawrectangle RECTANGLE(
         min_x <: PREP.min_x, min_y <: PREP.min_y, max_x <: PREP.max_x, max_y <: PREP.max_y,
-        bitmap_x_write :> bitmap_x_write, bitmap_y_write :> bitmap_y_write,
-        bitmap_write :> bitmap_write,
+        bitmap_x_write :> bitmap_x_write, bitmap_y_write :> bitmap_y_write, bitmap_write :> bitmap_write,
         start <: PREP.todraw
     );
 
@@ -97,17 +94,22 @@ algorithm rectangle (
 // Test it (make verilator)
 algorithm main(output uint8 leds)
 {
+    uint32  startcycle = uninitialized;
     pulse PULSE();
+    uint16  pixels = 0;
 
     rectangle RECTANGLE(); RECTANGLE.start := 0;
     RECTANGLE.crop_left = 0; RECTANGLE.crop_right = 319; RECTANGLE.crop_top = 0; RECTANGLE.crop_bottom = 239;
     RECTANGLE.x = 10; RECTANGLE.y = 10; RECTANGLE.x1 = 20; RECTANGLE.y1 = 20;
 
     ++:
-
+    startcycle = PULSE.cycles;
     RECTANGLE.start = 1;
     while( RECTANGLE.busy ) {
-        if( RECTANGLE.bitmap_write ) { __display(" @ %d, ( %d, %d )",PULSE.cycles,RECTANGLE.bitmap_x_write,RECTANGLE.bitmap_y_write); }
+        if( RECTANGLE.bitmap_write ) {
+            pixels = pixels + 1;
+            __display(" %d @ %d, ( %d, %d )",pixels,PULSE.cycles-startcycle,RECTANGLE.bitmap_x_write,RECTANGLE.bitmap_y_write);
+        }
     }
 }
 

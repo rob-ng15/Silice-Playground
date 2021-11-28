@@ -24,13 +24,12 @@ algorithm preptriangle(
     output  int11   max_y,
     output  uint1   todraw
 ) <autorun> {
-    int16 tx = uninitialised; int16 ty = uninitialised;
-    uint1   x1x2 <: ( x1 < x2 );
-    uint1   y1y2 <: ( y1 < y2 );
-    uint1   x1x3 <: ( x1 < x3 );
-    uint1   y1y3 <: ( y1 < y3 );
-    uint1   x2x3 <: ( x2 < x3 );
-    uint1   y2y3 <: ( y2 < y3 );
+    // TEMPORARY STORAGE FOR SWAPPING VARIABLES
+    int11   tx = uninitialised;                     int11   ty = uninitialised;
+
+    uint1   x1x2 <: ( x1 < x2 );                    uint1   y1y2 <: ( y1 < y2 );
+    uint1   x1x3 <: ( x1 < x3 );                    uint1   y1y3 <: ( y1 < y3 );
+    uint1   x2x3 <: ( x2 < x3 );                    uint1   y2y3 <: ( y2 < y3 );
 
     todraw := 0;
 
@@ -38,9 +37,7 @@ algorithm preptriangle(
         if( start ) {
             busy = 1;
             // Setup drawing a filled triangle x,y param0, param1, param2, param3
-            x1 = x; y1 = y;
-            x2 = param0; y2 = param1;
-            x3 = param2; y3 = param3;
+            x1 = x; y1 = y; x2 = param0; y2 = param1; x3 = param2; y3 = param3;
             ++:
             // Put points in order so that ( x1, y1 ) is at top, then ( x2, y2 ) and ( x3, y3 ) are clockwise from there
             if( y3 < y2 ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++: }
@@ -85,21 +82,25 @@ algorithm drawtriangle(
     output  uint1   bitmap_write
 ) <autorun> {
     // Filled triangle calculations
-    // Is the point px,py inside the triangle given by px,py x1,y1 x2,y2?
+    // Is the point px,py inside the triangle given by x0,x1 x1,y1 x2,y2?
     uint1   inTriangle <:: ( (( x2 - x1 ) * ( py - y1 ) - ( y2 - y1 ) * ( px - x1 )) >= 0 ) &
                             ( (( x0 - x2 ) * ( py - y2 ) - ( y0 - y2 ) * ( px - x2 )) >= 0 ) &
                             ( (( x1 - x0 ) * ( py - y0 ) - ( y1 - y0 ) * ( px - x0 )) >= 0 );
     uint1   beenInTriangle = uninitialized;
-    uint1   rightleft <:: ( max_x - px ) < ( px - min_x );
+
+    // CLOSER TO LEFT OR RIGHT OF THE BOUNDING BOX
+    uint1   leftright <:: ( px - min_x ) < ( max_x - px );
 
     // WORK COORDINATES AND DIRECTION
     int11   px = uninitialized;                         int11   pxNEXT <:: px + ( dx ? 1 : (-1) );
     int11   py = uninitialized;                         int11   pyNEXT <:: py + 1;
     uint1   dx = uninitialized;
+
+    // DETECT IF AT LEFT/RIGHT/BOTTOM OF THE BOUNDING BOX
     uint1   stillinline <:: ( dx & ( px != max_x ) ) | ( ~dx & ( px != min_x ));
     uint1   working <:: ( py != max_y );
 
-    bitmap_x_write := px; bitmap_y_write := py; bitmap_write := 0;
+    bitmap_x_write := px; bitmap_y_write := py; bitmap_write := busy & inTriangle;
 
     while(1) {
         if( start ) {
@@ -107,10 +108,9 @@ algorithm drawtriangle(
             dx = 1; px = min_x; py = min_y;
             while( working ) {
                 beenInTriangle = inTriangle | beenInTriangle;
-                bitmap_write = inTriangle;
                 if( beenInTriangle ^ inTriangle ) {
                     // Exited the triangle, move to the next line
-                    beenInTriangle = 0; py = pyNEXT; px = rightleft ? max_x : min_x; dx = ~rightleft;
+                    beenInTriangle = 0; py = pyNEXT; px = leftright ? min_x : max_x; dx = leftright;
                 } else {
                     // MOVE TO THE NEXT PIXEL ON THE LINE LEFT/RIGHT OR DOWN AND SWITCH DIRECTION IF AT END
                     if( stillinline ) { px = pxNEXT; } else { dx = ~dx; beenInTriangle = 0; py = pyNEXT; }
@@ -158,6 +158,7 @@ algorithm triangle(
 // Test it (make verilator)
 algorithm main(output uint8 leds)
 {
+    uint32  startcycle = uninitialised;
     pulse PULSE();
     uint16  pixels = 0;
 
@@ -166,12 +167,13 @@ algorithm main(output uint8 leds)
     TRIANGLE.x = 20; TRIANGLE.y = 30; TRIANGLE.x1 = 10; TRIANGLE.y1 = 20; TRIANGLE.x2 = 30; TRIANGLE.y2 = 20;
 
     ++:
-
+    startcycle = PULSE.cycles;
     TRIANGLE.start = 1;
     while( TRIANGLE.busy ) {
         if( TRIANGLE.bitmap_write ) {
             pixels = pixels + 1;
-            __display(" %d @ %d, ( %d, %d )",pixels,PULSE.cycles,TRIANGLE.bitmap_x_write,TRIANGLE.bitmap_y_write); }
+            __display(" %d @ %d, ( %d, %d )",pixels,PULSE.cycles-startcycle,TRIANGLE.bitmap_x_write,TRIANGLE.bitmap_y_write);
+        }
     }
 }
 

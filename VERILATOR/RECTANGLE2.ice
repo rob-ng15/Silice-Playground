@@ -9,28 +9,24 @@ algorithm preprectangle(
     input   int11   y,
     input   int11   param0,
     input   int11   param1,
-    output  uint9   min_x,
-    output  uint8   min_y,
-    output  uint8   max_x,
+    output  int11   min_x,
+    output  int11   min_y,
+    output  int11   max_x,
     output  int11   max_y,
     output  uint1   todraw
 ) <autorun> {
-    uint1   xcompareparam0 <: ( x < param0 );
-    uint1   ycompareparam1 <: ( y < param1 );
-
-    int11   x1 <: xcompareparam0 ? x : param0;
-    int11   y1 <: ycompareparam1 ? y : param1;
-    int11   x2 <: xcompareparam0 ? param0 : x;
-    int11   y2 <: ycompareparam1 ? param1 : y;
+    uint1   xcompareparam0 <:: ( x < param0 );          uint1   ycompareparam1 <:: ( y < param1 );
+    int11   x1 <:: xcompareparam0 ? x : param0;         int11   y1 <:: ycompareparam1 ? y : param1;
+    int11   x2 <:: xcompareparam0 ? param0 : x;         int11   y2 <:: ycompareparam1 ? param1 : y;
 
     todraw := 0;
 
-    always_after {
+    always {
         if( start ) {
             min_x = ( x1 < crop_left ) ? crop_left : x1;
             min_y = ( y1 < crop_top ) ? crop_top : y1;
-            max_x = ( ( x2 > crop_right ) ? crop_right : x2 );
-            max_y = ( ( y2 > crop_bottom ) ? crop_bottom : y2 );
+            max_x = 1 + ( ( x2 > crop_right ) ? crop_right : x2 );
+            max_y = 1 + ( ( y2 > crop_bottom ) ? crop_bottom : y2 );
             todraw = ~( ( max_x < crop_left ) | ( max_y < crop_top ) | ( min_x > crop_right ) | ( min_y > crop_bottom ) );
         }
     }
@@ -46,26 +42,19 @@ algorithm drawrectangle(
     output  int11   bitmap_y_write,
     output  uint1   bitmap_write
 ) <autorun> {
-    uint9   x = uninitialized;
-    uint8   y = uninitialized;
-    bitmap_x_write := x; bitmap_y_write := y; bitmap_write := busy;
+    uint9   x = uninitialized;                          uint9   xNEXT <:: x + 1;                        uint1   xLAST <:: xNEXT == max_x;
+    uint8   y = uninitialized;                          uint8   yNEXT <:: y + xLAST;
 
-    always {
-        if( busy ) {
-            if( x != max_x ) {
-                x = x + 1;
-            } else {
-                x = min_x;
-                if( y != max_y ) {
-                    y = y + 1;
-                } else {
-                    busy = 0;
-                }
+    bitmap_x_write := x; bitmap_y_write := y; bitmap_write := 0;
+
+    while(1) {
+        if( start ) {
+            busy = 1;
+            y = min_y; x = min_x;
+            while( y != max_y ) {
+                bitmap_write = 1; x = xLAST ? min_x : xNEXT; y = yNEXT;
             }
-        } else {
-            if( start ) {
-                busy = 1; y = min_y; x = min_x;
-            }
+            busy = 0;
         }
     }
 }
@@ -84,18 +73,16 @@ algorithm rectangle (
     output  int11   bitmap_x_write,
     output  int11   bitmap_y_write,
     output  uint1   bitmap_write
-) <autorun> {
+) <autorun,reginputs> {
     preprectangle PREP(
         start <: start,
         crop_left <: crop_left, crop_right <: crop_right, crop_top <: crop_top, crop_bottom <: crop_bottom,
-        x <: x, y <: y,
-        param0 <: x1, param1 <: y1
+        x <: x, y <: y, param0 <: x1, param1 <: y1
     );
 
     drawrectangle RECTANGLE(
         min_x <: PREP.min_x, min_y <: PREP.min_y, max_x <: PREP.max_x, max_y <: PREP.max_y,
-        bitmap_x_write :> bitmap_x_write, bitmap_y_write :> bitmap_y_write,
-        bitmap_write :> bitmap_write,
+        bitmap_x_write :> bitmap_x_write, bitmap_y_write :> bitmap_y_write, bitmap_write :> bitmap_write,
         start <: PREP.todraw
     );
 
@@ -107,6 +94,7 @@ algorithm main(output uint8 leds)
 {
     uint32  startcycle = uninitialized;
     pulse PULSE();
+    uint16  pixels = 0;
 
     rectangle RECTANGLE(); RECTANGLE.start := 0;
     RECTANGLE.crop_left = 0; RECTANGLE.crop_right = 319; RECTANGLE.crop_top = 0; RECTANGLE.crop_bottom = 239;
@@ -116,7 +104,10 @@ algorithm main(output uint8 leds)
     startcycle = PULSE.cycles;
     RECTANGLE.start = 1;
     while( RECTANGLE.busy ) {
-        if( RECTANGLE.bitmap_write ) { __display(" @ %d, ( %d, %d )",PULSE.cycles-startcycle,RECTANGLE.bitmap_x_write,RECTANGLE.bitmap_y_write); }
+        if( RECTANGLE.bitmap_write ) {
+            pixels = pixels + 1;
+            __display(" %d @ %d, ( %d, %d )",pixels,PULSE.cycles-startcycle,RECTANGLE.bitmap_x_write,RECTANGLE.bitmap_y_write);
+        }
     }
 }
 
