@@ -16,19 +16,16 @@ algorithm bitmap(
     output! uint1   bitmap_display,
 
     // Pixel reader
-    input   int11   bitmap_x_read,
-    input   int11   bitmap_y_read,
+    input   uint9   bitmap_x_read,
+    input   uint9   bitmap_y_read,
     output  uint7   bitmap_colour_read
 ) <autorun,reginputs> {
     // Pixel x and y fetching 1 in advance due to bram latency
-    uint9   x_plus_one <: pix_x[1,9] + pix_x[0,1];
-    uint8   y_line <: pix_vblank ? 0 : pix_y[1,9];
-    uint9   x_pixel <: pix_active ? x_plus_one : 0;
-
-    uint17  address <: y_line * 320 + x_pixel;
+    uint9   x_plus_one <: pix_x[1,9] + pix_x[0,1];                uint8   y_line <: pix_vblank ? 0 : pix_y[1,8];
+    uint9   x_pixel <: pix_active ? x_plus_one : 0; uint17  address <: y_line * 320 + x_pixel;
 
     // Pixel being read?
-    bitmap_colour_read := ( pix_x[1,9] == bitmap_x_read ) & ( pix_y[1,9] == bitmap_y_read ) ?
+    bitmap_colour_read := ( pix_x == bitmap_x_read ) & ( pix_y == bitmap_y_read ) ?
                             ( framebuffer ? { bitmap_1A.rdata0, bitmap_1R.rdata0, bitmap_1G.rdata0, bitmap_1B.rdata0 } : { bitmap_0A.rdata0, bitmap_0R.rdata0, bitmap_0G.rdata0, bitmap_0B.rdata0 } )
                             : bitmap_colour_read;
 
@@ -115,27 +112,7 @@ algorithm bitmapwriter(
     );
 
     // From GPU to set a pixel
-    int11   bitmap_x_write = uninitialized;
-    int11   bitmap_y_write = uninitialized;
-    uint9   bitmap_crop_left = uninitialised;
-    uint9   bitmap_crop_right = uninitialised;
-    uint8   bitmap_crop_top = uninitialised;
-    uint8   bitmap_crop_bottom = uninitialised;
-    uint7   bitmap_colour_write = uninitialized;
-    uint7   bitmap_colour_write_alt = uninitialized;
-    uint4   dithermode = uninitialized;
-    uint1   bitmap_write = uninitialized;
     gpu_queue QUEUE(
-        bitmap_x_write :> bitmap_x_write,
-        bitmap_y_write :> bitmap_y_write,
-        bitmap_crop_left :> bitmap_crop_left,
-        bitmap_crop_right :> bitmap_crop_right,
-        bitmap_crop_top :> bitmap_crop_top,
-        bitmap_crop_bottom :> bitmap_crop_bottom,
-        bitmap_colour_write :> bitmap_colour_write,
-        bitmap_colour_write_alt :> bitmap_colour_write_alt,
-        bitmap_write :> bitmap_write,
-        gpu_active_dithermode :> dithermode,
         crop_left <: crop_left,
         crop_right <: crop_right,
         crop_top <: crop_top,
@@ -171,31 +148,27 @@ algorithm bitmapwriter(
         queue_complete :> gpu_queue_complete
     );
 
-    uint1   condition = uninitialised;
     uint7   pixeltowrite = uninitialised;
-    dither DODITHER(
-        bitmap_x_write <: bitmap_x_write,
-        bitmap_y_write <: bitmap_y_write,
-        dithermode <: dithermode,
-        static1bit <: static6bit[0,1],
-        condition :> condition
-    );
+    dither DODITHER(bitmap_x_write <: QUEUE.bitmap_x_write, bitmap_y_write <: QUEUE.bitmap_y_write, dithermode <: QUEUE.gpu_active_dithermode, static1bit <: static6bit[0,1]);
 
     // Write in range?
-    uint1 write_pixel <:: ( bitmap_x_write >= bitmap_crop_left ) & ( bitmap_x_write <= bitmap_crop_right ) & ( bitmap_y_write >= bitmap_crop_top ) & ( bitmap_y_write <= bitmap_crop_bottom ) & bitmap_write;
+    uint1 write_pixel <:: ( QUEUE.bitmap_x_write >= QUEUE.bitmap_crop_left ) & (QUEUE. bitmap_x_write <= QUEUE.bitmap_crop_right ) &
+                            ( QUEUE.bitmap_y_write >= QUEUE.bitmap_crop_top ) & ( QUEUE.bitmap_y_write <= QUEUE.bitmap_crop_bottom ) & QUEUE.bitmap_write;
 
     // Bitmap write access for the GPU
-    uint17  address <:: bitmap_y_write[0,8] * 320 + bitmap_x_write[0,9];
+    uint17  address <:: QUEUE.bitmap_y_write[0,8] * 320 + QUEUE.bitmap_x_write[0,9];
     bitmap_0A.wenable1 := 1; bitmap_0R.wenable1 := 1; bitmap_0G.wenable1 := 1; bitmap_0B.wenable1 := 1;
     bitmap_1A.wenable1 := 1; bitmap_1R.wenable1 := 1; bitmap_1G.wenable1 := 1; bitmap_1B.wenable1 := 1;
 
-    always {
+    always_before {
+        // SELECT ACTUAL COLOUR
+        switch( QUEUE.gpu_active_dithermode ) {
+            case 14: { pixeltowrite = static6bit; }
+            default: { pixeltowrite = DODITHER.condition ? QUEUE.bitmap_colour_write : QUEUE.bitmap_colour_write_alt; }
+        }
+    }
+    always_after {
         if( write_pixel ) {
-            // SELECT ACTUAL COLOUR
-            switch( dithermode ) {
-                case 14: { pixeltowrite = static6bit; }
-                default: { pixeltowrite = condition ? bitmap_colour_write : bitmap_colour_write_alt; }
-            }
             // SET PIXEL ADDRESSS bitmap_y_write * 320 + bitmap_x_write
             if( framebuffer ) {
                 bitmap_1A.addr1 = address; bitmap_1A.wdata1 = pixeltowrite[6,1];
@@ -219,8 +192,8 @@ algorithm dither(
     input   uint1   static1bit,
     output! uint1   condition
 ) <autorun> {
-    uint4   checkmode <: dithermode - 1;
-    uint3   revbitmapx <: 3b111 - bitmap_x_write[0,3];
+    uint4   checkmode <: dithermode - 1;            uint3   revbitmapx <: 3b111 - bitmap_x_write[0,3];
+
     always {
         // DITHER PATTERNS
         // == 0 SOLID == 1 SMALL CHECKERBOARD == 2 MED CHECKERBOARD == 3 LARGE CHECKERBOARD

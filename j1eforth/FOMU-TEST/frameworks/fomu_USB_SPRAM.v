@@ -193,20 +193,58 @@ module top(
     wire uart_out_valid;
     wire uart_out_ready;
 
+    wire tx_en;
+    wire tx_dp;
+    wire tx_dn;
+    wire rx_dp;
+    wire rx_dn;
+
+    // USB Host Detect Pull Up
+    assign usb_dp_pu = 1'b1;
+
     // usb uart - this instanciates the entire USB device.
-    usb_cdc uart (
+    SB_IO #(.PIN_TYPE(6'b101001),
+            .PULLUP(1'b0))
+    u_usb_p (.PACKAGE_PIN(usb_dp),
+            .OUTPUT_ENABLE(tx_en),
+            .D_OUT_0(tx_dp),
+            .D_IN_0(rx_dp),
+            .D_OUT_1(1'b0),
+            .D_IN_1(),
+            .CLOCK_ENABLE(1'b0),
+            .LATCH_INPUT_VALUE(1'b0),
+            .INPUT_CLK(1'b0),
+            .OUTPUT_CLK(1'b0));
+
+    SB_IO #(.PIN_TYPE(6'b101001),
+            .PULLUP(1'b0))
+    u_usb_n (.PACKAGE_PIN(usb_dn),
+            .OUTPUT_ENABLE(tx_en),
+            .D_OUT_0(tx_dn),
+            .D_IN_0(rx_dn),
+            .D_OUT_1(1'b0),
+            .D_IN_1(),
+            .CLOCK_ENABLE(1'b0),
+            .LATCH_INPUT_VALUE(1'b0),
+            .INPUT_CLK(1'b0),
+            .OUTPUT_CLK(1'b0));
+
+    usb_cdc #(
+             .VENDORID(16'h0483),
+             .PRODUCTID(16'h5740),
+             .USE_APP_CLK(1))
+    uart (
         .clk_i      (clk_usb),
         .app_clk_i  (clk),
-        .rstn_i     (reset),
+        .rstn_i (~reset),
 
         // pins
-        .tx_en_o            ( usb_dp_pu ),
-        .tx_dp_o            ( usb_dp ),
-        .tx_dn_o            ( usb_dn ),
-        .rx_dp_i            ( usb_dp ),
-        .rx_dn_i            ( usb_dn ),
+        .tx_en_o            ( tx_en ),
+        .tx_dp_o            ( tx_dp ),
+        .tx_dn_o            ( tx_dn ),
+        .rx_dp_i            ( rx_dp ),
+        .rx_dn_i            ( rx_dn ),
 
-        // uart pipeline in
         .in_data_i          ( uart_in_data ),
         .in_valid_i         ( uart_in_valid ),
         .in_ready_o         ( uart_in_ready ),

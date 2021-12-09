@@ -1,6 +1,7 @@
 // RECTANGLE - OUTPUT PIXELS TO DRAW A RECTANGLE
 algorithm preprectangle(
     input   uint1   start,
+    output  uint1   busy(0),
     input   int11   crop_left,
     input   int11   crop_right,
     input   int11   crop_top,
@@ -18,16 +19,20 @@ algorithm preprectangle(
     uint1   xcompareparam0 <:: ( x < param0 );          uint1   ycompareparam1 <:: ( y < param1 );
     int11   x1 <:: xcompareparam0 ? x : param0;         int11   y1 <:: ycompareparam1 ? y : param1;
     int11   x2 <:: xcompareparam0 ? param0 : x;         int11   y2 <:: ycompareparam1 ? param1 : y;
-
+    istodraw TODRAW( crop_left <: crop_left, crop_right <: crop_right, crop_top <: crop_top, crop_bottom <: crop_bottom,
+                min_x <: min_x, min_y <: min_y, max_x <: max_x, max_y <: max_y );
     todraw := 0;
 
-    always {
+    while(1) {
         if( start ) {
+            busy = 1;
             min_x = ( x1 < crop_left ) ? crop_left : x1;
             min_y = ( y1 < crop_top ) ? crop_top : y1;
             max_x = 1 + ( ( x2 > crop_right ) ? crop_right : x2 );
             max_y = 1 + ( ( y2 > crop_bottom ) ? crop_bottom : y2 );
-            todraw = ~( ( max_x < crop_left ) | ( max_y < crop_top ) | ( min_x > crop_right ) | ( min_y > crop_bottom ) );
+            ++:
+            todraw = TODRAW.draw;
+            busy = 0;
         }
     }
 }
@@ -42,17 +47,19 @@ algorithm drawrectangle(
     output  int11   bitmap_y_write,
     output  uint1   bitmap_write
 ) <autorun> {
-    uint9   x = uninitialized;                          uint9   xNEXT <:: x + 1;                        uint1   xLAST <:: xNEXT == max_x;
-    uint8   y = uninitialized;                          uint8   yNEXT <:: y + xLAST;
+    uint9   x = uninitialized;                          uint9 xNEXT <:: x + 1;                          uint1   xLAST <:: ( xNEXT == max_x );
+    uint8   y = uninitialized;                          uint8 yNEXT <:: y + xLAST;
 
     bitmap_x_write := x; bitmap_y_write := y; bitmap_write := 0;
 
     while(1) {
         if( start ) {
             busy = 1;
-            y = min_y; x = min_x;
+             x = min_x; y = min_y;
             while( y != max_y ) {
-                bitmap_write = 1; x = xLAST ? min_x : xNEXT; y = yNEXT;
+                bitmap_write = 1;
+                if( xLAST ) { x = min_x; } else { x = xNEXT; }
+                y = yNEXT;
             }
             busy = 0;
         }
@@ -86,7 +93,7 @@ algorithm rectangle (
         start <: PREP.todraw
     );
 
-    busy := start | PREP.todraw | RECTANGLE.busy;
+    busy := start | PREP.busy | PREP.todraw | RECTANGLE.busy;
 }
 
 // Test it (make verilator)
@@ -97,7 +104,7 @@ algorithm main(output uint8 leds)
     uint16  pixels = 0;
 
     rectangle RECTANGLE(); RECTANGLE.start := 0;
-    RECTANGLE.crop_left = 0; RECTANGLE.crop_right = 319; RECTANGLE.crop_top = 0; RECTANGLE.crop_bottom = 239;
+    RECTANGLE.crop_left = 12; RECTANGLE.crop_right = 18; RECTANGLE.crop_top = 12; RECTANGLE.crop_bottom = 18;
     RECTANGLE.x = 10; RECTANGLE.y = 10; RECTANGLE.x1 = 20; RECTANGLE.y1 = 20;
 
     ++:
@@ -115,4 +122,21 @@ algorithm pulse(
     output  uint32  cycles(0)
 ) <autorun> {
     cycles := cycles + 1;
+}
+
+// HELPER - DECIDE IF MIN/MAX ARE WITHIN CROP
+algorithm istodraw(
+    input   int11   crop_left,
+    input   int11   crop_right,
+    input   int11   crop_top,
+    input   int11   crop_bottom,
+    input   int11   min_x,
+    input   int11   min_y,
+    input   int11   max_x,
+    input   int11   max_y,
+    output  uint1   draw
+) <autorun> {
+    always {
+        draw = ~( ( max_x < crop_left ) | ( max_y < crop_top ) | ( min_x > crop_right ) | ( min_y > crop_bottom ) );
+    }
 }

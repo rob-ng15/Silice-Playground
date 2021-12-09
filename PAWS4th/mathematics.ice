@@ -14,22 +14,18 @@ algorithm douintdivide(
 ) <autorun,reginputs> {
     uint32  temporary <:: { remainder[0,31], dividend[bit,1] };
     uint1   bitresult <:: __unsigned(temporary) >= __unsigned(divisor);
-    uint6   bit(63);                                    uint6   bitNEXT <:: bit - 1;
+    uint6   bit(63);
 
     busy := start | ( ~&bit );
-    always {
-        if( ~&bit ) {
-            quotient[bit,1] = bitresult;
-            remainder = __unsigned(temporary) - ( bitresult ? __unsigned(divisor) : 0 );
-            bit = bitNEXT;
-        }
-    }
-
-    if( ~reset ) { bit = 63; }
-
-    while(1) {
+    always_after {
         if( start ) {
             bit = 31; quotient = 0; remainder = 0;
+        } else {
+            if( ~&bit ) {
+                quotient[bit,1] = bitresult;
+                remainder = __unsigned(temporary) - ( bitresult ? __unsigned(divisor) : 0 );
+                bit = bit - 1;
+            }
         }
     }
 }
@@ -101,7 +97,7 @@ algorithm douintmul(
     input   uint16  factor_2,
     output  uint32  product
 ) <autorun> {
-    always {
+    always_after {
         product = factor_1 * factor_2;
     }
 }
@@ -118,7 +114,7 @@ algorithm multi16by16to32DSP(
     uint16  factor2_unsigned <:: start[1,1] ? ( factor2[15,1] ? neg2 : factor2 ) : factor2;
     uint1   productsign <:: start[1,1] & ( factor1[15,1] ^ factor2[15,1] );
     douintmul UINTMUL( factor_1 <: factor1_unsigned, factor_2 <: factor2_unsigned );
-    always {
+    always_after {
         product = productsign ? -UINTMUL.product : UINTMUL.product;
     }
 }
@@ -129,7 +125,7 @@ algorithm add32(
     input   int32   b,
     output  int32   c
 ) <autorun> {
-    always {
+    always_after {
         c = a + b;
     }
 }
@@ -140,7 +136,7 @@ algorithm logic32(
     output  uint32  OR,
     output  uint32  XOR
 ) <autorun> {
-    always {
+    always_after {
         AND = a & b;
         OR = a | b;
         XOR = a ^ b;
@@ -177,7 +173,7 @@ algorithm doubleops(
     add32 DINC( a <: operand1, c :> increment );
     add32 DDEC( a <: operand1, c :> decrement );
     logic32 DLOGIC( a <: operand1, b <: operand2, AND :> binaryand, OR :> binaryor, XOR :> binaryxor );
-    always {
+    always_after {
         maximum = operand1voperand2 ? operand2 : operand1;
         minimum = operand1voperand2 ? operand1 : operand2;
         times2 = { operand1[0,31], 1b0 };

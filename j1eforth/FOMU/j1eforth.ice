@@ -272,7 +272,7 @@ algorithm add16(
     input   uint16  b,
     output  uint16  c
 ) <autorun> {
-    always {
+    always_after {
         c = a + b;
     }
 }
@@ -283,7 +283,7 @@ algorithm logic16(
     output  uint16  OR,
     output  uint16  XOR
 ) <autorun> {
-    always {
+    always_after {
         AND = a & b;
         OR = a | b;
         XOR = a ^ b;
@@ -295,7 +295,7 @@ algorithm shift16(
     output  uint16  SLL,
     output  uint16  SRA
 ) <autorun> {
-    always {
+    always_after {
         SLL = a << count;
         SRA = __signed(a) >>> count;
     }
@@ -316,7 +316,7 @@ algorithm alu0(
     logic16 LOGIC( a <: stackTop, b <: stackNext );
     shift16 SHIFT( a <: stackNext, count <: nibbles(stackTop).nibble0 );
 
-    always {
+    always_after {
         switch( ALUOP ) {
             case 4b0000: { newStackTop = stackTop; }
             case 4b0001: { newStackTop = stackNext; }
@@ -349,7 +349,7 @@ algorithm alu1(
     add16 SUB( a <: stackNext, b <: negTop );
     add16 INC( a <: stackTop );
 
-    always {
+    always_after {
         switch( ALUOP[0,4] ) {
             case 4b0000: { newStackTop = {16{ COMPARE.equal0 }}; }
             case 4b0001: { newStackTop = {16{ ~COMPARE.equal0 }}; }
@@ -380,7 +380,7 @@ algorithm compare(
     output  uint1   less,
     output  uint1   equal0,
 ) <autorun> {
-    always {
+    always_after {
         equal = stackNext == stackTop;
         lessu = __unsigned(stackNext) < __unsigned(stackTop);
         less = __signed(stackNext) < __signed(stackTop);
@@ -402,7 +402,7 @@ algorithm j1eforthcallbranch(
     output  uint8   newDSP,
     output  uint8   newRSP,
 ) <autorun> {
-    always {
+    always_after {
         newStackTop = callbranch(instruction).is_callbranchalu[0,1] ? stackNext : stackTop;
         newDSP = dsp - callbranch(instruction).is_callbranchalu[0,1];
         newRSP = rsp + callbranch(instruction).is_callbranchalu[1,1];
@@ -422,7 +422,7 @@ algorithm decode(
     output  uint8   ddelta,
     output  uint8   rdelta
 ) <autorun> {
-    always {
+    always_after {
         is_lit = literal(instruction).is_literal;
         is_call = ~is_lit & ( callbranch(instruction).is_callbranchalu == 2b10 );
         is_alu = ~is_lit & ( &callbranch(instruction).is_callbranchalu );
@@ -447,7 +447,7 @@ algorithm stack(
     stack.wenable1 := 1;
     stackTop := stack.rdata0;
 
-    always {
+    always_after {
         if( stackWrite ) { stack.addr1 = newSP; stack.wdata1 = stackWData; }
     }
 }
@@ -457,7 +457,7 @@ algorithm deltasp(
     input   uint8   delta,
     output  uint8   newSP
 ) <autorun> {
-    always {
+    always_after {
         newSP = sp + delta;
     }
 }
@@ -507,13 +507,13 @@ algorithm uart(
     available := ( uartInBufferNext != uartInBufferTop );
     inchar := uartInBuffer.rdata0;
 
-    always {
+    always_before {
         if( read ) { uartInBufferNext = INnext1; }
         if( uart_out_valid ) { uartInBufferTop = INtop1; uart_out_ready = 1; }
         if( uart_in_ready & uart_in_valid ) { uart_in_valid = 0; }
     }
 
-    while( 1 ) {
+    always_after {
         // WRITE to UART if characters in buffer and UART is ready
         if( write ) {
             uartOutBuffer.wdata1 = outchar;

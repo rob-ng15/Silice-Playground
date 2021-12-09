@@ -99,7 +99,7 @@ algorithm classify(
 ) <autorun> {
     uint1   expFF <:: ( &fp16(a).exponent );
     uint1   NAN <:: expFF & a[9,1];
-    always {
+    always_after {
         INF = expFF & ~a[9,1];
         sNAN = NAN & a[8,1];
         qNAN = NAN & ~a[8,1];
@@ -118,7 +118,7 @@ algorithm clz22(
     uint16  bitstream16 <:: bitstream[0,16];
 
     uint5   clz = uninitialised;
-    always {
+    always_after {
         switch( { |bitstream2, |bitstream4 } ) {
             case 2b00: {
                  ( clz ) = clz_silice_16( bitstream16 );
@@ -134,7 +134,7 @@ algorithm clz22(
         }
     }
 }
-algorithm donormalise22_adjustexp(
+algorithm donormalise11(
     input   int7    exp,
     input   uint22  bitstream,
     output  int7    newexp,
@@ -142,19 +142,9 @@ algorithm donormalise22_adjustexp(
 ) <autorun> {
     clz22 CLZ22( bitstream <: bitstream );
     uint22  temporary <:: bitstream << CLZ22.count;
-    always {
+    always_after {
         normalised = temporary[10,11];
         newexp = exp - CLZ22.count;
-    }
-}
-algorithm donormalise22(
-    input   uint22  bitstream,
-    output  uint11  normalised
-) <autorun,reginputs> {
-    clz22 CLZ22( bitstream <: bitstream );
-    uint22  temporary <:: bitstream << CLZ22.count;
-    always {
-        normalised = temporary[10,11];
     }
 }
 
@@ -166,7 +156,7 @@ algorithm doround11(
     output  uint10  roundfraction,
     output  int7    newexponent
 ) <autorun> {
-    always {
+    always_after {
         roundfraction = bitstream[1,10] + bitstream[0,1];
         newexponent = ( ( ~|roundfraction & bitstream[0,1] ) ? 16 : 15 ) + exponent;
     }
@@ -181,7 +171,7 @@ algorithm docombinecomponents16(
     output  uint1   UF,
     output  uint16  f16
 ) <autorun> {
-    always {
+    always_after {
         OF = ( exp > 30 ); UF = exp[6,1];
         f16 = UF ? 0 : OF ? { sign, 15h7c00 } : { sign, exp[0,5], fraction[0,10] };
     }
@@ -189,32 +179,27 @@ algorithm docombinecomponents16(
 
 // CONVERT SIGNED/UNSIGNED INTEGERS TO FLOAT
 // dounsigned == 0 for signed conversion (15 bit plus sign), == 1 for dounsigned conversion (16 bit)
-algorithm clz16(
-    input   uint16  bitstream,
-    output! uint5   zeros
-) <autorun> {
-    always {
-        ( zeros ) = clz_silice_16( bitstream );
-    }
-}
+
 algorithm prepitof(
     input   uint16  a,
     input   uint1   dounsigned,
     output  uint1   sign,
-    output  uint16  number,
     output  uint10  fraction,
     output  int7    exponent,
     output  uint1   NX
 ) <autorun> {
-    // COUNT LEADING ZEROS
-    clz16 CLZ16( bitstream <: number );
+    // COUNT LEADING ZEROS - RETURNS NX IF NUMBER IS TOO LARGE, LESS THAN 8 LEADING ZEROS
+    uint16  number <: sign ? -a : a;
+    uint4   zeros = uninitialised;
 
-    always {
-        NX =( CLZ16.zeros < 5 );
-        sign = ~dounsigned & fp16( a ).sign;
-        number = sign ? -a : a;
-        fraction= NX ? number >> ( 5 - CLZ16.zeros ) : ( CLZ16.zeros == 5 ) ? number : number << ( CLZ16.zeros - 5 );
-        exponent = 30 - CLZ16.zeros;
+    always_before {
+        sign = ~dounsigned & a[15,1];
+        ( zeros ) = clz_silice_16( number );
+    }
+    always_after {
+        NX = ( zeros < 5 );
+        fraction = NX ? number >> ( 5 - zeros ) : number << ( zeros - 5 );
+        exponent = 30 - zeros;
     }
 }
 algorithm inttofloat(
@@ -228,8 +213,8 @@ algorithm inttofloat(
     docombinecomponents16 COMBINE( sign <: PREP.sign, exp <: PREP.exponent, fraction <: PREP.fraction );
 
     flags := { 4b0, OF, UF, PREP.NX }; OF := 0; UF := 0;
-    always {
-        if( |PREP.number ) {
+    always_after {
+        if( |a ) {
             OF = COMBINE.OF; UF = COMBINE.UF; result = COMBINE.f16;
         } else {
             result = 0;
@@ -244,8 +229,10 @@ algorithm prepftoi(
     output  uint16  unsignedfraction
 ) <autorun> {
     uint17  sig <:: ( exp < 11 ) ? { 5b1, fp16( a ).fraction, 1b0 } >> ( 10 - exp ) : { 5b1, fp16( a ).fraction, 1b0 } << ( exp - 11);
-    exp := fp16( a ).exponent - 15;
-    unsignedfraction := ( sig[1,16] + sig[0,1] );
+    always_after {
+        exp = fp16( a ).exponent - 15;
+        unsignedfraction = ( sig[1,16] + sig[0,1] );
+    }
 }
 
 // CONVERT FLOAT TO SIGNED INTEGERS
@@ -264,7 +251,7 @@ algorithm floattoint(
 
     flags := { A.INF, NN, NV, 4b0000 };
 
-    always {
+    always_after {
         if( A.ZERO ) {
             result = 0;
         } else {
@@ -292,7 +279,7 @@ algorithm floattouint(
     prepftoi PREP( a <: a );
 
     flags := { A.INF, NN, NV, 4b0000 };
-    always {
+    always_after {
         if( A.ZERO ) {
             result = 0;
         } else {
@@ -307,21 +294,26 @@ algorithm floattouint(
 
 // ADDSUB ADD/SUBTRACT ( addsub == 0 add, == 1 subtract) TWO FLOATING POINT NUMBERS
 algorithm equaliseexpaddsub(
-    input   int7    expA,
-    input   uint22  sigA,
-    input   int7    expB,
-    input   uint22  sigB,
+    input   uint16  a,
+    input   uint16  b,
     output  uint22  newsigA,
     output  uint22  newsigB,
     output  int7    resultexp
 ) <autorun> {
-    always {
+    // BREAK DOWN INITIAL float32 INPUTS - SWITCH SIGN OF B IF SUBTRACTION
+    uint22  sigA <:: { 2b01, fp16(a).fraction, 10b0 };                                                  uint22  sigB <:: { 2b01, fp16(b).fraction, 10b0 };
+    int7    expA <:: fp16(a).exponent;                                                                  int7    expB <:: fp16(b).exponent;
+    uint22  aligned = uninitialised;                                                                    uint1   AvB <:: ( expA < expB );
+
+    always_after {
         // EQUALISE THE EXPONENTS BY SHIFT SMALLER NUMBER FRACTION PART TO THE RIGHT - REMOVE BIAS ( AND +1 TO ACCOUNT FOR POTENTIAL OVERFLOW )
-        if( expA < expB ) {
-            newsigA = sigA >> ( expB - expA ); resultexp = expB - 14; newsigB = sigB;
+        aligned = ( AvB ? sigA : sigB ) >> ( AvB ? ( expB - expA ) : ( expA - expB ) );
+        if( AvB ) {
+            newsigA = aligned; newsigB = sigB;
         } else {
-            newsigB = sigB >> ( expA - expB ); resultexp = expA - 14; newsigA = sigA;
+            newsigB = aligned; newsigA = sigA;
         }
+        resultexp = ( AvB ? expB : expA ) - 14;
     }
 }
 algorithm dofloataddsub(
@@ -337,7 +329,7 @@ algorithm dofloataddsub(
     uint22  sigAplussigB <:: sigA + sigB;
     uint1   AvB <:: ( sigA > sigB );
 
-    always {
+    always_after {
         // PERFORM ADDITION HANDLING SIGNS
         switch( { signA, signB } ) {
             case 2b01: { resultsign = ( ~AvB ); resultfraction = resultsign ? sigBminussigA : sigAminussigB; }
@@ -356,10 +348,8 @@ algorithm floataddsub(
     output  uint7   flags,
     output  uint16  result
 ) <autorun,reginputs> {
-    // BREAK DOWN INITIAL float32 INPUTS - SWITCH SIGN OF B IF SUBTRACTION
-    uint22  sigA <:: { 2b01, fp16(a).fraction, 10b0 };
+    // SWITCH SIGN OF B IF SUBTRACTION
     uint1   signB <:: addsub ^  fp16( b ).sign;
-    uint22  sigB <:: { 2b01, fp16(b).fraction, 10b0 };
 
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN, ZERO AND INVALID ( INF - INF )
     uint1   IF <:: ( A.INF | B.INF );
@@ -371,13 +361,13 @@ algorithm floataddsub(
     classify B( a <: b );
 
     // EQUALISE THE EXPONENTS
-    equaliseexpaddsub EQUALISEEXP( expA <: fp16( a ).exponent, sigA <: sigA,  expB <: fp16( b ).exponent, sigB <: sigB );
+    equaliseexpaddsub EQUALISEEXP( a <: a, b <: b );
 
     // PERFORM THE ADDITION/SUBTRACION USING THE EQUALISED FRACTIONS, 1 IS ADDED TO THE EXPONENT IN CASE OF OVERFLOW - NORMALISING WILL ADJUST WHEN SHIFTING
     dofloataddsub ADDSUB( signA <: fp16( a ).sign, sigA <: EQUALISEEXP.newsigA, signB <: signB, sigB <: EQUALISEEXP.newsigB );
 
     // NORMALISE THE RESULTING FRACTION AND ADJUST THE EXPONENT IF SMALLER ( ie, MSB is not 1 )
-    donormalise22_adjustexp NORMALISE( exp <: EQUALISEEXP.resultexp, bitstream <: ADDSUB.resultfraction );
+    donormalise11 NORMALISE( exp <: EQUALISEEXP.resultexp, bitstream <: ADDSUB.resultfraction );
 
     // ROUND THE NORMALISED FRACTION AND ADJUST EXPONENT IF OVERFLOW
     doround11 ROUND( exponent <: NORMALISE.newexp, bitstream <: NORMALISE.normalised );
@@ -426,7 +416,7 @@ algorithm prepmul(
     uint11  sigA <:: { 1b1, fp16( a ).fraction };
     uint11  sigB <:: { 1b1, fp16( b ).fraction };
     uint22  product <:: sigA * sigB;
-    always {
+    always_after {
         productsign = fp16( a ).sign ^ fp16( b ).sign;
         productexp = fp16( a ).exponent + fp16( b ).exponent - ( product[21,1] ? 29 : 30 );
         normalfraction = product[ product[21,1] ? 10 : 9, 11 ];
@@ -504,22 +494,18 @@ algorithm dofloatdivide(
     uint5   bitNEXT <:: bit - 1;
 
     busy := start | ( ~&bit ) | ( quotient[22,2] != 0 );
-    always {
+    always_after {
         // FIND QUOTIENT AND ENSURE 48 BIT FRACTION ( ie BITS 48 and 49 clear )
-        if( ~&bit ) {
-            remainder = __unsigned(temporary) - ( bitresult ? __unsigned(sigB) : 0 );
-            quotient[bit,1] = bitresult;
-            bit = bitNEXT;
-        } else {
-            quotient = quotient >> normalshift;
-        }
-    }
-
-    if( ~reset ) { bit = 31; quotient = 0; }
-
-    while(1) {
         if( start ) {
             bit = 23; quotient = 0; remainder = 0;
+        } else {
+            if( ~&bit ) {
+                remainder = __unsigned(temporary) - ( bitresult ? __unsigned(sigB) : 0 );
+                quotient[bit,1] = bitresult;
+                bit = bit - 1;
+            } else {
+                quotient = quotient[ normalshift, 22 ];
+            }
         }
     }
 }
@@ -534,7 +520,7 @@ algorithm prepdivide(
     // BREAK DOWN INITIAL float32 INPUTS AND FIND SIGN OF RESULT AND EXPONENT OF QUOTIENT ( -1 IF DIVISOR > DIVIDEND )
     // ALIGN DIVIDEND TO THE LEFT, DIVISOR TO THE RIGHT
     uint1   AvB <:: ( fp16(b).fraction > fp16(a).fraction );
-    always {
+    always_after {
         quotientsign = fp16( a ).sign ^ fp16( b ).sign;
         quotientexp = fp16( a ).exponent - fp16( b ).exponent - AvB;
         sigA = { 1b1, fp16(a).fraction, 13b0 };
@@ -562,7 +548,7 @@ algorithm floatdivide(
     // PREPARE THE DIVISION, DO THE DIVISION, NORMALISE THE RESULT
     prepdivide PREP( a <: a, b <: b );
     dofloatdivide DODIVIDE( sigA <: PREP.sigA, sigB <: PREP.sigB );
-    donormalise22 NORMALISE( bitstream <: DODIVIDE.quotient );
+    donormalise11 NORMALISE( bitstream <: DODIVIDE.quotient );
 
     // ROUND THE NORMALISED FRACTION AND ADJUST EXPONENT IF OVERFLOW
     doround11 ROUND( exponent <: PREP.quotientexp, bitstream <: NORMALISE.normalised );
@@ -627,21 +613,16 @@ algorithm dofloatsqrt(
     uint5   iNEXT <:: i + 1;
 
     busy := start | ( i != 21 );
-
-    always {
-        if( i != 21 ) {
-            ac = { test_res[23,1] ? ac[0,21] : test_res[0,21], x[20,2] };
-            squareroot = { squareroot[0,21], ~test_res[23,1] };
-            x = { x[0,20], 2b00 };
-            i = iNEXT;
-        }
-    }
-
-    if( ~reset ) { i = 21; }
-
-    while(1) {
+    always_after {
         if( start ) {
             i = 0; squareroot = 0; ac = start_ac; x = start_x;
+        } else {
+            if( i != 21 ) {
+                ac = { test_res[23,1] ? ac[0,21] : test_res[0,21], x[20,2] };
+                squareroot = { squareroot[0,21], ~test_res[23,1] };
+                x = { x[0,20], 2b00 };
+                i = i + 1;
+            }
         }
     }
 }
@@ -654,7 +635,7 @@ algorithm prepsqrt(
     // EXPONENT OF INPUT ( used to determine if 1x.xxxxx or 01.xxxxx for fixed point fraction to sqrt )
     // SQUARE ROOT EXPONENT IS HALF OF INPUT EXPONENT
     int7    exp  <:: fp16( a ).exponent - 15;
-    always {
+    always_after {
         start_ac = ~exp[0,1] ? 1 : { 22b0, 1b1, a[9,1] };
         start_x = ~exp[0,1] ? { a[0,10], 12b0 } : { a[0,9], 13b0 };
         squarerootexp = ( exp >>> 1 );
@@ -766,7 +747,9 @@ algorithm floatcompare(
     uint1   avb <:: ( a < b );
 
     // IDENTIFY NaN, RETURN 0 IF NAN, OTHERWISE RESULT OF COMPARISONS
-    flags := { INF, {2{NAN}}, 4b0000 };
-    less := NAN ? 0 : ( ( fp16( a ).sign ^ fp16( b ).sign ) ? fp16( a ).sign & ~aorbleft1equal0 : ~aequalb & ( fp16( a ).sign ^ avb ) );
-    equal := NAN ? 0 : ( aequalb | aorbleft1equal0 );
+    always_after {
+        flags = { INF, {2{NAN}}, 4b0000 };
+        less = NAN ? 0 : ( ( fp16( a ).sign ^ fp16( b ).sign ) ? fp16( a ).sign & ~aorbleft1equal0 : ~aequalb & ( fp16( a ).sign ^ avb ) );
+        equal = NAN ? 0 : ( aequalb | aorbleft1equal0 );
+    }
 }

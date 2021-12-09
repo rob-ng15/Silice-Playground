@@ -440,15 +440,6 @@ roadsegment road[]={
 };
 int corner[MAXSEGMENT]; float pitch[MAXSEGMENT], slope[MAXSEGMENT];
 
-#define min(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a < _b ? _a : _b; })
-#define max(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a > _b ? _a : _b; })
-
 // VECTOR HELPERS FOR 2D to 3D PROJECTION
 typedef struct { float x,y,z; }   vec3;
 typedef struct { short x,y,z; }   ivec3;
@@ -527,10 +518,10 @@ void drawtunnelface( float px, float py, float scale ) {
     short x1, y1, x2, y2;
     gettunnelrectangle( px, py, scale, &x1, &y1, &x2, &y2 );
     short wh = 4.5 * scale, wy = py - wh;
-    gpu_dither( DITHERBRICK, BROWN );
-    if( y1 > 0 ) gpu_rectangle( DKBROWN, 0, wy, 319, y1 - 1 );
-    if( x1 > 0 ) gpu_rectangle( DKBROWN, 0, y1, x1 -1, y2 - 1 );
-    if( x2 < 319 ) gpu_rectangle( DKBROWN, x2, y1, 319, y2 - 1 );
+    gpu_dither( DITHERBRICK, GREY1 );
+    if( y1 > 0 ) gpu_rectangle( 0x10, 0, wy, 319, y1 - 1 );
+    if( x1 > 0 ) gpu_rectangle( 0x10, 0, y1, x1 -1, y2 - 1 );
+    if( x2 < 319 ) gpu_rectangle( 0x10, x2, y1, 319, y2 - 1 );
     gpu_dither( DITHEROFF );
 }
 

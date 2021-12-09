@@ -2,9 +2,9 @@ $$ uart_in_clock_freq_mhz = 25
 
 $$if not SIMULATION then
 // CLOCKS
-import('../common/ulx3s_clk_risc_ice_v.v')
-import('../common/ulx3s_clk_risc_ice_v_2.v')
-import('../common/ulx3s_clk_risc_ice_v_3.v')
+import('../common/clock_system.v')
+import('../common/clock_cpu.v')
+import('../common/clock_video.v')
 $$end
 
 // HDMI + UART + SDCARD + SDRAM Driver Includes

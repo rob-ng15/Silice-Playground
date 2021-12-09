@@ -1,6 +1,6 @@
 #include "PAWSlibrary.h"
 
-// http://www.rosettacode.org/wiki/Conway%27s_Game_of_Life#C
+// http://http://www.rosettacode.org/wiki/Langton%27s_ant
 
 #define for_x for (int x = 0; x < w; x++)
 #define for_y for (int y = 0; y < h; y++)
@@ -9,8 +9,8 @@
 #define HEIGHT 120
 #define SIZE 2
 
-unsigned char universe[HEIGHT][WIDTH], new[HEIGHT][WIDTH], framebuffer = 0;
-int w = WIDTH, h = HEIGHT;
+unsigned char universe[HEIGHT][WIDTH], framebuffer = 0;
+int w = WIDTH, h = HEIGHT, x, y, d;
 
 void show( void ) {
     bitmap_draw( 1 - framebuffer );
@@ -30,28 +30,33 @@ void show( void ) {
     bitmap_display( framebuffer );
 }
 
-void evolve( void) {
-	for_y for_x {
-		int n = 0;
-		for (int y1 = y - 1; y1 <= y + 1; y1++)
-			for (int x1 = x - 1; x1 <= x + 1; x1++)
-				if (universe[(y1 + h) % h][(x1 + w) % w])
-					n++;
+void walk( void) {
+    if( !universe[y][x] ) { universe[y][x] = 1; d -= 1; } else { universe[y][x] = 0; d += 1; }
+    d = ( d + 4 ) % 4;
 
-		if (universe[y][x]) n--;
-		new[y][x] = (n == 3 || (n == 2 && universe[y][x]));
-	}
-	for_y for_x universe[y][x] = new[y][x];
+    // MOVE ANT, WRAPS AROUND IF MOVES OFF THE SCREEN
+    switch(d) {
+        case 0: y = ( y == HEIGHT - 1 ) ? 0 : y + 1;
+            break;
+        case 1: x = ( x == WIDTH - 1 ) ? 0 : x + 1;
+            break;
+        case 2: y = ( y == 0 ) ? ( HEIGHT - 1 ) : y - 1;
+            break;
+        case 3: x = ( x == 0 ) ? ( WIDTH - 1 ) : x - 1;
+            break;
+    }
 }
 
 void game( void ) {
-	for_xy universe[y][x] = rng( 2 );
+	for_xy universe[y][x] = ( get_buttons() == 1 ) ? 0 : ( y & 1 ) ^ ( x & 1 );
+    show();
+    while( get_buttons() != 1 );
 
     // HOLD FIRE 1 TO REGENERATE STARTING POSITION
 	while( get_buttons() == 1 ) {
-		evolve();
+		walk();
         show();
-        //sleep( 10, 0 );
+        gpu_rectangle( WHITE, x * SIZE, y * SIZE, x * SIZE + (SIZE-1), y * SIZE + (SIZE-1) );
 	}
 }
 
@@ -64,6 +69,7 @@ int main( void ) {
 
     // CONTINUE UNTIL FIRE 2 IS PRESSED
     while( !( get_buttons() & 4 ) ) {
+        x = WIDTH/2; y = HEIGHT / 2; d = 0;
         game();
     }
 }

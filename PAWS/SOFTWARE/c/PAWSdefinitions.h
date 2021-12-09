@@ -5,6 +5,16 @@
 #define TRUE 1
 #define FALSE 0
 
+// MIN MAX MACROS
+#define min(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a < _b ? _a : _b; })
+#define max(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a > _b ? _a : _b; })
+
 // DISPLAY LAYERS
 #define LOWER_LAYER 0
 #define UPPER_LAYER 1

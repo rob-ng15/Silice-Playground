@@ -52,7 +52,7 @@ algorithm cmcursorx(
     output  uint7   NEXT,
     output  uint1   ATLAST
 ) <autorun> {
-    always {
+    always_after {
         ATLAST = ( tpu_active_x == 79 );
         NEXT = tpu_active_x + 1;
     }
@@ -62,7 +62,7 @@ algorithm cmcursory(
     output  uint6   NEXT,
     output  uint1   ATLAST
 ) <autorun> {
-    always {
+    always_after {
         ATLAST = ( tpu_active_y == 59 );
         NEXT = tpu_active_y + 1;
     }
@@ -76,7 +76,7 @@ algorithm cmaddresses(
     output  uint13  YSTARTADDR,
     output  uint13  YENDADDR
 ) <autorun> {
-    always {
+    always_after {
         WRITEADDR = tpu_active_x + tpu_active_y * 80;
         YSTARTADDR = tpu_y * 80;
         YENDADDR = YSTARTADDR + 80;
@@ -125,7 +125,7 @@ algorithm character_map_writer(
     // CURSES COPY ADDRESS
     charactermap_copy.addr0 := ( tpu_active[2,1] ) ? tpu_cs_addr : TPUA.WRITEADDR;
 
-    always {
+    always_after {
         switch( tpu_write ) {
             default: {}
             case 1: {                                                                                                                                   // Set cursor position
@@ -143,7 +143,7 @@ algorithm character_map_writer(
                 }
             }
             case 3: { tpu_active_x = 0; tpu_active_y = 0; tpu_active = 1; tpu_start_cs_addr = 0; tpu_max_count = 4800; }                                // Start tpucs
-            case 4: { tpu_active_x = 0; tpu_active_y = tpu_y; tpu_active = 1; tpu_start_cs_addr = TPUA.YSTARTADDR; tpu_max_count = TPUA.YENDADDR; }   // Start tpu_clearline
+            case 4: { tpu_active_x = 0; tpu_active_y = tpu_y; tpu_active = 1; tpu_start_cs_addr = TPUA.YSTARTADDR; tpu_max_count = TPUA.YENDADDR; }     // Start tpu_clearline
             case 5: {                                                                                                                                   // Write character, foreground, background to curses buffer
                 charactermap_copy.addr1 = TPUA.WRITEADDR;
                 charactermap_copy.wdata1 = { tpu_background, tpu_foreground, tpu_character };
@@ -155,36 +155,32 @@ algorithm character_map_writer(
 
     while(1) {
         if( |tpu_active ) {
+            tpu_cs_addr = tpu_start_cs_addr;
             onehot( tpu_active ) {
                 case 0: {                                                                                                                               // TPU WIPE - WHOLE OR PARTIAL SCREEN (LINE)
-                    tpu_cs_addr = tpu_start_cs_addr;
                     charactermap.wdata1 = 0; colourmap.wdata1 = 13b1000000000000;
                     while( tpu_cs_addr != tpu_max_count ) {
                         charactermap.addr1 = tpu_cs_addr; colourmap.addr1 = tpu_cs_addr;
                         tpu_cs_addr = tpu_cs_addr_next;
                     }
-                    tpu_active = 0;
                 }
                 case 1: {                                                                                                                               // CURSES WIPE
-                    tpu_cs_addr = tpu_start_cs_addr;
                     charactermap_copy.wdata1 = 22b1000000000000000000000;
                     while( tpu_cs_addr != 4800 ) {
                         charactermap_copy.addr1 = tpu_cs_addr;
                         tpu_cs_addr = tpu_cs_addr_next;
                     }
-                    tpu_active = 0;
                 }
                 case 2: {                                                                                                                               // CURSES COPY
-                    tpu_cs_addr = tpu_start_cs_addr;
                     while( tpu_cs_addr != 4800 ) {
                         ++:
                         charactermap.addr1 = tpu_cs_addr; charactermap.wdata1 = charactermap_copy.rdata0[0,9];
                         colourmap.addr1 = tpu_cs_addr; colourmap.wdata1 = { charactermap_copy.rdata0[15,7], charactermap_copy.rdata0[9,6] };
                         tpu_cs_addr = tpu_cs_addr_next;
                     }
-                    tpu_active = 0;
                 }
             }
+            tpu_active = 0;
         }
     }
 }

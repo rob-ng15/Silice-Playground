@@ -543,23 +543,21 @@ void main( void ) {
     unsigned short i, j;
     unsigned short selectedfile = 0;
 
-    // STOP SMT
-    SMTSTOP();
+    // STOP SMT AND PIXELBLOCK
+    SMTSTOP(); *PB_STOP = 1;
 
     // CLEAR MEMORY
     memset( &_bss_start, 0, &_bss_end - &_bss_end );
 
     // RESET THE DISPLAY
-    reset_display();
-    set_background( DKBLUE - 1, BLACK, BKG_SOLID );
+    reset_display(); set_background( DKBLUE - 1, BLACK, BKG_SOLID );
 
     // KEYBOARD INTO JOYSTICK MODE
     *PS2_MODE = 0;
 
     // DRAW LOGO AND SDCARD
     // COLOUR BARS ON THE TILEMAP - SCROLL WITH SMT THREAD
-    draw_paws_logo();
-    draw_sdcard();
+    draw_paws_logo(); draw_sdcard();
     for( i = 0; i < 42; i++ ) {
         set_tilemap_tile( 0, i, 21, 0, i, 0 );
         set_tilemap_tile( 1, i, 27, 0, 63 - i, 0 );

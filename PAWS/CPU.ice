@@ -27,8 +27,9 @@ algorithm PAWSCPU(
     uint1   compressed = uninitialized;
     compressed00 COMPRESSED00 <@clock_CPUdecoder> ( i16 <: readdata ); compressed01 COMPRESSED01 <@clock_CPUdecoder> ( i16 <: readdata ); compressed10 COMPRESSED10 <@clock_CPUdecoder> ( i16 <: readdata );
 
-    // RISC-V 32 BIT INSTRUCTION DECODER
-    decode RV32DECODER <@clock_CPUdecoder> ( instruction <: instruction, accesssize :> accesssize );
+    // RISC-V 32 BIT INSTRUCTION DECODER + MEMORY ACCESS SIZE
+    decode RV32DECODER <@clock_CPUdecoder> ( instruction <: instruction );
+    memoryaccess MEMACCESS <@clock_CPUdecoder> ( opCode <: RV32DECODER.opCode, function7 <: RV32DECODER.function7[2,5], function3 <: RV32DECODER.function3, AMO <: RV32DECODER.AMO, accesssize :> accesssize );
 
     // RISC-V REGISTERS
     uint1   frd <:: IFASTSLOW.FASTPATH ? IFASTSLOW.frd : EXECUTESLOW.frd;
@@ -43,8 +44,11 @@ algorithm PAWSCPU(
         rd <: RV32DECODER.rd,
         write <: REGISTERSwrite
     );
+    // NEGATIVE OF REGISTERS FOR ABS AND ADD/SUB
+    int32   negRS1 <:: -REGISTERS.sourceReg1;                 int32   negRS2 <:: -REGISTERS.sourceReg2;
     // EXTRACT ABSOLUTE VALUE FOR MULTIPLICATION AND DIVISION
-    absolute ARS1 <@clock_CPUdecoder> ( number <: REGISTERS.sourceReg1 ); absolute ARS2 <@clock_CPUdecoder> ( number <: REGISTERS.sourceReg2 );
+    absolute ARS1 <@clock_CPUdecoder> ( number <: REGISTERS.sourceReg1, negative <: negRS1 ); absolute ARS2 <@clock_CPUdecoder> ( number <: REGISTERS.sourceReg2, negative <: negRS2 );
+
 
     // RISC-V FLOATING POINT REGISTERS
     uint1   REGISTERSFwrite <:: COMMIT & IFASTSLOW.writeRegister & frd;
@@ -102,8 +106,8 @@ algorithm PAWSCPU(
         rs2 <: RV32DECODER.rs2,
         sourceReg1 <: REGISTERS.sourceReg1,
         sourceReg2 <: REGISTERS.sourceReg2,
-        absRS1 <: ARS1.value,
-        absRS2 <: ARS2.value,
+        abssourceReg1 <: ARS1.value,
+        abssourceReg2 <: ARS2.value,
         sourceReg1F <: REGISTERSF.sourceReg1,
         sourceReg2F <: REGISTERSF.sourceReg2,
         sourceReg3F <: REGISTERSF.sourceReg3,
@@ -121,8 +125,9 @@ algorithm PAWSCPU(
         rs2 <: RV32DECODER.rs2,
         sourceReg1 <: REGISTERS.sourceReg1,
         sourceReg2 <: REGISTERS.sourceReg2,
-        absRS1 <: ARS1.value,
-        absRS2 <: ARS2.value,
+        abssourceReg1 <: ARS1.value,
+        abssourceReg2 <: ARS2.value,
+        negSourceReg2 <: negRS2,
         sourceReg2F <: REGISTERSF.sourceReg2,
         immediateValue <: RV32DECODER.immediateValue,
         memoryinput <: memoryinput,
@@ -144,7 +149,10 @@ algorithm PAWSCPU(
 
     readmemory := 0; writememory := 0; EXECUTESLOW.start := 0; COMMIT := 0;
 
-    if( ~reset ) { SMT = 0; pc = 0; }                                                                                                               // ON RESET SET PC AND SMT TO 0
+    if( ~reset ) {
+        SMT = 0; pc = 0;                                                                                                                            // ON RESET SET PC AND SMT TO 0
+        while( memorybusy | EXECUTESLOW.busy ) {}                                                                                                   // WAIT FDR MEMORY AND CPU TO FINISH
+    }
 
     while(1) {
         address = PC; readmemory = 1; while( memorybusy ) {}                                                                                        // FETCH POTENTIAL COMPRESSED OR 1ST 16 BITS
@@ -161,7 +169,7 @@ algorithm PAWSCPU(
         }
         ++: ++:                                                                                                                                     // DECODE, REGISTER FETCH, ADDRESS GENERATION
 
-        if( RV32DECODER.memoryload ) {
+        if( MEMACCESS.memoryload ) {
             address = AGU.loadAddress; readmemory = 1; while( memorybusy ) {}                                                                       // READ 1ST 8 or 16 BITS
             if( accesssize[1,1] ) {
                 memoryinput[0,16] = readdata; address = LA2.addressplus2; readmemory = 1; while( memorybusy ) {} memoryinput[16,16] = readdata;     // READ 2ND 16 BITS
@@ -173,7 +181,7 @@ algorithm PAWSCPU(
         if( ~IFASTSLOW.FASTPATH ) { EXECUTESLOW.start = 1; while( EXECUTESLOW.busy ) {} }                                                           // FPU ALU AND CSR OPERATIONS, FASTPATH HANDLED AUTOMATICALLY
         COMMIT = 1;                                                                                                                                 // COMMIT REGISTERS
 
-        if( RV32DECODER.memorystore ) {
+        if( MEMACCESS.memorystore ) {
             address = AGU.storeAddress; writedata = storeLOW; writememory = 1; while( memorybusy ) {}                                               // STORE 8 OR 16 BIT
             if( accesssize[1,1] ) {
                 address = SA2.addressplus2; writedata = storeHIGH; writememory = 1;  while( memorybusy ) {}                                         // 32 BIT WRITE 2ND 16 BITS
@@ -196,8 +204,8 @@ algorithm cpuexecuteSLOWPATH(
     input   uint5   rs2,
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
-    input   uint32  absRS1,
-    input   uint32  absRS2,
+    input   uint32  abssourceReg1,
+    input   uint32  abssourceReg2,
     input   uint32  sourceReg1F,
     input   uint32  sourceReg2F,
     input   uint32  sourceReg3F,
@@ -211,7 +219,7 @@ algorithm cpuexecuteSLOWPATH(
     aluMD ALUMD(
         function3 <: function3[0,2],
         sourceReg1 <: sourceReg1, sourceReg2 <: sourceReg2,
-        absRS1 <: absRS1, absRS2 <: absRS2
+        abssourceReg1 <: abssourceReg1, abssourceReg2 <: abssourceReg2
     );
 
     // ATOMIC MEMORY OPERATIONS
@@ -295,8 +303,9 @@ algorithm cpuexecuteFASTPATH(
     input   uint5   rs2,
     input   uint32  sourceReg1,
     input   uint32  sourceReg2,
-    input   uint32  absRS1,
-    input   uint32  absRS2,
+    input   uint32  abssourceReg1,
+    input   uint32  abssourceReg2,
+    input   int32   negSourceReg2,
     input   uint32  sourceReg2F,
     input   uint32  immediateValue,
     input   uint32  memoryinput,
@@ -313,7 +322,7 @@ algorithm cpuexecuteFASTPATH(
     alu ALU(
         opCode <: opCode, function3 <: function3, function7 <: function7,
         rs1 <: rs1, rs2 <: rs2,
-        sourceReg1 <: sourceReg1, sourceReg2 <: sourceReg2,
+        sourceReg1 <: sourceReg1, sourceReg2 <: sourceReg2, negSourceReg2 <: negSourceReg2,
         immediateValue <: immediateValue
     );
 
@@ -321,7 +330,7 @@ algorithm cpuexecuteFASTPATH(
     aluMM ALUMM(
         function3 <: function3[0,2],
         sourceReg1 <: sourceReg1, sourceReg2 <: sourceReg2,
-        absRS1 <: absRS1, absRS2 <: absRS2
+        abssourceReg1 <: abssourceReg1, abssourceReg2 <: abssourceReg2
     );
 
     // CLASSIFY THE TYPE FOR INSTRUCTIONS THAT WRITE TO REGISTER
@@ -332,7 +341,7 @@ algorithm cpuexecuteFASTPATH(
 
     takeBranch := 0;
 
-    always {
+    always_after {
         switch( opCode ) {
             case 5b11000: { takeBranch = BRANCHUNIT.takeBranch; }       // BRANCH
             case 5b01000: { memoryoutput = sourceReg2; }                // STORE

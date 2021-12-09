@@ -3,6 +3,7 @@
 ./compile.sh c/asteroids.c PAWS//GAMES/ASTROIDS.PAW
 ./compile.sh c/spaceinvaders.c PAWS/GAMES/INVADERS.PAW
 
+./compile.sh c/ant.c PAWS/DEMO/ANT.PAW
 ./compile.sh c/chess.c PAWS/DEMO/CHESS.PAW
 ./compile.sh c/demo.c PAWS/DEMO/DEMO.PAW
 ./compile.sh c/jpeg-colour.c PAWS/DEMO/JPEG.PAW

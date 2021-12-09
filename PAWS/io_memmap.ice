@@ -43,7 +43,8 @@ $$if not SIMULATION then
     // UART CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
     uint2   UARTinread = 0;                                                                                                         // 2 BIT LATCH ( bit 0 is the signal ) due to clock boundary change
     uint2   UARToutwrite = 0;                                                                                                       // 2 BIT LATCH ( bit 0 is the signal )
-    uart UART <@clock_25mhz> ( uart_tx :> uart_tx, uart_rx <: uart_rx, inread <: UARTinread[0,1], outwrite <: UARToutwrite[0,1] );
+    uart_IN UART_IN <@clock_25mhz> ( uart_rx <: uart_rx, inread <: UARTinread[0,1] );
+    uart_OUT UART_OUT <@clock_25mhz> ( uart_tx :> uart_tx, outwrite <: UARToutwrite[0,1] );
 
     // PS2 CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
     uint2   PS2inread = 0;                                                                                                          // 2 BIT LATCH ( bit 0 is the signal )
@@ -58,7 +59,7 @@ $$if not SIMULATION then
     // I/O FLAGS
     SDCARDreadsector := 0;
 $$end
-     always {
+     always_before {
 $$if not SIMULATION then
         // UPDATE LATCHES
         UARTinread = UARTinread[1,1]; UARToutwrite = UARToutwrite[1,1]; PS2inread = PS2inread[1,1];
@@ -70,9 +71,9 @@ $$end
                 $$if not SIMULATION then
                 case 4h0: {
                     if( memoryAddress[1,1] ) {
-                        readData = { 14b0, UART.outfull, UART.inavailable };
+                        readData = { 14b0, UART_OUT.outfull, UART_IN.inavailable };
                     } else {
-                        readData = { 8b0, UART.inchar }; UARTinread = 2b11;
+                        readData = { 8b0, UART_IN.inchar }; UARTinread = 2b11;
                     }
                 }
                 case 4h1: {
@@ -95,12 +96,13 @@ $$end
                 default: { readData = 0;}
             }
         }
-
+    }
+    always_after {
         // WRITE IO Memory
         if( memoryWrite ) {
             switch( memoryAddress[4,4] ) {
                 $$if not SIMULATION then
-                case 4h0: { UART.outchar = writeData[0,8]; UARToutwrite = 2b11; }
+                case 4h0: { UART_OUT.outchar = writeData[0,8]; UARToutwrite = 2b11; }
                 case 4h1: { PS2.outputascii = writeData; }
                 case 4h4: {
                     switch( memoryAddress[1,2] ) {
@@ -125,7 +127,6 @@ $$end
     // DISBLE SMT ON STARTUP, KEYBOARD DEFAULTS TO JOYSTICK MODE
     if( ~reset ) {
         SMTRUNNING = 0;
-        SMTSTARTPC = 0;
 
         $$if not SIMULATION then
         PS2.outputascii = 0;
@@ -156,7 +157,7 @@ algorithm timers_memmap(
     // LATCH MEMORYWRITE
     uint1   LATCHmemoryWrite = uninitialized;
 
-    always {
+    always_before {
         // READ IO Memory
         if( memoryRead ) {
             switch( memoryAddress[1,4] ) {
@@ -176,6 +177,8 @@ algorithm timers_memmap(
                 default: { readData = 0; }
             }
         }
+    }
+    always_after {
         // WRITE IO Memory
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: { timers.counter = writeData; timers.resetcounter = timerreset; }
@@ -210,10 +213,11 @@ algorithm audio_memmap(
     // LATCH MEMORYWRITE
     uint1   LATCHmemoryWrite = uninitialized;
 
-    always {
+    always_before {
         // READ IO Memory
         if( memoryRead ) { readData = memoryAddress[1,1] ? apu_processor.audio_active_r : apu_processor.audio_active_l; }
-
+    }
+    always_after {
         // WRITE IO Memory
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
@@ -263,7 +267,7 @@ algorithm timers_rng(
     T0khz0.resetCounter := 0; T1khz1.resetCounter := 0;
     STimer0.resetCounter := 0; STimer1.resetCounter := 0;
 
-    always {
+    always_after {
         switch( resetcounter ) {
             default: {}
             case 1: { T1hz0.resetCounter = 1; }
@@ -323,8 +327,7 @@ algorithm fifo8(
 ) <autorun,reginputs> {
     simple_dualport_bram uint8 queue[256] = uninitialized;
     uint1   update = uninitialized;
-    uint8   top = 0;
-    uint8   next = 0;
+    uint8   top = 0;                                uint8   next = 0;
 
     available := ( top != next ); full := ( top + 1 == next );
     queue.addr0 := next; first := queue.rdata0;
@@ -343,42 +346,39 @@ algorithm fifo8(
         next = next + read;
     }
 }
-algorithm uart(
+algorithm uart_IN(
     // UART
-    output  uint1   uart_tx,
     input   uint1   uart_rx,
     output  uint1   inavailable,
-    output  uint1   outfull,
     output  uint8   inchar,
-    input   uint1   inread,
-    input   uint8   outchar,
-    input   uint1   outwrite
+    input   uint1   inread
 ) <autorun> {
     uart_in ui; uart_receiver urecv( io <:> ui, uart_rx <: uart_rx );
-    uint8   uidata_out <: ui.data_out;
-    uint1   uidata_out_ready <: ui.data_out_ready;
     fifo8 IN(
         available :> inavailable,
         first :> inchar,
         read <: inread,
-        last <: uidata_out,
-        write <: uidata_out_ready
+        last <: ui.data_out,
+        write <: ui.data_out_ready
     );
-
+}
+algorithm uart_OUT(
+    // UART
+    output  uint1   uart_tx,
+    output  uint1   outfull,
+    input   uint8   outchar,
+    input   uint1   outwrite
+) <autorun> {
     uart_out uo; uart_sender usend( io <:> uo, uart_tx :> uart_tx );
-    uint8   uodata_in = uninitialized;
-    uint1   OUTread <: OUT.available & !uo.busy;
     fifo8 OUT(
         full :> outfull,
         last <: outchar,
         write <: outwrite,
-        first :> uodata_in,
-        read <: OUTread
+        first :> uo.data_in
     );
-    uo.data_in := uodata_in;
+    OUT.read := OUT.available & !uo.busy;
     uo.data_in_ready := OUT.available & ( !uo.busy );
 }
-
 // PS2 BUFFER CONTROLLER
 // 9 bit 256 entry FIFO buffer
 algorithm fifo9(
@@ -387,16 +387,15 @@ algorithm fifo9(
     input   uint1   write,
     output  uint9   first,
     input   uint9   last
-) <autorun,reginputs> {
+) <autorun> {
     simple_dualport_bram uint9 queue[256] = uninitialized;
-    uint8   top = 0;
-    uint8   next = 0;
+    uint8   top = 0;                                uint8   next = 0;
 
     available := ( top != next );
     queue.addr0 := next; first := queue.rdata0;
     queue.wenable1 := 1;
 
-    always {
+    always_after {
         if( write ) { queue.addr1 = top; queue.wdata1 = last; }
         top = top + write;
         next = next + read;
@@ -435,13 +434,14 @@ algorithm sdcardbuffer(
 ) <autorun> {
     // SDCARD - Code for the SDCARD from @sylefeb
     simple_dualport_bram uint8 sdbuffer[512] = uninitialized;
-    sdcardio sdcio;
-    sdcard sd( sd_clk :> sd_clk, sd_mosi :> sd_mosi, sd_csn :> sd_csn, sd_miso <: sd_miso, io <:> sdcio, store <:> sdbuffer );
+    sdcardio sdcio; sdcard sd( sd_clk :> sd_clk, sd_mosi :> sd_mosi, sd_csn :> sd_csn, sd_miso <: sd_miso, io <:> sdcio, store <:> sdbuffer );
 
     // SDCARD Commands
-    sdcio.read_sector := readsector;
-    sdcio.addr_sector := sectoraddress;
-    sdbuffer.addr0 := bufferaddress;
-    ready := sdcio.ready;
-    bufferdata := sdbuffer.rdata0;
+    always_after {
+        sdcio.read_sector = readsector;
+        sdcio.addr_sector = sectoraddress;
+        sdbuffer.addr0 = bufferaddress;
+        ready = sdcio.ready;
+        bufferdata = sdbuffer.rdata0;
+    }
 }

@@ -17,7 +17,7 @@ algorithm fpufast(
     floatclassify FPUclass( sourceReg1F <: sourceReg1F );
     floatsign FPUsign( function3 <: function3[0,2], sourceReg1F <: sourceReg1F, sourceReg2F <: sourceReg2F );
 
-    always {
+    always_after {
         switch( function7[3,2] ) {
             case 2b00: {
                 // FMIN.S FMAX.S FSGNJ.S FSGNJN.S FSGNJX.S
@@ -85,7 +85,7 @@ algorithm floatconvert(
     floattoint FPUint( a <: sourceReg1F );
     floattouint FPUuint( a <: sourceReg1F );
 
-    always {
+    always_after {
         // FCVT.S.W FCVT.S.WU FCVT.W.S FCVT.WU.S
         result = direction ? FPUfloat.result : rs2 ? FPUuint.result : FPUint.result; flags = direction ? FPUfloat.flags : rs2 ? FPUuint.flags : FPUint.flags;
     }
@@ -163,9 +163,9 @@ algorithm floatclassify(
 ) <autorun> {
     // CLASSIFY THE INPUT AND FLAG INFINITY, NAN, ZERO
     classify A( a <: sourceReg1F );                 uint4   classA <:: { A.INF, A.sNAN, A.qNAN, A.ZERO };
-    uint4   bit = uninitialised;                    classification := 1 << bit;
+    uint4   bit = uninitialised;
 
-    always {
+    always_after {
         if( |classA ) {
             // INFINITY, NAN OR ZERO
             onehot( classA ) {
@@ -178,6 +178,7 @@ algorithm floatclassify(
             // NUMBER
             bit = fp32( sourceReg1F ).sign ? 1 : 6;
         }
+        classification = 1 << bit;
     }
 }
 
@@ -194,13 +195,8 @@ algorithm floatminmax(
     uint1   NAN <:: ( A.sNAN | B.sNAN ) | ( A.qNAN & B.qNAN );
 
     flags := { NAN, 4b0000 };
-    always {
-        if( NAN ) {
-            // sNAN or both qNAN
-            result = 32h7fc00000;
-        } else {
-            result = A.qNAN ? ( B.qNAN ? 32h7fc00000 : sourceReg2F ) : B.qNAN | ( function3 ^ less ) ? sourceReg1F : sourceReg2F;
-        }
+    always_after {
+        result = NAN ? 32h7fc00000 : A.qNAN ? ( B.qNAN ? 32h7fc00000 : sourceReg2F ) : B.qNAN | ( function3 ^ less ) ? sourceReg1F : sourceReg2F;
     }
 }
 
@@ -217,17 +213,10 @@ algorithm floatcomparison(
     // CLASSIFY THE INPUTS AND FLAG INFINITY, NAN
     classify A( a <: sourceReg1F );                 classify B( a <: sourceReg2F );
     uint1   NAN <:: ( A.qNAN | A.sNAN | B.qNAN | B.sNAN );
-
+    uint4   comparison <:: { 1b0, equal, less, less | equal };
     flags := { function3[1,1] ? ( A.sNAN | B.sNAN ) : NAN, 4b0000 }; result := 0;
-    always {
-        if( ~NAN ) {
-            switch( function3 ) {
-                case 2b00: { result = ( less | equal ); }
-                case 2b01: { result = less; }
-                case 2b10: { result = equal; }
-                default: {}
-            }
-        }
+    always_after {
+        result = ~NAN & comparison[ function3, 1 ];
     }
 }
 
@@ -238,7 +227,7 @@ algorithm floatsign(
     output  uint32  result,
 ) <autorun> {
     uint1   sign <:: function3[1,1] ? sourceReg1F[31,1] ^ sourceReg2F[31,1] : function3[0,1] ^ sourceReg2F[31,1];
-    always {
+    always_after {
         result = { sign, sourceReg1F[0,31] };
     }
 }

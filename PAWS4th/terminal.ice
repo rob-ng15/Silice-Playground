@@ -49,7 +49,7 @@ algorithm terminalcursor(
     output  uint7   PREV,
     output  uint10  ADDRESS
 ) <autorun> {
-    always {
+    always_after {
         endofline = ( terminal_x == 79 );
         NEXT = endofline ? 0 : terminal_x + 1;
         PREV = terminal_x - 1;
@@ -79,7 +79,7 @@ algorithm terminal_writer(
     // READ CHARACTER ON THE NEXT LINE FOR SCROLLING
     terminal_copy.addr0 := terminal_scroll + 80;
 
-    always {
+    always_after {
         if( |terminal_write ) {
             onehot( terminal_write ) {                                                                                                                          // WRITE CHARACTER
                 case 0: {
@@ -116,15 +116,14 @@ algorithm terminal_writer(
                         terminal_copy.addr1 = terminal_scroll; terminal_copy.wdata1 = scrolling ? terminal_copy.rdata0 : 0;
                         terminal_scroll = terminal_scroll_next;
                     }
-                    terminal_active = 0;
                 }
                 case 1: {                                                                                                                                       // RESET TERMINAL
                     terminal.wdata1 = 0; terminal_copy.wdata1 = 0;
                     while( working ) { terminal.addr1 = terminal_scroll; terminal_copy.addr1 = terminal_scroll; terminal_scroll = terminal_scroll_next; }
                     terminal_x = 0;
-                    terminal_active = 0;
                 }
             }
+            terminal_active = 0;
         } else {
             terminal_scroll = 0;
         }

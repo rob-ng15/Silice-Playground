@@ -16,9 +16,6 @@
 
 typedef short BOOL;
 
-static inline float max(float x, float y) { return x>y?x:y; }
-static inline float min(float x, float y) { return x<y?x:y; }
-
 typedef struct { float x,y,z; }   vec3;
 typedef struct { float x,y,z,w; } vec4;
 

@@ -413,10 +413,10 @@ void gpu_dither( unsigned char mode, unsigned char colour ) {
 // SET GPU CROPPING RECTANGLE
 void gpu_crop( short left, short top, short right, short bottom ) {
     wait_gpu();
-    *CROP_LEFT = left;
-    *CROP_RIGHT = right;
-    *CROP_TOP = top;
-    *CROP_BOTTOM = bottom;
+    *CROP_LEFT = left < 0 ? 0 : left;
+    *CROP_RIGHT = right > 319 ? 319 : right;
+    *CROP_TOP = top < 0 ? 0 : top;
+    *CROP_BOTTOM = bottom > 239 ? 239 : bottom;
 }
 
 // SET THE PIXEL at (x,y) to colour
@@ -1195,7 +1195,7 @@ void terminal_printf( const char *fmt,... ) {
     terminal_outputstring( buffer );
 }
 
-// READ A FILE USING THE SIMPLE FILE BROWSER OR DIRECTLY FROM FILENAME
+// READ A FILE USING THE SIMPLE FILE BROWSER
 // WILL ALLOW SELECTION OF A FILE FROM THE SDCARD, INCLUDING SUB-DIRECTORIES
 // ALLOCATES MEMORY FOR THE FILE, AND LOADS INTO MEMORY
 unsigned char *BOOTRECORD = NULL;
@@ -1952,7 +1952,7 @@ void  __attribute__ ((noreturn)) _exit( int status ){
     while(1);
 }
 
-// SETUP MEMORY POINTERS FOR THE SDCARD - ALREADY PRE-LOADED BY THE BIOS
+// SETUP MEMORY - CLEAR THE BSS SECTION AND INITIALISE FOR MALLOC
 extern int _bss_start, _bss_end;
 void INITIALISEMEMORY( void ) {
     // CLEAR BSS

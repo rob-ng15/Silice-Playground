@@ -61,15 +61,13 @@ algorithm multiplex_display(
 
     // SELECT COLOUR OR BLACK AND WHITE
     uint8   grey <: { pixel[0,6], pixel[0,2] };
+    pix_red := { {4{pixel[4,2]}} }; pix_green := { {4{pixel[2,2]}} }; pix_blue := { {4{pixel[0,2]}} };
+
     always {
-        if( colour ) {
-            pix_red   = { {4{pixel[4,2]}} };
-            pix_green = { {4{pixel[2,2]}} };
-            pix_blue  = { {4{pixel[0,2]}} };
-        } else {
-            pix_red   = grey;
+        if( ~colour ) {
+            pix_red = grey;
             pix_green = grey;
-            pix_blue  = grey;
+            pix_blue = grey;
         }
     }
 }

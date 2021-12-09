@@ -27,31 +27,35 @@ algorithm preptriangle(
     // TEMPORARY STORAGE FOR SWAPPING VARIABLES
     int11   tx = uninitialised;                     int11   ty = uninitialised;
 
-    uint1   x1x2 <: ( x1 < x2 );                    uint1   y1y2 <: ( y1 < y2 );
-    uint1   x1x3 <: ( x1 < x3 );                    uint1   y1y3 <: ( y1 < y3 );
-    uint1   x2x3 <: ( x2 < x3 );                    uint1   y2y3 <: ( y2 < y3 );
+    uint1   x1x2 <:: ( x1 < x2 );                   uint1   y1y2 <:: ( y1 < y2 );                       uint1   y1ey2 <:: ( y1 == y2 );
+    uint1   x1x3 <:: ( x1 < x3 );                   uint1   y1y3 <:: ( y1 < y3 );
+    uint1   x2x3 <:: ( x2 < x3 );                   uint1   y2y3 <:: ( y2 < y3 );
 
+    istodraw TODRAW( crop_left <: crop_left, crop_right <: crop_right, crop_top <: crop_top, crop_bottom <: crop_bottom,
+                min_x <: min_x, min_y <: min_y, max_x <: max_x, max_y <: max_y );
     todraw := 0;
 
     while(1) {
         if( start ) {
             busy = 1;
             // Setup drawing a filled triangle x,y param0, param1, param2, param3
-            x1 = x; y1 = y; x2 = param0; y2 = param1; x3 = param2; y3 = param3;
+            x1 = x; y1 = y;
+            x2 = param0; y2 = param1;
+            x3 = param2; y3 = param3;
             ++:
             // Put points in order so that ( x1, y1 ) is at top, then ( x2, y2 ) and ( x3, y3 ) are clockwise from there
-            if( y3 < y2 ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++: }
-            if( y2 < y1 ) { tx = x1; ty = y1; x1 = x2; y1 = y2; x2 = tx; y2 = ty; ++: }
-            if( y3 < y1 ) { tx = x1; ty = y1; x1 = x3; y1 = y3; x3 = tx; y3 = ty; ++: }
-            if( y3 < y2 ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++: }
-            if( ( y2 == y1 ) & ( x2 < x1 ) ) { tx = x1; ty = y1; x1 = x2; y1 = y2; x2 = tx; y2 = ty; ++: }
-            if( ( y2 != y1 ) & ( y3 >= y2 ) & ( x2 < x3 ) ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++:}
+            if( ~y2y3 ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++: }
+            if( ~y1y2 ) { tx = x1; ty = y1; x1 = x2; y1 = y2; x2 = tx; y2 = ty; ++: }
+            if( ~y1y3 ) { tx = x1; ty = y1; x1 = x3; y1 = y3; x3 = tx; y3 = ty; ++: }
+            if( ~y2y3 ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++: }
+            if( ( y1ey2 ) & ( ~x1x2 ) ) { tx = x1; ty = y1; x1 = x2; y1 = y2; x2 = tx; y2 = ty; ++: }
+            if( ( ~y1ey2 ) & ( ~y2y3 ) & ( x2x3 ) ) { tx = x2; ty = y2; x2 = x3; y2 = y3; x3 = tx; y3 = ty; ++:}
 
             // Find minimum and maximum of x, x1, x2, y, y1 and y2 for the bounding box
-            min_x = x1x2 ? ( x1x3 ? x1 : x3 ) : ( x2x3 ? x2 : x3 );
-            max_x = x1x2 ? ( x2x3 ? x3 : x2 ) : ( x1x3 ? x3 : x1 );
-            min_y = y1y2 ? ( y1y3 ? y1 : y3 ) : ( y2y3 ? y2 : y3 );
-            max_y = y1y2 ? ( y2y3 ? y3 : y2 ) : ( y1y3 ? y3 : y1 );
+            min_x = x1x2 ? ( x1x3 ? x1 : x3 ) : ( x2x3 ? x2 : x3 ); ++:
+            max_x = x1x2 ? ( x2x3 ? x3 : x2 ) : ( x1x3 ? x3 : x1 ); ++:
+            min_y = y1y2 ? ( y1y3 ? y1 : y3 ) : ( y2y3 ? y2 : y3 ); ++:
+            max_y = y1y2 ? ( y2y3 ? y3 : y2 ) : ( y1y3 ? y3 : y1 ); ++:
             ++:
             // Apply cropping rectangle
             min_x = ( min_x < crop_left ) ? crop_left : min_x;
@@ -59,7 +63,7 @@ algorithm preptriangle(
             max_x = ( max_x > crop_right ) ? crop_right : max_x;
             max_y = 1 + ( ( max_y > crop_bottom ) ? crop_bottom : max_y );
             ++:
-            todraw = ~( ( max_x < crop_left ) | ( max_y < crop_top ) | ( min_x > crop_right ) | ( min_y > crop_bottom ) );
+            todraw = TODRAW.draw;
             busy = 0;
         }
     }
@@ -164,7 +168,7 @@ algorithm main(output uint8 leds)
 
     triangle TRIANGLE(); TRIANGLE.start := 0;
     TRIANGLE.crop_left = 0; TRIANGLE.crop_right = 319; TRIANGLE.crop_top = 0; TRIANGLE.crop_bottom = 239;
-    TRIANGLE.x = 20; TRIANGLE.y = 30; TRIANGLE.x1 = 10; TRIANGLE.y1 = 20; TRIANGLE.x2 = 30; TRIANGLE.y2 = 20;
+    TRIANGLE.x = 10; TRIANGLE.y = 10; TRIANGLE.x1 = 20; TRIANGLE.y1 = 10; TRIANGLE.x2 = 15; TRIANGLE.y2 = 15;
 
     ++:
     startcycle = PULSE.cycles;
@@ -172,7 +176,9 @@ algorithm main(output uint8 leds)
     while( TRIANGLE.busy ) {
         if( TRIANGLE.bitmap_write ) {
             pixels = pixels + 1;
-            __display(" %d @ %d, ( %d, %d )",pixels,PULSE.cycles-startcycle,TRIANGLE.bitmap_x_write,TRIANGLE.bitmap_y_write);
+            __display(" %3d @ %3d, ( %3d, %3d )",pixels,PULSE.cycles-startcycle,TRIANGLE.bitmap_x_write,TRIANGLE.bitmap_y_write);
+        } else {
+            __display("            ( %3d, %3d )",TRIANGLE.bitmap_x_write,TRIANGLE.bitmap_y_write);
         }
     }
 }
@@ -183,5 +189,22 @@ algorithm pulse(
     uint32  plus1 <:: cycles + 1;
     always {
         cycles = plus1;
+    }
+}
+
+// HELPER - DECIDE IF MIN/MAX ARE WITHIN CROP
+algorithm istodraw(
+    input   int11   crop_left,
+    input   int11   crop_right,
+    input   int11   crop_top,
+    input   int11   crop_bottom,
+    input   int11   min_x,
+    input   int11   min_y,
+    input   int11   max_x,
+    input   int11   max_y,
+    output  uint1   draw
+) <autorun> {
+    always {
+        draw = ~( ( max_x < crop_left ) | ( max_y < crop_top ) | ( min_x > crop_right ) | ( min_y > crop_bottom ) );
     }
 }

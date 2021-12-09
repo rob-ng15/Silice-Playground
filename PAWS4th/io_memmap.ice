@@ -54,16 +54,10 @@ $$end
 
 $$if not SIMULATION then
     // UART CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
-    uint8   UARToutchar = uninitialized;
-    uint2   UARTinread = 0;
-    uint2   UARToutwrite = 0;
-    uart UART <@clock_25mhz> (
-        uart_tx :> uart_tx,
-        uart_rx <: uart_rx,
-        outchar <: UARToutchar,
-        inread <: UARTinread[0,1],
-        outwrite <: UARToutwrite[0,1]
-    );
+    uint2   UARTinread = 0;                                                                                                         // 2 BIT LATCH ( bit 0 is the signal ) due to clock boundary change
+    uint2   UARToutwrite = 0;                                                                                                       // 2 BIT LATCH ( bit 0 is the signal )
+    uart_IN UART_IN <@clock_25mhz> ( uart_rx <: uart_rx, inread <: UARTinread[0,1] );
+    uart_OUT UART_OUT <@clock_25mhz> ( uart_tx :> uart_tx, outwrite <: UARToutwrite[0,1] );
 
     // PS2 CONTROLLER, CONTAINS BUFFERS FOR INPUT/OUTPUT
     uint2   PS2inread = 0;
@@ -88,11 +82,12 @@ $$if not SIMULATION then
         bufferaddress <: bufferaddress,
         readsector <: SDCARDreadsector
     );
+    SDCARDreadsector := 0;
 $$end
 
     sdramwriteflag := 0; sdramreadflag := 0;
 
-    always {
+    always_before {
 $$if not SIMULATION then
         // UPDATE LATCHES
         UARTinread = UARTinread[1,1]; UARToutwrite = UARToutwrite[1,1]; PS2inread = PS2inread[1,1];
@@ -103,13 +98,13 @@ $$end
                 // UART/PS2, LEDS, BUTTONS
                 $$if not SIMULATION then
                 case 12h100: {
-                    switch( { PS2.inavailable, UART.inavailable } ) {
+                    switch( { PS2.inavailable, UART_IN.inavailable } ) {
                         case 2b00: { readData = 0; }
-                        case 2b01: { readData = { 8b0, UART.inchar }; UARTinread = 2b11; }
+                        case 2b01: { readData = { 8b0, UART_IN.inchar }; UARTinread = 2b11; }
                         default: { readData = { 8b0, PS2.inchar }; PS2inread = 2b11; }
                     }
                 }
-                case 12h102: { readData = { 14b0, UART.outfull, ( UART.inavailable | PS2.inavailable ) }; }
+                case 12h102: { readData = { 14b0, UART_OUT.outfull, ( UART_IN.inavailable | PS2.inavailable ) }; }
                 case 12h120: { readData = { $16-NUM_BTNS$b0, btns[0,$NUM_BTNS$] }; }
 
                 // SDCARD
@@ -125,14 +120,15 @@ $$end
                 default: { readData = 0; }
             }
         }
-
+    }
+    always_after {
         // WRITE IO Memory
         if( memoryWrite ) {
             switch( memoryAddress ) {
                 // UART, LEDS
                 case 12h130: { leds = writeData; }
                 $$if not SIMULATION then
-                case 12h100: { UARToutchar = writeData[0,8]; UARToutwrite = 2b11; }
+                case 12h100: { UART_OUT.outchar = writeData[0,8]; UARToutwrite = 2b11; }
 
                 // SDCARD
                 case 12h140: { SDCARDreadsector = 1; }
@@ -165,13 +161,16 @@ algorithm copro_memmap(
     input   uint16  writeData,
     output  uint16  readData
 ) <autorun,reginputs> {
+    // HIGH LOW ADDRESS SWITCH
+    uint5   hilow <:: { ~memoryAddress[0,1], 4b0000 };
+
     // Mathematics Co-Processors
     divmod32by16 divmod32by16to16qr(); divmod16by16 divmod16by16to16qr(); multi16by16to32DSP multiplier16by16to32(); doubleops doperations(); floatops fpu();
 
     // RESET Mathematics Co-Processor Controls
     divmod32by16to16qr.start := 0; divmod16by16to16qr.start := 0; multiplier16by16to32.start := 0; fpu.start := 0;
 
-    always {
+    always_before {
         // READ IO Memory
         if( memoryRead ) {
             if( memoryAddress[8,1] ) {
@@ -193,24 +192,24 @@ algorithm copro_memmap(
                 switch( memoryAddress[4,3] ) {
                     case 3h0: {
                         switch( memoryAddress[1,3] ) {
-                            case 3h0: { readData = doperations.total[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
-                            case 3h1: { readData = doperations.difference[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
-                            case 3h2: { readData = doperations.increment[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
-                            case 3h3: { readData = doperations.decrement[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
-                            case 3h4: { readData = doperations.times2[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
-                            case 3h5: { readData = doperations.divide2[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
-                            case 3h6: { readData = doperations.negation[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
-                            case 3h7: { readData = doperations.binaryinvert[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
+                            case 3h0: { readData = doperations.total[ hilow, 16 ]; }
+                            case 3h1: { readData = doperations.difference[ hilow, 16 ]; }
+                            case 3h2: { readData = doperations.increment[ hilow, 16 ]; }
+                            case 3h3: { readData = doperations.decrement[ hilow, 16 ]; }
+                            case 3h4: { readData = doperations.times2[ hilow, 16 ]; }
+                            case 3h5: { readData = doperations.divide2[ hilow, 16 ]; }
+                            case 3h6: { readData = doperations.negation[ hilow, 16 ]; }
+                            case 3h7: { readData = doperations.binaryinvert[ hilow, 16 ]; }
                         }
                     }
                     case 3h1: {
                         switch( memoryAddress[1,3] ) {
-                            case 3h0: { readData = doperations.binaryxor[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
-                            case 3h1: { readData = doperations.binaryand[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
-                            case 3h2: { readData = doperations.binaryor[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
-                            case 3h3: { readData = doperations.absolute[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
-                            case 3h4: { readData = doperations.maximum[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
-                            case 3h5: { readData = doperations.minimum[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
+                            case 3h0: { readData = doperations.binaryxor[ hilow, 16 ]; }
+                            case 3h1: { readData = doperations.binaryand[ hilow, 16 ]; }
+                            case 3h2: { readData = doperations.binaryor[ hilow, 16 ]; }
+                            case 3h3: { readData = doperations.absolute[ hilow, 16 ]; }
+                            case 3h4: { readData = doperations.maximum[ hilow, 16 ]; }
+                            case 3h5: { readData = doperations.minimum[ hilow, 16 ]; }
                             case 3h6: { readData = memoryAddress[0,1] ? doperations.zeroless : doperations.zeroequal; }
                             case 3h7: { readData = memoryAddress[0,1] ? doperations.lessthan : doperations.equal; }
                         }
@@ -226,11 +225,13 @@ algorithm copro_memmap(
                             default: { readData = 0; }
                         }
                     }
-                    case 3h3: { readData = multiplier16by16to32.product[ { ~memoryAddress[0,1], 4b0000 },16 ]; }
+                    case 3h3: { readData = multiplier16by16to32.product[ hilow, 16 ]; }
+                    default: {}
                 }
             }
         }
-
+    }
+    always_after {
         // WRITE IO Memory
         if( memoryWrite ) {
             if( memoryAddress[8,1] ) {
@@ -244,9 +245,9 @@ algorithm copro_memmap(
                 switch( memoryAddress[4,2] ) {
                     case 2h0: {
                         if( memoryAddress[1,1] ) {
-                            doperations.operand2[ { ~memoryAddress[0,1], 4b0000 },16 ] = writeData;
+                            doperations.operand2[ hilow, 16 ] = writeData;
                         } else {
-                            doperations.operand1[ { ~memoryAddress[0,1], 4b0000 },16 ] = writeData;
+                            doperations.operand1[ hilow, 16 ] = writeData;
                         }
                     }
                     case 2h1: {}
@@ -300,7 +301,7 @@ algorithm audiotimers_memmap(
     // LATCH MEMORYWRITE
     uint1   LATCHmemoryWrite = uninitialized;
 
-    always {
+    always_before {
         // READ IO Memory
         if( memoryRead ) {
             if( memoryAddress[8,1] ) {
@@ -322,7 +323,8 @@ algorithm audiotimers_memmap(
                 }
             }
         }
-
+    }
+    always_after {
         // WRITE IO Memory
         switch( { memoryWrite, LATCHmemoryWrite } ) {
             case 2b10: {
@@ -382,7 +384,7 @@ algorithm timers_rng(
     T0khz0.resetCounter := 0; T1khz1.resetCounter := 0;
     STimer0.resetCounter := 0; STimer1.resetCounter := 0;
 
-    always {
+    always_after {
         switch( resetcounter ) {
             default: {}
             case 1: { T1hz0.resetCounter = 1; }
@@ -439,7 +441,7 @@ algorithm fifo8(
     input   uint1   write,
     output  uint8   first,
     input   uint8   last
-) <autorun> {
+) <autorun,reginputs> {
     simple_dualport_bram uint8 queue[256] = uninitialized;
     uint1   update = uninitialized;
     uint8   top = 0;
@@ -462,63 +464,58 @@ algorithm fifo8(
         next = next + read;
     }
 }
-algorithm uart(
+algorithm uart_IN(
     // UART
-    output  uint1   uart_tx,
     input   uint1   uart_rx,
     output  uint1   inavailable,
-    output  uint1   outfull,
     output  uint8   inchar,
-    input   uint1   inread,
-    input   uint8   outchar,
-    input   uint1   outwrite
+    input   uint1   inread
 ) <autorun> {
     uart_in ui; uart_receiver urecv( io <:> ui, uart_rx <: uart_rx );
-    uint8   uidata_out <: ui.data_out;
-    uint1   uidata_out_ready <: ui.data_out_ready;
     fifo8 IN(
         available :> inavailable,
         first :> inchar,
         read <: inread,
-        last <: uidata_out,
-        write <: uidata_out_ready
+        last <: ui.data_out,
+        write <: ui.data_out_ready
     );
-
+}
+algorithm uart_OUT(
+    // UART
+    output  uint1   uart_tx,
+    output  uint1   outfull,
+    input   uint8   outchar,
+    input   uint1   outwrite
+) <autorun> {
     uart_out uo; uart_sender usend( io <:> uo, uart_tx :> uart_tx );
-    uint8   uodata_in = uninitialized;
-    uint1   OUTread <: OUT.available & !uo.busy;
     fifo8 OUT(
         full :> outfull,
         last <: outchar,
         write <: outwrite,
-        first :> uodata_in,
-        read <: OUTread
+        first :> uo.data_in
     );
-    uo.data_in := uodata_in;
+    OUT.read := OUT.available & !uo.busy;
     uo.data_in_ready := OUT.available & ( !uo.busy );
 }
-
 
 // PS2 BUFFER CONTROLLER
 // 9 bit 256 entry FIFO buffer
 algorithm fifo9(
     output  uint1   available,
-    output  uint1   full,
     input   uint1   read,
     input   uint1   write,
     output  uint9   first,
     input   uint9   last
 ) <autorun> {
     simple_dualport_bram uint9 queue[256] = uninitialized;
-    uint1   update = uninitialized;
     uint8   top = 0;
     uint8   next = 0;
 
-    available := ( top != next ); full := ( top + 1 == next );
+    available := ( top != next );
     queue.addr0 := next; first := queue.rdata0;
     queue.wenable1 := 1;
 
-    always {
+    always_after {
         if( write ) { queue.addr1 = top; queue.wdata1 = last; }
         top = top + write;
         next = next + read;
@@ -558,21 +555,10 @@ algorithm sdcardbuffer(
 ) <autorun> {
     // SDCARD - Code for the SDCARD from @sylefeb
     simple_dualport_bram uint8 sdbuffer[512] = uninitialized;
-    sdcardio sdcio;
-    sdcard sd(
-        // pins
-        sd_clk      :> sd_clk,
-        sd_mosi     :> sd_mosi,
-        sd_csn      :> sd_csn,
-        sd_miso     <: sd_miso,
-        // io
-        io          <:> sdcio,
-        // bram port
-        store       <:> sdbuffer
-    );
+    sdcardio sdcio; sdcard sd( sd_clk :> sd_clk, sd_mosi :> sd_mosi, sd_csn :> sd_csn, sd_miso <: sd_miso, io <:> sdcio, store <:> sdbuffer );
 
     // SDCARD Commands
-    always {
+    always_after {
         sdcio.read_sector = readsector;
         sdcio.addr_sector = { sectoraddressH, sectoraddressL };
         sdbuffer.addr0 = bufferaddress;

@@ -46,7 +46,7 @@ algorithm   calcoffset(
     output  uint1   MAX,
     output  int5    NEXT
 ) <autorun> {
-    always {
+    always_after {
         MIN = ( offset == -15 );                    PREV = ( offset - 1 );
         MAX = ( offset == 15 );                     NEXT = ( offset + 1 );
     }
@@ -103,7 +103,7 @@ algorithm tile_map_writer(
     // TILEMAP WRITE FLAGS
     tiles.wenable1 := 1; tiles_copy.wenable1 := 1; colours.wenable1 := 1; colours_copy.wenable1 := 1;
 
-    always {
+    always_after {
         if( tm_write ) {
             // Write character to the tilemap
             tiles.addr1 = write_address; tiles.wdata1 = tm_character;
@@ -156,7 +156,6 @@ algorithm tile_map_writer(
                         y_cursor_addr = yNEXT;
                     }
                     tm_offset_x = 0;
-                    tm_active = 0;
                 }
                 case 1: {                                                                                                   // SCROLL/WRAP UP/DOWN
                     while( x_cursor != 42 ) {                                                                                   // REPEAT UNTIL AT RIGHT OF THE SCREEN
@@ -183,7 +182,6 @@ algorithm tile_map_writer(
                         x_cursor = xNEXT;
                     }
                     tm_offset_y = 0;
-                    tm_active = 0;
                 }
                 case 2: {                                                                                                   // CLEAR
                     tiles.wdata1 = 0; tiles_copy.wdata1 = 0; colours.wdata1 = 15h1000; colours_copy.wdata1 = 15h1000;
@@ -194,9 +192,9 @@ algorithm tile_map_writer(
                     }
                     tm_offset_x = 0;
                     tm_offset_y = 0;
-                    tm_active = 0;
                 }
             }
+            tm_active = 0;
         } else {
             tmcsaddr = 0; y_cursor_addr = 0; x_cursor = 0;                                                                  // RESET SCROLL/WRAP
         }
@@ -211,6 +209,9 @@ algorithm tilebitmapwriter(
     simple_dualport_bram_port1 tiles16x16
 ) <autorun,reginputs> {
     tiles16x16.wenable1 := 1;
-    tiles16x16.addr1 := { tile_writer_tile, tile_writer_line };
-    tiles16x16.wdata1 := tile_writer_bitmap;
+    always_after {
+        tiles16x16.addr1 = { tile_writer_tile, tile_writer_line };
+        tiles16x16.wdata1 = tile_writer_bitmap;
+    }
 }
+

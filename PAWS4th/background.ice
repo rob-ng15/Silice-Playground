@@ -38,25 +38,23 @@ algorithm background_writer(
     // BACKGROUND CO-PROCESSOR PROGRAM STORAGE
     // { 3 bit command, 3 bit mask, { 1 bit for cpuinput flag, 10 bit coordinate }, 4 bit mode, 6 bit colour 2, 6 bit colour 1 }
     simple_dualport_bram uint33 copper[ 64 ] = uninitialised;
-    uint1   copper_execute = uninitialised;
-    uint1   copper_branch = uninitialised;
-    uint10  copper_variable = uninitialised;
-    uint6   PC = 0;
-    uint6   PCplus1 <:: PC + 1;
+
+    uint1   copper_execute = uninitialised;         uint1   copper_branch = uninitialised;
+    uint6   PC = 0;                                 uint6   PCplus1 <:: PC + 1;
+    uint10  copper_variable = 0;
 
     // COPPER PROGRAM ENTRY
-    uint10  value <: CU(copper.rdata0).valueflag ? copper_cpu_input : CU(copper.rdata0).value;
-    uint10  negvalue <: -value;
+    uint10  value <:: CU(copper.rdata0).valueflag ? copper_cpu_input : CU(copper.rdata0).value;
+    uint10  negvalue <:: -value;
 
-    // COPPER PROGRAM FLAGS
-    copper.addr0 := PC; copper.wenable1 := 1;
+    // COPPER FLAGS
+    copper.addr0 := PC; copper.wenable1 := 1; copper_execute := 0; copper_branch := 0;
 
-    always {
+    always_after {
         switch( background_update ) {
             case 2b00: {
                 // UPDATE THE BACKGROUND GENERATOR FROM THE COPPER
                 if( copper_status ) {
-                    copper_execute = 0; copper_branch = 0;
                     switch( CU(copper.rdata0).command ) {
                         case 3b000: {
                             // JUMP ON CONDITION
@@ -118,7 +116,7 @@ algorithm rainbow(
     input   uint3   y,
     output  uint6   colour
 ) <autorun> {
-    always {
+    always_after {
         switch( y ) {
             case 3b000: { colour = 6b100000; }
             case 3b001: { colour = 6b110000; }
@@ -167,21 +165,18 @@ algorithm starfield(
     output  uint1   star
 ) <autorun> {
     // Variables for SNOW (from @sylefeb)
-    int10   dotpos = 0;
-    int2    speed = 0;
-    int2    inv_speed = 0;
-    int12   rand_x = 0;
-    int12   new_rand_x <:: rand_x * 31421 + 6927;
-    int32   frame = 0;
+    int10   dotpos = 0;                             int2    speed = 0;                                  int2    inv_speed = 0;
+    int12   rand_x = 0;                             int12   new_rand_x <:: rand_x * 31421 + 6927;       int32   frame = 0;
 
-    // Increment frame number for the snow/star field
-    frame ::= frame + ( ( pix_x == 639 ) & ( pix_y == 479 ) );
-
-    always {
+    always_before {
         rand_x = ( ~|pix_x )  ? 1 : new_rand_x;
         speed  = rand_x[10,2];
         dotpos = ( frame >> speed ) + rand_x;
         star = ( pix_y == dotpos );
+    }
+    always_after {
+        // Increment frame number for the snow/star field
+        frame = frame + ( ( pix_x == 639 ) & ( pix_y == 479 ) );
     }
 }
 
@@ -191,10 +186,9 @@ algorithm pattern(
     input   uint4   b_mode,
     output! uint1   condition
 ) <autorun> {
-    uint1   tophalf <: ( pix_y < 240 );
-    uint1   lefthalf <: ( pix_x < 320 );
-    uint4   checkmode <: b_mode - 7;
+    uint1   tophalf <: ( pix_y < 240 );             uint1   lefthalf <: ( pix_x < 320 );                uint4   checkmode <: b_mode - 7;
     starfield STARS( pix_x <: pix_x, pix_y <: pix_y );
+
     always {
         // SELECT COLOUR OR ALT
         switch( b_mode ) {

@@ -3,22 +3,18 @@ $$if ICARUS or VERILATOR then
 algorithm pll(
   output  uint1 video_clock,
   output! uint1 sdram_clock,
-  output! uint1 clock_100_1,
-  output! uint1 clock_100_2,
-  output! uint1 clock_100_3,
+  output! uint1 clock_decode,
   output  uint1 compute_clock
 ) <autorun> {
   uint3 counter = 0;
   uint8 trigger = 8b11111111;
   sdram_clock   := clock;
-  clock_100_1   := clock;
-  clock_100_2   := clock;
-  clock_100_3   := clock;
+  clock_decode   := clock;
   compute_clock := ~counter[0,1]; // x2 slower
   video_clock   := counter[1,1]; // x4 slower
   while (1) {
-    counter = counter + 1;
-	  trigger = trigger >> 1;
+        counter = counter + 1;
+        trigger = trigger >> 1;
   }
 }
 $$end
@@ -87,43 +83,40 @@ $$else
 $$end
 ) <@clock_system> {
     uint1   clock_system = uninitialized;
-    uint1   clock_100_1 = uninitialized;
-    uint1   clock_100_2 = uninitialized;
-    uint1   clock_100_3 = uninitialized;
+    uint1   clock_cpu = uninitialized;
+    uint1   clock_decode = uninitialized;
 $$if VERILATOR then
     $$clock_25mhz = 'video_clock'
     // --- PLL
     pll clockgen<@clock,!reset>(
       video_clock   :> video_clock,
       sdram_clock   :> sdram_clock,
-      clock_100_1   :> clock_100_1,
-      clock_100_2   :> clock_100_2,
-      clock_100_3   :> clock_100_3,
-      compute_clock :> clock_system
+      clock_decode   :> clock_decode,
+      compute_clock :> clock_system,
+      compute_clock :> clock_cpu
     );
 $$else
     $$clock_25mhz = 'clock'
     // CLOCK/RESET GENERATION
     // CPU + MEMORY
+    uint1   sdram_clock = uninitialized;
+    uint1   pll_lock_SYSTEM = uninitialized;
+    ulx3s_clk_risc_ice_v_SYSTEM clk_gen_SYSTEM (
+        clkin    <: $clock_25mhz$,
+        clkSYSTEM  :> clock_system,
+        clkSDRAM :> sdram_clock,
+        clkSDRAMcontrol :> sdram_clk,
+        locked   :> pll_lock_SYSTEM
+    );
     uint1   pll_lock_CPU = uninitialized;
     ulx3s_clk_risc_ice_v_CPU clk_gen_CPU (
         clkin    <: $clock_25mhz$,
-        clkSYSTEM  :> clock_system,
-        clk100_1  :> clock_100_1,
-        clk100_2  :> clock_100_2,
-        clk100_3  :> clock_100_3,
+        clkCPU  :> clock_cpu,
+        clkDECODE  :> clock_decode,
         locked   :> pll_lock_CPU
     );
-    // SDRAM  CLOCKS + ON CPU CACHE + USB DOMAIN CLOCKS
-    uint1   sdram_clock = uninitialized;
-    uint1   pll_lock_AUX = uninitialized;
-    ulx3s_clk_risc_ice_v_AUX clk_gen_AUX (
-        clkin   <: $clock_25mhz$,
-        clkSDRAM :> sdram_clock,
-        clkSDRAMcontrol :> sdram_clk,
-        locked :> pll_lock_AUX
-    );
 $$end
+
 
     // SDRAM Reset
     uint1   sdram_reset = uninitialized;
@@ -242,8 +235,8 @@ $$end
 
     uint16  address = uninitialized;
     uint16  writedata = uninitialized;
-    J1CPU CPU <@clock_system,!reset> (
-        clock100 <: clock_100_1,
+    J1CPU CPU <@clock_cpu,!reset> (
+        clock100 <: clock_decode,
         address :> address,
         writedata :> writedata,
         memorybusy <: memorybusy,

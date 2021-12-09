@@ -168,7 +168,7 @@ algorithm add16(
     input   uint16  b,
     output  uint16  c
 ) <autorun> {
-    always {
+    always_after {
         c = a + b;
     }
 }
@@ -179,7 +179,7 @@ algorithm logic16(
     output  uint16  OR,
     output  uint16  XOR
 ) <autorun> {
-    always {
+    always_after {
         AND = a & b;
         OR = a | b;
         XOR = a ^ b;
@@ -193,7 +193,7 @@ algorithm compare(
     output  uint1   less,
     output  uint1   equal0,
 ) <autorun> {
-    always {
+    always_after {
         equal = stackNext == stackTop;
         lessu = __unsigned(stackNext) < __unsigned(stackTop);
         less = __signed(stackNext) < __signed(stackTop);
@@ -206,7 +206,7 @@ algorithm shift16(
     output  uint16  SLL,
     output  uint16  SRA
 ) <autorun> {
-    always {
+    always_after {
         SLL = a << count;
         SRA = __signed(a) >> count;
     }
@@ -230,7 +230,7 @@ algorithm alu(
     add16 DEC( a <: stackTop );
     logic16 LOGIC( a <: stackTop, b <: stackNext );
     shift16 SHIFT( a <: stackNext, count <: nibbles(stackTop).nibble0 );
-    always {
+    always_after {
         if( aluop(instruction).is_j1j1plus ) {
             switch( aluop(instruction).operation ) {
                 case 4b0000: { newStackTop = {16{ COMPARE.equal0 }}; }
@@ -287,7 +287,7 @@ algorithm j1eforthcallbranch(
     output  uint8   newDSP,
     output  uint8   newRSP,
 ) <autorun,reginputs> {
-    always {
+    always_after {
         newStackTop = callbranch(instruction).is_callbranchalu[0,1] ? stackNext : stackTop;
         newDSP = dsp - callbranch(instruction).is_callbranchalu[0,1];
         newRSP = rsp + callbranch(instruction).is_callbranchalu[1,1];
@@ -307,7 +307,7 @@ algorithm decode(
 ) <autorun,reginputs> {
     uint1   is_lit <:: literal(instruction).is_literal;
     uint1   is_call <:: ~is_lit & ( callbranch(instruction).is_callbranchalu == 2b10 );
-    always {
+    always_after {
         is_alu = ~is_lit & ( &callbranch(instruction).is_callbranchalu );
         is_n2memt = is_alu & aluop(instruction).is_n2memt;
         is_memtr = is_alu & ~aluop(instruction).is_j1j1plus & ( aluop(instruction).operation == 4b1100 );
@@ -329,7 +329,7 @@ algorithm stack(
     stack.addr0 := sp; stackTop := stack.rdata0;
     stack.wenable1 := 1;
 
-    always {
+    always_after {
         if( stackWrite ) { stack.addr1 = newSP; stack.wdata1 = stackWData; }
     }
 }
@@ -340,7 +340,7 @@ algorithm deltasp(
     output  uint8   newSP
 ) <autorun,reginputs> {
     uint8   delta8 <:: { {7{delta[1,1]}}, delta[0,1] };
-    always {
+    always_after {
         newSP = sp + delta8;
     }
 }

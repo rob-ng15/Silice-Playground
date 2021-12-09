@@ -38,25 +38,23 @@ algorithm background_writer(
     // BACKGROUND CO-PROCESSOR PROGRAM STORAGE
     // { 3 bit command, 3 bit mask, { 1 bit for cpuinput flag, 10 bit coordinate }, 4 bit mode, 6 bit colour 2, 6 bit colour 1 }
     simple_dualport_bram uint33 copper[ 64 ] = uninitialised;
-    uint1   copper_execute = uninitialised;
-    uint1   copper_branch = uninitialised;
-    uint10  copper_variable = uninitialised;
-    uint6   PC = 0;
-    uint6   PCplus1 <:: PC + 1;
+
+    uint1   copper_execute = uninitialised;         uint1   copper_branch = uninitialised;
+    uint6   PC = 0;                                 uint6   PCplus1 <:: PC + 1;
+    uint10  copper_variable = 0;
 
     // COPPER PROGRAM ENTRY
-    uint10  value <: CU(copper.rdata0).valueflag ? copper_cpu_input : CU(copper.rdata0).value;
-    uint10  negvalue <: -value;
+    uint10  value <:: CU(copper.rdata0).valueflag ? copper_cpu_input : CU(copper.rdata0).value;
+    uint10  negvalue <:: -value;
 
-    // COPPER PROGRAM FLAGS
-    copper.addr0 := PC; copper.wenable1 := 1;
+    // COPPER FLAGS
+    copper.addr0 := PC; copper.wenable1 := 1; copper_execute := 0; copper_branch := 0;
 
-    always {
+    always_after {
         switch( background_update ) {
             case 2b00: {
                 // UPDATE THE BACKGROUND GENERATOR FROM THE COPPER
                 if( copper_status ) {
-                    copper_execute = 0; copper_branch = 0;
                     switch( CU(copper.rdata0).command ) {
                         case 3b000: {
                             // JUMP ON CONDITION
@@ -114,6 +112,23 @@ algorithm background_writer(
     }
 }
 
+algorithm rainbow(
+    input   uint3   y,
+    output  uint6   colour
+) <autorun> {
+    always_after {
+        switch( y ) {
+            case 3b000: { colour = 6b100000; }
+            case 3b001: { colour = 6b110000; }
+            case 3b010: { colour = 6b111000; }
+            case 3b011: { colour = 6b111100; }
+            case 3b100: { colour = 6b001100; }
+            case 3b101: { colour = 6b000011; }
+            case 3b110: { colour = 6b010010; }
+            case 3b111: { colour = 6b011011; }
+        }
+    }
+}
 algorithm background_display(
     input   uint10  pix_x,
     input   uint10  pix_y,
@@ -128,35 +143,40 @@ algorithm background_display(
     input   uint4   b_mode
 ) <autorun,reginputs> {
     // TRUE FOR COLOUR, FALSE FOR ALT
-    uint1   condition = uninitialised;
-    pattern PATTERN(
-        pix_x <: pix_x,
-        pix_y <: pix_y,
-        b_mode <: b_mode,
-        condition :> condition
-    );
+    pattern PATTERN( pix_x <: pix_x, pix_y <: pix_y, b_mode <: b_mode );
+    rainbow RAINBOW( y <: pix_y[6,3] );
 
     always {
         // RENDER
         if( pix_active ) {
             // SELECT ACTUAL COLOUR
             switch( b_mode ) {
-                default: { pixel = condition ? b_colour : b_alt; }                      // EVERYTHING ELSE
-                case 4: {                                                               // RAINBOW
-                    switch( pix_y[6,3] ) {
-                        case 3b000: { pixel = 6b100000; }
-                        case 3b001: { pixel = 6b110000; }
-                        case 3b010: { pixel = 6b111000; }
-                        case 3b011: { pixel = 6b111100; }
-                        case 3b100: { pixel = 6b001100; }
-                        case 3b101: { pixel = 6b000011; }
-                        case 3b110: { pixel = 6b010010; }
-                        case 3b111: { pixel = 6b011011; }
-                    }
-                }
+                default: { pixel = PATTERN.condition ? b_colour : b_alt; }              // EVERYTHING ELSE
+                case 4: { pixel = RAINBOW.colour; }                                     // RAINBOW
                 case 6: { pixel = {3{staticGenerator}}; }                               // STATIC
             }
         }
+    }
+}
+
+algorithm starfield(
+    input   uint10  pix_x,
+    input   uint10  pix_y,
+    output  uint1   star
+) <autorun> {
+    // Variables for SNOW (from @sylefeb)
+    int10   dotpos = 0;                             int2    speed = 0;                                  int2    inv_speed = 0;
+    int12   rand_x = 0;                             int12   new_rand_x <:: rand_x * 31421 + 6927;       int32   frame = 0;
+
+    always_before {
+        rand_x = ( ~|pix_x )  ? 1 : new_rand_x;
+        speed  = rand_x[10,2];
+        dotpos = ( frame >> speed ) + rand_x;
+        star = ( pix_y == dotpos );
+    }
+    always_after {
+        // Increment frame number for the snow/star field
+        frame = frame + ( ( pix_x == 639 ) & ( pix_y == 479 ) );
     }
 }
 
@@ -166,20 +186,8 @@ algorithm pattern(
     input   uint4   b_mode,
     output! uint1   condition
 ) <autorun> {
-    uint1   tophalf <: ( pix_y < 240 );
-    uint1   lefthalf <: ( pix_x < 320 );
-    uint4   checkmode <: b_mode - 7;
-
-    // Variables for SNOW (from @sylefeb)
-    int10   dotpos = 0;
-    int2    speed = 0;
-    int2    inv_speed = 0;
-    int12   rand_x = 0;
-    int12   new_rand_x <:: rand_x * 31421 + 6927;
-    int32   frame = 0;
-
-    // Increment frame number for the snow/star field
-    frame ::= frame + ( ( pix_x == 639 ) & ( pix_y == 479 ) );
+    uint1   tophalf <: ( pix_y < 240 );             uint1   lefthalf <: ( pix_x < 320 );                uint4   checkmode <: b_mode - 7;
+    starfield STARS( pix_x <: pix_x, pix_y <: pix_y );
 
     always {
         // SELECT COLOUR OR ALT
@@ -188,7 +196,7 @@ algorithm pattern(
             case 1: { condition = tophalf; }                                        // 50:50 HORIZONTAL SPLIT
             case 2: { condition = ( lefthalf ); }                                   // 50:50 VERTICAL SPLIT
             case 3: { condition = ( lefthalf ^ tophalf ); }                         // QUARTERS
-            case 5: { condition  = ( pix_y == dotpos ); }                           // SNOW (from @sylefeb)
+            case 5: { condition  = STARS.star; }                                    // SNOW (from @sylefeb)
             case 11: { condition = ( pix_x[0,1] | pix_y[0,1] ); }                   // CROSSHATCH
             case 12: { condition = ( pix_x[0,2] == pix_y[0,2] ); }                  // LSLOPE
             case 13: { condition = ( pix_x[0,2] == ~pix_y[0,2] ); }                 // RSLOPE
@@ -197,11 +205,5 @@ algorithm pattern(
             case 4: {} case 6: {}                                                   // STATIC AND RAINBOW (placeholder, done in main)
             default: { condition = ( pix_x[checkmode,1] ^ pix_y[checkmode,1] ); }   // CHECKERBOARDS (7,8,9,10)
         }
-    }
-
-    while(1) {
-        rand_x = ( ~|pix_x )  ? 1 : new_rand_x;
-        speed  = rand_x[10,2];
-        dotpos = ( frame >> speed ) + rand_x;
     }
 }

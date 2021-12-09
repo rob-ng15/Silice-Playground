@@ -8,4 +8,3 @@ circuitry copycoordinates( input x, input y, output x1, output y1 ) {
     x1 = x;
     y1 = y;
 }
-

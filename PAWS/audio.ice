@@ -8,16 +8,18 @@ algorithm apu(
     output  uint1   audio_active,
     output  uint4   audio_output
 ) <autorun,reginputs> {
-    uint5   point = uninitialised;
-    uint4   level = uninitialised;
+    uint5   point = uninitialised;                  uint4   level = uninitialised;
     uint1   updatepoint = uninitialised;
+
     waveform WAVEFORM( point <: point, staticGenerator <: staticGenerator, audio_output :> level );
     audiocounter COUNTER( active :> audio_active, updatepoint :> updatepoint );
 
     COUNTER.start := 0;
 
-    always {
+    always_before {
         if( updatepoint ) { audio_output = level; }
+    }
+    always_after {
         if( apu_write ) {
             point = 0;
             WAVEFORM.selected_waveform = waveform;
@@ -36,15 +38,26 @@ algorithm waveform(
     input   uint4   staticGenerator,
     output  uint4   audio_output
 ) <autorun,reginputs> {
-    uint4   triangle <:: point[4,1] ? 15 - point[0,4] : point[0,4];
-    uint4   sine <:: point[4,1] ? 15 - point[1,4] : point[1,4];
-    always {
-        switch( selected_waveform ) {
-            case 0: { audio_output = { {4{point[4,1]}} }; }     // SQUARE
-            case 1: { audio_output = point[1,4]; }              // SAWTOOTH
-            case 2: { audio_output = triangle; }                // TRIANGLE
-            case 3: { audio_output = sine; }                    // SINE
-            default: { audio_output = staticGenerator; }        // WHITE NOISE
+    brom uint4 level[128] = {
+        15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,     // SQUARE WAVE ( 0 )
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+        0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7,                     // SAWTOOTH WAVE ( 1 )
+        8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15,
+
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,               // TRIANGLE WAVE ( 2 )
+        15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
+
+        8, 9, 10, 12, 13, 14, 14, 15, 15, 15, 14, 14, 13, 12, 10, 9,        // SINE WAVE ( 3 )
+        8, 6, 5, 4, 2, 1, 1, 0, 0, 0, 1, 1, 2, 3, 5, 6
+    };
+    level.addr := { selected_waveform[0,2], point };
+
+    always_after {
+        if( selected_waveform[2,1] ) {
+             audio_output = staticGenerator;
+        } else {
+             audio_output = level.rdata;
         }
     }
 }
@@ -56,27 +69,20 @@ algorithm audiocounter(
     output  uint1   updatepoint,
     output  uint1   active
 ) <autorun,reginputs> {
-    uint16  counter25mhz = uninitialised;
-    uint16  nextcounter25mhz <:: counter25mhz - 1;
-    uint16  counter1khz = uninitialised;
-    uint16  nextcounter1khz <:: counter1khz - 1;
-    uint16  duration = uninitialised;
+    uint16  counter25mhz = uninitialised;           uint16  counter1khz = uninitialised;                uint16  duration = uninitialised;
     uint1   updateduration <:: active & ( ~|counter1khz );
 
     active := ( |duration ); updatepoint := active & ( ~|counter25mhz );
 
-    always {
+    always_after {
         if( start ) {
             counter25mhz = 0;
             counter1khz = 25000;
             duration = selected_duration;
         } else {
-            counter25mhz = updatepoint ? selected_frequency : nextcounter25mhz;
-            counter1khz = updateduration ? 25000 : nextcounter1khz;
+            counter25mhz = updatepoint ? selected_frequency : counter25mhz - 1;
+            counter1khz = updateduration ? 25000 : counter1khz - 1;
             duration = duration - updateduration;
         }
     }
-
-    // STOP AUDIO ON RESET
-    if( ~reset ) { duration = 0; }
 }
