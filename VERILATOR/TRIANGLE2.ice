@@ -65,10 +65,10 @@ algorithm preptriangle(
     output  int11   y2,
     output  int11   x3,
     output  int11   y3,
-    output  int11   min_x,
-    output  int11   min_y,
-    output  int11   max_x,
-    output  int11   max_y,
+    output  uint9   min_x,
+    output  uint8   min_y,
+    output  uint9   max_x,
+    output  uint8   max_y,
     output  uint1   todraw
 ) <autorun> {
     swaponcondition SWAP();
@@ -119,21 +119,21 @@ algorithm intriangle(
     input   int11   py,
     output  uint1   IN
 ) <autorun> {
-    int20   step1 <:: (( x2 - x1 ) * ( py - y1 ) - ( y2 - y1 ) * ( px - x1 ));
-    int20   step2 <:: (( x0 - x2 ) * ( py - y2 ) - ( y0 - y2 ) * ( px - x2 ));
-    int20   step3 <:: (( x1 - x0 ) * ( py - y0 ) - ( y1 - y0 ) * ( px - x0 ));
+    int22   step1 <:: (( x2 - x1 ) * ( py - y1 ) - ( y2 - y1 ) * ( px - x1 ));
+    int22   step2 <:: (( x0 - x2 ) * ( py - y2 ) - ( y0 - y2 ) * ( px - x2 ));
+    int22   step3 <:: (( x1 - x0 ) * ( py - y0 ) - ( y1 - y0 ) * ( px - x0 ));
 
     always_after {
-        IN =  &{ ~step1[19,1], ~step2[19,1], ~step3[19,1] };
+        IN =  ~|{ step1[21,1], step2[21,1], step3[21,1] };
     }
 }
 algorithm drawtriangle(
     input   uint1   start,
     output  uint1   busy(0),
-    input   int11   min_x,
-    input   int11   min_y,
-    input   int11   max_x,
-    input   int11   max_y,
+    input   uint9   min_x,
+    input   uint8   min_y,
+    input   uint9   max_x,
+    input   uint8   max_y,
     input   int11   x0,
     input   int11   y0,
     input   int11   x1,
@@ -153,8 +153,8 @@ algorithm drawtriangle(
     uint1   leftright <:: ( px - min_x ) < ( max_x - px );
 
     // WORK COORDINATES AND DIRECTION
-    int11   px = uninitialized;                         int11   pxNEXT <:: px + ( dx ? 1 : (-1) );
-    int11   py = uninitialized;                         int11   pyNEXT <:: py + 1;
+    uint9   px = uninitialized;                         uint9   pxNEXT <:: px + ( dx ? 1 : (-1) );
+    uint8   py = uninitialized;                         uint8   pyNEXT <:: py + 1;
     uint1   dx = uninitialized;
 
     // DETECT IF AT LEFT/RIGHT/BOTTOM OF THE BOUNDING BOX
@@ -163,11 +163,11 @@ algorithm drawtriangle(
 
     bitmap_x_write := px; bitmap_y_write := py; bitmap_write := busy & IS.IN;
 
-    while(1) {
+    always {
         if( start ) {
-            busy = 1;
-            dx = 1; px = min_x; py = min_y;
-            while( working ) {
+            busy = 1; dx = 1; px = min_x; py = min_y;
+        } else {
+            if( working ) {
                 beenInTriangle = IS.IN | beenInTriangle;
                 if( beenInTriangle ^ IS.IN ) {
                     // Exited the triangle, move to the next line
@@ -176,18 +176,19 @@ algorithm drawtriangle(
                     // MOVE TO THE NEXT PIXEL ON THE LINE LEFT/RIGHT OR DOWN AND SWITCH DIRECTION IF AT END
                     if( stillinline ) { px = pxNEXT; } else { dx = ~dx; beenInTriangle = 0; py = pyNEXT; }
                 }
+            } else {
+                busy = 0;
             }
-            busy = 0;
         }
     }
 }
 algorithm triangle(
     input   uint1   start,
     output  uint1   busy(0),
-    input   int11   crop_left,
-    input   int11   crop_right,
-    input   int11   crop_top,
-    input   int11   crop_bottom,
+    input   uint9   crop_left,
+    input   uint9   crop_right,
+    input   uint8   crop_top,
+    input   uint8   crop_bottom,
     input   int11   x,
     input   int11   y,
     input   int11   x1,
@@ -225,7 +226,7 @@ algorithm main(output uint8 leds)
 
     triangle TRIANGLE(); TRIANGLE.start := 0;
     TRIANGLE.crop_left = 0; TRIANGLE.crop_right = 319; TRIANGLE.crop_top = 0; TRIANGLE.crop_bottom = 239;
-    TRIANGLE.x = 10; TRIANGLE.y = 10; TRIANGLE.x1 = 20; TRIANGLE.y1 = 10; TRIANGLE.x2 = 15; TRIANGLE.y2 = 15;
+    TRIANGLE.x = -5; TRIANGLE.y = 10; TRIANGLE.x1 = 20; TRIANGLE.y1 = 10; TRIANGLE.x2 = 15; TRIANGLE.y2 = 15;
 
     ++:
     startcycle = PULSE.cycles;
@@ -261,7 +262,7 @@ algorithm istodraw(
     input   int11   max_y,
     output  uint1   draw
 ) <autorun> {
-    always {
-        draw = ~( ( max_x < crop_left ) | ( max_y < crop_top ) | ( min_x > crop_right ) | ( min_y > crop_bottom ) );
+    always_after {
+        draw = ~|{ ( max_x < crop_left ), ( max_y < crop_top ), ( min_x > crop_right ), ( min_y > crop_bottom ) };
     }
 }

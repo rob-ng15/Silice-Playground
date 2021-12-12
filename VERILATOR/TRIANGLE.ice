@@ -168,7 +168,7 @@ algorithm main(output uint8 leds)
 
     triangle TRIANGLE(); TRIANGLE.start := 0;
     TRIANGLE.crop_left = 0; TRIANGLE.crop_right = 319; TRIANGLE.crop_top = 0; TRIANGLE.crop_bottom = 239;
-    TRIANGLE.x = 10; TRIANGLE.y = 10; TRIANGLE.x1 = 20; TRIANGLE.y1 = 10; TRIANGLE.x2 = 15; TRIANGLE.y2 = 15;
+    TRIANGLE.x = -5; TRIANGLE.y = 10; TRIANGLE.x1 = 20; TRIANGLE.y1 = 10; TRIANGLE.x2 = 15; TRIANGLE.y2 = 15;
 
     ++:
     startcycle = PULSE.cycles;

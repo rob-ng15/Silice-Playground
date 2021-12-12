@@ -83,6 +83,7 @@ $$else
 $$end
 ) <@clock_system> {
     uint1   clock_system = uninitialized;
+    uint1   clock_io = uninitialized;
     uint1   clock_cpu = uninitialized;
     uint1   clock_decode = uninitialized;
 $$if VERILATOR then
@@ -93,6 +94,7 @@ $$if VERILATOR then
       sdram_clock   :> sdram_clock,
       clock_decode   :> clock_decode,
       compute_clock :> clock_system,
+      compute_clock :> clock_io,
       compute_clock :> clock_cpu
     );
 $$else
@@ -104,6 +106,7 @@ $$else
     ulx3s_clk_risc_ice_v_SYSTEM clk_gen_SYSTEM (
         clkin    <: $clock_25mhz$,
         clkSYSTEM  :> clock_system,
+        clkIO :> clock_io,
         clkSDRAM :> sdram_clock,
         clkSDRAMcontrol :> sdram_clk,
         locked   :> pll_lock_SYSTEM
@@ -163,7 +166,7 @@ $$end
 
     // MEMORY MAPPED I/O + SMT CONTROLS
     uint16  IOreadData = uninitialized;
-    io_memmap IO_Map <@clock_system,!reset> (
+    io_memmap IO_Map <@clock_io,!reset> (
         sio <:> sio_halfrate,
         leds :> leds,
 $$if not SIMULATION then
@@ -193,7 +196,7 @@ $$if SIMULATION then
 $$end
 
     uint16  COreadData = uninitialized;
-    copro_memmap COPRO_Map <@clock_system,!reset> (
+    copro_memmap COPRO_Map <@clock_io,!reset> (
         memoryAddress <: address,
         memoryWrite <: COmemoryWrite,
         writeData <: writedata,
@@ -202,7 +205,7 @@ $$end
     );
 
     uint16  ATreadData = uninitialized;
-    audiotimers_memmap AUDIOTIMERS_Map <@clock_system,!reset> (
+    audiotimers_memmap AUDIOTIMERS_Map <@clock_io,!reset> (
         clock_25mhz <: $clock_25mhz$,
         memoryAddress <: address,
         memoryWrite <: ATmemoryWrite,
@@ -214,7 +217,7 @@ $$end
     );
 
     uint16  VreadData = uninitialized;
-    video_memmap VIDEO_Map <@clock_system,!reset> (
+    video_memmap VIDEO_Map <@clock_io,!reset> (
         clock_25mhz <: $clock_25mhz$,
        memoryAddress <: address,
         memoryWrite <: VmemoryWrite,
