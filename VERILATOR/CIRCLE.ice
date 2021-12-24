@@ -18,7 +18,7 @@ algorithm drawcircle(
     int11   active_y = uninitialized;                   int11   active_yNEXT <:: active_y - positivenumerator;
     int11   count = uninitialised;                      int11   countNEXT <:: filledcircle ? count - 1 : min_count;
     int11   min_count = uninitialised;                  int11   min_countNEXT <:: min_count + 1;
-    uint1   drawingcircle <:: ( active_y >= active_x ); uint1   drawingsegment <:: ( count != min_count );
+    uint1   drawingcircle <:: ( active_y >= active_x ); uint1   finishsegment <:: ( countNEXT == min_count );
 
     // PLUS OR MINUS OFFSETS
     int11   xcpax <:: xc + active_x;                    int11   xcnax <:: xc - active_x;
@@ -33,23 +33,25 @@ algorithm drawcircle(
             busy = 1;
             active_x = 0; active_y = radius; count = radius; min_count = (-1); numerator = start_numerator;
             while( drawingcircle ) {
-                while( drawingsegment ) {
-                    if( ~|count & ~|active_x & |draw_sectors ) {
-                        // DETECT IF CENTRE PIXEL, OUTPUT ONCE
-                        bitmap_x_write = xc; bitmap_y_write = yc; bitmap_write = 1;
-                    } else {
-                        bitmap_x_write = xcpax; bitmap_y_write = ycpc;      if( draw_sectors[0,1] ) { bitmap_write = 1; ++: }
-                        bitmap_y_write = ycnc;                              if( draw_sectors[1,1] ) { bitmap_write = 1; ++: }
-                        bitmap_x_write = xcnax;                             if( draw_sectors[2,1] ) { bitmap_write = 1; ++: }
-                        bitmap_y_write = ycpc;                              if( draw_sectors[3,1] ) { bitmap_write = 1; ++: }
-                        bitmap_x_write = xcpc; bitmap_y_write = ycpax;      if( draw_sectors[4,1] ) { bitmap_write = 1; ++: }
-                        bitmap_y_write = ycnax;                             if( draw_sectors[5,1] ) { bitmap_write = 1; ++: }
-                        bitmap_x_write = xcnc;                              if( draw_sectors[6,1] ) { bitmap_write = 1; ++: }
-                        bitmap_y_write = ycpax;                             if( draw_sectors[7,1] ) { bitmap_write = 1; }
-                    }
+                if( ~|count & ~|active_x & |draw_sectors ) {
+                    // DETECT IF CENTRE PIXEL, OUTPUT ONCE
+                    bitmap_x_write = xc; bitmap_y_write = yc; bitmap_write = 1;
+                } else {
+                    // OUTPUT PIXELS IN THE 8 SEGMENTS/ARCS AS PER MASK
+                    bitmap_x_write = xcpax; bitmap_y_write = ycpc;      if( draw_sectors[0,1] ) { bitmap_write = 1; ++: }
+                    bitmap_y_write = ycnc;                              if( draw_sectors[1,1] ) { bitmap_write = 1; ++: }
+                    bitmap_x_write = xcnax;                             if( draw_sectors[2,1] ) { bitmap_write = 1; ++: }
+                    bitmap_y_write = ycpc;                              if( draw_sectors[3,1] ) { bitmap_write = 1; ++: }
+                    bitmap_x_write = xcpc; bitmap_y_write = ycpax;      if( draw_sectors[4,1] ) { bitmap_write = 1; ++: }
+                    bitmap_y_write = ycnax;                             if( draw_sectors[5,1] ) { bitmap_write = 1; ++: }
+                    bitmap_x_write = xcnc;                              if( draw_sectors[6,1] ) { bitmap_write = 1; ++: }
+                    bitmap_y_write = ycpax;                             if( draw_sectors[7,1] ) { bitmap_write = 1; }
+                }
+                if( finishsegment ) {
+                    active_x = active_xNEXT; active_y = active_yNEXT; count = active_y; min_count = min_countNEXT; numerator = new_numerator;
+                } else {
                     count = countNEXT;
                 }
-                active_x = active_xNEXT; active_y = active_yNEXT; count = active_y; min_count = min_countNEXT; numerator = new_numerator;
             }
             busy = 0;
         }

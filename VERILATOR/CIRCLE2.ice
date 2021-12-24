@@ -38,14 +38,14 @@ algorithm drawcircle(
                     bitmap_x_write = xc; bitmap_y_write = yc; bitmap_write = 1;
                 } else {
                     // OUTPUT PIXELS IN THE 8 SEGMENTS/ARCS AS PER MASK
-                    bitmap_x_write = xcpax; bitmap_y_write = ycpc;      if( draw_sectors[0,1] ) { bitmap_write = 1; ++: }
-                    bitmap_y_write = ycnc;                              if( draw_sectors[1,1] ) { bitmap_write = 1; ++: }
-                    bitmap_x_write = xcnax;                             if( draw_sectors[2,1] ) { bitmap_write = 1; ++: }
-                    bitmap_y_write = ycpc;                              if( draw_sectors[3,1] ) { bitmap_write = 1; ++: }
-                    bitmap_x_write = xcpc; bitmap_y_write = ycpax;      if( draw_sectors[4,1] ) { bitmap_write = 1; ++: }
-                    bitmap_y_write = ycnax;                             if( draw_sectors[5,1] ) { bitmap_write = 1; ++: }
-                    bitmap_x_write = xcnc;                              if( draw_sectors[6,1] ) { bitmap_write = 1; ++: }
-                    bitmap_y_write = ycpax;                             if( draw_sectors[7,1] ) { bitmap_write = 1; }
+                    bitmap_x_write = xcpax; bitmap_y_write = ycpc;      bitmap_write = draw_sectors[0,1]; ++:
+                    bitmap_y_write = ycnc;                              bitmap_write = draw_sectors[1,1]; ++:
+                    bitmap_x_write = xcnax;                             bitmap_write = draw_sectors[2,1]; ++:
+                    bitmap_y_write = ycpc;                              bitmap_write = draw_sectors[3,1]; ++:
+                    bitmap_x_write = xcpc; bitmap_y_write = ycpax;      bitmap_write = draw_sectors[4,1]; ++:
+                    bitmap_y_write = ycnax;                             bitmap_write = draw_sectors[5,1]; ++:
+                    bitmap_x_write = xcnc;                              bitmap_write = draw_sectors[6,1]; ++:
+                    bitmap_y_write = ycpax;                             bitmap_write = draw_sectors[7,1];
                 }
                 if( finishsegment ) {
                     active_x = active_xNEXT; active_y = active_yNEXT; count = active_y; min_count = min_countNEXT; numerator = new_numerator;

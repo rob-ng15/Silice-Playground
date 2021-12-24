@@ -71,12 +71,20 @@ algorithm drawline(
     while(1) {
         if( start ) {
             busy = 1;  x = start_x; y = start_y; numerator = start_numerator; count = 0;
-            while( count != max_count ) {
-                pixel_count = 0; offset_x = dxdy ? 0 : offset_start; offset_y = dxdy ? offset_start : 0;
-                while( pixel_count != width ) {
-                    bitmap_write = 1; offset_y = offset_xNEXT; offset_x = offset_yNEXT; pixel_count = pixel_countNEXT;
+            if( width == 1 ) {
+                offset_x = 0; offset_y = 0;
+                while( count != max_count ) {
+                    bitmap_write = 1;
+                    numerator = newnumerator; x = xNEXT; y = yNEXT; count = countNEXT;
                 }
-                numerator = newnumerator; x = xNEXT; y = yNEXT; count = countNEXT;
+            } else {
+                while( count != max_count ) {
+                    pixel_count = 0; offset_x = dxdy ? 0 : offset_start; offset_y = dxdy ? offset_start : 0;
+                    while( pixel_count != width ) {
+                        bitmap_write = 1; offset_y = offset_xNEXT; offset_x = offset_yNEXT; pixel_count = pixel_countNEXT;
+                    }
+                    numerator = newnumerator; x = xNEXT; y = yNEXT; count = countNEXT;
+                }
             }
             busy = 0;
         }

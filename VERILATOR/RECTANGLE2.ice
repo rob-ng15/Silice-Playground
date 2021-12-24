@@ -28,7 +28,7 @@ algorithm preprectangle(
             busy = 1;
             min_x = ( x1 < crop_left ) ? crop_left : x1;
             min_y = ( y1 < crop_top ) ? crop_top : y1;
-            max_x = 1 + ( ( x2 > crop_right ) ? crop_right : x2 );
+            max_x = ( ( x2 > crop_right ) ? crop_right : x2 );
             max_y = 1 + ( ( y2 > crop_bottom ) ? crop_bottom : y2 );
             ++:
             todraw = TODRAW.draw;
@@ -47,31 +47,31 @@ algorithm drawrectangle(
     output  int11   bitmap_y_write,
     output  uint1   bitmap_write
 ) <autorun> {
-    uint9   x = uninitialized;                          uint9 xNEXT <:: x + 1;                          uint1   xLAST <:: ( xNEXT == max_x );
-    uint8   y = uninitialized;                          uint8 yNEXT <:: y + xLAST;
-
-    bitmap_x_write := x; bitmap_y_write := y; bitmap_write := 0;
+    bitmap_write := 0;
 
     while(1) {
         if( start ) {
             busy = 1;
-             x = min_x; y = min_y;
-            while( y != max_y ) {
-                bitmap_write = 1;
-                if( xLAST ) { x = min_x; } else { x = xNEXT; }
-                y = yNEXT;
+            bitmap_x_write = min_x; bitmap_y_write = min_y; bitmap_write = 1;
+            while( busy ) {
+                if( bitmap_x_write != max_x ) {
+                    bitmap_x_write = bitmap_x_write + 1;
+                } else {
+                    bitmap_x_write = min_x; bitmap_y_write = bitmap_y_write + 1;
+                }
+                busy = ( bitmap_y_write != max_y );
+                bitmap_write = ( busy );
             }
-            busy = 0;
         }
     }
 }
 algorithm rectangle (
     input   uint1   start,
     output  uint1   busy(0),
-    input   int11   crop_left,
-    input   int11   crop_right,
-    input   int11   crop_top,
-    input   int11   crop_bottom,
+    input   uint9   crop_left,
+    input   uint9   crop_right,
+    input   uint8   crop_top,
+    input   uint8   crop_bottom,
     input   int11   x,
     input   int11   y,
     input   int11   x1,
@@ -136,7 +136,7 @@ algorithm istodraw(
     input   int11   max_y,
     output  uint1   draw
 ) <autorun> {
-    always {
-        draw = ~( ( max_x < crop_left ) | ( max_y < crop_top ) | ( min_x > crop_right ) | ( min_y > crop_bottom ) );
+    always_after {
+        draw = ~|{ ( max_x < crop_left ), ( max_y < crop_top ), ( min_x > crop_right ), ( min_y > crop_bottom ) };
     }
 }

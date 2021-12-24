@@ -171,7 +171,7 @@ algorithm drawtriangle(
                 beenInTriangle = IS.IN | beenInTriangle;
                 if( beenInTriangle ^ IS.IN ) {
                     // Exited the triangle, move to the next line
-                    beenInTriangle = 0; py = pyNEXT; px = leftright ? min_x : max_x; dx = leftright;
+                    beenInTriangle = 0; py = pyNEXT; px = pxNEXT; dx = ~dx;
                 } else {
                     // MOVE TO THE NEXT PIXEL ON THE LINE LEFT/RIGHT OR DOWN AND SWITCH DIRECTION IF AT END
                     if( stillinline ) { px = pxNEXT; } else { dx = ~dx; beenInTriangle = 0; py = pyNEXT; }

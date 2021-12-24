@@ -47,9 +47,7 @@ algorithm drawrectangle(
     output  int11   bitmap_y_write,
     output  uint1   bitmap_write
 ) <autorun> {
-    uint9   x = uninitialized;                          uint9 xNEXT <:: x + 1;
-    uint8   y = uninitialized;                          uint8 yNEXT <:: y + 1;
-
+    uint9   x = uninitialized;                          uint8   y = uninitialized;
     bitmap_x_write := x; bitmap_y_write := y; bitmap_write := 0;
 
     while(1) {
@@ -58,8 +56,8 @@ algorithm drawrectangle(
             y = min_y;
             while( y != max_y ) {
                 x = min_x;
-                while( x != max_x ) { bitmap_write = 1; x = xNEXT; }
-                y = yNEXT;
+                while( x != max_x ) { bitmap_write = 1; x = x + 1; }
+                y = y + 1;
             }
             busy = 0;
         }
@@ -68,10 +66,10 @@ algorithm drawrectangle(
 algorithm rectangle (
     input   uint1   start,
     output  uint1   busy(0),
-    input   int11   crop_left,
-    input   int11   crop_right,
-    input   int11   crop_top,
-    input   int11   crop_bottom,
+    input   uint9   crop_left,
+    input   uint9   crop_right,
+    input   uint8   crop_top,
+    input   uint8   crop_bottom,
     input   int11   x,
     input   int11   y,
     input   int11   x1,
@@ -136,7 +134,7 @@ algorithm istodraw(
     input   int11   max_y,
     output  uint1   draw
 ) <autorun> {
-    always {
-        draw = ~( ( max_x < crop_left ) | ( max_y < crop_top ) | ( min_x > crop_right ) | ( min_y > crop_bottom ) );
+    always_after {
+        draw = ~|{ ( max_x < crop_left ), ( max_y < crop_top ), ( min_x > crop_right ), ( min_y > crop_bottom ) };
     }
 }
