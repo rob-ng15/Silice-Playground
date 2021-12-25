@@ -137,20 +137,20 @@ algorithm testcard(
     input   uint10  pix_y,
     input   uint1   pix_active,
     input   uint1   pix_vblank,
-    output! uint6   pixel(0),
+    output! uint6   pixel,
     output! uint1   pixel_display,
 ) <autorun> {
     pixel_display := pix_active;
 
-//    while(1) {
-//        if( pix_vblank ) {
-//            pixel = 0;
-//        } else {
-//            if( pix_active ) {
-//                pixel = pixel + 1;
-//            }
-//        }
-//    }
+    while(1) {
+        if( pix_vblank ) {
+            pixel = 0;
+        } else {
+            if( pix_active ) {
+                pixel = pixel + 1;
+            }
+        }
+    }
 }
 
 
@@ -199,25 +199,24 @@ algorithm sprite_controller(
     $$end
 ) <autorun,reginputs> {
     $$for i=0,15 do
-        // Sprite Tiles - 16 x 16 x 8 in ARRGGBB colour
-        simple_dualport_bram uint7 tiles_$i$ <@video_clock,@video_clock> [2048] = {
-            $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$,
-            $i+8$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$,    63,    63,    63,    63,    63, $i+8$,
-            $i+8$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$,    63,    63, $i+8$,
-            $i+8$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$,    63, $i+4$,    63, $i+8$,
-            $i+8$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$,    63, $i+4$, $i+4$,    63, $i+8$,
-            $i+8$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$,    63, $i+4$, $i+4$, $i+4$,    63, $i+8$,
-            $i+8$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+8$,
-            $i+8$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+8$,
-            $i+8$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+8$,
-            $i+8$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+8$,
-            $i+8$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+8$,
-            $i+8$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+8$,
-            $i+8$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+8$,
-            $i+8$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+8$,
-            $i+8$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+4$, $i+8$,
-            $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$, $i+8$,
-            pad( uninitialised )
+        // Sprite Tiles
+        simple_dualport_bram uint16 tiles_$i$ <@video_clock,@video_clock> [128] = {
+            16hfffe, 16hfffe, 16hc006, 16hc006, 16hc006, 16hc006, 16hc006, 16hc006,
+            16hc006, 16hc006, 16hc006, 16hc006, 16hc006, 16hfffe, 16hfffe, 16h0000,
+            16h0180, 16h0180, 16h0180, 16h0180, 16h0180, 16h0180, 16h0180, 16h0180,
+            16h0180, 16h0180, 16h0180, 16h0180, 16h0180, 16h0180, 16h0180, 16h0180,
+            16hfffe, 16hfffe, 16h0006, 16h0006, 16h0006, 16h0006, 16hfffe, 16hfffe,
+            16hc000, 16hc000, 16hc000, 16hc000, 16hc000, 16hfffe, 16hfffe, 16h0000,
+            16hfffe, 16hfffe, 16h0006, 16h0006, 16h0006, 16h0006, 16h3ffe, 16h3ffe,
+            16h0006, 16h0006, 16h0006, 16h0006, 16h0006, 16hfffe, 16hfffe, 16h0000,
+            16hc006, 16hc006, 16hc006, 16hc006, 16hc006, 16hc006, 16hfffe, 16hfffe,
+            16h0006, 16h0006, 16h0006, 16h0006, 16h0006, 16h0006, 16h0006, 16h0000,
+            16hfffe, 16hfffe, 16hc000, 16hc000, 16hc000, 16hc000, 16hfffe, 16hfffe,
+            16h0006, 16h0006, 16h0006, 16h0006, 16h0006, 16hfffe, 16hfffe, 16h0000,
+            16hc000, 16hc000, 16hc000, 16hc000, 16hc000, 16hc000, 16hfffe, 16hfffe,
+            16hc006, 16hc006, 16hc006, 16hc006, 16hc006, 16hfffe, 16hfffe, 16h0000,
+            16hfffe, 16hfffe, 16h0006, 16h0006, 16h0006, 16h0006, 16h0006, 16h0006,
+            16h0006, 16h0006, 16h0006, 16h0006, 16h0006, 16h0006, 16h0006, 16h0000
         };
     $$end
 
@@ -238,6 +237,7 @@ algorithm sprite_controller(
         $$for i=0,15 do
             sprite_read_active_$i$ <: sprite_read_active_$i$,
             sprite_read_double_$i$ <: sprite_read_double_$i$,
+            sprite_read_colour_$i$ <: sprite_read_colour_$i$,
             sprite_read_x_$i$ <: sprite_read_x_$i$,
             sprite_read_y_$i$ <: sprite_read_y_$i$,
             sprite_read_tile_$i$ <: sprite_read_tile_$i$,
@@ -252,6 +252,7 @@ algorithm sprite_controller(
         $$for i=0,15 do
             sprite_read_active_$i$ :> sprite_read_active_$i$,
             sprite_read_double_$i$ :> sprite_read_double_$i$,
+            sprite_read_colour_$i$ :> sprite_read_colour_$i$,
             sprite_read_x_$i$ :> sprite_read_x_$i$,
             sprite_read_y_$i$ :> sprite_read_y_$i$,
             sprite_read_tile_$i$ :> sprite_read_tile_$i$,
@@ -272,11 +273,12 @@ algorithm sprite_controller(
     while( count != 16 ) {
         SLW.sprite_set_number = count;
 
-        ++: SLW.sprite_layer_write = 1; SLW.sprite_write_value = 1;                 // ACTIVE
-        ++: SLW.sprite_layer_write = 2; SLW.sprite_write_value = count[0,3];        // DOUBLE / REFLECTION
-        ++: SLW.sprite_layer_write = 4; SLW.sprite_write_value = 32 * count;        // X
-        ++: SLW.sprite_layer_write = 5; SLW.sprite_write_value = 16 * count;        // Y
-        ++: SLW.sprite_layer_write = 6; SLW.sprite_write_value = 0;                 // TILE
+        ++: SLW.sprite_layer_write = 1; SLW.sprite_write_value = 1;
+        ++: SLW.sprite_layer_write = 2; SLW.sprite_write_value = count[0,3];
+        ++: SLW.sprite_layer_write = 3; SLW.sprite_write_value = count;
+        ++: SLW.sprite_layer_write = 4; SLW.sprite_write_value = 10 * count;
+        ++: SLW.sprite_layer_write = 5;
+        ++: SLW.sprite_layer_write = 6; SLW.sprite_write_value = count[0,3];
 
         count = count + 1;
     }
@@ -332,8 +334,6 @@ algorithm sprite_display(
         sprite_generator SPRITE_$i$(
             pix_x <: pix_x,
             pix_y <: pix_y,
-            pix_active <: pix_active,
-            pix_vblank <: pix_vblank,
             sprite_active <: sprite_read_active_$i$,
             sprite_double <: sprite_read_double_$i$,
             sprite_x <: sprite_read_x_$i$,
@@ -360,9 +360,9 @@ algorithm sprite_display(
     sprite_layer_display := pix_active & ( |sprite_collision_frame );
     pixel :=
         $$for i=0,14 do
-                SPRITE_$15-i$.pix_visible ? SPRITE_$15-i$.pixel :
+                SPRITE_$15-i$.pix_visible ? sprite_read_colour_$15-i$ :
         $$end
-        SPRITE_0.pixel;
+        sprite_read_colour_0;
 
     always_before {
         if( pix_active ) {
@@ -396,34 +396,30 @@ algorithm sprite_display(
 algorithm sprite_generator(
     input   uint10  pix_x,
     input   uint10  pix_y,
-    input   uint1   pix_active,
-    input   uint1   pix_vblank,
     input   uint1   sprite_active,
     input   uint3   sprite_double,
     input   int11   sprite_x,
     input   int10   sprite_y,
     input   uint3   sprite_tile_number,
     simple_dualport_bram_port0 tiles,
-    output! uint1   pix_visible,
-    output! uint6   pixel
+    output! uint1   pix_visible
 ) <autorun> {
-    int11   x <: { 1b0, pix_x };                    int11   y <: { 1b0, pix_y };
-    int11   xspritex <: ( x - sprite_x );           int11   xspriteshift <: ( xspritex >>> sprite_double[0,1] ) + pix_active;
-    int11   yspritey <: ( y - sprite_y );           int11   yspriteshift <: yspritey >>> sprite_double[0,1];
+    int11   x <: { 1b0, pix_x };                    int10   y <: pix_y;
+    int11   xspritex <: ( x - sprite_x );           int11   xspriteshift <: xspritex >>> sprite_double[0,1];
+    int10   yspritey <: ( y - sprite_y );           int10   yspriteshift <: yspritey >>> sprite_double[0,1];
 
     // Calculate position in sprite, handling reflection and doubling
     uint6 spritesize <: sprite_double[0,1] ? 32 : 16;
     uint1 xinrange <: ( x >= __signed(sprite_x) ) & ( x < __signed( sprite_x + spritesize ) );
     uint1 yinrange <: ( y >= __signed(sprite_y) ) & ( y < __signed( sprite_y + spritesize ) );
-    uint4 xinsprite <: ( sprite_double[1,1] ? 15 - xspriteshift : xspriteshift );
     uint4 yinsprite <: sprite_double[2,1] ? 15 - yspriteshift : yspriteshift;
+    uint4 xinsprite <: sprite_double[1,1] ? xspriteshift : 15  - xspriteshift;
 
     // READ ADDRESS FOR SPRITE
-    tiles.addr0 := { sprite_tile_number, yinsprite, xinsprite };
+    tiles.addr0 := { sprite_tile_number, yinsprite };
 
     // Determine if pixel is visible
-    pix_visible := sprite_active & xinrange & yinrange & ( ~tiles.rdata0[ 6, 1 ] );
-    pixel := tiles.rdata0[ 0, 6 ];
+    pix_visible := sprite_active & xinrange & yinrange & ( tiles.rdata0[ xinsprite, 1 ] );
 }
 
 algorithm sprite_writer(
@@ -436,6 +432,7 @@ algorithm sprite_writer(
     $$for i=0,15 do
         output  uint1   sprite_read_active_$i$,
         output  uint3   sprite_read_double_$i$,
+        output  uint6   sprite_read_colour_$i$,
         output  int11   sprite_read_x_$i$,
         output  int10   sprite_read_y_$i$,
         output  uint3   sprite_read_tile_$i$,
@@ -445,6 +442,7 @@ algorithm sprite_writer(
     // Stored as registers as needed instantly
     uint1   sprite_active[16] = uninitialised;
     uint3   sprite_double[16] = uninitialised;
+    uint6   sprite_colour[16] = uninitialised;
     int11   sprite_x[16] = uninitialised;
     int10   sprite_y[16] = uninitialised;
     uint3   sprite_tile_number[16] = uninitialised;
@@ -462,6 +460,7 @@ algorithm sprite_writer(
         // For setting sprite read paramers
         sprite_read_active_$i$ := sprite_active[$i$];
         sprite_read_double_$i$ := sprite_double[$i$];
+        sprite_read_colour_$i$ := sprite_colour[$i$];
         sprite_read_x_$i$ := sprite_x[$i$];
         sprite_read_y_$i$ := sprite_y[$i$];
         sprite_read_tile_$i$ := sprite_tile_number[$i$];
@@ -480,6 +479,7 @@ algorithm sprite_writer(
             case 0: {}
             case 1: { sprite_active[ sprite_set_number ] = sprite_write_value[0,1]; }
             case 2: { sprite_double[ sprite_set_number ] = sprite_write_value[0,3]; }
+            case 3: { sprite_colour[ sprite_set_number ] = sprite_write_value[0,6]; }
             case 4: { sprite_x[ sprite_set_number ] = sprite_write_value[0,11]; }
             case 5: { sprite_y[ sprite_set_number ] = sprite_write_value[0,10]; }
             case 6: { sprite_tile_number[ sprite_set_number ] = sprite_write_value[0,3]; }
@@ -502,8 +502,7 @@ algorithm spritebitmapwriter(
     $$end
     input   uint4   sprite_writer_sprite,
     input   uint7   sprite_writer_line,
-    input   uint4   sprite_writer_pixel,
-    input   uint7   sprite_writer_colour,
+    input   uint16  sprite_writer_bitmap,
 ) <autorun,reginputs> {
     $$for i=0,15 do
         tiles_$i$.wenable1 := 1;
@@ -513,7 +512,7 @@ algorithm spritebitmapwriter(
         // WRITE BITMAP TO SPRITE TILE
         switch( sprite_writer_sprite ) {
             $$for i=0,15 do
-                case $i$: { tiles_$i$.addr1 = { sprite_writer_line, sprite_writer_pixel }; tiles_$i$.wdata1 = sprite_writer_colour; }
+                case $i$: { tiles_$i$.addr1 = sprite_writer_line; tiles_$i$.wdata1 = sprite_writer_bitmap; }
             $$end
         }
     }
