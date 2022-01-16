@@ -26,13 +26,13 @@ algorithm tilemap(
     uint4   yintm <: { 1b0, pix_y[0,4] } + tm_offset_y;
 
     // Derive the actual pixel in the current character
-    uint1   tmpixel <: colour15(colours.rdata0).x_reflect ? tiles16x16.rdata0[xintm, 1] :tiles16x16.rdata0[4b1111 - xintm, 1];
+    uint1   tmpixel <: tiles16x16.rdata0[ colour15(colours.rdata0).x_reflect ? xintm : ~xintm, 1 ];
 
     // Set up reading of the tilemap
     tiles.addr0 := xtmpos + ytmpos * 42; colours.addr0 := xtmposcolour + ytmpos * 42;
 
     // Setup the reading and writing of the tiles16x16
-    tiles16x16.addr0 := colour15(colours.rdata0).y_reflect ? { tiles.rdata0, 4b1111 - yintm } :{ tiles.rdata0, yintm };
+    tiles16x16.addr0 := { tiles.rdata0, colour15(colours.rdata0).y_reflect ? ~yintm : yintm };
 
     // RENDER - Default to transparent
     tilemap_display := pix_active & ( tmpixel | ~colour15(colours.rdata0).alpha );

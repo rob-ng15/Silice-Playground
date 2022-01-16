@@ -128,6 +128,7 @@ algorithm clz48(
         }
     }
 }
+// NORMALISE RESULT FOR ADD SUB DIVIDE
 algorithm donormalise24(
     input   int10   exp,
     input   uint48  bitstream,
@@ -139,6 +140,16 @@ algorithm donormalise24(
     always_after {
         normalised = temporary[23,24];
         newexp = exp - CLZ48.count;
+    }
+}
+
+// NORMALISE RESULT FOR MULTIPLICATION AND SQUARE ROOT
+algorithm fastnormal24(
+    input   uint48  tonormal,
+    output  uint24  normalfraction
+) <autorun> {
+    always_after {
+        normalfraction = tonormal[ tonormal[47,1] ? 23 : 22,24 ];
     }
 }
 
@@ -391,10 +402,11 @@ algorithm prepmul(
     uint24  sigA <:: { 1b1, fp32( a ).fraction }; uint24  sigB <:: { 1b1, fp32( b ).fraction };
     uint48  product <:: sigA * sigB;
 
+    fastnormal24 NORMAL( tonormal <: product, normalfraction :> normalfraction );
+
     always_after {
         productsign = fp32( a ).sign ^ fp32( b ).sign;
         productexp = fp32( a ).exponent + fp32( b ).exponent - ( product[47,1] ? 253 : 254 );
-        normalfraction = product[ product[47,1] ? 23 : 22, 24 ];
     }
 }
 algorithm floatmultiply(
@@ -623,14 +635,11 @@ algorithm floatsqrt(
     uint1   UF = uninitialised;
     classify A( a <: a );
 
-    // PREPARE AND PERFORM THE SQUAREROOT
+    // PREPARE AND PERFORM THE SQUAREROOT, FAST NORMALISE THE RESULT, COMBINE TO FINALK RESULT
     prepsqrt PREP( a <: a );
     dofloatsqrt DOSQRT( start_ac <: PREP.start_ac, start_x <: PREP.start_x );
-
-    // FAST NORMALISATION - SQUARE ROOT RESULTS IN 1x.xxx or 01.xxxx
-    // EXTRACT 24 BITS FOR ROUNDING FOLLOWING THE NORMALISED 1.xxxx -  COMBINE TO FINAL float32
-    uint24  normalfraction <:: DOSQRT.squareroot[ DOSQRT.squareroot[47,1] ? 23 : 22,24 ];
-    doroundcombine MAKERESULT( exponent <: PREP.squarerootexp, bitstream <: normalfraction );
+    fastnormal24 NORMAL( tonormal <: DOSQRT.squareroot );
+    doroundcombine MAKERESULT( exponent <: PREP.squarerootexp, bitstream <: NORMAL.normalfraction );
 
     DOSQRT.start := 0; flags := { A.INF, NN, NV, 1b0, OF, UF, 1b0 };
     while(1) {

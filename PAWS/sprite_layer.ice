@@ -114,8 +114,8 @@ algorithm sprite_generator(
     uint6 spritesize <: sprite_double[0,1] ? 32 : 16;
     uint1 xinrange <: ( x >= __signed(sprite_x) ) & ( x < __signed( sprite_x + spritesize ) );
     uint1 yinrange <: ( y >= __signed(sprite_y) ) & ( y < __signed( sprite_y + spritesize ) );
-    uint4 yinsprite <: sprite_double[2,1] ? 15 - yspriteshift : yspriteshift;
-    uint4 xinsprite <: sprite_double[1,1] ? xspriteshift : 15  - xspriteshift;
+    uint4 yinsprite <: sprite_double[2,1] ? ~yspriteshift : yspriteshift;
+    uint4 xinsprite <: sprite_double[1,1] ? xspriteshift : ~xspriteshift;
 
     // READ ADDRESS FOR SPRITE
     tiles.addr0 := { sprite_tile_number, yinsprite };

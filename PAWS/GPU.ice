@@ -790,8 +790,8 @@ algorithm   blittilexy(
     output  uint4   yinblittile,
     output  uint3   yinchartile
 ) <autorun> {
-    uint4   revx4 <:: 4b1111 - px[0,4];             uint4   revy4 <:: 4b1111 - py[0,4];
-    uint3   revx3 <:: 3b111 - px[0,3];              uint3   revy3 <:: 3b111 - py[0,3];
+    uint4   revx4 <:: ~px[0,4];                     uint4   revy4 <:: ~py[0,4];
+    uint3   revx3 <:: ~px[0,3];                     uint3   revy3 <:: ~py[0,3];
     uint1   action00 <:: ( ~|action[0,2] );         uint1   action01 <:: ( action[0,2] == 2b01 );           uint1   action10 <:: ( action[0,2] == 2b10 );
 
     // find y and x positions within the tile/character bitmap handling rotation or reflection
@@ -809,7 +809,7 @@ algorithm cololurblittilexy(
     output  uint4   xintile,
     output  uint4   yintile
 ) <autorun> {
-    uint4   revx <:: 4b1111 - px[0,4];              uint4   revy <:: 4b1111 - py[0,4];
+    uint4   revx <:: ~px[0,4];                      uint4   revy <:: ~py[0,4];
     uint1   action00 <:: ( ~|action[0,2] );         uint1   action01 <:: ( action[0,2] == 2b01 );           uint1   action10 <:: ( action[0,2] == 2b10 );
 
     // find y and x positions within the tile bitmap handling rotation or reflection

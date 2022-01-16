@@ -762,6 +762,8 @@ algorithm sprite_memmap(
             sprite_read_y_$i$ :> sprite_read_y_$i$,
             sprite_read_tile_$i$ :> sprite_read_tile_$i$,
         $$end
+        sprite_set_number <: memoryAddress[1,4],
+        sprite_write_value <: writeData
     );
 
     // UPDATE THE SPRITE TILE BITMAPS
@@ -786,8 +788,6 @@ algorithm sprite_memmap(
                     }
                 } else {
                     // SET SPRITE ATTRIBUTE
-                    SLW.sprite_set_number = memoryAddress[1,4];
-                    SLW.sprite_write_value = writeData;
                     SLW.sprite_layer_write = memoryAddress[5,3] + 1;
                 }
             }
