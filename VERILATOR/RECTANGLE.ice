@@ -28,7 +28,7 @@ algorithm preprectangle(
             busy = 1;
             min_x = ( x1 < crop_left ) ? crop_left : x1;
             min_y = ( y1 < crop_top ) ? crop_top : y1;
-            max_x = 1 + ( ( x2 > crop_right ) ? crop_right : x2 );
+            max_x = ( ( x2 > crop_right ) ? crop_right : x2 );
             max_y = 1 + ( ( y2 > crop_bottom ) ? crop_bottom : y2 );
             ++:
             todraw = TODRAW.draw;
@@ -47,19 +47,21 @@ algorithm drawrectangle(
     output  int11   bitmap_y_write,
     output  uint1   bitmap_write
 ) <autorun> {
-    uint9   x = uninitialized;                          uint8   y = uninitialized;
-    bitmap_x_write := x; bitmap_y_write := y; bitmap_write := 0;
+    bitmap_write := 0;
 
     while(1) {
         if( start ) {
             busy = 1;
-            y = min_y;
-            while( y != max_y ) {
-                x = min_x;
-                while( x != max_x ) { bitmap_write = 1; x = x + 1; }
-                y = y + 1;
+            bitmap_x_write = min_x; bitmap_y_write = min_y; bitmap_write = 1;
+            while( busy ) {
+                if( bitmap_x_write != max_x ) {
+                    bitmap_x_write = bitmap_x_write + 1;
+                } else {
+                    bitmap_x_write = min_x; bitmap_y_write = bitmap_y_write + 1;
+                }
+                busy = ( bitmap_y_write != max_y );
+                bitmap_write = busy;
             }
-            busy = 0;
         }
     }
 }
@@ -102,7 +104,7 @@ algorithm main(output uint8 leds)
     uint16  pixels = 0;
 
     rectangle RECTANGLE(); RECTANGLE.start := 0;
-    RECTANGLE.crop_left = 12; RECTANGLE.crop_right = 18; RECTANGLE.crop_top = 12; RECTANGLE.crop_bottom = 18;
+    RECTANGLE.crop_left = 0; RECTANGLE.crop_right = 319; RECTANGLE.crop_top = 0; RECTANGLE.crop_bottom = 239;
     RECTANGLE.x = 10; RECTANGLE.y = 10; RECTANGLE.x1 = 20; RECTANGLE.y1 = 20;
 
     ++:

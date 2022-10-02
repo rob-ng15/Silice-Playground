@@ -3,6 +3,7 @@ circuitry copycoordinates( input x, input y, output x1, output y1 ) {
     x1 = x;
     y1 = y;
 }
+
 // TRIANGLE - OUTPUT PIXELS TO DRAW A FILLED TRIANGLE
 algorithm swaponcondition(
     input   int11   x1,
@@ -15,7 +16,7 @@ algorithm swaponcondition(
     output  int11   ny1,
     output  int11   ny2
 ) <autorun,reginputs> {
-    always {
+    always_after {
         if( condition ) {
             nx1 = x2; ny1 = y2;
             nx2 = x1; ny2 = y1;
@@ -31,7 +32,9 @@ algorithm min3(
     input   int11   n3,
     output  int11   min
 ) <autorun> {
-    min := ( n1 < n2 ) ? ( ( n1 < n3 ) ? n1 : n3 ) : ( ( n2 < n3 ) ? n2 : n3 );
+    always_after {
+        min = ( n1 < n2 ) ? ( ( n1 < n3 ) ? n1 : n3 ) : ( ( n2 < n3 ) ? n2 : n3 );
+    }
 }
 algorithm max3(
     input   int11   n1,
@@ -39,7 +42,9 @@ algorithm max3(
     input   int11   n3,
     output  int11   max
 ) <autorun> {
-    max := ( n1 > n2 ) ? ( ( n1 > n3 ) ? n1 : n3 ) : ( ( n2 > n3 ) ? n2 : n3 );
+    always_after {
+        max = ( n1 > n2 ) ? ( ( n1 > n3 ) ? n1 : n3 ) : ( ( n2 > n3 ) ? n2 : n3 );
+    }
 }
 algorithm preptriangle(
     input   uint1   start,
@@ -118,11 +123,14 @@ algorithm intriangle(
     int22   step2 <:: (( x0 - x2 ) * ( py - y2 ) - ( y0 - y2 ) * ( px - x2 ));
     int22   step3 <:: (( x1 - x0 ) * ( py - y0 ) - ( y1 - y0 ) * ( px - x0 ));
 
-    IN :=  ~|{ step1[21,1], step2[21,1], step3[21,1] };
+    always_after {
+        IN =  ~|{ step1[21,1], step2[21,1], step3[21,1] };
+    }
 }
 algorithm drawtriangle(
     input   uint1   start,
     output  uint1   busy(0),
+    input   uint1   drawrectangle,
     input   uint9   min_x,
     input   uint8   min_y,
     input   uint9   max_x,
@@ -154,15 +162,15 @@ algorithm drawtriangle(
     uint1   stillinline <:: ( dx & ( px != max_x ) ) | ( ~dx & ( px != min_x ));
     uint1   working <:: ( py != max_y );
 
-    bitmap_x_write := px; bitmap_y_write := py; bitmap_write := busy & IS.IN;
+    bitmap_x_write := px; bitmap_y_write := py; bitmap_write := busy & working & ( IS.IN | drawrectangle );
 
-    always {
+    always_after {
         if( start ) {
             busy = 1; dx = 1; px = min_x; py = min_y;
         } else {
             if( working ) {
                 beenInTriangle = IS.IN | beenInTriangle;
-                if( beenInTriangle ^ IS.IN ) {
+                if( ~drawrectangle & ( beenInTriangle ^ IS.IN ) ) {
                     // Exited the triangle, move to the next line
                     beenInTriangle = 0; py = pyNEXT; px = leftright ? min_x : max_x; dx = leftright;
                 } else {
@@ -178,6 +186,7 @@ algorithm drawtriangle(
 algorithm triangle(
     input   uint1   start,
     output  uint1   busy(0),
+    input   uint1   drawrectangle,
     input   uint9   crop_left,
     input   uint9   crop_right,
     input   uint8   crop_top,
@@ -204,7 +213,7 @@ algorithm triangle(
         min_x <: PREP.min_x, max_x <: PREP.max_x, min_y <: PREP.min_y, max_y <: PREP.max_y,
         x0 <: PREP.x1, y0 <: PREP.y1, x1 <: PREP.x2, y1 <: PREP.y2, x2 <: PREP.x3, y2 <: PREP.y3,
         bitmap_x_write :> bitmap_x_write, bitmap_y_write :> bitmap_y_write, bitmap_write :> bitmap_write,
-        start <: PREP.todraw
+        drawrectangle <: drawrectangle, start <: PREP.todraw
     );
 
     busy := start | PREP.busy | PREP.todraw | TRIANGLE.busy;
@@ -219,7 +228,8 @@ algorithm main(output uint8 leds)
 
     triangle TRIANGLE(); TRIANGLE.start := 0;
     TRIANGLE.crop_left = 0; TRIANGLE.crop_right = 319; TRIANGLE.crop_top = 0; TRIANGLE.crop_bottom = 239;
-    TRIANGLE.x = 5; TRIANGLE.y = 10; TRIANGLE.x1 = 20; TRIANGLE.y1 = 10; TRIANGLE.x2 = 15; TRIANGLE.y2 = 15;
+    TRIANGLE.x = 10; TRIANGLE.y = 10; TRIANGLE.x1 = 20; TRIANGLE.y1 = 20; TRIANGLE.x2 = 20; TRIANGLE.y2 = 20;
+    TRIANGLE.drawrectangle = 1;
 
     ++:
     startcycle = PULSE.cycles;

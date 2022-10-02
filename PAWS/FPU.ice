@@ -82,12 +82,11 @@ algorithm floatconvert(
     output  uint32  result
 ) <autorun,reginputs> {
     inttofloat FPUfloat( a <: sourceReg1, dounsigned <: rs2[0,1] );
-    floattoint FPUint( a <: sourceReg1F );
-    floattouint FPUuint( a <: sourceReg1F );
+    floattoint FPUint( a <: sourceReg1F, dounsigned <: rs2[0,1] );
 
     always_after {
         // FCVT.S.W FCVT.S.WU FCVT.W.S FCVT.WU.S
-        result = direction ? FPUfloat.result : rs2 ? FPUuint.result : FPUint.result; flags = direction ? FPUfloat.flags : rs2 ? FPUuint.flags : FPUint.flags;
+        result = direction ? FPUfloat.result : FPUint.result; flags = direction ? FPUfloat.flags : FPUint.flags;
     }
 }
 
