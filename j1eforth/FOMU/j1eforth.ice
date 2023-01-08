@@ -284,9 +284,9 @@ algorithm logic16(
     output  uint16  XOR
 ) <autorun> {
     always_after {
-        AND = a & b;
-        OR = a | b;
-        XOR = a ^ b;
+        { AND = a & b; }
+        { OR = a | b; }
+        { XOR = a ^ b; }
     }
 }
 algorithm shift16(
@@ -296,8 +296,8 @@ algorithm shift16(
     output  uint16  SRA
 ) <autorun> {
     always_after {
-        SLL = a << count;
-        SRA = __signed(a) >>> count;
+        { SLL = a << count; }
+        { SRA = __signed(a) >>> count; }
     }
 }
 algorithm alu0(
@@ -317,26 +317,28 @@ algorithm alu0(
     shift16 SHIFT( a <: stackNext, count <: nibbles(stackTop).nibble0 );
 
     always_after {
-        switch( ALUOP ) {
-            case 4b0000: { newStackTop = stackTop; }
-            case 4b0001: { newStackTop = stackNext; }
-            case 4b0010: { newStackTop = ADD.c; }
-            case 4b0011: { newStackTop = LOGIC.AND; }
-            case 4b0100: { newStackTop = LOGIC.OR; }
-            case 4b0101: { newStackTop = LOGIC.XOR; }
-            case 4b0110: { newStackTop = ~stackTop; }
-            case 4b0111: { newStackTop = {16{COMPARE.equal}}; }
-            case 4b1000: { newStackTop = {16{COMPARE.less}}; }
-            case 4b1001: { newStackTop = SHIFT.SRA; }
-            case 4b1010: { newStackTop = DEC.c; }
-            case 4b1011: { newStackTop = rStackTop; }
-            case 4b1100: { newStackTop = memoryRead; }
-            case 4b1101: { newStackTop = SHIFT.SLL; }
-            case 4b1110: { newStackTop = {rsp, dsp}; }
-            case 4b1111: { newStackTop = {16{COMPARE.lessu}}; }
+        {
+            switch( ALUOP ) {
+                case 4b0000: { newStackTop = stackTop; }
+                case 4b0001: { newStackTop = stackNext; }
+                case 4b0010: { newStackTop = ADD.c; }
+                case 4b0011: { newStackTop = LOGIC.AND; }
+                case 4b0100: { newStackTop = LOGIC.OR; }
+                case 4b0101: { newStackTop = LOGIC.XOR; }
+                case 4b0110: { newStackTop = ~stackTop; }
+                case 4b0111: { newStackTop = {16{COMPARE.equal}}; }
+                case 4b1000: { newStackTop = {16{COMPARE.less}}; }
+                case 4b1001: { newStackTop = SHIFT.SRA; }
+                case 4b1010: { newStackTop = DEC.c; }
+                case 4b1011: { newStackTop = rStackTop; }
+                case 4b1100: { newStackTop = memoryRead; }
+                case 4b1101: { newStackTop = SHIFT.SLL; }
+                case 4b1110: { newStackTop = {rsp, dsp}; }
+                case 4b1111: { newStackTop = {16{COMPARE.lessu}}; }
+            }
         }
+        { DEC.b = -1; }
     }
-    DEC.b = -1;
 }
 algorithm alu1(
     input   uint4   ALUOP,
@@ -350,27 +352,28 @@ algorithm alu1(
     add16 INC( a <: stackTop );
 
     always_after {
-        switch( ALUOP[0,4] ) {
-            case 4b0000: { newStackTop = {16{ COMPARE.equal0 }}; }
-            case 4b0001: { newStackTop = {16{ ~COMPARE.equal0 }}; }
-            case 4b0010: { newStackTop = {16{ ~COMPARE.equal }}; }
-            case 4b0011: { newStackTop = INC.c; }
-            case 4b0100: { newStackTop = { stackTop[0,15], 1b0 }; }
-            case 4b0101: { newStackTop = { stackTop[15,1], stackTop[1,15]}; }
-            case 4b0110: { newStackTop = {16{~COMPARE.less & ~COMPARE.equal}}; }
-            case 4b0111: { newStackTop = {16{~COMPARE.lessu & ~COMPARE.equal}}; }
-            case 4b1000: { newStackTop = {16{stackTop[15,1]}}; }
-            case 4b1001: { newStackTop = {16{~stackTop[15,1]}}; }
-            case 4b1010: { newStackTop = stackTop[15,1] ? negTop : stackTop; }
-            case 4b1011: { newStackTop = COMPARE.less ? stackTop : stackNext; }
-            case 4b1100: { newStackTop = COMPARE.less ? stackNext : stackTop; }
-            case 4b1101: { newStackTop = negTop; }
-            case 4b1110: { newStackTop = SUB.c; }
-            case 4b1111: { newStackTop = {16{~COMPARE.less}}; }
+        {
+            switch( ALUOP[0,4] ) {
+                case 4b0000: { newStackTop = {16{ COMPARE.equal0 }}; }
+                case 4b0001: { newStackTop = {16{ ~COMPARE.equal0 }}; }
+                case 4b0010: { newStackTop = {16{ ~COMPARE.equal }}; }
+                case 4b0011: { newStackTop = INC.c; }
+                case 4b0100: { newStackTop = { stackTop[0,15], 1b0 }; }
+                case 4b0101: { newStackTop = { stackTop[15,1], stackTop[1,15]}; }
+                case 4b0110: { newStackTop = {16{~COMPARE.less & ~COMPARE.equal}}; }
+                case 4b0111: { newStackTop = {16{~COMPARE.lessu & ~COMPARE.equal}}; }
+                case 4b1000: { newStackTop = {16{stackTop[15,1]}}; }
+                case 4b1001: { newStackTop = {16{~stackTop[15,1]}}; }
+                case 4b1010: { newStackTop = stackTop[15,1] ? negTop : stackTop; }
+                case 4b1011: { newStackTop = COMPARE.less ? stackTop : stackNext; }
+                case 4b1100: { newStackTop = COMPARE.less ? stackNext : stackTop; }
+                case 4b1101: { newStackTop = negTop; }
+                case 4b1110: { newStackTop = SUB.c; }
+                case 4b1111: { newStackTop = {16{~COMPARE.less}}; }
+            }
         }
+        { INC.b = 1; }
     }
-
-    INC.b = 1;
 }
 algorithm compare(
     input   uint16  stackTop,
@@ -381,10 +384,10 @@ algorithm compare(
     output  uint1   equal0,
 ) <autorun> {
     always_after {
-        equal = stackNext == stackTop;
-        lessu = __unsigned(stackNext) < __unsigned(stackTop);
-        less = __signed(stackNext) < __signed(stackTop);
-        equal0 = ~|stackTop;
+        { equal = stackNext == stackTop; }
+        { lessu = __unsigned(stackNext) < __unsigned(stackTop); }
+        { less = __signed(stackNext) < __signed(stackTop); }
+        { equal0 = ~|stackTop; }
     }
 }
 
@@ -403,10 +406,10 @@ algorithm j1eforthcallbranch(
     output  uint8   newRSP,
 ) <autorun> {
     always_after {
-        newStackTop = callbranch(instruction).is_callbranchalu[0,1] ? stackNext : stackTop;
-        newDSP = dsp - callbranch(instruction).is_callbranchalu[0,1];
-        newRSP = rsp + callbranch(instruction).is_callbranchalu[1,1];
-        newPC = callbranch(instruction).is_callbranchalu[0,1] & ( |stackTop ) ? pcPlusOne : callbranch(instruction).address;
+        { newStackTop = callbranch(instruction).is_callbranchalu[0,1] ? stackNext : stackTop; }
+        { newDSP = dsp - callbranch(instruction).is_callbranchalu[0,1]; }
+        { newRSP = rsp + callbranch(instruction).is_callbranchalu[1,1]; }
+        { newPC = callbranch(instruction).is_callbranchalu[0,1] & ( |stackTop ) ? pcPlusOne : callbranch(instruction).address; }
     }
 }
 
@@ -423,15 +426,15 @@ algorithm decode(
     output  uint8   rdelta
 ) <autorun> {
     always_after {
-        is_lit = literal(instruction).is_literal;
-        is_call = ~is_lit & ( callbranch(instruction).is_callbranchalu == 2b10 );
-        is_alu = ~is_lit & ( &callbranch(instruction).is_callbranchalu );
-        is_n2memt = is_alu & aluop(instruction).is_n2memt;
-        is_memtr = is_alu & ~aluop(instruction).is_j1j1plus & ( aluop(instruction).operation == 4b1100 );
-        dstackWrite = ( is_lit | ( is_alu & aluop(instruction).is_t2n ) );
-        rstackWrite = ( is_call | ( is_alu & aluop(instruction).is_t2r ) );
-        ddelta = { {7{aluop(instruction).ddelta1}}, aluop(instruction).ddelta0 };
-        rdelta = { {7{aluop(instruction).rdelta1}}, aluop(instruction).rdelta0 };
+        { is_lit = literal(instruction).is_literal; }
+        { is_call = ~is_lit & ( callbranch(instruction).is_callbranchalu == 2b10 ); }
+        { is_alu = ~is_lit & ( &callbranch(instruction).is_callbranchalu ); }
+        { is_n2memt = is_alu & aluop(instruction).is_n2memt; }
+        { is_memtr = is_alu & ~aluop(instruction).is_j1j1plus & ( aluop(instruction).operation == 4b1100 ); }
+        { dstackWrite = ( is_lit | ( is_alu & aluop(instruction).is_t2n ) ); }
+        { rstackWrite = ( is_call | ( is_alu & aluop(instruction).is_t2r ) ); }
+        { ddelta = { {7{aluop(instruction).ddelta1}}, aluop(instruction).ddelta0 }; }
+        { rdelta = { {7{aluop(instruction).rdelta1}}, aluop(instruction).rdelta0 }; ] }
     }
 }
 
@@ -448,7 +451,8 @@ algorithm stack(
     stackTop := stack.rdata0;
 
     always_after {
-        if( stackWrite ) { stack.addr1 = newSP; stack.wdata1 = stackWData; }
+        { if( stackWrite ) { stack.addr1 = newSP; } }
+        { if( stackWrite ) { stack.wdata1 = stackWData; } }
     }
 }
 
@@ -508,9 +512,9 @@ algorithm uart(
     inchar := uartInBuffer.rdata0;
 
     always_before {
-        if( read ) { uartInBufferNext = INnext1; }
-        if( uart_out_valid ) { uartInBufferTop = INtop1; uart_out_ready = 1; }
-        if( uart_in_ready & uart_in_valid ) { uart_in_valid = 0; }
+        { if( read ) { uartInBufferNext = INnext1; } }
+        { if( uart_out_valid ) { uartInBufferTop = INtop1; uart_out_ready = 1; } }
+        { if( uart_in_ready & uart_in_valid ) { uart_in_valid = 0; } }
     }
 
     always_after {
