@@ -421,6 +421,8 @@ unit normalise48to24(
      always_after {
         f32 = UF ? 0 : { sign, OF ? 31h7f800000 : { newexponent[0,8], roundfraction } };
         flags = { OF, UF, 1b0 };
+        __display("BITSTREAM = %b",temporary);
+        __display("ROUNDFRACTION = %b",roundfraction);
      }
 }
 
@@ -922,13 +924,13 @@ algorithm main(output int8 leds) {
     uint32  startcycle = uninitialised;
     pulse PULSE();
 
-     uint7   opCode = 7b1010011; // ALL OTHER FPU OPERATIONS
+     uint7   opCode = 7b1010000; // ALL OTHER FPU OPERATIONS
     // uint7   opCode = 7b1000011; // FMADD
     // uint7   opCode = 7b1000111; // FMSUB
     // uint7   opCode = 7b1001011; // FNMSUB
     // uint7   opCode = 7b1001111; // FNMADD
 
-    uint7   function7 = 7b0000000; // OPERATION SWITCH
+    uint7   function7 = 7b0001100; // OPERATION SWITCH
     // ADD = 7b0000000 SUB = 7b0000100 MUL = 7b0001000 DIV = 7b0001100 SQRT = 7b0101100
     // FSGNJ[N][X] = 7b0010000 function3 == 000 FSGNJ == 001 FSGNJN == 010 FSGNJX
     // MIN MAX = 7b0010100 function3 == 000 MIN == 001 MAX
@@ -958,8 +960,8 @@ algorithm main(output int8 leds) {
     // qNaN = 32hffc00000
     // INF = 32h7F800000
     // -INF = 32hFF800000
-    uint32  sourceReg1F = 32h3F800000;
-    uint32  sourceReg2F = 32h40000000;
+    uint32  sourceReg1F = 32h40000000;
+    uint32  sourceReg2F = 32h3eaaaaab;
     uint32  sourceReg3F = 32h42480000;
 
     uint32  result = uninitialised;
@@ -1032,6 +1034,7 @@ algorithm main(output int8 leds) {
                         case 5b00101: {
                             // FMIN.S FMAX.S
                             __display("MIN MAX");
+                            if( function3[0,1] ) { __display("MAX"); } else { __display("MIN" ); }
                             result = minmaxresult; FPUnewflags = FPUflags | minmaxflags;
                         }
                         case 5b10100: {
