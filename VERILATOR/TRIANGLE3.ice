@@ -40,7 +40,6 @@ unit applycrop(
     }
 }
 
-// TRIANGLE - OUTPUT PIXELS TO DRAW A FILLED TRIANGLE
 unit swaponcondition(
     input   int11   x1,
     input   int11   x2,
@@ -192,29 +191,56 @@ unit drawtriangle(
     intriangle IS( x0 <: x0, x1 <: x1, x2 <: x2, px <: px, y0 <: y0, y1 <: y1, y2 <: y2, py <: py );
     uint1   beenInTriangle = uninitialized;
 
-    // CLOSER TO LEFT OR RIGHT OF THE BOUNDING BOX
-    uint1   leftright <:: ( px - min_x ) < ( max_x - px );
-
     // WORK COORDINATES AND DIRECTION
-    uint9   px = uninitialized;                     uint8   py = uninitialized;                         uint8   pyNEXT <:: py + 1;
+    uint9   px = uninitialized;                         uint9   pxNEXT <:: px + ( dx ? 1 : (-1) );
+    uint8   py = uninitialized;                         uint8   pyNEXT <:: py + 1;
     uint1   dx = uninitialized;
+    uint1   eol <:: px == ( dx ? max_x : min_x );
+
+    uint2   state = uninitialised;                  uint9   sx = uninitialised;
 
     bitmap_x_write := px; bitmap_y_write := py; bitmap_write := busy & IS.IN;
 
     always_after {
         if( start ) {
-            busy = 1; dx = 1; px = min_x; py = min_y;
+            busy = 1; dx = 1; py = min_y; state = 0;
             __display("TRI ( %3d, %3d ) ( %3d, %3d ) ( %3d, %3d )",x0,y0,x1,y1,x2,y2);
            __display("BOX ( %3d, %3d ) -> ( %3d, %3d )",min_x,min_y,max_x,max_y);
-        } else {
+            if( ( y0 == min_y ) & ( x0 > min_x ) & ( x0 <= max_x ) ) { px = x0 - 1; } else { px = min_x; }
+         } else {
             if( py != max_y ) {
-                beenInTriangle = IS.IN | beenInTriangle;
-                if( beenInTriangle ^ IS.IN ) {
-                    // Exited the triangle, move to the next line
-                    beenInTriangle = 0; py = pyNEXT; px = leftright ? min_x : max_x; dx = leftright;
-                } else {
-                    // MOVE TO THE NEXT PIXEL ON THE LINE LEFT/RIGHT OR DOWN AND SWITCH DIRECTION IF AT END
-                    if( ( dx & ( px != max_x ) ) | ( ~dx & ( px != min_x )) ) { px = px + ( dx ? 1 : (-1) ); } else { dx = ~dx; beenInTriangle = 0; py = pyNEXT; }
+                beenInTriangle = IS.IN | beenInTriangle;                                                                        // SET TO 1 IF EVER BEEN IN TRIANGLE ON THIS LINE
+                switch( state ) {
+                    case 0: {                                                                                                   // NORMAL STATE, MOVE UNTIL IN THEN OUT OF TRIANGLE
+                        if( beenInTriangle ^ IS.IN ) {
+                            beenInTriangle = 0; py = pyNEXT; state = 3;                                                         // LEFT THE TRIANGLE, MOVE TO NEXT LINE AND CHANGE STATE TO CHECK
+                        } else {
+                            if( eol )  {
+                                dx = ~dx; beenInTriangle = 0; py = pyNEXT;                                                      // AT END OF LINE, SWITCH DIRECTION AND MOVE TO THE NEXT LINE
+                            } else {
+                                px = pxNEXT;                                                                    // MOVE TO THE NEXT PIXEL
+                            }
+                        }
+                    }
+                    case 1: {                                                                                                   // SECONDARY STATE, MOVED DOWN AND WAS IN TRIANGLE
+                        if( ( beenInTriangle ^ IS.IN ) | eol ) {
+                            px = sx; dx = ~dx; state = 0;                                                                       // LEFT THE TRIANGLE OR EOL, GOT TO SAVED POSITION, SWITCH DIRECTION, GO TO NORMAL STATE
+                            __display("LOAD x = %d, TO STATE 0",px);
+                        } else {
+                            px = pxNEXT;                                                                    // MOVE TO THE NEXT PIXEL
+                        }
+                    }
+                    case 2: {
+                    }
+                    case 3: {
+                        if( IS.IN ) {
+                            sx =  px + ( dx ? (-1) : 1 ); px = pxNEXT; state = 1;                               // MOVED DOWN AND IN TRIANGLE, SAVE AND MOVE TO NEXT PIXEL
+                            __display("SAVED x = %d MOVE TO x = %d, TO STATE 1",sx,px);
+                        } else {
+                            dx = ~dx; state = 0;                                                                                // MOVED DOWN AND OUTSIDE THE TRIANGLE, SWITCH DIRECTION
+                            __display("OUTSIDE, TO STATE 0");
+                        }
+                    }
                 }
             } else {
                 busy = 0;
@@ -256,7 +282,6 @@ unit triangle(
     busy := start | PREP.busy | PREP.todraw | TRIANGLE.busy;
 }
 
-
 // Test it (make verilator)
 algorithm main(output uint8 leds)
 {
@@ -269,7 +294,6 @@ algorithm main(output uint8 leds)
     TRIANGLE.x = 188; TRIANGLE.y = 196; TRIANGLE.x1 = 329; TRIANGLE.y1 = 232; TRIANGLE.x2 = 27; TRIANGLE.y2 = 14;
 
     ++:
-
     startcycle = PULSE.cycles;
     TRIANGLE.start = 1;
     while( TRIANGLE.busy ) {

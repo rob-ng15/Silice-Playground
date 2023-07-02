@@ -21,10 +21,10 @@ $$ if w_in == 2 then
    out = !in[1,1];
 $$ else
    uint$clog2(w_in)-1$ half_count = uninitialized;
-   uint$w_h$           lhs        <: in[$w_h$,$w_h$];
-   uint$w_h$           rhs        <: in[    0,$w_h$];
-   uint$w_h$           select     <: left_empty ? rhs : lhs;
-   uint1               left_empty <: ~|lhs;
+   uint$w_h$           lhs        = in[$w_h$,$w_h$];
+   uint$w_h$           rhs        = in[    0,$w_h$];
+   uint1               left_empty = ~|lhs;
+   uint$w_h$           select     = left_empty ? rhs : lhs;
    (half_count) = $name$_$w_h$(select);
    out          = {left_empty,half_count};
 $$ end
@@ -40,11 +40,11 @@ circuitry $name$_$w_in$ (input in,output out)
 $$ if w_in == 2 then
    out = !in[0,1];
 $$ else
-   uint$clog2(w_in)-1$ half_count = uninitialized;
-   uint$w_h$           lhs        <: in[$w_h$,$w_h$];
-   uint$w_h$           rhs        <: in[    0,$w_h$];
-   uint$w_h$           select     <: right_empty ? lhs : rhs;
-   uint1               right_empty <: ~|rhs;
+   uint$clog2(w_in)-1$ half_count  = uninitialized;
+   uint$w_h$           lhs         = in[$w_h$,$w_h$];
+   uint$w_h$           rhs         = in[    0,$w_h$];
+   uint1               right_empty = ~|rhs;
+   uint$w_h$           select      = right_empty ? lhs : rhs;
    (half_count) = $name$_$w_h$(select);
    out          = {right_empty,half_count};
 $$ end
@@ -60,112 +60,132 @@ circuitry $name$_$w_in$ (input in,output out)
 $$ if w_in == 2 then
    out = in[0,1] + in[1,1];
 $$ else
-   uint$clog2(w_in)$   left_count = uninitialized;
+   uint$clog2(w_in)$   left_count  = uninitialized;
    uint$clog2(w_in)$   right_count = uninitialized;
-   uint$w_h$           lhs        <: in[$w_h$,$w_h$];
-   uint$w_h$           rhs        <: in[    0,$w_h$];
-   (left_count) = $name$_$w_h$(lhs);
+   uint$w_h$           lhs         = in[$w_h$,$w_h$];
+   uint$w_h$           rhs         = in[    0,$w_h$];
+   (left_count)  = $name$_$w_h$(lhs);
    (right_count) = $name$_$w_h$(rhs);
-   out          = left_count + right_count;
+   out           = left_count + right_count;
 $$ end
 }
 $$end
 
-// Produce circuits for 32 bits numbers
-$$generate_clz('clz_silice',32)
-$$generate_ctz('ctz_silice',32)
-$$generate_cpop('cpop_silice',32)
+// Produce circuits for 64 bits numbers
+$$generate_clz('clz_silice',64)
+$$generate_ctz('ctz_silice',64)
+$$generate_cpop('cpop_silice',64)
 
-// CALCULATES SLL SLLI SRL SRLI SRA SRAI + ROL ROR RORI
-unit alushift(
-    input   uint32  sourceReg1,
-    input   uint5   shiftcount,
-    input   uint1   reverse,
-    output  uint32  SLL,
-    output  uint32  SRL,
-    output  uint32  SRA,
-    output  uint32  ROTATE
+// ALU - ALU for immediate-register operations and register-register operations
+
+// CALCULATES ADD ADDI SUB
+unit aluaddsub(
+    input   uint1   size32,
+    input   uint1   doadduw,
+    input   uint1   dosub,
+    input   int64   sourceReg1,
+    input   int64   operand2,
+    output  int64   addsub
 ) <reginputs> {
-    uint6   shiftother <:: 32 - shiftcount;
-
     always_after {
-        SLL = sourceReg1 << shiftcount;
-        SRL = sourceReg1 >> shiftcount;
-        SRA = __signed(sourceReg1) >>> shiftcount;
-        ROTATE = reverse ? ( ( sourceReg1 << shiftother ) | SRL ) : ( SLL | ( sourceReg1 >> shiftother ) );
+        addsub = dosub ? ( ( size32 ? sourceReg1[0,32] : sourceReg1 ) - ( size32 ? operand2[0,32] : operand2 ) ) :
+                         ( ( size32 ? sourceReg1[0,32] : sourceReg1 ) + ( size32 & ~doadduw ? operand2[0,32] : operand2 ) );
     }
 }
 // CALCULATES BCLR BCLRI BEXT BEXTI BIN BINI BSET BSETI
 unit alubits(
-    input   uint32  sourceReg1,
-    input   uint5   shiftcount,
-    output  uint32  CLR,
-    output  uint32  INV,
-    output  uint32  SET,
+    input   uint64  sourceReg1,
+    input   uint6   shiftcount,
+    output  uint64  CLR,
+    output  uint64  INV,
+    output  uint64  SET,
     output  uint1   EXT
 ) <reginputs> {
-    uint32  mask <:: ( 1 << shiftcount );
+    uint64  mask <:: ( 1 << shiftcount );
 
     always_after {
-        CLR = sourceReg1 & ~mask;                      INV = sourceReg1 ^ mask;
-        SET = sourceReg1 | mask;                       EXT = sourceReg1[ shiftcount, 1 ];
+        { CLR = sourceReg1 & ~mask; }               { INV = sourceReg1 ^ mask; }
+        { SET = sourceReg1 | mask; }                { EXT = sourceReg1[ shiftcount, 1 ]; }
     }
 }
-// CALCULATES ADD ADDI SUB
-unit aluaddsub(
-    input   uint1   dosub,
-    input   int32   sourceReg1,
-    input   int32   operand2,
-    input   int32   negoperand2,
-    output  int32   AS
+// CALCULATES BREV8
+unit alubrev(
+    input   uint64  sourceReg1,
+    output  uint64  BREV8
 ) <reginputs> {
     always_after {
-        AS = sourceReg1 + ( dosub ? negoperand2 : operand2 );
-    }
-}
-// CALCULATES AND/ANDN OR/ORN XOR/XNOR
-unit alulogic(
-    input   uint32  sourceReg1,
-    input   uint32  operand2,
-    input   uint1   doinv,
-    output  uint32  AND,
-    output  uint32  OR,
-    output  uint32  XOR
-) <reginputs> {
-    uint32  operand <:: doinv ? ~operand2 : operand2;
-
-    always_after {
-        AND = sourceReg1 & operand;                    OR = sourceReg1 | operand;
-        XOR = sourceReg1 ^ operand;
-    }
-}
-// CALCULATES SH1ADD, SH2ADD, SH3ADD
-unit alushxadd(
-    input   uint2   function3,
-    input   uint32  sourceReg1,
-    input   uint32  sourceReg2,
-    output  uint32  result
-) <reginputs> {
-    always_after {
-        result = sourceReg2 + ( sourceReg1 << function3 );
+        BREV8 = {
+                $$for i=0,7 do
+                    sourceReg1[$56+i$,1],
+                $$end
+                $$for i=0,7 do
+                    sourceReg1[$48+i$,1],
+                $$end
+                $$for i=0,7 do
+                    sourceReg1[$40+i$,1],
+                $$end
+                $$for i=0,7 do
+                    sourceReg1[$32+i$,1],
+                $$end
+                $$for i=0,7 do
+                    sourceReg1[$24+i$,1],
+                $$end
+                $$for i=0,7 do
+                    sourceReg1[$16+i$,1],
+                $$end
+                $$for i=0,7 do
+                    sourceReg1[$8+i$,1],
+                $$end
+                $$for i=0,6 do
+                    sourceReg1[$i$,1],
+                $$end
+                sourceReg1[7,1]
+        };
     }
 }
 // CALCULATES CLZ CTZ CPOP
 unit alucount(
+    input   uint1   size32,
     input   uint2   counttype,
-    input   uint32  sourceReg1,
-    output  uint6   result
+    input   uint64  sourceReg1,
+    output  uint7   result
 ) <reginputs> {
     always_after {
         if( ~|sourceReg1 ) {
-            result = { ~counttype[1,1], 5b00000 };
+            result = size32 ? { ~counttype[1,1], 5b00000 } : { ~counttype[1,1], 6b000000 };
         } else {
             switch( counttype ) {
-                case 2b00: { ( result ) = clz_silice_32( sourceReg1 ); }
-                case 2b01: { ( result ) = ctz_silice_32( sourceReg1 ); }
-                default: { ( result ) = cpop_silice_32( sourceReg1 ); }
+                case 2b00: { if( size32 ) { ( result ) = clz_silice_32( sourceReg1[0,32] ); } else { ( result ) = clz_silice_64( sourceReg1 ); } }
+                case 2b01: { if( size32 ) { ( result ) = ctz_silice_32( sourceReg1[0,32] ); } else { ( result ) = ctz_silice_64( sourceReg1 ); } }
+                default: { ( result ) = cpop_silice_64( size32 ? sourceReg1[0,32] : sourceReg1 ); }
             }
         }
+    }
+}
+// CALCULATES SEXT.B SEXT.H
+unit aluextendsign(
+    input   uint1   halfbyte,
+    input   uint16  sourceReg1,
+    output  uint64  result
+)  <reginputs> {
+    always_after {
+        result = halfbyte ? { {48{sourceReg1[15,1]}}, sourceReg1[0,16] } : { {56{sourceReg1[7,1]}}, sourceReg1[0,8] };
+    }
+}
+// CALCULATES AND/ANDN OR/ORN XOR/XNOR
+unit alulogic(
+    input   uint1   doinv,
+    input   uint64  sourceReg1,
+    input   uint64  operand2,
+    output  uint64  AND,
+    output  uint64  OR,
+    output  uint64  XOR
+) <reginputs> {
+    uint64  operand <:: doinv ? ~operand2 : operand2;
+
+    always_after {
+        { AND = sourceReg1 & operand; }             { OR = sourceReg1 | operand; }
+        { XOR = sourceReg1 ^ operand; }
     }
 }
 // CALCULATES MAX MAXU MIN MINU
@@ -173,200 +193,196 @@ unit aluminmax(
     input   uint2   function3,
     input   uint1   signedcompare,
     input   uint1   unsignedcompare,
-    input   uint32  sourceReg1,
-    input   uint32  sourceReg2,
-    output  uint32  result
+    input   uint64  sourceReg1,
+    input   uint64  sourceReg2,
+    output  uint64  result
 ) <reginputs> {
     always_after {
         result = function3[1,1] ^ ( function3[0,1] ? unsignedcompare : signedcompare ) ? sourceReg1 : sourceReg2;
     }
 }
-// CALCULATES ORC.B REV8 BREV8
-unit aluorcrev(
-    input   uint32  sourceReg1,
-    input   uint1   revtype,
-    output  uint32  ORC,
-    output  uint32  REV8
+// UNSIGNED / SIGNED 65 by 65 bit multiplication giving 130 bit product using DSP blocks
+unit alumultiply(
+    input   uint1   size32,
+    input   uint2   function3,
+    input   int64   sourceReg1,
+    input   int64   sourceReg2,
+    output  int64   mult
 ) <reginputs> {
+    // SIGN EXTEND IF SIGNED MULTIPLY
+    uint2   dosigned <:: function3[1,1] ? function3[0,1] ? 2b00 : 2b01 : 2b11;
+    int65   factor_1 <:: size32 ? sourceReg1[0,32] : { dosigned[0,1] & sourceReg1[ 63, 1 ], sourceReg1 }; // SIGN EXTEND IF SIGNED MULTIPLY
+    int65   factor_2 <:: size32 ? sourceReg2[0,32] : { dosigned[1,1] & sourceReg2[ 63, 1 ], sourceReg2 }; // SIGN EXTEND IF SIGNED MULTIPLY
+    int130   product <:: factor_1 * factor_2;
+
     always_after {
-        ORC = { {8{ |sourceReg1[24,8] }}, {8{ |sourceReg1[16,8] }}, {8{ |sourceReg1[8,8] }}, {8{ |sourceReg1[0,8] }} };
-        REV8 = revtype ? {
-            $$for i=0,7 do
-                sourceReg1[$24+i$,1],
-            $$end
-            $$for i=0,7 do
-                sourceReg1[$16+i$,1],
-            $$end
-            $$for i=0,7 do
-                sourceReg1[$8+i$,1],
-            $$end
-            $$for i=0,6 do
-                sourceReg1[$i$,1],
-            $$end
-            sourceReg1[7,1]
-        } : { sourceReg1[0,8], sourceReg1[8,8], sourceReg1[16,8], sourceReg1[24,8] };
+        mult = size32 ? product[ 0, 32 ] : product[ { |function3, 6b0 }, 64 ];
     }
 }
-// CALCULATES PACK PACKH ( ZEXT.H when rs2 == 0 )
+// CALCULATES ORC.B
+unit aluorc(
+    input   uint64  sourceReg1,
+    output  uint64  ORC
+) <reginputs> {
+    always_after {
+        ORC = {
+            {8{ |sourceReg1[56,8] }}, {8{ |sourceReg1[48,8] }}, {8{ |sourceReg1[40,8] }}, {8{ |sourceReg1[32,8] }},
+            {8{ |sourceReg1[24,8] }}, {8{ |sourceReg1[16,8] }}, {8{ |sourceReg1[8,8] }}, {8{ |sourceReg1[0,8] }}
+        };
+    }
+}
+// CALCULATES PACK PACKH PACKW ( ZEXT.H when rs2 == 0 )
 unit alupack(
-    input   uint32  sourceReg1,
-    input   uint32  sourceReg2,
-    output  uint32  pack,
-    output  uint32  packh
+    input   uint1   size32,
+    input   uint64  sourceReg1,
+    input   uint64  sourceReg2,
+    output  uint64  pack,
+    output  uint64  packh,
 ) <reginputs> {
     always_after {
-        pack = { sourceReg2[0,16], sourceReg1[0,16] };
-        packh = { 16b0, sourceReg2[0,8], sourceReg1[0,8] };
+        { pack = size32 ? { 32h0, sourceReg2[0,16], sourceReg1[0,16] } : { sourceReg2[0,32], sourceReg1[0,32] }; }
+        { packh = { 48b0, sourceReg2[0,8], sourceReg1[0,8] }; }
     }
 }
-// CALCULATES SEXT.B SEXT.H
-unit aluextend(
-    input   uint1   halfbyte,
-    input   uint32  sourceReg1,
-    output  uint32  result
-)  <reginputs> {
-    always_after {
-        result = halfbyte ? { {16{sourceReg1[15,1]}}, sourceReg1[0,16] } : { {24{sourceReg1[7,1]}}, sourceReg1[0,8] };
-    }
-}
-// CALCULATES ZIP UNZIP
-unit aluzip(
-    input   uint32  sourceReg1,
-    output  uint32  zip,
-    output  uint32  unzip
-)  <reginputs> {
-    always_after {
-        zip = {
-            $$for i=0,14 do
-                sourceReg1[$16+(15-i)$,1],
-                sourceReg1[$(15-i)$,1],
-            $$end
-            sourceReg1[16,1],
-            sourceReg1[0,1]
-        };
-        unzip = {
-            $$for i=0,15 do
-                sourceReg1[$(15-i)*2+1$,1],
-            $$end
-            $$for i=0,14 do
-                sourceReg1[$(15-i)*2$,1],
-            $$end
-            sourceReg1[0,1]
-        };
-    }
-}
-// CALCULATES XPERM4 XPERM8
-unit aluxperm(
-    input   uint32  sourceReg1,
-    input   uint32  sourceReg2,
-    output  uint32  xperm4,
-    output  uint32  xperm8
+// CALCULATES REV8
+unit alurev(
+    input   uint64  sourceReg1,
+    output  uint64  REV8
 ) <reginputs> {
     always_after {
-        xperm8 = { { |sourceReg2[26,2] ? 8b00000000 : sourceReg1[ {sourceReg2[24,2], 3b000}, 8 ] },
-                   { |sourceReg2[18,2] ? 8b00000000 : sourceReg1[ {sourceReg2[16,2], 3b000}, 8 ] },
-                   { |sourceReg2[10,2] ? 8b00000000 : sourceReg1[ {sourceReg2[8,2], 3b000}, 8 ] },
-                   { |sourceReg2[2,2] ? 8b00000000 : sourceReg1[ {sourceReg2[0,2], 3b000}, 8 ] } };
-        xperm4 = { { sourceReg2[31,1] ? 4b0000 : sourceReg1[ {sourceReg2[28,3], 2b00}, 4 ] },
-                   { sourceReg2[27,1] ? 4b0000 : sourceReg1[ {sourceReg2[24,3], 2b00}, 4 ]  },
-                   { sourceReg2[23,1] ? 4b0000 : sourceReg1[ {sourceReg2[20,3], 2b00}, 4 ] },
-                   { sourceReg2[19,1] ? 4b0000 : sourceReg1[ {sourceReg2[16,3], 2b00}, 4 ] },
-                   { sourceReg2[15,1] ? 4b0000 : sourceReg1[ {sourceReg2[12,3], 2b00}, 4 ]  },
-                   { sourceReg2[11,1] ? 4b0000 : sourceReg1[ {sourceReg2[8,3], 2b00}, 4 ] },
-                   { sourceReg2[7,1] ? 4b0000 : sourceReg1[ {sourceReg2[4,3], 2b00}, 4 ] },
-                   { sourceReg2[3,1] ? 4b0000 : sourceReg1[ {sourceReg2[0,3], 2b00}, 4 ] } };
+        REV8 = { sourceReg1[0,8], sourceReg1[8,8], sourceReg1[16,8], sourceReg1[24,8], sourceReg1[32,8], sourceReg1[40,8], sourceReg1[48,8], sourceReg1[56,8] };
+    }
+}
+// CALCULATES SLL SLLI SRL SRLI SRA SRAI + ROL ROR RORI
+unit alushift(
+    input   uint1   size32,
+    input   uint1   reverse,
+    input   uint64  sourceReg1,
+    input   uint6   shiftcount,
+    output  uint64  SLL,
+    output  uint64  SRL,
+    output  uint64  SRA,
+    output  uint64  ROTATE
+) <reginputs> {
+    uint7 shiftother <:: ( size32 ? 32 : 64 ) - shiftcount;
+
+    always_after {
+        __display("32bit = %b, reverse = %b, shiftcount = %d, shiftother = %d",size32,reverse,shiftcount,shiftother);
+        { SLL = ( size32 ? sourceReg1[0,32] : sourceReg1 ) << shiftcount; }
+        { SRL = ( size32 ? sourceReg1[0,32] : sourceReg1 ) >> shiftcount; }
+        { SRA = __signed( { size32 ? {32{sourceReg1[31,1]}} : sourceReg1[32,32], sourceReg1[0,32] } ) >>> shiftcount; }
+        { ROTATE = reverse ? ( ( ( size32 ? sourceReg1[0,32] : sourceReg1 ) << shiftother ) | SRL ) : ( SLL | ( ( size32 ? sourceReg1[0,32] : sourceReg1 ) >> shiftother ) ); }
+    }
+}
+// CALCULATES SH1ADD, SH2ADD, SH3ADD
+unit alushxadd(
+    input   uint1   size32,
+    input   uint2   function3,
+    input   uint64  sourceReg1,
+    input   uint64  sourceReg2,
+    output  uint64  result
+) <reginputs> {
+    always_after {
+        result = sourceReg2 + ( ( size32 ? sourceReg1[0,32] : sourceReg1 ) << function3 );
     }
 }
 
 // DECODE ALU INSTRUCTIONS
 unit aludecode(
+    input   uint1   size32,
     input   uint1   regreg,
     input   uint7   function7,
     input   uint3   function3,
     input   uint5   rs2,
 
+    output  uint1   doadduw,
     output  uint1   doalt,
-    output  uint1   dosra,
-    output  uint1   dorotate,
     output  uint1   dobclrext,
-    output  uint1   dobinv,
-    output  uint1   dobset,
-    output  uint1   doshxadd,
+    output  uint1   dobrev,
     output  uint1   docount,
+    output  uint1   dobinv,
     output  uint1   dominmax,
-    output  uint1   dosignx,
-    output  uint1   dopack,
+    output  uint1   dobset,
+    output  uint1   domul,
     output  uint1   doorc,
-    output  uint1   doxperm,
+    output  uint1   dopack,
     output  uint1   dorev,
-    output  uint1   dozip
+    output  uint1   dorotate,
+    output  uint1   doshxadd,
+    output  uint1   dosignx,
+    output  uint1   dosra
 ) <reginputs> {
-    uint1   f70100000 <:: ( function7 == 7b0100000 );
-    uint1   f70110000 <:: ( function7 == 7b0110000 );
-    uint1   f70110100 <:: ( function7 == 7b0110100 );
-    uint1   f70010100 <:: ( function7 == 7b0010100 );
-    uint1   f70000100 <:: ( function7 == 7b0000100 );
+    uint1   f70000100 <:: ( function7 == 7b0000100 );                               // DETECT ADD.UW ZEXT.H
+    uint1   f70100000 <:: ( function7 == 7b0100000 );                               // DETECT SUB ANDN ORN XNOR
+    uint1   f70000001 <:: ( function7 == 7b0000001 );                               // DETECT MUL
+    uint1   f70010000 <:: ( function7 == 7b0010000 );                               // DETECT SHxADD
+    uint1   f70110000 <:: ( function7 == 7b0110000 );                               // DETECT SEXT.B SEXT.H
+    uint1   f70010100 <:: ( function7 == 7b0010100 );                               // DETECT ORC,B
+    uint1   f70110100 <:: ( function7 == 7b0110100 );                               // DETECT BREV8
+    uint1   f70110101 <:: ( function7 == 7b0110101 );                               // DETECT REV8
 
     always_after {
-        doalt = regreg & f70100000;                                         // ADD/SUB AND/ANDN OR/ORN XOR/XNOR ( register - register only )
-        dosra = f70100000;                                                  // SRA SRAI
-        dorotate = f70110000;                                               // ROL ROR RORI
-        dobclrext = ( function7 == 7b0100100 );                             // BCLR BCLRI BEXT BEXTI
-        dobinv = f70110100;                                                 // BINV BINVI
-        dobset = f70010100;                                                 // ( F3 == 001 ) BSET BSETI
-        doshxadd = regreg & ( function7 == 7b0010000 );                     // SH1ADD SH2ADD SH3ADD ( register - register only )
-        docount = ~regreg & f70110000 & ~rs2[2,1];                          // CLZ CPOP CTZ ( immediate only )
-        dominmax = regreg & function3[2,1] & ( function7 == 7b0000101 );    // MAX MAXU MIN MINU ( register - register only )
-        dosignx = ~regreg & f70110000 & rs2[2,1];                           // SEXT.B SEXT.H
-        dopack = regreg & f70000100;                                        // ZEXT.H PACK PACKH ( ZEXT.H when rs2 == 0 )
-        dozip = ~regreg & f70000100;                                        // UNZIP ZIP
-        doorc = ~regreg & f70010100;                                   // ( F3 = 101 ) ORC.B
-        dorev = ~regreg & f70110100;                                        // REV8
-        doxperm = regreg & f70010100;                                   // ( F3 == 010 ) XPERM4 ( F3 = 100 ) XPERM8
+        { doadduw = size32 & regreg & f70000100; }                                  // ADD.UW
+        { doalt = regreg & f70100000; }                                             // ADD/SUB AND/ANDN OR/ORN XOR/XNOR ( register - register only )
+        { dobclrext = ( function7[1,6] == 6b010010 ); }                             // BCLR BCLRI BEXT BEXTI
+        { dobrev = ~regreg & f70110100; }                                           // BREV8
+        { docount = ~regreg & f70110000 & ~rs2[2,1]; }                              // CLZ CPOP CTZ ( immediate only )
+        { dobinv = ( function7[1,6] == 6b011010 ); }                                // BINV BINVI
+        { dominmax = regreg & ( function7 == 7b0000101 ); }                         // MAX MAXU MIN MINU ( register - register only )
+        { dobset = ( function7[1,6] == 6b001010 ); }                                // ( F3 == 001 ) BSET BSETI
+        { domul = regreg & f70000001; }                                             // MULTIPLICATION
+        { doorc = ~regreg & f70010100; }                                            // ( F3 = 101 ) ORC.B
+        { dopack = regreg & f70000100; }                                            // ZEXT.H PACK PACKH PACKW ( ZEXT.H when rs2 == 0 )
+        { dorev = ~regreg & f70110101; }                                            // REV8
+        { dorotate = ( function7[1,6] == 6b011000 ); }                              // ROL ROR RORI
+        { doshxadd = regreg & f70010000; }                                          // SH1ADD SH2ADD SH3ADD ( register - register only )
+        { dosignx = ~regreg & f70110000 & rs2[2,1]; }                               // SEXT.B SEXT.H
+        { dosra = ( function7[1,6] == 6b010000 ); }                                 // SRA SRAI
     }
 }
 
 unit alu(
+    input   uint1   size32,
     input   uint5   opCode,
     input   uint3   function3,
     input   uint7   function7,
     input   uint5   rs1,
     input   uint5   rs2,
-    input   int32   sourceReg1,
-    input   int32   sourceReg2,
-    input   int32   negSourceReg2,
-    input   int32   immediateValue,
+    input   int64   sourceReg1,
+    input   int64   sourceReg2,
+    input   int64   immediateValue,
     input   uint1   LT,                                                             // SIGNED COMPARE sourceReg1 < operand2
     input   uint1   LTU,                                                            // UNSIGNED COMPARE sourceReg1 < operand2
-
-    output  int32   result
+    output  int64   result
 ) <reginputs> {
-    aludecode AD( regreg <: opCode[3,1], function7 <: function7, function3 <: function3, rs2 <: rs2 );
+    uint6   shiftcount <:: opCode[3,1] ? ( size32 ? sourceReg2[0,5] : sourceReg2[0,6] ) : { function7[0,1], rs2 };
+    uint64  operand2 <:: opCode[3,1] ? sourceReg2 : immediateValue;
 
-    uint5   shiftcount <:: opCode[3,1] ? sourceReg2[0,5] : rs2;
-    uint32  operand2 <:: opCode[3,1] ? sourceReg2 : immediateValue;
+    // DECODE THE ALU OPERATION
+    aludecode AD( size32 <: size32, regreg <: opCode[3,1], function7 <: function7, function3 <: function3, rs2 <: rs2 );
 
-    aluaddsub ADDSUB( dosub <: AD.doalt, sourceReg1 <: sourceReg1, operand2 <: operand2, negoperand2 <: negSourceReg2 );
-    alushift SHIFTS( sourceReg1 <: sourceReg1, shiftcount <: shiftcount, reverse <: function3[2,1] );
+    aluaddsub ADDSUB( size32 <: size32, dosub <: AD.doalt, doadduw <: AD.doadduw, sourceReg1 <: sourceReg1, operand2 <: operand2 );
     alubits BITS( sourceReg1 <: sourceReg1, shiftcount <: shiftcount );
-    alulogic LOGIC( sourceReg1 <: sourceReg1, operand2 <: operand2, doinv <: AD.doalt );
-    alushxadd SHXADD( function3 <: function3[1,2], sourceReg1 <: sourceReg1, sourceReg2 <: sourceReg2 );
-    alucount COUNT( counttype <: rs2[0,2], sourceReg1 <: sourceReg1 );
+    alubrev BREV( sourceReg1 <: sourceReg1 );
+    alucount COUNT( size32 <: size32, counttype <: rs2[0,2], sourceReg1 <: sourceReg1 );
+    aluextendsign EXTENDS( halfbyte <: rs2[0,1], sourceReg1 <: sourceReg1 );
+    alulogic LOGIC( doinv <: AD.doalt, sourceReg1 <: sourceReg1, operand2 <: operand2 );
     aluminmax MINMAX( function3 <: function3[0,2], sourceReg1 <: sourceReg1, sourceReg2 <: sourceReg2, signedcompare <: LT, unsignedcompare <: LTU );
-    aluextend EXTEND( halfbyte <: rs2[0,1], sourceReg1 <: sourceReg1 );
-    aluorcrev ORCREV( sourceReg1 <: sourceReg1, revtype <: rs2[2,1] );
-    alupack PACK( sourceReg1 <: sourceReg1, sourceReg2 <: sourceReg2 );
-    aluxperm XPERM( sourceReg1 <: sourceReg1, sourceReg2 <: sourceReg2 );
-    aluzip ZIP( sourceReg1 <: sourceReg1 );
+    alumultiply MULT( size32 <: size32, function3 <: function3[0,2], sourceReg1 <: sourceReg1, sourceReg2 <: sourceReg2 );
+    aluorc ORC( sourceReg1 <: sourceReg1 );
+    alupack PACK( size32 <: size32, sourceReg1 <: sourceReg1, sourceReg2 <: sourceReg2 );
+    alurev REV( sourceReg1 <: sourceReg1 );
+    alushift SHIFTS( size32 <: size32, reverse <: function3[2,1], sourceReg1 <: sourceReg1, shiftcount <: shiftcount );
+    alushxadd SHXADD( size32 <: size32, function3 <: function3[1,2], sourceReg1 <: sourceReg1, sourceReg2 <: sourceReg2 );
 
     always_after {
         switch( function3 ) {
-            case 3b000: { result = ADDSUB.AS; }
-            case 3b001: { result = AD.dosignx ? EXTEND.result : AD.docount ? COUNT.result : AD.dobclrext ? BITS.CLR : AD.dobinv ? BITS.INV : AD.dobset ? BITS.SET : AD.dozip ? ZIP.zip : AD.dorotate ? SHIFTS.ROTATE : SHIFTS.SLL; }
-            case 3b010: { result = AD.doshxadd ? SHXADD.result : AD.doxperm ? XPERM.xperm4 : LT; }
-            case 3b011: { result = opCode[3,1] ? ( ~|rs1 ) ? ( |operand2 ) : LTU : ( operand2 == 1 ) ? ( ~|sourceReg1 ) : LTU; }
-            case 3b100: { result = AD.dominmax ? MINMAX.result : AD.doshxadd ? SHXADD.result : AD.dopack ? PACK.pack : AD.doxperm ? XPERM.xperm8 : LOGIC.XOR; }
-            case 3b101: { result = AD.doorc ? ORCREV.ORC : AD.dorev ? ORCREV.REV8 : AD.dominmax ? MINMAX.result : AD.dobclrext ? BITS.EXT : AD.dozip ? ZIP.zip : AD.dorotate ? SHIFTS.ROTATE : AD.dosra ? SHIFTS.SRA : SHIFTS.SRL; }
+            case 3b000: { result = AD.domul ? MULT.mult : ADDSUB.addsub; }
+            case 3b001: { result = AD.domul ? MULT.mult : AD.dosignx ? EXTENDS.result : AD.docount ? COUNT.result : AD.dobclrext ? BITS.CLR : AD.dobinv ? BITS.INV : AD.dobset ? BITS.SET : AD.dorotate ? SHIFTS.ROTATE : SHIFTS.SLL; }
+            case 3b010: { result = AD.domul ? MULT.mult : AD.doshxadd ? SHXADD.result : LT; }
+            case 3b011: { result = AD.domul ? MULT.mult : opCode[3,1] ? ( ~|rs1 ) ? ( |operand2 ) : LTU : ( operand2 == 1 ) ? ( ~|sourceReg1 ) : LTU; }
+            case 3b100: { result = AD.dominmax ? MINMAX.result : AD.doshxadd ? SHXADD.result : AD.dopack ? PACK.pack : LOGIC.XOR; }
+            case 3b101: { result = AD.doorc ? ORC.ORC : AD.dorev ? REV.REV8 : AD.dobrev ? BREV.BREV8 : AD.dominmax ? MINMAX.result : AD.dobclrext ? BITS.EXT : AD.dorotate ? SHIFTS.ROTATE : AD.dosra ? SHIFTS.SRA : SHIFTS.SRL; }
             case 3b110: { result = AD.dominmax ? MINMAX.result : AD.doshxadd ? SHXADD.result : LOGIC.OR; }
             case 3b111: { result = AD.dominmax ? MINMAX.result : AD.dopack ? PACK.packh : LOGIC.AND; }
         }
@@ -379,17 +395,16 @@ algorithm main(output uint8 leds)
    alu ALU();
 
    // DEFINE THE INSTRUCTION
-   ALU.opCode = 5b01100;
-   ALU.function3 = 3b010;
-   ALU.function7 = 7b0010100;
+   ALU.opCode = 5b00100;
+   ALU.function3 = 3b101;
+   ALU.function7 = 7b0110001;
 
    // DEFINE THE ACTUAL REGISTER NUMBER - MATTERS FOR SLT/SLTU - RS2 DEFINES THE SHIFTCOUNT FOR REGISTER SHIFTS
-   ALU.rs1 = 0; ALU.rs2 = 16;
+   ALU.rs1 = 0; ALU.rs2 = 60;
 
    // INPUT VALUES
-   ALU.sourceReg1 = 32h00001234;
+   ALU.sourceReg1 = 64h2023020507102500;
    ALU.sourceReg2 = 32h00005678;
-   ALU.negSourceReg2 = -ALU.sourceReg2;
    ALU.immediateValue = 4;
 
    ++: ++:
